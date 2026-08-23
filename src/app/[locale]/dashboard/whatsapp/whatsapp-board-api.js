@@ -82,12 +82,16 @@ export function boardCardToUi(card) {
 		description: card.description || '',
 		dueDate: card.dueDate || null,
 		isStarred: Boolean(card.isStarred),
+		isCompleted: Boolean(card.isCompleted),
 		labels: card.labels || [],
 		checklist: card.checklist || [],
 		comments: card.comments || [],
 		attachments: card.attachments || [],
 		coverImage: card.coverImage || null,
 		conversationId: card.conversationId || null,
+		orderIndex: card.orderIndex ?? 0,
+		createdAt: card.createdAt || null,
+		updatedAt: card.updatedAt || null,
 		links: card.links || [],
 	};
 }

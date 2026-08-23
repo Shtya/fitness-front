@@ -633,6 +633,107 @@ const TopConversations = ({ data, t }) => {
 };
 
 /* ════════════════════════════════════════════════════════
+   SKELETON — mirrors real dashboard layout
+════════════════════════════════════════════════════════ */
+const Skel = ({ className = '' }) => (
+  <div className={`animate-pulse rounded-lg bg-slate-200/80 ${className}`} />
+);
+
+const DashboardSkeleton = () => (
+  <div className="space-y-5" aria-busy="true">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-secondary-500)] p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-white/25" />
+          <div className="space-y-2">
+            <div className="h-5 w-40 rounded-md bg-white/30" />
+            <div className="h-3 w-56 rounded-md bg-white/20" />
+          </div>
+        </div>
+        <div className="h-10 w-28 rounded-lg bg-white/20" />
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl bg-white/15 px-3 py-2.5">
+            <div className="h-2.5 w-16 rounded bg-white/25" />
+            <div className="mt-2 h-5 w-10 rounded bg-white/30" />
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="rounded-2xl border border-slate-200/80 bg-white p-5">
+          <div className="mb-3 flex items-start justify-between">
+            <Skel className="h-9 w-9 rounded-xl" />
+            <Skel className="h-3 w-3 rounded" />
+          </div>
+          <Skel className="mb-2 h-2.5 w-16" />
+          <Skel className="h-7 w-12" />
+          <Skel className="mt-2 h-2.5 w-20" />
+        </div>
+      ))}
+    </div>
+
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 lg:col-span-2">
+        <div className="mb-5 flex items-center gap-3">
+          <Skel className="h-9 w-9 rounded-xl" />
+          <div className="space-y-2">
+            <Skel className="h-3.5 w-32" />
+            <Skel className="h-2.5 w-44" />
+          </div>
+        </div>
+        <Skel className="h-56 w-full rounded-xl" />
+      </div>
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5">
+        <div className="mb-5 flex items-center gap-3">
+          <Skel className="h-9 w-9 rounded-xl" />
+          <div className="space-y-2">
+            <Skel className="h-3.5 w-28" />
+            <Skel className="h-2.5 w-36" />
+          </div>
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skel className="h-3 w-16" />
+              <Skel className="h-2.5 flex-1 rounded-full" />
+              <Skel className="h-3 w-8" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 lg:col-span-2">
+        <Skel className="mb-5 h-9 w-40 rounded-xl" />
+        <Skel className="h-44 w-full rounded-xl" />
+      </div>
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5">
+        <Skel className="mb-5 h-9 w-36 rounded-xl" />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skel key={i} className="h-12 w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="rounded-2xl border border-slate-200/80 bg-white p-5">
+          <Skel className="mb-5 h-9 w-40 rounded-xl" />
+          <Skel className="h-40 w-full rounded-xl" />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/* ════════════════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════════════════ */
 export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
@@ -641,7 +742,7 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
   const isRtl = locale === 'ar';
 
   const [data, setData] = useState(PREVIEW ? PREVIEW_DATA : null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!PREVIEW);
   const [err, setErr] = useState('');
   const [from] = useState('2026-02-28');
   const [to] = useState('2026-03-12');
@@ -674,6 +775,8 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
     { icon: Activity, label: t('kpi.pendingVideos'),    value: kpis.pendingExerciseVideos, sub: t('kpi.pendingVideosSub'),   accentColor: '#f97316',  accentBg: 'bg-orange-50',                   delay: 420 },
   ] : [];
 
+  const showSkeleton = loading && !kpis;
+
   return (
     <div className="min-h-screen ">
  
@@ -686,8 +789,10 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
           </div>
         )}
 
+        {showSkeleton ? <DashboardSkeleton /> : null}
+
         {/* Page header — same PageHeader used across dashboard pages */}
-        {kpis && (
+        {!showSkeleton && kpis && (
           <PageHeader
             title={t('title')}
             desc={t('subtitle')}
@@ -717,7 +822,7 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
         )}
 
         {/* KPI grid — 4 cols on lg, 2 on sm */}
-        {kpis && (
+        {!showSkeleton && kpis && (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             {metricCards.map((c, i) => (
               <div key={i} className="lg:col-span-1 sm:col-span-1">
@@ -728,7 +833,7 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
         )}
 
         {/* Row 2: Activity chart (2/3) + Membership (1/3) */}
-        {series && breakdowns && (
+        {!showSkeleton && series && breakdowns && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <ActivityChart
               usersData={series.usersCreatedDaily}
@@ -741,7 +846,7 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
         )}
 
         {/* Row 3: Meal bar (2/3) + Review queue (1/3) */}
-        {series && reviewsQueue && (
+        {!showSkeleton && series && reviewsQueue && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <MealLogsBar data={series.mealLogsDaily} t={t} locale={locale} />
             <ReviewQueue data={reviewsQueue} t={t} />
@@ -749,7 +854,7 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
         )}
 
         {/* Row 4: Exercise heatmap + Conversations */}
-        {series && breakdowns && (
+        {!showSkeleton && series && breakdowns && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ExerciseCard data={series.exerciseVolumeDaily} t={t} />
             <TopConversations data={breakdowns.messagesPerConversationTop5} t={t} />
@@ -758,20 +863,6 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
 
         <div className="h-4" />
       </div>
-
-      {/* Loading overlay */}
-      {loading && (
-        <div className="fixed inset-0 bg-white/75 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 flex flex-col items-center gap-4">
-            <div className="relative w-12 h-12">
-              <div className="absolute inset-0 rounded-full border-2 border-slate-100" />
-              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--color-primary-500)] animate-spin" />
-              <div className="absolute inset-[5px] rounded-full border-2 border-transparent border-t-[var(--color-secondary-400)] animate-spin" style={{ animationDuration: '0.65s', animationDirection: 'reverse' }} />
-            </div>
-            <p className="text-slate-500 text-sm font-medium">{t('loading')}</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

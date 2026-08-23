@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { cloneElement, isValidElement, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocale } from 'next-intl';
 import { io } from 'socket.io-client';
@@ -25,6 +25,7 @@ import {
 	ChevronRight,
 	ChevronUp,
 	Clock,
+	CalendarClock,
 	Camera,
 	Columns2,
 	Download,
@@ -41,6 +42,7 @@ import {
 	ListFilter,
 	Loader2,
 	LogOut,
+	Mail,
 	MapPin,
 	Expand,
 	MessageCircle,
@@ -83,6 +85,7 @@ import {
 import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import TranscriptionDialog from '../transcript/transcription-dialog';
+import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
 import CloneChatVoicePanel from './voice-changer/CloneChatVoicePanel';
 import ScheduleMessageDialog from './schedule-message/ScheduleMessageDialog';
@@ -138,6 +141,9 @@ import {
 	quotedMessageLabel,
 	quotedPreviewFromMessage,
 	quotedTargetFromMessage,
+	quotedVoicePresentation,
+	resolveQuotedReplySource,
+	buildReplySnapshot,
 	messageMatchesQuotedTarget,
 	messageTextSegments,
 	relativeTime,
@@ -162,8 +168,11 @@ import {
 	mediaUploadFailedMessage,
 } from './whatsapp-voice-recorder';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
+
+const EmailMemoWorkspace = lazy(() => import('../email-memo/EmailMemoWorkspace'));
 import { WhatsAppReportsTab, staffAssignHint } from './WhatsAppReportsTab';
 import { WhatsAppBoardTab } from './WhatsAppBoardTab';
+import { BoardColumnPicker, BoardColumnPickerMenu } from './BoardColumnPicker';
 import { createBoardCardFromMessages } from './whatsapp-board-api';
 import { WaCustomSelect } from './WaCustomSelect';
 import { WaActionMenu } from './WaActionMenu';
@@ -206,6 +215,8 @@ import WhatsAppWorkspaceAiParts from './ai/WhatsAppWorkspaceAiParts';
 import { useWhatsAppAi } from './ai/use-whatsapp-ai';
 import WhatsAppPrivacyBlurControl from './WhatsAppPrivacyBlurControl';
 import ExpandableMessageText from './ExpandableMessageText';
+import EmailMemoMessageCard from './EmailMemoMessageCard';
+import { isEmailMemoMessageText } from './email-memo-message';
 import {
 	applyWhatsAppPrivacyBlurClasses,
 	markPrivacyBlurRevealed,
@@ -224,7 +235,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'calls',
 	'groups',
 	'statuses',
-	'notifications',
+	'emails',
 	'reports',
 	'board',
 	'settings',
@@ -345,12 +356,13 @@ function resolveStoredWhatsAppUserId() {
 }
 
 function defaultWhatsAppActiveTab() {
-	if (typeof window === 'undefined') return 'chats';
+	if (typeof window === 'undefined') return null;
 	const userId = resolveStoredWhatsAppUserId();
 	const stored =
 		readStoredWhatsAppActiveTab(userId) ||
 		readStoredWhatsAppActiveTab(null);
-	if (stored) return stored;
+	if (stored === 'notifications') return 'chats';
+	if (stored && WHATSAPP_PERSISTED_TABS.has(stored)) return stored;
 	return 'chats';
 }
 
@@ -380,6 +392,8 @@ const translations = {
 		accounts: 'Accounts',
 		chats: 'Chats',
 		channels: 'Channels',
+		emails: 'Emails',
+		emailsHint: 'Email Memo — Gmail, AI summaries, and WhatsApp delivery',
 		calls: 'Calls',
 		updates: 'Updates',
 		communities: 'Groups',
@@ -394,7 +408,17 @@ const translations = {
 		board: 'Tasks board',
 		boardHint: 'Trello-style tasks for this WhatsApp account. Drag cards, add checklists, and link chats.',
 		addToBoard: 'Add to tasks board',
-		addToBoardHint: 'Create a board card from selected messages, text, or voice notes',
+		addToBoardHint: 'Right-click messages or multi-select, then pick a column',
+		pickBoardColumn: 'Choose column',
+		addToBoardNow: 'Add to tasks…',
+		scheduleMessage: 'Schedule message',
+		scheduleMessageHint: 'Send later once or on a recurring schedule',
+		scheduledMessages: 'Scheduled messages',
+		copyMessage: 'Copy text',
+		copiedMessage: 'Copied',
+		selectMoreMessages: 'Select more',
+		clearMessageSelection: 'Clear selection',
+		multiMessageActions: 'Selected messages',
 		sentToBoard: 'Added to tasks board',
 		openBoardTab: 'Open tasks board',
 		settings: 'Settings',
@@ -453,6 +477,13 @@ const translations = {
 		syncProgress: 'Sync progress',
 		selectConversation: 'Select a conversation to start',
 		selectConversationHint: 'Pick a chat from the list to read messages and reply.',
+		restoreSessionSubtitle: 'Please wait while we restore your previous session',
+		restoreStepSecureTitle: 'Secure connection',
+		restoreStepSecureDesc: 'Your data is encrypted',
+		restoreStepSyncTitle: 'Syncing messages',
+		restoreStepSyncDesc: 'Fetching your conversations',
+		restoreStepDoneTitle: 'Almost done',
+		restoreStepDoneDesc: 'Finalizing setup',
 		unreadMessagesLong: '{count} unread messages',
 		noMessagesYet: 'No messages in this conversation yet',
 		loadingMessages: 'Loading messages…',
@@ -583,6 +614,7 @@ const translations = {
 		noteSaved: 'Note added',
 		search: 'Search conversations',
 		readMore: 'Read more',
+		readFullEmail: 'Read full email',
 		blurToggle: 'Privacy blur',
 		blurToggleHint: 'Hide names, photos and messages while screen sharing',
 		blurTitle: 'Privacy blur',
@@ -757,6 +789,8 @@ const translations = {
 		accounts: 'الحسابات',
 		chats: 'المحادثات',
 		channels: 'القنوات',
+		emails: 'إيميلات',
+		emailsHint: 'مذكرة الإيميل — Gmail وملخصات AI وإرسال واتساب',
 		calls: 'المكالمات',
 		updates: 'التحديثات',
 		communities: 'المجموعات',
@@ -771,7 +805,17 @@ const translations = {
 		board: 'لوحة المهام',
 		boardHint: 'مهام على شكل Trello لهذا الحساب. اسحب البطاقات، أضف قوائم، واربط الشات.',
 		addToBoard: 'إضافة للوحة المهام',
-		addToBoardHint: 'أنشئ بطاقة من الرسائل المحددة (نص أو تسجيل صوتي)',
+		addToBoardHint: 'كليك يمين على الرسائل أو حدّد عدة رسائل ثم اختر العمود',
+		pickBoardColumn: 'اختر العمود',
+		addToBoardNow: 'إضافة للمهام…',
+		scheduleMessage: 'جدولة الرسالة',
+		scheduleMessageHint: 'أرسل لاحقًا مرة واحدة أو بشكل متكرر',
+		scheduledMessages: 'رسائل مجدولة',
+		copyMessage: 'نسخ النص',
+		copiedMessage: 'تم النسخ',
+		selectMoreMessages: 'تحديد المزيد',
+		clearMessageSelection: 'إلغاء التحديد',
+		multiMessageActions: 'الرسائل المحددة',
 		sentToBoard: 'تمت الإضافة للوحة المهام',
 		openBoardTab: 'فتح لوحة المهام',
 		settings: 'الإعدادات',
@@ -830,6 +874,13 @@ const translations = {
 		syncProgress: 'تقدم المزامنة',
 		selectConversation: 'اختر محادثة للبدء',
 		selectConversationHint: 'اختار شات من القائمة عشان تقرأ وترد.',
+		restoreSessionSubtitle: 'يرجى الانتظار أثناء استعادة جلستك السابقة',
+		restoreStepSecureTitle: 'اتصال آمن',
+		restoreStepSecureDesc: 'بياناتك مشفّرة',
+		restoreStepSyncTitle: 'مزامنة الرسائل',
+		restoreStepSyncDesc: 'جارٍ جلب محادثاتك',
+		restoreStepDoneTitle: 'أوشكنا على الانتهاء',
+		restoreStepDoneDesc: 'جارٍ إنهاء الإعداد',
 		unreadMessagesLong: '{count} رسالة غير مقروءة',
 		noMessagesYet: 'لا توجد رسائل في هذه المحادثة بعد',
 		loadingMessages: 'جارِ تحميل الرسائل…',
@@ -960,6 +1011,7 @@ const translations = {
 		noteSaved: 'تمت إضافة الملاحظة',
 		search: 'بحث في المحادثات',
 		readMore: 'اقرأ المزيد',
+		readFullEmail: 'قراءة الإيميل كاملاً',
 		blurToggle: 'تمويه الخصوصية',
 		blurToggleHint: 'إخفاء الأسماء والصور والرسائل أثناء مشاركة الشاشة',
 		blurTitle: 'تمويه الخصوصية',
@@ -1135,7 +1187,6 @@ const tabs = [
 	['channels', Radio],
 	['statuses', Zap],
 	['groups', Users],
-	['notifications', Bell],
 	['reports', BarChart3],
 	['board', LayoutGrid],
 	['settings', Settings],
@@ -1422,6 +1473,7 @@ function ImageMessage({
 	previewUrl = null,
 	loading = false,
 	cover = true,
+	blurPlaceholder = false,
 }) {
 	const [loaded, setLoaded] = useState(false);
 	const [broken, setBroken] = useState(false);
@@ -1465,10 +1517,10 @@ function ImageMessage({
 					alt={alt}
 					onLoad={() => setLoaded(true)}
 					onError={() => {
-						setBroken(!placeholder);
+						setBroken(!placeholder && !blurPlaceholder);
 						setLoaded(false);
 					}}
-					className={`${fitClass} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+					className={`${fitClass} transition-opacity duration-300 ${loaded ? 'opacity-100' : blurPlaceholder ? 'opacity-70 blur-[2px] scale-105' : 'opacity-0'}`}
 				/>
 			)}
 			{loading && !loaded && (
@@ -1711,12 +1763,24 @@ async function readBlobErrorMessage(blob) {
 }
 
 async function fetchAttachmentContentBlob(attachmentId, { timeout = 60_000 } = {}) {
+	const debugMedia =
+		typeof window !== 'undefined' &&
+		window.localStorage?.getItem('WA_MEDIA_DEBUG') === '1';
+	const started = debugMedia ? performance.now() : 0;
 	const response = await api.get(`/whatsapp/attachments/${attachmentId}/content`, {
 		responseType: 'blob',
 		validateStatus: () => true,
 		timeout,
 	});
 	const blob = response.data;
+	if (debugMedia) {
+		const ms = Math.round(performance.now() - started);
+		const sizeKb = blob instanceof Blob ? Math.round(blob.size / 1024) : 0;
+		// eslint-disable-next-line no-console
+		console.debug(
+			`[wa-media] content ${attachmentId.slice(0, 8)}… status=${response.status} ${ms}ms ${sizeKb}KB`,
+		);
+	}
 	if (!blob || response.status >= 400) {
 		const message =
 			(blob instanceof Blob ? await readBlobErrorMessage(blob) : null) ||
@@ -1770,6 +1834,13 @@ function rememberAttachmentBlob(attachmentId, blob) {
 		if (oldest === undefined) break;
 		attachmentBlobCache.delete(oldest);
 	}
+}
+
+function forgetAttachmentBlob(attachmentId) {
+	const id = String(attachmentId || '');
+	if (!id) return;
+	attachmentBlobCache.delete(id);
+	attachmentBlobRequests.delete(id);
 }
 
 function drainAttachmentFetchQueue() {
@@ -2179,12 +2250,17 @@ async function probeAudioDuration(objectUrl) {
 	});
 }
 
-async function prepareVoicePlaybackFromBlob(blob, mimeType) {
+async function prepareVoicePlaybackFromBlob(blob, mimeType, { analyze = true } = {}) {
 	const type = (mimeType || blob.type || 'audio/webm').split(';')[0];
 	const typedBlob = blob.type ? blob : new Blob([blob], { type });
-	const buffer = await typedBlob.arrayBuffer();
-	const objectUrl = URL.createObjectURL(new Blob([buffer], { type }));
+	const objectUrl = URL.createObjectURL(typedBlob);
 
+	// Fast path for prefetch / first paint: skip AudioContext decode (can take seconds).
+	if (!analyze) {
+		return { objectUrl, duration: 0, waveform: [] };
+	}
+
+	const buffer = await typedBlob.arrayBuffer();
 	let duration = 0;
 	let waveform = [];
 	try {
@@ -2195,7 +2271,7 @@ async function prepareVoicePlaybackFromBlob(blob, mimeType) {
 				const decoded = await Promise.race([
 					ctx.decodeAudioData(buffer.slice(0)),
 					new Promise((_, reject) => {
-						window.setTimeout(() => reject(new Error('decode timeout')), 5000);
+						window.setTimeout(() => reject(new Error('decode timeout')), 2500);
 					}),
 				]);
 				duration = decoded.duration || 0;
@@ -2245,33 +2321,35 @@ function VoiceLoadingIcon() {
 	);
 }
 
-function VoicePlaybackButton({ playing, loading, onClick }) {
+function VoicePlaybackButton({ playing, loading, failed, onClick }) {
 	const label = loading
 		? 'Loading voice message'
-		: playing
-			? 'Pause voice message'
-			: 'Play voice message';
+		: failed
+			? 'Retry voice message'
+			: playing
+				? 'Pause voice message'
+				: 'Play voice message';
 	return (
 		<button
 			type="button"
 			onClick={onClick}
 			aria-label={label}
-			className={`wa-voice-play grid shrink-0 place-items-center ${playing ? 'is-playing' : ''} ${loading ? 'is-loading' : ''}`}
+			className={`wa-voice-play grid shrink-0 place-items-center ${playing ? 'is-playing' : ''} ${loading ? 'is-loading' : ''} ${failed ? 'is-failed' : ''}`}
 		>
 			{loading ? <VoiceLoadingIcon /> : playing ? <VoicePauseIcon /> : <VoicePlayIcon />}
 		</button>
 	);
 }
 
-function VoiceWaveform({ peaks, progress, mine, loading, onSeek }) {
+function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
 	const items = peaks.length > 0 ? peaks : seededWaveform('', 40);
 	return (
 		<button
 			type="button"
 			onClick={onSeek}
-			disabled={loading}
+			disabled={loading || failed}
 			aria-label="Seek voice message"
-			className={`wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60`}
+			className={`wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60 ${failed ? 'is-failed' : ''}`}
 		>
 			<span className="wa-voice-waveform-bars" aria-hidden="true">
 				{items.map((height, index) => {
@@ -2286,7 +2364,7 @@ function VoiceWaveform({ peaks, progress, mine, loading, onSeek }) {
 					);
 				})}
 			</span>
-			{progress > 0.01 ? (
+			{!failed && progress > 0.01 ? (
 				<span
 					className={`wa-voice-thumb ${mine ? 'is-outgoing' : 'is-incoming'}`}
 					style={{ left: `${Math.max(0, Math.min(1, progress)) * 100}%` }}
@@ -2394,19 +2472,21 @@ function VoiceMessage({
 	demoAttachment = false,
 	seed,
 	fallbackDuration = 0,
+	labels = {},
 }) {
 	const audioRef = useRef(null);
 	const containerRef = useRef(null);
 	const objectUrlRef = useRef(null);
 	const voiceBlobRef = useRef(null);
 	const loadPromiseRef = useRef(null);
+	const analyzedRef = useRef(false);
 	const [playing, setPlaying] = useState(false);
 	const [loadingPlayback, setLoadingPlayback] = useState(false);
 	const [loadFailed, setLoadFailed] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [playbackUrl, setPlaybackUrl] = useState(null);
 	const [playbackRate, setPlaybackRate] = useState(1);
-	const fallbackBars = useMemo(() => seededWaveform(seed, 40), [seed]);
+	const fallbackBars = useMemo(() => seededWaveform(seed, 36), [seed]);
 	const [bars, setBars] = useState(fallbackBars);
 	const [duration, setDuration] = useState(
 		Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0,
@@ -2429,59 +2509,83 @@ function VoiceMessage({
 		setLoadingPlayback(false);
 		voiceBlobRef.current = null;
 		loadPromiseRef.current = null;
+		analyzedRef.current = false;
 		if (objectUrlRef.current) {
 			URL.revokeObjectURL(objectUrlRef.current);
 			objectUrlRef.current = null;
 		}
 	}, [url, attachmentId, demoAttachment, mimeType, fallbackBars]);
 
-	const ensurePlaybackReady = useCallback(async ({ priority = false } = {}) => {
-		if (playbackUrl) return playbackUrl;
-		if (loadPromiseRef.current) return loadPromiseRef.current;
+	const ensurePlaybackReady = useCallback(async ({ priority = false, analyze = false, softFail = false } = {}) => {
+		if (playbackUrl && (!analyze || analyzedRef.current)) return playbackUrl;
+		if (loadPromiseRef.current) {
+			const pendingUrl = await loadPromiseRef.current.catch(() => null);
+			if (pendingUrl && (!analyze || analyzedRef.current)) return pendingUrl;
+		}
 
 		const run = (async () => {
 			setLoadingPlayback(true);
-			setLoadFailed(false);
+			if (!softFail) setLoadFailed(false);
 			try {
-				let blob = null;
-				if (canFetchAttachment) {
-					blob = demoAttachment
-						? await demoApi.getMedia(rawDemoId(attachmentId))
-						: await requestAttachmentBlob(attachmentId, {
-								timeout: 45_000,
-								priority,
-							});
-					if (
-						blob &&
-						(!blob.type ||
-							String(blob.type).includes('octet-stream') ||
-							String(blob.type).includes('application/ogg'))
-					) {
-						blob = blob.slice(0, blob.size, mimeType || 'audio/ogg; codecs=opus');
+				let blob = voiceBlobRef.current;
+				if (!blob) {
+					const fetchBlob = async () => {
+						if (canFetchAttachment) {
+							let next = demoAttachment
+								? await demoApi.getMedia(rawDemoId(attachmentId))
+								: await requestAttachmentBlob(attachmentId, {
+										timeout: priority ? 45_000 : 30_000,
+										priority,
+									});
+							if (
+								next &&
+								(!next.type ||
+									String(next.type).includes('octet-stream') ||
+									String(next.type).includes('application/ogg'))
+							) {
+								next = next.slice(0, next.size, mimeType || 'audio/ogg; codecs=opus');
+							}
+							return assertAudioBlob(next);
+						}
+						if (url) {
+							const response = url.startsWith('blob:')
+								? await fetch(url)
+								: await fetch(url, { mode: 'cors', credentials: 'omit' });
+							if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
+							return assertAudioBlob(await response.blob());
+						}
+						throw new Error('Voice message unavailable');
+					};
+
+					try {
+						blob = await fetchBlob();
+					} catch (firstError) {
+						if (!priority) throw firstError;
+						forgetAttachmentBlob(attachmentId);
+						voiceBlobRef.current = null;
+						await new Promise(resolve => window.setTimeout(resolve, 450));
+						blob = await fetchBlob();
 					}
-					assertAudioBlob(blob);
-				} else if (url) {
-					const response = url.startsWith('blob:')
-						? await fetch(url)
-						: await fetch(url, { mode: 'cors', credentials: 'omit' });
-					if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
-					blob = assertAudioBlob(await response.blob());
-				} else {
-					throw new Error('Voice message unavailable');
+					voiceBlobRef.current = blob;
 				}
 
-				voiceBlobRef.current = blob;
-				const prepared = await prepareVoicePlaybackFromBlob(blob, mimeType || blob.type);
-				if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+				const prepared = await prepareVoicePlaybackFromBlob(blob, mimeType || blob.type, {
+					analyze,
+				});
+				if (objectUrlRef.current && objectUrlRef.current !== prepared.objectUrl) {
+					URL.revokeObjectURL(objectUrlRef.current);
+				}
 				objectUrlRef.current = prepared.objectUrl;
 				setPlaybackUrl(prepared.objectUrl);
 				if (prepared.waveform?.length) setBars(prepared.waveform);
 				if (prepared.duration > 0) {
 					setDuration(current => (current > 0 ? current : prepared.duration));
 				}
+				if (analyze) analyzedRef.current = true;
+				setLoadFailed(false);
 				return prepared.objectUrl;
 			} catch (error) {
-				setLoadFailed(true);
+				if (!softFail) setLoadFailed(true);
 				throw error;
 			} finally {
 				setLoadingPlayback(false);
@@ -2497,8 +2601,8 @@ function VoiceMessage({
 		if (!isNearViewport) return undefined;
 		if (!canFetchAttachment && !url) return undefined;
 		const timer = window.setTimeout(() => {
-			void ensurePlaybackReady().catch(() => {});
-		}, 120);
+			void ensurePlaybackReady({ analyze: false, softFail: true }).catch(() => {});
+		}, 80);
 		return () => window.clearTimeout(timer);
 	}, [canFetchAttachment, ensurePlaybackReady, isNearViewport, url]);
 
@@ -2563,7 +2667,13 @@ function VoiceMessage({
 			return;
 		}
 		try {
-			const readyUrl = await ensurePlaybackReady({ priority: true });
+			if (loadFailed) {
+				forgetAttachmentBlob(attachmentId);
+				voiceBlobRef.current = null;
+				analyzedRef.current = false;
+				setPlaybackUrl(null);
+			}
+			const readyUrl = await ensurePlaybackReady({ priority: true, analyze: true });
 			const audio = audioRef.current;
 			if (!audio || !readyUrl) return;
 			if (audio.src !== readyUrl) audio.src = readyUrl;
@@ -2585,7 +2695,7 @@ function VoiceMessage({
 
 	const seekTo = event => {
 		const audio = audioRef.current;
-		if (!audio || !duration || !playbackUrl) return;
+		if (!audio || !duration || !playbackUrl || loadFailed) return;
 		const rect = event.currentTarget.getBoundingClientRect();
 		const isRtl =
 			typeof document !== 'undefined' &&
@@ -2597,11 +2707,14 @@ function VoiceMessage({
 	};
 
 	const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
+	const statusLabel = loadFailed
+		? labels.tapToRetry || labels.failed || 'Tap to retry'
+		: formatClock(currentTime > 0 ? currentTime : duration);
 
 	return (
 		<div
 			ref={containerRef}
-			className={`wa-voice-message ${mine ? 'is-outgoing' : 'is-incoming'}`}
+			className={`wa-voice-message ${mine ? 'is-outgoing' : 'is-incoming'} ${loadFailed ? 'is-failed' : ''} ${loadingPlayback ? 'is-loading' : ''}`}
 		>
 			<audio ref={audioRef} preload="metadata" src={playbackUrl || undefined} className="hidden" />
 			<VoiceMessageLayout mine={mine}>
@@ -2610,23 +2723,41 @@ function VoiceMessage({
 						<VoicePlaybackButton
 							playing={playing}
 							loading={loadingPlayback}
+							failed={loadFailed}
 							onClick={() => void toggle()}
 						/>
-						<VoiceWaveform
-							peaks={bars}
-							progress={progress}
-							mine={mine}
-							loading={loadingPlayback}
-							onSeek={seekTo}
-						/>
-						<VoicePlaybackRate value={playbackRate} onChange={cyclePlaybackRate} />
-					</div>
-					<div className="wa-voice-track-meta">
-						<span className="wa-voice-duration">
-							{loadFailed && !playbackUrl
-								? 'Failed'
-								: formatClock(currentTime > 0 ? currentTime : duration)}
-						</span>
+						<div className="wa-voice-main">
+							<div className="wa-voice-main-row">
+								<VoiceWaveform
+									peaks={bars}
+									progress={progress}
+									mine={mine}
+									loading={loadingPlayback}
+									failed={loadFailed}
+									onSeek={seekTo}
+								/>
+								{!loadFailed ? (
+									<VoicePlaybackRate value={playbackRate} onChange={cyclePlaybackRate} />
+								) : (
+									<button
+										type="button"
+										className="wa-voice-retry"
+										onClick={event => {
+											event.stopPropagation();
+											void toggle();
+										}}
+									>
+										<RefreshCw size={11} strokeWidth={2.4} />
+										<span>{labels.retry || 'Retry'}</span>
+									</button>
+								)}
+							</div>
+							<div className="wa-voice-track-meta">
+								<span className={`wa-voice-duration ${loadFailed ? 'is-failed' : ''}`}>
+									{statusLabel}
+								</span>
+							</div>
+						</div>
 					</div>
 				</div>
 			</VoiceMessageLayout>
@@ -2674,7 +2805,7 @@ export function MediaAttachment({
 	sessionReady = true,
 }) {
 	const [url, setUrl] = useState(null);
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(() => !attachment?.previewDataUrl);
 	const [failed, setFailed] = useState(false);
 	const [fileAction, setFileAction] = useState('');
 	const [retryNonce, setRetryNonce] = useState(0);
@@ -2693,12 +2824,18 @@ export function MediaAttachment({
 		if (attachment?.id) {
 			if (demoAttachment) return demoApi.getMedia(rawDemoId(attachment.id));
 			try {
-				return await requestAttachmentBlob(attachment.id);
+				return await requestAttachmentBlob(attachment.id, {
+					timeout: 45_000,
+					priority: true,
+				});
 			} catch (firstError) {
-				// One retry — media often fails while WA Web is still finishing MAIN sync.
-				await new Promise(resolve => window.setTimeout(resolve, 2500));
+				// Short retry — media often fails while WA is still hydrating.
+				await new Promise(resolve => window.setTimeout(resolve, 500));
 				try {
-					return await requestAttachmentBlob(attachment.id, { timeout: 90_000 });
+					return await requestAttachmentBlob(attachment.id, {
+						timeout: 60_000,
+						priority: true,
+					});
 				} catch {
 					throw firstError;
 				}
@@ -2738,7 +2875,7 @@ export function MediaAttachment({
 			autoRetryCountRef.current += 1;
 			setFailed(false);
 			setRetryNonce(value => value + 1);
-		}, 3200);
+		}, 1200);
 		return () => window.clearTimeout(timer);
 	}, [failed, sessionReady, isNearViewport]);
 
@@ -2828,6 +2965,7 @@ export function MediaAttachment({
 				demoAttachment={demoAttachment}
 				seed={String(attachment.id || attachment.fileName || attachment.url)}
 				fallbackDuration={durationFromFileName(attachment.fileName)}
+				labels={labels}
 			/>
 		);
 	}
@@ -2989,6 +3127,7 @@ export function MediaAttachment({
 					loading={Boolean(loading && !url)}
 					alt={attachment.fileName || 'image'}
 					cover={isGallery}
+					blurPlaceholder={!url && Boolean(previewDataUrl)}
 					onOpen={() => {
 						if (url) {
 							onOpenImage?.(attachment.id);
@@ -3101,11 +3240,19 @@ function MessageAttachments({
 	onOpenImage,
 	onOpenDocument,
 	sessionReady = true,
+	messageRaw = null,
 }) {
-	const images = attachments.filter(attachment =>
+	const rawPreview = mediaPreviewFromRaw(messageRaw);
+	const normalized = (Array.isArray(attachments) ? attachments : []).map(attachment => {
+		const kind = String(attachment?.type || '').toLowerCase();
+		if (!['image', 'sticker', 'video'].includes(kind)) return attachment;
+		if (attachment?.previewDataUrl) return attachment;
+		return rawPreview ? { ...attachment, previewDataUrl: rawPreview } : attachment;
+	});
+	const images = normalized.filter(attachment =>
 		['image', 'sticker'].includes(String(attachment.type || '').toLowerCase()),
 	);
-	const otherAttachments = attachments.filter(attachment =>
+	const otherAttachments = normalized.filter(attachment =>
 		!['image', 'sticker'].includes(String(attachment.type || '').toLowerCase()),
 	);
 	const visibleImages = images.slice(0, 4);
@@ -3378,14 +3525,52 @@ function MessageActionMenu({
 	onAction,
 	onReact,
 	mentionDirectory = null,
+	accountId = null,
+	conversationId = null,
+	canUseBoard = false,
+	canUseGroups = false,
+	onBoardSuccess,
 }) {
 	const [mounted, setMounted] = useState(false);
+	const [boardOpen, setBoardOpen] = useState(false);
 	const [desktopPos, setDesktopPos] = useState(() =>
 		computeAnchoredMenuPosition(anchorRect),
 	);
 	const menuRef = useRef(null);
+	const boardItemRef = useRef(null);
+	const boardCloseTimerRef = useRef(null);
+	const [boardFlyoutPos, setBoardFlyoutPos] = useState(null);
+
+	const clearBoardCloseTimer = () => {
+		if (boardCloseTimerRef.current) {
+			window.clearTimeout(boardCloseTimerRef.current);
+			boardCloseTimerRef.current = null;
+		}
+	};
+
+	const openBoardSubmenu = () => {
+		if (!canUseBoard) return;
+		clearBoardCloseTimer();
+		setBoardOpen(true);
+	};
+
+	const scheduleBoardSubmenuClose = () => {
+		clearBoardCloseTimer();
+		boardCloseTimerRef.current = window.setTimeout(() => {
+			setBoardOpen(false);
+			boardCloseTimerRef.current = null;
+		}, 160);
+	};
 
 	useEffect(() => setMounted(true), []);
+	useEffect(() => {
+		if (!open) {
+			clearBoardCloseTimer();
+			setBoardOpen(false);
+			setBoardFlyoutPos(null);
+		}
+	}, [open]);
+	useEffect(() => () => clearBoardCloseTimer(), []);
 
 	useEffect(() => {
 		if (!open) return undefined;
@@ -3393,8 +3578,8 @@ function MessageActionMenu({
 			const measured = menuRef.current?.getBoundingClientRect();
 			setDesktopPos(
 				computeAnchoredMenuPosition(anchorRect, {
-					width: measured?.width || 220,
-					height: measured?.height || 420,
+					width: measured?.width || 240,
+					height: measured?.height || 480,
 				}),
 			);
 		};
@@ -3409,11 +3594,60 @@ function MessageActionMenu({
 		};
 	}, [open, anchorRect]);
 
+	useEffect(() => {
+		if (!boardOpen || !open) {
+			setBoardFlyoutPos(null);
+			return undefined;
+		}
+		const update = () => {
+			const trigger = boardItemRef.current?.getBoundingClientRect();
+			if (!trigger) return;
+			const flyoutW = 228;
+			const gap = 8;
+			const margin = 10;
+			const viewportW = window.innerWidth || 1280;
+			const viewportH = window.innerHeight || 720;
+			const spaceEnd = viewportW - trigger.right - margin;
+			const spaceStart = trigger.left - margin;
+			const openOnStart = spaceEnd < flyoutW + gap && spaceStart >= flyoutW + gap;
+			let left = openOnStart ? trigger.left - flyoutW - gap : trigger.right + gap;
+			left = Math.min(Math.max(margin, left), viewportW - flyoutW - margin);
+			const maxHeight = Math.max(120, viewportH - margin * 2);
+			let top = trigger.top;
+			top = Math.min(Math.max(margin, top), viewportH - Math.min(maxHeight, 280) - margin);
+			setBoardFlyoutPos({ top, left, maxHeight });
+		};
+		update();
+		const raf = window.requestAnimationFrame(update);
+		window.addEventListener('resize', update);
+		window.addEventListener('scroll', update, true);
+		return () => {
+			window.cancelAnimationFrame(raf);
+			window.removeEventListener('resize', update);
+			window.removeEventListener('scroll', update, true);
+		};
+	}, [boardOpen, open, desktopPos.top, desktopPos.left]);
+
 	if (!open || !message) return null;
 	const ar = locale === 'ar';
+	const canSelect = isSelectableTranscriptMessage(message);
+	const hasCopyableText = Boolean(String(message.text || '').trim());
 	const actions = [
 		isVoice && { id: 'transcribe', label: ar ? 'تحويل إلى نص' : 'Transcribe', icon: Mic },
-		isSelectableTranscriptMessage(message) && { id: 'select', label: ar ? 'تحديد' : 'Select', icon: ListChecks },
+		canUseBoard &&
+			canSelect && {
+				id: 'addToBoard',
+				label: ar ? 'إضافة للمهام…' : 'Add to tasks…',
+				icon: LayoutGrid,
+				submenu: true,
+			},
+		canUseGroups && {
+			id: 'addToGroup',
+			label: ar ? 'إضافة لمجموعة رسائل' : 'Add to message group',
+			icon: FolderKanban,
+		},
+		canSelect && { id: 'select', label: ar ? 'تحديد' : 'Select', icon: ListChecks },
+		hasCopyableText && { id: 'copy', label: ar ? 'نسخ النص' : 'Copy text', icon: Copy },
 		{ id: 'reply', label: ar ? 'رد' : 'Reply', icon: Reply },
 		{ id: 'forward', label: ar ? 'إعادة توجيه' : 'Forward', icon: Send },
 		{ id: 'info', label: ar ? 'معلومات' : 'Info', icon: MessageCircle },
@@ -3435,35 +3669,125 @@ function MessageActionMenu({
 		},
 		{ id: 'delete', label: ar ? 'حذف' : 'Delete', icon: Trash2, destructive: true },
 	].filter(Boolean);
-	const menuItems = (
-		<>
-			{actions.map(action => {
-				const Icon = action.icon;
-				const filled = action.id === 'star'
+
+	const runAction = (actionId, event) => {
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
+		if (actionId === 'addToBoard') {
+			clearBoardCloseTimer();
+			setBoardOpen(boardOpen ? false : true);
+			return;
+		}
+		clearBoardCloseTimer();
+		setBoardOpen(false);
+		onAction(actionId);
+	};
+
+	const renderMenuItems = (options = {}) => {
+		const { attachBoardRef = false } = options;
+		return actions.map(action => {
+			const Icon = action.icon;
+			const filled =
+				action.id === 'star'
 					? Boolean(message.isStarred)
 					: action.id === 'pin'
 						? Boolean(message.isPinned)
 						: false;
-				return (
-					<button
-						key={action.id}
-						type="button"
-						disabled={busy}
-						onClick={() => onAction(action.id)}
-						className={`wa-message-action-item ${action.destructive ? 'is-destructive' : ''}`}
-					>
-						<span>{action.label}</span>
-						<Icon
-							size={16}
-							strokeWidth={2.1}
-							fill={filled ? 'currentColor' : 'none'}
-						/>
-					</button>
-				);
-			})}
-		</>
-	);
-	const reactions = (
+			const isBoard = action.id === 'addToBoard';
+			return (
+				<button
+					key={action.id}
+					ref={isBoard && attachBoardRef ? boardItemRef : undefined}
+					type="button"
+					disabled={busy}
+					onMouseEnter={() => {
+						if (isBoard) openBoardSubmenu();
+						else scheduleBoardSubmenuClose();
+					}}
+					onMouseDown={event => {
+						if (isBoard) {
+							event.preventDefault();
+							event.stopPropagation();
+						}
+					}}
+					onClick={event => runAction(action.id, event)}
+					aria-expanded={isBoard ? boardOpen : undefined}
+					aria-haspopup={isBoard ? 'menu' : undefined}
+					className={`wa-message-action-item ${action.destructive ? 'is-destructive' : ''} ${
+						isBoard && boardOpen ? 'is-active' : ''
+					}`}
+				>
+					<span className="flex min-w-0 flex-1 items-center gap-1">
+						{action.label}
+						{action.submenu ? (
+							<ChevronRight
+								size={14}
+								className={`opacity-50 transition-transform rtl:rotate-180 ${
+									boardOpen && isBoard ? 'rotate-90 rtl:-rotate-90' : ''
+								}`}
+							/>
+						) : null}
+					</span>
+					<Icon
+						size={16}
+						strokeWidth={2.1}
+						fill={filled ? 'currentColor' : 'none'}
+					/>
+				</button>
+			);
+		});
+	};
+
+	const renderBoardFlyout = () =>
+		boardOpen && canUseBoard && accountId && conversationId && boardFlyoutPos ? (
+			<div
+				className="wa-message-action-board-flyout hidden min-[769px]:block"
+				style={{
+					top: boardFlyoutPos.top,
+					left: boardFlyoutPos.left,
+					maxHeight: boardFlyoutPos.maxHeight,
+				}}
+				onMouseEnter={openBoardSubmenu}
+				onMouseLeave={scheduleBoardSubmenuClose}
+				onMouseDown={event => event.stopPropagation()}
+				onClick={event => event.stopPropagation()}
+			>
+				<BoardColumnPickerMenu
+					accountId={accountId}
+					conversationId={conversationId}
+					messageIds={[message.id]}
+					locale={locale}
+					onSuccess={() => {
+						onBoardSuccess?.();
+						onClose?.();
+					}}
+					className="wa-message-action-board-panel"
+				/>
+			</div>
+		) : null;
+
+	const renderBoardSheet = () =>
+		boardOpen && canUseBoard && accountId && conversationId ? (
+			<div
+				className="wa-message-action-board wa-message-action-board--sheet"
+				onMouseDown={event => event.stopPropagation()}
+				onClick={event => event.stopPropagation()}
+			>
+				<BoardColumnPickerMenu
+					accountId={accountId}
+					conversationId={conversationId}
+					messageIds={[message.id]}
+					locale={locale}
+					onSuccess={() => {
+						onBoardSuccess?.();
+						onClose?.();
+					}}
+					className="wa-message-action-board-panel"
+				/>
+			</div>
+		) : null;
+
+	const renderReactions = () => (
 		<div className="wa-message-action-reactions">
 			{QUICK_REACTIONS.map(emoji => (
 				<button
@@ -3513,14 +3837,14 @@ function MessageActionMenu({
 				style={{
 					top: desktopPos.top,
 					left: desktopPos.left,
-					width: desktopPos.width,
+					width: desktopPos.width || 220,
 				}}
+				onMouseLeave={scheduleBoardSubmenuClose}
 			>
-				{reactions}
-				<div className="wa-message-action-list">
-					{menuItems}
-				</div>
+				{renderReactions()}
+				<div className="wa-message-action-list">{renderMenuItems({ attachBoardRef: true })}</div>
 			</div>
+			{renderBoardFlyout()}
 
 			{/* Mobile sheet */}
 			<div
@@ -3558,13 +3882,276 @@ function MessageActionMenu({
 						</div>
 					</div>
 					<div className="mx-auto mb-2.5 w-fit overflow-hidden rounded-full bg-white shadow-xl">
-						{reactions}
+						{renderReactions()}
 					</div>
 					<div className="wa-message-action-sheet overflow-hidden">
-						{menuItems}
+						{renderMenuItems({ attachBoardRef: false })}
+						{renderBoardSheet()}
 					</div>
 				</div>
 			</div>
+		</>,
+		document.body,
+	);
+}
+
+function MultiMessageActionMenu({
+	open,
+	anchorRect,
+	locale,
+	selectedCount,
+	messageIds = [],
+	accountId,
+	conversationId,
+	canTranscribe = false,
+	canUseBoard = false,
+	canUseGroups = false,
+	busy = false,
+	onClose,
+	onAction,
+	onBoardSuccess,
+}) {
+	const [mounted, setMounted] = useState(false);
+	const [boardOpen, setBoardOpen] = useState(false);
+	const [boardFlyoutPos, setBoardFlyoutPos] = useState(null);
+	const [pos, setPos] = useState(() => computeAnchoredMenuPosition(anchorRect, { width: 248, height: 360 }));
+	const menuRef = useRef(null);
+	const boardItemRef = useRef(null);
+	const boardCloseTimerRef = useRef(null);
+
+	const clearBoardCloseTimer = () => {
+		if (boardCloseTimerRef.current) {
+			window.clearTimeout(boardCloseTimerRef.current);
+			boardCloseTimerRef.current = null;
+		}
+	};
+
+	const openBoardSubmenu = () => {
+		if (!canUseBoard) return;
+		clearBoardCloseTimer();
+		setBoardOpen(true);
+	};
+
+	const scheduleBoardSubmenuClose = () => {
+		clearBoardCloseTimer();
+		boardCloseTimerRef.current = window.setTimeout(() => {
+			setBoardOpen(false);
+			boardCloseTimerRef.current = null;
+		}, 160);
+	};
+
+	useEffect(() => setMounted(true), []);
+	useEffect(() => {
+		if (!open) {
+			clearBoardCloseTimer();
+			setBoardOpen(false);
+			setBoardFlyoutPos(null);
+		}
+	}, [open]);
+	useEffect(() => () => clearBoardCloseTimer(), []);
+	useEffect(() => {
+		if (!open) return undefined;
+		const update = () => {
+			const measured = menuRef.current?.getBoundingClientRect();
+			setPos(
+				computeAnchoredMenuPosition(anchorRect, {
+					width: measured?.width || 248,
+					height: measured?.height || 360,
+				}),
+			);
+		};
+		update();
+		const raf = window.requestAnimationFrame(update);
+		window.addEventListener('resize', update);
+		window.addEventListener('scroll', update, true);
+		return () => {
+			window.cancelAnimationFrame(raf);
+			window.removeEventListener('resize', update);
+			window.removeEventListener('scroll', update, true);
+		};
+	}, [open, anchorRect]);
+
+	useEffect(() => {
+		if (!boardOpen || !open) {
+			setBoardFlyoutPos(null);
+			return undefined;
+		}
+		const update = () => {
+			const trigger = boardItemRef.current?.getBoundingClientRect();
+			if (!trigger) return;
+			const flyoutW = 228;
+			const gap = 8;
+			const margin = 10;
+			const viewportW = window.innerWidth || 1280;
+			const viewportH = window.innerHeight || 720;
+			const spaceEnd = viewportW - trigger.right - margin;
+			const spaceStart = trigger.left - margin;
+			const openOnStart = spaceEnd < flyoutW + gap && spaceStart >= flyoutW + gap;
+			let left = openOnStart ? trigger.left - flyoutW - gap : trigger.right + gap;
+			left = Math.min(Math.max(margin, left), viewportW - flyoutW - margin);
+			const maxHeight = Math.max(120, viewportH - margin * 2);
+			let top = trigger.top;
+			top = Math.min(Math.max(margin, top), viewportH - Math.min(maxHeight, 280) - margin);
+			setBoardFlyoutPos({ top, left, maxHeight });
+		};
+		update();
+		const raf = window.requestAnimationFrame(update);
+		window.addEventListener('resize', update);
+		window.addEventListener('scroll', update, true);
+		return () => {
+			window.cancelAnimationFrame(raf);
+			window.removeEventListener('resize', update);
+			window.removeEventListener('scroll', update, true);
+		};
+	}, [boardOpen, open, pos.top, pos.left]);
+
+	if (!mounted || !open) return null;
+	const ar = locale === 'ar';
+	const actions = [
+		canUseBoard && {
+			id: 'addToBoard',
+			label: ar ? 'إضافة للمهام…' : 'Add to tasks…',
+			icon: LayoutGrid,
+			submenu: true,
+		},
+		canTranscribe && {
+			id: 'transcribe',
+			label: ar ? 'تحويل المحدد' : 'Transcribe selected',
+			icon: AudioLines,
+		},
+		canUseGroups && {
+			id: 'addToGroup',
+			label: ar ? 'إضافة لمجموعة رسائل' : 'Add to message group',
+			icon: FolderKanban,
+		},
+		canUseGroups && {
+			id: 'removeFromGroup',
+			label: ar ? 'إزالة من المجموعة' : 'Remove from group',
+			icon: Trash2,
+		},
+		{
+			id: 'selectAll',
+			label: ar ? 'تحديد الكل' : 'Select all',
+			icon: CheckCheck,
+		},
+		{
+			id: 'clear',
+			label: ar ? 'إلغاء التحديد' : 'Clear selection',
+			icon: X,
+		},
+	].filter(Boolean);
+
+	return createPortal(
+		<>
+			<button
+				type="button"
+				aria-label={ar ? 'إغلاق القائمة' : 'Close menu'}
+				onClick={onClose}
+				className="fixed inset-0 z-[120] bg-transparent"
+			/>
+			<div
+				ref={menuRef}
+				className="wa-message-action-menu"
+				style={{
+					top: pos.top,
+					left: pos.left,
+					width: Math.max(pos.width || 248, 248),
+				}}
+				onMouseDown={event => event.stopPropagation()}
+				onClick={event => event.stopPropagation()}
+				onMouseLeave={scheduleBoardSubmenuClose}
+			>
+				<div className="wa-message-action-multi-head">
+					{ar ? `${selectedCount} رسالة محددة` : `${selectedCount} selected`}
+				</div>
+				<div className="wa-message-action-list">
+					{actions.map(action => {
+						const Icon = action.icon;
+						const isBoard = action.id === 'addToBoard';
+						return (
+							<button
+								key={action.id}
+								ref={isBoard ? boardItemRef : undefined}
+								type="button"
+								disabled={
+									busy ||
+									(action.id !== 'clear' &&
+										action.id !== 'selectAll' &&
+										!messageIds.length)
+								}
+								onMouseEnter={() => {
+									if (isBoard) openBoardSubmenu();
+									else scheduleBoardSubmenuClose();
+								}}
+								onMouseDown={event => {
+									if (isBoard) {
+										event.preventDefault();
+										event.stopPropagation();
+									}
+								}}
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
+									if (isBoard) {
+										clearBoardCloseTimer();
+										setBoardOpen(boardOpen ? false : true);
+										return;
+									}
+									clearBoardCloseTimer();
+									setBoardOpen(false);
+									onAction(action.id);
+								}}
+								aria-expanded={isBoard ? boardOpen : undefined}
+								aria-haspopup={isBoard ? 'menu' : undefined}
+								className={`wa-message-action-item ${
+									isBoard && boardOpen ? 'is-active' : ''
+								}`}
+							>
+								<span className="flex min-w-0 flex-1 items-center gap-1">
+									{action.label}
+									{action.submenu ? (
+										<ChevronRight
+											size={14}
+											className={`opacity-50 transition-transform rtl:rotate-180 ${
+												boardOpen && isBoard
+													? 'rotate-90 rtl:-rotate-90'
+													: ''
+											}`}
+										/>
+									) : null}
+								</span>
+								<Icon size={16} strokeWidth={2.1} />
+							</button>
+						);
+					})}
+				</div>
+			</div>
+			{boardOpen && canUseBoard && accountId && conversationId && boardFlyoutPos ? (
+				<div
+					className="wa-message-action-board-flyout"
+					style={{
+						top: boardFlyoutPos.top,
+						left: boardFlyoutPos.left,
+						maxHeight: boardFlyoutPos.maxHeight,
+					}}
+					onMouseEnter={openBoardSubmenu}
+					onMouseLeave={scheduleBoardSubmenuClose}
+					onMouseDown={event => event.stopPropagation()}
+					onClick={event => event.stopPropagation()}
+				>
+					<BoardColumnPickerMenu
+						accountId={accountId}
+						conversationId={conversationId}
+						messageIds={messageIds}
+						locale={locale}
+						onSuccess={() => {
+							onBoardSuccess?.();
+							onClose?.();
+						}}
+						className="wa-message-action-board-panel"
+					/>
+				</div>
+			) : null}
 		</>,
 		document.body,
 	);
@@ -4415,20 +5002,14 @@ function Empty({ icon: Icon = MessageCircle, title, hint, className = '' }) {
 	);
 }
 
-function ChatIdlePane({ title, hint, unreadLabel }) {
+function ChatIdlePane({ title, hint, unreadLabel, steps }) {
 	return (
-		<div className="wa-chat-idle" role="status">
-			<div className="wa-chat-idle__art" aria-hidden="true">
-				<span className="wa-chat-idle__icon">
-					<MessageCircle size={36} strokeWidth={1.7} />
-				</span>
-			</div>
-			<h2 className="wa-chat-idle__title">{title}</h2>
-			{hint ? <p className="wa-chat-idle__hint">{hint}</p> : null}
-			{unreadLabel ? (
-				<span className="wa-chat-idle__unread">{unreadLabel}</span>
-			) : null}
-		</div>
+		<WhatsAppChatIdlePane
+			title={title}
+			hint={hint}
+			unreadLabel={unreadLabel}
+			steps={steps}
+		/>
 	);
 }
 
@@ -4757,7 +5338,8 @@ function WhatsAppWorkspaceContent() {
 	const hoverPrefetchTimerRef = useRef(null);
 	const prefetchInFlightRef = useRef(0);
 	const listScrollPrefetchBlockedUntilRef = useRef(0);
-	const [activeTab, setActiveTab] = useState(defaultWhatsAppActiveTab);
+	const [activeTab, setActiveTab] = useState(null);
+	const [tabReady, setTabReady] = useState(false);
 	const restoredTabRef = useRef(false);
 	const [settingsSection, setSettingsSection] = useState('ai');
 	const [accounts, setAccounts] = useState([]);
@@ -4891,6 +5473,7 @@ function WhatsAppWorkspaceContent() {
 	const [reactingMessageIds, setReactingMessageIds] = useState(() => new Set());
 	const [actionMessageId, setActionMessageId] = useState(null);
 	const [actionMessageAnchor, setActionMessageAnchor] = useState(null);
+	const [multiMessageMenuAnchor, setMultiMessageMenuAnchor] = useState(null);
 	const [pendingMessageActions, setPendingMessageActions] = useState(() => new Set());
 	const [forwardingMessage, setForwardingMessage] = useState(null);
 	const [highlightedMessageKey, setHighlightedMessageKey] = useState(null);
@@ -5226,6 +5809,7 @@ function WhatsAppWorkspaceContent() {
 		reactionPickerMessageRef.current = null;
 		setActionMessageId(null);
 		setActionMessageAnchor(null);
+		setMultiMessageMenuAnchor(null);
 		setForwardingMessage(null);
 		setDeleteMessageTarget(null);
 		setMessageInfo(null);
@@ -5331,20 +5915,30 @@ function WhatsAppWorkspaceContent() {
 		return () => window.clearInterval(id);
 	}, []);
 
+	useLayoutEffect(() => {
+		const next = defaultWhatsAppActiveTab() || 'chats';
+		setActiveTab(next);
+		setTabReady(true);
+	}, []);
+
 	useEffect(() => {
+		if (!tabReady || !activeTab) return;
 		if (!currentUserId || currentUserId === 'anonymous') return;
 		if (!restoredTabRef.current) {
 			restoredTabRef.current = true;
-			const stored =
-				readStoredWhatsAppActiveTab(currentUserId) ||
-				readStoredWhatsAppActiveTab(null);
-			if (stored && stored !== activeTab) {
+			const stored = readStoredWhatsAppActiveTab(currentUserId);
+			if (
+				stored &&
+				stored !== 'notifications' &&
+				WHATSAPP_PERSISTED_TABS.has(stored) &&
+				stored !== activeTab
+			) {
 				setActiveTab(stored);
 				return;
 			}
 		}
 		writeStoredWhatsAppActiveTab(activeTab, currentUserId);
-	}, [activeTab, currentUserId]);
+	}, [activeTab, currentUserId, tabReady]);
 
 	useEffect(() => {
 		try {
@@ -5731,7 +6325,12 @@ function WhatsAppWorkspaceContent() {
 			setQr(null);
 			setPairingCode(null);
 		}
-		if (requestedAccount) setActiveTab('chats');
+		if (requestedAccount) {
+			const tab = activeTabRef.current;
+			if (isConversationWorkspaceTab(tab) || tab === 'accounts' || !tab) {
+				setActiveTab('chats');
+			}
+		}
 		return list;
 	}, [currentUserId]);
 
@@ -5812,7 +6411,11 @@ function WhatsAppWorkspaceContent() {
 			if (cachedItems.some(item => item.id === requestedConversationId)) {
 				setConversationId(requestedConversationId);
 				const requested = cachedItems.find(item => item.id === requestedConversationId);
-				setActiveTab(isChannelConversation(requested) ? 'channels' : 'chats');
+				// Never steal focus from Task Board / Emails / Reports / Settings.
+				const tab = activeTabRef.current;
+				if (isConversationWorkspaceTab(tab) || tab === 'accounts') {
+					setActiveTab(isChannelConversation(requested) ? 'channels' : 'chats');
+				}
 			}
 			setConversationPage(cached.page);
 			setConversationTotal(cached.total);
@@ -5996,7 +6599,12 @@ function WhatsAppWorkspaceContent() {
 		if (nextItems.some(item => item.id === requestedConversationId)) {
 			setConversationId(requestedConversationId);
 			const requested = nextItems.find(item => item.id === requestedConversationId);
-			setActiveTab(isChannelConversation(requested) ? 'channels' : 'chats');
+			// Keep the user on Task Board (and other non-chat tabs) when a deep-link
+			// conversationId is present — only switch when already in the chat workspace.
+			const tab = activeTabRef.current;
+			if (isConversationWorkspaceTab(tab) || tab === 'accounts') {
+				setActiveTab(isChannelConversation(requested) ? 'channels' : 'chats');
+			}
 		}
 		// Chip backfill must not reset All-inbox pagination / totals.
 		if (!chipBackfill) {
@@ -8678,6 +9286,7 @@ function WhatsAppWorkspaceContent() {
 		setGroupSelectMode(true);
 		setActionMessageId(null);
 		setActionMessageAnchor(null);
+		setMultiMessageMenuAnchor(null);
 		closeReactionPicker();
 		setSelectedMessageIds(current => {
 			const next = new Set(current);
@@ -8942,6 +9551,7 @@ function WhatsAppWorkspaceContent() {
 		setTicketSelectMode(true);
 		setActionMessageId(null);
 		setActionMessageAnchor(null);
+		setMultiMessageMenuAnchor(null);
 		closeReactionPicker();
 		setSelectedMessageIds(current => {
 			const next = new Set(current);
@@ -8985,17 +9595,12 @@ function WhatsAppWorkspaceContent() {
 	const handleMessageAction = async (message, action) => {
 		if (!message || message.optimistic) return;
 		setActionMessageId(null);
+		setMultiMessageMenuAnchor(null);
 		if (action !== 'react') {
 			setActionMessageAnchor(null);
 		}
 		if (action === 'reply') {
-			setReplyingTo({
-				id: message.id,
-				providerMessageId: message.providerMessageId,
-				text: message.text,
-				type: message.type,
-				direction: message.direction,
-			});
+			setReplyingTo(buildReplySnapshot(message));
 			return;
 		}
 		if (action === 'react') {
@@ -9022,6 +9627,29 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (action === 'select') {
 			applyMessageSelection(message, { toggle: false });
+			return;
+		}
+		if (action === 'copy') {
+			const text = String(message.text || '').trim();
+			if (!text) {
+				toast.error(locale === 'ar' ? 'لا يوجد نص للنسخ' : 'Nothing to copy');
+				return;
+			}
+			try {
+				await navigator.clipboard.writeText(text);
+				toast.success(t.copiedMessage);
+			} catch {
+				toast.error(locale === 'ar' ? 'تعذر النسخ' : 'Could not copy');
+			}
+			return;
+		}
+		if (action === 'addToGroup') {
+			if (demo.settings.enabled || isDemoId(conversationId)) {
+				toast.error(locale === 'ar' ? 'هذا الإجراء غير متاح في الوضع التجريبي' : 'This action is unavailable in demo mode');
+				return;
+			}
+			applyGroupMessageSelection(message, { toggle: false });
+			setGroupPickerOpen(true);
 			return;
 		}
 		if (demo.settings.enabled) {
@@ -9110,6 +9738,87 @@ function WhatsAppWorkspaceContent() {
 		} finally {
 			markMessageActionPending(message.id, false);
 		}
+	};
+
+	const handleMultiMessageAction = action => {
+		setMultiMessageMenuAnchor(null);
+		if (action === 'transcribe') {
+			openSelectedTranscriptBundle();
+			return;
+		}
+		if (action === 'addToGroup') {
+			if (demo.settings.enabled || isDemoId(conversationId)) {
+				toast.error(locale === 'ar' ? 'هذا الإجراء غير متاح في الوضع التجريبي' : 'This action is unavailable in demo mode');
+				return;
+			}
+			setTicketSelectMode(false);
+			setGroupSelectMode(true);
+			setGroupPickerOpen(true);
+			return;
+		}
+		if (action === 'removeFromGroup') {
+			void removeSelectedFromGroups();
+			return;
+		}
+		if (action === 'selectAll') {
+			if (groupSelectMode) {
+				const ids = effectiveMessages
+					.filter(item => item?.id && !item.optimistic)
+					.map(item => item.id);
+				setSelectedMessageIds(new Set(ids));
+				return;
+			}
+			const ids = selectableTranscriptMessages
+				.slice(0, MAX_TRANSCRIPT_BUNDLE_ITEMS)
+				.map(item => item.id);
+			setTicketSelectMode(true);
+			setSelectedMessageIds(new Set(ids));
+			if (selectableTranscriptMessages.length > MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+				toast.error(
+					t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)),
+				);
+			}
+			return;
+		}
+		if (action === 'clear') {
+			setTicketSelectMode(false);
+			setGroupSelectMode(false);
+			setGroupPickerOpen(false);
+			setSelectedMessageIds(new Set());
+		}
+	};
+
+	const openMessageContextMenu = (event, message) => {
+		if (!message || message.optimistic) return;
+		event.preventDefault();
+		event.stopPropagation();
+		if (mediaSelectMode) return;
+		closeReactionPicker();
+		const point = {
+			top: event.clientY,
+			bottom: event.clientY,
+			left: event.clientX,
+			right: event.clientX,
+			width: 0,
+			height: 0,
+		};
+		const hasBulkSelection =
+			selectedMessageIds.size > 0 || ticketSelectMode || groupSelectMode;
+		if (hasBulkSelection) {
+			if (!selectedMessageIds.has(message.id)) {
+				if (groupSelectMode) applyGroupMessageSelection(message, { toggle: false });
+				else if (isSelectableTranscriptMessage(message)) {
+					applyMessageSelection(message, { toggle: false });
+				}
+			}
+			setActionMessageId(null);
+			setActionMessageAnchor(null);
+			setMultiMessageMenuAnchor(point);
+			return;
+		}
+		setMultiMessageMenuAnchor(null);
+		setActionMessageAnchor(point);
+		setActionMessageId(message.id);
 	};
 
 	const forwardSelectedMessage = async targetConversationId => {
@@ -10002,14 +10711,19 @@ function WhatsAppWorkspaceContent() {
 				disabled: demoBlocked || demoChat || !conversationId || !accountId,
 				onClick: () => {
 					if (selectedMessageIds.size > 0) {
-						void sendSelectedToBoard();
+						setTicketSelectMode(true);
+						toast.success(
+							locale === 'ar'
+								? 'مرّر على «إضافة للوحة المهام» واختر العمود'
+								: 'Hover “Add to tasks board” and pick a column',
+						);
 						return;
 					}
 					setTicketSelectMode(true);
 					toast.success(
 						locale === 'ar'
-							? 'حدد الرسائل ثم اضغط إضافة للوحة المهام'
-							: 'Select messages, then add to tasks board',
+							? 'حدد الرسائل (نص/صوت) ثم مرّر على إضافة للوحة لاختيار العمود'
+							: 'Select messages (text/voice), then hover Add to board to pick a column',
 					);
 				},
 			},
@@ -10021,6 +10735,14 @@ function WhatsAppWorkspaceContent() {
 				active: messageGroupsOpen || Boolean(activeMessageGroup),
 				disabled: demoBlocked || demoChat || !conversationId,
 				onClick: toggleMessageGroupsPanel,
+			},
+			{
+				id: 'schedule',
+				label: t.scheduleMessage,
+				description: t.scheduleMessageHint,
+				icon: CalendarClock,
+				disabled: demoBlocked || demoChat || !conversationId || !accountId,
+				onClick: () => setScheduleDialogOpen(true),
 			},
 			{
 				id: 'group-select',
@@ -10248,9 +10970,14 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const loadTabData = async (tab, force = false) => {
+		if (tab === 'notifications') {
+			setActiveTab('chats');
+			return;
+		}
 		setActiveTab(tab);
 		setTabError('');
 		if (tab === 'profile') return;
+		if (tab === 'emails') return;
 		if (!accountId) return;
 		const targetAccountId = accountId;
 		const requestId = ++tabRequestId.current;
@@ -10312,7 +11039,7 @@ function WhatsAppWorkspaceContent() {
 				const { data } = await api.get(`/whatsapp/accounts/${targetAccountId}/groups`);
 				if (isCurrentRequest()) setGroups(data || []);
 			}
-			if (tab === 'notifications' || tab === 'calls') {
+			if (tab === 'calls') {
 				const { data } = await api.get(`/whatsapp/accounts/${targetAccountId}/logs`);
 				if (isCurrentRequest()) setLogs(data || []);
 			}
@@ -10393,26 +11120,31 @@ function WhatsAppWorkspaceContent() {
 	}, [accountId, canManageWhatsApp, canAssignWhatsApp]);
 
 	useEffect(() => {
+		if (!tabReady) return;
 		if (window.matchMedia('(max-width: 768px)').matches) {
-			const stored = readStoredWhatsAppActiveTab(currentUserId);
+			const stored =
+				readStoredWhatsAppActiveTab(currentUserId) ||
+				readStoredWhatsAppActiveTab(null);
 			// Mobile defaults to chats only when the user has no saved tab yet.
 			if (!stored) void loadTabData('chats');
 		}
 		// The mobile workspace opens on the familiar WhatsApp chats screen.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [tabReady]);
 
 	useEffect(() => {
 		if (
+			!tabReady ||
 			!accountId ||
-			!['groups', 'calls', 'notifications', 'reports', 'board', 'settings'].includes(activeTab)
+			!activeTab ||
+			!['groups', 'calls', 'reports', 'board', 'settings'].includes(activeTab)
 		) {
 			return;
 		}
 		void loadTabData(activeTab);
 		// Reload account-scoped tab data whenever the selected account changes.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [accountId]);
+	}, [accountId, tabReady]);
 
 	const openStory = async (status, queue = null, index = 0) => {
 		if (!status || !accountId) return;
@@ -10915,6 +11647,25 @@ function WhatsAppWorkspaceContent() {
 	const accStatus = selectedAccount ? statusMeta(selectedAccount.status, t, selectedAccount) : null;
 	const draftPresentation = messageTextPresentation(draft);
 
+	if (!tabReady || !activeTab) {
+		return (
+			<div
+				className={`wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-white text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:bg-transparent dark:bg-slate-950 dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
+				lang={locale}
+				dir={locale === 'ar' ? 'rtl' : 'ltr'}
+			>
+				<div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6">
+					<div className="rounded-2xl bg-[#e7f8ec] p-4 dark:bg-slate-800">
+						<Loader2 size={28} className="animate-spin text-[#20BD5C]" />
+					</div>
+					<p className="text-sm font-semibold text-slate-500">
+						{t.loading || (locale === 'ar' ? 'جارِ التحميل…' : 'Loading…')}
+					</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div
 			className={`wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-[#0b141a] text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:gap-0 min-[769px]:overflow-hidden min-[769px]:bg-transparent dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
@@ -11082,15 +11833,20 @@ function WhatsAppWorkspaceContent() {
 					connected={isAccountConnected}
 					showSettings={canManageWhatsApp || isAdmin}
 					showAccounts
-					showNotifications
 					showReports
 					showBoard={canManageWhatsApp || canAssignWhatsApp || isAdmin}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 				/>
-			<div className={`wa-web-main min-h-0 flex-1 overflow-y-auto nice-scroll max-[768px]:min-h-0 ${isConversationWorkspaceTab(activeTab) ? 'wa-chat-workspace-scroll' : ''}`}>
+			<div className={`wa-web-main min-h-0 flex-1 max-[768px]:min-h-0 ${
+				activeTab === 'board'
+					? 'wa-board-workspace'
+					: isConversationWorkspaceTab(activeTab)
+						? 'overflow-y-auto nice-scroll wa-chat-workspace-scroll'
+						: 'overflow-y-auto nice-scroll'
+			}`}>
 				{/* Compact account switcher for desktop utility tabs (replaces PageHeader actions). */}
-				{['accounts', 'notifications', 'reports', 'board', 'settings', 'profile'].includes(activeTab) ? (
+				{['accounts', 'reports', 'settings', 'profile'].includes(activeTab) ? (
 					<div className="mb-4 hidden items-center justify-between gap-3 min-[769px]:flex">
 						<div>
 							<h2 className="text-lg font-black text-slate-900 dark:text-white">
@@ -12306,13 +13062,7 @@ function WhatsAppWorkspaceContent() {
 												? (accountBusy || qr ? t.autoConnecting : t.connectToSeeChats)
 												: t.selectConversation
 									}
-									hint={
-										cloneVoicePickMode
-											? t.cloneVoicePickIdleHint
-											: !isAccountConnected && !demo.settings.enabled
-												? null
-												: t.selectConversationHint
-									}
+									 
 									unreadLabel={
 										unreadConversationCount > 0
 											? t.unreadMessagesLong.replace(
@@ -12321,6 +13071,7 @@ function WhatsAppWorkspaceContent() {
 												)
 											: null
 									}
+									 
 								/>
 							) : (
 								<>
@@ -12335,12 +13086,18 @@ function WhatsAppWorkspaceContent() {
 												</span>
 											) : null}
 											<div className="wa-chat-avatar-ring shrink-0">
-												<Avatar
-													label={conversationTitle(selectedConversation)}
-													size={8}
-													isGroup={selectedConversation.type === 'group'}
-													src={conversationAvatarUrl(selectedConversation)}
-												/>
+												{isEmailMemoAiConversation(selectedConversation) ? (
+													<div className="grid h-8 w-8 place-items-center rounded-full bg-[#eff6ff] text-[#2563eb] ring-2 ring-white dark:bg-[#1e3a5f] dark:text-[#93c5fd] dark:ring-slate-900">
+														<Mail size={16} />
+													</div>
+												) : (
+													<Avatar
+														label={conversationTitle(selectedConversation)}
+														size={8}
+														isGroup={selectedConversation.type === 'group'}
+														src={conversationAvatarUrl(selectedConversation)}
+													/>
+												)}
 											</div>
 											<div className="wa-chat-contact min-w-0">
 												<h3
@@ -12352,24 +13109,28 @@ function WhatsAppWorkspaceContent() {
 													{selectedChatTitle}
 												</h3>
 												<p className="wa-chat-assignee mt-px text-[11px] leading-4 text-slate-500">
-													{selectedConversation.isTyping ||
-													selectedConversation.typing ||
-													selectedConversation.presence?.typing
-														? selectedConversation.presence?.recording
-															? locale === 'ar'
-																? 'يسجل صوت الآن…'
-																: 'recording…'
-															: locale === 'ar'
-																? 'يكتب الآن…'
-																: 'typing…'
-														: selectedConversation.presence?.online
-															? (
-																<span className="wa-online-status inline-flex items-center gap-1.5">
-																	<span className="wa-online-dot" aria-hidden="true" />
-																	{locale === 'ar' ? 'متصل الآن' : 'Online'}
-																</span>
-															)
-															: selectedConversation.assignedUser?.name || t.unassign}
+													{isEmailMemoAiConversation(selectedConversation)
+														? locale === 'ar'
+															? 'صندوق وارد الإيميلات · عرض فقط'
+															: 'Email inbox thread · view only'
+														: selectedConversation.isTyping ||
+															  selectedConversation.typing ||
+															  selectedConversation.presence?.typing
+															? selectedConversation.presence?.recording
+																? locale === 'ar'
+																	? 'يسجل صوت الآن…'
+																	: 'recording…'
+																: locale === 'ar'
+																	? 'يكتب الآن…'
+																	: 'typing…'
+															: selectedConversation.presence?.online
+																? (
+																	<span className="wa-online-status inline-flex items-center gap-1.5">
+																		<span className="wa-online-dot" aria-hidden="true" />
+																		{locale === 'ar' ? 'متصل الآن' : 'Online'}
+																	</span>
+																)
+																: selectedConversation.assignedUser?.name || t.unassign}
 												</p>
 												<p className="wa-chat-contact-hint hidden text-[11px] text-[#667781]">
 													{selectedConversation.isTyping || selectedConversation.typing || selectedConversation.presence?.typing
@@ -12389,6 +13150,22 @@ function WhatsAppWorkspaceContent() {
 											/>
 										</div>
 										<div className="wa-chat-toolbar-actions hidden items-center gap-2 min-[769px]:flex">
+											{!demo.settings.enabled && conversationId && accountId ? (
+												<button
+													type="button"
+													title={t.scheduleMessage}
+													aria-label={t.scheduleMessage}
+													onClick={() => setScheduleDialogOpen(true)}
+													className="relative grid h-9 w-9 place-items-center rounded-[10px] border border-[#e5e7eb] bg-white text-[#54656F] shadow-[0_1px_0_#eef0f2] transition-colors hover:bg-[#f0f2f5] dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+												>
+													<CalendarClock size={16} />
+													{messageSchedules.length > 0 ? (
+														<span className="absolute -end-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-white">
+															{messageSchedules.length > 9 ? '9+' : messageSchedules.length}
+														</span>
+													) : null}
+												</button>
+											) : null}
 											<WaActionMenu
 												actions={chatToolbarActions}
 												ariaLabel={t.chatActions}
@@ -12562,6 +13339,12 @@ function WhatsAppWorkspaceContent() {
 												loadOlder();
 											}
 										}}
+										onContextMenu={event => {
+											// Keep native menu off the chat wallpaper; bubbles open app actions.
+											if (!event.target?.closest?.('.wa-message-bubble, [data-message-action-menu]')) {
+												event.preventDefault();
+											}
+										}}
 										className={`wa-message-wallpaper min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 nice-scroll ${
 											Boolean(conversationId) &&
 											aiSuggestionsVisible &&
@@ -12671,14 +13454,31 @@ function WhatsAppWorkspaceContent() {
 														</button>
 														<span className="opacity-50">·</span>
 														<span>{t.selectedMessagesCount.replace('{count}', String(selectedMessageIds.size))}</span>
+														<BoardColumnPicker
+															accountId={accountId}
+															conversationId={conversationId}
+															messageIds={[...selectedMessageIds]}
+															locale={locale}
+															triggerLabel={t.addToBoard}
+															onSuccess={() => {
+																setTicketSelectMode(false);
+																setGroupSelectMode(false);
+																setSelectedMessageIds(new Set());
+																toast.success(t.sentToBoard);
+															}}
+														/>
 														<button
 															type="button"
-															disabled={!selectedMessageIds.size || messageGroupsBusy}
-															onClick={() => void sendSelectedToBoard()}
-															className="inline-flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-0.5 text-white disabled:opacity-50"
+															disabled={!selectedMessageIds.size || messageGroupsBusy || demo.settings.enabled || isDemoId(conversationId)}
+															onClick={() => {
+																setTicketSelectMode(false);
+																setGroupSelectMode(true);
+																setGroupPickerOpen(true);
+															}}
+															className="inline-flex items-center gap-1 rounded-full bg-sky-600/90 px-2.5 py-0.5 text-white disabled:opacity-50"
 														>
-															<LayoutGrid size={12} />
-															{t.addToBoard}
+															<FolderKanban size={12} />
+															{t.addToGroup}
 														</button>
 														<button
 															type="button"
@@ -12727,6 +13527,19 @@ function WhatsAppWorkspaceContent() {
 																<FolderKanban size={12} />
 																{t.addToGroup}
 															</button>
+															<BoardColumnPicker
+																accountId={accountId}
+																conversationId={conversationId}
+																messageIds={[...selectedMessageIds]}
+																locale={locale}
+																triggerLabel={t.addToBoard}
+																onSuccess={() => {
+																	setGroupSelectMode(false);
+																	setSelectedMessageIds(new Set());
+																	setGroupPickerOpen(false);
+																	toast.success(t.sentToBoard);
+																}}
+															/>
 															<button
 																type="button"
 																disabled={!selectedMessageIds.size || messageGroupsBusy}
@@ -12812,9 +13625,14 @@ function WhatsAppWorkspaceContent() {
 														: message.attachments;
 													const mine = message.direction === 'outbound';
 													const visibleText = visibleMessageText(message.text);
-													const captionText = firstMessageLink(visibleText)
-														? textWithoutFirstLink(visibleText)
-														: visibleText;
+													const isEmailMemoConv = isEmailMemoAiConversation(selectedConversation);
+													const isEmailMemoMsg =
+														isEmailMemoConv && isEmailMemoMessageText(visibleText);
+													const captionText = isEmailMemoMsg
+														? visibleText
+														: firstMessageLink(visibleText)
+															? textWithoutFirstLink(visibleText)
+															: visibleText;
 													const textPresentation = messageTextPresentation(captionText || visibleText);
 													const isDeleted =
 														message.deletedMode && message.deletedMode !== 'none';
@@ -12888,6 +13706,15 @@ function WhatsAppWorkspaceContent() {
 													const groupSenderAvatarSrc =
 														sender.avatarUrl || inboxAvatarForWaId(conversations, sender.key);
 													const quotePreview = quotedPreviewFromMessage(message);
+													const quotedSource = message.replyTo
+														? resolveQuotedReplySource(
+																message.replyTo,
+																conversationMessages,
+															)
+														: null;
+													const quotedVoice = quotedSource
+														? quotedVoicePresentation(quotedSource, locale)
+														: null;
 													const rowItems = groupedImages ? row.messages : [message];
 													const rowMessageIds = rowItems
 														.map(item => item?.id)
@@ -13019,20 +13846,14 @@ function WhatsAppWorkspaceContent() {
 																		applyMediaSelection(downloadableAttachments);
 																	}}
 																	onContextMenu={event => {
-																		if (mediaSelectMode || ticketSelectMode || groupSelectMode) {
-																			event.preventDefault();
-																			return;
-																		}
-																		if (window.innerWidth <= 768) {
-																			event.preventDefault();
-																			setReactionPickerMessageId(null);
-																			setActionMessageAnchor(event.currentTarget.getBoundingClientRect());
-																			setActionMessageId(message.id);
-																		}
+																		openMessageContextMenu(event, message);
 																	}}
-															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${captionText && (isVisualMediaMessage || groupedImages) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${mine
-																		? 'bg-[#d9fdd3] text-slate-900 dark:bg-[#005c4b] dark:text-white'
-																		: 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white'
+															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${captionText && (isVisualMediaMessage || groupedImages) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${
+																		isEmailMemoMsg
+																			? 'bg-white text-slate-900 dark:bg-slate-900 dark:text-white'
+																			: mine
+																				? 'bg-[#d9fdd3] text-slate-900 dark:bg-[#005c4b] dark:text-white'
+																				: 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white'
 																		} ${isChecked ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
 																>
 																	{membership?.groupName ? (
@@ -13078,7 +13899,29 @@ function WhatsAppWorkspaceContent() {
 																			}}
 																		>
 																			<div className="min-w-0 flex-1 px-2 py-1 text-xs opacity-80">
-																				{quotedMessageLabel(message.replyTo, locale)}
+																				{quotedVoice ? (
+																					<>
+																						{quotedVoice.senderName ? (
+																							<p className="truncate font-semibold text-[#8752d9]">
+																								{quotedVoice.senderName}
+																							</p>
+																						) : null}
+																						<p className="mt-0.5 flex min-w-0 items-center gap-1.5">
+																							<Mic size={12} className="shrink-0 text-emerald-600" />
+																							<span className="truncate">
+																								{[
+																									quotedVoice.durationLabel ||
+																										quotedVoice.fallbackLabel,
+																									quotedVoice.timeLabel,
+																								]
+																									.filter(Boolean)
+																									.join(' · ')}
+																							</span>
+																						</p>
+																					</>
+																				) : (
+																					quotedMessageLabel(quotedSource || message.replyTo, locale)
+																				)}
 																			</div>
 																			{quotePreview ? (
 																				<img
@@ -13099,6 +13942,7 @@ function WhatsAppWorkspaceContent() {
 																				onOpenImage={setActiveChatImageId}
 																				onOpenDocument={setDocumentPreview}
 																				sessionReady={isAccountConnected}
+																				messageRaw={message.raw}
 																			/>
 																		)
 																		: !isDeleted && fallbackMediaPreview ? (
@@ -13168,6 +14012,19 @@ function WhatsAppWorkspaceContent() {
 																				)}
 																			</div>
 																		</>
+																	) : isEmailMemoMsg ? (
+																		<div className="wa-message-copy wa-message-copy--email">
+																			<EmailMemoMessageCard
+																				text={visibleText}
+																				timestamp={
+																					message.providerTimestamp ||
+																					message.timestamp ||
+																					message.created_at
+																				}
+																				labels={t}
+																				locale={locale}
+																			/>
+																		</div>
 																	) : visibleText ? (
 																		<div className="wa-message-copy">
 																			<MessageLinkPreview text={visibleText} labels={t} />
@@ -13177,7 +14034,7 @@ function WhatsAppWorkspaceContent() {
 																					dir={textPresentation.dir}
 																					lang={textPresentation.lang}
 																					style={textPresentation.style}
-																					className={`wa-message-text whitespace-pre-wrap wrap-break-word ${textPresentation.className || ''}`}
+																					className={`wa-message-text whitespace-pre-wrap ${textPresentation.className || ''}`}
 																					readMoreLabel={t.readMore}
 																					renderText={value => (
 																						<WhatsAppFormattedText
@@ -13301,6 +14158,20 @@ function WhatsAppWorkspaceContent() {
 																				.map(attachment => registeredChatImages[attachment.id]?.url)
 																				.find(Boolean)}
 																			busy={pendingMessageActions.has(message.id)}
+																			accountId={accountId}
+																			conversationId={conversationId}
+																			canUseBoard={
+																				!demo.settings.enabled &&
+																				!isDemoId(conversationId) &&
+																				Boolean(accountId)
+																			}
+																			canUseGroups={
+																				!demo.settings.enabled &&
+																				!isDemoId(conversationId)
+																			}
+																			onBoardSuccess={() => {
+																				toast.success(t.sentToBoard);
+																			}}
 																			onClose={() => {
 																				setActionMessageId(null);
 																				setActionMessageAnchor(null);
@@ -13383,10 +14254,18 @@ function WhatsAppWorkspaceContent() {
 															{locale === 'ar' ? 'الرد على رسالة' : 'Replying to message'}
 														</p>
 														<p className="truncate">
-															{replyingTo.text ||
-																(replyingTo.type === 'image'
-																	? locale === 'ar' ? 'صورة' : 'Photo'
-																	: replyingTo.type)}
+															{(() => {
+																const voice = quotedVoicePresentation(replyingTo, locale);
+																if (voice) {
+																	return [
+																		voice.durationLabel || voice.fallbackLabel,
+																		voice.timeLabel,
+																	]
+																		.filter(Boolean)
+																		.join(' · ');
+																}
+																return quotedMessageLabel(replyingTo, locale);
+															})()}
 														</p>
 													</div>
 													<button
@@ -13517,9 +14396,9 @@ function WhatsAppWorkspaceContent() {
 													<>
 													<button
 														type="button"
-														disabled={sending || !draft.trim() || demo.settings.enabled}
-														title={locale === 'ar' ? 'جدولة الرسالة' : 'Schedule message'}
-														aria-label={locale === 'ar' ? 'جدولة الرسالة' : 'Schedule message'}
+														disabled={sending || demo.settings.enabled}
+														title={t.scheduleMessage}
+														aria-label={t.scheduleMessage}
 														onClick={() => setScheduleDialogOpen(true)}
 														className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-800"
 													>
@@ -13537,6 +14416,16 @@ function WhatsAppWorkspaceContent() {
 													</>
 													) : (
 													<div className="flex shrink-0 items-center gap-0.5">
+													<button
+														type="button"
+														disabled={sending || demo.settings.enabled}
+														title={t.scheduleMessage}
+														aria-label={t.scheduleMessage}
+														onClick={() => setScheduleDialogOpen(true)}
+														className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
+													>
+														<Clock size={16} />
+													</button>
 													<button
 														type="button"
 														disabled={sending}
@@ -14245,12 +15134,34 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'board' && (
-					<div className="h-[calc(100vh-8rem)] min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+					<div
+						className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+						onClick={event => event.stopPropagation()}
+						onMouseDown={event => event.stopPropagation()}
+					>
 						<WhatsAppBoardTab
 							accountId={accountId}
 							locale={locale}
-							onOpenConversation={openConversationFromReport}
+							onOpenConversation={conversationIdToOpen => {
+								if (!conversationIdToOpen) return;
+								openConversationFromReport(conversationIdToOpen);
+							}}
 						/>
+					</div>
+				)}
+
+				{activeTab === 'emails' && (
+					<div className="min-h-[calc(100vh-5.5rem)] overflow-hidden rounded-2xl border border-[#e6ebf1] bg-[#f8fafc] shadow-sm dark:border-slate-700 dark:bg-slate-950">
+						<Suspense
+							fallback={
+								<div className="flex min-h-[420px] items-center justify-center gap-2 p-8 text-sm text-slate-500">
+									<Loader2 size={18} className="animate-spin" />
+									{t.loading || 'Loading…'}
+								</div>
+							}
+						>
+							<EmailMemoWorkspace />
+						</Suspense>
 					</div>
 				)}
 
@@ -14583,6 +15494,30 @@ function WhatsAppWorkspaceContent() {
 				}
 				onClose={closeConversationActions}
 				onAction={handleConversationAction}
+			/>
+			<MultiMessageActionMenu
+				open={Boolean(multiMessageMenuAnchor)}
+				anchorRect={multiMessageMenuAnchor}
+				locale={locale}
+				selectedCount={selectedMessageIds.size}
+				messageIds={[...selectedMessageIds]}
+				accountId={accountId}
+				conversationId={conversationId}
+				canTranscribe={selectedMessageIds.size > 0}
+				canUseBoard={
+					!demo.settings.enabled && !isDemoId(conversationId) && Boolean(accountId)
+				}
+				canUseGroups={!demo.settings.enabled && !isDemoId(conversationId)}
+				busy={messageGroupsBusy}
+				onClose={() => setMultiMessageMenuAnchor(null)}
+				onAction={handleMultiMessageAction}
+				onBoardSuccess={() => {
+					setTicketSelectMode(false);
+					setGroupSelectMode(false);
+					setSelectedMessageIds(new Set());
+					setGroupPickerOpen(false);
+					toast.success(t.sentToBoard);
+				}}
 			/>
 			{conversationAssignTarget && (
 				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/25 p-4 backdrop-blur-sm sm:place-items-center" onClick={() => setConversationAssignTarget(null)}>

@@ -225,15 +225,30 @@ export async function createChunkedTranscription({
 }
 
 export function transcriptionErrorMessage(error, fallback = 'Transcription failed.') {
+	const status = error?.response?.status;
 	const data = error?.response?.data;
 	const raw = data?.message ?? data?.error ?? error?.message;
-	if (Array.isArray(raw)) return raw.map(String).filter(Boolean).join(', ') || fallback;
-	if (typeof raw === 'string' && raw.trim()) return raw.trim();
-	if (raw && typeof raw === 'object' && typeof raw.message === 'string' && raw.message.trim()) {
-		return raw.message.trim();
+	const rawText = Array.isArray(raw)
+		? raw.map(String).filter(Boolean).join(', ')
+		: typeof raw === 'string'
+			? raw.trim()
+			: raw && typeof raw === 'object' && typeof raw.message === 'string'
+				? raw.message.trim()
+				: '';
+
+	// Production reverse proxies (nginx default ~1MB) reject before Nest reaches Multer (500MB).
+	if (status === 413 || /request entity too large|payload too large/i.test(rawText)) {
+		return 'Upload rejected: file too large for the server proxy (HTTP 413). Raise nginx client_max_body_size (e.g. 100m) for api.so7bafit.com, reload nginx, then retry.';
 	}
+
+	if (Array.isArray(raw)) return rawText || fallback;
+	if (rawText) return rawText;
 	if (error?.code === 'ECONNABORTED' || /timeout/i.test(String(error?.message || ''))) {
 		return 'Transcription timed out. Try again, or use a shorter clip.';
+	}
+	// Nginx 413 often omits CORS headers → axios surfaces "Network Error" with no response body.
+	if (!error?.response && /network error/i.test(String(error?.message || ''))) {
+		return 'Network Error — on production this often means the reverse proxy rejected a large upload (HTTP 413). Raise nginx client_max_body_size (e.g. 100m) for api.so7bafit.com.';
 	}
 	if (!error?.response && error?.message) return error.message;
 	return fallback;

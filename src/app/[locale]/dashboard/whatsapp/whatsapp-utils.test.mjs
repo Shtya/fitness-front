@@ -17,10 +17,12 @@ import {
 	isSelfChatConversation,
 	messageMatchesAckTarget,
 	messageTextSegments,
+	firstStrongTextDirection,
 	messageTextPresentation,
 	groupSenderIdentity,
 	quotedMessageLabel,
 	quotedPreviewFromMessage,
+	quotedVoicePresentation,
 	quotedTargetFromMessage,
 	messageMatchesQuotedTarget,
 	inboxAvatarForWaId,
@@ -512,22 +514,41 @@ test('image galleries support one, two, three and four image layouts', () => {
 	}
 });
 
+test('firstStrongTextDirection uses the first Arabic or Latin letter', () => {
+	assert.equal(firstStrongTextDirection('رسالة عربية'), 'rtl');
+	assert.equal(firstStrongTextDirection('English message'), 'ltr');
+	assert.equal(firstStrongTextDirection('Hello مرحباً'), 'ltr');
+	assert.equal(firstStrongTextDirection('مرحبا Hello'), 'rtl');
+	assert.equal(firstStrongTextDirection('  123 ssh-ed25519 AAA...'), 'ltr');
+	assert.equal(firstStrongTextDirection('بعد ما تضيفه Frontend'), 'rtl');
+	assert.equal(firstStrongTextDirection('!!!'), 'ltr');
+});
+
 test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	const arabic = messageTextPresentation('رسالة عربية');
 	assert.equal(arabic.dir, 'rtl');
-	assert.equal(arabic.style.textAlign, 'right');
+	assert.equal(arabic.style.textAlign, 'start');
 	assert.match(arabic.style.fontFamily, /--font-arabic/);
 	assert.equal(arabic.style.fontWeight, 500);
 	assert.equal(messageTextPresentation('English message').dir, 'ltr');
-	const mixedArabic = messageTextPresentation('Hello مرحباً');
-	assert.equal(mixedArabic.dir, 'rtl');
-	assert.match(mixedArabic.style.fontFamily, /Tajawal/);
+	const startsEnglish = messageTextPresentation('Hello مرحباً');
+	assert.equal(startsEnglish.dir, 'ltr');
+	assert.match(startsEnglish.style.fontFamily, /--font-inter/);
+	const startsArabic = messageTextPresentation('مرحبا Hello');
+	assert.equal(startsArabic.dir, 'rtl');
+	assert.match(startsArabic.style.fontFamily, /Tajawal/);
 	const mostlyEnglish = messageTextPresentation(
 		'New Email\nFrom: Admin\nReceived: السبت، ٢٢ أغسطس في ٣:٤٣ م',
 	);
 	assert.equal(mostlyEnglish.dir, 'ltr');
 	assert.equal(mostlyEnglish.className, 'wa-message-text--en');
 	assert.equal(mostlyEnglish.style.textAlign, 'start');
+	assert.equal(
+		messageTextPresentation(
+			'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...\nبعد ما تضيفه Frontend',
+		).dir,
+		'ltr',
+	);
 });
 
 test('message links are segmented and normalized for safe previews', () => {
@@ -664,6 +685,35 @@ test('quoted image labels and previews do not fall back to the word image', () =
 		}),
 		'data:image/jpeg;base64,abc',
 	);
+});
+
+test('quoted voice labels show duration and time instead of only Voice message', () => {
+	const label = quotedMessageLabel(
+		{
+			type: 'ptt',
+			durationSeconds: 42,
+			timestamp: '2026-08-23T09:02:00.000Z',
+		},
+		'en',
+	);
+	assert.match(label, /0:42/);
+	assert.doesNotMatch(label, /^Voice message$/);
+	assert.equal(
+		quotedMessageLabel({ type: 'ptt', attachments: [{ fileName: 'voice-15s.ogg' }] }, 'en'),
+		'0:15',
+	);
+	const voice = quotedVoicePresentation(
+		{
+			type: 'ptt',
+			durationSeconds: 9,
+			timestamp: '2026-08-23T09:03:00.000Z',
+			senderName: 'Ahmed Magdy',
+		},
+		'en',
+	);
+	assert.equal(voice?.senderName, 'Ahmed Magdy');
+	assert.equal(voice?.durationLabel, '0:09');
+	assert.ok(voice?.timeLabel);
 });
 
 test('parseWhatsAppBold converts double-asterisk sections into bold text', () => {

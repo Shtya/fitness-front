@@ -30,9 +30,6 @@ export const PAGE_HREFS_BY_ID = {
 	transcript: ['/dashboard/transcript'],
 	calorieCalculator: ['/dashboard/calculator'],
 	aiFree: ['/dashboard/ai-free'],
-	aiContentStudio: ['/dashboard/ai-content-studio'],
-	emailMemo: ['/dashboard/email-memo'],
-	goldIntelligence: ['/dashboard/gold-intelligence'],
 	quranRevision: ['/dashboard/quran-revision'],
 	phoneCheck: ['/dashboard/phone-check'],
 	fitnessLeads: ['/dashboard/fitness-leads'],
@@ -70,9 +67,6 @@ export const NAV_HREFS = {
 		'/dashboard/my/profile',
 		'/dashboard/phone-check',
 		'/dashboard/ai-free',
-		'/dashboard/ai-content-studio',
-		'/dashboard/email-memo',
-		'/dashboard/gold-intelligence',
 		'/money',
 		'/workspace',
 	],
@@ -93,9 +87,6 @@ export const NAV_HREFS = {
 		'/dashboard/phone-check',
 		'/dashboard/fitness-leads',
 		'/dashboard/ai-free',
-		'/dashboard/ai-content-studio',
-		'/dashboard/email-memo',
-		'/dashboard/gold-intelligence',
 		'/dashboard/quran-revision',
 		'/dashboard/recipes',
 		'/dashboard/notifications',
@@ -127,9 +118,6 @@ export const NAV_HREFS = {
 		'/dashboard/phone-check',
 		'/dashboard/fitness-leads',
 		'/dashboard/ai-free',
-		'/dashboard/ai-content-studio',
-		'/dashboard/email-memo',
-		'/dashboard/gold-intelligence',
 		'/dashboard/quran-revision',
 		'/dashboard/recipes',
 		'/dashboard/notifications',
@@ -152,9 +140,6 @@ export const NAV_HREFS = {
 		'/dashboard/phone-check',
 		'/dashboard/fitness-leads',
 		'/dashboard/ai-free',
-		'/dashboard/ai-content-studio',
-		'/dashboard/email-memo',
-		'/dashboard/gold-intelligence',
 		'/dashboard/quran-revision',
 		'/workspace',
 	],
@@ -263,21 +248,15 @@ export function resolvePostLoginPath(user, intendedPath) {
 	return allowed[0] || fallback;
 }
 
-/** When custom page access has fewer than this many pages, use top header nav instead of sidebar. */
+/** @deprecated Compact top-nav by page count is disabled — desktop uses sidebar; mobile uses header. */
 export const COMPACT_NAV_PAGE_THRESHOLD = 5;
 
 /**
- * Restricted accounts with a small page set get a compact top navigation (no sidebar).
- * - null / empty allowedPages → full role access → sidebar
- * - length >= threshold → sidebar
- * - 1..threshold-1 → compact top nav
+ * Always false: navigation chrome is responsive (sidebar desktop / header mobile),
+ * not driven by allowedPages length.
  */
-export function shouldUseCompactTopNav(allowedPages) {
-	return (
-		Array.isArray(allowedPages) &&
-		allowedPages.length > 0 &&
-		allowedPages.length < COMPACT_NAV_PAGE_THRESHOLD
-	);
+export function shouldUseCompactTopNav(_allowedPages) {
+	return false;
 }
 
 export function getAllowedPagesCount(allowedPages) {

@@ -22,6 +22,11 @@ function sliceWindow(text, charLimit, lineLimit) {
 	return byChars;
 }
 
+/**
+ * Renders message text as one inline flow so the bubble can grow with content.
+ * Newlines from Enter are kept via white-space: pre-wrap.
+ * Per-paragraph RTL/LTR comes from unicode-bidi: plaintext (set by presentation style).
+ */
 export default function ExpandableMessageText({
 	text,
 	dir,
@@ -29,6 +34,10 @@ export default function ExpandableMessageText({
 	style,
 	className = '',
 	readMoreLabel = 'Read more',
+	previewChars = PREVIEW_CHARS,
+	previewLines = PREVIEW_LINES,
+	readMoreStep = READ_MORE_STEP,
+	readMoreLines = READ_MORE_LINES,
 	renderText,
 }) {
 	const full = String(text || '');
@@ -40,15 +49,23 @@ export default function ExpandableMessageText({
 
 	if (!full) return null;
 
-	const charLimit = PREVIEW_CHARS + (step - 1) * READ_MORE_STEP;
-	const lineLimit = PREVIEW_LINES + (step - 1) * READ_MORE_LINES;
+	const charLimit = previewChars + (step - 1) * readMoreStep;
+	const lineLimit = previewLines + (step - 1) * readMoreLines;
 	const needsCollapse =
-		full.length > PREVIEW_CHARS || full.split('\n').length > PREVIEW_LINES;
+		full.length > previewChars || full.split('\n').length > previewLines;
 	const visible = needsCollapse ? sliceWindow(full, charLimit, lineLimit) : full;
 	const remaining = full.length - visible.length;
 
+	const mergedStyle = {
+		...style,
+		whiteSpace: 'pre-wrap',
+		overflowWrap: 'break-word',
+		wordBreak: 'normal',
+		unicodeBidi: style?.unicodeBidi || 'plaintext',
+	};
+
 	return (
-		<span dir={dir} lang={lang} style={style} className={className}>
+		<span dir={dir} lang={lang} style={mergedStyle} className={className}>
 			{renderText ? renderText(visible) : visible}
 			{remaining > 0 ? (
 				<>

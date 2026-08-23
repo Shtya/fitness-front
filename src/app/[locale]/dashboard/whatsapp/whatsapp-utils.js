@@ -577,6 +577,18 @@ export function relativeTime(dateStr, nowOrLocale = Date.now(), locale = 'en') {
 
 const ARABIC_SCRIPT_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/g;
 const LATIN_SCRIPT_RE = /[A-Za-z]/g;
+const ARABIC_CHAR_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/;
+const LATIN_CHAR_RE = /[A-Za-z]/;
+
+/** First strong letter wins: Arabic → rtl, Latin → ltr. Skips digits/punctuation/space. */
+export function firstStrongTextDirection(text) {
+	const value = String(text || '');
+	for (const ch of value) {
+		if (ARABIC_CHAR_RE.test(ch)) return 'rtl';
+		if (LATIN_CHAR_RE.test(ch)) return 'ltr';
+	}
+	return 'ltr';
+}
 
 export function isMostlyArabicText(text) {
 	const value = String(text || '');
@@ -589,11 +601,8 @@ export function isMostlyArabicText(text) {
 
 export function messageTextPresentation(text) {
 	const value = String(text || '');
-	const hasArabic = ARABIC_SCRIPT_RE.test(value);
-	ARABIC_SCRIPT_RE.lastIndex = 0;
-	const hasLatin = LATIN_SCRIPT_RE.test(value);
-	LATIN_SCRIPT_RE.lastIndex = 0;
-	const mostlyArabic = isMostlyArabicText(value);
+	const dir = firstStrongTextDirection(value);
+	const isArabic = dir === 'rtl';
 	const arabicStyle = {
 		fontFamily:
 			'var(--font-arabic), "Tajawal", "Cairo", "Noto Sans Arabic", Tahoma, Arial, sans-serif',
@@ -602,7 +611,7 @@ export function messageTextPresentation(text) {
 		lineHeight: 1.85,
 		direction: 'rtl',
 		unicodeBidi: 'plaintext',
-		textAlign: 'right',
+		textAlign: 'start',
 	};
 	const englishStyle = {
 		direction: 'ltr',
@@ -613,8 +622,9 @@ export function messageTextPresentation(text) {
 		fontWeight: 400,
 		letterSpacing: '-0.011em',
 		fontFeatureSettings: '"cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1',
+		lineHeight: 1.55,
 	};
-	if (mostlyArabic || (hasArabic && !hasLatin)) {
+	if (isArabic) {
 		return {
 			dir: 'rtl',
 			lang: 'ar',
@@ -1252,6 +1262,161 @@ export function quotedPreviewFromMessage(message) {
 	);
 }
 
+export function voiceDurationSecondsFromSource(source) {
+	if (!source || typeof source !== 'object') return 0;
+	const direct = [
+		source.durationSeconds,
+		source.duration,
+		source.seconds,
+		source.mediaDuration,
+	];
+	for (const value of direct) {
+		const num = Number(value);
+		if (!Number.isFinite(num) || num <= 0) continue;
+		if (num > 600 && num < 3_600_000) return Math.round(num / 1000);
+		return Math.round(num);
+	}
+	const attachments = Array.isArray(source.attachments) ? source.attachments : [];
+	for (const attachment of attachments) {
+		const fromName = String(attachment?.fileName || '').match(/voice-(\d+(?:\.\d+)?)s/i);
+		if (fromName) {
+			const num = Number(fromName[1]);
+			if (Number.isFinite(num) && num > 0) return Math.round(num);
+		}
+		const attDuration = Number(attachment?.duration ?? attachment?.seconds);
+		if (Number.isFinite(attDuration) && attDuration > 0) {
+			if (attDuration > 600 && attDuration < 3_600_000) return Math.round(attDuration / 1000);
+			return Math.round(attDuration);
+		}
+	}
+	const raw = source.raw;
+	if (raw && typeof raw === 'object') {
+		const candidates = [
+			raw.duration,
+			raw.mediaData?.duration,
+			raw.message?.audioMessage?.seconds,
+			raw.message?.audioMessage?.duration,
+			raw.message?.pttMessage?.seconds,
+			raw.audioMessage?.seconds,
+			raw.audioMessage?.duration,
+		];
+		for (const value of candidates) {
+			const num = Number(value);
+			if (!Number.isFinite(num) || num <= 0) continue;
+			if (num > 600 && num < 3_600_000) return Math.round(num / 1000);
+			return Math.round(num);
+		}
+	}
+	return 0;
+}
+
+export function formatVoiceDurationClock(seconds) {
+	const value = Math.max(0, Math.floor(Number(seconds) || 0));
+	const m = Math.floor(value / 60);
+	const s = value % 60;
+	return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+export function formatQuotedMessageTime(value, locale = 'en') {
+	if (!value) return '';
+	const date = value instanceof Date ? value : new Date(value);
+	if (!Number.isFinite(date.getTime())) return '';
+	return date.toLocaleTimeString(locale === 'ar' ? 'ar-EG' : undefined, {
+		hour: '2-digit',
+		minute: '2-digit',
+	});
+}
+
+export function isVoiceMessageType(type) {
+	return ['audio', 'ptt', 'voice'].includes(String(type || '').toLowerCase());
+}
+
+/** Snapshot used when composing a reply (and for optimistic bubbles). */
+export function buildReplySnapshot(message) {
+	if (!message) return null;
+	return {
+		id: message.id,
+		providerMessageId: message.providerMessageId,
+		text: message.text,
+		type: message.type,
+		direction: message.direction,
+		durationSeconds: voiceDurationSecondsFromSource(message),
+		timestamp:
+			message.providerTimestamp || message.timestamp || message.created_at || null,
+		senderName: String(
+			message.senderName ||
+				message.contactName ||
+				message.raw?.pushName ||
+				message.senderUser?.name ||
+				'',
+		).trim() || null,
+	};
+}
+
+export function resolveQuotedReplySource(replyTo, messages = []) {
+	if (!replyTo) return null;
+	const list = Array.isArray(messages) ? messages : [];
+	const byId = replyTo.id
+		? list.find(item => String(item?.id) === String(replyTo.id))
+		: null;
+	if (byId) return { ...replyTo, ...byId, type: replyTo.type || byId.type };
+	const byProvider = replyTo.providerMessageId
+		? list.find(
+				item =>
+					String(item?.providerMessageId || '') ===
+					String(replyTo.providerMessageId),
+			)
+		: null;
+	if (byProvider) {
+		return { ...replyTo, ...byProvider, type: replyTo.type || byProvider.type };
+	}
+	return replyTo;
+}
+
+export function quotedMessageLabel(replyTo, locale = 'en') {
+	const text = String(replyTo?.text || '').trim();
+	const type = String(replyTo?.type || '').toLowerCase();
+	const arabic = locale === 'ar';
+	const isVoice = isVoiceMessageType(type);
+	// Voice notes often store a placeholder caption — prefer duration/time details.
+	if (text && !isVoice) return text;
+	if (['image', 'sticker'].includes(type)) return arabic ? 'صورة' : 'Photo';
+	if (type === 'video') return arabic ? 'فيديو' : 'Video';
+	if (isVoice) {
+		const duration = voiceDurationSecondsFromSource(replyTo);
+		const durationLabel = duration > 0 ? formatVoiceDurationClock(duration) : '';
+		const timeLabel = formatQuotedMessageTime(
+			replyTo?.timestamp || replyTo?.providerTimestamp || replyTo?.created_at,
+			locale,
+		);
+		const parts = [
+			durationLabel || (arabic ? 'رسالة صوتية' : 'Voice message'),
+			timeLabel,
+		].filter(Boolean);
+		return parts.join(' · ');
+	}
+	if (text) return text;
+	if (type === 'document') return arabic ? 'مستند' : 'Document';
+	if (['location', 'live_location', 'livelocation'].includes(type)) {
+		return arabic ? 'موقع' : 'Location';
+	}
+	return type || (arabic ? 'رسالة' : 'Message');
+}
+
+export function quotedVoicePresentation(replyTo, locale = 'en') {
+	if (!replyTo || !isVoiceMessageType(replyTo.type)) return null;
+	const duration = voiceDurationSecondsFromSource(replyTo);
+	return {
+		senderName: String(replyTo.senderName || '').trim() || null,
+		durationLabel: duration > 0 ? formatVoiceDurationClock(duration) : null,
+		timeLabel: formatQuotedMessageTime(
+			replyTo.timestamp || replyTo.providerTimestamp || replyTo.created_at,
+			locale,
+		) || null,
+		fallbackLabel: locale === 'ar' ? 'رسالة صوتية' : 'Voice message',
+	};
+}
+
 export function quotedTargetFromMessage(message) {
 	const reply = message?.replyTo || {};
 	const id = String(reply.id || message?.replyToId || '').trim() || null;
@@ -1274,21 +1439,6 @@ export function messageMatchesQuotedTarget(message, target) {
 		return true;
 	}
 	return false;
-}
-
-export function quotedMessageLabel(replyTo, locale = 'en') {
-	const text = String(replyTo?.text || '').trim();
-	if (text) return text;
-	const type = String(replyTo?.type || '').toLowerCase();
-	const arabic = locale === 'ar';
-	if (['image', 'sticker'].includes(type)) return arabic ? 'صورة' : 'Photo';
-	if (type === 'video') return arabic ? 'فيديو' : 'Video';
-	if (['audio', 'ptt', 'voice'].includes(type)) return arabic ? 'رسالة صوتية' : 'Voice message';
-	if (type === 'document') return arabic ? 'مستند' : 'Document';
-	if (['location', 'live_location', 'livelocation'].includes(type)) {
-		return arabic ? 'موقع' : 'Location';
-	}
-	return type || (arabic ? 'رسالة' : 'Message');
 }
 
 export function groupConsecutiveImageMessages(messages = []) {
