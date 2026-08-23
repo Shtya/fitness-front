@@ -20,12 +20,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { IMPERSONATION_EVENT, notifyImpersonationChanged } from '@/lib/impersonation';
-import { shouldUseCompactTopNav } from '@/lib/nav-access';
 import { SidebarChromeProvider } from './SidebarChromeContext';
 import './sidebar-glass.css';
 
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
-const CompactDashboardNav = dynamic(() => import('./CompactDashboardNav'), { ssr: false });
 const QuranMiniPlayer = dynamic(() => import('./QuranMiniPlayer'), { ssr: false });
 
 const LS_KEY = 'sidebar:collapsed';
@@ -211,8 +209,6 @@ export default function Layout({ children }) {
 			try { setRole(user?.role); } catch {}
 		}
 	}, [user]);
-
-	const useCompactNav = Boolean(user && shouldUseCompactTopNav(user.allowedPages));
 
 	const isAdminOrCoach = role === 'admin' || role === 'coach';
 	const isFormRoute = (
@@ -404,7 +400,7 @@ export default function Layout({ children }) {
 						<div className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)` }} />
 
 						<div className={`flex w-full max-w-[100vw] overflow-hidden ${isAppShell || isPresentationRoute ? 'h-full' : ''}`}>
-							{!isAuthRoute && !useCompactNav && (
+							{!isAuthRoute && (
 								<div
 									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'} ${focusMode ? 'w-0 overflow-visible' : ''}`}
 								>
@@ -422,6 +418,7 @@ export default function Layout({ children }) {
 							{/*
 							  Mobile had two scrolls: sticky Header outside #body + #body h-screen/overflow-auto.
 							  App shell is now one column: header (fixed height) + single scrollable #body.
+							  Desktop: sidebar only. Mobile (≤1025px): top Header + drawer sidebar.
 							*/}
 							<div
 								className={[
@@ -429,15 +426,9 @@ export default function Layout({ children }) {
 									isAppShell ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'overflow-x-hidden',
 								].filter(Boolean).join(' ')}
 								data-dashboard-content
-								data-sidebar-offset={focusMode && !useCompactNav && !isWhatsAppRoute ? 'true' : undefined}
-								data-compact-nav={useCompactNav ? 'true' : undefined}
+								data-sidebar-offset={focusMode && !isWhatsAppRoute ? 'true' : undefined}
 							>
-								{!isAuthRoute && useCompactNav && (
-									<div className="shrink-0">
-										<CompactDashboardNav />
-									</div>
-								)}
-								{!isAuthRoute && !useCompactNav && (
+								{!isAuthRoute && (
 									<div
 										className={[
 											'max-[1025px]:block hidden shrink-0',
