@@ -2189,6 +2189,11 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   }
 }
 
+.wa-message-bubble {
+  box-sizing: border-box;
+  padding: 6px 7px 8px 9px;
+}
+
 .wa-message-bubble.wa-message-voice {
   min-width: min(220px, calc(100% - 16px));
   max-width: min(82%, 300px) !important;
@@ -5479,15 +5484,26 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-web-desktop .wa-message-bubble {
+		box-sizing: border-box;
 		border-radius: 8px !important;
 		box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13) !important;
 		font-size: 14.2px !important;
 		line-height: 19px !important;
 		color: #111b21 !important;
+		padding: 6px 7px 8px 9px !important;
+	}
+
+	.wa-web-desktop .wa-message-bubble.wa-message-voice {
+		padding: 6px 8px 4px !important;
 	}
 
 	.wa-web-desktop .wa-message-bubble.wa-message-media {
 		max-width: min(76%, 384px) !important;
+		padding: 3px 3px 4px !important;
+	}
+
+	.wa-web-desktop .wa-message-bubble.wa-message-sticker {
+		padding: 0 !important;
 	}
 
 	.wa-web-desktop .wa-message-bubble.wa-message-location {
