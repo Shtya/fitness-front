@@ -229,6 +229,13 @@ function saveBoardPrefs(accountId, prefs) {
 	window.localStorage.setItem(`wa-board-prefs:${accountId}`, JSON.stringify(prefs));
 }
 
+function applyColumnOrder(cards, listId, orderedColumnCards) {
+	const byId = new Map(
+		orderedColumnCards.map((card, index) => [card.id, { ...card, orderIndex: index }]),
+	);
+	return cards.map(card => (card.listId === listId ? byId.get(card.id) || card : card));
+}
+
 function isCardOverdue(card, doneListIds) {
 	if (!card?.dueDate || card.isCompleted || doneListIds?.has(card.listId)) return false;
 	const due = new Date(card.dueDate);
@@ -500,7 +507,11 @@ function SortableTaskCard({
 			) : null}
 
 			<div className={`${compact ? 'px-3 py-2.5' : 'px-3.5 py-3'}`}>
-				<div className="flex min-h-0 items-center gap-0 pe-6 group-hover:gap-2">
+				<div
+					className={`flex min-h-0 items-center pe-6 ${
+						completedVisual ? 'gap-2' : 'gap-0 group-hover:gap-2'
+					}`}
+				>
 					<button
 						type="button"
 						aria-label={completedVisual ? 'Reopen task' : 'Complete task'}
@@ -1098,9 +1109,11 @@ export default function WhatsAppTasksBoard({
 			const updated = { ...card, isCompleted: nextCompleted };
 			const incomplete = columnOthers.filter(item => !item.isCompleted);
 			const completed = columnOthers.filter(item => item.isCompleted);
-			const columnNext = nextCompleted
-				? [...incomplete, ...completed, updated]
-				: [...incomplete, updated, ...completed];
+			const columnNext = (
+				nextCompleted
+					? [...incomplete, ...completed, updated]
+					: [...incomplete, updated, ...completed]
+			).map((item, index) => ({ ...item, orderIndex: index }));
 			const orderedIds = columnNext.map(item => item.id);
 			const outside = cards.filter(item => item.listId !== card.listId);
 
@@ -1275,25 +1288,30 @@ export default function WhatsAppTasksBoard({
 		if (!activeCard) return;
 		if (overData?.type === 'card' && activeCard.listId === overData.listId) {
 			const columnCards = cards.filter(card => card.listId === activeCard.listId);
-			const others = cards.filter(card => card.listId !== activeCard.listId);
 			const from = columnCards.findIndex(card => card.id === active.id);
 			const to = columnCards.findIndex(card => card.id === over.id);
 			if (from >= 0 && to >= 0 && from !== to) {
 				const reordered = arrayMove(columnCards, from, to);
-				setCards([...others, ...reordered]);
+				const previousCards = cards;
+				setCards(applyColumnOrder(cards, activeCard.listId, reordered));
 				void persistCardMove(
 					active.id,
 					activeCard.listId,
 					reordered.map(card => card.id),
 				).catch(err => {
+					setCards(previousCards);
 					toast.error(err?.message || (ar ? 'فشل نقل البطاقة' : 'Could not move card'));
 				});
 			}
 			return;
 		}
 		const columnId = overData?.type === 'column' ? overData.listId : activeCard.listId;
-		const ids = cards.filter(card => card.listId === columnId).map(card => card.id);
+		const columnCards = cards.filter(card => card.listId === columnId);
+		const ids = columnCards.map(card => card.id);
+		const previousCards = cards;
+		setCards(applyColumnOrder(cards, columnId, columnCards));
 		void persistCardMove(active.id, columnId, ids).catch(err => {
+			setCards(previousCards);
 			toast.error(err?.message || (ar ? 'فشل نقل البطاقة' : 'Could not move card'));
 		});
 	};
