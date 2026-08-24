@@ -153,6 +153,7 @@ import {
 	updateConversationPreview,
 	visibleMessageText,
 	clipboardImageFiles,
+	voiceDurationSecondsFromSource,
 } from './whatsapp-utils';
 import { DemoModeProvider, useDemoMode } from './demo/DemoModeProvider';
 import DemoModeSettings from './demo/components/DemoModeSettings';
@@ -2709,17 +2710,33 @@ function VoiceMessage({
 		}
 
 		if (loadPromiseRef.current) {
-			const pendingUrl = await loadPromiseRef.current.catch(() => null);
-			if (pendingUrl && objectUrlRef.current && voiceBlobRef.current) {
-				if (analyze && !analyzedRef.current) {
-					void ensurePlaybackReady({ analyze: true, softFail: true });
+			if (priority) {
+				// Soft/background fetch may hang on phone media — don't block Play.
+				const raced = await Promise.race([
+					loadPromiseRef.current.catch(() => null),
+					new Promise(resolve => window.setTimeout(() => resolve(null), 900)),
+				]);
+				if (raced && objectUrlRef.current && voiceBlobRef.current) {
+					if (analyze && !analyzedRef.current) {
+						void ensurePlaybackReady({ analyze: true, softFail: true });
+					}
+					return objectUrlRef.current || raced;
 				}
-				return objectUrlRef.current || pendingUrl;
+				loadPromiseRef.current = null;
+			} else {
+				const pendingUrl = await loadPromiseRef.current.catch(() => null);
+				if (pendingUrl && objectUrlRef.current && voiceBlobRef.current) {
+					if (analyze && !analyzedRef.current) {
+						void ensurePlaybackReady({ analyze: true, softFail: true });
+					}
+					return objectUrlRef.current || pendingUrl;
+				}
 			}
 		}
 
 		const run = (async () => {
-			setLoadingPlayback(true);
+			// Background prefetch must not flip the bubble into a stuck spinner.
+			if (!softFail) setLoadingPlayback(true);
 			if (!softFail) setLoadFailed(false);
 			try {
 				let blob = voiceBlobRef.current;
@@ -2729,8 +2746,8 @@ function VoiceMessage({
 							let next = demoAttachment
 								? await demoApi.getMedia(rawDemoId(attachmentId))
 								: await requestAttachmentBlob(attachmentId, {
-										timeout: priority ? 45_000 : 30_000,
-										priority,
+										timeout: priority ? 45_000 : softFail ? 20_000 : 30_000,
+										priority: priority || !softFail,
 									});
 							if (
 								next &&
@@ -3033,6 +3050,8 @@ export function MediaAttachment({
 	className = '',
 	layout = 'inline',
 	sessionReady = true,
+	messageRaw = null,
+	messageDurationSeconds = 0,
 }) {
 	const [url, setUrl] = useState(null);
 	const [loading, setLoading] = useState(() => !attachment?.previewDataUrl);
@@ -3185,6 +3204,14 @@ export function MediaAttachment({
 	}, [attachment.id, attachment.fileName, onImageReady, type, url]);
 
 	if (isVoice) {
+		const fromName = durationFromFileName(attachment.fileName);
+		const fromMessage =
+			Number(messageDurationSeconds) > 0
+				? Number(messageDurationSeconds)
+				: voiceDurationSecondsFromSource({
+						raw: messageRaw,
+						attachments: [attachment],
+					});
 		return (
 			<VoiceMessage
 				attachmentId={attachment.id}
@@ -3194,7 +3221,7 @@ export function MediaAttachment({
 				fileName={attachment.fileName}
 				demoAttachment={demoAttachment}
 				seed={String(attachment.id || attachment.fileName || attachment.url)}
-				fallbackDuration={durationFromFileName(attachment.fileName)}
+				fallbackDuration={fromName || fromMessage || 0}
 				labels={labels}
 			/>
 		);
@@ -3487,8 +3514,10 @@ function MessageAttachments({
 	onOpenDocument,
 	sessionReady = true,
 	messageRaw = null,
+	message = null,
 }) {
 	const rawPreview = mediaPreviewFromRaw(messageRaw);
+	const voiceDuration = voiceDurationSecondsFromSource(message || { raw: messageRaw, attachments });
 	const normalized = (Array.isArray(attachments) ? attachments : []).map(attachment => {
 		const kind = String(attachment?.type || '').toLowerCase();
 		if (!['image', 'sticker', 'video'].includes(kind)) return attachment;
@@ -3570,6 +3599,8 @@ function MessageAttachments({
 					onOpenImage={onOpenImage}
 					onOpenDocument={onOpenDocument}
 					sessionReady={sessionReady}
+					messageRaw={messageRaw}
+					messageDurationSeconds={voiceDuration}
 				/>
 			))}
 		</>
@@ -10646,16 +10677,18 @@ function WhatsAppWorkspaceContent() {
 	const loadOlder = async (options = {}) => {
 		const preserveScroll = options.preserveScroll !== false;
 		const ignoreThrottle = Boolean(options.ignoreThrottle);
+		const forceProvider = Boolean(options.forceProvider);
 		const oldest = conversationMessagesRef.current[0];
 		const starredOnly =
 			conversationFilterRef.current === 'important' ||
 			conversationFilterRef.current === 'starred';
 		const cacheKey = starredOnly ? `${conversationId}:important` : conversationId;
+		// Do not gate on loadingMessages — that flag can stay true during soft sync
+		// and silently ignore the "Load older messages" button.
 		if (
 			!conversationId ||
 			isDemoId(conversationId) ||
 			loadingOlderRef.current ||
-			loadingMessages ||
 			!hasMoreMessagesRef.current ||
 			!oldest?.id
 		) {
@@ -10667,6 +10700,7 @@ function WhatsAppWorkspaceContent() {
 		const requestId = ++olderRequestId.current;
 		const box = messageBoxRef.current;
 		const previousHeight = box?.scrollHeight || 0;
+		const previousCount = conversationMessagesRef.current.length;
 		loadingOlderRef.current = true;
 		setLoadingOlder(true);
 		try {
@@ -10690,43 +10724,67 @@ function WhatsAppWorkspaceContent() {
 			let local = Array.isArray(data) ? data : [];
 			if (starredOnly) local = local.filter(item => item?.isStarred);
 			let provider = null;
-			// Prefer Postgres page. Only ask WhatsApp Web for older history when
-			// the DB page is empty/short (first-time backfill), not on every scroll.
-			if (
+			// Prefer Postgres. On explicit button click (forceProvider) always ask
+			// WhatsApp Web when the DB page is short/empty so history can backfill.
+			const shouldSyncProvider =
 				!starredOnly &&
 				canUseWhatsApp &&
 				!demo.settings.enabled &&
-				local.length < MESSAGE_PAGE_SIZE
-			) {
+				(forceProvider || local.length < MESSAGE_PAGE_SIZE);
+			if (shouldSyncProvider) {
 				try {
 					const synced = await api.post(
 						`/whatsapp/conversations/${targetConversationId}/sync/older`,
 						null,
-						{ params: { limit: MESSAGE_PAGE_SIZE } },
+						{
+							params: {
+								limit: MESSAGE_PAGE_SIZE,
+								force: forceProvider ? 1 : undefined,
+							},
+							timeout: 90_000,
+						},
 					);
 					provider = synced?.data || null;
 				} catch {
 					/* keep DB page */
 				}
 			}
-			if (!local.length && !provider?.items?.length) {
+			if (
+				requestId !== olderRequestId.current ||
+				conversationIdRef.current !== targetConversationId
+			) {
+				return false;
+			}
+			const providerItems = Array.isArray(provider?.items) ? provider.items : [];
+			if (!local.length && !providerItems.length) {
 				setHasMoreMessages(false);
 				hasMoreMessagesRef.current = false;
 				return false;
 			}
-			const incoming = [...local, ...(provider?.items || [])];
-			const hasMore =
-				typeof provider?.hasMore === 'boolean'
-					? provider.hasMore
-					: local.length >= MESSAGE_PAGE_SIZE;
-			setHasMoreMessages(hasMore);
-			hasMoreMessagesRef.current = hasMore;
+			const incoming = [...local, ...providerItems];
 			const previousCache = messagesCacheRef.current.get(cacheKey);
 			const previousItems = previousCache?.items || conversationMessagesRef.current;
 			const next = mergeMessages(incoming, previousItems, targetConversationId);
+			const added = Math.max(0, next.length - previousCount);
+			const dbHasMore = local.length >= MESSAGE_PAGE_SIZE;
+			const hasMore =
+				typeof provider?.hasMore === 'boolean'
+					? provider.hasMore || dbHasMore
+					: dbHasMore || (forceProvider && added > 0);
+			// Stop after repeated empty merges so we don't spin forever on duplicates.
+			if (added === 0 && !dbHasMore) {
+				setHasMoreMessages(
+					typeof provider?.hasMore === 'boolean' ? Boolean(provider.hasMore) : false,
+				);
+				hasMoreMessagesRef.current =
+					typeof provider?.hasMore === 'boolean' ? Boolean(provider.hasMore) : false;
+			} else {
+				setHasMoreMessages(hasMore);
+				hasMoreMessagesRef.current = hasMore;
+			}
 			messagesCacheRef.current.set(cacheKey, {
 				items: next,
-				hasMore,
+				hasMore: hasMoreMessagesRef.current,
 				cachedAt: Date.now(),
 				providerHydratedAt: previousCache?.providerHydratedAt || 0,
 			});
@@ -10737,7 +10795,7 @@ function WhatsAppWorkspaceContent() {
 					if (currentBox) currentBox.scrollTop += currentBox.scrollHeight - previousHeight;
 				});
 			}
-			return incoming.length > 0;
+			return added > 0 || incoming.length > 0;
 		} catch (error) {
 			if (conversationIdRef.current === targetConversationId) {
 				toast.error(error.response?.data?.message || 'Could not load older messages');
@@ -13832,7 +13890,8 @@ function WhatsAppWorkspaceContent() {
 												)}
 												{hasMoreMessages && !loadingOlder && !activeMessageGroup && (
 													<button
-														onClick={loadOlder}
+														type="button"
+														onClick={() => void loadOlder({ forceProvider: true, ignoreThrottle: true })}
 														disabled={loadingOlder}
 														className="mx-auto flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-bold shadow dark:bg-slate-800"
 													>
@@ -14178,6 +14237,7 @@ function WhatsAppWorkspaceContent() {
 																				onOpenDocument={setDocumentPreview}
 																				sessionReady={isAccountConnected}
 																				messageRaw={message.raw}
+																				message={message}
 																			/>
 																		)
 																		: !isDeleted && fallbackMediaPreview ? (

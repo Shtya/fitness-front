@@ -1,9 +1,9 @@
-import LearningStudio from './LearningStudio';
+import LearningHub from './LearningHub';
 
 export const metadata = {
 	title: 'Learning',
 };
 
 export default function LearningPage() {
-	return <LearningStudio />;
+	return <LearningHub />;
 }

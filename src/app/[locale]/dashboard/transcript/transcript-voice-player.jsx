@@ -40,7 +40,17 @@ function formatClock(seconds) {
 	return `${mm}:${ss}`;
 }
 
-export default function TranscriptVoicePlayer({ src, seed = '' }) {
+/**
+ * @param {'default' | 'list'} variant
+ * list = dense row control (play + seek track + time), no nested card chrome
+ */
+export default function TranscriptVoicePlayer({
+	src,
+	seed = '',
+	compact = false,
+	variant = 'default',
+}) {
+	const isList = variant === 'list' || compact;
 	const audioRef = useRef(null);
 	const [playing, setPlaying] = useState(false);
 	const [progress, setProgress] = useState(0);
@@ -88,7 +98,7 @@ export default function TranscriptVoicePlayer({ src, seed = '' }) {
 	}, [src]);
 
 	useEffect(() => {
-		if (!src) return undefined;
+		if (!src || isList) return undefined;
 		let cancelled = false;
 		const controller = new AbortController();
 
@@ -115,7 +125,7 @@ export default function TranscriptVoicePlayer({ src, seed = '' }) {
 			cancelled = true;
 			controller.abort();
 		};
-	}, [src]);
+	}, [src, isList]);
 
 	const seek = event => {
 		const audio = audioRef.current;
@@ -142,6 +152,45 @@ export default function TranscriptVoicePlayer({ src, seed = '' }) {
 			setPlaying(false);
 		}
 	};
+
+	if (isList) {
+		const pct = Math.max(0, Math.min(100, progress * 100));
+		return (
+			<div className="transcript-voice-player is-list" dir="ltr">
+				<audio ref={audioRef} src={src} preload="metadata" />
+				<button
+					type="button"
+					onClick={toggle}
+					aria-label={playing ? 'Pause' : 'Play'}
+					className={`transcript-list-play ${playing ? 'is-playing' : ''}`}
+				>
+					{playing ? (
+						<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+							<path
+								fill="currentColor"
+								d="M7 5h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm7 0h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
+							/>
+						</svg>
+					) : (
+						<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+							<path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.54.84l10.06-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14Z" />
+						</svg>
+					)}
+				</button>
+				<button
+					type="button"
+					onClick={seek}
+					aria-label="Seek"
+					className="transcript-list-track"
+				>
+					<span className="transcript-list-track-fill" style={{ width: `${pct}%` }} />
+				</button>
+				<span className="transcript-list-time">
+					{formatClock(playing || current > 0 ? current : duration)}
+				</span>
+			</div>
+		);
+	}
 
 	return (
 		<div className="transcript-voice-player" dir="ltr">

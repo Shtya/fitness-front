@@ -2,13 +2,64 @@ export function uid(prefix = 'id') {
 	return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+export const DEFAULT_PROMPT_TEMPLATES = [
+	{
+		id: 'tpl_summarize',
+		name: 'Summarize',
+		body: 'Summarize {{topic}} using my notes:\n\n{{notes}}\n\nKeep it clear for level {{level}}.',
+	},
+	{
+		id: 'tpl_explain',
+		name: 'Explain',
+		body: 'Explain {{topic}} in a simple way for level {{level}}. Cover the important concepts and practical examples.',
+	},
+	{
+		id: 'tpl_deep_dive',
+		name: 'Deep Dive',
+		body: 'Deep dive into {{topic}}. Assume level {{level}}. Use my notes if helpful:\n\n{{notes}}',
+	},
+	{
+		id: 'tpl_examples',
+		name: 'Give Examples',
+		body: 'Give practical examples for {{topic}} at level {{level}}.',
+	},
+	{
+		id: 'tpl_flashcards',
+		name: 'Create Flashcards',
+		body: 'Create flashcards for {{topic}} based on these notes:\n\n{{notes}}',
+	},
+	{
+		id: 'tpl_questions',
+		name: 'Generate Questions',
+		body: 'Generate questions to test my understanding of {{topic}} (level {{level}}).',
+	},
+	{
+		id: 'tpl_review_notes',
+		name: 'Review My Notes',
+		body: 'Review my notes for {{topic}} and improve clarity:\n\n{{notes}}',
+	},
+	{
+		id: 'tpl_missing',
+		name: 'Find Missing Concepts',
+		body: 'Find missing concepts for {{topic}} at level {{level}} using my notes:\n\n{{notes}}',
+	},
+	{
+		id: 'tpl_interview',
+		name: 'Interview Questions',
+		body: 'Create interview questions about {{topic}} for level {{level}}.',
+	},
+];
+
 export function emptyLearningState() {
 	return {
 		paths: [],
 		inbox: [],
 		activity: [],
+		promptTemplates: DEFAULT_PROMPT_TEMPLATES.map(item => ({ ...item })),
 		prefs: {
 			topicMode: null,
+			dailyNewLimit: 3,
+			dailyReviewLimit: 2,
 		},
 		stats: {
 			streakDays: 0,
@@ -17,6 +68,18 @@ export function emptyLearningState() {
 			totalSessions: 0,
 		},
 		continueLearning: null,
+	};
+}
+
+export function createTopicPrompt(partial = {}) {
+	return {
+		id: uid('prompt'),
+		title: '',
+		body: '',
+		isDefault: false,
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString(),
+		...partial,
 	};
 }
 
@@ -53,6 +116,10 @@ export function createTopic(partial = {}) {
 		questions: [],
 		flashcards: [],
 		practice: [],
+		prompts: [],
+		confusedNotes: [],
+		studyMinutes: 0,
+		reviewCount: 0,
 		favorite: false,
 		completedAt: null,
 		lastReviewedAt: null,

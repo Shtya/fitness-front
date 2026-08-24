@@ -18,7 +18,6 @@ import {
 	Play,
 	RotateCcw,
 	Save,
-	Sparkles,
 	Square,
 	Trash2,
 	UploadCloud,
@@ -28,15 +27,13 @@ import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/hooks/useUser';
-import {
-	LearningHeaderCard,
-	LearningHeaderStat,
-} from '../learning/learning-ui';
-import '../learning/learning-landing.css';
 import TranscriptionAiPanel from './transcription-ai-panel';
+import TranscriptVoicePlayer from './transcript-voice-player';
+import { WaCustomSelect } from '../whatsapp/WaCustomSelect';
 import {
 	ACCEPTED_TRANSCRIPTION_EXTENSIONS as ACCEPTED_EXTENSIONS,
 	CLOUD_TRANSCRIPTION_PROVIDER_IDS as CLOUD_PROVIDER_IDS,
+	audioDisplayName,
 	createChunkedTranscription,
 	getStoredTranscriptionChunkSeconds,
 	getStoredTranscriptionProvider,
@@ -49,6 +46,33 @@ import {
 	TRANSCRIPTION_PROVIDERS as PROVIDERS,
 	transcriptionErrorMessage,
 } from './transcription-client';
+import { STUDIO } from '../ai-content-studio/components/studio-theme';
+
+function formatSelectedFileSize(bytes) {
+	const size = Number(bytes);
+	if (!Number.isFinite(size) || size <= 0) return '';
+	if (size < 1024) return `${size} B`;
+	if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+	return `${(size / 1024 / 1024).toFixed(2)} MB`;
+}
+
+/** Shorter label for dense file rows; full name stays in title tooltip. */
+function shortSelectedFileLabel(fullName, index, fallbackTemplate) {
+	const raw = String(fullName || '').trim();
+	if (!raw) return String(fallbackTemplate || 'Audio {n}').replace('{n}', String(index + 1));
+	const base = raw.split(/[/\\]/).pop() || raw;
+	const noExt = base.replace(/\.[a-z0-9]{2,5}$/i, '');
+	const waMatch = noExt.match(
+		/whatsapp\s+audio\s+(\d{4}-\d{2}-\d{2})\s+at\s+(\d{1,2}[.:]\d{2}(?:[.:]\d{2})?\s*(?:AM|PM)?)(?:\s*\((\d+)\))?/i,
+	);
+	if (waMatch) {
+		const time = waMatch[2].replace(/\./g, ':');
+		const dup = waMatch[3] ? ` (${waMatch[3]})` : '';
+		return `${time}${dup}`;
+	}
+	if (noExt.length <= 28) return noExt;
+	return `${noExt.slice(0, 18)}…${noExt.slice(-6)}`;
+}
 
 const copy = {
 	en: {
@@ -261,7 +285,7 @@ function buildCombinedTranscript(items, audioLabelTemplate, { forceLabels = fals
 	if (items.length === 1 && !forceLabels) return String(items[0]?.text || '').trim();
 	return items
 		.map((item, index) => {
-			const label = audioLabelTemplate.replace('{n}', String(index + 1));
+			const label = audioDisplayName(item, index, audioLabelTemplate);
 			const text = String(item?.text || '').trim();
 			return `${label} :\n${text}`;
 		})
@@ -286,7 +310,6 @@ export default function TranscriptWorkspace() {
 	const [chunkSeconds, setChunkSeconds] = useState(() => getStoredTranscriptionChunkSeconds());
 	const [chunkProgress, setChunkProgress] = useState({ current: 0, total: 0 });
 	const [language, setLanguage] = useState('auto');
-	const [customVocabulary, setCustomVocabulary] = useState('');
 	const [recordingState, setRecordingState] = useState('idle');
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [status, setStatus] = useState('idle');
@@ -594,7 +617,6 @@ export default function TranscriptWorkspace() {
 					file: currentFile,
 					provider,
 					language,
-					customVocabulary,
 					chunkSeconds,
 					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
 						setChunkProgress({ current: chunkIndex, total: chunkTotal });
@@ -610,7 +632,12 @@ export default function TranscriptWorkspace() {
 						if (next >= 95) setStatus('processing');
 					},
 				});
-				created.push(data);
+				created.push({
+					...data,
+					originalFileName: data?.originalFileName || currentFile.name,
+					fileName: currentFile.name,
+					name: currentFile.name,
+				});
 				const combinedText = buildCombinedTranscript(created, t.audioLabel, {
 					forceLabels: queue.length > 1,
 				});
@@ -718,6 +745,31 @@ export default function TranscriptWorkspace() {
 		setChunkSeconds(storeTranscriptionChunkSeconds(value));
 	};
 
+	const providerOptions = useMemo(
+		() =>
+			PROVIDERS.map(item => ({
+				value: item.id,
+				label: `${item.name} · ${item.score}%`,
+			})),
+		[],
+	);
+	const languageOptions = useMemo(
+		() => [
+			{ value: 'auto', label: t.auto },
+			{ value: 'ar', label: t.arabic },
+			{ value: 'en', label: t.english },
+		],
+		[t.auto, t.arabic, t.english],
+	);
+	const chunkOptions = useMemo(
+		() =>
+			TRANSCRIPTION_CHUNK_PRESETS.map(item => ({
+				value: item.value,
+				label: isArabic ? item.labelAr : item.labelEn,
+			})),
+		[isArabic],
+	);
+
 	const saveProviderKey = async () => {
 		const apiKey = providerApiKey.trim();
 		if (!apiKey) return;
@@ -788,83 +840,71 @@ export default function TranscriptWorkspace() {
 
 	const busy = status === 'uploading' || status === 'processing';
 	const recording = recordingState !== 'idle';
+	const panelClass =
+		'relative rounded-[20px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_10px_20px_-10px_rgba(15,23,42,0.10),0_4px_6px_-4px_rgba(15,23,42,0.05)] md:p-6';
 
 	return (
-		<div className="learning-landing mx-auto w-full max-w-[1500px] space-y-5 pb-10" dir={isArabic ? 'rtl' : 'ltr'}>
-			<div className="learning-landing__page !max-w-none">
-			<LearningHeaderCard>
-				<div className="learning-header-card__top">
-					<div className="learning-header-card__title-row">
-						<div className="learning-header-card__title-icon">
-							<AudioLines size={22} strokeWidth={1.6} />
-						</div>
-						<div className="learning-header-card__title-block">
-							<h1 className="learning-header-card__title">
-								{t.heroTitleBefore} <em>{t.heroTitleEm}</em>.
-							</h1>
-							<p className="learning-header-card__subtitle">
-								<span className="is-hl">{t.heroSubtitle1}</span>
-								<span className="learning-header-card__subtitle-dot" aria-hidden />
-								<span>{t.heroSubtitle2}</span>
-								<span className="learning-header-card__subtitle-dot" aria-hidden />
-								<span>{t.heroSubtitle3}</span>
-							</p>
-						</div>
-					</div>
-					<div className="learning-header-card__actions">
-						<label className="sr-only" htmlFor="header-transcription-provider">{t.method}</label>
-						<select
-							id="header-transcription-provider"
-							value={provider}
-							onChange={event => selectProvider(event.target.value)}
-							disabled={busy}
-							title={t.qualityEstimate}
-							className="h-11 rounded-full border-0 bg-white/15 px-4 text-sm font-bold text-white outline-none backdrop-blur"
-						>
-							{PROVIDERS.map(item => (
-								<option key={item.id} value={item.id} className="text-slate-900">
-									{item.name} · {item.score}%
-								</option>
-							))}
-						</select>
-						{CLOUD_PROVIDER_IDS.includes(provider) && canManageProviderKey && (
-							<button
-								type="button"
-								onClick={() => setShowCredentialModal(true)}
-								className="learning-pill-btn--light"
-								aria-label={t.providerSettings}
-								title={t.providerSettings}
-							>
-								<KeyRound className="size-5" />
-								<span className="hidden lg:inline">{t.groqKeyManage}</span>
-							</button>
-						)}
-					</div>
-				</div>
-				<div className="learning-header-stats">
-					<LearningHeaderStat
-						label={t.method}
-						value={`${providerMeta.score}%`}
-						icon={<Sparkles size={16} style={{ color: 'var(--learn-h-gold)' }} />}
-					/>
-					<LearningHeaderStat
-						label={t.history}
-						value={history.length}
-						icon={<History size={16} />}
-					/>
-					<LearningHeaderStat
-						label={t.words}
-						value={result ? liveCounts.words : '—'}
-						icon={<Check size={16} />}
-					/>
-				</div>
-				<p className="mt-4 max-w-3xl text-sm text-white/75">{t.subtitle}</p>
-			</LearningHeaderCard>
+		<div className="relative mx-auto w-full max-w-[1500px] space-y-5 overflow-hidden pb-10" dir={isArabic ? 'rtl' : 'ltr'}>
+			<div
+				className="pointer-events-none absolute left-[8%] top-[-80px] h-[340px] w-[480px] rounded-full blur-3xl"
+				style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(59,130,246,0.08) 45%, transparent 70%)' }}
+			/>
+			<div
+				className="pointer-events-none absolute right-[4%] top-[12%] h-[280px] w-[380px] rounded-full blur-3xl"
+				style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.12) 0%, transparent 70%)' }}
+			/>
 
-			<div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(310px,.65fr)]">
+			<header
+				className="relative z-10 flex min-h-[76px] flex-wrap items-center gap-3 rounded-[20px] bg-white px-5 py-3 sm:px-6"
+				style={{ boxShadow: STUDIO.shadow }}
+			>
+				<div className="flex min-w-0 flex-1 items-center gap-3">
+					<span
+						className="grid size-11 shrink-0 place-items-center rounded-xl text-white"
+						style={{ background: STUDIO.gradientBr, boxShadow: STUDIO.shadow3dPrimary }}
+					>
+						<AudioLines size={20} strokeWidth={1.8} />
+					</span>
+					<div className="min-w-0">
+						<h1 className="truncate text-[16px] font-bold tracking-tight text-[#111827]">
+							{t.heroTitleBefore} <span className="text-[#6366F1]">{t.heroTitleEm}</span>
+						</h1>
+						<p className="mt-0.5 truncate text-[12px] text-[#6B7280]">
+							{t.heroSubtitle1} · {t.heroSubtitle2} · {t.heroSubtitle3}
+						</p>
+					</div>
+				</div>
+				<div className="flex flex-wrap items-center gap-2">
+					 
+					<label className="sr-only">{t.method}</label>
+					<WaCustomSelect
+						value={provider}
+						onChange={selectProvider}
+						disabled={busy}
+						ariaLabel={t.method}
+						options={providerOptions}
+						className="min-w-[11rem]"
+						buttonClassName="!h-10 !rounded-xl !px-3 !text-sm !font-semibold text-slate-800"
+					/>
+					{CLOUD_PROVIDER_IDS.includes(provider) && canManageProviderKey && (
+						<button
+							type="button"
+							onClick={() => setShowCredentialModal(true)}
+							className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:border-[#c7d2fe] hover:text-[#4f46e5]"
+							aria-label={t.providerSettings}
+							title={t.providerSettings}
+						>
+							<KeyRound className="size-4" />
+							<span className="hidden lg:inline">{t.groqKeyManage}</span>
+						</button>
+					)}
+				</div>
+ 			</header>
+
+			<div className="relative z-10 grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(310px,.65fr)]">
 				<div className="space-y-5">
-					<section className="learning-neu p-4 md:p-6">
-						<div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-100 p-1.5">
+					<section className={panelClass}>
+						<div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
 							{[
 								['upload', UploadCloud, t.upload],
 								['microphone', Mic, t.microphone],
@@ -875,8 +915,10 @@ export default function TranscriptWorkspace() {
 									type="button"
 									disabled={recording || busy}
 									onClick={() => setMode(value)}
-									className={`flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 text-xs font-bold transition md:text-sm ${
-										mode === value ? 'bg-white text-[var(--color-primary-700)] shadow-sm' : 'text-slate-500 hover:text-slate-800'
+									className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-2 text-xs font-bold transition md:text-sm ${
+										mode === value
+											? 'bg-white text-[#4f46e5] shadow-sm ring-1 ring-[#c7d2fe]'
+											: 'text-slate-500 hover:text-slate-800'
 									}`}
 								>
 									<Icon className="size-4" />
@@ -897,15 +939,25 @@ export default function TranscriptWorkspace() {
 										selectFiles(event.dataTransfer.files);
 									}}
 									className={`flex min-h-56 flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition ${
-										dragging ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-50)]' : 'border-slate-200 bg-slate-50/70'
+										dragging
+											? 'border-[#6366F1] bg-[#eef2ff]'
+											: 'border-slate-200 bg-gradient-to-b from-slate-50 to-white'
 									}`}
 								>
-									<div className="mb-4 grid size-14 place-items-center rounded-2xl bg-white text-[var(--color-primary-600)] shadow-sm">
+									<div
+										className="mb-4 grid size-14 place-items-center rounded-2xl text-white"
+										style={{ background: STUDIO.gradientBr, boxShadow: STUDIO.shadow3dPrimary }}
+									>
 										<UploadCloud className="size-7" />
 									</div>
-									<h2 className="font-black text-slate-800">{t.dropTitle}</h2>
-									<p className="mt-1 text-xs text-slate-500 md:text-sm">{t.dropHint}</p>
-									<Button className="mt-5" onClick={() => fileInputRef.current?.click()} disabled={busy}>
+									<h2 className="font-bold text-slate-800">{t.dropTitle}</h2>
+									<p className="mt-1 max-w-md text-xs text-slate-500 md:text-sm">{t.dropHint}</p>
+									<Button
+										className="mt-5 border-0 text-white hover:opacity-95"
+										style={{ background: STUDIO.gradient, boxShadow: STUDIO.shadow3dPrimary }}
+										onClick={() => fileInputRef.current?.click()}
+										disabled={busy}
+									>
 										{t.browse}
 									</Button>
 									<input
@@ -921,9 +973,9 @@ export default function TranscriptWorkspace() {
 									/>
 								</div>
 							) : (
-								<div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border bg-slate-50/70 p-6 text-center">
+								<div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6 text-center">
 									<div className={`relative mb-4 grid size-20 place-items-center rounded-full ${
-										recordingState === 'recording' ? 'bg-red-50 text-red-600' : 'bg-[var(--color-primary-50)] text-[var(--color-primary-600)]'
+										recordingState === 'recording' ? 'bg-red-50 text-red-600' : 'bg-[#eef2ff] text-[#4f46e5]'
 									}`}>
 										{recordingState === 'recording' && <span className="absolute inset-0 animate-ping rounded-full bg-red-200/50" />}
 										{mode === 'meeting' ? <MonitorUp className="relative size-8" /> : <Mic className="relative size-8" />}
@@ -938,7 +990,7 @@ export default function TranscriptWorkspace() {
 										</div>
 									)}
 									<div className="mt-5 flex flex-wrap justify-center gap-2">
-										{!recording && <Button onClick={startRecording}><Mic />{t.start}</Button>}
+										{!recording && <Button onClick={startRecording} style={{ background: STUDIO.gradient }} className="border-0 text-white"><Mic />{t.start}</Button>}
 										{recordingState === 'recording' && <Button variant="outline" onClick={pauseRecording}><Pause />{t.pause}</Button>}
 										{recordingState === 'paused' && <Button variant="outline" onClick={resumeRecording}><Play />{t.resume}</Button>}
 										{recording && <Button onClick={stopRecording}><Square />{t.stop}</Button>}
@@ -949,100 +1001,101 @@ export default function TranscriptWorkspace() {
 						</div>
 
 						{files.length > 0 && !recording && (
-							<div className="mt-4 space-y-3">
-								<div className="flex items-center justify-between gap-3">
-									<p className="text-sm font-bold text-slate-700">
-										{t.selectedFiles} · {files.length}
+							<div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+								<div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/90 px-3 py-2">
+									<p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+										{t.selectedFiles}
+										<span className="ms-1.5 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-700 ring-1 ring-slate-200/80">
+											{files.length}
+										</span>
 									</p>
 									<button
 										type="button"
 										onClick={clearFiles}
 										disabled={busy}
-										className="text-xs font-bold text-slate-500 hover:text-red-600 disabled:opacity-50"
+										className="text-[11px] font-semibold text-slate-500 hover:text-red-600 disabled:opacity-50"
 									>
 										{t.clearFiles}
 									</button>
 								</div>
-								{files.map((item, index) => (
-									<div
-										key={`${fileKey(item)}-${index}`}
-										className={`rounded-xl border p-4 ${
-											busy && batchIndex === index + 1
-												? 'border-blue-300 bg-blue-50/70'
-												: 'border-emerald-200 bg-emerald-50/60'
-										}`}
-									>
-										<div className="flex items-start justify-between gap-3">
-											<div className="flex min-w-0 items-center gap-3">
-												<FileAudio className="size-6 shrink-0 text-emerald-600" />
-												<div className="min-w-0">
-													<p className="truncate text-sm font-bold text-slate-800">{item.name}</p>
-													<p className="text-xs text-slate-500">{(item.size / 1024 / 1024).toFixed(2)} MB</p>
-												</div>
-											</div>
-											<button
-												type="button"
-												onClick={() => removeFile(index)}
-												disabled={busy}
-												className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-red-600 disabled:opacity-50"
-												aria-label={t.removeFile}
+								<ul className="max-h-[220px] divide-y divide-slate-100 overflow-y-auto">
+									{files.map((item, index) => {
+										const fullName = audioDisplayName(item, index, t.audioLabel);
+										const shortName = shortSelectedFileLabel(fullName, index, t.audioLabel);
+										const active = busy && batchIndex === index + 1;
+										return (
+											<li
+												key={`${fileKey(item)}-${index}`}
+												className={`flex h-9 items-center gap-2 px-2.5 transition-colors ${
+													active ? 'bg-[#eef2ff]' : 'hover:bg-slate-50/90'
+												}`}
 											>
-												<X className="size-4" />
-											</button>
-										</div>
-										{previewUrls[index] && (
-											<audio className="mt-3 h-10 w-full" controls src={previewUrls[index]} />
-										)}
-									</div>
-								))}
+												{previewUrls[index] ? (
+													<div className="w-[132px] shrink-0 sm:w-[148px]">
+														<TranscriptVoicePlayer
+															variant="list"
+															src={previewUrls[index]}
+															seed={item.name || String(index)}
+														/>
+													</div>
+												) : (
+													<span className="grid size-6 shrink-0 place-items-center rounded-md bg-slate-100 text-[#4f46e5]">
+														<FileAudio className="size-3" />
+													</span>
+												)}
+												<p
+													className="min-w-0 flex-1 truncate text-[12px] font-semibold text-slate-700"
+													title={fullName}
+												>
+													{shortName}
+												</p>
+												<span className="shrink-0 text-[10px] font-semibold tabular-nums text-slate-400">
+													{formatSelectedFileSize(item.size)}
+												</span>
+												<button
+													type="button"
+													onClick={() => removeFile(index)}
+													disabled={busy}
+													className="grid size-6 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-white hover:text-red-600 disabled:opacity-50"
+													aria-label={t.removeFile}
+												>
+													<X className="size-3.5" />
+												</button>
+											</li>
+										);
+									})}
+								</ul>
 							</div>
 						)}
 
-						<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[180px_200px_minmax(0,1fr)]">
-							<label className="grid gap-1.5 text-sm font-bold text-slate-700">
+						<div className="mt-4 grid gap-3 sm:grid-cols-2">
+							<label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 								{t.language}
-								<select
+								<WaCustomSelect
 									value={language}
-									onChange={event => setLanguage(event.target.value)}
+									onChange={setLanguage}
 									disabled={busy || recording}
-									className="h-11 rounded-xl border bg-white px-3 text-sm outline-none focus:border-[var(--color-primary-400)]"
-								>
-									<option value="auto">{t.auto}</option>
-									<option value="ar">{t.arabic}</option>
-									<option value="en">{t.english}</option>
-								</select>
-							</label>
-							<label className="grid gap-1.5 text-sm font-bold text-slate-700">
-								{t.chunkLength}
-								<select
-									value={chunkSeconds}
-									onChange={event => selectChunkSeconds(event.target.value)}
-									disabled={busy || recording}
-									className="h-11 rounded-xl border bg-white px-3 text-sm outline-none focus:border-[var(--color-primary-400)]"
-								>
-									{TRANSCRIPTION_CHUNK_PRESETS.map(item => (
-										<option key={item.value} value={item.value}>
-											{isArabic ? item.labelAr : item.labelEn}
-										</option>
-									))}
-								</select>
- 							</label>
-							<label className="grid gap-1.5 text-sm font-bold text-slate-700 sm:col-span-2 lg:col-span-1">
-								{t.vocabulary}
-								<input
-									value={customVocabulary}
-									onChange={event => setCustomVocabulary(event.target.value)}
-									disabled={busy || recording}
-									maxLength={4000}
-									placeholder={t.vocabularyHint}
-									className="h-11 rounded-xl border bg-white px-3 text-sm font-normal outline-none focus:border-[var(--color-primary-400)]"
+									ariaLabel={t.language}
+									options={languageOptions}
+									buttonClassName="!h-11 !rounded-xl !px-3 !text-sm !font-semibold normal-case text-slate-800"
 								/>
 							</label>
+							<label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+								{t.chunkLength}
+								<WaCustomSelect
+									value={chunkSeconds}
+									onChange={selectChunkSeconds}
+									disabled={busy || recording}
+									ariaLabel={t.chunkLength}
+									options={chunkOptions}
+									buttonClassName="!h-11 !rounded-xl !px-3 !text-sm !font-semibold normal-case text-slate-800"
+								/>
+ 							</label>
 						</div>
 
 						{busy && (
-							<div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
-								<div className="flex items-center justify-between text-sm font-bold text-blue-800">
+							<div className="mt-5 rounded-xl border border-[#c7d2fe] bg-[#eef2ff] p-4">
+								<div className="flex items-center justify-between text-sm font-bold text-[#3730a3]">
 									<span className="flex items-center gap-2">
 										<LoaderCircle className="size-4 animate-spin" />
 										{chunkProgress.total > 1
@@ -1065,23 +1118,34 @@ export default function TranscriptWorkspace() {
 									</span>
 								</div>
 								{batchTotal > 1 && (
-									<p className="mt-2 text-xs font-bold text-blue-700">
+									<p className="mt-2 text-xs font-bold text-[#4338ca]">
 										{t.batchProgress
 											.replace('{current}', String(batchIndex))
 											.replace('{total}', String(batchTotal))}
-										{files[batchIndex - 1] ? ` · ${files[batchIndex - 1].name}` : ''}
+										{files[batchIndex - 1]
+											? ` · ${audioDisplayName(files[batchIndex - 1], batchIndex - 1, t.audioLabel)}`
+											: ''}
 									</p>
 								)}
-								<div className="mt-3 h-2 overflow-hidden rounded-full bg-blue-100">
+								<div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
 									<div
-										className={`h-full rounded-full bg-[var(--color-primary-600)] transition-all ${status === 'processing' ? 'w-full animate-pulse' : ''}`}
-										style={status === 'uploading' ? { width: `${progress}%` } : undefined}
+										className={`h-full rounded-full transition-all ${status === 'processing' ? 'w-full animate-pulse' : ''}`}
+										style={{
+											background: STUDIO.gradient,
+											...(status === 'uploading' ? { width: `${progress}%` } : null),
+										}}
 									/>
 								</div>
 							</div>
 						)}
 
-						<Button size="lg" className="mt-5 w-full" disabled={!files.length || busy || recording} onClick={transcribe}>
+						<Button
+							size="lg"
+							className="mt-5 w-full border-0 text-white hover:opacity-95"
+							style={{ background: STUDIO.gradient, boxShadow: STUDIO.shadow3dPrimary }}
+							disabled={!files.length || busy || recording}
+							onClick={transcribe}
+						>
 							{busy ? <LoaderCircle className="animate-spin" /> : <AudioLines />}
 							{t.transcribe}
 							{files.length > 1 ? ` (${files.length})` : ''}
@@ -1089,10 +1153,12 @@ export default function TranscriptWorkspace() {
 					</section>
 
 					{result && (
-						<section className="learning-neu p-4 md:p-6">
+						<section className={panelClass}>
 							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-								<h2 className="flex items-center gap-2 text-lg font-black text-slate-900">
-									<Check className="size-5 text-emerald-600" />
+								<h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+									<span className="grid size-8 place-items-center rounded-lg bg-emerald-50 text-emerald-600">
+										<Check className="size-4" />
+									</span>
 									{t.transcript}
 								</h2>
 								<div className="flex flex-wrap gap-2">
@@ -1114,9 +1180,9 @@ export default function TranscriptWorkspace() {
 									[t.processingTime, formatTime(result.processingTimeSeconds)],
 									[t.detected, result.detectedLanguage?.toUpperCase() || '—'],
 								].map(([label, value]) => (
-									<div key={label} className="learning-neu-inset p-3">
-										<p className="text-[11px] font-bold text-slate-500">{label}</p>
-										<p className="mt-1 text-lg font-black text-slate-900">{value}</p>
+									<div key={label} className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+										<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+										<p className="mt-1 truncate text-base font-bold text-slate-900">{value}</p>
 									</div>
 								))}
 							</div>
@@ -1124,10 +1190,15 @@ export default function TranscriptWorkspace() {
 							<textarea
 								value={transcriptText}
 								onChange={event => setTranscriptText(event.target.value)}
-								className="mt-4 min-h-72 w-full resize-y rounded-[18px] border border-slate-200 bg-slate-50/50 p-4 text-sm leading-7 text-slate-800 outline-none focus:border-[var(--color-primary-400)] focus:bg-white"
+								className="mt-4 min-h-72 w-full resize-y rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-sm leading-7 text-slate-800 outline-none focus:border-[#6366F1] focus:bg-white focus:ring-2 focus:ring-[#6366F1]/20"
 							/>
 							<div className="mt-3 flex justify-end">
-								<Button onClick={saveTranscript} disabled={saving || transcriptText === result.text}>
+								<Button
+									onClick={saveTranscript}
+									disabled={saving || transcriptText === result.text}
+									className="border-0 text-white"
+									style={{ background: STUDIO.gradient }}
+								>
 									{saving ? <LoaderCircle className="animate-spin" /> : <Save />}
 									{t.save}
 								</Button>
@@ -1168,21 +1239,23 @@ export default function TranscriptWorkspace() {
 				</div>
 
 				<aside className="min-w-0">
-					<section className="learning-neu p-4 xl:sticky xl:top-4">
-						<h2 className="flex items-center gap-2 text-lg font-black text-slate-900">
-							<History className="size-5 text-[var(--color-primary-600)]" />
+					<section className={`${panelClass} xl:sticky xl:top-4`}>
+						<h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+							<span className="grid size-8 place-items-center rounded-lg bg-[#eef2ff] text-[#4f46e5]">
+								<History className="size-4" />
+							</span>
 							{t.history}
 						</h2>
 						<div className="mt-4 max-h-[70vh] space-y-2 overflow-y-auto pe-1">
 							{historyLoading ? (
 								<div className="grid min-h-32 place-items-center"><LoaderCircle className="animate-spin text-slate-400" /></div>
 							) : history.length === 0 ? (
-								<div className="rounded-xl border border-dashed p-6 text-center text-sm text-slate-500">{t.noHistory}</div>
+								<div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">{t.noHistory}</div>
 							) : history.map(item => (
 								<div
 									key={item.id}
-									className={`group rounded-xl border p-3 transition hover:border-[var(--color-primary-300)] ${
-										result?.id === item.id ? 'border-[var(--color-primary-400)] bg-[var(--color-primary-50)]' : 'bg-slate-50/60'
+									className={`group rounded-xl border p-3 transition hover:border-[#c7d2fe] ${
+										result?.id === item.id ? 'border-[#a5b4fc] bg-[#eef2ff]' : 'border-slate-200 bg-slate-50/70'
 									}`}
 								>
 									<button
@@ -1195,7 +1268,7 @@ export default function TranscriptWorkspace() {
 									>
 										<div className="flex items-center justify-between gap-2">
 											<p className="truncate text-sm font-bold text-slate-800">{item.originalFileName}</p>
-											<span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">
+											<span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500 ring-1 ring-slate-200">
 												{PROVIDERS.find(providerItem => providerItem.id === item.provider)?.name ||
 													'Local'}
 											</span>
@@ -1233,13 +1306,12 @@ export default function TranscriptWorkspace() {
 								</div>
 							))}
 						</div>
-						<button type="button" onClick={loadHistory} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg p-2 text-xs font-bold text-slate-500 hover:bg-slate-50">
+						<button type="button" onClick={loadHistory} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 p-2 text-xs font-bold text-slate-500 hover:bg-slate-50">
 							<RotateCcw className="size-3.5" />
 							{t.history}
 						</button>
 					</section>
 				</aside>
-			</div>
 			</div>
 
 			{showCredentialModal && canManageProviderKey && providerMeta.keyUrl && (

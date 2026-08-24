@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -257,7 +257,10 @@ export const ITEM_META = {
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
   aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
   learning: { id: 'learning', nameKey: 'learning', href: '/dashboard/learning', icon: GraduationCap, descKey: 'descriptions.learning', group: 'tools', defaultVisible: true, required: false },
+  learningManagement: { id: 'learningManagement', nameKey: 'learningManagement', href: '/dashboard/learning/management', icon: Layers3, descKey: 'descriptions.learningManagement', group: 'tools', defaultVisible: true, required: false },
+  learningStudy: { id: 'learningStudy', nameKey: 'learningStudy', href: '/dashboard/learning/study', icon: Brain, descKey: 'descriptions.learningStudy', group: 'tools', defaultVisible: true, required: false },
   quranRevision: { id: 'quranRevision', nameKey: 'quranRevision', href: '/dashboard/quran-revision', icon: BookMarked, descKey: 'descriptions.quranRevision', group: 'tools', defaultVisible: true, required: false },
+  webTranslator: { id: 'webTranslator', nameKey: 'webTranslator', href: '/dashboard/web-translator', icon: Languages, descKey: 'descriptions.webTranslator', group: 'tools', defaultVisible: true, required: false },
   phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   metaWhatsApp: { id: 'metaWhatsApp', nameKey: 'metaWhatsApp', href: '/dashboard/meta-whatsapp', icon: MessageCircle, descKey: 'descriptions.metaWhatsApp', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
@@ -306,8 +309,9 @@ export const NAV = [
       { ...ITEM_META.notifications },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
-      { ...ITEM_META.learning },
+      { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
+      { ...ITEM_META.webTranslator },
     ],
   },
   {
@@ -343,8 +347,9 @@ export const NAV = [
       { ...ITEM_META.transcript },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
-      { ...ITEM_META.learning },
+      { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
+      { ...ITEM_META.webTranslator },
       { ...ITEM_META.money },
       { ...ITEM_META.profile_client },
     ],
@@ -380,8 +385,9 @@ export const NAV = [
       { ...ITEM_META.notifications },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
-      { ...ITEM_META.learning },
+      { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
+      { ...ITEM_META.webTranslator },
     ],
   },
   {
@@ -412,7 +418,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }, { ...ITEM_META.webTranslator }],
   },
   {
     role: 'super_admin',

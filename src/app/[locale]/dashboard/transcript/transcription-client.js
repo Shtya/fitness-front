@@ -349,16 +349,27 @@ export function toTranscriptSource(message) {
 	};
 }
 
+export function audioDisplayName(item, index = 0, fallbackTemplate = 'Audio {n}') {
+	const raw = String(
+		item?.originalFileName || item?.fileName || item?.name || item?.label || '',
+	).trim();
+	if (raw) {
+		const base = raw.split(/[/\\]/).pop() || raw;
+		return base.replace(/\s+/g, ' ').trim() || fallbackTemplate.replace('{n}', String(index + 1));
+	}
+	return String(fallbackTemplate || 'Audio {n}').replace('{n}', String(index + 1));
+}
+
 export function buildTimelineTranscript(items, labels = {}) {
 	const audioLabel = labels.audioLabel || 'Audio {n}';
 	const messageLabel = labels.messageLabel || 'Message';
 	const missingVoice = labels.missingVoice || '';
 	return (items || [])
-		.map(item => {
+		.map((item, index) => {
 			const time = formatTimestampWithMs(item.timestamp);
 			const heading =
 				item.kind === 'voice'
-					? audioLabel.replace('{n}', String(item.audioIndex || 1))
+					? audioDisplayName(item, (item.audioIndex || index + 1) - 1, audioLabel)
 					: messageLabel;
 			const body =
 				String(item.text || '').trim() ||

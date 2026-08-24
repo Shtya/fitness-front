@@ -28,6 +28,7 @@ import TranscriptionAiPanel from './transcription-ai-panel';
 import TranscriptVoicePlayer from './transcript-voice-player';
 import {
 	buildTimelineTranscript,
+	audioDisplayName,
 	createTextTranscription,
 	createChunkedTranscription,
 	formatTimestampWithMs,
@@ -132,9 +133,7 @@ function formatFileSize(bytes) {
 }
 
 function displayFileName(fileName, fallback) {
-	const name = String(fileName || '');
-	if (!name || /^whatsapp-voice-/i.test(name)) return fallback;
-	return name;
+	return audioDisplayName({ fileName }, 0, fallback || 'Audio {n}');
 }
 
 function sortSources(sources) {
@@ -383,6 +382,10 @@ export default function TranscriptionDialog({
 				if (provider === 'groq' && nextFile.size > GROQ_FREE_MAX_FILE_SIZE) {
 					throw new Error(t.groqTooLarge);
 				}
+				const voiceName =
+					source.fileName ||
+					nextFile?.name ||
+					audioDisplayName(source, (source.audioIndex || 1) - 1, t.audioLabel);
 				const data = await createChunkedTranscription({
 					file: nextFile,
 					provider,
@@ -408,6 +411,9 @@ export default function TranscriptionDialog({
 					kind: 'voice',
 					timestamp: source.timestamp,
 					audioIndex: source.audioIndex,
+					fileName: voiceName,
+					originalFileName: data?.originalFileName || voiceName,
+					name: voiceName,
 					text: String(data?.text || '').trim(),
 				});
 			} catch (error) {
@@ -416,6 +422,9 @@ export default function TranscriptionDialog({
 					kind: 'voice',
 					timestamp: source.timestamp,
 					audioIndex: source.audioIndex,
+					fileName: source.fileName || '',
+					originalFileName: source.fileName || '',
+					name: source.fileName || '',
 					text: t.missingVoice,
 				});
 				toast.error(transcriptionErrorMessage(error, t.failed));
@@ -481,6 +490,10 @@ export default function TranscriptionDialog({
 	const providerOptions = TRANSCRIPTION_PROVIDERS.map(item => ({
 		value: item.id,
 		label: `${item.name} · ${item.score}%`,
+	}));
+	const chunkOptions = TRANSCRIPTION_CHUNK_PRESETS.map(item => ({
+		value: item.value,
+		label: locale === 'ar' ? item.labelAr : item.labelEn,
 	}));
 
 	return (
@@ -588,7 +601,7 @@ export default function TranscriptionDialog({
 											<div className="min-w-0 flex-1">
 												<p className="truncate text-[12px] font-semibold text-slate-800">
 													{item.kind === 'voice'
-														? t.audioLabel.replace('{n}', String(item.audioIndex || 1))
+														? audioDisplayName(item, (item.audioIndex || 1) - 1, t.audioLabel)
 														: t.messageLabel}
 												</p>
 												<p className="truncate text-[11px] text-slate-500">
@@ -615,20 +628,14 @@ export default function TranscriptionDialog({
 
 						<label className="grid gap-1.5 text-[13px] font-semibold text-slate-700">
 							{t.chunkLength}
-							<select
+							<WaCustomSelect
 								value={chunkSeconds}
-								onChange={event => selectChunkSeconds(event.target.value)}
+								onChange={selectChunkSeconds}
 								disabled={busy}
-								aria-label={t.chunkLength}
-								className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-800 outline-none focus:border-[var(--color-primary-400)]"
-							>
-								{TRANSCRIPTION_CHUNK_PRESETS.map(item => (
-									<option key={item.value} value={item.value}>
-										{locale === 'ar' ? item.labelAr : item.labelEn}
-									</option>
-								))}
-							</select>
- 						</label>
+								ariaLabel={t.chunkLength}
+								options={chunkOptions}
+							/>
+						</label>
 
 						{['uploading', 'processing'].includes(status) && (
 							<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">

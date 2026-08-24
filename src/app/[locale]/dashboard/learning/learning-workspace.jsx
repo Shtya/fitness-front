@@ -1358,6 +1358,7 @@ function LearningTopicPanel({
 }
 
 function LearningPathHome({
+	system = 'management',
 	path,
 	t,
 	today,
@@ -1379,14 +1380,18 @@ function LearningPathHome({
 	onScrapeRoadmapResources,
 }) {
 	const roadmapImportBusy = importBusy === 'roadmap';
+	const isStudySystem = system === 'study';
+	const tabs = isStudySystem
+		? [['today', t.tabToday, Target]]
+		: [
+				['roadmap', t.tabRoadmap, Map],
+				['today', t.tabToday, Target],
+			];
 
 	return (
 		<div className="min-h-0 flex-1">
 			<div className="learning-path-tabs">
-				{[
-					['today', t.tabToday, Target],
-					['roadmap', t.tabRoadmap, Map],
-				].map(([id, label, Icon]) => (
+				{tabs.map(([id, label, Icon]) => (
 					<button
 						key={id}
 						type="button"
@@ -1596,6 +1601,7 @@ function LearningPathHome({
 }
 
 export function LearningPathWorkspace({
+	system = 'management',
 	path,
 	topic,
 	topicId,
@@ -1628,10 +1634,11 @@ export function LearningPathWorkspace({
 	onTopicModeChange,
 	preferredTopicMode,
 }) {
+	const isStudySystem = system === 'study';
 	const progress = useMemo(() => pathProgress(path), [path]);
 	const [roadmapUrl, setRoadmapUrl] = useState('');
 	const [topicMode, setTopicMode] = useState(() =>
-		readStoredTopicMode(locale, preferredTopicMode),
+		isStudySystem ? 'study' : readStoredTopicMode(locale, preferredTopicMode === 'study' ? 'edit' : preferredTopicMode),
 	);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 });
@@ -1644,7 +1651,23 @@ export function LearningPathWorkspace({
 		topicMode === 'roadmap' ? defaultTopicMode(locale) : topicMode,
 	);
 
+	useEffect(() => {
+		if (isStudySystem && topicMode !== 'study') {
+			setTopicMode('study');
+			writeStoredTopicMode('study');
+			onTopicModeChange?.('study');
+		}
+		if (!isStudySystem && topicMode === 'study') {
+			setTopicMode('edit');
+			writeStoredTopicMode('edit');
+			onTopicModeChange?.('edit');
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- lock mode to learning system
+	}, [isStudySystem]);
+
 	const changeTopicMode = nextMode => {
+		if (isStudySystem && nextMode !== 'study') return;
+		if (!isStudySystem && nextMode === 'study') return;
 		if (nextMode === 'edit' || nextMode === 'study') {
 			lastBuildStudyRef.current = nextMode;
 		}
@@ -1862,47 +1885,53 @@ export function LearningPathWorkspace({
 						<div
 							className="learning-path-header__mode-toggle"
 							data-mode={topicMode}
-							data-count="3"
+							data-count={isStudySystem ? '1' : '2'}
 							role="tablist"
 							aria-label="Topic mode"
 						>
 							<span className="learning-path-header__mode-thumb" aria-hidden />
-							<button
-								type="button"
-								role="tab"
-								aria-selected={topicMode === 'edit'}
-								onClick={() => changeTopicMode('edit')}
-								className={cx('learning-path-header__mode-btn', topicMode === 'edit' && 'is-active')}
-							>
-								<PenLine size={14} />
-								{t.topicModeEdit}
-							</button>
-							<button
-								type="button"
-								role="tab"
-								aria-selected={topicMode === 'study'}
-								onClick={() => changeTopicMode('study')}
-								className={cx(
-									'learning-path-header__mode-btn',
-									topicMode === 'study' && 'is-active',
-								)}
-							>
-								<Eye size={14} />
-								{t.topicModeStudy}
-							</button>
-							<button
-								type="button"
-								role="tab"
-								aria-selected={topicMode === 'roadmap'}
-								onClick={() => changeTopicMode('roadmap')}
-								className={cx(
-									'learning-path-header__mode-btn',
-									topicMode === 'roadmap' && 'is-active',
-								)}
-							>
-								<Map size={14} />
-								{t.topicModeRoadmap}
-							</button>
+							{!isStudySystem ? (
+								<button
+									type="button"
+									role="tab"
+									aria-selected={topicMode === 'edit'}
+									onClick={() => changeTopicMode('edit')}
+									className={cx('learning-path-header__mode-btn', topicMode === 'edit' && 'is-active')}
+								>
+									<PenLine size={14} />
+									{t.topicModeEdit}
+								</button>
+							) : null}
+							{isStudySystem ? (
+								<button
+									type="button"
+									role="tab"
+									aria-selected={topicMode === 'study'}
+									onClick={() => changeTopicMode('study')}
+									className={cx(
+										'learning-path-header__mode-btn',
+										topicMode === 'study' && 'is-active',
+									)}
+								>
+									<Eye size={14} />
+									{t.topicModeStudy}
+								</button>
+							) : null}
+							{!isStudySystem ? (
+								<button
+									type="button"
+									role="tab"
+									aria-selected={topicMode === 'roadmap'}
+									onClick={() => changeTopicMode('roadmap')}
+									className={cx(
+										'learning-path-header__mode-btn',
+										topicMode === 'roadmap' && 'is-active',
+									)}
+								>
+									<Map size={14} />
+									{t.topicModeRoadmap}
+								</button>
+							) : null}
 						</div>
 					</div>
 				</LearningHeaderCard>
@@ -2062,6 +2091,7 @@ export function LearningPathWorkspace({
 						/>
 					) : (
 						<LearningPathHome
+							system={system}
 							path={path}
 							t={t}
 							today={today}

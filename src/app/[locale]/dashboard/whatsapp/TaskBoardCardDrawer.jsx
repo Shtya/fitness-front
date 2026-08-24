@@ -19,7 +19,7 @@ import {
 	Video,
 	X,
 } from 'lucide-react';
-import { resolveBoardMediaUrl, uploadBoardFile, uploadBoardImage } from './useWhatsAppBoardApi';
+import { resolveBoardMediaUrl, uploadBoardImage } from './useWhatsAppBoardApi';
 import { WaCustomSelect } from './WaCustomSelect';
 
 const LABEL_PILL = {
@@ -29,6 +29,32 @@ const LABEL_PILL = {
 	blue: 'bg-[#edf6ff] text-[#2c82de]',
 	green: 'bg-[#e9f9f2] text-[#17a96f]',
 };
+
+function autoResizeTextArea(element, { minRows = 1, maxRows = 24 } = {}) {
+	if (!element) return;
+	const styles = window.getComputedStyle(element);
+	const lineHeight = Number.parseFloat(styles.lineHeight) || 20;
+	const padding =
+		(Number.parseFloat(styles.paddingTop) || 0) + (Number.parseFloat(styles.paddingBottom) || 0);
+	const minHeight = lineHeight * minRows + padding;
+	const maxHeight = lineHeight * maxRows + padding;
+	element.style.height = 'auto';
+	const next = Math.min(maxHeight, Math.max(minHeight, element.scrollHeight));
+	element.style.height = `${next}px`;
+	element.style.overflowY = element.scrollHeight > maxHeight ? 'auto' : 'hidden';
+}
+
+function insertTextAreaNewline(element, value, setValue) {
+	if (!element) return;
+	const start = element.selectionStart ?? value.length;
+	const end = element.selectionEnd ?? value.length;
+	const next = `${value.slice(0, start)}\n${value.slice(end)}`;
+	setValue(next);
+	requestAnimationFrame(() => {
+		element.selectionStart = element.selectionEnd = start + 1;
+		autoResizeTextArea(element, { minRows: 2, maxRows: 12 });
+	});
+}
 
 const LABEL_COLORS = [
 	{ id: 'pink', value: '#f13d72' },
@@ -329,8 +355,6 @@ export default function TaskBoardCardDrawer({
 	const [dragOver, setDragOver] = useState(false);
 	const [lightboxSrc, setLightboxSrc] = useState('');
 	const fileRef = useRef(null);
-	const voiceFileRef = useRef(null);
-	const linkedImageRef = useRef(null);
 	const pasteLock = useRef(false);
 	const saveTimer = useRef(null);
 	const pendingUpdates = useRef({});
@@ -468,49 +492,6 @@ export default function TaskBoardCardDrawer({
 			URL.revokeObjectURL(previewUrl);
 			setUploading(false);
 			pasteLock.current = false;
-		}
-	};
-
-	const addVoiceFile = async file => {
-		if (!file) return;
-		const isAudio =
-			file.type?.startsWith('audio/') ||
-			/\.(ogg|opus|mp3|m4a|wav|webm|aac)$/i.test(file.name || '');
-		if (!isAudio) {
-			toast.error(ar ? 'اختر ملف صوت صالح' : 'Choose a valid audio file');
-			return;
-		}
-		const tempId = `att-voice-${Date.now()}`;
-		const previewUrl = URL.createObjectURL(file);
-		const optimisticAttachment = {
-			id: tempId,
-			url: previewUrl,
-			name: file.name || 'Voice note',
-			type: 'audio',
-			__local: true,
-		};
-		applyDraft({
-			attachments: [...(draftRef.current.attachments || []), optimisticAttachment],
-		});
-		setUploading(true);
-		try {
-			const url = await uploadBoardFile(file);
-			if (!url) throw new Error(ar ? 'فشل رفع الصوت' : 'Voice upload failed');
-			const attachments = [
-				...(draftRef.current.attachments || []).filter(item => item.id !== tempId),
-				{ id: tempId, url, name: file.name || 'Voice note', type: 'audio' },
-			];
-			pendingUpdates.current = { ...pendingUpdates.current, attachments };
-			applyDraft({ attachments });
-			await flushSave();
-		} catch (err) {
-			applyDraft({
-				attachments: (draftRef.current.attachments || []).filter(item => item.id !== tempId),
-			});
-			toast.error(err?.message || (ar ? 'فشل رفع الصوت' : 'Voice upload failed'));
-		} finally {
-			URL.revokeObjectURL(previewUrl);
-			setUploading(false);
 		}
 	};
 
@@ -716,12 +697,19 @@ export default function TaskBoardCardDrawer({
 						>
 							{isDone ? <Check size={11} strokeWidth={3} /> : null}
 						</button>
-						<input
+						<textarea
 							value={draft.title || ''}
-							onChange={event => queueSave({ title: event.target.value })}
+							onChange={event => {
+								queueSave({ title: event.target.value });
+								autoResizeTextArea(event.target, { minRows: 1, maxRows: 16 });
+							}}
+							ref={node => {
+								if (node) autoResizeTextArea(node, { minRows: 1, maxRows: 16 });
+							}}
+							rows={1}
 							dir={titleProps.dir}
 							lang={titleProps.lang}
-							className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap bg-transparent text-lg font-bold outline-none ${titleProps.className} ${
+							className={`min-w-0 flex-1 resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent text-lg font-bold leading-6 outline-none ${titleProps.className} ${
 								isDone ? 'text-[#6b7788] line-through' : 'text-[#18243b]'
 							}`}
 							placeholder={ar ? 'عنوان المهمة' : 'Task title'}
@@ -734,13 +722,19 @@ export default function TaskBoardCardDrawer({
 						</label>
 						<textarea
 							value={draft.description || ''}
-							onChange={event => queueSave({ description: event.target.value })}
+							onChange={event => {
+								queueSave({ description: event.target.value });
+								autoResizeTextArea(event.target, { minRows: 4, maxRows: 28 });
+							}}
 							onPaste={onPaste}
+							ref={node => {
+								if (node) autoResizeTextArea(node, { minRows: 4, maxRows: 28 });
+							}}
 							rows={4}
 							dir={descriptionProps.dir}
 							lang={descriptionProps.lang}
 							placeholder={ar ? 'أضف وصفاً…' : 'Add a description…'}
-							className={`w-full resize-none rounded-xl border border-[#e2e7ee] px-3 py-2.5 text-[13px] leading-5 outline-none focus:border-[#0db873] ${descriptionProps.className}`}
+							className={`w-full resize-none whitespace-pre-wrap break-words rounded-xl border border-[#e2e7ee] px-3 py-2.5 text-[13px] leading-5 outline-none focus:border-[#0db873] ${descriptionProps.className}`}
 						/>
 						{imageAttachments.length ? (
 							<div className="mt-2 flex flex-wrap gap-1.5">
@@ -1036,162 +1030,42 @@ export default function TaskBoardCardDrawer({
 								{ar ? 'رسائل مربوطة' : 'Linked messages'}
 							</label>
 							<span className="rounded-full bg-[#eef2f6] px-2 py-0.5 text-[10px] font-semibold text-[#667781]">
-								{(draft.links || []).length +
-									(draft.attachments || []).filter(
-										item => item.type === 'audio' || item.type === 'image' || !item.type,
-									).length}
+								{(draft.links || []).length}
 							</span>
 						</div>
 
-						<div className="space-y-2.5">
-							{[...(draft.links || [])]
-								.slice()
-								.sort((a, b) => String(a.id).localeCompare(String(b.id)))
-								.map((link, index) => (
-									<LinkedMessageItem key={link.id} link={link} index={index} ar={ar} />
-								))}
-
-							{(draft.attachments || [])
-								.filter(item => {
-									const type = String(item.type || '').toLowerCase();
-									const name = String(item.name || '');
-									return (
-										type === 'audio' ||
-										type === 'voice' ||
-										type === 'image' ||
-										(!type && /\.(ogg|opus|mp3|m4a|wav|webm|aac|png|jpe?g|gif|webp)$/i.test(name))
-									);
-								})
-								.map((item, index) => {
-									const src =
-										item.url && (item.url.startsWith('blob:') || item.url.startsWith('data:'))
-											? item.url
-											: resolveBoardMediaUrl(item.url);
-									const isVoice =
-										String(item.type || '').includes('audio') ||
-										String(item.type || '').includes('voice') ||
-										/\.(ogg|opus|mp3|m4a|wav|webm|aac)$/i.test(item.name || '');
-									return (
-										<article
-											key={item.id}
-											className="rounded-xl border border-[#e8ecf1] bg-white p-3 shadow-[0_1px_2px_rgba(27,39,62,0.04)]"
-										>
-											<header className="mb-2 flex items-center gap-2">
-												<span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#eefaf4] text-[#0db873]">
-													{isVoice ? <Mic size={14} /> : <ImageIcon size={14} />}
-												</span>
-												<p className="min-w-0 flex-1 truncate text-[11px] font-bold text-[#18243b]">
-													{isVoice
-														? ar
-															? `مرفق صوتي · ${item.name || 'Voice'}`
-															: `Voice attachment · ${item.name || 'Voice'}`
-														: ar
-															? `صورة مرفقة · ${item.name || 'Image'}`
-															: `Image attachment · ${item.name || 'Image'}`}
-												</p>
-												<button
-													type="button"
-													className="text-slate-400 hover:text-red-500"
-													onClick={() => {
-														const nextAttachments = (draft.attachments || []).filter(
-															row => row.id !== item.id,
-														);
-														queueSave(
-															{
-																attachments: nextAttachments,
-																coverImage:
-																	resolveBoardMediaUrl(draft.coverImage) === src
-																		? nextAttachments.find(row =>
-																				String(row.type || '').includes('image'),
-																			)?.url || null
-																		: draft.coverImage,
-															},
-															{ immediate: true },
-														);
-													}}
-												>
-													<Trash2 size={12} />
-												</button>
-											</header>
-											{isVoice ? (
-												<audio controls preload="metadata" src={src} className="w-full" />
-											) : (
-												<button
-													type="button"
-													className="block w-full overflow-hidden rounded-lg border border-[#edf0f3] bg-[#f7f8fa]"
-													onClick={() => setLightboxSrc(src)}
-												>
-													<img src={src} alt="" className="max-h-40 w-full object-contain" />
-												</button>
-											)}
-										</article>
-									);
-								})}
-						</div>
-
-						{!(draft.links || []).length &&
-						!(draft.attachments || []).some(item =>
-							['audio', 'voice', 'image'].includes(String(item.type || '').toLowerCase()),
-						) ? (
-							<p className="rounded-xl border border-dashed border-[#d5dde8] bg-[#fbfcfd] px-3 py-4 text-center text-[11px] text-[#8a95a5]">
+						{(draft.links || []).length ? (
+							<div className="space-y-2.5">
+								{[...(draft.links || [])]
+									.slice()
+									.sort((a, b) => String(a.id).localeCompare(String(b.id)))
+									.map((link, index) => (
+										<LinkedMessageItem key={link.id} link={link} index={index} ar={ar} />
+									))}
+							</div>
+						) : (
+							<p className="rounded-xl border border-dashed border-[#d5dde8] bg-[#fbfcfd] px-3 py-4 text-center text-[11px] leading-5 text-[#8a95a5]">
 								{ar
-									? 'لا توجد رسائل مربوطة بعد. أضف صورة أو صوت من هنا.'
-									: 'No linked messages yet. Add an image or voice note here.'}
+									? 'لا توجد رسائل مربوطة بعد. اربط نصًا أو صورة أو رسالة صوتية من محادثة واتساب.'
+									: 'No linked messages yet. Link text, image, or voice notes from a WhatsApp chat.'}
 							</p>
-						) : null}
-
-						<div className="mt-2.5 flex flex-wrap gap-2">
-							<button
-								type="button"
-								disabled={uploading}
-								onClick={() => linkedImageRef.current?.click()}
-								className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#e2e7ee] bg-white px-2.5 text-[11px] font-semibold text-[#415069] hover:border-[#0db873] hover:text-[#0db873] disabled:opacity-50"
-							>
-								{uploading ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
-								{ar ? 'إضافة صورة' : 'Add image'}
-							</button>
-							<button
-								type="button"
-								disabled={uploading}
-								onClick={() => voiceFileRef.current?.click()}
-								className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#e2e7ee] bg-white px-2.5 text-[11px] font-semibold text-[#415069] hover:border-[#0db873] hover:text-[#0db873] disabled:opacity-50"
-							>
-								{uploading ? <Loader2 size={12} className="animate-spin" /> : <Mic size={12} />}
-								{ar ? 'إضافة صوت' : 'Add voice'}
-							</button>
-							<input
-								ref={linkedImageRef}
-								type="file"
-								accept="image/*"
-								className="hidden"
-								onChange={event => {
-									const file = event.target.files?.[0];
-									event.target.value = '';
-									if (file) void addImageFile(file);
-								}}
-							/>
-							<input
-								ref={voiceFileRef}
-								type="file"
-								accept="audio/*,.ogg,.opus,.mp3,.m4a,.wav,.webm,.aac"
-								className="hidden"
-								onChange={event => {
-									const file = event.target.files?.[0];
-									event.target.value = '';
-									if (file) void addVoiceFile(file);
-								}}
-							/>
-						</div>
+						)}
 
 						{draft.conversationId && onOpenConversation ? (
 							<button
 								type="button"
-								className="mt-2 text-[12px] font-semibold text-[#0db873] hover:underline"
+								className="mt-2.5 inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d7ebe0] bg-[#f3fbf7] px-2.5 text-[11px] font-semibold text-[#0db873] hover:border-[#0db873]"
 								onClick={() => onOpenConversation(draft.conversationId)}
 							>
-								{ar ? 'فتح المحادثة' : 'Open conversation'}
+								{ar ? 'فتح محادثة واتساب' : 'Open WhatsApp chat'}
 							</button>
-						) : null}
+						) : (
+							<p className="mt-2 text-[10px] leading-4 text-[#8a95a5]">
+								{ar
+									? 'من الشات: اختر الرسائل → أرسل إلى لوحة المهام.'
+									: 'From chat: select messages → send to the tasks board.'}
+							</p>
+						)}
 					</section>
 
 					<section>
@@ -1481,7 +1355,12 @@ export function InlineCardComposer({ locale, onCancel, onCreate }) {
 
 	useEffect(() => {
 		inputRef.current?.focus();
+		if (inputRef.current) autoResizeTextArea(inputRef.current, { minRows: 2, maxRows: 12 });
 	}, []);
+
+	useEffect(() => {
+		if (inputRef.current) autoResizeTextArea(inputRef.current, { minRows: 2, maxRows: 12 });
+	}, [title]);
 
 	useEffect(() => {
 		return () => {
@@ -1545,10 +1424,17 @@ export function InlineCardComposer({ locale, onCancel, onCreate }) {
 
 	const submit = () => {
 		const readyUrls = images.map(item => item.serverUrl).filter(Boolean);
-		if (!title.trim() || uploading || images.some(item => item.uploading)) return;
+		const raw = title.replace(/\r\n/g, '\n');
+		const lines = raw
+			.split('\n')
+			.map(line => line.trimEnd())
+			.filter((line, index, arr) => line.length > 0 || (index > 0 && index < arr.length - 1));
+		const compact = lines.join('\n').trim();
+		if (!compact || uploading || images.some(item => item.uploading)) return;
+		const [firstLine, ...rest] = compact.split('\n');
 		onCreate({
-			title: title.trim(),
-			description: '',
+			title: firstLine.trim(),
+			description: rest.join('\n').trim(),
 			dueDate: dueDate || todayIsoDate(),
 			images: readyUrls,
 		});
@@ -1560,21 +1446,31 @@ export function InlineCardComposer({ locale, onCancel, onCreate }) {
 			onPaste={onPaste}
 		>
 			<div className="relative">
-				<input
+				<textarea
 					ref={inputRef}
 					value={title}
 					onChange={event => setTitle(event.target.value)}
 					placeholder={ar ? 'عنوان البطاقة…' : 'Card title…'}
-					className="h-9 w-full rounded-lg border border-[#e2e7ee] pe-16 ps-2.5 text-[12px] font-semibold outline-none focus:border-[#0db873]"
+					rows={2}
+					className="min-h-[52px] w-full resize-none rounded-lg border border-[#e2e7ee] pe-16 ps-2.5 py-2 text-[12px] font-semibold leading-5 outline-none focus:border-[#0db873]"
 					onKeyDown={event => {
-						if (event.key === 'Enter') {
+						if (event.key === 'Escape') {
+							event.preventDefault();
+							onCancel();
+							return;
+						}
+						if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+							event.preventDefault();
+							insertTextAreaNewline(event.currentTarget, title, setTitle);
+							return;
+						}
+						if (event.key === 'Enter' && !event.shiftKey) {
 							event.preventDefault();
 							submit();
 						}
-						if (event.key === 'Escape') onCancel();
 					}}
 				/>
-				<div className="absolute end-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
+				<div className="absolute end-1.5 top-2 flex items-center gap-1">
 					<button
 						type="button"
 						onClick={onCancel}
@@ -1594,6 +1490,9 @@ export function InlineCardComposer({ locale, onCancel, onCreate }) {
 					</button>
 				</div>
 			</div>
+			<p className="mt-1 text-[9px] font-medium text-[#8a95a5]">
+				{ar ? 'Enter للحفظ · Ctrl+Enter لسطر جديد' : 'Enter to save · Ctrl+Enter for new line'}
+			</p>
 
 			<div className="mt-2 flex flex-wrap items-center gap-1.5">
 				<label className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#f5f7fa] px-2 text-[10px] font-semibold text-[#54656f]">

@@ -338,6 +338,7 @@ export default function WhatsAppSplitPane({
 		const box = scrollRef.current;
 		const previousHeight = box?.scrollHeight || 0;
 		const oldest = messages[0];
+		const previousCount = messages.length;
 		try {
 			const { data } = await api.get(`/whatsapp/conversations/${conversationId}/messages`, {
 				params: { before: oldest?.id, limit: MESSAGE_PAGE_SIZE, live: 0 },
@@ -349,12 +350,13 @@ export default function WhatsAppSplitPane({
 					: [];
 			let synced = [];
 			let providerHasMore;
+			// Explicit older load: ask WhatsApp Web when DB page is short/empty.
 			if (accountId && canCompose && local.length < MESSAGE_PAGE_SIZE) {
 				try {
 					const response = await api.post(
 						`/whatsapp/conversations/${conversationId}/sync/older`,
 						null,
-						{ params: { limit: MESSAGE_PAGE_SIZE } },
+						{ params: { limit: MESSAGE_PAGE_SIZE, force: 1 }, timeout: 90_000 },
 					);
 					synced = Array.isArray(response?.data?.items) ? response.data.items : [];
 					providerHasMore = response?.data?.hasMore;
@@ -367,12 +369,21 @@ export default function WhatsAppSplitPane({
 				setHasMore(false);
 				return;
 			}
-			setHasMore(
-				typeof providerHasMore === 'boolean'
-					? providerHasMore
-					: local.length >= MESSAGE_PAGE_SIZE,
-			);
-			setMessages(current => mergeMessages(incoming, current));
+			setMessages(current => {
+				const next = mergeMessages(incoming, current);
+				const added = Math.max(0, next.length - previousCount);
+				const dbHasMore = local.length >= MESSAGE_PAGE_SIZE;
+				if (added === 0 && !dbHasMore) {
+					setHasMore(typeof providerHasMore === 'boolean' ? Boolean(providerHasMore) : false);
+				} else {
+					setHasMore(
+						typeof providerHasMore === 'boolean'
+							? Boolean(providerHasMore) || dbHasMore
+							: dbHasMore,
+					);
+				}
+				return next;
+			});
 			requestAnimationFrame(() => {
 				const currentBox = scrollRef.current;
 				if (currentBox) {

@@ -62,15 +62,15 @@ export function WaCustomSelect({
 		if (!Icon) return null;
 		return (
 			<span
-				className={`grid shrink-0 place-items-center rounded-md border ${
-					fitContent ? 'h-6 w-6' : 'h-7 w-7'
+				className={`grid shrink-0 place-items-center rounded-lg border ${
+					fitContent ? 'h-7 w-7' : 'h-8 w-8'
 				} ${
 					selectedState
-						? 'border-emerald-200 bg-white text-emerald-600 dark:border-emerald-900/40 dark:bg-slate-900'
-						: 'border-slate-200 bg-slate-50 text-[#54656f] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+						? 'border-emerald-200/80 bg-white text-emerald-600 shadow-sm dark:border-emerald-800/50 dark:bg-slate-900'
+						: 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
 				}`}
 			>
-				<Icon size={14} strokeWidth={2.1} className="shrink-0" />
+				<Icon size={15} strokeWidth={2.1} className="shrink-0" />
 			</span>
 		);
 	};
@@ -80,16 +80,17 @@ export function WaCustomSelect({
 		const updatePosition = () => {
 			const rect = buttonRef.current?.getBoundingClientRect();
 			if (!rect) return;
-			const gap = 4;
+			const gap = 6;
 			const margin = 8;
 			const viewportH = window.innerHeight || 720;
 			const viewportW = window.innerWidth || 1280;
-			const width = Math.min(Math.max(rect.width, compact ? 200 : 180), viewportW - margin * 2);
+			const minW = hasDescriptions ? 260 : compact ? 220 : 240;
+			const width = Math.min(Math.max(rect.width, minW), viewportW - margin * 2);
 			const spaceBelow = Math.max(0, viewportH - rect.bottom - margin - gap);
 			const spaceAbove = Math.max(0, rect.top - margin - gap);
-			const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
-			const available = Math.max(120, openUp ? spaceAbove : spaceBelow);
-			const maxHeight = Math.min(320, available);
+			const openUp = spaceBelow < 180 && spaceAbove > spaceBelow;
+			const available = Math.max(140, openUp ? spaceAbove : spaceBelow);
+			const maxHeight = Math.min(360, available);
 			const top = openUp ? Math.max(margin, rect.top - gap - maxHeight) : rect.bottom + gap;
 			let left = rect.left;
 			left = Math.max(margin, Math.min(left, viewportW - width - margin));
@@ -98,6 +99,7 @@ export function WaCustomSelect({
 				left,
 				width,
 				maxHeight,
+				openUp,
 			});
 		};
 		updatePosition();
@@ -166,18 +168,24 @@ export function WaCustomSelect({
 				aria-expanded={open}
 				aria-label={ariaLabel}
 				onClick={() => setOpen(current => !current)}
-				className={`wa-btn-3d flex ${fitContent ? 'w-auto' : 'w-full'} items-center justify-between gap-1.5 border border-slate-200 bg-white px-2.5 font-bold text-[#111b21] outline-none disabled:opacity-50 ${
-					compact ? 'h-8 rounded-lg text-[11px]' : 'h-10 rounded-[10px] text-xs'
-				} ${buttonClassName}`}
+				className={`wa-custom-select-trigger flex ${fitContent ? 'w-auto' : 'w-full'} items-center justify-between gap-2 border border-slate-200 bg-white px-3 font-semibold text-[#111b21] shadow-[0_1px_0_#eef0f2] outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:shadow-none dark:hover:border-slate-600 dark:hover:bg-slate-800 ${
+					compact ? 'h-8 rounded-lg text-[11px]' : 'h-10 rounded-xl text-[13px]'
+				} ${open ? 'border-slate-300 ring-2 ring-slate-900/5 dark:ring-white/10' : ''} ${buttonClassName}`}
 			>
 				<span className="flex min-w-0 items-center gap-2">
 					{selected?.icon ? renderOptionIcon(selected, Boolean(selected?.value)) : null}
 					<span className="min-w-0 truncate">{selected?.label || ''}</span>
 				</span>
-				<ChevronDown
-					size={14}
-					className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-				/>
+				<span
+					className={`grid shrink-0 place-items-center rounded-md bg-slate-100 text-slate-500 transition-colors dark:bg-slate-800 dark:text-slate-300 ${
+						compact ? 'h-5 w-5' : 'h-6 w-6'
+					} ${open ? 'bg-slate-200 text-slate-700 dark:bg-slate-700' : ''}`}
+				>
+					<ChevronDown
+						size={compact ? 12 : 14}
+						className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+					/>
+				</span>
 			</button>
 			{open &&
 				position &&
@@ -201,7 +209,9 @@ export function WaCustomSelect({
 							data-wa-select-menu="true"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className="fixed overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
+							className={`wa-custom-select-menu fixed overflow-y-auto overscroll-contain rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-[0_18px_48px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.06)] ring-1 ring-black/[0.03] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)] dark:ring-white/[0.04] ${
+								position.openUp ? 'wa-custom-select-menu--up' : 'wa-custom-select-menu--down'
+							}`}
 							style={{
 								top: position.top,
 								left: position.left,
@@ -225,26 +235,48 @@ export function WaCustomSelect({
 										aria-selected={isSelected}
 										onPointerDown={event => pickOption(event, option)}
 										onClick={event => pickOption(event, option)}
-										className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start leading-none transition-colors ${
+										className={`group flex w-full items-center gap-2.5 rounded-xl px-3 text-start transition-all duration-150 ${
+											hasDescriptions ? 'py-2.5' : 'py-2.5'
+										} ${
 											isDisabled
-												? 'cursor-not-allowed text-slate-300 opacity-50 dark:text-slate-600'
+												? 'cursor-not-allowed text-slate-300 opacity-45 dark:text-slate-600'
 												: isSelected
-													? 'bg-emerald-50 text-emerald-700 dark:bg-slate-800 dark:text-emerald-300'
-													: 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
+													? 'bg-emerald-50 text-emerald-800 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.22)] dark:bg-emerald-950/40 dark:text-emerald-200 dark:shadow-[inset_0_0_0_1px_rgba(16,185,129,0.28)]'
+													: 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white'
 										}`}
 									>
 										{option.icon ? renderOptionIcon(option, isSelected) : null}
 										<span className="min-w-0 flex-1">
-											<span className="block truncate text-xs font-semibold leading-4">{option.label}</span>
+											<span
+												className={`block truncate leading-5 ${
+													isSelected
+														? 'text-[13px] font-semibold'
+														: 'text-[13px] font-medium'
+												}`}
+											>
+												{option.label}
+											</span>
 											{option.description ? (
-												<span className="mt-0.5 block truncate text-[10px] font-medium leading-4 text-slate-400">
+												<span
+													className={`mt-0.5 block truncate text-[11px] font-medium leading-4 ${
+														isSelected
+															? 'text-emerald-700/70 dark:text-emerald-300/70'
+															: 'text-slate-400 group-hover:text-slate-500 dark:text-slate-500'
+													}`}
+												>
 													{option.description}
 												</span>
 											) : null}
 										</span>
-										<span className="grid h-4 w-4 shrink-0 place-items-center">
+										<span
+											className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition-colors ${
+												isSelected && !isDisabled
+													? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+													: 'bg-transparent text-transparent'
+											}`}
+										>
 											{isSelected && !isDisabled ? (
-												<Check size={14} className="text-emerald-600" />
+												<Check size={12} strokeWidth={3} />
 											) : null}
 										</span>
 									</button>

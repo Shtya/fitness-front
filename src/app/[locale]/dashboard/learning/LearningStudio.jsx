@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { learningApi } from './learning-api';
 import { LearningPathWorkspace } from './learning-workspace';
+import { LearningSystemSwitcher } from './LearningSystemSwitcher';
 import {
 	LearningDailyOverview,
 	LearningHeaderCard,
@@ -84,6 +85,16 @@ const COPY = {
 		heroSubtitle1: 'Learn anything',
 		heroSubtitle2: 'Organize everything',
 		heroSubtitle3: 'Build real mastery',
+		mgmtHeroBefore: 'Build',
+		mgmtHeroEm: 'structure',
+		mgmtHeroSub1: 'Courses',
+		mgmtHeroSub2: 'Modules & topics',
+		mgmtHeroSub3: 'Organize learning',
+		studyHeroBefore: 'Study',
+		studyHeroEm: 'deeply',
+		studyHeroSub1: 'Notes & prompts',
+		studyHeroSub2: 'Daily review',
+		studyHeroSub3: 'Personal knowledge',
 		tabPaths: 'Learning paths',
 		tabAchievements: 'Achievements',
 		tabInsights: 'Insights',
@@ -405,6 +416,16 @@ const COPY = {
 		heroSubtitle1: 'تعلّم أي شيء',
 		heroSubtitle2: 'نظّم كل شيء',
 		heroSubtitle3: 'ابنِ إتقاناً حقيقياً',
+		mgmtHeroBefore: 'ابنِ',
+		mgmtHeroEm: 'الهيكل',
+		mgmtHeroSub1: 'كورسات',
+		mgmtHeroSub2: 'موديولات وموضوعات',
+		mgmtHeroSub3: 'تنظيم التعلم',
+		studyHeroBefore: 'ذاكر',
+		studyHeroEm: 'بعمق',
+		studyHeroSub1: 'ملاحظات وPrompts',
+		studyHeroSub2: 'مراجعة يومية',
+		studyHeroSub3: 'معرفة شخصية',
 		tabPaths: 'مسارات التعلم',
 		tabAchievements: 'الإنجازات',
 		tabInsights: 'الرؤى',
@@ -781,7 +802,8 @@ function ProgressRing({ value = 0, size = 52 }) {
 	);
 }
 
-export default function LearningStudio() {
+export default function LearningStudio({ system = 'management' }) {
+	const isStudySystem = system === 'study';
 	const locale = useLocale();
 	const t = COPY[locale?.startsWith('ar') ? 'ar' : 'en'];
 	const router = useRouter();
@@ -794,9 +816,9 @@ export default function LearningStudio() {
 	const [pathId, setPathId] = useState(null);
 	const [topicId, setTopicId] = useState(null);
 	const [pathTab, setPathTab] = useState('today');
-	const [workspaceTab, setWorkspaceTab] = useState('today');
+	const [workspaceTab, setWorkspaceTab] = useState(isStudySystem ? 'today' : 'roadmap');
 	const [topicTab, setTopicTab] = useState('overview');
-	const [dashboardMode, setDashboardMode] = useState('overview');
+	const [dashboardMode, setDashboardMode] = useState(isStudySystem ? 'overview' : 'paths');
 	const [roadmapSearchQuery, setRoadmapSearchQuery] = useState('');
 	const [roadmapSearchResult, setRoadmapSearchResult] = useState(null);
 	const [roadmapCatalog, setRoadmapCatalog] = useState([]);
@@ -938,7 +960,16 @@ export default function LearningStudio() {
 				const data = await learningApi.getState();
 				if (cancelled) return;
 				const today = todayKey();
-				const merged = { ...emptyLearningState(), ...data };
+				const base = emptyLearningState();
+				const merged = {
+					...base,
+					...data,
+					prefs: { ...base.prefs, ...(data?.prefs || {}) },
+					promptTemplates:
+						Array.isArray(data?.promptTemplates) && data.promptTemplates.length
+							? data.promptTemplates
+							: base.promptTemplates,
+				};
 				const rawPaths = merged.paths || [];
 				const syncedPaths = rawPaths.map(path => ensurePathDailyItems(path, today));
 				merged.paths = syncedPaths;
@@ -1048,14 +1079,15 @@ export default function LearningStudio() {
 		return list;
 	}, [state.paths]);
 
-	const openPath = (path, tab = 'today') => {
+	const openPath = (path, tab) => {
+		const nextTab = tab || (isStudySystem ? 'today' : 'roadmap');
 		setPathId(path.id);
-		setWorkspaceTab(tab);
+		setWorkspaceTab(nextTab);
 		setView('workspace');
 		setRoadmapDraft([]);
 
 		const resumeTopicId =
-			tab === 'roadmap'
+			nextTab === 'roadmap'
 				? null
 				: (state.continueLearning?.pathId === path.id && state.continueLearning?.topicId) ||
 					path.lastOpenedTopicId ||
@@ -2042,6 +2074,9 @@ export default function LearningStudio() {
 
 	return (
 		<div className={cx('flex min-h-0 flex-1 flex-col', view === 'dashboard' && 'gap-0')}>
+			<div className="px-0 pb-1">
+				<LearningSystemSwitcher active={isStudySystem ? 'study' : 'management'} />
+			</div>
 			{view === 'dashboard' && (
 				<div className="learning-landing space-y-6 pb-2">
 					<div className="learning-landing__page">
@@ -2054,14 +2089,17 @@ export default function LearningStudio() {
 									</div>
 									<div className="learning-header-card__title-block">
 										<h1 className="learning-header-card__title">
-											{t.heroTitleBefore} <em>{t.heroTitleEm}</em>.
+											{isStudySystem ? t.studyHeroBefore : t.mgmtHeroBefore}{' '}
+											<em>{isStudySystem ? t.studyHeroEm : t.mgmtHeroEm}</em>.
 										</h1>
 										<p className="learning-header-card__subtitle">
-											<span className="is-hl">{t.heroSubtitle1}</span>
+											<span className="is-hl">
+												{isStudySystem ? t.studyHeroSub1 : t.mgmtHeroSub1}
+											</span>
 											<span className="learning-header-card__subtitle-dot" aria-hidden />
-											<span>{t.heroSubtitle2}</span>
+											<span>{isStudySystem ? t.studyHeroSub2 : t.mgmtHeroSub2}</span>
 											<span className="learning-header-card__subtitle-dot" aria-hidden />
-											<span>{t.heroSubtitle3}</span>
+											<span>{isStudySystem ? t.studyHeroSub3 : t.mgmtHeroSub3}</span>
 										</p>
 									</div>
 								</div>
@@ -2069,12 +2107,14 @@ export default function LearningStudio() {
 									{saving ? (
 										<span className="learning-header-saving">{t.saving}</span>
 									) : null}
-									<NewLearningPathButton
-										ref={quickCreateRef}
-										t={t}
-										variant="header-light"
-										onSubmit={handleQuickCreate}
-									/>
+									{!isStudySystem ? (
+										<NewLearningPathButton
+											ref={quickCreateRef}
+											t={t}
+											variant="header-light"
+											onSubmit={handleQuickCreate}
+										/>
+									) : null}
 								</div>
 							</div>
 
@@ -2136,15 +2176,17 @@ export default function LearningStudio() {
 								>
 									{t.overview}
 								</button>
-								<button
-									type="button"
-									role="tab"
-									aria-selected={dashboardMode === 'search'}
-									className={cx('learning-header-tab', dashboardMode === 'search' && 'is-active')}
-									onClick={() => setDashboardMode('search')}
-								>
-									{t.searchRoadmaps}
-								</button>
+								{!isStudySystem ? (
+									<button
+										type="button"
+										role="tab"
+										aria-selected={dashboardMode === 'search'}
+										className={cx('learning-header-tab', dashboardMode === 'search' && 'is-active')}
+										onClick={() => setDashboardMode('search')}
+									>
+										{t.searchRoadmaps}
+									</button>
+								) : null}
 								<button type="button" role="tab" disabled className="learning-header-tab">
 									{t.tabAchievements}
 								</button>
@@ -2154,7 +2196,7 @@ export default function LearningStudio() {
 							</div>
 						</LearningHeaderCard>
 
-						{dashboardMode === 'search' ? (
+						{!isStudySystem && dashboardMode === 'search' ? (
 							<LearningRoadmapSearchPanel
 								t={t}
 								query={roadmapSearchQuery}
@@ -2298,6 +2340,7 @@ export default function LearningStudio() {
 
 			{view === 'workspace' && selectedPath && (
 				<LearningPathWorkspace
+					system={system}
 					path={selectedPath}
 					topic={selectedTopic}
 					topicId={topicId}
@@ -2327,7 +2370,13 @@ export default function LearningStudio() {
 							prefs: { ...(state.prefs || {}), topicMode: mode },
 						});
 					}}
-					preferredTopicMode={state.prefs?.topicMode}
+					preferredTopicMode={
+						isStudySystem
+							? 'study'
+							: state.prefs?.topicMode === 'study'
+								? 'edit'
+								: state.prefs?.topicMode || 'edit'
+					}
 					onPatchPath={updater => patchPath(updater)}
 					onPatchTopic={patch => patchTopic(topic => ({ ...topic, ...patch }))}
 					onToggleDaily={itemId => toggleDailyItem(selectedPath.id, itemId)}

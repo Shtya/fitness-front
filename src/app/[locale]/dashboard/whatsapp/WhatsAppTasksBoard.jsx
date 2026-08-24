@@ -7,9 +7,11 @@ import {
 	ArrowLeft,
 	ArrowRight,
 	ArrowUpRight,
+	BarChart3,
 	Calendar,
 	Check,
 	CheckSquare,
+	ChevronDown,
 	Clock,
 	Copy,
 	FileText,
@@ -91,39 +93,101 @@ const DROP_ANIMATION = {
 };
 
 const COLUMN_THEME = {
-	todo: {
-		key: 'todo',
-		header: 'from-[#fff6f8]',
-		accent: 'bg-[#f13d72]',
-		count: 'bg-[#ffe8ef] text-[#ee3c6c]',
-		dot: 'bg-[#f13d72]',
-		add: 'border-[#ffb8c9] text-[#ee3d70] hover:bg-[#fff6f8]',
+	purple: {
+		key: 'purple',
+		surface: 'bg-[#f7f5fb]',
+		border: 'border-[#ebe6f5]',
+		header: 'bg-[#f7f5fb]',
+		accentBar: 'border-s-[3px] border-s-[#9b87c9]',
+		accent: 'bg-[#9b87c9]',
+		count: 'bg-[#efeaf8] text-[#7a6a9e]',
+		dot: 'bg-[#9b87c9]',
+		add: 'border-[#d5cce8] text-[#7a6a9e] hover:bg-[#f1edf8]',
+		empty: 'border-[#ddd5ec] text-[#9b87c9] hover:bg-[#f3f0f9]',
+		chart: '#9b87c9',
+		fade: 'from-[#f7f5fb] via-[#f7f5fb]/95',
 	},
-	progress: {
-		key: 'progress',
-		header: 'from-[#faf7ff]',
-		accent: 'bg-[#8d58de]',
-		count: 'bg-[#f1e8ff] text-[#8554d9]',
-		dot: 'bg-[#8d58de]',
-		add: 'border-[#d9c8f8] text-[#8957db] hover:bg-[#faf7ff]',
+	green: {
+		key: 'green',
+		surface: 'bg-[#f4f9f6]',
+		border: 'border-[#e0ece5]',
+		header: 'bg-[#f4f9f6]',
+		accentBar: 'border-s-[3px] border-s-[#5fad86]',
+		accent: 'bg-[#5fad86]',
+		count: 'bg-[#e8f4ee] text-[#4a8f6d]',
+		dot: 'bg-[#5fad86]',
+		add: 'border-[#c5dfd1] text-[#4a8f6d] hover:bg-[#eef7f2]',
+		empty: 'border-[#cfe4d8] text-[#5fad86] hover:bg-[#f0f8f4]',
+		chart: '#5fad86',
+		fade: 'from-[#f4f9f6] via-[#f4f9f6]/95',
 	},
-	review: {
-		key: 'review',
-		header: 'from-[#f5faff]',
-		accent: 'bg-[#2785ed]',
-		count: 'bg-[#e8f3ff] text-[#2781e8]',
-		dot: 'bg-[#2785ed]',
-		add: 'border-[#b8d9ff] text-[#2583eb] hover:bg-[#f5faff]',
+	orange: {
+		key: 'orange',
+		surface: 'bg-[#fbf7f2]',
+		border: 'border-[#f0e6d8]',
+		header: 'bg-[#fbf7f2]',
+		accentBar: 'border-s-[3px] border-s-[#d4a574]',
+		accent: 'bg-[#d4a574]',
+		count: 'bg-[#f5ebdf] text-[#a87d52]',
+		dot: 'bg-[#d4a574]',
+		add: 'border-[#e8d4bb] text-[#a87d52] hover:bg-[#f7f0e8]',
+		empty: 'border-[#ecd9c3] text-[#d4a574] hover:bg-[#f8f2ea]',
+		chart: '#d4a574',
+		fade: 'from-[#fbf7f2] via-[#fbf7f2]/95',
 	},
-	done: {
-		key: 'done',
-		header: 'from-[#f4fcf8]',
-		accent: 'bg-[#17b77a]',
-		count: 'bg-[#e5f8ef] text-[#16aa6e]',
-		dot: 'bg-[#17b77a]',
-		add: 'border-[#b4e8d2] text-[#18ae71] hover:bg-[#f4fcf8]',
+	blue: {
+		key: 'blue',
+		surface: 'bg-[#f4f7fb]',
+		border: 'border-[#e1e8f1]',
+		header: 'bg-[#f4f7fb]',
+		accentBar: 'border-s-[3px] border-s-[#6f93c4]',
+		accent: 'bg-[#6f93c4]',
+		count: 'bg-[#e8eef7] text-[#58769e]',
+		dot: 'bg-[#6f93c4]',
+		add: 'border-[#c8d6e8] text-[#58769e] hover:bg-[#eef3f9]',
+		empty: 'border-[#d0dbeb] text-[#6f93c4] hover:bg-[#f0f4f9]',
+		chart: '#6f93c4',
+		fade: 'from-[#f4f7fb] via-[#f4f7fb]/95',
+	},
+	pink: {
+		key: 'pink',
+		surface: 'bg-[#fbf5f7]',
+		border: 'border-[#f0e2e7]',
+		header: 'bg-[#fbf5f7]',
+		accentBar: 'border-s-[3px] border-s-[#c97f95]',
+		accent: 'bg-[#c97f95]',
+		count: 'bg-[#f5e8ed] text-[#a3667a]',
+		dot: 'bg-[#c97f95]',
+		add: 'border-[#e8ccd6] text-[#a3667a] hover:bg-[#f7eef1]',
+		empty: 'border-[#ebcfd8] text-[#c97f95] hover:bg-[#f8f0f3]',
+		chart: '#c97f95',
+		fade: 'from-[#fbf5f7] via-[#fbf5f7]/95',
 	},
 };
+
+/** Cycle: purple → green → orange → blue → pink (matches Tasks board reference). */
+const COLUMN_THEME_CYCLE = [
+	COLUMN_THEME.purple,
+	COLUMN_THEME.green,
+	COLUMN_THEME.orange,
+	COLUMN_THEME.blue,
+	COLUMN_THEME.pink,
+];
+
+/** Keep semantic aliases used by board stats. */
+COLUMN_THEME.todo = COLUMN_THEME.pink;
+COLUMN_THEME.progress = { ...COLUMN_THEME.orange, key: 'progress' };
+COLUMN_THEME.review = { ...COLUMN_THEME.blue, key: 'review' };
+COLUMN_THEME.done = { ...COLUMN_THEME.green, key: 'done' };
+
+function columnTheme(title = '', index = 0) {
+	const t = String(title).toLowerCase();
+	if (t.includes('progress') || t.includes('تقدم')) return COLUMN_THEME.progress;
+	if (t.includes('review') || t.includes('مراجعة')) return COLUMN_THEME.review;
+	if (t.includes('done') || t.includes('منتهي') || t.includes('مكتمل')) return COLUMN_THEME.done;
+	const safeIndex = Number.isFinite(index) ? Math.abs(index) : 0;
+	return COLUMN_THEME_CYCLE[safeIndex % COLUMN_THEME_CYCLE.length];
+}
 
 const LABEL_PILL = {
 	pink: 'bg-[#fff0f4] text-[#de4b70]',
@@ -146,6 +210,7 @@ const DEFAULT_BOARD_PREFS = {
 	autoCreateDoneColumn: false,
 	highlightOverdue: true,
 	compactCards: false,
+	showStats: true,
 };
 
 function loadBoardPrefs(accountId) {
@@ -212,14 +277,6 @@ function animateBoardCardFlip(cardIds, firstRects, durationMs = 520) {
 	return Promise.all(animations).then(() => undefined);
 }
 
-function columnTheme(title = '') {
-	const t = String(title).toLowerCase();
-	if (t.includes('progress') || t.includes('تقدم')) return COLUMN_THEME.progress;
-	if (t.includes('review') || t.includes('مراجعة')) return COLUMN_THEME.review;
-	if (t.includes('done') || t.includes('منتهي') || t.includes('مكتمل')) return COLUMN_THEME.done;
-	return COLUMN_THEME.todo;
-}
-
 function labelPillClass(label) {
 	const name = String(label?.name || '').toLowerCase();
 	const color = String(label?.color || '').toLowerCase();
@@ -283,9 +340,13 @@ function priorityTone(value) {
 	return 'bg-[#edf6ff] text-[#2c82de]';
 }
 
-function StatCard({ icon: Icon, iconClass, label, value, delta, caption, ring, chart }) {
+function StatCard({ icon: Icon, iconClass, cardClass = '', label, value, delta, caption, ring, chart, chartColor = '#748091' }) {
 	return (
-		<div className="relative min-h-[76px] rounded-xl border border-[#e8ecf2] bg-white px-3 py-2.5 shadow-[0_2px_8px_rgba(29,42,65,0.04)]">
+		<div
+			className={`relative min-h-[76px] rounded-xl border px-3 py-2.5 shadow-[0_2px_8px_rgba(29,42,65,0.04)] ${
+				cardClass || 'border-[#e8ecf2] bg-white'
+			}`}
+		>
 			<div className={`absolute start-3 top-[16px] grid h-8 w-8 place-items-center rounded-lg ${iconClass}`}>
 				<Icon size={16} strokeWidth={1.8} />
 			</div>
@@ -308,7 +369,7 @@ function StatCard({ icon: Icon, iconClass, label, value, delta, caption, ring, c
 			) : null}
 			{chart ? (
 				<svg className="absolute bottom-4 end-2.5 h-5 w-[38px]" viewBox="0 0 40 24" fill="none" aria-hidden>
-					<path d={chart} stroke="#748091" strokeWidth="1.2" />
+					<path d={chart} stroke={chartColor} strokeWidth="1.2" />
 				</svg>
 			) : null}
 		</div>
@@ -394,6 +455,8 @@ function SortableTaskCard({
 				if (magicEnter) onMagicEnterEnd?.(card.id);
 			}}
 			className={`wa-board-card group relative mx-2 mb-2.5 cursor-pointer overflow-hidden rounded-[15px] border bg-white shadow-[0_3px_12px_rgba(35,49,68,0.055)] ${
+				theme?.accentBar || ''
+			} ${
 				isCompleting
 					? 'wa-board-card--completing border-[#13b779]'
 					: completedVisual
@@ -436,8 +499,8 @@ function SortableTaskCard({
 				</div>
 			) : null}
 
-			<div className={`${compact ? 'px-3 py-3' : 'px-[17px] py-4'}`}>
-				<div className="flex min-h-[36px] items-center gap-2.5 pe-6">
+			<div className={`${compact ? 'px-3 py-2.5' : 'px-3.5 py-3'}`}>
+				<div className="flex min-h-0 items-center gap-0 pe-6 group-hover:gap-2">
 					<button
 						type="button"
 						aria-label={completedVisual ? 'Reopen task' : 'Complete task'}
@@ -445,10 +508,10 @@ function SortableTaskCard({
 							event.stopPropagation();
 							onToggleComplete?.(card);
 						}}
-						className={`wa-board-checkbox grid h-[16px] w-[16px] shrink-0 place-items-center rounded-full border ${
+						className={`wa-board-checkbox grid shrink-0 place-items-center overflow-hidden rounded-full border transition-all duration-200 ${
 							completedVisual
-								? 'is-checked border-[#10c98b] bg-[#10c98b] text-white'
-								: 'border-[#c5ced9] bg-white text-transparent hover:border-[#10c98b]'
+								? 'is-checked h-4 w-4 border-[#10c98b] bg-[#10c98b] text-white opacity-100'
+								: 'h-0 w-0 border-transparent bg-white text-transparent opacity-0 group-hover:h-4 group-hover:w-4 group-hover:border-[#c5ced9] group-hover:opacity-100 group-hover:hover:border-[#10c98b]'
 						}`}
 					>
 						{completedVisual ? (
@@ -469,7 +532,7 @@ function SortableTaskCard({
 						dir={titleDir}
 						lang={titleDir === 'rtl' ? 'ar' : undefined}
 						title={card.title}
-						className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-bold leading-5 tracking-tight text-[#1d2a3d] ${
+						className={`min-w-0 flex-1 truncate text-[11px] font-semibold leading-4 tracking-tight text-[#1d2a3d] transition-all duration-200 ${
 							titleDir === 'rtl'
 								? 'text-right font-[family-name:var(--font-arabic),"Tajawal","Cairo",Tahoma,sans-serif]'
 								: 'text-left'
@@ -482,11 +545,11 @@ function SortableTaskCard({
 
 					{due ? (
 						<span
-							className={`ms-auto inline-flex shrink-0 items-center gap-1.5 text-[12px] font-medium ${
+							className={`ms-auto inline-flex shrink-0 items-center gap-1 text-[10px] font-medium ${
 								overdue ? 'text-[#e11d48]' : 'text-[#778499]'
 							}`}
 						>
-							<Calendar size={15} strokeWidth={1.8} />
+							<Calendar size={12} strokeWidth={1.8} />
 							{due}
 						</span>
 					) : null}
@@ -496,7 +559,7 @@ function SortableTaskCard({
 					<div
 						dir={descriptionDir}
 						lang={descriptionDir === 'rtl' ? 'ar' : undefined}
-						className={`mt-3 rounded-[8px] border border-[#e5e9ee] bg-[#fbfcfd] px-2.5 py-2 text-[12px] leading-5 text-[#4b5568] line-clamp-3 ${
+						className={`mt-3 rounded-[8px] border border-[#e5e9ee] bg-[#fbfcfd] px-2.5 py-2 text-[12px] leading-5 text-[#4b5568] whitespace-pre-wrap break-words line-clamp-3 ${
 							descriptionDir === 'rtl'
 								? 'text-right font-[family-name:var(--font-arabic),"Tajawal","Cairo",Tahoma,sans-serif]'
 								: 'text-left'
@@ -560,7 +623,7 @@ function SortableTaskCard({
 				) : null}
 
 				{compact && (due || checklist.length > 0 || label) ? (
-					<div className="mt-2 flex flex-wrap items-center gap-1.5 ps-10">
+					<div className="mt-2 flex flex-wrap items-center gap-1.5">
 						{label ? (
 							<span className={`rounded-md px-1.5 py-0.5 text-[9px] font-semibold ${labelPillClass(label)}`}>
 								{label.name}
@@ -627,7 +690,7 @@ function SortableColumn({
 	dragDisabled,
 	showDropBefore = false,
 }) {
-	const theme = columnTheme(list.title);
+	const theme = columnTheme(list.title, index);
 	const ar = locale === 'ar';
 	const [creating, setCreating] = useState(false);
 	const [renaming, setRenaming] = useState(false);
@@ -677,13 +740,17 @@ function SortableColumn({
 					transform: CSS.Transform.toString(transform),
 					transition: transition || 'transform 200ms ease',
 				}}
-				className={`relative flex h-full min-h-0 w-[260px] shrink-0 flex-col overflow-hidden rounded-2xl border bg-[#fbfcfd] shadow-[0_1px_6px_rgba(30,43,65,0.04)] transition-[box-shadow,opacity,border-color] duration-150 lg:min-w-[240px] lg:flex-1 lg:max-w-[340px] ${
+				className={`relative flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl border shadow-[0_1px_6px_rgba(30,43,65,0.04)] transition-[box-shadow,opacity,border-color] duration-150 lg:min-w-[300px] lg:flex-1 lg:max-w-[420px] ${
+					theme.surface
+				} ${
 					isDragging
 						? 'border-dashed border-[#0db873]/55 bg-[#eefaf4]/70 opacity-30 shadow-none'
-						: 'border-[#e8ecf1] hover:shadow-[0_3px_12px_rgba(30,43,65,0.06)]'
+						: `${theme.border} hover:shadow-[0_3px_12px_rgba(30,43,65,0.06)]`
 				}`}
 			>
-				<header className="flex shrink-0 items-center gap-1.5 border-b border-[#f0f2f5] bg-white/80 px-2 py-2.5 backdrop-blur-sm">
+				<header
+					className={`flex shrink-0 items-center gap-1.5 border-b border-black/[0.04] px-2 py-2.5 backdrop-blur-sm ${theme.header}`}
+				>
 					<button
 						type="button"
 						className="grid h-7 w-6 cursor-grab place-items-center rounded-md text-[#9aa5b5] transition-colors hover:bg-[#f5f7fa] hover:text-[#54656f] active:cursor-grabbing"
@@ -800,24 +867,24 @@ function SortableColumn({
 							<button
 								type="button"
 								onClick={startCreate}
-								className="mx-2 mb-2 flex min-h-[140px] w-[calc(100%-1rem)] flex-1 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#d7dee8] bg-white/70 text-[11px] font-semibold text-[#667781] transition-colors hover:border-[#0db873] hover:text-[#0db873]"
+								className="mx-1.5 mb-1.5 flex min-h-[72px] w-[calc(100%-0.75rem)] flex-1 items-center justify-center gap-1 rounded-lg text-[11px] font-medium text-[#8a95a5] transition-colors hover:bg-black/[0.03] hover:text-[#667781]"
 							>
-								<Plus size={16} />
-								{ar ? 'إضافة بطاقة جديدة' : 'Add new card'}
+								<Plus size={13} strokeWidth={2} />
+								{ar ? 'إضافة بطاقة' : 'Add a card'}
 							</button>
 						) : null}
 					</div>
 				</ColumnDropArea>
 
 				{!creating && cards.length > 0 ? (
-					<div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] bg-gradient-to-t from-[#fbfcfd] via-[#fbfcfd]/95 to-transparent px-2 pb-2 pt-6">
+					<div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] px-1.5 pb-1.5 pt-4">
 						<button
 							type="button"
 							onClick={startCreate}
-							className="pointer-events-auto flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#e2e7ee] bg-white text-[11px] font-semibold text-[#54656f] shadow-[0_2px_8px_rgba(30,43,65,0.06)] transition-all hover:border-[#0db873] hover:text-[#0db873] active:scale-[0.99]"
+							className="pointer-events-auto flex h-8 w-full items-center justify-start gap-1 rounded-lg px-2 text-[11px] font-medium text-[#8a95a5] transition-colors hover:bg-black/[0.04] hover:text-[#54656f]"
 						>
-							<Plus size={13} />
-							{ar ? 'إضافة بطاقة جديدة' : 'Add new card'}
+							<Plus size={13} strokeWidth={2} />
+							{ar ? 'إضافة بطاقة' : 'Add a card'}
 						</button>
 					</div>
 				) : null}
@@ -1303,7 +1370,7 @@ export default function WhatsAppTasksBoard({
 			onMouseDown={event => event.stopPropagation()}
 		>
 			<header className="flex shrink-0 flex-col gap-2 pt-1 sm:pt-2">
-				<div className="flex flex-wrap items-end justify-between gap-2">
+				<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
 					<div className="min-w-0 shrink-0">
 						<h1 className="flex items-center gap-1.5 text-xl font-bold tracking-tight sm:text-[20px]">
 							{ar ? 'لوحة المهام' : 'Tasks board'}
@@ -1312,13 +1379,20 @@ export default function WhatsAppTasksBoard({
 							</span>
 						</h1>
 						<p className="mt-0.5 text-[11px] leading-4 text-[#7b8799]">
-							{ar ? 'إدارة المهام اليومية من محادثات واتساب' : 'Daily task management from WhatsApp conversations'}
+							{ar
+								? 'إدارة المهام اليومية من محادثات واتساب'
+								: 'Daily task management from WhatsApp conversations'}
 						</p>
 					</div>
-				</div>
 
-				<div className="flex flex-wrap items-center gap-2">
-					<div className="relative flex h-8 w-full max-w-[220px] items-center rounded-lg border border-[#e2e7ee] bg-white px-2 shadow-sm focus-within:border-[#0db873]/50 sm:w-[200px]">
+					<div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+					<div
+						className={`relative flex h-8 items-center rounded-lg border border-[#e2e7ee] bg-white px-2 shadow-sm transition-[width,max-width,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus-within:border-[#0db873]/50 focus-within:shadow-[0_0_0_3px_rgba(13,184,115,0.12)] ${
+							searchTerm
+								? 'w-[220px] max-w-[220px] sm:w-[260px] sm:max-w-[260px]'
+								: 'w-[128px] max-w-[128px] focus-within:w-[220px] focus-within:max-w-[220px] sm:w-[140px] sm:max-w-[140px] sm:focus-within:w-[260px] sm:focus-within:max-w-[260px]'
+						}`}
+					>
 						<Search size={14} className="shrink-0 text-[#26364b]" />
 						<input
 							value={searchTerm}
@@ -1453,6 +1527,35 @@ export default function WhatsAppTasksBoard({
 						</PopoverContent>
 					</Popover>
 
+					<button
+						type="button"
+						onClick={() => updatePrefs({ ...prefs, showStats: !prefs.showStats })}
+						aria-pressed={Boolean(prefs.showStats)}
+						title={
+							prefs.showStats
+								? ar
+									? 'إخفاء الإحصائيات'
+									: 'Hide stats'
+								: ar
+									? 'إظهار الإحصائيات'
+									: 'Show stats'
+						}
+						className={`inline-flex h-8 items-center gap-1.5 rounded-lg border bg-white px-2.5 text-[11px] font-semibold transition-colors hover:border-[#cfd7e2] ${
+							prefs.showStats
+								? 'border-[#cfc5e3] text-[#7a6a9e]'
+								: 'border-[#e2e7ee] text-[#26354a]'
+						}`}
+					>
+						<BarChart3 size={13} className={prefs.showStats ? 'text-[#8b79b8]' : 'text-[#53637a]'} />
+						{ar ? 'إحصائيات' : 'Stats'}
+						<ChevronDown
+							size={13}
+							className={`text-[#8a95a5] transition-transform duration-300 ${
+								prefs.showStats ? 'rotate-180' : ''
+							}`}
+						/>
+					</button>
+
 					<Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
 						<PopoverTrigger asChild>
 							<button
@@ -1463,7 +1566,7 @@ export default function WhatsAppTasksBoard({
 								{ar ? 'إعدادات اللوحة' : 'Board settings'}
 							</button>
 						</PopoverTrigger>
-						<PopoverContent align="start" className="z-[120000] w-[300px] space-y-2 p-3">
+						<PopoverContent align="end" className="z-[120000] w-[300px] space-y-2 p-3">
 							<div>
 								<p className="text-[12px] font-bold text-[#182235]">
 									{ar ? 'إعدادات اللوحة' : 'Board settings'}
@@ -1521,98 +1624,97 @@ export default function WhatsAppTasksBoard({
 							</p>
 						</PopoverContent>
 					</Popover>
-
-					{panelFilterCount ? (
-						<div className="flex flex-wrap items-center gap-1.5">
-							{filterStatus !== 'all' ? (
-								<button
-									type="button"
-									onClick={() => setFilterStatus('all')}
-									className="inline-flex h-7 items-center gap-1 rounded-full bg-[#e8f8f0] px-2.5 text-[10px] font-semibold text-[#0a9a62]"
-								>
-									{filterStatusLabel[filterStatus]}
-									<X size={12} />
-								</button>
-							) : null}
-							{filterLabel !== 'all' ? (
-								<button
-									type="button"
-									onClick={() => setFilterLabel('all')}
-									className="inline-flex h-7 items-center gap-1 rounded-full bg-[#f0eaff] px-2.5 text-[10px] font-semibold text-[#8056dc]"
-								>
-									{labels.find(label => label.id === filterLabel)?.name || 'Label'}
-									<X size={12} />
-								</button>
-							) : null}
-							{sortBy !== 'none' ? (
-								<button
-									type="button"
-									onClick={() => setSortBy('none')}
-									className="inline-flex h-7 items-center gap-1 rounded-full bg-[#eef4ff] px-2.5 text-[10px] font-semibold text-[#3b82f6]"
-								>
-									{ar ? 'مرتب' : 'Sorted'}
-									<X size={12} />
-								</button>
-							) : null}
-						</div>
-					) : null}
-
-					<button
-						type="button"
-						onClick={() => setAddingList(true)}
-						className="ms-auto inline-flex h-8 items-center gap-1 rounded-lg border border-dashed border-[#d5dde8] bg-white px-2.5 text-[10px] font-semibold text-[#54656f] hover:border-[#0db873] hover:text-[#0db873]"
-					>
-						<Plus size={13} />
-						{ar ? 'إضافة عمود' : 'Add column'}
-					</button>
+					</div>
 				</div>
+
+				{panelFilterCount ? (
+					<div className="flex flex-wrap items-center gap-1.5">
+						{filterStatus !== 'all' ? (
+							<button
+								type="button"
+								onClick={() => setFilterStatus('all')}
+								className="inline-flex h-7 items-center gap-1 rounded-full bg-[#e8f8f0] px-2.5 text-[10px] font-semibold text-[#0a9a62]"
+							>
+								{filterStatusLabel[filterStatus]}
+								<X size={12} />
+							</button>
+						) : null}
+						{filterLabel !== 'all' ? (
+							<button
+								type="button"
+								onClick={() => setFilterLabel('all')}
+								className="inline-flex h-7 items-center gap-1 rounded-full bg-[#f0eaff] px-2.5 text-[10px] font-semibold text-[#8056dc]"
+							>
+								{labels.find(label => label.id === filterLabel)?.name || 'Label'}
+								<X size={12} />
+							</button>
+						) : null}
+						{sortBy !== 'none' ? (
+							<button
+								type="button"
+								onClick={() => setSortBy('none')}
+								className="inline-flex h-7 items-center gap-1 rounded-full bg-[#eef4ff] px-2.5 text-[10px] font-semibold text-[#3b82f6]"
+							>
+								{ar ? 'مرتب' : 'Sorted'}
+								<X size={12} />
+							</button>
+						) : null}
+					</div>
+				) : null}
 			</header>
 
-			<section className="mt-2 grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-				<StatCard
-					icon={FileText}
-					iconClass="bg-[#f0eaff] text-[#8056dc]"
-					label={ar ? 'إجمالي البطاقات' : 'Total Cards'}
-					value={stats.total}
-					caption={ar ? 'من هذا الحساب' : 'on this account'}
-					chart="M1 16l5-2 5 5 6-8 5 4 6-7 6 3"
-				/>
-				<StatCard
-					icon={ShieldCheck}
-					iconClass="bg-[#e7f8ef] text-[#12aa70]"
-					label={ar ? 'مكتمل' : 'Completed'}
-					value={stats.completed}
-					delta={{ text: `${stats.completedPct}%`, className: 'text-[#17b778]' }}
-					caption={ar ? 'من الإجمالي' : 'of total'}
-					ring={{ color: '#39c38b', percent: stats.completedPct, label: `${stats.completedPct}%` }}
-				/>
-				<StatCard
-					icon={Timer}
-					iconClass="bg-[#fff1df] text-[#ff981b]"
-					label={ar ? 'قيد التنفيذ' : 'In Progress'}
-					value={stats.inProgress}
-					delta={{ text: `${stats.progressPct}%`, className: 'text-[#f39a1c]' }}
-					caption={ar ? 'من الإجمالي' : 'of total'}
-					ring={{ color: '#ffad42', percent: stats.progressPct, label: `${stats.progressPct}%` }}
-				/>
-				<StatCard
-					icon={Clock}
-					iconClass="bg-[#ffe8ef] text-[#ef4d76]"
-					label={ar ? 'متأخر' : 'Overdue'}
-					value={stats.overdue}
-					delta={{ text: `${stats.overduePct}%`, className: 'text-[#ef4c57]' }}
-					caption={ar ? 'تحتاج متابعة' : 'need attention'}
-					ring={{ color: '#f06b87', percent: Math.max(stats.overduePct, 1), label: `${stats.overduePct}%` }}
-				/>
-				<StatCard
-					icon={Timer}
-					iconClass="bg-[#e8f4ff] text-[#2386ee]"
-					label={ar ? 'أعمدة اللوحة' : 'Board columns'}
-					value={lists.length}
-					caption={ar ? 'نشطة الآن' : 'active now'}
-					chart="M1 7l7 6 5-2 5 7 6-8 5 4 5-6"
-				/>
-			</section>
+			<div
+				className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+					prefs.showStats
+						? 'mt-2 grid-rows-[1fr] opacity-100'
+						: 'pointer-events-none mt-0 grid-rows-[0fr] opacity-0'
+				}`}
+			>
+				<div className="min-h-0 overflow-hidden">
+					<section className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+						<StatCard
+							icon={FileText}
+							iconClass="bg-[#efeaf8] text-[#7a6a9e]"
+							cardClass="border-[#ebe6f5] bg-[#f7f5fb]"
+							label={ar ? 'إجمالي البطاقات' : 'Total Cards'}
+							value={stats.total}
+							caption={ar ? 'من هذا الحساب' : 'on this account'}
+							chart="M1 16l5-2 5 5 6-8 5 4 6-7 6 3"
+							chartColor="#9b87c9"
+						/>
+						<StatCard
+							icon={ShieldCheck}
+							iconClass="bg-[#e8f4ee] text-[#4a8f6d]"
+							cardClass="border-[#e0ece5] bg-[#f4f9f6]"
+							label={ar ? 'مكتمل' : 'Completed'}
+							value={stats.completed}
+							delta={{ text: `${stats.completedPct}%`, className: 'text-[#5fad86]' }}
+							caption={ar ? 'من الإجمالي' : 'of total'}
+							ring={{ color: '#5fad86', percent: stats.completedPct, label: `${stats.completedPct}%` }}
+						/>
+						<StatCard
+							icon={Timer}
+							iconClass="bg-[#f5ebdf] text-[#a87d52]"
+							cardClass="border-[#f0e6d8] bg-[#fbf7f2]"
+							label={ar ? 'قيد التنفيذ' : 'In Progress'}
+							value={stats.inProgress}
+							delta={{ text: `${stats.progressPct}%`, className: 'text-[#a87d52]' }}
+							caption={ar ? 'من الإجمالي' : 'of total'}
+							ring={{ color: '#d4a574', percent: stats.progressPct, label: `${stats.progressPct}%` }}
+						/>
+						<StatCard
+							icon={Clock}
+							iconClass="bg-[#f5e8ed] text-[#a3667a]"
+							cardClass="border-[#f0e2e7] bg-[#fbf5f7]"
+							label={ar ? 'متأخر' : 'Overdue'}
+							value={stats.overdue}
+							delta={{ text: `${stats.overduePct}%`, className: 'text-[#a3667a]' }}
+							caption={ar ? 'تحتاج متابعة' : 'need attention'}
+							ring={{ color: '#c97f95', percent: Math.max(stats.overduePct, 1), label: `${stats.overduePct}%` }}
+						/>
+					</section>
+				</div>
+			</div>
 
 			<div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden pb-2 sm:mt-5">
 				<DndContext
@@ -1654,7 +1756,7 @@ export default function WhatsAppTasksBoard({
 						</SortableContext>
 
 						{addingList ? (
-							<div className="flex h-full min-h-0 w-[260px] shrink-0 flex-col rounded-2xl border border-[#e6ebf1] bg-white p-3 shadow-sm">
+							<div className="flex h-full min-h-0 w-[280px] shrink-0 flex-col rounded-2xl border border-[#e6ebf1] bg-white p-3 shadow-sm lg:min-w-[260px] lg:max-w-[320px]">
 								<p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[#8a95a5]">
 									{ar ? 'اسم العمود' : 'Column name'}
 								</p>
@@ -1700,13 +1802,39 @@ export default function WhatsAppTasksBoard({
 								</div>
 								{listError ? <p className="mt-1.5 text-[10px] font-semibold text-[#e11d48]">{listError}</p> : null}
 							</div>
-						) : null}
+						) : (
+							<button
+								type="button"
+								onClick={() => setAddingList(true)}
+								className="group flex h-full min-h-[180px] w-[220px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d5dde8] bg-[#fbfcfd]/80 px-4 text-center transition-colors hover:border-[#c5b8de] hover:bg-[#f7f5fb] lg:min-w-[200px] lg:max-w-[260px]"
+							>
+								<span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#8b79b8] shadow-sm ring-1 ring-[#ebe6f5] transition-transform group-hover:scale-105">
+									<Plus size={18} strokeWidth={2.2} />
+								</span>
+								<span className="text-[12px] font-bold text-[#54656f] group-hover:text-[#7a6a9e]">
+									{ar ? 'إضافة عمود' : 'Add column'}
+								</span>
+								<span className="max-w-[11rem] text-[10px] leading-4 text-[#8a95a5]">
+									{ar ? 'عمود جديد في نهاية اللوحة' : 'New column at the end of the board'}
+								</span>
+							</button>
+						)}
 					</div>
 					<DragOverlay dropAnimation={DROP_ANIMATION}>
 						{activeList ? (
-							<div className="w-[260px] rotate-[1deg] rounded-2xl border border-[#0db873]/35 bg-white p-3 shadow-2xl ring-2 ring-[#0db873]/20">
+							<div className="w-[320px] rotate-[1deg] rounded-2xl border border-[#0db873]/35 bg-white p-3 shadow-2xl ring-2 ring-[#0db873]/20">
 								<div className="mb-2 flex items-center gap-2">
-									<span className={`h-2 w-2 rounded-full ${columnTheme(activeList.title).dot}`} />
+									<span
+										className={`h-2 w-2 rounded-full ${
+											columnTheme(
+												activeList.title,
+												Math.max(
+													0,
+													lists.findIndex(list => list.id === activeList.id),
+												),
+											).dot
+										}`}
+									/>
 									<p className="text-[12px] font-bold">{activeList.title}</p>
 									<span className="rounded-full bg-[#f1f3f6] px-1.5 text-[9px] font-bold text-[#667781]">
 										{cards.filter(card => card.listId === activeList.id).length}
