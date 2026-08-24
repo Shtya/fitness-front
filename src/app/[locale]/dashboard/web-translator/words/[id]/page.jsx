@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { ArrowLeft, Languages } from 'lucide-react';
 import { webTranslatorApi } from '@/lib/web-translator/web-translator-api';
-import { STUDIO } from '../../ai-content-studio/components/studio-theme';
+import { STUDIO } from '../../../ai-content-studio/components/studio-theme';
 
 export default function WebTranslatorWordPage({ params }) {
 	const { id } = params;
