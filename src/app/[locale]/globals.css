@@ -3562,7 +3562,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	display: flex;
 	align-items: center;
 	gap: 0;
-	height: 22px;
+	height: 28px;
 	position: relative;
 	flex: 1 1 0%;
 	width: auto;
@@ -3584,7 +3584,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 0;
+	gap: 1px;
 	width: 100%;
 	height: 100%;
 	min-width: 0;
@@ -3597,6 +3597,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	width: 2.5px;
 	min-width: 2.5px;
 	max-width: 2.5px;
+	height: var(--wa-bar-h, 8px) !important;
+	min-height: 4px;
 	border-radius: 999px;
 	background: rgba(17, 27, 33, 0.22);
 	transition: height 160ms ease, background-color 120ms linear;
@@ -3779,15 +3781,16 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 }
 
 .wa-voice-message.is-outgoing .wa-voice-waveform .is-unplayed {
-	background: rgba(17, 27, 33, 0.2);
+	background: rgba(255, 255, 255, 0.45);
 }
 
 .wa-voice-message.is-outgoing .wa-voice-waveform .is-played-outgoing {
-	background: #008f6a;
+	background: #ffffff;
 }
 
 .wa-voice-message.is-outgoing .wa-voice-thumb.is-outgoing {
-	background: #008f6a;
+	background: #ffffff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 }
 
 .wa-voice-avatar-wrap {
@@ -5675,14 +5678,21 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-web-desktop .wa-voice-waveform-bars > .wa-voice-bar {
-		width: 2px !important;
+		width: 2.5px !important;
+		min-width: 2.5px !important;
+		height: var(--wa-bar-h, 8px) !important;
 		border-radius: 2px !important;
 		background: #8b9ba2 !important;
 	}
 
-	.wa-web-desktop .wa-message-mine .wa-voice-waveform-bars > .wa-voice-bar,
-	.wa-web-desktop .wa-voice-message.is-outgoing .wa-voice-waveform-bars > .wa-voice-bar {
-		background: #76b99d !important;
+	.wa-web-desktop .wa-message-mine .wa-voice-waveform-bars > .wa-voice-bar.is-unplayed,
+	.wa-web-desktop .wa-voice-message.is-outgoing .wa-voice-waveform-bars > .wa-voice-bar.is-unplayed {
+		background: rgba(255, 255, 255, 0.48) !important;
+	}
+
+	.wa-web-desktop .wa-message-mine .wa-voice-waveform-bars > .wa-voice-bar.is-played-outgoing,
+	.wa-web-desktop .wa-voice-message.is-outgoing .wa-voice-waveform-bars > .wa-voice-bar.is-played-outgoing {
+		background: #ffffff !important;
 	}
 
 	.wa-web-desktop .wa-voice-duration,
@@ -6859,11 +6869,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-voice-message.is-outgoing .wa-voice-waveform .is-unplayed {
-		background: rgba(17, 27, 33, 0.18);
+		background: rgba(255, 255, 255, 0.45);
 	}
 
 	.wa-voice-message.is-outgoing .wa-voice-waveform .is-played-outgoing {
-		background: #008f6a;
+		background: #ffffff;
 	}
 
 	.wa-voice-track {
@@ -6902,7 +6912,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		max-width: none;
 		overflow: hidden;
 		isolation: isolate;
-		height: 22px;
+		height: 28px;
 		gap: 0;
 		direction: ltr;
 	}
@@ -6911,7 +6921,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0;
+		gap: 1px;
 		width: 100%;
 		height: 100%;
 		min-width: 0;
@@ -6924,6 +6934,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		width: 2.5px;
 		min-width: 2.5px;
 		max-width: 2.5px;
+		height: var(--wa-bar-h, 8px) !important;
+		min-height: 4px;
 		border-radius: 999px;
 		transition: height 160ms ease, background-color 100ms linear;
 	}
@@ -6937,7 +6949,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-voice-waveform .is-played-outgoing {
-		background: #008f6a;
+		background: #ffffff;
 	}
 
 	.wa-voice-waveform .is-played-incoming {
@@ -6957,7 +6969,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-voice-thumb.is-outgoing {
-		background: #008f6a;
+		background: #ffffff;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 	}
 
 	.wa-voice-thumb.is-incoming {

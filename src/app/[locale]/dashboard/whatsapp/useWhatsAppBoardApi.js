@@ -29,6 +29,7 @@ function toUiCard(created, overrides = {}) {
 		attachments: created.attachments || [],
 		coverImage: created.coverImage || null,
 		isStarred: Boolean(created.isStarred),
+		priority: created.priority || (created.isStarred ? 'high' : 'medium'),
 		isCompleted: Boolean(created.isCompleted),
 		orderIndex: created.orderIndex ?? 0,
 		createdAt: created.createdAt || new Date().toISOString(),
@@ -42,6 +43,15 @@ export async function uploadBoardImage(file) {
 	const form = new FormData();
 	form.append('file', file);
 	const { data } = await api.post('/chat/upload/image', form, {
+		headers: { 'Content-Type': 'multipart/form-data' },
+	});
+	return data?.url || data?.path || '';
+}
+
+export async function uploadBoardFile(file) {
+	const form = new FormData();
+	form.append('file', file);
+	const { data } = await api.post('/chat/upload/file', form, {
 		headers: { 'Content-Type': 'multipart/form-data' },
 	});
 	return data?.url || data?.path || '';
@@ -67,6 +77,7 @@ export function useWhatsAppBoardApi(accountId) {
 	const reloadRef = useRef(0);
 	const cardCreateLock = useRef(new Set());
 	const listCreateLock = useRef(false);
+	const deletingCardIds = useRef(new Set());
 
 	const reload = useCallback(async () => {
 		if (!accountId) return;
@@ -251,16 +262,19 @@ export function useWhatsAppBoardApi(accountId) {
 	const patchCard = useCallback(
 		async (cardId, updates) => {
 			if (!accountId || !cardId || String(cardId).startsWith('temp-')) return;
-			const previous = cards.find(item => item.id === cardId);
-			setCards(current =>
-				current.map(item => (item.id === cardId ? { ...item, ...updates } : item)),
-			);
+			if (deletingCardIds.current.has(cardId)) return;
+			let previous = null;
+			setCards(current => {
+				previous = current.find(item => item.id === cardId) || null;
+				return current.map(item => (item.id === cardId ? { ...item, ...updates } : item));
+			});
 			try {
 				await updateBoardCard(accountId, cardId, {
 					title: updates.title,
 					description: updates.description,
 					columnId: updates.listId,
 					isStarred: updates.isStarred,
+					priority: updates.priority,
 					isCompleted: updates.isCompleted,
 					labels: updates.labels,
 					checklist: updates.checklist,
@@ -275,6 +289,7 @@ export function useWhatsAppBoardApi(accountId) {
 								: null,
 				});
 			} catch (err) {
+				if (deletingCardIds.current.has(cardId)) return;
 				if (previous) {
 					setCards(current =>
 						current.map(item => (item.id === cardId ? previous : item)),
@@ -283,22 +298,28 @@ export function useWhatsAppBoardApi(accountId) {
 				throw err;
 			}
 		},
-		[accountId, cards],
+		[accountId],
 	);
 
 	const removeCard = useCallback(
 		async cardId => {
 			if (!accountId || String(cardId).startsWith('temp-')) return;
-			const previous = cards;
-			setCards(current => current.filter(item => item.id !== cardId));
+			deletingCardIds.current.add(cardId);
+			let snapshot = [];
+			setCards(current => {
+				snapshot = current;
+				return current.filter(item => item.id !== cardId);
+			});
 			try {
 				await deleteBoardCard(accountId, cardId);
 			} catch (err) {
-				setCards(previous);
+				setCards(snapshot);
 				throw err;
+			} finally {
+				deletingCardIds.current.delete(cardId);
 			}
 		},
-		[accountId, cards],
+		[accountId],
 	);
 
 	const persistColumnOrder = useCallback(

@@ -1571,7 +1571,13 @@ function ImageMessage({
 						setBroken(!placeholder && !blurPlaceholder);
 						setLoaded(false);
 					}}
-					className={`${fitClass} transition-opacity duration-300 ${loaded ? 'opacity-100' : blurPlaceholder ? 'opacity-70 blur-[2px] scale-105' : 'opacity-0'}`}
+					className={`${fitClass} transition-opacity duration-300 ${
+						blurPlaceholder
+							? 'opacity-70 blur-[2px] scale-105'
+							: loaded
+								? 'opacity-100'
+								: 'opacity-0'
+					}`}
 				/>
 			)}
 			{loading && !loaded && (
@@ -1940,20 +1946,56 @@ function useNearViewport(elementRef, { rootMargin = '600px' } = {}) {
 	const [isNear, setIsNear] = useState(false);
 	useEffect(() => {
 		if (isNear) return undefined;
-		const node = elementRef.current;
-		if (!node) return undefined;
-		if (typeof IntersectionObserver === 'undefined') {
-			setIsNear(true);
-			return undefined;
-		}
-		const observer = new IntersectionObserver(
-			entries => {
-				if (entries.some(entry => entry.isIntersecting)) setIsNear(true);
-			},
-			{ rootMargin },
-		);
-		observer.observe(node);
-		return () => observer.disconnect();
+		let cancelled = false;
+		let observer = null;
+		let raf = 0;
+		let tries = 0;
+		const marginPx = Number.parseInt(String(rootMargin), 10);
+		const pad = Number.isFinite(marginPx) ? Math.abs(marginPx) : 600;
+
+		const markNear = () => {
+			if (!cancelled) setIsNear(true);
+		};
+
+		const isAlreadyNear = node => {
+			const rect = node.getBoundingClientRect();
+			if (!(rect.width > 0 || rect.height > 0)) return false;
+			const vh = typeof window === 'undefined' ? 0 : window.innerHeight || 0;
+			return rect.top < vh + pad && rect.bottom > -pad;
+		};
+
+		const attach = () => {
+			if (cancelled) return;
+			const node = elementRef.current;
+			// Ref is often null on the first effect tick — retry until mounted.
+			if (!node) {
+				if (tries++ < 90) raf = window.requestAnimationFrame(attach);
+				else markNear();
+				return;
+			}
+			if (typeof IntersectionObserver === 'undefined') {
+				markNear();
+				return;
+			}
+			if (isAlreadyNear(node)) {
+				markNear();
+				return;
+			}
+			observer = new IntersectionObserver(
+				entries => {
+					if (entries.some(entry => entry.isIntersecting)) markNear();
+				},
+				{ rootMargin },
+			);
+			observer.observe(node);
+		};
+
+		attach();
+		return () => {
+			cancelled = true;
+			if (raf) window.cancelAnimationFrame(raf);
+			observer?.disconnect();
+		};
 	}, [elementRef, isNear, rootMargin]);
 	return isNear;
 }
@@ -2212,18 +2254,40 @@ function StoryRing({ size = 80, strokeWidth = 3, segmentsViewed, idSuffix = '' }
 	);
 }
 
-function seededWaveform(seed = '', count = 32) {
+function seededWaveform(seed = '', count = 40) {
 	let hash = 0;
 	for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
 	const bars = [];
 	for (let i = 0; i < count; i++) {
 		hash = (hash * 1103515245 + 12345) >>> 0;
-		bars.push(0.28 + ((hash >>> 8) % 100) / 100 * 0.72);
+		const noise = ((hash >>> 8) % 100) / 100;
+		// Mix LCG noise with a slow envelope so placeholder never looks like a flat line.
+		const envelope = 0.35 + 0.65 * Math.abs(Math.sin((i + 1) * 0.55 + (hash % 7) * 0.2));
+		bars.push(Math.max(0.18, Math.min(1, 0.22 + noise * 0.55 * envelope + envelope * 0.28)));
 	}
 	return bars;
 }
 
-function waveformPeaksFromAudioBuffer(audioBuffer, count = 40) {
+function isUsefulWaveform(peaks) {
+	if (!Array.isArray(peaks) || peaks.length < 12) return false;
+	let min = 1;
+	let max = 0;
+	let sum = 0;
+	for (const value of peaks) {
+		const n = Number(value);
+		if (!Number.isFinite(n)) return false;
+		min = Math.min(min, n);
+		max = Math.max(max, n);
+		sum += n;
+	}
+	const avg = sum / peaks.length;
+	const variance =
+		peaks.reduce((total, value) => total + (Number(value) - avg) ** 2, 0) / peaks.length;
+	// Reject silent / corrupt / near-flat decodes (common with some ogg/opus blobs).
+	return max - min >= 0.14 && variance >= 0.004;
+}
+
+function waveformPeaksFromAudioBuffer(audioBuffer, count = 48) {
 	const channel = audioBuffer?.getChannelData?.(0);
 	if (!channel?.length) return [];
 	const blockSize = Math.max(1, Math.floor(channel.length / count));
@@ -2232,13 +2296,21 @@ function waveformPeaksFromAudioBuffer(audioBuffer, count = 40) {
 		const start = index * blockSize;
 		const end = Math.min(channel.length, start + blockSize);
 		let peak = 0;
+		let sumSquares = 0;
+		const samples = Math.max(1, end - start);
 		for (let cursor = start; cursor < end; cursor += 1) {
-			peak = Math.max(peak, Math.abs(channel[cursor]));
+			const sample = Math.abs(channel[cursor]);
+			peak = Math.max(peak, sample);
+			sumSquares += sample * sample;
 		}
-		peaks.push(peak);
+		const rms = Math.sqrt(sumSquares / samples);
+		peaks.push(peak * 0.4 + rms * 0.6);
 	}
-	const maxPeak = Math.max(...peaks, 0.001);
-	return peaks.map(peak => Math.max(0.15, Math.min(1, peak / maxPeak)));
+	const maxPeak = Math.max(...peaks, 0.0001);
+	const normalized = peaks.map(peak => peak / maxPeak);
+	if (!isUsefulWaveform(normalized)) return [];
+	// Expand mid dynamics so voice notes look like WhatsApp frequencies.
+	return normalized.map(peak => Math.max(0.14, Math.min(1, peak ** 0.55)));
 }
 
 function formatClock(seconds) {
@@ -2301,16 +2373,10 @@ async function probeAudioDuration(objectUrl) {
 	});
 }
 
-async function prepareVoicePlaybackFromBlob(blob, mimeType, { analyze = true } = {}) {
-	const type = (mimeType || blob.type || 'audio/webm').split(';')[0];
-	const typedBlob = blob.type ? blob : new Blob([blob], { type });
-	const objectUrl = URL.createObjectURL(typedBlob);
-
-	// Fast path for prefetch / first paint: skip AudioContext decode (can take seconds).
-	if (!analyze) {
-		return { objectUrl, duration: 0, waveform: [] };
-	}
-
+async function analyzeVoiceBlob(blob, mimeType, objectUrlForProbe) {
+	const rawType = String(mimeType || blob.type || 'audio/ogg; codecs=opus');
+	const type = rawType.split(';')[0] || 'audio/ogg';
+	const typedBlob = blob.type ? blob : new Blob([blob], { type: rawType });
 	const buffer = await typedBlob.arrayBuffer();
 	let duration = 0;
 	let waveform = [];
@@ -2319,25 +2385,62 @@ async function prepareVoicePlaybackFromBlob(blob, mimeType, { analyze = true } =
 		if (AudioCtx) {
 			const ctx = new AudioCtx();
 			try {
-				const decoded = await Promise.race([
-					ctx.decodeAudioData(buffer.slice(0)),
-					new Promise((_, reject) => {
-						window.setTimeout(() => reject(new Error('decode timeout')), 2500);
-					}),
-				]);
-				duration = decoded.duration || 0;
+				const decodeOnce = () =>
+					Promise.race([
+						ctx.decodeAudioData(buffer.slice(0)),
+						new Promise((_, reject) => {
+							window.setTimeout(() => reject(new Error('decode timeout')), 4500);
+						}),
+					]);
+				let decoded = null;
+				try {
+					decoded = await decodeOnce();
+				} catch {
+					// WhatsApp PTT is often ogg/opus with odd/missing blob MIME — retry once.
+					const retryBlob = new Blob([buffer], { type: 'audio/ogg; codecs=opus' });
+					const retryBuf = await retryBlob.arrayBuffer();
+					decoded = await Promise.race([
+						ctx.decodeAudioData(retryBuf.slice(0)),
+						new Promise((_, reject) => {
+							window.setTimeout(() => reject(new Error('decode timeout')), 4500);
+						}),
+					]);
+				}
+				duration = decoded?.duration || 0;
 				waveform = waveformPeaksFromAudioBuffer(decoded);
 			} finally {
 				await ctx.close().catch(() => { });
 			}
 		}
 	} catch {
-		/* decodeAudioData can fail / hang for some ogg/opus variants */
+		/* decodeAudioData can fail / hang for some ogg/opus variants — keep seeded bars */
 	}
-	if (!(Number.isFinite(duration) && duration > 0)) {
-		duration = await probeAudioDuration(objectUrl);
+	if (!(Number.isFinite(duration) && duration > 0) && objectUrlForProbe) {
+		duration = await probeAudioDuration(objectUrlForProbe);
 	}
-	return { objectUrl, duration: Number.isFinite(duration) && duration > 0 ? duration : 0, waveform };
+	return {
+		duration: Number.isFinite(duration) && duration > 0 ? duration : 0,
+		waveform: isUsefulWaveform(waveform) ? waveform : [],
+	};
+}
+
+async function prepareVoicePlaybackFromBlob(blob, mimeType, { analyze = true, reuseObjectUrl = null } = {}) {
+	const type = (mimeType || blob.type || 'audio/webm').split(';')[0];
+	const typedBlob = blob.type ? blob : new Blob([blob], { type });
+	const objectUrl = reuseObjectUrl || URL.createObjectURL(typedBlob);
+
+	// Fast path for prefetch / first paint: skip AudioContext decode (can take seconds).
+	if (!analyze) {
+		return { objectUrl, duration: 0, waveform: [], reused: Boolean(reuseObjectUrl) };
+	}
+
+	const analyzed = await analyzeVoiceBlob(typedBlob, type, objectUrl);
+	return {
+		objectUrl,
+		duration: analyzed.duration,
+		waveform: analyzed.waveform,
+		reused: Boolean(reuseObjectUrl),
+	};
 }
 
 async function prepareVoicePlayback(sourceUrl, mimeType) {
@@ -2393,7 +2496,7 @@ function VoicePlaybackButton({ playing, loading, failed, onClick }) {
 }
 
 function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
-	const items = peaks.length > 0 ? peaks : seededWaveform('', 40);
+	const items = isUsefulWaveform(peaks) ? peaks : seededWaveform(String(peaks?.length || 'voice'), 40);
 	return (
 		<button
 			type="button"
@@ -2406,11 +2509,15 @@ function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
 				{items.map((height, index) => {
 					const played =
 						items.length > 0 && (index + 0.5) / items.length <= progress;
+					const px = Math.round(4 + Number(height) * 20);
 					return (
 						<span
 							key={index}
 							className={`wa-voice-bar ${played ? (mine ? 'is-played-outgoing' : 'is-played-incoming') : 'is-unplayed'}`}
-							style={{ height: `${Math.round(6 + height * 16)}px` }}
+							style={{
+								'--wa-bar-h': `${px}px`,
+								height: `${px}px`,
+							}}
 						/>
 					);
 				})}
@@ -2531,6 +2638,7 @@ function VoiceMessage({
 	const voiceBlobRef = useRef(null);
 	const loadPromiseRef = useRef(null);
 	const analyzedRef = useRef(false);
+	const ignoreAudioErrorRef = useRef(false);
 	const [playing, setPlaying] = useState(false);
 	const [loadingPlayback, setLoadingPlayback] = useState(false);
 	const [loadFailed, setLoadFailed] = useState(false);
@@ -2551,6 +2659,8 @@ function VoiceMessage({
 		}
 	}, [fallbackDuration]);
 
+	// Reset only when the attachment identity changes — MIME/url churn after
+	// download must not revoke a live blob and fake a Retry state.
 	useEffect(() => {
 		setBars(fallbackBars);
 		setPlaybackUrl(null);
@@ -2561,17 +2671,51 @@ function VoiceMessage({
 		voiceBlobRef.current = null;
 		loadPromiseRef.current = null;
 		analyzedRef.current = false;
+		ignoreAudioErrorRef.current = true;
 		if (objectUrlRef.current) {
 			URL.revokeObjectURL(objectUrlRef.current);
 			objectUrlRef.current = null;
 		}
-	}, [url, attachmentId, demoAttachment, mimeType, fallbackBars]);
+		const timer = window.setTimeout(() => {
+			ignoreAudioErrorRef.current = false;
+		}, 0);
+		return () => window.clearTimeout(timer);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- identity-only reset
+	}, [attachmentId, demoAttachment]);
 
 	const ensurePlaybackReady = useCallback(async ({ priority = false, analyze = false, softFail = false } = {}) => {
-		if (playbackUrl && (!analyze || analyzedRef.current)) return playbackUrl;
+		const existingUrl = objectUrlRef.current;
+		// Already playable — never block the spinner on waveform analysis.
+		if (existingUrl && voiceBlobRef.current) {
+			if (analyze && !analyzedRef.current) {
+				void (async () => {
+					try {
+						const refined = await prepareVoicePlaybackFromBlob(
+							voiceBlobRef.current,
+							mimeType || voiceBlobRef.current.type,
+							{ analyze: true, reuseObjectUrl: existingUrl },
+						);
+						if (isUsefulWaveform(refined.waveform)) setBars(refined.waveform);
+						if (refined.duration > 0) {
+							setDuration(current => (current > 0 ? current : refined.duration));
+						}
+						analyzedRef.current = true;
+					} catch {
+						/* analysis is best-effort — keep seeded bars */
+					}
+				})();
+			}
+			return existingUrl;
+		}
+
 		if (loadPromiseRef.current) {
 			const pendingUrl = await loadPromiseRef.current.catch(() => null);
-			if (pendingUrl && (!analyze || analyzedRef.current)) return pendingUrl;
+			if (pendingUrl && objectUrlRef.current && voiceBlobRef.current) {
+				if (analyze && !analyzedRef.current) {
+					void ensurePlaybackReady({ analyze: true, softFail: true });
+				}
+				return objectUrlRef.current || pendingUrl;
+			}
 		}
 
 		const run = (async () => {
@@ -2620,20 +2764,42 @@ function VoiceMessage({
 					voiceBlobRef.current = blob;
 				}
 
+				const reuseObjectUrl =
+					objectUrlRef.current && voiceBlobRef.current === blob ? objectUrlRef.current : null;
+				// Create a playable URL immediately — analyze waveform in the background.
 				const prepared = await prepareVoicePlaybackFromBlob(blob, mimeType || blob.type, {
-					analyze,
+					analyze: false,
+					reuseObjectUrl,
 				});
-				if (objectUrlRef.current && objectUrlRef.current !== prepared.objectUrl) {
+				if (
+					objectUrlRef.current &&
+					objectUrlRef.current !== prepared.objectUrl &&
+					!prepared.reused
+				) {
+					ignoreAudioErrorRef.current = true;
 					URL.revokeObjectURL(objectUrlRef.current);
 				}
 				objectUrlRef.current = prepared.objectUrl;
 				setPlaybackUrl(prepared.objectUrl);
-				if (prepared.waveform?.length) setBars(prepared.waveform);
-				if (prepared.duration > 0) {
-					setDuration(current => (current > 0 ? current : prepared.duration));
-				}
-				if (analyze) analyzedRef.current = true;
 				setLoadFailed(false);
+				ignoreAudioErrorRef.current = false;
+				if (analyze && !analyzedRef.current) {
+					void (async () => {
+						try {
+							const refined = await prepareVoicePlaybackFromBlob(blob, mimeType || blob.type, {
+								analyze: true,
+								reuseObjectUrl: prepared.objectUrl,
+							});
+							if (isUsefulWaveform(refined.waveform)) setBars(refined.waveform);
+							if (refined.duration > 0) {
+								setDuration(current => (current > 0 ? current : refined.duration));
+							}
+							analyzedRef.current = true;
+						} catch {
+							/* keep seeded waveform */
+						}
+					})();
+				}
 				return prepared.objectUrl;
 			} catch (error) {
 				if (!softFail) setLoadFailed(true);
@@ -2646,13 +2812,14 @@ function VoiceMessage({
 
 		loadPromiseRef.current = run;
 		return run;
-	}, [attachmentId, canFetchAttachment, demoAttachment, mimeType, playbackUrl, url]);
+	}, [attachmentId, canFetchAttachment, demoAttachment, mimeType, url]);
 
 	useEffect(() => {
 		if (!isNearViewport) return undefined;
 		if (!canFetchAttachment && !url) return undefined;
 		const timer = window.setTimeout(() => {
-			void ensurePlaybackReady({ analyze: false, softFail: true }).catch(() => {});
+			// Prefetch playable blob, then refine waveform in background (never block UI).
+			void ensurePlaybackReady({ analyze: true, softFail: true }).catch(() => {});
 		}, 80);
 		return () => window.clearTimeout(timer);
 	}, [canFetchAttachment, ensurePlaybackReady, isNearViewport, url]);
@@ -2682,8 +2849,10 @@ function VoiceMessage({
 		};
 		const onMeta = () => applyDuration(audio.duration);
 		const onError = () => {
+			if (ignoreAudioErrorRef.current) return;
 			setLoadFailed(true);
 			setPlaying(false);
+			setLoadingPlayback(false);
 		};
 
 		audio.addEventListener('loadedmetadata', onMeta);
@@ -2718,23 +2887,33 @@ function VoiceMessage({
 			return;
 		}
 		try {
-			if (loadFailed) {
+			const hadRealFailure = loadFailed && !voiceBlobRef.current && !objectUrlRef.current;
+			if (hadRealFailure) {
 				forgetAttachmentBlob(attachmentId);
 				voiceBlobRef.current = null;
 				analyzedRef.current = false;
+				ignoreAudioErrorRef.current = true;
 				setPlaybackUrl(null);
+			} else if (loadFailed) {
+				setLoadFailed(false);
 			}
 			const readyUrl = await ensurePlaybackReady({ priority: true, analyze: true });
 			const audio = audioRef.current;
 			if (!audio || !readyUrl) return;
-			if (audio.src !== readyUrl) audio.src = readyUrl;
+			if (audio.src !== readyUrl) {
+				ignoreAudioErrorRef.current = true;
+				audio.src = readyUrl;
+			}
 			audio.playbackRate = playbackRate;
 			await audio.play();
+			ignoreAudioErrorRef.current = false;
 			setPlaying(true);
 			setLoadFailed(false);
+			setLoadingPlayback(false);
 		} catch {
 			setPlaying(false);
 			setLoadFailed(true);
+			setLoadingPlayback(false);
 		}
 	};
 
@@ -3175,7 +3354,7 @@ export function MediaAttachment({
 				<ImageMessage
 					url={url || previewDataUrl}
 					previewUrl={url ? previewDataUrl : null}
-					loading={Boolean(loading && !url)}
+					loading={Boolean((loading || (!url && isNearViewport)) && !failed)}
 					alt={attachment.fileName || 'image'}
 					cover={isGallery}
 					blurPlaceholder={!url && Boolean(previewDataUrl)}
@@ -3186,10 +3365,26 @@ export function MediaAttachment({
 						}
 						autoRetryCountRef.current = 0;
 						setFailed(false);
+						setLoading(true);
 						setRetryNonce(value => value + 1);
 					}}
 					className={`${type === 'sticker' ? 'wa-sticker-asset' : 'wa-photo-asset'}`}
 				/>
+				{failed && !url ? (
+					<button
+						type="button"
+						className="absolute inset-x-2 bottom-2 z-[3] rounded-lg bg-black/60 px-2 py-1.5 text-[11px] font-semibold text-white"
+						onClick={event => {
+							event.stopPropagation();
+							autoRetryCountRef.current = 0;
+							setFailed(false);
+							setLoading(true);
+							setRetryNonce(value => value + 1);
+						}}
+					>
+						{labels.retry || labels.tapToRetry || 'Retry'}
+					</button>
+				) : null}
 			</div>
 		);
 	}
@@ -5614,6 +5809,7 @@ function WhatsAppWorkspaceContent() {
 	const pinThreadToBottomRef = useRef(false);
 	const chatSearchRef = useRef('');
 	const conversationFilterRef = useRef('all');
+	const lastOpenMessagesLoadKeyRef = useRef('');
 	const assignmentFilterRef = useRef('');
 	const messageSyncInFlightRef = useRef(new Map());
 	/** Skip provider history sync while WA Store is known unhealthy. */
@@ -7599,7 +7795,15 @@ function WhatsAppWorkspaceContent() {
 			setConversationUnreadCount(conversationId, 0);
 			notifyWhatsAppUnreadChanged();
 		}
-		loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled).catch(() => { });
+		const loadKey = `${conversationId}:${conversationFilter}`;
+		const shouldReloadMessages =
+			switchedConversation ||
+			lastOpenMessagesLoadKeyRef.current !== loadKey ||
+			!messagesCacheRef.current.get(conversationId)?.items?.length;
+		if (shouldReloadMessages) {
+			lastOpenMessagesLoadKeyRef.current = loadKey;
+			loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled).catch(() => { });
+		}
 		if (selectedConversationSource === 'real_overlay') {
 			markRuntimeReadRef.current?.(selectedDemoRuntimeId);
 			markRuntimeReadRef.current?.(conversationId);

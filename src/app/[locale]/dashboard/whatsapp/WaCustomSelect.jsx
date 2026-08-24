@@ -22,6 +22,9 @@ function scrollNodeByDelta(node, deltaY) {
 	return true;
 }
 
+// Above TaskBoardCardDrawer (z-100000) and its lightbox (z-100001).
+const DEFAULT_MENU_Z = 100050;
+
 export function WaCustomSelect({
 	value,
 	onChange,
@@ -32,6 +35,7 @@ export function WaCustomSelect({
 	disabled = false,
 	size = 'md',
 	fitContent = false,
+	menuZIndex = DEFAULT_MENU_Z,
 }) {
 	const [open, setOpen] = useState(false);
 	const [position, setPosition] = useState(null);
@@ -183,8 +187,8 @@ export function WaCustomSelect({
 						<div
 							aria-hidden="true"
 							data-wa-select-menu="true"
-							className="fixed inset-0 z-[1599]"
-							style={{ pointerEvents: 'auto' }}
+							className="fixed inset-0"
+							style={{ zIndex: menuZIndex, pointerEvents: 'auto' }}
 							onPointerDown={event => {
 								event.preventDefault();
 								event.stopPropagation();
@@ -197,12 +201,13 @@ export function WaCustomSelect({
 							data-wa-select-menu="true"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className="fixed z-[1600] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
+							className="fixed overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
 							style={{
 								top: position.top,
 								left: position.left,
 								width: position.width,
 								maxHeight: position.maxHeight,
+								zIndex: menuZIndex + 1,
 								pointerEvents: 'auto',
 								WebkitOverflowScrolling: 'touch',
 							}}

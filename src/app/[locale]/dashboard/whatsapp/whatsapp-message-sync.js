@@ -34,22 +34,10 @@ export function shouldSkipOpenChatNetwork({
 	cacheIsFresh = false,
 	forceProvider = false,
 	itemCount = 0,
-	providerHydratedAt = 0,
-	lastProviderSyncAt = null,
-	now = Date.now(),
 } = {}) {
 	if (forceProvider || !cacheIsFresh || itemCount <= 0) return false;
-	if (itemCount >= MESSAGE_PAGE_SIZE) return true;
-	if (
-		isHydrationFresh(providerHydratedAt, now) ||
-		isHydrationFresh(lastProviderSyncAt, now)
-	) {
-		return true;
-	}
-	// Previously hydrated in this session — trust warm cache until TTL expires.
-	if (hydrationTimestampMs(providerHydratedAt) > 0) return true;
-	if (hydrationTimestampMs(lastProviderSyncAt) > 0) return true;
-	return false;
+	// Warm in-memory thread: skip GET + phone work on reopen (any length).
+	return true;
 }
 
 /**

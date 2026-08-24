@@ -96,6 +96,17 @@ test('short warm hydrated cache skips open-chat network', () => {
 	);
 });
 
+test('short warm cache skips open-chat network even without watermark', () => {
+	assert.equal(
+		shouldSkipOpenChatNetwork({
+			cacheIsFresh: true,
+			itemCount: 8,
+			now,
+		}),
+		true,
+	);
+});
+
 test('force provider never skips network', () => {
 	assert.equal(
 		shouldSkipOpenChatNetwork({

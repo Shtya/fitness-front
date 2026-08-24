@@ -82,6 +82,7 @@ export function boardCardToUi(card) {
 		description: card.description || '',
 		dueDate: card.dueDate || null,
 		isStarred: Boolean(card.isStarred),
+		priority: card.priority || (card.isStarred ? 'high' : 'medium'),
 		isCompleted: Boolean(card.isCompleted),
 		labels: card.labels || [],
 		checklist: card.checklist || [],

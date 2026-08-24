@@ -239,11 +239,48 @@ function labelPillClass(label) {
 	return LABEL_PILL.blue;
 }
 
-function formatDue(value) {
+function formatDue(value, locale = 'en') {
 	if (!value) return null;
-	const date = new Date(value);
+	const raw = String(value);
+	const parts = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+	const date = parts
+		? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+		: new Date(value);
 	if (Number.isNaN(date.getTime())) return null;
-	return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+	return date.toLocaleDateString(locale === 'ar' ? 'ar' : 'en-US', {
+		month: 'short',
+		day: 'numeric',
+	});
+}
+
+function isMostlyArabic(text) {
+	const value = String(text || '');
+	const arabic = (value.match(/[\u0600-\u06FF]/g) || []).length;
+	const latin = (value.match(/[A-Za-z]/g) || []).length;
+	return arabic > 0 && arabic >= latin;
+}
+
+function boardTextDir(text) {
+	return isMostlyArabic(text) ? 'rtl' : 'ltr';
+}
+
+const PRIORITY_OPTIONS = [
+	{ id: 'low', en: 'Low', ar: 'منخفضة' },
+	{ id: 'medium', en: 'Medium', ar: 'متوسطة' },
+	{ id: 'high', en: 'High', ar: 'عالية' },
+	{ id: 'urgent', en: 'Urgent', ar: 'عاجلة' },
+];
+
+function priorityLabel(value, ar) {
+	const found = PRIORITY_OPTIONS.find(item => item.id === value) || PRIORITY_OPTIONS[1];
+	return ar ? found.ar : found.en;
+}
+
+function priorityTone(value) {
+	if (value === 'urgent') return 'bg-[#fff0f4] text-[#f13f70]';
+	if (value === 'high') return 'bg-[#fff8e8] text-[#b78105]';
+	if (value === 'low') return 'bg-[#f0f2f5] text-[#8692a5]';
+	return 'bg-[#edf6ff] text-[#2c82de]';
 }
 
 function StatCard({ icon: Icon, iconClass, label, value, delta, caption, ring, chart }) {
@@ -319,7 +356,9 @@ function SortableTaskCard({
 	highlightOverdue,
 	compact,
 	onMagicEnterEnd,
+	locale = 'en',
 }) {
+	const ar = locale === 'ar';
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: card.id,
 		data: { type: 'card', cardId: card.id, listId },
@@ -334,13 +373,16 @@ function SortableTaskCard({
 			'transform 480ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, box-shadow 180ms ease',
 		opacity: isDragging ? 0.25 : 1,
 	};
-	const due = formatDue(card.dueDate);
+	const due = formatDue(card.dueDate, locale);
 	const label = card.labels?.[0];
 	const checklist = card.checklist || [];
 	const checklistDone = checklist.filter(item => item.completed).length;
 	const cover = resolveBoardMediaUrl(card.coverImage);
+	const priority = card.priority || (card.isStarred ? 'high' : 'medium');
 	const showMetaPanel =
-		!compact && Boolean(card.isStarred || checklist.length || label || card.links?.length);
+		!compact && Boolean(priority !== 'medium' || checklist.length || label || card.links?.length);
+	const titleDir = boardTextDir(card.title);
+	const descriptionDir = boardTextDir(card.description);
 
 	return (
 		<article
@@ -389,13 +431,13 @@ function SortableTaskCard({
 			</button>
 
 			{cover ? (
-				<div className="overflow-hidden border-b border-[#edf0f3]">
-					<img src={cover} alt="" className="h-[120px] w-full object-cover" />
+				<div className="overflow-hidden border-b border-[#edf0f3] bg-[#f7f8fa]">
+					<img src={cover} alt="" className="h-[120px] w-full object-contain" />
 				</div>
 			) : null}
 
 			<div className={`${compact ? 'px-3 py-3' : 'px-[17px] py-4'}`}>
-				<div className="flex min-h-[42px] items-center gap-3 pe-6">
+				<div className="flex min-h-[36px] items-center gap-2.5 pe-6">
 					<button
 						type="button"
 						aria-label={completedVisual ? 'Reopen task' : 'Complete task'}
@@ -403,19 +445,19 @@ function SortableTaskCard({
 							event.stopPropagation();
 							onToggleComplete?.(card);
 						}}
-						className={`wa-board-checkbox grid h-[27px] w-[27px] shrink-0 place-items-center rounded-full border-2 ${
+						className={`wa-board-checkbox grid h-[16px] w-[16px] shrink-0 place-items-center rounded-full border ${
 							completedVisual
 								? 'is-checked border-[#10c98b] bg-[#10c98b] text-white'
-								: 'border-[#d4dbe4] bg-white text-transparent hover:border-[#10c98b]'
+								: 'border-[#c5ced9] bg-white text-transparent hover:border-[#10c98b]'
 						}`}
 					>
 						{completedVisual ? (
-							<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+							<svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden>
 								<path
 									className="wa-board-checkbox__mark"
 									d="M2.5 6.2L4.8 8.5L9.5 3.5"
 									stroke="currentColor"
-									strokeWidth="2"
+									strokeWidth="2.2"
 									strokeLinecap="round"
 									strokeLinejoin="round"
 								/>
@@ -423,10 +465,15 @@ function SortableTaskCard({
 						) : null}
 					</button>
 
-					<span className={`h-[9px] w-[9px] shrink-0 rounded-full ${theme.dot}`} />
-
 					<h4
-						className={`min-w-0 flex-1 truncate text-[15px] font-bold leading-5 tracking-tight text-[#1d2a3d] ${
+						dir={titleDir}
+						lang={titleDir === 'rtl' ? 'ar' : undefined}
+						title={card.title}
+						className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-bold leading-5 tracking-tight text-[#1d2a3d] ${
+							titleDir === 'rtl'
+								? 'text-right font-[family-name:var(--font-arabic),"Tajawal","Cairo",Tahoma,sans-serif]'
+								: 'text-left'
+						} ${
 							completedVisual ? 'text-[#6b7788] line-through decoration-[#10c98b]/60' : ''
 						}`}
 					>
@@ -446,37 +493,47 @@ function SortableTaskCard({
 				</div>
 
 				{card.description && !compact ? (
-					<div className="mt-3 rounded-[8px] border border-[#e5e9ee] bg-[#fbfcfd] px-2.5 py-2 text-[11px] leading-4 text-[#64738a] line-clamp-3">
+					<div
+						dir={descriptionDir}
+						lang={descriptionDir === 'rtl' ? 'ar' : undefined}
+						className={`mt-3 rounded-[8px] border border-[#e5e9ee] bg-[#fbfcfd] px-2.5 py-2 text-[12px] leading-5 text-[#4b5568] line-clamp-3 ${
+							descriptionDir === 'rtl'
+								? 'text-right font-[family-name:var(--font-arabic),"Tajawal","Cairo",Tahoma,sans-serif]'
+								: 'text-left'
+						}`}
+					>
 						{card.description}
 					</div>
 				) : null}
 
 				{showMetaPanel ? (
 					<div className="mt-3 overflow-hidden rounded-[10px] border border-[#edf0f3]">
-						{card.isStarred || checklist.length ? (
+						{priority !== 'medium' || checklist.length ? (
 							<>
-								<div className="flex h-[48px] items-center gap-3 border-b border-[#edf0f3] px-3">
-									<span className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-[#fff0f4] text-[#f43f74]">
-										<Flag size={16} strokeWidth={1.8} />
-									</span>
-									<span className="text-[13px] font-medium text-[#1d2a3d]">Priority</span>
-									<span
-										className={`ms-auto rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-											card.isStarred
-												? 'bg-[#fff0f4] text-[#f13f70]'
-												: 'bg-[#f0f2f5] text-[#8692a5]'
-										}`}
-									>
-										{card.isStarred ? 'High' : 'Normal'}
-									</span>
-								</div>
+								{priority !== 'medium' ? (
+									<div className="flex h-[48px] items-center gap-3 border-b border-[#edf0f3] px-3">
+										<span className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-[#fff0f4] text-[#f43f74]">
+											<Flag size={16} strokeWidth={1.8} />
+										</span>
+										<span className="text-[13px] font-medium text-[#1d2a3d]">
+											{ar ? 'الأولوية' : 'Priority'}
+										</span>
+										<span
+											className={`ms-auto rounded-full px-2.5 py-1 text-[11px] font-semibold ${priorityTone(
+												priority,
+											)}`}
+										>
+											{priorityLabel(priority, ar)}
+										</span>
+									</div>
+								) : null}
 								{checklist.length ? (
 									<div className="flex h-[48px] items-center gap-3 border-b border-[#edf0f3] px-3">
 										<span className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-[#e7faf2] text-[#0cbe7d]">
 											<CheckSquare size={16} strokeWidth={1.8} />
 										</span>
 										<span className="text-[13px] font-medium text-[#1d2a3d]">
-											Checklist status
+											{ar ? 'العناصر المستخدمة' : 'Used items'}
 										</span>
 										<span className="ms-auto rounded-full bg-[#e8faf2] px-2.5 py-1 text-[11px] font-semibold text-[#10b879]">
 											{checklistDone} / {checklist.length}
@@ -492,7 +549,7 @@ function SortableTaskCard({
 									{label ? <Tag size={16} strokeWidth={1.8} /> : <Link2 size={16} strokeWidth={1.8} />}
 								</span>
 								<span className="text-[13px] font-medium text-[#1d2a3d]">
-									{label ? 'Label' : 'WhatsApp'}
+									{label ? (ar ? 'تصنيف' : 'Label') : 'WhatsApp'}
 								</span>
 								<span className="ms-auto max-w-[46%] truncate text-[12px] font-semibold text-[#8692a5]">
 									{label?.name || `${card.links.length} linked`}
@@ -721,6 +778,7 @@ function SortableColumn({
 									card={card}
 									listId={list.id}
 									theme={theme}
+									locale={locale}
 									isCompleting={completingIds?.has(card.id)}
 									isSettling={settlingIds?.has(card.id)}
 									onToggleComplete={onToggleComplete}
@@ -894,7 +952,12 @@ export default function WhatsAppTasksBoard({
 			} else if (sortBy === 'title') {
 				next.sort((a, b) => a.title.localeCompare(b.title));
 			} else if (sortBy === 'priority') {
-				next.sort((a, b) => Number(Boolean(b.isStarred)) - Number(Boolean(a.isStarred)));
+				const rank = value => {
+					const map = { urgent: 4, high: 3, medium: 2, low: 1 };
+					const key = value.priority || (value.isStarred ? 'high' : 'medium');
+					return map[key] || 0;
+				};
+				next.sort((a, b) => rank(b) - rank(a));
 			} else if (sortBy === 'createdAt') {
 				next.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 			} else if (sortBy === 'updatedAt') {
@@ -1178,7 +1241,6 @@ export default function WhatsAppTasksBoard({
 			if (!created) {
 				throw new Error(ar ? 'البطاقة قيد الإنشاء بالفعل' : 'Card is already being created');
 			}
-			toast.success(ar ? 'تم إنشاء البطاقة' : 'Card created');
 		} catch (err) {
 			toast.error(err?.response?.data?.message || err?.message || (ar ? 'فشل الإنشاء' : 'Create failed'));
 			throw err;
@@ -1193,7 +1255,6 @@ export default function WhatsAppTasksBoard({
 			await addList(newListTitle.trim());
 			setNewListTitle('');
 			setAddingList(false);
-			toast.success(ar ? 'تم إضافة العمود' : 'Column added');
 		} catch (err) {
 			setListError(err?.response?.data?.message || err?.message || (ar ? 'فشل الإنشاء' : 'Create failed'));
 		} finally {
@@ -1677,7 +1738,19 @@ export default function WhatsAppTasksBoard({
 					)}
 					onClose={() => setSelected(null)}
 					onPatch={(cardId, updates) => patchCard(cardId, updates)}
-					onDelete={cardId => void removeCard(cardId)}
+					onDelete={async cardId => {
+						try {
+							await removeCard(cardId);
+							setSelected(null);
+						} catch (err) {
+							toast.error(
+								err?.response?.data?.message ||
+									err?.message ||
+									(ar ? 'فشل حذف البطاقة' : 'Could not delete card'),
+							);
+							throw err;
+						}
+					}}
 					onOpenConversation={onOpenConversation}
 					onToggleComplete={card => void toggleCompleteCard(card)}
 					onDuplicate={card => void duplicateCard(card)}
