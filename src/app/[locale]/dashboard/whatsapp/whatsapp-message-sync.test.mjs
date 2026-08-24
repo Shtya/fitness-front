@@ -17,7 +17,7 @@ test('short hydrated thread does not backfill on reopen', () => {
 		now,
 	});
 	assert.equal(result.needed, false);
-	assert.equal(result.reason, 'fresh');
+	assert.equal(result.reason, 'local_replica');
 });
 
 test('empty thread still requests first hydrate', () => {
@@ -30,25 +30,47 @@ test('empty thread still requests first hydrate', () => {
 	assert.equal(result.reason, 'empty_thread');
 });
 
-test('never-hydrated short thread requests one provider pass', () => {
+test('empty thread with inbox watermark does not look like first hydrate', () => {
+	const result = shouldProviderBackfill({
+		canSync: true,
+		itemCount: 0,
+		lastProviderSyncAt: new Date(now - 60_000).toISOString(),
+		now,
+	});
+	assert.equal(result.needed, false);
+	assert.equal(result.reason, 'hydrated_empty');
+});
+
+test('thread with local rows skips provider even without hydration watermark', () => {
 	const result = shouldProviderBackfill({
 		canSync: true,
 		itemCount: 12,
 		now,
 	});
-	assert.equal(result.needed, true);
-	assert.equal(result.reason, 'first_hydrate');
+	assert.equal(result.needed, false);
+	assert.equal(result.reason, 'local_replica');
 });
 
-test('stale hydration requests catch-up', () => {
+test('stale watermark does not re-pull when local rows exist', () => {
 	const result = shouldProviderBackfill({
 		canSync: true,
 		itemCount: 40,
 		providerHydratedAt: now - PROVIDER_SYNC_FRESH_MS - 1,
 		now,
 	});
+	assert.equal(result.needed, false);
+	assert.equal(result.reason, 'local_replica');
+});
+
+test('force still requests provider backfill', () => {
+	const result = shouldProviderBackfill({
+		canSync: true,
+		forceProvider: true,
+		itemCount: 40,
+		now,
+	});
 	assert.equal(result.needed, true);
-	assert.equal(result.reason, 'stale');
+	assert.equal(result.reason, 'forced');
 });
 
 test('page-full warm cache skips open-chat network', () => {

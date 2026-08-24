@@ -168,6 +168,9 @@ import {
 	mediaUploadFailedMessage,
 } from './whatsapp-voice-recorder';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
+import WhatsAppAccountLinkPanel, {
+	WhatsAppRestoreProgress,
+} from './WhatsAppAccountLinkPanel';
 
 const EmailMemoWorkspace = lazy(() => import('../email-memo/EmailMemoWorkspace'));
 import { WhatsAppReportsTab, staffAssignHint } from './WhatsAppReportsTab';
@@ -463,6 +466,30 @@ const translations = {
 		pairingCodeCopied: 'Code copied',
 		phoneNumberRequired: 'Enter a phone number first',
 		phoneNumberInvalid: 'Enter a valid phone number with country code',
+		connectWhatsApp: 'Connect WhatsApp',
+		linkDeviceTitle: 'Link Device',
+		linkDeviceHint: 'Connect using device linking',
+		phoneConnectTitle: 'Phone Number',
+		phoneConnectHint: 'Connect using your phone number',
+		sendPairingCode: 'Send code',
+		verifyPhoneTitle: 'Confirm on your phone',
+		verifyPhoneSent: 'We generated a pairing code for',
+		didntReceiveCode: "Didn't receive the code?",
+		resendCode: 'Resend code',
+		resendIn: 'Resend in {seconds}s',
+		changePhoneNumber: 'Change number',
+		waitingPhoneConfirm: 'Waiting for your phone to confirm…',
+		connectingWhatsApp: 'Connecting WhatsApp…',
+		restorePhoneVerified: 'Phone verified',
+		restoreSessionRestored: 'Session restored',
+		restoreChatsRestored: 'Chats restored',
+		restoreContactsRestored: 'Contacts restored',
+		restoreLoadingMessages: 'Loading messages…',
+		restoreAlmostReady: 'Almost ready…',
+		connectionMethodLabel: 'Connection method',
+		connectionMethodQr: 'Linked Device',
+		connectionMethodPhone: 'Phone Number',
+		openWhatsAppInbox: 'Open WhatsApp',
 		noAccounts: 'No WhatsApp accounts yet',
 		noAccountsHint: 'Create your first account to start connecting WhatsApp',
 		noConversations: 'No conversations yet',
@@ -860,6 +887,30 @@ const translations = {
 		pairingCodeCopied: 'تم نسخ الرمز',
 		phoneNumberRequired: 'أدخل رقم الهاتف أولاً',
 		phoneNumberInvalid: 'أدخل رقم هاتف صحيح مع رمز الدولة',
+		connectWhatsApp: 'ربط واتساب',
+		linkDeviceTitle: 'ربط جهاز',
+		linkDeviceHint: 'الاتصال عبر ربط الجهاز',
+		phoneConnectTitle: 'رقم الهاتف',
+		phoneConnectHint: 'الاتصال باستخدام رقم الهاتف',
+		sendPairingCode: 'إرسال الرمز',
+		verifyPhoneTitle: 'أكّد من هاتفك',
+		verifyPhoneSent: 'تم إنشاء رمز الربط للرقم',
+		didntReceiveCode: 'لم يصلك الرمز؟',
+		resendCode: 'إعادة الإرسال',
+		resendIn: 'إعادة الإرسال خلال {seconds}ث',
+		changePhoneNumber: 'تعديل الرقم',
+		waitingPhoneConfirm: 'بانتظار تأكيد الهاتف…',
+		connectingWhatsApp: 'جارٍ ربط واتساب…',
+		restorePhoneVerified: 'تم التحقق من الهاتف',
+		restoreSessionRestored: 'تم استعادة الجلسة',
+		restoreChatsRestored: 'تم استعادة المحادثات',
+		restoreContactsRestored: 'تم استعادة جهات الاتصال',
+		restoreLoadingMessages: 'جارٍ تحميل الرسائل…',
+		restoreAlmostReady: 'أوشكنا على الانتهاء…',
+		connectionMethodLabel: 'طريقة الاتصال',
+		connectionMethodQr: 'جهاز مرتبط',
+		connectionMethodPhone: 'رقم الهاتف',
+		openWhatsAppInbox: 'فتح واتساب',
 		noAccounts: 'لا توجد حسابات واتساب',
 		noAccountsHint: 'أنشئ أول حساب لبدء ربط واتساب',
 		noConversations: 'لا توجد محادثات بعد',
@@ -5405,7 +5456,7 @@ function WhatsAppWorkspaceContent() {
 	const [enablingPush, setEnablingPush] = useState(false);
 	const [qr, setQr] = useState(null);
 	const [pairingCode, setPairingCode] = useState(null);
-	const [linkMode, setLinkMode] = useState('qr'); // 'qr' | 'phone'
+	const [linkMode, setLinkMode] = useState(null); // null | 'qr' | 'phone'
 	const [linkPhoneNumber, setLinkPhoneNumber] = useState('');
 	const parsedLinkPhone = useMemo(() => {
 		const trimmed = linkPhoneNumber.trim();
@@ -5420,6 +5471,9 @@ function WhatsAppWorkspaceContent() {
 	}, [linkPhoneNumber]);
 	const linkPhoneTouched = linkPhoneNumber.trim().length > 3;
 	const linkPhoneValid = Boolean(parsedLinkPhone);
+	useEffect(() => {
+		linkModeRef.current = linkMode;
+	}, [linkMode]);
 	const [bootStatus, setBootStatus] = useState('loading');
 	const [bootError, setBootError] = useState('');
 	const [isAdmin, setIsAdmin] = useState(false);
@@ -5610,6 +5664,7 @@ function WhatsAppWorkspaceContent() {
 	});
 	const statusMediaUrlRef = useRef(null);
 	const autoConnectAttemptedRef = useRef(null);
+	const linkModeRef = useRef(null);
 	const autoCreateAccountAttemptedRef = useRef(false);
 	const autoInboxSyncAttemptedRef = useRef(null);
 	const loadOlderAtRef = useRef(0);
@@ -7130,7 +7185,12 @@ function WhatsAppWorkspaceContent() {
 					lastProviderSyncAt: syncAt,
 					lastSyncReason: synced?.syncReason || synced?.syncError || null,
 				});
-				if (synced?.lastProviderSyncAt || synced?.syncReason === 'fresh') {
+				if (
+					synced?.lastProviderSyncAt ||
+					synced?.syncReason === 'fresh' ||
+					synced?.syncReason === 'local_replica' ||
+					synced?.syncReason === 'hydrated_empty'
+				) {
 					setConversations(current =>
 						current.map(item =>
 							item.id === id
@@ -7198,8 +7258,8 @@ function WhatsAppWorkspaceContent() {
 						retryState.attempts = 0;
 					}
 					// Empty ChatStore will not fill from hammering sync/latest.
-					// Two quiet retries, then stop — user can reopen later.
-					if (retryState.attempts >= 2) {
+					// One quiet retry (Postgres only), then wait for live events.
+					if (retryState.attempts >= 1) {
 						if (isCurrentRequest()) {
 							setMessagesSyncHint('');
 							setLoadingMessages(false);
@@ -7209,15 +7269,14 @@ function WhatsAppWorkspaceContent() {
 					retryState.attempts += 1;
 					const waitMs = Math.min(
 						30_000,
-						Math.max(10_000, Number(cooldownMs) || 12_000) +
-							(retryState.attempts - 1) * 5_000,
+						Math.max(10_000, Number(cooldownMs) || 12_000),
 					);
 					providerHistorySyncBlockedUntilRef.current = Date.now() + waitMs;
 					retryState.timer = setTimeout(() => {
 						retryState.timer = null;
 						if (conversationIdRef.current !== id) return;
 						providerHistorySyncBlockedUntilRef.current = 0;
-						loadMessagesRef.current?.(id, true, { forceProvider: true })?.catch?.(() => { });
+						loadMessagesRef.current?.(id, true, { forceProvider: false })?.catch?.(() => { });
 					}, waitMs);
 				};
 				const finishProviderSync = async () => {
@@ -7230,7 +7289,7 @@ function WhatsAppWorkspaceContent() {
 								providerHistorySyncBlockedUntilRef.current =
 									Date.now() + Math.min(30_000, Math.max(3_000, cooldown));
 							}
-							if (synced?.syncReason === 'fresh' || synced?.syncError === 'fresh') {
+							if (synced?.syncReason === 'fresh' || synced?.syncError === 'fresh' || synced?.syncReason === 'local_replica' || synced?.syncError === 'local_replica' || synced?.syncReason === 'hydrated_empty' || synced?.syncError === 'hydrated_empty') {
 								applySynced(synced);
 								setMessagesSyncHint('');
 								messageHistoryRetryRef.current.attempts = 0;
@@ -8151,9 +8210,7 @@ function WhatsAppWorkspaceContent() {
 							clearTimeout(messageHistoryRetryRef.current.timer);
 							messageHistoryRetryRef.current.timer = null;
 						}
-						loadMessagesRef.current?.(activeConversationId, true, {
-							forceProvider: true,
-						})?.catch?.(() => { });
+						// Reconnect catch-up is loadMessages(forceProvider: false) below.
 					}
 				}
 				refreshAccountsSoon();
@@ -8201,8 +8258,14 @@ function WhatsAppWorkspaceContent() {
 		const poll = setInterval(async () => {
 			try {
 				const { data } = await api.get(`/whatsapp/accounts/${id}/qr`);
-				if (data.qr) setQr(data.qr);
-				if (data.pairingCode) setPairingCode(data.pairingCode);
+				if (data.qr) {
+					setQr(data.qr);
+					if (linkModeRef.current !== 'phone') setLinkMode('qr');
+				}
+				if (data.pairingCode) {
+					setPairingCode(data.pairingCode);
+					setLinkMode('phone');
+				}
 				if (data.status && data.status !== status) {
 					await loadAccounts();
 				}
@@ -8233,7 +8296,7 @@ function WhatsAppWorkspaceContent() {
 	const connectAccount = async (phoneNumber, options = {}) => {
 		if (!accountId) return;
 		const force = Boolean(options.force);
-		const switchingMode = Boolean(phoneNumber);
+		const switchingMode = Boolean(phoneNumber) || options.mode === 'qr';
 		const status = selectedAccount?.status;
 		const updatedAt = selectedAccount?.updatedAt || selectedAccount?.updated_at;
 		const statusAgeMs = updatedAt
@@ -8270,10 +8333,20 @@ function WhatsAppWorkspaceContent() {
 			}
 			const { data } = await api.post(
 				`/whatsapp/accounts/${accountId}/connect`,
-				phoneNumber ? { phoneNumber } : {},
+				phoneNumber
+					? { phoneNumber }
+					: options.mode === 'qr'
+						? { mode: 'qr' }
+						: {},
 			);
-			if (data.qr) setQr(data.qr);
-			if (data.pairingCode) setPairingCode(data.pairingCode);
+			if (data.qr) {
+				setQr(data.qr);
+				setLinkMode('qr');
+			}
+			if (data.pairingCode) {
+				setPairingCode(data.pairingCode);
+				setLinkMode('phone');
+			}
 			await loadAccounts();
 			if (data.status === 'connected') {
 				toast.success(t.connectStarted);
@@ -8321,8 +8394,14 @@ function WhatsAppWorkspaceContent() {
 		const bootstrapSession = async () => {
 			try {
 				const { data: qrData } = await api.get(`/whatsapp/accounts/${id}/qr`);
-				if (qrData.qr) setQr(qrData.qr);
-				if (qrData.pairingCode) setPairingCode(qrData.pairingCode);
+				if (qrData.qr) {
+					setQr(qrData.qr);
+					if (linkModeRef.current !== 'phone') setLinkMode('qr');
+				}
+				if (qrData.pairingCode) {
+					setPairingCode(qrData.pairingCode);
+					setLinkMode('phone');
+				}
 				if (qrData.status === 'connected') {
 					await loadAccounts();
 					return;
@@ -8334,9 +8413,23 @@ function WhatsAppWorkspaceContent() {
 				if (['connecting', 'qr_pending'].includes(status)) {
 					return;
 				}
+				const hadSession = Boolean(
+					selectedAccount.lastConnectedAt ||
+						selectedAccount.initialHydratedAt ||
+						selectedAccount.phoneNumber,
+				);
+				if (!hadSession || linkModeRef.current === 'phone') {
+					return;
+				}
 				const { data } = await api.post(`/whatsapp/accounts/${id}/connect`, {});
-				if (data.qr) setQr(data.qr);
-				if (data.pairingCode) setPairingCode(data.pairingCode);
+				if (data.qr) {
+					setQr(data.qr);
+					setLinkMode('qr');
+				}
+				if (data.pairingCode) {
+					setPairingCode(data.pairingCode);
+					setLinkMode('phone');
+				}
 				await loadAccounts();
 			} catch {
 				await loadAccounts().catch(() => { });
@@ -8363,12 +8456,9 @@ function WhatsAppWorkspaceContent() {
 				if (data?.id) {
 					selectWhatsAppAccount(data.id);
 					setActiveTab('accounts');
-					const { data: connectData } = await api.post(
-						`/whatsapp/accounts/${data.id}/connect`,
-						{},
-					);
-					if (connectData?.qr) setQr(connectData.qr);
-					if (connectData?.pairingCode) setPairingCode(connectData.pairingCode);
+					setLinkMode(null);
+					setQr(null);
+					setPairingCode(null);
 					await loadAccounts();
 				}
 			} catch (error) {
@@ -8388,6 +8478,7 @@ function WhatsAppWorkspaceContent() {
 			await api.post(`/whatsapp/accounts/${accountId}/${logout ? 'logout' : 'disconnect'}`);
 			setQr(null);
 			setPairingCode(null);
+			setLinkMode(null);
 			await loadAccounts();
 		} catch (error) {
 			toast.error(
@@ -8441,11 +8532,9 @@ function WhatsAppWorkspaceContent() {
 				if (data?.id) {
 					selectWhatsAppAccount(data.id);
 					setActiveTab('accounts');
-					const { data: connectData } = await api
-						.post(`/whatsapp/accounts/${data.id}/connect`, {})
-						.catch(() => ({ data: {} }));
-					if (connectData?.qr) setQr(connectData.qr);
-					if (connectData?.pairingCode) setPairingCode(connectData.pairingCode);
+					setLinkMode(null);
+					setQr(null);
+					setPairingCode(null);
 					await loadAccounts();
 				}
 				toast.success(t.accountDeletedFreshReady);
@@ -9904,7 +9993,6 @@ function WhatsAppWorkspaceContent() {
 								{
 									params: {
 										limit: Math.min(limit || MESSAGE_PAGE_SIZE, 200),
-										force: 1,
 									},
 									timeout: 12_000,
 								},
@@ -9918,7 +10006,7 @@ function WhatsAppWorkspaceContent() {
 							const synced = await api.post(
 								`/whatsapp/conversations/${targetConversationId}/sync/older`,
 								null,
-								{ params: { limit: Math.min(limit || MESSAGE_PAGE_SIZE, 200), force: 1 } },
+								{ params: { limit: Math.min(limit || MESSAGE_PAGE_SIZE, 200) } },
 							);
 							return synced?.data;
 						}
@@ -12079,157 +12167,100 @@ function WhatsAppWorkspaceContent() {
 										)}
 									</div>
 									<div className="space-y-5 p-5">
-										{accountBusy &&
-											!qr &&
-											!pairingCode &&
-											selectedAccount.status !== 'connected' && (
-											<div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800">
-												<Loader2 size={16} className="animate-spin text-[var(--color-primary-500)]" />
-												{t.loading}
-											</div>
-										)}
 										{canManageWhatsApp && selectedAccount.status !== 'connected' && (
-											<div className="mx-auto max-w-sm">
-												<div className="mb-4 flex justify-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-													<button
-														type="button"
-														onClick={() => setLinkMode('qr')}
-														className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
-															linkMode === 'qr'
-																? 'bg-white text-slate-900 shadow dark:bg-slate-700 dark:text-white'
-																: 'text-slate-500'
-														}`}
-													>
-														{t.linkViaQr}
-													</button>
-													<button
-														type="button"
-														onClick={() => setLinkMode('phone')}
-														className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
-															linkMode === 'phone'
-																? 'bg-white text-slate-900 shadow dark:bg-slate-700 dark:text-white'
-																: 'text-slate-500'
-														}`}
-													>
-														{t.linkViaPhone}
-													</button>
-												</div>
-
-												{linkMode === 'phone' && (
-													<form
-														onSubmit={event => {
-															event.preventDefault();
-															if (!linkPhoneNumber.trim()) {
-																toast.error(t.phoneNumberRequired);
-																return;
-															}
-															if (!parsedLinkPhone) {
-																toast.error(t.phoneNumberInvalid);
-																return;
-															}
-															connectAccount(parsedLinkPhone.number);
-														}}
-													>
-														<div className="flex gap-2">
-															<input
-																type="tel"
-																value={linkPhoneNumber}
-																onChange={event => setLinkPhoneNumber(event.target.value)}
-																placeholder={t.phoneNumberPlaceholder}
-																dir="ltr"
-																aria-invalid={linkPhoneTouched && !linkPhoneValid}
-																className={`flex-1 rounded-xl border bg-white px-3 py-2 text-sm outline-none transition-colors dark:bg-slate-800 ${
-																	linkPhoneTouched && !linkPhoneValid
-																		? 'border-rose-400 focus:border-rose-500'
-																		: 'border-slate-200 focus:border-[var(--color-primary-400)] dark:border-slate-700'
-																}`}
-															/>
-															<button
-																type="submit"
-																disabled={
-																	accountBusy ||
-																	selectedAccount.status === 'connected' ||
-																	!linkPhoneValid
-																}
-																className="shrink-0 rounded-xl bg-[var(--color-primary-500)] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--color-primary-600)] disabled:cursor-not-allowed disabled:opacity-50"
-															>
-																{t.getPairingCode}
-															</button>
-														</div>
-														{linkPhoneTouched && !linkPhoneValid && (
-															<p className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600">
-																<AlertCircle size={13} className="shrink-0" />
-																{t.phoneNumberInvalid}
-															</p>
-														)}
-													</form>
-												)}
-											</div>
-										)}
-										{linkMode === 'qr' &&
-											!qr &&
-											!accountBusy &&
-											canManageWhatsApp &&
-											['connecting', 'qr_pending', 'disconnected', 'error'].includes(
-												selectedAccount.status,
-											) && (
-												<div className="mx-auto flex max-w-sm items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800">
-													<Loader2 size={16} className="animate-spin text-[var(--color-primary-500)]" />
-													{t.generatingQr}
-												</div>
-											)}
-										{linkMode === 'qr' && qr && canManageWhatsApp && (
-											<div className="mx-auto max-w-sm text-center">
-												
-												<div className="mb-4 flex items-center justify-center gap-2">
-													<span className="relative flex h-2 w-2">
-														<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-														<span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-													</span>
-													<p className="text-sm font-black">{t.scanQr}</p>
-												</div>
-												
-												<div className="relative mx-auto w-fit rounded-2xl bg-white p-4 shadow-[0_20px_50px_-15px_rgba(37,211,102,0.35)] dark:bg-slate-800">
-													<span className="absolute -start-1.5 -top-1.5 h-6 w-6 rounded-tl-xl border-s-4 border-t-4 border-[var(--color-primary-500)]" />
-													<span className="absolute -end-1.5 -top-1.5 h-6 w-6 rounded-tr-xl border-e-4 border-t-4 border-[var(--color-primary-500)]" />
-													<span className="absolute -start-1.5 -bottom-1.5 h-6 w-6 rounded-bl-xl border-b-4 border-s-4 border-[var(--color-secondary-500)]" />
-													<span className="absolute -end-1.5 -bottom-1.5 h-6 w-6 rounded-br-xl border-b-4 border-e-4 border-[var(--color-secondary-500)]" />
-													{qr.startsWith('data:image') ? (
-														<img src={qr} alt="WhatsApp QR" className="aspect-square w-52 rounded-lg" />
-													) : (
-														<p className="max-w-52 break-all text-xs">{qr}</p>
-													)}
-												</div>
-												<p className="mx-auto mt-4 max-w-xs text-xs text-slate-500">{t.scanQrHint}</p>
-											</div>
-										)}
-										{linkMode === 'phone' && pairingCode && canManageWhatsApp && (
-											<div className="mx-auto max-w-sm text-center">
-												<div className="mb-4 flex items-center justify-center gap-2">
-													<span className="relative flex h-2 w-2">
-														<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-														<span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-													</span>
-													<p className="text-sm font-black">{t.pairingCodeTitle}</p>
-												</div>
-												<button
-													type="button"
-													onClick={() => {
-														navigator.clipboard?.writeText(pairingCode);
-														toast.success(t.pairingCodeCopied);
-													}}
-													className="mx-auto flex items-center gap-3 rounded-2xl bg-white px-6 py-4 font-mono text-2xl font-black tracking-[0.3em] shadow-[0_20px_50px_-15px_rgba(37,211,102,0.35)] transition-transform hover:-translate-y-px dark:bg-slate-800 dark:text-white"
-												>
-													{pairingCode}
-												</button>
-												<p className="mx-auto mt-4 max-w-xs text-xs text-slate-500">{t.pairingCodeHint}</p>
-											</div>
+											<WhatsAppAccountLinkPanel
+												labels={t}
+												account={selectedAccount}
+												linkMode={linkMode}
+												onSelectMode={mode => {
+													setLinkMode(mode);
+													if (mode === 'qr') {
+														setPairingCode(null);
+														connectAccount(undefined, { mode: 'qr', force: true });
+													}
+													if (mode == null) {
+														setQr(null);
+														setPairingCode(null);
+													}
+												}}
+												linkPhoneNumber={linkPhoneNumber}
+												onLinkPhoneNumberChange={setLinkPhoneNumber}
+												phoneValid={linkPhoneValid}
+												phoneTouched={linkPhoneTouched}
+												accountBusy={accountBusy}
+												qr={qr}
+												pairingCode={pairingCode}
+												canManage={canManageWhatsApp}
+												onConnectQr={() =>
+													connectAccount(undefined, { mode: 'qr', force: true })
+												}
+												onConnectPhone={() => {
+													if (!parsedLinkPhone) {
+														toast.error(t.phoneNumberInvalid);
+														return;
+													}
+													setLinkMode('phone');
+													connectAccount(parsedLinkPhone.number);
+												}}
+												onChangePhone={() => {
+													setPairingCode(null);
+													setLinkMode('phone');
+												}}
+												syncProgress={syncProgress}
+												conversationCount={conversations.length}
+											/>
 										)}
 										{selectedAccount.status === 'connected' && (
-											<div className="grid gap-3 sm:grid-cols-3">
-												<StatTile icon={ShieldCheck} label={t.provider} value={selectedAccount.providerName} bg="bg-[var(--color-primary-50)]" color="var(--color-primary-500)" />
-												<StatTile icon={accStatus?.dot === 'bg-emerald-500' ? CheckCircle2 : AlertTriangle} label={t.status} value={accStatus?.label} bg={accStatus?.bg} color={accStatus?.dot === 'bg-emerald-500' ? '#10b981' : accStatus?.dot === 'bg-rose-500' ? '#f43f5e' : '#f59e0b'} />
-												<StatTile icon={Clock} label={t.lastConnected} value={selectedAccount.lastConnectedAt ? new Date(selectedAccount.lastConnectedAt).toLocaleString() : '—'} bg="bg-[var(--color-secondary-50)]" color="var(--color-secondary-500)" />
+											<div className="space-y-4">
+												{(selectedAccount.syncPhase === 'hydrating' ||
+													(syncingInbox && conversations.length === 0)) && (
+													<WhatsAppRestoreProgress
+														labels={t}
+														account={selectedAccount}
+														syncProgress={syncProgress}
+														conversationCount={conversations.length}
+													/>
+												)}
+												<div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+													<p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+														{t.accounts}
+													</p>
+													<p className="mt-1 text-sm font-black text-emerald-600">{accStatus?.label}</p>
+													{selectedAccount.phoneNumber ? (
+														<p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200" dir="ltr">
+															{selectedAccount.phoneNumber}
+														</p>
+													) : null}
+													<p className="mt-3 text-xs text-slate-500">{t.connectionMethodLabel}</p>
+													<p className="text-sm font-bold text-slate-900 dark:text-white">
+														{selectedAccount.connectionMethod === 'pairing_code'
+															? t.connectionMethodPhone
+															: t.connectionMethodQr}
+													</p>
+													<div className="mt-4 flex flex-wrap gap-2">
+														<button
+															type="button"
+															onClick={() => setActiveTab('chats')}
+															className="rounded-xl bg-[var(--color-primary-500)] px-4 py-2 text-sm font-bold text-white hover:bg-[var(--color-primary-600)]"
+														>
+															{t.openWhatsAppInbox}
+														</button>
+														{canManageWhatsApp && (
+															<button
+																type="button"
+																onClick={() => disconnectAccount(false)}
+																className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 dark:border-slate-600 dark:text-slate-300"
+															>
+																{t.disconnect}
+															</button>
+														)}
+													</div>
+												</div>
+												<div className="grid gap-3 sm:grid-cols-3">
+													<StatTile icon={ShieldCheck} label={t.provider} value={selectedAccount.providerName} bg="bg-[var(--color-primary-50)]" color="var(--color-primary-500)" />
+													<StatTile icon={accStatus?.dot === 'bg-emerald-500' ? CheckCircle2 : AlertTriangle} label={t.status} value={accStatus?.label} bg={accStatus?.bg} color={accStatus?.dot === 'bg-emerald-500' ? '#10b981' : accStatus?.dot === 'bg-rose-500' ? '#f43f5e' : '#f59e0b'} />
+													<StatTile icon={Clock} label={t.lastConnected} value={selectedAccount.lastConnectedAt ? new Date(selectedAccount.lastConnectedAt).toLocaleString() : '—'} bg="bg-[var(--color-secondary-50)]" color="var(--color-secondary-500)" />
+												</div>
 											</div>
 										)}
 									</div>

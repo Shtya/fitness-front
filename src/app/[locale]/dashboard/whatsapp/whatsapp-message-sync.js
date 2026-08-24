@@ -72,18 +72,16 @@ export function shouldProviderBackfill({
 		return { needed: false, reason: 'cooldown' };
 	}
 	if (forceProvider) return { needed: true, reason: 'forced' };
-	if (itemCount <= 0) return { needed: true, reason: 'empty_thread' };
-	if (
-		isHydrationFresh(providerHydratedAt, now) ||
-		isHydrationFresh(lastProviderSyncAt, now)
-	) {
-		return { needed: false, reason: 'fresh' };
+	if (itemCount <= 0) {
+		if (
+			hydrationTimestampMs(lastProviderSyncAt) > 0 ||
+			hydrationTimestampMs(providerHydratedAt) > 0
+		) {
+			return { needed: false, reason: 'hydrated_empty' };
+		}
+		return { needed: true, reason: 'empty_thread' };
 	}
-	if (
-		!hydrationTimestampMs(providerHydratedAt) &&
-		!hydrationTimestampMs(lastProviderSyncAt)
-	) {
-		return { needed: true, reason: 'first_hydrate' };
-	}
-	return { needed: true, reason: 'stale' };
+	// Local Postgres rows are the replica. Do not POST sync/latest on open
+	// just because the 5-minute watermark expired or was never stored on the client.
+	return { needed: false, reason: 'local_replica' };
 }
