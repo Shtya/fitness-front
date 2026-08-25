@@ -98,7 +98,7 @@ const COLUMN_THEME = {
 		surface: 'bg-[#f7f5fb]',
 		border: 'border-[#ebe6f5]',
 		header: 'bg-[#f7f5fb]',
-		accentBar: 'border-s-[3px] border-s-[#9b87c9]',
+		accentBar: 'wa-board-card--accent before:bg-[#9b87c9]',
 		accent: 'bg-[#9b87c9]',
 		count: 'bg-[#efeaf8] text-[#7a6a9e]',
 		dot: 'bg-[#9b87c9]',
@@ -112,7 +112,7 @@ const COLUMN_THEME = {
 		surface: 'bg-[#f4f9f6]',
 		border: 'border-[#e0ece5]',
 		header: 'bg-[#f4f9f6]',
-		accentBar: 'border-s-[3px] border-s-[#5fad86]',
+		accentBar: 'wa-board-card--accent before:bg-[#5fad86]',
 		accent: 'bg-[#5fad86]',
 		count: 'bg-[#e8f4ee] text-[#4a8f6d]',
 		dot: 'bg-[#5fad86]',
@@ -126,7 +126,7 @@ const COLUMN_THEME = {
 		surface: 'bg-[#fbf7f2]',
 		border: 'border-[#f0e6d8]',
 		header: 'bg-[#fbf7f2]',
-		accentBar: 'border-s-[3px] border-s-[#d4a574]',
+		accentBar: 'wa-board-card--accent before:bg-[#d4a574]',
 		accent: 'bg-[#d4a574]',
 		count: 'bg-[#f5ebdf] text-[#a87d52]',
 		dot: 'bg-[#d4a574]',
@@ -140,7 +140,7 @@ const COLUMN_THEME = {
 		surface: 'bg-[#f4f7fb]',
 		border: 'border-[#e1e8f1]',
 		header: 'bg-[#f4f7fb]',
-		accentBar: 'border-s-[3px] border-s-[#6f93c4]',
+		accentBar: 'wa-board-card--accent before:bg-[#6f93c4]',
 		accent: 'bg-[#6f93c4]',
 		count: 'bg-[#e8eef7] text-[#58769e]',
 		dot: 'bg-[#6f93c4]',
@@ -154,7 +154,7 @@ const COLUMN_THEME = {
 		surface: 'bg-[#fbf5f7]',
 		border: 'border-[#f0e2e7]',
 		header: 'bg-[#fbf5f7]',
-		accentBar: 'border-s-[3px] border-s-[#c97f95]',
+		accentBar: 'wa-board-card--accent before:bg-[#c97f95]',
 		accent: 'bg-[#c97f95]',
 		count: 'bg-[#f5e8ed] text-[#a3667a]',
 		dot: 'bg-[#c97f95]',
@@ -751,7 +751,7 @@ function SortableColumn({
 					transform: CSS.Transform.toString(transform),
 					transition: transition || 'transform 200ms ease',
 				}}
-				className={`relative flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl border shadow-[0_1px_6px_rgba(30,43,65,0.04)] transition-[box-shadow,opacity,border-color] duration-150 lg:min-w-[300px] lg:flex-1 lg:max-w-[420px] ${
+				className={`relative flex h-full min-h-0 w-[260px] shrink-0 flex-col overflow-hidden rounded-2xl border shadow-[0_1px_6px_rgba(30,43,65,0.04)] transition-[box-shadow,opacity,border-color] duration-150 lg:min-w-[240px] lg:flex-1 lg:max-w-[300px] ${
 					theme.surface
 				} ${
 					isDragging
@@ -1774,7 +1774,7 @@ export default function WhatsAppTasksBoard({
 						</SortableContext>
 
 						{addingList ? (
-							<div className="flex h-full min-h-0 w-[280px] shrink-0 flex-col rounded-2xl border border-[#e6ebf1] bg-white p-3 shadow-sm lg:min-w-[260px] lg:max-w-[320px]">
+							<div className="flex h-full min-h-0 w-[240px] shrink-0 flex-col rounded-2xl border border-[#e6ebf1] bg-white p-3 shadow-sm lg:min-w-[220px] lg:max-w-[280px]">
 								<p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[#8a95a5]">
 									{ar ? 'اسم العمود' : 'Column name'}
 								</p>
@@ -1824,7 +1824,7 @@ export default function WhatsAppTasksBoard({
 							<button
 								type="button"
 								onClick={() => setAddingList(true)}
-								className="group flex h-full min-h-[180px] w-[220px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d5dde8] bg-[#fbfcfd]/80 px-4 text-center transition-colors hover:border-[#c5b8de] hover:bg-[#f7f5fb] lg:min-w-[200px] lg:max-w-[260px]"
+								className="group flex h-full min-h-[180px] w-[200px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d5dde8] bg-[#fbfcfd]/80 px-4 text-center transition-colors hover:border-[#c5b8de] hover:bg-[#f7f5fb] lg:min-w-[180px] lg:max-w-[240px]"
 							>
 								<span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#8b79b8] shadow-sm ring-1 ring-[#ebe6f5] transition-transform group-hover:scale-105">
 									<Plus size={18} strokeWidth={2.2} />
@@ -1840,7 +1840,7 @@ export default function WhatsAppTasksBoard({
 					</div>
 					<DragOverlay dropAnimation={DROP_ANIMATION}>
 						{activeList ? (
-							<div className="w-[320px] rotate-[1deg] rounded-2xl border border-[#0db873]/35 bg-white p-3 shadow-2xl ring-2 ring-[#0db873]/20">
+							<div className="w-[260px] rotate-[1deg] rounded-2xl border border-[#0db873]/35 bg-white p-3 shadow-2xl ring-2 ring-[#0db873]/20">
 								<div className="mb-2 flex items-center gap-2">
 									<span
 										className={`h-2 w-2 rounded-full ${

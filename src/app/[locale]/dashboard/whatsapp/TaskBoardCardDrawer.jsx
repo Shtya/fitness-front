@@ -44,15 +44,15 @@ function autoResizeTextArea(element, { minRows = 1, maxRows = 24 } = {}) {
 	element.style.overflowY = element.scrollHeight > maxHeight ? 'auto' : 'hidden';
 }
 
-function insertTextAreaNewline(element, value, setValue) {
+function insertTextAreaNewline(element, value, onValueChange, resizeOptions = { minRows: 2, maxRows: 12 }) {
 	if (!element) return;
 	const start = element.selectionStart ?? value.length;
 	const end = element.selectionEnd ?? value.length;
 	const next = `${value.slice(0, start)}\n${value.slice(end)}`;
-	setValue(next);
+	onValueChange(next);
 	requestAnimationFrame(() => {
 		element.selectionStart = element.selectionEnd = start + 1;
-		autoResizeTextArea(element, { minRows: 2, maxRows: 12 });
+		autoResizeTextArea(element, resizeOptions);
 	});
 }
 
@@ -726,6 +726,17 @@ export default function TaskBoardCardDrawer({
 								queueSave({ description: event.target.value });
 								autoResizeTextArea(event.target, { minRows: 4, maxRows: 28 });
 							}}
+							onKeyDown={event => {
+								if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+									event.preventDefault();
+									insertTextAreaNewline(
+										event.currentTarget,
+										draft.description || '',
+										next => queueSave({ description: next }),
+										{ minRows: 4, maxRows: 28 },
+									);
+								}
+							}}
 							onPaste={onPaste}
 							ref={node => {
 								if (node) autoResizeTextArea(node, { minRows: 4, maxRows: 28 });
@@ -736,6 +747,9 @@ export default function TaskBoardCardDrawer({
 							placeholder={ar ? 'أضف وصفاً…' : 'Add a description…'}
 							className={`w-full resize-none whitespace-pre-wrap break-words rounded-xl border border-[#e2e7ee] px-3 py-2.5 text-[13px] leading-5 outline-none focus:border-[#0db873] ${descriptionProps.className}`}
 						/>
+						<p className="mt-1 text-[9px] font-medium text-[#8a95a5]">
+							{ar ? 'Enter أو Ctrl+Enter لسطر جديد' : 'Enter or Ctrl+Enter for a new line'}
+						</p>
 						{imageAttachments.length ? (
 							<div className="mt-2 flex flex-wrap gap-1.5">
 								{imageAttachments.map(item => (
