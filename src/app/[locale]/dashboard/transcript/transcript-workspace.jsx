@@ -4,22 +4,31 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale } from 'next-intl';
 import {
 	AudioLines,
+	Calendar,
 	Check,
+	ChevronDown,
+	ChevronLeft,
+	ChevronRight,
 	Clipboard,
 	Clock3,
 	Download,
 	FileAudio,
+	Filter,
 	History,
 	KeyRound,
 	LoaderCircle,
 	Mic,
 	MonitorUp,
+	MoreVertical,
 	Pause,
+	Pencil,
 	Play,
 	RotateCcw,
 	Save,
+	Search,
+	Sparkles,
 	Square,
-	Trash2,
+	Type,
 	UploadCloud,
 	X,
 } from 'lucide-react';
@@ -141,6 +150,7 @@ const copy = {
 		vocabularyHint: 'Names or specialist terms, separated by commas',
 		transcribe: 'Transcribe audio',
 		uploading: 'Uploading',
+		preparing: 'Preparing audio from video…',
 		processing: 'Normalizing audio and transcribing locally…',
 		elapsed: 'Elapsed',
 		ready: 'Ready to transcribe',
@@ -155,8 +165,21 @@ const copy = {
 		processingTime: 'Processing time',
 		detected: 'Detected language',
 		history: 'History',
+		historySubtitle: 'Manage your recordings',
+		historySearch: 'Search recordings…',
+		historyFilter: 'Filter',
+		historyFilterAll: 'All providers',
+		historyShowing: 'Showing {from} to {to} of {total} recordings',
+		historyPerPage: '{n} per page',
 		noHistory: 'Your transcriptions will appear here.',
 		deleteConfirm: 'Delete this transcription?',
+		deleteItem: 'Delete',
+		openItem: 'Open',
+		editSegment: 'Edit',
+		copySegment: 'Copy segment',
+		doneEditing: 'Done',
+		transcriptShowing: 'Showing {from} to {to} of {total} segments',
+		transcriptPerPage: '{n} per page',
 		recording: 'Recording',
 		paused: 'Paused',
 		fileRequired: 'Choose or record audio files first.',
@@ -235,6 +258,7 @@ const copy = {
 		vocabularyHint: 'أسماء أو مصطلحات متخصصة مفصولة بفواصل',
 		transcribe: 'تحويل إلى نص',
 		uploading: 'جارٍ الرفع',
+		preparing: 'جارٍ تجهيز الصوت من الفيديو…',
 		processing: 'جارٍ توحيد الصوت وتحويله محليًا إلى نص…',
 		elapsed: 'الوقت المنقضي',
 		ready: 'جاهز للتحويل',
@@ -249,8 +273,21 @@ const copy = {
 		processingTime: 'وقت المعالجة',
 		detected: 'اللغة المكتشفة',
 		history: 'السجل',
+		historySubtitle: 'إدارة التسجيلات',
+		historySearch: 'بحث في التسجيلات…',
+		historyFilter: 'تصفية',
+		historyFilterAll: 'كل المزودين',
+		historyShowing: 'عرض {from} إلى {to} من {total} تسجيل',
+		historyPerPage: '{n} لكل صفحة',
 		noHistory: 'ستظهر عمليات التحويل الخاصة بك هنا.',
 		deleteConfirm: 'هل تريد حذف هذا النص؟',
+		deleteItem: 'حذف',
+		openItem: 'فتح',
+		editSegment: 'تعديل',
+		copySegment: 'نسخ الجزء',
+		doneEditing: 'تم',
+		transcriptShowing: 'عرض {from} إلى {to} من {total} جزء',
+		transcriptPerPage: '{n} لكل صفحة',
 		recording: 'جارٍ التسجيل',
 		paused: 'متوقف مؤقتًا',
 		fileRequired: 'اختر أو سجل ملفات صوتية أولًا.',
@@ -274,6 +311,72 @@ function formatTime(seconds = 0) {
 		.filter((_, index) => hours > 0 || index > 0)
 		.map(part => String(part).padStart(2, '0'))
 		.join(':');
+}
+
+function formatDurationClock(seconds = 0) {
+	const value = Math.max(0, Math.round(Number(seconds) || 0));
+	const hours = Math.floor(value / 3600);
+	const minutes = Math.floor((value % 3600) / 60);
+	const secs = value % 60;
+	if (hours > 0) {
+		return [hours, minutes, secs].map(part => String(part).padStart(2, '0')).join(':');
+	}
+	return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function formatHistoryDate(value, locale) {
+	const date = value ? new Date(value) : null;
+	if (!date || Number.isNaN(date.getTime())) return '—';
+	return date.toLocaleDateString(locale === 'ar' ? 'ar' : 'en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+	});
+}
+
+function formatHistoryClock(value, locale) {
+	const date = value ? new Date(value) : null;
+	if (!date || Number.isNaN(date.getTime())) return '—';
+	return date.toLocaleTimeString(locale === 'ar' ? 'ar' : 'en-US', {
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: true,
+	});
+}
+
+function providerBadgeLabel(providerId) {
+	const name = PROVIDERS.find(item => item.id === providerId)?.name || 'Local';
+	return String(name).toUpperCase();
+}
+
+function splitTranscriptSegments(text, durationSeconds = 0) {
+	const raw = String(text || '').replace(/\r\n/g, '\n').trim();
+	if (!raw) return [];
+
+	let parts = raw.split(/\n{2,}/).map(part => part.trim()).filter(Boolean);
+	if (parts.length <= 1) {
+		const lines = raw.split(/\n+/).map(part => part.trim()).filter(Boolean);
+		if (lines.length > 1) parts = lines;
+		else parts = [raw];
+	}
+
+	const totalChars = parts.reduce((sum, part) => sum + part.length, 0) || 1;
+	const totalDuration = Math.max(0, Number(durationSeconds) || 0);
+	let cursor = 0;
+
+	return parts.map((content, index) => {
+		const startSeconds = Math.round((cursor / totalChars) * totalDuration);
+		cursor += content.length;
+		return {
+			id: index,
+			startSeconds,
+			text: content,
+		};
+	});
+}
+
+function joinTranscriptSegments(segments) {
+	return segments.map(item => String(item?.text || '').trim()).filter(Boolean).join('\n\n');
 }
 
 function fileKey(file) {
@@ -321,6 +424,16 @@ export default function TranscriptWorkspace() {
 	const [transcriptText, setTranscriptText] = useState('');
 	const [history, setHistory] = useState([]);
 	const [historyLoading, setHistoryLoading] = useState(true);
+	const [historySearch, setHistorySearch] = useState('');
+	const [historyProviderFilter, setHistoryProviderFilter] = useState('all');
+	const [historyPage, setHistoryPage] = useState(1);
+	const [historyPageSize, setHistoryPageSize] = useState(10);
+	const [historyMenuId, setHistoryMenuId] = useState(null);
+	const [transcriptPage, setTranscriptPage] = useState(1);
+	const [transcriptPageSize, setTranscriptPageSize] = useState(10);
+	const [editingSegmentId, setEditingSegmentId] = useState(null);
+	const [editingSegmentDraft, setEditingSegmentDraft] = useState('');
+	const [segmentMenuId, setSegmentMenuId] = useState(null);
 	const [saving, setSaving] = useState(false);
 	const [dragging, setDragging] = useState(false);
 	const [providerApiKey, setProviderApiKey] = useState('');
@@ -608,7 +721,7 @@ export default function TranscriptWorkspace() {
 		for (let index = 0; index < queue.length; index += 1) {
 			const currentFile = queue[index];
 			setBatchIndex(index + 1);
-			setStatus('uploading');
+			setStatus('preparing');
 			setProgress(0);
 			setProcessingElapsed(0);
 			setChunkProgress({ current: 0, total: 0 });
@@ -618,11 +731,16 @@ export default function TranscriptWorkspace() {
 					provider,
 					language,
 					chunkSeconds,
+					onPrepareProgress: ({ percent }) => {
+						setStatus('preparing');
+						setProgress(Math.min(95, Number(percent) || 0));
+					},
 					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
 						setChunkProgress({ current: chunkIndex, total: chunkTotal });
-						if (chunkTotal > 1) setStatus('processing');
+						if (chunkTotal > 1) setStatus('uploading');
 					},
 					onUploadProgress: event => {
+						setStatus('uploading');
 						if (!event.total) {
 							setStatus('processing');
 							return;
@@ -788,9 +906,19 @@ export default function TranscriptWorkspace() {
 
 	const saveTranscript = async () => {
 		if (!result?.id) return;
+		let textToSave = transcriptText;
+		if (editingSegmentId != null) {
+			const next = transcriptSegments.map(item =>
+				item.id === editingSegmentId ? { ...item, text: editingSegmentDraft } : item,
+			);
+			textToSave = joinTranscriptSegments(next);
+			setTranscriptText(textToSave);
+			setEditingSegmentId(null);
+			setEditingSegmentDraft('');
+		}
 		setSaving(true);
 		try {
-			const { data } = await api.patch(`/transcriptions/${result.id}`, { text: transcriptText });
+			const { data } = await api.patch(`/transcriptions/${result.id}`, { text: textToSave });
 			setResult(data);
 			setHistory(current => current.map(item => (item.id === data.id ? data : item)));
 			toast.success(t.saved);
@@ -838,13 +966,120 @@ export default function TranscriptWorkspace() {
 		};
 	}, [transcriptText]);
 
-	const busy = status === 'uploading' || status === 'processing';
+	const filteredHistory = useMemo(() => {
+		const query = historySearch.trim().toLowerCase();
+		return history.filter(item => {
+			if (historyProviderFilter !== 'all' && item.provider !== historyProviderFilter) return false;
+			if (!query) return true;
+			const haystack = `${item.originalFileName || ''} ${item.text || ''} ${item.provider || ''}`.toLowerCase();
+			return haystack.includes(query);
+		});
+	}, [history, historySearch, historyProviderFilter]);
+
+	const historyPageCount = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize) || 1);
+	const safeHistoryPage = Math.min(historyPage, historyPageCount);
+	const pagedHistory = useMemo(() => {
+		const start = (safeHistoryPage - 1) * historyPageSize;
+		return filteredHistory.slice(start, start + historyPageSize);
+	}, [filteredHistory, safeHistoryPage, historyPageSize]);
+
+	const historyRange = useMemo(() => {
+		if (!filteredHistory.length) return { from: 0, to: 0, total: 0 };
+		const from = (safeHistoryPage - 1) * historyPageSize + 1;
+		const to = Math.min(filteredHistory.length, safeHistoryPage * historyPageSize);
+		return { from, to, total: filteredHistory.length };
+	}, [filteredHistory.length, safeHistoryPage, historyPageSize]);
+
+	useEffect(() => {
+		setHistoryPage(1);
+	}, [historySearch, historyProviderFilter, historyPageSize]);
+
+	useEffect(() => {
+		if (!historyMenuId) return undefined;
+		const onPointerDown = event => {
+			if (event.target?.closest?.('[data-history-menu]')) return;
+			setHistoryMenuId(null);
+		};
+		document.addEventListener('pointerdown', onPointerDown);
+		return () => document.removeEventListener('pointerdown', onPointerDown);
+	}, [historyMenuId]);
+
+	useEffect(() => {
+		if (!segmentMenuId) return undefined;
+		const onPointerDown = event => {
+			if (event.target?.closest?.('[data-segment-menu]')) return;
+			setSegmentMenuId(null);
+		};
+		document.addEventListener('pointerdown', onPointerDown);
+		return () => document.removeEventListener('pointerdown', onPointerDown);
+	}, [segmentMenuId]);
+
+	useEffect(() => {
+		setTranscriptPage(1);
+		setEditingSegmentId(null);
+		setEditingSegmentDraft('');
+		setSegmentMenuId(null);
+	}, [result?.id]);
+
+	const transcriptSegments = useMemo(
+		() => splitTranscriptSegments(transcriptText, result?.durationSeconds),
+		[transcriptText, result?.durationSeconds],
+	);
+
+	const transcriptPageCount = Math.max(1, Math.ceil(transcriptSegments.length / transcriptPageSize) || 1);
+	const safeTranscriptPage = Math.min(transcriptPage, transcriptPageCount);
+	const pagedTranscriptSegments = useMemo(() => {
+		const start = (safeTranscriptPage - 1) * transcriptPageSize;
+		return transcriptSegments.slice(start, start + transcriptPageSize);
+	}, [transcriptSegments, safeTranscriptPage, transcriptPageSize]);
+
+	const transcriptRange = useMemo(() => {
+		if (!transcriptSegments.length) return { from: 0, to: 0, total: 0 };
+		const from = (safeTranscriptPage - 1) * transcriptPageSize + 1;
+		const to = Math.min(transcriptSegments.length, safeTranscriptPage * transcriptPageSize);
+		return { from, to, total: transcriptSegments.length };
+	}, [transcriptSegments.length, safeTranscriptPage, transcriptPageSize]);
+
+	useEffect(() => {
+		setTranscriptPage(1);
+	}, [transcriptPageSize]);
+
+	const beginEditSegment = segment => {
+		setEditingSegmentId(segment.id);
+		setEditingSegmentDraft(segment.text);
+		setSegmentMenuId(null);
+	};
+
+	const finishEditSegment = () => {
+		if (editingSegmentId == null) return;
+		const next = transcriptSegments.map(item =>
+			item.id === editingSegmentId ? { ...item, text: editingSegmentDraft } : item,
+		);
+		setTranscriptText(joinTranscriptSegments(next));
+		setEditingSegmentId(null);
+		setEditingSegmentDraft('');
+	};
+
+	const copySegment = async text => {
+		await navigator.clipboard.writeText(text || '');
+		toast.success(t.copied);
+		setSegmentMenuId(null);
+	};
+
+	const transcriptDirty =
+		editingSegmentId != null
+			? editingSegmentDraft !==
+					(transcriptSegments.find(item => item.id === editingSegmentId)?.text || '') ||
+				transcriptText !== (result?.text || '')
+			: transcriptText !== (result?.text || '');
+
+	const busy = status === 'preparing' || status === 'uploading' || status === 'processing';
 	const recording = recordingState !== 'idle';
 	const panelClass =
 		'relative rounded-[20px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_10px_20px_-10px_rgba(15,23,42,0.10),0_4px_6px_-4px_rgba(15,23,42,0.05)] md:p-6';
 
 	return (
-		<div className="relative mx-auto w-full max-w-[1500px] space-y-5 overflow-hidden pb-10" dir={isArabic ? 'rtl' : 'ltr'}>
+		<div className="relative mx-auto w-full max-w-[1500px] space-y-5 overflow-x-hidden pb-10" dir={isArabic ? 'rtl' : 'ltr'}>
 			<div
 				className="pointer-events-none absolute left-[8%] top-[-80px] h-[340px] w-[480px] rounded-full blur-3xl"
 				style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(59,130,246,0.08) 45%, transparent 70%)' }}
@@ -901,7 +1136,7 @@ export default function TranscriptWorkspace() {
 				</div>
  			</header>
 
-			<div className="relative z-10 grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(310px,.65fr)]">
+			<div className="relative z-10 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
 				<div className="space-y-5">
 					<section className={panelClass}>
 						<div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
@@ -1102,17 +1337,19 @@ export default function TranscriptWorkspace() {
 											? t.chunkProgress
 												.replace('{current}', String(chunkProgress.current || 1))
 												.replace('{total}', String(chunkProgress.total))
-											: status === 'uploading'
-												? t.uploading
-												: {
-														groq: t.groqProcessing,
-														deepgram: t.deepgramProcessing,
-														assemblyai: t.assemblyProcessing,
-														local: t.localProcessing,
-													}[provider]}
+											: status === 'preparing'
+												? t.preparing
+												: status === 'uploading'
+													? t.uploading
+													: {
+															groq: t.groqProcessing,
+															deepgram: t.deepgramProcessing,
+															assemblyai: t.assemblyProcessing,
+															local: t.localProcessing,
+														}[provider]}
 									</span>
 									<span>
-										{status === 'uploading'
+										{status === 'preparing' || status === 'uploading'
 											? `${progress}%`
 											: `${t.elapsed}: ${formatTime(processingElapsed)}`}
 									</span>
@@ -1132,7 +1369,9 @@ export default function TranscriptWorkspace() {
 										className={`h-full rounded-full transition-all ${status === 'processing' ? 'w-full animate-pulse' : ''}`}
 										style={{
 											background: STUDIO.gradient,
-											...(status === 'uploading' ? { width: `${progress}%` } : null),
+											...(status === 'preparing' || status === 'uploading'
+												? { width: `${Math.max(progress, 2)}%` }
+												: null),
 										}}
 									/>
 								</div>
@@ -1154,54 +1393,232 @@ export default function TranscriptWorkspace() {
 
 					{result && (
 						<section className={panelClass}>
-							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+							<div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
 								<h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-									<span className="grid size-8 place-items-center rounded-lg bg-emerald-50 text-emerald-600">
+									<span className="grid size-8 place-items-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
 										<Check className="size-4" />
 									</span>
 									{t.transcript}
 								</h2>
 								<div className="flex flex-wrap gap-2">
-									<Button size="sm" variant="outline" onClick={copyTranscript}><Clipboard />{t.copy}</Button>
-									<Button size="sm" variant="outline" onClick={downloadTranscript}><Download />{t.download}</Button>
+									<button
+										type="button"
+										onClick={copyTranscript}
+										className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#c7d2fe] bg-white px-3 text-sm font-semibold text-[#4f46e5] transition hover:bg-[#eef2ff]"
+									>
+										<Clipboard className="size-4" />
+										{t.copy}
+									</button>
+									<button
+										type="button"
+										onClick={downloadTranscript}
+										className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#c7d2fe] bg-white px-3 text-sm font-semibold text-[#4f46e5] transition hover:bg-[#eef2ff]"
+									>
+										<Download className="size-4" />
+										{t.download}
+									</button>
+									<button
+										type="button"
+										onClick={saveTranscript}
+										disabled={saving || !transcriptDirty}
+										className="inline-flex h-9 items-center gap-2 rounded-xl border-0 px-3 text-sm font-semibold text-white transition disabled:opacity-50"
+										style={{ background: STUDIO.gradient }}
+									>
+										{saving ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
+										{t.save}
+									</button>
 								</div>
 							</div>
 
-							<div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+							<div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-6">
 								{[
-									[
-										t.method,
-										PROVIDERS.find(item => item.id === result.provider)?.name ||
+									{
+										label: t.method,
+										value:
+											PROVIDERS.find(item => item.id === result.provider)?.name ||
 											'Local faster-whisper Base',
-									],
-									[t.words, liveCounts.words],
-									[t.characters, liveCounts.characters],
-									[t.duration, formatTime(result.durationSeconds)],
-									[t.processingTime, formatTime(result.processingTimeSeconds)],
-									[t.detected, result.detectedLanguage?.toUpperCase() || '—'],
-								].map(([label, value]) => (
-									<div key={label} className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-										<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-										<p className="mt-1 truncate text-base font-bold text-slate-900">{value}</p>
-									</div>
-								))}
+										icon: Sparkles,
+										tone: 'bg-[#eef2ff] text-[#6366f1]',
+									},
+									{
+										label: t.words,
+										value: liveCounts.words,
+										icon: Type,
+										tone: 'bg-sky-50 text-sky-600',
+									},
+									{
+										label: t.characters,
+										value: liveCounts.characters,
+										icon: Type,
+										tone: 'bg-emerald-50 text-emerald-600',
+									},
+									{
+										label: t.duration,
+										value: formatDurationClock(result.durationSeconds),
+										icon: Clock3,
+										tone: 'bg-blue-50 text-blue-600',
+									},
+									{
+										label: t.processingTime,
+										value: formatDurationClock(result.processingTimeSeconds),
+										icon: LoaderCircle,
+										tone: 'bg-amber-50 text-amber-600',
+									},
+									{
+										label: t.detected,
+										value: result.detectedLanguage?.toUpperCase() || '—',
+										icon: AudioLines,
+										tone: 'bg-violet-50 text-violet-600',
+									},
+								].map(item => {
+									const Icon = item.icon;
+									return (
+										<div
+											key={item.label}
+											className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3"
+										>
+											<span className={`grid size-9 shrink-0 place-items-center rounded-lg ${item.tone}`}>
+												<Icon className="size-4" />
+											</span>
+											<div className="min-w-0">
+												<p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+													{item.label}
+												</p>
+												<p className="truncate text-sm font-bold text-slate-900">{item.value}</p>
+											</div>
+										</div>
+									);
+								})}
 							</div>
 
-							<textarea
-								value={transcriptText}
-								onChange={event => setTranscriptText(event.target.value)}
-								className="mt-4 min-h-72 w-full resize-y rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-sm leading-7 text-slate-800 outline-none focus:border-[#6366F1] focus:bg-white focus:ring-2 focus:ring-[#6366F1]/20"
-							/>
-							<div className="mt-3 flex justify-end">
-								<Button
-									onClick={saveTranscript}
-									disabled={saving || transcriptText === result.text}
-									className="border-0 text-white"
-									style={{ background: STUDIO.gradient }}
-								>
-									{saving ? <LoaderCircle className="animate-spin" /> : <Save />}
-									{t.save}
-								</Button>
+							<div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+								{transcriptSegments.length === 0 ? (
+									<div className="px-4 py-10 text-center text-sm text-slate-500">—</div>
+								) : (
+									<ul className="divide-y divide-slate-100">
+										{pagedTranscriptSegments.map(segment => {
+											const editing = editingSegmentId === segment.id;
+											const menuOpen = segmentMenuId === segment.id;
+											return (
+												<li key={segment.id} className="px-4 py-4 sm:px-5">
+													<div className="mb-3 flex items-center justify-between gap-3">
+														<span className="inline-flex rounded-lg bg-[#eef2ff] px-2.5 py-1 text-[11px] font-bold tabular-nums text-[#4f46e5]">
+															{formatDurationClock(segment.startSeconds)}
+														</span>
+														<div className="flex items-center gap-0.5" data-segment-menu>
+															{editing ? (
+																<button
+																	type="button"
+																	onClick={finishEditSegment}
+																	className="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-bold text-[#4f46e5] hover:bg-[#eef2ff]"
+																>
+																	{t.doneEditing}
+																</button>
+															) : (
+																<button
+																	type="button"
+																	onClick={() => beginEditSegment(segment)}
+																	className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+																	aria-label={t.editSegment}
+																	title={t.editSegment}
+																>
+																	<Pencil className="size-3.5" />
+																</button>
+															)}
+															<div className="relative">
+																<button
+																	type="button"
+																	onClick={() => setSegmentMenuId(menuOpen ? null : segment.id)}
+																	className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+																	aria-label={t.openItem}
+																>
+																	<MoreVertical className="size-3.5" />
+																</button>
+																{menuOpen ? (
+																	<div className="absolute end-0 z-20 mt-1 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+																		<button
+																			type="button"
+																			className="flex w-full rounded-lg px-3 py-2 text-start text-sm font-medium text-slate-700 hover:bg-slate-50"
+																			onClick={() => void copySegment(segment.text)}
+																		>
+																			{t.copySegment}
+																		</button>
+																		<button
+																			type="button"
+																			className="flex w-full rounded-lg px-3 py-2 text-start text-sm font-medium text-slate-700 hover:bg-slate-50"
+																			onClick={() => beginEditSegment(segment)}
+																		>
+																			{t.editSegment}
+																		</button>
+																	</div>
+																) : null}
+															</div>
+														</div>
+													</div>
+													{editing ? (
+														<textarea
+															value={editingSegmentDraft}
+															onChange={event => setEditingSegmentDraft(event.target.value)}
+															rows={Math.min(12, Math.max(4, editingSegmentDraft.split('\n').length + 2))}
+															className="min-h-[140px] w-full resize-y rounded-xl border border-[#c7d2fe] bg-[#f8fafc] p-3 text-sm leading-7 text-slate-800 outline-none focus:border-[#6366F1] focus:bg-white focus:ring-2 focus:ring-[#6366F1]/20"
+															dir="auto"
+															autoFocus
+														/>
+													) : (
+														<p dir="auto" className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">
+															{segment.text}
+														</p>
+													)}
+												</li>
+											);
+										})}
+									</ul>
+								)}
+
+								<div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+									<p className="text-xs font-medium text-slate-500">
+										{t.transcriptShowing
+											.replace('{from}', String(transcriptRange.from))
+											.replace('{to}', String(transcriptRange.to))
+											.replace('{total}', String(transcriptRange.total))}
+									</p>
+									<div className="flex flex-wrap items-center gap-2">
+										<div className="flex items-center gap-1">
+											<button
+												type="button"
+												disabled={safeTranscriptPage <= 1}
+												onClick={() => setTranscriptPage(page => Math.max(1, page - 1))}
+												className="grid size-8 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
+												aria-label="Previous page"
+											>
+												{isArabic ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+											</button>
+											<span className="grid h-8 min-w-8 place-items-center rounded-lg border border-[#c7d2fe] bg-[#eef2ff] px-2 text-sm font-bold text-[#4338ca]">
+												{safeTranscriptPage}
+											</span>
+											<button
+												type="button"
+												disabled={safeTranscriptPage >= transcriptPageCount}
+												onClick={() => setTranscriptPage(page => Math.min(transcriptPageCount, page + 1))}
+												className="grid size-8 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
+												aria-label="Next page"
+											>
+												{isArabic ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
+											</button>
+										</div>
+										<select
+											value={transcriptPageSize}
+											onChange={event => setTranscriptPageSize(Number(event.target.value) || 10)}
+											className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 outline-none focus:border-[#a5b4fc]"
+										>
+											{[5, 10, 20].map(size => (
+												<option key={size} value={size}>
+													{t.transcriptPerPage.replace('{n}', String(size))}
+												</option>
+											))}
+										</select>
+									</div>
+								</div>
 							</div>
 
 							<TranscriptionAiPanel
@@ -1238,78 +1655,257 @@ export default function TranscriptWorkspace() {
 					)}
 				</div>
 
-				<aside className="min-w-0">
-					<section className={`${panelClass} xl:sticky xl:top-4`}>
-						<h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-							<span className="grid size-8 place-items-center rounded-lg bg-[#eef2ff] text-[#4f46e5]">
-								<History className="size-4" />
-							</span>
-							{t.history}
-						</h2>
-						<div className="mt-4 max-h-[70vh] space-y-2 overflow-y-auto pe-1">
-							{historyLoading ? (
-								<div className="grid min-h-32 place-items-center"><LoaderCircle className="animate-spin text-slate-400" /></div>
-							) : history.length === 0 ? (
-								<div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">{t.noHistory}</div>
-							) : history.map(item => (
-								<div
-									key={item.id}
-									className={`group rounded-xl border p-3 transition hover:border-[#c7d2fe] ${
-										result?.id === item.id ? 'border-[#a5b4fc] bg-[#eef2ff]' : 'border-slate-200 bg-slate-50/70'
-									}`}
+				<aside className="min-w-0 xl:w-[380px]">
+					<section className={`${panelClass} flex max-h-[calc(100vh-6rem)] flex-col xl:sticky xl:top-4`}>
+						<div className="shrink-0 space-y-3">
+							<div className="flex items-start gap-3">
+								<span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#eef2ff] text-[#6366f1] ring-1 ring-[#e0e7ff]">
+									<History className="size-5" />
+								</span>
+								<div className="min-w-0 flex-1">
+									<h2 className="text-lg font-bold tracking-tight text-slate-900">{t.history}</h2>
+									<p className="mt-0.5 text-xs leading-5 text-slate-500">{t.historySubtitle}</p>
+								</div>
+								<button
+									type="button"
+									onClick={loadHistory}
+									className="grid size-8 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"
+									aria-label={t.history}
+									title={t.history}
 								>
-									<button
-										type="button"
-										className="w-full text-start"
-										onClick={() => {
-											setResult(item);
-											setTranscriptText(item.text || '');
-										}}
-									>
-										<div className="flex items-center justify-between gap-2">
-											<p className="truncate text-sm font-bold text-slate-800">{item.originalFileName}</p>
-											<span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500 ring-1 ring-slate-200">
-												{PROVIDERS.find(providerItem => providerItem.id === item.provider)?.name ||
-													'Local'}
-											</span>
-										</div>
-										<p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{item.text || '—'}</p>
-										<div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-											<span className="flex items-center gap-1"><Clock3 className="size-3" />{formatTime(item.durationSeconds)}</span>
-											<span className="flex items-center gap-1" title={t.processingTime}>
-												<LoaderCircle className="size-3" />
-												{t.processingTime}: {formatTime(item.processingTimeSeconds)}
-											</span>
-											<span>{new Date(item.createdAt).toLocaleDateString(locale)}</span>
-											{item.enhancedText ? (
-												<span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-700">
-													AI
-												</span>
-											) : null}
-											{item.memorizePayload ? (
-												<span className="rounded-full bg-amber-100 px-2 py-0.5 font-bold text-amber-800">
-													Memo
-												</span>
-											) : null}
-										</div>
-									</button>
-									<div className="mt-2 flex justify-end">
+									<RotateCcw className="size-3.5" />
+								</button>
+							</div>
+
+							<div className="flex gap-2">
+								<label className="relative min-w-0 flex-1">
+									<Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+									<input
+										value={historySearch}
+										onChange={event => setHistorySearch(event.target.value)}
+										placeholder={t.historySearch}
+										className="h-10 w-full rounded-xl border border-slate-200 bg-white pe-3 ps-9 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#a5b4fc] focus:ring-2 focus:ring-[#6366f1]/15"
+									/>
+								</label>
+								<details className="group/filter relative shrink-0">
+									<summary className="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+										<Filter className="size-4 text-slate-500" />
+										<span className="hidden sm:inline xl:hidden 2xl:inline">{t.historyFilter}</span>
+										<ChevronDown className="size-3.5 text-slate-400 transition group-open/filter:rotate-180" />
+									</summary>
+									<div className="absolute end-0 z-30 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
 										<button
 											type="button"
-											onClick={() => deleteTranscript(item.id)}
-											className="rounded-lg p-1.5 text-slate-400 opacity-100 transition hover:bg-red-50 hover:text-red-600 xl:opacity-0 xl:group-hover:opacity-100"
-											aria-label={t.cancel}
+											onClick={() => setHistoryProviderFilter('all')}
+											className={`flex w-full rounded-lg px-3 py-2 text-start text-sm font-medium ${
+												historyProviderFilter === 'all'
+													? 'bg-[#eef2ff] text-[#4338ca]'
+													: 'text-slate-700 hover:bg-slate-50'
+											}`}
 										>
-											<Trash2 className="size-4" />
+											{t.historyFilterAll}
 										</button>
+										{PROVIDERS.map(item => (
+											<button
+												key={item.id}
+												type="button"
+												onClick={() => setHistoryProviderFilter(item.id)}
+												className={`flex w-full rounded-lg px-3 py-2 text-start text-sm font-medium ${
+													historyProviderFilter === item.id
+														? 'bg-[#eef2ff] text-[#4338ca]'
+														: 'text-slate-700 hover:bg-slate-50'
+												}`}
+											>
+												{item.name}
+											</button>
+										))}
 									</div>
-								</div>
-							))}
+								</details>
+							</div>
 						</div>
-						<button type="button" onClick={loadHistory} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 p-2 text-xs font-bold text-slate-500 hover:bg-slate-50">
-							<RotateCcw className="size-3.5" />
-							{t.history}
-						</button>
+
+						<div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pe-0.5">
+							{historyLoading ? (
+								<div className="grid min-h-40 place-items-center">
+									<LoaderCircle className="size-6 animate-spin text-slate-400" />
+								</div>
+							) : filteredHistory.length === 0 ? (
+								<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-10 text-center text-sm text-slate-500">
+									{t.noHistory}
+								</div>
+							) : (
+								pagedHistory.map(item => {
+									const active = result?.id === item.id;
+									const menuOpen = historyMenuId === item.id;
+									return (
+										<article
+											key={item.id}
+											className={`rounded-2xl border bg-white p-3.5 transition ${
+												active
+													? 'border-[#c7d2fe] bg-[#f8faff] shadow-[0_8px_20px_-12px_rgba(79,70,229,0.35)]'
+													: 'border-slate-200 hover:border-slate-300'
+											}`}
+										>
+											<div className="flex items-start gap-2.5">
+												<button
+													type="button"
+													className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-[#eef2ff] text-[#6366f1] ring-1 ring-[#e0e7ff]"
+													onClick={() => {
+														setResult(item);
+														setTranscriptText(item.text || '');
+														setHistoryMenuId(null);
+													}}
+													aria-label={t.openItem}
+												>
+													<FileAudio className="size-4" />
+												</button>
+												<button
+													type="button"
+													className="min-w-0 flex-1 text-start"
+													onClick={() => {
+														setResult(item);
+														setTranscriptText(item.text || '');
+														setHistoryMenuId(null);
+													}}
+												>
+													<p className="truncate text-sm font-bold text-slate-900">
+														{item.originalFileName || 'Recording'}
+													</p>
+													<span className="mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full bg-[#eef2ff] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#4f46e5]">
+														<Sparkles className="size-2.5 shrink-0" />
+														<span className="truncate">{providerBadgeLabel(item.provider)}</span>
+													</span>
+												</button>
+												<div className="relative shrink-0" data-history-menu>
+													<button
+														type="button"
+														aria-label={t.openItem}
+														onClick={event => {
+															event.stopPropagation();
+															setHistoryMenuId(menuOpen ? null : item.id);
+														}}
+														className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+													>
+														<MoreVertical className="size-4" />
+													</button>
+													{menuOpen ? (
+														<div className="absolute end-0 z-30 mt-1 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+															<button
+																type="button"
+																className="flex w-full rounded-lg px-3 py-2 text-start text-sm font-medium text-slate-700 hover:bg-slate-50"
+																onClick={() => {
+																	setResult(item);
+																	setTranscriptText(item.text || '');
+																	setHistoryMenuId(null);
+																}}
+															>
+																{t.openItem}
+															</button>
+															<button
+																type="button"
+																className="flex w-full rounded-lg px-3 py-2 text-start text-sm font-medium text-red-600 hover:bg-red-50"
+																onClick={() => {
+																	setHistoryMenuId(null);
+																	void deleteTranscript(item.id);
+																}}
+															>
+																{t.deleteItem}
+															</button>
+														</div>
+													) : null}
+												</div>
+											</div>
+
+											<button
+												type="button"
+												className="mt-3 w-full text-start"
+												onClick={() => {
+													setResult(item);
+													setTranscriptText(item.text || '');
+													setHistoryMenuId(null);
+												}}
+											>
+												<div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+													<span className="inline-flex items-center gap-1">
+														<Calendar className="size-3 shrink-0 text-slate-400" />
+														{formatHistoryDate(item.createdAt, locale)}
+													</span>
+													<span className="inline-flex items-center gap-1">
+														<Clock3 className="size-3 shrink-0 text-slate-400" />
+														{formatHistoryClock(item.createdAt, locale)}
+													</span>
+													<span className="inline-flex items-center gap-1">
+														<Clock3 className="size-3 shrink-0 text-slate-400" />
+														{formatDurationClock(item.durationSeconds)}
+													</span>
+													{item.enhancedText ? (
+														<span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+															AI
+														</span>
+													) : null}
+													{item.memorizePayload ? (
+														<span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+															Memo
+														</span>
+													) : null}
+												</div>
+												<p
+													dir="auto"
+													className="mt-2 line-clamp-3 break-words text-[13px] leading-6 text-slate-600"
+												>
+													{item.text || '—'}
+												</p>
+											</button>
+										</article>
+									);
+								})
+							)}
+						</div>
+
+						<div className="mt-3 shrink-0 space-y-2 border-t border-slate-100 pt-3">
+							<p className="text-[11px] font-medium text-slate-500">
+								{t.historyShowing
+									.replace('{from}', String(historyRange.from))
+									.replace('{to}', String(historyRange.to))
+									.replace('{total}', String(historyRange.total))}
+							</p>
+							<div className="flex flex-wrap items-center justify-between gap-2">
+								<div className="flex items-center gap-1">
+									<button
+										type="button"
+										disabled={safeHistoryPage <= 1}
+										onClick={() => setHistoryPage(page => Math.max(1, page - 1))}
+										className="grid size-8 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
+										aria-label="Previous page"
+									>
+										{isArabic ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+									</button>
+									<span className="grid h-8 min-w-8 place-items-center rounded-lg border border-[#c7d2fe] bg-[#eef2ff] px-2 text-sm font-bold text-[#4338ca]">
+										{safeHistoryPage}
+									</span>
+									<button
+										type="button"
+										disabled={safeHistoryPage >= historyPageCount}
+										onClick={() => setHistoryPage(page => Math.min(historyPageCount, page + 1))}
+										className="grid size-8 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
+										aria-label="Next page"
+									>
+										{isArabic ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
+									</button>
+								</div>
+								<select
+									value={historyPageSize}
+									onChange={event => setHistoryPageSize(Number(event.target.value) || 10)}
+									className="h-8 max-w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 outline-none focus:border-[#a5b4fc]"
+								>
+									{[5, 10, 20].map(size => (
+										<option key={size} value={size}>
+											{t.historyPerPage.replace('{n}', String(size))}
+										</option>
+									))}
+								</select>
+							</div>
+						</div>
 					</section>
 				</aside>
 			</div>

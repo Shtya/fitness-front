@@ -232,7 +232,7 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 
 	const shellClass = compact
 		? 'mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-3'
-		: 'learning-neu mt-5 overflow-hidden p-4 md:p-5';
+		: 'mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 md:p-5';
 	const ghostBtn = compact
 		? 'inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700'
 		: 'learning-pill-btn--light !px-3 !py-2 !text-xs';
@@ -277,17 +277,17 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 					) : null}
 				</div>
 			) : (
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-				<div>
+			<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+				<div className="min-w-0">
 					<h3 className="flex items-center gap-2 text-sm font-black text-slate-900">
-						<span className="grid size-8 place-items-center rounded-xl bg-[var(--color-primary-50)] text-[var(--color-primary-600)]">
+						<span className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-50)] text-[var(--color-primary-600)]">
 							<Sparkles size={16} />
 						</span>
 						{t.aiTools}
 					</h3>
-					<p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{t.aiHint}</p>
+					<p className="mt-1 max-w-xl text-xs leading-5 text-slate-500">{t.aiHint}</p>
 				</div>
-				<div className="flex flex-wrap gap-2">
+				<div className="flex flex-wrap items-center gap-2">
 					{(compare || memorize || summary) && (
 						<>
 							{compare ? (
@@ -332,7 +332,7 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 						type="button"
 						disabled={enhancing || !transcriptionId}
 						onClick={runEnhance}
-						className={primaryBtn}
+						className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
 					>
 						{enhancing ? (
 							<LoaderCircle size={15} className="animate-spin" />
@@ -345,7 +345,7 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 						type="button"
 						disabled={summarizing || !transcriptionId}
 						onClick={runSummarize}
-						className={lightBtn}
+						className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
 					>
 						{summarizing ? (
 							<LoaderCircle size={15} className="animate-spin" />
@@ -358,7 +358,7 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 						type="button"
 						disabled={memorizing || !transcriptionId}
 						onClick={runMemorize}
-						className={lightBtn}
+						className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
 					>
 						{memorizing ? (
 							<LoaderCircle size={15} className="animate-spin" />

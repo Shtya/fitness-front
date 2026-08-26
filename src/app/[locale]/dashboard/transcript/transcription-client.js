@@ -1,10 +1,8 @@
 import api from '@/utils/axios';
 import {
 	SAFE_PROXY_UPLOAD_BYTES,
+	buildTranscriptionUploadParts,
 	getStoredTranscriptionChunkSeconds,
-	normalizeTranscriptionChunkSeconds,
-	prepareTranscriptionUploadFile,
-	splitAudioFileForTranscription,
 } from './transcription-audio-chunks';
 
 export {
@@ -14,7 +12,9 @@ export {
 	SAFE_PROXY_UPLOAD_BYTES,
 	TRANSCRIPTION_CHUNK_PRESETS,
 	TRANSCRIPTION_CHUNK_STORAGE_KEY,
+	buildTranscriptionUploadParts,
 	getStoredTranscriptionChunkSeconds,
+	isVideoLikeFile,
 	normalizeTranscriptionChunkSeconds,
 	prepareTranscriptionUploadFile,
 	storeTranscriptionChunkSeconds,
@@ -131,39 +131,30 @@ export async function createChunkedTranscription({
 	chunkSeconds = getStoredTranscriptionChunkSeconds(),
 	onUploadProgress,
 	onChunkProgress,
+	onPrepareProgress,
 }) {
-	let prepared = file;
+	onPrepareProgress?.({ phase: 'preparing', percent: 2 });
+	let parts = [];
 	try {
-		prepared = await prepareTranscriptionUploadFile(file);
-	} catch {
-		prepared = file;
-	}
-
-	let parts = [prepared];
-	try {
-		parts = await splitAudioFileForTranscription(prepared, chunkSeconds);
-	} catch {
-		parts = [prepared];
-	}
-
-	// If the whole file is still huge and chunking was off, force time-based splits.
-	if (
-		parts.length === 1 &&
-		parts[0].size > SAFE_PROXY_UPLOAD_BYTES &&
-		normalizeTranscriptionChunkSeconds(chunkSeconds) <= 0
-	) {
-		try {
-			parts = await splitAudioFileForTranscription(prepared, 180);
-		} catch {
-			/* keep single part */
+		parts = await buildTranscriptionUploadParts(file, chunkSeconds, {
+			onProgress: event => onPrepareProgress?.(event),
+		});
+	} catch (error) {
+		// Fall back to original only when it is small enough for the proxy.
+		if (file?.size && file.size <= SAFE_PROXY_UPLOAD_BYTES) {
+			parts = [file];
+		} else {
+			throw error;
 		}
 	}
+
+	if (!parts.length) parts = [file];
 
 	const oversized = parts.find(part => part.size > SAFE_PROXY_UPLOAD_BYTES);
 	if (oversized) {
 		const mb = (oversized.size / (1024 * 1024)).toFixed(1);
 		const error = new Error(
-			`Upload too large for production proxy (~${mb} MB). Use a shorter video, a smaller audio export, or enable chunking (2–3 minutes).`,
+			`Upload too large for production proxy (~${mb} MB). Use a shorter clip or set chunk length to 2 minutes.`,
 		);
 		error.code = 'UPLOAD_TOO_LARGE_FOR_PROXY';
 		throw error;
@@ -179,6 +170,8 @@ export async function createChunkedTranscription({
 			throw error;
 		}
 	}
+
+	onPrepareProgress?.({ phase: 'ready', percent: 100 });
 
 	const records = [];
 	for (let index = 0; index < parts.length; index += 1) {

@@ -1,18 +1,23 @@
 /**
  * Browser-side audio prep for long / video transcription jobs.
- * Extracts audio from video, compresses to Opus when possible, then slices by duration.
+ * Decodes with Web Audio, downsamples to 16 kHz mono WAV (fast, STT-friendly),
+ * and slices by duration so uploads stay under reverse-proxy body limits.
  */
 
 export const DEFAULT_TRANSCRIPTION_CHUNK_SECONDS = 210; // 3.5 minutes
 export const MIN_TRANSCRIPTION_CHUNK_SECONDS = 60;
 export const MAX_TRANSCRIPTION_CHUNK_SECONDS = 900;
 export const TRANSCRIPTION_CHUNK_STORAGE_KEY = 'transcript:chunkSeconds';
+export const TRANSCRIPTION_TARGET_SAMPLE_RATE = 16_000;
 
 /**
  * Production nginx often caps uploads (~20m). Stay under that so the proxy
  * does not drop the request (browser then shows a generic Network Error).
  */
 export const SAFE_PROXY_UPLOAD_BYTES = 18 * 1024 * 1024;
+
+/** Prefer shorter slices for video / large containers so each POST stays small. */
+export const VIDEO_FORCE_CHUNK_SECONDS = 120;
 
 export const TRANSCRIPTION_CHUNK_PRESETS = [
 	{ value: 0, labelEn: 'Off (whole file)', labelAr: 'إيقاف (الملف كامل)' },
@@ -53,6 +58,12 @@ export function storeTranscriptionChunkSeconds(value) {
 	return next;
 }
 
+export function isVideoLikeFile(file) {
+	const type = String(file?.type || '').toLowerCase();
+	const name = String(file?.name || '').toLowerCase();
+	return type.startsWith('video/') || /\.(mp4|mov|m4v|mkv|avi)$/i.test(name);
+}
+
 function mixToMono(source, startSample, length) {
 	const mixed = new Float32Array(length);
 	const channelCount = source.numberOfChannels || 1;
@@ -63,6 +74,17 @@ function mixToMono(source, startSample, length) {
 		}
 	}
 	return mixed;
+}
+
+function downsampleMono(samples, fromRate, toRate) {
+	if (!toRate || toRate >= fromRate) return { samples, sampleRate: fromRate };
+	const ratio = fromRate / toRate;
+	const length = Math.max(1, Math.floor(samples.length / ratio));
+	const out = new Float32Array(length);
+	for (let i = 0; i < length; i += 1) {
+		out[i] = samples[Math.min(samples.length - 1, Math.floor(i * ratio))];
+	}
+	return { samples: out, sampleRate: toRate };
 }
 
 function encodeWavMono(samples, sampleRate) {
@@ -97,54 +119,6 @@ function encodeWavMono(samples, sampleRate) {
 	return new Blob([buffer], { type: 'audio/wav' });
 }
 
-function pickOpusRecorderMime() {
-	if (typeof MediaRecorder === 'undefined') return '';
-	const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
-	return candidates.find(type => MediaRecorder.isTypeSupported(type)) || '';
-}
-
-async function encodeAudioBufferToOpus(audioBuffer, startSample = 0, length = audioBuffer.length) {
-	const mimeType = pickOpusRecorderMime();
-	if (!mimeType) return null;
-
-	const AudioCtx = window.AudioContext || window.webkitAudioContext;
-	const context = new AudioCtx();
-	try {
-		const mono = mixToMono(audioBuffer, startSample, length);
-		const slice = context.createBuffer(1, mono.length, audioBuffer.sampleRate);
-		slice.copyToChannel(mono, 0);
-		const destination = context.createMediaStreamDestination();
-		const source = context.createBufferSource();
-		source.buffer = slice;
-		source.connect(destination);
-
-		const chunks = [];
-		const recorder = new MediaRecorder(destination.stream, {
-			mimeType,
-			audioBitsPerSecond: 24_000,
-		});
-		recorder.ondataavailable = event => {
-			if (event.data?.size) chunks.push(event.data);
-		};
-		const stopped = new Promise(resolve => {
-			recorder.onstop = resolve;
-			recorder.onerror = resolve;
-		});
-		recorder.start(250);
-		await context.resume();
-		source.start(0);
-		await new Promise(resolve => {
-			source.onended = resolve;
-		});
-		if (recorder.state !== 'inactive') recorder.stop();
-		await stopped;
-		const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
-		return blob.size ? blob : null;
-	} finally {
-		await context.close().catch(() => {});
-	}
-}
-
 async function decodeAudioFile(file) {
 	const AudioCtx = window.AudioContext || window.webkitAudioContext;
 	if (!AudioCtx) throw new Error('Web Audio is not available in this browser');
@@ -157,43 +131,26 @@ async function decodeAudioFile(file) {
 	}
 }
 
-function isVideoLikeFile(file) {
-	const type = String(file?.type || '').toLowerCase();
-	const name = String(file?.name || '').toLowerCase();
-	return type.startsWith('video/') || /\.(mp4|mov|m4v|webm)$/i.test(name);
-}
-
 function baseFileName(file) {
 	return String(file?.name || 'audio').replace(/\.[^.]+$/, '') || 'audio';
 }
 
+function sliceToWavFile(decoded, startSample, length, fileName) {
+	const mono = mixToMono(decoded, startSample, length);
+	const { samples, sampleRate } = downsampleMono(
+		mono,
+		decoded.sampleRate,
+		TRANSCRIPTION_TARGET_SAMPLE_RATE,
+	);
+	const blob = encodeWavMono(samples, sampleRate);
+	return new File([blob], fileName, { type: 'audio/wav' });
+}
+
 /**
- * Extract / recompress media so large MP4 uploads do not hit the reverse-proxy body limit.
- * Returns the original file when compression is unnecessary or unavailable.
+ * Kept for API compatibility — realtime Opus encoding was removed (it blocked
+ * the UI for the full media duration). Preparation happens in buildTranscriptionUploadParts.
  */
 export async function prepareTranscriptionUploadFile(file) {
-	if (!file) return file;
-	const needsPrep =
-		isVideoLikeFile(file) || file.size > SAFE_PROXY_UPLOAD_BYTES || file.size > 8 * 1024 * 1024;
-	if (!needsPrep) return file;
-
-	try {
-		const decoded = await decodeAudioFile(file);
-		const opus = await encodeAudioBufferToOpus(decoded);
-		if (opus && opus.size > 0 && opus.size < file.size) {
-			const ext = String(opus.type || '').includes('ogg') ? 'ogg' : 'webm';
-			return new File([opus], `${baseFileName(file)}.${ext}`, {
-				type: opus.type || `audio/${ext}`,
-			});
-		}
-		// Fallback: mono WAV can still be smaller than a video container, but keep size in check.
-		const wav = encodeWavMono(mixToMono(decoded, 0, decoded.length), decoded.sampleRate);
-		if (wav.size > 0 && wav.size < file.size) {
-			return new File([wav], `${baseFileName(file)}.wav`, { type: 'audio/wav' });
-		}
-	} catch {
-		/* keep original — caller may still chunk or fail with a clear message */
-	}
 	return file;
 }
 
@@ -201,38 +158,96 @@ export async function prepareTranscriptionUploadFile(file) {
  * @returns {Promise<File[]>} original file as single-item array when no split needed
  */
 export async function splitAudioFileForTranscription(file, chunkSeconds) {
-	const limit = normalizeTranscriptionChunkSeconds(chunkSeconds);
-	if (!file || limit <= 0) return [file];
+	const parts = await buildTranscriptionUploadParts(file, chunkSeconds);
+	return parts;
+}
 
-	const decoded = await decodeAudioFile(file);
-	const duration = Number(decoded.duration) || 0;
-	if (!(duration > limit + 2)) {
+/**
+ * Decode → optional downsampled WAV slices. Always finishes in CPU time, not wall-clock
+ * media duration (unlike MediaRecorder realtime encode).
+ *
+ * @returns {Promise<File[]>}
+ */
+export async function buildTranscriptionUploadParts(
+	file,
+	chunkSeconds = getStoredTranscriptionChunkSeconds(),
+	{ onProgress } = {},
+) {
+	if (!file) return [];
+
+	const preferred = normalizeTranscriptionChunkSeconds(chunkSeconds);
+	const videoLike = isVideoLikeFile(file);
+	const large = file.size > SAFE_PROXY_UPLOAD_BYTES;
+	let limit = preferred;
+
+	// Videos / oversized containers: always slice short so each POST stays small.
+	if (videoLike || large) {
+		if (limit <= 0) limit = VIDEO_FORCE_CHUNK_SECONDS;
+		limit = Math.min(limit, VIDEO_FORCE_CHUNK_SECONDS);
+	}
+
+	// Small plain audio under the proxy cap: upload as-is.
+	if (!videoLike && !large && limit <= 0) {
+		onProgress?.({ phase: 'ready', percent: 100 });
 		return [file];
 	}
 
+	onProgress?.({ phase: 'decoding', percent: 8 });
+	let decoded;
+	try {
+		decoded = await decodeAudioFile(file);
+	} catch (error) {
+		if (!videoLike && file.size <= SAFE_PROXY_UPLOAD_BYTES) return [file];
+		const err = new Error(
+			'Could not read audio from this file in the browser. Export audio (mp3/wav/m4a) and retry.',
+		);
+		err.code = 'AUDIO_DECODE_FAILED';
+		err.cause = error;
+		throw err;
+	}
+
+	const duration = Number(decoded.duration) || 0;
 	const sampleRate = decoded.sampleRate;
 	const totalSamples = decoded.length;
-	const chunkSamples = Math.max(1, Math.floor(limit * sampleRate));
 	const nameRoot = baseFileName(file);
+
+	const needsSplit =
+		limit > 0 &&
+		(duration > limit + 2 || videoLike || large || file.size > SAFE_PROXY_UPLOAD_BYTES);
+
+	if (!needsSplit) {
+		onProgress?.({ phase: 'encoding', percent: 55 });
+		const single = sliceToWavFile(decoded, 0, totalSamples, `${nameRoot}.wav`);
+		onProgress?.({ phase: 'ready', percent: 100 });
+		// Prefer original only when it is already small enough and not a video container.
+		if (!videoLike && file.size <= SAFE_PROXY_UPLOAD_BYTES && file.size <= single.size) {
+			return [file];
+		}
+		if (single.size > SAFE_PROXY_UPLOAD_BYTES) {
+			// Force a short split even for short duration if WAV is huge.
+			limit = VIDEO_FORCE_CHUNK_SECONDS;
+		} else {
+			return [single];
+		}
+	}
+
+	const chunkSamples = Math.max(1, Math.floor(limit * sampleRate));
 	const parts = [];
+	const estimatedParts = Math.max(1, Math.ceil(totalSamples / chunkSamples));
 
 	for (let start = 0, index = 0; start < totalSamples; start += chunkSamples, index += 1) {
 		const length = Math.min(chunkSamples, totalSamples - start);
-		if (length < sampleRate * 0.25) break; // skip tiny trailing scraps < 0.25s
-		const partLabel = `${nameRoot}.part${String(index + 1).padStart(2, '0')}`;
-		let blob = await encodeAudioBufferToOpus(decoded, start, length);
-		let extension = 'webm';
-		let type = 'audio/webm';
-		if (!blob) {
-			blob = encodeWavMono(mixToMono(decoded, start, length), sampleRate);
-			extension = 'wav';
-			type = 'audio/wav';
-		} else {
-			extension = String(blob.type || '').includes('ogg') ? 'ogg' : 'webm';
-			type = blob.type || `audio/${extension}`;
-		}
-		parts.push(new File([blob], `${partLabel}.${extension}`, { type }));
+		if (length < sampleRate * 0.25) break;
+		const partLabel = `${nameRoot}.part${String(index + 1).padStart(2, '0')}.wav`;
+		parts.push(sliceToWavFile(decoded, start, length, partLabel));
+		onProgress?.({
+			phase: 'encoding',
+			percent: Math.min(95, Math.round(((index + 1) / estimatedParts) * 90) + 8),
+			chunkIndex: index + 1,
+			chunkTotal: estimatedParts,
+		});
 	}
 
+	onProgress?.({ phase: 'ready', percent: 100 });
 	return parts.length ? parts : [file];
 }

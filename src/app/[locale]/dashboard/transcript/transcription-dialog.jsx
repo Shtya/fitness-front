@@ -59,6 +59,7 @@ const labels = {
 		chunkProgress: 'Chunk {current} of {total}',
 		transcribe: 'Transcribe',
 		uploading: 'Uploading',
+		preparing: 'Preparing audio…',
 		processing: 'Transcribing audio… this can take a few minutes for long voice notes.',
 		failed: 'Transcription failed.',
 		timedOut: 'Transcription timed out. Keep the page open and try again.',
@@ -98,6 +99,7 @@ const labels = {
 		chunkProgress: 'قطعة {current} من {total}',
 		transcribe: 'تحويل إلى نص',
 		uploading: 'جارٍ الرفع',
+		preparing: 'جارٍ تجهيز الصوت…',
 		processing: 'جارٍ تحويل الصوت إلى نص… الرسائل الطويلة قد تستغرق دقائق.',
 		failed: 'فشل تحويل الرسالة الصوتية.',
 		timedOut: 'انتهت مهلة التحويل. اترك الصفحة مفتوحة وحاول مرة أخرى.',
@@ -199,7 +201,7 @@ export default function TranscriptionDialog({
 			summarizing: Boolean(next?.summarizing),
 		});
 	}, []);
-	const busy = ['loading', 'uploading', 'processing'].includes(status);
+	const busy = ['loading', 'preparing', 'uploading', 'processing'].includes(status);
 	const singleVoice = !isBundle && sources[0]?.kind === 'voice';
 
 	const sourceKey = useMemo(
@@ -314,7 +316,7 @@ export default function TranscriptionDialog({
 				toast.error(t.groqTooLarge);
 				return;
 			}
-			setStatus('uploading');
+			setStatus('preparing');
 			setProgress(0);
 			setElapsed(0);
 			setChunkProgress({ current: 0, total: 0 });
@@ -325,11 +327,16 @@ export default function TranscriptionDialog({
 					language: locale === 'ar' ? 'ar' : 'auto',
 					customVocabulary: '',
 					chunkSeconds,
+					onPrepareProgress: ({ percent }) => {
+						setStatus('preparing');
+						setProgress(Math.min(95, Number(percent) || 0));
+					},
 					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
 						setChunkProgress({ current: chunkIndex, total: chunkTotal });
-						if (chunkTotal > 1) setStatus('processing');
+						if (chunkTotal > 1) setStatus('uploading');
 					},
 					onUploadProgress: event => {
+						setStatus('uploading');
 						if (!event.total) {
 							setStatus('processing');
 							return;
@@ -392,11 +399,16 @@ export default function TranscriptionDialog({
 					language: locale === 'ar' ? 'ar' : 'auto',
 					customVocabulary: '',
 					chunkSeconds,
+					onPrepareProgress: ({ percent }) => {
+						setStatus('preparing');
+						setProgress(Math.min(95, Number(percent) || 0));
+					},
 					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
 						setChunkProgress({ current: chunkIndex, total: chunkTotal });
-						if (chunkTotal > 1) setStatus('processing');
+						if (chunkTotal > 1) setStatus('uploading');
 					},
 					onUploadProgress: event => {
+						setStatus('uploading');
 						if (!event.total) {
 							setStatus('processing');
 							return;
@@ -637,7 +649,7 @@ export default function TranscriptionDialog({
 							/>
 						</label>
 
-						{['uploading', 'processing'].includes(status) && (
+						{['preparing', 'uploading', 'processing'].includes(status) && (
 							<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
 								<div className="flex items-center justify-between text-[13px] font-semibold text-slate-700">
 									<span className="flex items-center gap-2">
@@ -650,18 +662,26 @@ export default function TranscriptionDialog({
 												? t.batchProgress
 													.replace('{current}', String(batchIndex || 1))
 													.replace('{total}', String(voiceSources.length))
-												: status === 'uploading'
-													? t.uploading
-													: t.processing}
+												: status === 'preparing'
+													? t.preparing
+													: status === 'uploading'
+														? t.uploading
+														: t.processing}
 									</span>
 									<span className="tabular-nums text-slate-500">
-										{status === 'uploading' ? `${progress}%` : `${elapsed}s`}
+										{status === 'preparing' || status === 'uploading'
+											? `${progress}%`
+											: `${elapsed}s`}
 									</span>
 								</div>
 								<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
 									<div
 										className={`h-full rounded-full bg-[var(--color-primary-600)] ${status === 'processing' ? 'w-full animate-pulse' : ''}`}
-										style={status === 'uploading' ? { width: `${progress}%` } : undefined}
+										style={
+											status === 'preparing' || status === 'uploading'
+												? { width: `${Math.max(progress, 2)}%` }
+												: undefined
+										}
 									/>
 								</div>
 							</div>
