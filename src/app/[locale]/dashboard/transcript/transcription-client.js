@@ -1,6 +1,9 @@
 import api from '@/utils/axios';
 import {
+	SAFE_PROXY_UPLOAD_BYTES,
 	getStoredTranscriptionChunkSeconds,
+	normalizeTranscriptionChunkSeconds,
+	prepareTranscriptionUploadFile,
 	splitAudioFileForTranscription,
 } from './transcription-audio-chunks';
 
@@ -8,10 +11,12 @@ export {
 	DEFAULT_TRANSCRIPTION_CHUNK_SECONDS,
 	MAX_TRANSCRIPTION_CHUNK_SECONDS,
 	MIN_TRANSCRIPTION_CHUNK_SECONDS,
+	SAFE_PROXY_UPLOAD_BYTES,
 	TRANSCRIPTION_CHUNK_PRESETS,
 	TRANSCRIPTION_CHUNK_STORAGE_KEY,
 	getStoredTranscriptionChunkSeconds,
 	normalizeTranscriptionChunkSeconds,
+	prepareTranscriptionUploadFile,
 	storeTranscriptionChunkSeconds,
 } from './transcription-audio-chunks';
 
@@ -127,16 +132,46 @@ export async function createChunkedTranscription({
 	onUploadProgress,
 	onChunkProgress,
 }) {
-	let parts = [file];
+	let prepared = file;
 	try {
-		parts = await splitAudioFileForTranscription(file, chunkSeconds);
+		prepared = await prepareTranscriptionUploadFile(file);
 	} catch {
-		parts = [file];
+		prepared = file;
+	}
+
+	let parts = [prepared];
+	try {
+		parts = await splitAudioFileForTranscription(prepared, chunkSeconds);
+	} catch {
+		parts = [prepared];
+	}
+
+	// If the whole file is still huge and chunking was off, force time-based splits.
+	if (
+		parts.length === 1 &&
+		parts[0].size > SAFE_PROXY_UPLOAD_BYTES &&
+		normalizeTranscriptionChunkSeconds(chunkSeconds) <= 0
+	) {
+		try {
+			parts = await splitAudioFileForTranscription(prepared, 180);
+		} catch {
+			/* keep single part */
+		}
+	}
+
+	const oversized = parts.find(part => part.size > SAFE_PROXY_UPLOAD_BYTES);
+	if (oversized) {
+		const mb = (oversized.size / (1024 * 1024)).toFixed(1);
+		const error = new Error(
+			`Upload too large for production proxy (~${mb} MB). Use a shorter video, a smaller audio export, or enable chunking (2–3 minutes).`,
+		);
+		error.code = 'UPLOAD_TOO_LARGE_FOR_PROXY';
+		throw error;
 	}
 
 	if (provider === 'groq') {
-		const oversized = parts.find(part => part.size > GROQ_FREE_MAX_FILE_SIZE);
-		if (oversized) {
+		const groqOversize = parts.find(part => part.size > GROQ_FREE_MAX_FILE_SIZE);
+		if (groqOversize) {
 			const error = new Error(
 				'A transcription chunk is larger than Groq free tier allows (25 MB). Use a shorter chunk length.',
 			);
@@ -248,7 +283,7 @@ export function transcriptionErrorMessage(error, fallback = 'Transcription faile
 	}
 	// Nginx 413 often omits CORS headers → axios surfaces "Network Error" with no response body.
 	if (!error?.response && /network error/i.test(String(error?.message || ''))) {
-		return 'Network Error — on production this often means the reverse proxy rejected a large upload (HTTP 413). Raise nginx client_max_body_size (e.g. 100m) for api.so7bafit.com.';
+		return 'Network Error — the reverse proxy likely blocked a large upload (HTTP 413). The app now compresses video to audio first; if it still fails, raise nginx client_max_body_size to 100m for api.so7bafit.com and reload nginx.';
 	}
 	if (!error?.response && error?.message) return error.message;
 	return fallback;

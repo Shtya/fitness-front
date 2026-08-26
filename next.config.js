@@ -34,12 +34,27 @@ const withPWA = require('next-pwa')({
   // Prefer a short NetworkFirst for navigations so cold PWA opens feel snappy,
   // then fall through to the stock next-pwa rules for static assets.
   runtimeCaching: [
+    // Never let Workbox touch API traffic (uploads / multipart especially).
+    {
+      urlPattern: ({ url }) =>
+        /(?:^|\.)so7bafit\.com$/i.test(url.hostname) &&
+        (url.hostname.startsWith('api.') || url.pathname.includes('/api/')),
+      handler: 'NetworkOnly',
+      method: 'GET',
+    },
+    {
+      urlPattern: ({ url }) =>
+        /(?:^|\.)so7bafit\.com$/i.test(url.hostname) &&
+        (url.hostname.startsWith('api.') || url.pathname.includes('/api/')),
+      handler: 'NetworkOnly',
+      method: 'POST',
+    },
     {
       urlPattern: ({ request }) => request.mode === 'navigate',
       handler: 'NetworkFirst',
       options: {
         cacheName: 'so7ba-pages',
-        networkTimeoutSeconds: 4,
+        networkTimeoutSeconds: 8,
         expiration: { maxEntries: 48, maxAgeSeconds: 60 * 60 * 24 * 7 },
       },
     },
