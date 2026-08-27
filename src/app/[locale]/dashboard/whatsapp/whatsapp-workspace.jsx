@@ -16,6 +16,7 @@ import {
 	ArrowUpRight,
 	BarChart3,
 	Bell,
+	BellOff,
 	Copy,
 	Check,
 	CheckCheck,
@@ -717,6 +718,9 @@ const translations = {
 		pinChat: 'Pin chat',
 		unpinChat: 'Unpin chat',
 		pinUpdated: 'Pinned chats updated',
+		muteChat: 'Mute notifications',
+		unmuteChat: 'Unmute notifications',
+		muteUpdated: 'Notification mute updated',
 		messagePreviewFallback: 'Message',
 		online: 'Connected',
 		offline: 'Not connected',
@@ -1139,6 +1143,9 @@ const translations = {
 		pinChat: 'تثبيت المحادثة',
 		unpinChat: 'إلغاء تثبيت المحادثة',
 		pinUpdated: 'تم تحديث المحادثات المثبتة',
+		muteChat: 'كتم الإشعارات',
+		unmuteChat: 'إلغاء كتم الإشعارات',
+		muteUpdated: 'تم تحديث كتم الإشعارات',
 		messagePreviewFallback: 'رسالة',
 		online: 'متصل',
 		offline: 'غير متصل',
@@ -3087,13 +3094,16 @@ export function MediaAttachment({
 	const demoAttachment = Boolean(attachment?.demoAttachment || isDemoId(attachment?.id));
 	const previewDataUrl = attachment?.previewDataUrl || null;
 	const isGallery = layout === 'gallery';
+	const isSingleMedia = layout === 'single';
 
 	const loadAttachmentBlob = useCallback(async () => {
 		if (attachment?.id) {
 			if (demoAttachment) return demoApi.getMedia(rawDemoId(attachment.id));
+			const kind = String(attachment?.type || '').toLowerCase();
+			const isHeavyMedia = kind === 'video';
 			try {
 				return await requestAttachmentBlob(attachment.id, {
-					timeout: 45_000,
+					timeout: isHeavyMedia ? 120_000 : 45_000,
 					priority: true,
 				});
 			} catch (firstError) {
@@ -3101,7 +3111,7 @@ export function MediaAttachment({
 				await new Promise(resolve => window.setTimeout(resolve, 500));
 				try {
 					return await requestAttachmentBlob(attachment.id, {
-						timeout: 60_000,
+						timeout: isHeavyMedia ? 150_000 : 60_000,
 						priority: true,
 					});
 				} catch {
@@ -3118,7 +3128,7 @@ export function MediaAttachment({
 			return response.blob();
 		}
 		throw new Error('Attachment is unavailable');
-	}, [attachment?.id, attachment?.url, demoAttachment]);
+	}, [attachment?.id, attachment?.type, attachment?.url, demoAttachment]);
 
 	useEffect(() => {
 		autoRetryCountRef.current = 0;
@@ -3179,6 +3189,8 @@ export function MediaAttachment({
 					(!mime || mime.includes('octet-stream'))
 				) {
 					nextBlob = blob.slice(0, blob.size, 'image/jpeg');
+				} else if (kind === 'video' && (!mime || mime.includes('octet-stream'))) {
+					nextBlob = blob.slice(0, blob.size, 'video/mp4');
 				} else if (
 					['audio', 'ptt', 'voice'].includes(kind) &&
 					(!mime || mime.includes('octet-stream'))
@@ -3199,16 +3211,20 @@ export function MediaAttachment({
 			cancelled = true;
 			if (objectUrl) {
 				const stale = objectUrl;
-				window.setTimeout(() => URL.revokeObjectURL(stale), 8_000);
+				window.setTimeout(() => URL.revokeObjectURL(stale), 60_000);
 			}
 		};
+		// Intentionally omit onImageReady / url — unstable parent callbacks were
+		// cancelling in-flight video/image fetches and leaving "Loading media…".
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- load once per id/viewport/retry
 	}, [
 		attachment?.id,
+		attachment?.mimeType,
+		attachment?.type,
 		isDocument,
 		isNearViewport,
 		isVoice,
 		loadAttachmentBlob,
-		onImageReady,
 		retryNonce,
 		type,
 	]);
@@ -3394,7 +3410,9 @@ export function MediaAttachment({
 				className={
 					isGallery
 						? `absolute inset-0 overflow-hidden ${className}`
-						: `relative max-w-[360px] overflow-hidden ${className}`
+						: isSingleMedia
+							? `relative w-full overflow-hidden ${className}`
+							: `relative max-w-[360px] overflow-hidden ${className}`
 				}
 			>
 				<ImageMessage
@@ -3414,7 +3432,7 @@ export function MediaAttachment({
 						setLoading(true);
 						setRetryNonce(value => value + 1);
 					}}
-					className={`${type === 'sticker' ? 'wa-sticker-asset' : 'wa-photo-asset'}`}
+					className={`${type === 'sticker' ? 'wa-sticker-asset' : 'wa-photo-asset'}${isSingleMedia ? ' wa-photo-asset-single' : ''}`}
 				/>
 				{failed && !url ? (
 					<button
@@ -3439,7 +3457,11 @@ export function MediaAttachment({
 		return (
 			<div
 				ref={containerRef}
-				className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5 ${className}`}
+				className={
+					type === 'video'
+						? `wa-video-loading mb-2 flex min-h-[160px] w-full max-w-[360px] items-center justify-center gap-2 rounded-[10px] bg-black/10 px-3 py-6 text-xs ${className}`
+						: `mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5 ${className}`
+				}
 			>
 				<Loader2 size={14} className="animate-spin" />
 				<span>{labels.loadingMedia}</span>
@@ -3506,9 +3528,20 @@ export function MediaAttachment({
 	}
 	if (type === 'video') {
 		return (
-			<video controls preload="metadata" className="mb-2 max-h-64 w-full rounded-xl">
-				<source src={url} type={attachment.mimeType || 'video/mp4'} />
-			</video>
+			<div ref={containerRef} className={`wa-video-wrap mb-2 w-full ${className}`}>
+				<video
+					key={url}
+					controls
+					playsInline
+					preload="metadata"
+					src={url}
+					className="wa-video-asset"
+					onError={() => {
+						setFailed(true);
+						setUrl(null);
+					}}
+				/>
+			</div>
 		);
 	}
 	return (
@@ -3582,7 +3615,7 @@ function MessageAttachments({
 								onImageReady={onImageReady}
 								onOpenImage={onOpenImage}
 								onOpenDocument={onOpenDocument}
-								layout="gallery"
+								layout={visibleImages.length === 1 ? 'single' : 'gallery'}
 								sessionReady={sessionReady}
 								className={visibleImages.length === 1 ? '' : 'rounded-none'}
 							/>
@@ -4506,6 +4539,17 @@ function ConversationActionMenu({
 			icon: Pin,
 		},
 		{
+			id: 'mute',
+			label: conversation.isMuted
+				? ar
+					? 'إلغاء كتم الإشعارات'
+					: 'Unmute notifications'
+				: ar
+					? 'كتم الإشعارات'
+					: 'Mute notifications',
+			icon: conversation.isMuted ? Bell : BellOff,
+		},
+		{
 			id: 'favorite',
 			label: conversation.isFavorite ? (ar ? 'إزالة من المفضلة' : 'Remove from favorites') : ar ? 'إضافة إلى المفضلة' : 'Add to favorites',
 			icon: Star,
@@ -4575,6 +4619,7 @@ function ConversationActionMenu({
 									strokeWidth={2.1}
 									fill={
 										(action.id === 'pin' && conversation.isPinned) ||
+										(action.id === 'mute' && conversation.isMuted) ||
 										(action.id === 'favorite' && conversation.isFavorite) ||
 										(action.id === 'archive' && conversation.isArchived)
 											? 'currentColor'
@@ -8225,30 +8270,32 @@ function WhatsAppWorkspaceContent() {
 					const peer = conversationsRef.current.find(
 						item => item.id === targetConversationId,
 					);
-					const title =
-						conversationTitle(peer) ||
-						event.payload?.contactName ||
-						(locale === 'ar' ? 'رسالة واتساب' : 'WhatsApp');
-					const body =
-						String(event.payload?.text || '').trim() ||
-						(event.payload?.type === 'image'
-							? locale === 'ar'
-								? 'صورة'
-								: 'Photo'
-							: event.payload?.type === 'ptt' || event.payload?.type === 'audio'
+					if (!peer?.isMuted) {
+						const title =
+							conversationTitle(peer) ||
+							event.payload?.contactName ||
+							(locale === 'ar' ? 'رسالة واتساب' : 'WhatsApp');
+						const body =
+							String(event.payload?.text || '').trim() ||
+							(event.payload?.type === 'image'
 								? locale === 'ar'
-									? 'رسالة صوتية'
-									: 'Voice message'
-								: locale === 'ar'
-									? 'رسالة جديدة'
-									: 'New message');
-					showWhatsAppDesktopNotification({
-						title,
-						body,
-						conversationId: targetConversationId,
-						accountId: accountIdRef.current,
-						locale,
-					});
+									? 'صورة'
+									: 'Photo'
+								: event.payload?.type === 'ptt' || event.payload?.type === 'audio'
+									? locale === 'ar'
+										? 'رسالة صوتية'
+										: 'Voice message'
+									: locale === 'ar'
+										? 'رسالة جديدة'
+										: 'New message');
+						showWhatsAppDesktopNotification({
+							title,
+							body,
+							conversationId: targetConversationId,
+							accountId: accountIdRef.current,
+							locale,
+						});
+					}
 				}
 			}
 			if (
@@ -11141,6 +11188,52 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
+	const toggleConversationMuted = async (conversation, event) => {
+		event?.stopPropagation?.();
+		if (demo.settings.enabled || !conversation?.id || isDemoId(conversation.id)) return;
+		const actionKey = `mute:${conversation.id}`;
+		if (pendingPreferenceActions.has(actionKey)) return;
+		const previousMuted = Boolean(conversation.isMuted);
+		const nextMuted = !conversation.isMuted;
+		setPendingPreferenceActions(current => new Set(current).add(actionKey));
+		setConversations(current =>
+			current.map(item =>
+				item.id === conversation.id ? { ...item, isMuted: nextMuted } : item,
+			),
+		);
+		try {
+			await api.put(`/whatsapp/conversations/${conversation.id}/mute`, {
+				isMuted: nextMuted,
+			});
+			const cached = accountId
+				? conversationsCacheRef.current.get(accountId)
+				: null;
+			if (cached) {
+				conversationsCacheRef.current.set(accountId, {
+					...cached,
+					items: cached.items.map(item =>
+						item.id === conversation.id ? { ...item, isMuted: nextMuted } : item,
+					),
+					cachedAt: Date.now(),
+				});
+			}
+			toast.success(t.muteUpdated);
+		} catch (error) {
+			setConversations(current =>
+				current.map(item =>
+					item.id === conversation.id ? { ...item, isMuted: previousMuted } : item,
+				),
+			);
+			toast.error(error.response?.data?.message || 'Could not update mute');
+		} finally {
+			setPendingPreferenceActions(current => {
+				const next = new Set(current);
+				next.delete(actionKey);
+				return next;
+			});
+		}
+	};
+
 	const chatToolbarActions = useMemo(() => {
 		if (!selectedConversation) return [];
 		const demoBlocked = demo.settings.enabled;
@@ -11172,6 +11265,16 @@ function WhatsAppWorkspaceContent() {
 					demoBlocked ||
 					pendingPreferenceActions.has(`pin:${selectedConversation.id}`),
 				onClick: event => toggleConversationPinned(selectedConversation, event),
+			},
+			{
+				id: 'mute',
+				label: selectedConversation.isMuted ? t.unmuteChat : t.muteChat,
+				icon: selectedConversation.isMuted ? Bell : BellOff,
+				active: selectedConversation.isMuted,
+				disabled:
+					demoBlocked ||
+					pendingPreferenceActions.has(`mute:${selectedConversation.id}`),
+				onClick: event => toggleConversationMuted(selectedConversation, event),
 			},
 			{
 				id: 'favorite',
@@ -11261,6 +11364,7 @@ function WhatsAppWorkspaceContent() {
 		t,
 		ticketSelectMode,
 		toggleConversationFavorite,
+		toggleConversationMuted,
 		toggleConversationPinned,
 		toggleGroupSelectMode,
 		toggleMediaSelectMode,
@@ -11415,6 +11519,8 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (action === 'pin') {
 			void toggleConversationPinned(conversation);
+		} else if (action === 'mute') {
+			void toggleConversationMuted(conversation);
 		} else if (action === 'favorite') {
 			void toggleConversationFavorite(conversation);
 		} else if (action === 'archive') {
@@ -13348,6 +13454,15 @@ function WhatsAppWorkspaceContent() {
 																	{title}
 																</p>
 																<div className="flex shrink-0 items-center gap-1">
+																	{conversation.isMuted ? (
+																		<span
+																			className="text-slate-400"
+																			title={t.muteChat}
+																			aria-label={t.muteChat}
+																		>
+																			<BellOff size={13} strokeWidth={2.2} />
+																		</span>
+																	) : null}
 																	<button
 																		type="button"
 																		disabled={demo.settings.enabled || pendingPreferenceActions.has(
