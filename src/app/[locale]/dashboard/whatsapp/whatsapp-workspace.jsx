@@ -3926,7 +3926,7 @@ function MessageActionMenu({
 		canSelect && { id: 'select', label: ar ? 'تحديد' : 'Select', icon: ListChecks },
 		hasCopyableText && { id: 'copy', label: ar ? 'نسخ النص' : 'Copy text', icon: Copy },
 		{ id: 'reply', label: ar ? 'رد' : 'Reply', icon: Reply },
-		{ id: 'forward', label: ar ? 'إعادة توجيه' : 'Forward', icon: Send },
+		{ id: 'forward', label: ar ? 'إرسال إلى…' : 'Send to…', icon: Send },
 		{ id: 'info', label: ar ? 'معلومات' : 'Info', icon: MessageCircle },
 		{
 			id: 'star',
@@ -4305,6 +4305,11 @@ function MultiMessageActionMenu({
 			id: 'removeFromGroup',
 			label: ar ? 'إزالة من المجموعة' : 'Remove from group',
 			icon: Trash2,
+		},
+		{
+			id: 'shareAsSend',
+			label: ar ? 'إرسال إلى شخص…' : 'Send to chat…',
+			icon: Send,
 		},
 		{
 			id: 'selectAll',
@@ -5756,6 +5761,8 @@ function WhatsAppWorkspaceContent() {
 	const [multiMessageMenuAnchor, setMultiMessageMenuAnchor] = useState(null);
 	const [pendingMessageActions, setPendingMessageActions] = useState(() => new Set());
 	const [forwardingMessage, setForwardingMessage] = useState(null);
+	const [sharingMessageIds, setSharingMessageIds] = useState(null);
+	const [sharingBusy, setSharingBusy] = useState(false);
 	const [highlightedMessageKey, setHighlightedMessageKey] = useState(null);
 	const highlightTimerRef = useRef(null);
 	const [messageInfo, setMessageInfo] = useState(null);
@@ -6093,6 +6100,8 @@ function WhatsAppWorkspaceContent() {
 		setActionMessageAnchor(null);
 		setMultiMessageMenuAnchor(null);
 		setForwardingMessage(null);
+		setSharingMessageIds(null);
+		setSharingBusy(false);
 		setDeleteMessageTarget(null);
 		setMessageInfo(null);
 		setTranscriptionSources(null);
@@ -9938,7 +9947,8 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (action === 'forward') {
-			setForwardingMessage(message);
+			setForwardingMessage(null);
+			setSharingMessageIds([message.id]);
 			return;
 		}
 		if (action === 'delete') {
@@ -10066,6 +10076,19 @@ function WhatsAppWorkspaceContent() {
 
 	const handleMultiMessageAction = action => {
 		setMultiMessageMenuAnchor(null);
+		if (action === 'shareAsSend') {
+			if (demo.settings.enabled || isDemoId(conversationId)) {
+				toast.error(locale === 'ar' ? 'هذا الإجراء غير متاح في الوضع التجريبي' : 'This action is unavailable in demo mode');
+				return;
+			}
+			const ids = [...selectedMessageIds];
+			if (!ids.length) {
+				toast.error(locale === 'ar' ? 'حدد رسائل أولًا' : 'Select messages first');
+				return;
+			}
+			setSharingMessageIds(ids);
+			return;
+		}
 		if (action === 'transcribe') {
 			openSelectedTranscriptBundle();
 			return;
@@ -10145,21 +10168,50 @@ function WhatsAppWorkspaceContent() {
 		setActionMessageId(message.id);
 	};
 
-	const forwardSelectedMessage = async targetConversationId => {
-		const message = forwardingMessage;
-		if (!message || !targetConversationId || pendingMessageActions.has(message.id)) return;
-		markMessageActionPending(message.id, true);
+	const shareMessagesAsOriginal = async targetConversationId => {
+		const messageIds = Array.isArray(sharingMessageIds)
+			? sharingMessageIds
+			: forwardingMessage?.id
+				? [forwardingMessage.id]
+				: [];
+		if (!messageIds.length || !targetConversationId || sharingBusy) return;
+		setSharingBusy(true);
 		try {
-			await api.post(
-				`/whatsapp/conversations/${conversationId}/messages/${message.id}/forward`,
-				{ targetConversationId },
+			const { data } = await api.post(
+				`/whatsapp/conversations/${conversationId}/messages/share-as-original`,
+				{ targetConversationId, messageIds },
 			);
+			const sent = Number(data?.sent || 0);
+			const failed = Number(data?.failed || 0);
+			setSharingMessageIds(null);
 			setForwardingMessage(null);
-			toast.success(locale === 'ar' ? 'تمت إعادة توجيه الرسالة' : 'Message forwarded');
+			setTicketSelectMode(false);
+			setGroupSelectMode(false);
+			setSelectedMessageIds(new Set());
+			if (failed > 0 && sent > 0) {
+				toast.success(
+					locale === 'ar'
+						? `تم إرسال ${sent} رسالة · فشل ${failed}`
+						: `Sent ${sent} · ${failed} failed`,
+				);
+			} else {
+				toast.success(
+					locale === 'ar'
+						? sent > 1
+							? `تم إرسال ${sent} رسالة كأنها منك`
+							: 'تم الإرسال كرسالة جديدة منك'
+						: sent > 1
+							? `Sent ${sent} messages as yours`
+							: 'Sent as a new message from you',
+				);
+			}
 		} catch (error) {
-			toast.error(error.response?.data?.message || 'Could not forward message');
+			toast.error(
+				error.response?.data?.message ||
+					(locale === 'ar' ? 'تعذر إرسال الرسائل' : 'Could not send messages'),
+			);
 		} finally {
-			markMessageActionPending(message.id, false);
+			setSharingBusy(false);
 		}
 	};
 
@@ -13775,6 +13827,15 @@ function WhatsAppWorkspaceContent() {
 														</button>
 														<button
 															type="button"
+															disabled={!selectedMessageIds.size || demo.settings.enabled || isDemoId(conversationId)}
+															onClick={() => setSharingMessageIds([...selectedMessageIds])}
+															className="inline-flex items-center gap-1 rounded-full bg-emerald-600/90 px-2.5 py-0.5 text-white disabled:opacity-50"
+														>
+															<Send size={12} />
+															{locale === 'ar' ? 'إرسال إلى…' : 'Send to…'}
+														</button>
+														<button
+															type="button"
 															disabled={!selectedMessageIds.size}
 															onClick={openSelectedTranscriptBundle}
 															className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-500)] px-2.5 py-0.5 text-white disabled:opacity-50"
@@ -13833,6 +13894,15 @@ function WhatsAppWorkspaceContent() {
 																	toast.success(t.sentToBoard);
 																}}
 															/>
+															<button
+																type="button"
+																disabled={!selectedMessageIds.size || demo.settings.enabled || isDemoId(conversationId)}
+																onClick={() => setSharingMessageIds([...selectedMessageIds])}
+																className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-white disabled:opacity-50"
+															>
+																<Send size={12} />
+																{locale === 'ar' ? 'إرسال إلى…' : 'Send to…'}
+															</button>
 															<button
 																type="button"
 																disabled={!selectedMessageIds.size || messageGroupsBusy}
@@ -15897,12 +15967,38 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				</div>
 			)}
-			{forwardingMessage && (
-				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center" onClick={() => setForwardingMessage(null)}>
+			{(sharingMessageIds?.length || forwardingMessage) && (
+				<div
+					className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center"
+					onClick={() => {
+						if (sharingBusy) return;
+						setSharingMessageIds(null);
+						setForwardingMessage(null);
+					}}
+				>
 					<div className="max-h-[70vh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
 						<div className="flex items-center justify-between border-b px-4 py-3">
-							<h3 className="text-lg font-bold">{locale === 'ar' ? 'إعادة توجيه إلى' : 'Forward to'}</h3>
-							<button type="button" onClick={() => setForwardingMessage(null)} className="rounded-full p-2 hover:bg-slate-100"><X size={18} /></button>
+							<div className="min-w-0">
+								<h3 className="text-lg font-bold">
+									{locale === 'ar' ? 'إرسال إلى' : 'Send to'}
+								</h3>
+								<p className="mt-0.5 text-xs text-[#667781]">
+									{locale === 'ar'
+										? `${sharingMessageIds?.length || 1} رسالة · تظهر كأنها مرسلة منك (بدون تحويل)`
+										: `${sharingMessageIds?.length || 1} message(s) · sent as yours (not forwarded)`}
+								</p>
+							</div>
+							<button
+								type="button"
+								disabled={sharingBusy}
+								onClick={() => {
+									setSharingMessageIds(null);
+									setForwardingMessage(null);
+								}}
+								className="rounded-full p-2 hover:bg-slate-100 disabled:opacity-50"
+							>
+								<X size={18} />
+							</button>
 						</div>
 						<div className="max-h-[58vh] overflow-y-auto p-2">
 							{conversations
@@ -15911,15 +16007,26 @@ function WhatsAppWorkspaceContent() {
 									<button
 										key={item.id}
 										type="button"
-										onClick={() => void forwardSelectedMessage(item.id)}
-										disabled={pendingMessageActions.has(forwardingMessage.id)}
+										onClick={() => void shareMessagesAsOriginal(item.id)}
+										disabled={sharingBusy}
 										className="flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100 disabled:opacity-50"
 									>
 										<Avatar label={conversationTitle(item)} size={10} src={conversationAvatarUrl(item)} isGroup={item.type === 'group'} />
 										<span className="min-w-0 flex-1 truncate font-semibold">{conversationTitle(item)}</span>
-										<Send size={18} className="text-[#00a884]" />
+										{sharingBusy ? (
+											<Loader2 size={18} className="animate-spin text-[#00a884]" />
+										) : (
+											<Send size={18} className="text-[#00a884]" />
+										)}
 									</button>
 								))}
+							{!conversations.some(
+								item => item.id !== conversationId && item.accountId === selectedConversation?.accountId,
+							) && (
+								<p className="px-3 py-8 text-center text-sm text-[#667781]">
+									{locale === 'ar' ? 'لا توجد محادثات أخرى في هذا الحساب' : 'No other chats on this account'}
+								</p>
+							)}
 						</div>
 					</div>
 				</div>
