@@ -232,6 +232,23 @@ const EMPTY_MESSAGES = [];
 const WHATSAPP_SELECTED_ACCOUNT_KEY = 'wa-selected-account-id';
 const WHATSAPP_ACTIVE_TAB_KEY = 'wa-active-tab';
 const WHATSAPP_CHAT_LIST_COLLAPSED_KEY = 'wa-chat-list-collapsed';
+const WHATSAPP_CHAT_LIST_WIDTH_KEY = 'wa-chat-list-width';
+const CHAT_LIST_WIDTH_MIN = 220;
+const CHAT_LIST_WIDTH_MAX = 520;
+const CHAT_LIST_WIDTH_DEFAULT = 300;
+
+function readStoredChatListWidth() {
+	if (typeof window === 'undefined') return CHAT_LIST_WIDTH_DEFAULT;
+	try {
+		const raw = Number(window.localStorage.getItem(WHATSAPP_CHAT_LIST_WIDTH_KEY));
+		if (Number.isFinite(raw)) {
+			return Math.min(CHAT_LIST_WIDTH_MAX, Math.max(CHAT_LIST_WIDTH_MIN, Math.round(raw)));
+		}
+	} catch {
+		/* ignore */
+	}
+	return CHAT_LIST_WIDTH_DEFAULT;
+}
 const WHATSAPP_PERSISTED_TABS = new Set([
 	'accounts',
 	'chats',
@@ -658,6 +675,7 @@ const translations = {
 		blurPersistHint: 'Once you hover an item, it stays visible until blur is turned off',
 		collapseChatList: 'Collapse chat list',
 		expandChatList: 'Expand chat list',
+		resizeChatList: 'Drag to resize chat list',
 		allChats: 'All',
 		unreadChats: 'Unread',
 		favoriteChats: 'Favorites',
@@ -1079,6 +1097,7 @@ const translations = {
 		blurPersistHint: 'بعد أول هوفر يبقى ظاهر حتى إيقاف التمويه',
 		collapseChatList: 'طي قائمة المحادثات',
 		expandChatList: 'توسيع قائمة المحادثات',
+		resizeChatList: 'اسحب لتغيير عرض قائمة المحادثات',
 		allChats: 'الكل',
 		unreadChats: 'غير مقروءة',
 		favoriteChats: 'المفضلة',
@@ -5217,10 +5236,12 @@ function Avatar({
 	);
 }
 
-function Card({ children, className = '' }) {
+function Card({ children, className = '', style, ...props }) {
 	return (
 		<div
 			className={`rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_16px_32px_-14px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-900 ${className}`}
+			style={style}
+			{...props}
 		>
 			{children}
 		</div>
@@ -5792,6 +5813,9 @@ function WhatsAppWorkspaceContent() {
 			return false;
 		}
 	});
+	const [chatListWidth, setChatListWidth] = useState(readStoredChatListWidth);
+	const [chatListResizing, setChatListResizing] = useState(false);
+	const chatListResizeRef = useRef({ active: false, startX: 0, startWidth: CHAT_LIST_WIDTH_DEFAULT });
 	const [collapsedChatTip, setCollapsedChatTip] = useState(null);
 	const [searchOpen, setSearchOpen] = useState(false);
 	const searchInputRef = useRef(null);
@@ -6242,6 +6266,61 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (!chatListCollapsed) setCollapsedChatTip(null);
 	}, [chatListCollapsed]);
+
+	useEffect(() => {
+		try {
+			window.localStorage.setItem(WHATSAPP_CHAT_LIST_WIDTH_KEY, String(chatListWidth));
+		} catch {
+			/* ignore */
+		}
+	}, [chatListWidth]);
+
+	const beginChatListResize = useCallback(
+		event => {
+			if (chatListCollapsed || event.button !== 0) return;
+			event.preventDefault();
+			event.stopPropagation();
+			chatListResizeRef.current = {
+				active: true,
+				startX: event.clientX,
+				startWidth: chatListWidth,
+			};
+			setChatListResizing(true);
+			document.body.style.cursor = 'col-resize';
+			document.body.style.userSelect = 'none';
+		},
+		[chatListCollapsed, chatListWidth],
+	);
+
+	useEffect(() => {
+		if (!chatListResizing) return undefined;
+		const onMove = event => {
+			const state = chatListResizeRef.current;
+			if (!state.active) return;
+			const rtl = locale === 'ar';
+			const delta = event.clientX - state.startX;
+			const next = state.startWidth + (rtl ? -delta : delta);
+			setChatListWidth(
+				Math.min(CHAT_LIST_WIDTH_MAX, Math.max(CHAT_LIST_WIDTH_MIN, Math.round(next))),
+			);
+		};
+		const onUp = () => {
+			chatListResizeRef.current.active = false;
+			setChatListResizing(false);
+			document.body.style.cursor = '';
+			document.body.style.userSelect = '';
+		};
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+		window.addEventListener('pointercancel', onUp);
+		return () => {
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+			window.removeEventListener('pointercancel', onUp);
+			document.body.style.cursor = '';
+			document.body.style.userSelect = '';
+		};
+	}, [chatListResizing, locale]);
 
 	useEffect(() => {
 		writeWhatsAppPrivacyBlur(privacyBlur);
@@ -12585,18 +12664,35 @@ function WhatsAppWorkspaceContent() {
 				)} 
 
 				{isConversationWorkspaceTab(activeTab) && (
-					<Card className={`wa-chat-card grid h-full min-h-[600px] overflow-hidden min-[769px]:overflow-visible max-[768px]:min-h-0 max-[768px]:rounded-none max-[768px]:border-0 ${
-						chatListCollapsed ? 'is-list-collapsed' : ''
-					} ${
-						secondaryConversationId
-							? chatListCollapsed
-								? 'min-[769px]:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)]'
-								: 'min-[769px]:grid-cols-[minmax(240px,300px)_minmax(0,1fr)_minmax(0,1fr)] max-[1050px]:min-[769px]:grid-cols-[minmax(220px,270px)_minmax(0,1fr)_minmax(0,1fr)]'
-							: chatListCollapsed
-								? 'min-[769px]:grid-cols-[72px_1fr]'
-								: 'min-[769px]:grid-cols-[minmax(260px,320px)_1fr] max-[1050px]:min-[769px]:grid-cols-[minmax(240px,290px)_1fr]'
-					}`}>
+					<Card
+						className={`wa-chat-card grid h-full min-h-[600px] overflow-hidden min-[769px]:overflow-visible max-[768px]:min-h-0 max-[768px]:rounded-none max-[768px]:border-0 ${
+							chatListCollapsed ? 'is-list-collapsed' : ''
+						} ${chatListResizing ? 'is-list-resizing' : ''} ${
+							secondaryConversationId
+								? chatListCollapsed
+									? 'min-[769px]:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)]'
+									: 'min-[769px]:grid-cols-[var(--wa-chat-list-width)_minmax(0,1fr)_minmax(0,1fr)]'
+								: chatListCollapsed
+									? 'min-[769px]:grid-cols-[72px_1fr]'
+									: 'min-[769px]:grid-cols-[var(--wa-chat-list-width)_1fr]'
+						}`}
+						style={
+							!chatListCollapsed
+								? { ['--wa-chat-list-width']: `${chatListWidth}px` }
+								: undefined
+						}
+					>
 						<aside className={`wa-chat-list ${chatListCollapsed ? 'is-collapsed' : ''} ${conversationId ? 'hidden min-[769px]:flex' : 'flex'} min-h-0 flex-col border-e border-slate-200 dark:border-slate-700`}>
+							{!chatListCollapsed ? (
+								<div
+									role="separator"
+									aria-orientation="vertical"
+									aria-label={t.resizeChatList}
+									title={t.resizeChatList}
+									onPointerDown={beginChatListResize}
+									className="wa-chat-list-resize-handle hidden min-[769px]:block"
+								/>
+							) : null}
 							<button
 								type="button"
 								onClick={() => {
@@ -14001,18 +14097,21 @@ function WhatsAppWorkspaceContent() {
 													const isDeleted =
 														message.deletedMode && message.deletedMode !== 'none';
 													const attachmentTypes = (attachments || []).map(attachment => String(attachment.type || '').toLowerCase());
-													const isStickerMessage = !message.text && attachmentTypes.length > 0 && attachmentTypes.every(type => type === 'sticker');
+													const hasOnlyVisualAttachments =
+														attachmentTypes.length > 0 &&
+														attachmentTypes.every(type =>
+															['image', 'sticker', 'video'].includes(type),
+														);
 													const isVisualMediaMessage =
-														(!message.text &&
-															attachmentTypes.length > 0 &&
-															attachmentTypes.every(type =>
-																['image', 'sticker', 'video'].includes(type),
-															)) ||
-														(!message.text &&
-															!(attachments || []).length &&
+														hasOnlyVisualAttachments ||
+														(!(attachments || []).length &&
 															['image', 'sticker', 'video'].includes(
 																String(message.type || '').toLowerCase(),
 															));
+													const isStickerMessage =
+														!String(captionText || '').trim() &&
+														attachmentTypes.length > 0 &&
+														attachmentTypes.every(type => type === 'sticker');
 													const isDocumentMessage =
 														!groupedImages &&
 														attachmentTypes.some(
