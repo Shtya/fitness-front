@@ -3275,7 +3275,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 .wa-photo-tile-single .wa-photo-asset,
 .wa-photo-tile-single .wa-photo-open,
-.wa-photo-tile-single img {
+.wa-photo-tile-single .wa-photo-main {
   position: relative;
   inset: auto;
   display: block;
@@ -3380,7 +3380,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 .wa-media-gallery-single .wa-photo-asset,
 .wa-media-gallery-single .wa-photo-open,
-.wa-media-gallery-single img {
+.wa-media-gallery-single .wa-photo-main {
 	position: relative;
 	inset: auto;
 	width: 100%;
@@ -3506,6 +3506,15 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 .wa-reply-quote img {
 	background: #d1d7db;
+}
+
+.wa-reply-quote-thumb {
+	flex: 0 0 48px;
+	width: 48px !important;
+	height: 48px !important;
+	max-width: 48px !important;
+	max-height: 48px !important;
+	object-fit: cover;
 }
 
 .wa-message-row.wa-message-highlighted {
@@ -6557,7 +6566,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-media-gallery-single .wa-photo-asset,
 	.wa-media-gallery-single .wa-photo-open,
-	.wa-media-gallery-single img {
+	.wa-media-gallery-single .wa-photo-main {
 		position: relative !important;
 		inset: auto;
 		width: 100% !important;
@@ -6604,7 +6613,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-media-gallery-single .wa-photo-asset,
 	.wa-media-gallery-single .wa-photo-open,
-	.wa-media-gallery-single img {
+	.wa-media-gallery-single .wa-photo-main {
 		position: relative !important;
 		inset: auto !important;
 		width: 100% !important;

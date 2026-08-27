@@ -1564,7 +1564,7 @@ function ImageMessage({
 	const placeholder = previewUrl && previewUrl !== url ? previewUrl : null;
 	const fitClass = cover
 		? 'absolute inset-0 z-[1] h-full w-full object-cover'
-		: 'relative z-[1] h-auto max-h-[420px] w-full object-contain';
+		: 'wa-photo-main relative z-[1] block h-auto max-h-[420px] w-full object-contain';
 
 	return (
 		<button
@@ -1574,12 +1574,12 @@ function ImageMessage({
 			disabled={broken}
 			className={`wa-photo-open relative block w-full overflow-hidden bg-black/5 ${cover ? 'h-full min-h-0' : 'h-auto'} ${className}`}
 		>
-			{placeholder ? (
+			{placeholder && cover ? (
 				<img
 					src={placeholder}
 					alt=""
 					aria-hidden="true"
-					className="absolute inset-0 h-full w-full object-cover"
+					className="wa-photo-placeholder absolute inset-0 h-full w-full object-cover"
 				/>
 			) : null}
 			{!loaded && !broken && !placeholder && (
@@ -1599,11 +1599,13 @@ function ImageMessage({
 						setLoaded(false);
 					}}
 					className={`${fitClass} transition-opacity duration-300 ${
-						blurPlaceholder
+						blurPlaceholder && !loaded
 							? 'opacity-70 blur-[2px] scale-105'
 							: loaded
 								? 'opacity-100'
-								: 'opacity-0'
+								: placeholder && !cover
+									? 'opacity-0'
+									: 'opacity-0'
 					}`}
 				/>
 			)}
@@ -14505,7 +14507,7 @@ function WhatsAppWorkspaceContent() {
 																				<img
 																					src={quotePreview}
 																					alt=""
-																					className="h-12 w-12 shrink-0 object-cover"
+																					className="wa-reply-quote-thumb h-12 w-12 shrink-0 object-cover"
 																				/>
 																			) : null}
 																		</button>
