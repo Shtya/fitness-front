@@ -16198,8 +16198,8 @@ function WhatsAppWorkspaceContent() {
 								</h3>
 								<p className="mt-0.5 text-xs text-[#667781]">
 									{locale === 'ar'
-										? `${sharingMessageIds?.length || 1} رسالة · تظهر كأنها مرسلة منك (بدون تحويل)`
-										: `${sharingMessageIds?.length || 1} message(s) · sent as yours (not forwarded)`}
+										? `${sharingMessageIds?.length || 1} رسالة · تظهر كأنها مرسلة منك · الردود تُحفظ مع الاقتباس فوقها`
+										: `${sharingMessageIds?.length || 1} message(s) · sent as yours · replies keep the quote on top`}
 								</p>
 							</div>
 							<button
