@@ -601,6 +601,7 @@ export function isMostlyArabicText(text) {
 
 export function messageTextPresentation(text) {
 	const value = String(text || '');
+	// Same rule as WhatsApp Web: first strong letter decides bubble direction.
 	const dir = firstStrongTextDirection(value);
 	const isArabic = dir === 'rtl';
 	const arabicStyle = {
@@ -611,12 +612,16 @@ export function messageTextPresentation(text) {
 		lineHeight: 1.85,
 		direction: 'rtl',
 		unicodeBidi: 'plaintext',
-		textAlign: 'start',
+		textAlign: 'right',
+		display: 'block',
+		width: '100%',
 	};
 	const englishStyle = {
 		direction: 'ltr',
-		textAlign: 'start',
+		textAlign: 'left',
 		unicodeBidi: 'plaintext',
+		display: 'block',
+		width: '100%',
 		fontFamily:
 			'var(--font-inter), "SF Pro Text", "Segoe UI Variable Text", "Helvetica Neue", system-ui, sans-serif',
 		fontWeight: 400,

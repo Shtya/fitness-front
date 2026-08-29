@@ -1,0 +1,15 @@
+{
+  "name": "so7bafit-web-translator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "So7baFit web translator browser extension",
+  "scripts": {
+    "test": "node --test src/shared/text-utils.test.mjs",
+    "build": "node scripts/build.mjs",
+    "build:chrome": "node scripts/build.mjs chrome",
+    "build:firefox": "node scripts/build.mjs firefox",
+    "build:all": "node scripts/build.mjs all",
+    "build:dev": "node scripts/build.mjs all --dev"
+  }
+}

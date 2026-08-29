@@ -527,7 +527,7 @@ test('firstStrongTextDirection uses the first Arabic or Latin letter', () => {
 test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	const arabic = messageTextPresentation('رسالة عربية');
 	assert.equal(arabic.dir, 'rtl');
-	assert.equal(arabic.style.textAlign, 'start');
+	assert.equal(arabic.style.textAlign, 'right');
 	assert.match(arabic.style.fontFamily, /--font-arabic/);
 	assert.equal(arabic.style.fontWeight, 500);
 	assert.equal(messageTextPresentation('English message').dir, 'ltr');
@@ -542,7 +542,7 @@ test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	);
 	assert.equal(mostlyEnglish.dir, 'ltr');
 	assert.equal(mostlyEnglish.className, 'wa-message-text--en');
-	assert.equal(mostlyEnglish.style.textAlign, 'start');
+	assert.equal(mostlyEnglish.style.textAlign, 'left');
 	assert.equal(
 		messageTextPresentation(
 			'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...\nبعد ما تضيفه Frontend',

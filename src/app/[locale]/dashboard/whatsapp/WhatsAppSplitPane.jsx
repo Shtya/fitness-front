@@ -712,7 +712,11 @@ export default function WhatsAppSplitPane({
 										/>
 									))}
 									{message.text ? (
-										<div className="wa-message-copy">
+										<div
+											className="wa-message-copy"
+											dir={presentation.dir}
+											lang={presentation.lang}
+										>
 											<ExpandableMessageText
 												text={message.text}
 												dir={presentation.dir}

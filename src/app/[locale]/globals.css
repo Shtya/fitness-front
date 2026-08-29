@@ -1025,7 +1025,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   font-feature-settings: "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1;
   direction: ltr;
   unicode-bidi: plaintext;
-  text-align: start;
+  text-align: left !important;
 }
 
 .wa-mobile-shell {
@@ -2730,8 +2730,8 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-text {
-  display: inline;
-  width: auto;
+  display: block;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
   overflow-wrap: break-word;
@@ -2746,27 +2746,28 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-copy {
-  display: inline-block;
+  display: block;
   max-width: 100%;
   min-width: 0;
   vertical-align: top;
 }
 
 .wa-message-copy .wa-message-text {
-  display: inline;
+  display: block;
+  width: 100%;
 }
 
 .wa-message-copy .wa-message-text.wa-message-text--ar,
 .wa-message-copy .wa-message-text[lang='ar'] {
-  direction: rtl;
-  text-align: right;
+  direction: rtl !important;
+  text-align: right !important;
   unicode-bidi: plaintext;
 }
 
 .wa-message-copy .wa-message-text.wa-message-text--en,
 .wa-message-copy .wa-message-text[lang='en'] {
-  direction: ltr;
-  text-align: left;
+  direction: ltr !important;
+  text-align: left !important;
   unicode-bidi: plaintext;
 }
 
@@ -6373,8 +6374,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-message-text {
-		display: inline;
-		width: auto;
+		display: block;
+		width: 100%;
 		min-width: 0;
 		max-width: 100%;
 		overflow-wrap: anywhere;
@@ -6402,7 +6403,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		letter-spacing: -0.011em;
 		font-feature-settings: "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1;
 		direction: ltr !important;
-		text-align: start;
+		text-align: left !important;
 	}
 
 	.wa-message-meta {
@@ -6420,7 +6421,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-message-copy {
-		display: inline-block;
+		display: block;
 		max-width: 100%;
 		min-width: 0;
 		vertical-align: top;

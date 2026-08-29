@@ -15,6 +15,7 @@ import {
 	Trash2,
 } from 'lucide-react';
 import { webTranslatorApi } from '@/lib/web-translator/web-translator-api';
+import { normalizeLookupText, toSaveWordPayload } from '@/lib/web-translator/text-utils';
 import { STUDIO } from '../ai-content-studio/components/studio-theme';
 import { CustomSelect } from '../ai-content-studio/components/CustomSelect';
 
@@ -127,7 +128,7 @@ export default function WebTranslatorStudio() {
 		setBusy('lookup');
 		try {
 			const { data } = await webTranslatorApi.lookup({
-				text,
+				text: normalizeLookupText(text),
 				sourceLang: settings?.sourceLang,
 				targetLang: settings?.targetLang,
 			});
@@ -143,7 +144,7 @@ export default function WebTranslatorStudio() {
 	const saveCurrent = async (payload) => {
 		setBusy('save');
 		try {
-			const { data } = await webTranslatorApi.saveWord(payload);
+			const { data } = await webTranslatorApi.saveWord(toSaveWordPayload(payload));
 			setLookup((prev) => (prev ? { ...prev, saved: true, savedId: data.id, websitePath: data.websitePath } : prev));
 			toast.success(t('saved'));
 			load();

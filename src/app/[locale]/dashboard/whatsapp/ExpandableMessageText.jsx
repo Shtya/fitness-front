@@ -65,7 +65,7 @@ export default function ExpandableMessageText({
 	};
 
 	return (
-		<span dir={dir} lang={lang} style={mergedStyle} className={className}>
+		<div dir={dir} lang={lang} style={mergedStyle} className={className}>
 			{renderText ? renderText(visible) : visible}
 			{remaining > 0 ? (
 				<>
@@ -84,6 +84,6 @@ export default function ExpandableMessageText({
 					</button>
 				</>
 			) : null}
-		</span>
+		</div>
 	);
 }

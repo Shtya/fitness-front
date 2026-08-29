@@ -1557,6 +1557,7 @@ function ImageMessage({
 	loading = false,
 	cover = true,
 	blurPlaceholder = false,
+	selectMode = false,
 }) {
 	const [loaded, setLoaded] = useState(false);
 	const [broken, setBroken] = useState(false);
@@ -1575,8 +1576,15 @@ function ImageMessage({
 		<button
 			type="button"
 			aria-label={alt || 'Open image preview'}
-			onClick={broken ? undefined : onOpen}
-			disabled={broken}
+			onClick={event => {
+				if (selectMode) {
+					// Parent bubble handles selection — don't open / retry.
+					return;
+				}
+				if (broken) return;
+				onOpen?.(event);
+			}}
+			disabled={broken && !selectMode}
 			className={`wa-photo-open relative block w-full overflow-hidden bg-black/5 ${cover ? 'h-full min-h-0' : 'h-auto'} ${className}`}
 		>
 			{placeholder && cover ? (
@@ -1950,12 +1958,77 @@ async function fetchAttachmentContentBlob(attachmentId, { timeout = 60_000 } = {
 // request at once, which saturated the browser connection pool and made each
 // one time out. Requests are therefore deduped per attachment and drained a few
 // at a time, with playback/open actions jumping ahead of background prefetches.
-const ATTACHMENT_FETCH_CONCURRENCY = 6;
-const ATTACHMENT_BLOB_CACHE_LIMIT = 80;
+const ATTACHMENT_FETCH_CONCURRENCY = 8;
+const ATTACHMENT_BLOB_CACHE_LIMIT = 120;
 const attachmentBlobCache = new Map();
 const attachmentBlobRequests = new Map();
 const attachmentFetchQueue = [];
 let attachmentFetchActive = 0;
+
+function attachmentFetchPriorityScore(attachmentId, { priority = false, kind = '' } = {}) {
+	if (priority) return 0;
+	const type = String(kind || '').toLowerCase();
+	if (
+		type === 'image' ||
+		type === 'sticker' ||
+		type === 'audio' ||
+		type === 'ptt' ||
+		type === 'voice'
+	) {
+		return 1;
+	}
+	if (type === 'video') return 2;
+	return 3;
+}
+
+function drainAttachmentFetchQueue() {
+	while (
+		attachmentFetchActive < ATTACHMENT_FETCH_CONCURRENCY &&
+		attachmentFetchQueue.length
+	) {
+		attachmentFetchQueue.sort((a, b) => a.score - b.score);
+		const task = attachmentFetchQueue.shift();
+		attachmentFetchActive += 1;
+		task.run().finally(() => {
+			attachmentFetchActive -= 1;
+			drainAttachmentFetchQueue();
+		});
+	}
+}
+
+function requestAttachmentBlob(
+	attachmentId,
+	{ timeout = 60_000, priority = false, kind = '' } = {},
+) {
+	const id = String(attachmentId || '');
+	if (!id) return Promise.reject(new Error('Attachment is unavailable'));
+	const cached = attachmentBlobCache.get(id);
+	if (cached) return Promise.resolve(cached);
+	const pending = attachmentBlobRequests.get(id);
+	if (pending) return pending;
+
+	const promise = new Promise((resolve, reject) => {
+		const run = () =>
+			fetchAttachmentContentBlob(id, { timeout })
+				.then(blob => {
+					rememberAttachmentBlob(id, blob);
+					resolve(blob);
+				})
+				.catch(reject);
+		const entry = {
+			score: attachmentFetchPriorityScore(id, { priority, kind }),
+			run,
+		};
+		if (priority) attachmentFetchQueue.unshift(entry);
+		else attachmentFetchQueue.push(entry);
+		drainAttachmentFetchQueue();
+	}).finally(() => {
+		attachmentBlobRequests.delete(id);
+	});
+
+	attachmentBlobRequests.set(id, promise);
+	return promise;
+}
 
 function rememberAttachmentBlob(attachmentId, blob) {
 	attachmentBlobCache.set(attachmentId, blob);
@@ -1971,47 +2044,6 @@ function forgetAttachmentBlob(attachmentId) {
 	if (!id) return;
 	attachmentBlobCache.delete(id);
 	attachmentBlobRequests.delete(id);
-}
-
-function drainAttachmentFetchQueue() {
-	while (
-		attachmentFetchActive < ATTACHMENT_FETCH_CONCURRENCY &&
-		attachmentFetchQueue.length
-	) {
-		const task = attachmentFetchQueue.shift();
-		attachmentFetchActive += 1;
-		task().finally(() => {
-			attachmentFetchActive -= 1;
-			drainAttachmentFetchQueue();
-		});
-	}
-}
-
-function requestAttachmentBlob(attachmentId, { timeout = 60_000, priority = false } = {}) {
-	const id = String(attachmentId || '');
-	if (!id) return Promise.reject(new Error('Attachment is unavailable'));
-	const cached = attachmentBlobCache.get(id);
-	if (cached) return Promise.resolve(cached);
-	const pending = attachmentBlobRequests.get(id);
-	if (pending) return pending;
-
-	const promise = new Promise((resolve, reject) => {
-		const task = () =>
-			fetchAttachmentContentBlob(id, { timeout })
-				.then(blob => {
-					rememberAttachmentBlob(id, blob);
-					resolve(blob);
-				})
-				.catch(reject);
-		if (priority) attachmentFetchQueue.unshift(task);
-		else attachmentFetchQueue.push(task);
-		drainAttachmentFetchQueue();
-	}).finally(() => {
-		attachmentBlobRequests.delete(id);
-	});
-
-	attachmentBlobRequests.set(id, promise);
-	return promise;
 }
 
 /** Defers media requests until the bubble is close to the viewport. */
@@ -2642,6 +2674,25 @@ function isPersistedAttachmentId(value) {
 	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 }
 
+/** Any chat message that can be forwarded / shared (including image-only). */
+function isSharableChatMessage(message) {
+	if (!message?.id || message.optimistic) return false;
+	if (message.deletedMode && message.deletedMode !== 'none') return false;
+	return true;
+}
+
+function messageHasSelectableMedia(message) {
+	if (!isSharableChatMessage(message)) return false;
+	const type = String(message?.type || '').toLowerCase();
+	if (['image', 'sticker', 'video', 'document', 'audio', 'ptt', 'voice'].includes(type)) {
+		return true;
+	}
+	return (message?.attachments || []).some(item => {
+		const id = String(item?.id || '');
+		return Boolean(item?.demoAttachment || isDemoId(id) || isPersistedAttachmentId(id));
+	});
+}
+
 /** OS notification while the WhatsApp tab is open but not focused (PWA / browser). */
 function showWhatsAppDesktopNotification({
 	title,
@@ -2704,6 +2755,9 @@ function VoiceMessage({
 	seed,
 	fallbackDuration = 0,
 	labels = {},
+	sessionReady = true,
+	downloadStatus = '',
+	attachmentType = 'ptt',
 }) {
 	const audioRef = useRef(null);
 	const containerRef = useRef(null);
@@ -2712,19 +2766,22 @@ function VoiceMessage({
 	const loadPromiseRef = useRef(null);
 	const analyzedRef = useRef(false);
 	const ignoreAudioErrorRef = useRef(false);
+	const wasSessionReadyRef = useRef(sessionReady);
 	const [playing, setPlaying] = useState(false);
 	const [loadingPlayback, setLoadingPlayback] = useState(false);
 	const [loadFailed, setLoadFailed] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [playbackUrl, setPlaybackUrl] = useState(null);
 	const [playbackRate, setPlaybackRate] = useState(1);
+	const [prefetchNonce, setPrefetchNonce] = useState(0);
 	const fallbackBars = useMemo(() => seededWaveform(seed, 36), [seed]);
 	const [bars, setBars] = useState(fallbackBars);
 	const [duration, setDuration] = useState(
 		Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0,
 	);
 	const canFetchAttachment = demoAttachment || isPersistedAttachmentId(attachmentId);
-	const isNearViewport = useNearViewport(containerRef);
+	const isNearViewport = useNearViewport(containerRef, { rootMargin: '900px' });
+	const alreadyOnDisk = String(downloadStatus || '').toLowerCase() === 'downloaded';
 
 	useEffect(() => {
 		if (Number.isFinite(fallbackDuration) && fallbackDuration > 0) {
@@ -2755,6 +2812,29 @@ function VoiceMessage({
 		return () => window.clearTimeout(timer);
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- identity-only reset
 	}, [attachmentId, demoAttachment]);
+
+	useEffect(() => {
+		if (sessionReady && !wasSessionReadyRef.current) {
+			setLoadFailed(false);
+			setPrefetchNonce(value => value + 1);
+		}
+		wasSessionReadyRef.current = sessionReady;
+	}, [sessionReady]);
+
+	useEffect(() => {
+		const id = String(attachmentId || '');
+		if (!id) return undefined;
+		const onReady = event => {
+			if (String(event?.detail?.attachmentId || '') !== id) return;
+			forgetAttachmentBlob(id);
+			voiceBlobRef.current = null;
+			analyzedRef.current = false;
+			setLoadFailed(false);
+			setPrefetchNonce(value => value + 1);
+		};
+		window.addEventListener('wa-attachment-ready', onReady);
+		return () => window.removeEventListener('wa-attachment-ready', onReady);
+	}, [attachmentId]);
 
 	const ensurePlaybackReady = useCallback(async ({ priority = false, analyze = false, softFail = false } = {}) => {
 		const existingUrl = objectUrlRef.current;
@@ -2818,8 +2898,9 @@ function VoiceMessage({
 							let next = demoAttachment
 								? await demoApi.getMedia(rawDemoId(attachmentId))
 								: await requestAttachmentBlob(attachmentId, {
-										timeout: priority ? 45_000 : softFail ? 20_000 : 30_000,
-										priority: priority || !softFail,
+										timeout: priority ? 45_000 : softFail ? 25_000 : 35_000,
+										priority: priority || !softFail || alreadyOnDisk,
+										kind: attachmentType || 'ptt',
 									});
 							if (
 								next &&
@@ -2901,17 +2982,38 @@ function VoiceMessage({
 
 		loadPromiseRef.current = run;
 		return run;
-	}, [attachmentId, canFetchAttachment, demoAttachment, mimeType, url]);
+	}, [
+		alreadyOnDisk,
+		attachmentId,
+		attachmentType,
+		canFetchAttachment,
+		demoAttachment,
+		mimeType,
+		url,
+	]);
 
 	useEffect(() => {
 		if (!isNearViewport) return undefined;
 		if (!canFetchAttachment && !url) return undefined;
+		if (!sessionReady && !alreadyOnDisk && !url) return undefined;
 		const timer = window.setTimeout(() => {
-			// Prefetch playable blob, then refine waveform in background (never block UI).
-			void ensurePlaybackReady({ analyze: true, softFail: true }).catch(() => {});
-		}, 80);
+			// Prefetch playable blob early (like WhatsApp Web auto-download for voice).
+			void ensurePlaybackReady({
+				analyze: true,
+				softFail: true,
+				priority: alreadyOnDisk,
+			}).catch(() => {});
+		}, alreadyOnDisk ? 0 : 40);
 		return () => window.clearTimeout(timer);
-	}, [canFetchAttachment, ensurePlaybackReady, isNearViewport, url]);
+	}, [
+		alreadyOnDisk,
+		canFetchAttachment,
+		ensurePlaybackReady,
+		isNearViewport,
+		prefetchNonce,
+		sessionReady,
+		url,
+	]);
 
 	useEffect(() => {
 		const audio = audioRef.current;
@@ -3124,6 +3226,7 @@ export function MediaAttachment({
 	sessionReady = true,
 	messageRaw = null,
 	messageDurationSeconds = 0,
+	selectMode = false,
 }) {
 	const [url, setUrl] = useState(null);
 	const [loading, setLoading] = useState(() => !attachment?.previewDataUrl);
@@ -3133,6 +3236,7 @@ export function MediaAttachment({
 	const containerRef = useRef(null);
 	const wasSessionReadyRef = useRef(sessionReady);
 	const autoRetryCountRef = useRef(0);
+	const loadGenRef = useRef(0);
 	const isNearViewport = useNearViewport(containerRef);
 	const type = String(attachment?.type || '').toLowerCase();
 	const isVoice = type === 'audio' || type === 'ptt' || type === 'voice';
@@ -3151,6 +3255,7 @@ export function MediaAttachment({
 				return await requestAttachmentBlob(attachment.id, {
 					timeout: isHeavyMedia ? 120_000 : 45_000,
 					priority: true,
+					kind,
 				});
 			} catch (firstError) {
 				// Short retry — media often fails while WA is still hydrating.
@@ -3159,6 +3264,7 @@ export function MediaAttachment({
 					return await requestAttachmentBlob(attachment.id, {
 						timeout: isHeavyMedia ? 150_000 : 60_000,
 						priority: true,
+						kind,
 					});
 				} catch {
 					throw firstError;
@@ -3193,6 +3299,22 @@ export function MediaAttachment({
 	}, [sessionReady]);
 
 	useEffect(() => {
+		const attachmentId = String(attachment?.id || '');
+		if (!attachmentId) return undefined;
+		const onReady = event => {
+			const readyId = String(event?.detail?.attachmentId || '');
+			if (readyId !== attachmentId) return;
+			forgetAttachmentBlob(attachmentId);
+			autoRetryCountRef.current = 0;
+			setFailed(false);
+			setLoading(true);
+			setRetryNonce(value => value + 1);
+		};
+		window.addEventListener('wa-attachment-ready', onReady);
+		return () => window.removeEventListener('wa-attachment-ready', onReady);
+	}, [attachment?.id]);
+
+	useEffect(() => {
 		if (!failed || !sessionReady || !isNearViewport) return undefined;
 		if (autoRetryCountRef.current >= 2) return undefined;
 		const timer = window.setTimeout(() => {
@@ -3206,6 +3328,7 @@ export function MediaAttachment({
 	useEffect(() => {
 		let cancelled = false;
 		let objectUrl = null;
+		const loadGen = ++loadGenRef.current;
 		if (isVoice || isDocument) {
 			setLoading(false);
 			return undefined;
@@ -3222,11 +3345,11 @@ export function MediaAttachment({
 			return undefined;
 		}
 		if (!isNearViewport) return undefined;
-		if (!url) setLoading(true);
+		setLoading(true);
 		setFailed(false);
 		loadAttachmentBlob()
 			.then(blob => {
-				if (cancelled) return;
+				if (cancelled || loadGenRef.current !== loadGen) return;
 				const kind = String(attachment?.type || '').toLowerCase();
 				const mime = String(attachment?.mimeType || blob?.type || '').toLowerCase();
 				let nextBlob = blob;
@@ -3248,10 +3371,10 @@ export function MediaAttachment({
 				setFailed(false);
 			})
 			.catch(() => {
-				if (!cancelled) setFailed(true);
+				if (!cancelled && loadGenRef.current === loadGen) setFailed(true);
 			})
 			.finally(() => {
-				if (!cancelled) setLoading(false);
+				if (loadGenRef.current === loadGen) setLoading(false);
 			});
 		return () => {
 			cancelled = true;
@@ -3304,6 +3427,9 @@ export function MediaAttachment({
 				seed={String(attachment.id || attachment.fileName || attachment.url)}
 				fallbackDuration={fromName || fromMessage || 0}
 				labels={labels}
+				sessionReady={sessionReady}
+				downloadStatus={attachment.downloadStatus}
+				attachmentType={type || 'ptt'}
 			/>
 		);
 	}
@@ -3464,11 +3590,13 @@ export function MediaAttachment({
 				<ImageMessage
 					url={url || previewDataUrl}
 					previewUrl={url ? previewDataUrl : null}
-					loading={Boolean((loading || (!url && isNearViewport)) && !failed)}
+					loading={Boolean(loading && !failed && !url)}
 					alt={attachment.fileName || 'image'}
 					cover={isGallery}
 					blurPlaceholder={!url && Boolean(previewDataUrl)}
+					selectMode={selectMode}
 					onOpen={() => {
+						if (selectMode) return;
 						if (url) {
 							onOpenImage?.(attachment.id);
 							return;
@@ -3614,6 +3742,7 @@ function MessageAttachments({
 	sessionReady = true,
 	messageRaw = null,
 	message = null,
+	selectMode = false,
 }) {
 	const rawPreview = mediaPreviewFromRaw(messageRaw);
 	const voiceDuration = voiceDurationSecondsFromSource(message || { raw: messageRaw, attachments });
@@ -3664,6 +3793,7 @@ function MessageAttachments({
 								onOpenDocument={onOpenDocument}
 								layout={visibleImages.length === 1 ? 'single' : 'gallery'}
 								sessionReady={sessionReady}
+								selectMode={selectMode}
 								className={visibleImages.length === 1 ? '' : 'rounded-none'}
 							/>
 							{index === 3 && images.length > 4 && (
@@ -3683,6 +3813,7 @@ function MessageAttachments({
 								onOpenImage={onOpenImage}
 								onOpenDocument={onOpenDocument}
 								sessionReady={sessionReady}
+								selectMode={selectMode}
 							/>
 						</div>
 					))}
@@ -3698,6 +3829,7 @@ function MessageAttachments({
 					onOpenImage={onOpenImage}
 					onOpenDocument={onOpenDocument}
 					sessionReady={sessionReady}
+					selectMode={selectMode}
 					messageRaw={messageRaw}
 					messageDurationSeconds={voiceDuration}
 				/>
@@ -4006,7 +4138,9 @@ function MessageActionMenu({
 
 	if (!open || !message) return null;
 	const ar = locale === 'ar';
-	const canSelect = isSelectableTranscriptMessage(message);
+	const canSelectTranscript = isSelectableTranscriptMessage(message);
+	const canSelectMedia = messageHasSelectableMedia(message);
+	const canSelect = canSelectTranscript || canSelectMedia;
 	const hasCopyableText = Boolean(String(message.text || '').trim());
 	const isOutboundText =
 		String(message.type || 'text').toLowerCase() === 'text' &&
@@ -4015,7 +4149,7 @@ function MessageActionMenu({
 	const actions = [
 		isVoice && { id: 'transcribe', label: ar ? 'تحويل إلى نص' : 'Transcribe', icon: Mic },
 		canUseBoard &&
-			canSelect && {
+			canSelectTranscript && {
 				id: 'addToBoard',
 				label: ar ? 'إضافة للمهام…' : 'Add to tasks…',
 				icon: LayoutGrid,
@@ -4026,7 +4160,11 @@ function MessageActionMenu({
 			label: ar ? 'إضافة لمجموعة رسائل' : 'Add to message group',
 			icon: FolderKanban,
 		},
-		canSelect && { id: 'select', label: ar ? 'تحديد' : 'Select', icon: ListChecks },
+		canSelect && {
+			id: canSelectMedia && !canSelectTranscript ? 'selectMedia' : 'select',
+			label: ar ? 'تحديد' : 'Select',
+			icon: ListChecks,
+		},
 		hasCopyableText && { id: 'copy', label: ar ? 'نسخ النص' : 'Copy text', icon: Copy },
 		{ id: 'reply', label: ar ? 'رد' : 'Reply', icon: Reply },
 		isOutboundText && { id: 'edit', label: ar ? 'تعديل' : 'Edit', icon: FileText },
@@ -8516,6 +8654,47 @@ function WhatsAppWorkspaceContent() {
 					message => ({ ...message, reactions: event.payload.reactions || [] }),
 				);
 			}
+			if (event.event === 'attachment_ready' && event.payload?.attachmentId) {
+				const attachmentId = String(event.payload.attachmentId);
+				forgetAttachmentBlob(attachmentId);
+				const applyReady = items =>
+					(items || []).map(message => {
+						if (!message?.attachments?.length) return message;
+						let changed = false;
+						const attachments = message.attachments.map(item => {
+							if (String(item?.id) !== attachmentId) return item;
+							changed = true;
+							return {
+								...item,
+								downloadStatus: 'downloaded',
+								mimeType: event.payload.mimeType || item.mimeType,
+							};
+						});
+						return changed ? { ...message, attachments } : message;
+					});
+				if (eventConversationId) {
+					const cached = messagesCacheRef.current.get(eventConversationId);
+					if (cached) {
+						messagesCacheRef.current.set(eventConversationId, {
+							...cached,
+							items: applyReady(cached.items),
+							cachedAt: Date.now(),
+						});
+					}
+					if (eventConversationId === activeConversationId) {
+						writeConversationMessages(eventConversationId, applyReady);
+					}
+				}
+				window.dispatchEvent(
+					new CustomEvent('wa-attachment-ready', {
+						detail: {
+							attachmentId,
+							messageId: event.payload.messageId,
+							cached: Boolean(event.payload.cached),
+						},
+					}),
+				);
+			}
 			if (
 				event.event === 'message_updated' &&
 				eventConversationId === activeConversationId
@@ -10289,6 +10468,20 @@ function WhatsAppWorkspaceContent() {
 			applyMessageSelection(message, { toggle: false });
 			return;
 		}
+		if (action === 'selectMedia') {
+			const downloadable = collectDownloadableAttachments([message]);
+			if (downloadable.length) {
+				applyMediaSelection(downloadable);
+				return;
+			}
+			// Image envelope without persisted attachment — still allow Send-to selection.
+			if (isSharableChatMessage(message)) {
+				applyGroupMessageSelection(message, { toggle: false });
+			} else {
+				toast.error(t.noMediaToSelect);
+			}
+			return;
+		}
 		if (action === 'copy') {
 			const text = String(message.text || '').trim();
 			if (!text) {
@@ -10482,6 +10675,12 @@ function WhatsAppWorkspaceContent() {
 				if (groupSelectMode) applyGroupMessageSelection(message, { toggle: false });
 				else if (isSelectableTranscriptMessage(message)) {
 					applyMessageSelection(message, { toggle: false });
+				} else if (messageHasSelectableMedia(message)) {
+					const downloadable = collectDownloadableAttachments([message]);
+					if (downloadable.length) applyMediaSelection(downloadable);
+					else applyGroupMessageSelection(message, { toggle: false });
+				} else if (isSharableChatMessage(message)) {
+					applyGroupMessageSelection(message, { toggle: false });
 				}
 			}
 			setActionMessageId(null);
@@ -10503,6 +10702,23 @@ function WhatsAppWorkspaceContent() {
 		if (!messageIds.length || !targetConversationId || sharingBusy) return;
 		setSharingBusy(true);
 		try {
+			// Warm media onto disk first — share fails when attachment is still pending.
+			const selected = (effectiveMessages || []).filter(item => messageIds.includes(item.id));
+			for (const message of selected) {
+				for (const attachment of message.attachments || []) {
+					const id = String(attachment?.id || '');
+					if (!isPersistedAttachmentId(id)) continue;
+					try {
+						await requestAttachmentBlob(id, {
+							timeout: 90_000,
+							priority: true,
+							kind: attachment.type,
+						});
+					} catch {
+						/* backend share path will retry / report failure */
+					}
+				}
+			}
 			const { data } = await api.post(
 				`/whatsapp/conversations/${conversationId}/messages/share-as-original`,
 				{ targetConversationId, messageIds },
@@ -14792,7 +15008,9 @@ function WhatsAppWorkspaceContent() {
 															: message,
 													]);
 													const selectableInMediaMode =
-														mediaSelectMode && downloadableAttachments.length > 0;
+														mediaSelectMode &&
+														(downloadableAttachments.length > 0 ||
+															messageHasSelectableMedia(message));
 													const selectableInTicketMode =
 														ticketSelectMode &&
 														!groupedImages &&
@@ -14801,9 +15019,11 @@ function WhatsAppWorkspaceContent() {
 														groupSelectMode && !groupedImages && message?.id && !message.optimistic;
 													const allSelected =
 														selectableInMediaMode &&
-														downloadableAttachments.every(item =>
-															selectedMediaIds.has(item.id),
-														);
+														(downloadableAttachments.length
+															? downloadableAttachments.every(item =>
+																	selectedMediaIds.has(item.id),
+																)
+															: selectedMessageIds.has(message.id));
 													const messageSelected =
 														(selectableInTicketMode || selectableInGroupMode) &&
 														selectedMessageIds.has(message.id);
@@ -14901,7 +15121,13 @@ function WhatsAppWorkspaceContent() {
 																				applyMessageSelection(message);
 																				return;
 																			}
-																			applyMediaSelection(downloadableAttachments);
+																			if (downloadableAttachments.length) {
+																				applyMediaSelection(downloadableAttachments);
+																				return;
+																			}
+																			if (messageHasSelectableMedia(message) || isSharableChatMessage(message)) {
+																				applyGroupMessageSelection(message);
+																			}
 																		}}
 																		className={`mt-2 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
 																			isChecked
@@ -14946,7 +15172,11 @@ function WhatsAppWorkspaceContent() {
 																			return;
 																		}
 																		if (mediaSelectMode) {
-																			applyMediaSelection(downloadableAttachments);
+																			if (downloadableAttachments.length) {
+																				applyMediaSelection(downloadableAttachments);
+																			} else if (messageHasSelectableMedia(message)) {
+																				applyGroupMessageSelection(message);
+																			}
 																			return;
 																		}
 																		if (
@@ -14956,21 +15186,31 @@ function WhatsAppWorkspaceContent() {
 																			applyMessageSelection(message);
 																			return;
 																		}
-																		applyMediaSelection(downloadableAttachments);
-																	}}
-																	onClick={() => {
-																		if (selectableInGroupMode) {
+																		if (downloadableAttachments.length) {
+																			applyMediaSelection(downloadableAttachments);
+																			return;
+																		}
+																		if (messageHasSelectableMedia(message) || isSharableChatMessage(message)) {
 																			applyGroupMessageSelection(message);
-																			return;
 																		}
-																		if (selectableInTicketMode) {
-																			applyMessageSelection(message);
-																			return;
-																		}
-																		if (!selectableInMediaMode) return;
-																		applyMediaSelection(downloadableAttachments);
 																	}}
-																	onContextMenu={event => {
+																		onClick={() => {
+																			if (selectableInGroupMode) {
+																				applyGroupMessageSelection(message);
+																				return;
+																			}
+																			if (selectableInTicketMode) {
+																				applyMessageSelection(message);
+																				return;
+																			}
+																			if (!selectableInMediaMode) return;
+																			if (downloadableAttachments.length) {
+																				applyMediaSelection(downloadableAttachments);
+																				return;
+																			}
+																			applyGroupMessageSelection(message);
+																		}}
+																		onContextMenu={event => {
 																		openMessageContextMenu(event, message);
 																	}}
 															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${captionText && (isVisualMediaMessage || groupedImages) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${
@@ -15069,6 +15309,11 @@ function WhatsAppWorkspaceContent() {
 																				sessionReady={isAccountConnected}
 																				messageRaw={message.raw}
 																				message={message}
+																				selectMode={Boolean(
+																					mediaSelectMode ||
+																						ticketSelectMode ||
+																						groupSelectMode,
+																				)}
 																			/>
 																		)
 																		: !isDeleted && fallbackMediaPreview ? (
@@ -15172,7 +15417,11 @@ function WhatsAppWorkspaceContent() {
 																			/>
 																		</div>
 																	) : visibleText ? (
-																		<div className="wa-message-copy">
+																		<div
+																			className="wa-message-copy"
+																			dir={textPresentation.dir}
+																			lang={textPresentation.lang}
+																		>
 																			<MessageLinkPreview text={visibleText} labels={t} />
 																			{captionText ? (
 																				<ExpandableMessageText
