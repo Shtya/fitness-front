@@ -32,6 +32,24 @@ export const whatsappKeys = {
 	messagesRoot: () => ['whatsapp', 'messages'],
 };
 
+/** Adapter key used by workspace Map-style cache (`id` or `id:starred`). */
+export function messagesCacheKey(conversationId, starredOnly = false) {
+	const id = String(conversationId || '');
+	if (!id) return '';
+	return starredOnly ? `${id}:starred` : id;
+}
+
+function parseMessagesCacheKey(key) {
+	const raw = String(key || '');
+	if (raw.endsWith(':starred') || raw.endsWith(':important')) {
+		return {
+			id: raw.replace(/:(starred|important)$/, ''),
+			starredOnly: true,
+		};
+	}
+	return { id: raw, starredOnly: false };
+}
+
 export async function fetchConversations(accountId, params = {}) {
 	const page = params.page || 1;
 	const { data } = await api.get(`/whatsapp/accounts/${accountId}/conversations`, {
@@ -143,7 +161,8 @@ export function useWhatsAppQueryCache() {
 	const getMessagesCache = useCallback(
 		(conversationId) => {
 			if (!conversationId) return undefined;
-			return queryClient.getQueryData(whatsappKeys.messages(conversationId));
+			const { id, starredOnly } = parseMessagesCacheKey(conversationId);
+			return queryClient.getQueryData(whatsappKeys.messages(id, { starredOnly }));
 		},
 		[queryClient],
 	);
@@ -151,7 +170,8 @@ export function useWhatsAppQueryCache() {
 	const setMessagesCache = useCallback(
 		(conversationId, data) => {
 			if (!conversationId || !data) return;
-			queryClient.setQueryData(whatsappKeys.messages(conversationId), {
+			const { id, starredOnly } = parseMessagesCacheKey(conversationId);
+			queryClient.setQueryData(whatsappKeys.messages(id, { starredOnly }), {
 				...data,
 				cachedAt: data.cachedAt || Date.now(),
 			});

@@ -642,25 +642,84 @@ export function messageTextPresentation(text) {
 	};
 }
 
+/**
+ * WhatsApp-style inline formatting: *bold* _italic_ ~strike~ `code`
+ * (also accepts **bold**). Nested markers are left as plain text.
+ */
 export function parseWhatsAppBold(text) {
 	const value = String(text || '');
+	if (!value) return [{ text: '', bold: false, italic: false, strike: false, code: false }];
+	const pattern =
+		/`([^`\n]+)`|\*{1,2}(?=\S)([\s\S]*?\S)\*{1,2}|_(?=\S)([\s\S]*?\S)_|~(?=\S)([\s\S]*?\S)~/g;
 	const parts = [];
-	// WhatsApp uses *bold*; also accept **bold**
-	const pattern = /\*{1,2}(?=\S)([\s\S]*?\S)\*{1,2}/g;
 	let cursor = 0;
 	let match;
-
 	while ((match = pattern.exec(value)) !== null) {
 		if (match.index > cursor) {
-			parts.push({ text: value.slice(cursor, match.index), bold: false });
+			parts.push({
+				text: value.slice(cursor, match.index),
+				bold: false,
+				italic: false,
+				strike: false,
+				code: false,
+			});
 		}
-		parts.push({ text: match[1], bold: true });
+		if (match[1] != null) {
+			parts.push({ text: match[1], bold: false, italic: false, strike: false, code: true });
+		} else if (match[2] != null) {
+			parts.push({ text: match[2], bold: true, italic: false, strike: false, code: false });
+		} else if (match[3] != null) {
+			parts.push({ text: match[3], bold: false, italic: true, strike: false, code: false });
+		} else if (match[4] != null) {
+			parts.push({ text: match[4], bold: false, italic: false, strike: true, code: false });
+		}
 		cursor = match.index + match[0].length;
 	}
 	if (cursor < value.length) {
-		parts.push({ text: value.slice(cursor), bold: false });
+		parts.push({
+			text: value.slice(cursor),
+			bold: false,
+			italic: false,
+			strike: false,
+			code: false,
+		});
 	}
-	return parts.length ? parts : [{ text: value, bold: false }];
+	return parts.length
+		? parts
+		: [{ text: value, bold: false, italic: false, strike: false, code: false }];
+}
+
+/** Compress large images before upload while keeping the 25MB hard cap elsewhere. */
+export async function compressImageForWhatsApp(file, options = {}) {
+	if (!file || !String(file.type || '').startsWith('image/')) return file;
+	if (String(file.type || '').includes('gif')) return file;
+	const maxEdge = Number(options.maxEdge) || 1920;
+	const quality = Number(options.quality) || 0.82;
+	const minBytesToCompress = Number(options.minBytes) || 350 * 1024;
+	if (file.size < minBytesToCompress) return file;
+	if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas === 'undefined') {
+		return file;
+	}
+	try {
+		const bitmap = await createImageBitmap(file);
+		const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+		const width = Math.max(1, Math.round(bitmap.width * scale));
+		const height = Math.max(1, Math.round(bitmap.height * scale));
+		const canvas = new OffscreenCanvas(width, height);
+		const ctx = canvas.getContext('2d');
+		if (!ctx) {
+			bitmap.close?.();
+			return file;
+		}
+		ctx.drawImage(bitmap, 0, 0, width, height);
+		bitmap.close?.();
+		const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
+		if (!blob || blob.size >= file.size) return file;
+		const name = String(file.name || 'image.jpg').replace(/\.\w+$/, '.jpg');
+		return new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() });
+	} catch {
+		return file;
+	}
 }
 
 const MESSAGE_URL_PATTERN =
@@ -979,6 +1038,10 @@ const DISPLAYABLE_MEDIA_TYPES = new Set([
 	'document',
 	'location',
 	'live_location',
+	'contact',
+	'contacts',
+	'contactsArray',
+	'vcard',
 ]);
 
 const INVISIBLE_MESSAGE_CHARS_RE = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF\u00AD]/g;

@@ -34,10 +34,14 @@ export function shouldSkipOpenChatNetwork({
 	cacheIsFresh = false,
 	forceProvider = false,
 	itemCount = 0,
+	socketHealthy = false,
 } = {}) {
-	if (forceProvider || !cacheIsFresh || itemCount <= 0) return false;
-	// Warm in-memory thread: skip GET + phone work on reopen (any length).
-	return true;
+	if (forceProvider || itemCount <= 0) return false;
+	// Warm in-memory thread: skip GET + phone work on reopen.
+	if (cacheIsFresh) return true;
+	// Socket-healthy catch-up: keep local rows; live events fill gaps (WA Web-like).
+	if (socketHealthy) return true;
+	return false;
 }
 
 /**

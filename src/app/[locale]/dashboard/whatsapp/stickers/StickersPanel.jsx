@@ -8,6 +8,7 @@ import api from '@/utils/axios';
 import { clipboardImageFiles } from '../whatsapp-utils';
 import AiGenerateForm from './AiGenerateForm';
 import StickerPromptStudio from './StickerPromptStudio';
+import GiphyPicker from './GiphyPicker';
 
 const STICKER_EDGE = 512;
 const STICKER_TARGET_BYTES = 480 * 1024;
@@ -493,10 +494,24 @@ export default function StickersPanel({
 					))}
 				</div>
 			) : tab === 'gif' ? (
-				<div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-[#667781]">
-					<ImageIcon size={30} />
-					<p className="text-sm font-semibold">{ar ? 'الـ GIF قريبًا' : 'GIFs coming soon'}</p>
-				</div>
+				process.env.NEXT_PUBLIC_GIPHY_API_KEY || process.env.NEXT_PUBLIC_TENOR_API_KEY ? (
+					<GiphyPicker
+						ar={ar}
+						apiKey={process.env.NEXT_PUBLIC_GIPHY_API_KEY || ''}
+						tenorKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ''}
+						onPick={file => onSendSticker?.(file)}
+					/>
+				) : (
+					<div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-[#667781]">
+						<ImageIcon size={30} />
+						<p className="text-sm font-semibold">
+							{ar ? 'أضف مفتاح Giphy أو Tenor في البيئة' : 'Add Giphy or Tenor API key in env'}
+						</p>
+						<p className="text-xs opacity-80">
+							NEXT_PUBLIC_GIPHY_API_KEY / NEXT_PUBLIC_TENOR_API_KEY
+						</p>
+					</div>
+				)
 			) : (
 				<div className="flex min-h-0 flex-1 flex-col">
 					<div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
