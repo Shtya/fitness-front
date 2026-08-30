@@ -124,6 +124,7 @@ import {
 	isChannelConversation,
 	firstMessageLink,
 	textWithoutFirstLink,
+	formatWhatsAppPhone,
 	getStoryMediaEmbed,
 	groupConsecutiveImageMessages,
 	groupSenderIdentity,
@@ -1330,8 +1331,15 @@ function newClientMessageId() {
 	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function isLocalMediaUrl(url) {
+	return (
+		typeof url === 'string' &&
+		(url.startsWith('blob:') || url.startsWith('data:'))
+	);
+}
+
 function releaseBlobUrl(url) {
-	if (typeof url !== 'string' || !url.startsWith('blob:')) return;
+	if (!isLocalMediaUrl(url) || !String(url).startsWith('blob:')) return;
 	window.setTimeout(() => {
 		try {
 			URL.revokeObjectURL(url);
@@ -1344,7 +1352,15 @@ function releaseBlobUrl(url) {
 function releaseOptimisticMediaPreview(message) {
 	for (const attachment of message?.attachments || []) {
 		releaseBlobUrl(attachment?.url);
+		releaseBlobUrl(attachment?.previewDataUrl);
 	}
+}
+
+function localAttachmentPreview(attachment) {
+	if (!attachment) return null;
+	if (isLocalMediaUrl(attachment.previewDataUrl)) return attachment.previewDataUrl;
+	if (isLocalMediaUrl(attachment.url)) return attachment.url;
+	return null;
 }
 
 function outgoingMediaType(file, forcedType) {
@@ -1604,7 +1620,7 @@ function ImageMessage({
 	const showSkeleton = !isBroken && !previewReady && !loaded && !showFrame;
 	const fitClass = cover
 		? 'absolute inset-0 z-[1] h-full w-full object-cover'
-		: 'wa-photo-main relative z-[1] mx-auto block h-auto w-auto max-w-full object-contain';
+		: 'wa-photo-main relative z-[1] block h-auto w-full max-w-full';
 
 	return (
 		<button
@@ -1620,7 +1636,7 @@ function ImageMessage({
 			}}
 			disabled={selectMode && isBroken && !previewSrc}
 			className={`wa-photo-open relative block overflow-hidden ${
-				cover ? 'h-full min-h-0 w-full' : showFrame ? 'wa-photo-frame' : 'h-auto w-auto max-w-full'
+				cover ? 'h-full min-h-0 w-full' : showFrame ? 'wa-photo-frame' : 'h-auto w-full max-w-full'
 			} ${isPending ? 'is-loading' : isBroken ? 'is-unavailable' : 'is-ready'} ${
 				previewSrc ? 'wa-photo-has-preview' : 'wa-photo-no-preview'
 			} ${selectMode ? 'wa-photo-select-mode' : ''} ${className}`}
@@ -2238,10 +2254,10 @@ const MORE_REACTIONS = [
 ];
 
 function computeReactionPickerPosition(anchorRect, options = {}) {
-	const gap = 4;
+	const gap = 8;
 	const margin = 10;
-	const width = options.width || 156;
-	const height = options.height || 24;
+	const width = options.width || 312;
+	const height = options.height || 56;
 	const mine = Boolean(options.mine);
 	const viewportW =
 		typeof window === 'undefined' ? 1280 : window.innerWidth || 1280;
@@ -2636,6 +2652,25 @@ function VoiceMicIcon() {
 			<path
 				fill="currentColor"
 				d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
+			/>
+		</svg>
+	);
+}
+
+/** Filled mic for the composer (WhatsApp-style). Lucide stroke icons break under .wa-mic-button fill CSS. */
+function ComposerMicIcon({ size = 22 }) {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+			focusable="false"
+			className="wa-composer-mic-icon"
+		>
+			<path
+				fill="currentColor"
+				d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm4.89-3a4.89 4.89 0 0 1-9.78 0H5.5a6.5 6.5 0 0 0 5.75 6.21V21h1.5v-3.79A6.5 6.5 0 0 0 18.5 11h-1.61Z"
 			/>
 		</svg>
 	);
@@ -3315,8 +3350,9 @@ export function MediaAttachment({
 	avatarLabel = '?',
 	avatarSrc = '',
 }) {
-	const [url, setUrl] = useState(null);
-	const [loading, setLoading] = useState(() => !attachment?.previewDataUrl);
+	const initialLocalPreview = localAttachmentPreview(attachment);
+	const [url, setUrl] = useState(() => initialLocalPreview);
+	const [loading, setLoading] = useState(() => !initialLocalPreview);
 	const [failed, setFailed] = useState(false);
 	const [fileAction, setFileAction] = useState('');
 	const [retryNonce, setRetryNonce] = useState(0);
@@ -3329,14 +3365,43 @@ export function MediaAttachment({
 	const isVoice = type === 'audio' || type === 'ptt' || type === 'voice';
 	const isDocument = !['image', 'sticker', 'video', 'audio', 'ptt', 'voice'].includes(type);
 	const demoAttachment = Boolean(attachment?.demoAttachment || isDemoId(attachment?.id));
-	const previewDataUrl = attachment?.previewDataUrl || null;
+	const localPreview = localAttachmentPreview(attachment);
+	const previewDataUrl =
+		(isLocalMediaUrl(attachment?.previewDataUrl) ? attachment.previewDataUrl : null) ||
+		(type === 'image' || type === 'sticker' || type === 'video' ? localPreview : null);
 	const isGallery = layout === 'gallery';
 	const isSingleMedia = layout === 'single';
 	const alreadyOnDisk =
 		String(attachment?.downloadStatus || '').toLowerCase() === 'downloaded';
 	const canFetchWithoutSession = demoAttachment || alreadyOnDisk;
+	const attachmentIdStr = String(attachment?.id || '');
+	const isPendingAttachment =
+		attachmentIdStr.startsWith('pending-att:') || attachmentIdStr.startsWith('pending:');
 
 	const loadAttachmentBlob = useCallback(async () => {
+		// Outgoing optimistic media already has the file as a blob/data URL.
+		const localUrl = localAttachmentPreview(attachment);
+		if (localUrl) {
+			const response = await fetch(localUrl);
+			if (!response.ok) throw new Error(`Local media fetch failed (${response.status})`);
+			return response.blob();
+		}
+		const attachmentId = String(attachment?.id || '');
+		if (
+			attachmentId.startsWith('pending-att:') ||
+			attachmentId.startsWith('pending:') ||
+			!isPersistedAttachmentId(attachmentId)
+		) {
+			if (attachment?.url) {
+				const response = await fetch(attachment.url, {
+					mode: 'cors',
+					credentials: 'omit',
+				});
+				if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
+				return response.blob();
+			}
+			throw new Error('Attachment is unavailable');
+		}
 		if (attachment?.id) {
 			if (demoAttachment) return demoApi.getMedia(rawDemoId(attachment.id));
 			const kind = String(attachment?.type || '').toLowerCase();
@@ -3370,14 +3435,23 @@ export function MediaAttachment({
 			return response.blob();
 		}
 		throw new Error('Attachment is unavailable');
-	}, [attachment?.id, attachment?.type, attachment?.url, demoAttachment]);
+	}, [attachment, demoAttachment]);
 
 	useEffect(() => {
 		autoRetryCountRef.current = 0;
+		const local = localAttachmentPreview(attachment);
+		if (local) {
+			setUrl(local);
+			setFailed(false);
+			setLoading(false);
+			return;
+		}
 		setUrl(null);
 		setFailed(false);
 		setLoading(true);
-	}, [attachment?.id]);
+		// attachment fields change with the same id during optimistic→confirmed merge
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- reset when identity or local preview changes
+	}, [attachment?.id, attachment?.url, attachment?.previewDataUrl]);
 
 	useEffect(() => {
 		if (sessionReady && !wasSessionReadyRef.current) {
@@ -3429,20 +3503,42 @@ export function MediaAttachment({
 			setFailed(true);
 			return undefined;
 		}
+		const localUrl = localAttachmentPreview(attachment);
+		// Sender already has the file — show it immediately, never hit the API for pending-att.
+		if (localUrl && (isPendingAttachment || !isPersistedAttachmentId(attachmentId))) {
+			setUrl(localUrl);
+			setLoading(false);
+			setFailed(false);
+			return undefined;
+		}
 		if (!attachment?.id && !attachment?.url) {
 			setLoading(false);
 			setFailed(true);
 			return undefined;
 		}
 		if (!isNearViewport) return undefined;
+		// Keep showing the local optimistic preview while the durable copy loads.
+		if (localUrl) {
+			setUrl(localUrl);
+			setFailed(false);
+			setLoading(false);
+		}
 		// Cached media streams offline; pending media needs a linked WhatsApp session.
-		if (!sessionReady && !canFetchWithoutSession) {
+		if (!sessionReady && !canFetchWithoutSession && !localUrl) {
 			setLoading(false);
 			setFailed(true);
 			return undefined;
 		}
-		setLoading(true);
-		setFailed(false);
+		// No durable server id yet and no local file — nothing to fetch.
+		if (!isPersistedAttachmentId(attachmentId) && !demoAttachment && !localUrl) {
+			setLoading(false);
+			setFailed(true);
+			return undefined;
+		}
+		if (!localUrl) {
+			setLoading(true);
+			setFailed(false);
+		}
 		loadAttachmentBlob()
 			.then(blob => {
 				if (cancelled || loadGenRef.current !== loadGen) return;
@@ -3467,7 +3563,10 @@ export function MediaAttachment({
 				setFailed(false);
 			})
 			.catch(() => {
-				if (!cancelled && loadGenRef.current === loadGen) setFailed(true);
+				// Keep local preview if fetch of durable copy fails.
+				if (!cancelled && loadGenRef.current === loadGen && !localUrl) {
+					setFailed(true);
+				}
 			})
 			.finally(() => {
 				if (loadGenRef.current === loadGen) setLoading(false);
@@ -3486,9 +3585,13 @@ export function MediaAttachment({
 		attachment?.id,
 		attachment?.mimeType,
 		attachment?.type,
+		attachment?.url,
+		attachment?.previewDataUrl,
 		canFetchWithoutSession,
+		demoAttachment,
 		isDocument,
 		isNearViewport,
+		isPendingAttachment,
 		isVoice,
 		loadAttachmentBlob,
 		retryNonce,
@@ -3683,8 +3786,8 @@ export function MediaAttachment({
 					isGallery
 						? `absolute inset-0 overflow-hidden ${className}`
 						: isSingleMedia
-							? `relative w-fit max-w-full overflow-hidden ${className}`
-							: `relative w-fit max-w-[min(100%,480px)] overflow-hidden ${className}`
+							? `relative w-full max-w-full overflow-hidden ${className}`
+							: `relative w-full max-w-full overflow-hidden ${className}`
 				}
 			>
 				<ImageMessage
@@ -3808,7 +3911,7 @@ export function MediaAttachment({
 		return (
 			<div
 				ref={containerRef}
-				className={`wa-video-wrap mb-2 ${selectMode ? 'pointer-events-none' : ''} ${className}`}
+				className={`wa-video-wrap ${selectMode ? 'pointer-events-none' : ''} ${className}`}
 			>
 				<video
 					key={url}
@@ -4170,8 +4273,8 @@ function MessageReactionPicker({
 			setPos(
 				computeReactionPickerPosition(anchorRect, {
 					mine,
-					width: measured?.width || (expanded ? 176 : 156),
-					height: measured?.height || (expanded ? 136 : 24),
+					width: measured?.width || (expanded ? 300 : 312),
+					height: measured?.height || (expanded ? 200 : 56),
 				}),
 			);
 		};
@@ -4244,7 +4347,7 @@ function MessageReactionPicker({
 					onClick={() => setExpanded(current => !current)}
 					className={`wa-reaction-picker-more ${expanded ? 'is-open' : ''}`}
 				>
-					{expanded ? <X size={10} strokeWidth={2.6} /> : <Plus size={11} strokeWidth={2.6} />}
+					{expanded ? <X size={16} strokeWidth={2.5} /> : <Plus size={18} strokeWidth={2.5} />}
 				</button>
 			</div>
 			{expanded && (
@@ -4573,7 +4676,7 @@ function MessageActionMenu({
 				className="wa-message-action-react-more"
 				aria-label={ar ? 'المزيد من التفاعلات' : 'More reactions'}
 			>
-				<Plus size={16} strokeWidth={2.3} />
+				<Plus size={18} strokeWidth={2.3} />
 			</button>
 		</div>
 	);
@@ -10145,7 +10248,8 @@ function WhatsAppWorkspaceContent() {
 			persistConversationMessages(targetConversationId, current =>
 				mergeMessages(current, [confirmedMessage], targetConversationId),
 			);
-			if (optimisticMessage) releaseOptimisticMediaPreview(optimisticMessage);
+			// Keep blob preview alive — mergeAttachments still references it until
+			// MediaAttachment swaps to the durable server copy.
 			if (conversationIdRef.current === targetConversationId && !isOptimisticVoiceType(type)) {
 				setDraft(current => (current.trim() === caption ? '' : current));
 				setReplyingTo(null);
@@ -12506,9 +12610,26 @@ function WhatsAppWorkspaceContent() {
 		setInChatSearchHits([]);
 	}, [conversationId]);
 
-	const assignStaffOptions = useMemo(
-		() => [
-			{ value: '', label: t.unassign, icon: UserCircle2 },
+	const assignStaffOptions = useMemo(() => {
+		const base = [{ value: '', label: t.unassign, icon: UserCircle2 }];
+		if (!assignableStaff.length) {
+			return [
+				...base,
+				{
+					value: '__no_assignable__',
+					label:
+						locale === 'ar' ? 'لا يوجد موظفون للتعيين' : 'No assignable staff',
+					description:
+						locale === 'ar'
+							? 'من الإعدادات → الصلاحيات: فعّل View و Use للموظف'
+							: 'In Settings → Access: enable View and Use for staff',
+					disabled: true,
+					icon: Users,
+				},
+			];
+		}
+		return [
+			...base,
 			...assignableStaff.map(user => {
 				const sla = report?.staff?.find(item => item.userId === user.id);
 				return {
@@ -12518,9 +12639,8 @@ function WhatsAppWorkspaceContent() {
 					description: staffAssignHint(sla, locale) || undefined,
 				};
 			}),
-		],
-		[assignableStaff, locale, report?.staff, t.unassign],
-	);
+		];
+	}, [assignableStaff, locale, report?.staff, t.unassign]);
 
 	const toggleConversationArchived = async (conversation, event) => {
 		event?.stopPropagation?.();
@@ -13299,7 +13419,14 @@ function WhatsAppWorkspaceContent() {
 
 	const setAccessFlag = (userId, flag, value) => {
 		setAccountAccess(current =>
-			current.map(row => (row.userId === userId ? { ...row, [flag]: value } : row)),
+			current.map(row => {
+				if (row.userId !== userId) return row;
+				const next = { ...row, [flag]: value };
+				/* Use implies View; turning View off also clears Use */
+				if (flag === 'canUse' && value) next.canView = true;
+				if (flag === 'canView' && !value) next.canUse = false;
+				return next;
+			}),
 		);
 	};
 
@@ -13310,14 +13437,37 @@ function WhatsAppWorkspaceContent() {
 			{
 				userId: user.id,
 				user,
+				/* View + Use required to appear in Assign dropdown / receive chats */
 				canView: true,
-				canUse: false,
+				canUse: true,
 				canManage: false,
 				canAssign: false,
 				canTransfer: false,
 			},
 		]);
 	};
+
+	const setAccessFull = (userId, enabled) => {
+		setAccountAccess(current =>
+			current.map(row =>
+				row.userId === userId
+					? {
+							...row,
+							canView: enabled,
+							canUse: enabled,
+							canManage: enabled,
+							canAssign: enabled,
+							canTransfer: enabled,
+						}
+					: row,
+			),
+		);
+	};
+
+	const isAccessFull = row =>
+		Boolean(
+			row?.canView && row?.canUse && row?.canManage && row?.canAssign && row?.canTransfer,
+		);
 
 	const saveAccess = async () => {
 		if (!accountId || (!canManageWhatsApp && !isAdmin)) return;
@@ -15088,7 +15238,7 @@ function WhatsAppWorkspaceContent() {
 														onChange={assignConversation}
 														size="sm"
 														fitContent
-														className="w-auto"
+														className="wa-chat-assign-select w-auto max-w-[14rem]"
 														buttonClassName="wa-chat-assign-trigger"
 														options={assignStaffOptions}
 													/>
@@ -16566,7 +16716,7 @@ function WhatsAppWorkspaceContent() {
 																onClick={startVoiceRecording}
 																className="wa-mic-button wa-input-action"
 															>
-																<Mic size={20} strokeWidth={2} />
+																<ComposerMicIcon size={22} />
 															</button>
 														</div>
 													)}
@@ -16821,11 +16971,20 @@ function WhatsAppWorkspaceContent() {
 							) : (
 								<div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-x-4 gap-y-5">
 									{groupedStatuses.map((story, storyIndex) => {
-										const name =
+										const rawName =
 											story.latest.contactName ||
 											(story.latest.isOwn
 												? selectedAccount?.label || t.accounts
-												: String(story.senderWaId).replace(/@.*$/, ''));
+												: '');
+										const digits = String(
+											rawName || story.senderWaId || '',
+										)
+											.replace(/@.*$/, '')
+											.replace(/\D/g, '');
+										const name =
+											rawName ||
+											formatWhatsAppPhone(digits) ||
+											String(story.senderWaId || '').replace(/@.*$/, '');
 										const viewed = story.isViewed;
 										const thumb = storyThumbs[story.latest.id];
 										return (
@@ -16902,7 +17061,18 @@ function WhatsAppWorkspaceContent() {
 											<Avatar label={selectedStatus.contactName || selectedStatus.senderWaId} size={8} />
 											<div className="min-w-0 flex-1">
 												<p className="truncate text-sm font-black">
-													{selectedStatus.contactName || (selectedStatus.isOwn ? selectedAccount?.label : String(selectedStatus.senderWaId).replace(/@.*$/, ''))}
+													{selectedStatus.contactName ||
+														(selectedStatus.isOwn
+															? selectedAccount?.label
+															: formatWhatsAppPhone(
+																	String(selectedStatus.senderWaId || '')
+																		.replace(/@.*$/, '')
+																		.replace(/\D/g, ''),
+																) ||
+																String(selectedStatus.senderWaId || '').replace(
+																	/@.*$/,
+																	'',
+																))}
 												</p>
 												<p className="text-[11px] text-white/60">{new Date(selectedStatus.publishedAt).toLocaleString()}</p>
 											</div>
@@ -17278,16 +17448,18 @@ function WhatsAppWorkspaceContent() {
 
 				{activeTab === 'emails' && (
 					<div className="wa-secondary-pane wa-emails-pane">
-						<Suspense
-							fallback={
-								<div className="wa-pane-loading">
-									<Loader2 size={18} className="animate-spin" />
-									{t.loading || 'Loading…'}
-								</div>
-							}
-						>
-							<EmailMemoWorkspace />
-						</Suspense>
+						<div className="min-h-0 flex-1 overflow-y-auto nice-scroll">
+							<Suspense
+								fallback={
+									<div className="wa-pane-loading">
+										<Loader2 size={18} className="animate-spin" />
+										{t.loading || 'Loading…'}
+									</div>
+								}
+							>
+								<EmailMemoWorkspace />
+							</Suspense>
+						</div>
 					</div>
 				)}
 
@@ -17543,18 +17715,40 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										</div>
 									) : (
-										<div className="overflow-x-auto">
-											<div className="min-w-[720px]">
-												<div className="grid grid-cols-[1fr_repeat(5,90px)] gap-2 border-b border-slate-100 p-2 text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:border-slate-800">
-													<span>Staff</span>{['View', 'Use', 'Manage', 'Assign', 'Transfer'].map(label => <span key={label} className="text-center">{label}</span>)}
-												</div>
-												{accountAccess.map(row => (
-													<div key={row.userId} className="grid grid-cols-[1fr_repeat(5,90px)] items-center gap-2 border-b border-slate-100 p-2.5 dark:border-slate-800">
-														<div className="flex items-center gap-2.5">
-															<Avatar label={row.user?.name} size={8} />
+										<div className="space-y-3">
+											<p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-snug text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+												{locale === 'ar'
+													? 'للظهور في قائمة التعيين يجب تفعيل View و Use. يمكنك استخدام Full access لكل الصلاحيات دفعة واحدة.'
+													: 'Staff need View + Use to appear in the Assign dropdown. Use Full access to grant every permission at once.'}
+											</p>
+											{accountAccess.map(row => {
+												const full = isAccessFull(row);
+												const assignReady = Boolean(row.canView && row.canUse);
+												return (
+													<div
+														key={row.userId}
+														className="rounded-2xl border border-slate-200 p-3.5 dark:border-slate-700"
+													>
+														<div className="flex items-start gap-2.5">
+															<Avatar label={row.user?.name} size={9} />
 															<div className="min-w-0 flex-1">
-																<p className="truncate font-bold">{row.user?.name}</p>
-																<p className="truncate text-xs text-slate-500">{row.user?.email}</p>
+																<div className="flex items-center gap-2">
+																	<p className="truncate font-bold text-[#111b21] dark:text-white">
+																		{row.user?.name}
+																	</p>
+																	{assignReady ? (
+																		<span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+																			{locale === 'ar' ? 'قابل للتعيين' : 'Assignable'}
+																		</span>
+																	) : (
+																		<span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+																			{locale === 'ar' ? 'غير قابل للتعيين' : 'Not assignable'}
+																		</span>
+																	)}
+																</div>
+																{row.user?.email ? (
+																	<p className="truncate text-xs text-slate-500">{row.user.email}</p>
+																) : null}
 															</div>
 															<button
 																type="button"
@@ -17569,18 +17763,85 @@ function WhatsAppWorkspaceContent() {
 																<X size={14} />
 															</button>
 														</div>
-														{['canView', 'canUse', 'canManage', 'canAssign', 'canTransfer'].map(flag => (
-															<div key={flag} className="flex justify-center">
-																<Toggle
-																	label={`${row.user?.name || 'Staff'} ${flag}`}
-																	checked={Boolean(row[flag])}
-																	onChange={value => setAccessFlag(row.userId, flag, value)}
-																/>
+
+														<div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-900/60">
+															<div className="min-w-0">
+																<p className="text-[12px] font-bold text-[#111b21] dark:text-white">
+																	{locale === 'ar' ? 'صلاحية كاملة' : 'Full access'}
+																</p>
+																<p className="text-[10px] text-slate-500">
+																	{locale === 'ar'
+																		? 'View + Use + Manage + Assign + Transfer'
+																		: 'View + Use + Manage + Assign + Transfer'}
+																</p>
 															</div>
-														))}
+															<Toggle
+																label={`${row.user?.name || 'Staff'} full access`}
+																checked={full}
+																onChange={value => setAccessFull(row.userId, value)}
+															/>
+														</div>
+
+														<div className="mt-3 grid gap-2 sm:grid-cols-2">
+															<label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-700">
+																<input
+																	type="checkbox"
+																	className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+																	checked={Boolean(row.canView)}
+																	onChange={event =>
+																		setAccessFlag(row.userId, 'canView', event.target.checked)
+																	}
+																/>
+																<span className="min-w-0">
+																	<span className="block text-[12px] font-bold">
+																		{locale === 'ar' ? 'قراءة (View)' : 'Read (View)'}
+																	</span>
+																	<span className="block text-[10px] text-slate-500">{t.permView}</span>
+																</span>
+															</label>
+															<label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-700">
+																<input
+																	type="checkbox"
+																	className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+																	checked={Boolean(row.canUse)}
+																	onChange={event =>
+																		setAccessFlag(row.userId, 'canUse', event.target.checked)
+																	}
+																/>
+																<span className="min-w-0">
+																	<span className="block text-[12px] font-bold">
+																		{locale === 'ar' ? 'استخدام (Use)' : 'Use'}
+																	</span>
+																	<span className="block text-[10px] text-slate-500">{t.permUse}</span>
+																</span>
+															</label>
+														</div>
+
+														<div className="mt-2 flex flex-wrap gap-2">
+															{[
+																{ flag: 'canManage', label: 'Manage' },
+																{ flag: 'canAssign', label: 'Assign' },
+																{ flag: 'canTransfer', label: 'Transfer' },
+															].map(item => (
+																<label
+																	key={item.flag}
+																	className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+																>
+																	<input
+																		type="checkbox"
+																		className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+																		checked={Boolean(row[item.flag])}
+																		onChange={event =>
+																			setAccessFlag(row.userId, item.flag, event.target.checked)
+																		}
+																	/>
+																	{item.label}
+																</label>
+															))}
+														</div>
 													</div>
-												))}
-											</div>
+												);
+											})}
 										</div>
 									)}
 								</Card>

@@ -227,6 +227,7 @@ test('buildOptimisticMediaMessage creates a pending voice bubble that merge can 
 	assert.equal(pending.optimistic, true);
 	assert.equal(pending.type, 'voice');
 	assert.equal(pending.attachments[0].url, 'blob:http://local/voice');
+	assert.equal(pending.attachments[0].previewDataUrl, null);
 	const confirmed = mergeMessages(
 		[pending],
 		[
@@ -246,6 +247,47 @@ test('buildOptimisticMediaMessage creates a pending voice bubble that merge can 
 	assert.equal(confirmed.length, 1);
 	assert.equal(confirmed[0].id, 'db-voice');
 	assert.equal(confirmed[0].optimistic, false);
+});
+
+test('buildOptimisticMediaMessage stores image preview for instant bubble display', () => {
+	const pending = buildOptimisticMediaMessage({
+		conversationId: 'chat-1',
+		clientMessageId: 'img-1',
+		type: 'image',
+		file: { type: 'image/jpeg', name: 'photo.jpg', size: 4096 },
+		previewUrl: 'blob:http://local/photo',
+	});
+	assert.equal(pending.attachments[0].url, 'blob:http://local/photo');
+	assert.equal(pending.attachments[0].previewDataUrl, 'blob:http://local/photo');
+});
+
+test('mergeMessages keeps local image preview when confirming outbound media', () => {
+	const pending = buildOptimisticMediaMessage({
+		conversationId: 'chat-1',
+		clientMessageId: 'img-2',
+		type: 'image',
+		file: { type: 'image/jpeg', name: 'photo.jpg', size: 4096 },
+		previewUrl: 'blob:http://local/photo-2',
+	});
+	const confirmed = mergeMessages(
+		[pending],
+		[
+			{
+				id: 'db-img',
+				conversationId: 'chat-1',
+				clientMessageId: 'img-2',
+				providerMessageId: 'provider-img',
+				type: 'image',
+				direction: 'outbound',
+				providerTimestamp: pending.providerTimestamp,
+				attachments: [{ id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', type: 'image' }],
+			},
+		],
+		'chat-1',
+	);
+	assert.equal(confirmed.length, 1);
+	assert.equal(confirmed[0].attachments[0].url, 'blob:http://local/photo-2');
+	assert.equal(confirmed[0].attachments[0].previewDataUrl, 'blob:http://local/photo-2');
 });
 
 test('scopeMessagesToConversation keeps items that carry no conversation id', () => {
@@ -298,6 +340,20 @@ test('pinned conversations stay above newer activity', () => {
 test('conversationTitle prefers alias names and formats the phone otherwise', () => {
 	assert.equal(conversationTitle({ group: { subject: 'Support' } }), 'Support');
 	assert.equal(conversationTitle({ contact: { name: 'Ahmed' } }), 'Ahmed');
+	assert.equal(
+		conversationTitle({
+			contact: { name: null, pushName: 'yassinnasser', phoneNumber: '201000000000' },
+			providerChatId: '201000000000@c.us',
+		}),
+		'yassinnasser',
+	);
+	assert.equal(
+		conversationTitle({
+			contact: { name: 'Ahmed Ibrahim', pushName: 'yassinnasser' },
+			providerChatId: '201000000000@c.us',
+		}),
+		'Ahmed Ibrahim',
+	);
 	assert.equal(
 		conversationTitle({ providerChatId: '201000000000@c.us' }),
 		'+201000000000',

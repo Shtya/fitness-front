@@ -51,6 +51,8 @@ const emptyOverview = {
 		accounts: [],
 		maxAccounts: 5,
 		linkingAccountId: null,
+		inSiteReady: false,
+		inSiteAccounts: [],
 	},
 	ai: { provider: 'ai-free', label: 'AI Free', configured: true, providers: [], preview: '' },
 	googleOAuth: {
@@ -491,6 +493,8 @@ export default function EmailMemoWorkspace() {
 	}, [load]);
 
 	const waAccounts = overview.whatsapp?.accounts || [];
+	const inSiteAccounts = overview.whatsapp?.inSiteAccounts || [];
+	const inSiteReady = Boolean(overview.whatsapp?.inSiteReady || inSiteAccounts.length);
 	const waLinking =
 		['qr_pending', 'connecting'].includes(overview.whatsapp?.status) ||
 		waAccounts.some((item) => ['qr_pending', 'connecting'].includes(item.status));
@@ -648,7 +652,7 @@ export default function EmailMemoWorkspace() {
 	};
 
 	const saveDeliveryDestination = (nextDestination) => {
-		if (!settings || nextDestination === (settings.deliveryDestination || 'whatsapp')) return;
+		if (!settings || nextDestination === (settings.deliveryDestination || 'in_site')) return;
 		const nextSettings = { ...settings, deliveryDestination: nextDestination };
 		setSettings(nextSettings);
 		return run(
@@ -730,21 +734,38 @@ export default function EmailMemoWorkspace() {
 	const maxAccounts = oauth.maxAccounts || 5;
 	const waMax = overview.whatsapp?.maxAccounts || 5;
 	const targetPhoneValue = displayWhatsAppPhone(settings?.targetChatId);
-	const deliveryDestination = settings?.deliveryDestination || 'whatsapp';
+	const deliveryDestination = settings?.deliveryDestination || 'in_site';
 	const deliveryUsesPhone =
 		deliveryDestination === 'whatsapp' || deliveryDestination === 'both';
 	const deliveryUsesInSite =
 		deliveryDestination === 'in_site' || deliveryDestination === 'both';
+	const deliveryInSiteOnly = deliveryUsesInSite && !deliveryUsesPhone;
 	const deliveryDestinationLabel =
 		deliveryDestination === 'in_site'
 			? t('deliveryInSite')
 			: deliveryDestination === 'both'
 				? t('deliveryBoth')
 				: t('deliveryWhatsApp');
+	const waPipelineReady = deliveryInSiteOnly ? inSiteReady : waOk;
+	const waPipelineLabel = deliveryInSiteOnly
+		? inSiteReady
+			? t('inSiteReady')
+			: t('notConnected')
+		: waOk
+			? t('connected')
+			: t('notConnected');
+
+	useEffect(() => {
+		if (deliveryInSiteOnly) setWaOpen(true);
+	}, [deliveryInSiteOnly]);
 
 	const sendOne = (row) => {
 		if (deliveryUsesPhone && !waOk) {
 			toast.error(t('connectWhatsApp'));
+			return;
+		}
+		if (deliveryInSiteOnly && !inSiteReady) {
+			toast.error(t('inSiteNeedsAccount'));
 			return;
 		}
 		return run(`send-${row.id}`, async () => {
@@ -758,6 +779,10 @@ export default function EmailMemoWorkspace() {
 	const sendNow = () => {
 		if (deliveryUsesPhone && !waOk) {
 			toast.error(t('connectWhatsApp'));
+			return;
+		}
+		if (deliveryInSiteOnly && !inSiteReady) {
+			toast.error(t('inSiteNeedsAccount'));
 			return;
 		}
 		const initial = { phase: 'collect', current: 0, total: 0 };
@@ -835,7 +860,7 @@ export default function EmailMemoWorkspace() {
 	}
 
 	return (
-		<div dir={isRtl ? 'rtl' : 'ltr'} className="relative flex min-h-full flex-col">
+		<div dir={isRtl ? 'rtl' : 'ltr'} className="relative flex min-h-0 flex-col">
 			<div
 				className="pointer-events-none absolute left-[8%] top-[-80px] h-[380px] w-[520px] rounded-full blur-3xl"
 				style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(59,130,246,0.08) 45%, transparent 70%)' }}
@@ -888,7 +913,7 @@ export default function EmailMemoWorkspace() {
 							{busy === 'import-inbox' ? <Loader2 className="animate-spin" size={13} /> : t('loadInbox')}
 						</StudioButton>
 					) : null}
-					<StudioButton primary disabled={busy === 'send-now' || (deliveryUsesPhone && !waOk)} onClick={sendNow}>
+					<StudioButton primary disabled={busy === 'send-now' || (deliveryUsesPhone ? !waOk : deliveryInSiteOnly && !inSiteReady)} onClick={sendNow}>
 						{busy === 'send-now' ? <Loader2 className="animate-spin" size={13} /> : <Send size={13} />}
 						{t('sendNow')}
 					</StudioButton>
@@ -1159,8 +1184,8 @@ export default function EmailMemoWorkspace() {
 										{t('whatsapp')}
 									</div>
 									<span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#6B7280]">
-										{waOk ? <ReadyCheck size={14} /> : <span className={`h-2.5 w-2.5 rounded-full ${waLinking ? 'animate-pulse bg-amber-500' : 'bg-slate-300'}`} />}
-										{waOk ? t('connected') : t('notConnected')}
+										{waPipelineReady ? <ReadyCheck size={14} /> : <span className={`h-2.5 w-2.5 rounded-full ${waLinking && !deliveryInSiteOnly ? 'animate-pulse bg-amber-500' : 'bg-slate-300'}`} />}
+										{waPipelineLabel}
 									</span>
 								</div>
 								<p className="mt-2 truncate text-[12px] text-[#6B7280]">
@@ -1177,11 +1202,45 @@ export default function EmailMemoWorkspace() {
 								{t('whatsapp')}
 							</div>
 							<span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#6B7280]">
-								{waOk ? <ReadyCheck size={14} /> : <span className={`h-2.5 w-2.5 rounded-full ${waLinking ? 'animate-pulse bg-amber-500' : 'bg-slate-300'}`} />}
-								{waOk ? t('connected') : t('notConnected')}
+								{waPipelineReady ? <ReadyCheck size={14} /> : <span className={`h-2.5 w-2.5 rounded-full ${waLinking && !deliveryInSiteOnly ? 'animate-pulse bg-amber-500' : 'bg-slate-300'}`} />}
+								{waPipelineLabel}
 							</span>
 						</div>
 
+						{deliveryInSiteOnly ? (
+							<div className="mb-4 space-y-2">
+								{inSiteAccounts.length ? (
+									inSiteAccounts.map((account, index) => (
+										<div key={account.id} className="rounded-[14px] border border-[#E5E7EB] px-3 py-2">
+											<div className="flex items-start justify-between gap-2">
+												<div className="min-w-0">
+													<p className="truncate text-sm font-medium text-[#111827] dark:text-slate-100">
+														{account.phoneNumber || account.label || t('whatsappDevice')}
+													</p>
+													<p className="text-[11px] text-[#6B7280]">
+														{account.label}
+														{' · '}
+														{t('inSiteInboxTarget')}
+													</p>
+												</div>
+												{index === 0 ? (
+													<span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+														{t('sendFromThis')}
+													</span>
+												) : null}
+											</div>
+										</div>
+									))
+								) : (
+									<p className="rounded-[14px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+										{t('inSiteNeedsAccount')}
+									</p>
+								)}
+							</div>
+						) : null}
+
+						{!deliveryInSiteOnly ? (
+						<>
 						<div className="space-y-2">
 							{waAccounts.map((account) => {
 								const sending = Boolean(account.sending || account.id === overview.whatsapp?.accountId);
@@ -1320,6 +1379,8 @@ export default function EmailMemoWorkspace() {
 						</div>
 						{waAccounts.length >= waMax ? (
 							<p className="mt-2 text-[11px] text-[#6B7280]">{t('maxWhatsApp')}</p>
+						) : null}
+						</>
 						) : null}
 
 						{settings ? (
@@ -1565,7 +1626,7 @@ export default function EmailMemoWorkspace() {
 					senders.length === 0 ? (
 						<p className="text-sm text-[#6B7280]">{t('noSenders')}</p>
 					) : (
-						<div className="flex max-h-52 flex-wrap gap-1.5 overflow-auto pb-1">
+						<div className="flex max-h-[min(50vh,22rem)] flex-wrap gap-1.5 overflow-y-auto overscroll-contain pb-1 nice-scroll">
 							{senders.map((sender) => (
 								<div
 									key={sender.email}
@@ -2061,7 +2122,7 @@ export default function EmailMemoWorkspace() {
 												<input
 													type="radio"
 													className="mt-1"
-													checked={(settings.deliveryDestination || 'whatsapp') === id}
+													checked={(settings.deliveryDestination || 'in_site') === id}
 													onChange={() =>
 														setSettings({ ...settings, deliveryDestination: id })
 													}
@@ -2077,7 +2138,7 @@ export default function EmailMemoWorkspace() {
 										</p>
 									)}
 								</div>
-								{(settings.deliveryDestination || 'whatsapp') !== 'in_site' && (
+								{(settings.deliveryDestination || 'in_site') !== 'in_site' && (
 									<>
 										<label className="block">
 											<div className="mb-1 font-semibold">{t('targetChat')}</div>

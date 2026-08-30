@@ -378,13 +378,23 @@ export function conversationTitle(conversation) {
 	const isChannel = isChannelConversation(conversation);
 	const phone = String(conversation?.contact?.phoneNumber || '').trim();
 	const contactName = String(conversation?.contact?.name || '').trim();
+	const pushName = String(
+		conversation?.contact?.pushName ||
+			conversation?.contact?.pushname ||
+			conversation?.contact?.notify ||
+			'',
+	).trim();
 	const groupSubject = String(conversation?.group?.subject || '').trim();
 
 	if (groupSubject && !isWeakConversationLabel(groupSubject, chatId, phone)) {
 		return groupSubject;
 	}
+	// WhatsApp order: saved contact → profile display name → phone.
 	if (contactName && !isWeakConversationLabel(contactName, chatId, phone)) {
 		return contactName;
+	}
+	if (pushName && !isWeakConversationLabel(pushName, chatId, phone)) {
+		return pushName;
 	}
 	if (isGroup) return 'Group';
 	if (isChannel) return 'Channel';
@@ -1242,6 +1252,11 @@ export function buildOptimisticMediaMessage({
 				fileName: file?.name || 'voice.webm',
 				sizeBytes: file?.size || 0,
 				url: previewUrl || null,
+				// Images/stickers read previewDataUrl immediately in MediaAttachment.
+				previewDataUrl:
+					previewUrl && ['image', 'sticker', 'video'].includes(mediaType)
+						? previewUrl
+						: null,
 			},
 		],
 	};

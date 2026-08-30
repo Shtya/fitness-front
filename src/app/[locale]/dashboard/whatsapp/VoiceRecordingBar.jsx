@@ -66,11 +66,11 @@ export function VoiceRecordingBar({
 					{previewActive ? (
 						<Headphones size={11} strokeWidth={2.2} />
 					) : (
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-							<rect x="8" y="3" width="8" height="12" rx="4" />
-							<path d="M5 11a7 7 0 0 0 14 0" />
-							<path d="M12 18v3" />
-							<path d="M9 21h6" />
+						<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+							<path
+								fill="currentColor"
+								d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm4.89-3a4.89 4.89 0 0 1-9.78 0H5.5a6.5 6.5 0 0 0 5.75 6.21V21h1.5v-3.79A6.5 6.5 0 0 0 18.5 11h-1.61Z"
+							/>
 						</svg>
 					)}
 				</div>
