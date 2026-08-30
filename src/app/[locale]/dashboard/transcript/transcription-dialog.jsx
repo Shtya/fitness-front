@@ -77,6 +77,10 @@ const labels = {
 		enhancing: 'Enhancing…',
 		summarize: 'Summarize',
 		summarizing: 'Summarizing…',
+		originalTranscript: 'Original transcript',
+		correctedTranscript: 'Corrected transcript',
+		showOriginal: 'Show original',
+		hideOriginal: 'Hide original',
 		audioLabel: 'Audio {n}',
 		messageLabel: 'Message',
 		missingVoice: '(Could not transcribe this voice note.)',
@@ -120,6 +124,10 @@ const labels = {
 		enhancing: 'جاري التحسين…',
 		summarize: 'تلخيص',
 		summarizing: 'جارٍ التلخيص…',
+		originalTranscript: 'النص الأصلي',
+		correctedTranscript: 'النص بعد التصحيح',
+		showOriginal: 'إظهار الأصلي',
+		hideOriginal: 'إخفاء الأصلي',
 		audioLabel: 'صوت {n}',
 		messageLabel: 'رسالة',
 		missingVoice: '(تعذر تحويل هذه الرسالة الصوتية.)',
@@ -199,6 +207,8 @@ export default function TranscriptionDialog({
 	const [batchIndex, setBatchIndex] = useState(0);
 	const [result, setResult] = useState(null);
 	const [text, setText] = useState('');
+	const [originalTranscript, setOriginalTranscript] = useState('');
+	const [originalExpanded, setOriginalExpanded] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [aiBusy, setAiBusy] = useState({ enhancing: false, summarizing: false });
 	const aiPanelRef = useRef(null);
@@ -226,6 +236,8 @@ export default function TranscriptionDialog({
 		setFileError('');
 		setResult(null);
 		setText('');
+		setOriginalTranscript('');
+		setOriginalExpanded(false);
 		setProgress(0);
 		setElapsed(0);
 		setBatchIndex(0);
@@ -260,6 +272,18 @@ export default function TranscriptionDialog({
 			cancelled = true;
 		};
 	}, [loadFile, loadVoiceFile, open, singleVoice, sourceKey, t.fileError]);
+
+	useEffect(() => {
+		if (!result?.originalText || !result?.enhancedText) return;
+		if (originalTranscript) return;
+		setOriginalTranscript(String(result.originalText));
+		setOriginalExpanded(false);
+		if (typeof result.text === 'string' && result.text.trim()) {
+			setText(result.text);
+		} else {
+			setText(String(result.enhancedText));
+		}
+	}, [result?.id, result?.originalText, result?.enhancedText, result?.text, originalTranscript]);
 
 	useEffect(() => {
 		if (status !== 'processing') return undefined;
@@ -352,6 +376,8 @@ export default function TranscriptionDialog({
 				const nextText = String(data?.text || '').trim();
 				setResult(data);
 				setText(nextText);
+				setOriginalTranscript('');
+				setOriginalExpanded(false);
 				setStatus('done');
 				onCompleted?.(nextText, data);
 			} catch (error) {
@@ -466,6 +492,8 @@ export default function TranscriptionDialog({
 			}
 			setResult(merged);
 			setText(combinedText);
+			setOriginalTranscript('');
+			setOriginalExpanded(false);
 			setStatus('done');
 			onCompleted?.(combinedText, merged);
 			if (voiceSources.length && failedVoices === 0) {
@@ -695,55 +723,119 @@ export default function TranscriptionDialog({
 						</Button>
 
 						{result && (
-							<div className="rounded-xl border border-slate-200 bg-white p-2.5">
-								<div className="mb-2 flex items-center justify-between gap-2">
-									<h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-800">
-										<Check className="size-4 text-emerald-600" />
-										{t.result}
-									</h3>
-									<Button
-										size="sm"
-										variant="outline"
-										onClick={async () => {
-											await navigator.clipboard.writeText(text);
-											toast.success(t.copied);
+							<div className="space-y-2">
+								{originalTranscript ? (
+									<div className="overflow-hidden rounded-xl border border-slate-200 bg-[#f7f8fa]">
+										<button
+											type="button"
+											onClick={() => setOriginalExpanded(open => !open)}
+											className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-start"
+											aria-expanded={originalExpanded}
+										>
+											<span className="text-[12px] font-semibold text-slate-600">
+												{t.originalTranscript}
+											</span>
+											<span className="text-[11px] font-medium text-slate-500">
+												{originalExpanded ? t.hideOriginal : t.showOriginal}
+											</span>
+										</button>
+										{originalExpanded ? (
+											<pre
+												dir="auto"
+												className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words border-t border-slate-200 px-2.5 py-2 font-sans text-[12px] leading-5 text-slate-600"
+											>
+												{originalTranscript}
+											</pre>
+										) : null}
+									</div>
+								) : null}
+
+								<div className="relative rounded-xl border border-slate-200 bg-white p-2.5">
+									<div className="mb-2 flex items-center justify-between gap-2">
+										<h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-800">
+											<Check className="size-4 text-emerald-600" />
+											{originalTranscript ? t.correctedTranscript : t.result}
+										</h3>
+										<Button
+											size="sm"
+											variant="outline"
+											disabled={aiBusy.enhancing}
+											onClick={async () => {
+												await navigator.clipboard.writeText(text);
+												toast.success(t.copied);
+											}}
+										>
+											<Clipboard />
+											{t.copy}
+										</Button>
+									</div>
+									<textarea
+										dir="auto"
+										value={text}
+										disabled={aiBusy.enhancing}
+										onChange={event => setText(event.target.value)}
+										className={`min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-[#f7f8fa] p-2.5 text-[12px] leading-5 outline-none focus:border-[var(--color-primary-400)] disabled:opacity-70 ${
+											originalTranscript
+												? 'border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/35'
+												: ''
+										}`}
+									/>
+									{aiBusy.enhancing ? (
+										<div className="pointer-events-none absolute inset-x-2.5 bottom-2.5 top-12 flex items-center justify-center rounded-xl bg-white/55 backdrop-blur-[1px]">
+											<div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm">
+												<Loader2 className="size-4 animate-spin text-[var(--color-primary-600)]" />
+												{t.enhancing}
+											</div>
+										</div>
+									) : null}
+									<TranscriptionAiPanel
+										ref={aiPanelRef}
+										key={result.id}
+										variant="compact"
+										locale={locale}
+										transcriptionId={result.id}
+										transcriptText={text}
+										onApplyText={nextText => {
+											const next = String(nextText || '');
+											setText(next);
+											if (
+												originalTranscript &&
+												next.trim() === String(originalTranscript).trim()
+											) {
+												setOriginalTranscript('');
+												setOriginalExpanded(false);
+											}
 										}}
-									>
-										<Clipboard />
-										{t.copy}
-									</Button>
+										onEnhanced={payload => {
+											const original = String(payload?.originalText || '').trim();
+											const enhanced = String(payload?.enhancedText || '').trim();
+											if (original) {
+												setOriginalTranscript(original);
+												setOriginalExpanded(false);
+											}
+											if (enhanced) {
+												setText(enhanced);
+												onCompleted?.(enhanced, result);
+											}
+										}}
+										onBusyChange={onAiBusyChange}
+										onResultUpdated={updated => {
+											if (!updated) return;
+											setResult(updated);
+											if (typeof updated.text === 'string') setText(updated.text);
+										}}
+										initialCompare={
+											result.originalText && result.enhancedText
+												? {
+														originalText: result.originalText,
+														enhancedText: result.enhancedText,
+														changesSummary: result.enhancementMeta?.changesSummary || [],
+													}
+												: null
+										}
+										initialSummary={result.summaryPayload || null}
+									/>
 								</div>
-								<textarea
-									dir="auto"
-									value={text}
-									onChange={event => setText(event.target.value)}
-									className="min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-[#f7f8fa] p-2.5 text-[12px] leading-5 outline-none focus:border-[var(--color-primary-400)]"
-								/>
-								<TranscriptionAiPanel
-									ref={aiPanelRef}
-									key={result.id}
-									variant="compact"
-									locale={locale}
-									transcriptionId={result.id}
-									transcriptText={text}
-									onApplyText={nextText => setText(nextText)}
-									onBusyChange={onAiBusyChange}
-									onResultUpdated={updated => {
-										if (!updated) return;
-										setResult(updated);
-										if (typeof updated.text === 'string') setText(updated.text);
-									}}
-									initialCompare={
-										result.originalText && result.enhancedText
-											? {
-													originalText: result.originalText,
-													enhancedText: result.enhancedText,
-													changesSummary: result.enhancementMeta?.changesSummary || [],
-												}
-											: null
-									}
-									initialSummary={result.summaryPayload || null}
-								/>
 							</div>
 						)}
 					</>

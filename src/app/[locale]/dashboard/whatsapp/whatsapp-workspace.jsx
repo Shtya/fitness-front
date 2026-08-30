@@ -89,6 +89,11 @@ import {
 import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import TranscriptionDialog from '../transcript/transcription-dialog';
+import MessageSavedTranscript from './MessageSavedTranscript';
+import {
+	getMessageTranscriptsForIds,
+	saveMessageTranscripts,
+} from './whatsapp-message-transcripts';
 import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
 import CloneChatVoicePanel from './voice-changer/CloneChatVoicePanel';
@@ -108,6 +113,7 @@ import {
 } from './voice-changer/voice-changer-client';
 import {
 	createTranscriptionFile,
+	isMediaTranscriptKind,
 	isSelectableTranscriptMessage,
 	isVideoMessage as isTranscriptVideoMessage,
 	MAX_TRANSCRIPT_BUNDLE_ITEMS,
@@ -3956,6 +3962,16 @@ export function MediaAttachment({
 					poster={previewDataUrl && !isPlayableVideoUrl(previewDataUrl) ? previewDataUrl : undefined}
 					src={url}
 					className="wa-video-asset"
+					onLoadedMetadata={event => {
+						const node = event.currentTarget;
+						const wrap = node.parentElement;
+						const width = Number(node.videoWidth) || 0;
+						const height = Number(node.videoHeight) || 0;
+						if (!wrap || !width || !height) return;
+						wrap.style.setProperty('--wa-video-ar', `${width} / ${height}`);
+						wrap.classList.toggle('is-portrait', height > width);
+						wrap.classList.toggle('is-landscape', width >= height);
+					}}
 					onError={event => {
 						if (event.currentTarget.currentSrc !== url) return;
 						setFailed(true);
@@ -6488,6 +6504,7 @@ function WhatsAppWorkspaceContent() {
 	const [loadingMessageInfo, setLoadingMessageInfo] = useState(false);
 	const [deleteMessageTarget, setDeleteMessageTarget] = useState(null);
 	const [transcriptionSources, setTranscriptionSources] = useState(null);
+	const [messageTranscripts, setMessageTranscripts] = useState(() => ({}));
 	const [conversationActionTarget, setConversationActionTarget] = useState(null);
 	const [conversationActionAnchor, setConversationActionAnchor] = useState(null);
 	const [conversationAssignTarget, setConversationAssignTarget] = useState(null);
@@ -6897,7 +6914,33 @@ function WhatsAppWorkspaceContent() {
 		setDeleteMessageTarget(null);
 		setMessageInfo(null);
 		setTranscriptionSources(null);
+		setMessageTranscripts({});
 	}, [conversationId]);
+
+	useEffect(() => {
+		const ids = (conversationMessages || [])
+			.filter(
+				item =>
+					isTranscriptVideoMessage(item) ||
+					['audio', 'ptt', 'voice'].includes(String(item?.type || '').toLowerCase()) ||
+					(Array.isArray(item?.attachments) &&
+						item.attachments.some(att =>
+							['audio', 'ptt', 'voice', 'video'].includes(String(att?.type || '').toLowerCase()),
+						)),
+			)
+			.map(item => item?.id)
+			.filter(Boolean);
+		if (!ids.length) return;
+		const loaded = getMessageTranscriptsForIds(ids);
+		setMessageTranscripts(current => {
+			const next = { ...loaded };
+			// Keep any in-memory entries that localStorage also has / freshly saved this session.
+			for (const [id, entry] of Object.entries(current || {})) {
+				if (ids.includes(id) && entry?.text && !next[id]) next[id] = entry;
+			}
+			return next;
+		});
+	}, [conversationId, conversationMessages]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return undefined;
@@ -16044,7 +16087,7 @@ function WhatsAppWorkspaceContent() {
 																		onContextMenu={event => {
 																		openMessageContextMenu(event, message);
 																	}}
-															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${
+															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${
 																		isEmailMemoMsg
 																			? 'bg-white text-slate-900 dark:bg-slate-900 dark:text-white'
 																			: mine
@@ -16189,6 +16232,16 @@ function WhatsAppWorkspaceContent() {
 																				<span>{quotedMessageLabel({ type: message.type }, locale)}</span>
 																			</div>
 																		)}
+																	{!isDeleted &&
+																	canTranscribeMedia &&
+																	messageTranscripts[message.id]?.text ? (
+																		<MessageSavedTranscript
+																			text={messageTranscripts[message.id].text}
+																			locale={locale}
+																			mine={mine}
+																			defaultOpen={false}
+																		/>
+																	) : null}
 																	{isDeleted ? (
 																		<div className="wa-message-copy">
 																			<p className="wa-message-text italic opacity-60">
@@ -18014,6 +18067,23 @@ function WhatsAppWorkspaceContent() {
 				}}
 				items={transcriptionSources}
 				loadVoiceFile={loadTranscriptionSourceFile}
+				onCompleted={(text, data) => {
+					const nextText = String(text || '').trim();
+					if (!nextText) return;
+					const mediaSources = (transcriptionSources || []).filter(item =>
+						isMediaTranscriptKind(item?.kind),
+					);
+					if (!mediaSources.length) return;
+					const entries = mediaSources.map(item => ({
+						messageId: item.id,
+						text: nextText,
+						transcriptionId: data?.id || null,
+					}));
+					const saved = saveMessageTranscripts(entries);
+					if (Object.keys(saved).length) {
+						setMessageTranscripts(current => ({ ...current, ...saved }));
+					}
+				}}
 			/>
 			<ChatImageViewer
 				images={chatImages}

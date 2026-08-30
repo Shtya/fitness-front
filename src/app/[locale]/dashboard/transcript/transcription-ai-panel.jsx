@@ -55,6 +55,10 @@ const labels = {
 		needText: 'Add transcript text first.',
 		enhancedBadge: 'Enhanced',
 		memorizedBadge: 'Memorized',
+		originalCollapsed: 'Original transcript',
+		enhancedOpen: 'Corrected transcript',
+		enhanceApplied: 'Transcript corrected',
+		toggleOriginal: 'Show / hide original',
 	},
 	ar: {
 		aiTools: 'تنظيف بالذكاء الاصطناعي + تثبيت',
@@ -92,6 +96,10 @@ const labels = {
 		needText: 'أضف نص التحويل أولاً.',
 		enhancedBadge: 'محسّن',
 		memorizedBadge: 'مثبّت',
+		originalCollapsed: 'النص الأصلي',
+		enhancedOpen: 'النص بعد التصحيح',
+		enhanceApplied: 'تم تصحيح النص',
+		toggleOriginal: 'إظهار / إخفاء الأصلي',
 	},
 };
 
@@ -102,6 +110,7 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 	onApplyText,
 	onResultUpdated,
 	onBusyChange,
+	onEnhanced,
 	initialCompare = null,
 	initialMemorize = null,
 	initialSummary = null,
@@ -140,17 +149,22 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 				text,
 				locale: 'auto',
 				mode: 'full',
-				apply: false,
+				// Persist corrected text so Copy / Save use the enhanced version.
+				apply: true,
 			});
+			const originalText = data.originalText || text;
+			const enhancedText = String(data.enhancedText || text).trim() || text;
 			const next = {
-				originalText: data.originalText || text,
-				enhancedText: data.enhancedText || text,
+				originalText,
+				enhancedText,
 				changesSummary: data.changesSummary || [],
 			};
 			setCompare(next);
 			setView('compare');
+			onApplyText?.(enhancedText);
+			onEnhanced?.(next);
 			onResultUpdated?.(data.transcription || null);
-			toast.success(t.compare);
+			toast.success(t.enhanceApplied);
 		} catch (error) {
 			toast.error(error?.response?.data?.message || t.enhanceFailed);
 		} finally {
@@ -373,44 +387,7 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 
 			{view === 'compare' && compare ? (
 				<div className={compact ? 'space-y-2' : 'mt-4 space-y-4'}>
-					{compact ? (
-						<div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-							<div className="flex min-h-[132px] max-h-[180px]">
-								<div className="flex min-w-0 flex-1 flex-col border-e border-slate-200">
-									<div className="flex items-center justify-between gap-1 border-b border-slate-100 px-2 py-1">
-										<p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-											{t.before}
-										</p>
-										<span className="rounded-full bg-slate-200/80 px-1.5 py-px text-[9px] font-bold text-slate-600">
-											ASR
-										</span>
-									</div>
-									<pre
-										dir="auto"
-										className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words p-2 font-sans text-[11px] leading-5 text-slate-700"
-									>
-										{compare.originalText}
-									</pre>
-								</div>
-								<div className="flex min-w-0 flex-1 flex-col bg-[var(--color-primary-50)]/50">
-									<div className="flex items-center justify-between gap-1 border-b border-[var(--color-primary-100)] px-2 py-1">
-										<p className="text-[10px] font-black uppercase tracking-wide text-[var(--color-primary-700)]">
-											{t.after}
-										</p>
-										<span className="rounded-full bg-[var(--color-primary-500)] px-1.5 py-px text-[9px] font-bold text-white">
-											{t.enhancedBadge}
-										</span>
-									</div>
-									<pre
-										dir="auto"
-										className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words p-2 font-sans text-[11px] leading-5 text-slate-800"
-									>
-										{compare.enhancedText}
-									</pre>
-								</div>
-							</div>
-						</div>
-					) : (
+					{compact ? null : (
 						<div className="grid gap-3 lg:grid-cols-2">
 							<div className={card}>
 								<div className="mb-2 flex items-center justify-between gap-2">
@@ -457,15 +434,23 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 						) : (
 							<p className={`mt-1.5 ${compact ? 'text-[11px]' : 'text-sm'} text-slate-500`}>{t.noChanges}</p>
 						)}
-						<div className="mt-2 flex flex-wrap gap-2">
-							<Button size="sm" onClick={applyEnhanced}>
-								<Check />
-								{t.apply}
-							</Button>
-							<Button size="sm" variant="outline" onClick={revertBefore}>
-								{t.revert}
-							</Button>
-						</div>
+						{!compact ? (
+							<div className="mt-2 flex flex-wrap gap-2">
+								<Button size="sm" onClick={applyEnhanced}>
+									<Check />
+									{t.apply}
+								</Button>
+								<Button size="sm" variant="outline" onClick={revertBefore}>
+									{t.revert}
+								</Button>
+							</div>
+						) : (
+							<div className="mt-2 flex flex-wrap gap-2">
+								<Button size="sm" variant="outline" onClick={revertBefore}>
+									{t.revert}
+								</Button>
+							</div>
+						)}
 					</div>
 				</div>
 			) : null}
