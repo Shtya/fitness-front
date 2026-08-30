@@ -127,6 +127,7 @@ import {
 	getStoryMediaEmbed,
 	groupConsecutiveImageMessages,
 	groupSenderIdentity,
+	messagesFormBubbleCluster,
 	isRenderableWhatsAppMessage,
 	isWhatsAppLocationMessage,
 	whatsAppLocationFromMessage,
@@ -15398,10 +15399,22 @@ function WhatsAppWorkspaceContent() {
 														? row.messages[row.messages.length - 1]
 														: row.message;
 													const previousRow = messageRows[rowIndex - 1];
+													const nextRow = messageRows[rowIndex + 1];
+													const rowStartMessage = groupedImages
+														? row.messages[0]
+														: row.message;
+													const rowEndMessage = groupedImages
+														? row.messages[row.messages.length - 1]
+														: row.message;
 													const previousMessage = previousRow
 														? previousRow.kind === 'image-gallery'
 															? previousRow.messages[previousRow.messages.length - 1]
 															: previousRow.message
+														: null;
+													const nextMessage = nextRow
+														? nextRow.kind === 'image-gallery'
+															? nextRow.messages[0]
+															: nextRow.message
 														: null;
 													const messageDate = message.providerTimestamp || message.created_at;
 													const previousMessageDate = previousMessage?.providerTimestamp || previousMessage?.created_at;
@@ -15484,6 +15497,17 @@ function WhatsAppWorkspaceContent() {
 													const isGroupChat =
 														selectedConversation?.type === 'group' ||
 														String(selectedConversation?.providerChatId || '').endsWith('@g.us');
+													const followsSame = messagesFormBubbleCluster(
+														previousMessage,
+														rowStartMessage,
+														{ isGroupChat },
+													);
+													const precedesSame = messagesFormBubbleCluster(
+														rowEndMessage,
+														nextMessage,
+														{ isGroupChat },
+													);
+													const hasBubbleTail = !followsSame;
 													const sender = groupSenderIdentity(message);
 													const previousSender = previousMessage
 														? groupSenderIdentity(previousMessage)
@@ -15491,9 +15515,7 @@ function WhatsAppWorkspaceContent() {
 													const sameSenderCluster =
 														isGroupChat &&
 														!mine &&
-														previousMessage &&
-														previousMessage.direction !== 'outbound' &&
-														dayLabel === previousDayLabel &&
+														followsSame &&
 														previousSender?.key &&
 														previousSender.key === sender.key;
 													const showGroupSenderMeta =
@@ -15535,6 +15557,8 @@ function WhatsAppWorkspaceContent() {
 														<div
 															key={row.key}
 															className={`wa-message-row min-w-0 max-w-full ${
+																followsSame ? 'wa-follows-same' : ''
+															} ${precedesSame ? 'wa-precedes-same' : ''} ${
 																isQuotedHighlight
 																	? 'wa-message-highlighted'
 																	: '[content-visibility:auto] [contain-intrinsic-size:80px]'
@@ -15663,7 +15687,7 @@ function WhatsAppWorkspaceContent() {
 																		onContextMenu={event => {
 																		openMessageContextMenu(event, message);
 																	}}
-															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${captionText && (isVisualMediaMessage || groupedImages) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${
+															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${captionText && (isVisualMediaMessage || groupedImages) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${
 																		isEmailMemoMsg
 																			? 'bg-white text-slate-900 dark:bg-slate-900 dark:text-white'
 																			: mine

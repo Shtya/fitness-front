@@ -1986,7 +1986,20 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   width: 100%;
   min-width: 0;
   margin-top: auto;
-  gap: 3px;
+  gap: 0;
+}
+
+/* WhatsApp stack: tight gap inside a run, roomier between runs */
+.wa-message-row + .wa-message-row {
+  margin-top: 12px;
+}
+
+.wa-message-row.wa-follows-same {
+  margin-top: 2px;
+}
+
+.wa-message-row:has(.wa-date-separator) {
+  margin-top: 0;
 }
 
 .wa-message-bubble.wa-message-email {
@@ -2280,13 +2293,68 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   width: fit-content;
   max-width: min(85%, 32.5rem);
   padding: 6px 12px 8px 12px;
+  border-radius: 7.5px;
+  position: relative;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+}
+
+.wa-message-mine {
+  background: var(--wa-outgoing) !important;
+  border-radius: 7.5px;
+}
+
+.wa-message-other {
+  background: var(--wa-incoming) !important;
+  border-radius: 7.5px;
+}
+
+.wa-message-mine.wa-has-tail {
+  border-start-end-radius: 0 !important;
+}
+
+.wa-message-other.wa-has-tail {
+  border-start-start-radius: 0 !important;
+}
+
+/* Single tail only on the first bubble of a run */
+.wa-message-other.wa-has-tail::before,
+.wa-message-mine.wa-has-tail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 13px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.wa-message-other.wa-has-tail::before {
+  inset-inline-start: -8px;
+  background: inherit;
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+
+.wa-message-mine.wa-has-tail::before {
+  inset-inline-end: -8px;
+  background: inherit;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.wa-message-bubble.wa-message-sticker.wa-has-tail::before,
+.wa-message-bubble.wa-message-email.wa-has-tail::before {
+  display: none;
+}
+
+.wa-message-bubble.wa-message-sticker,
+.wa-message-bubble.wa-message-sticker.wa-has-tail {
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .wa-message-bubble.wa-message-voice {
   min-width: min(220px, calc(100% - 16px));
   max-width: min(82%, 300px) !important;
   padding: 5px 8px 3px !important;
-  border-radius: 8px !important;
 }
 
 .wa-message-bubble.wa-message-media {
@@ -2307,12 +2375,13 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   width: 0;
   height: 34px;
   overflow: visible;
+  z-index: 8;
 }
 
 .wa-message-hover-actions {
   position: absolute;
   top: 50%;
-  z-index: 6;
+  z-index: 20;
   display: inline-flex;
   align-items: center;
   gap: 1px;
@@ -2326,12 +2395,12 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
     0 1px 4px rgba(11, 20, 26, 0.06);
   opacity: 0;
   pointer-events: none;
+  overflow: visible;
+  /* backdrop-filter clips ::after tooltips to the pill edge — keep solid fill only. */
   transform: translateY(calc(-50% + 4px)) scale(0.94);
   transition:
     opacity 140ms ease,
     transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .wa-message-hover-actions.is-incoming {
@@ -2348,6 +2417,13 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   opacity: 1;
   pointer-events: auto;
   transform: translateY(-50%) scale(1);
+  z-index: 40;
+}
+
+.group:hover,
+.group:focus-within {
+  z-index: 12;
+  overflow: visible;
 }
 
 .wa-message-hover-sep {
@@ -2371,6 +2447,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   background: transparent;
   color: #3b4a54;
   cursor: pointer;
+  overflow: visible;
   transition:
     background 140ms ease,
     color 140ms ease,
@@ -2418,14 +2495,15 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   transform: none;
 }
 
-/* Hover tooltips above the toolbar */
+/* Hover tooltips — below the chip so the pill / scroll parents don't crop them */
 .wa-message-hover-btn[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 7px);
+  bottom: auto;
   left: 50%;
-  z-index: 2;
-  padding: 4px 7px;
+  z-index: 60;
+  padding: 5px 8px;
   border-radius: 6px;
   background: #111b21;
   color: #fff;
@@ -2436,7 +2514,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateX(-50%) translateY(-3px);
   transition: opacity 120ms ease, transform 120ms ease;
   box-shadow: 0 3px 10px rgba(11, 20, 26, 0.2);
 }
@@ -6228,6 +6306,14 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		border-radius: 7.5px !important;
 	}
 
+	.wa-web-desktop .wa-message-mine.wa-has-tail {
+		border-start-end-radius: 0 !important;
+	}
+
+	.wa-web-desktop .wa-message-other.wa-has-tail {
+		border-start-start-radius: 0 !important;
+	}
+
 	.wa-web-desktop .wa-file-card {
 		width: min(310px, 100%) !important;
 		max-width: 310px !important;
@@ -7020,6 +7106,14 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		border-radius: 7.5px !important;
 		background: #FFFFFF !important;
   }
+
+	.wa-message-mine.wa-has-tail {
+		border-start-end-radius: 0 !important;
+	}
+
+	.wa-message-other.wa-has-tail {
+		border-start-start-radius: 0 !important;
+	}
 
 	.wa-message-media,
 	.wa-message-sticker {

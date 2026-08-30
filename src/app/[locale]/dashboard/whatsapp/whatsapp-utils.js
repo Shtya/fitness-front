@@ -1351,6 +1351,28 @@ export function groupSenderIdentity(message) {
 	};
 }
 
+/** Same author + same day → WhatsApp stacks bubbles tightly with one tail. */
+export function messagesFormBubbleCluster(left, right, { isGroupChat = false } = {}) {
+	if (!left || !right) return false;
+	const leftOut = String(left.direction || '').toLowerCase() === 'outbound';
+	const rightOut = String(right.direction || '').toLowerCase() === 'outbound';
+	if (leftOut !== rightOut) return false;
+	const dayLeft = String(left.providerTimestamp || left.created_at || left.timestamp || '').slice(
+		0,
+		10,
+	);
+	const dayRight = String(
+		right.providerTimestamp || right.created_at || right.timestamp || '',
+	).slice(0, 10);
+	if (dayLeft && dayRight && dayLeft !== dayRight) return false;
+	if (isGroupChat && !leftOut) {
+		const keyLeft = groupSenderIdentity(left).key;
+		const keyRight = groupSenderIdentity(right).key;
+		if (!keyLeft || !keyRight || keyLeft !== keyRight) return false;
+	}
+	return true;
+}
+
 export function quotedPreviewFromMessage(message) {
 	return (
 		message?.replyTo?.previewDataUrl ||
