@@ -3968,9 +3968,12 @@ export function MediaAttachment({
 						const width = Number(node.videoWidth) || 0;
 						const height = Number(node.videoHeight) || 0;
 						if (!wrap || !width || !height) return;
-						wrap.style.setProperty('--wa-video-ar', `${width} / ${height}`);
 						wrap.classList.toggle('is-portrait', height > width);
 						wrap.classList.toggle('is-landscape', width >= height);
+						// Intrinsic sizing: width 100%, height auto — no forced aspect box.
+						wrap.style.removeProperty('--wa-video-ar');
+						wrap.style.height = 'auto';
+						node.style.height = 'auto';
 					}}
 					onError={event => {
 						if (event.currentTarget.currentSrc !== url) return;
