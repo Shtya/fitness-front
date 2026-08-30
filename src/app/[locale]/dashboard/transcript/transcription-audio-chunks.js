@@ -11,13 +11,14 @@ export const TRANSCRIPTION_CHUNK_STORAGE_KEY = 'transcript:chunkSeconds';
 export const TRANSCRIPTION_TARGET_SAMPLE_RATE = 16_000;
 
 /**
- * Production nginx often caps uploads (~20m). Stay under that so the proxy
- * does not drop the request (browser then shows a generic Network Error).
+ * Production nginx often caps uploads (~1–20m). Stay well under common
+ * defaults so the proxy does not drop the request (browser then shows
+ * a generic Network Error with no HTTP status).
  */
-export const SAFE_PROXY_UPLOAD_BYTES = 18 * 1024 * 1024;
+export const SAFE_PROXY_UPLOAD_BYTES = 8 * 1024 * 1024;
 
 /** Prefer shorter slices for video / large containers so each POST stays small. */
-export const VIDEO_FORCE_CHUNK_SECONDS = 120;
+export const VIDEO_FORCE_CHUNK_SECONDS = 90;
 
 export const TRANSCRIPTION_CHUNK_PRESETS = [
 	{ value: 0, labelEn: 'Off (whole file)', labelAr: 'إيقاف (الملف كامل)' },
@@ -197,9 +198,10 @@ export async function buildTranscriptionUploadParts(
 	try {
 		decoded = await decodeAudioFile(file);
 	} catch (error) {
+		// Never return the raw video — production nginx will drop it as Network Error.
 		if (!videoLike && file.size <= SAFE_PROXY_UPLOAD_BYTES) return [file];
 		const err = new Error(
-			'Could not read audio from this file in the browser. Export audio (mp3/wav/m4a) and retry.',
+			'Could not read audio from this video in the browser. Export audio (mp3/wav/m4a) and retry.',
 		);
 		err.code = 'AUDIO_DECODE_FAILED';
 		err.cause = error;

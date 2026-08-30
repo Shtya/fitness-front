@@ -301,7 +301,9 @@ export function WaAssignMenu({
 							})}
 							{visibleStaff.length === 0 ? (
 								<p className="px-3 py-4 text-center text-sm text-slate-400">
-									{ar ? 'لا يوجد موظفون' : 'No staff found'}
+									{ar
+										? 'لا يوجد موظفون في نطاق حسابك. تأكد أن الموظفين مربوطين بنفس الأدمن/المؤسسة.'
+										: 'No staff in your account scope. Make sure staff are linked to the same admin/org.'}
 								</p>
 							) : null}
 						</div>

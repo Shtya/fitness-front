@@ -3,6 +3,7 @@ import {
 	SAFE_PROXY_UPLOAD_BYTES,
 	buildTranscriptionUploadParts,
 	getStoredTranscriptionChunkSeconds,
+	isVideoLikeFile,
 } from './transcription-audio-chunks';
 
 export {
@@ -146,7 +147,11 @@ export async function createChunkedTranscription({
 			onProgress: event => onPrepareProgress?.(event),
 		});
 	} catch (error) {
-		// Fall back to original only when it is small enough for the proxy.
+		// Never upload a raw video container — proxies reject them as Network Error.
+		if (isVideoLikeFile(file)) {
+			throw error;
+		}
+		// Fall back to original only for small plain audio under the proxy cap.
 		if (file?.size && file.size <= SAFE_PROXY_UPLOAD_BYTES) {
 			parts = [file];
 		} else {
@@ -154,7 +159,26 @@ export async function createChunkedTranscription({
 		}
 	}
 
-	if (!parts.length) parts = [file];
+	if (!parts.length) {
+		if (isVideoLikeFile(file)) {
+			const error = new Error(
+				'Could not extract audio from this video. Try exporting the audio (mp3/wav) and retry.',
+			);
+			error.code = 'AUDIO_DECODE_FAILED';
+			throw error;
+		}
+		parts = [file];
+	}
+
+	// Reject any leftover video parts (should not happen after WAV conversion).
+	const videoPart = parts.find(part => isVideoLikeFile(part));
+	if (videoPart) {
+		const error = new Error(
+			'Video must be converted to audio before upload. Refresh the page and try again.',
+		);
+		error.code = 'VIDEO_NOT_CONVERTED';
+		throw error;
+	}
 
 	const oversized = parts.find(part => part.size > SAFE_PROXY_UPLOAD_BYTES);
 	if (oversized) {
@@ -282,7 +306,10 @@ export function transcriptionErrorMessage(error, fallback = 'Transcription faile
 	}
 	// Nginx 413 often omits CORS headers → axios surfaces "Network Error" with no response body.
 	if (!error?.response && /network error/i.test(String(error?.message || ''))) {
-		return 'Network Error — the reverse proxy likely blocked a large upload (HTTP 413). The app now compresses video to audio first; if it still fails, raise nginx client_max_body_size to 100m for api.so7bafit.com and reload nginx.';
+		return 'Upload blocked by the production proxy (usually file too large). The app converts video to small audio chunks first — refresh and retry. If it still fails, raise nginx client_max_body_size to 100m for the API host and reload nginx.';
+	}
+	if (error?.code === 'AUDIO_DECODE_FAILED' || error?.code === 'VIDEO_NOT_CONVERTED') {
+		return rawText || 'Could not read audio from this video in the browser. Export mp3/wav and retry.';
 	}
 	if (!error?.response && error?.message) return error.message;
 	return fallback;

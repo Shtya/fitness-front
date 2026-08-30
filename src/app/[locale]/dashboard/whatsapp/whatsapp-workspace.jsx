@@ -12984,18 +12984,53 @@ function WhatsAppWorkspaceContent() {
 			return undefined;
 		}
 		let cancelled = false;
-		api
-			.get(`/whatsapp/accounts/${accountId}/assignable-staff`)
-			.then(({ data }) => {
-				if (!cancelled) setAssignableStaff(Array.isArray(data) ? data : []);
-			})
-			.catch(() => {
-				if (!cancelled) setAssignableStaff([]);
+		const ownerId = selectedAccount?.ownerAdminId || null;
+		const mapStaffFallback = list =>
+			(Array.isArray(list) ? list : []).map(item => {
+				const isOwner = Boolean(ownerId && item.id === ownerId);
+				return {
+					id: item.id,
+					name: item.name || item.email || 'Staff',
+					email: item.email,
+					role: item.role,
+					avatarUrl: item.avatarUrl || null,
+					isOwner,
+					canView: isOwner || Boolean(item.canView),
+					canUse: isOwner || Boolean(item.canUse),
+					canManage: isOwner || Boolean(item.canManage),
+					canAssign: isOwner || Boolean(item.canAssign),
+					canTransfer: isOwner || Boolean(item.canTransfer),
+					assignable: isOwner || Boolean(item.canView && item.canUse),
+				};
 			});
+		Promise.all([
+			api
+				.get(`/whatsapp/accounts/${accountId}/assignable-staff`)
+				.then(({ data }) => (Array.isArray(data) ? data : []))
+				.catch(error => {
+					console.warn('assignable-staff failed', error?.response?.status, error?.response?.data);
+					return null;
+				}),
+			api
+				.get('/whatsapp/accounts/staff')
+				.then(({ data }) => (Array.isArray(data) ? data : []))
+				.catch(() => []),
+		]).then(([assignable, staffList]) => {
+			if (cancelled) return;
+			if (Array.isArray(staffList) && staffList.length) {
+				setStaff(staffList);
+			}
+			if (Array.isArray(assignable) && assignable.length) {
+				setAssignableStaff(assignable);
+				return;
+			}
+			// API empty/failed — still show eligible staff so permissions can be granted.
+			setAssignableStaff(mapStaffFallback(staffList));
+		});
 		return () => {
 			cancelled = true;
 		};
-	}, [accountId, canAssignWhatsApp, canManageWhatsApp]);
+	}, [accountId, canAssignWhatsApp, canManageWhatsApp, selectedAccount?.ownerAdminId]);
 
 	useEffect(() => {
 		if (!accountId || (!canManageWhatsApp && !canAssignWhatsApp)) return undefined;
