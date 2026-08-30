@@ -109,6 +109,7 @@ import {
 import {
 	createTranscriptionFile,
 	isSelectableTranscriptMessage,
+	isVideoMessage as isTranscriptVideoMessage,
 	MAX_TRANSCRIPT_BUNDLE_ITEMS,
 	toTranscriptSource,
 } from '../transcript/transcription-client';
@@ -162,6 +163,9 @@ import {
 	visibleMessageText,
 	clipboardImageFiles,
 	voiceDurationSecondsFromSource,
+	isLocalMediaUrl,
+	localMediaFileUrl,
+	isPlayableVideoUrl,
 } from './whatsapp-utils';
 import { writeCachedMessagePage, readCachedMessagePage } from './whatsapp-idb-cache';
 import { createWhatsAppTabLeader } from './whatsapp-tab-leader';
@@ -189,6 +193,7 @@ import { WhatsAppBoardTab } from './WhatsAppBoardTab';
 import { BoardColumnPicker, BoardColumnPickerMenu } from './BoardColumnPicker';
 import { createBoardCardFromMessages } from './whatsapp-board-api';
 import { WaCustomSelect } from './WaCustomSelect';
+import { WaAssignMenu, StaffPermissionChips } from './WaAssignMenu';
 import { WaActionMenu } from './WaActionMenu';
 import {
 	addMessagesToChatGroup,
@@ -460,7 +465,6 @@ const translations = {
 		settingsDemo: 'Demo mode',
 		settingsNotifications: 'Notifications',
 		settingsPrivacy: 'Privacy',
-		settingsAccess: 'Team access',
 		profile: 'Profile',
 		profileName: 'Name',
 		profilePhone: 'Phone',
@@ -892,7 +896,6 @@ const translations = {
 		settingsDemo: 'الوضع التجريبي',
 		settingsNotifications: 'الإشعارات',
 		settingsPrivacy: 'الخصوصية',
-		settingsAccess: 'صلاحيات الفريق',
 		profile: 'الملف الشخصي',
 		profileName: 'الاسم',
 		profilePhone: 'الهاتف',
@@ -1331,13 +1334,6 @@ function newClientMessageId() {
 	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function isLocalMediaUrl(url) {
-	return (
-		typeof url === 'string' &&
-		(url.startsWith('blob:') || url.startsWith('data:'))
-	);
-}
-
 function releaseBlobUrl(url) {
 	if (!isLocalMediaUrl(url) || !String(url).startsWith('blob:')) return;
 	window.setTimeout(() => {
@@ -1357,10 +1353,7 @@ function releaseOptimisticMediaPreview(message) {
 }
 
 function localAttachmentPreview(attachment) {
-	if (!attachment) return null;
-	if (isLocalMediaUrl(attachment.previewDataUrl)) return attachment.previewDataUrl;
-	if (isLocalMediaUrl(attachment.url)) return attachment.url;
-	return null;
+	return localMediaFileUrl(attachment);
 }
 
 function outgoingMediaType(file, forcedType) {
@@ -1643,7 +1636,7 @@ function ImageMessage({
 		>
 			{showFrame ? <span className="wa-photo-sizer" aria-hidden="true" /> : null}
 			{showSkeleton ? <span className="wa-photo-skeleton" aria-hidden="true" /> : null}
-			{previewSrc && !isBroken ? (
+			{previewSrc ? (
 				<img
 					src={previewSrc}
 					alt=""
@@ -1651,7 +1644,7 @@ function ImageMessage({
 					draggable={false}
 					onLoad={() => setPreviewReady(true)}
 					className={`wa-photo-placeholder ${
-						cover || showFrame
+						cover || showFrame || isBroken
 							? 'absolute inset-0 h-full w-full object-cover'
 							: 'absolute inset-0 z-0 h-full w-full object-cover'
 					} ${loaded ? 'is-faded' : 'is-visible'}`}
@@ -2017,6 +2010,23 @@ async function fetchAttachmentContentBlob(attachmentId, { timeout = 60_000 } = {
 			headerType.startsWith('audio/'))
 	) {
 		return new Blob([blob], { type: headerType });
+	}
+	return blob;
+}
+
+async function assertBlobMatchesKind(blob, kind) {
+	const type = String(kind || '').toLowerCase();
+	if (type !== 'video' || !blob) return blob;
+	const mime = String(blob.type || '')
+		.split(';')[0]
+		.trim()
+		.toLowerCase();
+	if (mime.startsWith('image/')) {
+		throw new Error('Video is still a thumbnail');
+	}
+	const header = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+	if (header.length >= 3 && header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) {
+		throw new Error('Video is still a thumbnail');
 	}
 	return blob;
 }
@@ -3349,6 +3359,7 @@ export function MediaAttachment({
 	selectMode = false,
 	avatarLabel = '?',
 	avatarSrc = '',
+	onTranscribe = null,
 }) {
 	const initialLocalPreview = localAttachmentPreview(attachment);
 	const [url, setUrl] = useState(() => initialLocalPreview);
@@ -3407,20 +3418,22 @@ export function MediaAttachment({
 			const kind = String(attachment?.type || '').toLowerCase();
 			const isHeavyMedia = kind === 'video';
 			try {
-				return await requestAttachmentBlob(attachment.id, {
+				const blob = await requestAttachmentBlob(attachment.id, {
 					timeout: isHeavyMedia ? 120_000 : 45_000,
 					priority: true,
 					kind,
 				});
+				return assertBlobMatchesKind(blob, kind);
 			} catch (firstError) {
 				// Short retry — media often fails while WA is still hydrating.
 				await new Promise(resolve => window.setTimeout(resolve, 500));
 				try {
-					return await requestAttachmentBlob(attachment.id, {
+					const blob = await requestAttachmentBlob(attachment.id, {
 						timeout: isHeavyMedia ? 150_000 : 60_000,
 						priority: true,
 						kind,
 					});
+					return assertBlobMatchesKind(blob, kind);
 				} catch {
 					throw firstError;
 				}
@@ -3439,7 +3452,7 @@ export function MediaAttachment({
 
 	useEffect(() => {
 		autoRetryCountRef.current = 0;
-		const local = localAttachmentPreview(attachment);
+		const local = localMediaFileUrl(attachment);
 		if (local) {
 			setUrl(local);
 			setFailed(false);
@@ -3449,9 +3462,8 @@ export function MediaAttachment({
 		setUrl(null);
 		setFailed(false);
 		setLoading(true);
-		// attachment fields change with the same id during optimistic→confirmed merge
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- reset when identity or local preview changes
-	}, [attachment?.id, attachment?.url, attachment?.previewDataUrl]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- reset when identity or local file changes
+	}, [attachment?.id, attachment?.url]);
 
 	useEffect(() => {
 		if (sessionReady && !wasSessionReadyRef.current) {
@@ -3503,7 +3515,7 @@ export function MediaAttachment({
 			setFailed(true);
 			return undefined;
 		}
-		const localUrl = localAttachmentPreview(attachment);
+		const localUrl = localMediaFileUrl(attachment);
 		// Sender already has the file — show it immediately, never hit the API for pending-att.
 		if (localUrl && (isPendingAttachment || !isPersistedAttachmentId(attachmentId))) {
 			setUrl(localUrl);
@@ -3586,7 +3598,6 @@ export function MediaAttachment({
 		attachment?.mimeType,
 		attachment?.type,
 		attachment?.url,
-		attachment?.previewDataUrl,
 		canFetchWithoutSession,
 		demoAttachment,
 		isDocument,
@@ -3908,6 +3919,29 @@ export function MediaAttachment({
 		);
 	}
 	if (type === 'video') {
+		const playable = isPlayableVideoUrl(url);
+		if (!playable) {
+			return (
+				<button
+					ref={containerRef}
+					type="button"
+					onClick={() => {
+						autoRetryCountRef.current = 0;
+						setFailed(false);
+						setRetryNonce(value => value + 1);
+					}}
+					className={`wa-media-card wa-media-card--video mb-2 text-start ${className}`}
+				>
+					<span className="wa-media-card__icon" aria-hidden="true">
+						<Video size={28} strokeWidth={1.75} />
+					</span>
+					<span className="wa-photo-download__ring">
+						<Loader2 size={22} strokeWidth={2.25} className="animate-spin" />
+					</span>
+					<span className="wa-media-card__label">{labels.loadingMedia}</span>
+				</button>
+			);
+		}
 		return (
 			<div
 				ref={containerRef}
@@ -3918,14 +3952,30 @@ export function MediaAttachment({
 					controls={!selectMode}
 					playsInline
 					preload="metadata"
-					poster={previewDataUrl || undefined}
+					poster={previewDataUrl && !isPlayableVideoUrl(previewDataUrl) ? previewDataUrl : undefined}
 					src={url}
 					className="wa-video-asset"
-					onError={() => {
+					onError={event => {
+						if (event.currentTarget.currentSrc !== url) return;
 						setFailed(true);
 						setUrl(null);
 					}}
 				/>
+				{typeof onTranscribe === 'function' && !selectMode ? (
+					<button
+						type="button"
+						className="wa-video-transcribe"
+						title={labels.transcribe || (mine ? 'Transcribe' : 'Transcribe')}
+						aria-label={labels.transcribe || 'Transcribe'}
+						onClick={event => {
+							event.preventDefault();
+							event.stopPropagation();
+							onTranscribe(event);
+						}}
+					>
+						<AudioLines size={16} strokeWidth={2.1} />
+					</button>
+				) : null}
 			</div>
 		);
 	}
@@ -3966,6 +4016,7 @@ function MessageAttachments({
 	selectMode = false,
 	avatarLabel = '?',
 	avatarSrc = '',
+	onTranscribe = null,
 }) {
 	const rawPreview = mediaPreviewFromRaw(messageRaw);
 	const voiceDuration = voiceDurationSecondsFromSource(message || { raw: messageRaw, attachments });
@@ -4057,6 +4108,9 @@ function MessageAttachments({
 					messageDurationSeconds={voiceDuration}
 					avatarLabel={avatarLabel}
 					avatarSrc={avatarSrc}
+					onTranscribe={
+						String(attachment?.type || '').toLowerCase() === 'video' ? onTranscribe : null
+					}
 				/>
 			))}
 		</>
@@ -4377,6 +4431,7 @@ function MessageActionMenu({
 	message,
 	locale,
 	isVoice,
+	isVideo = false,
 	anchorRect,
 	previewImageUrl,
 	busy,
@@ -4498,7 +4553,11 @@ function MessageActionMenu({
 		String(message.direction || '').toLowerCase() !== 'inbound' &&
 		!message.optimistic;
 	const actions = [
-		isVoice && { id: 'transcribe', label: ar ? 'تحويل إلى نص' : 'Transcribe', icon: Mic },
+		(isVoice || isVideo) && {
+			id: 'transcribe',
+			label: ar ? 'تحويل إلى نص' : 'Transcribe',
+			icon: isVideo && !isVoice ? Video : Mic,
+		},
 		canUseBoard &&
 			canSelectTranscript && {
 				id: 'addToBoard',
@@ -4683,6 +4742,8 @@ function MessageActionMenu({
 	const previewType = String(message.type || '').toLowerCase();
 	const previewText = message.text || (isVoice
 		? ar ? 'رسالة صوتية' : 'Voice message'
+		: isVideo
+			? ar ? 'فيديو' : 'Video'
 		: previewType || (ar ? 'رسالة' : 'Message'));
 	const mobileTop =
 		typeof window === 'undefined'
@@ -4735,6 +4796,7 @@ function MessageActionMenu({
 							)}
 							<div className="flex items-center gap-2">
 								{isVoice && <Mic size={17} className="shrink-0 text-[#00a884]" />}
+								{isVideo && !isVoice && <Video size={17} className="shrink-0 text-[#00a884]" />}
 								<p className="whitespace-pre-wrap wrap-break-word">
 									<WhatsAppFormattedText
 										text={previewText}
@@ -5681,7 +5743,7 @@ function WhatsAppFormattedText({
 						href={segment.href}
 						target="_blank"
 						rel="noreferrer"
-						className="break-all font-medium text-[#027EB5] underline decoration-[#027EB5]/50 underline-offset-2 hover:decoration-current dark:text-[#53BDEB]"
+						className="wa-message-link font-medium text-[#027EB5] underline decoration-[#027EB5]/50 underline-offset-2 hover:decoration-current dark:text-[#53BDEB]"
 						onClick={event => event.stopPropagation()}
 					>
 						{segment.text}
@@ -5692,7 +5754,7 @@ function WhatsAppFormattedText({
 							segment.text,
 							mentionDirectory,
 							mentionLabels,
-						)}
+						).replace(/ /g, '\u00A0')}
 					</span>
 				) : segment.type === 'emoji' ? (
 					<span key={key} className="wa-message-emoji">
@@ -5701,7 +5763,14 @@ function WhatsAppFormattedText({
 				) : (
 					segment.text
 				);
-			let node = <span key={key}>{content}</span>;
+			let node =
+				typeof content === 'string' ? (
+					<span key={key} className="wa-message-run">
+						{content}
+					</span>
+				) : (
+					content
+				);
 			if (part.code) {
 				node = (
 					<code key={key} className="rounded bg-black/10 px-1 py-0.5 font-mono text-[0.92em] dark:bg-white/10">
@@ -6312,7 +6381,6 @@ function WhatsAppWorkspaceContent() {
 	const reportPeriodDaysRef = useRef(7);
 	reportPeriodDaysRef.current = reportPeriodDays;
 	const [staff, setStaff] = useState([]);
-	const [accountAccess, setAccountAccess] = useState([]);
 	const [assignableStaff, setAssignableStaff] = useState([]);
 	const [privacySettings, setPrivacySettings] = useState({
 		hideStatusViewReceipts: true,
@@ -6454,7 +6522,6 @@ function WhatsAppWorkspaceContent() {
 	const [pendingPreferenceActions, setPendingPreferenceActions] = useState(() => new Set());
 	const [assignmentFilter, setAssignmentFilter] = useState('');
 	const [searchingConversations, setSearchingConversations] = useState(false);
-	const [staffSearch, setStaffSearch] = useState('');
 	const [relativeTimeNow, setRelativeTimeNow] = useState(() => Date.now());
 	const [registeredChatImages, setRegisteredChatImages] = useState({});
 	const [activeChatImageId, setActiveChatImageId] = useState(null);
@@ -7360,15 +7427,6 @@ function WhatsAppWorkspaceContent() {
 		}).length;
 		return Math.max(local, archivedCount);
 	}, [effectiveConversations, activeTab, archivedCount]);
-
-	const availableStaff = useMemo(() => {
-		const rest = staff.filter(user => !accountAccess.some(row => row.userId === user.id));
-		if (!staffSearch.trim()) return rest;
-		const q = staffSearch.trim().toLowerCase();
-		return rest.filter(
-			user => user.name?.toLowerCase().includes(q) || user.email?.toLowerCase().includes(q),
-		);
-	}, [staff, accountAccess, staffSearch]);
 
 	const loadAccounts = useCallback(async () => {
 		const { data } = await api.get('/whatsapp/accounts');
@@ -8552,7 +8610,6 @@ function WhatsAppWorkspaceContent() {
 			setGroups([]);
 			setLogs([]);
 			setReport(null);
-			setAccountAccess([]);
 			setAssignableStaff([]);
 			setPrivacySettings({
 				hideStatusViewReceipts: true,
@@ -11382,12 +11439,12 @@ function WhatsAppWorkspaceContent() {
 
 	const loadTranscriptionSourceFile = useCallback(async source => {
 		const attachment = source?.attachment;
-		if (!attachment?.id) throw new Error('Voice message is unavailable');
+		if (!attachment?.id) throw new Error('Media is unavailable');
 		const demoAttachment = Boolean(attachment.demoAttachment || isDemoId(attachment.id));
 		const blob = demoAttachment
 			? await demoApi.getMedia(rawDemoId(attachment.id))
 			: await requestAttachmentBlob(attachment.id, { timeout: 90_000, priority: true });
-		if (!blob || blob.size < 8) throw new Error('Voice message is unavailable');
+		if (!blob || blob.size < 8) throw new Error('Media is unavailable');
 		return createTranscriptionFile(
 			blob,
 			attachment.fileName,
@@ -12112,6 +12169,22 @@ function WhatsAppWorkspaceContent() {
 			isDemoId(targetConversationId)
 		) return;
 		try {
+			if (userId && (canManageWhatsApp || isAdmin)) {
+				const person = assignableStaff.find(item => item.id === userId);
+				if (person && !person.isOwner && (!person.canView || !person.canUse)) {
+					const granted = assignableStaff.map(item => {
+						if (item.id !== userId) return item;
+						return {
+							...item,
+							canView: true,
+							canUse: true,
+							assignable: true,
+						};
+					});
+					setAssignableStaff(granted);
+					await persistStaffAccess(granted);
+				}
+			}
 			await api.put(`/whatsapp/conversations/${targetConversationId}/assignment`, {
 				userId: userId || null,
 			});
@@ -12610,38 +12683,6 @@ function WhatsAppWorkspaceContent() {
 		setInChatSearchHits([]);
 	}, [conversationId]);
 
-	const assignStaffOptions = useMemo(() => {
-		const base = [{ value: '', label: t.unassign, icon: UserCircle2 }];
-		if (!assignableStaff.length) {
-			return [
-				...base,
-				{
-					value: '__no_assignable__',
-					label:
-						locale === 'ar' ? 'لا يوجد موظفون للتعيين' : 'No assignable staff',
-					description:
-						locale === 'ar'
-							? 'من الإعدادات → الصلاحيات: فعّل View و Use للموظف'
-							: 'In Settings → Access: enable View and Use for staff',
-					disabled: true,
-					icon: Users,
-				},
-			];
-		}
-		return [
-			...base,
-			...assignableStaff.map(user => {
-				const sla = report?.staff?.find(item => item.userId === user.id);
-				return {
-					value: user.id,
-					label: user.name,
-					icon: Users,
-					description: staffAssignHint(sla, locale) || undefined,
-				};
-			}),
-		];
-	}, [assignableStaff, locale, report?.staff, t.unassign]);
-
 	const toggleConversationArchived = async (conversation, event) => {
 		event?.stopPropagation?.();
 		if (!conversation?.id) return;
@@ -12895,14 +12936,10 @@ function WhatsAppWorkspaceContent() {
 				}
 			}
 			if (tab === 'settings') {
-				const [accessResponse, privacyResponse] = await Promise.all([
-					api.get(`/whatsapp/accounts/${targetAccountId}/access`),
-					api.get(`/whatsapp/accounts/${targetAccountId}/privacy`),
-				]);
+				const { data } = await api.get(`/whatsapp/accounts/${targetAccountId}/privacy`);
 				if (isCurrentRequest()) {
-					setAccountAccess(accessResponse.data || []);
 					setPrivacySettings(
-						privacyResponse.data || {
+						data || {
 							hideStatusViewReceipts: true,
 							readReceiptMode: 'on_reply',
 						},
@@ -13417,85 +13454,48 @@ function WhatsAppWorkspaceContent() {
 		setActiveTab('chats');
 	};
 
-	const setAccessFlag = (userId, flag, value) => {
-		setAccountAccess(current =>
-			current.map(row => {
-				if (row.userId !== userId) return row;
-				const next = { ...row, [flag]: value };
-				/* Use implies View; turning View off also clears Use */
-				if (flag === 'canUse' && value) next.canView = true;
-				if (flag === 'canView' && !value) next.canUse = false;
-				return next;
-			}),
-		);
-	};
-
-	const addStaffAccess = user => {
-		if (accountAccess.some(row => row.userId === user.id)) return;
-		setAccountAccess(current => [
-			...current,
-			{
-				userId: user.id,
-				user,
-				/* View + Use required to appear in Assign dropdown / receive chats */
-				canView: true,
-				canUse: true,
-				canManage: false,
-				canAssign: false,
-				canTransfer: false,
-			},
-		]);
-	};
-
-	const setAccessFull = (userId, enabled) => {
-		setAccountAccess(current =>
-			current.map(row =>
-				row.userId === userId
-					? {
-							...row,
-							canView: enabled,
-							canUse: enabled,
-							canManage: enabled,
-							canAssign: enabled,
-							canTransfer: enabled,
-						}
-					: row,
-			),
-		);
-	};
-
-	const isAccessFull = row =>
-		Boolean(
-			row?.canView && row?.canUse && row?.canManage && row?.canAssign && row?.canTransfer,
-		);
-
-	const saveAccess = async () => {
+	const persistStaffAccess = async list => {
 		if (!accountId || (!canManageWhatsApp && !isAdmin)) return;
 		const targetAccountId = accountId;
+		await api.put(`/whatsapp/accounts/${targetAccountId}/access`, {
+			access: (list || []).filter(
+				item =>
+					!item.isOwner &&
+					(item.canView || item.canUse || item.canManage || item.canAssign || item.canTransfer),
+			).map(item => ({
+				userId: item.id || item.userId,
+				canView: Boolean(item.canView),
+				canUse: Boolean(item.canUse),
+				canManage: Boolean(item.canManage),
+				canAssign: Boolean(item.canAssign),
+				canTransfer: Boolean(item.canTransfer),
+			})),
+		});
+		const { data } = await api.get(`/whatsapp/accounts/${targetAccountId}/assignable-staff`);
+		setAssignableStaff(Array.isArray(data) ? data : list);
+	};
+
+	const toggleStaffPermission = async (userId, flag, value) => {
+		if (!userId) return;
+		const next = assignableStaff.map(item => {
+			if (item.id !== userId || item.isOwner) return item;
+			const updated = { ...item, [flag]: value };
+			if (flag === 'canUse' && value) updated.canView = true;
+			if (flag === 'canView' && !value) updated.canUse = false;
+			updated.assignable = Boolean(updated.canView && updated.canUse);
+			return updated;
+		});
+		setAssignableStaff(next);
 		try {
-			await api.put(`/whatsapp/accounts/${targetAccountId}/access`, {
-				access: accountAccess.map(
-					({ userId, canView, canUse, canManage, canAssign, canTransfer }) => ({
-						userId,
-						canView,
-						canUse,
-						canManage,
-						canAssign,
-						canTransfer,
-					}),
-				),
-			});
-			toast.success('WhatsApp access updated');
-			try {
-				const { data } = await api.get(
-					`/whatsapp/accounts/${targetAccountId}/assignable-staff`,
-				);
-				setAssignableStaff(Array.isArray(data) ? data : []);
-			} catch {
-				/* keep previous assignable list */
-			}
+			await persistStaffAccess(next);
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Could not save access');
+			try {
+				const { data } = await api.get(`/whatsapp/accounts/${accountId}/assignable-staff`);
+				setAssignableStaff(Array.isArray(data) ? data : []);
+			} catch {
+				/* keep optimistic list */
+			}
 		}
 	};
 
@@ -15227,20 +15227,22 @@ function WhatsAppWorkspaceContent() {
 														</button>
 													)}
 											</div>
-											{!demo.settings.enabled && canAssignWhatsApp && (
+											{!demo.settings.enabled && (canAssignWhatsApp || canManageWhatsApp) && (
 												<div className="wa-chat-assign-field relative inline-flex items-center">
 													<span className="wa-chat-assign-field__label">
 														{t.assignedTo}
 													</span>
-													<WaCustomSelect
+													<WaAssignMenu
 														ariaLabel={t.assignedTo}
 														value={selectedConversation.assignedUserId || ''}
-														onChange={assignConversation}
-														size="sm"
-														fitContent
-														className="wa-chat-assign-select w-auto max-w-[14rem]"
+														staff={assignableStaff}
+														onAssign={assignConversation}
+														onTogglePermission={toggleStaffPermission}
+														canManageAccess={Boolean(canManageWhatsApp || isAdmin)}
+														locale={locale}
+														unassignLabel={t.unassign}
+														className="wa-chat-assign-select w-auto max-w-[16rem]"
 														buttonClassName="wa-chat-assign-trigger"
-														options={assignStaffOptions}
 													/>
 												</div>
 											)}
@@ -15765,6 +15767,9 @@ function WhatsAppWorkspaceContent() {
 														!groupedImages &&
 														(attachmentTypes.some(type => ['audio', 'ptt', 'voice'].includes(type)) ||
 															['audio', 'ptt', 'voice'].includes(String(message.type || '').toLowerCase()));
+													const isVideoTranscriptMessage =
+														!groupedImages && isTranscriptVideoMessage(message);
+													const canTranscribeMedia = isVoiceMessage || isVideoTranscriptMessage;
 													const isLocationMessage =
 														!isDeleted && isWhatsAppLocationMessage(message);
 													const downloadableAttachments = collectDownloadableAttachments([
@@ -16107,6 +16112,15 @@ function WhatsAppWorkspaceContent() {
 																						ticketSelectMode ||
 																						groupSelectMode,
 																				)}
+																				onTranscribe={
+																					isVideoTranscriptMessage
+																						? event => {
+																								event?.preventDefault?.();
+																								event?.stopPropagation?.();
+																								void handleMessageAction(message, 'transcribe');
+																							}
+																						: null
+																				}
 																			/>
 																		)
 																		: !isDeleted && fallbackMediaPreview ? (
@@ -16323,7 +16337,7 @@ function WhatsAppWorkspaceContent() {
 																				reactionPickerMessageId === message.id
 																			}
 																			emojiOpen={reactionPickerMessageId === message.id}
-																			showTranscribe={isVoiceMessage}
+																			showTranscribe={canTranscribeMedia}
 																			showCopy={
 																				!isDeleted &&
 																				Boolean(String(captionText || '').trim())
@@ -16365,6 +16379,7 @@ function WhatsAppWorkspaceContent() {
 																			message={message}
 																			locale={locale}
 																			isVoice={isVoiceMessage}
+																			isVideo={isVideoTranscriptMessage}
 																			anchorRect={actionMessageAnchor}
 																			previewImageUrl={(attachments || [])
 																				.map(attachment => registeredChatImages[attachment.id]?.url)
@@ -17514,7 +17529,6 @@ function WhatsAppWorkspaceContent() {
 									{ id: 'ai', label: t.settingsAi, icon: Sparkles },
 									{ id: 'demo', label: t.settingsDemo, icon: Zap },
 									{ id: 'privacy', label: t.settingsPrivacy, icon: ShieldCheck },
-									{ id: 'access', label: t.settingsAccess, icon: Users },
 								].map(item => {
 									const Icon = item.icon;
 									const selected = settingsSection === item.id;
@@ -17637,216 +17651,6 @@ function WhatsAppWorkspaceContent() {
 								</div>
 								</Card>
 							)}
-							{settingsSection === 'access' && (
-								<div className="grid gap-4 min-[769px]:grid-cols-[340px_1fr]">
-								<Card className="p-4">
-									<h2 className="mb-3 flex items-center gap-2 text-sm font-black">
-										<UserPlus size={14} className="text-[var(--color-primary-500)]" />
-										{t.addStaff}
-									</h2>
-									<div className="relative mb-3">
-										<Search size={15} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
-										<input
-											aria-label={t.searchStaff}
-											value={staffSearch}
-											onChange={event => setStaffSearch(event.target.value)}
-											placeholder={t.searchStaff}
-											className="wa-input-3d h-10 w-full rounded-xl border border-slate-200 bg-white ps-9 pe-3 text-sm outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800"
-										/>
-									</div>
-									<div className="max-h-[440px] space-y-1.5 overflow-y-auto nice-scroll">
-										{availableStaff.length === 0 ? (
-											<p className="p-4 text-center text-xs text-slate-400">{t.allStaffAdded}</p>
-										) : (
-											availableStaff.map(user => (
-												<button
-													key={user.id}
-													onClick={() => addStaffAccess(user)}
-													className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-2.5 text-start transition-colors hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] dark:border-slate-700 dark:hover:bg-slate-800"
-												>
-													<Avatar label={user.name} size={8} />
-													<div className="min-w-0 flex-1">
-														<p className="truncate text-sm font-bold">{user.name}</p>
-														{user.email && <p className="truncate text-[11px] text-slate-400">{user.email}</p>}
-													</div>
-													<span
-														className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-white"
-														style={{ background: GRADIENT }}
-													>
-														<Plus size={13} />
-													</span>
-												</button>
-											))
-										)}
-									</div>
-								</Card>
-								<Card className="p-4">
-									<CardHeader
-										icon={ShieldCheck}
-										title={t.settings}
-										subtitle={accountAccess.length > 0 ? `${accountAccess.length} ${t.staffOnAccount}` : t.permissions}
-										right={
-											<button
-												type="button"
-												onClick={saveAccess}
-												className="rounded-xl px-4 py-2 text-sm font-bold text-white transition-transform hover:-translate-y-px disabled:translate-y-0 disabled:opacity-40"
-												style={{ background: GRADIENT, boxShadow: GLOW }}
-											>
-												{t.saveAccess}
-											</button>
-										}
-									/>
-									{accountAccess.length === 0 ? (
-										<div className="space-y-5">
-											<Empty icon={ShieldCheck} title={t.noStaffAccess} hint={t.noStaffAccessHint} />
-											<div className="grid gap-2 sm:grid-cols-5">
-												{[
-													{ key: 'View', desc: t.permView },
-													{ key: 'Use', desc: t.permUse },
-													{ key: 'Manage', desc: t.permManage },
-													{ key: 'Assign', desc: t.permAssign },
-													{ key: 'Transfer', desc: t.permTransfer },
-												].map(item => (
-													<div key={item.key} className="rounded-xl border border-dashed border-slate-200 p-3 text-center dark:border-slate-700">
-														<p className="text-xs font-black">{item.key}</p>
-														<p className="mt-1 text-[10px] leading-snug text-slate-400">{item.desc}</p>
-													</div>
-												))}
-											</div>
-										</div>
-									) : (
-										<div className="space-y-3">
-											<p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-snug text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
-												{locale === 'ar'
-													? 'للظهور في قائمة التعيين يجب تفعيل View و Use. يمكنك استخدام Full access لكل الصلاحيات دفعة واحدة.'
-													: 'Staff need View + Use to appear in the Assign dropdown. Use Full access to grant every permission at once.'}
-											</p>
-											{accountAccess.map(row => {
-												const full = isAccessFull(row);
-												const assignReady = Boolean(row.canView && row.canUse);
-												return (
-													<div
-														key={row.userId}
-														className="rounded-2xl border border-slate-200 p-3.5 dark:border-slate-700"
-													>
-														<div className="flex items-start gap-2.5">
-															<Avatar label={row.user?.name} size={9} />
-															<div className="min-w-0 flex-1">
-																<div className="flex items-center gap-2">
-																	<p className="truncate font-bold text-[#111b21] dark:text-white">
-																		{row.user?.name}
-																	</p>
-																	{assignReady ? (
-																		<span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-																			{locale === 'ar' ? 'قابل للتعيين' : 'Assignable'}
-																		</span>
-																	) : (
-																		<span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-																			{locale === 'ar' ? 'غير قابل للتعيين' : 'Not assignable'}
-																		</span>
-																	)}
-																</div>
-																{row.user?.email ? (
-																	<p className="truncate text-xs text-slate-500">{row.user.email}</p>
-																) : null}
-															</div>
-															<button
-																type="button"
-																aria-label={`Remove ${row.user?.name || 'staff'}`}
-																onClick={() =>
-																	setAccountAccess(current =>
-																		current.filter(item => item.userId !== row.userId),
-																	)
-																}
-																className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-500"
-															>
-																<X size={14} />
-															</button>
-														</div>
-
-														<div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-900/60">
-															<div className="min-w-0">
-																<p className="text-[12px] font-bold text-[#111b21] dark:text-white">
-																	{locale === 'ar' ? 'صلاحية كاملة' : 'Full access'}
-																</p>
-																<p className="text-[10px] text-slate-500">
-																	{locale === 'ar'
-																		? 'View + Use + Manage + Assign + Transfer'
-																		: 'View + Use + Manage + Assign + Transfer'}
-																</p>
-															</div>
-															<Toggle
-																label={`${row.user?.name || 'Staff'} full access`}
-																checked={full}
-																onChange={value => setAccessFull(row.userId, value)}
-															/>
-														</div>
-
-														<div className="mt-3 grid gap-2 sm:grid-cols-2">
-															<label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-700">
-																<input
-																	type="checkbox"
-																	className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-																	checked={Boolean(row.canView)}
-																	onChange={event =>
-																		setAccessFlag(row.userId, 'canView', event.target.checked)
-																	}
-																/>
-																<span className="min-w-0">
-																	<span className="block text-[12px] font-bold">
-																		{locale === 'ar' ? 'قراءة (View)' : 'Read (View)'}
-																	</span>
-																	<span className="block text-[10px] text-slate-500">{t.permView}</span>
-																</span>
-															</label>
-															<label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-700">
-																<input
-																	type="checkbox"
-																	className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-																	checked={Boolean(row.canUse)}
-																	onChange={event =>
-																		setAccessFlag(row.userId, 'canUse', event.target.checked)
-																	}
-																/>
-																<span className="min-w-0">
-																	<span className="block text-[12px] font-bold">
-																		{locale === 'ar' ? 'استخدام (Use)' : 'Use'}
-																	</span>
-																	<span className="block text-[10px] text-slate-500">{t.permUse}</span>
-																</span>
-															</label>
-														</div>
-
-														<div className="mt-2 flex flex-wrap gap-2">
-															{[
-																{ flag: 'canManage', label: 'Manage' },
-																{ flag: 'canAssign', label: 'Assign' },
-																{ flag: 'canTransfer', label: 'Transfer' },
-															].map(item => (
-																<label
-																	key={item.flag}
-																	className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300"
-																>
-																	<input
-																		type="checkbox"
-																		className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-																		checked={Boolean(row[item.flag])}
-																		onChange={event =>
-																			setAccessFlag(row.userId, item.flag, event.target.checked)
-																		}
-																	/>
-																	{item.label}
-																</label>
-															))}
-														</div>
-													</div>
-												);
-											})}
-										</div>
-									)}
-								</Card>
-								</div>
-							)}
 						</div>
 					)
 				)}
@@ -17924,6 +17728,11 @@ function WhatsAppWorkspaceContent() {
 							<button type="button" onClick={() => setConversationAssignTarget(null)} className="rounded-full p-2 hover:bg-slate-100"><X size={18} /></button>
 						</div>
 						<div className="max-h-[58vh] overflow-y-auto p-2">
+							<p className="px-3 pb-2 text-[11px] leading-snug text-[#667781]">
+								{locale === 'ar'
+									? 'عرض + استخدام مطلوبان للتعيين. غيّر الصلاحيات من المربعات.'
+									: 'View + Use are required to assign. Use the checkboxes to change permissions.'}
+							</p>
 							<button
 								type="button"
 								onClick={() => {
@@ -17936,33 +17745,47 @@ function WhatsAppWorkspaceContent() {
 								<span className="font-semibold">{locale === 'ar' ? 'بدون تعيين' : 'Unassigned'}</span>
 							</button>
 							{assignableStaff.map(user => (
-								<button
+								<div
 									key={user.id}
-									type="button"
-									onClick={() => {
-										void assignConversationTarget(conversationAssignTarget.id, user.id);
-										setConversationAssignTarget(null);
-									}}
-									className="flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100"
+									className="rounded-xl p-2 hover:bg-slate-50"
 								>
-									<Avatar label={user.name} size={10} src={user.avatarUrl} />
-									<div className="min-w-0 flex-1">
-										<p className="truncate font-semibold">{user.name}</p>
-										<p className="truncate text-xs text-[#667781]">
-											{staffAssignHint(
-												report?.staff?.find(item => item.userId === user.id),
-												locale,
-											) || user.email}
-										</p>
-									</div>
-									{conversationAssignTarget.assignedUserId === user.id && <Check size={18} className="text-[#00a884]" />}
-								</button>
+									<button
+										type="button"
+										onClick={() => {
+											void assignConversationTarget(conversationAssignTarget.id, user.id);
+											setConversationAssignTarget(null);
+										}}
+										className="flex w-full items-center gap-3 text-start"
+									>
+										<Avatar label={user.name} size={10} src={user.avatarUrl} />
+										<div className="min-w-0 flex-1">
+											<p className="truncate font-semibold">{user.name}</p>
+											<p className="truncate text-xs text-[#667781]">
+												{user.assignable
+													? staffAssignHint(
+															report?.staff?.find(item => item.userId === user.id),
+															locale,
+														) || user.email
+													: locale === 'ar'
+														? 'فعّل عرض واستخدام للتعيين'
+														: 'Enable View + Use to assign'}
+											</p>
+										</div>
+										{conversationAssignTarget.assignedUserId === user.id && <Check size={18} className="text-[#00a884]" />}
+									</button>
+									{(canManageWhatsApp || isAdmin) && !user.isOwner ? (
+										<StaffPermissionChips
+											person={user}
+											onToggle={toggleStaffPermission}
+											locale={locale}
+											className="mt-2 ps-12"
+										/>
+									) : null}
+								</div>
 							))}
 							{assignableStaff.length === 0 ? (
 								<p className="px-3 py-4 text-center text-sm text-[#667781]">
-									{locale === 'ar'
-										? 'لا يوجد موظفون بصلاحية عرض واستخدام لهذا الحساب. امنحهم الصلاحية من الإعدادات أولاً.'
-										: 'No staff with view and use access on this account. Grant access in Settings first.'}
+									{locale === 'ar' ? 'لا يوجد موظفون' : 'No staff found'}
 								</p>
 							) : null}
 						</div>

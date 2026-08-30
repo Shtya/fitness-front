@@ -11,6 +11,7 @@ import {
 	ListChecks,
 	MessageSquareText,
 	Save,
+	Video,
 	Wand2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -35,6 +36,7 @@ import {
 	getStoredTranscriptionChunkSeconds,
 	getStoredTranscriptionProvider,
 	GROQ_FREE_MAX_FILE_SIZE,
+	isMediaTranscriptKind,
 	storeTranscriptionChunkSeconds,
 	storeTranscriptionProvider,
 	timestampMs,
@@ -45,14 +47,14 @@ import {
 
 const labels = {
 	en: {
-		title: 'Transcribe voice message',
+		title: 'Transcribe voice or video',
 		bundleTitle: 'Transcribe selected messages',
-		description: 'Convert this voice note into editable text.',
+		description: 'Convert speech in this voice note or video into editable text.',
 		bundleDescription:
-			'Voices are converted to text. Selected tickets stay as they are. Everything is merged in time order.',
-		loadingFile: 'Loading voice message…',
-		fileError: 'Could not load this voice message.',
-		voiceFile: 'Voice message',
+			'Voice notes and videos are converted to text. Selected tickets stay as they are. Everything is merged in time order.',
+		loadingFile: 'Loading media…',
+		fileError: 'Could not load this media.',
+		voiceFile: 'Voice or video',
 		method: 'Transcription method',
 		chunkLength: 'Chunk length',
 		chunkLengthHint: 'Long voice notes are split and sent one chunk at a time.',
@@ -77,22 +79,22 @@ const labels = {
 		messageLabel: 'Message',
 		missingVoice: '(Could not transcribe this voice note.)',
 		selectedCount: '{count} selected',
-		voiceCount: '{count} voices',
+		voiceCount: '{count} media files',
 		ticketCount: '{count} messages',
-		batchProgress: 'Audio {current} of {total}',
-		batchDone: 'Transcribed {count} voices',
-		batchPartial: 'Transcribed {done} of {total} voices. Some failed.',
-		noItems: 'Select at least one voice or message.',
+		batchProgress: 'Media {current} of {total}',
+		batchDone: 'Transcribed {count} files',
+		batchPartial: 'Transcribed {done} of {total} files. Some failed.',
+		noItems: 'Select at least one voice, video, or message.',
 	},
 	ar: {
-		title: 'تحويل الرسالة الصوتية إلى نص',
+		title: 'تحويل الصوت أو الفيديو إلى نص',
 		bundleTitle: 'تحويل الرسائل المحددة إلى نص',
-		description: 'حوّل الرسالة الصوتية إلى نص يمكن تعديله.',
+		description: 'حوّل الكلام في الرسالة الصوتية أو الفيديو إلى نص يمكن تعديله.',
 		bundleDescription:
-			'الأصوات تتحول لنص. التيكتات المحددة تفضل زي ما هي. كله يترتب حسب الوقت.',
-		loadingFile: 'جارٍ تحميل الرسالة الصوتية…',
-		fileError: 'تعذر تحميل الرسالة الصوتية.',
-		voiceFile: 'رسالة صوتية',
+			'الصوت والفيديو يتحولان لنص. التيكتات المحددة تفضل زي ما هي. كله يترتب حسب الوقت.',
+		loadingFile: 'جارٍ تحميل الملف…',
+		fileError: 'تعذر تحميل هذا الملف.',
+		voiceFile: 'صوت أو فيديو',
 		method: 'طريقة التحويل',
 		chunkLength: 'طول القطعة',
 		chunkLengthHint: 'الرسائل الطويلة تتقسم وتتبعث قطعة قطعة.',
@@ -117,12 +119,12 @@ const labels = {
 		messageLabel: 'رسالة',
 		missingVoice: '(تعذر تحويل هذه الرسالة الصوتية.)',
 		selectedCount: '{count} محدد',
-		voiceCount: '{count} صوت',
+		voiceCount: '{count} ملف',
 		ticketCount: '{count} رسالة',
-		batchProgress: 'صوت {current} من {total}',
-		batchDone: 'تم تحويل {count} صوت',
+		batchProgress: 'ملف {current} من {total}',
+		batchDone: 'تم تحويل {count} ملف',
 		batchPartial: 'تم تحويل {done} من {total}. بعضها فشل.',
-		noItems: 'حدّد صوتًا أو رسالة واحدة على الأقل.',
+		noItems: 'حدّد صوتًا أو فيديو أو رسالة واحدة على الأقل.',
 	},
 };
 
@@ -149,7 +151,7 @@ function sortSources(sources) {
 function withAudioIndexes(sources) {
 	let audioIndex = 0;
 	return sortSources(sources).map(item => {
-		if (item.kind !== 'voice') return item;
+		if (!isMediaTranscriptKind(item.kind)) return item;
 		audioIndex += 1;
 		return { ...item, audioIndex };
 	});
@@ -179,7 +181,7 @@ export default function TranscriptionDialog({
 		[items, loadFile],
 	);
 	const isBundle = sources.length > 1 || sources.some(item => item.kind === 'text');
-	const voiceSources = sources.filter(item => item.kind === 'voice');
+	const voiceSources = sources.filter(item => isMediaTranscriptKind(item.kind));
 	const ticketCount = sources.filter(item => item.kind === 'text').length;
 	const [file, setFile] = useState(null);
 	const [fileError, setFileError] = useState('');
@@ -202,7 +204,7 @@ export default function TranscriptionDialog({
 		});
 	}, []);
 	const busy = ['loading', 'preparing', 'uploading', 'processing'].includes(status);
-	const singleVoice = !isBundle && sources[0]?.kind === 'voice';
+	const singleVoice = !isBundle && isMediaTranscriptKind(sources[0]?.kind);
 
 	const sourceKey = useMemo(
 		() => sources.map(item => `${item.kind}:${item.id}`).join('|'),
@@ -604,7 +606,9 @@ export default function TranscriptionDialog({
 											className="flex items-start gap-2 rounded-lg bg-white px-2 py-1.5"
 										>
 											<span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md bg-[#d9fdd3] text-[#128c7e]">
-												{item.kind === 'voice' ? (
+												{item.kind === 'video' ? (
+													<Video className="size-3.5" />
+												) : isMediaTranscriptKind(item.kind) ? (
 													<FileAudio className="size-3.5" />
 												) : (
 													<MessageSquareText className="size-3.5" />
@@ -612,7 +616,7 @@ export default function TranscriptionDialog({
 											</span>
 											<div className="min-w-0 flex-1">
 												<p className="truncate text-[12px] font-semibold text-slate-800">
-													{item.kind === 'voice'
+													{isMediaTranscriptKind(item.kind)
 														? audioDisplayName(item, (item.audioIndex || 1) - 1, t.audioLabel)
 														: t.messageLabel}
 												</p>

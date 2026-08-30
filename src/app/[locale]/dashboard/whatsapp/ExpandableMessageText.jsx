@@ -60,12 +60,14 @@ export default function ExpandableMessageText({
 	const mergedStyle = {
 		whiteSpace: 'pre-wrap',
 		overflowWrap: 'break-word',
+		wordWrap: 'break-word',
 		wordBreak: 'normal',
+		hyphens: 'none',
 		maxWidth: '100%',
 		unicodeBidi: style?.unicodeBidi || 'plaintext',
 		...style,
-		// Never allow max-content on the text node — it collides with floated timestamps.
 		width: 'auto',
+		minWidth: 'auto',
 	};
 
 	return (

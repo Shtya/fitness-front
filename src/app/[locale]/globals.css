@@ -985,47 +985,52 @@ body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-co
     sans-serif !important;
 }
 
-/* Per-message script: Arabic bubbles always use Arabic typeface + RTL, even on EN UI. */
+/* Per-message script: match WhatsApp Web — first strong char sets dir; wrap is browser-driven. */
 body .wa-mobile-shell .wa-message-text.wa-message-text--ar,
 body .wa-mobile-shell .wa-message-text.wa-message-text--ar *,
 body .wa-mobile-shell .wa-composer-input.wa-message-text--ar {
   font-family:
-    var(--font-arabic),
-    'Tajawal',
-    'Cairo',
-    'Noto Sans Arabic',
+    "Segoe UI",
     Tahoma,
+    "Noto Sans Arabic",
+    var(--font-arabic),
+    "Helvetica Neue",
     Arial,
-    'Apple Color Emoji',
-    'Segoe UI Emoji',
-    'Noto Color Emoji',
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Noto Color Emoji",
     sans-serif !important;
-  font-weight: 500 !important;
-  line-height: 1.4 !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+  font-feature-settings: normal !important;
+  line-height: 19px !important;
   direction: rtl;
   unicode-bidi: plaintext;
-  text-align: right !important;
+  text-align: start !important;
 }
 
 body .wa-mobile-shell .wa-message-text.wa-message-text--en,
 body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 .wa-composer-input.wa-message-text--en {
   font-family:
-    var(--font-inter),
-    'SF Pro Text',
-    'Segoe UI Variable Text',
-    'Helvetica Neue',
-    system-ui,
-    'Apple Color Emoji',
-    'Segoe UI Emoji',
-    'Noto Color Emoji',
+    "Segoe UI",
+    "Helvetica Neue",
+    Helvetica,
+    "Lucida Grande",
+    Arial,
+    Ubuntu,
+    Cantarell,
+    "Fira Sans",
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Noto Color Emoji",
     sans-serif !important;
   font-weight: 400 !important;
-  letter-spacing: -0.011em;
-  font-feature-settings: "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1;
+  letter-spacing: normal !important;
+  font-feature-settings: normal !important;
   direction: ltr;
   unicode-bidi: plaintext;
-  text-align: left !important;
+  text-align: start !important;
 }
 
 .wa-mobile-shell {
@@ -1989,6 +1994,13 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   gap: 0;
 }
 
+.wa-message-row,
+.wa-message-line {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
 /* WhatsApp stack: tight gap inside a run, roomier between runs */
 .wa-message-row + .wa-message-row {
   margin-top: 12px;
@@ -2300,9 +2312,10 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 
 .wa-message-bubble {
   box-sizing: border-box;
+  flex: 0 0 auto;
   width: fit-content;
-  max-width: min(85%, 32.5rem);
-  padding: 6px 12px 8px 12px;
+  max-width: 65%;
+  padding: 6px 9px 8px 9px;
   border-radius: 7.5px;
   position: relative;
   box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
@@ -3088,7 +3101,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 .wa-message-text {
   display: block;
   width: auto;
-  min-width: 0;
+  min-width: auto;
   max-width: 100%;
   overflow-wrap: break-word;
   word-break: normal;
@@ -3098,21 +3111,33 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   unicode-bidi: plaintext;
   font-variant-emoji: emoji;
   font-size: 14.2px;
-  line-height: 1.35;
+  font-weight: 400;
+  line-height: 19px;
+  letter-spacing: normal;
+  font-family:
+    "Segoe UI",
+    "Helvetica Neue",
+    Helvetica,
+    "Lucida Grande",
+    Arial,
+    Ubuntu,
+    Cantarell,
+    "Fira Sans",
+    sans-serif;
   vertical-align: top;
   text-align: start;
 }
 
 .wa-message-text.wa-message-text--ar,
 .wa-message-text[lang='ar'] {
-  line-height: 1.4;
+  line-height: 19px;
 }
 
 .wa-message-copy {
   display: block;
-  width: max-content;
+  width: fit-content;
   max-width: 100%;
-  min-width: 0;
+  min-width: auto;
   vertical-align: top;
 }
 
@@ -3125,23 +3150,32 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 .wa-message-copy .wa-message-text.wa-message-text--ar,
 .wa-message-copy .wa-message-text[lang='ar'] {
   direction: rtl !important;
-  text-align: right !important;
+  text-align: start !important;
   unicode-bidi: plaintext;
 }
 
 .wa-message-copy .wa-message-text.wa-message-text--en,
 .wa-message-copy .wa-message-text[lang='en'] {
   direction: ltr !important;
-  text-align: left !important;
+  text-align: start !important;
   unicode-bidi: plaintext;
 }
 
+.wa-message-run {
+  white-space: inherit;
+}
+
+.wa-message-link {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .wa-message-emoji {
-  display: inline-block;
-  font-size: 1.25em;
-  line-height: 1;
-  vertical-align: -0.18em;
-  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  display: inline;
+  font-size: 1.2em;
+  line-height: inherit;
+  vertical-align: -0.1em;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   font-variant-emoji: emoji;
 }
 
@@ -3196,6 +3230,12 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 .wa-message-bubble.wa-message-has-caption {
   width: fit-content;
   max-width: min(92%, 480px) !important;
+}
+
+.wa-message-bubble.wa-message-media {
+  width: min(92%, 330px);
+  min-width: min(240px, calc(100% - 16px));
+  max-width: min(92%, 330px) !important;
 }
 
 .wa-message-bubble.wa-message-media.wa-message-has-caption {
@@ -4160,12 +4200,34 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 }
 
 .wa-video-wrap {
+	position: relative;
 	width: 100%;
 	max-width: 100%;
 	min-height: 180px;
 	overflow: hidden;
 	border-radius: 0;
 	background: #0b141a;
+}
+
+.wa-video-transcribe {
+	position: absolute;
+	top: 8px;
+	inset-inline-end: 8px;
+	z-index: 6;
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 0;
+	border-radius: 999px;
+	background: rgba(11, 20, 26, 0.72);
+	color: #ffffff;
+	cursor: pointer;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.wa-video-transcribe:hover {
+	background: rgba(17, 27, 33, 0.9);
 }
 
 .wa-video-asset {
@@ -4244,6 +4306,10 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 }
 
 .wa-message-mention {
+	display: inline-block;
+	max-width: 100%;
+	white-space: nowrap;
+	vertical-align: baseline;
 	color: #027eb5;
 	background: rgba(2, 126, 181, 0.12);
 	border-radius: 4px;
@@ -6563,14 +6629,15 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-message-bubble {
 		box-sizing: border-box;
+		flex: 0 0 auto;
 		width: fit-content;
-		max-width: min(72%, 32.5rem) !important;
+		max-width: 65% !important;
 		border-radius: 8px !important;
 		box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13) !important;
 		font-size: 14.2px !important;
 		line-height: 19px !important;
 		color: #111b21 !important;
-		padding: 6px 12px 8px 12px !important;
+		padding: 6px 9px 8px 9px !important;
 	}
 
 	.wa-web-desktop .wa-message-bubble.wa-message-voice {
@@ -7337,12 +7404,13 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   .wa-message-bubble {
 		position: relative;
 		box-sizing: border-box;
-		min-width: 0;
+		flex: 0 0 auto;
+		min-width: auto;
 		width: fit-content;
-		max-width: min(78%, calc(100% - 24px)) !important;
+		max-width: 85% !important;
 		border-radius: 7.5px !important;
 		color: var(--wa-text) !important;
-		padding: 6px 12px 8px 12px !important;
+		padding: 6px 9px 8px 9px !important;
 		box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.08);
   }
 
@@ -7386,7 +7454,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	.wa-message-text {
 		display: block;
 		width: auto !important;
-		min-width: 0;
+		min-width: auto;
 		max-width: 100%;
 		overflow-wrap: break-word;
 		word-break: normal;
@@ -7395,28 +7463,30 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		white-space: pre-wrap;
 		font-size: 14.2px;
 		font-weight: 400;
-		line-height: 1.35 !important;
+		line-height: 19px !important;
+		letter-spacing: normal;
 		unicode-bidi: plaintext;
 		vertical-align: top;
+		text-align: start;
 	}
 
 	.wa-message-text[lang='ar'],
 	.wa-message-text.wa-message-text--ar {
-		font-family: var(--font-arabic), 'Tajawal', 'Cairo', 'Noto Sans Arabic', Tahoma, Arial, sans-serif !important;
+		font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", var(--font-arabic), Arial, sans-serif !important;
 		font-weight: 400 !important;
-		line-height: 1.4 !important;
+		line-height: 19px !important;
 		direction: rtl !important;
 		unicode-bidi: plaintext;
-		text-align: right !important;
+		text-align: start !important;
 	}
 
 	.wa-message-text.wa-message-text--en {
-		font-family: var(--font-inter), 'SF Pro Text', 'Segoe UI Variable Text', 'Helvetica Neue', system-ui, sans-serif !important;
+		font-family: "Segoe UI", "Helvetica Neue", Helvetica, "Lucida Grande", Arial, sans-serif !important;
 		font-weight: 400 !important;
-		letter-spacing: -0.011em;
-		font-feature-settings: "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1;
+		letter-spacing: normal;
+		font-feature-settings: normal;
 		direction: ltr !important;
-		text-align: left !important;
+		text-align: start !important;
 	}
 
 	.wa-message-meta {
@@ -7437,9 +7507,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-message-copy {
 		display: block;
-		width: max-content;
+		width: fit-content;
 		max-width: 100%;
-		min-width: 0;
+		min-width: auto;
 		vertical-align: top;
 		overflow: visible;
 	}
@@ -7452,14 +7522,14 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	.wa-message-copy .wa-message-text.wa-message-text--ar,
 	.wa-message-copy .wa-message-text[lang='ar'] {
 		direction: rtl !important;
-		text-align: right !important;
+		text-align: start !important;
 		unicode-bidi: plaintext !important;
 	}
 
 	.wa-message-copy .wa-message-text.wa-message-text--en,
 	.wa-message-copy .wa-message-text[lang='en'] {
 		direction: ltr !important;
-		text-align: left !important;
+		text-align: start !important;
 		unicode-bidi: plaintext !important;
 	}
 

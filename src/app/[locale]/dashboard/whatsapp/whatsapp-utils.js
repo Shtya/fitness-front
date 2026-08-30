@@ -21,6 +21,36 @@ const WHATSAPP_ACK_RANK = {
 	played: 4,
 };
 
+export function isLocalMediaUrl(url) {
+	return typeof url === 'string' && (url.startsWith('blob:') || url.startsWith('data:'));
+}
+
+export function isInlineImageDataUrl(url) {
+	return typeof url === 'string' && /^data:image\//i.test(url);
+}
+
+/** Actual local file (blob/data), never a JPEG thumbnail used as the media src. */
+export function localMediaFileUrl(attachment, kind = '') {
+	const type = String(kind || attachment?.type || '').toLowerCase();
+	const fileUrl = isLocalMediaUrl(attachment?.url) ? attachment.url : null;
+	if (!fileUrl) return null;
+	if (['video', 'audio', 'ptt', 'voice'].includes(type) && isInlineImageDataUrl(fileUrl)) {
+		return null;
+	}
+	return fileUrl;
+}
+
+export function isPlayableVideoUrl(url) {
+	if (!url || typeof url !== 'string') return false;
+	if (isInlineImageDataUrl(url)) return false;
+	return (
+		url.startsWith('blob:') ||
+		/^data:video\//i.test(url) ||
+		/^https?:/i.test(url) ||
+		url.startsWith('/')
+	);
+}
+
 export function preferWhatsAppAckStatus(current, incoming) {
 	const next = String(incoming || '').toLowerCase();
 	const prev = String(current || '').toLowerCase();
@@ -616,35 +646,41 @@ export function messageTextPresentation(text) {
 	const isArabic = dir === 'rtl';
 	const arabicStyle = {
 		fontFamily:
-			'var(--font-arabic), "Tajawal", "Cairo", "Noto Sans Arabic", Tahoma, Arial, sans-serif',
-		fontWeight: 500,
-		fontFeatureSettings: '"kern" 1, "liga" 1',
-		lineHeight: 1.4,
+			'"Segoe UI", Tahoma, "Noto Sans Arabic", var(--font-arabic), "Helvetica Neue", Arial, sans-serif',
+		fontWeight: 400,
+		fontFeatureSettings: 'normal',
+		letterSpacing: 'normal',
+		lineHeight: '19px',
 		direction: 'rtl',
 		unicodeBidi: 'plaintext',
-		textAlign: 'right',
+		textAlign: 'start',
 		display: 'block',
-		// Auto width — max-content + floated timestamp collapsed short Arabic into a column.
 		width: 'auto',
 		maxWidth: '100%',
 		overflowWrap: 'break-word',
 		wordBreak: 'normal',
+		wordWrap: 'break-word',
+		hyphens: 'none',
+		whiteSpace: 'pre-wrap',
 	};
 	const englishStyle = {
 		direction: 'ltr',
-		textAlign: 'left',
+		textAlign: 'start',
 		unicodeBidi: 'plaintext',
 		display: 'block',
 		width: 'auto',
 		maxWidth: '100%',
 		overflowWrap: 'break-word',
 		wordBreak: 'normal',
+		wordWrap: 'break-word',
+		hyphens: 'none',
+		whiteSpace: 'pre-wrap',
 		fontFamily:
-			'var(--font-inter), "SF Pro Text", "Segoe UI Variable Text", "Helvetica Neue", system-ui, sans-serif',
+			'"Segoe UI", "Helvetica Neue", Helvetica, "Lucida Grande", Arial, Ubuntu, Cantarell, "Fira Sans", sans-serif',
 		fontWeight: 400,
-		letterSpacing: '-0.011em',
-		fontFeatureSettings: '"cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1',
-		lineHeight: 1.35,
+		letterSpacing: 'normal',
+		fontFeatureSettings: 'normal',
+		lineHeight: '19px',
 	};
 	if (isArabic) {
 		return {

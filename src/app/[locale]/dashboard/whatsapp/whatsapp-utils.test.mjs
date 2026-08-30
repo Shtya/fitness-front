@@ -38,6 +38,8 @@ import {
 	updateConversationPreview,
 	conversationUnreadCount,
 	conversationMatchesInboxFilter,
+	localMediaFileUrl,
+	isPlayableVideoUrl,
 } from './whatsapp-utils.js';
 
 test('mergeMessages deduplicates provider messages and sorts chronologically', () => {
@@ -584,22 +586,22 @@ test('firstStrongTextDirection uses the first Arabic or Latin letter', () => {
 test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	const arabic = messageTextPresentation('رسالة عربية');
 	assert.equal(arabic.dir, 'rtl');
-	assert.equal(arabic.style.textAlign, 'right');
-	assert.match(arabic.style.fontFamily, /--font-arabic/);
-	assert.equal(arabic.style.fontWeight, 500);
+	assert.equal(arabic.style.textAlign, 'start');
+	assert.match(arabic.style.fontFamily, /Segoe UI/);
+	assert.equal(arabic.style.fontWeight, 400);
 	assert.equal(messageTextPresentation('English message').dir, 'ltr');
 	const startsEnglish = messageTextPresentation('Hello مرحباً');
 	assert.equal(startsEnglish.dir, 'ltr');
-	assert.match(startsEnglish.style.fontFamily, /--font-inter/);
+	assert.match(startsEnglish.style.fontFamily, /Segoe UI/);
 	const startsArabic = messageTextPresentation('مرحبا Hello');
 	assert.equal(startsArabic.dir, 'rtl');
-	assert.match(startsArabic.style.fontFamily, /Tajawal/);
+	assert.match(startsArabic.style.fontFamily, /Noto Sans Arabic/);
 	const mostlyEnglish = messageTextPresentation(
 		'New Email\nFrom: Admin\nReceived: السبت، ٢٢ أغسطس في ٣:٤٣ م',
 	);
 	assert.equal(mostlyEnglish.dir, 'ltr');
 	assert.equal(mostlyEnglish.className, 'wa-message-text--en');
-	assert.equal(mostlyEnglish.style.textAlign, 'left');
+	assert.equal(mostlyEnglish.style.textAlign, 'start');
 	assert.equal(
 		messageTextPresentation(
 			'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...\nبعد ما تضيفه Frontend',
@@ -954,4 +956,32 @@ test('quotedTargetFromMessage reads reply ids', () => {
 		messageMatchesQuotedTarget({ id: 'msg-1' }, { id: 'msg-9', providerMessageId: 'NO' }),
 		false,
 	);
+});
+
+test('localMediaFileUrl ignores JPEG thumbnails so they are not used as video/image src', () => {
+	assert.equal(
+		localMediaFileUrl({
+			type: 'video',
+			previewDataUrl: 'data:image/jpeg;base64,abc',
+			url: 'data:image/jpeg;base64,abc',
+		}),
+		null,
+	);
+	assert.equal(
+		localMediaFileUrl({
+			type: 'image',
+			previewDataUrl: 'data:image/jpeg;base64,abc',
+		}),
+		null,
+	);
+	assert.equal(
+		localMediaFileUrl({
+			type: 'image',
+			url: 'blob:http://localhost/full-image',
+			previewDataUrl: 'data:image/jpeg;base64,abc',
+		}),
+		'blob:http://localhost/full-image',
+	);
+	assert.equal(isPlayableVideoUrl('data:image/jpeg;base64,abc'), false);
+	assert.equal(isPlayableVideoUrl('blob:http://localhost/video'), true);
 });

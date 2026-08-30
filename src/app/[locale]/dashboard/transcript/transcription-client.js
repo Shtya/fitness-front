@@ -81,6 +81,12 @@ export function storeTranscriptionProvider(provider) {
 
 function extensionFromMimeType(mimeType) {
 	const normalized = String(mimeType || '').split(';')[0].toLowerCase();
+	if (normalized.startsWith('video/')) {
+		if (normalized.includes('webm')) return 'webm';
+		if (normalized.includes('quicktime') || normalized.includes('mov')) return 'mov';
+		if (normalized.includes('mkv')) return 'mkv';
+		return 'mp4';
+	}
 	if (normalized.includes('ogg')) return 'ogg';
 	if (normalized.includes('wav')) return 'wav';
 	if (normalized.includes('mpeg')) return 'mp3';
@@ -94,7 +100,7 @@ export function createTranscriptionFile(blob, preferredName, fallbackId, mimeTyp
 	const preferredExtension = preferred.split('.').pop()?.toLowerCase();
 	const name = ACCEPTED_TRANSCRIPTION_EXTENSIONS.includes(preferredExtension)
 		? preferred
-		: `whatsapp-voice-${fallbackId || Date.now()}.${extensionFromMimeType(type)}`;
+		: `${type.startsWith('video/') ? 'whatsapp-video' : 'whatsapp-voice'}-${fallbackId || Date.now()}.${extensionFromMimeType(type)}`;
 	return new File([blob], name, { type });
 }
 
@@ -318,9 +324,19 @@ export async function createTextTranscription({
 
 export const MAX_TRANSCRIPT_BUNDLE_ITEMS = 25;
 export const VOICE_ATTACHMENT_TYPES = ['audio', 'ptt', 'voice'];
+export const VIDEO_ATTACHMENT_TYPES = ['video'];
 
 export function isVoiceLikeType(type) {
 	return VOICE_ATTACHMENT_TYPES.includes(String(type || '').toLowerCase());
+}
+
+export function isVideoLikeType(type) {
+	const normalized = String(type || '').toLowerCase();
+	return VIDEO_ATTACHMENT_TYPES.includes(normalized) || normalized.startsWith('video/');
+}
+
+export function isMediaTranscriptKind(kind) {
+	return kind === 'voice' || kind === 'video';
 }
 
 export function timestampMs(value) {
@@ -351,29 +367,51 @@ export function findVoiceAttachment(message) {
 	);
 }
 
+export function findVideoAttachment(message) {
+	const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+	return (
+		attachments.find(
+			item =>
+				isVideoLikeType(item?.type) ||
+				String(item?.mimeType || '').toLowerCase().startsWith('video/'),
+		) || null
+	);
+}
+
 export function isVoiceMessage(message) {
 	if (findVoiceAttachment(message)) return true;
 	return isVoiceLikeType(message?.type);
 }
 
+export function isVideoMessage(message) {
+	if (findVideoAttachment(message)) return true;
+	return isVideoLikeType(message?.type);
+}
+
+export function isTranscribableMediaMessage(message) {
+	return isVoiceMessage(message) || isVideoMessage(message);
+}
+
 export function isSelectableTranscriptMessage(message) {
 	if (!message || message.optimistic) return false;
 	if (message.deletedMode && message.deletedMode !== 'none') return false;
-	if (isVoiceMessage(message)) return true;
+	if (isTranscribableMediaMessage(message)) return true;
 	return Boolean(String(message.text || '').trim());
 }
 
 export function toTranscriptSource(message) {
 	const voice = findVoiceAttachment(message);
-	const voiceMessage = Boolean(voice) || isVoiceLikeType(message?.type);
+	const video = findVideoAttachment(message);
+	const attachment = voice || video;
+	const kind = voice ? 'voice' : video ? 'video' : 'text';
 	return {
 		id: String(message?.id || ''),
-		kind: voiceMessage ? 'voice' : 'text',
+		kind,
 		timestamp: message?.providerTimestamp || message?.timestamp || message?.created_at,
 		text: String(message?.text || '').trim(),
-		attachment: voice,
-		fileName: voice?.fileName || '',
-		size: Number(voice?.sizeBytes || voice?.size || voice?.fileSize || 0),
+		attachment,
+		fileName: attachment?.fileName || '',
+		size: Number(attachment?.sizeBytes || attachment?.size || attachment?.fileSize || 0),
 	};
 }
 
@@ -396,12 +434,12 @@ export function buildTimelineTranscript(items, labels = {}) {
 		.map((item, index) => {
 			const time = formatTimestampWithMs(item.timestamp);
 			const heading =
-				item.kind === 'voice'
+				isMediaTranscriptKind(item.kind)
 					? audioDisplayName(item, (item.audioIndex || index + 1) - 1, audioLabel)
 					: messageLabel;
 			const body =
 				String(item.text || '').trim() ||
-				(item.kind === 'voice' ? missingVoice : '');
+				(isMediaTranscriptKind(item.kind) ? missingVoice : '');
 			return [time ? `[${time}] ${heading}` : heading, body].filter(Boolean).join('\n');
 		})
 		.join('\n\n');

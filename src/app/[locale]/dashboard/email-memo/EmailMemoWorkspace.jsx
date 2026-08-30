@@ -494,7 +494,6 @@ export default function EmailMemoWorkspace() {
 
 	const waAccounts = overview.whatsapp?.accounts || [];
 	const inSiteAccounts = overview.whatsapp?.inSiteAccounts || [];
-	const inSiteReady = Boolean(overview.whatsapp?.inSiteReady || inSiteAccounts.length);
 	const waLinking =
 		['qr_pending', 'connecting'].includes(overview.whatsapp?.status) ||
 		waAccounts.some((item) => ['qr_pending', 'connecting'].includes(item.status));
@@ -746,11 +745,9 @@ export default function EmailMemoWorkspace() {
 			: deliveryDestination === 'both'
 				? t('deliveryBoth')
 				: t('deliveryWhatsApp');
-	const waPipelineReady = deliveryInSiteOnly ? inSiteReady : waOk;
+	const waPipelineReady = deliveryInSiteOnly ? true : waOk;
 	const waPipelineLabel = deliveryInSiteOnly
-		? inSiteReady
-			? t('inSiteReady')
-			: t('notConnected')
+		? t('inSiteReady')
 		: waOk
 			? t('connected')
 			: t('notConnected');
@@ -764,10 +761,6 @@ export default function EmailMemoWorkspace() {
 			toast.error(t('connectWhatsApp'));
 			return;
 		}
-		if (deliveryInSiteOnly && !inSiteReady) {
-			toast.error(t('inSiteNeedsAccount'));
-			return;
-		}
 		return run(`send-${row.id}`, async () => {
 			const res = await emailMemoApi.sendNow({ ids: [row.id] });
 			const sent = Number(res.data?.sent || 0);
@@ -779,10 +772,6 @@ export default function EmailMemoWorkspace() {
 	const sendNow = () => {
 		if (deliveryUsesPhone && !waOk) {
 			toast.error(t('connectWhatsApp'));
-			return;
-		}
-		if (deliveryInSiteOnly && !inSiteReady) {
-			toast.error(t('inSiteNeedsAccount'));
 			return;
 		}
 		const initial = { phase: 'collect', current: 0, total: 0 };
@@ -913,7 +902,7 @@ export default function EmailMemoWorkspace() {
 							{busy === 'import-inbox' ? <Loader2 className="animate-spin" size={13} /> : t('loadInbox')}
 						</StudioButton>
 					) : null}
-					<StudioButton primary disabled={busy === 'send-now' || (deliveryUsesPhone ? !waOk : deliveryInSiteOnly && !inSiteReady)} onClick={sendNow}>
+					<StudioButton primary disabled={busy === 'send-now' || (deliveryUsesPhone && !waOk)} onClick={sendNow}>
 						{busy === 'send-now' ? <Loader2 className="animate-spin" size={13} /> : <Send size={13} />}
 						{t('sendNow')}
 					</StudioButton>
@@ -1232,8 +1221,8 @@ export default function EmailMemoWorkspace() {
 										</div>
 									))
 								) : (
-									<p className="rounded-[14px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
-										{t('inSiteNeedsAccount')}
+									<p className="rounded-[14px] border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-900">
+										{t('deliveryInSiteHint')}
 									</p>
 								)}
 							</div>
