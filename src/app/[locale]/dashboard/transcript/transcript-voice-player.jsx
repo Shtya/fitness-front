@@ -222,7 +222,11 @@ export default function TranscriptVoicePlayer({
 			>
 				<span className="wa-voice-waveform-bars" aria-hidden="true">
 					{peaks.map((height, index) => {
-						const played = peaks.length > 0 && (index + 0.5) / peaks.length <= progress;
+						const lastIndex = Math.max(1, peaks.length - 1);
+						const played =
+							peaks.length <= 1
+								? progress > 0
+								: index / lastIndex <= Math.max(0, Math.min(1, progress)) + 1e-6;
 						return (
 							<span
 								key={index}
@@ -237,8 +241,11 @@ export default function TranscriptVoicePlayer({
 						);
 					})}
 				</span>
-				{progress > 0.01 ? (
-					<span className="wa-voice-thumb is-incoming" style={{ left: `${Math.max(0, Math.min(1, progress)) * 100}%` }} />
+				{progress > 0.008 && progress < 0.995 ? (
+					<span
+						className="wa-voice-thumb is-incoming"
+						style={{ left: `${Math.max(0, Math.min(1, progress)) * 100}%` }}
+					/>
 				) : null}
 			</button>
 			<span className="wa-voice-duration">{formatClock(playing || current > 0 ? current : duration)}</span>

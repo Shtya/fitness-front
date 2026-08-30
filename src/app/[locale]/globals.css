@@ -4491,7 +4491,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	height: var(--wa-bar-h, 8px) !important;
 	min-height: 4px;
 	border-radius: 999px;
-	transition: height 160ms ease, background-color 120ms linear;
+	transition: height 160ms ease;
+	/* No color transition — keeps playhead and bar fill in sync (avoids double progress). */
 }
 
 .wa-voice-waveform-bars > .wa-voice-bar.is-played-outgoing {
@@ -4587,13 +4588,14 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	position: absolute;
 	top: 50%;
 	z-index: 2;
-	width: 11px;
-	height: 11px;
+	width: 10px;
+	height: 10px;
 	border-radius: 999px;
 	transform: translate(-50%, -50%);
 	pointer-events: none;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-	transition: left 80ms linear;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+	/* Instant with timeupdate — delayed left made the thumb lag bars by one step. */
+	transition: none;
 }
 
 .wa-voice-thumb.is-outgoing {
@@ -8275,7 +8277,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		height: var(--wa-bar-h, 8px) !important;
 		min-height: 4px;
 		border-radius: 999px;
-		transition: height 160ms ease, background-color 100ms linear;
+		transition: height 160ms ease;
 	}
 
 	.wa-voice-waveform-bars > .wa-voice-bar.is-unplayed {
@@ -8298,12 +8300,12 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		position: absolute;
 		top: 50%;
 		z-index: 2;
-		width: 11px;
-		height: 11px;
+		width: 10px;
+		height: 10px;
 		border-radius: 50%;
 		transform: translate(-50%, -50%);
 		pointer-events: none;
-		transition: left 80ms linear;
+		transition: none;
 	}
 
 	.wa-voice-thumb.is-outgoing {

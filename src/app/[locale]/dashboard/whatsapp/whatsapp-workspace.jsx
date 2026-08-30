@@ -2717,9 +2717,12 @@ function VoicePlaybackButton({ playing, loading, failed, onClick }) {
 
 function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
 	const items = isUsefulWaveform(peaks) ? peaks : seededWaveform(String(peaks?.length || 'voice'), 40);
+	const clamped = Math.max(0, Math.min(1, Number(progress) || 0));
+	const lastIndex = Math.max(1, items.length - 1);
 	return (
 		<button
 			type="button"
+			dir="ltr"
 			onClick={onSeek}
 			disabled={loading || failed}
 			aria-label="Seek voice message"
@@ -2727,8 +2730,9 @@ function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
 		>
 			<span className="wa-voice-waveform-bars" aria-hidden="true">
 				{items.map((height, index) => {
+					// Bars use space-between: centers sit at index/(n-1), same axis as the thumb.
 					const played =
-						items.length > 0 && (index + 0.5) / items.length <= progress;
+						items.length <= 1 ? clamped > 0 : index / lastIndex <= clamped + 1e-6;
 					const px = Math.round(4 + Number(height) * 20);
 					return (
 						<span
@@ -2742,10 +2746,10 @@ function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
 					);
 				})}
 			</span>
-			{!failed && progress > 0.01 ? (
+			{!failed && clamped > 0.008 && clamped < 0.995 ? (
 				<span
 					className={`wa-voice-thumb ${mine ? 'is-outgoing' : 'is-incoming'}`}
-					style={{ left: `${Math.max(0, Math.min(1, progress)) * 100}%` }}
+					style={{ left: `${clamped * 100}%` }}
 				/>
 			) : null}
 		</button>
@@ -3246,11 +3250,8 @@ function VoiceMessage({
 		const audio = audioRef.current;
 		if (!audio || !duration || !playbackUrl || loadFailed) return;
 		const rect = event.currentTarget.getBoundingClientRect();
-		const isRtl =
-			typeof document !== 'undefined' &&
-			(document.documentElement.dir === 'rtl' ||
-				document.documentElement.getAttribute('lang') === 'ar');
-		const ratio = seekRatio(event.clientX, rect.left, rect.width, isRtl);
+		// Waveform bars are always LTR (WhatsApp-style); do not flip seek for page RTL.
+		const ratio = seekRatio(event.clientX, rect.left, rect.width, false);
 		audio.currentTime = ratio * duration;
 		setCurrentTime(audio.currentTime);
 	};
