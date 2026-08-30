@@ -1612,15 +1612,18 @@ function ImageMessage({
 			aria-label={isBroken ? retryLabel : alt || 'Open image preview'}
 			aria-busy={isPending}
 			onClick={event => {
-				if (selectMode) return;
+				if (selectMode) {
+					// Keep bubbling so the message row can toggle selection (images included).
+					return;
+				}
 				onOpen?.(event);
 			}}
 			disabled={selectMode && isBroken && !previewSrc}
 			className={`wa-photo-open relative block overflow-hidden ${
-				cover ? 'h-full min-h-0 w-full' : showFrame ? 'wa-photo-frame' : 'h-auto w-full'
+				cover ? 'h-full min-h-0 w-full' : showFrame ? 'wa-photo-frame' : 'h-auto w-auto max-w-full'
 			} ${isPending ? 'is-loading' : isBroken ? 'is-unavailable' : 'is-ready'} ${
 				previewSrc ? 'wa-photo-has-preview' : 'wa-photo-no-preview'
-			} ${className}`}
+			} ${selectMode ? 'wa-photo-select-mode' : ''} ${className}`}
 		>
 			{showFrame ? <span className="wa-photo-sizer" aria-hidden="true" /> : null}
 			{showSkeleton ? <span className="wa-photo-skeleton" aria-hidden="true" /> : null}
@@ -2613,8 +2616,8 @@ async function prepareVoicePlayback(sourceUrl, mimeType) {
 
 function VoicePlayIcon() {
 	return (
-		<svg className="wa-voice-play-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-			<path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86a1 1 0 0 0-1.5.86Z" />
+		<svg className="wa-voice-play-icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+			<path fill="currentColor" d="M8.2 5.8c0-.9.9-1.5 1.7-1.1l10.2 5.7c.9.5.9 1.7 0 2.2l-10.2 5.7c-.8.4-1.7-.2-1.7-1.1V5.8Z" />
 		</svg>
 	);
 }
@@ -2622,7 +2625,18 @@ function VoicePlayIcon() {
 function VoicePauseIcon() {
 	return (
 		<svg className="wa-voice-play-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-			<path fill="currentColor" d="M7 5h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm7 0h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+			<path fill="currentColor" d="M7.5 5.5h2.8c.6 0 1 .4 1 1v11c0 .6-.4 1-1 1H7.5c-.6 0-1-.4-1-1v-11c0-.6.4-1 1-1Zm6.2 0h2.8c.6 0 1 .4 1 1v11c0 .6-.4 1-1 1h-2.8c-.6 0-1-.4-1-1v-11c0-.6.4-1 1-1Z" />
+		</svg>
+	);
+}
+
+function VoiceMicIcon() {
+	return (
+		<svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path
+				fill="currentColor"
+				d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
+			/>
 		</svg>
 	);
 }
@@ -2715,6 +2729,17 @@ function VoiceReplyPreview({ reply }) {
 			<strong>{reply.sender}</strong>
 			<span>
 				<Mic size={13} /> {formatClock(reply.duration)}
+			</span>
+		</div>
+	);
+}
+
+function VoiceAvatar({ label = '?', src = '', mine = false }) {
+	return (
+		<div className={`wa-voice-avatar-wrap ${mine ? 'is-outgoing' : 'is-incoming'}`}>
+			<Avatar label={label} size={11} src={src} className="wa-voice-avatar" />
+			<span className="wa-voice-mic-badge" aria-hidden="true">
+				<VoiceMicIcon />
 			</span>
 		</div>
 	);
@@ -2814,6 +2839,8 @@ function VoiceMessage({
 	sessionReady = true,
 	downloadStatus = '',
 	attachmentType = 'ptt',
+	avatarLabel = '?',
+	avatarSrc = '',
 }) {
 	const audioRef = useRef(null);
 	const containerRef = useRef(null);
@@ -3195,6 +3222,7 @@ function VoiceMessage({
 		>
 			<audio ref={audioRef} preload="metadata" src={playbackUrl || undefined} className="hidden" />
 			<VoiceMessageLayout mine={mine}>
+				{mine ? <VoiceAvatar label={avatarLabel} src={avatarSrc} mine /> : null}
 				<div className="wa-voice-track">
 					<div className="wa-voice-track-row">
 						<VoicePlaybackButton
@@ -3237,6 +3265,7 @@ function VoiceMessage({
 						</div>
 					</div>
 				</div>
+				{!mine ? <VoiceAvatar label={avatarLabel} src={avatarSrc} mine={false} /> : null}
 			</VoiceMessageLayout>
 		</div>
 	);
@@ -3283,6 +3312,8 @@ export function MediaAttachment({
 	messageRaw = null,
 	messageDurationSeconds = 0,
 	selectMode = false,
+	avatarLabel = '?',
+	avatarSrc = '',
 }) {
 	const [url, setUrl] = useState(null);
 	const [loading, setLoading] = useState(() => !attachment?.previewDataUrl);
@@ -3497,6 +3528,8 @@ export function MediaAttachment({
 				sessionReady={sessionReady}
 				downloadStatus={attachment.downloadStatus}
 				attachmentType={type || 'ptt'}
+				avatarLabel={avatarLabel}
+				avatarSrc={avatarSrc}
 			/>
 		);
 	}
@@ -3650,8 +3683,8 @@ export function MediaAttachment({
 					isGallery
 						? `absolute inset-0 overflow-hidden ${className}`
 						: isSingleMedia
-							? `relative w-full min-w-[min(100%,220px)] max-w-[280px] overflow-hidden ${className}`
-							: `relative max-w-[360px] overflow-hidden ${className}`
+							? `relative w-fit max-w-full overflow-hidden ${className}`
+							: `relative w-fit max-w-[min(100%,480px)] overflow-hidden ${className}`
 				}
 			>
 				<ImageMessage
@@ -3773,10 +3806,13 @@ export function MediaAttachment({
 	}
 	if (type === 'video') {
 		return (
-			<div ref={containerRef} className={`wa-video-wrap mb-2 w-full ${className}`}>
+			<div
+				ref={containerRef}
+				className={`wa-video-wrap mb-2 ${selectMode ? 'pointer-events-none' : ''} ${className}`}
+			>
 				<video
 					key={url}
-					controls
+					controls={!selectMode}
 					playsInline
 					preload="metadata"
 					poster={previewDataUrl || undefined}
@@ -3787,6 +3823,17 @@ export function MediaAttachment({
 						setUrl(null);
 					}}
 				/>
+			</div>
+		);
+	}
+	if (selectMode) {
+		return (
+			<div
+				ref={containerRef}
+				className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5 ${className}`}
+			>
+				<FileText size={14} />
+				<span>{attachment.fileName || attachment.type || 'file'}</span>
 			</div>
 		);
 	}
@@ -3814,6 +3861,8 @@ function MessageAttachments({
 	messageRaw = null,
 	message = null,
 	selectMode = false,
+	avatarLabel = '?',
+	avatarSrc = '',
 }) {
 	const rawPreview = mediaPreviewFromRaw(messageRaw);
 	const voiceDuration = voiceDurationSecondsFromSource(message || { raw: messageRaw, attachments });
@@ -3903,6 +3952,8 @@ function MessageAttachments({
 					selectMode={selectMode}
 					messageRaw={messageRaw}
 					messageDurationSeconds={voiceDuration}
+					avatarLabel={avatarLabel}
+					avatarSrc={avatarSrc}
 				/>
 			))}
 		</>
@@ -6159,6 +6210,7 @@ function WhatsAppWorkspaceContent() {
 	reportPeriodDaysRef.current = reportPeriodDays;
 	const [staff, setStaff] = useState([]);
 	const [accountAccess, setAccountAccess] = useState([]);
+	const [assignableStaff, setAssignableStaff] = useState([]);
 	const [privacySettings, setPrivacySettings] = useState({
 		hideStatusViewReceipts: true,
 		readReceiptMode: 'on_reply',
@@ -6219,11 +6271,22 @@ function WhatsAppWorkspaceContent() {
 	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
 	const [draft, setDraft] = useState('');
 	const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+	const [scheduleAnchorEl, setScheduleAnchorEl] = useState(null);
 	const [messageSchedules, setMessageSchedules] = useState([]);
 	const [messageSchedulesLoading, setMessageSchedulesLoading] = useState(false);
 	const [messageScheduleBusyId, setMessageScheduleBusyId] = useState('');
 	const [composerImages, setComposerImages] = useState([]);
 	const composerImagesRef = useRef([]);
+
+	const openSchedulePopover = useCallback(event => {
+		setScheduleAnchorEl(event?.currentTarget || null);
+		setScheduleDialogOpen(true);
+	}, []);
+
+	const closeSchedulePopover = useCallback(open => {
+		setScheduleDialogOpen(open);
+		if (!open) setScheduleAnchorEl(null);
+	}, []);
 
 	useEffect(() => {
 		composerImagesRef.current = composerImages;
@@ -8387,6 +8450,7 @@ function WhatsAppWorkspaceContent() {
 			setLogs([]);
 			setReport(null);
 			setAccountAccess([]);
+			setAssignableStaff([]);
 			setPrivacySettings({
 				hideStatusViewReceipts: true,
 				readReceiptMode: 'on_reply',
@@ -10796,8 +10860,11 @@ function WhatsAppWorkspaceContent() {
 		});
 	};
 
-	const applyMessageSelection = (message, { toggle = true } = {}) => {
-		if (!message || !isSelectableTranscriptMessage(message)) return false;
+	const applyMessagesSelection = (messages, { toggle = true } = {}) => {
+		const list = (Array.isArray(messages) ? messages : [messages]).filter(
+			item => isSharableChatMessage(item),
+		);
+		if (!list.length) return false;
 		setMediaSelectMode(false);
 		setSelectedMediaIds(new Set());
 		setTicketSelectMode(true);
@@ -10807,21 +10874,29 @@ function WhatsAppWorkspaceContent() {
 		closeReactionPicker();
 		setSelectedMessageIds(current => {
 			const next = new Set(current);
-			if (toggle && next.has(message.id)) {
-				next.delete(message.id);
+			const allSelected = list.every(item => next.has(item.id));
+			if (toggle && allSelected) {
+				list.forEach(item => next.delete(item.id));
 				return next;
 			}
-			if (next.has(message.id)) return current;
-			if (next.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
-				toast.error(
-					t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)),
-				);
-				return current;
+			for (const item of list) {
+				if (next.has(item.id)) continue;
+				if (next.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+					toast.error(
+						t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)),
+					);
+					break;
+				}
+				next.add(item.id);
 			}
-			next.add(message.id);
 			return next;
 		});
 		return true;
+	};
+
+	const applyMessageSelection = (message, { toggle = true } = {}) => {
+		if (!message || !isSharableChatMessage(message)) return false;
+		return applyMessagesSelection([message], { toggle });
 	};
 
 	const applyMediaSelection = downloadableAttachments => {
@@ -12273,6 +12348,7 @@ function WhatsAppWorkspaceContent() {
 			},
 			{
 				id: 'pin',
+				dividerBefore: true,
 				label: selectedConversation.isPinned ? t.unpinChat : t.pinChat,
 				icon: Pin,
 				iconFill: selectedConversation.isPinned,
@@ -12294,6 +12370,7 @@ function WhatsAppWorkspaceContent() {
 			},
 			{
 				id: 'search',
+				dividerBefore: true,
 				label: locale === 'ar' ? 'بحث في الشات' : 'Search in chat',
 				icon: Search,
 				active: inChatSearchOpen,
@@ -12315,6 +12392,7 @@ function WhatsAppWorkspaceContent() {
 			},
 			{
 				id: 'favorite',
+				dividerBefore: true,
 				label: t.favoriteChats,
 				icon: Star,
 				iconFill: selectedConversation.isFavorite,
@@ -12363,7 +12441,7 @@ function WhatsAppWorkspaceContent() {
 				description: t.scheduleMessageHint,
 				icon: CalendarClock,
 				disabled: demoBlocked || demoChat || !conversationId || !accountId,
-				onClick: () => setScheduleDialogOpen(true),
+				onClick: event => openSchedulePopover(event),
 			},
 			{
 				id: 'group-select',
@@ -12410,6 +12488,7 @@ function WhatsAppWorkspaceContent() {
 		toggleTicketSelectMode,
 		inChatSearchOpen,
 		markConversationUnread,
+		openSchedulePopover,
 	]);
 
 	useEffect(() => {
@@ -12430,7 +12509,7 @@ function WhatsAppWorkspaceContent() {
 	const assignStaffOptions = useMemo(
 		() => [
 			{ value: '', label: t.unassign, icon: UserCircle2 },
-			...staff.map(user => {
+			...assignableStaff.map(user => {
 				const sla = report?.staff?.find(item => item.userId === user.id);
 				return {
 					value: user.id,
@@ -12440,7 +12519,7 @@ function WhatsAppWorkspaceContent() {
 				};
 			}),
 		],
-		[locale, report?.staff, staff, t.unassign],
+		[assignableStaff, locale, report?.staff, t.unassign],
 	);
 
 	const toggleConversationArchived = async (conversation, event) => {
@@ -12741,6 +12820,25 @@ function WhatsAppWorkspaceContent() {
 		setConversationId(conversationId);
 		void loadTabData('chats');
 	};
+
+	useEffect(() => {
+		if (!accountId || (!canManageWhatsApp && !canAssignWhatsApp)) {
+			setAssignableStaff([]);
+			return undefined;
+		}
+		let cancelled = false;
+		api
+			.get(`/whatsapp/accounts/${accountId}/assignable-staff`)
+			.then(({ data }) => {
+				if (!cancelled) setAssignableStaff(Array.isArray(data) ? data : []);
+			})
+			.catch(() => {
+				if (!cancelled) setAssignableStaff([]);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [accountId, canAssignWhatsApp, canManageWhatsApp]);
 
 	useEffect(() => {
 		if (!accountId || (!canManageWhatsApp && !canAssignWhatsApp)) return undefined;
@@ -13238,6 +13336,14 @@ function WhatsAppWorkspaceContent() {
 				),
 			});
 			toast.success('WhatsApp access updated');
+			try {
+				const { data } = await api.get(
+					`/whatsapp/accounts/${targetAccountId}/assignable-staff`,
+				);
+				setAssignableStaff(Array.isArray(data) ? data : []);
+			} catch {
+				/* keep previous assignable list */
+			}
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Could not save access');
 		}
@@ -14940,7 +15046,7 @@ function WhatsAppWorkspaceContent() {
 														type="button"
 														title={t.scheduleMessage}
 														aria-label={t.scheduleMessage}
-														onClick={() => setScheduleDialogOpen(true)}
+														onClick={openSchedulePopover}
 														className="wa-header-icon-btn relative"
 													>
 														<CalendarDays size={18} strokeWidth={2.05} />
@@ -15278,35 +15384,14 @@ function WhatsAppWorkspaceContent() {
 													</div>
 												)}
 												{ticketSelectMode && (
-													<div className="sticky top-0 z-20 mx-auto mb-2 flex w-fit max-w-full flex-wrap items-center justify-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm dark:bg-slate-800/95">
-														<button
-															type="button"
-															className="rounded-full px-2 py-0.5 hover:bg-slate-100 dark:hover:bg-slate-700"
-															onClick={() => {
-																const ids = selectableTranscriptMessages
-																	.slice(0, MAX_TRANSCRIPT_BUNDLE_ITEMS)
-																	.map(item => item.id);
-																setSelectedMessageIds(new Set(ids));
-																if (selectableTranscriptMessages.length > MAX_TRANSCRIPT_BUNDLE_ITEMS) {
-																	toast.error(
-																		t.tooManySelected.replace(
-																			'{count}',
-																			String(MAX_TRANSCRIPT_BUNDLE_ITEMS),
-																		),
-																	);
-																}
-															}}
-														>
-															{t.selectAllMessages}
-														</button>
-														<span className="opacity-50">·</span>
-														<span>{t.selectedMessagesCount.replace('{count}', String(selectedMessageIds.size))}</span>
+													<div className="wa-select-toolbar sticky top-0 z-20 mx-auto mb-2 flex w-fit max-w-full flex-wrap items-center justify-center gap-1.5 rounded-2xl border border-black/5 bg-white/98 px-2 py-1.5 shadow-[0_4px_18px_rgba(11,20,26,0.12)] dark:border-white/10 dark:bg-slate-900/95">
 														<BoardColumnPicker
 															accountId={accountId}
 															conversationId={conversationId}
 															messageIds={[...selectedMessageIds]}
 															locale={locale}
 															triggerLabel={t.addToBoard}
+															triggerClassName="wa-select-toolbar__btn wa-select-toolbar__btn--board"
 															onSuccess={() => {
 																setTicketSelectMode(false);
 																setGroupSelectMode(false);
@@ -15316,42 +15401,30 @@ function WhatsAppWorkspaceContent() {
 														/>
 														<button
 															type="button"
-															disabled={!selectedMessageIds.size || messageGroupsBusy || demo.settings.enabled || isDemoId(conversationId)}
-															onClick={() => {
-																setTicketSelectMode(false);
-																setGroupSelectMode(true);
-																setGroupPickerOpen(true);
-															}}
-															className="inline-flex items-center gap-1 rounded-full bg-sky-600/90 px-2.5 py-0.5 text-white disabled:opacity-50"
-														>
-															<FolderKanban size={12} />
-															{t.addToGroup}
-														</button>
-														<button
-															type="button"
 															disabled={!selectedMessageIds.size || demo.settings.enabled || isDemoId(conversationId)}
 															onClick={() => setSharingMessageIds([...selectedMessageIds])}
-															className="inline-flex items-center gap-1 rounded-full bg-emerald-600/90 px-2.5 py-0.5 text-white disabled:opacity-50"
+															className="wa-select-toolbar__btn wa-select-toolbar__btn--send disabled:opacity-40"
 														>
-															<Send size={12} />
+															<Send size={13} strokeWidth={2.25} />
 															{locale === 'ar' ? 'إرسال إلى…' : 'Send to…'}
 														</button>
 														<button
 															type="button"
 															disabled={!selectedMessageIds.size}
 															onClick={openSelectedTranscriptBundle}
-															className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-500)] px-2.5 py-0.5 text-white disabled:opacity-50"
+															className="wa-select-toolbar__btn wa-select-toolbar__btn--transcribe disabled:opacity-40"
 														>
-															<AudioLines size={12} />
+															<AudioLines size={13} strokeWidth={2.25} />
 															{t.transcribeSelected}
 														</button>
+														<span className="wa-select-toolbar__divider" aria-hidden="true" />
 														<button
 															type="button"
 															onClick={() => {
 																setTicketSelectMode(false);
 																setSelectedMessageIds(new Set());
 															}}
-															className="rounded-full px-2 py-0.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+															className="wa-select-toolbar__cancel"
 														>
 															{t.cancelSelectMessages}
 														</button>
@@ -15554,9 +15627,7 @@ function WhatsAppWorkspaceContent() {
 														(downloadableAttachments.length > 0 ||
 															messageHasSelectableMedia(message));
 													const selectableInTicketMode =
-														ticketSelectMode &&
-														!groupedImages &&
-														isSelectableTranscriptMessage(message);
+														ticketSelectMode && isSharableChatMessage(message);
 													const selectableInGroupMode =
 														groupSelectMode && !groupedImages && message?.id && !message.optimistic;
 													const allSelected =
@@ -15568,10 +15639,17 @@ function WhatsAppWorkspaceContent() {
 															: selectedMessageIds.has(message.id));
 													const messageSelected =
 														(selectableInTicketMode || selectableInGroupMode) &&
-														selectedMessageIds.has(message.id);
+														(groupedImages
+															? (row.messages || []).some(item =>
+																	selectedMessageIds.has(item.id),
+																)
+															: selectedMessageIds.has(message.id));
 													const showSelectCheck =
 														selectableInMediaMode || selectableInTicketMode || selectableInGroupMode;
 													const isChecked = allSelected || messageSelected;
+													const ticketSelectionTargets = groupedImages
+														? row.messages || [message]
+														: [message];
 													const membership = messageGroupMembership[message.id];
 													const isGroupChat =
 														selectedConversation?.type === 'group' ||
@@ -15671,7 +15749,7 @@ function WhatsAppWorkspaceContent() {
 																				return;
 																			}
 																			if (selectableInTicketMode) {
-																				applyMessageSelection(message);
+																				applyMessagesSelection(ticketSelectionTargets);
 																				return;
 																			}
 																			if (downloadableAttachments.length) {
@@ -15734,9 +15812,11 @@ function WhatsAppWorkspaceContent() {
 																		}
 																		if (
 																			ticketSelectMode ||
-																			(!groupedImages && isSelectableTranscriptMessage(message))
+																			isSharableChatMessage(message)
 																		) {
-																			applyMessageSelection(message);
+																			applyMessagesSelection(
+																				groupedImages ? row.messages || [message] : [message],
+																			);
 																			return;
 																		}
 																		if (downloadableAttachments.length) {
@@ -15753,7 +15833,7 @@ function WhatsAppWorkspaceContent() {
 																				return;
 																			}
 																			if (selectableInTicketMode) {
-																				applyMessageSelection(message);
+																				applyMessagesSelection(ticketSelectionTargets);
 																				return;
 																			}
 																			if (!selectableInMediaMode) return;
@@ -15862,6 +15942,16 @@ function WhatsAppWorkspaceContent() {
 																				sessionReady={isAccountConnected}
 																				messageRaw={message.raw}
 																				message={message}
+																				avatarLabel={
+																					mine
+																						? selectedAccount?.label || selectedAccount?.phoneNumber || 'Me'
+																						: conversationTitle(selectedConversation) || '?'
+																				}
+																				avatarSrc={
+																					mine
+																						? selectedAccount?.avatarUrl || ''
+																						: conversationAvatarUrl(selectedConversation)
+																				}
 																				selectMode={Boolean(
 																					mediaSelectMode ||
 																						ticketSelectMode ||
@@ -16425,7 +16515,7 @@ function WhatsAppWorkspaceContent() {
 																disabled={sending || demo.settings.enabled}
 																title={t.scheduleMessage}
 																aria-label={t.scheduleMessage}
-																onClick={() => setScheduleDialogOpen(true)}
+																onClick={openSchedulePopover}
 																className="wa-input-action"
 															>
 																<Clock size={18} strokeWidth={2} />
@@ -16451,7 +16541,7 @@ function WhatsAppWorkspaceContent() {
 																disabled={sending || demo.settings.enabled}
 																title={t.scheduleMessage}
 																aria-label={t.scheduleMessage}
-																onClick={() => setScheduleDialogOpen(true)}
+																onClick={openSchedulePopover}
 																className="wa-input-action"
 															>
 																<Clock size={18} strokeWidth={2} />
@@ -17584,7 +17674,7 @@ function WhatsAppWorkspaceContent() {
 								<div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100"><X size={18} /></div>
 								<span className="font-semibold">{locale === 'ar' ? 'بدون تعيين' : 'Unassigned'}</span>
 							</button>
-							{staff.map(user => (
+							{assignableStaff.map(user => (
 								<button
 									key={user.id}
 									type="button"
@@ -17607,6 +17697,13 @@ function WhatsAppWorkspaceContent() {
 									{conversationAssignTarget.assignedUserId === user.id && <Check size={18} className="text-[#00a884]" />}
 								</button>
 							))}
+							{assignableStaff.length === 0 ? (
+								<p className="px-3 py-4 text-center text-sm text-[#667781]">
+									{locale === 'ar'
+										? 'لا يوجد موظفون بصلاحية عرض واستخدام لهذا الحساب. امنحهم الصلاحية من الإعدادات أولاً.'
+										: 'No staff with view and use access on this account. Grant access in Settings first.'}
+								</p>
+							) : null}
 						</div>
 					</div>
 				</div>
@@ -17761,7 +17858,8 @@ function WhatsAppWorkspaceContent() {
 			)}
 			<ScheduleMessageDialog
 				open={scheduleDialogOpen}
-				onOpenChange={setScheduleDialogOpen}
+				onOpenChange={closeSchedulePopover}
+				anchorEl={scheduleAnchorEl}
 				ar={locale === 'ar'}
 				accountId={accountId}
 				conversations={scheduleConversationOptions}

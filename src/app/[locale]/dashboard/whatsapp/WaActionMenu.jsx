@@ -51,16 +51,16 @@ export function WaActionMenu({
 		const updatePosition = () => {
 			const rect = buttonRef.current?.getBoundingClientRect();
 			if (!rect) return;
-			const gap = 6;
+			const gap = 8;
 			const margin = 8;
 			const viewportH = window.innerHeight || 720;
 			const viewportW = window.innerWidth || 1280;
-			const width = Math.min(Math.max(rect.width, compact ? 220 : 240), viewportW - margin * 2);
+			const width = Math.min(Math.max(compact ? 248 : 268, rect.width), viewportW - margin * 2);
 			const spaceBelow = Math.max(0, viewportH - rect.bottom - margin - gap);
 			const spaceAbove = Math.max(0, rect.top - margin - gap);
-			const openUp = spaceBelow < 180 && spaceAbove > spaceBelow;
-			const available = Math.max(140, openUp ? spaceAbove : spaceBelow);
-			const maxHeight = Math.min(360, available);
+			const openUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+			const available = Math.max(160, openUp ? spaceAbove : spaceBelow);
+			const maxHeight = Math.min(420, available);
 			const top = openUp ? Math.max(margin, rect.top - gap - maxHeight) : rect.bottom + gap;
 			let left = rect.right - width;
 			left = Math.max(margin, Math.min(left, viewportW - width - margin));
@@ -165,7 +165,7 @@ export function WaActionMenu({
 							role="menu"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className="wa-action-menu-panel fixed z-[1600] overflow-y-auto overscroll-contain rounded-lg border border-[var(--wa-border,#e9edef)] bg-white p-1.5 shadow-[0_2px_5px_0_rgba(11,20,26,0.26),0_2px_10px_0_rgba(11,20,26,0.16)] dark:border-slate-700 dark:bg-[#233138]"
+							className="wa-action-menu-panel fixed z-[1600] overflow-y-auto overscroll-contain"
 							style={{
 								top: position.top,
 								left: position.left,
@@ -173,60 +173,55 @@ export function WaActionMenu({
 								maxHeight: position.maxHeight,
 							}}
 						>
-							{visibleActions.map(action => {
+							{visibleActions.map((action, index) => {
 								const Icon = action.icon;
 								const isDisabled = Boolean(action.disabled);
 								const tone = action.tone || (action.active ? 'active' : 'default');
+								const showDivider = Boolean(action.dividerBefore) && index > 0;
 								return (
-									<button
-										key={action.id}
-										type="button"
-										role="menuitem"
-										disabled={isDisabled}
-										onPointerDown={event => runAction(event, action)}
-										onClick={event => runAction(event, action)}
-										className={`wa-action-menu-item flex w-full items-center gap-2.5 rounded-md px-2.5 py-2.5 text-start transition-colors ${
-											isDisabled
-												? 'cursor-not-allowed opacity-45'
-												: tone === 'danger'
-													? 'text-[#ea0038] hover:bg-[#fce8eb] dark:hover:bg-rose-950/30'
-													: tone === 'active'
-														? 'bg-[var(--wa-hover,#f5f6f6)] text-[var(--wa-accent,#00a884)] dark:bg-slate-800 dark:text-[#00a884]'
-														: 'text-[var(--wa-text,#111b21)] hover:bg-[var(--wa-hover,#f5f6f6)] dark:text-slate-200 dark:hover:bg-slate-800'
-										}`}
-									>
-										<span
-											className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${
-												tone === 'active'
-													? 'bg-[var(--wa-accent,#00a884)]/12 text-[var(--wa-accent,#00a884)]'
-													: 'bg-[var(--wa-input,#f0f2f5)] text-[var(--wa-secondary,#667781)] dark:bg-slate-800 dark:text-slate-300'
+									<div key={action.id}>
+										{showDivider ? <div className="wa-action-menu-divider" aria-hidden="true" /> : null}
+										<button
+											type="button"
+											role="menuitem"
+											disabled={isDisabled}
+											onPointerDown={event => runAction(event, action)}
+											onClick={event => runAction(event, action)}
+											className={`wa-action-menu-item ${
+												isDisabled
+													? 'is-disabled'
+													: tone === 'danger'
+														? 'is-danger'
+														: tone === 'active'
+															? 'is-active'
+															: ''
 											}`}
 										>
-											{Icon ? (
-												<Icon
-													size={16}
-													strokeWidth={2.1}
-													className="shrink-0"
-													fill={action.iconFill ? 'currentColor' : 'none'}
-												/>
-											) : null}
-										</span>
-										<span className="min-w-0 flex-1">
-											<span className="block truncate text-[12px] font-semibold leading-4">
-												{action.label}
+											<span className="wa-action-menu-item__icon" aria-hidden="true">
+												{Icon ? (
+													<Icon
+														size={18}
+														strokeWidth={1.9}
+														className="shrink-0"
+														fill={action.iconFill ? 'currentColor' : 'none'}
+													/>
+												) : null}
 											</span>
-											{action.description ? (
-												<span className="mt-0.5 block truncate text-[10px] font-medium leading-4 text-slate-400">
-													{action.description}
-												</span>
-											) : null}
-										</span>
-										<span className="grid h-4 w-4 shrink-0 place-items-center">
+											<span className="wa-action-menu-item__body">
+												<span className="wa-action-menu-item__label">{action.label}</span>
+												{action.description ? (
+													<span className="wa-action-menu-item__desc">{action.description}</span>
+												) : null}
+											</span>
 											{action.active && !isDisabled ? (
-												<Check size={14} className="text-emerald-600" />
-											) : null}
-										</span>
-									</button>
+												<span className="wa-action-menu-item__check" aria-hidden="true">
+													<Check size={15} strokeWidth={2.4} />
+												</span>
+											) : (
+												<span className="wa-action-menu-item__check is-empty" aria-hidden="true" />
+											)}
+										</button>
+									</div>
 								);
 							})}
 						</div>

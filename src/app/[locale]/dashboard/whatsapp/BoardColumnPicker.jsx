@@ -37,6 +37,7 @@ export function BoardColumnPicker({
 	onSuccess,
 	anchorClassName = '',
 	triggerLabel,
+	triggerClassName = '',
 }) {
 	const ar = locale === 'ar';
 	const [lists, setLists] = useState([]);
@@ -256,7 +257,10 @@ export function BoardColumnPicker({
 			<button
 				type="button"
 				disabled={!messageIds.length}
-				className="inline-flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-0.5 text-white disabled:opacity-50"
+				className={
+					triggerClassName ||
+					'inline-flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-0.5 text-white disabled:opacity-50'
+				}
 				aria-expanded={visible}
 				onClick={event => {
 					event.preventDefault();
@@ -269,7 +273,7 @@ export function BoardColumnPicker({
 					}
 				}}
 			>
-				<LayoutGrid size={12} />
+				<LayoutGrid size={13} strokeWidth={2.25} />
 				{triggerLabel || (ar ? 'إضافة للوحة المهام' : 'Add to tasks board')}
 			</button>
 			{menu}

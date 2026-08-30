@@ -1,36 +1,37 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { CalendarClock, Check, Loader2, Search, Users, X } from 'lucide-react';
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
+	CalendarClock,
+	Check,
+	Loader2,
+	Plus,
+	Search,
+	X,
+} from 'lucide-react';
 import api from '@/utils/axios';
 
 const copy = {
 	en: {
 		title: 'Schedule message',
-		subtitle: 'Send the same message to one or more chats on a schedule.',
+		subtitle: 'Send later to one or more chats',
 		message: 'Message',
-		recipients: 'Recipients',
-		currentChat: 'Current chat',
-		addMore: 'Add more chats',
+		messagePlaceholder: 'Type the message to send…',
+		recipients: 'Send to',
+		addMore: 'Add chats',
 		searchChats: 'Search chats',
-		selectedCount: '{count} chats selected',
-		when: 'When to send',
+		selectedCount: '{count} selected',
+		when: 'Schedule',
 		once: 'Once',
-		daily: 'Every day',
-		customDays: 'Custom days',
+		daily: 'Daily',
+		customDays: 'Custom',
 		dateTime: 'Date & time',
-		timeOfDay: 'Time of day',
-		endDate: 'End date (optional)',
-		days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-		schedule: 'Schedule message',
+		timeOfDay: 'Time',
+		endDate: 'Ends (optional)',
+		days: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+		schedule: 'Schedule',
 		scheduling: 'Scheduling…',
 		cancel: 'Cancel',
 		emptyMessage: 'Write the message to schedule.',
@@ -41,23 +42,23 @@ const copy = {
 	},
 	ar: {
 		title: 'جدولة رسالة',
-		subtitle: 'ابعت نفس الرسالة لشات واحد أو أكتر في وقت محدد.',
+		subtitle: 'أرسل لاحقًا لشات واحد أو أكثر',
 		message: 'الرسالة',
-		recipients: 'المستلمون',
-		currentChat: 'الشات الحالي',
-		addMore: 'ضيف شاتات',
+		messagePlaceholder: 'اكتب الرسالة المراد إرسالها…',
+		recipients: 'إلى',
+		addMore: 'إضافة شاتات',
 		searchChats: 'ابحث في الشاتات',
-		selectedCount: '{count} شات محدد',
-		when: 'متى الإرسال',
-		once: 'مرة واحدة',
-		daily: 'كل يوم',
-		customDays: 'أيام مخصصة',
+		selectedCount: '{count} محدد',
+		when: 'الموعد',
+		once: 'مرة',
+		daily: 'يومي',
+		customDays: 'مخصص',
 		dateTime: 'التاريخ والوقت',
-		timeOfDay: 'وقت الإرسال',
-		endDate: 'تاريخ الانتهاء (اختياري)',
-		days: ['أحد', 'إثن', 'ثلا', 'أرب', 'خم', 'جم', 'سب'],
-		schedule: 'جدولة الرسالة',
-		scheduling: 'بيحدّد الموعد…',
+		timeOfDay: 'الوقت',
+		endDate: 'ينتهي (اختياري)',
+		days: ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'],
+		schedule: 'جدولة',
+		scheduling: 'جاري…',
 		cancel: 'إلغاء',
 		emptyMessage: 'اكتب الرسالة المراد جدولتها.',
 		needRecipients: 'اختَر شات واحد على الأقل.',
@@ -81,9 +82,41 @@ function defaultTimeValue(date = new Date()) {
 	return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function clamp(value, min, max) {
+	return Math.min(max, Math.max(min, value));
+}
+
+function computePopoverPosition(anchorEl) {
+	const margin = 10;
+	const width = Math.min(380, (window.innerWidth || 1280) - margin * 2);
+	const maxHeight = Math.min(560, (window.innerHeight || 800) - margin * 2);
+	const rect = anchorEl?.getBoundingClientRect?.();
+	if (!rect) {
+		return {
+			top: Math.max(margin, ((window.innerHeight || 800) - maxHeight) / 2),
+			left: Math.max(margin, ((window.innerWidth || 1280) - width) / 2),
+			width,
+			maxHeight,
+		};
+	}
+	const gap = 8;
+	const spaceBelow = window.innerHeight - rect.bottom - margin - gap;
+	const spaceAbove = rect.top - margin - gap;
+	const openUp = spaceBelow < 320 && spaceAbove > spaceBelow;
+	const available = Math.max(220, openUp ? spaceAbove : spaceBelow);
+	const height = Math.min(maxHeight, available);
+	const top = openUp
+		? Math.max(margin, rect.top - gap - height)
+		: Math.min(rect.bottom + gap, window.innerHeight - margin - 120);
+	let left = rect.right - width;
+	left = clamp(left, margin, window.innerWidth - width - margin);
+	return { top, left, width, maxHeight: height };
+}
+
 export default function ScheduleMessageDialog({
 	open,
 	onOpenChange,
+	anchorEl = null,
 	ar = false,
 	accountId,
 	conversations = [],
@@ -92,6 +125,8 @@ export default function ScheduleMessageDialog({
 	onCreated,
 }) {
 	const t = ar ? copy.ar : copy.en;
+	const panelRef = useRef(null);
+	const [position, setPosition] = useState(null);
 	const [mode, setMode] = useState('once');
 	const [messageText, setMessageText] = useState('');
 	const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -117,6 +152,39 @@ export default function ScheduleMessageDialog({
 		setSearch('');
 		setPickerOpen(false);
 	}, [open, initialConversationId, initialText]);
+
+	useEffect(() => {
+		if (!open) {
+			setPosition(null);
+			return undefined;
+		}
+		const update = () => setPosition(computePopoverPosition(anchorEl));
+		update();
+		window.addEventListener('resize', update);
+		window.addEventListener('scroll', update, true);
+		return () => {
+			window.removeEventListener('resize', update);
+			window.removeEventListener('scroll', update, true);
+		};
+	}, [open, anchorEl]);
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const onKey = event => {
+			if (event.key === 'Escape') onOpenChange?.(false);
+		};
+		const onPointer = event => {
+			if (panelRef.current?.contains(event.target)) return;
+			if (anchorEl && (anchorEl === event.target || anchorEl.contains?.(event.target))) return;
+			onOpenChange?.(false);
+		};
+		document.addEventListener('keydown', onKey);
+		document.addEventListener('pointerdown', onPointer);
+		return () => {
+			document.removeEventListener('keydown', onKey);
+			document.removeEventListener('pointerdown', onPointer);
+		};
+	}, [open, anchorEl, onOpenChange]);
 
 	const filteredConversations = useMemo(() => {
 		const query = search.trim().toLowerCase();
@@ -205,188 +273,204 @@ export default function ScheduleMessageDialog({
 		}
 	};
 
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2">
-						<CalendarClock size={18} />
-						{t.title}
-					</DialogTitle>
-					<DialogDescription>{t.subtitle}</DialogDescription>
-				</DialogHeader>
+	if (!open || !position || typeof document === 'undefined') return null;
 
-				<div className="space-y-4">
-					<div>
-						<label className="mb-1 block text-xs font-bold text-slate-600">{t.message}</label>
-						<textarea
-							value={messageText}
-							onChange={event => setMessageText(event.target.value)}
-							rows={3}
-							className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-900"
-						/>
+	return createPortal(
+		<div
+			ref={panelRef}
+			role="dialog"
+			aria-label={t.title}
+			className="wa-schedule-popover"
+			style={{
+				top: position.top,
+				left: position.left,
+				width: position.width,
+				maxHeight: position.maxHeight,
+			}}
+			onPointerDown={event => event.stopPropagation()}
+		>
+			<header className="wa-schedule-popover__header">
+				<div className="wa-schedule-popover__heading">
+					<span className="wa-schedule-popover__icon" aria-hidden="true">
+						<CalendarClock size={16} strokeWidth={2.1} />
+					</span>
+					<div className="min-w-0">
+						<h3>{t.title}</h3>
+						<p>{t.subtitle}</p>
 					</div>
+				</div>
+				<button
+					type="button"
+					className="wa-schedule-popover__close"
+					aria-label={t.cancel}
+					onClick={() => onOpenChange?.(false)}
+				>
+					<X size={16} strokeWidth={2.2} />
+				</button>
+			</header>
 
-					<div>
-						<div className="mb-2 flex items-center justify-between gap-2">
-							<label className="text-xs font-bold text-slate-600">{t.recipients}</label>
-							<span className="text-[11px] font-semibold text-emerald-700">
-								{formatTemplate(t.selectedCount, { count: selectedIds.size })}
-							</span>
-						</div>
-						<div className="flex flex-wrap gap-2">
-							{selectedChips.map(item => (
-								<span
-									key={item.id}
-									className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+			<div className="wa-schedule-popover__body nice-scroll">
+				<section className="wa-schedule-popover__section">
+					<label className="wa-schedule-popover__label">{t.message}</label>
+					<textarea
+						value={messageText}
+						onChange={event => setMessageText(event.target.value)}
+						rows={3}
+						placeholder={t.messagePlaceholder}
+						className="wa-schedule-popover__textarea"
+					/>
+				</section>
+
+				<section className="wa-schedule-popover__section">
+					<div className="wa-schedule-popover__row">
+						<label className="wa-schedule-popover__label">{t.recipients}</label>
+						<span className="wa-schedule-popover__count">
+							{formatTemplate(t.selectedCount, { count: selectedIds.size })}
+						</span>
+					</div>
+					<div className="wa-schedule-popover__chips">
+						{selectedChips.map(item => (
+							<span key={item.id} className="wa-schedule-popover__chip">
+								<span className="truncate">{item.title}</span>
+								<button
+									type="button"
+									aria-label="Remove"
+									onClick={() => toggleConversation(String(item.id))}
 								>
-									{item.title}
-									<button type="button" onClick={() => toggleConversation(String(item.id))}>
-										<X size={12} />
-									</button>
-								</span>
-							))}
-						</div>
+									<X size={11} strokeWidth={2.4} />
+								</button>
+							</span>
+						))}
 						<button
 							type="button"
+							className="wa-schedule-popover__add"
 							onClick={() => setPickerOpen(current => !current)}
-							className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 dark:border-slate-700"
 						>
-							<Users size={13} />
+							<Plus size={13} strokeWidth={2.4} />
 							{t.addMore}
 						</button>
-						{pickerOpen ? (
-							<div className="mt-2 rounded-xl border border-slate-200 p-2 dark:border-slate-700">
-								<div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5 dark:bg-slate-900">
-									<Search size={14} className="text-slate-400" />
-									<input
-										value={search}
-										onChange={event => setSearch(event.target.value)}
-										placeholder={t.searchChats}
-										className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-									/>
-								</div>
-								<div className="max-h-40 space-y-1 overflow-y-auto nice-scroll">
-									{filteredConversations.map(item => {
-										const checked = selectedIds.has(String(item.id));
-										return (
-											<label
-												key={item.id}
-												className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-900"
-											>
-												<input
-													type="checkbox"
-													checked={checked}
-													onChange={() => toggleConversation(String(item.id))}
-												/>
-												<span className="truncate">{item.title}</span>
-											</label>
-										);
-									})}
-								</div>
+					</div>
+					{pickerOpen ? (
+						<div className="wa-schedule-popover__picker">
+							<div className="wa-schedule-popover__search">
+								<Search size={14} strokeWidth={2} />
+								<input
+									value={search}
+									onChange={event => setSearch(event.target.value)}
+									placeholder={t.searchChats}
+								/>
 							</div>
-						) : null}
+							<div className="wa-schedule-popover__picker-list nice-scroll">
+								{filteredConversations.map(item => {
+									const checked = selectedIds.has(String(item.id));
+									return (
+										<button
+											key={item.id}
+											type="button"
+											className={`wa-schedule-popover__picker-item ${checked ? 'is-checked' : ''}`}
+											onClick={() => toggleConversation(String(item.id))}
+										>
+											<span className="wa-schedule-popover__check" aria-hidden="true">
+												{checked ? <Check size={12} strokeWidth={2.6} /> : null}
+											</span>
+											<span className="truncate">{item.title}</span>
+										</button>
+									);
+								})}
+							</div>
+						</div>
+					) : null}
+				</section>
+
+				<section className="wa-schedule-popover__section">
+					<label className="wa-schedule-popover__label">{t.when}</label>
+					<div className="wa-schedule-popover__segment" role="tablist">
+						{[
+							['once', t.once],
+							['daily', t.daily],
+							['custom', t.customDays],
+						].map(([value, label]) => (
+							<button
+								key={value}
+								type="button"
+								role="tab"
+								aria-selected={mode === value}
+								className={mode === value ? 'is-active' : ''}
+								onClick={() => setMode(value)}
+							>
+								{label}
+							</button>
+						))}
 					</div>
 
-					<div>
-						<label className="mb-2 block text-xs font-bold text-slate-600">{t.when}</label>
-						<div className="mb-3 flex flex-wrap gap-2">
-							{[
-								['once', t.once],
-								['daily', t.daily],
-								['custom', t.customDays],
-							].map(([value, label]) => (
-								<button
-									key={value}
-									type="button"
-									onClick={() => setMode(value)}
-									className={`rounded-full px-3 py-1 text-[11px] font-bold ${
-										mode === value
-											? 'bg-emerald-600 text-white'
-											: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
-									}`}
-								>
-									{label}
-								</button>
-							))}
-						</div>
-
-						{mode === 'once' ? (
+					{mode === 'once' ? (
+						<label className="wa-schedule-popover__field">
+							<span>{t.dateTime}</span>
 							<input
 								type="datetime-local"
 								value={onceAt}
 								onChange={event => setOnceAt(event.target.value)}
-								className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
 							/>
-						) : (
-							<div className="space-y-3">
-								<div>
-									<label className="mb-1 block text-[11px] font-semibold text-slate-500">
-										{t.timeOfDay}
-									</label>
-									<input
-										type="time"
-										value={timeOfDay}
-										onChange={event => setTimeOfDay(event.target.value)}
-										className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-									/>
+						</label>
+					) : (
+						<div className="wa-schedule-popover__stack">
+							<label className="wa-schedule-popover__field">
+								<span>{t.timeOfDay}</span>
+								<input
+									type="time"
+									value={timeOfDay}
+									onChange={event => setTimeOfDay(event.target.value)}
+								/>
+							</label>
+							{mode === 'custom' ? (
+								<div className="wa-schedule-popover__days">
+									{t.days.map((label, index) => {
+										const checked = daysOfWeek.includes(index);
+										return (
+											<button
+												key={`${label}-${index}`}
+												type="button"
+												className={checked ? 'is-active' : ''}
+												onClick={() => toggleDay(index)}
+											>
+												{label}
+											</button>
+										);
+									})}
 								</div>
-								{mode === 'custom' ? (
-									<div className="flex flex-wrap gap-2">
-										{t.days.map((label, index) => {
-											const checked = daysOfWeek.includes(index);
-											return (
-												<button
-													key={label}
-													type="button"
-													onClick={() => toggleDay(index)}
-													className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-														checked
-															? 'bg-emerald-600 text-white'
-															: 'bg-slate-100 text-slate-700 dark:bg-slate-800'
-													}`}
-												>
-													{label}
-												</button>
-											);
-										})}
-									</div>
-								) : null}
-								<div>
-									<label className="mb-1 block text-[11px] font-semibold text-slate-500">
-										{t.endDate}
-									</label>
-									<input
-										type="date"
-										value={endDate}
-										onChange={event => setEndDate(event.target.value)}
-										className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-									/>
-								</div>
-							</div>
-						)}
-					</div>
+							) : null}
+							<label className="wa-schedule-popover__field">
+								<span>{t.endDate}</span>
+								<input
+									type="date"
+									value={endDate}
+									onChange={event => setEndDate(event.target.value)}
+								/>
+							</label>
+						</div>
+					)}
+				</section>
+			</div>
 
-					<div className="flex justify-end gap-2 pt-2">
-						<button
-							type="button"
-							onClick={() => onOpenChange?.(false)}
-							className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600"
-						>
-							{t.cancel}
-						</button>
-						<button
-							type="button"
-							disabled={submitting}
-							onClick={() => void submit()}
-							className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-						>
-							{submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-							{submitting ? t.scheduling : t.schedule}
-						</button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+			<footer className="wa-schedule-popover__footer">
+				<button
+					type="button"
+					className="wa-schedule-popover__ghost"
+					onClick={() => onOpenChange?.(false)}
+				>
+					{t.cancel}
+				</button>
+				<button
+					type="button"
+					disabled={submitting}
+					className="wa-schedule-popover__primary"
+					onClick={() => void submit()}
+				>
+					{submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} strokeWidth={2.4} />}
+					{submitting ? t.scheduling : t.schedule}
+				</button>
+			</footer>
+		</div>,
+		document.body,
 	);
 }
