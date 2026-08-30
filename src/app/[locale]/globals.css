@@ -3351,7 +3351,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   overflow: hidden;
 }
 
-.wa-message-bubble.wa-message-file .wa-message-meta {
+.wa-message-bubble.wa-message-file:not(.wa-message-has-caption) .wa-message-meta {
   position: absolute;
   z-index: 2;
   bottom: 50px;
@@ -3366,6 +3366,30 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   font-size: 11px !important;
   line-height: 1 !important;
   text-shadow: none;
+}
+
+.wa-message-bubble.wa-message-file.wa-message-has-caption .wa-message-meta {
+  position: relative !important;
+  z-index: auto;
+  float: inline-end;
+  clear: none;
+  inset: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  align-self: auto;
+  height: auto;
+  margin-block: 4px 0 !important;
+  margin-inline: 10px 0 !important;
+  padding-inline: 2px !important;
+  background: transparent !important;
+  color: #667781 !important;
+  font-size: 11px !important;
+  line-height: 15px !important;
+  text-shadow: none;
+}
+
+.wa-message-bubble.wa-message-file.wa-message-has-caption .wa-file-card-head {
+  padding-bottom: 10px;
 }
 
 .wa-message-bubble.wa-message-location {
@@ -6737,9 +6761,19 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		border-inline-start: 1px solid rgba(7, 94, 84, 0.18) !important;
 	}
 
-	.wa-web-desktop .wa-message-bubble.wa-message-file .wa-message-meta {
+	.wa-web-desktop .wa-message-bubble.wa-message-file:not(.wa-message-has-caption) .wa-message-meta {
 		bottom: 50px !important;
 		inset-inline-end: 14px !important;
+		color: #667781 !important;
+	}
+
+	.wa-web-desktop .wa-message-bubble.wa-message-file.wa-message-has-caption .wa-message-meta {
+		position: relative !important;
+		bottom: auto !important;
+		inset: auto !important;
+		float: inline-end;
+		margin-block: 4px 0 !important;
+		margin-inline: 10px 0 !important;
 		color: #667781 !important;
 	}
 
