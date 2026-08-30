@@ -38,10 +38,18 @@ export function useWaScrollWindow({
 	overscan = 12,
 	enabled = true,
 	minCountToWindow = 48,
+	/** 'end' = chat thread (latest at bottom). 'start' = inbox list (latest at top). */
+	initialAlign = 'end',
 } = {}) {
 	const shouldWindow = Boolean(enabled) && count >= minCountToWindow;
 	const [windowState, setWindowState] = useState(() =>
-		computeRowWindow({ count, rowHeight, overscan, clientHeight: 800 }),
+		computeRowWindow({
+			count,
+			rowHeight,
+			overscan,
+			clientHeight: 800,
+			scrollTop: initialAlign === 'start' ? 0 : Math.max(0, count * rowHeight - 800),
+		}),
 	);
 
 	// Recompute when the list grows from empty / crosses the window threshold.
@@ -67,15 +75,20 @@ export function useWaScrollWindow({
 					overscan,
 				});
 			}
+			// Inbox lists start at top; message threads open near the bottom.
+			const estimatedBottom = Math.max(
+				0,
+				count * Math.max(24, Number(rowHeight) || 72) - 800,
+			);
 			return computeRowWindow({
-				scrollTop: 0,
+				scrollTop: initialAlign === 'start' ? 0 : estimatedBottom,
 				clientHeight: 800,
 				count,
 				rowHeight,
 				overscan,
 			});
 		});
-	}, [shouldWindow, count, rowHeight, overscan]);
+	}, [shouldWindow, count, rowHeight, overscan, initialAlign]);
 
 	const onScroll = useCallback(
 		event => {

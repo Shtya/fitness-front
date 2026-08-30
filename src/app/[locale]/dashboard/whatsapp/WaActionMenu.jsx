@@ -26,6 +26,7 @@ export function WaActionMenu({
 	buttonClassName = '',
 	disabled = false,
 	size = 'md',
+	iconOnly = false,
 }) {
 	const [open, setOpen] = useState(false);
 	const [position, setPosition] = useState(null);
@@ -123,18 +124,31 @@ export function WaActionMenu({
 				aria-expanded={open}
 				aria-label={ariaLabel}
 				onClick={() => setOpen(current => !current)}
-				className={`wa-action-menu-trigger wa-btn-3d inline-flex items-center gap-1.5 border border-slate-200 bg-white font-semibold text-[#111b21] outline-none transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 ${
-					compact ? 'h-9 rounded-[10px] px-2.5 text-[12px]' : 'h-10 rounded-[10px] px-3 text-xs'
-				} ${activeCount ? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)] dark:bg-slate-800' : ''} ${buttonClassName}`}
+				className={
+					iconOnly
+						? `wa-action-menu-trigger wa-toolbar-icon-btn outline-none disabled:opacity-50 ${
+								activeCount ? 'is-active' : ''
+							} ${buttonClassName}`
+						: `wa-action-menu-trigger wa-btn-3d inline-flex items-center gap-1.5 border border-[var(--wa-border,#e9edef)] bg-white font-semibold text-[var(--wa-text,#111b21)] outline-none transition-colors hover:bg-[var(--wa-hover,#f5f6f6)] disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 ${
+								compact ? 'h-9 rounded-[10px] px-2.5 text-[12px]' : 'h-10 rounded-[10px] px-3 text-xs'
+							} ${activeCount ? 'border-[var(--wa-accent,#00a884)]/30 bg-[var(--wa-accent,#00a884)]/10 text-[var(--wa-accent,#00a884)] dark:bg-slate-800' : ''} ${buttonClassName}`
+				}
 			>
-				<MoreHorizontal size={16} className="shrink-0" aria-hidden="true" />
-				<span className="max-w-[7rem] truncate">{triggerLabel || ariaLabel}</span>
-				{activeCount ? (
-					<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-primary-600)] px-1 text-[10px] font-bold text-white">
-						{activeCount}
-					</span>
+				<MoreHorizontal size={iconOnly ? 20 : 16} strokeWidth={iconOnly ? 1.75 : 2} className="shrink-0" aria-hidden="true" />
+				{iconOnly ? null : (
+					<>
+						<span className="max-w-[7rem] truncate">{triggerLabel || ariaLabel}</span>
+						{activeCount ? (
+							<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--wa-accent,#00a884)] px-1 text-[10px] font-bold text-white">
+								{activeCount}
+							</span>
+						) : null}
+						<ChevronDown size={14} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+					</>
+				)}
+				{iconOnly && activeCount ? (
+					<span className="wa-toolbar-icon-btn__badge">{activeCount > 9 ? '9+' : activeCount}</span>
 				) : null}
-				<ChevronDown size={14} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
 			{open &&
 				position &&
@@ -151,7 +165,7 @@ export function WaActionMenu({
 							role="menu"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className="wa-action-menu-panel fixed z-[1600] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_16px_40px_rgba(11,20,26,0.16)] dark:border-slate-700 dark:bg-slate-900"
+							className="wa-action-menu-panel fixed z-[1600] overflow-y-auto overscroll-contain rounded-lg border border-[var(--wa-border,#e9edef)] bg-white p-1.5 shadow-[0_2px_5px_0_rgba(11,20,26,0.26),0_2px_10px_0_rgba(11,20,26,0.16)] dark:border-slate-700 dark:bg-[#233138]"
 							style={{
 								top: position.top,
 								left: position.left,
@@ -171,21 +185,21 @@ export function WaActionMenu({
 										disabled={isDisabled}
 										onPointerDown={event => runAction(event, action)}
 										onClick={event => runAction(event, action)}
-										className={`wa-action-menu-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start transition-colors ${
+										className={`wa-action-menu-item flex w-full items-center gap-2.5 rounded-md px-2.5 py-2.5 text-start transition-colors ${
 											isDisabled
 												? 'cursor-not-allowed opacity-45'
 												: tone === 'danger'
-													? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+													? 'text-[#ea0038] hover:bg-[#fce8eb] dark:hover:bg-rose-950/30'
 													: tone === 'active'
-														? 'bg-emerald-50 text-emerald-700 dark:bg-slate-800 dark:text-emerald-300'
-														: 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
+														? 'bg-[var(--wa-hover,#f5f6f6)] text-[var(--wa-accent,#00a884)] dark:bg-slate-800 dark:text-[#00a884]'
+														: 'text-[var(--wa-text,#111b21)] hover:bg-[var(--wa-hover,#f5f6f6)] dark:text-slate-200 dark:hover:bg-slate-800'
 										}`}
 									>
 										<span
-											className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${
+											className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${
 												tone === 'active'
-													? 'border-emerald-200 bg-white text-emerald-600 dark:border-emerald-900/40 dark:bg-slate-900'
-													: 'border-slate-200 bg-slate-50 text-[#54656f] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+													? 'bg-[var(--wa-accent,#00a884)]/12 text-[var(--wa-accent,#00a884)]'
+													: 'bg-[var(--wa-input,#f0f2f5)] text-[var(--wa-secondary,#667781)] dark:bg-slate-800 dark:text-slate-300'
 											}`}
 										>
 											{Icon ? (

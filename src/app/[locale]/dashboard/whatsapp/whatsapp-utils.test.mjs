@@ -27,6 +27,7 @@ import {
 	messageMatchesQuotedTarget,
 	inboxAvatarForWaId,
 	normalizeWhatsAppIdentity,
+	looksLikeMarkdown,
 	parseWhatsAppBold,
 	relativeTime,
 	resolveWhatsAppMentionLabel,
@@ -714,6 +715,17 @@ test('quoted voice labels show duration and time instead of only Voice message',
 	assert.equal(voice?.senderName, 'Ahmed Magdy');
 	assert.equal(voice?.durationLabel, '0:09');
 	assert.ok(voice?.timeLabel);
+});
+
+test('looksLikeMarkdown detects headings lists fences and double-star bold', () => {
+	assert.equal(looksLikeMarkdown('hello *bold* world'), false);
+	assert.equal(
+		looksLikeMarkdown('### Headings\n**Bold**\n- Lists\n`code`\n```js\ncode\n```'),
+		true,
+	);
+	assert.equal(looksLikeMarkdown('- item one\n- item two'), true);
+	assert.equal(looksLikeMarkdown('Use **ECS-HQ** now'), true);
+	assert.equal(looksLikeMarkdown('plain chat line'), false);
 });
 
 test('parseWhatsAppBold converts double-asterisk sections into bold text', () => {

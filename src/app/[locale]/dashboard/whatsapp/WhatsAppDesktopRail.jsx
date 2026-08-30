@@ -103,8 +103,8 @@ export default function WhatsAppDesktopRail({
 			: 'Hide menu';
 
 	const itemClass = active =>
-		`wa-desktop-rail__item group relative flex h-12 w-14 max-[1050px]:w-12 flex-col items-center justify-center gap-0.5 rounded-lg border-0 bg-transparent text-[10px] font-semibold text-[#54656f] transition-colors hover:bg-[#f0f2f5] ${
-			active ? 'is-active bg-[#e7f7ef] text-[#00a884]' : ''
+		`wa-desktop-rail__item group relative flex h-12 w-14 max-[1050px]:w-12 flex-col items-center justify-center gap-0.5 rounded-lg border-0 bg-transparent text-[10px] font-semibold transition-colors ${
+			active ? 'is-active' : ''
 		}`;
 
 	const renderItem = item => {
@@ -140,11 +140,11 @@ export default function WhatsAppDesktopRail({
 
 	return (
 		<aside
-			className="wa-desktop-rail relative z-[5] hidden w-[64px] max-[1050px]:w-[58px] shrink-0 flex-col items-center border-e border-[#e5e9eb] bg-white min-[769px]:flex"
+			className="wa-desktop-rail relative z-[5] hidden w-[64px] max-[1050px]:w-[58px] shrink-0 flex-col items-center min-[769px]:flex"
 			aria-label={ar ? 'تنقل واتساب' : 'WhatsApp navigation'}
 		>
 			<div
-				className="wa-desktop-rail__logo grid h-12 w-full place-items-center text-[#00a884]"
+				className="wa-desktop-rail__logo grid h-12 w-full place-items-center"
 				title="WhatsApp"
 				aria-hidden="true"
 			>
@@ -177,7 +177,7 @@ export default function WhatsAppDesktopRail({
 				) : null}
 				{primaryItems.map(renderItem)}
 				{utilityItems.length > 0 ? (
-					<div className="wa-desktop-rail__divider my-1 h-px w-6 bg-[#e4e7ec]" aria-hidden="true" />
+					<div className="wa-desktop-rail__divider my-1 h-px w-6" aria-hidden="true" />
 				) : null}
 				{utilityItems.map(renderItem)}
 			</nav>
@@ -188,8 +188,8 @@ export default function WhatsAppDesktopRail({
 				{showSettings ? (
 					<button
 						type="button"
-						className={`grid size-8 place-items-center rounded-lg border-0 bg-transparent p-0 text-[#54656f] transition-colors hover:bg-[#f0f2f5] hover:text-[#00a884] ${
-							activeTab === 'settings' ? 'bg-[#e7f7ef] text-[#00a884]' : ''
+						className={`wa-desktop-rail__settings ${
+							activeTab === 'settings' ? 'is-active' : ''
 						}`}
 						onClick={() => (onOpenSettings ? onOpenSettings() : onSelect('settings'))}
 						aria-label={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
@@ -202,24 +202,24 @@ export default function WhatsAppDesktopRail({
 				<button
 					type="button"
 					className={`wa-desktop-rail__avatar-btn relative rounded-full ${
-						activeTab === 'profile' ? 'ring-2 ring-[#00a884] ring-offset-1' : ''
+						activeTab === 'profile' ? 'is-active' : ''
 					}`}
 					onClick={onOpenProfile}
 					aria-label={ar ? 'الملف الشخصي' : 'Profile'}
 					aria-current={activeTab === 'profile' ? 'page' : undefined}
 					title={ar ? 'الملف الشخصي' : 'Profile'}
 				>
-					<span className="wa-desktop-rail__avatar relative grid size-8 place-items-center overflow-hidden rounded-full border border-[#ddd] bg-[#f0f2f5]">
+					<span className="wa-desktop-rail__avatar relative grid size-8 place-items-center overflow-hidden rounded-full">
 						{avatarUrl ? (
 							// eslint-disable-next-line @next/next/no-img-element
 							<img src={avatarUrl} alt="" className="size-full object-cover" />
 						) : (
-							<span className="wa-desktop-rail__avatar-fallback grid size-full place-items-center text-[#667781]">
+							<span className="wa-desktop-rail__avatar-fallback grid size-full place-items-center">
 								<User size={15} strokeWidth={2} />
 							</span>
 						)}
 						{connected ? (
-							<span className="wa-desktop-rail__online-dot absolute end-0 bottom-0 size-2 rounded-full border-2 border-white bg-[#25d366]" />
+							<span className="wa-desktop-rail__online-dot absolute end-0 bottom-0 size-2 rounded-full" />
 						) : null}
 					</span>
 				</button>

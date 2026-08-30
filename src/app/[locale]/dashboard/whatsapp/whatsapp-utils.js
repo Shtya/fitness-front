@@ -614,14 +614,17 @@ export function messageTextPresentation(text) {
 		unicodeBidi: 'plaintext',
 		textAlign: 'right',
 		display: 'block',
-		width: '100%',
+		// Prefer one line; soft-wrap only when bubble max-width is hit (Enter still breaks).
+		width: 'max-content',
+		maxWidth: '100%',
 	};
 	const englishStyle = {
 		direction: 'ltr',
 		textAlign: 'left',
 		unicodeBidi: 'plaintext',
 		display: 'block',
-		width: '100%',
+		width: 'max-content',
+		maxWidth: '100%',
 		fontFamily:
 			'var(--font-inter), "SF Pro Text", "Segoe UI Variable Text", "Helvetica Neue", system-ui, sans-serif',
 		fontWeight: 400,
@@ -645,6 +648,28 @@ export function messageTextPresentation(text) {
 		className: 'wa-message-text--en',
 		style: englishStyle,
 	};
+}
+
+/**
+ * Detect Markdown that WhatsApp native formatting does not cover
+ * (headings, fenced code, **bold**, dash lists, etc.).
+ * Keep plain WhatsApp *bold* / _italic_ on the WA path.
+ */
+export function looksLikeMarkdown(text) {
+	const value = String(text || '')
+		.replace(/^\uFEFF/, '')
+		.replace(/[\u200B-\u200D\uFEFF]/g, '')
+		.replace(/\r\n/g, '\n');
+	if (!value.trim()) return false;
+	if (/(^|\n)\s{0,3}#{1,6}\s+\S/.test(value)) return true;
+	if (/(^|\n)\s*```/.test(value)) return true;
+	if (/\*\*[^*\n][\s\S]*?\*\*/.test(value)) return true;
+	if (/(^|\n)\s{0,3}[-+]\s+\S/.test(value)) return true;
+	if (/(^|\n)\s{0,3}\d+\.\s+\S/.test(value)) return true;
+	if (/(^|\n)\s{0,3}>\s+\S/.test(value)) return true;
+	if (/\[[^\]]+\]\([^)\s]+\)/.test(value)) return true;
+	if (/`[^`\n]+`/.test(value) && /\n/.test(value)) return true;
+	return false;
 }
 
 /**

@@ -31,6 +31,7 @@ import {
 	mergeMessages,
 	messageDeliveryState,
 	isSelfChatConversation,
+	looksLikeMarkdown,
 	messageTextPresentation,
 } from './whatsapp-utils';
 import {
@@ -38,6 +39,7 @@ import {
 	shouldProviderBackfill,
 } from './whatsapp-message-sync';
 import ExpandableMessageText from './ExpandableMessageText';
+import MarkdownMessage from '../ai-free/MarkdownMessage';
 
 function newClientMessageId() {
 	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -695,6 +697,7 @@ export default function WhatsAppSplitPane({
 						const mine = message.direction === 'outbound';
 						const presentation = messageTextPresentation(message.text);
 						const attachments = message.attachments || [];
+						const textIsMarkdown = looksLikeMarkdown(message.text);
 						return (
 							<div
 								key={message.id}
@@ -723,9 +726,25 @@ export default function WhatsAppSplitPane({
 												text={message.text}
 												dir={presentation.dir}
 												lang={presentation.lang}
-												style={presentation.style}
-												className={`wa-message-text whitespace-pre-wrap wrap-break-word ${presentation.className || ''}`}
+												style={{
+													...presentation.style,
+													...(textIsMarkdown ? { whiteSpace: 'normal' } : null),
+												}}
+												className={`wa-message-text ${
+													textIsMarkdown ? 'wa-message-text--md' : 'whitespace-pre-wrap'
+												} ${presentation.className || ''}`}
 												readMoreLabel={labels.readMore || (ar ? 'اقرأ المزيد' : 'Read more')}
+												previewChars={textIsMarkdown ? 3600 : undefined}
+												previewLines={textIsMarkdown ? 64 : undefined}
+												readMoreStep={textIsMarkdown ? 2400 : undefined}
+												readMoreLines={textIsMarkdown ? 40 : undefined}
+												renderText={value =>
+													textIsMarkdown || looksLikeMarkdown(value) ? (
+														<MarkdownMessage content={value} className="wa-chat-md" />
+													) : (
+														value
+													)
+												}
 											/>
 											<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
 												{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString([], {

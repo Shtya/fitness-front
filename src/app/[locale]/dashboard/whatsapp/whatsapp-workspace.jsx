@@ -37,6 +37,7 @@ import {
 	FolderKanban,
 	Globe2,
 	Image as ImageIcon,
+	ImageOff,
 	Images,
 	LayoutGrid,
 	ListChecks,
@@ -138,6 +139,7 @@ import {
 	messageMatchesAckTarget,
 	messageTextPresentation,
 	normalizeWhatsAppIdentity,
+	looksLikeMarkdown,
 	parseWhatsAppBold,
 	compressImageForWhatsApp,
 	quotedMessageLabel,
@@ -227,6 +229,7 @@ import WhatsAppPrivacyBlurControl from './WhatsAppPrivacyBlurControl';
 import ExpandableMessageText from './ExpandableMessageText';
 import EmailMemoMessageCard from './EmailMemoMessageCard';
 import { isEmailMemoMessageText } from './email-memo-message';
+import MarkdownMessage from '../ai-free/MarkdownMessage';
 import {
 	applyWhatsAppPrivacyBlurClasses,
 	markPrivacyBlurRevealed,
@@ -568,6 +571,13 @@ const translations = {
 		selectMessageAction: 'Select',
 		reconnectAccount: 'Reconnect WhatsApp',
 		autoConnecting: 'Restoring WhatsApp session…',
+		checkingSession: 'Checking WhatsApp session…',
+		loadingInbox: 'Loading chats…',
+		sessionLinkBanner:
+			'Phone not linked — scan QR to send and receive live. Saved chats stay available.',
+		sessionLinkAction: 'Link phone',
+		qrExpired: 'QR code expired',
+		qrRefresh: 'Generate new QR',
 		defaultAccountLabel: 'WhatsApp',
 		openLink: 'Open link',
 		copyLink: 'Copy link',
@@ -993,6 +1003,13 @@ const translations = {
 		selectMessageAction: 'تحديد',
 		reconnectAccount: 'إعادة ربط واتساب',
 		autoConnecting: 'جارِ استعادة جلسة واتساب…',
+		checkingSession: 'جارِ التحقق من جلسة واتساب…',
+		loadingInbox: 'جارِ تحميل المحادثات…',
+		sessionLinkBanner:
+			'الجوال غير مربوط — امسح QR للإرسال والاستقبال. المحادثات المحفوظة تبقى ظاهرة.',
+		sessionLinkAction: 'ربط الجوال',
+		qrExpired: 'انتهت صلاحية رمز QR',
+		qrRefresh: 'إنشاء رمز جديد',
 		defaultAccountLabel: 'واتساب',
 		openLink: 'فتح الرابط',
 		copyLink: 'نسخ الرابط',
@@ -1555,83 +1572,112 @@ function ImageMessage({
 	className = '',
 	previewUrl = null,
 	loading = false,
+	unavailable = false,
 	cover = true,
-	blurPlaceholder = false,
 	selectMode = false,
+	retryLabel = 'Tap to retry',
+	loadingLabel = 'Loading media…',
 }) {
 	const [loaded, setLoaded] = useState(false);
 	const [broken, setBroken] = useState(false);
+	const [previewReady, setPreviewReady] = useState(false);
 
 	useEffect(() => {
 		setLoaded(false);
 		setBroken(false);
 	}, [url]);
 
-	const placeholder = previewUrl && previewUrl !== url ? previewUrl : null;
+	useEffect(() => {
+		setPreviewReady(false);
+	}, [previewUrl]);
+
+	const previewSrc = previewUrl || null;
+	const hasFull = Boolean(url);
+	const isBroken = Boolean(broken || (unavailable && !hasFull));
+	const isPending =
+		!isBroken &&
+		(loading || (hasFull && !loaded) || (!hasFull && Boolean(previewSrc || loading)));
+	const showFrame = !cover && (isPending || isBroken) && !hasFull;
+	const showSkeleton = !isBroken && !previewReady && !loaded && !showFrame;
 	const fitClass = cover
 		? 'absolute inset-0 z-[1] h-full w-full object-cover'
-		: 'wa-photo-main relative z-[1] block h-auto max-h-[420px] w-full object-contain';
+		: 'wa-photo-main relative z-[1] mx-auto block h-auto w-auto max-w-full object-contain';
 
 	return (
 		<button
 			type="button"
-			aria-label={alt || 'Open image preview'}
+			aria-label={isBroken ? retryLabel : alt || 'Open image preview'}
+			aria-busy={isPending}
 			onClick={event => {
-				if (selectMode) {
-					// Parent bubble handles selection — don't open / retry.
-					return;
-				}
-				if (broken) return;
+				if (selectMode) return;
 				onOpen?.(event);
 			}}
-			disabled={broken && !selectMode}
-			className={`wa-photo-open relative block w-full overflow-hidden bg-black/5 ${cover ? 'h-full min-h-0' : 'h-auto'} ${className}`}
+			disabled={selectMode && isBroken && !previewSrc}
+			className={`wa-photo-open relative block overflow-hidden ${
+				cover ? 'h-full min-h-0 w-full' : showFrame ? 'wa-photo-frame' : 'h-auto w-full'
+			} ${isPending ? 'is-loading' : isBroken ? 'is-unavailable' : 'is-ready'} ${
+				previewSrc ? 'wa-photo-has-preview' : 'wa-photo-no-preview'
+			} ${className}`}
 		>
-			{placeholder && cover ? (
+			{showFrame ? <span className="wa-photo-sizer" aria-hidden="true" /> : null}
+			{showSkeleton ? <span className="wa-photo-skeleton" aria-hidden="true" /> : null}
+			{previewSrc && !isBroken ? (
 				<img
-					src={placeholder}
+					src={previewSrc}
 					alt=""
 					aria-hidden="true"
-					className="wa-photo-placeholder absolute inset-0 h-full w-full object-cover"
+					draggable={false}
+					onLoad={() => setPreviewReady(true)}
+					className={`wa-photo-placeholder ${
+						cover || showFrame
+							? 'absolute inset-0 h-full w-full object-cover'
+							: 'absolute inset-0 z-0 h-full w-full object-cover'
+					} ${loaded ? 'is-faded' : 'is-visible'}`}
 				/>
 			) : null}
-			{!loaded && !broken && !placeholder && (
-				<div className={`animate-pulse bg-linear-to-br from-slate-200 to-slate-100 dark:from-slate-700 dark:to-slate-800 ${cover ? 'absolute inset-0' : 'h-40 w-full'}`} />
-			)}
-			{broken ? (
-				<div className={`grid place-items-center bg-black/10 text-xs font-semibold text-slate-600 ${cover ? 'absolute inset-0' : 'h-40 w-full'}`}>
-					Media unavailable
+			{isBroken && !hasFull ? (
+				<div
+					className={`wa-photo-state ${
+						cover ? 'absolute inset-0' : 'absolute inset-0'
+					}`}
+				>
+					<span className="wa-photo-state__icon" aria-hidden="true">
+						<ImageOff size={28} strokeWidth={1.75} />
+					</span>
+					<span className="wa-photo-state__action" aria-hidden="true">
+						<RefreshCw size={18} strokeWidth={2.4} />
+					</span>
+					<span className="wa-photo-state__label">{retryLabel}</span>
 				</div>
-			) : (
+			) : hasFull ? (
 				<img
 					src={url}
 					alt={alt}
+					draggable={false}
 					onLoad={() => setLoaded(true)}
 					onError={() => {
-						setBroken(!placeholder && !blurPlaceholder);
+						setBroken(!previewSrc);
 						setLoaded(false);
 					}}
-					className={`${fitClass} transition-opacity duration-300 ${
-						blurPlaceholder && !loaded
-							? 'opacity-70 blur-[2px] scale-105'
-							: loaded
-								? 'opacity-100'
-								: placeholder && !cover
-									? 'opacity-0'
-									: 'opacity-0'
-					}`}
+					className={`${fitClass} wa-photo-full ${loaded ? 'is-loaded' : 'is-pending'}`}
 				/>
-			)}
-			{loading && !loaded && (
-				<span className="absolute end-2 top-2 z-[2] grid h-6 w-6 place-items-center rounded-full bg-black/45 text-white">
-					<Loader2 size={14} className="animate-spin" />
-				</span>
-			)}
-			{!broken && onOpen && (
+			) : null}
+			{isPending ? (
+				<div className="wa-photo-state is-loading-state" aria-hidden="true">
+					<span className="wa-photo-state__icon wa-photo-state__icon--muted">
+						<ImageIcon size={28} strokeWidth={1.75} />
+					</span>
+					<span className="wa-photo-download__ring">
+						<Loader2 size={22} strokeWidth={2.25} className="animate-spin" />
+					</span>
+					<span className="wa-photo-state__label wa-photo-state__label--soft">{loadingLabel}</span>
+				</div>
+			) : null}
+			{!isBroken && onOpen && !isPending && hasFull && loaded ? (
 				<span className="wa-photo-open-hint" aria-hidden="true">
 					<Expand size={15} strokeWidth={2.4} />
 				</span>
-			)}
+			) : null}
 		</button>
 	);
 }
@@ -2080,6 +2126,13 @@ function useNearViewport(elementRef, { rootMargin = '600px' } = {}) {
 			}
 			if (typeof IntersectionObserver === 'undefined') {
 				markNear();
+				return;
+			}
+			const rect = node.getBoundingClientRect();
+			// Zero-size tiles never intersect — load anyway after a short settle.
+			if (!(rect.width > 0 || rect.height > 0)) {
+				if (tries++ < 45) raf = window.requestAnimationFrame(attach);
+				else markNear();
 				return;
 			}
 			if (isAlreadyNear(node)) {
@@ -3245,6 +3298,9 @@ export function MediaAttachment({
 	const previewDataUrl = attachment?.previewDataUrl || null;
 	const isGallery = layout === 'gallery';
 	const isSingleMedia = layout === 'single';
+	const alreadyOnDisk =
+		String(attachment?.downloadStatus || '').toLowerCase() === 'downloaded';
+	const canFetchWithoutSession = demoAttachment || alreadyOnDisk;
 
 	const loadAttachmentBlob = useCallback(async () => {
 		if (attachment?.id) {
@@ -3345,6 +3401,12 @@ export function MediaAttachment({
 			return undefined;
 		}
 		if (!isNearViewport) return undefined;
+		// Cached media streams offline; pending media needs a linked WhatsApp session.
+		if (!sessionReady && !canFetchWithoutSession) {
+			setLoading(false);
+			setFailed(true);
+			return undefined;
+		}
 		setLoading(true);
 		setFailed(false);
 		loadAttachmentBlob()
@@ -3390,11 +3452,13 @@ export function MediaAttachment({
 		attachment?.id,
 		attachment?.mimeType,
 		attachment?.type,
+		canFetchWithoutSession,
 		isDocument,
 		isNearViewport,
 		isVoice,
 		loadAttachmentBlob,
 		retryNonce,
+		sessionReady,
 		type,
 	]);
 
@@ -3575,7 +3639,7 @@ export function MediaAttachment({
 		);
 	}
 
-	if ((type === 'image' || type === 'sticker') && (url || previewDataUrl)) {
+	if ((type === 'image' || type === 'sticker') && (url || previewDataUrl || loading || failed)) {
 		return (
 			<div
 				ref={containerRef}
@@ -3583,18 +3647,20 @@ export function MediaAttachment({
 					isGallery
 						? `absolute inset-0 overflow-hidden ${className}`
 						: isSingleMedia
-							? `relative w-full overflow-hidden ${className}`
+							? `relative w-full min-w-[min(100%,220px)] max-w-[280px] overflow-hidden ${className}`
 							: `relative max-w-[360px] overflow-hidden ${className}`
 				}
 			>
 				<ImageMessage
-					url={url || previewDataUrl}
-					previewUrl={url ? previewDataUrl : null}
-					loading={Boolean(loading && !failed && !url)}
+					url={url || null}
+					previewUrl={previewDataUrl}
+					loading={Boolean((loading || !url) && !failed)}
+					unavailable={Boolean(failed && !url)}
 					alt={attachment.fileName || 'image'}
 					cover={isGallery}
-					blurPlaceholder={!url && Boolean(previewDataUrl)}
 					selectMode={selectMode}
+					retryLabel={labels.tapToRetry || labels.retry || 'Tap to retry'}
+					loadingLabel={labels.loadingMedia || 'Loading media…'}
 					onOpen={() => {
 						if (selectMode) return;
 						if (url) {
@@ -3608,21 +3674,6 @@ export function MediaAttachment({
 					}}
 					className={`${type === 'sticker' ? 'wa-sticker-asset' : 'wa-photo-asset'}${isSingleMedia ? ' wa-photo-asset-single' : ''}`}
 				/>
-				{failed && !url ? (
-					<button
-						type="button"
-						className="absolute inset-x-2 bottom-2 z-[3] rounded-lg bg-black/60 px-2 py-1.5 text-[11px] font-semibold text-white"
-						onClick={event => {
-							event.stopPropagation();
-							autoRetryCountRef.current = 0;
-							setFailed(false);
-							setLoading(true);
-							setRetryNonce(value => value + 1);
-						}}
-					>
-						{labels.retry || labels.tapToRetry || 'Retry'}
-					</button>
-				) : null}
 			</div>
 		);
 	}
@@ -3633,12 +3684,17 @@ export function MediaAttachment({
 				ref={containerRef}
 				className={
 					type === 'video'
-						? `wa-video-loading mb-2 flex min-h-[160px] w-full max-w-[360px] items-center justify-center gap-2 rounded-[10px] bg-black/10 px-3 py-6 text-xs ${className}`
-						: `mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5 ${className}`
+						? `wa-media-card wa-media-card--video mb-2 ${className}`
+						: `wa-media-card mb-2 ${className}`
 				}
 			>
-				<Loader2 size={14} className="animate-spin" />
-				<span>{labels.loadingMedia}</span>
+				<span className="wa-media-card__icon" aria-hidden="true">
+					{type === 'video' ? <Video size={28} strokeWidth={1.75} /> : <ImageIcon size={28} strokeWidth={1.75} />}
+				</span>
+				<span className="wa-photo-download__ring">
+					<Loader2 size={22} strokeWidth={2.25} className="animate-spin" />
+				</span>
+				<span className="wa-media-card__label">{labels.loadingMedia}</span>
 			</div>
 		);
 	}
@@ -3648,41 +3704,53 @@ export function MediaAttachment({
 			setFailed(false);
 			setRetryNonce(value => value + 1);
 		};
+		if (!isGallery) {
+			return (
+				<button
+					ref={containerRef}
+					type="button"
+					onClick={retry}
+					className={`wa-media-card ${type === 'video' ? 'wa-media-card--video' : ''} mb-2 text-start ${className}`}
+				>
+					<span className="wa-media-card__icon" aria-hidden="true">
+						{type === 'video' ? (
+							<Video size={28} strokeWidth={1.75} />
+						) : type === 'audio' || type === 'ptt' ? (
+							<Mic size={28} strokeWidth={1.75} />
+						) : (
+							<ImageOff size={28} strokeWidth={1.75} />
+						)}
+					</span>
+					<span className="wa-photo-state__action" aria-hidden="true">
+						<RefreshCw size={18} strokeWidth={2.4} />
+					</span>
+					<span className="wa-media-card__label">
+						{labels.tapToRetry || labels.mediaUnavailable || 'Tap to retry'}
+					</span>
+				</button>
+			);
+		}
 		return (
 			<button
 				ref={containerRef}
 				type="button"
 				onClick={retry}
-				className={
-					isGallery
-						? `wa-media-unavailable absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-1.5 overflow-hidden px-3 text-center text-xs ${mine ? 'text-emerald-950/80' : 'text-slate-600'} ${className}`
-						: 'wa-media-unavailable mb-2 flex max-w-[260px] items-center gap-2.5 overflow-hidden rounded-xl border border-black/5 bg-black/[0.04] px-3 py-2.5 text-start text-xs text-slate-600'
-				}
+				className={`wa-media-unavailable absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-1.5 overflow-hidden px-3 text-center text-xs ${mine ? 'text-emerald-950/80' : 'text-slate-600'} ${className}`}
 			>
-				<span
-					className={`relative z-[1] grid place-items-center rounded-full ${
-						isGallery
-							? 'h-11 w-11 bg-black/35 text-white shadow-sm'
-							: 'h-9 w-9 bg-black/10 text-slate-600'
-					}`}
-				>
+				<span className="relative z-[1] grid h-11 w-11 place-items-center rounded-full bg-black/35 text-white shadow-sm">
 					{type === 'audio' || type === 'ptt' ? (
-						<Mic size={isGallery ? 18 : 16} className="shrink-0" />
+						<Mic size={18} className="shrink-0" />
 					) : type === 'video' ? (
-						<Video size={isGallery ? 18 : 16} className="shrink-0" />
+						<Video size={18} className="shrink-0" />
 					) : (
-						<FileText size={isGallery ? 18 : 16} className="shrink-0" />
+						<FileText size={18} className="shrink-0" />
 					)}
 				</span>
 				<span className="relative z-[1] min-w-0">
-					<span className={`block font-semibold ${isGallery ? 'text-white drop-shadow' : ''}`}>
+					<span className="block font-semibold text-white drop-shadow">
 						{labels.mediaUnavailable}
 					</span>
-					<span
-						className={`mt-0.5 block text-[10px] ${
-							isGallery ? 'text-white/85 drop-shadow' : 'text-slate-400'
-						}`}
-					>
+					<span className="mt-0.5 block text-[10px] text-white/85 drop-shadow">
 						{labels.tapToRetry || 'Tap to retry'}
 					</span>
 				</span>
@@ -3844,52 +3912,104 @@ function MessageHoverActions({
 	open,
 	emojiOpen,
 	showTranscribe = false,
+	showCopy = false,
 	onEmoji,
 	onReply,
 	onTranscribe,
+	onCopy,
 	onMore,
 }) {
 	const ar = locale === 'ar';
+	const [copied, setCopied] = useState(false);
+	const copiedTimerRef = useRef(null);
+
+	useEffect(
+		() => () => {
+			if (copiedTimerRef.current) window.clearTimeout(copiedTimerRef.current);
+		},
+		[],
+	);
+
+	const copyLabel = copied ? (ar ? 'تم النسخ' : 'Copied') : ar ? 'نسخ' : 'Copy';
+	const reactLabel = ar ? 'تفاعل' : 'React';
+	const replyLabel = ar ? 'رد' : 'Reply';
+	const transcribeLabel = ar ? 'تفريغ' : 'Transcribe';
+	const moreLabel = ar ? 'المزيد' : 'More';
+
 	return (
-		<div className={`wa-message-hover-actions ${mine ? 'is-outgoing' : 'is-incoming'} ${open ? 'is-open' : ''}`}>
+		<div
+			className={`wa-message-hover-actions ${mine ? 'is-outgoing' : 'is-incoming'} ${open ? 'is-open' : ''}`}
+			role="toolbar"
+			aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}
+		>
+			{showCopy ? (
+				<button
+					type="button"
+					onPointerDown={event => event.stopPropagation()}
+					onClick={async event => {
+						event.preventDefault();
+						event.stopPropagation();
+						if (copied) return;
+						const ok = await onCopy?.(event);
+						if (!ok) return;
+						setCopied(true);
+						if (copiedTimerRef.current) window.clearTimeout(copiedTimerRef.current);
+						copiedTimerRef.current = window.setTimeout(() => setCopied(false), 1600);
+					}}
+					aria-label={copyLabel}
+					data-tooltip={copyLabel}
+					className={`wa-message-hover-btn ${copied ? 'is-copied' : ''}`}
+				>
+					{copied ? (
+						<Check size={20} strokeWidth={2.5} aria-hidden />
+					) : (
+						<Copy size={19} strokeWidth={2.2} aria-hidden />
+					)}
+				</button>
+			) : null}
 			<button
 				type="button"
 				data-message-reaction-trigger
 				onPointerDown={event => event.stopPropagation()}
 				onClick={onEmoji}
-				aria-label={ar ? 'تفاعل الرموز' : 'React'}
+				aria-label={reactLabel}
+				data-tooltip={reactLabel}
 				aria-expanded={Boolean(emojiOpen)}
 				className="wa-message-hover-btn"
 			>
-				<Smile size={13} strokeWidth={2.2} />
+				<Smile size={20} strokeWidth={2.15} aria-hidden />
 			</button>
 			<button
 				type="button"
 				onClick={onReply}
-				aria-label={ar ? 'رد' : 'Reply'}
+				aria-label={replyLabel}
+				data-tooltip={replyLabel}
 				className="wa-message-hover-btn"
 			>
-				<Reply size={13} strokeWidth={2.2} />
+				<Reply size={20} strokeWidth={2.15} aria-hidden />
 			</button>
 			{showTranscribe ? (
 				<button
 					type="button"
 					onClick={onTranscribe}
-					aria-label={ar ? 'تحويل إلى نص' : 'Transcribe'}
+					aria-label={transcribeLabel}
+					data-tooltip={transcribeLabel}
 					className="wa-message-hover-btn is-transcribe"
 				>
-					<AudioLines size={13} strokeWidth={2.2} />
+					<AudioLines size={20} strokeWidth={2.15} aria-hidden />
 				</button>
 			) : null}
+			<span className="wa-message-hover-sep" aria-hidden />
 			<button
 				type="button"
 				data-message-actions-trigger
 				onClick={onMore}
-				aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}
+				aria-label={moreLabel}
+				data-tooltip={moreLabel}
 				aria-expanded={open && !emojiOpen}
-				className="wa-message-hover-btn"
+				className="wa-message-hover-btn is-more"
 			>
-				<MoreHorizontal size={13} strokeWidth={2.2} />
+				<MoreHorizontal size={20} strokeWidth={2.15} aria-hidden />
 			</button>
 		</div>
 	);
@@ -5311,7 +5431,15 @@ function ConversationPreviewIcon({ type }) {
 	return null;
 }
 
-function WhatsAppFormattedText({ text, mentionDirectory = null, mentionLabels = null }) {
+function WhatsAppFormattedText({
+	text,
+	mentionDirectory = null,
+	mentionLabels = null,
+	forceMarkdown = false,
+}) {
+	if (forceMarkdown || looksLikeMarkdown(text)) {
+		return <MarkdownMessage content={text} className="wa-chat-md" />;
+	}
 	return parseWhatsAppBold(text).flatMap((part, partIndex) =>
 		messageTextSegments(part.text).map((segment, segmentIndex) => {
 			const key = `${partIndex}:${segmentIndex}`;
@@ -5672,10 +5800,8 @@ function ConversationFilterDropdown({ value, onChange, labels, variant = 'dropdo
 							role="option"
 							aria-selected={active}
 							onClick={() => onChange(option.value)}
-							className={`rounded-[18px] border-0 px-3 py-1.5 text-[10px] font-semibold transition-colors ${
-								active
-									? 'bg-[#d9fdd3] text-[#008069]'
-									: 'bg-[#f0f2f5] text-[#54636b] hover:bg-[#e9edef]'
+							className={`wa-filter-pill rounded-[18px] border-0 px-3 py-1.5 text-[10px] font-semibold transition-colors ${
+								active ? 'is-active' : ''
 							}`}
 						>
 							{option.label}
@@ -5991,12 +6117,16 @@ function WhatsAppWorkspaceContent() {
 	const [tabLoading, setTabLoading] = useState(false);
 	const [tabError, setTabError] = useState('');
 	const [accountBusy, setAccountBusy] = useState(false);
+	const [inboxReady, setInboxReady] = useState(false);
+	const [sessionProbeDone, setSessionProbeDone] = useState(false);
+	const [qrExpired, setQrExpired] = useState(false);
 	const [sending, setSending] = useState(false);
 	const [loadingOlder, setLoadingOlder] = useState(false);
 	const [hasMoreMessages, setHasMoreMessages] = useState(true);
 	const hasMoreMessagesRef = useRef(true);
 	hasMoreMessagesRef.current = hasMoreMessages;
 	const [loadingMessages, setLoadingMessages] = useState(false);
+	const [showJumpToBottom, setShowJumpToBottom] = useState(false);
 	const [messagesSyncHint, setMessagesSyncHint] = useState('');
 	const [recordingVoice, setRecordingVoice] = useState(false);
 	const [recordingPaused, setRecordingPaused] = useState(false);
@@ -6219,15 +6349,29 @@ function WhatsAppWorkspaceContent() {
 	const scrollMessagesToBottom = useCallback((behavior = 'auto') => {
 		const scroll = () => {
 			const box = messageBoxRef.current;
-			if (box) box.scrollTo({ top: box.scrollHeight, behavior });
+			if (!box) return;
+			if (behavior === 'smooth') {
+				box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+			} else {
+				box.scrollTop = box.scrollHeight;
+			}
+			const distance = box.scrollHeight - box.clientHeight - box.scrollTop;
+			setShowJumpToBottom(distance > 220);
 		};
 		requestAnimationFrame(() => {
 			scroll();
 			requestAnimationFrame(scroll);
 		});
-		window.setTimeout(scroll, 120);
-		window.setTimeout(scroll, 350);
+		window.setTimeout(scroll, 80);
+		window.setTimeout(scroll, 220);
+		window.setTimeout(scroll, 600);
 	}, []);
+
+	const jumpMessagesToBottom = useCallback(() => {
+		pinThreadToBottomRef.current = true;
+		setShowJumpToBottom(false);
+		scrollMessagesToBottom('smooth');
+	}, [scrollMessagesToBottom]);
 
 	/** Single write path for the message pane. The base list is whatever the
 	 *  target conversation already owns — messages belonging to a chat the user
@@ -6400,18 +6544,25 @@ function WhatsAppWorkspaceContent() {
 			rowIndex: messageListWindow.start + offset,
 		}));
 	}, [messageRows, messageListWindow.start, messageListWindow.end]);
-	const registerChatImage = useCallback((id, image) => {
-		setRegisteredChatImages(current => {
-			if (!image) {
-				if (!current[id]) return current;
-				const next = { ...current };
-				delete next[id];
-				return next;
+	const registerChatImage = useCallback(
+		(id, image) => {
+			setRegisteredChatImages(current => {
+				if (!image) {
+					if (!current[id]) return current;
+					const next = { ...current };
+					delete next[id];
+					return next;
+				}
+				if (current[id]?.url === image.url) return current;
+				return { ...current, [id]: image };
+			});
+			// Tall media expands after the first bottom-pin — re-stick while opening.
+			if (image && pinThreadToBottomRef.current) {
+				scrollMessagesToBottom('auto');
 			}
-			if (current[id]?.url === image.url) return current;
-			return { ...current, [id]: image };
-		});
-	}, []);
+		},
+		[scrollMessagesToBottom],
+	);
 
 	useEffect(() => {
 		setActiveChatImageId(null);
@@ -6944,6 +7095,7 @@ function WhatsAppWorkspaceContent() {
 		rowHeight: 76,
 		overscan: 14,
 		minCountToWindow: 40,
+		initialAlign: 'start',
 	});
 	const visibleConversations = useMemo(
 		() =>
@@ -8161,6 +8313,9 @@ function WhatsAppWorkspaceContent() {
 			setTabError('');
 			setSelectedStatus(null);
 			setStatuses(statusesCacheRef.current.get(accountId)?.items || []);
+			setInboxReady(false);
+			setSessionProbeDone(false);
+			setQrExpired(false);
 			if (statusMediaUrlRef.current) {
 				URL.revokeObjectURL(statusMediaUrlRef.current);
 				statusMediaUrlRef.current = null;
@@ -8171,8 +8326,20 @@ function WhatsAppWorkspaceContent() {
 		if (!isAccountConnected) {
 			setSyncingInbox(current => (current ? false : current));
 			setSyncProgress(current => (current === 0 ? current : 0));
+		} else {
+			setSessionProbeDone(true);
+			setQrExpired(false);
 		}
-		loadConversations(accountId).catch(() => { });
+		const cachedRows = conversationsCacheRef.current.get(accountId)?.items;
+		if (Array.isArray(cachedRows) && cachedRows.length > 0) {
+			setInboxReady(true);
+		}
+		const hydrateId = accountId;
+		loadConversations(hydrateId)
+			.catch(() => { })
+			.finally(() => {
+				if (accountIdRef.current === hydrateId) setInboxReady(true);
+			});
 	}, [accountId, clearConversationMessages, isAccountConnected, loadConversations]);
 
 	useEffect(
@@ -8206,6 +8373,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			lastAutoScrolledMessageRef.current = null;
 			pinThreadToBottomRef.current = true;
+			setShowJumpToBottom(false);
 		}
 		messagesRequestId.current += 1;
 		olderRequestId.current += 1;
@@ -8354,12 +8522,45 @@ function WhatsAppWorkspaceContent() {
 		if (pinOpen) {
 			lastAutoScrolledMessageRef.current = latest.id;
 			box.scrollTop = box.scrollHeight;
+			setShowJumpToBottom(false);
 			return;
 		}
 		if (!isNewLatest || !(nearBottom || latest.direction === 'outbound')) return;
 		lastAutoScrolledMessageRef.current = latest.id;
 		box.scrollTop = box.scrollHeight;
-	}, [effectiveMessages, loadingOlder, conversationId]);
+		setShowJumpToBottom(false);
+	}, [effectiveMessages, loadingOlder, conversationId, loadingMessages]);
+
+	// Keep the thread glued to the bottom while media/layout grows on first open.
+	useEffect(() => {
+		const box = messageBoxRef.current;
+		if (!box || !conversationId) return undefined;
+		const keepBottom = () => {
+			if (!pinThreadToBottomRef.current) return;
+			box.scrollTop = box.scrollHeight;
+			setShowJumpToBottom(false);
+		};
+		const onMediaLoad = event => {
+			if (event?.target?.tagName === 'IMG' || event?.target?.tagName === 'VIDEO') {
+				keepBottom();
+			}
+		};
+		box.addEventListener('load', onMediaLoad, true);
+		let observer = null;
+		if (typeof ResizeObserver !== 'undefined') {
+			observer = new ResizeObserver(() => {
+				keepBottom();
+			});
+			observer.observe(box);
+			const thread = box.querySelector('.wa-message-thread');
+			if (thread) observer.observe(thread);
+		}
+		keepBottom();
+		return () => {
+			box.removeEventListener('load', onMediaLoad, true);
+			observer?.disconnect();
+		};
+	}, [conversationId, effectiveMessages.length, loadingMessages]);
 
 	const loadNotes = useCallback(async id => {
 		if (!id) return;
@@ -8816,7 +9017,12 @@ function WhatsAppWorkspaceContent() {
 					force: true,
 				});
 			}
-			if (event.event === 'qr') setQr(event.payload.qr);
+			if (event.event === 'qr') {
+				const nextQr = event.payload?.qr || null;
+				setQr(nextQr);
+				setQrExpired(!nextQr);
+				if (nextQr && linkModeRef.current !== 'phone') setLinkMode('qr');
+			}
 			if (event.event === 'sync_started') {
 				const backgroundHydrate =
 					event.payload?.background === true ||
@@ -8988,11 +9194,21 @@ function WhatsAppWorkspaceContent() {
 				const { data } = await api.get(`/whatsapp/accounts/${id}/qr`);
 				if (data.qr) {
 					setQr(data.qr);
+					setQrExpired(false);
 					if (linkModeRef.current !== 'phone') setLinkMode('qr');
-				}
-				if (data.pairingCode) {
+				} else if (data.pairingCode) {
 					setPairingCode(data.pairingCode);
 					setLinkMode('phone');
+					setQrExpired(false);
+				} else {
+					// QR refs often expire — keep a stable "expired" state instead of
+					// flashing blank then reconnect CTA.
+					setQr(current => {
+						if (current) {
+							window.setTimeout(() => setQrExpired(true), 0);
+						}
+						return null;
+					});
 				}
 				if (data.status && data.status !== status) {
 					await loadAccounts();
@@ -9100,9 +9316,16 @@ function WhatsAppWorkspaceContent() {
 	// After refresh (or session drop), bootstrap any non-connected account:
 	// restore from saved tokens when possible, otherwise surface a QR code.
 	useEffect(() => {
-		if (!selectedAccount || !canManageWhatsApp) return;
+		if (!selectedAccount) return;
+		if (selectedAccount.status === 'connected') {
+			setSessionProbeDone(true);
+			return;
+		}
+		if (!canManageWhatsApp) {
+			setSessionProbeDone(true);
+			return;
+		}
 		const { id, status } = selectedAccount;
-		if (status === 'connected') return;
 		if (
 			![
 				'connecting',
@@ -9111,12 +9334,16 @@ function WhatsAppWorkspaceContent() {
 				'error',
 			].includes(status)
 		) {
+			setSessionProbeDone(true);
 			return;
 		}
 		if (autoConnectAttemptedRef.current && autoConnectAttemptedRef.current !== id) {
 			autoConnectAttemptedRef.current = null;
 		}
-		if (autoConnectAttemptedRef.current === id) return;
+		if (autoConnectAttemptedRef.current === id) {
+			setSessionProbeDone(true);
+			return;
+		}
 		autoConnectAttemptedRef.current = id;
 
 		const bootstrapSession = async () => {
@@ -9124,11 +9351,13 @@ function WhatsAppWorkspaceContent() {
 				const { data: qrData } = await api.get(`/whatsapp/accounts/${id}/qr`);
 				if (qrData.qr) {
 					setQr(qrData.qr);
+					setQrExpired(false);
 					if (linkModeRef.current !== 'phone') setLinkMode('qr');
 				}
 				if (qrData.pairingCode) {
 					setPairingCode(qrData.pairingCode);
 					setLinkMode('phone');
+					setQrExpired(false);
 				}
 				if (qrData.status === 'connected') {
 					await loadAccounts();
@@ -9153,14 +9382,18 @@ function WhatsAppWorkspaceContent() {
 				if (data.qr) {
 					setQr(data.qr);
 					setLinkMode('qr');
+					setQrExpired(false);
 				}
 				if (data.pairingCode) {
 					setPairingCode(data.pairingCode);
 					setLinkMode('phone');
+					setQrExpired(false);
 				}
 				await loadAccounts();
 			} catch {
 				await loadAccounts().catch(() => { });
+			} finally {
+				if (accountIdRef.current === id) setSessionProbeDone(true);
 			}
 		};
 		void bootstrapSession();
@@ -10486,15 +10719,15 @@ function WhatsAppWorkspaceContent() {
 			const text = String(message.text || '').trim();
 			if (!text) {
 				toast.error(locale === 'ar' ? 'لا يوجد نص للنسخ' : 'Nothing to copy');
-				return;
+				return false;
 			}
 			try {
 				await navigator.clipboard.writeText(text);
-				toast.success(t.copiedMessage);
+				return true;
 			} catch {
 				toast.error(locale === 'ar' ? 'تعذر النسخ' : 'Could not copy');
+				return false;
 			}
-			return;
 		}
 		if (action === 'addToGroup') {
 			if (demo.settings.enabled || isDemoId(conversationId)) {
@@ -12864,10 +13097,10 @@ function WhatsAppWorkspaceContent() {
 				dir={locale === 'ar' ? 'rtl' : 'ltr'}
 			>
 				<div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6">
-					<div className="rounded-2xl bg-[#e7f8ec] p-4 dark:bg-slate-800">
-						<Loader2 size={28} className="animate-spin text-[#20BD5C]" />
+					<div className="wa-loading-mark">
+						<Loader2 size={26} className="animate-spin" />
 					</div>
-					<p className="text-sm font-semibold text-slate-500">
+					<p className="text-sm font-medium text-[#667781]">
 						{t.loading || (locale === 'ar' ? 'جارِ التحميل…' : 'Loading…')}
 					</p>
 				</div>
@@ -13031,12 +13264,12 @@ function WhatsAppWorkspaceContent() {
 				}}
 			/>
 			{muteDurationOpen && muteTargetConversation ? (
-				<div className="fixed inset-0 z-[600] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="dialog">
-					<div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl dark:bg-slate-900">
-						<p className="mb-3 text-sm font-bold text-slate-900 dark:text-white">
+				<div className="wa-modal-backdrop" role="dialog" aria-modal="true">
+					<div className="wa-modal-sheet">
+						<p className="wa-modal-sheet__title">
 							{locale === 'ar' ? 'كتم الإشعارات' : 'Mute notifications'}
 						</p>
-						<div className="flex flex-col gap-2">
+						<div className="wa-modal-sheet__actions">
 							{[
 								{ minutes: 60 * 8, label: locale === 'ar' ? '٨ ساعات' : '8 hours' },
 								{ minutes: 60 * 24, label: locale === 'ar' ? 'يوم واحد' : '1 day' },
@@ -13046,7 +13279,7 @@ function WhatsAppWorkspaceContent() {
 								<button
 									key={String(option.minutes)}
 									type="button"
-									className="rounded-xl border border-slate-200 px-3 py-2.5 text-start text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+									className="wa-modal-sheet__option"
 									onClick={() => void applyMuteDuration(muteTargetConversation, option.minutes)}
 								>
 									{option.label}
@@ -13054,7 +13287,7 @@ function WhatsAppWorkspaceContent() {
 							))}
 							<button
 								type="button"
-								className="mt-1 rounded-xl px-3 py-2 text-sm text-slate-500"
+								className="wa-modal-sheet__cancel"
 								onClick={() => {
 									setMuteDurationOpen(false);
 									setMuteTargetConversation(null);
@@ -13067,15 +13300,22 @@ function WhatsAppWorkspaceContent() {
 				</div>
 			) : null}
 			{shareContactOpen ? (
-				<div className="fixed inset-0 z-[600] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="dialog">
-					<div className="flex max-h-[70vh] w-full max-w-md flex-col rounded-2xl bg-white shadow-xl dark:bg-slate-900">
-						<div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-							<p className="text-sm font-bold">{locale === 'ar' ? 'إرسال جهة اتصال' : 'Send contact'}</p>
-							<button type="button" onClick={() => setShareContactOpen(false)} className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
+				<div className="wa-modal-backdrop" role="dialog" aria-modal="true">
+					<div className="wa-modal-sheet wa-modal-sheet--list">
+						<div className="wa-modal-sheet__head">
+							<p className="wa-modal-sheet__title">
+								{locale === 'ar' ? 'إرسال جهة اتصال' : 'Send contact'}
+							</p>
+							<button
+								type="button"
+								onClick={() => setShareContactOpen(false)}
+								className="wa-modal-sheet__icon-close"
+								aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
+							>
 								<X size={16} />
 							</button>
 						</div>
-						<div className="overflow-y-auto p-2">
+						<div className="wa-modal-sheet__scroll">
 							{conversations
 								.filter(item => item.id !== conversationId && !String(item.providerChatId || '').endsWith('@g.us'))
 								.slice(0, 40)
@@ -13083,13 +13323,13 @@ function WhatsAppWorkspaceContent() {
 									<button
 										key={item.id}
 										type="button"
-										className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start hover:bg-slate-50 dark:hover:bg-slate-800"
+										className="wa-modal-sheet__list-item"
 										onClick={() => void shareContactFromConversation(item)}
 									>
-										<span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+										<span className="wa-modal-sheet__avatar">
 											<User size={16} />
 										</span>
-										<span className="min-w-0 flex-1 truncate text-sm font-semibold">
+										<span className="wa-modal-sheet__list-label">
 											{conversationTitle(item)}
 										</span>
 									</button>
@@ -13099,22 +13339,24 @@ function WhatsAppWorkspaceContent() {
 				</div>
 			) : null}
 			{editingMessage ? (
-				<div className="fixed inset-0 z-[600] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="dialog">
-					<div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl dark:bg-slate-900">
-						<p className="mb-2 text-sm font-bold">{locale === 'ar' ? 'تعديل الرسالة' : 'Edit message'}</p>
+				<div className="wa-modal-backdrop" role="dialog" aria-modal="true">
+					<div className="wa-modal-sheet">
+						<p className="wa-modal-sheet__title">
+							{locale === 'ar' ? 'تعديل الرسالة' : 'Edit message'}
+						</p>
 						<textarea
 							value={editDraft}
 							onChange={event => setEditDraft(event.target.value)}
 							rows={4}
-							className="w-full rounded-xl border border-slate-200 bg-transparent p-3 text-sm outline-none dark:border-slate-700"
+							className="wa-modal-sheet__textarea"
 						/>
-						<div className="mt-3 flex justify-end gap-2">
-							<button type="button" className="rounded-xl px-3 py-2 text-sm" onClick={() => setEditingMessage(null)}>
+						<div className="wa-modal-sheet__footer">
+							<button type="button" className="wa-modal-sheet__cancel" onClick={() => setEditingMessage(null)}>
 								{locale === 'ar' ? 'إلغاء' : 'Cancel'}
 							</button>
 							<button
 								type="button"
-								className="rounded-xl bg-[#00A884] px-3 py-2 text-sm font-bold text-white"
+								className="wa-primary-btn"
 								onClick={() => void submitEditMessage()}
 							>
 								{locale === 'ar' ? 'حفظ' : 'Save'}
@@ -13203,8 +13445,7 @@ function WhatsAppWorkspaceContent() {
 							<button
 								type="button"
 								onClick={reloadWorkspace}
-								className="rounded-xl px-4 py-2 text-sm font-bold text-white"
-								style={{ background: GRADIENT }}
+								className="wa-primary-btn"
 							>
 								{t.retry}
 							</button>
@@ -13865,7 +14106,43 @@ function WhatsAppWorkspaceContent() {
 										</button>
 									) : null}
 									{filteredConversations.length === 0 ? (
-										syncingInbox ? (
+										!inboxReady ||
+										syncingInbox ||
+										(!demo.settings.enabled &&
+											!isAccountConnected &&
+											!sessionProbeDone &&
+											!qr &&
+											!qrExpired) ? (
+											<div className="wa-inbox-bootstrap space-y-2 p-1" role="status" aria-live="polite">
+												{Array.from({ length: 8 }).map((_, index) => (
+													<div
+														key={`wa-boot-skel-${index}`}
+														className="flex animate-pulse items-center gap-3 rounded-xl p-3"
+													>
+														<div className="h-11 w-11 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700" />
+														<div className="min-w-0 flex-1 space-y-2">
+															<div className="h-3 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
+															<div className="h-2.5 w-full rounded bg-slate-100 dark:bg-slate-800" />
+														</div>
+													</div>
+												))}
+												<p className="flex items-center justify-center gap-2 px-2 pt-2 text-center text-[11px] font-semibold text-slate-500">
+													<Loader2 size={13} className="animate-spin" />
+													{!inboxReady
+														? t.loadingInbox
+														: syncingInbox
+															? syncStage === 'prefetch_history'
+																? locale === 'ar'
+																	? 'جاري تجهيز أحدث الرسائل…'
+																	: 'Warming recent message history…'
+																: syncStage === 'fetching_chats' ||
+																	  (syncProgress >= 25 && syncProgress <= 45)
+																	? t.syncingChatsFetching
+																	: t.syncingChats
+															: t.checkingSession}
+												</p>
+											</div>
+										) : syncingInbox ? (
 											<div className="space-y-2 p-1">
 												{Array.from({ length: 8 }).map((_, index) => (
 													<div
@@ -13896,7 +14173,8 @@ function WhatsAppWorkspaceContent() {
 												['connecting', 'qr_pending'].includes(
 													selectedAccount?.status,
 												)) &&
-											!qr ? (
+											!qr &&
+											!qrExpired ? (
 												<>
 													<Loader2
 														size={28}
@@ -13924,21 +14202,33 @@ function WhatsAppWorkspaceContent() {
 												</>
 											) : (
 												<>
-													<p className="text-sm font-semibold text-slate-500">
-														{activeTab === 'channels'
-															? t.connectToSeeChannels
-															: t.connectToSeeChats}
-													</p>
+													{qrExpired ? (
+														<p className="text-sm font-semibold text-slate-600">{t.qrExpired}</p>
+													) : (
+														<p className="text-sm font-semibold text-slate-500">
+															{activeTab === 'channels'
+																? t.connectToSeeChannels
+																: t.connectToSeeChats}
+														</p>
+													)}
 													{canManageWhatsApp && (
 														<button
 															type="button"
 															onClick={() => {
-																setActiveTab('accounts');
-																void connectAccount(undefined, { force: true });
+																setQrExpired(false);
+																setActiveTab(
+																	qrExpired || filteredConversations.length === 0
+																		? activeTab
+																		: 'accounts',
+																);
+																void connectAccount(undefined, {
+																	force: true,
+																	mode: 'qr',
+																});
 															}}
-															className="rounded-xl bg-[var(--color-primary-500)] px-4 py-2 text-sm font-bold text-white"
+															className="wa-primary-btn"
 														>
-															{t.reconnectAccount}
+															{qrExpired ? t.qrRefresh : t.reconnectAccount}
 														</button>
 													)}
 												</>
@@ -14099,19 +14389,16 @@ function WhatsAppWorkspaceContent() {
 																setConversationId(conversation.id);
 															}
 														}}
-														className={`wa-conversation-row relative mb-1 flex w-full cursor-pointer items-start gap-3 rounded-xl p-3 text-start transition-colors [content-visibility:auto] [contain-intrinsic-size:72px] ${active
-															? isSplitSecondary
-																? 'bg-[var(--color-primary-50)] ring-1 ring-inset ring-[var(--color-primary-200)] dark:bg-slate-800'
-																: 'bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] dark:from-slate-800 dark:to-slate-800'
-															: 'hover:bg-slate-50 dark:hover:bg-slate-800'
-															}`}
+														className={`wa-conversation-row relative flex w-full cursor-pointer items-start gap-3 text-start transition-colors [content-visibility:auto] [contain-intrinsic-size:72px] ${
+															active
+																? isSplitSecondary
+																	? 'is-active is-split-secondary'
+																	: 'is-active'
+																: ''
+														}`}
+														aria-current={active && !isSplitSecondary ? 'true' : undefined}
+														data-selected={active ? 'true' : undefined}
 													>
-														{active && (
-															<span
-																className="absolute inset-y-2 start-0 w-1 rounded-full"
-																style={{ background: GRADIENT }}
-															/>
-														)}
 														<div className="wa-conversation-avatar relative grid h-11 w-11 shrink-0 place-items-center">
 															{story ? (
 																<>
@@ -14150,10 +14437,7 @@ function WhatsAppWorkspaceContent() {
 																/>
 															)}
 															{unread && (
-																<span
-																	className="wa-unread-avatar-badge"
-																	style={{ background: GRADIENT }}
-																>
+																<span className="wa-unread-avatar-badge">
 																	{unreadCount > 99 ? '99+' : unreadCount}
 																</span>
 															)}
@@ -14227,7 +14511,7 @@ function WhatsAppWorkspaceContent() {
 																		/>
 																	</button>
 																	{conversation.lastMessageAt && (
-																		<span className={`time-chat text-[10px] ${unread ? '!font-bold !text-[#1DAB61]' : '!text-[#767779]'}`}>
+																		<span className={`time-chat text-[10px] ${unread ? 'is-unread' : ''}`}>
 																			{conversationTimestamp(
 																				conversation.lastMessage?.providerTimestamp ||
 																				conversation.lastMessageAt,
@@ -14324,7 +14608,7 @@ function WhatsAppWorkspaceContent() {
 									document.body,
 								)}
 						</aside>
-						<section className={`wa-chat-thread-pane ${!conversationId ? 'hidden min-[769px]:flex' : 'flex'} h-full min-h-0 min-w-0 flex-col overflow-hidden`}>
+						<section className={`wa-chat-thread-pane relative ${!conversationId ? 'hidden min-[769px]:flex' : 'flex'} h-full min-h-0 min-w-0 flex-col overflow-hidden`}>
 							{!selectedConversation ? (
 								<ChatIdlePane
 									title={
@@ -14417,22 +14701,23 @@ function WhatsAppWorkspaceContent() {
 												ariaLabel={t.chatActions}
 												triggerLabel={t.chatActions}
 												size="sm"
+												iconOnly
 												disabled={demo.settings.enabled}
 												buttonClassName="shadow-none"
 											/>
 										</div>
-										<div className="wa-chat-toolbar-actions hidden items-center gap-2 min-[769px]:flex">
+										<div className="wa-chat-toolbar-actions hidden items-center gap-1.5 min-[769px]:flex">
 											{!demo.settings.enabled && conversationId && accountId ? (
 												<button
 													type="button"
 													title={t.scheduleMessage}
 													aria-label={t.scheduleMessage}
 													onClick={() => setScheduleDialogOpen(true)}
-													className="relative grid h-9 w-9 place-items-center rounded-[10px] border border-[#e5e7eb] bg-white text-[#54656F] shadow-[0_1px_0_#eef0f2] transition-colors hover:bg-[#f0f2f5] dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+													className="wa-toolbar-icon-btn relative"
 												>
-													<CalendarClock size={16} />
+													<CalendarClock size={20} strokeWidth={1.75} />
 													{messageSchedules.length > 0 ? (
-														<span className="absolute -end-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-white">
+														<span className="wa-toolbar-icon-btn__badge">
 															{messageSchedules.length > 9 ? '9+' : messageSchedules.length}
 														</span>
 													) : null}
@@ -14443,6 +14728,7 @@ function WhatsAppWorkspaceContent() {
 												ariaLabel={t.chatActions}
 												triggerLabel={t.chatActions}
 												size="sm"
+												iconOnly
 												disabled={demo.settings.enabled}
 											/>
 											{!demo.settings.enabled && canUseWhatsApp &&
@@ -14450,14 +14736,14 @@ function WhatsAppWorkspaceContent() {
 													<button
 														type="button"
 														onClick={markConversationReadManually}
-														className="h-9 rounded-[10px] border border-[#e5e7eb] bg-white px-2.5 text-[12px] font-bold text-[#1f2d34] shadow-[0_1px_0_#eef0f2] transition-colors hover:bg-[#f0f2f5] dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+														className="wa-toolbar-text-btn"
 													>
 														{t.markRead}
 													</button>
 												)}
 											{!demo.settings.enabled && canAssignWhatsApp && (
 												<div className="wa-chat-assign-field relative inline-flex items-center">
-													<span className="pointer-events-none absolute -top-1.5 start-2 z-1 rounded bg-white px-1 text-[8px] font-black uppercase tracking-wide text-slate-400 dark:bg-slate-900">
+													<span className="wa-chat-assign-field__label">
 														{t.assignedTo}
 													</span>
 													<WaCustomSelect
@@ -14467,24 +14753,16 @@ function WhatsAppWorkspaceContent() {
 														size="sm"
 														fitContent
 														className="w-auto"
-														buttonClassName="h-9 w-auto min-w-[7.75rem] max-w-[9.5rem] rounded-[10px] border border-[#e5e7eb] bg-white px-2 text-[12px] font-semibold text-[#111b21] shadow-[0_1px_0_#eef0f2]"
+														buttonClassName="wa-chat-assign-trigger"
 														options={assignStaffOptions}
 													/>
 												</div>
 											)}
-											<button type="button" aria-label="Close conversation" onClick={() => setConversationId(null)} className="rounded-lg p-2 hover:bg-slate-100 min-[769px]:hidden dark:hover:bg-slate-800">
+											<button type="button" aria-label="Close conversation" onClick={() => setConversationId(null)} className="wa-toolbar-icon-btn min-[769px]:hidden">
 												<X size={18} />
 											</button>
 										</div>
-										<div className="wa-chat-mobile-actions flex shrink-0 items-center min-[769px]:hidden">
-											{/* <button type="button" disabled aria-label="Voice call unavailable" className="grid h-11 w-11 place-items-center rounded-full"><Phone size={26} strokeWidth={2.3} /></button> */}
-											{/* <ChevronDown size={17} strokeWidth={2.4} aria-hidden="true" /> */}
-											<svg width="80" height="34" viewBox="0 0 80 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path fillRule="evenodd" clipRule="evenodd" d="M6.49995 7.7002C4.67741 7.7002 3.19995 9.17766 3.19995 11.0002V21.0002C3.19995 22.8227 4.67741 24.3002 6.49995 24.3002H19C20.8226 24.3002 22.3 22.8227 22.3 21.0002V19.0266L25.8181 22.0895C26.9828 23.1036 28.8 22.2763 28.8 20.7319L28.8 11.2685C28.8 9.72414 26.9829 8.89685 25.8181 9.91093L22.3 12.9738V11.0002C22.3 9.17766 20.8226 7.7002 19 7.7002H6.49995ZM22.3 15.0952V16.9052L26.8687 20.8828C26.9981 20.9954 27.2 20.9035 27.2 20.7319L27.2 11.2685C27.2 11.0969 26.9981 11.005 26.8687 11.1177L22.3 15.0952ZM4.79995 11.0002C4.79995 10.0613 5.56107 9.3002 6.49995 9.3002H19C19.9389 9.3002 20.7 10.0613 20.7 11.0002V21.0002C20.7 21.9391 19.9389 22.7002 19 22.7002H6.49995C5.56107 22.7002 4.79995 21.9391 4.79995 21.0002V11.0002Z" fill="#0A0A0A"/>
-<path d="M68.7676 26.1555C65.8452 26.1555 62.2666 24.3303 58.9751 21.0388C55.6631 17.7268 53.8584 14.1585 53.8584 11.2258C53.8584 9.45192 54.3403 8.27272 55.5093 7.22682C55.5913 7.15504 55.6733 7.08326 55.7656 7.00123C56.4526 6.386 57.1294 6.08864 57.7754 6.09889C58.5137 6.10914 59.2007 6.52955 59.8364 7.44215L61.9077 10.426C62.5435 11.3386 62.6152 12.4255 61.7539 13.2869L60.9746 14.0764C60.7388 14.3123 60.7285 14.5071 60.8618 14.7429C61.272 15.3889 62.041 16.2708 62.8408 17.0603C63.5996 17.8191 64.7173 18.7932 65.271 19.1419C65.4966 19.2854 65.7017 19.2752 65.9375 19.0393L66.7271 18.2498C67.5884 17.3987 68.665 17.4705 69.5879 18.1062L72.5718 20.1775C73.4844 20.8132 73.915 21.5003 73.915 22.2385C73.915 22.8845 73.6279 23.5613 73.0127 24.2483C72.9409 24.3303 72.8589 24.4226 72.7769 24.5047C71.7412 25.6736 70.562 26.1555 68.7676 26.1555ZM68.7778 24.5764C69.916 24.5559 70.8901 24.1663 71.5874 23.3665C71.6489 23.2947 71.6899 23.2434 71.7515 23.1716C72.0181 22.864 72.1616 22.5359 72.1616 22.2385C72.1616 21.9309 72.0488 21.6746 71.7412 21.4695L68.7573 19.4802C68.4292 19.2752 68.0806 19.2547 67.7627 19.5725L66.8604 20.4749C66.1528 21.1824 65.2915 21.1311 64.6045 20.6184C63.8047 20.0237 62.564 18.9163 61.7847 18.1267C60.9951 17.3474 59.98 16.199 59.3955 15.4094C58.8828 14.7224 58.8315 13.8611 59.5391 13.1536L60.4414 12.2512C60.7593 11.9334 60.7388 11.5745 60.5234 11.2566L58.5342 8.27272C58.3394 7.9651 58.0728 7.85231 57.7754 7.85231C57.478 7.85231 57.1499 7.99586 56.8423 8.26246C56.7705 8.31373 56.7192 8.365 56.6475 8.42653C55.8477 9.12379 55.4478 10.0979 55.4272 11.2258C55.376 13.8406 57.478 17.3064 60.1543 19.9724C62.8101 22.6179 66.1631 24.6277 68.7778 24.5764Z" fill="#0A0A0A"/>
-</svg>
-
-										</div>
+										<div className="wa-chat-mobile-actions flex shrink-0 items-center min-[769px]:hidden" aria-hidden="true" />
 									</header>
 									<ScheduledMessagesPanel
 										ar={locale === 'ar'}
@@ -14647,8 +14925,10 @@ function WhatsAppWorkspaceContent() {
 												box.scrollHeight - box.clientHeight - box.scrollTop;
 											if (distanceFromBottom > 180) {
 												pinThreadToBottomRef.current = false;
+												setShowJumpToBottom(distanceFromBottom > 220);
 											} else {
 												pinThreadToBottomRef.current = true;
+												setShowJumpToBottom(false);
 											}
 											if (
 												!loadingMessages &&
@@ -14973,6 +15253,7 @@ function WhatsAppWorkspaceContent() {
 														: firstMessageLink(visibleText)
 															? textWithoutFirstLink(visibleText)
 															: visibleText;
+													const captionIsMarkdown = looksLikeMarkdown(captionText);
 													const textPresentation = messageTextPresentation(captionText || visibleText);
 													const isDeleted =
 														message.deletedMode && message.deletedMode !== 'none';
@@ -15430,12 +15711,26 @@ function WhatsAppWorkspaceContent() {
 																					text={captionText}
 																					dir={textPresentation.dir}
 																					lang={textPresentation.lang}
-																					style={textPresentation.style}
-																					className={`wa-message-text whitespace-pre-wrap ${textPresentation.className || ''}`}
+																					style={{
+																						...textPresentation.style,
+																						...(captionIsMarkdown
+																							? { whiteSpace: 'normal' }
+																							: null),
+																					}}
+																					className={`wa-message-text ${
+																						captionIsMarkdown
+																							? 'wa-message-text--md'
+																							: 'whitespace-pre-wrap'
+																					} ${textPresentation.className || ''}`}
 																					readMoreLabel={t.readMore}
+																					previewChars={captionIsMarkdown ? 3600 : undefined}
+																					previewLines={captionIsMarkdown ? 64 : undefined}
+																					readMoreStep={captionIsMarkdown ? 2400 : undefined}
+																					readMoreLines={captionIsMarkdown ? 40 : undefined}
 																					renderText={value => (
 																						<WhatsAppFormattedText
 																							text={value}
+																							forceMarkdown={captionIsMarkdown}
 																							mentionDirectory={mentionDirectory}
 																							mentionLabels={message.mentionLabels}
 																						/>
@@ -15519,6 +15814,10 @@ function WhatsAppWorkspaceContent() {
 																			}
 																			emojiOpen={reactionPickerMessageId === message.id}
 																			showTranscribe={isVoiceMessage}
+																			showCopy={
+																				!isDeleted &&
+																				Boolean(String(captionText || '').trim())
+																			}
 																			onEmoji={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
@@ -15538,6 +15837,7 @@ function WhatsAppWorkspaceContent() {
 																				event.stopPropagation();
 																				void handleMessageAction(message, 'transcribe');
 																			}}
+																			onCopy={() => handleMessageAction(message, 'copy')}
 																			onMore={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
@@ -15598,6 +15898,17 @@ function WhatsAppWorkspaceContent() {
 										)}
 									</div>
 									</div>
+									{showJumpToBottom && conversationId ? (
+										<button
+											type="button"
+											className="wa-jump-bottom"
+											aria-label={locale === 'ar' ? 'انتقل لأسفل' : 'Jump to latest'}
+											title={locale === 'ar' ? 'انتقل لأسفل' : 'Jump to latest'}
+											onClick={jumpMessagesToBottom}
+										>
+											<ChevronDown size={22} strokeWidth={2.4} />
+										</button>
+									) : null}
 									<div
 										className={`wa-composer-stack ${
 											!demo.settings.enabled &&
@@ -15674,13 +15985,13 @@ function WhatsAppWorkspaceContent() {
 												onChange={event => sendFile(event.target.files?.[0])}
 											/>
 											{replyingTo && (
-												<div className="flex min-w-0 basis-full items-center gap-3 rounded-xl border-s-4 border-[#00A884] bg-[#F0F2F5] px-3 py-2 text-xs text-[#54656F]">
-													<Reply size={16} className="shrink-0 text-[#00A884]" />
-													<div className="min-w-0 flex-1">
-														<p className="font-semibold text-[#008069]">
+												<div className="wa-reply-preview">
+													<Reply size={16} className="wa-reply-preview__icon" aria-hidden="true" />
+													<div className="wa-reply-preview__copy">
+														<p className="wa-reply-preview__title">
 															{locale === 'ar' ? 'الرد على رسالة' : 'Replying to message'}
 														</p>
-														<p className="truncate">
+														<p className="wa-reply-preview__snippet">
 															{(() => {
 																const voice = quotedVoicePresentation(replyingTo, locale);
 																if (voice) {
@@ -15699,7 +16010,7 @@ function WhatsAppWorkspaceContent() {
 														type="button"
 														onClick={() => setReplyingTo(null)}
 														aria-label={locale === 'ar' ? 'إلغاء الرد' : 'Cancel reply'}
-														className="grid h-7 w-7 shrink-0 place-items-center rounded-full hover:bg-black/5"
+														className="wa-reply-preview__close"
 													>
 														<X size={16} />
 													</button>
@@ -15925,74 +16236,86 @@ function WhatsAppWorkspaceContent() {
 
 				{activeTab === 'groups' && (
 					tabLoading ? (
-						<Card className="flex min-h-[600px] items-center justify-center p-4">
-							<TabLoading label={t.loading} />
-						</Card>
+						<div className="wa-secondary-pane">
+							<div className="wa-pane-loading">
+								<Loader2 size={18} className="animate-spin" />
+								{t.loading}
+							</div>
+						</div>
 					) : (
-						<div className="grid h-full min-h-[600px] gap-4 min-[769px]:grid-cols-[minmax(280px,360px)_1fr]">
-							<Card className="flex min-h-0 flex-col overflow-hidden">
-								<div className="shrink-0 p-4 pb-3">
-									<CardHeader
-										icon={Users}
-										title={t.groups}
-										right={
-											<button type="button" aria-label={t.refresh} onClick={() => loadTabData('groups')} className="rounded-xl border border-slate-200 p-2 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" title={t.refresh}>
-												<RefreshCw size={15} />
-											</button>
-										}
-									/>
+						<div className="wa-groups-pane grid h-full min-h-0 gap-0 min-[769px]:grid-cols-[minmax(280px,360px)_1fr]">
+							<aside className="wa-groups-list flex min-h-0 flex-col overflow-hidden border-e border-[var(--wa-border,#e9edef)] bg-white">
+								<div className="wa-secondary-pane__header">
+									<div className="wa-secondary-pane__heading">
+										<Users size={18} strokeWidth={1.75} aria-hidden="true" />
+										<div>
+											<h2 className="wa-secondary-pane__title">{t.groups}</h2>
+										</div>
+									</div>
+									<button
+										type="button"
+										aria-label={t.refresh}
+										onClick={() => loadTabData('groups')}
+										className="wa-toolbar-icon-btn"
+										title={t.refresh}
+									>
+										<RefreshCw size={16} strokeWidth={1.85} />
+									</button>
 								</div>
-								<div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 nice-scroll">
+								<div className="min-h-0 flex-1 overflow-y-auto nice-scroll">
 									{groups.length === 0 ? (
-										<Empty icon={Users} title={t.noGroups} />
+										<div className="p-5">
+											<Empty icon={Users} title={t.noGroups} />
+										</div>
 									) : (
-										<div className="space-y-2">
+										<div>
 											{groups.map(group => (
 												<button
 													type="button"
 													key={group.id}
 													onClick={() => openGroupDetails(group)}
-													className={`flex w-full items-center gap-3 rounded-xl border p-3 text-start transition-all ${selectedGroup?.id === group.id
-														? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)] dark:bg-slate-800'
-														: 'border-slate-200 hover:border-[var(--color-primary-200)] dark:border-slate-700'
-														}`}
+													className={`wa-conversation-row relative flex w-full items-center gap-3 text-start ${
+														selectedGroup?.id === group.id ? 'is-active' : ''
+													}`}
 												>
 													<Avatar label={group.subject} size={11} />
 													<div className="min-w-0 flex-1">
-														<p className="truncate font-black">{group.subject}</p>
-														<p className="text-xs text-slate-500">
-															{group.participantCount || group.participants?.length || 0} {t.groupParticipants.toLowerCase()}
+														<p className="title-chat truncate">{group.subject}</p>
+														<p className="desc-chat text-xs text-[#667781]">
+															{group.participantCount || group.participants?.length || 0}{' '}
+															{t.groupParticipants.toLowerCase()}
 														</p>
 													</div>
-													<MessageCircle size={15} className="text-slate-400" />
 												</button>
 											))}
 										</div>
 									)}
 								</div>
-							</Card>
+							</aside>
 
-							<Card className="flex min-h-0 flex-col overflow-hidden">
+							<section className="wa-groups-detail flex min-h-0 flex-col overflow-hidden bg-white">
 								{!selectedGroup ? (
-									<div className="p-5">
+									<div className="flex flex-1 items-center justify-center p-5">
 										<Empty icon={Users} title={t.groupDetails} hint={t.selectConversation} />
 									</div>
 								) : (
 									<>
-										<div className="flex shrink-0 flex-wrap items-center gap-4 border-b border-slate-100 p-5 dark:border-slate-800">
-											<Avatar label={selectedGroup.subject} size={16} />
-											<div className="min-w-0 flex-1">
-												<h2 className="truncate text-xl font-black">{selectedGroup.subject}</h2>
-												<p className="mt-1 text-sm text-slate-500">
-													{selectedGroup.participantCount || selectedGroup.participants?.length || 0} {t.groupParticipants.toLowerCase()}
-												</p>
+										<div className="wa-secondary-pane__header flex-wrap">
+											<div className="flex min-w-0 flex-1 items-center gap-3">
+												<Avatar label={selectedGroup.subject} size={12} />
+												<div className="min-w-0 flex-1">
+													<h2 className="wa-secondary-pane__title truncate">{selectedGroup.subject}</h2>
+													<p className="wa-secondary-pane__subtitle">
+														{selectedGroup.participantCount || selectedGroup.participants?.length || 0}{' '}
+														{t.groupParticipants.toLowerCase()}
+													</p>
+												</div>
 											</div>
 											<button
 												type="button"
 												onClick={() => openGroupChat(selectedGroup)}
 												disabled={!selectedGroup.conversationId}
-												className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
-												style={{ background: GRADIENT }}
+												className="wa-primary-btn disabled:cursor-not-allowed disabled:opacity-40"
 											>
 												<MessageCircle size={16} /> {t.openGroupChat}
 											</button>
@@ -16045,29 +16368,31 @@ function WhatsAppWorkspaceContent() {
 										</div>
 									</>
 								)}
-							</Card>
+							</section>
 						</div>
 					)
 				)}
 
 				{activeTab === 'statuses' && (
-					<div className="wa-statuses-page space-y-4">
-						<Card className="wa-statuses-card p-4">
-							<CardHeader
-								icon={Zap}
-								title={t.statuses}
-								right={
-									<button
-										type="button"
-										onClick={() => loadTabData('statuses', true)}
-										disabled={syncingStatuses}
-										className="rounded-xl border border-slate-200 p-2 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-										title={t.refresh}
-									>
-										<RefreshCw size={15} className={syncingStatuses ? 'animate-spin' : undefined} />
-									</button>
-								}
-							/>
+					<div className="wa-secondary-pane wa-statuses-pane">
+						<header className="wa-secondary-pane__header">
+							<div className="wa-secondary-pane__heading">
+								<Zap size={18} strokeWidth={1.75} aria-hidden="true" />
+								<div>
+									<h2 className="wa-secondary-pane__title">{t.statuses}</h2>
+								</div>
+							</div>
+							<button
+								type="button"
+								onClick={() => loadTabData('statuses', true)}
+								disabled={syncingStatuses}
+								className="wa-toolbar-icon-btn disabled:opacity-50"
+								title={t.refresh}
+							>
+								<RefreshCw size={16} className={syncingStatuses ? 'animate-spin' : undefined} />
+							</button>
+						</header>
+						<div className="wa-statuses-body min-h-0 flex-1 overflow-y-auto p-4 nice-scroll">
 							{canUseWhatsApp && (
 								<form onSubmit={publishStory} className="mb-4 flex gap-2">
 									<input
@@ -16076,13 +16401,12 @@ function WhatsAppWorkspaceContent() {
 										onChange={event => setStatusDraft(event.target.value)}
 										placeholder={t.statusUpdate}
 										maxLength={700}
-										className="h-11 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800"
+										className="wa-input-3d h-11 flex-1 rounded-full border border-[var(--wa-border,#e9edef)] bg-[var(--wa-input,#f0f2f5)] px-4 text-sm outline-none transition-colors focus:border-[var(--wa-accent,#00a884)]"
 									/>
 									<button
 										type="submit"
 										disabled={publishingStatus || !statusDraft.trim()}
-										className="h-11 rounded-xl px-4 text-sm font-bold text-white disabled:opacity-50"
-										style={{ background: GRADIENT, boxShadow: GLOW }}
+										className="wa-primary-btn h-11 disabled:opacity-50"
 									>
 										{publishingStatus ? (
 											<Loader2 size={15} className="animate-spin" />
@@ -16164,7 +16488,7 @@ function WhatsAppWorkspaceContent() {
 									})}
 								</div>
 							)}
-						</Card>
+						</div>
 
 						{selectedStatus && (
 							<div
@@ -16433,7 +16757,7 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'profile' && (
-					<Card className="wa-whatsapp-profile mx-auto max-w-xl overflow-hidden">
+					<Card className="wa-whatsapp-profile wa-secondary-pane mx-auto max-w-xl overflow-hidden border-0 shadow-none">
 						{selectedAccount ? (
 							<div>
 								<div className="flex flex-col items-center gap-3 bg-[#f0f2f5] px-5 py-8 dark:bg-slate-800">
@@ -16579,10 +16903,10 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'emails' && (
-					<div className="min-h-[calc(100vh-5.5rem)] overflow-hidden rounded-2xl border border-[#e6ebf1] bg-[#f8fafc] shadow-sm dark:border-slate-700 dark:bg-slate-950">
+					<div className="wa-secondary-pane wa-emails-pane">
 						<Suspense
 							fallback={
-								<div className="flex min-h-[420px] items-center justify-center gap-2 p-8 text-sm text-slate-500">
+								<div className="wa-pane-loading">
 									<Loader2 size={18} className="animate-spin" />
 									{t.loading || 'Loading…'}
 								</div>
@@ -16594,8 +16918,17 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'reports' && (
-					<Card className="p-4">
-						<CardHeader icon={TrendingUp} title={t.reports} subtitle={t.reportsHint} />
+					<div className="wa-secondary-pane wa-reports-pane">
+						<header className="wa-secondary-pane__header">
+							<div className="wa-secondary-pane__heading">
+								<TrendingUp size={18} strokeWidth={1.75} aria-hidden="true" />
+								<div>
+									<h2 className="wa-secondary-pane__title">{t.reports}</h2>
+									<p className="wa-secondary-pane__subtitle">{t.reportsHint}</p>
+								</div>
+							</div>
+						</header>
+						<div className="min-h-0 flex-1 overflow-y-auto p-4 nice-scroll">
 						<WhatsAppReportsTab
 							locale={locale}
 							t={t}
@@ -16612,20 +16945,24 @@ function WhatsAppWorkspaceContent() {
 							onOpenStaff={fetchStaffReportDetail}
 							onOpenConversation={openConversationFromReport}
 						/>
-					</Card>
+						</div>
+					</div>
 				)}
 
 				{activeTab === 'settings' && (
 					tabLoading ? (
-						<Card className="p-4">
-							<TabLoading label={t.loading} />
-						</Card>
+						<div className="wa-secondary-pane">
+							<div className="wa-pane-loading">
+								<Loader2 size={18} className="animate-spin" />
+								{t.loading}
+							</div>
+						</div>
 					) : (
-						<div className="space-y-4">
+						<div className="wa-settings-pane space-y-4">
 							<div
 								role="tablist"
 								aria-label={t.settings}
-								className="nice-scroll flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+								className="wa-settings-tablist nice-scroll"
 							>
 								{[
 									{ id: 'ai', label: t.settingsAi, icon: Sparkles },
@@ -16642,14 +16979,9 @@ function WhatsAppWorkspaceContent() {
 											role="tab"
 											aria-selected={selected}
 											onClick={() => setSettingsSection(item.id)}
-											style={selected ? { background: BRAND_GRADIENT, boxShadow: '0 8px 18px -8px var(--color-primary-400)' } : undefined}
-											className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-xs font-black transition-colors ${
-												selected
-													? 'text-white'
-													: 'text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-											}`}
+											className={`wa-settings-tab ${selected ? 'is-active' : ''}`}
 										>
-											<Icon size={15} />
+											<Icon size={15} strokeWidth={1.85} />
 											{item.label}
 										</button>
 									);
@@ -16689,8 +17021,7 @@ function WhatsAppWorkspaceContent() {
 										<button
 											type="button"
 											onClick={savePrivacySettings}
-											className="rounded-xl px-4 py-2 text-sm font-bold text-white transition-transform hover:-translate-y-px"
-											style={{ background: GRADIENT, boxShadow: GLOW }}
+											className="wa-primary-btn"
 										>
 											{t.savePrivacy}
 										</button>

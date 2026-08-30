@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
-const PREVIEW_CHARS = 480;
-const PREVIEW_LINES = 8;
-const READ_MORE_STEP = 480;
-const READ_MORE_LINES = 8;
+/** Show a long first chunk before "Read more" — WhatsApp Web keeps long texts open longer. */
+const PREVIEW_CHARS = 2400;
+const PREVIEW_LINES = 42;
+const READ_MORE_STEP = 1800;
+const READ_MORE_LINES = 32;
 
 function sliceAtBoundary(text, limit) {
 	if (text.length <= limit) return text;
@@ -23,8 +24,8 @@ function sliceWindow(text, charLimit, lineLimit) {
 }
 
 /**
- * Renders message text as one inline flow so the bubble can grow with content.
- * Newlines from Enter are kept via white-space: pre-wrap.
+ * Renders message text as one flow so the bubble can grow with content.
+ * Soft wrap only when max-width is hit; Enter newlines stay via pre-wrap.
  * Per-paragraph RTL/LTR comes from unicode-bidi: plaintext (set by presentation style).
  */
 export default function ExpandableMessageText({
@@ -57,11 +58,13 @@ export default function ExpandableMessageText({
 	const remaining = full.length - visible.length;
 
 	const mergedStyle = {
-		...style,
 		whiteSpace: 'pre-wrap',
 		overflowWrap: 'break-word',
 		wordBreak: 'normal',
+		width: 'max-content',
+		maxWidth: '100%',
 		unicodeBidi: style?.unicodeBidi || 'plaintext',
+		...style,
 	};
 
 	return (
