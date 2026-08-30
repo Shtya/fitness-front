@@ -35,7 +35,6 @@ import {
 	formatTimestampWithMs,
 	getStoredTranscriptionChunkSeconds,
 	getStoredTranscriptionProvider,
-	GROQ_FREE_MAX_FILE_SIZE,
 	isMediaTranscriptKind,
 	storeTranscriptionChunkSeconds,
 	storeTranscriptionProvider,
@@ -57,7 +56,8 @@ const labels = {
 		voiceFile: 'Voice or video',
 		method: 'Transcription method',
 		chunkLength: 'Chunk length',
-		chunkLengthHint: 'Long notes and videos are converted to small audio chunks before upload.',
+		chunkLengthHint:
+			'Videos are always converted to sound first, then split into small audio chunks before upload.',
 		chunkProgress: 'Chunk {current} of {total}',
 		transcribe: 'Transcribe',
 		uploading: 'Uploading',
@@ -67,7 +67,7 @@ const labels = {
 		timedOut: 'Transcription timed out. Keep the page open and try again.',
 		groqTooLarge: 'Groq free tier accepts files up to 25 MB.',
 		networkBlocked:
-			'Upload blocked by the server proxy. Video is converted to small audio first — refresh and retry. If it still fails, raise nginx client_max_body_size to 100m.',
+			'Upload blocked by the server proxy. Hard-refresh: video is converted to ~25s audio pieces first. If it still fails, raise nginx client_max_body_size to at least 10m.',
 		result: 'Transcript',
 		copy: 'Copy',
 		copied: 'Transcript copied',
@@ -99,7 +99,8 @@ const labels = {
 		voiceFile: 'صوت أو فيديو',
 		method: 'طريقة التحويل',
 		chunkLength: 'طول القطعة',
-		chunkLengthHint: 'الرسائل الطويلة والفيديو تتحول لقطع صوت صغيرة قبل الرفع.',
+		chunkLengthHint:
+			'الفيديو يتحول لصوت أولاً ثم يتقسم لقطع صوت صغيرة قبل الرفع.',
 		chunkProgress: 'قطعة {current} من {total}',
 		transcribe: 'تحويل إلى نص',
 		uploading: 'جارٍ الرفع',
@@ -109,7 +110,7 @@ const labels = {
 		timedOut: 'انتهت مهلة التحويل. اترك الصفحة مفتوحة وحاول مرة أخرى.',
 		groqTooLarge: 'خطة Groq المجانية تقبل ملفات حتى 25 ميجابايت.',
 		networkBlocked:
-			'الرفع اترفض من البروكسي. الفيديو بيتحول لصوت صغير أولًا — حدّث الصفحة وحاول. لو استمر، زوّد nginx client_max_body_size إلى 100m.',
+			'الرفع اترفض من البروكسي. حدّث الصفحة بقوة: الفيديو بيتحول لقطع صوت ~25 ثانية. لو استمر، زوّد nginx client_max_body_size إلى 10m على الأقل.',
 		result: 'النص',
 		copy: 'نسخ',
 		copied: 'تم نسخ النص',
@@ -318,10 +319,6 @@ export default function TranscriptionDialog({
 
 		if (singleVoice) {
 			if (!file) return;
-			if (provider === 'groq' && file.size > GROQ_FREE_MAX_FILE_SIZE) {
-				toast.error(t.groqTooLarge);
-				return;
-			}
 			setStatus('preparing');
 			setProgress(0);
 			setElapsed(0);
@@ -392,9 +389,6 @@ export default function TranscriptionDialog({
 			try {
 				if (!loader) throw new Error(t.fileError);
 				const nextFile = await loader();
-				if (provider === 'groq' && nextFile.size > GROQ_FREE_MAX_FILE_SIZE) {
-					throw new Error(t.groqTooLarge);
-				}
 				const voiceName =
 					source.fileName ||
 					nextFile?.name ||

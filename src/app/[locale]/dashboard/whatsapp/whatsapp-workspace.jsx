@@ -11446,11 +11446,18 @@ function WhatsAppWorkspaceContent() {
 			? await demoApi.getMedia(rawDemoId(attachment.id))
 			: await requestAttachmentBlob(attachment.id, { timeout: 90_000, priority: true });
 		if (!blob || blob.size < 8) throw new Error('Media is unavailable');
+		const forceVideo =
+			source?.kind === 'video' ||
+			String(attachment?.type || '').toLowerCase() === 'video' ||
+			String(attachment?.mimeType || blob.type || '')
+				.toLowerCase()
+				.startsWith('video/');
 		return createTranscriptionFile(
 			blob,
 			attachment.fileName,
 			attachment.id,
-			attachment.mimeType,
+			attachment.mimeType || blob.type,
+			{ forceVideo, kind: forceVideo ? 'video' : source?.kind },
 		);
 	}, []);
 

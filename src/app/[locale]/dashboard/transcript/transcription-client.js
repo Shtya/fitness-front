@@ -13,9 +13,11 @@ export {
 	SAFE_PROXY_UPLOAD_BYTES,
 	TRANSCRIPTION_CHUNK_PRESETS,
 	TRANSCRIPTION_CHUNK_STORAGE_KEY,
+	VIDEO_FORCE_CHUNK_SECONDS,
 	buildTranscriptionUploadParts,
 	getStoredTranscriptionChunkSeconds,
 	isVideoLikeFile,
+	maxWavChunkSeconds,
 	normalizeTranscriptionChunkSeconds,
 	prepareTranscriptionUploadFile,
 	storeTranscriptionChunkSeconds,
@@ -95,13 +97,22 @@ function extensionFromMimeType(mimeType) {
 	return 'webm';
 }
 
-export function createTranscriptionFile(blob, preferredName, fallbackId, mimeType) {
-	const type = String(mimeType || blob?.type || 'audio/webm').split(';')[0];
+export function createTranscriptionFile(blob, preferredName, fallbackId, mimeType, options = {}) {
+	const forceVideo =
+		options?.forceVideo ||
+		options?.kind === 'video' ||
+		String(mimeType || '').toLowerCase().startsWith('video/') ||
+		String(blob?.type || '').toLowerCase().startsWith('video/');
+	let type = String(mimeType || blob?.type || '').split(';')[0].toLowerCase();
+	if (forceVideo && !type.startsWith('video/')) {
+		type = 'video/mp4';
+	}
+	if (!type) type = forceVideo ? 'video/mp4' : 'audio/webm';
 	const preferred = String(preferredName || '').trim();
 	const preferredExtension = preferred.split('.').pop()?.toLowerCase();
 	const name = ACCEPTED_TRANSCRIPTION_EXTENSIONS.includes(preferredExtension)
 		? preferred
-		: `${type.startsWith('video/') ? 'whatsapp-video' : 'whatsapp-voice'}-${fallbackId || Date.now()}.${extensionFromMimeType(type)}`;
+		: `${forceVideo || type.startsWith('video/') ? 'whatsapp-video' : 'whatsapp-voice'}-${fallbackId || Date.now()}.${extensionFromMimeType(type)}`;
 	return new File([blob], name, { type });
 }
 
@@ -306,7 +317,7 @@ export function transcriptionErrorMessage(error, fallback = 'Transcription faile
 	}
 	// Nginx 413 often omits CORS headers → axios surfaces "Network Error" with no response body.
 	if (!error?.response && /network error/i.test(String(error?.message || ''))) {
-		return 'Upload blocked by the production proxy (usually file too large). The app converts video to small audio chunks first — refresh and retry. If it still fails, raise nginx client_max_body_size to 100m for the API host and reload nginx.';
+		return 'Upload blocked by the production proxy (file still too large after audio conversion). Hard-refresh and retry — video is split into ~25s WAV pieces. If it still fails, raise nginx client_max_body_size to at least 10m for the API host.';
 	}
 	if (error?.code === 'AUDIO_DECODE_FAILED' || error?.code === 'VIDEO_NOT_CONVERTED') {
 		return rawText || 'Could not read audio from this video in the browser. Export mp3/wav and retry.';
