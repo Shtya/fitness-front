@@ -215,37 +215,59 @@ export async function createChunkedTranscription({
 	onPrepareProgress?.({ phase: 'ready', percent: 100 });
 
 	const records = [];
+	const totalParts = Math.max(1, parts.length);
 	for (let index = 0; index < parts.length; index += 1) {
+		const chunkIndex = index + 1;
 		onChunkProgress?.({
-			chunkIndex: index + 1,
-			chunkTotal: parts.length,
+			chunkIndex,
+			chunkTotal: totalParts,
 			fileName: parts[index]?.name,
 		});
+		// Mark the start of this chunk on the overall bar (prepare ends ~15%).
+		const chunkStart = Math.round(15 + ((chunkIndex - 1) / totalParts) * 81);
+		onUploadProgress?.({
+			loaded: chunkStart,
+			total: 100,
+			chunkIndex,
+			chunkTotal: totalParts,
+		});
+
 		const data = await createTranscription({
 			file: parts[index],
 			provider,
 			language,
 			customVocabulary,
-			onUploadProgress:
-				parts.length === 1
-					? onUploadProgress
-					: event => {
-							if (!event?.total) return;
-							const local = Math.min(100, Math.round((event.loaded * 100) / event.total));
-							const overall = Math.min(
-								100,
-								Math.round(((index + local / 100) / parts.length) * 100),
-							);
-							onUploadProgress?.({
-								...event,
-								loaded: overall,
-								total: 100,
-								chunkIndex: index + 1,
-								chunkTotal: parts.length,
-							});
-						},
+			onUploadProgress: event => {
+				if (!event?.total) {
+					onUploadProgress?.({
+						loaded: Math.round(15 + ((chunkIndex - 0.25) / totalParts) * 81),
+						total: 100,
+						chunkIndex,
+						chunkTotal: totalParts,
+					});
+					return;
+				}
+				const local = Math.min(100, Math.round((event.loaded * 100) / event.total));
+				const overall = Math.min(
+					96,
+					Math.round(15 + ((index + local / 100) / totalParts) * 81),
+				);
+				onUploadProgress?.({
+					...event,
+					loaded: overall,
+					total: 100,
+					chunkIndex,
+					chunkTotal: totalParts,
+				});
+			},
 		});
 		records.push(data);
+		onUploadProgress?.({
+			loaded: Math.min(96, Math.round(15 + (chunkIndex / totalParts) * 81)),
+			total: 100,
+			chunkIndex,
+			chunkTotal: totalParts,
+		});
 	}
 
 	if (records.length === 1) return records[0];
@@ -328,7 +350,7 @@ export function transcriptionErrorMessage(error, fallback = 'Transcription faile
 
 export async function enhanceTranscription(id, payload = {}) {
 	const { data } = await api.post(`/transcriptions/${id}/enhance`, payload, {
-		timeout: 0,
+		timeout: 3 * 60 * 1000,
 	});
 	return data;
 }

@@ -166,7 +166,14 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 			onResultUpdated?.(data.transcription || null);
 			toast.success(t.enhanceApplied);
 		} catch (error) {
-			toast.error(error?.response?.data?.message || t.enhanceFailed);
+			toast.error(
+				Array.isArray(error?.response?.data?.message)
+					? error.response.data.message.join(', ')
+					: error?.response?.data?.message ||
+							error?.response?.data?.errors?.[0] ||
+							error?.message ||
+							t.enhanceFailed,
+			);
 		} finally {
 			setEnhancing(false);
 		}

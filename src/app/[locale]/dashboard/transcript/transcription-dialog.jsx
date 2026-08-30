@@ -44,6 +44,23 @@ import {
 	transcriptionErrorMessage,
 } from './transcription-client';
 
+/** Prepare audio → 0–15%. Chunk uploads/process → 15–96%. */
+function prepareBarPercent(percent) {
+	const p = Math.min(100, Math.max(0, Number(percent) || 0));
+	return Math.round(p * 0.15);
+}
+
+function chunkBarPercent(chunkIndex, chunkTotal, localPercent = 0) {
+	const total = Math.max(1, Number(chunkTotal) || 1);
+	const index = Math.min(total, Math.max(1, Number(chunkIndex) || 1));
+	const local = Math.min(100, Math.max(0, Number(localPercent) || 0));
+	const prepareEnd = 15;
+	const span = 81; // 15 → 96
+	const chunkSpan = span / total;
+	const start = prepareEnd + (index - 1) * chunkSpan;
+	return Math.min(96, Math.round(start + (local / 100) * chunkSpan));
+}
+
 const labels = {
 	en: {
 		title: 'Transcribe voice or video',
@@ -356,21 +373,28 @@ export default function TranscriptionDialog({
 					chunkSeconds,
 					onPrepareProgress: ({ percent }) => {
 						setStatus('preparing');
-						setProgress(Math.min(95, Number(percent) || 0));
+						setProgress(prepareBarPercent(percent));
 					},
 					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
 						setChunkProgress({ current: chunkIndex, total: chunkTotal });
-						if (chunkTotal > 1) setStatus('uploading');
+						setStatus('uploading');
+						setProgress(prev => Math.max(prev, chunkBarPercent(chunkIndex, chunkTotal, 0)));
 					},
 					onUploadProgress: event => {
+						const chunkIndex = Number(event?.chunkIndex) || 1;
+						const chunkTotal = Number(event?.chunkTotal) || 1;
 						setStatus('uploading');
-						if (!event.total) {
+						if (event?.total === 100 && Number.isFinite(event.loaded)) {
+							setProgress(Math.min(96, Math.max(15, Math.round(event.loaded))));
+							return;
+						}
+						if (!event?.total) {
+							setProgress(prev => Math.max(prev, chunkBarPercent(chunkIndex, chunkTotal, 70)));
 							setStatus('processing');
 							return;
 						}
-						const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
-						setProgress(next);
-						if (next >= 95) setStatus('processing');
+						const local = Math.min(100, Math.round((event.loaded * 100) / event.total));
+						setProgress(chunkBarPercent(chunkIndex, chunkTotal, local));
 					},
 				});
 				const nextText = String(data?.text || '').trim();
@@ -378,6 +402,7 @@ export default function TranscriptionDialog({
 				setText(nextText);
 				setOriginalTranscript('');
 				setOriginalExpanded(false);
+				setProgress(100);
 				setStatus('done');
 				onCompleted?.(nextText, data);
 			} catch (error) {
@@ -427,21 +452,28 @@ export default function TranscriptionDialog({
 					chunkSeconds,
 					onPrepareProgress: ({ percent }) => {
 						setStatus('preparing');
-						setProgress(Math.min(95, Number(percent) || 0));
+						setProgress(prepareBarPercent(percent));
 					},
 					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
 						setChunkProgress({ current: chunkIndex, total: chunkTotal });
-						if (chunkTotal > 1) setStatus('uploading');
+						setStatus('uploading');
+						setProgress(prev => Math.max(prev, chunkBarPercent(chunkIndex, chunkTotal, 0)));
 					},
 					onUploadProgress: event => {
 						setStatus('uploading');
-						if (!event.total) {
+						if (event?.total === 100 && Number.isFinite(event.loaded)) {
+							setProgress(Math.min(96, Math.max(15, Math.round(event.loaded))));
+							return;
+						}
+						const chunkIndex = Number(event?.chunkIndex) || 1;
+						const chunkTotal = Number(event?.chunkTotal) || 1;
+						if (!event?.total) {
+							setProgress(prev => Math.max(prev, chunkBarPercent(chunkIndex, chunkTotal, 70)));
 							setStatus('processing');
 							return;
 						}
-						const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
-						setProgress(next);
-						if (next >= 95) setStatus('processing');
+						const local = Math.min(100, Math.round((event.loaded * 100) / event.total));
+						setProgress(chunkBarPercent(chunkIndex, chunkTotal, local));
 					},
 				});
 				createdRecords.push(data);
@@ -657,70 +689,78 @@ export default function TranscriptionDialog({
 							</div>
 						) : null}
 
-						<label className="grid gap-1.5 text-[13px] font-semibold text-slate-700">
-							{t.method}
-							<WaCustomSelect
-								value={provider}
-								onChange={selectProvider}
-								disabled={busy}
-								ariaLabel={t.method}
-								options={providerOptions}
-							/>
-						</label>
+						<div className="wa-transcribe-controls grid grid-cols-[minmax(0,1fr)_minmax(6.75rem,8.25rem)_auto] items-end gap-2">
+							<label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-700">
+								<span className="truncate">{t.method}</span>
+								<WaCustomSelect
+									value={provider}
+									onChange={selectProvider}
+									disabled={busy}
+									ariaLabel={t.method}
+									options={providerOptions}
+									className="min-w-0"
+								/>
+							</label>
 
-						<label className="grid gap-1.5 text-[13px] font-semibold text-slate-700">
-							{t.chunkLength}
-							<WaCustomSelect
-								value={chunkSeconds}
-								onChange={selectChunkSeconds}
-								disabled={busy}
-								ariaLabel={t.chunkLength}
-								options={chunkOptions}
-							/>
-						</label>
+							<label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-700">
+								<span className="truncate">{t.chunkLength}</span>
+								<WaCustomSelect
+									value={chunkSeconds}
+									onChange={selectChunkSeconds}
+									disabled={busy}
+									ariaLabel={t.chunkLength}
+									options={chunkOptions}
+									className="min-w-0"
+								/>
+							</label>
+
+							<Button
+								onClick={transcribe}
+								disabled={busy || (singleVoice && !file)}
+								className="h-10 shrink-0 rounded-xl px-3 sm:min-w-[7.25rem]"
+							>
+								{busy ? <Loader2 className="animate-spin" /> : <AudioLines />}
+								<span className="truncate">{t.transcribe}</span>
+							</Button>
+						</div>
 
 						{['preparing', 'uploading', 'processing'].includes(status) && (
 							<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
 								<div className="flex items-center justify-between text-[13px] font-semibold text-slate-700">
-									<span className="flex items-center gap-2">
-										<Loader2 className="size-4 animate-spin text-[var(--color-primary-600)]" />
-										{chunkProgress.total > 1
-											? t.chunkProgress
-												.replace('{current}', String(chunkProgress.current || 1))
-												.replace('{total}', String(chunkProgress.total))
-											: isBundle && voiceSources.length
-												? t.batchProgress
-													.replace('{current}', String(batchIndex || 1))
-													.replace('{total}', String(voiceSources.length))
-												: status === 'preparing'
-													? t.preparing
-													: status === 'uploading'
-														? t.uploading
-														: t.processing}
+									<span className="flex min-w-0 items-center gap-2">
+										<Loader2 className="size-4 shrink-0 animate-spin text-[var(--color-primary-600)]" />
+										<span className="truncate">
+											{chunkProgress.total > 1
+												? t.chunkProgress
+													.replace('{current}', String(chunkProgress.current || 1))
+													.replace('{total}', String(chunkProgress.total))
+												: isBundle && voiceSources.length
+													? t.batchProgress
+														.replace('{current}', String(batchIndex || 1))
+														.replace('{total}', String(voiceSources.length))
+													: status === 'preparing'
+														? t.preparing
+														: status === 'uploading'
+															? t.uploading
+															: t.processing}
+										</span>
 									</span>
-									<span className="tabular-nums text-slate-500">
-										{status === 'preparing' || status === 'uploading'
-											? `${progress}%`
-											: `${elapsed}s`}
+									<span className="shrink-0 tabular-nums text-slate-500">
+										{status === 'processing' && progress >= 96
+											? `${elapsed}s`
+											: `${Math.min(99, Math.max(0, progress))}%`}
 									</span>
 								</div>
 								<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
 									<div
-										className={`h-full rounded-full bg-[var(--color-primary-600)] ${status === 'processing' ? 'w-full animate-pulse' : ''}`}
-										style={
-											status === 'preparing' || status === 'uploading'
-												? { width: `${Math.max(progress, 2)}%` }
-												: undefined
-										}
+										className={`h-full rounded-full bg-[var(--color-primary-600)] transition-[width] duration-300 ease-out ${
+											status === 'processing' && progress >= 96 ? 'animate-pulse' : ''
+										}`}
+										style={{ width: `${Math.min(100, Math.max(2, progress))}%` }}
 									/>
 								</div>
 							</div>
 						)}
-
-						<Button onClick={transcribe} disabled={busy} className="h-10 w-full rounded-xl">
-							{busy ? <Loader2 className="animate-spin" /> : <AudioLines />}
-							{t.transcribe}
-						</Button>
 
 						{result && (
 							<div className="space-y-2">

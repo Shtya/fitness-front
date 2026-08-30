@@ -4391,15 +4391,44 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	border-radius: 0 0 7.5px 7.5px;
 }
 
-.wa-message-bubble.wa-message-voice:has(.wa-message-transcript) {
-	padding-bottom: 0 !important;
+/* Time must sit above the transcript row, never over the Show control. */
+.wa-message-bubble:has(> .wa-message-transcript),
+.wa-message-bubble:has(.wa-message-transcript) {
+	display: flex !important;
+	flex-direction: column !important;
 }
 
-.wa-message-bubble.wa-message-voice:has(.wa-message-transcript) .wa-message-meta {
+.wa-message-bubble:has(.wa-message-transcript) > .wa-message-transcript {
+	order: 40;
+	position: relative;
+	z-index: 1;
+	width: 100%;
+	margin-top: 2px;
+}
+
+.wa-message-bubble:has(.wa-message-transcript) > .wa-message-meta,
+.wa-message-bubble.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
+.wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta {
+	order: 30;
 	position: static !important;
-	float: inline-end;
 	inset: auto !important;
-	margin: 2px 10px 8px !important;
+	top: auto !important;
+	right: auto !important;
+	bottom: auto !important;
+	left: auto !important;
+	float: none !important;
+	align-self: flex-end;
+	margin: 4px 10px 2px !important;
+	padding: 0 !important;
+	z-index: 1;
+	color: #667781 !important;
+	text-shadow: none !important;
+	pointer-events: auto !important;
+	background: transparent !important;
+}
+
+.wa-message-bubble.wa-message-voice:has(.wa-message-transcript) {
+	padding-bottom: 6px !important;
 }
 
 .wa-photo-open-hint {
@@ -6819,6 +6848,25 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		bottom: 5px !important;
 	}
 
+	.wa-web-desktop .wa-message-bubble:has(.wa-message-transcript) > .wa-message-meta,
+	.wa-web-desktop .wa-message-bubble.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
+	.wa-web-desktop .wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta,
+	.wa-web-desktop .wa-message-other.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
+	.wa-web-desktop .wa-message-mine.wa-message-voice:has(.wa-message-transcript) .wa-message-meta {
+		position: static !important;
+		inset: auto !important;
+		top: auto !important;
+		right: auto !important;
+		bottom: auto !important;
+		left: auto !important;
+		float: none !important;
+		align-self: flex-end;
+		margin: 4px 10px 2px !important;
+		color: #667781 !important;
+		text-shadow: none !important;
+		pointer-events: auto !important;
+	}
+
 	.wa-web-desktop .wa-message-bubble.wa-message-media {
 		width: min(72%, 380px) !important;
 		max-width: min(72%, 380px) !important;
@@ -7603,6 +7651,25 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		bottom: 5px !important;
 	}
 
+	.wa-message-bubble:has(.wa-message-transcript) > .wa-message-meta,
+	.wa-message-bubble.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
+	.wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta,
+	.wa-message-other.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
+	.wa-message-mine.wa-message-voice:has(.wa-message-transcript) .wa-message-meta {
+		position: static !important;
+		inset: auto !important;
+		top: auto !important;
+		right: auto !important;
+		bottom: auto !important;
+		left: auto !important;
+		float: none !important;
+		align-self: flex-end;
+		margin: 4px 10px 2px !important;
+		color: #667781 !important;
+		text-shadow: none !important;
+		pointer-events: auto !important;
+	}
+
 	.wa-message-bubble.wa-message-media {
 		width: min(90%, 360px) !important;
 		max-width: min(90%, 360px) !important;
@@ -8009,6 +8076,18 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		background: transparent !important;
 		color: rgba(255, 255, 255, 0.95) !important;
 		pointer-events: none;
+	}
+
+	.wa-message-media:has(.wa-message-transcript) > .wa-message-meta,
+	.wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta {
+		position: static !important;
+		inset: auto !important;
+		float: none !important;
+		align-self: flex-end;
+		margin: 4px 10px 2px !important;
+		color: #667781 !important;
+		text-shadow: none !important;
+		pointer-events: auto !important;
 	}
 
 	/* Soft clock while media is still downloading — avoid harsh white on empty grey. */
