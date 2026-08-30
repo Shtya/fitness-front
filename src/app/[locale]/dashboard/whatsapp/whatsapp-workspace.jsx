@@ -3852,7 +3852,7 @@ function MessageAttachments({
 	return (
 		<>
 			{images.length > 0 && (
-				<div className={`wa-media-gallery ${mine ? 'wa-media-gallery-mine' : 'wa-media-gallery-other'} ${visibleImages.length === 1 ? 'wa-media-gallery-single' : ''} ${galleryCountClass} grid overflow-hidden rounded-[10px] ${gridClass} gap-[2px]`}>
+				<div className={`wa-media-gallery ${mine ? 'wa-media-gallery-mine' : 'wa-media-gallery-other'} ${visibleImages.length === 1 ? 'wa-media-gallery-single' : ''} ${galleryCountClass} grid overflow-hidden rounded-none ${gridClass} gap-[2px]`}>
 					{visibleImages.map((attachment, index) => (
 						<div key={attachment.id} className={`wa-photo-tile relative min-h-0 min-w-0 overflow-hidden ${tileClass(index)}`}>
 							<MediaAttachment
@@ -3909,6 +3909,90 @@ function MessageAttachments({
 	);
 }
 
+function HoverActionButton({
+	tooltip,
+	className = '',
+	children,
+	tooltipPrefer = 'below',
+	...props
+}) {
+	const buttonRef = useRef(null);
+	const [tip, setTip] = useState(null);
+
+	const hideTip = useCallback(() => setTip(null), []);
+
+	const showTip = useCallback(() => {
+		const node = buttonRef.current;
+		if (!node || !tooltip) return;
+		const rect = node.getBoundingClientRect();
+		const preferBelow = tooltipPrefer === 'below';
+		const gap = 8;
+		setTip({
+			label: tooltip,
+			left: rect.left + rect.width / 2,
+			top: preferBelow ? rect.bottom + gap : rect.top - gap,
+			place: preferBelow ? 'below' : 'above',
+		});
+	}, [tooltip, tooltipPrefer]);
+
+	useEffect(() => {
+		if (!tip) return undefined;
+		const onScroll = () => hideTip();
+		window.addEventListener('scroll', onScroll, true);
+		window.addEventListener('resize', hideTip);
+		return () => {
+			window.removeEventListener('scroll', onScroll, true);
+			window.removeEventListener('resize', hideTip);
+		};
+	}, [tip, hideTip]);
+
+	return (
+		<>
+			<button
+				{...props}
+				ref={buttonRef}
+				type={props.type || 'button'}
+				aria-label={props['aria-label'] || tooltip}
+				className={className}
+				onMouseEnter={event => {
+					props.onMouseEnter?.(event);
+					showTip();
+				}}
+				onMouseLeave={event => {
+					props.onMouseLeave?.(event);
+					hideTip();
+				}}
+				onFocus={event => {
+					props.onFocus?.(event);
+					showTip();
+				}}
+				onBlur={event => {
+					props.onBlur?.(event);
+					hideTip();
+				}}
+				onClick={event => {
+					hideTip();
+					props.onClick?.(event);
+				}}
+			>
+				{children}
+			</button>
+			{tip && typeof document !== 'undefined'
+				? createPortal(
+						<span
+							className={`wa-hover-portal-tooltip is-${tip.place}`}
+							style={{ left: tip.left, top: tip.top }}
+							role="tooltip"
+						>
+							{tip.label}
+						</span>,
+						document.body,
+					)
+				: null}
+		</>
+	);
+}
+
 function MessageHoverActions({
 	mine,
 	locale,
@@ -3946,8 +4030,7 @@ function MessageHoverActions({
 			aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}
 		>
 			{showCopy ? (
-				<button
-					type="button"
+				<HoverActionButton
 					onPointerDown={event => event.stopPropagation()}
 					onClick={async event => {
 						event.preventDefault();
@@ -3959,8 +4042,7 @@ function MessageHoverActions({
 						if (copiedTimerRef.current) window.clearTimeout(copiedTimerRef.current);
 						copiedTimerRef.current = window.setTimeout(() => setCopied(false), 1600);
 					}}
-					aria-label={copyLabel}
-					data-tooltip={copyLabel}
+					tooltip={copyLabel}
 					className={`wa-message-hover-btn ${copied ? 'is-copied' : ''}`}
 				>
 					{copied ? (
@@ -3968,52 +4050,44 @@ function MessageHoverActions({
 					) : (
 						<Copy size={14} strokeWidth={2.2} aria-hidden />
 					)}
-				</button>
+				</HoverActionButton>
 			) : null}
-			<button
-				type="button"
+			<HoverActionButton
 				data-message-reaction-trigger
 				onPointerDown={event => event.stopPropagation()}
 				onClick={onEmoji}
-				aria-label={reactLabel}
-				data-tooltip={reactLabel}
+				tooltip={reactLabel}
 				aria-expanded={Boolean(emojiOpen)}
 				className="wa-message-hover-btn"
 			>
 				<Smile size={15} strokeWidth={2.1} aria-hidden />
-			</button>
-			<button
-				type="button"
+			</HoverActionButton>
+			<HoverActionButton
 				onClick={onReply}
-				aria-label={replyLabel}
-				data-tooltip={replyLabel}
+				tooltip={replyLabel}
 				className="wa-message-hover-btn"
 			>
 				<Reply size={15} strokeWidth={2.1} aria-hidden />
-			</button>
+			</HoverActionButton>
 			{showTranscribe ? (
-				<button
-					type="button"
+				<HoverActionButton
 					onClick={onTranscribe}
-					aria-label={transcribeLabel}
-					data-tooltip={transcribeLabel}
+					tooltip={transcribeLabel}
 					className="wa-message-hover-btn is-transcribe"
 				>
 					<AudioLines size={15} strokeWidth={2.1} aria-hidden />
-				</button>
+				</HoverActionButton>
 			) : null}
 			<span className="wa-message-hover-sep" aria-hidden />
-			<button
-				type="button"
+			<HoverActionButton
 				data-message-actions-trigger
 				onClick={onMore}
-				aria-label={moreLabel}
-				data-tooltip={moreLabel}
+				tooltip={moreLabel}
 				aria-expanded={open && !emojiOpen}
 				className="wa-message-hover-btn is-more"
 			>
 				<MoreHorizontal size={15} strokeWidth={2.1} aria-hidden />
-			</button>
+			</HoverActionButton>
 		</div>
 	);
 }
@@ -10680,6 +10754,11 @@ function WhatsAppWorkspaceContent() {
 				: []),
 		];
 		closeReactionPicker();
+		setReactingMessageIds(current => {
+			const next = new Set(current);
+			next.add(message.id);
+			return next;
+		});
 		updateCachedMessage(targetConversationId, message.id, current => ({
 			...current,
 			reactions: optimisticReactions,
