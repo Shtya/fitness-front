@@ -662,6 +662,8 @@ export default function WhatsAppSplitPane({
 				</button>
 			</header>
 
+			<div className="wa-chat-wallpaper-host min-h-0 flex-1">
+			<div className="wa-chat-wallpaper-layer" aria-hidden="true" />
 			<div
 				ref={scrollRef}
 				className="wa-message-wallpaper min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 nice-scroll"
@@ -758,6 +760,7 @@ export default function WhatsAppSplitPane({
 					})}
 					</div>
 				)}
+			</div>
 			</div>
 
 			{canCompose ? (

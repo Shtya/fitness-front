@@ -1042,24 +1042,59 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   --wa-input: #f0f2f5;
 }
 
-.wa-message-wallpaper {
+/* Wallpaper host: pattern sits on a fixed layer so scroll does not repaint the SVG tile. */
+.wa-chat-wallpaper-host {
+  position: relative;
   display: flex;
   flex-direction: column;
-  background-color: var(--wa-wall-bg) !important;
-  background-image: url('/bg-whatsapp.svg') !important;
-  background-repeat: repeat !important;
-  background-position: center top !important;
-  background-size: 618px 829px !important;
-  background-attachment: local;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 0%;
+  overflow: hidden;
+  background-color: var(--wa-wall-bg);
+}
+
+.wa-chat-wallpaper-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--wa-wall-bg);
+  background-image: url('/bg-whatsapp.svg');
+  background-repeat: repeat;
+  background-position: center top;
+  /* Smaller tile + muted opacity = cheaper paints than scrolling a 549KB SVG. */
+  background-size: 420px 564px;
+  opacity: 0.42;
+  transform: translateZ(0);
+  contain: strict;
+}
+
+.dark .wa-chat-wallpaper-layer {
+  background-color: #0b141a;
+  background-image:
+    linear-gradient(rgba(11, 20, 26, 0.78), rgba(11, 20, 26, 0.78)),
+    url('/bg-whatsapp.svg');
+  background-repeat: no-repeat, repeat;
+  background-size: auto, 420px 564px;
+  opacity: 1;
+}
+
+.wa-message-wallpaper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  /* Transparent — pattern comes from .wa-chat-wallpaper-layer behind the scroller. */
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
 .dark .wa-message-wallpaper {
-  background-color: #0b141a !important;
-  background-image:
-    linear-gradient(rgba(11, 20, 26, 0.72), rgba(11, 20, 26, 0.72)),
-    url('/bg-whatsapp.svg') !important;
-  background-repeat: no-repeat, repeat !important;
-  background-size: auto, 618px 829px !important;
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
 .wa-push-nudge {
@@ -5349,7 +5384,16 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-message-wallpaper {
 		padding: 24px 38px 20px !important;
-		background-color: #efeae2 !important;
+		background-color: transparent !important;
+		background-image: none !important;
+	}
+
+	.wa-web-desktop .wa-chat-wallpaper-host {
+		background-color: #efeae2;
+	}
+
+	.wa-web-desktop .wa-chat-wallpaper-layer {
+		background-color: #efeae2;
 	}
 
 	.wa-web-desktop .wa-day-chip,
@@ -5615,7 +5659,16 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-message-wallpaper {
 		padding: 24px 38px 20px !important;
-		background-color: #efeae2 !important;
+		background-color: transparent !important;
+		background-image: none !important;
+	}
+
+	.wa-web-desktop .wa-chat-wallpaper-host {
+		background-color: #efeae2;
+	}
+
+	.wa-web-desktop .wa-chat-wallpaper-layer {
+		background-color: #efeae2;
 	}
 
 	.wa-web-desktop .wa-day-chip,
@@ -5969,7 +6022,12 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-web-desktop .wa-split-pane .wa-message-wallpaper {
-		background-color: var(--wa-wall-bg) !important;
+		background-color: transparent !important;
+		background-image: none !important;
+	}
+
+	.wa-web-desktop .wa-split-pane .wa-chat-wallpaper-host {
+		background-color: var(--wa-wall-bg);
 	}
 
 	.wa-web-desktop .wa-split-pane header {

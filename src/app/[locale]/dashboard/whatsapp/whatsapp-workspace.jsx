@@ -14636,6 +14636,8 @@ function WhatsAppWorkspaceContent() {
 										/>
 									) : (
 									<>
+									<div className="wa-chat-wallpaper-host">
+									<div className="wa-chat-wallpaper-layer" aria-hidden="true" />
 									<div
 										ref={messageBoxRef}
 										onScroll={event => {
@@ -15594,6 +15596,7 @@ function WhatsAppWorkspaceContent() {
 												<WaVirtualSpacer height={messageListWindow.bottomPad} />
 											</div>
 										)}
+									</div>
 									</div>
 									<div
 										className={`wa-composer-stack ${
