@@ -609,28 +609,32 @@ export function messageTextPresentation(text) {
 			'var(--font-arabic), "Tajawal", "Cairo", "Noto Sans Arabic", Tahoma, Arial, sans-serif',
 		fontWeight: 500,
 		fontFeatureSettings: '"kern" 1, "liga" 1',
-		lineHeight: 1.85,
+		lineHeight: 1.4,
 		direction: 'rtl',
 		unicodeBidi: 'plaintext',
 		textAlign: 'right',
 		display: 'block',
-		// Prefer one line; soft-wrap only when bubble max-width is hit (Enter still breaks).
-		width: 'max-content',
+		// Auto width — max-content + floated timestamp collapsed short Arabic into a column.
+		width: 'auto',
 		maxWidth: '100%',
+		overflowWrap: 'break-word',
+		wordBreak: 'normal',
 	};
 	const englishStyle = {
 		direction: 'ltr',
 		textAlign: 'left',
 		unicodeBidi: 'plaintext',
 		display: 'block',
-		width: 'max-content',
+		width: 'auto',
 		maxWidth: '100%',
+		overflowWrap: 'break-word',
+		wordBreak: 'normal',
 		fontFamily:
 			'var(--font-inter), "SF Pro Text", "Segoe UI Variable Text", "Helvetica Neue", system-ui, sans-serif',
 		fontWeight: 400,
 		letterSpacing: '-0.011em',
 		fontFeatureSettings: '"cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1',
-		lineHeight: 1.55,
+		lineHeight: 1.35,
 	};
 	if (isArabic) {
 		return {

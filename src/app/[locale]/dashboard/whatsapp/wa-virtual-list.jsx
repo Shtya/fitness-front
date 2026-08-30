@@ -1,11 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 /**
  * Scroll-window helper: only mount a slice of rows (+spacers).
  * Safer than absolute virtualizers when rows have complex nested UI.
+ *
+ * Fixed rowHeight is an estimate. Variable-height chat bubbles should disable
+ * windowing (enabled:false) — otherwise spacers drift and scroll jumps on prepend.
  */
 export function computeRowWindow({
 	scrollTop = 0,
@@ -40,6 +43,8 @@ export function useWaScrollWindow({
 	minCountToWindow = 48,
 	/** 'end' = chat thread (latest at bottom). 'start' = inbox list (latest at top). */
 	initialAlign = 'end',
+	/** Optional scroll container — used to read real scrollTop on count changes. */
+	scrollRef = null,
 } = {}) {
 	const shouldWindow = Boolean(enabled) && count >= minCountToWindow;
 	const [windowState, setWindowState] = useState(() =>
@@ -51,10 +56,14 @@ export function useWaScrollWindow({
 			scrollTop: initialAlign === 'start' ? 0 : Math.max(0, count * rowHeight - 800),
 		}),
 	);
+	const prevCountRef = useRef(count);
 
 	// Recompute when the list grows from empty / crosses the window threshold.
 	// Without this, start/end stay at 0 and the UI shows spacers with no rows.
 	useEffect(() => {
+		const prevCount = prevCountRef.current;
+		prevCountRef.current = count;
+
 		if (!shouldWindow) {
 			setWindowState({
 				start: 0,
@@ -65,30 +74,64 @@ export function useWaScrollWindow({
 			});
 			return;
 		}
+
+		const node = scrollRef?.current;
+		const realScrollTop =
+			node && typeof node.scrollTop === 'number' ? node.scrollTop : null;
+		const realClientHeight =
+			node && typeof node.clientHeight === 'number' && node.clientHeight > 0
+				? node.clientHeight
+				: 800;
+		const prepended = count - prevCount;
+		const h = Math.max(24, Number(rowHeight) || 72);
+
 		setWindowState(current => {
-			if (current.end > 0 && current.end <= count) {
-				return computeRowWindow({
-					scrollTop: current.start * (current.rowHeight || rowHeight),
-					clientHeight: 800,
+			// Prepend (load older): shift the mounted window so the same rows stay visible.
+			if (prepended > 0 && (realScrollTop == null || realScrollTop < realClientHeight * 2)) {
+				const nextStart = Math.max(0, (current.start || 0) + prepended);
+				const nextEnd = Math.min(
 					count,
-					rowHeight,
+					Math.max(nextStart + 1, (current.end || 0) + prepended),
+				);
+				return {
+					start: nextStart,
+					end: nextEnd,
+					topPad: nextStart * h,
+					bottomPad: Math.max(0, (count - nextEnd) * h),
+					rowHeight: h,
+				};
+			}
+
+			if (realScrollTop != null) {
+				return computeRowWindow({
+					scrollTop: realScrollTop,
+					clientHeight: realClientHeight,
+					count,
+					rowHeight: h,
 					overscan,
 				});
 			}
-			// Inbox lists start at top; message threads open near the bottom.
-			const estimatedBottom = Math.max(
-				0,
-				count * Math.max(24, Number(rowHeight) || 72) - 800,
-			);
+
+			if (current.end > 0 && current.end <= count) {
+				return computeRowWindow({
+					scrollTop: current.start * (current.rowHeight || h),
+					clientHeight: 800,
+					count,
+					rowHeight: h,
+					overscan,
+				});
+			}
+
+			const estimatedBottom = Math.max(0, count * h - 800);
 			return computeRowWindow({
 				scrollTop: initialAlign === 'start' ? 0 : estimatedBottom,
 				clientHeight: 800,
 				count,
-				rowHeight,
+				rowHeight: h,
 				overscan,
 			});
 		});
-	}, [shouldWindow, count, rowHeight, overscan, initialAlign]);
+	}, [shouldWindow, count, rowHeight, overscan, initialAlign, scrollRef]);
 
 	const onScroll = useCallback(
 		event => {
@@ -119,7 +162,6 @@ export function useWaScrollWindow({
 		}
 		const start = Math.min(Math.max(0, windowState.start || 0), count);
 		const end = Math.max(start, Math.min(count, windowState.end || 0));
-		// Guard: never mount an empty window when rows exist.
 		if (count > 0 && end <= start) {
 			return computeRowWindow({
 				scrollTop: 0,

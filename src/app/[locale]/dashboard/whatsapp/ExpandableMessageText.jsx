@@ -61,10 +61,11 @@ export default function ExpandableMessageText({
 		whiteSpace: 'pre-wrap',
 		overflowWrap: 'break-word',
 		wordBreak: 'normal',
-		width: 'max-content',
 		maxWidth: '100%',
 		unicodeBidi: style?.unicodeBidi || 'plaintext',
 		...style,
+		// Never allow max-content on the text node — it collides with floated timestamps.
+		width: 'auto',
 	};
 
 	return (

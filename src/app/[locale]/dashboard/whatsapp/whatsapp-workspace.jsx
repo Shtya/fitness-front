@@ -27,6 +27,7 @@ import {
 	ChevronUp,
 	Clock,
 	CalendarClock,
+	CalendarDays,
 	Camera,
 	Columns2,
 	Download,
@@ -77,6 +78,7 @@ import {
 	User,
 	UserPlus,
 	UserCircle2,
+	UserRound,
 	Users,
 	Video,
 	Wifi,
@@ -3961,9 +3963,9 @@ function MessageHoverActions({
 					className={`wa-message-hover-btn ${copied ? 'is-copied' : ''}`}
 				>
 					{copied ? (
-						<Check size={20} strokeWidth={2.5} aria-hidden />
+						<Check size={15} strokeWidth={2.4} aria-hidden />
 					) : (
-						<Copy size={19} strokeWidth={2.2} aria-hidden />
+						<Copy size={14} strokeWidth={2.2} aria-hidden />
 					)}
 				</button>
 			) : null}
@@ -3977,7 +3979,7 @@ function MessageHoverActions({
 				aria-expanded={Boolean(emojiOpen)}
 				className="wa-message-hover-btn"
 			>
-				<Smile size={20} strokeWidth={2.15} aria-hidden />
+				<Smile size={15} strokeWidth={2.1} aria-hidden />
 			</button>
 			<button
 				type="button"
@@ -3986,7 +3988,7 @@ function MessageHoverActions({
 				data-tooltip={replyLabel}
 				className="wa-message-hover-btn"
 			>
-				<Reply size={20} strokeWidth={2.15} aria-hidden />
+				<Reply size={15} strokeWidth={2.1} aria-hidden />
 			</button>
 			{showTranscribe ? (
 				<button
@@ -3996,7 +3998,7 @@ function MessageHoverActions({
 					data-tooltip={transcribeLabel}
 					className="wa-message-hover-btn is-transcribe"
 				>
-					<AudioLines size={20} strokeWidth={2.15} aria-hidden />
+					<AudioLines size={15} strokeWidth={2.1} aria-hidden />
 				</button>
 			) : null}
 			<span className="wa-message-hover-sep" aria-hidden />
@@ -4009,7 +4011,7 @@ function MessageHoverActions({
 				aria-expanded={open && !emojiOpen}
 				className="wa-message-hover-btn is-more"
 			>
-				<MoreHorizontal size={20} strokeWidth={2.15} aria-hidden />
+				<MoreHorizontal size={15} strokeWidth={2.1} aria-hidden />
 			</button>
 		</div>
 	);
@@ -6344,6 +6346,8 @@ function WhatsAppWorkspaceContent() {
 	const autoCreateAccountAttemptedRef = useRef(false);
 	const autoInboxSyncAttemptedRef = useRef(null);
 	const loadOlderAtRef = useRef(0);
+	const olderScrollRestoreRef = useRef(null);
+	const suppressOlderLoadUntilRef = useRef(0);
 	const syncCooldownUntilRef = useRef(0);
 
 	const scrollMessagesToBottom = useCallback((behavior = 'auto') => {
@@ -6536,6 +6540,9 @@ function WhatsAppWorkspaceContent() {
 		rowHeight: 96,
 		overscan: 10,
 		minCountToWindow: 60,
+		// Variable-height bubbles + fixed spacers jump hard when prepending older pages.
+		enabled: false,
+		scrollRef: messageBoxRef,
 	});
 	const visibleMessageRows = useMemo(() => {
 		const slice = messageRows.slice(messageListWindow.start, messageListWindow.end);
@@ -8515,6 +8522,8 @@ function WhatsAppWorkspaceContent() {
 		if (!latest?.id) return;
 		const box = messageBoxRef.current;
 		if (!box || loadingOlder) return;
+		// Never fight "load older" scroll restoration.
+		if (olderScrollRestoreRef.current) return;
 		const pinOpen = pinThreadToBottomRef.current;
 		const isNewLatest = latest.id !== lastAutoScrolledMessageRef.current;
 		const nearBottom =
@@ -8531,12 +8540,57 @@ function WhatsAppWorkspaceContent() {
 		setShowJumpToBottom(false);
 	}, [effectiveMessages, loadingOlder, conversationId, loadingMessages]);
 
+	// Restore scroll after older messages are prepended (before paint).
+	useLayoutEffect(() => {
+		const pending = olderScrollRestoreRef.current;
+		if (!pending || loadingOlder) return;
+		if (pending.conversationId !== conversationIdRef.current) {
+			olderScrollRestoreRef.current = null;
+			return;
+		}
+		const box = messageBoxRef.current;
+		if (!box) {
+			olderScrollRestoreRef.current = null;
+			return;
+		}
+
+		const applyRestore = () => {
+			const current = messageBoxRef.current;
+			if (!current) return;
+			if (pending.anchorId) {
+				const safeId =
+					typeof CSS !== 'undefined' && CSS.escape
+						? CSS.escape(pending.anchorId)
+						: pending.anchorId.replace(/"/g, '\\"');
+				const anchor =
+					current.querySelector(`[data-wa-message-id="${safeId}"]`) ||
+					current.querySelector(`[data-wa-message-ids~="${safeId}"]`);
+				if (anchor) {
+					const nextTop = anchor.getBoundingClientRect().top;
+					current.scrollTop += nextTop - pending.anchorOffset;
+					return;
+				}
+			}
+			const delta = current.scrollHeight - pending.previousHeight;
+			current.scrollTop = pending.previousScrollTop + delta;
+		};
+
+		applyRestore();
+		requestAnimationFrame(() => {
+			applyRestore();
+			olderScrollRestoreRef.current = null;
+			// Block immediate re-trigger while still sitting near the top.
+			suppressOlderLoadUntilRef.current = Date.now() + 900;
+		});
+	}, [loadingOlder, effectiveMessages.length, conversationId]);
+
 	// Keep the thread glued to the bottom while media/layout grows on first open.
 	useEffect(() => {
 		const box = messageBoxRef.current;
 		if (!box || !conversationId) return undefined;
 		const keepBottom = () => {
 			if (!pinThreadToBottomRef.current) return;
+			if (loadingOlderRef.current || olderScrollRestoreRef.current) return;
 			box.scrollTop = box.scrollHeight;
 			setShowJumpToBottom(false);
 		};
@@ -9643,14 +9697,59 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (composerImages.length) {
 			if (!conversationId || sending) return;
-			for (const item of composerImages) {
-				const sent = await sendFile(item.file, 'image');
-				if (!sent) return;
-				setComposerImages(current => {
-					const next = current.filter(entry => entry.id !== item.id);
-					if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-					return next;
+			const targetConversationId = conversationId;
+			const imagesToSend = [...composerImages];
+			const caption = draft.trim();
+			const replySnapshot = replyingTo;
+
+			// Drop composer staging immediately — WhatsApp shows the bubble in-thread first.
+			composerImagesRef.current = [];
+			setComposerImages([]);
+			setDraft('');
+			setReplyingTo(null);
+
+			for (let index = 0; index < imagesToSend.length; index += 1) {
+				const item = imagesToSend[index];
+				const clientMessageId = newClientMessageId();
+				const imageCaption = index === 0 ? caption : '';
+				const imageReply = index === 0 ? replySnapshot : null;
+				const optimisticMessage = buildOptimisticMediaMessage({
+					conversationId: targetConversationId,
+					clientMessageId,
+					type: 'image',
+					file: item.file,
+					previewUrl: item.previewUrl,
+					caption: imageCaption,
+					replySnapshot: imageReply,
 				});
+				persistConversationMessages(targetConversationId, current =>
+					mergeMessages(current, [optimisticMessage], targetConversationId),
+				);
+
+				const sent = await sendFile(item.file, 'image', {
+					conversationId: targetConversationId,
+					clientMessageId,
+					caption: imageCaption,
+					replySnapshot: imageReply,
+					optimisticMessage,
+				});
+				if (!sent) {
+					const remaining = imagesToSend.slice(index).map((entry, offset) => {
+						if (offset === 0) {
+							// Failed send revoked the blob preview — rebuild for re-attach.
+							return {
+								...entry,
+								previewUrl: URL.createObjectURL(entry.file),
+							};
+						}
+						return entry;
+					});
+					composerImagesRef.current = remaining;
+					setComposerImages(remaining);
+					if (caption) setDraft(current => current || caption);
+					if (replySnapshot) setReplyingTo(current => current || replySnapshot);
+					return;
+				}
 			}
 			return;
 		}
@@ -9829,11 +9928,7 @@ function WhatsAppWorkspaceContent() {
 			return false;
 		}
 		const targetAccountId = accountId;
-		let outgoingFile = file;
 		const type = outgoingMediaType(file, forcedType);
-		if (type === 'image') {
-			outgoingFile = await compressImageForWhatsApp(file);
-		}
 		const caption =
 			type === 'sticker'
 				? ''
@@ -9845,15 +9940,22 @@ function WhatsAppWorkspaceContent() {
 		const clientMessageId = options.clientMessageId || newClientMessageId();
 		let optimisticMessage = options.optimisticMessage || null;
 		let uploadedFileId = null;
+		const ownsOptimisticPreview = !options.optimisticMessage;
 
-		if (isOptimisticVoiceType(type) && !optimisticMessage) {
+		// Show in-chat bubble with clock immediately (text already does this).
+		if (!optimisticMessage) {
+			const mediaType = isOptimisticVoiceType(type)
+				? type === 'audio'
+					? 'audio'
+					: 'voice'
+				: type;
 			optimisticMessage = buildOptimisticMediaMessage({
 				conversationId: targetConversationId,
 				clientMessageId,
-				type: type === 'audio' ? 'audio' : 'voice',
-				file: outgoingFile,
-				previewUrl: URL.createObjectURL(outgoingFile),
-				caption: '',
+				type: mediaType,
+				file,
+				previewUrl: URL.createObjectURL(file),
+				caption: caption || '',
 				replySnapshot,
 			});
 			persistConversationMessages(targetConversationId, current =>
@@ -9867,6 +9969,10 @@ function WhatsAppWorkspaceContent() {
 		setSending(true);
 		setUploadProgress(0);
 		try {
+			let outgoingFile = file;
+			if (type === 'image') {
+				outgoingFile = await compressImageForWhatsApp(file);
+			}
 			const form = new FormData();
 			form.append('file', outgoingFile);
 			const { data: uploaded } = await api.post(
@@ -9919,7 +10025,7 @@ function WhatsAppWorkspaceContent() {
 				persistConversationMessages(targetConversationId, current =>
 					current.filter(message => message.id !== optimisticMessage.id),
 				);
-				if (conversationIdRef.current === targetConversationId) {
+				if (conversationIdRef.current === targetConversationId && ownsOptimisticPreview) {
 					setReplyingTo(current => current || replySnapshot);
 				}
 			}
@@ -11546,14 +11652,13 @@ function WhatsAppWorkspaceContent() {
 		) {
 			return false;
 		}
-		if (!ignoreThrottle && Date.now() - loadOlderAtRef.current < 500) return false;
+		if (!ignoreThrottle && Date.now() - loadOlderAtRef.current < 700) return false;
+		if (!ignoreThrottle && Date.now() < suppressOlderLoadUntilRef.current) return false;
 		loadOlderAtRef.current = Date.now();
 		const targetConversationId = conversationId;
 		const requestId = ++olderRequestId.current;
-		const box = messageBoxRef.current;
-		const previousHeight = box?.scrollHeight || 0;
-		const previousCount = conversationMessagesRef.current.length;
 		loadingOlderRef.current = true;
+		pinThreadToBottomRef.current = false;
 		setLoadingOlder(true);
 		try {
 			const { data } = await api.get(
@@ -11616,6 +11721,7 @@ function WhatsAppWorkspaceContent() {
 			const incoming = [...local, ...providerItems];
 			const previousCache = messagesCacheRef.current.get(cacheKey);
 			const previousItems = previousCache?.items || conversationMessagesRef.current;
+			const previousCount = conversationMessagesRef.current.length;
 			const next = mergeMessages(incoming, previousItems, targetConversationId);
 			const added = Math.max(0, next.length - previousCount);
 			const dbHasMore = local.length >= MESSAGE_PAGE_SIZE;
@@ -11640,15 +11746,28 @@ function WhatsAppWorkspaceContent() {
 				cachedAt: Date.now(),
 				providerHydratedAt: previousCache?.providerHydratedAt || 0,
 			});
-			writeConversationMessages(targetConversationId, next);
-			if (preserveScroll) {
-				requestAnimationFrame(() => {
-					const currentBox = messageBoxRef.current;
-					if (currentBox) currentBox.scrollTop += currentBox.scrollHeight - previousHeight;
-				});
+
+			// Capture scroll anchor immediately before React prepends rows.
+			const box = messageBoxRef.current;
+			if (preserveScroll && box) {
+				const anchorEl =
+					box.querySelector('.wa-message-line [data-wa-message-id]') ||
+					box.querySelector('[data-wa-message-id]');
+				olderScrollRestoreRef.current = {
+					conversationId: targetConversationId,
+					previousHeight: box.scrollHeight,
+					previousScrollTop: box.scrollTop,
+					anchorId: anchorEl?.getAttribute('data-wa-message-id') || '',
+					anchorOffset: anchorEl ? anchorEl.getBoundingClientRect().top : 0,
+				};
+			} else {
+				olderScrollRestoreRef.current = null;
 			}
+
+			writeConversationMessages(targetConversationId, next);
 			return added > 0 || incoming.length > 0;
 		} catch (error) {
+			olderScrollRestoreRef.current = null;
 			if (conversationIdRef.current === targetConversationId) {
 				toast.error(error.response?.data?.message || 'Could not load older messages');
 			}
@@ -13766,7 +13885,9 @@ function WhatsAppWorkspaceContent() {
 								}}
 								aria-label={chatListCollapsed ? t.expandChatList : t.collapseChatList}
 								title={chatListCollapsed ? t.expandChatList : t.collapseChatList}
-								className="wa-chat-list-collapse-float hidden min-[769px]:grid"
+								className={`wa-chat-list-collapse-float hidden min-[769px]:grid ${
+									chatListCollapsed ? '' : 'is-docked-hidden'
+								}`}
 							>
 								{chatListCollapsed
 									? locale === 'ar'
@@ -13907,6 +14028,23 @@ function WhatsAppWorkspaceContent() {
 													blurPersistHint: t.blurPersistHint,
 												}}
 											/>
+											<button
+												type="button"
+												onClick={() => {
+													setChatListCollapsed(true);
+													setSearchOpen(false);
+													setChatSearch('');
+												}}
+												aria-label={t.collapseChatList}
+												title={t.collapseChatList}
+												className="wa-header-icon-btn hidden min-[769px]:grid"
+											>
+												{locale === 'ar' ? (
+													<PanelRightClose size={18} strokeWidth={2.1} />
+												) : (
+													<PanelLeftClose size={18} strokeWidth={2.1} />
+												)}
+											</button>
 										</div>
 									</div>
 									<div className="wa-desktop-search-inline wa-desktop-search-always mb-2.5 hidden min-[769px]:flex">
@@ -14631,68 +14769,77 @@ function WhatsAppWorkspaceContent() {
 								/>
 							) : (
 								<>
-									<header className="wa-chat-toolbar flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-800">
-										<div className="flex min-w-0 items-center gap-2">
-											<button type="button" aria-label="Back to chats" onClick={() => setConversationId(null)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#0A0A0A] min-[769px]:hidden">
-												{locale === 'ar' ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
+									<header className="wa-chat-toolbar flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+										<div className="wa-chat-toolbar__identity flex min-w-0 items-center gap-3">
+											<button type="button" aria-label="Back to chats" onClick={() => setConversationId(null)} className="wa-header-icon-btn grid shrink-0 place-items-center min-[769px]:hidden">
+												{locale === 'ar' ? <ChevronRight size={20} strokeWidth={2.2} /> : <ChevronLeft size={20} strokeWidth={2.2} />}
 											</button>
 											{unreadConversationCount > 0 ? (
-												<span className="me-[15px] wa-chat-back-count min-[769px]:hidden">
+												<span className="wa-chat-back-count min-[769px]:hidden">
 													{unreadConversationCount > 99 ? '99+' : unreadConversationCount}
 												</span>
 											) : null}
-											<div className="wa-chat-avatar-ring shrink-0">
-												{isEmailMemoAiConversation(selectedConversation) ? (
-													<div className="grid h-8 w-8 place-items-center rounded-full bg-[#eff6ff] text-[#2563eb] ring-2 ring-white dark:bg-[#1e3a5f] dark:text-[#93c5fd] dark:ring-slate-900">
-														<Mail size={16} />
-													</div>
-												) : (
-													<Avatar
-														label={conversationTitle(selectedConversation)}
-														size={8}
-														isGroup={selectedConversation.type === 'group'}
-														src={conversationAvatarUrl(selectedConversation)}
-													/>
-												)}
-											</div>
-											<div className="wa-chat-contact min-w-0">
-												<h3
-													className={`truncate text-sm font-semibold tracking-tight ${selectedChatTitlePresentation.className}`}
-													dir={selectedChatTitlePresentation.dir}
-													lang={selectedChatTitlePresentation.lang}
-													title={selectedChatTitle}
-												>
-													{selectedChatTitle}
-												</h3>
-												<p className="wa-chat-assignee mt-px text-[11px] leading-4 text-slate-500">
-													{isEmailMemoAiConversation(selectedConversation)
-														? locale === 'ar'
-															? 'صندوق وارد الإيميلات · عرض فقط'
-															: 'Email inbox thread · view only'
-														: selectedConversation.isTyping ||
-															  selectedConversation.typing ||
-															  selectedConversation.presence?.typing
-															? selectedConversation.presence?.recording
-																? locale === 'ar'
-																	? 'يسجل صوت الآن…'
-																	: 'recording…'
-																: locale === 'ar'
-																	? 'يكتب الآن…'
-																	: 'typing…'
-															: selectedConversation.presence?.online
-																? (
-																	<span className="wa-online-status inline-flex items-center gap-1.5">
-																		<span className="wa-online-dot" aria-hidden="true" />
-																		{locale === 'ar' ? 'متصل الآن' : 'Online'}
-																	</span>
-																)
-																: selectedConversation.assignedUser?.name || t.unassign}
-												</p>
-												<p className="wa-chat-contact-hint hidden text-[11px] text-[#667781]">
-													{selectedConversation.isTyping || selectedConversation.typing || selectedConversation.presence?.typing
-														? locale === 'ar' ? 'يكتب الآن…' : 'typing…'
-														: locale === 'ar' ? 'اضغط هنا لمعلومات جهة الاتصال' : 'tap here for contact info'}
-												</p>
+											<div className="wa-chat-toolbar__profile flex min-w-0 items-center gap-3">
+												<div className="wa-chat-avatar-ring shrink-0">
+													{isEmailMemoAiConversation(selectedConversation) ? (
+														<div className="grid h-10 w-10 place-items-center rounded-full bg-[#eff6ff] text-[#2563eb] ring-2 ring-white dark:bg-[#1e3a5f] dark:text-[#93c5fd] dark:ring-slate-900">
+															<Mail size={18} />
+														</div>
+													) : (
+														<Avatar
+															label={conversationTitle(selectedConversation)}
+															size={10}
+															isGroup={selectedConversation.type === 'group'}
+															src={conversationAvatarUrl(selectedConversation)}
+														/>
+													)}
+												</div>
+												<div className="wa-chat-contact min-w-0">
+													<h3
+														className={`truncate text-sm font-semibold tracking-tight ${selectedChatTitlePresentation.className}`}
+														dir={selectedChatTitlePresentation.dir}
+														lang={selectedChatTitlePresentation.lang}
+														title={selectedChatTitle}
+													>
+														{selectedChatTitle}
+													</h3>
+													<p className="wa-chat-assignee mt-0.5 truncate text-[12px] leading-4 text-slate-500">
+														{isEmailMemoAiConversation(selectedConversation)
+															? locale === 'ar'
+																? 'صندوق وارد الإيميلات · عرض فقط'
+																: 'Email inbox thread · view only'
+															: selectedConversation.isTyping ||
+																  selectedConversation.typing ||
+																  selectedConversation.presence?.typing
+																? selectedConversation.presence?.recording
+																	? locale === 'ar'
+																		? 'يسجل صوت الآن…'
+																		: 'recording…'
+																	: locale === 'ar'
+																		? 'يكتب الآن…'
+																		: 'typing…'
+																: selectedConversation.presence?.online
+																	? (
+																		<span className="wa-online-status inline-flex items-center gap-1.5">
+																			<span className="wa-online-dot" aria-hidden="true" />
+																			{locale === 'ar' ? 'متصل الآن' : 'Online'}
+																		</span>
+																	)
+																	: (
+																		<span className="wa-chat-assignee-pill inline-flex max-w-full items-center gap-1.5">
+																			<UserRound size={12} strokeWidth={2.3} className="shrink-0 opacity-70" />
+																			<span className="truncate">
+																				{selectedConversation.assignedUser?.name || t.unassign}
+																			</span>
+																		</span>
+																	)}
+													</p>
+													<p className="wa-chat-contact-hint hidden text-[11px] text-[#667781]">
+														{selectedConversation.isTyping || selectedConversation.typing || selectedConversation.presence?.typing
+															? locale === 'ar' ? 'يكتب الآن…' : 'typing…'
+															: locale === 'ar' ? 'اضغط هنا لمعلومات جهة الاتصال' : 'tap here for contact info'}
+													</p>
+												</div>
 											</div>
 										</div>
 										<div className="flex items-center gap-1 min-[769px]:hidden">
@@ -14703,44 +14850,47 @@ function WhatsAppWorkspaceContent() {
 												size="sm"
 												iconOnly
 												disabled={demo.settings.enabled}
-												buttonClassName="shadow-none"
+												buttonClassName="wa-header-icon-btn shadow-none"
 											/>
 										</div>
-										<div className="wa-chat-toolbar-actions hidden items-center gap-1.5 min-[769px]:flex">
-											{!demo.settings.enabled && conversationId && accountId ? (
-												<button
-													type="button"
-													title={t.scheduleMessage}
-													aria-label={t.scheduleMessage}
-													onClick={() => setScheduleDialogOpen(true)}
-													className="wa-toolbar-icon-btn relative"
-												>
-													<CalendarClock size={20} strokeWidth={1.75} />
-													{messageSchedules.length > 0 ? (
-														<span className="wa-toolbar-icon-btn__badge">
-															{messageSchedules.length > 9 ? '9+' : messageSchedules.length}
-														</span>
-													) : null}
-												</button>
-											) : null}
-											<WaActionMenu
-												actions={chatToolbarActions}
-												ariaLabel={t.chatActions}
-												triggerLabel={t.chatActions}
-												size="sm"
-												iconOnly
-												disabled={demo.settings.enabled}
-											/>
-											{!demo.settings.enabled && canUseWhatsApp &&
-												selectedAccount?.privacySettings?.readReceiptMode === 'manual' && (
+										<div className="wa-chat-toolbar-actions hidden items-center gap-2 min-[769px]:flex">
+											<div className="wa-chat-toolbar-actions__group">
+												{!demo.settings.enabled && conversationId && accountId ? (
 													<button
 														type="button"
-														onClick={markConversationReadManually}
-														className="wa-toolbar-text-btn"
+														title={t.scheduleMessage}
+														aria-label={t.scheduleMessage}
+														onClick={() => setScheduleDialogOpen(true)}
+														className="wa-header-icon-btn relative"
 													>
-														{t.markRead}
+														<CalendarDays size={18} strokeWidth={2.05} />
+														{messageSchedules.length > 0 ? (
+															<span className="wa-toolbar-icon-btn__badge">
+																{messageSchedules.length > 9 ? '9+' : messageSchedules.length}
+															</span>
+														) : null}
 													</button>
-												)}
+												) : null}
+												<WaActionMenu
+													actions={chatToolbarActions}
+													ariaLabel={t.chatActions}
+													triggerLabel={t.chatActions}
+													size="sm"
+													iconOnly
+													disabled={demo.settings.enabled}
+													buttonClassName="wa-header-icon-btn"
+												/>
+												{!demo.settings.enabled && canUseWhatsApp &&
+													selectedAccount?.privacySettings?.readReceiptMode === 'manual' && (
+														<button
+															type="button"
+															onClick={markConversationReadManually}
+															className="wa-toolbar-text-btn"
+														>
+															{t.markRead}
+														</button>
+													)}
+											</div>
 											{!demo.settings.enabled && canAssignWhatsApp && (
 												<div className="wa-chat-assign-field relative inline-flex items-center">
 													<span className="wa-chat-assign-field__label">
@@ -14758,8 +14908,15 @@ function WhatsAppWorkspaceContent() {
 													/>
 												</div>
 											)}
-											<button type="button" aria-label="Close conversation" onClick={() => setConversationId(null)} className="wa-toolbar-icon-btn min-[769px]:hidden">
-												<X size={18} />
+											<span className="wa-chat-toolbar-actions__divider" aria-hidden="true" />
+											<button
+												type="button"
+												aria-label="Close conversation"
+												title={locale === 'ar' ? 'إغلاق المحادثة' : 'Close chat'}
+												onClick={() => setConversationId(null)}
+												className="wa-header-icon-btn wa-header-icon-btn--quiet"
+											>
+												<X size={18} strokeWidth={2.2} />
 											</button>
 										</div>
 										<div className="wa-chat-mobile-actions flex shrink-0 items-center min-[769px]:hidden" aria-hidden="true" />
@@ -14814,7 +14971,15 @@ function WhatsAppWorkspaceContent() {
 									) : null}
 									{uploadProgress != null ? (
 										<div className="flex shrink-0 items-center gap-2 border-b border-emerald-100 bg-emerald-50 px-4 py-1.5 text-[11px] font-semibold text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
-											<span>{locale === 'ar' ? 'رفع الملف' : 'Uploading'}</span>
+											<span>
+												{uploadProgress >= 100
+													? locale === 'ar'
+														? 'جاري الإرسال'
+														: 'Sending'
+													: locale === 'ar'
+														? 'رفع الملف'
+														: 'Uploading'}
+											</span>
 											<div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-emerald-200/70">
 												<div
 													className="h-full rounded-full bg-[#00A884] transition-[width]"
@@ -14926,15 +15091,17 @@ function WhatsAppWorkspaceContent() {
 											if (distanceFromBottom > 180) {
 												pinThreadToBottomRef.current = false;
 												setShowJumpToBottom(distanceFromBottom > 220);
-											} else {
+											} else if (!loadingOlderRef.current && !olderScrollRestoreRef.current) {
 												pinThreadToBottomRef.current = true;
 												setShowJumpToBottom(false);
 											}
 											if (
 												!loadingMessages &&
 												!loadingOlderRef.current &&
+												!olderScrollRestoreRef.current &&
+												Date.now() >= suppressOlderLoadUntilRef.current &&
 												box.scrollHeight > box.clientHeight + 8 &&
-												box.scrollTop < 50
+												box.scrollTop < 40
 											) {
 												loadOlder();
 											}
@@ -15975,7 +16142,7 @@ function WhatsAppWorkspaceContent() {
 												const file = event.dataTransfer?.files?.[0];
 												if (file) void sendFile(file);
 											}}
-											className={`wa-composer flex gap-2 border-0 border-t-0 p-3 ${composerDragOver ? 'ring-2 ring-[#00A884]/40' : ''} ${recordingVoice ? 'is-recording flex-nowrap items-center' : 'flex-wrap items-end'}`}
+											className={`wa-composer flex gap-2 border-0 border-t border-[#e9edef] p-2 ${composerDragOver ? 'ring-2 ring-[#00A884]/40' : ''} ${recordingVoice ? 'is-recording flex-nowrap items-center' : 'flex-wrap items-end'}`}
 										>
 											<input
 												ref={fileRef}
@@ -16064,7 +16231,7 @@ function WhatsAppWorkspaceContent() {
 													</span>
 												</div>
 											) : (
-												<div dir="ltr" className="wa-input-pill flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1 !border !border-slate-200 !bg-white dark:border-slate-700">
+												<div dir="ltr" className="wa-input-pill flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-[24px] px-1.5 py-1">
 													<button
 														ref={attachButtonRef}
 														type="button"
@@ -16076,14 +16243,23 @@ function WhatsAppWorkspaceContent() {
 															setAttachmentSheetOpen(true);
 														}}
 														title={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
-														className="wa-attach-button grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
+														className="wa-attach-button wa-input-action"
 													>
-														<Plus size={20} strokeWidth={2.25} />
+														<Plus size={22} strokeWidth={2.1} />
 													</button>
-													<button type="button" ref={stickerButtonRef} aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setAiImagePanelOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-8 w-8 shrink-0 place-items-center text-[#8696A0]">
-														<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-															<path fillRule="evenodd" clipRule="evenodd" d="M11.6154 2.89991L13.9358 2.89991C14.4593 2.8999 14.7592 2.8999 15.0178 2.92026C18.2543 3.17497 20.8249 5.7456 21.0797 8.98208C21.1 9.24075 21.1 9.54062 21.1 10.0641V10.1375C21.1 10.9379 21.1 11.377 21.0704 11.7531C20.6999 16.4607 16.9608 20.1998 12.2532 20.5703C11.8771 20.5999 11.438 20.5999 10.6376 20.5999H10.2524C9.55427 20.5999 9.15433 20.5999 8.81011 20.5638C5.71094 20.238 3.26189 17.789 2.93616 14.6898C2.89998 14.3456 2.89999 13.9457 2.9 13.2477L2.9 11.6154C2.8999 9.64928 2.89984 8.52143 3.1842 7.58403C3.82407 5.47466 5.47475 3.82397 7.58412 3.1841C8.52152 2.89975 9.64937 2.89981 11.6154 2.89991ZM11.75 4.09991C9.61283 4.09991 8.67748 4.10643 7.93247 4.33243C6.20662 4.85596 4.85605 6.20653 4.33252 7.93237C4.10653 8.67739 4.1 9.61273 4.1 11.7499V13.1999C4.1 13.9582 4.10083 14.2908 4.12958 14.5644C4.3961 17.1001 6.39986 19.1038 8.93555 19.3703C9.2091 19.3991 9.54174 19.3999 10.3 19.3999H10.6C11.4472 19.3999 11.836 19.3994 12.1591 19.374C12.2949 19.3633 12.3998 19.2475 12.3994 19.1065C12.3993 19.073 12.3992 19.0395 12.3991 19.0059C12.3968 18.2485 12.3944 17.4838 12.4565 16.7239C12.514 16.0197 12.6331 15.438 12.9014 14.9115C13.3424 14.046 14.0461 13.3423 14.9116 12.9013C15.4381 12.633 16.0198 12.5139 16.7239 12.4564C17.5478 12.3891 18.376 12.3928 19.1977 12.3973C19.4427 12.3987 19.5331 12.3969 19.6099 12.361C19.6767 12.3297 19.7451 12.2681 19.7831 12.2049C19.827 12.132 19.8371 12.0506 19.8592 11.8267C19.8647 11.771 19.8697 11.7151 19.8741 11.659C19.8995 11.3359 19.9 10.9471 19.9 10.0999C19.9 9.53129 19.8995 9.28181 19.8834 9.07623C19.6749 6.4282 17.5717 4.32496 14.9237 4.11656C14.7181 4.10038 14.4686 4.09991 13.9 4.09991H11.75ZM18.9751 13.5977C18.2535 13.5944 17.5348 13.5941 16.8217 13.6524C16.1917 13.7039 15.7856 13.8028 15.4564 13.9705C14.8167 14.2965 14.2965 14.8166 13.9706 15.4563C13.8029 15.7855 13.704 16.1917 13.6525 16.8216C13.6128 17.3078 13.6031 17.8966 13.6007 18.6525C13.6004 18.7573 13.6003 18.8287 13.6054 18.8834C13.6103 18.9368 13.6195 18.9631 13.6308 18.981C13.6562 19.0214 13.7033 19.0559 13.7494 19.068C13.7706 19.0735 13.7977 19.0743 13.8468 19.0639C13.8977 19.0531 13.9619 19.0328 14.0567 19.0025C16.4656 18.234 18.3983 16.4129 19.3177 14.0764C19.3562 13.9785 19.3823 13.9119 19.3971 13.8589C19.4116 13.8076 19.4123 13.7794 19.4077 13.7575C19.3975 13.7092 19.3639 13.6596 19.3227 13.6322C19.3049 13.6203 19.2775 13.6103 19.2206 13.6045C19.1626 13.5986 19.0863 13.5982 18.9751 13.5977Z" fill="currentColor" />
-														</svg>
+													<button
+														type="button"
+														ref={stickerButtonRef}
+														aria-label="Stickers"
+														title="Emoji, GIF and stickers"
+														onClick={() => {
+															setAttachmentSheetOpen(false);
+															setAiImagePanelOpen(false);
+															setStickerPanelOpen(current => !current);
+														}}
+														className="wa-sticker-button wa-input-action"
+													>
+														<Smile size={20} strokeWidth={2} />
 													</button>
 													<button
 														type="button"
@@ -16095,106 +16271,111 @@ function WhatsAppWorkspaceContent() {
 															setStickerPanelOpen(false);
 															setAiImagePanelOpen(current => !current);
 														}}
-														className="wa-sticker-button wa-input-action grid h-8 w-8 shrink-0 place-items-center text-[#8696A0]"
+														className="wa-sticker-button wa-input-action"
 													>
-														<Sparkles size={16} />
+														<Sparkles size={18} strokeWidth={2} />
 													</button>
-														<textarea
-															aria-label={t.message}
-													value={draft}
-													onChange={event => {
-														setDraft(event.target.value);
-														notifyPeerTyping();
-														event.currentTarget.style.height = 'auto';
-														event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 112)}px`;
-													}}
-															onKeyDown={event => {
-																if (
-																	event.key === 'Enter' &&
-																	!event.shiftKey &&
-																	!event.nativeEvent.isComposing
-																) {
-																	event.preventDefault();
-																	sendMessage(event);
-																}
-															}}
-													rows={1}
-													dir={draftPresentation.dir}
-													lang={draftPresentation.lang}
-													style={draftPresentation.style}
-													placeholder={t.message}
-															className={`wa-composer-input max-h-28 min-h-8 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${draftPresentation.className || ''}`}
-														/>
-												<button type="button" aria-label="Camera" title="Camera or photo picker" onClick={() => openComposerFilePicker({ accept: 'image/*', capture: 'environment' })} className="wa-camera-button wa-input-action grid h-8 w-8 shrink-0 place-items-center text-[#8696A0] min-[769px]:hidden">
-														<svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-															<path fillRule="evenodd" clipRule="evenodd" d="M12.3302 7.08112C12.8052 6.52227 13.5016 6.2002 14.235 6.2002H17.762C18.4954 6.2002 19.1918 6.52228 19.6668 7.08112L20.3484 7.88312C20.5193 8.08427 20.77 8.2002 21.034 8.2002H24.7499C26.4344 8.2002 27.7999 9.56573 27.7999 11.2502V21.2502C27.7999 22.9347 26.4344 24.3002 24.75 24.3002H7.24995C5.56548 24.3002 4.19995 22.9347 4.19995 21.2502V11.2502C4.19995 9.56573 5.56548 8.2002 7.24995 8.2002H10.963C11.227 8.2002 11.4777 8.08427 11.6486 7.88312L12.3302 7.08112ZM14.235 7.8002C13.971 7.8002 13.7203 7.91612 13.5494 8.11727L12.8678 8.91927C12.3928 9.47812 11.6964 9.8002 10.963 9.8002H7.24995C6.44914 9.8002 5.79995 10.4494 5.79995 11.2502V21.2502C5.79995 22.051 6.44914 22.7002 7.24995 22.7002H24.75C25.5508 22.7002 26.2 22.051 26.2 21.2502V11.2502C26.2 10.4494 25.5508 9.8002 24.7499 9.8002H21.034C20.3006 9.8002 19.6041 9.47812 19.1292 8.91927L18.4476 8.11727C18.2766 7.91612 18.026 7.8002 17.762 7.8002H14.235ZM15.9984 12.8002C14.0934 12.8002 12.549 14.3445 12.549 16.2496C12.549 18.1546 14.0934 19.6989 15.9984 19.6989C17.9034 19.6989 19.4478 18.1546 19.4478 16.2496C19.4478 14.3445 17.9034 12.8002 15.9984 12.8002ZM10.949 16.2496C10.949 13.4609 13.2097 11.2002 15.9984 11.2002C18.7871 11.2002 21.0478 13.4609 21.0478 16.2496C21.0478 19.0382 18.7871 21.2989 15.9984 21.2989C13.2097 21.2989 10.949 19.0382 10.949 16.2496ZM22.65 13.8002C23.3404 13.8002 23.9 13.2405 23.9 12.5502C23.9 11.8598 23.3404 11.3002 22.65 11.3002C21.9597 11.3002 21.4 11.8598 21.4 12.5502C21.4 13.2405 21.9597 13.8002 22.65 13.8002Z" fill="currentColor" />
-														</svg>
-
+													<textarea
+														aria-label={t.message}
+														value={draft}
+														onChange={event => {
+															setDraft(event.target.value);
+															notifyPeerTyping();
+															event.currentTarget.style.height = 'auto';
+															event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 112)}px`;
+														}}
+														onKeyDown={event => {
+															if (
+																event.key === 'Enter' &&
+																!event.shiftKey &&
+																!event.nativeEvent.isComposing
+															) {
+																event.preventDefault();
+																sendMessage(event);
+															}
+														}}
+														rows={1}
+														dir={draftPresentation.dir}
+														lang={draftPresentation.lang}
+														style={draftPresentation.style}
+														placeholder={t.message}
+														className={`wa-composer-input max-h-28 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${draftPresentation.className || ''}`}
+													/>
+													<button
+														type="button"
+														aria-label="Camera"
+														title="Camera or photo picker"
+														onClick={() =>
+															openComposerFilePicker({
+																accept: 'image/*',
+																capture: 'environment',
+															})
+														}
+														className="wa-camera-button wa-input-action min-[769px]:hidden"
+													>
+														<Camera size={20} strokeWidth={2} />
 													</button>
 													{draft.trim() || composerImages.length ? (
-													<>
-													<button
-														type="button"
-														disabled={sending || demo.settings.enabled}
-														title={t.scheduleMessage}
-														aria-label={t.scheduleMessage}
-														onClick={() => setScheduleDialogOpen(true)}
-														className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-800"
-													>
-														<Clock size={16} />
-													</button>
-													<button
-														type="submit"
-														aria-label={t.send}
-														disabled={sending}
-														className="wa-send-button grid h-8 w-8 shrink-0 place-items-center rounded-full text-white disabled:opacity-40"
-														style={{ background: GRADIENT }}
-													>
-														{sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-													</button>
-													</>
+														<>
+															<button
+																type="button"
+																disabled={sending || demo.settings.enabled}
+																title={t.scheduleMessage}
+																aria-label={t.scheduleMessage}
+																onClick={() => setScheduleDialogOpen(true)}
+																className="wa-input-action"
+															>
+																<Clock size={18} strokeWidth={2} />
+															</button>
+															<button
+																type="submit"
+																aria-label={t.send}
+																disabled={sending}
+																className="wa-send-button"
+																style={{ background: GRADIENT }}
+															>
+																{sending ? (
+																	<Loader2 size={17} className="animate-spin" />
+																) : (
+																	<Send size={17} strokeWidth={2.1} />
+																)}
+															</button>
+														</>
 													) : (
-													<div className="flex shrink-0 items-center gap-0.5">
-													<button
-														type="button"
-														disabled={sending || demo.settings.enabled}
-														title={t.scheduleMessage}
-														aria-label={t.scheduleMessage}
-														onClick={() => setScheduleDialogOpen(true)}
-														className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
-													>
-														<Clock size={16} />
-													</button>
-													<button
-														type="button"
-														disabled={sending}
-														title={t.voiceChanger}
-														aria-label={t.voiceChanger}
-														onClick={() => setVoiceChangerOpen(true)}
-														className={`wa-voice-changer-button grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-															voiceChangerSettings?.enabled
-																? 'text-emerald-600 dark:text-emerald-300'
-																: 'text-[#54656F] hover:bg-slate-100 dark:hover:bg-slate-800'
-														}`}
-													>
-														<AudioLines size={16} />
-													</button>
-													<button
-														type="button"
-														disabled={sending}
-														title={t.recordVoice}
-														aria-label={t.recordVoice}
-														onClick={startVoiceRecording}
-														className="wa-mic-button grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 hover:text-[var(--color-primary-600)] disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
-													>
-														<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-															<path
-																fill="currentColor"
-																d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"
-															/>
-														</svg>
-													</button>
-													</div>
+														<div className="wa-composer-end-actions flex shrink-0 items-center gap-0.5">
+															<button
+																type="button"
+																disabled={sending || demo.settings.enabled}
+																title={t.scheduleMessage}
+																aria-label={t.scheduleMessage}
+																onClick={() => setScheduleDialogOpen(true)}
+																className="wa-input-action"
+															>
+																<Clock size={18} strokeWidth={2} />
+															</button>
+															<button
+																type="button"
+																disabled={sending}
+																title={t.voiceChanger}
+																aria-label={t.voiceChanger}
+																onClick={() => setVoiceChangerOpen(true)}
+																className={`wa-voice-changer-button wa-input-action ${
+																	voiceChangerSettings?.enabled ? 'is-active' : ''
+																}`}
+															>
+																<AudioLines size={18} strokeWidth={2} />
+															</button>
+															<button
+																type="button"
+																disabled={sending}
+																title={t.recordVoice}
+																aria-label={t.recordVoice}
+																onClick={startVoiceRecording}
+																className="wa-mic-button wa-input-action"
+															>
+																<Mic size={20} strokeWidth={2} />
+															</button>
+														</div>
 													)}
 												</div>
 											)}
