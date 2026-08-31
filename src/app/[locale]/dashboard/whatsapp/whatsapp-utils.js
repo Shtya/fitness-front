@@ -1931,11 +1931,15 @@ export function buildChatViewerImages(messages = [], registered = {}) {
 			const dims = mediaDimensionsForAttachment(attachment, message?.raw);
 			items.push({
 				id,
+				messageId: message?.id || null,
 				fileName: attachment?.fileName || registeredItem?.fileName || '',
 				url: fullUrl,
 				previewUrl: preview,
 				width: Number(dims?.width) || 0,
 				height: Number(dims?.height) || 0,
+				sentAt: message?.sentAt || message?.createdAt || null,
+				senderName: String(message?.senderName || '').trim() || null,
+				fromMe: Boolean(message?.fromMe),
 			});
 		}
 	}
