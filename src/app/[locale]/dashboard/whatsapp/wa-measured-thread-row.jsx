@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 
+/** Absolute-positioned measuring shell for the thread virtualizer. */
 export const WaMeasuredThreadRow = memo(function WaMeasuredThreadRow({
 	index,
 	start,

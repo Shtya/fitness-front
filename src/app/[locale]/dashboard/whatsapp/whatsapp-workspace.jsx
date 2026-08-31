@@ -232,7 +232,7 @@ import {
 } from './whatsapp-message-sync';
 import { useWaScrollWindow, useWaVirtualRows, WaVirtualSpacer } from './wa-virtual-list';
 import { estimateMessageRowSize, messageRowKey } from './wa-thread-virtual.js';
-import { WaMeasuredThreadRow } from './wa-thread-virtual';
+import { WaMeasuredThreadRow } from './wa-measured-thread-row';
 import { getAttachmentStreamUrl } from './whatsapp-media-stream';
 import {
 	buildEffectiveConversations,
