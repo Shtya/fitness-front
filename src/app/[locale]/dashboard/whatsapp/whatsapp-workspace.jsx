@@ -759,6 +759,8 @@ const translations = {
 		messagePreviewFallback: 'Message',
 		online: 'Connected',
 		offline: 'Not connected',
+		computerOffline: 'Computer not connected',
+		reconnectingSocket: 'Reconnecting…',
 		connecting: 'Connecting',
 		restoring: 'Restoring…',
 		syncingPhone: 'Syncing with phone… keep WhatsApp open on your phone',
@@ -1190,6 +1192,8 @@ const translations = {
 		messagePreviewFallback: 'رسالة',
 		online: 'متصل',
 		offline: 'غير متصل',
+		computerOffline: 'الجهاز غير متصل',
+		reconnectingSocket: 'جارٍ إعادة الاتصال…',
 		connecting: 'جارِ الاتصال',
 		restoring: 'جارٍ الاستعادة…',
 		syncingPhone: 'جارٍ المزامنة مع الهاتف… أبقِ واتساب مفتوحاً على هاتفك',
@@ -1328,7 +1332,23 @@ function DeliveryTicks({ message, size = 13, className = '', selfChat = false })
 		return <Clock size={Math.max(12, size - 1)} className={`animate-pulse ${className}`} />;
 	}
 	if (state === 'failed') {
-		return <AlertCircle size={size} className={`text-rose-500 ${className}`} />;
+		return (
+			<button
+				type="button"
+				aria-label="Retry"
+				title="Retry"
+				className={`inline-flex items-center ${className}`}
+				onClick={event => {
+					event.preventDefault();
+					event.stopPropagation();
+					window.dispatchEvent(
+						new CustomEvent('wa-retry-outbound', { detail: { message } }),
+					);
+				}}
+			>
+				<AlertCircle size={size} className="text-rose-500" />
+			</button>
+		);
 	}
 	if (state === 'read') {
 		return <CheckCheck size={size} className={`text-[#53BDEB] ${className}`} />;
@@ -1337,6 +1357,74 @@ function DeliveryTicks({ message, size = 13, className = '', selfChat = false })
 		return <CheckCheck size={size} className={`text-[#8696A0] ${className}`} />;
 	}
 	return <Check size={size} className={className} />;
+}
+
+function IsolatedComposerTextarea({
+	apiRef,
+	draftRef,
+	onHasTextChange,
+	placeholder,
+	ariaLabel,
+	onTyping,
+	onEnterSubmit,
+}) {
+	const [draft, setDraft] = useState('');
+	const textareaRef = useRef(null);
+
+	const apply = useCallback(
+		next => {
+			const current = String(draftRef.current || '');
+			const value = typeof next === 'function' ? next(current) : next;
+			const text = String(value ?? '');
+			draftRef.current = text;
+			setDraft(text);
+			onHasTextChange?.(Boolean(text.trim()));
+			requestAnimationFrame(() => {
+				const node = textareaRef.current;
+				if (!node) return;
+				node.style.height = 'auto';
+				node.style.height = `${Math.min(node.scrollHeight, 112)}px`;
+			});
+		},
+		[draftRef, onHasTextChange],
+	);
+
+	useLayoutEffect(() => {
+		apiRef.current = {
+			getDraft: () => String(draftRef.current || ''),
+			setDraft: apply,
+			focus: () => textareaRef.current?.focus(),
+		};
+		return () => {
+			if (apiRef.current?.setDraft === apply) apiRef.current = null;
+		};
+	}, [apiRef, apply, draftRef]);
+
+	const presentation = messageTextPresentation(draft);
+
+	return (
+		<textarea
+			ref={textareaRef}
+			aria-label={ariaLabel}
+			value={draft}
+			onChange={event => {
+				apply(event.target.value);
+				onTyping?.();
+			}}
+			onKeyDown={event => {
+				if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+					event.preventDefault();
+					onEnterSubmit?.(event);
+				}
+			}}
+			rows={1}
+			dir={presentation.dir}
+			lang={presentation.lang}
+			style={presentation.style}
+			placeholder={placeholder}
+			className={`wa-composer-input max-h-28 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${presentation.className || ''}`}
+		/>
+	);
 }
 
 function newClientMessageId() {
@@ -2966,6 +3054,15 @@ function claimVoicePlayback(token) {
 		voicePlayers.get(activeVoicePlayerToken)?.pause?.();
 	}
 	activeVoicePlayerToken = token;
+	if (typeof window !== 'undefined') {
+		window.dispatchEvent(new CustomEvent('wa-inline-voice-play'));
+	}
+}
+
+function pauseAllVoicePlayers() {
+	if (!activeVoicePlayerToken) return;
+	voicePlayers.get(activeVoicePlayerToken)?.pause?.();
+	activeVoicePlayerToken = null;
 }
 
 function releaseVoicePlayback(token) {
@@ -3560,6 +3657,168 @@ function attachmentExtension(fileName, mimeType) {
 	const subtype = String(mimeType || '').split('/')[1]?.split(/[;+]/)[0] || '';
 	if (!subtype || subtype === 'octet-stream') return 'FILE';
 	return subtype.slice(0, 4).toUpperCase();
+}
+
+function ChatVideoPlayer({
+	url,
+	poster,
+	className = '',
+	selectMode = false,
+	containerRef,
+	onError,
+	onTranscribe,
+	transcribeLabel,
+	durationHint = 0,
+	playLabel = 'Play',
+}) {
+	const videoRef = useRef(null);
+	const paintedUrlRef = useRef('');
+	const [playing, setPlaying] = useState(false);
+	const [duration, setDuration] = useState(() => {
+		const value = Number(durationHint);
+		return Number.isFinite(value) && value > 0 ? value : 0;
+	});
+
+	useEffect(() => {
+		setPlaying(false);
+		paintedUrlRef.current = '';
+		const hint = Number(durationHint);
+		setDuration(Number.isFinite(hint) && hint > 0 ? hint : 0);
+	}, [url, durationHint]);
+
+	useEffect(() => {
+		const pauseMine = () => {
+			const node = videoRef.current;
+			if (node && !node.paused) node.pause();
+		};
+		const onOtherVideo = event => {
+			if (event.detail?.node === videoRef.current) return;
+			pauseMine();
+		};
+		window.addEventListener('wa-inline-video-play', onOtherVideo);
+		window.addEventListener('wa-inline-voice-play', pauseMine);
+		return () => {
+			window.removeEventListener('wa-inline-video-play', onOtherVideo);
+			window.removeEventListener('wa-inline-voice-play', pauseMine);
+		};
+	}, []);
+
+	const applySize = node => {
+		const wrap = node?.parentElement;
+		const width = Number(node?.videoWidth) || 0;
+		const height = Number(node?.videoHeight) || 0;
+		if (!wrap || !width || !height) return;
+		wrap.classList.toggle('is-portrait', height > width);
+		wrap.classList.toggle('is-landscape', width >= height);
+		wrap.style.removeProperty('--wa-video-ar');
+		wrap.style.height = 'auto';
+		node.style.height = 'auto';
+	};
+
+	const paintPreview = node => {
+		if (!node || poster || paintedUrlRef.current === url) return;
+		if (!node.paused || node.readyState < 2) return;
+		const length = Number(node.duration);
+		if (!Number.isFinite(length) || length <= 0) return;
+		paintedUrlRef.current = url;
+		try {
+			if (node.currentTime < 0.04) {
+				node.currentTime = Math.min(0.04, length / 50);
+			}
+		} catch {
+			paintedUrlRef.current = '';
+		}
+	};
+
+	const togglePlayback = event => {
+		event.preventDefault();
+		event.stopPropagation();
+		if (selectMode) return;
+		const node = videoRef.current;
+		if (!node) return;
+		if (node.paused) {
+			void node.play().catch(() => {});
+			return;
+		}
+		node.pause();
+	};
+
+	return (
+		<div
+			ref={containerRef}
+			className={`wa-video-wrap ${playing ? 'is-playing' : 'is-paused'} ${selectMode ? 'pointer-events-none' : ''} ${className}`}
+		>
+			<video
+				ref={videoRef}
+				key={url}
+				controls={false}
+				controlsList="nodownload nofullscreen noremoteplayback"
+				disablePictureInPicture
+				playsInline
+				preload="auto"
+				poster={poster || undefined}
+				src={url}
+				className="wa-video-asset"
+				onLoadedMetadata={event => {
+					const node = event.currentTarget;
+					applySize(node);
+					const length = Number(node.duration);
+					if (Number.isFinite(length) && length > 0) setDuration(length);
+					paintPreview(node);
+				}}
+				onLoadedData={event => paintPreview(event.currentTarget)}
+				onPlay={event => {
+					setPlaying(true);
+					pauseAllVoicePlayers();
+					window.dispatchEvent(
+						new CustomEvent('wa-inline-video-play', { detail: { node: event.currentTarget } }),
+					);
+				}}
+				onPause={() => setPlaying(false)}
+				onEnded={event => {
+					setPlaying(false);
+					try {
+						event.currentTarget.currentTime = 0;
+					} catch {
+						/* ignore */
+					}
+				}}
+				onClick={togglePlayback}
+				onError={onError}
+			/>
+			<span className="wa-video-scrim" aria-hidden="true" />
+			{!playing && !selectMode ? (
+				<button
+					type="button"
+					className="wa-video-play"
+					aria-label={playLabel}
+					onClick={togglePlayback}
+				>
+					<span className="wa-video-play__icon" aria-hidden="true">
+						<Play size={22} strokeWidth={2.2} fill="currentColor" className="ms-0.5" />
+					</span>
+				</button>
+			) : null}
+			{!playing && duration > 0 ? (
+				<span className="wa-video-duration">{formatClock(duration)}</span>
+			) : null}
+			{typeof onTranscribe === 'function' && !selectMode ? (
+				<button
+					type="button"
+					className="wa-video-transcribe"
+					title={transcribeLabel}
+					aria-label={transcribeLabel}
+					onClick={event => {
+						event.preventDefault();
+						event.stopPropagation();
+						onTranscribe(event);
+					}}
+				>
+					<AudioLines size={16} strokeWidth={2.1} />
+				</button>
+			) : null}
+		</div>
+	);
 }
 
 export function MediaAttachment({
@@ -4253,54 +4512,25 @@ export function MediaAttachment({
 				</button>
 			);
 		}
+		const videoPoster =
+			previewDataUrl && !isPlayableVideoUrl(previewDataUrl) ? previewDataUrl : null;
 		return (
-			<div
-				ref={containerRef}
-				className={`wa-video-wrap ${selectMode ? 'pointer-events-none' : ''} ${className}`}
-			>
-				<video
-					key={url}
-					controls={!selectMode}
-					playsInline
-					preload="metadata"
-					poster={previewDataUrl && !isPlayableVideoUrl(previewDataUrl) ? previewDataUrl : undefined}
-					src={url}
-					className="wa-video-asset"
-					onLoadedMetadata={event => {
-						const node = event.currentTarget;
-						const wrap = node.parentElement;
-						const width = Number(node.videoWidth) || 0;
-						const height = Number(node.videoHeight) || 0;
-						if (!wrap || !width || !height) return;
-						wrap.classList.toggle('is-portrait', height > width);
-						wrap.classList.toggle('is-landscape', width >= height);
-						// Intrinsic sizing: width 100%, height auto — no forced aspect box.
-						wrap.style.removeProperty('--wa-video-ar');
-						wrap.style.height = 'auto';
-						node.style.height = 'auto';
-					}}
-					onError={event => {
-						if (event.currentTarget.currentSrc !== url) return;
-						setFailed(true);
-						setUrl(null);
-					}}
-				/>
-				{typeof onTranscribe === 'function' && !selectMode ? (
-					<button
-						type="button"
-						className="wa-video-transcribe"
-						title={labels.transcribe || (mine ? 'Transcribe' : 'Transcribe')}
-						aria-label={labels.transcribe || 'Transcribe'}
-						onClick={event => {
-							event.preventDefault();
-							event.stopPropagation();
-							onTranscribe(event);
-						}}
-					>
-						<AudioLines size={16} strokeWidth={2.1} />
-					</button>
-				) : null}
-			</div>
+			<ChatVideoPlayer
+				url={url}
+				poster={videoPoster}
+				className={className}
+				selectMode={selectMode}
+				containerRef={containerRef}
+				durationHint={messageDurationSeconds}
+				playLabel={labels.playVideo || labels.play || 'Play'}
+				transcribeLabel={labels.transcribe || 'Transcribe'}
+				onTranscribe={typeof onTranscribe === 'function' ? onTranscribe : null}
+				onError={event => {
+					if (event.currentTarget.currentSrc !== url) return;
+					setFailed(true);
+					setUrl(null);
+				}}
+			/>
 		);
 	}
 	if (selectMode) {
@@ -6803,7 +7033,20 @@ function WhatsAppWorkspaceContent() {
 	const [voiceChanging, setVoiceChanging] = useState(false);
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
 	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
-	const [draft, setDraft] = useState('');
+	const draftRef = useRef('');
+	const composerApiRef = useRef(null);
+	const [composerHasText, setComposerHasText] = useState(false);
+	const [browserOnline, setBrowserOnline] = useState(
+		() => typeof navigator === 'undefined' || navigator.onLine,
+	);
+	const [socketLive, setSocketLive] = useState(true);
+	const notifyComposerHasText = useCallback(has => {
+		setComposerHasText(current => (current === has ? current : has));
+	}, []);
+	const setDraft = useCallback(next => {
+		composerApiRef.current?.setDraft(next);
+	}, []);
+	const getDraft = useCallback(() => String(draftRef.current || ''), []);
 	const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 	const [scheduleAnchorEl, setScheduleAnchorEl] = useState(null);
 	const [messageSchedules, setMessageSchedules] = useState([]);
@@ -6825,6 +7068,16 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		composerImagesRef.current = composerImages;
 	}, [composerImages]);
+
+	useEffect(() => {
+		const sync = () => setBrowserOnline(typeof navigator === 'undefined' || navigator.onLine);
+		window.addEventListener('online', sync);
+		window.addEventListener('offline', sync);
+		return () => {
+			window.removeEventListener('online', sync);
+			window.removeEventListener('offline', sync);
+		};
+	}, []);
 
 	useEffect(() => () => {
 		for (const item of composerImagesRef.current) {
@@ -9455,7 +9708,11 @@ function WhatsAppWorkspaceContent() {
 			}
 		};
 		rewatchRooms();
-		socket.on('connect', rewatchRooms);
+		socket.on('connect', () => {
+			setSocketLive(true);
+			rewatchRooms();
+		});
+		socket.on('disconnect', () => setSocketLive(false));
 		let accountsRefreshTimer;
 		const refreshAccountsSoon = () => {
 			if (accountsRefreshTimer) return;
@@ -10419,7 +10676,7 @@ function WhatsAppWorkspaceContent() {
 			if (!conversationId || sending) return;
 			const targetConversationId = conversationId;
 			const imagesToSend = [...composerImages];
-			const caption = draft.trim();
+			const caption = getDraft().trim();
 			const replySnapshot = replyingTo;
 
 			// Drop composer staging immediately — WhatsApp shows the bubble in-thread first.
@@ -10473,9 +10730,9 @@ function WhatsAppWorkspaceContent() {
 			}
 			return;
 		}
-		if (!conversationId || !draft.trim() || sending) return;
+		if (!conversationId || !getDraft().trim() || sending) return;
 		const targetConversationId = conversationId;
-		const text = draft.trim();
+		const text = getDraft().trim();
 		const replySnapshot = replyingTo;
 		if (demo.settings.enabled) {
 			setSending(true);
@@ -10512,6 +10769,7 @@ function WhatsAppWorkspaceContent() {
 		const clientMessageId = newClientMessageId();
 		const optimisticMessage = {
 			id: `pending:${clientMessageId}`,
+			conversationId: targetConversationId,
 			clientMessageId,
 			type: 'text',
 			text,
@@ -10562,20 +10820,28 @@ function WhatsAppWorkspaceContent() {
 				);
 			}
 		} catch (error) {
+			const failedMessage = {
+				...optimisticMessage,
+				conversationId: targetConversationId,
+				status: 'failed',
+				optimistic: false,
+			};
+			const applyFailed = items =>
+				(items || []).map(item =>
+					item.id === optimisticMessage.id || item.clientMessageId === clientMessageId
+						? failedMessage
+						: item,
+				);
 			const currentCache = messagesCacheRef.current.get(targetConversationId);
 			if (currentCache) {
 				messagesCacheRef.current.set(targetConversationId, {
 					...currentCache,
-					items: currentCache.items.filter(message => message.id !== optimisticMessage.id),
+					items: applyFailed(currentCache.items),
 					cachedAt: Date.now(),
 				});
 			}
 			if (conversationIdRef.current === targetConversationId) {
-				writeConversationMessages(targetConversationId, current =>
-					current.filter(message => message.id !== optimisticMessage.id),
-				);
-				setDraft(current => current || text);
-				setReplyingTo(current => current || replySnapshot);
+				writeConversationMessages(targetConversationId, applyFailed);
 			}
 			toast.error(error.response?.data?.message || 'Message failed');
 		} finally {
@@ -10623,7 +10889,61 @@ function WhatsAppWorkspaceContent() {
 		);
 	};
 
-	const sendFile = async (file, forcedType, options = {}) => {
+	const retryOutboundMessage = useCallback(async message => {
+		if (!message || message.direction !== 'outbound' || message.status !== 'failed') return;
+		const targetConversationId =
+			message.conversationId || conversationIdRef.current;
+		if (!targetConversationId || isDemoId(targetConversationId)) return;
+		const clientMessageId = message.clientMessageId || newClientMessageId();
+		const pendingMessage = {
+			...message,
+			conversationId: targetConversationId,
+			clientMessageId,
+			status: 'pending',
+			optimistic: true,
+		};
+		const apply = items =>
+			(items || []).map(item =>
+				item.id === message.id || item.clientMessageId === message.clientMessageId
+					? pendingMessage
+					: item,
+			);
+		persistConversationMessages(targetConversationId, apply);
+		try {
+			const { data } = await api.post(`/whatsapp/conversations/${targetConversationId}/messages`, {
+				type: message.type || 'text',
+				text: message.text,
+				clientMessageId,
+				quotedProviderMessageId: message.quotedProviderMessageId || undefined,
+			});
+			const confirmedMessage = {
+				...data.message,
+				clientMessageId,
+				replyTo: data.message?.replyTo || message.replyTo || null,
+			};
+			persistConversationMessages(targetConversationId, items =>
+				mergeMessages(items, [confirmedMessage], targetConversationId),
+			);
+		} catch (error) {
+			persistConversationMessages(targetConversationId, items =>
+				(items || []).map(item =>
+					item.id === pendingMessage.id || item.clientMessageId === clientMessageId
+						? { ...pendingMessage, status: 'failed', optimistic: false }
+						: item,
+				),
+			);
+			toast.error(error.response?.data?.message || 'Message failed');
+		}
+	}, []);
+
+	useEffect(() => {
+		const onRetry = event => {
+			const message = event.detail?.message;
+			if (message) void retryOutboundMessage(message);
+		};
+		window.addEventListener('wa-retry-outbound', onRetry);
+		return () => window.removeEventListener('wa-retry-outbound', onRetry);
+	}, [retryOutboundMessage]);
 		if (!file || !accountId) return false;
 		const targetConversationId = options.conversationId || conversationId;
 		if (!targetConversationId) return false;
@@ -10654,7 +10974,7 @@ function WhatsAppWorkspaceContent() {
 				? ''
 				: options.caption !== undefined
 					? options.caption
-					: draft.trim();
+					: getDraft().trim();
 		const replySnapshot =
 			options.replySnapshot !== undefined ? options.replySnapshot : replyingTo;
 		const clientMessageId = options.clientMessageId || newClientMessageId();
@@ -14028,7 +14348,6 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const accStatus = selectedAccount ? statusMeta(selectedAccount.status, t, selectedAccount) : null;
-	const draftPresentation = messageTextPresentation(draft);
 
 	if (!tabReady || !activeTab) {
 		return (
@@ -15745,6 +16064,17 @@ function WhatsAppWorkspaceContent() {
 										</div>
 										<div className="wa-chat-mobile-actions flex shrink-0 items-center min-[769px]:hidden" aria-hidden="true" />
 									</header>
+									{!browserOnline || !socketLive ? (
+										<div
+											role="status"
+											className="flex shrink-0 items-center justify-center gap-2 border-b border-amber-200 bg-[#fff5c4] px-3 py-1.5 text-[12px] font-semibold text-[#5c4b12] dark:border-amber-900/50 dark:bg-amber-950/50 dark:text-amber-100"
+										>
+											<span
+												className={`h-1.5 w-1.5 rounded-full ${browserOnline ? 'bg-amber-500' : 'bg-rose-500'}`}
+											/>
+											{browserOnline ? t.reconnectingSocket : t.computerOffline}
+										</div>
+									) : null}
 									<ScheduledMessagesPanel
 										ar={locale === 'ar'}
 										schedules={messageSchedules}
@@ -17139,31 +17469,14 @@ function WhatsAppWorkspaceContent() {
 													>
 														<Sparkles size={18} strokeWidth={2} />
 													</button>
-													<textarea
-														aria-label={t.message}
-														value={draft}
-														onChange={event => {
-															setDraft(event.target.value);
-															notifyPeerTyping();
-															event.currentTarget.style.height = 'auto';
-															event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 112)}px`;
-														}}
-														onKeyDown={event => {
-															if (
-																event.key === 'Enter' &&
-																!event.shiftKey &&
-																!event.nativeEvent.isComposing
-															) {
-																event.preventDefault();
-																sendMessage(event);
-															}
-														}}
-														rows={1}
-														dir={draftPresentation.dir}
-														lang={draftPresentation.lang}
-														style={draftPresentation.style}
+													<IsolatedComposerTextarea
+														apiRef={composerApiRef}
+														draftRef={draftRef}
+														onHasTextChange={notifyComposerHasText}
 														placeholder={t.message}
-														className={`wa-composer-input max-h-28 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${draftPresentation.className || ''}`}
+														ariaLabel={t.message}
+														onTyping={notifyPeerTyping}
+														onEnterSubmit={sendMessage}
 													/>
 													<button
 														type="button"
@@ -17179,7 +17492,7 @@ function WhatsAppWorkspaceContent() {
 													>
 														<Camera size={20} strokeWidth={2} />
 													</button>
-													{draft.trim() || composerImages.length ? (
+													{composerHasText || composerImages.length ? (
 														<>
 															<button
 																type="button"
@@ -18474,7 +18787,7 @@ function WhatsAppWorkspaceContent() {
 				accountId={accountId}
 				conversations={scheduleConversationOptions}
 				initialConversationId={conversationId}
-				initialText={draft}
+				initialText={getDraft()}
 				onCreated={() => {
 					if (conversationId) void loadMessageSchedules(conversationId);
 				}}

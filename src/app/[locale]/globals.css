@@ -3369,7 +3369,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   max-height: min(72vh, 640px) !important;
   object-fit: contain !important;
   vertical-align: top;
-  background: transparent !important;
+  background: #111b21 !important;
   border-radius: 0 !important;
 }
 
@@ -4355,8 +4355,82 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	min-height: 0;
 	max-height: min(72vh, 640px);
 	object-fit: contain;
-	background: transparent;
+	background: #111b21;
 	border-radius: 0;
+	cursor: pointer;
+}
+
+/* Chromium's native <video controls> paints a tall black gradient over the
+   picture. Playback uses a custom overlay instead. */
+.wa-video-asset::-webkit-media-controls,
+.wa-video-asset::-webkit-media-controls-enclosure,
+.wa-video-asset::-webkit-media-controls-panel,
+.wa-video-asset::-webkit-media-controls-overlay-enclosure {
+	display: none !important;
+	opacity: 0 !important;
+}
+
+.wa-video-scrim {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 3;
+	height: 44px;
+	background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.42));
+	pointer-events: none;
+}
+
+.wa-video-wrap.is-playing .wa-video-scrim {
+	height: 36px;
+}
+
+.wa-video-play {
+	position: absolute;
+	inset: 0;
+	z-index: 4;
+	display: grid;
+	place-items: center;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+}
+
+.wa-video-play__icon {
+	display: grid;
+	place-items: center;
+	width: 52px;
+	height: 52px;
+	border-radius: 999px;
+	background: rgba(11, 20, 26, 0.55);
+	color: #ffffff;
+	box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.wa-video-play:hover .wa-video-play__icon,
+.wa-video-play:focus-visible .wa-video-play__icon {
+	background: rgba(11, 20, 26, 0.72);
+}
+
+.wa-video-duration {
+	position: absolute;
+	z-index: 5;
+	inset-inline-start: 8px;
+	bottom: 8px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	background: rgba(11, 20, 26, 0.55);
+	color: #ffffff;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.3;
+	pointer-events: none;
+}
+
+.wa-video-wrap.is-playing .wa-video-duration {
+	display: none;
 }
 
 .wa-message-transcript {
