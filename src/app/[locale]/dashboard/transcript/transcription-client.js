@@ -372,9 +372,34 @@ export function transcriptionErrorMessage(error, fallback = 'Transcription faile
 
 export async function enhanceTranscription(id, payload = {}) {
 	const { data } = await api.post(`/transcriptions/${id}/enhance`, payload, {
-		timeout: 3 * 60 * 1000,
+		// AI + proxy retries can exceed the default 120s axios instance timeout.
+		timeout: 0,
 	});
 	return data;
+}
+
+export function enhanceTranscriptionErrorMessage(error, locale = 'en') {
+	const ar = String(locale).toLowerCase().startsWith('ar');
+	const fromApi =
+		error?.response?.data?.message ||
+		error?.response?.data?.errors?.[0] ||
+		(Array.isArray(error?.response?.data?.message)
+			? error.response.data.message.join(', ')
+			: null);
+	if (fromApi) return String(fromApi);
+	const code = String(error?.code || '');
+	const text = String(error?.message || '');
+	if (code === 'ERR_NETWORK' || /network error/i.test(text)) {
+		return ar
+			? 'تعذر الاتصال بالخادم أثناء تحسين النص. تأكد أن api.so7bafit.com يعمل أو جرّب مرة أخرى بعد قليل.'
+			: 'Could not reach the server while enhancing. Check that the API is online or try again shortly.';
+	}
+	if (code === 'ECONNABORTED' || /timeout/i.test(text)) {
+		return ar
+			? 'انتهت مهلة تحسين النص. جرّب مرة أخرى أو استخدم نص أقصر.'
+			: 'Enhance timed out. Try again or use a shorter transcript.';
+	}
+	return text || (ar ? 'تعذر تحسين النص.' : 'Could not enhance this transcript.');
 }
 
 export async function memorizeTranscription(id, payload = {}) {

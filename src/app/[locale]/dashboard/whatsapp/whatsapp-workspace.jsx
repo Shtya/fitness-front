@@ -88,7 +88,6 @@ import {
 } from 'lucide-react';
 import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
-import TranscriptionDialog from '../transcript/transcription-dialog';
 import MessageSavedTranscript from './MessageSavedTranscript';
 import {
 	getMessageTranscriptsForIds,
@@ -105,7 +104,6 @@ import {
 } from './voice-changer/voice-clone-chat-samples';
 import StickersPanel from './stickers/StickersPanel';
 import AiImageComposerPanel from './stickers/AiImageComposerPanel';
-import { ChatDocumentViewer } from './document-viewer/chat-document-viewer';
 import {
 	fetchVoiceChangerSettings,
 	readVoiceChangerError,
@@ -194,6 +192,14 @@ import WhatsAppAccountLinkPanel, {
 } from './WhatsAppAccountLinkPanel';
 
 const EmailMemoWorkspace = lazy(() => import('../email-memo/EmailMemoWorkspace'));
+// Transient viewers that most sessions never open. The document viewer alone
+// pulls mammoth + xlsx, which dominated the route's first-load JS.
+const TranscriptionDialog = lazy(() => import('../transcript/transcription-dialog'));
+const ChatDocumentViewer = lazy(() =>
+	import('./document-viewer/chat-document-viewer').then(module => ({
+		default: module.ChatDocumentViewer,
+	})),
+);
 import { WhatsAppReportsTab, staffAssignHint } from './WhatsAppReportsTab';
 import { WhatsAppBoardTab } from './WhatsAppBoardTab';
 import { BoardColumnPicker, BoardColumnPickerMenu } from './BoardColumnPicker';
@@ -2935,6 +2941,57 @@ function assertAudioBlob(blob) {
 	return blob;
 }
 
+// WhatsApp Web keeps exactly one voice note audible and rolls into the next note
+// of the thread when one ends. Each bubble owns its own <audio>, so exclusivity
+// and hand-off are coordinated here instead of by a shared player instance.
+const voicePlayers = new Map();
+let activeVoicePlayerToken = null;
+let voicePlayerTokenSeq = 0;
+
+function nextVoicePlayerToken() {
+	voicePlayerTokenSeq += 1;
+	return `wa-voice-${voicePlayerTokenSeq}`;
+}
+
+function registerVoicePlayer(token, handlers) {
+	voicePlayers.set(token, handlers);
+	return () => {
+		voicePlayers.delete(token);
+		if (activeVoicePlayerToken === token) activeVoicePlayerToken = null;
+	};
+}
+
+function claimVoicePlayback(token) {
+	if (activeVoicePlayerToken && activeVoicePlayerToken !== token) {
+		voicePlayers.get(activeVoicePlayerToken)?.pause?.();
+	}
+	activeVoicePlayerToken = token;
+}
+
+function releaseVoicePlayback(token) {
+	if (activeVoicePlayerToken === token) activeVoicePlayerToken = null;
+}
+
+/** Nearest voice bubble that follows `token` in document (thread) order. */
+function nextVoicePlayerAfter(token) {
+	const anchor = voicePlayers.get(token)?.element?.();
+	if (!anchor?.compareDocumentPosition) return null;
+	let best = null;
+	voicePlayers.forEach((handlers, key) => {
+		if (key === token) return;
+		const node = handlers.element?.();
+		if (!node) return;
+		if (!(anchor.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING)) return;
+		if (
+			!best ||
+			best.node.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_PRECEDING
+		) {
+			best = { node, handlers };
+		}
+	});
+	return best?.handlers || null;
+}
+
 function VoiceMessage({
 	url,
 	attachmentId,
@@ -2959,6 +3016,9 @@ function VoiceMessage({
 	const analyzedRef = useRef(false);
 	const ignoreAudioErrorRef = useRef(false);
 	const wasSessionReadyRef = useRef(sessionReady);
+	const playerTokenRef = useRef(null);
+	if (!playerTokenRef.current) playerTokenRef.current = nextVoicePlayerToken();
+	const startPlaybackRef = useRef(null);
 	const [playing, setPlaying] = useState(false);
 	const [playLoading, setPlayLoading] = useState(false);
 	const [loadFailed, setLoadFailed] = useState(false);
@@ -3297,7 +3357,11 @@ function VoiceMessage({
 			if (endedAt > 0) setDuration(current => Math.max(current, endedAt));
 			setPlaying(false);
 			setCurrentTime(0);
+			releaseVoicePlayback(playerTokenRef.current);
+			nextVoicePlayerAfter(playerTokenRef.current)?.playFromStart?.();
 		};
+		// Another bubble claiming playback pauses this element directly.
+		const onPause = () => setPlaying(false);
 		const onMeta = () => applyDuration(audio.duration);
 		const onError = () => {
 			if (ignoreAudioErrorRef.current) return;
@@ -3310,6 +3374,7 @@ function VoiceMessage({
 		audio.addEventListener('durationchange', onMeta);
 		audio.addEventListener('timeupdate', onTime);
 		audio.addEventListener('ended', onEnd);
+		audio.addEventListener('pause', onPause);
 		audio.addEventListener('error', onError);
 		if (audio.readyState >= 1) onMeta();
 		return () => {
@@ -3317,6 +3382,7 @@ function VoiceMessage({
 			audio.removeEventListener('durationchange', onMeta);
 			audio.removeEventListener('timeupdate', onTime);
 			audio.removeEventListener('ended', onEnd);
+			audio.removeEventListener('pause', onPause);
 			audio.removeEventListener('error', onError);
 		};
 	}, [playbackUrl]);
@@ -3331,12 +3397,7 @@ function VoiceMessage({
 		[],
 	);
 
-	const toggle = async () => {
-		if (playing) {
-			audioRef.current?.pause();
-			setPlaying(false);
-			return;
-		}
+	const startPlayback = async ({ fromStart = false } = {}) => {
 		try {
 			const hadRealFailure = loadFailed && !voiceBlobRef.current && !objectUrlRef.current;
 			if (hadRealFailure) {
@@ -3355,18 +3416,44 @@ function VoiceMessage({
 				ignoreAudioErrorRef.current = true;
 				audio.src = readyUrl;
 			}
+			if (fromStart) audio.currentTime = 0;
 			audio.playbackRate = playbackRate;
+			claimVoicePlayback(playerTokenRef.current);
 			await audio.play();
 			ignoreAudioErrorRef.current = false;
 			setPlaying(true);
 			setLoadFailed(false);
 			setPlayLoading(false);
 		} catch {
+			releaseVoicePlayback(playerTokenRef.current);
 			setPlaying(false);
 			setLoadFailed(true);
 			setPlayLoading(false);
 		}
 	};
+	startPlaybackRef.current = startPlayback;
+
+	const toggle = async () => {
+		if (playing) {
+			audioRef.current?.pause();
+			setPlaying(false);
+			releaseVoicePlayback(playerTokenRef.current);
+			return;
+		}
+		await startPlayback();
+	};
+
+	useEffect(
+		() =>
+			registerVoicePlayer(playerTokenRef.current, {
+				element: () => containerRef.current,
+				pause: () => audioRef.current?.pause(),
+				playFromStart: () => {
+					void startPlaybackRef.current?.({ fromStart: true });
+				},
+			}),
+		[],
+	);
 
 	const cyclePlaybackRate = () => {
 		const next = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1;
@@ -6892,6 +6979,8 @@ function WhatsAppWorkspaceContent() {
 	const workspaceHandlersRef = useRef({});
 	const accountIdRef = useRef(null);
 	const accountsRef = useRef([]);
+	// The socket effect mounts once, so it must not close over `locale` directly.
+	const localeRef = useRef(locale);
 	const conversationsRef = useRef([]);
 	const syncingInboxRef = useRef(false);
 	const previousAccountIdRef = useRef(null);
@@ -8899,6 +8988,10 @@ function WhatsAppWorkspaceContent() {
 	}, [accountId]);
 
 	useEffect(() => {
+		localeRef.current = locale;
+	}, [locale]);
+
+	useEffect(() => {
 		accountsRef.current = accounts;
 	}, [accounts]);
 
@@ -9433,21 +9526,23 @@ function WhatsAppWorkspaceContent() {
 						item => item.id === targetConversationId,
 					);
 					if (!peer?.isMuted && (tabLeaderRef.current?.isLeader !== false)) {
+						const activeLocale = localeRef.current;
+						const isArabic = activeLocale === 'ar';
 						const title =
 							conversationTitle(peer) ||
 							event.payload?.contactName ||
-							(locale === 'ar' ? 'رسالة واتساب' : 'WhatsApp');
+							(isArabic ? 'رسالة واتساب' : 'WhatsApp');
 						const body =
 							String(event.payload?.text || '').trim() ||
 							(event.payload?.type === 'image'
-								? locale === 'ar'
+								? isArabic
 									? 'صورة'
 									: 'Photo'
 								: event.payload?.type === 'ptt' || event.payload?.type === 'audio'
-									? locale === 'ar'
+									? isArabic
 										? 'رسالة صوتية'
 										: 'Voice message'
-									: locale === 'ar'
+									: isArabic
 										? 'رسالة جديدة'
 										: 'New message');
 						showWhatsAppDesktopNotification({
@@ -9455,7 +9550,7 @@ function WhatsAppWorkspaceContent() {
 							body,
 							conversationId: targetConversationId,
 							accountId: accountIdRef.current,
-							locale,
+							locale: activeLocale,
 						});
 					}
 				}
@@ -9532,7 +9627,11 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (event.event === 'attachment_ready' && event.payload?.attachmentId) {
 				const attachmentId = String(event.payload.attachmentId);
-				forgetAttachmentBlob(attachmentId);
+				// Attachment bytes are immutable for a given id, and the blob cache only
+				// holds successful fetches. Evicting a blob we already hold makes the
+				// bubbles re-download media we have in memory, so only drop misses.
+				const alreadyDownloaded = Boolean(getCachedAttachmentBlob(attachmentId));
+				if (!alreadyDownloaded) forgetAttachmentBlob(attachmentId);
 				const applyReady = items =>
 					(items || []).map(message => {
 						if (!message?.attachments?.length) return message;
@@ -18391,43 +18490,51 @@ function WhatsAppWorkspaceContent() {
 					setVoiceChangerSettings(data);
 				}}
 			/>
-			<TranscriptionDialog
-				open={Boolean(transcriptionSources?.length)}
-				onOpenChange={open => {
-					if (!open) setTranscriptionSources(null);
-				}}
-				items={transcriptionSources}
-				loadVoiceFile={loadTranscriptionSourceFile}
-				onCompleted={(text, data) => {
-					const nextText = String(text || '').trim();
-					if (!nextText) return;
-					const mediaSources = (transcriptionSources || []).filter(item =>
-						isMediaTranscriptKind(item?.kind),
-					);
-					if (!mediaSources.length) return;
-					const entries = mediaSources.map(item => ({
-						messageId: item.id,
-						text: nextText,
-						transcriptionId: data?.id || null,
-					}));
-					const saved = saveMessageTranscripts(entries);
-					if (Object.keys(saved).length) {
-						setMessageTranscripts(current => ({ ...current, ...saved }));
-					}
-				}}
-			/>
+			{transcriptionSources?.length ? (
+				<Suspense fallback={null}>
+					<TranscriptionDialog
+						open
+						onOpenChange={open => {
+							if (!open) setTranscriptionSources(null);
+						}}
+						items={transcriptionSources}
+						loadVoiceFile={loadTranscriptionSourceFile}
+						onCompleted={(text, data) => {
+							const nextText = String(text || '').trim();
+							if (!nextText) return;
+							const mediaSources = (transcriptionSources || []).filter(item =>
+								isMediaTranscriptKind(item?.kind),
+							);
+							if (!mediaSources.length) return;
+							const entries = mediaSources.map(item => ({
+								messageId: item.id,
+								text: nextText,
+								transcriptionId: data?.id || null,
+							}));
+							const saved = saveMessageTranscripts(entries);
+							if (Object.keys(saved).length) {
+								setMessageTranscripts(current => ({ ...current, ...saved }));
+							}
+						}}
+					/>
+				</Suspense>
+			) : null}
 			<ChatImageViewer
 				images={chatImages}
 				activeId={activeChatImageId}
 				onClose={() => setActiveChatImageId(null)}
 				onChange={setActiveChatImageId}
 			/>
-			<ChatDocumentViewer
-				open={Boolean(documentPreview?.blob)}
-				file={documentPreview}
-				locale={locale}
-				onClose={() => setDocumentPreview(null)}
-			/>
+			{documentPreview?.blob ? (
+				<Suspense fallback={null}>
+					<ChatDocumentViewer
+						open
+						file={documentPreview}
+						locale={locale}
+						onClose={() => setDocumentPreview(null)}
+					/>
+				</Suspense>
+			) : null}
 		</div>
 	);
 }

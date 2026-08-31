@@ -4482,8 +4482,12 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 }
 
 .wa-message-voice .wa-message-transcript {
-	margin-top: 4px;
+	margin-top: 0;
 	border-radius: 0 0 7.5px 7.5px;
+}
+
+.wa-message-bubble.wa-message-voice .wa-message-transcript__toggle {
+	padding: 6px 10px 5px;
 }
 
 /* Time must sit above the transcript row, never over the Show control. */
@@ -4513,7 +4517,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	left: auto !important;
 	float: none !important;
 	align-self: flex-end;
-	margin: 4px 10px 2px !important;
+	margin: 2px 10px 0 !important;
 	padding: 0 !important;
 	z-index: 1;
 	color: #667781 !important;
@@ -4522,8 +4526,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	background: transparent !important;
 }
 
-.wa-message-bubble.wa-message-voice:has(.wa-message-transcript) {
-	padding-bottom: 6px !important;
+.wa-message-bubble.wa-message-voice:has(.wa-message-transcript),
+.wa-message-bubble:has(.wa-voice-message):has(.wa-message-transcript) {
+	padding-bottom: 0 !important;
 }
 
 .wa-photo-open-hint {
@@ -6965,10 +6970,15 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		left: auto !important;
 		float: none !important;
 		align-self: flex-end;
-		margin: 4px 10px 2px !important;
+		margin: 2px 10px 0 !important;
 		color: #667781 !important;
 		text-shadow: none !important;
 		pointer-events: auto !important;
+	}
+
+	.wa-web-desktop .wa-message-bubble.wa-message-voice:has(.wa-message-transcript),
+	.wa-web-desktop .wa-message-bubble:has(.wa-voice-message):has(.wa-message-transcript) {
+		padding-bottom: 0 !important;
 	}
 
 	.wa-web-desktop .wa-message-bubble.wa-message-media {
@@ -7769,10 +7779,15 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		left: auto !important;
 		float: none !important;
 		align-self: flex-end;
-		margin: 4px 10px 2px !important;
+		margin: 2px 10px 0 !important;
 		color: #667781 !important;
 		text-shadow: none !important;
 		pointer-events: auto !important;
+	}
+
+	.wa-message-bubble.wa-message-voice:has(.wa-message-transcript),
+	.wa-message-bubble:has(.wa-voice-message):has(.wa-message-transcript) {
+		padding-bottom: 0 !important;
 	}
 
 	.wa-message-bubble.wa-message-media {
@@ -8525,6 +8540,10 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		max-width: min(82%, 300px) !important;
 		border-radius: 8px !important;
 		padding: 5px 8px 18px !important;
+	}
+
+	.wa-message-bubble:has(.wa-voice-message):has(.wa-message-transcript) {
+		padding-bottom: 0 !important;
 	}
 
 	.wa-message-mine:has(.wa-voice-message)::after,

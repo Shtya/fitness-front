@@ -3,6 +3,7 @@
 import React, { useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
+import { clearClientSession } from '@/lib/session-cleanup';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
@@ -3042,7 +3043,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      ['user', 'accessToken', 'refreshToken'].forEach(k => localStorage.removeItem(k));
+      await clearClientSession();
     } catch (err) {
       console.error('Logout failed:', err);
     } finally {

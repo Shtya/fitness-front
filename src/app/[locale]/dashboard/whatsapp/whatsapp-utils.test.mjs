@@ -786,16 +786,24 @@ test('looksLikeMarkdown detects headings lists fences and double-star bold', () 
 	assert.equal(looksLikeMarkdown('plain chat line'), false);
 });
 
-test('parseWhatsAppBold converts double-asterisk sections into bold text', () => {
+test('parseWhatsAppBold marks bold, italic, strike and code segments', () => {
+	const plain = { bold: false, italic: false, strike: false, code: false };
 	assert.deepEqual(parseWhatsAppBold('Use **ECS-HQ** or **SPX5** now'), [
-		{ text: 'Use ', bold: false },
-		{ text: 'ECS-HQ', bold: true },
-		{ text: ' or ', bold: false },
-		{ text: 'SPX5', bold: true },
-		{ text: ' now', bold: false },
+		{ ...plain, text: 'Use ' },
+		{ ...plain, text: 'ECS-HQ', bold: true },
+		{ ...plain, text: ' or ' },
+		{ ...plain, text: 'SPX5', bold: true },
+		{ ...plain, text: ' now' },
 	]);
 	assert.deepEqual(parseWhatsAppBold('Unclosed **text'), [
-		{ text: 'Unclosed **text', bold: false },
+		{ ...plain, text: 'Unclosed **text' },
+	]);
+	assert.deepEqual(parseWhatsAppBold('_soft_ ~gone~ `npm run dev`'), [
+		{ ...plain, text: 'soft', italic: true },
+		{ ...plain, text: ' ' },
+		{ ...plain, text: 'gone', strike: true },
+		{ ...plain, text: ' ' },
+		{ ...plain, text: 'npm run dev', code: true },
 	]);
 });
 

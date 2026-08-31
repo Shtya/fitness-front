@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import {
 	enhanceTranscription,
+	enhanceTranscriptionErrorMessage,
 	getStoredEnhanceAiProvider,
 	memorizeTranscription,
 	storeEnhanceAiProvider,
@@ -179,14 +180,7 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 				toast.success(t.enhanceApplied);
 			}
 		} catch (error) {
-			toast.error(
-				Array.isArray(error?.response?.data?.message)
-					? error.response.data.message.join(', ')
-					: error?.response?.data?.message ||
-							error?.response?.data?.errors?.[0] ||
-							error?.message ||
-							t.enhanceFailed,
-			);
+			toast.error(enhanceTranscriptionErrorMessage(error, locale));
 		} finally {
 			setEnhancing(false);
 		}

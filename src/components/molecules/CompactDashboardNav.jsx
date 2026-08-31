@@ -9,6 +9,7 @@ import { usePathname as useI18nPathname, Link, useRouter } from '@/i18n/navigati
 import { useSearchParams } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
 import { useTenantTheme } from '@/lib/tenant/TenantThemeProvider';
+import { clearClientSession } from '@/lib/session-cleanup';
 import { getNavPagesForRole } from './Sidebar';
 import LanguageToggle from '../atoms/LanguageToggle';
 import './header-glass.css';
@@ -100,7 +101,7 @@ export default function CompactDashboardNav() {
 	const handleLogout = async () => {
 		try {
 			await fetch('/api/auth/logout', { method: 'POST' });
-			['user', 'accessToken', 'refreshToken'].forEach((k) => localStorage.removeItem(k));
+			await clearClientSession();
 		} catch {
 			/* ignore */
 		} finally {
