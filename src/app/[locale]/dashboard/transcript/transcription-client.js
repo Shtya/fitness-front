@@ -32,6 +32,8 @@ export const GROQ_FREE_MAX_FILE_SIZE = 25 * 1024 * 1024;
 /** Cloud STT (especially long WhatsApp notes) can take several minutes. */
 export const TRANSCRIPTION_REQUEST_TIMEOUT_MS = 30 * 60 * 1000;
 export const TRANSCRIPTION_PROVIDER_STORAGE_KEY = 'transcript:provider';
+export const ENHANCE_AI_PROVIDER_STORAGE_KEY = 'so7bafit.transcript.enhanceAiProvider';
+export const ENHANCE_AI_PROVIDERS = ['llm7-free', 'pollinations-free', 'browser-chatgpt'];
 export const TRANSCRIPTION_PROVIDERS = [
 	{
 		id: 'assemblyai',
@@ -76,6 +78,26 @@ export function storeTranscriptionProvider(provider) {
 	if (!TRANSCRIPTION_PROVIDERS.some(item => item.id === provider)) return false;
 	try {
 		window.localStorage.setItem(TRANSCRIPTION_PROVIDER_STORAGE_KEY, provider);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+export function getStoredEnhanceAiProvider() {
+	if (typeof window === 'undefined') return null;
+	try {
+		const provider = window.localStorage.getItem(ENHANCE_AI_PROVIDER_STORAGE_KEY);
+		return ENHANCE_AI_PROVIDERS.includes(provider) ? provider : null;
+	} catch {
+		return null;
+	}
+}
+
+export function storeEnhanceAiProvider(provider) {
+	if (!ENHANCE_AI_PROVIDERS.includes(provider)) return false;
+	try {
+		window.localStorage.setItem(ENHANCE_AI_PROVIDER_STORAGE_KEY, provider);
 		return true;
 	} catch {
 		return false;

@@ -2279,9 +2279,14 @@ function computeBesideMenuPosition(anchorRect, menuSize = { width: 228, height: 
 	return { top, left, width, maxHeight: height };
 }
 
-function computeAnchoredMenuPosition(anchorRect, menuSize = { width: 220, height: 420 }) {
+function computeAnchoredMenuPosition(
+	anchorRect,
+	menuSize = { width: 248, height: 420 },
+	options = {},
+) {
 	const gap = 8;
 	const margin = 12;
+	const mine = Boolean(options.mine);
 	const viewportW =
 		typeof window === 'undefined' ? 1280 : window.innerWidth || 1280;
 	const viewportH =
@@ -2301,7 +2306,7 @@ function computeAnchoredMenuPosition(anchorRect, menuSize = { width: 220, height
 	const openUp = spaceBelow < height && spaceAbove > spaceBelow;
 	let top = openUp ? rect.top - gap - height : rect.bottom + gap;
 	top = Math.max(margin, Math.min(top, viewportH - height - margin));
-	let left = rect.right - width;
+	let left = mine ? rect.right - width : rect.left;
 	left = Math.max(margin, Math.min(left, viewportW - width - margin));
 	return {
 		top,
@@ -3497,8 +3502,11 @@ export function MediaAttachment({
 	const wasSessionReadyRef = useRef(sessionReady);
 	const autoRetryCountRef = useRef(0);
 	const loadGenRef = useRef(0);
-	const isNearViewport = useNearViewport(containerRef);
 	const type = String(attachment?.type || '').toLowerCase();
+	const isNearViewport = useNearViewport(
+		containerRef,
+		type === 'video' ? { rootMargin: '1200px' } : { rootMargin: '900px' },
+	);
 	const isVoice = type === 'audio' || type === 'ptt' || type === 'voice';
 	const isDocument = !['image', 'sticker', 'video', 'audio', 'ptt', 'voice'].includes(type);
 	const demoAttachment = Boolean(attachment?.demoAttachment || isDemoId(attachment?.id));
@@ -3516,6 +3524,7 @@ export function MediaAttachment({
 	const alreadyOnDisk =
 		String(attachment?.downloadStatus || '').toLowerCase() === 'downloaded';
 	const canFetchWithoutSession = demoAttachment || alreadyOnDisk;
+	const downloadStatus = String(attachment?.downloadStatus || '').toLowerCase();
 	const attachmentIdStr = String(attachment?.id || '');
 	const isPendingAttachment =
 		attachmentIdStr.startsWith('pending-att:') || attachmentIdStr.startsWith('pending:');
@@ -3550,7 +3559,7 @@ export function MediaAttachment({
 			const isHeavyMedia = kind === 'video';
 			try {
 				const blob = await requestAttachmentBlob(attachment.id, {
-					timeout: isHeavyMedia ? 120_000 : 45_000,
+					timeout: isHeavyMedia ? 180_000 : 45_000,
 					priority: true,
 					kind,
 				});
@@ -3560,7 +3569,7 @@ export function MediaAttachment({
 				await new Promise(resolve => window.setTimeout(resolve, 500));
 				try {
 					const blob = await requestAttachmentBlob(attachment.id, {
-						timeout: isHeavyMedia ? 150_000 : 60_000,
+						timeout: isHeavyMedia ? 180_000 : 60_000,
 						priority: true,
 						kind,
 					});
@@ -3593,8 +3602,10 @@ export function MediaAttachment({
 		setUrl(null);
 		setFailed(false);
 		setLoading(true);
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- reset when identity or local file changes
-	}, [attachment?.id, attachment?.url]);
+		// Only reset when the attachment id changes — url/downloadStatus churn from
+		// live sync used to cancel in-flight video fetches and leave "Loading media…".
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- identity only
+	}, [attachment?.id]);
 
 	useEffect(() => {
 		if (sessionReady && !wasSessionReadyRef.current) {
@@ -3659,7 +3670,17 @@ export function MediaAttachment({
 			setFailed(true);
 			return undefined;
 		}
-		if (!isNearViewport) return undefined;
+		if (!isNearViewport) {
+			if (
+				!localUrl &&
+				sessionReady &&
+				isPersistedAttachmentId(attachmentId) &&
+				(demoAttachment || canFetchWithoutSession || downloadStatus !== 'failed')
+			) {
+				setLoading(true);
+			}
+			return undefined;
+		}
 		// Keep showing the local optimistic preview while the durable copy loads.
 		if (localUrl) {
 			setUrl(localUrl);
@@ -3705,9 +3726,28 @@ export function MediaAttachment({
 				setUrl(objectUrl);
 				setFailed(false);
 			})
-			.catch(() => {
+			.catch(error => {
 				// Keep local preview if fetch of durable copy fails.
 				if (!cancelled && loadGenRef.current === loadGen && !localUrl) {
+					const detail = String(
+						error instanceof Error ? error.message : error || '',
+					).toLowerCase();
+					const isThumbnail =
+						detail.includes('thumbnail') || detail.includes('still a thumbnail');
+					if (
+						isThumbnail &&
+						type === 'video' &&
+						autoRetryCountRef.current < 6
+					) {
+						autoRetryCountRef.current += 1;
+						forgetAttachmentBlob(attachmentId);
+						window.setTimeout(
+							() => setRetryNonce(value => value + 1),
+							1200 * autoRetryCountRef.current,
+						);
+						setLoading(true);
+						return;
+					}
 					setFailed(true);
 				}
 			})
@@ -3726,10 +3766,6 @@ export function MediaAttachment({
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- load once per id/viewport/retry
 	}, [
 		attachment?.id,
-		attachment?.mimeType,
-		attachment?.type,
-		attachment?.url,
-		canFetchWithoutSession,
 		demoAttachment,
 		isDocument,
 		isNearViewport,
@@ -3960,13 +3996,28 @@ export function MediaAttachment({
 	}
 
 	if (loading) {
+		const videoPoster =
+			type === 'video' &&
+			previewDataUrl &&
+			!isPlayableVideoUrl(previewDataUrl)
+				? previewDataUrl
+				: null;
 		return (
 			<div
 				ref={containerRef}
 				className={
 					type === 'video'
-						? `wa-media-card wa-media-card--video mb-2 ${className}`
+						? `wa-media-card wa-media-card--video mb-2 ${className}${videoPoster ? ' has-poster' : ''}`
 						: `wa-media-card mb-2 ${className}`
+				}
+				style={
+					videoPoster
+						? {
+								backgroundImage: `url(${videoPoster})`,
+								backgroundSize: 'cover',
+								backgroundPosition: 'center',
+							}
+						: undefined
 				}
 			>
 				<span className="wa-media-card__icon" aria-hidden="true">
@@ -4052,6 +4103,37 @@ export function MediaAttachment({
 	if (type === 'video') {
 		const playable = isPlayableVideoUrl(url);
 		if (!playable) {
+			const videoPoster =
+				previewDataUrl && !isPlayableVideoUrl(previewDataUrl) ? previewDataUrl : null;
+			const stillFetching =
+				loading ||
+				downloadStatus === 'pending' ||
+				downloadStatus === 'downloading';
+			if (stillFetching) {
+				return (
+					<div
+						ref={containerRef}
+						className={`wa-media-card wa-media-card--video mb-2 ${className}${videoPoster ? ' has-poster' : ''}`}
+						style={
+							videoPoster
+								? {
+										backgroundImage: `url(${videoPoster})`,
+										backgroundSize: 'cover',
+										backgroundPosition: 'center',
+									}
+								: undefined
+						}
+					>
+						<span className="wa-media-card__icon" aria-hidden="true">
+							<Video size={28} strokeWidth={1.75} />
+						</span>
+						<span className="wa-photo-download__ring">
+							<Loader2 size={22} strokeWidth={2.25} className="animate-spin" />
+						</span>
+						<span className="wa-media-card__label">{labels.loadingMedia}</span>
+					</div>
+				);
+			}
 			return (
 				<button
 					ref={containerRef}
@@ -4061,15 +4143,26 @@ export function MediaAttachment({
 						setFailed(false);
 						setRetryNonce(value => value + 1);
 					}}
-					className={`wa-media-card wa-media-card--video mb-2 text-start ${className}`}
+					className={`wa-media-card wa-media-card--video mb-2 text-start ${className}${videoPoster ? ' has-poster' : ''}`}
+					style={
+						videoPoster
+							? {
+									backgroundImage: `url(${videoPoster})`,
+									backgroundSize: 'cover',
+									backgroundPosition: 'center',
+								}
+							: undefined
+					}
 				>
 					<span className="wa-media-card__icon" aria-hidden="true">
 						<Video size={28} strokeWidth={1.75} />
 					</span>
-					<span className="wa-photo-download__ring">
-						<Loader2 size={22} strokeWidth={2.25} className="animate-spin" />
+					<span className="wa-photo-state__action" aria-hidden="true">
+						<RefreshCw size={18} strokeWidth={2.4} />
 					</span>
-					<span className="wa-media-card__label">{labels.loadingMedia}</span>
+					<span className="wa-media-card__label">
+						{labels.tapToRetry || labels.mediaUnavailable || 'Tap to retry'}
+					</span>
 				</button>
 			);
 		}
@@ -4433,6 +4526,7 @@ function MessageHoverActions({
 			<span className="wa-message-hover-sep" aria-hidden />
 			<HoverActionButton
 				data-message-actions-trigger
+				onPointerDown={event => event.stopPropagation()}
 				onClick={onMore}
 				tooltip={moreLabel}
 				aria-expanded={open && !emojiOpen}
@@ -4574,6 +4668,7 @@ function MessageActionMenu({
 	open,
 	message,
 	locale,
+	mine = false,
 	isVoice,
 	isVideo = false,
 	anchorRect,
@@ -4591,8 +4686,9 @@ function MessageActionMenu({
 }) {
 	const [mounted, setMounted] = useState(false);
 	const [boardOpen, setBoardOpen] = useState(false);
+	const [reactionsExpanded, setReactionsExpanded] = useState(false);
 	const [desktopPos, setDesktopPos] = useState(() =>
-		computeAnchoredMenuPosition(anchorRect),
+		computeAnchoredMenuPosition(anchorRect, { width: 248, height: 420 }, { mine }),
 	);
 	const menuRef = useRef(null);
 	const boardItemRef = useRef(null);
@@ -4626,6 +4722,7 @@ function MessageActionMenu({
 			clearBoardCloseTimer();
 			setBoardOpen(false);
 			setBoardFlyoutPos(null);
+			setReactionsExpanded(false);
 		}
 	}, [open]);
 	useEffect(() => () => clearBoardCloseTimer(), []);
@@ -4635,10 +4732,14 @@ function MessageActionMenu({
 		const update = () => {
 			const measured = menuRef.current?.getBoundingClientRect();
 			setDesktopPos(
-				computeAnchoredMenuPosition(anchorRect, {
-					width: measured?.width || 240,
-					height: measured?.height || 480,
-				}),
+				computeAnchoredMenuPosition(
+					anchorRect,
+					{
+						width: measured?.width || 248,
+						height: measured?.height || 480,
+					},
+					{ mine },
+				),
 			);
 		};
 		update();
@@ -4650,7 +4751,7 @@ function MessageActionMenu({
 			window.removeEventListener('resize', update);
 			window.removeEventListener('scroll', update, true);
 		};
-	}, [open, anchorRect]);
+	}, [open, anchorRect, mine]);
 
 	useEffect(() => {
 		if (!boardOpen || !open) {
@@ -4861,26 +4962,56 @@ function MessageActionMenu({
 		) : null;
 
 	const renderReactions = () => (
-		<div className="wa-message-action-reactions">
-			{QUICK_REACTIONS.map(emoji => (
+		<div className="wa-message-action-reactions-wrap">
+			<div className="wa-message-action-reactions">
+				{QUICK_REACTIONS.map(emoji => (
+					<button
+						key={emoji}
+						type="button"
+						disabled={busy}
+						onClick={() => onReact(emoji)}
+						className="wa-message-action-react"
+					>
+						{emoji}
+					</button>
+				))}
 				<button
-					key={emoji}
 					type="button"
-					disabled={busy}
-					onClick={() => onReact(emoji)}
-					className="wa-message-action-react"
+					aria-expanded={reactionsExpanded}
+					onClick={() => setReactionsExpanded(current => !current)}
+					className={`wa-message-action-react-more ${reactionsExpanded ? 'is-open' : ''}`}
+					aria-label={
+						reactionsExpanded
+							? ar
+								? 'إخفاء التفاعلات'
+								: 'Hide reactions'
+							: ar
+								? 'المزيد من التفاعلات'
+								: 'More reactions'
+					}
 				>
-					{emoji}
+					{reactionsExpanded ? (
+						<X size={16} strokeWidth={2.4} />
+					) : (
+						<Plus size={18} strokeWidth={2.3} />
+					)}
 				</button>
-			))}
-			<button
-				type="button"
-				onClick={() => onAction('react')}
-				className="wa-message-action-react-more"
-				aria-label={ar ? 'المزيد من التفاعلات' : 'More reactions'}
-			>
-				<Plus size={18} strokeWidth={2.3} />
-			</button>
+			</div>
+			{reactionsExpanded ? (
+				<div className="wa-message-action-reactions-grid">
+					{MORE_REACTIONS.map(emoji => (
+						<button
+							key={emoji}
+							type="button"
+							disabled={busy}
+							onClick={() => onReact(emoji)}
+							className="wa-message-action-react"
+						>
+							{emoji}
+						</button>
+					))}
+				</div>
+			) : null}
 		</div>
 	);
 	const previewType = String(message.type || '').toLowerCase();
@@ -4903,7 +5034,7 @@ function MessageActionMenu({
 				type="button"
 				aria-label={ar ? 'إغلاق القائمة' : 'Close menu'}
 				onClick={onClose}
-				className="fixed inset-0 z-[120] hidden bg-transparent min-[769px]:block"
+				className="fixed inset-0 z-[20015] hidden bg-transparent min-[769px]:block"
 			/>
 			<div
 				ref={menuRef}
@@ -4912,7 +5043,8 @@ function MessageActionMenu({
 				style={{
 					top: desktopPos.top,
 					left: desktopPos.left,
-					width: desktopPos.width || 220,
+					width: desktopPos.width || 248,
+					maxHeight: desktopPos.maxHeight || undefined,
 				}}
 				onMouseLeave={scheduleBoardSubmenuClose}
 			>
@@ -16612,6 +16744,8 @@ function WhatsAppWorkspaceContent() {
 																			onEmoji={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
+																				setActionMessageId(null);
+																				setActionMessageAnchor(null);
 																				const bar = event.currentTarget.closest('.wa-message-hover-actions');
 																				toggleReactionPicker(
 																					message,
@@ -16633,8 +16767,13 @@ function WhatsAppWorkspaceContent() {
 																				event.preventDefault();
 																				event.stopPropagation();
 																				closeReactionPicker();
-																				const rect =
-																					event.currentTarget.getBoundingClientRect();
+																				const bar =
+																					event.currentTarget.closest(
+																						'.wa-message-hover-actions',
+																					);
+																				const rect = (
+																					bar || event.currentTarget
+																				).getBoundingClientRect();
 																				setActionMessageAnchor(rect);
 																				setActionMessageId(current =>
 																					current === message.id ? null : message.id,
@@ -16645,6 +16784,7 @@ function WhatsAppWorkspaceContent() {
 																			open={actionMessageId === message.id}
 																			message={message}
 																			locale={locale}
+																			mine={mine}
 																			isVoice={isVoiceMessage}
 																			isVideo={isVideoTranscriptMessage}
 																			anchorRect={actionMessageAnchor}

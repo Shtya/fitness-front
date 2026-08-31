@@ -14,7 +14,9 @@ import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import {
 	enhanceTranscription,
+	getStoredEnhanceAiProvider,
 	memorizeTranscription,
+	storeEnhanceAiProvider,
 	summarizeTranscription,
 } from './transcription-client';
 
@@ -58,6 +60,7 @@ const labels = {
 		originalCollapsed: 'Original transcript',
 		enhancedOpen: 'Corrected transcript',
 		enhanceApplied: 'Transcript corrected',
+		enhancePartial: 'Basic cleanup only — AI providers were unavailable.',
 		toggleOriginal: 'Show / hide original',
 	},
 	ar: {
@@ -99,6 +102,7 @@ const labels = {
 		originalCollapsed: 'النص الأصلي',
 		enhancedOpen: 'النص بعد التصحيح',
 		enhanceApplied: 'تم تصحيح النص',
+		enhancePartial: 'تم تنظيف بسيط فقط — مزوّدات الذكاء الاصطناعي غير متاحة حالياً.',
 		toggleOriginal: 'إظهار / إخفاء الأصلي',
 	},
 };
@@ -145,12 +149,14 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 		}
 		setEnhancing(true);
 		try {
+			const preferredProvider = getStoredEnhanceAiProvider();
 			const data = await enhanceTranscription(transcriptionId, {
 				text,
 				locale: 'auto',
 				mode: 'full',
 				// Persist corrected text so Copy / Save use the enhanced version.
 				apply: true,
+				...(preferredProvider ? { provider: preferredProvider } : {}),
 			});
 			const originalText = data.originalText || text;
 			const enhancedText = String(data.enhancedText || text).trim() || text;
@@ -164,7 +170,14 @@ const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 			onApplyText?.(enhancedText);
 			onEnhanced?.(next);
 			onResultUpdated?.(data.transcription || null);
-			toast.success(t.enhanceApplied);
+			if (data.provider && data.provider !== 'local-fallback') {
+				storeEnhanceAiProvider(data.provider);
+			}
+			if (data.usedLocalFallback) {
+				toast(t.enhancePartial, { icon: '⚠️' });
+			} else {
+				toast.success(t.enhanceApplied);
+			}
 		} catch (error) {
 			toast.error(
 				Array.isArray(error?.response?.data?.message)

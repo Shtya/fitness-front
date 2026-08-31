@@ -2,8 +2,8 @@ export const VOICE_NOTE_MAX_SECONDS = 299;
 export const VOICE_NOTE_BITRATE = 16_000;
 
 const VOICE_RECORDER_MIME_TYPES = [
-	'audio/webm;codecs=opus',
 	'audio/ogg;codecs=opus',
+	'audio/webm;codecs=opus',
 	'audio/webm',
 ];
 
