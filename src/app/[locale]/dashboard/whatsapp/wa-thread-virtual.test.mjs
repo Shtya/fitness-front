@@ -37,7 +37,7 @@ test('image galleries grow with extra tiles', () => {
 		}),
 	);
 	assert.ok(three < one || three !== one);
-	assert.equal(one, 280);
+	assert.equal(one, 292);
 });
 
 test('messageRowKey prefers the grouping key', () => {

@@ -170,6 +170,17 @@ import {
 	isLocalMediaUrl,
 	localMediaFileUrl,
 	isPlayableVideoUrl,
+	applyThreadScrollAnchor,
+	captureThreadScrollAnchor,
+	mediaDimensionsForAttachment,
+	rememberMediaDimensions,
+	reservedMediaBoxStyle,
+	isPortraitMediaDims,
+	buildChatViewerImages,
+	viewerNeighborIds,
+	viewerThumbSrc,
+	viewerFullSrc,
+	isInlineImageDataUrl,
 } from './whatsapp-utils';
 import { writeCachedMessagePage, readCachedMessagePage } from './whatsapp-idb-cache';
 import { createWhatsAppTabLeader } from './whatsapp-tab-leader';
@@ -1692,6 +1703,9 @@ function ImageMessage({
 	selectMode = false,
 	retryLabel = 'Tap to retry',
 	loadingLabel = 'Loading media…',
+	mediaWidth = 0,
+	mediaHeight = 0,
+	cacheKey = '',
 }) {
 	const [loaded, setLoaded] = useState(false);
 	const [broken, setBroken] = useState(false);
@@ -1744,13 +1758,31 @@ function ImageMessage({
 	const isPending =
 		!isBroken &&
 		(loading || (hasFull && !loaded) || (!hasFull && Boolean(previewSrc || loading)));
-	const showFrame = !cover && (isPending || isBroken) && !hasFull && !previewSrc;
+	const isSticker = String(className).includes('wa-sticker-asset');
+	const reserveAspect = !cover && !isSticker;
+	const knownWidth = Number(mediaWidth) || 0;
+	const knownHeight = Number(mediaHeight) || 0;
+	const reservedRatio =
+		knownWidth > 0 && knownHeight > 0 ? `${Math.round(knownWidth)} / ${Math.round(knownHeight)}` : '4 / 5';
+	const boxStyle = reserveAspect
+		? { aspectRatio: reservedRatio, '--wa-media-ar': reservedRatio }
+		: undefined;
+	const rememberNaturalSize = node => {
+		const width = Number(node?.naturalWidth) || 0;
+		const height = Number(node?.naturalHeight) || 0;
+		if (cacheKey && width > 0 && height > 0) {
+			rememberMediaDimensions(cacheKey, width, height);
+		}
+	};
+	const showFrame = reserveAspect && (isPending || isBroken) && !hasFull && !previewSrc;
 	const showSkeleton = !isBroken && previewSrc && !previewReady && !loaded && !showFrame;
 	const showBlockingLoad = isPending && !previewReady;
 	const showSpinnerOnly = isPending && previewReady;
 	const fitClass = cover
 		? 'absolute inset-0 z-[1] h-full w-full object-cover'
-		: 'wa-photo-main relative z-[1] block h-auto w-full max-w-full';
+		: reserveAspect
+			? 'wa-photo-main absolute inset-0 z-[1] h-full w-full object-contain'
+			: 'wa-photo-main relative z-[1] block h-auto w-full max-w-full';
 
 	return (
 		<button
@@ -1765,8 +1797,15 @@ function ImageMessage({
 				onOpen?.(event);
 			}}
 			disabled={selectMode && isBroken && !previewSrc}
+			style={boxStyle}
 			className={`wa-photo-open relative block overflow-hidden ${
-				cover ? 'h-full min-h-0 w-full' : showFrame ? 'wa-photo-frame' : 'h-auto w-full max-w-full'
+				cover
+					? 'h-full min-h-0 w-full'
+					: reserveAspect
+						? 'wa-photo-reserved h-auto w-full max-w-full'
+						: showFrame
+							? 'wa-photo-frame'
+							: 'h-auto w-full max-w-full'
 			} ${isPending ? 'is-loading' : isBroken ? 'is-unavailable' : 'is-ready'} ${
 				previewSrc ? 'wa-photo-has-preview' : 'wa-photo-no-preview'
 			} ${selectMode ? 'wa-photo-select-mode' : ''} ${className}`}
@@ -1780,11 +1819,14 @@ function ImageMessage({
 					alt=""
 					aria-hidden="true"
 					draggable={false}
-					onLoad={() => setPreviewReady(true)}
+					onLoad={event => {
+						setPreviewReady(true);
+						rememberNaturalSize(event.currentTarget);
+					}}
 					className={`wa-photo-placeholder ${
-						cover || showFrame || isBroken
+						cover
 							? 'absolute inset-0 h-full w-full object-cover'
-							: 'absolute inset-0 z-0 h-full w-full object-cover'
+							: 'absolute inset-0 z-0 h-full w-full object-contain'
 					} ${loaded ? 'is-faded' : 'is-visible'}`}
 				/>
 			) : null}
@@ -1808,7 +1850,12 @@ function ImageMessage({
 					src={url}
 					alt={alt}
 					draggable={false}
-					onLoad={() => setLoaded(true)}
+					width={knownWidth > 0 ? Math.round(knownWidth) : undefined}
+					height={knownHeight > 0 ? Math.round(knownHeight) : undefined}
+					onLoad={event => {
+						setLoaded(true);
+						rememberNaturalSize(event.currentTarget);
+					}}
 					onError={() => {
 						setBroken(!previewSrc);
 						setLoaded(false);
@@ -2037,6 +2084,90 @@ function ChatImageViewer({ images, activeId, onClose, onChange }) {
 	const index = images.findIndex(image => String(image.id) === String(activeId));
 	const image = images[index];
 	const canNavigate = images.length > 1;
+	const [blobUrls, setBlobUrls] = useState({});
+	const [brokenUrls, setBrokenUrls] = useState({});
+	const [fullReady, setFullReady] = useState(false);
+	const blobUrlsRef = useRef({});
+	const ownedUrlsRef = useRef(new Set());
+	const scrollRef = useRef(null);
+	const thumbRefs = useRef({});
+	const viewerOpenRef = useRef(false);
+
+	const markBroken = useCallback(src => {
+		if (!src) return;
+		setBrokenUrls(current => (current[src] ? current : { ...current, [src]: true }));
+	}, []);
+
+	const rememberBlobUrl = useCallback((id, url) => {
+		if (!id || !url) return;
+		blobUrlsRef.current = { ...blobUrlsRef.current, [id]: url };
+		setBlobUrls(blobUrlsRef.current);
+	}, []);
+
+	const ensureViewerBlob = useCallback(async id => {
+		const attachmentId = String(id || '');
+		if (!attachmentId || blobUrlsRef.current[attachmentId]) return;
+		if (!isPersistedAttachmentId(attachmentId)) return;
+		try {
+			const cached = getCachedAttachmentBlob(attachmentId);
+			const blob = cached || (await requestAttachmentBlob(attachmentId, {
+				timeout: 60_000,
+				priority: true,
+				kind: 'image',
+			}));
+			if (blobUrlsRef.current[attachmentId]) return;
+			const url = URL.createObjectURL(blob);
+			if (!viewerOpenRef.current || blobUrlsRef.current[attachmentId]) {
+				URL.revokeObjectURL(url);
+				return;
+			}
+			ownedUrlsRef.current.add(url);
+			rememberBlobUrl(attachmentId, url);
+		} catch {
+			/* keep preview placeholder */
+		}
+	}, [rememberBlobUrl]);
+
+	useEffect(() => {
+		return () => {
+			ownedUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+			ownedUrlsRef.current.clear();
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!image) {
+			if (!viewerOpenRef.current) return undefined;
+			viewerOpenRef.current = false;
+			ownedUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+			ownedUrlsRef.current.clear();
+			blobUrlsRef.current = {};
+			setBlobUrls({});
+			setBrokenUrls({});
+			return undefined;
+		}
+		viewerOpenRef.current = true;
+		const neighborIds = new Set(viewerNeighborIds(images, image.id, 2));
+		images.forEach((item, itemIndex) => {
+			if (Math.abs(itemIndex - index) <= 8 && !isInlineImageDataUrl(item.previewUrl)) {
+				neighborIds.add(String(item.id));
+			}
+		});
+		neighborIds.forEach(id => {
+			void ensureViewerBlob(id);
+		});
+		return undefined;
+	}, [ensureViewerBlob, image, images, index]);
+
+	useLayoutEffect(() => {
+		setFullReady(false);
+		if (scrollRef.current) scrollRef.current.scrollTop = 0;
+	}, [image?.id]);
+
+	useEffect(() => {
+		const node = thumbRefs.current[String(activeId || '')];
+		node?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+	}, [activeId]);
 
 	useEffect(() => {
 		if (!image) return undefined;
@@ -2054,44 +2185,162 @@ function ChatImageViewer({ images, activeId, onClose, onChange }) {
 	}, [canNavigate, image, images, index, onChange, onClose]);
 
 	if (!image) return null;
+
 	const previous = () => onChange(images[(index - 1 + images.length) % images.length].id);
 	const next = () => onChange(images[(index + 1) % images.length].id);
+	const fullSrc = viewerFullSrc(image, blobUrls, brokenUrls);
+	const previewSrc = isInlineImageDataUrl(image.previewUrl) ? image.previewUrl : null;
+	const hasDistinctFull = Boolean(fullSrc && fullSrc !== previewSrc);
+	const reservedRatio =
+		image.width > 0 && image.height > 0
+			? `${Math.round(image.width)} / ${Math.round(image.height)}`
+			: '4 / 5';
+	const downloadHref = hasDistinctFull ? fullSrc : image.url || previewSrc || undefined;
 
 	return (
-		<div role="dialog" aria-modal="true" aria-label="Chat image viewer" className="wa-chat-image-viewer fixed inset-0 z-400 flex flex-col bg-[#0b141a]" onClick={onClose}>
+		<div
+			role="dialog"
+			aria-modal="true"
+			aria-label="Chat image viewer"
+			className="wa-chat-image-viewer fixed inset-0 z-400 flex flex-col bg-[#0b141a]"
+			onClick={onClose}
+		>
 			<div className="flex h-16 shrink-0 items-center justify-between px-4 text-white">
-				<span className="text-sm font-semibold">{index + 1} / {images.length}</span>
+				<span className="text-sm font-semibold">
+					{index + 1} / {images.length}
+				</span>
 				<div className="flex items-center gap-2">
-					<a href={image.url} download={image.fileName || true} aria-label="Download image" onClick={event => event.stopPropagation()} className="rounded-full p-2 hover:bg-white/10">
-						<Download size={21} />
-					</a>
-					<button type="button" onClick={onClose} aria-label="Close image viewer" className="rounded-full p-2 hover:bg-white/10">
+					{downloadHref ? (
+						<a
+							href={downloadHref}
+							download={image.fileName || true}
+							aria-label="Download image"
+							onClick={event => event.stopPropagation()}
+							className="rounded-full p-2 hover:bg-white/10"
+						>
+							<Download size={21} />
+						</a>
+					) : null}
+					<button
+						type="button"
+						onClick={onClose}
+						aria-label="Close image viewer"
+						className="rounded-full p-2 hover:bg-white/10"
+					>
 						<X size={24} />
 					</button>
 				</div>
 			</div>
-			<div className="relative flex min-h-0 flex-1 items-center justify-center px-3 pb-4">
-				<img src={image.url} alt={image.fileName || 'Chat image'} onClick={event => event.stopPropagation()} className="max-h-full max-w-full object-contain" />
-				{canNavigate && (
+			<div className="wa-chat-image-viewer__stage" onClick={event => event.stopPropagation()}>
+				<div ref={scrollRef} className="wa-chat-image-viewer__scroll">
+					<div
+						className="wa-chat-image-viewer__frame"
+						style={{ aspectRatio: reservedRatio, '--wa-media-ar': reservedRatio }}
+					>
+						{previewSrc ? (
+							<img
+								src={previewSrc}
+								alt=""
+								draggable={false}
+								className={`wa-chat-image-viewer__preview ${
+									hasDistinctFull && fullReady ? 'is-faded' : 'is-visible'
+								}`}
+							/>
+						) : null}
+						{hasDistinctFull ? (
+							<img
+								src={fullSrc}
+								alt={image.fileName || 'Chat image'}
+								draggable={false}
+								width={image.width > 0 ? Math.round(image.width) : undefined}
+								height={image.height > 0 ? Math.round(image.height) : undefined}
+								className={`wa-chat-image-viewer__image ${fullReady ? 'is-ready' : 'is-pending'}`}
+								onLoad={event => {
+									setFullReady(true);
+									rememberMediaDimensions(
+										image.id,
+										event.currentTarget.naturalWidth,
+										event.currentTarget.naturalHeight,
+									);
+								}}
+								onError={() => markBroken(fullSrc)}
+							/>
+						) : null}
+						{!previewSrc && !hasDistinctFull ? (
+							<div className="wa-chat-image-viewer__placeholder" aria-hidden="true">
+								<ImageIcon size={36} strokeWidth={1.6} />
+							</div>
+						) : null}
+						{!previewSrc && !hasDistinctFull ? (
+							<span className="wa-chat-image-viewer__spinner" aria-hidden="true">
+								<Loader2 size={26} strokeWidth={2.2} className="animate-spin" />
+							</span>
+						) : null}
+					</div>
+				</div>
+				{canNavigate ? (
 					<>
-						<button type="button" aria-label="Previous image" onClick={event => { event.stopPropagation(); previous(); }} className="absolute start-3 grid h-11 w-11 place-items-center rounded-full bg-black/45 text-white backdrop-blur hover:bg-black/65">
+						<button
+							type="button"
+							aria-label="Previous image"
+							onClick={event => {
+								event.stopPropagation();
+								previous();
+							}}
+							className="wa-chat-image-viewer__nav is-prev"
+						>
 							<ChevronLeft size={26} />
 						</button>
-						<button type="button" aria-label="Next image" onClick={event => { event.stopPropagation(); next(); }} className="absolute end-3 grid h-11 w-11 place-items-center rounded-full bg-black/45 text-white backdrop-blur hover:bg-black/65">
+						<button
+							type="button"
+							aria-label="Next image"
+							onClick={event => {
+								event.stopPropagation();
+								next();
+							}}
+							className="wa-chat-image-viewer__nav is-next"
+						>
 							<ChevronRight size={26} />
 						</button>
 					</>
-				)}
+				) : null}
 			</div>
-			{canNavigate && (
-				<div className="flex h-20 shrink-0 justify-center gap-2 overflow-x-auto px-4 pb-3" onClick={event => event.stopPropagation()}>
-					{images.map(item => (
-						<button key={item.id} type="button" onClick={() => onChange(item.id)} className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 ${String(item.id) === String(activeId) ? 'border-[#25D366]' : 'border-transparent opacity-60'}`}>
-							<img src={item.url} alt="" className="h-full w-full object-cover" />
-						</button>
-					))}
+			{canNavigate ? (
+				<div
+					className="wa-chat-image-viewer__thumbs"
+					onClick={event => event.stopPropagation()}
+				>
+					{images.map(item => {
+						const rawThumb = viewerThumbSrc(item, blobUrls);
+						const thumbSrc = rawThumb && !brokenUrls[rawThumb] ? rawThumb : null;
+						const selected = String(item.id) === String(activeId);
+						return (
+							<button
+								key={item.id}
+								type="button"
+								ref={node => {
+									thumbRefs.current[String(item.id)] = node;
+								}}
+								onClick={() => onChange(item.id)}
+								className={`wa-chat-image-viewer__thumb ${selected ? 'is-active' : ''}`}
+							>
+								{thumbSrc ? (
+									<img
+										src={thumbSrc}
+										alt=""
+										draggable={false}
+										onError={() => markBroken(thumbSrc)}
+									/>
+								) : (
+									<span className="wa-chat-image-viewer__thumb-ph" aria-hidden="true">
+										<ImageIcon size={18} strokeWidth={1.75} />
+									</span>
+								)}
+							</button>
+						);
+					})}
 				</div>
-			)}
+			) : null}
 		</div>
 	);
 }
@@ -3698,6 +3947,9 @@ function ChatVideoPlayer({
 	transcribeLabel,
 	durationHint = 0,
 	playLabel = 'Play',
+	aspectWidth = 0,
+	aspectHeight = 0,
+	cacheKey = '',
 }) {
 	const videoRef = useRef(null);
 	const paintedUrlRef = useRef('');
@@ -3731,11 +3983,20 @@ function ChatVideoPlayer({
 		};
 	}, []);
 
+	const knownWidth = Number(aspectWidth) || 0;
+	const knownHeight = Number(aspectHeight) || 0;
+	const hasReservedAspect = knownWidth > 0 && knownHeight > 0;
+	const reservedRatio = hasReservedAspect ? `${Math.round(knownWidth)} / ${Math.round(knownHeight)}` : '16 / 9';
+	const reservedPortrait = hasReservedAspect && knownHeight > knownWidth;
+
 	const applySize = node => {
 		const wrap = node?.parentElement;
 		const width = Number(node?.videoWidth) || 0;
 		const height = Number(node?.videoHeight) || 0;
-		if (!wrap || !width || !height) return;
+		if (cacheKey && width > 0 && height > 0) {
+			rememberMediaDimensions(cacheKey, width, height);
+		}
+		if (!wrap || !width || !height || hasReservedAspect) return;
 		wrap.classList.toggle('is-portrait', height > width);
 		wrap.classList.toggle('is-landscape', width >= height);
 		wrap.style.setProperty('--wa-video-ar', `${width} / ${height}`);
@@ -3772,7 +4033,10 @@ function ChatVideoPlayer({
 	return (
 		<div
 			ref={containerRef}
-			className={`wa-video-wrap ${playing ? 'is-playing' : 'is-paused'} ${selectMode ? 'pointer-events-none' : ''} ${className}`}
+			className={`wa-video-wrap ${playing ? 'is-playing' : 'is-paused'} ${
+				hasReservedAspect ? (reservedPortrait ? 'is-portrait' : 'is-landscape') : ''
+			} ${selectMode ? 'pointer-events-none' : ''} ${className}`}
+			style={{ aspectRatio: reservedRatio, '--wa-video-ar': reservedRatio }}
 		>
 			<video
 				ref={videoRef}
@@ -3900,6 +4164,12 @@ export function MediaAttachment({
 	const attachmentIdStr = String(attachment?.id || '');
 	const isPendingAttachment =
 		attachmentIdStr.startsWith('pending-att:') || attachmentIdStr.startsWith('pending:');
+	const mediaDims = mediaDimensionsForAttachment(attachment, messageRaw);
+	const mediaBoxStyle = reservedMediaBoxStyle(
+		mediaDims,
+		type === 'video' ? '16 / 9' : '4 / 5',
+	);
+	const reservedPortrait = isPortraitMediaDims(mediaDims);
 
 	const loadAttachmentBlob = useCallback(async () => {
 		// Outgoing optimistic media already has the file as a blob/data URL.
@@ -4168,6 +4438,7 @@ export function MediaAttachment({
 		onImageReady?.(attachment.id, {
 			id: attachment.id,
 			url,
+			previewUrl: previewDataUrl || null,
 			fileName: attachment.fileName,
 		});
 	}, [attachment.id, attachment.fileName, onImageReady, type, url]);
@@ -4362,6 +4633,9 @@ export function MediaAttachment({
 					alt={attachment.fileName || 'image'}
 					cover={isGallery}
 					selectMode={selectMode}
+					mediaWidth={mediaDims?.width}
+					mediaHeight={mediaDims?.height}
+					cacheKey={attachment?.id}
 					retryLabel={labels.tapToRetry || labels.retry || 'Tap to retry'}
 					loadingLabel={labels.loadingMedia || 'Loading media…'}
 					onOpen={() => {
@@ -4393,18 +4667,19 @@ export function MediaAttachment({
 				ref={containerRef}
 				className={
 					type === 'video'
-						? `wa-media-card wa-media-card--video mb-2 ${className}${videoPoster ? ' has-poster' : ''}`
+						? `wa-media-card wa-media-card--video mb-2 ${reservedPortrait ? 'is-portrait' : ''} ${className}${videoPoster ? ' has-poster' : ''}`
 						: `wa-media-card mb-2 ${className}`
 				}
-				style={
-					videoPoster
+				style={{
+					...mediaBoxStyle,
+					...(videoPoster
 						? {
 								backgroundImage: `url(${videoPoster})`,
 								backgroundSize: 'cover',
 								backgroundPosition: 'center',
 							}
-						: undefined
-				}
+						: {}),
+				}}
 			>
 				<span className="wa-media-card__icon" aria-hidden="true">
 					{type === 'video' ? <Video size={28} strokeWidth={1.75} /> : <ImageIcon size={28} strokeWidth={1.75} />}
@@ -4428,7 +4703,8 @@ export function MediaAttachment({
 					ref={containerRef}
 					type="button"
 					onClick={retry}
-					className={`wa-media-card ${type === 'video' ? 'wa-media-card--video' : ''} mb-2 text-start ${className}`}
+					className={`wa-media-card ${type === 'video' ? `wa-media-card--video${reservedPortrait ? ' is-portrait' : ''}` : ''} mb-2 text-start ${className}`}
+					style={type === 'video' || type === 'image' ? mediaBoxStyle : undefined}
 				>
 					<span className="wa-media-card__icon" aria-hidden="true">
 						{type === 'video' ? (
@@ -4482,6 +4758,10 @@ export function MediaAttachment({
 				previewUrl={previewDataUrl}
 				alt={attachment.fileName || 'image'}
 				onOpen={() => onOpenImage?.(attachment.id)}
+				cover={false}
+				mediaWidth={mediaDims?.width}
+				mediaHeight={mediaDims?.height}
+				cacheKey={attachment?.id}
 				className={`${className} ${type === 'sticker' ? 'wa-sticker-asset' : 'wa-photo-asset'}`}
 			/>
 		);
@@ -4499,16 +4779,17 @@ export function MediaAttachment({
 				return (
 					<div
 						ref={containerRef}
-						className={`wa-media-card wa-media-card--video mb-2 ${className}${videoPoster ? ' has-poster' : ''}`}
-						style={
-							videoPoster
+						className={`wa-media-card wa-media-card--video mb-2 ${reservedPortrait ? 'is-portrait' : ''} ${className}${videoPoster ? ' has-poster' : ''}`}
+						style={{
+							...mediaBoxStyle,
+							...(videoPoster
 								? {
 										backgroundImage: `url(${videoPoster})`,
 										backgroundSize: 'cover',
 										backgroundPosition: 'center',
 									}
-								: undefined
-						}
+								: {}),
+						}}
 					>
 						<span className="wa-media-card__icon" aria-hidden="true">
 							<Video size={28} strokeWidth={1.75} />
@@ -4529,16 +4810,17 @@ export function MediaAttachment({
 						setFailed(false);
 						setRetryNonce(value => value + 1);
 					}}
-					className={`wa-media-card wa-media-card--video mb-2 text-start ${className}${videoPoster ? ' has-poster' : ''}`}
-					style={
-						videoPoster
+					className={`wa-media-card wa-media-card--video mb-2 text-start ${reservedPortrait ? 'is-portrait' : ''} ${className}${videoPoster ? ' has-poster' : ''}`}
+					style={{
+						...mediaBoxStyle,
+						...(videoPoster
 							? {
 									backgroundImage: `url(${videoPoster})`,
 									backgroundSize: 'cover',
 									backgroundPosition: 'center',
 								}
-							: undefined
-					}
+							: {}),
+					}}
 				>
 					<span className="wa-media-card__icon" aria-hidden="true">
 						<Video size={28} strokeWidth={1.75} />
@@ -4562,6 +4844,9 @@ export function MediaAttachment({
 				selectMode={selectMode}
 				containerRef={containerRef}
 				durationHint={messageDurationSeconds}
+				aspectWidth={mediaDims?.width}
+				aspectHeight={mediaDims?.height}
+				cacheKey={attachment?.id}
 				playLabel={labels.playVideo || labels.play || 'Play'}
 				transcribeLabel={labels.transcribe || 'Transcribe'}
 				onTranscribe={typeof onTranscribe === 'function' ? onTranscribe : null}
@@ -7015,6 +7300,7 @@ function WhatsAppWorkspaceContent() {
 	reportPeriodDaysRef.current = reportPeriodDays;
 	const [staff, setStaff] = useState([]);
 	const [assignableStaff, setAssignableStaff] = useState([]);
+	const [assignableStaffLoading, setAssignableStaffLoading] = useState(false);
 	const [privacySettings, setPrivacySettings] = useState({
 		hideStatusViewReceipts: true,
 		readReceiptMode: 'on_reply',
@@ -7059,6 +7345,7 @@ function WhatsAppWorkspaceContent() {
 	const hasMoreMessagesRef = useRef(true);
 	hasMoreMessagesRef.current = hasMoreMessages;
 	const [loadingMessages, setLoadingMessages] = useState(false);
+	const [threadSettled, setThreadSettled] = useState(true);
 	const [showJumpToBottom, setShowJumpToBottom] = useState(false);
 	const [messagesSyncHint, setMessagesSyncHint] = useState('');
 	const [recordingVoice, setRecordingVoice] = useState(false);
@@ -7351,9 +7638,6 @@ function WhatsAppWorkspaceContent() {
 			scroll();
 			requestAnimationFrame(scroll);
 		});
-		window.setTimeout(scroll, 80);
-		window.setTimeout(scroll, 220);
-		window.setTimeout(scroll, 600);
 	}, []);
 
 	const jumpMessagesToBottom = useCallback(() => {
@@ -7508,12 +7792,7 @@ function WhatsAppWorkspaceContent() {
 		[effectiveConversations],
 	);
 	const chatImages = useMemo(
-		() => effectiveMessages.flatMap(message =>
-			(message.attachments || [])
-				.filter(attachment => ['image', 'sticker'].includes(String(attachment.type || '').toLowerCase()))
-				.map(attachment => registeredChatImages[attachment.id])
-				.filter(Boolean),
-		),
+		() => buildChatViewerImages(effectiveMessages, registeredChatImages),
 		[effectiveMessages, registeredChatImages],
 	);
 	const messageRows = useMemo(
@@ -7554,7 +7833,9 @@ function WhatsAppWorkspaceContent() {
 					delete next[id];
 					return next;
 				}
-				if (current[id]?.url === image.url) return current;
+				if (current[id]?.url === image.url && current[id]?.previewUrl === image.previewUrl) {
+					return current;
+				}
 				return { ...current, [id]: image };
 			});
 			// Tall media expands after the first bottom-pin — re-stick while opening.
@@ -9397,6 +9678,8 @@ function WhatsAppWorkspaceContent() {
 			lastAutoScrolledMessageRef.current = null;
 			pinThreadToBottomRef.current = true;
 			setShowJumpToBottom(false);
+			setThreadSettled(false);
+			suppressOlderLoadUntilRef.current = Date.now() + 2000;
 		}
 		messagesRequestId.current += 1;
 		olderRequestId.current += 1;
@@ -9413,6 +9696,7 @@ function WhatsAppWorkspaceContent() {
 			clearConversationMessages(null);
 			setLoadingMessages(false);
 			setHasMoreMessages(true);
+			setThreadSettled(true);
 			setNotes(current => (current.length ? [] : current));
 			setNoteDraft(current => (current ? '' : current));
 			setShowNotes(current => (current ? false : current));
@@ -9463,6 +9747,18 @@ function WhatsAppWorkspaceContent() {
 		setAiImagePanelOpen(false);
 		setDocumentPreview(null);
 	}, [conversationId]);
+
+	useEffect(() => {
+		if (threadSettled || !conversationId) return undefined;
+		const timer = window.setTimeout(() => {
+			const box = messageBoxRef.current;
+			if (box && pinThreadToBottomRef.current) {
+				box.scrollTop = box.scrollHeight;
+			}
+			setThreadSettled(true);
+		}, 450);
+		return () => window.clearTimeout(timer);
+	}, [threadSettled, conversationId]);
 
 	const loadMessageSchedules = useCallback(async targetConversationId => {
 		if (!targetConversationId || isDemoId(targetConversationId)) {
@@ -9534,34 +9830,52 @@ function WhatsAppWorkspaceContent() {
 	loadMessageSchedulesRef.current = loadMessageSchedules;
 
 	useLayoutEffect(() => {
-		const latest = effectiveMessages[effectiveMessages.length - 1];
-		if (!latest?.id) return;
 		const box = messageBoxRef.current;
-		if (!box || loadingOlder) return;
-		// Never fight "load older" scroll restoration.
-		if (olderScrollRestoreRef.current) return;
+		if (!conversationId) {
+			if (!threadSettled) setThreadSettled(true);
+			return;
+		}
+		if (loadingOlder || olderScrollRestoreRef.current) return;
+		const latest = effectiveMessages[effectiveMessages.length - 1];
+		if (!latest?.id) {
+			if (!loadingMessages && !threadSettled) setThreadSettled(true);
+			return;
+		}
 		const pinOpen = pinThreadToBottomRef.current;
-		const isNewLatest = latest.id !== lastAutoScrolledMessageRef.current;
-		const nearBottom =
-			box.scrollHeight - box.clientHeight - box.scrollTop < 180;
-		if (pinOpen) {
+		if (virtualizeMessages && pinOpen && messageRows.length > 0) {
+			messageVirtualRef.current?.scrollToIndex?.(messageRows.length - 1, {
+				align: 'end',
+			});
+		}
+		if (box && pinOpen) {
 			lastAutoScrolledMessageRef.current = latest.id;
 			box.scrollTop = box.scrollHeight;
 			setShowJumpToBottom(false);
+			if (!threadSettled && effectiveMessages.length > 0 && !loadingMessages) {
+				setThreadSettled(true);
+			}
 			return;
 		}
-		if (!isNewLatest || !(nearBottom || latest.direction === 'outbound')) return;
+		if (!box) return;
+		const isNewLatest = latest.id !== lastAutoScrolledMessageRef.current;
+		const nearBottom =
+			box.scrollHeight - box.clientHeight - box.scrollTop < 180;
+		if (!isNewLatest || !(nearBottom || latest.direction === 'outbound')) {
+			return;
+		}
 		lastAutoScrolledMessageRef.current = latest.id;
 		box.scrollTop = box.scrollHeight;
 		setShowJumpToBottom(false);
-	}, [effectiveMessages, loadingOlder, conversationId, loadingMessages]);
-
-	useLayoutEffect(() => {
-		if (!virtualizeMessages || !pinThreadToBottomRef.current) return;
-		if (loadingOlder || olderScrollRestoreRef.current) return;
-		const box = messageBoxRef.current;
-		if (box) box.scrollTop = box.scrollHeight;
-	}, [messageVirtual.totalSize, virtualizeMessages, conversationId, loadingOlder]);
+	}, [
+		effectiveMessages,
+		loadingOlder,
+		conversationId,
+		loadingMessages,
+		virtualizeMessages,
+		messageRows.length,
+		messageVirtual.totalSize,
+		threadSettled,
+	]);
 
 	// Restore scroll after older messages are prepended (before paint).
 	useLayoutEffect(() => {
@@ -9572,40 +9886,49 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		const box = messageBoxRef.current;
-		if (!box) {
-			olderScrollRestoreRef.current = null;
-			return;
+		if (!box) return;
+
+		if (!pending.startedAt) {
+			pending.startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
 		}
 
-		const applyRestore = () => {
-			const current = messageBoxRef.current;
-			if (!current) return;
-			if (pending.anchorId) {
-				const safeId =
-					typeof CSS !== 'undefined' && CSS.escape
-						? CSS.escape(pending.anchorId)
-						: pending.anchorId.replace(/"/g, '\\"');
-				const anchor =
-					current.querySelector(`[data-wa-message-id="${safeId}"]`) ||
-					current.querySelector(`[data-wa-message-ids~="${safeId}"]`);
-				if (anchor) {
-					const nextTop = anchor.getBoundingClientRect().top;
-					current.scrollTop += nextTop - pending.anchorOffset;
-					return;
-				}
-			}
-			const delta = current.scrollHeight - pending.previousHeight;
-			current.scrollTop = pending.previousScrollTop + delta;
+		const restoreOptions = {
+			totalSize: messageVirtual.totalSize,
+			virtualized: virtualizeMessages,
 		};
+		applyThreadScrollAnchor(box, pending, restoreOptions);
 
-		applyRestore();
-		requestAnimationFrame(() => {
-			applyRestore();
+		const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+		const elapsed = now - pending.startedAt;
+		if (elapsed >= 360) {
 			olderScrollRestoreRef.current = null;
-			// Block immediate re-trigger while still sitting near the top.
 			suppressOlderLoadUntilRef.current = Date.now() + 900;
+			return undefined;
+		}
+
+		const raf = requestAnimationFrame(() => {
+			if (olderScrollRestoreRef.current !== pending) return;
+			const current = messageBoxRef.current;
+			if (current) applyThreadScrollAnchor(current, pending, restoreOptions);
 		});
-	}, [loadingOlder, effectiveMessages.length, conversationId]);
+		const timer = window.setTimeout(() => {
+			if (olderScrollRestoreRef.current === pending) {
+				olderScrollRestoreRef.current = null;
+				suppressOlderLoadUntilRef.current = Date.now() + 900;
+			}
+		}, Math.max(16, 360 - elapsed));
+
+		return () => {
+			cancelAnimationFrame(raf);
+			window.clearTimeout(timer);
+		};
+	}, [
+		loadingOlder,
+		effectiveMessages.length,
+		conversationId,
+		messageVirtual.totalSize,
+		virtualizeMessages,
+	]);
 
 	// Keep the thread glued to the bottom while media/layout grows on first open.
 	useEffect(() => {
@@ -12892,18 +13215,16 @@ function WhatsAppWorkspaceContent() {
 				providerHydratedAt: previousCache?.providerHydratedAt || 0,
 			});
 
-			// Capture scroll anchor immediately before React prepends rows.
+			// Capture the visible row immediately before React prepends older history.
 			const box = messageBoxRef.current;
-			if (preserveScroll && box) {
-				const anchorEl =
-					box.querySelector('.wa-message-line [data-wa-message-id]') ||
-					box.querySelector('[data-wa-message-id]');
+			if (preserveScroll && added > 0 && box) {
+				const virt = messageVirtualRef.current;
 				olderScrollRestoreRef.current = {
 					conversationId: targetConversationId,
-					previousHeight: box.scrollHeight,
-					previousScrollTop: box.scrollTop,
-					anchorId: anchorEl?.getAttribute('data-wa-message-id') || '',
-					anchorOffset: anchorEl ? anchorEl.getBoundingClientRect().top : 0,
+					...captureThreadScrollAnchor(box, {
+						virtualItems: virt?.items || [],
+						totalSize: virt?.totalSize || 0,
+					}),
 				};
 			} else {
 				olderScrollRestoreRef.current = null;
@@ -13354,7 +13675,10 @@ function WhatsAppWorkspaceContent() {
 			{
 				id: 'media',
 				label: mediaSelectMode ? t.cancelSelectMedia : t.selectMedia,
+				description: locale === 'ar' ? 'صور وفيديو ومستندات والمزيد' : 'Photos, videos, docs and more',
 				icon: mediaSelectMode ? X : Images,
+				iconTone: 'green',
+				opensSubmenu: !mediaSelectMode,
 				active: mediaSelectMode,
 				disabled: demoBlocked,
 				onClick: toggleMediaSelectMode,
@@ -13362,7 +13686,10 @@ function WhatsAppWorkspaceContent() {
 			{
 				id: 'messages',
 				label: ticketSelectMode ? t.cancelSelectMessages : t.selectMessages,
+				description: locale === 'ar' ? 'اختيار عدة رسائل' : 'Choose multiple messages',
 				icon: ticketSelectMode ? X : ListChecks,
+				iconTone: 'lime',
+				opensSubmenu: !ticketSelectMode,
 				active: ticketSelectMode,
 				disabled: demoBlocked,
 				onClick: toggleTicketSelectMode,
@@ -13371,7 +13698,9 @@ function WhatsAppWorkspaceContent() {
 				id: 'pin',
 				dividerBefore: true,
 				label: selectedConversation.isPinned ? t.unpinChat : t.pinChat,
+				description: locale === 'ar' ? 'أبقِ هذه المحادثة في الأعلى' : 'Keep this chat at the top',
 				icon: Pin,
+				iconTone: 'blue',
 				iconFill: selectedConversation.isPinned,
 				active: selectedConversation.isPinned,
 				disabled:
@@ -13382,7 +13711,9 @@ function WhatsAppWorkspaceContent() {
 			{
 				id: 'mute',
 				label: selectedConversation.isMuted ? t.unmuteChat : t.muteChat,
+				description: locale === 'ar' ? 'كتم تنبيهات هذه المحادثة' : 'Silence alerts for this chat',
 				icon: selectedConversation.isMuted ? Bell : BellOff,
+				iconTone: 'orange',
 				active: selectedConversation.isMuted,
 				disabled:
 					demoBlocked ||
@@ -13393,7 +13724,9 @@ function WhatsAppWorkspaceContent() {
 				id: 'search',
 				dividerBefore: true,
 				label: locale === 'ar' ? 'بحث في الشات' : 'Search in chat',
+				description: locale === 'ar' ? 'ابحث عن رسائل داخل هذه المحادثة' : 'Find messages in this chat',
 				icon: Search,
+				iconTone: 'purple',
 				active: inChatSearchOpen,
 				disabled: demoBlocked,
 				onClick: () => {
@@ -13406,16 +13739,26 @@ function WhatsAppWorkspaceContent() {
 			},
 			{
 				id: 'unread',
-				label: locale === 'ar' ? 'تعليمليم كغير مقروء' : 'Mark as unread',
+				label: locale === 'ar' ? 'تعليم كغير مقروء' : 'Mark as unread',
+				description: locale === 'ar' ? 'تعليم الكل كغير مقروء' : 'Mark all as unread',
 				icon: EyeOff,
+				iconTone: 'navy',
 				disabled: demoBlocked || demoChat,
 				onClick: () => void markConversationUnread(),
 			},
 			{
 				id: 'favorite',
 				dividerBefore: true,
-				label: t.favoriteChats,
+				label: selectedConversation.isFavorite
+					? locale === 'ar'
+						? 'إزالة من المفضلة'
+						: 'Remove from favorites'
+					: locale === 'ar'
+						? 'إضافة إلى المفضلة'
+						: 'Add to favorites',
+				description: locale === 'ar' ? 'أضف المحادثة إلى المفضلة' : 'Add chat to favorites',
 				icon: Star,
+				iconTone: 'pink',
 				iconFill: selectedConversation.isFavorite,
 				active: selectedConversation.isFavorite,
 				disabled:
@@ -13426,8 +13769,9 @@ function WhatsAppWorkspaceContent() {
 			{
 				id: 'board',
 				label: t.addToBoard,
-				description: t.addToBoardHint,
+				description: locale === 'ar' ? 'إنشاء مهام من الرسائل' : 'Create tasks from messages',
 				icon: LayoutGrid,
+				iconTone: 'green',
 				disabled: demoBlocked || demoChat || !conversationId || !accountId,
 				onClick: () => {
 					if (selectedMessageIds.size > 0) {
@@ -13450,24 +13794,32 @@ function WhatsAppWorkspaceContent() {
 			{
 				id: 'groups',
 				label: t.messageGroups,
-				description: t.messageGroupsHint,
-				icon: FolderKanban,
+				description: locale === 'ar' ? 'عرض المجموعات في هذه المحادثة' : 'View groups in this chat',
+				icon: Users,
+				iconTone: 'purple',
+				opensSubmenu: true,
 				active: messageGroupsOpen || Boolean(activeMessageGroup),
 				disabled: demoBlocked || demoChat || !conversationId,
 				onClick: toggleMessageGroupsPanel,
 			},
 			{
 				id: 'schedule',
+				dividerBefore: true,
 				label: t.scheduleMessage,
 				description: t.scheduleMessageHint,
 				icon: CalendarClock,
+				iconTone: 'blue',
+				opensSubmenu: true,
 				disabled: demoBlocked || demoChat || !conversationId || !accountId,
 				onClick: event => openSchedulePopover(event),
 			},
 			{
 				id: 'group-select',
 				label: groupSelectMode ? t.cancelGroupSelect : t.selectForGroup,
+				description: locale === 'ar' ? 'اختيار رسائل لمجموعة' : 'Choose messages for a group',
 				icon: ListChecks,
+				iconTone: 'lime',
+				opensSubmenu: !groupSelectMode,
 				active: groupSelectMode,
 				disabled: demoBlocked || demoChat || !conversationId,
 				onClick: toggleGroupSelectMode,
@@ -13477,6 +13829,7 @@ function WhatsAppWorkspaceContent() {
 				label: secondaryConversationId ? t.closeSplitChat : t.openSplitChat,
 				description: t.splitChat,
 				icon: Columns2,
+				iconTone: 'navy',
 				active: Boolean(secondaryConversationId || splitPickMode),
 				disabled: demoBlocked,
 				onClick: toggleSplitChat,
@@ -13825,9 +14178,11 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		if (!accountId || (!canManageWhatsApp && !canAssignWhatsApp)) {
 			setAssignableStaff([]);
+			setAssignableStaffLoading(false);
 			return undefined;
 		}
 		let cancelled = false;
+		setAssignableStaffLoading(true);
 		const ownerId = selectedAccount?.ownerAdminId || null;
 		const mapStaffFallback = list =>
 			(Array.isArray(list) ? list : []).map(item => {
@@ -13870,6 +14225,8 @@ function WhatsAppWorkspaceContent() {
 			}
 			// API empty/failed — still show eligible staff so permissions can be granted.
 			setAssignableStaff(mapStaffFallback(staffList));
+		}).finally(() => {
+			if (!cancelled) setAssignableStaffLoading(false);
 		});
 		return () => {
 			cancelled = true;
@@ -15375,31 +15732,6 @@ function WhatsAppWorkspaceContent() {
 											</button>
 										</div>
 									</div>
-									{syncingInbox && (
-										<div className="mt-3 pb-4">
-											<div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-500">
-												<Loader2 size={12} className="animate-spin" />
-												{t.syncProgress}
-											</div>
-											<div className="wa-sync-progress-track relative mt-7 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800">
-												<div
-													className="absolute inset-y-0 start-0 h-full rounded-full transition-all duration-500"
-													style={{
-														width: `${Math.max(1, Math.min(100, Number(syncProgress) || 1))}%`,
-														background: GRADIENT,
-													}}
-												/>
-												<span
-													className="wa-sync-progress-badge"
-													style={{
-														insetInlineStart: `${Math.max(6, Math.min(94, Number(syncProgress) || 1))}%`,
-													}}
-												>
-													{Math.max(1, Math.min(100, Number(syncProgress) || 1))}%
-												</span>
-											</div>
-										</div>
-									)}
 								</div>
 								<div
 									className="wa-conversation-list min-h-0 flex-1 overflow-y-auto p-2 nice-scroll"
@@ -16119,6 +16451,7 @@ function WhatsAppWorkspaceContent() {
 														canManageAccess={Boolean(canManageWhatsApp || isAdmin)}
 														locale={locale}
 														unassignLabel={t.unassign}
+														loading={assignableStaffLoading}
 														className="wa-chat-assign-select w-auto max-w-[16rem]"
 														buttonClassName="wa-chat-assign-trigger"
 													/>
@@ -16322,6 +16655,7 @@ function WhatsAppWorkspaceContent() {
 												setShowJumpToBottom(false);
 											}
 											if (
+												threadSettled &&
 												!loadingMessages &&
 												!loadingOlderRef.current &&
 												!olderScrollRestoreRef.current &&
@@ -16367,7 +16701,7 @@ function WhatsAppWorkspaceContent() {
 												</p>
 											</div>
 										) : (
-											<div className="wa-message-thread">
+											<div className={`wa-message-thread${threadSettled ? '' : ' is-settling'}`}>
 												{loadingOlder && (
 													<div className="sticky top-0 z-10 mx-auto mb-2 w-fit rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm dark:bg-slate-800/95">
 														<span className="inline-flex items-center gap-1.5">
@@ -16775,6 +17109,7 @@ function WhatsAppWorkspaceContent() {
 																		? ''
 																		: '[content-visibility:auto] [contain-intrinsic-size:80px]'
 															}`}
+															data-wa-row-key={row.key || messageRowKey(row, rowIndex)}
 															data-wa-message-id={message.id || undefined}
 															data-wa-message-ids={rowMessageIds || undefined}
 															data-wa-provider-id={message.providerMessageId || undefined}

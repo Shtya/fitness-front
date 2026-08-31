@@ -40,6 +40,18 @@ import {
 	conversationMatchesInboxFilter,
 	localMediaFileUrl,
 	isPlayableVideoUrl,
+	mediaDimensionsFromRaw,
+	mediaDimensionsForAttachment,
+	rememberMediaDimensions,
+	resetMediaDimensionsCache,
+	reservedMediaBoxStyle,
+	isPortraitMediaDims,
+	applyThreadScrollAnchor,
+	captureThreadScrollAnchor,
+	buildChatViewerImages,
+	viewerNeighborIds,
+	viewerThumbSrc,
+	viewerFullSrc,
 } from './whatsapp-utils.js';
 
 test('mergeMessages deduplicates provider messages and sorts chronologically', () => {
@@ -992,4 +1004,169 @@ test('localMediaFileUrl ignores JPEG thumbnails so they are not used as video/im
 	);
 	assert.equal(isPlayableVideoUrl('data:image/jpeg;base64,abc'), false);
 	assert.equal(isPlayableVideoUrl('blob:http://localhost/video'), true);
+});
+
+test('mediaDimensionsFromRaw reads Baileys image/video width and height', () => {
+	assert.deepEqual(
+		mediaDimensionsFromRaw({
+			message: { imageMessage: { width: 1200, height: 1600 } },
+		}),
+		{ width: 1200, height: 1600 },
+	);
+	assert.deepEqual(
+		mediaDimensionsFromRaw({
+			message: {
+				viewOnceMessage: {
+					message: { videoMessage: { width: 1920, height: 1080 } },
+				},
+			},
+		}),
+		{ width: 1920, height: 1080 },
+	);
+	assert.equal(mediaDimensionsFromRaw({ message: { imageMessage: {} } }), null);
+	assert.equal(isPortraitMediaDims({ width: 720, height: 1280 }), true);
+	assert.equal(isPortraitMediaDims({ width: 1280, height: 720 }), false);
+	assert.deepEqual(reservedMediaBoxStyle({ width: 800, height: 600 }), {
+		aspectRatio: '800 / 600',
+		'--wa-media-ar': '800 / 600',
+		'--wa-video-ar': '800 / 600',
+	});
+	assert.equal(reservedMediaBoxStyle(null, '16 / 9').aspectRatio, '16 / 9');
+});
+
+test('mediaDimensionsForAttachment prefers cache then proto, and does not overwrite', () => {
+	resetMediaDimensionsCache();
+	assert.deepEqual(
+		mediaDimensionsForAttachment(
+			{ id: 'att-proto' },
+			{ message: { imageMessage: { width: 640, height: 480 } } },
+		),
+		{ width: 640, height: 480 },
+	);
+	assert.deepEqual(
+		rememberMediaDimensions('att-proto', 10, 10),
+		{ width: 640, height: 480 },
+	);
+	assert.deepEqual(mediaDimensionsForAttachment({ id: 'att-proto' }, null), {
+		width: 640,
+		height: 480,
+	});
+	assert.deepEqual(rememberMediaDimensions('att-measured', 1080, 1920), {
+		width: 1080,
+		height: 1920,
+	});
+	assert.deepEqual(mediaDimensionsForAttachment({ id: 'att-measured' }, null), {
+		width: 1080,
+		height: 1920,
+	});
+	resetMediaDimensionsCache();
+});
+
+test('applyThreadScrollAnchor keeps the same viewport after older rows are prepended', () => {
+	const box = {
+		scrollTop: 120,
+		scrollHeight: 5000,
+		getBoundingClientRect: () => ({ top: 0 }),
+		querySelector: () => null,
+	};
+	const pending = {
+		previousHeight: 4000,
+		previousTotalSize: 4000,
+		lastAppliedTotalSize: 4000,
+		previousScrollTop: 120,
+		offsetFromViewport: 36,
+		rowKey: 'row-keep',
+	};
+	applyThreadScrollAnchor(box, pending, { totalSize: 5000, virtualized: true });
+	assert.equal(box.scrollTop, 1120);
+	assert.equal(pending.lastAppliedTotalSize, 5000);
+	applyThreadScrollAnchor(box, pending, { totalSize: 5180, virtualized: true });
+	assert.equal(box.scrollTop, 1300);
+});
+
+test('applyThreadScrollAnchor corrects drift against the anchored row', () => {
+	const row = { getBoundingClientRect: () => ({ top: 88 }) };
+	const box = {
+		scrollTop: 200,
+		scrollHeight: 4200,
+		getBoundingClientRect: () => ({ top: 0 }),
+		querySelector: selector => (String(selector).includes('row-keep') ? row : null),
+	};
+	const pending = {
+		rowKey: 'row-keep',
+		offsetFromViewport: 40,
+		lastAppliedTotalSize: 3600,
+	};
+	applyThreadScrollAnchor(box, pending, { totalSize: 4200, virtualized: true });
+	assert.equal(box.scrollTop, 248);
+});
+
+test('captureThreadScrollAnchor records the first visible row key', () => {
+	const row = {
+		getAttribute: name => (name === 'data-wa-row-key' ? 'msg-7' : name === 'data-wa-message-id' ? '7' : ''),
+		getBoundingClientRect: () => ({ top: 24, bottom: 120 }),
+	};
+	const box = {
+		scrollTop: 80,
+		scrollHeight: 3000,
+		clientHeight: 640,
+		getBoundingClientRect: () => ({ top: 0 }),
+		querySelectorAll: () => [row],
+	};
+	const captured = captureThreadScrollAnchor(box, {
+		totalSize: 2800,
+		virtualItems: [{ index: 4, start: 60, end: 140, key: 'msg-7' }],
+	});
+	assert.equal(captured.rowKey, 'msg-7');
+	assert.equal(captured.messageId, '7');
+	assert.equal(captured.previousScrollTop, 80);
+	assert.equal(captured.offsetFromViewport, 24);
+	assert.equal(captured.previousTotalSize, 2800);
+});
+
+test('buildChatViewerImages keeps every image with a stable preview even without a blob url', () => {
+	resetMediaDimensionsCache();
+	const items = buildChatViewerImages(
+		[
+			{
+				attachments: [
+					{
+						id: 'img-1',
+						type: 'image',
+						fileName: 'sheet.png',
+						previewDataUrl: 'data:image/jpeg;base64,AAA',
+					},
+					{ id: 'skip-doc', type: 'document' },
+				],
+				raw: { message: { imageMessage: { width: 800, height: 1200 } } },
+			},
+			{
+				attachments: [{ id: 'img-2', type: 'image' }],
+				raw: {
+					message: { imageMessage: { jpegThumbnail: 'QkFTRTY0', width: 640, height: 480 } },
+				},
+			},
+		],
+		{ 'img-1': { url: 'blob:http://localhost/full' } },
+	);
+	assert.equal(items.length, 2);
+	assert.equal(items[0].url, 'blob:http://localhost/full');
+	assert.equal(items[0].previewUrl, 'data:image/jpeg;base64,AAA');
+	assert.equal(items[0].width, 800);
+	assert.equal(items[1].previewUrl, 'data:image/jpeg;base64,QkFTRTY0');
+	assert.equal(viewerThumbSrc(items[0], {}), 'data:image/jpeg;base64,AAA');
+	assert.equal(viewerThumbSrc(items[1], {}), 'data:image/jpeg;base64,QkFTRTY0');
+	assert.equal(viewerFullSrc(items[0], {}), 'blob:http://localhost/full');
+	assert.deepEqual(viewerNeighborIds(items, 'img-1', 1), ['img-1', 'img-2']);
+	resetMediaDimensionsCache();
+});
+
+test('viewerFullSrc falls back to the thumbnail when a blob url is marked broken', () => {
+	const image = {
+		id: 'img-9',
+		url: 'blob:http://localhost/dead',
+		previewUrl: 'data:image/jpeg;base64,THUMB',
+	};
+	assert.equal(viewerFullSrc(image, {}, { 'blob:http://localhost/dead': true }), 'data:image/jpeg;base64,THUMB');
+	assert.equal(viewerThumbSrc(image, {}), 'data:image/jpeg;base64,THUMB');
 });

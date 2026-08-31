@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 function clamp(value, min, max) {
 	return Math.min(max, Math.max(min, value));
@@ -17,6 +18,17 @@ function scrollNodeByDelta(node, deltaY) {
 	node.scrollTop = next;
 	return true;
 }
+
+const ICON_TONES = {
+	green: 'bg-emerald-100 text-emerald-700',
+	lime: 'bg-lime-100 text-lime-700',
+	blue: 'bg-sky-100 text-sky-700',
+	navy: 'bg-indigo-100 text-indigo-700',
+	orange: 'bg-orange-100 text-orange-600',
+	purple: 'bg-violet-100 text-violet-700',
+	pink: 'bg-rose-100 text-rose-600',
+	slate: 'bg-slate-100 text-slate-600',
+};
 
 export function WaActionMenu({
 	actions = [],
@@ -55,12 +67,12 @@ export function WaActionMenu({
 			const margin = 8;
 			const viewportH = window.innerHeight || 720;
 			const viewportW = window.innerWidth || 1280;
-			const width = Math.min(Math.max(compact ? 248 : 268, rect.width), viewportW - margin * 2);
+			const width = Math.min(Math.max(compact ? 300 : 320, rect.width), viewportW - margin * 2);
 			const spaceBelow = Math.max(0, viewportH - rect.bottom - margin - gap);
 			const spaceAbove = Math.max(0, rect.top - margin - gap);
-			const openUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-			const available = Math.max(160, openUp ? spaceAbove : spaceBelow);
-			const maxHeight = Math.min(420, available);
+			const openUp = spaceBelow < 240 && spaceAbove > spaceBelow;
+			const available = Math.max(180, openUp ? spaceAbove : spaceBelow);
+			const maxHeight = Math.min(520, available);
 			const top = openUp ? Math.max(margin, rect.top - gap - maxHeight) : rect.bottom + gap;
 			let left = rect.right - width;
 			left = Math.max(margin, Math.min(left, viewportW - width - margin));
@@ -115,7 +127,7 @@ export function WaActionMenu({
 	}, [open, compact, visibleActions.length]);
 
 	return (
-		<div ref={rootRef} className={`relative ${className}`}>
+		<div ref={rootRef} className={cn('relative', className)}>
 			<button
 				ref={buttonRef}
 				type="button"
@@ -126,12 +138,19 @@ export function WaActionMenu({
 				onClick={() => setOpen(current => !current)}
 				className={
 					iconOnly
-						? `wa-action-menu-trigger wa-toolbar-icon-btn outline-none disabled:opacity-50 ${
-								activeCount ? 'is-active' : ''
-							} ${buttonClassName}`
-						: `wa-action-menu-trigger wa-btn-3d inline-flex items-center gap-1.5 border border-[var(--wa-border,#e9edef)] bg-white font-semibold text-[var(--wa-text,#111b21)] outline-none transition-colors hover:bg-[var(--wa-hover,#f5f6f6)] disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 ${
-								compact ? 'h-9 rounded-[10px] px-2.5 text-[12px]' : 'h-10 rounded-[10px] px-3 text-xs'
-							} ${activeCount ? 'border-[var(--wa-accent,#00a884)]/30 bg-[var(--wa-accent,#00a884)]/10 text-[var(--wa-accent,#00a884)] dark:bg-slate-800' : ''} ${buttonClassName}`
+						? cn(
+								'wa-action-menu-trigger wa-toolbar-icon-btn outline-none disabled:opacity-50',
+								activeCount ? 'is-active' : '',
+								buttonClassName,
+							)
+						: cn(
+								'wa-action-menu-trigger wa-btn-3d inline-flex items-center gap-1.5 border border-[var(--wa-border,#e9edef)] bg-white font-semibold text-[var(--wa-text,#111b21)] outline-none transition-colors hover:bg-[var(--wa-hover,#f5f6f6)] disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
+								compact ? 'h-9 rounded-[10px] px-2.5 text-[12px]' : 'h-10 rounded-[10px] px-3 text-xs',
+								activeCount
+									? 'border-[var(--wa-accent,#00a884)]/30 bg-[var(--wa-accent,#00a884)]/10 text-[var(--wa-accent,#00a884)] dark:bg-slate-800'
+									: '',
+								buttonClassName,
+							)
 				}
 			>
 				<MoreHorizontal size={iconOnly ? 20 : 16} strokeWidth={iconOnly ? 1.75 : 2} className="shrink-0" aria-hidden="true" />
@@ -143,7 +162,7 @@ export function WaActionMenu({
 								{activeCount}
 							</span>
 						) : null}
-						<ChevronDown size={14} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+						<ChevronDown size={14} className={cn('shrink-0 transition-transform', open ? 'rotate-180' : '')} />
 					</>
 				)}
 				{iconOnly && activeCount ? (
@@ -165,7 +184,7 @@ export function WaActionMenu({
 							role="menu"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className="wa-action-menu-panel fixed z-[1600] overflow-y-auto overscroll-contain"
+							className="fixed z-[1600] overflow-y-auto overscroll-contain rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.14)] dark:border-slate-700 dark:bg-[#233138]"
 							style={{
 								top: position.top,
 								left: position.left,
@@ -176,28 +195,39 @@ export function WaActionMenu({
 							{visibleActions.map((action, index) => {
 								const Icon = action.icon;
 								const isDisabled = Boolean(action.disabled);
-								const tone = action.tone || (action.active ? 'active' : 'default');
+								const tone = action.iconTone || 'slate';
 								const showDivider = Boolean(action.dividerBefore) && index > 0;
+								const opensSubmenu = Boolean(action.opensSubmenu) && !action.active;
 								return (
 									<div key={action.id}>
-										{showDivider ? <div className="wa-action-menu-divider" aria-hidden="true" /> : null}
+										{showDivider ? (
+											<div
+												className="mx-2 my-1.5 h-px bg-slate-100 dark:bg-white/10"
+												aria-hidden="true"
+											/>
+										) : null}
 										<button
 											type="button"
 											role="menuitem"
 											disabled={isDisabled}
 											onPointerDown={event => runAction(event, action)}
 											onClick={event => runAction(event, action)}
-											className={`wa-action-menu-item ${
+											className={cn(
+												'flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-start transition-colors',
 												isDisabled
-													? 'is-disabled'
-													: tone === 'danger'
-														? 'is-danger'
-														: tone === 'active'
-															? 'is-active'
-															: ''
-											}`}
+													? 'cursor-not-allowed opacity-40'
+													: 'hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none dark:hover:bg-white/5',
+												action.active && !isDisabled ? 'bg-slate-50 dark:bg-white/5' : '',
+												action.tone === 'danger' && !isDisabled ? 'text-rose-600' : '',
+											)}
 										>
-											<span className="wa-action-menu-item__icon" aria-hidden="true">
+											<span
+												className={cn(
+													'grid h-9 w-9 shrink-0 place-items-center rounded-lg',
+													ICON_TONES[tone] || ICON_TONES.slate,
+												)}
+												aria-hidden="true"
+											>
 												{Icon ? (
 													<Icon
 														size={18}
@@ -207,18 +237,26 @@ export function WaActionMenu({
 													/>
 												) : null}
 											</span>
-											<span className="wa-action-menu-item__body">
-												<span className="wa-action-menu-item__label">{action.label}</span>
+											<span className="min-w-0 flex-1">
+												<span className="block truncate text-[14px] font-bold leading-5 text-[#111b21] dark:text-[#e9edef]">
+													{action.label}
+												</span>
 												{action.description ? (
-													<span className="wa-action-menu-item__desc">{action.description}</span>
+													<span className="mt-0.5 block truncate text-[12px] leading-4 text-slate-500">
+														{action.description}
+													</span>
 												) : null}
 											</span>
-											{action.active && !isDisabled ? (
-												<span className="wa-action-menu-item__check" aria-hidden="true">
-													<Check size={15} strokeWidth={2.4} />
-												</span>
+											{action.active && !opensSubmenu && !isDisabled ? (
+												<Check size={16} strokeWidth={2.4} className="shrink-0 text-emerald-600" />
+											) : opensSubmenu ? (
+												<ChevronRight
+													size={16}
+													strokeWidth={2}
+													className="shrink-0 text-slate-300 rtl:rotate-180"
+												/>
 											) : (
-												<span className="wa-action-menu-item__check is-empty" aria-hidden="true" />
+												<span className="h-4 w-4 shrink-0" aria-hidden="true" />
 											)}
 										</button>
 									</div>

@@ -1700,3 +1700,255 @@ export function clipboardImageFiles(event) {
 	return files;
 }
 
+function cssEscapeAttr(value) {
+	const str = String(value || '');
+	if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+		return CSS.escape(str);
+	}
+	return str.replace(/[^a-zA-Z0-9_-]/g, ch => `\\${ch}`);
+}
+
+const mediaDimCache = new Map();
+
+function positiveSize(value) {
+	const n = Number(value);
+	return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function mediaNodeFromRaw(raw) {
+	const content = baileysContentFromRaw(raw);
+	const node = content && typeof content === 'object' ? content : raw;
+	if (!node || typeof node !== 'object') return null;
+	return (
+		node.imageMessage ||
+		node.videoMessage ||
+		node.stickerMessage ||
+		node.documentMessage ||
+		null
+	);
+}
+
+export function resetMediaDimensionsCache() {
+	mediaDimCache.clear();
+}
+
+export function rememberMediaDimensions(key, width, height) {
+	const id = String(key || '');
+	const w = positiveSize(width);
+	const h = positiveSize(height);
+	if (!id || !w || !h) return null;
+	const existing = mediaDimCache.get(id);
+	if (existing?.width > 0 && existing?.height > 0) return existing;
+	const next = { width: w, height: h };
+	mediaDimCache.set(id, next);
+	return next;
+}
+
+export function mediaDimensionsFromRaw(raw) {
+	const node = mediaNodeFromRaw(raw);
+	const width = positiveSize(node?.width ?? raw?.width);
+	const height = positiveSize(node?.height ?? raw?.height);
+	if (!width || !height) return null;
+	return { width, height };
+}
+
+export function mediaDimensionsForAttachment(attachment, raw = null) {
+	const id = String(attachment?.id || '');
+	if (id && mediaDimCache.has(id)) return mediaDimCache.get(id);
+	const fromAttachment = {
+		width: positiveSize(attachment?.width ?? attachment?.mediaWidth),
+		height: positiveSize(attachment?.height ?? attachment?.mediaHeight),
+	};
+	if (fromAttachment.width && fromAttachment.height) {
+		if (id) mediaDimCache.set(id, fromAttachment);
+		return fromAttachment;
+	}
+	const fromRaw = mediaDimensionsFromRaw(raw);
+	if (fromRaw) {
+		if (id) mediaDimCache.set(id, fromRaw);
+		return fromRaw;
+	}
+	return null;
+}
+
+export function reservedMediaBoxStyle(dims, fallbackRatio = '4 / 5') {
+	const width = positiveSize(dims?.width);
+	const height = positiveSize(dims?.height);
+	const ratio = width && height ? `${Math.round(width)} / ${Math.round(height)}` : fallbackRatio;
+	return {
+		aspectRatio: ratio,
+		'--wa-media-ar': ratio,
+		'--wa-video-ar': ratio,
+	};
+}
+
+export function isPortraitMediaDims(dims) {
+	return positiveSize(dims?.height) > positiveSize(dims?.width) && positiveSize(dims?.width) > 0;
+}
+
+export function findThreadAnchorRow(box, pending) {
+	if (!box || !pending || typeof box.querySelector !== 'function') return null;
+	if (pending.rowKey) {
+		const key = cssEscapeAttr(pending.rowKey);
+		const byKey = box.querySelector(`[data-wa-row-key="${key}"]`);
+		if (byKey) return byKey;
+	}
+	if (pending.messageId) {
+		const id = cssEscapeAttr(pending.messageId);
+		return (
+			box.querySelector(`[data-wa-message-id="${id}"]`) ||
+			box.querySelector(`[data-wa-message-ids~="${id}"]`)
+		);
+	}
+	return null;
+}
+
+export function captureThreadScrollAnchor(box, options = {}) {
+	if (!box) return null;
+	const virtualItems = Array.isArray(options.virtualItems) ? options.virtualItems : [];
+	const totalSize = positiveSize(options.totalSize) || Number(box.scrollHeight) || 0;
+	const scrollTop = Number(box.scrollTop) || 0;
+	const clientHeight = Number(box.clientHeight) || 0;
+	const boxRect =
+		typeof box.getBoundingClientRect === 'function'
+			? box.getBoundingClientRect()
+			: { top: 0 };
+	const viewportTop = Number(boxRect?.top) || 0;
+
+	let row = null;
+	let bestScore = Number.POSITIVE_INFINITY;
+	const nodes =
+		typeof box.querySelectorAll === 'function' ? box.querySelectorAll('[data-wa-row-key]') : [];
+	for (const node of nodes) {
+		if (typeof node.getBoundingClientRect !== 'function') continue;
+		const rect = node.getBoundingClientRect();
+		if (rect.bottom <= viewportTop + 1) continue;
+		if (clientHeight > 0 && rect.top >= viewportTop + clientHeight) continue;
+		const dist = rect.top - viewportTop;
+		const score = dist >= -1 ? dist : Number.POSITIVE_INFINITY;
+		if (score < bestScore) {
+			bestScore = score;
+			row = node;
+		}
+	}
+
+	let virtualIndex = -1;
+	let virtualKey = '';
+	if (virtualItems.length) {
+		const visible = virtualItems.find(
+			item => Number(item?.end) > scrollTop + 1 && Number(item?.start) < scrollTop + clientHeight,
+		);
+		if (visible) {
+			virtualIndex = Number(visible.index);
+			virtualKey = String(visible.key ?? '');
+		}
+	}
+
+	const rowKey = row?.getAttribute?.('data-wa-row-key') || virtualKey || '';
+	const messageId = row?.getAttribute?.('data-wa-message-id') || '';
+	const offsetFromViewport = row?.getBoundingClientRect
+		? row.getBoundingClientRect().top - viewportTop
+		: 0;
+
+	return {
+		previousHeight: Number(box.scrollHeight) || totalSize,
+		previousTotalSize: totalSize,
+		previousScrollTop: scrollTop,
+		lastAppliedTotalSize: totalSize,
+		rowKey,
+		messageId,
+		virtualIndex,
+		offsetFromViewport,
+	};
+}
+
+export function applyThreadScrollAnchor(box, pending, options = {}) {
+	if (!box || !pending) return false;
+	const totalSize = positiveSize(options.totalSize);
+	const virtualized = Boolean(options.virtualized);
+	const row = findThreadAnchorRow(box, pending);
+	if (row && typeof row.getBoundingClientRect === 'function') {
+		const viewportTop =
+			typeof box.getBoundingClientRect === 'function'
+				? box.getBoundingClientRect().top
+				: 0;
+		const drift =
+			row.getBoundingClientRect().top - viewportTop - Number(pending.offsetFromViewport || 0);
+		if (Math.abs(drift) > 0.5) {
+			box.scrollTop += drift;
+		}
+		pending.lastAppliedTotalSize = virtualized && totalSize ? totalSize : Number(box.scrollHeight) || totalSize;
+		return true;
+	}
+
+	const nextSize = virtualized && totalSize ? totalSize : Number(box.scrollHeight) || totalSize;
+	const prevSize = Number(
+		pending.lastAppliedTotalSize ?? pending.previousTotalSize ?? pending.previousHeight ?? 0,
+	);
+	const delta = nextSize - prevSize;
+	if (delta) box.scrollTop += delta;
+	pending.lastAppliedTotalSize = nextSize;
+	return true;
+}
+
+export function buildChatViewerImages(messages = [], registered = {}) {
+	const items = [];
+	const seen = new Set();
+	for (const message of messages) {
+		const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+		for (const attachment of attachments) {
+			const type = String(attachment?.type || '').toLowerCase();
+			if (type !== 'image' && type !== 'sticker') continue;
+			const id = String(attachment?.id || '');
+			if (!id || seen.has(id)) continue;
+			seen.add(id);
+			const registeredItem = registered[id] || registered[attachment.id] || null;
+			const preview =
+				(isInlineImageDataUrl(attachment?.previewDataUrl) && attachment.previewDataUrl) ||
+				(isInlineImageDataUrl(registeredItem?.previewUrl) && registeredItem.previewUrl) ||
+				mediaPreviewFromRaw(message?.raw) ||
+				null;
+			const fullUrl = registeredItem?.url || localMediaFileUrl(attachment) || null;
+			const dims = mediaDimensionsForAttachment(attachment, message?.raw);
+			items.push({
+				id,
+				fileName: attachment?.fileName || registeredItem?.fileName || '',
+				url: fullUrl,
+				previewUrl: preview,
+				width: Number(dims?.width) || 0,
+				height: Number(dims?.height) || 0,
+			});
+		}
+	}
+	return items;
+}
+
+export function viewerNeighborIds(images = [], activeId, radius = 2) {
+	const index = images.findIndex(image => String(image?.id) === String(activeId));
+	if (index < 0) return [];
+	const ids = [];
+	const span = Math.max(0, Number(radius) || 0);
+	for (let i = index - span; i <= index + span; i += 1) {
+		const id = images[i]?.id;
+		if (id) ids.push(String(id));
+	}
+	return ids;
+}
+
+export function viewerThumbSrc(image, blobUrls = {}) {
+	if (!image) return null;
+	if (isInlineImageDataUrl(image.previewUrl)) return image.previewUrl;
+	if (blobUrls[image.id]) return blobUrls[image.id];
+	if (isInlineImageDataUrl(image.url)) return image.url;
+	return null;
+}
+
+export function viewerFullSrc(image, blobUrls = {}, brokenUrls = {}) {
+	if (!image) return null;
+	const id = String(image.id || '');
+	if (blobUrls[id] && !brokenUrls[blobUrls[id]]) return blobUrls[id];
+	if (image.url && !brokenUrls[image.url] && isLocalMediaUrl(image.url)) return image.url;
+	if (isInlineImageDataUrl(image.previewUrl)) return image.previewUrl;
+	return null;
+}
+
