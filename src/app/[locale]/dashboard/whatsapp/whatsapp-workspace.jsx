@@ -10944,6 +10944,8 @@ function WhatsAppWorkspaceContent() {
 		window.addEventListener('wa-retry-outbound', onRetry);
 		return () => window.removeEventListener('wa-retry-outbound', onRetry);
 	}, [retryOutboundMessage]);
+
+	const sendFile = async (file, forcedType, options = {}) => {
 		if (!file || !accountId) return false;
 		const targetConversationId = options.conversationId || conversationId;
 		if (!targetConversationId) return false;
