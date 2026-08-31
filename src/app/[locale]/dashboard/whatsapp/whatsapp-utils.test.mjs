@@ -48,6 +48,7 @@ import {
 	isPortraitMediaDims,
 	applyThreadScrollAnchor,
 	captureThreadScrollAnchor,
+	shouldStickThreadToBottom,
 	buildChatViewerImages,
 	viewerNeighborIds,
 	viewerThumbSrc,
@@ -1082,6 +1083,48 @@ test('applyThreadScrollAnchor keeps the same viewport after older rows are prepe
 	assert.equal(pending.lastAppliedTotalSize, 5000);
 	applyThreadScrollAnchor(box, pending, { totalSize: 5180, virtualized: true });
 	assert.equal(box.scrollTop, 1300);
+});
+
+test('applyThreadScrollAnchor restores from previousScrollTop when the scroller was reset', () => {
+	const box = {
+		scrollTop: 0,
+		scrollHeight: 5000,
+		getBoundingClientRect: () => ({ top: 0 }),
+		querySelector: () => null,
+	};
+	const pending = {
+		previousHeight: 4000,
+		previousTotalSize: 4000,
+		previousScrollTop: 120,
+		offsetFromViewport: 36,
+		rowKey: 'row-keep',
+	};
+	applyThreadScrollAnchor(box, pending, { totalSize: 5000, virtualized: true });
+	assert.equal(box.scrollTop, 1120);
+});
+
+test('shouldStickThreadToBottom only pins on first open or new messages near the bottom', () => {
+	assert.equal(
+		shouldStickThreadToBottom({ pinToBottom: true, loadingOlder: true }),
+		false,
+	);
+	assert.equal(
+		shouldStickThreadToBottom({ pinToBottom: true, restoringOlder: true }),
+		false,
+	);
+	assert.equal(shouldStickThreadToBottom({ pinToBottom: true }), true);
+	assert.equal(
+		shouldStickThreadToBottom({ isNewLatest: true, nearBottom: true }),
+		true,
+	);
+	assert.equal(
+		shouldStickThreadToBottom({ isNewLatest: true, nearBottom: false }),
+		false,
+	);
+	assert.equal(
+		shouldStickThreadToBottom({ isNewLatest: false, nearBottom: true }),
+		false,
+	);
 });
 
 test('applyThreadScrollAnchor corrects drift against the anchored row', () => {

@@ -53,7 +53,8 @@ export function buildVoiceNoteFile(chunks, recorder, durationSec) {
 	const mime = recordedType.split(';')[0] || recordedType;
 	const seconds = Math.max(1, Number(durationSec) || 1);
 	const extension = mime.includes('ogg') ? 'ogg' : 'webm';
-	return new File([blob], `voice-${seconds}s.${extension}`, { type: mime });
+	const fileType = mime.includes('ogg') ? 'audio/ogg;codecs=opus' : mime;
+	return new File([blob], `voice-${seconds}s.${extension}`, { type: fileType });
 }
 
 export function mediaUploadFailedMessage(error, locale = 'en') {

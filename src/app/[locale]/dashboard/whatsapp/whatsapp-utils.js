@@ -1862,10 +1862,23 @@ export function captureThreadScrollAnchor(box, options = {}) {
 	};
 }
 
+export function shouldStickThreadToBottom({
+	pinToBottom = false,
+	loadingOlder = false,
+	restoringOlder = false,
+	isNewLatest = false,
+	nearBottom = false,
+} = {}) {
+	if (loadingOlder || restoringOlder) return false;
+	if (pinToBottom) return true;
+	return Boolean(isNewLatest && nearBottom);
+}
+
 export function applyThreadScrollAnchor(box, pending, options = {}) {
 	if (!box || !pending) return false;
 	const totalSize = positiveSize(options.totalSize);
 	const virtualized = Boolean(options.virtualized);
+	const nextSize = virtualized && totalSize ? totalSize : Number(box.scrollHeight) || totalSize;
 	const row = findThreadAnchorRow(box, pending);
 	if (row && typeof row.getBoundingClientRect === 'function') {
 		const viewportTop =
@@ -1877,17 +1890,23 @@ export function applyThreadScrollAnchor(box, pending, options = {}) {
 		if (Math.abs(drift) > 0.5) {
 			box.scrollTop += drift;
 		}
-		pending.lastAppliedTotalSize = virtualized && totalSize ? totalSize : Number(box.scrollHeight) || totalSize;
+		pending.lastAppliedTotalSize = nextSize;
+		pending.usedRow = true;
 		return true;
 	}
 
-	const nextSize = virtualized && totalSize ? totalSize : Number(box.scrollHeight) || totalSize;
-	const prevSize = Number(
-		pending.lastAppliedTotalSize ?? pending.previousTotalSize ?? pending.previousHeight ?? 0,
-	);
-	const delta = nextSize - prevSize;
-	if (delta) box.scrollTop += delta;
+	const originalSize = Number(pending.previousTotalSize ?? pending.previousHeight ?? 0);
+	const baseTop = Number(pending.previousScrollTop);
+	if (Number.isFinite(baseTop) && originalSize > 0 && Number.isFinite(nextSize)) {
+		// Absolute restore so a remount / scrollTop reset cannot jump to 0 or the bottom.
+		box.scrollTop = baseTop + (nextSize - originalSize);
+	} else {
+		const prevSize = Number(pending.lastAppliedTotalSize ?? originalSize);
+		const delta = nextSize - prevSize;
+		if (delta) box.scrollTop += delta;
+	}
 	pending.lastAppliedTotalSize = nextSize;
+	pending.usedRow = false;
 	return true;
 }
 

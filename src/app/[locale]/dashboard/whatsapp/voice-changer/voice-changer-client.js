@@ -126,6 +126,9 @@ export async function transformVoiceNote(file, options = {}) {
 		.split(';')[0]
 		.trim();
 	const match = String(response.headers['content-disposition'] || '').match(/filename="?([^"]+)"?/i);
-	const name = match?.[1] || file.name || 'voice.mp3';
+	const durationMatch = String(file.name || '').match(/voice-(\d+)s/i);
+	const durationTag = durationMatch ? `voice-${durationMatch[1]}s` : 'voice';
+	const ext = mime.includes('mpeg') || mime.includes('mp3') ? 'mp3' : mime.includes('ogg') ? 'ogg' : 'webm';
+	const name = match?.[1] || `${durationTag}.${ext}`;
 	return new File([blob], name, { type: mime });
 }

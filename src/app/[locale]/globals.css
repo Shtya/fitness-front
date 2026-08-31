@@ -2413,6 +2413,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 
 .wa-message-bubble.wa-message-media.wa-message-video,
 .wa-message-bubble.wa-message-media:has(> .wa-video-wrap),
+.wa-message-bubble.wa-message-media:has(> .wa-video-slot),
 .wa-message-bubble.wa-message-media:has(.wa-media-card--video) {
   flex-shrink: 1 !important;
   width: min(330px, 100%) !important;
@@ -2421,6 +2422,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-bubble.wa-message-media:has(.wa-video-wrap.is-portrait),
+.wa-message-bubble.wa-message-media:has(.wa-video-slot.is-portrait),
 .wa-message-bubble.wa-message-media:has(.wa-media-card--video.is-portrait) {
   width: min(260px, 100%) !important;
   max-width: min(260px, 100%) !important;
@@ -3290,7 +3292,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   box-sizing: border-box;
 }
 
-.wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-file):not(.wa-message-location)
+.wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-file):not(.wa-message-location):not(.wa-message-contact)
   .wa-message-copy
   .wa-message-meta,
 .wa-message-bubble.wa-message-has-caption .wa-message-copy .wa-message-meta {
@@ -3341,6 +3343,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 .wa-message-bubble.wa-message-media .wa-media-gallery-single,
 .wa-message-bubble.wa-message-media .wa-photo-tile-single,
 .wa-message-bubble.wa-message-media > .wa-video-wrap,
+.wa-message-bubble.wa-message-media > .wa-video-slot,
 .wa-message-bubble.wa-message-media .wa-media-card--video {
   width: 100% !important;
   max-width: 100% !important;
@@ -3396,6 +3399,14 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   max-width: 100% !important;
   border-radius: 12px !important;
   overflow: hidden;
+}
+
+.wa-message-bubble.wa-message-media .wa-video-slot {
+	position: relative !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	border-radius: 12px !important;
+	overflow: hidden;
 }
 
 .wa-message-bubble.wa-message-media .wa-video-wrap {
@@ -3559,6 +3570,17 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   overflow: hidden;
 }
 
+.wa-message-bubble.wa-message-contact {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 264px;
+  max-width: min(85%, 264px) !important;
+  padding: 3px 3px 2px !important;
+  overflow: hidden;
+}
+
+.wa-message-bubble.wa-message-contact .wa-message-meta,
 .wa-message-bubble.wa-message-location .wa-message-meta {
   float: none;
   clear: both;
@@ -3600,6 +3622,152 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   overflow: hidden;
   border-radius: 6px;
   background: rgba(11, 20, 26, 0.04);
+}
+
+.wa-contact-card {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(11, 20, 26, 0.04);
+}
+
+.wa-contact-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px 8px;
+  min-width: 0;
+}
+
+.wa-contact-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(0, 168, 132, 0.14);
+  color: #00a884;
+}
+
+.wa-contact-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.wa-contact-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--wa-primary, #111b21);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wa-contact-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--wa-secondary, #667781);
+}
+
+.wa-contact-phones {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wa-contact-phone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--wa-secondary, #667781);
+}
+
+.wa-contact-phone + .wa-contact-phone {
+  margin-top: 2px;
+}
+
+.wa-contact-phone-label {
+  font-size: 11px;
+  text-transform: capitalize;
+  opacity: 0.85;
+}
+
+.wa-contact-phone-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.wa-contact-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid rgba(11, 20, 26, 0.08);
+}
+
+.wa-contact-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  color: #008069;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.wa-contact-action + .wa-contact-action {
+  border-inline-start: 1px solid rgba(11, 20, 26, 0.08);
+}
+
+.wa-contact-action:hover:not(:disabled) {
+  background: rgba(11, 20, 26, 0.04);
+}
+
+.wa-contact-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dark .wa-contact-card,
+.dark .wa-location-card {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dark .wa-contact-name {
+  color: #e9edef;
+}
+
+.dark .wa-contact-sub,
+.dark .wa-contact-phone {
+  color: #8696a0;
+}
+
+.dark .wa-contact-actions,
+.dark .wa-contact-action + .wa-contact-action {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .wa-contact-action {
+  color: #53bdeb;
+}
+
+.dark .wa-contact-action:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .wa-location-map {
@@ -4385,6 +4553,24 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	object-fit: unset;
 }
 
+.wa-video-slot {
+	position: relative;
+	display: block;
+	width: 100%;
+	max-width: 100%;
+}
+
+.wa-video-slot.is-portrait {
+	max-height: min(58vh, 440px);
+}
+
+.wa-video-viewer-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 399;
+	background: #0b141a;
+}
+
 .wa-video-wrap {
 	position: relative;
 	display: block;
@@ -4515,6 +4701,196 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 .wa-video-wrap.is-playing .wa-video-duration {
 	display: none;
+}
+
+.wa-video-expand {
+	position: absolute;
+	z-index: 6;
+	inset-inline-end: 8px;
+	bottom: 8px;
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 0;
+	border-radius: 999px;
+	background: rgba(11, 20, 26, 0.72);
+	color: #ffffff;
+	cursor: pointer;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.wa-video-expand:hover,
+.wa-video-expand:focus-visible {
+	background: rgba(17, 27, 33, 0.9);
+}
+
+.wa-video-wrap.is-expanded {
+	position: fixed;
+	inset: 0;
+	z-index: 400;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 100vw !important;
+	height: 100dvh !important;
+	max-width: none !important;
+	max-height: none !important;
+	min-height: 0 !important;
+	aspect-ratio: unset !important;
+	border-radius: 0;
+	background: transparent;
+	padding:
+		max(8px, env(safe-area-inset-top))
+		max(8px, env(safe-area-inset-right))
+		max(8px, env(safe-area-inset-bottom))
+		max(8px, env(safe-area-inset-left));
+}
+
+.wa-video-wrap.is-expanded .wa-video-asset {
+	position: relative;
+	inset: unset;
+	flex: 0 1 auto;
+	width: auto;
+	height: auto;
+	max-width: min(100vw, 100%);
+	max-height: calc(100dvh - 72px);
+	min-height: 0;
+	object-fit: contain;
+}
+
+.wa-video-wrap.is-expanded .wa-video-scrim {
+	display: none;
+}
+
+.wa-video-wrap.is-expanded .wa-video-play {
+	position: absolute;
+	inset: 0;
+}
+
+.wa-video-wrap.is-expanded .wa-video-expand {
+	inset-inline-end: max(12px, env(safe-area-inset-right));
+	bottom: max(16px, env(safe-area-inset-bottom));
+	width: 40px;
+	height: 40px;
+	background: rgba(17, 27, 33, 0.82);
+}
+
+.wa-video-viewer-chrome {
+	position: absolute;
+	top: 0;
+	inset-inline: 0;
+	z-index: 7;
+	display: flex;
+	justify-content: flex-end;
+	padding:
+		max(8px, env(safe-area-inset-top))
+		max(8px, env(safe-area-inset-right))
+		0
+		max(8px, env(safe-area-inset-left));
+	pointer-events: none;
+}
+
+.wa-video-viewer-close {
+	pointer-events: auto;
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border: 0;
+	border-radius: 999px;
+	background: rgba(17, 27, 33, 0.72);
+	color: #ffffff;
+	cursor: pointer;
+}
+
+.wa-video-viewer-close:hover,
+.wa-video-viewer-close:focus-visible {
+	background: rgba(17, 27, 33, 0.92);
+}
+
+.wa-stories-rail-wrap {
+	position: relative;
+	padding-inline: 4px;
+}
+
+.wa-stories-rail {
+	display: flex;
+	gap: 18px;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 8px 4px 16px;
+	scroll-snap-type: x proximity;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+}
+
+.wa-stories-card {
+	flex: 0 0 148px;
+	width: 148px;
+	text-align: center;
+	scroll-snap-align: start;
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+	padding: 0;
+}
+
+.wa-stories-card__name {
+	margin-top: 10px;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 13px;
+	line-height: 1.25;
+}
+
+.wa-stories-card__name.is-unseen {
+	font-weight: 800;
+	color: #111b21;
+}
+
+.wa-stories-card__name.is-viewed {
+	font-weight: 600;
+	color: #64748b;
+}
+
+.wa-stories-card__time {
+	margin-top: 2px;
+	font-size: 11px;
+	color: #94a3b8;
+}
+
+.wa-stories-rail-nav {
+	position: absolute;
+	top: 50%;
+	z-index: 2;
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border: 0;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.95);
+	color: #111b21;
+	box-shadow: 0 2px 12px rgba(15, 23, 42, 0.12);
+	transform: translateY(-50%);
+	cursor: pointer;
+}
+
+.wa-stories-rail-nav.is-prev {
+	inset-inline-start: 0;
+}
+
+.wa-stories-rail-nav.is-next {
+	inset-inline-end: 0;
+}
+
+.dark .wa-stories-rail-nav {
+	background: rgba(15, 23, 42, 0.92);
+	color: #e2e8f0;
 }
 
 .wa-message-transcript {
@@ -7149,6 +7525,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-message-bubble.wa-message-media.wa-message-video,
 	.wa-web-desktop .wa-message-bubble.wa-message-media:has(> .wa-video-wrap),
+.wa-message-bubble.wa-message-media:has(> .wa-video-slot),
 	.wa-web-desktop .wa-message-bubble.wa-message-media:has(.wa-media-card--video) {
 		width: min(330px, 100%) !important;
 		max-width: min(330px, 100%) !important;
@@ -7966,6 +8343,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 .wa-message-bubble.wa-message-media.wa-message-video,
 .wa-message-bubble.wa-message-media:has(> .wa-video-wrap),
+.wa-message-bubble.wa-message-media:has(> .wa-video-slot),
 .wa-message-bubble.wa-message-media:has(.wa-media-card--video) {
   flex-shrink: 1 !important;
   width: min(330px, 100%) !important;
@@ -8084,7 +8462,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		unicode-bidi: plaintext !important;
 	}
 
-	.wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-file):not(.wa-message-location)
+	.wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-file):not(.wa-message-location):not(.wa-message-contact)
 		.wa-message-copy
 		.wa-message-meta,
 	.wa-message-bubble.wa-message-has-caption .wa-message-copy .wa-message-meta {
@@ -8141,6 +8519,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-message-media.wa-message-video,
 	.wa-message-media:has(> .wa-video-wrap),
+	.wa-message-media:has(> .wa-video-slot),
 	.wa-message-media:has(.wa-media-card--video) {
 		width: min(330px, 100%) !important;
 		max-width: min(330px, 100%) !important;
