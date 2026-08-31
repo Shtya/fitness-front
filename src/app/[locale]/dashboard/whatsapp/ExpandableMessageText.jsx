@@ -57,21 +57,25 @@ export default function ExpandableMessageText({
 	const visible = needsCollapse ? sliceWindow(full, charLimit, lineLimit) : full;
 	const remaining = full.length - visible.length;
 
+	const isMarkdown = String(className || '').includes('wa-message-text--md');
 	const mergedStyle = {
+		display: isMarkdown ? 'block' : 'inline',
 		whiteSpace: 'pre-wrap',
 		overflowWrap: 'break-word',
 		wordWrap: 'break-word',
 		wordBreak: 'normal',
 		hyphens: 'none',
-		maxWidth: '100%',
+		maxWidth: isMarkdown ? '100%' : undefined,
 		unicodeBidi: style?.unicodeBidi || 'plaintext',
 		...style,
-		width: 'auto',
-		minWidth: 'auto',
+		width: isMarkdown ? 'auto' : undefined,
+		minWidth: isMarkdown ? 'auto' : undefined,
 	};
 
+	const Root = isMarkdown ? 'div' : 'span';
+
 	return (
-		<div dir={dir} lang={lang} style={mergedStyle} className={className}>
+		<Root dir={dir} lang={lang} style={mergedStyle} className={className}>
 			{renderText ? renderText(visible) : visible}
 			{remaining > 0 ? (
 				<>
@@ -90,6 +94,6 @@ export default function ExpandableMessageText({
 					</button>
 				</>
 			) : null}
-		</div>
+		</Root>
 	);
 }

@@ -704,7 +704,7 @@ export default function WhatsAppSplitPane({
 								className={`wa-message-line flex min-w-0 max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}
 							>
 								<div
-									className={`wa-message-bubble ${mine ? 'wa-message-mine' : 'wa-message-other'} ${
+									className={`wa-message-bubble shrink-0 ${mine ? 'wa-message-mine' : 'wa-message-other'} ${
 										attachments.length ? 'wa-message-media' : ''
 									} ${mine ? 'bg-[#d9fdd3] text-slate-900' : 'bg-white text-slate-900'}`}
 								>
@@ -722,7 +722,8 @@ export default function WhatsAppSplitPane({
 											dir={presentation.dir}
 											lang={presentation.lang}
 										>
-											<ExpandableMessageText
+											<div className="wa-message-copy-body">
+												<ExpandableMessageText
 												text={message.text}
 												dir={presentation.dir}
 												lang={presentation.lang}
@@ -758,6 +759,7 @@ export default function WhatsAppSplitPane({
 													/>
 												) : null}
 											</div>
+										</div>
 										</div>
 									) : (
 										<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>

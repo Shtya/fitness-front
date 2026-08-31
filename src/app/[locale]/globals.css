@@ -2313,7 +2313,9 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 .wa-message-bubble {
   box-sizing: border-box;
   flex: 0 0 auto;
+  flex-shrink: 0;
   width: fit-content;
+  min-width: min-content;
   max-width: 65%;
   padding: 6px 9px 8px 9px;
   border-radius: 7.5px;
@@ -3109,9 +3111,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-text {
-  display: block;
-  width: auto;
-  min-width: auto;
+  display: inline;
   max-width: 100%;
   overflow-wrap: break-word;
   word-break: normal;
@@ -3147,11 +3147,23 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   display: block;
   width: fit-content;
   max-width: 100%;
-  min-width: auto;
+  min-width: min-content;
   vertical-align: top;
 }
 
+.wa-message-copy-body {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  min-width: min-content;
+}
+
 .wa-message-copy .wa-message-text {
+  display: inline;
+  max-width: 100%;
+}
+
+.wa-message-copy .wa-message-text.wa-message-text--md {
   display: block;
   width: auto;
   max-width: 100%;
@@ -3229,12 +3241,18 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   float: inline-end;
   clear: none;
   position: relative;
-  top: 0;
+  top: 4px;
   height: auto;
-  margin-block: 4px 0;
-  margin-inline: 10px 0;
+  margin-block: 0;
+  margin-inline: 8px 0;
   align-items: center;
   line-height: 15px;
+}
+
+.wa-message-copy-body::after {
+  content: '';
+  display: table;
+  clear: both;
 }
 
 .wa-message-bubble.wa-message-has-caption {
@@ -3920,6 +3938,29 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		linear-gradient(180deg, rgba(232, 236, 239, 0.92) 0%, rgba(207, 214, 219, 0.96) 100%);
 }
 
+.wa-photo-open.is-loading.wa-photo-has-preview {
+	background: transparent;
+	min-height: 0 !important;
+	aspect-ratio: auto !important;
+}
+
+.wa-photo-open.is-loading.wa-photo-has-preview.wa-photo-frame,
+.wa-photo-asset-single.wa-photo-open.is-loading.wa-photo-has-preview {
+	min-height: 0 !important;
+	aspect-ratio: auto !important;
+}
+
+.wa-photo-state.is-loading-state.is-loading-preview {
+	background: rgba(11, 20, 26, 0.22);
+	gap: 0;
+	padding: 0;
+	pointer-events: none;
+}
+
+.wa-photo-state.is-loading-state.is-loading-preview .wa-photo-download__ring {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
 .wa-photo-state__icon {
 	display: grid;
 	place-items: center;
@@ -4480,6 +4521,15 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	font-size: 12.8px;
 	font-weight: 700;
 	line-height: 18px;
+}
+
+.wa-message-bubble.wa-message-media .wa-group-sender-name {
+	display: block;
+	max-width: 100%;
+	margin: 0;
+	padding: 10px 12px 6px;
+	box-sizing: border-box;
+	line-height: 1.25;
 }
 
 .wa-group-sender-avatar {
@@ -7621,7 +7671,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		position: relative;
 		box-sizing: border-box;
 		flex: 0 0 auto;
-		min-width: auto;
+		flex-shrink: 0;
+		min-width: min-content;
 		width: fit-content;
 		max-width: 85% !important;
 		border-radius: 7.5px !important;
@@ -7697,9 +7748,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-message-text {
-		display: block;
-		width: auto !important;
-		min-width: auto;
+		display: inline;
 		max-width: 100%;
 		overflow-wrap: break-word;
 		word-break: normal;
@@ -7713,6 +7762,12 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		unicode-bidi: plaintext;
 		vertical-align: top;
 		text-align: start;
+	}
+
+	.wa-message-text.wa-message-text--md {
+		display: block;
+		width: auto !important;
+		max-width: 100%;
 	}
 
 	.wa-message-text[lang='ar'],
@@ -7754,12 +7809,25 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		display: block;
 		width: fit-content;
 		max-width: 100%;
-		min-width: auto;
+		min-width: min-content;
 		vertical-align: top;
 		overflow: visible;
 	}
 
+	.wa-message-copy-body {
+		display: block;
+		width: fit-content;
+		max-width: 100%;
+		min-width: min-content;
+	}
+
 	.wa-message-copy .wa-message-text {
+		display: inline;
+		max-width: 100%;
+	}
+
+	.wa-message-copy .wa-message-text.wa-message-text--md {
+		display: block;
 		width: auto !important;
 		max-width: 100%;
 	}
@@ -7784,10 +7852,10 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	.wa-message-bubble.wa-message-has-caption .wa-message-copy .wa-message-meta {
 		float: inline-end;
 		position: relative;
-		top: 0;
+		top: 4px;
 		height: auto;
-		margin-block: 4px 0 !important;
-		margin-inline: 10px 0 !important;
+		margin-block: 0 !important;
+		margin-inline: 8px 0 !important;
 		align-items: center;
 		line-height: 15px !important;
 	}

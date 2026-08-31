@@ -1599,6 +1599,22 @@ function ImageMessage({
 	const [loaded, setLoaded] = useState(false);
 	const [broken, setBroken] = useState(false);
 	const [previewReady, setPreviewReady] = useState(false);
+	const fullImgRef = useRef(null);
+	const previewImgRef = useRef(null);
+
+	const bindFullImg = node => {
+		fullImgRef.current = node;
+		if (node?.complete && node.naturalWidth > 0) {
+			setLoaded(true);
+		}
+	};
+
+	const bindPreviewImg = node => {
+		previewImgRef.current = node;
+		if (node?.complete && node.naturalWidth > 0) {
+			setPreviewReady(true);
+		}
+	};
 
 	useEffect(() => {
 		setLoaded(false);
@@ -1609,14 +1625,32 @@ function ImageMessage({
 		setPreviewReady(false);
 	}, [previewUrl]);
 
+	useEffect(() => {
+		const img = fullImgRef.current;
+		if (!img || !url) return;
+		if (img.complete && img.naturalWidth > 0) {
+			setLoaded(true);
+		}
+	}, [url]);
+
+	useEffect(() => {
+		const img = previewImgRef.current;
+		if (!img || !previewUrl) return;
+		if (img.complete && img.naturalWidth > 0) {
+			setPreviewReady(true);
+		}
+	}, [previewUrl]);
+
 	const previewSrc = previewUrl || null;
 	const hasFull = Boolean(url);
 	const isBroken = Boolean(broken || (unavailable && !hasFull));
 	const isPending =
 		!isBroken &&
 		(loading || (hasFull && !loaded) || (!hasFull && Boolean(previewSrc || loading)));
-	const showFrame = !cover && (isPending || isBroken) && !hasFull;
-	const showSkeleton = !isBroken && !previewReady && !loaded && !showFrame;
+	const showFrame = !cover && (isPending || isBroken) && !hasFull && !previewSrc;
+	const showSkeleton = !isBroken && previewSrc && !previewReady && !loaded && !showFrame;
+	const showBlockingLoad = isPending && !previewReady;
+	const showSpinnerOnly = isPending && previewReady;
 	const fitClass = cover
 		? 'absolute inset-0 z-[1] h-full w-full object-cover'
 		: 'wa-photo-main relative z-[1] block h-auto w-full max-w-full';
@@ -1644,6 +1678,7 @@ function ImageMessage({
 			{showSkeleton ? <span className="wa-photo-skeleton" aria-hidden="true" /> : null}
 			{previewSrc ? (
 				<img
+					ref={bindPreviewImg}
 					src={previewSrc}
 					alt=""
 					aria-hidden="true"
@@ -1672,6 +1707,7 @@ function ImageMessage({
 				</div>
 			) : hasFull ? (
 				<img
+					ref={bindFullImg}
 					src={url}
 					alt={alt}
 					draggable={false}
@@ -1683,7 +1719,7 @@ function ImageMessage({
 					className={`${fitClass} wa-photo-full ${loaded ? 'is-loaded' : 'is-pending'}`}
 				/>
 			) : null}
-			{isPending ? (
+			{showBlockingLoad ? (
 				<div className="wa-photo-state is-loading-state" aria-hidden="true">
 					<span className="wa-photo-state__icon wa-photo-state__icon--muted">
 						<ImageIcon size={28} strokeWidth={1.75} />
@@ -1692,6 +1728,13 @@ function ImageMessage({
 						<Loader2 size={22} strokeWidth={2.25} className="animate-spin" />
 					</span>
 					<span className="wa-photo-state__label wa-photo-state__label--soft">{loadingLabel}</span>
+				</div>
+			) : null}
+			{showSpinnerOnly ? (
+				<div className="wa-photo-state is-loading-state is-loading-preview" aria-hidden="true">
+					<span className="wa-photo-download__ring">
+						<Loader2 size={22} strokeWidth={2.25} className="animate-spin" />
+					</span>
 				</div>
 			) : null}
 			{!isBroken && onOpen && !isPending && hasFull && loaded ? (
@@ -2128,6 +2171,12 @@ function forgetAttachmentBlob(attachmentId) {
 	if (!id) return;
 	attachmentBlobCache.delete(id);
 	attachmentBlobRequests.delete(id);
+}
+
+function getCachedAttachmentBlob(attachmentId) {
+	const id = String(attachmentId || '');
+	if (!id) return null;
+	return attachmentBlobCache.get(id) || null;
 }
 
 /** Defers media requests until the bubble is close to the viewport. */
@@ -2906,7 +2955,7 @@ function VoiceMessage({
 	const ignoreAudioErrorRef = useRef(false);
 	const wasSessionReadyRef = useRef(sessionReady);
 	const [playing, setPlaying] = useState(false);
-	const [loadingPlayback, setLoadingPlayback] = useState(false);
+	const [playLoading, setPlayLoading] = useState(false);
 	const [loadFailed, setLoadFailed] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [playbackUrl, setPlaybackUrl] = useState(null);
@@ -2935,7 +2984,7 @@ function VoiceMessage({
 		setCurrentTime(0);
 		setPlaying(false);
 		setLoadFailed(false);
-		setLoadingPlayback(false);
+		setPlayLoading(false);
 		voiceBlobRef.current = null;
 		loadPromiseRef.current = null;
 		analyzedRef.current = false;
@@ -2974,6 +3023,50 @@ function VoiceMessage({
 		return () => window.removeEventListener('wa-attachment-ready', onReady);
 	}, [attachmentId]);
 
+	const hydrateFromBlob = useCallback(
+		async (blob, { analyze = false } = {}) => {
+			if (!blob) return null;
+			voiceBlobRef.current = blob;
+			const reuseObjectUrl =
+				objectUrlRef.current && voiceBlobRef.current === blob ? objectUrlRef.current : null;
+			const prepared = await prepareVoicePlaybackFromBlob(blob, mimeType || blob.type, {
+				analyze: false,
+				reuseObjectUrl,
+			});
+			if (
+				objectUrlRef.current &&
+				objectUrlRef.current !== prepared.objectUrl &&
+				!prepared.reused
+			) {
+				ignoreAudioErrorRef.current = true;
+				URL.revokeObjectURL(objectUrlRef.current);
+			}
+			objectUrlRef.current = prepared.objectUrl;
+			setPlaybackUrl(prepared.objectUrl);
+			setLoadFailed(false);
+			ignoreAudioErrorRef.current = false;
+			if (analyze && !analyzedRef.current) {
+				void (async () => {
+					try {
+						const refined = await prepareVoicePlaybackFromBlob(blob, mimeType || blob.type, {
+							analyze: true,
+							reuseObjectUrl: prepared.objectUrl,
+						});
+						if (isUsefulWaveform(refined.waveform)) setBars(refined.waveform);
+						if (refined.duration > 0) {
+							setDuration(current => (current > 0 ? current : refined.duration));
+						}
+						analyzedRef.current = true;
+					} catch {
+						/* keep seeded waveform */
+					}
+				})();
+			}
+			return prepared.objectUrl;
+		},
+		[mimeType],
+	);
+
 	const ensurePlaybackReady = useCallback(async ({ priority = false, analyze = false, softFail = false } = {}) => {
 		const existingUrl = objectUrlRef.current;
 		// Already playable — never block the spinner on waveform analysis.
@@ -3000,38 +3093,35 @@ function VoiceMessage({
 		}
 
 		if (loadPromiseRef.current) {
-			if (priority) {
-				// Soft/background fetch may hang on phone media — don't block Play.
-				const raced = await Promise.race([
-					loadPromiseRef.current.catch(() => null),
-					new Promise(resolve => window.setTimeout(() => resolve(null), 900)),
-				]);
-				if (raced && objectUrlRef.current && voiceBlobRef.current) {
-					if (analyze && !analyzedRef.current) {
-						void ensurePlaybackReady({ analyze: true, softFail: true });
-					}
-					return objectUrlRef.current || raced;
+			const pendingUrl = await loadPromiseRef.current.catch(() => null);
+			if (objectUrlRef.current && voiceBlobRef.current) {
+				if (analyze && !analyzedRef.current) {
+					void ensurePlaybackReady({ analyze: true, softFail: true });
 				}
-				loadPromiseRef.current = null;
-			} else {
-				const pendingUrl = await loadPromiseRef.current.catch(() => null);
-				if (pendingUrl && objectUrlRef.current && voiceBlobRef.current) {
-					if (analyze && !analyzedRef.current) {
-						void ensurePlaybackReady({ analyze: true, softFail: true });
-					}
-					return objectUrlRef.current || pendingUrl;
-				}
+				return objectUrlRef.current || pendingUrl;
 			}
 		}
 
 		const run = (async () => {
 			// Background prefetch must not flip the bubble into a stuck spinner.
-			if (!softFail) setLoadingPlayback(true);
+			if (!softFail) setPlayLoading(true);
 			if (!softFail) setLoadFailed(false);
 			try {
 				let blob = voiceBlobRef.current;
 				if (!blob) {
+					const cached = canFetchAttachment ? getCachedAttachmentBlob(attachmentId) : null;
+					if (cached) {
+						blob = cached;
+					}
+				}
+				if (!blob) {
 					const fetchBlob = async () => {
+						const localUrl = isLocalMediaUrl(url) ? url : null;
+						if (localUrl) {
+							const response = await fetch(localUrl);
+							if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
+							return assertAudioBlob(await response.blob());
+						}
 						if (canFetchAttachment) {
 							let next = demoAttachment
 								? await demoApi.getMedia(rawDemoId(attachmentId))
@@ -3113,7 +3203,7 @@ function VoiceMessage({
 				if (!softFail) setLoadFailed(true);
 				throw error;
 			} finally {
-				setLoadingPlayback(false);
+				setPlayLoading(false);
 				loadPromiseRef.current = null;
 			}
 		})();
@@ -3132,22 +3222,49 @@ function VoiceMessage({
 
 	useEffect(() => {
 		if (!isNearViewport) return undefined;
+		const localUrl = isLocalMediaUrl(url) ? url : null;
+		if (localUrl) {
+			let cancelled = false;
+			void (async () => {
+				try {
+					const response = await fetch(localUrl);
+					if (!response.ok || cancelled) return;
+					const blob = assertAudioBlob(await response.blob());
+					if (cancelled) return;
+					await hydrateFromBlob(blob, { analyze: true });
+				} catch {
+					/* durable fetch may still succeed */
+				}
+			})();
+			return () => {
+				cancelled = true;
+			};
+		}
+		const cached = canFetchAttachment ? getCachedAttachmentBlob(attachmentId) : null;
+		if (cached) {
+			void hydrateFromBlob(cached, { analyze: true });
+		}
+		return undefined;
+	}, [attachmentId, canFetchAttachment, hydrateFromBlob, isNearViewport, url]);
+
+	useEffect(() => {
+		if (!isNearViewport) return undefined;
 		if (!canFetchAttachment && !url) return undefined;
 		if (!sessionReady && !alreadyOnDisk && !url) return undefined;
-		const timer = window.setTimeout(() => {
-			// Prefetch playable blob early (like WhatsApp Web auto-download for voice).
-			void ensurePlaybackReady({
-				analyze: true,
-				softFail: true,
-				priority: alreadyOnDisk,
-			}).catch(() => {});
-		}, alreadyOnDisk ? 0 : 40);
-		return () => window.clearTimeout(timer);
+		if (playbackUrl && voiceBlobRef.current) return undefined;
+		// Prefetch playable blob early (like WhatsApp Web auto-download for voice).
+		void ensurePlaybackReady({
+			analyze: true,
+			softFail: true,
+			priority: true,
+		}).catch(() => {});
+		return undefined;
 	}, [
 		alreadyOnDisk,
 		canFetchAttachment,
 		ensurePlaybackReady,
 		isNearViewport,
+		playbackUrl,
 		prefetchNonce,
 		sessionReady,
 		url,
@@ -3181,7 +3298,7 @@ function VoiceMessage({
 			if (ignoreAudioErrorRef.current) return;
 			setLoadFailed(true);
 			setPlaying(false);
-			setLoadingPlayback(false);
+			setPlayLoading(false);
 		};
 
 		audio.addEventListener('loadedmetadata', onMeta);
@@ -3238,11 +3355,11 @@ function VoiceMessage({
 			ignoreAudioErrorRef.current = false;
 			setPlaying(true);
 			setLoadFailed(false);
-			setLoadingPlayback(false);
+			setPlayLoading(false);
 		} catch {
 			setPlaying(false);
 			setLoadFailed(true);
-			setLoadingPlayback(false);
+			setPlayLoading(false);
 		}
 	};
 
@@ -3263,6 +3380,8 @@ function VoiceMessage({
 	};
 
 	const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
+	const showPlaySpinner = playLoading && !playbackUrl;
+	const waveformBusy = loadFailed || showPlaySpinner;
 	const statusLabel = loadFailed
 		? labels.tapToRetry || labels.failed || 'Tap to retry'
 		: formatClock(currentTime > 0 ? currentTime : duration);
@@ -3270,16 +3389,16 @@ function VoiceMessage({
 	return (
 		<div
 			ref={containerRef}
-			className={`wa-voice-message ${mine ? 'is-outgoing' : 'is-incoming'} ${loadFailed ? 'is-failed' : ''} ${loadingPlayback ? 'is-loading' : ''}`}
+			className={`wa-voice-message ${mine ? 'is-outgoing' : 'is-incoming'} ${loadFailed ? 'is-failed' : ''} ${showPlaySpinner ? 'is-loading' : ''}`}
 		>
-			<audio ref={audioRef} preload="metadata" src={playbackUrl || undefined} className="hidden" />
+			<audio ref={audioRef} preload="auto" src={playbackUrl || undefined} className="hidden" />
 			<VoiceMessageLayout mine={mine}>
 				{mine ? <VoiceAvatar label={avatarLabel} src={avatarSrc} mine /> : null}
 				<div className="wa-voice-track">
 					<div className="wa-voice-track-row">
 						<VoicePlaybackButton
 							playing={playing}
-							loading={loadingPlayback}
+							loading={showPlaySpinner}
 							failed={loadFailed}
 							onClick={() => void toggle()}
 						/>
@@ -3289,7 +3408,7 @@ function VoiceMessage({
 									peaks={bars}
 									progress={progress}
 									mine={mine}
-									loading={loadingPlayback}
+									loading={waveformBusy}
 									failed={loadFailed}
 									onSeek={seekTo}
 								/>
@@ -3384,9 +3503,14 @@ export function MediaAttachment({
 	const isDocument = !['image', 'sticker', 'video', 'audio', 'ptt', 'voice'].includes(type);
 	const demoAttachment = Boolean(attachment?.demoAttachment || isDemoId(attachment?.id));
 	const localPreview = localAttachmentPreview(attachment);
+	const inlinePreview =
+		isLocalMediaUrl(attachment?.previewDataUrl) ? attachment.previewDataUrl : null;
 	const previewDataUrl =
-		(isLocalMediaUrl(attachment?.previewDataUrl) ? attachment.previewDataUrl : null) ||
-		(type === 'image' || type === 'sticker' || type === 'video' ? localPreview : null);
+		inlinePreview ||
+		(type === 'image' || type === 'sticker' || type === 'video' ? localPreview : null) ||
+		(['image', 'sticker', 'video'].includes(type)
+			? mediaPreviewFromRaw(messageRaw)
+			: null);
 	const isGallery = layout === 'gallery';
 	const isSingleMedia = layout === 'single';
 	const alreadyOnDisk =
@@ -3638,7 +3762,7 @@ export function MediaAttachment({
 		return (
 			<VoiceMessage
 				attachmentId={attachment.id}
-				url={attachment.url}
+				url={localMediaFileUrl(attachment, type) || attachment.url}
 				mine={mine}
 				mimeType={attachment.mimeType}
 				fileName={attachment.fileName}
@@ -6500,7 +6624,7 @@ function WhatsAppWorkspaceContent() {
 	const [pendingMessageActions, setPendingMessageActions] = useState(() => new Set());
 	const [forwardingMessage, setForwardingMessage] = useState(null);
 	const [sharingMessageIds, setSharingMessageIds] = useState(null);
-	const [sharingBusy, setSharingBusy] = useState(false);
+	const [sharingTargetConversationId, setSharingTargetConversationId] = useState(null);
 	const [highlightedMessageKey, setHighlightedMessageKey] = useState(null);
 	const highlightTimerRef = useRef(null);
 	const [messageInfo, setMessageInfo] = useState(null);
@@ -6640,6 +6764,24 @@ function WhatsAppWorkspaceContent() {
 	const syncingInboxRef = useRef(false);
 	const previousAccountIdRef = useRef(null);
 	const conversationIdRef = useRef(null);
+	const sharingSourceConversationIdRef = useRef(null);
+
+	const openShareMessagesModal = useCallback(
+		ids => {
+			const list = [...new Set((Array.isArray(ids) ? ids : []).map(String).filter(Boolean))];
+			if (!list.length) {
+				toast.error(
+					locale === 'ar' ? 'حدد رسائل أولًا' : 'Select messages first',
+				);
+				return;
+			}
+			sharingSourceConversationIdRef.current =
+				conversationIdRef.current || conversationId || null;
+			setForwardingMessage(null);
+			setSharingMessageIds(list);
+		},
+		[conversationId, locale],
+	);
 	const activeTabRef = useRef(activeTab);
 	activeTabRef.current = activeTab;
 	// Which conversation the rendered `messages` array belongs to. Never read
@@ -6913,7 +7055,8 @@ function WhatsAppWorkspaceContent() {
 		setMultiMessageMenuAnchor(null);
 		setForwardingMessage(null);
 		setSharingMessageIds(null);
-		setSharingBusy(false);
+		setSharingTargetConversationId(null);
+		sharingSourceConversationIdRef.current = null;
 		setDeleteMessageTarget(null);
 		setMessageInfo(null);
 		setTranscriptionSources(null);
@@ -11154,8 +11297,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (action === 'forward') {
-			setForwardingMessage(null);
-			setSharingMessageIds([message.id]);
+			openShareMessagesModal([message.id]);
 			return;
 		}
 		if (action === 'delete') {
@@ -11307,7 +11449,7 @@ function WhatsAppWorkspaceContent() {
 				toast.error(locale === 'ar' ? 'حدد رسائل أولًا' : 'Select messages first');
 				return;
 			}
-			setSharingMessageIds(ids);
+			openShareMessagesModal(ids);
 			return;
 		}
 		if (action === 'transcribe') {
@@ -11395,40 +11537,64 @@ function WhatsAppWorkspaceContent() {
 		setActionMessageId(message.id);
 	};
 
+	useEffect(() => {
+		if (sharingMessageIds?.length || forwardingMessage) {
+			if (!sharingSourceConversationIdRef.current) {
+				sharingSourceConversationIdRef.current =
+					conversationIdRef.current || conversationId || null;
+			}
+		}
+	}, [sharingMessageIds, forwardingMessage, conversationId]);
+
 	const shareMessagesAsOriginal = async targetConversationId => {
 		const messageIds = Array.isArray(sharingMessageIds)
 			? sharingMessageIds
 			: forwardingMessage?.id
 				? [forwardingMessage.id]
 				: [];
-		if (!messageIds.length || !targetConversationId || sharingBusy) return;
-		setSharingBusy(true);
+		const sourceConversationId =
+			sharingSourceConversationIdRef.current ||
+			conversationIdRef.current ||
+			conversationId;
+		if (!messageIds.length || !targetConversationId) {
+			toast.error(
+				locale === 'ar' ? 'لا توجد رسائل للإرسال' : 'No messages selected to send',
+			);
+			return;
+		}
+		if (!sourceConversationId) {
+			toast.error(
+				locale === 'ar' ? 'افتح المحادثة ثم أعد المحاولة' : 'Open the chat and try again',
+			);
+			return;
+		}
+		if (sharingTargetConversationId) return;
+		setSharingTargetConversationId(targetConversationId);
 		try {
-			// Warm media onto disk first — share fails when attachment is still pending.
+			// Backend downloads media on send — do not block the share API on client prefetch
+			// (that saturated the attachment queue and made Send-to feel random / need refresh).
 			const selected = (effectiveMessages || []).filter(item => messageIds.includes(item.id));
 			for (const message of selected) {
 				for (const attachment of message.attachments || []) {
 					const id = String(attachment?.id || '');
 					if (!isPersistedAttachmentId(id)) continue;
-					try {
-						await requestAttachmentBlob(id, {
-							timeout: 90_000,
-							priority: true,
-							kind: attachment.type,
-						});
-					} catch {
-						/* backend share path will retry / report failure */
-					}
+					void requestAttachmentBlob(id, {
+						timeout: 12_000,
+						priority: false,
+						kind: attachment.type,
+					}).catch(() => {});
 				}
 			}
 			const { data } = await api.post(
-				`/whatsapp/conversations/${conversationId}/messages/share-as-original`,
+				`/whatsapp/conversations/${sourceConversationId}/messages/share-as-original`,
 				{ targetConversationId, messageIds },
+				{ timeout: 120_000 },
 			);
 			const sent = Number(data?.sent || 0);
 			const failed = Number(data?.failed || 0);
 			setSharingMessageIds(null);
 			setForwardingMessage(null);
+			sharingSourceConversationIdRef.current = null;
 			setTicketSelectMode(false);
 			setGroupSelectMode(false);
 			setSelectedMessageIds(new Set());
@@ -11455,7 +11621,7 @@ function WhatsAppWorkspaceContent() {
 					(locale === 'ar' ? 'تعذر إرسال الرسائل' : 'Could not send messages'),
 			);
 		} finally {
-			setSharingBusy(false);
+			setSharingTargetConversationId(null);
 		}
 	};
 
@@ -15643,7 +15809,7 @@ function WhatsAppWorkspaceContent() {
 														<button
 															type="button"
 															disabled={!selectedMessageIds.size || demo.settings.enabled || isDemoId(conversationId)}
-															onClick={() => setSharingMessageIds([...selectedMessageIds])}
+															onClick={() => openShareMessagesModal([...selectedMessageIds])}
 															className="wa-select-toolbar__btn wa-select-toolbar__btn--send disabled:opacity-40"
 														>
 															<Send size={13} strokeWidth={2.25} />
@@ -15713,7 +15879,7 @@ function WhatsAppWorkspaceContent() {
 															<button
 																type="button"
 																disabled={!selectedMessageIds.size || demo.settings.enabled || isDemoId(conversationId)}
-																onClick={() => setSharingMessageIds([...selectedMessageIds])}
+																onClick={() => openShareMessagesModal([...selectedMessageIds])}
 																className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-white disabled:opacity-50"
 															>
 																<Send size={12} />
@@ -16090,7 +16256,7 @@ function WhatsAppWorkspaceContent() {
 																		onContextMenu={event => {
 																		openMessageContextMenu(event, message);
 																	}}
-															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${
+															className={`wa-message-bubble relative w-fit shrink-0 ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${
 																		isEmailMemoMsg
 																			? 'bg-white text-slate-900 dark:bg-slate-900 dark:text-white'
 																			: mine
@@ -16329,50 +16495,52 @@ function WhatsAppWorkspaceContent() {
 																			lang={textPresentation.lang}
 																		>
 																			<MessageLinkPreview text={visibleText} labels={t} />
-																			{captionText ? (
-																				<ExpandableMessageText
-																					text={captionText}
-																					dir={textPresentation.dir}
-																					lang={textPresentation.lang}
-																					style={{
-																						...textPresentation.style,
-																						...(captionIsMarkdown
-																							? { whiteSpace: 'normal' }
-																							: null),
-																					}}
-																					className={`wa-message-text ${
-																						captionIsMarkdown
-																							? 'wa-message-text--md'
-																							: 'whitespace-pre-wrap'
-																					} ${textPresentation.className || ''}`}
-																					readMoreLabel={t.readMore}
-																					previewChars={captionIsMarkdown ? 3600 : undefined}
-																					previewLines={captionIsMarkdown ? 64 : undefined}
-																					readMoreStep={captionIsMarkdown ? 2400 : undefined}
-																					readMoreLines={captionIsMarkdown ? 40 : undefined}
-																					renderText={value => (
-																						<WhatsAppFormattedText
-																							text={value}
-																							forceMarkdown={captionIsMarkdown}
-																							mentionDirectory={mentionDirectory}
-																							mentionLabels={message.mentionLabels}
-																						/>
-																					)}
-																				/>
-																			) : null}
-																			<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
-																				{message.isStarred && <Star size={11} fill="currentColor" />}
-																				{message.isPinned && <Pin size={11} fill="currentColor" />}
-																				{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-																				{mine && message.showReadReceipt !== false && (
-																					<DeliveryTicks
-																						message={message}
-																						selfChat={isSelfChatConversation(
-																							selectedConversation,
-																							selectedAccount,
+																			<div className="wa-message-copy-body">
+																				{captionText ? (
+																					<ExpandableMessageText
+																						text={captionText}
+																						dir={textPresentation.dir}
+																						lang={textPresentation.lang}
+																						style={{
+																							...textPresentation.style,
+																							...(captionIsMarkdown
+																								? { whiteSpace: 'normal' }
+																								: null),
+																						}}
+																						className={`wa-message-text ${
+																							captionIsMarkdown
+																								? 'wa-message-text--md'
+																								: 'whitespace-pre-wrap'
+																						} ${textPresentation.className || ''}`}
+																						readMoreLabel={t.readMore}
+																						previewChars={captionIsMarkdown ? 3600 : undefined}
+																						previewLines={captionIsMarkdown ? 64 : undefined}
+																						readMoreStep={captionIsMarkdown ? 2400 : undefined}
+																						readMoreLines={captionIsMarkdown ? 40 : undefined}
+																						renderText={value => (
+																							<WhatsAppFormattedText
+																								text={value}
+																								forceMarkdown={captionIsMarkdown}
+																								mentionDirectory={mentionDirectory}
+																								mentionLabels={message.mentionLabels}
+																							/>
 																						)}
 																					/>
-																				)}
+																				) : null}
+																				<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
+																					{message.isStarred && <Star size={11} fill="currentColor" />}
+																					{message.isPinned && <Pin size={11} fill="currentColor" />}
+																					{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+																					{mine && message.showReadReceipt !== false && (
+																						<DeliveryTicks
+																							message={message}
+																							selfChat={isSelfChatConversation(
+																								selectedConversation,
+																								selectedAccount,
+																							)}
+																						/>
+																					)}
+																				</div>
 																			</div>
 																		</div>
 																	) : (
@@ -17929,9 +18097,10 @@ function WhatsAppWorkspaceContent() {
 				<div
 					className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center"
 					onClick={() => {
-						if (sharingBusy) return;
+						if (sharingTargetConversationId) return;
 						setSharingMessageIds(null);
 						setForwardingMessage(null);
+						sharingSourceConversationIdRef.current = null;
 					}}
 				>
 					<div className="max-h-[70vh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
@@ -17948,10 +18117,11 @@ function WhatsAppWorkspaceContent() {
 							</div>
 							<button
 								type="button"
-								disabled={sharingBusy}
+								disabled={Boolean(sharingTargetConversationId)}
 								onClick={() => {
 									setSharingMessageIds(null);
 									setForwardingMessage(null);
+									sharingSourceConversationIdRef.current = null;
 								}}
 								className="rounded-full p-2 hover:bg-slate-100 disabled:opacity-50"
 							>
@@ -17959,27 +18129,45 @@ function WhatsAppWorkspaceContent() {
 							</button>
 						</div>
 						<div className="max-h-[58vh] overflow-y-auto p-2">
-							{conversations
-								.filter(item => item.id !== conversationId && item.accountId === selectedConversation?.accountId)
-								.map(item => (
-									<button
-										key={item.id}
-										type="button"
-										onClick={() => void shareMessagesAsOriginal(item.id)}
-										disabled={sharingBusy}
-										className="flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100 disabled:opacity-50"
-									>
-										<Avatar label={conversationTitle(item)} size={10} src={conversationAvatarUrl(item)} isGroup={item.type === 'group'} />
-										<span className="min-w-0 flex-1 truncate font-semibold">{conversationTitle(item)}</span>
-										{sharingBusy ? (
-											<Loader2 size={18} className="animate-spin text-[#00a884]" />
-										) : (
-											<Send size={18} className="text-[#00a884]" />
-										)}
-									</button>
-								))}
-							{!conversations.some(
-								item => item.id !== conversationId && item.accountId === selectedConversation?.accountId,
+							{effectiveConversations
+								.filter(
+									item =>
+										item.id !== (sharingSourceConversationIdRef.current || conversationId) &&
+										item.accountId === selectedConversation?.accountId,
+								)
+								.map(item => {
+									const isSending = sharingTargetConversationId === item.id;
+									return (
+										<button
+											key={item.id}
+											type="button"
+											onClick={() => void shareMessagesAsOriginal(item.id)}
+											disabled={Boolean(sharingTargetConversationId)}
+											className={`flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100 disabled:opacity-60 ${
+												isSending ? 'bg-slate-50' : ''
+											}`}
+										>
+											<Avatar
+												label={conversationTitle(item)}
+												size={10}
+												src={conversationAvatarUrl(item)}
+												isGroup={item.type === 'group'}
+											/>
+											<span className="min-w-0 flex-1 truncate font-semibold">
+												{conversationTitle(item)}
+											</span>
+											{isSending ? (
+												<Loader2 size={18} className="animate-spin text-[#00a884]" />
+											) : (
+												<Send size={18} className="text-[#00a884]" />
+											)}
+										</button>
+									);
+								})}
+							{!effectiveConversations.some(
+								item =>
+									item.id !== (sharingSourceConversationIdRef.current || conversationId) &&
+									item.accountId === selectedConversation?.accountId,
 							) && (
 								<p className="px-3 py-8 text-center text-sm text-[#667781]">
 									{locale === 'ar' ? 'لا توجد محادثات أخرى في هذا الحساب' : 'No other chats on this account'}
