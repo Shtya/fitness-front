@@ -193,6 +193,7 @@ export function useWaVirtualRows({
 	estimateSize,
 	overscan = 12,
 	enabled = true,
+	getItemKey = null,
 }) {
 	const virtualizer = useVirtualizer({
 		count: enabled ? count : 0,
@@ -200,6 +201,8 @@ export function useWaVirtualRows({
 		estimateSize: typeof estimateSize === 'function' ? estimateSize : () => estimateSize || 72,
 		overscan,
 		enabled: Boolean(enabled && count > 0),
+		getItemKey:
+			typeof getItemKey === 'function' ? getItemKey : (index) => index,
 	});
 
 	const items = enabled ? virtualizer.getVirtualItems() : [];

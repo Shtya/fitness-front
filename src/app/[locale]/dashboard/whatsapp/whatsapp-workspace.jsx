@@ -230,7 +230,10 @@ import {
 	shouldProviderBackfill,
 	shouldSkipOpenChatNetwork,
 } from './whatsapp-message-sync';
-import { useWaScrollWindow, WaVirtualSpacer } from './wa-virtual-list';
+import { useWaScrollWindow, useWaVirtualRows, WaVirtualSpacer } from './wa-virtual-list';
+import { estimateMessageRowSize, messageRowKey } from './wa-thread-virtual.js';
+import { WaMeasuredThreadRow } from './wa-thread-virtual';
+import { getAttachmentStreamUrl } from './whatsapp-media-stream';
 import {
 	buildEffectiveConversations,
 	buildEffectiveMessages,
@@ -3254,6 +3257,22 @@ function VoiceMessage({
 			return existingUrl;
 		}
 
+		if (
+			!demoAttachment &&
+			isPersistedAttachmentId(attachmentId) &&
+			!isLocalMediaUrl(url)
+		) {
+			try {
+				const streamUrl = await getAttachmentStreamUrl(attachmentId);
+				setPlaybackUrl(streamUrl);
+				setLoadFailed(false);
+				if (!softFail) setPlayLoading(false);
+				return streamUrl;
+			} catch {
+				/* fall through to the authenticated blob download */
+			}
+		}
+
 		if (loadPromiseRef.current) {
 			const pendingUrl = await loadPromiseRef.current.catch(() => null);
 			if (objectUrlRef.current && voiceBlobRef.current) {
@@ -3413,7 +3432,9 @@ function VoiceMessage({
 		if (!isNearViewport) return undefined;
 		if (!canFetchAttachment && !url) return undefined;
 		if (!sessionReady && !alreadyOnDisk && !url) return undefined;
-		if (playbackUrl && voiceBlobRef.current) return undefined;
+		if (playbackUrl && (voiceBlobRef.current || /^https?:/i.test(String(playbackUrl)))) {
+			return undefined;
+		}
 		// Prefetch playable blob early (like WhatsApp Web auto-download for voice).
 		void ensurePlaybackReady({
 			analyze: true,
@@ -3580,7 +3601,14 @@ function VoiceMessage({
 			ref={containerRef}
 			className={`wa-voice-message ${mine ? 'is-outgoing' : 'is-incoming'} ${loadFailed ? 'is-failed' : ''} ${showPlaySpinner ? 'is-loading' : ''}`}
 		>
-			<audio ref={audioRef} preload="auto" src={playbackUrl || undefined} className="hidden" />
+			<audio
+				ref={audioRef}
+				preload={
+					playbackUrl && !String(playbackUrl).startsWith('blob:') ? 'metadata' : 'auto'
+				}
+				src={playbackUrl || undefined}
+				className="hidden"
+			/>
 			<VoiceMessageLayout mine={mine}>
 				{mine ? <VoiceAvatar label={avatarLabel} src={avatarSrc} mine /> : null}
 				<div className="wa-voice-track">
@@ -3710,9 +3738,7 @@ function ChatVideoPlayer({
 		if (!wrap || !width || !height) return;
 		wrap.classList.toggle('is-portrait', height > width);
 		wrap.classList.toggle('is-landscape', width >= height);
-		wrap.style.removeProperty('--wa-video-ar');
-		wrap.style.height = 'auto';
-		node.style.height = 'auto';
+		wrap.style.setProperty('--wa-video-ar', `${width} / ${height}`);
 	};
 
 	const paintPreview = node => {
@@ -4049,29 +4075,43 @@ export function MediaAttachment({
 			setLoading(true);
 			setFailed(false);
 		}
-		loadAttachmentBlob()
-			.then(blob => {
-				if (cancelled || loadGenRef.current !== loadGen) return;
-				const kind = String(attachment?.type || '').toLowerCase();
-				const mime = String(attachment?.mimeType || blob?.type || '').toLowerCase();
-				let nextBlob = blob;
-				if (
-					(kind === 'image' || kind === 'sticker') &&
-					(!mime || mime.includes('octet-stream'))
-				) {
-					nextBlob = blob.slice(0, blob.size, 'image/jpeg');
-				} else if (kind === 'video' && (!mime || mime.includes('octet-stream'))) {
-					nextBlob = blob.slice(0, blob.size, 'video/mp4');
-				} else if (
-					['audio', 'ptt', 'voice'].includes(kind) &&
-					(!mime || mime.includes('octet-stream'))
-				) {
-					nextBlob = blob.slice(0, blob.size, 'audio/ogg');
-				}
-				objectUrl = URL.createObjectURL(nextBlob);
-				setUrl(objectUrl);
-				setFailed(false);
-			})
+		const useSignedVideo =
+			type === 'video' &&
+			!demoAttachment &&
+			isPersistedAttachmentId(attachmentId) &&
+			!localUrl;
+		const finishBlob = blob => {
+			if (cancelled || loadGenRef.current !== loadGen) return;
+			const kind = String(attachment?.type || '').toLowerCase();
+			const mime = String(attachment?.mimeType || blob?.type || '').toLowerCase();
+			let nextBlob = blob;
+			if (
+				(kind === 'image' || kind === 'sticker') &&
+				(!mime || mime.includes('octet-stream'))
+			) {
+				nextBlob = blob.slice(0, blob.size, 'image/jpeg');
+			} else if (kind === 'video' && (!mime || mime.includes('octet-stream'))) {
+				nextBlob = blob.slice(0, blob.size, 'video/mp4');
+			} else if (
+				['audio', 'ptt', 'voice'].includes(kind) &&
+				(!mime || mime.includes('octet-stream'))
+			) {
+				nextBlob = blob.slice(0, blob.size, 'audio/ogg');
+			}
+			objectUrl = URL.createObjectURL(nextBlob);
+			setUrl(objectUrl);
+			setFailed(false);
+		};
+		const load = useSignedVideo
+			? getAttachmentStreamUrl(attachmentId, attachment)
+					.then(streamUrl => {
+						if (cancelled || loadGenRef.current !== loadGen) return;
+						setUrl(streamUrl);
+						setFailed(false);
+					})
+					.catch(() => loadAttachmentBlob().then(finishBlob))
+			: loadAttachmentBlob().then(finishBlob);
+		load
 			.catch(error => {
 				// Keep local preview if fetch of durable copy fails.
 				if (!cancelled && loadGenRef.current === loadGen && !localUrl) {
@@ -7480,22 +7520,31 @@ function WhatsAppWorkspaceContent() {
 		() => groupConsecutiveImageMessages(effectiveMessages.filter(isRenderableWhatsAppMessage)),
 		[effectiveMessages],
 	);
-	const messageListWindow = useWaScrollWindow({
+	const messageRowsRef = useRef(messageRows);
+	messageRowsRef.current = messageRows;
+	const virtualizeMessages = messageRows.length >= 32;
+	const messageVirtual = useWaVirtualRows({
 		count: messageRows.length,
-		rowHeight: 96,
-		overscan: 10,
-		minCountToWindow: 60,
-		// Variable-height bubbles + fixed spacers jump hard when prepending older pages.
-		enabled: false,
 		scrollRef: messageBoxRef,
+		estimateSize: index => estimateMessageRowSize(messageRowsRef.current[index]),
+		overscan: 10,
+		enabled: virtualizeMessages,
+		getItemKey: index => messageRowKey(messageRowsRef.current[index], index),
 	});
+	const messageVirtualRef = useRef(messageVirtual);
+	messageVirtualRef.current = messageVirtual;
 	const visibleMessageRows = useMemo(() => {
-		const slice = messageRows.slice(messageListWindow.start, messageListWindow.end);
-		return slice.map((row, offset) => ({
-			row,
-			rowIndex: messageListWindow.start + offset,
-		}));
-	}, [messageRows, messageListWindow.start, messageListWindow.end]);
+		if (!virtualizeMessages) {
+			return messageRows.map((row, rowIndex) => ({ row, rowIndex, start: null }));
+		}
+		return messageVirtual.items
+			.map(item => ({
+				row: messageRows[item.index],
+				rowIndex: item.index,
+				start: item.start,
+			}))
+			.filter(item => item.row);
+	}, [messageRows, messageVirtual.items, virtualizeMessages]);
 	const registerChatImage = useCallback(
 		(id, image) => {
 			setRegisteredChatImages(current => {
@@ -9506,6 +9555,13 @@ function WhatsAppWorkspaceContent() {
 		box.scrollTop = box.scrollHeight;
 		setShowJumpToBottom(false);
 	}, [effectiveMessages, loadingOlder, conversationId, loadingMessages]);
+
+	useLayoutEffect(() => {
+		if (!virtualizeMessages || !pinThreadToBottomRef.current) return;
+		if (loadingOlder || olderScrollRestoreRef.current) return;
+		const box = messageBoxRef.current;
+		if (box) box.scrollTop = box.scrollHeight;
+	}, [messageVirtual.totalSize, virtualizeMessages, conversationId, loadingOlder]);
 
 	// Restore scroll after older messages are prepended (before paint).
 	useLayoutEffect(() => {
@@ -12873,6 +12929,7 @@ function WhatsAppWorkspaceContent() {
 		const key = String(target?.id || target?.providerMessageId || '').trim();
 		if (!key) return;
 		setHighlightedMessageKey(null);
+		let tries = 0;
 		const apply = () => {
 			const box = messageBoxRef.current;
 			if (!box) return;
@@ -12889,7 +12946,21 @@ function WhatsAppWorkspaceContent() {
 				);
 			}
 			const el = selectors.map(selector => box.querySelector(selector)).find(Boolean);
-			el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			if (!el) {
+				const rows = messageRowsRef.current || [];
+				const index = rows.findIndex(row => {
+					const items =
+						row?.kind === 'image-gallery' ? row.messages || [] : [row?.message];
+					return items.some(item => item && messageMatchesQuotedTarget(item, target));
+				});
+				if (index >= 0 && tries < 8) {
+					tries += 1;
+					messageVirtualRef.current?.scrollToIndex?.(index, { align: 'center' });
+					window.setTimeout(apply, 80);
+				}
+				return;
+			}
+			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			setHighlightedMessageKey(key);
 			if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
 			highlightTimerRef.current = window.setTimeout(() => {
@@ -16240,7 +16311,6 @@ function WhatsAppWorkspaceContent() {
 									<div
 										ref={messageBoxRef}
 										onScroll={event => {
-											messageListWindow.onScroll(event);
 											const box = event.currentTarget;
 											const distanceFromBottom =
 												box.scrollHeight - box.clientHeight - box.scrollTop;
@@ -16514,8 +16584,19 @@ function WhatsAppWorkspaceContent() {
 														{t.older}
 													</button>
 												)}
-												<WaVirtualSpacer height={messageListWindow.topPad} />
-												{visibleMessageRows.map(({ row, rowIndex }) => {
+												<div
+													className={virtualizeMessages ? 'wa-message-virtual-list' : undefined}
+													style={
+														virtualizeMessages
+															? {
+																	height: messageVirtual.totalSize,
+																	position: 'relative',
+																	width: '100%',
+																}
+															: undefined
+													}
+												>
+												{visibleMessageRows.map(({ row, rowIndex, start }) => {
 													const groupedImages = row.kind === 'image-gallery';
 													const message = groupedImages
 														? row.messages[row.messages.length - 1]
@@ -16683,15 +16764,16 @@ function WhatsAppWorkspaceContent() {
 														)
 															? mediaPreviewFromRaw(message.raw)
 															: null;
-													return (
+													const rowBody = (
 														<div
-															key={row.key}
 															className={`wa-message-row min-w-0 max-w-full ${
 																followsSame ? 'wa-follows-same' : ''
 															} ${precedesSame ? 'wa-precedes-same' : ''} ${
 																isQuotedHighlight
 																	? 'wa-message-highlighted'
-																	: '[content-visibility:auto] [contain-intrinsic-size:80px]'
+																	: virtualizeMessages
+																		? ''
+																		: '[content-visibility:auto] [contain-intrinsic-size:80px]'
 															}`}
 															data-wa-message-id={message.id || undefined}
 															data-wa-message-ids={rowMessageIds || undefined}
@@ -16703,8 +16785,8 @@ function WhatsAppWorkspaceContent() {
 																	{dayLabel}
 																</div>
 															)}
-																	<div className={`wa-message-line flex min-w-0 max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}>
-																<div className={`group flex min-w-0 max-w-full ${mine ? 'flex-row-reverse items-start' : 'items-start'} gap-1.5`}>
+																	<div className={`wa-message-line flex min-w-0 w-full max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}>
+																<div className={`wa-message-cluster group flex min-w-0 w-full max-w-full ${mine ? 'flex-row-reverse items-start' : 'items-start'} gap-1.5`}>
 																{showSelectCheck && (
 																	<button
 																		type="button"
@@ -17255,8 +17337,20 @@ function WhatsAppWorkspaceContent() {
 															</div>
 														</div>
 													);
+													return virtualizeMessages ? (
+														<WaMeasuredThreadRow
+															key={row.key}
+															index={rowIndex}
+															start={start}
+															measureElement={messageVirtual.measureElement}
+														>
+															{rowBody}
+														</WaMeasuredThreadRow>
+													) : (
+														<div key={row.key}>{rowBody}</div>
+													);
 												})}
-												<WaVirtualSpacer height={messageListWindow.bottomPad} />
+												</div>
 											</div>
 										)}
 									</div>
