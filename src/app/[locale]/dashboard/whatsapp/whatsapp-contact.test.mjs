@@ -46,6 +46,15 @@ test('parseVcardPhones supports multiple numbers', () => {
 	assert.equal(phones[1].label, 'HOME');
 });
 
+test('parseContactFromMessage ignores regular text messages', () => {
+	const message = {
+		type: 'text',
+		text: 'على تلاته كده تاكل ولا ايه',
+		raw: { body: 'على تلاته كده تاكل ولا ايه' },
+	};
+	assert.equal(parseContactFromMessage(message), null);
+});
+
 test('buildContactVcard keeps Arabic names', () => {
 	const vcard = buildContactVcard({
 		displayName: 'خالو 😍',

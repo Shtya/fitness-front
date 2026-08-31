@@ -95,10 +95,21 @@ function phoneFromLooseValue(value) {
 	};
 }
 
+function hasContactPayload(raw) {
+	if (!raw || typeof raw !== 'object') return false;
+	if (raw.sharedContact?.displayName || raw.sharedContact?.phones?.length) return true;
+	if (raw.contact?.displayName || raw.contact?.phoneNumber || raw.contact?.waId) return true;
+	if (raw.vcard || raw.vcardFormattedName) return true;
+	if (raw?.message?.contactMessage || raw?.contactMessage) return true;
+	if (raw?.message?.contactsArrayMessage || raw?.contactsArrayMessage) return true;
+	if (Array.isArray(raw.vcardList) && raw.vcardList.length) return true;
+	return false;
+}
+
 function normalizeSharedContact(displayName, phones) {
 	const name = String(displayName || '').trim();
 	const cleanedPhones = (phones || []).filter(item => item?.phone || item?.waId);
-	if (!name && !cleanedPhones.length) return null;
+	if (!cleanedPhones.length) return null;
 	return {
 		displayName: name || cleanedPhones[0]?.formatted || cleanedPhones[0]?.phone || 'Contact',
 		phones: cleanedPhones,
@@ -109,18 +120,22 @@ function normalizeSharedContact(displayName, phones) {
 
 export function parseContactFromMessage(message) {
 	if (!message) return null;
+	const typeIsContact = isContactMessage(message);
+	const raw = message?.raw && typeof message.raw === 'object' ? message.raw : {};
+	if (!typeIsContact && !hasContactPayload(raw) && !message.sharedContact) return null;
+
 	if (message.sharedContact?.displayName || message.sharedContact?.phones?.length) {
 		const phones = Array.isArray(message.sharedContact.phones) ? message.sharedContact.phones : [];
 		return normalizeSharedContact(message.sharedContact.displayName, phones);
 	}
 
-	const raw = message?.raw && typeof message.raw === 'object' ? message.raw : {};
 	if (raw.sharedContact?.displayName || raw.sharedContact?.phones?.length) {
 		return normalizeSharedContact(raw.sharedContact.displayName, raw.sharedContact.phones || []);
 	}
 	if (raw.contact?.displayName || raw.contact?.phoneNumber) {
 		const phone = phoneFromLooseValue(raw.contact.phoneNumber || raw.contact.waId);
-		return normalizeSharedContact(raw.contact.displayName || message.text, phone ? [phone] : []);
+		if (!phone) return null;
+		return normalizeSharedContact(raw.contact.displayName || message.text, [phone]);
 	}
 
 	const contactMessage =
@@ -151,10 +166,10 @@ export function parseContactFromMessage(message) {
 				raw?.vcardFormattedName ||
 				(Array.isArray(contactsArray) ? contactsArray[0]?.displayName : '') ||
 				parseVcardName(vcardSources[0] || '') ||
-				message?.text ||
-				raw?.body ||
 				'',
 		).trim() || '';
+
+	if (!phones.length) return null;
 
 	if (looksLikeWhatsAppJid(displayName)) {
 		const loose = phoneFromLooseValue(displayName);
@@ -166,13 +181,6 @@ export function parseContactFromMessage(message) {
 		phones,
 	);
 	if (shared) return shared;
-
-	const fallbackName =
-		String(message?.contactName || message?.text || '').trim() || null;
-	if (fallbackName && !looksLikeWhatsAppJid(fallbackName)) {
-		const loose = phoneFromLooseValue(message?.text);
-		if (loose) return normalizeSharedContact(fallbackName, [loose]);
-	}
 
 	return null;
 }

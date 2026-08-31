@@ -9255,7 +9255,7 @@ function WhatsAppWorkspaceContent() {
 			try {
 				const { data: refreshed } = await api.get(
 					`/whatsapp/accounts/${targetAccountId}/statuses`,
-					{ params: { refresh: true, debug: '1' }, timeout: 60_000 },
+					{ params: { refresh: true, debug: '1' }, timeout: 90_000 },
 				);
 				applyStatuses(targetAccountId, refreshed);
 			} catch (error) {
@@ -9995,6 +9995,16 @@ function WhatsAppWorkspaceContent() {
 		setAiImagePanelOpen(false);
 		setDocumentPreview(null);
 	}, [conversationId]);
+
+	useEffect(() => {
+		if (!conversationId || !loadingMessages) return undefined;
+		const timer = window.setTimeout(() => {
+			if (conversationIdRef.current !== conversationId) return;
+			setLoadingMessages(false);
+			setMessagesSyncHint('');
+		}, 18_000);
+		return () => window.clearTimeout(timer);
+	}, [conversationId, loadingMessages]);
 
 	useEffect(() => {
 		if (threadSettled || !conversationId) return undefined;
@@ -17304,8 +17314,8 @@ function WhatsAppWorkspaceContent() {
 														!isDeleted && isWhatsAppLocationMessage(message);
 													const isContactMsg =
 														!isDeleted &&
-														(isContactMessage(message) ||
-															Boolean(parseContactFromMessage(message)));
+														isContactMessage(message) &&
+														Boolean(parseContactFromMessage(message));
 													const downloadableAttachments = collectDownloadableAttachments([
 														groupedImages
 															? { ...message, attachments: attachments || [] }
