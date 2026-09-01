@@ -1,3 +1,5 @@
+import { waScrollApply, waScrollLog, waScrollMark } from './wa-scroll-debug.js';
+
 /** Drops anything that belongs to a different chat. Messages carry their own
  *  conversationId, so a slow response for a previously opened chat can never
  *  paint into the chat the user is looking at now. */
@@ -620,6 +622,12 @@ const LATIN_SCRIPT_RE = /[A-Za-z]/g;
 const ARABIC_CHAR_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/;
 const LATIN_CHAR_RE = /[A-Za-z]/;
 
+export const ARABIC_MESSAGE_FONT_FAMILY =
+	'var(--font-arabic), "Segoe UI", Tahoma, "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif';
+
+export const DEFAULT_MESSAGE_FONT_FAMILY =
+	'"Segoe UI", "Helvetica Neue", Helvetica, "Lucida Grande", Arial, Ubuntu, Cantarell, "Fira Sans", sans-serif';
+
 /** First strong letter wins: Arabic → rtl, Latin → ltr. Skips digits/punctuation/space. */
 export function firstStrongTextDirection(text) {
 	const value = String(text || '');
@@ -641,12 +649,10 @@ export function isMostlyArabicText(text) {
 
 export function messageTextPresentation(text) {
 	const value = String(text || '');
-	// Same rule as WhatsApp Web: first strong letter decides bubble direction.
-	const dir = firstStrongTextDirection(value);
-	const isArabic = dir === 'rtl';
+	const isArabic = isMostlyArabicText(value);
+	const dir = isArabic ? 'rtl' : firstStrongTextDirection(value);
 	const arabicStyle = {
-		fontFamily:
-			'"Segoe UI", Tahoma, "Noto Sans Arabic", var(--font-arabic), "Helvetica Neue", Arial, sans-serif',
+		fontFamily: ARABIC_MESSAGE_FONT_FAMILY,
 		fontWeight: 400,
 		fontFeatureSettings: 'normal',
 		letterSpacing: 'normal',
@@ -661,7 +667,7 @@ export function messageTextPresentation(text) {
 		whiteSpace: 'pre-wrap',
 	};
 	const englishStyle = {
-		direction: 'ltr',
+		direction: dir,
 		textAlign: 'start',
 		unicodeBidi: 'plaintext',
 		overflowWrap: 'break-word',
@@ -669,8 +675,7 @@ export function messageTextPresentation(text) {
 		wordWrap: 'break-word',
 		hyphens: 'none',
 		whiteSpace: 'pre-wrap',
-		fontFamily:
-			'"Segoe UI", "Helvetica Neue", Helvetica, "Lucida Grande", Arial, Ubuntu, Cantarell, "Fira Sans", sans-serif',
+		fontFamily: DEFAULT_MESSAGE_FONT_FAMILY,
 		fontWeight: 400,
 		letterSpacing: 'normal',
 		fontFeatureSettings: 'normal',
@@ -686,7 +691,7 @@ export function messageTextPresentation(text) {
 		};
 	}
 	return {
-		dir: 'ltr',
+		dir,
 		lang: 'en',
 		isArabic: false,
 		className: 'wa-message-text--en',
@@ -1537,6 +1542,60 @@ export function resolveQuotedReplySource(replyTo, messages = []) {
 	return replyTo;
 }
 
+const QUOTED_PREVIEW_MAX_CHARS = 96;
+
+/** Flatten reply/quote text for a compact bubble preview (no markdown, no line breaks). */
+export function collapseQuotedPreviewText(text) {
+	return String(text || '')
+		.replace(/\*\*([^*]+)\*\*/g, '$1')
+		.replace(/\*([^*]+)\*/g, '$1')
+		.replace(/_([^_]+)_/g, '$1')
+		.replace(/`([^`]+)`/g, '$1')
+		.replace(/\r?\n+/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+export function truncateQuotedPreviewText(text, maxChars = QUOTED_PREVIEW_MAX_CHARS) {
+	const collapsed = collapseQuotedPreviewText(text);
+	if (!collapsed) return '';
+	if (collapsed.length <= maxChars) return collapsed;
+	return `${collapsed.slice(0, Math.max(1, maxChars - 1)).trimEnd()}…`;
+}
+
+/** Compact quoted-reply preview for in-bubble and composer UI. */
+export function quotedMessagePreview(replyTo, locale = 'en', options = {}) {
+	if (!replyTo) return null;
+	const type = String(replyTo?.type || '').toLowerCase();
+	const senderName = String(replyTo?.senderName || '').trim() || null;
+	const showSender = Boolean(options.isGroupChat && senderName);
+
+	if (isVoiceMessageType(type)) {
+		const voice = quotedVoicePresentation(replyTo, locale);
+		return {
+			senderName: showSender ? senderName : null,
+			body: [voice?.durationLabel || voice?.fallbackLabel, voice?.timeLabel]
+				.filter(Boolean)
+				.join(' · '),
+			isVoice: true,
+		};
+	}
+
+	const text = String(replyTo?.text || '').trim();
+	if (text) {
+		return {
+			senderName: showSender ? senderName : null,
+			body: truncateQuotedPreviewText(text),
+		};
+	}
+
+	return {
+		senderName: showSender ? senderName : null,
+		body: quotedMessageLabel(replyTo, locale),
+		isMediaOnly: true,
+	};
+}
+
 export function quotedMessageLabel(replyTo, locale = 'en') {
 	const text = String(replyTo?.text || '').trim();
 	const type = String(replyTo?.type || '').toLowerCase();
@@ -1662,6 +1721,27 @@ export function isComposerImageFile(file) {
 	const type = String(file?.type || '').toLowerCase();
 	if (COMPOSER_IMAGE_TYPES.has(type)) return true;
 	return /\.(jpe?g|png|webp|gif)$/i.test(String(file?.name || ''));
+}
+
+/** Ensure picked/pasted images carry a MIME type multer will accept. */
+export function normalizeComposerImageFile(file) {
+	if (!file) return null;
+	const name = String(file.name || '').trim() || 'image.jpg';
+	const lower = name.toLowerCase();
+	let type = String(file.type || '').toLowerCase().replace(/\s+/g, '');
+	if (!type || type === 'application/octet-stream') {
+		if (/\.jpe?g$/i.test(lower)) type = 'image/jpeg';
+		else if (/\.png$/i.test(lower)) type = 'image/png';
+		else if (/\.webp$/i.test(lower)) type = 'image/webp';
+		else if (/\.gif$/i.test(lower)) type = 'image/gif';
+		else if (isComposerImageFile(file)) type = 'image/jpeg';
+	}
+	if (!type.startsWith('image/')) return file;
+	if (file instanceof File && file.type === type && file.name === name) return file;
+	return new File([file], name, {
+		type,
+		lastModified: file.lastModified || Date.now(),
+	});
 }
 
 export function clipboardImageFiles(event) {
@@ -1803,6 +1883,25 @@ export function findThreadAnchorRow(box, pending) {
 	return null;
 }
 
+/** Distance (px) from the bottom of the scroll container. */
+export const THREAD_PIN_THRESHOLD_PX = 64;
+export const THREAD_NEAR_BOTTOM_THRESHOLD_PX = 180;
+
+export function threadDistanceFromBottom(box) {
+	if (!box) return Number.POSITIVE_INFINITY;
+	return (
+		Number(box.scrollHeight) - Number(box.clientHeight) - (Number(box.scrollTop) || 0)
+	);
+}
+
+export function isThreadPinnedToBottom(box, threshold = THREAD_PIN_THRESHOLD_PX) {
+	return threadDistanceFromBottom(box) <= threshold;
+}
+
+export function isThreadNearBottom(box, threshold = THREAD_NEAR_BOTTOM_THRESHOLD_PX) {
+	return threadDistanceFromBottom(box) <= threshold;
+}
+
 export function captureThreadScrollAnchor(box, options = {}) {
 	if (!box) return null;
 	const virtualItems = Array.isArray(options.virtualItems) ? options.virtualItems : [];
@@ -1868,9 +1967,13 @@ export function shouldStickThreadToBottom({
 	restoringOlder = false,
 	isNewLatest = false,
 	nearBottom = false,
+	threadSettling = false,
 } = {}) {
 	if (loadingOlder || restoringOlder) return false;
-	if (pinToBottom) return true;
+	// Glue to bottom while a chat first opens and media heights are still settling.
+	if (threadSettling && pinToBottom) return true;
+	// Pin only when the viewport is actually at the bottom — not merely flagged.
+	if (pinToBottom && nearBottom) return true;
 	return Boolean(isNewLatest && nearBottom);
 }
 
@@ -1888,7 +1991,13 @@ export function applyThreadScrollAnchor(box, pending, options = {}) {
 		const drift =
 			row.getBoundingClientRect().top - viewportTop - Number(pending.offsetFromViewport || 0);
 		if (Math.abs(drift) > 0.5) {
-			box.scrollTop += drift;
+			waScrollApply(
+				box,
+				box.scrollTop + drift,
+				'applyThreadScrollAnchor',
+				'row-drift-correction',
+				{ drift, rowKey: pending.rowKey },
+			);
 		}
 		pending.lastAppliedTotalSize = nextSize;
 		pending.usedRow = true;
@@ -1899,11 +2008,25 @@ export function applyThreadScrollAnchor(box, pending, options = {}) {
 	const baseTop = Number(pending.previousScrollTop);
 	if (Number.isFinite(baseTop) && originalSize > 0 && Number.isFinite(nextSize)) {
 		// Absolute restore so a remount / scrollTop reset cannot jump to 0 or the bottom.
-		box.scrollTop = baseTop + (nextSize - originalSize);
+		waScrollApply(
+			box,
+			baseTop + (nextSize - originalSize),
+			'applyThreadScrollAnchor',
+			'absolute-restore',
+			{ baseTop, originalSize, nextSize },
+		);
 	} else {
 		const prevSize = Number(pending.lastAppliedTotalSize ?? originalSize);
 		const delta = nextSize - prevSize;
-		if (delta) box.scrollTop += delta;
+		if (delta) {
+			waScrollApply(
+				box,
+				box.scrollTop + delta,
+				'applyThreadScrollAnchor',
+				'height-delta',
+				{ delta, prevSize, nextSize },
+			);
+		}
 	}
 	pending.lastAppliedTotalSize = nextSize;
 	pending.usedRow = false;

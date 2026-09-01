@@ -108,6 +108,9 @@ const labels = {
 		batchDone: 'Transcribed {count} files',
 		batchPartial: 'Transcribed {done} of {total} files. Some failed.',
 		noItems: 'Select at least one voice, video, or message.',
+		copyTitle: 'Preparing messages to copy',
+		copyDescription:
+			'Transcribing voice notes that do not have a transcript yet. Everything will be copied in order when done.',
 	},
 	ar: {
 		title: 'تحويل الصوت أو الفيديو إلى نص',
@@ -155,6 +158,9 @@ const labels = {
 		batchDone: 'تم تحويل {count} ملف',
 		batchPartial: 'تم تحويل {done} من {total}. بعضها فشل.',
 		noItems: 'حدّد صوتًا أو فيديو أو رسالة واحدة على الأقل.',
+		copyTitle: 'جارٍ تجهيز الرسائل للنسخ',
+		copyDescription:
+			'يتم تحويل الرسائل الصوتية التي لا تحتوي على نص. سيتم نسخ كل الرسائل بالترتيب عند الانتهاء.',
 	},
 };
 
@@ -194,9 +200,12 @@ export default function TranscriptionDialog({
 	loadVoiceFile,
 	items,
 	onCompleted,
+	autoStart = false,
+	intent = 'default',
 }) {
 	const locale = useLocale();
 	const t = labels[locale] || labels.en;
+	const isCopyIntent = intent === 'copy';
 	const sources = useMemo(
 		() => {
 			const provided = Array.isArray(items) ? items.filter(Boolean) : [];
@@ -229,6 +238,7 @@ export default function TranscriptionDialog({
 	const [saving, setSaving] = useState(false);
 	const [aiBusy, setAiBusy] = useState({ enhancing: false, summarizing: false });
 	const aiPanelRef = useRef(null);
+	const autoStartKeyRef = useRef('');
 	const onAiBusyChange = useCallback(next => {
 		setAiBusy({
 			enhancing: Boolean(next?.enhancing),
@@ -244,7 +254,10 @@ export default function TranscriptionDialog({
 	);
 
 	useEffect(() => {
-		if (!open) return undefined;
+		if (!open) {
+			autoStartKeyRef.current = '';
+			return undefined;
+		}
 		let cancelled = false;
 		setProvider(getStoredTranscriptionProvider());
 		setChunkSeconds(getStoredTranscriptionChunkSeconds());
@@ -289,6 +302,15 @@ export default function TranscriptionDialog({
 			cancelled = true;
 		};
 	}, [loadFile, loadVoiceFile, open, singleVoice, sourceKey, t.fileError]);
+
+	useEffect(() => {
+		if (!open || !autoStart || !sources.length || busy) return;
+		if (singleVoice && !file) return;
+		if (autoStartKeyRef.current === sourceKey) return;
+		autoStartKeyRef.current = sourceKey;
+		void transcribe();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [open, autoStart, sources.length, singleVoice, file, sourceKey, busy]);
 
 	useEffect(() => {
 		if (!result?.originalText || !result?.enhancedText) return;
@@ -404,7 +426,16 @@ export default function TranscriptionDialog({
 				setOriginalExpanded(false);
 				setProgress(100);
 				setStatus('done');
-				onCompleted?.(nextText, data);
+				onCompleted?.(nextText, data, {
+					timeline: [
+						{
+							id: sources[0]?.id,
+							kind: sources[0]?.kind || 'voice',
+							timestamp: sources[0]?.timestamp,
+							text: nextText,
+						},
+					],
+				});
 			} catch (error) {
 				setStatus('error');
 				const fallback =
@@ -426,6 +457,7 @@ export default function TranscriptionDialog({
 		for (const source of sources) {
 			if (source.kind === 'text') {
 				timeline.push({
+					id: source.id,
 					kind: 'text',
 					timestamp: source.timestamp,
 					text: source.text,
@@ -478,6 +510,7 @@ export default function TranscriptionDialog({
 				});
 				createdRecords.push(data);
 				timeline.push({
+					id: source.id,
 					kind: 'voice',
 					timestamp: source.timestamp,
 					audioIndex: source.audioIndex,
@@ -489,6 +522,7 @@ export default function TranscriptionDialog({
 			} catch (error) {
 				failedVoices += 1;
 				timeline.push({
+					id: source.id,
 					kind: 'voice',
 					timestamp: source.timestamp,
 					audioIndex: source.audioIndex,
@@ -527,7 +561,7 @@ export default function TranscriptionDialog({
 			setOriginalTranscript('');
 			setOriginalExpanded(false);
 			setStatus('done');
-			onCompleted?.(combinedText, merged);
+			onCompleted?.(combinedText, merged, { timeline });
 			if (voiceSources.length && failedVoices === 0) {
 				toast.success(t.batchDone.replace('{count}', String(voiceSources.length)));
 			} else if (voiceSources.length && failedVoices > 0 && createdRecords.length > 0) {
@@ -608,10 +642,10 @@ export default function TranscriptionDialog({
 						<span className="grid size-8 place-items-center rounded-full bg-[#d9fdd3] text-[#128c7e]">
 							<AudioLines className="size-4" />
 						</span>
-						{isBundle ? t.bundleTitle : t.title}
+						{isCopyIntent ? t.copyTitle : isBundle ? t.bundleTitle : t.title}
 					</DialogTitle>
 					<DialogDescription className="text-[12px] leading-5 text-slate-500">
-						{isBundle ? t.bundleDescription : t.description}
+						{isCopyIntent ? t.copyDescription : isBundle ? t.bundleDescription : t.description}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -689,7 +723,7 @@ export default function TranscriptionDialog({
 							</div>
 						) : null}
 
-						<div className="wa-transcribe-controls grid grid-cols-[minmax(0,1fr)_minmax(6.75rem,8.25rem)_auto] items-end gap-2">
+						<div className={`wa-transcribe-controls grid grid-cols-[minmax(0,1fr)_minmax(6.75rem,8.25rem)_auto] items-end gap-2 ${isCopyIntent ? 'hidden' : ''}`}>
 							<label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-700">
 								<span className="truncate">{t.method}</span>
 								<WaCustomSelect

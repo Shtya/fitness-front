@@ -20,7 +20,11 @@ import {
 	firstStrongTextDirection,
 	messageTextPresentation,
 	groupSenderIdentity,
+	collapseQuotedPreviewText,
 	quotedMessageLabel,
+	quotedMessagePreview,
+	normalizeComposerImageFile,
+	truncateQuotedPreviewText,
 	quotedPreviewFromMessage,
 	quotedVoicePresentation,
 	quotedTargetFromMessage,
@@ -601,15 +605,20 @@ test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	const arabic = messageTextPresentation('رسالة عربية');
 	assert.equal(arabic.dir, 'rtl');
 	assert.equal(arabic.style.textAlign, 'start');
-	assert.match(arabic.style.fontFamily, /Segoe UI/);
+	assert.match(arabic.style.fontFamily, /--font-arabic/);
 	assert.equal(arabic.style.fontWeight, 400);
 	assert.equal(messageTextPresentation('English message').dir, 'ltr');
-	const startsEnglish = messageTextPresentation('Hello مرحباً');
+	const startsEnglish = messageTextPresentation('Hello world مرحباً');
 	assert.equal(startsEnglish.dir, 'ltr');
 	assert.match(startsEnglish.style.fontFamily, /Segoe UI/);
 	const startsArabic = messageTextPresentation('مرحبا Hello');
 	assert.equal(startsArabic.dir, 'rtl');
-	assert.match(startsArabic.style.fontFamily, /Noto Sans Arabic/);
+	assert.match(startsArabic.style.fontFamily, /--font-arabic/);
+	const numberedArabic = messageTextPresentation(
+		'1- وانت بتحط الخطوه بيقول لك اختار شركه الشحن',
+	);
+	assert.equal(numberedArabic.dir, 'rtl');
+	assert.equal(numberedArabic.className, 'wa-message-text--ar');
 	const mostlyEnglish = messageTextPresentation(
 		'New Email\nFrom: Admin\nReceived: السبت، ٢٢ أغسطس في ٣:٤٣ م',
 	);
@@ -745,6 +754,49 @@ test('inbox avatar lookup uses a matching direct chat photo', () => {
 		'https://cdn/a.jpg',
 	);
 	assert.equal(inboxAvatarForWaId([], '201000000000@c.us'), '');
+});
+
+test('normalizeComposerImageFile repairs missing image mime types', () => {
+	const raw = new File([new Uint8Array([1, 2, 3])], 'scan.JPG', {
+		type: '',
+	});
+	const normalized = normalizeComposerImageFile(raw);
+	assert.equal(normalized.type, 'image/jpeg');
+	assert.equal(normalized.name, 'scan.JPG');
+});
+
+test('quoted preview collapses markdown and truncates long reply text', () => {
+	const long = [
+		'**رابط المشروع**',
+		'https://example.com/very/long/path',
+		'adyar_riviera_file_message',
+		'المزيد من النص الطويل الذي يجب ألا يظهر كاملاً داخل المعاينة',
+	].join('\n');
+	const collapsed = collapseQuotedPreviewText(long);
+	assert.match(collapsed, /رابط المشروع/);
+	assert.doesNotMatch(collapsed, /\*\*/);
+	assert.doesNotMatch(collapsed, /\n/);
+	const truncated = truncateQuotedPreviewText(long, 48);
+	assert.equal(truncated.length, 48);
+	assert.match(truncated, /…$/);
+	const preview = quotedMessagePreview({ type: 'text', text: long }, 'ar');
+	assert.ok(preview.body.length <= 96);
+	assert.match(preview.body, /…$/);
+});
+
+test('quoted preview shows group sender name only in group chats', () => {
+	const withName = quotedMessagePreview(
+		{ type: 'text', text: 'Hello', senderName: 'Ahmed' },
+		'en',
+		{ isGroupChat: true },
+	);
+	assert.equal(withName.senderName, 'Ahmed');
+	const direct = quotedMessagePreview(
+		{ type: 'text', text: 'Hello', senderName: 'Ahmed' },
+		'en',
+		{ isGroupChat: false },
+	);
+	assert.equal(direct.senderName, null);
 });
 
 test('quoted image labels and previews do not fall back to the word image', () => {
@@ -1113,7 +1165,15 @@ test('shouldStickThreadToBottom only pins on first open or new messages near the
 		shouldStickThreadToBottom({ pinToBottom: true, restoringOlder: true }),
 		false,
 	);
-	assert.equal(shouldStickThreadToBottom({ pinToBottom: true }), true);
+	assert.equal(shouldStickThreadToBottom({ pinToBottom: true }), false);
+	assert.equal(
+		shouldStickThreadToBottom({ pinToBottom: true, threadSettling: true }),
+		true,
+	);
+	assert.equal(
+		shouldStickThreadToBottom({ pinToBottom: true, nearBottom: true }),
+		true,
+	);
 	assert.equal(
 		shouldStickThreadToBottom({ isNewLatest: true, nearBottom: true }),
 		true,

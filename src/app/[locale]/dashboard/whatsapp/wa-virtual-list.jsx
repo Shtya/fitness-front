@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { waScrollLog, waScrollMark } from './wa-scroll-debug';
 
 /**
  * Scroll-window helper: only mount a slice of rows (+spacers).
@@ -217,8 +218,38 @@ export function useWaVirtualRows({
 		virtualizer,
 		items,
 		totalSize,
-		scrollToIndex: (index, opts) => virtualizer.scrollToIndex(index, opts),
-		scrollToOffset: (offset, opts) => virtualizer.scrollToOffset(offset, opts),
+		scrollToIndex: (index, opts) => {
+			const box = scrollRef?.current;
+			const oldTop = box ? Number(box.scrollTop) || 0 : 0;
+			waScrollMark('useWaVirtualRows', 'virtualizer.scrollToIndex', { index, opts });
+			virtualizer.scrollToIndex(index, opts);
+			if (box) {
+				waScrollLog(
+					'useWaVirtualRows',
+					`virtualizer.scrollToIndex:${index}`,
+					box,
+					oldTop,
+					box.scrollTop,
+					{ align: opts?.align },
+				);
+			}
+		},
+		scrollToOffset: (offset, opts) => {
+			const box = scrollRef?.current;
+			const oldTop = box ? Number(box.scrollTop) || 0 : 0;
+			waScrollMark('useWaVirtualRows', 'virtualizer.scrollToOffset', { offset, opts });
+			virtualizer.scrollToOffset(offset, opts);
+			if (box) {
+				waScrollLog(
+					'useWaVirtualRows',
+					`virtualizer.scrollToOffset:${offset}`,
+					box,
+					oldTop,
+					box.scrollTop,
+					{ align: opts?.align },
+				);
+			}
+		},
 		getScrollOffset: () => virtualizer.scrollOffset,
 		measureElement: virtualizer.measureElement,
 	};

@@ -97,6 +97,13 @@ import {
 	getMessageTranscriptsForIds,
 	saveMessageTranscripts,
 } from './whatsapp-message-transcripts';
+import {
+	buildSelectedMessagesCopyText,
+	messageNeedsTranscription,
+	resolveStoredTranscript,
+	sortMessagesByTime,
+	transcriptTextByIdFromTimeline,
+} from './whatsapp-selected-copy';
 import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
 import CloneChatVoicePanel from './voice-changer/CloneChatVoicePanel';
@@ -156,9 +163,9 @@ import {
 	parseWhatsAppBold,
 	compressImageForWhatsApp,
 	quotedMessageLabel,
+	quotedMessagePreview,
 	quotedPreviewFromMessage,
 	quotedTargetFromMessage,
-	quotedVoicePresentation,
 	resolveQuotedReplySource,
 	buildReplySnapshot,
 	messageMatchesQuotedTarget,
@@ -171,6 +178,7 @@ import {
 	visibleMessageText,
 	clipboardImageFiles,
 	isComposerImageFile,
+	normalizeComposerImageFile,
 	voiceDurationSecondsFromSource,
 	isLocalMediaUrl,
 	localMediaFileUrl,
@@ -179,6 +187,11 @@ import {
 	captureThreadScrollAnchor,
 	findThreadAnchorRow,
 	shouldStickThreadToBottom,
+	isThreadNearBottom,
+	isThreadPinnedToBottom,
+	threadDistanceFromBottom,
+	THREAD_NEAR_BOTTOM_THRESHOLD_PX,
+	THREAD_PIN_THRESHOLD_PX,
 	mediaDimensionsForAttachment,
 	rememberMediaDimensions,
 	reservedMediaBoxStyle,
@@ -191,8 +204,16 @@ import {
 	statusMessageIdentityKey,
 } from './whatsapp-utils';
 import {
+	installWaScrollSpy,
+	waScrollApply,
+	waScrollLog,
+	waScrollMark,
+	waScrollTo,
+} from './wa-scroll-debug';
+import {
 	downloadContactVcard,
 	extractRawVcardFromMessage,
+	isContactMessage,
 	parseContactFromMessage,
 } from './whatsapp-contact';
 import { createWhatsAppTabLeader } from './whatsapp-tab-leader';
@@ -250,6 +271,7 @@ import {
 import {
 	MESSAGE_PAGE_SIZE,
 	MESSAGES_CACHE_TTL_MS,
+	isMessageThreadCacheComplete,
 	shouldProviderBackfill,
 	shouldSkipOpenChatNetwork,
 } from './whatsapp-message-sync';
@@ -616,6 +638,10 @@ const translations = {
 		selectAllMessages: 'Select all',
 		noMessagesToSelect: 'No voices or tickets to select in this chat',
 		transcribeSelected: 'Transcribe selected',
+		copySelected: 'Copy',
+		copiedSelectedMessages: 'Copied {count} messages',
+		nothingToCopy: 'Nothing to copy from the selected messages',
+		copyFailed: 'Could not copy',
 		selectedMessagesCount: '{count} selected',
 		needVoiceOrTicket: 'Select at least one voice or text message',
 		tooManySelected: 'Select up to {count} messages at a time',
@@ -1058,6 +1084,10 @@ const translations = {
 		selectAllMessages: 'تحديد الكل',
 		noMessagesToSelect: 'لا توجد أصوات أو تذاكر للتحديد في هذه المحادثة',
 		transcribeSelected: 'تحويل المحدد',
+		copySelected: 'نسخ',
+		copiedSelectedMessages: 'تم نسخ {count} رسالة',
+		nothingToCopy: 'لا يوجد محتوى للنسخ من الرسائل المحددة',
+		copyFailed: 'تعذر النسخ',
 		selectedMessagesCount: '{count} محدد',
 		needVoiceOrTicket: 'حدّد رسالة صوتية أو نصية واحدة على الأقل',
 		tooManySelected: 'يمكنك تحديد حتى {count} رسالة في المرة',
@@ -6451,6 +6481,11 @@ function MultiMessageActionMenu({
 			label: ar ? 'تحويل المحدد' : 'Transcribe selected',
 			icon: AudioLines,
 		},
+		selectedCount > 0 && {
+			id: 'copy',
+			label: ar ? 'نسخ' : 'Copy',
+			icon: Copy,
+		},
 		canUseGroups && {
 			id: 'addToGroup',
 			label: ar ? 'إضافة لمجموعة رسائل' : 'Add to message group',
@@ -7975,6 +8010,14 @@ function WhatsAppWorkspaceContent() {
 	const [messageScheduleBusyId, setMessageScheduleBusyId] = useState('');
 	const [composerImages, setComposerImages] = useState([]);
 	const composerImagesRef = useRef([]);
+	const setComposerImagesState = useCallback(next => {
+		setComposerImages(current => {
+			const resolved = typeof next === 'function' ? next(current) : next;
+			const items = Array.isArray(resolved) ? resolved : [];
+			composerImagesRef.current = items;
+			return items;
+		});
+	}, []);
 
 	const openSchedulePopover = useCallback(event => {
 		setScheduleAnchorEl(event?.currentTarget || null);
@@ -7989,6 +8032,20 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		composerImagesRef.current = composerImages;
 	}, [composerImages]);
+
+	const removeComposerImageById = useCallback(id => {
+		setComposerImagesState(current => {
+			const target = current.find(item => item.id === id);
+			if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+			return current.filter(item => item.id !== id);
+		});
+	}, [setComposerImagesState]);
+
+	const markComposerImageUploading = useCallback((id, uploading) => {
+		setComposerImagesState(current =>
+			current.map(item => (item.id === id ? { ...item, uploading } : item)),
+		);
+	}, [setComposerImagesState]);
 
 	useEffect(() => {
 		const sync = () => setBrowserOnline(typeof navigator === 'undefined' || navigator.onLine);
@@ -8024,6 +8081,8 @@ function WhatsAppWorkspaceContent() {
 	const [loadingMessageInfo, setLoadingMessageInfo] = useState(false);
 	const [deleteMessageTarget, setDeleteMessageTarget] = useState(null);
 	const [transcriptionSources, setTranscriptionSources] = useState(null);
+	const [transcriptionIntent, setTranscriptionIntent] = useState(null);
+	const pendingCopyMessagesRef = useRef([]);
 	const [messageTranscripts, setMessageTranscripts] = useState(() => ({}));
 	const [conversationActionTarget, setConversationActionTarget] = useState(null);
 	const [conversationActionAnchor, setConversationActionAnchor] = useState(null);
@@ -8134,6 +8193,10 @@ function WhatsAppWorkspaceContent() {
 	const suppressConversationClickRef = useRef(false);
 	const lastAutoScrolledMessageRef = useRef(null);
 	const pinThreadToBottomRef = useRef(false);
+	const lastThreadScrollTopRef = useRef(0);
+	const userScrollingThreadRef = useRef(false);
+	const userScrollIdleTimerRef = useRef(null);
+	const threadSettledRef = useRef(true);
 	const chatSearchRef = useRef('');
 	const conversationFilterRef = useRef('all');
 	const lastOpenMessagesLoadKeyRef = useRef('');
@@ -8226,10 +8289,30 @@ function WhatsAppWorkspaceContent() {
 			if (!pinThreadToBottomRef.current) return;
 			const box = messageBoxRef.current;
 			if (!box) return;
+			if (
+				threadSettledRef.current &&
+				!isThreadPinnedToBottom(box) &&
+				!isThreadNearBottom(box)
+			) {
+				pinThreadToBottomRef.current = false;
+				return;
+			}
 			if (behavior === 'smooth') {
-				box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+				waScrollTo(
+					box,
+					{ top: box.scrollHeight, behavior: 'smooth' },
+					'scrollMessagesToBottom',
+					'scrollMessagesToBottom:smooth',
+					{ pin: true },
+				);
 			} else {
-				box.scrollTop = box.scrollHeight;
+				waScrollApply(
+					box,
+					box.scrollHeight,
+					'scrollMessagesToBottom',
+					'scrollMessagesToBottom:auto',
+					{ pin: true },
+				);
 			}
 			const distance = box.scrollHeight - box.clientHeight - box.scrollTop;
 			setShowJumpToBottom(distance > 220);
@@ -8414,7 +8497,12 @@ function WhatsAppWorkspaceContent() {
 	const latestThreadMessageId = effectiveMessages[effectiveMessages.length - 1]?.id || null;
 	const shouldAdjustScrollOnRowResize = useCallback(() => {
 		if (isThreadScrollLocked()) return false;
-		return Boolean(pinThreadToBottomRef.current);
+		if (!pinThreadToBottomRef.current) return false;
+		if (userScrollingThreadRef.current) return false;
+		const box = messageBoxRef.current;
+		if (!box) return false;
+		if (!threadSettledRef.current) return true;
+		return isThreadPinnedToBottom(box);
 	}, [isThreadScrollLocked]);
 	const messageVirtual = useWaVirtualRows({
 		count: messageRows.length,
@@ -8460,7 +8548,13 @@ function WhatsAppWorkspaceContent() {
 				!loadingOlderRef.current &&
 				!olderScrollRestoreRef.current
 			) {
-				scrollMessagesToBottom('auto');
+				const box = messageBoxRef.current;
+				if (
+					box &&
+					(!threadSettledRef.current || isThreadPinnedToBottom(box))
+				) {
+					scrollMessagesToBottom('auto');
+				}
 			}
 		},
 		[scrollMessagesToBottom],
@@ -9799,10 +9893,8 @@ function WhatsAppWorkspaceContent() {
 					cacheIsFresh,
 					forceProvider,
 					itemCount: cached.items.length,
+					hasMore: cached.hasMore !== false,
 					socketHealthy: Boolean(socketRef.current?.connected),
-					providerHydratedAt: cached.providerHydratedAt,
-					lastProviderSyncAt:
-						cached.lastProviderSyncAt || conversationMeta?.lastProviderSyncAt,
 				})
 			) {
 				markReadIfNeeded();
@@ -10150,7 +10242,7 @@ function WhatsAppWorkspaceContent() {
 				conversationsRef.current.find(item => item.id === id) ||
 				null;
 
-			if (warmCache?.items?.length) {
+			if (isMessageThreadCacheComplete(warmCache)) {
 				writeConversationMessages(id, () => warmCache.items);
 				setHasMoreMessages(Boolean(warmCache.hasMore));
 				setLoadingMessages(false);
@@ -10179,6 +10271,8 @@ function WhatsAppWorkspaceContent() {
 
 			lastAutoScrolledMessageRef.current = null;
 			olderScrollRestoreRef.current = null;
+			lastThreadScrollTopRef.current = 0;
+			userScrollingThreadRef.current = false;
 			pinThreadToBottomRef.current = true;
 			setShowJumpToBottom(false);
 			setThreadSettled(false);
@@ -10368,7 +10462,7 @@ function WhatsAppWorkspaceContent() {
 		const cacheKey = conversationId ? messagesCacheKey(conversationId, starredOnly) : '';
 		if (switchedConversation) {
 			const warmCache = cacheKey ? messagesCacheRef.current.get(cacheKey) : null;
-			if (warmCache?.items?.length) {
+			if (warmCache && isMessageThreadCacheComplete(warmCache)) {
 				writeConversationMessages(conversationId, () => warmCache.items);
 				setHasMoreMessages(Boolean(warmCache.hasMore));
 				setLoadingMessages(false);
@@ -10382,6 +10476,8 @@ function WhatsAppWorkspaceContent() {
 			}
 			lastAutoScrolledMessageRef.current = null;
 			olderScrollRestoreRef.current = null;
+			lastThreadScrollTopRef.current = 0;
+			userScrollingThreadRef.current = false;
 			pinThreadToBottomRef.current = true;
 			setShowJumpToBottom(false);
 			setThreadSettled(false);
@@ -10465,11 +10561,35 @@ function WhatsAppWorkspaceContent() {
 	}, [conversationId, loadingMessages]);
 
 	useEffect(() => {
+		const box = messageBoxRef.current;
+		if (!box || !conversationId) return undefined;
+		return installWaScrollSpy(box);
+	}, [conversationId]);
+
+	useEffect(() => {
+		threadSettledRef.current = threadSettled;
+	}, [threadSettled]);
+
+	useEffect(() => {
+		return () => {
+			if (userScrollIdleTimerRef.current) {
+				window.clearTimeout(userScrollIdleTimerRef.current);
+			}
+		};
+	}, [conversationId]);
+
+	useEffect(() => {
 		if (threadSettled || !conversationId) return undefined;
 		const timer = window.setTimeout(() => {
 			const box = messageBoxRef.current;
 			if (box && pinThreadToBottomRef.current) {
-				box.scrollTop = box.scrollHeight;
+				waScrollApply(
+					box,
+					box.scrollHeight,
+					'threadSettledTimer',
+					'threadSettled:450ms-pin-bottom',
+					{ pin: true },
+				);
 			}
 			setThreadSettled(true);
 		}, 450);
@@ -10557,9 +10677,7 @@ function WhatsAppWorkspaceContent() {
 			if (!loadingMessages && !threadSettled) setThreadSettled(true);
 			return;
 		}
-		const nearBottom = box
-			? box.scrollHeight - box.clientHeight - box.scrollTop < 180
-			: false;
+		const nearBottom = box ? isThreadNearBottom(box) : false;
 		const isNewLatest = latest.id !== lastAutoScrolledMessageRef.current;
 		if (
 			!shouldStickThreadToBottom({
@@ -10568,18 +10686,32 @@ function WhatsAppWorkspaceContent() {
 				restoringOlder: Boolean(olderScrollRestoreRef.current),
 				isNewLatest,
 				nearBottom,
+				threadSettling: !threadSettled,
 			})
 		) {
 			return;
 		}
 		lastAutoScrolledMessageRef.current = latest.id;
 		if (virtualizeMessages && messageRows.length > 0) {
+			waScrollMark('autoScrollLayoutEffect', 'virtualizer.scrollToIndex:last', {
+				latestId: latest.id,
+			});
 			messageVirtualRef.current?.scrollToIndex?.(messageRows.length - 1, {
 				align: 'end',
 			});
 		}
 		if (box) {
-			box.scrollTop = box.scrollHeight;
+			waScrollApply(
+				box,
+				box.scrollHeight,
+				'autoScrollLayoutEffect',
+				`shouldStickThreadToBottom:latest=${latest.id}`,
+				{
+					isNewLatest,
+					nearBottom,
+					pin: pinThreadToBottomRef.current,
+				},
+			);
 			setShowJumpToBottom(false);
 		}
 		if (!threadSettled && effectiveMessages.length > 0 && !loadingMessages) {
@@ -10615,6 +10747,9 @@ function WhatsAppWorkspaceContent() {
 			virtualized: virtualizeMessages,
 		};
 		const previousSize = pending.lastAppliedTotalSize;
+		waScrollMark('olderRestoreLayoutEffect', 'applyThreadScrollAnchor', {
+			conversationId: pending.conversationId,
+		});
 		applyThreadScrollAnchor(box, pending, restoreOptions);
 
 		const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -10642,7 +10777,12 @@ function WhatsAppWorkspaceContent() {
 		const raf = requestAnimationFrame(() => {
 			if (olderScrollRestoreRef.current !== pending) return;
 			const current = messageBoxRef.current;
-			if (current) applyThreadScrollAnchor(current, pending, restoreOptions);
+			if (current) {
+				waScrollMark('olderRestoreLayoutEffect', 'applyThreadScrollAnchor:raf', {
+					conversationId: pending.conversationId,
+				});
+				applyThreadScrollAnchor(current, pending, restoreOptions);
+			}
 		});
 		const timer = window.setTimeout(() => {
 			if (olderScrollRestoreRef.current === pending) {
@@ -10668,9 +10808,24 @@ function WhatsAppWorkspaceContent() {
 		const box = messageBoxRef.current;
 		if (!box || !conversationId) return undefined;
 		const keepBottom = () => {
-			if (!pinThreadToBottomRef.current) return;
 			if (isThreadScrollLocked()) return;
-			box.scrollTop = box.scrollHeight;
+			if (!pinThreadToBottomRef.current) return;
+			if (userScrollingThreadRef.current) return;
+			const distance = threadDistanceFromBottom(box);
+			const allowGlue = threadSettledRef.current
+				? distance <= THREAD_PIN_THRESHOLD_PX
+				: distance <= THREAD_NEAR_BOTTOM_THRESHOLD_PX;
+			if (!allowGlue) {
+				if (threadSettledRef.current) pinThreadToBottomRef.current = false;
+				return;
+			}
+			waScrollApply(
+				box,
+				box.scrollHeight,
+				'resizeObserverKeepBottom',
+				'media/layout-resize:pin-bottom',
+				{ pin: true, distance },
+			);
 			setShowJumpToBottom(false);
 		};
 		const onMediaLoad = event => {
@@ -10860,7 +11015,7 @@ function WhatsAppWorkspaceContent() {
 					items: nextCached,
 					hasMore: previous?.hasMore ?? true,
 					cachedAt: Date.now(),
-					providerHydratedAt: previous?.providerHydratedAt || Date.now(),
+					providerHydratedAt: previous?.providerHydratedAt || 0,
 				});
 				queryClient.setQueryData(whatsappKeys.messages(targetConversationId), {
 					items: nextCached,
@@ -11794,7 +11949,9 @@ function WhatsAppWorkspaceContent() {
 			stopVoiceRecording(true);
 			return;
 		}
-		const stagedComposerImages = composerImagesRef.current;
+		const stagedComposerImages = composerImagesRef.current.filter(
+			item => item?.file && !item.uploading,
+		);
 		if (stagedComposerImages.length) {
 			if (!conversationId || sending) return;
 			if (!accountId) {
@@ -11807,61 +11964,57 @@ function WhatsAppWorkspaceContent() {
 			}
 			pinThreadToBottomRef.current = true;
 			const targetConversationId = conversationId;
-			const imagesToSend = [...stagedComposerImages];
 			const caption = getDraft().trim();
 			const replySnapshot = replyingTo;
+			setSending(true);
+			setUploadProgress(0);
 
-			const restoreComposerImages = (fromIndex = 0) => {
-				const remaining = imagesToSend.slice(fromIndex).map((entry, offset) => {
-					if (offset === 0) {
-						return {
-							...entry,
-							previewUrl: URL.createObjectURL(entry.file),
-						};
+			try {
+				for (let index = 0; index < stagedComposerImages.length; index += 1) {
+					const item = stagedComposerImages[index];
+					const imageCaption = index === 0 ? caption : '';
+					const imageReply = index === 0 ? replySnapshot : null;
+					markComposerImageUploading(item.id, true);
+
+					const clientMessageId = newClientMessageId();
+					const optimisticPreviewUrl = URL.createObjectURL(item.file);
+					const optimisticMessage = buildOptimisticMediaMessage({
+						conversationId: targetConversationId,
+						clientMessageId,
+						type: 'image',
+						file: item.file,
+						previewUrl: optimisticPreviewUrl,
+						caption: imageCaption,
+						replySnapshot: imageReply,
+					});
+					persistConversationMessages(targetConversationId, current =>
+						mergeMessages(current, [optimisticMessage], targetConversationId),
+					);
+
+					const sent = await sendFile(item.file, 'image', {
+						conversationId: targetConversationId,
+						clientMessageId,
+						caption: imageCaption,
+						replySnapshot: imageReply,
+						optimisticMessage,
+						skipSendingState: true,
+						clearUploadProgress: false,
+					});
+
+					if (!sent) {
+						markComposerImageUploading(item.id, false);
+						return;
 					}
-					return entry;
-				});
-				composerImagesRef.current = remaining;
-				setComposerImages(remaining);
-				if (caption) setDraft(current => current || caption);
-				if (replySnapshot) setReplyingTo(current => current || replySnapshot);
-			};
 
-			// Drop composer staging immediately — WhatsApp shows the bubble in-thread first.
-			composerImagesRef.current = [];
-			setComposerImages([]);
-			setDraft('');
-			setReplyingTo(null);
-
-			for (let index = 0; index < imagesToSend.length; index += 1) {
-				const item = imagesToSend[index];
-				const clientMessageId = newClientMessageId();
-				const imageCaption = index === 0 ? caption : '';
-				const imageReply = index === 0 ? replySnapshot : null;
-				const optimisticMessage = buildOptimisticMediaMessage({
-					conversationId: targetConversationId,
-					clientMessageId,
-					type: 'image',
-					file: item.file,
-					previewUrl: item.previewUrl,
-					caption: imageCaption,
-					replySnapshot: imageReply,
-				});
-				persistConversationMessages(targetConversationId, current =>
-					mergeMessages(current, [optimisticMessage], targetConversationId),
-				);
-
-				const sent = await sendFile(item.file, 'image', {
-					conversationId: targetConversationId,
-					clientMessageId,
-					caption: imageCaption,
-					replySnapshot: imageReply,
-					optimisticMessage,
-				});
-				if (!sent) {
-					restoreComposerImages(index);
-					return;
+					removeComposerImageById(item.id);
+					if (index === 0) {
+						if (caption) setDraft('');
+						setReplyingTo(null);
+					}
 				}
+			} finally {
+				setSending(false);
+				setUploadProgress(null);
 			}
 			return;
 		}
@@ -12144,12 +12297,16 @@ function WhatsAppWorkspaceContent() {
 			}
 		}
 
-		setSending(true);
+		if (!options.skipSendingState) {
+			setSending(true);
+		}
 		setUploadProgress(0);
 		try {
 			let outgoingFile = file;
 			if (type === 'image') {
-				outgoingFile = await compressImageForWhatsApp(file);
+				outgoingFile = await compressImageForWhatsApp(
+					normalizeComposerImageFile(file) || file,
+				);
 			}
 			const form = new FormData();
 			form.append('file', outgoingFile);
@@ -12211,30 +12368,37 @@ function WhatsAppWorkspaceContent() {
 			toast.error(mediaUploadFailedMessage(error, locale));
 			return false;
 		} finally {
-			setSending(false);
-			setUploadProgress(null);
+			if (!options.skipSendingState) {
+				setSending(false);
+			}
+			if (!options.skipSendingState || options.clearUploadProgress !== false) {
+				setUploadProgress(null);
+			}
 			if (fileRef.current) fileRef.current.value = '';
 		}
 	};
 
 	const handleComposerFileInput = file => {
 		if (!file) return;
-		if (isComposerImageFile(file)) {
-			queueComposerImages([file]);
+		const normalized = normalizeComposerImageFile(file) || file;
+		if (isComposerImageFile(normalized)) {
+			queueComposerImages([normalized]);
 			return;
 		}
-		void sendFile(file);
+		void sendFile(normalized);
 	};
 
 	const queueComposerImages = files => {
 		const current = composerImagesRef.current;
 		const next = [...current];
-		for (const file of files) {
+		for (const rawFile of files) {
+			const file = normalizeComposerImageFile(rawFile) || rawFile;
 			if (file.size > 25 * 1024 * 1024) {
 				toast.error('File size must not exceed 25 MB');
 				continue;
 			}
-			if (next.some(item => item.file.size === file.size && item.file.type === file.type)) {
+			const fingerprint = `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+			if (next.some(item => item.fingerprint === fingerprint)) {
 				continue;
 			}
 			if (next.length >= 10) {
@@ -12244,20 +12408,17 @@ function WhatsAppWorkspaceContent() {
 			next.push({
 				id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 				file,
+				fingerprint,
 				previewUrl: URL.createObjectURL(file),
+				uploading: false,
 			});
 		}
 		if (next.length === current.length) return;
-		composerImagesRef.current = next;
-		setComposerImages(next);
+		setComposerImagesState(next);
 	};
 
 	const removeComposerImage = id => {
-		setComposerImages(current => {
-			const target = current.find(item => item.id === id);
-			if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
-			return current.filter(item => item.id !== id);
-		});
+		removeComposerImageById(id);
 	};
 
 	const handleComposerPaste = event => {
@@ -12492,7 +12653,7 @@ function WhatsAppWorkspaceContent() {
 		setDownloadingSelectedMedia(false);
 		setTicketSelectMode(false);
 		setSelectedMessageIds(new Set());
-		setComposerImages(current => {
+		setComposerImagesState(current => {
 			for (const item of current) {
 				if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
 			}
@@ -12816,8 +12977,79 @@ function WhatsAppWorkspaceContent() {
 			toast.error(t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)));
 			return;
 		}
+		setTranscriptionIntent(null);
+		pendingCopyMessagesRef.current = [];
 		setTranscriptionSources(selected.map(toTranscriptSource));
 	};
+
+	const getSelectedMessagesForCopy = useCallback(() => {
+		const ids = new Set(selectedMessageIds);
+		return sortMessagesByTime(
+			(effectiveMessages || []).filter(
+				item => item?.id && ids.has(item.id) && !item.optimistic,
+			),
+		);
+	}, [effectiveMessages, selectedMessageIds]);
+
+	const finishCopySelectedMessages = useCallback(
+		async (messages, textOverrideById = {}) => {
+			const copyText = buildSelectedMessagesCopyText(messages, {
+				locale,
+				transcriptMap: messageTranscripts,
+				textOverrideById,
+			});
+			if (!copyText.trim()) {
+				toast.error(t.nothingToCopy);
+				return false;
+			}
+			try {
+				await navigator.clipboard.writeText(copyText);
+				toast.success(
+					t.copiedSelectedMessages.replace('{count}', String(messages.length)),
+				);
+				return true;
+			} catch {
+				toast.error(t.copyFailed);
+				return false;
+			}
+		},
+		[locale, messageTranscripts, t],
+	);
+
+	const copySelectedMessages = useCallback(() => {
+		const messages = getSelectedMessagesForCopy();
+		if (!messages.length) {
+			toast.error(t.selectMessagesFirst);
+			return;
+		}
+		if (messages.length > MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+			toast.error(t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)));
+			return;
+		}
+		const needsTranscription = messages.filter(item =>
+			messageNeedsTranscription(item, messageTranscripts),
+		);
+		if (!needsTranscription.length) {
+			void finishCopySelectedMessages(messages);
+			return;
+		}
+		const sources = sortMessagesByTime(messages).map(message => {
+			const source = toTranscriptSource(message);
+			const existing = resolveStoredTranscript(message, messageTranscripts);
+			if (existing && (source.kind === 'voice' || source.kind === 'video')) {
+				return { ...source, kind: 'text', text: existing };
+			}
+			return source;
+		});
+		pendingCopyMessagesRef.current = messages;
+		setTranscriptionIntent('copy');
+		setTranscriptionSources(sources);
+	}, [
+		finishCopySelectedMessages,
+		getSelectedMessagesForCopy,
+		messageTranscripts,
+		t,
+	]);
 
 	const closeReactionPicker = () => {
 		skipReactionPickerCloseRef.current = false;
@@ -13158,6 +13390,10 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (action === 'transcribe') {
 			openSelectedTranscriptBundle();
+			return;
+		}
+		if (action === 'copy') {
+			copySelectedMessages();
 			return;
 		}
 		if (action === 'addToGroup') {
@@ -13898,7 +14134,13 @@ function WhatsAppWorkspaceContent() {
 		const targetConversationId = conversationId;
 		const requestId = ++olderRequestId.current;
 		const scrollBox = messageBoxRef.current;
+		const wasPinned = pinThreadToBottomRef.current;
 		pinThreadToBottomRef.current = false;
+		if (wasPinned && scrollBox) {
+			waScrollLog('loadOlder', 'pin-disabled:start-loadOlder', scrollBox, scrollBox.scrollTop, scrollBox.scrollTop, {
+				preserveScroll,
+			});
+		}
 		if (preserveScroll && scrollBox) {
 			const virt = messageVirtualRef.current;
 			olderScrollRestoreRef.current = {
@@ -14034,6 +14276,10 @@ function WhatsAppWorkspaceContent() {
 				const nextTotalSize =
 					Number(pending.previousTotalSize || 0) +
 					(estimatedPrependedHeight || 0);
+				waScrollMark('loadOlder', 'applyThreadScrollAnchor:post-prepend', {
+					added,
+					estimatedPrependedHeight,
+				});
 				applyThreadScrollAnchor(box, pending, {
 					totalSize: virtualizedThread ? nextTotalSize : Number(box.scrollHeight) || 0,
 					virtualized: virtualizedThread,
@@ -14041,6 +14287,9 @@ function WhatsAppWorkspaceContent() {
 				if (virtualizedThread && typeof virt?.scrollToOffset === 'function') {
 					const targetOffset =
 						Number(pending.previousScrollTop || 0) + (estimatedPrependedHeight || 0);
+					waScrollMark('loadOlder', 'virtualizer.scrollToOffset:post-prepend', {
+						targetOffset,
+					});
 					virt.scrollToOffset(targetOffset, { align: 'start' });
 				}
 			}
@@ -14090,11 +14339,16 @@ function WhatsAppWorkspaceContent() {
 				});
 				if (index >= 0 && tries < 8) {
 					tries += 1;
+					waScrollMark('scrollAndHighlightQuotedMessage', 'virtualizer.scrollToIndex:quoted', {
+						index,
+						key,
+					});
 					messageVirtualRef.current?.scrollToIndex?.(index, { align: 'center' });
 					window.setTimeout(apply, 80);
 				}
 				return;
 			}
+			waScrollMark('scrollAndHighlightQuotedMessage', 'scrollIntoView:quoted', { key });
 			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			setHighlightedMessageKey(key);
 			if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
@@ -17521,14 +17775,54 @@ function WhatsAppWorkspaceContent() {
 										ref={messageBoxRef}
 										onScroll={event => {
 											const box = event.currentTarget;
-											const distanceFromBottom =
-												box.scrollHeight - box.clientHeight - box.scrollTop;
-											if (distanceFromBottom > 180) {
+											const scrollTop = Number(box.scrollTop) || 0;
+											const prevTop = lastThreadScrollTopRef.current;
+											const scrollingUp = scrollTop < prevTop - 2;
+											lastThreadScrollTopRef.current = scrollTop;
+											const distanceFromBottom = threadDistanceFromBottom(box);
+
+											userScrollingThreadRef.current = true;
+											if (userScrollIdleTimerRef.current) {
+												window.clearTimeout(userScrollIdleTimerRef.current);
+											}
+											userScrollIdleTimerRef.current = window.setTimeout(() => {
+												userScrollingThreadRef.current = false;
+											}, 250);
+
+											const wasPinned = pinThreadToBottomRef.current;
+											if (
+												scrollingUp ||
+												distanceFromBottom > THREAD_PIN_THRESHOLD_PX
+											) {
 												pinThreadToBottomRef.current = false;
 												setShowJumpToBottom(distanceFromBottom > 220);
-											} else if (!loadingOlderRef.current && !olderScrollRestoreRef.current) {
+												if (wasPinned) {
+													waScrollLog(
+														'onScroll',
+														'pin-disabled:scrolled-up-or-away',
+														box,
+														scrollTop,
+														scrollTop,
+														{ distanceFromBottom, scrollingUp },
+													);
+												}
+											} else if (
+												!loadingOlderRef.current &&
+												!olderScrollRestoreRef.current &&
+												distanceFromBottom <= THREAD_PIN_THRESHOLD_PX
+											) {
 												pinThreadToBottomRef.current = true;
 												setShowJumpToBottom(false);
+												if (!wasPinned) {
+													waScrollLog(
+														'onScroll',
+														'pin-enabled:at-bottom',
+														box,
+														scrollTop,
+														scrollTop,
+														{ distanceFromBottom },
+													);
+												}
 											}
 											if (
 												threadSettled &&
@@ -17657,6 +17951,15 @@ function WhatsAppWorkspaceContent() {
 														>
 															<Send size={13} strokeWidth={2.25} />
 															{locale === 'ar' ? 'إرسال إلى…' : 'Send to…'}
+														</button>
+														<button
+															type="button"
+															disabled={!selectedMessageIds.size}
+															onClick={copySelectedMessages}
+															className="wa-select-toolbar__btn wa-select-toolbar__btn--copy disabled:opacity-40"
+														>
+															<Copy size={13} strokeWidth={2.25} />
+															{t.copySelected}
 														</button>
 														<button
 															type="button"
@@ -17882,7 +18185,13 @@ function WhatsAppWorkspaceContent() {
 													const isLocationMessage =
 														!isDeleted && isWhatsAppLocationMessage(message);
 													const isContactMsg =
-														!isDeleted && Boolean(parseContactFromMessage(message));
+														!isDeleted &&
+														(isContactMessage(message) ||
+															Boolean(
+																message?.sharedContact?.displayName ||
+																	message?.sharedContact?.phones?.length,
+															) ||
+															Boolean(parseContactFromMessage(message)));
 													const downloadableAttachments = collectDownloadableAttachments([
 														groupedImages
 															? { ...message, attachments: attachments || [] }
@@ -17952,9 +18261,17 @@ function WhatsAppWorkspaceContent() {
 																conversationMessages,
 															)
 														: null;
-													const quotedVoice = quotedSource
-														? quotedVoicePresentation(quotedSource, locale)
-														: null;
+													const quotedPreview = quotedSource
+														? quotedMessagePreview(quotedSource, locale, {
+																isGroupChat,
+															})
+														: quotedMessagePreview(message.replyTo, locale, {
+																isGroupChat,
+															});
+													const quotedBodyPresentation =
+														quotedPreview && !quotedPreview.isVoice
+															? messageTextPresentation(quotedPreview.body)
+															: null;
 													const rowItems = groupedImages ? row.messages : [message];
 													const rowMessageIds = rowItems
 														.map(item => item?.id)
@@ -18151,10 +18468,10 @@ function WhatsAppWorkspaceContent() {
 																			{locale === 'ar' ? 'مُعاد توجيهها' : 'Forwarded'}
 																		</p>
 																	)}
-																	{message.replyTo && (
+																	{message.replyTo && quotedPreview ? (
 																		<button
 																			type="button"
-																			className="wa-reply-quote mb-2 flex overflow-hidden rounded-lg border-s-4 border-emerald-500 bg-black/5"
+																			className="wa-reply-quote mb-2"
 																			aria-label={locale === 'ar' ? 'الانتقال إلى الرسالة الأصلية' : 'Go to original message'}
 																			onPointerDown={event => event.stopPropagation()}
 																			onClick={event => {
@@ -18164,40 +18481,37 @@ function WhatsAppWorkspaceContent() {
 																				void jumpToQuotedMessage(message);
 																			}}
 																		>
-																			<div className="min-w-0 flex-1 px-2 py-1 text-xs opacity-80">
-																				{quotedVoice ? (
-																					<>
-																						{quotedVoice.senderName ? (
-																							<p className="truncate font-semibold text-[#8752d9]">
-																								{quotedVoice.senderName}
-																							</p>
-																						) : null}
-																						<p className="mt-0.5 flex min-w-0 items-center gap-1.5">
-																							<Mic size={12} className="shrink-0 text-emerald-600" />
-																							<span className="truncate">
-																								{[
-																									quotedVoice.durationLabel ||
-																										quotedVoice.fallbackLabel,
-																									quotedVoice.timeLabel,
-																								]
-																									.filter(Boolean)
-																									.join(' · ')}
-																							</span>
-																						</p>
-																					</>
-																				) : (
-																					quotedMessageLabel(quotedSource || message.replyTo, locale)
-																				)}
+																			<div className="wa-reply-quote__content">
+																				{quotedPreview.senderName ? (
+																					<p className="wa-reply-quote__sender">
+																						{quotedPreview.senderName}
+																					</p>
+																				) : null}
+																				<p
+																					className={`wa-reply-quote__body ${quotedBodyPresentation?.className || ''}`}
+																					dir={quotedBodyPresentation?.dir}
+																					lang={quotedBodyPresentation?.lang}
+																					style={quotedBodyPresentation?.style}
+																				>
+																					{quotedPreview.isVoice ? (
+																						<Mic
+																							size={12}
+																							className="wa-reply-quote__voice-icon shrink-0"
+																							aria-hidden="true"
+																						/>
+																					) : null}
+																					<span className="min-w-0">{quotedPreview.body}</span>
+																				</p>
 																			</div>
 																			{quotePreview ? (
 																				<img
 																					src={quotePreview}
 																					alt=""
-																					className="wa-reply-quote-thumb h-12 w-12 shrink-0 object-cover"
+																					className="wa-reply-quote-thumb"
 																				/>
 																			) : null}
 																		</button>
-																	)}
+																	) : null}
 																	{!isDeleted && attachments?.length
 																		? (
 																			<MessageAttachments
@@ -18662,26 +18976,32 @@ function WhatsAppWorkspaceContent() {
 													event.target.value = '';
 												}}
 											/>
-											{replyingTo && (
+											{replyingTo && (() => {
+												const isGroupChat =
+													selectedConversation?.type === 'group' ||
+													String(
+														selectedConversation?.providerChatId || '',
+													).endsWith('@g.us');
+												const preview = quotedMessagePreview(replyingTo, locale, {
+													isGroupChat,
+												});
+												const snippet =
+													preview?.body || quotedMessageLabel(replyingTo, locale);
+												const snippetPresentation = messageTextPresentation(snippet);
+												return (
 												<div className="wa-reply-preview">
 													<Reply size={16} className="wa-reply-preview__icon" aria-hidden="true" />
 													<div className="wa-reply-preview__copy">
 														<p className="wa-reply-preview__title">
 															{locale === 'ar' ? 'الرد على رسالة' : 'Replying to message'}
 														</p>
-														<p className="wa-reply-preview__snippet">
-															{(() => {
-																const voice = quotedVoicePresentation(replyingTo, locale);
-																if (voice) {
-																	return [
-																		voice.durationLabel || voice.fallbackLabel,
-																		voice.timeLabel,
-																	]
-																		.filter(Boolean)
-																		.join(' · ');
-																}
-																return quotedMessageLabel(replyingTo, locale);
-															})()}
+														<p
+															className={`wa-reply-preview__snippet ${snippetPresentation.className || ''}`}
+															dir={snippetPresentation.dir}
+															lang={snippetPresentation.lang}
+															style={snippetPresentation.style}
+														>
+															{snippet}
 														</p>
 													</div>
 													<button
@@ -18693,21 +19013,31 @@ function WhatsAppWorkspaceContent() {
 														<X size={16} />
 													</button>
 												</div>
-											)}
+												);
+											})()}
 											{composerImages.length > 0 && (
 												<div className="wa-composer-paste-preview flex min-w-0 basis-full gap-2 overflow-x-auto pb-1">
 													{composerImages.map(item => (
-														<div key={item.id} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black/5">
+														<div
+															key={item.id}
+															className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black/5 ${item.uploading ? 'opacity-70' : ''}`}
+														>
 															<img
 																src={item.previewUrl}
 																alt=""
 																className="h-full w-full object-cover"
 															/>
+															{item.uploading ? (
+																<div className="absolute inset-0 grid place-items-center bg-black/35">
+																	<Loader2 size={18} className="animate-spin text-white" />
+																</div>
+															) : null}
 															<button
 																type="button"
 																onClick={() => removeComposerImage(item.id)}
+																disabled={item.uploading || sending}
 																aria-label={locale === 'ar' ? 'إزالة الصورة' : 'Remove image'}
-																className="absolute end-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/65 text-white hover:bg-black/80"
+																className="absolute end-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/65 text-white hover:bg-black/80 disabled:opacity-40"
 															>
 																<X size={12} strokeWidth={2.4} />
 															</button>
@@ -20194,26 +20524,55 @@ function WhatsAppWorkspaceContent() {
 				<Suspense fallback={null}>
 					<TranscriptionDialog
 						open
+						autoStart={transcriptionIntent === 'copy'}
+						intent={transcriptionIntent || 'default'}
 						onOpenChange={open => {
-							if (!open) setTranscriptionSources(null);
+							if (!open) {
+								setTranscriptionSources(null);
+								setTranscriptionIntent(null);
+								pendingCopyMessagesRef.current = [];
+							}
 						}}
 						items={transcriptionSources}
 						loadVoiceFile={loadTranscriptionSourceFile}
-						onCompleted={(text, data) => {
-							const nextText = String(text || '').trim();
-							if (!nextText) return;
+						onCompleted={(text, data, meta) => {
+							const timeline = Array.isArray(meta?.timeline) ? meta.timeline : [];
+							const textOverrideById = transcriptTextByIdFromTimeline(timeline);
 							const mediaSources = (transcriptionSources || []).filter(item =>
 								isMediaTranscriptKind(item?.kind),
 							);
-							if (!mediaSources.length) return;
-							const entries = mediaSources.map(item => ({
-								messageId: item.id,
-								text: nextText,
-								transcriptionId: data?.id || null,
-							}));
-							const saved = saveMessageTranscripts(entries);
-							if (Object.keys(saved).length) {
-								setMessageTranscripts(current => ({ ...current, ...saved }));
+							if (mediaSources.length) {
+								const entries = mediaSources
+									.map(item => {
+										const transcriptText = String(
+											textOverrideById[item.id] || '',
+										).trim();
+										if (!transcriptText) return null;
+										return {
+											messageId: item.id,
+											text: transcriptText,
+											transcriptionId: data?.id || null,
+										};
+									})
+									.filter(Boolean);
+								if (entries.length) {
+									const saved = saveMessageTranscripts(entries);
+									if (Object.keys(saved).length) {
+										setMessageTranscripts(current => ({ ...current, ...saved }));
+									}
+								}
+							}
+							if (transcriptionIntent === 'copy') {
+								const messages = pendingCopyMessagesRef.current.length
+									? pendingCopyMessagesRef.current
+									: getSelectedMessagesForCopy();
+								void finishCopySelectedMessages(messages, textOverrideById).finally(
+									() => {
+										setTranscriptionSources(null);
+										setTranscriptionIntent(null);
+										pendingCopyMessagesRef.current = [];
+									},
+								);
 							}
 						}}
 					/>

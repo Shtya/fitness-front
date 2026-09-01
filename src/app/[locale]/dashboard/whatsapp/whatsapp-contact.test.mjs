@@ -77,6 +77,27 @@ test('parseContactFromMessage ignores regular text messages', () => {
 	assert.equal(parseContactFromMessage(message), null);
 });
 
+test('parseContactFromMessage reads top-level sharedContact from API', () => {
+	const message = {
+		type: 'contact',
+		text: 'خالو 😍',
+		sharedContact: {
+			displayName: 'خالو 😍',
+			phones: [
+				{
+					phone: '+20 10 9099 8111',
+					waId: '201090998111@c.us',
+					formatted: '+20 10 9099 8111',
+				},
+			],
+			waId: '201090998111@c.us',
+		},
+	};
+	const contact = parseContactFromMessage(message);
+	assert.equal(contact.displayName, 'خالو 😍');
+	assert.equal(contact.phones[0].formatted, '+20 10 9099 8111');
+});
+
 test('buildContactVcard keeps Arabic names', () => {
 	const vcard = buildContactVcard({
 		displayName: 'خالو 😍',

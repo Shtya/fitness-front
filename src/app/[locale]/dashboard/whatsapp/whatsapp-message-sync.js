@@ -27,6 +27,17 @@ export function isHydrationFresh(
 	return at > 0 && now - at < freshMs;
 }
 
+/** True when the in-memory thread is safe to paint without a GET on open. */
+export function isMessageThreadCacheComplete(
+	cache,
+	pageSize = MESSAGE_PAGE_SIZE,
+) {
+	const items = Array.isArray(cache?.items) ? cache.items : [];
+	if (!items.length) return false;
+	if (cache.hasMore === false) return true;
+	return items.length >= pageSize;
+}
+
 /**
  * Soft-open: paint from cache and skip GET + sync when the thread is warm.
  */
@@ -34,12 +45,16 @@ export function shouldSkipOpenChatNetwork({
 	cacheIsFresh = false,
 	forceProvider = false,
 	itemCount = 0,
+	hasMore = true,
 	socketHealthy = false,
+	pageSize = MESSAGE_PAGE_SIZE,
 } = {}) {
 	if (forceProvider || itemCount <= 0) return false;
-	// Warm in-memory thread: skip GET + phone work on reopen.
+	const threadComplete =
+		itemCount >= pageSize || hasMore === false;
+	// A lone inbox/socket row is not a hydrated thread — always fetch Postgres.
+	if (!threadComplete) return false;
 	if (cacheIsFresh) return true;
-	// Socket-healthy catch-up: keep local rows; live events fill gaps (WA Web-like).
 	if (socketHealthy) return true;
 	return false;
 }

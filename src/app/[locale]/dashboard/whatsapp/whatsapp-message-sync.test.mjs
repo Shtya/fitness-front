@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
 	MESSAGE_PAGE_SIZE,
 	PROVIDER_SYNC_FRESH_MS,
+	isMessageThreadCacheComplete,
 	shouldProviderBackfill,
 	shouldSkipOpenChatNetwork,
 } from './whatsapp-message-sync.js';
@@ -84,11 +85,12 @@ test('page-full warm cache skips open-chat network', () => {
 	);
 });
 
-test('short warm hydrated cache skips open-chat network', () => {
+test('short warm hydrated cache skips open-chat network when thread is complete', () => {
 	assert.equal(
 		shouldSkipOpenChatNetwork({
 			cacheIsFresh: true,
 			itemCount: 8,
+			hasMore: false,
 			providerHydratedAt: now - 10_000,
 			now,
 		}),
@@ -96,11 +98,12 @@ test('short warm hydrated cache skips open-chat network', () => {
 	);
 });
 
-test('short warm cache skips open-chat network even without watermark', () => {
+test('short warm cache skips open-chat network when hasMore is false', () => {
 	assert.equal(
 		shouldSkipOpenChatNetwork({
 			cacheIsFresh: true,
 			itemCount: 8,
+			hasMore: false,
 			now,
 		}),
 		true,
@@ -117,5 +120,41 @@ test('force provider never skips network', () => {
 			now,
 		}),
 		false,
+	);
+});
+
+test('single socket row with healthy socket still fetches on open', () => {
+	assert.equal(
+		shouldSkipOpenChatNetwork({
+			cacheIsFresh: true,
+			itemCount: 1,
+			hasMore: true,
+			socketHealthy: true,
+		}),
+		false,
+	);
+});
+
+test('short complete thread (hasMore false) can skip when fresh', () => {
+	assert.equal(
+		shouldSkipOpenChatNetwork({
+			cacheIsFresh: true,
+			itemCount: 3,
+			hasMore: false,
+			socketHealthy: true,
+		}),
+		true,
+	);
+});
+
+test('isMessageThreadCacheComplete rejects partial pages', () => {
+	assert.equal(isMessageThreadCacheComplete({ items: [{ id: '1' }], hasMore: true }), false);
+	assert.equal(
+		isMessageThreadCacheComplete({ items: Array(100).fill({ id: 'x' }), hasMore: true }),
+		true,
+	);
+	assert.equal(
+		isMessageThreadCacheComplete({ items: [{ id: '1' }], hasMore: false }),
+		true,
 	);
 });
