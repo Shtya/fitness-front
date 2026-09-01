@@ -162,6 +162,7 @@ import {
 	looksLikeMarkdown,
 	parseWhatsAppBold,
 	compressImageForWhatsApp,
+	withAsyncTimeout,
 	quotedMessageLabel,
 	quotedMessagePreview,
 	quotedPreviewFromMessage,
@@ -201,7 +202,6 @@ import {
 	viewerThumbSrc,
 	viewerFullSrc,
 	isInlineImageDataUrl,
-	statusMessageIdentityKey,
 } from './whatsapp-utils';
 import {
 	installWaScrollSpy,
@@ -311,6 +311,8 @@ const WHATSAPP_SELECTED_ACCOUNT_KEY = 'wa-selected-account-id';
 const WHATSAPP_ACTIVE_TAB_KEY = 'wa-active-tab';
 const WHATSAPP_CHAT_LIST_COLLAPSED_KEY = 'wa-chat-list-collapsed';
 const WHATSAPP_CHAT_LIST_WIDTH_KEY = 'wa-chat-list-width';
+/** Slightly above axios default (120s) so uploads fail cleanly instead of hanging forever. */
+const WHATSAPP_MEDIA_SEND_TIMEOUT_MS = 125_000;
 const CHAT_LIST_WIDTH_MIN = 220;
 const CHAT_LIST_WIDTH_MAX = 520;
 const CHAT_LIST_WIDTH_DEFAULT = 300;
@@ -862,6 +864,10 @@ const translations = {
 		addStaff: 'Add staff member',
 		noGroups: 'No groups yet',
 		noStatuses: 'No active stories on this phone',
+		activeStories: 'Active',
+		storyHistory: 'Story history',
+		storyHistoryEmpty: 'No archived stories yet',
+		storyHistoryCount: '{count} archived',
 		storiesSessionSyncing:
 			'WhatsApp is still linking on the server. Keep WhatsApp open on your phone, or reconnect from Accounts.',
 		storiesSyncFailed: 'Could not load stories from WhatsApp. Reconnect the account and try again.',
@@ -1308,6 +1314,10 @@ const translations = {
 		addStaff: 'إضافة موظف',
 		noGroups: 'لا توجد مجموعات',
 		noStatuses: 'لا توجد حالات نشطة على هذا الهاتف',
+		activeStories: 'النشطة',
+		storyHistory: 'سجل الحالات',
+		storyHistoryEmpty: 'لا توجد حالات مؤرشفة بعد',
+		storyHistoryCount: '{count} مؤرشفة',
 		storiesSessionSyncing:
 			'واتساب ما زال يربط الجلسة على الخادم. أبقِ واتساب مفتوحاً على هاتفك، أو أعد الربط من الحسابات.',
 		storiesSyncFailed: 'تعذر تحميل الحالات من واتساب. أعد ربط الحساب وحاول مرة أخرى.',
@@ -3105,16 +3115,16 @@ async function mapPool(items, concurrency, worker) {
 	await Promise.all(runners);
 }
 
-async function fetchStatusMediaBlob(accountId, statusId) {
-	const response = await api.get(
-		`/whatsapp/accounts/${accountId}/statuses/${statusId}/content`,
-		{
-			responseType: 'blob',
-			validateStatus: () => true,
-			// Story grid previews should fail fast and move on instead of blocking the queue.
-			timeout: 45_000,
-		},
-	);
+async function fetchStatusMediaBlob(accountId, statusId, { history = false } = {}) {
+	const path = history
+		? `/whatsapp/accounts/${accountId}/statuses/history/${encodeURIComponent(statusId)}/content`
+		: `/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(statusId)}/content`;
+	const response = await api.get(path, {
+		responseType: 'blob',
+		validateStatus: () => true,
+		// Story grid previews should fail fast and move on instead of blocking the queue.
+		timeout: 45_000,
+	});
 	const blob = response.data;
 	if (!blob || response.status >= 400) {
 		const message =
@@ -7895,6 +7905,9 @@ function WhatsAppWorkspaceContent() {
 	const [selectedGroup, setSelectedGroup] = useState(null);
 	const [loadingGroup, setLoadingGroup] = useState(false);
 	const [statuses, setStatuses] = useState([]);
+	const [statusHistory, setStatusHistory] = useState([]);
+	const [storyPanelMode, setStoryPanelMode] = useState('active');
+	const [loadingStatusHistory, setLoadingStatusHistory] = useState(false);
 	const [statusFetchHint, setStatusFetchHint] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState(null);
 	const [storyQueue, setStoryQueue] = useState([]);
@@ -8354,6 +8367,7 @@ function WhatsAppWorkspaceContent() {
 	writeConversationMessagesRef.current = writeConversationMessages;
 
 	const storyRequestId = useRef(0);
+	const storyViewerHistoryRef = useRef(false);
 	const statusRefreshInFlightRef = useRef(null);
 	const groupRequestId = useRef(0);
 	const conversationsRequestId = useRef(0);
@@ -8904,9 +8918,9 @@ function WhatsAppWorkspaceContent() {
 				for (const item of [...items].sort(
 					(a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime(),
 				)) {
-					const identity = statusMessageIdentityKey(item.providerStatusId || item.id);
-					if (!identity || seen.has(identity)) continue;
-					seen.add(identity);
+					const storyKey = String(item.id || item.providerStatusId || '').trim();
+					if (!storyKey || seen.has(storyKey)) continue;
+					seen.add(storyKey);
 					deduped.push(item);
 				}
 				const ordered = deduped;
@@ -8931,6 +8945,45 @@ function WhatsAppWorkspaceContent() {
 				return bTime - aTime;
 			});
 	}, [statuses, viewedStatusIds]);
+
+	const groupedStatusHistory = useMemo(() => {
+		const map = new Map();
+		for (const status of statusHistory) {
+			if (!status?.isOwn && !status?.senderWaId) continue;
+			const key = status.senderWaId || (status.isOwn ? 'own' : status.id);
+			if (!map.has(key)) map.set(key, []);
+			map.get(key).push(status);
+		}
+		return [...map.entries()]
+			.map(([senderWaId, items]) => {
+				const deduped = [];
+				const seen = new Set();
+				for (const item of [...items].sort(
+					(a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime(),
+				)) {
+					const storyKey = String(item.id || item.providerStatusId || '').trim();
+					if (!storyKey || seen.has(storyKey)) continue;
+					seen.add(storyKey);
+					deduped.push(item);
+				}
+				const ordered = deduped;
+				return {
+					senderWaId,
+					items: ordered,
+					latest: ordered[ordered.length - 1] || items[0],
+					isOwn: ordered.some(item => item.isOwn),
+					isViewed: true,
+					unviewedCount: 0,
+					startIndex: 0,
+					historyCount: ordered.length,
+				};
+			})
+			.sort((a, b) => {
+				const aTime = a.latest?.publishedAt ? new Date(a.latest.publishedAt).getTime() : 0;
+				const bTime = b.latest?.publishedAt ? new Date(b.latest.publishedAt).getTime() : 0;
+				return bTime - aTime;
+			});
+	}, [statusHistory]);
 
 	useEffect(() => {
 		if (activeTab !== 'statuses') return;
@@ -9822,6 +9875,33 @@ function WhatsAppWorkspaceContent() {
 		},
 		[refreshStatusesFromProvider, applyStatuses],
 	);
+
+	const loadStatusHistory = useCallback(async targetAccountId => {
+		if (!targetAccountId) return;
+		setLoadingStatusHistory(true);
+		try {
+			const { data } = await api.get(
+				`/whatsapp/accounts/${targetAccountId}/statuses/history`,
+				{ timeout: 30000 },
+			);
+			if (accountIdRef.current === targetAccountId) {
+				setStatusHistory(Array.isArray(data?.items) ? data.items : []);
+			}
+		} catch (error) {
+			if (accountIdRef.current === targetAccountId) {
+				toast.error(error.response?.data?.message || 'Could not load story history');
+			}
+		} finally {
+			if (accountIdRef.current === targetAccountId) {
+				setLoadingStatusHistory(false);
+			}
+		}
+	}, []);
+
+	useEffect(() => {
+		if (activeTab !== 'statuses' || storyPanelMode !== 'history' || !accountId) return;
+		void loadStatusHistory(accountId);
+	}, [activeTab, storyPanelMode, accountId, loadStatusHistory]);
 
 	const loadMessages = useCallback(async (id, canSync, options = {}) => {
 		if (!id) return;
@@ -11991,18 +12071,40 @@ function WhatsAppWorkspaceContent() {
 						mergeMessages(current, [optimisticMessage], targetConversationId),
 					);
 
-					const sent = await sendFile(item.file, 'image', {
-						conversationId: targetConversationId,
-						clientMessageId,
-						caption: imageCaption,
-						replySnapshot: imageReply,
-						optimisticMessage,
-						skipSendingState: true,
-						clearUploadProgress: false,
-					});
+					let sent = false;
+					try {
+						sent = await withAsyncTimeout(
+							sendFile(item.file, 'image', {
+								conversationId: targetConversationId,
+								accountId,
+								clientMessageId,
+								caption: imageCaption,
+								replySnapshot: imageReply,
+								optimisticMessage,
+								skipSendingState: true,
+								clearUploadProgress: false,
+							}),
+							WHATSAPP_MEDIA_SEND_TIMEOUT_MS,
+							locale === 'ar' ? 'إرسال الصورة' : 'Image send',
+						);
+					} catch (error) {
+						releaseOptimisticMediaPreview(optimisticMessage);
+						persistConversationMessages(targetConversationId, current =>
+							current.filter(message => message.id !== optimisticMessage.id),
+						);
+						toast.error(
+							error?.message?.includes('timed out')
+								? locale === 'ar'
+									? 'انتهت مهلة إرسال الصورة. تحقق من الاتصال وحاول مرة أخرى.'
+									: 'Image send timed out. Check your connection and try again.'
+								: mediaUploadFailedMessage(error, locale),
+						);
+						return;
+					} finally {
+						markComposerImageUploading(item.id, false);
+					}
 
 					if (!sent) {
-						markComposerImageUploading(item.id, false);
 						return;
 					}
 
@@ -12235,7 +12337,8 @@ function WhatsAppWorkspaceContent() {
 	}, [retryOutboundMessage]);
 
 	const sendFile = async (file, forcedType, options = {}) => {
-		if (!file || !accountId) return false;
+		const uploadAccountId = options.accountId || accountId;
+		if (!file || !uploadAccountId) return false;
 		const targetConversationId = options.conversationId || conversationId;
 		if (!targetConversationId) return false;
 		if (demo.settings.enabled) {
@@ -12258,7 +12361,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			return false;
 		}
-		const targetAccountId = accountId;
+		const targetAccountId = uploadAccountId;
 		const type = outgoingMediaType(file, forcedType);
 		const caption =
 			type === 'sticker'
@@ -12314,6 +12417,7 @@ function WhatsAppWorkspaceContent() {
 				`/whatsapp/accounts/${targetAccountId}/media`,
 				form,
 				{
+					timeout: WHATSAPP_MEDIA_SEND_TIMEOUT_MS,
 					maxBodyLength: Infinity,
 					maxContentLength: Infinity,
 					onUploadProgress: event => {
@@ -12325,13 +12429,17 @@ function WhatsAppWorkspaceContent() {
 			);
 			uploadedFileId = uploaded.fileId;
 			setUploadProgress(100);
-			const { data } = await api.post(`/whatsapp/conversations/${targetConversationId}/messages`, {
-				type,
-				fileId: uploaded.fileId,
-				caption: caption || undefined,
-				clientMessageId,
-				quotedProviderMessageId: replySnapshot?.providerMessageId || undefined,
-			});
+			const { data } = await api.post(
+				`/whatsapp/conversations/${targetConversationId}/messages`,
+				{
+					type,
+					fileId: uploaded.fileId,
+					caption: caption || undefined,
+					clientMessageId,
+					quotedProviderMessageId: replySnapshot?.providerMessageId || undefined,
+				},
+				{ timeout: WHATSAPP_MEDIA_SEND_TIMEOUT_MS },
+			);
 			uploadedFileId = null;
 			const confirmedMessage = {
 				...data.message,
@@ -15392,7 +15500,7 @@ function WhatsAppWorkspaceContent() {
 		setStatusMediaUrl(null);
 		const hideStatusViewReceipts =
 			selectedAccount?.privacySettings?.hideStatusViewReceipts ?? true;
-		if (!hideStatusViewReceipts) {
+		if (!hideStatusViewReceipts && !storyViewerHistoryRef.current) {
 			api
 				.post(
 					`/whatsapp/accounts/${targetAccountId}/statuses/${encodeURIComponent(status.providerStatusId)}/view`,
@@ -15406,10 +15514,11 @@ function WhatsAppWorkspaceContent() {
 		}
 		const loadMedia = async statusRef => {
 			const ids = [statusRef?.id, statusRef?.providerStatusId].filter(Boolean);
+			const history = storyViewerHistoryRef.current;
 			let lastError = null;
 			for (const mediaId of ids) {
 				try {
-					return await fetchStatusMediaBlob(targetAccountId, mediaId);
+					return await fetchStatusMediaBlob(targetAccountId, mediaId, { history });
 				} catch (error) {
 					lastError = error;
 					const message =
@@ -15435,6 +15544,7 @@ function WhatsAppWorkspaceContent() {
 						: String(firstError || '');
 				// Stale UUID / missing provider payload: resync and rematch by story id.
 				if (!isRecoverableStoryMediaError(firstMessage)) throw firstError;
+				if (storyViewerHistoryRef.current) throw firstError;
 				let refreshedItems =
 					statusesCacheRef.current.get(targetAccountId)?.items || [];
 				try {
@@ -15455,13 +15565,15 @@ function WhatsAppWorkspaceContent() {
 				) {
 					return;
 				}
-				const wanted = statusMessageIdentityKey(status.providerStatusId || status.id);
+				const wantedId = status.id;
+				const wantedProvider = String(status.providerStatusId || '').trim();
 				const rematched =
-					refreshedItems.find(item => item.id === status.id) ||
-					refreshedItems.find(
-						item =>
-							statusMessageIdentityKey(item.providerStatusId || item.id) === wanted,
-					) ||
+					refreshedItems.find(item => item.id === wantedId) ||
+					(wantedProvider
+						? refreshedItems.find(
+								item => String(item.providerStatusId || '').trim() === wantedProvider,
+							)
+						: null) ||
 					null;
 				if (!rematched) throw firstError;
 				setSelectedStatus(rematched);
@@ -15489,7 +15601,9 @@ function WhatsAppWorkspaceContent() {
 			for (const neighbor of neighbors) {
 				const neighborType = String(neighbor?.type || '').toLowerCase();
 				if (!['image', 'video', 'gif', 'sticker'].includes(neighborType)) continue;
-				void fetchStatusMediaBlob(targetAccountId, neighbor.id).catch(() => undefined);
+				void fetchStatusMediaBlob(targetAccountId, neighbor.id, {
+					history: storyViewerHistoryRef.current,
+				}).catch(() => undefined);
 			}
 		} catch (error) {
 			if (requestId === storyRequestId.current) {
@@ -15506,8 +15620,9 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const openStoryGroup = story => {
+	const openStoryGroup = (story, { history = false } = {}) => {
 		if (!story?.items?.length) return;
+		storyViewerHistoryRef.current = history;
 		const startIndex = Number.isInteger(story.startIndex) ? story.startIndex : 0;
 		openStory(story.items[startIndex] || story.items[0], story.items, startIndex);
 	};
@@ -15547,6 +15662,7 @@ function WhatsAppWorkspaceContent() {
 
 	const closeStory = () => {
 		storyRequestId.current += 1;
+		storyViewerHistoryRef.current = false;
 		setSelectedStatus(null);
 		setStoryQueue([]);
 		setStoryIndex(0);
@@ -19389,16 +19505,48 @@ function WhatsAppWorkspaceContent() {
 							</div>
 							<button
 								type="button"
-								onClick={() => loadTabData('statuses', true)}
-								disabled={syncingStatuses}
+								onClick={() => {
+									if (storyPanelMode === 'history') void loadStatusHistory(accountId);
+									else void loadTabData('statuses', true);
+								}}
+								disabled={syncingStatuses || loadingStatusHistory}
 								className="wa-toolbar-icon-btn disabled:opacity-50"
 								title={t.refresh}
 							>
-								<RefreshCw size={16} className={syncingStatuses ? 'animate-spin' : undefined} />
+								<RefreshCw
+									size={16}
+									className={
+										syncingStatuses || loadingStatusHistory ? 'animate-spin' : undefined
+									}
+								/>
 							</button>
 						</header>
 						<div className="wa-statuses-body min-h-0 flex-1 overflow-y-auto p-4 nice-scroll">
-							{canUseWhatsApp && (
+							<div className="mb-4 flex gap-2 rounded-full bg-[var(--wa-input,#f0f2f5)] p-1">
+								<button
+									type="button"
+									onClick={() => setStoryPanelMode('active')}
+									className={`h-9 flex-1 rounded-full text-sm font-semibold transition-colors ${
+										storyPanelMode === 'active'
+											? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
+											: 'text-slate-500 hover:text-slate-700'
+									}`}
+								>
+									{t.activeStories}
+								</button>
+								<button
+									type="button"
+									onClick={() => setStoryPanelMode('history')}
+									className={`h-9 flex-1 rounded-full text-sm font-semibold transition-colors ${
+										storyPanelMode === 'history'
+											? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
+											: 'text-slate-500 hover:text-slate-700'
+									}`}
+								>
+									{t.storyHistory}
+								</button>
+							</div>
+							{storyPanelMode === 'active' && canUseWhatsApp && (
 								<form onSubmit={publishStory} className="mb-4 flex gap-2">
 									<input
 										aria-label={t.statusUpdate}
@@ -19421,15 +19569,15 @@ function WhatsAppWorkspaceContent() {
 									</button>
 								</form>
 							)}
-							{syncingStatuses && !tabLoading && (
+							{storyPanelMode === 'active' && syncingStatuses && !tabLoading && (
 								<p className="mb-3 flex items-center gap-2 text-xs font-semibold text-slate-500">
 									<Loader2 size={13} className="animate-spin" />
 									{t.syncingStatuses}
 								</p>
 							)}
-							{tabLoading ? (
+							{storyPanelMode === 'active' && tabLoading ? (
 								<TabLoading label={t.loading} />
-							) : statuses.length === 0 ? (
+							) : storyPanelMode === 'active' && statuses.length === 0 ? (
 								<Empty
 									icon={Zap}
 									title={
@@ -19449,7 +19597,7 @@ function WhatsAppWorkspaceContent() {
 															: t.noStatuses
 									}
 								/>
-							) : (
+							) : storyPanelMode === 'active' ? (
 								<div className="wa-stories-grid">
 										{groupedStatuses.map((story, storyIndex) => {
 										const rawName =
@@ -19500,6 +19648,69 @@ function WhatsAppWorkspaceContent() {
 												</div>
 												<p className={`wa-stories-card__name ${viewed ? 'is-viewed' : 'is-unseen'}`}>
 													{name}
+												</p>
+												<p className="wa-stories-card__time">
+													{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}
+												</p>
+											</button>
+										);
+									})}
+								</div>
+							) : loadingStatusHistory ? (
+								<TabLoading label={t.loading} />
+							) : groupedStatusHistory.length === 0 ? (
+								<Empty icon={Zap} title={t.storyHistoryEmpty} />
+							) : (
+								<div className="wa-stories-grid">
+									{groupedStatusHistory.map((story, storyIndex) => {
+										const rawName =
+											story.latest.contactName ||
+											(story.latest.isOwn
+												? selectedAccount?.label || t.accounts
+												: '');
+										const digits = String(rawName || story.senderWaId || '')
+											.replace(/@.*$/, '')
+											.replace(/\D/g, '');
+										const name =
+											rawName ||
+											formatWhatsAppPhone(digits) ||
+											String(story.senderWaId || '').replace(/@.*$/, '');
+										const ringSize = 128;
+										return (
+											<button
+												type="button"
+												key={`history-${story.senderWaId}`}
+												onClick={() => openStoryGroup(story, { history: true })}
+												className="wa-stories-card group is-viewed"
+											>
+												<div
+													className="relative mx-auto transition-transform duration-200 group-hover:scale-[1.03]"
+													style={{ width: ringSize, height: ringSize }}
+												>
+													<StoryRing
+														size={ringSize}
+														strokeWidth={3.5}
+														segmentsViewed={story.items.map(() => true)}
+														idSuffix={`history_${String(story.senderWaId).replace(/[^a-zA-Z0-9_-]/g, '_')}`}
+													/>
+													<div className="absolute inset-[7px] overflow-hidden rounded-full border-[3px] border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
+														<StoryThumbnail
+															label={name}
+															size={22}
+															viewed
+															priority={storyIndex < 14}
+															thumbUrl={storyThumbs[story.latest.id]?.url}
+															thumbType={storyThumbs[story.latest.id]?.type}
+															avatarUrl={story.latest.contactAvatarUrl || ''}
+														/>
+													</div>
+												</div>
+												<p className="wa-stories-card__name is-viewed">{name}</p>
+												<p className="wa-stories-card__time">
+													{t.storyHistoryCount.replace(
+														'{count}',
+														String(story.historyCount || story.items.length),
+													)}
 												</p>
 												<p className="wa-stories-card__time">
 													{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}
@@ -19774,7 +19985,10 @@ function WhatsAppWorkspaceContent() {
 											{renderStoryLinkedText(selectedStatus.caption)}
 										</div>
 									)}
-									{!selectedStatus.isOwn && canUseWhatsApp && !demo.settings.enabled && (
+									{!selectedStatus.isOwn &&
+										!selectedStatus.isHistory &&
+										canUseWhatsApp &&
+										!demo.settings.enabled && (
 										<form
 											onSubmit={replyToCurrentStory}
 											className="relative z-40 flex items-center gap-2 border-t border-white/10 bg-black/45 px-3 py-3 backdrop-blur-md"

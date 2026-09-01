@@ -771,6 +771,25 @@ export function parseWhatsAppBold(text) {
 		: [{ text: value, bold: false, italic: false, strike: false, code: false }];
 }
 
+/** Race a promise against a timeout; rejects if the deadline is exceeded. */
+export function withAsyncTimeout(promise, timeoutMs, label = 'Operation') {
+	const ms = Math.max(1, Number(timeoutMs) || 1);
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => {
+			reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s`));
+		}, ms);
+		Promise.resolve(promise)
+			.then(value => {
+				clearTimeout(timer);
+				resolve(value);
+			})
+			.catch(error => {
+				clearTimeout(timer);
+				reject(error);
+			});
+	});
+}
+
 /** Compress large images before upload while keeping the 25MB hard cap elsewhere. */
 export async function compressImageForWhatsApp(file, options = {}) {
 	if (!file || !String(file.type || '').startsWith('image/')) return file;
@@ -778,12 +797,17 @@ export async function compressImageForWhatsApp(file, options = {}) {
 	const maxEdge = Number(options.maxEdge) || 1920;
 	const quality = Number(options.quality) || 0.82;
 	const minBytesToCompress = Number(options.minBytes) || 350 * 1024;
+	const decodeTimeoutMs = Number(options.decodeTimeoutMs) || 12_000;
 	if (file.size < minBytesToCompress) return file;
 	if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas === 'undefined') {
 		return file;
 	}
 	try {
-		const bitmap = await createImageBitmap(file);
+		const bitmap = await withAsyncTimeout(
+			createImageBitmap(file),
+			decodeTimeoutMs,
+			'Image decode',
+		);
 		const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
 		const width = Math.max(1, Math.round(bitmap.width * scale));
 		const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -795,7 +819,11 @@ export async function compressImageForWhatsApp(file, options = {}) {
 		}
 		ctx.drawImage(bitmap, 0, 0, width, height);
 		bitmap.close?.();
-		const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
+		const blob = await withAsyncTimeout(
+			canvas.convertToBlob({ type: 'image/jpeg', quality }),
+			decodeTimeoutMs,
+			'Image encode',
+		);
 		if (!blob || blob.size >= file.size) return file;
 		const name = String(file.name || 'image.jpg').replace(/\.\w+$/, '.jpg');
 		return new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() });
@@ -1711,6 +1739,8 @@ const COMPOSER_IMAGE_TYPES = new Set([
 	'image/png',
 	'image/webp',
 	'image/gif',
+	'image/heic',
+	'image/heif',
 ]);
 
 function extensionForImageType(type) {
@@ -1723,7 +1753,7 @@ function extensionForImageType(type) {
 export function isComposerImageFile(file) {
 	const type = String(file?.type || '').toLowerCase();
 	if (COMPOSER_IMAGE_TYPES.has(type)) return true;
-	return /\.(jpe?g|png|webp|gif)$/i.test(String(file?.name || ''));
+	return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(String(file?.name || ''));
 }
 
 /** Ensure picked/pasted images carry a MIME type multer will accept. */
@@ -1737,6 +1767,8 @@ export function normalizeComposerImageFile(file) {
 		else if (/\.png$/i.test(lower)) type = 'image/png';
 		else if (/\.webp$/i.test(lower)) type = 'image/webp';
 		else if (/\.gif$/i.test(lower)) type = 'image/gif';
+		else if (/\.heic$/i.test(lower)) type = 'image/heic';
+		else if (/\.heif$/i.test(lower)) type = 'image/heif';
 		else if (isComposerImageFile(file)) type = 'image/jpeg';
 	}
 	if (!type.startsWith('image/')) return file;

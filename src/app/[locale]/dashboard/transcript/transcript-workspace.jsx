@@ -15,7 +15,6 @@ import {
 	FileAudio,
 	Filter,
 	History,
-	KeyRound,
 	LoaderCircle,
 	Mic,
 	MonitorUp,
@@ -35,15 +34,15 @@ import {
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import { Button } from '@/components/ui/button';
-import { useUser } from '@/hooks/useUser';
 import TranscriptionAiPanel from './transcription-ai-panel';
 import TranscriptVoicePlayer from './transcript-voice-player';
+import TranscriptionProviderSelect from './transcription-provider-select';
 import { WaCustomSelect } from '../whatsapp/WaCustomSelect';
 import {
 	ACCEPTED_TRANSCRIPTION_EXTENSIONS as ACCEPTED_EXTENSIONS,
-	CLOUD_TRANSCRIPTION_PROVIDER_IDS as CLOUD_PROVIDER_IDS,
 	audioDisplayName,
 	createChunkedTranscription,
+	DEFAULT_TRANSCRIPTION_PROVIDER,
 	getStoredTranscriptionChunkSeconds,
 	getStoredTranscriptionProvider,
 	GROQ_FREE_MAX_FILE_SIZE,
@@ -404,12 +403,10 @@ export default function TranscriptWorkspace() {
 	const locale = useLocale();
 	const t = copy[locale] || copy.en;
 	const isArabic = locale === 'ar';
-	const currentUser = useUser();
-	const canManageProviderKey = ['admin', 'super_admin'].includes(currentUser?.role);
 	const [mode, setMode] = useState('upload');
 	const [files, setFiles] = useState([]);
 	const [previewUrls, setPreviewUrls] = useState([]);
-	const [provider, setProvider] = useState('local');
+	const [provider, setProvider] = useState(DEFAULT_TRANSCRIPTION_PROVIDER);
 	const [chunkSeconds, setChunkSeconds] = useState(() => getStoredTranscriptionChunkSeconds());
 	const [chunkProgress, setChunkProgress] = useState({ current: 0, total: 0 });
 	const [language, setLanguage] = useState('auto');
@@ -436,10 +433,6 @@ export default function TranscriptWorkspace() {
 	const [segmentMenuId, setSegmentMenuId] = useState(null);
 	const [saving, setSaving] = useState(false);
 	const [dragging, setDragging] = useState(false);
-	const [providerApiKey, setProviderApiKey] = useState('');
-	const [providerCredential, setProviderCredential] = useState(null);
-	const [savingProviderKey, setSavingProviderKey] = useState(false);
-	const [showCredentialModal, setShowCredentialModal] = useState(false);
 
 	const fileInputRef = useRef(null);
 	const recorderRef = useRef(null);
@@ -448,7 +441,6 @@ export default function TranscriptWorkspace() {
 	const audioContextRef = useRef(null);
 	const timerRef = useRef(null);
 	const cancelledRef = useRef(false);
-	const providerMeta = PROVIDERS.find(item => item.id === provider) || PROVIDERS.at(-1);
 
 	const releaseMedia = useCallback(() => {
 		if (timerRef.current) window.clearInterval(timerRef.current);
@@ -499,32 +491,6 @@ export default function TranscriptWorkspace() {
 		setProvider(getStoredTranscriptionProvider());
 		setChunkSeconds(getStoredTranscriptionChunkSeconds());
 	}, []);
-
-	const loadProviderCredential = useCallback(async () => {
-		if (!canManageProviderKey || !CLOUD_PROVIDER_IDS.includes(provider)) {
-			setProviderCredential(null);
-			return;
-		}
-		try {
-			const { data } = await api.get(`/transcriptions/providers/${provider}/credential`);
-			setProviderCredential(data);
-		} catch {
-			setProviderCredential(null);
-		}
-	}, [canManageProviderKey, provider]);
-
-	useEffect(() => {
-		loadProviderCredential();
-	}, [loadProviderCredential]);
-
-	useEffect(() => {
-		if (!showCredentialModal) return;
-		const onKeyDown = event => {
-			if (event.key === 'Escape') setShowCredentialModal(false);
-		};
-		window.addEventListener('keydown', onKeyDown);
-		return () => window.removeEventListener('keydown', onKeyDown);
-	}, [showCredentialModal]);
 
 	useEffect(() => {
 		if (status !== 'processing') return;
@@ -853,9 +819,6 @@ export default function TranscriptWorkspace() {
 	const selectProvider = nextProvider => {
 		if (!PROVIDERS.some(item => item.id === nextProvider)) return;
 		setProvider(nextProvider);
-		setProviderApiKey('');
-		setProviderCredential(null);
-		setShowCredentialModal(false);
 		storeTranscriptionProvider(nextProvider);
 	};
 
@@ -863,14 +826,6 @@ export default function TranscriptWorkspace() {
 		setChunkSeconds(storeTranscriptionChunkSeconds(value));
 	};
 
-	const providerOptions = useMemo(
-		() =>
-			PROVIDERS.map(item => ({
-				value: item.id,
-				label: `${item.name} · ${item.score}%`,
-			})),
-		[],
-	);
 	const languageOptions = useMemo(
 		() => [
 			{ value: 'auto', label: t.auto },
@@ -887,22 +842,6 @@ export default function TranscriptWorkspace() {
 			})),
 		[isArabic],
 	);
-
-	const saveProviderKey = async () => {
-		const apiKey = providerApiKey.trim();
-		if (!apiKey) return;
-		setSavingProviderKey(true);
-		try {
-			const { data } = await api.put(`/transcriptions/providers/${provider}/credential`, { apiKey });
-			setProviderCredential(data);
-			setProviderApiKey('');
-			toast.success(`${providerMeta.name}: ${t.groqKeySaved}`);
-		} catch (error) {
-			toast.error(error.response?.data?.message || t.failed);
-		} finally {
-			setSavingProviderKey(false);
-		}
-	};
 
 	const saveTranscript = async () => {
 		if (!result?.id) return;
@@ -1112,27 +1051,14 @@ export default function TranscriptWorkspace() {
 				<div className="flex flex-wrap items-center gap-2">
 					 
 					<label className="sr-only">{t.method}</label>
-					<WaCustomSelect
+					<TranscriptionProviderSelect
 						value={provider}
 						onChange={selectProvider}
 						disabled={busy}
 						ariaLabel={t.method}
-						options={providerOptions}
 						className="min-w-[11rem]"
 						buttonClassName="!h-10 !rounded-xl !px-3 !text-sm !font-semibold text-slate-800"
 					/>
-					{CLOUD_PROVIDER_IDS.includes(provider) && canManageProviderKey && (
-						<button
-							type="button"
-							onClick={() => setShowCredentialModal(true)}
-							className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:border-[#c7d2fe] hover:text-[#4f46e5]"
-							aria-label={t.providerSettings}
-							title={t.providerSettings}
-						>
-							<KeyRound className="size-4" />
-							<span className="hidden lg:inline">{t.groqKeyManage}</span>
-						</button>
-					)}
 				</div>
  			</header>
 
@@ -1909,91 +1835,6 @@ export default function TranscriptWorkspace() {
 					</section>
 				</aside>
 			</div>
-
-			{showCredentialModal && canManageProviderKey && providerMeta.keyUrl && (
-				<div
-					className="fixed inset-0 z-[1000] grid place-items-center bg-slate-950/45 p-4 backdrop-blur-sm"
-					onMouseDown={event => {
-						if (event.target === event.currentTarget) setShowCredentialModal(false);
-					}}
-				>
-					<div
-						role="dialog"
-						aria-modal="true"
-						aria-labelledby="provider-credentials-title"
-						className="w-full max-w-lg rounded-2xl border bg-white p-5 shadow-2xl md:p-6"
-					>
-						<div className="flex items-start justify-between gap-4">
-							<div>
-								<h2 id="provider-credentials-title" className="text-lg font-black text-slate-900">
-									{t.providerSettings} · {providerMeta.name}
-								</h2>
-								<p className="mt-1 text-sm text-slate-500">
-									{providerCredential?.configured
-										? `${t.groqKeyConfigured} ••••${providerCredential.lastFour}`
-										: t.groqKeyMissing}
-								</p>
-							</div>
-							<button
-								type="button"
-								onClick={() => setShowCredentialModal(false)}
-								className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-								aria-label={t.close}
-							>
-								<X className="size-5" />
-							</button>
-						</div>
-
-						<div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-							<p className="font-black">{t.groqStepsTitle}</p>
-							<ol className="mt-2 list-decimal space-y-1 ps-5 text-xs leading-5">
-								<li>{t.groqStep1}</li>
-								<li>{t.groqStep2}</li>
-								<li>{t.groqStep3}</li>
-							</ol>
-						</div>
-
-						<label htmlFor="groq-api-key" className="mt-5 block text-sm font-bold text-slate-700">
-							{t.groqKeyLabel}
-						</label>
-						<input
-							id="groq-api-key"
-							type="password"
-							value={providerApiKey}
-							onChange={event => setProviderApiKey(event.target.value)}
-							placeholder={
-								providerCredential?.configured
-									? `••••••••••••${providerCredential.lastFour}`
-									: t.groqKeyPlaceholder
-							}
-							autoComplete="new-password"
-							maxLength={512}
-							autoFocus
-							className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 outline-none focus:border-amber-600 focus:bg-white"
-						/>
-
-						<div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-							<a
-								href={providerMeta.keyUrl}
-								target="_blank"
-								rel="noreferrer"
-								className="inline-flex h-10 items-center justify-center rounded-lg border border-amber-300 px-4 text-xs font-bold text-amber-900 hover:bg-amber-50"
-							>
-								{t.groqGetKey}
-							</a>
-							<Button
-								type="button"
-								onClick={saveProviderKey}
-								disabled={!providerApiKey.trim() || savingProviderKey}
-								className="bg-amber-900 hover:bg-amber-800"
-							>
-								{savingProviderKey && <LoaderCircle className="animate-spin" />}
-								{t.groqKeySave}
-							</Button>
-						</div>
-					</div>
-				</div>
-			)}
 		</div>
 	);
 }

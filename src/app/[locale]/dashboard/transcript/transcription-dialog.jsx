@@ -24,7 +24,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { WaCustomSelect } from '../whatsapp/WaCustomSelect';
+import TranscriptionProviderSelect from './transcription-provider-select';
 import TranscriptionAiPanel from './transcription-ai-panel';
 import TranscriptVoicePlayer from './transcript-voice-player';
 import {
@@ -32,6 +32,7 @@ import {
 	audioDisplayName,
 	createTextTranscription,
 	createChunkedTranscription,
+	DEFAULT_TRANSCRIPTION_PROVIDER,
 	formatTimestampWithMs,
 	getStoredTranscriptionChunkSeconds,
 	getStoredTranscriptionProvider,
@@ -43,6 +44,7 @@ import {
 	TRANSCRIPTION_PROVIDERS,
 	transcriptionErrorMessage,
 } from './transcription-client';
+import { WaCustomSelect } from '../whatsapp/WaCustomSelect';
 
 /** Prepare audio → 0–15%. Chunk uploads/process → 15–96%. */
 function prepareBarPercent(percent) {
@@ -224,7 +226,7 @@ export default function TranscriptionDialog({
 	const ticketCount = sources.filter(item => item.kind === 'text').length;
 	const [file, setFile] = useState(null);
 	const [fileError, setFileError] = useState('');
-	const [provider, setProvider] = useState('local');
+	const [provider, setProvider] = useState(DEFAULT_TRANSCRIPTION_PROVIDER);
 	const [chunkSeconds, setChunkSeconds] = useState(() => getStoredTranscriptionChunkSeconds());
 	const [chunkProgress, setChunkProgress] = useState({ current: 0, total: 0 });
 	const [status, setStatus] = useState('idle');
@@ -593,10 +595,6 @@ export default function TranscriptionDialog({
 		}
 	};
 
-	const providerOptions = TRANSCRIPTION_PROVIDERS.map(item => ({
-		value: item.id,
-		label: `${item.name} · ${item.score}%`,
-	}));
 	const chunkOptions = TRANSCRIPTION_CHUNK_PRESETS.map(item => ({
 		value: item.value,
 		label: locale === 'ar' ? item.labelAr : item.labelEn,
@@ -726,12 +724,11 @@ export default function TranscriptionDialog({
 						<div className={`wa-transcribe-controls grid grid-cols-[minmax(0,1fr)_minmax(6.75rem,8.25rem)_auto] items-end gap-2 ${isCopyIntent ? 'hidden' : ''}`}>
 							<label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-700">
 								<span className="truncate">{t.method}</span>
-								<WaCustomSelect
+								<TranscriptionProviderSelect
 									value={provider}
 									onChange={selectProvider}
 									disabled={busy}
 									ariaLabel={t.method}
-									options={providerOptions}
 									className="min-w-0"
 								/>
 							</label>

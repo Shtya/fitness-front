@@ -5750,6 +5750,10 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	background: #075e54;
 }
 
+.wa-select-toolbar__btn--copy {
+	background: #027eb5;
+}
+
 .wa-select-toolbar__divider {
 	width: 1px;
 	height: 18px;

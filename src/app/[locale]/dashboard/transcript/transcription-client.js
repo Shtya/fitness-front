@@ -64,13 +64,17 @@ export const CLOUD_TRANSCRIPTION_PROVIDER_IDS = TRANSCRIPTION_PROVIDERS
 	.filter(item => item.id !== 'local')
 	.map(item => item.id);
 
+export const DEFAULT_TRANSCRIPTION_PROVIDER = 'groq';
+
 export function getStoredTranscriptionProvider() {
-	if (typeof window === 'undefined') return 'local';
+	if (typeof window === 'undefined') return DEFAULT_TRANSCRIPTION_PROVIDER;
 	try {
 		const provider = window.localStorage.getItem(TRANSCRIPTION_PROVIDER_STORAGE_KEY);
-		return TRANSCRIPTION_PROVIDERS.some(item => item.id === provider) ? provider : 'local';
+		return TRANSCRIPTION_PROVIDERS.some(item => item.id === provider)
+			? provider
+			: DEFAULT_TRANSCRIPTION_PROVIDER;
 	} catch {
-		return 'local';
+		return DEFAULT_TRANSCRIPTION_PROVIDER;
 	}
 }
 
@@ -102,6 +106,30 @@ export function storeEnhanceAiProvider(provider) {
 	} catch {
 		return false;
 	}
+}
+
+export async function fetchTranscriptionCredentialStatus(provider) {
+	const { data } = await api.get(`/transcriptions/providers/${provider}/credential`);
+	return data;
+}
+
+export async function fetchAllTranscriptionCredentialStatuses() {
+	const entries = await Promise.all(
+		CLOUD_TRANSCRIPTION_PROVIDER_IDS.map(async provider => {
+			try {
+				const status = await fetchTranscriptionCredentialStatus(provider);
+				return [provider, status];
+			} catch {
+				return [provider, { configured: false, lastFour: null, source: null }];
+			}
+		}),
+	);
+	return Object.fromEntries(entries);
+}
+
+export async function saveTranscriptionCredential(provider, apiKey) {
+	const { data } = await api.put(`/transcriptions/providers/${provider}/credential`, { apiKey });
+	return data;
 }
 
 function extensionFromMimeType(mimeType) {
