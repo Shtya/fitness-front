@@ -29,6 +29,28 @@ export function estimateMessageRowSize(row) {
 	return Math.min(280, 52 + Math.min(lines, 10) * 20) + MESSAGE_ROW_GAP;
 }
 
-export function messageRowKey(row, index = 0) {
-	return String(row?.key || row?.message?.id || row?.message?.clientMessageId || index);
+export function messageRowKey(row) {
+	if (!row) return 'unknown-row';
+	if (row.key) return String(row.key);
+	if (row.kind === 'image-gallery') {
+		const first = row.messages?.[0]?.id || row.messages?.[0]?.clientMessageId;
+		const last = row.messages?.[row.messages.length - 1]?.id;
+		if (first && last && first !== last) return `${first}:${last}`;
+		if (first) return String(first);
+	}
+	const message = row.message;
+	if (message?.id) return String(message.id);
+	if (message?.clientMessageId) return String(message.clientMessageId);
+	return 'unknown-row';
+}
+
+/** Sum estimated heights for rows prepended at the top of the thread. */
+export function estimatePrependedThreadHeight(rows = [], addedRowCount = 0) {
+	const count = Math.max(0, Number(addedRowCount) || 0);
+	if (!count || !Array.isArray(rows) || !rows.length) return 0;
+	let total = 0;
+	for (let i = 0; i < Math.min(count, rows.length); i += 1) {
+		total += estimateMessageRowSize(rows[i]);
+	}
+	return total;
 }

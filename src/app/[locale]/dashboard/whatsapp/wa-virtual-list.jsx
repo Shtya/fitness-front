@@ -194,6 +194,7 @@ export function useWaVirtualRows({
 	overscan = 12,
 	enabled = true,
 	getItemKey = null,
+	shouldAdjustScrollPositionOnItemSizeChange = null,
 }) {
 	const virtualizer = useVirtualizer({
 		count: enabled ? count : 0,
@@ -202,7 +203,11 @@ export function useWaVirtualRows({
 		overscan,
 		enabled: Boolean(enabled && count > 0),
 		getItemKey:
-			typeof getItemKey === 'function' ? getItemKey : (index) => index,
+			typeof getItemKey === 'function' ? getItemKey : index => index,
+		shouldAdjustScrollPositionOnItemSizeChange:
+			typeof shouldAdjustScrollPositionOnItemSizeChange === 'function'
+				? shouldAdjustScrollPositionOnItemSizeChange
+				: undefined,
 	});
 
 	const items = enabled ? virtualizer.getVirtualItems() : [];
@@ -213,6 +218,8 @@ export function useWaVirtualRows({
 		items,
 		totalSize,
 		scrollToIndex: (index, opts) => virtualizer.scrollToIndex(index, opts),
+		scrollToOffset: (offset, opts) => virtualizer.scrollToOffset(offset, opts),
+		getScrollOffset: () => virtualizer.scrollOffset,
 		measureElement: virtualizer.measureElement,
 	};
 }

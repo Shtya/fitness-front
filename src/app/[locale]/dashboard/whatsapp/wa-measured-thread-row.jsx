@@ -6,12 +6,14 @@ import { memo } from 'react';
 export const WaMeasuredThreadRow = memo(function WaMeasuredThreadRow({
 	index,
 	start,
+	rowKey,
 	measureElement,
 	children,
 }) {
 	return (
 		<div
 			data-index={index}
+			data-wa-row-key={rowKey || undefined}
 			ref={measureElement}
 			className="wa-message-virtual-item"
 			style={{

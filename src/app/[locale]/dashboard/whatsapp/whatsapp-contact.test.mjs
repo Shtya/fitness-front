@@ -46,6 +46,28 @@ test('parseVcardPhones supports multiple numbers', () => {
 	assert.equal(phones[1].label, 'HOME');
 });
 
+test('parseContactFromMessage maps WPP vcard payload stored as text', () => {
+	const message = {
+		type: 'text',
+		text: 'خالو 😍',
+		raw: {
+			type: 'chat',
+			body: 'خالو 😍',
+			vcardFormattedName: 'خالو 😍',
+			vcard: [
+				'BEGIN:VCARD',
+				'VERSION:3.0',
+				'FN:خالو 😍',
+				'TEL;type=CELL;waid=201090998111:+20 10 9099 8111',
+				'END:VCARD',
+			].join('\n'),
+		},
+	};
+	const contact = parseContactFromMessage(message);
+	assert.equal(contact.displayName, 'خالو 😍');
+	assert.equal(contact.phones[0].formatted, '+201090998111');
+});
+
 test('parseContactFromMessage ignores regular text messages', () => {
 	const message = {
 		type: 'text',

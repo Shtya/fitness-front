@@ -1,4 +1,8 @@
-import { estimateMessageRowSize, messageRowKey } from './wa-thread-virtual.js';
+import {
+	estimateMessageRowSize,
+	estimatePrependedThreadHeight,
+	messageRowKey,
+} from './wa-thread-virtual.js';
 
 function makeRow({ kind = 'message', type = 'text', text = '', attachments = [] } = {}) {
 	if (kind === 'image-gallery') {
@@ -40,8 +44,18 @@ test('image galleries grow with extra tiles', () => {
 	assert.equal(one, 292);
 });
 
-test('messageRowKey prefers the grouping key', () => {
-	assert.equal(messageRowKey({ key: 'a:b', message: { id: 'x' } }, 9), 'a:b');
-	assert.equal(messageRowKey({ message: { id: 'mid' } }, 2), 'mid');
-	assert.equal(messageRowKey(null, 4), '4');
+test('messageRowKey prefers stable message ids over array index', () => {
+	assert.equal(messageRowKey({ key: 'a:b', message: { id: 'x' } }), 'a:b');
+	assert.equal(messageRowKey({ message: { id: 'mid' } }), 'mid');
+	assert.equal(messageRowKey(null), 'unknown-row');
+});
+
+test('estimatePrependedThreadHeight sums only the new top rows', () => {
+	const rows = [
+		makeRow({ text: 'new-1' }),
+		makeRow({ text: 'new-2' }),
+		makeRow({ text: 'old' }),
+	];
+	const height = estimatePrependedThreadHeight(rows, 2);
+	assert.equal(height, estimateMessageRowSize(rows[0]) + estimateMessageRowSize(rows[1]));
 });

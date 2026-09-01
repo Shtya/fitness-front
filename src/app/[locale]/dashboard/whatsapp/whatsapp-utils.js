@@ -1975,3 +1975,19 @@ export function viewerFullSrc(image, blobUrls = {}, brokenUrls = {}) {
 	return null;
 }
 
+/** One status slide — must not collapse to the sender/broadcast id. */
+export function statusMessageIdentityKey(value) {
+	const text = String(value || '').trim();
+	if (!text) return '';
+	const statusPart = text.match(/_(3A[0-9A-Fa-f]+)(?:_|$)/)?.[1];
+	if (statusPart) return statusPart.toLowerCase();
+	const hexMatch = text.match(/_([0-9A-Fa-f]{16,})(?:_|$)/)?.[1];
+	if (hexMatch) return hexMatch.toLowerCase();
+	const parts = text.split('_').filter(Boolean);
+	const bare = parts.length ? parts[parts.length - 1] : text;
+	if (/^3A[0-9A-Fa-f]+$/i.test(bare) || /^[0-9A-Fa-f]{16,}$/i.test(bare)) {
+		return bare.toLowerCase();
+	}
+	return text.toLowerCase();
+}
+

@@ -53,6 +53,7 @@ import {
 	viewerNeighborIds,
 	viewerThumbSrc,
 	viewerFullSrc,
+	statusMessageIdentityKey,
 } from './whatsapp-utils.js';
 
 test('mergeMessages deduplicates provider messages and sorts chronologically', () => {
@@ -1212,4 +1213,16 @@ test('viewerFullSrc falls back to the thumbnail when a blob url is marked broken
 	};
 	assert.equal(viewerFullSrc(image, {}, { 'blob:http://localhost/dead': true }), 'data:image/jpeg;base64,THUMB');
 	assert.equal(viewerThumbSrc(image, {}), 'data:image/jpeg;base64,THUMB');
+});
+
+test('statusMessageIdentityKey keeps each story slide distinct per sender', () => {
+	const sender = '201090998111@c.us';
+	const a = `false_status@broadcast_${sender}_3A1111111111111111`;
+	const b = `false_status@broadcast_${sender}_3A2222222222222222`;
+	const keyA = statusMessageIdentityKey(a);
+	const keyB = statusMessageIdentityKey(b);
+	assert.notEqual(keyA, keyB);
+	assert.equal(keyA, '3a1111111111111111');
+	assert.equal(keyB, '3a2222222222222222');
+	assert.notEqual(keyA, sender.toLowerCase());
 });
