@@ -1451,6 +1451,7 @@ function IsolatedComposerTextarea({
 	ariaLabel,
 	onTyping,
 	onEnterSubmit,
+	onPaste,
 }) {
 	const [draft, setDraft] = useState('');
 	const textareaRef = useRef(null);
@@ -1495,6 +1496,7 @@ function IsolatedComposerTextarea({
 				apply(event.target.value);
 				onTyping?.();
 			}}
+			onPaste={onPaste}
 			onKeyDown={event => {
 				if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
 					event.preventDefault();
@@ -12105,6 +12107,13 @@ function WhatsAppWorkspaceContent() {
 					}
 
 					if (!sent) {
+						releaseOptimisticMediaPreview(optimisticMessage);
+						persistConversationMessages(targetConversationId, current =>
+							current.filter(message => message.id !== optimisticMessage.id),
+						);
+						if (conversationIdRef.current === targetConversationId) {
+							setReplyingTo(current => current || imageReply);
+						}
 						return;
 					}
 
@@ -12338,9 +12347,35 @@ function WhatsAppWorkspaceContent() {
 
 	const sendFile = async (file, forcedType, options = {}) => {
 		const uploadAccountId = options.accountId || accountId;
-		if (!file || !uploadAccountId) return false;
 		const targetConversationId = options.conversationId || conversationId;
-		if (!targetConversationId) return false;
+		const replySnapshot =
+			options.replySnapshot !== undefined ? options.replySnapshot : replyingTo;
+		let optimisticMessage = options.optimisticMessage || null;
+
+		const abortOptimistic = () => {
+			if (!optimisticMessage) return;
+			releaseOptimisticMediaPreview(optimisticMessage);
+			if (targetConversationId) {
+				persistConversationMessages(targetConversationId, current =>
+					current.filter(message => message.id !== optimisticMessage.id),
+				);
+			}
+			if (conversationIdRef.current === targetConversationId) {
+				setReplyingTo(current => current || replySnapshot);
+			}
+		};
+
+		if (!file || !uploadAccountId || !targetConversationId) {
+			abortOptimistic();
+			return false;
+		}
+		if (!Number(file.size)) {
+			toast.error(
+				locale === 'ar' ? 'ملف الصورة فارغ أو تالف' : 'Image file is empty or unreadable',
+			);
+			abortOptimistic();
+			return false;
+		}
 		if (demo.settings.enabled) {
 			toast.error(
 				locale === 'ar'
@@ -12348,17 +12383,13 @@ function WhatsAppWorkspaceContent() {
 					: 'Demo media is deferred. Nothing was sent to WhatsApp.',
 			);
 			if (fileRef.current) fileRef.current.value = '';
+			abortOptimistic();
 			return false;
 		}
 		if (file.size > 25 * 1024 * 1024) {
 			toast.error('File size must not exceed 25 MB');
 			if (fileRef.current) fileRef.current.value = '';
-			if (options.optimisticMessage) {
-				releaseOptimisticMediaPreview(options.optimisticMessage);
-				persistConversationMessages(targetConversationId, current =>
-					current.filter(message => message.id !== options.optimisticMessage.id),
-				);
-			}
+			abortOptimistic();
 			return false;
 		}
 		const targetAccountId = uploadAccountId;
@@ -12369,10 +12400,7 @@ function WhatsAppWorkspaceContent() {
 				: options.caption !== undefined
 					? options.caption
 					: getDraft().trim();
-		const replySnapshot =
-			options.replySnapshot !== undefined ? options.replySnapshot : replyingTo;
 		const clientMessageId = options.clientMessageId || newClientMessageId();
-		let optimisticMessage = options.optimisticMessage || null;
 		let uploadedFileId = null;
 		const ownsOptimisticPreview = !options.optimisticMessage;
 
@@ -12407,9 +12435,16 @@ function WhatsAppWorkspaceContent() {
 		try {
 			let outgoingFile = file;
 			if (type === 'image') {
-				outgoingFile = await compressImageForWhatsApp(
-					normalizeComposerImageFile(file) || file,
-				);
+				const normalizedFile = normalizeComposerImageFile(file) || file;
+				try {
+					outgoingFile = await withAsyncTimeout(
+						compressImageForWhatsApp(normalizedFile),
+						20_000,
+						locale === 'ar' ? 'تحضير الصورة' : 'Image prepare',
+					);
+				} catch {
+					outgoingFile = normalizedFile;
+				}
 			}
 			const form = new FormData();
 			form.append('file', outgoingFile);
@@ -12530,12 +12565,70 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const handleComposerPaste = event => {
-		if (event.defaultPrevented || !conversationId || sending || recordingVoice) return;
+		if (event.defaultPrevented || !conversationId || sending || recordingVoice || !accountId) {
+			return;
+		}
 		const files = clipboardImageFiles(event);
 		if (!files.length) return;
 		event.preventDefault();
 		event.stopPropagation();
-		queueComposerImages(files);
+		void sendPastedComposerImages(files);
+	};
+
+	const sendPastedComposerImages = async files => {
+		if (!conversationId || !accountId || sending || recordingVoice) return;
+		const targetConversationId = conversationId;
+		const targetAccountId = accountId;
+		const caption = getDraft().trim();
+		const replySnapshot = replyingTo;
+		pinThreadToBottomRef.current = true;
+		setSending(true);
+		setUploadProgress(0);
+		try {
+			for (let index = 0; index < files.length; index += 1) {
+				const raw = files[index];
+				const file = normalizeComposerImageFile(raw) || raw;
+				if (!file?.size) continue;
+				if (file.size > 25 * 1024 * 1024) {
+					toast.error('File size must not exceed 25 MB');
+					continue;
+				}
+				const imageCaption = index === 0 ? caption : '';
+				const imageReply = index === 0 ? replySnapshot : null;
+				let sent = false;
+				try {
+					sent = await withAsyncTimeout(
+						sendFile(file, 'image', {
+							conversationId: targetConversationId,
+							accountId: targetAccountId,
+							caption: imageCaption,
+							replySnapshot: imageReply,
+							skipSendingState: true,
+							clearUploadProgress: index === files.length - 1,
+						}),
+						WHATSAPP_MEDIA_SEND_TIMEOUT_MS,
+						locale === 'ar' ? 'إرسال الصورة' : 'Image send',
+					);
+				} catch (error) {
+					toast.error(
+						error?.message?.includes('timed out')
+							? locale === 'ar'
+								? 'انتهت مهلة إرسال الصورة. تحقق من الاتصال وحاول مرة أخرى.'
+								: 'Image send timed out. Check your connection and try again.'
+							: mediaUploadFailedMessage(error, locale),
+					);
+					break;
+				}
+				if (!sent) break;
+				if (index === 0) {
+					if (caption) setDraft('');
+					setReplyingTo(null);
+				}
+			}
+		} finally {
+			setSending(false);
+			setUploadProgress(null);
+		}
 	};
 
 	const sendRecordedVoice = async file => {
@@ -19240,6 +19333,7 @@ function WhatsAppWorkspaceContent() {
 														ariaLabel={t.message}
 														onTyping={notifyPeerTyping}
 														onEnterSubmit={sendMessage}
+														onPaste={handleComposerPaste}
 													/>
 													<button
 														type="button"

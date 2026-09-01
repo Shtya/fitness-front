@@ -1741,6 +1741,9 @@ const COMPOSER_IMAGE_TYPES = new Set([
 	'image/gif',
 	'image/heic',
 	'image/heif',
+	'image/bmp',
+	'image/x-ms-bmp',
+	'image/tiff',
 ]);
 
 function extensionForImageType(type) {
@@ -1785,7 +1788,7 @@ export function clipboardImageFiles(event) {
 	const files = [];
 	const seen = new Set();
 	const add = (blob, fallbackType = '') => {
-		if (!blob) return;
+		if (!blob || !Number(blob.size)) return;
 		const type = String(blob.type || fallbackType || 'image/png').toLowerCase();
 		const key = `${Number(blob.size || 0)}:${type}`;
 		if (seen.has(key)) return;
@@ -1795,9 +1798,10 @@ export function clipboardImageFiles(event) {
 				: new File([blob], `pasted-image.${extensionForImageType(type)}`, {
 						type: type.startsWith('image/') ? type : 'image/png',
 					});
-		if (!isComposerImageFile(named)) return;
+		const normalized = normalizeComposerImageFile(named) || named;
+		if (!isComposerImageFile(normalized)) return;
 		seen.add(key);
-		files.push(named);
+		files.push(normalized);
 	};
 
 	let addedFromItems = false;
@@ -1811,6 +1815,14 @@ export function clipboardImageFiles(event) {
 	}
 	if (!addedFromItems && data.files?.length) {
 		for (const file of data.files) add(file);
+	}
+	if (!files.length && data.items?.length) {
+		for (const item of data.items) {
+			if (item.kind !== 'file') continue;
+			const type = String(item.type || '').toLowerCase();
+			if (!type.startsWith('image/')) continue;
+			add(item.getAsFile(), type);
+		}
 	}
 	return files;
 }
