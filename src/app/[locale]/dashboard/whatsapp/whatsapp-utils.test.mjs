@@ -610,7 +610,7 @@ test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	assert.equal(messageTextPresentation('English message').dir, 'ltr');
 	const startsEnglish = messageTextPresentation('Hello world مرحباً');
 	assert.equal(startsEnglish.dir, 'ltr');
-	assert.match(startsEnglish.style.fontFamily, /Segoe UI/);
+	assert.match(startsEnglish.style.fontFamily, /--font-dm-sans/);
 	const startsArabic = messageTextPresentation('مرحبا Hello');
 	assert.equal(startsArabic.dir, 'rtl');
 	assert.match(startsArabic.style.fontFamily, /--font-arabic/);

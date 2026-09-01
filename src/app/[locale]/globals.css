@@ -951,55 +951,27 @@ div[data-rht-toaster] {
 body .wa-mobile-shell,
 body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path) {
   font-variant-emoji: emoji;
-  font-family:
-    'SF Pro Display',
-    'Apple Color Emoji',
-    'Segoe UI Emoji',
-    'Noto Color Emoji',
-    sans-serif !important;
+  font-family: var(--wa-font-ui) !important;
 }
 
-/* Arabic locale: prefer a proper Arabic UI font instead of SF Pro. */
+/* Arabic locale: prefer a proper Arabic UI font instead of DM Sans. */
 [dir='rtl'] body .wa-mobile-shell,
 [dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path) {
-  font-family:
-    var(--font-arabic),
-    'Tajawal',
-    'Cairo',
-    'Noto Sans Arabic',
-    Tahoma,
-    'Apple Color Emoji',
-    'Segoe UI Emoji',
-    'Noto Color Emoji',
-    sans-serif !important;
+  font-family: var(--wa-font-ui-ar) !important;
 }
 
 [dir='rtl'] body .wa-mobile-shell .font-number,
 [dir='rtl'] body .wa-mobile-shell .font-number *,
 [dir='rtl'] body .wa-mobile-shell [dir='ltr']:not(.wa-message-text):not(.wa-composer-input),
 [dir='rtl'] body .wa-mobile-shell [dir='ltr']:not(.wa-message-text):not(.wa-composer-input) * {
-  font-family:
-    var(--font-inter),
-    'SF Pro Display',
-    system-ui,
-    sans-serif !important;
+  font-family: var(--wa-font-ui) !important;
 }
 
-/* Per-message script: match WhatsApp Web — first strong char sets dir; wrap is browser-driven. */
+/* Per-message script: Arabic bubbles keep Tajawal; English bubbles use DM Sans. */
 body .wa-mobile-shell .wa-message-text.wa-message-text--ar,
 body .wa-mobile-shell .wa-message-text.wa-message-text--ar *,
 body .wa-mobile-shell .wa-composer-input.wa-message-text--ar {
-  font-family:
-    "Segoe UI",
-    Tahoma,
-    "Noto Sans Arabic",
-    var(--font-arabic),
-    "Helvetica Neue",
-    Arial,
-    "Apple Color Emoji",
-    "Segoe UI Emoji",
-    "Noto Color Emoji",
-    sans-serif !important;
+  font-family: var(--wa-font-message-ar) !important;
   font-weight: 400 !important;
   letter-spacing: normal !important;
   font-feature-settings: normal !important;
@@ -1012,19 +984,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--ar {
 body .wa-mobile-shell .wa-message-text.wa-message-text--en,
 body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 .wa-composer-input.wa-message-text--en {
-  font-family:
-    "Segoe UI",
-    "Helvetica Neue",
-    Helvetica,
-    "Lucida Grande",
-    Arial,
-    Ubuntu,
-    Cantarell,
-    "Fira Sans",
-    "Apple Color Emoji",
-    "Segoe UI Emoji",
-    "Noto Color Emoji",
-    sans-serif !important;
+  font-family: var(--wa-font-message-en) !important;
   font-weight: 400 !important;
   letter-spacing: normal !important;
   font-feature-settings: normal !important;
@@ -1034,6 +994,10 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-mobile-shell {
+  --wa-font-ui: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
+  --wa-font-ui-ar: var(--font-arabic), 'Tajawal', 'Cairo', 'Noto Sans Arabic', Tahoma, sans-serif;
+  --wa-font-message-en: var(--wa-font-ui);
+  --wa-font-message-ar: var(--wa-font-ui-ar);
   --wa-app-bg: #ffffff;
   --wa-wall-bg: #f0e9df;
   --wa-incoming: #ffffff;
@@ -3146,7 +3110,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   font-size: 11px;
   font-weight: 500;
   color: #54656f;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--wa-font-ui);
   padding-inline-start: 1px;
 }
 
@@ -3185,23 +3149,14 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   font-weight: 400;
   line-height: 19px;
   letter-spacing: normal;
-  font-family:
-    "Segoe UI",
-    "Helvetica Neue",
-    Helvetica,
-    "Lucida Grande",
-    Arial,
-    Ubuntu,
-    Cantarell,
-    "Fira Sans",
-    sans-serif;
+  font-family: var(--wa-font-message-en);
   vertical-align: top;
   text-align: start;
 }
 
 .wa-message-text.wa-message-text--ar,
 .wa-message-text[lang='ar'] {
-  font-family: var(--font-arabic), "Segoe UI", Tahoma, "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--wa-font-message-ar);
   direction: rtl;
   unicode-bidi: plaintext;
   text-align: start;
@@ -5318,8 +5273,18 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 .wa-reply-quote__body[lang='ar'],
 .wa-reply-preview__snippet.wa-message-text--ar,
 .wa-reply-preview__snippet[lang='ar'] {
-	font-family: var(--font-arabic), "Segoe UI", Tahoma, "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif;
+	font-family: var(--wa-font-message-ar);
 	direction: rtl;
+	unicode-bidi: plaintext;
+	text-align: start;
+}
+
+.wa-reply-quote__body.wa-message-text--en,
+.wa-reply-quote__body[lang='en'],
+.wa-reply-preview__snippet.wa-message-text--en,
+.wa-reply-preview__snippet[lang='en'] {
+	font-family: var(--wa-font-message-en);
+	direction: ltr;
 	unicode-bidi: plaintext;
 	text-align: start;
 }
@@ -8147,7 +8112,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   }
 
   .wa-mobile-nav-item {
-		font-family: 'SF Pro Text', var(--font-sf-pro-display);
+		font-family: var(--wa-font-ui);
 		font-size: 10px;
 		font-style: normal;
 		font-weight: 500;
@@ -8158,7 +8123,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   }
 
 	[dir='rtl'] .wa-mobile-nav-item {
-		font-family: var(--font-arabic), 'Tajawal', 'Cairo', 'Noto Sans Arabic', Tahoma, sans-serif;
+		font-family: var(--wa-font-ui-ar);
 		letter-spacing: 0;
 	}
 
@@ -8323,11 +8288,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		padding-block: max(4px, env(safe-area-inset-top)) 4px !important;
 		padding-inline: 6px 8px !important;
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-		font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', sans-serif;
+		font-family: var(--wa-font-ui);
   }
 
 	[dir='rtl'] .wa-chat-toolbar {
-		font-family: var(--font-arabic), 'Tajawal', 'Cairo', 'Noto Sans Arabic', Tahoma, sans-serif;
+		font-family: var(--wa-font-ui-ar);
 	}
 
 	.wa-chat-toolbar > div:first-child {
@@ -8434,11 +8399,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		max-width: 100%;
 		padding: 10px 12px 78px !important;
 		overflow-x: hidden !important;
-		font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', sans-serif;
+		font-family: var(--wa-font-ui);
   }
 
 	[dir='rtl'] .wa-message-wallpaper {
-		font-family: var(--font-arabic), 'Tajawal', 'Cairo', 'Noto Sans Arabic', Tahoma, sans-serif;
+		font-family: var(--wa-font-ui-ar);
 	}
 
 	.wa-message-wallpaper.wa-has-ai-suggestions {
@@ -8559,7 +8524,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-message-text[lang='ar'],
 	.wa-message-text.wa-message-text--ar {
-		font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", var(--font-arabic), Arial, sans-serif !important;
+		font-family: var(--wa-font-message-ar) !important;
 		font-weight: 400 !important;
 		line-height: 19px !important;
 		direction: rtl !important;
@@ -8568,7 +8533,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-message-text.wa-message-text--en {
-		font-family: "Segoe UI", "Helvetica Neue", Helvetica, "Lucida Grande", Arial, sans-serif !important;
+		font-family: var(--wa-font-message-en) !important;
 		font-weight: 400 !important;
 		letter-spacing: normal;
 		font-feature-settings: normal;
@@ -9609,8 +9574,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   }
 }
 
-.title-whatsapp {
-  font-family: SF Pro Text;
+.wa-mobile-shell .title-whatsapp {
+  font-family: var(--wa-font-ui);
   font-weight: 700;
   font-style: Bold;
   font-size: 33.33px;
@@ -9619,8 +9584,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   letter-spacing: -4%;
 }
 
-.search-input {
-  font-family: SF Pro Text;
+.wa-mobile-shell .search-input {
+  font-family: var(--wa-font-ui);
   font-weight: 400;
   font-style: Regular;
   font-size: 16.4px;
@@ -9629,9 +9594,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   letter-spacing: 0%;
 }
 
-.title-chat {
+.wa-mobile-shell .title-chat {
   color: #0a0a0a;
-  font-family: SF Pro Text;
+  font-family: var(--wa-font-ui);
   font-weight: 600;
   font-style: Semibold;
   font-size: 16px;
@@ -9639,9 +9604,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   line-height: 100%;
   letter-spacing: -2%;
 }
-.desc-chat {
+.wa-mobile-shell .desc-chat {
   color: #767779;
-  font-family: SF Pro Text;
+  font-family: var(--wa-font-ui);
   font-weight: 400;
   font-style: Regular;
   font-size: 14px;
@@ -9650,9 +9615,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   letter-spacing: -1%;
 }
 
-.time-chat{
+.wa-mobile-shell .time-chat{
 	color: var(--Text-txt-secondary, #767779);
-font-family: SF Pro Text;
+font-family: var(--wa-font-ui);
 font-weight: 400;
 font-style: Regular;
 font-size: 14px;
@@ -9672,10 +9637,18 @@ text-align: end;
 	letter-spacing: 0;
 }
 
+[dir='rtl'] .wa-mobile-shell .title-whatsapp,
+[dir='rtl'] .wa-mobile-shell .search-input,
+[dir='rtl'] .wa-mobile-shell .title-chat:not(.wa-message-text--en),
+[dir='rtl'] .wa-mobile-shell .desc-chat:not(.wa-message-text--en),
+[dir='rtl'] .wa-mobile-shell .time-chat {
+	font-family: var(--wa-font-ui-ar);
+}
+
 .title-chat.wa-message-text--ar,
 .desc-chat .wa-message-text--ar,
 .wa-chat-contact h3.wa-message-text--ar {
-	font-family: var(--font-arabic), 'Tajawal', 'Cairo', 'Noto Sans Arabic', Tahoma, Arial, sans-serif !important;
+	font-family: var(--wa-font-message-ar) !important;
 	letter-spacing: 0 !important;
 }
 
@@ -9685,7 +9658,7 @@ text-align: end;
 [dir='rtl'] .title-chat.wa-message-text--en,
 [dir='rtl'] .desc-chat .wa-message-text--en,
 [dir='rtl'] .wa-chat-contact h3.wa-message-text--en {
-	font-family: var(--font-inter), 'SF Pro Text', 'Segoe UI Variable Text', 'Helvetica Neue', system-ui, sans-serif !important;
+	font-family: var(--wa-font-message-en) !important;
 }
 
 /* Full-screen “keep phone open” gate during WhatsApp history sync */

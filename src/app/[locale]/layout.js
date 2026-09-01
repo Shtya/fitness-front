@@ -2,7 +2,7 @@ import { Toaster } from 'react-hot-toast';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { routing } from '../../i18n/routing';
-import { Inter, Open_Sans, Roboto_Mono, Space_Grotesk, Tajawal } from 'next/font/google';
+import { Inter, DM_Sans, Open_Sans, Roboto_Mono, Space_Grotesk, Tajawal } from 'next/font/google';
 import './globals.css';
 import "./theme-tokens.css";
 
@@ -29,6 +29,13 @@ export const inter = Inter({
   variable: '--font-inter',
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
 });
 
@@ -96,7 +103,7 @@ export default async function RootLayout({ children, params }) {
         <link rel='apple-touch-icon' href='/icons/apple-touch-icon.png' sizes='180x180' />
       </head>
 
-      <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable} ${spaceGrotesk.variable} ${robotoMono.variable} ${inter.variable}`}>
+      <body className={`bg-[#fff] scroll ${arabicFont.variable} ${dmSans.variable} ${openSans.variable} ${spaceGrotesk.variable} ${robotoMono.variable} ${inter.variable}`}>
         <NextIntlClientProvider locale={locale}>
           <Layout>
             {children}

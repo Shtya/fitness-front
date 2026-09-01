@@ -626,7 +626,10 @@ export const ARABIC_MESSAGE_FONT_FAMILY =
 	'var(--font-arabic), "Segoe UI", Tahoma, "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif';
 
 export const DEFAULT_MESSAGE_FONT_FAMILY =
-	'"Segoe UI", "Helvetica Neue", Helvetica, "Lucida Grande", Arial, Ubuntu, Cantarell, "Fira Sans", sans-serif';
+	'var(--font-dm-sans), system-ui, -apple-system, sans-serif';
+
+export const WA_UI_FONT_FAMILY =
+	'var(--font-dm-sans), system-ui, -apple-system, sans-serif';
 
 /** First strong letter wins: Arabic → rtl, Latin → ltr. Skips digits/punctuation/space. */
 export function firstStrongTextDirection(text) {
