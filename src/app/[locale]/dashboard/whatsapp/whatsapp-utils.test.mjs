@@ -23,6 +23,8 @@ import {
 	collapseQuotedPreviewText,
 	quotedMessageLabel,
 	quotedMessagePreview,
+	isDeletedWhatsAppMessage,
+	deletedWhatsAppMessageLabel,
 	normalizeComposerImageFile,
 	truncateQuotedPreviewText,
 	quotedPreviewFromMessage,
@@ -1285,4 +1287,15 @@ test('statusMessageIdentityKey keeps each story slide distinct per sender', () =
 	assert.equal(keyA, '3a1111111111111111');
 	assert.equal(keyB, '3a2222222222222222');
 	assert.notEqual(keyA, sender.toLowerCase());
+});
+
+test('deleted message helpers detect tombstones and quote previews', () => {
+	const deleted = { deletedMode: 'for_everyone', type: 'text', text: null };
+	assert.equal(isDeletedWhatsAppMessage(deleted), true);
+	assert.equal(isRenderableWhatsAppMessage(deleted), true);
+	assert.equal(deletedWhatsAppMessageLabel('en'), 'This message was deleted');
+	assert.equal(deletedWhatsAppMessageLabel('ar'), 'تم حذف هذه الرسالة');
+	const preview = quotedMessagePreview(deleted, 'en');
+	assert.equal(preview.body, 'This message was deleted');
+	assert.equal(preview.isDeleted, true);
 });

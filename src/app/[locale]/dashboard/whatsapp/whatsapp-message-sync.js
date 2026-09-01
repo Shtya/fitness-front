@@ -40,6 +40,19 @@ export function isMessageThreadCacheComplete(
 	return false;
 }
 
+/** True when open-chat must hit Postgres (partial preview / IDB row is not enough). */
+export function shouldReloadOpenChatMessages({
+	switchedConversation = false,
+	loadKey = '',
+	lastOpenLoadKey = '',
+	cache = null,
+	pageSize = MESSAGE_PAGE_SIZE,
+} = {}) {
+	if (switchedConversation) return true;
+	if (lastOpenLoadKey !== loadKey) return true;
+	return !isMessageThreadCacheComplete(cache, pageSize);
+}
+
 /**
  * Soft-open: paint from cache and skip GET + sync when the thread is warm.
  */

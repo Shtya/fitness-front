@@ -761,11 +761,26 @@ export default function EmailMemoWorkspace() {
 			toast.error(t('connectWhatsApp'));
 			return;
 		}
+		const initial = { phase: 'memo', current: 0, total: 1, id: row.id, subject: row.subject };
+		sendProgressRef.current = initial;
+		setSendProgress(initial);
 		return run(`send-${row.id}`, async () => {
-			const res = await emailMemoApi.sendNow({ ids: [row.id] });
-			const sent = Number(res.data?.sent || 0);
-			if (sent > 0) toast.success(t('sendOneOk'));
-			else toast.error(t('sendOneSkip'));
+			try {
+				const res = await emailMemoApi.sendNow({ ids: [row.id] });
+				const sent = Number(res.data?.sent || 0);
+				const failed = Number(res.data?.failed || 0);
+				if (sent > 0) toast.success(t('sendOneOk'));
+				else if (failed > 0) toast.error(res.data?.error || t('sendOneSkip'));
+				else toast.error(t('sendOneSkip'));
+			} catch (error) {
+				toast.error(error.response?.data?.message || error.message || t('sendOneSkip'));
+			} finally {
+				await load().catch(() => {});
+				window.setTimeout(() => {
+					sendProgressRef.current = null;
+					setSendProgress(null);
+				}, 900);
+			}
 		});
 	};
 

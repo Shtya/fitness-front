@@ -226,6 +226,7 @@ export default function WhatsAppSplitPane({
 	const [draft, setDraft] = useState('');
 	const [sending, setSending] = useState(false);
 	const [recordingVoice, setRecordingVoice] = useState(false);
+	const [recordingStarting, setRecordingStarting] = useState(false);
 	const [recordingPaused, setRecordingPaused] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const scrollRef = useRef(null);
@@ -554,8 +555,10 @@ export default function WhatsAppSplitPane({
 		}
 	};
 
+	const isVoiceRecordingMode = recordingVoice || recordingStarting;
+
 	const startVoiceRecording = async () => {
-		if (!conversationId || sending || recordingVoice) return;
+		if (!conversationId || sending || recordingVoice || recordingStarting) return;
 		if (
 			typeof navigator === 'undefined' ||
 			!navigator.mediaDevices?.getUserMedia ||
@@ -566,6 +569,7 @@ export default function WhatsAppSplitPane({
 		}
 		let stream = null;
 		clearVoicePreview();
+		setRecordingStarting(true);
 		try {
 			stream = await getVoiceMediaStream();
 			const recorder = createVoiceMediaRecorder(stream);
@@ -576,6 +580,7 @@ export default function WhatsAppSplitPane({
 			recordingSecondsRef.current = 0;
 			setRecordingSeconds(0);
 			setRecordingPaused(false);
+			setRecordingStarting(false);
 			setRecordingVoice(true);
 
 			recorder.ondataavailable = event => {
@@ -612,6 +617,7 @@ export default function WhatsAppSplitPane({
 			}, 1000);
 		} catch {
 			stream?.getTracks().forEach(track => track.stop());
+			setRecordingStarting(false);
 			setRecordingVoice(false);
 			setRecordingPaused(false);
 			toast.error(ar ? 'تعذر الوصول للميكروفون' : 'Microphone access failed');
@@ -787,10 +793,10 @@ export default function WhatsAppSplitPane({
 			{canCompose ? (
 				<form
 					onSubmit={sendText}
-					className={`flex shrink-0 items-center gap-2 border-0 border-t-0 p-2.5 wa-composer ${recordingVoice ? 'is-recording' : ''}`}
+					className={`flex shrink-0 items-center gap-2 border-0 border-t-0 p-2.5 wa-composer ${isVoiceRecordingMode ? 'is-recording' : ''}`}
 				>
 					{recordingVoice ? (
-						<div dir="ltr" className="wa-input-pill wa-recording-pill flex min-h-10 min-w-0 flex-1 items-center rounded-full px-1 py-1">
+						<div dir="ltr" className="wa-input-pill wa-recording-pill is-live flex min-h-10 min-w-0 flex-1 items-center rounded-full px-1 py-1">
 							<VoiceRecordingBar
 								seconds={recordingSeconds}
 								paused={recordingPaused}
@@ -836,9 +842,11 @@ export default function WhatsAppSplitPane({
 							) : (
 								<button
 									type="button"
-									disabled={sending}
+									disabled={sending || recordingStarting}
 									onClick={() => void startVoiceRecording()}
-									className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#16B96B] text-white disabled:opacity-50"
+									className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#16B96B] text-white disabled:opacity-50 wa-mic-button ${
+										recordingStarting ? 'is-active is-armed' : ''
+									}`}
 									aria-label={ar ? 'تسجيل صوت' : 'Record voice'}
 								>
 									<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">

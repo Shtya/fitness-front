@@ -51,6 +51,11 @@ export async function readVoiceChangerError(error, locale = 'en') {
 			? 'استنساخ ElevenLabs محتاج حوالي 60 ثانية كلام واضح. ارفع عيّنات أكتر أو سجّل أطول وبعدين جرّب تاني. النافذة هتفضل مفتوحة.'
 			: 'ElevenLabs Instant Voice Cloning needs about 60 seconds of clean speech. Add more clips or record longer samples, then try again.';
 	}
+	if (/insufficient balance|MiniMax account has insufficient balance/i.test(message)) {
+		return locale === 'ar'
+			? 'حساب MiniMax مفيهوش رصيد كافي لاستنساخ الصوت. أضف رصيد من platform.minimax.io أو استخدم مفتاح Coding Plan (speech-2.8-hd).'
+			: 'Your MiniMax account has insufficient balance for voice cloning. Add credits at platform.minimax.io or use a Coding Plan key with speech-2.8-hd.';
+	}
 	if (/MiniMax cloning needs at least 10 seconds/i.test(message)) {
 		return locale === 'ar'
 			? 'استنساخ MiniMax محتاج 10 ثواني كلام واضح على الأقل. ارفع عيّنة أطول وبعدين جرّب تاني.'

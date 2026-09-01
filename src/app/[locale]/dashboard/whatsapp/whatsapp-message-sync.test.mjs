@@ -5,6 +5,7 @@ import {
 	PROVIDER_SYNC_FRESH_MS,
 	isMessageThreadCacheComplete,
 	shouldProviderBackfill,
+	shouldReloadOpenChatMessages,
 	shouldSkipOpenChatNetwork,
 } from './whatsapp-message-sync.js';
 
@@ -171,6 +172,42 @@ test('isMessageThreadCacheComplete rejects partial pages', () => {
 	);
 	assert.equal(
 		isMessageThreadCacheComplete({ items: [{ id: '1' }, { id: '2' }], hasMore: false }),
+		true,
+	);
+});
+
+test('partial cache still requires reload on open', () => {
+	assert.equal(
+		shouldReloadOpenChatMessages({
+			switchedConversation: false,
+			loadKey: 'chat-a:all',
+			lastOpenLoadKey: 'chat-a:all',
+			cache: { items: [{ id: '1' }], hasMore: true },
+		}),
+		true,
+	);
+});
+
+test('complete short cache skips reload on reopen', () => {
+	assert.equal(
+		shouldReloadOpenChatMessages({
+			switchedConversation: false,
+			loadKey: 'chat-a:all',
+			lastOpenLoadKey: 'chat-a:all',
+			cache: { items: [{ id: '1' }, { id: '2' }], hasMore: false },
+		}),
+		false,
+	);
+});
+
+test('switching chats always reloads', () => {
+	assert.equal(
+		shouldReloadOpenChatMessages({
+			switchedConversation: true,
+			loadKey: 'chat-b:all',
+			lastOpenLoadKey: 'chat-a:all',
+			cache: { items: [{ id: '1' }, { id: '2' }], hasMore: false },
+		}),
 		true,
 	);
 });

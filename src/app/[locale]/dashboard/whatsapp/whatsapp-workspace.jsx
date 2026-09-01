@@ -202,6 +202,8 @@ import {
 	viewerThumbSrc,
 	viewerFullSrc,
 	isInlineImageDataUrl,
+	isDeletedWhatsAppMessage,
+	deletedWhatsAppMessageLabel,
 } from './whatsapp-utils';
 import {
 	installWaScrollSpy,
@@ -216,6 +218,7 @@ import {
 	isContactMessage,
 	parseContactFromMessage,
 } from './whatsapp-contact';
+import { WhatsAppFileTypeIcon, whatsappFileIconSrc } from './whatsapp-file-icons';
 import { createWhatsAppTabLeader } from './whatsapp-tab-leader';
 import { DemoModeProvider, useDemoMode } from './demo/DemoModeProvider';
 import DemoModeSettings from './demo/components/DemoModeSettings';
@@ -273,8 +276,13 @@ import {
 	MESSAGES_CACHE_TTL_MS,
 	isMessageThreadCacheComplete,
 	shouldProviderBackfill,
+	shouldReloadOpenChatMessages,
 	shouldSkipOpenChatNetwork,
 } from './whatsapp-message-sync';
+import {
+	readCachedMessagePage,
+	writeCachedMessagePage,
+} from './whatsapp-idb-cache';
 import { useWaScrollWindow, useWaVirtualRows, WaVirtualSpacer } from './wa-virtual-list';
 import { estimateMessageRowSize, estimatePrependedThreadHeight, messageRowKey } from './wa-thread-virtual.js';
 import { WaMeasuredThreadRow } from './wa-measured-thread-row';
@@ -297,6 +305,7 @@ import { useWhatsAppAi } from './ai/use-whatsapp-ai';
 import WhatsAppPrivacyBlurControl from './WhatsAppPrivacyBlurControl';
 import ExpandableMessageText from './ExpandableMessageText';
 import EmailMemoMessageCard from './EmailMemoMessageCard';
+import DeletedMessageNotice from './DeletedMessageNotice';
 import { isEmailMemoMessageText } from './email-memo-message';
 import MarkdownMessage from '../ai-free/MarkdownMessage';
 import {
@@ -5143,6 +5152,7 @@ export function MediaAttachment({
 		const isWord = extKey === 'doc' || extKey === 'docx';
 		const isExcel = extKey === 'xls' || extKey === 'xlsx' || extKey === 'csv';
 		const isPdf = extKey === 'pdf';
+		const fileIconKey = isPdf ? 'pdf' : isExcel ? 'xlsx' : isWord ? 'doc' : extKey;
 		const saveLabel = labels.saveAsFile || labels.downloadFile;
 		return (
 			<div
@@ -5151,46 +5161,8 @@ export function MediaAttachment({
 				data-ext={extKey || undefined}
 			>
 				<div className="wa-file-card-head">
-					<span className="wa-file-card-icon" data-ext={extKey || undefined} aria-hidden="true">
-						{isWord ? (
-							<svg className="wa-file-type-glyph" viewBox="0 0 32 36" width="28" height="32">
-								<path
-									fill="#2b579a"
-									d="M4 0h17l7 7v25a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z"
-								/>
-								<path fill="#1e3f78" d="M21 0v7h7z" />
-								<path
-									fill="#fff"
-									d="M8.2 25.2 11.1 12h2.6l1.7 8.3L17.2 12h2.5l-2.9 13.2h-2.5L12.5 16l-1.8 9.2H8.2z"
-								/>
-							</svg>
-						) : isExcel ? (
-							<svg className="wa-file-type-glyph" viewBox="0 0 32 36" width="28" height="32">
-								<path
-									fill="#1a7f37"
-									d="M4 0h17l7 7v25a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z"
-								/>
-								<path fill="#0f5c28" d="M21 0v7h7z" />
-								<path
-									fill="#fff"
-									d="M9.2 25.2 13.1 18l-3.7-6.2h3l2.3 4.2 2.3-4.2h2.9L16.2 18l3.9 7.2h-3l-2.4-4.6-2.4 4.6H9.2z"
-								/>
-							</svg>
-						) : isPdf ? (
-							<svg className="wa-file-type-glyph" viewBox="0 0 32 36" width="28" height="32">
-								<path
-									fill="#e5252a"
-									d="M4 0h17l7 7v25a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z"
-								/>
-								<path fill="#b51d22" d="M21 0v7h7z" />
-								<path
-									fill="#fff"
-									d="M8.4 25.2V12h3.4c2.2 0 3.5 1.2 3.5 3.1 0 1.9-1.3 3.1-3.5 3.1H10.6v7H8.4zm2.2-8.8h1c.9 0 1.4-.5 1.4-1.3S12.5 13.8 11.6 13.8h-1v2.6z"
-								/>
-							</svg>
-						) : (
-							<span className="wa-file-card-ext">{extension || 'FILE'}</span>
-						)}
+					<span className="wa-file-card-icon wa-file-card-icon-image" data-ext={extKey || undefined} aria-hidden="true">
+						<WhatsAppFileTypeIcon extKey={fileIconKey} />
 					</span>
 					<span className="wa-file-card-copy">
 						<span className="wa-file-card-name" title={attachment.fileName}>
@@ -5352,7 +5324,7 @@ export function MediaAttachment({
 					) : type === 'video' ? (
 						<Video size={18} className="shrink-0" />
 					) : (
-						<FileText size={18} className="shrink-0" />
+						<WhatsAppFileTypeIcon extKey="file" className="h-[18px] w-[18px] object-contain" />
 					)}
 				</span>
 				<span className="relative z-[1] min-w-0">
@@ -5482,7 +5454,10 @@ export function MediaAttachment({
 				ref={containerRef}
 				className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5 ${className}`}
 			>
-				<FileText size={14} />
+				<WhatsAppFileTypeIcon
+					extKey={attachmentExtension(attachment.fileName, attachment.mimeType)}
+					className="h-3.5 w-3.5 object-contain"
+				/>
 				<span>{attachment.fileName || attachment.type || 'file'}</span>
 			</div>
 		);
@@ -5494,7 +5469,10 @@ export function MediaAttachment({
 			rel="noreferrer"
 			className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs underline bg-black/5`}
 		>
-			<FileText size={14} />
+			<WhatsAppFileTypeIcon
+				extKey={attachmentExtension(attachment.fileName, attachment.mimeType)}
+				className="h-3.5 w-3.5 object-contain"
+			/>
 			<span>{attachment.fileName || attachment.type || 'file'}</span>
 		</a>
 	);
@@ -7199,9 +7177,12 @@ function messageDayLabel(value, locale) {
 	return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric' }).format(date);
 }
 
-function conversationPreview(conversation) {
+function conversationPreview(conversation, locale = 'en') {
 	const message = conversation?.lastMessage;
 	if (!message) return '';
+	if (isDeletedWhatsAppMessage(message)) {
+		return deletedWhatsAppMessageLabel(locale);
+	}
 	const text = String(message.text || '').trim();
 	const type = String(message.type || '').toLowerCase();
 	const mediaLabel = {
@@ -7257,7 +7238,16 @@ function ConversationPreviewIcon({ type }) {
 	}
 	if (['location', 'live_location'].includes(normalizedType)) return <MapPin {...props} />;
 	if (normalizedType === 'video') return <Video {...props} />;
-	if (normalizedType === 'document') return <FileText {...props} />;
+	if (normalizedType === 'document') {
+		return (
+			<img
+				src={whatsappFileIconSrc('file')}
+				alt=""
+				aria-hidden="true"
+				className={`h-4 w-4 shrink-0 object-contain ${props.className || ''}`}
+			/>
+		);
+	}
 	if (normalizedType === 'sticker') {
 		return (
 			<img
@@ -7993,6 +7983,7 @@ function WhatsAppWorkspaceContent() {
 	const [showJumpToBottom, setShowJumpToBottom] = useState(false);
 	const [messagesSyncHint, setMessagesSyncHint] = useState('');
 	const [recordingVoice, setRecordingVoice] = useState(false);
+	const [recordingStarting, setRecordingStarting] = useState(false);
 	const [recordingPaused, setRecordingPaused] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [voiceChangerOpen, setVoiceChangerOpen] = useState(false);
@@ -8208,6 +8199,7 @@ function WhatsAppWorkspaceContent() {
 	const suppressConversationClickRef = useRef(false);
 	const lastAutoScrolledMessageRef = useRef(null);
 	const pinThreadToBottomRef = useRef(false);
+	const jumpToBottomInFlightRef = useRef(false);
 	const lastThreadScrollTopRef = useRef(0);
 	const userScrollingThreadRef = useRef(false);
 	const userScrollIdleTimerRef = useRef(null);
@@ -8298,13 +8290,14 @@ function WhatsAppWorkspaceContent() {
 	const suppressOlderLoadUntilRef = useRef(0);
 	const syncCooldownUntilRef = useRef(0);
 
-	const scrollMessagesToBottom = useCallback((behavior = 'auto') => {
+	const scrollMessagesToBottom = useCallback((behavior = 'auto', { force = false } = {}) => {
 		const scroll = () => {
 			if (loadingOlderRef.current || olderScrollRestoreRef.current) return;
-			if (!pinThreadToBottomRef.current) return;
+			if (!pinThreadToBottomRef.current && !force) return;
 			const box = messageBoxRef.current;
 			if (!box) return;
 			if (
+				!force &&
 				threadSettledRef.current &&
 				!isThreadPinnedToBottom(box) &&
 				!isThreadNearBottom(box)
@@ -8318,7 +8311,7 @@ function WhatsAppWorkspaceContent() {
 					{ top: box.scrollHeight, behavior: 'smooth' },
 					'scrollMessagesToBottom',
 					'scrollMessagesToBottom:smooth',
-					{ pin: true },
+					{ pin: true, force },
 				);
 			} else {
 				waScrollApply(
@@ -8326,10 +8319,10 @@ function WhatsAppWorkspaceContent() {
 					box.scrollHeight,
 					'scrollMessagesToBottom',
 					'scrollMessagesToBottom:auto',
-					{ pin: true },
+					{ pin: true, force },
 				);
 			}
-			const distance = box.scrollHeight - box.clientHeight - box.scrollTop;
+			const distance = threadDistanceFromBottom(box);
 			setShowJumpToBottom(distance > 220);
 		};
 		requestAnimationFrame(() => {
@@ -8337,12 +8330,6 @@ function WhatsAppWorkspaceContent() {
 			requestAnimationFrame(scroll);
 		});
 	}, []);
-
-	const jumpMessagesToBottom = useCallback(() => {
-		pinThreadToBottomRef.current = true;
-		setShowJumpToBottom(false);
-		scrollMessagesToBottom('smooth');
-	}, [scrollMessagesToBottom]);
 
 	/** Single write path for the message pane. The base list is whatever the
 	 *  target conversation already owns — messages belonging to a chat the user
@@ -8531,6 +8518,57 @@ function WhatsAppWorkspaceContent() {
 	});
 	const messageVirtualRef = useRef(messageVirtual);
 	messageVirtualRef.current = messageVirtual;
+
+	const jumpMessagesToBottom = useCallback(() => {
+		if (loadingOlderRef.current || olderScrollRestoreRef.current) return;
+		const box = messageBoxRef.current;
+		if (!box) return;
+
+		pinThreadToBottomRef.current = true;
+		userScrollingThreadRef.current = false;
+		if (userScrollIdleTimerRef.current) {
+			window.clearTimeout(userScrollIdleTimerRef.current);
+			userScrollIdleTimerRef.current = null;
+		}
+		jumpToBottomInFlightRef.current = true;
+		setShowJumpToBottom(false);
+
+		const rows = messageRowsRef.current;
+		const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
+
+		const applyJump = () => {
+			const el = messageBoxRef.current;
+			if (!el) return;
+			if (useVirtual) {
+				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
+					align: 'end',
+					behavior: 'auto',
+				});
+			}
+			waScrollApply(
+				el,
+				el.scrollHeight,
+				'jumpMessagesToBottom',
+				'user-jump-to-bottom',
+				{ pin: true, force: true },
+			);
+		};
+
+		applyJump();
+		requestAnimationFrame(() => {
+			applyJump();
+			requestAnimationFrame(() => {
+				applyJump();
+				const el = messageBoxRef.current;
+				jumpToBottomInFlightRef.current = false;
+				if (!el) return;
+				const pinned = isThreadPinnedToBottom(el);
+				pinThreadToBottomRef.current = pinned;
+				setShowJumpToBottom(!pinned && threadDistanceFromBottom(el) > 220);
+			});
+		});
+	}, []);
+
 	const visibleMessageRows = useMemo(() => {
 		if (!virtualizeMessages) {
 			return messageRows.map((row, rowIndex) => ({ row, rowIndex, start: null }));
@@ -9925,14 +9963,22 @@ function WhatsAppWorkspaceContent() {
 			void readCachedMessagePage(id, false).then(page => {
 				if (!page?.items?.length) return;
 				if (conversationIdRef.current !== id) return;
-				if (messagesCacheRef.current.get(cacheKey)?.items?.length) return;
-				messagesCacheRef.current.set(cacheKey, {
+				const existing = messagesCacheRef.current.get(cacheKey);
+				if (isMessageThreadCacheComplete(existing)) return;
+				const idbCache = {
 					items: page.items,
-					hasMore: true,
+					hasMore:
+						page.items.length >= MESSAGE_PAGE_SIZE
+							? true
+							: page.hasMore !== false,
 					cachedAt: page.cachedAt || Date.now(),
-				});
+				};
+				// A lone IDB row is the same as inbox preview — never treat it as hydrated.
+				if (!isMessageThreadCacheComplete(idbCache)) return;
+				if ((existing?.items?.length || 0) >= page.items.length) return;
+				messagesCacheRef.current.set(cacheKey, idbCache);
 				writeConversationMessages(id, () => page.items);
-				setHasMoreMessages(true);
+				setHasMoreMessages(Boolean(idbCache.hasMore));
 				setLoadingMessages(false);
 				setMessagesSyncHint('');
 				scrollMessagesToBottom();
@@ -10565,7 +10611,9 @@ function WhatsAppWorkspaceContent() {
 			setThreadSettled(false);
 			suppressOlderLoadUntilRef.current = Date.now() + 2000;
 		}
-		messagesRequestId.current += 1;
+		if (switchedConversation) {
+			messagesRequestId.current += 1;
+		}
 		olderRequestId.current += 1;
 		loadingOlderRef.current = false;
 		setLoadingOlder(false);
@@ -10601,10 +10649,13 @@ function WhatsAppWorkspaceContent() {
 			notifyWhatsAppUnreadChanged();
 		}
 		const loadKey = `${conversationId}:${conversationFilter}`;
-		const shouldReloadMessages =
-			switchedConversation ||
-			lastOpenMessagesLoadKeyRef.current !== loadKey ||
-			!messagesCacheRef.current.get(cacheKey)?.items?.length;
+		const cachedPage = cacheKey ? messagesCacheRef.current.get(cacheKey) : null;
+		const shouldReloadMessages = shouldReloadOpenChatMessages({
+			switchedConversation,
+			loadKey,
+			lastOpenLoadKey: lastOpenMessagesLoadKeyRef.current,
+			cache: cachedPage,
+		});
 		if (shouldReloadMessages) {
 			lastOpenMessagesLoadKeyRef.current = loadKey;
 			loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled).catch(() => { });
@@ -10891,6 +10942,7 @@ function WhatsAppWorkspaceContent() {
 		if (!box || !conversationId) return undefined;
 		const keepBottom = () => {
 			if (isThreadScrollLocked()) return;
+			if (jumpToBottomInFlightRef.current) return;
 			if (!pinThreadToBottomRef.current) return;
 			if (userScrollingThreadRef.current) return;
 			const distance = threadDistanceFromBottom(box);
@@ -14153,8 +14205,10 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
+	const isVoiceRecordingMode = recordingVoice || recordingStarting;
+
 	const startVoiceRecording = async () => {
-		if (!conversationId || sending || recordingVoice || voiceChanging) return;
+		if (!conversationId || sending || recordingVoice || recordingStarting || voiceChanging) return;
 		setAttachmentSheetOpen(false);
 		setStickerPanelOpen(false);
 		setAiImagePanelOpen(false);
@@ -14176,6 +14230,7 @@ function WhatsAppWorkspaceContent() {
 		}
 		let stream = null;
 		clearVoicePreview();
+		setRecordingStarting(true);
 		try {
 			stream = await getVoiceMediaStream();
 			const recorder = createVoiceMediaRecorder(stream);
@@ -14186,6 +14241,7 @@ function WhatsAppWorkspaceContent() {
 			recordingSecondsRef.current = 0;
 			setRecordingSeconds(0);
 			setRecordingPaused(false);
+			setRecordingStarting(false);
 			setRecordingVoice(true);
 
 			recorder.ondataavailable = event => {
@@ -14241,6 +14297,7 @@ function WhatsAppWorkspaceContent() {
 			recordingStreamRef.current = null;
 			mediaRecorderRef.current = null;
 			recordingChunksRef.current = [];
+			setRecordingStarting(false);
 			setRecordingVoice(false);
 			setRecordingPaused(false);
 			const permissionDenied = ['NotAllowedError', 'SecurityError'].includes(error?.name);
@@ -17298,7 +17355,8 @@ function WhatsAppWorkspaceContent() {
 											{visibleConversations.map(conversation => {
 												const title = conversationTitle(conversation);
 												const titlePresentation = messageTextPresentation(title);
-												const previewText = conversationPreview(conversation);
+												const previewText = conversationPreview(conversation, locale);
+												const lastMessageDeleted = isDeletedWhatsAppMessage(conversation.lastMessage);
 												const typing = Boolean(
 													conversation.isTyping ||
 													conversation.typing ||
@@ -17550,8 +17608,11 @@ function WhatsAppWorkspaceContent() {
 																</div>
 															</div>
 															<div className="mt-0.5 flex items-center justify-between gap-2">
-																<p className={`desc-chat flex min-w-0 items-center gap-1 truncate text-sm ${typing ? 'font-medium text-[#00A884]' : 'text-[#667781]'}`}>
-																	{!typing && conversation.lastMessage?.direction === 'outbound' && (
+																<p className={`desc-chat flex min-w-0 items-center gap-1 truncate text-sm ${typing ? 'font-medium text-[#00A884]' : lastMessageDeleted ? 'wa-conversation-preview--deleted' : 'text-[#667781]'}`}>
+																	{!typing && lastMessageDeleted && (
+																		<Trash2 size={14} strokeWidth={2} className="shrink-0" aria-hidden="true" />
+																	)}
+																	{!typing && !lastMessageDeleted && conversation.lastMessage?.direction === 'outbound' && (
 																		<span className="shrink-0">
 																			<DeliveryTicks
 																			message={conversation.lastMessage}
@@ -17563,7 +17624,7 @@ function WhatsAppWorkspaceContent() {
 																		/>
 																		</span>
 																	)}
-																	{!typing && (
+																	{!typing && !lastMessageDeleted && (
 																		<ConversationPreviewIcon
 																			type={conversation.lastMessage?.type}
 																		/>
@@ -18005,8 +18066,9 @@ function WhatsAppWorkspaceContent() {
 
 											const wasPinned = pinThreadToBottomRef.current;
 											if (
-												scrollingUp ||
-												distanceFromBottom > THREAD_PIN_THRESHOLD_PX
+												!jumpToBottomInFlightRef.current &&
+												(scrollingUp ||
+												distanceFromBottom > THREAD_PIN_THRESHOLD_PX)
 											) {
 												pinThreadToBottomRef.current = false;
 												setShowJumpToBottom(distanceFromBottom > 220);
@@ -18365,8 +18427,7 @@ function WhatsAppWorkspaceContent() {
 															: visibleText;
 													const captionIsMarkdown = looksLikeMarkdown(captionText);
 													const textPresentation = messageTextPresentation(captionText || visibleText);
-													const isDeleted =
-														message.deletedMode && message.deletedMode !== 'none';
+													const isDeleted = isDeletedWhatsAppMessage(message);
 													const attachmentTypes = (attachments || []).map(attachment => String(attachment.type || '').toLowerCase());
 													const hasOnlyVisualAttachments =
 														attachmentTypes.length > 0 &&
@@ -18645,8 +18706,10 @@ function WhatsAppWorkspaceContent() {
 																		onContextMenu={event => {
 																		openMessageContextMenu(event, message);
 																	}}
-															className={`wa-message-bubble relative w-fit shrink-0 ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${isContactMsg ? 'wa-message-contact' : ''} ${
-																		isEmailMemoMsg
+															className={`wa-message-bubble relative w-fit shrink-0 ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isDeleted ? 'wa-message-deleted' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${isContactMsg ? 'wa-message-contact' : ''} ${
+																		isDeleted
+																			? ''
+																			: isEmailMemoMsg
 																			? 'bg-white text-slate-900 dark:bg-slate-900 dark:text-white'
 																			: mine
 																				? 'bg-[#d9fdd3] text-slate-900 dark:bg-[#005c4b] dark:text-white'
@@ -18702,7 +18765,7 @@ function WhatsAppWorkspaceContent() {
 																					</p>
 																				) : null}
 																				<p
-																					className={`wa-reply-quote__body ${quotedBodyPresentation?.className || ''}`}
+																					className={`wa-reply-quote__body ${quotedPreview.isDeleted ? 'wa-reply-quote__body--deleted' : ''} ${quotedBodyPresentation?.className || ''}`}
 																					dir={quotedBodyPresentation?.dir}
 																					lang={quotedBodyPresentation?.lang}
 																					style={quotedBodyPresentation?.style}
@@ -18781,6 +18844,8 @@ function WhatsAppWorkspaceContent() {
 																					<Mic size={14} />
 																				) : String(message.type).includes('image') ? (
 																					<ImageIcon size={14} />
+																				) : String(message.type) === 'document' ? (
+																					<WhatsAppFileTypeIcon extKey="file" className="h-3.5 w-3.5 object-contain" />
 																				) : (
 																					<FileText size={14} />
 																				)}
@@ -18798,11 +18863,9 @@ function WhatsAppWorkspaceContent() {
 																		/>
 																	) : null}
 																	{isDeleted ? (
-																		<div className="wa-message-copy">
-																			<p className="wa-message-text italic opacity-60">
-																				{locale === 'ar' ? 'تم حذف هذه الرسالة' : 'This message was deleted'}
-																			</p>
-																			<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
+																		<div className="wa-message-copy wa-message-copy--deleted">
+																			<DeletedMessageNotice locale={locale} />
+																			<div className={`wa-message-meta ${mine ? 'text-rose-700/70 dark:text-rose-200/70' : 'text-rose-600/70 dark:text-rose-300/70'}`}>
 																				{message.isStarred && <Star size={11} fill="currentColor" />}
 																				{message.isPinned && <Pin size={11} fill="currentColor" />}
 																				{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -19114,6 +19177,8 @@ function WhatsAppWorkspaceContent() {
 									) : null}
 									<div
 										className={`wa-composer-stack ${
+											isVoiceRecordingMode ? 'is-voice-recording' : ''
+										} ${
 											!demo.settings.enabled &&
 											canUseWhatsApp &&
 											aiSuggestionsVisible &&
@@ -19178,7 +19243,7 @@ function WhatsAppWorkspaceContent() {
 												const file = event.dataTransfer?.files?.[0];
 												if (file) handleComposerFileInput(file);
 											}}
-											className={`wa-composer flex gap-2 border-0 border-t border-[#e9edef] p-2 ${composerDragOver ? 'ring-2 ring-[#00A884]/40' : ''} ${recordingVoice ? 'is-recording flex-nowrap items-center' : 'flex-wrap items-end'}`}
+											className={`wa-composer flex gap-2 border-0 border-t border-[#e9edef] p-2 ${composerDragOver ? 'ring-2 ring-[#00A884]/40' : ''} ${isVoiceRecordingMode ? 'is-recording flex-nowrap items-center' : 'flex-wrap items-end'}`}
 										>
 											<input
 												ref={fileRef}
@@ -19260,7 +19325,7 @@ function WhatsAppWorkspaceContent() {
 												</div>
 											)}
 											{recordingVoice ? (
-												<div dir="ltr" className="wa-input-pill wa-recording-pill flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1">
+												<div dir="ltr" className="wa-input-pill wa-recording-pill is-live flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1">
 													<VoiceRecordingBar
 														seconds={recordingSeconds}
 														paused={recordingPaused}
@@ -19406,11 +19471,13 @@ function WhatsAppWorkspaceContent() {
 															</button>
 															<button
 																type="button"
-																disabled={sending}
+																disabled={sending || recordingStarting}
 																title={t.recordVoice}
 																aria-label={t.recordVoice}
 																onClick={startVoiceRecording}
-																className="wa-mic-button wa-input-action"
+																className={`wa-mic-button wa-input-action ${
+																	recordingStarting ? 'is-active is-armed' : ''
+																}`}
 															>
 																<ComposerMicIcon size={22} />
 															</button>

@@ -1272,7 +1272,7 @@ export function whatsAppLocationHref(message, location = null) {
 
 export function isRenderableWhatsAppMessage(message) {
 	if (!message) return false;
-	const deleted = message.deletedMode && message.deletedMode !== 'none';
+	const deleted = isDeletedWhatsAppMessage(message);
 	if (deleted) return true;
 	if (visibleMessageText(message.text)) return true;
 	if (isWhatsAppLocationMessage(message)) return true;
@@ -1454,6 +1454,14 @@ export function messagesFormBubbleCluster(left, right, { isGroupChat = false } =
 	return true;
 }
 
+export function isDeletedWhatsAppMessage(message) {
+	return Boolean(message?.deletedMode && message.deletedMode !== 'none');
+}
+
+export function deletedWhatsAppMessageLabel(locale = 'en') {
+	return locale === 'ar' ? 'تم حذف هذه الرسالة' : 'This message was deleted';
+}
+
 export function quotedPreviewFromMessage(message) {
 	return (
 		message?.replyTo?.previewDataUrl ||
@@ -1597,6 +1605,15 @@ export function truncateQuotedPreviewText(text, maxChars = QUOTED_PREVIEW_MAX_CH
 /** Compact quoted-reply preview for in-bubble and composer UI. */
 export function quotedMessagePreview(replyTo, locale = 'en', options = {}) {
 	if (!replyTo) return null;
+	if (isDeletedWhatsAppMessage(replyTo)) {
+		const senderName = String(replyTo?.senderName || '').trim() || null;
+		const showSender = Boolean(options.isGroupChat && senderName);
+		return {
+			senderName: showSender ? senderName : null,
+			body: deletedWhatsAppMessageLabel(locale),
+			isDeleted: true,
+		};
+	}
 	const type = String(replyTo?.type || '').toLowerCase();
 	const senderName = String(replyTo?.senderName || '').trim() || null;
 	const showSender = Boolean(options.isGroupChat && senderName);
