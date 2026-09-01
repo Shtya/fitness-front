@@ -135,6 +135,18 @@ test('single socket row with healthy socket still fetches on open', () => {
 	);
 });
 
+test('single prefetched row with hasMore false still fetches on open', () => {
+	assert.equal(
+		shouldSkipOpenChatNetwork({
+			cacheIsFresh: true,
+			itemCount: 1,
+			hasMore: false,
+			socketHealthy: true,
+		}),
+		false,
+	);
+});
+
 test('short complete thread (hasMore false) can skip when fresh', () => {
 	assert.equal(
 		shouldSkipOpenChatNetwork({
@@ -155,6 +167,10 @@ test('isMessageThreadCacheComplete rejects partial pages', () => {
 	);
 	assert.equal(
 		isMessageThreadCacheComplete({ items: [{ id: '1' }], hasMore: false }),
+		false,
+	);
+	assert.equal(
+		isMessageThreadCacheComplete({ items: [{ id: '1' }, { id: '2' }], hasMore: false }),
 		true,
 	);
 });

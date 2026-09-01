@@ -1770,8 +1770,10 @@ export function normalizeComposerImageFile(file) {
 		else if (/\.png$/i.test(lower)) type = 'image/png';
 		else if (/\.webp$/i.test(lower)) type = 'image/webp';
 		else if (/\.gif$/i.test(lower)) type = 'image/gif';
+		else if (/\.bmp$/i.test(lower)) type = 'image/bmp';
 		else if (/\.heic$/i.test(lower)) type = 'image/heic';
 		else if (/\.heif$/i.test(lower)) type = 'image/heif';
+		else if (/\.tiff?$/i.test(lower)) type = 'image/tiff';
 		else if (isComposerImageFile(file)) type = 'image/jpeg';
 	}
 	if (!type.startsWith('image/')) return file;

@@ -57,21 +57,40 @@ export function buildVoiceNoteFile(chunks, recorder, durationSec) {
 	return new File([blob], `voice-${seconds}s.${extension}`, { type: fileType });
 }
 
+function extractApiErrorMessage(error) {
+	const data = error?.response?.data;
+	if (!data) return String(error?.message || '').trim();
+	if (typeof data === 'string') return data.trim();
+	const message = data.message;
+	if (typeof message === 'string' && message.trim()) return message.trim();
+	if (Array.isArray(message) && message.length) {
+		return message.map(item => String(item || '').trim()).filter(Boolean).join(', ');
+	}
+	if (typeof data.error === 'string' && data.error.trim()) return data.error.trim();
+	return String(error?.message || '').trim();
+}
+
 export function mediaUploadFailedMessage(error, locale = 'en') {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const status = error?.response?.status;
-	const text = String(error?.response?.data?.message || error?.message || '');
+	const text = extractApiErrorMessage(error);
 	const tooLarge =
 		status === 413 || /413|entity too large|payload too large|file too large/i.test(text);
 	if (tooLarge) {
 		return ar
-			? 'التسجيل كبير على السيرفر. جرّب رسالة أقصر.'
-			: 'This recording is too large for the server. Try a shorter voice note.';
+			? 'الملف كبير جداً على السيرفر. جرّب ملفاً أصغر.'
+			: 'This file is too large for the server. Try a smaller file.';
 	}
 	if (!error?.response && (error?.code === 'ERR_NETWORK' || /network error/i.test(text))) {
 		return ar
-			? 'فشل رفع الصوت. غالباً التسجيل أكبر من الحد المسموح على السيرفر.'
-			: 'Voice upload failed. The recording is likely larger than the server allows.';
+			? 'فشل رفع الوسائط. تحقق من الاتصال أو جرّب ملفاً أصغر.'
+			: 'Media upload failed. Check your connection or try a smaller file.';
 	}
-	return error?.response?.data?.message || (ar ? 'فشل إرسال الوسائط' : 'Media message failed');
+	if (text) return text;
+	if (status === 502 || status === 503) {
+		return ar
+			? 'تعذر إرسال الوسائط عبر واتساب. تأكد أن الحساب متصل ثم أعد المحاولة.'
+			: 'Could not send media through WhatsApp. Make sure the account is connected, then try again.';
+	}
+	return ar ? 'فشل إرسال الوسائط' : 'Media message failed';
 }

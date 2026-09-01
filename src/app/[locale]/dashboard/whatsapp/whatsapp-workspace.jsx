@@ -12346,7 +12346,8 @@ function WhatsAppWorkspaceContent() {
 	}, [retryOutboundMessage]);
 
 	const sendFile = async (file, forcedType, options = {}) => {
-		const uploadAccountId = options.accountId || accountId;
+		const uploadAccountId =
+			options.accountId || selectedConversation?.accountId || accountId;
 		const targetConversationId = options.conversationId || conversationId;
 		const replySnapshot =
 			options.replySnapshot !== undefined ? options.replySnapshot : replyingTo;
@@ -12578,7 +12579,7 @@ function WhatsAppWorkspaceContent() {
 	const sendPastedComposerImages = async files => {
 		if (!conversationId || !accountId || sending || recordingVoice) return;
 		const targetConversationId = conversationId;
-		const targetAccountId = accountId;
+		const targetAccountId = selectedConversation?.accountId || accountId;
 		const caption = getDraft().trim();
 		const replySnapshot = replyingTo;
 		pinThreadToBottomRef.current = true;
@@ -14085,7 +14086,11 @@ function WhatsAppWorkspaceContent() {
 	const openComposerFilePicker = ({ accept, capture } = {}) => {
 		const input = fileRef.current;
 		if (!input) return;
-		input.setAttribute('accept', accept || 'image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/ogg,audio/mp4,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx');
+		input.setAttribute(
+			'accept',
+			accept ||
+				'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/bmp,video/mp4,video/webm,video/quicktime,video/3gpp,audio/mpeg,audio/ogg,audio/mp4,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx,.mov,.heic,.heif',
+		);
 		if (capture) input.setAttribute('capture', capture);
 		else input.removeAttribute('capture');
 		input.click();
@@ -19178,7 +19183,7 @@ function WhatsAppWorkspaceContent() {
 											<input
 												ref={fileRef}
 												type="file"
-												accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/ogg,audio/mp4,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx"
+												accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/bmp,video/mp4,video/webm,video/quicktime,video/3gpp,audio/mpeg,audio/ogg,audio/mp4,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx,.mov,.heic,.heif"
 												className="hidden"
 												onChange={event => {
 													handleComposerFileInput(event.target.files?.[0]);

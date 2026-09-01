@@ -34,8 +34,10 @@ export function isMessageThreadCacheComplete(
 ) {
 	const items = Array.isArray(cache?.items) ? cache.items : [];
 	if (!items.length) return false;
-	if (cache.hasMore === false) return true;
-	return items.length >= pageSize;
+	if (items.length >= pageSize) return true;
+	// A lone inbox preview / prefetch row is not a hydrated thread.
+	if (cache.hasMore === false) return items.length > 1;
+	return false;
 }
 
 /**
@@ -50,9 +52,10 @@ export function shouldSkipOpenChatNetwork({
 	pageSize = MESSAGE_PAGE_SIZE,
 } = {}) {
 	if (forceProvider || itemCount <= 0) return false;
-	const threadComplete =
-		itemCount >= pageSize || hasMore === false;
 	// A lone inbox/socket row is not a hydrated thread — always fetch Postgres.
+	if (itemCount <= 1) return false;
+	const threadComplete =
+		itemCount >= pageSize || (hasMore === false && itemCount > 1);
 	if (!threadComplete) return false;
 	if (cacheIsFresh) return true;
 	if (socketHealthy) return true;

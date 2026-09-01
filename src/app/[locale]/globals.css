@@ -3039,16 +3039,16 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-bubble:has(.wa-message-reactions) {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .wa-message-reactions {
   position: absolute;
   z-index: 5;
-  bottom: -10px;
+  bottom: -16px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   max-width: calc(100% - 6px);
   margin: 0 !important;
   pointer-events: none;
@@ -3069,15 +3069,15 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-width: 28px;
-  min-height: 26px;
-  height: 26px;
-  padding: 0 7px;
+  gap: 1px;
+  min-width: 20px;
+  min-height: 18px;
+  height: 18px;
+  padding: 0 4px;
   border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
+  border-radius: 9px;
   background: #ffffff !important;
-  box-shadow: 0 1px 2px rgba(11, 20, 26, 0.16);
+  box-shadow: 0 1px 2px rgba(11, 20, 26, 0.14);
   line-height: 1;
   pointer-events: auto;
   cursor: default;
@@ -3100,14 +3100,14 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-reaction-emoji {
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1;
   font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
-  transform: translateY(0.5px);
+  transform: translateY(0);
 }
 
 .wa-message-reaction-count {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 500;
   color: #54656f;
   font-family: var(--wa-font-ui);
