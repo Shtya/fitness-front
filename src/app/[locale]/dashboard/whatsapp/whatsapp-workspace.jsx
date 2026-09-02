@@ -8226,6 +8226,7 @@ function WhatsAppWorkspaceContent() {
 	// The socket effect mounts once, so it must not close over `locale` directly.
 	const localeRef = useRef(locale);
 	const conversationsRef = useRef([]);
+	const chatListScrollRef = useRef(null);
 	const syncingInboxRef = useRef(false);
 	const previousAccountIdRef = useRef(null);
 	const conversationIdRef = useRef(null);
@@ -8304,6 +8305,14 @@ function WhatsAppWorkspaceContent() {
 			) {
 				pinThreadToBottomRef.current = false;
 				return;
+			}
+			const rows = messageRowsRef.current;
+			const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
+			if (useVirtual) {
+				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
+					align: 'end',
+					behavior,
+				});
 			}
 			if (behavior === 'smooth') {
 				waScrollTo(
@@ -9212,12 +9221,15 @@ function WhatsAppWorkspaceContent() {
 		);
 	}, [effectiveConversations, chatSearch, activeTab, conversationFilter]);
 
+	const chatListVisible = isConversationWorkspaceTab(activeTab);
 	const chatListWindow = useWaScrollWindow({
 		count: filteredConversations.length,
 		rowHeight: 76,
 		overscan: 14,
 		minCountToWindow: 40,
 		initialAlign: 'start',
+		scrollRef: chatListScrollRef,
+		visible: chatListVisible,
 	});
 	const visibleConversations = useMemo(
 		() =>
@@ -10613,6 +10625,9 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (switchedConversation) {
 			messagesRequestId.current += 1;
+			requestAnimationFrame(() => {
+				scrollMessagesToBottom('auto', { force: true });
+			});
 		}
 		olderRequestId.current += 1;
 		loadingOlderRef.current = false;
@@ -10671,6 +10686,7 @@ function WhatsAppWorkspaceContent() {
 		canUseWhatsApp,
 		demo.settings.enabled,
 		loadMessages,
+		scrollMessagesToBottom,
 		selectedDemoRuntimeId,
 		selectedConversationSource,
 		setConversationUnreadCount,
@@ -10716,12 +10732,20 @@ function WhatsAppWorkspaceContent() {
 		const timer = window.setTimeout(() => {
 			const box = messageBoxRef.current;
 			if (box && pinThreadToBottomRef.current) {
+				const rows = messageRowsRef.current;
+				const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
+				if (useVirtual) {
+					messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
+						align: 'end',
+						behavior: 'auto',
+					});
+				}
 				waScrollApply(
 					box,
 					box.scrollHeight,
 					'threadSettledTimer',
 					'threadSettled:450ms-pin-bottom',
-					{ pin: true },
+					{ pin: true, force: true },
 				);
 			}
 			setThreadSettled(true);
@@ -10797,6 +10821,21 @@ function WhatsAppWorkspaceContent() {
 
 	const loadMessageSchedulesRef = useRef(loadMessageSchedules);
 	loadMessageSchedulesRef.current = loadMessageSchedules;
+
+	useLayoutEffect(() => {
+		if (!conversationId || loadingOlderRef.current || olderScrollRestoreRef.current) return;
+		if (!pinThreadToBottomRef.current || threadSettledRef.current) return;
+		if (!effectiveMessages.length) return;
+		scrollMessagesToBottom('auto', { force: true });
+	}, [
+		conversationId,
+		effectiveMessages.length,
+		loadingMessages,
+		virtualizeMessages,
+		messageRows.length,
+		threadSettled,
+		scrollMessagesToBottom,
+	]);
 
 	useLayoutEffect(() => {
 		if (!conversationId) {
@@ -17145,6 +17184,7 @@ function WhatsAppWorkspaceContent() {
 									</div>
 								</div>
 								<div
+									ref={chatListScrollRef}
 									className="wa-conversation-list min-h-0 flex-1 overflow-y-auto p-2 nice-scroll"
 									onScroll={event => {
 										chatListWindow.onScroll(event);
@@ -18706,7 +18746,7 @@ function WhatsAppWorkspaceContent() {
 																		onContextMenu={event => {
 																		openMessageContextMenu(event, message);
 																	}}
-															className={`wa-message-bubble relative w-fit shrink-0 ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isDeleted ? 'wa-message-deleted' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${isContactMsg ? 'wa-message-contact' : ''} ${
+															className={`wa-message-bubble relative min-w-0 max-w-[65%] shrink ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isDeleted ? 'wa-message-deleted' : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${isContactMsg ? 'wa-message-contact' : ''} ${
 																		isDeleted
 																			? ''
 																			: isEmailMemoMsg

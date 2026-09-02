@@ -710,7 +710,7 @@ export default function WhatsAppSplitPane({
 								className={`wa-message-line flex min-w-0 max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}
 							>
 								<div
-									className={`wa-message-bubble shrink-0 ${mine ? 'wa-message-mine' : 'wa-message-other'} ${
+									className={`wa-message-bubble min-w-0 max-w-[65%] shrink ${mine ? 'wa-message-mine' : 'wa-message-other'} ${
 										attachments.length ? 'wa-message-media' : ''
 									} ${mine ? 'bg-[#d9fdd3] text-slate-900' : 'bg-white text-slate-900'}`}
 								>

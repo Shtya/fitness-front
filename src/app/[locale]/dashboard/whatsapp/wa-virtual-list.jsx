@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { waScrollLog, waScrollMark } from './wa-scroll-debug';
 
@@ -46,6 +46,8 @@ export function useWaScrollWindow({
 	initialAlign = 'end',
 	/** Optional scroll container — used to read real scrollTop on count changes. */
 	scrollRef = null,
+	/** When false→true, re-read the scroll container (e.g. inbox tab was hidden). */
+	visible = true,
 } = {}) {
 	const shouldWindow = Boolean(enabled) && count >= minCountToWindow;
 	const [windowState, setWindowState] = useState(() =>
@@ -133,6 +135,48 @@ export function useWaScrollWindow({
 			});
 		});
 	}, [shouldWindow, count, rowHeight, overscan, initialAlign, scrollRef]);
+
+	// Tab switches unmount the inbox list while the hook state survives. On remount
+	// scrollTop resets to 0 but start/end can still point mid-list — huge topPad, blank UI.
+	useLayoutEffect(() => {
+		if (!visible) return undefined;
+		let frameId = 0;
+		const syncFromScroll = () => {
+			const node = scrollRef?.current;
+			if (!node) {
+				frameId = requestAnimationFrame(syncFromScroll);
+				return;
+			}
+			if (!shouldWindow) {
+				setWindowState({
+					start: 0,
+					end: count,
+					topPad: 0,
+					bottomPad: 0,
+					rowHeight,
+				});
+				return;
+			}
+			const scrollTop = Number(node.scrollTop) || 0;
+			const clientHeight =
+				typeof node.clientHeight === 'number' && node.clientHeight > 0
+					? node.clientHeight
+					: 800;
+			setWindowState(
+				computeRowWindow({
+					scrollTop,
+					clientHeight,
+					count,
+					rowHeight,
+					overscan,
+				}),
+			);
+		};
+		syncFromScroll();
+		return () => {
+			if (frameId) cancelAnimationFrame(frameId);
+		};
+	}, [visible, shouldWindow, count, rowHeight, overscan, scrollRef]);
 
 	const onScroll = useCallback(
 		event => {
