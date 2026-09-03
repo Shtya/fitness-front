@@ -7419,6 +7419,77 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		background: #25d366;
 	}
 
+	.wa-typing-indicator {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		min-width: 0;
+		max-width: 100%;
+		color: #00a884 !important;
+		font-size: inherit;
+		font-weight: 600 !important;
+		font-style: italic;
+		line-height: inherit;
+		letter-spacing: 0.01em;
+	}
+
+	.wa-typing-indicator__label {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.wa-typing-dots {
+		display: inline-flex;
+		align-items: center;
+		gap: 3px;
+		flex-shrink: 0;
+		height: 1em;
+	}
+
+	.wa-typing-dots > i {
+		display: block;
+		width: 5px;
+		height: 5px;
+		border-radius: 999px;
+		background: currentColor;
+		opacity: 0.35;
+		animation: wa-typing-bounce 1.05s ease-in-out infinite;
+	}
+
+	.wa-typing-dots > i:nth-child(2) {
+		animation-delay: 0.15s;
+	}
+
+	.wa-typing-dots > i:nth-child(3) {
+		animation-delay: 0.3s;
+	}
+
+	@keyframes wa-typing-bounce {
+		0%,
+		60%,
+		100% {
+			opacity: 0.3;
+			transform: translateY(0);
+		}
+		30% {
+			opacity: 1;
+			transform: translateY(-2.5px);
+		}
+	}
+
+	.wa-conversation-row .desc-chat:has(.wa-typing-indicator),
+	.wa-web-desktop .wa-conversation-row .desc-chat:has(.wa-typing-indicator) {
+		color: #00a884 !important;
+		font-weight: 600 !important;
+	}
+
+	.wa-chat-assignee:has(.wa-typing-indicator),
+	.wa-web-desktop .wa-chat-assignee:has(.wa-typing-indicator) {
+		color: #00a884 !important;
+		font-weight: 600 !important;
+	}
+
 	.wa-e2e-banner {
 		align-items: center;
 		gap: 10px;
@@ -7587,6 +7658,12 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		font-size: 13px !important;
 		font-weight: 400 !important;
 		line-height: 18px !important;
+	}
+
+	.wa-web-desktop .wa-conversation-row .desc-chat.is-typing,
+	.wa-web-desktop .wa-conversation-row .desc-chat:has(.wa-typing-indicator) {
+		color: #00a884 !important;
+		font-weight: 600 !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row .desc-chat.text-\[\#667781\] {
@@ -9794,6 +9871,71 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   letter-spacing: 0%;
 }
 
+.wa-typing-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	max-width: 100%;
+	color: #00a884 !important;
+	font-size: inherit;
+	font-weight: 600 !important;
+	font-style: italic;
+	line-height: inherit;
+	letter-spacing: 0.01em;
+}
+
+.wa-typing-indicator__label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-typing-dots {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	flex-shrink: 0;
+	height: 1em;
+}
+
+.wa-typing-dots > i {
+	display: block;
+	width: 5px;
+	height: 5px;
+	border-radius: 999px;
+	background: currentColor;
+	opacity: 0.35;
+	animation: wa-typing-bounce 1.05s ease-in-out infinite;
+}
+
+.wa-typing-dots > i:nth-child(2) {
+	animation-delay: 0.15s;
+}
+
+.wa-typing-dots > i:nth-child(3) {
+	animation-delay: 0.3s;
+}
+
+@keyframes wa-typing-bounce {
+	0%,
+	60%,
+	100% {
+		opacity: 0.3;
+		transform: translateY(0);
+	}
+	30% {
+		opacity: 1;
+		transform: translateY(-2.5px);
+	}
+}
+
+.wa-conversation-row .desc-chat:has(.wa-typing-indicator),
+.wa-chat-assignee:has(.wa-typing-indicator) {
+	color: #00a884 !important;
+	font-weight: 600 !important;
+}
+
 .wa-mobile-shell .title-chat {
   color: #0a0a0a;
   font-family: var(--wa-font-ui);
@@ -9813,6 +9955,16 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   leading-trim: NONE;
   line-height: 19px;
   letter-spacing: -1%;
+}
+
+.wa-mobile-shell .desc-chat:has(.wa-typing-indicator),
+.wa-mobile-shell .wa-chat-assignee:has(.wa-typing-indicator) {
+  color: #00a884 !important;
+  font-weight: 600 !important;
+}
+
+.wa-mobile-shell .wa-typing-indicator {
+  color: #00a884 !important;
 }
 
 .wa-mobile-shell .time-chat{

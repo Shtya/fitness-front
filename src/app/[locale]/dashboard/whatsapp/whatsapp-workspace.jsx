@@ -7511,6 +7511,26 @@ function StatTile({ icon: Icon, label, value, color = 'var(--color-primary-500)'
 	);
 }
 
+function TypingIndicator({ locale = 'en', recording = false, className = '' }) {
+	const label = recording
+		? locale === 'ar'
+			? 'يسجل صوت الآن'
+			: 'recording'
+		: locale === 'ar'
+			? 'يكتب الآن'
+			: 'typing';
+	return (
+		<span className={`wa-typing-indicator ${className}`.trim()} aria-live="polite">
+			<span className="wa-typing-dots" aria-hidden="true">
+				<i />
+				<i />
+				<i />
+			</span>
+			<span className="wa-typing-indicator__label">{label}</span>
+		</span>
+	);
+}
+
 function Empty({ icon: Icon = MessageCircle, title, hint, className = '' }) {
 	return (
 		<div
@@ -13502,7 +13522,16 @@ function WhatsAppWorkspaceContent() {
 			setActionMessageAnchor(null);
 		}
 		if (action === 'reply') {
-			setReplyingTo(buildReplySnapshot(message));
+			const snapshot = buildReplySnapshot(message);
+			if (!snapshot?.providerMessageId) {
+				toast.error(
+					locale === 'ar'
+						? 'لا يمكن الرد على هذه الرسالة (معرّف واتساب غير متوفر)'
+						: 'Cannot reply to this message (WhatsApp id missing)',
+				);
+				return;
+			}
+			setReplyingTo(snapshot);
 			return;
 		}
 		if (action === 'edit') {
@@ -17648,11 +17677,18 @@ function WhatsAppWorkspaceContent() {
 																</div>
 															</div>
 															<div className="mt-0.5 flex items-center justify-between gap-2">
-																<p className={`desc-chat flex min-w-0 items-center gap-1 truncate text-sm ${typing ? 'font-medium text-[#00A884]' : lastMessageDeleted ? 'wa-conversation-preview--deleted' : 'text-[#667781]'}`}>
-																	{!typing && lastMessageDeleted && (
+																<p className={`desc-chat flex min-w-0 items-center gap-1 truncate text-sm ${typing ? 'is-typing' : lastMessageDeleted ? 'wa-conversation-preview--deleted' : 'text-[#667781]'}`}>
+																	{typing ? (
+																		<TypingIndicator
+																			locale={locale}
+																			recording={Boolean(conversation.presence?.recording)}
+																		/>
+																	) : (
+																		<>
+																	{lastMessageDeleted && (
 																		<Trash2 size={14} strokeWidth={2} className="shrink-0" aria-hidden="true" />
 																	)}
-																	{!typing && !lastMessageDeleted && conversation.lastMessage?.direction === 'outbound' && (
+																	{!lastMessageDeleted && conversation.lastMessage?.direction === 'outbound' && (
 																		<span className="shrink-0">
 																			<DeliveryTicks
 																			message={conversation.lastMessage}
@@ -17664,7 +17700,7 @@ function WhatsAppWorkspaceContent() {
 																		/>
 																		</span>
 																	)}
-																	{!typing && !lastMessageDeleted && (
+																	{!lastMessageDeleted && (
 																		<ConversationPreviewIcon
 																			type={conversation.lastMessage?.type}
 																		/>
@@ -17674,10 +17710,10 @@ function WhatsAppWorkspaceContent() {
 																		dir={previewPresentation.dir}
 																		lang={previewPresentation.lang}
 																	>
-																		{typing
-																			? locale === 'ar' ? 'يكتب الآن…' : 'typing…'
-																			: previewText}
+																		{previewText}
 																	</span>
+																		</>
+																	)}
 																</p>
 																{unread && (
 																	<span
@@ -17802,13 +17838,14 @@ function WhatsAppWorkspaceContent() {
 															: selectedConversation.isTyping ||
 																  selectedConversation.typing ||
 																  selectedConversation.presence?.typing
-																? selectedConversation.presence?.recording
-																	? locale === 'ar'
-																		? 'يسجل صوت الآن…'
-																		: 'recording…'
-																	: locale === 'ar'
-																		? 'يكتب الآن…'
-																		: 'typing…'
+																? (
+																	<TypingIndicator
+																		locale={locale}
+																		recording={Boolean(
+																			selectedConversation.presence?.recording,
+																		)}
+																	/>
+																)
 																: selectedConversation.presence?.online
 																	? (
 																		<span className="wa-online-status inline-flex items-center gap-1.5">
@@ -17827,7 +17864,14 @@ function WhatsAppWorkspaceContent() {
 													</p>
 													<p className="wa-chat-contact-hint hidden text-[11px] text-[#667781]">
 														{selectedConversation.isTyping || selectedConversation.typing || selectedConversation.presence?.typing
-															? locale === 'ar' ? 'يكتب الآن…' : 'typing…'
+															? (
+																<TypingIndicator
+																	locale={locale}
+																	recording={Boolean(
+																		selectedConversation.presence?.recording,
+																	)}
+																/>
+															)
 															: locale === 'ar' ? 'اضغط هنا لمعلومات جهة الاتصال' : 'tap here for contact info'}
 													</p>
 												</div>
