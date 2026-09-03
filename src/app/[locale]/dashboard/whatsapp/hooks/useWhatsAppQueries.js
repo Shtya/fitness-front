@@ -18,6 +18,7 @@ export const whatsappKeys = {
 			search: params.search || '',
 			filter: params.filter || 'all',
 			assignedUserId: params.assignedUserId || '',
+			kind: params.kind || '',
 		},
 	],
 	conversationsRoot: (accountId) => ['whatsapp', 'conversations', accountId],
@@ -58,7 +59,7 @@ export async function fetchConversations(accountId, params = {}) {
 			limit: params.limit || 50,
 			search: params.search || undefined,
 			filter: params.filter && params.filter !== 'all' ? params.filter : undefined,
-			assignedUserId: params.assignedUserId || undefined,
+			kind: params.kind || undefined,
 		},
 	});
 	// Defensive: accept both `{ items }` and a bare array payload.

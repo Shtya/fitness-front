@@ -1173,6 +1173,18 @@ test('shouldStickThreadToBottom only pins on first open or new messages near the
 		true,
 	);
 	assert.equal(
+		shouldStickThreadToBottom({ pinToBottom: true, loadingMessages: true }),
+		true,
+	);
+	assert.equal(
+		shouldStickThreadToBottom({
+			pinToBottom: true,
+			loadingMessages: true,
+			nearBottom: false,
+		}),
+		true,
+	);
+	assert.equal(
 		shouldStickThreadToBottom({ pinToBottom: true, nearBottom: true }),
 		true,
 	);
@@ -1187,6 +1199,21 @@ test('shouldStickThreadToBottom only pins on first open or new messages near the
 	assert.equal(
 		shouldStickThreadToBottom({ isNewLatest: false, nearBottom: true }),
 		false,
+	);
+});
+
+test('mergeMessages sorts mixed timestamp units chronologically', () => {
+	const result = mergeMessages(
+		[
+			{ id: 'sec', providerMessageId: 'sec', providerTimestamp: 1_700_000_000 },
+			{ id: 'iso', providerMessageId: 'iso', providerTimestamp: '2024-01-01T00:00:00.000Z' },
+		],
+		[{ id: 'ms', providerMessageId: 'ms', timestamp: 1_700_000_000_500 }],
+	);
+	// 1700000000s → 2023-11-14; +500ms slightly later; ISO 2024-01-01 last.
+	assert.deepEqual(
+		result.map(item => item.id),
+		['sec', 'ms', 'iso'],
 	);
 });
 

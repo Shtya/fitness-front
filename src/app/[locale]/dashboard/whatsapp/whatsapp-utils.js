@@ -3,6 +3,20 @@ import { waScrollApply, waScrollLog, waScrollMark } from './wa-scroll-debug.js';
 /** Drops anything that belongs to a different chat. Messages carry their own
  *  conversationId, so a slow response for a previously opened chat can never
  *  paint into the chat the user is looking at now. */
+export function foldWhatsAppSearchText(value) {
+	return String(value || '')
+		.toLowerCase()
+		.normalize('NFKD')
+		.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
+		.replace(/[إأآا]/g, 'ا')
+		.replace(/ى/g, 'ي')
+		.replace(/ؤ/g, 'و')
+		.replace(/ئ/g, 'ي')
+		.replace(/ة/g, 'ه')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
 export function scopeMessagesToConversation(items = [], conversationId = null) {
 	if (!conversationId) return Array.isArray(items) ? items : [];
 	return (Array.isArray(items) ? items : []).filter(
@@ -10,9 +24,21 @@ export function scopeMessagesToConversation(items = [], conversationId = null) {
 	);
 }
 
-function messageSortTime(message) {
-	const time = new Date(message?.providerTimestamp || message?.created_at || 0).getTime();
-	return Number.isFinite(time) ? time : 0;
+/** Normalize provider / socket / optimistic timestamps to epoch ms. */
+export function messageSortTime(message) {
+	const value =
+		message?.providerTimestamp ?? message?.timestamp ?? message?.created_at ?? 0;
+	if (value == null || value === '') return 0;
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		// WhatsApp / Baileys often send seconds; ISO Date ms is >= 1e12.
+		return value < 1e12 ? Math.round(value * 1000) : Math.round(value);
+	}
+	if (value instanceof Date) {
+		const ms = value.getTime();
+		return Number.isFinite(ms) ? ms : 0;
+	}
+	const parsed = Date.parse(value);
+	return Number.isFinite(parsed) ? parsed : 0;
 }
 
 const WHATSAPP_ACK_RANK = {
@@ -2034,10 +2060,13 @@ export function shouldStickThreadToBottom({
 	isNewLatest = false,
 	nearBottom = false,
 	threadSettling = false,
+	loadingMessages = false,
 } = {}) {
 	if (loadingOlder || restoringOlder) return false;
-	// Glue to bottom while a chat first opens and media heights are still settling.
-	if (threadSettling && pinToBottom) return true;
+	// First open / still hydrating the initial page: always stay on the latest
+	// messages. The page grows upward (older rows prepended chronologically), so
+	// "near bottom" is unreliable until the first paint settles.
+	if (pinToBottom && (threadSettling || loadingMessages)) return true;
 	// Pin only when the viewport is actually at the bottom — not merely flagged.
 	if (pinToBottom && nearBottom) return true;
 	return Boolean(isNewLatest && nearBottom);

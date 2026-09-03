@@ -92,6 +92,18 @@ function SplitAttachment({ attachment, labels, ar }) {
 	const [loading, setLoading] = useState(false);
 	const audioRef = useRef(null);
 	const [playing, setPlaying] = useState(false);
+	const blobUrlsRef = useRef([]);
+
+	const revokeTrackedBlobs = useCallback(() => {
+		for (const blobUrl of blobUrlsRef.current) {
+			try {
+				URL.revokeObjectURL(blobUrl);
+			} catch {
+				/* ignore */
+			}
+		}
+		blobUrlsRef.current = [];
+	}, []);
 
 	const load = useCallback(async () => {
 		if (attachment?.url) {
@@ -112,7 +124,17 @@ function SplitAttachment({ attachment, labels, ar }) {
 				timeout: 20000,
 			});
 			const objectUrl = URL.createObjectURL(data);
-			setUrl(objectUrl);
+			blobUrlsRef.current.push(objectUrl);
+			setUrl(prev => {
+				if (prev && prev !== attachment?.url && !blobUrlsRef.current.includes(prev)) {
+					try {
+						URL.revokeObjectURL(prev);
+					} catch {
+						/* ignore */
+					}
+				}
+				return objectUrl;
+			});
 			return objectUrl;
 		} catch {
 			toast.error(ar ? 'تعذر تحميل المرفق' : 'Could not load attachment');
@@ -128,9 +150,9 @@ function SplitAttachment({ attachment, labels, ar }) {
 
 	useEffect(
 		() => () => {
-			if (url && url !== attachment?.url) URL.revokeObjectURL(url);
+			revokeTrackedBlobs();
 		},
-		[attachment?.url, url],
+		[revokeTrackedBlobs],
 	);
 
 	if (['audio', 'ptt', 'voice'].includes(type)) {
@@ -215,8 +237,10 @@ export default function WhatsAppSplitPane({
 	labels = {},
 	canCompose = true,
 	onClose,
+	liveMessage = null,
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
+	const timeLocale = ar ? 'ar-EG' : 'en-GB';
 	const conversationId = conversation?.id || null;
 	const title = conversation ? conversationTitle(conversation) : '';
 	const [messages, setMessages] = useState([]);
@@ -231,6 +255,7 @@ export default function WhatsAppSplitPane({
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const scrollRef = useRef(null);
 	const loadingOlderRef = useRef(false);
+	const messagesRef = useRef([]);
 	const mediaRecorderRef = useRef(null);
 	const recordingStreamRef = useRef(null);
 	const recordingChunksRef = useRef([]);
@@ -252,12 +277,20 @@ export default function WhatsAppSplitPane({
 		setRecordingPaused,
 		labels,
 	});
+	const clearVoicePreviewRef = useRef(clearVoicePreview);
+	clearVoicePreviewRef.current = clearVoicePreview;
 	const stickToBottomRef = useRef(true);
 	const hydrationRef = useRef({
 		conversationId: null,
 		providerHydratedAt: 0,
 		lastProviderSyncAt: null,
 	});
+	const lastProviderSyncAtRef = useRef(conversation?.lastProviderSyncAt || null);
+	lastProviderSyncAtRef.current = conversation?.lastProviderSyncAt || null;
+
+	useEffect(() => {
+		messagesRef.current = messages;
+	}, [messages]);
 
 	const loadMessages = useCallback(async () => {
 		if (!conversationId) return;
@@ -278,17 +311,17 @@ export default function WhatsAppSplitPane({
 				hydrationRef.current = {
 					conversationId,
 					providerHydratedAt: 0,
-					lastProviderSyncAt: conversation?.lastProviderSyncAt || null,
+					lastProviderSyncAt: lastProviderSyncAtRef.current || null,
 				};
-			} else if (conversation?.lastProviderSyncAt) {
-				hydrationRef.current.lastProviderSyncAt = conversation.lastProviderSyncAt;
+			} else if (lastProviderSyncAtRef.current) {
+				hydrationRef.current.lastProviderSyncAt = lastProviderSyncAtRef.current;
 			}
 			const backfill = shouldProviderBackfill({
 				canSync: Boolean(accountId && canCompose),
 				itemCount: local.length,
 				providerHydratedAt: hydrationRef.current.providerHydratedAt,
 				lastProviderSyncAt:
-					hydrationRef.current.lastProviderSyncAt || conversation?.lastProviderSyncAt,
+					hydrationRef.current.lastProviderSyncAt || lastProviderSyncAtRef.current,
 			});
 			// Prefer Postgres page. Ask WhatsApp only when hydration policy says so —
 			// never because the thread is simply shorter than one page.
@@ -317,12 +350,13 @@ export default function WhatsAppSplitPane({
 				hydrationRef.current.providerHydratedAt =
 					hydrationRef.current.providerHydratedAt || Date.now();
 			}
-			setMessages(next);
+			setMessages(mergeMessages([], next, conversationId));
 			setHasMore(
 				typeof providerHasMore === 'boolean'
 					? providerHasMore
 					: local.length >= MESSAGE_PAGE_SIZE,
 			);
+			stickToBottomRef.current = true;
 		} catch (error) {
 			toast.error(
 				error.response?.data?.message ||
@@ -332,16 +366,17 @@ export default function WhatsAppSplitPane({
 		} finally {
 			setLoading(false);
 		}
-	}, [accountId, ar, canCompose, conversation?.lastProviderSyncAt, conversationId]);
+	}, [accountId, ar, canCompose, conversationId]);
 
 	const loadOlder = useCallback(async () => {
-		if (!conversationId || loadingOlderRef.current || !hasMore || !messages.length) return;
+		const currentMessages = messagesRef.current;
+		if (!conversationId || loadingOlderRef.current || !hasMore || !currentMessages.length) return;
 		loadingOlderRef.current = true;
 		setLoadingOlder(true);
 		const box = scrollRef.current;
 		const previousHeight = box?.scrollHeight || 0;
-		const oldest = messages[0];
-		const previousCount = messages.length;
+		const oldest = currentMessages[0];
+		const previousCount = currentMessages.length;
 		try {
 			const { data } = await api.get(`/whatsapp/conversations/${conversationId}/messages`, {
 				params: { before: oldest?.id, limit: MESSAGE_PAGE_SIZE, live: 0 },
@@ -402,7 +437,7 @@ export default function WhatsAppSplitPane({
 			loadingOlderRef.current = false;
 			setLoadingOlder(false);
 		}
-	}, [accountId, ar, canCompose, conversationId, hasMore, messages]);
+	}, [accountId, ar, canCompose, conversationId, hasMore]);
 
 	useEffect(() => {
 		setDraft('');
@@ -411,14 +446,30 @@ export default function WhatsAppSplitPane({
 	}, [loadMessages]);
 
 	useEffect(() => {
+		if (!liveMessage || !conversationId) return;
+		if (liveMessage.conversationId && liveMessage.conversationId !== conversationId) return;
+		stickToBottomRef.current = true;
+		setMessages(current => mergeMessages(current, [liveMessage], conversationId));
+	}, [conversationId, liveMessage]);
+
+	useEffect(() => {
 		const node = scrollRef.current;
 		if (!node || !stickToBottomRef.current) return;
 		node.scrollTop = node.scrollHeight;
 	}, [messages.length, conversationId]);
 
+	const stopVoiceRecording = useCallback((send = true) => {
+		clearVoicePreviewRef.current?.();
+		const recorder = mediaRecorderRef.current;
+		if (!recorder || recorder.state === 'inactive') return;
+		discardRecordingRef.current = !send;
+		setRecordingPaused(false);
+		recorder.stop();
+	}, []);
+
 	useEffect(
 		() => () => {
-			clearVoicePreview();
+			clearVoicePreviewRef.current?.();
 			if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
 			recordingStreamRef.current?.getTracks().forEach(track => track.stop());
 			if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -521,17 +572,8 @@ export default function WhatsAppSplitPane({
 		}
 	};
 
-	const stopVoiceRecording = (send = true) => {
-		clearVoicePreview();
-		const recorder = mediaRecorderRef.current;
-		if (!recorder || recorder.state === 'inactive') return;
-		discardRecordingRef.current = !send;
-		setRecordingPaused(false);
-		recorder.stop();
-	};
-
 	const pauseVoiceRecording = () => {
-		clearVoicePreview();
+		clearVoicePreviewRef.current?.();
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state !== 'recording') return;
 		try {
@@ -544,7 +586,7 @@ export default function WhatsAppSplitPane({
 	};
 
 	const resumeVoiceRecording = () => {
-		clearVoicePreview();
+		clearVoicePreviewRef.current?.();
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state !== 'paused') return;
 		try {
@@ -568,7 +610,7 @@ export default function WhatsAppSplitPane({
 			return;
 		}
 		let stream = null;
-		clearVoicePreview();
+		clearVoicePreviewRef.current?.();
 		setRecordingStarting(true);
 		try {
 			stream = await getVoiceMediaStream();
@@ -670,11 +712,11 @@ export default function WhatsAppSplitPane({
 				</button>
 			</header>
 
-			<div className="wa-chat-wallpaper-host min-h-0 flex-1">
+			<div className="wa-chat-wallpaper-host relative flex min-h-0 flex-1 flex-col">
 			<div className="wa-chat-wallpaper-layer" aria-hidden="true" />
 			<div
 				ref={scrollRef}
-				className="wa-message-wallpaper min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 nice-scroll"
+				className="wa-message-wallpaper relative z-[1] min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 nice-scroll"
 				onScroll={event => {
 					const node = event.currentTarget;
 					stickToBottomRef.current =
@@ -754,7 +796,7 @@ export default function WhatsAppSplitPane({
 												}
 											/>
 											<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
-												{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString([], {
+												{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString(timeLocale, {
 													hour: '2-digit',
 													minute: '2-digit',
 												})}
@@ -769,7 +811,7 @@ export default function WhatsAppSplitPane({
 										</div>
 									) : (
 										<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
-											{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString([], {
+											{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString(timeLocale, {
 												hour: '2-digit',
 												minute: '2-digit',
 											})}

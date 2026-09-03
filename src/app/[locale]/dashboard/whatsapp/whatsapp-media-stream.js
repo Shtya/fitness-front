@@ -5,8 +5,11 @@ const streamUrlCache = new Map();
 export function absoluteApiUrl(pathOrUrl) {
 	if (!pathOrUrl || typeof pathOrUrl !== 'string') return null;
 	if (/^(https?:|blob:|data:)/i.test(pathOrUrl)) return pathOrUrl;
-	const origin = String(baseImg || '').replace(/\/$/, '');
+	const origin = String(baseImg || '')
+		.trim()
+		.replace(/\/$/, '');
 	const path = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+	if (!origin) return path;
 	return `${origin}${path}`;
 }
 

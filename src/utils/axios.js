@@ -1,9 +1,14 @@
 // lib/axios.js
 import axios from 'axios';
 
-export const baseImg = process.env.NEXT_PUBLIC_BASE_URL;
+/** Trim so trailing spaces in .env cannot produce Invalid URL (local-only footgun). */
+const API_ORIGIN = String(process.env.NEXT_PUBLIC_BASE_URL || '')
+	.trim()
+	.replace(/\/$/, '');
+
+export const baseImg = API_ORIGIN;
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BASE_URL + '/api/v1',
+  baseURL: `${API_ORIGIN}/api/v1`,
   timeout: 120000,
 });
 
