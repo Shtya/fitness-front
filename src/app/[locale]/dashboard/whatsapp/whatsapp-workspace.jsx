@@ -21030,51 +21030,19 @@ function WhatsAppWorkspaceContent() {
 						</header>
 						<div className="wa-statuses-body min-h-0 flex-1 overflow-y-auto p-4 nice-scroll">
 							<div
-								className="wa-story-seg-wrap mb-4 flex justify-center"
-								style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}
+								className="wa-story-seg-wrap"
 								role="tablist"
 								aria-label={t.statuses}
 							>
-								<div
-									className="wa-story-seg inline-flex items-center gap-0.5 rounded-full bg-[var(--wa-input,#f0f2f5)] p-[3px] dark:bg-slate-800/80"
-									style={{
-										display: 'inline-flex',
-										alignItems: 'center',
-										gap: 2,
-										padding: 3,
-										borderRadius: 999,
-										background: 'var(--wa-input, #f0f2f5)',
-									}}
-								>
+								<div className="wa-story-seg">
 									<button
 										type="button"
 										role="tab"
 										aria-selected={storyPanelMode === 'active'}
 										onClick={() => setStoryPanelMode('active')}
-										className={`wa-story-seg__btn inline-flex h-[30px] items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
-											storyPanelMode === 'active'
-												? 'is-active bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-												: 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+										className={`wa-story-seg__btn${
+											storyPanelMode === 'active' ? ' is-active' : ''
 										}`}
-										style={{
-											display: 'inline-flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											gap: 6,
-											minHeight: 30,
-											padding: '0 12px',
-											border: 0,
-											borderRadius: 999,
-											background: storyPanelMode === 'active' ? '#fff' : 'transparent',
-											color: storyPanelMode === 'active' ? '#111b21' : '#667781',
-											fontSize: 12,
-											fontWeight: 600,
-											cursor: 'pointer',
-											boxShadow:
-												storyPanelMode === 'active'
-													? '0 1px 2px rgba(11, 20, 26, 0.08)'
-													: 'none',
-										}}
 									>
 										{t.activeStories}
 									</button>
@@ -21083,49 +21051,13 @@ function WhatsAppWorkspaceContent() {
 										role="tab"
 										aria-selected={storyPanelMode === 'history'}
 										onClick={() => setStoryPanelMode('history')}
-										className={`wa-story-seg__btn inline-flex h-[30px] items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
-											storyPanelMode === 'history'
-												? 'is-active bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-												: 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+										className={`wa-story-seg__btn${
+											storyPanelMode === 'history' ? ' is-active' : ''
 										}`}
-										style={{
-											display: 'inline-flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											gap: 6,
-											minHeight: 30,
-											padding: '0 12px',
-											border: 0,
-											borderRadius: 999,
-											background: storyPanelMode === 'history' ? '#fff' : 'transparent',
-											color: storyPanelMode === 'history' ? '#111b21' : '#667781',
-											fontSize: 12,
-											fontWeight: 600,
-											cursor: 'pointer',
-											boxShadow:
-												storyPanelMode === 'history'
-													? '0 1px 2px rgba(11, 20, 26, 0.08)'
-													: 'none',
-										}}
 									>
 										{t.storyHistory}
 										{groupedStatusHistory.length > 0 ? (
-											<span
-												className="wa-story-seg__count inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/15 px-1.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300"
-												style={{
-													display: 'inline-flex',
-													alignItems: 'center',
-													justifyContent: 'center',
-													minWidth: 18,
-													height: 18,
-													padding: '0 5px',
-													borderRadius: 999,
-													background: 'rgba(0, 168, 132, 0.12)',
-													color: '#008f6f',
-													fontSize: 10,
-													fontWeight: 700,
-												}}
-											>
+											<span className="wa-story-seg__count">
 												{groupedStatusHistory.length}
 											</span>
 										) : null}
@@ -21253,15 +21185,15 @@ function WhatsAppWorkspaceContent() {
 							) : groupedStatusHistory.length === 0 ? (
 								<Empty icon={Zap} title={t.storyHistoryEmpty} />
 							) : (
-								<div className="wa-story-history flex flex-col gap-2.5 pb-2">
-									<p className="wa-story-history__hint m-0 px-0.5 text-[11px] font-semibold tracking-wide text-slate-400">
+								<div className="wa-story-history">
+									<p className="wa-story-history__hint">
 										{locale === 'ar'
 											? `${groupedStatusHistory.length} جهة مؤرشفة`
 											: `${groupedStatusHistory.length} archived ${
 													groupedStatusHistory.length === 1 ? 'person' : 'people'
 												}`}
 									</p>
-									<ul className="wa-story-history__list m-0 flex list-none flex-col gap-1.5 p-0">
+									<ul className="wa-story-history__list">
 										{groupedStatusHistory.map((story, storyIndex) => {
 											const rawName =
 												story.latest.contactName ||
@@ -21279,53 +21211,22 @@ function WhatsAppWorkspaceContent() {
 												story.historyCount || story.items.length || 0;
 											const thumb = storyThumbs[story.latest.id];
 											return (
-												<li key={`history-${story.senderWaId}`} className="m-0 p-0">
+												<li key={`history-${story.senderWaId}`}>
 													<button
 														type="button"
 														onClick={() =>
 															openStoryGroup(story, { history: true })
 														}
-														className="wa-story-history__row group flex w-full items-center gap-3 rounded-2xl border border-slate-200/90 bg-white px-3 py-2.5 text-start transition-colors hover:border-emerald-500/30 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:bg-slate-800"
-														style={{
-															display: 'flex',
-															width: '100%',
-															alignItems: 'center',
-															gap: 12,
-															padding: '10px 12px',
-															border: '1px solid rgba(233, 237, 239, 0.95)',
-															borderRadius: 16,
-															background: '#fff',
-															textAlign: 'start',
-															cursor: 'pointer',
-														}}
+														className="wa-story-history__row group"
 													>
-														<span
-															className="wa-story-history__avatar-wrap relative h-12 w-12 shrink-0"
-															style={{
-																position: 'relative',
-																flex: '0 0 auto',
-																width: 48,
-																height: 48,
-															}}
-														>
-															<span
-																className="wa-story-history__avatar block h-12 w-12 overflow-hidden rounded-full border-2 border-white bg-slate-200 shadow-sm dark:border-slate-950 dark:bg-slate-800"
-																style={{
-																	display: 'block',
-																	overflow: 'hidden',
-																	width: 48,
-																	height: 48,
-																	borderRadius: 999,
-																	border: '2px solid #fff',
-																	background: '#e9edef',
-																}}
-															>
+														<span className="wa-story-history__avatar-wrap">
+															<span className="wa-story-history__avatar">
 																<StoryThumbnail
 																	label={name}
-																	size={12}
+																	size={18}
 																	viewed
-																	fillParent={false}
-																	priority={storyIndex < 12}
+																	fillParent
+																	priority={storyIndex < 24}
 																	thumbUrl={thumb?.url}
 																	thumbType={thumb?.type}
 																	avatarUrl={
@@ -21333,69 +21234,15 @@ function WhatsAppWorkspaceContent() {
 																	}
 																/>
 															</span>
-															<span
-																className="wa-story-history__badge absolute -bottom-0.5 end-[-2px] inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#00a884] px-1 text-[10px] font-bold leading-none text-white dark:border-slate-950"
-																style={{
-																	position: 'absolute',
-																	insetInlineEnd: -2,
-																	bottom: -2,
-																	display: 'inline-flex',
-																	alignItems: 'center',
-																	justifyContent: 'center',
-																	minWidth: 20,
-																	height: 20,
-																	padding: '0 5px',
-																	border: '2px solid #fff',
-																	borderRadius: 999,
-																	background: '#00a884',
-																	color: '#fff',
-																	fontSize: 10,
-																	fontWeight: 700,
-																	lineHeight: 1,
-																}}
-															>
+															<span className="wa-story-history__badge">
 																{archivedCount}
 															</span>
 														</span>
-														<span
-															className="wa-story-history__meta flex min-w-0 flex-1 flex-col gap-0.5"
-															style={{
-																display: 'flex',
-																minWidth: 0,
-																flex: '1 1 auto',
-																flexDirection: 'column',
-																gap: 3,
-															}}
-														>
-															<span
-																className="wa-story-history__name truncate text-sm font-bold text-slate-900 dark:text-slate-100"
-																style={{
-																	overflow: 'hidden',
-																	color: '#111b21',
-																	fontSize: 14,
-																	fontWeight: 700,
-																	textOverflow: 'ellipsis',
-																	whiteSpace: 'nowrap',
-																}}
-															>
+														<span className="wa-story-history__meta">
+															<span className="wa-story-history__name" title={name}>
 																{name}
 															</span>
-															<span
-																className="wa-story-history__sub flex flex-wrap items-center gap-1 text-xs font-medium text-slate-400"
-																style={{
-																	display: 'flex',
-																	flexWrap: 'wrap',
-																	alignItems: 'center',
-																	gap: 4,
-																	color: '#8696a0',
-																	fontSize: 12,
-																	fontWeight: 500,
-																}}
-															>
-																<span>{t.archived}</span>
-																<span className="wa-story-history__dot opacity-70" aria-hidden="true">
-																	·
-																</span>
+															<span className="wa-story-history__sub">
 																<span>
 																	{relativeTime(
 																		story.latest.publishedAt,
@@ -21404,25 +21251,6 @@ function WhatsAppWorkspaceContent() {
 																	)}
 																</span>
 															</span>
-														</span>
-														<span
-															className="wa-story-history__chevron grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-400 group-hover:bg-emerald-500/10 group-hover:text-emerald-600"
-															style={{
-																display: 'grid',
-																flex: '0 0 auto',
-																placeItems: 'center',
-																width: 28,
-																height: 28,
-																borderRadius: 999,
-																color: '#94a3b8',
-															}}
-															aria-hidden="true"
-														>
-															{locale === 'ar' ? (
-																<ChevronLeft size={16} strokeWidth={2.2} />
-															) : (
-																<ChevronRight size={16} strokeWidth={2.2} />
-															)}
 														</span>
 													</button>
 												</li>
