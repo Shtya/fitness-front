@@ -792,6 +792,10 @@ const translations = {
 		loopStory: 'Loop',
 		loopStoryOn: 'Loop on — will replay after finish',
 		loopStoryOff: 'Loop off',
+		expandStory: 'Full width',
+		collapseStory: 'Exit full width',
+		previousStory: 'Previous person',
+		nextStory: 'Next person',
 		syncingStatuses: 'Syncing new stories…',
 		saveAccess: 'Save access',
 		privacySettings: 'Privacy & read receipts',
@@ -895,7 +899,7 @@ const translations = {
 		unpinChat: 'Unpin chat',
 		pinUpdated: 'Pinned chats updated',
 		connectedNumbers: 'Online contacts',
-		noConnectedNumbers: 'No contacts online',
+		noConnectedNumbers: 'No one online right now',
 		pinNumber: 'Pin contact',
 		unpinNumber: 'Unpin contact',
 		numberPinned: 'Pinned contact saved',
@@ -905,6 +909,8 @@ const translations = {
 		messagePreviewFallback: 'Message',
 		online: 'Online',
 		offline: 'Offline',
+		typing: 'Typing…',
+		recording: 'Recording…',
 		computerOffline: 'Computer not connected',
 		reconnectingSocket: 'Reconnecting…',
 		connecting: 'Connecting',
@@ -1252,6 +1258,10 @@ const translations = {
 		loopStory: 'تكرار',
 		loopStoryOn: 'التكرار مفعّل — سيعاد التشغيل بعد الانتهاء',
 		loopStoryOff: 'التكرار متوقف',
+		expandStory: 'عرض كامل العرض',
+		collapseStory: 'إلغاء العرض الكامل',
+		previousStory: 'الشخص السابق',
+		nextStory: 'الشخص التالي',
 		syncingStatuses: 'جارِ مزامنة الحالات الجديدة…',
 		saveAccess: 'حفظ الصلاحيات',
 		privacySettings: 'الخصوصية وإيصالات القراءة',
@@ -1355,7 +1365,7 @@ const translations = {
 		unpinChat: 'إلغاء تثبيت المحادثة',
 		pinUpdated: 'تم تحديث المحادثات المثبتة',
 		connectedNumbers: 'المتصلون الآن',
-		noConnectedNumbers: 'لا يوجد جهات اتصال متصلة',
+		noConnectedNumbers: 'لا يوجد أحد متصل الآن',
 		pinNumber: 'تثبيت جهة الاتصال',
 		unpinNumber: 'إلغاء تثبيت جهة الاتصال',
 		numberPinned: 'تم حفظ جهة الاتصال المثبتة',
@@ -1365,6 +1375,8 @@ const translations = {
 		messagePreviewFallback: 'رسالة',
 		online: 'متصل',
 		offline: 'غير متصل',
+		typing: 'يكتب…',
+		recording: 'يسجّل…',
 		computerOffline: 'الجهاز غير متصل',
 		reconnectingSocket: 'جارٍ إعادة الاتصال…',
 		connecting: 'جارِ الاتصال',
@@ -3252,10 +3264,26 @@ async function fetchStatusMediaBlob(accountId, statusId, { history = false } = {
 	return typed;
 }
 
+function isPlayableStoryItem(item) {
+	if (!item) return false;
+	const type = String(item.type || '').toLowerCase();
+	if (type === 'text' || type === 'chat') return true;
+	if (item.mediaReady === false) return false;
+	if (item.mediaReady === true) return true;
+	return Boolean(String(item.mediaPath || '').trim());
+}
+
 function isRecoverableStoryMediaError(message) {
 	const text = String(message || '');
+	if (/archived story media|not saved before expiry/i.test(text)) return false;
 	return /whatsapp status not found|session cache|unavailable from whatsapp|not found in whatsapp store|thumbnail only|invalid story id|unexpected database error|invalid input syntax for type uuid|account is not connected|not connected/i.test(
 		text,
+	);
+}
+
+function isUnrecoverableStoryMediaError(message) {
+	return /archived story media|not saved before expiry|no longer in the live whatsapp session and was not saved/i.test(
+		String(message || ''),
 	);
 }
 
@@ -8067,50 +8095,80 @@ function OnlineContactsBar({
 				if (a.conversationId === pinnedId) return -1;
 				if (b.conversationId === pinnedId) return 1;
 			}
-			return String(a.name || '').localeCompare(String(b.name || ''), undefined, {
-				sensitivity: 'base',
-			});
+			if (Boolean(a.online) !== Boolean(b.online)) return a.online ? -1 : 1;
+			return (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
 		});
 	}, [contacts, pinnedId]);
 
+	const visible = useMemo(() => {
+		// Only real online / typing contacts, plus a pinned contact if offline.
+		const online = ordered.filter(
+			item => item.online || item.typing || item.recording,
+		);
+		const pinnedOffline = ordered.filter(
+			item =>
+				pinnedId &&
+				item.conversationId === pinnedId &&
+				!item.online &&
+				!item.typing &&
+				!item.recording,
+		);
+		return [...online, ...pinnedOffline];
+	}, [ordered, pinnedId]);
+
 	return (
-		<div className="wa-numbers-bar" role="toolbar" aria-label={labels.connectedNumbers}>
-			<div className="wa-numbers-bar__scroll nice-scroll">
-				{!ordered.length ? (
-					<span className="wa-numbers-bar__empty">{labels.noConnectedNumbers}</span>
+		<div className="wa-presence-bar" role="toolbar" aria-label={labels.connectedNumbers}>
+			<div className="wa-presence-bar__scroll nice-scroll">
+				{!visible.length ? (
+					<span className="wa-presence-bar__empty">{labels.noConnectedNumbers}</span>
 				) : (
-					ordered.map(contact => {
+					visible.map(contact => {
 						const pinned = contact.conversationId === pinnedId;
 						const active = contact.conversationId === selectedId;
+						const online = Boolean(
+							contact.online || contact.typing || contact.recording,
+						);
 						const label =
 							String(contact.name || contact.phoneNumber || labels.online).trim() ||
 							labels.online;
-						const phoneHint = contact.phoneNumber ? String(contact.phoneNumber) : '';
+						const avatarSrc = String(contact.avatarUrl || '').trim();
 						return (
 							<div
 								key={contact.conversationId}
-								className={`wa-numbers-chip is-live${
+								className={`wa-presence-chip${online ? ' is-online' : ' is-offline'}${
 									pinned ? ' is-pinned' : ''
 								}${active ? ' is-active' : ''}`}
+								title={label}
 							>
 								<button
 									type="button"
-									className="wa-numbers-chip__main"
+									className="wa-presence-chip__main"
 									onClick={() => onSelect?.(contact.conversationId)}
-									title={
-										phoneHint
-											? `${label} · ${phoneHint} · ${labels.online}`
-											: `${label} · ${labels.online}`
-									}
+									title={label}
+									aria-label={label}
 									aria-pressed={active}
 								>
-									<span className="wa-numbers-chip__dot" aria-hidden="true" />
-									<span className="wa-numbers-chip__phone">{label}</span>
+									<span className="wa-presence-chip__avatar-wrap">
+										<Avatar
+											label={label}
+											size={10}
+											src={avatarSrc}
+											priority={Boolean(avatarSrc)}
+											className="wa-presence-chip__avatar !ring-0"
+										/>
+										{online ? (
+											<span
+												className="wa-presence-chip__dot is-online"
+												aria-hidden="true"
+											/>
+										) : null}
+									</span>
 								</button>
 								<button
 									type="button"
-									className="wa-numbers-chip__pin"
+									className="wa-presence-chip__pin"
 									onClick={event => {
+										event.preventDefault();
 										event.stopPropagation();
 										onTogglePin?.(contact.conversationId);
 									}}
@@ -8119,8 +8177,8 @@ function OnlineContactsBar({
 									aria-pressed={pinned}
 								>
 									<Pin
-										size={12}
-										strokeWidth={2.2}
+										size={13}
+										strokeWidth={2.4}
 										className={pinned ? 'fill-current' : undefined}
 									/>
 								</button>
@@ -8193,6 +8251,8 @@ function WhatsAppWorkspaceContent() {
 	const [selectedStatus, setSelectedStatus] = useState(null);
 	const [storyQueue, setStoryQueue] = useState([]);
 	const [storyIndex, setStoryIndex] = useState(0);
+	const [storyPeopleQueue, setStoryPeopleQueue] = useState([]);
+	const [storyPeopleIndex, setStoryPeopleIndex] = useState(0);
 	const [storyLoop, setStoryLoop] = useState(false);
 	const [storyReplayKey, setStoryReplayKey] = useState(0);
 	const [storyReplyDraft, setStoryReplyDraft] = useState('');
@@ -8202,16 +8262,26 @@ function WhatsAppWorkspaceContent() {
 	const [sendingStoryShareId, setSendingStoryShareId] = useState(null);
 	const [storyViewerEmbed, setStoryViewerEmbed] = useState(null);
 	const storyLoopRef = useRef(false);
+	const storyQueueRef = useRef([]);
+	const storyIndexRef = useRef(0);
+	const storyPeopleQueueRef = useRef([]);
+	const storyPeopleIndexRef = useRef(0);
+	const groupedStatusesRef = useRef([]);
+	const groupedStatusHistoryRef = useRef([]);
+	const openStoryGroupRef = useRef(null);
 	const [statusMediaUrl, setStatusMediaUrl] = useState(null);
 	const [loadingStory, setLoadingStory] = useState(false);
 	const [storyMediaError, setStoryMediaError] = useState('');
 	const [storyProgress, setStoryProgress] = useState(0);
 	const [storyDurationMs, setStoryDurationMs] = useState(5000);
 	const [storyPaused, setStoryPaused] = useState(false);
+	const [storyExpanded, setStoryExpanded] = useState(false);
+	const [storyPeekMedia, setStoryPeekMedia] = useState({});
 	const storyStartRef = useRef(0);
 	const storyElapsedRef = useRef(0);
 	const storyProgressBarRef = useRef(null);
 	const storyVideoRef = useRef(null);
+	const storyPeekMediaRef = useRef({});
 	const [logs, setLogs] = useState([]);
 	const [report, setReport] = useState(null);
 	const [reportPeriodDays, setReportPeriodDays] = useState(7);
@@ -9307,6 +9377,7 @@ function WhatsAppWorkspaceContent() {
 		const map = new Map();
 		for (const status of statusHistory) {
 			if (!status?.isOwn && !status?.senderWaId) continue;
+			if (!isPlayableStoryItem(status)) continue;
 			const key = status.senderWaId || (status.isOwn ? 'own' : status.id);
 			if (!map.has(key)) map.set(key, []);
 			map.get(key).push(status);
@@ -9341,6 +9412,13 @@ function WhatsAppWorkspaceContent() {
 				return bTime - aTime;
 			});
 	}, [statusHistory]);
+
+	groupedStatusesRef.current = groupedStatuses;
+	groupedStatusHistoryRef.current = groupedStatusHistory;
+	storyQueueRef.current = storyQueue;
+	storyIndexRef.current = storyIndex;
+	storyPeopleQueueRef.current = storyPeopleQueue;
+	storyPeopleIndexRef.current = storyPeopleIndex;
 
 	useEffect(() => {
 		if (activeTab !== 'statuses') return;
@@ -9625,10 +9703,13 @@ function WhatsAppWorkspaceContent() {
 					conversationId: String(item?.conversationId || item?.id || '').trim(),
 					name: String(item?.name || item?.phoneNumber || '').trim() || 'Contact',
 					phoneNumber: item?.phoneNumber ? String(item.phoneNumber) : null,
-					state: String(item?.state || 'available'),
+					avatarUrl: item?.avatarUrl ? String(item.avatarUrl) : null,
+					state: String(item?.state || (item?.online ? 'available' : 'unavailable')),
+					status: String(item?.status || (item?.online ? 'online' : 'offline')),
 					typing: Boolean(item?.typing),
 					recording: Boolean(item?.recording),
-					online: true,
+					online: Boolean(item?.online ?? item?.status === 'online'),
+					lastSeen: Number(item?.lastSeen) || 0,
 					updatedAt: Number(item?.updatedAt) || Date.now(),
 				}))
 				.filter(item => item.conversationId);
@@ -9641,7 +9722,9 @@ function WhatsAppWorkspaceContent() {
 							item.conversationId === next.conversationId &&
 							item.name === next.name &&
 							item.phoneNumber === next.phoneNumber &&
+							item.avatarUrl === next.avatarUrl &&
 							item.state === next.state &&
+							item.online === next.online &&
 							item.typing === next.typing
 						);
 					})
@@ -9712,7 +9795,8 @@ function WhatsAppWorkspaceContent() {
 			void refreshOnlineContacts();
 		};
 		tick();
-		const poll = window.setInterval(tick, 1000);
+		// Event-driven via Socket.IO; light reconcile only (not 1s × contacts).
+		const poll = window.setInterval(tick, 30000);
 		const onVisible = () => {
 			if (document.visibilityState === 'visible') tick();
 		};
@@ -9728,6 +9812,60 @@ function WhatsAppWorkspaceContent() {
 		const pinnedStoredId = readStoredPinnedOnlineContactId(currentUserId);
 		setPinnedOnlineContactId(pinnedStoredId);
 	}, [currentUserId]);
+
+	const presenceBarContacts = useMemo(() => {
+		const byId = new Map(
+			(Array.isArray(onlineContacts) ? onlineContacts : []).map(item => [
+				item.conversationId,
+				item,
+			]),
+		);
+		if (pinnedOnlineContactId && !byId.has(pinnedOnlineContactId)) {
+			const conv = (Array.isArray(conversations) ? conversations : []).find(
+				item => item.id === pinnedOnlineContactId,
+			);
+			if (conv) {
+				byId.set(pinnedOnlineContactId, {
+					conversationId: pinnedOnlineContactId,
+					name: conversationTitle(conv) || 'Contact',
+					phoneNumber: conv.contact?.phoneNumber || null,
+					avatarUrl: conv.contact?.avatarUrl || null,
+					online: false,
+					status: 'offline',
+					state: 'unavailable',
+					typing: false,
+					recording: false,
+					lastSeen: Number(conv.presence?.lastSeen) || 0,
+					updatedAt: Date.now(),
+				});
+			}
+		}
+		return [...byId.values()].map(item => {
+			const conv = (Array.isArray(conversations) ? conversations : []).find(
+				row => row.id === item.conversationId,
+			);
+			if (!conv) return item;
+			const resolvedAvatar =
+				conversationAvatarUrl(conv) ||
+				conv.contact?.avatarUrl ||
+				item.avatarUrl ||
+				null;
+			return {
+				...item,
+				name: conversationTitle(conv) || item.name,
+				avatarUrl: resolvedAvatar,
+				phoneNumber: item.phoneNumber || conv.contact?.phoneNumber || null,
+				online: Boolean(
+					item.online ||
+						conv.presence?.online ||
+						conv.isTyping ||
+						conv.typing,
+				),
+				typing: Boolean(item.typing || conv.isTyping || conv.typing || conv.presence?.typing),
+				recording: Boolean(item.recording || conv.presence?.recording),
+			};
+		});
+	}, [onlineContacts, pinnedOnlineContactId, conversations]);
 
 	const loadStaff = useCallback(async () => {
 		try {
@@ -11950,6 +12088,42 @@ function WhatsAppWorkspaceContent() {
 							: item,
 					),
 				);
+				setOnlineContacts(current => {
+					const idx = current.findIndex(item => item.conversationId === targetId);
+					const patch = {
+						conversationId: targetId,
+						online: isOnline || typing || recording,
+						status: recording
+							? 'recording'
+							: typing
+								? 'typing'
+								: isOnline
+									? 'online'
+									: 'offline',
+						state: presence.state,
+						typing,
+						recording,
+						lastSeen: lastSeen || 0,
+						updatedAt: Number(presence.t) || Date.now(),
+					};
+					if (idx < 0) {
+						const conv = conversationsRef.current.find(item => item.id === targetId);
+						if (!conv && !isOnline && !typing) return current;
+						return [
+							{
+								...patch,
+								name: conversationTitle(conv) || 'Contact',
+								phoneNumber: conv?.contact?.phoneNumber || null,
+								avatarUrl:
+									conversationAvatarUrl(conv) || conv?.contact?.avatarUrl || null,
+							},
+							...current,
+						];
+					}
+					const next = [...current];
+					next[idx] = { ...next[idx], ...patch };
+					return next;
+				});
 				// Clear stuck "typing…" after a few seconds (WA Web clears quickly).
 				if (typing) {
 					const clearKey = `presence-ttl:${targetId}`;
@@ -16187,6 +16361,26 @@ function WhatsAppWorkspaceContent() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [accountId, tabReady]);
 
+	const revokeStoryPeekMedia = useCallback((keepIds = null) => {
+		const keep = keepIds instanceof Set ? keepIds : null;
+		const next = {};
+		Object.entries(storyPeekMediaRef.current || {}).forEach(([id, entry]) => {
+			if (keep?.has(String(id))) {
+				next[id] = entry;
+				return;
+			}
+			if (entry?.url) {
+				try {
+					URL.revokeObjectURL(entry.url);
+				} catch {
+					/* ignore */
+				}
+			}
+		});
+		storyPeekMediaRef.current = next;
+		setStoryPeekMedia(next);
+	}, []);
+
 	const openStory = async (status, queue = null, index = 0) => {
 		if (!status || !accountId) return;
 		const targetAccountId = accountId;
@@ -16197,15 +16391,23 @@ function WhatsAppWorkspaceContent() {
 		setSelectedStatus(status);
 		setStoryReplyDraft('');
 		setStoryMediaError('');
+		setStoryPaused(false);
+		setStoryShareOpen(false);
+		setStoryViewerEmbed(null);
 		markStatusesViewed(status.id);
 		const statusType = String(status.type || '').toLowerCase();
 		const isTextStory = statusType === 'text' || statusType === 'chat';
-		setStoryViewerEmbed(null);
 		setLoadingStory(!isTextStory);
 		storyElapsedRef.current = 0;
 		setStoryProgress(0);
 		setStoryReplayKey(key => key + 1);
 		setStoryDurationMs(statusType.includes('video') ? 15000 : 5000);
+		const peekKeep = new Set(
+			[playlist[index - 1]?.id, playlist[index + 1]?.id]
+				.filter(Boolean)
+				.map(id => String(id)),
+		);
+		revokeStoryPeekMedia(peekKeep);
 		if (statusMediaUrlRef.current) {
 			URL.revokeObjectURL(statusMediaUrlRef.current);
 			statusMediaUrlRef.current = null;
@@ -16318,13 +16520,64 @@ function WhatsAppWorkspaceContent() {
 						: current,
 				);
 			}
-			const neighbors = [playlist[index + 1], playlist[index - 1]].filter(Boolean);
+			const people = storyPeopleQueueRef.current;
+			const peopleIndex = storyPeopleIndexRef.current;
+			const neighborPeople = [
+				people[peopleIndex - 1],
+				people[peopleIndex + 1],
+			].filter(Boolean);
+			const neighbors = [];
+			for (const person of neighborPeople) {
+				const playable = (person.items || []).filter(isPlayableStoryItem);
+				const peekItem =
+					playable.find(item => !viewedStatusIds.has(item.id)) ||
+					playable[0] ||
+					person.latest ||
+					null;
+				if (peekItem) neighbors.push(peekItem);
+			}
+			// Also warm the next item inside this person's ring for smooth auto-advance.
+			if (playlist[index + 1]) neighbors.push(playlist[index + 1]);
 			for (const neighbor of neighbors) {
 				const neighborType = String(neighbor?.type || '').toLowerCase();
 				if (!['image', 'video', 'gif', 'sticker'].includes(neighborType)) continue;
+				const neighborId = String(neighbor.id || '');
+				if (!neighborId) continue;
+				if (storyPeekMediaRef.current[neighborId]?.url) continue;
 				void fetchStatusMediaBlob(targetAccountId, neighbor.id, {
 					history: storyViewerHistoryRef.current,
-				}).catch(() => undefined);
+				})
+					.then(blob => {
+						if (
+							requestId !== storyRequestId.current ||
+							accountIdRef.current !== targetAccountId ||
+							!blob
+						) {
+							return;
+						}
+						const peekUrl = URL.createObjectURL(blob);
+						const entry = {
+							url: peekUrl,
+							type: String(blob.type || neighbor.type || ''),
+						};
+						const prevEntry = storyPeekMediaRef.current[neighborId];
+						if (prevEntry?.url && prevEntry.url !== peekUrl) {
+							try {
+								URL.revokeObjectURL(prevEntry.url);
+							} catch {
+								/* ignore */
+							}
+						}
+						storyPeekMediaRef.current = {
+							...storyPeekMediaRef.current,
+							[neighborId]: entry,
+						};
+						setStoryPeekMedia(current => ({
+							...current,
+							[neighborId]: entry,
+						}));
+					})
+					.catch(() => undefined);
 			}
 		} catch (error) {
 			if (requestId === storyRequestId.current) {
@@ -16342,6 +16595,28 @@ function WhatsAppWorkspaceContent() {
 							? 'تعذر تحميل وسائط الحالة. حدّث الحالات وحاول مرة أخرى.'
 							: 'Could not load story media. Refresh stories and try again.'
 						: raw;
+				if (
+					isUnrecoverableStoryMediaError(message) &&
+					Array.isArray(queue) &&
+					queue.length > index + 1
+				) {
+					const nextPlayable = queue
+						.slice(index + 1)
+						.findIndex(isPlayableStoryItem);
+					if (nextPlayable >= 0) {
+						const nextIndex = index + 1 + nextPlayable;
+						void openStory(queue[nextIndex], queue, nextIndex);
+						return;
+					}
+				}
+				if (isUnrecoverableStoryMediaError(message)) {
+					const people = storyPeopleQueueRef.current;
+					const peopleIndex = storyPeopleIndexRef.current;
+					if (people.length > peopleIndex + 1) {
+						goStoryPerson(1);
+						return;
+					}
+				}
 				setStoryMediaError(message);
 				toast.error(message);
 			}
@@ -16350,25 +16625,93 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const openStoryGroup = (story, { history = false } = {}) => {
+	const openStoryGroup = (story, { history = false, preservePeopleQueue = false } = {}) => {
 		if (!story?.items?.length) return;
 		storyViewerHistoryRef.current = history;
-		const startIndex = Number.isInteger(story.startIndex) ? story.startIndex : 0;
-		openStory(story.items[startIndex] || story.items[0], story.items, startIndex);
+		const playable = story.items.filter(isPlayableStoryItem);
+		if (!playable.length) {
+			toast.error(
+				locale === 'ar'
+					? 'وسائط هذه الحالات غير محفوظة ولم تعد متاحة.'
+					: 'These stories were never saved and are no longer available.',
+			);
+			return;
+		}
+		if (!preservePeopleQueue) {
+			const source = history
+				? groupedStatusHistoryRef.current
+				: groupedStatusesRef.current;
+			const people = (Array.isArray(source) ? source : []).filter(group =>
+				(group?.items || []).some(isPlayableStoryItem),
+			);
+			const peopleIndex = Math.max(
+				0,
+				people.findIndex(group => group.senderWaId === story.senderWaId),
+			);
+			setStoryPeopleQueue(people);
+			setStoryPeopleIndex(peopleIndex >= 0 ? peopleIndex : 0);
+			storyPeopleQueueRef.current = people;
+			storyPeopleIndexRef.current = peopleIndex >= 0 ? peopleIndex : 0;
+		} else {
+			const people = storyPeopleQueueRef.current;
+			const peopleIndex = Math.max(
+				0,
+				people.findIndex(group => group.senderWaId === story.senderWaId),
+			);
+			setStoryPeopleIndex(peopleIndex);
+			storyPeopleIndexRef.current = peopleIndex;
+		}
+		const preferred = Number.isInteger(story.startIndex)
+			? story.items[story.startIndex]
+			: null;
+		const startItem =
+			(preferred && isPlayableStoryItem(preferred) ? preferred : null) || playable[0];
+		const startIndex = Math.max(0, playable.findIndex(item => item.id === startItem.id));
+		openStory(startItem, playable, startIndex);
 	};
+	openStoryGroupRef.current = openStoryGroup;
 
-	const goStory = delta => {
-		if (!storyQueue.length) return;
-		const next = storyIndex + delta;
-		if (next < 0 || next >= storyQueue.length) {
-			if (storyLoopRef.current && storyQueue.length) {
-				openStory(storyQueue[0], storyQueue, 0);
-				return;
-			}
+	const goStoryPerson = delta => {
+		const people = storyPeopleQueueRef.current;
+		if (!people.length) {
 			closeStory();
 			return;
 		}
-		openStory(storyQueue[next], storyQueue, next);
+		let next = storyPeopleIndexRef.current + delta;
+		if (next < 0 || next >= people.length) {
+			if (storyLoopRef.current && people.length) {
+				next = ((next % people.length) + people.length) % people.length;
+			} else {
+				closeStory();
+				return;
+			}
+		}
+		const target = people[next];
+		if (!target) {
+			closeStory();
+			return;
+		}
+		setStoryPeopleIndex(next);
+		storyPeopleIndexRef.current = next;
+		openStoryGroup(target, {
+			history: storyViewerHistoryRef.current,
+			preservePeopleQueue: true,
+		});
+	};
+
+	/** Advance within the current person's items; overflow moves to the next/previous person. */
+	const goStory = delta => {
+		const queue = storyQueueRef.current.length
+			? storyQueueRef.current
+			: storyQueue;
+		const index = storyQueueRef.current.length ? storyIndexRef.current : storyIndex;
+		if (!queue.length) return;
+		const next = index + delta;
+		if (next >= 0 && next < queue.length) {
+			openStory(queue[next], queue, next);
+			return;
+		}
+		goStoryPerson(delta > 0 ? 1 : -1);
 	};
 
 	const replayCurrentStory = useCallback(() => {
@@ -16396,6 +16739,10 @@ function WhatsAppWorkspaceContent() {
 		setSelectedStatus(null);
 		setStoryQueue([]);
 		setStoryIndex(0);
+		setStoryPeopleQueue([]);
+		setStoryPeopleIndex(0);
+		storyPeopleQueueRef.current = [];
+		storyPeopleIndexRef.current = 0;
 		setStoryReplyDraft('');
 		setSendingStoryReply(false);
 		setStoryShareOpen(false);
@@ -16403,7 +16750,10 @@ function WhatsAppWorkspaceContent() {
 		setSendingStoryShareId(null);
 		setStoryViewerEmbed(null);
 		setStoryMediaError('');
+		setStoryPaused(false);
+		setStoryExpanded(false);
 		setStatusMediaUrl(null);
+		revokeStoryPeekMedia();
 		if (statusMediaUrlRef.current) {
 			URL.revokeObjectURL(statusMediaUrlRef.current);
 			statusMediaUrlRef.current = null;
@@ -16684,12 +17034,29 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		const video = storyVideoRef.current;
-		if (!video) return;
+		if (!video || !statusMediaUrl) return undefined;
 		if (storyPaused) {
 			video.pause();
-		} else {
-			video.play().catch(() => undefined);
+			return undefined;
 		}
+		let cancelled = false;
+		const tryPlay = () => {
+			if (cancelled || !storyVideoRef.current) return;
+			const playPromise = storyVideoRef.current.play();
+			if (playPromise?.catch) {
+				playPromise.catch(() => undefined);
+			}
+		};
+		tryPlay();
+		video.addEventListener('loadeddata', tryPlay);
+		video.addEventListener('canplay', tryPlay);
+		const retryId = window.setTimeout(tryPlay, 120);
+		return () => {
+			cancelled = true;
+			video.removeEventListener('loadeddata', tryPlay);
+			video.removeEventListener('canplay', tryPlay);
+			window.clearTimeout(retryId);
+		};
 	}, [storyPaused, selectedStatus?.id, statusMediaUrl]);
 
 	const openGroupDetails = async group => {
@@ -17514,7 +17881,7 @@ function WhatsAppWorkspaceContent() {
 				{isConversationWorkspaceTab(activeTab) && (
 					<div className="wa-chat-workspace flex h-full min-h-0 flex-col">
 					<OnlineContactsBar
-						contacts={onlineContacts}
+						contacts={presenceBarContacts}
 						pinnedId={pinnedOnlineContactId}
 						selectedId={conversationId}
 						onSelect={id => openConversationRef.current?.(id)}
@@ -18485,6 +18852,18 @@ function WhatsAppWorkspaceContent() {
 																			{locale === 'ar' ? 'متصل الآن' : 'Online'}
 																		</span>
 																	)
+																	: selectedConversation.presence &&
+																		  (selectedConversation.presence.state ||
+																				selectedConversation.presence.online === false)
+																		? (
+																			<span className="wa-offline-status inline-flex items-center gap-1.5 text-slate-400">
+																				<span
+																					className="inline-block h-2 w-2 rounded-full bg-slate-400"
+																					aria-hidden="true"
+																				/>
+																				{locale === 'ar' ? 'غير متصل' : 'Offline'}
+																			</span>
+																		)
 																	: selectedConversation.presence?.lastSeen
 																		? (
 																			<span className="wa-last-seen text-slate-400">
@@ -20680,18 +21059,149 @@ function WhatsAppWorkspaceContent() {
 								role="dialog"
 								aria-modal="true"
 								aria-label={t.storyFrom}
-								className="fixed inset-0 z-50 grid cursor-default place-items-center bg-slate-950/85 p-3 backdrop-blur-sm sm:p-5"
+								className="wa-story-viewer fixed inset-0 z-50 flex cursor-default items-center justify-center bg-slate-950/85 p-2 backdrop-blur-sm sm:p-4"
 								onClick={closeStory}
 								onKeyDown={event => {
 									if (event.key === 'Escape') closeStory();
 								}}
 							>
-								<div
-									className="relative flex h-[min(920px,96vh)] w-full max-w-xl cursor-default flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl"
-									onClick={event => event.stopPropagation()}
-								>
+								{(() => {
+									const queue = storyQueue.length ? storyQueue : [selectedStatus];
+									const people =
+										storyPeopleQueue.length > 0
+											? storyPeopleQueue
+											: [];
+									const peopleIdx =
+										people.length > 0 ? storyPeopleIndex : -1;
+									const prevPerson =
+										peopleIdx > 0 ? people[peopleIdx - 1] : null;
+									const nextPerson =
+										peopleIdx >= 0 && peopleIdx < people.length - 1
+											? people[peopleIdx + 1]
+											: storyLoop && people.length > 1
+												? people[0]
+												: null;
+									const personPeekStatus = person => {
+										if (!person) return null;
+										const playable = (person.items || []).filter(
+											isPlayableStoryItem,
+										);
+										return (
+											playable.find(item => !viewedStatusIds.has(item.id)) ||
+											playable[0] ||
+											person.latest ||
+											null
+										);
+									};
+									const prevPeekStatus = personPeekStatus(prevPerson);
+									const nextPeekStatus = personPeekStatus(nextPerson);
+									const peekFor = item => {
+										if (!item?.id) return null;
+										return (
+											storyPeekMedia[item.id] ||
+											storyThumbs[item.id] ||
+											null
+										);
+									};
+									const personLabel = person => {
+										const item = person?.latest || personPeekStatus(person);
+										return (
+											item?.contactName ||
+											(item?.isOwn || person?.isOwn
+												? selectedAccount?.label
+												: formatWhatsAppPhone(
+														String(item?.senderWaId || person?.senderWaId || '')
+															.replace(/@.*$/, '')
+															.replace(/\D/g, ''),
+													) ||
+													String(
+														item?.senderWaId || person?.senderWaId || '',
+													).replace(/@.*$/, '')) ||
+											''
+										);
+									};
+									const renderPeek = (person, statusItem, side) => {
+										if (!person || !statusItem || storyExpanded) return null;
+										const peek = peekFor(statusItem);
+										const peekType = String(
+											peek?.type || statusItem.type || '',
+										).toLowerCase();
+										const isVideoPeek = peekType.includes('video');
+										const label = personLabel(person);
+										return (
+											<button
+												type="button"
+												key={`${side}-${person.senderWaId}`}
+												className={`wa-story-peek wa-story-peek--${side} hidden md:flex`}
+												onClick={event => {
+													event.preventDefault();
+													event.stopPropagation();
+													goStoryPerson(side === 'prev' ? -1 : 1);
+												}}
+												aria-label={
+													side === 'prev' ? t.previousStory : t.nextStory
+												}
+												title={
+													side === 'prev' ? t.previousStory : t.nextStory
+												}
+											>
+												<span className="wa-story-peek__frame">
+													{peek?.url ? (
+														isVideoPeek ? (
+															<video
+																src={peek.url}
+																muted
+																playsInline
+																preload="metadata"
+																className="wa-story-peek__media"
+															/>
+														) : (
+															<img
+																src={peek.url}
+																alt=""
+																className="wa-story-peek__media"
+															/>
+														)
+													) : (
+														<span
+															className={`wa-story-peek__fallback bg-gradient-to-br ${gradientFor(statusItem.providerStatusId || statusItem.id || person.senderWaId)}`}
+														/>
+													)}
+													<span className="wa-story-peek__scrim" />
+													<span className="wa-story-peek__meta">
+														<Avatar
+															label={label}
+															size={8}
+															src={
+																statusItem.contactAvatarUrl ||
+																person.latest?.contactAvatarUrl ||
+																''
+															}
+														/>
+														<span className="wa-story-peek__name">
+															{label}
+														</span>
+													</span>
+												</span>
+											</button>
+										);
+									};
+									return (
+										<div
+											className={`wa-story-viewer__stage ${storyExpanded ? 'is-expanded' : ''}`}
+											onClick={event => event.stopPropagation()}
+										>
+											{renderPeek(prevPerson, prevPeekStatus, 'prev')}
+											<div
+												key={selectedStatus.id || selectedStatus.providerStatusId}
+												className={`wa-story-viewer__card relative flex h-[min(920px,96vh)] cursor-default flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl ${
+													storyExpanded
+														? 'w-[min(96vw,1100px)] max-w-[1100px]'
+														: 'w-full max-w-xl'
+												}`}
+											>
 									<div className="absolute inset-x-3 top-3 z-10 flex gap-1.5">
-										{(storyQueue.length ? storyQueue : [selectedStatus]).map((item, index) => (
+										{queue.map((item, index) => (
 											<div key={item.id || index} className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25">
 												<div
 													ref={index === storyIndex ? storyProgressBarRef : undefined}
@@ -20775,6 +21285,28 @@ function WhatsAppWorkspaceContent() {
 											onClick={event => {
 												event.preventDefault();
 												event.stopPropagation();
+												setStoryExpanded(current => !current);
+											}}
+											title={storyExpanded ? t.collapseStory : t.expandStory}
+											className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
+												storyExpanded
+													? 'bg-emerald-500 text-white hover:bg-emerald-400'
+													: 'bg-black/40 hover:bg-black/60'
+											}`}
+											aria-label={storyExpanded ? t.collapseStory : t.expandStory}
+											aria-pressed={storyExpanded}
+										>
+											{storyExpanded ? (
+												<Minimize2 size={17} />
+											) : (
+												<Maximize2 size={17} />
+											)}
+										</button>
+										<button
+											type="button"
+											onClick={event => {
+												event.preventDefault();
+												event.stopPropagation();
 												setStoryPaused(current => !current);
 											}}
 											className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
@@ -20811,31 +21343,33 @@ function WhatsAppWorkspaceContent() {
 										<>
 											<button
 												type="button"
-												aria-label="Previous story"
-												onClick={() => goStory(-1)}
-												className="absolute bottom-24 start-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-start bg-transparent p-3"
+												aria-label={t.previousStory}
+												onClick={() => goStoryPerson(-1)}
+												className="absolute bottom-24 start-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-start bg-transparent p-3 md:w-[22%]"
 											>
-												{storyQueue.length > 1 && storyIndex > 0 && (
-													<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
+												{((people.length > 1 && peopleIdx > 0) ||
+													(storyLoop && people.length > 1)) && (
+													<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50 md:hidden">
 														{locale === 'ar' ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
 													</span>
 												)}
 											</button>
 											<button
 												type="button"
-												aria-label="Next story"
-												onClick={() => goStory(1)}
-												className="absolute bottom-24 end-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-end bg-transparent p-3"
+												aria-label={t.nextStory}
+												onClick={() => goStoryPerson(1)}
+												className="absolute bottom-24 end-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-end bg-transparent p-3 md:w-[22%]"
 											>
-												{(storyLoop || storyIndex < storyQueue.length - 1) && storyQueue.length > 1 && (
-													<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
+												{((people.length > 1 && peopleIdx < people.length - 1) ||
+													(storyLoop && people.length > 1)) && (
+													<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50 md:hidden">
 														{locale === 'ar' ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
 													</span>
 												)}
 											</button>
 										</>
 									)}
-									<div className="relative z-10 flex min-h-0 flex-1 items-center justify-center pt-20">
+									<div className="wa-story-viewer__media relative z-10 flex min-h-0 flex-1 items-center justify-center pt-20">
 										{loadingStory ? (
 											<Loader2 size={32} className="animate-spin" />
 										) : storyViewerEmbed ? (
@@ -20883,17 +21417,22 @@ function WhatsAppWorkspaceContent() {
 												onLoadedMetadata={event => {
 													if (event.target.duration) setStoryDurationMs(event.target.duration * 1000);
 												}}
+												onCanPlay={event => {
+													if (!storyPaused) {
+														event.currentTarget.play().catch(() => undefined);
+													}
+												}}
 												onError={() => {
 													setStatusMediaUrl(null);
 													toast.error(t.mediaUnavailable);
 												}}
-												className="pointer-events-none max-h-full w-full object-contain"
+												className="pointer-events-none max-h-full max-w-full w-full object-contain"
 											/>
 										) : statusMediaUrl ? (
 											<img
 												src={statusMediaUrl}
 												alt={selectedStatus.caption || 'WhatsApp story'}
-												className="pointer-events-none max-h-full w-full object-contain"
+												className="pointer-events-none max-h-full max-w-full w-full object-contain"
 												onError={() => {
 													setStatusMediaUrl(null);
 													toast.error(t.mediaUnavailable);
@@ -20908,6 +21447,7 @@ function WhatsAppWorkspaceContent() {
 																{t.mediaUnavailable}
 															</p>
 															<p className="mt-2 text-sm text-white/75">{storyMediaError}</p>
+															{!isUnrecoverableStoryMediaError(storyMediaError) ? (
 															<button
 																type="button"
 																onClick={event => {
@@ -20942,6 +21482,28 @@ function WhatsAppWorkspaceContent() {
 																	? t.connect || (locale === 'ar' ? 'ربط الحساب' : 'Connect')
 																	: t.refresh}
 															</button>
+															) : (
+																<button
+																	type="button"
+																	onClick={event => {
+																		event.stopPropagation();
+																		if (storyQueue.length > storyIndex + 1) {
+																			goStory(1);
+																			return;
+																		}
+																		closeStory();
+																	}}
+																	className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
+																>
+																	{storyQueue.length > storyIndex + 1
+																		? locale === 'ar'
+																			? 'التالي'
+																			: 'Next'
+																		: locale === 'ar'
+																			? 'إغلاق'
+																			: 'Close'}
+																</button>
+															)}
 														</>
 													) : selectedStatus.caption ? (
 														renderStoryLinkedText(
@@ -21016,7 +21578,11 @@ function WhatsAppWorkspaceContent() {
 											</button>
 										</form>
 									)}
-								</div>
+											</div>
+											{renderPeek(nextPerson, nextPeekStatus, 'next')}
+										</div>
+									);
+								})()}
 							</div>
 						)}
 

@@ -5205,6 +5205,192 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	color: #94a3b8;
 }
 
+.wa-story-viewer__stage {
+	display: flex;
+	width: 100%;
+	max-width: 1400px;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35rem;
+	pointer-events: none;
+}
+
+.wa-story-viewer__stage > * {
+	pointer-events: auto;
+}
+
+.wa-story-viewer__card {
+	z-index: 2;
+	flex: 0 1 auto;
+	transition:
+		width 280ms ease,
+		max-width 280ms ease,
+		transform 280ms ease,
+		box-shadow 280ms ease;
+	animation: wa-story-card-in 280ms ease;
+}
+
+.wa-story-viewer__stage.is-expanded .wa-story-viewer__card {
+	box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.wa-story-viewer__media {
+	animation: wa-story-media-in 260ms ease;
+}
+
+.wa-story-peek {
+	position: relative;
+	z-index: 1;
+	flex: 0 0 auto;
+	width: clamp(72px, 12vw, 148px);
+	height: min(70vh, 720px);
+	padding: 0;
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+	transition:
+		transform 240ms ease,
+		opacity 240ms ease,
+		filter 240ms ease;
+}
+
+.wa-story-peek--prev {
+	margin-inline-end: -1.25rem;
+	transform: scale(0.88) translateX(6%);
+	opacity: 0.72;
+	filter: brightness(0.72);
+}
+
+.wa-story-peek--next {
+	margin-inline-start: -1.25rem;
+	transform: scale(0.88) translateX(-6%);
+	opacity: 0.72;
+	filter: brightness(0.72);
+}
+
+.wa-story-peek:hover,
+.wa-story-peek:focus-visible {
+	opacity: 0.92;
+	filter: brightness(0.9);
+	outline: none;
+}
+
+.wa-story-peek--prev:hover,
+.wa-story-peek--prev:focus-visible {
+	transform: scale(0.94) translateX(2%);
+}
+
+.wa-story-peek--next:hover,
+.wa-story-peek--next:focus-visible {
+	transform: scale(0.94) translateX(-2%);
+}
+
+.wa-story-peek__frame {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	border-radius: 1.25rem;
+	background: #0f172a;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wa-story-peek__media,
+.wa-story-peek__fallback {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wa-story-peek__fallback {
+	background-size: cover;
+}
+
+.wa-story-peek__scrim {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		180deg,
+		rgba(15, 23, 42, 0.15) 0%,
+		rgba(15, 23, 42, 0.55) 70%,
+		rgba(15, 23, 42, 0.82) 100%
+	);
+	pointer-events: none;
+}
+
+.wa-story-peek__meta {
+	position: absolute;
+	inset-inline: 0.55rem;
+	bottom: 0.65rem;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	min-width: 0;
+	color: #fff;
+}
+
+.wa-story-peek__name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 11px;
+	font-weight: 700;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+@keyframes wa-story-card-in {
+	from {
+		opacity: 0.72;
+		transform: scale(0.975);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes wa-story-media-in {
+	from {
+		opacity: 0.55;
+		transform: scale(1.02);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@media (max-width: 767px) {
+	.wa-story-peek {
+		display: none !important;
+	}
+
+	.wa-story-viewer__stage {
+		max-width: 100%;
+	}
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+	.wa-story-peek {
+		width: clamp(64px, 10vw, 110px);
+		height: min(64vh, 640px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-story-viewer__card,
+	.wa-story-viewer__media,
+	.wa-story-peek {
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
 .wa-message-transcript {
 	margin: 0;
 	border-top: 1px solid rgba(11, 20, 26, 0.08);
@@ -13690,22 +13876,25 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	}
 }
 
-/* Online staff / agents presence bar */
+/* WhatsApp contact online presence bar (Messenger-style) */
+.wa-presence-bar,
 .wa-numbers-bar {
 	flex-shrink: 0;
 	border-bottom: 1px solid #e9edef;
 	background: #f0f2f5;
 }
 
+.wa-presence-bar__scroll,
 .wa-numbers-bar__scroll {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 8px;
 	overflow-x: auto;
-	padding: 6px 10px;
+	padding: 8px 10px;
 	scrollbar-width: thin;
 }
 
+.wa-presence-bar__empty,
 .wa-numbers-bar__empty {
 	font-size: 11px;
 	font-weight: 600;
@@ -13714,6 +13903,185 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	white-space: nowrap;
 }
 
+.wa-presence-chip {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	height: 48px;
+	max-width: none;
+	border-radius: 999px;
+	border: 1px solid #d1d7db;
+	background: #fff;
+	overflow: visible;
+	flex-shrink: 0;
+	animation: wa-presence-in 180ms ease-out;
+}
+
+@keyframes wa-presence-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px) scale(0.96);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.wa-presence-chip.is-active {
+	border-color: #25d366;
+	background: #e7f8ec;
+	box-shadow: 0 0 0 1px rgba(37, 211, 102, 0.22);
+}
+
+.wa-presence-chip.is-offline {
+	opacity: 0.92;
+}
+
+.wa-presence-chip__main {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 0;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	cursor: pointer;
+	color: #111b21;
+}
+
+.wa-presence-chip__avatar-wrap {
+	position: relative;
+	width: 40px;
+	height: 40px;
+	flex-shrink: 0;
+	border-radius: 999px;
+	margin: 0 auto;
+}
+
+.wa-presence-chip__avatar {
+	width: 40px !important;
+	height: 40px !important;
+	box-shadow: 0 0 0 1px rgba(11, 20, 26, 0.08);
+}
+
+.wa-presence-chip__avatar img {
+	display: block;
+	object-fit: cover;
+}
+
+.wa-presence-chip__dot {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	z-index: 2;
+	width: 11px;
+	height: 11px;
+	border-radius: 999px;
+	border: 2px solid #fff;
+	background: #8696a0;
+}
+
+.wa-presence-chip__dot.is-online {
+	background: #25d366;
+	box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.2);
+}
+
+.wa-presence-chip__meta {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	min-width: 0;
+	padding-inline-end: 2px;
+}
+
+.wa-presence-chip__name {
+	max-width: 120px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1.2;
+	color: #111b21;
+}
+
+.wa-presence-chip__status {
+	font-size: 10px;
+	font-weight: 600;
+	color: #667781;
+	line-height: 1.2;
+}
+
+.wa-presence-chip.is-online .wa-presence-chip__status {
+	color: #128c7e;
+}
+
+/* Pin appears over the avatar on hover / when pinned */
+.wa-presence-chip__pin {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	display: grid;
+	place-items: center;
+	width: 100%;
+	height: 100%;
+	border: 0;
+	border-radius: 999px;
+	background: rgba(17, 27, 33, 0.55);
+	color: #fff;
+	cursor: pointer;
+	opacity: 0;
+	transform: scale(0.92);
+	transition:
+		opacity 140ms ease,
+		transform 140ms ease,
+		background 140ms ease;
+	pointer-events: none;
+}
+
+.wa-presence-chip:hover .wa-presence-chip__pin,
+.wa-presence-chip:focus-within .wa-presence-chip__pin,
+.wa-presence-chip.is-pinned .wa-presence-chip__pin {
+	opacity: 1;
+	transform: scale(1);
+	pointer-events: auto;
+}
+
+.wa-presence-chip__pin:hover,
+.wa-presence-chip__pin:focus-visible {
+	background: rgba(17, 27, 33, 0.72);
+	outline: none;
+}
+
+.wa-presence-chip.is-pinned .wa-presence-chip__pin {
+	background: rgba(18, 140, 126, 0.88);
+	color: #fff;
+}
+
+@media (hover: none) {
+	.wa-presence-chip__pin {
+		opacity: 1;
+		pointer-events: auto;
+		background: rgba(17, 27, 33, 0.42);
+		inset: auto 2px 2px auto;
+		width: 16px;
+		height: 16px;
+		transform: none;
+		border: 1.5px solid #fff;
+	}
+
+	.wa-presence-chip.is-pinned .wa-presence-chip__pin {
+		background: #128c7e;
+	}
+}
+
+/* Legacy chip styles kept for any residual class usage */
 .wa-numbers-chip {
 	display: inline-flex;
 	align-items: center;
@@ -13809,36 +14177,61 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	color: #0e7566;
 }
 
+.dark .wa-presence-bar,
 .dark .wa-numbers-bar {
 	border-bottom-color: #222d34;
 	background: #111b21;
 }
 
+.dark .wa-presence-bar__empty,
 .dark .wa-numbers-bar__empty {
 	color: #8696a0;
 }
 
+.dark .wa-presence-chip,
 .dark .wa-numbers-chip {
 	border-color: #2a3942;
 	background: #202c33;
 }
 
+.dark .wa-presence-chip.is-active,
 .dark .wa-numbers-chip.is-active {
 	border-color: #25d366;
 	background: rgba(37, 211, 102, 0.12);
 }
 
-.dark .wa-numbers-chip.is-offline .wa-numbers-chip__phone {
+.dark .wa-presence-chip__main,
+.dark .wa-numbers-chip__main {
+	color: #e9edef;
+}
+
+.dark .wa-presence-chip__status {
 	color: #aebac1;
 }
 
-.dark .wa-numbers-chip.is-offline .wa-numbers-chip__dot {
-	background: #667781;
-	box-shadow: 0 0 0 2px rgba(102, 119, 129, 0.25);
+.dark .wa-presence-chip.is-online .wa-presence-chip__status {
+	color: #25d366;
 }
 
-.dark .wa-numbers-chip__main {
-	color: #e9edef;
+.dark .wa-presence-chip__dot {
+	border-color: #202c33;
+}
+
+.dark .wa-presence-chip__pin {
+	background: rgba(0, 0, 0, 0.62);
+	color: #fff;
+	border-inline-start: 0;
+}
+
+.dark .wa-presence-chip__pin:hover,
+.dark .wa-presence-chip__pin:focus-visible {
+	background: rgba(0, 0, 0, 0.78);
+	color: #fff;
+}
+
+.dark .wa-presence-chip.is-pinned .wa-presence-chip__pin {
+	background: rgba(37, 211, 102, 0.92);
+	color: #111b21;
 }
 
 .dark .wa-numbers-chip__pin {
@@ -13856,7 +14249,17 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	color: #25d366;
 }
 
+.dark .wa-numbers-chip.is-offline .wa-numbers-chip__phone {
+	color: #aebac1;
+}
+
+.dark .wa-numbers-chip.is-offline .wa-numbers-chip__dot {
+	background: #667781;
+	box-shadow: 0 0 0 2px rgba(102, 119, 129, 0.25);
+}
+
 @media (min-width: 769px) {
+	.wa-web-desktop .wa-presence-bar,
 	.wa-web-desktop .wa-numbers-bar {
 		border-radius: 12px 12px 0 0;
 		margin-bottom: 0;
