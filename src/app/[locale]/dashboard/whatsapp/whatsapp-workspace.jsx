@@ -2,6 +2,7 @@
 
 import { cloneElement, isValidElement, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useLocale } from 'next-intl';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
@@ -79,6 +80,8 @@ import {
 	Trash2,
 	TrendingUp,
 	User,
+	Volume2,
+	VolumeX,
 	ZoomIn,
 	ZoomOut,
 	UserPlus,
@@ -213,6 +216,7 @@ import {
 	waScrollMark,
 	waScrollTo,
 } from './wa-scroll-debug';
+import './wa-story-panel.css';
 import {
 	downloadContactVcard,
 	extractRawVcardFromMessage,
@@ -796,6 +800,10 @@ const translations = {
 		collapseStory: 'Exit full width',
 		previousStory: 'Previous person',
 		nextStory: 'Next person',
+		previousStoryItem: 'Previous story',
+		nextStoryItem: 'Next story',
+		muteStory: 'Mute story',
+		unmuteStory: 'Unmute story',
 		syncingStatuses: 'Syncing new stories…',
 		saveAccess: 'Save access',
 		privacySettings: 'Privacy & read receipts',
@@ -1262,6 +1270,10 @@ const translations = {
 		collapseStory: 'إلغاء العرض الكامل',
 		previousStory: 'الشخص السابق',
 		nextStory: 'الشخص التالي',
+		previousStoryItem: 'الحالة السابقة',
+		nextStoryItem: 'الحالة التالية',
+		muteStory: 'كتم صوت الحالة',
+		unmuteStory: 'تشغيل صوت الحالة',
 		syncingStatuses: 'جارِ مزامنة الحالات الجديدة…',
 		saveAccess: 'حفظ الصلاحيات',
 		privacySettings: 'الخصوصية وإيصالات القراءة',
@@ -3293,6 +3305,23 @@ function isWhatsAppUuid(value) {
 	);
 }
 
+/** Instagram-style person slide: next = exit left / enter from right. */
+const STORY_PERSON_SLIDE_TRANSITION = {
+	duration: 0.32,
+	ease: [0.32, 0.72, 0, 1],
+};
+const STORY_PERSON_SLIDE_VARIANTS = {
+	enter: direction =>
+		direction === 0
+			? { x: 0, opacity: 1 }
+			: { x: direction > 0 ? '108%' : '-108%', opacity: 1 },
+	center: { x: 0, opacity: 1 },
+	exit: direction =>
+		direction === 0
+			? { x: 0, opacity: 0.96 }
+			: { x: direction > 0 ? '-108%' : '108%', opacity: 1 },
+};
+
 function StoryThumbnail({
 	label,
 	size = 16,
@@ -3301,6 +3330,7 @@ function StoryThumbnail({
 	thumbType = '',
 	priority = false,
 	avatarUrl = '',
+	fillParent = true,
 }) {
 	// Thumbnails are fetched via the content endpoint only (never the /view
 	// endpoint), so this never registers a WhatsApp "seen" receipt — that only
@@ -3309,14 +3339,16 @@ function StoryThumbnail({
 	const hasMediaThumb = Boolean(thumbUrl);
 	const portraitSrc = !isVideo ? (hasMediaThumb ? thumbUrl : avatarUrl) : '';
 	return (
-		<div className={`h-full w-full ${viewed ? 'opacity-80' : ''}`}>
+		<div
+			className={`${fillParent ? 'h-full w-full' : 'inline-block'} ${viewed ? 'opacity-80' : ''}`}
+		>
 			<Avatar
 				label={label}
 				size={size}
 				src={portraitSrc}
 				videoSrc={isVideo ? thumbUrl : ''}
 				priority={priority}
-				className="!h-full !w-full !ring-0"
+				className={fillParent ? '!h-full !w-full !ring-0' : '!ring-0'}
 			/>
 		</div>
 	);
@@ -8275,8 +8307,14 @@ function WhatsAppWorkspaceContent() {
 	const [storyProgress, setStoryProgress] = useState(0);
 	const [storyDurationMs, setStoryDurationMs] = useState(5000);
 	const [storyPaused, setStoryPaused] = useState(false);
+	const [storyMuted, setStoryMuted] = useState(false);
 	const [storyExpanded, setStoryExpanded] = useState(false);
 	const [storyPeekMedia, setStoryPeekMedia] = useState({});
+	/** 1 = next person, -1 = previous, 0 = open from tray (no slide). */
+	const [storyPersonSlideDir, setStoryPersonSlideDir] = useState(0);
+	const storyPersonSlideDirRef = useRef(0);
+	const storyPersonAnimatingRef = useRef(false);
+	const storyPersonAnimUnlockTimerRef = useRef(null);
 	const storyStartRef = useRef(0);
 	const storyElapsedRef = useRef(0);
 	const storyProgressBarRef = useRef(null);
@@ -8667,13 +8705,13 @@ function WhatsAppWorkspaceContent() {
 	const syncCooldownUntilRef = useRef(0);
 
 	const scrollMessagesToBottom = useCallback((behavior = 'auto', { force = false } = {}) => {
-		const scroll = () => {
-			if (loadingOlderRef.current || olderScrollRestoreRef.current) return;
+		const applyOnce = () => {
+			if (loadingOlderRef.current || olderScrollRestoreRef.current) return false;
 			const opening = !threadSettledRef.current || loadingMessagesRef.current;
 			const forceScroll = force || opening;
-			if (!pinThreadToBottomRef.current && !forceScroll) return;
+			if (!pinThreadToBottomRef.current && !forceScroll) return false;
 			const box = messageBoxRef.current;
-			if (!box) return;
+			if (!box) return false;
 			if (
 				!forceScroll &&
 				threadSettledRef.current &&
@@ -8681,7 +8719,7 @@ function WhatsAppWorkspaceContent() {
 				!isThreadNearBottom(box)
 			) {
 				pinThreadToBottomRef.current = false;
-				return;
+				return false;
 			}
 			if (forceScroll) pinThreadToBottomRef.current = true;
 			const rows = messageRowsRef.current;
@@ -8689,13 +8727,21 @@ function WhatsAppWorkspaceContent() {
 			if (useVirtual) {
 				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
 					align: 'end',
-					behavior,
+					behavior: behavior === 'smooth' ? 'smooth' : 'auto',
 				});
+				const total = Number(messageVirtualRef.current?.totalSize) || 0;
+				if (total > 0 && behavior !== 'smooth') {
+					messageVirtualRef.current?.scrollToOffset?.(total, { align: 'end' });
+				}
 			}
+			const target = Math.max(
+				Number(box.scrollHeight) || 0,
+				Number(messageVirtualRef.current?.totalSize) || 0,
+			);
 			if (behavior === 'smooth') {
 				waScrollTo(
 					box,
-					{ top: box.scrollHeight, behavior: 'smooth' },
+					{ top: target, behavior: 'smooth' },
 					'scrollMessagesToBottom',
 					'scrollMessagesToBottom:smooth',
 					{ pin: true, force: forceScroll },
@@ -8703,7 +8749,7 @@ function WhatsAppWorkspaceContent() {
 			} else {
 				waScrollApply(
 					box,
-					box.scrollHeight,
+					target,
 					'scrollMessagesToBottom',
 					'scrollMessagesToBottom:auto',
 					{ pin: true, force: forceScroll },
@@ -8711,10 +8757,17 @@ function WhatsAppWorkspaceContent() {
 			}
 			const distance = threadDistanceFromBottom(box);
 			setShowJumpToBottom(distance > 220);
+			return isThreadPinnedToBottom(box);
 		};
 		requestAnimationFrame(() => {
-			scroll();
-			requestAnimationFrame(scroll);
+			if (applyOnce()) return;
+			requestAnimationFrame(() => {
+				if (applyOnce()) return;
+				// Content height often lands after the first paint (media / virtualizer).
+				window.setTimeout(() => {
+					applyOnce();
+				}, 50);
+			});
 		});
 	}, []);
 
@@ -8920,40 +8973,72 @@ function WhatsAppWorkspaceContent() {
 		jumpToBottomInFlightRef.current = true;
 		setShowJumpToBottom(false);
 
-		const rows = messageRowsRef.current;
-		const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
+		let attempts = 0;
+		const maxAttempts = 30;
 
 		const applyJump = () => {
 			const el = messageBoxRef.current;
-			if (!el) return;
+			if (!el) return false;
+			const rows = messageRowsRef.current;
+			const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
 			if (useVirtual) {
 				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
 					align: 'end',
 					behavior: 'auto',
 				});
+				const total = Number(messageVirtualRef.current?.totalSize) || 0;
+				if (total > 0) {
+					messageVirtualRef.current?.scrollToOffset?.(total, { align: 'end' });
+				}
 			}
-			waScrollApply(
-				el,
-				el.scrollHeight,
-				'jumpMessagesToBottom',
-				'user-jump-to-bottom',
-				{ pin: true, force: true },
+			const target = Math.max(
+				Number(el.scrollHeight) || 0,
+				Number(messageVirtualRef.current?.totalSize) || 0,
 			);
+			// Force even when already near target — virtualizer height can lag.
+			const oldTop = Number(el.scrollTop) || 0;
+			el.scrollTop = target;
+			waScrollLog(
+				'jumpMessagesToBottom',
+				`user-jump-to-bottom:attempt-${attempts}`,
+				el,
+				oldTop,
+				el.scrollTop,
+				{ pin: true, force: true, target },
+			);
+			return isThreadPinnedToBottom(el);
 		};
 
-		applyJump();
-		requestAnimationFrame(() => {
-			applyJump();
-			requestAnimationFrame(() => {
-				applyJump();
-				const el = messageBoxRef.current;
-				jumpToBottomInFlightRef.current = false;
-				if (!el) return;
-				const pinned = isThreadPinnedToBottom(el);
-				pinThreadToBottomRef.current = pinned;
-				setShowJumpToBottom(!pinned && threadDistanceFromBottom(el) > 220);
-			});
-		});
+		const finish = () => {
+			jumpToBottomInFlightRef.current = false;
+			const el = messageBoxRef.current;
+			if (!el) return;
+			// User explicitly asked for bottom — keep pin on.
+			pinThreadToBottomRef.current = true;
+			const distance = threadDistanceFromBottom(el);
+			setShowJumpToBottom(distance > 220);
+			if (distance > 48) {
+				// One late pass after layout/media settles.
+				window.setTimeout(() => {
+					if (!messageBoxRef.current || !pinThreadToBottomRef.current) return;
+					jumpToBottomInFlightRef.current = true;
+					applyJump();
+					jumpToBottomInFlightRef.current = false;
+					setShowJumpToBottom(threadDistanceFromBottom(messageBoxRef.current) > 220);
+				}, 120);
+			}
+		};
+
+		const tick = () => {
+			attempts += 1;
+			if (applyJump() || attempts >= maxAttempts) {
+				finish();
+				return;
+			}
+			requestAnimationFrame(tick);
+		};
+
+		requestAnimationFrame(tick);
 	}, []);
 
 	const visibleMessageRows = useMemo(() => {
@@ -9730,6 +9815,14 @@ function WhatsAppWorkspaceContent() {
 					})
 				) {
 					return current;
+				}
+				if (typeof console !== 'undefined') {
+					const live = normalized.filter(i => i.online || i.typing || i.recording);
+					console.log(
+						'[WHATSAPP PRESENCE] FE snapshot',
+						`live=${live.length}`,
+						live.map(i => ({ id: i.conversationId, name: i.name, state: i.state })),
+					);
 				}
 				return normalized;
 			});
@@ -11305,33 +11398,77 @@ function WhatsAppWorkspaceContent() {
 	}, [conversationId]);
 
 	useEffect(() => {
-		// Never mark the thread settled while the initial page is still loading —
-		// otherwise the full latest page paints above scrollTop=0 and the user
-		// lands on the oldest messages with the scrollbar at the top/middle.
+		// Hold "settling" until the viewport is actually pinned to the latest
+		// messages. Marking settled too early freezes scrollTop at 0 (oldest).
 		if (threadSettled || !conversationId || loadingMessages) return undefined;
-		const timer = window.setTimeout(() => {
+		if (!effectiveMessages.length) {
+			const emptyTimer = window.setTimeout(() => setThreadSettled(true), 80);
+			return () => window.clearTimeout(emptyTimer);
+		}
+
+		let attempts = 0;
+		let rafId = 0;
+		let cancelled = false;
+		const maxAttempts = 36;
+
+		const pinBottom = () => {
 			const box = messageBoxRef.current;
-			if (box && pinThreadToBottomRef.current) {
-				const rows = messageRowsRef.current;
-				const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
-				if (useVirtual) {
-					messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
-						align: 'end',
-						behavior: 'auto',
-					});
+			if (!box || !pinThreadToBottomRef.current) return false;
+			const rows = messageRowsRef.current;
+			const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
+			if (useVirtual) {
+				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
+					align: 'end',
+					behavior: 'auto',
+				});
+				const total = Number(messageVirtualRef.current?.totalSize) || 0;
+				if (total > 0) {
+					messageVirtualRef.current?.scrollToOffset?.(total, { align: 'end' });
 				}
-				waScrollApply(
-					box,
-					box.scrollHeight,
-					'threadSettledTimer',
-					'threadSettled:450ms-pin-bottom',
-					{ pin: true, force: true },
-				);
 			}
-			setThreadSettled(true);
-		}, 450);
-		return () => window.clearTimeout(timer);
-	}, [threadSettled, conversationId, loadingMessages]);
+			const target = Math.max(
+				Number(box.scrollHeight) || 0,
+				Number(messageVirtualRef.current?.totalSize) || 0,
+			);
+			waScrollApply(
+				box,
+				target,
+				'threadSettlePin',
+				`settle-attempt-${attempts}`,
+				{ pin: true, force: true },
+			);
+			return isThreadPinnedToBottom(box);
+		};
+
+		const tick = () => {
+			if (cancelled) return;
+			attempts += 1;
+			const pinned = pinBottom();
+			if (pinned || attempts >= maxAttempts) {
+				setThreadSettled(true);
+				setShowJumpToBottom(
+					!pinned &&
+						threadDistanceFromBottom(messageBoxRef.current) > 220,
+				);
+				// Opacity flips to ready on settle — heights can grow; re-pin once.
+				requestAnimationFrame(() => {
+					if (cancelled || !pinThreadToBottomRef.current) return;
+					pinBottom();
+					setShowJumpToBottom(
+						threadDistanceFromBottom(messageBoxRef.current) > 220,
+					);
+				});
+				return;
+			}
+			rafId = requestAnimationFrame(tick);
+		};
+
+		rafId = requestAnimationFrame(tick);
+		return () => {
+			cancelled = true;
+			cancelAnimationFrame(rafId);
+		};
+	}, [threadSettled, conversationId, loadingMessages, effectiveMessages.length]);
 
 	const loadMessageSchedules = useCallback(async targetConversationId => {
 		if (!targetConversationId || isDemoId(targetConversationId)) {
@@ -11454,9 +11591,13 @@ function WhatsAppWorkspaceContent() {
 			});
 		}
 		if (box) {
+			const target = Math.max(
+				Number(box.scrollHeight) || 0,
+				Number(messageVirtualRef.current?.totalSize) || 0,
+			);
 			waScrollApply(
 				box,
-				box.scrollHeight,
+				target,
 				'autoScrollLayoutEffect',
 				`shouldStickThreadToBottom:latest=${latest.id}`,
 				{
@@ -11468,9 +11609,7 @@ function WhatsAppWorkspaceContent() {
 			);
 			setShowJumpToBottom(false);
 		}
-		if (!threadSettled && effectiveMessages.length > 0 && !loadingMessages) {
-			setThreadSettled(true);
-		}
+		// Do NOT mark settled here — settle effect waits until actually pinned to bottom.
 	}, [
 		latestThreadMessageId,
 		loadingOlder,
@@ -12056,9 +12195,24 @@ function WhatsAppWorkspaceContent() {
 				notifyWhatsAppUnreadChanged();
 			}
 			if (event.event === 'online_contacts') {
+				if (typeof console !== 'undefined') {
+					const items = Array.isArray(event.payload?.items) ? event.payload.items : [];
+					console.log(
+						'[WHATSAPP PRESENCE] FE socket online_contacts',
+						items.filter(i => i?.online || i?.typing).length,
+					);
+				}
 				handlers().applyOnlineContactsSnapshot?.(event.payload);
 			}
 			if (event.event === 'presence') {
+				if (typeof console !== 'undefined') {
+					console.log('[WHATSAPP PRESENCE] FE socket presence', {
+						conversationId: eventConversationId || event.payload?.conversationId,
+						state: event.payload?.state,
+						isOnline: event.payload?.isOnline,
+						chatId: event.payload?.chatId,
+					});
+				}
 				const targetId = eventConversationId || null;
 				if (!targetId) return;
 				const typing = Boolean(
@@ -16638,6 +16792,10 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (!preservePeopleQueue) {
+			// Fresh open from the tray — no person slide.
+			storyPersonSlideDirRef.current = 0;
+			setStoryPersonSlideDir(0);
+			storyPersonAnimatingRef.current = false;
 			const source = history
 				? groupedStatusHistoryRef.current
 				: groupedStatusesRef.current;
@@ -16672,6 +16830,7 @@ function WhatsAppWorkspaceContent() {
 	openStoryGroupRef.current = openStoryGroup;
 
 	const goStoryPerson = delta => {
+		if (storyPersonAnimatingRef.current) return;
 		const people = storyPeopleQueueRef.current;
 		if (!people.length) {
 			closeStory();
@@ -16691,6 +16850,17 @@ function WhatsAppWorkspaceContent() {
 			closeStory();
 			return;
 		}
+		const direction = delta > 0 ? 1 : -1;
+		storyPersonSlideDirRef.current = direction;
+		setStoryPersonSlideDir(direction);
+		storyPersonAnimatingRef.current = true;
+		if (storyPersonAnimUnlockTimerRef.current) {
+			window.clearTimeout(storyPersonAnimUnlockTimerRef.current);
+		}
+		storyPersonAnimUnlockTimerRef.current = window.setTimeout(() => {
+			storyPersonAnimatingRef.current = false;
+			storyPersonAnimUnlockTimerRef.current = null;
+		}, 480);
 		setStoryPeopleIndex(next);
 		storyPeopleIndexRef.current = next;
 		openStoryGroup(target, {
@@ -16736,6 +16906,13 @@ function WhatsAppWorkspaceContent() {
 	const closeStory = () => {
 		storyRequestId.current += 1;
 		storyViewerHistoryRef.current = false;
+		storyPersonAnimatingRef.current = false;
+		storyPersonSlideDirRef.current = 0;
+		setStoryPersonSlideDir(0);
+		if (storyPersonAnimUnlockTimerRef.current) {
+			window.clearTimeout(storyPersonAnimUnlockTimerRef.current);
+			storyPersonAnimUnlockTimerRef.current = null;
+		}
 		setSelectedStatus(null);
 		setStoryQueue([]);
 		setStoryIndex(0);
@@ -17058,6 +17235,12 @@ function WhatsAppWorkspaceContent() {
 			window.clearTimeout(retryId);
 		};
 	}, [storyPaused, selectedStatus?.id, statusMediaUrl]);
+
+	useEffect(() => {
+		const video = storyVideoRef.current;
+		if (!video) return;
+		video.muted = storyMuted;
+	}, [storyMuted, selectedStatus?.id, statusMediaUrl]);
 
 	const openGroupDetails = async group => {
 		if (!accountId || !group?.id) return;
@@ -20311,18 +20494,22 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										)}
 									</div>
-									</div>
 									{showJumpToBottom && conversationId ? (
 										<button
 											type="button"
 											className="wa-jump-bottom"
 											aria-label={locale === 'ar' ? 'انتقل لأسفل' : 'Jump to latest'}
 											title={locale === 'ar' ? 'انتقل لأسفل' : 'Jump to latest'}
-											onClick={jumpMessagesToBottom}
+											onClick={event => {
+												event.preventDefault();
+												event.stopPropagation();
+												jumpMessagesToBottom();
+											}}
 										>
 											<ChevronDown size={22} strokeWidth={2.4} />
 										</button>
 									) : null}
+									</div>
 									<div
 										className={`wa-composer-stack ${
 											isVoiceRecordingMode ? 'is-voice-recording' : ''
@@ -20842,40 +21029,113 @@ function WhatsAppWorkspaceContent() {
 							</button>
 						</header>
 						<div className="wa-statuses-body min-h-0 flex-1 overflow-y-auto p-4 nice-scroll">
-							<div className="mb-4 flex gap-2 rounded-full bg-[var(--wa-input,#f0f2f5)] p-1">
-								<button
-									type="button"
-									onClick={() => setStoryPanelMode('active')}
-									className={`h-9 flex-1 rounded-full text-sm font-semibold transition-colors ${
-										storyPanelMode === 'active'
-											? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
-											: 'text-slate-500 hover:text-slate-700'
-									}`}
+							<div
+								className="wa-story-seg-wrap mb-4 flex justify-center"
+								style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}
+								role="tablist"
+								aria-label={t.statuses}
+							>
+								<div
+									className="wa-story-seg inline-flex items-center gap-0.5 rounded-full bg-[var(--wa-input,#f0f2f5)] p-[3px] dark:bg-slate-800/80"
+									style={{
+										display: 'inline-flex',
+										alignItems: 'center',
+										gap: 2,
+										padding: 3,
+										borderRadius: 999,
+										background: 'var(--wa-input, #f0f2f5)',
+									}}
 								>
-									{t.activeStories}
-								</button>
-								<button
-									type="button"
-									onClick={() => setStoryPanelMode('history')}
-									className={`h-9 flex-1 rounded-full text-sm font-semibold transition-colors ${
-										storyPanelMode === 'history'
-											? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
-											: 'text-slate-500 hover:text-slate-700'
-									}`}
-								>
-									{t.storyHistory}
-								</button>
+									<button
+										type="button"
+										role="tab"
+										aria-selected={storyPanelMode === 'active'}
+										onClick={() => setStoryPanelMode('active')}
+										className={`wa-story-seg__btn inline-flex h-[30px] items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
+											storyPanelMode === 'active'
+												? 'is-active bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+												: 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+										}`}
+										style={{
+											display: 'inline-flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											gap: 6,
+											minHeight: 30,
+											padding: '0 12px',
+											border: 0,
+											borderRadius: 999,
+											background: storyPanelMode === 'active' ? '#fff' : 'transparent',
+											color: storyPanelMode === 'active' ? '#111b21' : '#667781',
+											fontSize: 12,
+											fontWeight: 600,
+											cursor: 'pointer',
+											boxShadow:
+												storyPanelMode === 'active'
+													? '0 1px 2px rgba(11, 20, 26, 0.08)'
+													: 'none',
+										}}
+									>
+										{t.activeStories}
+									</button>
+									<button
+										type="button"
+										role="tab"
+										aria-selected={storyPanelMode === 'history'}
+										onClick={() => setStoryPanelMode('history')}
+										className={`wa-story-seg__btn inline-flex h-[30px] items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
+											storyPanelMode === 'history'
+												? 'is-active bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+												: 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+										}`}
+										style={{
+											display: 'inline-flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											gap: 6,
+											minHeight: 30,
+											padding: '0 12px',
+											border: 0,
+											borderRadius: 999,
+											background: storyPanelMode === 'history' ? '#fff' : 'transparent',
+											color: storyPanelMode === 'history' ? '#111b21' : '#667781',
+											fontSize: 12,
+											fontWeight: 600,
+											cursor: 'pointer',
+											boxShadow:
+												storyPanelMode === 'history'
+													? '0 1px 2px rgba(11, 20, 26, 0.08)'
+													: 'none',
+										}}
+									>
+										{t.storyHistory}
+										{groupedStatusHistory.length > 0 ? (
+											<span
+												className="wa-story-seg__count inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/15 px-1.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300"
+												style={{
+													display: 'inline-flex',
+													alignItems: 'center',
+													justifyContent: 'center',
+													minWidth: 18,
+													height: 18,
+													padding: '0 5px',
+													borderRadius: 999,
+													background: 'rgba(0, 168, 132, 0.12)',
+													color: '#008f6f',
+													fontSize: 10,
+													fontWeight: 700,
+												}}
+											>
+												{groupedStatusHistory.length}
+											</span>
+										) : null}
+									</button>
+								</div>
 							</div>
 							{storyPanelMode === 'active' && canUseWhatsApp && (
 								selectedAccount?.providerCapabilities?.statusPublish === false ||
 								String(selectedAccount?.providerName || '').toLowerCase() === 'baileys'
-							) ? (
-								<p className="mb-4 rounded-2xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
-									{locale === 'ar'
-										? 'نشر الحالة من النظام غير متاح حاليًا لهذا الاتصال. يمكنك عرض الحالات فقط.'
-										: 'Publishing stories from the dashboard is not available for this connection yet. You can still view statuses.'}
-								</p>
-							) : null}
+							) ? null : null}
 							{storyPanelMode === 'active' && canUseWhatsApp &&
 								selectedAccount?.providerCapabilities?.statusPublish !== false &&
 								String(selectedAccount?.providerName || '').toLowerCase() !== 'baileys' && (
@@ -20993,63 +21253,182 @@ function WhatsAppWorkspaceContent() {
 							) : groupedStatusHistory.length === 0 ? (
 								<Empty icon={Zap} title={t.storyHistoryEmpty} />
 							) : (
-								<div className="wa-stories-grid">
-									{groupedStatusHistory.map((story, storyIndex) => {
-										const rawName =
-											story.latest.contactName ||
-											(story.latest.isOwn
-												? selectedAccount?.label || t.accounts
-												: '');
-										const digits = String(rawName || story.senderWaId || '')
-											.replace(/@.*$/, '')
-											.replace(/\D/g, '');
-										const name =
-											rawName ||
-											formatWhatsAppPhone(digits) ||
-											String(story.senderWaId || '').replace(/@.*$/, '');
-										const ringSize = 128;
-										return (
-											<button
-												type="button"
-												key={`history-${story.senderWaId}`}
-												onClick={() => openStoryGroup(story, { history: true })}
-												className="wa-stories-card group is-viewed"
-											>
-												<div
-													className="relative mx-auto transition-transform duration-200 group-hover:scale-[1.03]"
-													style={{ width: ringSize, height: ringSize }}
-												>
-													<StoryRing
-														size={ringSize}
-														strokeWidth={3.5}
-														segmentsViewed={story.items.map(() => true)}
-														idSuffix={`history_${String(story.senderWaId).replace(/[^a-zA-Z0-9_-]/g, '_')}`}
-													/>
-													<div className="absolute inset-[7px] overflow-hidden rounded-full border-[3px] border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
-														<StoryThumbnail
-															label={name}
-															size={22}
-															viewed
-															priority={storyIndex < 14}
-															thumbUrl={storyThumbs[story.latest.id]?.url}
-															thumbType={storyThumbs[story.latest.id]?.type}
-															avatarUrl={story.latest.contactAvatarUrl || ''}
-														/>
-													</div>
-												</div>
-												<p className="wa-stories-card__name is-viewed">{name}</p>
-												<p className="wa-stories-card__time">
-													{t.storyHistoryCount.replace(
-														'{count}',
-														String(story.historyCount || story.items.length),
-													)}
-												</p>
-												<p className="wa-stories-card__time">
-													{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}
-												</p>
-											</button>
-										);
-									})}
+								<div className="wa-story-history flex flex-col gap-2.5 pb-2">
+									<p className="wa-story-history__hint m-0 px-0.5 text-[11px] font-semibold tracking-wide text-slate-400">
+										{locale === 'ar'
+											? `${groupedStatusHistory.length} جهة مؤرشفة`
+											: `${groupedStatusHistory.length} archived ${
+													groupedStatusHistory.length === 1 ? 'person' : 'people'
+												}`}
+									</p>
+									<ul className="wa-story-history__list m-0 flex list-none flex-col gap-1.5 p-0">
+										{groupedStatusHistory.map((story, storyIndex) => {
+											const rawName =
+												story.latest.contactName ||
+												(story.latest.isOwn
+													? selectedAccount?.label || t.accounts
+													: '');
+											const digits = String(rawName || story.senderWaId || '')
+												.replace(/@.*$/, '')
+												.replace(/\D/g, '');
+											const name =
+												rawName ||
+												formatWhatsAppPhone(digits) ||
+												String(story.senderWaId || '').replace(/@.*$/, '');
+											const archivedCount =
+												story.historyCount || story.items.length || 0;
+											const thumb = storyThumbs[story.latest.id];
+											return (
+												<li key={`history-${story.senderWaId}`} className="m-0 p-0">
+													<button
+														type="button"
+														onClick={() =>
+															openStoryGroup(story, { history: true })
+														}
+														className="wa-story-history__row group flex w-full items-center gap-3 rounded-2xl border border-slate-200/90 bg-white px-3 py-2.5 text-start transition-colors hover:border-emerald-500/30 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:bg-slate-800"
+														style={{
+															display: 'flex',
+															width: '100%',
+															alignItems: 'center',
+															gap: 12,
+															padding: '10px 12px',
+															border: '1px solid rgba(233, 237, 239, 0.95)',
+															borderRadius: 16,
+															background: '#fff',
+															textAlign: 'start',
+															cursor: 'pointer',
+														}}
+													>
+														<span
+															className="wa-story-history__avatar-wrap relative h-12 w-12 shrink-0"
+															style={{
+																position: 'relative',
+																flex: '0 0 auto',
+																width: 48,
+																height: 48,
+															}}
+														>
+															<span
+																className="wa-story-history__avatar block h-12 w-12 overflow-hidden rounded-full border-2 border-white bg-slate-200 shadow-sm dark:border-slate-950 dark:bg-slate-800"
+																style={{
+																	display: 'block',
+																	overflow: 'hidden',
+																	width: 48,
+																	height: 48,
+																	borderRadius: 999,
+																	border: '2px solid #fff',
+																	background: '#e9edef',
+																}}
+															>
+																<StoryThumbnail
+																	label={name}
+																	size={12}
+																	viewed
+																	fillParent={false}
+																	priority={storyIndex < 12}
+																	thumbUrl={thumb?.url}
+																	thumbType={thumb?.type}
+																	avatarUrl={
+																		story.latest.contactAvatarUrl || ''
+																	}
+																/>
+															</span>
+															<span
+																className="wa-story-history__badge absolute -bottom-0.5 end-[-2px] inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#00a884] px-1 text-[10px] font-bold leading-none text-white dark:border-slate-950"
+																style={{
+																	position: 'absolute',
+																	insetInlineEnd: -2,
+																	bottom: -2,
+																	display: 'inline-flex',
+																	alignItems: 'center',
+																	justifyContent: 'center',
+																	minWidth: 20,
+																	height: 20,
+																	padding: '0 5px',
+																	border: '2px solid #fff',
+																	borderRadius: 999,
+																	background: '#00a884',
+																	color: '#fff',
+																	fontSize: 10,
+																	fontWeight: 700,
+																	lineHeight: 1,
+																}}
+															>
+																{archivedCount}
+															</span>
+														</span>
+														<span
+															className="wa-story-history__meta flex min-w-0 flex-1 flex-col gap-0.5"
+															style={{
+																display: 'flex',
+																minWidth: 0,
+																flex: '1 1 auto',
+																flexDirection: 'column',
+																gap: 3,
+															}}
+														>
+															<span
+																className="wa-story-history__name truncate text-sm font-bold text-slate-900 dark:text-slate-100"
+																style={{
+																	overflow: 'hidden',
+																	color: '#111b21',
+																	fontSize: 14,
+																	fontWeight: 700,
+																	textOverflow: 'ellipsis',
+																	whiteSpace: 'nowrap',
+																}}
+															>
+																{name}
+															</span>
+															<span
+																className="wa-story-history__sub flex flex-wrap items-center gap-1 text-xs font-medium text-slate-400"
+																style={{
+																	display: 'flex',
+																	flexWrap: 'wrap',
+																	alignItems: 'center',
+																	gap: 4,
+																	color: '#8696a0',
+																	fontSize: 12,
+																	fontWeight: 500,
+																}}
+															>
+																<span>{t.archived}</span>
+																<span className="wa-story-history__dot opacity-70" aria-hidden="true">
+																	·
+																</span>
+																<span>
+																	{relativeTime(
+																		story.latest.publishedAt,
+																		relativeTimeNow,
+																		locale,
+																	)}
+																</span>
+															</span>
+														</span>
+														<span
+															className="wa-story-history__chevron grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-400 group-hover:bg-emerald-500/10 group-hover:text-emerald-600"
+															style={{
+																display: 'grid',
+																flex: '0 0 auto',
+																placeItems: 'center',
+																width: 28,
+																height: 28,
+																borderRadius: 999,
+																color: '#94a3b8',
+															}}
+															aria-hidden="true"
+														>
+															{locale === 'ar' ? (
+																<ChevronLeft size={16} strokeWidth={2.2} />
+															) : (
+																<ChevronRight size={16} strokeWidth={2.2} />
+															)}
+														</span>
+													</button>
+												</li>
+											);
+										})}
+									</ul>
 								</div>
 							)}
 						</div>
@@ -21132,7 +21511,7 @@ function WhatsAppWorkspaceContent() {
 											<button
 												type="button"
 												key={`${side}-${person.senderWaId}`}
-												className={`wa-story-peek wa-story-peek--${side} hidden md:flex`}
+												className={`wa-story-peek wa-story-peek--${side}`}
 												onClick={event => {
 													event.preventDefault();
 													event.stopPropagation();
@@ -21168,6 +21547,15 @@ function WhatsAppWorkspaceContent() {
 														/>
 													)}
 													<span className="wa-story-peek__scrim" />
+													<span className="wa-story-peek__hint" aria-hidden="true">
+														{side === 'prev'
+															? locale === 'ar'
+																? <ChevronRight size={16} />
+																: <ChevronLeft size={16} />
+															: locale === 'ar'
+																? <ChevronLeft size={16} />
+																: <ChevronRight size={16} />}
+													</span>
 													<span className="wa-story-peek__meta">
 														<Avatar
 															label={label}
@@ -21193,13 +21581,40 @@ function WhatsAppWorkspaceContent() {
 										>
 											{renderPeek(prevPerson, prevPeekStatus, 'prev')}
 											<div
-												key={selectedStatus.id || selectedStatus.providerStatusId}
-												className={`wa-story-viewer__card relative flex h-[min(920px,96vh)] cursor-default flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl ${
-													storyExpanded
-														? 'w-[min(96vw,1100px)] max-w-[1100px]'
-														: 'w-full max-w-xl'
+												className={`wa-story-viewer__carousel ${
+													storyExpanded ? 'is-expanded' : ''
 												}`}
 											>
+												<AnimatePresence
+													initial={false}
+													custom={storyPersonSlideDir}
+													mode="sync"
+												>
+													<motion.div
+														key={
+															selectedStatus.senderWaId ||
+															selectedStatus.id ||
+															selectedStatus.providerStatusId
+														}
+														custom={storyPersonSlideDir}
+														variants={STORY_PERSON_SLIDE_VARIANTS}
+														initial="enter"
+														animate="center"
+														exit="exit"
+														transition={STORY_PERSON_SLIDE_TRANSITION}
+														className="wa-story-viewer__card relative flex h-full w-full cursor-default flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl"
+														onAnimationComplete={definition => {
+															if (definition === 'center') {
+																storyPersonAnimatingRef.current = false;
+																if (storyPersonAnimUnlockTimerRef.current) {
+																	window.clearTimeout(
+																		storyPersonAnimUnlockTimerRef.current,
+																	);
+																	storyPersonAnimUnlockTimerRef.current = null;
+																}
+															}
+														}}
+													>
 									<div className="absolute inset-x-3 top-3 z-10 flex gap-1.5">
 										{queue.map((item, index) => (
 											<div key={item.id || index} className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25">
@@ -21302,6 +21717,28 @@ function WhatsAppWorkspaceContent() {
 												<Maximize2 size={17} />
 											)}
 										</button>
+										{String(selectedStatus?.type || '')
+											.toLowerCase()
+											.includes('video') && (
+										<button
+											type="button"
+											onClick={event => {
+												event.preventDefault();
+												event.stopPropagation();
+												setStoryMuted(current => !current);
+											}}
+											title={storyMuted ? t.unmuteStory : t.muteStory}
+											className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
+												storyMuted
+													? 'bg-black/40 hover:bg-black/60'
+													: 'bg-emerald-500 text-white hover:bg-emerald-400'
+											}`}
+											aria-label={storyMuted ? t.unmuteStory : t.muteStory}
+											aria-pressed={!storyMuted}
+										>
+											{storyMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+										</button>
+										)}
 										<button
 											type="button"
 											onClick={event => {
@@ -21341,32 +21778,64 @@ function WhatsAppWorkspaceContent() {
 									</div>
 									{!storyViewerEmbed && (
 										<>
+											{/* In-story item prev/next (same person) — visible when multiple segments */}
+											{queue.length > 1 && storyIndex > 0 && (
+												<button
+													type="button"
+													aria-label={t.previousStoryItem}
+													title={t.previousStoryItem}
+													onClick={event => {
+														event.preventDefault();
+														event.stopPropagation();
+														goStory(-1);
+													}}
+													className="wa-story-nav-btn wa-story-nav-btn--prev absolute start-2 top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/65"
+												>
+													{locale === 'ar' ? (
+														<ChevronRight size={22} />
+													) : (
+														<ChevronLeft size={22} />
+													)}
+												</button>
+											)}
+											{queue.length > 1 && storyIndex < queue.length - 1 && (
+												<button
+													type="button"
+													aria-label={t.nextStoryItem}
+													title={t.nextStoryItem}
+													onClick={event => {
+														event.preventDefault();
+														event.stopPropagation();
+														goStory(1);
+													}}
+													className="wa-story-nav-btn wa-story-nav-btn--next absolute end-2 top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/65"
+												>
+													{locale === 'ar' ? (
+														<ChevronLeft size={22} />
+													) : (
+														<ChevronRight size={22} />
+													)}
+												</button>
+											)}
+											{/* Tap zones: item first, then person */}
 											<button
 												type="button"
-												aria-label={t.previousStory}
-												onClick={() => goStoryPerson(-1)}
-												className="absolute bottom-24 start-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-start bg-transparent p-3 md:w-[22%]"
-											>
-												{((people.length > 1 && peopleIdx > 0) ||
-													(storyLoop && people.length > 1)) && (
-													<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50 md:hidden">
-														{locale === 'ar' ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
-													</span>
-												)}
-											</button>
+												aria-label={t.previousStoryItem}
+												onClick={() => {
+													if (storyIndex > 0) goStory(-1);
+													else goStoryPerson(-1);
+												}}
+												className="absolute bottom-24 start-0 top-24 z-20 flex w-[28%] cursor-default items-center justify-start bg-transparent p-3 md:w-[18%]"
+											/>
 											<button
 												type="button"
-												aria-label={t.nextStory}
-												onClick={() => goStoryPerson(1)}
-												className="absolute bottom-24 end-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-end bg-transparent p-3 md:w-[22%]"
-											>
-												{((people.length > 1 && peopleIdx < people.length - 1) ||
-													(storyLoop && people.length > 1)) && (
-													<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50 md:hidden">
-														{locale === 'ar' ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
-													</span>
-												)}
-											</button>
+												aria-label={t.nextStoryItem}
+												onClick={() => {
+													if (storyIndex < queue.length - 1) goStory(1);
+													else goStoryPerson(1);
+												}}
+												className="absolute bottom-24 end-0 top-24 z-20 flex w-[28%] cursor-default items-center justify-end bg-transparent p-3 md:w-[18%]"
+											/>
 										</>
 									)}
 									<div className="wa-story-viewer__media relative z-10 flex min-h-0 flex-1 items-center justify-center pt-20">
@@ -21414,10 +21883,13 @@ function WhatsAppWorkspaceContent() {
 												controls={false}
 												autoPlay
 												playsInline
+												muted={storyMuted}
 												onLoadedMetadata={event => {
 													if (event.target.duration) setStoryDurationMs(event.target.duration * 1000);
+													event.currentTarget.muted = storyMuted;
 												}}
 												onCanPlay={event => {
+													event.currentTarget.muted = storyMuted;
 													if (!storyPaused) {
 														event.currentTarget.play().catch(() => undefined);
 													}
@@ -21578,6 +22050,8 @@ function WhatsAppWorkspaceContent() {
 											</button>
 										</form>
 									)}
+											</motion.div>
+												</AnimatePresence>
 											</div>
 											{renderPeek(nextPerson, nextPeekStatus, 'next')}
 										</div>

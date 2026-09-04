@@ -56,7 +56,7 @@ export function waScrollApply(box, newTop, who, reason, extra = {}) {
 	if (!box) return;
 	const oldTop = Number(box.scrollTop) || 0;
 	const target = Number(newTop) || 0;
-	if (Math.abs(oldTop - target) < 0.5) return;
+	if (!extra?.force && Math.abs(oldTop - target) < 0.5) return;
 	waScrollLog(who, reason, box, oldTop, target, extra);
 	box.scrollTop = target;
 }
