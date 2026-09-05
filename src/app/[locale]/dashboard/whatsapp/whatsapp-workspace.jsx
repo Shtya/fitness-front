@@ -8319,6 +8319,7 @@ function WhatsAppWorkspaceContent() {
 	const storyElapsedRef = useRef(0);
 	const storyProgressBarRef = useRef(null);
 	const storyVideoRef = useRef(null);
+	const storySegmentDoneRef = useRef(false);
 	const storyPeekMediaRef = useRef({});
 	const [logs, setLogs] = useState([]);
 	const [report, setReport] = useState(null);
@@ -16553,6 +16554,7 @@ function WhatsAppWorkspaceContent() {
 		const isTextStory = statusType === 'text' || statusType === 'chat';
 		setLoadingStory(!isTextStory);
 		storyElapsedRef.current = 0;
+		storySegmentDoneRef.current = false;
 		setStoryProgress(0);
 		setStoryReplayKey(key => key + 1);
 		setStoryDurationMs(statusType.includes('video') ? 15000 : 5000);
@@ -16886,10 +16888,8 @@ function WhatsAppWorkspaceContent() {
 
 	const replayCurrentStory = useCallback(() => {
 		storyElapsedRef.current = 0;
+		storySegmentDoneRef.current = false;
 		setStoryProgress(0);
-		if (storyProgressBarRef.current) {
-			storyProgressBarRef.current.style.width = '0%';
-		}
 		const video = storyVideoRef.current;
 		if (video) {
 			try {
@@ -16902,6 +16902,18 @@ function WhatsAppWorkspaceContent() {
 		setStoryPaused(false);
 		setStoryReplayKey(key => key + 1);
 	}, []);
+
+	const finishStorySegmentRef = useRef(() => {});
+	finishStorySegmentRef.current = () => {
+		if (storySegmentDoneRef.current) return;
+		storySegmentDoneRef.current = true;
+		setStoryProgress(100);
+		if (storyLoopRef.current) {
+			replayCurrentStory();
+			return;
+		}
+		goStory(1);
+	};
 
 	const closeStory = () => {
 		storyRequestId.current += 1;
@@ -17164,50 +17176,84 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		if (!selectedStatus || loadingStory) {
 			storyElapsedRef.current = 0;
+			storySegmentDoneRef.current = false;
 			setStoryProgress(0);
-			if (storyProgressBarRef.current) {
-				storyProgressBarRef.current.style.width = '0%';
-			}
 			return undefined;
 		}
 		if (storyPaused) return undefined;
+
+		const statusType = String(selectedStatus.type || '').toLowerCase();
+		const isVideo = statusType.includes('video');
 		storyStartRef.current = Date.now() - storyElapsedRef.current;
+
 		let frameId = 0;
-		const tick = () => {
-			const elapsed = Date.now() - storyStartRef.current;
-			storyElapsedRef.current = elapsed;
-			const pct = Math.min(100, (elapsed / storyDurationMs) * 100);
-			if (storyProgressBarRef.current) {
-				storyProgressBarRef.current.style.width = `${pct}%`;
-			}
-			if (pct >= 100) {
-				if (storyLoopRef.current) {
-					replayCurrentStory();
-					return;
+		let cancelled = false;
+		let lastEmit = 0;
+
+		const tick = now => {
+			if (cancelled || storySegmentDoneRef.current) return;
+
+			let pct = 0;
+			let done = false;
+			const video = storyVideoRef.current;
+
+			if (isVideo) {
+				if (
+					video &&
+					Number.isFinite(video.duration) &&
+					video.duration > 0 &&
+					!Number.isNaN(video.currentTime)
+				) {
+					pct = Math.min(
+						100,
+						(Math.max(0, video.currentTime) / video.duration) * 100,
+					);
+					storyElapsedRef.current = Math.max(0, video.currentTime) * 1000;
+					done = Boolean(video.ended) || pct >= 99.5;
+				} else {
+					// Wait for metadata / first frame — do not fake-advance on wall clock.
+					pct = 0;
 				}
-				goStory(1);
+			} else {
+				const elapsed = Date.now() - storyStartRef.current;
+				storyElapsedRef.current = elapsed;
+				pct = Math.min(100, (elapsed / Math.max(storyDurationMs, 1)) * 100);
+				done = pct >= 100;
+			}
+
+			if (!lastEmit || now - lastEmit >= 32 || done || pct === 0) {
+				lastEmit = now;
+				setStoryProgress(pct);
+			}
+
+			if (done) {
+				finishStorySegmentRef.current();
 				return;
 			}
 			frameId = window.requestAnimationFrame(tick);
 		};
+
 		frameId = window.requestAnimationFrame(tick);
-		return () => window.cancelAnimationFrame(frameId);
+		return () => {
+			cancelled = true;
+			window.cancelAnimationFrame(frameId);
+		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedStatus?.id, loadingStory, storyDurationMs, storyPaused, storyReplayKey]);
+	}, [
+		selectedStatus?.id,
+		selectedStatus?.type,
+		loadingStory,
+		storyDurationMs,
+		storyPaused,
+		storyReplayKey,
+		statusMediaUrl,
+	]);
 
 	useLayoutEffect(() => {
-		const el = storyProgressBarRef.current;
-		if (!el) return;
 		if (!selectedStatus || loadingStory) {
-			el.style.width = '0%';
-			return;
+			setStoryProgress(0);
 		}
-		const pct = Math.min(
-			100,
-			(storyElapsedRef.current / Math.max(storyDurationMs, 1)) * 100,
-		);
-		el.style.width = `${pct}%`;
-	}, [selectedStatus?.id, storyIndex, loadingStory, storyPaused, storyDurationMs]);
+	}, [selectedStatus?.id, storyIndex, loadingStory, storyReplayKey]);
 
 	useEffect(() => {
 		const video = storyVideoRef.current;
@@ -21445,17 +21491,20 @@ function WhatsAppWorkspaceContent() {
 													>
 									<div className="absolute inset-x-3 top-3 z-10 flex gap-1.5">
 										{queue.map((item, index) => (
-											<div key={item.id || index} className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25">
+											<div
+												key={item.id || index}
+												className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25"
+											>
 												<div
-													ref={index === storyIndex ? storyProgressBarRef : undefined}
-													className="h-full bg-white will-change-[width]"
+													className="h-full rounded-full bg-white"
 													style={{
 														width:
 															index < storyIndex
 																? '100%'
 																: index > storyIndex
 																	? '0%'
-																	: undefined,
+																	: `${Math.max(0, Math.min(100, storyProgress))}%`,
+														transition: 'none',
 													}}
 												/>
 											</div>
@@ -21713,8 +21762,30 @@ function WhatsAppWorkspaceContent() {
 												playsInline
 												muted={storyMuted}
 												onLoadedMetadata={event => {
-													if (event.target.duration) setStoryDurationMs(event.target.duration * 1000);
+													const duration = Number(event.currentTarget.duration);
+													if (Number.isFinite(duration) && duration > 0) {
+														setStoryDurationMs(duration * 1000);
+													}
 													event.currentTarget.muted = storyMuted;
+												}}
+												onTimeUpdate={event => {
+													const node = event.currentTarget;
+													const duration = Number(node.duration);
+													if (
+														!Number.isFinite(duration) ||
+														duration <= 0 ||
+														storyPaused
+													) {
+														return;
+													}
+													const pct = Math.min(
+														100,
+														(Math.max(0, node.currentTime) / duration) * 100,
+													);
+													setStoryProgress(pct);
+												}}
+												onEnded={() => {
+													finishStorySegmentRef.current();
 												}}
 												onCanPlay={event => {
 													event.currentTarget.muted = storyMuted;
