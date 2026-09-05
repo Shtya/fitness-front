@@ -13948,10 +13948,10 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 .wa-presence-bar__scroll,
 .wa-numbers-bar__scroll {
 	display: flex;
-	align-items: center;
-	gap: 8px;
+	align-items: flex-start;
+	gap: 10px;
 	overflow-x: auto;
-	padding: 8px 10px;
+	padding: 8px 10px 6px;
 	scrollbar-width: thin;
 }
 
@@ -13967,14 +13967,16 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 .wa-presence-chip {
 	position: relative;
 	display: inline-flex;
+	flex-direction: column;
 	align-items: center;
-	justify-content: center;
-	width: 48px;
-	height: 48px;
-	max-width: none;
-	border-radius: 999px;
-	border: 1px solid #d1d7db;
-	background: #fff;
+	justify-content: flex-start;
+	width: 64px;
+	height: auto;
+	min-height: 0;
+	max-width: 64px;
+	border-radius: 12px;
+	border: 1px solid transparent;
+	background: transparent;
 	overflow: visible;
 	flex-shrink: 0;
 	animation: wa-presence-in 180ms ease-out;
@@ -13992,9 +13994,9 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 }
 
 .wa-presence-chip.is-active {
-	border-color: #25d366;
-	background: #e7f8ec;
-	box-shadow: 0 0 0 1px rgba(37, 211, 102, 0.22);
+	border-color: transparent;
+	background: rgba(37, 211, 102, 0.1);
+	box-shadow: none;
 }
 
 .wa-presence-chip.is-offline {
@@ -14003,14 +14005,16 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 
 .wa-presence-chip__main {
 	display: inline-flex;
+	flex-direction: column;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
+	gap: 4px;
 	min-width: 0;
 	width: 100%;
-	height: 100%;
-	padding: 0;
+	height: auto;
+	padding: 4px 2px 2px;
 	border: 0;
-	border-radius: 999px;
+	border-radius: 12px;
 	background: transparent;
 	cursor: pointer;
 	color: #111b21;
@@ -14044,7 +14048,7 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	width: 11px;
 	height: 11px;
 	border-radius: 999px;
-	border: 2px solid #fff;
+	border: 2px solid #f0f2f5;
 	background: #8696a0;
 }
 
@@ -14056,20 +14060,22 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 .wa-presence-chip__meta {
 	display: flex;
 	flex-direction: column;
-	align-items: flex-start;
+	align-items: center;
 	min-width: 0;
-	padding-inline-end: 2px;
+	width: 100%;
+	padding: 0;
 }
 
 .wa-presence-chip__name {
-	max-width: 120px;
+	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 12px;
+	font-size: 10px;
 	font-weight: 700;
 	line-height: 1.2;
 	color: #111b21;
+	text-align: center;
 }
 
 .wa-presence-chip__status {
@@ -14083,62 +14089,76 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	color: #128c7e;
 }
 
-/* Pin appears over the avatar on hover / when pinned */
+/* Small corner pin — never covers the whole avatar */
 .wa-presence-chip__pin {
 	position: absolute;
-	inset: 0;
+	top: 2px;
+	inset-inline-end: 2px;
 	z-index: 3;
 	display: grid;
 	place-items: center;
-	width: 100%;
-	height: 100%;
+	width: 18px;
+	height: 18px;
+	margin: 0;
 	border: 0;
 	border-radius: 999px;
-	background: rgba(17, 27, 33, 0.55);
-	color: #fff;
+	background: transparent;
+	color: #128c7e;
 	cursor: pointer;
 	opacity: 0;
-	transform: scale(0.92);
-	transition:
-		opacity 140ms ease,
-		transform 140ms ease,
-		background 140ms ease;
+	transform: none;
+	box-shadow: none;
+	transition: opacity 140ms ease, color 140ms ease;
 	pointer-events: none;
 }
 
 .wa-presence-chip:hover .wa-presence-chip__pin,
-.wa-presence-chip:focus-within .wa-presence-chip__pin,
+.wa-presence-chip:focus-within .wa-presence-chip__pin {
+	opacity: 1;
+	pointer-events: auto;
+	color: #54656f;
+}
+
 .wa-presence-chip.is-pinned .wa-presence-chip__pin {
 	opacity: 1;
-	transform: scale(1);
 	pointer-events: auto;
+	background: transparent;
+	color: #128c7e;
+	box-shadow: none;
 }
 
 .wa-presence-chip__pin:hover,
 .wa-presence-chip__pin:focus-visible {
-	background: rgba(17, 27, 33, 0.72);
+	background: transparent;
+	color: #0e7566;
 	outline: none;
 }
 
-.wa-presence-chip.is-pinned .wa-presence-chip__pin {
-	background: rgba(18, 140, 126, 0.88);
-	color: #fff;
+.wa-presence-chip.is-pinned .wa-presence-chip__pin:hover,
+.wa-presence-chip.is-pinned .wa-presence-chip__pin:focus-visible {
+	background: transparent;
+	color: #0e7566;
 }
 
 @media (hover: none) {
 	.wa-presence-chip__pin {
-		opacity: 1;
-		pointer-events: auto;
-		background: rgba(17, 27, 33, 0.42);
-		inset: auto 2px 2px auto;
-		width: 16px;
-		height: 16px;
+		opacity: 0;
+		pointer-events: none;
+		background: transparent;
+		top: 2px;
+		inset-inline-end: 2px;
+		width: 18px;
+		height: 18px;
+		margin: 0;
+		border: 0;
 		transform: none;
-		border: 1.5px solid #fff;
 	}
 
 	.wa-presence-chip.is-pinned .wa-presence-chip__pin {
-		background: #128c7e;
+		opacity: 1;
+		pointer-events: auto;
+		background: transparent;
+		color: #128c7e;
 	}
 }
 
@@ -14251,19 +14271,27 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 
 .dark .wa-presence-chip,
 .dark .wa-numbers-chip {
-	border-color: #2a3942;
-	background: #202c33;
+	border-color: transparent;
+	background: transparent;
 }
 
 .dark .wa-presence-chip.is-active,
 .dark .wa-numbers-chip.is-active {
-	border-color: #25d366;
+	border-color: transparent;
 	background: rgba(37, 211, 102, 0.12);
 }
 
 .dark .wa-presence-chip__main,
 .dark .wa-numbers-chip__main {
 	color: #e9edef;
+}
+
+.dark .wa-presence-chip__name {
+	color: #e9edef;
+}
+
+.dark .wa-presence-chip__dot {
+	border-color: #111b21;
 }
 
 .dark .wa-presence-chip__status {
@@ -14279,20 +14307,21 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 }
 
 .dark .wa-presence-chip__pin {
-	background: rgba(0, 0, 0, 0.62);
-	color: #fff;
+	background: transparent;
+	color: #aebac1;
 	border-inline-start: 0;
+	box-shadow: none;
 }
 
 .dark .wa-presence-chip__pin:hover,
 .dark .wa-presence-chip__pin:focus-visible {
-	background: rgba(0, 0, 0, 0.78);
-	color: #fff;
+	background: transparent;
+	color: #e9edef;
 }
 
 .dark .wa-presence-chip.is-pinned .wa-presence-chip__pin {
-	background: rgba(37, 211, 102, 0.92);
-	color: #111b21;
+	background: transparent;
+	color: #25d366;
 }
 
 .dark .wa-numbers-chip__pin {

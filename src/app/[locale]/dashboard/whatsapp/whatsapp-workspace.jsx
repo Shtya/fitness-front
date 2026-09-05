@@ -8148,76 +8148,78 @@ function OnlineContactsBar({
 		return [...online, ...pinnedOffline];
 	}, [ordered, pinnedId]);
 
+	if (!visible.length) return null;
+
 	return (
 		<div className="wa-presence-bar" role="toolbar" aria-label={labels.connectedNumbers}>
 			<div className="wa-presence-bar__scroll nice-scroll">
-				{!visible.length ? (
-					<span className="wa-presence-bar__empty">{labels.noConnectedNumbers}</span>
-				) : (
-					visible.map(contact => {
-						const pinned = contact.conversationId === pinnedId;
-						const active = contact.conversationId === selectedId;
-						const online = Boolean(
-							contact.online || contact.typing || contact.recording,
-						);
-						const label =
-							String(contact.name || contact.phoneNumber || labels.online).trim() ||
-							labels.online;
-						const avatarSrc = String(contact.avatarUrl || '').trim();
-						return (
-							<div
-								key={contact.conversationId}
-								className={`wa-presence-chip${online ? ' is-online' : ' is-offline'}${
-									pinned ? ' is-pinned' : ''
-								}${active ? ' is-active' : ''}`}
+				{visible.map(contact => {
+					const pinned = contact.conversationId === pinnedId;
+					const active = contact.conversationId === selectedId;
+					const online = Boolean(
+						contact.online || contact.typing || contact.recording,
+					);
+					const label =
+						String(contact.name || contact.phoneNumber || labels.online).trim() ||
+						labels.online;
+					const avatarSrc = String(contact.avatarUrl || '').trim();
+					return (
+						<div
+							key={contact.conversationId}
+							className={`wa-presence-chip${online ? ' is-online' : ' is-offline'}${
+								pinned ? ' is-pinned' : ''
+							}${active ? ' is-active' : ''}`}
+							title={label}
+						>
+							<button
+								type="button"
+								className="wa-presence-chip__main"
+								onClick={() => onSelect?.(contact.conversationId)}
 								title={label}
+								aria-label={label}
+								aria-pressed={active}
 							>
-								<button
-									type="button"
-									className="wa-presence-chip__main"
-									onClick={() => onSelect?.(contact.conversationId)}
-									title={label}
-									aria-label={label}
-									aria-pressed={active}
-								>
-									<span className="wa-presence-chip__avatar-wrap">
-										<Avatar
-											label={label}
-											size={10}
-											src={avatarSrc}
-											priority={Boolean(avatarSrc)}
-											className="wa-presence-chip__avatar !ring-0"
-										/>
-										{online ? (
-											<span
-												className="wa-presence-chip__dot is-online"
-												aria-hidden="true"
-											/>
-										) : null}
-									</span>
-								</button>
-								<button
-									type="button"
-									className="wa-presence-chip__pin"
-									onClick={event => {
-										event.preventDefault();
-										event.stopPropagation();
-										onTogglePin?.(contact.conversationId);
-									}}
-									aria-label={pinned ? labels.unpinNumber : labels.pinNumber}
-									title={pinned ? labels.unpinNumber : labels.pinNumber}
-									aria-pressed={pinned}
-								>
-									<Pin
-										size={13}
-										strokeWidth={2.4}
-										className={pinned ? 'fill-current' : undefined}
+								<span className="wa-presence-chip__avatar-wrap">
+									<Avatar
+										label={label}
+										size={10}
+										src={avatarSrc}
+										priority={Boolean(avatarSrc)}
+										className="wa-presence-chip__avatar !ring-0"
 									/>
-								</button>
-							</div>
-						);
-					})
-				)}
+									{online ? (
+										<span
+											className="wa-presence-chip__dot is-online"
+											aria-hidden="true"
+										/>
+									) : null}
+								</span>
+								<span className="wa-presence-chip__meta">
+									<span className="wa-presence-chip__name">{label}</span>
+								</span>
+							</button>
+							<button
+								type="button"
+								className="wa-presence-chip__pin"
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
+									onTogglePin?.(contact.conversationId);
+								}}
+								aria-label={pinned ? labels.unpinNumber : labels.pinNumber}
+								title={pinned ? labels.unpinNumber : labels.pinNumber}
+								aria-pressed={pinned}
+							>
+								<Pin
+									size={12}
+									strokeWidth={2.6}
+									className={pinned ? 'fill-current' : undefined}
+									aria-hidden="true"
+								/>
+							</button>
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);
