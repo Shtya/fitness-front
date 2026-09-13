@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
 	MESSAGE_PAGE_SIZE,
+	MESSAGES_CACHE_TTL_MS,
 	PROVIDER_SYNC_FRESH_MS,
 	isMessageThreadCacheComplete,
+	openChatMessagesStaleTime,
 	shouldProviderBackfill,
 	shouldReloadOpenChatMessages,
 	shouldSkipOpenChatNetwork,
@@ -173,6 +175,51 @@ test('isMessageThreadCacheComplete rejects partial pages', () => {
 	assert.equal(
 		isMessageThreadCacheComplete({ items: [{ id: '1' }, { id: '2' }], hasMore: false }),
 		true,
+	);
+});
+
+test('incomplete fresh socket seed must not reuse RQ staleTime', () => {
+	assert.equal(
+		openChatMessagesStaleTime({
+			cacheIsFresh: true,
+			cache: { items: [{ id: '1' }], hasMore: true, cachedAt: Date.now() },
+		}),
+		0,
+	);
+	assert.equal(
+		openChatMessagesStaleTime({
+			cacheIsFresh: true,
+			cache: {
+				items: Array(MESSAGE_PAGE_SIZE).fill({ id: 'x' }),
+				hasMore: true,
+				cachedAt: Date.now(),
+			},
+		}),
+		MESSAGES_CACHE_TTL_MS,
+	);
+});
+
+test('short complete thread can reuse RQ when fresh', () => {
+	assert.equal(
+		openChatMessagesStaleTime({
+			cacheIsFresh: true,
+			cache: { items: [{ id: '1' }, { id: '2' }], hasMore: false },
+		}),
+		MESSAGES_CACHE_TTL_MS,
+	);
+});
+
+test('force provider always uses staleTime 0', () => {
+	assert.equal(
+		openChatMessagesStaleTime({
+			forceProvider: true,
+			cacheIsFresh: true,
+			cache: {
+				items: Array(MESSAGE_PAGE_SIZE).fill({ id: 'x' }),
+				hasMore: true,
+			},
+		}),
+		0,
 	);
 });
 

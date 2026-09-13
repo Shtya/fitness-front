@@ -281,6 +281,7 @@ import {
 	MESSAGE_PAGE_SIZE,
 	MESSAGES_CACHE_TTL_MS,
 	isMessageThreadCacheComplete,
+	openChatMessagesStaleTime,
 	shouldProviderBackfill,
 	shouldReloadOpenChatMessages,
 	shouldSkipOpenChatNetwork,
@@ -324,6 +325,7 @@ import {
 const EMPTY_MESSAGES = [];
 const WHATSAPP_SELECTED_ACCOUNT_KEY = 'wa-selected-account-id';
 const WHATSAPP_PINNED_ONLINE_CONTACT_KEY = 'wa-pinned-online-contact-id';
+const WHATSAPP_SHOW_ONLINE_BAR_KEY = 'wa-show-online-bar';
 const WHATSAPP_ACTIVE_TAB_KEY = 'wa-active-tab';
 const WHATSAPP_CHAT_LIST_COLLAPSED_KEY = 'wa-chat-list-collapsed';
 const WHATSAPP_CHAT_LIST_WIDTH_KEY = 'wa-chat-list-width';
@@ -466,6 +468,43 @@ function writeStoredPinnedOnlineContactId(conversationId, userId) {
 		window.localStorage.setItem(WHATSAPP_PINNED_ONLINE_CONTACT_KEY, conversationId);
 	} catch {
 		// Ignore quota / private-mode failures.
+	}
+}
+
+function readStoredShowOnlineBar(userId) {
+	if (typeof window === 'undefined') return false;
+	try {
+		const scopedUserId = resolveWhatsAppStorageUserId(userId);
+		if (scopedUserId) {
+			const scoped = window.localStorage.getItem(
+				`${WHATSAPP_SHOW_ONLINE_BAR_KEY}:${scopedUserId}`,
+			);
+			if (scoped === '1') return true;
+			if (scoped === '0') return false;
+		}
+		const legacy = window.localStorage.getItem(WHATSAPP_SHOW_ONLINE_BAR_KEY);
+		return legacy === '1';
+	} catch {
+		return false;
+	}
+}
+
+function writeStoredShowOnlineBar(show, userId) {
+	if (typeof window === 'undefined') return;
+	try {
+		const value = show ? '1' : '0';
+		const scopedUserId = resolveWhatsAppStorageUserId(userId);
+		if (scopedUserId) {
+			window.localStorage.setItem(
+				`${WHATSAPP_SHOW_ONLINE_BAR_KEY}:${scopedUserId}`,
+				value,
+			);
+			window.localStorage.removeItem(WHATSAPP_SHOW_ONLINE_BAR_KEY);
+			return;
+		}
+		window.localStorage.setItem(WHATSAPP_SHOW_ONLINE_BAR_KEY, value);
+	} catch {
+		/* ignore */
 	}
 }
 
@@ -741,6 +780,10 @@ const translations = {
 		transcribe: 'Transcribe',
 		expandVideo: 'Expand video',
 		exitVideoFullscreen: 'Exit fullscreen',
+		playVideo: 'Play video',
+		pauseVideo: 'Pause video',
+		muteVideo: 'Mute',
+		unmuteVideo: 'Unmute',
 		recordVoice: 'Record voice message',
 		recordingVoice: 'Recording voice message...',
 		recordingLive: 'LIVE',
@@ -908,6 +951,8 @@ const translations = {
 		pinUpdated: 'Pinned chats updated',
 		connectedNumbers: 'Online contacts',
 		noConnectedNumbers: 'No one online right now',
+		showOnlineBar: 'Show online bar',
+		hideOnlineBar: 'Hide online bar',
 		pinNumber: 'Pin contact',
 		unpinNumber: 'Unpin contact',
 		numberPinned: 'Pinned contact saved',
@@ -1211,6 +1256,10 @@ const translations = {
 		transcribe: 'تحويل إلى نص',
 		expandVideo: 'توسيع الفيديو',
 		exitVideoFullscreen: 'إغلاق ملء الشاشة',
+		playVideo: 'تشغيل الفيديو',
+		pauseVideo: 'إيقاف الفيديو',
+		muteVideo: 'كتم الصوت',
+		unmuteVideo: 'تشغيل الصوت',
 		recordVoice: 'تسجيل رسالة صوتية',
 		recordingVoice: 'جارِ تسجيل رسالة صوتية...',
 		recordingLive: 'مباشر',
@@ -1378,6 +1427,8 @@ const translations = {
 		pinUpdated: 'تم تحديث المحادثات المثبتة',
 		connectedNumbers: 'المتصلون الآن',
 		noConnectedNumbers: 'لا يوجد أحد متصل الآن',
+		showOnlineBar: 'إظهار شريط المتصلين',
+		hideOnlineBar: 'إخفاء شريط المتصلين',
 		pinNumber: 'تثبيت جهة الاتصال',
 		unpinNumber: 'إلغاء تثبيت جهة الاتصال',
 		numberPinned: 'تم حفظ جهة الاتصال المثبتة',
@@ -1895,6 +1946,7 @@ function ImageMessage({
 	mediaWidth = 0,
 	mediaHeight = 0,
 	cacheKey = '',
+	onFullError = null,
 }) {
 	const [loaded, setLoaded] = useState(false);
 	const [broken, setBroken] = useState(false);
@@ -1942,11 +1994,11 @@ function ImageMessage({
 	}, [previewUrl]);
 
 	const previewSrc = previewUrl || null;
-	const hasFull = Boolean(url);
+	const hasFull = Boolean(url) && !broken;
 	const isBroken = Boolean(broken || (unavailable && !hasFull));
 	const isPending =
 		!isBroken &&
-		(loading || (hasFull && !loaded) || (!hasFull && Boolean(previewSrc || loading)));
+		(loading || (Boolean(url) && !loaded && !broken) || (!url && Boolean(previewSrc || loading)));
 	const isSticker = String(className).includes('wa-sticker-asset');
 	const reserveAspect = !cover && !isSticker;
 	const knownWidth = Number(mediaWidth) || 0;
@@ -1963,7 +2015,7 @@ function ImageMessage({
 			rememberMediaDimensions(cacheKey, width, height);
 		}
 	};
-	const showFrame = reserveAspect && (isPending || isBroken) && !hasFull && !previewSrc;
+	const showFrame = reserveAspect && (isPending || isBroken) && !url && !previewSrc;
 	const showSkeleton = !isBroken && previewSrc && !previewReady && !loaded && !showFrame;
 	const showBlockingLoad = isPending && !previewReady;
 	const showSpinnerOnly = isPending && previewReady;
@@ -2016,10 +2068,10 @@ function ImageMessage({
 						cover
 							? 'absolute inset-0 h-full w-full object-cover'
 							: 'absolute inset-0 z-0 h-full w-full object-contain'
-					} ${loaded ? 'is-faded' : 'is-visible'}`}
+					} ${loaded && !broken ? 'is-faded' : isBroken ? 'is-failed-preview' : 'is-visible'}`}
 				/>
 			) : null}
-			{isBroken && !hasFull ? (
+			{isBroken ? (
 				<div
 					className={`wa-photo-state ${
 						cover ? 'absolute inset-0' : 'absolute inset-0'
@@ -2033,7 +2085,7 @@ function ImageMessage({
 					</span>
 					<span className="wa-photo-state__label">{retryLabel}</span>
 				</div>
-			) : hasFull ? (
+			) : url ? (
 				<img
 					ref={bindFullImg}
 					src={url}
@@ -2043,11 +2095,13 @@ function ImageMessage({
 					height={knownHeight > 0 ? Math.round(knownHeight) : undefined}
 					onLoad={event => {
 						setLoaded(true);
+						setBroken(false);
 						rememberNaturalSize(event.currentTarget);
 					}}
 					onError={() => {
-						setBroken(!previewSrc);
+						setBroken(true);
 						setLoaded(false);
+						onFullError?.();
 					}}
 					className={`${fitClass} wa-photo-full ${loaded ? 'is-loaded' : 'is-pending'}`}
 				/>
@@ -2923,19 +2977,31 @@ async function fetchAttachmentContentBlob(attachmentId, { timeout = 60_000 } = {
 	return blob;
 }
 
-async function assertBlobMatchesKind(blob, kind) {
+async function assertBlobMatchesKind(blob, kind, { fileSizeBytes = null } = {}) {
 	const type = String(kind || '').toLowerCase();
-	if (type !== 'video' || !blob) return blob;
-	const mime = String(blob.type || '')
-		.split(';')[0]
-		.trim()
-		.toLowerCase();
-	if (mime.startsWith('image/')) {
-		throw new Error('Video is still a thumbnail');
+	if (!blob) return blob;
+	if (type === 'video') {
+		const mime = String(blob.type || '')
+			.split(';')[0]
+			.trim()
+			.toLowerCase();
+		if (mime.startsWith('image/')) {
+			throw new Error('Video is still a thumbnail');
+		}
+		const header = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+		if (header.length >= 3 && header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) {
+			throw new Error('Video is still a thumbnail');
+		}
+		return blob;
 	}
-	const header = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
-	if (header.length >= 3 && header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) {
-		throw new Error('Video is still a thumbnail');
+	if (type === 'image') {
+		const expected = Number(fileSizeBytes) || 0;
+		if (blob.size > 0 && blob.size < 3_500) {
+			throw new Error('Image is still a thumbnail');
+		}
+		if (expected > 40_000 && blob.size < Math.max(12_000, expected * 0.12)) {
+			throw new Error('Image is still a thumbnail');
+		}
 	}
 	return blob;
 }
@@ -4545,6 +4611,9 @@ function ChatVideoPlayer({
 	downloading = false,
 	durationHint = 0,
 	playLabel = 'Play',
+	pauseLabel = 'Pause',
+	muteLabel = 'Mute',
+	unmuteLabel = 'Unmute',
 	expandLabel = 'Expand video',
 	collapseLabel = 'Exit fullscreen',
 	closeLabel = 'Close',
@@ -4554,9 +4623,18 @@ function ChatVideoPlayer({
 }) {
 	const videoRef = useRef(null);
 	const paintedUrlRef = useRef('');
-	const playbackSnapshotRef = useRef({ time: 0, wasPlaying: false });
+	const playbackSnapshotRef = useRef({
+		time: 0,
+		wasPlaying: false,
+		muted: false,
+		volume: 1,
+	});
+	const seekingRef = useRef(false);
 	const [playing, setPlaying] = useState(false);
 	const [expanded, setExpanded] = useState(false);
+	const [currentTime, setCurrentTime] = useState(0);
+	const [muted, setMuted] = useState(false);
+	const [volume, setVolume] = useState(1);
 	const [duration, setDuration] = useState(() => {
 		const value = Number(durationHint);
 		return Number.isFinite(value) && value > 0 ? value : 0;
@@ -4565,17 +4643,55 @@ function ChatVideoPlayer({
 	useEffect(() => {
 		setPlaying(false);
 		setExpanded(false);
+		setCurrentTime(0);
 		paintedUrlRef.current = '';
 		const hint = Number(durationHint);
 		setDuration(Number.isFinite(hint) && hint > 0 ? hint : 0);
 	}, [url, durationHint]);
 
 	useEffect(() => {
+		const node = videoRef.current;
+		if (!node) return;
+		node.muted = muted;
+		node.volume = Math.min(1, Math.max(0, volume));
+	}, [muted, volume, expanded]);
+
+	useEffect(() => {
 		if (!expanded) return undefined;
 		const previousOverflow = document.body.style.overflow;
 		document.body.style.overflow = 'hidden';
 		const onKeyDown = event => {
-			if (event.key === 'Escape') setExpanded(false);
+			if (event.key === 'Escape') {
+				setExpanded(false);
+				return;
+			}
+			if (event.key === ' ' || event.key === 'k' || event.key === 'K') {
+				event.preventDefault();
+				const node = videoRef.current;
+				if (!node) return;
+				if (node.paused) void node.play().catch(() => {});
+				else node.pause();
+			}
+			if (event.key === 'm' || event.key === 'M') {
+				event.preventDefault();
+				setMuted(current => !current);
+			}
+			if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+				event.preventDefault();
+				const node = videoRef.current;
+				if (!node) return;
+				const delta = event.key === 'ArrowRight' ? 5 : -5;
+				const next = Math.min(
+					Number(node.duration) || 0,
+					Math.max(0, (node.currentTime || 0) + delta),
+				);
+				try {
+					node.currentTime = next;
+					setCurrentTime(next);
+				} catch {
+					/* ignore */
+				}
+			}
 		};
 		window.addEventListener('keydown', onKeyDown);
 		return () => {
@@ -4589,10 +4705,13 @@ function ChatVideoPlayer({
 		const node = videoRef.current;
 		const snap = playbackSnapshotRef.current;
 		if (!node) return;
+		node.muted = snap.muted;
+		node.volume = snap.volume;
 		const resume = () => {
 			if (snap.time > 0.01) {
 				try {
 					node.currentTime = snap.time;
+					setCurrentTime(snap.time);
 				} catch {
 					/* ignore */
 				}
@@ -4623,8 +4742,14 @@ function ChatVideoPlayer({
 	const knownWidth = Number(aspectWidth) || 0;
 	const knownHeight = Number(aspectHeight) || 0;
 	const hasReservedAspect = knownWidth > 0 && knownHeight > 0;
-	const reservedRatio = hasReservedAspect ? `${Math.round(knownWidth)} / ${Math.round(knownHeight)}` : '16 / 9';
+	const reservedRatio = hasReservedAspect
+		? `${Math.round(knownWidth)} / ${Math.round(knownHeight)}`
+		: '16 / 9';
 	const reservedPortrait = hasReservedAspect && knownHeight > knownWidth;
+	const progressMax = duration > 0 ? duration : 0;
+	const progressValue = progressMax > 0 ? Math.min(currentTime, progressMax) : 0;
+	const progressPercent =
+		progressMax > 0 ? Math.min(100, Math.max(0, (progressValue / progressMax) * 100)) : 0;
 
 	const applySize = node => {
 		const width = Number(node?.videoWidth) || 0;
@@ -4632,7 +4757,8 @@ function ChatVideoPlayer({
 		if (cacheKey && width > 0 && height > 0) {
 			rememberMediaDimensions(cacheKey, width, height);
 		}
-		const wrap = node?.parentElement;
+		const stage = node?.parentElement;
+		const wrap = stage?.closest?.('.wa-video-wrap') || stage?.parentElement;
 		const slot = containerRef?.current;
 		if (!wrap || !slot || !width || !height || hasReservedAspect || expanded) return;
 		const portrait = height > width;
@@ -4641,11 +4767,9 @@ function ChatVideoPlayer({
 		wrap.classList.toggle('is-portrait', portrait);
 		wrap.classList.toggle('is-landscape', landscape);
 		wrap.style.setProperty('--wa-video-ar', ratio);
-		if (slot) {
-			slot.classList.toggle('is-portrait', portrait);
-			slot.classList.toggle('is-landscape', landscape);
-			slot.style.setProperty('--wa-video-ar', ratio);
-		}
+		slot.classList.toggle('is-portrait', portrait);
+		slot.classList.toggle('is-landscape', landscape);
+		slot.style.setProperty('--wa-video-ar', ratio);
 	};
 
 	const paintPreview = node => {
@@ -4663,9 +4787,19 @@ function ChatVideoPlayer({
 		}
 	};
 
+	const bindVideoNode = node => {
+		const length = Number(node?.duration);
+		if (Number.isFinite(length) && length > 0) setDuration(length);
+		if (!seekingRef.current) {
+			setCurrentTime(Number(node?.currentTime) || 0);
+		}
+		applySize(node);
+		paintPreview(node);
+	};
+
 	const togglePlayback = event => {
-		event.preventDefault();
-		event.stopPropagation();
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
 		if (selectMode) return;
 		const node = videoRef.current;
 		if (!node) return;
@@ -4676,9 +4810,58 @@ function ChatVideoPlayer({
 		node.pause();
 	};
 
+	const toggleMute = event => {
+		event.preventDefault();
+		event.stopPropagation();
+		if (selectMode) return;
+		setMuted(current => {
+			const next = !current;
+			if (!next && volume <= 0.01) setVolume(0.6);
+			return next;
+		});
+	};
+
+	const onVolumeChange = event => {
+		event.stopPropagation();
+		const next = Number(event.target.value);
+		if (!Number.isFinite(next)) return;
+		const clamped = Math.min(1, Math.max(0, next));
+		setVolume(clamped);
+		setMuted(clamped <= 0.001);
+	};
+
+	const onSeekInput = event => {
+		event.stopPropagation();
+		const next = Number(event.target.value);
+		if (!Number.isFinite(next)) return;
+		seekingRef.current = true;
+		setCurrentTime(next);
+	};
+
+	const onSeekCommit = event => {
+		event.stopPropagation();
+		const node = videoRef.current;
+		const next = Number(event.target.value);
+		seekingRef.current = false;
+		if (!node || !Number.isFinite(next)) return;
+		try {
+			node.currentTime = next;
+			setCurrentTime(next);
+		} catch {
+			/* ignore */
+		}
+	};
+
 	const closeExpanded = useCallback(() => {
+		const node = videoRef.current;
+		playbackSnapshotRef.current = {
+			time: node?.currentTime || currentTime || 0,
+			wasPlaying: node ? !node.paused : playing,
+			muted,
+			volume,
+		};
 		setExpanded(false);
-	}, []);
+	}, [currentTime, muted, playing, volume]);
 
 	const toggleExpanded = event => {
 		event.preventDefault();
@@ -4690,8 +4873,10 @@ function ChatVideoPlayer({
 		}
 		const node = videoRef.current;
 		playbackSnapshotRef.current = {
-			time: node?.currentTime || 0,
-			wasPlaying: node ? !node.paused : false,
+			time: node?.currentTime || currentTime || 0,
+			wasPlaying: node ? !node.paused : playing,
+			muted,
+			volume,
 		};
 		setExpanded(true);
 	};
@@ -4701,156 +4886,88 @@ function ChatVideoPlayer({
 		'--wa-video-ar': reservedRatio,
 	};
 
-	const renderVideoWrap = fullscreen => (
+	const renderControls = fullscreen => (
 		<div
-			className={`wa-video-wrap ${playing ? 'is-playing' : 'is-paused'} ${
-				fullscreen ? 'is-expanded' : ''
-			} ${hasReservedAspect ? (reservedPortrait ? 'is-portrait' : 'is-landscape') : ''} ${
-				selectMode ? 'pointer-events-none' : ''
-			}`}
-			style={fullscreen ? undefined : slotStyle}
-			role={fullscreen ? 'dialog' : undefined}
-			aria-modal={fullscreen ? 'true' : undefined}
-			aria-label={fullscreen ? expandLabel : undefined}
+			className={`wa-video-controls ${fullscreen ? 'is-expanded' : ''}`}
 			onClick={event => event.stopPropagation()}
+			onPointerDown={event => event.stopPropagation()}
 		>
-			{fullscreen ? (
-				<div className="wa-video-viewer-chrome">
-					{typeof onDownload === 'function' && !selectMode ? (
-						<button
-							type="button"
-							className="wa-video-viewer-download"
-							aria-label={downloadLabel}
-							title={downloadLabel}
-							disabled={downloading}
-							onClick={event => {
-								event.preventDefault();
-								event.stopPropagation();
-								if (downloading) return;
-								onDownload(event);
-							}}
-						>
-							{downloading ? (
-								<Loader2 size={20} strokeWidth={2.2} className="animate-spin" />
-							) : (
-								<Download size={20} strokeWidth={2.2} />
-							)}
-						</button>
-					) : null}
-					<button
-						type="button"
-						className="wa-video-viewer-close"
-						aria-label={closeLabel}
-						title={closeLabel}
-						onClick={toggleExpanded}
-					>
-						<X size={22} strokeWidth={2.2} />
-					</button>
-				</div>
-			) : null}
-			{fullscreen ? (
-				<div className="wa-video-stage">
-					<video
-						ref={videoRef}
-						key={url}
-						controls={false}
-						controlsList="nodownload nofullscreen noremoteplayback"
-						disablePictureInPicture
-						playsInline
-						preload="auto"
-						poster={poster || undefined}
-						src={url}
-						className="wa-video-asset"
-						onLoadedMetadata={event => {
-							const node = event.currentTarget;
-							applySize(node);
-							const length = Number(node.duration);
-							if (Number.isFinite(length) && length > 0) setDuration(length);
-							paintPreview(node);
-						}}
-						onLoadedData={event => paintPreview(event.currentTarget)}
-						onPlay={event => {
-							setPlaying(true);
-							pauseAllVoicePlayers();
-							window.dispatchEvent(
-								new CustomEvent('wa-inline-video-play', {
-									detail: { node: event.currentTarget },
-								}),
-							);
-						}}
-						onPause={() => setPlaying(false)}
-						onEnded={event => {
-							setPlaying(false);
-							try {
-								event.currentTarget.currentTime = 0;
-							} catch {
-								/* ignore */
-							}
-						}}
-						onClick={togglePlayback}
-						onError={onError}
+			<button
+				type="button"
+				className="wa-video-controls__btn"
+				aria-label={playing ? pauseLabel : playLabel}
+				title={playing ? pauseLabel : playLabel}
+				onClick={togglePlayback}
+			>
+				{playing ? (
+					<Pause size={fullscreen ? 20 : 18} strokeWidth={2.2} fill="currentColor" />
+				) : (
+					<Play
+						size={fullscreen ? 20 : 18}
+						strokeWidth={2.2}
+						fill="currentColor"
+						className="ms-0.5"
 					/>
-				</div>
-			) : (
-				<video
-					ref={videoRef}
-					key={url}
-					controls={false}
-					controlsList="nodownload nofullscreen noremoteplayback"
-					disablePictureInPicture
-					playsInline
-					preload="auto"
-					poster={poster || undefined}
-					src={url}
-					className="wa-video-asset"
-					onLoadedMetadata={event => {
-						const node = event.currentTarget;
-						applySize(node);
-						const length = Number(node.duration);
-						if (Number.isFinite(length) && length > 0) setDuration(length);
-						paintPreview(node);
-					}}
-					onLoadedData={event => paintPreview(event.currentTarget)}
-					onPlay={event => {
-						setPlaying(true);
-						pauseAllVoicePlayers();
-						window.dispatchEvent(
-							new CustomEvent('wa-inline-video-play', { detail: { node: event.currentTarget } }),
-						);
-					}}
-					onPause={() => setPlaying(false)}
-					onEnded={event => {
-						setPlaying(false);
-						try {
-							event.currentTarget.currentTime = 0;
-						} catch {
-							/* ignore */
-						}
-					}}
-					onClick={togglePlayback}
-					onError={onError}
+				)}
+			</button>
+			<span className="wa-video-controls__time" aria-hidden="true">
+				{formatClock(currentTime)}
+				<span className="wa-video-controls__time-sep">/</span>
+				{formatClock(duration)}
+			</span>
+			<div className="wa-video-controls__seek-wrap">
+				<input
+					type="range"
+					className="wa-video-controls__seek"
+					min={0}
+					max={progressMax || 0}
+					step={0.05}
+					value={progressValue}
+					disabled={progressMax <= 0}
+					aria-label="Seek"
+					style={{ '--wa-video-progress': `${progressPercent}%` }}
+					onChange={onSeekInput}
+					onInput={onSeekInput}
+					onMouseUp={onSeekCommit}
+					onTouchEnd={onSeekCommit}
+					onKeyUp={onSeekCommit}
+					onBlur={onSeekCommit}
 				/>
-			)}
-			<span className="wa-video-scrim" aria-hidden="true" />
-			{!playing && !selectMode ? (
+			</div>
+			<div className="wa-video-controls__volume">
 				<button
 					type="button"
-					className="wa-video-play"
-					aria-label={playLabel}
-					onClick={togglePlayback}
+					className="wa-video-controls__btn"
+					aria-label={muted || volume <= 0.001 ? unmuteLabel : muteLabel}
+					title={muted || volume <= 0.001 ? unmuteLabel : muteLabel}
+					aria-pressed={!(muted || volume <= 0.001)}
+					onClick={toggleMute}
 				>
-					<span className="wa-video-play__icon" aria-hidden="true">
-						<Play size={22} strokeWidth={2.2} fill="currentColor" className="ms-0.5" />
-					</span>
+					{muted || volume <= 0.001 ? (
+						<VolumeX size={fullscreen ? 20 : 18} strokeWidth={2.2} />
+					) : (
+						<Volume2 size={fullscreen ? 20 : 18} strokeWidth={2.2} />
+					)}
 				</button>
-			) : null}
-			{!playing && duration > 0 && !fullscreen ? (
-				<span className="wa-video-duration">{formatClock(duration)}</span>
-			) : null}
-			{typeof onTranscribe === 'function' && !selectMode && !fullscreen ? (
+				<input
+					type="range"
+					className="wa-video-controls__volume-slider"
+					min={0}
+					max={1}
+					step={0.01}
+					value={muted ? 0 : volume}
+					aria-label="Volume"
+					style={{
+						'--wa-video-volume': `${Math.round((muted ? 0 : volume) * 100)}%`,
+					}}
+					onChange={onVolumeChange}
+					onInput={onVolumeChange}
+				/>
+			</div>
+			{typeof onTranscribe === 'function' && !fullscreen ? (
 				<button
 					type="button"
-					className="wa-video-transcribe"
+					className="wa-video-controls__btn"
 					title={transcribeLabel}
 					aria-label={transcribeLabel}
 					onClick={event => {
@@ -4862,10 +4979,10 @@ function ChatVideoPlayer({
 					<AudioLines size={16} strokeWidth={2.1} />
 				</button>
 			) : null}
-			{typeof onDownload === 'function' && !selectMode && !fullscreen ? (
+			{typeof onDownload === 'function' ? (
 				<button
 					type="button"
-					className="wa-video-download"
+					className="wa-video-controls__btn"
 					title={downloadLabel}
 					aria-label={downloadLabel}
 					disabled={downloading}
@@ -4883,22 +5000,107 @@ function ChatVideoPlayer({
 					)}
 				</button>
 			) : null}
-			{!selectMode ? (
+			<button
+				type="button"
+				className="wa-video-controls__btn"
+				title={fullscreen ? collapseLabel : expandLabel}
+				aria-label={fullscreen ? collapseLabel : expandLabel}
+				aria-pressed={fullscreen}
+				onClick={toggleExpanded}
+			>
+				{fullscreen ? (
+					<Minimize2 size={fullscreen ? 20 : 18} strokeWidth={2.2} />
+				) : (
+					<Maximize2 size={fullscreen ? 20 : 18} strokeWidth={2.2} />
+				)}
+			</button>
+		</div>
+	);
+
+	const renderVideoWrap = fullscreen => (
+		<div
+			className={`wa-video-wrap ${playing ? 'is-playing' : 'is-paused'} ${
+				fullscreen ? 'is-expanded' : ''
+			} ${hasReservedAspect ? (reservedPortrait ? 'is-portrait' : 'is-landscape') : ''} ${
+				selectMode ? 'pointer-events-none' : ''
+			}`}
+			style={fullscreen ? undefined : slotStyle}
+			role={fullscreen ? 'dialog' : undefined}
+			aria-modal={fullscreen ? 'true' : undefined}
+			aria-label={fullscreen ? expandLabel : undefined}
+			onClick={event => event.stopPropagation()}
+		>
+			{fullscreen ? (
+				<div className="wa-video-viewer-chrome">
+					<button
+						type="button"
+						className="wa-video-viewer-close"
+						aria-label={closeLabel}
+						title={closeLabel}
+						onClick={toggleExpanded}
+					>
+						<X size={22} strokeWidth={2.2} />
+					</button>
+				</div>
+			) : null}
+			<div className="wa-video-stage">
+				<video
+					ref={videoRef}
+					key={`${url}:${fullscreen ? 'fs' : 'inline'}`}
+					controls={false}
+					controlsList="nodownload nofullscreen noremoteplayback"
+					disablePictureInPicture
+					playsInline
+					preload="auto"
+					poster={poster || undefined}
+					src={url}
+					className="wa-video-asset"
+					onLoadedMetadata={event => bindVideoNode(event.currentTarget)}
+					onLoadedData={event => paintPreview(event.currentTarget)}
+					onDurationChange={event => {
+						const length = Number(event.currentTarget.duration);
+						if (Number.isFinite(length) && length > 0) setDuration(length);
+					}}
+					onTimeUpdate={event => {
+						if (seekingRef.current) return;
+						setCurrentTime(Number(event.currentTarget.currentTime) || 0);
+					}}
+					onPlay={event => {
+						setPlaying(true);
+						pauseAllVoicePlayers();
+						window.dispatchEvent(
+							new CustomEvent('wa-inline-video-play', {
+								detail: { node: event.currentTarget },
+							}),
+						);
+					}}
+					onPause={() => setPlaying(false)}
+					onEnded={event => {
+						setPlaying(false);
+						try {
+							event.currentTarget.currentTime = 0;
+							setCurrentTime(0);
+						} catch {
+							/* ignore */
+						}
+					}}
+					onClick={togglePlayback}
+					onError={onError}
+				/>
+			</div>
+			{!selectMode && !playing ? (
 				<button
 					type="button"
-					className="wa-video-expand"
-					title={fullscreen ? collapseLabel : expandLabel}
-					aria-label={fullscreen ? collapseLabel : expandLabel}
-					aria-pressed={fullscreen}
-					onClick={toggleExpanded}
+					className="wa-video-play"
+					aria-label={playLabel}
+					onClick={togglePlayback}
 				>
-					{fullscreen ? (
-						<Minimize2 size={16} strokeWidth={2.2} />
-					) : (
-						<Maximize2 size={16} strokeWidth={2.2} />
-					)}
+					<span className="wa-video-play__icon" aria-hidden="true">
+						<Play size={22} strokeWidth={2.2} fill="currentColor" className="ms-0.5" />
+					</span>
 				</button>
 			) : null}
+			{!selectMode ? renderControls(fullscreen) : null}
 		</div>
 	);
 
@@ -5035,17 +5237,22 @@ export function MediaAttachment({
 					priority: true,
 					kind,
 				});
-				return assertBlobMatchesKind(blob, kind);
+				return assertBlobMatchesKind(blob, kind, {
+					fileSizeBytes: attachment?.fileSizeBytes,
+				});
 			} catch (firstError) {
 				// Short retry — media often fails while WA is still hydrating.
 				await new Promise(resolve => window.setTimeout(resolve, 500));
 				try {
+					forgetAttachmentBlob(String(attachment.id || ''));
 					const blob = await requestAttachmentBlob(attachment.id, {
 						timeout: isHeavyMedia ? 180_000 : 60_000,
 						priority: true,
 						kind,
 					});
-					return assertBlobMatchesKind(blob, kind);
+					return assertBlobMatchesKind(blob, kind, {
+						fileSizeBytes: attachment?.fileSizeBytes,
+					});
 				} catch {
 					throw firstError;
 				}
@@ -5110,14 +5317,15 @@ export function MediaAttachment({
 
 	useEffect(() => {
 		if (!failed || !sessionReady || !isNearViewport) return undefined;
-		if (autoRetryCountRef.current >= 2) return undefined;
+		if (autoRetryCountRef.current >= 4) return undefined;
 		const timer = window.setTimeout(() => {
 			autoRetryCountRef.current += 1;
+			forgetAttachmentBlob(String(attachment?.id || ''));
 			setFailed(false);
 			setRetryNonce(value => value + 1);
-		}, 1200);
+		}, 900 * Math.max(1, autoRetryCountRef.current + 1));
 		return () => window.clearTimeout(timer);
-	}, [failed, sessionReady, isNearViewport]);
+	}, [failed, sessionReady, isNearViewport, attachment?.id]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -5226,7 +5434,7 @@ export function MediaAttachment({
 						detail.includes('thumbnail') || detail.includes('still a thumbnail');
 					if (
 						isThumbnail &&
-						type === 'video' &&
+						(type === 'video' || type === 'image') &&
 						autoRetryCountRef.current < 6
 					) {
 						autoRetryCountRef.current += 1;
@@ -5435,6 +5643,12 @@ export function MediaAttachment({
 					cacheKey={attachment?.id}
 					retryLabel={labels.tapToRetry || labels.retry || 'Tap to retry'}
 					loadingLabel={labels.loadingMedia || 'Loading media…'}
+					onFullError={() => {
+						forgetAttachmentBlob(String(attachment?.id || ''));
+						setUrl(null);
+						setFailed(true);
+						setLoading(false);
+					}}
 					onOpen={() => {
 						if (selectMode) return;
 						if (url) {
@@ -5442,6 +5656,7 @@ export function MediaAttachment({
 							return;
 						}
 						autoRetryCountRef.current = 0;
+						forgetAttachmentBlob(String(attachment?.id || ''));
 						setFailed(false);
 						setLoading(true);
 						setRetryNonce(value => value + 1);
@@ -5645,6 +5860,9 @@ export function MediaAttachment({
 				aspectHeight={mediaDims?.height}
 				cacheKey={attachment?.id}
 				playLabel={labels.playVideo || labels.play || 'Play'}
+				pauseLabel={labels.pauseVideo || labels.recordingPause || 'Pause'}
+				muteLabel={labels.muteVideo || 'Mute'}
+				unmuteLabel={labels.unmuteVideo || 'Unmute'}
 				expandLabel={labels.expandVideo || 'Expand video'}
 				collapseLabel={labels.exitVideoFullscreen || 'Exit fullscreen'}
 				closeLabel={labels.close || 'Close'}
@@ -8251,6 +8469,7 @@ function WhatsAppWorkspaceContent() {
 	const [accounts, setAccounts] = useState([]);
 	const [accountId, setAccountId] = useState(null);
 	const [onlineContacts, setOnlineContacts] = useState([]);
+	const [showOnlineBar, setShowOnlineBar] = useState(() => readStoredShowOnlineBar(null));
 	const [pinnedOnlineContactId, setPinnedOnlineContactId] = useState(null);
 	const [conversations, setConversations] = useState([]);
 	const [conversationPage, setConversationPage] = useState(1);
@@ -9907,6 +10126,15 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		const pinnedStoredId = readStoredPinnedOnlineContactId(currentUserId);
 		setPinnedOnlineContactId(pinnedStoredId);
+		setShowOnlineBar(readStoredShowOnlineBar(currentUserId));
+	}, [currentUserId]);
+
+	const toggleShowOnlineBar = useCallback(() => {
+		setShowOnlineBar(current => {
+			const next = !current;
+			writeStoredShowOnlineBar(next, currentUserId);
+			return next;
+		});
 	}, [currentUserId]);
 
 	const presenceBarContacts = useMemo(() => {
@@ -10724,8 +10952,18 @@ function WhatsAppWorkspaceContent() {
 			setHasMoreMessages(false);
 		}
 		try {
+			const queryKey = whatsappKeys.messages(id, { starredOnly });
+			const threadComplete = isMessageThreadCacheComplete(cached);
+			// Socket / inbox often seeds RQ with 1 fresh row. A long staleTime then
+			// makes fetchQuery return that partial page and never hit Postgres.
+			if (!threadComplete || forceProvider) {
+				await queryClient.cancelQueries({ queryKey });
+				if (!threadComplete) {
+					queryClient.removeQueries({ queryKey });
+				}
+			}
 			const storedItems = await queryClient.fetchQuery({
-				queryKey: whatsappKeys.messages(id, { starredOnly }),
+				queryKey,
 				queryFn: async ({ signal }) => {
 					const items = await fetchMessages(id, {
 						limit: MESSAGE_PAGE_SIZE,
@@ -10738,7 +10976,11 @@ function WhatsAppWorkspaceContent() {
 						cachedAt: Date.now(),
 					};
 				},
-				staleTime: cacheIsFresh && !forceProvider ? MESSAGES_CACHE_TTL : 0,
+				staleTime: openChatMessagesStaleTime({
+					forceProvider,
+					cache: cached,
+					cacheIsFresh,
+				}),
 			});
 			if (!isCurrentRequest()) return;
 			const pageItems = Array.isArray(storedItems)
@@ -10754,9 +10996,9 @@ function WhatsAppWorkspaceContent() {
 				items = items.filter(item => item?.isStarred);
 			}
 			const storedPageIsFull = pageItems.length >= MESSAGE_PAGE_SIZE;
-			const initialHasMore =
-				Boolean(currentCache?.hasMore ?? cached?.hasMore ?? storedItems?.hasMore) ||
-				storedPageIsFull;
+			// First-page GET is authoritative — do not keep socket/preview hasMore=true
+			// after Postgres returned a short page (that falsely shows “Load older”).
+			const initialHasMore = storedPageIsFull;
 			const seededHydratedAt =
 				currentCache?.providerHydratedAt ||
 				cached?.providerHydratedAt ||
@@ -11944,17 +12186,19 @@ function WhatsAppWorkspaceContent() {
 					[event.payload],
 					targetConversationId,
 				);
-				messagesCacheRef.current.set(targetConversationId, {
+				const previousComplete = isMessageThreadCacheComplete(previous);
+				const nextEntry = {
 					items: nextCached,
-					hasMore: previous?.hasMore ?? true,
+					// Socket-only seeds must keep hasMore true so open-chat
+					// treats them as incomplete and refetches Postgres.
+					hasMore: previousComplete ? previous?.hasMore !== false : true,
 					cachedAt: Date.now(),
 					providerHydratedAt: previous?.providerHydratedAt || 0,
-				});
-				queryClient.setQueryData(whatsappKeys.messages(targetConversationId), {
-					items: nextCached,
-					hasMore: previous?.hasMore ?? true,
-					cachedAt: Date.now(),
-				});
+					lastProviderSyncAt: previous?.lastProviderSyncAt || null,
+					lastSyncReason: previous?.lastSyncReason || null,
+				};
+				// Adapter writes RQ; incomplete pages are forced to refetch in loadMessages.
+				messagesCacheRef.current.set(targetConversationId, nextEntry);
 				if (targetConversationId === activeConversationId) {
 					const importantView =
 						conversationFilterRef.current === 'important' ||
@@ -18111,6 +18355,7 @@ function WhatsAppWorkspaceContent() {
 
 				{isConversationWorkspaceTab(activeTab) && (
 					<div className="wa-chat-workspace flex h-full min-h-0 flex-col">
+					{showOnlineBar ? (
 					<OnlineContactsBar
 						contacts={presenceBarContacts}
 						pinnedId={pinnedOnlineContactId}
@@ -18119,6 +18364,7 @@ function WhatsAppWorkspaceContent() {
 						onTogglePin={togglePinnedOnlineContact}
 						labels={t}
 					/>
+					) : null}
 					<Card
 						className={`wa-chat-card min-h-0 flex-1 grid h-full min-h-[600px] overflow-hidden min-[769px]:overflow-visible max-[768px]:min-h-0 max-[768px]:rounded-none max-[768px]:border-0 ${
 							chatListCollapsed ? 'is-list-collapsed' : ''
@@ -18283,6 +18529,26 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										</div>
 										<div className="wa-desktop-chat-list-actions">
+											<button
+												type="button"
+												onClick={toggleShowOnlineBar}
+												aria-pressed={showOnlineBar}
+												aria-label={
+													showOnlineBar ? t.hideOnlineBar : t.showOnlineBar
+												}
+												title={
+													showOnlineBar ? t.hideOnlineBar : t.showOnlineBar
+												}
+												className={`wa-header-icon-btn ${
+													showOnlineBar ? 'is-active' : ''
+												}`}
+											>
+												{showOnlineBar ? (
+													<Eye size={18} strokeWidth={2.1} />
+												) : (
+													<EyeOff size={18} strokeWidth={2.1} />
+												)}
+											</button>
 											<WhatsAppPrivacyBlurControl
 												value={privacyBlur}
 												onChange={setPrivacyBlur}

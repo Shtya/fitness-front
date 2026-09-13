@@ -3,6 +3,10 @@
  *
  * Never treat “fewer than one page of messages” as “must re-sync from phone”.
  * Short threads that are already hydrated stay on Postgres + socket until stale.
+ *
+ * Critical: a lone socket / inbox-preview row written into React Query must NOT
+ * use a long staleTime — otherwise open-chat skips GET and the pane stays at
+ * 1–2 messages with a misleading “Load older” button.
  */
 
 export const MESSAGE_PAGE_SIZE = 100;
@@ -38,6 +42,23 @@ export function isMessageThreadCacheComplete(
 	// A lone inbox preview / prefetch row is not a hydrated thread.
 	if (cache.hasMore === false) return items.length > 1;
 	return false;
+}
+
+/**
+ * React Query staleTime for open-chat fetchQuery.
+ * Incomplete socket/inbox seeds must always refetch Postgres (staleTime 0).
+ */
+export function openChatMessagesStaleTime({
+	forceProvider = false,
+	cache = null,
+	cacheIsFresh = false,
+	pageSize = MESSAGE_PAGE_SIZE,
+	freshTtlMs = MESSAGES_CACHE_TTL_MS,
+} = {}) {
+	if (forceProvider) return 0;
+	if (!cacheIsFresh) return 0;
+	if (!isMessageThreadCacheComplete(cache, pageSize)) return 0;
+	return freshTtlMs;
 }
 
 /** True when open-chat must hit Postgres (partial preview / IDB row is not enough). */
