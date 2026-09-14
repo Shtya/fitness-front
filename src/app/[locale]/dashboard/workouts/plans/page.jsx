@@ -598,14 +598,14 @@ export default function PlansPage() {
 							icon: <PencilLine />,
 							tooltip: t('actions.edit'),
 							variant: 'amber',
-							hidden: row.raw?.adminId == null,
+							hidden: row.raw?.adminId == null && String(user?.role || '').toLowerCase() !== 'super_admin',
 							onClick: r => onEdit?.(r),
 						},
 						{
 							icon: <Trash2 />,
 							tooltip: t('actions.delete'),
 							variant: 'red',
-							hidden: row.raw?.adminId == null,
+							hidden: row.raw?.adminId == null && String(user?.role || '').toLowerCase() !== 'super_admin',
 							onClick: r => onDelete?.(r.id),
 						},
 					]}

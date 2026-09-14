@@ -437,6 +437,7 @@ export default function ExercisesPage() {
 				t={t}
 				loading={loading}
 				items={items}
+				canManageGlobal={String(user?.role || '').toLowerCase() === 'super_admin'}
 				onView={setPreview}
 				onEdit={setEditRow}
 				onDelete={askDelete}
@@ -510,7 +511,7 @@ const SkeletonCard = () => (
 	</div>
 );
 
-const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, t }) => {
+const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, canManageGlobal, t }) => {
 	if (loading) {
 		return (
 			<div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
@@ -535,16 +536,28 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, 
 
 	return (
 		<div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
-			{items.map(e => <ExerciseCard key={e.id} exercise={e} t={t} onView={onView} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} />)}
+			{items.map(e => (
+				<ExerciseCard
+					key={e.id}
+					exercise={e}
+					t={t}
+					canManageGlobal={canManageGlobal}
+					onView={onView}
+					onEdit={onEdit}
+					onDelete={onDelete}
+					onDuplicate={onDuplicate}
+				/>
+			))}
 		</div>
 	);
 });
 
 /** Individual card — extracted for clarity and memoization */
-const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplicate }) => {
+const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplicate, canManageGlobal }) => {
 	const hasImg = Boolean(e.img);
 	const sets = e.targetSets ?? 3;
 	const rest = e.rest ?? 90;
+	const hideOwnerActions = e?.adminId == null && !canManageGlobal;
 
 	return (
 		<motion.div
@@ -596,7 +609,7 @@ const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplica
 									tooltip: t('actions.edit'),
 									variant: 'amber',
 									size: 'sm',
-									hidden: e?.adminId == null,
+									hidden: hideOwnerActions,
 									onClick: row => onEdit?.(row),
 								},
 								{
@@ -611,7 +624,7 @@ const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplica
 									tooltip: t('actions.delete'),
 									variant: 'red',
 									size: 'sm',
-									hidden: e?.adminId == null,
+									hidden: hideOwnerActions,
 									onClick: row => onDelete?.(row.id),
 								},
 							]}
