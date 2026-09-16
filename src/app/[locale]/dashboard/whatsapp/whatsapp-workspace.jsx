@@ -111,6 +111,7 @@ import {
 import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
 import CloneChatVoicePanel from './voice-changer/CloneChatVoicePanel';
+import VideoToVoiceDialog from './video-to-voice/VideoToVoiceDialog';
 import ScheduleMessageDialog from './schedule-message/ScheduleMessageDialog';
 import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
 import {
@@ -4649,7 +4650,6 @@ function ChatVideoPlayer({
 		volume: 1,
 	});
 	const seekingRef = useRef(false);
-	const menuRef = useRef(null);
 	const [playing, setPlaying] = useState(false);
 	const [expanded, setExpanded] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -4673,8 +4673,11 @@ function ChatVideoPlayer({
 
 	useEffect(() => {
 		if (!menuOpen) return undefined;
+		// Matched by attribute rather than ref containment: the fullscreen viewer
+		// renders through a portal, so a single ref cannot cover both trees and the
+		// menu would close before its own click landed.
 		const onAway = event => {
-			if (menuRef.current?.contains(event.target)) return;
+			if (event.target?.closest?.('[data-wa-video-menu]')) return;
 			setMenuOpen(false);
 		};
 		const onKey = event => {
@@ -5032,7 +5035,7 @@ function ChatVideoPlayer({
 				/>
 			</div>
 			{menuItems.length ? (
-				<div className="wa-video-controls__more" ref={fullscreen ? undefined : menuRef}>
+				<div className="wa-video-controls__more" data-wa-video-menu>
 					<button
 						type="button"
 						className="wa-video-controls__btn"
@@ -8717,6 +8720,8 @@ function WhatsAppWorkspaceContent() {
 	const cloneVoiceHistoryRef = useRef(new Map());
 	const [voiceChanging, setVoiceChanging] = useState(false);
 	const [sendingVideoAsVoiceId, setSendingVideoAsVoiceId] = useState('');
+	/** `{ messageId, attachmentId }` while the video → voice editor is open. */
+	const [videoToVoiceTarget, setVideoToVoiceTarget] = useState(null);
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
 	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
 	const draftRef = useRef('');
@@ -13955,24 +13960,34 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	/** FFmpeg strips the video track server-side; the result arrives as a normal PTT. */
-	const sendVideoAsVoice = async (message, attachment) => {
+	/** Opens the mini audio editor; the actual conversion happens on submit. */
+	const openVideoToVoiceEditor = (message, attachment) => {
 		const attachmentId = String(attachment?.id || '');
 		if (!attachmentId || !conversationId) return;
-		if (sendingVideoAsVoiceId) return;
 		if (!isPersistedAttachmentId(attachmentId)) {
 			toast.error(t.sendAsVoiceFailed);
 			return;
 		}
-		setSendingVideoAsVoiceId(message?.id || attachmentId);
+		setVideoToVoiceTarget({ messageId: message?.id || attachmentId, attachmentId });
+	};
+
+	/**
+	 * FFmpeg (plus ElevenLabs isolation when asked) does the work server-side, so
+	 * the result arrives through the socket as a normal PTT message.
+	 */
+	const sendVideoAsVoice = async (attachmentId, editOptions) => {
+		if (!attachmentId || !conversationId || sendingVideoAsVoiceId) return;
+		setSendingVideoAsVoiceId(attachmentId);
 		toast.loading(t.sendingAsVoice, { id: 'wa-video-as-voice' });
 		try {
 			await api.post(
 				`/whatsapp/conversations/${conversationId}/attachments/${attachmentId}/send-as-voice`,
-				{ clientMessageId: newClientMessageId() },
+				{ ...(editOptions || {}), clientMessageId: newClientMessageId() },
 			);
 			toast.success(t.sendAsVoiceDone, { id: 'wa-video-as-voice' });
+			setVideoToVoiceTarget(null);
 		} catch (error) {
+			// Keep the editor open on failure so the settings are not lost.
 			toast.error(error?.response?.data?.message || t.sendAsVoiceFailed, {
 				id: 'wa-video-as-voice',
 			});
@@ -19840,6 +19855,11 @@ function WhatsAppWorkspaceContent() {
 										onTouchMove={() => {
 											lastThreadGestureAtRef.current = Date.now();
 										}}
+										// Dragging the scrollbar emits neither wheel nor touchmove, so
+										// without this the drag-to-top gesture could never page in history.
+										onPointerDown={() => {
+											lastThreadGestureAtRef.current = Date.now();
+										}}
 										onKeyDown={event => {
 											if (
 												[
@@ -20680,10 +20700,12 @@ function WhatsAppWorkspaceContent() {
 																						: null
 																				}
 																				onSendAsVoice={attachment => {
-																					void sendVideoAsVoice(message, attachment);
+																					openVideoToVoiceEditor(message, attachment);
 																				}}
 																				sendAsVoiceLabel={t.sendAsVoice}
-																				sendingAsVoice={sendingVideoAsVoiceId === message.id}
+																				// The target stays set while sending, so this covers both
+																				// "editor open" and "conversion in flight".
+																				sendingAsVoice={videoToVoiceTarget?.messageId === message.id}
 																			/>
 																		)
 																		: !isDeleted && fallbackMediaPreview ? (
@@ -23257,6 +23279,16 @@ function WhatsAppWorkspaceContent() {
 					voiceChangerSettingsRef.current = data;
 					setVoiceChangerSettings(data);
 				}}
+			/>
+			<VideoToVoiceDialog
+				open={Boolean(videoToVoiceTarget)}
+				attachmentId={videoToVoiceTarget?.attachmentId || ''}
+				locale={locale}
+				sending={Boolean(sendingVideoAsVoiceId)}
+				onClose={() => setVideoToVoiceTarget(null)}
+				onSend={editOptions =>
+					sendVideoAsVoice(videoToVoiceTarget?.attachmentId, editOptions)
+				}
 			/>
 			{transcriptionSources?.length ? (
 				<Suspense fallback={null}>
