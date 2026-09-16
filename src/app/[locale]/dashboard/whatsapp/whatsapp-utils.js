@@ -1063,6 +1063,104 @@ export function firstMessageLink(text) {
 	}
 }
 
+/**
+ * Hosts whose videos the downloader can handle, mapped to the label we show.
+ *
+ * Kept as host suffixes rather than a regex so `evil-tiktok.com` cannot pass as
+ * TikTok — matching is on a full label boundary.
+ */
+const SOCIAL_VIDEO_HOSTS = [
+	{ suffix: 'tiktok.com', platform: 'tiktok' },
+	{ suffix: 'instagram.com', platform: 'instagram' },
+	{ suffix: 'instagr.am', platform: 'instagram' },
+	{ suffix: 'facebook.com', platform: 'facebook' },
+	{ suffix: 'fb.watch', platform: 'facebook' },
+	{ suffix: 'fb.com', platform: 'facebook' },
+];
+
+/**
+ * Prefilled name for a library item, so the save dialog is never blank.
+ *
+ * Prefers the original file name because that is what the user recognises; falls
+ * back to a media label plus the message time, which stays unique enough to tell two
+ * saves of the same kind apart in a folder listing.
+ */
+export function defaultLibraryItemTitle({
+	fileName = '',
+	type = '',
+	timestamp = null,
+	locale = 'en',
+} = {}) {
+	const ar = locale === 'ar';
+	const base = String(fileName || '')
+		.split(/[\\/]/)
+		.pop()
+		.replace(/\.[a-z0-9]{1,6}$/i, '')
+		.trim();
+	if (base) return base.slice(0, 120);
+
+	const kind = String(type || '').toLowerCase();
+	const label = ['ptt', 'voice'].includes(kind)
+		? ar
+			? 'رسالة صوتية'
+			: 'Voice note'
+		: kind === 'audio'
+			? ar
+				? 'مقطع صوتي'
+				: 'Audio'
+			: kind === 'video'
+				? ar
+					? 'فيديو'
+					: 'Video'
+				: kind === 'image'
+					? ar
+						? 'صورة'
+						: 'Image'
+					: ar
+						? 'ملف'
+						: 'File';
+
+	const date = timestamp ? new Date(timestamp) : null;
+	if (!date || Number.isNaN(date.getTime())) return label;
+	const stamp = date.toLocaleString(ar ? 'ar' : 'en', {
+		day: '2-digit',
+		month: 'short',
+		hour: '2-digit',
+		minute: '2-digit',
+	});
+	return `${label} — ${stamp}`;
+}
+
+export function socialVideoPlatform(href) {
+	let hostname = '';
+	try {
+		const parsed = new URL(String(href || ''));
+		if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+		hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+	} catch {
+		return null;
+	}
+	const match = SOCIAL_VIDEO_HOSTS.find(
+		entry => hostname === entry.suffix || hostname.endsWith(`.${entry.suffix}`),
+	);
+	return match ? match.platform : null;
+}
+
+/**
+ * First downloadable social video link in a message, or `null`.
+ *
+ * Reuses `messageTextSegments` so detection matches exactly what is rendered as a
+ * link — a second URL regex would inevitably drift from it.
+ */
+export function firstSocialVideoLink(text) {
+	for (const segment of messageTextSegments(text)) {
+		if (segment.type !== 'link') continue;
+		const platform = socialVideoPlatform(segment.href);
+		if (platform) return { href: segment.href, platform };
+	}
+	return null;
+}
+
 export function textWithoutFirstLink(text) {
 	const segments = messageTextSegments(text);
 	let skipped = false;
@@ -1975,6 +2073,36 @@ export function findThreadAnchorRow(box, pending) {
 	return null;
 }
 
+/**
+ * Whether the virtualizer should shift `scrollTop` after a row's estimated height
+ * is replaced by its measured height.
+ *
+ * This answers a purely geometric question: a row that sits above the fold grew or
+ * shrank off-screen, so the delta must be absorbed by `scrollTop` or everything the
+ * user is looking at slides. It must NOT be conditioned on "are we pinned to the
+ * bottom" or "is the user scrolling" — refusing the correction is what let ~90
+ * unmeasured rows of a 100-message page drift the thread into the middle on open,
+ * because the app's own programmatic scrolls mark the thread as user-scrolling.
+ *
+ * `firstMeasure` widens the rule to rows that merely start above the fold: on the
+ * very first measurement the whole estimated block above the viewport is suspect,
+ * whereas a re-measured row spanning the fold is usually growing at its bottom
+ * (visible) edge and must be left alone.
+ */
+export function shouldCompensateRowResize({
+	rowStart,
+	rowSize,
+	scrollOffset,
+	firstMeasure = false,
+} = {}) {
+	const start = Number(rowStart);
+	const offset = Number(scrollOffset);
+	if (!Number.isFinite(start) || !Number.isFinite(offset)) return false;
+	if (firstMeasure) return start < offset;
+	const size = Number(rowSize);
+	return start + (Number.isFinite(size) ? size : 0) <= offset;
+}
+
 export const ANCHORED_MENU_GAP_PX = 8;
 export const ANCHORED_MENU_MARGIN_PX = 12;
 
@@ -1997,7 +2125,13 @@ export function computeAnchoredMenuPosition(
 	const viewportW = Number(options.viewportW) || (typeof window === 'undefined' ? 1280 : window.innerWidth || 1280);
 	const viewportH = Number(options.viewportH) || (typeof window === 'undefined' ? 720 : window.innerHeight || 720);
 	const width = Math.min(menuSize.width, viewportW - margin * 2);
-	const maxHeight = Math.min(menuSize.height, viewportH - margin * 2);
+	// Two distinct numbers that must not be conflated:
+	//   `maxHeight` is the cap handed to CSS. Only the viewport may cap the menu — a
+	//   tighter value silently clips options, and because the caller measures the
+	//   element it just capped, a tighter value also feeds itself forever.
+	//   `contentHeight` is the menu's natural height, used purely to place it.
+	const maxHeight = viewportH - margin * 2;
+	const contentHeight = Math.min(Math.max(0, Number(menuSize.height) || 0) || maxHeight, maxHeight);
 	const rect = anchorRect || {
 		top: margin,
 		bottom: margin + 32,
@@ -2010,9 +2144,11 @@ export function computeAnchoredMenuPosition(
 	const spaceAbove = rect.top - margin;
 	// Prefer the side with more room, but only flip when the menu genuinely does
 	// not fit below — flipping early makes the menu jump around while typing.
-	const openUp = spaceBelow < maxHeight && spaceAbove > spaceBelow;
-	let top = openUp ? rect.top - gap - maxHeight : rect.bottom + gap;
-	top = Math.max(margin, Math.min(top, viewportH - maxHeight - margin));
+	const openUp = spaceBelow < contentHeight && spaceAbove > spaceBelow;
+	let top = openUp ? rect.top - gap - contentHeight : rect.bottom + gap;
+	// Shift the menu so the whole of its content fits on screen, rather than
+	// shortening it to whatever happens to be free below the anchor.
+	top = Math.max(margin, Math.min(top, viewportH - contentHeight - margin));
 	let left = mine ? rect.right - width : rect.left;
 	left = Math.max(margin, Math.min(left, viewportW - width - margin));
 	return {
@@ -2020,6 +2156,7 @@ export function computeAnchoredMenuPosition(
 		left,
 		width,
 		maxHeight,
+		contentHeight,
 		placement: openUp ? 'top' : 'bottom',
 	};
 }

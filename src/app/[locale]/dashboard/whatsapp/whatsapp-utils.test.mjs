@@ -58,6 +58,10 @@ import {
 	shouldShowJumpToBottom,
 	shouldAutoLoadOlder,
 	computeAnchoredMenuPosition,
+	shouldCompensateRowResize,
+	firstSocialVideoLink,
+	socialVideoPlatform,
+	defaultLibraryItemTitle,
 	THREAD_PIN_THRESHOLD_PX,
 	THREAD_JUMP_BUTTON_THRESHOLD_PX,
 	THREAD_NEAR_BOTTOM_THRESHOLD_PX,
@@ -1366,14 +1370,161 @@ test('deleted message helpers detect tombstones and quote previews', () => {
 	assert.equal(preview.isDeleted, true);
 });
 
+test('defaultLibraryItemTitle prefers the original file name without its extension', () => {
+	assert.equal(defaultLibraryItemTitle({ fileName: 'family-trip.mp4' }), 'family-trip');
+	assert.equal(defaultLibraryItemTitle({ fileName: 'folder/clip.final.mov' }), 'clip.final');
+	assert.equal(defaultLibraryItemTitle({ fileName: 'no-extension' }), 'no-extension');
+});
+
+test('defaultLibraryItemTitle falls back to a media label plus the message time', () => {
+	const at = '2026-03-04T18:45:00.000Z';
+	const title = defaultLibraryItemTitle({ type: 'ptt', timestamp: at, locale: 'en' });
+	assert.ok(title.startsWith('Voice note — '), title);
+	assert.equal(defaultLibraryItemTitle({ type: 'video' }), 'Video');
+	assert.equal(defaultLibraryItemTitle({ type: 'image' }), 'Image');
+	assert.equal(defaultLibraryItemTitle({ type: 'unknown-kind' }), 'File');
+	assert.equal(defaultLibraryItemTitle({}), 'File');
+});
+
+test('defaultLibraryItemTitle localises the fallback label', () => {
+	assert.equal(defaultLibraryItemTitle({ type: 'ptt', locale: 'ar' }), 'رسالة صوتية');
+	assert.equal(defaultLibraryItemTitle({ type: 'video', locale: 'ar' }), 'فيديو');
+});
+
+test('defaultLibraryItemTitle ignores an unusable timestamp instead of showing NaN', () => {
+	assert.equal(defaultLibraryItemTitle({ type: 'video', timestamp: 'not a date' }), 'Video');
+	assert.equal(defaultLibraryItemTitle({ type: 'video', timestamp: null }), 'Video');
+});
+
+test('firstSocialVideoLink finds tiktok, instagram and facebook video links', () => {
+	assert.deepEqual(firstSocialVideoLink('look at this https://www.tiktok.com/@user/video/123'), {
+		href: 'https://www.tiktok.com/@user/video/123',
+		platform: 'tiktok',
+	});
+	assert.equal(firstSocialVideoLink('https://www.instagram.com/reel/Abc123/')?.platform, 'instagram');
+	assert.equal(firstSocialVideoLink('https://fb.watch/1H5BjZ8pa9/')?.platform, 'facebook');
+	assert.equal(
+		firstSocialVideoLink('https://www.facebook.com/share/v/1H5BjZ8pa9/?mibextid=wwXIfr')?.platform,
+		'facebook',
+	);
+	assert.equal(firstSocialVideoLink('https://m.facebook.com/watch/?v=999')?.platform, 'facebook');
+});
+
+test('firstSocialVideoLink ignores unsupported and unsafe links', () => {
+	assert.equal(firstSocialVideoLink('no links here'), null);
+	assert.equal(firstSocialVideoLink('https://example.com/video.mp4'), null);
+	assert.equal(firstSocialVideoLink('https://www.youtube.com/watch?v=abc'), null);
+	// A lookalike host must not be treated as the real one.
+	assert.equal(firstSocialVideoLink('https://evil-tiktok.com/video/1'), null);
+	assert.equal(firstSocialVideoLink('javascript:alert(1)'), null);
+});
+
+test('firstSocialVideoLink returns the first supported link, skipping other links', () => {
+	const text = 'read https://example.com/post then https://www.tiktok.com/@a/video/7';
+	assert.equal(firstSocialVideoLink(text)?.platform, 'tiktok');
+});
+
+test('socialVideoPlatform matches subdomains but not arbitrary hosts', () => {
+	assert.equal(socialVideoPlatform('https://vt.tiktok.com/ZS123/'), 'tiktok');
+	assert.equal(socialVideoPlatform('https://tiktok.com.evil.net/x'), null);
+	assert.equal(socialVideoPlatform(''), null);
+	assert.equal(socialVideoPlatform(null), null);
+});
+
+test('shouldCompensateRowResize corrects rows measured above the fold', () => {
+	// A 100-message thread scrolled near the bottom: an image row 4000px up turns out
+	// taller than its estimate, so scrollTop must absorb the difference.
+	assert.equal(
+		shouldCompensateRowResize({
+			rowStart: 4000,
+			rowSize: 292,
+			scrollOffset: 12000,
+			firstMeasure: true,
+		}),
+		true,
+	);
+});
+
+test('shouldCompensateRowResize leaves rows at or below the fold alone', () => {
+	// The row the user is looking at: shifting scrollTop would drag the view.
+	assert.equal(
+		shouldCompensateRowResize({ rowStart: 12400, rowSize: 300, scrollOffset: 12000 }),
+		false,
+	);
+	// Growing at its visible bottom edge while spanning the fold (streaming text).
+	assert.equal(
+		shouldCompensateRowResize({ rowStart: 11900, rowSize: 400, scrollOffset: 12000 }),
+		false,
+	);
+});
+
+test('shouldCompensateRowResize is stricter once a row has already been measured', () => {
+	const spansFold = { rowStart: 11900, rowSize: 400, scrollOffset: 12000 };
+	// First measurement: the whole estimated block above the viewport is suspect.
+	assert.equal(shouldCompensateRowResize({ ...spansFold, firstMeasure: true }), true);
+	// Re-measurement: only compensate when the row ends above the fold.
+	assert.equal(shouldCompensateRowResize({ ...spansFold, firstMeasure: false }), false);
+	assert.equal(
+		shouldCompensateRowResize({ rowStart: 11000, rowSize: 400, scrollOffset: 12000 }),
+		true,
+	);
+});
+
+test('shouldCompensateRowResize refuses non-numeric geometry instead of guessing', () => {
+	assert.equal(shouldCompensateRowResize({ rowStart: undefined, scrollOffset: 100 }), false);
+	assert.equal(shouldCompensateRowResize({ rowStart: 0, scrollOffset: NaN }), false);
+	assert.equal(shouldCompensateRowResize(), false);
+});
+
 test('computeAnchoredMenuPosition shifts the menu instead of shrinking it into a scrollbar', () => {
 	const viewport = { viewportW: 1280, viewportH: 900 };
 	// Anchor low on screen: only 150px below it, but the menu needs 500px.
 	const anchor = { top: 700, bottom: 750, left: 400, right: 440 };
 	const position = computeAnchoredMenuPosition(anchor, { width: 248, height: 500 }, viewport);
-	assert.equal(position.maxHeight, 500, 'menu keeps its full content height');
+	assert.equal(position.contentHeight, 500, 'menu keeps its full content height');
 	assert.ok(position.top >= 12, 'stays inside the top margin');
-	assert.ok(position.top + position.maxHeight <= 900 - 12, 'stays inside the bottom margin');
+	assert.ok(position.top + position.contentHeight <= 900 - 12, 'stays inside the bottom margin');
+});
+
+test('computeAnchoredMenuPosition never caps the menu below its own content', () => {
+	// The cap is what CSS applies. If it were the space below the anchor, the caller
+	// would then measure the capped element and re-derive the same cap forever, and
+	// the options past the cap would stay invisible (no scrollbar, overflow hidden).
+	const anchor = { top: 700, bottom: 750, left: 400, right: 440 };
+	const position = computeAnchoredMenuPosition(
+		anchor,
+		{ width: 248, height: 500 },
+		{ viewportW: 1280, viewportH: 900 },
+	);
+	assert.ok(position.maxHeight >= 500, 'cap leaves room for every option');
+	assert.equal(position.maxHeight, 900 - 24, 'only the viewport caps the menu');
+});
+
+test('computeAnchoredMenuPosition treats an unmeasured menu as full height', () => {
+	// First paint, before the element exists to be measured: assume it may need the
+	// whole viewport rather than guessing a height that would clip it.
+	const position = computeAnchoredMenuPosition(
+		{ top: 100, bottom: 140, left: 100, right: 140 },
+		{ width: 248, height: 0 },
+		{ viewportW: 1280, viewportH: 900 },
+	);
+	assert.equal(position.maxHeight, 900 - 24);
+	assert.equal(position.contentHeight, 900 - 24);
+	assert.equal(position.top, 12);
+});
+
+test('computeAnchoredMenuPosition is stable once fed its real content height', () => {
+	// Re-running with the previously reported content height must not move the menu:
+	// an unstable result here is the feedback loop that hid the lower options.
+	const anchor = { top: 60, bottom: 92, left: 300, right: 340 };
+	const viewport = { viewportW: 1280, viewportH: 700 };
+	const first = computeAnchoredMenuPosition(anchor, { width: 248, height: 520 }, viewport);
+	const second = computeAnchoredMenuPosition(
+		anchor,
+		{ width: first.width, height: first.contentHeight },
+		viewport,
+	);
+	assert.deepEqual(second, first);
 });
 
 test('computeAnchoredMenuPosition still clamps to the viewport when content is taller than the screen', () => {

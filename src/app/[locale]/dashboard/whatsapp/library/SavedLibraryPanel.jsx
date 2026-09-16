@@ -237,6 +237,24 @@ export default function SavedLibraryPanel({
 		[refresh, t.confirmDelete, t.deleted, t.deleteFailed],
 	);
 
+	const renameItem = useCallback(
+		async (item) => {
+			const next = window.prompt(t.renamePrompt, item.title || '');
+			// `null` is cancel; an unchanged name is not worth a request.
+			if (next === null || !next.trim() || next.trim() === item.title) return;
+			setBusyItemId(item.id);
+			try {
+				await api.patch(`/whatsapp/library/items/${item.id}`, { title: next.trim() });
+				await refresh();
+			} catch (error) {
+				toast.error(error?.response?.data?.message || t.deleteFailed);
+			} finally {
+				setBusyItemId('');
+			}
+		},
+		[refresh, t.renamePrompt, t.deleteFailed],
+	);
+
 	const moveItem = useCallback(
 		async (item, folderId) => {
 			setBusyItemId(item.id);
@@ -506,6 +524,17 @@ export default function SavedLibraryPanel({
 														<Send size={13} />
 													)}
 													{busy ? t.sending : t.sendTo}
+												</button>
+
+												<button
+													type="button"
+													disabled={busy}
+													aria-label={t.rename}
+													title={t.rename}
+													onClick={() => void renameItem(item)}
+													className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+												>
+													<Pencil size={15} />
 												</button>
 
 												<button

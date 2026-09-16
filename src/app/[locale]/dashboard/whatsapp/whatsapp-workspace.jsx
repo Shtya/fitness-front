@@ -38,6 +38,7 @@ import {
 	EyeOff,
 	ExternalLink,
 	FileText,
+	FileVideo,
 	FolderKanban,
 	Globe2,
 	Image as ImageIcon,
@@ -148,6 +149,8 @@ import {
 	WHATSAPP_INBOX_CHIP_FILTERS,
 	isChannelConversation,
 	firstMessageLink,
+	firstSocialVideoLink,
+	defaultLibraryItemTitle,
 	textWithoutFirstLink,
 	formatWhatsAppPhone,
 	getStoryMediaEmbed,
@@ -217,6 +220,7 @@ import {
 	isDeletedWhatsAppMessage,
 	deletedWhatsAppMessageLabel,
 	computeAnchoredMenuPosition,
+	shouldCompensateRowResize,
 } from './whatsapp-utils';
 import {
 	installWaScrollSpy,
@@ -5113,20 +5117,25 @@ function ChatVideoPlayer({
 						<Volume2 size={fullscreen ? 19 : 17} strokeWidth={2.2} />
 					)}
 				</button>
-				<input
-					type="range"
-					className="wa-video-controls__volume-slider"
-					min={0}
-					max={1}
-					step={0.01}
-					value={muted ? 0 : volume}
-					aria-label="Volume"
-					style={{
-						'--wa-video-volume': `${Math.round((muted ? 0 : volume) * 100)}%`,
-					}}
-					onChange={onVolumeChange}
-					onInput={onVolumeChange}
-				/>
+				{/* Floats above the speaker rather than expanding beside it, so the
+				    control bar keeps its width and the slider never covers the seek bar. */}
+				<div className="wa-video-controls__volume-panel">
+					<input
+						type="range"
+						className="wa-video-controls__volume-slider"
+						min={0}
+						max={1}
+						step={0.01}
+						value={muted ? 0 : volume}
+						aria-label="Volume"
+						aria-orientation="vertical"
+						style={{
+							'--wa-video-volume': `${Math.round((muted ? 0 : volume) * 100)}%`,
+						}}
+						onChange={onVolumeChange}
+						onInput={onVolumeChange}
+					/>
+				</div>
 			</div>
 			<MediaOverflowMenu
 				items={menuItems}
@@ -6522,8 +6531,10 @@ function MessageActionMenu({
 	const [mounted, setMounted] = useState(false);
 	const [boardOpen, setBoardOpen] = useState(false);
 	const [reactionsExpanded, setReactionsExpanded] = useState(false);
+	// Height 0 means "not measured yet", which resolves to the viewport limit so the
+	// very first paint cannot clip an option before the real height is known.
 	const [desktopPos, setDesktopPos] = useState(() =>
-		computeAnchoredMenuPosition(anchorRect, { width: 248, height: 420 }, { mine }),
+		computeAnchoredMenuPosition(anchorRect, { width: 248, height: 0 }, { mine }),
 	);
 	const menuRef = useRef(null);
 	const boardItemRef = useRef(null);
@@ -6565,13 +6576,16 @@ function MessageActionMenu({
 	useEffect(() => {
 		if (!open) return undefined;
 		const update = () => {
-			const measured = menuRef.current?.getBoundingClientRect();
+			const node = menuRef.current;
 			setDesktopPos(
 				computeAnchoredMenuPosition(
 					anchorRect,
 					{
-						width: measured?.width || 248,
-						height: measured?.height || 480,
+						width: node?.getBoundingClientRect().width || 248,
+						// `scrollHeight`, not the bounding box: the box reports the height it
+						// was capped to, so measuring it would only ever re-confirm the cap
+						// and the options below it would stay hidden.
+						height: node?.scrollHeight || 0,
 					},
 					{ mine },
 				),
@@ -6632,6 +6646,8 @@ function MessageActionMenu({
 	// stored media, not from an optimistic local blob.
 	const canEditAsVoice = (isVoice || isVideo) && Boolean(firstPersistedAttachmentId(message));
 	const canSaveToLibrary = canUseGroups && Boolean(firstPersistedAttachmentId(message));
+	// A shared TikTok/Instagram/Facebook link can be pulled in as a playable video.
+	const socialVideoLink = message.optimistic ? null : firstSocialVideoLink(message.text);
 	const hasCopyableText = Boolean(String(message.text || '').trim());
 	const isOutboundText =
 		String(message.type || 'text').toLowerCase() === 'text' &&
@@ -6660,6 +6676,11 @@ function MessageActionMenu({
 			id: 'saveToLibrary',
 			label: ar ? 'حفظ في المكتبة…' : 'Save to library…',
 			icon: BookmarkPlus,
+		},
+		socialVideoLink && {
+			id: 'downloadSocialVideo',
+			label: ar ? 'تحميل الفيديو' : 'Download video',
+			icon: FileVideo,
 		},
 		canUseBoard &&
 			canSelectTranscript && {
@@ -6991,7 +7012,9 @@ function MultiMessageActionMenu({
 	const [mounted, setMounted] = useState(false);
 	const [boardOpen, setBoardOpen] = useState(false);
 	const [boardFlyoutPos, setBoardFlyoutPos] = useState(null);
-	const [pos, setPos] = useState(() => computeAnchoredMenuPosition(anchorRect, { width: 248, height: 360 }));
+	const [pos, setPos] = useState(() =>
+		computeAnchoredMenuPosition(anchorRect, { width: 248, height: 0 }),
+	);
 	const menuRef = useRef(null);
 	const boardItemRef = useRef(null);
 	const boardCloseTimerRef = useRef(null);
@@ -7029,11 +7052,13 @@ function MultiMessageActionMenu({
 	useEffect(() => {
 		if (!open) return undefined;
 		const update = () => {
-			const measured = menuRef.current?.getBoundingClientRect();
+			const node = menuRef.current;
 			setPos(
 				computeAnchoredMenuPosition(anchorRect, {
-					width: measured?.width || 248,
-					height: measured?.height || 360,
+					// See the sibling menu above: the bounding box reports the capped
+					// height, so content height has to come from `scrollHeight`.
+					width: node?.getBoundingClientRect().width || 248,
+					height: node?.scrollHeight || 0,
 				}),
 			);
 		};
@@ -7966,6 +7991,73 @@ function WhatsAppFormattedText({
 	);
 }
 
+/**
+ * The video pulled from a social link, shown under the link preview it belongs to.
+ *
+ * Renders nothing until a download is actually requested, so an ordinary shared link
+ * keeps looking exactly as it does today.
+ */
+function SocialVideoDownload({ state, locale, onRetry, labels }) {
+	if (!state) return null;
+	const ar = locale === 'ar';
+
+	if (state.status === 'pending') {
+		return (
+			<div className="mb-1 flex items-center gap-2.5 rounded-xl border border-black/5 bg-black/[0.045] px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.07]">
+				<Loader2 size={16} className="shrink-0 animate-spin text-[#027EB5] dark:text-[#53BDEB]" />
+				<span className="min-w-0 flex-1 truncate text-[12px] opacity-75">
+					{ar ? 'جارٍ تحميل الفيديو…' : 'Downloading video…'}
+				</span>
+			</div>
+		);
+	}
+
+	if (state.status === 'failed') {
+		return (
+			<div className="mb-1 rounded-xl border border-red-500/25 bg-red-500/8 px-3 py-2.5">
+				<div className="flex items-start gap-2.5">
+					<AlertCircle size={16} className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
+					<span className="min-w-0 flex-1 text-[12px] leading-snug text-red-700 dark:text-red-300">
+						{state.errorMessage || (ar ? 'فشل تحميل الفيديو' : 'Could not download this video')}
+					</span>
+				</div>
+				<button
+					type="button"
+					onPointerDown={event => event.stopPropagation()}
+					onClick={event => {
+						event.preventDefault();
+						event.stopPropagation();
+						onRetry();
+					}}
+					className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-600/10 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-600/20 dark:text-red-300"
+				>
+					<RefreshCw size={12} strokeWidth={2.4} />
+					{ar ? 'إعادة المحاولة' : 'Retry'}
+				</button>
+			</div>
+		);
+	}
+
+	if (state.status !== 'ready' || !state.url) return null;
+	return (
+		<div className="mb-1 overflow-hidden rounded-xl">
+			<ChatVideoPlayer
+				url={absoluteApiUrl(state.url)}
+				cacheKey={state.id}
+				durationHint={state.durationSeconds || 0}
+				playLabel={labels.playVideo || labels.play || 'Play'}
+				pauseLabel={labels.pauseVideo || 'Pause'}
+				muteLabel={labels.muteVideo || 'Mute'}
+				unmuteLabel={labels.unmuteVideo || 'Unmute'}
+				expandLabel={labels.expandVideo || 'Expand video'}
+				collapseLabel={labels.exitVideoFullscreen || 'Exit fullscreen'}
+				closeLabel={labels.close || 'Close'}
+				moreLabel={labels.moreActions || 'More'}
+			/>
+		</div>
+	);
+}
+
 function MessageLinkPreview({ text, labels }) {
 	const link = firstMessageLink(text);
 	if (!link) return null;
@@ -8806,7 +8898,15 @@ function WhatsAppWorkspaceContent() {
 	const [sendingVideoAsVoiceId, setSendingVideoAsVoiceId] = useState('');
 	/** `{ messageId, attachmentId }` while the video → voice editor is open. */
 	const [videoToVoiceTarget, setVideoToVoiceTarget] = useState(null);
-	/** `{ attachmentId, messageId }` while picking a library folder to save into. */
+	/**
+	 * Downloaded social videos, keyed by message id.
+	 *
+	 * Held in the workspace rather than per bubble so a row can scroll out of the
+	 * virtualized window and back without losing a download that is still running.
+	 */
+	const [socialDownloads, setSocialDownloads] = useState({});
+	const socialPollTimersRef = useRef(new Map());
+	/** `{ attachmentId, messageId, defaultTitle }` while picking a library folder. */
 	const [librarySaveTarget, setLibrarySaveTarget] = useState(null);
 	const [libraryOpen, setLibraryOpen] = useState(false);
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
@@ -9376,15 +9476,29 @@ function WhatsAppWorkspaceContent() {
 	}
 	const virtualizeMessages = threadVirtualLatchRef.current.enabled;
 	const latestThreadMessageId = effectiveMessages[effectiveMessages.length - 1]?.id || null;
-	const shouldAdjustScrollOnRowResize = useCallback(() => {
-		if (isThreadScrollLocked()) return false;
-		if (!pinThreadToBottomRef.current) return false;
-		if (userScrollingThreadRef.current) return false;
-		const box = messageBoxRef.current;
-		if (!box) return false;
-		if (!threadSettledRef.current) return true;
-		return isThreadPinnedToBottom(box);
-	}, [isThreadScrollLocked]);
+	const shouldAdjustScrollOnRowResize = useCallback(
+		(item, _delta, virtualizer) => {
+			// An older-messages restore is mid-flight with its own absolute anchor;
+			// a second adjustment here would double-count the same delta.
+			if (isThreadScrollLocked()) return false;
+			const box = messageBoxRef.current;
+			if (!box) return false;
+			// `scrollAdjustments` holds corrections already queued but not yet flushed to
+			// the DOM, so the virtualizer's own offset is the only accurate reference.
+			const scrollOffset =
+				(typeof virtualizer?.getScrollOffset === 'function'
+					? Number(virtualizer.getScrollOffset())
+					: Number(box.scrollTop)) + (Number(virtualizer?.scrollAdjustments) || 0);
+			return shouldCompensateRowResize({
+				rowStart: item?.start,
+				rowSize: item?.size,
+				scrollOffset,
+				// Estimates are only trustworthy after a row has been measured once.
+				firstMeasure: !virtualizer?.itemSizeCache?.has?.(item?.key),
+			});
+		},
+		[isThreadScrollLocked],
+	);
 	const messageVirtual = useWaVirtualRows({
 		count: messageRows.length,
 		scrollRef: messageBoxRef,
@@ -11548,6 +11662,7 @@ function WhatsAppWorkspaceContent() {
 			lastThreadScrollTopRef.current = 0;
 			userScrollingThreadRef.current = false;
 			pinThreadToBottomRef.current = true;
+			lastThreadGestureAtRef.current = 0;
 			setShowJumpToBottom(false);
 			setThreadSettled(false);
 			suppressOlderLoadUntilRef.current = Date.now() + 2000;
@@ -11756,6 +11871,10 @@ function WhatsAppWorkspaceContent() {
 			lastThreadScrollTopRef.current = 0;
 			userScrollingThreadRef.current = false;
 			pinThreadToBottomRef.current = true;
+			// A wheel gesture in the chat list must not count as a gesture in the thread
+			// that just opened, or the top-of-thread check can auto-load older messages
+			// before the first paint has settled.
+			lastThreadGestureAtRef.current = 0;
 			setShowJumpToBottom(false);
 			setThreadSettled(false);
 			suppressOlderLoadUntilRef.current = Date.now() + 2000;
@@ -11883,7 +12002,8 @@ function WhatsAppWorkspaceContent() {
 		let cancelled = false;
 		let stableFrames = 0;
 		let lastHeight = -1;
-		const maxAttempts = 36;
+		let lastMeasuredCount = -1;
+		const maxAttempts = 48;
 
 		const pinBottom = () => {
 			const box = messageBoxRef.current;
@@ -11921,12 +12041,20 @@ function WhatsAppWorkspaceContent() {
 			// Declaring victory on a single frame let the virtualizer swap estimated
 			// row sizes for measured ones right after `opacity` flipped to 1, landing
 			// the thread mid-scroll with no native anchoring to pull it back.
+			//
+			// `scrollHeight` alone is not enough evidence: while virtualized it is derived
+			// from the virtualizer's total size, which is React state and sits flat for
+			// several frames in the middle of a measurement pass. Requiring the measured
+			// row count to stop changing as well keeps the loop alive until the rows the
+			// thread actually renders have real heights.
 			const height = Number(messageBoxRef.current?.scrollHeight) || 0;
-			if (pinned && height === lastHeight) stableFrames += 1;
+			const measured = Number(messageVirtualRef.current?.items?.length) || 0;
+			if (pinned && height === lastHeight && measured === lastMeasuredCount) stableFrames += 1;
 			else stableFrames = 0;
 			lastHeight = height;
+			lastMeasuredCount = measured;
 
-			if ((pinned && stableFrames >= 2) || attempts >= maxAttempts) {
+			if ((pinned && stableFrames >= 3) || attempts >= maxAttempts) {
 				setThreadSettled(true);
 				setShowJumpToBottom(!pinned && shouldShowJumpToBottom(messageBoxRef.current));
 				// Opacity flips to ready on settle — heights can grow; re-pin a few frames.
@@ -12198,10 +12326,11 @@ function WhatsAppWorkspaceContent() {
 			if (userScrollingThreadRef.current && threadSettledRef.current) return;
 			const distance = threadDistanceFromBottom(box);
 			const opening = !threadSettledRef.current;
-			const allowGlue = opening
-				? true
-				: distance <= THREAD_PIN_THRESHOLD_PX;
-			if (!allowGlue) {
+			// A resize is layout, not intent. Dropping the pin here meant a single row
+			// measuring taller than its estimate permanently unpinned the thread, so the
+			// view stayed wherever the growth left it. Only a real user gesture (handled
+			// in onScroll) may unpin; here we re-assert the bottom instead.
+			if (!opening && distance > THREAD_PIN_THRESHOLD_PX && userScrollingThreadRef.current) {
 				pinThreadToBottomRef.current = false;
 				return;
 			}
@@ -14048,6 +14177,23 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	/** Opens the mini audio editor; the actual conversion happens on submit. */
+	/** Prefills the save dialog from whichever attachment is being saved. */
+	const libraryTitleForMessage = useCallback(
+		(message, attachmentId) => {
+			const attachment =
+				(message?.attachments || []).find(item => String(item?.id) === String(attachmentId)) ||
+				(message?.attachments || [])[0] ||
+				null;
+			return defaultLibraryItemTitle({
+				fileName: attachment?.fileName || '',
+				type: attachment?.type || message?.type || '',
+				timestamp: message?.providerTimestamp || message?.timestamp || message?.created_at || null,
+				locale,
+			});
+		},
+		[locale],
+	);
+
 	const openVideoToVoiceEditor = (message, attachment) => {
 		const attachmentId = String(attachment?.id || '');
 		if (!attachmentId || !conversationId) return;
@@ -14082,6 +14228,117 @@ function WhatsAppWorkspaceContent() {
 			setSendingVideoAsVoiceId('');
 		}
 	};
+
+	/**
+	 * Downloading the video behind a TikTok / Instagram / Facebook link.
+	 *
+	 * yt-dlp routinely runs longer than a request should stay open, so the server
+	 * answers immediately with a `pending` row and we poll until it resolves. Calling
+	 * this again on a failed row is the retry path — the server reuses the same row.
+	 */
+	const startSocialVideoDownload = useCallback(
+		async (message, href) => {
+			const messageId = String(message?.id || '');
+			if (!messageId || !conversationId || !href) return;
+			if (demo.settings.enabled) {
+				toast.error(
+					locale === 'ar'
+						? 'تحميل الفيديو غير متاح في العرض التجريبي'
+						: 'Video download is not available in demo mode',
+				);
+				return;
+			}
+			const targetConversationId = conversationId;
+			setSocialDownloads(current => ({
+				...current,
+				[messageId]: { status: 'pending', sourceUrl: href, errorMessage: null },
+			}));
+			try {
+				const { data } = await api.post(
+					`/whatsapp/conversations/${targetConversationId}/messages/${messageId}/social-download`,
+					{ url: href },
+				);
+				setSocialDownloads(current => ({ ...current, [messageId]: data }));
+				if (data?.status === 'pending') pollSocialVideoDownloadRef.current(messageId, href);
+			} catch (error) {
+				setSocialDownloads(current => ({
+					...current,
+					[messageId]: {
+						status: 'failed',
+						sourceUrl: href,
+						errorMessage:
+							error?.response?.data?.message ||
+							(locale === 'ar' ? 'فشل تحميل الفيديو' : 'Could not download this video'),
+					},
+				}));
+			}
+		},
+		[conversationId, demo.settings.enabled, locale],
+	);
+
+	// Held in a ref so the poller and the starter can call each other without either
+	// having to be declared first.
+	const pollSocialVideoDownloadRef = useRef(() => {});
+	pollSocialVideoDownloadRef.current = (messageId, href) => {
+		const timers = socialPollTimersRef.current;
+		if (timers.has(messageId)) return;
+		const targetConversationId = conversationId;
+		let attempts = 0;
+		const stop = () => {
+			const timer = timers.get(messageId);
+			if (timer) window.clearTimeout(timer);
+			timers.delete(messageId);
+		};
+		const poll = async () => {
+			attempts += 1;
+			try {
+				const { data } = await api.get(
+					`/whatsapp/conversations/${targetConversationId}/messages/${messageId}/social-download`,
+				);
+				const row =
+					(data?.items || []).find(item => item.sourceUrl === href) || (data?.items || [])[0];
+				if (row) setSocialDownloads(current => ({ ...current, [messageId]: row }));
+				if (row && row.status !== 'pending') {
+					stop();
+					return;
+				}
+			} catch {
+				// A transient poll failure is not a download failure; keep waiting.
+			}
+			// ~3 minutes, matching the server-side yt-dlp timeout.
+			if (attempts >= 90) {
+				stop();
+				setSocialDownloads(current => {
+					const existing = current[messageId];
+					if (!existing || existing.status !== 'pending') return current;
+					return {
+						...current,
+						[messageId]: {
+							...existing,
+							status: 'failed',
+							errorMessage:
+								locale === 'ar'
+									? 'استغرق التحميل وقتًا طويلًا. حاول مرة أخرى.'
+									: 'The download took too long. Please try again.',
+						},
+					};
+				});
+				return;
+			}
+			timers.set(messageId, window.setTimeout(poll, 2000));
+		};
+		timers.set(messageId, window.setTimeout(poll, 1500));
+	};
+
+	// Switching conversations must not leave pollers running against the old thread.
+	useEffect(() => {
+		setSocialDownloads({});
+		const timers = socialPollTimersRef.current;
+		return () => {
+			timers.forEach(timer => window.clearTimeout(timer));
+			timers.clear();
+		};
+	}, [conversationId]);
 
 	const sendRecordedVoice = async file => {
 		if (!file || !conversationId || !accountId) return false;
@@ -14901,6 +15158,17 @@ function WhatsAppWorkspaceContent() {
 			setTranscriptionSources([toTranscriptSource(message)]);
 			return;
 		}
+		if (action === 'downloadSocialVideo') {
+			const link = firstSocialVideoLink(message.text);
+			if (!link) {
+				toast.error(
+					locale === 'ar' ? 'لا يوجد رابط فيديو مدعوم' : 'No supported video link in this message',
+				);
+				return;
+			}
+			void startSocialVideoDownload(message, link.href);
+			return;
+		}
 		if (action === 'select') {
 			applyMessageSelection(message, { toggle: false });
 			return;
@@ -14960,7 +15228,11 @@ function WhatsAppWorkspaceContent() {
 			if (action === 'sendAsVoice') {
 				openVideoToVoiceEditor(message, { id: attachmentId });
 			} else {
-				setLibrarySaveTarget({ attachmentId, messageId: message.id });
+				setLibrarySaveTarget({
+					attachmentId,
+					messageId: message.id,
+					defaultTitle: libraryTitleForMessage(message, attachmentId),
+				});
 			}
 			return;
 		}
@@ -19001,6 +19273,20 @@ function WhatsAppWorkspaceContent() {
 											>
 												{t.channels}
 											</button>
+											{/* Saved media is not a conversation filter, but this row is the only
+											    always-visible tab strip — the composer button needs an open chat. */}
+											<button
+												type="button"
+												onClick={() => setLibraryOpen(true)}
+												className={`inline-flex h-[28px] shrink-0 items-center gap-1 rounded-[19px] px-3 text-[11px] font-semibold ${
+													libraryOpen
+														? 'bg-[#D9FDD3] text-[#008069]'
+														: 'bg-[#F0F2F5] text-[#54656F]'
+												}`}
+											>
+												<Bookmark size={12} strokeWidth={2.4} />
+												{t.library}
+											</button>
 										</div>
 									</div>
 								</div>
@@ -20812,7 +21098,11 @@ function WhatsAppWorkspaceContent() {
 										toast.error(t.sendAsVoiceFailed);
 										return;
 									}
-									setLibrarySaveTarget({ attachmentId, messageId: message.id });
+									setLibrarySaveTarget({
+										attachmentId,
+										messageId: message.id,
+										defaultTitle: libraryTitleForMessage(message, attachmentId),
+									});
 								}}
 																				sendAsVoiceLabel={t.sendAsVoice}
 																				// The target stays set while sending, so this covers both
@@ -20941,6 +21231,18 @@ function WhatsAppWorkspaceContent() {
 																			lang={textPresentation.lang}
 																		>
 																			<MessageLinkPreview text={visibleText} labels={t} />
+																			<SocialVideoDownload
+																				state={socialDownloads[message.id]}
+																				locale={locale}
+																				labels={t}
+																				onRetry={() =>
+																					startSocialVideoDownload(
+																						message,
+																						socialDownloads[message.id]?.sourceUrl ||
+																							firstSocialVideoLink(message.text)?.href,
+																					)
+																				}
+																			/>
 																			<div className="wa-message-copy-body">
 																				{captionText ? (
 																					<ExpandableMessageText
@@ -21024,15 +21326,34 @@ function WhatsAppWorkspaceContent() {
 																					return groups;
 																				}, {}),
 																			).map(group => (
-																				<span
+																				<button
 																					key={group.emoji}
+																					type="button"
+																					disabled={reactingMessageIds.has(message.id)}
+																					title={
+																						group.mine
+																							? locale === 'ar'
+																								? 'إزالة تفاعلك'
+																								: 'Remove your reaction'
+																							: group.emoji
+																					}
+																					// The bubble starts a long-press gesture on pointerdown; a tap
+																					// on the chip is not a long press on the message.
+																					onPointerDown={event => event.stopPropagation()}
+																					// Tapping the chip is how WhatsApp toggles your own reaction off.
+																					// `reactToMessage` already treats re-picking the same emoji as a clear.
+																					onClick={event => {
+																						event.preventDefault();
+																						event.stopPropagation();
+																						if (group.mine) void reactToMessage(message, group.emoji);
+																					}}
 																					className={`wa-message-reaction-chip ${group.mine ? 'is-mine' : ''}`}
 																				>
 																					<span className="wa-message-reaction-emoji">{group.emoji}</span>
 																					{group.count > 1 && (
 																						<span className="wa-message-reaction-count">{group.count}</span>
 																					)}
-																				</span>
+																				</button>
 																			))}
 																		</div>
 																	)}
@@ -23415,6 +23736,12 @@ function WhatsAppWorkspaceContent() {
 					setLibrarySaveTarget({
 						attachmentId: videoToVoiceTarget?.attachmentId || '',
 						voiceEdit: editOptions,
+						// The editor output is a new voice note, not the source file.
+						defaultTitle: defaultLibraryItemTitle({
+							type: 'ptt',
+							timestamp: Date.now(),
+							locale,
+						}),
 					})
 				}
 			/>
@@ -23422,6 +23749,7 @@ function WhatsAppWorkspaceContent() {
 				open={Boolean(librarySaveTarget)}
 				attachmentId={librarySaveTarget?.attachmentId || ''}
 				voiceEdit={librarySaveTarget?.voiceEdit || null}
+				defaultTitle={librarySaveTarget?.defaultTitle || ''}
 				locale={locale}
 				onClose={() => setLibrarySaveTarget(null)}
 			/>
