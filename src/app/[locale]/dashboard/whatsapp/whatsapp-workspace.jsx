@@ -193,10 +193,13 @@ import {
 	captureThreadScrollAnchor,
 	findThreadAnchorRow,
 	shouldStickThreadToBottom,
+	shouldShowJumpToBottom,
+	shouldAutoLoadOlder,
 	isThreadNearBottom,
 	isThreadPinnedToBottom,
 	threadDistanceFromBottom,
 	THREAD_PIN_THRESHOLD_PX,
+	THREAD_RESTORE_MAX_MS,
 	mediaDimensionsForAttachment,
 	rememberMediaDimensions,
 	reservedMediaBoxStyle,
@@ -811,6 +814,11 @@ const translations = {
 		recordingStartFailed: 'Could not start voice recording',
 		voiceChanger: 'Voice changer settings',
 		voiceChanging: 'Changing voice…',
+		moreActions: 'More',
+		sendAsVoice: 'Send as voice message',
+		sendingAsVoice: 'Converting video to a voice message…',
+		sendAsVoiceDone: 'Sent as a voice message',
+		sendAsVoiceFailed: 'Could not send this video as a voice message',
 		message: 'Write a message',
 		send: 'Send',
 		sync: 'Sync',
@@ -1287,6 +1295,11 @@ const translations = {
 		recordingStartFailed: 'تعذر بدء تسجيل الرسالة الصوتية',
 		voiceChanger: 'إعدادات تغيير الصوت',
 		voiceChanging: 'جارِ تغيير الصوت…',
+		moreActions: 'المزيد',
+		sendAsVoice: 'إرسال كرسالة صوتية',
+		sendingAsVoice: 'جارِ تحويل الفيديو لرسالة صوتية…',
+		sendAsVoiceDone: 'تم الإرسال كرسالة صوتية',
+		sendAsVoiceFailed: 'تعذر إرسال الفيديو كرسالة صوتية',
 		message: 'اكتب رسالة',
 		send: 'إرسال',
 		sync: 'مزامنة',
@@ -2091,6 +2104,8 @@ function ImageMessage({
 					src={url}
 					alt={alt}
 					draggable={false}
+					// Keeps full-resolution decode off the main thread during scroll.
+					decoding="async"
 					width={knownWidth > 0 ? Math.round(knownWidth) : undefined}
 					height={knownHeight > 0 ? Math.round(knownHeight) : undefined}
 					onLoad={event => {
@@ -4609,6 +4624,10 @@ function ChatVideoPlayer({
 	onDownload,
 	downloadLabel = 'Download',
 	downloading = false,
+	onSendAsVoice,
+	sendAsVoiceLabel = 'Send as voice message',
+	sendingAsVoice = false,
+	moreLabel = 'More',
 	durationHint = 0,
 	playLabel = 'Play',
 	pauseLabel = 'Pause',
@@ -4630,8 +4649,10 @@ function ChatVideoPlayer({
 		volume: 1,
 	});
 	const seekingRef = useRef(false);
+	const menuRef = useRef(null);
 	const [playing, setPlaying] = useState(false);
 	const [expanded, setExpanded] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [muted, setMuted] = useState(false);
 	const [volume, setVolume] = useState(1);
@@ -4643,11 +4664,29 @@ function ChatVideoPlayer({
 	useEffect(() => {
 		setPlaying(false);
 		setExpanded(false);
+		setMenuOpen(false);
 		setCurrentTime(0);
 		paintedUrlRef.current = '';
 		const hint = Number(durationHint);
 		setDuration(Number.isFinite(hint) && hint > 0 ? hint : 0);
 	}, [url, durationHint]);
+
+	useEffect(() => {
+		if (!menuOpen) return undefined;
+		const onAway = event => {
+			if (menuRef.current?.contains(event.target)) return;
+			setMenuOpen(false);
+		};
+		const onKey = event => {
+			if (event.key === 'Escape') setMenuOpen(false);
+		};
+		document.addEventListener('pointerdown', onAway, true);
+		document.addEventListener('keydown', onKey);
+		return () => {
+			document.removeEventListener('pointerdown', onAway, true);
+			document.removeEventListener('keydown', onKey);
+		};
+	}, [menuOpen]);
 
 	useEffect(() => {
 		const node = videoRef.current;
@@ -4886,6 +4925,32 @@ function ChatVideoPlayer({
 		'--wa-video-ar': reservedRatio,
 	};
 
+	// Secondary actions live behind a single "more" button instead of each owning a
+	// permanent slot in the bar.
+	const menuItems = [
+		typeof onSendAsVoice === 'function' && {
+			key: 'send-as-voice',
+			label: sendAsVoiceLabel,
+			icon: <Mic size={15} strokeWidth={2.1} />,
+			busy: sendingAsVoice,
+			onSelect: onSendAsVoice,
+		},
+		typeof onTranscribe === 'function' && {
+			key: 'transcribe',
+			label: transcribeLabel,
+			icon: <AudioLines size={15} strokeWidth={2.1} />,
+			busy: false,
+			onSelect: onTranscribe,
+		},
+		typeof onDownload === 'function' && {
+			key: 'download',
+			label: downloadLabel,
+			icon: <Download size={15} strokeWidth={2.1} />,
+			busy: downloading,
+			onSelect: onDownload,
+		},
+	].filter(Boolean);
+
 	const renderControls = fullscreen => (
 		<div
 			className={`wa-video-controls ${fullscreen ? 'is-expanded' : ''}`}
@@ -4894,19 +4959,19 @@ function ChatVideoPlayer({
 		>
 			<button
 				type="button"
-				className="wa-video-controls__btn"
+				className="wa-video-controls__btn wa-video-controls__btn--play"
 				aria-label={playing ? pauseLabel : playLabel}
 				title={playing ? pauseLabel : playLabel}
 				onClick={togglePlayback}
 			>
 				{playing ? (
-					<Pause size={fullscreen ? 20 : 18} strokeWidth={2.2} fill="currentColor" />
+					<Pause size={fullscreen ? 19 : 17} strokeWidth={2.2} fill="currentColor" />
 				) : (
 					<Play
-						size={fullscreen ? 20 : 18}
+						size={fullscreen ? 19 : 17}
 						strokeWidth={2.2}
 						fill="currentColor"
-						className="ms-0.5"
+						className="ms-px"
 					/>
 				)}
 			</button>
@@ -4934,6 +4999,8 @@ function ChatVideoPlayer({
 					onBlur={onSeekCommit}
 				/>
 			</div>
+			{/* Volume slider stays collapsed until the speaker is hovered or focused,
+			    so the resting bar is play · time · seek · volume · more · fullscreen. */}
 			<div className="wa-video-controls__volume">
 				<button
 					type="button"
@@ -4944,9 +5011,9 @@ function ChatVideoPlayer({
 					onClick={toggleMute}
 				>
 					{muted || volume <= 0.001 ? (
-						<VolumeX size={fullscreen ? 20 : 18} strokeWidth={2.2} />
+						<VolumeX size={fullscreen ? 19 : 17} strokeWidth={2.2} />
 					) : (
-						<Volume2 size={fullscreen ? 20 : 18} strokeWidth={2.2} />
+						<Volume2 size={fullscreen ? 19 : 17} strokeWidth={2.2} />
 					)}
 				</button>
 				<input
@@ -4964,41 +5031,53 @@ function ChatVideoPlayer({
 					onInput={onVolumeChange}
 				/>
 			</div>
-			{typeof onTranscribe === 'function' && !fullscreen ? (
-				<button
-					type="button"
-					className="wa-video-controls__btn"
-					title={transcribeLabel}
-					aria-label={transcribeLabel}
-					onClick={event => {
-						event.preventDefault();
-						event.stopPropagation();
-						onTranscribe(event);
-					}}
-				>
-					<AudioLines size={16} strokeWidth={2.1} />
-				</button>
-			) : null}
-			{typeof onDownload === 'function' ? (
-				<button
-					type="button"
-					className="wa-video-controls__btn"
-					title={downloadLabel}
-					aria-label={downloadLabel}
-					disabled={downloading}
-					onClick={event => {
-						event.preventDefault();
-						event.stopPropagation();
-						if (downloading) return;
-						onDownload(event);
-					}}
-				>
-					{downloading ? (
-						<Loader2 size={16} strokeWidth={2.2} className="animate-spin" />
-					) : (
-						<Download size={16} strokeWidth={2.2} />
-					)}
-				</button>
+			{menuItems.length ? (
+				<div className="wa-video-controls__more" ref={fullscreen ? undefined : menuRef}>
+					<button
+						type="button"
+						className="wa-video-controls__btn"
+						title={moreLabel}
+						aria-label={moreLabel}
+						aria-haspopup="menu"
+						aria-expanded={menuOpen}
+						onClick={event => {
+							event.preventDefault();
+							event.stopPropagation();
+							setMenuOpen(open => !open);
+						}}
+					>
+						<MoreHorizontal size={fullscreen ? 19 : 17} strokeWidth={2.2} />
+					</button>
+					{menuOpen ? (
+						<div className="wa-video-menu" role="menu">
+							{menuItems.map(item => (
+								<button
+									key={item.key}
+									type="button"
+									role="menuitem"
+									className="wa-video-menu__item"
+									disabled={item.busy}
+									onClick={event => {
+										event.preventDefault();
+										event.stopPropagation();
+										if (item.busy) return;
+										setMenuOpen(false);
+										item.onSelect(event);
+									}}
+								>
+									<span className="wa-video-menu__icon" aria-hidden="true">
+										{item.busy ? (
+											<Loader2 size={15} strokeWidth={2.2} className="animate-spin" />
+										) : (
+											item.icon
+										)}
+									</span>
+									<span className="wa-video-menu__label">{item.label}</span>
+								</button>
+							))}
+						</div>
+					) : null}
+				</div>
 			) : null}
 			<button
 				type="button"
@@ -5009,9 +5088,9 @@ function ChatVideoPlayer({
 				onClick={toggleExpanded}
 			>
 				{fullscreen ? (
-					<Minimize2 size={fullscreen ? 20 : 18} strokeWidth={2.2} />
+					<Minimize2 size={fullscreen ? 19 : 17} strokeWidth={2.2} />
 				) : (
-					<Maximize2 size={fullscreen ? 20 : 18} strokeWidth={2.2} />
+					<Maximize2 size={fullscreen ? 19 : 17} strokeWidth={2.2} />
 				)}
 			</button>
 		</div>
@@ -5046,12 +5125,14 @@ function ChatVideoPlayer({
 			<div className="wa-video-stage">
 				<video
 					ref={videoRef}
-					key={`${url}:${fullscreen ? 'fs' : 'inline'}`}
+					key={url}
 					controls={false}
 					controlsList="nodownload nofullscreen noremoteplayback"
 					disablePictureInPicture
 					playsInline
-					preload="auto"
+					// `auto` had every near-viewport video pulling its whole file at once,
+					// starving the images on screen. Metadata is enough for poster+duration.
+					preload="metadata"
 					poster={poster || undefined}
 					src={url}
 					className="wa-video-asset"
@@ -5151,6 +5232,9 @@ export function MediaAttachment({
 	avatarLabel = '?',
 	avatarSrc = '',
 	onTranscribe = null,
+	onSendAsVoice = null,
+	sendAsVoiceLabel = '',
+	sendingAsVoice = false,
 }) {
 	const initialLocalPreview = localAttachmentPreview(attachment);
 	const [url, setUrl] = useState(() => initialLocalPreview);
@@ -5387,8 +5471,11 @@ export function MediaAttachment({
 			setLoading(true);
 			setFailed(false);
 		}
-		const useSignedVideo =
-			type === 'video' &&
+		// Images and video both stream from a signed URL. Blob-fetching an image over
+		// an authenticated XHR blocked painting until the last byte arrived and threw
+		// away progressive decode, Range support and the browser's HTTP cache.
+		const useSignedStream =
+			['video', 'image', 'sticker'].includes(type) &&
 			!demoAttachment &&
 			isPersistedAttachmentId(attachmentId) &&
 			!localUrl;
@@ -5414,7 +5501,7 @@ export function MediaAttachment({
 			setUrl(objectUrl);
 			setFailed(false);
 		};
-		const load = useSignedVideo
+		const load = useSignedStream
 			? getAttachmentStreamUrl(attachmentId, attachment)
 					.then(streamUrl => {
 						if (cancelled || loadGenRef.current !== loadGen) return;
@@ -5871,6 +5958,10 @@ export function MediaAttachment({
 				onDownload={() => handleFileAction('download')}
 				transcribeLabel={labels.transcribe || 'Transcribe'}
 				onTranscribe={typeof onTranscribe === 'function' ? onTranscribe : null}
+				moreLabel={labels.moreActions || 'More'}
+				onSendAsVoice={typeof onSendAsVoice === 'function' ? onSendAsVoice : null}
+				sendAsVoiceLabel={sendAsVoiceLabel || labels.sendAsVoice || 'Send as voice message'}
+				sendingAsVoice={sendingAsVoice}
 				onError={event => {
 					if (event.currentTarget.currentSrc !== url) return;
 					setFailed(true);
@@ -5923,6 +6014,9 @@ function MessageAttachments({
 	avatarLabel = '?',
 	avatarSrc = '',
 	onTranscribe = null,
+	onSendAsVoice = null,
+	sendAsVoiceLabel = '',
+	sendingAsVoice = false,
 }) {
 	const rawPreview = mediaPreviewFromRaw(messageRaw);
 	const voiceDuration = voiceDurationSecondsFromSource(message || { raw: messageRaw, attachments });
@@ -6017,6 +6111,13 @@ function MessageAttachments({
 					onTranscribe={
 						String(attachment?.type || '').toLowerCase() === 'video' ? onTranscribe : null
 					}
+					onSendAsVoice={
+						String(attachment?.type || '').toLowerCase() === 'video' && onSendAsVoice
+							? () => onSendAsVoice(attachment)
+							: null
+					}
+					sendAsVoiceLabel={sendAsVoiceLabel}
+					sendingAsVoice={sendingAsVoice}
 				/>
 			))}
 		</>
@@ -8615,6 +8716,7 @@ function WhatsAppWorkspaceContent() {
 	const pendingCloneSamplesRef = useRef([]);
 	const cloneVoiceHistoryRef = useRef(new Map());
 	const [voiceChanging, setVoiceChanging] = useState(false);
+	const [sendingVideoAsVoiceId, setSendingVideoAsVoiceId] = useState('');
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
 	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
 	const draftRef = useRef('');
@@ -8829,10 +8931,15 @@ function WhatsAppWorkspaceContent() {
 	const conversationLongPressOriginRef = useRef(null);
 	const suppressConversationClickRef = useRef(false);
 	const lastAutoScrolledMessageRef = useRef(null);
-	const pinThreadToBottomRef = useRef(false);
+	// Opens at the newest message by default. Starting at `false` meant any mount
+	// that already had a conversationId (restored chat, remounted split pane)
+	// skipped every bottom-pin path and rendered mid-thread.
+	const pinThreadToBottomRef = useRef(true);
 	const jumpToBottomInFlightRef = useRef(false);
 	const lastThreadScrollTopRef = useRef(0);
 	const userScrollingThreadRef = useRef(false);
+	/** Last real input gesture on the thread (wheel / touch / key), not a programmatic scroll. */
+	const lastThreadGestureAtRef = useRef(0);
 	const userScrollIdleTimerRef = useRef(null);
 	const threadSettledRef = useRef(true);
 	const loadingMessagesRef = useRef(false);
@@ -8919,16 +9026,34 @@ function WhatsAppWorkspaceContent() {
 	const autoInboxSyncAttemptedRef = useRef(null);
 	const loadOlderAtRef = useRef(0);
 	const olderScrollRestoreRef = useRef(null);
+	/**
+	 * The restore effect owns the pending anchor, but its cleanup can cancel the
+	 * expiry timer on a re-render that then early-returns, orphaning the lock and
+	 * silently disabling both auto-scroll and the jump button. Treat anything past
+	 * its deadline as released, whoever asks.
+	 */
+	const pendingOlderRestore = useCallback(() => {
+		const pending = olderScrollRestoreRef.current;
+		if (!pending) return null;
+		// `lockedAt` is wall-clock; `startedAt` is a performance timestamp owned by
+		// the restore effect and is not comparable to Date.now().
+		const lockedAt = Number(pending.lockedAt || 0);
+		if (lockedAt && Date.now() - lockedAt > THREAD_RESTORE_MAX_MS * 2) {
+			olderScrollRestoreRef.current = null;
+			return null;
+		}
+		return pending;
+	}, []);
 	const isThreadScrollLocked = useCallback(
-		() => loadingOlderRef.current || Boolean(olderScrollRestoreRef.current),
-		[],
+		() => loadingOlderRef.current || Boolean(pendingOlderRestore()),
+		[pendingOlderRestore],
 	);
 	const suppressOlderLoadUntilRef = useRef(0);
 	const syncCooldownUntilRef = useRef(0);
 
 	const scrollMessagesToBottom = useCallback((behavior = 'auto', { force = false } = {}) => {
 		const applyOnce = () => {
-			if (loadingOlderRef.current || olderScrollRestoreRef.current) return false;
+			if (loadingOlderRef.current || pendingOlderRestore()) return false;
 			const opening = !threadSettledRef.current || loadingMessagesRef.current;
 			const forceScroll = force || opening;
 			if (!pinThreadToBottomRef.current && !forceScroll) return false;
@@ -8977,8 +9102,7 @@ function WhatsAppWorkspaceContent() {
 					{ pin: true, force: forceScroll },
 				);
 			}
-			const distance = threadDistanceFromBottom(box);
-			setShowJumpToBottom(distance > 220);
+			setShowJumpToBottom(shouldShowJumpToBottom(box));
 			return isThreadPinnedToBottom(box);
 		};
 		requestAnimationFrame(() => {
@@ -8991,7 +9115,7 @@ function WhatsAppWorkspaceContent() {
 				}, 50);
 			});
 		});
-	}, []);
+	}, [pendingOlderRestore]);
 
 	/** Single write path for the message pane. The base list is whatever the
 	 *  target conversation already owns — messages belonging to a chat the user
@@ -9182,9 +9306,13 @@ function WhatsAppWorkspaceContent() {
 	messageVirtualRef.current = messageVirtual;
 
 	const jumpMessagesToBottom = useCallback(() => {
-		if (loadingOlderRef.current || olderScrollRestoreRef.current) return;
 		const box = messageBoxRef.current;
 		if (!box) return;
+		// An explicit user request always wins. Bailing out while an older-messages
+		// restore was pending is what made the button silently do nothing, because
+		// the pending anchor could outlive the effect that was supposed to clear it.
+		olderScrollRestoreRef.current = null;
+		suppressOlderLoadUntilRef.current = Date.now() + 600;
 
 		pinThreadToBottomRef.current = true;
 		userScrollingThreadRef.current = false;
@@ -9237,18 +9365,25 @@ function WhatsAppWorkspaceContent() {
 			if (!el) return;
 			// User explicitly asked for bottom — keep pin on.
 			pinThreadToBottomRef.current = true;
-			const distance = threadDistanceFromBottom(el);
-			setShowJumpToBottom(distance > 220);
-			if (distance > 48) {
-				// One late pass after layout/media settles.
-				window.setTimeout(() => {
-					if (!messageBoxRef.current || !pinThreadToBottomRef.current) return;
+			setShowJumpToBottom(shouldShowJumpToBottom(el));
+			// Media decode and virtualizer re-measure land well after the rAF loop
+			// gives up. A single 120ms pass was not enough, so the position drifted
+			// back and the button reappeared — which read as "the button did nothing".
+			let latePasses = 0;
+			const latePass = () => {
+				const node = messageBoxRef.current;
+				if (!node || !pinThreadToBottomRef.current) return;
+				if (userScrollingThreadRef.current) return;
+				latePasses += 1;
+				if (threadDistanceFromBottom(node) > 8) {
 					jumpToBottomInFlightRef.current = true;
 					applyJump();
 					jumpToBottomInFlightRef.current = false;
-					setShowJumpToBottom(threadDistanceFromBottom(messageBoxRef.current) > 220);
-				}, 120);
-			}
+				}
+				setShowJumpToBottom(shouldShowJumpToBottom(node));
+				if (latePasses < 4) window.setTimeout(latePass, 140 * latePasses);
+			};
+			window.setTimeout(latePass, 120);
 		};
 
 		const tick = () => {
@@ -9294,7 +9429,7 @@ function WhatsAppWorkspaceContent() {
 				image &&
 				pinThreadToBottomRef.current &&
 				!loadingOlderRef.current &&
-				!olderScrollRestoreRef.current
+				!pendingOlderRestore()
 			) {
 				const box = messageBoxRef.current;
 				if (
@@ -11654,6 +11789,8 @@ function WhatsAppWorkspaceContent() {
 		let attempts = 0;
 		let rafId = 0;
 		let cancelled = false;
+		let stableFrames = 0;
+		let lastHeight = -1;
 		const maxAttempts = 36;
 
 		const pinBottom = () => {
@@ -11689,20 +11826,28 @@ function WhatsAppWorkspaceContent() {
 			if (cancelled) return;
 			attempts += 1;
 			const pinned = pinBottom();
-			if (pinned || attempts >= maxAttempts) {
+			// Declaring victory on a single frame let the virtualizer swap estimated
+			// row sizes for measured ones right after `opacity` flipped to 1, landing
+			// the thread mid-scroll with no native anchoring to pull it back.
+			const height = Number(messageBoxRef.current?.scrollHeight) || 0;
+			if (pinned && height === lastHeight) stableFrames += 1;
+			else stableFrames = 0;
+			lastHeight = height;
+
+			if ((pinned && stableFrames >= 2) || attempts >= maxAttempts) {
 				setThreadSettled(true);
-				setShowJumpToBottom(
-					!pinned &&
-						threadDistanceFromBottom(messageBoxRef.current) > 220,
-				);
-				// Opacity flips to ready on settle — heights can grow; re-pin once.
-				requestAnimationFrame(() => {
+				setShowJumpToBottom(!pinned && shouldShowJumpToBottom(messageBoxRef.current));
+				// Opacity flips to ready on settle — heights can grow; re-pin a few frames.
+				let after = 0;
+				const rePin = () => {
 					if (cancelled || !pinThreadToBottomRef.current) return;
+					if (userScrollingThreadRef.current) return;
 					pinBottom();
-					setShowJumpToBottom(
-						threadDistanceFromBottom(messageBoxRef.current) > 220,
-					);
-				});
+					setShowJumpToBottom(shouldShowJumpToBottom(messageBoxRef.current));
+					after += 1;
+					if (after < 3) requestAnimationFrame(rePin);
+				};
+				requestAnimationFrame(rePin);
 				return;
 			}
 			rafId = requestAnimationFrame(tick);
@@ -11785,7 +11930,7 @@ function WhatsAppWorkspaceContent() {
 	loadMessageSchedulesRef.current = loadMessageSchedules;
 
 	useLayoutEffect(() => {
-		if (!conversationId || loadingOlderRef.current || olderScrollRestoreRef.current) return;
+		if (!conversationId || loadingOlderRef.current || pendingOlderRestore()) return;
 		if (!pinThreadToBottomRef.current || threadSettledRef.current) return;
 		if (!effectiveMessages.length) return;
 		scrollMessagesToBottom('auto', { force: true });
@@ -11797,6 +11942,7 @@ function WhatsAppWorkspaceContent() {
 		messageRows.length,
 		threadSettled,
 		scrollMessagesToBottom,
+		pendingOlderRestore,
 	]);
 
 	useLayoutEffect(() => {
@@ -11804,7 +11950,7 @@ function WhatsAppWorkspaceContent() {
 			if (!threadSettled) setThreadSettled(true);
 			return;
 		}
-		if (loadingOlderRef.current || olderScrollRestoreRef.current) return;
+		if (loadingOlderRef.current || pendingOlderRestore()) return;
 		const box = messageBoxRef.current;
 		const latest = effectiveMessages[effectiveMessages.length - 1];
 		if (!latest?.id) {
@@ -11817,13 +11963,16 @@ function WhatsAppWorkspaceContent() {
 			!shouldStickThreadToBottom({
 				pinToBottom: pinThreadToBottomRef.current,
 				loadingOlder: loadingOlderRef.current,
-				restoringOlder: Boolean(olderScrollRestoreRef.current),
+				restoringOlder: false,
 				isNewLatest,
 				nearBottom,
 				threadSettling: !threadSettled,
 				loadingMessages,
 			})
 		) {
+			// Reading history further up: surface the jump control so the new message
+			// is reachable instead of leaving the user with no way back to the bottom.
+			if (isNewLatest && threadSettled && box) setShowJumpToBottom(true);
 			return;
 		}
 		lastAutoScrolledMessageRef.current = latest.id;
@@ -11863,6 +12012,7 @@ function WhatsAppWorkspaceContent() {
 		virtualizeMessages,
 		messageRows.length,
 		threadSettled,
+		pendingOlderRestore,
 	]);
 
 	// Restore scroll after older messages are prepended (before paint).
@@ -11906,7 +12056,7 @@ function WhatsAppWorkspaceContent() {
 			pending.stableFrames >= 2 &&
 			elapsed >= 120 &&
 			(!pending.rowKey || findThreadAnchorRow(box, pending));
-		if (settled || elapsed >= 1600) {
+		if (settled || elapsed >= THREAD_RESTORE_MAX_MS) {
 			olderScrollRestoreRef.current = null;
 			suppressOlderLoadUntilRef.current = Date.now() + 900;
 			return undefined;
@@ -11927,10 +12077,13 @@ function WhatsAppWorkspaceContent() {
 				olderScrollRestoreRef.current = null;
 				suppressOlderLoadUntilRef.current = Date.now() + 900;
 			}
-		}, Math.max(16, 1600 - elapsed));
+		}, Math.max(16, THREAD_RESTORE_MAX_MS - elapsed));
 
 		return () => {
 			cancelAnimationFrame(raf);
+			// This cleanup also runs on re-renders whose next effect pass early-returns,
+			// so the deadline can be cancelled without ever being rescheduled. The
+			// `lockedAt` watchdog in pendingOlderRestore() is the backstop for that.
 			window.clearTimeout(timer);
 		};
 	}, [
@@ -11970,12 +12123,15 @@ function WhatsAppWorkspaceContent() {
 			}
 			waScrollApply(
 				box,
-				box.scrollHeight,
+				Math.max(
+					Number(box.scrollHeight) || 0,
+					Number(messageVirtualRef.current?.totalSize) || 0,
+				),
 				'resizeObserverKeepBottom',
 				opening ? 'open-chat:force-bottom' : 'media/layout-resize:pin-bottom',
 				{ pin: true, distance, force: opening },
 			);
-			setShowJumpToBottom(false);
+			setShowJumpToBottom(shouldShowJumpToBottom(box));
 		};
 		const onMediaLoad = event => {
 			if (event?.target?.tagName === 'IMG' || event?.target?.tagName === 'VIDEO') {
@@ -13799,6 +13955,32 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
+	/** FFmpeg strips the video track server-side; the result arrives as a normal PTT. */
+	const sendVideoAsVoice = async (message, attachment) => {
+		const attachmentId = String(attachment?.id || '');
+		if (!attachmentId || !conversationId) return;
+		if (sendingVideoAsVoiceId) return;
+		if (!isPersistedAttachmentId(attachmentId)) {
+			toast.error(t.sendAsVoiceFailed);
+			return;
+		}
+		setSendingVideoAsVoiceId(message?.id || attachmentId);
+		toast.loading(t.sendingAsVoice, { id: 'wa-video-as-voice' });
+		try {
+			await api.post(
+				`/whatsapp/conversations/${conversationId}/attachments/${attachmentId}/send-as-voice`,
+				{ clientMessageId: newClientMessageId() },
+			);
+			toast.success(t.sendAsVoiceDone, { id: 'wa-video-as-voice' });
+		} catch (error) {
+			toast.error(error?.response?.data?.message || t.sendAsVoiceFailed, {
+				id: 'wa-video-as-voice',
+			});
+		} finally {
+			setSendingVideoAsVoiceId('');
+		}
+	};
+
 	const sendRecordedVoice = async file => {
 		if (!file || !conversationId || !accountId) return false;
 		if (file.size > 25 * 1024 * 1024) {
@@ -15529,8 +15711,12 @@ function WhatsAppWorkspaceContent() {
 		const requestId = ++olderRequestId.current;
 		const scrollBox = messageBoxRef.current;
 		const wasPinned = pinThreadToBottomRef.current;
-		pinThreadToBottomRef.current = false;
-		if (wasPinned && scrollBox) {
+		// Only drop the pin when the viewport really left the bottom. Clearing it
+		// unconditionally meant one spurious prepend permanently stopped new
+		// messages from auto-scrolling for the rest of the conversation.
+		const stillAtBottom = scrollBox ? isThreadPinnedToBottom(scrollBox) : false;
+		if (!stillAtBottom) pinThreadToBottomRef.current = false;
+		if (wasPinned && !stillAtBottom && scrollBox) {
 			waScrollLog('loadOlder', 'pin-disabled:start-loadOlder', scrollBox, scrollBox.scrollTop, scrollBox.scrollTop, {
 				preserveScroll,
 			});
@@ -15539,6 +15725,7 @@ function WhatsAppWorkspaceContent() {
 			const virt = messageVirtualRef.current;
 			olderScrollRestoreRef.current = {
 				conversationId: targetConversationId,
+				lockedAt: Date.now(),
 				...captureThreadScrollAnchor(scrollBox, {
 					virtualItems: virt?.items || [],
 					totalSize: virt?.totalSize || 0,
@@ -15652,6 +15839,7 @@ function WhatsAppWorkspaceContent() {
 				const virt = messageVirtualRef.current;
 				olderScrollRestoreRef.current = {
 					conversationId: targetConversationId,
+					lockedAt: Date.now(),
 					...captureThreadScrollAnchor(box, {
 						virtualItems: virt?.items || [],
 						totalSize: virt?.totalSize || 0,
@@ -15668,7 +15856,6 @@ function WhatsAppWorkspaceContent() {
 
 			if (preserveScroll && added > 0 && box && olderScrollRestoreRef.current) {
 				const pending = olderScrollRestoreRef.current;
-				const virt = messageVirtualRef.current;
 				const nextTotalSize =
 					Number(pending.previousTotalSize || 0) +
 					(estimatedPrependedHeight || 0);
@@ -15676,18 +15863,14 @@ function WhatsAppWorkspaceContent() {
 					added,
 					estimatedPrependedHeight,
 				});
+				// One writer only. This used to also call virt.scrollToOffset() with a
+				// separately derived target, so two estimates fought each other across
+				// frames and the thread visibly crept upward. The restore layout effect
+				// refines this same anchor once real measurements land.
 				applyThreadScrollAnchor(box, pending, {
 					totalSize: virtualizedThread ? nextTotalSize : Number(box.scrollHeight) || 0,
 					virtualized: virtualizedThread,
 				});
-				if (virtualizedThread && typeof virt?.scrollToOffset === 'function') {
-					const targetOffset =
-						Number(pending.previousScrollTop || 0) + (estimatedPrependedHeight || 0);
-					waScrollMark('loadOlder', 'virtualizer.scrollToOffset:post-prepend', {
-						targetOffset,
-					});
-					virt.scrollToOffset(targetOffset, { align: 'start' });
-				}
 			}
 
 			return added > 0 || incoming.length > 0;
@@ -19651,6 +19834,27 @@ function WhatsAppWorkspaceContent() {
 									<div className="wa-chat-wallpaper-layer" aria-hidden="true" />
 									<div
 										ref={messageBoxRef}
+										onWheel={() => {
+											lastThreadGestureAtRef.current = Date.now();
+										}}
+										onTouchMove={() => {
+											lastThreadGestureAtRef.current = Date.now();
+										}}
+										onKeyDown={event => {
+											if (
+												[
+													'PageUp',
+													'PageDown',
+													'ArrowUp',
+													'ArrowDown',
+													'Home',
+													'End',
+													' ',
+												].includes(event.key)
+											) {
+												lastThreadGestureAtRef.current = Date.now();
+											}
+										}}
 										onScroll={event => {
 											const box = event.currentTarget;
 											const scrollTop = Number(box.scrollTop) || 0;
@@ -19677,7 +19881,7 @@ function WhatsAppWorkspaceContent() {
 												distanceFromBottom > THREAD_PIN_THRESHOLD_PX)
 											) {
 												pinThreadToBottomRef.current = false;
-												setShowJumpToBottom(distanceFromBottom > 220);
+												setShowJumpToBottom(shouldShowJumpToBottom(box));
 												if (wasPinned) {
 													waScrollLog(
 														'onScroll',
@@ -19690,7 +19894,7 @@ function WhatsAppWorkspaceContent() {
 												}
 											} else if (
 												!loadingOlderRef.current &&
-												!olderScrollRestoreRef.current &&
+												!pendingOlderRestore() &&
 												distanceFromBottom <= THREAD_PIN_THRESHOLD_PX
 											) {
 												pinThreadToBottomRef.current = true;
@@ -19710,10 +19914,15 @@ function WhatsAppWorkspaceContent() {
 												threadSettled &&
 												!loadingMessages &&
 												!loadingOlderRef.current &&
-												!olderScrollRestoreRef.current &&
+												!pendingOlderRestore() &&
 												Date.now() >= suppressOlderLoadUntilRef.current &&
-												box.scrollHeight > box.clientHeight + 8 &&
-												box.scrollTop < 40
+												shouldAutoLoadOlder({
+													scrollTop,
+													scrollHeight: box.scrollHeight,
+													clientHeight: box.clientHeight,
+													scrollingUp,
+													lastUserGestureAt: lastThreadGestureAtRef.current,
+												})
 											) {
 												loadOlder();
 											}
@@ -20470,6 +20679,11 @@ function WhatsAppWorkspaceContent() {
 																							}
 																						: null
 																				}
+																				onSendAsVoice={attachment => {
+																					void sendVideoAsVoice(message, attachment);
+																				}}
+																				sendAsVoiceLabel={t.sendAsVoice}
+																				sendingAsVoice={sendingVideoAsVoiceId === message.id}
 																			/>
 																		)
 																		: !isDeleted && fallbackMediaPreview ? (

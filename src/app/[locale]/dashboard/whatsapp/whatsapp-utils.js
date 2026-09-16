@@ -1978,6 +1978,11 @@ export function findThreadAnchorRow(box, pending) {
 /** Distance (px) from the bottom of the scroll container. */
 export const THREAD_PIN_THRESHOLD_PX = 64;
 export const THREAD_NEAR_BOTTOM_THRESHOLD_PX = 180;
+// Must stay just above the pin threshold: anything larger leaves a band where the
+// thread is unpinned but the jump button is hidden, so the user cannot get back.
+export const THREAD_JUMP_BUTTON_THRESHOLD_PX = 72;
+/** How long a pending older-messages restore may hold the scroll lock. */
+export const THREAD_RESTORE_MAX_MS = 1600;
 
 export function threadDistanceFromBottom(box) {
 	if (!box) return Number.POSITIVE_INFINITY;
@@ -1992,6 +1997,33 @@ export function isThreadPinnedToBottom(box, threshold = THREAD_PIN_THRESHOLD_PX)
 
 export function isThreadNearBottom(box, threshold = THREAD_NEAR_BOTTOM_THRESHOLD_PX) {
 	return threadDistanceFromBottom(box) <= threshold;
+}
+
+export function shouldShowJumpToBottom(box) {
+	return threadDistanceFromBottom(box) > THREAD_JUMP_BUTTON_THRESHOLD_PX;
+}
+
+/**
+ * Auto-loading older messages must be driven by a real user gesture. The
+ * virtualizer legitimately parks `scrollTop` near 0 while it swaps estimated row
+ * sizes for measured ones, and those synthetic scroll events used to look
+ * identical to "the user reached the top of the thread".
+ */
+export function shouldAutoLoadOlder({
+	scrollTop = 0,
+	scrollHeight = 0,
+	clientHeight = 0,
+	scrollingUp = false,
+	lastUserGestureAt = 0,
+	now = Date.now(),
+	gestureWindowMs = 1200,
+	topThresholdPx = 40,
+} = {}) {
+	if (scrollHeight <= clientHeight + 8) return false;
+	if (scrollTop >= topThresholdPx) return false;
+	if (!scrollingUp) return false;
+	if (!lastUserGestureAt) return false;
+	return now - lastUserGestureAt <= gestureWindowMs;
 }
 
 export function captureThreadScrollAnchor(box, options = {}) {

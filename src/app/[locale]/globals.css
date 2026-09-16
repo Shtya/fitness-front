@@ -4889,37 +4889,64 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	z-index: 6;
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	min-height: 44px;
-	padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+	gap: 2px;
+	min-height: 40px;
+	padding: 6px 6px max(6px, env(safe-area-inset-bottom));
 	background: linear-gradient(
 		180deg,
 		transparent 0%,
-		rgba(11, 20, 26, 0.55) 28%,
-		rgba(11, 20, 26, 0.88) 100%
+		rgba(11, 20, 26, 0.42) 35%,
+		rgba(11, 20, 26, 0.82) 100%
 	);
 	color: #fff;
 	pointer-events: auto;
+	opacity: 0;
+	transform: translateY(4px);
+	transition:
+		opacity 160ms ease,
+		transform 160ms ease;
+}
+
+/* Chrome stays out of the way while the video plays and returns on hover, focus
+   or pause. Keyboard and touch users are covered by :focus-within and is-paused. */
+.wa-video-wrap:hover > .wa-video-controls,
+.wa-video-wrap.is-paused > .wa-video-controls,
+.wa-video-wrap > .wa-video-controls:focus-within,
+.wa-video-controls.is-expanded {
+	opacity: 1;
+	transform: none;
+}
+
+@media (hover: none) {
+	.wa-video-wrap > .wa-video-controls {
+		opacity: 1;
+		transform: none;
+	}
 }
 
 .wa-video-controls__btn {
 	flex: 0 0 auto;
 	display: grid;
 	place-items: center;
-	width: 34px;
-	height: 34px;
+	width: 30px;
+	height: 30px;
 	margin: 0;
 	padding: 0;
 	border: 0;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.12);
+	background: transparent;
 	color: #fff;
 	cursor: pointer;
+	transition: background-color 140ms ease;
+}
+
+.wa-video-controls__btn--play {
+	background: rgba(255, 255, 255, 0.14);
 }
 
 .wa-video-controls__btn:hover,
 .wa-video-controls__btn:focus-visible {
-	background: rgba(255, 255, 255, 0.22);
+	background: rgba(255, 255, 255, 0.2);
 }
 
 .wa-video-controls__btn:disabled {
@@ -5014,12 +5041,85 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	display: flex;
 	align-items: center;
 	gap: 4px;
-	max-width: 120px;
 }
 
 .wa-video-controls__volume-slider {
-	width: 72px;
-	min-width: 56px;
+	width: 0;
+	min-width: 0;
+	opacity: 0;
+	pointer-events: none;
+	transition:
+		width 160ms ease,
+		opacity 160ms ease;
+}
+
+.wa-video-controls__volume:hover .wa-video-controls__volume-slider,
+.wa-video-controls__volume:focus-within .wa-video-controls__volume-slider {
+	width: 64px;
+	min-width: 64px;
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.wa-video-controls__more {
+	position: relative;
+	flex: 0 0 auto;
+}
+
+.wa-video-menu {
+	position: absolute;
+	bottom: calc(100% + 8px);
+	inset-inline-end: 0;
+	z-index: 8;
+	min-width: 190px;
+	padding: 5px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 12px;
+	background: rgba(23, 33, 39, 0.97);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+	backdrop-filter: blur(10px);
+}
+
+.wa-video-menu__item {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	width: 100%;
+	padding: 8px 9px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: #e9edef;
+	font-size: 12.5px;
+	font-weight: 500;
+	text-align: start;
+	cursor: pointer;
+}
+
+.wa-video-menu__item:hover:not(:disabled),
+.wa-video-menu__item:focus-visible {
+	background: rgba(255, 255, 255, 0.09);
+}
+
+.wa-video-menu__item:disabled {
+	opacity: 0.6;
+	cursor: wait;
+}
+
+.wa-video-menu__icon {
+	display: grid;
+	place-items: center;
+	flex: 0 0 auto;
+	width: 16px;
+	height: 16px;
+	color: #8696a0;
+}
+
+.wa-video-menu__label {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .wa-video-controls__volume-slider::-webkit-slider-runnable-track {
@@ -5134,17 +5234,25 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.wa-video-controls.is-expanded {
+	gap: 4px;
+}
+
 .wa-video-controls.is-expanded .wa-video-controls__btn {
-	width: 40px;
-	height: 40px;
+	width: 38px;
+	height: 38px;
 }
 
 .wa-video-controls.is-expanded .wa-video-controls__time {
 	font-size: 12px;
 }
 
+/* Fullscreen has the room, so volume is always on show there. */
 .wa-video-controls.is-expanded .wa-video-controls__volume-slider {
-	width: 96px;
+	width: 88px;
+	min-width: 88px;
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .wa-video-viewer-root .wa-video-viewer-chrome {
@@ -5190,8 +5298,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-video-controls__btn {
-		width: 32px;
-		height: 32px;
+		width: 28px;
+		height: 28px;
 	}
 
 	.wa-video-controls__time {
@@ -5204,7 +5312,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-video-controls.is-expanded .wa-video-controls__volume-slider {
 		display: block;
-		width: 72px;
+		width: 68px;
+		min-width: 68px;
 	}
 }
 

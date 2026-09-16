@@ -55,6 +55,11 @@ import {
 	applyThreadScrollAnchor,
 	captureThreadScrollAnchor,
 	shouldStickThreadToBottom,
+	shouldShowJumpToBottom,
+	shouldAutoLoadOlder,
+	THREAD_PIN_THRESHOLD_PX,
+	THREAD_JUMP_BUTTON_THRESHOLD_PX,
+	THREAD_NEAR_BOTTOM_THRESHOLD_PX,
 	buildChatViewerImages,
 	viewerNeighborIds,
 	viewerThumbSrc,
@@ -1200,6 +1205,39 @@ test('shouldStickThreadToBottom only pins on first open or new messages near the
 		shouldStickThreadToBottom({ isNewLatest: false, nearBottom: true }),
 		false,
 	);
+});
+
+test('shouldShowJumpToBottom leaves no gap where the thread is unpinned but the button is hidden', () => {
+	const box = (distance) => ({ scrollHeight: 1000 + distance, clientHeight: 1000, scrollTop: 0 });
+	assert.equal(shouldShowJumpToBottom(box(0)), false);
+	assert.equal(shouldShowJumpToBottom(box(THREAD_PIN_THRESHOLD_PX)), false);
+	// The old 220px threshold left 64–220px unpinned with the button hidden.
+	assert.equal(shouldShowJumpToBottom(box(120)), true);
+	assert.equal(shouldShowJumpToBottom(box(400)), true);
+	assert.ok(THREAD_JUMP_BUTTON_THRESHOLD_PX > THREAD_PIN_THRESHOLD_PX);
+	assert.ok(THREAD_JUMP_BUTTON_THRESHOLD_PX < THREAD_NEAR_BOTTOM_THRESHOLD_PX);
+});
+
+test('shouldAutoLoadOlder requires a recent user gesture, not just scrollTop near zero', () => {
+	const now = 10_000;
+	const base = {
+		scrollTop: 0,
+		scrollHeight: 5000,
+		clientHeight: 800,
+		scrollingUp: true,
+		lastUserGestureAt: now - 100,
+		now,
+	};
+	assert.equal(shouldAutoLoadOlder(base), true);
+
+	// The virtualizer parks scrollTop at 0 while swapping estimates for measured
+	// sizes; those synthetic scroll events must not prepend a page.
+	assert.equal(shouldAutoLoadOlder({ ...base, lastUserGestureAt: 0 }), false);
+	assert.equal(shouldAutoLoadOlder({ ...base, lastUserGestureAt: now - 5000 }), false);
+	assert.equal(shouldAutoLoadOlder({ ...base, scrollingUp: false }), false);
+	assert.equal(shouldAutoLoadOlder({ ...base, scrollTop: 400 }), false);
+	// Nothing to page in when the thread does not overflow.
+	assert.equal(shouldAutoLoadOlder({ ...base, scrollHeight: 800 }), false);
 });
 
 test('mergeMessages sorts mixed timestamp units chronologically', () => {

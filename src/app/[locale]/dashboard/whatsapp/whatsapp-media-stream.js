@@ -22,6 +22,54 @@ export function rememberAttachmentStreamUrl(attachmentId, url, expiresAt) {
 	return href;
 }
 
+// A screenful of media used to mean one signed-url request per bubble. Requests
+// raised in the same tick are coalesced into a single batch call instead.
+const pendingBatch = new Map();
+let batchTimer = null;
+
+function flushBatch() {
+	batchTimer = null;
+	const batch = [...pendingBatch.entries()];
+	pendingBatch.clear();
+	if (!batch.length) return;
+
+	const ids = batch.map(([id]) => id);
+	api.post('/whatsapp/attachments/signed-urls', { attachmentIds: ids })
+		.then(({ data }) => {
+			const byId = new Map(
+				(Array.isArray(data?.items) ? data.items : []).map(item => [
+					String(item?.attachmentId || ''),
+					item,
+				]),
+			);
+			for (const [id, waiters] of batch) {
+				const item = byId.get(id);
+				if (item?.url) {
+					const href = rememberAttachmentStreamUrl(id, item.url, item.expiresAt);
+					waiters.forEach(({ resolve }) => resolve(href));
+				} else {
+					const error = new Error('Media stream URL missing');
+					waiters.forEach(({ reject }) => reject(error));
+				}
+			}
+		})
+		.catch(error => {
+			for (const [, waiters] of batch) waiters.forEach(({ reject }) => reject(error));
+		});
+}
+
+function requestStreamUrl(id) {
+	return new Promise((resolve, reject) => {
+		const waiters = pendingBatch.get(id);
+		if (waiters) {
+			waiters.push({ resolve, reject });
+			return;
+		}
+		pendingBatch.set(id, [{ resolve, reject }]);
+		if (!batchTimer) batchTimer = setTimeout(flushBatch, 16);
+	});
+}
+
 export async function getAttachmentStreamUrl(attachmentId, hint = null) {
 	const id = String(attachmentId || '');
 	if (!id) throw new Error('Attachment is unavailable');
@@ -34,9 +82,7 @@ export async function getAttachmentStreamUrl(attachmentId, hint = null) {
 			return rememberAttachmentStreamUrl(id, hint.streamUrl, hint.streamExpiresAt);
 		}
 	}
-	const { data } = await api.get(`/whatsapp/attachments/${id}/signed-url`);
-	if (!data?.url) throw new Error('Media stream URL missing');
-	return rememberAttachmentStreamUrl(id, data.url, data.expiresAt);
+	return requestStreamUrl(id);
 }
 
 export function forgetAttachmentStreamUrl(attachmentId) {
