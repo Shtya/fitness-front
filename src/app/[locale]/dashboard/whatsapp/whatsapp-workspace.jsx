@@ -6289,9 +6289,11 @@ function MessageHoverActions({
 	emojiOpen,
 	showTranscribe = false,
 	showCopy = false,
+	showDownloadVideo = false,
 	onEmoji,
 	onReply,
 	onTranscribe,
+	onDownloadVideo,
 	onCopy,
 	onMore,
 }) {
@@ -6310,6 +6312,7 @@ function MessageHoverActions({
 	const reactLabel = ar ? 'تفاعل' : 'React';
 	const replyLabel = ar ? 'رد' : 'Reply';
 	const transcribeLabel = ar ? 'تفريغ' : 'Transcribe';
+	const downloadVideoLabel = ar ? 'تحميل الفيديو' : 'Download video';
 	const moreLabel = ar ? 'المزيد' : 'More';
 
 	return (
@@ -6365,6 +6368,15 @@ function MessageHoverActions({
 					className="wa-message-hover-btn is-transcribe"
 				>
 					<AudioLines size={15} strokeWidth={2.1} aria-hidden />
+				</HoverActionButton>
+			) : null}
+			{showDownloadVideo ? (
+				<HoverActionButton
+					onClick={onDownloadVideo}
+					tooltip={downloadVideoLabel}
+					className="wa-message-hover-btn"
+				>
+					<FileVideo size={15} strokeWidth={2.1} aria-hidden />
 				</HoverActionButton>
 			) : null}
 			<span className="wa-message-hover-sep" aria-hidden />
@@ -14340,6 +14352,44 @@ function WhatsAppWorkspaceContent() {
 		};
 	}, [conversationId]);
 
+	/**
+	 * Restores videos already downloaded in this thread.
+	 *
+	 * The rows live on the server, so without this a reload leaves a finished video
+	 * invisible until it is downloaded a second time.
+	 */
+	useEffect(() => {
+		if (!conversationId || demo.settings.enabled) return undefined;
+		const targetConversationId = conversationId;
+		let cancelled = false;
+		(async () => {
+			try {
+				const { data } = await api.get(
+					`/whatsapp/conversations/${targetConversationId}/social-downloads`,
+				);
+				if (cancelled || conversationIdRef.current !== targetConversationId) return;
+				const byMessage = {};
+				// Newest first from the server, so the first row per message wins.
+				for (const row of data?.items || []) {
+					if (row?.messageId && !byMessage[row.messageId]) byMessage[row.messageId] = row;
+				}
+				if (!Object.keys(byMessage).length) return;
+				setSocialDownloads(current => ({ ...byMessage, ...current }));
+				// A download that was still running when the tab closed keeps going server-side.
+				for (const row of Object.values(byMessage)) {
+					if (row.status === 'pending') {
+						pollSocialVideoDownloadRef.current(row.messageId, row.sourceUrl);
+					}
+				}
+			} catch {
+				// Nothing to restore is the normal case; never block opening a thread.
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [conversationId, demo.settings.enabled]);
+
 	const sendRecordedVoice = async file => {
 		if (!file || !conversationId || !accountId) return false;
 		if (file.size > 25 * 1024 * 1024) {
@@ -20721,6 +20771,11 @@ function WhatsAppWorkspaceContent() {
 													const isVideoTranscriptMessage =
 														!groupedImages && isTranscriptVideoMessage(message);
 													const canTranscribeMedia = isVoiceMessage || isVideoTranscriptMessage;
+													// Same check the action menu makes, so the hover bar and the menu
+													// never disagree about whether this link can be downloaded.
+													const socialVideoLink = message.optimistic
+														? null
+														: firstSocialVideoLink(message.text);
 													const isLocationMessage =
 														!isDeleted && isWhatsAppLocationMessage(message);
 													const isContactMsg =
@@ -21376,6 +21431,10 @@ function WhatsAppWorkspaceContent() {
 																				!isDeleted &&
 																				Boolean(String(captionText || '').trim())
 																			}
+																			showDownloadVideo={Boolean(
+																				socialVideoLink &&
+																					!socialDownloads[message.id],
+																			)}
 																			onEmoji={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
@@ -21396,6 +21455,14 @@ function WhatsAppWorkspaceContent() {
 																				event.preventDefault();
 																				event.stopPropagation();
 																				void handleMessageAction(message, 'transcribe');
+																			}}
+																			onDownloadVideo={event => {
+																				event.preventDefault();
+																				event.stopPropagation();
+																				void handleMessageAction(
+																					message,
+																					'downloadSocialVideo',
+																				);
 																			}}
 																			onCopy={() => handleMessageAction(message, 'copy')}
 																			onMore={event => {
