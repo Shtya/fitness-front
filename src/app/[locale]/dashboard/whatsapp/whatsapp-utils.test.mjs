@@ -57,6 +57,7 @@ import {
 	shouldStickThreadToBottom,
 	shouldShowJumpToBottom,
 	shouldAutoLoadOlder,
+	computeAnchoredMenuPosition,
 	THREAD_PIN_THRESHOLD_PX,
 	THREAD_JUMP_BUTTON_THRESHOLD_PX,
 	THREAD_NEAR_BOTTOM_THRESHOLD_PX,
@@ -1363,4 +1364,58 @@ test('deleted message helpers detect tombstones and quote previews', () => {
 	const preview = quotedMessagePreview(deleted, 'en');
 	assert.equal(preview.body, 'This message was deleted');
 	assert.equal(preview.isDeleted, true);
+});
+
+test('computeAnchoredMenuPosition shifts the menu instead of shrinking it into a scrollbar', () => {
+	const viewport = { viewportW: 1280, viewportH: 900 };
+	// Anchor low on screen: only 150px below it, but the menu needs 500px.
+	const anchor = { top: 700, bottom: 750, left: 400, right: 440 };
+	const position = computeAnchoredMenuPosition(anchor, { width: 248, height: 500 }, viewport);
+	assert.equal(position.maxHeight, 500, 'menu keeps its full content height');
+	assert.ok(position.top >= 12, 'stays inside the top margin');
+	assert.ok(position.top + position.maxHeight <= 900 - 12, 'stays inside the bottom margin');
+});
+
+test('computeAnchoredMenuPosition still clamps to the viewport when content is taller than the screen', () => {
+	const position = computeAnchoredMenuPosition(
+		{ top: 10, bottom: 40, left: 100, right: 140 },
+		{ width: 248, height: 2000 },
+		{ viewportW: 1280, viewportH: 700 },
+	);
+	assert.equal(position.maxHeight, 700 - 24);
+	assert.equal(position.top, 12);
+});
+
+test('computeAnchoredMenuPosition opens upward only when there is more room above', () => {
+	const size = { width: 248, height: 400 };
+	const below = computeAnchoredMenuPosition(
+		{ top: 100, bottom: 140, left: 100, right: 140 },
+		size,
+		{ viewportW: 1280, viewportH: 900 },
+	);
+	assert.equal(below.placement, 'bottom');
+
+	const above = computeAnchoredMenuPosition(
+		{ top: 800, bottom: 840, left: 100, right: 140 },
+		size,
+		{ viewportW: 1280, viewportH: 900 },
+	);
+	assert.equal(above.placement, 'top');
+});
+
+test('computeAnchoredMenuPosition right-aligns outgoing menus and keeps them on screen', () => {
+	const mine = computeAnchoredMenuPosition(
+		{ top: 100, bottom: 140, left: 1240, right: 1275 },
+		{ width: 248, height: 300 },
+		{ viewportW: 1280, viewportH: 900, mine: true },
+	);
+	assert.equal(mine.left, 1280 - 248 - 12);
+
+	const narrow = computeAnchoredMenuPosition(
+		{ top: 100, bottom: 140, left: 0, right: 40 },
+		{ width: 248, height: 300 },
+		{ viewportW: 200, viewportH: 900 },
+	);
+	assert.equal(narrow.width, 200 - 24);
+	assert.equal(narrow.left, 12);
 });

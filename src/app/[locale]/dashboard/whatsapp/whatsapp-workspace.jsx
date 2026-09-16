@@ -18,6 +18,8 @@ import {
 	BarChart3,
 	Bell,
 	BellOff,
+	Bookmark,
+	BookmarkPlus,
 	Copy,
 	Check,
 	CheckCheck,
@@ -112,6 +114,8 @@ import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
 import CloneChatVoicePanel from './voice-changer/CloneChatVoicePanel';
 import VideoToVoiceDialog from './video-to-voice/VideoToVoiceDialog';
+import SavedLibraryPanel from './library/SavedLibraryPanel';
+import SaveToLibraryDialog from './library/SaveToLibraryDialog';
 import ScheduleMessageDialog from './schedule-message/ScheduleMessageDialog';
 import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
 import {
@@ -212,6 +216,7 @@ import {
 	isInlineImageDataUrl,
 	isDeletedWhatsAppMessage,
 	deletedWhatsAppMessageLabel,
+	computeAnchoredMenuPosition,
 } from './whatsapp-utils';
 import {
 	installWaScrollSpy,
@@ -820,6 +825,9 @@ const translations = {
 		sendingAsVoice: 'Converting video to a voice message…',
 		sendAsVoiceDone: 'Sent as a voice message',
 		sendAsVoiceFailed: 'Could not send this video as a voice message',
+		editAsVoice: 'Edit & send as voice',
+		saveToLibrary: 'Save to library',
+		library: 'Saved library',
 		message: 'Write a message',
 		send: 'Send',
 		sync: 'Sync',
@@ -1301,6 +1309,9 @@ const translations = {
 		sendingAsVoice: 'جارِ تحويل الفيديو لرسالة صوتية…',
 		sendAsVoiceDone: 'تم الإرسال كرسالة صوتية',
 		sendAsVoiceFailed: 'تعذر إرسال الفيديو كرسالة صوتية',
+		editAsVoice: 'تعديل وإرسال كصوت',
+		saveToLibrary: 'حفظ في المكتبة',
+		library: 'المكتبة المحفوظة',
 		message: 'اكتب رسالة',
 		send: 'إرسال',
 		sync: 'مزامنة',
@@ -3221,46 +3232,6 @@ function computeBesideMenuPosition(anchorRect, menuSize = { width: 228, height: 
 	return { top, left, width, maxHeight: height };
 }
 
-function computeAnchoredMenuPosition(
-	anchorRect,
-	menuSize = { width: 248, height: 420 },
-	options = {},
-) {
-	const gap = 8;
-	const margin = 12;
-	const mine = Boolean(options.mine);
-	const viewportW =
-		typeof window === 'undefined' ? 1280 : window.innerWidth || 1280;
-	const viewportH =
-		typeof window === 'undefined' ? 720 : window.innerHeight || 720;
-	const width = Math.min(menuSize.width, viewportW - margin * 2);
-	const height = Math.min(menuSize.height, viewportH - margin * 2);
-	const rect = anchorRect || {
-		top: margin,
-		bottom: margin + 32,
-		left: viewportW - width - margin,
-		right: viewportW - margin,
-		width: 32,
-		height: 32,
-	};
-	const spaceBelow = viewportH - rect.bottom - margin;
-	const spaceAbove = rect.top - margin;
-	const openUp = spaceBelow < height && spaceAbove > spaceBelow;
-	const availableSpace = Math.max(160, (openUp ? spaceAbove : spaceBelow) - gap);
-	const maxHeight = Math.min(height, availableSpace);
-	let top = openUp ? rect.top - gap - maxHeight : rect.bottom + gap;
-	top = Math.max(margin, Math.min(top, viewportH - maxHeight - margin));
-	let left = mine ? rect.right - width : rect.left;
-	left = Math.max(margin, Math.min(left, viewportW - width - margin));
-	return {
-		top,
-		left,
-		width,
-		maxHeight,
-		placement: openUp ? 'top' : 'bottom',
-	};
-}
-
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const MORE_REACTIONS = [
 	'🔥', '👏', '🥰', '😍', '💯', '🎉', '😭', '💪',
@@ -3903,6 +3874,16 @@ function messageHasGalleryMedia(message) {
 	return Boolean(firstGalleryAttachmentId(message));
 }
 
+/** First attachment the server can act on — needed by the voice editor and the library. */
+function firstPersistedAttachmentId(message) {
+	if (!isSharableChatMessage(message)) return null;
+	for (const attachment of message?.attachments || []) {
+		const id = String(attachment?.id || '');
+		if (isPersistedAttachmentId(id)) return id;
+	}
+	return null;
+}
+
 /** OS notification while the WhatsApp tab is open but not focused (PWA / browser). */
 function showWhatsAppDesktopNotification({
 	title,
@@ -4032,6 +4013,12 @@ function VoiceMessage({
 	attachmentType = 'ptt',
 	avatarLabel = '?',
 	avatarSrc = '',
+	onTranscribe,
+	onEditAsVoice,
+	onSaveToLibrary,
+	onDownload,
+	downloading = false,
+	menuLabels = {},
 }) {
 	const audioRef = useRef(null);
 	const containerRef = useRef(null);
@@ -4521,6 +4508,36 @@ function VoiceMessage({
 		? labels.tapToRetry || labels.failed || 'Tap to retry'
 		: formatClock(currentTime > 0 ? currentTime : duration);
 
+	// Same secondary actions the video bubble offers, minus the ones that only make
+	// sense for a picture track.
+	const menuItems = [
+		typeof onEditAsVoice === 'function' && {
+			key: 'edit-as-voice',
+			label: menuLabels.editAsVoice || 'Edit & send as voice',
+			icon: <AudioLines size={15} strokeWidth={2.1} />,
+			onSelect: onEditAsVoice,
+		},
+		typeof onTranscribe === 'function' && {
+			key: 'transcribe',
+			label: menuLabels.transcribe || 'Transcribe',
+			icon: <Mic size={15} strokeWidth={2.1} />,
+			onSelect: onTranscribe,
+		},
+		typeof onSaveToLibrary === 'function' && {
+			key: 'save-to-library',
+			label: menuLabels.saveToLibrary || 'Save to library',
+			icon: <BookmarkPlus size={15} strokeWidth={2.1} />,
+			onSelect: onSaveToLibrary,
+		},
+		typeof onDownload === 'function' && {
+			key: 'download',
+			label: menuLabels.download || 'Download',
+			icon: <Download size={15} strokeWidth={2.1} />,
+			busy: downloading,
+			onSelect: onDownload,
+		},
+	].filter(Boolean);
+
 	return (
 		<div
 			ref={containerRef}
@@ -4575,6 +4592,12 @@ function VoiceMessage({
 								<span className={`wa-voice-duration ${loadFailed ? 'is-failed' : ''}`}>
 									{statusLabel}
 								</span>
+								<MediaOverflowMenu
+									items={menuItems}
+									label={menuLabels.more || 'More'}
+									iconSize={15}
+									className="wa-voice-more"
+								/>
 							</div>
 						</div>
 					</div>
@@ -4613,6 +4636,91 @@ function attachmentExtension(fileName, mimeType) {
 	return subtype.slice(0, 4).toUpperCase();
 }
 
+/**
+ * Overflow menu for media bubbles. Shared by the video control bar and voice
+ * notes so both get the same secondary actions with one implementation.
+ *
+ * Away-clicks are matched by attribute rather than ref containment: the video's
+ * fullscreen viewer renders through a portal, so one ref cannot cover both trees
+ * and the menu would close before its own click landed.
+ */
+function MediaOverflowMenu({ items, label = 'More', iconSize = 17, className = '' }) {
+	const [open, setOpen] = useState(false);
+	const usable = (items || []).filter(Boolean);
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const onAway = event => {
+			if (event.target?.closest?.('[data-wa-media-menu]')) return;
+			setOpen(false);
+		};
+		const onKey = event => {
+			if (event.key === 'Escape') setOpen(false);
+		};
+		document.addEventListener('pointerdown', onAway, true);
+		document.addEventListener('keydown', onKey);
+		return () => {
+			document.removeEventListener('pointerdown', onAway, true);
+			document.removeEventListener('keydown', onKey);
+		};
+	}, [open]);
+
+	useEffect(() => {
+		if (!usable.length) setOpen(false);
+	}, [usable.length]);
+
+	if (!usable.length) return null;
+
+	return (
+		<div className={`wa-video-controls__more ${className}`} data-wa-media-menu>
+			<button
+				type="button"
+				className="wa-video-controls__btn"
+				title={label}
+				aria-label={label}
+				aria-haspopup="menu"
+				aria-expanded={open}
+				onClick={event => {
+					event.preventDefault();
+					event.stopPropagation();
+					setOpen(value => !value);
+				}}
+			>
+				<MoreHorizontal size={iconSize} strokeWidth={2.2} />
+			</button>
+			{open ? (
+				<div className="wa-video-menu" role="menu">
+					{usable.map(item => (
+						<button
+							key={item.key}
+							type="button"
+							role="menuitem"
+							className="wa-video-menu__item"
+							disabled={item.busy}
+							onClick={event => {
+								event.preventDefault();
+								event.stopPropagation();
+								if (item.busy) return;
+								setOpen(false);
+								item.onSelect(event);
+							}}
+						>
+							<span className="wa-video-menu__icon" aria-hidden="true">
+								{item.busy ? (
+									<Loader2 size={15} strokeWidth={2.2} className="animate-spin" />
+								) : (
+									item.icon
+								)}
+							</span>
+							<span className="wa-video-menu__label">{item.label}</span>
+						</button>
+					))}
+				</div>
+			) : null}
+		</div>
+	);
+}
+
 function ChatVideoPlayer({
 	url,
 	poster,
@@ -4628,6 +4736,8 @@ function ChatVideoPlayer({
 	onSendAsVoice,
 	sendAsVoiceLabel = 'Send as voice message',
 	sendingAsVoice = false,
+	onSaveToLibrary,
+	saveToLibraryLabel = 'Save to library',
 	moreLabel = 'More',
 	durationHint = 0,
 	playLabel = 'Play',
@@ -4652,7 +4762,6 @@ function ChatVideoPlayer({
 	const seekingRef = useRef(false);
 	const [playing, setPlaying] = useState(false);
 	const [expanded, setExpanded] = useState(false);
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [muted, setMuted] = useState(false);
 	const [volume, setVolume] = useState(1);
@@ -4664,32 +4773,11 @@ function ChatVideoPlayer({
 	useEffect(() => {
 		setPlaying(false);
 		setExpanded(false);
-		setMenuOpen(false);
 		setCurrentTime(0);
 		paintedUrlRef.current = '';
 		const hint = Number(durationHint);
 		setDuration(Number.isFinite(hint) && hint > 0 ? hint : 0);
 	}, [url, durationHint]);
-
-	useEffect(() => {
-		if (!menuOpen) return undefined;
-		// Matched by attribute rather than ref containment: the fullscreen viewer
-		// renders through a portal, so a single ref cannot cover both trees and the
-		// menu would close before its own click landed.
-		const onAway = event => {
-			if (event.target?.closest?.('[data-wa-video-menu]')) return;
-			setMenuOpen(false);
-		};
-		const onKey = event => {
-			if (event.key === 'Escape') setMenuOpen(false);
-		};
-		document.addEventListener('pointerdown', onAway, true);
-		document.addEventListener('keydown', onKey);
-		return () => {
-			document.removeEventListener('pointerdown', onAway, true);
-			document.removeEventListener('keydown', onKey);
-		};
-	}, [menuOpen]);
 
 	useEffect(() => {
 		const node = videoRef.current;
@@ -4945,6 +5033,12 @@ function ChatVideoPlayer({
 			busy: false,
 			onSelect: onTranscribe,
 		},
+		typeof onSaveToLibrary === 'function' && {
+			key: 'save-to-library',
+			label: saveToLibraryLabel,
+			icon: <BookmarkPlus size={15} strokeWidth={2.1} />,
+			onSelect: onSaveToLibrary,
+		},
 		typeof onDownload === 'function' && {
 			key: 'download',
 			label: downloadLabel,
@@ -5034,54 +5128,11 @@ function ChatVideoPlayer({
 					onInput={onVolumeChange}
 				/>
 			</div>
-			{menuItems.length ? (
-				<div className="wa-video-controls__more" data-wa-video-menu>
-					<button
-						type="button"
-						className="wa-video-controls__btn"
-						title={moreLabel}
-						aria-label={moreLabel}
-						aria-haspopup="menu"
-						aria-expanded={menuOpen}
-						onClick={event => {
-							event.preventDefault();
-							event.stopPropagation();
-							setMenuOpen(open => !open);
-						}}
-					>
-						<MoreHorizontal size={fullscreen ? 19 : 17} strokeWidth={2.2} />
-					</button>
-					{menuOpen ? (
-						<div className="wa-video-menu" role="menu">
-							{menuItems.map(item => (
-								<button
-									key={item.key}
-									type="button"
-									role="menuitem"
-									className="wa-video-menu__item"
-									disabled={item.busy}
-									onClick={event => {
-										event.preventDefault();
-										event.stopPropagation();
-										if (item.busy) return;
-										setMenuOpen(false);
-										item.onSelect(event);
-									}}
-								>
-									<span className="wa-video-menu__icon" aria-hidden="true">
-										{item.busy ? (
-											<Loader2 size={15} strokeWidth={2.2} className="animate-spin" />
-										) : (
-											item.icon
-										)}
-									</span>
-									<span className="wa-video-menu__label">{item.label}</span>
-								</button>
-							))}
-						</div>
-					) : null}
-				</div>
-			) : null}
+			<MediaOverflowMenu
+				items={menuItems}
+				label={moreLabel}
+				iconSize={fullscreen ? 19 : 17}
+			/>
 			<button
 				type="button"
 				className="wa-video-controls__btn"
@@ -5236,6 +5287,7 @@ export function MediaAttachment({
 	avatarSrc = '',
 	onTranscribe = null,
 	onSendAsVoice = null,
+	onSaveToLibrary = null,
 	sendAsVoiceLabel = '',
 	sendingAsVoice = false,
 }) {
@@ -5600,6 +5652,14 @@ export function MediaAttachment({
 				attachmentType={type || 'ptt'}
 				avatarLabel={avatarLabel}
 				avatarSrc={avatarSrc}
+				onTranscribe={typeof onTranscribe === 'function' ? onTranscribe : null}
+				onEditAsVoice={
+					typeof onSendAsVoice === 'function' ? () => onSendAsVoice(attachment) : null
+				}
+				onSaveToLibrary={
+					typeof onSaveToLibrary === 'function' ? () => onSaveToLibrary(attachment) : null
+				}
+				menuLabels={labels}
 			/>
 		);
 	}
@@ -5962,9 +6022,15 @@ export function MediaAttachment({
 				transcribeLabel={labels.transcribe || 'Transcribe'}
 				onTranscribe={typeof onTranscribe === 'function' ? onTranscribe : null}
 				moreLabel={labels.moreActions || 'More'}
-				onSendAsVoice={typeof onSendAsVoice === 'function' ? onSendAsVoice : null}
+				onSendAsVoice={
+					typeof onSendAsVoice === 'function' ? () => onSendAsVoice(attachment) : null
+				}
 				sendAsVoiceLabel={sendAsVoiceLabel || labels.sendAsVoice || 'Send as voice message'}
 				sendingAsVoice={sendingAsVoice}
+				onSaveToLibrary={
+					typeof onSaveToLibrary === 'function' ? () => onSaveToLibrary(attachment) : null
+				}
+				saveToLibraryLabel={labels.saveToLibrary || 'Save to library'}
 				onError={event => {
 					if (event.currentTarget.currentSrc !== url) return;
 					setFailed(true);
@@ -6018,6 +6084,7 @@ function MessageAttachments({
 	avatarSrc = '',
 	onTranscribe = null,
 	onSendAsVoice = null,
+	onSaveToLibrary = null,
 	sendAsVoiceLabel = '',
 	sendingAsVoice = false,
 }) {
@@ -6111,14 +6178,9 @@ function MessageAttachments({
 					messageDurationSeconds={voiceDuration}
 					avatarLabel={avatarLabel}
 					avatarSrc={avatarSrc}
-					onTranscribe={
-						String(attachment?.type || '').toLowerCase() === 'video' ? onTranscribe : null
-					}
-					onSendAsVoice={
-						String(attachment?.type || '').toLowerCase() === 'video' && onSendAsVoice
-							? () => onSendAsVoice(attachment)
-							: null
-					}
+					onTranscribe={onTranscribe}
+					onSendAsVoice={onSendAsVoice}
+					onSaveToLibrary={onSaveToLibrary}
 					sendAsVoiceLabel={sendAsVoiceLabel}
 					sendingAsVoice={sendingAsVoice}
 				/>
@@ -6566,6 +6628,10 @@ function MessageActionMenu({
 	const canSelectMedia = messageHasSelectableMedia(message);
 	const canViewGallery = messageHasGalleryMedia(message);
 	const canSelect = canSelectTranscript || canSelectMedia;
+	// Both need a real server-side attachment: the editor and the library work from
+	// stored media, not from an optimistic local blob.
+	const canEditAsVoice = (isVoice || isVideo) && Boolean(firstPersistedAttachmentId(message));
+	const canSaveToLibrary = canUseGroups && Boolean(firstPersistedAttachmentId(message));
 	const hasCopyableText = Boolean(String(message.text || '').trim());
 	const isOutboundText =
 		String(message.type || 'text').toLowerCase() === 'text' &&
@@ -6576,6 +6642,24 @@ function MessageActionMenu({
 			id: 'transcribe',
 			label: ar ? 'تحويل إلى نص' : 'Transcribe',
 			icon: isVideo && !isVoice ? Video : Mic,
+		},
+		// The voice editor accepts any audio track, so a voice note can be trimmed and
+		// cleaned up the same way a video can.
+		canEditAsVoice && {
+			id: 'sendAsVoice',
+			label: isVoice
+				? ar
+					? 'تعديل وإرسال كصوت…'
+					: 'Edit & send as voice…'
+				: ar
+					? 'إرسال كرسالة صوتية…'
+					: 'Send as voice message…',
+			icon: AudioLines,
+		},
+		canSaveToLibrary && {
+			id: 'saveToLibrary',
+			label: ar ? 'حفظ في المكتبة…' : 'Save to library…',
+			icon: BookmarkPlus,
 		},
 		canUseBoard &&
 			canSelectTranscript && {
@@ -6609,10 +6693,10 @@ function MessageActionMenu({
 			label: message.isStarred
 				? ar
 					? 'إزالة من المهم (داخل النظام)'
-					: 'Remove from important (in-app)'
+					: 'Remove from important'
 				: ar
 					? 'حفظ كمهم (داخل النظام)'
-					: 'Save as important (in-app)',
+					: 'Save as important',
 			icon: Star,
 		},
 		{
@@ -6620,10 +6704,10 @@ function MessageActionMenu({
 			label: message.isPinned
 				? ar
 					? 'إلغاء التثبيت (داخل النظام)'
-					: 'Unpin (in-app)'
+					: 'Unpin'
 				: ar
 					? 'تثبيت (داخل النظام)'
-					: 'Pin (in-app)',
+					: 'Pin',
 			icon: Pin,
 		},
 		{ id: 'delete', label: ar ? 'حذف' : 'Delete', icon: Trash2, destructive: true },
@@ -8722,6 +8806,9 @@ function WhatsAppWorkspaceContent() {
 	const [sendingVideoAsVoiceId, setSendingVideoAsVoiceId] = useState('');
 	/** `{ messageId, attachmentId }` while the video → voice editor is open. */
 	const [videoToVoiceTarget, setVideoToVoiceTarget] = useState(null);
+	/** `{ attachmentId, messageId }` while picking a library folder to save into. */
+	const [librarySaveTarget, setLibrarySaveTarget] = useState(null);
+	const [libraryOpen, setLibraryOpen] = useState(false);
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
 	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
 	const draftRef = useRef('');
@@ -14860,6 +14947,23 @@ function WhatsAppWorkspaceContent() {
 			setGroupPickerOpen(true);
 			return;
 		}
+		if (action === 'sendAsVoice' || action === 'saveToLibrary') {
+			if (demo.settings.enabled || isDemoId(conversationId)) {
+				toast.error(locale === 'ar' ? 'هذا الإجراء غير متاح في الوضع التجريبي' : 'This action is unavailable in demo mode');
+				return;
+			}
+			const attachmentId = firstPersistedAttachmentId(message);
+			if (!attachmentId) {
+				toast.error(t.sendAsVoiceFailed);
+				return;
+			}
+			if (action === 'sendAsVoice') {
+				openVideoToVoiceEditor(message, { id: attachmentId });
+			} else {
+				setLibrarySaveTarget({ attachmentId, messageId: message.id });
+			}
+			return;
+		}
 		if (demo.settings.enabled) {
 			toast.error(locale === 'ar' ? 'هذا الإجراء غير متاح في الوضع التجريبي' : 'This action is unavailable in demo mode');
 			return;
@@ -20699,9 +20803,17 @@ function WhatsAppWorkspaceContent() {
 																							}
 																						: null
 																				}
-																				onSendAsVoice={attachment => {
-																					openVideoToVoiceEditor(message, attachment);
-																				}}
+								onSendAsVoice={attachment => {
+									openVideoToVoiceEditor(message, attachment);
+								}}
+								onSaveToLibrary={attachment => {
+									const attachmentId = String(attachment?.id || '');
+									if (!isPersistedAttachmentId(attachmentId)) {
+										toast.error(t.sendAsVoiceFailed);
+										return;
+									}
+									setLibrarySaveTarget({ attachmentId, messageId: message.id });
+								}}
 																				sendAsVoiceLabel={t.sendAsVoice}
 																				// The target stays set while sending, so this covers both
 																				// "editor open" and "conversion in flight".
@@ -21341,6 +21453,16 @@ function WhatsAppWorkspaceContent() {
 																className="wa-input-action"
 															>
 																<Clock size={18} strokeWidth={2} />
+															</button>
+															<button
+																type="button"
+																disabled={demo.settings.enabled}
+																title={t.library}
+																aria-label={t.library}
+																onClick={() => setLibraryOpen(true)}
+																className="wa-input-action"
+															>
+																<Bookmark size={18} strokeWidth={2} />
 															</button>
 															<button
 																type="button"
@@ -23289,6 +23411,26 @@ function WhatsAppWorkspaceContent() {
 				onSend={editOptions =>
 					sendVideoAsVoice(videoToVoiceTarget?.attachmentId, editOptions)
 				}
+				onSaveToLibrary={editOptions =>
+					setLibrarySaveTarget({
+						attachmentId: videoToVoiceTarget?.attachmentId || '',
+						voiceEdit: editOptions,
+					})
+				}
+			/>
+			<SaveToLibraryDialog
+				open={Boolean(librarySaveTarget)}
+				attachmentId={librarySaveTarget?.attachmentId || ''}
+				voiceEdit={librarySaveTarget?.voiceEdit || null}
+				locale={locale}
+				onClose={() => setLibrarySaveTarget(null)}
+			/>
+			<SavedLibraryPanel
+				open={libraryOpen}
+				locale={locale}
+				conversations={scheduleConversationOptions}
+				activeConversationId={conversationId || ''}
+				onClose={() => setLibraryOpen(false)}
 			/>
 			{transcriptionSources?.length ? (
 				<Suspense fallback={null}>

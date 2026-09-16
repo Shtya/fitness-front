@@ -1975,6 +1975,55 @@ export function findThreadAnchorRow(box, pending) {
 	return null;
 }
 
+export const ANCHORED_MENU_GAP_PX = 8;
+export const ANCHORED_MENU_MARGIN_PX = 12;
+
+/**
+ * Places a popover menu next to its trigger.
+ *
+ * The menu is allowed the full viewport height and is *shifted* when it does not
+ * fit beside the anchor, rather than being clipped to the space below it. Sizing
+ * to the anchor's free space is what used to force an inner scrollbar on menus
+ * that would otherwise fit on screen.
+ */
+export function computeAnchoredMenuPosition(
+	anchorRect,
+	menuSize = { width: 248, height: 420 },
+	options = {},
+) {
+	const gap = ANCHORED_MENU_GAP_PX;
+	const margin = ANCHORED_MENU_MARGIN_PX;
+	const mine = Boolean(options.mine);
+	const viewportW = Number(options.viewportW) || (typeof window === 'undefined' ? 1280 : window.innerWidth || 1280);
+	const viewportH = Number(options.viewportH) || (typeof window === 'undefined' ? 720 : window.innerHeight || 720);
+	const width = Math.min(menuSize.width, viewportW - margin * 2);
+	const maxHeight = Math.min(menuSize.height, viewportH - margin * 2);
+	const rect = anchorRect || {
+		top: margin,
+		bottom: margin + 32,
+		left: viewportW - width - margin,
+		right: viewportW - margin,
+		width: 32,
+		height: 32,
+	};
+	const spaceBelow = viewportH - rect.bottom - margin;
+	const spaceAbove = rect.top - margin;
+	// Prefer the side with more room, but only flip when the menu genuinely does
+	// not fit below — flipping early makes the menu jump around while typing.
+	const openUp = spaceBelow < maxHeight && spaceAbove > spaceBelow;
+	let top = openUp ? rect.top - gap - maxHeight : rect.bottom + gap;
+	top = Math.max(margin, Math.min(top, viewportH - maxHeight - margin));
+	let left = mine ? rect.right - width : rect.left;
+	left = Math.max(margin, Math.min(left, viewportW - width - margin));
+	return {
+		top,
+		left,
+		width,
+		maxHeight,
+		placement: openUp ? 'top' : 'bottom',
+	};
+}
+
 /** Distance (px) from the bottom of the scroll container. */
 export const THREAD_PIN_THRESHOLD_PX = 64;
 export const THREAD_NEAR_BOTTOM_THRESHOLD_PX = 180;

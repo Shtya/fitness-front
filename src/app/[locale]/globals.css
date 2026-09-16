@@ -2950,7 +2950,9 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   display: flex;
   flex-direction: column;
   width: 248px;
-  max-height: min(480px, calc(100vh - 24px));
+  /* Sizes to its content so every option is visible without an inner scrollbar.
+     The viewport is the only limit; JS shifts the menu up when it would overflow. */
+  max-height: calc(100vh - 24px);
   height: fit-content;
   overflow: hidden;
   border: 1px solid rgba(11, 20, 26, 0.08);
@@ -3073,10 +3075,12 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-action-list {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   padding: 2px 0 4px;
   overflow-x: hidden;
+  /* `auto` only kicks in when the list alone is taller than the viewport, which is
+     the documented last resort. Normal item counts render fully, unscrolled. */
   overflow-y: auto;
   border-top: 1px solid rgba(11, 20, 26, 0.06);
 }
@@ -6074,6 +6078,32 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	margin-top: 0;
 	padding-inline-end: 4px;
 	line-height: 1;
+}
+
+/* Overflow menu inside a voice bubble: reuses .wa-video-menu, but the trigger has
+   to sit quietly next to the duration instead of in a dark control bar. */
+.wa-voice-more {
+	margin-inline-start: auto;
+}
+
+.wa-voice-more > .wa-video-controls__btn {
+	width: 22px;
+	height: 22px;
+	color: inherit;
+	opacity: 0.55;
+	background: transparent;
+	border-radius: 999px;
+}
+
+.wa-voice-more > .wa-video-controls__btn:hover,
+.wa-voice-more > .wa-video-controls__btn:focus-visible {
+	opacity: 1;
+	background: rgba(11, 20, 26, 0.08);
+}
+
+.wa-voice-message.is-outgoing .wa-voice-more > .wa-video-controls__btn:hover,
+.wa-voice-message.is-outgoing .wa-voice-more > .wa-video-controls__btn:focus-visible {
+	background: rgba(11, 20, 26, 0.1);
 }
 
 .wa-voice-avatar-wrap {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
 	AudioLines,
+	BookmarkPlus,
 	Loader2,
 	Mic,
 	Music4,
@@ -16,6 +17,7 @@ import {
 	X,
 } from 'lucide-react';
 import api from '@/utils/axios';
+import { getAttachmentStreamUrl } from '../whatsapp-media-stream';
 import {
 	MAX_GAIN,
 	MIN_GAIN,
@@ -41,6 +43,9 @@ const copy = {
 		from: 'From',
 		to: 'To',
 		selected: 'Voice note length',
+		scrubHint: 'Click the waveform to listen from that point. Drag the handles to trim.',
+		save: 'Save',
+		saveHint: 'Keep this voice note in your library so you can send it again later.',
 		cleanup: 'Audio cleanup',
 		removeMusic: 'Remove background music',
 		removeMusicHint: 'AI isolates the speech and drops music and ambience.',
@@ -75,6 +80,9 @@ const copy = {
 		from: 'من',
 		to: 'إلى',
 		selected: 'مدة الرسالة الصوتية',
+		scrubHint: 'اضغط على الموجة لتسمع من عند النقطة دي. اسحب المقابض لتحديد المقطع.',
+		save: 'حفظ',
+		saveHint: 'احتفظ بالرسالة الصوتية في مكتبتك عشان تبعتها تاني بعدين.',
 		cleanup: 'تنقية الصوت',
 		removeMusic: 'إزالة الموسيقى الخلفية',
 		removeMusicHint: 'الذكاء الاصطناعي يعزل الكلام ويشيل الموسيقى والضجيج.',
@@ -177,6 +185,7 @@ export default function VideoToVoiceDialog({
 	locale = 'en',
 	onClose,
 	onSend,
+	onSaveToLibrary,
 	sending = false,
 }) {
 	const t = copy[locale === 'ar' ? 'ar' : 'en'];
@@ -195,10 +204,19 @@ export default function VideoToVoiceDialog({
 	const [playing, setPlaying] = useState(false);
 	const [stage, setStage] = useState('');
 
+	// Scrubbing plays the untouched source so clicking the waveform is instant and
+	// costs no server work. The processed result has its own player below.
+	const [sourceUrl, setSourceUrl] = useState('');
+	const [playhead, setPlayhead] = useState(0);
+	const [scrubbing, setScrubbing] = useState(false);
+
 	const audioRef = useRef(null);
+	const scrubRef = useRef(null);
 	const trackRef = useRef(null);
 	const draggingRef = useRef(null);
 	const previewUrlRef = useRef('');
+	/** Where the current scrub run should stop, so it does not run past the selection. */
+	const stopAtRef = useRef(Number.POSITIVE_INFINITY);
 
 	const sourceSeconds = source.sourceSeconds;
 	const end = resolveEnd(state, sourceSeconds);
@@ -217,6 +235,32 @@ export default function VideoToVoiceDialog({
 		setPlaying(false);
 	}, []);
 
+	const stopScrub = useCallback(() => {
+		const audio = scrubRef.current;
+		if (audio && !audio.paused) audio.pause();
+		setScrubbing(false);
+	}, []);
+
+	/** Plays the source from `seconds`, stopping at the end of the selection. */
+	const scrubTo = useCallback(
+		(seconds) => {
+			const audio = scrubRef.current;
+			if (!audio || sourceSeconds <= 0) return;
+			// Two players at once would be unlistenable.
+			audioRef.current?.pause();
+			const at = Math.min(Math.max(0, seconds), Math.max(0, sourceSeconds - 0.05));
+			stopAtRef.current = at < end ? end : Number.POSITIVE_INFINITY;
+			setPlayhead(at);
+			try {
+				audio.currentTime = at;
+			} catch {
+				// Metadata may not be in yet; play() below still starts from 0.
+			}
+			void audio.play().catch(() => setScrubbing(false));
+		},
+		[sourceSeconds, end],
+	);
+
 	// Load the source description once per open.
 	useEffect(() => {
 		if (!open || !attachmentId) return undefined;
@@ -224,7 +268,18 @@ export default function VideoToVoiceDialog({
 		setLoading(true);
 		setLoadError('');
 		setPreviewError('');
+		setPlayhead(0);
 		releasePreview();
+		// A signed stream URL lets the browser play the original audio track directly,
+		// so scrubbing needs no conversion round-trip.
+		getAttachmentStreamUrl(attachmentId)
+			.then((url) => {
+				if (!cancelled) setSourceUrl(url || '');
+			})
+			.catch(() => {
+				// Scrub playback is an enhancement; the editor still works without it.
+				if (!cancelled) setSourceUrl('');
+			});
 		api
 			.get(`/whatsapp/attachments/${attachmentId}/voice-edit`)
 			.then(({ data }) => {
@@ -251,6 +306,11 @@ export default function VideoToVoiceDialog({
 	}, [open, attachmentId, releasePreview, t.failedLoad]);
 
 	useEffect(() => () => releasePreview(), [releasePreview]);
+
+	// Leaving the dialog must not leave audio playing behind it.
+	useEffect(() => {
+		if (!open) stopScrub();
+	}, [open, stopScrub]);
 
 	// Any settings change invalidates what the user is currently hearing.
 	useEffect(() => {
@@ -450,21 +510,28 @@ export default function VideoToVoiceDialog({
 									{t.trim}
 								</span>
 								<span className="text-xs text-slate-500">
-									{t.selected}:{' '}
-									<span className="font-semibold text-slate-800">{formatClock(length)}</span>
+									{scrubbing ? (
+										<span className="font-semibold tabular-nums text-emerald-700">
+											{formatClock(playhead)} / {formatClock(sourceSeconds)}
+										</span>
+									) : (
+										<>
+											{t.selected}:{' '}
+											<span className="font-semibold text-slate-800">{formatClock(length)}</span>
+										</>
+									)}
 								</span>
 							</div>
 
 							<div
 								ref={trackRef}
-								className="relative h-20 select-none rounded-xl bg-slate-100 px-1"
+								title={t.scrubHint}
+								className="relative h-20 cursor-pointer select-none rounded-xl bg-slate-100 px-1"
 								onPointerDown={(event) => {
-									// Clicking the track moves the nearer handle to that point.
-									const seconds = secondsFromPointer(event.clientX);
-									const edge =
-										Math.abs(seconds - state.start) <= Math.abs(seconds - end) ? 'start' : 'end';
-									draggingRef.current = edge;
-									moveHandle(edge, seconds);
+									// Clicking the waveform auditions the source from that point. Trimming
+									// is the handles' job, so a click never moves the selection.
+									if (scrubbing) stopScrub();
+									else scrubTo(secondsFromPointer(event.clientX));
 								}}
 							>
 								<div className="flex h-full items-center gap-px">
@@ -524,6 +591,36 @@ export default function VideoToVoiceDialog({
 										/>
 									);
 								})}
+
+								{scrubbing ? (
+									<div
+										className="pointer-events-none absolute inset-y-1 z-20 w-0.5 rounded-full bg-slate-900"
+										style={handleStyle(
+											sourceSeconds > 0 ? (playhead / sourceSeconds) * 100 : 0,
+										)}
+									/>
+								) : null}
+
+								{sourceUrl ? (
+									<audio
+										ref={scrubRef}
+										src={sourceUrl}
+										preload="metadata"
+										className="hidden"
+										onPlay={() => setScrubbing(true)}
+										onPause={() => setScrubbing(false)}
+										onEnded={() => setScrubbing(false)}
+										onTimeUpdate={(event) => {
+											const at = event.currentTarget.currentTime;
+											if (at >= stopAtRef.current) {
+												event.currentTarget.pause();
+												setPlayhead(stopAtRef.current);
+												return;
+											}
+											setPlayhead(at);
+										}}
+									/>
+								) : null}
 							</div>
 
 							<div className="mt-3 flex items-center gap-3">
@@ -641,7 +738,10 @@ export default function VideoToVoiceDialog({
 									src={preview.url}
 									controls
 									className="mt-3 w-full"
-									onPlay={() => setPlaying(true)}
+									onPlay={() => {
+										stopScrub();
+										setPlaying(true);
+									}}
 									onPause={() => setPlaying(false)}
 									onEnded={() => setPlaying(false)}
 								/>
@@ -669,6 +769,21 @@ export default function VideoToVoiceDialog({
 						>
 							{t.cancel}
 						</button>
+						{typeof onSaveToLibrary === 'function' ? (
+							<button
+								type="button"
+								disabled={busy || loading || Boolean(loadError)}
+								title={t.saveHint}
+								onClick={() => {
+									stopScrub();
+									onSaveToLibrary(buildEditPayload(state, sourceSeconds));
+								}}
+								className="flex items-center gap-1.5 rounded-lg border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+							>
+								<BookmarkPlus size={15} />
+								{t.save}
+							</button>
+						) : null}
 						<button
 							type="button"
 							disabled={busy || loading || Boolean(loadError)}
