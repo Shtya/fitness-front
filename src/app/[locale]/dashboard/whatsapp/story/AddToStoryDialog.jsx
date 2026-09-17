@@ -27,6 +27,9 @@ const copy = {
 		duration: 'Duration',
 		size: 'Size',
 		clipLength: 'Clip length',
+		recommended: 'Safe',
+		longClipWarning:
+			'WhatsApp only guarantees status clips up to {safe}s. A longer clip may stay on “Waiting for this status update” on the viewer’s phone.',
 		willSplit: 'Longer than {max}s, so it will be split into {count} sequential clips.',
 		fitsOne: 'Short enough to publish as a single story.',
 		cancel: 'Cancel',
@@ -56,6 +59,9 @@ const copy = {
 		duration: 'المدة',
 		size: 'الحجم',
 		clipLength: 'مدة المقطع',
+		recommended: 'مضمون',
+		longClipWarning:
+			'واتساب مضمون بس لحد {safe} ثانية في الحالة. المقطع الأطول ممكن يفضل «Waiting for this status update» على موبايل اللي بيتفرج.',
 		willSplit: 'أطول من {max} ثانية، فهيتقسم إلى {count} مقاطع متتابعة.',
 		fitsOne: 'قصير كفاية عشان ينشر كحالة واحدة.',
 		cancel: 'إلغاء',
@@ -83,10 +89,13 @@ const copy = {
 /**
  * Selectable clip lengths.
  *
- * 90s is the default because that is what this account's WhatsApp accepts; older
- * clients cap a status video at 30s, which is why the shorter options stay on offer.
+ * 30s is the length WhatsApp itself trims a status video to, and the only one every
+ * client is known to play — past it the viewer's phone can sit on "Waiting for this
+ * status update" instead. The longer options stay available, flagged, for accounts
+ * whose client does accept them.
  */
 const CLIP_LENGTHS = [30, 45, 60, 90, 120, 180];
+const SAFE_CLIP_SECONDS = 30;
 
 function formatClock(seconds) {
 	const total = Math.max(0, Math.round(Number(seconds) || 0));
@@ -131,7 +140,7 @@ export default function AddToStoryDialog({
 	const ar = locale === 'ar';
 
 	const [draft, setDraft] = useState(null);
-	const [partSeconds, setPartSeconds] = useState(90);
+	const [partSeconds, setPartSeconds] = useState(SAFE_CLIP_SECONDS);
 	const [lengthMenuOpen, setLengthMenuOpen] = useState(false);
 	const lengthMenuRef = useRef(null);
 	const [preparing, setPreparing] = useState(false);
@@ -331,6 +340,11 @@ export default function AddToStoryDialog({
 														}`}
 													>
 														<span className="min-w-0 flex-1">{formatClock(length)}</span>
+														{length === SAFE_CLIP_SECONDS && (
+															<span className="shrink-0 text-[10px] font-semibold uppercase text-emerald-600">
+																{t.recommended}
+															</span>
+														)}
 														{active && <Check size={14} className="shrink-0" />}
 													</button>
 												</li>
@@ -359,6 +373,12 @@ export default function AddToStoryDialog({
 										: t.fitsOne}
 								</span>
 							</p>
+							{partSeconds > SAFE_CLIP_SECONDS && (
+								<p className="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-snug text-rose-700">
+									<CircleAlert size={14} className="mt-0.5 shrink-0" />
+									<span>{t.longClipWarning.replace('{safe}', String(SAFE_CLIP_SECONDS))}</span>
+								</p>
+							)}
 						</div>
 					) : (
 						<div className="space-y-2">
