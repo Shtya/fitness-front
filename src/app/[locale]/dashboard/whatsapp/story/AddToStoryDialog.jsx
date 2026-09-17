@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import {
 	AlertCircle,
 	Check,
+	ChevronDown,
 	CircleAlert,
 	Clock,
 	Loader2,
@@ -25,8 +26,8 @@ const copy = {
 		partsSubtitle: 'Review the clips, then publish them in order.',
 		duration: 'Duration',
 		size: 'Size',
-		limitNote: 'A story clip can be up to {max}s.',
-		willSplit: 'Longer than {max}s, so it will be split into sequential clips.',
+		clipLength: 'Clip length',
+		willSplit: 'Longer than {max}s, so it will be split into {count} sequential clips.',
 		fitsOne: 'Short enough to publish as a single story.',
 		cancel: 'Cancel',
 		close: 'Close',
@@ -54,8 +55,8 @@ const copy = {
 		partsSubtitle: 'راجع المقاطع، وبعدين انشرها بالترتيب.',
 		duration: 'المدة',
 		size: 'الحجم',
-		limitNote: 'مقطع الحالة أقصاه {max} ثانية.',
-		willSplit: 'أطول من {max} ثانية، فهيتقسم لمقاطع متتابعة.',
+		clipLength: 'مدة المقطع',
+		willSplit: 'أطول من {max} ثانية، فهيتقسم إلى {count} مقاطع متتابعة.',
 		fitsOne: 'قصير كفاية عشان ينشر كحالة واحدة.',
 		cancel: 'إلغاء',
 		close: 'إغلاق',
@@ -78,6 +79,14 @@ const copy = {
 		progress: 'تم نشر {done} من {total}',
 	},
 };
+
+/**
+ * Selectable clip lengths.
+ *
+ * 90s is the default because that is what this account's WhatsApp accepts; older
+ * clients cap a status video at 30s, which is why the shorter options stay on offer.
+ */
+const CLIP_LENGTHS = [30, 45, 60, 90, 120, 180];
 
 function formatClock(seconds) {
 	const total = Math.max(0, Math.round(Number(seconds) || 0));
@@ -122,6 +131,9 @@ export default function AddToStoryDialog({
 	const ar = locale === 'ar';
 
 	const [draft, setDraft] = useState(null);
+	const [partSeconds, setPartSeconds] = useState(90);
+	const [lengthMenuOpen, setLengthMenuOpen] = useState(false);
+	const lengthMenuRef = useRef(null);
 	const [preparing, setPreparing] = useState(false);
 	const [publishing, setPublishing] = useState(false);
 	const busy = preparing || publishing;
@@ -131,25 +143,35 @@ export default function AddToStoryDialog({
 	useEffect(() => {
 		if (open) return;
 		setDraft(null);
+		setLengthMenuOpen(false);
 		setPreparing(false);
 		setPublishing(false);
 		requestRef.current += 1;
 	}, [open]);
 
-	// The server decides the real limit; this is only for the pre-flight message.
-	const maxPartSeconds = draft?.maxPartSeconds || 30;
-	const willSplit = Number(durationSeconds) > maxPartSeconds;
+	useEffect(() => {
+		if (!lengthMenuOpen) return undefined;
+		const onPointerDown = event => {
+			if (!lengthMenuRef.current?.contains(event.target)) setLengthMenuOpen(false);
+		};
+		document.addEventListener('pointerdown', onPointerDown, true);
+		return () => document.removeEventListener('pointerdown', onPointerDown, true);
+	}, [lengthMenuOpen]);
+
+	const willSplit = Number(durationSeconds) > partSeconds;
+	// Matches how the server plans the cut, so the count shown is the count produced.
+	const expectedParts = Math.max(1, Math.ceil((Number(durationSeconds) || 0) / partSeconds));
 
 	const prepare = useCallback(async () => {
 		if (!accountId || !(attachmentId || socialDownloadId)) return;
 		const request = requestRef.current;
 		setPreparing(true);
 		try {
-			const { data } = await api.post(
-				`/whatsapp/accounts/${accountId}/story-drafts`,
+			const { data } = await api.post(`/whatsapp/accounts/${accountId}/story-drafts`, {
 				// One source or the other; the server cuts from whichever file it resolves.
-				attachmentId ? { attachmentId } : { socialDownloadId },
-			);
+				...(attachmentId ? { attachmentId } : { socialDownloadId }),
+				maxPartSeconds: partSeconds,
+			});
 			if (requestRef.current !== request) return;
 			setDraft(data);
 		} catch (error) {
@@ -157,7 +179,7 @@ export default function AddToStoryDialog({
 		} finally {
 			if (requestRef.current === request) setPreparing(false);
 		}
-	}, [accountId, attachmentId, socialDownloadId, t.prepareFailed]);
+	}, [accountId, attachmentId, socialDownloadId, partSeconds, t.prepareFailed]);
 
 	const publish = useCallback(async () => {
 		if (!draft?.id) return;
@@ -263,6 +285,60 @@ export default function AddToStoryDialog({
 									</div>
 								) : null}
 							</dl>
+							<div ref={lengthMenuRef} className="relative">
+								<span className="mb-1 block text-xs font-semibold text-slate-500">
+									{t.clipLength}
+								</span>
+								<button
+									type="button"
+									aria-haspopup="listbox"
+									aria-expanded={lengthMenuOpen}
+									onClick={() => setLengthMenuOpen(current => !current)}
+									className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition hover:border-slate-300 focus:border-emerald-400"
+								>
+									<span className="flex items-center gap-2">
+										<Scissors size={15} className="shrink-0 text-slate-400" />
+										{formatClock(partSeconds)}
+									</span>
+									<ChevronDown
+										size={15}
+										className={`shrink-0 text-slate-400 transition-transform ${
+											lengthMenuOpen ? 'rotate-180' : ''
+										}`}
+									/>
+								</button>
+								{lengthMenuOpen && (
+									<ul
+										role="listbox"
+										className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+									>
+										{CLIP_LENGTHS.map(length => {
+											const active = length === partSeconds;
+											return (
+												<li key={length}>
+													<button
+														type="button"
+														role="option"
+														aria-selected={active}
+														onClick={() => {
+															setPartSeconds(length);
+															setLengthMenuOpen(false);
+														}}
+														className={`flex w-full items-center gap-2 px-3 py-2 text-start text-sm transition ${
+															active
+																? 'bg-emerald-50 font-semibold text-emerald-700'
+																: 'text-slate-700 hover:bg-slate-50'
+														}`}
+													>
+														<span className="min-w-0 flex-1">{formatClock(length)}</span>
+														{active && <Check size={14} className="shrink-0" />}
+													</button>
+												</li>
+											);
+										})}
+									</ul>
+								)}
+							</div>
 							<p
 								className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs leading-snug ${
 									willSplit
@@ -277,7 +353,9 @@ export default function AddToStoryDialog({
 								)}
 								<span>
 									{willSplit
-										? t.willSplit.replace('{max}', String(maxPartSeconds))
+										? t.willSplit
+												.replace('{max}', String(partSeconds))
+												.replace('{count}', String(expectedParts))
 										: t.fitsOne}
 								</span>
 							</p>
