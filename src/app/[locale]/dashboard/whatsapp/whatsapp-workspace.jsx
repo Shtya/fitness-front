@@ -117,6 +117,7 @@ import CloneChatVoicePanel from './voice-changer/CloneChatVoicePanel';
 import VideoToVoiceDialog from './video-to-voice/VideoToVoiceDialog';
 import SavedLibraryPanel from './library/SavedLibraryPanel';
 import SaveToLibraryDialog from './library/SaveToLibraryDialog';
+import AddToStoryDialog from './story/AddToStoryDialog';
 import ScheduleMessageDialog from './schedule-message/ScheduleMessageDialog';
 import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
 import {
@@ -6658,6 +6659,8 @@ function MessageActionMenu({
 	// stored media, not from an optimistic local blob.
 	const canEditAsVoice = (isVoice || isVideo) && Boolean(firstPersistedAttachmentId(message));
 	const canSaveToLibrary = canUseGroups && Boolean(firstPersistedAttachmentId(message));
+	// Only a stored video: the server cuts the clips from the file on disk.
+	const canAddToStory = isVideo && !isVoice && Boolean(firstPersistedAttachmentId(message));
 	// A shared TikTok/Instagram/Facebook link can be pulled in as a playable video.
 	const socialVideoLink = message.optimistic ? null : firstSocialVideoLink(message.text);
 	const hasCopyableText = Boolean(String(message.text || '').trim());
@@ -6688,6 +6691,11 @@ function MessageActionMenu({
 			id: 'saveToLibrary',
 			label: ar ? 'حفظ في المكتبة…' : 'Save to library…',
 			icon: BookmarkPlus,
+		},
+		canAddToStory && {
+			id: 'addToStory',
+			label: ar ? 'إضافة إلى الحالة…' : 'Add to story…',
+			icon: Sparkles,
 		},
 		socialVideoLink && {
 			id: 'downloadSocialVideo',
@@ -8920,6 +8928,8 @@ function WhatsAppWorkspaceContent() {
 	const socialPollTimersRef = useRef(new Map());
 	/** `{ attachmentId, messageId, defaultTitle }` while picking a library folder. */
 	const [librarySaveTarget, setLibrarySaveTarget] = useState(null);
+	/** `{ attachmentId, previewUrl, durationSeconds, fileSizeBytes }` while confirming a story. */
+	const [storyTarget, setStoryTarget] = useState(null);
 	const [libraryOpen, setLibraryOpen] = useState(false);
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
 	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
@@ -15265,7 +15275,7 @@ function WhatsAppWorkspaceContent() {
 			setGroupPickerOpen(true);
 			return;
 		}
-		if (action === 'sendAsVoice' || action === 'saveToLibrary') {
+		if (action === 'sendAsVoice' || action === 'saveToLibrary' || action === 'addToStory') {
 			if (demo.settings.enabled || isDemoId(conversationId)) {
 				toast.error(locale === 'ar' ? 'هذا الإجراء غير متاح في الوضع التجريبي' : 'This action is unavailable in demo mode');
 				return;
@@ -15277,6 +15287,20 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (action === 'sendAsVoice') {
 				openVideoToVoiceEditor(message, { id: attachmentId });
+			} else if (action === 'addToStory') {
+				const attachment = (message.attachments || []).find(item => item?.id === attachmentId);
+				// A signed URL, so the confirmation step can play the video before the
+				// server has cut anything. Its absence is not fatal: the rest still works.
+				const previewUrl = await getAttachmentStreamUrl(attachmentId).catch(() => '');
+				setStoryTarget({
+					attachmentId,
+					messageId: message.id,
+					previewUrl,
+					durationSeconds: Number(attachment?.durationSeconds) || 0,
+					fileSizeBytes:
+						Number(attachment?.sizeBytes ?? attachment?.size ?? attachment?.fileSizeBytes) ||
+						0,
+				});
 			} else {
 				setLibrarySaveTarget({
 					attachmentId,
@@ -23819,6 +23843,22 @@ function WhatsAppWorkspaceContent() {
 				defaultTitle={librarySaveTarget?.defaultTitle || ''}
 				locale={locale}
 				onClose={() => setLibrarySaveTarget(null)}
+			/>
+			<AddToStoryDialog
+				open={Boolean(storyTarget)}
+				accountId={accountId || ''}
+				attachmentId={storyTarget?.attachmentId || ''}
+				previewUrl={storyTarget?.previewUrl || ''}
+				durationSeconds={storyTarget?.durationSeconds || 0}
+				fileSizeBytes={storyTarget?.fileSizeBytes || 0}
+				locale={locale}
+				onClose={() => setStoryTarget(null)}
+				onPublished={() => {
+					setStoryTarget(null);
+					// The story list is what the user will look at next, and the new story
+					// only appears there after a provider refresh.
+					if (accountId) void loadStatuses(accountId, { force: true, silent: true });
+				}}
 			/>
 			<SavedLibraryPanel
 				open={libraryOpen}
