@@ -118,6 +118,7 @@ import VideoToVoiceDialog from './video-to-voice/VideoToVoiceDialog';
 import SavedLibraryPanel from './library/SavedLibraryPanel';
 import SaveToLibraryDialog from './library/SaveToLibraryDialog';
 import AddToStoryDialog from './story/AddToStoryDialog';
+import SocialVideoActions from './social-download/SocialVideoActions';
 import ScheduleMessageDialog from './schedule-message/ScheduleMessageDialog';
 import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
 import {
@@ -794,6 +795,7 @@ const translations = {
 		transcribe: 'Transcribe',
 		expandVideo: 'Expand video',
 		exitVideoFullscreen: 'Exit fullscreen',
+		playbackSpeed: 'Playback speed',
 		playVideo: 'Play video',
 		pauseVideo: 'Pause video',
 		muteVideo: 'Mute',
@@ -1278,6 +1280,7 @@ const translations = {
 		transcribe: 'تحويل إلى نص',
 		expandVideo: 'توسيع الفيديو',
 		exitVideoFullscreen: 'إغلاق ملء الشاشة',
+		playbackSpeed: 'سرعة التشغيل',
 		playVideo: 'تشغيل الفيديو',
 		pauseVideo: 'إيقاف الفيديو',
 		muteVideo: 'كتم الصوت',
@@ -4726,6 +4729,15 @@ function MediaOverflowMenu({ items, label = 'More', iconSize = 17, className = '
 	);
 }
 
+/** Offered playback rates. Slower than 1× is not useful for chat video. */
+const PLAYBACK_SPEEDS = [1, 1.5, 2, 3];
+
+function formatPlaybackSpeed(rate) {
+	// `1.5×`, but `2×` rather than `2.0×`.
+	const value = Number(rate) || 1;
+	return `${Number.isInteger(value) ? value : value.toFixed(1)}×`;
+}
+
 function ChatVideoPlayer({
 	url,
 	poster,
@@ -4752,6 +4764,7 @@ function ChatVideoPlayer({
 	expandLabel = 'Expand video',
 	collapseLabel = 'Exit fullscreen',
 	closeLabel = 'Close',
+	speedLabel = 'Playback speed',
 	aspectWidth = 0,
 	aspectHeight = 0,
 	cacheKey = '',
@@ -4770,6 +4783,9 @@ function ChatVideoPlayer({
 	const [currentTime, setCurrentTime] = useState(0);
 	const [muted, setMuted] = useState(false);
 	const [volume, setVolume] = useState(1);
+	const [speed, setSpeed] = useState(1);
+	const [speedOpen, setSpeedOpen] = useState(false);
+	const speedRef = useRef(null);
 	const [duration, setDuration] = useState(() => {
 		const value = Number(durationHint);
 		return Number.isFinite(value) && value > 0 ? value : 0;
@@ -4784,12 +4800,31 @@ function ChatVideoPlayer({
 		setDuration(Number.isFinite(hint) && hint > 0 ? hint : 0);
 	}, [url, durationHint]);
 
+	// `expanded` is a dependency because entering fullscreen mounts a second <video>,
+	// which starts at the element defaults rather than at whatever the user chose.
 	useEffect(() => {
 		const node = videoRef.current;
 		if (!node) return;
 		node.muted = muted;
 		node.volume = Math.min(1, Math.max(0, volume));
-	}, [muted, volume, expanded]);
+		node.playbackRate = speed;
+	}, [muted, volume, speed, expanded]);
+
+	useEffect(() => {
+		if (!speedOpen) return undefined;
+		const onPointerDown = event => {
+			if (!speedRef.current?.contains(event.target)) setSpeedOpen(false);
+		};
+		const onKeyDown = event => {
+			if (event.key === 'Escape') setSpeedOpen(false);
+		};
+		document.addEventListener('pointerdown', onPointerDown, true);
+		document.addEventListener('keydown', onKeyDown);
+		return () => {
+			document.removeEventListener('pointerdown', onPointerDown, true);
+			document.removeEventListener('keydown', onKeyDown);
+		};
+	}, [speedOpen]);
 
 	useEffect(() => {
 		if (!expanded) return undefined;
@@ -5138,6 +5173,49 @@ function ChatVideoPlayer({
 					/>
 				</div>
 			</div>
+			{/* Playback rate sits with the other playback controls. The label doubles as
+			    the current value, so the chosen speed is readable without opening it. */}
+			<div className="wa-video-controls__speed" ref={speedRef}>
+				<button
+					type="button"
+					className="wa-video-controls__btn wa-video-controls__btn--speed"
+					aria-label={speedLabel}
+					title={speedLabel}
+					aria-haspopup="true"
+					aria-expanded={speedOpen}
+					onClick={() => setSpeedOpen(current => !current)}
+				>
+					{formatPlaybackSpeed(speed)}
+				</button>
+				{speedOpen ? (
+					<div className="wa-video-speed-menu" role="menu">
+						{PLAYBACK_SPEEDS.map(step => (
+							<button
+								key={step}
+								type="button"
+								role="menuitemradio"
+								aria-checked={step === speed}
+								className={`wa-video-speed-option ${step === speed ? 'is-active' : ''}`}
+								onClick={() => {
+									setSpeed(step);
+									setSpeedOpen(false);
+								}}
+							>
+								{formatPlaybackSpeed(step)}
+							</button>
+						))}
+					</div>
+				) : null}
+			</div>
+			{/* Fullscreen keeps these in the bar, where there is room for them. */}
+			{fullscreen ? renderChromeActions(true) : null}
+		</div>
+	);
+
+	// "More" and fullscreen are not playback controls, so inline they float over the
+	// top corner instead of crowding the timeline row.
+	const renderChromeActions = fullscreen => (
+		<>
 			<MediaOverflowMenu
 				items={menuItems}
 				label={moreLabel}
@@ -5157,7 +5235,7 @@ function ChatVideoPlayer({
 					<Maximize2 size={fullscreen ? 19 : 17} strokeWidth={2.2} />
 				)}
 			</button>
-		</div>
+		</>
 	);
 
 	const renderVideoWrap = fullscreen => (
@@ -5233,6 +5311,15 @@ function ChatVideoPlayer({
 					onError={onError}
 				/>
 			</div>
+			{!selectMode && !fullscreen ? (
+				<div
+					className="wa-video-topbar"
+					onClick={event => event.stopPropagation()}
+					onPointerDown={event => event.stopPropagation()}
+				>
+					{renderChromeActions(false)}
+				</div>
+			) : null}
 			{!selectMode && !playing ? (
 				<button
 					type="button"
@@ -6026,6 +6113,7 @@ export function MediaAttachment({
 				expandLabel={labels.expandVideo || 'Expand video'}
 				collapseLabel={labels.exitVideoFullscreen || 'Exit fullscreen'}
 				closeLabel={labels.close || 'Close'}
+				speedLabel={labels.playbackSpeed || 'Playback speed'}
 				downloadLabel={labels.saveAsFile || labels.downloadFile || 'Download'}
 				downloading={fileAction === 'download'}
 				onDownload={() => handleFileAction('download')}
@@ -8017,7 +8105,15 @@ function WhatsAppFormattedText({
  * Renders nothing until a download is actually requested, so an ordinary shared link
  * keeps looking exactly as it does today.
  */
-function SocialVideoDownload({ state, locale, onRetry, labels }) {
+function SocialVideoDownload({
+	state,
+	locale,
+	onRetry,
+	labels,
+	conversationId,
+	conversations,
+	onAddToStory,
+}) {
 	if (!state) return null;
 	const ar = locale === 'ar';
 
@@ -8060,19 +8156,29 @@ function SocialVideoDownload({ state, locale, onRetry, labels }) {
 
 	if (state.status !== 'ready' || !state.url) return null;
 	return (
-		<div className="mb-1 overflow-hidden rounded-xl">
-			<ChatVideoPlayer
-				url={absoluteApiUrl(state.url)}
-				cacheKey={state.id}
-				durationHint={state.durationSeconds || 0}
-				playLabel={labels.playVideo || labels.play || 'Play'}
-				pauseLabel={labels.pauseVideo || 'Pause'}
-				muteLabel={labels.muteVideo || 'Mute'}
-				unmuteLabel={labels.unmuteVideo || 'Unmute'}
-				expandLabel={labels.expandVideo || 'Expand video'}
-				collapseLabel={labels.exitVideoFullscreen || 'Exit fullscreen'}
-				closeLabel={labels.close || 'Close'}
-				moreLabel={labels.moreActions || 'More'}
+		<div className="mb-1">
+			<div className="overflow-hidden rounded-xl">
+				<ChatVideoPlayer
+					url={absoluteApiUrl(state.url)}
+					cacheKey={state.id}
+					durationHint={state.durationSeconds || 0}
+					playLabel={labels.playVideo || labels.play || 'Play'}
+					pauseLabel={labels.pauseVideo || 'Pause'}
+					muteLabel={labels.muteVideo || 'Mute'}
+					unmuteLabel={labels.unmuteVideo || 'Unmute'}
+					expandLabel={labels.expandVideo || 'Expand video'}
+					collapseLabel={labels.exitVideoFullscreen || 'Exit fullscreen'}
+					closeLabel={labels.close || 'Close'}
+					speedLabel={labels.playbackSpeed || 'Playback speed'}
+					moreLabel={labels.moreActions || 'More'}
+				/>
+			</div>
+			<SocialVideoActions
+				downloadId={state.id}
+				locale={locale}
+				conversationId={conversationId}
+				conversations={conversations}
+				onAddToStory={onAddToStory}
 			/>
 		</div>
 	);
@@ -8928,7 +9034,11 @@ function WhatsAppWorkspaceContent() {
 	const socialPollTimersRef = useRef(new Map());
 	/** `{ attachmentId, messageId, defaultTitle }` while picking a library folder. */
 	const [librarySaveTarget, setLibrarySaveTarget] = useState(null);
-	/** `{ attachmentId, previewUrl, durationSeconds, fileSizeBytes }` while confirming a story. */
+	/**
+	 * `{ previewUrl, durationSeconds, fileSizeBytes }` plus one source id — either
+	 * `attachmentId` for a video message or `socialDownloadId` for a downloaded clip —
+	 * while the story confirmation is open.
+	 */
 	const [storyTarget, setStoryTarget] = useState(null);
 	const [libraryOpen, setLibraryOpen] = useState(false);
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
@@ -21314,6 +21424,8 @@ function WhatsAppWorkspaceContent() {
 																				state={socialDownloads[message.id]}
 																				locale={locale}
 																				labels={t}
+																				conversationId={conversationId}
+																				conversations={scheduleConversationOptions}
 																				onRetry={() =>
 																					startSocialVideoDownload(
 																						message,
@@ -21321,6 +21433,17 @@ function WhatsAppWorkspaceContent() {
 																							firstSocialVideoLink(message.text)?.href,
 																					)
 																				}
+																				onAddToStory={() => {
+																					const download = socialDownloads[message.id];
+																					if (!download?.id) return;
+																					setStoryTarget({
+																						socialDownloadId: download.id,
+																						messageId: message.id,
+																						previewUrl: absoluteApiUrl(download.url) || '',
+																						durationSeconds: download.durationSeconds || 0,
+																						fileSizeBytes: download.fileSizeBytes || 0,
+																					});
+																				}}
 																			/>
 																			<div className="wa-message-copy-body">
 																				{captionText ? (
@@ -23848,6 +23971,7 @@ function WhatsAppWorkspaceContent() {
 				open={Boolean(storyTarget)}
 				accountId={accountId || ''}
 				attachmentId={storyTarget?.attachmentId || ''}
+				socialDownloadId={storyTarget?.socialDownloadId || ''}
 				previewUrl={storyTarget?.previewUrl || ''}
 				durationSeconds={storyTarget?.durationSeconds || 0}
 				fileSizeBytes={storyTarget?.fileSizeBytes || 0}

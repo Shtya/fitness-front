@@ -109,7 +109,8 @@ function apiMessage(error, fallback) {
 export default function AddToStoryDialog({
 	open,
 	accountId,
-	attachmentId,
+	attachmentId = '',
+	socialDownloadId = '',
 	previewUrl = '',
 	durationSeconds = 0,
 	fileSizeBytes = 0,
@@ -140,13 +141,15 @@ export default function AddToStoryDialog({
 	const willSplit = Number(durationSeconds) > maxPartSeconds;
 
 	const prepare = useCallback(async () => {
-		if (!accountId || !attachmentId) return;
+		if (!accountId || !(attachmentId || socialDownloadId)) return;
 		const request = requestRef.current;
 		setPreparing(true);
 		try {
-			const { data } = await api.post(`/whatsapp/accounts/${accountId}/story-drafts`, {
-				attachmentId,
-			});
+			const { data } = await api.post(
+				`/whatsapp/accounts/${accountId}/story-drafts`,
+				// One source or the other; the server cuts from whichever file it resolves.
+				attachmentId ? { attachmentId } : { socialDownloadId },
+			);
 			if (requestRef.current !== request) return;
 			setDraft(data);
 		} catch (error) {
@@ -154,7 +157,7 @@ export default function AddToStoryDialog({
 		} finally {
 			if (requestRef.current === request) setPreparing(false);
 		}
-	}, [accountId, attachmentId, t.prepareFailed]);
+	}, [accountId, attachmentId, socialDownloadId, t.prepareFailed]);
 
 	const publish = useCallback(async () => {
 		if (!draft?.id) return;

@@ -4919,9 +4919,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	z-index: 6;
 	display: flex;
 	align-items: center;
-	gap: 2px;
-	min-height: 40px;
-	padding: 6px 6px max(6px, env(safe-area-inset-bottom));
+	/* Roomier than the old 2px: the controls used to read as one undifferentiated
+	   strip of glyphs. Grouping below adds the larger breaks. */
+	gap: 6px;
+	min-height: 44px;
+	padding: 8px 10px max(8px, env(safe-area-inset-bottom));
 	background: linear-gradient(
 		180deg,
 		transparent 0%,
@@ -4952,6 +4954,53 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		opacity: 1;
 		transform: none;
 	}
+}
+
+/* Secondary actions float over the top corner. They are not part of the timeline,
+   and on a portrait video the bottom row had no width left to spare for them. */
+.wa-video-topbar {
+	position: absolute;
+	top: 0;
+	inset-inline-end: 0;
+	z-index: 7;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 8px 10px;
+	color: #fff;
+	pointer-events: auto;
+	opacity: 0;
+	transform: translateY(-4px);
+	transition:
+		opacity 160ms ease,
+		transform 160ms ease;
+}
+
+/* Revealed by the same triggers as the bottom bar, so the two behave as one layer. */
+.wa-video-wrap:hover > .wa-video-topbar,
+.wa-video-wrap.is-paused > .wa-video-topbar,
+.wa-video-wrap > .wa-video-topbar:focus-within {
+	opacity: 1;
+	transform: none;
+}
+
+@media (hover: none) {
+	.wa-video-wrap > .wa-video-topbar {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* Without a backdrop these icons vanish over a pale frame. A pill per button rather
+   than a bar keeps the video itself unobscured. */
+.wa-video-topbar .wa-video-controls__btn {
+	background: rgba(11, 20, 26, 0.55);
+	backdrop-filter: blur(2px);
+}
+
+.wa-video-topbar .wa-video-controls__btn:hover,
+.wa-video-topbar .wa-video-controls__btn:focus-visible {
+	background: rgba(11, 20, 26, 0.78);
 }
 
 .wa-video-controls__btn {
@@ -4990,6 +5039,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	align-items: center;
 	gap: 3px;
 	min-width: 0;
+	/* Reads as a caption on the play button rather than a third icon slot. */
+	margin-inline-start: -2px;
 	padding: 0 2px;
 	font-size: 11px;
 	font-weight: 600;
@@ -5116,6 +5167,72 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 .wa-video-controls__more {
 	position: relative;
 	flex: 0 0 auto;
+}
+
+.wa-video-controls__speed {
+	position: relative;
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+}
+
+/* Wider than the icon buttons because it carries text, and the text is the value:
+   `1.5×` has to fit without the pill changing size between rates. */
+.wa-video-controls__btn--speed {
+	width: auto;
+	min-width: 34px;
+	padding: 0 7px;
+	font-size: 11px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	letter-spacing: 0.01em;
+	background: rgba(255, 255, 255, 0.14);
+}
+
+.wa-video-speed-menu {
+	position: absolute;
+	bottom: calc(100% + 8px);
+	left: 50%;
+	z-index: 8;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 4px;
+	border-radius: 12px;
+	background: rgba(11, 20, 26, 0.94);
+	box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+	transform: translateX(-50%);
+}
+
+.wa-video-speed-option {
+	min-width: 52px;
+	padding: 6px 10px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: #fff;
+	font-size: 12px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	cursor: pointer;
+}
+
+.wa-video-speed-option:hover,
+.wa-video-speed-option:focus-visible {
+	background: rgba(255, 255, 255, 0.14);
+}
+
+.wa-video-speed-option.is-active {
+	background: rgba(37, 211, 102, 0.22);
+	color: #25d366;
+}
+
+.wa-video-controls.is-expanded .wa-video-controls__btn--speed {
+	min-width: 42px;
+	padding: 0 10px;
+	font-size: 12px;
 }
 
 .wa-video-menu {
@@ -5345,13 +5462,23 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 @media (max-width: 640px) {
 	.wa-video-controls {
-		gap: 4px;
-		padding: 6px 6px max(8px, env(safe-area-inset-bottom));
+		gap: 5px;
+		padding: 7px 8px max(8px, env(safe-area-inset-bottom));
 	}
 
 	.wa-video-controls__btn {
 		width: 28px;
 		height: 28px;
+	}
+
+	.wa-video-controls__btn--speed {
+		min-width: 30px;
+		padding: 0 6px;
+		font-size: 10px;
+	}
+
+	.wa-video-topbar {
+		padding: 6px 8px;
 	}
 
 	.wa-video-controls__time {
