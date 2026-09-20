@@ -308,7 +308,7 @@ import {
 import { useWaScrollWindow, useWaVirtualRows, WaVirtualSpacer } from './wa-virtual-list';
 import { estimateMessageRowSize, estimatePrependedThreadHeight, messageRowKey } from './wa-thread-virtual.js';
 import { WaMeasuredThreadRow } from './wa-measured-thread-row';
-import { getAttachmentStreamUrl, absoluteApiUrl } from './whatsapp-media-stream';
+import { getAttachmentStreamUrl, absoluteApiUrl, forgetAttachmentStreamUrl } from './whatsapp-media-stream';
 import {
 	buildEffectiveConversations,
 	buildEffectiveMessages,
@@ -3668,6 +3668,55 @@ async function prepareVoicePlaybackFromBlob(blob, mimeType, { analyze = true, re
 	};
 }
 
+/**
+ * A signed stream URL is not playable the instant it is assigned — the browser still
+ * has to fetch the first packets. Calling play() before that rejects with AbortError
+ * / NotSupportedError and used to flip the bubble into a permanent Retry state.
+ */
+function waitForAudioCanPlay(audio, timeoutMs = 12_000) {
+	if (!audio) return Promise.reject(new Error('Audio element missing'));
+	if (audio.readyState >= 3) return Promise.resolve();
+	return new Promise((resolve, reject) => {
+		let settled = false;
+		const finish = (ok, error) => {
+			if (settled) return;
+			settled = true;
+			window.clearTimeout(timer);
+			audio.removeEventListener('canplay', onReady);
+			audio.removeEventListener('loadeddata', onReady);
+			audio.removeEventListener('error', onError);
+			if (ok) resolve();
+			else reject(error || new Error('Audio failed to load'));
+		};
+		const onReady = () => finish(true);
+		const onError = () =>
+			finish(false, new Error(audio.error?.message || 'Audio failed to load'));
+		const timer = window.setTimeout(
+			() => finish(false, new Error('Audio load timed out')),
+			timeoutMs,
+		);
+		audio.addEventListener('canplay', onReady);
+		audio.addEventListener('loadeddata', onReady);
+		audio.addEventListener('error', onError);
+		// Already buffered between the readyState check and the listeners.
+		if (audio.readyState >= 3) finish(true);
+		else {
+			try {
+				audio.load();
+			} catch {
+				/* assignment already kicked off the fetch */
+			}
+		}
+	});
+}
+
+function isBenignAudioPlayError(error) {
+	const name = String(error?.name || '');
+	// AbortError: a newer play() / src change cancelled this attempt — not a bad file.
+	// NotAllowedError: autoplay policy; the click gesture usually clears it on retry.
+	return name === 'AbortError' || name === 'NotAllowedError';
+}
+
 async function prepareVoicePlayback(sourceUrl, mimeType) {
 	const response = await fetch(sourceUrl, { mode: 'cors', credentials: 'omit' });
 	if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
@@ -4035,6 +4084,7 @@ function VoiceMessage({
 	const loadPromiseRef = useRef(null);
 	const analyzedRef = useRef(false);
 	const ignoreAudioErrorRef = useRef(false);
+	const playGenerationRef = useRef(0);
 	const wasSessionReadyRef = useRef(sessionReady);
 	const playerTokenRef = useRef(null);
 	if (!playerTokenRef.current) playerTokenRef.current = nextVoicePlayerToken();
@@ -4152,7 +4202,7 @@ function VoiceMessage({
 		[mimeType],
 	);
 
-	const ensurePlaybackReady = useCallback(async ({ priority = false, analyze = false, softFail = false } = {}) => {
+	const ensurePlaybackReady = useCallback(async ({ priority = false, analyze = false, softFail = false, preferBlob = false } = {}) => {
 		const existingUrl = objectUrlRef.current;
 		// Already playable — never block the spinner on waveform analysis.
 		if (existingUrl && voiceBlobRef.current) {
@@ -4177,16 +4227,23 @@ function VoiceMessage({
 			return existingUrl;
 		}
 
+		// Signed stream URLs are fine for prefetch, but a user click that already failed
+		// once with the stream must go through the authenticated blob path instead.
 		if (
+			!preferBlob &&
 			!demoAttachment &&
 			isPersistedAttachmentId(attachmentId) &&
 			!isLocalMediaUrl(url)
 		) {
+			const existingStream =
+				playbackUrl && /^https?:/i.test(String(playbackUrl)) ? playbackUrl : null;
+			if (existingStream) {
+				return existingStream;
+			}
 			try {
 				const streamUrl = await getAttachmentStreamUrl(attachmentId);
 				setPlaybackUrl(streamUrl);
 				setLoadFailed(false);
-				if (!softFail) setPlayLoading(false);
 				return streamUrl;
 			} catch {
 				/* fall through to the authenticated blob download */
@@ -4318,6 +4375,7 @@ function VoiceMessage({
 		canFetchAttachment,
 		demoAttachment,
 		mimeType,
+		playbackUrl,
 		url,
 	]);
 
@@ -4402,6 +4460,8 @@ function VoiceMessage({
 		const onPause = () => setPlaying(false);
 		const onMeta = () => applyDuration(audio.duration);
 		const onError = () => {
+			// Src swaps and intentional reloads set ignoreAudioErrorRef so a mid-load
+			// abort does not look like a permanent failure.
 			if (ignoreAudioErrorRef.current) return;
 			setLoadFailed(true);
 			setPlaying(false);
@@ -4436,45 +4496,88 @@ function VoiceMessage({
 	);
 
 	const startPlayback = async ({ fromStart = false } = {}) => {
+		const generation = ++playGenerationRef.current;
+		const isStale = () => generation !== playGenerationRef.current;
 		try {
+			setPlayLoading(true);
+			setLoadFailed(false);
 			const hadRealFailure = loadFailed && !voiceBlobRef.current && !objectUrlRef.current;
 			if (hadRealFailure) {
 				forgetAttachmentBlob(attachmentId);
+				forgetAttachmentStreamUrl(attachmentId);
 				voiceBlobRef.current = null;
 				analyzedRef.current = false;
 				ignoreAudioErrorRef.current = true;
 				setPlaybackUrl(null);
-			} else if (loadFailed) {
-				setLoadFailed(false);
 			}
-			const readyUrl = await ensurePlaybackReady({ priority: true, analyze: true });
-			const audio = audioRef.current;
-			if (!audio || !readyUrl) return;
-			if (audio.src !== readyUrl) {
+
+			const tryPlay = async readyUrl => {
+				const audio = audioRef.current;
+				if (!audio || !readyUrl || isStale()) return false;
 				ignoreAudioErrorRef.current = true;
-				audio.src = readyUrl;
+				if (audio.src !== readyUrl) {
+					audio.src = readyUrl;
+				}
+				await waitForAudioCanPlay(audio);
+				if (isStale()) return false;
+				if (fromStart) audio.currentTime = 0;
+				audio.playbackRate = playbackRate;
+				claimVoicePlayback(playerTokenRef.current);
+				await audio.play();
+				ignoreAudioErrorRef.current = false;
+				if (isStale()) return false;
+				setPlaying(true);
+				setLoadFailed(false);
+				setPlayLoading(false);
+				return true;
+			};
+
+			let readyUrl = await ensurePlaybackReady({ priority: true, analyze: true });
+			if (isStale()) return;
+			try {
+				const played = await tryPlay(readyUrl);
+				if (played || isStale()) return;
+			} catch (streamError) {
+				if (isStale()) return;
+				if (isBenignAudioPlayError(streamError)) {
+					// A newer click / pause cancelled this attempt — leave UI alone.
+					setPlayLoading(false);
+					return;
+				}
+				// Stream URL often fails on the first packet (expired token, wrong
+				// Content-Type for opus). Fall through to the authenticated blob.
 			}
-			if (fromStart) audio.currentTime = 0;
-			audio.playbackRate = playbackRate;
-			claimVoicePlayback(playerTokenRef.current);
-			await audio.play();
-			ignoreAudioErrorRef.current = false;
-			setPlaying(true);
-			setLoadFailed(false);
-			setPlayLoading(false);
-		} catch {
+
+			forgetAttachmentStreamUrl(attachmentId);
+			readyUrl = await ensurePlaybackReady({
+				priority: true,
+				analyze: true,
+				preferBlob: true,
+			});
+			if (isStale()) return;
+			const played = await tryPlay(readyUrl);
+			if (!played && !isStale()) {
+				setPlayLoading(false);
+			}
+		} catch (error) {
+			if (isStale()) return;
 			releaseVoicePlayback(playerTokenRef.current);
 			setPlaying(false);
-			setLoadFailed(true);
 			setPlayLoading(false);
+			if (!isBenignAudioPlayError(error)) {
+				setLoadFailed(true);
+			}
+			ignoreAudioErrorRef.current = false;
 		}
 	};
 	startPlaybackRef.current = startPlayback;
 
 	const toggle = async () => {
 		if (playing) {
+			playGenerationRef.current += 1;
 			audioRef.current?.pause();
 			setPlaying(false);
+			setPlayLoading(false);
 			releaseVoicePlayback(playerTokenRef.current);
 			return;
 		}
@@ -4510,7 +4613,9 @@ function VoiceMessage({
 	};
 
 	const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
-	const showPlaySpinner = playLoading && !playbackUrl;
+	// Keep the spinner up for the whole canplay wait — a stream URL alone is not
+	// enough evidence that audio is ready, and hiding it early made clicks look dead.
+	const showPlaySpinner = playLoading && !playing;
 	const waveformBusy = loadFailed || showPlaySpinner;
 	const statusLabel = loadFailed
 		? labels.tapToRetry || labels.failed || 'Tap to retry'
@@ -11386,23 +11491,31 @@ function WhatsAppWorkspaceContent() {
 				messagesCacheRef.current.set(cacheKey, { ...cached, items: sortedCached });
 			}
 			setHasMoreMessages(cached.hasMore);
-			setLoadingMessages(false);
-			setMessagesSyncHint('');
-			scrollMessagesToBottom();
-			// WhatsApp Web model: warm in-memory thread opens instantly.
-			// Provider history sync is NOT re-run on every open — live rows
-			// arrive via socket; Postgres is the durable cache.
-			if (
-				shouldSkipOpenChatNetwork({
-					cacheIsFresh,
-					forceProvider,
-					itemCount: cached.items.length,
-					hasMore: cached.hasMore !== false,
-					socketHealthy: Boolean(socketRef.current?.connected),
-				})
-			) {
-				markReadIfNeeded();
-				return;
+			const threadComplete = isMessageThreadCacheComplete(cached);
+			// A partial cache (socket seed / incomplete prefetch) must keep the loading
+			// overlay up. Flipping it off early let the settle loop declare victory on a
+			// half-painted thread, which is what opened chats mid-conversation.
+			if (threadComplete) {
+				setLoadingMessages(false);
+				setMessagesSyncHint('');
+				scrollMessagesToBottom();
+				// WhatsApp Web model: warm in-memory thread opens instantly.
+				// Provider history sync is NOT re-run on every open — live rows
+				// arrive via socket; Postgres is the durable cache.
+				if (
+					shouldSkipOpenChatNetwork({
+						cacheIsFresh,
+						forceProvider,
+						itemCount: cached.items.length,
+						hasMore: cached.hasMore !== false,
+						socketHealthy: Boolean(socketRef.current?.connected),
+					})
+				) {
+					markReadIfNeeded();
+					return;
+				}
+			} else {
+				setLoadingMessages(true);
 			}
 		} else if (starredOnly && cached?.items) {
 			writeConversationMessages(id, () =>
@@ -11798,6 +11911,17 @@ function WhatsAppWorkspaceContent() {
 			setShowJumpToBottom(false);
 			setThreadSettled(false);
 			suppressOlderLoadUntilRef.current = Date.now() + 2000;
+			// The scroll container is reused across chats, so leftover scrollTop from the
+			// previous thread would otherwise paint the new one mid-conversation until
+			// the settle loop caught up — and sometimes it never did.
+			const box = messageBoxRef.current;
+			if (box) {
+				try {
+					box.scrollTop = Number(box.scrollHeight) || 0;
+				} catch {
+					/* ignore */
+				}
+			}
 			setConversationId(id);
 		},
 		[cancelIdleMessagePrefetch, clearConversationMessages, writeConversationMessages],
@@ -12122,9 +12246,11 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		// Hold "settling" until the viewport is actually pinned to the latest
-		// messages. Marking settled too early freezes scrollTop at 0 (oldest).
-		if (threadSettled || !conversationId || loadingMessages) return undefined;
+		// messages. Marking settled too early freezes scrollTop mid-thread.
+		if (threadSettled || !conversationId) return undefined;
 		if (!effectiveMessages.length) {
+			// Still waiting on the first page — keep the overlay, do not settle yet.
+			if (loadingMessages) return undefined;
 			const emptyTimer = window.setTimeout(() => setThreadSettled(true), 80);
 			return () => window.clearTimeout(emptyTimer);
 		}
@@ -12135,7 +12261,8 @@ function WhatsAppWorkspaceContent() {
 		let stableFrames = 0;
 		let lastHeight = -1;
 		let lastMeasuredCount = -1;
-		const maxAttempts = 48;
+		const maxAttempts = 72;
+		const hardCapAttempts = 120;
 
 		const pinBottom = () => {
 			const box = messageBoxRef.current;
@@ -12186,10 +12313,12 @@ function WhatsAppWorkspaceContent() {
 			lastHeight = height;
 			lastMeasuredCount = measured;
 
-			if ((pinned && stableFrames >= 3) || attempts >= maxAttempts) {
+			// Never settle while the first page is still in flight — the message list
+			// is about to grow and any "pinned" frame here is temporary.
+			const stillLoading = loadingMessagesRef.current;
+			if (pinned && stableFrames >= 3 && !stillLoading) {
 				setThreadSettled(true);
-				setShowJumpToBottom(!pinned && shouldShowJumpToBottom(messageBoxRef.current));
-				// Opacity flips to ready on settle — heights can grow; re-pin a few frames.
+				setShowJumpToBottom(false);
 				let after = 0;
 				const rePin = () => {
 					if (cancelled || !pinThreadToBottomRef.current) return;
@@ -12197,9 +12326,30 @@ function WhatsAppWorkspaceContent() {
 					pinBottom();
 					setShowJumpToBottom(shouldShowJumpToBottom(messageBoxRef.current));
 					after += 1;
-					if (after < 3) requestAnimationFrame(rePin);
+					if (after < 4) requestAnimationFrame(rePin);
 				};
 				requestAnimationFrame(rePin);
+				return;
+			}
+			if (attempts >= maxAttempts && !stillLoading) {
+				pinBottom();
+				const box = messageBoxRef.current;
+				if (box && isThreadPinnedToBottom(box)) {
+					setThreadSettled(true);
+					setShowJumpToBottom(false);
+					return;
+				}
+				// Keep forcing the pin rather than settling mid-thread.
+				if (attempts < hardCapAttempts) {
+					rafId = requestAnimationFrame(tick);
+					return;
+				}
+				pinBottom();
+				setThreadSettled(true);
+				setShowJumpToBottom(
+					!isThreadPinnedToBottom(messageBoxRef.current) &&
+						shouldShowJumpToBottom(messageBoxRef.current),
+				);
 				return;
 			}
 			rafId = requestAnimationFrame(tick);
