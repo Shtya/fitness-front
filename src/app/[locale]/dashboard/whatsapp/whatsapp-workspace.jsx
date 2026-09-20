@@ -3277,7 +3277,44 @@ function computeReactionPickerPosition(anchorRect, options = {}) {
 }
 
 function ownReactionEmoji(message) {
-	return (message?.reactions || []).find(reaction => reaction.actorKey === 'me')?.emoji || '';
+	return normalizeWhatsAppReactions(message?.reactions).find(
+		reaction => reaction.actorKey === 'me',
+	)?.emoji || '';
+}
+
+/**
+ * Reactions arrive from three places (optimistic UI, REST, socket) and not always
+ * with the same field names. Without this, a chip that has `actor_key` / missing
+ * `emoji` is dropped by the renderer and looks like the reaction never landed —
+ * even though WhatsApp on the phone already shows it.
+ */
+function normalizeWhatsAppReactions(reactions) {
+	if (!Array.isArray(reactions)) return [];
+	const byActor = new Map();
+	for (const reaction of reactions) {
+		if (!reaction || typeof reaction !== 'object') continue;
+		const actorKey = String(reaction.actorKey || reaction.actor_key || '').trim();
+		const emoji = String(reaction.emoji || '').trim();
+		if (!actorKey || !emoji) continue;
+		byActor.set(actorKey, {
+			id: reaction.id || `${actorKey}:${emoji}`,
+			actorKey,
+			emoji,
+			reactedAt: reaction.reactedAt || reaction.reacted_at || reaction.timestamp || null,
+		});
+	}
+	return [...byActor.values()];
+}
+
+function mergeReactionLists(preferred = [], fallback = []) {
+	const merged = new Map();
+	for (const reaction of normalizeWhatsAppReactions(fallback)) {
+		merged.set(reaction.actorKey, reaction);
+	}
+	for (const reaction of normalizeWhatsAppReactions(preferred)) {
+		merged.set(reaction.actorKey, reaction);
+	}
+	return [...merged.values()];
 }
 
 async function mapPool(items, concurrency, worker) {
@@ -11247,7 +11284,7 @@ function WhatsAppWorkspaceContent() {
 	const updateCachedMessage = useCallback((targetConversationId, messageId, updater) => {
 		if (!targetConversationId || !messageId) return;
 		const apply = items =>
-			items.map(message =>
+			(items || []).map(message =>
 				message.id === messageId ||
 				message.providerMessageId === messageId ||
 				message.clientMessageId === messageId
@@ -11259,9 +11296,16 @@ function WhatsAppWorkspaceContent() {
 				apply(current),
 			);
 		}
-		const cached = messagesCacheRef.current.get(targetConversationId);
-		if (cached) {
-			messagesCacheRef.current.set(targetConversationId, {
+		// The in-memory cache is keyed as `id` or `id:starred`. Updating only the bare
+		// conversation id left the starred view (and a later reopen from that key)
+		// without the reaction the user just added.
+		for (const key of [
+			messagesCacheKey(targetConversationId, false),
+			messagesCacheKey(targetConversationId, true),
+		]) {
+			const cached = messagesCacheRef.current.get(key);
+			if (!cached) continue;
+			messagesCacheRef.current.set(key, {
 				...cached,
 				items: apply(cached.items),
 				cachedAt: Date.now(),
@@ -12995,7 +13039,13 @@ function WhatsAppWorkspaceContent() {
 				updateCachedMessage(
 					activeConversationId,
 					event.payload.messageId || event.payload.providerMessageId,
-					message => ({ ...message, reactions: event.payload.reactions || [] }),
+					message => ({
+						...message,
+						reactions: mergeReactionLists(
+							event.payload.reactions,
+							message.reactions,
+						),
+					}),
 				);
 			}
 			if (event.event === 'attachment_ready' && event.payload?.attachmentId) {
@@ -15320,7 +15370,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		const targetConversationId = conversationId;
-		const previousReactions = Array.isArray(message.reactions) ? message.reactions : [];
+		const previousReactions = normalizeWhatsAppReactions(message.reactions);
 		const existingOwn = previousReactions.find(reaction => reaction.actorKey === 'me');
 		const nextEmoji = existingOwn?.emoji === emoji ? '' : emoji;
 		const optimisticReactions = [
@@ -15344,9 +15394,20 @@ function WhatsAppWorkspaceContent() {
 				`/whatsapp/conversations/${targetConversationId}/messages/${message.id}/reaction`,
 				{ emoji: nextEmoji || undefined },
 			);
+			const serverReactions = normalizeWhatsAppReactions(data?.reactions);
+			// A successful send that returns before the row is readable used to wipe the
+			// optimistic chip with `[]`, so the phone showed the reaction and the web
+			// did not. Prefer the server list, but keep our own emoji if it is missing.
 			updateCachedMessage(targetConversationId, message.id, current => ({
 				...current,
-				reactions: data.reactions || [],
+				reactions:
+					nextEmoji && !serverReactions.some(reaction => reaction.actorKey === 'me')
+						? mergeReactionLists(optimisticReactions, serverReactions)
+						: serverReactions.length
+							? mergeReactionLists(serverReactions, current.reactions)
+							: nextEmoji
+								? optimisticReactions
+								: serverReactions,
 			}));
 		} catch (error) {
 			updateCachedMessage(targetConversationId, message.id, current => ({
@@ -21664,10 +21725,10 @@ function WhatsAppWorkspaceContent() {
 																			)}
 																		</div>
 																	)}
-																	{Array.isArray(message.reactions) && message.reactions.length > 0 && (
+																	{normalizeWhatsAppReactions(message.reactions).length > 0 && (
 																		<div className={`wa-message-reactions ${mine ? 'is-outgoing' : 'is-incoming'}`}>
 																			{Object.values(
-																				message.reactions.reduce((groups, reaction) => {
+																				normalizeWhatsAppReactions(message.reactions).reduce((groups, reaction) => {
 																					const emoji = reaction.emoji || '';
 																					if (!emoji) return groups;
 																					if (!groups[emoji]) {

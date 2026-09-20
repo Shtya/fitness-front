@@ -3262,23 +3262,36 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   }
 }
 
-/* The chip hangs 16px below the bubble box. Text bubbles clip their overflow to keep
-   rounded corners, which cut the chip off entirely and made reactions look broken —
-   so a bubble carrying reactions opts out of clipping and reserves room for them. */
+/* The chip hangs below the bubble box. Text bubbles clip overflow for rounded
+   corners, which cut the chip off — and virtualized rows paint later siblings on
+   top of any overhang, so a reaction that escapes its row disappears under the
+   next message. Rows that carry reactions reserve space and win the stacking
+   order so the chip stays visible. */
 .wa-message-bubble:has(.wa-message-reactions) {
-  margin-bottom: 14px;
-  overflow: visible;
+  margin-bottom: 0;
+  overflow: visible !important;
+}
+
+.wa-message-row:has(.wa-message-reactions) {
+  padding-bottom: 22px;
+  position: relative;
+  z-index: 3;
+}
+
+.wa-message-virtual-item:has(.wa-message-reactions) {
+  z-index: 3;
 }
 
 .wa-message-reactions {
   position: absolute;
   z-index: 5;
-  bottom: -16px;
+  bottom: -10px;
   display: inline-flex;
   align-items: center;
   gap: 2px;
   max-width: calc(100% - 6px);
   margin: 0 !important;
+  pointer-events: auto;
 }
 
 /* WhatsApp: reaction sits on the inner/bottom corner of the bubble */
