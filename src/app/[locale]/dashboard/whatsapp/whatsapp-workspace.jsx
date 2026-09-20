@@ -3686,14 +3686,35 @@ async function analyzeVoiceBlob(blob, mimeType, objectUrlForProbe) {
 	};
 }
 
+function coerceVoiceBlobMime(blob, mimeType) {
+	const preferred = String(mimeType || '').trim() || 'audio/ogg; codecs=opus';
+	const current = String(blob?.type || '')
+		.trim()
+		.toLowerCase();
+	// Browsers will not decode WhatsApp PTT when the blob is labeled octet-stream /
+	// empty / generic ogg. Always re-wrap into a playable audio/* type.
+	if (
+		!current ||
+		current.includes('octet-stream') ||
+		current === 'application/ogg' ||
+		current === 'audio/ogg' ||
+		!current.startsWith('audio/')
+	) {
+		return blob.slice(0, blob.size, preferred);
+	}
+	return blob;
+}
+
 async function prepareVoicePlaybackFromBlob(blob, mimeType, { analyze = true, reuseObjectUrl = null } = {}) {
-	const type = (mimeType || blob.type || 'audio/webm').split(';')[0];
-	const typedBlob = blob.type ? blob : new Blob([blob], { type });
-	const objectUrl = reuseObjectUrl || URL.createObjectURL(typedBlob);
+	const typedBlob = coerceVoiceBlobMime(blob, mimeType);
+	const type = (typedBlob.type || mimeType || 'audio/ogg').split(';')[0];
+	// If MIME was coerced, the old object URL still points at the unplayable blob.
+	const canReuse = Boolean(reuseObjectUrl) && typedBlob === blob;
+	const objectUrl = canReuse ? reuseObjectUrl : URL.createObjectURL(typedBlob);
 
 	// Fast path for prefetch / first paint: skip AudioContext decode (can take seconds).
 	if (!analyze) {
-		return { objectUrl, duration: 0, waveform: [], reused: Boolean(reuseObjectUrl) };
+		return { objectUrl, duration: 0, waveform: [], reused: canReuse };
 	}
 
 	const analyzed = await analyzeVoiceBlob(typedBlob, type, objectUrl);
@@ -3701,49 +3722,56 @@ async function prepareVoicePlaybackFromBlob(blob, mimeType, { analyze = true, re
 		objectUrl,
 		duration: analyzed.duration,
 		waveform: analyzed.waveform,
-		reused: Boolean(reuseObjectUrl),
+		reused: canReuse,
 	};
 }
 
 /**
- * A signed stream URL is not playable the instant it is assigned — the browser still
- * has to fetch the first packets. Calling play() before that rejects with AbortError
- * / NotSupportedError and used to flip the bubble into a permanent Retry state.
+ * Wait until the element can start playback.
+ *
+ * Do not call `audio.load()` here — restarting an in-flight fetch is what left
+ * some bubbles spinning forever (canplay never came, error was swallowed while
+ * ignoreAudioErrorRef was set). The browser already fetches when `src` is set.
+ *
+ * Ignore MEDIA_ERR_ABORTED / empty errors: swapping `src` aborts the previous
+ * resource and used to reject this waiter immediately, leaving play() unreached
+ * while the UI spinner stayed up for the outer attempt.
  */
-function waitForAudioCanPlay(audio, timeoutMs = 12_000) {
+function waitForAudioCanPlay(audio, timeoutMs = 6_000) {
 	if (!audio) return Promise.reject(new Error('Audio element missing'));
-	if (audio.readyState >= 3) return Promise.resolve();
+	// HAVE_CURRENT_DATA is enough to begin; waiting for HAVE_FUTURE_DATA stranded
+	// short voice notes that never buffered ahead.
+	if (audio.readyState >= 2) return Promise.resolve();
 	return new Promise((resolve, reject) => {
 		let settled = false;
+		let timer = 0;
 		const finish = (ok, error) => {
 			if (settled) return;
 			settled = true;
-			window.clearTimeout(timer);
+			if (timer) window.clearTimeout(timer);
 			audio.removeEventListener('canplay', onReady);
 			audio.removeEventListener('loadeddata', onReady);
+			audio.removeEventListener('loadedmetadata', onReady);
 			audio.removeEventListener('error', onError);
 			if (ok) resolve();
 			else reject(error || new Error('Audio failed to load'));
 		};
 		const onReady = () => finish(true);
-		const onError = () =>
+		const onError = () => {
+			const code = audio.error?.code;
+			// 1 = MEDIA_ERR_ABORTED (src swap). Keep waiting for the new resource.
+			if (!audio.error || code === 1) return;
 			finish(false, new Error(audio.error?.message || 'Audio failed to load'));
-		const timer = window.setTimeout(
+		};
+		timer = window.setTimeout(
 			() => finish(false, new Error('Audio load timed out')),
 			timeoutMs,
 		);
 		audio.addEventListener('canplay', onReady);
 		audio.addEventListener('loadeddata', onReady);
+		audio.addEventListener('loadedmetadata', onReady);
 		audio.addEventListener('error', onError);
-		// Already buffered between the readyState check and the listeners.
-		if (audio.readyState >= 3) finish(true);
-		else {
-			try {
-				audio.load();
-			} catch {
-				/* assignment already kicked off the fetch */
-			}
-		}
+		if (audio.readyState >= 1) finish(true);
 	});
 }
 
@@ -4243,6 +4271,7 @@ function VoiceMessage({
 		const existingUrl = objectUrlRef.current;
 		// Already playable — never block the spinner on waveform analysis.
 		if (existingUrl && voiceBlobRef.current) {
+			setPlaybackUrl(current => (current === existingUrl ? current : existingUrl));
 			if (analyze && !analyzedRef.current) {
 				void (async () => {
 					try {
@@ -4298,8 +4327,9 @@ function VoiceMessage({
 		}
 
 		const run = (async () => {
-			// Background prefetch must not flip the bubble into a stuck spinner.
-			if (!softFail) setPlayLoading(true);
+			// playLoading is owned by startPlayback / toggle — never flip it here.
+			// Background prefetch (softFail) and in-flight blob fetches used to clear
+			// the spinner mid-click or leave it stuck across overlapping attempts.
 			if (!softFail) setLoadFailed(false);
 			try {
 				let blob = voiceBlobRef.current;
@@ -4329,7 +4359,8 @@ function VoiceMessage({
 								next &&
 								(!next.type ||
 									String(next.type).includes('octet-stream') ||
-									String(next.type).includes('application/ogg'))
+									String(next.type).includes('application/ogg') ||
+									!String(next.type).toLowerCase().startsWith('audio/'))
 							) {
 								next = next.slice(0, next.size, mimeType || 'audio/ogg; codecs=opus');
 							}
@@ -4398,7 +4429,6 @@ function VoiceMessage({
 				if (!softFail) setLoadFailed(true);
 				throw error;
 			} finally {
-				setPlayLoading(false);
 				loadPromiseRef.current = null;
 			}
 		})();
@@ -4450,11 +4480,13 @@ function VoiceMessage({
 		if (playbackUrl && (voiceBlobRef.current || /^https?:/i.test(String(playbackUrl)))) {
 			return undefined;
 		}
-		// Prefetch playable blob early (like WhatsApp Web auto-download for voice).
+		// Prefetch a real blob (not the signed stream). Stream URLs for ogg/opus
+		// often never reach canplay and left the play button spinning.
 		void ensurePlaybackReady({
 			analyze: true,
 			softFail: true,
 			priority: true,
+			preferBlob: true,
 		}).catch(() => {});
 		return undefined;
 	}, [
@@ -4470,11 +4502,30 @@ function VoiceMessage({
 
 	useEffect(() => {
 		const audio = audioRef.current;
-		if (!audio || !playbackUrl) return undefined;
+		if (!audio) return undefined;
+		// Keep the element src in sync without putting `src={...}` on JSX — a
+		// controlled attribute re-applied on parent re-renders aborts in-flight
+		// blob loads and is what made canplay never arrive.
+		const next = playbackUrl || '';
+		const current = audio.getAttribute('src') || '';
+		if (next && current !== next) {
+			ignoreAudioErrorRef.current = true;
+			audio.src = next;
+			window.setTimeout(() => {
+				ignoreAudioErrorRef.current = false;
+			}, 0);
+		} else if (!next && current) {
+			ignoreAudioErrorRef.current = true;
+			audio.removeAttribute('src');
+			audio.load();
+			window.setTimeout(() => {
+				ignoreAudioErrorRef.current = false;
+			}, 0);
+		}
 
 		const applyDuration = value => {
 			if (Number.isFinite(value) && value > 0 && value !== Infinity) {
-				setDuration(current => (current > 0 ? current : value));
+				setDuration(currentDuration => (currentDuration > 0 ? currentDuration : value));
 			}
 		};
 
@@ -4482,12 +4533,12 @@ function VoiceMessage({
 			const time = audio.currentTime || 0;
 			setCurrentTime(time);
 			if (!(audio.duration > 0 && Number.isFinite(audio.duration)) && time > 0) {
-				setDuration(current => Math.max(current, Math.ceil(time)));
+				setDuration(currentDuration => Math.max(currentDuration, Math.ceil(time)));
 			}
 		};
 		const onEnd = () => {
 			const endedAt = audio.currentTime || 0;
-			if (endedAt > 0) setDuration(current => Math.max(current, endedAt));
+			if (endedAt > 0) setDuration(currentDuration => Math.max(currentDuration, endedAt));
 			setPlaying(false);
 			setCurrentTime(0);
 			releaseVoicePlayback(playerTokenRef.current);
@@ -4500,6 +4551,7 @@ function VoiceMessage({
 			// Src swaps and intentional reloads set ignoreAudioErrorRef so a mid-load
 			// abort does not look like a permanent failure.
 			if (ignoreAudioErrorRef.current) return;
+			if (!audio.error || audio.error.code === 1) return;
 			setLoadFailed(true);
 			setPlaying(false);
 			setPlayLoading(false);
@@ -4532,12 +4584,24 @@ function VoiceMessage({
 		[],
 	);
 
+	// Hard stop for a spinner that somehow survives a cancelled attempt.
+	useEffect(() => {
+		if (!playLoading) return undefined;
+		const timer = window.setTimeout(() => {
+			setPlayLoading(false);
+			setLoadFailed(true);
+			ignoreAudioErrorRef.current = false;
+		}, 12_000);
+		return () => window.clearTimeout(timer);
+	}, [playLoading]);
+
 	const startPlayback = async ({ fromStart = false } = {}) => {
 		const generation = ++playGenerationRef.current;
 		const isStale = () => generation !== playGenerationRef.current;
+		let didStart = false;
+		setPlayLoading(true);
+		setLoadFailed(false);
 		try {
-			setPlayLoading(true);
-			setLoadFailed(false);
 			const hadRealFailure = loadFailed && !voiceBlobRef.current && !objectUrlRef.current;
 			if (hadRealFailure) {
 				forgetAttachmentBlob(attachmentId);
@@ -4552,69 +4616,115 @@ function VoiceMessage({
 				const audio = audioRef.current;
 				if (!audio || !readyUrl || isStale()) return false;
 				ignoreAudioErrorRef.current = true;
-				if (audio.src !== readyUrl) {
+				// Keep React state in sync for duration/meta effects — but assign src
+				// imperatively so a re-render cannot slap the old stream URL back on.
+				setPlaybackUrl(current => (current === readyUrl ? current : readyUrl));
+				if ((audio.getAttribute('src') || '') !== readyUrl) {
 					audio.src = readyUrl;
 				}
-				await waitForAudioCanPlay(audio);
-				if (isStale()) return false;
-				if (fromStart) audio.currentTime = 0;
-				audio.playbackRate = playbackRate;
-				claimVoicePlayback(playerTokenRef.current);
-				await audio.play();
+				// Blob URLs are usually ready immediately; try play() first so we do
+				// not sit on a spinner waiting for canplay that a src-swap aborted.
+				const kickPlay = async () => {
+					if (fromStart) {
+						try {
+							audio.currentTime = 0;
+						} catch {
+							/* ignore */
+						}
+					}
+					audio.playbackRate = playbackRate;
+					claimVoicePlayback(playerTokenRef.current);
+					await audio.play();
+				};
+				try {
+					if (audio.readyState >= 1) {
+						await kickPlay();
+					} else {
+						await waitForAudioCanPlay(audio, 5_000);
+						if (isStale()) return false;
+						await kickPlay();
+					}
+				} catch (firstPlayError) {
+					if (isStale()) return false;
+					if (isBenignAudioPlayError(firstPlayError) && firstPlayError?.name === 'AbortError') {
+						// Src/play race — one short retry after the element settles.
+						await waitForAudioCanPlay(audio, 4_000);
+						if (isStale()) return false;
+						await kickPlay();
+					} else if (audio.readyState < 2) {
+						await waitForAudioCanPlay(audio, 4_000);
+						if (isStale()) return false;
+						await kickPlay();
+					} else {
+						throw firstPlayError;
+					}
+				}
 				ignoreAudioErrorRef.current = false;
-				if (isStale()) return false;
+				if (isStale()) {
+					audio.pause();
+					return false;
+				}
+				didStart = true;
 				setPlaying(true);
 				setLoadFailed(false);
-				setPlayLoading(false);
 				return true;
 			};
 
-			let readyUrl = await ensurePlaybackReady({ priority: true, analyze: true });
-			if (isStale()) return;
-			try {
-				const played = await tryPlay(readyUrl);
-				if (played || isStale()) return;
-			} catch (streamError) {
-				if (isStale()) return;
-				if (isBenignAudioPlayError(streamError)) {
-					// A newer click / pause cancelled this attempt — leave UI alone.
-					setPlayLoading(false);
-					return;
-				}
-				// Stream URL often fails on the first packet (expired token, wrong
-				// Content-Type for opus). Fall through to the authenticated blob.
-			}
-
-			forgetAttachmentStreamUrl(attachmentId);
-			readyUrl = await ensurePlaybackReady({
+			// User click: go straight to the authenticated blob. The signed stream URL
+			// is fine for images/video, but ogg/opus from it often never reaches canplay.
+			let readyUrl = await ensurePlaybackReady({
 				priority: true,
 				analyze: true,
 				preferBlob: true,
 			});
 			if (isStale()) return;
-			const played = await tryPlay(readyUrl);
-			if (!played && !isStale()) {
-				setPlayLoading(false);
+			try {
+				if (await tryPlay(readyUrl)) return;
+			} catch (blobError) {
+				if (isStale()) return;
+				if (isBenignAudioPlayError(blobError)) return;
+				// Fall through to stream as a last resort (cached signed URL).
 			}
+
+			if (isStale()) return;
+			readyUrl = await ensurePlaybackReady({ priority: true, analyze: true });
+			if (isStale()) return;
+			try {
+				if (await tryPlay(readyUrl)) return;
+			} catch (streamError) {
+				if (isStale()) return;
+				if (isBenignAudioPlayError(streamError)) return;
+				throw streamError;
+			}
+			if (!isStale()) setLoadFailed(true);
 		} catch (error) {
 			if (isStale()) return;
 			releaseVoicePlayback(playerTokenRef.current);
 			setPlaying(false);
-			setPlayLoading(false);
 			if (!isBenignAudioPlayError(error)) {
 				setLoadFailed(true);
 			}
 			ignoreAudioErrorRef.current = false;
+		} finally {
+			// Always clear the spinner for *this* attempt. Early `return`s used to leave
+			// playLoading true forever, which is the stuck spinner in the screenshot.
+			if (generation === playGenerationRef.current) {
+				setPlayLoading(false);
+				if (!didStart) ignoreAudioErrorRef.current = false;
+			}
 		}
 	};
 	startPlaybackRef.current = startPlayback;
 
 	const toggle = async () => {
-		if (playing) {
+		// A second tap while loading cancels a stuck spinner instead of queuing
+		// another attempt that never clears.
+		if (playing || playLoading) {
 			playGenerationRef.current += 1;
 			audioRef.current?.pause();
 			setPlaying(false);
 			setPlayLoading(false);
+			ignoreAudioErrorRef.current = false;
 			releaseVoicePlayback(playerTokenRef.current);
 			return;
 		}
@@ -4695,10 +4805,7 @@ function VoiceMessage({
 		>
 			<audio
 				ref={audioRef}
-				preload={
-					playbackUrl && !String(playbackUrl).startsWith('blob:') ? 'metadata' : 'auto'
-				}
-				src={playbackUrl || undefined}
+				preload="auto"
 				className="hidden"
 			/>
 			<VoiceMessageLayout mine={mine}>
