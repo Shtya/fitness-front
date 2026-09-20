@@ -1,25 +1,30 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, Pause, Pencil, Play, Trash2, X } from 'lucide-react';
+import {
+	ChevronLeft,
+	ChevronRight,
+	Loader2,
+	Pause,
+	Pencil,
+	Play,
+	Plus,
+	Trash2,
+	X,
+} from 'lucide-react';
 
 const copy = {
 	en: {
 		title: 'Scheduled',
-		recipients: '{count} chats',
-		next: 'Next {when}',
+		recipients: '{count}',
+		next: '{when}',
 		pause: 'Pause',
 		resume: 'Resume',
 		edit: 'Edit',
 		cancel: 'Delete',
 		hide: 'Hide',
-		status: {
-			active: 'Active',
-			paused: 'Paused',
-			completed: 'Done',
-			cancelled: 'Cancelled',
-			processing: 'Sending…',
-		},
+		add: 'Add',
+		addNew: 'New schedule',
 		kind: {
 			once: 'Once',
 			recurring: 'Recurring',
@@ -27,20 +32,15 @@ const copy = {
 	},
 	ar: {
 		title: 'مجدولة',
-		recipients: '{count} شات',
-		next: 'التالي {when}',
+		recipients: '{count}',
+		next: '{when}',
 		pause: 'إيقاف',
 		resume: 'استئناف',
 		edit: 'تعديل',
 		cancel: 'حذف',
 		hide: 'إخفاء',
-		status: {
-			active: 'نشط',
-			paused: 'موقوف',
-			completed: 'اكتمل',
-			cancelled: 'ملغي',
-			processing: 'بيُرسَل…',
-		},
+		add: 'إضافة',
+		addNew: 'جدولة جديدة',
 		kind: {
 			once: 'مرة',
 			recurring: 'متكرر',
@@ -90,6 +90,27 @@ function isLiveSchedule(item) {
 	return status === 'active' || status === 'paused' || status === 'processing';
 }
 
+function IconBtn({ title, onClick, disabled, tone = 'slate', children }) {
+	const tones = {
+		slate: 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+		emerald:
+			'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40',
+		rose: 'text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30',
+	};
+	return (
+		<button
+			type="button"
+			disabled={disabled}
+			onClick={onClick}
+			title={title}
+			aria-label={title}
+			className={`grid h-5 w-5 place-items-center rounded-md transition disabled:opacity-40 ${tones[tone] || tones.slate}`}
+		>
+			{children}
+		</button>
+	);
+}
+
 export default function ScheduledMessagesPanel({
 	ar = false,
 	open = true,
@@ -97,6 +118,7 @@ export default function ScheduledMessagesPanel({
 	loading = false,
 	busyId = '',
 	onHide,
+	onAdd,
 	onPause,
 	onResume,
 	onEdit,
@@ -115,9 +137,9 @@ export default function ScheduledMessagesPanel({
 
 	if (loading) {
 		return (
-			<div className="flex shrink-0 items-center gap-1.5 border-b border-[#e9edef] bg-[#f0f2f5] px-3 py-1 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/80">
-				<Loader2 size={12} className="animate-spin text-emerald-600" />
-				<span className="font-semibold">{t.title}</span>
+			<div className="flex shrink-0 items-center gap-1.5 border-b border-[#d1d7db] bg-[#e9edef] px-2.5 py-1 text-[10px] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
+				<Loader2 size={11} className="animate-spin text-emerald-600" />
+				{t.title}
 			</div>
 		);
 	}
@@ -127,25 +149,38 @@ export default function ScheduledMessagesPanel({
 	const scrollBy = direction => {
 		const node = scrollerRef.current;
 		if (!node) return;
-		const delta = Math.max(160, Math.round(node.clientWidth * 0.7)) * direction;
+		const delta = Math.max(140, Math.round(node.clientWidth * 0.65)) * direction;
 		node.scrollBy({ left: ar ? -delta : delta, behavior: 'smooth' });
 	};
 
 	return (
-		<div className="shrink-0 border-b border-[#e9edef] bg-[#f0f2f5] px-2 py-1 dark:border-slate-800 dark:bg-slate-900/80">
-			<div className="mb-0.5 flex items-center gap-1.5 px-0.5">
-				<span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+		<div className="shrink-0 border-b border-[#d1d7db] bg-[#e9edef] px-2 py-1 dark:border-slate-800 dark:bg-slate-900/85">
+			<div className="mb-1 flex items-center gap-1">
+				<span className="text-[10px] font-bold uppercase tracking-[0.06em] text-slate-600 dark:text-slate-300">
 					{t.title}
 				</span>
-				<span className="rounded-full bg-white px-1.5 py-px text-[9px] font-bold text-slate-500 shadow-sm dark:bg-slate-800 dark:text-slate-400">
+				<span className="grid h-4 min-w-4 place-items-center rounded-full bg-emerald-600 px-1 text-[9px] font-bold text-white">
 					{list.length}
 				</span>
+
+				{typeof onAdd === 'function' ? (
+					<button
+						type="button"
+						onClick={event => onAdd(event)}
+						className="ms-0.5 inline-flex h-5 items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-emerald-700"
+						title={t.addNew}
+					>
+						<Plus size={11} strokeWidth={2.6} />
+						<span>{t.add}</span>
+					</button>
+				) : null}
+
 				<div className="ms-auto flex items-center gap-0.5">
 					{list.length > 1 ? (
 						<>
 							<button
 								type="button"
-								className="grid h-5 w-5 place-items-center rounded text-slate-400 hover:bg-white hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+								className="grid h-5 w-5 place-items-center rounded-md text-slate-500 hover:bg-white/80 dark:hover:bg-slate-800"
 								onClick={() => scrollBy(-1)}
 								aria-label="Previous"
 							>
@@ -153,7 +188,7 @@ export default function ScheduledMessagesPanel({
 							</button>
 							<button
 								type="button"
-								className="grid h-5 w-5 place-items-center rounded text-slate-400 hover:bg-white hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+								className="grid h-5 w-5 place-items-center rounded-md text-slate-500 hover:bg-white/80 dark:hover:bg-slate-800"
 								onClick={() => scrollBy(1)}
 								aria-label="Next"
 							>
@@ -164,7 +199,7 @@ export default function ScheduledMessagesPanel({
 					{typeof onHide === 'function' ? (
 						<button
 							type="button"
-							className="grid h-5 w-5 place-items-center rounded text-slate-400 hover:bg-white hover:text-slate-700 dark:hover:bg-slate-800"
+							className="grid h-5 w-5 place-items-center rounded-md text-slate-500 hover:bg-white/80 dark:hover:bg-slate-800"
 							onClick={onHide}
 							title={t.hide}
 							aria-label={t.hide}
@@ -177,89 +212,95 @@ export default function ScheduledMessagesPanel({
 
 			<div
 				ref={scrollerRef}
-				className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+				className="flex gap-1.5 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 			>
 				{list.map(item => {
 					const busy = busyId === item.id;
 					const title = item.text || item.title || 'Scheduled';
 					const canEdit = item.status === 'active' || item.status === 'paused';
-					const meta = [
-						describeSchedule(item, t, ar),
-						formatTemplate(t.recipients, { count: item.recipients?.length || 0 }),
-					].join(' · ');
+					const chats = formatTemplate(t.recipients, {
+						count: item.recipients?.length || 0,
+					});
+					const when = item.nextRunAt ? formatWhen(item.nextRunAt, ar) : '';
 
 					return (
 						<div
 							key={item.id}
-							className="flex w-[min(220px,72vw)] shrink-0 items-stretch overflow-hidden rounded-lg border border-white/90 bg-white shadow-[0_1px_2px_rgba(11,20,26,0.05)] dark:border-slate-700/80 dark:bg-slate-950/75"
+							className="flex w-[min(188px,68vw)] shrink-0 overflow-hidden rounded-md border border-white bg-white shadow-[0_1px_1px_rgba(11,20,26,0.06)] dark:border-slate-700 dark:bg-slate-950/80"
 						>
-							<span className={`w-0.5 shrink-0 ${statusTone(item.status)}`} aria-hidden="true" />
-							<div className="min-w-0 flex-1 px-2 py-1">
-								<p className="truncate text-[11px] font-semibold leading-tight text-slate-800 dark:text-slate-100">
-									{title}
-								</p>
+							<span className={`w-[3px] shrink-0 ${statusTone(item.status)}`} aria-hidden="true" />
+							<div className="min-w-0 flex-1 px-1.5 py-1">
+								<div className="flex items-start gap-1">
+									<p className="min-w-0 flex-1 truncate text-[11px] font-semibold leading-none text-slate-800 dark:text-slate-100">
+										{title}
+									</p>
+									{item.status === 'paused' ? (
+										<span className="shrink-0 rounded bg-amber-100 px-1 py-px text-[8px] font-bold uppercase text-amber-700 dark:bg-amber-950/50 dark:text-amber-200">
+											{ar ? 'وقف' : 'Paused'}
+										</span>
+									) : null}
+								</div>
 								<p className="mt-0.5 truncate text-[9px] leading-tight text-slate-500 dark:text-slate-400">
-									{meta}
+									{describeSchedule(item, t, ar)}
+									{' · '}
+									{chats}
+									{ar ? ' شات' : ' chats'}
 								</p>
-								{item.nextRunAt ? (
+								{when ? (
 									<p className="mt-0.5 truncate text-[9px] font-semibold leading-tight text-emerald-600 dark:text-emerald-400">
-										{formatTemplate(t.next, { when: formatWhen(item.nextRunAt, ar) })}
+										{formatTemplate(t.next, { when })}
 									</p>
 								) : null}
-							</div>
-							<div className="flex shrink-0 flex-col justify-center gap-px border-s border-slate-100 pe-0.5 ps-0.5 dark:border-slate-800">
-								{canEdit ? (
-									<button
-										type="button"
-										disabled={busy}
-										onClick={() => onEdit?.(item)}
-										className="grid h-5 w-5 place-items-center rounded text-slate-500 hover:bg-slate-100 hover:text-emerald-700 disabled:opacity-50 dark:hover:bg-slate-800"
-										title={t.edit}
-										aria-label={t.edit}
-									>
-										<Pencil size={10} strokeWidth={2.3} />
-									</button>
-								) : null}
-								{item.status === 'active' ? (
-									<button
-										type="button"
-										disabled={busy}
-										onClick={() => onPause?.(item)}
-										className="grid h-5 w-5 place-items-center rounded text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"
-										title={t.pause}
-										aria-label={t.pause}
-									>
-										{busy ? <Loader2 size={10} className="animate-spin" /> : <Pause size={10} />}
-									</button>
-								) : null}
-								{item.status === 'paused' ? (
-									<button
-										type="button"
-										disabled={busy}
-										onClick={() => onResume?.(item)}
-										className="grid h-5 w-5 place-items-center rounded text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 dark:hover:bg-emerald-950/40"
-										title={t.resume}
-										aria-label={t.resume}
-									>
-										{busy ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
-									</button>
-								) : null}
-								{canEdit ? (
-									<button
-										type="button"
-										disabled={busy}
-										onClick={() => onCancel?.(item)}
-										className="grid h-5 w-5 place-items-center rounded text-rose-500 hover:bg-rose-50 disabled:opacity-50 dark:hover:bg-rose-950/30"
-										title={t.cancel}
-										aria-label={t.cancel}
-									>
-										{busy ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
-									</button>
-								) : null}
+								<div className="mt-1 flex items-center gap-0.5">
+									{canEdit ? (
+										<IconBtn title={t.edit} disabled={busy} onClick={() => onEdit?.(item)} tone="emerald">
+											<Pencil size={10} strokeWidth={2.3} />
+										</IconBtn>
+									) : null}
+									{item.status === 'active' ? (
+										<IconBtn title={t.pause} disabled={busy} onClick={() => onPause?.(item)}>
+											{busy ? <Loader2 size={10} className="animate-spin" /> : <Pause size={10} />}
+										</IconBtn>
+									) : null}
+									{item.status === 'paused' ? (
+										<IconBtn
+											title={t.resume}
+											disabled={busy}
+											onClick={() => onResume?.(item)}
+											tone="emerald"
+										>
+											{busy ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
+										</IconBtn>
+									) : null}
+									{canEdit ? (
+										<IconBtn
+											title={t.cancel}
+											disabled={busy}
+											onClick={() => onCancel?.(item)}
+											tone="rose"
+										>
+											{busy ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
+										</IconBtn>
+									) : null}
+								</div>
 							</div>
 						</div>
 					);
 				})}
+
+				{typeof onAdd === 'function' ? (
+					<button
+						type="button"
+						onClick={event => onAdd(event)}
+						className="flex h-auto w-[72px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-emerald-400/70 bg-emerald-50/70 px-1 py-1.5 text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100 dark:border-emerald-700/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
+						title={t.addNew}
+					>
+						<span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-white">
+							<Plus size={12} strokeWidth={2.6} />
+						</span>
+						<span className="text-[9px] font-bold leading-none">{t.add}</span>
+					</button>
+				) : null}
 			</div>
 		</div>
 	);

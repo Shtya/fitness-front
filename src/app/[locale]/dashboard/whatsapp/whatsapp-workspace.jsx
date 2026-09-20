@@ -20645,6 +20645,7 @@ function WhatsAppWorkspaceContent() {
 										loading={messageSchedulesLoading}
 										busyId={messageScheduleBusyId}
 										onHide={() => setSchedulesPanelOpen(false)}
+										onAdd={openSchedulePopover}
 										onPause={pauseMessageSchedule}
 										onResume={resumeMessageSchedule}
 										onEdit={schedule => openEditSchedule(schedule)}
