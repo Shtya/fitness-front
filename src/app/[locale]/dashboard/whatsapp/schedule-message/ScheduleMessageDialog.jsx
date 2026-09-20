@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -16,9 +16,11 @@ import api from '@/utils/axios';
 const copy = {
 	en: {
 		title: 'Schedule message',
+		editTitle: 'Edit schedule',
 		subtitle: 'Send later to one or more chats',
+		editSubtitle: 'Update message or timing',
 		message: 'Message',
-		messagePlaceholder: 'Type the message to send…',
+		messagePlaceholder: 'Type the message to sendâ€¦',
 		recipients: 'Send to',
 		addMore: 'Add chats',
 		searchChats: 'Search chats',
@@ -32,39 +34,49 @@ const copy = {
 		endDate: 'Ends (optional)',
 		days: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
 		schedule: 'Schedule',
-		scheduling: 'Scheduling…',
+		save: 'Save',
+		scheduling: 'Schedulingâ€¦',
+		saving: 'Savingâ€¦',
 		cancel: 'Cancel',
 		emptyMessage: 'Write the message to schedule.',
 		needRecipients: 'Select at least one chat.',
 		needFutureTime: 'Pick a time at least 1 minute from now.',
 		created: 'Message scheduled',
+		updated: 'Schedule updated',
 		failed: 'Could not schedule message',
+		updateFailed: 'Could not update schedule',
 	},
 	ar: {
-		title: 'جدولة رسالة',
-		subtitle: 'أرسل لاحقًا لشات واحد أو أكثر',
-		message: 'الرسالة',
-		messagePlaceholder: 'اكتب الرسالة المراد إرسالها…',
-		recipients: 'إلى',
-		addMore: 'إضافة شاتات',
-		searchChats: 'ابحث في الشاتات',
-		selectedCount: '{count} محدد',
-		when: 'الموعد',
-		once: 'مرة',
-		daily: 'يومي',
-		customDays: 'مخصص',
-		dateTime: 'التاريخ والوقت',
-		timeOfDay: 'الوقت',
-		endDate: 'ينتهي (اختياري)',
-		days: ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'],
-		schedule: 'جدولة',
-		scheduling: 'جاري…',
-		cancel: 'إلغاء',
-		emptyMessage: 'اكتب الرسالة المراد جدولتها.',
-		needRecipients: 'اختَر شات واحد على الأقل.',
-		needFutureTime: 'اختَر وقت بعد دقيقة على الأقل.',
-		created: 'تمت جدولة الرسالة',
-		failed: 'تعذّرت جدولة الرسالة',
+		title: 'Ø¬Ø¯ÙˆÙ„Ø© Ø±Ø³Ø§Ù„Ø©',
+		editTitle: 'ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©',
+		subtitle: 'Ø£Ø±Ø³Ù„ Ù„Ø§Ø­Ù‚Ù‹Ø§ Ù„Ø´Ø§Øª ÙˆØ§Ø­Ø¯ Ø£Ùˆ Ø£ÙƒØ«Ø±',
+		editSubtitle: 'Ø¹Ø¯Ù‘Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø£Ùˆ Ø§Ù„Ù…ÙˆØ¹Ø¯',
+		message: 'Ø§Ù„Ø±Ø³Ø§Ù„Ø©',
+		messagePlaceholder: 'Ø§ÙƒØªØ¨ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø±Ø§Ø¯ Ø¥Ø±Ø³Ø§Ù„Ù‡Ø§â€¦',
+		recipients: 'Ø¥Ù„Ù‰',
+		addMore: 'Ø¥Ø¶Ø§ÙØ© Ø´Ø§ØªØ§Øª',
+		searchChats: 'Ø§Ø¨Ø­Ø« ÙÙŠ Ø§Ù„Ø´Ø§ØªØ§Øª',
+		selectedCount: '{count} Ù…Ø­Ø¯Ø¯',
+		when: 'Ø§Ù„Ù…ÙˆØ¹Ø¯',
+		once: 'Ù…Ø±Ø©',
+		daily: 'ÙŠÙˆÙ…ÙŠ',
+		customDays: 'Ù…Ø®ØµØµ',
+		dateTime: 'Ø§Ù„ØªØ§Ø±ÙŠØ® ÙˆØ§Ù„ÙˆÙ‚Øª',
+		timeOfDay: 'Ø§Ù„ÙˆÙ‚Øª',
+		endDate: 'ÙŠÙ†ØªÙ‡ÙŠ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)',
+		days: ['Ø­', 'Ù†', 'Ø«', 'Ø±', 'Ø®', 'Ø¬', 'Ø³'],
+		schedule: 'Ø¬Ø¯ÙˆÙ„Ø©',
+		save: 'Ø­ÙØ¸',
+		scheduling: 'Ø¬Ø§Ø±ÙŠâ€¦',
+		saving: 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸â€¦',
+		cancel: 'Ø¥Ù„ØºØ§Ø¡',
+		emptyMessage: 'Ø§ÙƒØªØ¨ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø±Ø§Ø¯ Ø¬Ø¯ÙˆÙ„ØªÙ‡Ø§.',
+		needRecipients: 'Ø§Ø®ØªÙŽØ± Ø´Ø§Øª ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.',
+		needFutureTime: 'Ø§Ø®ØªÙŽØ± ÙˆÙ‚Øª Ø¨Ø¹Ø¯ Ø¯Ù‚ÙŠÙ‚Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.',
+		created: 'ØªÙ…Øª Ø¬Ø¯ÙˆÙ„Ø© Ø§Ù„Ø±Ø³Ø§Ù„Ø©',
+		updated: 'ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©',
+		failed: 'ØªØ¹Ø°Ù‘Ø±Øª Ø¬Ø¯ÙˆÙ„Ø© Ø§Ù„Ø±Ø³Ø§Ù„Ø©',
+		updateFailed: 'ØªØ¹Ø°Ù‘Ø± ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©',
 	},
 };
 
@@ -122,9 +134,12 @@ export default function ScheduleMessageDialog({
 	conversations = [],
 	initialConversationId,
 	initialText = '',
+	editingSchedule = null,
 	onCreated,
+	onUpdated,
 }) {
 	const t = ar ? copy.ar : copy.en;
+	const editing = Boolean(editingSchedule?.id);
 	const panelRef = useRef(null);
 	const [position, setPosition] = useState(null);
 	const [mode, setMode] = useState('once');
@@ -140,18 +155,45 @@ export default function ScheduleMessageDialog({
 
 	useEffect(() => {
 		if (!open) return;
-		setMessageText(String(initialText || '').trim());
-		const next = new Set();
-		if (initialConversationId) next.add(String(initialConversationId));
-		setSelectedIds(next);
-		setMode('once');
-		setOnceAt(defaultDateTimeLocal());
-		setTimeOfDay(defaultTimeValue());
-		setDaysOfWeek([1, 2, 3, 4, 5]);
-		setEndDate('');
+		if (editingSchedule?.id) {
+			setMessageText(String(editingSchedule.text || editingSchedule.title || '').trim());
+			const ids = new Set(
+				(Array.isArray(editingSchedule.recipients) ? editingSchedule.recipients : [])
+					.map(item => String(item?.conversationId || ''))
+					.filter(Boolean),
+			);
+			if (!ids.size && initialConversationId) ids.add(String(initialConversationId));
+			setSelectedIds(ids);
+			const kind = String(editingSchedule.scheduleKind || 'once');
+			const days = Array.isArray(editingSchedule.daysOfWeek) ? editingSchedule.daysOfWeek : [];
+			if (kind === 'recurring') {
+				setMode(days.length === 7 ? 'daily' : 'custom');
+				setDaysOfWeek(days.length ? days : [1, 2, 3, 4, 5]);
+				setTimeOfDay(editingSchedule.timeOfDay || defaultTimeValue());
+				setEndDate(
+					editingSchedule.recurrenceEndDate
+						? String(editingSchedule.recurrenceEndDate).slice(0, 10)
+						: '',
+				);
+			} else {
+				setMode('once');
+				const when = editingSchedule.scheduledAt || editingSchedule.nextRunAt;
+				setOnceAt(when ? defaultDateTimeLocal(new Date(when)) : defaultDateTimeLocal());
+			}
+		} else {
+			setMessageText(String(initialText || '').trim());
+			const next = new Set();
+			if (initialConversationId) next.add(String(initialConversationId));
+			setSelectedIds(next);
+			setMode('once');
+			setOnceAt(defaultDateTimeLocal());
+			setTimeOfDay(defaultTimeValue());
+			setDaysOfWeek([1, 2, 3, 4, 5]);
+			setEndDate('');
+		}
 		setSearch('');
 		setPickerOpen(false);
-	}, [open, initialConversationId, initialText]);
+	}, [open, initialConversationId, initialText, editingSchedule]);
 
 	useEffect(() => {
 		if (!open) {
@@ -204,6 +246,7 @@ export default function ScheduleMessageDialog({
 	);
 
 	const toggleConversation = id => {
+		if (editing) return;
 		setSelectedIds(current => {
 			const next = new Set(current);
 			if (next.has(id)) next.delete(id);
@@ -222,7 +265,7 @@ export default function ScheduleMessageDialog({
 	};
 
 	const submit = async () => {
-		if (!accountId) return;
+		if (!accountId && !editing) return;
 		const text = messageText.trim();
 		if (!text) {
 			toast.error(t.emptyMessage);
@@ -234,40 +277,72 @@ export default function ScheduleMessageDialog({
 			return;
 		}
 
-		const payload = {
-			type: 'text',
-			text,
-			conversationIds,
-			scheduleKind: mode === 'once' ? 'once' : 'recurring',
-			timezone: 'Asia/Qatar',
-			clientMessageId: `schedule:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
-		};
-
-		if (mode === 'once') {
-			const scheduled = new Date(onceAt);
-			if (!Number.isFinite(scheduled.getTime()) || scheduled.getTime() <= Date.now() + 60_000) {
-				toast.error(t.needFutureTime);
-				return;
-			}
-			payload.scheduledAt = scheduled.toISOString();
-		} else {
-			payload.timeOfDay = timeOfDay;
-			payload.daysOfWeek = mode === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : daysOfWeek;
-			if (!payload.daysOfWeek.length) {
-				toast.error(ar ? 'اختَر يوم واحد على الأقل' : 'Select at least one weekday');
-				return;
-			}
-			if (endDate) payload.recurrenceEndDate = endDate;
-		}
-
 		setSubmitting(true);
 		try {
-			await api.post(`/whatsapp/accounts/${accountId}/message-schedules`, payload);
-			toast.success(t.created);
-			onCreated?.();
-			onOpenChange?.(false);
+			if (editing) {
+				const payload = { text };
+				if (mode === 'once') {
+					const scheduled = new Date(onceAt);
+					if (!Number.isFinite(scheduled.getTime()) || scheduled.getTime() <= Date.now() + 60_000) {
+						toast.error(t.needFutureTime);
+						setSubmitting(false);
+						return;
+					}
+					payload.scheduledAt = scheduled.toISOString();
+				} else {
+					payload.timeOfDay = timeOfDay;
+					payload.daysOfWeek = mode === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : daysOfWeek;
+					if (!payload.daysOfWeek.length) {
+						toast.error(ar ? 'Ø§Ø®ØªÙŽØ± ÙŠÙˆÙ… ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„' : 'Select at least one weekday');
+						setSubmitting(false);
+						return;
+					}
+					payload.recurrenceEndDate = endDate || null;
+				}
+				await api.patch(`/whatsapp/message-schedules/${editingSchedule.id}`, payload);
+				toast.success(t.updated);
+				onUpdated?.();
+				onOpenChange?.(false);
+			} else {
+				const payload = {
+					type: 'text',
+					text,
+					conversationIds,
+					scheduleKind: mode === 'once' ? 'once' : 'recurring',
+					timezone: 'Asia/Qatar',
+					clientMessageId: `schedule:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+				};
+
+				if (mode === 'once') {
+					const scheduled = new Date(onceAt);
+					if (!Number.isFinite(scheduled.getTime()) || scheduled.getTime() <= Date.now() + 60_000) {
+						toast.error(t.needFutureTime);
+						setSubmitting(false);
+						return;
+					}
+					payload.scheduledAt = scheduled.toISOString();
+				} else {
+					payload.timeOfDay = timeOfDay;
+					payload.daysOfWeek = mode === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : daysOfWeek;
+					if (!payload.daysOfWeek.length) {
+						toast.error(ar ? 'Ø§Ø®ØªÙŽØ± ÙŠÙˆÙ… ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„' : 'Select at least one weekday');
+						setSubmitting(false);
+						return;
+					}
+					if (endDate) payload.recurrenceEndDate = endDate;
+				}
+
+				await api.post(`/whatsapp/accounts/${accountId}/message-schedules`, payload);
+				toast.success(t.created);
+				onCreated?.();
+				onOpenChange?.(false);
+			}
 		} catch (error) {
-			toast.error(error?.response?.data?.message || error?.message || t.failed);
+			toast.error(
+				error?.response?.data?.message ||
+					error?.message ||
+					(editing ? t.updateFailed : t.failed),
+			);
 		} finally {
 			setSubmitting(false);
 		}
@@ -279,7 +354,7 @@ export default function ScheduleMessageDialog({
 		<div
 			ref={panelRef}
 			role="dialog"
-			aria-label={t.title}
+			aria-label={editing ? t.editTitle : t.title}
 			className="wa-schedule-popover"
 			style={{
 				top: position.top,
@@ -295,8 +370,8 @@ export default function ScheduleMessageDialog({
 						<CalendarClock size={16} strokeWidth={2.1} />
 					</span>
 					<div className="min-w-0">
-						<h3>{t.title}</h3>
-						<p>{t.subtitle}</p>
+						<h3>{editing ? t.editTitle : t.title}</h3>
+						<p>{editing ? t.editSubtitle : t.subtitle}</p>
 					</div>
 				</div>
 				<button
@@ -332,25 +407,29 @@ export default function ScheduleMessageDialog({
 						{selectedChips.map(item => (
 							<span key={item.id} className="wa-schedule-popover__chip">
 								<span className="truncate">{item.title}</span>
-								<button
-									type="button"
-									aria-label="Remove"
-									onClick={() => toggleConversation(String(item.id))}
-								>
-									<X size={11} strokeWidth={2.4} />
-								</button>
+								{!editing ? (
+									<button
+										type="button"
+										aria-label="Remove"
+										onClick={() => toggleConversation(String(item.id))}
+									>
+										<X size={11} strokeWidth={2.4} />
+									</button>
+								) : null}
 							</span>
 						))}
-						<button
-							type="button"
-							className="wa-schedule-popover__add"
-							onClick={() => setPickerOpen(current => !current)}
-						>
-							<Plus size={13} strokeWidth={2.4} />
-							{t.addMore}
-						</button>
+						{!editing ? (
+							<button
+								type="button"
+								className="wa-schedule-popover__add"
+								onClick={() => setPickerOpen(current => !current)}
+							>
+								<Plus size={13} strokeWidth={2.4} />
+								{t.addMore}
+							</button>
+						) : null}
 					</div>
-					{pickerOpen ? (
+					{pickerOpen && !editing ? (
 						<div className="wa-schedule-popover__picker">
 							<div className="wa-schedule-popover__search">
 								<Search size={14} strokeWidth={2} />
@@ -384,24 +463,50 @@ export default function ScheduleMessageDialog({
 
 				<section className="wa-schedule-popover__section">
 					<label className="wa-schedule-popover__label">{t.when}</label>
-					<div className="wa-schedule-popover__segment" role="tablist">
-						{[
-							['once', t.once],
-							['daily', t.daily],
-							['custom', t.customDays],
-						].map(([value, label]) => (
-							<button
-								key={value}
-								type="button"
-								role="tab"
-								aria-selected={mode === value}
-								className={mode === value ? 'is-active' : ''}
-								onClick={() => setMode(value)}
-							>
-								{label}
-							</button>
-						))}
-					</div>
+					{!editing || editingSchedule?.scheduleKind === 'once' ? (
+						<div className="wa-schedule-popover__segment" role="tablist">
+							{(editing
+								? [['once', t.once]]
+								: [
+										['once', t.once],
+										['daily', t.daily],
+										['custom', t.customDays],
+									]
+							).map(([value, label]) => (
+								<button
+									key={value}
+									type="button"
+									role="tab"
+									aria-selected={mode === value}
+									className={mode === value ? 'is-active' : ''}
+									onClick={() => setMode(value)}
+									disabled={editing && value !== 'once'}
+								>
+									{label}
+								</button>
+							))}
+						</div>
+					) : (
+						<div className="wa-schedule-popover__segment" role="tablist">
+							{(
+								[
+									['daily', t.daily],
+									['custom', t.customDays],
+								]
+							).map(([value, label]) => (
+								<button
+									key={value}
+									type="button"
+									role="tab"
+									aria-selected={mode === value}
+									className={mode === value ? 'is-active' : ''}
+									onClick={() => setMode(value)}
+								>
+									{label}
+								</button>
+							))}
+						</div>
+					)}
 
 					{mode === 'once' ? (
 						<label className="wa-schedule-popover__field">
@@ -425,12 +530,12 @@ export default function ScheduleMessageDialog({
 							{mode === 'custom' ? (
 								<div className="wa-schedule-popover__days">
 									{t.days.map((label, index) => {
-										const checked = daysOfWeek.includes(index);
+										const active = daysOfWeek.includes(index);
 										return (
 											<button
 												key={`${label}-${index}`}
 												type="button"
-												className={checked ? 'is-active' : ''}
+												className={active ? 'is-active' : ''}
 												onClick={() => toggleDay(index)}
 											>
 												{label}
@@ -462,12 +567,20 @@ export default function ScheduleMessageDialog({
 				</button>
 				<button
 					type="button"
-					disabled={submitting}
 					className="wa-schedule-popover__primary"
+					disabled={submitting}
 					onClick={() => void submit()}
 				>
-					{submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} strokeWidth={2.4} />}
-					{submitting ? t.scheduling : t.schedule}
+					{submitting ? (
+						<>
+							<Loader2 size={14} className="animate-spin" />
+							{editing ? t.saving : t.scheduling}
+						</>
+					) : editing ? (
+						t.save
+					) : (
+						t.schedule
+					)}
 				</button>
 			</footer>
 		</div>,

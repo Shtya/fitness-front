@@ -9308,9 +9308,19 @@ function WhatsAppWorkspaceContent() {
 	const getDraft = useCallback(() => String(draftRef.current || ''), []);
 	const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 	const [scheduleAnchorEl, setScheduleAnchorEl] = useState(null);
+	const [editingSchedule, setEditingSchedule] = useState(null);
+	const [schedulesPanelOpen, setSchedulesPanelOpen] = useState(false);
 	const [messageSchedules, setMessageSchedules] = useState([]);
 	const [messageSchedulesLoading, setMessageSchedulesLoading] = useState(false);
 	const [messageScheduleBusyId, setMessageScheduleBusyId] = useState('');
+	const liveMessageSchedules = useMemo(
+		() =>
+			(Array.isArray(messageSchedules) ? messageSchedules : []).filter(item => {
+				const status = String(item?.status || '').toLowerCase();
+				return status === 'active' || status === 'paused' || status === 'processing';
+			}),
+		[messageSchedules],
+	);
 	const [composerImages, setComposerImages] = useState([]);
 	const composerImagesRef = useRef([]);
 	const setComposerImagesState = useCallback(next => {
@@ -9323,13 +9333,33 @@ function WhatsAppWorkspaceContent() {
 	}, []);
 
 	const openSchedulePopover = useCallback(event => {
+		setEditingSchedule(null);
 		setScheduleAnchorEl(event?.currentTarget || null);
 		setScheduleDialogOpen(true);
 	}, []);
 
 	const closeSchedulePopover = useCallback(open => {
 		setScheduleDialogOpen(open);
-		if (!open) setScheduleAnchorEl(null);
+		if (!open) {
+			setScheduleAnchorEl(null);
+			setEditingSchedule(null);
+		}
+	}, []);
+
+	const toggleSchedulesPanel = useCallback(event => {
+		event?.stopPropagation?.();
+		if (liveMessageSchedules.length > 0) {
+			setSchedulesPanelOpen(current => !current);
+			return;
+		}
+		openSchedulePopover(event);
+	}, [liveMessageSchedules.length, openSchedulePopover]);
+
+	const openEditSchedule = useCallback((schedule, event) => {
+		if (!schedule?.id) return;
+		setEditingSchedule(schedule);
+		setScheduleAnchorEl(event?.currentTarget || null);
+		setScheduleDialogOpen(true);
 	}, []);
 
 	useEffect(() => {
@@ -12523,7 +12553,11 @@ function WhatsAppWorkspaceContent() {
 			const { data } = await api.get(
 				`/whatsapp/conversations/${targetConversationId}/message-schedules`,
 			);
-			setMessageSchedules(Array.isArray(data) ? data : []);
+			const rows = (Array.isArray(data) ? data : []).filter(item => {
+				const status = String(item?.status || '').toLowerCase();
+				return status === 'active' || status === 'paused' || status === 'processing';
+			});
+			setMessageSchedules(rows);
 		} catch {
 			setMessageSchedules([]);
 		} finally {
@@ -12534,10 +12568,15 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		if (!conversationId || demo.settings.enabled) {
 			setMessageSchedules([]);
+			setSchedulesPanelOpen(false);
 			return;
 		}
 		void loadMessageSchedules(conversationId);
 	}, [conversationId, demo.settings.enabled, loadMessageSchedules]);
+
+	useEffect(() => {
+		if (!liveMessageSchedules.length) setSchedulesPanelOpen(false);
+	}, [liveMessageSchedules.length]);
 
 	const pauseMessageSchedule = useCallback(async schedule => {
 		if (!schedule?.id) return;
@@ -12568,16 +12607,19 @@ function WhatsAppWorkspaceContent() {
 	const cancelMessageSchedule = useCallback(async schedule => {
 		if (!schedule?.id) return;
 		setMessageScheduleBusyId(schedule.id);
+		const previous = messageSchedules;
+		setMessageSchedules(current => current.filter(item => item.id !== schedule.id));
 		try {
 			await api.delete(`/whatsapp/message-schedules/${schedule.id}`);
+			toast.success(locale === 'ar' ? 'تم حذف الجدولة' : 'Schedule deleted');
 			if (conversationId) await loadMessageSchedules(conversationId);
-			toast.success(locale === 'ar' ? 'تم إلغاء الجدولة' : 'Schedule cancelled');
 		} catch (error) {
-			toast.error(error?.response?.data?.message || 'Could not cancel schedule');
+			setMessageSchedules(previous);
+			toast.error(error?.response?.data?.message || 'Could not delete schedule');
 		} finally {
 			setMessageScheduleBusyId('');
 		}
-	}, [conversationId, loadMessageSchedules, locale]);
+	}, [conversationId, loadMessageSchedules, locale, messageSchedules]);
 
 	const loadMessageSchedulesRef = useRef(loadMessageSchedules);
 	loadMessageSchedulesRef.current = loadMessageSchedules;
@@ -20502,15 +20544,32 @@ function WhatsAppWorkspaceContent() {
 												{!demo.settings.enabled && conversationId && accountId ? (
 													<button
 														type="button"
-														title={t.scheduleMessage}
-														aria-label={t.scheduleMessage}
-														onClick={openSchedulePopover}
-														className="wa-header-icon-btn relative"
+														title={
+															liveMessageSchedules.length
+																? locale === 'ar'
+																	? schedulesPanelOpen
+																		? 'إخفاء المجدولة'
+																		: 'إظهار المجدولة'
+																	: schedulesPanelOpen
+																		? 'Hide scheduled'
+																		: 'Show scheduled'
+																: t.scheduleMessage
+														}
+														aria-label={
+															liveMessageSchedules.length
+																? locale === 'ar'
+																	? 'المجدولة'
+																	: 'Scheduled messages'
+																: t.scheduleMessage
+														}
+														aria-pressed={liveMessageSchedules.length ? schedulesPanelOpen : undefined}
+														onClick={toggleSchedulesPanel}
+														className={`wa-header-icon-btn relative ${schedulesPanelOpen && liveMessageSchedules.length ? 'is-active' : ''}`}
 													>
 														<CalendarDays size={18} strokeWidth={2.05} />
-														{messageSchedules.length > 0 ? (
+														{liveMessageSchedules.length > 0 ? (
 															<span className="wa-toolbar-icon-btn__badge">
-																{messageSchedules.length > 9 ? '9+' : messageSchedules.length}
+																{liveMessageSchedules.length > 9 ? '9+' : liveMessageSchedules.length}
 															</span>
 														) : null}
 													</button>
@@ -20581,11 +20640,14 @@ function WhatsAppWorkspaceContent() {
 									) : null}
 									<ScheduledMessagesPanel
 										ar={locale === 'ar'}
-										schedules={messageSchedules}
+										open={schedulesPanelOpen}
+										schedules={liveMessageSchedules}
 										loading={messageSchedulesLoading}
 										busyId={messageScheduleBusyId}
+										onHide={() => setSchedulesPanelOpen(false)}
 										onPause={pauseMessageSchedule}
 										onResume={resumeMessageSchedule}
+										onEdit={schedule => openEditSchedule(schedule)}
 										onCancel={cancelMessageSchedule}
 									/>
 									{(conversationFilter === 'important' || conversationFilter === 'starred') && conversationId && !activeMessageGroup ? (
@@ -24239,9 +24301,15 @@ function WhatsAppWorkspaceContent() {
 				accountId={accountId}
 				conversations={scheduleConversationOptions}
 				initialConversationId={conversationId}
-				initialText={getDraft()}
+				initialText={editingSchedule ? '' : getDraft()}
+				editingSchedule={editingSchedule}
 				onCreated={() => {
 					if (conversationId) void loadMessageSchedules(conversationId);
+					setSchedulesPanelOpen(true);
+				}}
+				onUpdated={() => {
+					if (conversationId) void loadMessageSchedules(conversationId);
+					setSchedulesPanelOpen(true);
 				}}
 			/>
 			<VoiceChangerDialog

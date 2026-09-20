@@ -1,6 +1,7 @@
 'use client';
 
-import { CalendarClock, Loader2, Pause, Play, Trash2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Loader2, Pause, Pencil, Play, Trash2, X } from 'lucide-react';
 
 const copy = {
 	en: {
@@ -9,7 +10,9 @@ const copy = {
 		next: 'Next {when}',
 		pause: 'Pause',
 		resume: 'Resume',
-		cancel: 'Cancel',
+		edit: 'Edit',
+		cancel: 'Delete',
+		hide: 'Hide',
 		status: {
 			active: 'Active',
 			paused: 'Paused',
@@ -28,7 +31,9 @@ const copy = {
 		next: 'التالي {when}',
 		pause: 'إيقاف',
 		resume: 'استئناف',
-		cancel: 'إلغاء',
+		edit: 'تعديل',
+		cancel: 'حذف',
+		hide: 'إخفاء',
 		status: {
 			active: 'نشط',
 			paused: 'موقوف',
@@ -66,54 +71,51 @@ function describeSchedule(item, t, ar) {
 	const days = Array.isArray(item.daysOfWeek) ? item.daysOfWeek : [];
 	const dayLabel =
 		days.length === 7 ? (ar ? 'يومي' : 'Daily') : days.length ? days.join(',') : t.kind.recurring;
-	return `${t.kind.recurring} · ${dayLabel} · ${item.timeOfDay || ''}`;
+	return `${dayLabel} · ${item.timeOfDay || ''}`;
 }
 
 function statusTone(status) {
 	switch (status) {
 		case 'paused':
-			return {
-				bar: 'bg-amber-400',
-				pill: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
-			};
+			return 'bg-amber-400';
 		case 'processing':
-			return {
-				bar: 'bg-sky-400',
-				pill: 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200',
-			};
-		case 'completed':
-			return {
-				bar: 'bg-slate-300',
-				pill: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-			};
-		case 'cancelled':
-			return {
-				bar: 'bg-rose-300',
-				pill: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200',
-			};
+			return 'bg-sky-400';
 		default:
-			return {
-				bar: 'bg-emerald-500',
-				pill: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200',
-			};
+			return 'bg-emerald-500';
 	}
+}
+
+function isLiveSchedule(item) {
+	const status = String(item?.status || '').toLowerCase();
+	return status === 'active' || status === 'paused' || status === 'processing';
 }
 
 export default function ScheduledMessagesPanel({
 	ar = false,
+	open = true,
 	schedules = [],
 	loading = false,
 	busyId = '',
+	onHide,
 	onPause,
 	onResume,
+	onEdit,
 	onCancel,
 }) {
 	const t = ar ? copy.ar : copy.en;
-	const list = Array.isArray(schedules) ? schedules : [];
+	const scrollerRef = useRef(null);
+	const list = (Array.isArray(schedules) ? schedules : []).filter(isLiveSchedule);
+
+	useEffect(() => {
+		if (!open || !scrollerRef.current) return;
+		scrollerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+	}, [open, list.length]);
+
+	if (!open) return null;
 
 	if (loading) {
 		return (
-			<div className="flex shrink-0 items-center gap-1.5 border-b border-[#e9edef] bg-[#f0f2f5] px-3 py-1.5 text-[11px] text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
+			<div className="flex shrink-0 items-center gap-1.5 border-b border-[#e9edef] bg-[#f0f2f5] px-3 py-1 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/80">
 				<Loader2 size={12} className="animate-spin text-emerald-600" />
 				<span className="font-semibold">{t.title}</span>
 			</div>
@@ -122,83 +124,112 @@ export default function ScheduledMessagesPanel({
 
 	if (!list.length) return null;
 
-	const visible = list.slice(0, 5);
-	const extra = Math.max(0, list.length - visible.length);
+	const scrollBy = direction => {
+		const node = scrollerRef.current;
+		if (!node) return;
+		const delta = Math.max(160, Math.round(node.clientWidth * 0.7)) * direction;
+		node.scrollBy({ left: ar ? -delta : delta, behavior: 'smooth' });
+	};
 
 	return (
-		<div className="shrink-0 border-b border-[#e9edef] bg-[#f0f2f5] px-2.5 py-1.5 dark:border-slate-800 dark:bg-slate-900/80">
-			<div className="mb-1 flex items-center gap-1.5 px-0.5">
-				<span className="grid h-5 w-5 place-items-center rounded-md bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-					<CalendarClock size={11} strokeWidth={2.4} />
-				</span>
-				<span className="text-[11px] font-bold tracking-wide text-slate-700 dark:text-slate-200">
+		<div className="shrink-0 border-b border-[#e9edef] bg-[#f0f2f5] px-2 py-1 dark:border-slate-800 dark:bg-slate-900/80">
+			<div className="mb-0.5 flex items-center gap-1.5 px-0.5">
+				<span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 					{t.title}
 				</span>
-				<span className="rounded-full bg-white px-1.5 py-px text-[10px] font-semibold text-slate-500 shadow-sm dark:bg-slate-800 dark:text-slate-400">
+				<span className="rounded-full bg-white px-1.5 py-px text-[9px] font-bold text-slate-500 shadow-sm dark:bg-slate-800 dark:text-slate-400">
 					{list.length}
 				</span>
-				{extra > 0 ? (
-					<span className="text-[10px] text-slate-400">+{extra}</span>
-				) : null}
+				<div className="ms-auto flex items-center gap-0.5">
+					{list.length > 1 ? (
+						<>
+							<button
+								type="button"
+								className="grid h-5 w-5 place-items-center rounded text-slate-400 hover:bg-white hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+								onClick={() => scrollBy(-1)}
+								aria-label="Previous"
+							>
+								{ar ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+							</button>
+							<button
+								type="button"
+								className="grid h-5 w-5 place-items-center rounded text-slate-400 hover:bg-white hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+								onClick={() => scrollBy(1)}
+								aria-label="Next"
+							>
+								{ar ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+							</button>
+						</>
+					) : null}
+					{typeof onHide === 'function' ? (
+						<button
+							type="button"
+							className="grid h-5 w-5 place-items-center rounded text-slate-400 hover:bg-white hover:text-slate-700 dark:hover:bg-slate-800"
+							onClick={onHide}
+							title={t.hide}
+							aria-label={t.hide}
+						>
+							<X size={11} strokeWidth={2.4} />
+						</button>
+					) : null}
+				</div>
 			</div>
 
-			<div className="flex flex-col gap-1">
-				{visible.map(item => {
+			<div
+				ref={scrollerRef}
+				className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+			>
+				{list.map(item => {
 					const busy = busyId === item.id;
-					const statusLabel = t.status[item.status] || item.status;
-					const tone = statusTone(item.status);
-					const title = item.text || item.title || 'Scheduled message';
+					const title = item.text || item.title || 'Scheduled';
+					const canEdit = item.status === 'active' || item.status === 'paused';
 					const meta = [
 						describeSchedule(item, t, ar),
 						formatTemplate(t.recipients, { count: item.recipients?.length || 0 }),
-					]
-						.filter(Boolean)
-						.join(' · ');
+					].join(' · ');
 
 					return (
 						<div
 							key={item.id}
-							className="group flex items-center gap-2 overflow-hidden rounded-lg border border-white/80 bg-white py-1 ps-0 pe-1 shadow-[0_1px_2px_rgba(11,20,26,0.04)] dark:border-slate-700/80 dark:bg-slate-950/70"
+							className="flex w-[min(220px,72vw)] shrink-0 items-stretch overflow-hidden rounded-lg border border-white/90 bg-white shadow-[0_1px_2px_rgba(11,20,26,0.05)] dark:border-slate-700/80 dark:bg-slate-950/75"
 						>
-							<span className={`h-8 w-0.5 shrink-0 rounded-full ${tone.bar}`} aria-hidden="true" />
-
-							<div className="min-w-0 flex-1 py-0.5">
-								<div className="flex min-w-0 items-center gap-1.5">
-									<p className="min-w-0 truncate text-[12px] font-semibold leading-tight text-slate-800 dark:text-slate-100">
-										{title}
+							<span className={`w-0.5 shrink-0 ${statusTone(item.status)}`} aria-hidden="true" />
+							<div className="min-w-0 flex-1 px-2 py-1">
+								<p className="truncate text-[11px] font-semibold leading-tight text-slate-800 dark:text-slate-100">
+									{title}
+								</p>
+								<p className="mt-0.5 truncate text-[9px] leading-tight text-slate-500 dark:text-slate-400">
+									{meta}
+								</p>
+								{item.nextRunAt ? (
+									<p className="mt-0.5 truncate text-[9px] font-semibold leading-tight text-emerald-600 dark:text-emerald-400">
+										{formatTemplate(t.next, { when: formatWhen(item.nextRunAt, ar) })}
 									</p>
-									<span
-										className={`shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide ${tone.pill}`}
-									>
-										{statusLabel}
-									</span>
-								</div>
-								<div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 text-[10px] leading-tight text-slate-500 dark:text-slate-400">
-									<span className="truncate">{meta}</span>
-									{item.nextRunAt ? (
-										<>
-											<span className="text-slate-300 dark:text-slate-600" aria-hidden="true">
-												·
-											</span>
-											<span className="shrink-0 font-semibold text-emerald-600 dark:text-emerald-400">
-												{formatTemplate(t.next, { when: formatWhen(item.nextRunAt, ar) })}
-											</span>
-										</>
-									) : null}
-								</div>
+								) : null}
 							</div>
-
-							<div className="flex shrink-0 items-center gap-0.5">
+							<div className="flex shrink-0 flex-col justify-center gap-px border-s border-slate-100 pe-0.5 ps-0.5 dark:border-slate-800">
+								{canEdit ? (
+									<button
+										type="button"
+										disabled={busy}
+										onClick={() => onEdit?.(item)}
+										className="grid h-5 w-5 place-items-center rounded text-slate-500 hover:bg-slate-100 hover:text-emerald-700 disabled:opacity-50 dark:hover:bg-slate-800"
+										title={t.edit}
+										aria-label={t.edit}
+									>
+										<Pencil size={10} strokeWidth={2.3} />
+									</button>
+								) : null}
 								{item.status === 'active' ? (
 									<button
 										type="button"
 										disabled={busy}
 										onClick={() => onPause?.(item)}
-										className="grid h-6 w-6 place-items-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+										className="grid h-5 w-5 place-items-center rounded text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"
 										title={t.pause}
 										aria-label={t.pause}
 									>
-										{busy ? <Loader2 size={12} className="animate-spin" /> : <Pause size={12} />}
+										{busy ? <Loader2 size={10} className="animate-spin" /> : <Pause size={10} />}
 									</button>
 								) : null}
 								{item.status === 'paused' ? (
@@ -206,23 +237,23 @@ export default function ScheduledMessagesPanel({
 										type="button"
 										disabled={busy}
 										onClick={() => onResume?.(item)}
-										className="grid h-6 w-6 place-items-center rounded-md text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50 dark:hover:bg-emerald-950/40"
+										className="grid h-5 w-5 place-items-center rounded text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 dark:hover:bg-emerald-950/40"
 										title={t.resume}
 										aria-label={t.resume}
 									>
-										{busy ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+										{busy ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
 									</button>
 								) : null}
-								{item.status === 'active' || item.status === 'paused' ? (
+								{canEdit ? (
 									<button
 										type="button"
 										disabled={busy}
 										onClick={() => onCancel?.(item)}
-										className="grid h-6 w-6 place-items-center rounded-md text-rose-500 transition hover:bg-rose-50 disabled:opacity-50 dark:hover:bg-rose-950/30"
+										className="grid h-5 w-5 place-items-center rounded text-rose-500 hover:bg-rose-50 disabled:opacity-50 dark:hover:bg-rose-950/30"
 										title={t.cancel}
 										aria-label={t.cancel}
 									>
-										{busy ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+										{busy ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
 									</button>
 								) : null}
 							</div>
