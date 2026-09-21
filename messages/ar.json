@@ -7966,7 +7966,10 @@
 			"timer": "المؤقت",
 			"timerOff": "إيقاف",
 			"timerSeconds": "{n} ث",
-			"cancelTimer": "إلغاء المؤقت"
+			"cancelTimer": "إلغاء المؤقت",
+			"zoomIn": "تكبير",
+			"zoomOut": "تصغير",
+			"goodPose": "وضع مناسب"
 		},
 		"processing": {
 			"title": "جاري قراءة صورك",

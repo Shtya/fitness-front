@@ -66,6 +66,7 @@ const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: false,
   devIndicators: false,
+  transpilePackages: ['@mediapipe/tasks-vision'],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'cdn.jsdelivr.net', pathname: '/gh/faker-js/**' },

@@ -15,7 +15,7 @@ export default function HeightInput({ value, onChange, onContinue, t }) {
 	};
 
 	return (
-		<div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)]">
+		<div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white pt-10 shadow-[0_12px_40px_rgba(15,23,42,0.08)]">
 			<div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4 sm:px-7">
 				<div className="grid h-11 w-11 place-items-center rounded-xl text-white bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-primary-700)]">
 					<Ruler className="h-5 w-5" />

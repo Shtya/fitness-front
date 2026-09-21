@@ -13,7 +13,6 @@ import CameraCapture from './CameraCapture';
 import ProcessingState from './ProcessingState';
 import MeasurementResults from './MeasurementResults';
 import MeasurementEditor from './MeasurementEditor';
-import ScanProgress from './ScanProgress';
 import {
 	analyzeBodyMeasurements,
 	fetchLatestBodyMeasurement,
@@ -34,32 +33,39 @@ function formatDate(value, locale) {
 function CameraStage({ title, hint, index, total, children, t }) {
 	return (
 		<div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)]">
-			<div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-7">
-				<div>
-					<p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-primary-500)]">
-						{t('camera.photoOf', { n: index, total })}
-					</p>
-					<h2 className="mt-1 text-lg font-black text-slate-900">{title}</h2>
-					<p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>
-				</div>
-				<div className="flex gap-1 pt-1">
-					{Array.from({ length: total }).map((_, i) => (
-						<span
-							key={i}
-							className={`h-1.5 w-6 rounded-full ${i < index ? 'bg-[var(--color-primary-500)]' : 'bg-slate-200'}`}
-						/>
-					))}
-				</div>
+			<div className="px-5 pt-4 sm:px-7">
+				<p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-primary-500)]">
+					{t('camera.photoOf', { n: index, total })}
+				</p>
+				<h2 className="mt-1 text-lg font-black text-slate-900">{title}</h2>
+				<p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>
 			</div>
-			<div className="space-y-3 bg-slate-50/80 p-5 sm:p-7">
+			<div className="space-y-3 p-5 sm:p-7">
 				<div className="flex flex-wrap gap-2">
-					<span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">{t('camera.tipClothes')}</span>
-					<span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">{t('camera.tipFrame')}</span>
-					<span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">{t('camera.tipArms')}</span>
+					<span className="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">{t('camera.tipClothes')}</span>
+					<span className="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">{t('camera.tipFrame')}</span>
+					<span className="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">{t('camera.tipArms')}</span>
 				</div>
 				{children}
 			</div>
 		</div>
+	);
+}
+
+function CardBack({ onClick, t, light = false }) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={`absolute top-3 start-3 z-20 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ${
+				light
+					? 'bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25'
+					: 'bg-white/95 text-slate-700 ring-1 ring-slate-200 hover:bg-white'
+			}`}
+		>
+			<ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+			{t('actions.back')}
+		</button>
 	);
 }
 
@@ -167,21 +173,6 @@ export default function BodyMeasurementFlow({ userId, backHref, t }) {
 
 	return (
 		<div className="mx-auto w-full max-w-3xl space-y-4">
-			{step !== 'intro' && (
-				<div className="rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur">
-					<ScanProgress step={step} t={t} />
-				</div>
-			)}
-
-			{step !== 'intro' && (
-				<div className="flex items-center">
-					<Button type="button" variant="ghost" size="sm" className="rounded-full px-3" onClick={goBack}>
-						<ArrowLeft className="h-4 w-4 rtl:rotate-180" />
-						{t('actions.back')}
-					</Button>
-				</div>
-			)}
-
 			<AnimatePresence mode="wait">
 				<motion.div
 					key={step}
@@ -200,7 +191,10 @@ export default function BodyMeasurementFlow({ userId, backHref, t }) {
 					)}
 
 					{step === 'height' && (
-						<HeightInput value={height} onChange={setHeight} onContinue={() => setStep('front')} t={t} />
+						<div className="relative">
+							<CardBack onClick={goBack} t={t} />
+							<HeightInput value={height} onChange={setHeight} onContinue={() => setStep('front')} t={t} />
+						</div>
 					)}
 
 					{step === 'front' && (
@@ -210,6 +204,7 @@ export default function BodyMeasurementFlow({ userId, backHref, t }) {
 								previewUrl={frontUrl}
 								onCapture={(blob) => setFrontBlob(blob)}
 								onRetake={() => setFrontBlob(null)}
+								onBack={goBack}
 								t={t}
 							/>
 							{frontBlob && (
@@ -227,6 +222,7 @@ export default function BodyMeasurementFlow({ userId, backHref, t }) {
 								previewUrl={sideUrl}
 								onCapture={(blob) => setSideBlob(blob)}
 								onRetake={() => setSideBlob(null)}
+								onBack={goBack}
 								t={t}
 							/>
 							{sideBlob && (
@@ -237,10 +233,15 @@ export default function BodyMeasurementFlow({ userId, backHref, t }) {
 						</CameraStage>
 					)}
 
-					{step === 'processing' && <ProcessingState t={t} />}
+					{step === 'processing' && (
+						<div className="relative">
+							<ProcessingState t={t} />
+						</div>
+					)}
 
 					{step === 'results' && (
-						<div className="space-y-4">
+						<div className="relative space-y-4 pt-10">
+							<CardBack onClick={goBack} t={t} />
 							<MeasurementResults values={values} t={t} />
 							<MeasurementEditor values={values} onChange={updateField} t={t} />
 							<Button type="button" className="h-12 w-full rounded-xl text-base font-bold" disabled={saving || saved} onClick={onSave}>
