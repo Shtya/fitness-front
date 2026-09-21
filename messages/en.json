@@ -6876,7 +6876,15 @@
 			"upload": "Upload photo",
 			"denied": "Camera permission was denied. Allow camera access or upload a photo.",
 			"unavailable": "No camera is available on this device. Upload a photo instead.",
-			"captureFailed": "Could not capture the photo. Try again."
+			"captureFailed": "Could not capture the photo. Try again.",
+			"selfie": "Selfie",
+			"rear": "Rear camera",
+			"switchSelfie": "Switch to selfie",
+			"switchRear": "Switch to rear camera",
+			"timer": "Timer",
+			"timerOff": "Off",
+			"timerSeconds": "{n}s",
+			"cancelTimer": "Cancel timer"
 		},
 		"processing": {
 			"title": "Reading your photos",
