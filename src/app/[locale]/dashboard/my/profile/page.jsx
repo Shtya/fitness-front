@@ -36,6 +36,7 @@ import {
 	Star,
 	ChevronRight,
 	Activity,
+	ScanLine,
 } from 'lucide-react';
 
 import api from '@/utils/axios';
@@ -46,6 +47,7 @@ import { useTranslations } from 'next-intl';
 import Select from '@/components/atoms/Select';
 import Img from '@/components/atoms/Img';
 import { useTheme } from '@/app/[locale]/theme';
+import BodyMeasurementFlow from '@/components/body-measurement/BodyMeasurementFlow';
 
 /* =========================================================================
 	 DESIGN TOKENS
@@ -918,6 +920,7 @@ const blobToFile = (blob, name) => new File([blob], name, { type: blob.type });
 	 ========================================================================= */
 export default function ProfileOverviewPage() {
 	const t = useTranslations('myProfile');
+	const tBm = useTranslations('bodyMeasurement');
 	useTheme();
 
 	const [tab, setTab] = useState('overview');
@@ -987,6 +990,7 @@ export default function ProfileOverviewPage() {
 	const tabs = [
 		{ key: 'overview', label: t('tabs.overview'), icon: Trophy },
 		{ key: 'body', label: t('tabs.body'), icon: Ruler },
+		{ key: 'aiMeasure', label: t('tabs.aiMeasure'), icon: ScanLine },
 		{ key: 'photos', label: t('tabs.photos'), icon: Camera },
 	];
 
@@ -1315,10 +1319,16 @@ export default function ProfileOverviewPage() {
 						</motion.div>
 					)}
 
+					{/* ── AI BODY SCAN TAB (client role) ── */}
+					{tab === 'aiMeasure' && user?.id && (
+						<motion.div key="aiMeasure" {...fadeUp} className="space-y-4">
+							<BodyMeasurementFlow userId={user.id} t={tBm} />
+						</motion.div>
+					)}
+
 					{/* ── BODY TAB ── */}
 					{tab === 'body' && (
 						<motion.div key="body" {...fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
 							{/* add measurement form */}
 							<div className={card + ' p-5 sm:p-6'}>
 								<SectionHeader icon={Plus} title={t('forms.addMeasurement')} subtitle={t('messages.trackYourMeasurements')} />

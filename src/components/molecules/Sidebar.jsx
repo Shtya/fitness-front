@@ -6,7 +6,7 @@ import api from '@/utils/axios';
 import { clearClientSession } from '@/lib/session-cleanup';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, ScanLine } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -246,6 +246,7 @@ export const ITEM_META = {
   mealPlans: { id: 'mealPlans', nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat, descKey: 'descriptions.mealPlans', group: 'content', defaultVisible: true, required: false },
   reports: { id: 'reports', nameKey: 'reports', href: '/dashboard/reports', icon: BarChart3, descKey: 'descriptions.reports', group: 'content', defaultVisible: true, required: false },
   myWorkouts: { id: 'myWorkouts', nameKey: 'myWorkouts', href: '/dashboard/my/workouts', icon: Target, descKey: 'descriptions.myWorkouts', group: 'workspace', defaultVisible: true, required: false },
+  bodyMeasurement: { id: 'bodyMeasurement', nameKey: 'bodyMeasurement', href: '/dashboard/my/profile/body-measurements', icon: ScanLine, descKey: 'descriptions.bodyMeasurement', group: 'workspace', defaultVisible: true, required: false },
   myNutrition: { id: 'myNutrition', nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple, descKey: 'descriptions.myNutrition', group: 'workspace', defaultVisible: true, required: false },
   recipes: { id: 'recipes', nameKey: 'recipes', href: '/dashboard/my/recipes', icon: Coffee, descKey: 'descriptions.recipes', group: 'workspace', defaultVisible: true, required: false },
   weeklyStrength: { id: 'weeklyStrength', nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: TrendingUp, descKey: 'descriptions.weeklyStrength', group: 'workspace', defaultVisible: true, required: false },
@@ -333,7 +334,7 @@ export const NAV = [
   {
     role: 'client',
     sectionKey: 'sections.myWorkspace',
-    items: [{ ...ITEM_META.myWorkouts }, { ...ITEM_META.myNutrition }, { ...ITEM_META.recipes }, { ...ITEM_META.weeklyStrength }, { ...ITEM_META.myReminders }],
+    items: [{ ...ITEM_META.myWorkouts }, { ...ITEM_META.bodyMeasurement }, { ...ITEM_META.myNutrition }, { ...ITEM_META.recipes }, { ...ITEM_META.weeklyStrength }, { ...ITEM_META.myReminders }],
   },
   {
     role: 'client',

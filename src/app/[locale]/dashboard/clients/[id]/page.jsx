@@ -14,6 +14,7 @@ import ClientMeasurementsChart from '@/components/clients/ClientMeasurementsChar
 import ClientPaymentsSummary from '@/components/clients/ClientPaymentsSummary';
 import ClientCommunicationLog from '@/components/clients/ClientCommunicationLog';
 import CommunicationCenter from '@/components/communications/CommunicationCenter';
+import BodyMeasurementsCard from '@/components/body-measurement/BodyMeasurementsCard';
 import api from '@/utils/axios';
 import { useEffect, useState } from 'react';
 
@@ -54,6 +55,7 @@ export default function ClientDetailsPage() {
 	return (
 		<div className='space-y-4'>
 			<ClientProfileHeader client={data} />
+			<BodyMeasurementsCard userId={clientId} href={`/dashboard/users/${clientId}/body-measurements`} />
 			<ClientProgressCards progress={progress} />
 			<div className='grid grid-cols-1 xl:grid-cols-2 gap-4'>
 				<ClientPaymentsSummary total={data?.paymentsSummary || 0} />

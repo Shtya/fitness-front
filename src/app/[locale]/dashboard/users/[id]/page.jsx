@@ -28,6 +28,7 @@ import {
 	BarChart3,
 	CheckCircle2,
 	Sparkles,
+	ScanLine,
 	ImageIcon,
 	MessageSquare,
 	ChevronLeft,
@@ -38,6 +39,9 @@ import {
 import { Notification } from "@/config/Notification";
 import api from "@/utils/axios";
 import Img from "@/components/atoms/Img";
+import BodyMeasurementsCard from "@/components/body-measurement/BodyMeasurementsCard";
+import { Link } from "@/i18n/navigation";
+import { Button } from "@/components/ui/button";
 
 /* ============================== * Small shared UI * ============================== */
 function Spinner({ className = "" }) {
@@ -496,6 +500,7 @@ function ReportKPI({ icon: Icon, label, value, hint, tone = "indigo" }) {
 /* ============================== * Page * ============================== */
 export default function ClientProfilePage() {
 	const t = useTranslations("client360");
+	const tMeasure = useTranslations("bodyMeasurement");
 	const { colors } = useTheme();
 	const { id } = useParams();
 	const router = useRouter();
@@ -757,6 +762,13 @@ export default function ClientProfilePage() {
 								<h1 className="text-2xl font-bold text-slate-900">{client?.identity?.name}</h1>
 								<p className="mt-1 text-sm text-slate-600">{client?.identity?.email}</p>
 							</div>
+							<div className="flex flex-col gap-3 md:items-end">
+								<Button asChild size="sm">
+									<Link href={`/dashboard/users/${id}/body-measurements`}>
+										<ScanLine className="h-4 w-4" />
+										{tMeasure("card.update")}
+									</Link>
+								</Button>
 							<div className="flex flex-wrap gap-3 text-xs text-slate-600">
 								<div className="flex items-center gap-1.5">
 									<Shield className="h-4 w-4 text-[var(--color-primary-500)]" />
@@ -777,6 +789,7 @@ export default function ClientProfilePage() {
 										{t("summary.header.lastLogin")} {formatDate(client?.identity?.lastLogin)}
 									</span>
 								</div>
+							</div>
 							</div>
 						</div>
 					)}
@@ -813,7 +826,8 @@ export default function ClientProfilePage() {
 									exit={{ opacity: 0, y: -10 }}
 									transition={spring}
 								>
-									<CardGlass className="p-6">
+									<CardGlass className="p-6 space-y-4">
+										<BodyMeasurementsCard userId={id} href={`/dashboard/users/${id}/body-measurements`} />
 										<SectionTitle icon={ClipboardList}>{t("measurements.title")}</SectionTitle>
 										<DataTable columns={measColumns} data={filteredMeasurements} />
 										{!filteredMeasurements.length && (
@@ -915,6 +929,9 @@ function SummaryTab({ data }) {
 			transition={spring}
 			className="space-y-6"
 		>
+			{identity?.id && (
+				<BodyMeasurementsCard userId={identity.id} href={`/dashboard/users/${identity.id}/body-measurements`} />
+			)}
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 				<KPI
 					icon={Scale}

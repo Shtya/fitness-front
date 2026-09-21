@@ -11153,6 +11153,18 @@ function WhatsAppWorkspaceContent() {
 		if (!isCurrent) {
 			return next;
 		}
+		// Search/assignment responses must not land after the user cleared the query —
+		// that left the inbox stuck on a stale subset when tapping X / All.
+		if (!chipBackfill) {
+			const liveSearch = String(chatSearchRef.current || '').trim();
+			const liveAssignment = String(assignmentFilterRef.current || '');
+			if (search !== liveSearch) {
+				return next;
+			}
+			if (String(assignedUserId || '') !== liveAssignment) {
+				return next;
+			}
+		}
 		// Background revalidation must not wipe a newer live preview patch with
 		// an older network snapshot that raced past a socket update.
 		if (options.background && !chipBackfill) {
@@ -11300,38 +11312,44 @@ function WhatsAppWorkspaceContent() {
 		const needsChipBackfill =
 			!needsServerSearch && WHATSAPP_INBOX_CHIP_FILTERS.has(conversationFilter);
 		const timer = window.setTimeout(async () => {
+			const stillCurrent = () =>
+				accountIdRef.current === accountId &&
+				conversationSearchRequestId.current === searchRequestId;
+
 			// Account switching already reloads via the accountId effect. Forcing a
 			// second cancel+refetch here races and surfaces "Could not search conversations".
-			if (!needsServerSearch && !needsChipBackfill) {
-				if (
-					accountIdRef.current === accountId &&
-					conversationSearchRequestId.current === searchRequestId
-				) {
-					setSearchingConversations(false);
-				}
-				return;
-			}
-
-			// Chip filters: UI already filtered the loaded All list. Backfill missing
-			// chats (e.g. unread not in the first All page) quietly in the background.
-			if (needsChipBackfill) {
-				if (
-					accountIdRef.current === accountId &&
-					conversationSearchRequestId.current === searchRequestId
-				) {
-					setSearchingConversations(false);
-				}
+			//
+			// Leaving text/assignment search MUST rehydrate the All inbox. Search
+			// responses replace `conversations` with a subset; without a restore,
+			// clear-X and chip tabs (All / Unread / …) stay stuck on that subset.
+			if (!needsServerSearch) {
+				if (stillCurrent()) setSearchingConversations(false);
 				try {
+					const baseFilter =
+						conversationFilterRef.current === 'archived' ? 'archived' : 'all';
 					await loadConversations(accountId, 1, false, {
-						background: true,
-						mergeIntoInbox: true,
 						force: false,
 						search: '',
-						filter: conversationFilterRef.current,
+						filter: baseFilter,
 						assignedUserId: '',
 					});
 				} catch {
-					// Silent — local filter already shows what we have.
+					/* cache paint / network — ignore */
+				}
+				if (!stillCurrent()) return;
+				if (needsChipBackfill) {
+					try {
+						await loadConversations(accountId, 1, false, {
+							background: true,
+							mergeIntoInbox: true,
+							force: false,
+							search: '',
+							filter: conversationFilterRef.current,
+							assignedUserId: '',
+						});
+					} catch {
+						// Silent — local filter already shows what we have.
+					}
 				}
 				return;
 			}
@@ -11346,18 +11364,12 @@ function WhatsAppWorkspaceContent() {
 				});
 			} catch (error) {
 				if (isRequestCancelled(error)) return;
-				if (accountIdRef.current !== accountId) return;
-				if (conversationSearchRequestId.current !== searchRequestId) return;
+				if (!stillCurrent()) return;
 				toast.error(error.response?.data?.message || 'Could not search conversations');
 			} finally {
-				if (
-					accountIdRef.current === accountId &&
-					conversationSearchRequestId.current === searchRequestId
-				) {
-					setSearchingConversations(false);
-				}
+				if (stillCurrent()) setSearchingConversations(false);
 			}
-		}, needsChipBackfill ? 0 : 300);
+		}, needsServerSearch ? 300 : 0);
 		return () => window.clearTimeout(timer);
 	}, [
 		accountId,

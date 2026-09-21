@@ -619,6 +619,7 @@
 			"branding": "Branding",
 			"systemSettings": "System Settings",
 			"myWorkouts": "My Workouts",
+			"bodyMeasurement": "AI Body Scan",
 			"myNutrition": "My Nutrition",
 			"myReminders": "My Reminders",
 			"weeklyStrength": "Weekly Strength Report",
@@ -646,6 +647,7 @@
 			"mealPlans": "Design and assign meal plans to clients",
 			"reports": "Analytics and performance reports",
 			"myWorkouts": "Your assigned workout sessions and history",
+			"bodyMeasurement": "Estimate body measurements from front and side photos",
 			"myNutrition": "Your personal meal plans and nutrition targets",
 			"recipes": "Browse recipes tailored to your dietary preferences",
 			"weeklyStrength": "Your weekly strength report and progress",
@@ -798,6 +800,7 @@
 		"tabs": {
 			"overview": "Overview",
 			"body": "Body",
+			"aiMeasure": "AI Scan",
 			"photos": "Photos"
 		},
 		"stats": {
@@ -6821,5 +6824,123 @@
 		"selectionEnabled": "Show translate chip after selecting text",
 		"notFound": "This word is not in your saved list.",
 		"back": "Back to translator"
+	},
+	"bodyMeasurement": {
+		"page": {
+			"title": "AI Body Measurement",
+			"subtitle": "Capture front and side photos to estimate body measurements."
+		},
+		"flow": {
+			"progress": "Scan steps",
+			"start": "Start",
+			"height": "Height",
+			"photos": "Photos",
+			"review": "Review",
+			"minutes": "About 2 minutes",
+			"photosCount": "2 photos",
+			"estimatesOnly": "AI estimates"
+		},
+		"intro": {
+			"title": "Scan your body",
+			"subtitle": "Confirm your height, take a front photo and a side photo, then review the estimates before saving.",
+			"step1Title": "Confirm height",
+			"step1Text": "Height scales the photos into centimeters.",
+			"step2Title": "Front and side",
+			"step2Text": "Fitted clothes, full body in frame, arms slightly away from the torso.",
+			"step3Title": "Review and save",
+			"step3Text": "Edit any value. Unreliable fields stay empty instead of being guessed.",
+			"estimateDisclaimer": "These are AI estimates, not a tape-measure result. Review them before saving."
+		},
+		"height": {
+			"title": "Height",
+			"subtitle": "Enter height in centimeters. This is used as the scale for the photos.",
+			"label": "Height (cm)",
+			"placeholder": "e.g. 180",
+			"invalid": "Height must be between 100 and 230 cm"
+		},
+		"camera": {
+			"frontTitle": "Front photo",
+			"frontHint": "Face the camera, feet together, arms slightly out, whole body visible.",
+			"sideTitle": "Side photo",
+			"sideHint": "Turn 90°, keep posture straight, whole body visible.",
+			"photoOf": "Photo {n} of {total}",
+			"tipClothes": "Fitted clothes",
+			"tipFrame": "Full body in frame",
+			"tipArms": "Arms slightly out",
+			"captured": "Looks good — continue or retake",
+			"opening": "Opening camera…",
+			"capture": "Capture",
+			"capturing": "Capturing…",
+			"retake": "Retake",
+			"retry": "Retry camera",
+			"upload": "Upload photo",
+			"denied": "Camera permission was denied. Allow camera access or upload a photo.",
+			"unavailable": "No camera is available on this device. Upload a photo instead.",
+			"captureFailed": "Could not capture the photo. Try again."
+		},
+		"processing": {
+			"title": "Reading your photos",
+			"subtitle": "Pose and silhouette are being measured. This usually takes a few seconds.",
+			"beat1": "Finding pose landmarks",
+			"beat2": "Tracing the silhouette",
+			"beat3": "Scaling to your height"
+		},
+		"results": {
+			"title": "Estimated measurements",
+			"disclaimer": "Estimated AI measurements — not exact. Review and edit before saving.",
+			"couldNotEstimate": "Could not estimate"
+		},
+		"editor": {
+			"title": "Edit / confirm",
+			"subtitle": "Change any value before it is saved to this client.",
+			"placeholder": "Leave empty if unknown"
+		},
+		"existing": {
+			"title": "This client already has measurements",
+			"hint": "Last updated {date}. Saving requires confirmation so history is not overwritten by accident.",
+			"confirmTitle": "Replace current measurements?",
+			"confirmText": "Current measurements from {date} will be replaced for today. Older dated entries stay in history."
+		},
+		"card": {
+			"title": "Body measurements",
+			"subtitle": "Latest saved measurements for this client",
+			"empty": "No body measurements saved yet.",
+			"start": "Start measurement",
+			"update": "Update measurement",
+			"sourceAi": "Source = AI",
+			"sourceManual": "Source = Manual",
+			"updated": "Last updated {date}"
+		},
+		"fields": {
+			"height": "Height",
+			"shoulderWidth": "Shoulders",
+			"chest": "Chest",
+			"waist": "Waist",
+			"hips": "Hips",
+			"upperArm": "Upper arm",
+			"thigh": "Thigh",
+			"inseam": "Inseam"
+		},
+		"units": {
+			"cm": "cm"
+		},
+		"actions": {
+			"start": "Start scan",
+			"continue": "Continue",
+			"analyze": "Analyze photos",
+			"save": "Save to client",
+			"saving": "Saving…",
+			"saved": "Saved",
+			"replace": "Replace and save",
+			"cancel": "Cancel",
+			"back": "Back"
+		},
+		"toast": {
+			"saved": "Measurements saved to the client profile"
+		},
+		"errors": {
+			"analyzeFailed": "Could not estimate measurements from these photos.",
+			"saveFailed": "Could not save measurements."
+		}
 	}
 }
