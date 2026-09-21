@@ -7969,7 +7969,8 @@
 			"cancelTimer": "إلغاء المؤقت",
 			"zoomIn": "تكبير",
 			"zoomOut": "تصغير",
-			"goodPose": "وضع مناسب"
+			"goodPose": "وضع مناسب",
+			"autoCapturing": "وضع مناسب — جاري التقاط الصورة…"
 		},
 		"processing": {
 			"title": "جاري قراءة صورك",

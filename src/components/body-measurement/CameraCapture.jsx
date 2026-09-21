@@ -8,7 +8,7 @@ import { playCountdownTick, playShutterSound } from './camera-sound';
 import usePoseAlignment from './usePoseAlignment';
 
 const TIMER_OPTIONS = [0, 3, 5, 10];
-const ZOOM_MIN = 1;
+const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.4;
 const ZOOM_STEP = 0.15;
 
@@ -66,11 +66,12 @@ export default function CameraCapture({
 	const [error, setError] = useState('');
 	const [busy, setBusy] = useState(false);
 	const [facingMode, setFacingMode] = useState('user');
-	const [timerSec, setTimerSec] = useState(5);
+	const [timerSec, setTimerSec] = useState(0);
 	const [countdown, setCountdown] = useState(null);
 	const [zoom, setZoom] = useState(1);
 	const [flash, setFlash] = useState(false);
 	const zoomRef = useRef(1);
+	const capturingRef = useRef(false);
 
 	const stopStream = useCallback(() => {
 		streamRef.current?.getTracks()?.forEach((track) => track.stop());
@@ -117,7 +118,8 @@ export default function CameraCapture({
 	const aligned = usePoseAlignment(videoRef, { enabled: status === 'live' && !previewUrl, variant });
 
 	const handleCapture = useCallback(async () => {
-		if (!videoRef.current) return;
+		if (!videoRef.current || capturingRef.current) return;
+		capturingRef.current = true;
 		setBusy(true);
 		setCountdown(null);
 		playShutterSound();
@@ -129,6 +131,7 @@ export default function CameraCapture({
 			stopStream();
 			onCapture(blob);
 		} catch {
+			capturingRef.current = false;
 			setError(t('camera.captureFailed'));
 		} finally {
 			setBusy(false);
@@ -137,6 +140,20 @@ export default function CameraCapture({
 
 	captureRef.current = handleCapture;
 	zoomRef.current = zoom;
+
+	useEffect(() => {
+		if (previewUrl) return undefined;
+		capturingRef.current = false;
+		return undefined;
+	}, [previewUrl]);
+
+	useEffect(() => {
+		if (!aligned || previewUrl || status !== 'live' || busy || capturingRef.current) return undefined;
+		const id = window.setTimeout(() => {
+			captureRef.current();
+		}, 850);
+		return () => window.clearTimeout(id);
+	}, [aligned, previewUrl, status, busy]);
 
 	useEffect(() => {
 		if (countdown == null) return undefined;
@@ -173,6 +190,7 @@ export default function CameraCapture({
 	const onShutter = () => {
 		if (countdown != null) {
 			setCountdown(null);
+			handleCapture();
 			return;
 		}
 		if (timerSec > 0) {
@@ -262,7 +280,7 @@ export default function CameraCapture({
 						{aligned && (
 							<div className="absolute inset-x-0 bottom-3 z-20 flex justify-center">
 								<span className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-black text-white shadow-lg">
-									{t('camera.goodPose')}
+									{t('camera.autoCapturing')}
 								</span>
 							</div>
 						)}
