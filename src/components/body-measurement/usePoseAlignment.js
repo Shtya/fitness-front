@@ -12,38 +12,63 @@ function vis(lm) {
 	return 0;
 }
 
-function poseFitsGuide(landmarks, variant) {
-	if (!landmarks?.length) return false;
-	const nose = landmarks[0];
-	const lS = landmarks[11];
-	const rS = landmarks[12];
-	const lW = landmarks[15];
-	const rW = landmarks[16];
-	const lH = landmarks[23];
-	const rH = landmarks[24];
-	const lA = landmarks[27];
-	const rA = landmarks[28];
-	const core = [nose, lS, rS, lH, rH, lA, rA];
-	if (core.some((p) => vis(p) < 0.4)) return false;
+function toCrop(lm, zoom) {
+	const z = Math.max(1, Number(zoom) || 1);
+	const inset = (1 - 1 / z) / 2;
+	return {
+		x: (lm.x - inset) * z,
+		y: (lm.y - inset) * z,
+		v: vis(lm),
+	};
+}
 
-	if (nose.y < 0.03 || nose.y > 0.3) return false;
-	const ankleY = (lA.y + rA.y) / 2;
-	if (ankleY < 0.7 || ankleY > 0.99) return false;
+export function evaluatePose(landmarks, variant, zoom = 1) {
+	if (!landmarks?.length) return { ok: false, issue: 'noPerson' };
+
+	const p = (i) => (landmarks[i] ? toCrop(landmarks[i], zoom) : null);
+	const nose = p(0);
+	const lS = p(11);
+	const rS = p(12);
+	const lW = p(15);
+	const rW = p(16);
+	const lH = p(23);
+	const rH = p(24);
+	const lA = p(27);
+	const rA = p(28);
+	const lHeel = p(29);
+	const rHeel = p(30);
+
+	const core = [nose, lS, rS, lH, rH, lA, rA];
+	if (core.some((pt) => !pt || pt.v < 0.4)) return { ok: false, issue: 'notFull' };
+
+	if ([lS, rS, lH, rH, lA, rA].some((pt) => pt.x < 0.06 || pt.x > 0.94)) {
+		return { ok: false, issue: 'notFull' };
+	}
+
+	if (nose.y < 0.1) return { ok: false, issue: 'head' };
+	if (nose.y > 0.28) return { ok: false, issue: 'tooFar' };
+
+	const footY = Math.max(lA.y, rA.y, lHeel?.y || 0, rHeel?.y || 0);
+	if (footY > 0.9) return { ok: false, issue: 'feet' };
+	if (footY < 0.72) return { ok: false, issue: 'tooFar' };
 
 	const midX = (lH.x + rH.x) / 2;
-	if (Math.abs(midX - 0.5) > 0.2) return false;
+	if (Math.abs(midX - 0.5) > 0.18) return { ok: false, issue: 'center' };
 
 	if (variant === 'front') {
-		if (Math.abs(lS.y - rS.y) > 0.09) return false;
+		if (Math.abs(lS.y - rS.y) > 0.09) return { ok: false, issue: 'center' };
 		const hipW = Math.abs(lH.x - rH.x);
-		const wristSpread = Math.abs(lW.x - rW.x);
-		if (vis(lW) > 0.35 && vis(rW) > 0.35 && wristSpread < hipW * 1.08) return false;
-		return true;
+		const wristSpread = Math.abs((lW?.x || 0) - (rW?.x || 0));
+		if (lW?.v > 0.35 && rW?.v > 0.35 && wristSpread < hipW * 1.08) {
+			return { ok: false, issue: 'arms' };
+		}
+		return { ok: true, issue: null };
 	}
 
 	const hipW = Math.abs(lH.x - rH.x);
 	const shoulderW = Math.abs(lS.x - rS.x);
-	return hipW < 0.2 && shoulderW < 0.22;
+	if (hipW > 0.2 || shoulderW > 0.22) return { ok: false, issue: 'side' };
+	return { ok: true, issue: null };
 }
 
 let landmarkerPromise;
@@ -74,13 +99,15 @@ async function getLandmarker() {
 	return landmarkerPromise;
 }
 
-export default function usePoseAlignment(videoRef, { enabled, variant }) {
+export default function usePoseAlignment(videoRef, { enabled, variant, zoom = 1 }) {
 	const [aligned, setAligned] = useState(false);
+	const [issue, setIssue] = useState('noPerson');
 	const hitsRef = useRef(0);
 
 	useEffect(() => {
 		if (!enabled) {
 			setAligned(false);
+			setIssue('noPerson');
 			hitsRef.current = 0;
 			return undefined;
 		}
@@ -109,9 +136,10 @@ export default function usePoseAlignment(videoRef, { enabled, variant }) {
 				try {
 					const result = landmarker.detectForVideo(video, now);
 					const pose = result?.landmarks?.[0];
-					const ok = poseFitsGuide(pose, variant);
-					hitsRef.current = ok ? Math.min(hitsRef.current + 1, 6) : Math.max(hitsRef.current - 1, 0);
-					setAligned(hitsRef.current >= 3);
+					const next = evaluatePose(pose, variant, zoom);
+					hitsRef.current = next.ok ? Math.min(hitsRef.current + 1, 8) : Math.max(hitsRef.current - 2, 0);
+					setAligned(hitsRef.current >= 4);
+					setIssue(next.ok ? null : next.issue);
 				} catch {
 					/* keep last state */
 				}
@@ -123,7 +151,7 @@ export default function usePoseAlignment(videoRef, { enabled, variant }) {
 			cancelled = true;
 			window.cancelAnimationFrame(raf);
 		};
-	}, [enabled, variant, videoRef]);
+	}, [enabled, variant, videoRef, zoom]);
 
-	return aligned;
+	return { aligned, issue };
 }

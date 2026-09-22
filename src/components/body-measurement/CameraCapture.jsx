@@ -1,20 +1,29 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Camera, RefreshCw, Upload, AlertTriangle, SwitchCamera, Timer, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Upload, AlertTriangle, SwitchCamera, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BodyPoseGuide from './BodyPoseGuide';
-import { playCountdownTick, playShutterSound } from './camera-sound';
+import { playShutterSound } from './camera-sound';
 import usePoseAlignment from './usePoseAlignment';
 
-const TIMER_OPTIONS = [0, 3, 5, 10];
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.4;
 const ZOOM_STEP = 0.15;
 
-async function blobFromFile(file) {
-	if (!file) return null;
-	return file;
+function OverlayIconButton({ onClick, disabled, label, children }) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			disabled={disabled}
+			aria-label={label}
+			title={label}
+			className="grid h-10 w-10 place-items-center rounded-full bg-black/45 text-white backdrop-blur-sm ring-1 ring-white/20 hover:bg-black/60 disabled:opacity-40"
+		>
+			{children}
+		</button>
+	);
 }
 
 function captureFrame(video, zoom = 1) {
@@ -35,21 +44,6 @@ function captureFrame(video, zoom = 1) {
 	return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92));
 }
 
-function OverlayIconButton({ onClick, disabled, label, children }) {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			disabled={disabled}
-			aria-label={label}
-			title={label}
-			className="grid h-10 w-10 place-items-center rounded-full bg-black/45 text-white backdrop-blur-sm ring-1 ring-white/20 hover:bg-black/60 disabled:opacity-40"
-		>
-			{children}
-		</button>
-	);
-}
-
 export default function CameraCapture({
 	variant = 'front',
 	previewUrl,
@@ -62,12 +56,11 @@ export default function CameraCapture({
 	const streamRef = useRef(null);
 	const fileRef = useRef(null);
 	const captureRef = useRef(async () => {});
+	const alignedRef = useRef(false);
 	const [status, setStatus] = useState('idle');
 	const [error, setError] = useState('');
 	const [busy, setBusy] = useState(false);
 	const [facingMode, setFacingMode] = useState('user');
-	const [timerSec, setTimerSec] = useState(0);
-	const [countdown, setCountdown] = useState(null);
 	const [zoom, setZoom] = useState(1);
 	const [flash, setFlash] = useState(false);
 	const zoomRef = useRef(1);
@@ -85,7 +78,6 @@ export default function CameraCapture({
 			return;
 		}
 		stopStream();
-		setCountdown(null);
 		setError('');
 		setStatus('loading');
 		try {
@@ -115,13 +107,18 @@ export default function CameraCapture({
 		return () => stopStream();
 	}, [previewUrl, startCamera, stopStream]);
 
-	const aligned = usePoseAlignment(videoRef, { enabled: status === 'live' && !previewUrl, variant });
+	const { aligned, issue } = usePoseAlignment(videoRef, {
+		enabled: status === 'live' && !previewUrl,
+		variant,
+		zoom,
+	});
+	alignedRef.current = aligned;
 
 	const handleCapture = useCallback(async () => {
 		if (!videoRef.current || capturingRef.current) return;
+		if (!alignedRef.current) return;
 		capturingRef.current = true;
 		setBusy(true);
-		setCountdown(null);
 		playShutterSound();
 		setFlash(true);
 		window.setTimeout(() => setFlash(false), 140);
@@ -150,57 +147,20 @@ export default function CameraCapture({
 	useEffect(() => {
 		if (!aligned || previewUrl || status !== 'live' || busy || capturingRef.current) return undefined;
 		const id = window.setTimeout(() => {
+			if (!alignedRef.current) return;
 			captureRef.current();
-		}, 850);
+		}, 1200);
 		return () => window.clearTimeout(id);
 	}, [aligned, previewUrl, status, busy]);
-
-	useEffect(() => {
-		if (countdown == null) return undefined;
-		if (countdown <= 0) {
-			setCountdown(null);
-			captureRef.current();
-			return undefined;
-		}
-		playCountdownTick();
-		const id = window.setTimeout(() => setCountdown((c) => (c == null ? c : c - 1)), 1000);
-		return () => window.clearTimeout(id);
-	}, [countdown]);
 
 	const handleUpload = async (event) => {
 		const file = event.target.files?.[0];
 		event.target.value = '';
-		const blob = await blobFromFile(file);
-		if (!blob) return;
-		setCountdown(null);
-		playShutterSound();
+		if (!file) return;
 		stopStream();
-		onCapture(blob);
+		onCapture(file);
 	};
 
-	const toggleFacing = () => {
-		setCountdown(null);
-		setFacingMode((mode) => (mode === 'user' ? 'environment' : 'user'));
-	};
-
-	const nudgeZoom = (delta) => {
-		setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(z + delta).toFixed(2))));
-	};
-
-	const onShutter = () => {
-		if (countdown != null) {
-			setCountdown(null);
-			handleCapture();
-			return;
-		}
-		if (timerSec > 0) {
-			setCountdown(timerSec);
-			return;
-		}
-		handleCapture();
-	};
-
-	const counting = countdown != null;
 	const selfie = facingMode === 'user';
 	const frame = `relative overflow-hidden rounded-3xl bg-slate-950 aspect-[3/4] max-h-[62vh] mx-auto w-full max-w-sm shadow-[0_20px_50px_rgba(15,23,42,0.35)] transition-[box-shadow,ring-color] duration-300 ${
 		aligned
@@ -225,7 +185,7 @@ export default function CameraCapture({
 				<div className={frame}>
 					{backBtn && <div className="absolute top-3 start-3 z-20">{backBtn}</div>}
 					{/* eslint-disable-next-line @next/next/no-img-element */}
-					<img src={previewUrl} alt="" className="h-full w-full object-cover" />
+					<img src={previewUrl} alt="" className="h-full w-full object-contain bg-slate-950" />
 					<div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs font-bold text-white">
 						{t('camera.captured')}
 					</div>
@@ -238,6 +198,8 @@ export default function CameraCapture({
 		);
 	}
 
+	const issueText = issue ? t(`camera.issue.${issue}`) : t('camera.standStill');
+
 	return (
 		<div className="space-y-4">
 			<div className={frame}>
@@ -246,7 +208,7 @@ export default function CameraCapture({
 					playsInline
 					muted
 					autoPlay
-					className="h-full w-full object-cover origin-center"
+					className="h-full w-full object-contain origin-center bg-slate-950"
 					style={{ transform: selfie ? `scale(${-zoom}, ${zoom})` : `scale(${zoom})` }}
 				/>
 				<BodyPoseGuide variant={variant} aligned={aligned} />
@@ -257,8 +219,8 @@ export default function CameraCapture({
 							<div className="flex items-center gap-2">
 								{backBtn}
 								<OverlayIconButton
-									onClick={toggleFacing}
-									disabled={busy || counting}
+									onClick={() => setFacingMode((mode) => (mode === 'user' ? 'environment' : 'user'))}
+									disabled={busy}
 									label={selfie ? t('camera.switchRear') : t('camera.switchSelfie')}
 								>
 									<SwitchCamera className="h-4 w-4" />
@@ -269,29 +231,20 @@ export default function CameraCapture({
 							</div>
 						</div>
 						<div className="absolute end-3 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-1 rounded-full bg-black/40 p-1.5 backdrop-blur-sm ring-1 ring-white/15">
-							<OverlayIconButton onClick={() => nudgeZoom(ZOOM_STEP)} disabled={counting || zoom >= ZOOM_MAX} label={t('camera.zoomIn')}>
+							<OverlayIconButton onClick={() => setZoom((z) => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)))} disabled={busy || zoom >= ZOOM_MAX} label={t('camera.zoomIn')}>
 								<Plus className="h-4 w-4" />
 							</OverlayIconButton>
 							<span className="py-1 text-[10px] font-black tabular-nums text-white">{zoom.toFixed(1)}x</span>
-							<OverlayIconButton onClick={() => nudgeZoom(-ZOOM_STEP)} disabled={counting || zoom <= ZOOM_MIN} label={t('camera.zoomOut')}>
+							<OverlayIconButton onClick={() => setZoom((z) => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))} disabled={busy || zoom <= ZOOM_MIN} label={t('camera.zoomOut')}>
 								<Minus className="h-4 w-4" />
 							</OverlayIconButton>
 						</div>
-						{aligned && (
-							<div className="absolute inset-x-0 bottom-3 z-20 flex justify-center">
-								<span className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-black text-white shadow-lg">
-									{t('camera.autoCapturing')}
-								</span>
-							</div>
-						)}
+						<div className="absolute inset-x-0 bottom-3 z-20 flex justify-center px-4">
+							<span className={`max-w-[90%] rounded-full px-3 py-1.5 text-center text-[11px] font-black text-white shadow-lg ${aligned ? 'bg-emerald-500' : 'bg-black/55'}`}>
+								{aligned ? t('camera.autoCapturing') : issueText}
+							</span>
+						</div>
 					</>
-				)}
-				{counting && (
-					<div className="absolute inset-0 z-20 grid place-items-center bg-black/25">
-						<p className="text-7xl font-black tabular-nums text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.65)]">
-							{countdown}
-						</p>
-					</div>
 				)}
 				{status === 'loading' && (
 					<div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm font-semibold text-white">
@@ -319,51 +272,9 @@ export default function CameraCapture({
 					</Button>
 				</div>
 			) : (
-				<div className="space-y-3">
-					<div className="flex flex-wrap items-center justify-center gap-1.5">
-						<span className="me-1 inline-flex items-center gap-1 text-[11px] font-bold text-slate-500">
-							<Timer className="h-3.5 w-3.5" />
-							{t('camera.timer')}
-						</span>
-						{TIMER_OPTIONS.map((sec) => {
-							const on = timerSec === sec && !counting;
-							return (
-								<button
-									key={sec}
-									type="button"
-									disabled={counting || busy}
-									onClick={() => setTimerSec(sec)}
-									className={`h-8 min-w-10 rounded-full px-3 text-xs font-bold ring-1 transition ${
-										on
-											? 'bg-[var(--color-primary-600)] text-white ring-[var(--color-primary-600)]'
-											: 'bg-white text-slate-600 ring-slate-200 hover:ring-[var(--color-primary-300)]'
-									}`}
-								>
-									{sec === 0 ? t('camera.timerOff') : t('camera.timerSeconds', { n: sec })}
-								</button>
-							);
-						})}
-					</div>
-					<div className="flex items-center gap-3">
-						<button
-							type="button"
-							disabled={status !== 'live' || busy}
-							onClick={onShutter}
-							className={`mx-auto grid h-[4.5rem] w-[4.5rem] place-items-center rounded-full border-4 text-white shadow-[0_10px_30px_color-mix(in_srgb,var(--color-primary-600)_40%,transparent)] transition disabled:opacity-50 ${
-								aligned
-									? 'border-emerald-300 bg-emerald-500 hover:bg-emerald-600'
-									: 'border-white bg-[var(--color-primary-600)] hover:bg-[var(--color-primary-700)]'
-							}`}
-							aria-label={counting ? t('camera.cancelTimer') : busy ? t('camera.capturing') : t('camera.capture')}
-						>
-							{counting ? <span className="h-4 w-4 rounded-sm bg-white" /> : <Camera className="h-7 w-7" />}
-						</button>
-						<Button type="button" variant="outline" className="h-11 rounded-xl" disabled={counting} onClick={() => fileRef.current?.click()}>
-							<Upload className="h-4 w-4" />
-							{t('camera.upload')}
-						</Button>
-					</div>
-				</div>
+				<p className="text-center text-sm font-semibold leading-relaxed text-slate-600">
+					{t('camera.standStill')}
+				</p>
 			)}
 			<input
 				ref={fileRef}

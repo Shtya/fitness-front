@@ -39,6 +39,7 @@ function CameraStage({ title, hint, index, total, children, t }) {
 				</p>
 				<h2 className="mt-1 text-lg font-black text-slate-900">{title}</h2>
 				<p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>
+				<p className="mt-2 text-sm font-bold text-[var(--color-primary-700)]">{t('camera.standStill')}</p>
 			</div>
 			<div className="space-y-3 p-5 sm:p-7">
 				<div className="flex flex-wrap gap-2">

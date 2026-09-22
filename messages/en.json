@@ -6860,9 +6860,9 @@
 		},
 		"camera": {
 			"frontTitle": "Front photo",
-			"frontHint": "Face the camera, feet together, arms slightly out, whole body visible.",
+			"frontHint": "Face the camera, feet together, arms slightly out. Head and feet must stay inside the frame.",
 			"sideTitle": "Side photo",
-			"sideHint": "Turn 90°, keep posture straight, whole body visible.",
+			"sideHint": "Turn 90°, keep posture straight. Head and feet must stay inside the frame.",
 			"photoOf": "Photo {n} of {total}",
 			"tipClothes": "Fitted clothes",
 			"tipFrame": "Full body in frame",
@@ -6888,7 +6888,18 @@
 			"zoomIn": "Zoom in",
 			"zoomOut": "Zoom out",
 			"goodPose": "Good position",
-			"autoCapturing": "Good position — capturing…"
+			"autoCapturing": "Hold still — capturing…",
+			"standStill": "Stand still in the outline. The camera takes the photo by itself when the pose is correct.",
+			"issue": {
+				"noPerson": "Step into the outline",
+				"notFull": "Show your whole body in the frame",
+				"head": "Head is cut off — step back",
+				"feet": "Feet are cut off — step back",
+				"tooFar": "Move closer so head and feet fill the outline",
+				"center": "Stand in the center of the outline",
+				"arms": "Move your arms slightly away from your body",
+				"side": "Turn fully to the side"
+			}
 		},
 		"processing": {
 			"title": "Reading your photos",
