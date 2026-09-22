@@ -107,7 +107,7 @@ export default function CameraCapture({
 		return () => stopStream();
 	}, [previewUrl, startCamera, stopStream]);
 
-	const { aligned, issue } = usePoseAlignment(videoRef, {
+	const { aligned, issue, score } = usePoseAlignment(videoRef, {
 		enabled: status === 'live' && !previewUrl,
 		variant,
 		zoom,
@@ -228,6 +228,26 @@ export default function CameraCapture({
 							</div>
 							<div className="rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm ring-1 ring-white/20">
 								{selfie ? t('camera.selfie') : t('camera.rear')}
+							</div>
+						</div>
+						<div
+							className="absolute start-3 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-1.5"
+							role="meter"
+							aria-valuemin={0}
+							aria-valuemax={100}
+							aria-valuenow={score}
+							aria-label={t('camera.matchScore')}
+						>
+							<span className="rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-black tabular-nums text-white backdrop-blur-sm ring-1 ring-white/15">
+								{score}%
+							</span>
+							<div className="relative h-40 w-3 overflow-hidden rounded-full bg-white/20 ring-1 ring-white/20">
+								<div
+									className={`absolute inset-x-0 bottom-0 rounded-full transition-[height,background-color] duration-200 ${
+										aligned ? 'bg-emerald-400' : score >= 70 ? 'bg-lime-400' : score >= 40 ? 'bg-amber-400' : 'bg-rose-400'
+									}`}
+									style={{ height: `${score}%` }}
+								/>
 							</div>
 						</div>
 						<div className="absolute end-3 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-1 rounded-full bg-black/40 p-1.5 backdrop-blur-sm ring-1 ring-white/15">

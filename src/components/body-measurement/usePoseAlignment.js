@@ -22,8 +22,23 @@ function toCrop(lm, zoom) {
 	};
 }
 
+function clamp01(n) {
+	return Math.max(0, Math.min(1, n));
+}
+
+function rangeScore(value, goodLo, goodHi, failLo, failHi) {
+	if (!Number.isFinite(value)) return 0;
+	if (value >= goodLo && value <= goodHi) return 1;
+	if (value < goodLo) {
+		if (value <= failLo) return 0;
+		return (value - failLo) / (goodLo - failLo);
+	}
+	if (value >= failHi) return 0;
+	return (failHi - value) / (failHi - goodHi);
+}
+
 export function evaluatePose(landmarks, variant, zoom = 1) {
-	if (!landmarks?.length) return { ok: false, issue: 'noPerson' };
+	if (!landmarks?.length) return { ok: false, issue: 'noPerson', score: 0 };
 
 	const p = (i) => (landmarks[i] ? toCrop(landmarks[i], zoom) : null);
 	const nose = p(0);
@@ -39,36 +54,71 @@ export function evaluatePose(landmarks, variant, zoom = 1) {
 	const rHeel = p(30);
 
 	const core = [nose, lS, rS, lH, rH, lA, rA];
-	if (core.some((pt) => !pt || pt.v < 0.4)) return { ok: false, issue: 'notFull' };
+	const visAvg = core.reduce((sum, pt) => sum + (pt?.v || 0), 0) / core.length;
+	const visPart = clamp01((visAvg - 0.15) / 0.55);
 
-	if ([lS, rS, lH, rH, lA, rA].some((pt) => pt.x < 0.06 || pt.x > 0.94)) {
-		return { ok: false, issue: 'notFull' };
-	}
+	if (core.some((pt) => !pt)) return { ok: false, issue: 'noPerson', score: Math.round(visPart * 12) };
 
-	if (nose.y < 0.1) return { ok: false, issue: 'head' };
-	if (nose.y > 0.28) return { ok: false, issue: 'tooFar' };
+	const xs = [lS, rS, lH, rH, lA, rA];
+	const xInside = xs.reduce((sum, pt) => {
+		if (pt.x >= 0.08 && pt.x <= 0.92) return sum + 1;
+		if (pt.x < 0.08) return sum + rangeScore(pt.x, 0.08, 1, -0.1, 1);
+		return sum + rangeScore(pt.x, 0, 0.92, 0, 1.1);
+	}, 0) / xs.length;
 
+	const headPart = rangeScore(nose.y, 0.1, 0.28, 0.0, 0.48);
 	const footY = Math.max(lA.y, rA.y, lHeel?.y || 0, rHeel?.y || 0);
-	if (footY > 0.9) return { ok: false, issue: 'feet' };
-	if (footY < 0.72) return { ok: false, issue: 'tooFar' };
+	const feetPart = rangeScore(footY, 0.72, 0.9, 0.5, 1.02);
 
 	const midX = (lH.x + rH.x) / 2;
-	if (Math.abs(midX - 0.5) > 0.18) return { ok: false, issue: 'center' };
+	const centerPart = rangeScore(Math.abs(midX - 0.5), 0, 0.12, 0, 0.42);
 
+	let extraPart = 1;
+	let extraIssue = null;
 	if (variant === 'front') {
-		if (Math.abs(lS.y - rS.y) > 0.09) return { ok: false, issue: 'center' };
+		const levelPart = rangeScore(Math.abs(lS.y - rS.y), 0, 0.05, 0, 0.16);
+		const hipW = Math.abs(lH.x - rH.x) || 0.01;
+		const wristSpread = Math.abs((lW?.x || midX) - (rW?.x || midX));
+		const armsPart = lW?.v > 0.3 && rW?.v > 0.3
+			? clamp01((wristSpread / hipW - 0.85) / 0.5)
+			: 0.45;
+		extraPart = (levelPart + armsPart) / 2;
+		if (armsPart < 0.55) extraIssue = 'arms';
+		else if (levelPart < 0.55) extraIssue = 'center';
+	} else {
 		const hipW = Math.abs(lH.x - rH.x);
-		const wristSpread = Math.abs((lW?.x || 0) - (rW?.x || 0));
-		if (lW?.v > 0.35 && rW?.v > 0.35 && wristSpread < hipW * 1.08) {
-			return { ok: false, issue: 'arms' };
-		}
-		return { ok: true, issue: null };
+		const shoulderW = Math.abs(lS.x - rS.x);
+		const sidePart = (rangeScore(hipW, 0, 0.14, 0, 0.36) + rangeScore(shoulderW, 0, 0.16, 0, 0.4)) / 2;
+		extraPart = sidePart;
+		if (sidePart < 0.55) extraIssue = 'side';
 	}
 
-	const hipW = Math.abs(lH.x - rH.x);
-	const shoulderW = Math.abs(lS.x - rS.x);
-	if (hipW > 0.2 || shoulderW > 0.22) return { ok: false, issue: 'side' };
-	return { ok: true, issue: null };
+	const parts = [
+		visPart * 0.18,
+		xInside * 0.14,
+		headPart * 0.22,
+		feetPart * 0.22,
+		centerPart * 0.12,
+		extraPart * 0.12,
+	];
+	const score = Math.round(clamp01(parts.reduce((a, b) => a + b, 0)) * 100);
+
+	let issue = null;
+	if (visPart < 0.45 || core.some((pt) => pt.v < 0.35)) issue = 'notFull';
+	else if (headPart < 0.55 && nose.y < 0.1) issue = 'head';
+	else if (feetPart < 0.55 && footY > 0.9) issue = 'feet';
+	else if (headPart < 0.55 || feetPart < 0.55) issue = 'tooFar';
+	else if (xInside < 0.55) issue = 'notFull';
+	else if (centerPart < 0.55) issue = 'center';
+	else if (extraIssue) issue = extraIssue;
+
+	const ok = score >= 86
+		&& headPart >= 0.72
+		&& feetPart >= 0.72
+		&& visPart >= 0.55
+		&& !['head', 'feet', 'notFull', 'noPerson'].includes(issue || '');
+
+	return { ok, issue: ok ? null : issue || 'notFull', score };
 }
 
 let landmarkerPromise;
@@ -102,13 +152,17 @@ async function getLandmarker() {
 export default function usePoseAlignment(videoRef, { enabled, variant, zoom = 1 }) {
 	const [aligned, setAligned] = useState(false);
 	const [issue, setIssue] = useState('noPerson');
+	const [score, setScore] = useState(0);
 	const hitsRef = useRef(0);
+	const scoreRef = useRef(0);
 
 	useEffect(() => {
 		if (!enabled) {
 			setAligned(false);
 			setIssue('noPerson');
+			setScore(0);
 			hitsRef.current = 0;
+			scoreRef.current = 0;
 			return undefined;
 		}
 
@@ -138,8 +192,10 @@ export default function usePoseAlignment(videoRef, { enabled, variant, zoom = 1 
 					const pose = result?.landmarks?.[0];
 					const next = evaluatePose(pose, variant, zoom);
 					hitsRef.current = next.ok ? Math.min(hitsRef.current + 1, 8) : Math.max(hitsRef.current - 2, 0);
+					scoreRef.current = scoreRef.current * 0.55 + next.score * 0.45;
 					setAligned(hitsRef.current >= 4);
 					setIssue(next.ok ? null : next.issue);
+					setScore(Math.round(scoreRef.current));
 				} catch {
 					/* keep last state */
 				}
@@ -153,5 +209,5 @@ export default function usePoseAlignment(videoRef, { enabled, variant, zoom = 1 
 		};
 	}, [enabled, variant, videoRef, zoom]);
 
-	return { aligned, issue };
+	return { aligned, issue, score };
 }
