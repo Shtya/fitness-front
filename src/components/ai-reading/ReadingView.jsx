@@ -34,7 +34,6 @@ import {
 	LayoutList,
 	MoreHorizontal,
 	Layers,
-	Bookmark,
 	Pencil,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
