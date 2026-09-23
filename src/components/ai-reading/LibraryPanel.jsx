@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { BookShelf } from '@/components/ai-reading/BookShelf';
 import { deleteBook, listBooks, upsertBook } from '@/lib/ai-reading/storage';
-import { aiReadingApi } from '@/lib/ai-reading/client-api';
 
 export default function LibraryPanel() {
 	const t = useTranslations('aiReading');
@@ -32,14 +31,12 @@ export default function LibraryPanel() {
 				emptyLabel={t('hub.empty')}
 				onDelete={id => {
 					deleteBook(id);
-					aiReadingApi.deleteBook(id).catch(() => {});
 					refresh();
 				}}
 				onEdit={book => {
 					const title = window.prompt(t('library.renamePrompt'), book.title);
 					if (!title?.trim()) return;
 					upsertBook({ ...book, title: title.trim() });
-					aiReadingApi.saveBook({ ...book, title: title.trim() }).catch(() => {});
 					refresh();
 				}}
 				onOpen={id => router.push(`/ai-studio/read/${id}`)}

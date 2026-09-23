@@ -161,7 +161,6 @@ export default function AiWorkspace({ embedded = false }) {
 		if (!draftBook) return;
 		const book = enqueueReviewItems({ ...draftBook });
 		upsertBook(book);
-		aiReadingApi.saveBook(book).catch(() => {});
 		router.push(`/ai-studio/read/${book.id}`);
 	};
 

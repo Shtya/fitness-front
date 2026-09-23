@@ -1,3 +1,9 @@
+/**
+ * AI Reading store — Nest Postgres is the source of truth (no localStorage).
+ * In-memory cache for sync reads; hydrate on Studio / Reader mount.
+ */
+
+import api from '@/utils/axios';
 import {
 	createChatSession,
 	createIndexItem,
@@ -14,17 +20,59 @@ import {
 	buildDefaultPolishPrompt,
 } from './default-prompts.js';
 
-const KEYS = {
-	books: 'so7ba.aiReading.books.v1',
-	prompts: 'so7ba.aiReading.prompts.v2',
-	stats: 'so7ba.aiReading.stats.v1',
-	prefs: 'so7ba.aiReading.prefs.v1',
-	topics: 'so7ba.aiReading.topics.v2',
-	journeys: 'so7ba.aiReading.journeys.v1',
-	chat: 'so7ba.aiReading.chat.v1',
+const LEGACY_KEYS = [
+	'so7ba.aiReading.books.v1',
+	'so7ba.aiReading.prompts.v2',
+	'so7ba.aiReading.stats.v1',
+	'so7ba.aiReading.prefs.v1',
+	'so7ba.aiReading.topics.v2',
+	'so7ba.aiReading.journeys.v1',
+	'so7ba.aiReading.chat.v1',
+	'so7ba.aiReading.prompts.v1',
+];
+
+const DEFAULT_PREFS = {
+	fontSize: 18,
+	lineHeight: 1.75,
+	maxWidth: 680,
+	theme: 'light',
+	fontWeight: 400,
+	letterSpacing: 0,
+	paragraphGap: 1.25,
+	fontPreset: 'auto',
+	pageMode: 'pages',
+	wheelTurnsPage: true,
+	aiModelKey: 'gpt-oss:20b',
+	aiProvider: 'llm7-free',
 };
 
-function read(key, fallback) {
+const cache = {
+	books: [],
+	prompts: null,
+	topics: [],
+	journeys: null,
+	prefs: { ...DEFAULT_PREFS },
+	stats: {
+		streak: 0,
+		lastReadDate: null,
+		totalMinutes: 0,
+		booksCompleted: 0,
+		reviewsDone: 0,
+	},
+	chat: null,
+	ready: false,
+	hydrating: null,
+};
+
+let flushTimer = null;
+let flushPromise = null;
+
+function emit() {
+	if (typeof window === 'undefined') return;
+	window.dispatchEvent(new CustomEvent('ai-reading:changed', { detail: { source: 'cloud' } }));
+}
+
+function readLegacy(key, fallback) {
 	if (typeof window === 'undefined') return fallback;
 	try {
 		const raw = localStorage.getItem(key);
@@ -35,37 +83,171 @@ function read(key, fallback) {
 	}
 }
 
-function write(key, value) {
+function clearLegacyLocalStorage() {
 	if (typeof window === 'undefined') return;
-	localStorage.setItem(key, JSON.stringify(value));
-	window.dispatchEvent(new CustomEvent('ai-reading:changed', { detail: { key } }));
+	for (const key of LEGACY_KEYS) {
+		try {
+			localStorage.removeItem(key);
+		} catch {
+			/* ignore */
+		}
+	}
 }
 
-export function getPrefs() {
+function snapshot() {
 	return {
-		fontSize: 18,
-		lineHeight: 1.75,
-		maxWidth: 680,
-		theme: 'light',
-		fontWeight: 400,
-		letterSpacing: 0,
-		paragraphGap: 1.25,
-		fontPreset: 'auto',
-		pageMode: 'pages',
-		wheelTurnsPage: true,
-		aiModelKey: 'gpt-oss:20b',
-		aiProvider: 'llm7-free',
-		...read(KEYS.prefs, {}),
+		books: cache.books,
+		prompts: Array.isArray(cache.prompts) ? cache.prompts : [],
+		topics: cache.topics,
+		journeys: Array.isArray(cache.journeys) ? cache.journeys : [],
+		prefs: cache.prefs,
+		stats: cache.stats,
+		chat: cache.chat,
 	};
 }
 
-export function savePrefs(prefs) {
-	const next = { ...getPrefs(), ...prefs };
-	write(KEYS.prefs, next);
-	return next;
+async function flushNow() {
+	if (typeof window === 'undefined') return;
+	const token = localStorage.getItem('accessToken');
+	if (!token) return;
+	const body = snapshot();
+	try {
+		const { data } = await api.put('/ai-reading/state', body, { timeout: 120000 });
+		if (data && typeof data === 'object') {
+			applyServerState(data, { emitChange: false });
+		}
+	} catch (err) {
+		console.warn('[ai-reading] cloud flush failed', err?.message || err);
+	}
 }
 
-/** Appearance keys that can be overridden per article. AI model stays global. */
+function scheduleFlush() {
+	emit();
+	if (typeof window === 'undefined') return;
+	if (!localStorage.getItem('accessToken')) return;
+	clearTimeout(flushTimer);
+	flushTimer = setTimeout(() => {
+		flushPromise = flushNow().finally(() => {
+			flushPromise = null;
+		});
+	}, 450);
+}
+
+function applyServerState(data, { emitChange = true } = {}) {
+	if (!data || typeof data !== 'object') return;
+	if (Array.isArray(data.books)) cache.books = data.books;
+	if (Array.isArray(data.prompts)) cache.prompts = data.prompts;
+	if (Array.isArray(data.topics)) cache.topics = data.topics;
+	if (Array.isArray(data.journeys)) cache.journeys = data.journeys;
+	if (data.prefs && typeof data.prefs === 'object') {
+		cache.prefs = { ...DEFAULT_PREFS, ...data.prefs };
+	}
+	if (data.stats && typeof data.stats === 'object') {
+		cache.stats = { ...cache.stats, ...data.stats };
+	}
+	if (data.chat !== undefined) cache.chat = data.chat;
+	cache.ready = true;
+	if (emitChange) emit();
+}
+
+/** Load user reading library from Nest DB. Call once on Studio / Reader mount. */
+export async function hydrateAiReadingStore() {
+	if (typeof window === 'undefined') return cache;
+	if (cache.hydrating) return cache.hydrating;
+
+	cache.hydrating = (async () => {
+		const token = localStorage.getItem('accessToken');
+		if (!token) {
+			cache.ready = true;
+			return cache;
+		}
+		try {
+			const { data } = await api.get('/ai-reading/state', { timeout: 60000 });
+			const empty =
+				!data ||
+				((!data.books || data.books.length === 0) &&
+					(!data.prompts || data.prompts.length === 0) &&
+					(!data.topics || data.topics.length === 0));
+
+			/* One-time migrate from old localStorage → DB, then clear browser keys */
+			if (empty) {
+				const legacyBooks = readLegacy('so7ba.aiReading.books.v1', []);
+				const legacyPrompts = readLegacy('so7ba.aiReading.prompts.v2', null);
+				const legacyTopics = readLegacy('so7ba.aiReading.topics.v2', []);
+				const legacyJourneys = readLegacy('so7ba.aiReading.journeys.v1', null);
+				const legacyPrefs = readLegacy('so7ba.aiReading.prefs.v1', {});
+				const legacyStats = readLegacy('so7ba.aiReading.stats.v1', {});
+				const legacyChat = readLegacy('so7ba.aiReading.chat.v1', null);
+				const hasLegacy =
+					(Array.isArray(legacyBooks) && legacyBooks.length) ||
+					(Array.isArray(legacyPrompts) && legacyPrompts.length) ||
+					(Array.isArray(legacyTopics) && legacyTopics.length);
+
+				if (hasLegacy) {
+					const migrated = {
+						books: Array.isArray(legacyBooks) ? legacyBooks : [],
+						prompts: Array.isArray(legacyPrompts)
+							? legacyPrompts
+							: [buildDefaultPolishPrompt(), buildDefaultMemorizePrompt()],
+						topics: Array.isArray(legacyTopics) ? legacyTopics : [],
+						journeys: Array.isArray(legacyJourneys) ? legacyJourneys : [],
+						prefs: { ...DEFAULT_PREFS, ...(legacyPrefs || {}) },
+						stats: { ...cache.stats, ...(legacyStats || {}) },
+						chat: legacyChat,
+					};
+					const { data: saved } = await api.put('/ai-reading/state', migrated, { timeout: 120000 });
+					applyServerState(saved || migrated);
+					clearLegacyLocalStorage();
+					return cache;
+				}
+			}
+
+			applyServerState(data || emptyStateLocal());
+			clearLegacyLocalStorage();
+		} catch (err) {
+			console.warn('[ai-reading] hydrate failed', err?.message || err);
+			cache.ready = true;
+		} finally {
+			cache.hydrating = null;
+		}
+		return cache;
+	})();
+
+	return cache.hydrating;
+}
+
+function emptyStateLocal() {
+	return {
+		books: [],
+		prompts: [buildDefaultPolishPrompt(), buildDefaultMemorizePrompt()],
+		topics: [],
+		journeys: [],
+		prefs: { ...DEFAULT_PREFS },
+		stats: { ...cache.stats },
+		chat: null,
+	};
+}
+
+export function isAiReadingReady() {
+	return cache.ready;
+}
+
+export async function flushAiReadingStore() {
+	clearTimeout(flushTimer);
+	if (flushPromise) await flushPromise;
+	await flushNow();
+}
+
+export function getPrefs() {
+	return { ...DEFAULT_PREFS, ...cache.prefs };
+}
+
+export function savePrefs(prefs) {
+	cache.prefs = { ...getPrefs(), ...prefs };
+	scheduleFlush();
+	return cache.prefs;
+}
+
 export const READING_APPEARANCE_KEYS = [
 	'fontSize',
 	'lineHeight',
@@ -95,7 +277,6 @@ export function getBookReadingPrefs(book) {
 	return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
 }
 
-/** Merge global defaults with optional per-article appearance overrides. */
 export function resolveReadingPrefs(book, globalPrefs = null) {
 	const global = globalPrefs || getPrefs();
 	const local = pickPrefs(getBookReadingPrefs(book), READING_APPEARANCE_KEYS);
@@ -112,18 +293,12 @@ export function bookHasCustomReadingPrefs(book) {
 }
 
 export function getStats() {
-	return {
-		streak: 0,
-		lastReadDate: null,
-		totalMinutes: 0,
-		booksCompleted: 0,
-		reviewsDone: 0,
-		...read(KEYS.stats, {}),
-	};
+	return { ...cache.stats };
 }
 
 export function saveStats(stats) {
-	write(KEYS.stats, { ...getStats(), ...stats });
+	cache.stats = { ...getStats(), ...stats };
+	scheduleFlush();
 }
 
 export function recordReadingActivity(minutes = 1) {
@@ -145,8 +320,7 @@ export function recordReadingActivity(minutes = 1) {
 }
 
 export function listBooks() {
-	const books = read(KEYS.books, []);
-	return Array.isArray(books) ? books : [];
+	return Array.isArray(cache.books) ? cache.books : [];
 }
 
 export function getBook(id) {
@@ -154,20 +328,26 @@ export function getBook(id) {
 }
 
 export function upsertBook(book) {
-	const books = listBooks();
+	const books = [...listBooks()];
 	const idx = books.findIndex(b => b.id === book.id);
 	const next = { ...book, updatedAt: new Date().toISOString() };
 	if (idx >= 0) books[idx] = next;
 	else books.unshift(next);
-	write(KEYS.books, books);
+	cache.books = books;
+	scheduleFlush();
+	/* Also push single book for faster durability on import */
+	if (typeof window !== 'undefined' && localStorage.getItem('accessToken')) {
+		api.post('/ai-reading/books', { book: next }, { timeout: 120000 }).catch(() => {});
+	}
 	return next;
 }
 
 export function deleteBook(id) {
-	write(
-		KEYS.books,
-		listBooks().filter(b => b.id !== id),
-	);
+	cache.books = listBooks().filter(b => b.id !== id);
+	scheduleFlush();
+	if (typeof window !== 'undefined' && localStorage.getItem('accessToken')) {
+		api.delete(`/ai-reading/books/${encodeURIComponent(id)}`).catch(() => {});
+	}
 }
 
 export function touchBookOpen(id) {
@@ -185,35 +365,31 @@ export function updateProgress(id, progress) {
 }
 
 export function listPrompts() {
-	const prompts = read(KEYS.prompts, null);
-	if (!Array.isArray(prompts)) {
-		const seeded = [buildDefaultPolishPrompt(), buildDefaultMemorizePrompt()];
-		write(KEYS.prompts, seeded);
-		return seeded;
+	if (!Array.isArray(cache.prompts)) {
+		cache.prompts = [buildDefaultPolishPrompt(), buildDefaultMemorizePrompt()];
+		scheduleFlush();
 	}
-	return prompts;
+	return cache.prompts;
 }
 
-/** Ensure the default favorite memorize prompt exists (used by reading / prompts UI). */
 export function ensureDefaultMemorizePrompt() {
 	const prompts = listPrompts();
 	if (prompts.some(p => p.id === DEFAULT_MEMORIZE_PROMPT_ID)) return prompts;
-	const seeded = [buildDefaultMemorizePrompt(), ...prompts];
-	write(KEYS.prompts, seeded);
-	return seeded;
+	cache.prompts = [buildDefaultMemorizePrompt(), ...prompts];
+	scheduleFlush();
+	return cache.prompts;
 }
 
-/** Ensure the default page polish / audit prompt exists. */
 export function ensureDefaultPolishPrompt() {
 	const prompts = listPrompts();
 	if (prompts.some(p => p.id === DEFAULT_POLISH_PROMPT_ID)) return prompts;
-	const seeded = [buildDefaultPolishPrompt(), ...prompts];
-	write(KEYS.prompts, seeded);
-	return seeded;
+	cache.prompts = [buildDefaultPolishPrompt(), ...prompts];
+	scheduleFlush();
+	return cache.prompts;
 }
 
 export function upsertPrompt(prompt) {
-	const prompts = listPrompts();
+	const prompts = [...listPrompts()];
 	const vars = extractVariables(prompt.body);
 	const next = {
 		...prompt,
@@ -223,46 +399,42 @@ export function upsertPrompt(prompt) {
 	const idx = prompts.findIndex(p => p.id === next.id);
 	if (idx >= 0) prompts[idx] = next;
 	else prompts.unshift(next);
-	write(KEYS.prompts, prompts);
+	cache.prompts = prompts;
+	scheduleFlush();
 	return next;
 }
 
 export function deletePrompt(id) {
-	const prompts = listPrompts().filter(p => p.id !== id);
-	write(KEYS.prompts, prompts);
+	cache.prompts = listPrompts().filter(p => p.id !== id);
+	scheduleFlush();
 }
 
-/* ── Topics ── */
 export function listTopics() {
-	const topics = read(KEYS.topics, null);
-	if (Array.isArray(topics)) return topics;
-	write(KEYS.topics, []);
-	return [];
+	return Array.isArray(cache.topics) ? cache.topics : [];
 }
 
 export function upsertTopic(topic) {
-	const topics = listTopics();
+	const topics = [...listTopics()];
 	const next = { ...topic, updatedAt: new Date().toISOString() };
 	const idx = topics.findIndex(t => t.id === next.id);
 	if (idx >= 0) topics[idx] = next;
 	else topics.unshift(next);
-	write(KEYS.topics, topics);
+	cache.topics = topics;
+	scheduleFlush();
 	return next;
 }
 
 export function deleteTopic(id) {
-	const topics = listTopics().filter(t => t.id !== id);
-	write(KEYS.topics, topics);
+	cache.topics = listTopics().filter(t => t.id !== id);
+	scheduleFlush();
 }
 
-/* ── Journeys / monthly themes ── */
 export function listJourneys() {
-	let journeys = read(KEYS.journeys, null);
-	if (!Array.isArray(journeys) || !journeys.length) {
-		journeys = [defaultJourney()];
-		write(KEYS.journeys, journeys);
+	if (!Array.isArray(cache.journeys) || !cache.journeys.length) {
+		cache.journeys = [defaultJourney()];
+		scheduleFlush();
 	}
-	return journeys.map(j => ({ ...j, progressPercent: journeyProgress(j) }));
+	return cache.journeys.map(j => ({ ...j, progressPercent: journeyProgress(j) }));
 }
 
 export function getJourney(id) {
@@ -276,7 +448,7 @@ export function getActiveJourney() {
 }
 
 export function upsertJourney(journey) {
-	const journeys = listJourneys();
+	const journeys = [...listJourneys()];
 	const next = {
 		...journey,
 		progressPercent: journeyProgress(journey),
@@ -285,15 +457,14 @@ export function upsertJourney(journey) {
 	const idx = journeys.findIndex(j => j.id === next.id);
 	if (idx >= 0) journeys[idx] = next;
 	else journeys.unshift(next);
-	write(KEYS.journeys, journeys);
+	cache.journeys = journeys;
+	scheduleFlush();
 	return next;
 }
 
 export function deleteJourney(id) {
-	write(
-		KEYS.journeys,
-		listJourneys().filter(j => j.id !== id),
-	);
+	cache.journeys = listJourneys().filter(j => j.id !== id);
+	scheduleFlush();
 }
 
 function defaultJourney() {
@@ -321,11 +492,9 @@ function defaultJourney() {
 	});
 }
 
-/* ── Chat ── */
 export function getChatSession() {
-	let session = read(KEYS.chat, null);
-	if (!session?.id) {
-		session = createChatSession({
+	if (!cache.chat?.id) {
+		cache.chat = createChatSession({
 			messages: [
 				{
 					id: uid('msg'),
@@ -336,19 +505,19 @@ export function getChatSession() {
 				},
 			],
 		});
-		write(KEYS.chat, session);
+		scheduleFlush();
 	}
-	return session;
+	return cache.chat;
 }
 
 export function saveChatSession(session) {
-	const next = { ...session, updatedAt: new Date().toISOString() };
-	write(KEYS.chat, next);
-	return next;
+	cache.chat = { ...session, updatedAt: new Date().toISOString() };
+	scheduleFlush();
+	return cache.chat;
 }
 
 export function clearChatSession() {
-	const session = createChatSession({
+	cache.chat = createChatSession({
 		messages: [
 			{
 				id: uid('msg'),
@@ -358,8 +527,8 @@ export function clearChatSession() {
 			},
 		],
 	});
-	write(KEYS.chat, session);
-	return session;
+	scheduleFlush();
+	return cache.chat;
 }
 
 export function getContinueBook() {

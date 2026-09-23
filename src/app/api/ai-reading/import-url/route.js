@@ -3,7 +3,6 @@ import { isAiConfigured, completeJson, readingAiOpts } from '@/lib/ai-reading/pr
 import { buildImportEnhanceSystem } from '@/lib/ai-reading/prompts';
 import { normalizeAiBook, transformRawToBook } from '@/lib/ai-reading/transform';
 import { enqueueReviewItems } from '@/lib/ai-reading/spaced-review';
-import { upsertServerBook } from '@/lib/ai-reading/server-store';
 import {
 	extractChatGptShare,
 	isChatGptShareUrl,
@@ -117,7 +116,6 @@ async function buildBookFromMarkdown(markdown, { title, language, enhance, ai })
 	}
 
 	enqueueReviewItems(book);
-	await upsertServerBook(book);
 	return { book, provider };
 }
 

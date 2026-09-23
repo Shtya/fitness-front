@@ -26,6 +26,7 @@ import DailyReview from '@/components/ai-reading/DailyReview';
 import LibraryPanel from '@/components/ai-reading/LibraryPanel';
 import GenerateForm from '@/components/ai-reading/GenerateForm';
 import { uiFontFamily } from '@/lib/ai-reading/fonts';
+import { hydrateAiReadingStore } from '@/lib/ai-reading/storage';
 
 /** One shell width for every tab — no layout jump. */
 const SHELL = 'mx-auto w-full max-w-6xl px-4';
@@ -52,6 +53,21 @@ export default function StudioApp({ initialTab = 'home' }) {
 	const searchParams = useSearchParams();
 	const [tab, setTab] = useState(initialTab);
 	const [studioSub, setStudioSub] = useState('chat');
+	const [ready, setReady] = useState(false);
+
+	useEffect(() => {
+		let alive = true;
+		hydrateAiReadingStore()
+			.then(() => {
+				if (alive) setReady(true);
+			})
+			.catch(() => {
+				if (alive) setReady(true);
+			});
+		return () => {
+			alive = false;
+		};
+	}, []);
 
 	useEffect(() => {
 		const q = searchParams?.get('tab');
@@ -196,6 +212,9 @@ export default function StudioApp({ initialTab = 'home' }) {
 
 			<main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
 				<div className={`${SHELL} py-6`}>
+					{!ready ? (
+						<p className="py-16 text-center text-sm text-[#5c6b63]">{t('common.loading')}</p>
+					) : (
 					<AnimatePresence mode="wait">
 						<motion.div
 							key={`${tab}-${studioSub}`}
@@ -218,6 +237,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 							{tab === 'review' && <DailyReview />}
 						</motion.div>
 					</AnimatePresence>
+					)}
 				</div>
 			</main>
 		</div>

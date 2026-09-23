@@ -6,9 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import ReadingShell from '@/components/ai-reading/ReadingShell';
 import ReadingView from '@/components/ai-reading/ReadingView';
-import { getBook } from '@/lib/ai-reading/storage';
-import { aiReadingApi } from '@/lib/ai-reading/client-api';
-import { upsertBook } from '@/lib/ai-reading/storage';
+import { getBook, hydrateAiReadingStore } from '@/lib/ai-reading/storage';
 
 export default function ReadBookPage() {
 	const params = useParams();
@@ -18,22 +16,18 @@ export default function ReadBookPage() {
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		let local = getBook(bookId);
-		if (local) {
-			setBook(local);
+		let alive = true;
+		(async () => {
+			await hydrateAiReadingStore();
+			if (!alive) return;
+			setBook(getBook(bookId));
 			setLoading(false);
-			return;
-		}
-		aiReadingApi
-			.listBooks()
-			.then(({ books }) => {
-				const found = (books || []).find(b => b.id === bookId);
-				if (found) {
-					upsertBook(found);
-					setBook(found);
-				}
-			})
-			.finally(() => setLoading(false));
+		})().catch(() => {
+			if (alive) setLoading(false);
+		});
+		return () => {
+			alive = false;
+		};
 	}, [bookId]);
 
 	if (loading) {

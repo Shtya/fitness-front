@@ -3,7 +3,6 @@ import { isAiConfigured, completeJson, readingAiOpts } from '@/lib/ai-reading/pr
 import { buildImportEnhanceSystem } from '@/lib/ai-reading/prompts';
 import { normalizeAiBook, transformRawToBook } from '@/lib/ai-reading/transform';
 import { enqueueReviewItems } from '@/lib/ai-reading/spaced-review';
-import { upsertServerBook } from '@/lib/ai-reading/server-store';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -48,7 +47,6 @@ export async function POST(request) {
 			}
 		}
 
-		// Seed knowledge from callouts / key ideas
 		for (const ch of book.chapters || []) {
 			for (const page of ch.pages || []) {
 				for (const block of page.blocks || []) {
@@ -72,8 +70,6 @@ export async function POST(request) {
 		}
 
 		enqueueReviewItems(book);
-		await upsertServerBook(book);
-
 		return NextResponse.json({ book, provider });
 	} catch (error) {
 		console.error('[ai-reading/import]', error);

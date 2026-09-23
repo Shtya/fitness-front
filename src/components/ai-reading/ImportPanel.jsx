@@ -6,7 +6,7 @@ import { useRouter } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
 import { Bot, BookOpen, CheckSquare, FileUp, Import, Link2, Loader2, Square, User } from 'lucide-react';
 import { aiReadingApi } from '@/lib/ai-reading/client-api';
-import { upsertBook } from '@/lib/ai-reading/storage';
+import { upsertBook, flushAiReadingStore } from '@/lib/ai-reading/storage';
 import { extractBookFile } from '@/lib/ai-reading/extract-book-file';
 
 const SAMPLE = `# The Psychology of Money
@@ -121,6 +121,7 @@ export default function ImportPanel() {
 			action: 'import',
 		});
 		upsertBook(imported.book);
+		await flushAiReadingStore();
 		router.push(`/ai-studio/read/${imported.book.id}`);
 	};
 
@@ -138,6 +139,7 @@ export default function ImportPanel() {
 			includeRoles,
 		});
 		upsertBook(data.book);
+		await flushAiReadingStore();
 		router.push(`/ai-studio/read/${data.book.id}`);
 	};
 
@@ -162,6 +164,7 @@ export default function ImportPanel() {
 					{ signal: ctrl.signal },
 				);
 				upsertBook(data.book);
+				await flushAiReadingStore();
 				router.push(`/ai-studio/read/${data.book.id}`);
 			}
 		} catch (err) {

@@ -8,7 +8,6 @@ import {
 } from '@/lib/ai-reading/prompts';
 import { generateFallbackBook, normalizeAiBook } from '@/lib/ai-reading/transform';
 import { enqueueReviewItems } from '@/lib/ai-reading/spaced-review';
-import { upsertServerBook } from '@/lib/ai-reading/server-store';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -85,7 +84,6 @@ export async function POST(request) {
 		}
 
 		enqueueReviewItems(book);
-		await upsertServerBook(book);
 
 		return NextResponse.json({ book, provider, ai: aiStatus });
 	} catch (error) {

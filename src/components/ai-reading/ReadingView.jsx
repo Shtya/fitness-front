@@ -182,22 +182,9 @@ export default function ReadingView({ book: initialBook }) {
 		return () => clearInterval(readTick.current);
 	}, [book.id]);
 
-	useEffect(() => {
-		aiReadingApi
-			.getPrefs()
-			.then(data => {
-				if (data?.prefs && typeof data.prefs === 'object') {
-					const next = savePrefs(data.prefs);
-					setGlobalPrefs(next);
-				}
-			})
-			.catch(() => {});
-	}, []);
-
 	const persist = next => {
 		const saved = upsertBook(next);
 		setBook(saved);
-		aiReadingApi.saveBook(saved).catch(() => {});
 		return saved;
 	};
 
@@ -213,7 +200,7 @@ export default function ReadingView({ book: initialBook }) {
 		if (Object.keys(globalPatch).length) {
 			const nextGlobal = savePrefs(globalPatch);
 			setGlobalPrefs(nextGlobal);
-			aiReadingApi.savePrefs(nextGlobal).then(flashPrefsSaved).catch(() => {});
+			flashPrefsSaved();
 		}
 
 		if (Object.keys(appearancePatch).length) {
@@ -231,7 +218,7 @@ export default function ReadingView({ book: initialBook }) {
 		const nextGlobal = savePrefs(appearance);
 		setGlobalPrefs(nextGlobal);
 		persist({ ...book, readingPrefs: {} });
-		aiReadingApi.savePrefs(nextGlobal).then(flashPrefsSaved).catch(() => {});
+		flashPrefsSaved();
 	};
 
 	const resetArticleReadingPrefs = () => {
