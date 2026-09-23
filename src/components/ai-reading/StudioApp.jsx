@@ -106,64 +106,45 @@ export default function StudioApp({ initialTab = 'home' }) {
 			}}
 		>
 			<header className="z-40 shrink-0 border-b border-[#2d4a3e]/10 bg-[#f6f1e8]/92 backdrop-blur-md">
-				<div className={`${SHELL} flex items-center justify-between gap-3 py-3`}>
-					<div className="flex items-center gap-3">
+				<div className={`${SHELL} flex items-center justify-between gap-2 py-2 sm:gap-3 sm:py-3`}>
+					<div className="flex min-w-0 items-center gap-2 sm:gap-3">
 						<span
-							className="flex h-10 w-10 items-center justify-center rounded-2xl text-white shadow-md"
+							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-md sm:h-10 sm:w-10 sm:rounded-2xl"
 							style={{ background: 'linear-gradient(145deg, #1a2e28, #3d5a4c)' }}
 						>
-							<BookOpen size={18} />
+							<BookOpen size={16} />
 						</span>
-						<div>
-							<p className="font-[family-name:var(--font-space-grotesk)] text-sm font-bold text-[#1a2e28]">{t('brand')}</p>
-							<p className="text-[11px] text-[#5c6b63]">{t('brandSub')}</p>
+						<div className="min-w-0">
+							<p className="truncate font-[family-name:var(--font-space-grotesk)] text-[13px] font-bold text-[#1a2e28] sm:text-sm">
+								{t('brand')}
+							</p>
+							<p className="hidden truncate text-[11px] text-[#5c6b63] sm:block">{t('brandSub')}</p>
 						</div>
 					</div>
 					<Link
 						href="/ai-studio/fitness"
-						className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-[11px] font-semibold text-[#5c6b63] ring-1 ring-[#2d4a3e]/10 hover:text-[#1a2e28]"
+						className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/70 p-2 text-[11px] font-semibold text-[#5c6b63] ring-1 ring-[#2d4a3e]/10 hover:text-[#1a2e28] sm:gap-1.5 sm:px-3 sm:py-1.5"
+						aria-label={t('nav.fitness')}
+						title={t('nav.fitness')}
 					>
-						<Dumbbell size={12} /> {t('nav.fitness')}
+						<Dumbbell size={13} />
+						<span className="hidden sm:inline">{t('nav.fitness')}</span>
 					</Link>
 				</div>
 
 				<nav
-					className={`${SHELL} flex gap-1 overflow-x-auto overscroll-x-contain pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+					className={`${SHELL} flex gap-0.5 overflow-x-auto overscroll-x-contain pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-1`}
 				>
 					{TABS.map(item => {
 						const Icon = item.icon;
 						const active = tab === item.id;
-						if (item.hasMenu) {
-							return (
-								<button
-									key={item.id}
-									type="button"
-									onClick={() => goTab('studio', studioSub)}
-									className={`relative shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold transition sm:px-3.5 ${
-										active ? 'text-[#1a2e28]' : 'text-[#5c6b63] hover:text-[#1a2e28]'
-									}`}
-								>
-									{active && (
-										<motion.span
-											layoutId="studio-main-tab"
-											className="absolute inset-0 rounded-full bg-white shadow-sm ring-1 ring-[#2d4a3e]/10"
-											transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-										/>
-									)}
-									<span className="relative z-10 inline-flex items-center gap-1.5">
-										<Icon size={13} />
-										{t(item.key)}
-									</span>
-								</button>
-							);
-						}
-
+						const onClick = item.hasMenu ? () => goTab('studio', studioSub) : () => goTab(item.id);
 						return (
 							<button
 								key={item.id}
 								type="button"
-								onClick={() => goTab(item.id)}
-								className={`relative shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold transition sm:px-3.5 ${
+								onClick={onClick}
+								className={`relative shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition sm:px-3.5 sm:py-2 sm:text-xs ${
 									active ? 'text-[#1a2e28]' : 'text-[#5c6b63] hover:text-[#1a2e28]'
 								}`}
 							>
@@ -174,8 +155,8 @@ export default function StudioApp({ initialTab = 'home' }) {
 										transition={{ type: 'spring', stiffness: 400, damping: 32 }}
 									/>
 								)}
-								<span className="relative z-10 inline-flex items-center gap-1.5">
-									<Icon size={13} />
+								<span className="relative z-10 inline-flex items-center gap-1 sm:gap-1.5">
+									<Icon size={12} />
 									{t(item.key)}
 								</span>
 							</button>
@@ -185,7 +166,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 
 				{tab === 'studio' && (
 					<div
-						className={`${SHELL} flex gap-1 overflow-x-auto overscroll-x-contain pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+						className={`${SHELL} flex gap-1 overflow-x-auto overscroll-x-contain pb-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:pb-3`}
 					>
 						{STUDIO_SUB.map(s => {
 							const SubIcon = s.icon;
@@ -195,13 +176,13 @@ export default function StudioApp({ initialTab = 'home' }) {
 									key={s.id}
 									type="button"
 									onClick={() => goTab('studio', s.id)}
-									className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${
+									className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold transition sm:px-3 sm:py-1.5 sm:text-[11px] ${
 										subActive
 											? 'bg-[#1a2e28] text-[#f6f1e8]'
 											: 'bg-white/70 text-[#5c6b63] ring-1 ring-[#2d4a3e]/10 hover:text-[#1a2e28]'
 									}`}
 								>
-									<SubIcon size={12} />
+									<SubIcon size={11} />
 									{t(s.key)}
 								</button>
 							);
@@ -210,8 +191,8 @@ export default function StudioApp({ initialTab = 'home' }) {
 				)}
 			</header>
 
-			<main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-				<div className={`${SHELL} py-6`}>
+			<main className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+				<div className={`${SHELL} py-4 sm:py-6`}>
 					{!ready ? (
 						<p className="py-16 text-center text-sm text-[#5c6b63]">{t('common.loading')}</p>
 					) : (

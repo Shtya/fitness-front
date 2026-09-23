@@ -29,65 +29,54 @@ import {
 	ttsLangFor,
 } from '@/lib/ai-reading/reading-smart';
 
-export function SmartResumeBanner({ book, pages, pageIndex, theme, t, onResume }) {
+export function SmartResumeBanner({ book, pages, pageIndex, theme, t, onResume, onDismiss }) {
 	const last = useMemo(() => findLastHighlight(book), [book]);
 	const targetIdx = useMemo(() => findPageIndexForHighlight(pages, last), [pages, last]);
 	const mins = estimateMinutesLeft(pages, pageIndex);
-	if (!last || targetIdx < 0) {
-		return (
-			<div
-				className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2 text-xs"
-				style={{ background: `${theme.accent}12`, color: theme.ink }}
-			>
-				<span className="opacity-70">{t('reading.minsLeft', { minutes: mins })}</span>
-			</div>
-		);
-	}
+
 	return (
-		<div
-			className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-xs font-semibold"
-			style={{ background: `${theme.accent}14`, color: theme.ink }}
-		>
-			<div className="min-w-0">
-				<p>{t('reading.minsLeft', { minutes: mins })}</p>
-				<p className="mt-0.5 truncate text-[11px] font-normal opacity-60">
-					{t('reading.resumeFrom')}: “{String(last.text).slice(0, 64)}
-					{last.text?.length > 64 ? '…' : ''}”
-				</p>
-			</div>
-			<button
-				type="button"
-				onClick={() => onResume(targetIdx, last)}
-				className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold text-white"
-				style={{ background: theme.accent }}
-			>
-				{t('reading.resumeCta')}
-			</button>
+		<div className="mb-5 flex flex-wrap items-center gap-2 text-[11px]" style={{ color: theme.muted }}>
+			<span className="tabular-nums opacity-80">{t('reading.minsLeft', { minutes: mins })}</span>
+			{last && targetIdx >= 0 && (
+				<>
+					<span className="opacity-30">·</span>
+					<button
+						type="button"
+						onClick={() => onResume(targetIdx, last)}
+						className="font-semibold underline-offset-2 hover:underline"
+						style={{ color: theme.accent }}
+					>
+						{t('reading.resumeCta')}
+					</button>
+					{onDismiss && (
+						<button type="button" onClick={onDismiss} className="opacity-40 hover:opacity-70" aria-label="Dismiss">
+							<X size={12} />
+						</button>
+					)}
+				</>
+			)}
 		</div>
 	);
 }
 
 export function GlossaryStrip({ words, theme, t, onJump }) {
-	const list = (words || []).slice(0, 24);
+	const list = (words || []).slice(0, 16);
 	if (!list.length) return null;
 	return (
-		<div
-			className="sticky top-0 z-20 -mx-1 mb-3 overflow-x-auto border-b px-1 py-2 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-			style={{ background: `${theme.bg}ee`, borderColor: `${theme.ink}10` }}
-		>
-			<p className="mb-1.5 px-1 text-[9px] font-bold uppercase tracking-wider opacity-45">{t('reading.glossary')}</p>
-			<div className="flex gap-1.5">
+		<div className="mb-6">
+			<p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider opacity-40">{t('reading.glossary')}</p>
+			<div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 				{list.map(w => (
 					<button
 						key={w.id || w.word}
 						type="button"
 						onClick={() => onJump?.(w)}
-						className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1"
-						style={{ background: theme.paper, color: theme.ink, borderColor: `${theme.ink}12` }}
+						className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-medium"
+						style={{ background: `${theme.ink}08`, color: theme.ink }}
 						title={w.meaning || w.translation}
 					>
 						<span>{w.word}</span>
-						{w.translation ? <span className="opacity-55">· {w.translation}</span> : null}
+						{w.translation ? <span className="opacity-45">· {w.translation}</span> : null}
 					</button>
 				))}
 			</div>
@@ -108,31 +97,46 @@ export function ReadingToolsRail({
 	onDifficulty,
 	onOpenFlashcards,
 	onOpenCoach,
+	compact = false,
 }) {
-	const btn = (active, onClick, Icon, label) => (
+	const tip = id => {
+		if (id === 'original') return t('reading.diffOriginalHint');
+		if (id === 'simplify') return t('reading.diffSimplifyHint');
+		return t('reading.diffEli5Hint');
+	};
+
+	const iconBtn = (active, onClick, Icon, label) => (
 		<button
 			type="button"
 			onClick={onClick}
 			title={label}
-			className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition"
+			aria-label={label}
+			className="inline-flex h-8 w-8 items-center justify-center rounded-full transition"
 			style={{
-				background: active ? `${theme.accent}22` : `${theme.ink}08`,
+				background: active ? `${theme.accent}20` : 'transparent',
 				color: active ? theme.accent : theme.ink,
+				opacity: active ? 1 : 0.55,
 			}}
 		>
-			<Icon size={13} />
-			<span className="hidden sm:inline">{label}</span>
+			<Icon size={15} strokeWidth={2} />
 		</button>
 	);
 
 	return (
-		<div className="flex flex-wrap items-center gap-1.5">
-			{btn(focusOn, onToggleFocus, Focus, t('reading.focus'))}
-			{btn(listenOn, onToggleListen, Headphones, t('reading.listen'))}
-			{btn(bionicOn, onToggleBionic, Sparkles, t('reading.bionic'))}
+		<div className={`flex items-center ${compact ? 'justify-between gap-2' : 'flex-wrap gap-1.5'}`}>
+			<div className="flex shrink-0 items-center">
+				{iconBtn(focusOn, onToggleFocus, Focus, t('reading.focus'))}
+				{iconBtn(listenOn, onToggleListen, Headphones, t('reading.listen'))}
+				<span className="hidden sm:contents">
+					{iconBtn(bionicOn, onToggleBionic, Sparkles, t('reading.bionic'))}
+					{iconBtn(false, onOpenFlashcards, Layers, t('reading.flashcards'))}
+					{iconBtn(false, onOpenCoach, BookOpenCheck, t('reading.coach'))}
+				</span>
+			</div>
 			<div
-				className="inline-flex items-center gap-0.5 rounded-full p-0.5"
+				className="inline-flex min-w-0 max-w-full items-center overflow-x-auto rounded-full p-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 				style={{ background: `${theme.ink}08` }}
+				title={t('reading.diffHint')}
 			>
 				{[
 					['original', t('reading.diffOriginal')],
@@ -143,18 +147,18 @@ export function ReadingToolsRail({
 						key={id}
 						type="button"
 						onClick={() => onDifficulty(id)}
-						className="rounded-full px-2 py-1 text-[10px] font-bold"
+						title={tip(id)}
+						className="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold sm:px-2.5"
 						style={{
 							background: difficulty === id ? theme.accent : 'transparent',
 							color: difficulty === id ? '#fff' : theme.ink,
+							opacity: difficulty === id ? 1 : 0.65,
 						}}
 					>
 						{label}
 					</button>
 				))}
 			</div>
-			{btn(false, onOpenFlashcards, Layers, t('reading.flashcards'))}
-			{btn(false, onOpenCoach, BookOpenCheck, t('reading.coach'))}
 		</div>
 	);
 }
