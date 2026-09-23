@@ -1,0 +1,2354 @@
+[
+  {
+    "id": "book_nvvs2v0b_mudyawlp",
+    "title": "لماذا نقرأ الكتب",
+    "subtitle": "",
+    "author": "Imported link",
+    "coverGradient": [
+      "#1f2a1a",
+      "#4a6b3a"
+    ],
+    "language": "ar",
+    "tags": [],
+    "source": "imported",
+    "style": "narrative",
+    "depth": "standard",
+    "readingTimeMinutes": 16,
+    "createdAt": "2026-09-23T10:19:16.237Z",
+    "updatedAt": "2026-09-23T14:53:49.177Z",
+    "lastOpenedAt": "2026-09-23T11:36:24.883Z",
+    "progress": {
+      "chapterId": "ch_hy9wme36_mudyawlk",
+      "pageId": "page_ib7007zv_mudyawln",
+      "percent": 3,
+      "scrollRatio": 0
+    },
+    "chapters": [
+      {
+        "id": "ch_eyau13zo_mudyawlk",
+        "title": "ChatGPT",
+        "order": 0,
+        "pages": []
+      },
+      {
+        "id": "ch_hy9wme36_mudyawlk",
+        "title": "لماذا نقرأ؟ لأن الكتاب لا يعطيك معلومة فقط، بل يعطيك أعمارًا إضافية",
+        "order": 1,
+        "pages": [
+          {
+            "id": "page_ib7007zv_mudyawln",
+            "title": "الكتاب هو عمر إنسان آخر موضوع بين يديك",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_sqmaw975_mue82b0c",
+                "type": "paragraph",
+                "text": "شفت فيديوهات كثيرة، سمع بودكاست، كتبت اقتباسات، وبعد شهر ما تغيرت كثير."
+              },
+              {
+                "id": "blk_jm4eeffx_mue82b0c",
+                "type": "paragraph",
+                "text": "القراءة مش بس تجميع معلومات. هي اختصار لتجارب ناس ثانية وتدريب معقول. تُكبر لغتك وتوسع ذوقك وتفتح أبواب ما كنت تعرفها."
+              },
+              {
+                "id": "blk_xhm8awkv_mue82b0c",
+                "type": "paragraph",
+                "text": "الكتاب الحقيقي تسويه تعيش فيها حياة شخص آخر. تصور شخص قضى سنين يقرأ ويجرب ويكتب خلاصة حياته. أنت تقرأ خلاصته في أيام."
+              },
+              {
+                "id": "blk_o86e9key_mue82b0c",
+                "type": "paragraph",
+                "text": "بكده الذي تقرأ يضيف لك خبرات ما جربتها بنفسك."
+              }
+            ],
+            "_originalBlocks": [
+              {
+                "id": "blk_pqj6zi1y_mudyawll",
+                "type": "paragraph",
+                "text": "هناك فرق هائل بين أن تعرف معلومة، وأن تصبح إنسانًا مختلفًا بسبب ما عرفته."
+              },
+              {
+                "id": "blk_fj2h8n2z_mudyawll",
+                "type": "paragraph",
+                "text": "قد تشاهد عشرات الفيديوهات، وتسمع عشرات البودكاست، وتحفظ عشرات الاقتباسات، ثم تكتشف بعد أشهر أنك لم تتغير كثيرًا. وفي المقابل، قد تقرأ كتابًا واحدًا في الوقت المناسب، فتخرج منه بفكرة واحدة تعيد ترتيب طريقة تفكيرك أو قرارًا واحدًا يغيّر مسار حياتك."
+              },
+              {
+                "id": "blk_ideyhc24_mudyawll",
+                "type": "paragraph",
+                "text": "وهنا تكمن قيمة القراءة الحقيقية."
+              },
+              {
+                "id": "blk_zch4mrm6_mudyawll",
+                "type": "paragraph",
+                "text": "ليست المشكلة اليوم في الوصول إلى المعرفة؛ المشكلة في اختيار المعرفة التي تستحق وقتك، ثم تحويلها من معلومات عابرة إلى شيء يعيش داخلك."
+              },
+              {
+                "id": "blk_vm2vhedk_mudyawll",
+                "type": "paragraph",
+                "text": "القراءة ليست مجرد وسيلة لجمع المعلومات. إنها طريقة لاختصار تجارب الآخرين، وتوسيع خبرتك، وتدريب عقلك على التركيز، وبناء لغتك، وتكوين ذوقك، وأحيانًا فتح أبواب لم تكن تعرف أصلًا أنها موجودة."
+              },
+              {
+                "id": "blk_ib8ucw5b_mudyawll",
+                "type": "quote",
+                "text": "أنت لا تقرأ الكتاب لكي تعرف ما فيه فقط؛ أنت تقرؤه لكي تعرف ما الذي يمكن أن تصبح عليه بعد أن تعرف ما فيه."
+              },
+              {
+                "id": "blk_hioh3twk_mudyawll",
+                "type": "heading",
+                "text": "الكتاب هو عمر إنسان آخر موضوع بين يديك",
+                "level": 2
+              },
+              {
+                "id": "blk_ux9yqjpm_mudyawll",
+                "type": "paragraph",
+                "text": "تخيل أن شخصًا قضى أربعين أو خمسين سنة من حياته في مجال معين: يقرأ، ويجرب، ويخطئ، ويسافر، ويبحث، ويتأمل، ثم جلس في النهاية وكتب خلاصة ما وصل إليه."
+              },
+              {
+                "id": "blk_3n4wfmvy_mudyawll",
+                "type": "paragraph",
+                "text": "أنت تستطيع أن تقرأ هذه الخلاصة خلال أيام."
+              },
+              {
+                "id": "blk_4us4ghok_mudyawll",
+                "type": "paragraph",
+                "text": "هذه واحدة من أعظم مزايا القراءة: أنها تضيف إلى عمرك خبرات لم تعشها بنفسك."
+              }
+            ],
+            "_difficulty": "eli5"
+          },
+          {
+            "id": "page_c9vzge9b_mudyawln",
+            "title": "",
+            "order": 1,
+            "blocks": [
+              {
+                "id": "blk_mdilrwrr_mudyawll",
+                "type": "paragraph",
+                "text": "ولهذا كانت فكرة أن الإنسان يبدأ من حيث انتهى الآخرون من أهم أسرار التعلم. ليس من الحكمة أن تخوض كل تجربة بنفسك حتى تصل إلى النتيجة التي وصل إليها شخص قبلك منذ عشرات السنين."
+              },
+              {
+                "id": "blk_kxxrons5_mudyawll",
+                "type": "paragraph",
+                "text": "قد يختصر عليك كتاب واحد سنوات من التجربة والخطأ."
+              },
+              {
+                "id": "blk_p9346jgw_mudyawll",
+                "type": "paragraph",
+                "text": "ولهذا قيل في أحد اللقاءات إن من يقرأ سير السابقين يوسّع عمره الافتراضي؛ لأنك لا تعيش حياتك وحدها، بل تضيف إليها تجارب وحكم أشخاص عاشوا قبلك. فالكتاب قد يمنحك نتيجة تجربة استغرقت عمرًا كاملًا، في صورة فكرة تستطيع استيعابها في دقائق. fileciteturn0file2L15-L18"
+              },
+              {
+                "id": "blk_1neduzwb_mudyawll",
+                "type": "paragraph",
+                "text": "وهذه ليست ميزة بسيطة."
+              },
+              {
+                "id": "blk_22ylprou_mudyawll",
+                "type": "paragraph",
+                "text": "فبدلًا من أن يكون أمامك عمر واحد من الخبرة، يصبح لديك وصول إلى أعمار كثيرة من الخبرة البشرية."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_5m2ezsm6_mudyawll",
+        "title": "لماذا القراءة أقوى من مجرد مشاهدة ملخصات الكتب؟",
+        "order": 2,
+        "pages": [
+          {
+            "id": "page_klbs5yga_mudyawll",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_q0v31sfy_mudyawll",
+                "type": "paragraph",
+                "text": "هذه واحدة من أهم الأسئلة في عصر المحتوى السريع."
+              },
+              {
+                "id": "blk_evcxegst_mudyawll",
+                "type": "paragraph",
+                "text": "إذا كان بإمكانك مشاهدة فيديو مدته عشر دقائق يخبرك بأهم أفكار كتاب من 300 صفحة، فلماذا تقرأ الكتاب كاملًا؟"
+              },
+              {
+                "id": "blk_h3d0mgcs_mudyawll",
+                "type": "paragraph",
+                "text": "الإجابة ليست أن الملخصات سيئة. بالعكس، الملخص الجيد مفيد جدًا، وقد يكون أفضل بكثير من ألا تعرف شيئًا عن الكتاب أصلًا. كما أن الملخصات تساعدك على اكتشاف كتب لم تكن تعرف عنها شيئًا. fileciteturn0file0L6-L9"
+              },
+              {
+                "id": "blk_mt6ghah5_mudyawll",
+                "type": "paragraph",
+                "text": "لكن هناك فرق بين استخراج بعض الأفكار من الكتاب وبين قراءة الكتاب نفسه."
+              },
+              {
+                "id": "blk_w63e2h3r_mudyawll",
+                "type": "paragraph",
+                "text": "الملخص يعطيك النتيجة غالبًا، لكنه لا يمنحك الرحلة كاملة."
+              },
+              {
+                "id": "blk_mool5dzu_mudyawll",
+                "type": "paragraph",
+                "text": "أنت لا تحصل فقط على المعلومات، بل على طريقة الكاتب في التفكير، وتسلسل حججه، والأمثلة التي اختارها، والعلاقات بين الأفكار، والتفاصيل التي قد تبدو صغيرة لكنها هي التي تجعلك تفهم الصورة كاملة."
+              },
+              {
+                "id": "blk_vsvufvzq_mudyawll",
+                "type": "paragraph",
+                "text": "يمكن تشبيه الأمر بصديق شاهد فيلمًا رائعًا ثم جلس يحكي لك قصته. قد تعرف الأحداث الرئيسية، لكنك لم تعش التجربة نفسها."
+              },
+              {
+                "id": "blk_zi87dd6l_mudyawll",
+                "type": "heading",
+                "text": "لذلك أفضل علاقة مع الملخصات ليست",
+                "level": 3
+              },
+              {
+                "id": "blk_3cjk7j29_mudyawll",
+                "type": "heading",
+                "text": "ملخص بدل الكتاب.",
+                "level": 3
+              },
+              {
+                "id": "blk_5744o7zm_mudyawll",
+                "type": "heading",
+                "text": "بل",
+                "level": 3
+              },
+              {
+                "id": "blk_zu1rnucb_mudyawll",
+                "type": "heading",
+                "text": "الملخص ← اكتشاف الكتاب ← قراءة الكتاب عند استحقاقه.",
+                "level": 3
+              },
+              {
+                "id": "blk_2y78echa_mudyawll",
+                "type": "paragraph",
+                "text": "وهكذا يصبح المحتوى المختصر بوابة إلى المعرفة، لا بديلًا عنها دائمًا."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_q73clwvz_mudyawll",
+        "title": "القراءة لا تزيد معلوماتك فقط؛ إنها تغيّر طريقة تفكيرك",
+        "order": 3,
+        "pages": [
+          {
+            "id": "page_qrzuih1n_mudyawll",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_lskbjlcn_mudyawll",
+                "type": "paragraph",
+                "text": "من أكثر الأخطاء شيوعًا أن نقيس فائدة الكتاب بعدد المعلومات التي نستطيع تذكرها منه."
+              },
+              {
+                "id": "blk_e1sadkyn_mudyawll",
+                "type": "paragraph",
+                "text": "لكن تأثير القراءة أعمق من ذلك بكثير."
+              },
+              {
+                "id": "blk_cte8rfcf_mudyawll",
+                "type": "paragraph",
+                "text": "أنت قد تنهي كتابًا ولا تستطيع بعد أسبوع أن تسرد كل فصوله، ومع ذلك يكون الكتاب قد ترك أثرًا حقيقيًا في طريقة تفكيرك."
+              },
+              {
+                "id": "blk_vxzucpkz_mudyawll",
+                "type": "paragraph",
+                "text": "قد يغير سؤالًا تسأله لنفسك."
+              },
+              {
+                "id": "blk_wte04sv2_mudyawll",
+                "type": "paragraph",
+                "text": "قد يجعلك ترى مشكلة قديمة بطريقة مختلفة."
+              },
+              {
+                "id": "blk_butn68xc_mudyawll",
+                "type": "paragraph",
+                "text": "قد يمنحك مفردة جديدة تعبّر بها عن شيء كنت تشعر به دون أن تستطيع وصفه."
+              },
+              {
+                "id": "blk_tzd6f64m_mudyawll",
+                "type": "paragraph",
+                "text": "وقد يجعلك تربط بين فكرتين لم يخطر لك من قبل أنهما مرتبطتان."
+              },
+              {
+                "id": "blk_e4l7ebsk_mudyawll",
+                "type": "paragraph",
+                "text": "وهذا بالضبط أحد أوجه القراءة التي يصعب قياسها."
+              },
+              {
+                "id": "blk_zq4kfhge_mudyawll",
+                "type": "paragraph",
+                "text": "فالكتاب يشبه الطعام: لا تتذكر كل وجبة أكلتها، لكن بعض ما أكلته أصبح جزءًا من جسدك."
+              },
+              {
+                "id": "blk_q7hryfzi_mudyawll",
+                "type": "paragraph",
+                "text": "وبالمثل، ليست كل معرفة قرأتها ستبقى في ذاكرتك بصورة مباشرة، لكن بعضها يتحول تدريجيًا إلى جزء من عقلك وطريقة رؤيتك للعالم. وقد تظهر هذه المعرفة بعد سنوات عندما تواجه موقفًا أو سؤالًا يستدعيها. fileciteturn0file2L48-L55"
+              },
+              {
+                "id": "blk_k9u0s9c8_mudyawll",
+                "type": "heading",
+                "text": "لذلك لا تجعل معيارك الوحيد بعد الانتهاء من كتاب هو",
+                "level": 3
+              },
+              {
+                "id": "blk_itvptce8_mudyawll",
+                "type": "quote",
+                "text": "\"ماذا أتذكر منه؟\""
+              },
+              {
+                "id": "blk_78s7fa9c_mudyawll",
+                "type": "heading",
+                "text": "اسأل أيضًا",
+                "level": 3
+              },
+              {
+                "id": "blk_im3nqumo_mudyawll",
+                "type": "quote",
+                "text": "\"ماذا أصبح في داخلي بسببه؟\""
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_obg0omhx_mudyawll",
+        "title": "القراءة توسّع خبرتك حتى خارج تخصصك",
+        "order": 4,
+        "pages": [
+          {
+            "id": "page_hyjqjnjc_mudyawll",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_sixxbwog_mudyawll",
+                "type": "paragraph",
+                "text": "ميزة أخرى عظيمة للكتاب أنه يسمح لك بالخروج من حدود البيئة التي ولدت فيها."
+              },
+              {
+                "id": "blk_foadlu51_mudyawll",
+                "type": "paragraph",
+                "text": "الإنسان يتأثر تلقائيًا بثقافته ومجتمعه وما يسمعه ممن حوله. وإذا كانت كل مصادر معرفته تأتي من الدائرة نفسها، فمن الطبيعي أن تصبح رؤيته للعالم محدودة بإطارها."
+              },
+              {
+                "id": "blk_xxhjy6hr_mudyawll",
+                "type": "paragraph",
+                "text": "القراءة تفتح نافذة."
+              },
+              {
+                "id": "blk_fybf2z6j_mudyawll",
+                "type": "paragraph",
+                "text": "يمكنك أن تقرأ عن مجتمع مختلف، وفترة تاريخية مختلفة، وشخص عاش ظروفًا لا تشبه ظروفك، وفيلسوف يرى العالم بطريقة مختلفة، وعالم بنى معرفته خلال عقود."
+              },
+              {
+                "id": "blk_rjrx5qqm_mudyawll",
+                "type": "paragraph",
+                "text": "وفجأة تكتشف أن بعض الأشياء التي كنت تعتبرها \"حقائق واضحة\" ليست سوى طريقة واحدة من طرق النظر إلى الحياة."
+              },
+              {
+                "id": "blk_43ap8ufg_mudyawll",
+                "type": "paragraph",
+                "text": "وهنا تتحول القراءة من جمع معلومات إلى توسيع أفق الوعي."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_28rd0g8u_mudyawll",
+        "title": "ومن هنا تبدأ الكاريزما الحقيقية",
+        "order": 5,
+        "pages": [
+          {
+            "id": "page_chbi8olm_mudyawll",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_b3jefr3h_mudyawll",
+                "type": "paragraph",
+                "text": "هناك نوع من الكاريزما يمكن تصنيعه خارجيًا: طريقة الوقوف، الملابس، نبرة الصوت، لغة الجسد، وطريقة الحديث."
+              },
+              {
+                "id": "blk_o4azkooc_mudyawll",
+                "type": "paragraph",
+                "text": "لكن هناك نوعًا أعمق بكثير."
+              },
+              {
+                "id": "blk_fl4hx65k_mudyawlm",
+                "type": "heading",
+                "text": "أن تكون شخصًا لديه شيء يستحق أن يُسمع.",
+                "level": 3
+              },
+              {
+                "id": "blk_wslaje87_mudyawlm",
+                "type": "paragraph",
+                "text": "أن تستطيع الانتقال من موضوع إلى آخر لأن لديك قاعدة معرفية واسعة."
+              },
+              {
+                "id": "blk_ylw71qer_mudyawlm",
+                "type": "paragraph",
+                "text": "أن تربط بين فكرة في التاريخ ومشكلة معاصرة."
+              },
+              {
+                "id": "blk_ug6aj8mg_mudyawlm",
+                "type": "paragraph",
+                "text": "أن تشرح مفهومًا معقدًا بلغة بسيطة."
+              },
+              {
+                "id": "blk_rttgo42h_mudyawlm",
+                "type": "paragraph",
+                "text": "أن تعرف متى تتحدث، ومتى تسأل، ومتى تستمع."
+              },
+              {
+                "id": "blk_vbje3wcy_mudyawlm",
+                "type": "paragraph",
+                "text": "القراءة تمنحك المواد الخام لكل ذلك: المفردات، المفاهيم، القصص، الأمثلة، المقارنات، والتجارب الإنسانية."
+              },
+              {
+                "id": "blk_l6mb1xm5_mudyawlm",
+                "type": "paragraph",
+                "text": "وهذا ما يجعل بعض الأشخاص ممتعين في الحديث دون أن يحاولوا أن يكونوا \"كاريزماتيين\". أنت تستمتع بالجلوس معهم لأن وراء كلامهم شيئًا."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_u7quwvp8_mudyawlm",
+        "title": "القراءة تعلّمك كيف تعبّر، لا ماذا تعرف فقط",
+        "order": 6,
+        "pages": [
+          {
+            "id": "page_0cl2nbs7_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_60yzybdb_mudyawlm",
+                "type": "paragraph",
+                "text": "من أهم الأفكار التي ظهرت في التجارب المتعلقة بالقراءة أن كثرة القراءة الجيدة لا تزيد حصيلتك المعرفية فحسب؛ بل تؤثر أيضًا في لغتك وذوقك وطريقة تعبيرك."
+              },
+              {
+                "id": "blk_x3duu15n_mudyawlm",
+                "type": "paragraph",
+                "text": "لكن هناك فرقًا بين قارئ يجمع الكلمات، وقارئ يبني ذوقًا لغويًا."
+              },
+              {
+                "id": "blk_d7fxafjh_mudyawlm",
+                "type": "paragraph",
+                "text": "الأول يلتقط مفردات."
+              },
+              {
+                "id": "blk_r5f0m106_mudyawlm",
+                "type": "heading",
+                "text": "أما الثاني فيبدأ بملاحظة",
+                "level": 3
+              },
+              {
+                "id": "blk_oecnclas_mudyawlm",
+                "type": "list",
+                "text": "",
+                "items": [
+                  "كيف تُبنى الجملة.",
+                  "لماذا اختار الكاتب هذه الكلمة.",
+                  "كيف يستخدم التشبيه.",
+                  "أين وضع الفكرة.",
+                  "كيف ينتقل من معنى إلى آخر.",
+                  "كيف يجعل العبارة قوية دون أن تكون متكلفة."
+                ]
+              },
+              {
+                "id": "blk_k640k0jc_mudyawlm",
+                "type": "paragraph",
+                "text": "وهذا النوع من القراءة يحولك تدريجيًا من مستهلك للنص إلى شخص يفهم صناعة النص."
+              },
+              {
+                "id": "blk_svij9xaz_mudyawlm",
+                "type": "paragraph",
+                "text": "ولهذا أشار أحد المتحدثين إلى فكرة مهمة جدًا: إذا أردت تحسين التعبير، فلا يكفي أن تقرأ النصوص الجميلة قراءة عابرة؛ ينبغي أن تلاحظ تراكيبها، وتعيد قراءتها، وتحاول أن تستدعيها في كتابتك. fileciteturn0file1L9-L16"
+              },
+              {
+                "id": "blk_9707ud98_mudyawlm",
+                "type": "paragraph",
+                "text": "فاللغة لا تتحسن بمجرد رؤية الكلمات."
+              },
+              {
+                "id": "blk_lez7djpl_mudyawlm",
+                "type": "heading",
+                "text": "إنها تتحسن بالتشبع والممارسة.",
+                "level": 3
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_p2lfu050_mudyawlm",
+        "title": "القراءة أيضًا تمرين على التركيز في عصر صُمم لتشتيتك",
+        "order": 7,
+        "pages": [
+          {
+            "id": "page_jsunq4n5_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_vuadc1dr_mudyawlm",
+                "type": "paragraph",
+                "text": "ربما هذه إحدى أكثر فوائد القراءة أهمية في الوقت الحالي."
+              },
+              {
+                "id": "blk_x9irjw2x_mudyawlm",
+                "type": "paragraph",
+                "text": "الهاتف يعطيك محتوى جديدًا كل بضع ثوانٍ. إشعار، رسالة، فيديو، خبر، منشور، موضوع مختلف، ثم موضوع آخر."
+              },
+              {
+                "id": "blk_wt8cmd8b_mudyawlm",
+                "type": "paragraph",
+                "text": "عقلك يتعود تدريجيًا على الانتقال المستمر."
+              },
+              {
+                "id": "blk_b54fe37n_mudyawlm",
+                "type": "paragraph",
+                "text": "ولهذا يصبح الجلوس أمام كتاب لمدة ثلاثين دقيقة تجربة صعبة لبعض الناس."
+              },
+              {
+                "id": "blk_7xd38x0b_mudyawlm",
+                "type": "paragraph",
+                "text": "ليس لأن الكتاب ممل بالضرورة، بل لأن العقل اعتاد على جرعات سريعة من التحفيز."
+              },
+              {
+                "id": "blk_vskbk4nt_mudyawlm",
+                "type": "paragraph",
+                "text": "أما القراءة العميقة فتطلب العكس تمامًا: أن تبقى مع فكرة واحدة، وتتابع حجة واحدة، وتتحمل عدم وجود مكافأة كل خمس ثوانٍ."
+              },
+              {
+                "id": "blk_pl6stclg_mudyawlm",
+                "type": "paragraph",
+                "text": "ومع الوقت، تصبح هذه القدرة نفسها ميزة."
+              },
+              {
+                "id": "blk_b6pjo5u7_mudyawlm",
+                "type": "paragraph",
+                "text": "أن تستطيع أن تجلس وتقرأ، أو تتعلم، أو تعمل على مشكلة، دون أن تبحث باستمرار عن شيء جديد."
+              },
+              {
+                "id": "blk_8eyg6wx5_mudyawlm",
+                "type": "paragraph",
+                "text": "وهنا لا تعود القراءة مجرد وسيلة للحصول على المعرفة؛ بل تصبح تدريبًا لعقلك على عدم التشتت."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_ui63yl77_mudyawlm",
+        "title": "لا تقرأ من أجل المتعة فقط... لكن لا تخف من المتعة",
+        "order": 8,
+        "pages": [
+          {
+            "id": "page_2eqjdifb_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_thq3rtnx_mudyawlm",
+                "type": "paragraph",
+                "text": "قد يبدو هذا متناقضًا."
+              },
+              {
+                "id": "blk_nxz9nw43_mudyawlm",
+                "type": "paragraph",
+                "text": "هل القراءة ممتعة أم لا؟"
+              },
+              {
+                "id": "blk_9sl1143m_mudyawlm",
+                "type": "paragraph",
+                "text": "الحقيقة أن هناك فرقًا بين الهدف من القراءة وبين المتعة التي تأتي معها."
+              },
+              {
+                "id": "blk_9c4fnmns_mudyawlm",
+                "type": "paragraph",
+                "text": "قد تقرأ لكي تتعلم، لكي تصبح أفضل في عملك، لكي تفهم موضوعًا، لكي تطور شخصيتك، أو لكي تتخذ قرارًا أفضل."
+              },
+              {
+                "id": "blk_kzs098ki_mudyawlm",
+                "type": "paragraph",
+                "text": "لكن أثناء ذلك قد تجد نفسك مستمتعًا."
+              },
+              {
+                "id": "blk_xeefmnro_mudyawlm",
+                "type": "paragraph",
+                "text": "الأمر يشبه الرياضة: أنت لا تذهب إلى صالة التدريب فقط لأن رفع الأوزان ممتع، بل لأنك تريد أن تصبح أقوى. ومع ذلك قد تنتهي من التدريب وأنت تشعر بالرضا والسعادة."
+              },
+              {
+                "id": "blk_gc91h1oz_mudyawlm",
+                "type": "paragraph",
+                "text": "القراءة يمكن أن تعمل بالطريقة نفسها."
+              },
+              {
+                "id": "blk_oow7kc6x_mudyawlm",
+                "type": "heading",
+                "text": "المنفعة هي الدافع، والمتعة قد تصبح المكافأة.",
+                "level": 3
+              },
+              {
+                "id": "blk_xcau5nc5_mudyawlm",
+                "type": "paragraph",
+                "text": "وبمرور الوقت قد يتحول الأمر من تكلف إلى عادة، ومن عادة إلى حب."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_propm8ch_mudyawlm",
+        "title": "ولهذا لا تبدأ بأصعب كتاب",
+        "order": 9,
+        "pages": [
+          {
+            "id": "page_rckrwip2_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_1kgb7ube_mudyawlm",
+                "type": "paragraph",
+                "text": "من الأخطاء التي تجعل الناس يكرهون القراءة أنهم يتعاملون معها كاختبار."
+              },
+              {
+                "id": "blk_jq3k84lc_mudyawlm",
+                "type": "paragraph",
+                "text": "يختار الشخص كتابًا ضخمًا لأنه \"كتاب مهم\"، ثم يحاول إجبار نفسه على قراءة عشرات الصفحات يوميًا، وبعد أيام يشعر بالملل، فيترك الكتاب ويستنتج:"
+              },
+              {
+                "id": "blk_4vvjt9so_mudyawlm",
+                "type": "quote",
+                "text": "\"أنا لا أحب القراءة.\""
+              },
+              {
+                "id": "blk_uuw84a1a_mudyawlm",
+                "type": "paragraph",
+                "text": "المشكلة ربما لم تكن فيك أصلًا."
+              },
+              {
+                "id": "blk_zz9birr1_mudyawlm",
+                "type": "paragraph",
+                "text": "ربما اخترت الباب الخطأ."
+              },
+              {
+                "id": "blk_ul5ezazq_mudyawlm",
+                "type": "paragraph",
+                "text": "تجربة بعض القراء كانت مختلفة تمامًا: بدأوا برواية أو موضوع يحبونه، ثم اكتسبوا عادة القراءة، وبعد أن أصبحت القراءة مألوفة لهم انتقلوا تدريجيًا إلى الكتب الأكثر عمقًا. fileciteturn0file0L23-L30"
+              },
+              {
+                "id": "blk_1u6vzjxc_mudyawlm",
+                "type": "paragraph",
+                "text": "ولهذا لا تبحث في البداية عن الكتاب الذي يجب أن تقرأه؛ ابحث عن الكتاب الذي سيجعلك تحب أن تقرأ."
+              },
+              {
+                "id": "blk_odcg4wu4_mudyawlm",
+                "type": "paragraph",
+                "text": "إذا كانت الروايات هي التي ستفتح لك الباب، فابدأ بالروايات."
+              },
+              {
+                "id": "blk_j6p3ud2k_mudyawlm",
+                "type": "paragraph",
+                "text": "إذا كان التاريخ يثير فضولك، فابدأ بالتاريخ."
+              },
+              {
+                "id": "blk_61ga2gpj_mudyawlm",
+                "type": "paragraph",
+                "text": "إذا كانت البرمجة هي عالمك، فابدأ بكتاب يجعل البرمجة أكثر إثارة بالنسبة لك."
+              },
+              {
+                "id": "blk_vxay0rzq_mudyawlm",
+                "type": "paragraph",
+                "text": "المهم أن تدخل."
+              },
+              {
+                "id": "blk_zry5oajl_mudyawlm",
+                "type": "paragraph",
+                "text": "بعد ذلك ستبدأ الكتب في قيادة بعضها إلى بعض."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_pf2l4ab4_mudyawlm",
+        "title": "الروايات ليست مضيعة للوقت",
+        "order": 10,
+        "pages": [
+          {
+            "id": "page_fnv4g2g0_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_fddu1gf5_mudyawlm",
+                "type": "paragraph",
+                "text": "هناك تصور شائع بأن القراءة الجادة تعني الكتب العلمية أو الفكرية فقط، وأن الروايات نوع أقل قيمة من القراءة."
+              },
+              {
+                "id": "blk_88a94rc5_mudyawlm",
+                "type": "paragraph",
+                "text": "وهذا تبسيط شديد."
+              },
+              {
+                "id": "blk_08rfh3qz_mudyawlm",
+                "type": "paragraph",
+                "text": "الرواية الجيدة يمكن أن تمنحك تجربة إنسانية لا تستطيع مقالة مباشرة أن تمنحك إياها."
+              },
+              {
+                "id": "blk_tqiwsr54_mudyawlm",
+                "type": "paragraph",
+                "text": "قد تجعلك تعيش داخل عقل شخصية مختلفة عنك."
+              },
+              {
+                "id": "blk_43ycmq6b_mudyawlm",
+                "type": "paragraph",
+                "text": "قد تعرض لك حقبة تاريخية."
+              },
+              {
+                "id": "blk_nvmxfprj_mudyawlm",
+                "type": "paragraph",
+                "text": "قد تدفعك إلى التفكير في السلطة، أو الخوف، أو الحرية، أو العلاقات، أو المجتمع، دون أن تقدم لك هذه الأفكار في صورة درس مباشر."
+              },
+              {
+                "id": "blk_m5hixw82_mudyawlm",
+                "type": "paragraph",
+                "text": "لكن الرواية ليست بالضرورة بديلًا عن الكتب المتخصصة."
+              },
+              {
+                "id": "blk_0r0d4bay_mudyawlm",
+                "type": "paragraph",
+                "text": "الأفضل أن تعرف وظيفة كل نوع من القراءة."
+              },
+              {
+                "id": "blk_zs2gaao4_mudyawlm",
+                "type": "paragraph",
+                "text": "الكتب المتخصصة تبني المعرفة المنظمة."
+              },
+              {
+                "id": "blk_jjnynnd4_mudyawlm",
+                "type": "paragraph",
+                "text": "الروايات توسع الخيال والتجربة الإنسانية والذائقة."
+              },
+              {
+                "id": "blk_6mli1ao3_mudyawlm",
+                "type": "paragraph",
+                "text": "السير تمنحك تجارب أشخاص حقيقيين."
+              },
+              {
+                "id": "blk_y2wkl1lc_mudyawlm",
+                "type": "paragraph",
+                "text": "والكتب الفكرية تدربك على النظر والاستدلال."
+              },
+              {
+                "id": "blk_blq63rtd_mudyawlm",
+                "type": "paragraph",
+                "text": "لا تحتاج إلى جعل نوع واحد منها يحتكر مكتبتك."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_ivlbly87_mudyawlm",
+        "title": "والكتب الصوتية ليست عدوًا للقراءة",
+        "order": 11,
+        "pages": [
+          {
+            "id": "page_05oa9f13_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_bbo52lhf_mudyawlm",
+                "type": "paragraph",
+                "text": "ليست القضية منافسة بين \"القراءة الحقيقية\" والكتاب الصوتي."
+              },
+              {
+                "id": "blk_qk8ky2g0_mudyawlm",
+                "type": "paragraph",
+                "text": "الكتاب الصوتي ممتاز عندما تكون عيناك ويداك مشغولتين: في الطريق، أثناء المشي، الترتيب، السفر أو الأعمال الروتينية."
+              },
+              {
+                "id": "blk_rcv6fyml_mudyawlm",
+                "type": "paragraph",
+                "text": "في هذه الحالات أنت تستعيد وقتًا كان سيذهب دون استفادة معرفية."
+              },
+              {
+                "id": "blk_3bm94qxx_mudyawlm",
+                "type": "paragraph",
+                "text": "لكن عندما تحتاج إلى تحليل نص معقد، أو تدوين ملاحظات، أو الرجوع إلى فقرة، أو دراسة حجة بتأنٍّ، فالقراءة المباشرة قد تكون أنسب."
+              },
+              {
+                "id": "blk_bqnobd2l_mudyawlm",
+                "type": "heading",
+                "text": "إذن السؤال ليس",
+                "level": 3
+              },
+              {
+                "id": "blk_3peo2utb_mudyawlm",
+                "type": "heading",
+                "text": "أيّهما أفضل؟",
+                "level": 3
+              },
+              {
+                "id": "blk_hoeca6ar_mudyawlm",
+                "type": "heading",
+                "text": "بل",
+                "level": 3
+              },
+              {
+                "id": "blk_1b8bxc4i_mudyawlm",
+                "type": "heading",
+                "text": "أي وسيلة تناسب الهدف والوقت المتاح؟",
+                "level": 3
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_uyhtmcr4_mudyawlm",
+        "title": "لا تقرأ كل الكتب بالطريقة نفسها",
+        "order": 12,
+        "pages": [
+          {
+            "id": "page_n7s8z7k5_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_iihvc671_mudyawlm",
+                "type": "paragraph",
+                "text": "وهذه من أهم المهارات التي يكتسبها القارئ مع الوقت."
+              },
+              {
+                "id": "blk_s1zj1p6a_mudyawlm",
+                "type": "paragraph",
+                "text": "ليس كل كتاب يستحق أن تقرأه من الصفحة الأولى إلى الأخيرة بالسرعة نفسها."
+              },
+              {
+                "id": "blk_j743dp0z_mudyawlm",
+                "type": "heading",
+                "text": "بعض الكتب",
+                "level": 3
+              },
+              {
+                "id": "blk_gbgjcofr_mudyawlm",
+                "type": "heading",
+                "text": "تتصفحها.",
+                "level": 3
+              },
+              {
+                "id": "blk_m5r4z3zm_mudyawlm",
+                "type": "paragraph",
+                "text": "تبحث عن فكرتها، وفصولها، وما يمكن أن تضيفه."
+              },
+              {
+                "id": "blk_i89g5pyy_mudyawlm",
+                "type": "heading",
+                "text": "بعضها",
+                "level": 3
+              },
+              {
+                "id": "blk_wzun3wii_mudyawlm",
+                "type": "heading",
+                "text": "تتذوقه.",
+                "level": 3
+              },
+              {
+                "id": "blk_domiw5c6_mudyawlm",
+                "type": "paragraph",
+                "text": "تقرأ منه أجزاء محددة لأن أسلوبه أو بعض أفكاره تهمك."
+              },
+              {
+                "id": "blk_2cbm6evc_mudyawlm",
+                "type": "heading",
+                "text": "بعضها",
+                "level": 3
+              },
+              {
+                "id": "blk_nb8aw5a4_mudyawlm",
+                "type": "heading",
+                "text": "تدرسه.",
+                "level": 3
+              }
+            ]
+          },
+          {
+            "id": "page_j6uyy1fq_mudyawln",
+            "title": "",
+            "order": 1,
+            "blocks": [
+              {
+                "id": "blk_2gid3tak_mudyawlm",
+                "type": "paragraph",
+                "text": "تبطئ، وتكتب، وتراجع، وتحلل."
+              },
+              {
+                "id": "blk_haeyypid_mudyawlm",
+                "type": "heading",
+                "text": "وبعضها",
+                "level": 3
+              },
+              {
+                "id": "blk_7xvfc15a_mudyawlm",
+                "type": "heading",
+                "text": "تهضمه.",
+                "level": 3
+              },
+              {
+                "id": "blk_4v78rs3g_mudyawlm",
+                "type": "paragraph",
+                "text": "تعود إليه مرة ثانية وثالثة لأن قيمته لا تنكشف من القراءة الأولى."
+              },
+              {
+                "id": "blk_v81yte2k_mudyawlm",
+                "type": "paragraph",
+                "text": "هذه الفكرة ظهرت بوضوح في الحديث عن اختلاف مستويات التعامل مع الكتب، وأن بعض الكتب تكون مرجعًا يعود إليه عند الحاجة، وبعضها يُقرأ عدة مرات، وبعضها يكفي أن تستخرج منه فصلًا أو فكرة محددة. fileciteturn1file0L15-L19"
+              },
+              {
+                "id": "blk_ssozei0r_mudyawlm",
+                "type": "heading",
+                "text": "وهنا يتحول القارئ من شخص يسأل",
+                "level": 3
+              },
+              {
+                "id": "blk_0q38jzdq_mudyawlm",
+                "type": "quote",
+                "text": "\"كم كتابًا قرأت؟\""
+              },
+              {
+                "id": "blk_pf4ajxf4_mudyawlm",
+                "type": "heading",
+                "text": "إلى شخص يسأل",
+                "level": 3
+              },
+              {
+                "id": "blk_23d4ifav_mudyawlm",
+                "type": "quote",
+                "text": "\"ماذا أحتاج من هذا الكتاب؟\""
+              },
+              {
+                "id": "blk_xo60bpse_mudyawlm",
+                "type": "paragraph",
+                "text": "وهذا سؤال أكثر نضجًا."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_t0lfcnvh_mudyawlm",
+        "title": "القراءة السريعة لا تعني القراءة السطحية",
+        "order": 13,
+        "pages": [
+          {
+            "id": "page_vcddrtl6_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_1z8vrmg7_mudyawlm",
+                "type": "paragraph",
+                "text": "هناك أحيانًا كتاب تستطيع إنهاءه بسرعة لأنك تبحث عن معلومات محددة، وكتاب آخر تحتاج فيه إلى التوقف عند كل صفحة."
+              },
+              {
+                "id": "blk_u6ae9ic5_mudyawlm",
+                "type": "paragraph",
+                "text": "في الكتب العميقة، قد تستغرق خمس صفحات ساعات."
+              },
+              {
+                "id": "blk_reo99pma_mudyawlm",
+                "type": "paragraph",
+                "text": "وفي كتاب آخر قد تقرأ مئات الصفحات بسرعة."
+              },
+              {
+                "id": "blk_t764p3l0_mudyawlm",
+                "type": "paragraph",
+                "text": "وهذا طبيعي."
+              },
+              {
+                "id": "blk_mxh2r72w_mudyawlm",
+                "type": "paragraph",
+                "text": "القراءة الذكية ليست أن تقرأ كل شيء بالسرعة نفسها، بل أن تعرف متى تسرع ومتى تتأنى."
+              },
+              {
+                "id": "blk_gj19lkwr_mudyawlm",
+                "type": "heading",
+                "text": "يمكن أن نسمي ذلك",
+                "level": 3
+              },
+              {
+                "id": "blk_crf4218i_mudyawlm",
+                "type": "heading",
+                "text": "قراءة أفقية:",
+                "level": 3
+              },
+              {
+                "id": "blk_47nc3w7e_mudyawlm",
+                "type": "paragraph",
+                "text": "توسع نطاق معرفتك، وتقارن بين الكتب والأفكار والموضوعات."
+              },
+              {
+                "id": "blk_qs9wi3tk_mudyawlm",
+                "type": "paragraph",
+                "text": "وقراءة رأسية: تغوص في نص أو فكرة محددة، وتحللها وتستخرج منها أكبر قدر ممكن."
+              },
+              {
+                "id": "blk_e1zd5qbh_mudyawlm",
+                "type": "paragraph",
+                "text": "كلاهما ضروري."
+              },
+              {
+                "id": "blk_dyigaakm_mudyawlm",
+                "type": "paragraph",
+                "text": "الأولى تمنحك الاتساع."
+              },
+              {
+                "id": "blk_zxgkac7r_mudyawlm",
+                "type": "paragraph",
+                "text": "والثانية تمنحك العمق."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_1pg74vws_mudyawlm",
+        "title": "لا تدخل الكتاب بلا سؤال",
+        "order": 14,
+        "pages": [
+          {
+            "id": "page_icx80z70_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_15q5m9k5_mudyawlm",
+                "type": "paragraph",
+                "text": "ربما أفضل طريقة لرفع قيمة أي كتاب هي أن تدخل إليه وأنت تعرف ماذا تبحث عنه."
+              },
+              {
+                "id": "blk_8dus1qev_mudyawlm",
+                "type": "heading",
+                "text": "بدل أن تقول",
+                "level": 3
+              },
+              {
+                "id": "blk_hnbjq7jn_mudyawlm",
+                "type": "quote",
+                "text": "\"سأقرأ هذا الكتاب.\""
+              },
+              {
+                "id": "blk_vkhrdhpb_mudyawlm",
+                "type": "heading",
+                "text": "قل",
+                "level": 3
+              },
+              {
+                "id": "blk_pvypwokz_mudyawlm",
+                "type": "quote",
+                "text": "\"سأقرأ هذا الكتاب لأفهم لماذا يحدث X.\""
+              },
+              {
+                "id": "blk_hmw82mrv_mudyawlm",
+                "type": "heading",
+                "text": "أو",
+                "level": 3
+              },
+              {
+                "id": "blk_mo1fb1cx_mudyawlm",
+                "type": "quote",
+                "text": "\"أريد أن أجد فيه كل ما يتعلق بـ Y.\""
+              },
+              {
+                "id": "blk_bo6v475k_mudyawlm",
+                "type": "heading",
+                "text": "أو",
+                "level": 3
+              },
+              {
+                "id": "blk_q0gx4fp4_mudyawlm",
+                "type": "quote",
+                "text": "\"أريد استخراج عشر أفكار يمكنني تطبيقها في عملي.\""
+              },
+              {
+                "id": "blk_35xg4qcw_mudyawlm",
+                "type": "paragraph",
+                "text": "هنا يتحول عقلك إلى صياد."
+              }
+            ]
+          },
+          {
+            "id": "page_sikipsug_mudyawln",
+            "title": "",
+            "order": 1,
+            "blocks": [
+              {
+                "id": "blk_ypb1ezk8_mudyawlm",
+                "type": "paragraph",
+                "text": "وأنت لا تقرأ الكلمات فقط؛ أنت تبحث عن شيء."
+              },
+              {
+                "id": "blk_cywcfc4d_mudyawlm",
+                "type": "paragraph",
+                "text": "وهذا ما يجعل القراءة أكثر تركيزًا وأكثر إنتاجًا."
+              },
+              {
+                "id": "blk_orqy4589_mudyawlm",
+                "type": "paragraph",
+                "text": "في إحدى التجارب المذكورة، كان القارئ يدخل إلى الكتاب ومعه مشروع بحثي محدد، ويضع أي معلومة تخدم هذا المشروع في ملف خاص، حتى تراكمت خلال السنوات ملفات معرفية كبيرة من أشياء صغيرة ربما لم تكن تبدو مهمة وقت قراءتها الأولى. fileciteturn1file1L49-L53"
+              },
+              {
+                "id": "blk_gutgiwpe_mudyawlm",
+                "type": "heading",
+                "text": "وهنا تظهر قاعدة شديدة الأهمية",
+                "level": 3
+              },
+              {
+                "id": "blk_prpoz9to_mudyawlm",
+                "type": "quote",
+                "text": "لا تقرأ لكي تنهي الكتاب؛ اقرأ لكي تخرج بشيء يمكنك استخدامه."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_xngifvlx_mudyawlm",
+        "title": "اجعل للقراءة مشروعًا، لا مجرد رقم",
+        "order": 15,
+        "pages": [
+          {
+            "id": "page_x3y88y5d_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_3wnkmgtg_mudyawlm",
+                "type": "heading",
+                "text": "من السهل أن تقع في فخ",
+                "level": 3
+              },
+              {
+                "id": "blk_9xhzb50r_mudyawlm",
+                "type": "heading",
+                "text": "\"سأقرأ 50 كتابًا هذا العام.\"",
+                "level": 3
+              },
+              {
+                "id": "blk_txfhm8q8_mudyawlm",
+                "type": "paragraph",
+                "text": "ثم تتحول القراءة إلى سباق."
+              },
+              {
+                "id": "blk_zjphgzei_mudyawlm",
+                "type": "paragraph",
+                "text": "تنتهي من الكتاب وتنتقل إلى الذي يليه، ثم الذي يليه، وفي نهاية العام تستطيع أن تقول إنك قرأت خمسين كتابًا، لكنك لا تعرف ماذا صنعت بك هذه الكتب."
+              },
+              {
+                "id": "blk_oc556q7a_mudyawlm",
+                "type": "paragraph",
+                "text": "الأفضل أن تجعل للقراءة مشاريع صغيرة."
+              },
+              {
+                "id": "blk_5yocp16l_mudyawlm",
+                "type": "heading",
+                "text": "مثلًا",
+                "level": 3
+              },
+              {
+                "id": "blk_f913474q_mudyawlm",
+                "type": "list",
+                "text": "",
+                "items": [
+                  "أريد فهم أساسيات علم النفس.",
+                  "أريد أن أفهم تاريخ مجال معين.",
+                  "أريد تحسين كتابتي.",
+                  "أريد بناء معرفة قوية في الإدارة.",
+                  "أريد دراسة سيرة شخصية مؤثرة.",
+                  "أريد استخراج أفضل الأفكار العملية من خمسة كتب حول موضوع واحد."
+                ]
+              },
+              {
+                "id": "blk_qnwtbr1z_mudyawlm",
+                "type": "paragraph",
+                "text": "عندها تصبح الكتب أدوات داخل مشروع أكبر."
+              },
+              {
+                "id": "blk_wwy4x3hu_mudyawlm",
+                "type": "paragraph",
+                "text": "وهذا يحل مشكلة مهمة جدًا: الشعور بأنك قرأت كتابًا ولم تستفد منه."
+              },
+              {
+                "id": "blk_slcwd4s5_mudyawlm",
+                "type": "paragraph",
+                "text": "إذا خرجت من كتاب بثلاث أفكار تخدم مشروعك، فقد أدى وظيفته."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_5nvttw0f_mudyawlm",
+        "title": "اقرأ عدة كتب في الموضوع نفسه",
+        "order": 16,
+        "pages": [
+          {
+            "id": "page_82aypt6p_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_c9g2j2ba_mudyawlm",
+                "type": "paragraph",
+                "text": "قراءة كتاب واحد عن موضوع ما قد تمنحك معرفة."
+              },
+              {
+                "id": "blk_dy3i51th_mudyawlm",
+                "type": "paragraph",
+                "text": "لكن قراءة عدة كتب جيدة عن الموضوع نفسه تمنحك شيئًا آخر: القدرة على المقارنة."
+              },
+              {
+                "id": "blk_kqyy76eq_mudyawlm",
+                "type": "heading",
+                "text": "تبدأ في ملاحظة",
+                "level": 3
+              },
+              {
+                "id": "blk_gt4h8e42_mudyawlm",
+                "type": "paragraph",
+                "text": "ما الذي يتفق عليه الجميع؟"
+              },
+              {
+                "id": "blk_wq1szz3a_mudyawlm",
+                "type": "paragraph",
+                "text": "أين يختلفون؟"
+              },
+              {
+                "id": "blk_fzjx37ae_mudyawlm",
+                "type": "paragraph",
+                "text": "من يشرح الفكرة بشكل أوضح؟"
+              },
+              {
+                "id": "blk_sl4kyvnv_mudyawlm",
+                "type": "paragraph",
+                "text": "ما الذي أضافه كل كاتب؟"
+              },
+              {
+                "id": "blk_womr6imo_mudyawlm",
+                "type": "paragraph",
+                "text": "ما الذي تكرر؟"
+              },
+              {
+                "id": "blk_213ha6md_mudyawlm",
+                "type": "paragraph",
+                "text": "وما الذي لم تجده إلا عند مؤلف واحد؟"
+              },
+              {
+                "id": "blk_349z3tqb_mudyawlm",
+                "type": "paragraph",
+                "text": "وهنا تبدأ في تكوين رأيك أنت، بدل أن يصبح رأيك مجرد انعكاس لآخر كتاب قرأته."
+              },
+              {
+                "id": "blk_si6lkdmg_mudyawlm",
+                "type": "paragraph",
+                "text": "ولهذا ظهرت في التجارب التي تناولت القراءة فكرة التبحر في المجال عبر عدة كتب، ثم استخدام الإحالات والتوصيات داخل الكتب للوصول إلى كتب أخرى أكثر تخصصًا. fileciteturn1file0L14-L17"
+              },
+              {
+                "id": "blk_5z3g05ms_mudyawlm",
+                "type": "heading",
+                "text": "كتاب جيد يقودك إلى كتاب آخر، والكتاب الثاني يفتح لك بابًا ثالثًا.",
+                "level": 3
+              },
+              {
+                "id": "blk_cvfudbbz_mudyawlm",
+                "type": "paragraph",
+                "text": "وهكذا تبنى المكتبة الحقيقية."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_typ9hx6w_mudyawlm",
+        "title": "ماذا نقرأ؟ ابدأ بالكتب المركزية",
+        "order": 17,
+        "pages": [
+          {
+            "id": "page_4syq5u95_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_fiz2zle0_mudyawlm",
+                "type": "paragraph",
+                "text": "عندما تدخل مجالًا جديدًا، لا تجعل هدفك العثور على أغرب كتاب أو أحدث كتاب أو كتاب لم يسمع به أحد."
+              },
+              {
+                "id": "blk_k62595qe_mudyawlm",
+                "type": "paragraph",
+                "text": "ابدأ بالكتب التي تُعد مركزية أو تأسيسية في المجال."
+              },
+              {
+                "id": "blk_c6w22yjh_mudyawlm",
+                "type": "paragraph",
+                "text": "لأن هذه الكتب تمنحك الهيكل الذي ستفهم من خلاله بقية الكتب."
+              },
+              {
+                "id": "blk_xffvjm4k_mudyawlm",
+                "type": "paragraph",
+                "text": "ثم، بعد أن تتكون لديك قاعدة، يمكنك الانتقال إلى الكتب المتخصصة والمقاربات المختلفة."
+              },
+              {
+                "id": "blk_c3fl9q03_mudyawlm",
+                "type": "heading",
+                "text": "ومع الوقت سيحدث شيء جميل",
+                "level": 3
+              },
+              {
+                "id": "blk_90eoe4qp_mudyawlm",
+                "type": "paragraph",
+                "text": "لن تحتاج إلى شخص يعطيك قائمة قراءة كل مرة."
+              },
+              {
+                "id": "blk_x4oylayz_mudyawlm",
+                "type": "paragraph",
+                "text": "ستصبح قادرًا على بناء قائمتك بنفسك."
+              },
+              {
+                "id": "blk_x4qh3sha_mudyawlm",
+                "type": "paragraph",
+                "text": "تقرأ كتابًا، فيشير الكاتب إلى كتاب آخر."
+              },
+              {
+                "id": "blk_khhhimty_mudyawlm",
+                "type": "paragraph",
+                "text": "تقرأ الثاني، فيحيلك إلى الثالث."
+              },
+              {
+                "id": "blk_m0avwsv2_mudyawlm",
+                "type": "paragraph",
+                "text": "تكتشف مؤلفًا يعجبك، فتبحث في بقية أعماله."
+              },
+              {
+                "id": "blk_9t54gdv2_mudyawlm",
+                "type": "paragraph",
+                "text": "تتعرف إلى مدرسة فكرية، فتقرأ خصومها."
+              },
+              {
+                "id": "blk_zifecdco_mudyawlm",
+                "type": "paragraph",
+                "text": "وهكذا تنتقل من مرحلة البحث عن الكتب إلى مرحلة اكتشاف عالم الكتب."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_ffortx6x_mudyawlm",
+        "title": "لا تجعل اقتناء الكتب بديلًا عن قراءتها",
+        "order": 18,
+        "pages": [
+          {
+            "id": "page_tguqqbc7_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_rn03bfxj_mudyawlm",
+                "type": "paragraph",
+                "text": "يمكن أن تمتلك مئات الكتب ولا تكون قارئًا حقيقيًا."
+              },
+              {
+                "id": "blk_7itvaz30_mudyawlm",
+                "type": "paragraph",
+                "text": "المكتبة الكبيرة ليست دليلًا على المعرفة."
+              },
+              {
+                "id": "blk_35opcxlk_mudyawlm",
+                "type": "heading",
+                "text": "ما يدخل عقلك أهم مما يقف على رفك.",
+                "level": 3
+              },
+              {
+                "id": "blk_no9lw3gq_mudyawlm",
+                "type": "paragraph",
+                "text": "وفي المقابل، قد يمتلك شخص عشرات الكتب فقط، لكنه قرأها بعناية، وراجعها، واستخرج منها الأفكار، وطبق بعضها، فأصبح أغزر معرفة من شخص لديه آلاف الكتب لم يفتح معظمها."
+              },
+              {
+                "id": "blk_8qqod67u_mudyawlm",
+                "type": "paragraph",
+                "text": "القارئ الحقيقي ليس بالضرورة من يقرأ أكثر."
+              },
+              {
+                "id": "blk_97r03hzz_mudyawlm",
+                "type": "paragraph",
+                "text": "بل من يخرج من قراءته بشيء."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_ph701pgh_mudyawlm",
+        "title": "لماذا يترك بعض الناس القراءة بعد عشرة أو عشرين صفحة؟",
+        "order": 19,
+        "pages": [
+          {
+            "id": "page_6x2cf49p_mudyawlm",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_i85biibi_mudyawlm",
+                "type": "paragraph",
+                "text": "لأنهم يتعاملون مع القراءة باعتبارها مسألة إرادة فقط."
+              },
+              {
+                "id": "blk_040jlugn_mudyawlm",
+                "type": "paragraph",
+                "text": "لكن البيئة تلعب دورًا كبيرًا."
+              },
+              {
+                "id": "blk_qjkzun7g_mudyawlm",
+                "type": "paragraph",
+                "text": "إذا كنت تقرأ بينما هاتفك بجوارك، والإشعارات تعمل، وكل دقيقة يمكنك الانتقال إلى تطبيق آخر، فأنت تطلب من عقلك أن يفعل عكس ما تعوده عليه."
+              },
+              {
+                "id": "blk_wmfps1q6_mudyawlm",
+                "type": "paragraph",
+                "text": "لذلك قد يكون أحد أبسط الحلول هو إزالة مصدر التشتيت."
+              },
+              {
+                "id": "blk_6q3iz0so_mudyawlm",
+                "type": "paragraph",
+                "text": "ضع الهاتف بعيدًا."
+              },
+              {
+                "id": "blk_kivg3p0j_mudyawlm",
+                "type": "paragraph",
+                "text": "ليس على الطاولة."
+              },
+              {
+                "id": "blk_xojl9v6a_mudyawlm",
+                "type": "paragraph",
+                "text": "ليس مقلوبًا بجانب الكتاب."
+              },
+              {
+                "id": "blk_1fsnswd4_mudyawlm",
+                "type": "paragraph",
+                "text": "بل بعيدًا فعلًا."
+              },
+              {
+                "id": "blk_lgj74qjk_mudyawlm",
+                "type": "paragraph",
+                "text": "هناك تجربة ذُكرت لشخص وجد أن ترك الهاتف في السيارة ساعده على القراءة؛ لأنه في كل مرة كانت يده تذهب تلقائيًا إلى جيبه ثم يتذكر أن الهاتف ليس معه، فيعود إلى الكتاب. fileciteturn0file2L41-L45"
+              },
+              {
+                "id": "blk_h9yewuby_mudyawlm",
+                "type": "paragraph",
+                "text": "أحيانًا لا تحتاج إلى مزيد من الانضباط."
+              },
+              {
+                "id": "blk_81a50tb0_mudyawlm",
+                "type": "paragraph",
+                "text": "تحتاج فقط إلى بيئة تجعل الانضباط أسهل."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_4oafgyfd_mudyawlm",
+        "title": "والوقت؟ \"لا أملك وقتًا للقراءة\"",
+        "order": 20,
+        "pages": [
+          {
+            "id": "page_n1buu6h1_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_hstocwnd_mudyawlm",
+                "type": "paragraph",
+                "text": "في كثير من الأحيان لا تكون المشكلة غياب الوقت، بل غياب الأولوية."
+              },
+              {
+                "id": "blk_gc1js6qi_mudyawlm",
+                "type": "paragraph",
+                "text": "نجد وقتًا للهاتف."
+              },
+              {
+                "id": "blk_tscgncr7_mudyawlm",
+                "type": "paragraph",
+                "text": "وقتًا لمقاطع قصيرة."
+              },
+              {
+                "id": "blk_rmaxoh44_mudyawlm",
+                "type": "paragraph",
+                "text": "وقتًا للمحادثات."
+              },
+              {
+                "id": "blk_5r5lus0q_mudyawlm",
+                "type": "paragraph",
+                "text": "وقتًا للتصفح العشوائي."
+              },
+              {
+                "id": "blk_z5zhjmbs_mudyawlm",
+                "type": "paragraph",
+                "text": "ثم نقول إننا لا نملك عشرين دقيقة للكتاب."
+              },
+              {
+                "id": "blk_lcle4ojx_mudyawln",
+                "type": "paragraph",
+                "text": "لكن عندما تحب شيئًا فعلًا، تبدأ في اكتشاف الوقت الموجود أصلًا."
+              },
+              {
+                "id": "blk_iu8kkxdz_mudyawln",
+                "type": "heading",
+                "text": "ولهذا قيل في أحد اللقاءات",
+                "level": 3
+              },
+              {
+                "id": "blk_tyoqpbol_mudyawln",
+                "type": "quote",
+                "text": "الحب يولّد الوقت."
+              },
+              {
+                "id": "blk_lp7qa5n1_mudyawln",
+                "type": "paragraph",
+                "text": "عندما تصبح القراءة شيئًا تريده فعلًا، ستبدأ في اقتناص الدقائق الصغيرة: قبل النوم، أثناء الانتظار، في السفر، في المواصلات، أو في فترات الفراغ التي كانت تضيع بلا هدف. fileciteturn1file1L39-L45"
+              }
+            ]
+          },
+          {
+            "id": "page_oh3f9zef_mudyawln",
+            "title": "",
+            "order": 1,
+            "blocks": [
+              {
+                "id": "blk_2whce8xe_mudyawln",
+                "type": "paragraph",
+                "text": "ولا تحتاج إلى البدء بثلاث ساعات."
+              },
+              {
+                "id": "blk_zpufuhit_mudyawln",
+                "type": "paragraph",
+                "text": "ابدأ بعشر دقائق."
+              },
+              {
+                "id": "blk_e0zwvldr_mudyawln",
+                "type": "paragraph",
+                "text": "ثم خمس عشرة."
+              },
+              {
+                "id": "blk_hzq06526_mudyawln",
+                "type": "paragraph",
+                "text": "ثم نصف ساعة."
+              },
+              {
+                "id": "blk_elhhtbrc_mudyawln",
+                "type": "callout",
+                "text": "المهم أن تجعل القراءة جزءًا من حياتك قبل أن تجعلها إنجازًا.",
+                "calloutType": "note"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_vkqvepwy_mudyawln",
+        "title": "اصنع مجتمعًا حول القراءة",
+        "order": 21,
+        "pages": [
+          {
+            "id": "page_2s5s4g8h_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_tqhrzvbf_mudyawln",
+                "type": "paragraph",
+                "text": "من الصعب أحيانًا أن تصبح قارئًا إذا كان كل من حولك لا يقرأ."
+              },
+              {
+                "id": "blk_gpuha1dd_mudyawln",
+                "type": "paragraph",
+                "text": "لكن التكنولوجيا التي تشتتك يمكن أن تستخدمها في الاتجاه المعاكس."
+              },
+              {
+                "id": "blk_9oakab8v_mudyawln",
+                "type": "paragraph",
+                "text": "ابحث عن مجتمع مهتم بالموضوع نفسه."
+              },
+              {
+                "id": "blk_oyms25mx_mudyawln",
+                "type": "heading",
+                "text": "اسألهم",
+                "level": 3
+              },
+              {
+                "id": "blk_wjqcyv6s_mudyawln",
+                "type": "paragraph",
+                "text": "ما أفضل كتاب للمبتدئ؟"
+              },
+              {
+                "id": "blk_n84ez3ag_mudyawln",
+                "type": "paragraph",
+                "text": "ما الكتاب الذي غير طريقة تفكيركم؟"
+              },
+              {
+                "id": "blk_7k16qcn1_mudyawln",
+                "type": "paragraph",
+                "text": "ما الكتاب الذي لا تنصحون به؟"
+              },
+              {
+                "id": "blk_5630cek2_mudyawln",
+                "type": "paragraph",
+                "text": "ما أفضل ترجمة أو طبعة؟"
+              },
+              {
+                "id": "blk_6fijuykd_mudyawln",
+                "type": "paragraph",
+                "text": "ثم اقرأ وناقش."
+              },
+              {
+                "id": "blk_fcrj2j0r_mudyawln",
+                "type": "paragraph",
+                "text": "المناقشة تضيف طبقة جديدة من الفهم؛ لأن شخصًا آخر قد يرى في الصفحة شيئًا لم تره أنت."
+              },
+              {
+                "id": "blk_ozfuq4sj_mudyawln",
+                "type": "paragraph",
+                "text": "وقد تكتشف أنك فهمت الفكرة بطريقة مختلفة."
+              },
+              {
+                "id": "blk_sdafnxqi_mudyawln",
+                "type": "paragraph",
+                "text": "وقد يدفعك أحدهم إلى كتاب لم تكن ستصل إليه وحدك."
+              },
+              {
+                "id": "blk_bdh7dl8a_mudyawln",
+                "type": "paragraph",
+                "text": "وقد تصبح أنت نفسك سببًا في أن يقرأ شخص آخر كتابًا مهمًا."
+              },
+              {
+                "id": "blk_jkxl1936_mudyawln",
+                "type": "paragraph",
+                "text": "وهكذا تتحول القراءة من نشاط فردي إلى بيئة معرفية. fileciteturn1file1L44-L48"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_7jgbks45_mudyawln",
+        "title": "وبعد القراءة: لا تحتفظ بكل شيء في رأسك",
+        "order": 22,
+        "pages": [
+          {
+            "id": "page_m0v7o3zv_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_t72rjmu9_mudyawln",
+                "type": "paragraph",
+                "text": "من أكثر الأشياء التي تضاعف فائدة القراءة أن تخرج المعرفة من رأسك."
+              },
+              {
+                "id": "blk_rfidirft_mudyawln",
+                "type": "paragraph",
+                "text": "اكتب."
+              },
+              {
+                "id": "blk_m2purwem_mudyawln",
+                "type": "paragraph",
+                "text": "لخص بأسلوبك."
+              },
+              {
+                "id": "blk_48hs5mif_mudyawln",
+                "type": "paragraph",
+                "text": "ناقش شخصًا."
+              },
+              {
+                "id": "blk_nu0hf010_mudyawln",
+                "type": "paragraph",
+                "text": "سجل ملاحظة صوتية."
+              },
+              {
+                "id": "blk_sxwfveid_mudyawln",
+                "type": "paragraph",
+                "text": "اكتب مقالًا."
+              },
+              {
+                "id": "blk_vn8okd3b_mudyawln",
+                "type": "paragraph",
+                "text": "اشرح الفكرة لصديق."
+              },
+              {
+                "id": "blk_vt1laznw_mudyawln",
+                "type": "paragraph",
+                "text": "انشر ما تعلمته."
+              },
+              {
+                "id": "blk_f31rve9a_mudyawln",
+                "type": "paragraph",
+                "text": "لأنك عندما تحاول شرح الفكرة بلغتك، تكتشف فورًا هل فهمتها فعلًا أم كنت فقط تشعر أنك فهمتها."
+              },
+              {
+                "id": "blk_1a7f1h1a_mudyawln",
+                "type": "heading",
+                "text": "وهنا يتحول التعلم من",
+                "level": 3
+              }
+            ]
+          },
+          {
+            "id": "page_ctbutjqc_mudyawln",
+            "title": "",
+            "order": 1,
+            "blocks": [
+              {
+                "id": "blk_4mdw29pr_mudyawln",
+                "type": "heading",
+                "text": "\"قرأت.\"",
+                "level": 3
+              },
+              {
+                "id": "blk_7f3sghvn_mudyawln",
+                "type": "heading",
+                "text": "إلى",
+                "level": 3
+              },
+              {
+                "id": "blk_65efvlyk_mudyawln",
+                "type": "heading",
+                "text": "\"فهمت.\"",
+                "level": 3
+              },
+              {
+                "id": "blk_xatycv10_mudyawln",
+                "type": "heading",
+                "text": "ثم إلى",
+                "level": 3
+              },
+              {
+                "id": "blk_4ioozehh_mudyawln",
+                "type": "heading",
+                "text": "\"أستطيع أن أشرح.\"",
+                "level": 3
+              },
+              {
+                "id": "blk_1b3nsyd2_mudyawln",
+                "type": "heading",
+                "text": "ثم إلى",
+                "level": 3
+              },
+              {
+                "id": "blk_1uanj9jm_mudyawln",
+                "type": "heading",
+                "text": "\"أستطيع أن أطبق.\"",
+                "level": 3
+              },
+              {
+                "id": "blk_4me7ga7f_mudyawln",
+                "type": "paragraph",
+                "text": "وهذه هي الرحلة الحقيقية للمعرفة."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_6gt9wr5u_mudyawln",
+        "title": "لكن لا تجعل كل كتاب مشروعًا ضخمًا",
+        "order": 23,
+        "pages": [
+          {
+            "id": "page_ohktyevh_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_ebjtrw99_mudyawln",
+                "type": "paragraph",
+                "text": "في المقابل، هناك خطأ آخر: تحويل القراءة إلى نظام معقد جدًا."
+              },
+              {
+                "id": "blk_7zc701k3_mudyawln",
+                "type": "paragraph",
+                "text": "دفتر خاص."
+              },
+              {
+                "id": "blk_zb4grn30_mudyawln",
+                "type": "paragraph",
+                "text": "تطبيق خاص."
+              },
+              {
+                "id": "blk_6fkc2ka6_mudyawln",
+                "type": "paragraph",
+                "text": "ألوان متعددة."
+              },
+              {
+                "id": "blk_niagja45_mudyawln",
+                "type": "paragraph",
+                "text": "جداول."
+              },
+              {
+                "id": "blk_vxae8apx_mudyawln",
+                "type": "paragraph",
+                "text": "إحصائيات."
+              },
+              {
+                "id": "blk_jgs644st_mudyawln",
+                "type": "paragraph",
+                "text": "نظام ملاحظات لا ينتهي."
+              },
+              {
+                "id": "blk_qtvlf3bs_mudyawln",
+                "type": "paragraph",
+                "text": "ثم تقضي وقتًا في إدارة نظام القراءة أكثر مما تقضي في القراءة نفسها."
+              },
+              {
+                "id": "blk_f40ovslc_mudyawln",
+                "type": "paragraph",
+                "text": "استخدم ما يساعدك، لا ما يستهلكك."
+              },
+              {
+                "id": "blk_b0wsp4ge_mudyawln",
+                "type": "paragraph",
+                "text": "قد يكفيك ملف واحد تجمع فيه الأفكار المهمة."
+              },
+              {
+                "id": "blk_yxv9g8ar_mudyawln",
+                "type": "paragraph",
+                "text": "أو ملاحظات بسيطة في الهاتف."
+              },
+              {
+                "id": "blk_ofcrulfn_mudyawln",
+                "type": "paragraph",
+                "text": "أو علامات داخل الكتاب."
+              },
+              {
+                "id": "blk_3tpwkj3b_mudyawln",
+                "type": "paragraph",
+                "text": "أو ثلاث صفحات تلخص فيها أهم ما تريد الاحتفاظ به."
+              },
+              {
+                "id": "blk_7tw3cl6o_mudyawln",
+                "type": "paragraph",
+                "text": "النظام الجيد هو الذي يجعلك تقرأ أكثر وتفهم أفضل، لا الذي يجعلك تشعر أنك تدير شركة لإدارة الكتب."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_0v27mx9e_mudyawln",
+        "title": "ماذا تفعل إذا لم يعجبك الكتاب؟",
+        "order": 24,
+        "pages": [
+          {
+            "id": "page_hp0u7q9m_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_grs96ght_mudyawln",
+                "type": "paragraph",
+                "text": "اتركه."
+              },
+              {
+                "id": "blk_bfwccsik_mudyawln",
+                "type": "paragraph",
+                "text": "هذه ليست هزيمة."
+              },
+              {
+                "id": "blk_e50c32o9_mudyawln",
+                "type": "paragraph",
+                "text": "من علامات نضج القارئ أن يعرف أن وقته محدود."
+              },
+              {
+                "id": "blk_y2tc8549_mudyawln",
+                "type": "paragraph",
+                "text": "قد يكون الكتاب ممتازًا، لكنه لا يناسبك الآن."
+              },
+              {
+                "id": "blk_vnre44iu_mudyawln",
+                "type": "paragraph",
+                "text": "قد يكون مناسبًا لشخص آخر، لكنه ليس ما تحتاجه."
+              },
+              {
+                "id": "blk_w6z33l00_mudyawln",
+                "type": "paragraph",
+                "text": "وقد تكتشف بعد خمسين صفحة أن الكتاب لن يقدم لك ما تبحث عنه."
+              },
+              {
+                "id": "blk_aqtw3jiy_mudyawln",
+                "type": "paragraph",
+                "text": "لا تجعل احترامك للكتاب يجبرك على إهدار وقتك."
+              },
+              {
+                "id": "blk_my76osdu_mudyawln",
+                "type": "paragraph",
+                "text": "لكن في المقابل، لا تترك كل كتاب لمجرد أنك شعرت بالملل في أول عشر صفحات."
+              },
+              {
+                "id": "blk_jzz4a935_mudyawln",
+                "type": "heading",
+                "text": "تعلم الفرق بين كتاب يحتاج إلى صبر، وكتاب لا يستحق وقتك.",
+                "level": 3
+              },
+              {
+                "id": "blk_jbx1kkjc_mudyawln",
+                "type": "paragraph",
+                "text": "وهذه مهارة لا تأتي إلا مع كثرة القراءة."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_t82s7hjx_mudyawln",
+        "title": "إعادة القراءة ليست تكرارًا بلا فائدة",
+        "order": 25,
+        "pages": [
+          {
+            "id": "page_kejpoe75_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_i09xdkql_mudyawln",
+                "type": "paragraph",
+                "text": "قد يبدو من الغريب أن يعيد شخص قراءة الكتاب نفسه عدة مرات بينما توجد آلاف الكتب التي لم يقرأها بعد."
+              },
+              {
+                "id": "blk_7i66y2mv_mudyawln",
+                "type": "paragraph",
+                "text": "لكن الكتاب الجيد لا يبقى هو نفسه بالنسبة لك."
+              },
+              {
+                "id": "blk_paes6ewl_mudyawln",
+                "type": "paragraph",
+                "text": "أنت الذي تغيرت."
+              },
+              {
+                "id": "blk_ptad7dna_mudyawln",
+                "type": "paragraph",
+                "text": "الفكرة التي مرت عليك في العشرين قد تفهمها بصورة مختلفة في الثلاثين."
+              },
+              {
+                "id": "blk_h5mnpdsf_mudyawln",
+                "type": "paragraph",
+                "text": "والفصل الذي بدا عاديًا في المرة الأولى قد يصبح أهم فصل في الكتاب بعد سنوات."
+              },
+              {
+                "id": "blk_k6e41fz5_mudyawln",
+                "type": "paragraph",
+                "text": "ولهذا كان بعض العلماء والقراء يعيدون الكتب الجيدة مرارًا، بل إن التجارب المذكورة في المصادر تضرب أمثلة على قراء أعادوا بعض الكتب مرات كثيرة جدًا، لأن قيمة الكتاب الجيد لا تُقاس بعدد مرات الانتهاء منه، بل بعمق ما تستخرجه منه. fileciteturn0file1L15-L18"
+              },
+              {
+                "id": "blk_tr14zk5g_mudyawln",
+                "type": "heading",
+                "text": "أحيانًا قراءة كتاب عظيم ثلاث مرات أفضل من قراءة ثلاثة كتب عابرة مرة واحدة.",
+                "level": 3
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_odknyoym_mudyawln",
+        "title": "القراءة في النهاية تبنيك ببطء",
+        "order": 26,
+        "pages": [
+          {
+            "id": "page_0gmytgks_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_iycc8cax_mudyawln",
+                "type": "paragraph",
+                "text": "أخطر شيء في القراءة أنها لا تعطيك دائمًا نتيجة فورية."
+              },
+              {
+                "id": "blk_p80pir95_mudyawln",
+                "type": "paragraph",
+                "text": "أنت تقرأ اليوم ولا تشعر أنك أصبحت شخصًا مختلفًا."
+              },
+              {
+                "id": "blk_cb4tm94a_mudyawln",
+                "type": "paragraph",
+                "text": "تقرأ غدًا، وبعده."
+              },
+              {
+                "id": "blk_zbf7hz1d_mudyawln",
+                "type": "paragraph",
+                "text": "ثم تمر سنة."
+              },
+              {
+                "id": "blk_auzywse7_mudyawln",
+                "type": "paragraph",
+                "text": "ثم تجلس مع شخص لم يقرأ كثيرًا، فتكتشف أنك أصبحت تعرف أشياء لم تكن تعرفها."
+              },
+              {
+                "id": "blk_dr483g1t_mudyawln",
+                "type": "paragraph",
+                "text": "تتحدث بطريقة مختلفة."
+              },
+              {
+                "id": "blk_2d52as5f_mudyawln",
+                "type": "paragraph",
+                "text": "تشرح أفضل."
+              },
+              {
+                "id": "blk_uqz4fjpk_mudyawln",
+                "type": "paragraph",
+                "text": "تربط بين الأشياء أسرع."
+              },
+              {
+                "id": "blk_n2r0f163_mudyawln",
+                "type": "paragraph",
+                "text": "تطرح أسئلة أعمق."
+              },
+              {
+                "id": "blk_w1ivv1yl_mudyawln",
+                "type": "paragraph",
+                "text": "ترى الأمور من أكثر من زاوية."
+              },
+              {
+                "id": "blk_5q1e9cp6_mudyawln",
+                "type": "paragraph",
+                "text": "حتى ذوقك في اللغة يتغير."
+              },
+              {
+                "id": "blk_0m32n7j2_mudyawln",
+                "type": "heading",
+                "text": "البناء حدث طوال الوقت، لكنك لم تكن تراه أثناء حدوثه.",
+                "level": 3
+              },
+              {
+                "id": "blk_1xa6aqp6_mudyawln",
+                "type": "paragraph",
+                "text": "إنه يشبه بناء جدار من آلاف الطوب: وضع حجر واحد لا يثير الانتباه، لكن بعد سنوات يصبح أمامك بناء كامل."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_ofpptxzc_mudyawln",
+        "title": "ولهذا لا تجعل هدفك أن تصبح \"قارئًا\"",
+        "order": 27,
+        "pages": [
+          {
+            "id": "page_zkouo1da_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_a7lpypae_mudyawln",
+                "type": "paragraph",
+                "text": "اجعل هدفك أن تصبح إنسانًا أفضل بسبب ما تقرأ."
+              },
+              {
+                "id": "blk_wvbdrmjh_mudyawln",
+                "type": "heading",
+                "text": "لا يهم كثيرًا أن تقول",
+                "level": 3
+              },
+              {
+                "id": "blk_hmrc0mzc_mudyawln",
+                "type": "quote",
+                "text": "\"قرأت 100 كتاب.\""
+              },
+              {
+                "id": "blk_i0qspcz4_mudyawln",
+                "type": "heading",
+                "text": "الأهم",
+                "level": 3
+              },
+              {
+                "id": "blk_8571q57s_mudyawln",
+                "type": "quote",
+                "text": "ماذا فعلت هذه الكتب بك؟"
+              },
+              {
+                "id": "blk_d9hjjcul_mudyawln",
+                "type": "paragraph",
+                "text": "هل أصبحت أقدر على التفكير؟"
+              },
+              {
+                "id": "blk_bk0oy5xe_mudyawln",
+                "type": "paragraph",
+                "text": "هل أصبحت أكثر فهمًا؟"
+              },
+              {
+                "id": "blk_5bwmqwv3_mudyawln",
+                "type": "paragraph",
+                "text": "هل أصبحت أفضل في عملك؟"
+              },
+              {
+                "id": "blk_450t43ct_mudyawln",
+                "type": "paragraph",
+                "text": "هل تحسن تعبيرك؟"
+              },
+              {
+                "id": "blk_e6j1iys7_mudyawln",
+                "type": "paragraph",
+                "text": "هل أصبحت أوسع أفقًا؟"
+              }
+            ]
+          },
+          {
+            "id": "page_bj3v5zup_mudyawln",
+            "title": "",
+            "order": 1,
+            "blocks": [
+              {
+                "id": "blk_h3cn2r12_mudyawln",
+                "type": "paragraph",
+                "text": "هل اتخذت قرارات أفضل؟"
+              },
+              {
+                "id": "blk_p2t3zx2r_mudyawln",
+                "type": "paragraph",
+                "text": "هل تخلصت من فكرة خاطئة؟"
+              },
+              {
+                "id": "blk_lcl4c4ld_mudyawln",
+                "type": "paragraph",
+                "text": "هل تعلمت من تجربة شخص آخر بدل أن تدفع ثمنها بنفسك؟"
+              },
+              {
+                "id": "blk_5dnyaeng_mudyawln",
+                "type": "paragraph",
+                "text": "هل أصبحت أكثر قدرة على الحوار؟"
+              },
+              {
+                "id": "blk_tpanhwgl_mudyawln",
+                "type": "paragraph",
+                "text": "إذا كانت الإجابة نعم، فالقراءة تؤدي وظيفتها."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ch_kobdo1sx_mudyawln",
+        "title": "ابدأ بكتاب واحد",
+        "order": 28,
+        "pages": [
+          {
+            "id": "page_95jq3du0_mudyawln",
+            "title": "",
+            "order": 0,
+            "blocks": [
+              {
+                "id": "blk_uj14jg6m_mudyawln",
+                "type": "paragraph",
+                "text": "لا تحتاج إلى خطة أسطورية."
+              },
+              {
+                "id": "blk_0euq2vvl_mudyawln",
+                "type": "heading",
+                "text": "لا تقل",
+                "level": 3
+              },
+              {
+                "id": "blk_r3ngk4ia_mudyawln",
+                "type": "heading",
+                "text": "\"سأقرأ 100 كتاب هذا العام.\"",
+                "level": 3
+              },
+              {
+                "id": "blk_mp1ts7sr_mudyawln",
+                "type": "paragraph",
+                "text": "ولا تجعل الرقم هو الهدف."
+              },
+              {
+                "id": "blk_c7xxx4fo_mudyawln",
+                "type": "paragraph",
+                "text": "اختر كتابًا واحدًا في موضوع يثير اهتمامك فعلًا."
+              },
+              {
+                "id": "blk_n6b8nip5_mudyawln",
+                "type": "paragraph",
+                "text": "خصص له عشر أو خمس عشرة دقيقة يوميًا."
+              },
+              {
+                "id": "blk_i94h9kk0_mudyawln",
+                "type": "paragraph",
+                "text": "أبعد الهاتف."
+              },
+              {
+                "id": "blk_5dtc3v2f_mudyawln",
+                "type": "paragraph",
+                "text": "اقرأ بانتظام."
+              },
+              {
+                "id": "blk_mm23jczo_mudyawln",
+                "type": "paragraph",
+                "text": "ضع علامة على الأفكار التي تستحق العودة."
+              },
+              {
+                "id": "blk_sifdtfk2_mudyawln",
+                "type": "paragraph",
+                "text": "اكتب ما يستحق الاحتفاظ به."
+              }
+            ]
+          },
+          {
+            "id": "page_d8wzdt1j_mudyawln",
+            "title": "",
+            "order": 1,
+            "blocks": [
+              {
+                "id": "blk_655epnvd_mudyawln",
+                "type": "paragraph",
+                "text": "طبّق فكرة واحدة."
+              },
+              {
+                "id": "blk_mr3wrj7g_mudyawln",
+                "type": "heading",
+                "text": "ثم عندما تنتهي، اسأل نفسك",
+                "level": 3
+              },
+              {
+                "id": "blk_dbazs3la_mudyawln",
+                "type": "heading",
+                "text": "ما الكتاب التالي الذي قادني إليه هذا الكتاب؟",
+                "level": 3
+              },
+              {
+                "id": "blk_hz9wuacd_mudyawln",
+                "type": "paragraph",
+                "text": "وهكذا يبدأ الأمر."
+              },
+              {
+                "id": "blk_j9nrh2mi_mudyawln",
+                "type": "paragraph",
+                "text": "كتاب يقود إلى كتاب."
+              },
+              {
+                "id": "blk_dsf1jlgt_mudyawln",
+                "type": "paragraph",
+                "text": "وفكرة تقود إلى فكرة."
+              },
+              {
+                "id": "blk_rcq1mpez_mudyawln",
+                "type": "paragraph",
+                "text": "وتجربة تقود إلى تجربة."
+              },
+              {
+                "id": "blk_4fcj2nas_mudyawln",
+                "type": "paragraph",
+                "text": "وبعد أشهر ستجد أنك لم تجمع كتبًا فقط؛ بل بنيت عقلًا مختلفًا."
+              },
+              {
+                "id": "blk_a9qidc8k_mudyawln",
+                "type": "quote",
+                "text": "القارئ لا يعيش حياة واحدة فقط؛ فهو يستطيع أن يستعير من الكتب أعمارًا وتجارب وأفكارًا عاشها آخرون قبله."
+              },
+              {
+                "id": "blk_iqvtv1mg_mudyawln",
+                "type": "paragraph",
+                "text": "وهذه ربما هي أعظم قيمة للقراءة: أن الإنسان محكوم بعمر واحد، لكن المعرفة تمنحه فرصة نادرة لأن يتعلم من أعمار كثيرة."
+              }
+            ]
+          },
+          {
+            "id": "page_lxot7qih_mudyawln",
+            "title": "",
+            "order": 2,
+            "blocks": [
+              {
+                "id": "blk_nctciyeh_mudyawln",
+                "type": "paragraph",
+                "text": "لذلك لا تقرأ لكي تبدو مثقفًا."
+              },
+              {
+                "id": "blk_swjtl7a8_mudyawln",
+                "type": "paragraph",
+                "text": "اقرأ لكي ترى أبعد. اقرأ لكي تفكر أفضل. اقرأ لكي تختصر الطريق. اقرأ لكي تتغير."
+              },
+              {
+                "id": "blk_h23xobqx_mudyawln",
+                "type": "paragraph",
+                "text": "فالكتاب الجيد لا يملأ وقتك؛ بل يضيف إلى حياتك."
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "knowledge": {
+      "notes": [],
+      "highlights": [],
+      "keyIdeas": [],
+      "questions": [
+        {
+          "id": "q_834rv6t9_mudydha8",
+          "text": "من أكثر الأخطاء شيوعًا",
+          "answer": "",
+          "createdAt": "2026-09-23T10:21:16.352Z"
+        }
+      ],
+      "actions": [],
+      "tags": [],
+      "review": null,
+      "bookmarks": [],
+      "flashcards": []
+    },
+    "reviewQueue": [
+      {
+        "id": "rv_igjz4d6k_mudydha8",
+        "itemId": "q_834rv6t9_mudydha8",
+        "type": "question",
+        "text": "من أكثر الأخطاء شيوعًا",
+        "ease": 2.5,
+        "interval": 1,
+        "reps": 0,
+        "nextReviewAt": "2026-09-23T10:21:16.352Z"
+      },
+      {
+        "id": "rv_kycwz4tc_mudydha8",
+        "itemId": "hl_oe8g5b14_mudydha8",
+        "type": "highlight",
+        "text": "من أكثر الأخطاء شيوعًا",
+        "ease": 2.5,
+        "interval": 1,
+        "reps": 0,
+        "nextReviewAt": "2026-09-23T10:21:16.352Z"
+      }
+    ],
+    "journeyId": null,
+    "topicId": null,
+    "indexOnly": false,
+    "indexItems": [],
+    "readingPrefs": {
+      "fontPreset": "cairo",
+      "fontSize": 18,
+      "lineHeight": 1.4,
+      "maxWidth": 920,
+      "fontWeight": 500,
+      "letterSpacing": -0.005,
+      "paragraphGap": 0.85
+    }
+  }
+]

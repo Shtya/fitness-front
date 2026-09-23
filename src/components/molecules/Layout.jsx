@@ -234,13 +234,15 @@ export default function Layout({ children }) {
 		pathname.startsWith('/site') ||
 		pathname.startsWith('/open') ||
 		pathname.startsWith('/particle-playground') ||
+		pathname.startsWith('/ai-studio') ||
 		pathname === '/';
 	const isPresentationRoute = pathname.startsWith('/presentation');
-	/** Login / discover / open / particle studio: full-bleed viewport, no dashboard chrome */
+	/** Login / discover / open / particle studio / AI reading room: full-bleed viewport, no dashboard chrome */
 	const isBareViewport =
 		pathname.startsWith('/auth') ||
 		pathname.startsWith('/open') ||
-		pathname.startsWith('/particle-playground');
+		pathname.startsWith('/particle-playground') ||
+		pathname.startsWith('/ai-studio');
 	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
 	const isMetaWhatsAppRoute = pathname.includes('/dashboard/meta-whatsapp');
 	const isChatRoute = pathname.includes('/dashboard/chat');
@@ -388,7 +390,7 @@ export default function Layout({ children }) {
 				<ThemeProvider>
 				<SidebarChromeProvider value={sidebarChromeValue}>
 					{isBareViewport ? (
-					<div className="relative h-dvh w-full overflow-hidden bg-[#0b1220]">
+					<div className="relative h-dvh w-full overflow-hidden bg-transparent">
 						{children}
 					</div>
 					) : (

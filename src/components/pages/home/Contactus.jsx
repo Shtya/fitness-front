@@ -1,25 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import api from "@/utils/axios";
-import {
-	Check,
-	ChevronDown,
-	Dumbbell,
-	Heart,
-	TrendingUp,
-	Award,
-	User,
-	Users,
-	AlertCircle,
-	Loader2,
-} from "lucide-react";
-import SectionHeader from "./SectionHeader";
-
+import { Check, ChevronDown, User, Users, AlertCircle, Loader2 } from "lucide-react";
 // ─── AOS Init Hook ────────────────────────────────────────────────────────────
 function useAOS() {
 	useEffect(() => {
@@ -56,11 +43,13 @@ export default function ContactUs() {
 
 	const [countryCode, setCountryCode] = useState("+20");
 	const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-	const [currentTestimonial, setCurrentTestimonial] = useState(0);
 	const [submitted, setSubmitted] = useState(false);
 	const [submitError, setSubmitError] = useState(null);
-	const [testimonialVisible, setTestimonialVisible] = useState(true);
 	const dropdownRef = useRef(null);
+	const locale = useLocale();
+	const font = locale === "ar" ? "var(--font-arabic), sans-serif" : "var(--font-space-grotesk), var(--font-open-sans), sans-serif";
+	const brand = useTranslations("home.navbar");
+	const voices = useTranslations("home.testimonials");
 
 	// ── Validation schema ───────────────────────────────────────────────────
 	const schema = useMemo(
@@ -115,24 +104,6 @@ export default function ContactUs() {
 		{ id: "team", label: t("form.teamSize.team"), description: t("form.teamSize.teamDesc"), icon: Users },
 	], [t]);
 
-	const testimonials = useMemo(() => [
-		{ text: t("testimonials.0.text"), author: t("testimonials.0.author"), role: t("testimonials.0.role"), company: t("testimonials.0.company"), icon: TrendingUp },
-		{ text: t("testimonials.1.text"), author: t("testimonials.1.author"), role: t("testimonials.1.role"), company: t("testimonials.1.company"), icon: Heart },
-		{ text: t("testimonials.2.text"), author: t("testimonials.2.author"), role: t("testimonials.2.role"), company: t("testimonials.2.company"), icon: Award },
-	], [t]);
-
-	// ── Testimonial auto-rotate ──────────────────────────────────────────────
-	useEffect(() => {
-		const id = setInterval(() => {
-			setTestimonialVisible(false);
-			setTimeout(() => {
-				setCurrentTestimonial((p) => (p + 1) % testimonials.length);
-				setTestimonialVisible(true);
-			}, 280);
-		}, 5000);
-		return () => clearInterval(id);
-	}, [testimonials.length]);
-
 	// ── Close country dropdown on outside click ──────────────────────────────
 	useEffect(() => {
 		if (!showCountryDropdown) return;
@@ -145,7 +116,6 @@ export default function ContactUs() {
 	}, [showCountryDropdown]);
 
 	const selectedCountry = countryCodes.find((c) => c.code === countryCode);
-	const item = testimonials[currentTestimonial];
 
 	// ── Submit handler ───────────────────────────────────────────────────────
 	const onSubmit = async (data) => {
@@ -180,11 +150,9 @@ export default function ContactUs() {
 		<section
 			id="contact-section"
 			aria-labelledby="contact-heading"
-			className="relative overflow-hidden py-20 sm:py-24 md:py-28"
+			className="bg-[#f3efe6] px-5 py-20 text-[#1c1916] sm:px-8 sm:py-28 lg:px-12"
 		>
-
-
-			<div className="relative z-10 mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-16">
+			<div className="mx-auto max-w-[1180px]">
 				<div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
 
 					{/* ── Left: Form column ── */}
@@ -194,16 +162,20 @@ export default function ContactUs() {
 						data-aos-duration="700"
 					>
 
-						<SectionHeader
-							align="start"
-							id="contact-heading"
-							title={t("title")}
-							subtitle={t("description")}
-						/> 
+						<div>
+							<h2
+								id="contact-heading"
+								className="text-[clamp(2rem,4vw,3.25rem)] leading-[1.02] text-[#1c1916] ltr:tracking-[-0.04em]"
+								style={{ fontFamily: font }}
+							>
+								{t("title")}
+							</h2>
+							<p className="mt-4 max-w-md text-[15px] leading-relaxed text-[#5c5348]">{t("description")}</p>
+						</div> 
 
 						{/* ── Success state ── */}
 						{submitted ? (
-							<div className="flex flex-col items-center gap-5 rounded-xl border border-[var(--color-primary-500)]/25 bg-[var(--color-primary-500)]/[0.06] py-16 text-center backdrop-blur-sm">
+							<div className="flex flex-col items-center gap-5 rounded-[28px] bg-[#161616] py-16 text-center shadow-[0_24px_60px_rgba(28,25,22,0.18)]">
 								<div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-xl">
 									<Check aria-hidden="true" className="h-8 w-8 text-white" strokeWidth={3} />
 								</div>
@@ -221,7 +193,7 @@ export default function ContactUs() {
 							<form
 								noValidate
 								onSubmit={handleSubmit(onSubmit)}
-								className="space-y-6"
+								className="space-y-6 rounded-[28px] bg-[#161616] p-6 shadow-[0_24px_60px_rgba(28,25,22,0.18)] sm:p-8"
 								aria-label={t("form.ariaLabel") || "Contact form"}
 							>
 								{/* Name + Email row */}
@@ -389,7 +361,7 @@ export default function ContactUs() {
 													aria-checked={isSelected}
 													onClick={() => setValue("teamSize", option.id, { shouldValidate: true })}
 													className={[
-														"flex w-full items-start gap-4 rounded-xl border-2 p-4 text-start transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)] hover:-translate-y-0.5 active:scale-[0.99]",
+														"flex w-full items-start gap-4 rounded-xl border p-4 text-start transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]",
 														isSelected
 															? "border-[var(--color-primary-500)]/70 bg-[var(--color-primary-500)]/[0.07]"
 															: errors.teamSize
@@ -423,7 +395,7 @@ export default function ContactUs() {
 																</span>
 															)}
 														</div>
-														<p className="mt-0.5 font-body text-xs md: leading-relaxed text-white/35">
+														<p className="mt-0.5 text-xs leading-relaxed text-white/55">
 															{option.description}
 														</p>
 													</div>
@@ -443,12 +415,8 @@ export default function ContactUs() {
 								<button
 									type="submit"
 									disabled={isSubmitting}
-									className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] px-8 py-4 font-body text-base font-bold text-white shadow-[0_8px_32px_rgba(99,102,241,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(99,102,241,0.45)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)] disabled:cursor-not-allowed disabled:opacity-50"
+									className="w-full rounded-full bg-white px-8 py-3.5 text-[15px] font-semibold text-[#12110f] transition-transform duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0c] disabled:cursor-not-allowed disabled:opacity-50"
 								>
-									<span
-										aria-hidden="true"
-										className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
-									/>
 									<span className="relative flex items-center justify-center gap-2">
 										{isSubmitting ? (
 											<>
@@ -464,124 +432,24 @@ export default function ContactUs() {
 						)}
 					</div>
 
-					{/* ── Right: Testimonial sidebar ── */}
-					<aside
-						className="max-lg:hidden relative lg:sticky lg:top-8 lg:self-start"
-						aria-label="Customer testimonials"
-						data-aos="fade-left"
-						data-aos-delay="150"
-						data-aos-duration="700"
-					>
-						<div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-gradient-to-br from-slate-800/90 to-slate-900/90 shadow-[0_24px_56px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-							{/* Gradient wash */}
-							<div
-								aria-hidden="true"
-								className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[var(--color-gradient-from)]/[0.07] to-transparent animate-[pulse_3s_ease-in-out_infinite]"
-							/>
-
-							{/* Brand header */}
-							<div className="relative border-b border-white/[0.07] p-7">
-								<div className="flex items-center gap-4">
-									<div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-xl transition-transform duration-300 hover:rotate-6">
-										<Dumbbell aria-hidden="true" className="h-7 w-7 text-white" />
-									</div>
-									<div>
-										<h3 className="font-display text-2xl md: leading-none text-white">FitnessHub</h3>
-										<p className="mt-1 font-body text-sm text-white/45">{t("testimonials.subtitle")}</p>
-									</div>
-								</div>
-							</div>
-
-							{/* Illustration area */}
-							<div className="relative h-72 overflow-hidden bg-gradient-to-br from-slate-700 to-slate-800 sm:h-80">
-								{/* Moving stripe pattern */}
-								<div
-									aria-hidden="true"
-									className="absolute inset-0 opacity-20 animate-[shiftRight_5s_ease-in-out_infinite]"
-								>
-									<div className="h-full w-full bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,255,255,0.05)_10px,rgba(255,255,255,0.05)_20px)]" />
-								</div>
-
-								{/* Center icon — transitions on testimonial change */}
-								<div className="absolute inset-0 grid place-items-center">
-									<div
-										className={[
-											"flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-2xl transition-all duration-300",
-											testimonialVisible ? "scale-100 opacity-100 rotate-0" : "scale-75 opacity-0 -rotate-12",
-										].join(" ")}
-									>
-										<item.icon aria-hidden="true" className="h-20 w-20 text-white" strokeWidth={1.5} />
-									</div>
-								</div>
-
-								<div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-								<div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-[var(--color-gradient-from)]/15 to-transparent" />
-							</div>
-
-							{/* Testimonial text area */}
-							<div
-								className={[
-									"relative space-y-5 p-7 transition-all duration-280",
-									testimonialVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3",
-								].join(" ")}
-								aria-live="polite"
-								aria-atomic="true"
+					<aside className="lg:sticky lg:top-28 lg:self-start lg:pt-4">
+						<blockquote className="border-t border-black/10 pt-6">
+							<p
+								className="text-[1.35rem] leading-snug text-[#1c1916] ltr:tracking-[-0.03em]"
+								style={{ fontFamily: font }}
 							>
-								<div aria-hidden="true" className="-mb-3 select-none font-display text-5xl md: leading-none text-[var(--color-primary-500)]/25">"</div>
-
-								<p className="font-body text-base italic md: leading-relaxed text-white/80 md:text-lg">
-									{item.text}
-								</p>
-
-								<div className="flex items-center justify-between border-t border-white/[0.07] pt-4">
-									<div>
-										<p className="font-body text-base font-black md: leading-tight text-white">{item.author}</p>
-										<p className="mt-0.5 font-body text-xs text-white/40">{item.role}</p>
-									</div>
-									<div className="flex items-center gap-2">
-										<div aria-hidden="true" className="h-2 w-2 rounded-full bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]" />
-										<span className="font-body text-sm font-bold text-white/70">{item.company}</span>
-									</div>
-								</div>
-							</div>
-
-							{/* Dot navigation */}
-							<div className="flex justify-center gap-2 pb-5" role="tablist" aria-label="Testimonial navigation">
-								{testimonials.map((_, i) => (
-									<button
-										key={i}
-										type="button"
-										role="tab"
-										aria-selected={i === currentTestimonial}
-										aria-label={`Testimonial ${i + 1}`}
-										onClick={() => {
-											setTestimonialVisible(false);
-											setTimeout(() => {
-												setCurrentTestimonial(i);
-												setTestimonialVisible(true);
-											}, 280);
-										}}
-										className={[
-											"h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary-400)]",
-											i === currentTestimonial
-												? "w-8 bg-[var(--color-primary-400)]"
-												: "w-1.5 bg-white/20 hover:bg-white/40",
-										].join(" ")}
-									/>
-								))}
-							</div>
-						</div>
+								{voices("items.1.text")}
+							</p>
+							<footer className="mt-6 text-[13px] text-[#6d655c]">
+								<span className="font-semibold text-[#1c1916]">{voices("items.1.name")}</span>
+								<span className="mx-2 text-black/20">/</span>
+								{voices("items.1.role")}
+							</footer>
+						</blockquote>
+						<p className="mt-8 text-[13px] leading-relaxed text-[#6d655c]">{brand("brand.tagline")}</p>
 					</aside>
 				</div>
 			</div>
-
-			{/* ── Keyframes ── */}
-			<style>{`
-        @keyframes shiftRight {
-          0%, 100% { transform: translateX(0);   }
-          50%       { transform: translateX(22px); }
-        }
-      `}</style>
 		</section>
 	);
 }

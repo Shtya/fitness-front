@@ -1,0 +1,15 @@
+{
+  "fontSize": 17,
+  "lineHeight": 1.6,
+  "maxWidth": 920,
+  "theme": "slate",
+  "fontWeight": 500,
+  "letterSpacing": -0.02,
+  "paragraphGap": 1.05,
+  "fontPreset": "sans",
+  "pageMode": "scroll",
+  "wheelTurnsPage": true,
+  "aiModelKey": "llama3.1-8b",
+  "aiProvider": "llm7-free",
+  "updatedAt": "2026-09-23T12:19:09.745Z"
+}

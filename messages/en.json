@@ -743,47 +743,47 @@
 		"defaultDescription": "An elegant, balanced color palette.",
 		"footer": "The change will be applied instantly across the entire dashboard"
 	},
-	 "auth": {
-    "signIn": "Sign In",
-    "subtitle": "Welcome back! Please enter your details",
-    "email": "Email",
-    "enterEmail": "Enter your email",
-    "password": "Password",
-    "enterPassword": "Enter your password",
-    "signInButton": "Sign In",
-    "loading": {
-      "signingIn": "Signing in..."
-    },
-    "a11y": {
-      "hidePassword": "Hide password",
-      "showPassword": "Show password"
-    },
-    "language": "Language",
-    "success": {
-      "signedIn": "Successfully signed in"
-    },
-    "errors": {
-      "loginFailed": "Login failed. Please try again",
-      "accountPending": "Account is pending review. You'll be notified once approved",
-      "accountSuspended": "Account has been suspended. Please contact support"
-    },
-    "invalidEmail": "Invalid email address",
-    "passwordRequired": "Password is required",
-    "formAriaLabel": "Login form",
-    "pageAriaLabel": "Login page - So7baFit",
-    "hero": {
-      "tagline": "Smart Training Platform",
-      "titleLine1": "Turn your goal into",
-      "titleLine2": "real progress",
-      "subtitle": "Personalized plans with pro coaches — all in one place.",
-      "stat1Val": "2,500+",
-      "stat1Label": "Active Clients",
-      "stat2Val": "50+",
-      "stat2Label": "Pro Coaches",
-      "stat3Val": "98%",
-      "stat3Label": "Client Satisfaction"
-    }
-  },
+	"auth": {
+		"signIn": "Sign In",
+		"subtitle": "Welcome back! Please enter your details",
+		"email": "Email",
+		"enterEmail": "Enter your email",
+		"password": "Password",
+		"enterPassword": "Enter your password",
+		"signInButton": "Sign In",
+		"loading": {
+			"signingIn": "Signing in..."
+		},
+		"a11y": {
+			"hidePassword": "Hide password",
+			"showPassword": "Show password"
+		},
+		"language": "Language",
+		"success": {
+			"signedIn": "Successfully signed in"
+		},
+		"errors": {
+			"loginFailed": "Login failed. Please try again",
+			"accountPending": "Account is pending review. You'll be notified once approved",
+			"accountSuspended": "Account has been suspended. Please contact support"
+		},
+		"invalidEmail": "Invalid email address",
+		"passwordRequired": "Password is required",
+		"formAriaLabel": "Login form",
+		"pageAriaLabel": "Login page - So7baFit",
+		"hero": {
+			"tagline": "Smart Training Platform",
+			"titleLine1": "Turn your goal into",
+			"titleLine2": "real progress",
+			"subtitle": "Personalized plans with pro coaches — all in one place.",
+			"stat1Val": "2,500+",
+			"stat1Label": "Active Clients",
+			"stat2Val": "50+",
+			"stat2Label": "Pro Coaches",
+			"stat3Val": "98%",
+			"stat3Label": "Client Satisfaction"
+		}
+	},
 	"myProfile": {
 		"header": {
 			"title": "Profile",
@@ -866,7 +866,7 @@
 			"male": "Male",
 			"female": "Female"
 		},
-			"roles": {
+		"roles": {
 			"admin": "Admin",
 			"coach": "Coach",
 			"user": "User",
@@ -5584,7 +5584,6 @@
 				}
 			},
 			"testimonials": {
-				"subtitle": "What our clients say",
 				"0": {
 					"text": "FitnessHub completely changed how I approach my training. The guidance was clear, motivating, and actually sustainable.",
 					"author": "Sarah Ahmed",
@@ -5602,7 +5601,8 @@
 					"author": "Mona Hassan",
 					"role": "HR Lead",
 					"company": "MoveWell"
-				}
+				},
+				"subtitle": "What our clients say"
 			}
 		},
 		"footer": {
@@ -6025,7 +6025,7 @@
 	"aiContentStudio": {
 		"title": "AI Content Automation Studio",
 		"subtitle": "Click a node to configure · inspect outputs on each step",
-        "pipelineHint": "Daily publishing pipeline",
+		"pipelineHint": "Daily publishing pipeline",
 		"pipelineBadge": "Live pipeline",
 		"pipelineSubhint": "Click a node to edit · eye / View to inspect results",
 		"autoSaving": "Saving…",
@@ -6311,15 +6311,49 @@
 		"arabic": "Arabic",
 		"english": "English",
 		"nodes": {
-			"schedule": { "label": "Schedule", "subtitle": "When to run", "info": "Runs the pipeline automatically at the chosen time and days (server clock)." },
-			"topic": { "label": "Topic", "subtitle": "Generate idea", "info": "Creates today’s post idea from your voice, research (if on), and the topic prompt — or uses the chat box text if you typed one." },
-			"content": { "label": "Content", "subtitle": "Write the post", "info": "Writes the Facebook/Instagram caption from the topic, in the writer voice from Settings." },
-			"image": { "label": "Image", "subtitle": "Create visual", "info": "Generates the post image from the content + topic. Extra prompt on this node is optional extras only." },
-			"design": { "label": "Design", "subtitle": "Arabic overlay", "info": "Puts an Arabic headline overlay on the generated image (canvas), without regenerating the photo." },
-			"facebook": { "label": "Facebook", "subtitle": "Publish to page", "info": "Opens a visible Chrome popup, logs into your Facebook, opens Create post, and fills it with the generated caption + image so you can see it. No Meta token required." },
-			"instagram": { "label": "Instagram", "subtitle": "Publish post", "info": "Publishes the caption + public image URL to Instagram via Meta Graph API." },
-			"preview": { "label": "Pipeline Preview", "subtitle": "Full run output" },
-			"sessions": { "label": "Sessions", "subtitle": "Past runs & results" }
+			"schedule": {
+				"label": "Schedule",
+				"subtitle": "When to run",
+				"info": "Runs the pipeline automatically at the chosen time and days (server clock)."
+			},
+			"topic": {
+				"label": "Topic",
+				"subtitle": "Generate idea",
+				"info": "Creates today’s post idea from your voice, research (if on), and the topic prompt — or uses the chat box text if you typed one."
+			},
+			"content": {
+				"label": "Content",
+				"subtitle": "Write the post",
+				"info": "Writes the Facebook/Instagram caption from the topic, in the writer voice from Settings."
+			},
+			"image": {
+				"label": "Image",
+				"subtitle": "Create visual",
+				"info": "Generates the post image from the content + topic. Extra prompt on this node is optional extras only."
+			},
+			"design": {
+				"label": "Design",
+				"subtitle": "Arabic overlay",
+				"info": "Puts an Arabic headline overlay on the generated image (canvas), without regenerating the photo."
+			},
+			"facebook": {
+				"label": "Facebook",
+				"subtitle": "Publish to page",
+				"info": "Opens a visible Chrome popup, logs into your Facebook, opens Create post, and fills it with the generated caption + image so you can see it. No Meta token required."
+			},
+			"instagram": {
+				"label": "Instagram",
+				"subtitle": "Publish post",
+				"info": "Publishes the caption + public image URL to Instagram via Meta Graph API."
+			},
+			"preview": {
+				"label": "Pipeline Preview",
+				"subtitle": "Full run output"
+			},
+			"sessions": {
+				"label": "Sessions",
+				"subtitle": "Past runs & results"
+			}
 		},
 		"status": {
 			"idle": "Idle",
@@ -6965,6 +6999,551 @@
 		"errors": {
 			"analyzeFailed": "Could not estimate measurements from these photos.",
 			"saveFailed": "Could not save measurements."
+		}
+	},
+	"aiReading": {
+		"brand": "Reading Room",
+		"brandSub": "AI personal library",
+		"nav": {
+			"home": "Home",
+			"library": "Library",
+			"generate": "Generate",
+			"import": "Import",
+			"prompts": "Prompts",
+			"review": "Review",
+			"fitness": "Fitness AI",
+			"workspace": "Workspace",
+			"topics": "Topics",
+			"journeys": "Journeys",
+			"studio": "Studio"
+		},
+		"common": {
+			"save": "Save",
+			"loading": "Loading…",
+			"working": "Working…"
+		},
+		"hub": {
+			"eyebrow": "Your AI library",
+			"lede": "Turn any AI conversation or idea into a beautiful book you can highlight, remember, and apply.",
+			"generate": "Generate a book",
+			"import": "Import & transform",
+			"streak": "Day streak",
+			"minutes": "Minutes read",
+			"books": "Books",
+			"continue": "Continue reading",
+			"today": "Today's reading",
+			"shelf": "Your shelf",
+			"shelfSub": "Recent books and imports",
+			"dailyReview": "Daily review",
+			"empty": "No books yet — generate or import your first reading.",
+			"focus": "Focus",
+			"journeyProgress": "Journey progress",
+			"next": "Next",
+			"startReading": "Start Reading",
+			"openWorkspace": "AI Workspace",
+			"highlights": "Highlights",
+			"actions": "Actions",
+			"reviewCta": "Remember what you read",
+			"reviewSub": "Spaced review in a few calm minutes",
+			"journey": "Current journey",
+			"noJourney": "No monthly journey yet",
+			"seeAll": "See all",
+			"createJourney": "Create a monthly theme",
+			"explore": "Topics to explore",
+			"exploreSub": "Saved ideas waiting for a short session"
+		},
+		"generate": {
+			"title": "Generate",
+			"subtitle": "Choose a topic, style, and depth — or turn podcast transcripts into a polished article.",
+			"topic": "Topic",
+			"topicPlaceholder": "e.g. The psychology of money, building morning habits…",
+			"topicRequired": "Please enter a topic.",
+			"style": "Style",
+			"depth": "Depth",
+			"language": "Language",
+			"time": "Reading time",
+			"minutes": "min",
+			"savedPrompt": "Saved prompt",
+			"defaultPrompt": "Default template",
+			"cta": "Generate book",
+			"ctaTranscript": "Create article from transcripts",
+			"generating": "Writing your book…",
+			"poweredBy": "Generating with",
+			"checkingAi": "Checking AI…",
+			"modeTopic": "From topic",
+			"modeTranscripts": "From podcasts",
+			"articleTitle": "Article title (optional)",
+			"articleTitlePlaceholder": "Leave blank to derive from transcripts",
+			"transcriptPrompt": "Editor prompt",
+			"transcriptPromptPlaceholder": "e.g. Transform these transcripts into one definitive article. Keep the best stories, cut repetition, open with a strong hook…",
+			"transcripts": "Transcripts",
+			"addTranscript": "Add another",
+			"transcriptTitle": "Podcast {n} title",
+			"transcriptPaste": "Paste the full transcript here…",
+			"transcriptRequired": "Paste at least one transcript (40+ characters)."
+		},
+		"import": {
+			"title": "Import & transform",
+			"subtitle": "Paste text, a share link, or upload a PDF/Word book — we turn it into a beautiful reading document.",
+			"anyAi": "Any AI",
+			"optionalTitle": "Title (optional)",
+			"titlePlaceholder": "Leave blank to detect from headings",
+			"paste": "Paste content",
+			"pastePlaceholder": "Paste the full conversation or article markdown here…",
+			"enhance": "Polish structure with AI when available",
+			"loadSample": "Load sample",
+			"cta": "Import & Transform",
+			"working": "Transforming…",
+			"workingFetch": "Fetching share link…",
+			"workingSave": "Opening reader…",
+			"timeout": "This took too long. Try Paste text instead — open the share page and copy the conversation.",
+			"chatgptHint": "ChatGPT share pages hide the conversation from servers. Fastest path: open the link → Select all → Copy → switch to Paste text.",
+			"chatgptBlocked": "Couldn't read that ChatGPT share link (the page is JavaScript-only). Switched to Paste text — copy the conversation from the share page and paste it here.",
+			"modePaste": "Paste text",
+			"modeLink": "Share link",
+			"linkLabel": "ChatGPT / Claude / Gemini link",
+			"linkHint": "Public article links work best. ChatGPT shares: we load every message so you can pick what to import.",
+			"linkHintChat": "Paste a public ChatGPT share link. We'll load every user & assistant message so you can choose what becomes your reading.",
+			"fetchMessages": "Fetch messages",
+			"importSelected": "Import selected ({count})",
+			"messagesFound": "{count} messages found",
+			"selectedCount": "{count} selected",
+			"selectAll": "Select all",
+			"selectAssistant": "Assistant only",
+			"clearSelection": "Clear",
+			"selectOne": "Select at least one message",
+			"includeRoles": "Keep You / ChatGPT section labels",
+			"roleUser": "You",
+			"roleAssistant": "ChatGPT",
+			"invalidUrl": "Please enter a valid http(s) link",
+			"modeFile": "PDF / book file",
+			"fileDrop": "Upload a PDF or Word book",
+			"fileHint": "We extract the full text, then turn it into a reading article.",
+			"fileReadyPdf": "PDF · {pages} pages · {chars} characters extracted",
+			"fileReadyDocx": "Word · {chars} characters extracted",
+			"fileClear": "Remove",
+			"previewExtract": "Extracted text (edit if needed)",
+			"workingExtract": "Extracting text from file…",
+			"ctaFile": "Transform into reading",
+			"unsupportedFile": "Use a PDF or .docx file.",
+			"emptyFile": "Couldn't find enough text in that file."
+		},
+		"prompts": {
+			"title": "Prompts",
+			"subtitle": "Your saved prompts — name them and write the exact text you want to reuse.",
+			"create": "New prompt",
+			"newTitle": "New prompt",
+			"untitled": "Untitled",
+			"empty": "No prompts yet. Add your first one.",
+			"edit": "Edit prompt",
+			"titleField": "Name",
+			"bodyHint": "Write the prompt exactly as you want to use it…",
+			"copy": "Copy prompt",
+			"copied": "Copied",
+			"filters": {
+				"all": "All",
+				"favorites": "Favorites",
+				"generate": "Generate",
+				"summarize": "Summarize",
+				"explain": "Explain",
+				"actions": "Actions",
+				"questions": "Questions",
+				"custom": "Custom",
+				"outline": "Outline"
+			}
+		},
+		"library": {
+			"title": "Library",
+			"subtitle": "Everything you've generated or imported.",
+			"renamePrompt": "Rename book"
+		},
+		"review": {
+			"title": "Daily review",
+			"subtitle": "Spaced review so ideas stick — not just finish-and-forget.",
+			"streak": "Streak",
+			"due": "Due",
+			"done": "Reviewed",
+			"empty": "Nothing due. Read something and save ideas or actions first.",
+			"tapReveal": "Tap when you've tried to recall — then rate how it felt.",
+			"promptRecall": "How well did you remember this?",
+			"forgot": "Forgot",
+			"hard": "Hard",
+			"good": "Good",
+			"easy": "Easy"
+		},
+		"reading": {
+			"back": "Library",
+			"prev": "Previous",
+			"next": "Next",
+			"toc": "Contents",
+			"knowledge": "Knowledge",
+			"askAi": "Ask AI",
+			"settings": "Reading settings",
+			"settingsTabReading": "Reading",
+			"settingsTabAi": "AI",
+			"aiSettingsTitle": "AI model",
+			"aiSettingsHint": "One model for polish, summarize, translate, memorize, and ask — from your workspace AIs.",
+			"aiSettingsLoading": "Loading models…",
+			"aiSettingsError": "Could not load AI settings. Check your login.",
+			"aiSettingsEmpty": "No text models available yet.",
+			"aiSettingsActive": "Active for this library",
+			"aiSettingsSaved": "AI model saved",
+			"aiSettingsFree": "Free",
+			"aiSettingsLocked": "Needs API key",
+			"untitledPage": "Untitled page",
+			"fontSize": "Font size",
+			"lineHeight": "Line height",
+			"fontWeight": "Weight",
+			"letterSpacing": "Letter spacing",
+			"paragraphGap": "Paragraph spacing",
+			"fontPreset": "Typeface",
+			"fontGroupLatin": "Latin",
+			"fontGroupArabic": "Arabic",
+			"fontPresets": {
+				"auto": "Auto",
+				"serif": "Serif",
+				"sans": "Sans",
+				"literary": "Literary",
+				"georgia": "Georgia",
+				"palatino": "Palatino",
+				"book": "Book",
+				"mono": "Mono",
+				"arabic": "Tajawal",
+				"cairo": "Cairo",
+				"naskh": "Naskh",
+				"amiri": "Amiri",
+				"scheherazade": "Scheherazade",
+				"ibmArabic": "IBM Plex Arabic",
+				"notoSansAr": "Noto Sans Arabic",
+				"reemKufi": "Reem Kufi"
+			},
+			"fontPreview": "The quick brown fox — القراءة أوضح بخط مريح للعين.",
+			"fontPreviewAr": "القراءة أوضح بخط مريح للعين — جرّب أكثر من خط حتى تجد الأنسب لك.",
+			"pageMode": "Page navigation",
+			"pageModePages": "Slide pages",
+			"pageModeScroll": "Scroll continuous",
+			"wheelTurnsPage": "Mouse wheel turns page at edges",
+			"pages": "pages",
+			"timer": "Timer",
+			"timerHint": "Set a reading time limit",
+			"timerSet": "Reading timer",
+			"timerMin": "min",
+			"timerStart": "Start",
+			"timerPause": "Pause",
+			"timerResume": "Resume",
+			"timerRestart": "Restart",
+			"timerCancel": "Cancel",
+			"timerCustomize": "Customize my minutes…",
+			"timerCustomPlaceholder": "Minutes",
+			"timerReset": "Clear timer",
+			"timerDone": "Time's up — you read about {minutes} minutes. Take a break.",
+			"timerDismiss": "Dismiss",
+			"width": "Reading width",
+			"theme": "Reading themes",
+			"themes": {
+				"light": "Light",
+				"dark": "Dark",
+				"sepia": "Sepia",
+				"paper": "Paper",
+				"ivory": "Ivory",
+				"sand": "Sand",
+				"forest": "Forest",
+				"midnight": "Midnight",
+				"dusk": "Dusk",
+				"slate": "Slate"
+			},
+			"prefsSaved": "Saved",
+			"prefsScopeArticle": "Custom for this article",
+			"prefsScopeGlobal": "Using global defaults",
+			"prefsScopeHint": "Changes here stay on this article only. Save as default to apply them to every article.",
+			"prefsSaveGlobal": "Save as default for all",
+			"prefsResetArticle": "Reset to global",
+			"aiAssist": "AI assist",
+			"aiAssistHint": "Work with this page — polish, summarize, explain, or translate.",
+			"translateToAr": "Translate to Arabic",
+			"translateToEn": "Translate to English",
+			"translateApplyPage": "Apply translation to page",
+			"translateApplied": "Applied to page",
+			"polish": "Polish page",
+			"polishTitle": "Audit & improve this page",
+			"polishHint": "Pick a prompt or write your own instructions. The AI audits filler, weak lines, and gaps — then rewrites the page.",
+			"polishPickPrompt": "Prompt",
+			"polishCustom": "Instructions",
+			"polishCustomPlaceholder": "Describe how you want this page audited and improved…",
+			"polishRun": "Run audit & polish",
+			"polishWorking": "Auditing & rewriting…",
+			"polishPreview": "Improved page",
+			"polishAudit": "Audit notes",
+			"polishApply": "Replace page with this",
+			"polishRetry": "Regenerate",
+			"polishError": "Could not polish this page.",
+			"polishEmpty": "This page has too little text to polish.",
+			"polishApplied": "Page updated",
+			"structure": "Structure page",
+			"structureTitle": "Structure for better reading",
+			"structureHint": "AI reads this page and rebuilds it with titles, paragraphs, lists, and visual tags — then you can save it into the article.",
+			"structureRun": "Structure this page",
+			"structureWorking": "Structuring…",
+			"structurePreview": "Structured layout",
+			"structureApply": "Save to article",
+			"structureRetry": "Regenerate",
+			"structureError": "Could not structure this page.",
+			"structureEmpty": "This page has too little text to structure.",
+			"structureApplied": "Saved to article",
+			"structureNotes": "What changed",
+			"keyIdeaLabel": "Key idea",
+			"memorize": "Memorize",
+			"memorizeTitle": "Memorize this passage",
+			"memorizeHint": "Pick a favorite prompt, generate a clear summary, then replace the original if you like it.",
+			"memorizePickPrompt": "Prompt",
+			"memorizeNoPrompts": "No saved prompts yet — we'll use a default summary style. Add favorites in Prompts.",
+			"memorizeRun": "Generate memorization",
+			"memorizeWorking": "Compressing…",
+			"memorizePreview": "Memorized version",
+			"memorizeApply": "Replace with this",
+			"memorizeRetry": "Regenerate",
+			"memorizeError": "Could not memorize this passage.",
+			"memorizeNoPages": "Couldn't map this selection to pages.",
+			"memorizePages": "{count} pages in range",
+			"memorizeShowingMem": "Showing memorized",
+			"memorizeShowingOrig": "Showing original",
+			"memorizeShowOriginal": "Show original",
+			"memorizeShowMemorized": "Show memorized",
+			"memorizeStub": "This page is folded into the memorization above — switch to original to read it again.",
+			"memorizeLabel": "Memorized",
+			"translate": "Translate",
+			"translateWorking": "Looking up…",
+			"translateMeaning": "Meaning",
+			"translateContext": "In this context",
+			"translateSave": "Save to important words",
+			"translateSaved": "Saved",
+			"translateError": "Could not translate this word.",
+			"askPlaceholder": "Ask anything about this book…",
+			"ask": "Ask",
+			"suggestedAction": "Suggested action",
+			"summarize": "Summarize",
+			"explain": "Explain",
+			"simplify": "Simplify",
+			"keyIdeas": "Key ideas",
+			"questions": "Questions",
+			"actions": "Actions",
+			"notFound": "Book not found",
+			"focus": "Focus",
+			"focusEmpty": "No paragraphs on this page.",
+			"bionic": "Bionic",
+			"listen": "Listen",
+			"listenPlay": "Play",
+			"listenPause": "Pause",
+			"listenStop": "Stop",
+			"listenHint": "Listen to this page — sentences highlight as they play.",
+			"diffOriginal": "Original",
+			"diffSimplify": "Simple",
+			"diffEli5": "ELI5",
+			"diffError": "Could not simplify this page.",
+			"minsLeft": "~{minutes} min left",
+			"resumeFrom": "Continue from last highlight",
+			"resumeCta": "Jump",
+			"glossary": "Glossary",
+			"inlineAsk": "Ask",
+			"inlineAskHint": "Question about the selected passage only.",
+			"inlineAskPlaceholder": "What does this mean? Why does it matter?",
+			"flashcards": "Flashcards",
+			"flashcardsEmpty": "Highlight Important / Quote, Memorize, or save translated words to build cards.",
+			"flashFront": "Tap to flip",
+			"flashBack": "Answer",
+			"coach": "Coach",
+			"coachHint": "End-of-session recall: 3 questions + one action for Daily Review.",
+			"coachRun": "Generate recall",
+			"coachQuestions": "Recall questions",
+			"coachAction": "Today’s action",
+			"coachSave": "Save to Daily Review"
+		},
+		"knowledge": {
+			"highlights": "Highlights",
+			"emptyHighlights": "Select text while reading to highlight.",
+			"importantWords": "Important words",
+			"emptyWords": "Translate a word while reading to save it here.",
+			"notes": "Notes",
+			"notePlaceholder": "Add a note…",
+			"ideas": "Key ideas",
+			"actions": "Actions",
+			"review": "Your review",
+			"reviewPlaceholder": "What will you remember from this book?",
+			"bookmarkPage": "Bookmark this page",
+			"ideaToActionPlaceholder": "Turn into an action (e.g. phone outside bedroom for 7 days)",
+			"turnIntoAction": "Make it an action"
+		},
+		"highlights": {
+			"important": "Important",
+			"idea": "Idea",
+			"quote": "Quote",
+			"question": "Question",
+			"action": "Action"
+		},
+		"styles": {
+			"narrative": "Narrative",
+			"analytical": "Analytical",
+			"practical": "Practical",
+			"philosophical": "Philosophical",
+			"storytelling": "Storytelling"
+		},
+		"depths": {
+			"overview": "Overview",
+			"standard": "Standard",
+			"deep": "Deep"
+		},
+		"errors": {
+			"generate": "Could not generate the book.",
+			"import": "Could not import the content.",
+			"chat": "Chat failed. Try again."
+		},
+		"workspace": {
+			"leftTitle": "Libraries",
+			"newChat": "New chat",
+			"savedPrompts": "Saved prompts",
+			"topics": "Topics",
+			"chatTitle": "AI Chat",
+			"chatSub": "Native workspace — no ChatGPT iframe. Prompts & topics fill the composer.",
+			"composerPlaceholder": "Ask, outline, explain, or write a short reading…",
+			"thinking": "Thinking…",
+			"emptyReply": "Done.",
+			"bookAttached": "Reading draft ready →",
+			"emptyRight": "Generated books, outlines, and imports appear here.",
+			"generatedBook": "Generated reading",
+			"chapters": "chapters",
+			"openReading": "Open in Reading Mode",
+			"roadmap": "Learning index",
+			"saveJourney": "Save as journey",
+			"importReady": "Transformed “{title}” — open it from the right panel.",
+			"notesPlaceholder": "Scratch notes while you research…",
+			"notesHint": "Session notes stay here until you paste them into a reading.",
+			"importHint": "Paste from ChatGPT, Claude, Gemini, or any AI — then transform.",
+			"tabs": {
+				"content": "Content",
+				"notes": "Notes",
+				"import": "Import"
+			},
+			"quick": {
+				"article": "Article",
+				"outline": "Outline",
+				"explain": "Explain",
+				"actions": "Actions"
+			}
+		},
+		"topics": {
+			"title": "Topics",
+			"subtitle": "Collect ideas, set a date, then turn them into short readings.",
+			"suggest": "Suggest topics",
+			"add": "Add topic",
+			"titleField": "Topic",
+			"date": "Date",
+			"search": "Search topics…",
+			"addPlaceholder": "e.g. How habits stick…",
+			"generateReading": "Generate reading",
+			"empty": "No topics yet. Add one or ask for suggestions.",
+			"folders": {
+				"all": "All",
+				"favorites": "Favorites",
+				"inbox": "Inbox",
+				"psychology": "Psychology",
+				"habits": "Habits",
+				"money": "Money",
+				"work": "Work",
+				"health": "Health",
+				"monthly": "Monthly"
+			}
+		},
+		"journeys": {
+			"title": "Monthly themes & journeys",
+			"subtitle": "Pick a focus for the month. AI builds a short-session roadmap.",
+			"themePlaceholder": "e.g. Understanding Psychology / Discipline",
+			"create": "Generate roadmap",
+			"sessions": "sessions",
+			"notFound": "Journey not found",
+			"complete": "complete",
+			"done": "done",
+			"read": "Read",
+			"start": "Start"
+		},
+		"studioSub": {
+			"chat": "Chat",
+			"topics": "Topics",
+			"journey": "Journey",
+			"prompts": "Prompts",
+			"generate": "Generate"
+		},
+		"studio": {
+			"hint": "Hover Studio in the top bar to switch tools — chat, topics, prompts, generate."
+		}
+	},
+	"aiStudio": {
+		"title": "AI Fitness Studio",
+		"subtitle": "Auto-create user accounts, workout plans, and nutrition plans",
+		"badges": {
+			"beta": "Beta",
+			"ai": "AI"
+		},
+		"selector": {
+			"label": "Select client response",
+			"placeholder": "— Choose a response —"
+		},
+		"btn": {
+			"generate": "Generate plan",
+			"generating": "Generating...",
+			"approve": "Approve & save",
+			"saving": "Saving...",
+			"saved": "Saved!",
+			"discard": "Discard"
+		},
+		"sections": {
+			"user": "User details",
+			"workout": "Workout plan",
+			"nutrition": "Nutrition plan"
+		},
+		"fields": {
+			"name": "Full name",
+			"email": "Email",
+			"password": "Password",
+			"phone": "Phone",
+			"age": "Age",
+			"weight": "Weight (kg)",
+			"goal": "Goal",
+			"membership": "Membership"
+		},
+		"workout": {
+			"days": "days",
+			"exercises": "exercises",
+			"addDay": "Add day",
+			"addExercise": "Add exercise",
+			"sets": "Sets",
+			"reps": "Reps",
+			"rest": "Rest (s)"
+		},
+		"nutrition": {
+			"meals": "meals",
+			"totalCalories": "Total calories",
+			"calories": "Calories",
+			"protein": "Protein (g)",
+			"carbs": "Carbs (g)",
+			"fat": "Fat (g)",
+			"addMeal": "Add meal",
+			"addItem": "Add item",
+			"itemName": "Food name",
+			"quantity": "Quantity"
+		},
+		"approve": {
+			"title": "Review and confirm",
+			"subtitle": "Double-check everything before final save"
+		},
+		"success": {
+			"message": "All data saved — user, workout, and nutrition"
+		},
+		"empty": {
+			"title": "Select a client response to generate",
+			"subtitle": "AI will analyze the client and build a complete plan"
+		},
+		"errors": {
+			"aiError": "AI connection failed. Check your settings."
 		}
 	}
 }

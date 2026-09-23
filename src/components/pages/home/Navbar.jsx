@@ -3,9 +3,10 @@
 import { useTranslations, useLocale } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-	Dumbbell, Menu, X, Zap, LogOut, LayoutDashboard,
+	Dumbbell, Menu, X, LogOut, LayoutDashboard,
 	User, Crown, Shield, Star, ChevronDown,
 	Building2, Wallet, CalendarDays, MessageCircle,
+	Home, Info, Layers, CircleHelp, Mail,
 } from "lucide-react";
 import { useState, useEffect, useRef, useTransition, useMemo } from "react";
 import { Link } from "@/i18n/navigation";
@@ -89,7 +90,7 @@ function getRoleQuickLinks(role, t) {
 
 // ─── LangSwitch ───────────────────────────────────────────────────────────────
 
-export function LangSwitch() {
+export function LangSwitch({ tone = "surface" }) {
 	const t = useTranslations("home.navbar");
 	const locale = useLocale();
 	const router = useRouter();
@@ -117,50 +118,22 @@ export function LangSwitch() {
 
 	useEffect(() => { setDocumentLangDir(locale); }, [locale]);
 
+	const onPhoto = tone === "photo";
+
 	return (
-		<>
-			<style>{`
-        .ls-wrap {
-          position:relative; display:inline-flex; align-items:center;
-          height:34px; border-radius:10px; padding:3px; cursor:pointer;
-          background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.18);
-          transition:border-color 0.2s, box-shadow 0.2s, transform 0.2s; gap:0;
-        }
-        .ls-wrap:hover { border-color:rgba(99,102,241,0.4); box-shadow:0 0 14px rgba(99,102,241,0.15); transform:translateY(-1px); }
-        .ls-wrap:disabled { opacity:0.5; cursor:wait; }
-        .ls-thumb {
-          position:absolute; top:3px; bottom:3px; width:calc(50% - 3px); border-radius:7px;
-          background:linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to));
-          box-shadow:0 2px 8px rgba(99,102,241,0.4);
-          transition:left 0.26s cubic-bezier(0.4,0,0.2,1); pointer-events:none; z-index:1;
-        }
-        .ls-seg {
-          position:relative; z-index:2; display:flex; align-items:center; justify-content:center; gap:3px;
-          width:48px; height:100%; font-size:10px; font-weight:800; letter-spacing:0.06em;
-          text-transform:uppercase; border-radius:7px; transition:color 0.2s; user-select:none;
-        }
-        .ls-spin { position:absolute; inset:0; border-radius:10px; display:flex; align-items:center; justify-content:center; z-index:10; background:rgba(8,8,20,0.55); }
-        .ls-ring { width:14px; height:14px; border-radius:50%; border:2px solid rgba(99,102,241,0.25); border-top-color:var(--color-primary-400,#818cf8); animation:_sp 0.7s linear infinite; }
-      `}</style>
-			<button
-				onClick={toggle}
-				disabled={isPending}
-				className="ls-wrap"
-				aria-label={isEN ? t("langSwitch.ariaToAr") : t("langSwitch.ariaToEn")}
-				data-aos="zoom-in"
-				data-aos-delay="180"
-				data-aos-duration="650"
-			>
-				<span className="ls-thumb" style={{ left: isEN ? "3px" : "calc(50% + 0px)" }} />
-				<span className="ls-seg" style={{ color: isEN ? "#fff" : "rgba(255,255,255,0.35)" }}>
-					<span style={{ fontSize: "12px" }}>🇬🇧</span>EN
-				</span>
-				<span className="ls-seg" style={{ color: !isEN ? "#fff" : "rgba(255,255,255,0.35)" }}>
-					<span style={{ fontSize: "12px" }}>🇸🇦</span>ع
-				</span>
-				{isPending && <span className="ls-spin"><span className="ls-ring" /></span>}
-			</button>
-		</>
+		<button
+			type="button"
+			onClick={toggle}
+			disabled={isPending}
+			aria-label={isEN ? t("langSwitch.ariaToAr") : t("langSwitch.ariaToEn")}
+			className={[
+				"inline-flex h-10 items-center justify-center rounded-full px-3 text-[13px] font-semibold transition-colors disabled:cursor-wait disabled:opacity-50",
+				onPhoto ? "text-white hover:bg-white/15" : "text-[#161616] hover:bg-black/5",
+			].join(" ")}
+			style={isEN ? { fontFamily: "var(--font-arabic), sans-serif" } : undefined}
+		>
+			{isPending ? "…" : isEN ? "عربي" : "EN"}
+		</button>
 	);
 }
 
@@ -371,211 +344,6 @@ function AvatarButton({ user, isRTL }) {
 	);
 }
 
-// ─── MobileDrawer ─────────────────────────────────────────────────────────────
-
-function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
-	const t = useTranslations("home.navbar");
-
-	return (
-		<>
-			<style>{`
-        @keyframes _bdin { from{opacity:0} to{opacity:1} }
-        @keyframes _itmIn { from{opacity:0;transform:translateX(${isRTL ? "16px" : "-16px"})} to{opacity:1;transform:translateX(0)} }
-        .drw-item { animation:_itmIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
-        .drw-item:nth-child(1){animation-delay:0.03s}.drw-item:nth-child(2){animation-delay:0.07s}
-        .drw-item:nth-child(3){animation-delay:0.11s}.drw-item:nth-child(4){animation-delay:0.15s}
-        .drw-item:nth-child(5){animation-delay:0.19s}.drw-item:nth-child(6){animation-delay:0.23s}
-      `}</style>
-
-			{/* Backdrop */}
-			{isOpen && (
-				<div
-					onClick={onClose}
-					className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-[3px]"
-					style={{ animation: "_bdin 0.25s ease" }}
-					data-aos="fade-in"
-					data-aos-duration="300"
-				/>
-			)}
-
-			{/* Drawer — compact: 272px on mobile, 310px on sm+ */}
-			<div
-				className={`fixed top-0 bottom-0 z-[201] flex flex-col overflow-y-auto transition-transform duration-[380ms] ease-[cubic-bezier(0.4,0,0.2,1)]
-          w-[272px] sm:w-[310px]
-          ${isRTL ? "right-0 left-auto" : "left-0 right-auto"}
-          ${isOpen ? "translate-x-0" : isRTL ? "translate-x-full" : "-translate-x-full"}
-        `}
-				style={{
-					direction: isRTL ? "rtl" : "ltr",
-					background: "rgba(7,7,17,0.99)",
-					backdropFilter: "blur(28px)",
-					borderLeft: isRTL ? "none" : undefined,
-					borderRight: isRTL ? undefined : "none",
-					border: isRTL ? "0 0 0 1px rgba(255,255,255,0.06)" : "0 1px 0 0 rgba(255,255,255,0.06)",
-					boxShadow: isRTL ? "-10px 0 48px rgba(0,0,0,0.7)" : "10px 0 48px rgba(0,0,0,0.7)",
-				}}
-				data-aos={isRTL ? "fade-left" : "fade-right"}
-				data-aos-duration="500"
-			>
-				{/* Top accent */}
-				<div
-					className="h-[2px] shrink-0"
-					style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))" }}
-					data-aos="slide-right"
-					data-aos-delay="50"
-					data-aos-duration="450"
-				/>
-
-				{/* Header */}
-				<div
-					className="flex items-center justify-between px-4 py-3 shrink-0"
-					style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-					data-aos="fade-down"
-					data-aos-delay="80"
-					data-aos-duration="450"
-				>
-					<div className="flex items-center gap-2.5">
-						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img
-							src={BRAND_LOGO_SRC}
-							alt={t("brand.name")}
-							className="h-9 w-9 rounded-[10px] object-contain shrink-0"
-						/>
-						<div>
-							<p className="text-[14px] font-black text-white md: leading-none">{t("brand.name")}</p>
-							<p className="text-[8px] font-semibold uppercase tracking-[0.18em] mt-0.5" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p>
-						</div>
-					</div>
-					<button onClick={onClose} aria-label={t("mobile.close")}
-						className="h-8 w-8 flex items-center justify-center rounded-[9px] cursor-pointer transition-colors"
-						style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}>
-						<X className="h-[14px] w-[14px]" />
-					</button>
-				</div>
-
-				{/* User card */}
-				{user && (
-					<div
-						className="px-3 py-2.5 shrink-0"
-						style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-						data-aos="fade-up"
-						data-aos-delay="120"
-						data-aos-duration="500"
-					>
-						<div className="rounded-[14px] overflow-hidden" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.14)" }}>
-							<div className="h-[2px]" style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
-							<div className="p-3 flex items-center gap-2.5">
-								<div className="relative shrink-0">
-									<div className="h-10 w-10 rounded-[11px] flex items-center justify-center text-[14px] font-black text-white"
-										style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
-										{getInitials(user.name)}
-									</div>
-									<span className={`absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#07071a] block`} />
-								</div>
-								<div className="flex-1 min-w-0">
-									<p className="text-[13px] font-extrabold text-white truncate">{user.name}</p>
-									<span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-[2px] rounded-full text-[8px] font-black uppercase tracking-wider text-white"
-										style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
-										{getRoleIcon(user.role)}{getRoleLabel(user.role, t)}
-									</span>
-								</div> 
-							</div>
-						</div>
-					</div>
-				)}
-
-				{/* Nav */}
-				<nav className="p-2.5 flex-1">
-					{user && (
-						<>
-							<p
-								className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/20 px-2 pb-2 pt-1"
-								data-aos="fade-up"
-								data-aos-delay="150"
-								data-aos-duration="400"
-							>
-								{t("mobile.sectionNav")}
-							</p>
-							<div className="flex flex-col gap-0.5">
-								<Link
-									href={getDashboardPath(user)}
-									onClick={onClose}
-									className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] no-underline font-semibold text-[13px] transition-colors"
-									style={{ background: "rgba(99,102,241,0.09)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--color-primary-300)" }}
-									data-aos="fade-up"
-									data-aos-delay="180"
-									data-aos-duration="450"
-								>
-									<div className="h-8 w-8 rounded-[9px] flex items-center justify-center text-white shrink-0"
-										style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
-										<LayoutDashboard className="h-[14px] w-[14px]" />
-									</div>
-									{t("dropdown.dashboard")}
-								</Link>
-
-								{getRoleQuickLinks(user.role, t).map((link, index) => (
-									<Link
-										key={link.href}
-										href={link.href}
-										onClick={onClose}
-										className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] no-underline font-semibold text-[13px] transition-all hover:bg-white/[0.04]"
-										style={{ border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" }}
-										data-aos="fade-up"
-										data-aos-delay={220 + index * 55}
-										data-aos-duration="450"
-									>
-										<div className="h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0"
-											style={{ background: "rgba(99,102,241,0.08)", color: "var(--color-primary-400)" }}>
-											{link.icon}
-										</div>
-										{link.label}
-									</Link>
-								))}
-
-								<button
-									onClick={() => { onLogout(); onClose(); }}
-									className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] w-full cursor-pointer font-semibold text-[13px] transition-colors"
-									style={{ border: "1px solid rgba(239,68,68,0.15)", background: "rgba(239,68,68,0.05)", color: "#f87171" }}
-									onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.1)"}
-									onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.05)"}
-									data-aos="fade-up"
-									data-aos-delay="380"
-									data-aos-duration="450"
-								>
-									<div className="h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: "rgba(239,68,68,0.1)" }}>
-										<LogOut className="h-[14px] w-[14px]" />
-									</div>
-									{t("dropdown.signOut")}
-								</button>
-							</div>
-						</>
-					)}
-				</nav>
-
-				{!user && (
-					<div
-						className="p-3 mb-8 shrink-0"
-						data-aos="fade-up"
-						data-aos-delay="180"
-						data-aos-duration="500"
-					>
-						<Link href="/auth" onClick={onClose}
-							className="flex items-center justify-center gap-2 py-3 rounded-[12px] text-white font-extrabold text-[13px] no-underline transition-all hover:-translate-y-0.5"
-							style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 20px rgba(99,102,241,0.4)" }}>
-							<Zap className="h-[13px] w-[13px] fill-white" />
-							{t("mobile.joinCta")}
-						</Link>
-					</div>
-				)}
-
-				<div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[rgba(7,7,17,0.9)] to-transparent" />
-			</div>
-		</>
-	);
-}
-
-// ─── Navbar ───────────────────────────────────────────────────────────────────
-
 export default function PowerfulNavbar() {
 	const t = useTranslations("home.navbar");
 	const locale = useLocale();
@@ -583,188 +351,198 @@ export default function PowerfulNavbar() {
 
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
-	const [visible, setVisible] = useState(true);
-	const [lastY, setLastY] = useState(0);
+	const [activeId, setActiveId] = useState("hero");
 	const [user, setUser] = useState(null);
 
+	const navItems = [
+		{ label: t("nav.home"), href: "#hero", id: "hero", icon: Home },
+		{ label: t("nav.about"), href: "#how-it-works-section", id: "how-it-works-section", icon: Info },
+		{ label: t("nav.community"), href: "#role-tabs-section", id: "role-tabs-section", icon: Layers },
+		{ label: t("nav.faqs"), href: "#faqs-section", id: "faqs-section", icon: CircleHelp },
+		{ label: t("nav.contact"), href: "#contact-section", id: "contact-section", icon: Mail },
+	];
+
 	useEffect(() => {
-		try { const r = localStorage.getItem("user"); if (r) setUser(JSON.parse(r)); } catch (_) { }
+		try {
+			const raw = localStorage.getItem("user");
+			if (raw) setUser(JSON.parse(raw));
+		} catch (_) {}
 	}, []);
 
 	useEffect(() => {
-		const onScroll = () => {
-			const y = window.scrollY;
-			setScrolled(y > 40);
-			setVisible(y < lastY || y < 80);
-			if (y > lastY && y > 80) setMobileOpen(false);
-			setLastY(y);
-		};
+		const onScroll = () => setScrolled(window.scrollY > 24);
+		onScroll();
 		window.addEventListener("scroll", onScroll, { passive: true });
 		return () => window.removeEventListener("scroll", onScroll);
-	}, [lastY]);
+	}, []);
 
 	useEffect(() => {
 		document.body.style.overflow = mobileOpen ? "hidden" : "";
-		return () => { document.body.style.overflow = ""; };
+		return () => {
+			document.body.style.overflow = "";
+		};
 	}, [mobileOpen]);
 
-	const navItems = [
-		{ label: t("nav.home"), href: "#hero", icon: "🏠" },
-		{ label: t("nav.about"), href: "#how-it-works-section", icon: "ℹ️" },
-		{ label: t("nav.community"), href: "#role-tabs-section", icon: "👥" },
-		{ label: t("nav.faqs"), href: "#faqs-section", icon: "💰" },
-		{ label: t("nav.contact"), href: "#contact-section", icon: "💰" },
-	];
+	useEffect(() => {
+		const ids = ["hero", "how-it-works-section", "role-tabs-section", "faqs-section", "contact-section"];
+		const nodes = ids.map((id) => document.getElementById(id)).filter(Boolean);
+		if (!nodes.length) return undefined;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const hit = entries
+					.filter((entry) => entry.isIntersecting)
+					.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+				if (hit?.target?.id) setActiveId(hit.target.id);
+			},
+			{ rootMargin: "-30% 0px -55% 0px", threshold: [0.15, 0.4] }
+		);
+		nodes.forEach((node) => observer.observe(node));
+		return () => observer.disconnect();
+	}, []);
 
-	const handleLogout = () => { localStorage.removeItem("user"); setUser(null); };
+	const solid = scrolled || mobileOpen;
 
 	return (
-		<>
-			<style>{`
-        @keyframes _glw { 0%,100%{opacity:0.45} 50%{opacity:0.8} }
-        .logo-glow { animation:_glw 3.5s ease-in-out infinite; }
-        .nav-lnk { position:relative; }
-        .nav-lnk::after {
-          content:''; position:absolute; bottom:5px; left:50%;
-          width:0; height:1.5px; border-radius:2px;
-          background:linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to));
-          transform:translateX(-50%); transition:width 0.22s ease;
-        }
-        .nav-lnk:hover::after { width:55%; }
-      `}</style>
+		<header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4" dir={isRTL ? "rtl" : "ltr"}>
+			{mobileOpen && (
+				<button
+					type="button"
+					aria-label={t("mobile.close")}
+					className="fixed inset-0 bg-black/50"
+					onClick={() => setMobileOpen(false)}
+				/>
+			)}
 
-			<nav
-				className={`fixed left-0 right-0 top-0 z-50 transition-[transform,background,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
-          ${visible ? "translate-y-0" : "-translate-y-full"}
-        `}
-				style={{
-					direction: isRTL ? "rtl" : "ltr",
-					background: scrolled ? "rgba(7,7,17,0.97)" : "linear-gradient(to bottom, rgba(7,7,17,0.7), transparent)",
-					borderBottom: scrolled ? "1px solid rgba(255,255,255,0.07)" : "1px solid transparent",
-					backdropFilter: "blur(24px)",
-					boxShadow: scrolled ? "0 2px 30px rgba(0,0,0,0.5)" : "none",
-				}}
-				data-aos="fade-down"
-				data-aos-delay="40"
-				data-aos-duration="700"
-			>
-				<div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="flex h-[62px] sm:h-[68px] items-center justify-between gap-3">
+			<div className="relative mx-auto max-w-[1180px]">
+				<div
+					className={[
+						"flex h-14 items-center justify-between gap-2 rounded-full px-1.5 sm:px-2",
+						solid
+							? "bg-[#141414] shadow-[0_18px_50px_rgba(0,0,0,0.38)] ring-1 ring-white/10"
+							: "bg-black/45 shadow-[0_10px_28px_rgba(0,0,0,0.22)] ring-1 ring-white/30 backdrop-blur-xl",
+					].join(" ")}
+				>
+					<Link href="/" className="flex min-w-0 items-center gap-2 ps-1.5 no-underline">
+						<img src={BRAND_LOGO_SRC} alt="" className="h-9 w-9 shrink-0 object-contain" />
+						<span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-white">{t("brand.name")}</span>
+					</Link>
 
-						{/* Logo */}
-						<Link
-							href="/"
-							className="flex items-center gap-2.5 no-underline shrink-0 group"
-							data-aos="fade-right"
-							data-aos-delay="80"
-							data-aos-duration="700"
-						>
-							{/* eslint-disable-next-line @next/next/no-img-element */}
-							<img
-								src={BRAND_LOGO_SRC}
-								alt={t("brand.name")}
-								className="relative h-[40px] w-[40px] sm:h-[42px] sm:w-[42px] rounded-[12px] object-contain transition-transform duration-200 group-hover:scale-[1.05]"
-							/>
-							<div>
-								<span className="text-[17px] sm:text-[19px] font-black text-white tracking-[-0.02em] md: leading-none">{t("brand.name")}</span>
-								{/* <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-[3px]" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p> */}
-							</div>
-						</Link>
-
-						{/* Desktop links */}
-						<div
-							className="hidden lg:flex items-center gap-0.5"
-							data-aos="fade-down"
-							data-aos-delay="130"
-							data-aos-duration="700"
-						>
-							{navItems.map((item, i) => (
+					<nav
+						className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-0.5 lg:flex"
+						aria-label={t("mobile.sectionNav")}
+					>
+						{navItems.map((item) => {
+							const on = activeId === item.id;
+							return (
 								<a
-									key={i}
+									key={item.id}
 									href={item.href}
-									className="nav-lnk px-4 py-2 rounded-[10px] text-[13px] font-semibold no-underline transition-all duration-200 tracking-[0.01em]"
-									style={{ color: "rgba(255,255,255,0.5)" }}
-									onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.9)"; e.currentTarget.style.background = "rgba(99,102,241,0.07)"; }}
-									onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = ""; }}
-									data-aos="fade-down"
-									data-aos-delay={170 + i * 70}
-									data-aos-duration="550"
+									aria-current={on ? "true" : undefined}
+									className={[
+										"rounded-full px-3.5 py-2 text-[13px] font-semibold no-underline transition-colors",
+										on ? "bg-white text-[#161616]" : "text-white/90 hover:bg-white/10 hover:text-white",
+									].join(" ")}
 								>
 									{item.label}
 								</a>
-							))}
-						</div>
+							);
+						})}
+					</nav>
 
-						{/* Right side */}
-						<div
-							className="flex items-center gap-2 shrink-0"
-							data-aos="fade-left"
-							data-aos-delay="140"
-							data-aos-duration="700"
-						>
-							<LangSwitch />
-
-							{user ? (
-								<div className="hidden md:block">
-									<AvatarButton user={user} isRTL={isRTL} />
-								</div>
-							) : (
-								<Link
-									href="/auth"
-									className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-[11px] text-white font-bold text-[13px] no-underline transition-all duration-200 hover:-translate-y-px tracking-[0.01em]"
-									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 2px 14px rgba(99,102,241,0.38), inset 0 1px 0 rgba(255,255,255,0.14)" }}
-									onMouseEnter={e => e.currentTarget.style.boxShadow = "0 6px 22px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.14)"}
-									onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 14px rgba(99,102,241,0.38), inset 0 1px 0 rgba(255,255,255,0.14)"}
-									data-aos="zoom-in"
-									data-aos-delay="240"
-									data-aos-duration="650"
-								>
-									<Zap className="h-[13px] w-[13px] fill-white" />
-									{t("nav.joinNow")}
-								</Link>
-							)}
-
-							{/* Hamburger */}
-							<button
-								onClick={() => setMobileOpen((v) => !v)}
-								aria-label={mobileOpen ? t("mobile.close") : t("mobile.open")}
-								className="lg:hidden flex h-9 w-9 items-center justify-center rounded-[10px] cursor-pointer transition-all duration-200"
-								style={{
-									border: mobileOpen ? "1px solid rgba(99,102,241,0.38)" : "1px solid rgba(255,255,255,0.08)",
-									background: mobileOpen ? "rgba(99,102,241,0.1)" : "rgba(255,255,255,0.03)",
-									color: mobileOpen ? "var(--color-primary-300)" : "rgba(255,255,255,0.6)",
-								}}
-								data-aos="zoom-in"
-								data-aos-delay="260"
-								data-aos-duration="600"
+					<div className="flex shrink-0 items-center">
+						<LangSwitch tone="photo" />
+						{user ? (
+							<div className="hidden md:block">
+								<AvatarButton user={user} isRTL={isRTL} />
+							</div>
+						) : (
+							<Link
+								href="/auth"
+								className="ms-1 hidden h-10 items-center rounded-full bg-white px-4 text-[13px] font-semibold text-[#161616] no-underline md:inline-flex"
 							>
-								<div className={`transition-transform duration-300 ${mobileOpen ? "rotate-90" : ""}`}>
-									{mobileOpen ? <X className="h-[15px] w-[15px]" strokeWidth={2.5} /> : <Menu className="h-[15px] w-[15px]" strokeWidth={2.5} />}
-								</div>
-							</button>
-						</div>
+								{t("nav.joinNow")}
+							</Link>
+						)}
+						<button
+							type="button"
+							onClick={() => setMobileOpen((open) => !open)}
+							aria-expanded={mobileOpen}
+							aria-label={mobileOpen ? t("mobile.close") : t("mobile.open")}
+							className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white hover:bg-white/10 lg:hidden"
+						>
+							{mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+						</button>
 					</div>
 				</div>
 
-				{/* Bottom shimmer when scrolled */}
-				{scrolled && (
-					<div
-						className="absolute bottom-0 left-0 right-0 h-px opacity-45 pointer-events-none"
-						style={{ background: "linear-gradient(90deg, transparent 0%, var(--color-gradient-from) 30%, var(--color-gradient-to) 70%, transparent 100%)" }}
-						data-aos="fade-in"
-						data-aos-duration="350"
-					/>
-				)}
-			</nav>
+				<AnimatePresence>
+					{mobileOpen && (
+						<motion.div
+							initial={{ opacity: 0, y: -8 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -8 }}
+							transition={{ duration: 0.18 }}
+							className="mt-2 max-h-[min(72svh,560px)] overflow-y-auto rounded-3xl bg-[#141414] p-2 text-white shadow-[0_24px_60px_rgba(0,0,0,0.4)] ring-1 ring-white/10"
+						>
+							<nav className="flex flex-col" aria-label={t("mobile.sectionNav")}>
+								{navItems.map((item) => {
+									const Icon = item.icon;
+									const on = activeId === item.id;
+									return (
+										<a
+											key={item.id}
+											href={item.href}
+											onClick={() => setMobileOpen(false)}
+											className={[
+												"flex items-center gap-3 rounded-2xl px-4 py-3.5 text-[16px] font-semibold no-underline",
+												on ? "bg-white text-[#161616]" : "text-white hover:bg-white/10",
+											].join(" ")}
+										>
+											<Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+											{item.label}
+										</a>
+									);
+								})}
+							</nav>
 
-			<MobileDrawer
-				isOpen={mobileOpen}
-				onClose={() => setMobileOpen(false)}
-				navItems={navItems}
-				user={user}
-				onLogout={handleLogout}
-				isRTL={isRTL}
-			/>
-		</>
+							{user ? (
+								<div className="mt-1 border-t border-white/10 pt-1">
+									<Link
+										href={getDashboardPath(user)}
+										onClick={() => setMobileOpen(false)}
+										className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-[15px] font-semibold text-white no-underline hover:bg-white/10"
+									>
+										<LayoutDashboard className="h-5 w-5" aria-hidden="true" />
+										{t("dropdown.dashboard")}
+									</Link>
+									<button
+										type="button"
+										onClick={() => {
+											localStorage.removeItem("user");
+											setUser(null);
+											setMobileOpen(false);
+										}}
+										className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-[15px] font-semibold text-red-300 hover:bg-white/10"
+									>
+										<LogOut className="h-5 w-5" aria-hidden="true" />
+										{t("dropdown.signOut")}
+									</button>
+								</div>
+							) : (
+								<div className="p-2 pt-1">
+									<Link
+										href="/auth"
+										onClick={() => setMobileOpen(false)}
+										className="flex h-12 items-center justify-center rounded-full bg-white text-[15px] font-semibold text-[#161616] no-underline"
+									>
+										{t("nav.joinNow")}
+									</Link>
+								</div>
+							)}
+						</motion.div>
+					)}
+				</AnimatePresence>
+			</div>
+		</header>
 	);
 }

@@ -1,425 +1,171 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import {
-	User,
-	Dumbbell,
-	Shield,
-	Calendar,
-	TrendingUp,
-	Heart,
-	Users,
-	ClipboardList,
-	BarChart3,
-	Settings,
 	Award,
-	Target,
-	Activity,
-	MessageSquare,
-	FileText,
-	Lock,
-	Zap,
-	Trophy,
-	Video,
-	BookOpen,
-	DollarSign,
-	UserCheck,
+	BarChart3,
 	Bell,
-	Database,
-	CheckCircle2,
-	ArrowRight,
-	Sparkles,
+	BookOpen,
+	Calendar,
+	ClipboardList,
+	CreditCard,
+	Dumbbell,
+	FileText,
+	Heart,
+	LayoutDashboard,
+	MessageSquare,
+	Settings,
+	Shield,
+	TrendingUp,
+	Users,
+	Utensils,
+	Video,
 } from "lucide-react";
-import SectionHeader from "./SectionHeader";
 
-// ─── AOS Init Hook ────────────────────────────────────────────────────────────
-function useAOS() {
-	useEffect(() => {
-		if (typeof window === "undefined") return;
-		import("aos").then((AOS) => {
-			AOS.init({
-				duration: 600,
-				easing: "ease-out-cubic",
-				once: true,
-				offset: 60,
-				delay: 0,
-			});
-		});
-	}, []);
+const ROLE_IDS = ["client", "coach", "admin"];
+
+const FEATURE_ICONS = {
+	client: {
+		workouts: Dumbbell,
+		nutrition: Utensils,
+		exercises: Video,
+		progress: TrendingUp,
+		reports: Heart,
+		chat: MessageSquare,
+		reminders: Bell,
+		recipes: BookOpen,
+	},
+	coach: {
+		clients: Users,
+		workoutPlans: ClipboardList,
+		nutritionPlans: Utensils,
+		reports: Calendar,
+		exerciseLibrary: Award,
+		chat: MessageSquare,
+		forms: FileText,
+		sharedTools: Settings,
+	},
+	admin: {
+		dashboard: LayoutDashboard,
+		users: Users,
+		billing: CreditCard,
+		plans: Dumbbell,
+		forms: ClipboardList,
+		reports: BarChart3,
+		content: BookOpen,
+		operations: Shield,
+	},
+};
+
+const FEATURE_KEYS = {
+	client: ["workouts", "nutrition", "exercises", "progress", "reports", "chat", "reminders", "recipes"],
+	coach: ["clients", "workoutPlans", "nutritionPlans", "reports", "exerciseLibrary", "chat", "forms", "sharedTools"],
+	admin: ["dashboard", "users", "billing", "plans", "forms", "reports", "content", "operations"],
+};
+
+function displayFont(locale) {
+	return locale === "ar"
+		? "var(--font-arabic), sans-serif"
+		: "var(--font-space-grotesk), var(--font-open-sans), sans-serif";
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function RoleTabsFinal() {
 	const [activeTab, setActiveTab] = useState("client");
-	const [prevTab, setPrevTab] = useState(null);
-	const [animating, setAnimating] = useState(false);
 	const t = useTranslations("home.roles");
-	useAOS();
+	const locale = useLocale();
+	const font = displayFont(locale);
+	const keys = FEATURE_KEYS[activeTab];
 
-	const tabs = [
-		{ id: "client", label: t("tabs.client"), icon: User },
-		{ id: "coach", label: t("tabs.coach"), icon: Dumbbell },
-		{ id: "admin", label: t("tabs.admin"), icon: Shield },
-	];
-
-	const features = {
-		client: [
-			{
-				icon: Calendar,
-				title: t("client.features.workouts.title"),
-				description: t("client.features.workouts.description"),
-				badge: t("client.features.workouts.badge"),
-			},
-			{
-				icon: Activity,
-				title: t("client.features.nutrition.title"),
-				description: t("client.features.nutrition.description"),
-				badge: t("client.features.nutrition.badge"),
-			},
-			{
-				icon: Video,
-				title: t("client.features.exercises.title"),
-				description: t("client.features.exercises.description"),
-				badge: t("client.features.exercises.badge"),
-			},
-			{
-				icon: TrendingUp,
-				title: t("client.features.progress.title"),
-				description: t("client.features.progress.description"),
-				badge: t("client.features.progress.badge"),
-			},
-			{
-				icon: Heart,
-				title: t("client.features.reports.title"),
-				description: t("client.features.reports.description"),
-				badge: t("client.features.reports.badge"),
-			},
-			{
-				icon: MessageSquare,
-				title: t("client.features.chat.title"),
-				description: t("client.features.chat.description"),
-				badge: t("client.features.chat.badge"),
-			},
-			{
-				icon: Target,
-				title: t("client.features.reminders.title"),
-				description: t("client.features.reminders.description"),
-				badge: t("client.features.reminders.badge"),
-			},
-			{
-				icon: BookOpen,
-				title: t("client.features.recipes.title"),
-				description: t("client.features.recipes.description"),
-				badge: t("client.features.recipes.badge"),
-			},
-		],
-		coach: [
-			{
-				icon: Users,
-				title: t("coach.features.clients.title"),
-				description: t("coach.features.clients.description"),
-				badge: t("coach.features.clients.badge"),
-			},
-			{
-				icon: ClipboardList,
-				title: t("coach.features.workoutPlans.title"),
-				description: t("coach.features.workoutPlans.description"),
-				badge: t("coach.features.workoutPlans.badge"),
-			},
-			{
-				icon: BarChart3,
-				title: t("coach.features.nutritionPlans.title"),
-				description: t("coach.features.nutritionPlans.description"),
-				badge: t("coach.features.nutritionPlans.badge"),
-			},
-			{
-				icon: Calendar,
-				title: t("coach.features.reports.title"),
-				description: t("coach.features.reports.description"),
-				badge: t("coach.features.reports.badge"),
-			},
-			{
-				icon: Award,
-				title: t("coach.features.exerciseLibrary.title"),
-				description: t("coach.features.exerciseLibrary.description"),
-				badge: t("coach.features.exerciseLibrary.badge"),
-			},
-			{
-				icon: MessageSquare,
-				title: t("coach.features.chat.title"),
-				description: t("coach.features.chat.description"),
-				badge: t("coach.features.chat.badge"),
-			},
-			{
-				icon: FileText,
-				title: t("coach.features.forms.title"),
-				description: t("coach.features.forms.description"),
-				badge: t("coach.features.forms.badge"),
-			},
-			{
-				icon: DollarSign,
-				title: t("coach.features.sharedTools.title"),
-				description: t("coach.features.sharedTools.description"),
-				badge: t("coach.features.sharedTools.badge"),
-			},
-		],
-		admin: [
-			{
-				icon: Database,
-				title: t("admin.features.dashboard.title"),
-				description: t("admin.features.dashboard.description"),
-				badge: t("admin.features.dashboard.badge"),
-			},
-			{
-				icon: UserCheck,
-				title: t("admin.features.users.title"),
-				description: t("admin.features.users.description"),
-				badge: t("admin.features.users.badge"),
-			},
-			{
-				icon: BarChart3,
-				title: t("admin.features.billing.title"),
-				description: t("admin.features.billing.description"),
-				badge: t("admin.features.billing.badge"),
-			},
-			{
-				icon: Settings,
-				title: t("admin.features.plans.title"),
-				description: t("admin.features.plans.description"),
-				badge: t("admin.features.plans.badge"),
-			},
-			{
-				icon: Lock,
-				title: t("admin.features.forms.title"),
-				description: t("admin.features.forms.description"),
-				badge: t("admin.features.forms.badge"),
-			},
-			{
-				icon: Bell,
-				title: t("admin.features.reports.title"),
-				description: t("admin.features.reports.description"),
-				badge: t("admin.features.reports.badge"),
-			},
-			{
-				icon: Trophy,
-				title: t("admin.features.content.title"),
-				description: t("admin.features.content.description"),
-				badge: t("admin.features.content.badge"),
-			},
-			{
-				icon: Zap,
-				title: t("admin.features.operations.title"),
-				description: t("admin.features.operations.description"),
-				badge: t("admin.features.operations.badge"),
-			},
-		],
-	};
-
-	function handleTabChange(id) {
-		if (id === activeTab || animating) return;
-		setAnimating(true);
-		setPrevTab(activeTab);
-		setTimeout(() => {
-			setActiveTab(id);
-			setAnimating(false);
-		}, 180);
-	}
- 
 	return (
 		<section
 			id="role-tabs-section"
-			aria-label="Platform roles and features"
-			className="relative overflow-hidden py-16 md:py-24 lg:py-32"
+			aria-labelledby="role-tabs-heading"
+			className="px-5 py-20 sm:px-8 sm:py-28 lg:px-12"
+			style={{ background: "linear-gradient(160deg, var(--color-primary-700), var(--color-primary-500) 55%, var(--color-secondary-500))" }}
 		>
-			{/* ── Background decorations ── */}
-			<div
-				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 overflow-hidden"
-			>
-				{/* Primary glow */}
-				<div
-					className="absolute top-10 h-72 w-72 rounded-full
-            bg-[var(--color-primary-500)] opacity-10 blur-3xl
-            ltr:right-10 rtl:left-10
-            md:top-20 md:h-[28rem] md:w-[28rem]
-            ltr:md:right-20 rtl:md:left-20
-            animate-[pulse_4s_ease-in-out_infinite]"
-				/>
-			 
-				 
-			</div>
+			<div className="mx-auto max-w-[1180px]">
+				<div className="grid gap-10 lg:grid-cols-12 lg:gap-16">
+					<div className="lg:col-span-4">
+						<p className="text-[12px] font-semibold text-white/35 ltr:uppercase ltr:tracking-[0.18em]">{t("badge")}</p>
+						<h2
+							id="role-tabs-heading"
+							className="mt-4 text-[clamp(2rem,4vw,3.25rem)] leading-[1.02] text-white ltr:tracking-[-0.04em]"
+							style={{ fontFamily: font }}
+						>
+							{t("title")}
+						</h2>
+						<p className="mt-4 text-[15px] leading-relaxed text-white/52">{t("description")}</p>
 
-			{/* ── Content ── */}
-			<div
-				id="role-tabs-inner"
-				className="relative z-10 mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-16"
-			>
-				{/* ── Section header ── */}
-
-				<SectionHeader id="role-tabs-header" badge={t("badge")} title={t("title")} subtitle={t("description")} />
- 
-				<nav
-					id="role-tabs-nav"
-					aria-label="Role selector"
-					className="mb-8 flex justify-center px-4 md:mb-12"
-					data-aos="fade-up"
-					data-aos-delay="100"
-					data-aos-duration="600"
-				>
-					<div
-						role="tablist"
-						className="grid w-full max-w-lg grid-cols-3 gap-1 rounded-xl bg-white/[0.04] p-1.5 ring-1 ring-white/[0.08] backdrop-blur-xl sm:gap-1.5 sm:max-w-xl"
-					>
-						{tabs.map((tab) => {
-							const Icon = tab.icon;
-							const isActive = activeTab === tab.id;
-
-							return (
-								<button
-									key={tab.id}
-									role="tab"
-									id={`role-tab-${tab.id}`}
-									aria-selected={isActive}
-									aria-controls={`role-panel-${tab.id}`}
-									onClick={() => handleTabChange(tab.id)}
-									className={[
-										"relative cursor-pointer rounded-[10px] px-3 py-2.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)] sm:px-4 sm:py-3",
-										isActive
-											? "bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-[0_0_18px_rgba(99,102,241,0.35)]"
-											: "hover:bg-white/[0.06]",
-									].join(" ")}
-								>
-									<span
+						<div role="tablist" aria-label={t("badge")} className="mt-8 grid grid-cols-3 gap-2">
+							{ROLE_IDS.map((id) => {
+								const on = activeTab === id;
+								const Icon = id === "client" ? Dumbbell : id === "coach" ? Users : Shield;
+								return (
+									<button
+										key={id}
+										type="button"
+										role="tab"
+										id={`role-tab-${id}`}
+										aria-selected={on}
+										aria-controls={`role-panel-${id}`}
+										onClick={() => setActiveTab(id)}
 										className={[
-											"relative z-10 flex items-center justify-center gap-2 font-body text-sm font-bold transition-colors duration-200 sm:text-base",
-											isActive
-												? "text-white"
-												: "text-white/40 hover:text-white/70",
+											"flex min-h-[88px] flex-col items-start justify-between rounded-2xl border px-3 py-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]",
+											on ? "border-transparent bg-white text-[#12110f]" : "border-white/25 bg-white/15 text-white hover:bg-white/25",
 										].join(" ")}
 									>
-										<Icon
-											aria-hidden="true"
-											className={[
-												"h-4 w-4 shrink-0 transition-transform duration-200 sm:h-5 sm:w-5",
-												isActive ? "scale-110" : "",
-											].join(" ")}
-										/>
-										<span className="hidden sm:inline">{tab.label}</span>
-									</span>
-								</button>
-							);
-						})}
+										<Icon className="h-5 w-5" aria-hidden="true" />
+										<span className="text-[14px] font-semibold">{t(`tabs.${id}`)}</span>
+									</button>
+								);
+							})}
+						</div>
 					</div>
-				</nav>
 
-				{/* ── Feature grid ── */}
-				<div
-					id={`role-panel-${activeTab}`}
-					role="tabpanel"
-					aria-labelledby={`role-tab-${activeTab}`}
-					className={[
-						"grid grid-cols-1 gap-4 transition-opacity duration-200 sm:grid-cols-2 md:gap-5 lg:grid-cols-4",
-						animating ? "opacity-0" : "opacity-100",
-					].join(" ")}
-				>
-					{features[activeTab].map((feature, index) => (
-						<FeatureCard
-							key={`${activeTab}-${index}`}
-							feature={feature}
-							index={index}
-							t={t}
-						/>
-					))}
+					<div
+						id={`role-panel-${activeTab}`}
+						role="tabpanel"
+						aria-labelledby={`role-tab-${activeTab}`}
+						className="lg:col-span-8 lg:pt-16"
+					>
+						<p
+							className="text-[1.35rem] leading-snug text-white sm:text-[1.6rem] ltr:tracking-[-0.03em]"
+							style={{ fontFamily: font }}
+						>
+							{t(`${activeTab}.cta.title`)}
+						</p>
+						<p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/50">
+							{t(`${activeTab}.cta.description`)}
+						</p>
+
+						<ul className="mt-8 grid gap-3 sm:grid-cols-2">
+							{keys.map((key) => {
+								const Icon = FEATURE_ICONS[activeTab][key];
+								return (
+									<li key={key} className="rounded-2xl bg-white p-4 text-[#1c1916] shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
+										<span className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary-500)] text-white">
+											<Icon className="h-5 w-5" aria-hidden="true" />
+										</span>
+										<h3 className="text-[15px] font-semibold">{t(`${activeTab}.features.${key}.title`)}</h3>
+										<p className="mt-1.5 text-[13px] leading-relaxed text-[#5c5348]">
+											{t(`${activeTab}.features.${key}.description`)}
+										</p>
+									</li>
+								);
+							})}
+						</ul>
+
+						<Link
+							href="/auth"
+							className="mt-8 inline-flex rounded-full bg-white px-5 py-2.5 text-[14px] font-semibold text-[#1c1916] no-underline"
+						>
+							{t(`${activeTab}.cta.button`)}
+						</Link>
+					</div>
 				</div>
-
 			</div>
 		</section>
-	);
-}
-
-// ─── Feature Card ─────────────────────────────────────────────────────────────
-function FeatureCard({ feature, index, t }) {
-	const Icon = feature.icon;
-	const delay = (index % 4) * 80;
-
-	return (
-		<article
-			id={`feature-card-${index}`}
-			className="group relative h-full"
-			data-aos="fade-up"
-			data-aos-delay={delay}
-			data-aos-duration="550"
-		>
-			{/* Hover glow */}
-			<div
-				aria-hidden="true"
-				className="absolute -inset-px -z-10 rounded-xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-20"
-			/>
-
-			<div
-				className="relative flex h-full flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.04] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-all duration-300 group-hover:-translate-y-1.5 group-hover:border-[var(--color-primary-500)]/30 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)] md:p-6"
-			>
-				{/* Shimmer */}
-				<div
-					aria-hidden="true"
-					className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.04] to-transparent transition-transform duration-700 group-hover:translate-x-full"
-				/>
-
-				<div className="relative flex h-full flex-col gap-4">
-					{/* Icon + Badge row */}
-					<div className="flex items-start justify-between gap-3">
-						{/* Icon box */}
-						<div
-							className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-lg transition-transform duration-300 group-hover:scale-105 md:h-14 md:w-14"
-							aria-hidden="true"
-						>
-							<Icon className="h-6 w-6 text-white md:h-7 md:w-7" />
-						</div>
-
-						{/* Badge */}
-						<span className="mt-0.5 shrink-0 rounded-full border border-[var(--color-primary-500)]/25 bg-[var(--color-primary-500)]/[0.12] px-2.5 py-1 font-body text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-primary-300)]">
-							{feature.badge}
-						</span>
-					</div>
-
-					{/* Text */}
-					<div className="flex flex-1 flex-col gap-1.5">
-						<h3 className="font-body text-base font-black md: leading-snug text-white transition-colors duration-200 group-hover:text-[var(--color-primary-200)] md:text-lg">
-							{feature.title}
-						</h3>
-						<p className="font-body text-xs md: leading-relaxed text-white/40 transition-colors duration-200 group-hover:text-white/60 md:text-sm">
-							{feature.description}
-						</p>
-					</div>
-
-					{/* Footer */}
-					<div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
-						<div className="flex items-center gap-1.5">
-							<CheckCircle2
-								aria-hidden="true"
-								className="h-4 w-4 shrink-0 text-emerald-400"
-							/>
-							<span className="font-body text-[10px] font-bold uppercase tracking-[0.1em] text-white/35">
-								{t("included")}
-							</span>
-						</div>
-
-						<span
-							aria-hidden="true"
-							className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-						>
-							<ArrowRight className="h-4 w-4 text-[var(--color-primary-400)] rtl:rotate-180" />
-						</span>
-					</div>
-				</div>
-
-				{/* Bottom accent bar */}
-				<div
-					aria-hidden="true"
-					className="absolute bottom-0 left-0 right-0 h-[3px] origin-left scale-x-0 rounded-b-xl bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] transition-transform duration-300 group-hover:scale-x-100 rtl:origin-right"
-				/>
-			</div>
-		</article>
 	);
 }
