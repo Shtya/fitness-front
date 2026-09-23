@@ -6,7 +6,7 @@ import api from '@/utils/axios';
 import { clearClientSession } from '@/lib/session-cleanup';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, ScanLine } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, ScanLine, Library } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -258,6 +258,7 @@ export const ITEM_META = {
   transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
   aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
+  readingRoom: { id: 'readingRoom', nameKey: 'readingRoom', href: '/ai-studio', icon: Library, descKey: 'descriptions.readingRoom', group: 'tools', defaultVisible: true, required: false },
   learning: { id: 'learning', nameKey: 'learning', href: '/dashboard/learning', icon: GraduationCap, descKey: 'descriptions.learning', group: 'tools', defaultVisible: true, required: false },
   learningManagement: { id: 'learningManagement', nameKey: 'learningManagement', href: '/dashboard/learning/management', icon: Layers3, descKey: 'descriptions.learningManagement', group: 'tools', defaultVisible: true, required: false },
   learningStudy: { id: 'learningStudy', nameKey: 'learningStudy', href: '/dashboard/learning/study', icon: Brain, descKey: 'descriptions.learningStudy', group: 'tools', defaultVisible: true, required: false },
@@ -311,6 +312,7 @@ export const NAV = [
       { ...ITEM_META.notifications },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
+      { ...ITEM_META.readingRoom },
       { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
@@ -349,6 +351,7 @@ export const NAV = [
       { ...ITEM_META.transcript },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
+      { ...ITEM_META.readingRoom },
       { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
@@ -387,6 +390,7 @@ export const NAV = [
       { ...ITEM_META.notifications },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
+      { ...ITEM_META.readingRoom },
       { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
@@ -420,7 +424,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }, { ...ITEM_META.webTranslator }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.readingRoom }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }, { ...ITEM_META.webTranslator }],
   },
   {
     role: 'super_admin',
