@@ -248,21 +248,25 @@ export default function ReadingView({ book: initialBook }) {
 		flashPrefsSaved();
 	};
 
-	const goPage = idx => {
+	const goPage = (idx, opts = {}) => {
 		const target = pages[idx];
 		if (!target) return;
 		const percent = Math.round(((idx + 1) / pages.length) * 100);
 		persist({
 			...book,
 			progress: {
+				...(book.progress || {}),
 				chapterId: target.chapter.id,
 				pageId: target.page.id,
 				percent,
 				scrollRatio: 0,
+				/* keep pin / other progress fields — never wipe bookmark on navigation */
 			},
 		});
-		articleRef.current?.scrollTo?.({ top: 0, behavior: 'smooth' });
-		lenisRef.current?.scrollTo?.(0, { immediate: false });
+		if (!opts.keepScroll) {
+			articleRef.current?.scrollTo?.({ top: 0, behavior: 'smooth' });
+			lenisRef.current?.scrollTo?.(0, { immediate: false });
+		}
 	};
 
 	useEffect(() => {
@@ -1133,7 +1137,7 @@ export default function ReadingView({ book: initialBook }) {
 	const jumpToPin = (pin = readingPin) => {
 		if (!pin?.pageId) return;
 		const idx = pages.findIndex(p => p.page.id === pin.pageId);
-		if (idx >= 0) goPage(idx);
+		if (idx >= 0) goPage(idx, { keepScroll: true });
 		setShowResume(false);
 		setTimeout(() => {
 			const el = pin.blockId ? document.getElementById(`block-${pin.blockId}`) : null;
