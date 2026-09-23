@@ -34,7 +34,7 @@ import {
 	LayoutList,
 	MoreHorizontal,
 	Layers,
-	MapPin,
+	Bookmark,
 	Pencil,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
@@ -111,6 +111,20 @@ function clampTimerMins(n) {
 	return Math.min(180, Math.max(1, v));
 }
 
+/** Strip noisy page counters that sometimes land in imported body copy (e.g. 2/129, 3 من 80). */
+function isPageCounterNoise(text) {
+	const s = String(text || '')
+		.trim()
+		.replace(/\u200f|\u200e/g, '');
+	if (!s || s.length > 24) return false;
+	return (
+		/^\d+\s*\/\s*\d+$/.test(s) ||
+		/^\d+\s*من\s*\d+$/.test(s) ||
+		/^(page|صفحة)\s*\d+(\s*\/\s*\d+)?$/i.test(s) ||
+		/^p\.?\s*\d+$/i.test(s)
+	);
+}
+
 export default function ReadingView({ book: initialBook }) {
 	const t = useTranslations('aiReading');
 	const locale = useLocale();
@@ -158,6 +172,7 @@ export default function ReadingView({ book: initialBook }) {
 	const [showResume, setShowResume] = useState(true);
 	const [headerMoreOpen, setHeaderMoreOpen] = useState(false);
 	const [editMode, setEditMode] = useState(false);
+	const [pinPlaceMode, setPinPlaceMode] = useState(false);
 	const [pinFlash, setPinFlash] = useState(false);
 	const articleRef = useRef(null);
 	const articleInnerRef = useRef(null);
@@ -276,6 +291,7 @@ export default function ReadingView({ book: initialBook }) {
 					setListenPlaying(false);
 				}
 				if (editMode) setEditMode(false);
+				if (pinPlaceMode) setPinPlaceMode(false);
 			}
 		};
 		window.addEventListener('keydown', onKey);
@@ -1104,29 +1120,15 @@ export default function ReadingView({ book: initialBook }) {
 				},
 			},
 		});
+		setPinPlaceMode(false);
 		setPinFlash(true);
 		setTimeout(() => setPinFlash(false), 1600);
 	};
 
-	const pinCurrentView = () => {
-		const pageEntry = current;
-		if (!pageEntry) return;
-		const blocks = pageEntry.page?.blocks || [];
-		const root = articleRef.current;
-		let target = blocks[0];
-		if (root && blocks.length) {
-			const mid = root.scrollTop + root.clientHeight * 0.35;
-			for (const b of blocks) {
-				const el = document.getElementById(`block-${b.id}`);
-				if (!el) continue;
-				const top = el.offsetTop;
-				if (top + el.offsetHeight >= mid) {
-					target = b;
-					break;
-				}
-			}
-		}
-		if (target) setReadingPin(pageEntry, target);
+	const togglePinPlaceMode = () => {
+		setEditMode(false);
+		setSelectionMenu(null);
+		setPinPlaceMode(v => !v);
 	};
 
 	const jumpToPin = (pin = readingPin) => {
@@ -1305,44 +1307,68 @@ export default function ReadingView({ book: initialBook }) {
 						className="flex flex-col"
 						style={{ gap: `${prefs.paragraphGap || 1.25}rem`, textAlign: isContentRTL ? 'right' : 'left' }}
 					>
-						{(resolved.blocks || []).map(block => {
+						{(resolved.blocks || [])
+							.filter(block => {
+								const raw = block.type === 'list' ? (block.items || []).join(' ') : block.text;
+								return !isPageCounterNoise(raw);
+							})
+							.map(block => {
 							const isPinned = readingPin?.blockId === block.id;
 							return (
 								<div
 									key={block.id}
 									id={`block-${block.id}`}
-									className="group/block relative scroll-mt-24"
-									style={
-										isPinned
-											? {
-													boxShadow: `inset ${isContentRTL ? '-3px' : '3px'} 0 0 ${theme.accent}`,
-													paddingInlineStart: '0.35rem',
+									role={pinPlaceMode ? 'button' : undefined}
+									tabIndex={pinPlaceMode ? 0 : undefined}
+									onClick={
+										pinPlaceMode && !editMode
+											? e => {
+													e.stopPropagation();
+													setReadingPin(pageEntry, block);
 												}
 											: undefined
 									}
+									onKeyDown={
+										pinPlaceMode && !editMode
+											? e => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.preventDefault();
+														setReadingPin(pageEntry, block);
+													}
+												}
+											: undefined
+									}
+									className={`relative scroll-mt-24 rounded-lg transition ${
+										pinPlaceMode && !editMode
+											? 'cursor-cell ring-1 ring-transparent hover:bg-black/[0.03] hover:ring-[color:var(--pin-ring)]'
+											: ''
+									}`}
+									style={{
+										['--pin-ring']: `${theme.accent}55`,
+										...(isPinned && !pinPlaceMode
+											? {
+													boxShadow: `inset ${isContentRTL ? '-3px' : '3px'} 0 0 ${theme.accent}`,
+													paddingInlineStart: '0.5rem',
+												}
+											: null),
+									}}
 								>
-									{!editMode && (
-										<button
-											type="button"
-											onClick={e => {
-												e.stopPropagation();
-												setReadingPin(pageEntry, block);
-											}}
-											title={t('reading.pinHere')}
-											aria-label={t('reading.pinHere')}
-											className={`absolute top-0 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full transition ${
-												isPinned
-													? 'opacity-100'
-													: 'opacity-40 hover:opacity-100 focus:opacity-100 sm:opacity-0 sm:group-hover/block:opacity-100'
-											}`}
+									{/* Only the saved stop mark — never a pin on every paragraph */}
+									{isPinned && !pinPlaceMode && !editMode && (
+										<span
+											className="pointer-events-none absolute -top-1 z-10 flex items-center gap-1"
 											style={{
-												...(isContentRTL ? { right: -2 } : { left: -2 }),
-												background: isPinned ? theme.accent : `${theme.ink}12`,
-												color: isPinned ? '#fff' : theme.ink,
+												...(isContentRTL ? { left: -6 } : { right: -6 }),
 											}}
+											title={t('reading.pinSavedMark')}
 										>
-											<MapPin size={13} fill={isPinned ? 'currentColor' : 'none'} />
-										</button>
+											<span
+												className="inline-flex h-8 w-8 items-center justify-center rounded-full shadow-md ring-2 ring-white/30"
+												style={{ background: theme.accent, color: '#fff' }}
+											>
+												<Bookmark size={15} fill="currentColor" strokeWidth={2} />
+											</span>
+										</span>
 									)}
 									{editMode ? (
 										<div className="space-y-1.5">
@@ -1855,8 +1881,10 @@ export default function ReadingView({ book: initialBook }) {
 					>
 						<article
 							ref={articleInnerRef}
-							onMouseUp={editMode ? undefined : onMouseUp}
-							className="mx-auto px-4 py-5 pb-28 sm:px-5 sm:py-12 sm:pb-16"
+							onMouseUp={editMode || pinPlaceMode ? undefined : onMouseUp}
+							className={`mx-auto px-4 py-5 pb-28 sm:px-5 sm:py-12 sm:pb-16 ${
+								pinPlaceMode ? 'cursor-cell select-none' : ''
+							}`}
 							style={{
 								maxWidth: prefs.maxWidth,
 								fontSize: prefs.fontSize,
@@ -1866,7 +1894,6 @@ export default function ReadingView({ book: initialBook }) {
 								letterSpacing: `${prefs.letterSpacing || 0}em`,
 								textAlign: isContentRTL ? 'right' : 'left',
 								color: theme.ink,
-								/* Keep copy clear of the edge progress rail */
 								...(pageMode === 'scroll'
 									? isContentRTL
 										? { paddingLeft: '0.85rem' }
@@ -1885,6 +1912,24 @@ export default function ReadingView({ book: initialBook }) {
 								onResumePin={jumpToPin}
 								onDismiss={() => setShowResume(false)}
 							/>
+						)}
+						{pinPlaceMode && (
+							<div
+								className="mb-4 flex items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-xs font-semibold"
+								style={{ background: `${theme.accent}18`, color: theme.accent }}
+							>
+								<span className="inline-flex items-center gap-1.5">
+									<Bookmark size={14} /> {t('reading.pinPlaceHint')}
+								</span>
+								<button
+									type="button"
+									onClick={() => setPinPlaceMode(false)}
+									className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+									style={{ background: `${theme.ink}12`, color: theme.ink }}
+								>
+									{t('reading.pinCancel')}
+								</button>
+							</div>
 						)}
 						{editMode && (
 							<div
@@ -1913,25 +1958,25 @@ export default function ReadingView({ book: initialBook }) {
 
 						{pageMode === 'scroll' ? (
 							<div className="space-y-16">
-								{pages.map((p, idx) => (
+								{pages.map(p => (
 									<section key={p.page.id} id={`page-${p.page.id}`} className="scroll-mt-8">
-										<header className="mb-8" style={{ textAlign: isContentRTL ? 'right' : 'left' }}>
-											<p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.muted }}>
-												{p.chapter.title}
-											</p>
-											{p.page.title ? (
-												<h1
-													className="text-3xl font-bold tracking-tight sm:text-4xl"
-													style={{ fontFamily: contentFont, color: theme.heading || theme.accent }}
-												>
-													{p.page.title}
-												</h1>
-											) : (
-												<p className="text-xs font-semibold opacity-40">
-													{idx + 1}/{pages.length}
-												</p>
-											)}
-										</header>
+										{(p.chapter.title || (p.page.title && !isPageCounterNoise(p.page.title))) && (
+											<header className="mb-8" style={{ textAlign: isContentRTL ? 'right' : 'left' }}>
+												{p.chapter.title && !isPageCounterNoise(p.chapter.title) ? (
+													<p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.muted }}>
+														{p.chapter.title}
+													</p>
+												) : null}
+												{p.page.title && !isPageCounterNoise(p.page.title) ? (
+													<h1
+														className="text-3xl font-bold tracking-tight sm:text-4xl"
+														style={{ fontFamily: contentFont, color: theme.heading || theme.accent }}
+													>
+														{p.page.title}
+													</h1>
+												) : null}
+											</header>
+										)}
 										{renderPageBody(
 											p,
 											(book.knowledge?.highlights || []).filter(h => !h.pageId || h.pageId === p.page.id),
@@ -1993,21 +2038,25 @@ export default function ReadingView({ book: initialBook }) {
 					>
 						<button
 							type="button"
-							onClick={pinCurrentView}
-							className="inline-flex h-11 w-11 items-center justify-center rounded-full shadow-lg ring-1 ring-black/5"
-							style={{
-								background: readingPin ? theme.accent : theme.paper,
-								color: readingPin ? '#fff' : theme.ink,
-							}}
-							aria-label={t('reading.pinHere')}
-							title={t('reading.pinHint')}
+							onClick={togglePinPlaceMode}
+							className="inline-flex h-11 w-11 items-center justify-center rounded-full shadow-lg ring-1 ring-black/5 transition"
+							style={
+								pinPlaceMode
+									? { background: theme.accent, color: '#fff', boxShadow: `0 0 0 3px ${theme.accent}44` }
+									: readingPin
+										? { background: `${theme.accent}22`, color: theme.accent }
+										: { background: theme.paper, color: theme.ink }
+							}
+							aria-label={pinPlaceMode ? t('reading.pinCancel') : t('reading.pinHere')}
+							title={pinPlaceMode ? t('reading.pinCancel') : t('reading.pinHint')}
 						>
-							<MapPin size={17} fill={readingPin ? 'currentColor' : 'none'} />
+							{pinPlaceMode ? <X size={17} /> : <Bookmark size={17} fill={readingPin ? 'currentColor' : 'none'} />}
 						</button>
 						<button
 							type="button"
 							onClick={() => {
 								setEditMode(v => !v);
+								setPinPlaceMode(false);
 								setSelectionMenu(null);
 							}}
 							className="inline-flex h-11 w-11 items-center justify-center rounded-full shadow-lg ring-1 ring-black/5"

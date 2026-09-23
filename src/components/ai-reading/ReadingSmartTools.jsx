@@ -17,7 +17,7 @@ import {
 	Loader2,
 	Check,
 	BookOpenCheck,
-	MapPin,
+	Bookmark,
 } from 'lucide-react';
 import {
 	bionicNodes,
@@ -54,7 +54,7 @@ export function SmartResumeBanner({ book, pages, pageIndex, theme, t, onResume, 
 						className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
 						style={{ color: theme.accent }}
 					>
-						<MapPin size={11} />
+						<Bookmark size={11} fill="currentColor" />
 						{t('reading.resumePin')}
 					</button>
 				</>
