@@ -34,6 +34,8 @@ import {
 	LayoutList,
 	MoreHorizontal,
 	Layers,
+	MapPin,
+	Pencil,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { HIGHLIGHT_TYPES, flattenPages, computeProgressPercent } from '@/lib/ai-reading/schemas';
@@ -155,12 +157,15 @@ export default function ReadingView({ book: initialBook }) {
 	/* { passage, question, busy, result } */
 	const [showResume, setShowResume] = useState(true);
 	const [headerMoreOpen, setHeaderMoreOpen] = useState(false);
+	const [editMode, setEditMode] = useState(false);
+	const [pinFlash, setPinFlash] = useState(false);
 	const articleRef = useRef(null);
 	const articleInnerRef = useRef(null);
 	const lenisRef = useRef(null);
 	const readTick = useRef(null);
 	const wheelLock = useRef(false);
 	const selectionToolbarRef = useRef(null);
+	const pinJumpDone = useRef(false);
 	const prefs = useMemo(() => resolveReadingPrefs(book, globalPrefs), [book, globalPrefs]);
 	const hasArticlePrefs = bookHasCustomReadingPrefs(book);
 	const pageMode = prefs.pageMode === 'scroll' ? 'scroll' : 'pages';
@@ -270,6 +275,7 @@ export default function ReadingView({ book: initialBook }) {
 					setListenOn(false);
 					setListenPlaying(false);
 				}
+				if (editMode) setEditMode(false);
 			}
 		};
 		window.addEventListener('keydown', onKey);
@@ -1076,6 +1082,92 @@ export default function ReadingView({ book: initialBook }) {
 		}, 350);
 	};
 
+	const readingPin = book.progress?.pin || null;
+
+	const setReadingPin = (pageEntry, block) => {
+		if (!pageEntry?.page || !block?.id) return;
+		const snippet = String(block.text || (block.items || []).join(' ') || '')
+			.trim()
+			.slice(0, 120);
+		persist({
+			...book,
+			progress: {
+				...(book.progress || {}),
+				chapterId: pageEntry.chapter.id,
+				pageId: pageEntry.page.id,
+				pin: {
+					pageId: pageEntry.page.id,
+					chapterId: pageEntry.chapter.id,
+					blockId: block.id,
+					snippet,
+					createdAt: new Date().toISOString(),
+				},
+			},
+		});
+		setPinFlash(true);
+		setTimeout(() => setPinFlash(false), 1600);
+	};
+
+	const pinCurrentView = () => {
+		const pageEntry = current;
+		if (!pageEntry) return;
+		const blocks = pageEntry.page?.blocks || [];
+		const root = articleRef.current;
+		let target = blocks[0];
+		if (root && blocks.length) {
+			const mid = root.scrollTop + root.clientHeight * 0.35;
+			for (const b of blocks) {
+				const el = document.getElementById(`block-${b.id}`);
+				if (!el) continue;
+				const top = el.offsetTop;
+				if (top + el.offsetHeight >= mid) {
+					target = b;
+					break;
+				}
+			}
+		}
+		if (target) setReadingPin(pageEntry, target);
+	};
+
+	const jumpToPin = (pin = readingPin) => {
+		if (!pin?.pageId) return;
+		const idx = pages.findIndex(p => p.page.id === pin.pageId);
+		if (idx >= 0) goPage(idx);
+		setShowResume(false);
+		setTimeout(() => {
+			const el = pin.blockId ? document.getElementById(`block-${pin.blockId}`) : null;
+			el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+		}, 380);
+	};
+
+	useEffect(() => {
+		pinJumpDone.current = false;
+	}, [book.id]);
+
+	useEffect(() => {
+		if (pinJumpDone.current) return;
+		const pin = book.progress?.pin;
+		if (!pin?.pageId || !pages.length) return;
+		pinJumpDone.current = true;
+		const t = setTimeout(() => jumpToPin(pin), 280);
+		return () => clearTimeout(t);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- only on open
+	}, [book.id, pages.length]);
+
+	const updateBlockContent = (pageId, blockId, patch) => {
+		const nextChapters = (book.chapters || []).map(ch => ({
+			...ch,
+			pages: (ch.pages || []).map(p => {
+				if (p.id !== pageId) return p;
+				return {
+					...p,
+					blocks: (p.blocks || []).map(b => (b.id === blockId ? { ...b, ...patch } : b)),
+				};
+			}),
+		}));
+		persist({ ...book, chapters: nextChapters });
+	};
+
 	const runEnrich = async mode => {
 		const excerpt = (current?.page.blocks || []).map(b => b.text || (b.items || []).join(', ')).join('\n');
 		setEnrichBusy(true);
@@ -1213,23 +1305,105 @@ export default function ReadingView({ book: initialBook }) {
 						className="flex flex-col"
 						style={{ gap: `${prefs.paragraphGap || 1.25}rem`, textAlign: isContentRTL ? 'right' : 'left' }}
 					>
-						{(resolved.blocks || []).map(block => (
-								<Block
-								key={block.id}
-								block={block}
-								theme={theme}
-								highlights={highlightsForPage}
-								isRTL={isContentRTL}
-								fontFamily={contentFont}
-								onRemoveHighlight={removeHighlight}
-								bionic={bionicOn && !focusMode}
-								keyIdeaLabel={
-									mem?.active === 'memorized' && block.type === 'key_idea'
-										? t('reading.memorizeLabel')
-										: t('reading.keyIdeaLabel')
-								}
-							/>
-						))}
+						{(resolved.blocks || []).map(block => {
+							const isPinned = readingPin?.blockId === block.id;
+							return (
+								<div
+									key={block.id}
+									id={`block-${block.id}`}
+									className="group/block relative scroll-mt-24"
+									style={
+										isPinned
+											? {
+													boxShadow: `inset ${isContentRTL ? '-3px' : '3px'} 0 0 ${theme.accent}`,
+													paddingInlineStart: '0.35rem',
+												}
+											: undefined
+									}
+								>
+									{!editMode && (
+										<button
+											type="button"
+											onClick={e => {
+												e.stopPropagation();
+												setReadingPin(pageEntry, block);
+											}}
+											title={t('reading.pinHere')}
+											aria-label={t('reading.pinHere')}
+											className={`absolute top-0 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full transition ${
+												isPinned
+													? 'opacity-100'
+													: 'opacity-40 hover:opacity-100 focus:opacity-100 sm:opacity-0 sm:group-hover/block:opacity-100'
+											}`}
+											style={{
+												...(isContentRTL ? { right: -2 } : { left: -2 }),
+												background: isPinned ? theme.accent : `${theme.ink}12`,
+												color: isPinned ? '#fff' : theme.ink,
+											}}
+										>
+											<MapPin size={13} fill={isPinned ? 'currentColor' : 'none'} />
+										</button>
+									)}
+									{editMode ? (
+										<div className="space-y-1.5">
+											{block.type === 'list' ? (
+												<textarea
+													defaultValue={(block.items || []).join('\n')}
+													onBlur={e => {
+														const items = e.target.value
+															.split('\n')
+															.map(s => s.trim())
+															.filter(Boolean);
+														updateBlockContent(pageEntry.page.id, block.id, { items, text: items.join('\n') });
+													}}
+													rows={Math.max(3, (block.items || []).length + 1)}
+													className="w-full resize-y rounded-xl border bg-transparent px-3 py-2 text-sm leading-relaxed outline-none"
+													style={{
+														borderColor: `${theme.accent}55`,
+														color: theme.ink,
+														fontFamily: contentFont,
+														textAlign: isContentRTL ? 'right' : 'left',
+													}}
+													dir={isContentRTL ? 'rtl' : 'ltr'}
+												/>
+											) : (
+												<textarea
+													defaultValue={block.text || ''}
+													onBlur={e => updateBlockContent(pageEntry.page.id, block.id, { text: e.target.value })}
+													rows={Math.max(2, Math.ceil(String(block.text || '').length / 70))}
+													className="w-full resize-y rounded-xl border bg-transparent px-3 py-2 text-sm leading-relaxed outline-none"
+													style={{
+														borderColor: `${theme.accent}55`,
+														color: theme.ink,
+														fontFamily: contentFont,
+														fontSize: block.type === 'heading' ? '1.15em' : undefined,
+														fontWeight: block.type === 'heading' ? 700 : undefined,
+														textAlign: isContentRTL ? 'right' : 'left',
+													}}
+													dir={isContentRTL ? 'rtl' : 'ltr'}
+												/>
+											)}
+											<p className="text-[10px] opacity-40">{t('reading.editHint')}</p>
+										</div>
+									) : (
+										<Block
+											block={block}
+											theme={theme}
+											highlights={highlightsForPage}
+											isRTL={isContentRTL}
+											fontFamily={contentFont}
+											onRemoveHighlight={removeHighlight}
+											bionic={bionicOn && !focusMode}
+											keyIdeaLabel={
+												mem?.active === 'memorized' && block.type === 'key_idea'
+													? t('reading.memorizeLabel')
+													: t('reading.keyIdeaLabel')
+											}
+										/>
+									)}
+								</div>
+							);
+						})}
 					</div>
 				)}
 			</div>
@@ -1647,26 +1821,27 @@ export default function ReadingView({ book: initialBook }) {
 				<div className="relative min-h-0 flex-1 overflow-hidden">
 					{pageMode === 'scroll' && (
 						<div
-							className="pointer-events-none absolute inset-y-8 z-30 w-1.5 rounded-full"
+							className="pointer-events-none absolute inset-y-0 z-30 w-[3px]"
 							style={{
-								/* Physical sides: RTL scrollbar/progress on the left, LTR on the right.
-								   Parent forces dir=ltr so insetInline* would always land on the right. */
-								...(isContentRTL ? { left: '0.75rem' } : { right: '0.75rem' }),
+								/* Flush to physical screen edge — never over text */
+								...(isContentRTL ? { left: 0 } : { right: 0 }),
 								background: `${theme.ink}14`,
 							}}
 							aria-hidden
 						>
 							<div
-								className="w-full rounded-full transition-[height] duration-150 ease-out"
+								className="w-full transition-[height] duration-150 ease-out"
 								style={{
 									height: `${scrollPct}%`,
 									background: `linear-gradient(180deg, ${theme.accent}, ${theme.heading || theme.accent})`,
-									boxShadow: `0 0 10px ${theme.accent}44`,
 								}}
 							/>
 							<span
-								className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold tabular-nums"
-								style={{ color: theme.muted }}
+								className="absolute top-2 whitespace-nowrap text-[9px] font-bold tabular-nums"
+								style={{
+									color: theme.muted,
+									...(isContentRTL ? { left: 6 } : { right: 6 }),
+								}}
 							>
 								{scrollPct}%
 							</span>
@@ -1680,8 +1855,8 @@ export default function ReadingView({ book: initialBook }) {
 					>
 						<article
 							ref={articleInnerRef}
-							onMouseUp={onMouseUp}
-							className="mx-auto px-4 py-5 sm:px-5 sm:py-12"
+							onMouseUp={editMode ? undefined : onMouseUp}
+							className="mx-auto px-4 py-5 pb-28 sm:px-5 sm:py-12 sm:pb-16"
 							style={{
 								maxWidth: prefs.maxWidth,
 								fontSize: prefs.fontSize,
@@ -1691,6 +1866,12 @@ export default function ReadingView({ book: initialBook }) {
 								letterSpacing: `${prefs.letterSpacing || 0}em`,
 								textAlign: isContentRTL ? 'right' : 'left',
 								color: theme.ink,
+								/* Keep copy clear of the edge progress rail */
+								...(pageMode === 'scroll'
+									? isContentRTL
+										? { paddingLeft: '0.85rem' }
+										: { paddingRight: '0.85rem' }
+									: null),
 							}}
 						>
 						{showResume && (
@@ -1701,8 +1882,32 @@ export default function ReadingView({ book: initialBook }) {
 								theme={theme}
 								t={t}
 								onResume={resumeFromHighlight}
+								onResumePin={jumpToPin}
 								onDismiss={() => setShowResume(false)}
 							/>
+						)}
+						{editMode && (
+							<div
+								className="mb-4 flex items-center justify-between gap-2 rounded-2xl px-3 py-2 text-xs font-semibold"
+								style={{ background: `${theme.accent}18`, color: theme.accent }}
+							>
+								<span className="inline-flex items-center gap-1.5">
+									<Pencil size={13} /> {t('reading.editModeOn')}
+								</span>
+								<button
+									type="button"
+									onClick={() => setEditMode(false)}
+									className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white"
+									style={{ background: theme.accent }}
+								>
+									{t('reading.editDone')}
+								</button>
+							</div>
+						)}
+						{pinFlash && (
+							<p className="mb-3 text-center text-[11px] font-semibold" style={{ color: theme.accent }}>
+								{t('reading.pinSaved')}
+							</p>
 						)}
 						<GlossaryStrip words={book.knowledge?.importantWords || []} theme={theme} t={t} />
 
@@ -1772,24 +1977,69 @@ export default function ReadingView({ book: initialBook }) {
 				</aside>
 			</div>
 
-			{/* Mobile AI FAB — keeps article readable; tools open in a sheet */}
-			{!mobileAiOpen && (
-			<button
-				type="button"
-				onClick={() => setMobileAiOpen(true)}
-				className="fixed z-[45] inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-xl ring-1 ring-white/20 lg:hidden"
-				style={{
-					background: `linear-gradient(145deg, ${theme.accent}, ${theme.heading || theme.accent})`,
-					bottom: pageMode === 'pages'
-						? 'max(5.5rem, calc(env(safe-area-inset-bottom) + 4.5rem))'
-						: 'max(1.25rem, calc(env(safe-area-inset-bottom) + 1rem))',
-					insetInlineEnd: 'max(1rem, env(safe-area-inset-right))',
-				}}
-				aria-label={t('reading.aiAssist')}
-			>
-				<Sparkles size={16} />
-				<span className="hidden min-[380px]:inline">{t('reading.aiAssist')}</span>
-			</button>
+			{/* Floating tools: pin + edit (start) · AI assist (end) */}
+			{!mobileAiOpen && !focusMode && (
+				<>
+					<div
+						className="fixed z-[45] flex flex-col gap-2"
+						style={{
+							bottom: pageMode === 'pages'
+								? 'max(5.5rem, calc(env(safe-area-inset-bottom) + 4.5rem))'
+								: 'max(1.25rem, calc(env(safe-area-inset-bottom) + 1rem))',
+							...(isContentRTL
+								? { right: 'max(0.75rem, env(safe-area-inset-right))' }
+								: { left: 'max(0.75rem, env(safe-area-inset-left))' }),
+						}}
+					>
+						<button
+							type="button"
+							onClick={pinCurrentView}
+							className="inline-flex h-11 w-11 items-center justify-center rounded-full shadow-lg ring-1 ring-black/5"
+							style={{
+								background: readingPin ? theme.accent : theme.paper,
+								color: readingPin ? '#fff' : theme.ink,
+							}}
+							aria-label={t('reading.pinHere')}
+							title={t('reading.pinHint')}
+						>
+							<MapPin size={17} fill={readingPin ? 'currentColor' : 'none'} />
+						</button>
+						<button
+							type="button"
+							onClick={() => {
+								setEditMode(v => !v);
+								setSelectionMenu(null);
+							}}
+							className="inline-flex h-11 w-11 items-center justify-center rounded-full shadow-lg ring-1 ring-black/5"
+							style={{
+								background: editMode ? theme.accent : theme.paper,
+								color: editMode ? '#fff' : theme.ink,
+							}}
+							aria-label={t('reading.editContent')}
+							title={t('reading.editContent')}
+						>
+							{editMode ? <Check size={17} /> : <Pencil size={17} />}
+						</button>
+					</div>
+					<button
+						type="button"
+						onClick={() => setMobileAiOpen(true)}
+						className="fixed z-[45] inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-xl ring-1 ring-white/20 lg:hidden"
+						style={{
+							background: `linear-gradient(145deg, ${theme.accent}, ${theme.heading || theme.accent})`,
+							bottom: pageMode === 'pages'
+								? 'max(5.5rem, calc(env(safe-area-inset-bottom) + 4.5rem))'
+								: 'max(1.25rem, calc(env(safe-area-inset-bottom) + 1rem))',
+							...(isContentRTL
+								? { left: 'max(0.75rem, env(safe-area-inset-left))' }
+								: { right: 'max(0.75rem, env(safe-area-inset-right))' }),
+						}}
+						aria-label={t('reading.aiAssist')}
+					>
+						<Sparkles size={16} />
+						<span className="hidden min-[380px]:inline">{t('reading.aiAssist')}</span>
+					</button>
+				</>
 			)}
 
 			<AnimatePresence>

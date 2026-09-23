@@ -17,6 +17,7 @@ import {
 	Loader2,
 	Check,
 	BookOpenCheck,
+	MapPin,
 } from 'lucide-react';
 import {
 	bionicNodes,
@@ -29,15 +30,36 @@ import {
 	ttsLangFor,
 } from '@/lib/ai-reading/reading-smart';
 
-export function SmartResumeBanner({ book, pages, pageIndex, theme, t, onResume, onDismiss }) {
+export function SmartResumeBanner({ book, pages, pageIndex, theme, t, onResume, onResumePin, onDismiss }) {
+	const pin = book?.progress?.pin;
 	const last = useMemo(() => findLastHighlight(book), [book]);
 	const targetIdx = useMemo(() => findPageIndexForHighlight(pages, last), [pages, last]);
+	const pinIdx = useMemo(() => {
+		if (!pin?.pageId || !pages?.length) return -1;
+		return pages.findIndex(p => p.page.id === pin.pageId);
+	}, [pin, pages]);
 	const mins = estimateMinutesLeft(pages, pageIndex);
+	const hasPin = Boolean(pin && pinIdx >= 0);
+	const hasHighlight = Boolean(last && targetIdx >= 0);
 
 	return (
 		<div className="mb-5 flex flex-wrap items-center gap-2 text-[11px]" style={{ color: theme.muted }}>
 			<span className="tabular-nums opacity-80">{t('reading.minsLeft', { minutes: mins })}</span>
-			{last && targetIdx >= 0 && (
+			{hasPin && (
+				<>
+					<span className="opacity-30">·</span>
+					<button
+						type="button"
+						onClick={() => onResumePin?.(pin)}
+						className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
+						style={{ color: theme.accent }}
+					>
+						<MapPin size={11} />
+						{t('reading.resumePin')}
+					</button>
+				</>
+			)}
+			{!hasPin && hasHighlight && (
 				<>
 					<span className="opacity-30">·</span>
 					<button
@@ -48,12 +70,12 @@ export function SmartResumeBanner({ book, pages, pageIndex, theme, t, onResume, 
 					>
 						{t('reading.resumeCta')}
 					</button>
-					{onDismiss && (
-						<button type="button" onClick={onDismiss} className="opacity-40 hover:opacity-70" aria-label="Dismiss">
-							<X size={12} />
-						</button>
-					)}
 				</>
+			)}
+			{(hasPin || hasHighlight) && onDismiss && (
+				<button type="button" onClick={onDismiss} className="opacity-40 hover:opacity-70" aria-label="Dismiss">
+					<X size={12} />
+				</button>
 			)}
 		</div>
 	);
