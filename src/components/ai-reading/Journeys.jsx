@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -43,22 +43,22 @@ export function JourneysList() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="font-[family-name:var(--font-space-grotesk)] text-3xl font-bold text-[#1a2e28]">{t('journeys.title')}</h1>
-				<p className="mt-2 text-sm text-[#5c6b63]">{t('journeys.subtitle')}</p>
+				<h1 className="font-[family-name:var(--font-space-grotesk)] text-3xl font-bold text-[var(--ar-heading)]">{t('journeys.title')}</h1>
+				<p className="mt-2 text-sm text-[var(--ar-muted)]">{t('journeys.subtitle')}</p>
 			</div>
 
-			<div className="flex flex-col gap-2 rounded-3xl bg-white/70 p-4 ring-1 ring-[#2d4a3e]/10 sm:flex-row">
+			<div className="flex flex-col gap-2 rounded-3xl bg-white/70 p-4 ring-1 ring-[color:var(--ar-ring)]/10 sm:flex-row">
 				<input
 					value={theme}
 					onChange={e => setTheme(e.target.value)}
 					placeholder={t('journeys.themePlaceholder')}
-					className="flex-1 rounded-2xl border border-[#2d4a3e]/15 bg-[#fffefb] px-4 py-3 text-sm outline-none"
+					className="flex-1 rounded-2xl border border-[color:var(--ar-border)]/15 bg-white px-4 py-3 text-sm outline-none"
 				/>
 				<button
 					type="button"
 					disabled={busy || !theme.trim()}
 					onClick={create}
-					className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1a2e28] px-5 py-3 text-sm font-semibold text-[#f6f1e8] disabled:opacity-40"
+					className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ar-accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
 				>
 					{busy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
 					{t('journeys.create')}
@@ -72,15 +72,15 @@ export function JourneysList() {
 						<Link
 							key={j.id}
 							href={`/ai-studio/journeys/${j.id}`}
-							className="rounded-3xl bg-white/70 p-5 ring-1 ring-[#2d4a3e]/10 transition hover:shadow-md"
+							className="rounded-3xl bg-white/70 p-5 ring-1 ring-[color:var(--ar-ring)]/10 transition hover:shadow-md"
 						>
 							<p className="text-[10px] font-bold uppercase tracking-widest text-[#b45309]">{monthLabel(j.monthKey, locale)}</p>
-							<h2 className="mt-2 font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-[#1a2e28]">{j.title}</h2>
-							<p className="mt-1 text-sm text-[#5c6b63]">{j.theme}</p>
-							<div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#1a2e28]/10">
-								<div className="h-full rounded-full bg-[#3d5a4c]" style={{ width: `${pct}%` }} />
+							<h2 className="mt-2 font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-[var(--ar-heading)]">{j.title}</h2>
+							<p className="mt-1 text-sm text-[var(--ar-muted)]">{j.theme}</p>
+							<div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--ar-accent)]/10">
+								<div className="h-full rounded-full bg-[var(--ar-accent)]" style={{ width: `${pct}%` }} />
 							</div>
-							<p className="mt-2 text-xs font-semibold text-[#5c6b63]">
+							<p className="mt-2 text-xs font-semibold text-[var(--ar-muted)]">
 								{pct}% · {(j.items || []).length} {t('journeys.sessions')}
 							</p>
 						</Link>
@@ -104,7 +104,7 @@ export function JourneyDetail({ journeyId }) {
 	}, [journeyId]);
 
 	if (!journey) {
-		return <p className="text-sm text-[#5c6b63]">{t('journeys.notFound')}</p>;
+		return <p className="text-sm text-[var(--ar-muted)]">{t('journeys.notFound')}</p>;
 	}
 
 	const pct = journeyProgress(journey);
@@ -137,12 +137,12 @@ export function JourneyDetail({ journeyId }) {
 		<div className="mx-auto max-w-2xl space-y-6">
 			<div>
 				<p className="text-[11px] font-bold uppercase tracking-widest text-[#b45309]">{monthLabel(journey.monthKey, locale)}</p>
-				<h1 className="mt-2 font-[family-name:var(--font-space-grotesk)] text-3xl font-bold text-[#1a2e28]">{journey.title}</h1>
-				<p className="mt-2 text-sm text-[#5c6b63]">{journey.description || journey.theme}</p>
-				<div className="mt-4 h-2 overflow-hidden rounded-full bg-[#1a2e28]/10">
-					<div className="h-full rounded-full bg-[#3d5a4c] transition-all" style={{ width: `${pct}%` }} />
+				<h1 className="mt-2 font-[family-name:var(--font-space-grotesk)] text-3xl font-bold text-[var(--ar-heading)]">{journey.title}</h1>
+				<p className="mt-2 text-sm text-[var(--ar-muted)]">{journey.description || journey.theme}</p>
+				<div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--ar-accent)]/10">
+					<div className="h-full rounded-full bg-[var(--ar-accent)] transition-all" style={{ width: `${pct}%` }} />
 				</div>
-				<p className="mt-2 text-xs font-semibold text-[#5c6b63]">{pct}% {t('journeys.complete')}</p>
+				<p className="mt-2 text-xs font-semibold text-[var(--ar-muted)]">{pct}% {t('journeys.complete')}</p>
 			</div>
 
 			<ol className="space-y-3">
@@ -152,14 +152,14 @@ export function JourneyDetail({ journeyId }) {
 						initial={{ opacity: 0, y: 6 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ delay: i * 0.04 }}
-						className="flex items-center gap-4 rounded-2xl bg-white/70 p-4 ring-1 ring-[#2d4a3e]/10"
+						className="flex items-center gap-4 rounded-2xl bg-white/70 p-4 ring-1 ring-[color:var(--ar-ring)]/10"
 					>
-						<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1a2e28] text-sm font-bold text-[#e8c07a]">
+						<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--ar-accent)] text-sm font-bold text-[var(--color-secondary-400, #e8c07a)]">
 							{String(item.order || i + 1).padStart(2, '0')}
 						</span>
 						<div className="min-w-0 flex-1">
-							<p className="font-semibold text-[#1a2e28]">{item.title}</p>
-							<p className="text-xs text-[#5c6b63]">
+							<p className="font-semibold text-[var(--ar-heading)]">{item.title}</p>
+							<p className="text-xs text-[var(--ar-muted)]">
 								{item.subtitle || `${item.readingTimeMinutes || 8} min`}
 								{item.status === 'done' ? ` · ${t('journeys.done')}` : ''}
 							</p>
@@ -167,7 +167,7 @@ export function JourneyDetail({ journeyId }) {
 						{item.bookId ? (
 							<Link
 								href={`/ai-studio/read/${item.bookId}`}
-								className="rounded-full bg-[#3d5a4c] px-3 py-1.5 text-xs font-bold text-white"
+								className="rounded-full bg-[var(--ar-accent)] px-3 py-1.5 text-xs font-bold text-white"
 							>
 								{t('journeys.read')}
 							</Link>
@@ -176,7 +176,7 @@ export function JourneyDetail({ journeyId }) {
 								type="button"
 								disabled={busyId === item.id}
 								onClick={() => generateItem(item)}
-								className="inline-flex items-center gap-1 rounded-full bg-[#1a2e28] px-3 py-1.5 text-xs font-bold text-[#f6f1e8]"
+								className="inline-flex items-center gap-1 rounded-full bg-[var(--ar-accent)] px-3 py-1.5 text-xs font-bold text-white"
 							>
 								{busyId === item.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
 								{t('journeys.start')}

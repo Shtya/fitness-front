@@ -234,22 +234,28 @@ export default function Layout({ children }) {
 		pathname.startsWith('/site') ||
 		pathname.startsWith('/open') ||
 		pathname.startsWith('/particle-playground') ||
-		pathname.startsWith('/ai-studio') ||
 		pathname === '/';
 	const isPresentationRoute = pathname.startsWith('/presentation');
-	/** Login / discover / open / particle studio / AI reading room: full-bleed viewport, no dashboard chrome */
+	/** Login / discover / open / particle studio: full-bleed viewport, no dashboard chrome */
 	const isBareViewport =
 		pathname.startsWith('/auth') ||
 		pathname.startsWith('/open') ||
-		pathname.startsWith('/particle-playground') ||
-		pathname.startsWith('/ai-studio');
+		pathname.startsWith('/particle-playground');
 	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
 	const isMetaWhatsAppRoute = pathname.includes('/dashboard/meta-whatsapp');
 	const isChatRoute = pathname.includes('/dashboard/chat');
 	const isAiFreeRoute = pathname.includes('/dashboard/ai-free');
 	const isAiContentStudioRoute = pathname.includes('/dashboard/ai-content-studio');
 	const isGoldIntelligenceRoute = pathname.includes('/dashboard/gold-intelligence');
-	const isImmersiveRoute = isWhatsAppRoute || isMetaWhatsAppRoute || isChatRoute || isAiFreeRoute || isAiContentStudioRoute || isGoldIntelligenceRoute;
+	const isAiStudioRoute = pathname.startsWith('/ai-studio');
+	const isImmersiveRoute =
+		isWhatsAppRoute ||
+		isMetaWhatsAppRoute ||
+		isChatRoute ||
+		isAiFreeRoute ||
+		isAiContentStudioRoute ||
+		isGoldIntelligenceRoute ||
+		isAiStudioRoute;
 	/** Dashboard shell (sidebar/header): lock viewport to one scroll surface */
 	const isAppShell = !isAuthRoute;
 
@@ -317,6 +323,12 @@ export default function Layout({ children }) {
 		if (!isWhatsAppRoute) return;
 		setFocusMode(true);
 	}, [isWhatsAppRoute]);
+
+	/* AI Study Reading stays inside the dashboard chrome — keep sidebar visible. */
+	useEffect(() => {
+		if (!isAiStudioRoute) return;
+		setFocusMode(false);
+	}, [isAiStudioRoute]);
 
 	const sidebarChromeValue = {
 		focusMode,

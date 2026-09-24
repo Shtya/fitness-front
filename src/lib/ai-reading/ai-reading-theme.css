@@ -1,0 +1,30 @@
+/* AI Reading Studio — bind chrome to the live system / tenant palette */
+
+.ai-reading-root {
+	--ar-bg: color-mix(in srgb, var(--color-primary-50, #f8fafc) 72%, #ffffff);
+	--ar-ink: var(--color-primary-950, #0f172a);
+	--ar-muted: color-mix(in srgb, var(--color-primary-700, #334155) 40%, #64748b);
+	--ar-paper: #ffffff;
+	--ar-accent: var(--color-primary-600, #4f46e5);
+	--ar-heading: var(--color-primary-800, #1e293b);
+	--ar-border: color-mix(in srgb, var(--color-primary-500, #6366f1) 14%, transparent);
+	--ar-ring: color-mix(in srgb, var(--color-primary-500, #6366f1) 18%, transparent);
+	color: var(--ar-ink);
+	background: transparent;
+}
+
+.ai-reading-root .ar-surface {
+	background: color-mix(in srgb, var(--ar-paper) 88%, transparent);
+	border-color: var(--ar-border);
+}
+
+.ai-reading-root .ar-chip-active {
+	background: linear-gradient(135deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)));
+	color: #fff;
+}
+
+.ai-reading-root .ar-chip-idle {
+	background: color-mix(in srgb, var(--color-primary-50, #f8fafc) 80%, #fff);
+	color: var(--ar-muted);
+	box-shadow: inset 0 0 0 1px var(--ar-ring);
+}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import '@/lib/ai-reading/reading-fonts.css';
+import '@/lib/ai-reading/ai-reading-theme.css';
 import {
 	Bookmark,
 	ChevronLeft,
@@ -1283,7 +1284,7 @@ export default function ReadingView({ book: initialBook }) {
 				{mem && (
 					<div
 						className="flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2 text-xs font-semibold"
-						style={{ background: `${theme.accent}14`, color: theme.accent }}
+						style={{ background: `color-mix(in srgb, ${theme.accent} 8%, transparent)`, color: theme.accent }}
 					>
 						<span className="inline-flex items-center gap-1.5">
 							<Brain size={13} />
@@ -1302,7 +1303,7 @@ export default function ReadingView({ book: initialBook }) {
 				)}
 
 				{resolved.role === 'memorized-stub' ? (
-					<p className="rounded-2xl border border-dashed px-4 py-3 text-sm opacity-70" style={{ borderColor: `${theme.ink}22` }}>
+					<p className="rounded-2xl border border-dashed px-4 py-3 text-sm opacity-70" style={{ borderColor: `color-mix(in srgb, ${theme.ink} 13%, transparent)` }}>
 						{t('reading.memorizeStub')}
 					</p>
 				) : (
@@ -1347,7 +1348,7 @@ export default function ReadingView({ book: initialBook }) {
 											: ''
 									}`}
 									style={{
-										['--pin-ring']: `${theme.accent}55`,
+										['--pin-ring']: `color-mix(in srgb, ${theme.accent} 33%, transparent)`,
 										...(isPinned && !pinPlaceMode
 											? {
 													boxShadow: `inset ${isContentRTL ? '-3px' : '3px'} 0 0 ${theme.accent}`,
@@ -1388,7 +1389,7 @@ export default function ReadingView({ book: initialBook }) {
 													rows={Math.max(3, (block.items || []).length + 1)}
 													className="w-full resize-y rounded-xl border bg-transparent px-3 py-2 text-sm leading-relaxed outline-none"
 													style={{
-														borderColor: `${theme.accent}55`,
+														borderColor: `color-mix(in srgb, ${theme.accent} 33%, transparent)`,
 														color: theme.ink,
 														fontFamily: contentFont,
 														textAlign: isContentRTL ? 'right' : 'left',
@@ -1402,7 +1403,7 @@ export default function ReadingView({ book: initialBook }) {
 													rows={Math.max(2, Math.ceil(String(block.text || '').length / 70))}
 													className="w-full resize-y rounded-xl border bg-transparent px-3 py-2 text-sm leading-relaxed outline-none"
 													style={{
-														borderColor: `${theme.accent}55`,
+														borderColor: `color-mix(in srgb, ${theme.accent} 33%, transparent)`,
 														color: theme.ink,
 														fontFamily: contentFont,
 														fontSize: block.type === 'heading' ? '1.15em' : undefined,
@@ -1487,7 +1488,7 @@ export default function ReadingView({ book: initialBook }) {
 
 			<div
 				className="relative z-40 shrink-0 border-b backdrop-blur-md"
-				style={{ borderColor: `${theme.ink}15`, background: `${theme.bg}ee` }}
+				style={{ borderColor: `color-mix(in srgb, ${theme.ink} 8%, transparent)`, background: `color-mix(in srgb, ${theme.bg} 93%, transparent)` }}
 			>
 				<div className="mx-auto flex max-w-7xl items-center justify-between gap-1.5 px-2.5 py-2 sm:gap-3 sm:px-4 sm:py-3">
 					<div className="flex min-w-0 items-center gap-1 sm:gap-2">
@@ -1520,10 +1521,10 @@ export default function ReadingView({ book: initialBook }) {
 									background: timerDone
 										? 'linear-gradient(135deg, #fecaca88, #fda4af55)'
 										: timerRunning
-											? `linear-gradient(135deg, ${theme.accent}28, ${theme.accent}12)`
+											? `linear-gradient(135deg, color-mix(in srgb, ${theme.accent} 16%, transparent), color-mix(in srgb, ${theme.accent} 7%, transparent))`
 											: `linear-gradient(135deg, ${theme.paper}, ${theme.bg})`,
 									color: timerDone ? '#9f1239' : theme.ink,
-									borderColor: `${theme.ink}10`,
+									borderColor: `color-mix(in srgb, ${theme.ink} 6%, transparent)`,
 								}}
 								title={t('reading.timerHint')}
 							>
@@ -1553,9 +1554,9 @@ export default function ReadingView({ book: initialBook }) {
 										exit={{ opacity: 0, y: 4, scale: 0.98 }}
 										transition={{ duration: 0.18 }}
 										className="absolute start-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border shadow-2xl"
-										style={{ background: theme.paper, borderColor: `${theme.ink}12`, color: theme.ink }}
+										style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 									>
-										<div className="border-b px-3.5 py-2.5" style={{ borderColor: `${theme.ink}10` }}>
+										<div className="border-b px-3.5 py-2.5" style={{ borderColor: `color-mix(in srgb, ${theme.ink} 6%, transparent)` }}>
 											<p className="text-[11px] font-bold tracking-wide" style={{ color: theme.heading || theme.ink }}>
 												{t('reading.timerSet')}
 											</p>
@@ -1580,7 +1581,7 @@ export default function ReadingView({ book: initialBook }) {
 														type="button"
 														onClick={restartTimer}
 														className="inline-flex items-center justify-center gap-1 rounded-xl px-2.5 py-2 text-[11px] font-semibold"
-														style={{ background: `${theme.ink}0d` }}
+														style={{ background: `color-mix(in srgb, ${theme.ink} 5%, transparent)` }}
 														title={t('reading.timerRestart')}
 													>
 														<RotateCcw size={12} />
@@ -1609,7 +1610,7 @@ export default function ReadingView({ book: initialBook }) {
 														}}
 														className="rounded-xl px-2.5 py-1.5 text-[11px] font-semibold transition"
 														style={{
-															background: !timerShowCustom && timerPick === m ? theme.accent : `${theme.ink}0c`,
+															background: !timerShowCustom && timerPick === m ? theme.accent : `color-mix(in srgb, ${theme.ink} 5%, transparent)`,
 															color: !timerShowCustom && timerPick === m ? '#fff' : theme.ink,
 														}}
 													>
@@ -1637,7 +1638,7 @@ export default function ReadingView({ book: initialBook }) {
 														onChange={e => setTimerCustom(e.target.value)}
 														className="w-full rounded-xl border px-3 py-2 text-sm tabular-nums outline-none"
 														style={{
-															borderColor: `${theme.ink}18`,
+															borderColor: `color-mix(in srgb, ${theme.ink} 9%, transparent)`,
 															background: `${theme.bg}`,
 															color: theme.ink,
 														}}
@@ -1689,7 +1690,7 @@ export default function ReadingView({ book: initialBook }) {
 										setPanel(panel === id ? null : id);
 									}}
 									className="rounded-full p-2 transition hover:bg-black/5"
-									style={{ background: panel === id ? `${theme.accent}22` : 'transparent' }}
+									style={{ background: panel === id ? `color-mix(in srgb, ${theme.accent} 13%, transparent)` : 'transparent' }}
 									aria-label={id}
 								>
 									<Icon size={16} />
@@ -1701,7 +1702,7 @@ export default function ReadingView({ book: initialBook }) {
 							type="button"
 							onClick={() => setHeaderMoreOpen(o => !o)}
 							className="rounded-full p-2 transition hover:bg-black/5 sm:hidden"
-							style={{ background: headerMoreOpen || panel ? `${theme.accent}18` : 'transparent' }}
+							style={{ background: headerMoreOpen || panel ? `color-mix(in srgb, ${theme.accent} 9%, transparent)` : 'transparent' }}
 							aria-label={t('reading.more')}
 						>
 							<MoreHorizontal size={18} />
@@ -1713,7 +1714,7 @@ export default function ReadingView({ book: initialBook }) {
 									animate={{ opacity: 1, y: 0 }}
 									exit={{ opacity: 0, y: 4 }}
 									className="absolute end-0 top-full z-50 mt-1.5 w-44 overflow-hidden rounded-2xl border py-1 shadow-xl sm:hidden"
-									style={{ background: theme.paper, borderColor: `${theme.ink}12`, color: theme.ink }}
+									style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 								>
 									{[
 										['toc', Bookmark, t('reading.toc')],
@@ -1776,7 +1777,7 @@ export default function ReadingView({ book: initialBook }) {
 					</div>
 				</div>
 				{!focusMode && (
-					<div className="mx-auto max-w-7xl border-t px-3 py-1.5 sm:px-4 sm:py-2" style={{ borderColor: `${theme.ink}0a` }}>
+					<div className="mx-auto max-w-7xl border-t px-3 py-1.5 sm:px-4 sm:py-2" style={{ borderColor: `color-mix(in srgb, ${theme.ink} 4%, transparent)` }}>
 						<ReadingToolsRail
 							theme={theme}
 							t={t}
@@ -1816,7 +1817,7 @@ export default function ReadingView({ book: initialBook }) {
 				{timerDone && (
 					<div
 						className="flex items-center justify-center gap-3 border-t px-4 py-2.5 text-xs font-semibold"
-						style={{ borderColor: `${theme.ink}10`, background: `${theme.accent}14`, color: theme.accent }}
+						style={{ borderColor: `color-mix(in srgb, ${theme.ink} 6%, transparent)`, background: `color-mix(in srgb, ${theme.accent} 8%, transparent)`, color: theme.accent }}
 					>
 						<span>{t('reading.timerDone', { minutes: timerPick })}</span>
 						<button
@@ -1837,7 +1838,7 @@ export default function ReadingView({ book: initialBook }) {
 								setCoachOpen(true);
 							}}
 							className="rounded-full px-2.5 py-1 text-[11px] font-bold"
-							style={{ background: `${theme.ink}14`, color: theme.ink }}
+							style={{ background: `color-mix(in srgb, ${theme.ink} 8%, transparent)`, color: theme.ink }}
 						>
 							{t('reading.coach')}
 						</button>
@@ -1854,7 +1855,7 @@ export default function ReadingView({ book: initialBook }) {
 							style={{
 								/* Flush to physical screen edge — never over text */
 								...(isContentRTL ? { left: 0 } : { right: 0 }),
-								background: `${theme.ink}14`,
+								background: `color-mix(in srgb, ${theme.ink} 8%, transparent)`,
 							}}
 							aria-hidden
 						>
@@ -1919,7 +1920,7 @@ export default function ReadingView({ book: initialBook }) {
 						{pinPlaceMode && (
 							<div
 								className="mb-4 flex items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-xs font-semibold"
-								style={{ background: `${theme.accent}18`, color: theme.accent }}
+								style={{ background: `color-mix(in srgb, ${theme.accent} 9%, transparent)`, color: theme.accent }}
 							>
 								<span className="inline-flex items-center gap-1.5">
 									<Bookmark size={14} /> {t('reading.pinPlaceHint')}
@@ -1928,7 +1929,7 @@ export default function ReadingView({ book: initialBook }) {
 									type="button"
 									onClick={() => setPinPlaceMode(false)}
 									className="rounded-full px-2.5 py-1 text-[11px] font-bold"
-									style={{ background: `${theme.ink}12`, color: theme.ink }}
+									style={{ background: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 								>
 									{t('reading.pinCancel')}
 								</button>
@@ -1937,7 +1938,7 @@ export default function ReadingView({ book: initialBook }) {
 						{editMode && (
 							<div
 								className="mb-4 flex items-center justify-between gap-2 rounded-2xl px-3 py-2 text-xs font-semibold"
-								style={{ background: `${theme.accent}18`, color: theme.accent }}
+								style={{ background: `color-mix(in srgb, ${theme.accent} 9%, transparent)`, color: theme.accent }}
 							>
 								<span className="inline-flex items-center gap-1.5">
 									<Pencil size={13} /> {t('reading.editModeOn')}
@@ -2016,8 +2017,8 @@ export default function ReadingView({ book: initialBook }) {
 					className="hidden w-[min(19rem,28vw)] shrink-0 flex-col overflow-y-auto border-s px-4 py-6 xl:w-[19rem] lg:flex"
 					dir={locale === 'ar' ? 'rtl' : 'ltr'}
 					style={{
-						borderColor: `${theme.ink}12`,
-						background: `${theme.paper}cc`,
+						borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`,
+						background: `color-mix(in srgb, ${theme.paper} 80%, transparent)`,
 						fontFamily: toolsFont,
 					}}
 				>
@@ -2045,9 +2046,9 @@ export default function ReadingView({ book: initialBook }) {
 							className="inline-flex h-11 w-11 items-center justify-center rounded-full shadow-lg ring-1 ring-black/5 transition"
 							style={
 								pinPlaceMode
-									? { background: theme.accent, color: '#fff', boxShadow: `0 0 0 3px ${theme.accent}44` }
+									? { background: theme.accent, color: '#fff', boxShadow: `0 0 0 3px color-mix(in srgb, ${theme.accent} 27%, transparent)` }
 									: readingPin
-										? { background: `${theme.accent}22`, color: theme.accent }
+										? { background: `color-mix(in srgb, ${theme.accent} 13%, transparent)`, color: theme.accent }
 										: { background: theme.paper, color: theme.ink }
 							}
 							aria-label={pinPlaceMode ? t('reading.pinCancel') : t('reading.pinHere')}
@@ -2118,7 +2119,7 @@ export default function ReadingView({ book: initialBook }) {
 							dir={locale === 'ar' ? 'rtl' : 'ltr'}
 							style={{
 								background: theme.paper,
-								borderColor: `${theme.ink}12`,
+								borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`,
 								fontFamily: toolsFont,
 								color: theme.ink,
 							}}
@@ -2144,8 +2145,8 @@ export default function ReadingView({ book: initialBook }) {
 			<div
 				className="z-40 shrink-0 border-t backdrop-blur-md"
 				style={{
-					borderColor: `${theme.ink}12`,
-					background: `${theme.bg}f2`,
+					borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`,
+					background: `color-mix(in srgb, ${theme.bg} 95%, transparent)`,
 					paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
 				}}
 			>
@@ -2196,16 +2197,16 @@ export default function ReadingView({ book: initialBook }) {
 								ref={selectionToolbarRef}
 								className="flex max-w-[min(92vw,36rem)] flex-wrap items-center gap-1 rounded-2xl border px-1.5 py-1.5 shadow-2xl backdrop-blur-md"
 								style={{
-									background: 'rgba(255,254,251,0.97)',
-									borderColor: 'rgba(26,46,40,0.10)',
-									boxShadow: '0 18px 40px rgba(26,46,40,0.18), 0 2px 8px rgba(26,46,40,0.06)',
+									background: 'color-mix(in srgb, var(--ar-paper, #ffffff) 97%, transparent)',
+									borderColor: 'var(--ar-border, color-mix(in srgb, var(--color-primary-500) 14%, transparent))',
+									boxShadow: '0 18px 40px color-mix(in srgb, var(--color-primary-900, #0f172a) 18%, transparent), 0 2px 8px color-mix(in srgb, var(--color-primary-900, #0f172a) 6%, transparent)',
 								}}
 							>
 								<button
 									type="button"
 									onClick={() => openMemorize(selectionMenu.text)}
 									className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm"
-									style={{ background: 'linear-gradient(135deg, #1a2e28, #3d5a4c)' }}
+									style={{ background: 'linear-gradient(135deg, var(--ar-heading), var(--ar-accent))' }}
 								>
 									<Brain size={12} />
 									{t('reading.memorize')}
@@ -2270,12 +2271,12 @@ export default function ReadingView({ book: initialBook }) {
 							{selectionMenu.place === 'above' ? (
 								<span
 									className="absolute start-1/2 top-full h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-e"
-									style={{ background: 'rgba(255,254,251,0.97)', borderColor: 'rgba(26,46,40,0.10)' }}
+									style={{ background: 'color-mix(in srgb, var(--ar-paper, #ffffff) 97%, transparent)', borderColor: 'var(--ar-border, color-mix(in srgb, var(--color-primary-500) 14%, transparent))' }}
 								/>
 							) : (
 								<span
 									className="absolute start-1/2 bottom-full h-2.5 w-2.5 -translate-x-1/2 translate-y-1/2 rotate-45 border-s border-t"
-									style={{ background: 'rgba(255,254,251,0.97)', borderColor: 'rgba(26,46,40,0.10)' }}
+									style={{ background: 'color-mix(in srgb, var(--ar-paper, #ffffff) 97%, transparent)', borderColor: 'var(--ar-border, color-mix(in srgb, var(--color-primary-500) 14%, transparent))' }}
 								/>
 							)}
 						</motion.div>
@@ -2301,7 +2302,7 @@ export default function ReadingView({ book: initialBook }) {
 							className="max-h-[min(88vh,720px)] w-full max-w-lg overflow-y-auto rounded-3xl border p-4 shadow-2xl sm:p-5"
 							style={{
 								background: theme.paper,
-								borderColor: `${theme.ink}12`,
+								borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`,
 								color: theme.ink,
 								paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))',
 							}}
@@ -2321,7 +2322,7 @@ export default function ReadingView({ book: initialBook }) {
 								</button>
 							</div>
 
-							<div className="mb-3 rounded-2xl px-3 py-2 text-[12px] leading-relaxed opacity-70" style={{ background: `${theme.ink}08` }}>
+							<div className="mb-3 rounded-2xl px-3 py-2 text-[12px] leading-relaxed opacity-70" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 								{memorize.text.slice(0, 280)}
 								{memorize.text.length > 280 ? '…' : ''}
 								{memorize.pageHits?.length > 0 && (
@@ -2346,7 +2347,7 @@ export default function ReadingView({ book: initialBook }) {
 										placeholder={t('reading.memorizePickPrompt')}
 									/>
 								) : (
-									<p className="rounded-xl px-3 py-2 text-xs opacity-60" style={{ background: `${theme.ink}08` }}>
+									<p className="rounded-xl px-3 py-2 text-xs opacity-60" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 										{t('reading.memorizeNoPrompts')}
 									</p>
 								)}
@@ -2373,7 +2374,7 @@ export default function ReadingView({ book: initialBook }) {
 								<div className="space-y-3">
 									<div
 										className="rounded-2xl border px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
-										style={{ borderColor: `${theme.accent}33`, background: `${theme.accent}10` }}
+										style={{ borderColor: `color-mix(in srgb, ${theme.accent} 20%, transparent)`, background: `color-mix(in srgb, ${theme.accent} 6%, transparent)` }}
 									>
 										<p className="mb-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.accent }}>
 											{t('reading.memorizePreview')}
@@ -2394,7 +2395,7 @@ export default function ReadingView({ book: initialBook }) {
 											disabled={memorize.busy}
 											onClick={runMemorize}
 											className="rounded-2xl px-4 py-3 text-sm font-semibold"
-											style={{ background: `${theme.ink}0d` }}
+											style={{ background: `color-mix(in srgb, ${theme.ink} 5%, transparent)` }}
 										>
 											{t('reading.memorizeRetry')}
 										</button>
@@ -2422,7 +2423,7 @@ export default function ReadingView({ book: initialBook }) {
 							transition={{ type: 'spring', stiffness: 380, damping: 28 }}
 							onClick={e => e.stopPropagation()}
 							className="max-h-[min(90vh,760px)] w-full max-w-lg overflow-y-auto rounded-3xl border p-4 shadow-2xl sm:p-5"
-							style={{ background: theme.paper, borderColor: `${theme.ink}12`, color: theme.ink }}
+							style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 						>
 							<div className="mb-4 flex items-start justify-between gap-3">
 								<div>
@@ -2473,8 +2474,8 @@ export default function ReadingView({ book: initialBook }) {
 									placeholder={t('reading.polishCustomPlaceholder')}
 									className="w-full resize-y rounded-2xl border px-3.5 py-3 text-sm leading-relaxed outline-none"
 									style={{
-										background: `${theme.ink}06`,
-										borderColor: `${theme.ink}14`,
+										background: `color-mix(in srgb, ${theme.ink} 2%, transparent)`,
+										borderColor: `color-mix(in srgb, ${theme.ink} 8%, transparent)`,
 										color: theme.ink,
 										minHeight: 140,
 									}}
@@ -2506,7 +2507,7 @@ export default function ReadingView({ book: initialBook }) {
 											polish.audit.strengthened?.length ||
 											polish.audit.added?.length ||
 											polish.audit.notes?.length) && (
-											<div className="rounded-2xl px-4 py-3 text-xs leading-relaxed" style={{ background: `${theme.ink}08` }}>
+											<div className="rounded-2xl px-4 py-3 text-xs leading-relaxed" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 												<p className="mb-2 text-[10px] font-bold uppercase tracking-wider opacity-50">
 													{t('reading.polishAudit')}
 												</p>
@@ -2529,7 +2530,7 @@ export default function ReadingView({ book: initialBook }) {
 										)}
 									<div
 										className="rounded-2xl border px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
-										style={{ borderColor: `${theme.accent}33`, background: `${theme.accent}10` }}
+										style={{ borderColor: `color-mix(in srgb, ${theme.accent} 20%, transparent)`, background: `color-mix(in srgb, ${theme.accent} 6%, transparent)` }}
 										dir="auto"
 									>
 										<p className="mb-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.accent }}>
@@ -2554,7 +2555,7 @@ export default function ReadingView({ book: initialBook }) {
 											disabled={polish.busy}
 											onClick={runPolish}
 											className="rounded-2xl px-4 py-3 text-sm font-semibold"
-											style={{ background: `${theme.ink}0d` }}
+											style={{ background: `color-mix(in srgb, ${theme.ink} 5%, transparent)` }}
 										>
 											{t('reading.polishRetry')}
 										</button>
@@ -2582,7 +2583,7 @@ export default function ReadingView({ book: initialBook }) {
 							transition={{ type: 'spring', stiffness: 380, damping: 28 }}
 							onClick={e => e.stopPropagation()}
 							className="max-h-[min(90vh,760px)] w-full max-w-lg overflow-y-auto rounded-3xl border p-4 shadow-2xl sm:p-5"
-							style={{ background: theme.paper, borderColor: `${theme.ink}12`, color: theme.ink }}
+							style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 						>
 							<div className="mb-4 flex items-start justify-between gap-3">
 								<div>
@@ -2626,7 +2627,7 @@ export default function ReadingView({ book: initialBook }) {
 							{structure.blocks?.length > 0 && (
 								<div className="space-y-3">
 									{structure.notes && (
-										<div className="rounded-2xl px-4 py-3 text-xs leading-relaxed opacity-75" style={{ background: `${theme.ink}08` }}>
+										<div className="rounded-2xl px-4 py-3 text-xs leading-relaxed opacity-75" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 											<p className="mb-1 text-[10px] font-bold uppercase tracking-wider opacity-50">
 												{t('reading.structureNotes')}
 											</p>
@@ -2635,7 +2636,7 @@ export default function ReadingView({ book: initialBook }) {
 									)}
 									<div
 										className="space-y-3 rounded-2xl border px-4 py-3"
-										style={{ borderColor: `${theme.accent}33`, background: `${theme.accent}08` }}
+										style={{ borderColor: `color-mix(in srgb, ${theme.accent} 20%, transparent)`, background: `color-mix(in srgb, ${theme.accent} 3%, transparent)` }}
 									>
 										<p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.accent }}>
 											{t('reading.structurePreview')}
@@ -2668,7 +2669,7 @@ export default function ReadingView({ book: initialBook }) {
 												{(b.type === 'key_idea' || b.type === 'callout') && (
 													<div
 														className="rounded-xl px-3 py-2"
-														style={{ background: `${b.accent || theme.accent}18` }}
+														style={{ background: `color-mix(in srgb, ${b.accent || theme.accent} 9%, transparent)` }}
 													>
 														<p className="mb-0.5 text-[9px] font-bold uppercase tracking-wider opacity-60">
 															{b.type === 'key_idea' ? t('reading.keyIdeaLabel') : b.calloutType || 'note'}
@@ -2695,7 +2696,7 @@ export default function ReadingView({ book: initialBook }) {
 											disabled={structure.busy}
 											onClick={runStructure}
 											className="rounded-2xl px-4 py-3 text-sm font-semibold"
-											style={{ background: `${theme.ink}0d` }}
+											style={{ background: `color-mix(in srgb, ${theme.ink} 5%, transparent)` }}
 										>
 											{t('reading.structureRetry')}
 										</button>
@@ -2722,7 +2723,7 @@ export default function ReadingView({ book: initialBook }) {
 							exit={{ y: 10, opacity: 0 }}
 							onClick={e => e.stopPropagation()}
 							className="w-full max-w-md rounded-3xl border p-5 shadow-2xl"
-							style={{ background: theme.paper, borderColor: `${theme.ink}12`, color: theme.ink }}
+							style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 						>
 							<div className="mb-3 flex items-start justify-between gap-2">
 								<div>
@@ -2747,7 +2748,7 @@ export default function ReadingView({ book: initialBook }) {
 									{translatePanel.error && (
 										<p className="rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700">{translatePanel.error}</p>
 									)}
-									<div className="rounded-2xl px-4 py-3" style={{ background: `${theme.accent}12` }}>
+									<div className="rounded-2xl px-4 py-3" style={{ background: `color-mix(in srgb, ${theme.accent} 7%, transparent)` }}>
 										<p className="text-[10px] font-bold uppercase tracking-wider opacity-50">{t('reading.translateMeaning')}</p>
 										<p className="mt-1 text-base font-semibold">{translatePanel.translation || '—'}</p>
 										{translatePanel.meaning && (
@@ -2755,7 +2756,7 @@ export default function ReadingView({ book: initialBook }) {
 										)}
 									</div>
 									{(translatePanel.contextNote || translatePanel.context) && (
-										<div className="rounded-2xl px-4 py-3 text-sm leading-relaxed opacity-70" style={{ background: `${theme.ink}08` }}>
+										<div className="rounded-2xl px-4 py-3 text-sm leading-relaxed opacity-70" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 											<p className="mb-1 text-[10px] font-bold uppercase tracking-wider opacity-50">{t('reading.translateContext')}</p>
 											{translatePanel.contextNote || translatePanel.context}
 										</div>
@@ -2914,7 +2915,7 @@ export default function ReadingView({ book: initialBook }) {
 															setPanel(null);
 														}}
 														className="block w-full rounded-lg px-3 py-2 text-start text-sm hover:bg-black/5"
-														style={{ background: pg.id === current?.page.id ? `${theme.accent}18` : 'transparent' }}
+														style={{ background: pg.id === current?.page.id ? `color-mix(in srgb, ${theme.accent} 9%, transparent)` : 'transparent' }}
 													>
 														{pg.title || t('reading.untitledPage')}
 													</button>
@@ -2958,7 +2959,7 @@ export default function ReadingView({ book: initialBook }) {
 									<Sparkles size={14} /> {askBusy ? t('common.working') : t('reading.ask')}
 								</button>
 								{askResult && (
-									<div className="rounded-xl p-3 text-sm" style={{ background: `${theme.accent}12` }}>
+									<div className="rounded-xl p-3 text-sm" style={{ background: `color-mix(in srgb, ${theme.accent} 7%, transparent)` }}>
 										<p>{askResult.answer}</p>
 										{askResult.suggestedAction && (
 											<p className="mt-2 text-xs font-semibold opacity-80">
@@ -3066,7 +3067,7 @@ function EnrichTools({ t, theme, busy, result, onRun, onOpenPolish, onOpenStruct
 						type="button"
 						onClick={onOpenAiSettings}
 						className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide"
-						style={{ background: `${theme.accent}14`, color: theme.accent }}
+						style={{ background: `color-mix(in srgb, ${theme.accent} 8%, transparent)`, color: theme.accent }}
 					>
 						<Bot size={11} />
 						<span className="truncate">{aiModelKey}</span>
@@ -3083,14 +3084,14 @@ function EnrichTools({ t, theme, busy, result, onRun, onOpenPolish, onOpenStruct
 						onClick={() => handleMode(mode)}
 						className="group flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-start text-[12px] font-semibold transition disabled:opacity-50 sm:px-3.5 sm:text-[13px]"
 						style={{
-							background: result?.mode === mode ? `${theme.accent}22` : `${theme.ink}08`,
+							background: result?.mode === mode ? `color-mix(in srgb, ${theme.accent} 13%, transparent)` : `color-mix(in srgb, ${theme.ink} 3%, transparent)`,
 							color: theme.ink,
 							fontFamily: 'var(--font-space-grotesk), var(--font-dm-sans), system-ui, sans-serif',
 						}}
 					>
 						<span
 							className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl"
-							style={{ background: `${theme.accent}18`, color: theme.accent }}
+							style={{ background: `color-mix(in srgb, ${theme.accent} 9%, transparent)`, color: theme.accent }}
 						>
 							<Icon size={13} />
 						</span>
@@ -3206,7 +3207,7 @@ function SettingsBody({
 
 	return (
 		<div className="space-y-5 text-sm">
-			<div className="flex gap-1 rounded-2xl p-1" style={{ background: `${theme.ink}08` }}>
+			<div className="flex gap-1 rounded-2xl p-1" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 				{[
 					['reading', t('reading.settingsTabReading'), Settings2],
 					['ai', t('reading.settingsTabAi'), Bot],
@@ -3232,7 +3233,7 @@ function SettingsBody({
 
 			{tab === 'reading' && (
 		<div className="space-y-6 text-sm">
-			<div className="rounded-2xl px-3.5 py-3 text-xs leading-relaxed" style={{ background: `${theme.ink}08` }}>
+			<div className="rounded-2xl px-3.5 py-3 text-xs leading-relaxed" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 				<p className="font-semibold opacity-80">
 					{hasArticlePrefs ? t('reading.prefsScopeArticle') : t('reading.prefsScopeGlobal')}
 				</p>
@@ -3256,7 +3257,7 @@ function SettingsBody({
 							type="button"
 							onClick={onResetArticlePrefs}
 							className="rounded-full px-3 py-1.5 text-[11px] font-bold"
-							style={{ background: `${theme.ink}12`, color: theme.ink }}
+							style={{ background: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 						>
 							{t('reading.prefsResetArticle')}
 						</button>
@@ -3371,7 +3372,7 @@ function SettingsBody({
 							onClick={() => updatePrefs({ pageMode: id })}
 							className="rounded-full px-3 py-1.5 text-xs font-semibold"
 							style={{
-								background: (prefs.pageMode || 'pages') === id ? theme.accent : `${theme.ink}10`,
+								background: (prefs.pageMode || 'pages') === id ? theme.accent : `color-mix(in srgb, ${theme.ink} 6%, transparent)`,
 								color: (prefs.pageMode || 'pages') === id ? '#fff' : theme.ink,
 							}}
 						>
@@ -3403,7 +3404,7 @@ function SettingsBody({
 							onClick={() => updatePrefs({ fontPreset: p })}
 							className="rounded-full px-3 py-1.5 text-xs font-semibold capitalize"
 							style={{
-								background: prefs.fontPreset === p ? theme.accent : `${theme.ink}10`,
+								background: prefs.fontPreset === p ? theme.accent : `color-mix(in srgb, ${theme.ink} 6%, transparent)`,
 								color: prefs.fontPreset === p ? '#fff' : theme.ink,
 								fontFamily: resolveContentFont('en', p),
 							}}
@@ -3422,7 +3423,7 @@ function SettingsBody({
 							className="rounded-full px-3 py-1.5 text-xs font-semibold"
 							dir="rtl"
 							style={{
-								background: prefs.fontPreset === p ? theme.accent : `${theme.ink}10`,
+								background: prefs.fontPreset === p ? theme.accent : `color-mix(in srgb, ${theme.ink} 6%, transparent)`,
 								color: prefs.fontPreset === p ? '#fff' : theme.ink,
 								fontFamily: resolveContentFont('ar', p),
 							}}
@@ -3435,7 +3436,7 @@ function SettingsBody({
 					className="mt-3 rounded-xl px-3 py-2 text-[13px] leading-relaxed"
 					dir={isArabicFontPreset(prefs.fontPreset) ? 'rtl' : 'auto'}
 					style={{
-						background: `${theme.ink}08`,
+						background: `color-mix(in srgb, ${theme.ink} 3%, transparent)`,
 						fontFamily: resolveContentFont(isArabicFontPreset(prefs.fontPreset) ? 'ar' : 'en', prefs.fontPreset),
 						textAlign: isArabicFontPreset(prefs.fontPreset) ? 'right' : 'left',
 					}}
@@ -3457,8 +3458,8 @@ function SettingsBody({
 								onClick={() => updatePrefs({ theme: th })}
 								className="flex items-center gap-2.5 rounded-2xl border px-2.5 py-2 text-start transition"
 								style={{
-									borderColor: active ? theme.accent : `${theme.ink}12`,
-									background: active ? `${theme.accent}12` : 'transparent',
+									borderColor: active ? theme.accent : `color-mix(in srgb, ${theme.ink} 7%, transparent)`,
+									background: active ? `color-mix(in srgb, ${theme.accent} 7%, transparent)` : 'transparent',
 								}}
 							>
 								<span
@@ -3567,7 +3568,7 @@ function AiSettingsPanel({ prefs, theme, t, updatePrefs }) {
 			</div>
 
 			{savedFlash && (
-				<p className="rounded-xl px-3 py-2 text-xs font-semibold" style={{ background: `${theme.accent}18`, color: theme.accent }}>
+				<p className="rounded-xl px-3 py-2 text-xs font-semibold" style={{ background: `color-mix(in srgb, ${theme.accent} 9%, transparent)`, color: theme.accent }}>
 					{t('reading.aiSettingsSaved')}
 				</p>
 			)}
@@ -3597,13 +3598,13 @@ function AiSettingsPanel({ prefs, theme, t, updatePrefs }) {
 							onClick={() => selectModel(model)}
 							className="flex w-full items-start gap-3 rounded-2xl px-3.5 py-3 text-start transition disabled:opacity-45"
 							style={{
-								background: active ? `${theme.accent}18` : `${theme.ink}06`,
+								background: active ? `color-mix(in srgb, ${theme.accent} 9%, transparent)` : `color-mix(in srgb, ${theme.ink} 2%, transparent)`,
 								boxShadow: active ? `inset 0 0 0 1.5px ${theme.accent}` : 'none',
 							}}
 						>
 							<span
 								className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-								style={{ background: `${theme.accent}18`, color: theme.accent }}
+								style={{ background: `color-mix(in srgb, ${theme.accent} 9%, transparent)`, color: theme.accent }}
 							>
 								{saving === model.modelKey ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
 							</span>
@@ -3613,7 +3614,7 @@ function AiSettingsPanel({ prefs, theme, t, updatePrefs }) {
 									{free && (
 										<span
 											className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-											style={{ background: `${theme.accent}22`, color: theme.accent }}
+											style={{ background: `color-mix(in srgb, ${theme.accent} 13%, transparent)`, color: theme.accent }}
 										>
 											{t('reading.aiSettingsFree')}
 										</span>
@@ -3853,7 +3854,7 @@ function KnowledgeBody({ book, t, theme, onAddNote, onToggleAction, onSaveReview
 				type="button"
 				onClick={onBookmark}
 				className="w-full rounded-xl border border-dashed px-3 py-2 text-xs font-semibold"
-				style={{ borderColor: `${theme.accent}55`, color: theme.accent }}
+				style={{ borderColor: `color-mix(in srgb, ${theme.accent} 33%, transparent)`, color: theme.accent }}
 			>
 				{t('knowledge.bookmarkPage')}
 			</button>
@@ -3862,7 +3863,7 @@ function KnowledgeBody({ book, t, theme, onAddNote, onToggleAction, onSaveReview
 				<h3 className="mb-2 text-xs font-bold uppercase tracking-wider opacity-50">{t('knowledge.importantWords')}</h3>
 				<div className="space-y-2">
 					{(k.importantWords || []).slice(0, 40).map(w => (
-						<div key={w.id} className="rounded-xl px-3 py-2.5" style={{ background: `${theme.ink}08` }}>
+						<div key={w.id} className="rounded-xl px-3 py-2.5" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 							<p className="font-bold">
 								{w.word}
 								{w.translation ? <span className="ms-2 font-semibold opacity-70">— {w.translation}</span> : null}

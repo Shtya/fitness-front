@@ -30,12 +30,12 @@ export const PROMPT_CATEGORIES = ['generate', 'summarize', 'explain', 'actions',
 export const TOPIC_FOLDERS = ['inbox', 'psychology', 'habits', 'money', 'work', 'health', 'monthly'];
 
 export const COVER_PALETTES = [
-	['#1a2e28', '#3d5a4c'],
-	['#1e293b', '#475569'],
-	['#3b1f1a', '#8b5a3c'],
-	['#1a2332', '#2d4a6f'],
-	['#2a1f3d', '#5b4a7a'],
-	['#1f2a1a', '#4a6b3a'],
+	['#312e81', '#6366f1'],
+	['#0f172a', '#475569'],
+	['#1e3a5f', '#3b82f6'],
+	['#164e63', '#06b6d4'],
+	['#3b0764', '#a855f7'],
+	['#134e4a', '#14b8a6'],
 ];
 
 export function uid(prefix = 'id') {

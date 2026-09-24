@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from '@/i18n/navigation';
@@ -13,5 +13,5 @@ export default function RedirectToStudio({ tab = 'home', sub }) {
 		const qs = params.toString();
 		router.replace(qs ? `/ai-studio?${qs}` : '/ai-studio');
 	}, [router, tab, sub]);
-	return <div className="grid min-h-[40vh] place-items-center text-sm text-[#5c6b63]">…</div>;
+	return <div className="grid min-h-[40vh] place-items-center text-sm text-[var(--ar-muted)]">…</div>;
 }

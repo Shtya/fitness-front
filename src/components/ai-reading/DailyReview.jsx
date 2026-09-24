@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -46,10 +46,10 @@ export default function DailyReview() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="font-[family-name:var(--font-space-grotesk)] text-3xl font-bold tracking-tight text-[#1a2e28]">
+				<h1 className="font-[family-name:var(--font-space-grotesk)] text-3xl font-bold tracking-tight text-[var(--ar-heading)]">
 					{t('review.title')}
 				</h1>
-				<p className="mt-2 text-sm text-[#5c6b63]">{t('review.subtitle')}</p>
+				<p className="mt-2 text-sm text-[var(--ar-muted)]">{t('review.subtitle')}</p>
 			</div>
 
 			<div className="grid grid-cols-3 gap-3">
@@ -58,16 +58,16 @@ export default function DailyReview() {
 					{ label: t('review.due'), value: queue.length, icon: RotateCcw },
 					{ label: t('review.done'), value: stats.reviewsDone || 0, icon: Check },
 				].map(({ label, value, icon: Icon }) => (
-					<div key={label} className="rounded-2xl bg-white/70 p-4 text-center ring-1 ring-[#2d4a3e]/10">
-						<Icon size={16} className="mx-auto text-[#3d5a4c]" />
-						<p className="mt-2 text-2xl font-bold text-[#1a2e28]">{value}</p>
-						<p className="text-[10px] font-semibold uppercase tracking-wider text-[#5c6b63]">{label}</p>
+					<div key={label} className="rounded-2xl bg-white/70 p-4 text-center ring-1 ring-[color:var(--ar-ring)]/10">
+						<Icon size={16} className="mx-auto text-[var(--ar-accent)]" />
+						<p className="mt-2 text-2xl font-bold text-[var(--ar-heading)]">{value}</p>
+						<p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--ar-muted)]">{label}</p>
 					</div>
 				))}
 			</div>
 
 			{!current ? (
-				<div className="rounded-3xl bg-white/60 px-6 py-16 text-center text-sm text-[#5c6b63]">
+				<div className="rounded-3xl bg-white/60 px-6 py-16 text-center text-sm text-[var(--ar-muted)]">
 					{t('review.empty')}
 				</div>
 			) : (
@@ -75,16 +75,16 @@ export default function DailyReview() {
 					key={current.id}
 					initial={{ opacity: 0, y: 12 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="rounded-3xl bg-white/80 p-6 shadow-sm ring-1 ring-[#2d4a3e]/10"
+					className="rounded-3xl bg-white/80 p-6 shadow-sm ring-1 ring-[color:var(--ar-ring)]/10"
 				>
-					<p className="text-[10px] font-bold uppercase tracking-widest text-[#5c6b63]">
+					<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ar-muted)]">
 						{current.bookTitle} · {current.type}
 					</p>
 					<button type="button" onClick={() => setFlipped(f => !f)} className="mt-4 w-full text-start">
-						<p className="font-[family-name:var(--font-space-grotesk)] text-xl font-semibold leading-snug text-[#1a2e28]">
+						<p className="font-[family-name:var(--font-space-grotesk)] text-xl font-semibold leading-snug text-[var(--ar-heading)]">
 							{flipped && current.answer ? current.answer : current.text}
 						</p>
-						<p className="mt-3 text-xs text-[#5c6b63]">{flipped ? t('review.promptRecall') : t('review.tapReveal')}</p>
+						<p className="mt-3 text-xs text-[var(--ar-muted)]">{flipped ? t('review.promptRecall') : t('review.tapReveal')}</p>
 					</button>
 
 					{flipped && (
@@ -99,8 +99,8 @@ export default function DailyReview() {
 									key={q}
 									type="button"
 									onClick={() => grade(q)}
-									className="rounded-full px-4 py-2 text-xs font-semibold text-[#f6f1e8]"
-									style={{ background: q < 3 ? '#9f1239' : q === 3 ? '#b45309' : '#1a2e28' }}
+									className="rounded-full px-4 py-2 text-xs font-semibold text-white"
+									style={{ background: q < 3 ? '#9f1239' : q === 3 ? '#b45309' : 'var(--ar-heading)' }}
 								>
 									{label}
 								</button>

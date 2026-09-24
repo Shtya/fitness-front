@@ -16,6 +16,7 @@ import {
 	Lightbulb,
 	Route,
 } from 'lucide-react';
+import '@/lib/ai-reading/ai-reading-theme.css';
 
 const NAV = [
 	{ href: '/ai-studio', icon: Home, key: 'nav.home', exact: true },
@@ -46,27 +47,21 @@ export default function ReadingShell({ children, bare = false, wide = false }) {
 	}
 
 	return (
-		<div
-			className={`ai-reading-root min-h-screen ${isRTL ? 'rtl' : 'ltr'}`}
-			style={{
-				background:
-					'radial-gradient(1200px 600px at 10% -10%, rgba(45,74,62,0.12), transparent), radial-gradient(900px 500px at 100% 0%, rgba(180,120,60,0.08), transparent), #f6f1e8',
-			}}
-		>
-			<header className="sticky top-0 z-40 border-b border-[#2d4a3e]/12 bg-[#f6f1e8]/90 backdrop-blur-md">
+		<div className={`ai-reading-root flex h-full min-h-0 flex-col ${isRTL ? 'rtl' : 'ltr'}`}>
+			<header className="sticky top-0 z-40 shrink-0 border-b bg-white/85 backdrop-blur-md" style={{ borderColor: 'var(--ar-border)' }}>
 				<div className={`mx-auto flex items-center justify-between gap-4 px-4 py-3 ${wide || isWorkspace ? 'max-w-[1400px]' : 'max-w-6xl'}`}>
 					<Link href="/ai-studio" className="group flex items-center gap-3">
 						<span
 							className="flex h-10 w-10 items-center justify-center rounded-2xl text-white shadow-lg"
-							style={{ background: 'linear-gradient(145deg, #1a2e28, #3d5a4c)' }}
+							style={{ background: 'linear-gradient(145deg, var(--color-gradient-from, var(--color-primary-700)), var(--color-gradient-to, var(--color-primary-500)))' }}
 						>
 							<BookOpen size={18} />
 						</span>
 						<div>
-							<p className="font-[family-name:var(--font-space-grotesk)] text-sm font-bold tracking-tight text-[#1a2e28]">
+							<p className="font-[family-name:var(--font-space-grotesk)] text-sm font-bold tracking-tight" style={{ color: 'var(--ar-heading)' }}>
 								{t('brand')}
 							</p>
-							<p className="text-[11px] text-[#5c6b63]">{t('brandSub')}</p>
+							<p className="text-[11px]" style={{ color: 'var(--ar-muted)' }}>{t('brandSub')}</p>
 						</div>
 					</Link>
 					<nav className="hidden items-center gap-0.5 xl:flex">
@@ -77,14 +72,14 @@ export default function ReadingShell({ children, bare = false, wide = false }) {
 								<Link
 									key={item.href}
 									href={item.href}
-									className={`relative rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition ${
-										active ? 'text-[#1a2e28]' : 'text-[#5c6b63] hover:text-[#1a2e28]'
-									}`}
+									className="relative rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition"
+									style={{ color: active ? 'var(--ar-heading)' : 'var(--ar-muted)' }}
 								>
 									{active && (
 										<motion.span
 											layoutId="ai-reading-nav"
-											className="absolute inset-0 rounded-full bg-white/80 shadow-sm ring-1 ring-[#2d4a3e]/10"
+											className="absolute inset-0 rounded-full bg-white/90 shadow-sm"
+											style={{ boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
 											transition={{ type: 'spring', stiffness: 380, damping: 30 }}
 										/>
 									)}
@@ -106,7 +101,7 @@ export default function ReadingShell({ children, bare = false, wide = false }) {
 								key={item.href}
 								href={item.href}
 								className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold ${
-									active ? 'bg-[#1a2e28] text-[#f6f1e8]' : 'bg-white/60 text-[#5c6b63]'
+									active ? 'ar-chip-active' : 'ar-chip-idle'
 								}`}
 							>
 								<span className="inline-flex items-center gap-1">
@@ -118,7 +113,7 @@ export default function ReadingShell({ children, bare = false, wide = false }) {
 					})}
 				</div>
 			</header>
-			<main className={`mx-auto px-4 py-6 ${wide || isWorkspace ? 'max-w-[1400px]' : 'max-w-6xl py-8'}`}>{children}</main>
+			<main className={`mx-auto min-h-0 flex-1 overflow-y-auto px-4 py-6 ${wide || isWorkspace ? 'max-w-[1400px]' : 'max-w-6xl py-8'}`}>{children}</main>
 		</div>
 	);
 }

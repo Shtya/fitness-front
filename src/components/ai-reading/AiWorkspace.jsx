@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -211,17 +211,17 @@ export default function AiWorkspace({ embedded = false }) {
 	return (
 		<div className={`flex min-h-[420px] flex-col gap-3 lg:flex-row ${embedded ? 'h-[min(720px,calc(100dvh-14rem))] sm:h-[min(720px,calc(100dvh-12rem))]' : 'h-[calc(100dvh-7.5rem)] min-h-[560px]'}`}>
 			{/* LEFT */}
-			<aside className="flex max-h-[40vh] w-full shrink-0 flex-col gap-3 overflow-hidden rounded-3xl bg-white/65 p-3 ring-1 ring-[#2d4a3e]/10 lg:max-h-none lg:w-72">
+			<aside className="flex max-h-[40vh] w-full shrink-0 flex-col gap-3 overflow-hidden rounded-3xl bg-white/65 p-3 ring-1 ring-[color:var(--ar-ring)]/10 lg:max-h-none lg:w-72">
 				<div className="flex items-center justify-between px-1">
-					<p className="text-[10px] font-bold uppercase tracking-widest text-[#5c6b63]">{t('workspace.leftTitle')}</p>
-					<button type="button" onClick={() => { clearChatSession(); setSession(getChatSession()); }} className="text-[10px] font-semibold text-[#3d5a4c]">
+					<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ar-muted)]">{t('workspace.leftTitle')}</p>
+					<button type="button" onClick={() => { clearChatSession(); setSession(getChatSession()); }} className="text-[10px] font-semibold text-[var(--ar-accent)]">
 						{t('workspace.newChat')}
 					</button>
 				</div>
 
 				<section className="min-h-0 flex-1 space-y-4 overflow-y-auto pe-1">
 					<div>
-						<p className="mb-2 flex items-center gap-1 text-[11px] font-bold text-[#1a2e28]">
+						<p className="mb-2 flex items-center gap-1 text-[11px] font-bold text-[var(--ar-heading)]">
 							<MessageSquareQuote size={12} /> {t('workspace.savedPrompts')}
 						</p>
 						<div className="space-y-1.5">
@@ -230,17 +230,17 @@ export default function AiWorkspace({ embedded = false }) {
 									key={p.id}
 									type="button"
 									onClick={() => insertPrompt(p)}
-									className="w-full rounded-xl bg-[#1a2e28]/[0.04] px-3 py-2 text-start transition hover:bg-[#1a2e28]/10"
+									className="w-full rounded-xl bg-[var(--ar-accent)]/[0.04] px-3 py-2 text-start transition hover:bg-[var(--ar-accent)]/10"
 								>
-									<p className="text-xs font-semibold text-[#1a2e28]">{p.title}</p>
-									<p className="mt-0.5 line-clamp-2 text-[10px] text-[#5c6b63]">{p.body}</p>
+									<p className="text-xs font-semibold text-[var(--ar-heading)]">{p.title}</p>
+									<p className="mt-0.5 line-clamp-2 text-[10px] text-[var(--ar-muted)]">{p.body}</p>
 								</button>
 							))}
 						</div>
 					</div>
 
 					<div>
-						<p className="mb-2 flex items-center gap-1 text-[11px] font-bold text-[#1a2e28]">
+						<p className="mb-2 flex items-center gap-1 text-[11px] font-bold text-[var(--ar-heading)]">
 							<Lightbulb size={12} /> {t('workspace.topics')}
 						</p>
 						<div className="space-y-1.5">
@@ -249,10 +249,10 @@ export default function AiWorkspace({ embedded = false }) {
 									key={topic.id}
 									type="button"
 									onClick={() => insertTopic(topic)}
-									className="flex w-full items-start gap-2 rounded-xl px-3 py-2 text-start hover:bg-[#1a2e28]/[0.06]"
+									className="flex w-full items-start gap-2 rounded-xl px-3 py-2 text-start hover:bg-[var(--ar-accent)]/[0.06]"
 								>
-									{topic.favorite ? <Star size={11} className="mt-0.5 fill-amber-400 text-amber-400" /> : <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#3d5a4c]" />}
-									<span className="text-xs text-[#1a2e28]">{topic.title}</span>
+									{topic.favorite ? <Star size={11} className="mt-0.5 fill-amber-400 text-amber-400" /> : <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[var(--ar-accent)]" />}
+									<span className="text-xs text-[var(--ar-heading)]">{topic.title}</span>
 								</button>
 							))}
 						</div>
@@ -261,10 +261,10 @@ export default function AiWorkspace({ embedded = false }) {
 			</aside>
 
 			{/* CENTER chat */}
-			<section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-3xl bg-[#fffefb]/90 ring-1 ring-[#2d4a3e]/10">
-				<div className="border-b border-[#2d4a3e]/10 px-4 py-3">
-					<p className="font-[family-name:var(--font-space-grotesk)] text-sm font-bold text-[#1a2e28]">{t('workspace.chatTitle')}</p>
-					<p className="text-[11px] text-[#5c6b63]">{t('workspace.chatSub')}</p>
+			<section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-3xl bg-white/90 ring-1 ring-[color:var(--ar-ring)]/10">
+				<div className="border-b border-[color:var(--ar-border)]/10 px-4 py-3">
+					<p className="font-[family-name:var(--font-space-grotesk)] text-sm font-bold text-[var(--ar-heading)]">{t('workspace.chatTitle')}</p>
+					<p className="text-[11px] text-[var(--ar-muted)]">{t('workspace.chatSub')}</p>
 				</div>
 
 				<div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
@@ -275,32 +275,32 @@ export default function AiWorkspace({ embedded = false }) {
 							animate={{ opacity: 1, y: 0 }}
 							className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
 								msg.role === 'user'
-									? 'ms-auto bg-[#1a2e28] text-[#f6f1e8]'
-									: 'bg-white text-[#1a2e28] shadow-sm ring-1 ring-[#2d4a3e]/8'
+									? 'ms-auto bg-[var(--ar-accent)] text-white'
+									: 'bg-white text-[var(--ar-heading)] shadow-sm ring-1 ring-[color:var(--ar-ring)]/8'
 							}`}
 						>
 							<p className="whitespace-pre-wrap">{msg.content}</p>
 							{msg.meta?.hasBook && (
-								<p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-[#3d5a4c]">{t('workspace.bookAttached')}</p>
+								<p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-[var(--ar-accent)]">{t('workspace.bookAttached')}</p>
 							)}
 						</motion.div>
 					))}
 					{busy && (
-						<div className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs text-[#5c6b63] shadow-sm">
+						<div className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs text-[var(--ar-muted)] shadow-sm">
 							<Loader2 size={14} className="animate-spin" /> {t('workspace.thinking')}
 						</div>
 					)}
 					<div ref={endRef} />
 				</div>
 
-				<div className="border-t border-[#2d4a3e]/10 p-3">
+				<div className="border-t border-[color:var(--ar-border)]/10 p-3">
 					<div className="mb-2 flex flex-wrap gap-1.5">
 						{quickActions.map(q => (
 							<button
 								key={q.label}
 								type="button"
 								onClick={() => setComposer(q.text)}
-								className="rounded-full bg-[#1a2e28]/[0.06] px-2.5 py-1 text-[10px] font-semibold text-[#1a2e28]"
+								className="rounded-full bg-[var(--ar-accent)]/[0.06] px-2.5 py-1 text-[10px] font-semibold text-[var(--ar-heading)]"
 							>
 								{q.label}
 							</button>
@@ -319,14 +319,14 @@ export default function AiWorkspace({ embedded = false }) {
 							}}
 							rows={3}
 							placeholder={t('workspace.composerPlaceholder')}
-							className="flex-1 resize-none rounded-2xl border border-[#2d4a3e]/15 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#3d5a4c]/25"
+							className="flex-1 resize-none rounded-2xl border border-[color:var(--ar-border)]/15 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--ar-accent)]/25"
 						/>
 						<button
 							type="button"
 							disabled={busy || !composer.trim()}
 							onClick={send}
 							className="flex h-11 w-11 shrink-0 items-center justify-center self-end rounded-2xl text-white disabled:opacity-40"
-							style={{ background: 'linear-gradient(135deg,#1a2e28,#3d5a4c)' }}
+							style={{ background: 'linear-gradient(135deg,var(--ar-heading),var(--ar-accent))' }}
 						>
 							{busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
 						</button>
@@ -335,8 +335,8 @@ export default function AiWorkspace({ embedded = false }) {
 			</section>
 
 			{/* RIGHT */}
-			<aside className="flex w-full shrink-0 flex-col overflow-hidden rounded-3xl bg-white/65 ring-1 ring-[#2d4a3e]/10 lg:w-80">
-				<div className="flex gap-1 border-b border-[#2d4a3e]/10 p-2">
+			<aside className="flex w-full shrink-0 flex-col overflow-hidden rounded-3xl bg-white/65 ring-1 ring-[color:var(--ar-ring)]/10 lg:w-80">
+				<div className="flex gap-1 border-b border-[color:var(--ar-border)]/10 p-2">
 					{[
 						['content', FileText, t('workspace.tabs.content')],
 						['notes', ListTodo, t('workspace.tabs.notes')],
@@ -347,7 +347,7 @@ export default function AiWorkspace({ embedded = false }) {
 							type="button"
 							onClick={() => setRightTab(id)}
 							className={`flex flex-1 items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold ${
-								rightTab === id ? 'bg-[#1a2e28] text-[#f6f1e8]' : 'text-[#5c6b63]'
+								rightTab === id ? 'bg-[var(--ar-accent)] text-white' : 'text-[var(--ar-muted)]'
 							}`}
 						>
 							<Icon size={12} /> {label}
@@ -360,21 +360,21 @@ export default function AiWorkspace({ embedded = false }) {
 						{rightTab === 'content' && (
 							<motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
 								{!draftBook && !draftRoadmap && (
-									<div className="rounded-2xl border border-dashed border-[#2d4a3e]/20 px-4 py-10 text-center text-xs text-[#5c6b63]">
+									<div className="rounded-2xl border border-dashed border-[color:var(--ar-border)]/20 px-4 py-10 text-center text-xs text-[var(--ar-muted)]">
 										{t('workspace.emptyRight')}
 									</div>
 								)}
 								{draftBook && (
-									<div className="rounded-2xl bg-[#fffefb] p-4 ring-1 ring-[#2d4a3e]/10">
-										<p className="text-[10px] font-bold uppercase tracking-widest text-[#3d5a4c]">{t('workspace.generatedBook')}</p>
-										<h3 className="mt-1 font-[family-name:var(--font-space-grotesk)] text-lg font-bold text-[#1a2e28]">{draftBook.title}</h3>
-										<p className="mt-1 text-xs text-[#5c6b63]">{draftBook.subtitle}</p>
-										<p className="mt-3 text-[11px] text-[#5c6b63]">
+									<div className="rounded-2xl bg-white p-4 ring-1 ring-[color:var(--ar-ring)]/10">
+										<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ar-accent)]">{t('workspace.generatedBook')}</p>
+										<h3 className="mt-1 font-[family-name:var(--font-space-grotesk)] text-lg font-bold text-[var(--ar-heading)]">{draftBook.title}</h3>
+										<p className="mt-1 text-xs text-[var(--ar-muted)]">{draftBook.subtitle}</p>
+										<p className="mt-3 text-[11px] text-[var(--ar-muted)]">
 											{(draftBook.chapters || []).length} {t('workspace.chapters')} · {draftBook.readingTimeMinutes || 10} min
 										</p>
 										<ul className="mt-3 space-y-1">
 											{(draftBook.chapters || []).slice(0, 5).map(ch => (
-												<li key={ch.id} className="text-xs text-[#1a2e28]">
+												<li key={ch.id} className="text-xs text-[var(--ar-heading)]">
 													· {ch.title}
 												</li>
 											))}
@@ -382,23 +382,23 @@ export default function AiWorkspace({ embedded = false }) {
 										<button
 											type="button"
 											onClick={saveDraftBook}
-											className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1a2e28] px-4 py-2 text-xs font-bold text-[#f6f1e8]"
+											className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--ar-accent)] px-4 py-2 text-xs font-bold text-white"
 										>
 											<BookOpen size={13} /> {t('workspace.openReading')}
 										</button>
 									</div>
 								)}
 								{draftRoadmap && (
-									<div className="rounded-2xl bg-[#fffefb] p-4 ring-1 ring-[#2d4a3e]/10">
+									<div className="rounded-2xl bg-white p-4 ring-1 ring-[color:var(--ar-ring)]/10">
 										<p className="text-[10px] font-bold uppercase tracking-widest text-[#b45309]">{t('workspace.roadmap')}</p>
-										<h3 className="mt-1 font-bold text-[#1a2e28]">{draftRoadmap.title}</h3>
+										<h3 className="mt-1 font-bold text-[var(--ar-heading)]">{draftRoadmap.title}</h3>
 										<ol className="mt-3 space-y-2">
 											{(draftRoadmap.items || []).map((it, i) => (
-												<li key={it.id || i} className="flex gap-2 text-xs text-[#1a2e28]">
-													<span className="font-bold text-[#5c6b63]">{String(it.order || i + 1).padStart(2, '0')}</span>
+												<li key={it.id || i} className="flex gap-2 text-xs text-[var(--ar-heading)]">
+													<span className="font-bold text-[var(--ar-muted)]">{String(it.order || i + 1).padStart(2, '0')}</span>
 													<span>
 														{it.title}
-														<span className="ms-1 text-[#5c6b63]">{it.subtitle || `${it.readingTimeMinutes} min`}</span>
+														<span className="ms-1 text-[var(--ar-muted)]">{it.subtitle || `${it.readingTimeMinutes} min`}</span>
 													</span>
 												</li>
 											))}
@@ -422,27 +422,27 @@ export default function AiWorkspace({ embedded = false }) {
 									onChange={e => setSideNotes(e.target.value)}
 									rows={14}
 									placeholder={t('workspace.notesPlaceholder')}
-									className="w-full rounded-2xl border border-[#2d4a3e]/15 bg-[#fffefb] px-3 py-3 text-sm outline-none"
+									className="w-full rounded-2xl border border-[color:var(--ar-border)]/15 bg-white px-3 py-3 text-sm outline-none"
 								/>
-								<p className="mt-2 text-[10px] text-[#5c6b63]">{t('workspace.notesHint')}</p>
+								<p className="mt-2 text-[10px] text-[var(--ar-muted)]">{t('workspace.notesHint')}</p>
 							</motion.div>
 						)}
 
 						{rightTab === 'import' && (
 							<motion.div key="import" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-								<p className="text-xs text-[#5c6b63]">{t('workspace.importHint')}</p>
+								<p className="text-xs text-[var(--ar-muted)]">{t('workspace.importHint')}</p>
 								<textarea
 									value={importRaw}
 									onChange={e => setImportRaw(e.target.value)}
 									rows={12}
 									placeholder={t('import.pastePlaceholder')}
-									className="w-full rounded-2xl border border-[#2d4a3e]/15 bg-[#fffefb] px-3 py-3 font-mono text-[12px] outline-none"
+									className="w-full rounded-2xl border border-[color:var(--ar-border)]/15 bg-white px-3 py-3 font-mono text-[12px] outline-none"
 								/>
 								<button
 									type="button"
 									disabled={importBusy || !importRaw.trim()}
 									onClick={runImport}
-									className="inline-flex items-center gap-2 rounded-full bg-[#1a2e28] px-4 py-2 text-xs font-bold text-[#f6f1e8] disabled:opacity-40"
+									className="inline-flex items-center gap-2 rounded-full bg-[var(--ar-accent)] px-4 py-2 text-xs font-bold text-white disabled:opacity-40"
 								>
 									{importBusy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
 									{t('import.cta')}

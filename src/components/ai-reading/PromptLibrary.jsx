@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -71,27 +71,27 @@ export default function PromptLibrary() {
 		<div className="space-y-6">
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div>
-					<h1 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight text-[#1a2e28]">
+					<h1 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight text-[var(--ar-heading)]">
 						{t('prompts.title')}
 					</h1>
-					<p className="mt-1.5 text-sm text-[#5c6b63]">{t('prompts.subtitle')}</p>
+					<p className="mt-1.5 text-sm text-[var(--ar-muted)]">{t('prompts.subtitle')}</p>
 				</div>
 				<button
 					type="button"
 					onClick={openNew}
-					className="inline-flex items-center gap-2 rounded-full bg-[#1a2e28] px-4 py-2 text-sm font-semibold text-[#f6f1e8]"
+					className="inline-flex items-center gap-2 rounded-full bg-[var(--ar-accent)] px-4 py-2 text-sm font-semibold text-white"
 				>
 					<Plus size={14} /> {t('prompts.create')}
 				</button>
 			</div>
 
 			{prompts.length === 0 ? (
-				<div className="rounded-3xl border border-dashed border-[#2d4a3e]/20 bg-white/40 px-6 py-16 text-center">
-					<p className="text-sm text-[#5c6b63]">{t('prompts.empty')}</p>
+				<div className="rounded-3xl border border-dashed border-[color:var(--ar-border)]/20 bg-white/40 px-6 py-16 text-center">
+					<p className="text-sm text-[var(--ar-muted)]">{t('prompts.empty')}</p>
 					<button
 						type="button"
 						onClick={openNew}
-						className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1a2e28] px-4 py-2 text-sm font-semibold text-[#f6f1e8]"
+						className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--ar-accent)] px-4 py-2 text-sm font-semibold text-white"
 					>
 						<Plus size={14} /> {t('prompts.create')}
 					</button>
@@ -102,10 +102,10 @@ export default function PromptLibrary() {
 						<motion.article
 							key={p.id}
 							layout
-							className="group relative flex flex-col rounded-2xl border border-[#2d4a3e]/10 bg-white/80 p-4 shadow-sm transition hover:border-[#2d4a3e]/20 hover:shadow-md"
+							className="group relative flex flex-col rounded-2xl border border-[color:var(--ar-border)]/10 bg-white/80 p-4 shadow-sm transition hover:border-[color:var(--ar-border)]/20 hover:shadow-md"
 						>
 							<div className="mb-3 flex items-start justify-between gap-2">
-								<h3 className="min-w-0 font-[family-name:var(--font-space-grotesk)] text-base font-bold text-[#1a2e28]">
+								<h3 className="min-w-0 font-[family-name:var(--font-space-grotesk)] text-base font-bold text-[var(--ar-heading)]">
 									{p.title || t('prompts.untitled')}
 								</h3>
 								<div className="flex shrink-0 gap-0.5">
@@ -113,12 +113,12 @@ export default function PromptLibrary() {
 										type="button"
 										title={t('prompts.copy')}
 										onClick={() => copyPrompt(p)}
-										className="rounded-lg p-1.5 hover:bg-[#1a2e28]/[0.06]"
+										className="rounded-lg p-1.5 hover:bg-[var(--ar-accent)]/[0.06]"
 									>
 										{copiedId === p.id ? (
 											<Check size={14} className="text-emerald-600" />
 										) : (
-											<Copy size={14} className="text-[#5c6b63]" />
+											<Copy size={14} className="text-[var(--ar-muted)]" />
 										)}
 									</button>
 									<button type="button" onClick={() => toggleFav(p)} className="rounded-lg p-1.5 hover:bg-black/5">
@@ -132,7 +132,7 @@ export default function PromptLibrary() {
 									</button>
 								</div>
 							</div>
-							<p className="flex-1 whitespace-pre-wrap text-[13px] leading-relaxed text-[#3d4a42] line-clamp-6">{p.body}</p>
+							<p className="flex-1 whitespace-pre-wrap text-[13px] leading-relaxed line-clamp-6 text-[var(--ar-ink)]">{p.body}</p>
 							{copiedId === p.id && (
 								<span className="absolute bottom-3 end-3 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
 									{t('prompts.copied')}
@@ -154,10 +154,10 @@ export default function PromptLibrary() {
 						<motion.div
 							initial={{ y: 16, opacity: 0 }}
 							animate={{ y: 0, opacity: 1 }}
-							className="w-full max-w-lg rounded-3xl bg-[#f6f1e8] p-5 shadow-2xl"
+							className="w-full max-w-lg rounded-3xl bg-[var(--ar-bg)] p-5 shadow-2xl"
 						>
 							<div className="mb-4 flex items-center justify-between">
-								<h2 className="font-bold text-[#1a2e28]">
+								<h2 className="font-bold text-[var(--ar-heading)]">
 									{editing.title || editing.body ? t('prompts.edit') : t('prompts.create')}
 								</h2>
 								<button type="button" onClick={() => setEditing(null)}>
@@ -168,7 +168,7 @@ export default function PromptLibrary() {
 								<input
 									value={editing.title}
 									onChange={e => setEditing({ ...editing, title: e.target.value })}
-									className="w-full rounded-xl border border-[#2d4a3e]/15 bg-white px-3 py-2.5 text-sm outline-none"
+									className="w-full rounded-xl border border-[color:var(--ar-border)]/15 bg-white px-3 py-2.5 text-sm outline-none"
 									placeholder={t('prompts.titleField')}
 									autoFocus
 								/>
@@ -176,14 +176,14 @@ export default function PromptLibrary() {
 									value={editing.body}
 									onChange={e => setEditing({ ...editing, body: e.target.value })}
 									rows={9}
-									className="w-full rounded-xl border border-[#2d4a3e]/15 bg-white px-3 py-2.5 text-sm leading-relaxed outline-none"
+									className="w-full rounded-xl border border-[color:var(--ar-border)]/15 bg-white px-3 py-2.5 text-sm leading-relaxed outline-none"
 									placeholder={t('prompts.bodyHint')}
 								/>
 								<button
 									type="button"
 									disabled={!editing.title?.trim() || !editing.body?.trim()}
 									onClick={() => save(editing)}
-									className="rounded-full bg-[#1a2e28] px-5 py-2.5 text-sm font-semibold text-[#f6f1e8] disabled:opacity-40"
+									className="rounded-full bg-[var(--ar-accent)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
 								>
 									{t('common.save')}
 								</button>

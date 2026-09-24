@@ -1,13 +1,15 @@
-/** Reading ambience themes + typography prefs. */
+/** Reading ambience themes + typography prefs.
+ *  Default (`light`) follows the live tenant/system palette via CSS variables.
+ */
 
 export const THEME_STYLES = {
 	light: {
-		bg: '#faf8f4',
-		ink: '#1a2e28',
-		muted: '#5c6b63',
-		paper: '#fffefb',
-		accent: '#3d5a4c',
-		heading: '#0f3d32',
+		bg: 'var(--ar-bg, color-mix(in srgb, var(--color-primary-50) 70%, #ffffff))',
+		ink: 'var(--ar-ink, var(--color-primary-950, #0f172a))',
+		muted: 'var(--ar-muted, color-mix(in srgb, var(--color-primary-700) 42%, #64748b))',
+		paper: 'var(--ar-paper, #ffffff)',
+		accent: 'var(--ar-accent, var(--color-primary-600))',
+		heading: 'var(--ar-heading, var(--color-primary-800))',
 	},
 	dark: {
 		bg: '#0e1210',
@@ -38,8 +40,8 @@ export const THEME_STYLES = {
 		ink: '#1f2933',
 		muted: '#6b7280',
 		paper: '#fbf8f1',
-		accent: '#4b6a5a',
-		heading: '#16352c',
+		accent: 'var(--color-primary-600, #4f46e5)',
+		heading: 'var(--color-primary-800, #1e293b)',
 	},
 	sand: {
 		bg: '#ebe4d4',

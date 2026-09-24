@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -23,10 +23,10 @@ export default function LibraryPanel() {
 	return (
 		<div className="space-y-4 sm:space-y-6">
 			<div>
-				<h1 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-[#1a2e28] sm:text-3xl">
+				<h1 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-[var(--ar-heading)] sm:text-3xl">
 					{t('library.title')}
 				</h1>
-				<p className="mt-1 text-xs text-[#5c6b63] sm:mt-2 sm:text-sm">{t('library.subtitle')}</p>
+				<p className="mt-1 text-xs text-[var(--ar-muted)] sm:mt-2 sm:text-sm">{t('library.subtitle')}</p>
 			</div>
 			<BookShelf
 				books={books}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -108,14 +108,14 @@ export default function GenerateForm() {
 		<form onSubmit={submit} className="space-y-6">
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
-					<h2 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight text-[#1a2e28]">
+					<h2 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight text-[var(--ar-heading)]">
 						{t('generate.title')}
 					</h2>
-					<p className="mt-1.5 text-sm text-[#5c6b63]">{t('generate.subtitle')}</p>
+					<p className="mt-1.5 text-sm text-[var(--ar-muted)]">{t('generate.subtitle')}</p>
 				</div>
-				<div className="rounded-2xl border border-[#2d4a3e]/10 bg-white/70 px-3.5 py-2.5 text-end">
-					<p className="text-[10px] font-bold uppercase tracking-wider text-[#5c6b63]">{t('generate.poweredBy')}</p>
-					<p className="mt-0.5 text-sm font-semibold text-[#1a2e28]">
+				<div className="rounded-2xl border border-[color:var(--ar-border)]/10 bg-white/70 px-3.5 py-2.5 text-end">
+					<p className="text-[10px] font-bold uppercase tracking-wider text-[var(--ar-muted)]">{t('generate.poweredBy')}</p>
+					<p className="mt-0.5 text-sm font-semibold text-[var(--ar-heading)]">
 						{aiStatus?.label || t('generate.checkingAi')}
 					</p>
 				</div>
@@ -134,7 +134,7 @@ export default function GenerateForm() {
 							if (id === 'transcripts') setReadingTimeMinutes(15);
 						}}
 						className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold ${
-							mode === id ? 'bg-[#1a2e28] text-[#f6f1e8]' : 'bg-white/70 text-[#5c6b63]'
+							mode === id ? 'bg-[var(--ar-accent)] text-white' : 'bg-white/70 text-[var(--ar-muted)]'
 						}`}
 					>
 						{id === 'transcripts' ? <Mic2 size={12} /> : <Sparkles size={12} />}
@@ -145,51 +145,51 @@ export default function GenerateForm() {
 
 			{mode === 'topic' ? (
 				<label className="block">
-					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.topic')}</span>
+					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.topic')}</span>
 					<textarea
 						value={topic}
 						onChange={e => setTopic(e.target.value)}
 						rows={3}
 						placeholder={t('generate.topicPlaceholder')}
-						className="w-full rounded-2xl border border-[#2d4a3e]/15 bg-white/70 px-4 py-3 text-sm text-[#1a2e28] outline-none ring-[#3d5a4c]/30 focus:ring-2"
+						className="w-full rounded-2xl border border-[color:var(--ar-border)]/15 bg-white/70 px-4 py-3 text-sm text-[var(--ar-heading)] outline-none ring-[var(--ar-accent)]/30 focus:ring-2"
 					/>
 				</label>
 			) : (
 				<div className="space-y-4">
 					<label className="block">
-						<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.articleTitle')}</span>
+						<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.articleTitle')}</span>
 						<input
 							value={topic}
 							onChange={e => setTopic(e.target.value)}
 							placeholder={t('generate.articleTitlePlaceholder')}
-							className="w-full rounded-xl border border-[#2d4a3e]/15 bg-white/70 px-3 py-2.5 text-sm outline-none"
+							className="w-full rounded-xl border border-[color:var(--ar-border)]/15 bg-white/70 px-3 py-2.5 text-sm outline-none"
 						/>
 					</label>
 
 					<label className="block">
-						<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.transcriptPrompt')}</span>
+						<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.transcriptPrompt')}</span>
 						<textarea
 							value={customPrompt}
 							onChange={e => setCustomPrompt(e.target.value)}
 							rows={4}
 							placeholder={t('generate.transcriptPromptPlaceholder')}
-							className="w-full rounded-2xl border border-[#2d4a3e]/15 bg-white/70 px-4 py-3 text-sm outline-none ring-[#3d5a4c]/30 focus:ring-2"
+							className="w-full rounded-2xl border border-[color:var(--ar-border)]/15 bg-white/70 px-4 py-3 text-sm outline-none ring-[var(--ar-accent)]/30 focus:ring-2"
 						/>
 					</label>
 
 					<div className="space-y-3">
 						<div className="flex items-center justify-between">
-							<span className="text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.transcripts')}</span>
+							<span className="text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.transcripts')}</span>
 							<button
 								type="button"
 								onClick={() => setTranscripts(list => [...list, emptyTranscript()])}
-								className="inline-flex items-center gap-1 text-xs font-semibold text-[#3d5a4c]"
+								className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ar-accent)]"
 							>
 								<Plus size={12} /> {t('generate.addTranscript')}
 							</button>
 						</div>
 						{transcripts.map((tr, idx) => (
-							<div key={tr.id} className="rounded-2xl border border-[#2d4a3e]/10 bg-white/60 p-3">
+							<div key={tr.id} className="rounded-2xl border border-[color:var(--ar-border)]/10 bg-white/60 p-3">
 								<div className="mb-2 flex items-center gap-2">
 									<input
 										value={tr.title}
@@ -197,7 +197,7 @@ export default function GenerateForm() {
 											setTranscripts(list => list.map(x => (x.id === tr.id ? { ...x, title: e.target.value } : x)))
 										}
 										placeholder={t('generate.transcriptTitle', { n: idx + 1 })}
-										className="flex-1 rounded-lg border border-[#2d4a3e]/10 bg-white px-3 py-2 text-sm outline-none"
+										className="flex-1 rounded-lg border border-[color:var(--ar-border)]/10 bg-white px-3 py-2 text-sm outline-none"
 									/>
 									{transcripts.length > 1 && (
 										<button
@@ -216,7 +216,7 @@ export default function GenerateForm() {
 									}
 									rows={8}
 									placeholder={t('generate.transcriptPaste')}
-									className="w-full rounded-xl border border-[#2d4a3e]/10 bg-[#fffefb] px-3 py-2 font-mono text-[12px] leading-relaxed outline-none"
+									className="w-full rounded-xl border border-[color:var(--ar-border)]/10 bg-white px-3 py-2 font-mono text-[12px] leading-relaxed outline-none"
 								/>
 							</div>
 						))}
@@ -228,7 +228,7 @@ export default function GenerateForm() {
 				{mode === 'topic' && (
 					<>
 						<label className="block">
-							<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.style')}</span>
+							<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.style')}</span>
 							<CustomSelect
 								value={style}
 								onChange={setStyle}
@@ -236,7 +236,7 @@ export default function GenerateForm() {
 							/>
 						</label>
 						<label className="block">
-							<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.depth')}</span>
+							<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.depth')}</span>
 							<CustomSelect
 								value={depth}
 								onChange={setDepth}
@@ -246,7 +246,7 @@ export default function GenerateForm() {
 					</>
 				)}
 				<label className="block">
-					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.language')}</span>
+					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.language')}</span>
 					<CustomSelect
 						value={language}
 						onChange={setLanguage}
@@ -257,7 +257,7 @@ export default function GenerateForm() {
 					/>
 				</label>
 				<label className="block">
-					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.time')}</span>
+					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.time')}</span>
 					<CustomSelect
 						value={readingTimeMinutes}
 						onChange={v => setReadingTimeMinutes(Number(v))}
@@ -268,7 +268,7 @@ export default function GenerateForm() {
 
 			{mode === 'topic' && (
 				<label className="block">
-					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('generate.savedPrompt')}</span>
+					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('generate.savedPrompt')}</span>
 					<CustomSelect
 						value={promptId}
 						onChange={setPromptId}
@@ -279,7 +279,7 @@ export default function GenerateForm() {
 						]}
 					/>
 					{selected && (
-						<p className="mt-2 rounded-xl bg-white/50 px-3 py-2 text-xs text-[#5c6b63] whitespace-pre-wrap">{selected.body}</p>
+						<p className="mt-2 rounded-xl bg-white/50 px-3 py-2 text-xs text-[var(--ar-muted)] whitespace-pre-wrap">{selected.body}</p>
 					)}
 				</label>
 			)}
@@ -291,8 +291,8 @@ export default function GenerateForm() {
 				disabled={busy}
 				whileHover={{ scale: 1.01 }}
 				whileTap={{ scale: 0.98 }}
-				className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#f6f1e8] shadow-lg disabled:opacity-50"
-				style={{ background: 'linear-gradient(135deg, #1a2e28, #3d5a4c)' }}
+				className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
+				style={{ background: 'linear-gradient(135deg, var(--ar-heading), var(--ar-accent))' }}
 			>
 				{busy ? <Loader2 size={16} className="animate-spin" /> : mode === 'transcripts' ? <Mic2 size={16} /> : <Sparkles size={16} />}
 				{busy ? t('generate.generating') : mode === 'transcripts' ? t('generate.ctaTranscript') : t('generate.cta')}

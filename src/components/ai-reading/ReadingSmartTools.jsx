@@ -94,7 +94,7 @@ export function GlossaryStrip({ words, theme, t, onJump }) {
 						type="button"
 						onClick={() => onJump?.(w)}
 						className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-medium"
-						style={{ background: `${theme.ink}08`, color: theme.ink }}
+						style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)`, color: theme.ink }}
 						title={w.meaning || w.translation}
 					>
 						<span>{w.word}</span>
@@ -135,7 +135,7 @@ export function ReadingToolsRail({
 			aria-label={label}
 			className="inline-flex h-8 w-8 items-center justify-center rounded-full transition"
 			style={{
-				background: active ? `${theme.accent}20` : 'transparent',
+				background: active ? `color-mix(in srgb, ${theme.accent} 12%, transparent)` : 'transparent',
 				color: active ? theme.accent : theme.ink,
 				opacity: active ? 1 : 0.55,
 			}}
@@ -157,7 +157,7 @@ export function ReadingToolsRail({
 			</div>
 			<div
 				className="inline-flex min-w-0 max-w-full items-center overflow-x-auto rounded-full p-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-				style={{ background: `${theme.ink}08` }}
+				style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}
 				title={t('reading.diffHint')}
 			>
 				{[
@@ -225,7 +225,7 @@ export function FocusModeOverlay({
 			className="fixed inset-0 z-[65] flex flex-col"
 			style={{ background: theme.bg, color: theme.ink }}
 		>
-			<div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: `1px solid ${theme.ink}12` }}>
+			<div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: `1px solid color-mix(in srgb, ${theme.ink} 7%, transparent)` }}>
 				<p className="text-xs font-bold uppercase tracking-wider opacity-50">
 					{t('reading.focus')} · {index + 1}/{blocks.length}
 				</p>
@@ -257,7 +257,7 @@ export function FocusModeOverlay({
 					disabled={index <= 0}
 					onClick={() => onIndex(index - 1)}
 					className="rounded-full p-3 disabled:opacity-30"
-					style={{ background: `${theme.ink}10` }}
+					style={{ background: `color-mix(in srgb, ${theme.ink} 6%, transparent)` }}
 				>
 					<ChevronLeft size={18} />
 				</button>
@@ -266,7 +266,7 @@ export function FocusModeOverlay({
 					disabled={index >= blocks.length - 1}
 					onClick={() => onIndex(index + 1)}
 					className="rounded-full p-3 disabled:opacity-30"
-					style={{ background: `${theme.ink}10` }}
+					style={{ background: `color-mix(in srgb, ${theme.ink} 6%, transparent)` }}
 				>
 					<ChevronRight size={18} />
 				</button>
@@ -334,7 +334,7 @@ export function ListenBar({
 			className="fixed inset-x-0 bottom-0 z-[58] border-t px-3 py-3 shadow-2xl"
 			style={{
 				background: theme.paper,
-				borderColor: `${theme.ink}12`,
+				borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`,
 				paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
 				color: theme.ink,
 			}}
@@ -364,7 +364,7 @@ export function ListenBar({
 			{activeSentence >= 0 && sentences[activeSentence] && (
 				<p
 					className="mx-auto mt-2 max-w-3xl rounded-xl px-3 py-2 text-sm leading-relaxed"
-					style={{ background: `${theme.accent}14` }}
+					style={{ background: `color-mix(in srgb, ${theme.accent} 8%, transparent)` }}
 				>
 					{sentences[activeSentence]}
 				</p>
@@ -388,7 +388,7 @@ export function InlineAskModal({ theme, t, passage, busy, result, question, setQ
 				exit={{ y: 12, opacity: 0 }}
 				onClick={e => e.stopPropagation()}
 				className="max-h-[min(88vh,640px)] w-full max-w-lg overflow-y-auto rounded-3xl border p-4 shadow-2xl sm:p-5"
-				style={{ background: theme.paper, borderColor: `${theme.ink}12`, color: theme.ink }}
+				style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 			>
 				<div className="mb-3 flex items-start justify-between gap-2">
 					<div>
@@ -401,7 +401,7 @@ export function InlineAskModal({ theme, t, passage, busy, result, question, setQ
 						<X size={16} />
 					</button>
 				</div>
-				<div className="mb-3 max-h-28 overflow-y-auto rounded-2xl px-3 py-2 text-xs opacity-70" style={{ background: `${theme.ink}08` }}>
+				<div className="mb-3 max-h-28 overflow-y-auto rounded-2xl px-3 py-2 text-xs opacity-70" style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}>
 					{passage}
 				</div>
 				<textarea
@@ -422,7 +422,7 @@ export function InlineAskModal({ theme, t, passage, busy, result, question, setQ
 					{busy ? t('common.working') : t('reading.ask')}
 				</button>
 				{result && (
-					<div className="mt-3 rounded-2xl p-3 text-sm" style={{ background: `${theme.accent}12` }}>
+					<div className="mt-3 rounded-2xl p-3 text-sm" style={{ background: `color-mix(in srgb, ${theme.accent} 7%, transparent)` }}>
 						<p>{result.answer}</p>
 						{result.suggestedAction && (
 							<p className="mt-2 text-xs font-semibold opacity-80">
@@ -453,7 +453,7 @@ export function FlashcardsModal({ book, theme, t, onClose }) {
 			<motion.div
 				onClick={e => e.stopPropagation()}
 				className="w-full max-w-md rounded-3xl border p-5 shadow-2xl"
-				style={{ background: theme.paper, borderColor: `${theme.ink}12`, color: theme.ink }}
+				style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 			>
 				<div className="mb-4 flex items-center justify-between">
 					<h2 className="text-sm font-bold uppercase tracking-wider">{t('reading.flashcards')}</h2>
@@ -472,7 +472,7 @@ export function FlashcardsModal({ book, theme, t, onClose }) {
 							type="button"
 							onClick={() => setFlipped(f => !f)}
 							className="flex min-h-[160px] w-full flex-col items-center justify-center rounded-2xl px-4 py-6 text-center text-base font-medium"
-							style={{ background: `${theme.accent}12` }}
+							style={{ background: `color-mix(in srgb, ${theme.accent} 7%, transparent)` }}
 						>
 							{flipped ? card.back : card.front}
 							<span className="mt-3 text-[10px] font-semibold uppercase opacity-40">
@@ -488,7 +488,7 @@ export function FlashcardsModal({ book, theme, t, onClose }) {
 									setFlipped(false);
 								}}
 								className="rounded-full px-3 py-2 text-xs font-semibold disabled:opacity-30"
-								style={{ background: `${theme.ink}10` }}
+								style={{ background: `color-mix(in srgb, ${theme.ink} 6%, transparent)` }}
 							>
 								{t('reading.prev')}
 							</button>
@@ -500,7 +500,7 @@ export function FlashcardsModal({ book, theme, t, onClose }) {
 									setFlipped(false);
 								}}
 								className="rounded-full px-3 py-2 text-xs font-semibold disabled:opacity-30"
-								style={{ background: `${theme.ink}10` }}
+								style={{ background: `color-mix(in srgb, ${theme.ink} 6%, transparent)` }}
 							>
 								{t('reading.next')}
 							</button>
@@ -524,7 +524,7 @@ export function CoachModal({ theme, t, busy, data, onRun, onSave, onClose }) {
 			<motion.div
 				onClick={e => e.stopPropagation()}
 				className="max-h-[min(88vh,640px)] w-full max-w-lg overflow-y-auto rounded-3xl border p-5 shadow-2xl"
-				style={{ background: theme.paper, borderColor: `${theme.ink}12`, color: theme.ink }}
+				style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 			>
 				<div className="mb-3 flex items-start justify-between">
 					<div>
@@ -558,7 +558,7 @@ export function CoachModal({ theme, t, busy, data, onRun, onSave, onClose }) {
 							))}
 						</ol>
 						{data.action && (
-							<div className="rounded-2xl px-3 py-2 text-sm" style={{ background: `${theme.accent}14` }}>
+							<div className="rounded-2xl px-3 py-2 text-sm" style={{ background: `color-mix(in srgb, ${theme.accent} 8%, transparent)` }}>
 								<p className="text-[10px] font-bold uppercase tracking-wider opacity-50">{t('reading.coachAction')}</p>
 								<p className="mt-1 font-semibold">{data.action}</p>
 							</div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -128,17 +128,17 @@ export default function TopicLibrary() {
 		<div className="space-y-6">
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div>
-					<h1 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight text-[#1a2e28]">
+					<h1 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight text-[var(--ar-heading)]">
 						{t('topics.title')}
 					</h1>
-					<p className="mt-1.5 text-sm text-[#5c6b63]">{t('topics.subtitle')}</p>
+					<p className="mt-1.5 text-sm text-[var(--ar-muted)]">{t('topics.subtitle')}</p>
 				</div>
 				<div className="flex items-center gap-2">
 					<button
 						type="button"
 						onClick={suggest}
 						disabled={suggestBusy}
-						className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-2 text-xs font-semibold text-[#1a2e28] ring-1 ring-[#2d4a3e]/12"
+						className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-2 text-xs font-semibold text-[var(--ar-heading)] ring-1 ring-[color:var(--ar-ring)]/12"
 					>
 						{suggestBusy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
 						{t('topics.suggest')}
@@ -146,7 +146,7 @@ export default function TopicLibrary() {
 					<button
 						type="button"
 						onClick={() => setAdding(true)}
-						className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1a2e28] text-[#f6f1e8] shadow-sm"
+						className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ar-accent)] text-white shadow-sm"
 						title={t('topics.add')}
 						aria-label={t('topics.add')}
 					>
@@ -161,40 +161,40 @@ export default function TopicLibrary() {
 						initial={{ opacity: 0, y: -6 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -4 }}
-						className="rounded-2xl border border-[#2d4a3e]/12 bg-white/80 p-4 shadow-sm"
+						className="rounded-2xl border border-[color:var(--ar-border)]/12 bg-white/80 p-4 shadow-sm"
 					>
 						<div className="mb-3 flex items-center justify-between">
-							<p className="text-sm font-bold text-[#1a2e28]">{t('topics.add')}</p>
-							<button type="button" onClick={() => setAdding(false)} className="rounded-lg p-1 text-[#5c6b63]">
+							<p className="text-sm font-bold text-[var(--ar-heading)]">{t('topics.add')}</p>
+							<button type="button" onClick={() => setAdding(false)} className="rounded-lg p-1 text-[var(--ar-muted)]">
 								<X size={14} />
 							</button>
 						</div>
 						<div className="flex flex-col gap-3 sm:flex-row sm:items-end">
 							<label className="min-w-0 flex-1 space-y-1.5">
-								<span className="text-[11px] font-semibold text-[#5c6b63]">{t('topics.titleField')}</span>
+								<span className="text-[11px] font-semibold text-[var(--ar-muted)]">{t('topics.titleField')}</span>
 								<input
 									value={draftTitle}
 									onChange={e => setDraftTitle(e.target.value)}
 									onKeyDown={e => e.key === 'Enter' && saveTopic()}
 									placeholder={t('topics.addPlaceholder')}
-									className="w-full rounded-xl border border-[#2d4a3e]/15 bg-[#f6f1e8]/60 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#3d5a4c]/20"
+									className="w-full rounded-xl border border-[color:var(--ar-border)]/15 bg-[var(--ar-bg)]/60 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--ar-accent)]/20"
 									autoFocus
 								/>
 							</label>
 							<label className="space-y-1.5 sm:w-44">
-								<span className="text-[11px] font-semibold text-[#5c6b63]">{t('topics.date')}</span>
+								<span className="text-[11px] font-semibold text-[var(--ar-muted)]">{t('topics.date')}</span>
 								<input
 									type="date"
 									value={draftDate}
 									onChange={e => setDraftDate(e.target.value)}
-									className="w-full rounded-xl border border-[#2d4a3e]/15 bg-[#f6f1e8]/60 px-3 py-2.5 text-sm outline-none"
+									className="w-full rounded-xl border border-[color:var(--ar-border)]/15 bg-[var(--ar-bg)]/60 px-3 py-2.5 text-sm outline-none"
 								/>
 							</label>
 							<button
 								type="button"
 								onClick={saveTopic}
 								disabled={!draftTitle.trim()}
-								className="rounded-xl bg-[#1a2e28] px-4 py-2.5 text-sm font-semibold text-[#f6f1e8] disabled:opacity-40"
+								className="rounded-xl bg-[var(--ar-accent)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
 							>
 								{t('common.save')}
 							</button>
@@ -208,12 +208,12 @@ export default function TopicLibrary() {
 					<motion.article
 						key={topic.id}
 						layout
-						className="flex flex-col gap-3 rounded-2xl border border-[#2d4a3e]/10 bg-white/75 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+						className="flex flex-col gap-3 rounded-2xl border border-[color:var(--ar-border)]/10 bg-white/75 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
 					>
 						<div className="min-w-0 flex-1">
-							<h3 className="font-semibold leading-snug text-[#1a2e28]">{topic.title}</h3>
+							<h3 className="font-semibold leading-snug text-[var(--ar-heading)]">{topic.title}</h3>
 							{(topic.date || topic.createdAt) && (
-								<p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#5c6b63]">
+								<p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--ar-muted)]">
 									<CalendarDays size={12} />
 									{formatTopicDate(topic.date || topic.createdAt?.slice(0, 10), locale)}
 								</p>
@@ -234,7 +234,7 @@ export default function TopicLibrary() {
 								type="button"
 								disabled={genBusy === topic.id}
 								onClick={() => generateFromTopic(topic)}
-								className="inline-flex items-center gap-1.5 rounded-full bg-[#1a2e28]/[0.07] px-3 py-1.5 text-xs font-bold text-[#1a2e28]"
+								className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ar-accent)]/[0.07] px-3 py-1.5 text-xs font-bold text-[var(--ar-heading)]"
 							>
 								{genBusy === topic.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
 								{t('topics.generateReading')}
@@ -255,12 +255,12 @@ export default function TopicLibrary() {
 			</div>
 
 			{!sorted.length && !adding && (
-				<div className="rounded-3xl border border-dashed border-[#2d4a3e]/20 px-6 py-14 text-center text-sm text-[#5c6b63]">
+				<div className="rounded-3xl border border-dashed border-[color:var(--ar-border)]/20 px-6 py-14 text-center text-sm text-[var(--ar-muted)]">
 					<p>{t('topics.empty')}</p>
 					<button
 						type="button"
 						onClick={() => setAdding(true)}
-						className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1a2e28] px-4 py-2 text-sm font-semibold text-[#f6f1e8]"
+						className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--ar-accent)] px-4 py-2 text-sm font-semibold text-white"
 					>
 						<Plus size={14} /> {t('topics.add')}
 					</button>

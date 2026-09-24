@@ -33,7 +33,7 @@ export default function ReadBookPage() {
 	if (loading) {
 		return (
 			<ReadingShell bare>
-				<div className="grid min-h-screen place-items-center text-sm text-[#5c6b63]">{t('common.loading')}</div>
+				<div className="grid min-h-screen place-items-center text-sm" style={{ color: 'var(--ar-muted)' }}>{t('common.loading')}</div>
 			</ReadingShell>
 		);
 	}
@@ -42,8 +42,8 @@ export default function ReadBookPage() {
 		return (
 			<ReadingShell>
 				<div className="py-20 text-center">
-					<p className="text-[#1a2e28] font-semibold">{t('reading.notFound')}</p>
-					<Link href="/ai-studio/library" className="mt-4 inline-block text-sm text-[#3d5a4c] underline">
+					<p className="font-semibold" style={{ color: 'var(--ar-heading)' }}>{t('reading.notFound')}</p>
+					<Link href="/ai-studio/library" className="mt-4 inline-block text-sm underline" style={{ color: 'var(--ar-accent)' }}>
 						{t('reading.back')}
 					</Link>
 				</div>

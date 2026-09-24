@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -62,38 +62,38 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 		<div className={compact ? 'space-y-8' : 'space-y-10'}>
 			<section
 				className="relative overflow-hidden rounded-[1.75rem] px-6 py-9 sm:px-9"
-				style={{ background: 'linear-gradient(145deg, #1a2e28 0%, #2d4a3e 55%, #3d5a4c 100%)' }}
+				style={{ background: 'linear-gradient(145deg, var(--ar-heading) 0%, var(--color-primary-700) 55%, var(--ar-accent) 100%)' }}
 			>
 				<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-					<p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#e8c07a]">
+					<p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--color-secondary-400, #e8c07a)]">
 						{journey ? monthLabel(journey.monthKey, locale) : t('hub.eyebrow')}
 					</p>
-					<h1 className="mt-3 max-w-xl font-[family-name:var(--font-space-grotesk)] text-3xl font-bold leading-tight text-[#f6f1e8] sm:text-4xl">
+					<h1 className="mt-3 max-w-xl font-[family-name:var(--font-space-grotesk)] text-3xl font-bold leading-tight text-white sm:text-4xl">
 						{journey ? `${t('hub.focus')}: ${journey.theme || journey.title}` : t('brand')}
 					</h1>
 					{journey && (
 						<div className="mt-4 max-w-sm">
-							<div className="flex justify-between text-xs text-[#c5d4cb]">
+							<div className="flex justify-between text-xs text-white/70">
 								<span>{t('hub.journeyProgress')}</span>
-								<span className="font-bold text-[#e8c07a]">{journeyPct}%</span>
+								<span className="font-bold text-[var(--color-secondary-400, #e8c07a)]">{journeyPct}%</span>
 							</div>
 							<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15">
-								<div className="h-full rounded-full bg-[#e8c07a]" style={{ width: `${journeyPct}%` }} />
+								<div className="h-full rounded-full bg-[var(--color-secondary-400, #e8c07a)]" style={{ width: `${journeyPct}%` }} />
 							</div>
 						</div>
 					)}
 					{(nextItem || today) && (
 						<div className="mt-6 max-w-lg rounded-2xl bg-white/10 p-4">
-							<p className="text-[10px] font-bold uppercase tracking-widest text-[#e8c07a]">{t('hub.next')}</p>
-							<p className="mt-1 text-lg font-bold text-[#f6f1e8]">
+							<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-secondary-400, #e8c07a)]">{t('hub.next')}</p>
+							<p className="mt-1 text-lg font-bold text-white">
 								{nextItem?.title || today?.title}
-								<span className="ms-2 text-sm font-normal text-[#c5d4cb]">— {nextMinutes} min</span>
+								<span className="ms-2 text-sm font-normal text-white/70">— {nextMinutes} min</span>
 							</p>
 							<div className="mt-3 flex flex-wrap gap-2">
 								{nextItem?.bookId || today ? (
 									<Link
 										href={`/ai-studio/read/${nextItem?.bookId || today.id}`}
-										className="rounded-full bg-[#e8c07a] px-4 py-2 text-sm font-bold text-[#1a2e28]"
+										className="rounded-full bg-[var(--color-secondary-400, #e8c07a)] px-4 py-2 text-sm font-bold text-[var(--ar-heading)]"
 									>
 										{t('hub.startReading')}
 									</Link>
@@ -101,7 +101,7 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 									<button
 										type="button"
 										onClick={() => go('studio', 'topics')}
-										className="rounded-full bg-[#e8c07a] px-4 py-2 text-sm font-bold text-[#1a2e28]"
+										className="rounded-full bg-[var(--color-secondary-400, #e8c07a)] px-4 py-2 text-sm font-bold text-[var(--ar-heading)]"
 									>
 										{t('hub.startReading')}
 									</button>
@@ -109,7 +109,7 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 								<button
 									type="button"
 									onClick={() => go('studio', 'chat')}
-									className="rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-[#f6f1e8]"
+									className="rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white"
 								>
 									{t('hub.openWorkspace')}
 								</button>
@@ -126,12 +126,12 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 					{ icon: Highlighter, label: t('hub.highlights'), value: `${kStats.highlights || 0}` },
 					{ icon: BookOpenStat, label: t('hub.books'), value: `${books.length}` },
 				].map(({ icon: Icon, label, value }) => (
-					<div key={label} className="rounded-2xl bg-white/65 px-4 py-3 ring-1 ring-[#2d4a3e]/10">
+					<div key={label} className="rounded-2xl bg-white/65 px-4 py-3 ring-1 ring-[color:var(--ar-ring)]/10">
 						<div className="flex items-center gap-2">
-							<Icon size={15} className="text-[#1a2e28]" />
+							<Icon size={15} className="text-[var(--ar-heading)]" />
 							<div>
-								<p className="text-xl font-bold text-[#1a2e28]">{value}</p>
-								<p className="text-[10px] font-semibold uppercase tracking-wider text-[#5c6b63]">{label}</p>
+								<p className="text-xl font-bold text-[var(--ar-heading)]">{value}</p>
+								<p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--ar-muted)]">{label}</p>
 							</div>
 						</div>
 					</div>
@@ -140,18 +140,18 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 
 			<section className="grid gap-3 sm:grid-cols-3">
 				{continueBook && (
-					<Link href={`/ai-studio/read/${continueBook.id}`} className="rounded-2xl bg-white/70 p-5 ring-1 ring-[#2d4a3e]/10">
-						<p className="text-[10px] font-bold uppercase tracking-widest text-[#3d5a4c]">{t('hub.continue')}</p>
-						<p className="mt-1 font-bold text-[#1a2e28]">{continueBook.title}</p>
+					<Link href={`/ai-studio/read/${continueBook.id}`} className="rounded-2xl bg-white/70 p-5 ring-1 ring-[color:var(--ar-ring)]/10">
+						<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ar-accent)]">{t('hub.continue')}</p>
+						<p className="mt-1 font-bold text-[var(--ar-heading)]">{continueBook.title}</p>
 					</Link>
 				)}
-				<button type="button" onClick={() => go('import')} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[#2d4a3e]/10">
-					<p className="text-[10px] font-bold uppercase tracking-widest text-[#b45309]">{t('hub.import')}</p>
-					<p className="mt-1 text-sm text-[#5c6b63]">{t('import.linkHintShort')}</p>
+				<button type="button" onClick={() => go('import')} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[color:var(--ar-ring)]/10">
+					<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-secondary-600,#b45309)]">{t('hub.import')}</p>
+					<p className="mt-1 text-sm text-[var(--ar-muted)]">{t('import.linkHintShort')}</p>
 				</button>
-				<button type="button" onClick={() => go('review')} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[#2d4a3e]/10">
-					<p className="text-[10px] font-bold uppercase tracking-widest text-[#0d9488]">{t('hub.dailyReview')}</p>
-					<p className="mt-1 text-sm text-[#5c6b63]">{t('hub.reviewSub')}</p>
+				<button type="button" onClick={() => go('review')} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[color:var(--ar-ring)]/10">
+					<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-primary-500)]">{t('hub.dailyReview')}</p>
+					<p className="mt-1 text-sm text-[var(--ar-muted)]">{t('hub.reviewSub')}</p>
 				</button>
 			</section>
 
@@ -166,7 +166,7 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 						key={item.label}
 						type="button"
 						onClick={() => go(item.tab, item.sub)}
-						className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-[#1a2e28] ring-1 ring-[#2d4a3e]/10"
+						className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-[var(--ar-heading)] ring-1 ring-[color:var(--ar-ring)]/10"
 					>
 						<item.icon size={14} /> {item.label}
 					</button>
@@ -176,10 +176,10 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 			<section>
 				<div className="mb-4 flex items-end justify-between">
 					<div>
-						<h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-[#1a2e28]">{t('hub.shelf')}</h2>
-						<p className="text-sm text-[#5c6b63]">{t('hub.shelfSub')}</p>
+						<h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-[var(--ar-heading)]">{t('hub.shelf')}</h2>
+						<p className="text-sm text-[var(--ar-muted)]">{t('hub.shelfSub')}</p>
 					</div>
-					<button type="button" onClick={() => go('library')} className="text-xs font-bold text-[#3d5a4c]">
+					<button type="button" onClick={() => go('library')} className="text-xs font-bold text-[var(--ar-accent)]">
 						{t('hub.seeAll')} →
 					</button>
 				</div>

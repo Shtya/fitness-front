@@ -27,9 +27,10 @@ import LibraryPanel from '@/components/ai-reading/LibraryPanel';
 import GenerateForm from '@/components/ai-reading/GenerateForm';
 import { uiFontFamily } from '@/lib/ai-reading/fonts';
 import { hydrateAiReadingStore } from '@/lib/ai-reading/storage';
+import '@/lib/ai-reading/ai-reading-theme.css';
 
 /** One shell width for every tab — no layout jump. */
-const SHELL = 'mx-auto w-full max-w-6xl px-4';
+const SHELL = 'mx-auto w-full max-w-6xl px-3 sm:px-4';
 
 const TABS = [
 	{ id: 'home', icon: Home, key: 'nav.home' },
@@ -99,31 +100,28 @@ export default function StudioApp({ initialTab = 'home' }) {
 	return (
 		<div
 			className={`ai-reading-root flex h-full min-h-0 flex-col ${locale === 'ar' ? 'rtl' : 'ltr'}`}
-			style={{
-				background:
-					'radial-gradient(1100px 520px at 8% -8%, rgba(45,74,62,0.10), transparent), #f6f1e8',
-				fontFamily: uiFontFamily(locale === 'ar' ? 'ar' : 'en'),
-			}}
+			style={{ fontFamily: uiFontFamily(locale === 'ar' ? 'ar' : 'en') }}
 		>
-			<header className="z-40 shrink-0 border-b border-[#2d4a3e]/10 bg-[#f6f1e8]/92 backdrop-blur-md">
+			<header className="z-40 shrink-0 border-b bg-white/80 backdrop-blur-md" style={{ borderColor: 'var(--ar-border)' }}>
 				<div className={`${SHELL} flex items-center justify-between gap-2 py-2 sm:gap-3 sm:py-3`}>
 					<div className="flex min-w-0 items-center gap-2 sm:gap-3">
 						<span
 							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-md sm:h-10 sm:w-10 sm:rounded-2xl"
-							style={{ background: 'linear-gradient(145deg, #1a2e28, #3d5a4c)' }}
+							style={{ background: 'linear-gradient(145deg, var(--color-gradient-from, var(--color-primary-700)), var(--color-gradient-to, var(--color-primary-500)))' }}
 						>
 							<BookOpen size={16} />
 						</span>
 						<div className="min-w-0">
-							<p className="truncate font-[family-name:var(--font-space-grotesk)] text-[13px] font-bold text-[#1a2e28] sm:text-sm">
+							<p className="truncate font-[family-name:var(--font-space-grotesk)] text-[13px] font-bold sm:text-sm" style={{ color: 'var(--ar-heading)' }}>
 								{t('brand')}
 							</p>
-							<p className="hidden truncate text-[11px] text-[#5c6b63] sm:block">{t('brandSub')}</p>
+							<p className="hidden truncate text-[11px] sm:block" style={{ color: 'var(--ar-muted)' }}>{t('brandSub')}</p>
 						</div>
 					</div>
 					<Link
 						href="/ai-studio/fitness"
-						className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/70 p-2 text-[11px] font-semibold text-[#5c6b63] ring-1 ring-[#2d4a3e]/10 hover:text-[#1a2e28] sm:gap-1.5 sm:px-3 sm:py-1.5"
+						className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/90 p-2 text-[11px] font-semibold ring-1 hover:opacity-90 sm:gap-1.5 sm:px-3 sm:py-1.5"
+						style={{ color: 'var(--ar-muted)', boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
 						aria-label={t('nav.fitness')}
 						title={t('nav.fitness')}
 					>
@@ -144,14 +142,14 @@ export default function StudioApp({ initialTab = 'home' }) {
 								key={item.id}
 								type="button"
 								onClick={onClick}
-								className={`relative shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition sm:px-3.5 sm:py-2 sm:text-xs ${
-									active ? 'text-[#1a2e28]' : 'text-[#5c6b63] hover:text-[#1a2e28]'
-								}`}
+								className="relative shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition sm:px-3.5 sm:py-2 sm:text-xs"
+								style={{ color: active ? 'var(--ar-heading)' : 'var(--ar-muted)' }}
 							>
 								{active && (
 									<motion.span
 										layoutId="studio-main-tab"
-										className="absolute inset-0 rounded-full bg-white shadow-sm ring-1 ring-[#2d4a3e]/10"
+										className="absolute inset-0 rounded-full bg-white shadow-sm"
+										style={{ boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
 										transition={{ type: 'spring', stiffness: 400, damping: 32 }}
 									/>
 								)}
@@ -177,9 +175,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 									type="button"
 									onClick={() => goTab('studio', s.id)}
 									className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold transition sm:px-3 sm:py-1.5 sm:text-[11px] ${
-										subActive
-											? 'bg-[#1a2e28] text-[#f6f1e8]'
-											: 'bg-white/70 text-[#5c6b63] ring-1 ring-[#2d4a3e]/10 hover:text-[#1a2e28]'
+										subActive ? 'ar-chip-active' : 'ar-chip-idle'
 									}`}
 								>
 									<SubIcon size={11} />
@@ -194,7 +190,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 			<main className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 				<div className={`${SHELL} py-4 sm:py-6`}>
 					{!ready ? (
-						<p className="py-16 text-center text-sm text-[#5c6b63]">{t('common.loading')}</p>
+						<p className="py-16 text-center text-sm" style={{ color: 'var(--ar-muted)' }}>{t('common.loading')}</p>
 					) : (
 					<AnimatePresence mode="wait">
 						<motion.div

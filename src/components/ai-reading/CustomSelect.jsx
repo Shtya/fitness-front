@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
@@ -46,12 +46,12 @@ export default function CustomSelect({
 				aria-expanded={open}
 				aria-controls={listId}
 				onClick={() => !disabled && setOpen(o => !o)}
-				className="flex w-full items-center justify-between gap-2 rounded-xl border border-[#2d4a3e]/15 bg-white/80 px-3 py-2.5 text-start text-sm text-[#1a2e28] outline-none transition hover:border-[#2d4a3e]/30 focus:ring-2 focus:ring-[#3d5a4c]/25 disabled:opacity-50"
+				className="flex w-full items-center justify-between gap-2 rounded-xl border border-[color:var(--ar-border)]/15 bg-white/80 px-3 py-2.5 text-start text-sm text-[var(--ar-heading)] outline-none transition hover:border-[color:var(--ar-border)]/30 focus:ring-2 focus:ring-[var(--ar-accent)]/25 disabled:opacity-50"
 			>
-				<span className={`truncate ${selected ? '' : 'text-[#5c6b63]'}`}>
+				<span className={`truncate ${selected ? '' : 'text-[var(--ar-muted)]'}`}>
 					{selected?.label ?? placeholder}
 				</span>
-				<ChevronDown size={14} className={`shrink-0 text-[#5c6b63] transition ${open ? 'rotate-180' : ''}`} />
+				<ChevronDown size={14} className={`shrink-0 text-[var(--ar-muted)] transition ${open ? 'rotate-180' : ''}`} />
 			</button>
 
 			<AnimatePresence>
@@ -63,7 +63,7 @@ export default function CustomSelect({
 						animate={{ opacity: 1, y: 0, scale: 1 }}
 						exit={{ opacity: 0, y: 4, scale: 0.98 }}
 						transition={{ duration: 0.14 }}
-						className={`absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-2xl border border-[#2d4a3e]/12 bg-[#fffefb] py-1.5 shadow-xl ${
+						className={`absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-2xl border border-[color:var(--ar-border)]/12 bg-white py-1.5 shadow-xl ${
 							align === 'end' ? 'end-0' : 'start-0'
 						}`}
 					>
@@ -78,11 +78,11 @@ export default function CustomSelect({
 											setOpen(false);
 										}}
 										className={`flex w-full items-center justify-between gap-2 px-3 py-2.5 text-start text-sm transition ${
-											active ? 'bg-[#1a2e28]/[0.08] font-semibold text-[#1a2e28]' : 'text-[#1a2e28] hover:bg-[#1a2e28]/[0.05]'
+											active ? 'bg-[var(--ar-accent)]/[0.08] font-semibold text-[var(--ar-heading)]' : 'text-[var(--ar-heading)] hover:bg-[var(--ar-accent)]/[0.05]'
 										}`}
 									>
 										<span className="truncate">{opt.label}</span>
-										{active && <Check size={14} className="shrink-0 text-[#3d5a4c]" />}
+										{active && <Check size={14} className="shrink-0 text-[var(--ar-accent)]" />}
 									</button>
 								</li>
 							);

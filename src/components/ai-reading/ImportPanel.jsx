@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -231,10 +231,10 @@ export default function ImportPanel() {
 	return (
 		<form onSubmit={submit} className="space-y-6">
 			<div>
-				<h1 className="font-[family-name:var(--font-space-grotesk)] text-3xl font-bold tracking-tight text-[#1a2e28]">
+				<h1 className="font-[family-name:var(--font-space-grotesk)] text-3xl font-bold tracking-tight text-[var(--ar-heading)]">
 					{t('import.title')}
 				</h1>
-				<p className="mt-2 text-sm text-[#5c6b63]">{t('import.subtitle')}</p>
+				<p className="mt-2 text-sm text-[var(--ar-muted)]">{t('import.subtitle')}</p>
 			</div>
 
 			<div className="flex flex-wrap gap-2">
@@ -253,7 +253,7 @@ export default function ImportPanel() {
 							if (id !== 'file') clearFile();
 						}}
 						className={`rounded-full px-4 py-2 text-xs font-semibold ${
-							mode === id ? 'bg-[#1a2e28] text-[#f6f1e8]' : 'bg-white/70 text-[#5c6b63]'
+							mode === id ? 'bg-[var(--ar-accent)] text-white' : 'bg-white/70 text-[var(--ar-muted)]'
 						}`}
 					>
 						{label}
@@ -262,11 +262,11 @@ export default function ImportPanel() {
 			</div>
 
 			<label className="block">
-				<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('import.optionalTitle')}</span>
+				<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('import.optionalTitle')}</span>
 				<input
 					value={title}
 					onChange={e => setTitle(e.target.value)}
-					className="w-full rounded-xl border border-[#2d4a3e]/15 bg-white/70 px-3 py-2.5 text-sm outline-none"
+					className="w-full rounded-xl border border-[color:var(--ar-border)]/15 bg-white/70 px-3 py-2.5 text-sm outline-none"
 					placeholder={t('import.titlePlaceholder')}
 				/>
 			</label>
@@ -274,9 +274,9 @@ export default function ImportPanel() {
 			{mode === 'link' ? (
 				<div className="space-y-4">
 					<label className="block">
-						<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('import.linkLabel')}</span>
+						<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('import.linkLabel')}</span>
 						<div className="relative">
-							<Link2 size={14} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[#5c6b63]" />
+							<Link2 size={14} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--ar-muted)]" />
 							<input
 								value={url}
 								onChange={e => {
@@ -285,34 +285,34 @@ export default function ImportPanel() {
 								}}
 								required
 								placeholder="https://chatgpt.com/share/..."
-								className="w-full rounded-2xl border border-[#2d4a3e]/15 bg-[#fffefb] py-3 ps-9 pe-4 text-sm outline-none ring-[#3d5a4c]/30 focus:ring-2"
+								className="w-full rounded-2xl border border-[color:var(--ar-border)]/15 bg-white py-3 ps-9 pe-4 text-sm outline-none ring-[var(--ar-accent)]/30 focus:ring-2"
 							/>
 						</div>
-						<p className="mt-2 text-[11px] text-[#5c6b63]">{t('import.linkHintChat')}</p>
+						<p className="mt-2 text-[11px] text-[var(--ar-muted)]">{t('import.linkHintChat')}</p>
 					</label>
 
 					{preview?.kind === 'chatgpt-share' && (
-						<div className="overflow-hidden rounded-2xl border border-[#2d4a3e]/12 bg-white/80 shadow-sm">
-							<div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2d4a3e]/10 px-4 py-3">
+						<div className="overflow-hidden rounded-2xl border border-[color:var(--ar-border)]/12 bg-white/80 shadow-sm">
+							<div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--ar-border)]/10 px-4 py-3">
 								<div>
-									<p className="text-sm font-bold text-[#1a2e28]">{preview.title}</p>
-									<p className="text-[11px] text-[#5c6b63]">
+									<p className="text-sm font-bold text-[var(--ar-heading)]">{preview.title}</p>
+									<p className="text-[11px] text-[var(--ar-muted)]">
 										{t('import.messagesFound', { count: preview.messages.length })} · {t('import.selectedCount', { count: selectedCount })}
 									</p>
 								</div>
 								<div className="flex flex-wrap gap-1.5">
-									<button type="button" onClick={selectAll} className="rounded-full bg-[#1a2e28]/[0.06] px-2.5 py-1 text-[10px] font-semibold text-[#1a2e28]">
+									<button type="button" onClick={selectAll} className="rounded-full bg-[var(--ar-accent)]/[0.06] px-2.5 py-1 text-[10px] font-semibold text-[var(--ar-heading)]">
 										{t('import.selectAll')}
 									</button>
-									<button type="button" onClick={selectAssistants} className="rounded-full bg-[#1a2e28]/[0.06] px-2.5 py-1 text-[10px] font-semibold text-[#1a2e28]">
+									<button type="button" onClick={selectAssistants} className="rounded-full bg-[var(--ar-accent)]/[0.06] px-2.5 py-1 text-[10px] font-semibold text-[var(--ar-heading)]">
 										{t('import.selectAssistant')}
 									</button>
-									<button type="button" onClick={clearSelection} className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-[#5c6b63]">
+									<button type="button" onClick={clearSelection} className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-[var(--ar-muted)]">
 										{t('import.clearSelection')}
 									</button>
 								</div>
 							</div>
-							<ul className="max-h-[min(420px,50vh)] space-y-0 divide-y divide-[#2d4a3e]/8 overflow-y-auto">
+							<ul className="max-h-[min(420px,50vh)] space-y-0 divide-y divide-[var(--color-primary-700)]/8 overflow-y-auto">
 								{preview.messages.map(m => {
 									const on = preview.selected.has(m.id);
 									const isUser = m.role === 'user';
@@ -322,26 +322,26 @@ export default function ImportPanel() {
 												type="button"
 												onClick={() => toggleMsg(m.id)}
 												className={`flex w-full items-start gap-3 px-4 py-3 text-start transition ${
-													on ? 'bg-[#3d5a4c]/[0.08]' : 'hover:bg-[#1a2e28]/[0.03]'
+													on ? 'bg-[var(--ar-accent)]/[0.08]' : 'hover:bg-[var(--ar-accent)]/[0.03]'
 												}`}
 											>
-												<span className="mt-0.5 text-[#3d5a4c]">
+												<span className="mt-0.5 text-[var(--ar-accent)]">
 													{on ? <CheckSquare size={16} /> : <Square size={16} className="opacity-40" />}
 												</span>
 												<span
 													className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
-													style={{ background: isUser ? '#1a2e2814' : '#3d5a4c18', color: '#1a2e28' }}
+													style={{ background: isUser ? 'var(--ar-heading)14' : 'var(--ar-accent)18', color: 'var(--ar-heading)' }}
 												>
 													{isUser ? <User size={12} /> : <Bot size={12} />}
 												</span>
 												<span className="min-w-0 flex-1">
 													<span className="flex items-center gap-2">
-														<span className="text-[11px] font-bold uppercase tracking-wide text-[#5c6b63]">
+														<span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ar-muted)]">
 															{isUser ? t('import.roleUser') : t('import.roleAssistant')}
 														</span>
-														<span className="text-[10px] text-[#5c6b63]">{m.chars} chars</span>
+														<span className="text-[10px] text-[var(--ar-muted)]">{m.chars} chars</span>
 													</span>
-													<span className="mt-1 block text-[13px] leading-relaxed text-[#1a2e28] line-clamp-3">
+													<span className="mt-1 block text-[13px] leading-relaxed text-[var(--ar-heading)] line-clamp-3">
 														{m.preview}
 													</span>
 												</span>
@@ -350,7 +350,7 @@ export default function ImportPanel() {
 									);
 								})}
 							</ul>
-							<label className="flex items-center gap-2 border-t border-[#2d4a3e]/10 px-4 py-3 text-xs text-[#1a2e28]">
+							<label className="flex items-center gap-2 border-t border-[color:var(--ar-border)]/10 px-4 py-3 text-xs text-[var(--ar-heading)]">
 								<input type="checkbox" checked={includeRoles} onChange={e => setIncludeRoles(e.target.checked)} className="rounded" />
 								{t('import.includeRoles')}
 							</label>
@@ -370,9 +370,9 @@ export default function ImportPanel() {
 						type="button"
 						onClick={() => fileRef.current?.click()}
 						disabled={busy}
-						className="flex w-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-[#2d4a3e]/25 bg-white/60 px-6 py-12 text-center transition hover:border-[#2d4a3e]/40 hover:bg-white/80 disabled:opacity-60"
+						className="flex w-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-[color:var(--ar-border)]/25 bg-white/60 px-6 py-12 text-center transition hover:border-[color:var(--ar-border)]/40 hover:bg-white/80 disabled:opacity-60"
 					>
-						<span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1a2e28] text-[#f6f1e8]">
+						<span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--ar-accent)] text-white">
 							{busy && phase === t('import.workingExtract') ? (
 								<Loader2 size={20} className="animate-spin" />
 							) : (
@@ -380,19 +380,19 @@ export default function ImportPanel() {
 							)}
 						</span>
 						<span>
-							<span className="block text-sm font-bold text-[#1a2e28]">{t('import.fileDrop')}</span>
-							<span className="mt-1 block text-xs text-[#5c6b63]">{t('import.fileHint')}</span>
+							<span className="block text-sm font-bold text-[var(--ar-heading)]">{t('import.fileDrop')}</span>
+							<span className="mt-1 block text-xs text-[var(--ar-muted)]">{t('import.fileHint')}</span>
 						</span>
 					</button>
 
 					{fileName && (
-						<div className="flex items-start gap-3 rounded-2xl border border-[#2d4a3e]/12 bg-white/80 px-4 py-3">
-							<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#3d5a4c]/15 text-[#1a2e28]">
+						<div className="flex items-start gap-3 rounded-2xl border border-[color:var(--ar-border)]/12 bg-white/80 px-4 py-3">
+							<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--ar-accent)]/15 text-[var(--ar-heading)]">
 								<BookOpen size={16} />
 							</span>
 							<div className="min-w-0 flex-1">
-								<p className="truncate text-sm font-semibold text-[#1a2e28]">{fileName}</p>
-								<p className="mt-0.5 text-[11px] text-[#5c6b63]">
+								<p className="truncate text-sm font-semibold text-[var(--ar-heading)]">{fileName}</p>
+								<p className="mt-0.5 text-[11px] text-[var(--ar-muted)]">
 									{fileMeta?.kind === 'pdf'
 										? t('import.fileReadyPdf', { pages: fileMeta.pages || 0, chars: raw.length })
 										: t('import.fileReadyDocx', { chars: raw.length })}
@@ -406,37 +406,37 @@ export default function ImportPanel() {
 
 					{raw.trim() && (
 						<label className="block">
-							<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('import.previewExtract')}</span>
+							<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('import.previewExtract')}</span>
 							<textarea
 								value={raw}
 								onChange={e => setRaw(e.target.value)}
 								rows={10}
-								className="w-full rounded-2xl border border-[#2d4a3e]/15 bg-[#fffefb] px-4 py-3 font-mono text-[12px] leading-relaxed text-[#1a2e28] outline-none"
+								className="w-full rounded-2xl border border-[color:var(--ar-border)]/15 bg-white px-4 py-3 font-mono text-[12px] leading-relaxed text-[var(--ar-heading)] outline-none"
 							/>
 						</label>
 					)}
 				</div>
 			) : (
 				<label className="block">
-					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#5c6b63]">{t('import.paste')}</span>
+					<span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--ar-muted)]">{t('import.paste')}</span>
 					<textarea
 						value={raw}
 						onChange={e => setRaw(e.target.value)}
 						rows={14}
 						required
 						placeholder={t('import.pastePlaceholder')}
-						className="w-full rounded-2xl border border-[#2d4a3e]/15 bg-[#fffefb] px-4 py-3 font-mono text-[13px] leading-relaxed text-[#1a2e28] outline-none ring-[#3d5a4c]/30 focus:ring-2"
+						className="w-full rounded-2xl border border-[color:var(--ar-border)]/15 bg-white px-4 py-3 font-mono text-[13px] leading-relaxed text-[var(--ar-heading)] outline-none ring-[var(--ar-accent)]/30 focus:ring-2"
 					/>
 				</label>
 			)}
 
 			<div className="flex flex-wrap items-center gap-4">
-				<label className="inline-flex items-center gap-2 text-sm text-[#1a2e28]">
+				<label className="inline-flex items-center gap-2 text-sm text-[var(--ar-heading)]">
 					<input type="checkbox" checked={enhance} onChange={e => setEnhance(e.target.checked)} className="rounded" />
 					{t('import.enhance')}
 				</label>
 				{mode === 'paste' && (
-					<button type="button" onClick={() => setRaw(SAMPLE)} className="text-xs font-semibold text-[#3d5a4c] underline-offset-2 hover:underline">
+					<button type="button" onClick={() => setRaw(SAMPLE)} className="text-xs font-semibold text-[var(--ar-accent)] underline-offset-2 hover:underline">
 						{t('import.loadSample')}
 					</button>
 				)}
@@ -449,8 +449,8 @@ export default function ImportPanel() {
 				disabled={submitDisabled}
 				whileHover={{ scale: 1.01 }}
 				whileTap={{ scale: 0.98 }}
-				className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#f6f1e8] shadow-lg disabled:opacity-50"
-				style={{ background: 'linear-gradient(135deg, #1a2e28, #3d5a4c)' }}
+				className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
+				style={{ background: 'linear-gradient(135deg, var(--ar-heading), var(--ar-accent))' }}
 			>
 				{busy ? <Loader2 size={16} className="animate-spin" /> : <Import size={16} />}
 				{ctaLabel()}
