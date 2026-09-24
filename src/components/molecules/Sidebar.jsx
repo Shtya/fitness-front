@@ -23,6 +23,10 @@ import {
 	META_WHATSAPP_UNREAD_EVENT,
 } from '@/lib/outreach-unread';
 import { useSidebarChrome } from './SidebarChromeContext';
+import {
+	readingThemeToSidebarPalette,
+	useAiReadingChrome,
+} from '@/lib/ai-reading/reading-chrome';
 import './sidebar-glass.css';
 
 /* ─── Constants ─────────────────────────────────────────────── */
@@ -3033,7 +3037,15 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const { isHidden, toggle: toggleHidden, resetAll } = useHiddenItems();
   const { isInstalled, toggle: toggleInstalled } = useMarketplaceItems();
   const { labels, getLabel, setLabel, resetLabels } = useCustomLabels();
-  const { paletteKey, setPaletteKey, palette: P } = useSidebarPalette();
+  const { paletteKey, setPaletteKey, palette: basePalette } = useSidebarPalette();
+  const readingChrome = useAiReadingChrome();
+  const P = useMemo(() => {
+    if (!readingChrome?.theme) return basePalette;
+    return {
+      ...basePalette,
+      ...readingThemeToSidebarPalette(readingChrome.theme, readingChrome.themeId),
+    };
+  }, [basePalette, readingChrome]);
   const locale = useLocale();
   const isRTL = getDir() === 'rtl';
 

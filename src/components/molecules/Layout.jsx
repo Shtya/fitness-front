@@ -324,28 +324,9 @@ export default function Layout({ children }) {
 		setFocusMode(true);
 	}, [isWhatsAppRoute]);
 
-	/* AI Study Reading stays inside the dashboard chrome — keep sidebar visible. */
-	useEffect(() => {
-		if (!isAiStudioRoute) return;
-		setFocusMode(false);
-	}, [isAiStudioRoute]);
-
-	/** Never hide the app sidebar on AI Reading routes (user can still collapse width). */
-	const shellFocusMode = isAiStudioRoute ? false : focusMode;
-	const setShellFocusMode = useCallback(
-		next => {
-			if (isAiStudioRoute) {
-				setFocusMode(false);
-				return;
-			}
-			setFocusMode(next);
-		},
-		[isAiStudioRoute],
-	);
-
 	const sidebarChromeValue = {
-		focusMode: shellFocusMode,
-		setFocusMode: setShellFocusMode,
+		focusMode,
+		setFocusMode,
 		hideEdgeDock: isWhatsAppRoute,
 	};
 
@@ -421,7 +402,7 @@ export default function Layout({ children }) {
 					) : (
 					<div className={isAppShell || isPresentationRoute ? 'relative h-dvh overflow-hidden' : 'relative min-h-screen'}>
 						{/* Background layers */}
-						<div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
+						<div className="ai-shell-bg fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
 						<div className="fixed inset-0 -z-10 opacity-[0.015]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-primary-500) 1px, transparent 0)`, backgroundSize: '32px 32px', }} /> 
 						<div className="fixed top-0 right-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-primary-200), transparent 70%)` }} /> 
 						<div className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)` }} />
@@ -429,15 +410,15 @@ export default function Layout({ children }) {
 						<div className={`flex w-full max-w-[100vw] overflow-hidden ${isAppShell || isPresentationRoute ? 'h-full' : ''}`}>
 							{!isAuthRoute && (
 								<div
-									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'} ${shellFocusMode ? 'w-0 overflow-visible' : ''}`}
+									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'} ${focusMode ? 'w-0 overflow-visible' : ''}`}
 								>
 									<Sidebar
 										open={sidebarOpen}
 										setOpen={setSidebarOpen}
 										collapsed={sidebarCollapsed}
 										setCollapsed={setSidebarCollapsed}
-										focusMode={shellFocusMode}
-										setFocusMode={setShellFocusMode}
+										focusMode={focusMode}
+										setFocusMode={setFocusMode}
 									/>
 								</div>
 							)}
@@ -453,7 +434,8 @@ export default function Layout({ children }) {
 									isAppShell ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'overflow-x-hidden',
 								].filter(Boolean).join(' ')}
 								data-dashboard-content
-								data-sidebar-offset={shellFocusMode && !isWhatsAppRoute ? 'true' : undefined}
+								data-sidebar-offset={focusMode && !isWhatsAppRoute ? 'true' : undefined}
+								data-ai-studio={isAiStudioRoute ? 'true' : undefined}
 							>
 								{!isAuthRoute && (
 									<div
@@ -485,8 +467,8 @@ export default function Layout({ children }) {
 												isPresentationRoute ? 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto' : '',
 												isAppShell
 													? [
-														'min-h-0 flex-1 overflow-x-hidden overscroll-y-contain',
-														isWhatsAppRoute || isMetaWhatsAppRoute
+														'min-h-0 flex-1 overflow-x-hidden overscroll-y-contain overscroll-x-none',
+														isWhatsAppRoute || isMetaWhatsAppRoute || isAiStudioRoute
 															? 'overflow-hidden p-0'
 															: isImmersiveRoute
 																// Avoid `p-0` + pe/ps conflict (shorthand can wipe end padding).

@@ -67,6 +67,11 @@ import {
 	resolveContentFont,
 } from '@/lib/ai-reading/themes';
 import {
+	clearAiReadingChrome,
+	isReadingThemeDark,
+	setAiReadingChrome,
+} from '@/lib/ai-reading/reading-chrome';
+import {
 	createMemorization,
 	findPagesForSelection,
 	resolvePageBlocks,
@@ -193,6 +198,30 @@ export default function ReadingView({ book: initialBook }) {
 	);
 	const current = pages[pageIndex] || pages[0];
 	const theme = THEME_STYLES[prefs.theme] || THEME_STYLES.light;
+
+	/* Keep dashboard sidebar + shell in sync with the active reading theme. */
+	useEffect(() => {
+		const tone = isReadingThemeDark(prefs.theme) ? 'dark' : 'light';
+		setAiReadingChrome({ themeId: prefs.theme, tone, theme });
+		const root = document.documentElement;
+		root.dataset.aiReadingActive = '1';
+		root.dataset.aiReadingTone = tone;
+		root.style.setProperty('--ai-read-bg', theme.bg);
+		root.style.setProperty('--ai-read-paper', theme.paper);
+		root.style.setProperty('--ai-read-ink', theme.ink);
+		root.style.setProperty('--ai-read-muted', theme.muted);
+		root.style.setProperty('--ai-read-accent', theme.accent);
+		return () => {
+			clearAiReadingChrome();
+			delete root.dataset.aiReadingActive;
+			delete root.dataset.aiReadingTone;
+			root.style.removeProperty('--ai-read-bg');
+			root.style.removeProperty('--ai-read-paper');
+			root.style.removeProperty('--ai-read-ink');
+			root.style.removeProperty('--ai-read-muted');
+			root.style.removeProperty('--ai-read-accent');
+		};
+	}, [prefs.theme, theme.bg, theme.paper, theme.ink, theme.muted, theme.accent]);
 
 	useEffect(() => {
 		setDifficulty(current?.page?._difficulty || 'original');
@@ -383,6 +412,8 @@ export default function ReadingView({ book: initialBook }) {
 			wheelMultiplier: 0.92,
 			touchMultiplier: 1.05,
 			syncTouch: false,
+			orientation: 'vertical',
+			gestureOrientation: 'vertical',
 		});
 		lenisRef.current = lenis;
 		lenis.on('scroll', updatePct);
@@ -1360,9 +1391,10 @@ export default function ReadingView({ book: initialBook }) {
 									{/* Only the saved stop mark — never a pin on every paragraph */}
 									{isPinned && !pinPlaceMode && !editMode && (
 										<span
-											className="pointer-events-none absolute -top-1 z-10 flex items-center gap-1"
+											className="pointer-events-none absolute top-0 z-10 flex items-center gap-1"
 											style={{
-												...(isContentRTL ? { left: -6 } : { right: -6 }),
+												...(isContentRTL ? { left: 0 } : { right: 0 }),
+												transform: isContentRTL ? 'translate(-35%, -35%)' : 'translate(35%, -35%)',
 											}}
 											title={t('reading.pinSavedMark')}
 										>
@@ -1471,7 +1503,7 @@ export default function ReadingView({ book: initialBook }) {
 
 	return (
 		<div
-			className="ai-reading-root relative flex h-full min-h-0 flex-col"
+			className="ai-reading-root relative flex h-full min-h-0 max-w-full flex-col overflow-x-hidden overscroll-x-none touch-pan-y"
 			dir={isContentRTL ? 'rtl' : 'ltr'}
 			style={{ background: theme.bg, color: theme.ink }}
 		>
@@ -1847,8 +1879,8 @@ export default function ReadingView({ book: initialBook }) {
 			</div>
 
 			{/* Reading + desktop AI rail (aside stays on physical right) */}
-			<div className="relative flex min-h-0 flex-1 overflow-hidden" dir="ltr">
-				<div className="relative min-h-0 flex-1 overflow-hidden">
+			<div className="relative flex min-h-0 max-w-full flex-1 overflow-x-hidden overflow-y-hidden" dir="ltr">
+				<div className="relative min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-hidden">
 					{pageMode === 'scroll' && (
 						<div
 							className="pointer-events-none absolute inset-y-0 z-30 w-[3px]"
@@ -1879,18 +1911,19 @@ export default function ReadingView({ book: initialBook }) {
 					)}
 
 					<div
-						className="h-full min-h-0 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+						className="h-full min-h-0 max-w-full overflow-x-hidden overflow-y-auto overscroll-y-contain overscroll-x-none touch-pan-y [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 						ref={articleRef}
 						dir={isContentRTL ? 'rtl' : 'ltr'}
 					>
 						<article
 							ref={articleInnerRef}
 							onMouseUp={editMode || pinPlaceMode ? undefined : onMouseUp}
-							className={`mx-auto px-4 py-5 pb-28 sm:px-5 sm:py-12 sm:pb-16 ${
+							className={`mx-auto w-full max-w-full break-words px-4 py-5 pb-28 sm:px-5 sm:py-12 sm:pb-16 ${
 								pinPlaceMode ? 'cursor-cell select-none' : ''
 							}`}
 							style={{
 								maxWidth: prefs.maxWidth,
+								width: '100%',
 								fontSize: prefs.fontSize,
 								lineHeight: prefs.lineHeight,
 								fontFamily: contentFont,
@@ -1898,6 +1931,8 @@ export default function ReadingView({ book: initialBook }) {
 								letterSpacing: `${prefs.letterSpacing || 0}em`,
 								textAlign: isContentRTL ? 'right' : 'left',
 								color: theme.ink,
+								overflowWrap: 'anywhere',
+								wordBreak: 'break-word',
 								...(pageMode === 'scroll'
 									? isContentRTL
 										? { paddingLeft: '0.85rem' }
