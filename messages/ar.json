@@ -8187,6 +8187,7 @@
 			"modeLink": "رابط مشاركة",
 			"linkLabel": "رابط ChatGPT / Claude / Gemini",
 			"linkHint": "روابط المقالات العامة تعمل أفضل. مشاركات ChatGPT: نجلب كل الرسائل وتختار ما تستورده.",
+			"linkHintShort": "الصق رابط مشاركة أو نصاً",
 			"linkHintChat": "الصق رابط مشاركة ChatGPT العام. نجلب كل رسائل المستخدم والمساعد لتختار ما يتحول إلى قراءة.",
 			"fetchMessages": "جلب الرسائل",
 			"importSelected": "استيراد المحدد ({count})",

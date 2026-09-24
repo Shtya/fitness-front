@@ -2,9 +2,31 @@
 
 import { motion } from 'framer-motion';
 import { Pencil, Trash2 } from 'lucide-react';
+import { COVER_PALETTES } from '@/lib/ai-reading/schemas';
+
+const LEGACY_COVER_RE = /^#(?:1a2e28|3d5a4c|14201a|1b2a22|1f2a1a|4a6b3a|2a1f3d|5b4a7a|1a2332|2d4a6f|1e293b|3b1f1a|8b5a3c)/i;
+
+function hashId(id = '') {
+	let h = 0;
+	for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+	return h;
+}
+
+function resolveCover(book) {
+	const raw = book.coverGradient;
+	const looksLegacy =
+		Array.isArray(raw) &&
+		raw.length >= 2 &&
+		LEGACY_COVER_RE.test(String(raw[0])) &&
+		LEGACY_COVER_RE.test(String(raw[1]));
+	if (!raw || !Array.isArray(raw) || raw.length < 2 || looksLegacy) {
+		return COVER_PALETTES[hashId(book.id) % COVER_PALETTES.length];
+	}
+	return raw;
+}
 
 export function BookCover({ book, onOpen, onEdit, onDelete, className = '' }) {
-	const [c1, c2] = book.coverGradient || ['var(--ar-heading)', 'var(--ar-accent)'];
+	const [c1, c2] = resolveCover(book);
 	const percent = book.progress?.percent || 0;
 
 	return (

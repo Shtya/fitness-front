@@ -7105,6 +7105,7 @@
 			"modeLink": "Share link",
 			"linkLabel": "ChatGPT / Claude / Gemini link",
 			"linkHint": "Public article links work best. ChatGPT shares: we load every message so you can pick what to import.",
+			"linkHintShort": "Paste a share link or raw text",
 			"linkHintChat": "Paste a public ChatGPT share link. We'll load every user & assistant message so you can choose what becomes your reading.",
 			"fetchMessages": "Fetch messages",
 			"importSelected": "Import selected ({count})",

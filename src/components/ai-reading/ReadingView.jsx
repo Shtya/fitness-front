@@ -1471,7 +1471,7 @@ export default function ReadingView({ book: initialBook }) {
 
 	return (
 		<div
-			className="flex h-full min-h-0 flex-col"
+			className="ai-reading-root relative flex h-full min-h-0 flex-col"
 			dir={isContentRTL ? 'rtl' : 'ltr'}
 			style={{ background: theme.bg, color: theme.ink }}
 		>

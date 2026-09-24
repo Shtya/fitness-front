@@ -330,9 +330,22 @@ export default function Layout({ children }) {
 		setFocusMode(false);
 	}, [isAiStudioRoute]);
 
+	/** Never hide the app sidebar on AI Reading routes (user can still collapse width). */
+	const shellFocusMode = isAiStudioRoute ? false : focusMode;
+	const setShellFocusMode = useCallback(
+		next => {
+			if (isAiStudioRoute) {
+				setFocusMode(false);
+				return;
+			}
+			setFocusMode(next);
+		},
+		[isAiStudioRoute],
+	);
+
 	const sidebarChromeValue = {
-		focusMode,
-		setFocusMode,
+		focusMode: shellFocusMode,
+		setFocusMode: setShellFocusMode,
 		hideEdgeDock: isWhatsAppRoute,
 	};
 
@@ -416,15 +429,15 @@ export default function Layout({ children }) {
 						<div className={`flex w-full max-w-[100vw] overflow-hidden ${isAppShell || isPresentationRoute ? 'h-full' : ''}`}>
 							{!isAuthRoute && (
 								<div
-									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'} ${focusMode ? 'w-0 overflow-visible' : ''}`}
+									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'} ${shellFocusMode ? 'w-0 overflow-visible' : ''}`}
 								>
 									<Sidebar
 										open={sidebarOpen}
 										setOpen={setSidebarOpen}
 										collapsed={sidebarCollapsed}
 										setCollapsed={setSidebarCollapsed}
-										focusMode={focusMode}
-										setFocusMode={setFocusMode}
+										focusMode={shellFocusMode}
+										setFocusMode={setShellFocusMode}
 									/>
 								</div>
 							)}
@@ -440,7 +453,7 @@ export default function Layout({ children }) {
 									isAppShell ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'overflow-x-hidden',
 								].filter(Boolean).join(' ')}
 								data-dashboard-content
-								data-sidebar-offset={focusMode && !isWhatsAppRoute ? 'true' : undefined}
+								data-sidebar-offset={shellFocusMode && !isWhatsAppRoute ? 'true' : undefined}
 							>
 								{!isAuthRoute && (
 									<div

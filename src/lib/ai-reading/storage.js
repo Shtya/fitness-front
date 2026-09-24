@@ -141,6 +141,20 @@ function applyServerState(data, { emitChange = true } = {}) {
 	if (Array.isArray(data.journeys)) cache.journeys = data.journeys;
 	if (data.prefs && typeof data.prefs === 'object') {
 		cache.prefs = { ...DEFAULT_PREFS, ...data.prefs };
+		/* One-time: align reader with dashboard light/system chrome. */
+		if (!cache.prefs.dashboardChromeV2) {
+			const offSystem = new Set(['forest', 'dark', 'midnight', 'dusk', 'slate']);
+			if (offSystem.has(cache.prefs.theme)) cache.prefs.theme = 'light';
+			if (Array.isArray(cache.books)) {
+				cache.books = cache.books.map(b => {
+					const rp = b?.readingPrefs;
+					if (!rp || typeof rp !== 'object' || !offSystem.has(rp.theme)) return b;
+					return { ...b, readingPrefs: { ...rp, theme: 'light' } };
+				});
+			}
+			cache.prefs.dashboardChromeV2 = true;
+			scheduleFlush();
+		}
 	}
 	if (data.stats && typeof data.stats === 'object') {
 		cache.stats = { ...cache.stats, ...data.stats };

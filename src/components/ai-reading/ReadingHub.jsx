@@ -60,40 +60,52 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 
 	return (
 		<div className={compact ? 'space-y-8' : 'space-y-10'}>
-			<section
-				className="relative overflow-hidden rounded-[1.75rem] px-6 py-9 sm:px-9"
-				style={{ background: 'linear-gradient(145deg, var(--ar-heading) 0%, var(--color-primary-700) 55%, var(--ar-accent) 100%)' }}
-			>
-				<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-					<p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--color-secondary-400, #e8c07a)]">
+			<section className="relative overflow-hidden rounded-2xl border border-[color:var(--ar-border)] bg-white/90 px-5 py-7 shadow-sm sm:rounded-3xl sm:px-8 sm:py-9">
+				<div
+					className="absolute inset-x-0 top-0 h-1"
+					style={{ background: 'linear-gradient(90deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))' }}
+				/>
+				<div
+					className="pointer-events-none absolute -end-16 -top-20 h-56 w-56 rounded-full opacity-30 blur-3xl"
+					style={{ background: 'var(--color-primary-200, #c7d2fe)' }}
+				/>
+				<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative">
+					<p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--ar-accent)]">
 						{journey ? monthLabel(journey.monthKey, locale) : t('hub.eyebrow')}
 					</p>
-					<h1 className="mt-3 max-w-xl font-[family-name:var(--font-space-grotesk)] text-3xl font-bold leading-tight text-white sm:text-4xl">
+					<h1 className="mt-3 max-w-xl font-[family-name:var(--font-space-grotesk)] text-3xl font-bold leading-tight text-[var(--ar-heading)] sm:text-4xl">
 						{journey ? `${t('hub.focus')}: ${journey.theme || journey.title}` : t('brand')}
 					</h1>
 					{journey && (
 						<div className="mt-4 max-w-sm">
-							<div className="flex justify-between text-xs text-white/70">
+							<div className="flex justify-between text-xs text-[var(--ar-muted)]">
 								<span>{t('hub.journeyProgress')}</span>
-								<span className="font-bold text-[var(--color-secondary-400, #e8c07a)]">{journeyPct}%</span>
+								<span className="font-bold text-[var(--ar-accent)]">{journeyPct}%</span>
 							</div>
-							<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15">
-								<div className="h-full rounded-full bg-[var(--color-secondary-400, #e8c07a)]" style={{ width: `${journeyPct}%` }} />
+							<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[color:var(--ar-ring)]">
+								<div
+									className="h-full rounded-full"
+									style={{
+										width: `${journeyPct}%`,
+										background: 'linear-gradient(90deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))',
+									}}
+								/>
 							</div>
 						</div>
 					)}
 					{(nextItem || today) && (
-						<div className="mt-6 max-w-lg rounded-2xl bg-white/10 p-4">
-							<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-secondary-400, #e8c07a)]">{t('hub.next')}</p>
-							<p className="mt-1 text-lg font-bold text-white">
+						<div className="mt-6 max-w-lg rounded-2xl border border-[color:var(--ar-border)] bg-[color:var(--color-primary-50,#f8fafc)]/80 p-4">
+							<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ar-accent)]">{t('hub.next')}</p>
+							<p className="mt-1 text-lg font-bold text-[var(--ar-heading)]">
 								{nextItem?.title || today?.title}
-								<span className="ms-2 text-sm font-normal text-white/70">— {nextMinutes} min</span>
+								<span className="ms-2 text-sm font-normal text-[var(--ar-muted)]">— {nextMinutes} min</span>
 							</p>
 							<div className="mt-3 flex flex-wrap gap-2">
 								{nextItem?.bookId || today ? (
 									<Link
 										href={`/ai-studio/read/${nextItem?.bookId || today.id}`}
-										className="rounded-full bg-[var(--color-secondary-400, #e8c07a)] px-4 py-2 text-sm font-bold text-[var(--ar-heading)]"
+										className="rounded-full px-4 py-2 text-sm font-bold text-white shadow-sm"
+										style={{ background: 'linear-gradient(135deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))' }}
 									>
 										{t('hub.startReading')}
 									</Link>
@@ -101,7 +113,8 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 									<button
 										type="button"
 										onClick={() => go('studio', 'topics')}
-										className="rounded-full bg-[var(--color-secondary-400, #e8c07a)] px-4 py-2 text-sm font-bold text-[var(--ar-heading)]"
+										className="rounded-full px-4 py-2 text-sm font-bold text-white shadow-sm"
+										style={{ background: 'linear-gradient(135deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))' }}
 									>
 										{t('hub.startReading')}
 									</button>
@@ -109,7 +122,7 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 								<button
 									type="button"
 									onClick={() => go('studio', 'chat')}
-									className="rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white"
+									className="rounded-full border border-[color:var(--ar-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--ar-heading)]"
 								>
 									{t('hub.openWorkspace')}
 								</button>
