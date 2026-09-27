@@ -90,7 +90,13 @@ export function useWaScrollWindow({
 
 		setWindowState(current => {
 			// Prepend (load older): shift the mounted window so the same rows stay visible.
-			if (prepended > 0 && (realScrollTop == null || realScrollTop < realClientHeight * 2)) {
+			// Bottom-anchored threads only — for a top-anchored inbox a count jump is a
+			// filter switch or a new chat, and shifting leaves a blank top spacer.
+			if (
+				initialAlign === 'end' &&
+				prepended > 0 &&
+				(realScrollTop == null || realScrollTop < realClientHeight * 2)
+			) {
 				const nextStart = Math.max(0, (current.start || 0) + prepended);
 				const nextEnd = Math.min(
 					count,
