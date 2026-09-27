@@ -1698,7 +1698,7 @@ export default function UsersList() {
 							emptyTitle: t('common.noResults'),
 							emptySubtitle: t('common.tryAdjusting'),
 							preview: t('common.preview'),
-							selectedCount: t('common.selectedCount'),
+							selectedCount: t.raw('common.selectedCount'),
 							clearSelection: t('common.clearSelection'),
 						}}
 						pagination={{

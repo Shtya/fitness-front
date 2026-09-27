@@ -10,6 +10,7 @@ import {
 	Radio,
 	Settings,
 	Smartphone,
+	Sparkles,
 	User,
 	Users,
 	Zap,
@@ -36,6 +37,7 @@ export default function WhatsAppDesktopRail({
 	showAccounts = true,
 	showReports = true,
 	showBoard = true,
+	showFakeChat = true,
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const { focusMode, setFocusMode, hideEdgeDock } = useSidebarChrome();
@@ -90,6 +92,13 @@ export default function WhatsAppDesktopRail({
 					id: 'board',
 					label: ar ? 'مهام' : 'Tasks',
 					icon: LayoutGrid,
+				}
+			: null,
+		showFakeChat
+			? {
+					id: 'fakeChat',
+					label: labels.fakeChat || (ar ? 'شات وهمي' : 'Fake chat'),
+					icon: Sparkles,
 				}
 			: null,
 	].filter(Boolean);

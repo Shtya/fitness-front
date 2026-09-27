@@ -270,6 +270,7 @@ const ChatDocumentViewer = lazy(() =>
 );
 import { WhatsAppReportsTab, staffAssignHint } from './WhatsAppReportsTab';
 import { WhatsAppBoardTab } from './WhatsAppBoardTab';
+import FakeChatStudio from './fake-chat/FakeChatStudio';
 import { BoardColumnPicker, BoardColumnPickerMenu } from './BoardColumnPicker';
 import { createBoardCardFromMessages } from './whatsapp-board-api';
 import { WaCustomSelect } from './WaCustomSelect';
@@ -372,6 +373,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'emails',
 	'reports',
 	'board',
+	'fakeChat',
 	'settings',
 	'profile',
 ]);
@@ -638,6 +640,7 @@ const translations = {
 		reports: 'Reports',
 		board: 'Tasks board',
 		boardHint: 'Trello-style tasks for this WhatsApp account. Drag cards, add checklists, and link chats.',
+		fakeChat: 'Fake chat',
 		addToBoard: 'Add to tasks board',
 		addToBoardHint: 'Right-click messages or multi-select, then pick a column',
 		pickBoardColumn: 'Choose column',
@@ -1123,6 +1126,7 @@ const translations = {
 		reports: 'التقارير',
 		board: 'لوحة المهام',
 		boardHint: 'مهام على شكل Trello لهذا الحساب. اسحب البطاقات، أضف قوائم، واربط الشات.',
+		fakeChat: 'شات وهمي',
 		addToBoard: 'إضافة للوحة المهام',
 		addToBoardHint: 'كليك يمين على الرسائل أو حدّد عدة رسائل ثم اختر العمود',
 		pickBoardColumn: 'اختر العمود',
@@ -1597,6 +1601,7 @@ const tabs = [
 	['groups', Users],
 	['reports', BarChart3],
 	['board', LayoutGrid],
+	['fakeChat', Sparkles],
 	['settings', Settings],
 ];
 
@@ -9848,6 +9853,7 @@ function WhatsAppWorkspaceContent() {
 				if (key === 'settings') return canManageWhatsApp || isAdmin;
 				if (key === 'reports') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'board') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
+				if (key === 'fakeChat') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				return true;
 			}),
 		[canAssignWhatsApp, canManageWhatsApp, isAdmin],
@@ -17650,6 +17656,7 @@ function WhatsAppWorkspaceContent() {
 		setTabError('');
 		if (tab === 'profile') return;
 		if (tab === 'emails') return;
+		if (tab === 'board' || tab === 'fakeChat') return;
 		if (!accountId) return;
 		const targetAccountId = accountId;
 		const requestId = ++tabRequestId.current;
@@ -17883,7 +17890,7 @@ function WhatsAppWorkspaceContent() {
 			!tabReady ||
 			!accountId ||
 			!activeTab ||
-			!['groups', 'calls', 'reports', 'board', 'settings'].includes(activeTab)
+			!['groups', 'calls', 'reports', 'board', 'fakeChat', 'settings'].includes(activeTab)
 		) {
 			return;
 		}
@@ -19137,11 +19144,12 @@ function WhatsAppWorkspaceContent() {
 					showAccounts
 					showReports
 					showBoard={canManageWhatsApp || canAssignWhatsApp || isAdmin}
+					showFakeChat={canManageWhatsApp || canAssignWhatsApp || isAdmin}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 				/>
 			<div className={`wa-web-main min-h-0 flex-1 max-[768px]:min-h-0 ${
-				activeTab === 'board'
+				activeTab === 'board' || activeTab === 'fakeChat'
 					? 'wa-board-workspace'
 					: isConversationWorkspaceTab(activeTab)
 						? 'overflow-y-auto nice-scroll wa-chat-workspace-scroll'
@@ -23765,6 +23773,20 @@ function WhatsAppWorkspaceContent() {
 								if (!conversationIdToOpen) return;
 								openConversationFromReport(conversationIdToOpen);
 							}}
+						/>
+					</div>
+				)}
+
+				{activeTab === 'fakeChat' && (
+					<div
+						className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+						onClick={event => event.stopPropagation()}
+						onMouseDown={event => event.stopPropagation()}
+					>
+						<FakeChatStudio
+							locale={locale}
+							accountId={accountId}
+							conversations={effectiveConversations}
 						/>
 					</div>
 				)}

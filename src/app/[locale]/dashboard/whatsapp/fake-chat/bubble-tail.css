@@ -1,0 +1,54 @@
+/**
+ * WhatsApp iPhone-style message bubble tails.
+ * Soft curved extension at the bottom-outer corner (CSS only — no SVG).
+ * Wallpaper cream (#f4f1ec) is used for the concave cut to match Fake Chat chrome.
+ */
+
+.fc-bubble-tail-in::before,
+.fc-bubble-tail-out::before {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	width: 14px;
+	height: 15px;
+	pointer-events: none;
+	z-index: 0;
+	box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+}
+
+/* Incoming — bottom left */
+.fc-bubble-tail-in::before {
+	left: -8px;
+	background: #ffffff;
+	border-bottom-right-radius: 15px 13px;
+}
+
+/* Outgoing — bottom right (mirrored) */
+.fc-bubble-tail-out::before {
+	right: -8px;
+	background: #dcf8c6;
+	border-bottom-left-radius: 15px 13px;
+}
+
+/* Soft concave cut (wallpaper base) so the stub looks like a WA hook, not a triangle */
+.fc-bubble-tail-in::after,
+.fc-bubble-tail-out::after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	width: 11px;
+	height: 16px;
+	pointer-events: none;
+	z-index: 1;
+	background: #f4f1ec;
+}
+
+.fc-bubble-tail-in::after {
+	left: -12px;
+	border-bottom-right-radius: 12px 14px;
+}
+
+.fc-bubble-tail-out::after {
+	right: -12px;
+	border-bottom-left-radius: 12px 14px;
+}

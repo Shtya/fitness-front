@@ -1579,7 +1579,8 @@
 			"status": "Status",
 			"daysLeft": "Days Left",
 			"workoutEdit": "Workout Edit",
-			"actions": "Actions"
+			"actions": "Actions",
+			"birthDate": "Birth Date"
 		},
 		"actions": {
 			"openProfile": "Open Profile",
@@ -1593,6 +1594,7 @@
 			"directChat": "Direct Chat",
 			"delete": "Delete User",
 			"shareCredsWhatsapp": "Send Login Credentials via WhatsApp",
+			"renewSubscription": "Renew Subscription",
 			"enableWorkoutEdit": "Enable Workout Editing",
 			"disableWorkoutEdit": "Disable Workout Editing",
 			"deleteSelected": "Delete Selected"
@@ -1602,6 +1604,9 @@
 			"disabled": "Disabled",
 			"toggleSuccess": "Workout editing {status} for {name}",
 			"toggleFailed": "Failed to update workout edit permission"
+		},
+		"renewSubscription": {
+			"currentData": "Current data"
 		},
 		"status": {
 			"active": "Active",
@@ -1749,6 +1754,8 @@
 			"loadWorkoutFailed": "Failed to load workout plans",
 			"loadMealFailed": "Failed to load meal plans",
 			"saveCaloriesSuccess": "Calories information saved successfully",
+			"subscriptionRenewed": "Subscription renewed successfully",
+			"renewSubscriptionFailed": "Failed to renew subscription",
 			"usersDeleted": "{count} users deleted successfully"
 		},
 		"errors": {

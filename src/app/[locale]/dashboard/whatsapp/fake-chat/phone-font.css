@@ -1,0 +1,10 @@
+/**
+ * The studio renders inside `.wa-mobile-shell`, whose globals.css rule
+ * `body .wa-mobile-shell *:not(...)` forces DM Sans with !important (specificity 0,5,3 in RTL).
+ * The phone must use its own font (--fc-font, set inline on .fc-phone) so the live preview and
+ * the html-to-image PNG measure text identically. Repeated class = higher specificity, unlayered.
+ */
+.fc-phone.fc-phone.fc-phone.fc-phone.fc-phone.fc-phone,
+.fc-phone.fc-phone.fc-phone.fc-phone.fc-phone.fc-phone * {
+	font-family: var(--fc-font) !important;
+}
