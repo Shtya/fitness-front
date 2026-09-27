@@ -1,6 +1,8 @@
 import {
 	conversationAvatarUrl,
 	conversationTitle,
+	conversationUnreadCount,
+	sortConversationsByActivity,
 } from '../whatsapp-utils';
 
 /**
@@ -303,6 +305,124 @@ export function mapLiveMessagesToFake(items, { limit = 40 } = {}) {
 			};
 		})
 		.filter(Boolean);
+}
+
+/** WhatsApp list clock: time today, "Yesterday", weekday within a week, else dd/mm/yy. */
+function formatListTime(value) {
+	if (!value) return '';
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '';
+	const now = new Date();
+	if (date.toDateString() === now.toDateString()) return formatFakeBubbleTime(value);
+	const yesterday = new Date(now);
+	yesterday.setDate(now.getDate() - 1);
+	if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+	if (now.getTime() - date.getTime() < 7 * 86_400_000) {
+		return date.toLocaleDateString('en-US', { weekday: 'long' });
+	}
+	return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+function persistableAvatar(raw) {
+	const src = String(raw || '').trim();
+	if (!src) return '';
+	try {
+		const url = new URL(src, typeof window !== 'undefined' ? window.location.href : 'http://local');
+		if (url.pathname.startsWith('/uploads/')) return url.pathname;
+	} catch {
+		/* fall through */
+	}
+	return /^https?:\/\//i.test(src) ? src : '';
+}
+
+function listPreviewFromLastMessage(conversation) {
+	const last = conversation?.lastMessage || {};
+	const type = String(last.type || 'text').toLowerCase();
+	const text = String(last.text || last.caption || conversation?.lastMessagePreview || '').trim();
+	if (type === 'audio' || type === 'ptt' || type === 'voice') {
+		return { previewIcon: 'mic', preview: text || 'Voice message' };
+	}
+	if (type === 'image' || type === 'sticker') {
+		return { previewIcon: 'camera', preview: text || (type === 'sticker' ? 'Sticker' : 'Photo') };
+	}
+	if (type === 'video') return { previewIcon: 'video', preview: text || 'Video' };
+	if (type === 'document') return { previewIcon: '', preview: text || 'Document' };
+	return { previewIcon: '', preview: text };
+}
+
+/** Snapshot of the live inbox as Fake Chat list rows (newest first, pinned on top). */
+export function mapConversationsToFakeList(conversations, { limit = 15 } = {}) {
+	const rows = sortConversationsByActivity(
+		(Array.isArray(conversations) ? conversations : []).filter(item => !item?.isArchived),
+	).slice(0, Math.max(1, limit));
+
+	return rows.map(conversation => {
+		const last = conversation?.lastMessage || {};
+		const outbound = String(last.direction || '').toLowerCase() === 'outbound';
+		const status = String(last.status || '').toLowerCase();
+		const unread = conversationUnreadCount(conversation);
+		const isGroup =
+			conversation?.type === 'group' || String(conversation?.providerChatId || '').endsWith('@g.us');
+		return {
+			id: `live-${conversation.id}`,
+			liveConversationId: String(conversation.id),
+			name: conversationTitle(conversation),
+			phone: String(conversation?.contact?.phoneNumber || '').trim(),
+			avatar: persistableAvatar(conversationAvatarUrl(conversation)),
+			avatarKind: isGroup ? 'group' : '',
+			...listPreviewFromLastMessage(conversation),
+			time: formatListTime(
+				last.providerTimestamp || conversation?.lastMessageAt || conversation?.created_at,
+			),
+			ticks: outbound ? (status === 'read' ? 'read' : status === 'delivered' ? 'delivered' : 'sent') : '',
+			unread,
+			timeGreen: unread > 0,
+			pinned: Boolean(conversation?.isPinned),
+			muted: Boolean(conversation?.isMuted),
+			metaAi: false,
+			whatsapp: false,
+		};
+	});
+}
+
+/**
+ * Refresh list rows from a live snapshot without losing crafted chats:
+ * matched rows keep their id + messages; unmatched rows with messages stay at the end.
+ */
+export function mergeLiveListIntoFake(currentChats, liveRows) {
+	const current = Array.isArray(currentChats) ? currentChats : [];
+	const used = new Set();
+	const findPrevious = row => {
+		const byId = current.find(
+			chat => !used.has(chat.id) && chat.liveConversationId && chat.liveConversationId === row.liveConversationId,
+		);
+		if (byId) return byId;
+		const rowName = normalizeName(row.name);
+		const rowPhone = digitsOnly(row.phone);
+		return current.find(chat => {
+			if (used.has(chat.id)) return false;
+			if (rowPhone && phonesMatch(rowPhone, digitsOnly(chat.phone || chat.name))) return true;
+			return Boolean(rowName) && normalizeName(chat.name) === rowName;
+		});
+	};
+
+	const merged = (Array.isArray(liveRows) ? liveRows : []).map(row => {
+		const previous = findPrevious(row);
+		if (!previous) return row;
+		used.add(previous.id);
+		return {
+			...previous,
+			...row,
+			id: previous.id,
+			avatar: row.avatar || previous.avatar || '',
+			messages: previous.messages,
+		};
+	});
+
+	const crafted = current.filter(
+		chat => !used.has(chat.id) && Array.isArray(chat.messages) && chat.messages.length > 0,
+	);
+	return [...merged, ...crafted];
 }
 
 /** Prefer ~username / about when hiding phone numbers in the list & chat header. */

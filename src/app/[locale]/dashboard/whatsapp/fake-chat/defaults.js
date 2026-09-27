@@ -1044,6 +1044,7 @@ export function normalizeListChat(item, index = 0) {
 	const messages = Array.isArray(item?.messages) ? normalizeMessages(item.messages) : undefined;
 	return {
 		id: item?.id || nextId('c'),
+		liveConversationId: item?.liveConversationId || '',
 		name: item?.name || `Chat ${index + 1}`,
 		preview: item?.preview || '',
 		time: item?.time || formatChatBubbleTime(),

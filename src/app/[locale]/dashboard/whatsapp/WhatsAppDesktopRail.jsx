@@ -2,6 +2,7 @@
 
 import {
 	BarChart3,
+	Forward,
 	LayoutGrid,
 	Mails,
 	MessageCircle,
@@ -38,6 +39,7 @@ export default function WhatsAppDesktopRail({
 	showReports = true,
 	showBoard = true,
 	showFakeChat = true,
+	showAutoForward = true,
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const { focusMode, setFocusMode, hideEdgeDock } = useSidebarChrome();
@@ -99,6 +101,13 @@ export default function WhatsAppDesktopRail({
 					id: 'fakeChat',
 					label: labels.fakeChat || (ar ? 'شات وهمي' : 'Fake chat'),
 					icon: Sparkles,
+				}
+			: null,
+		showAutoForward
+			? {
+					id: 'autoForward',
+					label: labels.autoForward || (ar ? 'تحويل تلقائي' : 'Auto-forward'),
+					icon: Forward,
 				}
 			: null,
 	].filter(Boolean);

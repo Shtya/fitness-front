@@ -72,7 +72,10 @@ export const tw = {
 	shot: 'inline-flex h-[38px] cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-linear-to-br from-[#1dab61] to-[#128c7e] text-xs font-extrabold text-white shadow-[0_8px_18px_-10px_rgba(29,171,97,0.8)] disabled:cursor-wait disabled:opacity-65',
 	reset:
 		'inline-flex h-[34px] cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-[#d1d7db] bg-white text-xs font-bold text-[#54656f]',
-	stage: 'grid min-h-0 place-items-center justify-center overflow-hidden px-1 py-2 max-[900px]:order-[-1]',
+	stage: 'relative grid min-h-0 place-items-center justify-center overflow-hidden px-1 py-2 max-[900px]:order-[-1]',
+	stageEditToggle:
+		'absolute end-2 top-2 z-10 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-[#d1d7db] bg-white px-3 text-xs font-bold text-[#111b21] shadow-sm hover:bg-[#f0f2f5]',
+	stageEditToggleOn: 'border-[#1dab61] bg-[#1dab61] text-white hover:bg-[#179c57]',
 	/** Outer box = scaled visual size; inner keeps fixed 414×896 layout. */
 	phoneWrap: 'relative shrink-0',
 	phoneScale: 'origin-top-left will-change-transform',
@@ -81,6 +84,12 @@ export const tw = {
 	),
 	/** Capture = raw screen (rectangular). Preview rounding lives on phoneDeviceScreen. */
 	phoneCapturing: '!rounded-none ![border-radius:0]',
+	/** In-mockup edit mode (never rendered while capturing). */
+	editable:
+		'cursor-text rounded-[3px] outline-1 outline-offset-1 outline-dashed outline-[#1dab61]/70 focus:bg-[#1dab61]/10 focus:outline-2 focus:outline-solid',
+	editableGhost: 'opacity-35',
+	editAvatar:
+		'relative cursor-pointer rounded-full outline-2 outline-offset-2 outline-dashed outline-[#1dab61]/70 hover:outline-solid',
 	/** Preview-only chassis — excluded from PNG via data-no-capture. */
 	phoneDevice:
 		'relative box-border shrink-0 overflow-hidden rounded-[46px] bg-[#1c1c1e] p-[14px]',

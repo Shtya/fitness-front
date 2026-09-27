@@ -40,6 +40,7 @@ import {
 	FileText,
 	FileVideo,
 	FolderKanban,
+	Forward,
 	Globe2,
 	Image as ImageIcon,
 	ImageOff,
@@ -271,6 +272,7 @@ const ChatDocumentViewer = lazy(() =>
 import { WhatsAppReportsTab, staffAssignHint } from './WhatsAppReportsTab';
 import { WhatsAppBoardTab } from './WhatsAppBoardTab';
 import FakeChatStudio from './fake-chat/FakeChatStudio';
+import AutoForwardPanel from './AutoForwardPanel';
 import { BoardColumnPicker, BoardColumnPickerMenu } from './BoardColumnPicker';
 import { createBoardCardFromMessages } from './whatsapp-board-api';
 import { WaCustomSelect } from './WaCustomSelect';
@@ -374,6 +376,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'reports',
 	'board',
 	'fakeChat',
+	'autoForward',
 	'settings',
 	'profile',
 ]);
@@ -641,6 +644,7 @@ const translations = {
 		board: 'Tasks board',
 		boardHint: 'Trello-style tasks for this WhatsApp account. Drag cards, add checklists, and link chats.',
 		fakeChat: 'Fake chat',
+		autoForward: 'Auto-forward',
 		addToBoard: 'Add to tasks board',
 		addToBoardHint: 'Right-click messages or multi-select, then pick a column',
 		pickBoardColumn: 'Choose column',
@@ -1127,6 +1131,7 @@ const translations = {
 		board: 'لوحة المهام',
 		boardHint: 'مهام على شكل Trello لهذا الحساب. اسحب البطاقات، أضف قوائم، واربط الشات.',
 		fakeChat: 'شات وهمي',
+		autoForward: 'تحويل تلقائي',
 		addToBoard: 'إضافة للوحة المهام',
 		addToBoardHint: 'كليك يمين على الرسائل أو حدّد عدة رسائل ثم اختر العمود',
 		pickBoardColumn: 'اختر العمود',
@@ -1602,6 +1607,7 @@ const tabs = [
 	['reports', BarChart3],
 	['board', LayoutGrid],
 	['fakeChat', Sparkles],
+	['autoForward', Forward],
 	['settings', Settings],
 ];
 
@@ -9854,9 +9860,10 @@ function WhatsAppWorkspaceContent() {
 				if (key === 'reports') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'board') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'fakeChat') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
+				if (key === 'autoForward') return canUseWhatsApp || canManageWhatsApp || isAdmin;
 				return true;
 			}),
-		[canAssignWhatsApp, canManageWhatsApp, isAdmin],
+		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, isAdmin],
 	);
 	const unreadConversationCount = useMemo(
 		() =>
@@ -13286,6 +13293,21 @@ function WhatsAppWorkspaceContent() {
 						void loadMessagesRef.current?.(activeConversationId, false)?.catch?.(() => {});
 					}
 				}
+			}
+			if (event.event === 'message_updated' && eventConversationId && event.payload?.changes?.deletedMode) {
+				const { messageId, changes } = event.payload;
+				if (eventConversationId !== activeConversationId) {
+					updateCachedMessage(eventConversationId, messageId, message => ({ ...message, ...changes }));
+				}
+				setConversations(current => {
+					let touched = false;
+					const next = current.map(item => {
+						if (item.id !== eventConversationId || item.lastMessage?.id !== messageId) return item;
+						touched = true;
+						return { ...item, lastMessage: { ...item.lastMessage, ...changes } };
+					});
+					return touched ? next : current;
+				});
 			}
 			if (event.event === 'conversation_updated' && event.payload?.preview && accountIdRef.current) {
 				// Common case: a message arrived somewhere in this account — patch
@@ -17656,7 +17678,7 @@ function WhatsAppWorkspaceContent() {
 		setTabError('');
 		if (tab === 'profile') return;
 		if (tab === 'emails') return;
-		if (tab === 'board' || tab === 'fakeChat') return;
+		if (tab === 'board' || tab === 'fakeChat' || tab === 'autoForward') return;
 		if (!accountId) return;
 		const targetAccountId = accountId;
 		const requestId = ++tabRequestId.current;
@@ -19145,6 +19167,7 @@ function WhatsAppWorkspaceContent() {
 					showReports
 					showBoard={canManageWhatsApp || canAssignWhatsApp || isAdmin}
 					showFakeChat={canManageWhatsApp || canAssignWhatsApp || isAdmin}
+					showAutoForward={canUseWhatsApp || canManageWhatsApp || isAdmin}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 				/>
@@ -21277,6 +21300,11 @@ function WhatsAppWorkspaceContent() {
 													const captionIsMarkdown = looksLikeMarkdown(captionText);
 													const textPresentation = messageTextPresentation(captionText || visibleText);
 													const isDeleted = isDeletedWhatsAppMessage(message);
+													const keepsDeletedContent =
+														isDeleted &&
+														(Boolean(String(visibleText || '').trim()) ||
+															Boolean(attachments?.length));
+													const hideDeletedBody = isDeleted && !keepsDeletedContent;
 													const attachmentTypes = (attachments || []).map(attachment => String(attachment.type || '').toLowerCase());
 													const hasOnlyVisualAttachments =
 														attachmentTypes.length > 0 &&
@@ -21312,9 +21340,9 @@ function WhatsAppWorkspaceContent() {
 														? null
 														: firstSocialVideoLink(message.text);
 													const isLocationMessage =
-														!isDeleted && isWhatsAppLocationMessage(message);
+														!hideDeletedBody && isWhatsAppLocationMessage(message);
 													const isContactMsg =
-														!isDeleted &&
+														!hideDeletedBody &&
 														(isContactMessage(message) ||
 															Boolean(
 																message?.sharedContact?.displayName ||
@@ -21599,6 +21627,12 @@ function WhatsAppWorkspaceContent() {
 																			{locale === 'ar' ? 'مُعاد توجيهها' : 'Forwarded'}
 																		</p>
 																	)}
+																	{keepsDeletedContent ? (
+																		<DeletedMessageNotice
+																			locale={locale}
+																			className="wa-message-deleted-notice--kept"
+																		/>
+																	) : null}
 																	{message.replyTo && quotedPreview ? (
 																		<button
 																			type="button"
@@ -21643,7 +21677,7 @@ function WhatsAppWorkspaceContent() {
 																			) : null}
 																		</button>
 																	) : null}
-																	{!isDeleted && attachments?.length
+																	{!hideDeletedBody && attachments?.length
 																		? (
 																			<MessageAttachments
 																				attachments={attachments}
@@ -21700,7 +21734,7 @@ function WhatsAppWorkspaceContent() {
 																				sendingAsVoice={videoToVoiceTarget?.messageId === message.id}
 																			/>
 																		)
-																		: !isDeleted && fallbackMediaPreview ? (
+																		: !hideDeletedBody && fallbackMediaPreview ? (
 																			<div className="relative mb-2 max-w-[240px] overflow-hidden rounded-lg">
 																				<ImageMessage
 																					url={fallbackMediaPreview}
@@ -21709,7 +21743,7 @@ function WhatsAppWorkspaceContent() {
 																				/>
 																			</div>
 																		)
-																		: !isDeleted && ['image', 'audio', 'ptt', 'voice', 'video', 'document', 'sticker'].includes(
+																		: !hideDeletedBody && ['image', 'audio', 'ptt', 'voice', 'video', 'document', 'sticker'].includes(
 																			String(message.type || '').toLowerCase(),
 																		) && (
 																			<div className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5`}>
@@ -21725,7 +21759,7 @@ function WhatsAppWorkspaceContent() {
 																				<span>{quotedMessageLabel({ type: message.type }, locale)}</span>
 																			</div>
 																		)}
-																	{!isDeleted &&
+																	{!hideDeletedBody &&
 																	canTranscribeMedia &&
 																	messageTranscripts[message.id]?.text ? (
 																		<MessageSavedTranscript
@@ -21735,7 +21769,7 @@ function WhatsAppWorkspaceContent() {
 																			defaultOpen={false}
 																		/>
 																	) : null}
-																	{isDeleted ? (
+																	{hideDeletedBody ? (
 																		<div className="wa-message-copy wa-message-copy--deleted">
 																			<DeletedMessageNotice locale={locale} />
 																			<div className={`wa-message-meta ${mine ? 'text-rose-700/70 dark:text-rose-200/70' : 'text-rose-600/70 dark:text-rose-300/70'}`}>
@@ -21976,7 +22010,7 @@ function WhatsAppWorkspaceContent() {
 																			emojiOpen={reactionPickerMessageId === message.id}
 																			showTranscribe={canTranscribeMedia}
 																			showCopy={
-																				!isDeleted &&
+																				!hideDeletedBody &&
 																				Boolean(String(captionText || '').trim())
 																			}
 																			showDownloadVideo={Boolean(
@@ -23789,6 +23823,15 @@ function WhatsAppWorkspaceContent() {
 							conversations={effectiveConversations}
 						/>
 					</div>
+				)}
+
+				{activeTab === 'autoForward' && (
+					<AutoForwardPanel
+						accountId={accountId}
+						locale={locale}
+						conversations={effectiveConversations}
+						canUse={canUseWhatsApp || canManageWhatsApp || isAdmin}
+					/>
 				)}
 
 				{activeTab === 'emails' && (

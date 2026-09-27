@@ -2506,6 +2506,28 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   color: inherit;
 }
 
+.wa-message-deleted-notice--kept {
+  display: inline-flex;
+  gap: 5px;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e11d48;
+  color: #fff;
+}
+
+.wa-message-deleted-notice--kept .wa-message-deleted-label {
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.wa-message-deleted-notice--kept .wa-message-deleted-icon {
+  width: 12px;
+  height: 12px;
+  opacity: 1;
+}
+
 .wa-message-bubble.wa-message-deleted .wa-message-meta {
   color: rgba(159, 18, 57, 0.72) !important;
 }

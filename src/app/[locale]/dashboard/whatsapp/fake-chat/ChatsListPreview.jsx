@@ -69,35 +69,105 @@ function ChatAvatar({ chat }) {
 	);
 }
 
-function ChatRow({ chat, active, onOpen, hidePhoneNumbers = false }) {
-	const displayName = chatDisplayName(chat, hidePhoneNumbers);
-	return (
-		<button
-			type="button"
-			className={cn(tw.listRow, 'w-full border-0 bg-transparent text-start', active && 'bg-[#f0f2f5]')}
-			tabIndex={-1}
-			onClick={() => onOpen?.(chat.id)}
-		>
-			<span className={cn(tw.avatarWrap, chat.storyRing && tw.storyRing)}>
-				<ChatAvatar chat={chat} />
-				{chat.disappearing ? (
-					<span className={tw.disappearBadge} aria-hidden="true">
-						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img
-							src={FC_ASSETS.infoDisappearing}
-							alt=""
-							className="h-[11px] w-[11px] object-contain"
-							draggable={false}
-						/>
-					</span>
-				) : null}
+/**
+ * Inline text on the mockup. Commits on blur/Enter only, so React never re-renders mid-typing;
+ * `key={value}` resets the DOM after an external change.
+ */
+function EditableText({ editing, value, onCommit, className, dir, numeric = false, display }) {
+	const shown = display ?? value;
+	if (!editing) {
+		return (
+			<span className={className} dir={dir}>
+				{shown}
 			</span>
+		);
+	}
+	return (
+		<span
+			key={String(value ?? '')}
+			className={cn(className, tw.editable)}
+			dir={dir}
+			contentEditable
+			suppressContentEditableWarning
+			spellCheck={false}
+			onClick={event => event.stopPropagation()}
+			onKeyDown={event => {
+				if (event.key === 'Enter') {
+					event.preventDefault();
+					event.currentTarget.blur();
+				}
+				if (event.key === 'Escape') {
+					event.currentTarget.textContent = String(value ?? '');
+					event.currentTarget.blur();
+				}
+			}}
+			onBlur={event => {
+				const raw = String(event.currentTarget.textContent || '').trim();
+				const next = numeric ? Math.max(0, Number.parseInt(raw.replace(/\D/g, ''), 10) || 0) : raw;
+				if (next !== value) onCommit?.(next);
+			}}
+		>
+			{value}
+		</span>
+	);
+}
+
+function ChatRow({ chat, active, onOpen, hidePhoneNumbers = false, editing = false, onEdit, onPickAvatar }) {
+	const displayName = chatDisplayName(chat, hidePhoneNumbers);
+	const nameField = displayName === chat.name ? 'name' : 'about';
+	const unread = Number(chat.unread) || 0;
+	const RowTag = editing ? 'div' : 'button';
+	const avatar = (
+		<span className={cn(tw.avatarWrap, chat.storyRing && tw.storyRing, editing && tw.editAvatar)}>
+			<ChatAvatar chat={chat} />
+			{chat.disappearing ? (
+				<span className={tw.disappearBadge} aria-hidden="true">
+					{/* eslint-disable-next-line @next/next/no-img-element */}
+					<img
+						src={FC_ASSETS.infoDisappearing}
+						alt=""
+						className="h-[11px] w-[11px] object-contain"
+						draggable={false}
+					/>
+				</span>
+			) : null}
+		</span>
+	);
+	return (
+		<RowTag
+			{...(editing
+				? {}
+				: { type: 'button', tabIndex: -1, onClick: () => onOpen?.(chat.id) })}
+			className={cn(tw.listRow, 'w-full border-0 bg-transparent text-start', active && !editing && 'bg-[#f0f2f5]')}
+		>
+			{editing ? (
+				<label title="Change photo">
+					{avatar}
+					<input
+						className={tw.fileInputHidden}
+						type="file"
+						accept="image/*"
+						onChange={event => onPickAvatar?.(chat.id, event)}
+					/>
+				</label>
+			) : (
+				avatar
+			)}
 			<div className={tw.listRowBody}>
 				<div className={tw.listRowTop}>
-					<span className={tw.listName} dir="auto">
-						{displayName}
-					</span>
-					<span className={cn(tw.listTime, chat.timeGreen && tw.listTimeGreen)}>{chat.time}</span>
+					<EditableText
+						editing={editing}
+						className={tw.listName}
+						dir="auto"
+						value={displayName}
+						onCommit={next => onEdit?.(chat.id, { [nameField]: next })}
+					/>
+					<EditableText
+						editing={editing}
+						className={cn(tw.listTime, chat.timeGreen && tw.listTimeGreen)}
+						value={chat.time}
+						onCommit={next => onEdit?.(chat.id, { time: next })}
+					/>
 				</div>
 				<div className={tw.listRowBottom}>
 					<span className={tw.listPreview}>
@@ -112,20 +182,31 @@ function ChatRow({ chat, active, onOpen, hidePhoneNumbers = false }) {
 							/>
 						) : null}
 						<PreviewIcon kind={chat.previewIcon} />
-						<span className={tw.listPreviewText} dir="auto">
-							{chat.preview}
-						</span>
+						<EditableText
+							editing={editing}
+							className={tw.listPreviewText}
+							dir="auto"
+							value={chat.preview}
+							onCommit={next => onEdit?.(chat.id, { preview: next })}
+						/>
 					</span>
 					<span className={tw.listTrailing}>
 						{chat.muted ? <BellOff size={14} strokeWidth={2.2} className={tw.listMute} /> : null}
 						{chat.pinned ? <Pin size={14} strokeWidth={2.2} className={tw.listPin} /> : null}
-						{chat.unread > 0 ? (
-							<span className={tw.listBadge}>{chat.unread > 99 ? '99+' : chat.unread}</span>
+						{unread > 0 || editing ? (
+							<EditableText
+								editing={editing}
+								numeric
+								className={cn(tw.listBadge, editing && unread === 0 && tw.editableGhost)}
+								value={unread}
+								display={unread > 99 ? '99+' : unread}
+								onCommit={next => onEdit?.(chat.id, { unread: next, timeGreen: next > 0 })}
+							/>
 						) : null}
 					</span>
 				</div>
 			</div>
-		</button>
+		</RowTag>
 	);
 }
 
@@ -135,6 +216,10 @@ export default function ChatsListPreview({
 	capturing = false,
 	activeChatId = '',
 	onOpenChat,
+	editing = false,
+	onEditChat,
+	onEditList,
+	onPickChatAvatar,
 }) {
 	const showSearch = Boolean(list?.showSearch);
 	const showSuggestions = Boolean(list?.showSuggestions);
@@ -151,7 +236,13 @@ export default function ChatsListPreview({
 					<button type="button" className={tw.listMore} tabIndex={-1} aria-hidden="true">
 						<Ellipsis size={18} strokeWidth={2.2} />
 					</button>
-					<p className={tw.listTopTitle}>{list.title || 'Chats'}</p>
+					<p className={cn(tw.listTopTitle, editing && 'pointer-events-auto')}>
+						<EditableText
+							editing={editing}
+							value={list.title || 'Chats'}
+							onCommit={next => onEditList?.({ title: next })}
+						/>
+					</p>
 					<div className={tw.listTopRight}>
 						<button type="button" className={tw.listTopBtn} tabIndex={-1} aria-hidden="true">
 							<Camera size={22} strokeWidth={1.9} />
@@ -190,6 +281,9 @@ export default function ChatsListPreview({
 							active={chat.id === activeChatId}
 							onOpen={onOpenChat}
 							hidePhoneNumbers={hidePhoneNumbers}
+							editing={editing}
+							onEdit={onEditChat}
+							onPickAvatar={onPickChatAvatar}
 						/>
 					))}
 
@@ -231,6 +325,7 @@ export default function ChatsListPreview({
 						label: 'Calls',
 						icon: FC_ASSETS.tabCalls,
 						badge: list.callsBadge || 0,
+						badgeField: 'callsBadge',
 					},
 					{ key: 'communities', label: 'Communities', icon: FC_ASSETS.tabCommunities },
 					{
@@ -239,6 +334,7 @@ export default function ChatsListPreview({
 						icon: FC_ASSETS.tabChats,
 						active: true,
 						badge: list.unreadBadge || 0,
+						badgeField: 'unreadBadge',
 					},
 					{ key: 'you', label: 'You', you: true },
 				].map(tab => (
@@ -261,7 +357,15 @@ export default function ChatsListPreview({
 									alt=""
 								/>
 							)}
-							{tab.badge > 0 ? <span className={tw.tabBadge}>{tab.badge}</span> : null}
+							{tab.badge > 0 || (editing && tab.badgeField) ? (
+								<EditableText
+									editing={editing && Boolean(tab.badgeField)}
+									numeric
+									className={cn(tw.tabBadge, editing && !tab.badge && tw.editableGhost)}
+									value={tab.badge}
+									onCommit={next => onEditList?.({ [tab.badgeField]: next })}
+								/>
+							) : null}
 						</span>
 						<span>{tab.label}</span>
 					</span>

@@ -6,8 +6,10 @@ import {
 	Braces,
 	Bell,
 	Camera,
+	Check,
 	Download,
 	ImagePlus,
+	PencilLine,
 	LayoutList,
 	Loader2,
 	Mic,
@@ -62,8 +64,10 @@ import { fileBtn, segBtn, tw } from './styles';
 import { LIST_AVATARS } from './assets';
 import {
 	ensureIosWaFonts,
+	mapConversationsToFakeList,
 	mapLiveMessagesToFake,
 	matchConversationToChat,
+	mergeLiveListIntoFake,
 	repairListAvatarPaths,
 	syncListAvatarsFromConversations,
 } from './ios-font-and-match';
@@ -146,6 +150,7 @@ export default function FakeChatStudio({
 	const [pasteTarget, setPasteTarget] = useState('clipboard');
 	const [listPasteChatId, setListPasteChatId] = useState('');
 	const [syncingAvatars, setSyncingAvatars] = useState(false);
+	const [listEditMode, setListEditMode] = useState(false);
 	const didAutoSyncRef = useRef(false);
 
 	const liveChats = useMemo(
@@ -545,6 +550,29 @@ export default function FakeChatStudio({
 		}));
 	}, []);
 
+	/** Snapshot the live inbox into the list (editable copy). Crafted chat messages are kept. */
+	const syncListFromInbox = useCallback(() => {
+		if (!liveChats.length) {
+			toast.error(ar ? 'مفيش شاتات محمّلة في التاب' : 'No chats loaded in the Chats tab');
+			return;
+		}
+		const liveRows = mapConversationsToFakeList(liveChats);
+		setState(current => {
+			const chats = mergeLiveListIntoFake(current.list.chats, liveRows);
+			return {
+				...current,
+				list: {
+					...current.list,
+					chats,
+					unreadBadge: chats.filter(chat => Number(chat.unread) > 0).length,
+				},
+			};
+		});
+		toast.success(
+			ar ? `اتعمل Sync لـ ${liveRows.length} شات من الشات الحي` : `Synced ${liveRows.length} chats from the live inbox`,
+		);
+	}, [ar, liveChats]);
+
 	const addListChat = useCallback(() => {
 		const id = nextId('c');
 		const row = {
@@ -923,6 +951,7 @@ export default function FakeChatStudio({
 
 	const openShareFromCapture = async ({ download = false } = {}) => {
 		if (!screenRef.current && !phoneRef.current) return;
+		if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
 		setCapturing(true);
 		const phoneShell = phoneRef.current;
 		const prevTransform = phoneShell?.style?.transform;
@@ -1666,6 +1695,28 @@ export default function FakeChatStudio({
 											<button
 												type="button"
 												className={cn(tw.fileBtn, tw.btnAccent)}
+												disabled={!liveChats.length}
+												onClick={syncListFromInbox}
+												title={
+													ar
+														? 'ياخد نسخة محدّثة من الشات الحي (الرسائل المتظبطة بتفضل زي ما هي)'
+														: 'Copy the live inbox (crafted chat messages are kept)'
+												}
+											>
+												<RefreshCw size={12} />
+												{ar ? 'Sync من الشات' : 'Sync inbox'}
+											</button>
+											<button
+												type="button"
+												className={cn(tw.fileBtn, listEditMode && tw.btnAccent)}
+												onClick={() => setListEditMode(value => !value)}
+											>
+												{listEditMode ? <Check size={12} /> : <PencilLine size={12} />}
+												{listEditMode ? (ar ? 'تم' : 'Done') : ar ? 'تعديل' : 'Edit'}
+											</button>
+											<button
+												type="button"
+												className={cn(tw.fileBtn, tw.btnAccent)}
 												disabled={syncingAvatars || !liveChats.length}
 												onClick={() => void syncAvatarsFromInbox({ force: true })}
 											>
@@ -1683,9 +1734,13 @@ export default function FakeChatStudio({
 										</div>
 									</div>
 									<p className={tw.hint}>
-										{ar
-											? 'بيطابق الأسامي/الأرقام مع تاب الشاتات ويجيب الصورة الحقيقية.'
-											: 'Matches names/phones with the Chats tab and pulls real profile photos.'}
+										{listEditMode
+											? ar
+												? 'وضع التعديل: دوس على الاسم/الرسالة/الوقت/العدّاد جوه الموبايل واكتب، Enter للحفظ. دوس على الصورة عشان تغيّرها.'
+												: 'Edit mode: click a name / message / time / badge inside the phone and type, Enter to save. Click a photo to replace it.'
+											: ar
+												? 'بيطابق الأسامي/الأرقام مع تاب الشاتات ويجيب الصورة الحقيقية.'
+												: 'Matches names/phones with the Chats tab and pulls real profile photos.'}
 									</p>
 									<div className={tw.stack}>
 										<input
@@ -2140,6 +2195,16 @@ export default function FakeChatStudio({
 			</aside>
 
 			<div className={tw.stage} ref={stageRef}>
+				{state.screen === 'list' ? (
+					<button
+						type="button"
+						className={cn(tw.stageEditToggle, listEditMode && tw.stageEditToggleOn)}
+						onClick={() => setListEditMode(value => !value)}
+					>
+						{listEditMode ? <Check size={13} /> : <PencilLine size={13} />}
+						{listEditMode ? (ar ? 'تم' : 'Done') : ar ? 'تعديل على الشاشة' : 'Edit on screen'}
+					</button>
+				) : null}
 				<div
 					className={tw.phoneWrap}
 					style={{
@@ -2176,6 +2241,10 @@ export default function FakeChatStudio({
 									capturing={capturing}
 									activeChatId={state.activeChatId}
 									onOpenChat={openChat}
+									editing={listEditMode && !capturing}
+									onEditChat={updateListChat}
+									onEditList={updateList}
+									onPickChatAvatar={onPickListAvatar}
 								/>
 							) : state.screen === 'contact' ? (
 								<ContactInfoPreview
