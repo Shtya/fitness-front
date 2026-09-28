@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/axios';
+import { MESSAGE_PAGE_SIZE } from '../whatsapp-message-sync';
 
 /** Matches ReactQuery provider defaults closely; WhatsApp list TTL historically 30s. */
 export const WHATSAPP_STALE_TIME = 30_000;
@@ -60,6 +61,7 @@ export async function fetchConversations(accountId, params = {}) {
 			search: params.search || undefined,
 			filter: params.filter && params.filter !== 'all' ? params.filter : undefined,
 			kind: params.kind || undefined,
+			updatedSince: params.updatedSince || undefined,
 		},
 	});
 	// Defensive: accept both `{ items }` and a bare array payload.
@@ -197,7 +199,7 @@ export function useWhatsAppQueryCache() {
 	}, [queryClient]);
 
 	const prefetchMessages = useCallback(
-		async (conversationId, limit = 30) => {
+		async (conversationId, limit = MESSAGE_PAGE_SIZE) => {
 			if (!conversationId) return;
 			const existing = queryClient.getQueryData(whatsappKeys.messages(conversationId));
 			if (existing?.items?.length) return;
@@ -288,7 +290,7 @@ export function useWhatsAppConversationsQuery(accountId, params = {}, options = 
 }
 
 export function useWhatsAppMessagesQuery(conversationId, options = {}) {
-	const limit = options.limit || 30;
+	const limit = options.limit || MESSAGE_PAGE_SIZE;
 	return useQuery({
 		queryKey: whatsappKeys.messages(conversationId),
 		queryFn: async () => {

@@ -22,6 +22,7 @@ import {
 	WHATSAPP_UNREAD_EVENT,
 	META_WHATSAPP_UNREAD_EVENT,
 } from '@/lib/outreach-unread';
+import { createVisiblePoller } from '@/lib/visible-poll';
 import { useSidebarChrome } from './SidebarChromeContext';
 import {
 	readingThemeToSidebarPalette,
@@ -618,19 +619,37 @@ export function useUnreadChats(pollMs = 300000) {
   return { totalUnread: total, reloadUnread: load };
 }
 
+/** Badge polling: paused on hidden tabs; focus/change events are debounced + single-flight. */
+function useVisibleBadgePoll(load, pollMs, changeEvent) {
+  const loadRef = useRef(load);
+  loadRef.current = load;
+  useEffect(() => {
+    const poller = createVisiblePoller({
+      load: () => loadRef.current(),
+      intervalMs: pollMs,
+      debounceMs: 1000,
+    });
+    poller.start();
+    const onChanged = () => poller.request();
+    window.addEventListener('focus', onChanged);
+    if (changeEvent) window.addEventListener(changeEvent, onChanged);
+    return () => {
+      poller.stop();
+      window.removeEventListener('focus', onChanged);
+      if (changeEvent) window.removeEventListener(changeEvent, onChanged);
+    };
+  }, [pollMs, changeEvent]);
+}
+
 export function useUnreadNotifications(pollMs = 120000) {
   const [count, setCount] = useState(0);
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const res = await api.get('/notifications/unread-count');
       setCount(Number(res?.data?.count || 0));
     } catch {}
-  }
-  useEffect(() => {
-    load();
-    const id = setInterval(load, pollMs);
-    return () => clearInterval(id);
-  }, [pollMs]);
+  }, []);
+  useVisibleBadgePoll(load, pollMs);
   return { unreadNotifications: count, reloadUnreadNotifications: load };
 }
 
@@ -645,22 +664,7 @@ export function useUnreadWhatsApp(pollMs = 120000) {
       /* keep last known count — badge polls must never force logout/re-render storms */
     }
   }, []);
-  useEffect(() => {
-    load();
-    const id = setInterval(load, pollMs);
-    const onChanged = () => load();
-    if (typeof window !== 'undefined') {
-      window.addEventListener(WHATSAPP_UNREAD_EVENT, onChanged);
-      window.addEventListener('focus', onChanged);
-    }
-    return () => {
-      clearInterval(id);
-      if (typeof window !== 'undefined') {
-        window.removeEventListener(WHATSAPP_UNREAD_EVENT, onChanged);
-        window.removeEventListener('focus', onChanged);
-      }
-    };
-  }, [pollMs, load]);
+  useVisibleBadgePoll(load, pollMs, WHATSAPP_UNREAD_EVENT);
   return { unreadWhatsApp: total, reloadUnreadWhatsApp: load };
 }
 
@@ -680,22 +684,7 @@ export function useUnreadMetaWhatsApp(pollMs = 120000) {
       /* keep last known count */
     }
   }, []);
-  useEffect(() => {
-    load();
-    const id = setInterval(load, pollMs);
-    const onChanged = () => load();
-    if (typeof window !== 'undefined') {
-      window.addEventListener(META_WHATSAPP_UNREAD_EVENT, onChanged);
-      window.addEventListener('focus', onChanged);
-    }
-    return () => {
-      clearInterval(id);
-      if (typeof window !== 'undefined') {
-        window.removeEventListener(META_WHATSAPP_UNREAD_EVENT, onChanged);
-        window.removeEventListener('focus', onChanged);
-      }
-    };
-  }, [pollMs, load]);
+  useVisibleBadgePoll(load, pollMs, META_WHATSAPP_UNREAD_EVENT);
   return { unreadMetaWhatsApp: total, reloadUnreadMetaWhatsApp: load };
 }
 

@@ -10,6 +10,12 @@
  */
 
 export const MESSAGE_PAGE_SIZE = 100;
+/**
+ * Rows a thread keeps once the user leaves it. "Load older" grows the cache a
+ * page at a time; without a cut every visited deep thread stays in memory.
+ * Matches the IndexedDB page so both caches hold the same window.
+ */
+export const BACKGROUND_THREAD_KEEP = MESSAGE_PAGE_SIZE * 2;
 /** Client paint / RQ reuse window for an opened thread. */
 export const MESSAGES_CACHE_TTL_MS = 5 * 60_000;
 /** Skip provider sync/latest while hydration watermark is this fresh. */
@@ -42,6 +48,16 @@ export function isMessageThreadCacheComplete(
 	// A lone inbox preview / prefetch row is not a hydrated thread.
 	if (cache.hasMore === false) return items.length > 1;
 	return false;
+}
+
+/**
+ * Newest-window copy of a thread cache for a chat the user just left.
+ * Returns the same object when nothing needs cutting.
+ */
+export function trimBackgroundThreadCache(cache, keep = BACKGROUND_THREAD_KEEP) {
+	const items = Array.isArray(cache?.items) ? cache.items : null;
+	if (!items || items.length <= keep) return cache;
+	return { ...cache, items: items.slice(-keep), hasMore: true };
 }
 
 /**

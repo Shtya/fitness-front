@@ -24,65 +24,60 @@ function BoardSkeleton({ locale = 'en' }) {
 				}
 			`}</style>
 
-			<header className="flex shrink-0 flex-col gap-2 pt-1 sm:pt-2">
+			<header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-1 sm:pt-2">
 				<div className="space-y-2">
 					<div className="wa-board-skel h-6 w-40 rounded-lg" />
-					<div className="wa-board-skel h-3 w-64 max-w-full rounded-md" />
+					<div className="wa-board-skel h-3.5 w-64 max-w-full rounded-md" />
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
-					<div className="wa-board-skel h-8 w-[200px] rounded-lg" />
-					<div className="wa-board-skel h-8 w-[110px] rounded-lg" />
-					<div className="wa-board-skel h-8 w-[120px] rounded-lg" />
-					<div className="wa-board-skel ms-auto h-8 w-[100px] rounded-lg" />
+					<div className="wa-board-skel h-9 w-[280px] max-w-full rounded-lg" />
+					<div className="wa-board-skel h-9 w-[130px] rounded-lg" />
+					<div className="wa-board-skel h-9 w-[80px] rounded-lg" />
+					<div className="wa-board-skel h-9 w-[96px] rounded-lg" />
 				</div>
 			</header>
 
-			<section className="mt-2 grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-				{Array.from({ length: 5 }).map((_, index) => (
-					<div
-						key={index}
-						className="relative min-h-[76px] rounded-xl border border-[#e8ecf2] bg-white px-3 py-2.5"
-					>
-						<div className="wa-board-skel absolute start-3 top-4 h-8 w-8 rounded-lg" />
-						<div className="ps-[46px] pe-10">
-							<div className="wa-board-skel h-2.5 w-16 rounded" />
-							<div className="wa-board-skel mt-2 h-4 w-10 rounded" />
-							<div className="wa-board-skel mt-2 h-2 w-20 rounded" />
-						</div>
+			<section className="mt-3 grid shrink-0 grid-cols-3 gap-x-4 gap-y-3 rounded-xl border border-[#e7eaef] bg-white px-4 py-3 sm:grid-cols-[minmax(220px,1.6fr)_repeat(3,minmax(0,1fr))]">
+				<div className="col-span-3 space-y-2 sm:col-span-1">
+					<div className="wa-board-skel h-3 w-24 rounded" />
+					<div className="wa-board-skel h-6 w-12 rounded" />
+					<div className="wa-board-skel h-1.5 w-full rounded-full" />
+				</div>
+				{Array.from({ length: 3 }).map((_, index) => (
+					<div key={index} className="space-y-2 sm:border-s sm:border-[#eef1f4] sm:ps-4">
+						<div className="wa-board-skel h-3 w-20 rounded" />
+						<div className="wa-board-skel h-6 w-10 rounded" />
 					</div>
 				))}
 			</section>
 
-			<div className="mt-4 flex min-h-0 flex-1 gap-5 overflow-hidden pb-2 sm:mt-5">
+			<div className="mt-4 flex min-h-0 flex-1 items-start gap-4 overflow-hidden pb-3">
 				{Array.from({ length: 4 }).map((_, index) => (
 					<div
 						key={index}
-						className="flex h-full min-h-0 w-[260px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#e8ecf1] bg-[#fbfcfd]"
+						className="flex w-[288px] shrink-0 flex-col overflow-hidden rounded-xl border border-[#e7eaef] bg-[#f6f7f9]"
 					>
-						<div className="flex shrink-0 items-center gap-2 border-b border-[#f0f2f5] px-2 py-2.5">
-							<div className="wa-board-skel h-4 w-4 rounded" />
-							<div className="wa-board-skel h-2.5 w-2.5 rounded-full" />
-							<div className="wa-board-skel h-3 w-20 rounded" />
-							<div className="wa-board-skel ms-auto h-6 w-6 rounded-md" />
+						<div className="flex shrink-0 items-center gap-2 px-3 pb-2 pt-3">
+							<div className="wa-board-skel h-2 w-2 rounded-full" />
+							<div className="wa-board-skel h-3.5 w-24 rounded" />
+							<div className="wa-board-skel ms-auto h-3 w-4 rounded" />
 						</div>
-						<div className="flex-1 space-y-2 px-2 pt-5">
+						<div className="space-y-2 px-2 pb-2">
 							{Array.from({ length: index === 0 ? 3 : 2 }).map((__, cardIndex) => (
 								<div
 									key={cardIndex}
-									className="rounded-xl border border-[#e8ecf1] bg-white p-2.5"
+									className="rounded-xl border border-[#e3e7ec] bg-white px-3.5 py-3"
 								>
-									<div className="flex items-start gap-2">
-										<div className="wa-board-skel mt-0.5 h-[18px] w-[18px] shrink-0 rounded-full" />
+									<div className="flex items-start gap-2.5">
+										<div className="wa-board-skel mt-0.5 h-4 w-4 shrink-0 rounded-full" />
 										<div className="min-w-0 flex-1 space-y-2">
-											<div className="wa-board-skel h-3 w-[85%] rounded" />
-											<div className="wa-board-skel h-2.5 w-[55%] rounded" />
+											<div className="wa-board-skel h-3.5 w-[85%] rounded" />
+											<div className="wa-board-skel h-3 w-[55%] rounded" />
 										</div>
 									</div>
 								</div>
 							))}
-							<div className="mx-0 mt-2 flex min-h-[100px] items-center justify-center rounded-xl border border-dashed border-[#d7dee8]">
-								<div className="wa-board-skel h-3 w-24 rounded" />
-							</div>
+							<div className="wa-board-skel h-9 w-full rounded-lg opacity-60" />
 						</div>
 					</div>
 				))}

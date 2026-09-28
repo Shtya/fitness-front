@@ -1,4 +1,4 @@
-import WhatsAppWorkspace from './whatsapp-workspace';
+import WhatsAppWorkspace from './whatsapp-workspace-client';
 import WhatsAppTabIcon from './WhatsAppTabIcon';
 
 export const metadata = {

@@ -305,8 +305,9 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
   useEffect(() => { reset(defaultValues); setImgFile(null); setVideoFile(null); setAiHighlight({}); }, [initial, reset]);
 
   useEffect(() => {
-    api.get(user?.role === 'admin' ? '/settings' : `/settings?user_id=${user?.adminId}`)
-      .then(res => setSetting(res.data));
+    api.get(user?.role !== 'admin' && user?.adminId ? `/settings?user_id=${user.adminId}` : '/settings')
+      .then(res => setSetting(res.data))
+      .catch(() => setSetting(null));
   }, [user?.adminId, user?.role]);
 
   useEffect(() => {

@@ -3,37 +3,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { waScrollLog, waScrollMark } from './wa-scroll-debug';
+import { computeRowWindow, isSameRowWindow } from './wa-row-window';
 
-/**
- * Scroll-window helper: only mount a slice of rows (+spacers).
- * Safer than absolute virtualizers when rows have complex nested UI.
- *
- * Fixed rowHeight is an estimate. Variable-height chat bubbles should disable
- * windowing (enabled:false) — otherwise spacers drift and scroll jumps on prepend.
- */
-export function computeRowWindow({
-	scrollTop = 0,
-	clientHeight = 600,
-	count = 0,
-	rowHeight = 72,
-	overscan = 12,
-} = {}) {
-	const safeCount = Math.max(0, Number(count) || 0);
-	const h = Math.max(24, Number(rowHeight) || 72);
-	if (safeCount <= 0) {
-		return { start: 0, end: 0, topPad: 0, bottomPad: 0, rowHeight: h };
-	}
-	const start = Math.max(0, Math.floor(scrollTop / h) - overscan);
-	const visible = Math.ceil(Math.max(clientHeight, 1) / h) + overscan * 2;
-	const end = Math.min(safeCount, start + visible);
-	return {
-		start,
-		end,
-		topPad: start * h,
-		bottomPad: Math.max(0, (safeCount - end) * h),
-		rowHeight: h,
-	};
-}
+export { computeRowWindow, isSameRowWindow };
 
 /** Hook: keep a window in sync with a scroll container. */
 export function useWaScrollWindow({
@@ -184,19 +156,35 @@ export function useWaScrollWindow({
 		};
 	}, [visible, shouldWindow, count, rowHeight, overscan, scrollRef]);
 
+	const scrollFrameRef = useRef(0);
+	const scrollNodeRef = useRef(null);
+	useEffect(
+		() => () => {
+			if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
+			scrollFrameRef.current = 0;
+		},
+		[],
+	);
+
+	// One window update per frame, and none while the mounted slice is unchanged.
 	const onScroll = useCallback(
 		event => {
 			if (!shouldWindow) return;
-			const node = event.currentTarget;
-			setWindowState(
-				computeRowWindow({
+			scrollNodeRef.current = event.currentTarget;
+			if (scrollFrameRef.current) return;
+			scrollFrameRef.current = requestAnimationFrame(() => {
+				scrollFrameRef.current = 0;
+				const node = scrollNodeRef.current;
+				if (!node) return;
+				const next = computeRowWindow({
 					scrollTop: node.scrollTop,
 					clientHeight: node.clientHeight,
 					count,
 					rowHeight,
 					overscan,
-				}),
-			);
+				});
+				setWindowState(current => (isSameRowWindow(current, next) ? current : next));
+			});
 		},
 		[shouldWindow, count, rowHeight, overscan],
 	);

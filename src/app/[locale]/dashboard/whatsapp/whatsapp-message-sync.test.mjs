@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+	BACKGROUND_THREAD_KEEP,
 	MESSAGE_PAGE_SIZE,
 	MESSAGES_CACHE_TTL_MS,
 	PROVIDER_SYNC_FRESH_MS,
@@ -9,7 +10,39 @@ import {
 	shouldProviderBackfill,
 	shouldReloadOpenChatMessages,
 	shouldSkipOpenChatNetwork,
+	trimBackgroundThreadCache,
 } from './whatsapp-message-sync.js';
+
+function prefetchedPage(limit) {
+	const items = Array.from({ length: limit }, (_, index) => ({ id: `m${index}` }));
+	return { items, hasMore: items.length >= limit };
+}
+
+test('a hover prefetch of one full page is reused on open, a 40-row one is not (audit A10)', () => {
+	assert.equal(isMessageThreadCacheComplete(prefetchedPage(40)), false);
+	assert.equal(isMessageThreadCacheComplete(prefetchedPage(MESSAGE_PAGE_SIZE)), true);
+});
+
+test('leaving a deep thread keeps only the newest window and re-arms load older', () => {
+	const items = Array.from({ length: 650 }, (_, index) => ({ id: `m${index}` }));
+	const cache = { items, hasMore: false, cachedAt: 1, providerHydratedAt: 2 };
+	const trimmed = trimBackgroundThreadCache(cache);
+
+	assert.equal(trimmed.items.length, BACKGROUND_THREAD_KEEP);
+	assert.equal(trimmed.items[0].id, `m${650 - BACKGROUND_THREAD_KEEP}`);
+	assert.equal(trimmed.items.at(-1).id, 'm649');
+	assert.equal(trimmed.hasMore, true);
+	assert.equal(trimmed.providerHydratedAt, 2);
+	assert.equal(isMessageThreadCacheComplete(trimmed), true);
+	assert.equal(cache.items.length, 650);
+});
+
+test('short threads and empty caches are returned untouched', () => {
+	const short = { items: [{ id: 'a' }, { id: 'b' }], hasMore: false };
+	assert.equal(trimBackgroundThreadCache(short), short);
+	assert.equal(trimBackgroundThreadCache(undefined), undefined);
+	assert.equal(trimBackgroundThreadCache(null), null);
+});
 
 const now = 1_700_000_000_000;
 

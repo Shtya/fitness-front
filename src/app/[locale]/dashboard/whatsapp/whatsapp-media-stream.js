@@ -1,5 +1,7 @@
 import api, { baseImg } from '@/utils/axios';
+import { setBounded } from './wa-bounded-cache';
 
+const STREAM_URL_CACHE_MAX = 1000;
 const streamUrlCache = new Map();
 
 export function absoluteApiUrl(pathOrUrl) {
@@ -18,7 +20,7 @@ export function rememberAttachmentStreamUrl(attachmentId, url, expiresAt) {
 	const href = absoluteApiUrl(url);
 	if (!id || !href) return href;
 	const expiresAtMs = Date.parse(String(expiresAt || '')) || Date.now() + 14 * 60 * 1000;
-	streamUrlCache.set(id, { url: href, expiresAtMs });
+	setBounded(streamUrlCache, id, { url: href, expiresAtMs }, STREAM_URL_CACHE_MAX);
 	return href;
 }
 
@@ -76,6 +78,7 @@ export async function getAttachmentStreamUrl(attachmentId, hint = null) {
 	const now = Date.now();
 	const cached = streamUrlCache.get(id);
 	if (cached?.url && cached.expiresAtMs - 20_000 > now) return cached.url;
+	if (cached) streamUrlCache.delete(id);
 	if (hint?.streamUrl && hint?.streamExpiresAt) {
 		const hintExpiry = Date.parse(String(hint.streamExpiresAt));
 		if (Number.isFinite(hintExpiry) && hintExpiry - 20_000 > now) {

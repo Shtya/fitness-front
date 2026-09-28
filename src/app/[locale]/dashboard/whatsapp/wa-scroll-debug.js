@@ -87,9 +87,11 @@ export function clearWaScrollLog() {
 /**
  * Passive spy: detects scrollTop / scrollHeight changes not already logged.
  * Attach once per message scroll container.
+ * Debug-only: it polls layout every animation frame, so it is not installed
+ * unless the debug flag is set before the chat is opened.
  */
 export function installWaScrollSpy(box) {
-	if (!box || box.__waScrollSpyInstalled) return () => {};
+	if (!box || box.__waScrollSpyInstalled || !isEnabled()) return () => {};
 	box.__waScrollSpyInstalled = true;
 
 	let lastTop = Number(box.scrollTop) || 0;

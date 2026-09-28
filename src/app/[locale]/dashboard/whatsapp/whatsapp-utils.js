@@ -1,4 +1,5 @@
 import { waScrollApply, waScrollLog, waScrollMark } from './wa-scroll-debug.js';
+import { setBounded } from './wa-bounded-cache.js';
 
 /** Drops anything that belongs to a different chat. Messages carry their own
  *  conversationId, so a slow response for a previously opened chat can never
@@ -176,6 +177,36 @@ export function mergeMessages(current = [], incoming = [], conversationId = null
 	const byClient = new Map();
 	const byStableId = new Map();
 	const orphans = [];
+	const orphanSet = new Set();
+	// Candidates for findOptimisticTwin, kept so a thread merge stays linear
+	// instead of rebuilding and scanning every row for each incoming message.
+	const pendingOptimistic = new Set();
+	const isPendingOptimistic = message =>
+		Boolean(message?.optimistic) && !message.providerMessageId && isOutbound(message);
+
+	const isRemembered = message => {
+		if (orphanSet.has(message)) return true;
+		if (message.providerMessageId && byProvider.get(message.providerMessageId) === message) return true;
+		if (message.clientMessageId && byClient.get(message.clientMessageId) === message) return true;
+		const id = String(message.id || '');
+		return Boolean(id) && byStableId.get(id) === message;
+	};
+
+	const livePendingOptimistic = () => {
+		const live = [];
+		for (const message of pendingOptimistic) {
+			if (isRemembered(message)) live.push(message);
+			else pendingOptimistic.delete(message);
+		}
+		return live;
+	};
+
+	const fullPool = () => [
+		...byProvider.values(),
+		...byClient.values(),
+		...byStableId.values(),
+		...orphans,
+	];
 
 	const forget = message => {
 		if (!message) return;
@@ -198,6 +229,7 @@ export function mergeMessages(current = [], incoming = [], conversationId = null
 		if (id && !id.startsWith('pending:') && !id.startsWith('live:')) {
 			byStableId.set(id, message);
 		}
+		if (isPendingOptimistic(message)) pendingOptimistic.add(message);
 	};
 
 	[
@@ -238,8 +270,10 @@ export function mergeMessages(current = [], incoming = [], conversationId = null
 			return;
 		}
 
-		const pool = [...byProvider.values(), ...byClient.values(), ...byStableId.values(), ...orphans];
-		const optimisticTwin = findOptimisticTwin(pool, item);
+		const optimisticTwin =
+			item && !item.optimistic && isOutbound(item)
+				? findOptimisticTwin(livePendingOptimistic(), item)
+				: null;
 		if (optimisticTwin) {
 			forget(optimisticTwin);
 			const merged = {
@@ -259,7 +293,9 @@ export function mergeMessages(current = [], incoming = [], conversationId = null
 			return;
 		}
 
-		const confirmedTwin = findConfirmedTwinForOptimistic(pool, item);
+		const confirmedTwin = isPendingOptimistic(item)
+			? findConfirmedTwinForOptimistic(fullPool(), item)
+			: null;
 		if (confirmedTwin) {
 			forget(confirmedTwin);
 			const merged = {
@@ -289,10 +325,13 @@ export function mergeMessages(current = [], incoming = [], conversationId = null
 			return;
 		}
 
-		orphans.push({
+		const orphan = {
 			...item,
 			__anonKey: `anon:${index}:${item?.providerTimestamp || item?.created_at || ''}:${item?.text || item?.type || ''}`,
-		});
+		};
+		orphans.push(orphan);
+		orphanSet.add(orphan);
+		if (isPendingOptimistic(orphan)) pendingOptimistic.add(orphan);
 	});
 
 	const deduped = new Set();
@@ -1978,6 +2017,7 @@ function cssEscapeAttr(value) {
 	return str.replace(/[^a-zA-Z0-9_-]/g, ch => `\\${ch}`);
 }
 
+const MEDIA_DIM_CACHE_MAX = 5000;
 const mediaDimCache = new Map();
 
 function positiveSize(value) {
@@ -2009,9 +2049,7 @@ export function rememberMediaDimensions(key, width, height) {
 	if (!id || !w || !h) return null;
 	const existing = mediaDimCache.get(id);
 	if (existing?.width > 0 && existing?.height > 0) return existing;
-	const next = { width: w, height: h };
-	mediaDimCache.set(id, next);
-	return next;
+	return setBounded(mediaDimCache, id, { width: w, height: h }, MEDIA_DIM_CACHE_MAX);
 }
 
 export function mediaDimensionsFromRaw(raw) {
@@ -2030,12 +2068,12 @@ export function mediaDimensionsForAttachment(attachment, raw = null) {
 		height: positiveSize(attachment?.height ?? attachment?.mediaHeight),
 	};
 	if (fromAttachment.width && fromAttachment.height) {
-		if (id) mediaDimCache.set(id, fromAttachment);
+		if (id) setBounded(mediaDimCache, id, fromAttachment, MEDIA_DIM_CACHE_MAX);
 		return fromAttachment;
 	}
 	const fromRaw = mediaDimensionsFromRaw(raw);
 	if (fromRaw) {
-		if (id) mediaDimCache.set(id, fromRaw);
+		if (id) setBounded(mediaDimCache, id, fromRaw, MEDIA_DIM_CACHE_MAX);
 		return fromRaw;
 	}
 	return null;

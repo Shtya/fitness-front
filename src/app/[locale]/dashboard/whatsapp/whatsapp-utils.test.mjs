@@ -130,6 +130,35 @@ test('mergeMessages collapses optimistic sends into confirmed provider rows', ()
 	assert.equal(result[0].optimistic, false);
 });
 
+test('mergeMessages stays linear on a large thread (audit A9)', () => {
+	const rows = Array.from({ length: 20_000 }, (_, i) => ({
+		id: `m${i}`,
+		providerMessageId: `p${i}`,
+		direction: i % 2 ? 'outbound' : 'inbound',
+		type: 'text',
+		status: 'read',
+		providerTimestamp: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString(),
+	}));
+	const pending = {
+		id: 'pending:c-last',
+		clientMessageId: 'c-last',
+		optimistic: true,
+		direction: 'outbound',
+		type: 'text',
+		providerTimestamp: new Date(Date.UTC(2026, 0, 2)).toISOString(),
+	};
+	const started = performance.now();
+	const merged = mergeMessages([...rows, pending], [
+		{ ...pending, id: 'db-last', optimistic: false, providerMessageId: 'p-last' },
+	]);
+	const elapsed = performance.now() - started;
+
+	assert.equal(merged.length, 20_001);
+	assert.equal(merged.at(-1).id, 'db-last');
+	// The previous O(n²) scan took several seconds at this size.
+	assert.ok(elapsed < 1000, `merge took ${Math.round(elapsed)}ms`);
+});
+
 test('mergeMessages updates a lone pending voice in place when the confirmed row has no client id', () => {
 	const result = mergeMessages(
 		[
