@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lenis from 'lenis';
@@ -127,6 +127,127 @@ function isPageCounterNoise(text) {
 		/^\d+\s*من\s*\d+$/.test(s) ||
 		/^(page|صفحة)\s*\d+(\s*\/\s*\d+)?$/i.test(s) ||
 		/^p\.?\s*\d+$/i.test(s)
+	);
+}
+
+function caretFromPoint(x, y) {
+	if (typeof document === 'undefined') return null;
+	if (document.caretPositionFromPoint) {
+		const p = document.caretPositionFromPoint(x, y);
+		return p ? { node: p.offsetNode, offset: p.offset } : null;
+	}
+	if (document.caretRangeFromPoint) {
+		const r = document.caretRangeFromPoint(x, y);
+		return r ? { node: r.startContainer, offset: r.startOffset } : null;
+	}
+	return null;
+}
+
+/** Character offset of (node, offset) counted across all text nodes inside root. */
+function textOffsetWithin(root, node, offset) {
+	if (!root || !node || !root.contains(node) || node.nodeType !== Node.TEXT_NODE) return null;
+	const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+	let total = 0;
+	let n;
+	while ((n = walker.nextNode())) {
+		if (n === node) return total + offset;
+		total += n.nodeValue.length;
+	}
+	return null;
+}
+
+/** Client rect of the visual line containing charOffset inside root. */
+function lineRectAt(root, charOffset) {
+	if (!root || charOffset == null) return null;
+	const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+	let remaining = charOffset;
+	let n;
+	while ((n = walker.nextNode())) {
+		const len = n.nodeValue.length;
+		if (remaining < len || (remaining === len && len > 0)) {
+			const start = Math.min(remaining, len - 1);
+			const range = document.createRange();
+			range.setStart(n, Math.max(0, start));
+			range.setEnd(n, Math.max(0, start) + 1);
+			const rects = range.getClientRects();
+			return rects[0] || range.getBoundingClientRect();
+		}
+		remaining -= len;
+	}
+	return null;
+}
+
+/** Resolve the clicked line inside a block → { charOffset, lineRatio, top, height } relative to block. */
+function resolveLineFromPoint(blockEl, x, y) {
+	if (!blockEl) return null;
+	const blockRect = blockEl.getBoundingClientRect();
+	const caret = caretFromPoint(x, y);
+	const charOffset = caret ? textOffsetWithin(blockEl, caret.node, caret.offset) : null;
+	const rect = charOffset != null ? lineRectAt(blockEl, charOffset) : null;
+	const lineRatio = blockRect.height > 0 ? Math.min(1, Math.max(0, (y - blockRect.top) / blockRect.height)) : 0;
+	return {
+		charOffset,
+		lineRatio,
+		top: rect ? rect.top - blockRect.top : y - blockRect.top - 12,
+		height: rect ? rect.height : 24,
+	};
+}
+
+/** Saved stop mark on the exact line (not the whole paragraph). */
+function PinLineMarker({ pin, theme, isRTL, label }) {
+	const ref = useRef(null);
+	const [pos, setPos] = useState(null);
+
+	useLayoutEffect(() => {
+		const blockEl = ref.current?.parentElement;
+		if (!blockEl) return undefined;
+		const measure = () => {
+			const blockRect = blockEl.getBoundingClientRect();
+			const rect = pin.charOffset != null ? lineRectAt(blockEl, pin.charOffset) : null;
+			if (rect) {
+				setPos({ top: rect.top - blockRect.top, height: rect.height });
+				return;
+			}
+			const lineH = parseFloat(getComputedStyle(blockEl).lineHeight) || 28;
+			const top = Math.max(0, Math.min(blockRect.height - lineH, (pin.lineRatio || 0) * blockRect.height - lineH / 2));
+			setPos({ top, height: lineH });
+		};
+		measure();
+		const ro = new ResizeObserver(measure);
+		ro.observe(blockEl);
+		return () => ro.disconnect();
+	}, [pin.charOffset, pin.lineRatio, pin.blockId]);
+
+	return (
+		<span ref={ref} className="pointer-events-none absolute inset-x-0 top-0 z-10" aria-hidden={!pos}>
+			{pos && (
+				<>
+					<span
+						id="reading-pin-line"
+						className="absolute -inset-x-1.5 rounded-md scroll-mt-32"
+						style={{
+							top: pos.top - 2,
+							height: pos.height + 4,
+							background: `color-mix(in srgb, ${theme.accent} 14%, transparent)`,
+							boxShadow: `inset ${isRTL ? '-3px' : '3px'} 0 0 ${theme.accent}`,
+						}}
+					/>
+					<span
+						className="absolute inline-flex h-7 w-7 items-center justify-center rounded-full shadow-md ring-2 ring-white/30"
+						title={label}
+						style={{
+							top: pos.top + pos.height / 2,
+							background: theme.accent,
+							color: '#fff',
+							...(isRTL ? { left: 0 } : { right: 0 }),
+							transform: isRTL ? 'translate(-85%, -50%)' : 'translate(85%, -50%)',
+						}}
+					>
+						<Bookmark size={13} fill="currentColor" strokeWidth={2} />
+					</span>
+				</>
+			)}
+		</span>
 	);
 }
 
@@ -1135,9 +1256,12 @@ export default function ReadingView({ book: initialBook }) {
 
 	const readingPin = book.progress?.pin || null;
 
-	const setReadingPin = (pageEntry, block) => {
+	const setReadingPin = (pageEntry, block, line = null) => {
 		if (!pageEntry?.page || !block?.id) return;
-		const snippet = String(block.text || (block.items || []).join(' ') || '')
+		const fullText = String(block.text || (block.items || []).join(' ') || '');
+		const at = line?.charOffset ?? 0;
+		const snippet = fullText
+			.slice(Math.max(0, at - 30), at + 90)
 			.trim()
 			.slice(0, 120);
 		persist({
@@ -1150,6 +1274,8 @@ export default function ReadingView({ book: initialBook }) {
 					pageId: pageEntry.page.id,
 					chapterId: pageEntry.chapter.id,
 					blockId: block.id,
+					charOffset: line?.charOffset ?? null,
+					lineRatio: line?.lineRatio ?? 0,
 					snippet,
 					createdAt: new Date().toISOString(),
 				},
@@ -1172,7 +1298,9 @@ export default function ReadingView({ book: initialBook }) {
 		if (idx >= 0) goPage(idx, { keepScroll: true });
 		setShowResume(false);
 		setTimeout(() => {
-			const el = pin.blockId ? document.getElementById(`block-${pin.blockId}`) : null;
+			const el =
+				document.getElementById('reading-pin-line') ||
+				(pin.blockId ? document.getElementById(`block-${pin.blockId}`) : null);
 			el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
 		}, 380);
 	};
@@ -1359,7 +1487,27 @@ export default function ReadingView({ book: initialBook }) {
 										pinPlaceMode && !editMode
 											? e => {
 													e.stopPropagation();
-													setReadingPin(pageEntry, block);
+													setReadingPin(pageEntry, block, resolveLineFromPoint(e.currentTarget, e.clientX, e.clientY));
+												}
+											: undefined
+									}
+									onMouseMove={
+										pinPlaceMode && !editMode
+											? e => {
+													const band = e.currentTarget.querySelector('[data-pin-hover]');
+													const line = resolveLineFromPoint(e.currentTarget, e.clientX, e.clientY);
+													if (!band || !line) return;
+													band.style.display = 'block';
+													band.style.top = `${line.top - 2}px`;
+													band.style.height = `${line.height + 4}px`;
+												}
+											: undefined
+									}
+									onMouseLeave={
+										pinPlaceMode && !editMode
+											? e => {
+													const band = e.currentTarget.querySelector('[data-pin-hover]');
+													if (band) band.style.display = 'none';
 												}
 											: undefined
 									}
@@ -1368,43 +1516,31 @@ export default function ReadingView({ book: initialBook }) {
 											? e => {
 													if (e.key === 'Enter' || e.key === ' ') {
 														e.preventDefault();
-														setReadingPin(pageEntry, block);
+														setReadingPin(pageEntry, block, { charOffset: 0, lineRatio: 0 });
 													}
 												}
 											: undefined
 									}
-									className={`relative scroll-mt-24 rounded-lg transition ${
-										pinPlaceMode && !editMode
-											? 'cursor-cell ring-1 ring-transparent hover:bg-black/[0.03] hover:ring-[color:var(--pin-ring)]'
-											: ''
-									}`}
-									style={{
-										['--pin-ring']: `color-mix(in srgb, ${theme.accent} 33%, transparent)`,
-										...(isPinned && !pinPlaceMode
-											? {
-													boxShadow: `inset ${isContentRTL ? '-3px' : '3px'} 0 0 ${theme.accent}`,
-													paddingInlineStart: '0.5rem',
-												}
-											: null),
-									}}
+									className={`relative scroll-mt-24 rounded-lg ${pinPlaceMode && !editMode ? 'cursor-cell' : ''}`}
 								>
-									{/* Only the saved stop mark — never a pin on every paragraph */}
-									{isPinned && !pinPlaceMode && !editMode && (
+									{pinPlaceMode && !editMode && (
 										<span
-											className="pointer-events-none absolute top-0 z-10 flex items-center gap-1"
+											data-pin-hover
+											className="pointer-events-none absolute -inset-x-1.5 z-0 hidden rounded-md"
 											style={{
-												...(isContentRTL ? { left: 0 } : { right: 0 }),
-												transform: isContentRTL ? 'translate(-35%, -35%)' : 'translate(35%, -35%)',
+												background: `color-mix(in srgb, ${theme.accent} 12%, transparent)`,
+												boxShadow: `inset ${isContentRTL ? '-3px' : '3px'} 0 0 color-mix(in srgb, ${theme.accent} 60%, transparent)`,
 											}}
-											title={t('reading.pinSavedMark')}
-										>
-											<span
-												className="inline-flex h-8 w-8 items-center justify-center rounded-full shadow-md ring-2 ring-white/30"
-												style={{ background: theme.accent, color: '#fff' }}
-											>
-												<Bookmark size={15} fill="currentColor" strokeWidth={2} />
-											</span>
-										</span>
+										/>
+									)}
+									{/* Only the saved stop mark — on the exact line, never on every paragraph */}
+									{isPinned && !pinPlaceMode && !editMode && (
+										<PinLineMarker
+											pin={readingPin}
+											theme={theme}
+											isRTL={isContentRTL}
+											label={t('reading.pinSavedMark')}
+										/>
 									)}
 									{editMode ? (
 										<div className="space-y-1.5">
