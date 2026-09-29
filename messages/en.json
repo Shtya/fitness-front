@@ -7382,7 +7382,40 @@
 			"coachRun": "Generate recall",
 			"coachQuestions": "Recall questions",
 			"coachAction": "Today’s action",
-			"coachSave": "Save to Daily Review"
+			"coachSave": "Save to Daily Review",
+			"notebook": "Notebook",
+			"aiRailHide": "Hide AI assist",
+			"aiRailShow": "Show AI assist",
+			"tips": {
+				"focus": "Show one paragraph at a time, with no distractions.",
+				"listen": "Read the page aloud and highlight each sentence as it plays.",
+				"bionic": "Bold the start of each word to help your eyes move faster.",
+				"flashcards": "Review cards built from your highlights and saved words.",
+				"coach": "End the session with 3 recall questions and one action.",
+				"toc": "Chapters and pages — jump anywhere in the book.",
+				"knowledge": "Your highlights, notes and important words.",
+				"ask": "Ask the AI anything about this book.",
+				"settings": "Font, size, width, theme and page mode.",
+				"notebook": "Jot down topics to look up later. Saves as you type.",
+				"aiRail": "Show or hide the AI panel so you can focus on the text."
+			}
+		},
+		"notebook": {
+			"title": "Notebook",
+			"subtitle": "Write down any topic you want to research later. Saved automatically as you type.",
+			"placeholder": "A topic to look up later…",
+			"autosaveHint": "Enter to add another · saves automatically",
+			"fromBook": "From: {title}",
+			"newNote": "Add",
+			"empty": "No topics yet. Start typing above.",
+			"saving": "Saving…",
+			"saved": "Saved",
+			"saveError": "Not saved",
+			"markDone": "Mark as researched",
+			"reopen": "Mark as open",
+			"delete": "Delete",
+			"close": "Close notebook",
+			"open": "Notebook"
 		},
 		"knowledge": {
 			"highlights": "Highlights",

@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocale, useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lenis from 'lenis';
@@ -36,6 +37,9 @@ import {
 	MoreHorizontal,
 	Layers,
 	Pencil,
+	NotebookPen,
+	PanelRightClose,
+	PanelRightOpen,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { HIGHLIGHT_TYPES, flattenPages, computeProgressPercent } from '@/lib/ai-reading/schemas';
@@ -87,7 +91,9 @@ import {
 	InlineAskModal,
 	FlashcardsModal,
 	CoachModal,
+	Tip,
 } from '@/components/ai-reading/ReadingSmartTools';
+import NotebookDrawer from '@/components/ai-reading/NotebookDrawer';
 import { DEFAULT_MEMORIZE_PROMPT_ID, DEFAULT_POLISH_PROMPT_ID } from '@/lib/ai-reading/default-prompts';
 import CustomSelect from '@/components/ai-reading/CustomSelect';
 
@@ -300,6 +306,8 @@ export default function ReadingView({ book: initialBook }) {
 	const [editMode, setEditMode] = useState(false);
 	const [pinPlaceMode, setPinPlaceMode] = useState(false);
 	const [pinFlash, setPinFlash] = useState(false);
+	const [notebookOpen, setNotebookOpen] = useState(false);
+	const [mounted, setMounted] = useState(false);
 	const articleRef = useRef(null);
 	const articleInnerRef = useRef(null);
 	const lenisRef = useRef(null);
@@ -344,6 +352,8 @@ export default function ReadingView({ book: initialBook }) {
 		};
 	}, [prefs.theme, theme.bg, theme.paper, theme.ink, theme.muted, theme.accent]);
 
+	useEffect(() => setMounted(true), []);
+
 	useEffect(() => {
 		setDifficulty(current?.page?._difficulty || 'original');
 	}, [current?.page?.id, current?.page?._difficulty]);
@@ -384,6 +394,9 @@ export default function ReadingView({ book: initialBook }) {
 			flashPrefsSaved();
 		}
 	};
+
+	const aiRailOpen = globalPrefs.aiRailHidden !== true;
+	const toggleAiRail = () => setGlobalPrefs(savePrefs({ aiRailHidden: aiRailOpen }));
 
 	const saveReadingAsGlobalDefault = () => {
 		const appearance = pickPrefs(prefs, READING_APPEARANCE_KEYS);
@@ -1637,13 +1650,43 @@ export default function ReadingView({ book: initialBook }) {
 		/>
 	);
 
+	/** Header rows share the article column width (and skip the AI rail on desktop). */
+	const alignedRow = (children, className = '') => (
+		<div className="flex" dir="ltr">
+			<div className="min-w-0 flex-1">
+				<div
+					className={`mx-auto w-full px-3 sm:px-5 ${className}`}
+					style={{ maxWidth: prefs.maxWidth }}
+					dir={isContentRTL ? 'rtl' : 'ltr'}
+				>
+					{children}
+				</div>
+			</div>
+			{aiRailOpen && <div aria-hidden className="hidden w-[min(19rem,28vw)] shrink-0 xl:w-[19rem] lg:block" />}
+		</div>
+	);
+
+	const headerIconBtn = ({ id, Icon, label, desc, active, onClick, align = 'end', className = '' }) => (
+		<Tip key={id} label={label} desc={desc} theme={theme} align={align}>
+			<button
+				type="button"
+				onClick={onClick}
+				className={`rounded-full p-2 transition hover:bg-black/5 ${className}`}
+				style={{ background: active ? `color-mix(in srgb, ${theme.accent} 13%, transparent)` : 'transparent' }}
+				aria-label={label}
+			>
+				<Icon size={16} />
+			</button>
+		</Tip>
+	);
+
 	return (
 		<div
 			className="ai-reading-root relative flex h-full min-h-0 max-w-full flex-col overflow-x-hidden overscroll-x-none touch-pan-y"
 			dir={isContentRTL ? 'rtl' : 'ltr'}
 			style={{ background: theme.bg, color: theme.ink }}
 		>
-			<div className="pointer-events-none absolute inset-x-0 top-0 z-50 h-[3px] bg-black/10">
+			<div className="pointer-events-none absolute inset-x-0 top-0 z-50 h-[3px] bg-black/10 lg:hidden">
 				<div
 					className="h-full transition-all duration-500"
 					style={{
@@ -1658,7 +1701,8 @@ export default function ReadingView({ book: initialBook }) {
 				className="relative z-40 shrink-0 border-b backdrop-blur-md"
 				style={{ borderColor: `color-mix(in srgb, ${theme.ink} 8%, transparent)`, background: `color-mix(in srgb, ${theme.bg} 93%, transparent)` }}
 			>
-				<div className="mx-auto flex max-w-7xl items-center justify-between gap-1.5 px-2.5 py-2 sm:gap-3 sm:px-4 sm:py-3">
+				{alignedRow(
+				<div className="flex items-center justify-between gap-1.5 py-2 sm:gap-3 sm:py-3">
 					<div className="flex min-w-0 items-center gap-1 sm:gap-2">
 						<Link
 							href="/ai-studio/library"
@@ -1844,26 +1888,41 @@ export default function ReadingView({ book: initialBook }) {
 					<div className="relative flex shrink-0 items-center gap-0.5">
 						{/* Desktop: full panel icons */}
 						<div className="hidden items-center gap-0.5 sm:flex">
+							{headerIconBtn({
+								id: 'notebook',
+								Icon: NotebookPen,
+								label: t('reading.notebook'),
+								desc: t('reading.tips.notebook'),
+								active: notebookOpen,
+								onClick: () => setNotebookOpen(o => !o),
+							})}
 							{[
-								['toc', Bookmark],
-								['knowledge', Highlighter],
-								['ask', MessageSquare],
-								['settings', Settings2],
-							].map(([id, Icon]) => (
-								<button
-									key={id}
-									type="button"
-									onClick={() => {
+								['toc', Bookmark, t('reading.toc'), t('reading.tips.toc')],
+								['knowledge', Highlighter, t('reading.knowledge'), t('reading.tips.knowledge')],
+								['ask', MessageSquare, t('reading.askAi'), t('reading.tips.ask')],
+								['settings', Settings2, t('reading.settings'), t('reading.tips.settings')],
+							].map(([id, Icon, label, desc]) =>
+								headerIconBtn({
+									id,
+									Icon,
+									label,
+									desc,
+									active: panel === id,
+									onClick: () => {
 										setMobileAiOpen(false);
 										setPanel(panel === id ? null : id);
-									}}
-									className="rounded-full p-2 transition hover:bg-black/5"
-									style={{ background: panel === id ? `color-mix(in srgb, ${theme.accent} 13%, transparent)` : 'transparent' }}
-									aria-label={id}
-								>
-									<Icon size={16} />
-								</button>
-							))}
+									},
+								}),
+							)}
+							{headerIconBtn({
+								id: 'ai-rail',
+								Icon: aiRailOpen ? PanelRightClose : PanelRightOpen,
+								label: aiRailOpen ? t('reading.aiRailHide') : t('reading.aiRailShow'),
+								desc: t('reading.tips.aiRail'),
+								active: aiRailOpen,
+								onClick: toggleAiRail,
+								className: 'hidden lg:inline-flex',
+							})}
 						</div>
 						{/* Mobile: overflow only — AI assist stays on the FAB */}
 						<button
@@ -1939,13 +1998,27 @@ export default function ReadingView({ book: initialBook }) {
 										<Brain size={15} style={{ color: theme.accent }} />
 										{t('reading.coach')}
 									</button>
+									<button
+										type="button"
+										onClick={() => {
+											setHeaderMoreOpen(false);
+											setNotebookOpen(true);
+										}}
+										className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-start text-sm font-medium hover:bg-black/5"
+									>
+										<NotebookPen size={15} style={{ color: theme.accent }} />
+										{t('reading.notebook')}
+									</button>
 								</motion.div>
 							)}
 						</AnimatePresence>
 					</div>
-				</div>
+				</div>,
+				)}
 				{!focusMode && (
-					<div className="mx-auto max-w-7xl border-t px-3 py-1.5 sm:px-4 sm:py-2" style={{ borderColor: `color-mix(in srgb, ${theme.ink} 4%, transparent)` }}>
+					<div className="border-t" style={{ borderColor: `color-mix(in srgb, ${theme.ink} 4%, transparent)` }}>
+						{alignedRow(
+						<div className="py-1.5 sm:py-2">
 						<ReadingToolsRail
 							theme={theme}
 							t={t}
@@ -1980,6 +2053,8 @@ export default function ReadingView({ book: initialBook }) {
 							}}
 						/>
 						{diffBusy && <p className="mt-1 text-center text-[10px] opacity-40">{t('common.working')}</p>}
+						</div>,
+						)}
 					</div>
 				)}
 				{timerDone && (
@@ -2017,34 +2092,28 @@ export default function ReadingView({ book: initialBook }) {
 			{/* Reading + desktop AI rail (aside stays on physical right) */}
 			<div className="relative flex min-h-0 max-w-full flex-1 overflow-x-hidden overflow-y-hidden" dir="ltr">
 				<div className="relative min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-hidden">
-					{pageMode === 'scroll' && (
-						<div
-							className="pointer-events-none absolute inset-y-0 z-30 w-[3px]"
-							style={{
-								/* Flush to physical screen edge — never over text */
-								...(isContentRTL ? { left: 0 } : { right: 0 }),
-								background: `color-mix(in srgb, ${theme.ink} 8%, transparent)`,
-							}}
-							aria-hidden
-						>
+					{pageMode === 'scroll' &&
+						mounted &&
+						createPortal(
 							<div
-								className="w-full transition-[height] duration-150 ease-out"
+								className="pointer-events-none fixed inset-y-0 z-[100500] w-[3px]"
 								style={{
-									height: `${scrollPct}%`,
-									background: `linear-gradient(180deg, ${theme.accent}, ${theme.heading || theme.accent})`,
+									/* Viewport edge like a native scrollbar — portaled so no ancestor clips it */
+									...(isContentRTL ? { left: 0 } : { right: 0 }),
+									background: `color-mix(in srgb, ${theme.ink} 8%, transparent)`,
 								}}
-							/>
-							<span
-								className="absolute top-2 whitespace-nowrap text-[9px] font-bold tabular-nums"
-								style={{
-									color: theme.muted,
-									...(isContentRTL ? { left: 6 } : { right: 6 }),
-								}}
+								aria-hidden
 							>
-								{scrollPct}%
-							</span>
-						</div>
-					)}
+								<div
+									className="w-full transition-[height] duration-150 ease-out"
+									style={{
+										height: `${scrollPct}%`,
+										background: `linear-gradient(180deg, ${theme.accent}, ${theme.heading || theme.accent})`,
+									}}
+								/>
+							</div>,
+							document.body,
+						)}
 
 					<div
 						className="h-full min-h-0 max-w-full overflow-x-hidden overflow-y-auto overscroll-y-contain overscroll-x-none touch-pan-y [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -2069,11 +2138,6 @@ export default function ReadingView({ book: initialBook }) {
 								color: theme.ink,
 								overflowWrap: 'anywhere',
 								wordBreak: 'break-word',
-								...(pageMode === 'scroll'
-									? isContentRTL
-										? { paddingLeft: '0.85rem' }
-										: { paddingRight: '0.85rem' }
-									: null),
 							}}
 						>
 						{showResume && (
@@ -2184,17 +2248,29 @@ export default function ReadingView({ book: initialBook }) {
 				</div>
 
 				{/* Desktop: tools on the physical right */}
-				<aside
-					className="hidden w-[min(19rem,28vw)] shrink-0 flex-col overflow-y-auto border-s px-4 py-6 xl:w-[19rem] lg:flex"
-					dir={locale === 'ar' ? 'rtl' : 'ltr'}
-					style={{
-						borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`,
-						background: `color-mix(in srgb, ${theme.paper} 80%, transparent)`,
-						fontFamily: toolsFont,
-					}}
-				>
-					{enrichPanel}
-				</aside>
+				{aiRailOpen && (
+					<aside
+						className="relative hidden w-[min(19rem,28vw)] shrink-0 flex-col overflow-y-auto border-s px-4 pb-6 pt-9 xl:w-[19rem] lg:flex"
+						dir={locale === 'ar' ? 'rtl' : 'ltr'}
+						style={{
+							borderColor: `color-mix(in srgb, ${theme.ink} 6%, transparent)`,
+							background: `color-mix(in srgb, ${theme.ink} 3%, ${theme.bg})`,
+							fontFamily: toolsFont,
+						}}
+					>
+						<button
+							type="button"
+							onClick={toggleAiRail}
+							aria-label={t('reading.aiRailHide')}
+							title={t('reading.aiRailHide')}
+							className="absolute end-2 top-2 z-10 rounded-full p-1 opacity-50 transition hover:bg-black/5 hover:opacity-100"
+							style={{ color: theme.ink }}
+						>
+							<X size={14} />
+						</button>
+						{enrichPanel}
+					</aside>
+				)}
 			</div>
 
 			{/* Floating tools: pin + edit (start) · AI assist (end) */}
@@ -3028,6 +3104,15 @@ export default function ReadingView({ book: initialBook }) {
 					/>
 				)}
 			</AnimatePresence>
+
+			<NotebookDrawer
+				open={notebookOpen}
+				onClose={() => setNotebookOpen(false)}
+				theme={theme}
+				isRTL={locale === 'ar'}
+				book={{ id: book.id, title: book.title }}
+				fontFamily={toolsFont}
+			/>
 
 			<AnimatePresence>
 				{panel && (

@@ -106,6 +106,29 @@ export function GlossaryStrip({ words, theme, t, onJump }) {
 	);
 }
 
+const TIP_ALIGN = {
+	start: 'start-0',
+	end: 'end-0',
+	center: 'left-1/2 -translate-x-1/2',
+};
+
+/** Instant hover / keyboard-focus tooltip with a title + short description. */
+export function Tip({ label, desc, theme, align = 'center', children }) {
+	return (
+		<span className="group/tip relative inline-flex">
+			{children}
+			<span
+				role="tooltip"
+				className={`pointer-events-none absolute top-full z-[70] mt-2 w-max max-w-[15rem] rounded-lg px-2.5 py-1.5 text-start opacity-0 shadow-lg transition-opacity duration-75 group-hover/tip:opacity-100 group-has-focus-visible/tip:opacity-100 ${TIP_ALIGN[align] || TIP_ALIGN.center}`}
+				style={{ background: theme.ink, color: theme.paper }}
+			>
+				<span className="block text-[11px] font-semibold leading-tight">{label}</span>
+				{desc ? <span className="mt-0.5 block text-[10.5px] font-normal leading-snug opacity-75">{desc}</span> : null}
+			</span>
+		</span>
+	);
+}
+
 export function ReadingToolsRail({
 	theme,
 	t,
@@ -127,58 +150,58 @@ export function ReadingToolsRail({
 		return t('reading.diffEli5Hint');
 	};
 
-	const iconBtn = (active, onClick, Icon, label) => (
-		<button
-			type="button"
-			onClick={onClick}
-			title={label}
-			aria-label={label}
-			className="inline-flex h-8 w-8 items-center justify-center rounded-full transition"
-			style={{
-				background: active ? `color-mix(in srgb, ${theme.accent} 12%, transparent)` : 'transparent',
-				color: active ? theme.accent : theme.ink,
-				opacity: active ? 1 : 0.55,
-			}}
-		>
-			<Icon size={15} strokeWidth={2} />
-		</button>
+	const iconBtn = (active, onClick, Icon, label, desc, align = 'center') => (
+		<Tip label={label} desc={desc} theme={theme} align={align}>
+			<button
+				type="button"
+				onClick={onClick}
+				aria-label={label}
+				className="inline-flex h-8 w-8 items-center justify-center rounded-full transition hover:opacity-100!"
+				style={{
+					background: active ? `color-mix(in srgb, ${theme.accent} 12%, transparent)` : 'transparent',
+					color: active ? theme.accent : theme.ink,
+					opacity: active ? 1 : 0.55,
+				}}
+			>
+				<Icon size={15} strokeWidth={2} />
+			</button>
+		</Tip>
 	);
 
 	return (
 		<div className={`flex items-center ${compact ? 'justify-between gap-2' : 'flex-wrap gap-1.5'}`}>
 			<div className="flex shrink-0 items-center">
-				{iconBtn(focusOn, onToggleFocus, Focus, t('reading.focus'))}
-				{iconBtn(listenOn, onToggleListen, Headphones, t('reading.listen'))}
+				{iconBtn(focusOn, onToggleFocus, Focus, t('reading.focus'), t('reading.tips.focus'), 'start')}
+				{iconBtn(listenOn, onToggleListen, Headphones, t('reading.listen'), t('reading.tips.listen'))}
 				<span className="hidden sm:contents">
-					{iconBtn(bionicOn, onToggleBionic, Sparkles, t('reading.bionic'))}
-					{iconBtn(false, onOpenFlashcards, Layers, t('reading.flashcards'))}
-					{iconBtn(false, onOpenCoach, BookOpenCheck, t('reading.coach'))}
+					{iconBtn(bionicOn, onToggleBionic, Sparkles, t('reading.bionic'), t('reading.tips.bionic'))}
+					{iconBtn(false, onOpenFlashcards, Layers, t('reading.flashcards'), t('reading.tips.flashcards'))}
+					{iconBtn(false, onOpenCoach, BookOpenCheck, t('reading.coach'), t('reading.tips.coach'))}
 				</span>
 			</div>
 			<div
-				className="inline-flex min-w-0 max-w-full items-center overflow-x-auto rounded-full p-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+				className="inline-flex min-w-0 max-w-full items-center overflow-x-auto rounded-full p-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible [&::-webkit-scrollbar]:hidden"
 				style={{ background: `color-mix(in srgb, ${theme.ink} 3%, transparent)` }}
-				title={t('reading.diffHint')}
 			>
 				{[
 					['original', t('reading.diffOriginal')],
 					['simplify', t('reading.diffSimplify')],
 					['eli5', t('reading.diffEli5')],
-				].map(([id, label]) => (
-					<button
-						key={id}
-						type="button"
-						onClick={() => onDifficulty(id)}
-						title={tip(id)}
-						className="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold sm:px-2.5"
-						style={{
-							background: difficulty === id ? theme.accent : 'transparent',
-							color: difficulty === id ? '#fff' : theme.ink,
-							opacity: difficulty === id ? 1 : 0.65,
-						}}
-					>
-						{label}
-					</button>
+				].map(([id, label], i, all) => (
+					<Tip key={id} label={label} desc={tip(id)} theme={theme} align={i === all.length - 1 ? 'end' : 'center'}>
+						<button
+							type="button"
+							onClick={() => onDifficulty(id)}
+							className="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold sm:px-2.5"
+							style={{
+								background: difficulty === id ? theme.accent : 'transparent',
+								color: difficulty === id ? '#fff' : theme.ink,
+								opacity: difficulty === id ? 1 : 0.65,
+							}}
+						>
+							{label}
+						</button>
+					</Tip>
 				))}
 			</div>
 		</div>

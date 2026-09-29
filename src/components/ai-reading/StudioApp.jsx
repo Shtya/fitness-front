@@ -15,8 +15,10 @@ import {
 	MessageSquare,
 	MessageSquareQuote,
 	Home,
+	NotebookPen,
 	Sparkles,
 } from 'lucide-react';
+import NotebookDrawer from '@/components/ai-reading/NotebookDrawer';
 import ReadingHub from '@/components/ai-reading/ReadingHub';
 import AiWorkspace from '@/components/ai-reading/AiWorkspace';
 import TopicLibrary from '@/components/ai-reading/TopicLibrary';
@@ -55,6 +57,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 	const [tab, setTab] = useState(initialTab);
 	const [studioSub, setStudioSub] = useState('chat');
 	const [ready, setReady] = useState(false);
+	const [notebookOpen, setNotebookOpen] = useState(false);
 
 	useEffect(() => {
 		let alive = true;
@@ -118,16 +121,29 @@ export default function StudioApp({ initialTab = 'home' }) {
 							<p className="hidden truncate text-[11px] sm:block" style={{ color: 'var(--ar-muted)' }}>{t('brandSub')}</p>
 						</div>
 					</div>
-					<Link
-						href="/ai-studio/fitness"
-						className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/90 p-2 text-[11px] font-semibold ring-1 hover:opacity-90 sm:gap-1.5 sm:px-3 sm:py-1.5"
-						style={{ color: 'var(--ar-muted)', boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
-						aria-label={t('nav.fitness')}
-						title={t('nav.fitness')}
-					>
-						<Dumbbell size={13} />
-						<span className="hidden sm:inline">{t('nav.fitness')}</span>
-					</Link>
+					<div className="flex shrink-0 items-center gap-1.5">
+						<button
+							type="button"
+							onClick={() => setNotebookOpen(true)}
+							className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/90 p-2 text-[11px] font-semibold ring-1 hover:opacity-90 sm:gap-1.5 sm:px-3 sm:py-1.5"
+							style={{ color: 'var(--ar-muted)', boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
+							aria-label={t('notebook.open')}
+							title={t('reading.tips.notebook')}
+						>
+							<NotebookPen size={13} />
+							<span className="hidden sm:inline">{t('notebook.open')}</span>
+						</button>
+						<Link
+							href="/ai-studio/fitness"
+							className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/90 p-2 text-[11px] font-semibold ring-1 hover:opacity-90 sm:gap-1.5 sm:px-3 sm:py-1.5"
+							style={{ color: 'var(--ar-muted)', boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
+							aria-label={t('nav.fitness')}
+							title={t('nav.fitness')}
+						>
+							<Dumbbell size={13} />
+							<span className="hidden sm:inline">{t('nav.fitness')}</span>
+						</Link>
+					</div>
 				</div>
 
 				<nav
@@ -217,6 +233,12 @@ export default function StudioApp({ initialTab = 'home' }) {
 					)}
 				</div>
 			</main>
+			<NotebookDrawer
+				open={notebookOpen}
+				onClose={() => setNotebookOpen(false)}
+				isRTL={locale === 'ar'}
+				fontFamily={uiFontFamily(locale === 'ar' ? 'ar' : 'en')}
+			/>
 		</div>
 	);
 }

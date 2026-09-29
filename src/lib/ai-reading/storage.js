@@ -60,9 +60,15 @@ const cache = {
 		reviewsDone: 0,
 	},
 	chat: null,
+	notebook: [],
+	notebookLoaded: false,
 	ready: false,
 	hydrating: null,
 };
+
+let notebookTimer = null;
+let notebookStatus = 'idle';
+let notebookQueue = Promise.resolve();
 
 let flushTimer = null;
 let flushPromise = null;
@@ -160,6 +166,12 @@ function applyServerState(data, { emitChange = true } = {}) {
 		cache.stats = { ...cache.stats, ...data.stats };
 	}
 	if (data.chat !== undefined) cache.chat = data.chat;
+	/* Notebook has its own save channel — only take the server copy on first load. */
+	if (!cache.notebookLoaded && Array.isArray(data.notebook?.notes)) {
+		cache.notebook = data.notebook.notes;
+		cache.notebookLoaded = true;
+		emitNotebook();
+	}
 	cache.ready = true;
 	if (emitChange) emit();
 }
@@ -250,6 +262,48 @@ export async function flushAiReadingStore() {
 	clearTimeout(flushTimer);
 	if (flushPromise) await flushPromise;
 	await flushNow();
+}
+
+function emitNotebook() {
+	if (typeof window === 'undefined') return;
+	window.dispatchEvent(
+		new CustomEvent('ai-reading:notebook', { detail: { status: notebookStatus } }),
+	);
+}
+
+async function flushNotebookNow() {
+	if (typeof window === 'undefined' || !localStorage.getItem('accessToken')) return;
+	const notes = cache.notebook.filter(n => n.text.trim());
+	notebookStatus = 'saving';
+	emitNotebook();
+	try {
+		await api.put('/ai-reading/notebook', { notes }, { timeout: 30000 });
+		notebookStatus = 'saved';
+	} catch (err) {
+		notebookStatus = 'error';
+		console.warn('[ai-reading] notebook save failed', err?.message || err);
+	}
+	emitNotebook();
+}
+
+export function getNotebookNotes() {
+	return cache.notebook;
+}
+
+export function getNotebookStatus() {
+	return notebookStatus;
+}
+
+/** Update notes in memory and persist to DB after a short typing pause (or now). */
+export function saveNotebookNotes(notes, { immediate = false } = {}) {
+	cache.notebook = Array.isArray(notes) ? notes : [];
+	cache.notebookLoaded = true;
+	notebookStatus = 'pending';
+	emitNotebook();
+	clearTimeout(notebookTimer);
+	notebookTimer = setTimeout(() => {
+		notebookQueue = notebookQueue.then(flushNotebookNow);
+	}, immediate ? 0 : 900);
 }
 
 export function getPrefs() {
