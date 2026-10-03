@@ -1,7 +1,7 @@
 // /middleware.js
 import { NextResponse } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
-import { NAV_HREFS, getEffectiveNavHrefs } from './lib/nav-access';
+import { NAV_HREFS, getEffectiveNavHrefs, isPathLocked } from './lib/nav-access';
 
 export { NAV_HREFS };
 
@@ -87,14 +87,18 @@ export default function middleware(req) {
   // Always remove locale before checks to avoid loops
   const pathNoLocale = stripLocale(pathname);
 
-  // Public routes → allow and pass through next-intl
-  if (matchesPublic(pathNoLocale)) {
-    return intlMiddleware(req);
-  }
-
-  // Auth check via cookie
   const user = readUserCookie(req);
   const role = user?.role || null;
+  const locked = Array.isArray(user?.locked) ? user.locked : [];
+
+  // Public routes → allow and pass through next-intl (locked pages still blocked for signed-in users)
+  if (matchesPublic(pathNoLocale)) {
+    if (role && isPathLocked(pathNoLocale, locked)) {
+      const first = getEffectiveNavHrefs(role, user?.allowedPages, locked)[0] || NO_ACCESS_REDIRECT;
+      return NextResponse.redirect(new URL(withLocale(first, currentLocale), req.url));
+    }
+    return intlMiddleware(req);
+  }
 
   if (!role) {
     const to = new URL(withLocale(UNAUTH_REDIRECT, currentLocale), req.url);
@@ -106,12 +110,12 @@ export default function middleware(req) {
     return NextResponse.redirect(to);
   }
 
-  const allowed = getEffectiveNavHrefs(role, user?.allowedPages);
+  const allowed = getEffectiveNavHrefs(role, user?.allowedPages, locked);
   if (!allowed.length) {
     return NextResponse.redirect(new URL(withLocale(NO_ACCESS_REDIRECT, currentLocale), req.url));
   }
 
-  if (!isPathAllowed(pathNoLocale, allowed)) {
+  if (!isPathAllowed(pathNoLocale, allowed) || isPathLocked(pathNoLocale, locked)) {
     const first = allowed[0] || NO_ACCESS_REDIRECT;
     return NextResponse.redirect(new URL(withLocale(first, currentLocale), req.url));
   }

@@ -6,11 +6,11 @@ import api from '@/utils/axios';
 import { clearClientSession } from '@/lib/session-cleanup';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, ScanLine, Library } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, ScanLine, Library, ScanSearch } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
-import { FaInbox, FaUsers, FaWpforms, FaWhatsapp } from 'react-icons/fa';
+import { FaInbox, FaUsers, FaWpforms, FaWhatsapp, FaFacebook } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
 import { useValues } from '@/context/GlobalContext';
 import { useTheme, COLOR_PALETTES } from '@/app/[locale]/theme';
@@ -23,6 +23,7 @@ import {
 	META_WHATSAPP_UNREAD_EVENT,
 } from '@/lib/outreach-unread';
 import { createVisiblePoller } from '@/lib/visible-poll';
+import { applyPageAccessToSections } from '@/lib/nav-access';
 import { useSidebarChrome } from './SidebarChromeContext';
 import {
 	readingThemeToSidebarPalette,
@@ -61,6 +62,7 @@ const OUTREACH_MARKETPLACE_IDS = [
 	'messages',
 	'whatsapp',
 	'metaWhatsApp',
+	'facebookEngagement',
 	'phoneCheck',
 	'fitnessLeads',
 ];
@@ -240,6 +242,7 @@ export const ITEM_META = {
   overview_superadmin: { id: 'overview_superadmin', nameKey: 'overview', href: '/dashboard', icon: ShieldCheck, descKey: 'descriptions.overview_superadmin', group: 'main', defaultVisible: true, required: true },
   allUsers: { id: 'allUsers', nameKey: 'allUsers', href: '/dashboard/users', icon: Users, descKey: 'descriptions.allUsers', group: 'management', defaultVisible: true, required: false },
   allUsers_super: { id: 'allUsers_super', nameKey: 'allUsers', href: '/dashboard/super-admin/users', icon: Users, descKey: 'descriptions.allUsers_super', group: 'management', defaultVisible: true, required: true },
+  pageAccess_super: { id: 'pageAccess_super', nameKey: 'pageAccess', href: '/dashboard/super-admin/page-access', icon: Sliders, descKey: 'descriptions.pageAccess_super', group: 'management', defaultVisible: true, required: false },
   clientIntake: { id: 'clientIntake', nameKey: 'clientIntake', icon: FaUsers, descKey: 'descriptions.clientIntake', group: 'management', defaultVisible: true, required: false },
   manageForms: { id: 'manageForms', nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FileText, descKey: 'descriptions.manageForms', group: 'management', defaultVisible: true, required: false },
   responses: { id: 'responses', nameKey: 'responses', href: '/dashboard/intake/responses', icon: Inbox, descKey: 'descriptions.responses', group: 'management', defaultVisible: true, required: false },
@@ -269,9 +272,11 @@ export const ITEM_META = {
   learningStudy: { id: 'learningStudy', nameKey: 'learningStudy', href: '/dashboard/learning/study', icon: Brain, descKey: 'descriptions.learningStudy', group: 'tools', defaultVisible: true, required: false },
   quranRevision: { id: 'quranRevision', nameKey: 'quranRevision', href: '/dashboard/quran-revision', icon: BookMarked, descKey: 'descriptions.quranRevision', group: 'tools', defaultVisible: true, required: false },
   webTranslator: { id: 'webTranslator', nameKey: 'webTranslator', href: '/dashboard/web-translator', icon: Languages, descKey: 'descriptions.webTranslator', group: 'tools', defaultVisible: true, required: false },
+  siteInspector: { id: 'siteInspector', nameKey: 'siteInspector', href: '/dashboard/site-inspector', icon: ScanSearch, descKey: 'descriptions.siteInspector', group: 'tools', defaultVisible: true, required: false },
   phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   metaWhatsApp: { id: 'metaWhatsApp', nameKey: 'metaWhatsApp', href: '/dashboard/meta-whatsapp', icon: MessageCircle, descKey: 'descriptions.metaWhatsApp', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
+  facebookEngagement: { id: 'facebookEngagement', nameKey: 'facebookEngagement', href: '/dashboard/facebook-engagement', icon: FaFacebook, descKey: 'descriptions.facebookEngagement', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   notifications: { id: 'notifications', nameKey: 'notifications', href: '/dashboard/notifications', icon: Bell, descKey: 'descriptions.notifications', group: 'workspace', defaultVisible: true, required: false },
   billing: { id: 'billing', nameKey: 'billing', href: '/dashboard/billing', icon: CreditCard, descKey: 'descriptions.billing', group: 'finance', defaultVisible: false, required: false, marketplace: true },
   money: { id: 'money', nameKey: 'money', href: '/money', icon: Wallet, descKey: 'descriptions.money', group: 'finance', defaultVisible: false, required: false, marketplace: true },
@@ -303,6 +308,7 @@ export const NAV = [
       { ...ITEM_META.messages },
       { ...ITEM_META.whatsapp },
       { ...ITEM_META.metaWhatsApp },
+      { ...ITEM_META.facebookEngagement },
       { ...ITEM_META.phoneCheck },
       { ...ITEM_META.fitnessLeads },
     ],
@@ -321,6 +327,7 @@ export const NAV = [
       { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
+      { ...ITEM_META.siteInspector },
     ],
   },
   {
@@ -360,6 +367,7 @@ export const NAV = [
       { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
+      { ...ITEM_META.siteInspector },
       { ...ITEM_META.money },
       { ...ITEM_META.profile_client },
     ],
@@ -381,6 +389,7 @@ export const NAV = [
       { ...ITEM_META.messages },
       { ...ITEM_META.whatsapp },
       { ...ITEM_META.metaWhatsApp },
+      { ...ITEM_META.facebookEngagement },
       { ...ITEM_META.phoneCheck },
       { ...ITEM_META.fitnessLeads },
     ],
@@ -399,6 +408,7 @@ export const NAV = [
       { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
+      { ...ITEM_META.siteInspector },
     ],
   },
   {
@@ -414,7 +424,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.management',
-    items: [{ ...ITEM_META.allUsers_super }, { ...ITEM_META.allExercises }, { ...ITEM_META.feedback_super }, { ...ITEM_META.forms_super }],
+    items: [{ ...ITEM_META.allUsers_super }, { ...ITEM_META.pageAccess_super }, { ...ITEM_META.allExercises }, { ...ITEM_META.feedback_super }, { ...ITEM_META.forms_super }],
   },
   {
     role: 'super_admin',
@@ -422,6 +432,7 @@ export const NAV = [
     items: [
       { ...ITEM_META.whatsapp },
       { ...ITEM_META.metaWhatsApp },
+      { ...ITEM_META.facebookEngagement },
       { ...ITEM_META.phoneCheck },
       { ...ITEM_META.fitnessLeads },
     ],
@@ -429,7 +440,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.readingRoom }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }, { ...ITEM_META.webTranslator }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.readingRoom }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }, { ...ITEM_META.webTranslator }, { ...ITEM_META.siteInspector }],
   },
   {
     role: 'super_admin',
@@ -451,6 +462,8 @@ export function getNavPagesForRole(role) {
         href: item.href,
         icon: item.icon || null,
         group: item.group || section.sectionKey,
+        sectionKey: section.sectionKey,
+        descKey: item.descKey || null,
         required: !!item.required,
         marketplace: !!item.marketplace,
         parentId: null,
@@ -462,6 +475,8 @@ export function getNavPagesForRole(role) {
           href: child.href,
           icon: child.icon || null,
           group: child.group || item.group || section.sectionKey,
+          sectionKey: section.sectionKey,
+          descKey: child.descKey || null,
           required: !!child.required,
           marketplace: !!child.marketplace,
           parentId: item.id,
@@ -1321,33 +1336,16 @@ function NavSection({
   unreadMetaWhatsApp = 0,
   isHidden,
   isInstalled,
-  allowedPages,
   P,
   first = false,
   getLabel,
 }) {
   const t_nav = useTranslations('nav');
   const label = t_nav(sectionKey, { defaultValue: '' });
-  const restricted = Array.isArray(allowedPages) && allowedPages.length > 0;
-  const allowSet = restricted ? new Set(allowedPages) : null;
 
-  const visibleItems = items
-    .map(item => {
-      if (!restricted) return item;
-      const selfOk = allowSet.has(item.id);
-      const kids = (item.children || []).filter(c => allowSet.has(c.id));
-      if (!selfOk && !kids.length) return null;
-      if (item.children) {
-        // Parent selected alone → keep all children; else only allowed children
-        return { ...item, children: selfOk && !kids.length ? item.children : kids.length ? kids : item.children };
-      }
-      return item;
-    })
-    .filter(Boolean)
-    .filter(item => {
-      if (restricted) return true; // admin allowlist wins over local hide / marketplace
-      return (item.required || !isHidden(item.id)) && (!item.marketplace || isInstalled?.(item.id));
-    });
+  const visibleItems = items.filter(
+    item => (item.required || !isHidden(item.id)) && (!item.marketplace || isInstalled?.(item.id)),
+  );
 
   if (!visibleItems.length) return null;
   return (
@@ -3007,7 +3005,6 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const router = useI18nRouter();
   const user = useUser();
   const role = user?.role ?? null;
-  const allowedPages = user?.allowedPages ?? null;
   const t = useTranslations('nav');
   const t_header = useTranslations('header');
   const { totalUnread } = useUnreadChats();
@@ -3038,10 +3035,12 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const locale = useLocale();
   const isRTL = getDir() === 'rtl';
 
+  const allowedPages = user?.allowedPages;
+  const pageAccess = user?.pageAccess;
   const sections = useMemo(() => {
     if (!role) return null;
-    return NAV.filter(s => s.role === role);
-  }, [role]);
+    return applyPageAccessToSections(NAV.filter(s => s.role === role), { allowedPages, pageAccess });
+  }, [role, allowedPages, pageAccess]);
 
   const onNavigate = () => setOpen && setOpen(false);
   const logoutLabel = t_header('actions.signOut');
@@ -3131,7 +3130,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             <ScrollShadow P={P}>
               <nav style={{ padding: collapsed ? '4px 10px' : '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                 {sections?.map((section, idx) => (
-                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} isHidden={isHidden} isInstalled={isInstalled} allowedPages={allowedPages} P={P} first={idx === 0} getLabel={getLabel} />
+                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} getLabel={getLabel} />
                 ))}
               </nav>
             </ScrollShadow>
@@ -3255,7 +3254,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
                 <ScrollShadow P={P}>
                   <nav style={{ padding: '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                     {sections?.map((section, idx) => (
-                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} isHidden={isHidden} isInstalled={isInstalled} allowedPages={allowedPages} P={P} first={idx === 0} getLabel={getLabel} />
+                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} getLabel={getLabel} />
                     ))}
                   </nav>
                 </ScrollShadow>

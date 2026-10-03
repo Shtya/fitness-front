@@ -25,6 +25,12 @@ export async function POST(req) {
     }
 
     const cookieUser = { id: verifiedUser.id, role: verifiedUser.role };
+    if (Array.isArray(verifiedUser.allowedPages) && verifiedUser.allowedPages.length) {
+      cookieUser.allowedPages = verifiedUser.allowedPages;
+    }
+    if (Array.isArray(verifiedUser.pageAccess?.locked) && verifiedUser.pageAccess.locked.length) {
+      cookieUser.locked = verifiedUser.pageAccess.locked;
+    }
     const res = NextResponse.json({ ok: true, user: cookieUser });
     const oneWeek = 60 * 60 * 24 * 7;
 

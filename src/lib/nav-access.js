@@ -9,6 +9,7 @@ export const PAGE_HREFS_BY_ID = {
 	overview_superadmin: ['/dashboard'],
 	allUsers: ['/dashboard/users'],
 	allUsers_super: ['/dashboard/super-admin/users'],
+	pageAccess_super: ['/dashboard/super-admin/page-access'],
 	manageForms: ['/dashboard/intake/forms'],
 	responses: ['/dashboard/intake/responses'],
 	forms_super: ['/dashboard/super-admin/forms'],
@@ -32,11 +33,16 @@ export const PAGE_HREFS_BY_ID = {
 	calorieCalculator: ['/dashboard/calculator'],
 	aiFree: ['/dashboard/ai-free'],
 	readingRoom: ['/ai-studio'],
+	learning: ['/dashboard/learning'],
+	learningManagement: ['/dashboard/learning/management'],
+	learningStudy: ['/dashboard/learning/study'],
 	quranRevision: ['/dashboard/quran-revision'],
 	webTranslator: ['/dashboard/web-translator'],
+	siteInspector: ['/dashboard/site-inspector'],
 	phoneCheck: ['/dashboard/phone-check'],
 	fitnessLeads: ['/dashboard/fitness-leads'],
 	metaWhatsApp: ['/dashboard/meta-whatsapp'],
+	facebookEngagement: ['/dashboard/facebook-engagement'],
 	notifications: ['/dashboard/notifications'],
 	billing: [
 		'/dashboard/billing',
@@ -69,6 +75,7 @@ export const NAV_HREFS = {
 		'/dashboard/transcript',
 		'/dashboard/quran-revision',
 		'/dashboard/web-translator',
+		'/dashboard/site-inspector',
 		'/dashboard/my/profile',
 		'/dashboard/phone-check',
 		'/dashboard/ai-free',
@@ -85,6 +92,7 @@ export const NAV_HREFS = {
 		'/dashboard/chat',
 		'/dashboard/whatsapp',
 		'/dashboard/meta-whatsapp',
+		'/dashboard/facebook-engagement',
 		'/dashboard/transcript',
 		'/dashboard/calculator',
 		'/dashboard/my-account',
@@ -95,6 +103,7 @@ export const NAV_HREFS = {
 		'/dashboard/ai-free',
 		'/dashboard/quran-revision',
 		'/dashboard/web-translator',
+		'/dashboard/site-inspector',
 		'/dashboard/recipes',
 		'/dashboard/notifications',
 		'/ai-studio',
@@ -111,6 +120,7 @@ export const NAV_HREFS = {
 		'/dashboard/chat',
 		'/dashboard/whatsapp',
 		'/dashboard/meta-whatsapp',
+		'/dashboard/facebook-engagement',
 		'/dashboard/transcript',
 		'/dashboard/calculator',
 		'/dashboard/reports',
@@ -128,6 +138,7 @@ export const NAV_HREFS = {
 		'/dashboard/ai-free',
 		'/dashboard/quran-revision',
 		'/dashboard/web-translator',
+		'/dashboard/site-inspector',
 		'/dashboard/recipes',
 		'/dashboard/notifications',
 		'/ai-studio',
@@ -137,11 +148,13 @@ export const NAV_HREFS = {
 	super_admin: [
 		'/dashboard',
 		'/dashboard/super-admin/users',
+		'/dashboard/super-admin/page-access',
 		'/dashboard/super-admin/forms',
 		'/dashboard/super-admin/feedback',
 		'/dashboard/workouts',
 		'/dashboard/whatsapp',
 		'/dashboard/meta-whatsapp',
+		'/dashboard/facebook-engagement',
 		'/dashboard/transcript',
 		'/dashboard/billing',
 		'/dashboard/billing/analytics',
@@ -152,18 +165,146 @@ export const NAV_HREFS = {
 		'/dashboard/ai-free',
 		'/dashboard/quran-revision',
 		'/dashboard/web-translator',
+		'/dashboard/site-inspector',
 		'/ai-studio',
 		'/workspace',
 	],
 };
 
+/* ─── Page modes (super admin → Page access) ──────────────────── */
+
+export const PAGE_MODES = ['default', 'optional', 'locked'];
+export const MANAGED_PAGE_ROLES = ['admin', 'coach', 'client'];
+
+/** Never lockable: every role must keep a home and an account page. */
+export const REQUIRED_PAGE_IDS = [
+	'overview_admin',
+	'overview_client',
+	'overview_superadmin',
+	'allUsers_super',
+	'profile_admin',
+	'profile_client',
+];
+
+/** Sidebar children; a locked parent locks its children too. */
+export const PAGE_PARENT_BY_ID = {
+	manageForms: 'clientIntake',
+	responses: 'clientIntake',
+	learningManagement: 'learning',
+	learningStudy: 'learning',
+};
+
+function isRequiredPage(page) {
+	return !!page?.required || REQUIRED_PAGE_IDS.includes(page?.id);
+}
+
+/** Mode when the super admin has not configured the page. */
+export function codePageMode(page) {
+	if (isRequiredPage(page)) return 'default';
+	return page?.marketplace ? 'optional' : 'default';
+}
+
+function ownPageMode(page, access) {
+	if (isRequiredPage(page)) return 'default';
+	if (access?.extraPages?.includes(page.id)) return 'default';
+	if (access?.lockedPages?.includes(page.id)) return 'locked';
+	const roleMode = access?.roleModes?.[page.id];
+	return PAGE_MODES.includes(roleMode) ? roleMode : codePageMode(page);
+}
+
+/**
+ * Effective mode for one page. `access` is the `/auth/me` `pageAccess`
+ * payload ({ roleModes, extraPages, lockedPages }).
+ */
+export function resolvePageMode(page, access) {
+	const parentId = page?.parentId ?? PAGE_PARENT_BY_ID[page?.id];
+	if (parentId && ownPageMode({ id: parentId }, access) === 'locked') return 'locked';
+	return ownPageMode(page, access);
+}
+
+function legacyAllowSet(allowedPages) {
+	return Array.isArray(allowedPages) && allowedPages.length > 0 ? new Set(allowedPages) : null;
+}
+
+function legacyItem(item, allow) {
+	const selfOk = allow.has(item.id);
+	const kids = (item.children || []).filter((c) => allow.has(c.id));
+	if (!selfOk && !kids.length) return null;
+	const next = { ...item, required: true, marketplace: false };
+	if (item.children) next.children = kids.length ? kids : item.children;
+	return next;
+}
+
+function accessItem(item, access) {
+	const mode = resolvePageMode(item, access);
+	if (mode === 'locked') return null;
+	const next = { ...item, marketplace: mode === 'optional' };
+	if (item.children) {
+		const kids = item.children.filter((c) => resolvePageMode({ ...c, parentId: item.id }, access) !== 'locked');
+		if (!kids.length && !item.href) return null;
+		if (kids.length) next.children = kids;
+		else delete next.children;
+	}
+	return next;
+}
+
+/**
+ * Sidebar sections after page access:
+ * - legacy allowedPages → allowlist (shown, ignores local hide/marketplace)
+ * - otherwise locked pages removed; optional pages become Marketplace items
+ */
+export function applyPageAccessToSections(sections, user) {
+	if (!Array.isArray(sections)) return sections;
+	const allow = legacyAllowSet(user?.allowedPages);
+	const access = user?.pageAccess;
+	return sections
+		.map((section) => ({
+			...section,
+			items: (section.items || [])
+				.map((item) => (allow ? legacyItem(item, allow) : accessItem(item, access)))
+				.filter(Boolean),
+		}))
+		.filter((section) => section.items.length);
+}
+
+const HREF_OWNERS = (() => {
+	const owners = new Map();
+	for (const [id, hrefs] of Object.entries(PAGE_HREFS_BY_ID)) {
+		for (const href of hrefs) {
+			const key = normalizePathOnly(href);
+			owners.set(key, [...(owners.get(key) || []), id]);
+		}
+	}
+	return owners;
+})();
+
+/**
+ * True when the most specific page owning `path` is locked for every id that
+ * owns it (e.g. /workspace needs both todos and calendar locked).
+ */
+export function isPathLocked(path, locked) {
+	if (!Array.isArray(locked) || !locked.length) return false;
+	const lockedSet = new Set(locked.filter((id) => !REQUIRED_PAGE_IDS.includes(id)));
+	for (const [childId, parentId] of Object.entries(PAGE_PARENT_BY_ID)) {
+		if (lockedSet.has(parentId)) lockedSet.add(childId);
+	}
+	const target = normalizePathOnly(path);
+	let best = null;
+	for (const href of HREF_OWNERS.keys()) {
+		const matches = target === href || (href !== '/' && target.startsWith(href + '/'));
+		if (matches && (!best || href.length > best.length)) best = href;
+	}
+	return !!best && HREF_OWNERS.get(best).every((id) => lockedSet.has(id));
+}
+
 /**
  * Effective path allowlist for a user.
  * - No allowedPages / empty → full role list
  * - Non-empty allowedPages → only mapped hrefs for those ids ( ∩ role list)
+ * - Locked pages (page access) are removed
  */
-export function getEffectiveNavHrefs(role, allowedPages) {
-	const roleHrefs = NAV_HREFS[role] || [];
+export function getEffectiveNavHrefs(role, allowedPages, locked) {
+	const roleHrefs = (NAV_HREFS[role] || []).filter((h) => !isPathLocked(h, locked));
 	if (!Array.isArray(allowedPages) || allowedPages.length === 0) return roleHrefs;
 
 	const fromIds = new Set();
@@ -239,19 +380,20 @@ function normalizePathOnly(p) {
 export function resolvePostLoginPath(user, intendedPath) {
 	if (!user) return getDefaultPostLoginPath('client');
 	const role = String(user.role || '').toLowerCase();
-	const allowed = getEffectiveNavHrefs(role, user.allowedPages);
+	const locked = user.pageAccess?.locked;
+	const allowed = getEffectiveNavHrefs(role, user.allowedPages, locked);
 
 	const intended = sanitizeReturnPath(intendedPath);
-	if (intended && pathMatchesAllowlist(intended, allowed)) {
+	if (intended && pathMatchesAllowlist(intended, allowed) && !isPathLocked(intended, locked)) {
 		return intended;
 	}
 
 	const landingId = user.loginLandingPage ? String(user.loginLandingPage).trim() : '';
 	if (landingId) {
 		const restricted = Array.isArray(user.allowedPages) && user.allowedPages.length > 0;
-		if (!restricted || user.allowedPages.includes(landingId)) {
-			const hrefs = PAGE_HREFS_BY_ID[landingId];
-			if (hrefs?.[0]) return hrefs[0];
+		const href = PAGE_HREFS_BY_ID[landingId]?.[0];
+		if (href && (!restricted || user.allowedPages.includes(landingId)) && !isPathLocked(href, locked)) {
+			return href;
 		}
 	}
 

@@ -6,6 +6,7 @@ const SidebarChromeContext = createContext({
 	focusMode: false,
 	setFocusMode: () => {},
 	hideEdgeDock: false,
+	openSidebar: () => {},
 });
 
 export function SidebarChromeProvider({ value, children }) {

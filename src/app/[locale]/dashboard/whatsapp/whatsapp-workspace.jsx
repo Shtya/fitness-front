@@ -247,6 +247,7 @@ import {
 	mediaUploadFailedMessage,
 } from './whatsapp-voice-recorder';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
+import { useSidebarChrome } from '@/components/molecules/SidebarChromeContext';
 import WhatsAppAccountLinkPanel, {
 	WhatsAppRestoreProgress,
 } from './WhatsAppAccountLinkPanel';
@@ -679,6 +680,7 @@ const translations = {
 		boardHint: 'Trello-style tasks for this WhatsApp account. Drag cards, add checklists, and link chats.',
 		fakeChat: 'Fake chat',
 		autoForward: 'Auto-forward',
+		openSidebar: 'Open sidebar',
 		addToBoard: 'Add to tasks board',
 		addToBoardHint: 'Right-click messages or multi-select, then pick a column',
 		pickBoardColumn: 'Choose column',
@@ -1166,6 +1168,7 @@ const translations = {
 		boardHint: 'مهام على شكل Trello لهذا الحساب. اسحب البطاقات، أضف قوائم، واربط الشات.',
 		fakeChat: 'شات وهمي',
 		autoForward: 'تحويل تلقائي',
+		openSidebar: 'فتح القائمة الجانبية',
 		addToBoard: 'إضافة للوحة المهام',
 		addToBoardHint: 'كليك يمين على الرسائل أو حدّد عدة رسائل ثم اختر العمود',
 		pickBoardColumn: 'اختر العمود',
@@ -7933,6 +7936,7 @@ function MobileWhatsAppNav({ activeTab, onSelect, labels, unreadCount }) {
 }
 
 function MobileOverflowMenu({ open, tabs: menuTabs, labels, onSelect, onProfile, onClose }) {
+	const { openSidebar } = useSidebarChrome();
 	if (!open) return null;
 	return (
 		<>
@@ -7948,6 +7952,11 @@ function MobileOverflowMenu({ open, tabs: menuTabs, labels, onSelect, onProfile,
 						<span>{labels[id]}</span>
 					</button>
 				))}
+				<div className="my-1 h-px bg-[#8696a0]/20" aria-hidden="true" />
+				<button type="button" onClick={() => { onClose(); openSidebar(); }} className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10">
+					<PanelLeft size={18} className="text-[#8696a0] rtl:scale-x-[-1]" />
+					<span>{labels.openSidebar}</span>
+				</button>
 			</div>
 		</>
 	);

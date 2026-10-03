@@ -17,7 +17,7 @@ import {
 import api from '@/utils/axios';
 import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
-import { getNavPagesForRole } from '@/components/molecules/Sidebar';
+import { UserPageAccessFields, useUserPageAccess } from '@/components/page-access/UserPageAccessEditor';
 import { resolvePostLoginPath } from '@/lib/nav-access';
 import { buildAutoLoginUrl, buildWelcomeMessage, resolveShareLandingPath } from '@/lib/auto-login';
 import { notifyImpersonationChanged } from '@/lib/impersonation';
@@ -419,7 +419,8 @@ function DeleteModal({ user, onClose, onDeleted, t }) {
 function ActionBar({ user, onImpersonate, onStatusChange, onEdit, onDelete, onShowCreds, onPages, t }) {
 	const [menuOpen, setMenu] = useState(false);
 	const menuRef = useRef(null);
-	const pageCount = Array.isArray(user?.allowedPages) ? user.allowedPages.length : 0;
+	const { legacy: legacyPages, custom: customPages } = pageAccessCounts(user);
+	const pageCount = legacyPages || customPages;
 
 	useEffect(() => {
 		if (!menuOpen) return;
@@ -544,15 +545,23 @@ const TABLE_TH =
 	'px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap text-start';
 const TABLE_TD = 'px-3 py-2.5 align-middle text-start';
 
+function pageAccessCounts(user) {
+	return {
+		legacy: Array.isArray(user?.allowedPages) ? user.allowedPages.length : 0,
+		custom: (user?.pageOverrides?.extra || 0) + (user?.pageOverrides?.locked || 0),
+	};
+}
+
 function AccessCell({ user }) {
-	const n = Array.isArray(user?.allowedPages) ? user.allowedPages.length : 0;
-	if (!n) {
-		return <span className="text-[10px] font-semibold text-slate-400">All pages</span>;
+	const tAccess = useTranslations('pageAccess');
+	const { legacy, custom } = pageAccessCounts(user);
+	if (!legacy && !custom) {
+		return <span className="text-[10px] font-semibold text-slate-400">{tAccess('user.roleDefault')}</span>;
 	}
 	return (
 		<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--color-primary-50)] text-[var(--color-primary-700)] border border-[var(--color-primary-200)] dark:bg-[var(--color-primary-950)]/30 dark:text-[var(--color-primary-300)] dark:border-[var(--color-primary-900)]/40">
 			<LayoutGrid size={9} />
-			{n} pages
+			{legacy ? tAccess('user.legacy', { count: legacy }) : tAccess('user.customized', { count: custom })}
 		</span>
 	);
 }
@@ -947,338 +956,19 @@ function AdminTableBlock({ admin, actions, locale, t }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Nav label helpers + shared page-access picker
+// Per-user page overrides (on top of the role settings in Page access)
 // ─────────────────────────────────────────────────────────────────────────────
-function navItemLabel(tNav, nameKey) {
-	if (!nameKey) return '';
-	try {
-		return tNav(`items.${nameKey}`);
-	} catch {
-		return nameKey;
-	}
-}
-
-function navGroupLabel(tNav, groupKey) {
-	if (!groupKey) return '';
-	try {
-		return tNav(`groups.${groupKey}`);
-	} catch {
-		try {
-			return tNav(`sections.${groupKey}`);
-		} catch {
-			return groupKey;
-		}
-	}
-}
-
-/** Toggle + grouped page checklist + login redirect. */
-function PageAccessFields({
-	role,
-	pages,
-	allowAll,
-	setAllowAll,
-	selected,
-	setSelected,
-	landingPageId,
-	setLandingPageId,
-	landingChoices,
-	compact = false,
-}) {
-	const tNav = useTranslations('nav');
-
-	const groups = useMemo(() => {
-		const map = new Map();
-		for (const p of pages) {
-			const key = p.group || 'main';
-			if (!map.has(key)) map.set(key, []);
-			map.get(key).push(p);
-		}
-		return [...map.entries()];
-	}, [pages]);
-
-	const togglePage = (id) => {
-		setSelected(prev => {
-			const next = new Set(prev);
-			if (next.has(id)) next.delete(id);
-			else next.add(id);
-			return next;
-		});
-	};
-
-	const selectAll = () => setSelected(new Set(pages.map(p => p.id)));
-	const clearAll = () => setSelected(new Set());
-
-	return (
-		<div className="space-y-3">
-			{/* Mode switch */}
-			<div className="grid grid-cols-2 gap-2">
-				<button
-					type="button"
-					onClick={() => {
-						setAllowAll(true);
-						setSelected(new Set(pages.map(p => p.id)));
-					}}
-					className={`relative text-start px-3 py-2.5 rounded-xl border-2 transition-all ${
-						allowAll
-							? 'border-[var(--color-primary-500)] bg-[var(--color-primary-50)] dark:bg-[var(--color-primary-950)]/30 shadow-sm'
-							: 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-					}`}
-				>
-					<p className="text-xs font-bold text-slate-900 dark:text-slate-100">All pages</p>
-					<p className="text-[10px] text-slate-500 mt-0.5">Full sidebar for {role}</p>
-					{allowAll && (
-						<span className="absolute top-2 end-2 w-5 h-5 rounded-full grid place-items-center text-white"
-							style={{ background: 'var(--color-primary-500)' }}
-						>
-							<Check size={12} strokeWidth={3} />
-						</span>
-					)}
-				</button>
-				<button
-					type="button"
-					onClick={() => setAllowAll(false)}
-					className={`relative text-start px-3 py-2.5 rounded-xl border-2 transition-all ${
-						!allowAll
-							? 'border-[var(--color-primary-500)] bg-[var(--color-primary-50)] dark:bg-[var(--color-primary-950)]/30 shadow-sm'
-							: 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-					}`}
-				>
-					<p className="text-xs font-bold text-slate-900 dark:text-slate-100">Custom pages</p>
-					<p className="text-[10px] text-slate-500 mt-0.5">Pick what they can open</p>
-					{!allowAll && (
-						<span className="absolute top-2 end-2 w-5 h-5 rounded-full grid place-items-center text-white"
-							style={{ background: 'var(--color-primary-500)' }}
-						>
-							<Check size={12} strokeWidth={3} />
-						</span>
-					)}
-				</button>
-			</div>
-
-			{/* Page checklist box */}
-			{!allowAll && (
-				<div className="rounded-xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900">
-					<div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80">
-						<LayoutGrid size={14} className="text-[var(--color-primary-500)] shrink-0" />
-						<div className="min-w-0 flex-1">
-							<p className="text-xs font-bold text-slate-800 dark:text-slate-100">Choose visible pages</p>
-							<p className="text-[10px] text-slate-500">Only checked pages appear for this account</p>
-						</div>
-						<span
-							className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white shrink-0"
-							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
-						>
-							{selected.size}/{pages.length}
-						</span>
-					</div>
-
-					{!allowAll && selected.size > 0 && selected.size < 5 && (
-						<div className="mx-3 mt-2 mb-1 rounded-lg border border-[color-mix(in_srgb,var(--color-primary-200)_70%,transparent)] bg-[color-mix(in_srgb,var(--color-primary-50)_80%,white)] px-2.5 py-2 text-[10px] leading-relaxed text-[var(--color-primary-800)]">
-							<strong>{selected.size} pages</strong> — sidebar stays hidden; they get a top header with logo, pages, language & logout.
-						</div>
-					)}
-					{!allowAll && selected.size >= 5 && (
-						<div className="mx-3 mt-2 mb-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[10px] leading-relaxed text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
-							<strong>{selected.size} pages</strong> — normal sidebar navigation.
-						</div>
-					)}
-
-					<div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-						<button
-							type="button"
-							onClick={selectAll}
-							className="text-[10px] font-bold px-2.5 py-1 rounded-lg text-white"
-							style={{ background: 'var(--color-primary-500)' }}
-						>
-							Select all
-						</button>
-						<button
-							type="button"
-							onClick={clearAll}
-							className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-						>
-							Clear
-						</button>
-					</div>
-
-					<div className={`overflow-y-auto ${compact ? 'max-h-52' : 'max-h-64'}`}>
-						{groups.map(([groupKey, items]) => (
-							<div key={groupKey} className="border-b border-slate-100 dark:border-slate-800 last:border-b-0">
-								<div className="sticky top-0 z-[1] px-3 py-1.5 bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm">
-									<p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-										{navGroupLabel(tNav, groupKey)}
-									</p>
-								</div>
-								<ul className="divide-y divide-slate-100 dark:divide-slate-800">
-									{items.map(p => {
-										const checked = selected.has(p.id);
-										const Icon = p.icon || LayoutGrid;
-										const label = navItemLabel(tNav, p.nameKey);
-										return (
-											<li key={p.id}>
-												<button
-													type="button"
-													onClick={() => togglePage(p.id)}
-													className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-start transition-colors ${
-														checked
-															? 'bg-[var(--color-primary-50)]/80 dark:bg-[var(--color-primary-950)]/25'
-															: 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
-													} ${p.parentId ? 'ps-8' : ''}`}
-												>
-													<span
-														className={`w-5 h-5 rounded-md border-2 grid place-items-center shrink-0 transition-colors ${
-															checked
-																? 'border-[var(--color-primary-500)] text-white'
-																: 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900'
-														}`}
-														style={checked ? { background: 'var(--color-primary-500)' } : undefined}
-													>
-														{checked ? <Check size={12} strokeWidth={3} /> : null}
-													</span>
-													<span
-														className={`w-7 h-7 rounded-lg grid place-items-center shrink-0 ${
-															checked
-																? 'text-[var(--color-primary-600)] bg-white dark:bg-slate-900'
-																: 'text-slate-400 bg-slate-100 dark:bg-slate-800'
-														}`}
-													>
-														<Icon size={14} />
-													</span>
-													<span className="min-w-0 flex-1">
-														<span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">
-															{label}
-														</span>
-														{p.href ? (
-															<span className="block text-[10px] text-slate-400 truncate">{p.href}</span>
-														) : null}
-													</span>
-													{p.marketplace ? (
-														<span className="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded shrink-0">
-															Add-on
-														</span>
-													) : null}
-												</button>
-											</li>
-										);
-									})}
-								</ul>
-							</div>
-						))}
-						{!pages.length && (
-							<p className="text-xs text-slate-400 text-center py-8">No pages found for this role</p>
-						)}
-					</div>
-				</div>
-			)}
-
-			{allowAll && (
-				<div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 px-3 py-3 bg-slate-50/80 dark:bg-slate-800/40">
-					<p className="text-xs text-slate-600 dark:text-slate-300">
-						<span className="font-bold text-slate-800 dark:text-slate-100">{pages.length} pages</span>
-						{' '}unlocked — same access as a normal {role}.
-					</p>
-				</div>
-			)}
-
-			{/* Redirect */}
-			<div className="rounded-xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden">
-				<div className="flex items-start gap-2.5 px-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800">
-					<span className="w-7 h-7 rounded-lg grid place-items-center shrink-0 text-white"
-						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
-					>
-						<LogIn size={14} />
-					</span>
-					<div className="min-w-0">
-						<p className="text-xs font-bold text-slate-800 dark:text-slate-100">Redirect after login</p>
-						<p className="text-[10px] text-slate-500">
-							{allowAll
-								? 'Any page for this role'
-								: 'Only from the pages you checked above'}
-						</p>
-					</div>
-				</div>
-				<div className="p-3">
-					<select
-						value={landingPageId}
-						onChange={e => setLandingPageId(e.target.value)}
-						disabled={!allowAll && !landingChoices.length}
-						className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm disabled:opacity-50"
-					>
-						<option value="">Role default ({resolvePostLoginPath({ role })})</option>
-						{landingChoices.map(p => (
-							<option key={p.id} value={p.id}>
-								{navItemLabel(tNav, p.nameKey)} — {p.href}
-							</option>
-						))}
-					</select>
-					{!allowAll && !landingChoices.length && (
-						<p className="text-[10px] text-amber-600 mt-2 flex items-center gap-1">
-							<AlertTriangle size={11} />
-							Select at least one page with a URL to set a redirect.
-						</p>
-					)}
-				</div>
-			</div>
-		</div>
-	);
-}
-
-function PagesAccessModal({ user, onClose, onSaved, t }) {
-	const pages = useMemo(() => getNavPagesForRole(user?.role), [user?.role]);
-	const landingOptions = useMemo(() => pages.filter(p => p.href), [pages]);
-	const initialRestricted = Array.isArray(user?.allowedPages) && user.allowedPages.length > 0;
-	const [allowAll, setAllowAll] = useState(!initialRestricted);
-	const [selected, setSelected] = useState(() => {
-		if (initialRestricted) return new Set(user.allowedPages);
-		return new Set(pages.map(p => p.id));
-	});
-	const [landingPage, setLandingPage] = useState(user?.loginLandingPage || '');
-	const [saving, setSaving] = useState(false);
-
-	useEffect(() => {
-		const restricted = Array.isArray(user?.allowedPages) && user.allowedPages.length > 0;
-		setAllowAll(!restricted);
-		setSelected(new Set(restricted ? user.allowedPages : pages.map(p => p.id)));
-		setLandingPage(user?.loginLandingPage || '');
-	}, [user?.id, user?.allowedPages, user?.loginLandingPage, pages]);
-
-	const landingChoices = useMemo(() => {
-		if (allowAll) return landingOptions;
-		return landingOptions.filter(p => selected.has(p.id));
-	}, [allowAll, landingOptions, selected]);
-
-	useEffect(() => {
-		if (!landingPage) return;
-		if (!landingChoices.some(p => p.id === landingPage)) {
-			setLandingPage(landingChoices[0]?.id || '');
-		}
-	}, [landingChoices, landingPage]);
+function PagesAccessModal({ user, onClose, onSaved }) {
+	const tAccess = useTranslations('pageAccess');
+	const editor = useUserPageAccess(user?.id, user?.role);
 
 	const save = async () => {
-		setSaving(true);
 		try {
-			const payload = allowAll ? null : [...selected];
-			if (!allowAll && !payload.length) {
-				toast.error('Select at least one page, or enable All pages');
-				setSaving(false);
-				return;
-			}
-			if (landingPage && !allowAll && !payload.includes(landingPage)) {
-				toast.error('Login landing page must be one of the allowed pages');
-				setSaving(false);
-				return;
-			}
-			const { data } = await api.put(`/auth/super-admin/users/${user.id}/allowed-pages`, {
-				allowedPages: payload,
-				loginLandingPage: landingPage || null,
-			});
-			toast.success(allowAll ? 'Access + landing page saved' : `Locked to ${payload.length} pages`);
-			onSaved?.(data?.user || { ...user, allowedPages: payload, loginLandingPage: landingPage || null });
-			onClose?.();
+			await editor.save();
+			toast.success(tAccess('user.saved'));
+			onSaved?.();
 		} catch (e) {
-			toast.error(e?.response?.data?.message || 'Failed to save page access');
-		} finally {
-			setSaving(false);
+			toast.error(e?.response?.data?.message || tAccess('saveFailed'));
 		}
 	};
 
@@ -1290,7 +980,7 @@ function PagesAccessModal({ user, onClose, onSaved, t }) {
 				initial={{ scale: 0.94, opacity: 0, y: 16 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				exit={{ scale: 0.94, opacity: 0, y: 16 }}
-				className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]"
+				className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[88vh]"
 			>
 				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0"
 					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
@@ -1302,41 +992,31 @@ function PagesAccessModal({ user, onClose, onSaved, t }) {
 							<LayoutGrid size={16} />
 						</div>
 						<div className="min-w-0">
-							<h3 className="font-black text-slate-900 dark:text-slate-100 text-sm truncate">Page access — {user.name}</h3>
-							<p className="text-[10px] text-slate-500 capitalize">{user.role} · pages + login redirect</p>
+							<h3 className="font-black text-slate-900 dark:text-slate-100 text-sm truncate">{tAccess('user.title', { name: user.name || user.email })}</h3>
+							<p className="text-[10px] text-slate-500">{tAccess(`roles.${user.role}`)}</p>
 						</div>
 					</div>
-					<button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/60 text-slate-400 transition-colors">
+					<button onClick={onClose} aria-label={tAccess('user.cancel')} className="p-1.5 rounded-lg hover:bg-white/60 text-slate-400 transition-colors">
 						<X size={16} />
 					</button>
 				</div>
 
 				<div className="p-4 overflow-y-auto min-h-0 flex-1">
-					<PageAccessFields
-						role={user.role}
-						pages={pages}
-						allowAll={allowAll}
-						setAllowAll={setAllowAll}
-						selected={selected}
-						setSelected={setSelected}
-						landingPageId={landingPage}
-						setLandingPageId={setLandingPage}
-						landingChoices={landingChoices}
-					/>
+					<UserPageAccessFields editor={editor} />
 				</div>
 
 				<div className="flex gap-2 px-4 py-3 border-t border-slate-100 dark:border-slate-800 shrink-0">
 					<button onClick={onClose} className="flex-1 h-10 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400">
-						Cancel
+						{tAccess('user.cancel')}
 					</button>
 					<button
 						onClick={save}
-						disabled={saving}
+						disabled={editor.saving || editor.status !== 'ready'}
 						className="flex-1 h-10 rounded-lg text-white text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg"
 						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 					>
-						{saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-						Save
+						{editor.saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+						{tAccess('user.save')}
 					</button>
 				</div>
 			</motion.div>
@@ -1359,33 +1039,19 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 	const [step, setStep] = useState(1); // 1 account · 2 pages · 3 share
 	const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'admin', password: '' });
 	const [loading, setLoading] = useState(false);
-	const [savingAccess, setSavingAccess] = useState(false);
 	const [created, setCreated] = useState(null); // { id, name, email, password, role }
-	const [allowAll, setAllowAll] = useState(true);
-	const [selected, setSelected] = useState(() => new Set());
-	const [landingPageId, setLandingPageId] = useState('');
 	const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+	const tAccess = useTranslations('pageAccess');
+	const access = useUserPageAccess(created?.id, created?.role);
 
-	const pages = useMemo(() => getNavPagesForRole(created?.role || form.role), [created?.role, form.role]);
-	const landingOptions = useMemo(() => pages.filter(p => p.href), [pages]);
-	const landingChoices = useMemo(() => {
-		if (allowAll) return landingOptions;
-		return landingOptions.filter(p => selected.has(p.id));
-	}, [allowAll, landingOptions, selected]);
-
-	const shareNextHref = useMemo(() => {
-		const pick = landingChoices.find(p => p.id === landingPageId);
-		if (pick?.href) return pick.href;
-		if (landingChoices[0]?.href) return landingChoices[0].href;
-		return resolveShareLandingPath({ role: created?.role || form.role });
-	}, [landingChoices, landingPageId, created?.role, form.role]);
-
-	useEffect(() => {
-		if (!landingPageId) return;
-		if (!landingChoices.some(p => p.id === landingPageId)) {
-			setLandingPageId(landingChoices[0]?.id || '');
-		}
-	}, [landingChoices, landingPageId]);
+	const shareNextHref = useMemo(
+		() => resolveShareLandingPath({
+			role: created?.role || form.role,
+			loginLandingPage: access.landingPageId,
+			pageAccess: { locked: access.lockedIds },
+		}),
+		[created?.role, form.role, access.landingPageId, access.lockedIds],
+	);
 
 	const autoLink = useMemo(() => {
 		if (!created?.email || !created?.password) return '';
@@ -1436,7 +1102,6 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 			const password = data.tempPassword || form.password.trim() || '';
 			const userId = data?.user?.id;
 			if (!userId) throw new Error('User id missing from create response');
-			const rolePages = getNavPagesForRole(form.role);
 			setCreated({
 				id: userId,
 				name: form.name.trim(),
@@ -1444,9 +1109,6 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 				password,
 				role: form.role,
 			});
-			setAllowAll(true);
-			setSelected(new Set(rolePages.map(p => p.id)));
-			setLandingPageId('');
 			setStep(2);
 			toast.success('User created — configure pages next');
 			onCreated?.();
@@ -1457,25 +1119,12 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 
 	const submitAccess = async () => {
 		if (!created?.id) return;
-		const payloadPages = allowAll ? null : [...selected];
-		if (!allowAll && !payloadPages.length) {
-			return toast.error('Select at least one page, or enable All pages');
-		}
-		if (!allowAll && landingPageId && !payloadPages.includes(landingPageId)) {
-			return toast.error('Redirect page must be one of the selected pages');
-		}
-		setSavingAccess(true);
 		try {
-			await api.put(`/auth/super-admin/users/${created.id}/allowed-pages`, {
-				allowedPages: payloadPages,
-				loginLandingPage: landingPageId || null,
-			});
-			toast.success('Page access saved');
+			await access.save();
+			toast.success(tAccess('user.saved'));
 			setStep(3);
 		} catch (e) {
-			toast.error(e?.response?.data?.message || 'Failed to save page access');
-		} finally {
-			setSavingAccess(false);
+			toast.error(e?.response?.data?.message || tAccess('saveFailed'));
 		}
 	};
 
@@ -1483,9 +1132,6 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 		setForm({ name: '', email: '', phone: '', role: 'admin', password: '' });
 		setCreated(null);
 		setStep(1);
-		setAllowAll(true);
-		setSelected(new Set());
-		setLandingPageId('');
 		onClose();
 	};
 
@@ -1634,18 +1280,7 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 								</div>
 							</div>
 
-							<PageAccessFields
-								role={created.role}
-								pages={pages}
-								allowAll={allowAll}
-								setAllowAll={setAllowAll}
-								selected={selected}
-								setSelected={setSelected}
-								landingPageId={landingPageId}
-								setLandingPageId={setLandingPageId}
-								landingChoices={landingChoices}
-								compact
-							/>
+							<UserPageAccessFields editor={access} compact />
 						</>
 					)}
 
@@ -1730,11 +1365,11 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 							>
 								Skip
 							</button>
-							<button onClick={submitAccess} disabled={savingAccess}
+							<button onClick={submitAccess} disabled={access.saving || access.status !== 'ready'}
 								className="flex-1 h-10 rounded-lg text-white text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg"
 								style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 							>
-								{savingAccess ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+								{access.saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
 								Save & continue
 							</button>
 						</>
@@ -2128,7 +1763,6 @@ export default function SuperAdminUsersPage() {
 						user={pagesUser}
 						onClose={() => setPagesUser(null)}
 						onSaved={() => { setPagesUser(null); fetchUsers(); }}
-						t={t}
 					/>
 				)}
 			</AnimatePresence>

@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useUser } from '@/hooks/useUser';
+import { usePageAccessSync } from '@/hooks/usePageAccessSync';
 import { useTranslations } from 'next-intl';
 import Providers from '@/context/ReactQuery';
 import Link from 'next/link';
@@ -204,6 +205,7 @@ export default function Layout({ children }) {
 	}, []);
 
 	const user = useUser();
+	usePageAccessSync(user?.id);
 	useEffect(() => {
 		if (user) {
 			try { setRole(user?.role); } catch {}
@@ -328,6 +330,7 @@ export default function Layout({ children }) {
 		focusMode,
 		setFocusMode,
 		hideEdgeDock: isWhatsAppRoute,
+		openSidebar: () => setSidebarOpen(true),
 	};
 
 	// ── Mobile block screen ─────────────────────────────────────────────────
