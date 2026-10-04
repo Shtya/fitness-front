@@ -4636,10 +4636,13 @@ function VoiceMessage({
 		[],
 	);
 
-	// Hard stop for a spinner that somehow survives a cancelled attempt.
+	// Hard stop for a spinner that somehow survives a cancelled attempt. A first
+	// play can legitimately take longer while the server pulls the file from
+	// WhatsApp; that fetch has its own timeout and clears the spinner itself.
 	useEffect(() => {
 		if (!playLoading) return undefined;
 		const timer = window.setTimeout(() => {
+			if (loadPromiseRef.current) return;
 			setPlayLoading(false);
 			setLoadFailed(true);
 			ignoreAudioErrorRef.current = false;
