@@ -248,35 +248,120 @@ function removeQueueItem(item) { saveQueue(loadQueue().filter(x => queueKey(x) !
 	 PRIMITIVE COMPONENTS
 ───────────────────────────────────────── */
 
+function encodeMediaPath(value) {
+	try {
+		const url = new URL(value);
+		url.pathname = url.pathname
+			.split('/')
+			.map(seg => {
+				if (!seg) return seg;
+				try { return encodeURIComponent(decodeURIComponent(seg)); }
+				catch { return encodeURIComponent(seg); }
+			})
+			.join('/');
+		return url.toString();
+	} catch {
+		return value;
+	}
+}
+
 function mediaUrl(src) {
 	if (src == null) return '';
 	const value = String(src).trim();
 	if (!value) return '';
-	if (/^(https?:|data:|blob:)/i.test(value)) return value;
+	if (/^(data:|blob:)/i.test(value)) return value;
+	if (/^https?:/i.test(value)) return encodeMediaPath(value);
 	const base = String(baseImg || '').replace(/\/+$/, '');
-	return base ? `${base}/${value.replace(/^\/+/, '')}` : value;
+	const path = value.replace(/^\/+/, '');
+	return base ? encodeMediaPath(`${base}/${path}`) : value;
 }
 
 function youtubeId(url) {
-	const match = String(url).match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/i);
-	return match?.[1] || '';
+	const value = String(url || '').trim();
+	if (!value) return '';
+	const match = value.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([\w-]{11})/i);
+	if (match?.[1]) return match[1];
+	if (/^[\w-]{11}$/.test(value)) return value;
+	return '';
+}
+
+function playableSrc(src) {
+	const url = mediaUrl(src);
+	if (!url) return '';
+	if (youtubeId(url)) return url;
+	if (!/^https?:/i.test(url)) return '';
+	if (/\.(mp4|webm|ogg|ogv|mov|m4v)(?:[?#]|$)/i.test(url)) return url;
+	if (/\/uploads\/.+\.[a-z0-9]{2,5}(?:[?#]|$)/i.test(url)) return url;
+	return '';
 }
 
 export function InlineVideo({ src }) {
-	const url = mediaUrl(src);
+	const url = playableSrc(src);
 	const id = youtubeId(url);
+	const videoRef = useRef(null);
+	const [failed, setFailed] = useState(false);
+	const [playing, setPlaying] = useState(false);
+
+	useEffect(() => {
+		setFailed(false);
+		setPlaying(false);
+	}, [url]);
+
+	if (!url || failed) {
+		return (
+			<div className="absolute inset-0 z-[1] grid place-items-center bg-black text-white/45">
+				<VideoIcon size={28} />
+			</div>
+		);
+	}
+
 	if (id) {
 		return (
 			<iframe
-				className="absolute inset-0 z-[1] h-full w-full bg-black"
-				src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`}
+				className="absolute inset-0 z-[1] h-full w-full border-0 bg-black"
+				src={`https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`}
 				title="Exercise video"
-				allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+				referrerPolicy="strict-origin-when-cross-origin"
+				allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 				allowFullScreen
 			/>
 		);
 	}
-	return <video className="absolute inset-0 z-[1] h-full w-full bg-black object-contain" src={url} controls playsInline />;
+
+	const toggle = () => {
+		const el = videoRef.current;
+		if (!el) return;
+		if (el.paused) el.play().catch(() => setFailed(true));
+		else el.pause();
+	};
+
+	return (
+		<div className="absolute inset-0 z-[1] bg-black">
+			<video
+				ref={videoRef}
+				className="h-full w-full bg-black object-contain"
+				src={url}
+				controls={playing}
+				playsInline
+				preload="metadata"
+				onPlay={() => setPlaying(true)}
+				onPause={() => setPlaying(false)}
+				onError={() => setFailed(true)}
+			/>
+			{!playing && (
+				<button
+					type="button"
+					onClick={toggle}
+					aria-label="Play video"
+					className="absolute inset-0 grid place-items-center"
+				>
+					<span className="grid h-14 w-14 place-items-center rounded-2xl border-2 border-white/40 bg-black/55 text-white">
+						<Play size={22} fill="currentColor" />
+					</span>
+				</button>
+			)}
+		</div>
+	);
 }
 
 /** Minimal icon button — ghost style */
@@ -1701,11 +1786,13 @@ export default function MyWorkoutsPage() {
 		if (first) pickExercise(first);
 	};
 
-	const isVideo = !!(currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia]);
+	const videoSrc = playableSrc(currentExercise?.video);
+	const video2Src = playableSrc(currentExercise?.video2);
+	const isVideo = (activeMedia === 'video' && !!videoSrc) || (activeMedia === 'video2' && !!video2Src);
 	const mediaOptions = [
 		currentExercise?.img ? { key: 'image', icon: ImageIcon, title: t('showImage') } : null,
-		currentExercise?.video ? { key: 'video', icon: /youtu(\.be|be\.com)/i.test(String(currentExercise.video)) ? Youtube : VideoIcon, title: t('showVideo') } : null,
-		currentExercise?.video2 ? { key: 'video2', icon: VideoIcon, title: t('showVideoAlt') } : null,
+		videoSrc ? { key: 'video', icon: youtubeId(videoSrc) ? Youtube : VideoIcon, title: t('showVideo') } : null,
+		video2Src ? { key: 'video2', icon: youtubeId(video2Src) ? Youtube : VideoIcon, title: t('showVideoAlt') } : null,
 	].filter(Boolean);
 
 	/* ── Render ── */
