@@ -205,7 +205,7 @@ export function Select({ label, value, setValue, options, className = '' }) {
 }
 
 /* ─────────────────────────── Modal ─────────────────────────── */
-export function Modal({ scrollRef, cn, maxHBody, open, onClose, title, children, maxH, maxW = 'max-w-3xl' }) {
+export function Modal({ scrollRef, cn, panelClassName = '', maxHBody, open, onClose, title, children, maxH, maxW = 'max-w-3xl' }) {
   const shouldReduce = useReducedMotion();
   const containerRef = useRef(null);
   const closeBtnRef  = useRef(null);
@@ -279,6 +279,7 @@ export function Modal({ scrollRef, cn, maxHBody, open, onClose, title, children,
               'bg-gradient-to-b from-white/80 to-white backdrop-blur-2xl',
               'shadow-2xl md:p-6 p-4',
               maxW, maxH ?? '',
+              panelClassName,
             ].join(' ')}
             initial='hidden' animate='show' exit='exit'
             variants={panelVariants}>
@@ -288,11 +289,13 @@ export function Modal({ scrollRef, cn, maxHBody, open, onClose, title, children,
 
             {/* Header */}
             <div className='flex items-center justify-between mb-5'>
-              <h3 className='text-base md:text-lg font-semibold theme-primary-text md: leading-snug'>{title}</h3>
+              <h3 className='text-base md:text-lg font-semibold gm-ink leading-snug'>{title}</h3>
               <button
                 ref={closeBtnRef}
                 onClick={onClose}
-                className='grid h-8 w-8 place-content-center rounded-lg border border-slate-200 bg-white/80 text-slate-600 hover:bg-white hover:text-slate-900 transition-colors'>
+                className='gm-modal-close grid h-8 w-8 place-content-center rounded-[10px] border transition-colors'
+                style={{ borderColor: 'var(--gm-line)', background: 'color-mix(in srgb, var(--gm-paper) 80%, transparent)', color: 'var(--gm-muted)' }}
+              >
                 <X className='w-4 h-4' />
               </button>
             </div>
@@ -300,7 +303,7 @@ export function Modal({ scrollRef, cn, maxHBody, open, onClose, title, children,
             {/* Body */}
             <div
               ref={scrollRef}
-              className={`${maxHBody ?? ''} max-h-[80vh] overflow-y-auto  rtl:pl-1 rtl:-ml-1  ltr:pr-1 ltr:-mr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200`}>
+              className={`${maxHBody ?? ''} max-h-[80vh] overflow-y-auto -mt-2.5 pt-2.5 rtl:pl-1 rtl:-ml-1 ltr:pr-1 ltr:-mr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300`}>
               {children}
             </div>
           </motion.div>

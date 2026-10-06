@@ -44,7 +44,7 @@ import {
 	Eye,
 	EyeOff,
 } from 'lucide-react';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import { IntakeHero } from '@/components/pages/dashboard/intake/IntakeChrome';
 import Select from '@/components/atoms/Select';
 import {
 	SURAHS,
@@ -69,6 +69,7 @@ import {
 	fetchQuranRevisionState,
 	importQuranRevisionState,
 } from './quran-revision-api';
+import '@/components/pages/dashboard/users/roster/roster.css';
 import './quran-revision.css';
 
 const LS_PREFS = 'so7ba:quran-revision:prefs:v2';
@@ -140,7 +141,7 @@ const HISTORY_MAX = 40;
 const FOLDER_FILTER_ALL = 'all';
 const REPEAT_OPTIONS = [1, 2, 3, 4, 5, 7, 10, 15];
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5];
-const QR_SELECT_CN = '!h-[2.2rem] !rounded-[0.65rem] !text-[0.75rem] !font-bold !bg-[var(--qr-soft,#f8fafc)] !border-slate-200';
+const QR_SELECT_CN = '!h-[2.2rem] !rounded-[0.65rem] !text-[0.75rem] !font-bold !bg-[var(--qr-soft,#f8fafc)] !border-(--gm-line)';
 
 const DEFAULT_PREFS = {
 	selectedSurahId: 2,
@@ -742,6 +743,11 @@ export default function QuranRevisionStudio({
 	unitSelectionsRef.current = unitSelections;
 	speedRef.current = speed;
 	volumeRef.current = { volume, muted };
+
+	useEffect(() => {
+		document.documentElement.dataset.gmUsers = '1';
+		return () => { delete document.documentElement.dataset.gmUsers; };
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -2978,13 +2984,13 @@ export default function QuranRevisionStudio({
 			<button
 				type="button"
 				onClick={openHistory}
-				className="gsh-btn relative inline-flex h-10 w-10 items-center justify-center rounded-[14px] border border-white/[0.24] bg-white/[0.14] text-white backdrop-blur-xl"
+				className="qr-head-btn"
 				aria-label={t.history}
 				title={t.history}
 			>
 				<History size={16} />
 				{history.length > 0 ? (
-					<span className="absolute -end-1 -top-1 grid min-w-[1.05rem] place-items-center rounded-full bg-white px-1 text-[9px] font-black text-[var(--color-primary-700)]">
+					<span className="qr-head-count">
 						{d(Math.min(history.length, 99))}
 					</span>
 				) : null}
@@ -2992,13 +2998,13 @@ export default function QuranRevisionStudio({
 			<button
 				type="button"
 				onClick={openFavs}
-				className="gsh-btn relative inline-flex h-10 w-10 items-center justify-center rounded-[14px] border border-white/[0.24] bg-white/[0.14] text-white backdrop-blur-xl"
+				className="qr-head-btn"
 				aria-label={t.favorites}
 				title={t.favorites}
 			>
 				<Youtube size={17} />
 				{favorites.length > 0 ? (
-					<span className="absolute -end-1 -top-1 grid min-w-[1.05rem] place-items-center rounded-full bg-white px-1 text-[9px] font-black text-[var(--color-primary-700)]">
+					<span className="qr-head-count">
 						{d(Math.min(favorites.length, 99))}
 					</span>
 				) : null}
@@ -3006,7 +3012,7 @@ export default function QuranRevisionStudio({
 			<button
 				type="button"
 				onClick={() => setTajweedLegendOpen(true)}
-				className="gsh-btn relative inline-flex h-10 items-center gap-1.5 rounded-[14px] border border-white/[0.24] bg-white/[0.14] px-3 text-white backdrop-blur-xl"
+				className="qr-head-btn qr-head-btn--wide"
 				aria-label={t.tajweedLegend}
 				title={t.tajweedLegend}
 				aria-haspopup="dialog"
@@ -3021,7 +3027,7 @@ export default function QuranRevisionStudio({
 	return (
 		<div
 			className={cx(
-				'qr-studio mx-auto w-full max-w-[920px]',
+				'qr-studio gm-surface rs-scope mx-auto w-full max-w-[920px]',
 				sessionPhase === 'active' ? 'is-session-active' : 'space-y-3 pb-8',
 			)}
 			dir={isAr ? 'rtl' : 'ltr'}
@@ -3029,14 +3035,13 @@ export default function QuranRevisionStudio({
 			<audio ref={audioRef} preload="none" />
 
 			<div className={cx('qr-studio-head', sessionPhase === 'active' && 'is-compact')}>
-				<GradientStatsHeader
-					hiddenStats
+				<IntakeHero
 					icon={BookMarked}
 					title={t.title}
-					desc={sessionPhase === 'active' ? undefined : t.desc}
-					actions={headerActions}
-					btnName={sessionPhase !== 'setup' ? t.newSession : undefined}
-					onClick={sessionPhase !== 'setup' ? resetSetup : undefined}
+					subtitle={sessionPhase === 'active' ? undefined : t.desc}
+					extra={headerActions}
+					ctaLabel={sessionPhase !== 'setup' ? t.newSession : null}
+					onCta={sessionPhase !== 'setup' ? resetSetup : undefined}
 				/>
 			</div>
 

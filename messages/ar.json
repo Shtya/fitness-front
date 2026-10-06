@@ -299,13 +299,57 @@
 		},
 		"sections": {
 			"admins": "المديرون",
-			"others": "أخرى"
+			"coaches": "المدربون",
+			"clients": "العملاء",
+			"misc": "أدوار أخرى",
+			"others": "أخرى",
+			"adminsHint": "وسّع الصف لإدارة المدربين والعملاء تحت هذا المدير",
+			"coachesHint": "مدربون غير متداخلين تحت مدير في هذه الصفحة",
+			"clientsHint": "حسابات العملاء في هذه الصفحة",
+			"miscHint": "حسابات ليست مديراً أو مدرباً أو عميلاً",
+			"showCoaches": "عرض المدربين",
+			"expandClients": "وسّع لعرض العملاء",
+			"clientCount": "{count} عملاء",
+			"coachesUnder": "المدربون تحت {name}",
+			"noAdmins": "لا يوجد مديرون",
+			"addCoach": "إضافة مدرب",
+			"addClient": "إضافة عميل",
+			"addClientFor": "إضافة عميل إلى {name}",
+			"coachCount": "{count} مدربين",
+			"activeCount": "{count} نشط",
+			"unassigned": "بدون مدرب",
+			"unassignedHint": "عملاء هذا المدير غير المعيّنين لمدرب",
+			"moveCoach": "المدرب",
+			"moved": "تم نقل العميل إلى المدرب المختار",
+			"moveFailed": "تعذّر نقل العميل",
+			"copiedTally": "تم نسخ الأعداد",
+			"copyTally": "نسخ الأعداد",
+			"listCap": "يُعرض {shown} من {total}"
 		},
 		"filters": {
 			"searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني…",
 			"allStatuses": "جميع الحالات",
 			"allRoles": "جميع الأدوار",
 			"sortLabel": "الترتيب"
+		},
+		"table": {
+			"user": "المستخدم",
+			"admin": "المدير",
+			"coachClient": "مدرب / عميل",
+			"email": "البريد",
+			"phone": "الهاتف",
+			"role": "الدور",
+			"status": "الحالة",
+			"access": "الوصول",
+			"joined": "تاريخ الانضمام",
+			"lastLogin": "آخر دخول",
+			"never": "لم يدخل بعد",
+			"actions": "إجراءات",
+			"team": "الفريق"
+		},
+		"statsHints": {
+			"platform": "على مستوى المنصة",
+			"thisPage": "في هذه الصفحة"
 		},
 		"sort": {
 			"name_asc": "الاسم أ ← ي",
@@ -326,7 +370,9 @@
 			"copyCredentials": "نسخ بيانات الدخول",
 			"deleteUser": "حذف المستخدم",
 			"cancel": "إلغاء",
-			"statusUpdated": "تم تحديث الحالة بنجاح"
+			"statusUpdated": "تم تحديث الحالة بنجاح",
+			"pageAccess": "صلاحيات الصفحات",
+			"refresh": "تحديث"
 		},
 		"impersonation": {
 			"loading": "جارٍ تسجيل الدخول كمستخدم…",
@@ -381,7 +427,11 @@
 			},
 			"validation": {
 				"nameEmail": "الاسم والبريد الإلكتروني مطلوبان"
-			}
+			},
+			"underAdmin": "هذا الحساب سيكون تابعًا للمدير {name}",
+			"underCoach": "المدرب المعيّن: {name}",
+			"coachOptional": "المدرب",
+			"noCoach": "بدون مدرب"
 		},
 		"editModal": {
 			"title": "تعديل بيانات المستخدم",
@@ -483,6 +533,22 @@
 		"noTasksDesc": "لا توجد عناصر لهذا اليوم. انقر على إضافة لإنشاء واحد.",
 		"selectDayTitle": "اختر يوماً",
 		"selectDayDesc": "انقر على أي يوم في التقويم لعرض مهامه وتفاصيله.",
+		"today": "اليوم",
+		"completed": "مكتمل",
+		"tapToSelect": "اضغط على يوم لعرض مهامه",
+		"events": "أحداث",
+		"activeDays": "أيام نشطة",
+		"monthView": "شهر",
+		"selected": "محدد",
+		"addToThisDay": "إضافة لهذا اليوم",
+		"noTasksSubtitle": "أضف مهمة لهذا اليوم",
+		"daySat": "س",
+		"daySun": "أ",
+		"dayMon": "إ",
+		"dayTue": "ث",
+		"dayWed": "ر",
+		"dayThu": "خ",
+		"dayFri": "ج",
 		"everyXDays": "كل عدد من الأيام",
 		"everyXDaysLabel": "كل {count} يوم",
 		"none": "بدون تكرار",
@@ -849,7 +915,8 @@
 			"account": "الحساب",
 			"communication": "التواصل",
 			"outreach": "التواصل والتسويق",
-			"tools": "الأدوات"
+			"tools": "الأدوات",
+			"granted": "مضافة لهذا الدور"
 		},
 		"groups": {
 			"ai": "الذكاء الاصطناعي",
@@ -909,7 +976,8 @@
 			"profile": "الملف الشخصي",
 			"branding": "الهوية والألوان",
 			"siteInspector": "فاحص المواقع",
-			"pageAccess": "صلاحيات الصفحات"
+			"pageAccess": "صلاحيات الصفحات",
+			"documentEditor": "محرر المستندات"
 		},
 		"descriptions": {
 			"aiStudio": "أدوات مدعومة بالذكاء الاصطناعي والأتمتة الذكية لتعزيز سير عملك",
@@ -961,7 +1029,8 @@
 			"profile_admin": "إعدادات حسابك وتفضيلاتك وأمانك",
 			"profile_client": "ملفك الشخصي وإعدادات حسابك",
 			"branding": "تخصيص اسم التطبيق والشعارات وألوان الهوية",
-			"siteInspector": "هندسة عكسية لأي موقع عام: التقنيات ونظام التصميم والمكوّنات والكود القابل للاستخراج"
+			"siteInspector": "هندسة عكسية لأي موقع عام: التقنيات ونظام التصميم والمكوّنات والكود القابل للاستخراج",
+			"documentEditor_super": "مساحة عمل بملء الشاشة لقراءة وتحرير المستندات بذكاء"
 		},
 		"customize": {
 			"title": "تخصيص الشريط الجانبي",
@@ -1006,21 +1075,26 @@
 	},
 	"pageAccess": {
 		"title": "صلاحيات الصفحات",
-		"subtitle": "حدد صفحات القائمة الجانبية لكل دور. تصل التغييرات للمستخدمين المسجلين خلال دقيقة تقريبًا.",
+		"subtitle": "كل صفحات السيستم. علّم مين يشوف الصفحة: سوبر أدمن، أدمن، كوتش، أو كلاينت. التغيير يوصل للمستخدمين خلال حوالي دقيقة.",
+		"pageColumn": "الصفحة",
+		"visibleCount": "من {total} صفحة",
+		"toggleRole": "إظهار {page} لـ {role}",
+		"savedAll": "تم حفظ صلاحيات الصفحات",
 		"roles": {
-			"admin": "مدير",
-			"coach": "مدرب",
-			"client": "عميل"
+			"super_admin": "سوبر أدمن",
+			"admin": "أدمن",
+			"coach": "كوتش",
+			"client": "كلاينت"
 		},
 		"modes": {
 			"default": "ظاهرة",
-			"optional": "المتجر",
-			"locked": "مقفلة"
+			"optional": "مخفية (قديم)",
+			"locked": "مخفية"
 		},
 		"modeHints": {
-			"default": "تظهر في القائمة الجانبية افتراضيًا",
-			"optional": "مخفية حتى يضيفها المستخدم من المتجر",
-			"locked": "مخفية وممنوعة حتى بالرابط المباشر"
+			"default": "تظهر في الشريط الجانبي افتراضياً",
+			"optional": "وضع المتجر القديم — يُعامل كمختفي",
+			"locked": "مخفية من الشريط ومحظورة بالرابط المباشر حتى تظهرها"
 		},
 		"searchPlaceholder": "ابحث عن صفحة…",
 		"alwaysShown": "تظهر دائمًا",
@@ -1066,7 +1140,24 @@
 		"emptyTitle": "لا توجد نتائج",
 		"emptySubtitle": "جرّب كلمة مختلفة أو امسح البحث.",
 		"defaultDescription": "لوحة ألوان أنيقة ومتوازنة.",
-		"footer": "سيتم تطبيق التغيير فورًا على كامل لوحة التحكم"
+		"footer": "سيتم تطبيق التغيير فورًا على كامل لوحة التحكم",
+		"mode": {
+			"label": "المظهر",
+			"light": "فاتح",
+			"dark": "داكن",
+			"switchToLight": "التبديل إلى الوضع الفاتح",
+			"switchToDark": "التبديل إلى الوضع الداكن"
+		},
+		"palettes": {
+			"teal": "فيروزي استوائي",
+			"coral": "شعاب مرجانية",
+			"lavender": "حقول الخزامى",
+			"mint": "نعناع منعش",
+			"sunset": "وهج الغروب",
+			"blue": "أزرق سماوي",
+			"slate": "أردوازي ليلي",
+			"cyan": "نسيم المحيط"
+		}
 	},
 	"auth": {
 		"signIn": "تسجيل الدخول",
@@ -1306,6 +1397,12 @@
 			"expired": "منتهية",
 			"daysLeft": "يوم متبقٍ"
 		},
+		"legal": {
+			"title": "الخصوصية والشروط",
+			"subtitle": "السياسات وحقوق حسابك",
+			"privacy": "سياسة الخصوصية",
+			"terms": "شروط الاستخدام"
+		},
 		"sides": {
 			"all": "الكل",
 			"front": "أمام",
@@ -1423,7 +1520,19 @@
 	},
 	"weekly": {
 		"title": "التقرير الأسبوعي",
-		"subtitle": "شاركنا تقدمك هذا الأسبوع حتى يتمكن مدربك من متابعتك عن كثب",
+		"subtitle": "شارك تقدمك هذا الأسبوع مع مدربك",
+		"basics": "الأساسيات",
+		"tabs": {
+			"new": "تقرير جديد",
+			"history": "السجل"
+		},
+		"stars": {
+			"1": "ضعيف",
+			"2": "مقبول",
+			"3": "جيد",
+			"4": "جيد جداً",
+			"5": "ممتاز"
+		},
 		"weekOf": "أسبوع",
 		"cardioAdherence": "الالتزام بالكارديو",
 		"unreadFeedback": {
@@ -1538,60 +1647,96 @@
 	},
 	"chat": {
 		"search": {
-			"placeholder": "ابحث بالاسم أو البريد الإلكتروني...",
+			"placeholder": "ابحث بالاسم أو البريد",
 			"results": "نتائج البحث",
 			"clear": "مسح البحث",
-			"noResultsTitle": "لا توجد نتائج مطابقة",
-			"noResultsHint": "جرّب اسمًا أو بريدًا مختلفًا"
+			"noResultsTitle": "لا توجد نتائج",
+			"noResultsHint": "جرّب اسماً أو بريداً مختلفاً"
 		},
 		"quick": {
 			"coach": "تواصل مع المدرب",
-			"admin": "تواصل مع المشرف"
+			"admin": "تواصل مع المشرف",
+			"noCoach": "لا يوجد مدرب مرتبط بحسابك",
+			"noAdmin": "لا يوجد مشرف مرتبط بحسابك"
 		},
 		"appbar": {
 			"title": "الرسائل",
-			"subtitle": "تواصل مع مدربك وعملائك"
+			"subtitle": "تواصل مع مدربك وعملائك وفريقك من مكان واحد.",
+			"screenTitle": "المحادثات",
+			"screenHint": "الرسائل",
+			"unreadCount": "{count} رسائل غير مقروءة"
 		},
 		"tabs": {
 			"all": "الكل",
-			"unread": "غير المقروء"
+			"unread": "غير المقروء",
+			"groups": "المجموعات"
+		},
+		"stats": {
+			"conversations": "المحادثات",
+			"conversationsHint": "في صندوقك",
+			"unread": "غير مقروء",
+			"unreadHint": "بانتظار ردك",
+			"active": "محادثة مفتوحة",
+			"activeHintOn": "تم اختيار محادثة",
+			"activeHintOff": "اختر محادثة"
 		},
 		"empty": {
 			"pick": "اختر محادثة لبدء الدردشة",
-			"hint": "اختر محادثة من القائمة"
+			"hint": "اختر محادثة من القائمة أو ابحث عن شخص"
 		},
 		"composer": {
 			"placeholder": "اكتب رسالة…",
 			"disabled": "اختر محادثة لبدء الدردشة",
 			"remove": "إزالة المرفق",
 			"send": "إرسال",
-			"hint": "Shift+Enter لسطر جديد • Ctrl/Cmd+Enter للإرسال",
+			"hint": "Shift+Enter لسطر جديد • Enter للإرسال",
 			"voice": "رسالة صوتية",
 			"sendVoice": "إرسال الصوت",
 			"recording": "جاري التسجيل…",
-			"cancel": "إلغاء"
+			"cancel": "إلغاء",
+			"attach": "إرفاق ملف",
+			"image": "إرفاق صورة",
+			"micDenied": "يلزم إذن الميكروفون لإرسال الرسائل الصوتية"
 		},
 		"list": {
 			"group": "محادثة جماعية",
 			"direct": "رسالة مباشرة",
-			"photo": "📷 صورة",
-			"video": "🎥 فيديو",
-			"voice": "🎤 رسالة صوتية",
-			"file": "📎 ملف",
+			"photo": "صورة",
+			"video": "فيديو",
+			"voice": "رسالة صوتية",
+			"file": "ملف",
 			"empty": "لا توجد محادثات بعد",
+			"emptyUnread": "لا توجد محادثات غير مقروءة",
 			"title": "المحادثات",
 			"subtitle": "ابقَ على تواصل",
-			"startHint": "ابحث لبدء محادثة جديدة"
+			"startHint": "ابحث بالاسم أو البريد لبدء محادثة جديدة"
 		},
 		"header": {
-			"typing": "يكتب الآن...",
-			"direct": "متصل",
-			"loading": "جاري التحميل...",
+			"typing": "يكتب الآن…",
+			"direct": "محادثة",
+			"online": "متصل الآن",
+			"loading": "جاري التحميل…",
 			"noselect": "اختر محادثة"
 		},
 		"actions": {
 			"openList": "فتح قائمة المحادثات",
 			"close": "إغلاق"
+		},
+		"dates": {
+			"today": "اليوم",
+			"yesterday": "أمس"
+		},
+		"common": {
+			"retry": "إعادة المحاولة",
+			"serverUnreachable": "تعذّر الاتصال بالخادم. تحقّق من الاتصال وحاول مرة أخرى."
+		},
+		"errors": {
+			"loadConversations": "تعذّر تحميل المحادثات",
+			"loadMessages": "تعذّر تحميل الرسائل",
+			"searchFailed": "تعذّر البحث عن المستخدمين",
+			"openDirect": "تعذّر فتح هذه المحادثة",
+			"sendFailed": "تعذّر إرسال الرسالة",
+			"uploadFailed": "تعذّر رفع المرفق"
 		}
 	},
 	"calorie": {
@@ -1616,8 +1761,33 @@
 			"generating": "جاري التوليد..."
 		},
 		"header": {
-			"title": "حاسبة السعرات اليومية",
-			"desc": "احسب احتياجك اليومي حسب هدفك، واحسب سعرات الأطعمة بسهولة."
+			"title": "حاسبة السعرات",
+			"desc": "احسب BMR · TDEE · الماكروز"
+		},
+		"tabs": {
+			"profile": "الملف الشخصي",
+			"meal": "بناء الوجبة"
+		},
+		"phone": {
+			"bodyData": "بيانات الجسم",
+			"bodyDataSub": "أدخل بياناتك لحساب السعرات والماكروز",
+			"calculate": "احسب الآن",
+			"dailyTarget": "الهدف اليومي",
+			"day": "يوم",
+			"macros": "الماكروز",
+			"macrosSub": "التوزيع المثالي لمجموعات الغذاء",
+			"details": "التفاصيل",
+			"bodyFat": "الدهون %",
+			"leanMass": "الكتلة الخالية",
+			"tip": "نصيحة: أدخل نسبة الدهون للحصول على ماكروز أدق بناءً على الكتلة العضلية الفعلية.",
+			"addFood": "أضف طعاماً",
+			"addFoodSub": "ابحث واضف الأطعمة لوجبتك",
+			"searchHint": "ابحث عن طعام وأضفه للوجبة",
+			"noFoods": "لم تضف أي طعام بعد",
+			"noFoodsSub": "ابحث عن طعام وأضفه",
+			"clearAll": "مسح الكل",
+			"add": "أضف",
+			"select": "اختر..."
 		},
 		"sections": {
 			"dailyNeed": "الاحتياج اليومي",
@@ -1884,7 +2054,11 @@
 			"totalUsers": "إجمالي المستخدمين",
 			"active": "الحسابات النشطة",
 			"coaches": "المدربون",
-			"clients": "العملاء"
+			"clients": "العملاء",
+			"ofTotal": "{value} من {total}",
+			"pendingCount": "{count} قيد المراجعة",
+			"suspendedCount": "{count} موقوف",
+			"allAccounts": "كل الحسابات"
 		},
 		"filters": {
 			"role": "الدور",
@@ -1906,6 +2080,8 @@
 			"mealPlan": "خطة الوجبات",
 			"coach": "المدرب",
 			"joinDate": "تاريخ الانضمام",
+			"lastLogin": "آخر دخول",
+			"never": "لم يدخل بعد",
 			"status": "الحالة",
 			"daysLeft": "الأيام المتبقية",
 			"workoutEdit": "تعديل الخطة",
@@ -1992,7 +2168,33 @@
 			"credentialsAndForm": "بيانات الدخول ",
 			"createAndNext": "إنشاء والانتقال",
 			"credsReady": "تم إنشاء بيانات الدخول، يمكنك نسخها وإرسالها عبر واتساب أدناه.",
-			"passwordByEmail": "تم الإرسال عبر البريد الإلكتروني"
+			"passwordByEmail": "تم الإرسال عبر البريد الإلكتروني",
+			"stepAccount": "الحساب",
+			"stepWorkout": "تمرين",
+			"stepMeal": "تغذية",
+			"stepCalories": "سعرات",
+			"stepSend": "تسليم",
+			"sectionProfile": "البيانات",
+			"sectionAccess": "الدخول",
+			"sectionMembership": "الاشتراك",
+			"searchPlans": "ابحث في الخطط",
+			"selectedPlan": "المختار",
+			"noPlansTitle": "لا توجد خطط تمرين بعد",
+			"noPlansHint": "أنشئ خطة، أو تخطَّ وعيّنها لاحقًا.",
+			"noMealsTitle": "لا توجد خطط وجبات بعد",
+			"noMealsHint": "أنشئ خطة وجبات، أو تخطَّ وعيّنها لاحقًا.",
+			"noneMatch": "لا توجد خطط مطابقة للبحث.",
+			"fuelHint": "حدد الوقود اليومي عشان التراكِر يبدأ بأرقام حقيقية.",
+			"splitHint": "التقسيم بيتحدّث وأنت بتكتب السعرات أو الماكروز.",
+			"shareTitle": "سلّم بيانات الدخول",
+			"shareBody": "الحساب جاهز. انسخ الدخول، أو ابعتها واتساب بضغطة.",
+			"copyAll": "نسخ الدخول",
+			"messagePreview": "رسالة واتساب",
+			"phoneForWhatsapp": "رقم واتساب",
+			"kcalDay": "سعرة / يوم",
+			"fromMacros": "{kcal} سعرة من الماكروز",
+			"customDays": "أيام مخصصة",
+			"sameEveryDay": "نفس الجدول يوميًا"
 		},
 		"calories": {
 			"calories": "السعرات الحرارية",
@@ -2044,7 +2246,11 @@
 			"creating": "جاري الإنشاء...",
 			"expired": "منتهية",
 			"days": "يوم",
+			"daysShort": "ي",
+			"daysLeft": "{days} يوم متبقي",
+			"clearFilters": "مسح",
 			"back": "رجوع",
+			"skip": "تخطي",
 			"saveAndNext": "حفظ والمتابعة",
 			"sendWhatsapp": "إرسال عبر واتساب",
 			"noCoach": "بدون مدرب",
@@ -2055,7 +2261,8 @@
 			"tryAdjusting": "جرّب تعديل البحث أو الفلاتر",
 			"preview": "معاينة الصورة",
 			"selectedCount": "{count} محدد",
-			"clearSelection": "إلغاء التحديد"
+			"clearSelection": "إلغاء التحديد",
+			"done": "تم"
 		},
 		"alerts": {
 			"credsSent": "تم إرسال بيانات الدخول",
@@ -2086,7 +2293,8 @@
 			"saveCaloriesSuccess": "تم حفظ معلومات السعرات بنجاح",
 			"subscriptionRenewed": "تم تجديد الاشتراك بنجاح",
 			"renewSubscriptionFailed": "فشل في تجديد الاشتراك",
-			"usersDeleted": "تم حذف {count} مستخدمين بنجاح"
+			"usersDeleted": "تم حذف {count} مستخدمين بنجاح",
+			"macrosCalculated": "تم حساب المغذيات"
 		},
 		"errors": {
 			"nameMin": "يجب ألا يقل الاسم عن حرفين",
@@ -2114,6 +2322,27 @@
 			"deleteUserConfirm": "هل أنت متأكد أنك تريد حذف {name}؟ لا يمكن التراجع عن هذا الإجراء.",
 			"resetPasswordAndSendConfirm": "سيتم إعادة تعيين كلمة مرور {name} وإرسال بيانات دخول جديدة عبر واتساب. هل تريد المتابعة؟",
 			"deleteMultipleUsersConfirm": "هل أنت متأكد أنك تريد حذف {count} مستخدمين محددين؟ لا يمكن التراجع عن هذا الإجراء."
+		},
+		"roster": {
+			"all": "الكل",
+			"members": "عضو",
+			"composition": "توزيع حالات الحسابات",
+			"reviewPending": "مراجعة {count} معلّق",
+			"roleSplit": "توزيع الأدوار",
+			"programCoverage": "تغطية البرامج",
+			"withWorkout": "خطة تمارين",
+			"withMeal": "خطة غذائية",
+			"program": "البرنامج",
+			"noProgram": "غير مُسند",
+			"daysLeftShort": "متبقٍ {days} يوم",
+			"searching": "جارٍ البحث…",
+			"searchLabel": "بحث",
+			"filterTitle": "تصفية الأعضاء",
+			"reset": "إعادة ضبط",
+			"done": "تم",
+			"activeFilters": "الفلاتر النشطة",
+			"clearAll": "مسح الكل",
+			"resultCount": "{count, plural, =0 {لا يوجد أعضاء} one {عضو <strong>واحد</strong>} two {<strong>عضوان</strong>} few {<strong>#</strong> أعضاء} other {<strong>#</strong> عضو}}"
 		}
 	},
 	"date": {
@@ -2135,7 +2364,8 @@
 		"adjustFiltersOrAdd": "عدِّل عوامل التصفية أو أضِف سجلات جديدة."
 	},
 	"Stepper": {
-		"progress": "التقدّم"
+		"progress": "التقدّم",
+		"stepOf": "الخطوة {current} من {total}"
 	},
 	"Common": {
 		"seeMore": "عرض المزيد",
@@ -2160,14 +2390,15 @@
 		"empty": "لا توجد خطط متاحة. جرّب كلمة بحث أخرى.",
 		"untitled": "خطة بدون اسم",
 		"assignedCount": "{count} مُسند",
-		"daysCount": "{count} يوم",
+		"daysCount": "{count, plural, one {يوم واحد} two {يومان} few {# أيام} other {# يوم}}",
 		"details": "التفاصيل",
 		"moreCount": "+{count} أخرى"
 	},
 	"Meals": {
 		"searchPlaceholder": "ابحث باسم أو وصف خطة الوجبات…",
 		"empty": "لا توجد خطط وجبات متاحة. جرّب كلمة بحث أخرى.",
-		"untitled": "خطة وجبات بدون اسم"
+		"untitled": "خطة وجبات بدون اسم",
+		"clientsCount": "{count, plural, =0 {لا يوجد عملاء بعد} one {عميل واحد} two {عميلان} few {# عملاء} other {# عميل}}"
 	},
 	"Subscription": {
 		"startLabel": "تاريخ بداية الاشتراك",
@@ -2209,7 +2440,16 @@
 			"oldestFirst": "الأقدم أولاً",
 			"uploadImage": "رفع صورة",
 			"uploadVideo": "رفع فيديو",
-			"duplicate": "نسخ التمرين"
+			"duplicate": "نسخ التمرين",
+			"cancel": "إلغاء",
+			"retry": "إعادة المحاولة"
+		},
+		"sections": {
+			"targets": "أهداف التمرين",
+			"media": "الوسائط"
+		},
+		"badges": {
+			"personal": "خاص"
 		},
 		"labels": {
 			"name": "الاسم",
@@ -2283,11 +2523,16 @@
 			"avgRest": "متوسط الراحة (ث)",
 			"added7d": "أضيفت خلال 7 أيام",
 			"totalPersonalExercise": "تمارينك الخاصة",
-			"totalGlobalExercise": "جميع التمارين"
+			"totalGlobalExercise": "جميع التمارين",
+			"libraryHint": "مكتبة التمارين المشتركة",
+			"personalHint": "أنشأها فريقك",
+			"recentHint": "جديد هذا الأسبوع",
+			"ofTotal": "من أصل {total} تمرين"
 		},
 		"empty": {
 			"title": "لا توجد تمارين",
 			"subtitle": "جرّب بحثاً مختلفاً أو أضف تمريناً جديداً.",
+			"noDetails": "لم يُضف وصف بعد.",
 			"simple": "لا توجد تمارين حالياً."
 		},
 		"confirm": {
@@ -2297,6 +2542,7 @@
 		},
 		"errors": {
 			"loadExercises": "فشل تحميل التمارين",
+			"serverUnreachable": "تعذّر الاتصال بالخادم. تحقق من الاتصال أو من تشغيل الـ API ثم أعد المحاولة.",
 			"createFailed": "فشل إنشاء التمرين",
 			"updateFailed": "فشل تحديث التمرين",
 			"deleteFailed": "فشل حذف التمرين",
@@ -2319,6 +2565,17 @@
 			"none": "لا توجد {kind} متوفرة",
 			"noImage": "لا توجد صورة",
 			"noVideo": "لا يوجد فيديو"
+		},
+		"roster": {
+			"searchLabel": "بحث",
+			"resultCount": "{count, plural, =0 {لا توجد تمارين} one {<strong>#</strong> تمرين} two {<strong>#</strong> تمرينان} few {<strong>#</strong> تمارين} other {<strong>#</strong> تمرين}}",
+			"activeFilters": "فلاتر نشطة",
+			"clearAll": "مسح الكل",
+			"category": "التصنيف",
+			"allCategories": "كل التصنيفات",
+			"reset": "إعادة ضبط",
+			"done": "تم",
+			"emptyHint": "جرّب اسمًا أو تصنيفًا آخر."
 		}
 	},
 	"feedback": {
@@ -2356,6 +2613,7 @@
 			"exportCSV": "تحميل CSV",
 			"noFeedback": "لا توجد ملاحظات",
 			"loading": "جاري التحميل...",
+			"genericError": "حدث خطأ. حاول مرة أخرى.",
 			"description": "الوصف",
 			"changeStatus": "تغيير الحالة",
 			"delete": "حذف",
@@ -2374,10 +2632,10 @@
 		"Sets": "المجموعات",
 		"Reps": "التكرارات",
 		"Tempo": "الوتيرة",
-		"copySuffix": "(copy)",
+		"copySuffix": "(نسخة)",
 		"placeholders": {
 			"search": "ابحث...",
-			"searchPlan": "ابحث بالاسم عن الخطه…"
+			"searchPlan": "ابحث عن خطة بالاسم…"
 		},
 		"filters": {
 			"all": "الكل"
@@ -2401,11 +2659,14 @@
 			"savePlan": "حفظ الخطة",
 			"duplicateDay": "تكرار اليوم",
 			"share": "مشاركة",
-			"drag": "سحب"
+			"drag": "سحب",
+			"retry": "إعادة المحاولة"
 		},
 		"errors": {
 			"loadExercises": "حدث خطأ أثناء تحميل التمارين.",
-			"loadPlans": "تعذّر تحميل الخطط."
+			"loadPlans": "تعذّر تحميل الخطط.",
+			"loadPlan": "تعذّر تحميل تفاصيل الخطة.",
+			"serverUnreachable": "تعذّر الاتصال بالخادم. تحقق من الاتصال وحاول مجدداً."
 		},
 		"notifications": {
 			"planDeleted": "تم حذف الخطة بنجاح.",
@@ -2450,6 +2711,13 @@
 				"desc": "أنشئ برامج تدريب، نظّم الأيام، وعيّنها للمتدربين بسهولة."
 			},
 			"stats": {
+				"totalPlans": "إجمالي الخطط",
+				"totalHint": "المطابقة للبحث الحالي",
+				"globalHint": "مكتبة مشتركة للجميع",
+				"personalHint": "أنشأها فريقك",
+				"activeOnPage": "الخطط النشطة",
+				"clientsOnPage": "العملاء المعيّنون",
+				"onThisPage": "في هذه الصفحة",
 				"globalPlans": "الخطط العامة",
 				"personalPlans": "خططي الشخصية",
 				"withoutDays": "خطط بدون أيام",
@@ -2464,7 +2732,7 @@
 			},
 			"usersModal": {
 				"title": "مستخدمو الخطة",
-				"count": "{count} مستخدم",
+				"count": "{count, plural, =0 {لا يوجد مستخدمون} one {مستخدم واحد} two {مستخدمان} few {# مستخدمين} other {# مستخدم}}",
 				"loading": "جارٍ تحميل المستخدمين…",
 				"loadFailed": "تعذّر تحميل المستخدمين",
 				"subscriptionActive": "نشط",
@@ -2478,7 +2746,9 @@
 				"active": "نشطة",
 				"inactive": "غير نشطة",
 				"noDescription": "لا توجد ملاحظات.",
-				"dayCountLabel": "{count} ايام"
+				"dayCountLabel": "{count, plural, =0 {بدون أيام} one {يوم واحد} two {يومان} few {# أيام} other {# يوم}}",
+				"clearSearch": "مسح البحث",
+				"retryHint": "تحقق من الاتصال ثم اضغط إعادة المحاولة."
 			},
 			"modals": {
 				"previewTitle": "معاينة الخطة",
@@ -2494,7 +2764,10 @@
 				"actions": "الإجراءات",
 				"active": "نشطة",
 				"inactive": "غير نشطة",
-				"clientsUsing": "العملاء المستخدمون"
+				"clientsUsing": "العملاء",
+				"scope": "النوع",
+				"global": "عامة",
+				"personal": "خاصة"
 			}
 		},
 		"preview": {
@@ -2517,18 +2790,37 @@
 			"selectUsersLabel": "اختر المستخدمين",
 			"selectUsersPlaceholder": "ابحث واختر المستخدمين...",
 			"removeUser": "إزالة المستخدم",
-			"assigning": "جاري التعيين..."
+			"assigning": "جاري التعيين...",
+			"searchLabel": "ابحث عن العملاء بالاسم أو البريد",
+			"selectedCount": "{count, plural, =0 {لم يتم اختيار عملاء} one {تم اختيار عميل واحد} two {تم اختيار عميلين} few {تم اختيار # عملاء} other {تم اختيار # عميل}}",
+			"noClients": "لا يوجد عملاء متاحون للتعيين.",
+			"noMatches": "لا يوجد عملاء مطابقون للبحث.",
+			"loadFailed": "تعذّر تحميل العملاء."
 		},
 		"builder": {
-			"addMore": "اضافة المزيد",
+			"addMore": "إضافة المزيد",
 			"namePlaceholder": "اسم الخطة (مثلاً: دفع/سحب/أرجل...)",
+			"nameLabel": "اسم الخطة",
+			"notesTitle": "ملاحظات الخطة",
+			"notePlaceholder": "اكتب ملاحظة للمتدرب…",
+			"addNote": "إضافة ملاحظة",
+			"removeNote": "حذف الملاحظة",
+			"emptyNotes": "لا توجد ملاحظات بعد — أضف واحدة",
+			"dayLabel": "اليوم",
+			"daysShort": "أيام",
+			"secondsShort": "ث",
+			"pickBlockHint": "اختر قسماً بالأسفل لبدء إضافة التمارين.",
+			"dragHandle": "اسحب لإعادة الترتيب",
+			"durationUnit": "وحدة المدة",
+			"duration": "المدة",
 			"daysSectionTitle": "الأيام",
 			"restTime": "وقت الراحة",
 			"exerciseNote": "ملاحظة التمرين",
 			"validation": {
 				"nameRequired": "اسم الخطة مطلوب",
 				"needDay": "يجب إضافة يوم واحد على الأقل",
-				"needExercisePerDay": "كل يوم يجب أن يحتوي على تمرين واحد على الأقل"
+				"needExercisePerDay": "كل يوم يجب أن يحتوي على تمرين واحد على الأقل",
+				"duplicateDay": "هذا اليوم مستخدم بالفعل"
 			},
 			"blocks": {
 				"warmup": "التسخين",
@@ -2558,6 +2850,13 @@
 			"wednesday": "الأربعاء",
 			"thursday": "الخميس",
 			"friday": "الجمعة"
+		},
+		"roster": {
+			"searchLabel": "بحث",
+			"resultCount": "{count, plural, =0 {لا توجد خطط تمرين} one {<strong>#</strong> خطة تمرين} two {<strong>#</strong> خطتا تمرين} few {<strong>#</strong> خطط تمرين} other {<strong>#</strong> خطة تمرين}}",
+			"activeFilters": "فلاتر نشطة",
+			"clearAll": "مسح الكل",
+			"emptyHint": "جرّب اسم خطة آخر."
 		}
 	},
 	"MyWorkouts": {
@@ -2611,6 +2910,9 @@
 			"set": "المجموعة",
 			"weight": "الوزن",
 			"reps": "التكرارات",
+			"kg": "كجم",
+			"repUnit": "عدة",
+			"repUnitPlural": "عدات",
 			"done": "تم"
 		},
 		"actions": {
@@ -2697,14 +2999,27 @@
 			"generate": "توليد",
 			"duplicate": "نسخ",
 			"duplicated": "تم النسخ",
-			"view_users": "عرض المستخدمين"
+			"view_users": "عرض المستخدمين",
+			"retry": "إعادة المحاولة",
+			"remove_item": "حذف العنصر",
+			"remove_supplement": "حذف المكمل",
+			"close": "إغلاق",
+			"collapse": "طيّ",
+			"expand": "توسيع",
+			"assigning": "جاري التعيين…"
 		},
 		"stats": {
 			"global_plans": "الخطط العامة",
-			"my_plans": "خططي الخاصة"
+			"my_plans": "خططي الخاصة",
+			"total_plans": "إجمالي الخطط",
+			"total_hint": "المطابقة للبحث الحالي",
+			"global_hint": "مشتركة مع جميع الصالات",
+			"my_hint": "أنشأها فريقك",
+			"clients_on_page": "العملاء في الصفحة",
+			"on_this_page": "محسوبة في هذه الصفحة"
 		},
 		"search": {
-			"placeholder": "ابحث بالاسم عن الخطه…",
+			"placeholder": "ابحث عن خطة بالاسم…",
 			"clear": "مسح البحث",
 			"per_page": "عدد بالصفحة",
 			"oldest_first": "الأقدم أولاً",
@@ -2722,7 +3037,10 @@
 			"plan_users_title": "مستخدمو الخطة",
 			"subscription_active": "نشط",
 			"subscription_inactive": "غير نشط",
-			"no_plan_users": "لا يوجد مستخدمون لهذه الخطة بعد."
+			"no_plan_users": "لا يوجد مستخدمون لهذه الخطة بعد.",
+			"assign_title_named": "تعيين «{name}»",
+			"plan_users_count": "{count, plural, =0 {لا يوجد عملاء} one {عميل واحد} two {عميلان} few {# عملاء} many {# عميلًا} other {# عميل}}",
+			"no_plan_users_desc": "عيّن الخطة لعميل ليظهر هنا."
 		},
 		"form": {
 			"plan_name": "اسم الخطة",
@@ -2741,7 +3059,18 @@
 			"qty": "الكمية",
 			"select_client": "اختيار العميل",
 			"alternative_item": "عنصر بديل",
-			"add_alternative": "إضافة بديل"
+			"add_alternative": "إضافة بديل",
+			"unit": "الوحدة",
+			"kcal_short": "سعرة",
+			"meal_n": "الوجبة {n}",
+			"day_custom_hint": "وجبات مخصّصة لهذا اليوم",
+			"day_uses_base": "يستخدم وجبات اليوم المرجعي",
+			"meals_count": "{count, plural, =0 {لا توجد وجبات} one {وجبة واحدة} two {وجبتان} few {# وجبات} many {# وجبة} other {# وجبة}}",
+			"items_count": "{count, plural, =0 {لا توجد عناصر} one {عنصر واحد} two {عنصران} few {# عناصر} many {# عنصرًا} other {# عنصر}}",
+			"kcal_per_day": "سعرة / يوم",
+			"basics": "بيانات الخطة",
+			"base_day_hint": "تُطبَّق هذه الوجبات على كل الأيام ما لم يتم تخصيص يوم.",
+			"customize_days_hint": "استبدل الوجبات المرجعية لأيام محدّدة من الأسبوع."
 		},
 		"unit": {
 			"g": "غ",
@@ -2753,7 +3082,8 @@
 			"pickerTitle": "اختيار وصفة",
 			"searchPlaceholder": "ابحث في الوصفات...",
 			"label": "وصفة",
-			"empty": "لا توجد وصفات"
+			"empty": "لا توجد وصفات",
+			"load_failed": "تعذّر تحميل الوصفات"
 		},
 		"days": {
 			"monday": "الاثنين",
@@ -2784,17 +3114,28 @@
 			"actions": "الإجراءات",
 			"description": "الوصف",
 			"notes": "ملاحظات",
-			"clientsUsing": "العملاء"
+			"clientsUsing": "العملاء",
+			"scope": "النطاق",
+			"global": "عامة",
+			"personal": "خاصة",
+			"schedule": "الجدول",
+			"custom_days": "أيام مخصّصة",
+			"same_every_day": "موحّدة لكل الأيام"
 		},
 		"list": {
 			"empty_title": "لا توجد خطط",
 			"empty_desc": "جرّب بحثًا مختلفًا أو أنشئ خطة جديدة.",
 			"no_desc": "لا يوجد وصف.",
-			"no_clients": "لا يوجد عملاء"
+			"no_clients": "لا يوجد عملاء",
+			"retry_hint": "تحقّق من الاتصال ثم أعد المحاولة."
 		},
 		"assign": {
 			"title": "تعيين إلى",
-			"select_client": "اختر عميلًا"
+			"select_client": "اختر عميلًا",
+			"load_failed": "تعذّر تحميل العملاء",
+			"replace_hint": "سيتم استبدال خطة الوجبات الحالية للعميل المحدّد بهذه الخطة.",
+			"search_label": "ابحث عن عميل بالاسم أو البريد",
+			"no_matches": "لا يوجد عملاء مطابقون للبحث"
 		},
 		"confirm": {
 			"delete_title": "حذف الخطة؟",
@@ -2812,10 +3153,14 @@
 			"ai_filled": "تم ملء الخطة بواسطة الذكاء الاصطناعي. راجع وعدّل عند الحاجة.",
 			"ai_failed": "فشل توليد بيانات الخطة بالذكاء الاصطناعي",
 			"duplicated": "تم نسخ الخطة بنجاح",
-			"duplicate_failed": "فشل نسخ الخطة"
+			"duplicate_failed": "فشل نسخ الخطة",
+			"load_failed": "تعذّر تحميل تفاصيل الخطة"
 		},
 		"notes": {
-			"placeholder": "اكتب ملاحظة واضغط Enter…"
+			"placeholder": "اكتب ملاحظة واضغط Enter…",
+			"add": "إضافة ملاحظة",
+			"remove": "حذف الملاحظة",
+			"empty": "لا توجد ملاحظات — أضف أول ملاحظة"
 		},
 		"validation": {
 			"required": "مطلوب",
@@ -2824,7 +3169,8 @@
 			"hhmm": "صيغة الوقت HH:MM",
 			"add_item": "أضف عنصرًا واحدًا على الأقل",
 			"add_meal": "أضف وجبة واحدة على الأقل",
-			"plan_name_required": "اسم الخطة مطلوب"
+			"plan_name_required": "اسم الخطة مطلوب",
+			"fix_errors": "يرجى تصحيح الحقول المحدّدة"
 		},
 		"empty": {
 			"no_meals_hint": "لا توجد وجبات. اضغط «إضافة وجبة» للبدء."
@@ -2834,6 +3180,35 @@
 		},
 		"common": {
 			"loading": "جاري التحميل..."
+		},
+		"copy_suffix": "(نسخة)",
+		"errors": {
+			"load_plans": "تعذّر تحميل خطط الوجبات",
+			"server_unreachable": "تعذّر الوصول إلى الخادم. تحقّق من الاتصال ثم أعد المحاولة."
+		},
+		"builder": {
+			"drag_handle": "اسحب لإعادة الترتيب"
+		},
+		"ai": {
+			"default_prompt": "أنشئ خطة وجبات لإعادة تكوين الجسم تحتوي على 2300 سعرة حرارية و5 وجبات يوميًا.",
+			"title": "مولّد خطط الوجبات بالذكاء الاصطناعي",
+			"prompt_label": "صف الخطة",
+			"hint": "الوجبات المولّدة تستبدل وجبات اليوم المرجعي. راجعها قبل الحفظ."
+		},
+		"preview": {
+			"every_day": "كل الأيام",
+			"meals_per_day": "وجبات / يوم",
+			"avg_kcal": "متوسط السعرات / يوم",
+			"no_meals": "لا توجد وجبات في هذه الخطة بعد",
+			"created_at": "تاريخ الإنشاء",
+			"updated_at": "آخر تحديث"
+		},
+		"roster": {
+			"searchLabel": "بحث",
+			"resultCount": "{count, plural, =0 {لا توجد خطط وجبات} one {<strong>#</strong> خطة وجبات} two {<strong>#</strong> خطتا وجبات} few {<strong>#</strong> خطط وجبات} other {<strong>#</strong> خطة وجبات}}",
+			"activeFilters": "فلاتر نشطة",
+			"clearAll": "مسح الكل",
+			"emptyHint": "جرّب اسم خطة آخر."
 		}
 	},
 	"forms": {
@@ -2842,6 +3217,16 @@
 			"new": "نموذج جديد",
 			"title": "إدارة النماذج",
 			"desc": "إنشاء وإدارة النماذج المخصصة الخاصة بك"
+		},
+		"stats": {
+			"total": "إجمالي النماذج",
+			"totalHint": "كل النماذج المتاحة لك",
+			"own": "نماذجي",
+			"ownHint": "أنشأتها أنت",
+			"shared": "النماذج المشتركة",
+			"sharedHint": "مشتركة معك",
+			"fields": "إجمالي الحقول",
+			"fieldsHint": "في كل النماذج"
 		},
 		"table": {
 			"title": "العنوان",
@@ -2915,6 +3300,9 @@
 		"editor": {
 			"fields": "الحقول",
 			"add_field": "إضافة حقل",
+			"summary": "{fields, plural, =0 {لا توجد حقول بعد} one {حقل واحد} two {حقلان} few {# حقول} other {# حقل}} · {required} إجباري",
+			"palette": "أنواع الحقول",
+			"palette_hint": "اضغط على النوع لإضافته",
 			"label": "العنوان",
 			"type": "النوع",
 			"required": "مطلوب",
@@ -2938,6 +3326,17 @@
 			"create_failed": "فشل إنشاء النموذج",
 			"update_failed": "فشل تحديث النموذج",
 			"delete_failed": "فشل حذف النموذج"
+		},
+		"roster": {
+			"all": "الكل",
+			"own": "خاص بي",
+			"shared": "مشترك",
+			"searchLabel": "بحث",
+			"owner": "المالك",
+			"resultCount": "{count, plural, =0 {لا توجد نماذج} one {<strong>#</strong> نموذج} two {<strong>#</strong> نموذجان} few {<strong>#</strong> نماذج} other {<strong>#</strong> نموذج}}",
+			"activeFilters": "فلاتر نشطة",
+			"clearAll": "مسح الكل",
+			"emptyHint": "جرّب بحثًا أو فلتر مالك آخر، أو أنشئ نموذجًا."
 		}
 	},
 	"publicForm": {
@@ -2950,7 +3349,8 @@
 		"messages": {
 			"load_failed": "حدث خطأ أثناء تحميل النموذج.",
 			"submit_success": "تم إرسال النموذج بنجاح.",
-			"submit_failed": "فشل إرسال النموذج، برجاء المحاولة مرة أخرى."
+			"submit_failed": "فشل إرسال النموذج، برجاء المحاولة مرة أخرى.",
+			"upload_failed": "تعذر رفع الملف. حاول مرة أخرى."
 		},
 		"errors": {
 			"not_found_title": "النموذج غير موجود",
@@ -3054,6 +3454,12 @@
 			"all_forms_note": "يتم عرض الصفحة الأولى فقط من كل نموذج (عرض مُجمّع).",
 			"open": "فتح"
 		},
+		"stats": {
+			"totalHint": "كل الردود المحمّلة حسب فلتر النموذج",
+			"shownHint": "لسه مستنية المدرب يراجعها",
+			"reviewedHint": "اتعلّمت كمراجَعة",
+			"formsHint": "نماذج وصلها ردود"
+		},
 		"review": {
 			"aria_label": "تحديد حالة المراجعة",
 			"label": "مراجعة",
@@ -3078,6 +3484,7 @@
 			"refresh": "تحديث",
 			"load_more": "تحميل المزيد",
 			"delete": "حذف",
+			"cancel": "إلغاء",
 			"confirm_delete": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟"
 		},
 		"empty": {
@@ -3107,6 +3514,23 @@
 			"assign_optional": "تعيين (اختياري) — أدخل معرّف مستخدم",
 			"assign_optional_ph": "يمكنك التعيين لاحقاً من تفاصيل الإدخال",
 			"cta": "إنشاء"
+		},
+		"roster": {
+			"all": "الكل",
+			"waiting": "بانتظار",
+			"reviewed": "تمت المراجعة",
+			"searchLabel": "بحث",
+			"formFilter": "النموذج",
+			"filters": "فلاتر",
+			"reset": "إعادة ضبط",
+			"done": "تم",
+			"resultCount": "{count, plural, =0 {لا توجد ردود} one {<strong>#</strong> رد} two {<strong>#</strong> ردان} few {<strong>#</strong> ردود} other {<strong>#</strong> رد}}",
+			"activeFilters": "فلاتر نشطة",
+			"clearAll": "مسح الكل",
+			"reviewPending": "{count, plural, one {# بانتظار المراجعة} two {# بانتظار المراجعة} few {# بانتظار المراجعة} other {# بانتظار المراجعة}}",
+			"emptyHint": "جرّب بحثًا أو نموذجًا أو حالة مراجعة أخرى.",
+			"markReviewed": "تعليم كمراجَع",
+			"markUnreviewed": "تعليم كغير مراجَع"
 		}
 	},
 	"reports": {
@@ -3260,6 +3684,9 @@
 	"settings": {
 		"title": "الإعدادات",
 		"subtitle": "اضبط هوية منصّتك وتجربة العميل من مكان واحد",
+		"loading": "جاري التحميل…",
+		"remove": "إزالة",
+		"unsavedChanges": "تذكّر حفظ التغييرات",
 		"export": "تصدير",
 		"import": "استيراد",
 		"save": "حفظ التغييرات",
@@ -3705,8 +4132,17 @@
 				"daysElapsed": "الأيام المنقضية",
 				"checkIns": "التقارير الأسبوعية"
 			},
+			"snapshot": {
+				"title": "لمحة سريعة",
+				"subtitle": "وضع العميل الحالي",
+				"daysToExpiry": "أيام حتى نهاية الخطة",
+				"latestWeight": "آخر وزن",
+				"latestWaist": "آخر محيط خصر",
+				"totalCheckins": "إجمالي المتابعات"
+			},
 			"trend": {
 				"title": "تطور الوزن",
+				"subtitle": "الوزن خلال فترة المتابعة",
 				"legend": {
 					"current": "الحالي",
 					"min": "الأدنى",
@@ -3719,20 +4155,26 @@
 				}
 			},
 			"workout": {
+				"title": "خطة التمرين",
+				"subtitle": "خطة التدريب النشطة",
 				"daysShort": "أيام",
 				"viewPlan": "عرض الخطة"
 			},
 			"meal": {
+				"title": "خطة الوجبات",
+				"subtitle": "خطة التغذية النشطة",
 				"daysShort": "أيام",
 				"viewPlan": "عرض الخطة"
 			},
 			"checkins": {
 				"title": "التقارير الأسبوعية",
+				"subtitle": "آخر المتابعات الأسبوعية",
 				"empty": "لا توجد تقارير أسبوعية بعد",
 				"more": "المزيد"
 			},
 			"identity": {
 				"title": "معلومات العميل",
+				"subtitle": "الحساب والعضوية",
 				"client": "العميل",
 				"membership": "نوع العضوية",
 				"gender": "الجنس",
@@ -3748,7 +4190,8 @@
 			"units": {
 				"kg": "كجم",
 				"cm": "سم",
-				"days": "يوم"
+				"days": "يوم",
+				"dayShort": "ي"
 			}
 		},
 		"measurements": {
@@ -3761,13 +4204,23 @@
 		}
 	},
 	"workoutsProgress": {
+		"title": "تقدم التمارين",
+		"subtitle": "الحمل التدريبي والجلسات والأرقام القياسية",
 		"loading": "جاري التحميل...",
 		"empty": "لا توجد بيانات متاحة",
 		"kpi": {
+			"title": "لمحة التدريب",
+			"subtitle": "آخر تحديث {date}",
 			"adherence": "نسبة الالتزام",
+			"daysTrained": "{n} أيام تدريب",
 			"totalVolume": "إجمالي الحجم التدريبي",
+			"volumeTotal": "إجمالي الحجم التدريبي",
+			"avgPerSession": "{n} كجم لكل جلسة",
 			"kg": "كجم",
 			"sessions": "عدد الجلسات",
+			"avgSetsPerSession": "{n} مجموعات لكل جلسة",
+			"lastWorkout": "آخر تمرين",
+			"streak": "سلسلة {n} يوم",
 			"prs": "الأرقام القياسية الشخصية"
 		},
 		"sessions": {
@@ -3782,8 +4235,13 @@
 			"byAttempts": "أكثر التمارين تكراراً",
 			"byVolume": "التمارين حسب الحجم التدريبي"
 		},
+		"top": {
+			"byAttempts": "أكثر التمارين تكراراً",
+			"byVolume": "التمارين حسب الحجم التدريبي"
+		},
 		"prs": {
 			"title": "الأرقام القياسية الشخصية",
+			"subtitle": "{n} أرقام قياسية",
 			"e1rm": "{n} كجم (1RM)",
 			"weight": "{n} كجم",
 			"reps": "{n} تكرار"
@@ -3797,23 +4255,38 @@
 		"loading": "جاري التحميل...",
 		"empty": "لا توجد بيانات متاحة",
 		"kpi": {
+			"title": "لمحة التغذية",
+			"subtitle": "الوجبات والالتزام والمكملات",
 			"mealsLogged": "الوجبات المسجلة",
+			"daysCovered": "{n} أيام مغطاة",
 			"adherence": "نسبة الالتزام",
+			"adherenceAvg": "متوسط الالتزام",
+			"scale5": "من 5",
 			"supplements": "المكملات",
-			"daysTracked": "أيام المتابعة"
+			"taken": "تم تسجيلها",
+			"daysTracked": "أيام المتابعة",
+			"lastLog": "آخر تسجيل",
+			"latestHint": "أحدث إدخال"
 		},
 		"adherence": {
 			"title": "نسبة الالتزام اليومي",
+			"subtitle": "مدى مطابقة الوجبات للخطة",
 			"caption": "آخر 14 يوم"
 		},
 		"meals": {
 			"title": "الوجبات اليومية"
 		},
+		"mealsDensity": {
+			"title": "الوجبات حسب اليوم",
+			"subtitle": "عدد الوجبات المسجلة في كل يوم"
+		},
 		"topFoods": {
-			"title": "الأطعمة الأكثر تكراراً"
+			"title": "الأطعمة الأكثر تكراراً",
+			"subtitle": "الأطعمة الأكثر تسجيلاً"
 		},
 		"logs": {
 			"title": "سجل الوجبات",
+			"subtitle": "آخر الوجبات والمكملات",
 			"at": "في",
 			"adherence": "الالتزام: {n}%",
 			"items": "الأصناف",
@@ -3826,9 +4299,20 @@
 		"error": "خطأ في تحميل التقارير",
 		"empty": "لا توجد تقارير أسبوعية بعد",
 		"kpi": {
+			"title": "التقارير الأسبوعية",
+			"subtitle": "حالة القراءة والصور",
+			"total": "الإجمالي",
 			"totalReports": "إجمالي التقارير",
+			"pages": "{n} صفحات",
 			"unread": "غير مقروءة",
-			"withPhotos": "تحتوي على صور"
+			"unreadHint": "لم تُفتح بعد",
+			"withPhotos": "تحتوي على صور",
+			"withPhotosHint": "تقارير فيها صور",
+			"latestWeek": "آخر أسبوع"
+		},
+		"list": {
+			"title": "قائمة التقارير",
+			"subtitle": "افتح أسبوعاً لمراجعة التفاصيل"
 		},
 		"card": {
 			"weekOf": "أسبوع",
@@ -3851,7 +4335,8 @@
 			"title": "التدريب",
 			"sleepEnough": "نوم كافٍ",
 			"intensityOk": "شدة التمرين مناسبة",
-			"shapeChange": "تغير في الشكل"
+			"shapeChange": "تغير في الشكل",
+			"cardio": "التزام الكارديو"
 		},
 		"measurements": {
 			"title": "القياسات",
@@ -4624,7 +5109,7 @@
 			"header": {
 				"dailyTarget": "الهدف اليومي",
 				"todayCalories": "سعرات اليوم",
-				"mealsSelectedDay": "الوجبات (اليوم المحدد)",
+				"mealsSelectedDay": "وجبات اليوم",
 				"notes": "ملاحظات الكوتش",
 				"history": "السجل",
 				"FiberTarget": "فايبرز",
@@ -4645,18 +5130,25 @@
 				"defaultTitle": "الوجبة {index}",
 				"title": "الوجبة {index}",
 				"done": "تم",
+				"markAll": "تأكيد الكل",
+				"allMarked": "تم الكل",
+				"mealsCompleted": "وجبات مكتملة",
 				"markAllDone": "تحديد كل الوجبة كمكتملة",
 				"itemDoneTag": "تم"
 			},
 			"units": {
-				"kcal": "سعر حراري"
+				"kcal": "سعر حراري",
+				"kcalShort": "سعرة",
+				"count": "عدد"
 			},
 			"supplements": {
 				"title": "المكملات",
 				"bestWith": "الأفضل مع: {value}",
 				"bestWithLabel": "الأفضل مع:",
 				"takenTag": "تم تناولها",
+				"takenShort": "تم تناوله",
 				"markTaken": "تحديد كمُتناوَلة",
+				"markTakenShort": "تأكيد",
 				"logTitle": "المكملات"
 			},
 			"inline": {
@@ -5333,10 +5825,31 @@
 		"stats": {
 			"totalRecipes": "إجمالي الوصفات",
 			"shownOnPage": "المعروض في الصفحة",
-			"avgCalories": "متوسط السعرات"
+			"avgCalories": "متوسط السعرات",
+			"totalHint": "مطابقة للفلاتر الحالية",
+			"perRecipeKcal": "سعرة لكل وصفة",
+			"avgProtein": "متوسط البروتين",
+			"perRecipeGrams": "جرام لكل وصفة",
+			"mealTypes": "أنواع الوجبات",
+			"mealTypesHint": "التصنيفات في المكتبة"
 		},
 		"search": {
 			"placeholder": "ابحث باسم الوصفة أو المكونات أو الخطوات..."
+		},
+		"errors": {
+			"load": "فشل تحميل الوصفات",
+			"serverUnreachable": "تعذّر الاتصال بالخادم. تحقق من الاتصال أو من تشغيل الـ API ثم أعد المحاولة.",
+			"save": "فشل حفظ الوصفة",
+			"delete": "فشل حذف الوصفة"
+		},
+		"toasts": {
+			"created": "تمت إضافة الوصفة",
+			"updated": "تم تحديث الوصفة",
+			"deleted": "تم حذف الوصفة"
+		},
+		"preview": {
+			"title": "تفاصيل الوصفة",
+			"watchVideo": "مشاهدة الفيديو"
 		},
 		"table": {
 			"name": "اسم الوصفة",
@@ -5351,7 +5864,14 @@
 			"filters": "الفلاتر",
 			"apply": "تطبيق",
 			"emptyTitle": "لا توجد وصفات",
-			"emptySubtitle": "لم يتم العثور على أي وصفات مطابقة"
+			"emptySubtitle": "لم يتم العثور على أي وصفات مطابقة",
+			"emptyStart": "أضف أول وصفة لبدء بناء المكتبة.",
+			"actions": "الإجراءات",
+			"view": "عرض",
+			"video": "فيديو",
+			"clearFilters": "مسح",
+			"retry": "إعادة المحاولة",
+			"retryHint": "استخدم زر إعادة المحاولة بالأعلى بعد عودة الاتصال."
 		},
 		"slidePanel": {
 			"addTitle": "إضافة وصفة",
@@ -5360,6 +5880,17 @@
 			"changePhoto": "تغيير الصورة",
 			"uploadPhoto": "رفع صورة للوصفة",
 			"photoFormats": "JPG, PNG, WEBP",
+			"photoHint": "اسحب وأفلت أو اضغط — JPG, PNG, WEBP",
+			"resetPhoto": "تجاهل الصورة الجديدة",
+			"createCategory": "اكتب تصنيفاً جديداً…",
+			"addItem": "إضافة",
+			"removeItem": "حذف",
+			"emptyList": "لا يوجد شيء بعد — اضغط للإضافة",
+			"enterHint": "اضغط Enter داخل القائمة لإضافة سطر جديد",
+			"validation": {
+				"titleRequired": "اسم الوصفة مطلوب",
+				"invalidUrl": "أدخل رابطاً صحيحاً يبدأ بـ http:// أو https://"
+			},
 			"cancel": "إلغاء",
 			"save": "حفظ التعديلات",
 			"add": "إضافة الوصفة",
@@ -5369,7 +5900,7 @@
 				"info": "المعلومات الأساسية",
 				"nutrition": "القيم الغذائية",
 				"ingredients": "المكونات الأساسية",
-				"creamIngredients": "مكونات العبدالغنية",
+				"creamIngredients": "مكونات الكريمة",
 				"sauceIngredients": "مكونات الصوص",
 				"directions": "خطوات التحضير",
 				"tips": "النصائح",
@@ -5385,6 +5916,7 @@
 				"fat": "الدهون",
 				"kcal": "سعرة",
 				"grams": "جرام",
+				"gramsShort": "جم",
 				"ingredientPlaceholder": "اكتب مكونًا",
 				"stepPlaceholder": "اكتب خطوة التحضير",
 				"tipsPlaceholder": "اكتب النصائح، كل سطر كنصيحة مستقلة",
@@ -5395,6 +5927,17 @@
 				"medium": "متوسط",
 				"high": "مرتفع"
 			}
+		},
+		"roster": {
+			"searchLabel": "بحث",
+			"resultCount": "{count, plural, =0 {لا توجد وصفات} one {<strong>#</strong> وصفة} two {<strong>#</strong> وصفتان} few {<strong>#</strong> وصفات} other {<strong>#</strong> وصفة}}",
+			"activeFilters": "فلاتر نشطة",
+			"clearAll": "مسح الكل",
+			"mealType": "نوع الوجبة",
+			"allTypes": "كل أنواع الوجبات",
+			"reset": "إعادة ضبط",
+			"done": "تم",
+			"emptyHint": "جرّب اسمًا أو نوع وجبة آخر."
 		}
 	},
 	"table": {
@@ -5406,7 +5949,11 @@
 			"firstPage": "الصفحة الأولى",
 			"lastPage": "الصفحة الأخيرة",
 			"prevPage": "الصفحة السابقة",
-			"nextPage": "الصفحة التالية"
+			"nextPage": "الصفحة التالية",
+			"customLimit": "عدد مخصص",
+			"customLimitHint": "اكتب رقم الحد",
+			"applyLimit": "تطبيق",
+			"ofTotal": "من {total} مستخدم"
 		},
 		"toolbar": {
 			"search": "بحث...",
@@ -5424,9 +5971,10 @@
 	},
 	"recipesPage": {
 		"recipe": "وصفة",
+		"kcal": "سعرة",
 		"page": {
-			"title": "الوصفات الغذائية",
-			"desc": "تصفح وصفاتك الصحية واكتشف وجبات جديدة"
+			"title": "الوصفات",
+			"desc": "استكشف وصفاتك الصحية"
 		},
 		"stats": {
 			"totalRecipes": "إجمالي الوصفات",
@@ -5472,13 +6020,13 @@
 			"medium": "شبع متوسط",
 			"high": "شبع عالي"
 		},
-		"featured": "وصفة مميزة",
+		"featured": "مميزة",
 		"search": {
 			"placeholder": "ابحث عن وصفة..."
 		},
 		"filter": {
-			"title": "الفلاتر والترتيب",
-			"maxCalories": "الحد الأقصى للسعرات",
+			"title": "خيارات التصفية",
+			"maxCalories": "أقصى سعرات",
 			"mealType": "نوع الوجبة"
 		},
 		"sort": {
@@ -5491,10 +6039,10 @@
 			"title": "الاسم"
 		},
 		"table": {
-			"filters": "الفلاتر",
-			"reset": "إعادة ضبط",
+			"filters": "تصفية",
+			"reset": "إعادة تعيين",
 			"emptyTitle": "لا توجد وصفات",
-			"emptySubtitle": "جرب تغيير الفلاتر أو البحث بكلمة مختلفة"
+			"emptySubtitle": "جرّب تعديل خيارات التصفية"
 		},
 		"card": {
 			"viewFull": "عرض الوصفة",
@@ -5664,7 +6212,8 @@
 			"suspended": "موقوف",
 			"churned": "منسحب",
 			"joinedOn": "انضم في {date}",
-			"requiresAttention": "يحتاج اهتمام"
+			"requiresAttention": "يحتاج اهتمام",
+			"allClear": "لا يوجد ما ينتظر"
 		},
 		"conv": {
 			"nutritionQA": "أسئلة التغذية",
@@ -5688,8 +6237,18 @@
 		}
 	},
 	"clientDashboard": {
-		"title": "لوحة المتابعة",
-		"subtitle": "نظرة عامة على تقدمك",
+		"title": "الإحصائيات",
+		"subtitle": "تقدمك الكامل في مكان واحد",
+		"progressRings": "حلقات التقدم",
+		"progressRingsSub": "الالتزام والتغذية والأسبوعي",
+		"streak": {
+			"thisWeek": "هذا الأسبوع",
+			"sessions": "جلسة",
+			"allTime": "الكل",
+			"totalSessions": "إجمالي الجلسات",
+			"weekStart": "بداية الأسبوع",
+			"weekEnd": "نهاية الأسبوع"
+		},
 		"overview": "نظرة عامة",
 		"liveLabel": "مباشر",
 		"refresh": "تحديث",
@@ -5704,7 +6263,7 @@
 			"points": "نقطة"
 		},
 		"kpi": {
-			"totalSessions": "إجمالي الجلسات",
+			"totalSessions": "جلسة",
 			"personalRecords": "أرقام قياسية",
 			"totalVolume": "إجمالي الحجم",
 			"totalMeals": "إجمالي الوجبات",
@@ -6434,6 +6993,7 @@
 				"reps": "التكرار"
 			},
 			"buttons": {
+				"add": "إضافة",
 				"addSet": "إضافة مجموعة",
 				"save": "حفظ"
 			}
@@ -6567,7 +7127,10 @@
 		},
 		"packages": {
 			"title": "إدارة الحزم",
+			"subtitle": "أنشئ الحزم التي تعرضها وعدّلها",
 			"description": "إنشاء وتعديل حزم الاشتراك المتاحة",
+			"editPlan": "تعديل الحزمة",
+			"addPlan": "إضافة حزمة",
 			"addNew": "إضافة حزمة",
 			"edit": "تعديل الحزمة",
 			"sendToClient": "إرسال للعميل عبر واتساب",
@@ -6662,6 +7225,10 @@
 				"welcome": "رسالة ترحيب",
 				"custom": "رسالة مخصصة"
 			}
+		},
+		"pagination": {
+			"prev": "السابق",
+			"next": "التالي"
 		},
 		"errors": {
 			"loadStats": "فشل تحميل إحصائيات الفواتير",
@@ -6899,9 +7466,10 @@
 			"save": "حفظ التغييرات",
 			"loading": "جاري التحميل...",
 			"unsavedChanges": "لديك تغييرات غير محفوظة",
-			"savedSuccess": "✓ تم الحفظ بنجاح",
+			"savedSuccess": "تم حفظ إعدادات التقرير",
 			"errors": {
-				"saveFailed": "حدث خطأ أثناء الحفظ، يرجى المحاولة مجدداً"
+				"saveFailed": "حدث خطأ أثناء الحفظ، يرجى المحاولة مجدداً",
+				"loadFailed": "تعذّر تحميل إعدادات التقرير"
 			},
 			"tabs": {
 				"fields": "الأسئلة والمجموعات",
@@ -6916,7 +7484,24 @@
 				"enableGroup": "تفعيل المجموعة",
 				"addFirstField": "إضافة أول سؤال",
 				"newGroupDefaultLabel": "مجموعة جديدة",
-				"activeQuestionsSuffix": "سؤال نشط"
+				"activeQuestionsSuffix": "سؤال نشط",
+				"builtin": "أساسي",
+				"activeCount": "{active}/{total} نشط",
+				"enabled": "إظهار هذه المجموعة للعملاء",
+				"rename": "إعادة تسمية المجموعة",
+				"nameLabel": "اسم المجموعة",
+				"delete": "حذف المجموعة",
+				"collapse": "طيّ",
+				"expand": "توسيع",
+				"dragHandle": "اسحب لإعادة الترتيب",
+				"restoreFields": "{count, plural, zero {لا توجد أسئلة محذوفة} one {استعادة سؤال محذوف} two {استعادة سؤالين محذوفين} few {استعادة # أسئلة محذوفة} many {استعادة # سؤالاً محذوفاً} other {استعادة # سؤال محذوف}}",
+				"removedSections": "أقسام محذوفة:",
+				"restoreSection": "استعادة القسم",
+				"emptyTitle": "لا توجد مجموعات بعد",
+				"emptyDesc": "أضف مجموعة لبدء إنشاء أسئلة التقرير الأسبوعي.",
+				"deleteTitle": "حذف المجموعة؟",
+				"deleteMsg": "سيتم حذف هذه المجموعة وجميع أسئلتها من تقرير العميل بعد الحفظ.",
+				"deleteBuiltinMsg": "سيتم إخفاء هذا القسم الأساسي من تقرير العميل بعد الحفظ، ويمكنك استعادته في أي وقت."
 			},
 			"fields": {
 				"required": "مطلوب",
@@ -6927,7 +7512,16 @@
 				"helperText": "نص توضيحي",
 				"helperPlaceholder": "مثال: أدخل القيمة هنا...",
 				"options": "الخيارات (مفصولة بفاصلة)",
-				"optionsPlaceholder": "ممتاز, جيد, متوسط, ضعيف"
+				"optionsPlaceholder": "ممتاز, جيد, متوسط, ضعيف",
+				"edit": "تعديل السؤال",
+				"remove": "حذف السؤال",
+				"confirmRemove": "اضغط مرة أخرى للحذف",
+				"questionLabel": "نص السؤال",
+				"typeLabel": "نوع الإجابة",
+				"optionsChips": "الخيارات",
+				"optionPlaceholder": "اكتب خياراً واضغط Enter",
+				"optionsEmpty": "أضف خيارات",
+				"builtinLocked": "سؤال أساسي بموضع ثابت"
 			},
 			"fieldTypes": {
 				"boolean": "نعم / لا",
@@ -6956,8 +7550,10 @@
 				"reminderMessage": "رسالة التذكير التلقائي",
 				"reminderMessagePh": "اكتب رسالة التذكير للعملاء الذين لم يرسلوا التقرير...",
 				"useDefault": "استعادة الرسالة الافتراضية",
-				"defaultInitialMessage": "مرحباً 👋 حان وقت إرسال تقرير المتابعة الأسبوعي الخاص بك. يرجى ملء التقرير للحفاظ على تقدمك وإطلاعنا على حالتك. 💪",
-				"defaultReminderMessage": "تذكير 🔔 لم نستلم تقرير المتابعة الأسبوعي منك بعد. يرجى إكماله في أقرب وقت للحفاظ على متابعتك مع مدربك. 🏋️"
+				"defaultInitialMessage": "مرحباً، حان وقت إرسال تقرير المتابعة الأسبوعي الخاص بك. يرجى ملء التقرير للحفاظ على تقدمك وإطلاعنا على حالتك.",
+				"defaultReminderMessage": "تذكير: لم نستلم تقرير المتابعة الأسبوعي منك بعد. يرجى إكماله في أقرب وقت للحفاظ على متابعتك مع مدربك.",
+				"decrease": "إنقاص",
+				"increase": "زيادة"
 			},
 			"days": {
 				"SU": "أح",
@@ -6988,7 +7584,7 @@
 				"filterPending": "بانتظار الإرسال",
 				"filterLate": "متأخرون",
 				"sendToSelected": "إرسال تذكير للمحددين ({count})",
-				"reminderSent": "تم إرسال التذكيرات بنجاح ✓",
+				"reminderSent": "تم إرسال التذكيرات بنجاح",
 				"search": "ابحث باسم أو بريد العميل...",
 				"selectAll": "تحديد الكل",
 				"deselectAll": "إلغاء التحديد",
@@ -7001,8 +7597,18 @@
 				"whatsapp": "واتساب",
 				"call": "اتصال",
 				"chat": "محادثة",
-				"profile": "الملف الشخصي"
-			}
+				"profile": "الملف الشخصي",
+				"phone": "الهاتف",
+				"noPhoneShort": "لا يوجد رقم",
+				"never": "لا توجد تقارير بعد",
+				"loadFailed": "تعذّر تحميل العملاء",
+				"reminderSentCount": "{count, plural, one {تم إرسال التذكير لعميل واحد} two {تم إرسال التذكير لعميلين} few {تم إرسال التذكير إلى # عملاء} many {تم إرسال التذكير إلى # عميلاً} other {تم إرسال التذكير إلى # عميل}}",
+				"reminderNone": "لم يتم إرسال أي تذكير",
+				"reminderFailed": "تعذّر إرسال التذكيرات",
+				"selectedCount": "تم تحديد {count}",
+				"confirmBulkReminder": "إرسال تذكير بالتقرير إلى {count} من العملاء المحددين؟"
+			},
+			"unsavedHint": "احفظ لتطبيق التغييرات على تقرير عملائك."
 		},
 		"reports": {
 			"title": "التقارير الأسبوعية",
@@ -7017,7 +7623,7 @@
 			"createdAt": "تاريخ الأسبوع",
 			"statusReview": "حالة المراجعة",
 			"view": "عرض",
-			"searchPlaceholder": "ابحث في التقارير...",
+			"searchPlaceholder": "ابحث بالمتدرب أو البريد أو الأسبوع",
 			"labels": {
 				"total": "إجمالي التقارير"
 			},
@@ -7048,7 +7654,8 @@
 			"sort": {
 				"fields": {
 					"created_at": "تاريخ الإنشاء",
-					"updated_at": "تاريخ التحديث"
+					"updated_at": "تاريخ التحديث",
+					"weekOf": "تاريخ الأسبوع"
 				},
 				"orders": {
 					"desc": "الأحدث أولاً",
@@ -7056,12 +7663,14 @@
 				}
 			},
 			"messages": {
-				"saved": "تم الحفظ"
+				"saved": "تم الحفظ",
+				"reviewedSaved": "تم اعتماد مراجعة التقرير"
 			},
 			"errors": {
 				"load": "حدث خطأ أثناء تحميل التقارير",
 				"save": "حدث خطأ أثناء حفظ التغذية الراجعة",
-				"feedbackEmpty": "الرجاء كتابة تغذية راجعة أولاً"
+				"feedbackEmpty": "الرجاء كتابة تغذية راجعة أولاً",
+				"loadUsers": "تعذّر تحميل المتدربين"
 			},
 			"detail": {
 				"title": "تفاصيل التقرير",
@@ -7116,8 +7725,17 @@
 							"details": "التفاصيل"
 						}
 					}
-				}
-			}
+				},
+				"submittedAt": "تاريخ الإرسال",
+				"reviewedAt": "تاريخ المراجعة",
+				"customAnswers": "الأسئلة المخصصة",
+				"removedQuestion": "سؤال محذوف",
+				"customQuestion": "سؤال مخصص",
+				"markReviewed": "حفظ واعتماد المراجعة",
+				"updateFeedback": "تحديث الملاحظات",
+				"loadFailed": "تعذّر تحميل هذا التقرير"
+			},
+			"emptyFiltered": "لا توجد تقارير مطابقة للبحث"
 		},
 		"weekly": {
 			"cardioAdherence": "هل التزمت بتمارين الكارديو المحددة؟",
@@ -7161,6 +7779,44 @@
 				"left": "صورة جانب أيسر",
 				"right": "صورة جانب أيمن"
 			}
+		},
+		"ui": {
+			"title": "التقارير الأسبوعية",
+			"subtitle": "صمّم تقرير المتابعة الأسبوعي، وحدّد التذكيرات، وراجع التقارير، وتابع عملاءك."
+		},
+		"common": {
+			"serverUnreachable": "تعذّر الاتصال بالخادم. تحقّق من الاتصال وحاول مرة أخرى.",
+			"retry": "إعادة المحاولة",
+			"retryHint": "تحقّق من الاتصال ثم أعد المحاولة.",
+			"cancel": "إلغاء",
+			"confirm": "تأكيد",
+			"delete": "حذف",
+			"discard": "تجاهل",
+			"done": "تم",
+			"clearFilters": "مسح الفلاتر",
+			"actions": "الإجراءات"
+		},
+		"stats": {
+			"clientsHint": "عملاء ناديك",
+			"submittedHint": "أرسلوا خلال آخر 7 أيام",
+			"pendingHint": "آخر تقرير منذ 7–14 يوماً",
+			"lateHint": "لا تقارير منذ أكثر من 14 يوماً",
+			"reportsHint": "كل التقارير الأسبوعية",
+			"reviewedHint": "تم إرسال الملاحظات",
+			"awaitingHint": "بانتظار ملاحظاتك",
+			"matching": "النتائج المطابقة",
+			"matchingHint": "حسب البحث والفلاتر الحالية",
+			"activeQuestions": "الأسئلة النشطة",
+			"activeQuestionsHint": "تظهر لعملائك",
+			"visibleGroups": "المجموعات الظاهرة",
+			"visibleGroupsHint": "من أصل {total}"
+		},
+		"roster": {
+			"searchLabel": "بحث",
+			"resultCount": "{count, plural, =0 {لا توجد نتائج} one {<strong>#</strong> نتيجة} two {<strong>#</strong> نتيجتان} few {<strong>#</strong> نتائج} other {<strong>#</strong> نتيجة}}",
+			"activeFilters": "فلاتر نشطة",
+			"clearAll": "مسح الكل",
+			"emptyHint": "جرّب بحثًا أو فلترًا آخر."
 		}
 	},
 	"aiContentStudio": {
@@ -8909,5 +9565,39 @@
 		"copyTop": "نسخ أكثر الكلاسات",
 		"cssModules": "CSS Modules (أسماء مشفّرة)",
 		"topClasses": "الكلاسات الأكثر استخدامًا"
+	},
+	"documentEditor": {
+		"badge": "مستند",
+		"placeholder": "الصق HTML أو اكتب Markdown هنا…\n\n<h1>عنوان</h1>\n<p>فقرة</p>",
+		"loading": "جاري تحميل المحرر…",
+		"words": "كلمة",
+		"chars": "حرف",
+		"edit": "تعديل",
+		"preview": "معاينة",
+		"modeLabel": "الوضع",
+		"history": "السجل",
+		"historyEmpty": "المسودات المحفوظة تلقائيًا تظهر هنا.",
+		"newDoc": "مستند جديد",
+		"showHistory": "إظهار السجل",
+		"hideHistory": "إخفاء السجل",
+		"delete": "حذف",
+		"untitled": "بدون عنوان",
+		"saved": "تم الحفظ",
+		"previewEmpty": "ابدأ الكتابة هنا…",
+		"justNow": "الآن",
+		"minAgo": " د",
+		"hourAgo": " س",
+		"typography": "الخطوط والمسافات",
+		"typographyHint": "تُطبَّق على المستند كله في التعديل والمعاينة.",
+		"fontSize": "حجم الخط",
+		"lineHeight": "المسافة بين السطور",
+		"letterSpacing": "المسافة بين الحروف",
+		"wordSpacing": "المسافة بين الكلمات",
+		"paragraphSpacing": "المسافة بين الفقرات",
+		"arabicFont": "الخط العربي",
+		"englishFont": "الخط الإنجليزي",
+		"reset": "إعادة الضبط",
+		"rename": "إعادة التسمية",
+		"renameHint": "اضغط لإعادة التسمية"
 	}
 }

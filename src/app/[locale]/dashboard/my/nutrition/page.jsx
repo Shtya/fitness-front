@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { UtensilsCrossed, Clock, Send, Plus, Target, TrendingUp, Pill, Inbox, CheckCircle, CircleCheck, Flame, Activity, Apple, BookOpen, BookMarked, Lightbulb, PlayCircle, Eye, X } from 'lucide-react';
+import { Utensils, Clock, Plus, Target, Pill, Inbox, Flame, BookOpen, BookMarked, Lightbulb, PlayCircle, Eye, X, History, Salad, Check, Circle, ListChecks, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -15,10 +15,10 @@ import MultiLangText from '@/components/atoms/MultiLangText';
 import { Notification } from '@/config/Notification';
 import HistoryViewer from '@/components/pages/dashboard/nutrition/HistoryViewer';
 import { useUser } from '@/hooks/useUser';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import FloatingSelect from '@/components/atoms/FloatingSelect';
 import { useTheme } from '@/app/[locale]/theme';
-import { TabsPill } from '../workouts/page';
-import NutritionGuideModal, { NutritionGuideButton } from './Nutritionguidemodal';
+import NutritionGuideModal from './Nutritionguidemodal';
 
 /* =========================================================================
 	 SMALL UI PRIMITIVES
@@ -40,64 +40,6 @@ function BasicButton({ labelKey, onClick, icon: Icon, variant = 'outline', submi
       {Icon ? <Icon className='h-4 w-4' /> : null}
       <span>{loading ? t('common.loading') : t(labelKey)}</span>
     </button>
-  );
-}
-
-function AnimatedCheckPath({ visible }) {
-  return (
-    <svg width='10' height='10' viewBox='0 0 10 10' fill='none' style={{ display: 'block' }}>
-      <motion.path d='M1.5 5l2.5 2.5 4.5-5' stroke='currentColor' strokeWidth='1.75' strokeLinecap='round' strokeLinejoin='round' initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: visible ? 1 : 0, opacity: visible ? 1 : 0 }} transition={{ duration: 0.25, ease: 'easeOut' }} />
-    </svg>
-  );
-}
-
-function SparkleBurst({ active }) {
-  const angles = [0, 45, 90, 135, 180, 225, 270, 315];
-  return (
-    <AnimatePresence>
-      {active &&
-        angles.map((deg, i) => (
-          <motion.span
-            key={deg}
-            initial={{ opacity: 1, x: 0, y: 0, scale: 0 }}
-            animate={{
-              opacity: 0,
-              x: Math.cos((deg * Math.PI) / 180) * 16,
-              y: Math.sin((deg * Math.PI) / 180) * 16,
-              scale: 1,
-            }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.45, delay: i * 0.015, ease: 'easeOut' }}
-            className='absolute w-[3px] h-[3px] rounded-full pointer-events-none z-10'
-            style={{
-              background: `hsl(${210 + i * 18}, 80%, 55%)`,
-            }}
-          />
-        ))}
-    </AnimatePresence>
-  );
-}
-
-function MiniCheck({ checked, tone = 'primary', className = '' }) {
-  const [justChecked, setJustChecked] = useState(false);
-  const prevChecked = useRef(checked);
-
-  useEffect(() => {
-    if (!prevChecked.current && checked) {
-      setJustChecked(true);
-      const t = setTimeout(() => setJustChecked(false), 500);
-      return () => clearTimeout(t);
-    }
-    prevChecked.current = checked;
-  }, [checked]);
-
-  const isEmerald = tone === 'emerald';
-
-  return (
-    <span aria-hidden='true' className={['flex-none relative inline-flex h-[22px] w-[22px] items-center justify-center rounded-lg transition-all pointer-events-none', checked ? (isEmerald ? 'bg-gradient-to-br from-emerald-600 to-emerald-500 shadow-[0_2px_8px_rgba(16,185,129,0.35)] border-0' : 'bg-gradient-to-br from-[var(--color-primary-600)] to-[var(--color-primary-500)] shadow-[0_2px_8px_rgba(99,102,241,0.3)] border-0') : 'bg-white border border-slate-300', 'text-white', className].join(' ')}>
-      <AnimatedCheckPath visible={checked} />
-      <SparkleBurst active={justChecked} />
-    </span>
   );
 }
 
@@ -354,15 +296,17 @@ function NutritionRecipeSheet({ recipe, onClose }) {
 /* =========================================================================
 	 STAT PILL — matches RecipePage header stats
 	 ========================================================================= */
-function HeaderStatPill({ label, value, icon: Icon, delay = 0 }) {
+function HeaderStatPill({ label, value, icon: Icon }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.38, ease: [0.16, 1, 0.3, 1] }} className='relative overflow-hidden rounded-lg sm:rounded-lg p-2 sm:p-4 bg-white/[0.13] backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'>
-      <div className='flex items-start justify-between gap-1 mb-1 sm:mb-2'>
-        <p className='text-[7px] sm:text-[9px] font-black uppercase tracking-[0.1em] text-white/55 md: leading-tight'>{label}</p>
-        {Icon && <Icon className='h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 text-white/35 shrink-0' />}
-      </div>
-      <p className='text-base sm:text-2xl font-black text-white md: leading-none tabular-nums'>{value ?? 0}</p>
-    </motion.div>
+    <div className='flex min-h-[46px] min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-2.5 py-2 text-white'>
+      <span className='grid h-7 w-7 shrink-0 place-items-center rounded-2xl border border-white/30 bg-white/15'>
+        {Icon ? <Icon size={14} strokeWidth={2} /> : null}
+      </span>
+      <span className='min-w-0'>
+        <span className='block truncate text-[15px] font-black leading-[18px] tabular-nums'>{value ?? 0}</span>
+        <span className='block truncate text-[9px] font-bold leading-[11px] text-white/70'>{label}</span>
+      </span>
+    </div>
   );
 }
 
@@ -485,7 +429,30 @@ export default function ClientMealPlanPage() {
   }, [activeDay]);
 
   const user = useUser();
+  const nav = useTranslations('nav.labels');
   const hasNotes = !!(plan?.notes && String(plan.notes).trim().length);
+  const takenMeals = useMemo(() => {
+    if (!activeDayKey) return 0;
+    const prefix = `${String(activeDayKey).toLowerCase()}:`;
+    return Object.entries(takenMap).filter(([key, value]) => value && key.startsWith(prefix)).length;
+  }, [takenMap, activeDayKey]);
+  const fiveDayTabs = useMemo(() => {
+    const dayIdToJs = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+    const today = new Date();
+    const todayJs = today.getDay();
+    const withDate = tabs.map(tab => {
+      const targetJs = dayIdToJs[tab.key];
+      const dateObj = new Date(today);
+      if (targetJs != null) dateObj.setDate(today.getDate() + (targetJs - todayJs));
+      return { ...tab, date: targetJs == null ? null : dateObj.getDate() };
+    });
+    if (withDate.length <= 5) return withDate;
+    const idx = withDate.findIndex(tb => tb.key === String(activeDayKey || '').toLowerCase());
+    const clamped = idx < 0 ? 0 : idx;
+    const start = Math.max(0, Math.min(clamped - 2, withDate.length - 5));
+    return withDate.slice(start, start + 5);
+  }, [tabs, activeDayKey]);
+  const headerBtn = 'grid h-11 w-11 place-items-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-b-[rgba(15,48,120,0.35)] border-e-[rgba(15,48,120,0.25)] bg-white/15 text-white shadow-[2px_3px_6px_rgba(15,23,42,0.35)] transition active:scale-95';
 
   /* taken handlers (unchanged logic) */
   const setMealTaken = async (dayKey, mealIndex, meal, value) => {
@@ -620,62 +587,74 @@ export default function ClientMealPlanPage() {
   };
 
   return (
-    <div className='  min-h-screen flex  overflow-x-hidden flex-col '>
-      <div className='  rounded-lg relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-800)] via-[var(--color-primary-700)] to-[var(--color-secondary-600)]'>
-        {/* noise overlay */}
-        <div className='absolute inset-0 opacity-[0.055] pointer-events-none mix-blend-overlay' style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
-        {/* glow blobs */}
-        <div className='absolute w-72 h-72 rounded-full blur-[60px] -top-36 -start-20 pointer-events-none bg-white/[0.07]' />
-        <div className='absolute w-56 h-56 rounded-full blur-[50px] -bottom-20 -end-12 pointer-events-none bg-white/[0.05]' />
-        {/* edge fades */}
-        <div className='absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none' />
-        <div className='absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none' />
-        {/* decorative rings */}
-        <div className='absolute -top-8 -end-8 w-36 h-36 rounded-full border border-white/10 pointer-events-none' />
-        <div className='absolute -top-3 -end-3 w-20 h-20 rounded-full border border-white/[0.07] pointer-events-none' />
+    <div data-plain-page="1" className='report-phone mx-auto w-full max-w-[440px] bg-white pt-1 dark:bg-[#0b1220]'>
+      <div className='rounded-3xl text-white shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]'>
+        <div
+          className='relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-b-[rgba(15,34,128,0.45)] pb-2'
+          style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), var(--color-gradient-via))' }}
+        >
+          <div className='pointer-events-none absolute -top-10 -start-20 h-[280px] w-[280px] rounded-full bg-white/[0.06]' />
+          <div className='pointer-events-none absolute -bottom-10 -end-16 h-[200px] w-[200px] rounded-full bg-white/[0.04]' />
+          <div className='pointer-events-none absolute inset-x-0 top-0 h-px bg-white/30' />
 
-        <div className='relative z-10 px-3 sm:px-6 pt-4 sm:pt-5 pb-0'>
-          {/* ── Title row ── */}
-          <div className='flex items-start justify-between gap-3 mb-4 sm:mb-5'>
-            <div className='flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1'>
-              <motion.div whileHover={{ scale: 1.06, rotate: 4 }} transition={{ type: 'spring', stiffness: 380, damping: 20 }} className='w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-lg grid place-items-center shrink-0 bg-white/[0.16] backdrop-blur-[16px] shadow-[0_6px_24px_-4px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.35)]'>
-                <UtensilsCrossed className='h-4 w-4 sm:h-6 sm:w-6 text-white' />
-              </motion.div>
+          <div className='relative'>
+            <div className='flex items-center gap-3 px-4 pb-2 pt-4'>
+              <div className='grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-b-[rgba(15,48,120,0.35)] border-e-[rgba(15,48,120,0.25)] bg-white/15 shadow-[2px_3px_6px_rgba(15,23,42,0.35)]'>
+                <Salad size={20} strokeWidth={2} />
+              </div>
               <div className='min-w-0 flex-1'>
-                <MultiLangText className='block text-base sm:text-2xl font-black text-white md: leading-tight tracking-tight truncate'>{plan?.name || t('nutrition.header.defaultTitle')}</MultiLangText>
-                <MultiLangText className='block text-[9px] sm:text-xs text-white/55 mt-0.5 font-medium line-clamp-1'>{plan?.desc || ''}</MultiLangText>
+                <h1 className='truncate text-xl font-black leading-6 tracking-[-0.3px]'>{nav('myNutrition')}</h1>
+                <p className='mt-0.5 truncate text-[10px] font-medium text-white/55'>
+                  {takenMeals > 0
+                    ? `${takenMeals}/${stats.meals} ${t('nutrition.meal.mealsCompleted')}`
+                    : `${stats.kcal} ${t('nutrition.units.kcalShort')}`}
+                </p>
+              </div>
+              <div className='flex shrink-0 items-center gap-2'>
+                {hasNotes ? (
+                  <button type='button' onClick={() => setNotesOpen(true)} className={headerBtn} aria-label={t('nutrition.header.notes')}>
+                    <BookOpen size={18} strokeWidth={2} />
+                  </button>
+                ) : null}
+                <button type='button' onClick={() => setHistoryOpen(true)} className={headerBtn} aria-label={t('nutrition.header.history')}>
+                  <History size={18} strokeWidth={2} />
+                </button>
+                <button type='button' onClick={() => setGuideOpen(true)} className={headerBtn} aria-label={t('guide.buttonLabel')}>
+                  <BookMarked size={18} strokeWidth={2} />
+                </button>
               </div>
             </div>
 
-            {/* Notes button */}
-            {hasNotes && (
-              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setNotesOpen(true)} className='shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.14] backdrop-blur-sm border border-white/20 text-white text-[10px] sm:text-xs font-bold transition-all hover:bg-white/[0.22]'>
-                <BookOpen className='h-3 w-3 sm:h-3.5 sm:w-3.5' />
-                <span className='hidden sm:inline'>{t('nutrition.header.notes')}</span>
-              </motion.button>
-            )}
+            <div className='mx-4 mb-3 h-px bg-white/20' />
 
-            {/* Food Guide button — always visible */}
-            <NutritionGuideButton onClick={() => setGuideOpen(true)} />
- 
-          </div>
+            <div className='mb-3 flex gap-1.5 px-4'>
+              <HeaderStatPill label={t('nutrition.header.dailyTarget')} value={user?.caloriesTarget ?? 0} icon={Target} />
+              <HeaderStatPill label={t('nutrition.header.todayCalories')} value={stats?.kcal ?? 0} icon={Flame} />
+              <HeaderStatPill label={t('nutrition.header.mealsSelectedDay')} value={stats?.meals ?? 0} icon={Utensils} />
+            </div>
 
-          {/* ── Stats grid (4-col) ── */}
-          <div className='grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 mb-4 sm:mb-5'>
-            <HeaderStatPill label={t('nutrition.header.dailyTarget')} value={user?.caloriesTarget ?? 0} icon={Target} delay={0.05} />
-            <HeaderStatPill label={t('nutrition.header.FiberTarget')} value={user?.FiberTarget ?? 0} icon={Activity} delay={0.11} />
-            <HeaderStatPill label={t('nutrition.header.todayCalories')} value={stats?.kcal ?? 0} icon={Flame} delay={0.17} />
-            <HeaderStatPill label={t('nutrition.header.mealsSelectedDay')} value={stats?.meals ?? 0} icon={TrendingUp} delay={0.23} />
-          </div>
-
-          {/* ── Day Tabs ── */}
-          <div className='pb-4'>
-            <TabsPill id='nutrition-day-tabs' tabs={tabs} active={(activeDayKey || '').toLowerCase()} onChange={setActiveDayKey} sliceInPhone={false} hiddenArrow={false} />
+            <div className='flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide'>
+              {fiveDayTabs.map(tab => {
+                const on = tab.key === String(activeDayKey || '').toLowerCase();
+                return (
+                  <button
+                    key={tab.key}
+                    type='button'
+                    onClick={() => setActiveDayKey(tab.key)}
+                    aria-pressed={on}
+                    className={`flex h-[58px] min-w-14 shrink-0 flex-col items-center justify-center rounded-2xl px-2 transition active:scale-95 ${on ? 'scale-[1.02] bg-white text-[var(--color-primary-700)] shadow-[4px_5px_10px_rgba(15,23,42,0.18)]' : 'border border-white/30 bg-white/15 text-white/80'}`}
+                  >
+                    <span className={`max-w-full truncate text-[10px] font-bold uppercase tracking-wide ${on ? 'text-[var(--color-primary-700)]' : 'text-white/70'}`}>{tab.label}</span>
+                    <span className={`text-lg font-black tabular-nums leading-[22px] ${on ? 'text-[var(--color-primary-800)]' : 'text-white'}`}>{tab.date ?? '—'}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className='flex-1 pt-4 sm:pt-6 pb-24'>{loading ? <SkeletonPanel /> : !plan || !activeDay ? <NotFoundPanel onRefresh={refresh} /> : <DayPanel day={activeDay} takenMap={takenMap} itemTakenMap={itemTakenMap} suppTakenMap={suppTakenMap} setMealTaken={setMealTaken} setItemTaken={setItemTaken} setSupplementTaken={setSupplementTaken} onInlineSave={saveInlineMeal} />}</div>
+      <div className='pt-3'>{loading ? <SkeletonPanel /> : !plan || !activeDay ? <NotFoundPanel onRefresh={refresh} /> : <DayPanel day={activeDay} itemTakenMap={itemTakenMap} suppTakenMap={suppTakenMap} setMealTaken={setMealTaken} setItemTaken={setItemTaken} setSupplementTaken={setSupplementTaken} onInlineSave={saveInlineMeal} />}</div>
       <NutritionGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       {/* Notes Modal */}
@@ -702,10 +681,24 @@ export default function ClientMealPlanPage() {
 	 ========================================================================= */
 function SkeletonPanel() {
   return (
-    <div className='p-4 space-y-4'>
-      <div className='h-6 w-44 rounded bg-slate-200 animate-pulse' />
-      <div className='h-10 w-full rounded bg-slate-100 animate-pulse' />
-      <div className='h-28 w-full rounded bg-slate-100 animate-pulse' />
+    <div className='space-y-3'>
+      {[0, 1, 2].map(i => (
+        <div key={i} className='overflow-hidden rounded-3xl border border-white/80 bg-[#f2f6fc] shadow-[5px_6px_14px_rgba(100,116,139,0.18)]'>
+          <div className='h-[5px] w-2/3 bg-[var(--color-primary-200)]' />
+          <div className='flex items-center gap-2 p-4'>
+            <div className='h-11 w-11 rounded-2xl bg-[var(--color-primary-100)]' />
+            <div className='min-w-0 flex-1 space-y-2'>
+              <div className='h-4 w-28 rounded-full bg-slate-200' />
+              <div className='h-3 w-36 rounded-full bg-slate-100' />
+            </div>
+            <div className='h-8 w-24 rounded-full bg-[var(--color-primary-200)]' />
+          </div>
+          <div className='space-y-1 px-4 pb-4'>
+            <div className='h-10 rounded-2xl bg-[#e8eef8]' />
+            <div className='h-10 rounded-2xl bg-[#e8eef8]' />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -732,19 +725,7 @@ function NotFoundPanel({ onRefresh }) {
 	 FOOD ITEM ROW
 	 ========================================================================= */
 function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
-  const [justChecked, setJustChecked] = useState(false);
   const [recipeDetailOpen, setRecipeDetailOpen] = useState(false);
-  const prevRef = useRef(checked);
-  const recipeImage = normalizeRecipeImageUrl(it?.recipe?.imageUrl ?? it?.recipe?.image);
-
-  useEffect(() => {
-    if (!prevRef.current && checked) {
-      setJustChecked(true);
-      const timer = setTimeout(() => setJustChecked(false), 600);
-      return () => clearTimeout(timer);
-    }
-    prevRef.current = checked;
-  }, [checked]);
 
   return (
     <>
@@ -759,42 +740,42 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
           }
         }}
         onClick={onToggle}
-        whileHover={{ y: -1 }}
-        whileTap={{ scale: 0.98 }}
-        className={['group relative inline-flex w-full items-start gap-3 rounded-lg p-3 text-sm cursor-pointer select-none', 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]', 'border-[1.5px] transition-all duration-200 overflow-hidden', checked ? 'bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-[var(--color-primary-200)] shadow-[inset_0_0_0_1px_var(--color-primary-100),0_4px_12px_-2px_rgba(99,102,241,0.1)]' : 'bg-slate-50 border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.9)]'].join(' ')}>
-        {/* Shimmer sweep */}
-        <AnimatePresence>{justChecked && <motion.div initial={{ x: '-100%', opacity: 0.5 }} animate={{ x: '200%', opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }} className='absolute inset-0 bg-gradient-to-r from-transparent via-white/65 to-transparent pointer-events-none z-[5]' />}</AnimatePresence>
-
-        <div className='pt-0.5 shrink-0'>
-          <MiniCheck checked={checked} tone='primary' />
-        </div>
-
-        <div className='flex-1 min-w-0'>
-          <div dir='rtl' className='flex items-center gap-2 flex-wrap'>
-            {it.itemType === 'recipe' && <div className='shrink-0 h-8 w-8 rounded-md overflow-hidden border border-blue-100 bg-blue-50 flex items-center justify-center'>{recipeImage ? <img src={recipeImage} alt={it.name} className='h-full w-full object-cover' /> : <BookOpen size={13} className='text-blue-400' />}</div>}
-            <span className={['flex-1   md: leading-none text-[12px] tracking-[-0.01em] transition-all duration-150', checked ? 'font-[650] text-[var(--color-primary-900)]' : 'font-medium text-slate-700'].join(' ')}>{it.name}</span>
-            {it.itemType === 'recipe' && <span className='text-[10px] font-bold rounded px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700'>{t('nutrition.recipe', { default: 'Recipe' })}</span>}
-
-            {qtyLabel && <span className='text-xs text-slate-400 font-medium shrink-0 tracking-[0.02em]'>{qtyLabel}</span>}
-
-            <motion.span layout className={['inline-flex items-center gap-1 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tracking-[0.02em] border transition-all duration-200', checked ? 'bg-[rgba(var(--color-primary-rgb,99,102,241),0.12)] text-[var(--color-primary-700)] border-[var(--color-primary-200)]' : 'bg-slate-100/60 text-slate-500 border-slate-200/50'].join(' ')}>
-              <motion.span animate={checked ? { rotate: [0, -15, 10, 0] } : { rotate: 0 }} transition={{ duration: 0.4 }} className='flex'>
-                <Flame size={11} />
-              </motion.span>
-              {Number(it.calories)} {t('nutrition.units.kcal')}
-            </motion.span>
-            {it.itemType === 'recipe' && it.recipe && (
-              <button
-                type='button'
-                onClick={e => {
-                  e.stopPropagation();
-                  setRecipeDetailOpen(true);
-                }}
-                className='inline-flex items-center rounded-full border border-blue-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-50 transition'>
-                {t('nutrition.showRecipeDetails')}
-              </button>
-            )}
-          </div>
+        whileTap={{ scale: 0.985 }}
+        className={['flex w-full cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2.5 text-start select-none', checked ? 'border-emerald-300/40 bg-emerald-50' : 'border-[rgba(100,116,139,0.18)] bg-[#e8eef8]'].join(' ')}>
+        <span className='grid h-[22px] w-[22px] shrink-0 place-items-center'>
+          {checked ? (
+            <span className='grid h-[22px] w-[22px] place-items-center rounded-full bg-emerald-500 text-white shadow-[2px_2px_5px_rgba(16,185,129,0.45)]'>
+              <Check size={12} strokeWidth={3} />
+            </span>
+          ) : (
+            <span className='grid h-[22px] w-[22px] place-items-center rounded-full border border-white/80 bg-[#f2f6fc] shadow-[2px_2px_4px_rgba(100,116,139,0.25)]'>
+              <Circle size={14} className='text-slate-400' strokeWidth={1.5} />
+            </span>
+          )}
+        </span>
+        <span className={['min-w-0 flex-1 truncate text-[13px] font-bold leading-[18px]', checked ? 'text-slate-400 line-through' : 'text-slate-800'].join(' ')}>{it.name}</span>
+        <span className='flex shrink-0 items-center gap-1'>
+          {qtyLabel ? <span className={['rounded-full bg-[#f2f6fc] px-2 py-0.5 text-[10px] font-bold shadow-sm', checked ? 'text-emerald-600' : 'text-[var(--color-primary-700)]'].join(' ')}>{qtyLabel}</span> : null}
+          {it?.calories != null ? (
+            <span className='inline-flex items-center gap-0.5 rounded-full bg-[var(--color-primary-500)] px-1.5 py-0.5 text-[10px] font-bold text-white'>
+              <Flame size={10} strokeWidth={2.5} />
+              {Number(it.calories || 0)}
+            </span>
+          ) : null}
+          {it.itemType === 'recipe' && it.recipe ? (
+            <button
+              type='button'
+              onClick={e => {
+                e.stopPropagation();
+                setRecipeDetailOpen(true);
+              }}
+              className='grid h-6 w-6 place-items-center rounded-full bg-white text-[var(--color-primary-700)] shadow-sm'
+              aria-label={t('nutrition.showRecipeDetails')}>
+              <Eye size={13} />
+            </button>
+          ) : null}
+        </span>
+      </motion.div>
 
           <AnimatePresence>
             {((Array.isArray(it.alternatives) && it.alternatives.length > 0) || (it.alternativeName != null && String(it.alternativeName || '').trim())) && (
@@ -822,7 +803,7 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
                         {(alt.quantity != null || alt.calories != null) && (
                           <span className='text-xs text-amber-700/80'>
                             · {alt.quantity ?? '—'}
-                            {alt.unit === 'count' ? ' ' + (t('count') || '') : alt.unit === 'mg' ? 'mg' : 'g'}· {alt.calories ?? '—'} kcal
+                            {alt.unit === 'count' ? ' ' + (t('count') || '') : alt.unit === 'mg' ? 'mg' : 'g'} · {alt.calories ?? '—'} {t('nutrition.units.kcalShort')}
                           </span>
                         )}
                       </div>
@@ -831,8 +812,6 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-      </motion.div>
       {recipeDetailOpen && it.recipe && <NutritionRecipeSheet recipe={mapMealItemRecipeToModalRecipe(it.recipe, it.name)} onClose={() => setRecipeDetailOpen(false)} />}
     </>
   );
@@ -841,7 +820,7 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
 /* =========================================================================
 	 DAY PANEL
 	 ========================================================================= */
-function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, setItemTaken, setSupplementTaken, onInlineSave }) {
+function DayPanel({ day, itemTakenMap, suppTakenMap, setMealTaken, setItemTaken, setSupplementTaken, onInlineSave }) {
   const t = useTranslations('my-nutrition');
 
   const meals = day?.meals || mapFoodsToMeals(day?.foods || []);
@@ -849,6 +828,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
   const dayKey = (day.day || '').toLowerCase();
 
   const [editing, setEditing] = useState({});
+  const [suppOpen, setSuppOpen] = useState({});
   const toggleEdit = mi => {
     const key = `${dayKey}:${mi}`;
     setEditing(prev => ({ ...prev, [key]: !prev[key] }));
@@ -874,102 +854,56 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
   }, [meals, daySupps]);
 
   return (
-    <div className='relative'>
-      {/* Timeline centre line */}
-      <div className='hidden md:block absolute left-1/2 top-0 bottom-0 w-[2px] -translate-x-1/2 opacity-30 bg-gradient-to-b from-[var(--color-primary-400)] to-[var(--color-secondary-400)]' aria-hidden='true' />
+    <div className='space-y-3'>
+      <AnimatePresence mode='popLayout'>
+        {timeline.map((block, idx) => {
+          const time12 = block.time ? formatTime12(block.time) : '—';
 
-      <div className='space-y-8'>
-        <AnimatePresence mode='popLayout'>
-          {timeline.map((block, idx) => {
-            const time12 = block.time ? formatTime12(block.time) : '—';
-            const isLeft = idx % 2 === 0;
+          if (block.type === 'meal') {
+            const { mi, meal } = block.meta;
+            const mealKey = `${dayKey}:${mi}`;
+            const mealCals = (meal.items || []).reduce((a, it) => a + Number(it.calories || 0), 0);
+            const editKey = mealKey;
+            const isEditing = !!editing[editKey];
+            const itemCount = (meal.items || []).length;
+            const takenItems = (meal.items || []).filter(it => itemTakenMap[kItemByName(dayKey, mi, it.name)]).length;
+            const progress = itemCount > 0 ? takenItems / itemCount : 0;
+            const allDone = itemCount > 0 && takenItems === itemCount;
+            const suppsOpen = suppOpen[mealKey] !== false;
 
-            if (block.type === 'meal') {
-              const { mi, meal } = block.meta;
-              const mealKey = `${dayKey}:${mi}`;
-              const mealTaken = !!takenMap[mealKey];
-              const mealCals = (meal.items || []).reduce((a, it) => a + Number(it.calories || 0), 0);
-              const editKey = mealKey;
-              const isEditing = !!editing[editKey];
-
-              return (
-                <motion.div key={block.key} className='relative md:grid md:grid-cols-2 md:gap-8' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} layout>
-                  {/* Time column (desktop) */}
-                  <div className={`hidden md:block relative ${isLeft ? 'order-1 pr-8' : 'order-2 pl-8'}`}>
-                    <span className={['absolute top-4 h-4 w-4 rounded-full shadow-lg ring-4 ring-white bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-800)]', isLeft ? 'rtl:-left-[24px] ltr:-right-[9px]' : 'rtl:-right-[24px] ltr:-left-[9px]'].join(' ')} />
-                    <span className={['flex flex-col gap-1 absolute font-en text-xs text-slate-600 whitespace-nowrap font-medium top-[16px]', isLeft ? 'rtl:left-[-29px] ltr:right-[48px] translate-x-8' : 'rtl:right-[-22px] ltr:left-[48px] -translate-x-8'].join(' ')}>
-                      <span className='flex items-center gap-1.5'>
-                        <Clock size={14} className='text-[var(--color-primary-500)]' />
-                        {time12}
-                      </span>
-                    </span>
+            return (
+              <motion.div key={block.key} layout className={['overflow-hidden rounded-3xl border bg-[#f2f6fc] shadow-[5px_6px_14px_rgba(100,116,139,0.28)]', allDone ? 'border-emerald-300/40' : 'border-white/80'].join(' ')}>
+                {progress > 0 ? (
+                  <div className={allDone ? 'h-[5px] w-full bg-emerald-100' : 'h-[5px] w-full bg-[rgba(37,99,235,0.12)]'}>
+                    <div className={allDone ? 'h-full bg-emerald-500' : 'h-full bg-[var(--color-primary-500)]'} style={{ width: `${Math.round(progress * 100)}%` }} />
                   </div>
-
-                  {/* Mobile time */}
-                  <div className='md:hidden flex items-center gap-3 px-2 py-2 mb-0'>
-                    <span className='inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-50 rounded-full px-2.5 py-1 border border-slate-100'>
-                      <Clock size={12} className='text-[var(--color-primary-600)]' />
-                      {time12}
-                    </span>
-                  </div>
-
-                  {/* Card */}
-                  <div className={`${isLeft ? 'md:order-2 md:rtl:pr-8 md:ltr:pl-8' : 'md:order-1 md:rtl:pl-8 md:ltr:pr-8'}`}>
-                    <motion.div whileHover={{ y: -3, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12)' }} transition={{ type: 'spring', stiffness: 320, damping: 24 }} className='rounded-lg relative border border-slate-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden'>
-                      {/* Top gradient accent bar */}
-                      <div className='absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]' />
-
-                      {/* Subtle radial glow top-right */}
-                      <div className='absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[var(--color-primary-100)] opacity-20 blur-3xl pointer-events-none' />
-
-                      <div className='p-5 pt-5 relative'>
-                        {/* ── Header row ── */}
-                        <div className='flex justify-between gap-3 items-start'>
-                          {/* Left: icon + title + calorie badge */}
-                          <div className='flex items-center gap-3 flex-wrap min-w-0'>
-                            {/* Icon */}
-                            <div className='relative flex-none'>
-                              <div className='h-10 w-10 flex items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-50)] text-[var(--color-primary-700)] shadow-sm ring-1 ring-[var(--color-primary-200)]'>
-                                <UtensilsCrossed size={17} />
-                              </div>
-                              {mealTaken && (
-                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className='absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-primary-600)] flex items-center justify-center shadow-md'>
-                                  <CheckCircle size={11} className='text-white' />
-                                </motion.div>
-                              )}
+                ) : null}
+                <div className='relative p-4'>
+                        <div className='flex items-start justify-between gap-2'>
+                          <div className='flex min-w-0 flex-1 items-center gap-2'>
+                            <div className={['grid h-11 w-11 shrink-0 place-items-center rounded-2xl border shadow-[3px_3px_8px_rgba(100,116,139,0.22)]', allDone ? 'border-emerald-300/40 bg-[#ecfdf5] text-emerald-500' : 'border-white/80 bg-[#f2f6fc] text-[var(--color-primary-800)]'].join(' ')}>
+                              {allDone ? <CheckCircle2 size={22} strokeWidth={2.2} /> : <Utensils size={19} strokeWidth={2} />}
                             </div>
-
-                            {/* Title + badge */}
-                            <div className='flex flex-col gap-1 min-w-0'>
-                              <span className='text-sm font-black text-slate-900 md: leading-tight truncate'>{t('nutrition.meal.title', { index: idx + 1 })}</span>
-                              <span className='inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-orange-50 to-amber-50 text-orange-600 border border-orange-100 w-fit'>
-                                <Flame size={10} className='text-orange-500 flex-none' />
-                                {mealCals} {t('nutrition.units.kcal')}
+                            <div className='min-w-0 flex-1'>
+                              <span className='block truncate text-[15px] font-black leading-5 text-slate-900'>{meal?.title || t('nutrition.meal.title', { index: mi + 1 })}</span>
+                              <span className='mt-0.5 flex flex-wrap items-center gap-2 text-[11px] font-bold'>
+                                <span className='inline-flex items-center gap-1 text-slate-500'><Clock size={11} strokeWidth={2} />{time12}</span>
+                                <span className='text-slate-400'>·</span>
+                                <span className='inline-flex items-center gap-1 text-[var(--color-primary-700)]'><Flame size={11} strokeWidth={2.5} />{mealCals} {t('nutrition.units.kcalShort')}</span>
                               </span>
                             </div>
                           </div>
-
-                          {/* Mark taken button */}
                           {!isEditing && (
-                            <motion.button type='button' onClick={() => setMealTaken(dayKey, mi, meal, !mealTaken)} aria-pressed={mealTaken} whileTap={{ scale: 0.93 }} whileHover={{ scale: 1.03 }} className={['flex-none inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-xs font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2', mealTaken ? 'text-white bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-primary-700)] shadow-[0_4px_14px_-2px_var(--color-primary-400)]' : 'bg-slate-50 text-slate-600 hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-700)] ring-1 ring-slate-200 hover:ring-[var(--color-primary-200)]'].join(' ')}>
-                              {mealTaken ? (
-                                <>
-                                  <CheckCircle size={15} className='flex-none' />
-                                  <span className='max-md:hidden'>تم</span>
-                                </>
-                              ) : (
-                                <>
-                                  <CircleCheck size={15} className='flex-none' />
-                                  <span className='max-md:hidden'>تحديد</span>
-                                </>
-                              )}
-                            </motion.button>
+                            <button type='button' onClick={() => setMealTaken(dayKey, mi, meal, !allDone)} aria-pressed={allDone} className={['inline-flex shrink-0 items-center gap-[5px] rounded-full border border-white/30 px-3 py-[7px] text-[11px] font-bold text-white shadow-[2px_3px_6px_rgba(15,23,42,0.25)]', allDone ? 'bg-emerald-500' : 'bg-[var(--color-primary-500)]'].join(' ')}>
+                              {allDone ? <CheckCircle2 size={13} strokeWidth={2.5} /> : <ListChecks size={13} strokeWidth={2} />}
+                              <span>{allDone ? t('nutrition.meal.allMarked') : t('nutrition.meal.markAll')}</span>
+                            </button>
                           )}
                         </div>
 
                         {/* ── Food items ── */}
                         {!isEditing && !!meal.items?.length && (
-                          <div className='mt-4 flex flex-col gap-1.5'>
+                          <div className='mt-2 flex flex-col gap-1'>
                             {(meal.items || []).map((it, i) => {
                               const id = it?.id || `${it?.name}-${i}`;
                               const checked = !!itemTakenMap[kItemByName(dayKey, mi, it.name)];
@@ -1000,62 +934,59 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 
                         {/* ── Supplements ── */}
                         {!!meal.supplements?.length && !isEditing && (
-                          <div className='mt-4 pt-4 border-t border-dashed border-slate-100'>
-                            {/* Section header */}
-                            <div className='flex items-center gap-2 mb-3'>
-                              <div className='h-6 w-6 flex items-center justify-center rounded-lg bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-600 ring-1 ring-emerald-200 shadow-sm flex-none'>
-                                <Pill size={12} />
+                          <div className='mt-3'>
+                            <button type='button' onClick={() => setSuppOpen(prev => ({ ...prev, [mealKey]: !suppsOpen }))} className='mb-2 flex w-full items-center justify-between text-[11px] font-bold text-slate-500'>
+                              <span className='inline-flex items-center gap-2'>
+                                <Pill size={12} className='text-emerald-500' strokeWidth={2} />
+                                {t('nutrition.supplements.title')} · {meal.supplements.length}
+                              </span>
+                              {suppsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            </button>
+                            {suppsOpen ? (
+                              <div className='flex flex-col'>
+                                {meal.supplements.map((s, si) => {
+                                  const key = kSuppByName(dayKey, 'meal', mi, s.name);
+                                  const taken = !!suppTakenMap[key];
+                                  const toggle = () => setSupplementTaken(dayKey, 'meal', `${mi}-${s.id || si}`, s, !taken, mi);
+                                  return (
+                                    <button
+                                      key={s.id || si}
+                                      type='button'
+                                      onClick={toggle}
+                                      className={['mb-1.5 flex w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-start', taken ? 'border-emerald-300/40 bg-[#ecfdf5]' : 'border-[rgba(100,116,139,0.18)] bg-[#e8eef8]'].join(' ')}>
+                                      <span className='grid h-[30px] w-[30px] shrink-0 place-items-center rounded-xl border border-white/80 bg-[#f2f6fc] text-emerald-500 shadow-[2px_2px_5px_rgba(100,116,139,0.22)]'>
+                                        <Pill size={14} strokeWidth={2} />
+                                      </span>
+                                      <span className='min-w-0 flex-1'>
+                                        <span className={['block truncate text-xs font-bold leading-4', taken ? 'text-emerald-600' : 'text-slate-800'].join(' ')}>{s.name}</span>
+                                        {(s.time || s.timing) && (
+                                          <span className='mt-0.5 flex items-center gap-1 text-[10px] text-emerald-600'>
+                                            <Clock size={9} strokeWidth={2} />
+                                            {[s.time && formatTime12(s.time), s.timing].filter(Boolean).join(' · ')}
+                                          </span>
+                                        )}
+                                      </span>
+                                      {taken ? (
+                                        <span className='inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-bold text-white'>
+                                          <Check size={9} strokeWidth={3} />
+                                          {t('nutrition.supplements.takenShort')}
+                                        </span>
+                                      ) : (
+                                        <span className='grid h-6 w-6 shrink-0 place-items-center rounded-full border border-white/80 bg-[#f2f6fc] shadow-sm'>
+                                          <Circle size={10} className='text-slate-400' strokeWidth={1.5} />
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
                               </div>
-                              <span className='text-xs font-black text-slate-700 uppercase tracking-wider'>{t('nutrition.supplements.title')}</span>
-                              <div className='flex-1 h-px bg-gradient-to-r from-emerald-100 to-transparent' />
-                            </div>
-
-                            <div className='flex flex-col gap-1.5'>
-                              {meal.supplements.map((s, si) => {
-                                const key = kSuppByName(dayKey, 'meal', mi, s.name);
-                                const taken = !!suppTakenMap[key];
-                                const toggle = () => setSupplementTaken(dayKey, 'meal', `${mi}-${s.id || si}`, s, !taken, mi);
-                                return (
-                                  <motion.div
-                                    key={s.id || si}
-                                    role='checkbox'
-                                    aria-checked={taken}
-                                    tabIndex={0}
-                                    onKeyDown={e => {
-                                      if (e.key === ' ' || e.key === 'Enter') {
-                                        e.preventDefault();
-                                        toggle();
-                                      }
-                                    }}
-                                    onClick={toggle}
-                                    whileTap={{ scale: 0.985 }}
-                                    initial={{ opacity: 0, y: 4 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: si * 0.05, duration: 0.22 }}
-                                    className={['inline-flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm transition-all duration-200', 'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60', taken ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-900 border-emerald-200 shadow-sm' : 'bg-slate-50/60 text-slate-700 border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-sm'].join(' ')}>
-                                    <div className='flex items-center gap-2.5 min-w-0 flex-1'>
-                                      <MiniCheck checked={taken} tone='emerald' />
-                                      <div className='min-w-0 flex-1'>
-                                        <span className={`font-semibold truncate block text-xs md: leading-tight ${taken ? 'text-emerald-800' : 'text-slate-800'}`}>{s.name}</span>
-                                        {(s.time || s.timing || s.bestWith) && <span className='text-[10px] text-slate-400 truncate block mt-0.5'>{[s.time && formatTime12(s.time), s.timing, s.bestWith && t('nutrition.supplements.bestWith', { value: s.bestWith })].filter(Boolean).join(' · ')}</span>}
-                                      </div>
-                                      {taken && <span className='inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black text-emerald-700 uppercase tracking-wide flex-none'>{t('nutrition.supplements.takenTag')}</span>}
-                                    </div>
-                                  </motion.div>
-                                );
-                              })}
-                            </div>
+                            ) : null}
                           </div>
                         )}
                       </div>
-
-                      {/* Bottom shimmer when taken */}
-                      {mealTaken && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]' />}
                     </motion.div>
-                  </div>
-                </motion.div>
-              );
-            }
+                  );
+                }
 
             /* Day-level supplement block */
             const { supp } = block.meta;
@@ -1064,73 +995,32 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
             const toggle = () => setSupplementTaken(dayKey, 'day', `${supp.id || block.key}`, supp, !taken, null);
 
             return (
-              <motion.div key={block.key} className='relative md:grid md:grid-cols-2 md:gap-8' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} layout>
-                <div className={`hidden md:block relative ${idx % 2 === 0 ? 'order-1 pr-8' : 'order-2 pl-8'}`}>
-                  <span className={['absolute top-4 h-4 w-4 rounded-full shadow-lg ring-4 ring-white bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-secondary-500)]', idx % 2 !== 0 ? '-left-[9px]' : '-right-[9px]'].join(' ')} />
-                  <span className={`absolute top-8 text-xs text-slate-600 whitespace-nowrap font-medium ${idx % 2 === 0 ? 'right-0 translate-x-8' : 'left-0 -translate-x-8'}`}>
-                    <span className='inline-flex items-center gap-1.5'>
-                      <Clock size={14} className='text-[var(--color-primary-500)]' />
-                      {block.time ? formatTime12(block.time) : '—'}
+              <motion.div key={block.key} layout className={['rounded-3xl border bg-[#f2f6fc] p-4 shadow-[5px_6px_14px_rgba(100,116,139,0.28)]', taken ? 'border-emerald-300/40' : 'border-white/80'].join(' ')}>
+                <div className='flex items-center justify-between gap-3'>
+                  <div className='flex min-w-0 flex-1 items-center gap-3'>
+                    <span className='grid h-[42px] w-[42px] shrink-0 place-items-center rounded-2xl border border-white/80 bg-[#f2f6fc] text-emerald-500 shadow-[3px_3px_8px_rgba(100,116,139,0.22)]'>
+                      <Pill size={18} strokeWidth={2} />
                     </span>
-                  </span>
-                </div>
-
-                <div className={`${idx % 2 === 0 ? 'md:order-2 md:pl-8' : 'md:order-1 md:pr-8'}`}>
-                  <motion.div whileHover={{ y: -2 }} className='rounded-lg border border-slate-200 bg-white p-4 shadow-md hover:shadow-xl transition-all duration-300'>
-                    <div className='flex items-start justify-between gap-3'>
-                      <div className='min-w-0 flex-1'>
-                        <div className='font-semibold text-slate-900 flex items-center gap-2.5 text-sm'>
-                          <Pill size={18} className='text-emerald-600' />
-                          <span className='truncate'>{supp.name}</span>
-                        </div>
-                        <div className='mt-2 text-sm text-slate-600'>
-                          {supp.bestWith ? (
-                            <>
-                              {t('nutrition.supplements.bestWithLabel')}
-                              <span className='font-medium text-slate-800 ml-1'>{supp.bestWith}</span>
-                            </>
-                          ) : (
-                            '—'
-                          )}
-                          {supp.timing && <span className='ml-2 text-slate-700'>• {supp.timing}</span>}
-                        </div>
+                    <div className='min-w-0'>
+                      <div className='truncate text-sm font-bold text-slate-900'>{supp.name}</div>
+                      <div className='mt-0.5 flex items-center gap-1 text-[10px] text-emerald-600'>
+                        <Clock size={10} strokeWidth={2} />
+                        <span>
+                          {time12}
+                          {supp.timing ? ` · ${supp.timing}` : ''}
+                        </span>
                       </div>
-
-                      <motion.div
-                        role='checkbox'
-                        aria-checked={taken}
-                        tabIndex={0}
-                        onKeyDown={e => {
-                          if (e.key === ' ' || e.key === 'Enter') {
-                            e.preventDefault();
-                            toggle();
-                          }
-                        }}
-                        onClick={toggle}
-                        whileTap={{ scale: 0.95 }}
-                        className={['p-2.5 px-4 inline-flex items-center gap-2 rounded-lg border text-sm font-medium transition-all shadow-sm', 'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60', taken ? 'bg-emerald-600 text-white border-emerald-700 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'].join(' ')}>
-                        <MiniCheck checked={taken} tone='emerald' className={!taken ? 'opacity-60' : ''} />
-                        <span className='leading-none'>{taken ? t('nutrition.supplements.takenTag') : t('nutrition.supplements.markTaken')}</span>
-                      </motion.div>
                     </div>
-                  </motion.div>
-                </div>
-
-                {/* Mobile bullet */}
-                <div className='md:hidden pl-10 relative mb-2'>
-                  <span className='absolute left-0 top-3 h-4 w-4 rounded-full shadow-md ring-4 ring-white bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-secondary-500)]' />
-                  <span className='absolute left-0 top-8 text-xs text-slate-600 translate-x-6 font-medium'>
-                    <span className='inline-flex items-center gap-1.5'>
-                      <Clock size={14} className='text-[var(--color-primary-500)]' />
-                      {block.time ? formatTime12(block.time) : '—'}
-                    </span>
-                  </span>
+                  </div>
+                  <button type='button' onClick={toggle} className={['inline-flex shrink-0 items-center gap-[5px] rounded-2xl border px-3 py-2 text-[11px] font-bold', taken ? 'border-white/30 bg-emerald-500 text-white shadow-[2px_3px_6px_rgba(16,185,129,0.4)]' : 'border-white/80 bg-[#f2f6fc] text-emerald-600 shadow-[2px_3px_6px_rgba(100,116,139,0.22)]'].join(' ')}>
+                    {taken ? <Check size={13} strokeWidth={3} /> : <Circle size={13} strokeWidth={2} />}
+                    {taken ? t('nutrition.supplements.takenShort') : t('nutrition.supplements.markTakenShort')}
+                  </button>
                 </div>
               </motion.div>
             );
           })}
         </AnimatePresence>
-      </div>
     </div>
   );
 }
@@ -1160,6 +1050,7 @@ const inlineSchema = yup.object().shape({
 
 function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSave }) {
   const t = useTranslations('my-nutrition');
+  const locale = useLocale();
   const {
     control,
     handleSubmit,
@@ -1197,11 +1088,16 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
                 name={`items.${idx}.unit`}
                 control={control}
                 render={({ field }) => (
-                  <select value={field.value || 'g'} onChange={e => field.onChange(e.target.value)} className='h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700'>
-                    <option value='g'>g</option>
-                    <option value='mg'>mg</option>
-                    <option value='count'>count</option>
-                  </select>
+                  <FloatingSelect
+                    label={locale === 'ar' ? 'الوحدة' : 'Unit'}
+                    value={field.value || 'g'}
+                    onChange={field.onChange}
+                    options={[
+                      { id: 'g', label: 'g' },
+                      { id: 'mg', label: 'mg' },
+                      { id: 'count', label: t('nutrition.units.count') },
+                    ]}
+                  />
                 )}
               />
               <button type='button' onClick={() => remove(idx)} className='rounded-lg border border-slate-300 px-3 text-sm hover:bg-red-50 hover:border-red-300 hover:text-red-600 h-9 font-medium transition-colors'>

@@ -5,12 +5,12 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import { clearClientSession } from '@/lib/session-cleanup';
 import Link from 'next/link';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Layers3, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, ScanLine, Library, ScanSearch } from 'lucide-react';
+import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from 'framer-motion';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, ChevronRight, BrainCircuit, GanttChart, FileText, FilePenLine, Inbox, Layers, Layers3, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Sliders, AudioLines, ShieldAlert, Radar, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, Maximize2, ScanLine, Library, ScanSearch, Moon, Sun } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
-import { FaInbox, FaUsers, FaWpforms, FaWhatsapp, FaFacebook } from 'react-icons/fa';
+import { FaUsers, FaWhatsapp, FaFacebook } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
 import { useValues } from '@/context/GlobalContext';
 import { useTheme, COLOR_PALETTES } from '@/app/[locale]/theme';
@@ -44,28 +44,8 @@ const SIDEBAR_RADIUS = 22;
 const SIDEBAR_FONT_LTR = "var(--font-inter), 'Segoe UI', system-ui, -apple-system, sans-serif";
 const LS_COLLAPSED = 'sidebar:collapsed';
 const LS_OFFSET = 'sidebar:offset';
-const LS_HIDDEN = 'sidebar:hidden-items';
-const LS_MARKETPLACE = 'sidebar:marketplace-installed';
-const LS_MARKETPLACE_OUTREACH_MIGRATE = 'sidebar:marketplace-outreach-v1';
-const LS_MARKETPLACE_OPT_IN_MIGRATE = 'sidebar:marketplace-opt-in-v2';
 const LS_CUSTOM_LABELS = 'sidebar:custom-labels';
 const LS_PALETTE = 'sidebar:palette';
-
-/** Chat apps that stay installed by default after moving into Marketplace. */
-const OUTREACH_DEFAULT_INSTALLED = ['messages', 'whatsapp', 'metaWhatsApp'];
-
-/** Must be added from Marketplace — never shown on the sidebar until installed. */
-const OPT_IN_MARKETPLACE_IDS = ['phoneCheck', 'fitnessLeads', 'branding'];
-
-/** Outreach apps live in Marketplace so they can be stored and re-added later. */
-const OUTREACH_MARKETPLACE_IDS = [
-	'messages',
-	'whatsapp',
-	'metaWhatsApp',
-	'facebookEngagement',
-	'phoneCheck',
-	'fitnessLeads',
-];
 
 /* ─── Motion configs ────────────────────────────────────────── */
 const snap = { type: 'spring', stiffness: 500, damping: 36, mass: 0.65 };
@@ -243,6 +223,7 @@ export const ITEM_META = {
   allUsers: { id: 'allUsers', nameKey: 'allUsers', href: '/dashboard/users', icon: Users, descKey: 'descriptions.allUsers', group: 'management', defaultVisible: true, required: false },
   allUsers_super: { id: 'allUsers_super', nameKey: 'allUsers', href: '/dashboard/super-admin/users', icon: Users, descKey: 'descriptions.allUsers_super', group: 'management', defaultVisible: true, required: true },
   pageAccess_super: { id: 'pageAccess_super', nameKey: 'pageAccess', href: '/dashboard/super-admin/page-access', icon: Sliders, descKey: 'descriptions.pageAccess_super', group: 'management', defaultVisible: true, required: false },
+  documentEditor_super: { id: 'documentEditor_super', nameKey: 'documentEditor', href: '/dashboard/super-admin/document-editor', icon: FilePenLine, descKey: 'descriptions.documentEditor_super', group: 'management', defaultVisible: true, required: false },
   clientIntake: { id: 'clientIntake', nameKey: 'clientIntake', icon: FaUsers, descKey: 'descriptions.clientIntake', group: 'management', defaultVisible: true, required: false },
   manageForms: { id: 'manageForms', nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FileText, descKey: 'descriptions.manageForms', group: 'management', defaultVisible: true, required: false },
   responses: { id: 'responses', nameKey: 'responses', href: '/dashboard/intake/responses', icon: Inbox, descKey: 'descriptions.responses', group: 'management', defaultVisible: true, required: false },
@@ -259,29 +240,30 @@ export const ITEM_META = {
   recipes: { id: 'recipes', nameKey: 'recipes', href: '/dashboard/my/recipes', icon: Coffee, descKey: 'descriptions.recipes', group: 'workspace', defaultVisible: true, required: false },
   weeklyStrength: { id: 'weeklyStrength', nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: TrendingUp, descKey: 'descriptions.weeklyStrength', group: 'workspace', defaultVisible: true, required: false },
   myReminders: { id: 'myReminders', nameKey: 'myReminders', href: '/dashboard/reminders', icon: Bell, descKey: 'descriptions.myReminders', group: 'workspace', defaultVisible: true, required: false },
-  todos: { id: 'todos', nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo, descKey: 'descriptions.todos', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
-  calendar: { id: 'calendar', nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays, descKey: 'descriptions.calendar', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
-  messages: { id: 'messages', nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare, descKey: 'descriptions.messages', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
-  whatsapp: { id: 'whatsapp', nameKey: 'whatsapp', href: '/dashboard/whatsapp', icon: FaWhatsapp, descKey: 'descriptions.whatsapp', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
-  transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
+  todos: { id: 'todos', nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo, descKey: 'descriptions.todos', group: 'workspace', defaultVisible: true, required: false },
+  calendar: { id: 'calendar', nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays, descKey: 'descriptions.calendar', group: 'workspace', defaultVisible: true, required: false },
+  messages: { id: 'messages', nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare, descKey: 'descriptions.messages', group: 'outreach', defaultVisible: true, required: false },
+  whatsapp: { id: 'whatsapp', nameKey: 'whatsapp', href: '/dashboard/whatsapp', icon: FaWhatsapp, descKey: 'descriptions.whatsapp', group: 'outreach', defaultVisible: true, required: false },
+  /* Store Admin tools — locked for gym roles until enabled in Page Access */
+  transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: true, required: false, defaultLocked: true },
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
   aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
   readingRoom: { id: 'readingRoom', nameKey: 'readingRoom', href: '/ai-studio', icon: Library, descKey: 'descriptions.readingRoom', group: 'tools', defaultVisible: true, required: false },
-  learning: { id: 'learning', nameKey: 'learning', href: '/dashboard/learning', icon: GraduationCap, descKey: 'descriptions.learning', group: 'tools', defaultVisible: true, required: false },
-  learningManagement: { id: 'learningManagement', nameKey: 'learningManagement', href: '/dashboard/learning/management', icon: Layers3, descKey: 'descriptions.learningManagement', group: 'tools', defaultVisible: true, required: false },
-  learningStudy: { id: 'learningStudy', nameKey: 'learningStudy', href: '/dashboard/learning/study', icon: Brain, descKey: 'descriptions.learningStudy', group: 'tools', defaultVisible: true, required: false },
+  learning: { id: 'learning', nameKey: 'learning', href: '/dashboard/learning', icon: GraduationCap, descKey: 'descriptions.learning', group: 'tools', defaultVisible: true, required: false, defaultLocked: true },
+  learningManagement: { id: 'learningManagement', nameKey: 'learningManagement', href: '/dashboard/learning/management', icon: Layers3, descKey: 'descriptions.learningManagement', group: 'tools', defaultVisible: true, required: false, defaultLocked: true },
+  learningStudy: { id: 'learningStudy', nameKey: 'learningStudy', href: '/dashboard/learning/study', icon: Brain, descKey: 'descriptions.learningStudy', group: 'tools', defaultVisible: true, required: false, defaultLocked: true },
   quranRevision: { id: 'quranRevision', nameKey: 'quranRevision', href: '/dashboard/quran-revision', icon: BookMarked, descKey: 'descriptions.quranRevision', group: 'tools', defaultVisible: true, required: false },
-  webTranslator: { id: 'webTranslator', nameKey: 'webTranslator', href: '/dashboard/web-translator', icon: Languages, descKey: 'descriptions.webTranslator', group: 'tools', defaultVisible: true, required: false },
-  siteInspector: { id: 'siteInspector', nameKey: 'siteInspector', href: '/dashboard/site-inspector', icon: ScanSearch, descKey: 'descriptions.siteInspector', group: 'tools', defaultVisible: true, required: false },
-  phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
-  fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
-  metaWhatsApp: { id: 'metaWhatsApp', nameKey: 'metaWhatsApp', href: '/dashboard/meta-whatsapp', icon: MessageCircle, descKey: 'descriptions.metaWhatsApp', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
-  facebookEngagement: { id: 'facebookEngagement', nameKey: 'facebookEngagement', href: '/dashboard/facebook-engagement', icon: FaFacebook, descKey: 'descriptions.facebookEngagement', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
+  webTranslator: { id: 'webTranslator', nameKey: 'webTranslator', href: '/dashboard/web-translator', icon: Languages, descKey: 'descriptions.webTranslator', group: 'tools', defaultVisible: true, required: false, defaultLocked: true },
+  siteInspector: { id: 'siteInspector', nameKey: 'siteInspector', href: '/dashboard/site-inspector', icon: ScanSearch, descKey: 'descriptions.siteInspector', group: 'tools', defaultVisible: true, required: false, defaultLocked: true },
+  phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'outreach', defaultVisible: true, required: false, defaultLocked: true },
+  fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'outreach', defaultVisible: true, required: false, defaultLocked: true },
+  metaWhatsApp: { id: 'metaWhatsApp', nameKey: 'metaWhatsApp', href: '/dashboard/meta-whatsapp', icon: MessageCircle, descKey: 'descriptions.metaWhatsApp', group: 'outreach', defaultVisible: true, required: false, defaultLocked: true },
+  facebookEngagement: { id: 'facebookEngagement', nameKey: 'facebookEngagement', href: '/dashboard/facebook-engagement', icon: FaFacebook, descKey: 'descriptions.facebookEngagement', group: 'outreach', defaultVisible: true, required: false, defaultLocked: true },
   notifications: { id: 'notifications', nameKey: 'notifications', href: '/dashboard/notifications', icon: Bell, descKey: 'descriptions.notifications', group: 'workspace', defaultVisible: true, required: false },
-  billing: { id: 'billing', nameKey: 'billing', href: '/dashboard/billing', icon: CreditCard, descKey: 'descriptions.billing', group: 'finance', defaultVisible: false, required: false, marketplace: true },
-  money: { id: 'money', nameKey: 'money', href: '/money', icon: Wallet, descKey: 'descriptions.money', group: 'finance', defaultVisible: false, required: false, marketplace: true },
+  billing: { id: 'billing', nameKey: 'billing', href: '/dashboard/billing', icon: CreditCard, descKey: 'descriptions.billing', group: 'finance', defaultVisible: true, required: false },
+  money: { id: 'money', nameKey: 'money', href: '/money', icon: Wallet, descKey: 'descriptions.money', group: 'finance', defaultVisible: true, required: false, defaultLocked: true },
   profile_admin: { id: 'profile_admin', nameKey: 'profile', href: '/dashboard/my-account', icon: UserIcon, descKey: 'descriptions.profile_admin', group: 'account', defaultVisible: true, required: true },
-  branding: { id: 'branding', nameKey: 'branding', href: '/dashboard/settings/branding', icon: Paintbrush, descKey: 'descriptions.branding', group: 'management', defaultVisible: false, required: false, marketplace: true },
+  branding: { id: 'branding', nameKey: 'branding', href: '/dashboard/settings/branding', icon: Paintbrush, descKey: 'descriptions.branding', group: 'management', defaultVisible: true, required: false },
   profile_client: { id: 'profile_client', nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon, descKey: 'descriptions.profile_client', group: 'account', defaultVisible: true, required: true },
 };
 
@@ -424,7 +406,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.management',
-    items: [{ ...ITEM_META.allUsers_super }, { ...ITEM_META.pageAccess_super }, { ...ITEM_META.allExercises }, { ...ITEM_META.feedback_super }, { ...ITEM_META.forms_super }],
+    items: [{ ...ITEM_META.allUsers_super }, { ...ITEM_META.pageAccess_super }, { ...ITEM_META.documentEditor_super }, { ...ITEM_META.allExercises }, { ...ITEM_META.feedback_super }, { ...ITEM_META.forms_super }],
   },
   {
     role: 'super_admin',
@@ -440,12 +422,22 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.readingRoom }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }, { ...ITEM_META.webTranslator }, { ...ITEM_META.siteInspector }],
+    items: [
+      { ...ITEM_META.todos },
+      { ...ITEM_META.calendar },
+      { ...ITEM_META.transcript },
+      { ...ITEM_META.aiFree },
+      { ...ITEM_META.readingRoom },
+      { ...ITEM_META.learning, expand: false, children: [{ ...ITEM_META.learningManagement }, { ...ITEM_META.learningStudy }] },
+      { ...ITEM_META.quranRevision },
+      { ...ITEM_META.webTranslator },
+      { ...ITEM_META.siteInspector },
+    ],
   },
   {
     role: 'super_admin',
     sectionKey: 'sections.finance',
-    items: [{ ...ITEM_META.billing }],
+    items: [{ ...ITEM_META.billing }, { ...ITEM_META.money }],
   },
 ];
 
@@ -465,7 +457,7 @@ export function getNavPagesForRole(role) {
         sectionKey: section.sectionKey,
         descKey: item.descKey || null,
         required: !!item.required,
-        marketplace: !!item.marketplace,
+        defaultLocked: !!item.defaultLocked,
         parentId: null,
       });
       for (const child of item.children || []) {
@@ -478,13 +470,52 @@ export function getNavPagesForRole(role) {
           sectionKey: section.sectionKey,
           descKey: child.descKey || null,
           required: !!child.required,
-          marketplace: !!child.marketplace,
+          defaultLocked: !!child.defaultLocked,
           parentId: item.id,
         });
       }
     }
   }
   return out;
+}
+
+/** Every real page in the product, with the roles that include it in the built-in menu. */
+export function getAllNavPages() {
+  const roles = ['super_admin', 'admin', 'coach', 'client'];
+  const byId = new Map();
+  for (const role of roles) {
+    for (const page of getNavPagesForRole(role)) {
+      if (!page.href) continue;
+      const current = byId.get(page.id);
+      if (!current) {
+        byId.set(page.id, { ...page, builtInRoles: [role] });
+      } else if (!current.builtInRoles.includes(role)) {
+        current.builtInRoles.push(role);
+      }
+    }
+  }
+  return [...byId.values()];
+}
+
+function withGrantedPages(role, sections, pageAccess) {
+  const present = new Set();
+  for (const section of sections) {
+    for (const item of section.items || []) {
+      present.add(item.id);
+      for (const child of item.children || []) present.add(child.id);
+    }
+  }
+  const want = new Set([
+    ...Object.entries(pageAccess?.roleModes || {}).filter(([, mode]) => mode === 'default').map(([id]) => id),
+    ...(pageAccess?.extraPages || []),
+  ]);
+  const extras = [];
+  for (const id of want) {
+    if (present.has(id) || !ITEM_META[id]?.href) continue;
+    extras.push({ ...ITEM_META[id] });
+  }
+  if (!extras.length) return sections;
+  return [...sections, { role, sectionKey: 'sections.granted', items: extras }];
 }
 
 /* ─── Helpers ───────────────────────────────────────────────── */
@@ -537,58 +568,6 @@ function useLocalStorageState(key, initial) {
     } catch {}
   }, [key, val]);
   return [val, set];
-}
-
-function useHiddenItems() {
-  const [hidden, setHidden] = useLocalStorageState(LS_HIDDEN, []);
-  const isHidden = useCallback(id => hidden.includes(id), [hidden]);
-  const toggle = useCallback(
-    id => {
-      setHidden(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
-    },
-    [setHidden],
-  );
-  const resetAll = useCallback(() => setHidden([]), [setHidden]);
-  return { hidden, isHidden, toggle, resetAll };
-}
-
-function useMarketplaceItems() {
-  const [installed, setInstalled] = useLocalStorageState(LS_MARKETPLACE, []);
-
-  // One-time: keep previously always-visible chat apps installed, but leave
-  // Phone Check / Lead Scout / Branding as marketplace opt-in only.
-  useEffect(() => {
-    try {
-      if (typeof window === 'undefined') return;
-      if (localStorage.getItem(LS_MARKETPLACE_OUTREACH_MIGRATE) !== '1') {
-        setInstalled(prev => {
-          const next = new Set(Array.isArray(prev) ? prev : []);
-          for (const id of OUTREACH_DEFAULT_INSTALLED) next.add(id);
-          for (const id of OPT_IN_MARKETPLACE_IDS) next.delete(id);
-          return [...next];
-        });
-        localStorage.setItem(LS_MARKETPLACE_OUTREACH_MIGRATE, '1');
-      }
-      if (localStorage.getItem(LS_MARKETPLACE_OPT_IN_MIGRATE) !== '1') {
-        // Undo v1 auto-install for opt-in apps so they hide until added from Marketplace.
-        setInstalled(prev =>
-          (Array.isArray(prev) ? prev : []).filter(id => !OPT_IN_MARKETPLACE_IDS.includes(id)),
-        );
-        localStorage.setItem(LS_MARKETPLACE_OPT_IN_MIGRATE, '1');
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [setInstalled]);
-
-  const isInstalled = useCallback(id => installed.includes(id), [installed]);
-  const toggle = useCallback(
-    id => {
-      setInstalled(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
-    },
-    [setInstalled],
-  );
-  return { installed, isInstalled, toggle };
 }
 
 function useCustomLabels() {
@@ -750,45 +729,14 @@ export function CollapsedTooltip({ label, anchorRef, offset = 12 }) {
   return createPortal(
     <motion.div
       ref={tipRef}
-      initial={{ opacity: 0, x: isRTL ? 6 : -6, scale: 0.93 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: isRTL ? 6 : -6, scale: 0.93 }}
-      transition={{ duration: 0.13, ease: [0.22, 1, 0.36, 1] }}
-      style={{
-        position: 'fixed',
-        top: pos?.top ?? -9999,
-        left: pos?.left ?? -9999,
-        transform: 'translateY(-50%)',
-        zIndex: 9999,
-        pointerEvents: 'none',
-      }}>
-      <div
-        style={{
-          fontSize: 11.5,
-          fontWeight: 600,
-          padding: '6px 12px',
-          borderRadius: 9,
-          whiteSpace: 'nowrap',
-          color: 'white',
-          letterSpacing: '0.015em',
-          background: '#0f172a',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.12)',
-          position: 'relative',
-        }}>
-        {label}
-        <span
-          style={{
-            position: 'absolute',
-            top: '50%',
-            transform: 'translateY(-50%) rotate(45deg)',
-            [isRTL ? 'right' : 'left']: -3.5,
-            width: 7,
-            height: 7,
-            background: '#0f172a',
-            borderRadius: 2,
-          }}
-        />
-      </div>
+      role='tooltip'
+      className={`sb-tip${isRTL ? ' is-rtl' : ''}`}
+      initial={{ opacity: 0, x: isRTL ? 4 : -4 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: isRTL ? 4 : -4 }}
+      transition={{ duration: 0.12, ease: [0.22, 1, 0.36, 1] }}
+      style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}>
+      {label}
     </motion.div>,
     document.body,
   );
@@ -812,7 +760,7 @@ function PortalFlyout({ children, anchorRef, offset = 12 }) {
       let left = isRTL ? rect.left - flyW - offset : rect.right + offset;
       if (!isRTL && left + flyW > window.innerWidth - pad) left = rect.left - flyW - offset;
       if (isRTL && left < pad) left = rect.right + offset;
-      let top = rect.top;
+      let top = rect.top - 6;
       if (top + flyH > window.innerHeight - pad) top = window.innerHeight - flyH - pad;
       if (top < pad) top = pad;
       setPos({ top, left });
@@ -823,27 +771,17 @@ function PortalFlyout({ children, anchorRef, offset = 12 }) {
     return () => ro.disconnect();
   }, [mounted, anchorRef, offset, isRTL]);
   if (!mounted) return null;
-  const xFrom = isRTL ? 8 : -8;
+  const xFrom = isRTL ? 6 : -6;
   return createPortal(
     <motion.div
       ref={flyRef}
       role='menu'
-      initial={{ opacity: 0, x: xFrom, scale: 0.96 }}
+      className='sb-fly'
+      initial={{ opacity: 0, x: xFrom, scale: 0.98 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: xFrom, scale: 0.96 }}
-      transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-      style={{
-        position: 'fixed',
-        top: pos?.top ?? -9999,
-        left: pos?.left ?? -9999,
-        zIndex: 9998,
-        minWidth: 226,
-        borderRadius: 14,
-        overflow: 'hidden',
-        background: '#ffffff',
-        border: '1px solid rgba(0,0,0,0.07)',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.06)',
-      }}>
+      exit={{ opacity: 0, x: xFrom, scale: 0.98 }}
+      transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+      style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}>
       {children}
     </motion.div>,
     document.body,
@@ -851,7 +789,8 @@ function PortalFlyout({ children, anchorRef, offset = 12 }) {
 }
 
 /* ─── ScrollShadow ───────────────────────────────────────────── */
-function ScrollShadow({ children, P }) {
+/** Fades the nav edges with a mask so it works on any sidebar surface (light, dark, reading themes). */
+function ScrollShadow({ children }) {
   const ref = useRef(null);
   const [atTop, setAtTop] = useState(true);
   const [atBottom, setAtBottom] = useState(false);
@@ -879,7 +818,7 @@ function ScrollShadow({ children, P }) {
     <div className='sidebar-scroll-root' style={{ position: 'relative', height: '100%', minHeight: 0, flex: '1 1 auto' }}>
       <div
         ref={ref}
-        className='sidebar-scroll-viewport'
+        className={`sidebar-scroll-viewport sb-fade${atTop ? '' : ' has-top'}${atBottom ? '' : ' has-bottom'}`}
         style={{
           height: '100%',
           minHeight: 0,
@@ -894,35 +833,30 @@ function ScrollShadow({ children, P }) {
       >
         {children}
       </div>
-      <div style={{ pointerEvents: 'none', position: 'absolute', inset: '0 0 auto 0', height: 44, opacity: atTop ? 0 : 1, transition: 'opacity .25s', background: `linear-gradient(to bottom, ${P?.headerBg || '#fff'}, transparent)` }} />
-      <div style={{ pointerEvents: 'none', position: 'absolute', inset: 'auto 0 0 0', height: 44, opacity: atBottom ? 0 : 1, transition: 'opacity .25s', background: `linear-gradient(to top, ${P?.footerBg || '#f8f9fb'}, transparent)` }} />
     </div>
   );
 }
 
 /* ─── SectionLabel ───────────────────────────────────────────── */
-function SectionLabel({ label, P }) {
+function SectionLabel({ label }) {
   return (
-    <div className='sidebar-section-label' style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 3px', marginBottom: 6, marginTop: 14 }}>
-      <span
-        className='sidebar-section-label'
-        style={{
-          fontSize: 10,
-          fontWeight: 800,
-          textTransform: 'uppercase',
-          letterSpacing: '0.14em',
-          color: P?.sectionLabel || '#94a3b8',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-        }}>
-        {label}
-      </span>
-      <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, ${P?.border || 'rgba(0,0,0,0.07)'}, transparent)` }} />
+    <div className='sb-section' role='presentation'>
+      <span className='sb-section__text'>{label}</span>
+      <span className='sb-section__rule' aria-hidden />
     </div>
   );
 }
 
 /* ─── NavItem ────────────────────────────────────────────────── */
+function NavBadge({ value, small }) {
+  if (!(value > 0)) return null;
+  return (
+    <span className={small ? 'sb-tile__badge' : 'sb-row__badge'}>
+      <Badge value={value} small={small} />
+    </span>
+  );
+}
+
 function NavItem({
   item,
   pathname,
@@ -941,10 +875,10 @@ function NavItem({
   const Icon = item.icon || LayoutDashboard;
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
   const label = typeof getLabel === 'function' ? getLabel(item, t) : t(`items.${item.nameKey}`);
+  const childLabel = child => (typeof getLabel === 'function' ? getLabel(child, t) : t(`items.${child.nameKey}`));
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
   const liRef = useRef(null);
-  const isRTL = getDir() === 'rtl';
   const isMessages = item.nameKey === 'messages';
   const isNotifications = item.nameKey === 'notifications';
   const isWhatsApp = item.nameKey === 'whatsapp' || item.id === 'whatsapp';
@@ -967,120 +901,55 @@ function NavItem({
   if (collapsed) {
     const firstChildHref = hasChildren ? item.children.find(c => c.href)?.href : null;
     const href = hasChildren ? firstChildHref : item.href;
-    const active = isPathActive(pathname, href || '', searchParams);
+    const active = hasChildren ? anyChildActive(pathname, item.children, searchParams) : isPathActive(pathname, href || '', searchParams);
+    const tileClass = `sb-tile${active ? ' is-active' : ''}`;
+    const tileBody = (
+      <>
+        <Icon className='sb-tile__icon' strokeWidth={active ? 2.2 : 1.9} aria-hidden />
+        <NavBadge value={itemBadge} small />
+      </>
+    );
     return (
-      <div ref={liRef} style={{ position: 'relative', display: 'flex', justifyContent: 'center', padding: '2px 0' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <div
+        ref={liRef}
+        className='sb-tile-cell'
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        onFocus={() => setHover(true)}
+        onBlur={() => setHover(false)}>
         {href ? (
-          <Link href={href} onClick={onNavigate}>
-            <motion.div
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.93 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 42,
-                height: 42,
-                borderRadius: 13,
-                transition: 'all .18s',
-                ...(active
-                  ? {
-                      background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                      boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 32%, transparent)',
-                      color: '#fff',
-                    }
-                  : hover
-                  ? {
-                      background: 'color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
-                      boxShadow: '0 4px 10px color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
-                      color: 'var(--color-primary-600)',
-                    }
-                  : {
-                      background: 'color-mix(in srgb, var(--color-primary-500) 8%, transparent)',
-                      boxShadow: 'none',
-                      color: 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
-                    }),
-              }}>
-              <Icon style={{ width: 18, height: 18 }} strokeWidth={active ? 2.3 : 1.9} />
-              {itemBadge > 0 && (
-                <span style={{ position: 'absolute', top: -3, [isRTL ? 'left' : 'right']: -3, zIndex: 2 }}>
-                  <Badge value={itemBadge} small />
-                </span>
-              )}
-            </motion.div>
+          <Link href={href} onClick={onNavigate} className={tileClass} aria-label={label} aria-current={active ? 'page' : undefined}>
+            {tileBody}
           </Link>
         ) : (
-          <motion.div
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.93 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 42,
-              height: 42,
-              borderRadius: 13,
-              cursor: 'pointer',
-              transition: 'all .18s',
-              background: hover ? 'color-mix(in srgb, var(--color-primary-500) 16%, transparent)' : 'color-mix(in srgb, var(--color-primary-500) 8%, transparent)',
-              boxShadow: hover ? '0 4px 10px color-mix(in srgb, var(--color-primary-500) 16%, transparent)' : 'none',
-              color: hover ? 'var(--color-primary-600)' : 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
-            }}>
-            <Icon style={{ width: 18, height: 18 }} strokeWidth={1.9} />
-            {itemBadge > 0 && (
-              <span style={{ position: 'absolute', top: -3, [isRTL ? 'left' : 'right']: -3, zIndex: 2 }}>
-                <Badge value={itemBadge} small />
-              </span>
-            )}
-          </motion.div>
+          <button type='button' className={tileClass} aria-label={label} aria-haspopup='menu'>
+            {tileBody}
+          </button>
         )}
         <AnimatePresence>{hover && !hasChildren && <CollapsedTooltip label={label} anchorRef={liRef} />}</AnimatePresence>
         <AnimatePresence>
           {hover && hasChildren && (
             <PortalFlyout anchorRef={liRef}>
-              <div style={{ padding: '8px 0' }}>
-                <div style={{ padding: '7px 14px 10px', borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#94a3b8' }}>{label}</span>
-                </div>
-                <div style={{ padding: '4px 6px' }}>
-                  {item.children.map(child => {
-                    const A = child.icon || LayoutDashboard;
-                    const ca = isPathActive(pathname, child.href, searchParams);
-                    return (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        onClick={onNavigate}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          borderRadius: 10,
-                          padding: '8px 10px',
-                          transition: 'all .15s',
-                          ...(ca ? { background: 'color-mix(in srgb, var(--color-primary-500) 7%, transparent)', color: 'var(--color-primary-700)' } : { color: '#64748b' }),
-                        }}>
-                        <span
-                          style={{
-                            display: 'grid',
-                            placeContent: 'center',
-                            width: 28,
-                            height: 28,
-                            borderRadius: 8,
-                            flexShrink: 0,
-                            ...(ca ? { background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))', color: '#fff', boxShadow: '0 3px 8px color-mix(in srgb, var(--color-primary-500) 28%, transparent)' } : { background: '#f8f9fb', color: '#94a3b8', border: '1px solid rgba(0,0,0,0.07)' }),
-                          }}>
-                          <A style={{ width: 12, height: 12 }} strokeWidth={ca ? 2.5 : 2} />
-                        </span>
-                        <span style={{ fontSize: 13, fontWeight: ca ? 600 : 500 }}>{typeof getLabel === 'function' ? getLabel(child, t) : t(`items.${child.nameKey}`)}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
+              <p className='sb-fly__title'>{label}</p>
+              <div className='sb-fly__list'>
+                {item.children.map(child => {
+                  const ChildIcon = child.icon || LayoutDashboard;
+                  const childActive = isPathActive(pathname, child.href, searchParams);
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      onClick={onNavigate}
+                      role='menuitem'
+                      className={`sb-fly__item${childActive ? ' is-active' : ''}`}
+                      aria-current={childActive ? 'page' : undefined}>
+                      <span className='sb-fly__chip' aria-hidden>
+                        <ChildIcon strokeWidth={childActive ? 2.3 : 2} />
+                      </span>
+                      <span className='sb-fly__label'>{childLabel(child)}</span>
+                    </Link>
+                  );
+                })}
               </div>
             </PortalFlyout>
           )}
@@ -1093,117 +962,17 @@ function NavItem({
   if (!hasChildren) {
     const active = isPathActive(pathname, item.href, searchParams);
     return (
-      <Link href={item.href} onClick={onNavigate} style={{ display: 'block' }}>
-        <motion.div
-          whileHover={{ x: isRTL ? -2 : 2 }}
-          whileTap={{ scale: 0.986 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-          style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 11,
-            borderRadius: 12,
-            padding: '8px 10px',
-            marginBottom: 2,
-            transition: 'background .18s, box-shadow .18s, border-color .18s',
-            cursor: 'pointer',
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderStyle: 'solid',
-            borderColor: !active && hover ? 'color-mix(in srgb, var(--color-primary-400) 14%, transparent)' : 'transparent',
-            ...(active
-              ? {
-                  background: P?.bgActive || '#ffffff',
-                  boxShadow: P?.shadow?.md || '0 4px 16px rgba(0,0,0,0.07)',
-                  color: 'var(--color-primary-800)',
-                }
-              : hover
-              ? {
-                  background: `color-mix(in srgb, var(--color-primary-500) 5%, ${P?.bgCard || '#fff'})`,
-                  boxShadow: P?.shadow?.sm,
-                  color: P?.textMuted || '#64748b',
-                }
-              : {
-                  background: 'transparent',
-                  boxShadow: 'none',
-                  color: P?.textMuted || '#64748b',
-                }),
-          }}
-          aria-current={active ? 'page' : undefined}>
-          {/* Active rail */}
-          {active && (
-            <motion.span
-              layoutId='active-rail'
-              transition={snap}
-              style={{
-                position: 'absolute',
-                [isRTL ? 'right' : 'left']: 0,
-                top: '18%',
-                bottom: '18%',
-                width: 3,
-                borderRadius: 99,
-                background: 'linear-gradient(180deg, var(--color-gradient-from), var(--color-gradient-to))',
-              }}
-            />
-          )}
-          {/* Icon */}
-          <span
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              flexShrink: 0,
-              display: 'grid',
-              placeContent: 'center',
-              width: 34,
-              height: 34,
-              borderRadius: 11,
-              transition: 'all .2s cubic-bezier(.34,1.56,.64,1)',
-              transform: hover && !active ? 'scale(1.08)' : 'scale(1)',
-              ...(active
-                ? {
-                    background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                    color: '#fff',
-                    boxShadow: '0 4px 12px color-mix(in srgb, var(--color-primary-500) 38%, transparent)',
-                  }
-                : hover
-                ? {
-                    background: 'color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
-                    color: 'var(--color-primary-600)',
-                    boxShadow: '0 4px 10px color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
-                  }
-                : {
-                    background: 'color-mix(in srgb, var(--color-primary-500) 8%, transparent)',
-                    color: 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
-                  }),
-            }}>
-            <Icon style={{ width: 16.5, height: 16.5 }} strokeWidth={active ? 2.3 : 1.9} />
-          </span>
-          {/* Label */}
-          <span
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              fontSize: 13.5,
-              fontWeight: active ? 700 : hover ? 600 : 530,
-              letterSpacing: '-0.006em',
-              color: active ? 'var(--color-primary-800)' : hover ? P?.text || '#0f172a' : P?.textMuted || '#64748b',
-              transition: 'color .18s, font-weight .18s',
-            }}>
-            {label}
-          </span>
-          {itemBadge > 0 && (
-            <span style={{ position: 'relative', zIndex: 1 }}>
-              <Badge value={itemBadge} />
-            </span>
-          )}
-        </motion.div>
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        className={`sb-row${active ? ' is-active' : ''}${depth > 0 ? ' is-sub' : ''}`}
+        aria-current={active ? 'page' : undefined}>
+        {active && <motion.span layoutId='active-rail' transition={snap} className='sb-row__rail' aria-hidden />}
+        <span className='sb-row__chip' aria-hidden>
+          <Icon strokeWidth={active ? 2.2 : 1.9} />
+        </span>
+        <span className='sb-row__label'>{label}</span>
+        <NavBadge value={itemBadge} />
       </Link>
     );
   }
@@ -1211,110 +980,42 @@ function NavItem({
   /* ── Group item ── */
   const groupActive = anyChildActive(pathname, item.children, searchParams);
   return (
-    <div style={{ width: '100%', marginBottom: 1 }}>
-      <motion.button
+    <div className='sb-group'>
+      <button
         type='button'
         onClick={() => setOpen(v => !v)}
-        whileHover={{ x: isRTL ? -2 : 2 }}
-        whileTap={{ scale: 0.986 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        style={{
-          position: 'relative',
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 11,
-          borderRadius: 12,
-          padding: '8px 10px',
-          textAlign: isRTL ? 'right' : 'left',
-          borderWidth: 1,
-          borderStyle: 'solid',
-          borderColor: !open && hover ? 'color-mix(in srgb, var(--color-primary-400) 14%, transparent)' : 'transparent',
-          cursor: 'pointer',
-          transition: 'background .18s, box-shadow .18s, border-color .18s',
-          background: open ? P?.bgActive || '#ffffff' : hover ? `color-mix(in srgb, var(--color-primary-500) 5%, ${P?.bgCard || '#fff'})` : 'transparent',
-          boxShadow: open ? P?.shadow?.md : hover ? P?.shadow?.sm : 'none',
-          color: open ? 'var(--color-primary-700)' : P?.textMuted || '#64748b',
-        }}
+        className={`sb-row is-group${open ? ' is-open' : ''}${groupActive ? ' has-active' : ''}`}
         aria-expanded={open}>
-        <span
-          style={{
-            flexShrink: 0,
-            display: 'grid',
-            placeContent: 'center',
-            width: 34,
-            height: 34,
-            borderRadius: 11,
-            transition: 'all .2s cubic-bezier(.34,1.56,.64,1)',
-            transform: hover && !open ? 'scale(1.08)' : 'scale(1)',
-            ...(open
-              ? {
-                  background: 'color-mix(in srgb, var(--color-primary-500) 14%, transparent)',
-                  color: 'var(--color-primary-600)',
-                }
-              : hover
-              ? {
-                  background: 'color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
-                  color: 'var(--color-primary-600)',
-                  boxShadow: '0 4px 10px color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
-                }
-              : {
-                  background: 'color-mix(in srgb, var(--color-primary-500) 8%, transparent)',
-                  color: 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
-                }),
-          }}>
-          <Icon style={{ width: 16.5, height: 16.5 }} strokeWidth={1.9} />
+        <span className='sb-row__chip' aria-hidden>
+          <Icon strokeWidth={1.9} />
         </span>
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13.5, fontWeight: open ? 700 : hover ? 600 : 530, letterSpacing: '-0.006em' }}>{label}</span>
-        {!open && groupActive && <span style={{ width: 5, height: 5, borderRadius: '50%', flexShrink: 0, background: 'var(--color-primary-400)' }} />}
-        <motion.span animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }} style={{ color: open ? 'var(--color-primary-500)' : P?.textXLight || '#cbd5e1', flexShrink: 0 }}>
-          <ChevronRight className='rtl:scale-x-[-1]' style={{ width: 12, height: 12 }} strokeWidth={2.5} />
-        </motion.span>
-      </motion.button>
+        <span className='sb-row__label'>{label}</span>
+        {!open && groupActive && <span className='sb-row__dot' aria-hidden />}
+        <ChevronRight className='sb-row__chev rtl:scale-x-[-1]' strokeWidth={2.4} aria-hidden />
+      </button>
       <AnimatePresence initial={false}>
         {open && (
           <motion.div key='sub' initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={gentle} style={{ overflow: 'hidden' }}>
-            <div
-              style={{
-                position: 'relative',
-                marginTop: 3,
-                marginBottom: 3,
-                [isRTL ? 'marginRight' : 'marginLeft']: 16,
-              }}>
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 4,
-                  bottom: 4,
-                  [isRTL ? 'right' : 'left']: 15,
-                  width: 1.5,
-                  borderRadius: 2,
-                  background: 'linear-gradient(to bottom, color-mix(in srgb, var(--color-primary-300) 60%, transparent), transparent)',
-                }}
-              />
-              <ul style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: 14, margin: 0, listStyle: 'none' }}>
-                {item.children.map(child => (
-                  <li key={child.href || child.nameKey}>
-                    <NavItem
-                      item={child}
-                      pathname={pathname}
-                      searchParams={searchParams}
-                      depth={depth + 1}
-                      onNavigate={onNavigate}
-                      t={t}
-                      totalUnread={totalUnread}
-                      unreadNotifications={unreadNotifications}
-                      unreadWhatsApp={unreadWhatsApp}
-                      unreadMetaWhatsApp={unreadMetaWhatsApp}
-                      P={P}
-                      getLabel={getLabel}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ul className='sb-sub'>
+              {item.children.map(child => (
+                <li key={child.href || child.nameKey}>
+                  <NavItem
+                    item={child}
+                    pathname={pathname}
+                    searchParams={searchParams}
+                    depth={depth + 1}
+                    onNavigate={onNavigate}
+                    t={t}
+                    totalUnread={totalUnread}
+                    unreadNotifications={unreadNotifications}
+                    unreadWhatsApp={unreadWhatsApp}
+                    unreadMetaWhatsApp={unreadMetaWhatsApp}
+                    P={P}
+                    getLabel={getLabel}
+                  />
+                </li>
+              ))}
+            </ul>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1334,8 +1035,6 @@ function NavSection({
   unreadNotifications = 0,
   unreadWhatsApp = 0,
   unreadMetaWhatsApp = 0,
-  isHidden,
-  isInstalled,
   P,
   first = false,
   getLabel,
@@ -1343,17 +1042,12 @@ function NavSection({
   const t_nav = useTranslations('nav');
   const label = t_nav(sectionKey, { defaultValue: '' });
 
-  const visibleItems = items.filter(
-    item => (item.required || !isHidden(item.id)) && (!item.marketplace || isInstalled?.(item.id)),
-  );
-
-  if (!visibleItems.length) return null;
+  if (!items?.length) return null;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {!collapsed && label && !first && <SectionLabel label={label} P={P} />}
-      {!collapsed && first && <div style={{ height: 4 }} />}
-      {collapsed && <div style={{ height: first ? 2 : 6 }} />}
-      {visibleItems.map(item => (
+    <div className={`sb-nav-section${collapsed ? ' is-collapsed' : ''}${first ? ' is-first' : ''}`}>
+      {!collapsed && label && !first && <SectionLabel label={label} />}
+      {collapsed && !first && <span className='sb-section-tick' aria-hidden />}
+      {items.map(item => (
         <NavItem
           key={item.id || item.href || item.nameKey}
           item={item}
@@ -1378,89 +1072,44 @@ function NavSection({
 function Avatar({ user, size = 'md' }) {
   const text = initialsFrom(user?.name, user?.email);
   const isActive = (user?.status || '').toLowerCase() === 'active';
-  const dim = size === 'sm' ? { w: 36, h: 36, font: 11, radius: 10 } : { w: 40, h: 40, font: 13, radius: 11 };
   return (
-    <div style={{ position: 'relative', flexShrink: 0 }}>
-      <div
-        style={{
-          display: 'grid',
-          placeItems: 'center',
-          borderRadius: dim.radius,
-          fontWeight: 800,
-          color: '#fff',
-          position: 'relative',
-          overflow: 'hidden',
-          width: dim.w,
-          height: dim.h,
-          fontSize: dim.font,
-          background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-          boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 32%, transparent)',
-          letterSpacing: '0.03em',
-        }}>
-        <span style={{ position: 'relative', zIndex: 1 }}>{text}</span>
-        <motion.div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} animate={{ x: ['-100%', '200%'] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'linear', repeatDelay: 2 }}>
-          <div style={{ width: '60%', height: '100%', background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%)' }} />
-        </motion.div>
-      </div>
-      <span
-        style={{
-          position: 'absolute',
-          right: -2,
-          bottom: -2,
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          background: isActive ? '#22c55e' : '#94a3b8',
-          boxShadow: '0 0 0 2.5px #f8f9fb',
-        }}>
-        {isActive && <motion.span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#22c55e' }} animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }} />}
-      </span>
-    </div>
+    <span className={`sb-avatar is-${size}`}>
+      <span className='sb-avatar__face'>{text}</span>
+      <span className={`sb-avatar__status${isActive ? ' is-on' : ''}`} aria-hidden />
+    </span>
   );
 }
 
 /* ─── SidebarHeader ──────────────────────────────────────────── */
-function SidebarHeader({ user, collapsed, P }) {
+function HeaderControls({ collapsed, onToggleCollapse, onHide, copy }) {
+  const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  const collapseLabel = collapsed ? copy.expand : copy.collapse;
+  return (
+    <div className={`sb-head__controls${collapsed ? ' is-stacked' : ''}`}>
+      <button type='button' className='sb-head__btn' onClick={onToggleCollapse} aria-label={collapseLabel} data-tip={collapseLabel}>
+        <CollapseIcon className='rtl:scale-x-[-1]' strokeWidth={2} aria-hidden />
+      </button>
+      {!collapsed && (
+        <button type='button' className='sb-head__btn' onClick={onHide} aria-label={copy.hide} data-tip={copy.hide}>
+          <Maximize2 strokeWidth={2} aria-hidden />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SidebarHeader({ user, collapsed, controls }) {
   const t_r = useTranslations('');
   return (
-    <div
-      style={{
-        padding: collapsed ? '14px 10px 12px' : '16px 14px 13px',
-        borderBottom: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
-        flexShrink: 0,
-        background: P?.headerBg || 'rgba(255,255,255,0.8)',
-        backdropFilter: 'blur(12px)',
-      }}>
-      {collapsed ? (
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <Avatar user={user} size='sm' />
-        </div>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Avatar user={user} size='md' />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <MultiLangText
-              style={{
-                display: 'block',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                fontSize: 13.5,
-                fontWeight: 700,
-                color: P?.text || '#0f172a',
-                lineHeight: 1.3,
-                letterSpacing: '-0.01em',
-              }}>
-              {user?.name}
-            </MultiLangText>
-            {user?.role ? (
-              <p style={{ fontSize: 10, marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-primary-400)' }}>
-                {t_r(`myProfile.roles.${user.role}`)}
-              </p>
-            ) : null}
-          </div>
+    <div className={`sb-head${collapsed ? ' is-collapsed' : ''}`}>
+      <Avatar user={user} size={collapsed ? 'sm' : 'md'} />
+      {!collapsed && (
+        <div className='sb-head__text'>
+          <MultiLangText className='sb-head__name'>{user?.name}</MultiLangText>
+          {user?.role ? <p className='sb-head__role'>{t_r(`myProfile.roles.${user.role}`)}</p> : null}
         </div>
       )}
+      {controls ? <HeaderControls collapsed={collapsed} {...controls} /> : null}
     </div>
   );
 }
@@ -1699,9 +1348,84 @@ function SidebarLanguageToggle({ collapsed, P }) {
   );
 }
 
+/* ─── SidebarModeToggle (light / dark) ───────────────────────── */
+function SidebarModeToggle({ collapsed, P }) {
+  const { mode, setMode } = useTheme();
+  const tTheme = useTranslations('themeSwitcher');
+  const isDark = mode === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  const label = isDark ? (tTheme('mode.light') || 'Light') : (tTheme('mode.dark') || 'Dark');
+  const tip = isDark ? (tTheme('mode.switchToLight') || 'Switch to light mode') : (tTheme('mode.switchToDark') || 'Switch to dark mode');
+  const btnBase = {
+    border: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
+    background: P?.bgCard || '#ffffff',
+    boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
+  };
+
+  return (
+    <motion.button
+      type='button'
+      onClick={() => setMode(next)}
+      whileHover={{ scale: collapsed ? 1.06 : 1.005, y: -1 }}
+      whileTap={{ scale: collapsed ? 0.95 : 0.995 }}
+      title={tip}
+      aria-label={tip}
+      aria-pressed={isDark}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        cursor: 'pointer',
+        transition: 'all .18s',
+        ...(collapsed
+          ? { width: 40, height: 40, borderRadius: 12, justifyContent: 'center' }
+          : { width: '100%', height: 44, borderRadius: 12, padding: '0 10px' }),
+        ...btnBase,
+      }}
+    >
+      <span
+        style={{
+          flexShrink: 0,
+          display: 'grid',
+          placeContent: 'center',
+          width: collapsed ? 'auto' : 26,
+          height: collapsed ? 'auto' : 26,
+          borderRadius: 8,
+          background: isDark
+            ? 'color-mix(in srgb, #818cf8 22%, transparent)'
+            : 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
+          color: isDark ? '#a5b4fc' : 'var(--color-primary-600)',
+        }}
+      >
+        {isDark
+          ? <Moon style={{ width: collapsed ? 15 : 13, height: collapsed ? 15 : 13 }} strokeWidth={2.2} />
+          : <Sun style={{ width: collapsed ? 15 : 13, height: collapsed ? 15 : 13 }} strokeWidth={2.2} />}
+      </span>
+      {!collapsed && (
+        <>
+          <span className='rtl:text-right ltr:text-left' style={{ fontSize: 12.5, fontWeight: 650, flex: 1, letterSpacing: '-0.005em', color: P?.text || '#334155' }}>
+            {label}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: P?.textXLight || '#94a3b8',
+            }}
+          >
+            {isDark ? 'DARK' : 'LIGHT'}
+          </span>
+        </>
+      )}
+    </motion.button>
+  );
+}
+
 /* ─── SidebarThemeSwitcher ───────────────────────────────────── */
 function SidebarThemeSwitcher({ collapsed, P }) {
-  const { theme: currentTheme, setTheme } = useTheme();
+  const { theme: currentTheme, setTheme, mode, setMode } = useTheme();
   const tTheme = useTranslations('themeSwitcher');
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
@@ -1738,8 +1462,8 @@ function SidebarThemeSwitcher({ collapsed, P }) {
       const vh = window.innerHeight;
       const pad = 8;
       const narrow = vw < 1025;
-      const panelW = Math.min(316, vw - pad * 2);
-      const approxH = Math.min(460, vh * 0.72);
+      const panelW = Math.min(THEME_PANEL_W, vw - pad * 2);
+      const approxH = Math.min(540, vh * 0.78);
 
       let left;
       if (narrow) {
@@ -1832,6 +1556,8 @@ function SidebarThemeSwitcher({ collapsed, P }) {
             themeEntries={themeEntries}
             currentTheme={currentTheme}
             currentPalette={currentPalette}
+            mode={mode}
+            onMode={setMode}
             onSelect={key => {
               setTheme(key);
               setTimeout(() => setOpen(false), 250);
@@ -1847,1058 +1573,525 @@ function SidebarThemeSwitcher({ collapsed, P }) {
 }
 
 /* ─── ThemePanel ─────────────────────────────────────────────── */
-const ThemePanel = React.forwardRef(function ThemePanel({ themeEntries, currentTheme, currentPalette, onSelect, pos, xFrom, tTheme }, ref) {
-  return (
-    <AnimatePresence>
-      <motion.div
-        ref={ref}
-        initial={{ opacity: 0, y: 8, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 8, scale: 0.97 }}
-        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          position: 'fixed',
-          left: pos?.left ?? 8,
-          bottom: pos?.bottom ?? 16,
-          zIndex: 130000,
-          width: pos?.width ?? Math.min(316, typeof window !== 'undefined' ? window.innerWidth - 16 : 316),
-          maxWidth: 'calc(100vw - 16px)',
-          borderRadius: 18,
-          overflow: 'hidden',
-          background: '#fff',
-          border: '1px solid rgba(0,0,0,0.07)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.08)',
-        }}>
-        <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, display: 'grid', placeContent: 'center', color: '#fff', flexShrink: 0, background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))', boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 30%, transparent)' }}>
-            <Paintbrush style={{ width: 14, height: 14 }} strokeWidth={2.5} />
-          </div>
-          <div>
-            <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>{tTheme?.('title') || 'Color Theme'}</p>
-            <p style={{ fontSize: 10, fontWeight: 600, color: '#64748b', marginTop: 2 }}>{tTheme?.('subtitle') || `${themeEntries.length} palettes available`}</p>
-          </div>
-        </div>
-        <div style={{ padding: 10, maxHeight: pos?.maxHeight ?? 380, overflowY: 'auto', scrollbarWidth: 'thin' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {themeEntries.map(([key, palette], idx) => {
-              const isActive = currentTheme === key;
-              return (
-                <motion.button
-                  key={key}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.02 }}
-                  whileHover={{ scale: 1.025, y: -1 }}
-                  whileTap={{ scale: 0.975 }}
-                  onClick={() => onSelect(key)}
-                  style={{
-                    position: 'relative',
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    border: isActive ? `2px solid ${palette.primary[400]}` : '1.5px solid rgba(0,0,0,0.07)',
-                    background: isActive ? palette.primary[50] : '#fafafa',
-                    boxShadow: isActive ? `0 4px 16px color-mix(in srgb, ${palette.primary[400]} 18%, transparent)` : '0 1px 3px rgba(0,0,0,0.06)',
-                  }}>
-                  <div style={{ height: 38, position: 'relative', overflow: 'hidden', background: `linear-gradient(135deg, ${palette.gradient.from}, ${palette.gradient.to})` }}>
-                    {isActive && (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={snap} style={{ position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: '50%', background: 'white', display: 'grid', placeContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
-                        <Check style={{ width: 10, height: 10, color: palette.primary[500] }} strokeWidth={3} />
-                      </motion.div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 9px' }}>
-                    {[palette.primary[500], palette.secondary[500], palette.primary[300]].map((c, i) => (
-                      <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: c }} />
-                    ))}
-                    {isActive && <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: palette.primary[500] }}>Active</span>}
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-      </motion.div>
-    </AnimatePresence>
-  );
-});
+const THEME_PANEL_W = 344;
 
-/* ─── Toggle ─────────────────────────────────────────────────── */
-function Toggle({ checked, onChange }) {
+function paletteVars(palette) {
+  return {
+    '--tp-50': palette.primary[50],
+    '--tp-100': palette.primary[100],
+    '--tp-200': palette.primary[200],
+    '--tp-300': palette.primary[300],
+    '--tp-400': palette.primary[400],
+    '--tp-500': palette.primary[500],
+    '--tp-600': palette.primary[600],
+    '--tp-700': palette.primary[700],
+    '--tp-s400': palette.secondary[400],
+    '--tp-s500': palette.secondary[500],
+    '--tp-from': palette.gradient.from,
+    '--tp-to': palette.gradient.to,
+  };
+}
+
+/** Miniature dashboard drawn in the palette's own colours so each option previews the real result. */
+function ThemePreview() {
   return (
-    <motion.button
-      type='button'
-      dir='ltr'
-      onClick={onChange}
-      whileTap={{ scale: 0.93 }}
-      style={{
-        position: 'relative',
-        width: 36,
-        height: 20,
-        borderRadius: 99,
-        border: 'none',
-        cursor: 'pointer',
-        flexShrink: 0,
-        background: checked ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' : '#e2e8f0',
-        boxShadow: checked ? '0 2px 8px color-mix(in srgb, var(--color-primary-500) 30%, transparent)' : 'none',
-        transition: 'background .2s, box-shadow .2s',
-      }}>
-      <motion.span animate={{ x: checked ? 18 : 2 }} transition={snap} style={{ position: 'absolute', top: 2, left: 0, width: 16, height: 16, borderRadius: '50%', background: '#ffffff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }} />
-    </motion.button>
+    <span className='tp-preview' aria-hidden>
+      <span className='tp-preview__rail'>
+        <span className='tp-preview__logo' />
+        <span className='tp-preview__nav is-on' />
+        <span className='tp-preview__nav' />
+        <span className='tp-preview__nav' />
+      </span>
+      <span className='tp-preview__main'>
+        <span className='tp-preview__top'>
+          <span className='tp-preview__title' />
+          <span className='tp-preview__cta' />
+        </span>
+        <span className='tp-preview__card'>
+          <span className='tp-preview__bars'>
+            <span style={{ height: '45%' }} />
+            <span style={{ height: '70%' }} />
+            <span style={{ height: '55%' }} />
+            <span style={{ height: '90%' }} />
+            <span style={{ height: '62%' }} />
+          </span>
+          <span className='tp-preview__ring' />
+        </span>
+      </span>
+    </span>
   );
 }
 
-/* ─── Palette Picker ─────────────────────────────────────────── */
-function PalettePicker({ paletteKey, setPaletteKey, t }) {
-  const entries = Object.entries(SIDEBAR_PALETTES);
+const ThemePanel = React.forwardRef(function ThemePanel({ themeEntries, currentTheme, currentPalette, mode, onMode, onSelect, pos, tTheme }, ref) {
+  const isDark = mode === 'dark';
+  const reduceMotion = useReducedMotion();
+  const paletteName = (key, palette) => (tTheme?.has?.(`palettes.${key}`) ? tTheme(`palettes.${key}`) : palette.name);
+
+  const onGridKeyDown = e => {
+    const keys = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 2, ArrowUp: -2 };
+    if (!(e.key in keys)) return;
+    const cards = [...e.currentTarget.querySelectorAll('[role="radio"]')];
+    const at = cards.indexOf(document.activeElement);
+    if (at < 0) return;
+    e.preventDefault();
+    const rtlFlip = getDir() === 'rtl' && (e.key === 'ArrowRight' || e.key === 'ArrowLeft') ? -1 : 1;
+    const next = Math.min(cards.length - 1, Math.max(0, at + keys[e.key] * rtlFlip));
+    cards[next]?.focus();
+  };
+
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <div
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: 7,
-            background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
-            display: 'grid',
-            placeContent: 'center',
-          }}>
-          <Sliders style={{ width: 11, height: 11, color: 'var(--color-primary-600)' }} strokeWidth={2} />
+    <motion.div
+      ref={ref}
+      role='dialog'
+      aria-label={tTheme?.('title') || 'Choose Theme'}
+      className={`tp${isDark ? ' is-dark' : ''}`}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        left: pos?.left ?? 8,
+        bottom: pos?.bottom ?? 16,
+        width: pos?.width ?? THEME_PANEL_W,
+        maxHeight: pos?.maxHeight,
+      }}>
+      <div className='tp-head'>
+        <div className='tp-head__text'>
+          <p className='tp-head__title'>{tTheme?.('title') || 'Choose Theme'}</p>
+          <p className='tp-head__sub'>{tTheme?.('subtitle')}</p>
         </div>
-        <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#64748b' }}>{t('customize.appearanceTitle')}</span>
-        <div style={{ flex: 1, height: 1, background: 'rgba(0,0,0,0.05)' }} />
+        {currentPalette && (
+          <span className='tp-current' style={paletteVars(currentPalette)}>
+            <span className='tp-current__dot' aria-hidden />
+            {paletteName(currentTheme, currentPalette)}
+          </span>
+        )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-        {entries.map(([key, pal]) => {
-          const isActive = paletteKey === key;
+
+      <div className='tp-mode' role='radiogroup' aria-label={tTheme?.('mode.label') || 'Appearance'}>
+        {[
+          { id: 'light', Icon: Sun, label: tTheme?.('mode.light') || 'Light' },
+          { id: 'dark', Icon: Moon, label: tTheme?.('mode.dark') || 'Dark' },
+        ].map(({ id, Icon, label }) => {
+          const on = mode === id;
           return (
-            <motion.button
-              key={key}
-              whileHover={{ scale: 1.04, y: -1 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setPaletteKey(key)}
-              style={{
-                position: 'relative',
-                borderRadius: 11,
-                overflow: 'hidden',
-                cursor: 'pointer',
-                textAlign: 'center',
-                padding: 0,
-                border: isActive ? '2px solid var(--color-primary-400)' : '1.5px solid rgba(0,0,0,0.07)',
-                background: isActive ? 'color-mix(in srgb, var(--color-primary-500) 5%, white)' : '#fafafa',
-                boxShadow: isActive ? '0 4px 14px color-mix(in srgb, var(--color-primary-400) 18%, transparent)' : '0 1px 3px rgba(0,0,0,0.06)',
-                transition: 'border-color .18s, box-shadow .18s',
-              }}>
-              {/* Preview strips */}
-              <div style={{ height: 28, display: 'flex', overflow: 'hidden', borderRadius: '9px 9px 0 0' }}>
-                {pal.preview.map((c, i) => (
-                  <div key={i} style={{ flex: 1, background: c }} />
-                ))}
-              </div>
-              {/* Check */}
-              {isActive && (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={snap} style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, borderRadius: '50%', background: 'var(--color-primary-500)', display: 'grid', placeContent: 'center' }}>
-                  <Check style={{ width: 8, height: 8, color: '#fff' }} strokeWidth={3} />
-                </motion.div>
-              )}
-              <div style={{ padding: '5px 6px 6px' }}>
-                <p style={{ fontSize: 9.5, fontWeight: 700, color: '#334155', letterSpacing: '0.02em', lineHeight: 1.3, margin: 0 }}>{t(pal.nameKey)}</p>
-              </div>
-            </motion.button>
+            <button key={id} type='button' role='radio' aria-checked={on} className={`tp-mode__btn${on ? ' is-on' : ''}`} onClick={() => onMode?.(id)}>
+              {on && <motion.span layoutId='tp-mode-pill' className='tp-mode__pill' transition={snap} />}
+              <Icon className='tp-mode__icon' strokeWidth={2.1} aria-hidden />
+              {label}
+            </button>
           );
         })}
       </div>
-    </div>
+
+      <div className='tp-scroll'>
+        <div className='tp-grid' role='radiogroup' aria-label={tTheme?.('ariaLabel') || 'Theme color picker'} onKeyDown={onGridKeyDown}>
+          {themeEntries.map(([key, palette], idx) => {
+            const isActive = currentTheme === key;
+            return (
+              <motion.button
+                key={key}
+                type='button'
+                role='radio'
+                aria-checked={isActive}
+                tabIndex={isActive || (!currentPalette && idx === 0) ? 0 : -1}
+                className={`tp-card${isActive ? ' is-active' : ''}`}
+                style={paletteVars(palette)}
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: reduceMotion ? 0 : 0.03 + idx * 0.025, duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                onClick={() => onSelect(key)}>
+                <ThemePreview />
+                <span className='tp-card__meta'>
+                  <span className='tp-card__name'>{paletteName(key, palette)}</span>
+                  <span className='tp-card__swatches' aria-hidden>
+                    <span style={{ background: palette.primary[500] }} />
+                    <span style={{ background: palette.secondary[500] }} />
+                    <span style={{ background: palette.primary[200] }} />
+                  </span>
+                </span>
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.span
+                      className='tp-card__check'
+                      initial={{ scale: 0.4, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.4, opacity: 0 }}
+                      transition={snap}
+                      aria-hidden>
+                      <Check strokeWidth={3} />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            );
+          })}
+        </div>
+      </div>
+
+      {tTheme?.('footer') ? <p className='tp-foot'>{tTheme('footer')}</p> : null}
+    </motion.div>
+  );
+});
+
+/* ─── SidebarFooter (control dock + popovers) ────────────────── */
+const DOCK_COPY = {
+  en: {
+    language: 'Language',
+    appearance: 'Appearance',
+    theme: 'Theme',
+    signOutQ: 'Sign out?',
+    signOutDesc: "You'll need to sign in again to continue.",
+    cancel: 'Cancel',
+    arabicSub: 'Arabic · RTL',
+    englishSub: 'English · LTR',
+    light: 'Light',
+    dark: 'Dark',
+  },
+  ar: {
+    language: 'اللغة',
+    appearance: 'المظهر',
+    theme: 'الثيم',
+    signOutQ: 'تسجيل الخروج؟',
+    signOutDesc: 'هتحتاج تسجّل الدخول تاني عشان تكمل.',
+    cancel: 'إلغاء',
+    arabicSub: 'العربية · من اليمين',
+    englishSub: 'English · من اليسار',
+    light: 'فاتح',
+    dark: 'داكن',
+  },
+};
+
+const POP_W = 240;
+
+function useDockPopover(open, triggerRef, collapsed, isRTL) {
+  const [pos, setPos] = useState(null);
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) {
+      setPos(null);
+      return;
+    }
+    const place = () => {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const pad = 10;
+      const width = Math.min(POP_W, vw - pad * 2);
+      if (collapsed) {
+        let left = isRTL ? rect.left - width - 12 : rect.right + 12;
+        left = Math.max(pad, Math.min(left, vw - width - pad));
+        const bottom = Math.max(pad, vh - rect.bottom - 6);
+        setPos({ left, bottom, width, side: true, caret: Math.max(14, vh - bottom - rect.top - rect.height / 2) });
+        return;
+      }
+      const center = rect.left + rect.width / 2;
+      let left = center - width / 2;
+      left = Math.max(pad, Math.min(left, vw - width - pad));
+      const bottom = vh - rect.top + 12;
+      const caret = Math.max(16, Math.min(width - 16, center - left));
+      setPos({ left, bottom, width, side: false, caret });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open, triggerRef, collapsed, isRTL]);
+  return pos;
+}
+
+function DockButton({ btnRef, active, danger, label, onClick, children }) {
+  return (
+    <button
+      ref={btnRef}
+      type='button'
+      aria-label={label}
+      aria-expanded={!!active}
+      data-tip={active ? undefined : label}
+      onClick={onClick}
+      className={`sb-dock-btn${active ? ' is-active' : ''}${danger ? ' is-danger' : ''}`}
+    >
+      {children}
+    </button>
   );
 }
 
-/* ─── Group metadata ─────────────────────────────────────────── */
-const GROUP_CONFIG = {
-  ai: { icon: BrainCircuit, color: 'var(--color-primary-500)' },
-  main: { icon: LayoutDashboard, color: '#10b981' },
-  management: { icon: Users, color: '#6366f1' },
-  content: { icon: BookOpen, color: '#f59e0b' },
-  workspace: { icon: GanttChart, color: '#3b82f6' },
-  communication: { icon: MessageSquare, color: '#8b5cf6' },
-  outreach: { icon: Radar, color: '#ea580c' },
-  tools: { icon: Calculator, color: '#14b8a6' },
-  finance: { icon: Wallet, color: '#22c55e' },
-  account: { icon: UserIcon, color: '#64748b' },
-};
-
-/* ─── CustomizeSidebarModal ──────────────────────────────────── */
-function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, getLabel, setLabel, labels, resetLabels }) {
-  const [search, setSearch] = useState('');
-  const [tab, setTab] = useState('nav');
-  const [renamingId, setRenamingId] = useState(null);
-  const searchRef = useRef(null);
-
-  const allItems = useMemo(() => {
-    const seen = new Set();
-    const result = [];
-    sections?.forEach(section => {
-      section.items.forEach(item => {
-        if (!seen.has(item.id)) {
-          seen.add(item.id);
-          result.push(item);
-          if (item.children) {
-            item.children.forEach(child => {
-              if (!seen.has(child.id)) {
-                seen.add(child.id);
-                result.push(child);
-              }
-            });
-          }
-        }
-      });
-    });
-    return result;
-  }, [sections]);
-
-  const navItems = useMemo(() => allItems.filter(i => !i.marketplace), [allItems]);
-  const marketplaceItems = useMemo(() => {
-    const items = allItems.filter(i => i.marketplace);
-    const rank = id => {
-      const optIn = OPT_IN_MARKETPLACE_IDS.indexOf(id);
-      if (optIn >= 0) return optIn;
-      const outreach = OUTREACH_MARKETPLACE_IDS.indexOf(id);
-      if (outreach >= 0) return 10 + outreach;
-      return 100 + items.findIndex(item => item.id === id);
-    };
-    return [...items].sort((a, b) => rank(a.id) - rank(b.id));
-  }, [allItems]);
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return navItems;
-    const q = search.toLowerCase();
-    return navItems.filter(item => {
-      const label = item.nameKey?.toLowerCase() || '';
-      const desc = (item.descKey || '').toLowerCase();
-      return label.includes(q) || desc.includes(q);
-    });
-  }, [navItems, search]);
-
-  const filteredMarketplace = useMemo(() => {
-    if (!search.trim()) return marketplaceItems;
-    const q = search.toLowerCase();
-    return marketplaceItems.filter(item => {
-      const defaultName = t(`items.${item.nameKey}`).toLowerCase();
-      const custom = String(labels?.[item.id] || '').toLowerCase();
-      const desc = (item.descKey || '').toLowerCase();
-      return (
-        defaultName.includes(q) ||
-        custom.includes(q) ||
-        item.nameKey?.toLowerCase().includes(q) ||
-        desc.includes(q)
-      );
-    });
-  }, [marketplaceItems, search, t, labels]);
-
-  const grouped = useMemo(() => {
-    const groups = {};
-    filtered.forEach(item => {
-      const g = item.group || 'main';
-      if (!groups[g]) groups[g] = [];
-      groups[g].push(item);
-    });
-    return groups;
-  }, [filtered]);
-
-  useEffect(() => {
-    if (open && searchRef.current) setTimeout(() => searchRef.current?.focus(), 80);
-  }, [open]);
+function DockPopover({ open, pos, menuRef, triggerRef, onClose, title, children }) {
   useEffect(() => {
     if (!open) return;
-    const fn = e => {
+    const onDown = e => {
+      if (menuRef.current?.contains(e.target) || triggerRef?.current?.contains(e.target)) return;
+      onClose();
+    };
+    const onKey = e => {
       if (e.key === 'Escape') onClose();
     };
-    document.addEventListener('keydown', fn);
-    return () => document.removeEventListener('keydown', fn);
-  }, [open, onClose]);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, menuRef, triggerRef, onClose]);
 
-  const hiddenCount = navItems.filter(item => isHidden(item.id) && !item.required).length;
-  const visibleCount = navItems.filter(i => !isHidden(i.id)).length;
-  const installedCount = marketplaceItems.filter(i => isInstalled?.(i.id)).length;
-  const marketplaceNewCount = marketplaceItems.length - installedCount;
+  if (!open || !pos || typeof window === 'undefined') return null;
 
-  if (!open) return null;
+  const caretStyle = pos.side
+    ? { bottom: pos.caret - 6, [getDir() === 'rtl' ? 'right' : 'left']: -6 }
+    : { left: pos.caret - 6, bottom: -6 };
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div key='backdrop' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }} onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(8px)' }} />
-          <motion.div
-            key='modal'
-            initial={{ opacity: 0, scale: 0.94, y: 18 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 18 }}
-            transition={modal}
-            className='customize_sidebar'
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%,-50%)',
-              zIndex: 10001,
-              width: 'min(580px, calc(100vw - 32px))',
-              maxHeight: 'calc(100vh - 64px)',
-              borderRadius: 22,
-              overflow: 'hidden',
-              background: '#ffffff',
-              border: '1px solid rgba(0,0,0,0.07)',
-              boxShadow: '0 32px 80px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.07)',
-              display: 'flex',
-              flexDirection: 'column',
-            }}>
-            {/* Modal Header */}
-            <div
-              style={{
-                padding: '22px 24px 16px',
-                borderBottom: '1px solid rgba(0,0,0,0.06)',
-                flexShrink: 0,
-                background: 'linear-gradient(to bottom, #f8fafd, #ffffff)',
-              }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-                  <div
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 12,
-                      display: 'grid',
-                      placeContent: 'center',
-                      color: '#fff',
-                      flexShrink: 0,
-                      background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                      boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
-                    }}>
-                    <LayoutGrid style={{ width: 18, height: 18 }} strokeWidth={2.5} />
-                  </div>
-                  <div>
-                    <h2 style={{ fontSize: 16.5, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.3 }}>{t('customize.title')}</h2>
-                    <p style={{ fontSize: 12, color: '#64748b', marginTop: 3, lineHeight: 1.4 }}>
-                      {t('customize.subtitle')}
-                      {hiddenCount > 0 && (
-                        <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.08)', color: '#dc2626', fontWeight: 700, fontSize: 10.5 }}>
-                          {hiddenCount} {t('customize.hiddenBadge')}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.93 }}
-                  onClick={onClose}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 9,
-                    border: '1px solid rgba(0,0,0,0.07)',
-                    background: '#fff',
-                    color: '#64748b',
-                    display: 'grid',
-                    placeContent: 'center',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                  }}>
-                  <X style={{ width: 14, height: 14 }} strokeWidth={2.5} />
-                </motion.button>
-              </div>
-              {/* Search */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  padding: '9px 13px',
-                  borderRadius: 12,
-                  background: '#f8f9fb',
-                  border: '1px solid rgba(0,0,0,0.07)',
-                }}>
-                <Search style={{ width: 13, height: 13, color: '#94a3b8', flexShrink: 0 }} strokeWidth={2} />
-                <input
-                  ref={searchRef}
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder={t('customize.searchPlaceholder')}
-                  style={{
-                    flex: 1,
-                    border: 'none',
-                    outline: 'none',
-                    background: 'transparent',
-                    fontSize: 13,
-                    color: '#0f172a',
-                    fontFamily: 'inherit',
-                    '::placeholder': { color: '#94a3b8' },
-                  }}
-                />
-                {search && (
-                  <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }} onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', display: 'grid', placeContent: 'center', padding: 0 }}>
-                    <X style={{ width: 11, height: 11 }} strokeWidth={2.5} />
-                  </motion.button>
-                )}
-              </div>
-              {/* Tabs */}
-              <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
-                {[
-                  { key: 'nav', label: t('customize.tabs.navigation'), icon: LayoutGrid, badge: 0 },
-                  { key: 'market', label: t('customize.tabs.marketplace'), icon: Sparkles, badge: marketplaceNewCount },
-                ].map(tabItem => {
-                  const TabIcon = tabItem.icon;
-                  const isActive = tab === tabItem.key;
-                  return (
-                    <button
-                      key={tabItem.key}
-                      type='button'
-                      onClick={() => setTab(tabItem.key)}
-                      style={{
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '8px 13px',
-                        borderRadius: 10,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        border: isActive ? '1px solid transparent' : '1px solid rgba(0,0,0,0.07)',
-                        background: isActive ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' : '#fff',
-                        color: isActive ? '#fff' : '#64748b',
-                        boxShadow: isActive ? '0 4px 12px color-mix(in srgb, var(--color-primary-500) 28%, transparent)' : '0 1px 3px rgba(0,0,0,0.05)',
-                        transition: 'all .18s',
-                      }}>
-                      <TabIcon style={{ width: 12.5, height: 12.5 }} strokeWidth={2.2} />
-                      {tabItem.label}
-                      {tabItem.badge > 0 && (
-                        <span
-                          style={{
-                            display: 'grid',
-                            placeContent: 'center',
-                            minWidth: 16,
-                            height: 16,
-                            padding: '0 4px',
-                            borderRadius: 99,
-                            fontSize: 9,
-                            fontWeight: 800,
-                            background: isActive ? 'rgba(255,255,255,0.28)' : 'linear-gradient(135deg, #f59e0b, #ea580c)',
-                            color: '#fff',
-                          }}>
-                          {tabItem.badge}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px 20px' }}>
-              {tab === 'nav' ? (
-              <>
-              {/* Palette Picker — always visible when not searching */}
-              {!search.trim() && (
-                <div style={{ marginBottom: 24 }}>
-                  <PalettePicker paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} />
-                </div>
-              )}
-
-              {/* Items section header */}
-              {!search.trim() && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: 7, background: 'rgba(99,102,241,0.1)', display: 'grid', placeContent: 'center' }}>
-                    <LayoutGrid style={{ width: 11, height: 11, color: '#6366f1' }} strokeWidth={2} />
-                  </div>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#64748b' }}>{t('customize.navItemsTitle')}</span>
-                  <div style={{ flex: 1, height: 1, background: 'rgba(0,0,0,0.05)' }} />
-                </div>
-              )}
-
-              {Object.entries(grouped).length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
-                  <Search style={{ width: 28, height: 28, margin: '0 auto 10px', opacity: 0.3 }} strokeWidth={1.5} />
-                  <p style={{ fontSize: 13, fontWeight: 500 }}>{t('customize.noResults')}</p>
-                </div>
-              ) : (
-                Object.entries(grouped).map(([groupKey, items]) => {
-                  const gcfg = GROUP_CONFIG[groupKey] || { icon: LayoutDashboard, color: '#64748b' };
-                  const GIcon = gcfg.icon;
-                  const groupLabelKey = `groups.${groupKey}`;
-                  return (
-                    <div key={groupKey} style={{ marginBottom: 22 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-                        <div
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 7,
-                            background: `${gcfg.color}18`,
-                            display: 'grid',
-                            placeContent: 'center',
-                          }}>
-                          <GIcon style={{ width: 11, height: 11, color: gcfg.color }} strokeWidth={2} />
-                        </div>
-                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#94a3b8' }}>{t(groupLabelKey)}</span>
-                        <div style={{ flex: 1, height: 1, background: 'rgba(0,0,0,0.05)' }} />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {items.map((item, idx) => {
-                          const Icon = item.icon || LayoutDashboard;
-                          const hidden = isHidden(item.id);
-                          return (
-                            <motion.div
-                              key={item.id}
-                              initial={{ opacity: 0, y: 4 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: idx * 0.025 }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 12,
-                                padding: '11px 13px',
-                                borderRadius: 13,
-                                background: hidden ? '#fafafa' : '#f8fafd',
-                                border: `1px solid ${hidden ? 'rgba(0,0,0,0.06)' : 'color-mix(in srgb, var(--color-primary-300) 18%, transparent)'}`,
-                                opacity: hidden ? 0.55 : 1,
-                                transition: 'all .2s',
-                              }}>
-                              <div
-                                style={{
-                                  width: 34,
-                                  height: 34,
-                                  borderRadius: 10,
-                                  display: 'grid',
-                                  placeContent: 'center',
-                                  flexShrink: 0,
-                                  background: hidden ? '#f1f5f9' : 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                                  color: hidden ? '#94a3b8' : '#fff',
-                                  boxShadow: hidden ? 'none' : '0 2px 8px color-mix(in srgb, var(--color-primary-500) 28%, transparent)',
-                                  transition: 'all .2s',
-                                }}>
-                                <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                                  <span style={{ fontSize: 13.5, fontWeight: 650, color: '#0f172a', letterSpacing: '-0.01em' }}>{t(`items.${item.nameKey}`)}</span>
-                                  {item.required && (
-                                    <span
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: 3,
-                                        fontSize: 9,
-                                        fontWeight: 700,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.1em',
-                                        padding: '2px 7px',
-                                        borderRadius: 5,
-                                        background: 'rgba(100,116,139,0.1)',
-                                        color: '#64748b',
-                                      }}>
-                                      <Lock style={{ width: 8, height: 8 }} strokeWidth={2.5} />
-                                      {t('customize.requiredLabel')}
-                                    </span>
-                                  )}
-                                  {item.highlightVariant === 'premium' && (
-                                    <span
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: 3,
-                                        fontSize: 9,
-                                        fontWeight: 700,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.1em',
-                                        padding: '2px 7px',
-                                        borderRadius: 5,
-                                        background: 'color-mix(in srgb, var(--color-primary-500) 10%, transparent)',
-                                        color: 'var(--color-primary-600)',
-                                      }}>
-                                      <Sparkles style={{ width: 8, height: 8 }} strokeWidth={2.5} />
-                                      {t('customize.premiumLabel')}
-                                    </span>
-                                  )}
-                                </div>
-                                {item.descKey && <p style={{ fontSize: 11.5, color: '#64748b', marginTop: 2.5, lineHeight: 1.45 }}>{t(item.descKey)}</p>}
-                              </div>
-                              {item.required ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>
-                                  <Lock style={{ width: 11, height: 11 }} strokeWidth={2} />
-                                </div>
-                              ) : (
-                                <Toggle checked={!hidden} onChange={() => toggleHidden(item.id)} />
-                              )}
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-              </>
-              ) : (
-                <>
-                  <div style={{ marginBottom: 16 }}>
-                    <p style={{ fontSize: 12.5, color: '#64748b', lineHeight: 1.55 }}>{t('customize.marketplace.subtitle')}</p>
-                  </div>
-                  {filteredMarketplace.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
-                      {marketplaceItems.length === 0 ? (
-                        <>
-                          <Sparkles style={{ width: 28, height: 28, margin: '0 auto 10px', opacity: 0.3 }} strokeWidth={1.5} />
-                          <p style={{ fontSize: 13, fontWeight: 500 }}>{t('customize.marketplace.emptyTitle')}</p>
-                        </>
-                      ) : (
-                        <>
-                          <Search style={{ width: 28, height: 28, margin: '0 auto 10px', opacity: 0.3 }} strokeWidth={1.5} />
-                          <p style={{ fontSize: 13, fontWeight: 500 }}>{t('customize.noResults')}</p>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      {filteredMarketplace.map((item, idx) => {
-                        const Icon = item.icon || LayoutDashboard;
-                        const installed = isInstalled?.(item.id);
-                        return (
-                          <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.03 }}
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 10,
-                              padding: 14,
-                              borderRadius: 16,
-                              background: installed ? 'color-mix(in srgb, var(--color-primary-500) 5%, white)' : '#f8fafd',
-                              border: `1.5px solid ${installed ? 'color-mix(in srgb, var(--color-primary-400) 30%, transparent)' : 'rgba(0,0,0,0.06)'}`,
-                              transition: 'all .2s',
-                            }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                              <div
-                                style={{
-                                  width: 38,
-                                  height: 38,
-                                  borderRadius: 11,
-                                  display: 'grid',
-                                  placeContent: 'center',
-                                  background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                                  color: '#fff',
-                                  boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
-                                }}>
-                                <Icon style={{ width: 16, height: 16 }} strokeWidth={2} />
-                              </div>
-                              {installed && (
-                                <span
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 3,
-                                    fontSize: 9,
-                                    fontWeight: 800,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.06em',
-                                    color: '#16a34a',
-                                    background: 'rgba(34,197,94,0.1)',
-                                    padding: '3px 7px',
-                                    borderRadius: 99,
-                                  }}>
-                                  <Check style={{ width: 9, height: 9 }} strokeWidth={3} />
-                                  {t('customize.marketplace.addedBadge')}
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              {renamingId === item.id ? (
-                                <input
-                                  autoFocus
-                                  defaultValue={labels?.[item.id] || t(`items.${item.nameKey}`)}
-                                  maxLength={48}
-                                  onBlur={e => {
-                                    setLabel?.(item.id, e.target.value);
-                                    setRenamingId(null);
-                                  }}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') {
-                                      setLabel?.(item.id, e.currentTarget.value);
-                                      setRenamingId(null);
-                                    }
-                                    if (e.key === 'Escape') setRenamingId(null);
-                                  }}
-                                  placeholder={t('customize.marketplace.renamePlaceholder')}
-                                  style={{
-                                    width: '100%',
-                                    marginBottom: 6,
-                                    padding: '7px 9px',
-                                    borderRadius: 8,
-                                    border: '1.5px solid color-mix(in srgb, var(--color-primary-400) 45%, transparent)',
-                                    fontSize: 13,
-                                    fontWeight: 650,
-                                    color: '#0f172a',
-                                    outline: 'none',
-                                    background: '#fff',
-                                  }}
-                                />
-                              ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                                  <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', margin: 0, flex: 1, minWidth: 0 }}>
-                                    {typeof getLabel === 'function' ? getLabel(item, t) : t(`items.${item.nameKey}`)}
-                                  </p>
-                                  <button
-                                    type="button"
-                                    title={t('customize.marketplace.renameButton')}
-                                    onClick={() => setRenamingId(item.id)}
-                                    style={{
-                                      border: 'none',
-                                      background: 'rgba(0,0,0,0.04)',
-                                      borderRadius: 7,
-                                      width: 26,
-                                      height: 26,
-                                      display: 'grid',
-                                      placeContent: 'center',
-                                      cursor: 'pointer',
-                                      color: '#64748b',
-                                      flexShrink: 0,
-                                    }}>
-                                    <Pencil style={{ width: 12, height: 12 }} strokeWidth={2.2} />
-                                  </button>
-                                </div>
-                              )}
-                              {item.descKey && <p style={{ fontSize: 11, color: '#64748b', lineHeight: 1.45 }}>{t(item.descKey)}</p>}
-                              {(OUTREACH_MARKETPLACE_IDS.includes(item.id) ||
-                                OPT_IN_MARKETPLACE_IDS.includes(item.id)) && (
-                                <p style={{ fontSize: 10, fontWeight: 700, color: '#ea580c', marginTop: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                  {OPT_IN_MARKETPLACE_IDS.includes(item.id)
-                                    ? t('customize.marketplace.optInBadge')
-                                    : t('groups.outreach')}
-                                </p>
-                              )}
-                            </div>
-                            <motion.button
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.97 }}
-                              onClick={() => toggleInstalled?.(item.id)}
-                              style={{
-                                marginTop: 'auto',
-                                height: 34,
-                                borderRadius: 9,
-                                fontSize: 11.5,
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                border: 'none',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 5,
-                                ...(installed
-                                  ? { background: 'rgba(0,0,0,0.05)', color: '#64748b' }
-                                  : {
-                                      background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                                      color: '#fff',
-                                      boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 28%, transparent)',
-                                    }),
-                              }}>
-                              {installed ? (
-                                <>
-                                  <X style={{ width: 11, height: 11 }} strokeWidth={2.5} />
-                                  {t('customize.marketplace.removeButton')}
-                                </>
-                              ) : (
-                                <>+ {t('customize.marketplace.addButton')}</>
-                              )}
-                            </motion.button>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div
-              style={{
-                padding: '13px 22px',
-                borderTop: '1px solid rgba(0,0,0,0.06)',
-                background: '#fafbfd',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-              }}>
-              <span style={{ fontSize: 12, color: '#64748b' }}>
-                {tab === 'nav'
-                  ? `${visibleCount} ${t('customize.ofLabel')} ${navItems.length} ${t('customize.visibleLabel')}`
-                  : `${installedCount} ${t('customize.ofLabel')} ${marketplaceItems.length} ${t('customize.marketplace.installedLabel')}`}
-              </span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {tab === 'nav' && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={resetAll}
-                  style={{
-                    padding: '7px 14px',
-                    borderRadius: 9,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    border: '1px solid rgba(0,0,0,0.07)',
-                    background: '#fff',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                  }}>
-                  {t('customize.resetButton')}
-                </motion.button>
-                )}
-                {tab === 'market' && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => resetLabels?.()}
-                  style={{
-                    padding: '7px 14px',
-                    borderRadius: 9,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    border: '1px solid rgba(0,0,0,0.07)',
-                    background: '#fff',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                  }}>
-                  {t('customize.marketplace.resetNamesButton')}
-                </motion.button>
-                )}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={onClose}
-                  style={{
-                    padding: '7px 20px',
-                    borderRadius: 9,
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#fff',
-                    background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                    boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
-                  }}>
-                  {t('customize.doneButton')}
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>,
+    <motion.div
+      ref={menuRef}
+      role='dialog'
+      aria-label={title}
+      className={`sb-pop${pos.side ? ' is-side' : ''}`}
+      initial={{ opacity: 0, y: pos.side ? 0 : 6, x: pos.side ? -4 : 0, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 520, damping: 34, mass: 0.6 }}
+      style={{
+        left: pos.left,
+        bottom: pos.bottom,
+        width: pos.width,
+        transformOrigin: pos.side ? 'left bottom' : `${pos.caret}px 100%`,
+      }}
+    >
+      <span className='sb-pop-caret' style={caretStyle} aria-hidden />
+      {title ? <div className='sb-pop-title'>{title}</div> : null}
+      {children}
+    </motion.div>,
     document.body,
   );
 }
 
-/* ─── SidebarFooter ──────────────────────────────────────────── */
-function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, P, getLabel, setLabel, labels, resetLabels, mobileCompact = false }) {
-  const [customizeOpen, setCustomizeOpen] = useState(false);
-  const isRTL = getDir() === 'rtl';
-  const btnBase = {
-    border: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
-    background: P?.bgCard || '#ffffff',
-    boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
-  };
-  const marketplaceAvailable = useMemo(() => {
-    const seen = new Set();
-    let count = 0;
-    sections?.forEach(section =>
-      section.items.forEach(item => {
-        if (item.marketplace && !seen.has(item.id)) {
-          seen.add(item.id);
-          if (!isInstalled?.(item.id)) count++;
-        }
-      }),
-    );
-    return count;
-  }, [sections, isInstalled]);
-
-  const customizeBtn = (
-    <motion.button
-      whileHover={{ scale: collapsed ? 1.08 : 1.02, y: -2 }}
-      whileTap={{ scale: 0.96 }}
-      onClick={() => setCustomizeOpen(true)}
-      title={t('customize.triggerLabel')}
-      onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, var(--color-primary-500) 8%, ${P?.bgCard || '#fff'})`)}
-      onMouseLeave={e => (e.currentTarget.style.background = P?.bgCard || '#ffffff')}
-      style={{
-        display: 'flex',
-        flexDirection: collapsed ? 'row' : mobileCompact ? 'row' : 'column',
-        alignItems: 'center',
-        justifyContent: mobileCompact ? 'flex-start' : 'center',
-        gap: collapsed ? 0 : mobileCompact ? 10 : 7,
-        cursor: 'pointer',
-        overflow: 'visible',
-        transition: 'background .18s, box-shadow .18s',
-        width: collapsed ? 40 : mobileCompact ? '100%' : undefined,
-        ...(collapsed
-          ? { height: 40, borderRadius: 12 }
-          : mobileCompact
-            ? { height: 44, borderRadius: 12, padding: '0 10px' }
-            : { minHeight: 76, borderRadius: 14, padding: '12px 8px' }),
-        ...btnBase,
-      }}>
-      <span
-        style={{
-          position: 'relative',
-          flexShrink: 0,
-          display: 'grid',
-          placeContent: 'center',
-          width: collapsed ? 'auto' : mobileCompact ? 26 : 28,
-          height: collapsed ? 'auto' : mobileCompact ? 26 : 28,
-          borderRadius: mobileCompact ? 8 : 9,
-          background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
-          color: 'var(--color-primary-600)',
-        }}>
-        <Settings2 style={{ width: collapsed ? 15 : mobileCompact ? 13 : 14.5, height: collapsed ? 15 : mobileCompact ? 13 : 14.5 }} strokeWidth={2.2} />
-        {marketplaceAvailable > 0 && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            style={{
-              position: 'absolute',
-              top: -3,
-              [isRTL ? 'left' : 'right']: -3,
-              minWidth: 14,
-              height: 14,
-              padding: '0 3px',
-              borderRadius: 99,
-              background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
-              color: '#fff',
-              fontSize: 8.5,
-              fontWeight: 800,
-              display: 'grid',
-              placeContent: 'center',
-              boxShadow: '0 2px 6px rgba(234,88,12,0.4)',
-            }}>
-            {marketplaceAvailable}
-          </motion.span>
-        )}
+function PopOption({ active, onClick, lead, label, sub, busy }) {
+  return (
+    <button type='button' onClick={onClick} className={`sb-pop-opt${active ? ' is-active' : ''}`} aria-pressed={!!active}>
+      <span className='sb-pop-lead'>{lead}</span>
+      <span className='sb-pop-text'>
+        <span className='sb-pop-label'>{label}</span>
+        {sub ? <span className='sb-pop-sub'>{sub}</span> : null}
       </span>
-      {!collapsed && (
-        <span
-          style={{
-            fontSize: mobileCompact ? 12.5 : 10.5,
-            fontWeight: 650,
-            lineHeight: 1.3,
-            letterSpacing: '-0.005em',
-            color: P?.text || '#334155',
-            whiteSpace: 'normal',
-            overflow: 'visible',
-            wordBreak: 'break-word',
-            textAlign: mobileCompact ? 'start' : 'center',
-            flex: mobileCompact ? 1 : undefined,
-            maxWidth: '100%',
-          }}>
-          {t('customize.triggerLabel')}
-        </span>
-      )}
-    </motion.button>
+      <span className='sb-pop-check' aria-hidden>
+        {busy ? <span className='sb-pop-spin' /> : active ? <Check style={{ width: 14, height: 14 }} strokeWidth={2.6} /> : null}
+      </span>
+    </button>
   );
+}
+
+function SidebarFooter({ collapsed, onLogout, logoutLabel, P, mobileCompact = false }) {
+  const locale = useLocale();
+  const tTheme = useTranslations('themeSwitcher');
+  const { mode, setMode, theme: currentTheme, setTheme } = useTheme();
+  const router = useNextRouter();
+  const pathname = useNextPathname();
+  const search = useSearchParams();
+  const [pending, start] = useTransition();
+  const [pendingLocale, setPendingLocale] = useState(null);
+  const [openPanel, setOpenPanel] = useState(null);
+  const langRef = useRef(null);
+  const modeRef = useRef(null);
+  const themeRef = useRef(null);
+  const logoutRef = useRef(null);
+  const menuRef = useRef(null);
+  const themePanelRef = useRef(null);
+  const isDark = mode === 'dark';
+  const isRTL = getDir() === 'rtl';
+  const copy = DOCK_COPY[String(locale).startsWith('ar') ? 'ar' : 'en'];
+  const themeEntries = useMemo(() => Object.entries(COLOR_PALETTES), []);
+  const currentPalette = COLOR_PALETTES[currentTheme];
+  const vertical = collapsed && !mobileCompact;
+
+  const dockTriggerRef = openPanel === 'mode' ? modeRef : openPanel === 'logout' ? logoutRef : langRef;
+  const dockPos = useDockPopover(openPanel === 'lang' || openPanel === 'mode' || openPanel === 'logout', dockTriggerRef, vertical, isRTL);
+  const [themePos, setThemePos] = useState(null);
+  const close = useCallback(() => setOpenPanel(null), []);
+
+  useLayoutEffect(() => {
+    if (openPanel !== 'theme' || !themeRef.current) {
+      setThemePos(null);
+      return;
+    }
+    const place = () => {
+      const rect = themeRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const pad = 8;
+      const panelW = Math.min(THEME_PANEL_W, vw - pad * 2);
+      const approxH = Math.min(540, vh * 0.78);
+      let left = vertical ? (isRTL ? rect.left - panelW - 12 : rect.right + 12) : rect.left + rect.width / 2 - panelW / 2;
+      left = Math.max(pad, Math.min(left, vw - panelW - pad));
+      let bottom = vertical ? vh - rect.bottom : vh - rect.top + 12;
+      if (bottom + approxH > vh - pad) bottom = Math.max(pad, vh - approxH - pad);
+      setThemePos({ left, bottom, width: panelW, maxHeight: approxH });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [openPanel, vertical, isRTL]);
+
+  useEffect(() => {
+    if (openPanel !== 'theme') return;
+    const onDown = e => {
+      if (themePanelRef.current?.contains(e.target) || themeRef.current?.contains(e.target)) return;
+      setOpenPanel(null);
+    };
+    const onKey = e => {
+      if (e.key === 'Escape') setOpenPanel(null);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openPanel]);
+
+  const switchLocale = nextLocale => {
+    if (nextLocale === locale) {
+      close();
+      return;
+    }
+    setPendingLocale(nextLocale);
+    start(() => {
+      showGlobalLoader();
+      setLocaleCookie(nextLocale);
+      setDocumentLangDir(nextLocale);
+      const base = swapLocaleInPath(pathname || '/', nextLocale);
+      const qs = search?.toString();
+      router.replace(qs ? `${base}?${qs}` : base);
+      router.refresh();
+      close();
+    });
+  };
+
+  const toggle = id => setOpenPanel(v => (v === id ? null : id));
+  const iconSize = 16;
 
   return (
-    <>
-      <div
-        data-sidebar-footer
-        className='sidebar-glass-footer'
-        style={{
-          flexShrink: 0,
-          borderTop: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
-          background: P?.footerBg || 'rgba(248,249,251,0.9)',
-          backdropFilter: 'blur(12px)',
-          padding: mobileCompact ? '10px 10px 12px' : '12px 12px 14px',
-        }}>
-        {mobileCompact ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
-            <SidebarThemeSwitcher collapsed={collapsed} P={P} />
-            {customizeBtn}
-          </div>
-        ) : (
-          <>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                alignItems: collapsed ? 'center' : 'stretch',
-                marginBottom: 12,
-              }}>
-              <SidebarLanguageToggle collapsed={collapsed} P={P} />
-              <SidebarThemeSwitcher collapsed={collapsed} P={P} />
-            </div>
-
-            <div style={{ height: 1, background: P?.border || 'rgba(0,0,0,0.07)', margin: collapsed ? '0 auto 10px' : '0 2px 10px', width: collapsed ? 32 : 'auto' }} />
-
-            <div
-              style={{
-                display: collapsed ? 'flex' : 'grid',
-                flexDirection: collapsed ? 'column' : undefined,
-                gridTemplateColumns: collapsed ? undefined : '1fr 1fr',
-                gap: 8,
-                alignItems: collapsed ? 'center' : 'stretch',
-              }}>
-              {customizeBtn}
-              <motion.button
-                whileHover={{ scale: collapsed ? 1.08 : 1.02, y: -2 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={onLogout}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.12)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
-                style={{
-                  display: 'flex',
-                  flexDirection: collapsed ? 'row' : 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: collapsed ? 0 : 7,
-                  fontWeight: 700,
-                  letterSpacing: '-0.005em',
-                  cursor: 'pointer',
-                  overflow: 'visible',
-                  border: '1px solid rgba(239,68,68,0.16)',
-                  background: 'rgba(239,68,68,0.06)',
-                  color: '#dc2626',
-                  transition: 'background .18s, box-shadow .18s',
-                  ...(collapsed ? { width: 40, height: 40, borderRadius: 12 } : { minHeight: 76, borderRadius: 14, padding: '12px 8px' }),
-                }}>
-                <span
-                  style={{
-                    flexShrink: 0,
-                    display: 'grid',
-                    placeContent: 'center',
-                    width: collapsed ? 'auto' : 28,
-                    height: collapsed ? 'auto' : 28,
-                    borderRadius: 9,
-                    background: collapsed ? 'transparent' : 'rgba(239,68,68,0.12)',
-                  }}>
-                  <LogOut style={{ width: collapsed ? 15 : 14.5, height: collapsed ? 15 : 14.5, transform: isRTL ? 'scaleX(-1)' : 'none' }} strokeWidth={2.2} />
-                </span>
-                {!collapsed && (
-                  <span style={{ fontSize: 10.5, lineHeight: 1.3, whiteSpace: 'normal', overflow: 'visible', wordBreak: 'break-word', textAlign: 'center', maxWidth: '100%' }}>{logoutLabel}</span>
-                )}
-              </motion.button>
-            </div>
-          </>
-        )}
+    <div data-sidebar-footer className='sidebar-glass-footer sb-dock-wrap' style={{ flexShrink: 0, padding: vertical ? '10px 0 12px' : '10px 12px 12px' }}>
+      <div className={`sb-dock${vertical ? ' is-vertical' : ''}`} role='toolbar' aria-label='Preferences'>
+        <DockButton btnRef={langRef} active={openPanel === 'lang'} label={copy.language} onClick={() => toggle('lang')}>
+          <Globe style={{ width: iconSize, height: iconSize }} strokeWidth={2} />
+          {!vertical ? <span className='sb-dock-tag'>{String(locale).slice(0, 2).toUpperCase()}</span> : null}
+        </DockButton>
+        <DockButton btnRef={modeRef} active={openPanel === 'mode'} label={copy.appearance} onClick={() => toggle('mode')}>
+          {isDark ? <Moon style={{ width: iconSize, height: iconSize }} strokeWidth={2} /> : <Sun style={{ width: iconSize, height: iconSize }} strokeWidth={2} />}
+        </DockButton>
+        <DockButton btnRef={themeRef} active={openPanel === 'theme'} label={copy.theme} onClick={() => toggle('theme')}>
+          <span className='sb-dock-swatch' aria-hidden>
+            <span style={{ background: currentPalette?.primary?.[500] || 'var(--color-primary-500)' }} />
+            <span style={{ background: currentPalette?.secondary?.[500] || 'var(--color-secondary-500, var(--color-primary-300))' }} />
+          </span>
+        </DockButton>
+        <span className='sb-dock-sep' aria-hidden />
+        <DockButton btnRef={logoutRef} active={openPanel === 'logout'} danger label={logoutLabel} onClick={() => toggle('logout')}>
+          <LogOut style={{ width: iconSize, height: iconSize, transform: isRTL ? 'scaleX(-1)' : 'none' }} strokeWidth={2} />
+        </DockButton>
       </div>
 
-      <CustomizeSidebarModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} getLabel={getLabel} setLabel={setLabel} labels={labels} resetLabels={resetLabels} />
-    </>
+      <DockPopover open={openPanel === 'lang'} pos={dockPos} menuRef={menuRef} triggerRef={langRef} onClose={close} title={copy.language}>
+        <PopOption
+          active={locale === 'ar'}
+          busy={pending && pendingLocale === 'ar'}
+          onClick={() => switchLocale('ar')}
+          lead={<span className='sb-pop-code'>AR</span>}
+          label='العربية'
+          sub={copy.arabicSub}
+        />
+        <PopOption
+          active={locale === 'en'}
+          busy={pending && pendingLocale === 'en'}
+          onClick={() => switchLocale('en')}
+          lead={<span className='sb-pop-code'>EN</span>}
+          label='English'
+          sub={copy.englishSub}
+        />
+      </DockPopover>
+
+      <DockPopover open={openPanel === 'mode'} pos={dockPos} menuRef={menuRef} triggerRef={modeRef} onClose={close} title={copy.appearance}>
+        <div className='sb-mode-grid'>
+          {[
+            { id: 'light', label: tTheme('mode.light') || copy.light, Icon: Sun },
+            { id: 'dark', label: tTheme('mode.dark') || copy.dark, Icon: Moon },
+          ].map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type='button'
+              aria-pressed={mode === id}
+              className={`sb-mode-tile is-${id}${mode === id ? ' is-active' : ''}`}
+              onClick={() => {
+                setMode(id);
+                close();
+              }}
+            >
+              <span className='sb-mode-preview' aria-hidden>
+                <span className='sb-mode-bar' />
+                <span className='sb-mode-line' />
+                <span className='sb-mode-line is-short' />
+              </span>
+              <span className='sb-mode-label'>
+                <Icon style={{ width: 13, height: 13 }} strokeWidth={2.2} />
+                {label}
+                {mode === id ? <Check className='sb-mode-check' style={{ width: 13, height: 13 }} strokeWidth={2.6} /> : null}
+              </span>
+            </button>
+          ))}
+        </div>
+      </DockPopover>
+
+      <DockPopover open={openPanel === 'logout'} pos={dockPos} menuRef={menuRef} triggerRef={logoutRef} onClose={close}>
+        <div className='sb-confirm'>
+          <span className='sb-confirm-icon' aria-hidden>
+            <LogOut style={{ width: 16, height: 16, transform: isRTL ? 'scaleX(-1)' : 'none' }} strokeWidth={2.2} />
+          </span>
+          <div className='sb-confirm-title'>{copy.signOutQ}</div>
+          <p className='sb-confirm-desc'>{copy.signOutDesc}</p>
+          <div className='sb-confirm-actions'>
+            <button type='button' className='sb-btn-ghost' onClick={close} autoFocus>
+              {copy.cancel}
+            </button>
+            <button
+              type='button'
+              className='sb-btn-danger'
+              onClick={() => {
+                close();
+                onLogout?.();
+              }}
+            >
+              {logoutLabel}
+            </button>
+          </div>
+        </div>
+      </DockPopover>
+
+      {openPanel === 'theme' &&
+        themePos &&
+        typeof window !== 'undefined' &&
+        createPortal(
+          <ThemePanel
+            ref={themePanelRef}
+            themeEntries={themeEntries}
+            currentTheme={currentTheme}
+            currentPalette={currentPalette}
+            mode={mode}
+            onMode={setMode}
+            onSelect={key => {
+              setTheme(key);
+              setTimeout(close, 220);
+            }}
+            pos={themePos}
+            xFrom={isRTL ? 8 : -8}
+            tTheme={tTheme}
+          />,
+          document.body,
+        )}
+    </div>
   );
 }
 
@@ -3020,10 +2213,8 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const focusMode = typeof focusModeProp === 'boolean' ? focusModeProp : focusModeLS;
   const setFocusMode = typeof setFocusModeProp === 'function' ? setFocusModeProp : setFocusModeLS;
 
-  const { isHidden, toggle: toggleHidden, resetAll } = useHiddenItems();
-  const { isInstalled, toggle: toggleInstalled } = useMarketplaceItems();
-  const { labels, getLabel, setLabel, resetLabels } = useCustomLabels();
-  const { paletteKey, setPaletteKey, palette: basePalette } = useSidebarPalette();
+  const { getLabel } = useCustomLabels();
+  const { palette: basePalette } = useSidebarPalette();
   const readingChrome = useAiReadingChrome();
   const P = useMemo(() => {
     if (!readingChrome?.theme) return basePalette;
@@ -3039,7 +2230,8 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const pageAccess = user?.pageAccess;
   const sections = useMemo(() => {
     if (!role) return null;
-    return applyPageAccessToSections(NAV.filter(s => s.role === role), { allowedPages, pageAccess });
+    const base = withGrantedPages(role, NAV.filter(s => s.role === role), pageAccess);
+    return applyPageAccessToSections(base, { role, allowedPages, pageAccess });
   }, [role, allowedPages, pageAccess]);
 
   const onNavigate = () => setOpen && setOpen(false);
@@ -3061,9 +2253,17 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   // ~40px dock — sit on the sidebar edge, slightly inset (not floating outside)
   const edgeInset = focusMode ? 10 : sidebarEdge - 30;
   const { hideEdgeDock } = useSidebarChrome();
+  const edgeCopy = EDGE_COPY[locale?.startsWith('ar') ? 'ar' : 'en'];
+  const headerControls = hideEdgeDock
+    ? null
+    : {
+        copy: edgeCopy,
+        onToggleCollapse: () => setCollapsed(v => !v),
+        onHide: () => setFocusMode(true),
+      };
   const DesktopSidebar = (
     <>
-      {!hideEdgeDock ? (
+      {!hideEdgeDock && focusMode ? (
         <SidebarEdgeControls
           collapsed={collapsed}
           focusMode={focusMode}
@@ -3075,12 +2275,12 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
         />
       ) : null}
       <aside
-      className={`sidebar-shell sidebar-glass hidden lg:flex flex-col shrink-0 ${focusMode ? '' : 'ltr:ml-4 rtl:mr-4 ltr:mr-6 rtl:ml-6'}`}
+      className={`sidebar-shell sidebar-glass hidden lg:flex flex-col shrink-0 ${focusMode ? '' : 'ltr:ml-[var(--app-gutter)] rtl:mr-[var(--app-gutter)]'}`}
       style={{
         width: focusMode ? 0 : collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
-        height: `calc(100vh - ${SIDEBAR_MARGIN + SIDEBAR_MARGIN_BOTTOM}px)`,
-        marginTop: focusMode ? 0 : SIDEBAR_MARGIN,
-        marginBottom: focusMode ? 0 : SIDEBAR_MARGIN_BOTTOM,
+        height: 'calc(100vh - var(--app-gutter) * 2)',
+        marginTop: focusMode ? 0 : 'var(--app-gutter)',
+        marginBottom: focusMode ? 0 : 'var(--app-gutter)',
         marginLeft: focusMode ? 0 : undefined,
         marginRight: focusMode ? 0 : undefined,
         position: 'relative',
@@ -3123,21 +2323,21 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
       />
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-        <SidebarHeader user={user} collapsed={collapsed} P={P} />
+        <SidebarHeader user={user} collapsed={collapsed} controls={headerControls} />
 
         <LayoutGroup id='sidebar-desktop'>
           <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <ScrollShadow P={P}>
               <nav style={{ padding: collapsed ? '4px 10px' : '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                 {sections?.map((section, idx) => (
-                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} getLabel={getLabel} />
+                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} P={P} first={idx === 0} getLabel={getLabel} />
                 ))}
               </nav>
             </ScrollShadow>
           </div>
         </LayoutGroup>
 
-        <SidebarFooter collapsed={collapsed} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} getLabel={getLabel} setLabel={setLabel} labels={labels} resetLabels={resetLabels} />
+        <SidebarFooter collapsed={collapsed} onLogout={handleLogout} logoutLabel={logoutLabel} P={P} />
       </div>
       </aside>
     </>
@@ -3254,7 +2454,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
                 <ScrollShadow P={P}>
                   <nav style={{ padding: '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                     {sections?.map((section, idx) => (
-                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} getLabel={getLabel} />
+                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} P={P} first={idx === 0} getLabel={getLabel} />
                     ))}
                   </nav>
                 </ScrollShadow>
@@ -3262,26 +2462,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             </LayoutGroup>
 
             <div style={{ position: 'relative', zIndex: 1, flexShrink: 0 }}>
-              <SidebarFooter
-                collapsed={false}
-                mobileCompact
-                onLogout={handleLogout}
-                logoutLabel={logoutLabel}
-                sections={sections}
-                isHidden={isHidden}
-                toggleHidden={toggleHidden}
-                resetAll={resetAll}
-                isInstalled={isInstalled}
-                toggleInstalled={toggleInstalled}
-                paletteKey={paletteKey}
-                setPaletteKey={setPaletteKey}
-                t={t}
-                P={P}
-                getLabel={getLabel}
-                setLabel={setLabel}
-                labels={labels}
-                resetLabels={resetLabels}
-              />
+              <SidebarFooter collapsed={collapsed} onLogout={handleLogout} logoutLabel={logoutLabel} P={P} mobileCompact />
             </div>
           </motion.aside>
         </>

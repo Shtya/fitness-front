@@ -1,107 +1,61 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CalendarDays, Plus, Users as UsersIcon, CheckCircle2, XCircle, Shield, ChevronUp, ChevronDown, Eye, Clock, Search, BadgeCheck, ListChecks, Power, Trash2, Check, EyeOff, Eye as EyeIcon, Sparkles, Dumbbell, Utensils, MessageCircle, Edit3, KeyRound, Copy, User, Mail, Phone, Calendar, Crown, Award, Users, Globe, Languages } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Flatpickr from 'react-flatpickr';
-import 'flatpickr/dist/themes/airbnb.css';
 import { useTranslations } from 'next-intl';
 import MultiLangText from '@/components/atoms/MultiLangText';
-import Button from '@/components/atoms/Button';
+import FloatingDate from '@/components/atoms/FloatingDate';
+import FloatingInput from '@/components/atoms/FloatingInput';
+import 'flatpickr/dist/themes/airbnb.css';
 
 /* ===========================
 	 Stepper
 =========================== */
-export function Stepper({ step = 1, steps = 4 }) {
+export function Stepper({ step = 1, steps = 4, items, onStepSelect }) {
 	const t = useTranslations('Stepper');
-	const items = Array.from({ length: steps }, (_, i) => i + 1);
+	const list = Array.isArray(items) && items.length
+		? items
+		: Array.from({ length: steps }, (_, i) => ({ key: i + 1, label: String(i + 1) }));
 
-	const lineVariants = {
-		initial: { scaleX: 0, opacity: 0.4 },
-		active: { scaleX: 1, opacity: 1, transition: { duration: 0.45, ease: 'easeOut' } },
-		inactive: { scaleX: 1, opacity: 0.25 },
-	};
-
-	const bubbleVariants = {
-		initial: { y: 8, scale: 0.8, opacity: 0 },
-		enter: i => ({
-			y: 0,
-			scale: 1,
-			opacity: 1,
-			transition: { delay: i * 0.05, type: 'spring', stiffness: 380, damping: 26 },
-		}),
-		active: {
-			scale: 1.06,
-			transition: { type: 'spring', stiffness: 320, damping: 20 },
-		},
-		inactive: { scale: 1, opacity: 0.9 },
-	};
+	const total = list.length;
+	const progress = total > 1 ? Math.min(Math.max((step - 1) / (total - 1), 0), 1) : 1;
 
 	return (
-		<div dir='ltr' className='relative overflow-hidden'>
-			<div className='flex py-3 items-center justify-between gap-4 mb-4' aria-label={t('progress')} role='progressbar' aria-valuemin={1} aria-valuemax={steps} aria-valuenow={step}>
-				{items.map(idx => {
-					const isActive = step >= idx;
-
-					return (
-						<div key={idx} className='flex-1 relative'>
-							{/* Base track */}
-							<div className='h-2.5 rounded-full bg-slate-200 overflow-hidden' />
-
-							{/* Animated fill - now uses theme gradient */}
-							<motion.div
-								className='absolute inset-0 h-2.5 origin-left rounded-full theme-gradient-bg'
-								style={
-									isActive
-										? {
-											boxShadow: '0 0 12px var(--color-primary-500)',
-											opacity: 0.9,
-										}
-										: { opacity: 0 }
-								}
-								variants={lineVariants}
-								initial='initial'
-								animate={isActive ? 'active' : 'inactive'}
-							/>
-
-							{/* Shimmer accent on active */}
-							<AnimatePresence>
-								{isActive && (
-									<motion.div
-										key={`shimmer-${idx}`}
-										className='pointer-events-none absolute inset-0 h-2.5 rounded-full'
-										initial={{ x: '-100%' }}
-										animate={{ x: '100%' }}
-										exit={{ opacity: 0 }}
-										transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
-										style={{
-											background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
-										}}
-									/>
-								)}
-							</AnimatePresence>
-
-							{/* Step bubble */}
-							<motion.div custom={idx * 0.5} variants={bubbleVariants} initial='initial' animate='enter' className='absolute -top-3 left-1/2 -translate-x-1/2'>
-								<motion.div
-									animate={isActive ? 'active' : 'inactive'}
-									className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold transition-all
-                    ${isActive ? 'text-white shadow-md' : 'text-slate-500 border-slate-300 bg-white'}`}
-									style={
-										isActive
-											? {
-												background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-												borderColor: 'var(--color-primary-300)',
-											}
-											: {}
-									}>
-									{idx}
-								</motion.div>
-							</motion.div>
-						</div>
-					);
-				})}
-			</div>
+		<div
+			className='gm-stepper mb-5'
+			style={{ '--n': total, '--p': progress }}
+			role='progressbar'
+			aria-label={t('progress')}
+			aria-valuemin={1}
+			aria-valuemax={total}
+			aria-valuenow={step}>
+			<span className='gm-stepper__track' aria-hidden>
+				<span className='gm-stepper__fill' />
+			</span>
+			{list.map((item, i) => {
+				const idx = i + 1;
+				const done = step > idx;
+				const active = step === idx;
+				const Icon = item.icon;
+				const clickable = Boolean(onStepSelect) && (done || active);
+				return (
+					<button
+						key={item.key || idx}
+						type='button'
+						disabled={!clickable}
+						onClick={() => clickable && onStepSelect?.(idx)}
+						className={`gm-stepper__item ${done ? 'is-done' : ''} ${active ? 'is-active' : ''} ${clickable ? 'is-clickable' : ''}`}
+						aria-current={active ? 'step' : undefined}
+					>
+						<span className='gm-stepper__dot'>
+							{done ? <Check className='size-4' strokeWidth={2.8} /> : Icon ? <Icon className='size-4' strokeWidth={2} /> : idx}
+						</span>
+						<span className='gm-stepper__label'>{item.label}</span>
+						<span className='gm-stepper__sub'>{t('stepOf', { current: idx, total })}</span>
+					</button>
+				);
+			})}
 		</div>
 	);
 }
@@ -116,23 +70,36 @@ export function PlanPicker({
 	onSelect,
 	onAssign,
 	onSkip,
+	onBack,
 	assigning = false,
 	loading = false,
+	hideSearch = false,
 }) {
 	const t = useTranslations('Plans');
+	const tu = useTranslations('users');
 	const tc = useTranslations('Common');
 	const common = useTranslations('common');
 
-	const [expanded, setExpanded] = useState(null);
 	const [selectedId, setSelectedId] = useState(defaultSelectedId);
+	const [query, setQuery] = useState('');
 
 	const handleSelect = id => {
 		setSelectedId(id);
 		onSelect?.(id);
 	};
 
-	const visiblePlans = plans.slice(0, visibleWorkouts || plans.length);
-	const showEmpty = !loading && plans.length === 0;
+	const source = (workoutPlans?.length ? workoutPlans : plans) || [];
+	const q = query.trim().toLowerCase();
+	const matched = !q ? source : source.filter((p) => {
+		const name = String(p.name || p.title || '').toLowerCase();
+		const desc = String(p.description || p.desc || '').toLowerCase();
+		return name.includes(q) || desc.includes(q);
+	});
+	const visiblePlans = q ? matched : matched.slice(0, visibleWorkouts || matched.length);
+	const showEmpty = !loading && source.length === 0;
+	const showMiss = !loading && source.length > 0 && visiblePlans.length === 0;
+	const selected = source.find((p) => p.id === selectedId);
+	const showSkip = Boolean(onSkip) && !buttonName;
 
 	const renderSkeletonCard = (_, i) => (
 		<motion.div
@@ -140,168 +107,148 @@ export function PlanPicker({
 			initial={{ opacity: 0, y: 8 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
-			className='rounded-lg border bg-white p-4 shadow-sm animate-pulse'
-			style={{ borderColor: 'var(--color-primary-100)' }}>
+			className='rounded-[14px] border animate-pulse p-4'
+			style={{ borderColor: 'var(--gm-line)', background: 'color-mix(in srgb, var(--gm-paper) 70%, transparent)' }}>
 			<div className='flex items-center gap-3 mb-3'>
-				<div className='h-5 w-5 rounded-full' style={{ backgroundColor: 'var(--color-primary-200)' }} />
+				<div className='h-9 w-9 rounded-[11px]' style={{ backgroundColor: 'var(--color-primary-200)' }} />
 				<div className='flex-1 space-y-2'>
-					<div className='h-3 w-2/3 rounded bg-slate-200' />
-					<div className='h-2.5 w-1/3 rounded bg-slate-100' />
+					<div className='h-3 w-2/3 rounded' style={{ background: 'color-mix(in srgb, var(--gm-ink) 10%, transparent)' }} />
+					<div className='h-2.5 w-1/3 rounded' style={{ background: 'color-mix(in srgb, var(--gm-ink) 6%, transparent)' }} />
 				</div>
-			</div>
-			<div className='flex flex-wrap gap-2'>
-				{Array.from({ length: 3 }).map((__, idx) => (
-					<div key={idx} className='h-6 w-20 rounded-full bg-slate-100' />
-				))}
 			</div>
 		</motion.div>
 	);
 
 	return (
-		<div className='space-y-4'>
+		<div className='space-y-3.5'>
+			{!hideSearch && !loading && source.length > 0 && (
+				<FloatingInput
+					label={tu('wizard.searchPlans')}
+					value={query}
+					onChange={setQuery}
+					icon={<Search className='size-4' />}
+				/>
+			)}
+
+			{selected ? (
+				<div className='gm-pick-selected'>
+					<span className='gm-pick-selected__k'>{tu('wizard.selectedPlan')}</span>
+					<MultiLangText className='min-w-0 flex-1'>{selected.name || t('untitled')}</MultiLangText>
+					<button type='button' className='gm-pick-selected__clear' onClick={() => handleSelect(null)}>
+						{tu('common.clearSelection')}
+					</button>
+				</div>
+			) : null}
+
 			<AnimatePresence mode='popLayout'>
 				{loading ? (
 					<motion.div key='loading' layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
 						{Array.from({ length: 6 }).map(renderSkeletonCard)}
 					</motion.div>
-				) : showEmpty ? (
-					<motion.div
-						key='empty'
-						initial={{ opacity: 0, y: 8 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0 }}
-						className='rounded-lg border border-dashed p-6 text-center text-slate-500 bg-slate-50/60'
-						style={{ borderColor: 'var(--color-primary-200)' }}>
-						{t('empty')}
+				) : showEmpty || showMiss ? (
+					<motion.div key='empty' initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className='gm-pick-empty'>
+						<span className='gm-pick-empty__icon'><Dumbbell className='size-5' /></span>
+						<div className='gm-pick-empty__title'>{showMiss ? tu('wizard.noneMatch') : tu('wizard.noPlansTitle')}</div>
+						<p className='gm-pick-empty__hint'>{showMiss ? t('empty') : tu('wizard.noPlansHint')}</p>
 					</motion.div>
 				) : (
-					<motion.div key='plans' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+					<motion.div key='plans' layout role='radiogroup' className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
 						{visiblePlans.map((plan, i) => {
 							const isSelected = selectedId === plan.id;
 							const rawDays = plan.program?.days || plan.days || [];
-							const orderedDays = orderDays(rawDays);
+							const activeDays = new Set(
+								rawDays.map(d => String(d.day || d.dayOfWeek || '').toLowerCase()).filter(d => WEEK_ORDER.includes(d)),
+							);
 
 							return (
 								<motion.button
 									key={plan.id}
 									layout
 									type='button'
+									role='radio'
+									aria-checked={isSelected}
 									onClick={() => handleSelect(plan.id)}
+									onDoubleClick={() => { handleSelect(plan.id); onAssign?.(plan.id); }}
 									initial={{ opacity: 0, y: 8 }}
 									animate={{ opacity: 1, y: 0 }}
 									transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }}
-									className='flex flex-col group relative text-left rounded-lg border p-4 transition-all bg-white hover:shadow-md'
-									style={
-										isSelected
-											? {
-												borderColor: 'var(--color-primary-400)',
-												boxShadow: '0 0 0 3px var(--color-primary-100)',
-											}
-											: {
-												borderColor: '#e2e8f0',
-											}
-									}>
-									{/* Title row */}
-									<div className='flex items-start gap-3'>
-										<CheckCircle2
-											className='h-5 w-5 transition-colors'
-											style={{
-												color: isSelected ? 'var(--color-primary-500)' : '#cbd5e1'
-											}}
-										/>
-										<div className='flex-1 flex gap-2 items-center justify-between min-w-0'>
-											<MultiLangText className='font-semibold text-slate-800'>{plan.name || t('untitled')}</MultiLangText>
-										</div>
-									</div>
+									className={`gm-plan ${isSelected ? 'is-on' : ''}`}>
+									<PlanCardHead icon={Dumbbell} isSelected={isSelected} />
+									<MultiLangText className='mt-3 text-[13.5px] font-semibold leading-snug gm-ink line-clamp-2'>
+										{plan.name || t('untitled')}
+									</MultiLangText>
+									{plan.description || plan.desc ? (
+										<p className='gm-plan__desc'>{String(plan.description || plan.desc)}</p>
+									) : null}
 
-									{/* Expand details */}
-									<div className='mt-2'>
-										{orderedDays.length > 0 && (
-											<div className='flex items-center justify-between'>
-												<span className='flex-none inline-flex items-center gap-1 text-xs text-slate-600'>
-													<CalendarDays className='h-3.5 w-3.5' />
-													{t('daysCount', { count: orderedDays.length })}
-												</span>
-												<button
-													type='button'
-													onClick={e => {
-														e.stopPropagation();
-														setExpanded(expanded === plan.id ? null : plan.id);
-													}}
-													className='inline-flex items-center gap-1 text-xs theme-primary-text hover:opacity-80 transition-opacity'>
-													{t('details')}
-													<ChevronDown className={`h-4 w-4 transition-transform ${expanded === plan.id ? 'rotate-180' : ''}`} />
-												</button>
-											</div>
+									<div className='mt-auto flex items-center justify-between gap-2 pt-3'>
+										<span className='inline-flex items-center gap-1.5 text-[11.5px] font-medium gm-muted'>
+											<CalendarDays className='size-3.5' />
+											{t('daysCount', { count: rawDays.length })}
+											{Number(plan.clientsUsingCount) > 0 ? (
+												<>
+													<span className='gm-faint'>·</span>
+													<Users className='size-3.5' />
+													{Number(plan.clientsUsingCount)}
+												</>
+											) : null}
+										</span>
+										{activeDays.size > 0 && (
+											<span className='gm-week' aria-hidden>
+												{WEEK_ORDER.map(day => (
+													<span key={day} title={common(day)} className={activeDays.has(day) ? 'is-on' : ''} />
+												))}
+											</span>
 										)}
-
-										<AnimatePresence initial={false}>
-											{expanded === plan.id && (
-												<motion.div
-													key='details'
-													initial={{ height: 0, opacity: 0 }}
-													animate={{ height: 'auto', opacity: 1 }}
-													exit={{ height: 0, opacity: 0 }}
-													transition={{ duration: 0.25 }}
-													className='overflow-hidden'>
-													<div className='mt-3 flex flex-wrap gap-2'>
-														{orderedDays.slice(0, 6).map(d => (
-															<span
-																key={d.id || d.dayOfWeek}
-																className='rtl:flex-row-reverse inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border bg-slate-50 text-slate-600'
-																style={{ borderColor: 'var(--color-primary-200)' }}>
-																<span className='font-medium capitalize'>{common(d.dayOfWeek || d?.day || d.id)}</span>
-																<span className='text-slate-400'>•</span>
-																<span className='truncate max-w-[140px]'>{common('day')}</span>
-															</span>
-														))}
-														{orderedDays.length > 6 && (
-															<span
-																className='inline-flex items-center px-2.5 py-1 rounded-full text-xs border bg-slate-50 text-slate-600'
-																style={{ borderColor: 'var(--color-primary-200)' }}>
-																{t('moreCount', { count: orderedDays.length - 6 })}
-															</span>
-														)}
-													</div>
-												</motion.div>
-											)}
-										</AnimatePresence>
 									</div>
 								</motion.button>
 							);
 						})}
-
-						{/* See more */}
-						{workoutPlans?.length > (visibleWorkouts || 0) ? (
-							<div className='flex'>
-								<Button name={tc('seeMore')} color='neutral' onClick={() => setVisibleWorkouts(v => v + 6)} />
-							</div>
-						) : null}
 					</motion.div>
 				)}
 			</AnimatePresence>
 
-			{/* Footer actions */}
-			<div className='flex justify-between gap-2 pt-2'>
-				<div className='flex justify-end w-full gap-2'>
-					{!buttonName && (
-						<button
-							type='button'
-							onClick={onSkip}
-							className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
+			{!q && source.length > (visibleWorkouts || 0) && typeof setVisibleWorkouts === 'function' ? (
+				<button type='button' onClick={() => setVisibleWorkouts(v => Number(v || 0) + 6)} className='gm-btn-ghost gm-btn-compact'>
+					{tc('seeMore')}
+				</button>
+			) : null}
+
+			<div className='gm-modal-foot'>
+				{onBack ? (
+					<button type='button' onClick={onBack} className='gm-btn-ghost rounded-[11px] px-4 py-2 text-[13px] font-medium'>
+						{tc('back')}
+					</button>
+				) : null}
+				<div className='ms-auto flex gap-2'>
+					{showSkip ? (
+						<button type='button' onClick={onSkip} className='gm-btn-ghost rounded-[11px] px-4 py-2 text-[13px] font-medium'>
 							{tc('skip')}
 						</button>
-					)}
-
+					) : null}
 					<button
 						type='button'
 						onClick={() => onAssign?.(selectedId)}
 						disabled={!selectedId || assigning}
-						className='rounded-lg px-4 py-2 text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed theme-gradient-bg hover:opacity-95 shadow-sm'>
+						className='gm-btn-primary disabled:opacity-60 disabled:cursor-not-allowed'
+					>
 						{assigning ? tc('assigning') : buttonName || tc('assignNext')}
 					</button>
 				</div>
 			</div>
+		</div>
+	);
+}
+
+function PlanCardHead({ icon: Icon, isSelected }) {
+	return (
+		<div className='flex items-start justify-between gap-2'>
+			<span className='gm-plan__icon' aria-hidden>
+				<Icon className='size-[18px]' strokeWidth={1.9} />
+			</span>
+			<span className='gm-radio' aria-hidden>
+				{isSelected ? <Check className='size-3' strokeWidth={3} /> : null}
+			</span>
 		</div>
 	);
 }
@@ -320,20 +267,35 @@ export function MealPlanPicker({
 	meals = [],
 	defaultSelectedId = null,
 	assigning = false,
+	buttonName,
 	onSelect,
 	onBack,
 	onSkip,
 	onAssign,
 }) {
 	const t = useTranslations('Meals');
+	const tu = useTranslations('users');
 	const tc = useTranslations('Common');
 
 	const [selectedId, setSelectedId] = useState(defaultSelectedId);
+	const [query, setQuery] = useState('');
 
 	const handleSelect = id => {
 		setSelectedId(id);
 		onSelect?.(id);
 	};
+
+	const source = (mealPlans?.length ? mealPlans : meals) || [];
+	const q = query.trim().toLowerCase();
+	const matched = !q ? source : source.filter((p) => {
+		const name = String(p.name || p.title || '').toLowerCase();
+		const desc = String(p.description || p.desc || '').toLowerCase();
+		return name.includes(q) || desc.includes(q);
+	});
+	const visible = q ? matched : matched.slice(0, visibleMeals || matched.length);
+	const showEmpty = !loading && source.length === 0;
+	const showMiss = !loading && source.length > 0 && visible.length === 0;
+	const selected = source.find((p) => p.id === selectedId);
 
 	const renderSkeletonCard = (_, i) => (
 		<motion.div
@@ -341,110 +303,110 @@ export function MealPlanPicker({
 			initial={{ opacity: 0, y: 8 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
-			className='rounded-lg border bg-white p-4 shadow-sm animate-pulse'
-			style={{ borderColor: 'var(--color-primary-100)' }}>
-			<div className='flex items-start gap-3 mb-2'>
-				<div className='h-5 w-5 rounded-full' style={{ backgroundColor: 'var(--color-primary-200)' }} />
-				<div className='flex-1 space-y-2'>
-					<div className='h-3 w-2/3 rounded bg-slate-200' />
-					<div className='h-2.5 w-full rounded bg-slate-100' />
-					<div className='h-2.5 w-3/4 rounded bg-slate-100' />
-				</div>
-			</div>
+			className='rounded-[14px] border animate-pulse p-4'
+			style={{ borderColor: 'var(--gm-line)', background: 'color-mix(in srgb, var(--gm-paper) 70%, transparent)' }}>
+			<div className='h-9 w-9 rounded-[11px]' style={{ backgroundColor: 'var(--color-primary-200)' }} />
+			<div className='mt-3 h-3 w-2/3 rounded' style={{ background: 'color-mix(in srgb, var(--gm-ink) 10%, transparent)' }} />
 		</motion.div>
 	);
 
 	return (
-		<div className='space-y-4'>
-			{/* Grid */}
+		<div className='space-y-3.5'>
+			{!loading && source.length > 0 && (
+				<FloatingInput
+					label={tu('wizard.searchPlans')}
+					value={query}
+					onChange={setQuery}
+					icon={<Search className='size-4' />}
+				/>
+			)}
+
+			{selected ? (
+				<div className='gm-pick-selected'>
+					<span className='gm-pick-selected__k'>{tu('wizard.selectedPlan')}</span>
+					<MultiLangText className='min-w-0 flex-1'>{selected.name || t('untitled')}</MultiLangText>
+					<button type='button' className='gm-pick-selected__clear' onClick={() => handleSelect(null)}>
+						{tu('common.clearSelection')}
+					</button>
+				</div>
+			) : null}
+
 			<AnimatePresence mode='popLayout'>
 				{loading ? (
 					<motion.div key='loading' layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
 						{Array.from({ length: 6 }).map(renderSkeletonCard)}
 					</motion.div>
-				) : meals.length === 0 ? (
-					<motion.div
-						key='empty'
-						initial={{ opacity: 0, y: 8 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0 }}
-						className='rounded-lg border border-dashed p-6 text-center text-slate-500 bg-slate-50/60'
-						style={{ borderColor: 'var(--color-primary-200)' }}>
-						{t('empty')}
+				) : showEmpty || showMiss ? (
+					<motion.div key='empty' initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className='gm-pick-empty'>
+						<span className='gm-pick-empty__icon'><Utensils className='size-5' /></span>
+						<div className='gm-pick-empty__title'>{showMiss ? tu('wizard.noneMatch') : tu('wizard.noMealsTitle')}</div>
+						<p className='gm-pick-empty__hint'>{showMiss ? t('empty') : tu('wizard.noMealsHint')}</p>
 					</motion.div>
 				) : (
-					<motion.div key='meals' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
-						{meals.map((plan, i) => {
+					<motion.div key='meals' layout role='radiogroup' className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+						{visible.map((plan, i) => {
 							const isSelected = selectedId === plan.id;
-
 							return (
 								<motion.button
 									key={plan.id}
 									layout
 									type='button'
+									role='radio'
+									aria-checked={isSelected}
 									onClick={() => handleSelect(plan.id)}
+									onDoubleClick={() => { handleSelect(plan.id); onAssign?.(plan.id); }}
 									initial={{ opacity: 0, y: 8 }}
 									animate={{ opacity: 1, y: 0 }}
 									transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }}
-									className='flex flex-col group relative text-left rounded-lg border p-4 transition-all bg-white hover:shadow-md'
-									style={
-										isSelected
-											? {
-												borderColor: 'var(--color-primary-400)',
-												boxShadow: '0 0 0 3px var(--color-primary-100)',
-											}
-											: {
-												borderColor: '#e2e8f0',
-											}
-									}>
-									{/* Title row */}
-									<div className='flex items-start gap-3'>
-										<CheckCircle2
-											className='h-5 w-5 transition-colors'
-											style={{
-												color: isSelected ? 'var(--color-primary-500)' : '#cbd5e1'
-											}}
-										/>
-										<div className='flex-1 min-w-0'>
-											<MultiLangText className='text-sm font-semibold text-slate-800'>{plan.name || t('untitled')}</MultiLangText>
-											{plan.desc && <MultiLangText className='mt-1 text-sm text-slate-600 line-clamp-2'>{plan.desc}</MultiLangText>}
-										</div>
+									className={`gm-plan ${isSelected ? 'is-on' : ''}`}>
+									<PlanCardHead icon={Utensils} isSelected={isSelected} />
+									<MultiLangText className='mt-3 text-[13.5px] font-semibold leading-snug gm-ink line-clamp-2'>
+										{plan.name || t('untitled')}
+									</MultiLangText>
+									{plan.description || plan.desc ? (
+										<p className='gm-plan__desc'>{String(plan.description || plan.desc)}</p>
+									) : null}
+									<div className='mt-auto flex items-center justify-between gap-2 pt-3'>
+										<span className='inline-flex items-center gap-1 text-[11.5px] font-medium gm-muted'>
+											<Users className='size-3.5' />
+											{t('clientsCount', { count: Number(plan.clientsUsingCount) || 0 })}
+										</span>
+										<span className='gm-plan__chip'>
+											{plan.customizeDays ? tu('wizard.customDays') : tu('wizard.sameEveryDay')}
+										</span>
 									</div>
 								</motion.button>
 							);
 						})}
 					</motion.div>
 				)}
-
-				{/* See more */}
-				{mealPlans.length > visibleMeals ? (
-					<div className='flex justify-start'>
-						<Button name={tc('seeMore')} color='neutral' onClick={() => setVisibleMeals(v => v + 6)} />
-					</div>
-				) : null}
 			</AnimatePresence>
 
-			{/* Footer actions */}
-			<div className='flex justify-between gap-2 pt-2'>
-				<button
-					type='button'
-					onClick={onBack}
-					className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
-					{tc('back')}
+			{!q && source.length > (visibleMeals || 0) && typeof setVisibleMeals === 'function' ? (
+				<button type='button' onClick={() => setVisibleMeals(v => Number(v || 0) + 6)} className='gm-btn-ghost gm-btn-compact'>
+					{tc('seeMore')}
 				</button>
-				<div className='flex gap-2'>
-					<button
-						type='button'
-						onClick={onSkip}
-						className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
-						{tc('skip')}
+			) : null}
+
+			<div className='gm-modal-foot'>
+				{onBack ? (
+					<button type='button' onClick={onBack} className='gm-btn-ghost rounded-[11px] px-4 py-2 text-[13px] font-medium'>
+						{tc('back')}
 					</button>
+				) : null}
+				<div className='ms-auto flex gap-2'>
+					{onSkip ? (
+						<button type='button' onClick={onSkip} className='gm-btn-ghost rounded-[11px] px-4 py-2 text-[13px] font-medium'>
+							{tc('skip')}
+						</button>
+					) : null}
 					<button
 						type='button'
 						onClick={() => onAssign?.(selectedId)}
 						disabled={!selectedId || assigning}
-						className='rounded-lg px-4 py-2 text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed theme-gradient-bg hover:opacity-95 shadow-sm'>
-						{assigning ? tc('assigning') : tc('assignFinish')}
+						className='gm-btn-primary disabled:opacity-60 disabled:cursor-not-allowed'
+					>
+						{assigning ? tc('assigning') : buttonName || (onSkip ? tc('assignNext') : tc('assignFinish'))}
 					</button>
 				</div>
 			</div>
@@ -456,21 +418,13 @@ export function MealPlanPicker({
 	 FieldRow
 =========================== */
 export function FieldRow({ icon, label, value, canCopy }) {
-	const tc = useTranslations('Common');
 	return (
-		<div className='flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 shadow-sm' style={{ borderColor: 'var(--color-primary-100)' }}>
-			<div className='flex items-center gap-2 min-w-0'>
-				<div
-					className='grid place-items-center h-8 w-8 rounded-lg'
-					style={{
-						backgroundColor: 'var(--color-primary-100)',
-						color: 'var(--color-primary-700)'
-					}}>
-					{icon}
-				</div>
+		<div className='gm-cred'>
+			<div className='flex min-w-0 items-center gap-2.5'>
+				<div className='gm-cred__icon'>{icon}</div>
 				<div className='min-w-0'>
-					<div className='text-xs text-slate-500'>{label}</div>
-					<div className='text-sm font-medium text-slate-800 truncate'>{value || '—'}</div>
+					<div className='gm-cred__label'>{label}</div>
+					<div className='gm-cred__value truncate'>{value || '—'}</div>
 				</div>
 			</div>
 			{canCopy && <CopyButton text={String(value ?? '')} />}
@@ -488,41 +442,36 @@ export function PasswordRow({ label, value, canCopy }) {
 	const t = useTranslations('Common');
 
 	return (
-		<div className='flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 shadow-sm' style={{ borderColor: 'var(--color-primary-100)' }}>
-			<div className='flex items-center gap-2 min-w-0'>
-				<div
-					className='grid place-items-center h-8 w-8 rounded-lg'
-					style={{
-						backgroundColor: 'var(--color-primary-100)',
-						color: 'var(--color-primary-700)'
-					}}>
-					<KeyRound className='h-4 w-4' />
+		<div className='gm-cred'>
+			<div className='flex min-w-0 items-center gap-2.5'>
+				<div className='gm-cred__icon'>
+					<KeyRound className='size-4' />
 				</div>
 				<div className='min-w-0'>
-					<div className='text-xs text-slate-500'>{label}</div>
-					<div className='text-sm font-medium text-slate-800 truncate'>{masked || '—'}</div>
+					<div className='gm-cred__label'>{label}</div>
+					<div className='gm-cred__value truncate'>{masked || '—'}</div>
 				</div>
 			</div>
 
-			<div className='flex items-center gap-2'>
+			<div className='flex items-center gap-1'>
 				{isMasked && (
 					<button
 						type='button'
 						onClick={() => setShow(true)}
-						className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors'
+						className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs gm-muted hover:bg-[color-mix(in_srgb,var(--color-primary-50)_70%,transparent)]'
 						aria-label={t('showPassword')}
 						title={t('showPassword')}>
-						<Eye className='h-4 w-4' /> {t('show')}
+						<Eye className='size-3.5' /> {t('show')}
 					</button>
 				)}
 				{!isMasked && value && value !== 'sent to email (or set by admin)' && (
 					<button
 						type='button'
 						onClick={() => setShow(false)}
-						className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors'
+						className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs gm-muted hover:bg-[color-mix(in_srgb,var(--color-primary-50)_70%,transparent)]'
 						aria-label={t('hidePassword')}
 						title={t('hidePassword')}>
-						<EyeOff className='h-4 w-4' /> {t('hide')}
+						<EyeOff className='size-3.5' /> {t('hide')}
 					</button>
 				)}
 				{canCopy && value && value !== 'sent to email (or set by admin)' && <CopyButton text={String(value)} />}
@@ -534,7 +483,7 @@ export function PasswordRow({ label, value, canCopy }) {
 /* ===========================
 	 CopyButton
 =========================== */
-export function CopyButton({ text }) {
+export function CopyButton({ text, label }) {
 	const t = useTranslations('Common');
 	const [copied, setCopied] = useState(false);
 
@@ -565,7 +514,7 @@ export function CopyButton({ text }) {
 				</>
 			) : (
 				<>
-					<Copy className='h-4 w-4' /> {t('copy')}
+					<Copy className='h-4 w-4' /> {label || t('copy')}
 				</>
 			)}
 		</button>
@@ -575,20 +524,11 @@ export function CopyButton({ text }) {
 /* ===========================
 	 WhatsApp Link (kept bilingual logic)
 =========================== */
-export function buildWhatsAppLink({ phone, email, password, role, lang = 'en' }) {
-	const to = String(phone || '').replace(/[^0-9]/g, '');
-	if (!to) return null;
-
+export function buildWhatsAppMessage({ email, password, lang = 'en' }) {
 	const hasPwd = Boolean(password);
-
 	const baseUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://so7bafit.com';
 	const loginUrl = `${baseUrl}/en/auth`;
-
-	const urlLine =
-		lang === 'ar'
-			? `رابط تسجيل الدخول: ${loginUrl}`
-			: `Login here: ${loginUrl}`;
-
+	const urlLine = lang === 'ar' ? `رابط تسجيل الدخول: ${loginUrl}` : `Login here: ${loginUrl}`;
 	const linesEN = [
 		'Your account is ready!',
 		email ? `• Email: ${email}` : null,
@@ -597,7 +537,6 @@ export function buildWhatsAppLink({ phone, email, password, role, lang = 'en' })
 		'',
 		"You can sign in right away. If you didn't request this, ignore this message.",
 	].filter(Boolean);
-
 	const linesAR = [
 		'تم إنشاء حسابك بنجاح!',
 		email ? `• البريد الإلكتروني: ${email}` : null,
@@ -606,10 +545,13 @@ export function buildWhatsAppLink({ phone, email, password, role, lang = 'en' })
 		'',
 		'تقدر تسجّل دخولك مباشرة. إذا ما طلبتش إنشاء الحساب، تجاهل الرسالة.',
 	].filter(Boolean);
+	return lang === 'ar' ? linesAR.join('\n') : linesEN.join('\n');
+}
 
-	const message = lang === 'ar' ? linesAR.join('\n') : linesEN.join('\n');
-
-	return `https://wa.me/${to}?text=${encodeURIComponent(message)}`;
+export function buildWhatsAppLink({ phone, email, password, role, lang = 'en' }) {
+	const to = String(phone || '').replace(/[^0-9]/g, '');
+	if (!to) return null;
+	return `https://wa.me/${to}?text=${encodeURIComponent(buildWhatsAppMessage({ email, password, lang }))}`;
 }
 /* ===========================
 	 SubscriptionPeriodPicker
@@ -622,8 +564,6 @@ export function SubscriptionPeriodPicker({
 	errorEnd,
 }) {
 	const t = useTranslations('date');
-
-	const today = useMemo(() => formatISO(new Date(), { representation: 'date' }), []);
 	const threeMonthsFrom = date => formatISO(addMonths(date, 3), { representation: 'date' });
 
 	const invalidRange = useMemo(() => {
@@ -632,76 +572,29 @@ export function SubscriptionPeriodPicker({
 	}, [startValue, endValue]);
 
 	return (
-		<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className='mt-1'>
-			<div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-				{/* START DATE */}
-				<div>
-					<label className='text-sm font-[500] text-slate-700'>{t('startLabel')}</label>
-
-					<div className='mt-1 bg-white rounded-lg'>
-						<Flatpickr
-							value={startValue ? parseISO(startValue) : null}
-							options={{
-								dateFormat: 'Y-m-d',
-								minDate: startValue || today,
-								disableMobile: true,
-							}}
-							onChange={dates => {
-								const d = dates?.[0];
-								if (!d) return;
-
-								const iso = formatISO(d, { representation: 'date' });
-								setValue('subscriptionStart', iso, { shouldValidate: true });
-
-								if (endValue && isBefore(parseISO(endValue), d)) {
-									const newEnd = threeMonthsFrom(d);
-									setValue('subscriptionEnd', newEnd, { shouldValidate: true });
-								}
-							}}
-							className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
-							style={
-								errorStart
-									? { borderColor: '#f43f5e', '--tw-ring-color': '#fda4af' }
-									: { borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }
-							}
-						/>
-					</div>
-
-					{errorStart && <p className='mt-1 text-xs text-rose-600'>{errorStart}</p>}
-				</div>
-
-				{/* END DATE */}
-				<div>
-					<label className='text-sm font-[500] text-slate-700'>{t('endLabel')}</label>
-
-					<div className='mt-1 bg-white rounded-lg'>
-						<Flatpickr
-							value={endValue ? parseISO(endValue) : null}
-							options={{
-								dateFormat: 'Y-m-d',
-								minDate: today,
-								disableMobile: true,
-							}}
-							onChange={dates => {
-								const d = dates?.[0];
-								if (!d) return;
-
-								const iso = formatISO(d, { representation: 'date' });
-								setValue('subscriptionEnd', iso, { shouldValidate: true });
-							}}
-							className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
-							style={
-								errorEnd || invalidRange
-									? { borderColor: '#f43f5e', '--tw-ring-color': '#fda4af' }
-									: { borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }
-							}
-							placeholder={t('pickEnd')}
-						/>
-					</div>
-
-					{(errorEnd || invalidRange) && <p className='mt-1 text-xs text-rose-600'>{errorEnd || t('endAfterStart')}</p>}
-				</div>
-			</div>
+		<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className='sm:col-span-2 grid grid-cols-1 gap-3 sm:grid-cols-2'>
+			<FloatingDate
+				label={t('startLabel')}
+				value={startValue || ''}
+				onChange={(iso) => {
+					if (!iso) return;
+					setValue('subscriptionStart', iso, { shouldValidate: true });
+					if (endValue && isBefore(parseISO(endValue), parseISO(iso))) {
+						setValue('subscriptionEnd', threeMonthsFrom(parseISO(iso)), { shouldValidate: true });
+					}
+				}}
+				error={errorStart}
+			/>
+			<FloatingDate
+				label={t('endLabel')}
+				value={endValue || ''}
+				minDate={startValue || undefined}
+				onChange={(iso) => {
+					if (!iso) return;
+					setValue('subscriptionEnd', iso, { shouldValidate: true });
+				}}
+				error={errorEnd || (invalidRange ? t('endAfterStart') : '')}
+			/>
 		</motion.div>
 	);
 }

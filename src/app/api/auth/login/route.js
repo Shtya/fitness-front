@@ -31,6 +31,9 @@ export async function POST(req) {
     if (Array.isArray(verifiedUser.pageAccess?.locked) && verifiedUser.pageAccess.locked.length) {
       cookieUser.locked = verifiedUser.pageAccess.locked;
     }
+    if (Array.isArray(verifiedUser.pageAccess?.granted) && verifiedUser.pageAccess.granted.length) {
+      cookieUser.granted = verifiedUser.pageAccess.granted;
+    }
     const res = NextResponse.json({ ok: true, user: cookieUser });
     const oneWeek = 60 * 60 * 24 * 7;
 

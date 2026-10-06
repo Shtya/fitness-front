@@ -18,8 +18,10 @@ import Input from '@/components/atoms/Input';
 import Button from '@/components/atoms/Button';
 import PhoneField from '@/components/atoms/PhoneField';
 import { ToggleGroup } from '@/app/[locale]/dashboard/users/page';
-import { PageHeader } from '@/components/molecules/PageHeader';
-import { StatCard } from '@/components/dashboard/ui/UI';
+import { IntakeHero } from '@/components/pages/dashboard/intake/IntakeChrome';
+import GmStatCard from '@/components/molecules/GmStatCard';
+import '@/components/pages/dashboard/users/roster/roster.css';
+import './account-scope.css';
 
 /* ─── Validation ─────────────────────────────────────────── */
 const profileSchema = yup.object({
@@ -48,16 +50,15 @@ function Card({ children, className = '', accent = false }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={spring}
-      className={cx('relative overflow-hidden rounded-lg border bg-white', className)}
+      className={cx('relative overflow-hidden rounded-[18px] border border-(--gm-line) bg-(--gm-paper)', className)}
       style={{
-        borderColor: 'var(--color-primary-100)',
-        boxShadow: '0 1px 3px rgba(15,23,42,0.05), 0 10px 30px rgba(15,23,42,0.07)',
+        boxShadow: '0 1px 2px color-mix(in srgb, var(--gm-ink) 6%, transparent)',
       }}
     >
       {accent && (
         <div
           className="absolute inset-x-0 top-0 h-[2px]"
-          style={{ background: 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+          style={{ background: 'linear-gradient(90deg, var(--color-primary-500), var(--color-primary-600))' }}
         />
       )}
       {children}
@@ -71,14 +72,14 @@ function SectionHead({ icon: Icon, title, subtitle, right }) {
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-3">
         <div
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg"
-          style={{ background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))' }}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] border border-(--gm-line)"
+          style={{ background: 'color-mix(in srgb, var(--color-primary-500) 12%, var(--gm-paper))' }}
         >
           {Icon && <Icon className="h-5 w-5" style={{ color: 'var(--color-primary-600)' }} />}
         </div>
         <div>
-          <p className="text-base font-black text-slate-900 sm:text-lg">{title}</p>
-          {subtitle && <p className="mt-0.5 text-xs font-medium text-slate-500">{subtitle}</p>}
+          <p className="text-base font-black text-(--gm-ink) sm:text-lg">{title}</p>
+          {subtitle && <p className="mt-0.5 text-xs font-medium text-(--gm-muted)">{subtitle}</p>}
         </div>
       </div>
       {right && <div className="shrink-0">{right}</div>}
@@ -102,8 +103,8 @@ function Avatar({ name, size = 56 }) {
         width: size,
         height: size,
         fontSize: size * 0.36,
-        background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-        boxShadow: '0 6px 18px -4px color-mix(in srgb, var(--color-primary-500) 45%, transparent)',
+        background: 'linear-gradient(180deg, var(--color-primary-500), var(--color-primary-600))',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,.22), 0 8px 16px -10px color-mix(in srgb, var(--color-primary-600) 70%, transparent)',
       }}
     >
       {initials}
@@ -117,8 +118,8 @@ function IdentityStrip({ name, email, role, membership }) {
     <div className="flex flex-wrap items-center gap-4">
       <Avatar name={name} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-base font-black text-slate-900">{name || '—'}</p>
-        <p className="truncate text-xs font-medium text-slate-500">{email || '—'}</p>
+        <p className="truncate text-base font-black text-(--gm-ink)">{name || '—'}</p>
+        <p className="truncate text-xs font-medium text-(--gm-muted)">{email || '—'}</p>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         {role && <Pill icon={Shield} label="" value={role} />}
@@ -132,7 +133,7 @@ function IdentityStrip({ name, email, role, membership }) {
 function Pill({ icon: Icon, label, value, tone = 'primary' }) {
   const tones = {
     primary: { border: 'var(--color-primary-200)', bg: 'var(--color-primary-50)', text: 'var(--color-primary-800)' },
-    amber:   { border: '#fde68a',                  bg: '#fffbeb',                  text: '#92400e' },
+    amber:   { border: 'color-mix(in srgb, var(--gm-warn) 40%, transparent)', bg: 'color-mix(in srgb, var(--gm-warn) 14%, var(--gm-paper))', text: 'var(--gm-warn)' },
   };
   const s = tones[tone] || tones.primary;
   return (
@@ -153,12 +154,12 @@ function HintBox({ text }) {
     <div
       className="flex items-start gap-2.5 rounded-lg border p-3"
       style={{
-        borderColor: 'var(--color-primary-100)',
-        background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
+        borderColor: 'var(--gm-line)',
+        background: 'color-mix(in srgb, var(--color-primary-500) 6%, var(--gm-paper))',
       }}
     >
       <Info className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--color-primary-500)' }} />
-      <p className="text-xs font-medium text-slate-600">{text}</p>
+      <p className="text-xs font-medium text-(--gm-ink-soft)">{text}</p>
     </div>
   );
 }
@@ -169,12 +170,12 @@ function DateCard({ label, value }) {
     <div
       className="rounded-lg border p-4"
       style={{
-        borderColor: 'var(--color-primary-100)',
-        background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
+        borderColor: 'var(--gm-line)',
+        background: 'color-mix(in srgb, var(--gm-ink) 4%, var(--gm-paper))',
       }}
     >
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">{label}</p>
-      <p className="text-lg font-black text-slate-900">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-(--gm-muted) mb-2">{label}</p>
+      <p className="text-lg font-black text-(--gm-ink)">{value}</p>
     </div>
   );
 }
@@ -185,7 +186,7 @@ function VisibilityToggle({ show, onToggle }) {
     <button
       type="button"
       onClick={onToggle}
-      className="absolute top-9 text-slate-400 transition-colors hover:text-slate-700 focus:outline-none rtl:left-3 ltr:right-3"
+      className="absolute top-3.5 text-(--gm-muted) transition-colors hover:text-(--gm-ink) focus:outline-none rtl:left-3 ltr:right-3"
       tabIndex={-1}
     >
       <AnimatePresence mode="wait" initial={false}>
@@ -209,10 +210,10 @@ function LoadingScreen({ t }) {
   return (
     <div className="flex min-h-[420px] flex-col items-center justify-center gap-3">
       <div
-        className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200"
+        className="h-8 w-8 animate-spin rounded-full border-2 border-(--gm-line)"
         style={{ borderTopColor: 'var(--color-primary-500)' }}
       />
-      <p className="text-sm font-medium text-slate-400">{t('common.loading')}</p>
+      <p className="text-sm font-medium text-(--gm-muted)">{t('common.loading')}</p>
     </div>
   );
 }
@@ -235,6 +236,11 @@ export default function ProfilePage() {
   const [licenseRotating, setLicenseRotating] = useState(false);
   const [copied, setCopied]                 = useState(false);
   const [showLicense, setShowLicense]       = useState(true);
+
+  useEffect(() => {
+    document.documentElement.dataset.gmUsers = '1';
+    return () => { delete document.documentElement.dataset.gmUsers; };
+  }, []);
 
   /* Profile form */
   const {
@@ -353,36 +359,32 @@ export default function ProfilePage() {
 
   if (loading) return <LoadingScreen t={t} />;
 
-  return (
-    <div className="space-y-6 pb-10">
+  const accountStats = [
+    { key: 'name', title: t('header.name'), value: user?.name || '—', icon: User, tone: 'gm-chip', stroke: 'var(--color-primary-500)', fill: 'var(--color-primary-400)', seed: 0.3, max: 1 },
+    { key: 'role', title: t('header.role'), value: headerStats.role, icon: Shield, tone: 'gm-chip-secondary', stroke: 'var(--color-primary-400)', fill: 'var(--color-primary-300)', seed: 0.7, max: 1 },
+    { key: 'plan', title: t('header.membership'), value: headerStats.membership, icon: Crown, tone: 'gm-chip-warn', stroke: 'var(--gm-warn)', fill: 'var(--gm-warn)', seed: 1.1, max: 1 },
+    { key: 'mail', title: t('fields.email'), value: headerStats.email, icon: Mail, tone: 'gm-chip-ok', stroke: 'var(--gm-ok)', fill: 'var(--gm-ok)', seed: 1.5, max: 1 },
+  ];
 
-      {/* ── Header (same pattern as users page) ── */}
-      <PageHeader
-        title={t('header.title')}
-        desc={t('header.desc')}
-        icon={User}
-        actions={
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={fetchProfile}
-            className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
-            style={{
-              background: 'rgba(255,255,255,0.22)',
-              backdropFilter: 'blur(16px)',
-              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
-            }}
-          >
-            <RefreshCw className="h-4 w-4" />
-            {t('buttons.refresh')}
-          </motion.button>
-        }
-      >
-        <StatCard icon={User} title={t('header.name')} value={user?.name || '—'} />
-        <StatCard icon={Shield} title={t('header.role')} value={headerStats.role} />
-        <StatCard icon={Crown} title={t('header.membership')} value={headerStats.membership} />
-        <StatCard icon={Mail} title={t('fields.email')} value={headerStats.email} />
-      </PageHeader>
+  return (
+    <div className="acct-scope gm-surface rs-scope app-stack space-y-6 pb-10">
+
+      <div className="rs-summary">
+        <IntakeHero
+          icon={User}
+          title={t('header.title')}
+          subtitle={t('header.desc')}
+          extra={(
+            <button type="button" onClick={fetchProfile} className="rs-btn">
+              <RefreshCw className="size-4" />
+              <span>{t('buttons.refresh')}</span>
+            </button>
+          )}
+        />
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {accountStats.map((card, index) => <GmStatCard key={card.key} card={card} index={index} />)}
+        </section>
+      </div>
 
       {/* ── Admin org license (share with new users) ── */}
       {isAdmin && (
@@ -398,8 +400,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={fetchLicense}
                     disabled={licenseLoading}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-                    style={{ borderColor: 'var(--color-primary-100)' }}
+                    className="rs-btn"
                   >
                     <RefreshCw className={cx('h-3.5 w-3.5', licenseLoading && 'animate-spin')} />
                     {t('buttons.refresh')}
@@ -413,16 +414,12 @@ export default function ProfilePage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <p className="text-[10px] font-black uppercase tracking-widest text-(--gm-muted)">
                 {t('license.keyLabel')}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div
-                  className="flex min-h-11 flex-1 items-center rounded-lg border px-3 font-mono text-sm font-semibold tracking-wide text-slate-900"
-                  style={{
-                    borderColor: 'var(--color-primary-100)',
-                    background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
-                  }}
+                  className="flex min-h-11 flex-1 items-center rounded-[12px] border border-(--gm-line) bg-(--gm-paper) px-3 font-mono text-sm font-semibold tracking-wide text-(--gm-ink)"
                 >
                   {licenseLoading
                     ? '…'
@@ -434,8 +431,7 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => setShowLicense(v => !v)}
-                    className="inline-flex h-11 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                    style={{ borderColor: 'var(--color-primary-100)' }}
+                    className="rs-btn"
                   >
                     {showLicense ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     {showLicense ? t('license.hide') : t('license.show')}
@@ -444,8 +440,8 @@ export default function ProfilePage() {
                     type="button"
                     onClick={copyLicense}
                     disabled={!license?.licenseKey}
-                    className="inline-flex h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-white transition disabled:opacity-50"
-                    style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+                    className="rs-cta"
+                    style={{ width: 'auto' }}
                   >
                     {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     {copied ? t('license.copiedShort') : t('license.copy')}
@@ -454,8 +450,8 @@ export default function ProfilePage() {
                     type="button"
                     onClick={rotateLicense}
                     disabled={licenseRotating}
-                    className="inline-flex h-11 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold text-amber-800 transition hover:bg-amber-50 disabled:opacity-50"
-                    style={{ borderColor: '#fde68a', background: '#fffbeb' }}
+                    className="rs-btn"
+                    style={{ color: 'var(--gm-warn)', borderColor: 'color-mix(in srgb, var(--gm-warn) 40%, var(--gm-line))' }}
                   >
                     <RotateCcw className={cx('h-3.5 w-3.5', licenseRotating && 'animate-spin')} />
                     {t('license.rotate')}
@@ -463,8 +459,8 @@ export default function ProfilePage() {
                 </div>
               </div>
               {license?.tenantName && (
-                <p className="text-xs font-medium text-slate-500">
-                  {t('license.org')}: <span className="font-bold text-slate-700">{license.tenantName}</span>
+                <p className="text-xs font-medium text-(--gm-muted)">
+                  {t('license.org')}: <span className="font-bold text-(--gm-ink)">{license.tenantName}</span>
                 </p>
               )}
             </div>
@@ -496,7 +492,7 @@ export default function ProfilePage() {
             {/* Divider */}
             <div
               className="mt-5 h-px"
-              style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary-100), transparent)' }}
+              style={{ background: 'var(--gm-line)' }}
             />
 
             {/* Editable form */}
@@ -542,7 +538,7 @@ export default function ProfilePage() {
               {/* Divider */}
               <div
                 className="h-px"
-                style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary-100), transparent)' }}
+                style={{ background: 'var(--gm-line)' }}
               />
 
               <div className="flex justify-end">
@@ -576,6 +572,7 @@ export default function ProfilePage() {
                     label={t('fields.currentPassword')}
                     type={showCurrent ? 'text' : 'password'}
                     placeholder="••••••••"
+                    clearable={false}
                     error={pwErr.currentPassword?.message ? t(pwErr.currentPassword.message) : ''}
                     icon={<Lock className="h-4 w-4" />}
                     {...field}
@@ -592,6 +589,7 @@ export default function ProfilePage() {
                       label={t('fields.newPassword')}
                       type={showNew ? 'text' : 'password'}
                       placeholder="••••••••"
+                      clearable={false}
                       error={pwErr.newPassword?.message ? t(pwErr.newPassword.message) : ''}
                       icon={<Lock className="h-4 w-4" />}
                       {...field}
@@ -606,6 +604,7 @@ export default function ProfilePage() {
                       label={t('fields.confirmPassword')}
                       type={showConfirm ? 'text' : 'password'}
                       placeholder="••••••••"
+                      clearable={false}
                       error={pwErr.confirmPassword?.message ? t(pwErr.confirmPassword.message) : ''}
                       icon={<Lock className="h-4 w-4" />}
                       {...field}
@@ -620,7 +619,7 @@ export default function ProfilePage() {
               {/* Divider */}
               <div
                 className="h-px"
-                style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary-100), transparent)' }}
+                style={{ background: 'var(--gm-line)' }}
               />
 
               <div className="flex justify-end">

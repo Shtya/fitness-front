@@ -22,6 +22,7 @@ import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { IMPERSONATION_EVENT, notifyImpersonationChanged } from '@/lib/impersonation';
 import { SidebarChromeProvider } from './SidebarChromeContext';
+import ClientFloatingBar from './ClientFloatingBar';
 import './sidebar-glass.css';
 
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
@@ -237,6 +238,9 @@ export default function Layout({ children }) {
 		pathname.startsWith('/open') ||
 		pathname.startsWith('/particle-playground') ||
 		pathname === '/';
+	const userPending = user === undefined;
+	const isClientShell = user?.role === 'client' && !isAuthRoute;
+	const showStaffChrome = !isAuthRoute && !isClientShell && !userPending;
 	const isPresentationRoute = pathname.startsWith('/presentation');
 	/** Login / discover / open / particle studio: full-bleed viewport, no dashboard chrome */
 	const isBareViewport =
@@ -403,15 +407,18 @@ export default function Layout({ children }) {
 						{children}
 					</div>
 					) : (
-					<div className={isAppShell || isPresentationRoute ? 'relative h-dvh overflow-hidden' : 'relative min-h-screen'}>
-						{/* Background layers */}
-						<div className="ai-shell-bg fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
-						<div className="fixed inset-0 -z-10 opacity-[0.015]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-primary-500) 1px, transparent 0)`, backgroundSize: '32px 32px', }} /> 
-						<div className="fixed top-0 right-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-primary-200), transparent 70%)` }} /> 
-						<div className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)` }} />
+					<div className={`${isAppShell || isPresentationRoute ? 'relative h-dvh overflow-hidden' : 'relative min-h-screen'} ${isAppShell ? 'dashboard-icy' : ''}`}>
+						{isAppShell ? null : (
+							<>
+								<div className="ai-shell-bg fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
+								<div className="fixed inset-0 -z-10 opacity-[0.015]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-primary-500) 1px, transparent 0)`, backgroundSize: '32px 32px', }} />
+								<div className="fixed top-0 right-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-primary-200), transparent 70%)` }} />
+								<div className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)` }} />
+							</>
+						)}
 
 						<div className={`flex w-full max-w-[100vw] overflow-hidden ${isAppShell || isPresentationRoute ? 'h-full' : ''}`}>
-							{!isAuthRoute && (
+							{showStaffChrome && (
 								<div
 									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'} ${focusMode ? 'w-0 overflow-visible' : ''}`}
 								>
@@ -440,7 +447,7 @@ export default function Layout({ children }) {
 								data-sidebar-offset={focusMode && !isWhatsAppRoute ? 'true' : undefined}
 								data-ai-studio={isAiStudioRoute ? 'true' : undefined}
 							>
-								{!isAuthRoute && (
+								{showStaffChrome && (
 									<div
 										className={[
 											'max-[1025px]:block hidden shrink-0',
@@ -473,16 +480,19 @@ export default function Layout({ children }) {
 														'min-h-0 flex-1 overflow-x-hidden overscroll-y-contain overscroll-x-none',
 														isWhatsAppRoute || isMetaWhatsAppRoute || isAiStudioRoute
 															? 'overflow-hidden p-0'
-															: isImmersiveRoute
+															: isChatRoute
+																? 'flex flex-col overflow-hidden max-[768px]:p-0 min-[769px]:p-4'
+																: isImmersiveRoute
 																// Avoid `p-0` + pe/ps conflict (shorthand can wipe end padding).
 																// Symmetric inset so LTR/RTL both keep clear edge breathing room.
 																? 'overflow-hidden max-[768px]:p-0 min-[769px]:p-4'
-																: 'overflow-y-auto p-3 md:p-4',
+																: 'overflow-y-auto p-[var(--app-gutter)]',
 													].join(' ')
 													: pathname !== '/' && !isPresentationRoute
 														? 'min-h-screen'
 														: '',
 												isImpersonating ? 'pt-14' : '',
+												isClientShell && !isChatRoute ? 'pb-[var(--client-dock)]' : '',
 											].filter(Boolean).join(' ')}
 										>
 											{children}
@@ -508,6 +518,7 @@ export default function Layout({ children }) {
 					</AnimatePresence>
 
 					{/* Quran audio continues after leaving /quran-revision */}
+					{isClientShell ? <ClientFloatingBar user={user} /> : null}
 					{!isBareViewport ? <QuranMiniPlayer /> : null}
 					{!isBareViewport ? <LastRouteTracker /> : null}
 					{!isBareViewport ? <LastRouteRestorer /> : null}

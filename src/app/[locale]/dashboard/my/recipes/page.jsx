@@ -11,8 +11,10 @@ import {
 	Check, ChevronLeft, ChevronRight, TrendingUp,
 	Utensils, Layers, Star, ArrowUpDown, Filter,
 	Sparkles, Zap, Heart, Award, AlertTriangle,
+	Sun, Moon, Apple, Cookie, Salad, Soup, Coffee, ChefHat, Dumbbell,
 } from 'lucide-react';
 import { TabsPill } from '../workouts/page';
+import api from '@/utils/axios';
 
 const API_BASE = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1`;
 const PER_PAGE = 9;
@@ -63,6 +65,28 @@ const MEAL_EMOJI = {
 	dessert: '🍮', default: '🏷️',
 };
 const mealEmoji = v => MEAL_EMOJI[v] ?? MEAL_EMOJI.default;
+const MEAL_ICONS = {
+	savory_breakfast: Utensils, breakfast: Sun, lunch: Sun, dinner: Moon,
+	snack: Apple, sweet: Cookie, salad: Salad, soup: Soup, drink: Coffee, dessert: Cookie, default: Utensils,
+};
+function MealGlyph({ type, size = 9 }) {
+	const Icon = MEAL_ICONS[type] || MEAL_ICONS.default;
+	return <Icon size={size} strokeWidth={2} />;
+}
+function FavBtn({ on, onClick }) {
+	return (
+		<button
+			type="button"
+			onClick={e => { e.stopPropagation(); onClick(); }}
+			className={cn(
+				'grid h-[30px] w-[30px] place-items-center rounded-2xl border',
+				on ? 'border-rose-400/40 bg-rose-500/15 text-rose-500' : 'border-white/20 bg-black/40 text-white',
+			)}
+		>
+			<Heart size={13} fill={on ? '#f43f5e' : 'transparent'} strokeWidth={on ? 2.5 : 2} />
+		</button>
+	);
+}
 
 // ─── Global styles ────────────────────────────────────────────────────────────
 function GlobalStyles() {
@@ -167,202 +191,134 @@ function Badge({ children, color = 'default', icon: Icon, small }) {
 // ─── Skeleton card ────────────────────────────────────────────────────────────
 function SkeletonCard() {
 	return (
-		<div className="rounded-2xl border overflow-hidden border-[var(--color-primary-100)]">
-			<div className="h-[3px] bg-[var(--color-primary-100)]" />
-			<div className="rp-shimmer" style={{ height: 120 }} />
-			<div className="p-3 space-y-2">
-				<div className="h-3 rounded-lg rp-shimmer w-3/4" />
-				<div className="h-2.5 rounded-lg rp-shimmer w-2/5" />
-				<div className="h-9 rounded-xl rp-shimmer" />
+		<div className="overflow-hidden rounded-3xl border border-white/85 bg-[#eef2f9] shadow-[5px_5px_8px_rgba(100,116,139,0.28)]">
+			<div className="h-[3px] bg-gradient-to-r from-(--color-gradient-from) via-[#8b5cf6] to-(--color-gradient-to)" />
+			<div className="rp-shimmer" style={{ height: 112 }} />
+			<div className="space-y-2 p-3">
+				<div className="h-3 w-3/4 rounded-lg rp-shimmer" />
+				<div className="h-9 rounded-2xl rp-shimmer" />
 			</div>
 		</div>
 	);
 }
 
 // ─── Macro bar ────────────────────────────────────────────────────────────────
-function MacroBar({ protein, carbs, fat }) {
-	const total = (protein + carbs + fat) || 1;
-	const bars = [
-		{ v: carbs, c: '#f59e0b', label: 'C' },
-		{ v: protein, c: '#3b82f6', label: 'P' },
-		{ v: fat, c: '#ec4899', label: 'F' },
+function MacroBar({ protein, carbs, fat, calories = 0, t, compact = false }) {
+	const items = [
+		{ key: 'cal', value: Number(calories) || 0, unit: '', label: t ? t('kcal') : 'kcal', color: '#f97316', Icon: Flame },
+		{ key: 'p', value: Number(protein) || 0, unit: 'g', label: t ? t('card.protein') : 'P', color: '#3b82f6', Icon: Dumbbell },
+		{ key: 'c', value: Number(carbs) || 0, unit: 'g', label: t ? t('card.carbs') : 'C', color: '#f59e0b', Icon: Zap },
+		{ key: 'f', value: Number(fat) || 0, unit: 'g', label: t ? t('card.fat') : 'F', color: '#ec4899', Icon: Droplets },
 	];
+	const gramMax = Math.max(Number(protein) || 0, Number(carbs) || 0, Number(fat) || 0, 1);
 	return (
-		<div className="flex h-1.5 overflow-hidden rounded-full gap-px">
-			{bars.map(({ v, c, label }) => (
-				<div key={label} className="h-full rounded-full transition-all duration-700"
-					style={{ width: `${((v) / total) * 100}%`, background: c }} />
-			))}
+		<div className={cn('flex', compact ? 'gap-1' : 'gap-1.5')}>
+			{items.map(item => {
+				const scaleMax = item.key === 'cal' ? 600 : gramMax;
+				const pct = Math.max(6, Math.min(100, Math.round((item.value / scaleMax) * 100)));
+				const Icon = item.Icon;
+				return (
+					<div key={item.key} className="min-w-0 flex-1">
+						<div className={cn('text-center font-black leading-none', compact ? 'text-[10px]' : 'text-[11px]')} style={{ color: item.color }}>
+							{item.value}{item.unit}
+						</div>
+						<div className={cn('mt-1 overflow-hidden rounded-full', compact ? 'h-[5px]' : 'h-1.5')} style={{ background: `${item.color}1A` }}>
+							<div className="h-full rounded-full" style={{ width: `${pct}%`, background: item.color }} />
+						</div>
+						<div className="mt-1 flex items-center justify-center gap-0.5">
+							<Icon size={compact ? 8 : 9} style={{ color: item.color }} strokeWidth={2.4} />
+							<span className={cn('truncate font-bold uppercase text-slate-400', compact ? 'text-[7px]' : 'text-[8px]')}>{item.label}</span>
+						</div>
+					</div>
+				);
+			})}
 		</div>
 	);
 }
 
 // ─── Recipe Card ──────────────────────────────────────────────────────────────
-const RecipeCard = memo(function RecipeCard({ recipe, idx, onOpen, t, tMt }) {
+const RecipeCard = memo(function RecipeCard({ recipe, onOpen, t, tMt, favorite, onToggleFav }) {
 	const sat = satMeta(recipe.satiety);
 	let catLabel = recipe.category;
 	try { catLabel = tMt(recipe.category); } catch { /* keep raw */ }
 
 	return (
-		<motion.article
-			initial={{ opacity: 0, y: 16 }}
-			animate={{ opacity: 1, y: 0 }}
-			exit={{ opacity: 0, scale: 0.96 }}
-			transition={{ delay: Math.min(idx * 0.04, 0.24), duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-			layout
+		<button
+			type="button"
 			onClick={() => onOpen(recipe)}
-			className="rp-card group relative flex flex-col overflow-hidden rounded-2xl border bg-white cursor-pointer transition-shadow duration-300 active:scale-[0.97] border-[var(--color-primary-100)]"
-			style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}
-			whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(99,102,241,0.14)' }}
+			className="flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/85 bg-[#eef2f9] text-start shadow-[5px_5px_8px_rgba(100,116,139,0.38)]"
 		>
-			{/* gradient stripe */}
-			<div className="h-[3px] shrink-0 bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]" />
-
-			{/* image */}
-			<div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-primary-100)]" style={{ height: 120 }}>
+			<div className="h-[3px] shrink-0 bg-gradient-to-r from-(--color-gradient-from) via-[#8b5cf6] to-(--color-gradient-to)" />
+			<div className="relative h-28 overflow-hidden bg-slate-200">
 				{recipe.imageUrl
-					? <img src={recipe.imageUrl} alt={recipe.title} loading="lazy"
-						className="rp-card-img w-full h-full object-cover" />
-					: <div className="absolute inset-0 flex items-center justify-center">
-						<BookMarked className="h-8 w-8 opacity-10 text-[var(--color-primary-400)]" />
-					</div>
-				}
-				<div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-
-				{/* category badge */}
-				<span className="absolute bottom-2 start-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-black/50 text-white backdrop-blur-sm">
-					{mealEmoji(recipe.category)} {catLabel}
+					? <img src={recipe.imageUrl} alt="" className="h-full w-full object-cover" />
+					: <div className="absolute inset-0 grid place-items-center"><BookOpen size={32} className="text-slate-300" strokeWidth={1.2} /></div>}
+				<div className="absolute inset-0 bg-black/35" />
+				<span className="absolute bottom-2 start-2 inline-flex max-w-[70%] items-center gap-1 rounded-full bg-black/50 px-1.5 py-0.5 text-[8px] font-bold text-white">
+					<MealGlyph type={recipe.category} />
+					<span className="truncate">{catLabel}</span>
 				</span>
-
-				{/* satiety dot */}
-				<span className="absolute top-2 end-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[7px] font-bold backdrop-blur-sm border bg-white/90"
-					style={{ color: sat.text?.replace('text-', '') }}>
-					<span className={cn('w-1.5 h-1.5 rounded-full', sat.dot)} />
-					<span className={sat.text}>{t(`satiety.${recipe.satiety.toLowerCase()}`)}</span>
+				<span className={cn('absolute top-2 end-2 inline-flex max-w-[58%] items-center gap-1 truncate rounded-full border px-1.5 py-0.5 text-[7px] font-bold whitespace-nowrap', sat.bg, sat.text, sat.border)}>
+					<span className={cn('h-[5px] w-[5px] rounded-full', sat.dot)} />
+					{t(`satiety.${recipe.satiety.toLowerCase()}`)}
 				</span>
+				{onToggleFav ? (
+					<span className="absolute top-2 start-2">
+						<FavBtn on={favorite} onClick={() => onToggleFav(recipe.id)} />
+					</span>
+				) : null}
 			</div>
-
-			{/* body */}
-			<div className="flex flex-1 flex-col p-2.5 sm:p-3 gap-2">
-				<h3 className="text-[10.5px] sm:text-[11.5px] font-black md: leading-snug text-slate-800 line-clamp-2">
-					{recipe.title}
-				</h3>
-
-				{/* nutrition strip */}
-				<div className="rounded-xl border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] p-2 mt-auto">
-					<div className="flex items-center justify-between mb-1.5">
-						<div className="flex items-center gap-1">
-							<Flame className="h-3 w-3 text-[var(--color-primary-500)]" />
-							<span className="text-sm font-black tabular-nums text-[var(--color-primary-700)]">{recipe.calories}</span>
-							<span className="text-[7px] text-slate-400 font-medium">kcal</span>
-						</div>
-						<div className="flex items-center gap-2">
-							{[
-								[recipe.protein, '#3b82f6', Beef],
-								[recipe.carbs, '#f59e0b', Wheat],
-								[recipe.fat, '#ec4899', Droplets],
-							].map(([v, c, I], i) => (
-								<div key={i} className="flex items-center gap-0.5">
-									<I className="h-2 w-2" style={{ color: String(c) }} />
-									<span className="text-[8px] sm:text-[9px] font-bold tabular-nums text-slate-600">{v}g</span>
-								</div>
-							))}
-						</div>
-					</div>
-					<MacroBar protein={recipe.protein} carbs={recipe.carbs} fat={recipe.fat} />
+			<div className="flex flex-1 flex-col gap-2 p-3">
+				<h3 className="line-clamp-2 text-[11px] font-black leading-[15px] text-slate-800">{recipe.title}</h3>
+				<div className="rounded-2xl border border-white/80 bg-[#eef2f9] p-2 shadow-[3px_3px_6px_rgba(100,116,139,0.22)]">
+					<MacroBar protein={recipe.protein} carbs={recipe.carbs} fat={recipe.fat} calories={recipe.calories} t={t} compact />
 				</div>
 			</div>
-
-			{/* hover CTA */}
-			<div className="hidden sm:flex absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 px-3 pb-3 pt-6"
-				style={{ background: 'linear-gradient(to top, white 65%, transparent)' }}>
-				<div className="w-full py-1.5 flex items-center gap-1 rounded-xl text-center text-[9px] font-black text-white bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">
-					{t('card.viewFull')} <ChevronLeft size={12} />
-				</div>
-			</div>
-		</motion.article>
+		</button>
 	);
 });
 
 // ─── Featured Banner ──────────────────────────────────────────────────────────
-const FeaturedBanner = memo(function FeaturedBanner({ recipe, onOpen, t, tMt }) {
+const FeaturedBanner = memo(function FeaturedBanner({ recipe, onOpen, t, favorite, onToggleFav }) {
 	const sat = satMeta(recipe.satiety);
-	let catLabel = recipe.category;
-	try { catLabel = tMt(recipe.category); } catch { /* keep raw */ }
-
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+		<button
+			type="button"
 			onClick={() => onOpen(recipe)}
-			className="relative mb-5 cursor-pointer overflow-hidden rounded-2xl border border-[var(--color-primary-100)] active:scale-[0.99] transition-shadow duration-300"
-			style={{ boxShadow: '0 4px 24px rgba(99,102,241,0.1)' }}
-			whileHover={{ y: -2, boxShadow: '0 16px 48px rgba(99,102,241,0.18)' }}
+			className="mb-4 w-full overflow-hidden rounded-3xl border border-white/85 bg-[#eef2f9] text-start shadow-[5px_6px_10px_rgba(100,116,139,0.4)]"
 		>
-			<div className="h-[3px] bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]" />
-
-			<div className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr] bg-white">
-				{/* image */}
-				<div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-primary-100)]" style={{ minHeight: 160 }}>
-					{recipe.imageUrl
-						? <img src={recipe.imageUrl} alt={recipe.title}
-							className="w-full h-full object-cover sm:h-56 transition-transform duration-700 hover:scale-105" />
-						: <div className="absolute inset-0 flex items-center justify-center">
-							<BookMarked className="h-14 w-14 opacity-10 text-[var(--color-primary-400)]" />
-						</div>
-					}
-					<div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-white/80" />
-					<div className="sm:hidden absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
-					<div className="sm:hidden absolute bottom-3 start-3 end-3">
-						<h2 className="text-sm font-black text-white md: leading-tight line-clamp-2">{recipe.title}</h2>
-					</div>
-				</div>
-
-				{/* content */}
-				<div className="flex flex-col justify-center gap-3 p-4 sm:p-5">
-					<div className="flex items-center gap-2 flex-wrap">
-						<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-[var(--color-primary-50)] text-[var(--color-primary-600)] border border-[var(--color-primary-200)]">
-							<Star size={8} /> {t('featured')}
-						</span>
-						<span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-bold border', sat.bg, sat.text, sat.border)}>
-							<span className={cn('w-1.5 h-1.5 rounded-full', sat.dot)} />
-							{t(`satiety.${recipe.satiety.toLowerCase()}`)}
-						</span>
-					</div>
-
-					<h2 className="hidden sm:block rp-serif text-xl sm:text-2xl font-black md: leading-tight text-slate-800">
-						{recipe.title}
-					</h2>
-
-					<span className="inline-flex w-fit items-center gap-1 px-2 py-1 rounded-full text-[8px] font-bold bg-slate-50 text-slate-500 border border-slate-100">
-						{mealEmoji(recipe.category)} {catLabel}
+			<div className="h-[3px] bg-gradient-to-r from-(--color-gradient-from) via-[#8b5cf6] to-(--color-gradient-to)" />
+			<div className="relative h-44 overflow-hidden bg-slate-100">
+				{recipe.imageUrl
+					? <img src={recipe.imageUrl} alt="" className="h-full w-full object-cover" />
+					: <div className="absolute inset-0 grid place-items-center"><BookOpen size={48} className="text-slate-300" strokeWidth={1.2} /></div>}
+				<div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+				<div className="absolute start-3.5 top-3 flex flex-wrap items-center gap-1.5">
+					<span className="inline-flex items-center gap-1 rounded-full border border-(--color-primary-500)/20 bg-white/90 px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-(--color-primary-700)">
+						<Star size={9} className="fill-(--color-primary-500) text-(--color-primary-500)" />
+						{t('featured')}
 					</span>
-
-					{/* macros row */}
-					<div className="flex items-center gap-3 flex-wrap">
-						{[
-							[recipe.calories, 'kcal', Flame, 'var(--color-primary-500)'],
-							[recipe.protein + 'g', t('card.protein'), Beef, '#3b82f6'],
-							[recipe.carbs + 'g', t('card.carbs'), Wheat, '#f59e0b'],
-							[recipe.fat + 'g', t('card.fat'), Droplets, '#ec4899'],
-						].map(([v, l, I, c]) => (
-							<div key={String(l)} className="flex items-center gap-1">
-								<I className="h-3 w-3" style={{ color: String(c) }} />
-								<span className="text-[11px] font-bold text-slate-700">{v}</span>
-								<span className="text-[8px] text-slate-400">{l}</span>
-							</div>
-						))}
-					</div>
-
-					{/* macro bar */}
-					<MacroBar protein={recipe.protein} carbs={recipe.carbs} fat={recipe.fat} />
-
-					<div className="w-fit px-4 py-2 rounded-xl flex items-center gap-1 text-[10px] font-black text-white bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] shadow-lg shadow-[var(--color-primary-200)]">
-						{t('card.viewFull')} <ChevronLeft size={12} />
-					</div>
+					<span className={cn('inline-flex items-center gap-1 rounded-full border px-1.5 py-1 text-[7px] font-bold', sat.bg, sat.text, sat.border)}>
+						<span className={cn('h-[5px] w-[5px] rounded-full', sat.dot)} />
+						{t(`satiety.${recipe.satiety.toLowerCase()}`)}
+					</span>
 				</div>
+				{onToggleFav ? (
+					<span className="absolute end-3 top-2.5">
+						<FavBtn on={favorite} onClick={() => onToggleFav(recipe.id)} />
+					</span>
+				) : null}
+				<h2 className="absolute inset-x-3.5 bottom-3 line-clamp-2 text-[17px] font-black leading-snug text-white">{recipe.title}</h2>
 			</div>
-		</motion.div>
+			<div className="flex flex-col gap-3 p-4">
+				<MacroBar protein={recipe.protein} carbs={recipe.carbs} fat={recipe.fat} calories={recipe.calories} t={t} />
+				<span className="flex items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-(--color-gradient-from) to-(--color-gradient-to) py-2.5 text-xs font-bold text-white">
+					<ChefHat size={13} strokeWidth={2.5} />
+					{t('card.viewFull')}
+					<ChevronRight size={13} className="text-white/70 rtl:rotate-180" />
+				</span>
+			</div>
+		</button>
 	);
 });
 
@@ -392,11 +348,11 @@ function RecipeModal({ recipe, onClose, t, tMt }) {
 					<motion.div
 						initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
 						transition={{ type: 'spring', stiffness: 320, damping: 38 }}
-						className="fixed inset-x-0 bottom-0 top-[4%] z-[81] flex flex-col bg-white rounded-t-3xl overflow-hidden sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-[3%] sm:bottom-[3%] sm:w-[min(680px,94vw)] sm:rounded-3xl"
-						style={{ boxShadow: '0 -24px 80px rgba(99,102,241,0.22), 0 40px 120px rgba(0,0,0,0.4)' }}
+						className="fixed inset-x-0 bottom-0 z-[81] mx-auto flex h-[91dvh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-[28px] bg-[#f8fafc]"
+						style={{ boxShadow: '0 -8px 24px rgba(100,116,139,0.35)' }}
 					>
 						{/* drag pill */}
-						<div className="sm:hidden absolute top-2 inset-x-0 flex justify-center z-10">
+						<div className="absolute top-2 inset-x-0 z-10 flex justify-center">
 							<div className="h-1 w-10 rounded-full bg-[var(--color-primary-200)]" />
 						</div>
 
@@ -454,7 +410,7 @@ function RecipeModal({ recipe, onClose, t, tMt }) {
 									</div>
 								</div>
 								<div className="mt-3.5">
-									<MacroBar protein={recipe.protein} carbs={recipe.carbs} fat={recipe.fat} />
+									<MacroBar protein={recipe.protein} carbs={recipe.carbs} fat={recipe.fat} calories={recipe.calories} t={t} />
 								</div>
 							</div>
 
@@ -602,7 +558,7 @@ function FilterPanel({
 			exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22, ease: 'easeInOut' }}
 			className="overflow-hidden mb-4"
 		>
-			<div className="rounded-2xl border border-[var(--color-primary-100)] bg-gradient-to-br from-[var(--color-primary-50)] to-white p-4 space-y-4">
+			<div className="space-y-4 rounded-3xl border border-white/85 bg-[#eef2f9] p-4 shadow-[4px_5px_8px_rgba(100,116,139,0.32)]">
 				<div className="flex items-center justify-between">
 					<span className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--color-primary-500)]">{t('filter.title')}</span>
 					{hasAny && (
@@ -620,12 +576,12 @@ function FilterPanel({
 					<div className="flex gap-1.5 flex-wrap">
 
 						{mealTypeTabs.map(opt => (
-	<button key={opt.key} onClick={() => onTabChange(opt.key)}
+							<button key={opt.key} type="button" onClick={() => onTabChange(opt.key)}
 								className={cn(
-									'flex items-center gap-1.5 px-3 py-1 rounded-full border text-[9px] font-bold transition-all duration-200 cursor-pointer',
+									'flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold',
 									activeTab === opt.key
-										? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] border-transparent text-white shadow-md shadow-[var(--color-primary-200)]'
-										: 'bg-white border-[var(--color-primary-100)] text-slate-600 hover:border-[var(--color-primary-300)]'
+										? 'border border-t-white/35 border-b-[rgba(15,48,120,0.3)] bg-(--color-primary-600) text-white shadow-[2px_3px_5px_color-mix(in_srgb,var(--color-primary-800)_35%,transparent)]'
+										: 'border border-white/85 bg-[#eef2f9] text-slate-600 shadow-[3px_3px_6px_rgba(100,116,139,0.22)]',
 								)}>
 								{/* <span className={cn('w-2 h-2 rounded-full', opt.meta.dot)} /> */}
 								{opt.label}
@@ -640,12 +596,12 @@ function FilterPanel({
 					<p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-2">{t('satiety.label')}</p>
 					<div className="flex gap-1.5 flex-wrap">
 						{satietyOpts.map(opt => (
-							<button key={opt.value} onClick={() => onSatChange(opt.value)}
+							<button key={opt.value} type="button" onClick={() => onSatChange(opt.value)}
 								className={cn(
-									'flex items-center gap-1.5 px-3 py-1 rounded-full border text-[9px] font-bold transition-all duration-200 cursor-pointer',
+									'flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold',
 									satFilter === opt.value
-										? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] border-transparent text-white shadow-md shadow-[var(--color-primary-200)]'
-										: 'bg-white border-[var(--color-primary-100)] text-slate-600 hover:border-[var(--color-primary-300)]'
+										? 'border border-t-white/35 border-b-[rgba(15,48,120,0.3)] bg-(--color-primary-600) text-white shadow-[2px_3px_5px_color-mix(in_srgb,var(--color-primary-800)_35%,transparent)]'
+										: 'border border-white/85 bg-[#eef2f9] text-slate-600 shadow-[3px_3px_6px_rgba(100,116,139,0.22)]',
 								)}>
 								<span className={cn('w-2 h-2 rounded-full', opt.meta.dot)} />
 								{opt.label}
@@ -672,12 +628,12 @@ function FilterPanel({
 					<p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-2">{t('sort.label')}</p>
 					<div className="flex gap-1.5 flex-wrap">
 						{sortOpts.map(opt => (
-							<button key={opt.v} onClick={() => onSortChange(opt.v)}
+							<button key={opt.v} type="button" onClick={() => onSortChange(opt.v)}
 								className={cn(
-									'px-3 py-1 rounded-full border text-[9px] font-bold transition-all duration-200 cursor-pointer',
+									'cursor-pointer rounded-full px-3 py-1.5 text-[10px] font-bold',
 									sortBy === opt.v
-										? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] border-transparent text-white shadow-md shadow-[var(--color-primary-200)]'
-										: 'bg-white border-[var(--color-primary-100)] text-slate-600 hover:border-[var(--color-primary-300)]'
+										? 'border border-t-white/35 border-b-[rgba(15,48,120,0.3)] bg-(--color-primary-600) text-white shadow-[2px_3px_5px_color-mix(in_srgb,var(--color-primary-800)_35%,transparent)]'
+										: 'border border-white/85 bg-[#eef2f9] text-slate-600 shadow-[3px_3px_6px_rgba(100,116,139,0.22)]',
 								)}>
 								{opt.l}
 							</button>
@@ -696,15 +652,8 @@ function EmptyState({ onReset, hasFilter, t }) {
 			initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
 			className="flex flex-col items-center justify-center py-24 gap-5"
 		>
-			<div className="relative">
-				<div className="absolute inset-0 blur-3xl scale-[3] rounded-full bg-[var(--color-primary-100)]/50" />
-				<motion.div
-					animate={{ rotate: [0, -5, 5, 0] }}
-					transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-					className="relative w-14 h-14 rounded-2xl flex items-center justify-center bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]"
-				>
-					<BookMarked className="h-6 w-6 text-[var(--color-primary-300)]" />
-				</motion.div>
+			<div className="grid h-20 w-20 place-items-center rounded-full border border-white/85 bg-[#eef2f9] shadow-[5px_5px_8px_rgba(100,116,139,0.32)]">
+				<BookOpen className="h-8 w-8 text-(--color-primary-300)" strokeWidth={1.3} />
 			</div>
 			<div className="text-center space-y-1.5">
 				<p className="text-sm font-black text-slate-600">{t('table.emptyTitle')}</p>
@@ -729,25 +678,25 @@ function Pagination({ page, totalPages, onPage }) {
 	}, [page, totalPages]);
 
 	return (
-		<div className="flex items-center justify-center gap-1.5 pt-4 pb-4 flex-wrap">
-			<button disabled={page === 1} onClick={() => onPage(p => p - 1)}
-				className="w-8 h-8 rounded-xl border border-[var(--color-primary-100)] flex items-center justify-center text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-white hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] text-slate-600 cursor-pointer">
-				<ChevronLeft className=" rtl:scale-x-[-1] h-3.5 w-3.5" />
+		<div className="flex flex-wrap items-center justify-center gap-1.5 py-4">
+			<button type="button" disabled={page === 1} onClick={() => onPage(p => p - 1)}
+				className="grid h-8 w-8 cursor-pointer place-items-center rounded-2xl border border-white/85 bg-[#eef2f9] text-slate-500 shadow-[3px_3px_6px_rgba(100,116,139,0.22)] disabled:cursor-not-allowed disabled:opacity-35">
+				<ChevronLeft className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
 			</button>
 			{pageButtons.map(p => (
-				<button key={p} onClick={() => onPage(p)}
+				<button key={p} type="button" onClick={() => onPage(p)}
 					className={cn(
-						'w-8 h-8 rounded-xl border text-[11px] font-black transition-all cursor-pointer',
+						'grid h-8 w-8 cursor-pointer place-items-center rounded-2xl text-[11px] font-black',
 						p === page
-							? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] border-transparent text-white shadow-md shadow-[var(--color-primary-200)]'
-							: 'bg-white border-[var(--color-primary-100)] text-slate-600 hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]'
+							? 'border border-t-white/35 border-b-[rgba(15,48,120,0.3)] bg-(--color-primary-600) text-white shadow-[2px_3px_5px_color-mix(in_srgb,var(--color-primary-800)_40%,transparent)]'
+							: 'border border-white/85 bg-[#eef2f9] text-slate-500 shadow-[3px_3px_6px_rgba(100,116,139,0.22)]',
 					)}>
 					{p}
 				</button>
 			))}
-			<button disabled={page === totalPages} onClick={() => onPage(p => p + 1)}
-				className="w-8 h-8 rounded-xl border border-[var(--color-primary-100)] flex items-center justify-center text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-white hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] text-slate-600 cursor-pointer">
-				<ChevronRight className=" rtl:scale-x-[-1] h-3.5 w-3.5" />
+			<button type="button" disabled={page === totalPages} onClick={() => onPage(p => p + 1)}
+				className="grid h-8 w-8 cursor-pointer place-items-center rounded-2xl border border-white/85 bg-[#eef2f9] text-slate-500 shadow-[3px_3px_6px_rgba(100,116,139,0.22)] disabled:cursor-not-allowed disabled:opacity-35">
+				<ChevronRight className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
 			</button>
 		</div>
 	);
@@ -777,6 +726,44 @@ export default function RecipesPage() {
 	const [sortBy, setSortBy] = useState('created_at');
 	const [filterOpen, setFilterOpen] = useState(false);
 	const [selected, setSelected] = useState(null);
+	const [favorites, setFavorites] = useState(() => new Set());
+
+	useEffect(() => {
+		const pane = document.querySelector('[data-dashboard-content]');
+		if (!pane) return undefined;
+		pane.dataset.plainPage = '1';
+		return () => { delete pane.dataset.plainPage; };
+	}, []);
+
+	useEffect(() => {
+		api.get('/recipes/user/favorites', { params: { page: 1, limit: 200 } })
+			.then(res => {
+				const items = res?.data?.items || [];
+				setFavorites(new Set(items.map(item => item.id).filter(Boolean)));
+			})
+			.catch(() => {});
+	}, []);
+
+	const toggleFav = useCallback(async id => {
+		const on = favorites.has(id);
+		setFavorites(prev => {
+			const next = new Set(prev);
+			if (on) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+		try {
+			if (on) await api.delete(`/recipes/${id}/favorite`);
+			else await api.post(`/recipes/${id}/favorite`);
+		} catch {
+			setFavorites(prev => {
+				const next = new Set(prev);
+				if (on) next.add(id);
+				else next.delete(id);
+				return next;
+			});
+		}
+	}, [favorites]);
 
 	// bootstrap
 	useEffect(() => {
@@ -891,112 +878,87 @@ const hasFilter = !!(
 	return (
 		<>
 			<GlobalStyles />
-			<div className="rp-root w-[calc(100%+14px)] rtl:mr-[-7px] ltr:ml-[-7px] mt-[-7px] min-h-screen flex flex-col bg-[var(--color-primary-50)]">
+			<div data-plain-page="1" className="report-phone mx-auto w-full max-w-[440px] bg-white pt-1 dark:bg-[#0b1220]">
 
-				{/* ── Header ── */}
-				<div className="relative overflow-hidden rounded-md"
-					style={{ background: 'linear-gradient(150deg,var(--color-primary-800) 0%,var(--color-primary-700) 28%,var(--color-gradient-via) 62%,var(--color-secondary-600) 100%)' }}>
-
-					{/* Overlays */}
-					<div className="absolute inset-0 opacity-[0.055] pointer-events-none mix-blend-overlay"
-						style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
-					<div className="absolute w-80 h-80 rounded-full bg-white/[0.07] blur-[60px] -top-40 -start-24 pointer-events-none" />
-					<div className="absolute w-64 h-64 rounded-full bg-white/[0.05] blur-[55px] -bottom-24 -end-16 pointer-events-none" />
-					<div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none" />
-					<div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
-					<div className="absolute -top-10 -end-10 w-44 h-44 rounded-full border border-white/10 pointer-events-none" />
-					<div className="absolute -top-4 -end-4 w-28 h-28 rounded-full border border-white/8 pointer-events-none" />
-
-					<div className="relative z-10 px-4 sm:px-5 pt-5 pb-0">
-
-						{/* Title row */}
-						<div className="flex items-center justify-between gap-3 mb-5">
-							<div className="flex items-center gap-3 min-w-0">
-								<motion.div
-									whileHover={{ scale: 1.06, rotate: 4 }}
-									transition={{ type: 'spring', stiffness: 380, damping: 20 }}
-									className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl grid place-items-center shrink-0"
-									style={{ background: 'rgba(255,255,255,0.16)', backdropFilter: 'blur(16px)', boxShadow: '0 6px 24px -4px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.35)' }}
-								>
-									<Utensils className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-								</motion.div>
-								<div className="min-w-0">
-									<h1 className="rp-serif text-xl sm:text-2xl text-white md: leading-tight tracking-tight truncate">{t('page.title')}</h1>
-									<p className="text-[10px] sm:text-xs text-white/50 mt-0.5 font-medium">{t('page.desc')}</p>
+				<div className="m-[5px] rounded-3xl shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]">
+					<div
+						className="relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-e-[rgba(15,34,128,0.35)] border-b-[rgba(15,34,128,0.45)]"
+						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), #1a3fbf)' }}
+					>
+						<div className="pointer-events-none absolute -top-24 -start-16 h-[280px] w-[280px] rounded-full bg-white/5" />
+						<div className="pointer-events-none absolute -bottom-16 -end-12 h-[200px] w-[200px] rounded-full bg-white/[0.04]" />
+						<div className="relative flex items-center gap-3 p-4">
+							<div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-e-[rgba(15,48,120,0.25)] border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white">
+								<BookOpen size={20} strokeWidth={1.8} />
+							</div>
+							<div className="min-w-0 flex-1">
+								<h1 className="truncate text-xl font-black leading-6 tracking-[-0.3px] text-white">{t('page.title')}</h1>
+								<p className="mt-0.5 truncate text-[10px] font-medium text-white/50">{t('page.desc')}</p>
+							</div>
+							{favorites.size > 0 && (
+								<div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/30 bg-rose-500/20 text-rose-500">
+									<Heart size={18} fill="#f43f5e" />
+									<span className="absolute -top-1 -end-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[8px] font-bold text-white">{favorites.size}</span>
 								</div>
+							)}
+						</div>
+						<div className="px-4 pb-3">
+							<div className="mb-2 h-px bg-white/20" />
+							<div className="flex gap-1.5">
+								{[
+									[t('stats.totalRecipes'), statTotal, BookOpen],
+									[t('stats.avgCalories'), fmt(statAvgCal), Flame],
+									[t('stats.avgProtein'), statAvgPro, Dumbbell],
+								].map(([label, value, Icon]) => (
+									<div key={label} className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-white/30 bg-white/15 px-2.5 py-2 text-white shadow-[2px_3px_5px_rgba(15,48,120,0.28)]">
+										<span className="grid h-7 w-7 shrink-0 place-items-center rounded-2xl border border-white/30 bg-white/15">
+											<Icon size={13} strokeWidth={2} />
+										</span>
+										<span className="min-w-0">
+											<span className="block truncate text-[15px] font-black leading-[18px]">{value}</span>
+											<span className="block truncate text-[9px] font-bold text-white/65">{label}</span>
+										</span>
+									</div>
+								))}
 							</div>
 						</div>
-
-						{/* Stats */}
-						<div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
-							<StatPill label={t('stats.totalRecipes')} value={
-								<div className='flex items-end gap-1'>
-									{statTotal} <span className=' !font-[400] text-[10px] ' >{t("recipe")}</span>
-								</div>
-							} icon={BookOpen} delay={0.05} />
-							<StatPill label={t('stats.avgCalories')} value={
-								<div className='flex items-end gap-1'>
-									{fmt(statAvgCal)} <span className=' rtl:order-[-1] text-[10px] ' >kcal</span>
-								</div>
-							} icon={Flame} delay={0.11} />
-							<StatPill label={t('stats.avgProtein')} value={
-								<div className='flex items-end gap-1'>
-									{statAvgPro} <span className=' rtl:order-[-1] text-[10px] ' >g</span>
-								</div>
-							} icon={Beef} delay={0.17} />
-						</div>
-
-
 					</div>
 				</div>
 
-				{/* ── Content ── */}
-				<div className="flex-1 px-2 pt-4 sm:pt-5 "
-					style={{ boxShadow: '0 14px 44px rgba(99,102,241,0.06)' }}>
+				<div className="px-3 pt-4">
 
 					{/* Search + Filter row */}
 					<div className="flex items-center gap-2 mb-3.5">
 						{/* Search */}
-						<div className="relative flex-1 min-w-0">
-							<Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none"
-								style={{ insetInlineStart: '0.75rem' }} />
+						<div className="relative min-w-0 flex-1 rounded-3xl border border-white/85 bg-[#eef2f9] shadow-[4px_4px_8px_rgba(100,116,139,0.28)]">
+							<Search className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" style={{ insetInlineStart: '0.75rem' }} />
 							<input
 								value={search}
 								onChange={e => handleSearch(e.target.value)}
 								placeholder={t('search.placeholder')}
-								className=" text-base w-full h-10 rounded-2xl border border-[var(--color-primary-100)] bg-white font-semibold placeholder-slate-300 outline-none transition-all text-slate-800"
-								style={{ paddingInlineStart: '2.25rem', paddingInlineEnd: search ? '2.25rem' : '0.75rem' }}
-								onFocus={e => { e.target.style.borderColor = 'var(--color-primary-300)'; e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'; }}
-								onBlur={e => { e.target.style.borderColor = 'var(--color-primary-100)'; e.target.style.boxShadow = 'none'; }}
+								className="h-11 w-full bg-transparent text-[13px] font-medium text-slate-800 outline-none placeholder:text-slate-400"
+								style={{ paddingInlineStart: '2.4rem', paddingInlineEnd: search ? '2.25rem' : '0.85rem' }}
 							/>
 							{search && (
-								<button onClick={() => handleSearch('')}
-									className="absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer border-none bg-transparent"
-									style={{ insetInlineEnd: '0.625rem' }}>
+								<button type="button" onClick={() => handleSearch('')}
+									className="absolute top-1/2 -translate-y-1/2 border-none bg-transparent text-slate-400"
+									style={{ insetInlineEnd: '0.75rem' }}>
 									<X className="h-3 w-3" />
 								</button>
 							)}
 						</div>
-
-						{/* Filter toggle */}
-						<motion.button
-							whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
+						<button
+							type="button"
 							onClick={() => setFilterOpen(o => !o)}
 							className={cn(
-								'relative h-10 px-3 rounded-2xl border flex items-center gap-1.5 shrink-0 transition-all duration-200 cursor-pointer text-[11px] font-bold',
+								'flex h-11 shrink-0 items-center gap-1.5 rounded-3xl px-3.5 text-[11px] font-bold',
 								filterOpen || hasFilter
-									? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] border-transparent text-white shadow-lg shadow-[var(--color-primary-200)]'
-									: 'bg-white border-[var(--color-primary-100)] text-slate-600 hover:border-[var(--color-primary-300)]'
+									? 'border border-white/30 bg-(--color-primary-600) text-white shadow-[3px_4px_6px_color-mix(in_srgb,var(--color-primary-800)_40%,transparent)]'
+									: 'border border-white/85 bg-[#eef2f9] text-slate-500 shadow-[4px_4px_8px_rgba(100,116,139,0.28)]',
 							)}>
 							<SlidersHorizontal className="h-3.5 w-3.5" />
-							<span className="hidden sm:inline">{t('table.filters')}</span>
-							{hasFilter && !filterOpen && (
-								<span className="absolute -top-1 -end-1 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] font-black text-white ring-2 ring-white bg-[var(--color-secondary-500)]">✦</span>
-							)}
-							<motion.span animate={{ rotate: filterOpen ? 180 : 0 }} transition={{ duration: 0.18 }}>
-								<ChevronDown className="h-3 w-3" />
-							</motion.span>
-						</motion.button>
+							{t('table.filters')}
+						</button>
 
 
 					</div>
@@ -1056,7 +1018,7 @@ const hasFilter = !!(
 					<AnimatePresence mode="wait">
 						{loading ? (
 							<motion.div key="skel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-								className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
+								className="grid grid-cols-2 gap-2.5">
 								{Array.from({ length: PER_PAGE }).map((_, i) => <SkeletonCard key={i} />)}
 							</motion.div>
 						) : recipes.length === 0 ? (
@@ -1066,12 +1028,12 @@ const hasFilter = !!(
 								initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
 								transition={{ duration: 0.18 }}>
 
-								{featuredRecipe && <FeaturedBanner recipe={featuredRecipe} onOpen={setSelected} t={t} tMt={tMt} />}
+								{featuredRecipe && <FeaturedBanner recipe={featuredRecipe} onOpen={setSelected} t={t} favorite={favorites.has(featuredRecipe.id)} onToggleFav={toggleFav} />}
 
 								{gridRecipes.length > 0 && (
-									<div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
-										{gridRecipes.map((r, i) => (
-											<RecipeCard key={r.id} recipe={r} idx={i} onOpen={setSelected} t={t} tMt={tMt} />
+									<div className="grid grid-cols-2 gap-2.5">
+										{gridRecipes.map(r => (
+											<RecipeCard key={r.id} recipe={r} onOpen={setSelected} t={t} tMt={tMt} favorite={favorites.has(r.id)} onToggleFav={toggleFav} />
 										))}
 									</div>
 								)}

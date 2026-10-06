@@ -14277,15 +14277,17 @@ function WhatsAppWorkspaceContent() {
 				if (['connecting', 'qr_pending'].includes(status)) {
 					return;
 				}
+				if (linkModeRef.current === 'phone') return;
 				const hadSession = Boolean(
 					selectedAccount.lastConnectedAt ||
 						selectedAccount.initialHydratedAt ||
 						selectedAccount.phoneNumber,
 				);
-				if (!hadSession || linkModeRef.current === 'phone') {
-					return;
-				}
-				const { data } = await api.post(`/whatsapp/accounts/${id}/connect`, {});
+				setAccountBusy(true);
+				const { data } = await api.post(
+					`/whatsapp/accounts/${id}/connect`,
+					hadSession ? {} : { mode: 'qr' },
+				);
 				if (data.qr) {
 					setQr(data.qr);
 					setLinkMode('qr');
@@ -14300,7 +14302,10 @@ function WhatsAppWorkspaceContent() {
 			} catch {
 				await loadAccounts().catch(() => { });
 			} finally {
-				if (accountIdRef.current === id) setSessionProbeDone(true);
+				if (accountIdRef.current === id) {
+					setAccountBusy(false);
+					setSessionProbeDone(true);
+				}
 			}
 		};
 		void bootstrapSession();

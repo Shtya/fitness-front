@@ -8,10 +8,10 @@ import {
   LineChart, Line,
 } from 'recharts';
 import {
-  Dumbbell, Utensils, Bell, TrendingUp, Trophy, Target,
-  ArrowUpRight, Flame, Star, Shield, Sparkles, RefreshCw,
-  AlertCircle, Heart, Zap, User, CheckCircle2,
-  Activity, Weight,
+  Dumbbell, Utensils, TrendingUp, Trophy, Target,
+  Flame, Star, Shield, Sparkles, RefreshCw,
+  AlertCircle, Zap, User, CheckCircle2, Award, Calendar,
+  Activity, Weight, BarChart3,
 } from 'lucide-react';
 
 /* ════════════════════════════════════════════════════════
@@ -136,13 +136,13 @@ function useCounter(target, duration = 1100, active = false) {
 /* ════════════════════════════════════════════════════════
    DESIGN TOKENS — exact match to admin dashboard
 ════════════════════════════════════════════════════════ */
-const P500 = '#6366f1';
-const P600 = '#4f46e5';
-const P100 = '#e0e7ff';
-const P50  = '#eef2ff';
-const S500 = '#a855f7';
-const S100 = '#f3e8ff';
-const S50  = '#faf5ff';
+const P500 = 'var(--color-primary-500)';
+const P600 = 'var(--color-primary-600)';
+const P100 = 'var(--color-primary-100)';
+const P50  = 'var(--color-primary-50)';
+const S500 = 'var(--color-secondary-500)';
+const S100 = 'var(--color-secondary-100)';
+const S50  = 'var(--color-secondary-50)';
 
 const TIER_CFG = {
   basic:    { color: P500,      bg: P50,       label: 'basic',    Icon: Shield   },
@@ -155,7 +155,7 @@ const TIER_CFG = {
 ════════════════════════════════════════════════════════ */
 const Card = ({ children, className = '', style = {} }) => (
   <div
-    className={`bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`}
+    className={`rounded-3xl border border-white/85 bg-[#eef2f9] shadow-[5px_5px_8px_rgba(100,116,139,0.32)] ${className}`}
     style={style}
   >
     {children}
@@ -168,24 +168,24 @@ const CardHeader = ({
   iconColor = 'text-[var(--color-primary-500)]',
   right,
 }) => (
-  <div className="flex items-start justify-between gap-3 mb-5">
-    <div className="flex items-center gap-3">
-      <div className={`p-2 rounded-xl ${iconBg} flex-shrink-0`}>
-        <Icon size={16} className={iconColor} />
+  <div className="mb-4">
+    <div className="flex items-center gap-2.5">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-white/80 bg-[#eef2f9] text-(--color-primary-600) shadow-[3px_3px_6px_rgba(100,116,139,0.18)]">
+        <Icon size={16} strokeWidth={2} />
       </div>
-      <div>
-        <p className="text-sm font-semibold text-slate-800 md: leading-tight">{title}</p>
-        {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+      <div className="min-w-0">
+        <p className="text-sm font-bold leading-tight text-slate-800">{title}</p>
+        {subtitle && <p className="mt-0.5 text-[11px] text-slate-400">{subtitle}</p>}
       </div>
     </div>
-    {right && <div className="flex-shrink-0">{right}</div>}
+    {right && <div className="mt-3 [&>div]:grid [&>div]:w-full [&>div]:grid-cols-3 [&>div]:gap-2">{right}</div>}
   </div>
 );
 
 const StatBadge = ({ value, label, color = P500 }) => (
-  <div className="text-center px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+  <div className="rounded-2xl border border-white/80 bg-[#eef2f9] px-2 py-2 text-center shadow-[3px_3px_6px_rgba(100,116,139,0.18)]">
     <p className="text-base font-bold md: leading-none tabular-nums" style={{ color }}>{value}</p>
-    <p className="text-[10px] text-slate-400 mt-1 whitespace-nowrap font-medium">{label}</p>
+    <p className="mt-1 line-clamp-2 text-[9px] font-medium text-slate-400">{label}</p>
   </div>
 );
 
@@ -195,23 +195,16 @@ const MetricCard = ({ icon: Icon, label, value, sub, accentColor, accentBg, dela
   return (
     <div
       ref={ref}
-      className={`
-        bg-white rounded-2xl border border-slate-200/80 p-5
-        hover:border-slate-300 hover:shadow-md
-        transition-all duration-500 cursor-default group
-        ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}
-      `}
+      className={`flex flex-col items-center rounded-2xl border border-white/85 bg-[#eef2f9] px-1.5 py-3 text-center shadow-[3px_3px_6px_rgba(100,116,139,0.22)] ${inView ? 'opacity-100' : 'opacity-0'}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className={`p-2 rounded-xl ${accentBg}`}>
-          <Icon size={15} style={{ color: accentColor }} />
-        </div>
-        <ArrowUpRight size={13} className="text-slate-200 group-hover:text-slate-300 transition-colors" />
+      <div className={`mb-1.5 grid h-[30px] w-[30px] place-items-center rounded-xl ${accentBg}`}>
+        <Icon size={14} style={{ color: accentColor }} />
       </div>
-      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-3xl font-bold tabular-nums md: leading-none text-slate-900">{count.toLocaleString()}</p>
-      {sub && <p className="text-[11px] text-slate-400 mt-2">{sub}</p>}
+      <p className="text-sm font-black tabular-nums leading-none" style={{ color: accentColor }}>
+        {sub === '%' ? `${count}%` : count.toLocaleString()}
+      </p>
+      <p className="mt-1 line-clamp-2 text-[8px] font-medium text-slate-400">{label}</p>
     </div>
   );
 };
@@ -256,85 +249,58 @@ const HeroBanner = ({ overview, t }) => {
 
   return (
     <div
-      className="relative rounded-2xl overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, var(--color-gradient-from) 0%, var(--color-gradient-via) 55%, var(--color-gradient-to) 100%)' }}
+      className="relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-e-[rgba(15,34,128,0.35)] border-b-[rgba(15,34,128,0.45)] shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]"
+      style={{ background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700), var(--color-primary-800))' }}
     >
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.04]"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(255,255,255,1) 31px,rgba(255,255,255,1) 32px),' +
-            'repeating-linear-gradient(90deg,transparent,transparent 31px,rgba(255,255,255,1) 31px,rgba(255,255,255,1) 32px)',
-        }}
-      />
-      <div className="relative p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          {/* Left */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-50" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-              </span>
-              <span className="text-white/60 text-[10px] font-semibold uppercase tracking-[0.2em]">
-                {t('liveLabel')}
-              </span>
+      <div className="pointer-events-none absolute -end-12 -top-16 h-[220px] w-[220px] rounded-full bg-white/5" />
+      <div className="relative p-5">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55">{t('liveLabel')}</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white md: leading-tight tracking-tight">
-              {user.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
-                <TierIcon size={11} style={{ color: tier.color === '#f59e0b' ? '#fcd34d' : 'white' }} />
-                <span className="text-white text-[11px] font-semibold capitalize">
-                  {t(`membership.${tier.label}`)}
-                </span>
+            <h1 className="truncate text-2xl font-black leading-7 text-white">{user.name}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2.5 py-1">
+                <TierIcon size={10} className="text-white" />
+                <span className="text-[10px] font-semibold text-white">{t(`membership.${tier.label}`)}</span>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
-                <Star size={11} className="text-yellow-300" />
-                <span className="text-white text-[11px] font-semibold">{user.points} {t('hero.points')}</span>
+              <div className="flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2.5 py-1">
+                <Star size={10} className="fill-amber-200 text-amber-200" />
+                <span className="text-[10px] font-semibold text-white">{user.points} {t('hero.points')}</span>
               </div>
             </div>
-            <p className="text-white/50 text-xs mt-2 flex items-center gap-1.5">
-              <User size={11} />
+            <p className="mt-2 flex items-center gap-1 text-[10px] text-white/45">
+              <User size={10} />
               {t('hero.coachLabel')}: {user.coach?.name}
             </p>
           </div>
-
-          {/* Right: ring + pills */}
-          <div className="flex items-center gap-5">
-            <div className="relative w-20 h-20 flex-shrink-0">
-              <svg width="80" height="80" className="-rotate-90 absolute inset-0">
-                <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="6" />
-                <circle
-                  cx="40" cy="40" r="34" fill="none" stroke="white" strokeWidth="6"
-                  strokeLinecap="round"
-                  strokeDasharray={circ}
-                  strokeDashoffset={circ * (1 - (filled ? pct : 0) / 100)}
-                  style={{ transition: 'stroke-dashoffset 1.3s cubic-bezier(.16,1,.3,1)' }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-white text-lg font-bold md: leading-none">{pct}%</span>
-                <span className="text-white/50 text-[9px] mt-0.5 uppercase tracking-wide text-center md: leading-tight">
-                  {t('hero.compliance')}
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {pills.map((p, i) => (
-                <div key={i}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-xl px-3 py-2 cursor-default"
-                >
-                  <p.icon size={12} className="text-white/60 flex-shrink-0" />
-                  <div>
-                    <p className="text-white text-sm font-bold md: leading-none">{p.val}</p>
-                    <p className="text-white/50 text-[10px] md: leading-tight mt-0.5">{p.label}</p>
-                  </div>
-                </div>
-              ))}
+          <div className="relative h-[88px] w-[88px] shrink-0">
+            <svg width="88" height="88" className="-rotate-90">
+              <circle cx="44" cy="44" r="34" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="7" />
+              <circle
+                cx="44" cy="44" r="34" fill="none" stroke="white" strokeWidth="7"
+                strokeLinecap="round"
+                strokeDasharray={circ}
+                strokeDashoffset={circ * (1 - (filled ? pct : 0) / 100)}
+                style={{ transition: 'stroke-dashoffset 1.3s cubic-bezier(.16,1,.3,1)' }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-[17px] font-black leading-none text-white">{pct}%</span>
+              <span className="mt-0.5 text-center text-[7px] font-semibold uppercase tracking-wide text-white/50">{t('hero.compliance')}</span>
             </div>
           </div>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {pills.map((p, i) => (
+            <div key={i} className="flex flex-col items-center gap-1 rounded-2xl border border-white/15 bg-white/10 px-1 py-3">
+              <p.icon size={12} className="text-white/65" />
+              <p className="text-[13px] font-bold leading-none text-white">{p.val}</p>
+              <p className="line-clamp-2 text-center text-[8px] text-white/45">{p.label}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -380,7 +346,7 @@ const ActivityChart = ({ exerciseData, mealData, t, locale }) => {
             </div>
           }
         />
-        <ResponsiveContainer width="100%" height={230}>
+        <ResponsiveContainer width="100%" height={120}>
           <AreaChart data={combined} margin={{ top: 4, right: 2, bottom: 0, left: -22 }}>
             <defs>
               {series.map(s => (
@@ -471,7 +437,7 @@ const MealLogsBar = ({ data, t, locale }) => {
             </div>
           }
         />
-        <ResponsiveContainer width="100%" height={190}>
+        <ResponsiveContainer width="100%" height={120}>
           <BarChart data={formatted} margin={{ top: 4, right: 2, bottom: 0, left: -22 }} barSize={18}>
             <defs>
               <linearGradient id="cliMlGrad" x1="0" y1="0" x2="0" y2="1">
@@ -598,7 +564,7 @@ const WeightChart = ({ data, measurements, t, locale }) => {
             </div>
           }
         />
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={120}>
           <LineChart data={chartData} margin={{ top: 4, right: 2, bottom: 0, left: -22 }}>
             <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
             <XAxis dataKey="date" tickFormatter={(d) => fmtDate(d, locale)}
@@ -625,7 +591,7 @@ const ExerciseHeatmap = ({ data, t }) => {
   const peak        = Math.max(...data.map(d => n(d.value)));
   const activeDays  = data.filter(d => n(d.value) > 0).length;
   const consistency = Math.round((activeDays / data.length) * 100);
-  const shades      = ['#f1f5f9', P100, '#a5b4fc', P500, '#3730a3'];
+  const shades      = ['#f1f5f9', P100, '#93c5fd', P500, '#1e3a8a'];
 
   return (
     <div ref={ref}
@@ -832,8 +798,8 @@ const PageHeader = ({ loading, onRefresh, isPreview, t }) => (
    LOADING OVERLAY
 ════════════════════════════════════════════════════════ */
 const LoadingOverlay = ({ t }) => (
-  <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-10 flex flex-col items-center gap-5">
+  <div className="flex items-center justify-center py-16">
+    <div className="flex flex-col items-center gap-4 rounded-3xl border border-white/85 bg-[#eef2f9] px-8 py-8 shadow-[5px_5px_8px_rgba(100,116,139,0.28)]">
       <div className="relative w-12 h-12">
         <div className="absolute inset-0 rounded-full border-[3px] animate-spin"
           style={{ borderColor: `${P500} transparent transparent transparent` }} />
@@ -844,6 +810,87 @@ const LoadingOverlay = ({ t }) => (
     </div>
   </div>
 );
+
+function StreakBanner({ overview, t }) {
+  const workouts = Math.min(n(overview.weeklySummary?.workouts), 7);
+  const total = n(overview.workout?.totalSessions);
+  return (
+    <div className="rounded-3xl border border-white/85 bg-gradient-to-br from-[var(--color-primary-50)] via-[#fff7ed] to-[#fffbeb] p-4 shadow-[5px_5px_8px_rgba(100,116,139,0.28)]">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-full border border-white/80 bg-[#fff7ed] shadow-[3px_3px_6px_rgba(100,116,139,0.18)]">
+            <Flame size={22} className="text-amber-500" />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold text-amber-800">{t('streak.thisWeek')}</p>
+            <p className="text-[26px] font-black leading-[30px] text-amber-600">
+              {workouts} <span className="text-[13px] font-medium text-amber-700">{t('streak.sessions')}</span>
+            </p>
+          </div>
+        </div>
+        <div className="text-end">
+          <p className="text-[10px] font-medium text-amber-800">{t('streak.allTime')}</p>
+          <p className="text-[30px] font-black leading-none text-(--color-primary-600)">{total}</p>
+          <p className="mt-1 flex items-center justify-end gap-1 text-[9px] text-slate-400">
+            <Award size={10} />
+            {t('streak.totalSessions')}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 flex gap-1">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <span key={i} className={`h-1.5 flex-1 rounded-full ${i < workouts ? 'bg-amber-500' : 'bg-amber-200'}`} />
+        ))}
+      </div>
+      <div className="mt-1 flex justify-between text-[8px] font-medium text-amber-800">
+        <span>{t('streak.weekStart')}</span>
+        <span>{t('streak.weekEnd')}</span>
+      </div>
+    </div>
+  );
+}
+
+function MiniRing({ pct, color, label, sub, icon: Icon }) {
+  const r = 32;
+  const circ = 2 * Math.PI * r;
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
+      <div className="relative h-[88px] w-[88px]">
+        <svg width="88" height="88" className="-rotate-90">
+          <circle cx="44" cy="44" r={r} fill="none" stroke="#e2e8f0" strokeWidth="7" />
+          <circle
+            cx="44" cy="44" r={r} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={circ} strokeDashoffset={circ * (1 - Math.min(pct, 100) / 100)}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-2">
+          <span className="text-sm font-black leading-none" style={{ color }}>{Math.round(pct)}%</span>
+          <span className="mt-1 line-clamp-2 text-center text-[8px] text-slate-400">{label}</span>
+        </div>
+      </div>
+      <p className="flex items-center gap-1 text-center text-[9px] text-slate-500">
+        <Icon size={10} style={{ color }} />
+        {sub}
+      </p>
+    </div>
+  );
+}
+
+function DualProgress({ overview, t }) {
+  const workoutPct = Math.min(n(overview.workout?.complianceRate), 100);
+  const nutritionPct = Math.round((n(overview.nutrition?.avgAdherence) / 5) * 100);
+  const weeklyPct = Math.min(n(overview.weeklySummary?.workouts) * 14.3, 100);
+  return (
+    <Card className="p-5">
+      <CardHeader icon={Target} title={t('progressRings')} subtitle={t('progressRingsSub')} />
+      <div className="flex items-start justify-between gap-1">
+        <MiniRing pct={workoutPct} color={P500} label={t('workout.title')} icon={Dumbbell} sub={`${overview.workout?.totalSessions || 0} ${t('kpi.totalSessions')}`} />
+        <MiniRing pct={nutritionPct} color={S500} label={t('nutrition.title')} icon={Utensils} sub={`${overview.nutrition?.totalMeals || 0} ${t('charts.mealLogs')}`} />
+        <MiniRing pct={weeklyPct} color="#10b981" label={t('hero.weeklyWorkouts')} icon={Calendar} sub={t('kpi.thisWeek')} />
+      </div>
+    </Card>
+  );
+}
 
 /* ════════════════════════════════════════════════════════
    MAIN PAGE
@@ -906,25 +953,64 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
 
   useEffect(() => { if (!PREVIEW_MODE) fetchData(); }, []);
 
+  useEffect(() => {
+    const shell = document.querySelector('.dashboard-icy');
+    const body = document.getElementById('body');
+    const dark = document.documentElement.classList.contains('dark')
+      || document.documentElement.getAttribute('data-theme-mode') === 'dark';
+    const color = dark ? '#0b1220' : '#ffffff';
+    shell?.style.setProperty('--gm-bg-image', 'none', 'important');
+    shell?.style.setProperty('background-image', 'none', 'important');
+    shell?.style.setProperty('background-color', color, 'important');
+    body?.style.setProperty('background-image', 'none', 'important');
+    body?.style.setProperty('background-color', color, 'important');
+    return () => {
+      shell?.style.removeProperty('--gm-bg-image');
+      shell?.style.removeProperty('background-image');
+      shell?.style.removeProperty('background-color');
+      body?.style.removeProperty('background-image');
+      body?.style.removeProperty('background-color');
+    };
+  }, []);
+
   const { overview, timeline } = data || {};
 
   const metricCards = overview ? [
-    { icon: Dumbbell, label: t('kpi.totalSessions'),   value: overview.workout.totalSessions,      sub: t('kpi.periodSub'),    accentColor: P500,       accentBg: 'bg-[var(--color-primary-50)]',   delay: 0   },
-    { icon: Trophy,   label: t('kpi.personalRecords'), value: overview.workout.personalRecords,    sub: t('kpi.allTime'),      accentColor: '#f59e0b',  accentBg: 'bg-amber-50',                    delay: 60  },
-    { icon: Zap,      label: t('kpi.totalVolume'),     value: overview.workout.totalVolume,        sub: 'kg',                  accentColor: P600,       accentBg: 'bg-[var(--color-primary-50)]',   delay: 120 },
-    { icon: Utensils, label: t('kpi.totalMeals'),      value: overview.nutrition.totalMeals,       sub: t('kpi.periodSub'),    accentColor: S500,       accentBg: 'bg-[var(--color-secondary-50)]', delay: 180 },
-    { icon: Heart,    label: t('kpi.perfectDays'),     value: overview.nutrition.perfectDays,      sub: t('kpi.nutritionSub'), accentColor: '#10b981',  accentBg: 'bg-emerald-50',                  delay: 240 },
-    { icon: Target,   label: t('kpi.compliance'),      value: overview.workout.complianceRate,     sub: '%',                   accentColor: P500,       accentBg: 'bg-[var(--color-primary-50)]',   delay: 300 },
-    { icon: Flame,    label: t('kpi.weeklyWorkouts'),  value: overview.weeklySummary.workouts,     sub: t('kpi.thisWeek'),     accentColor: '#f97316',  accentBg: 'bg-orange-50',                   delay: 360 },
-    { icon: Star,     label: t('kpi.points'),          value: overview.user.points,                sub: t('kpi.totalPoints'),  accentColor: '#f59e0b',  accentBg: 'bg-amber-50',                    delay: 420 },
+    { icon: Dumbbell, label: t('kpi.totalSessions'),   value: overview.workout.totalSessions,   accentColor: P500,      accentBg: 'bg-[var(--color-primary-50)]' },
+    { icon: Trophy,   label: t('kpi.personalRecords'), value: overview.workout.personalRecords, accentColor: '#d97706', accentBg: 'bg-amber-50' },
+    { icon: Target,   label: t('kpi.compliance'),      value: overview.workout.complianceRate,  sub: '%', accentColor: '#10b981', accentBg: 'bg-emerald-50' },
+    { icon: Zap,      label: 'kg',                     value: overview.workout.totalVolume,     accentColor: S500,      accentBg: 'bg-[var(--color-secondary-50)]' },
   ] : [];
 
   return (
-    <div  className="min-h-screen ">
-
-      
-
-      <div className=" space-y-5">
+    <div data-plain-page="1" className="report-phone -mx-[var(--app-gutter)] min-h-full bg-white px-[var(--app-gutter)] pt-1 dark:bg-[#0b1220]">
+      <div className="mx-auto w-full max-w-[440px] space-y-4">
+        <div className="m-[5px] rounded-3xl shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]">
+          <div
+            className="relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-e-[rgba(15,34,128,0.35)] border-b-[rgba(15,34,128,0.45)]"
+            style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), var(--color-gradient-via))' }}
+          >
+            <div className="pointer-events-none absolute -start-16 -top-10 h-[280px] w-[280px] rounded-full bg-white/[0.06]" />
+            <div className="pointer-events-none absolute -end-12 -bottom-10 h-[200px] w-[200px] rounded-full bg-white/[0.04]" />
+            <div className="relative flex items-center gap-3 p-4">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white">
+                <BarChart3 size={20} strokeWidth={2} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate text-xl font-black leading-6 tracking-[-0.3px] text-white">{t('title')}</h1>
+                <p className="mt-0.5 truncate text-[10px] font-medium text-white/55">{t('subtitle')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={fetchData}
+                disabled={loading || PREVIEW_MODE}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white disabled:opacity-55"
+              >
+                <RefreshCw size={18} strokeWidth={2} className={loading ? 'animate-spin' : ''} />
+              </button>
+            </div>
+          </div>
+        </div>
  
         {/* ERROR */}
         {err && (
@@ -937,16 +1023,18 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
         {/* HERO */}
         {overview && <HeroBanner overview={overview} t={t} />}
 
-        {/* 8 KPI CARDS */}
         {overview && (
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          <div className="grid grid-cols-4 gap-2">
             {metricCards.map((c, i) => <MetricCard key={i} {...c} />)}
           </div>
         )}
 
+        {overview && <StreakBanner overview={overview} t={t} />}
+        {overview && <DualProgress overview={overview} t={t} />}
+
         {/* ROW 2: Activity chart (2/3) + Workout stats (1/3) */}
         {timeline && overview && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-4">
             <ActivityChart
               exerciseData={timeline.exerciseVolumeByDay}
               mealData={timeline.mealLogsByDay}
@@ -958,7 +1046,7 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
 
         {/* ROW 3: Meal logs bar (2/3) + Nutrition card (1/3) */}
         {timeline && overview && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-4">
             <MealLogsBar data={timeline.mealLogsByDay} t={t} locale={locale} />
             <NutritionCard nutrition={overview.nutrition} t={t} />
           </div>
@@ -966,7 +1054,7 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
 
         {/* ROW 4: Weight chart (2/3) + Plans & measurements (1/3) */}
         {timeline && overview && timeline.weightByDay.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-4">
             <WeightChart
               data={timeline.weightByDay}
               measurements={overview.measurements}
@@ -978,7 +1066,7 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
 
         {/* ROW 5: Exercise heatmap (1/2) + Recent workouts (1/2) */}
         {timeline && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
             <ExerciseHeatmap data={timeline.exerciseVolumeByDay} t={t} />
             <RecentWorkouts  data={timeline.recentWorkouts}      t={t} locale={locale} />
           </div>

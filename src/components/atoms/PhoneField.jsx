@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
-import Select from '@/components/atoms/Select';
-import { Phone as PhoneIcon, AlertCircle } from 'lucide-react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { Phone as PhoneIcon, AlertCircle, ChevronDown, Search } from 'lucide-react';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { readGmTokens } from '@/utils/gmTokens';
 
 // Extended metadata per country code
 const COUNTRY_META = {
@@ -150,7 +151,14 @@ export default function PhoneField({
 	clearable = true,
 	className = ''
 }) {
-	const raw = value || '';
+	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState('');
+	const [focused, setFocused] = useState(false);
+	const btnRef = useRef(null);
+	const menuRef = useRef(null);
+	const [pos, setPos] = useState({ top: 0, left: 0, width: 280 });
+	const [tokens, setTokens] = useState({});
+	const raw = String(value || '').trim();
 
 	const { countryCode, number } = useMemo(() => {
 		if (!raw) return { countryCode: '+20', number: '' };
@@ -432,88 +440,154 @@ export default function PhoneField({
 
 	const handleNumberChange = e => {
 		const num = e.target.value;
-		const next = num ? `${countryCode} ${num}` : countryCode;
+		const next = num ? `${countryCode} ${num}` : '';
 		onChange && onChange(next);
 		applyValidation(countryCode, num);
 	};
 
 	const hasError = error && error !== 'users';
+	const floated = focused || Boolean(number) || open;
+	const selectedCountry = countries.find((c) => c.id === countryCode) || { id: countryCode, label: countryCode };
+	const filtered = query
+		? countries.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()) || c.id.includes(query))
+		: countries;
+
+	const place = useCallback(() => {
+		const el = btnRef.current;
+		if (!el) return;
+		const rect = el.getBoundingClientRect();
+		const pad = 8;
+		const width = Math.max(280, rect.width);
+		let left = Math.min(Math.max(pad, rect.left), window.innerWidth - width - pad);
+		let top = rect.bottom + 6;
+		setPos({ top, left, width });
+		setTokens(readGmTokens(el));
+	}, []);
+
+	useEffect(() => {
+		if (!open) return;
+		place();
+		const onWin = () => place();
+		const onDoc = (e) => {
+			if (btnRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+			setOpen(false);
+		};
+		window.addEventListener('resize', onWin);
+		window.addEventListener('scroll', onWin, true);
+		document.addEventListener('mousedown', onDoc);
+		return () => {
+			window.removeEventListener('resize', onWin);
+			window.removeEventListener('scroll', onWin, true);
+			document.removeEventListener('mousedown', onDoc);
+		};
+	}, [open, place]);
 
 	return (
-		<div className={`w-full relative ${className}`}>
-			{label && (
-				<label className='mb-1.5 block text-sm font-medium text-slate-700'>
-					{label} {required && <span className='text-rose-500'>*</span>}
-				</label>
-			)}
-
-			<div className='flex gap-2 rtl:flex-row-reverse'>
-				<div className='min-w-[110px]'>
-					<Select
-
-						placeholder='+20'
-						clearable={false}
-						// searchable={false} 
-						options={countries}
-						value={countryCode}
-						onChange={handleCountryChange}
-						disabled={disabled}
-					/>
-				</div>
-
-				{/* Phone number input with enhanced styling */}
-				<div
-					dir='ltr'
-					className='relative flex items-center rounded-lg border bg-white transition-all duration-200 flex-1 group'
-					style={
-						hasError
-							? { borderColor: '#f43f5e', boxShadow: '0 0 0 3px rgba(244, 63, 94, 0.1)' }
-							: disabled
-								? { borderColor: '#e2e8f0', opacity: 0.6, cursor: 'not-allowed' }
-								: { borderColor: '#cbd5e1' }
-					}>
-					{!hasError && <PhoneIcon
-						className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors'
-						style={{ color: hasError ? '#f43f5e' : '#94a3b8' }}
-					/>}
-
-					<input
-						type='tel'
-						placeholder={dynamicPlaceholder}
-						value={number}
-						onChange={handleNumberChange}
-						disabled={disabled}
-						className='h-[40px] w-full rounded-lg px-10 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 bg-transparent disabled:cursor-not-allowed'
-						aria-invalid={!!hasError}
-						style={{
-							paddingLeft: 'calc(2.5rem)',
-							paddingRight: '1rem',
-						}}
-					/>
-
-					{hasError && (
-						<AlertCircle
-							className='absolute rtl:left-3 ltr:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-500'
-						/>
-					)}
-
-					{/* Focus ring effect */}
-					<div
-						className='absolute inset-0 rounded-lg pointer-events-none transition-all duration-200 opacity-0 group-focus-within:opacity-100'
-						style={{
-							boxShadow: hasError
-								? '0 0 0 3px rgba(244, 63, 94, 0.1)'
-								: '0 0 0 3px var(--color-primary-100)',
-							borderColor: hasError ? '#f43f5e' : 'var(--color-primary-400)',
-						}}
-					/>
-				</div>
+		<div className={`relative w-full ${className}`}>
+			<div
+				className='relative flex h-11 items-center rounded-[11px] border bg-[color-mix(in_srgb,var(--gm-paper,#fff)_62%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition-all duration-200'
+				style={
+					hasError
+						? { borderColor: '#f43f5e' }
+						: focused || open
+							? { borderColor: 'var(--color-primary-500)', boxShadow: '0 0 0 3px color-mix(in srgb, var(--color-primary-500) 12%, transparent), inset 0 1px 0 rgba(255,255,255,0.8)' }
+							: { borderColor: 'var(--gm-line, rgba(92,143,211,0.22))' }
+				}
+			>
+				<button
+					ref={btnRef}
+					type="button"
+					disabled={disabled}
+					onClick={() => !disabled && setOpen((v) => !v)}
+					className="ms-1 flex h-8 shrink-0 items-center gap-1 rounded-[8px] px-2 text-[12px] font-semibold text-[var(--gm-ink-soft)] hover:bg-[color-mix(in_srgb,var(--color-primary-50)_70%,transparent)]"
+				>
+					<span className="truncate max-w-[72px]">{selectedCountry.label}</span>
+					<ChevronDown className={`size-3.5 text-[var(--gm-muted)] transition-transform ${open ? 'rotate-180' : ''}`} />
+				</button>
+				<span className="h-5 w-px bg-[var(--gm-line)]" />
+				<PhoneIcon className="mx-2 size-4 shrink-0 text-[var(--gm-muted)]" />
+				<input
+					type="tel"
+					dir="ltr"
+					value={number}
+					disabled={disabled}
+					placeholder={floated ? dynamicPlaceholder : ' '}
+					onChange={handleNumberChange}
+					onFocus={() => setFocused(true)}
+					onBlur={() => setFocused(false)}
+					aria-invalid={!!hasError}
+					className="h-full min-w-0 flex-1 bg-transparent pe-3 text-[13px] text-[var(--gm-ink)] outline-none placeholder:text-[var(--gm-faint)] disabled:cursor-not-allowed"
+				/>
+				{label ? (
+					<span
+						className={`pointer-events-none absolute z-[1] px-1 transition-all duration-200 ${
+							floated
+								? 'top-0 start-24 -translate-y-1/2 rounded-md bg-[var(--gm-paper,#fff)] text-[11px] font-medium text-[var(--gm-muted)]'
+								: 'top-1/2 start-[7.5rem] -translate-y-1/2 text-[13px] text-[var(--gm-faint)]'
+						} ${hasError && floated ? 'text-rose-500' : ''}`}
+					>
+						{label}
+						{required ? <span className="ms-0.5 text-rose-500">*</span> : null}
+					</span>
+				) : null}
 			</div>
 
+			{open && typeof document !== 'undefined'
+				? createPortal(
+					<div
+						ref={menuRef}
+						className="overflow-hidden rounded-[12px] border p-1.5"
+						style={{
+							...tokens,
+							position: 'fixed',
+							top: pos.top,
+							left: pos.left,
+							width: pos.width,
+							zIndex: 1200000,
+							background: 'var(--gm-paper, #fff)',
+							borderColor: 'var(--gm-line)',
+							boxShadow: 'var(--gm-shadow-3)',
+						}}
+					>
+						<div className="mb-1.5 flex h-9 items-center gap-2 rounded-[9px] border px-2" style={{ borderColor: 'var(--gm-line)', background: 'var(--gm-paper)' }}>
+							<Search className="size-3.5 text-[var(--gm-muted)]" />
+							<input
+								autoFocus
+								value={query}
+								onChange={(e) => setQuery(e.target.value)}
+								placeholder="Search country"
+								className="h-full w-full bg-transparent text-[12px] outline-none"
+							/>
+						</div>
+						<div className="max-h-56 overflow-auto">
+							{filtered.map((opt) => (
+								<button
+									key={`${opt.id}-${opt.label}`}
+									type="button"
+									onClick={() => {
+										handleCountryChange(opt.id);
+										setOpen(false);
+										setQuery('');
+									}}
+									className={`flex w-full items-center rounded-[9px] px-3 py-2 text-start text-[13px] ${
+										opt.id === countryCode
+											? 'bg-[color-mix(in_srgb,var(--color-primary-100)_80%,transparent)] font-semibold text-[var(--color-primary-700)]'
+											: 'text-[var(--gm-ink-soft)] hover:bg-[color-mix(in_srgb,var(--color-primary-50)_80%,transparent)]'
+									}`}
+								>
+									{opt.label}
+								</button>
+							))}
+						</div>
+					</div>,
+					document.body,
+				)
+				: null}
+
 			{hasError && (
-				<div className='mt-1.5 flex items-center gap-1.5'>
-					<AlertCircle className='w-3.5 h-3.5 text-rose-600 flex-shrink-0' />
-					<p className='text-xs text-rose-600'>{error}</p>
+				<div className="mt-1.5 flex items-center gap-1.5">
+					<AlertCircle className="size-3.5 shrink-0 text-rose-600" />
+					<p className="text-xs text-rose-600">{error}</p>
 				</div>
 			)}
 		</div>

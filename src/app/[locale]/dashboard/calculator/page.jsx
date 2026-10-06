@@ -1,30 +1,28 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 
-// ✅ atoms
-import Button from '@/components/atoms/Button';
-import Input from '@/components/atoms/Input';
-import Select from '@/components/atoms/Select';
-
-// ✅ header/cards
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
-import { StatCard } from '@/components/dashboard/ui/UI';
-
-// Icons
 import {
   Flame,
-  Apple,
   Calculator,
-  Gauge,
-  Ruler,
   Info,
   Search,
-  Trash,
-  Sparkles,
-  BadgeCheck,
-  RefreshCcw,
+  RefreshCw,
+  User,
+  Scale,
+  TrendingUp,
+  BarChart3,
+  Dumbbell,
+  Target,
+  Zap,
+  Plus,
+  Minus,
+  Trash2,
+  UtensilsCrossed,
+  Leaf,
+  X,
+  ChevronDown,
 } from 'lucide-react';
 
 import { DEFAULT_FOODS } from './FoodCalorieDB';
@@ -91,135 +89,131 @@ function bmrMifflin({ sex, weightKg, heightCm, age }) {
 ---------------------------------------------- */
 const cx = (...a) => a.filter(Boolean).join(' ');
 
-function Surface({ className = '', children }) {
-  return (
-    <div
-      className={cx(
-        'relative overflow-hidden rounded-lg border bg-white/80 backdrop-blur-xl shadow-sm',
-        className,
-      )}
-      style={{
-        borderColor: 'var(--color-primary-200)',
-      }}
-    >
-      {/* soft top glow */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-24"
-        style={{
-          background:
-            'linear-gradient(180deg, var(--color-primary-50) 0%, rgba(255,255,255,0) 75%)',
-        }}
-      />
-      <div className="relative">{children}</div>
-    </div>
-  );
-}
+const CARD = 'overflow-hidden rounded-3xl border border-white/85 bg-[#eef2f9] shadow-[5px_5px_8px_rgba(100,116,139,0.32)]';
 
-function SectionHeader({ icon: Icon, title, subtitle }) {
+function PhoneCard({ icon: Icon, title, subtitle, accent = '#2563eb', children, action }) {
   return (
-    <div
-      className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-4 sm:px-6"
-      style={{
-        borderColor: 'rgba(226,232,240,0.9)',
-        background: 'rgba(255,255,255,0.78)',
-        backdropFilter: 'blur(10px)',
-      }}
-    >
-      <div className="flex items-center gap-3">
+    <section className={CARD}>
+      <div className="flex items-center gap-3 px-4 pb-2 pt-4">
         <div
-          className="grid h-10 w-10 place-items-center rounded-lg border shadow-sm"
-          style={{
-            borderColor: 'var(--color-primary-200)',
-            background:
-              'linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-secondary-50) 100%)',
-          }}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border"
+          style={{ backgroundColor: `${accent}14`, borderColor: `${accent}28`, color: accent }}
         >
-          <Icon className="h-5 w-5" style={{ color: 'var(--color-primary-600)' }} />
+          <Icon size={18} strokeWidth={2} />
         </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="truncate text-base font-semibold text-slate-900 sm:text-lg">{title}</h2>
-            <Sparkles className="h-4 w-4" style={{ color: 'var(--color-secondary-400)' }} />
-          </div>
-          {subtitle ? <p className="mt-0.5 text-xs text-slate-600 sm:text-sm">{subtitle}</p> : null}
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[15px] font-bold text-slate-900">{title}</h2>
+          {subtitle ? <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p> : null}
         </div>
+        {action}
       </div>
-    </div>
+      <div className="space-y-3 px-4 pb-4">{children}</div>
+    </section>
   );
 }
 
-function Tooltip({ label, children }) {
+function PhoneSheet({ open, title, onClose, children }) {
+  if (!open) return null;
   return (
-    <span className="relative inline-flex items-center group cursor-help">
-      {children}
-      <span
-        className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 rtl:left-auto rtl:right-0 rtl:translate-x-0 whitespace-pre rounded-lg border bg-white px-2.5 py-1.5 text-[11px] text-slate-700 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-30"
-        style={{ borderColor: 'var(--color-primary-200)' }}
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/45" onClick={onClose}>
+      <div
+        className="flex max-h-[88dvh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-[28px] border border-white/90 bg-[#eef2f9] pb-8 shadow-[0_-8px_24px_rgba(100,116,139,0.35)]"
+        onClick={(e) => e.stopPropagation()}
       >
-        {label}
-      </span>
-    </span>
-  );
-}
-
-function InfoBadge({ title }) {
-  return (
-    <Tooltip label={title}>
-      <Info className="w-3.5 h-3.5 ml-1" style={{ color: 'var(--color-primary-300)' }} />
-    </Tooltip>
-  );
-}
-
-function StatPill({ title, value, hint, tone = 'primary' }) {
-  const toneStyles =
-    tone === 'primary'
-      ? {
-          background:
-            'linear-gradient(135deg, var(--color-primary-50) 0%, rgba(255,255,255,0.7) 100%)',
-          borderColor: 'var(--color-primary-200)',
-          color: 'var(--color-primary-800)',
-        }
-      : tone === 'secondary'
-      ? {
-          background:
-            'linear-gradient(135deg, var(--color-secondary-50) 0%, rgba(255,255,255,0.7) 100%)',
-          borderColor: 'var(--color-secondary-200)',
-          color: 'var(--color-secondary-800)',
-        }
-      : {
-          background: 'linear-gradient(135deg, #fff7ed 0%, rgba(255,255,255,0.7) 100%)',
-          borderColor: '#fed7aa',
-          color: '#9a3412',
-        };
-
-  return (
-    <div className="rounded-lg border p-3.5" style={toneStyles}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="text-xs font-medium opacity-80">{title}</div>
-        {hint ? (
-          <div className="text-[10px] opacity-70 whitespace-nowrap rtl:order-[-1]">{hint}</div>
-        ) : null}
+        <div className="mx-auto mt-3 h-1 w-9 rounded-full bg-slate-200" />
+        <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-3">
+          <p className="text-sm font-bold text-slate-800">{title}</p>
+          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-white text-slate-500" aria-label="Close">
+            <X size={14} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </div>
-      <div className="mt-1 text-lg font-extrabold tracking-tight">{value}</div>
     </div>
   );
 }
 
-function SummaryRow({ label, value }) {
+const FIELD_LABEL = 'mb-1.5 block text-[11px] font-bold tracking-wide text-slate-500';
+
+function NeuField({ label, icon: Icon, value, onChange }) {
   return (
-    <div
-      className="flex items-center justify-between rounded-lg border px-4 py-3"
-      style={{
-        borderColor: 'var(--color-primary-200)',
-        background:
-          'linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-secondary-50) 100%)',
-      }}
-    >
-      <div className="font-semibold" style={{ color: 'var(--color-primary-800)' }}>
-        {label}
+    <label className="block min-w-0 flex-1">
+      <span className={FIELD_LABEL}>{label}</span>
+      <span className="flex h-[46px] items-center gap-2 rounded-2xl border border-slate-200/80 bg-[#e4eaf3] px-3 shadow-[inset_2px_2px_5px_rgba(100,116,139,0.22)]">
+        {Icon ? <Icon size={13} className="shrink-0 text-slate-400" /> : null}
+        <input
+          type="number"
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="—"
+          className="h-full w-full bg-transparent text-sm text-slate-800 outline-none"
+        />
+      </span>
+    </label>
+  );
+}
+
+function NeuSelect({ label, icon: Icon, value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.id === value);
+  return (
+    <div>
+      <p className={FIELD_LABEL}>{label}</p>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex h-[46px] w-full items-center gap-2 rounded-2xl border border-white/85 bg-[#eef2f9] px-3 text-start shadow-[4px_4px_8px_rgba(100,116,139,0.28)]"
+      >
+        <Icon size={13} className={selected ? 'shrink-0 text-(--color-primary-500)' : 'shrink-0 text-slate-400'} />
+        <span className={cx('min-w-0 flex-1 truncate text-sm', selected ? 'text-slate-800' : 'text-slate-400')}>
+          {selected?.label || placeholder}
+        </span>
+        <ChevronDown size={14} className="shrink-0 text-slate-400" />
+      </button>
+      <PhoneSheet open={open} title={label} onClose={() => setOpen(false)}>
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => { onChange(o.id); setOpen(false); }}
+            className={cx(
+              'block w-full border-b border-slate-200/70 px-5 py-3.5 text-start text-sm',
+              o.id === value ? 'bg-white font-bold text-(--color-primary-700)' : 'text-slate-700',
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </PhoneSheet>
+    </div>
+  );
+}
+
+function MacroSplit({ protein, carbs, fat }) {
+  const total = protein + carbs + fat || 1;
+  const pC = Math.round((carbs / total) * 100);
+  const pP = Math.round((protein / total) * 100);
+  const pF = Math.max(0, 100 - pC - pP);
+  const parts = [
+    ['#f59e0b', 'C', pC],
+    ['var(--color-primary-500)', 'P', pP],
+    ['#ec4899', 'F', pF],
+  ];
+  return (
+    <div>
+      <div className="flex h-2 overflow-hidden rounded-full bg-slate-200">
+        <span style={{ width: `${pC}%`, background: '#f59e0b' }} />
+        <span style={{ width: `${pP}%`, background: 'var(--color-primary-500)' }} />
+        <span style={{ width: `${pF}%`, background: '#ec4899' }} />
       </div>
-      <div className="text-xl font-black" style={{ color: 'var(--color-primary-700)' }}>
-        {value}
+      <div className="mt-2 flex justify-between text-[10px] font-medium text-slate-500">
+        {parts.map(([color, letter, pct]) => (
+          <span key={letter} className="inline-flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+            {letter} {pct}%
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -237,108 +231,93 @@ function FoodSearch({ foods, value, onChange, onPick, placeholder }) {
   const [open, setOpen] = useState(false);
 
   const norm = useCallback((s) => (s || '').toString().toLowerCase().trim(), []);
-  const q = norm(value);
+  const [query, setQuery] = useState('');
+  const q = norm(query);
 
   const results = useMemo(() => {
-    // ✅ don’t dump the whole DB when empty (this was a UX “issue there exist here”)
     if (!q) return [];
-    const filtered = foods.filter((f) => {
-      const a = norm(f.name);
-      const b = norm(f.name_en);
-      return a.includes(q) || b.includes(q);
-    });
-    return filtered.slice(0, 30);
+    return foods.filter((f) => norm(f.name).includes(q) || norm(f.name_en).includes(q)).slice(0, 40);
   }, [foods, q, norm]);
 
   const labelOf = (f) => (isEn ? f.name_en || f.name : f.name || f.name_en || '');
+  const close = () => { setQuery(''); setOpen(false); };
   const pick = (item) => {
     onPick?.(item);
-    setOpen(false);
+    onChange?.(labelOf(item));
+    close();
   };
 
-  const onBlurSafeClose = () => setTimeout(() => setOpen(false), 140);
-
   return (
-    <div className="relative z-[60]">
-      <div className="relative">
- 
-        <style jsx>{`
-          .foodSearchIcon {
-            left: 12px;
-          }
-          [dir='rtl'] .foodSearchIcon {
-            left: auto;
-            right: 12px;
-          }
-          .foodSearchInput {
-            padding-left: 40px;
-            padding-right: 12px;
-          }
-          [dir='rtl'] .foodSearchInput {
-            padding-left: 12px;
-            padding-right: 40px;
-          }
-        `}</style>
-
- 
-        <input
-          className={cx(
-            'foodSearchInput w-full h-11 rounded-lg border outline-none text-sm bg-white transition',
-            'focus:ring-4',
-          )}
-          style={{
-            borderColor: 'rgba(148,163,184,0.8)',
-            boxShadow: 'none',
-          }}
-          placeholder={placeholder}
-          value={value}
-          inputMode="search"
-          onChange={(e) => {
-            onChange?.(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onBlur={onBlurSafeClose}
-        />
-      </div>
-
-      {open && q && (
-        <div
-          className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-xl"
-          style={{ borderColor: 'var(--color-primary-200)' }}
-        >
-          <div className="max-h-[300px] overflow-auto overscroll-contain">
-            {results.length === 0 ? (
-              <div className="p-4 text-sm text-slate-500">لا توجد نتائج / No results</div>
-            ) : (
-              results.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => pick(f)}
-                  className="w-full px-4 py-3 text-left rtl:text-right transition"
-                  style={{
-                    borderBottom: '1px solid rgba(226,232,240,0.8)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--color-primary-50)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'white';
-                  }}
-                >
-                  <div className="font-semibold text-slate-800 line-clamp-1">{labelOf(f)}</div>
-                  <div className="mt-0.5 text-xs text-slate-500">
-                    {f.per} {f.unit} • {f.kcal} kcal • P {f.p} / C {f.c} / F {f.f}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex h-[46px] w-full items-center gap-2 rounded-2xl border border-white/85 bg-[#eef2f9] px-3 text-start shadow-[4px_4px_8px_rgba(100,116,139,0.28)]"
+      >
+        <Search size={15} className={value ? 'shrink-0 text-(--color-primary-500)' : 'shrink-0 text-slate-400'} />
+        <span className={cx('min-w-0 flex-1 truncate text-sm', value ? 'text-slate-800' : 'text-slate-400')}>
+          {value || placeholder}
+        </span>
+        {value ? (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => { e.stopPropagation(); onChange?.(''); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onChange?.(''); } }}
+            className="grid h-6 w-6 place-items-center text-slate-400"
+          >
+            <X size={14} />
+          </span>
+        ) : (
+          <ChevronDown size={14} className="shrink-0 text-slate-400" />
+        )}
+      </button>
+      <PhoneSheet open={open} title={placeholder} onClose={close}>
+        <div className="mx-4 mt-3 flex h-11 items-center gap-2 rounded-2xl border border-slate-200/80 bg-[#e4eaf3] px-3 shadow-[inset_2px_2px_5px_rgba(100,116,139,0.18)]">
+          <Search size={15} className="shrink-0 text-slate-400" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={isEn ? 'Type a food name...' : 'اسم الطعام...'}
+            className="h-full w-full bg-transparent text-sm text-slate-800 outline-none"
+          />
+          {query ? (
+            <button type="button" onClick={() => setQuery('')} className="text-slate-400"><X size={14} /></button>
+          ) : null}
         </div>
-      )}
-    </div>
+        {!query ? (
+          <div className="flex flex-col items-center gap-2 py-16 text-slate-300">
+            <Search size={36} strokeWidth={1.5} />
+            <p className="text-sm text-slate-400">{isEn ? 'Type to search for a food' : 'اكتب للبحث...'}</p>
+          </div>
+        ) : results.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-16 text-slate-300">
+            <UtensilsCrossed size={36} strokeWidth={1.5} />
+            <p className="text-sm text-slate-400">{isEn ? 'No results' : 'لا توجد نتائج'}</p>
+          </div>
+        ) : (
+          <div className="mt-2">
+            {results.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => pick(f)}
+                className="flex w-full items-center gap-3 border-b border-slate-200/70 px-5 py-3 text-start"
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-(--color-primary-50) text-(--color-primary-600)">
+                  <Leaf size={13} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold text-slate-800">{labelOf(f)}</span>
+                  <span className="text-[11px] text-slate-400">{f.per}{f.unit} · {f.kcal} kcal · P{f.p}g C{f.c}g F{f.f}g</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </PhoneSheet>
+    </>
   );
 }
 
@@ -375,6 +354,8 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [tab, setTab] = useState('profile');
+  const [validationMsg, setValidationMsg] = useState('');
 
   /* load */
   useEffect(() => {
@@ -441,18 +422,6 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     const fCal = fatG * 9;
     return Math.max(0, (targetCalories - pCal - fCal) / 4);
   }, [targetCalories, proteinG, fatG]);
-
-  const macroPct = useMemo(() => {
-    const pCal = proteinG * 4;
-    const fCal = fatG * 9;
-    const cCal = carbsG * 4;
-    const sum = pCal + fCal + cCal || 1;
-    return {
-      p: Math.round((pCal / sum) * 100),
-      c: Math.round((cCal / sum) * 100),
-      f: Math.round((fCal / sum) * 100),
-    };
-  }, [proteinG, fatG, carbsG]);
 
   const sexOptions = [
     { id: 'male', label: t('sex.male') },
@@ -536,12 +505,6 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     return { kcal: round(kcal), p: round(p, 1), c: round(c, 1), f: round(f, 1) };
   }, [mealItems, mergedFoods]);
 
-  const headerStats = {
-    bmr: Math.round(bmr || 0),
-    tdee: Math.round(tdee || 0),
-    target: Math.round(targetCalories || 0),
-  };
-
   const resetAll = () => {
     setSex('male');
     setAge('');
@@ -557,6 +520,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     setShowSummary(false);
     setIsGenerating(false);
     setProgress(0);
+    setValidationMsg('');
   };
 
   const addItem = () => {
@@ -572,6 +536,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     } else {
       setMealItems((prev) => [...prev, { id: selectedFood.id, qty: q }]);
     }
+    setQty('');
   };
 
   const updateQty = (id, newQty) =>
@@ -582,16 +547,27 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
   const removeItem = (id) => setMealItems((prev) => prev.filter((m) => m.id !== id));
 
   const generateSummary = () => {
+    setValidationMsg('');
+    const missing = [];
+    if (!ageN) missing.push(t('labels.ageYears'));
+    if (!heightN) missing.push(t('labels.heightCm'));
+    if (!weightN) missing.push(t('labels.weightKg'));
+    if (!activity) missing.push(t('labels.activity'));
+    if (!goal) missing.push(t('labels.goal'));
+    if (missing.length) {
+      setValidationMsg(isEn ? `Please fill in: ${missing.join(', ')}` : `يرجى إدخال: ${missing.join('، ')}`);
+      return;
+    }
+
     setShowSummary(false);
     setIsGenerating(true);
     setProgress(0);
 
     const steps = [12, 35, 62, 84, 100];
     let i = 0;
-
     const tick = () => {
       setProgress(steps[i]);
-      i++;
+      i += 1;
       if (i < steps.length) setTimeout(tick, 220);
       else {
         setIsGenerating(false);
@@ -601,436 +577,363 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     setTimeout(tick, 160);
   };
 
+  useEffect(() => {
+    const shell = document.querySelector('.dashboard-icy');
+    const body = document.getElementById('body');
+    const dark = document.documentElement.classList.contains('dark')
+      || document.documentElement.getAttribute('data-theme-mode') === 'dark';
+    const color = dark ? '#0b1220' : '#ffffff';
+    const pane = document.querySelector('[data-dashboard-content]');
+    shell?.style.setProperty('--gm-bg-image', 'none', 'important');
+    shell?.style.setProperty('background', color, 'important');
+    body?.style.setProperty('background', color, 'important');
+    pane?.style.setProperty('background', color, 'important');
+    return () => {
+      shell?.style.removeProperty('--gm-bg-image');
+      const pane = document.querySelector('[data-dashboard-content]');
+      shell?.style.removeProperty('background');
+      body?.style.removeProperty('background');
+      pane?.style.removeProperty('background');
+    };
+  }, []);
+
+  const mealLabel = mealItems.length ? `${t('tabs.meal')} (${mealItems.length})` : t('tabs.meal');
+
   return (
-    <div className="space-y-4">
-      {/* ✅ Themed Header (your component already uses theme vars) */}
-      <GradientStatsHeader
-        hiddenStats
-        onClick={resetAll}
-        btnName={t('actions.reset')}
-        title={t('header.title')}
-        desc={t('header.desc')}
-        loadingStats={false}
-        icon={Flame}
-      >
-        <StatCard icon={Flame} title="BMR" value={headerStats.bmr} />
-        <StatCard icon={Gauge} title="TDEE" value={headerStats.tdee} />
-        <StatCard icon={Calculator} title={t('labels.targetKcal')} value={headerStats.target} />
-      </GradientStatsHeader>
-
-      {/* ✅ Redesigned layout */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* LEFT: profile + summary */}
-        <Surface>
-          <SectionHeader
-            icon={Ruler}
-            title={t('sections.dailyNeed')}
-            subtitle={isEn ? 'Your body data → calories & macros' : 'بيانات الجسم → السعرات والماكروز'}
-          />
-
-          <div className="p-4 sm:p-6 space-y-4">
-            {/* Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Select searchable={false} label={t('labels.sex')} options={sexOptions} value={sex} onChange={setSex} />
-
-              <Input label={t('labels.ageYears')} type="number" inputMode="numeric" value={age} onChange={setAge} placeholder="—" />
-
-              <Input label={t('labels.heightCm')} type="number" inputMode="numeric" value={height} onChange={setHeight} placeholder="—" />
-
-              <Input label={t('labels.weightKg')} type="number" inputMode="numeric" value={weight} onChange={setWeight} placeholder="—" />
-
-              <Input
-                label={isEn ? 'Body Fat %' : 'نسبة الدهون %'}
-                type="number"
-                inputMode="numeric"
-                value={bodyFat}
-                onChange={setBodyFat}
-                placeholder="—"
-              />
-
-              <div className="hidden sm:block" />
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              <Select searchable={false} label={t('labels.activity')} options={activityOptions} value={activity} onChange={setActivity} />
-              <Select searchable={false} label={t('labels.goal')} options={goalOptions} value={goal} onChange={setGoal} />
-            </div>
-
-            {/* Actions row */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={generateSummary}
-                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border font-semibold transition active:scale-[0.98]"
-                  style={{
-                    borderColor: 'transparent',
-                    color: 'white',
-                    background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                    boxShadow: '0 10px 25px rgba(99,102,241,0.18)',
-                  }}
-                >
-                  <BadgeCheck className="h-4 w-4" />
-                  {t('actions.generateSummary')}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border font-semibold transition active:scale-[0.98]"
-                  style={{
-                    borderColor: 'var(--color-primary-200)',
-                    background: 'white',
-                    color: 'var(--color-primary-700)',
-                  }}
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                  {t('actions.reset')}
-                </button>
+    <div data-plain-page="1" className="report-phone -mx-[var(--app-gutter)] min-h-full bg-white px-[var(--app-gutter)] pt-1 dark:bg-[#0b1220]">
+      <div className="mx-auto w-full max-w-[440px] space-y-4">
+        <div className="m-[5px] rounded-3xl shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]">
+          <div
+            className="relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-e-[rgba(15,34,128,0.35)] border-b-[rgba(15,34,128,0.45)] pb-3"
+            style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), #1a3fbf)' }}
+          >
+            <div className="pointer-events-none absolute -start-16 -top-10 h-[280px] w-[280px] rounded-full bg-white/[0.06]" />
+            <div className="pointer-events-none absolute -end-12 -bottom-10 h-[200px] w-[200px] rounded-full bg-white/[0.04]" />
+            <div className="relative flex items-center gap-3 p-4 pb-2">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white">
+                <Calculator size={20} strokeWidth={2} />
               </div>
-
-              <div className="text-xs text-slate-500">
-                {isEn ? 'Tip: add body fat for better macros' : 'نصيحة: أدخل نسبة الدهون لنتائج ماكروز أدق'}
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate text-xl font-black leading-6 tracking-[-0.3px] text-white">{t('header.title')}</h1>
+                <p className="mt-0.5 truncate text-[10px] font-medium text-white/55">{t('header.desc')}</p>
               </div>
-            </div>
-
-            {/* Loader */}
-            {isGenerating && (
-              <div className="mt-2">
-                <div
-                  className="relative h-3 w-full overflow-hidden rounded-full border"
-                  style={{ background: 'rgba(241,245,249,1)', borderColor: 'rgba(226,232,240,1)' }}
-                >
-                  <div
-                    className="h-full transition-all duration-300"
-                    style={{
-                      width: `${progress}%`,
-                      backgroundImage:
-                        'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                    }}
-                  />
-                </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>{t('loader.generating')}</span>
-                  <span>{progress}%</span>
-                </div>
-              </div>
-            )}
-
-            {/* Summary */}
-            {showSummary && (
-              <div
-                className="rounded-lg border p-4 sm:p-5"
-                style={{
-                  borderColor: 'var(--color-primary-200)',
-                  background:
-                    'linear-gradient(135deg, rgba(255,255,255,0.85) 0%, var(--color-primary-50) 55%, var(--color-secondary-50) 100%)',
-                }}
+              <button
+                type="button"
+                onClick={resetAll}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white"
+                aria-label={t('actions.reset')}
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <div
-                    className="grid h-10 w-10 place-items-center rounded-lg border"
-                    style={{
-                      borderColor: 'var(--color-primary-200)',
-                      background: 'rgba(255,255,255,0.7)',
-                    }}
+                <RefreshCw size={18} strokeWidth={2} />
+              </button>
+            </div>
+            <div className="mx-4 mb-2 h-px bg-white/20" />
+            <div className="flex gap-2 px-4 pb-1">
+              {[
+                ['profile', t('tabs.profile')],
+                ['meal', mealLabel],
+              ].map(([key, label]) => {
+                const on = tab === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setTab(key)}
+                    className={cx(
+                      'h-9 flex-1 rounded-2xl text-xs font-bold',
+                      on
+                        ? 'border border-white/90 bg-white text-(--color-primary-700) shadow-[2px_4px_7px_rgba(30,58,138,0.35)]'
+                        : 'border border-white/30 bg-white/10 text-white/65',
+                    )}
                   >
-                    <Calculator className="h-5 w-5" style={{ color: 'var(--color-primary-600)' }} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {tab === 'profile' && (
+          <div className="space-y-3">
+            <PhoneCard icon={Scale} title={t('phone.bodyData')} subtitle={t('phone.bodyDataSub')}>
+              <div>
+                <p className={FIELD_LABEL}>{t('labels.sex')}</p>
+                <div className="flex overflow-hidden rounded-2xl border border-slate-200/70 bg-[#e4eaf3] shadow-[inset_2px_2px_5px_rgba(100,116,139,0.2)]">
+                  {sexOptions.map((opt) => {
+                    const on = sex === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setSex(opt.id)}
+                        className={cx(
+                          'm-[3px] flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13px] font-bold',
+                          on ? 'bg-(--color-primary-600) text-white shadow-[3px_3px_6px_rgba(37,99,235,0.35)]' : 'text-slate-500',
+                        )}
+                      >
+                        <User size={13} />
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <NeuField label={t('labels.ageYears')} icon={User} value={age} onChange={setAge} />
+                <NeuField label={t('labels.heightCm')} icon={TrendingUp} value={height} onChange={setHeight} />
+              </div>
+              <div className="flex gap-3">
+                <NeuField label={t('labels.weightKg')} icon={Scale} value={weight} onChange={setWeight} />
+                <NeuField label={t('phone.bodyFat')} icon={BarChart3} value={bodyFat} onChange={setBodyFat} />
+              </div>
+              <NeuSelect label={t('labels.activity')} icon={Dumbbell} value={activity} onChange={setActivity} options={activityOptions} placeholder={t('phone.select')} />
+              <NeuSelect label={t('labels.goal')} icon={Target} value={goal} onChange={setGoal} options={goalOptions} placeholder={t('phone.select')} />
+              {validationMsg ? (
+                <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-600">
+                  <Info size={13} className="mt-0.5 shrink-0" />
+                  <span>{validationMsg}</span>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={generateSummary}
+                className="mt-1 flex h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-(--color-primary-600) text-sm font-bold text-white shadow-[0_8px_20px_rgba(67,56,202,0.35)]"
+              >
+                <Calculator size={16} />
+                {t('phone.calculate')}
+              </button>
+              {isGenerating ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+                    <div className="h-full bg-(--color-primary-600) transition-all" style={{ width: `${progress}%` }} />
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-extrabold text-slate-900">{t('sections.summary')}</div>
-                    <div className="text-xs text-slate-600">
-                      {isEn ? 'Calories + macros based on your data' : 'السعرات والماكروز حسب بياناتك'}
+                  <span className="text-[11px] font-medium text-slate-400">{progress}%</span>
+                </div>
+              ) : null}
+            </PhoneCard>
+
+            {showSummary && (
+              <div className="space-y-3">
+                <div className={`${CARD} flex items-center justify-between px-5 py-4`}>
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-11 w-11 place-items-center rounded-2xl border border-(--color-primary-600)/20 bg-(--color-primary-600)/10 text-(--color-primary-600)">
+                      <Flame size={20} />
+                    </div>
+                    <p className="text-[13px] font-medium text-slate-500">{t('phone.dailyTarget')}</p>
+                  </div>
+                  <div className="flex items-end gap-1">
+                    <p className="text-4xl font-black tracking-tight text-(--color-primary-700)">{Math.round(targetCalories || 0)}</p>
+                    <div className="pb-1 text-end">
+                      <p className="text-sm font-bold text-(--color-primary-600)">kcal</p>
+                      <p className="text-[11px] text-slate-400">/ {t('phone.day')}</p>
                     </div>
                   </div>
                 </div>
 
-                <SummaryRow label={t('labels.targetCalories')} value={`${Math.round(targetCalories || 0)} kcal`} />
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-                  <StatPill title={t('labels.protein')} value={`${Math.round(proteinG || 0)} g`} hint={`${macroPct.p}%`} tone="primary" />
-                  <StatPill title={t('labels.carbs')} value={`${Math.round(carbsG || 0)} g`} hint={`${macroPct.c}%`} tone="secondary" />
-                  <StatPill title={t('labels.fat')} value={`${Math.round(fatG || 0)} g`} hint={`${macroPct.f}%`} tone="amber" />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  <div
-                    className="rounded-lg border p-4"
-                    style={{ borderColor: 'rgba(226,232,240,0.9)', background: 'rgba(255,255,255,0.7)' }}
-                  >
-                    <div className="text-xs text-slate-500">{isEn ? 'Body Fat' : 'نسبة الدهون'}</div>
-                    <div className="mt-1 text-lg font-bold text-slate-900">{bodyFat ? `${round(bodyFatN, 1)}%` : '—'}</div>
+                <PhoneCard icon={BarChart3} title={t('phone.macros')} subtitle={t('phone.macrosSub')} accent="#10b981">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      [t('labels.protein'), `${Math.round(proteinG || 0)}g`, '#3b82f6'],
+                      [t('labels.carbs'), `${Math.round(carbsG || 0)}g`, '#f59e0b'],
+                      [t('labels.fat'), `${Math.round(fatG || 0)}g`, '#ec4899'],
+                    ].map(([label, value, color]) => (
+                      <div key={label} className="rounded-2xl border px-2 py-2.5 text-center" style={{ borderColor: `${color}30`, background: `${color}0d` }}>
+                        <p className="text-sm font-bold" style={{ color }}>{value}</p>
+                        <p className="mt-1 text-[10px] font-medium" style={{ color }}>{label}</p>
+                      </div>
+                    ))}
                   </div>
+                  <MacroSplit protein={proteinG} carbs={carbsG} fat={fatG} />
+                </PhoneCard>
 
-                  <div
-                    className="rounded-lg border p-4"
-                    style={{ borderColor: 'rgba(226,232,240,0.9)', background: 'rgba(255,255,255,0.7)' }}
-                  >
-                    <div className="text-xs text-slate-500">{isEn ? 'Lean Mass' : 'الكتلة الخالية من الدهون'}</div>
-                    <div className="mt-1 text-lg font-bold text-slate-900">{leanMassKg ? `${round(leanMassKg, 1)} kg` : '—'}</div>
+                <PhoneCard icon={Info} title={t('phone.details')} accent="#f97316">
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ['BMR', `${Math.round(bmr || 0)} kcal`, Flame, '#f97316'],
+                      ['TDEE', `${Math.round(tdee || 0)} kcal`, Zap, '#8b5cf6'],
+                    ].map(([label, value, Icon, color]) => (
+                      <div key={label} className="flex flex-col items-center gap-1 rounded-2xl border border-white/80 bg-white/70 px-2 py-3 text-center">
+                        <Icon size={14} style={{ color }} />
+                        <p className="text-sm font-bold text-slate-800">{value}</p>
+                        <p className="text-[10px] text-slate-400">{label}</p>
+                      </div>
+                    ))}
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  <div
-                    className="rounded-lg border p-4"
-                    style={{ borderColor: 'rgba(226,232,240,0.9)', background: 'rgba(255,255,255,0.7)' }}
-                  >
-                    <div className="text-xs text-slate-500">
-                      BMR <InfoBadge title={t('tips.bmr')} />
+                  {(leanMassKg > 0 || bodyFatN > 0) && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        [t('phone.bodyFat'), bodyFat ? `${round(bodyFatN, 1)}%` : '—', BarChart3, '#ec4899'],
+                        [t('phone.leanMass'), leanMassKg ? `${round(leanMassKg, 1)} kg` : '—', Scale, '#10b981'],
+                      ].map(([label, value, Icon, color]) => (
+                        <div key={label} className="flex flex-col items-center gap-1 rounded-2xl border border-white/80 bg-white/70 px-2 py-3 text-center">
+                          <Icon size={14} style={{ color }} />
+                          <p className="text-sm font-bold text-slate-800">{value}</p>
+                          <p className="text-[10px] text-slate-400">{label}</p>
+                        </div>
+                      ))}
                     </div>
-                    <div className="mt-1 text-lg font-bold text-slate-900">{Math.round(bmr || 0)} kcal</div>
+                  )}
+                  <div className="flex items-start gap-2 rounded-2xl bg-amber-50 px-3 py-2.5 text-[11px] text-amber-700">
+                    <Info size={13} className="mt-0.5 shrink-0" />
+                    <span>{t('phone.tip')}</span>
                   </div>
-
-                  <div
-                    className="rounded-lg border p-4"
-                    style={{ borderColor: 'rgba(226,232,240,0.9)', background: 'rgba(255,255,255,0.7)' }}
-                  >
-                    <div className="text-xs text-slate-500">
-                      TDEE <InfoBadge title={t('tips.tdee')} />
-                    </div>
-                    <div className="mt-1 text-lg font-bold text-slate-900">{Math.round(tdee || 0)} kcal</div>
-                  </div>
-                </div>
+                </PhoneCard>
               </div>
             )}
           </div>
-        </Surface>
+        )}
 
-        {/* RIGHT: food builder */}
-        <Surface>
-          <SectionHeader
-            icon={Apple}
-            title={t('sections.foodCalc')}
-            subtitle={isEn ? 'Search food → add to meal → totals' : 'ابحث عن الطعام → أضفه للوجبة → الإجمالي'}
-          />
-
-          <div className="p-4 sm:p-6 space-y-4">
-            {/* Search + Qty */}
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_150px] gap-3 items-start">
+        {tab === 'meal' && (
+          <div className="space-y-3">
+            <PhoneCard icon={Search} title={t('phone.addFood')} subtitle={t('phone.addFoodSub')} accent="#10b981">
               <FoodSearch
                 foods={mergedFoods}
                 value={foodSearch}
-                onChange={setFoodSearch}
+                onChange={(v) => { setFoodSearch(v); if (!v) { setFoodId(''); setQty(''); } }}
                 onPick={(f) => {
                   setFoodId(f.id);
                   setFoodSearch(displayName(f));
-                  // default piece => 1
                   if (f.unit === 'piece' && (!qty || toNumber(qty, 0) <= 0)) setQty('1');
                 }}
                 placeholder={t('labels.searchFood')}
               />
-
-              <Input
-                placeholder={qtyPlaceholder}
-                type="number"
-                inputMode={qtyMeta.inputMode}
-                value={qty}
-                onChange={setQty}
-                step={qtyMeta.step}
-              />
-            </div>
-
-            {/* Selected food preview */}
-            <div
-              className="rounded-lg border p-4"
-              style={{
-                borderColor: 'rgba(226,232,240,0.9)',
-                background:
-                  'linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(248,250,252,0.85) 100%)',
-              }}
-            >
-              {!selectedFood ? (
-                <div className="text-sm text-slate-500">{t('labels.pickFoodHint')}</div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_repeat(4,110px)] gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs text-slate-500">{t('labels.item')}</div>
-                    <div className="mt-1 font-semibold text-slate-900 truncate">{displayName(selectedFood)}</div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {selectedFood.per} {selectedFood.unit} • {selectedFood.kcal} kcal
-                    </div>
+              {selectedFood ? (
+                <div className="space-y-3 rounded-2xl border border-white/80 bg-white/60 p-3">
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      [quickFoodTotals.kcal, 'kcal', '#f97316'],
+                      [`${quickFoodTotals.p}g`, 'P', '#3b82f6'],
+                      [`${quickFoodTotals.c}g`, 'C', '#f59e0b'],
+                      [`${quickFoodTotals.f}g`, 'F', '#ec4899'],
+                    ].map(([value, label, color]) => (
+                      <div key={label} className="rounded-xl border px-1 py-2 text-center" style={{ borderColor: `${color}30`, background: `${color}0d` }}>
+                        <p className="text-xs font-bold" style={{ color }}>{value}</p>
+                        <p className="text-[9px]" style={{ color }}>{label}</p>
+                      </div>
+                    ))}
                   </div>
-
-                  <StatPill title={t('labels.kcal')} value={`${quickFoodTotals.kcal}`} hint="kcal" tone="primary" />
-                  <StatPill title={t('labels.protein')} value={`${quickFoodTotals.p}`} hint="g" tone="secondary" />
-                  <StatPill title={t('labels.carbs')} value={`${quickFoodTotals.c}`} hint="g" tone="secondary" />
-                  <StatPill title={t('labels.fat')} value={`${quickFoodTotals.f}`} hint="g" tone="amber" />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={qty}
+                      onChange={(e) => setQty(e.target.value)}
+                      placeholder={qtyPlaceholder}
+                      className="h-11 min-w-0 flex-1 rounded-2xl border border-white/80 bg-[#e8edf2] px-3 text-center text-sm shadow-[inset_2px_2px_5px_rgba(100,116,139,0.16)] outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      disabled={!selectedFood || qtyN <= 0}
+                      className="inline-flex h-11 items-center gap-1 rounded-2xl bg-(--color-primary-600) px-4 text-sm font-bold text-white disabled:opacity-45"
+                    >
+                      <Plus size={15} />
+                      {t('phone.add')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-6 text-center text-slate-400">
+                  <UtensilsCrossed size={28} strokeWidth={1.5} />
+                  <p className="text-xs">{t('phone.searchHint')}</p>
                 </div>
               )}
+            </PhoneCard>
 
-              <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
-                <button
-                  type="button"
-                  onClick={addItem}
-                  disabled={!selectedFood || qtyN <= 0}
-                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    color: 'white',
-                    background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                    boxShadow: '0 10px 25px rgba(99,102,241,0.18)',
-                  }}
-                >
-                  <BadgeCheck className="h-4 w-4" />
-                  {t('actions.addItem')}
+            <PhoneCard
+              icon={UtensilsCrossed}
+              title={`${t('tabs.meal')}${mealItems.length ? ` (${mealItems.length})` : ''}`}
+              action={mealItems.length ? (
+                <button type="button" onClick={() => setMealItems([])} className="inline-flex items-center gap-1 text-[11px] font-bold text-red-500">
+                  <Trash2 size={12} />
+                  {t('phone.clearAll')}
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setMealItems([])}
-                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border font-semibold transition active:scale-[0.98]"
-                  style={{
-                    borderColor: 'rgba(226,232,240,0.9)',
-                    background: 'white',
-                    color: 'rgb(51,65,85)',
-                  }}
-                >
-                  <Trash className="h-4 w-4" />
-                  {t('actions.clearMeal')}
-                </button>
-              </div>
-            </div>
-
-            {/* Meal table */}
-            {mealItems.length === 0 ? (
-              <div
-                className="rounded-lg border border-dashed p-8 text-center"
-                style={{ borderColor: 'rgba(148,163,184,0.6)', background: 'rgba(248,250,252,0.8)' }}
-              >
-                <Apple className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--color-primary-300)' }} />
-                <div className="font-semibold text-slate-900">{t('labels.mealEmpty')}</div>
-                <div className="mt-1 text-sm text-slate-600">{isEn ? 'Search a food and add it to your meal.' : 'ابحث عن طعام وأضفه للوجبة.'}</div>
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'rgba(226,232,240,0.9)' }}>
-                <div className="overflow-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr
-                        className="text-slate-600"
-                        style={{
-                          background:
-                            'linear-gradient(135deg, rgba(248,250,252,0.95) 0%, rgba(255,255,255,0.95) 100%)',
-                          borderBottom: '1px solid rgba(226,232,240,0.9)',
-                        }}
-                      >
-                        <th className="text-left rtl:text-right px-4 py-3">{t('labels.item')}</th>
-                        <th className="text-right px-4 py-3">{t('labels.qty')}</th>
-                        <th className="text-right px-4 py-3">{t('labels.kcal')}</th>
-                        <th className="text-right px-4 py-3">{t('labels.p')}</th>
-                        <th className="text-right px-4 py-3">{t('labels.c')}</th>
-                        <th className="text-right px-4 py-3">{t('labels.f')}</th>
-                        <th className="px-4 py-3" />
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {mealItems.map((it) => {
-                        const f = findFood(it.id);
-                        if (!f) return null;
-
-                        const factor = (toNumber(it.qty, 0) || 0) / f.per;
-                        const isPiece = f.unit === 'piece';
-                        const step = isPiece ? 1 : 0.1;
-
-                        const unitLabel = isEn
-                          ? f.unit
-                          : f.unit === 'piece'
-                          ? 'عدد'
-                          : f.unit === 'g'
-                          ? 'جرام'
-                          : f.unit === 'ml'
-                          ? 'مل'
-                          : f.unit;
-
-                        return (
-                          <tr
-                            key={it.id}
-                            className="transition"
-                            style={{
-                              borderTop: '1px solid rgba(241,245,249,1)',
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(248,250,252,0.85)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                          >
-                            <td className="px-4 py-3">
-                              <div className="font-semibold text-slate-900">{displayName(f)}</div>
-                              <div className="text-xs text-slate-500 mt-0.5">
-                                {f.per} {unitLabel} • {f.kcal} kcal
-                              </div>
-                            </td>
-
-                            <td className="px-4 py-3 text-right">
-                              <div className="inline-flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  step={step}
-                                  value={it.qty ?? ''}
-                                  onChange={(e) => updateQty(it.id, e.target.value)}
-                                  placeholder="0"
-                                  inputMode="numeric"
-                                  className="w-[110px] text-right rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-4"
-                                  style={{
-                                    borderColor: 'rgba(148,163,184,0.75)',
-                                  }}
-                                />
-                                <span className="text-xs text-slate-500 whitespace-nowrap">{unitLabel}</span>
-                              </div>
-                            </td>
-
-                            <td className="px-4 py-3 text-right font-semibold text-slate-900">{round(f.kcal * factor)}</td>
-                            <td className="px-4 py-3 text-right text-slate-700">{round(f.p * factor, 1)}g</td>
-                            <td className="px-4 py-3 text-right text-slate-700">{round(f.c * factor, 1)}g</td>
-                            <td className="px-4 py-3 text-right text-slate-700">{round(f.f * factor, 1)}g</td>
-
-                            <td className="px-4 py-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() => removeItem(it.id)}
-                                className="inline-flex items-center justify-center h-10 w-10 rounded-lg border transition active:scale-[0.98]"
-                                style={{
-                                  borderColor: 'rgba(254,202,202,1)',
-                                  background: 'rgba(255,241,242,0.9)',
-                                  color: 'rgb(225,29,72)',
-                                }}
-                                title={t('actions.remove')}
-                                aria-label={t('actions.remove')}
-                              >
-                                <Trash className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-
-                    <tfoot>
-                      <tr
-                        style={{
-                          background:
-                            'linear-gradient(135deg, var(--color-primary-50) 0%, rgba(255,255,255,0.9) 100%)',
-                          borderTop: '1px solid rgba(226,232,240,0.9)',
-                        }}
-                      >
-                        <td className="px-4 py-3 font-bold" style={{ color: 'var(--color-primary-800)' }}>
-                          {t('labels.total')}
-                        </td>
-                        <td className="px-4 py-3" />
-                        <td className="px-4 py-3 text-right font-black" style={{ color: 'var(--color-primary-700)' }}>
-                          {mealTotals.kcal}
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold text-slate-800">{mealTotals.p}g</td>
-                        <td className="px-4 py-3 text-right font-bold text-slate-800">{mealTotals.c}g</td>
-                        <td className="px-4 py-3 text-right font-bold text-slate-800">{mealTotals.f}g</td>
-                        <td className="px-4 py-3" />
-                      </tr>
-                    </tfoot>
-                  </table>
+              ) : null}
+            >
+              {mealItems.length === 0 ? (
+                <div className="flex flex-col items-center gap-1 py-8 text-center">
+                  <UtensilsCrossed size={36} className="text-slate-300" strokeWidth={1.5} />
+                  <p className="text-sm font-bold text-slate-700">{t('phone.noFoods')}</p>
+                  <p className="text-xs text-slate-400">{t('phone.noFoodsSub')}</p>
                 </div>
-              </div>
-            )}
+              ) : (
+                <>
+                  {mealItems.map((it) => {
+                    const food = findFood(it.id);
+                    if (!food) return null;
+                    const qtyNow = toNumber(it.qty, 0);
+                    const factor = food.per > 0 ? qtyNow / food.per : 0;
+                    const step = food.unit === 'piece' ? 1 : 10;
+                    const unitLabel = food.unit === 'piece' ? (isEn ? 'pcs' : 'عدد') : food.unit;
+                    const chips = [
+                      [round(food.kcal * factor), 'kcal', '#f97316'],
+                      [`${round(food.p * factor, 1)}g`, 'P', '#3b82f6'],
+                      [`${round(food.c * factor, 1)}g`, 'C', '#f59e0b'],
+                      [`${round(food.f * factor, 1)}g`, 'F', '#ec4899'],
+                    ];
+                    return (
+                      <div key={it.id} className="rounded-2xl border border-white/80 bg-white/70 p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-(--color-primary-50) text-(--color-primary-600)">
+                            <Leaf size={13} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold text-slate-800">{displayName(food)}</p>
+                            <p className="text-[10px] text-slate-400">{food.per}{unitLabel} · {food.kcal} kcal</p>
+                          </div>
+                          <button type="button" onClick={() => removeItem(it.id)} className="grid h-8 w-8 place-items-center text-red-500" aria-label={t('actions.remove')}>
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center overflow-hidden rounded-xl border border-white/80 bg-[#eef2f9]">
+                            <button type="button" className="grid h-8 w-8 place-items-center text-(--color-primary-600)" onClick={() => updateQty(it.id, Math.max(0, qtyNow - step))}>
+                              <Minus size={13} />
+                            </button>
+                            <input
+                              value={it.qty ?? ''}
+                              onChange={(e) => updateQty(it.id, e.target.value)}
+                              className="h-8 w-12 bg-transparent text-center text-xs font-bold outline-none"
+                            />
+                            <button type="button" className="grid h-8 w-8 place-items-center bg-(--color-primary-600) text-white" onClick={() => updateQty(it.id, qtyNow + step)}>
+                              <Plus size={13} />
+                            </button>
+                          </div>
+                          <div className="flex gap-1">
+                            {chips.map(([value, label, color]) => (
+                              <span key={label} className="rounded-lg border px-1.5 py-1 text-center" style={{ borderColor: `${color}25`, background: `${color}10` }}>
+                                <span className="block text-[10px] font-bold leading-none" style={{ color }}>{value}</span>
+                                <span className="text-[8px]" style={{ color }}>{label}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="rounded-2xl bg-(--color-primary-50) p-3">
+                    <p className="mb-2 text-xs font-bold text-slate-700">{t('labels.total')}</p>
+                    <div className="mb-3 grid grid-cols-4 gap-1.5">
+                      {[
+                        [mealTotals.kcal, 'kcal', '#f97316'],
+                        [`${mealTotals.p}g`, t('labels.protein'), '#3b82f6'],
+                        [`${mealTotals.c}g`, t('labels.carbs'), '#f59e0b'],
+                        [`${mealTotals.f}g`, t('labels.fat'), '#ec4899'],
+                      ].map(([value, label, color]) => (
+                        <div key={label} className="rounded-xl border border-white/70 bg-white px-1 py-2 text-center">
+                          <p className="text-xs font-bold" style={{ color }}>{value}</p>
+                          <span className="mx-auto mt-1 block h-0.5 w-6 rounded-full" style={{ background: color }} />
+                          <p className="mt-1 text-[9px] text-slate-400">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <MacroSplit protein={mealTotals.p} carbs={mealTotals.c} fat={mealTotals.f} />
+                  </div>
+                </>
+              )}
+            </PhoneCard>
           </div>
-        </Surface>
+        )}
       </div>
     </div>
   );

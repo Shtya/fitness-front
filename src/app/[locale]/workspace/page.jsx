@@ -1,30 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
-
 import BoardTab from './BoardTab';
 import TodoTab from './TodoTab';
 import CalendarTab from './CalendarTab';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 export default function ProductivityDashboard() {
 	const searchParams = useSearchParams();
-
 	const validTabs = ['calendar', 'tasks', 'boards'];
-
-	const [activeTab, setActiveTab] = useState('calendar');
-
-	useEffect(() => {
-		const tabFromUrl = searchParams.get('tab');
-		if (tabFromUrl && validTabs.includes(tabFromUrl)) {
-			setActiveTab(tabFromUrl);
-		}
-	}, [searchParams]);
+	const tabFromUrl = searchParams.get('tab');
+	const activeTab = validTabs.includes(tabFromUrl) ? tabFromUrl : 'calendar';
 
 
 	return (
-		<div className="min-h-screen  ">
+		<div data-plain-page="1" className="report-phone min-h-full bg-white dark:bg-[#0b1220]">
 
 			{activeTab === 'calendar' && <CalendarTab />}
 			{activeTab === 'tasks' && <TodoTab />}

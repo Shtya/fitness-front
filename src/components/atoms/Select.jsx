@@ -233,35 +233,10 @@ export default function Select({
     });
   };
 
-  // --- THEME STYLES (inline to use CSS vars) ---
-  const triggerFocusStyle = {
-    borderColor: 'var(--color-primary-500)',
-    boxShadow: '0 0 0 3px color-mix(in srgb, var(--color-primary-500) 15%, transparent)',
-  };
-  const triggerBaseStyle = {
-    borderColor: '#cbd5e1',
-  };
-  const triggerHoverStyle = {
-    borderColor: 'var(--color-primary-300)',
-  };
-
   const [isFocused, setIsFocused] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-
-  const getTriggerStyle = () => {
-    if (open || isFocused) return triggerFocusStyle;
-    if (isHovered) return triggerHoverStyle;
-    return triggerBaseStyle;
-  };
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
-      {label && (
-        <label className={`${cnLabel || ''} mb-1.5 block text-sm font-semibold text-slate-600 tracking-wide uppercase`} style={{ fontSize: '0.7rem', letterSpacing: '0.06em' }}>
-          {label}
-        </label>
-      )}
-
       {/* Trigger Button */}
       <button
         type='button'
@@ -270,27 +245,39 @@ export default function Select({
         onKeyDown={onKeyDown}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         disabled={disabled}
         aria-haspopup='listbox'
         aria-expanded={open}
-        style={getTriggerStyle()}
         className={[
           cnInputParent || '',
-          'h-[43px] relative w-full inline-flex items-center justify-between gap-2',
-          'rounded-lg border bg-white px-3 py-2.5 text-sm',
+          'relative flex h-11 w-full items-center justify-between gap-2 rounded-[11px] border px-3 text-start transition-all duration-200 outline-none',
+          'bg-[color-mix(in_srgb,var(--gm-paper,#fff)_62%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
-          'transition-all duration-200 outline-none',
+          error
+            ? 'border-rose-300'
+            : open || isFocused
+              ? 'border-[var(--color-primary-500)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary-500)_12%,transparent)]'
+              : 'border-[var(--gm-line,rgba(92,143,211,0.22))] hover:border-[color-mix(in_srgb,var(--color-primary-400)_40%,transparent)]',
         ].join(' ')}
       >
-        {/* Left: icon + label */}
-        <span className='flex items-center gap-2 truncate'>
-          {icon && <span className='text-slate-400 flex-shrink-0'>{icon}</span>}
-          <span className={`truncate ${selectedOption || (typeof value === 'string' && value.trim()) ? 'text-slate-800 font-medium' : 'text-slate-400'}`}>
+        <span className='flex min-w-0 flex-1 items-center gap-2 truncate'>
+          {icon && <span className='shrink-0 text-[var(--gm-muted,#4d71a0)]'>{icon}</span>}
+          <span className={`truncate text-[13px] ${(open || selectedOption || (typeof value === 'string' && value.trim())) ? 'text-[var(--gm-ink-soft,#27456f)]' : 'text-transparent'}`}>
             {buttonLabel}
           </span>
         </span>
+        {label ? (
+          <span className={[
+            cnLabel || '',
+            'pointer-events-none absolute z-[1] px-1 text-[var(--gm-faint,#7388a7)] transition-all duration-200',
+            icon ? 'start-9' : 'start-3',
+            (open || selectedOption || (typeof value === 'string' && String(value).trim()))
+              ? 'top-0 -translate-y-1/2 rounded-md bg-[var(--gm-paper,#fff)] text-[11px] font-medium text-[var(--gm-muted,#56719a)]'
+              : 'top-1/2 -translate-y-1/2 text-[13px]',
+          ].join(' ')}>
+            {label}
+          </span>
+        ) : null}
 
         {/* Right: clear + chevron */}
         <span className='flex items-center gap-1 flex-shrink-0'>
@@ -319,7 +306,7 @@ export default function Select({
           >
             <div
               ref={listRef}
-              className='max-h-[215px] overflow-auto rounded-lg border border-slate-200 bg-white'
+              className={`max-h-[215px] overflow-auto rounded-lg border border-slate-200 bg-white ${typeof document !== 'undefined' && document.documentElement.dataset.gmUsers === '1' ? 'gm-float' : ''}`}
               style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06)' }}
               onKeyDown={onKeyDown}
             >

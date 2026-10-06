@@ -21,6 +21,8 @@ import {
 	Edit3,
 	Save,
 	Flame,
+	Beef,
+	Droplets,
 	User2,
 	Apple,
 	Lightbulb,
@@ -29,7 +31,6 @@ import {
 	Trophy,
 	Target,
 	Zap,
-	Heart,
 	Award,
 	Plus,
 	Info,
@@ -37,22 +38,27 @@ import {
 	ChevronRight,
 	Activity,
 	ScanLine,
+	Shield,
+	FileText,
 } from 'lucide-react';
 
 import api from '@/utils/axios';
 import { Modal } from '@/components/dashboard/ui/UI';
-import InputDate from '@/components/atoms/InputDate';
 import Input from '@/components/atoms/Input';
-import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import Select from '@/components/atoms/Select';
 import Img from '@/components/atoms/Img';
 import { useTheme } from '@/app/[locale]/theme';
 import BodyMeasurementFlow from '@/components/body-measurement/BodyMeasurementFlow';
+import DataTable from '@/components/atoms/Datatable';
+import { getStoredPerPage, setStoredPerPage } from '@/lib/table-prefs';
 
 /* =========================================================================
 	 DESIGN TOKENS
 	 ========================================================================= */
-const card = 'group relative overflow-hidden rounded-lg sm:rounded-lg border border-slate-100 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_28px_rgba(0,0,0,0.10)] transition-all duration-300';
+const card = 'relative overflow-hidden rounded-3xl border border-white/85 bg-[#eef2f9] shadow-[5px_5px_8px_rgba(100,116,139,0.32)]';
+const neuInput = '!h-[46px] !min-h-[46px] !rounded-2xl !border-0 !bg-[#e4eaf3] !text-slate-800 !shadow-[inset_2px_2px_5px_rgba(100,116,139,0.28),inset_-1px_-1px_2px_rgba(255,255,255,0.85)]';
 const sectionTitle = 'text-base sm:text-lg font-black text-slate-900 tracking-tight';
 
 const fadeUp = {
@@ -89,26 +95,22 @@ function SkeletonPulse({ className = '' }) {
 
 function LoadingSkeleton() {
 	return (
-		<div className="space-y-4 w-[calc(100%+14px)] rtl:mr-[-7px] ltr:ml-[-7px] mt-[-7px] ">
-			{/* header skeleton */}
-			<div className="rounded-lg sm:rounded-lg overflow-hidden bg-gradient-to-br from-[var(--color-primary-800)] to-[var(--color-secondary-600)] p-5 sm:p-7">
-				<div className="flex items-center gap-4 mb-6">
-					<SkeletonPulse className="h-14 w-14 rounded-lg bg-white/20" />
+		<div className="mx-auto w-full max-w-[440px] space-y-4">
+			<div className="m-[5px] overflow-hidden rounded-3xl p-4" style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), #1a3fbf)' }}>
+				<div className="mb-3 flex items-center gap-3">
+					<SkeletonPulse className="h-11 w-11 rounded-2xl bg-white/20" />
 					<div className="flex-1 space-y-2">
-						<SkeletonPulse className="h-5 w-48 bg-white/20" />
-						<SkeletonPulse className="h-3 w-32 bg-white/15" />
+						<SkeletonPulse className="h-4 w-36 bg-white/25" />
+						<SkeletonPulse className="h-2.5 w-24 bg-white/15" />
 					</div>
+					<SkeletonPulse className="h-11 w-11 rounded-2xl bg-white/20" />
 				</div>
-				<div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-					{[0, 1, 2, 3].map(i => <SkeletonPulse key={i} className="h-16 bg-white/15 rounded-lg" />)}
+				<SkeletonPulse className="mb-3 h-9 rounded-2xl bg-white/15" />
+				<div className="grid grid-cols-2 gap-1.5">
+					{[0, 1, 2, 3].map(i => <SkeletonPulse key={i} className="h-12 rounded-2xl bg-white/15" />)}
 				</div>
 			</div>
-			{/* tabs skeleton */}
-			<SkeletonPulse className="h-14 rounded-lg" />
-			{/* cards skeleton */}
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-				{[0, 1, 2].map(i => <SkeletonPulse key={i} className="h-48 rounded-lg" />)}
-			</div>
+			{[0, 1].map(i => <SkeletonPulse key={i} className="h-40 rounded-3xl bg-[#eef2f9]" />)}
 		</div>
 	);
 }
@@ -122,17 +124,13 @@ function HeaderStatPill({ label, value, icon: Icon, delay = 0 }) {
 			initial={{ opacity: 0, y: 10 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ delay, duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
-			className="relative overflow-hidden rounded-lg sm:rounded-lg p-2 sm:p-4 bg-white/[0.13] backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+			className="min-w-0 flex-1 rounded-2xl border border-white/20 bg-white/10 px-2.5 py-2"
 		>
-			<div className="flex items-start justify-between gap-1 mb-1 sm:mb-2">
-				<p className="text-[7px] sm:text-[9px] font-black uppercase tracking-[0.1em] text-white/55 md: leading-tight">
-					{label}
-				</p>
-				{Icon && <Icon className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 text-white/35 shrink-0" />}
+			<div className="mb-1 flex items-center gap-1.5">
+				{Icon && <Icon className="h-3 w-3 shrink-0 text-white/70" />}
+				<p className="truncate text-[9px] font-medium text-white/55">{label}</p>
 			</div>
-			<p className="!text-xs sm:text-2xl font-black text-white md: leading-none tabular-nums">
-				{value ?? 0}
-			</p>
+			<p className="truncate text-xs font-bold text-white">{value ?? '—'}</p>
 		</motion.div>
 	);
 }
@@ -163,22 +161,16 @@ function Btn({ children, onClick, disabled, className = '', size = 'md', variant
 
 function SectionHeader({ icon: Icon, title, subtitle, action }) {
 	return (
-		<div className="flex items-center justify-between mb-5 sm:mb-6">
+		<div className="flex items-center justify-between mb-3">
 			<div className="flex items-center gap-3.5">
 				{/* Icon badge with glow */}
-				<div className="relative flex-none">
-					<div className="h-11 w-11 flex items-center justify-center rounded-2xl text-white shadow-lg bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-primary-700)]"
-						style={{ boxShadow: '0 4px 14px -2px var(--color-primary-400)' }}>
-						<Icon className="h-5 w-5" />
-					</div>
-					{/* subtle corner glow dot */}
-					<div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--color-primary-400)] opacity-60 blur-[2px]" />
+				<div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-(--color-primary-600)/20 bg-(--color-primary-600)/10 text-(--color-primary-600)">
+					<Icon className="h-[18px] w-[18px]" />
 				</div>
-
-				<div>
-					<h3 className="text-sm sm:text-base font-black text-slate-900 md: leading-tight">{title}</h3>
+				<div className="min-w-0">
+					<h3 className="text-[15px] font-bold leading-tight text-slate-900">{title}</h3>
 					{subtitle && (
-						<p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 font-medium">{subtitle}</p>
+						<p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>
 					)}
 				</div>
 			</div>
@@ -228,367 +220,45 @@ function BeforeAfter({ before, after, name, t }) {
 	 ========================================================================= */
 function WeightTrendChart({ data = [], t }) {
 	const [hoveredIdx, setHoveredIdx] = useState(null);
-	const [animated, setAnimated] = useState(false);
+	if (!data.length) return null;
 
-	useEffect(() => {
-		const id = setTimeout(() => setAnimated(true), 120);
-		return () => clearTimeout(id);
-	}, []);
-
-	/* ── empty state ── */
-	if (!data.length) return (
-		<div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 px-6 py-14">
-			<motion.div
-				animate={{ y: [0, -5, 0] }}
-				transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut' }}
-				className="flex h-14 w-14 items-center justify-center rounded-lg bg-white shadow-md ring-1 ring-slate-200"
-			>
-				<Scale className="h-7 w-7 text-slate-300" />
-			</motion.div>
-			<p className="mt-4 text-sm font-black text-slate-600">{t('messages.noMeasurements')}</p>
-			<p className="mt-1 text-xs text-slate-400">{t('messages.noMeasurementsHint')}</p>
-		</div>
-	);
-
-	/* ── data prep ── */
 	const sorted = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
-	const weights = sorted.map(m => Number(m.weight || 0));
-	const minW = Math.min(...weights);
-	const maxW = Math.max(...weights);
-	const range = maxW - minW || 1;
-
-	/* SVG viewport */
-	const VW = 300;
-	const VH = 120;
-	const PAD_X = 12;
-	const PAD_TOP = 14;
-	const PAD_BOT = 18;
-
-	const points = sorted.map((m, idx) => ({
-		x: sorted.length === 1
-			? VW / 2
-			: PAD_X + (idx / (sorted.length - 1)) * (VW - PAD_X * 2),
-		y: PAD_TOP + (1 - (Number(m.weight || 0) - minW) / range) * (VH - PAD_TOP - PAD_BOT),
-		weight: m.weight,
-		date: m.date,
-		raw: m,
-	}));
-
-	const polyPts = points.map(p => `${p.x},${p.y}`).join(' ');
-	const fillPath = points.length > 1
-		? `M ${points[0].x},${points[0].y} ${polyPts} L ${points[points.length - 1].x},${VH - PAD_BOT + 4} L ${points[0].x},${VH - PAD_BOT + 4} Z`
-		: '';
-
-	/* path length for draw animation — approximate */
-	const pathLen = points.reduce((acc, p, i) => {
-		if (i === 0) return 0;
-		const prev = points[i - 1];
-		return acc + Math.hypot(p.x - prev.x, p.y - prev.y);
-	}, 0) || 1;
-
 	const first = sorted[0];
 	const last = sorted[sorted.length - 1];
-	const delta = last.weight != null && first.weight != null
-		? (last.weight - first.weight).toFixed(1)
-		: '0.0';
+	const delta = last.weight != null && first.weight != null ? (last.weight - first.weight).toFixed(1) : '0.0';
 	const isLoss = parseFloat(delta) < 0;
 	const isGain = parseFloat(delta) > 0;
-
-	/* y-axis labels */
-	const yLabels = [0, 1, 2, 3].map(i => ({
-		y: PAD_TOP + (i / 3) * (VH - PAD_TOP - PAD_BOT),
-		val: (maxW - (i / 3) * range).toFixed(1),
-	}));
-
-	const hovered = hoveredIdx !== null ? points[hoveredIdx] : null;
+	const deltaColor = isLoss ? '#10b981' : isGain ? '#ef4444' : '#94a3b8';
+	const stats = [
+		{ label: t('labels.start'), value: `${first.weight ?? '-'} ${t('units.kg')}`, color: '#64748b', bg: '#f8fafc', icon: Scale },
+		{ label: t('labels.current'), value: `${last.weight ?? '-'} ${t('units.kg')}`, color: 'var(--color-primary-600)', bg: 'color-mix(in srgb, var(--color-primary-50) 80%, #fff)', icon: TrendingUp },
+		{ label: t('labels.change'), value: `${isLoss ? '↓' : isGain ? '↑' : '→'} ${Math.abs(parseFloat(delta))} ${t('units.kg')}`, color: deltaColor, bg: isLoss ? '#f0fdf4' : isGain ? '#fef2f2' : '#f8fafc', icon: Activity },
+	];
 
 	return (
-		<div className="space-y-4">
-			<SectionHeader
-				icon={TrendingUp}
-				title={t('labels.direction')}
-				subtitle={t('messages.weightProgressionOverTime')}
-			/>
-
-			{/* ── stat cards row ── */}
+		<div>
+			<SectionHeader icon={TrendingUp} title={t('messages.weightProgressionOverTime')} />
 			<div className="grid grid-cols-3 gap-2">
-				{[
-					{
-						label: t('labels.start'),
-						val: first.weight ?? '-',
-						unit: t('units.kg'),
-						icon: Calendar,
-						color: 'text-slate-700',
-						bg: 'bg-slate-50',
-						border: 'border-slate-200',
-						iconColor: 'text-slate-400',
-					},
-					{
-						label: t('labels.current'),
-						val: last.weight ?? '-',
-						unit: t('units.kg'),
-						icon: Scale,
-						color: 'text-[var(--color-primary-700)]',
-						bg: 'bg-[var(--color-primary-50)]',
-						border: 'border-[var(--color-primary-200)]',
-						iconColor: 'text-[var(--color-primary-400)]',
-					},
-					{
-						label: t('labels.change'),
-						val: `${isLoss ? '↓' : isGain ? '↑' : '→'} ${Math.abs(parseFloat(delta))}`,
-						unit: t('units.kg'),
-						icon: TrendingUp,
-						color: isLoss ? 'text-emerald-700' : isGain ? 'text-rose-700' : 'text-slate-700',
-						bg: isLoss ? 'bg-emerald-50' : isGain ? 'bg-rose-50' : 'bg-slate-50',
-						border: isLoss ? 'border-emerald-200' : isGain ? 'border-rose-200' : 'border-slate-200',
-						iconColor: isLoss ? 'text-emerald-400' : isGain ? 'text-rose-400' : 'text-slate-400',
-					},
-				].map((s, i) => (
-					<motion.div
-						key={i}
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.06 + i * 0.07, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-						className={`flex flex-col gap-1.5 rounded-lg border px-3 py-3 ${s.bg} ${s.border}`}
-					>
-						<div className="flex items-center justify-between">
-							<span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400">
-								{s.label}
-							</span>
-							<s.icon className={`h-3 w-3 ${s.iconColor}`} />
-						</div>
-						<div className="flex items-baseline gap-1">
-							<span className={`text-lg sm:text-xl font-black tabular-nums md: leading-none ${s.color}`}>
-								{s.val}
-							</span>
-							<span className={`text-[9px] font-bold ${s.color} opacity-70`}>{s.unit}</span>
-						</div>
-					</motion.div>
+				{stats.map((s) => (
+					<div key={s.label} className="flex flex-col items-center gap-1 rounded-2xl border border-slate-100 px-2 py-3 text-center" style={{ background: s.bg }}>
+						<s.icon size={13} color={s.color} />
+						<p className="text-[10px] text-slate-400">{s.label}</p>
+						<p className="text-xs font-bold" style={{ color: s.color }}>{s.value}</p>
+					</div>
 				))}
 			</div>
-
-			{/* ── SVG chart ── */}
-			<div className="relative overflow-hidden rounded-lg sm:rounded-lg border border-slate-100 bg-gradient-to-br from-white to-slate-50 shadow-[0_2px_16px_rgba(0,0,0,0.05)]">
-
-				{/* top gradient stripe */}
-				<div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]" />
-
-				<div className="p-3 sm:p-4 pt-4">
-					<svg
-						viewBox={`0 0 ${VW} ${VH}`}
-						className="w-full"
-						style={{ height: 'clamp(120px, 22vw, 180px)' }}
-						onMouseLeave={() => setHoveredIdx(null)}
-					>
-						<defs>
-							<linearGradient id="wtLine" x1="0" y1="0" x2="1" y2="0">
-								<stop offset="0%" stopColor="var(--color-gradient-from)" />
-								<stop offset="50%" stopColor="var(--color-gradient-via)" />
-								<stop offset="100%" stopColor="var(--color-gradient-to)" />
-							</linearGradient>
-							<linearGradient id="wtFill" x1="0" y1="0" x2="0" y2="1">
-								<stop offset="0%" stopColor="var(--color-primary-500)" stopOpacity="0.18" />
-								<stop offset="85%" stopColor="var(--color-primary-500)" stopOpacity="0.03" />
-								<stop offset="100%" stopColor="var(--color-primary-500)" stopOpacity="0" />
-							</linearGradient>
-							<filter id="dotGlow">
-								<feGaussianBlur stdDeviation="1.5" result="blur" />
-								<feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-							</filter>
-						</defs>
-
-						{/* horizontal grid lines */}
-						{yLabels.map((yl, i) => (
-							<g key={i}>
-								<line
-									x1={PAD_X} x2={VW - PAD_X}
-									y1={yl.y} y2={yl.y}
-									stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="3,3"
-								/>
-								<text
-									x={PAD_X - 2} y={yl.y + 1}
-									textAnchor="end" fontSize="5.5" fill="#94a3b8" fontWeight="600"
-								>
-									{yl.val}
-								</text>
-							</g>
-						))}
-
-						{/* x-axis baseline */}
-						<line
-							x1={PAD_X} x2={VW - PAD_X}
-							y1={VH - PAD_BOT + 4} y2={VH - PAD_BOT + 4}
-							stroke="#e2e8f0" strokeWidth="0.6"
-						/>
-
-						{/* x-axis date labels */}
-						{points.filter((_, i) => i === 0 || i === points.length - 1 || (points.length <= 6)).map((p, i) => (
-							<text
-								key={i}
-								x={p.x} y={VH - 2}
-								textAnchor="middle" fontSize="5" fill="#94a3b8" fontWeight="600"
-							>
-								{String(p.date || '').slice(5)}
-							</text>
-						))}
-
-						{/* fill area */}
-						{fillPath && (
-							<motion.path
-								d={fillPath}
-								fill="url(#wtFill)"
-								initial={{ opacity: 0 }}
-								animate={{ opacity: animated ? 1 : 0 }}
-								transition={{ duration: 0.6, delay: 0.3 }}
-							/>
-						)}
-
-						{/* line — animated draw */}
-						{points.length > 1 && (
-							<motion.polyline
-								fill="none"
-								stroke="url(#wtLine)"
-								strokeWidth="2.5"
-								strokeLinejoin="round"
-								strokeLinecap="round"
-								points={polyPts}
-								initial={{ pathLength: 0, opacity: 0 }}
-								animate={{ pathLength: animated ? 1 : 0, opacity: 1 }}
-								transition={{ duration: 1.1, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-							/>
-						)}
-
-						{/* hover vertical line */}
-						{hovered && (
-							<motion.line
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								x1={hovered.x} x2={hovered.x}
-								y1={PAD_TOP - 4} y2={VH - PAD_BOT + 4}
-								stroke="var(--color-primary-300)" strokeWidth="1"
-								strokeDasharray="3,2"
-							/>
-						)}
-
-						{/* data point dots */}
-						{points.map((p, i) => {
-							const isHov = hoveredIdx === i;
-							const isEnd = i === 0 || i === points.length - 1;
-							return (
-								<g key={i}>
-									{/* hit area */}
-									<circle
-										cx={p.x} cy={p.y} r="8"
-										fill="transparent"
-										className="cursor-pointer"
-										onMouseEnter={() => setHoveredIdx(i)}
-										onTouchStart={() => setHoveredIdx(i)}
-									/>
-									{/* outer glow */}
-									{(isHov || isEnd) && (
-										<motion.circle
-											cx={p.x} cy={p.y}
-											initial={{ r: 0, opacity: 0 }}
-											animate={{ r: isHov ? 7 : 5, opacity: isHov ? 0.22 : 0.12 }}
-											transition={{ duration: 0.2 }}
-											fill="var(--color-primary-500)"
-										/>
-									)}
-									{/* main dot */}
-									<motion.circle
-										cx={p.x} cy={p.y}
-										initial={{ r: 0 }}
-										animate={{ r: isHov ? 4 : isEnd ? 3.5 : 2.5 }}
-										transition={{ duration: 0.18 }}
-										fill={isHov ? 'var(--color-primary-600)' : '#fff'}
-										stroke="var(--color-primary-500)"
-										strokeWidth={isHov ? 0 : 2}
-										filter={isHov ? 'url(#dotGlow)' : undefined}
-									/>
-								</g>
-							);
-						})}
-
-						{/* tooltip */}
-						{hovered && (() => {
-							const tx = Math.min(Math.max(hovered.x, 28), VW - 28);
-							const ty = hovered.y - 16;
-							return (
-								<motion.g
-									initial={{ opacity: 0, y: 4 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.15 }}
-								>
-									<rect
-										x={tx - 22} y={ty - 12}
-										width="44" height="14"
-										rx="4"
-										fill="var(--color-primary-700)"
-									/>
-									<text
-										x={tx} y={ty - 2}
-										textAnchor="middle" fontSize="6.5" fill="white" fontWeight="800"
-									>
-										{hovered.weight} {t('units.kg')}
-									</text>
-									{/* caret */}
-									<polygon
-										points={`${tx - 3},${ty + 2} ${tx + 3},${ty + 2} ${tx},${ty + 6}`}
-										fill="var(--color-primary-700)"
-									/>
-								</motion.g>
-							);
-						})()}
-					</svg>
-				</div>
-
-				{/* bottom fade */}
-				<div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white/60 to-transparent pointer-events-none" />
-			</div>
-
-			{/* ── scrollable data chips ── */}
-			<div className="flex gap-2 overflow-x-auto py-2 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+			<div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 				{sorted.map((m, i) => {
-					const isFirst = i === 0;
-					const isPrev = i > 0;
-					const diff = isPrev
-						? (Number(m.weight) - Number(sorted[i - 1].weight)).toFixed(1)
-						: null;
-					const diffNum = parseFloat(diff);
-					const isActive = hoveredIdx === i;
-
+					const diff = i > 0 ? (Number(m.weight) - Number(sorted[i - 1].weight)).toFixed(1) : null;
+					const diffNum = diff == null ? 0 : parseFloat(diff);
+					const on = hoveredIdx === i;
 					return (
-						<motion.div
-							key={m.id || m.date}
-							onMouseEnter={() => setHoveredIdx(i)}
-							onMouseLeave={() => setHoveredIdx(null)}
-							animate={isActive ? { y: -2, scale: 1.04 } : { y: 0, scale: 1 }}
-							transition={{ duration: 0.15 }}
-							className={[
-								'flex flex-col items-center shrink-0 rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 min-w-[60px]',
-								isActive
-									? 'bg-[var(--color-primary-50)] border-[var(--color-primary-300)] shadow-md'
-									: 'bg-white border-slate-200 ',
-							].join(' ')}
-						>
-							<span className="text-[9px] text-slate-400 font-semibold">
-								{String(m.date || '').slice(5)}
-							</span>
-							<span className={`text-sm font-black md: leading-tight mt-0.5 ${isActive ? 'text-[var(--color-primary-700)]' : 'text-slate-800'}`}>
-								{m.weight ?? '-'}
-							</span>
-							<span className="text-[8px] flex gap-1 text-slate-400">
-								{t('units.kg')}
-								{diff !== null && (
-									<span className={[
-										'text-[8px] font-black mt-0.5 md: leading-none',
-										diffNum < 0 ? 'text-emerald-500' : diffNum > 0 ? 'text-rose-500' : 'text-slate-400',
-									].join(' ')}>
-										{diffNum > 0 ? '+' : ''}{diff}
-									</span>
-								)}
-							</span>
-						</motion.div>
+						<button key={m.id || m.date} type="button" onClick={() => setHoveredIdx(on ? null : i)} className={`flex min-w-16 shrink-0 flex-col items-center gap-0.5 rounded-xl border px-3 py-2.5 ${on ? 'border-(--color-primary-300) bg-(--color-primary-50)' : 'border-slate-200 bg-slate-50'}`}>
+							<span className="text-[9px] font-semibold text-slate-400">{String(m.date || '').slice(5)}</span>
+							<span className={`text-sm font-black ${on ? 'text-(--color-primary-700)' : 'text-slate-800'}`}>{m.weight ?? '-'}</span>
+							<span className="text-[8px] font-bold text-slate-400">{t('units.kg')}</span>
+							{diff != null && <span className={`text-[8px] font-black ${diffNum < 0 ? 'text-emerald-500' : diffNum > 0 ? 'text-rose-500' : 'text-slate-400'}`}>{diffNum > 0 ? '+' : ''}{diff}</span>}
+						</button>
 					);
 				})}
 			</div>
@@ -596,195 +266,34 @@ function WeightTrendChart({ data = [], t }) {
 	);
 }
 
-
 function NutritionGoalsCard({ user, t }) {
 	const goals = [
-		{
-			label: t('profile.calories'),
-			value: user?.caloriesTarget || 0,
-			unit: t('units.kcal'),
-			icon: Flame,
-			gradient: 'from-orange-500 to-red-400',
-			softBg: 'from-orange-50 to-red-50',
-			border: 'border-orange-100',
-			ring: '#f97316',
-			ringLight: '#fed7aa',
-			textColor: 'text-orange-600',
-			bgColor: 'bg-orange-500',
-			hint: 85, // % of ring to fill as "example consumed"
-		},
-		{
-			label: t('profile.protein'),
-			value: user?.proteinPerDay || 0,
-			unit: t('units.g'),
-			icon: Dumbbell,
-			gradient: 'from-blue-500 to-indigo-500',
-			softBg: 'from-blue-50 to-indigo-50',
-			border: 'border-blue-100',
-			ring: '#3b82f6',
-			ringLight: '#bfdbfe',
-			textColor: 'text-blue-600',
-			bgColor: 'bg-blue-500',
-			hint: 62,
-		},
-		{
-			label: t('profile.carbs'),
-			value: user?.carbsPerDay || 0,
-			unit: t('units.g'),
-			icon: Zap,
-			gradient: 'from-emerald-500 to-teal-400',
-			softBg: 'from-emerald-50 to-teal-50',
-			border: 'border-emerald-100',
-			ring: '#10b981',
-			ringLight: '#a7f3d0',
-			textColor: 'text-emerald-600',
-			bgColor: 'bg-emerald-500',
-			hint: 74,
-		},
-		{
-			label: t('profile.fats'),
-			value: user?.fatsPerDay || 0,
-			unit: t('units.g'),
-			icon: Heart,
-			gradient: 'from-amber-500 to-yellow-400',
-			softBg: 'from-amber-50 to-yellow-50',
-			border: 'border-amber-100',
-			ring: '#f59e0b',
-			ringLight: '#fde68a',
-			textColor: 'text-amber-600',
-			bgColor: 'bg-amber-500',
-			hint: 50,
-		},
+		{ label: t('profile.calories'), value: user?.caloriesTarget, unit: t('units.kcal'), icon: Flame, color: '#f97316', bg: '#fff7ed' },
+		{ label: t('profile.protein'), value: user?.proteinPerDay, unit: t('units.g'), icon: Beef, color: '#2563eb', bg: '#eff6ff' },
+		{ label: t('profile.carbs'), value: user?.carbsPerDay, unit: t('units.g'), icon: Zap, color: '#f59e0b', bg: '#fffbeb' },
+		{ label: t('profile.fats'), value: user?.fatsPerDay, unit: t('units.g'), icon: Droplets, color: '#ec4899', bg: '#fdf2f8' },
 	];
 
-	/* SVG ring helper */
-	const R = 28;
-	const CIRC = 2 * Math.PI * R;
-	const ringDash = (pct) => (pct / 100) * CIRC;
-
 	return (
-		<motion.div {...fadeUp} className={card + ' p-5 sm:p-6 overflow-hidden'}>
-
-			{/* subtle radial glow behind everything */}
-			<div className="absolute inset-0 pointer-events-none rounded-[inherit] overflow-hidden">
-				<div className="absolute -top-8 -start-8 w-40 h-40 rounded-full bg-[var(--color-primary-100)] opacity-30 blur-3xl" />
-			</div>
-
+		<motion.div {...fadeUp} className={card + ' overflow-hidden p-4'}>
 			<SectionHeader
 				icon={Target}
 				title={t('profile.nutritionTargets')}
 				subtitle={t('messages.dailyMacroGoals')}
 			/>
-
-			{/* 2-col grid */}
-			<div className="grid grid-cols-2 gap-3 relative">
-				{goals.map((goal, idx) => (
-					<motion.div
-						key={idx}
-						variants={staggerItem}
-						whileHover={{ y: -2, scale: 1.015 }}
-						transition={{ type: 'spring', stiffness: 340, damping: 22 }}
-						className={[
-							'relative overflow-hidden rounded-lg sm:rounded-lg border p-3.5 sm:p-4',
-							`bg-gradient-to-br ${goal.softBg} ${goal.border}`,
-							'shadow-[0_2px_10px_rgba(0,0,0,0.04)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]',
-							'transition-shadow duration-300',
-						].join(' ')}
-					>
-						{/* decorative large circle — top-end */}
-						<div
-							className={`absolute -top-5 -end-5 h-24 w-24 rounded-full bg-gradient-to-br ${goal.gradient} opacity-[0.09]`}
-						/>
-						{/* second smaller circle — bottom-start */}
-						<div
-							className={`absolute -bottom-3 -start-3 h-14 w-14 rounded-full bg-gradient-to-br ${goal.gradient} opacity-[0.06]`}
-						/>
-
-						<div className="relative flex items-start justify-between gap-2">
-							{/* Left: icon + text */}
-							<div className="flex-1 min-w-0">
-								{/* icon badge */}
-								<div
-									className={[
-										'inline-flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-lg mb-2.5',
-										`bg-gradient-to-br ${goal.gradient}`,
-									].join(' ')}
-									style={{
-										boxShadow: `0 4px 12px -2px ${goal.ring}55`,
-									}}
-								>
-									<goal.icon className="h-4 w-4" />
-								</div>
-
-								{/* value + unit */}
-								<div className="flex items-baseline gap-1 flex-wrap">
-									<motion.span
-										initial={{ opacity: 0, y: 6 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ delay: 0.1 + idx * 0.06, duration: 0.4 }}
-										className="text-[22px] sm:text-3xl font-black text-slate-900 md: leading-none tabular-nums"
-									>
-										{goal.value || '--'}
-									</motion.span>
-									<span className={`text-[10px] sm:text-xs font-bold ${goal.textColor}`}>
-										{goal.unit}
-									</span>
-								</div>
-
-								{/* label */}
-								<p className="text-[10px] sm:text-[11px] font-semibold text-slate-500 mt-1 truncate">
-									{goal.label}
-								</p>
-							</div>
-
-							{/* Right: SVG ring */}
-							<div className="flex-none">
-								<svg
-									width="64"
-									height="64"
-									viewBox="0 0 64 64"
-									className="-me-1 -mt-1"
-								>
-									{/* track */}
-									<circle
-										cx="32" cy="32" r={R}
-										fill="none"
-										stroke={goal.ringLight}
-										strokeWidth="5"
-										strokeLinecap="round"
-									/>
-									{/* progress arc */}
-									<motion.circle
-										cx="32" cy="32" r={R}
-										fill="none"
-										stroke={goal.ring}
-										strokeWidth="5"
-										strokeLinecap="round"
-										strokeDasharray={CIRC}
-										initial={{ strokeDashoffset: CIRC }}
-										animate={{ strokeDashoffset: CIRC - ringDash(goal.hint) }}
-										transition={{ duration: 1.1, delay: 0.15 + idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
-										transform="rotate(-90 32 32)"
-									/>
-									{/* center pct text */}
-									<text
-										x="32" y="36"
-										textAnchor="middle"
-										fontSize="11"
-										fontWeight="800"
-										fill={goal.ring}
-										fontFamily="inherit"
-									>
-										{goal.hint}%
-									</text>
-								</svg>
-							</div>
+			<div className="grid grid-cols-4 gap-2">
+				{goals.map((goal) => (
+					<div key={goal.label} className="flex flex-col items-center gap-1 rounded-2xl border border-white/80 px-1 py-3 text-center shadow-[3px_3px_6px_rgba(100,116,139,0.18)]" style={{ background: goal.bg }}>
+						<div className="mb-0.5 grid h-[34px] w-[34px] place-items-center rounded-2xl border bg-[#eef2f9] shadow-[2px_2px_4px_rgba(100,116,139,0.2)]" style={{ borderColor: `${goal.color}28` }}>
+							<goal.icon size={15} color={goal.color} />
 						</div>
-
-					</motion.div>
+						<p className="text-[17px] font-bold leading-5 text-slate-800">{goal.value != null && goal.value !== '' ? goal.value : '—'}</p>
+						<p className="-mt-0.5 text-[9px] text-slate-400">{goal.unit}</p>
+						<span className="h-0.5 w-5 rounded-full" style={{ background: `${goal.color}66` }} />
+						<p className="line-clamp-2 text-[9px] font-medium" style={{ color: goal.color }}>{goal.label}</p>
+					</div>
 				))}
 			</div>
-
 		</motion.div>
 	);
 }
@@ -793,6 +302,15 @@ function NutritionGoalsCard({ user, t }) {
 	 MEASUREMENTS TABLE
 	 ========================================================================= */
 function MeasurementsTable({ measurements, onEdit, onDelete, editRowId, editRow, setEditRow, onSave, onCancel, saving, t }) {
+	const [page, setPage] = useState(1);
+	const [limit, setLimit] = useState(() => getStoredPerPage(10));
+	const rows = useMemo(() => [...measurements].reverse(), [measurements]);
+	useEffect(() => { setPage(1); }, [measurements]);
+	const paged = useMemo(() => {
+		const start = (page - 1) * limit;
+		return rows.slice(start, start + limit);
+	}, [rows, page, limit]);
+
 	if (!measurements.length) return (
 		<div className="flex flex-col items-center justify-center py-12 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50">
 			<div className="flex h-14 w-14 items-center justify-center rounded-lg bg-white shadow-md ring-1 ring-slate-200">
@@ -810,68 +328,78 @@ function MeasurementsTable({ measurements, onEdit, onDelete, editRowId, editRow,
 		/>
 	);
 
+	const columns = [
+		{
+			key: 'date',
+			header: t('table.date'),
+			cell: (m) => (editRowId === m.id
+				? <input type="date" className="h-9 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]" value={editRow.date} onChange={e => setEditRow(s => ({ ...s, date: e.target.value }))} />
+				: <span className="text-sm font-semibold text-slate-800">{m.date}</span>),
+		},
+		{
+			key: 'weight',
+			header: t('table.weight'),
+			cell: (m) => (editRowId === m.id
+				? inlineInput(editRow.weight, v => setEditRow(s => ({ ...s, weight: v })))
+				: <span className="text-sm font-black text-slate-900">{m.weight ?? '-'} <span className="text-xs font-medium text-slate-400">{t('units.kg')}</span></span>),
+		},
+		{
+			key: 'waist',
+			header: t('table.waist'),
+			cell: (m) => (editRowId === m.id
+				? inlineInput(editRow.waist, v => setEditRow(s => ({ ...s, waist: v })))
+				: <span className="text-sm text-slate-600">{m.waist ?? '-'} <span className="text-xs text-slate-400">{t('units.cm')}</span></span>),
+		},
+		{
+			key: 'chest',
+			header: t('table.chest'),
+			cell: (m) => (editRowId === m.id
+				? inlineInput(editRow.chest, v => setEditRow(s => ({ ...s, chest: v })))
+				: <span className="text-sm text-slate-600">{m.chest ?? '-'} <span className="text-xs text-slate-400">{t('units.cm')}</span></span>),
+		},
+		{
+			key: 'actions',
+			header: t('table.actions'),
+			cell: (m) => (editRowId === m.id ? (
+				<div className="flex items-center justify-center gap-1.5">
+					<button type="button" onClick={onSave} disabled={saving} className="h-8 w-8 flex items-center justify-center rounded-lg text-white shadow-md bg-gradient-to-br from-[var(--color-primary-600)] to-[var(--color-primary-500)] hover:brightness-105 disabled:opacity-50 transition-all" title={t('actions.save')}>
+						<Save className="h-3.5 w-3.5" />
+					</button>
+					<button type="button" onClick={onCancel} className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition-all text-slate-500" title={t('actions.cancel')}>
+						<X className="h-3.5 w-3.5" />
+					</button>
+				</div>
+			) : (
+				<div className="flex items-center justify-center gap-1.5">
+					<button type="button" onClick={() => onEdit(m)} className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-200)] transition-all text-slate-500 hover:text-[var(--color-primary-600)]" title={t('actions.edit')}>
+						<Edit3 className="h-3.5 w-3.5" />
+					</button>
+					<button type="button" onClick={() => onDelete(m.id)} className="h-8 w-8 flex items-center justify-center rounded-lg border border-rose-100 bg-white hover:bg-rose-50 text-rose-400 hover:text-rose-600 hover:border-rose-200 transition-all" title={t('actions.delete')}>
+						<Trash2 className="h-3.5 w-3.5" />
+					</button>
+				</div>
+			)),
+		},
+	];
+
 	return (
-		<div className="overflow-hidden rounded-lg border border-slate-100 shadow-sm">
-			<div className="overflow-x-auto">
-				<table className="w-full">
-					<thead>
-						<tr className="bg-gradient-to-r from-slate-50 to-slate-100/80 border-b border-slate-100">
-							{[t('table.date'), t('table.weight'), t('table.waist'), t('table.chest'), t('table.actions')].map((h, i) => (
-								<th key={i} className={`px-4 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider ${i === 4 ? 'text-center' : 'rtl:text-right ltr:text-left'}`}>{h}</th>
-							))}
-						</tr>
-					</thead>
-					<tbody className="divide-y divide-slate-50">
-						{[...measurements].reverse().map((m, idx) => {
-							const isEditing = editRowId === m.id;
-							return (
-								<tr key={m.id || idx} className="hover:bg-slate-50/70 transition-colors group">
-									<td className="px-4 py-3">
-										{isEditing
-											? <input type="date" className="h-9 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]" value={editRow.date} onChange={e => setEditRow(s => ({ ...s, date: e.target.value }))} />
-											: <span className="text-sm font-semibold text-slate-800">{m.date}</span>
-										}
-									</td>
-									<td className="px-4 py-3">
-										{isEditing ? inlineInput(editRow.weight, v => setEditRow(s => ({ ...s, weight: v })))
-											: <span className="text-sm font-black text-slate-900">{m.weight ?? '-'} <span className="text-xs font-medium text-slate-400">{t('units.kg')}</span></span>}
-									</td>
-									<td className="px-4 py-3">
-										{isEditing ? inlineInput(editRow.waist, v => setEditRow(s => ({ ...s, waist: v })))
-											: <span className="text-sm text-slate-600">{m.waist ?? '-'} <span className="text-xs text-slate-400">{t('units.cm')}</span></span>}
-									</td>
-									<td className="px-4 py-3">
-										{isEditing ? inlineInput(editRow.chest, v => setEditRow(s => ({ ...s, chest: v })))
-											: <span className="text-sm text-slate-600">{m.chest ?? '-'} <span className="text-xs text-slate-400">{t('units.cm')}</span></span>}
-									</td>
-									<td className="px-4 py-3">
-										{!isEditing ? (
-											<div className="flex items-center justify-center gap-1.5">
-												<button onClick={() => onEdit(m)} className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-200)] transition-all text-slate-500 hover:text-[var(--color-primary-600)]" title={t('actions.edit')}>
-													<Edit3 className="h-3.5 w-3.5" />
-												</button>
-												<button onClick={() => onDelete(m.id)} className="h-8 w-8 flex items-center justify-center rounded-lg border border-rose-100 bg-white hover:bg-rose-50 text-rose-400 hover:text-rose-600 hover:border-rose-200 transition-all" title={t('actions.delete')}>
-													<Trash2 className="h-3.5 w-3.5" />
-												</button>
-											</div>
-										) : (
-											<div className="flex items-center justify-center gap-1.5">
-												<button onClick={onSave} disabled={saving} className="h-8 w-8 flex items-center justify-center rounded-lg text-white shadow-md bg-gradient-to-br from-[var(--color-primary-600)] to-[var(--color-primary-500)] hover:brightness-105 disabled:opacity-50 transition-all" title={t('actions.save')}>
-													<Save className="h-3.5 w-3.5" />
-												</button>
-												<button onClick={onCancel} className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition-all text-slate-500" title={t('actions.cancel')}>
-													<X className="h-3.5 w-3.5" />
-												</button>
-											</div>
-										)}
-									</td>
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
-			</div>
-		</div>
+		<DataTable
+			hideToolbar
+			compact
+			columns={columns}
+			data={paged}
+			rowKey={(m, i) => m.id ?? i}
+			perPageOptions={[10, 20, 30, 50]}
+			pagination={{ current_page: page, per_page: limit, total_records: rows.length }}
+			onPageChange={({ page: nextPage, per_page }) => {
+				const nextLimit = Number(per_page);
+				if (nextLimit) {
+					setStoredPerPage(nextLimit);
+					setLimit(nextLimit);
+				}
+				setPage(Number(nextPage ?? 1));
+			}}
+		/>
 	);
 }
 
@@ -921,7 +449,29 @@ const blobToFile = (blob, name) => new File([blob], name, { type: blob.type });
 export default function ProfileOverviewPage() {
 	const t = useTranslations('myProfile');
 	const tBm = useTranslations('bodyMeasurement');
+	const locale = useLocale();
 	useTheme();
+
+	useEffect(() => {
+		const shell = document.querySelector('.dashboard-icy');
+		const body = document.getElementById('body');
+		const pane = document.querySelector('[data-dashboard-content]');
+		const dark = document.documentElement.classList.contains('dark')
+			|| document.documentElement.getAttribute('data-theme-mode') === 'dark';
+		const color = dark ? '#0b1220' : '#ffffff';
+		for (const el of [shell, body, pane]) {
+			el?.style.setProperty('--gm-bg-image', 'none', 'important');
+			el?.style.setProperty('background-image', 'none', 'important');
+			el?.style.setProperty('background-color', color, 'important');
+		}
+		return () => {
+			for (const el of [shell, body, pane]) {
+				el?.style.removeProperty('--gm-bg-image');
+				el?.style.removeProperty('background-image');
+				el?.style.removeProperty('background-color');
+			}
+		};
+	}, []);
 
 	const [tab, setTab] = useState('overview');
 	const [user, setUser] = useState(null);
@@ -1094,228 +644,105 @@ export default function ProfileOverviewPage() {
 	const allSides = ['front', 'back', 'left', 'right'];
 	const openAllCompare = () => { if (!compare.beforeId || !compare.afterId) return; setCompareAllIndex(0); setCompareAllOpen(true); };
 
-	if (loading) return <LoadingSkeleton />;
+	if (loading) return (
+		<div data-plain-page="1" className="report-phone -mx-[var(--app-gutter)] min-h-full bg-white px-[var(--app-gutter)] pt-1 dark:bg-[#0b1220]">
+			<LoadingSkeleton />
+		</div>
+	);
 
 	const leftDaysVal = daysLeft(user?.subscriptionEnd);
 	const leftDaysLabel = leftDaysVal == null ? t('profile.noEndDate') : leftDaysVal <= 0 ? t('profile.expired') : `${leftDaysVal} ${t('profile.daysLeft')}`;
 	const isExpiringSoon = leftDaysVal != null && leftDaysVal > 0 && leftDaysVal <= 7;
 
 	return (
-		<div className="min-h-screen w-[calc(100%+14px)] rtl:mr-[-7px] ltr:ml-[-7px] mt-[-7px]">
-
-			<div className="relative overflow-hidden rounded-lg sm:rounded-lg bg-gradient-to-br from-[var(--color-primary-800)] via-[var(--color-primary-700)] to-[var(--color-secondary-600)]  ">
-
-				<div className="absolute inset-0 opacity-[0.055] pointer-events-none mix-blend-overlay"
-					style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
-
-				{/* glow orbs */}
-				<div className="absolute w-80 h-80 rounded-full blur-[80px] -top-40 -start-20 pointer-events-none bg-white/[0.07]" />
-				<div className="absolute w-56 h-56 rounded-full blur-[60px] -bottom-24 -end-12 pointer-events-none bg-white/[0.06]" />
-				<div className="absolute w-40 h-40 rounded-full blur-[48px] top-1/2 start-1/3 pointer-events-none bg-[var(--color-secondary-400)]/[0.13]" />
-
-				{/* decorative rings */}
-				<div className="absolute -top-6 -end-6 w-28 h-28 rounded-full border border-white/[0.12] pointer-events-none" />
-				<div className="absolute -top-2 -end-2 w-16 h-16 rounded-full border border-white/[0.08] pointer-events-none" />
-				<div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
-
-				<div className="relative z-10 p-4 sm:p-6 pb-3 sm:pb-4">
-
-					{/* ── Identity row ── */}
-					<div className="flex items-start justify-between gap-3 mb-5">
-						<div className="flex items-center gap-3 min-w-0 flex-1">
-							{/* Avatar */}
-							<motion.div
-								whileHover={{ scale: 1.06, rotate: 3 }}
-								transition={{ type: 'spring', stiffness: 380, damping: 20 }}
-								className="relative flex-none w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-white/[0.18] backdrop-blur-[16px] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.38)] flex items-center justify-center"
-							>
-								<UserIcon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-								{/* online dot */}
-								<span className="absolute -bottom-0.5 -end-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[var(--color-primary-700)] shadow-sm" />
-							</motion.div>
-
-							<div className="min-w-0 flex-1">
-								<div className="flex items-center gap-2 flex-wrap">
-									<h1 className="text-lg sm:text-2xl font-black text-white md: leading-tight truncate">
-										{user?.name || t('profile.user')}
-									</h1>
-								</div>
-								<p className="text-[10px] sm:text-xs text-white/55 mt-0.5 font-medium truncate">{user?.email}</p>
-							</div>
+		<div data-plain-page="1" className="report-phone -mx-[var(--app-gutter)] min-h-full bg-white px-[var(--app-gutter)] pt-1 dark:bg-[#0b1220]">
+			<div className="mx-auto w-full max-w-[440px] space-y-4">
+			<div className="m-[5px] rounded-3xl shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]">
+				<div
+					className="relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-e-[rgba(15,34,128,0.35)] border-b-[rgba(15,34,128,0.45)] pb-3"
+					style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), #1a3fbf)' }}
+				>
+					<div className="pointer-events-none absolute -start-16 -top-10 h-[280px] w-[280px] rounded-full bg-white/[0.06]" />
+					<div className="pointer-events-none absolute -end-12 -bottom-10 h-[200px] w-[200px] rounded-full bg-white/[0.04]" />
+					<div className="relative flex items-center gap-3 p-4 pb-2">
+						<div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white">
+							<UserIcon className="h-5 w-5" />
+							<span className="absolute -bottom-0.5 -end-0.5 h-3 w-3 rounded-full border-2 border-(--color-primary-700) bg-emerald-400" />
 						</div>
-
-						{/* Right actions */}
-						<div className="flex items-center gap-2 shrink-0">
-							{/* Subscription badge */}
-							<motion.div
-								className={[
-									'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold border backdrop-blur-sm',
-									isExpiringSoon
-										? 'bg-amber-500/20 border-amber-400/40 text-amber-200'
-										: 'bg-white/[0.14] border-white/[0.22] text-white',
-								].join(' ')}
-								animate={isExpiringSoon ? { scale: [1, 1.03, 1] } : {}}
-								transition={{ repeat: Infinity, duration: 2 }}
-								title={String(user?.subscriptionEnd || '')}
-							>
-								<Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-								<span className="hidden sm:inline">{leftDaysLabel}</span>
-								<span className="sm:hidden">{leftDaysVal ?? '—'}</span>
-							</motion.div>
-
-							{/* Edit button */}
-							<motion.button
-								whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-								onClick={openEditProfile}
-								className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.16] backdrop-blur-sm border border-white/[0.22] text-white text-[10px] sm:text-xs font-bold hover:bg-white/[0.24] transition-all shadow-sm"
-							>
-								<Edit3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-								<span className="hidden sm:inline">{t('actions.edit')}</span>
-							</motion.button>
+						<div className="min-w-0 flex-1">
+							<h1 className="truncate text-xl font-black leading-6 tracking-[-0.3px] text-white">{user?.name || t('profile.user')}</h1>
+							<p className="mt-0.5 truncate text-[10px] font-medium text-white/55">{user?.email}</p>
 						</div>
+						<button type="button" onClick={openEditProfile} aria-label={t('actions.edit')} className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white">
+							<Edit3 className="h-[18px] w-[18px]" />
+						</button>
 					</div>
-
-					{/* ── Stats 4-col ── */}
-					<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5">
-						<HeaderStatPill label={t('stats.membership')} value={user?.membership || t('profile.basic')} icon={Award} delay={0.05} accent />
-						<HeaderStatPill label={t('stats.coach')} value={user?.coach?.name || t('profile.noCoach')} icon={User2} delay={0.11} />
-						<HeaderStatPill label={t('stats.exercisePlan')} value={user?.activeExercisePlan?.name || t('profile.none')} icon={Dumbbell} delay={0.17} accent />
-						<HeaderStatPill label={t('stats.mealPlan')} value={user?.activeMealPlan?.name || t('profile.none')} icon={Apple} delay={0.23} />
-					</div>
-
-					{/* ── Tabs ── */}
-					<div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1 -mb-1">
-						{tabs.map(({ key, label, icon: Icon }, i) => {
+					<div className="mx-4 mb-2 h-px bg-white/20" />
+					<div className="flex gap-1.5 px-4 pb-2">
+						{tabs.map(({ key, label }) => {
 							const on = tab === key;
 							return (
-								<motion.button
-									key={key}
-									initial={{ opacity: 0, y: 6 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ delay: 0.06 + i * 0.05 }}
-									onClick={() => setTab(key)}
-									whileTap={{ scale: 0.96 }}
-									className="relative shrink-0 flex items-center gap-1.5 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-lg cursor-pointer whitespace-nowrap font-bold transition-all duration-200 border-none bg-transparent text-[11px] sm:text-xs"
-									style={{ color: on ? 'var(--color-primary-700)' : 'rgba(255,255,255,0.65)' }}
-								>
-									{on && (
-										<motion.div
-											layoutId="profile-tab-bg"
-											className="absolute inset-0 rounded-lg sm:rounded-lg bg-white shadow-lg"
-											transition={{ type: 'spring', stiffness: 500, damping: 42 }}
-										/>
-									)}
-									<span className="relative z-10 flex items-center gap-1.5">
-										<Icon className={`h-3.5 w-3.5 ${on ? 'text-[var(--color-primary-600)]' : ''}`} />
-										{label}
-									</span>
-								</motion.button>
+								<button key={key} type="button" onClick={() => setTab(key)} className={`h-9 min-w-0 flex-1 truncate rounded-2xl px-1 text-[11px] font-bold ${on ? 'border border-white/90 bg-white text-(--color-primary-700) shadow-[2px_4px_7px_rgba(30,58,138,0.35)]' : 'border border-white/30 bg-white/10 text-white/70'}`}>
+									{label}
+								</button>
 							);
 						})}
+					</div>
+					<div className="space-y-1.5 px-4">
+						<div className="flex gap-1.5">
+							<HeaderStatPill label={t('stats.membership')} value={user?.membership || t('profile.basic')} icon={Award} />
+							<HeaderStatPill label={t('stats.coach')} value={user?.coach?.name || t('profile.noCoach')} icon={User2} />
+						</div>
+						<div className="flex gap-1.5">
+							<HeaderStatPill label={t('stats.exercisePlan')} value={user?.activeExercisePlan?.name || t('profile.none')} icon={Dumbbell} />
+							<HeaderStatPill label={t('stats.mealPlan')} value={user?.activeMealPlan?.name || t('profile.none')} icon={Apple} />
+						</div>
 					</div>
 				</div>
 			</div>
 
 			{/* ═══════════════════════ CONTENT ═══════════════════════ */}
-			<div className=" pt-4 pb-24">
+			<div className="space-y-4">
 				<AnimatePresence mode="wait">
 
 					{/* ── OVERVIEW TAB ── */}
 					{tab === 'overview' && (
-						<motion.div key="overview" variants={staggerContainer} initial="initial" animate="animate" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+						<motion.div key="overview" variants={staggerContainer} initial="initial" animate="animate" className="flex flex-col gap-4">
 
 							<NutritionGoalsCard user={user} t={t} />
-
-							<motion.div variants={staggerItem} className={card + ' lg:col-span-2 p-5 sm:p-6'}>
-								<WeightTrendChart data={measurements} t={t} />
-							</motion.div>
-
-							{/* Compare card */}
-							<motion.div
-								variants={staggerItem}
-								className={card + ' lg:col-span-3 p-5 sm:p-6 overflow-hidden'}
-							>
-								{/* Ambient glow */}
-								<div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-[var(--color-primary-100)] opacity-20 blur-3xl pointer-events-none" />
-
-								<SectionHeader
-									icon={ImageIcon}
-									title={t('sections.compare')}
-									subtitle={t('messages.compareHint')}
-								/>
-
-								{/* Controls row */}
-								<div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-									<Select
-										searchable={false}
-										options={sideOptions}
-										value={compare.side}
-										onChange={val => setCompare(s => ({ ...s, side: String(val) }))}
-										placeholder={t('labels.side')}
-									/>
-									<Select
-										searchable={false}
-										options={photoSetOptions}
-										value={compare.beforeId || ''}
-										onChange={val => setCompare(s => ({ ...s, beforeId: String(val) }))}
-										placeholder={t('labels.before')}
-										clearable
-									/>
-									<Select
-										searchable={false}
-										options={photoSetOptions}
-										value={compare.afterId || ''}
-										onChange={val => setCompare(s => ({ ...s, afterId: String(val) }))}
-										placeholder={t('labels.after')}
-										clearable
-									/>
-									<Btn
-										variant="primary"
-										disabled={!compare.beforeId || !compare.afterId}
-										onClick={() =>
-											compare.side === 'all'
-												? openAllCompare()
-												: setPhotoPreview({ before: leftSrc(), after: rightSrc() })
-										}
-									>
-										{t('actions.preview')}
-									</Btn>
+							<motion.div variants={staggerItem} className={card + ' overflow-hidden'}>
+								<div className="px-4 pt-4">
+									<SectionHeader icon={UserIcon} title={t('sections.personalInfo.title')} subtitle={t('sections.personalInfo.subtitle')} />
 								</div>
-
-								{/* Preview area */}
-								{compare.beforeId && compare.afterId && compare.side !== 'all' ? (
-									<motion.div
-										initial={{ opacity: 0, y: 8 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-										className="rounded-2xl overflow-hidden ring-1 ring-slate-100 shadow-sm"
-									>
-										<BeforeAfter before={leftSrc()} after={rightSrc()} name="progress" t={t} />
-									</motion.div>
-								) : (
-									<motion.div
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										transition={{ duration: 0.3 }}
-										className="flex flex-col items-center justify-center py-16 rounded-2xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 relative overflow-hidden"
-									>
-										{/* decorative circles */}
-										<div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-[var(--color-primary-100)] opacity-20 blur-2xl pointer-events-none" />
-										<div className="absolute -top-4 -right-4 h-16 w-16 rounded-full bg-[var(--color-primary-100)] opacity-15 blur-xl pointer-events-none" />
-
-										<motion.div
-											animate={{ y: [0, -4, 0] }}
-											transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-											className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white shadow-md ring-1 ring-slate-200 mb-4"
-										>
-											<ImageIcon className="h-7 w-7 text-slate-300" />
-										</motion.div>
-
-										<p className="text-sm font-black text-slate-600">{t('messages.chooseTwoSets')}</p>
-										<p className="text-xs text-slate-400 mt-1 font-medium">{t('messages.compareHint')}</p>
-									</motion.div>
-								)}
+								<div>
+									{[
+										{ icon: UserIcon, label: t('profile.name'), value: user?.name, color: '#3b82f6', bg: '#eff6ff' },
+										{ icon: Info, label: t('fields.email'), value: user?.email, color: '#64748b', bg: '#f8fafc' },
+										{ icon: Activity, label: t('profile.phone'), value: user?.phone, color: '#10b981', bg: '#f0fdf4' },
+										{ icon: User2, label: t('fields.gender'), value: user?.gender === 'male' ? t('gender.male') : user?.gender === 'female' ? t('gender.female') : user?.gender, color: '#8b5cf6', bg: '#f5f3ff' },
+										{ icon: Calendar, label: t('table.birthDate'), value: user?.birthDate ? new Date(user.birthDate).toLocaleDateString() : '', color: '#f59e0b', bg: '#fffbeb' },
+										{ icon: Award, label: t('stats.membership'), value: user?.membership, color: '#f97316', bg: '#fff7ed' },
+									].filter((row) => row.value).map((row, i, arr) => (
+										<div key={row.label} className={`flex items-center gap-3 px-4 py-3 ${i === arr.length - 1 ? '' : 'border-b border-slate-100'}`}>
+											<div className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-2xl shadow-[2px_2px_4px_rgba(100,116,139,0.18)]" style={{ background: row.bg, color: row.color }}>
+												<row.icon size={15} />
+											</div>
+											<div className="min-w-0 flex-1">
+												<p className="text-[11px] text-slate-400">{row.label}</p>
+												<p className="truncate text-[13px] font-semibold text-slate-800">{row.value}</p>
+											</div>
+										</div>
+									))}
+								</div>
 							</motion.div>
+
+
+
+							{measurements.length > 0 && (
+								<motion.div variants={staggerItem} className={card + ' p-4'}>
+									<WeightTrendChart data={measurements} t={t} />
+								</motion.div>
+							)}
 						</motion.div>
 					)}
 
@@ -1328,22 +755,28 @@ export default function ProfileOverviewPage() {
 
 					{/* ── BODY TAB ── */}
 					{tab === 'body' && (
-						<motion.div key="body" {...fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+						<motion.div key="body" {...fadeUp} className="flex flex-col gap-4">
 							{/* add measurement form */}
-							<div className={card + ' p-5 sm:p-6'}>
+							<div className={card + ' p-4'}>
 								<SectionHeader icon={Plus} title={t('forms.addMeasurement')} subtitle={t('messages.trackYourMeasurements')} />
 								<form onSubmit={handleSubmit(addMeasurement)} className="space-y-3">
-									<div className="grid grid-cols-2 gap-3">
+									<div className="grid grid-cols-2 gap-2.5">
 										<Controller name="date" control={control} render={({ field }) => (
-											<InputDate placeholder={t('forms.date')} value={field.value} onChange={field.onChange} />
+											<input
+												type="date"
+												aria-label={t('forms.date')}
+												className="h-[46px] w-full rounded-2xl bg-[#e4eaf3] px-3 text-sm text-slate-800 shadow-[inset_2px_2px_5px_rgba(100,116,139,0.28)] outline-none"
+												value={field.value instanceof Date && !Number.isNaN(field.value.getTime()) ? field.value.toISOString().slice(0, 10) : ''}
+												onChange={e => field.onChange(e.target.value ? new Date(`${e.target.value}T00:00:00`) : null)}
+											/>
 										)} />
 										<Controller name="weight" control={control} rules={{ required: t('errors.required') }} render={({ field }) => (
-											<Input placeholder={t('forms.weightKg')} {...field} error={errors.weight?.message} />
+											<Input placeholder={t('forms.weightKg')} cnInputParent={neuInput} {...field} error={errors.weight?.message} />
 										)} />
-										<Controller name="waist" control={control} render={({ field }) => <Input placeholder={t('forms.waistCm')} {...field} />} />
-										<Controller name="chest" control={control} render={({ field }) => <Input placeholder={t('forms.chestCm')} {...field} />} />
+										<Controller name="waist" control={control} render={({ field }) => <Input placeholder={t('forms.waistCm')} cnInputParent={neuInput} {...field} />} />
+										<Controller name="chest" control={control} render={({ field }) => <Input placeholder={t('forms.chestCm')} cnInputParent={neuInput} {...field} />} />
 									</div>
-									<Btn type="submit" variant="primary" disabled={savingMeasure} className="w-full" icon={Plus}>
+									<Btn type="submit" variant="primary" disabled={savingMeasure} className="!h-[50px] w-full !rounded-2xl" icon={Plus}>
 										{savingMeasure ? t('actions.saving') : t('actions.save')}
 									</Btn>
 								</form>
@@ -1370,7 +803,7 @@ export default function ProfileOverviewPage() {
 
 					{/* ── PHOTOS TAB ── */}
 					{tab === 'photos' && (
-						<motion.div key="photos" {...fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+						<motion.div key="photos" {...fadeUp} className="flex flex-col gap-4">
 
 							{/* upload panel */}
 							<div className={card + ' p-5 sm:p-6'}>
@@ -1386,9 +819,13 @@ export default function ProfileOverviewPage() {
 									}
 								/>
 
-								<Btn variant="outline" className="w-full mb-4" icon={Upload} onClick={() => setShowUploadBlock(s => !s)}>
-									{showUploadBlock ? t('actions.hideUpload') : t('actions.addBodyPhotos')}
-								</Btn>
+								<button type="button" onClick={() => setShowUploadBlock(s => !s)} className="mb-3 flex w-full flex-col items-center rounded-2xl border-[1.5px] border-dashed border-slate-200 bg-[#fafafa] px-4 py-6 text-center">
+									<span className="mb-3 grid h-[60px] w-[60px] place-items-center rounded-2xl bg-[#eef2f9] text-(--color-primary-500) shadow-[3px_3px_6px_rgba(100,116,139,0.22)]">
+										<Upload className="h-6 w-6" />
+									</span>
+									<span className="text-[13px] font-bold text-slate-600">{showUploadBlock ? t('actions.hideUpload') : t('actions.addBodyPhotos')}</span>
+									<span className="mt-1 text-[11px] text-slate-400">{t('messages.uploadProgressPhotos')}</span>
+								</button>
 
 								<AnimatePresence>
 									{showUploadBlock && (
@@ -1432,9 +869,9 @@ export default function ProfileOverviewPage() {
 											</div>
 
 											<div className="space-y-2.5">
-												<InputDate placeholder={t('forms.date')} value={pDate} onChange={setPDate} />
-												<Input placeholder={t('forms.weightOptional')} value={pWeight} onChange={setPWeight} />
-												<Input placeholder={t('forms.noteOptional')} value={pNote} onChange={setPNote} />
+												<input type="date" aria-label={t('forms.date')} className="h-[46px] w-full rounded-2xl bg-[#e4eaf3] px-3 text-sm text-slate-800 shadow-[inset_2px_2px_5px_rgba(100,116,139,0.28)] outline-none" value={pDate instanceof Date && !Number.isNaN(pDate.getTime()) ? pDate.toISOString().slice(0, 10) : ''} onChange={e => setPDate(e.target.value ? new Date(`${e.target.value}T00:00:00`) : new Date())} />
+												<Input placeholder={t('forms.weightOptional')} cnInputParent={neuInput} value={pWeight} onChange={setPWeight} />
+												<Input placeholder={t('forms.noteOptional')} cnInputParent={neuInput} value={pNote} onChange={setPNote} />
 											</div>
 
 											<Btn variant="primary" className="w-full" disabled={savingPhotos || (!pFront && !pBack && !pLeft && !pRight)} icon={Save} onClick={savePhotoSet}>
@@ -1513,9 +950,44 @@ export default function ProfileOverviewPage() {
 									</div>
 								)}
 							</div>
+
+							<div className={card + ' p-4'}>
+								<SectionHeader icon={ImageIcon} title={t('sections.compare')} subtitle={t('messages.compareHint')} />
+								<div className="space-y-2">
+									<Select searchable={false} cnInputParent={neuInput} options={sideOptions} value={compare.side} onChange={val => setCompare(s => ({ ...s, side: String(val) }))} placeholder={t('labels.side')} />
+									<Select searchable={false} cnInputParent={neuInput} options={photoSetOptions} value={compare.beforeId || ''} onChange={val => setCompare(s => ({ ...s, beforeId: String(val) }))} placeholder={t('labels.before')} clearable />
+									<Select searchable={false} cnInputParent={neuInput} options={photoSetOptions} value={compare.afterId || ''} onChange={val => setCompare(s => ({ ...s, afterId: String(val) }))} placeholder={t('labels.after')} clearable />
+									<Btn variant="primary" className="!h-[50px] w-full !rounded-2xl" disabled={!compare.beforeId || !compare.afterId} onClick={() => compare.side === 'all' ? openAllCompare() : setPhotoPreview({ before: leftSrc(), after: rightSrc() })}>
+										{t('actions.preview')}
+									</Btn>
+								</div>
+								{compare.beforeId && compare.afterId && compare.side !== 'all' && (
+									<div className="mt-3 overflow-hidden rounded-2xl">
+										<BeforeAfter before={leftSrc()} after={rightSrc()} name="progress" t={t} />
+									</div>
+								)}
+							</div>
 						</motion.div>
 					)}
 				</AnimatePresence>
+
+				<div className={card + ' p-4'}>
+					<SectionHeader icon={Shield} title={t('legal.title')} subtitle={t('legal.subtitle')} />
+					<div className="space-y-2">
+						{[
+							{ href: `/${locale}/privacy`, icon: Shield, label: t('legal.privacy') },
+							{ href: `/${locale}/policy`, icon: FileText, label: t('legal.terms') },
+						].map((item) => (
+							<Link key={item.href} href={item.href} className="flex items-center justify-between rounded-2xl border border-white/80 bg-[#eef2f9] px-3.5 py-3 shadow-[3px_3px_6px_rgba(100,116,139,0.18)]">
+								<span className="flex items-center gap-2.5 text-[13px] font-semibold text-slate-900">
+									<item.icon size={16} className="text-(--color-primary-600)" />
+									{item.label}
+								</span>
+								<ChevronRight size={16} className="text-slate-400 rtl:scale-x-[-1]" />
+							</Link>
+						))}
+					</div>
+				</div>
 			</div>
 
 			{/* ═══════════════════════ MODALS ═══════════════════════ */}
@@ -1611,6 +1083,7 @@ export default function ProfileOverviewPage() {
 					</div>
 				)}
 			</Modal>
+			</div>
 		</div>
 	);
 }

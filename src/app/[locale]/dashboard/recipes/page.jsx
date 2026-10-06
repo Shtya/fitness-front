@@ -1,1204 +1,622 @@
 'use client';
 
-import axios from 'axios';
-import { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-	Flame, Plus, Trash2, Edit2,
-	Beef, Wheat, Droplets, X, BookOpen,
-	Check, Image as ImageIcon, Lightbulb, PlayCircle, BookMarked,
-	Camera, Link2, Utensils, ListChecks, FileText, Soup,
-	ChevronDown, Eye,
+	AlertCircle, Beef, BookMarked, BookOpen, ChefHat, Droplets, Eye, Flame, Layers, Lightbulb, ListChecks,
+	PencilLine, PlayCircle, Plus, RefreshCw, Soup, Trash2, Utensils, Wheat, XCircle,
 } from 'lucide-react';
-import { PageHeader } from '@/components/molecules/PageHeader';
+import { useTranslations } from 'next-intl';
 
-import ActionButtons from '@/components/atoms/Actions';
+import api, { baseImg } from '@/utils/axios';
+import { Modal } from '@/components/dashboard/ui/UI';
+import Img from '@/components/atoms/Img';
+import Button from '@/components/atoms/Button';
+import Badge from '@/components/atoms/GmBadge';
+import GmRowActions from '@/components/atoms/GmRowActions';
+import GmStatCard from '@/components/molecules/GmStatCard';
 import DataTable from '@/components/atoms/Datatable';
+import { Notification } from '@/config/Notification';
+import useDebounced from '@/hooks/useDebounced';
+import { IntakeHero, IntakeToolbar, IntakeFilterPopover, IntakeOptionGroup } from '@/components/pages/dashboard/intake/IntakeChrome';
+import { RecipeForm } from '@/components/pages/dashboard/recipes/RecipeForm';
+import { SATIETY_COLOR, mealTypeLabel, mealTypeMeta, satietyLabel } from '@/lib/recipe-meta';
 
-const API_BASE = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1`;
+const GM_MODAL = 'gm-modal';
+const PER_PAGE_OPTIONS = [6, 12, 24, 48];
 
-/* ─── EMPTY FORM ─────────────────────────────────────────────────────────── */
-const EMPTY_FORM = {
-	id: null,
-	title: '',
-	satiety: 'medium',
-	category: '',
-	calories: '',
-	protein: '',
-	carbs: '',
-	fat: '',
-	ingredients: [''],
-	creamIngredients: [],
-	sauceIngredients: [],
-	directions: [''],
-	tips: '',
-	videoUrl: '',
-	imageUrl: '',
-	imageFile: null,
-};
-
-/* ─── FLOATING LABEL ─────────────────────────────────────────────────────── */
-const FloatLabel = ({ show, text }) => (
-	<AnimatePresence>
-		{show && (
-			<motion.span
-				initial={{ opacity: 0, y: 3 }}
-				animate={{ opacity: 1, y: 0 }}
-				exit={{ opacity: 0, y: 3 }}
-				transition={{ duration: 0.13 }}
-				className="pointer-events-none absolute z-10 px-1 text-[9px] font-bold"
-				style={{
-					top: -8,
-					insetInlineStart: 9,
-					color: 'var(--color-primary-600)',
-					background: 'linear-gradient(to bottom,var(--color-primary-50) 50%,white 50%)',
-					letterSpacing: '0.05em',
-				}}
-			>
-				{text}
-			</motion.span>
-		)}
-	</AnimatePresence>
-);
-
-const BASE =
-	'h-[36px] w-full rounded-lg border bg-white px-3 text-xs font-semibold outline-none transition-all duration-150 placeholder:text-slate-300 focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]';
-const filled = 'border-[color:var(--color-primary-300)] text-slate-800';
-const unfilled = 'border-slate-200 text-slate-700 hover:border-slate-300';
-
-const MiniField = memo(function MiniField({
-	value,
-	placeholder,
-	onChange,
-	type = 'text',
-	iconLeft = null,
-	className = '',
-	cnParent = '',
-	readOnly = false,
-}) {
-	const has = String(value ?? '').trim().length > 0;
-	return (
-		<div className={`relative w-full ${cnParent}`}>
-			<FloatLabel show={has} text={placeholder} />
-			{iconLeft && (
-				<span
-					className="pointer-events-none absolute z-10 top-1/2 -translate-y-1/2 opacity-40"
-					style={{ insetInlineStart: 10 }}
-				>
-					{iconLeft}
-				</span>
-			)}
-			<input
-				value={value ?? ''}
-				type={type}
-				placeholder={placeholder}
-				onChange={onChange}
-				readOnly={readOnly}
-				className={[BASE, iconLeft ? 'ps-8' : '', has ? filled : unfilled, className].join(' ')}
-			/>
-		</div>
-	);
-});
-
-const MiniTextArea = memo(function MiniTextArea({ value, placeholder, onChange, rows = 3 }) {
-	const has = String(value ?? '').trim().length > 0;
-	return (
-		<div className="relative w-full">
-			<FloatLabel show={has} text={placeholder} />
-			<textarea
-				value={value ?? ''}
-				placeholder={placeholder}
-				rows={rows}
-				onChange={e => onChange?.(e.target.value)}
-				className={[
-					'w-full rounded-lg border bg-white px-3 py-2.5 text-xs font-semibold md: leading-relaxed outline-none transition-all duration-150 placeholder:text-slate-300 resize-none focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
-					has ? filled : unfilled,
-				].join(' ')}
-			/>
-		</div>
-	);
-});
-
-function SegmentControl({ value, onChange, options, cn: cls, id }) {
-	return (
-		<div
-			className={`flex ${cls} gap-1 rounded-lg border p-1`}
-			style={{ borderColor: 'var(--color-primary-100)', background: 'var(--color-primary-50)' }}
-		>
-			{options.map(opt => {
-				const active = value === opt.value;
-				return (
-					<button
-						key={opt.value}
-						type="button"
-						onClick={() => onChange(opt.value)}
-						className="relative flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-colors"
-						style={{ color: active ? 'white' : 'var(--color-primary-600)' }}
-					>
-						{active && (
-							<motion.div
-								layoutId={`seg-${id}`}
-								className="absolute inset-0 rounded-lg"
-								style={{ background: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))' }}
-								transition={{ type: 'spring', stiffness: 500, damping: 36 }}
-							/>
-						)}
-						<span className="relative z-10">{opt.label}</span>
-					</button>
-				);
-			})}
-		</div>
-	);
-}
-
-function CategoryCombo({ value, onChange, presets, placeholder }) {
-	const [open, setOpen] = useState(false);
-	const ref = useRef();
-	const preset = presets.find(c => c.value === value);
-	const displayVal = preset ? preset.label : value ?? '';
-	const has = !!value;
-
-	useEffect(() => {
-		const h = e => {
-			if (!ref.current?.contains(e.target)) setOpen(false);
-		};
-		document.addEventListener('mousedown', h);
-		return () => document.removeEventListener('mousedown', h);
-	}, []);
-
-	return (
-		<div ref={ref} className="relative w-full">
-			<FloatLabel show={has} text={placeholder} />
-			<div
-				className={[
-					'flex h-[36px] w-full items-center rounded-lg border bg-white ps-3 pe-2 transition-all cursor-pointer focus-within:ring-2 focus-within:ring-[color:var(--color-primary-200)] focus-within:border-[color:var(--color-primary-400)]',
-					has ? 'border-[color:var(--color-primary-300)]' : 'border-slate-200 hover:border-slate-300',
-				].join(' ')}
-				onClick={() => setOpen(true)}
-			>
-				{value && <span className="me-1.5 text-sm select-none">{preset?.emoji ?? '🏷️'}</span>}
-				<input
-					value={displayVal}
-					readOnly
-					placeholder={placeholder}
-					className="flex-1 bg-transparent text-xs font-semibold outline-none placeholder:text-slate-300 text-slate-800 min-w-0 cursor-pointer"
-				/>
-				<motion.button
-					type="button"
-					animate={{ rotate: open ? 180 : 0 }}
-					transition={{ duration: 0.2 }}
-					onClick={e => {
-						e.stopPropagation();
-						setOpen(o => !o);
-					}}
-					className="ms-1 grid h-6 w-6 shrink-0 place-items-center rounded-lg hover:bg-slate-100"
-				>
-					<ChevronDown className="h-3.5 w-3.5" style={{ color: 'var(--color-primary-500)' }} />
-				</motion.button>
-			</div>
-
-			<AnimatePresence>
-				{open && (
-					<motion.div
-						initial={{ opacity: 0, y: 6, scale: 0.97 }}
-						animate={{ opacity: 1, y: 0, scale: 1 }}
-						exit={{ opacity: 0, y: 4, scale: 0.97 }}
-						transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-						className="absolute inset-x-0 top-full z-[200] mt-1.5 overflow-hidden rounded-lg border bg-white"
-						style={{
-							borderColor: 'var(--color-primary-100)',
-							boxShadow: '0 16px 48px rgba(201,123,46,0.18),0 2px 8px rgba(0,0,0,0.06)',
-						}}
-					>
-						<div className="p-1.5">
-							{presets.map(c => (
-								<button
-									key={c.value}
-									type="button"
-									onClick={() => {
-										onChange(c.value);
-										setOpen(false);
-									}}
-									className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all"
-									style={{
-										color: value === c.value ? 'var(--color-primary-700)' : 'var(--ink-mid)',
-										background: value === c.value ? 'var(--color-primary-50)' : 'transparent',
-									}}
-								>
-									<span className="text-base w-6 text-center">{c.emoji}</span>
-									<span>{c.label}</span>
-									{value === c.value && (
-										<Check className="ms-auto h-3.5 w-3.5" style={{ color: 'var(--color-primary-500)' }} />
-									)}
-								</button>
-							))}
-						</div>
-					</motion.div>
-				)}
-			</AnimatePresence>
-		</div>
-	);
-}
-
-function NutritionTile({ label, value, onChange, color, icon: Icon, unit }) {
-	const [focused, setFocused] = useState(false);
-
-	return (
-		<div
-			className="flex flex-col gap-1.5 rounded-lg border p-3 transition-all"
-			style={{
-				borderColor: focused ? color : 'var(--color-primary-100)',
-				background: focused ? `${color}0d` : 'white',
-				boxShadow: focused ? `0 0 0 3px ${color}18` : 'none',
-			}}
-		>
-			<div className="flex items-center gap-1.5">
-				{Icon && <Icon className="h-3 w-3" style={{ color, opacity: 0.75 }} />}
-				<span className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color }}>
-					{label}
-				</span>
-			</div>
-
-			<input
-				type="number"
-				min={0}
-				value={value ?? ''}
-				onChange={e => onChange(e.target.value)}
-				onFocus={() => setFocused(true)}
-				onBlur={() => setFocused(false)}
-				placeholder="0"
-				className="w-full border-none bg-transparent text-2xl font-black outline-none placeholder:text-slate-200"
-				style={{ color: 'var(--ink)' }}
-			/>
-
-			<span className="text-[9px] font-semibold" style={{ color: 'var(--color-primary-400)' }}>
-				{unit}
-			</span>
-		</div>
-	);
-}
-
-function SCard({ children, className = '' }) {
-	return (
-		<div
-			className={`rounded-lg border p-4 ${className}`}
-			style={{ borderColor: 'var(--color-primary-100)', background: 'rgba(253,248,240,0.55)' }}
-		>
-			{children}
-		</div>
-	);
-}
-
-function SLabel({ icon: Icon, children, button }) {
-	return (
-		<div className="mb-3 flex items-center justify-between gap-2">
-			<div className="flex items-center gap-2">
-				{Icon && (
-					<div className="grid h-6 w-6 place-items-center rounded-lg" style={{ background: 'var(--color-primary-100)' }}>
-						<Icon className="h-3.5 w-3.5" style={{ color: 'var(--color-primary-600)' }} />
-					</div>
-				)}
-				<span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--color-primary-600)' }}>
-					{children}
-				</span>
-			</div>
-			{button}
-		</div>
-	);
-}
-
-function ListEditor({ label, icon: Icon, items, placeholder, onChange, onAdd, onRemove, numbered = false }) {
-	return (
-		<SCard>
-			<SLabel
-				icon={Icon}
-				button={
-					<button
-						onClick={onAdd}
-						className="flex w-fit px-2 items-center justify-center gap-1.5 rounded-lg border-2 border-dashed py-2 text-xs font-bold transition-all hover:border-solid hover:bg-[color:var(--color-primary-50)]"
-						style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-600)' }}
-					>
-						<Plus className="h-3.5 w-3.5" />
-					</button>
-				}
-			>
-				{label}
-			</SLabel>
-
-			<div className="space-y-2">
-				<AnimatePresence initial={false}>
-					{(items || []).map((item, i) => (
-						<motion.div
-							key={i}
-							initial={{ opacity: 0, x: -8 }}
-							animate={{ opacity: 1, x: 0 }}
-							exit={{ opacity: 0, x: -8 }}
-							transition={{ duration: 0.16 }}
-							className="flex items-center gap-2"
-						>
-							{numbered ? (
-								<span
-									className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg text-[9px] font-black text-white"
-									style={{ background: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))' }}
-								>
-									{i + 1}
-								</span>
-							) : (
-								<span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: 'var(--color-primary-400)' }} />
-							)}
-
-							<MiniField
-								value={item}
-								placeholder={placeholder}
-								onChange={e => onChange(i, e.target.value)}
-								className="flex-1"
-							/>
-
-							<button
-								onClick={() => onRemove(i)}
-								className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border transition-all hover:bg-rose-50"
-								style={{ borderColor: '#fecaca', color: '#ef4444' }}
-							>
-								<X className="h-3 w-3" />
-							</button>
-						</motion.div>
-					))}
-				</AnimatePresence>
-			</div>
-		</SCard>
-	);
-}
-
-/* ─── SLIDE PANEL ────────────────────────────────────────────────────────── */
-function SlidePanel({ open, onClose, onSave, initial, loading, categoryPresets = [] }) {
-	const t = useTranslations('recipeLibrary.slidePanel');
-	const tCat = useTranslations('recipeLibrary.categories');
-	const tS = useTranslations('recipeLibrary.slidePanel.satietyOptions');
-
-	const [form, setForm] = useState(EMPTY_FORM);
-	const fileRef = useRef();
-
-	useEffect(() => {
-		setForm(initial ? { ...EMPTY_FORM, ...initial } : EMPTY_FORM);
-	}, [initial, open]);
-
-	const set = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), []);
-	const addList = k => set(k, [...(form[k] || []), '']);
-	const updList = (k, i, v) => {
-		const a = [...(form[k] || [])];
-		a[i] = v;
-		set(k, a);
-	};
-	const remList = (k, i) => set(k, (form[k] || []).filter((_, x) => x !== i));
-
-	const handleImg = e => {
-		const f = e.target.files?.[0];
-		if (!f) return;
-		set('imageFile', f);
-		set('imageUrl', URL.createObjectURL(f));
-	};
-
-	const fallbackPresets = [
-		{ value: 'breakfast', label: tCat('breakfast'), emoji: '🌅' },
-		{ value: 'lunch', label: tCat('lunch'), emoji: '☀️' },
-		{ value: 'dinner', label: tCat('dinner'), emoji: '🌙' },
-		{ value: 'snack', label: tCat('snack'), emoji: '🌿' },
-	];
-
-	const CATEGORY_PRESETS = categoryPresets.length ? categoryPresets : fallbackPresets;
-
-	const SATIETY_OPTS = [
-		{ value: 'low', label: tS('low') },
-		{ value: 'medium', label: tS('medium') },
-		{ value: 'high', label: tS('high') },
-	];
-
-	const total = ((+form.protein) || 0) + ((+form.carbs) || 0) + ((+form.fat) || 0) || 1;
-	const isValid = !!form.title?.trim();
-
-	return (
-		<AnimatePresence>
-			{open && (
-				<>
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.22 }}
-						className="fixed inset-0 z-[1000]"
-						style={{ background: 'rgba(26,18,8,0.52)', backdropFilter: 'blur(6px)' }}
-						onClick={onClose}
-					/>
-
-					<motion.div
-						initial={{ x: '100%' }}
-						animate={{ x: 0 }}
-						exit={{ x: '100%' }}
-						transition={{ type: 'spring', stiffness: 300, damping: 34, mass: 1.05 }}
-						className="fixed inset-y-0 rtl:start-0 ltr:end-0 z-[1000] flex w-full flex-col sm:max-w-[490px]"
-						style={{ background: 'var(--color-primary-50)', boxShadow: '-32px 0 100px -8px rgba(26,18,8,0.26)' }}
-					>
-						<div
-							className="relative flex shrink-0 items-center justify-between border-b px-5 py-4"
-							style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}
-						>
-							<div
-								className="absolute inset-x-0 top-0 h-0.5"
-								style={{ background: 'linear-gradient(90deg,var(--color-gradient-from),var(--color-gradient-to))' }}
-							/>
-							<div className="flex items-center gap-3">
-								<div
-									className="grid h-10 w-10 place-items-center rounded-lg"
-									style={{
-										background: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))',
-										boxShadow: '0 4px 14px rgba(201,123,46,0.35)',
-									}}
-								>
-									<BookOpen className="h-5 w-5 text-white" />
-								</div>
-								<div>
-									<p className="text-sm font-black" style={{ color: 'var(--ink)' }}>
-										{initial ? t('editTitle') : t('addTitle')}
-									</p>
-									<p className="text-[10px] font-semibold" style={{ color: 'var(--color-primary-500)' }}>
-										{t('fromCookbook')}
-									</p>
-								</div>
-							</div>
-
-							<button
-								onClick={onClose}
-								className="grid h-8 w-8 place-items-center rounded-lg border transition-all hover:bg-slate-100"
-								style={{ borderColor: 'var(--color-primary-200)', color: 'var(--ink-lt)' }}
-							>
-								<X className="h-4 w-4" />
-							</button>
-						</div>
-
-						<div className="flex-1 overflow-y-auto space-y-4 p-5">
-							<div
-								onClick={() => fileRef.current?.click()}
-								className="relative flex cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-all hover:border-[color:var(--color-primary-400)]"
-								style={{
-									height: 156,
-									borderColor: 'var(--color-primary-200)',
-									background: form.imageUrl ? 'transparent' : 'white',
-								}}
-							>
-								{form.imageUrl ? (
-									<>
-										<img src={form.imageUrl} alt="" className="h-full w-full object-cover" />
-										<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/35 opacity-0 hover:opacity-100 transition-opacity">
-											<Camera className="h-6 w-6 text-white" />
-											<span className="text-xs font-bold text-white">{t('changePhoto')}</span>
-										</div>
-									</>
-								) : (
-									<div className="flex flex-col items-center gap-2.5">
-										<div className="grid h-12 w-12 place-items-center rounded-lg" style={{ background: 'var(--color-primary-100)' }}>
-											<ImageIcon className="h-6 w-6" style={{ color: 'var(--color-primary-400)' }} />
-										</div>
-										<p className="text-xs font-bold" style={{ color: 'var(--color-primary-600)' }}>
-											{t('uploadPhoto')}
-										</p>
-										<p className="text-[10px]" style={{ color: 'var(--color-primary-400)' }}>
-											{t('photoFormats')}
-										</p>
-									</div>
-								)}
-								<input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImg} />
-							</div>
-
-							<SCard>
-								<SLabel icon={FileText}>{t('sections.info')}</SLabel>
-								<div className="space-y-3">
-									<div className="grid grid-cols-2 gap-2">
-										<MiniField
-											value={form.title}
-											placeholder={t('fields.recipeName')}
-											onChange={e => set('title', e.target.value)}
-										/>
-										<CategoryCombo
-											value={form.category}
-											onChange={v => set('category', v)}
-											presets={CATEGORY_PRESETS}
-											placeholder={t('fields.category')}
-										/>
-									</div>
-
-									<div className="flex items-center gap-2 w-full">
-										<p className="mb-1.5 text-[10px] font-bold" style={{ color: 'var(--color-primary-600)' }}>
-											{t('fields.satiety')}
-										</p>
-										<SegmentControl
-											cn="!max-w-[300px] rtl:mr-auto w-full"
-											value={form.satiety}
-											onChange={v => set('satiety', v)}
-											options={SATIETY_OPTS}
-											id="sat"
-										/>
-									</div>
-								</div>
-							</SCard>
-
-							<SCard>
-								<SLabel icon={Flame}>{t('sections.nutrition')}</SLabel>
-								<div className="grid grid-cols-4 gap-2">
-									<NutritionTile
-										label={t('fields.calories')}
-										value={form.calories}
-										onChange={v => set('calories', v)}
-										color="var(--color-primary-500)"
-										icon={Flame}
-										unit={t('fields.kcal')}
-									/>
-									<NutritionTile
-										label={t('fields.protein')}
-										value={form.protein}
-										onChange={v => set('protein', v)}
-										color="#3b82f6"
-										icon={Beef}
-										unit={t('fields.grams')}
-									/>
-									<NutritionTile
-										label={t('fields.carbs')}
-										value={form.carbs}
-										onChange={v => set('carbs', v)}
-										color="#f59e0b"
-										icon={Wheat}
-										unit={t('fields.grams')}
-									/>
-									<NutritionTile
-										label={t('fields.fat')}
-										value={form.fat}
-										onChange={v => set('fat', v)}
-										color="#ec4899"
-										icon={Droplets}
-										unit={t('fields.grams')}
-									/>
-								</div>
-
-								{(form.protein || form.carbs || form.fat) && (
-									<div className="mt-4 space-y-1.5">
-										<p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-primary-500)' }}>
-											{t('macroPreview')}
-										</p>
-										<div className="flex h-2.5 overflow-hidden rounded-full gap-0.5">
-											{[
-												[(+form.protein || 0), '#3b82f6'],
-												[(+form.carbs || 0), '#f59e0b'],
-												[(+form.fat || 0), '#ec4899'],
-											].map(([v, c], i) => (
-												<motion.div
-													key={i}
-													className="rounded-full"
-													style={{ background: c }}
-													initial={{ width: 0 }}
-													animate={{ width: `${(v / total) * 100}%` }}
-													transition={{ duration: 0.35, delay: i * 0.08 }}
-												/>
-											))}
-										</div>
-									</div>
-								)}
-							</SCard>
-
-							<ListEditor
-								label={t('sections.ingredients')}
-								icon={Utensils}
-								items={form.ingredients}
-								placeholder={t('fields.ingredientPlaceholder')}
-								onChange={(i, v) => updList('ingredients', i, v)}
-								onAdd={() => addList('ingredients')}
-								onRemove={i => remList('ingredients', i)}
-							/>
-
-							<ListEditor
-								label={t('sections.creamIngredients')}
-								icon={Soup}
-								items={form.creamIngredients}
-								placeholder={t('fields.ingredientPlaceholder')}
-								onChange={(i, v) => updList('creamIngredients', i, v)}
-								onAdd={() => addList('creamIngredients')}
-								onRemove={i => remList('creamIngredients', i)}
-							/>
-
-							<ListEditor
-								label={t('sections.sauceIngredients')}
-								icon={Soup}
-								items={form.sauceIngredients}
-								placeholder={t('fields.ingredientPlaceholder')}
-								onChange={(i, v) => updList('sauceIngredients', i, v)}
-								onAdd={() => addList('sauceIngredients')}
-								onRemove={i => remList('sauceIngredients', i)}
-							/>
-
-							<ListEditor
-								label={t('sections.directions')}
-								icon={ListChecks}
-								items={form.directions}
-								placeholder={t('fields.stepPlaceholder')}
-								onChange={(i, v) => updList('directions', i, v)}
-								onAdd={() => addList('directions')}
-								onRemove={i => remList('directions', i)}
-								numbered
-							/>
-
-							<SCard>
-								<SLabel icon={Lightbulb}>{t('sections.tips')}</SLabel>
-								<MiniTextArea
-									value={form.tips}
-									placeholder={t('fields.tipsPlaceholder')}
-									onChange={v => set('tips', v)}
-									rows={2}
-								/>
-							</SCard>
-
-							<SCard>
-								<SLabel icon={Link2}>{t('sections.video')}</SLabel>
-								<MiniField
-									value={form.videoUrl}
-									placeholder={t('fields.videoPlaceholder')}
-									onChange={e => set('videoUrl', e.target.value)}
-									iconLeft={<Link2 className="h-3.5 w-3.5 text-slate-400" />}
-								/>
-							</SCard>
-
-							<div className="h-2" />
-						</div>
-
-						<div
-							className="shrink-0 border-t px-5 py-4"
-							style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}
-						>
-							<div className="flex gap-2.5">
-								<button
-									onClick={onClose}
-									className="flex h-11 flex-1 items-center justify-center rounded-lg border text-sm font-bold transition-all hover:bg-slate-50"
-									style={{ borderColor: 'var(--color-primary-200)', color: 'var(--ink-mid)' }}
-								>
-									{t('cancel')}
-								</button>
-
-								<motion.button
-									whileHover={{ scale: 1.01 }}
-									whileTap={{ scale: 0.98 }}
-									onClick={() => form.title?.trim() && onSave?.(form)}
-									disabled={!isValid || loading}
-									className="flex h-11 flex-[2] items-center justify-center gap-2 rounded-lg text-sm font-black text-white transition-all disabled:opacity-40"
-									style={{
-										background: isValid ? 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))' : '#cbd5e1',
-										boxShadow: isValid ? '0 6px 20px rgba(201,123,46,0.38)' : 'none',
-									}}
-								>
-									<Check className="h-4 w-4" strokeWidth={3} />
-									{loading ? t('saving') : initial ? t('save') : t('add')}
-								</motion.button>
-							</div>
-						</div>
-					</motion.div>
-				</>
-			)}
-		</AnimatePresence>
-	);
-}
-
-/* ─── NUTRITION BADGE ────────────────────────────────────────────────────── */
-function NutritionBadge({ calories, protein, carbs, fat }) {
-	return (
-		<div className="flex items-center gap-2">
-			<span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 border border-orange-100 text-[11px] font-bold text-orange-600">
-				<Flame size={10} />
-				{calories}
-			</span>
-			<span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 border border-blue-100 text-[11px] font-bold text-blue-600">
-				<Beef size={10} />
-				{protein}g
-			</span>
-			<span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 border border-amber-100 text-[11px] font-bold text-amber-600">
-				<Wheat size={10} />
-				{carbs}g
-			</span>
-			<span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-pink-50 border border-pink-100 text-[11px] font-bold text-pink-600">
-				<Droplets size={10} />
-				{fat}g
-			</span>
-		</div>
-	);
-}
-
-/* ─── CATEGORY BADGE ─────────────────────────────────────────────────────── */
-const CAT_STYLES = {
-	breakfast: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-	lunch: 'bg-sky-50 text-sky-700 border-sky-200',
-	dinner: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-	snack: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-	savory_breakfast: 'bg-orange-50 text-orange-700 border-orange-200',
-	sweet: 'bg-pink-50 text-pink-700 border-pink-200',
-	salad: 'bg-green-50 text-green-700 border-green-200',
-	soup: 'bg-amber-50 text-amber-700 border-amber-200',
-	drink: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-	dessert: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
-};
-
-const CAT_EMOJI = {
-	breakfast: '🌅',
-	lunch: '☀️',
-	dinner: '🌙',
-	snack: '🌿',
-	savory_breakfast: '🍳',
-	sweet: '🍰',
-	salad: '🥗',
-	soup: '🍲',
-	drink: '🥤',
-	dessert: '🍮',
-};
-
-function CategoryBadge({ category, label }) {
-	const style = CAT_STYLES[category] ?? 'bg-slate-50 text-slate-600 border-slate-200';
-	return (
-		<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-semibold ${style}`}>
-			<span>{CAT_EMOJI[category] ?? '🏷️'}</span>
-			{label || category}
-		</span>
-	);
-}
-
-/* ─── SATIETY BADGE ──────────────────────────────────────────────────────── */
-const SAT_DOT = { low: '#22c55e', medium: '#f59e0b', high: '#ef4444' };
-
-function SatietyBadge({ satiety, label }) {
-	return (
-		<span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-			<span className="w-2 h-2 rounded-full" style={{ background: SAT_DOT[satiety] ?? '#94a3b8' }} />
-			{label || satiety}
-		</span>
-	);
-}
-
-/* ─── HELPERS ────────────────────────────────────────────────────────────── */
-function splitTipsText(value) {
-	if (!value) return [];
-	return value
-		.split('\n')
-		.map(v => v.trim())
-		.filter(Boolean);
-}
-
-function normalizeImage(url) {
+/* ─────────────────────────── API mapping ─────────────────────────── */
+const normalizeImage = url => {
 	if (!url) return '';
-	if (url.startsWith('http://') || url.startsWith('https://')) return url;
-	return `${process.env.NEXT_PUBLIC_BASE_URL}${url}`;
-}
+	return /^(https?:|data:|blob:)/i.test(url) ? url : `${baseImg}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
-function mapRecipeFromApi(item) {
-	return {
-		id: item.id,
-		title: item.title || '',
-		satiety: String(item.satiety_index || 'medium').toLowerCase(),
-		category: item.meal_type || '',
-		calories: item?.nutrition?.calories ?? 0,
-		protein: item?.nutrition?.protein_g ?? 0,
-		carbs: item?.nutrition?.carbs_g ?? 0,
-		fat: item?.nutrition?.fat_g ?? 0,
-		ingredients: item.ingredients || [],
-		creamIngredients: item.cream_ingredients || [],
-		sauceIngredients: item.sauce_ingredients || [],
-		directions: item.directions || [],
-		tips: Array.isArray(item.tips) ? item.tips.join('\n') : '',
-		videoUrl: item.video_url || '',
-		imageUrl: normalizeImage(item.image_url),
-		imageFile: null,
-	};
-}
+const mapRecipeFromApi = item => ({
+	id: item.id,
+	title: item.title || '',
+	satiety: String(item.satiety_index || 'medium').toLowerCase(),
+	category: item.meal_type || '',
+	calories: item?.nutrition?.calories ?? 0,
+	protein: item?.nutrition?.protein_g ?? 0,
+	carbs: item?.nutrition?.carbs_g ?? 0,
+	fat: item?.nutrition?.fat_g ?? 0,
+	ingredients: item.ingredients || [],
+	creamIngredients: item.cream_ingredients || [],
+	sauceIngredients: item.sauce_ingredients || [],
+	directions: item.directions || [],
+	tips: Array.isArray(item.tips) ? item.tips.join('\n') : '',
+	videoUrl: item.video_url || '',
+	imageUrl: normalizeImage(item.image_url),
+});
 
-function buildRecipeFormData(form) {
+const splitLines = value => String(value || '').split('\n').map(v => v.trim()).filter(Boolean);
+
+const buildRecipeFormData = form => {
 	const fd = new FormData();
-
 	fd.append('title', form.title || '');
 	fd.append('satiety_index', form.satiety || 'medium');
 	fd.append('meal_type', form.category || '');
 	fd.append('video_url', form.videoUrl || '');
-
-	fd.append(
-		'nutrition',
-		JSON.stringify({
-			calories: Number(form.calories || 0),
-			carbs_g: Number(form.carbs || 0),
-			protein_g: Number(form.protein || 0),
-			fat_g: Number(form.fat || 0),
-		}),
-	);
-
-	fd.append('ingredients', JSON.stringify((form.ingredients || []).map(v => v.trim()).filter(Boolean)));
-	fd.append('cream_ingredients', JSON.stringify((form.creamIngredients || []).map(v => v.trim()).filter(Boolean)));
-	fd.append('sauce_ingredients', JSON.stringify((form.sauceIngredients || []).map(v => v.trim()).filter(Boolean)));
-	fd.append('directions', JSON.stringify((form.directions || []).map(v => v.trim()).filter(Boolean)));
-	fd.append('tips', JSON.stringify(splitTipsText(form.tips)));
-
+	fd.append('nutrition', JSON.stringify({
+		calories: Number(form.calories || 0),
+		carbs_g: Number(form.carbs || 0),
+		protein_g: Number(form.protein || 0),
+		fat_g: Number(form.fat || 0),
+	}));
+	fd.append('ingredients', JSON.stringify(form.ingredients || []));
+	fd.append('cream_ingredients', JSON.stringify(form.creamIngredients || []));
+	fd.append('sauce_ingredients', JSON.stringify(form.sauceIngredients || []));
+	fd.append('directions', JSON.stringify(form.directions || []));
+	fd.append('tips', JSON.stringify(splitLines(form.tips)));
 	if (form.imageFile) fd.append('image', form.imageFile);
-
 	return fd;
+};
+
+const fmt = n => Math.round(Number(n) || 0).toLocaleString('en-US');
+
+/* ─────────────────────────── Table cells ─────────────────────────── */
+function MealTypeBadge({ type, t }) {
+	if (!type) return <span className='gm-faint'>—</span>;
+	const { icon: Icon, color } = mealTypeMeta(type);
+	return <Badge color={color} icon={<Icon className='size-3' />}>{mealTypeLabel(type, t)}</Badge>;
 }
 
-/* ─── MAIN PAGE ──────────────────────────────────────────────────────────── */
-export default function RecipesPage() {
-	const t = useTranslations('recipeLibrary');
-	const ts = useTranslations('recipeLibrary.stats');
-	const tCat = useTranslations('recipeLibrary.categories');
-	const tSrch = useTranslations('recipeLibrary.search');
+function NutritionCell({ row, t }) {
+	return (
+		<div className='flex flex-wrap items-center gap-1.5' dir='ltr'>
+			<span className='gm-plan__chip font-en tabular-nums text-(--color-primary-700)!' title={t('slidePanel.fields.calories')}>
+				<Flame className='size-3' />
+				{fmt(row.calories)}
+				<span className='font-normal gm-faint'>{t('slidePanel.fields.kcal')}</span>
+			</span>
+			{[
+				{ key: 'protein', Icon: Beef, color: 'var(--color-primary-500)' },
+				{ key: 'carbs', Icon: Wheat, color: 'var(--gm-warn)' },
+				{ key: 'fat', Icon: Droplets, color: 'var(--color-secondary-500)' },
+			].map(({ key, Icon, color }) => (
+				<span key={key} className='inline-flex items-center gap-1 font-en text-[11.5px] font-semibold tabular-nums gm-ink-soft' title={t(`slidePanel.fields.${key}`)}>
+					<Icon className='size-3' style={{ color }} />
+					{fmt(row[key])}g
+				</span>
+			))}
+		</div>
+	);
+}
 
-	const [recipes, setRecipes] = useState([]);
-	const [loading, setLoading] = useState(true);
-	const [saving, setSaving] = useState(false);
-	const [activeTab, setActiveTab] = useState('all');
-	const [search, setSearch] = useState('');
-	const [debouncedSearch, setDebouncedSearch] = useState('');
-	const [page, setPage] = useState(1);
-	const [total, setTotal] = useState(0);
-	const [slideOpen, setSlideOpen] = useState(false);
-	const [editRecipe, setEditRecipe] = useState(null);
-	const [statsData, setStatsData] = useState(null);
-	const [filterMeta, setFilterMeta] = useState(null);
+/* ─────────────────────────── Preview ─────────────────────────── */
+function MetaTile({ icon: Icon, label, value, color }) {
+	return (
+		<div className='gm-cred justify-start!'>
+			<span className='gm-cred__icon shrink-0' style={color ? { color } : undefined}><Icon className='size-4' /></span>
+			<div className='min-w-0'>
+				<p className='gm-cred__label'>{label}</p>
+				<p className='gm-cred__value font-en tabular-nums' dir='ltr'>{value}</p>
+			</div>
+		</div>
+	);
+}
 
-	const PER_PAGE = 12;
-
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearch(search);
-		}, 400);
-
-		return () => clearTimeout(timer);
-	}, [search]);
-
-	useEffect(() => {
-		const getMeta = async () => {
-			try {
-				const res = await axios.get(`${API_BASE}/recipes/filters/meta`);
-				setFilterMeta(res?.data || null);
-			} catch (e) {
-				console.error(e);
-			}
-		};
-
-		getMeta();
-	}, []);
-
-	const mealTypes = filterMeta?.filters?.meal_type || [];
-
-	const categoryPresets = useMemo(() => {
-		return mealTypes.map(type => ({
-			value: type,
-			label: tCat(type),
-			emoji: CAT_EMOJI[type] ?? '🏷️',
-		}));
-	}, [mealTypes, tCat]);
-
-	const TABS = useMemo(() => {
-		return [
-			{ id: 'all', label: t('tabs.all'), icon: BookOpen },
-			...mealTypes.map(type => ({
-				id: type,
-				label: tCat(type),
-				icon: BookOpen,
-			})),
-		];
-	}, [mealTypes, t, tCat]);
-
-	const fetchRecipes = useCallback(async () => {
-		try {
-			setLoading(true);
-
-			const params = {
-				page,
-				limit: PER_PAGE,
-			};
-
-			if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
-			if (activeTab !== 'all') params.meal_type = activeTab;
-
-			const [recipesRes, statsRes] = await Promise.all([
-				axios.get(`${API_BASE}/recipes`, { params }),
-				axios.get(`${API_BASE}/recipes/stats`, { params }),
-			]);
-
-			setRecipes((recipesRes?.data?.items || []).map(mapRecipeFromApi));
-			setTotal(recipesRes?.data?.total || 0);
-			setStatsData(statsRes?.data || null);
-		} catch (e) {
-			console.error(e);
-			setRecipes([]);
-			setTotal(0);
-			setStatsData(null);
-		} finally {
-			setLoading(false);
-		}
-	}, [page, debouncedSearch, activeTab]);
-
-	useEffect(() => {
-		fetchRecipes();
-	}, [fetchRecipes]);
-
-	const stats = useMemo(() => {
-		const summary = statsData?.summary || {};
-
-		return [
-			{
-				label: ts('totalRecipes'),
-				value: Number(summary.total_recipes || 0),
-				icon: BookOpen,
-			},
-			{
-				label: ts('shownOnPage'),
-				value: recipes.length,
-				icon: Eye,
-			},
-			{
-				label: ts('avgCalories'),
-				value: Math.round(Number(summary.avg_calories || 0)),
-				icon: Flame,
-			},
-		];
-	}, [statsData, recipes, ts]);
-
-	const handleDelete = async id => {
-		try {
-			await axios.delete(`${API_BASE}/recipes/${id}`);
-
-			if (recipes.length === 1 && page > 1) {
-				setPage(p => p - 1);
-			} else {
-				fetchRecipes();
-			}
-		} catch (e) {
-			console.error(e);
-		}
-	};
-
-	const handleSave = async form => {
-		try {
-			setSaving(true);
-
-			const payload = buildRecipeFormData(form);
-			const cfg = { headers: { 'Content-Type': 'multipart/form-data' } };
-
-			if (editRecipe?.id) {
-				await axios.put(`${API_BASE}/recipes/${editRecipe.id}`, payload, cfg);
-			} else {
-				await axios.post(`${API_BASE}/recipes`, payload, cfg);
-			}
-
-			setSlideOpen(false);
-			setEditRecipe(null);
-			setPage(1);
-			await fetchRecipes();
-		} catch (e) {
-			console.error(e);
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	const columns = useMemo(
-		() => [
-			{
-				key: 'imageUrl',
-				header: '',
-				type: 'img',
-				headClassName: 'w-14',
-			},
-			{
-				key: 'title',
-				header: t('table.name'),
-				cell: row => (
-					<div className="flex flex-col gap-0.5">
-						<span className="text-sm font-bold text-slate-800 md: leading-tight">{row.title}</span>
-						{row.videoUrl && (
-							<a
-								href={row.videoUrl}
-								target="_blank"
-								rel="noreferrer"
-								className="inline-flex items-center gap-1 text-[10px] text-violet-500 hover:text-violet-700 font-semibold w-fit"
+function PreviewList({ icon: Icon, title, items, numbered }) {
+	if (!items?.length) return null;
+	return (
+		<div className='gm-answer'>
+			<p className='mb-2.5 flex items-center gap-2 text-[12.5px] font-bold gm-ink'>
+				<span className='gm-plan__icon size-7! rounded-[9px]!'><Icon className='size-3.5' /></span>
+				{title}
+				<span className='gm-plan__chip font-en tabular-nums'>{items.length}</span>
+			</p>
+			<ol className='space-y-2'>
+				{items.map((item, i) => (
+					<li key={i} className='flex items-start gap-2.5 text-[13px] leading-relaxed gm-ink-soft'>
+						{numbered ? (
+							<span
+								className='mt-0.5 grid size-5 shrink-0 place-items-center rounded-[7px] font-en text-[10.5px] font-bold text-white tabular-nums'
+								style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 							>
-								<PlayCircle size={10} />
-								video
-							</a>
+								{i + 1}
+							</span>
+						) : (
+							<span className='mt-2 size-1.5 shrink-0 rounded-full bg-(--color-primary-400)' />
+						)}
+						<span dir='auto' className='min-w-0 flex-1 text-start wrap-break-word'>{item}</span>
+					</li>
+				))}
+			</ol>
+		</div>
+	);
+}
+
+function RecipePreview({ recipe, t }) {
+	const tips = splitLines(recipe.tips);
+	return (
+		<div className='space-y-5'>
+			<div className='grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,240px)_1fr]'>
+				<div className='overflow-hidden rounded-2xl border border-(--gm-line)' style={{ background: 'color-mix(in srgb, var(--color-primary-50) 70%, var(--gm-paper))' }}>
+					<div className='aspect-4/3'>
+						{recipe.imageUrl ? (
+							<Img src={recipe.imageUrl} alt={recipe.title} showBlur={false} className='h-full w-full object-cover' />
+						) : (
+							<span className='grid h-full place-items-center text-(--color-primary-300)'><ChefHat className='size-10' strokeWidth={1.4} /></span>
 						)}
 					</div>
-				),
-			},
-			{
-				key: 'category',
-				header: t('table.category'),
-				cell: row => (
-					<CategoryBadge
-						category={row.category}
-						label={row.category ? tCat(row.category) : '-'}
-					/>
-				),
-			},
-			{
-				key: 'satiety',
-				header: t('table.satiety'),
-				cell: row => (
-					<SatietyBadge
-						satiety={row.satiety}
-						label={t(`satiety.${String(row.satiety).toLowerCase()}`)}
-					/>
-				),
-			},
-			{
-				key: 'nutrition',
-				header: t('table.nutrition'),
-				cell: row => (
-					<NutritionBadge
-						calories={row.calories}
-						protein={row.protein}
-						carbs={row.carbs}
-						fat={row.fat}
-					/>
-				),
-			},
-			{
-				key: 'ingredients',
-				header: t('table.ingredients'),
-				cell: row => (
-					<span className="text-xs text-slate-500 font-medium">
-						{row.ingredients?.length ?? 0} {t('table.items')}
-					</span>
-				),
-			},
-			{
-				key: 'actions',
-				header: '',
-				cell: row => (
-					<ActionButtons
-						row={row}
-						gap="gap-1"
-						actions={[
-							{
-								icon: <Edit2 size={14} />,
-								tooltip: t('table.edit'),
-								variant: 'blue',
-								size: 'sm',
-								onClick: r => {
-									setEditRecipe(r);
-									setSlideOpen(true);
-								},
-							},
-							{
-								icon: <Trash2 size={14} />,
-								tooltip: t('table.delete'),
-								variant: 'red',
-								size: 'sm',
-								confirm: { message: t('table.confirmDelete'), enabled: true },
-								onClick: r => handleDelete(r.id),
-							},
-						]}
-					/>
-				),
-			},
-		],
-		[t, tCat],
-	);
-
-	const pagination = {
-		current_page: page,
-		per_page: PER_PAGE,
-		total_records: total,
-	};
-
-	return (
-		<>
-			<div className="min-h-screen pb-8">
-				<PageHeader
-					title={t('page.title')}
-					desc={t('page.desc')}
-					icon={BookMarked}
-					stats={stats}
-					tabs={TABS}
-					activeTab={activeTab}
-					onTabChange={id => {
-						setActiveTab(id);
-						setPage(1);
-					}}
-					filters={[]}
-					filterValues={{}}
-					onFilterChange={() => {}}
-					onFilterReset={() => {}}
-					actions={
-						<motion.button
-							whileHover={{ scale: 1.04 }}
-							whileTap={{ scale: 0.95 }}
-							onClick={() => {
-								setEditRecipe(null);
-								setSlideOpen(true);
-							}}
-							className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
-							style={{
-								background: 'rgba(255,255,255,0.22)',
-								backdropFilter: 'blur(16px)',
-								boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
-							}}
+				</div>
+				<div className='flex min-w-0 flex-col gap-3'>
+					<h3 dir='auto' className='text-start text-[18px] font-bold leading-snug gm-ink'>{recipe.title}</h3>
+					<div className='flex flex-wrap items-center gap-1.5'>
+						<MealTypeBadge type={recipe.category} t={t} />
+						<Badge color={SATIETY_COLOR[recipe.satiety] || 'slate'} dot>{satietyLabel(recipe.satiety, t)}</Badge>
+					</div>
+					<div className='grid grid-cols-2 gap-2.5'>
+						<MetaTile icon={Flame} label={t('slidePanel.fields.calories')} value={`${fmt(recipe.calories)} ${t('slidePanel.fields.kcal')}`} />
+						<MetaTile icon={Beef} label={t('slidePanel.fields.protein')} value={`${fmt(recipe.protein)}g`} color='var(--color-primary-500)' />
+						<MetaTile icon={Wheat} label={t('slidePanel.fields.carbs')} value={`${fmt(recipe.carbs)}g`} color='var(--gm-warn)' />
+						<MetaTile icon={Droplets} label={t('slidePanel.fields.fat')} value={`${fmt(recipe.fat)}g`} color='var(--color-secondary-500)' />
+					</div>
+					{recipe.videoUrl && (
+						<a
+							href={recipe.videoUrl}
+							target='_blank'
+							rel='noreferrer'
+							className='gm-btn-ghost gm-btn-compact inline-flex w-fit items-center gap-1.5'
 						>
-							<Plus className="h-4 w-4" />
-							{t('addButton')}
-						</motion.button>
-					}
-				/>
-
-				<div className="pt-10">
-					<DataTable
-						searchValue={search}
-						onSearchChange={v => {
-							setSearch(v);
-							setPage(1);
-						}}
-						onSearch={fetchRecipes}
-						columns={columns}
-						data={recipes}
-						isLoading={loading}
-						rowKey={row => row.id}
-						labels={{
-							searchPlaceholder: tSrch('placeholder'),
-							filter: t('table.filters'),
-							apply: t('table.apply'),
-							emptyTitle: t('table.emptyTitle'),
-							emptySubtitle: t('table.emptySubtitle'),
-						}}
-						actions={[
-							{
-								key: 'add',
-								label: t('addButton'),
-								icon: <Plus size={14} />,
-								color: 'primary',
-								onClick: () => {
-									setEditRecipe(null);
-									setSlideOpen(true);
-								},
-							},
-						]}
-						pagination={pagination}
-						onPageChange={({ page: p }) => setPage(p)}
-						perPageOptions={[6, 12, 24, 48]}
-						hoverable
-						compact={false}
-					/>
+							<PlayCircle className='size-4' />
+							{t('preview.watchVideo')}
+						</a>
+					)}
 				</div>
 			</div>
 
-			<SlidePanel
-				open={slideOpen}
-				onClose={() => {
-					setSlideOpen(false);
-					setEditRecipe(null);
+			<div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
+				<PreviewList icon={Utensils} title={t('slidePanel.sections.ingredients')} items={recipe.ingredients} />
+				<PreviewList icon={Soup} title={t('slidePanel.sections.creamIngredients')} items={recipe.creamIngredients} />
+				<PreviewList icon={Soup} title={t('slidePanel.sections.sauceIngredients')} items={recipe.sauceIngredients} />
+				<PreviewList icon={Lightbulb} title={t('slidePanel.sections.tips')} items={tips} />
+			</div>
+			<PreviewList icon={ListChecks} title={t('slidePanel.sections.directions')} items={recipe.directions} numbered />
+		</div>
+	);
+}
+
+/* ─────────────────────────── Page ─────────────────────────── */
+export default function RecipesPage() {
+	const t = useTranslations('recipeLibrary');
+
+	const [recipes, setRecipes] = useState([]);
+	const [total, setTotal] = useState(0);
+	const [loading, setLoading] = useState(true);
+	const [err, setErr] = useState(null);
+	const [statsData, setStatsData] = useState(null);
+	const [mealTypes, setMealTypes] = useState([]);
+
+	const [activeTab, setActiveTab] = useState('all');
+	const [filterOpen, setFilterOpen] = useState(false);
+	const filterAnchorRef = useRef(null);
+	const [search, setSearch] = useState('');
+	const debouncedSearch = useDebounced(search, 350);
+	const [page, setPage] = useState(1);
+	const [perPage, setPerPage] = useState(12);
+
+	const [formOpen, setFormOpen] = useState(false);
+	const [editRecipe, setEditRecipe] = useState(null);
+	const [saving, setSaving] = useState(false);
+	const [preview, setPreview] = useState(null);
+	const [deleteTarget, setDeleteTarget] = useState(null);
+	const [deleteLoading, setDeleteLoading] = useState(false);
+
+	const reqId = useRef(0);
+	const abortRef = useRef(null);
+
+	useEffect(() => {
+		document.documentElement.dataset.gmUsers = '1';
+		return () => { delete document.documentElement.dataset.gmUsers; };
+	}, []);
+
+	const filterParams = useMemo(() => {
+		const params = {};
+		const q = debouncedSearch.trim();
+		if (q) params.search = q;
+		if (activeTab !== 'all') params.meal_type = activeTab;
+		return params;
+	}, [debouncedSearch, activeTab]);
+
+	const fetchRecipes = useCallback(async () => {
+		abortRef.current?.abort();
+		const ctrl = new AbortController();
+		abortRef.current = ctrl;
+		const myId = ++reqId.current;
+		setLoading(true);
+		setErr(null);
+		try {
+			const res = await api.get('/recipes', { params: { ...filterParams, page, limit: perPage }, signal: ctrl.signal });
+			if (myId !== reqId.current) return;
+			setRecipes((res?.data?.items || []).map(mapRecipeFromApi));
+			setTotal(Number(res?.data?.total || 0));
+		} catch (e) {
+			if (e?.name === 'CanceledError' || myId !== reqId.current) return;
+			setRecipes([]);
+			setTotal(0);
+			setErr(e?.response ? e.response.data?.message || t('errors.load') : t('errors.serverUnreachable'));
+		} finally {
+			if (myId === reqId.current) setLoading(false);
+		}
+	}, [filterParams, page, perPage, t]);
+
+	const fetchStats = useCallback(async () => {
+		try {
+			const res = await api.get('/recipes/stats', { params: filterParams });
+			setStatsData(res?.data || null);
+		} catch {
+			setStatsData(null);
+		}
+	}, [filterParams]);
+
+	const fetchMeta = useCallback(async () => {
+		try {
+			const res = await api.get('/recipes/filters/meta');
+			setMealTypes(res?.data?.filters?.meal_type || []);
+		} catch {
+			setMealTypes([]);
+		}
+	}, []);
+
+	useEffect(() => { fetchMeta(); }, [fetchMeta]);
+	useEffect(() => { fetchStats(); }, [fetchStats]);
+	useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
+	useEffect(() => () => abortRef.current?.abort(), []);
+
+	const retryAll = useCallback(() => { fetchRecipes(); fetchStats(); fetchMeta(); }, [fetchRecipes, fetchStats, fetchMeta]);
+
+	/* ── Filters ── */
+	const onSearch = useCallback(v => { setSearch(v); setPage(1); }, []);
+	const onTab = useCallback(id => { setActiveTab(id); setPage(1); }, []);
+	const clearFilters = useCallback(() => { setSearch(''); setActiveTab('all'); setPage(1); }, []);
+	const hasFilters = Boolean(search) || activeTab !== 'all';
+
+	const mealOptions = useMemo(() => [
+		{ id: 'all', name: t('roster.allTypes'), icon: Layers },
+		...mealTypes.map(type => ({ id: type, name: mealTypeLabel(type, t), icon: mealTypeMeta(type).icon })),
+	], [mealTypes, t]);
+	const activeMealName = mealOptions.find(opt => opt.id === activeTab)?.name;
+
+	/* ── Mutations ── */
+	const openAdd = useCallback(() => { setEditRecipe(null); setFormOpen(true); }, []);
+	const openEdit = useCallback(recipe => { setEditRecipe(recipe); setFormOpen(true); }, []);
+	const closeForm = useCallback(() => {
+		if (saving) return;
+		setFormOpen(false);
+		setEditRecipe(null);
+	}, [saving]);
+
+	const handleSave = useCallback(async form => {
+		setSaving(true);
+		try {
+			const payload = buildRecipeFormData(form);
+			if (editRecipe?.id) {
+				await api.put(`/recipes/${editRecipe.id}`, payload);
+				Notification(t('toasts.updated'), 'success');
+				fetchRecipes();
+			} else {
+				await api.post('/recipes', payload);
+				Notification(t('toasts.created'), 'success');
+				if (page !== 1) setPage(1);
+				else fetchRecipes();
+			}
+			setFormOpen(false);
+			setEditRecipe(null);
+			fetchStats();
+			fetchMeta();
+		} catch (e) {
+			Notification(e?.response?.data?.message || t('errors.save'), 'error');
+		} finally {
+			setSaving(false);
+		}
+	}, [editRecipe?.id, page, fetchRecipes, fetchStats, fetchMeta, t]);
+
+	const closeDelete = useCallback(() => { if (!deleteLoading) setDeleteTarget(null); }, [deleteLoading]);
+
+	const handleDelete = useCallback(async () => {
+		if (!deleteTarget) return;
+		setDeleteLoading(true);
+		try {
+			await api.delete(`/recipes/${deleteTarget.id}`);
+			Notification(t('toasts.deleted'), 'success');
+			if (preview?.id === deleteTarget.id) setPreview(null);
+			setDeleteTarget(null);
+			if (recipes.length === 1 && page > 1) setPage(p => p - 1);
+			else fetchRecipes();
+			fetchStats();
+		} catch (e) {
+			Notification(e?.response?.data?.message || t('errors.delete'), 'error');
+		} finally {
+			setDeleteLoading(false);
+		}
+	}, [deleteTarget, preview?.id, recipes.length, page, fetchRecipes, fetchStats, t]);
+
+	/* ── Stats ── */
+	const statCards = useMemo(() => {
+		const s = statsData?.summary || {};
+		const totalRecipes = Number(s.total_recipes || 0);
+		return [
+			{
+				key: 'total', title: t('stats.totalRecipes'), value: totalRecipes, icon: BookOpen,
+				hint: t('stats.totalHint'), tone: 'gm-chip',
+				stroke: 'var(--color-primary-500)', fill: 'var(--color-primary-400)', seed: 0.4, max: totalRecipes,
+			},
+			{
+				key: 'calories', title: t('stats.avgCalories'), value: Math.round(Number(s.avg_calories || 0)), icon: Flame,
+				hint: t('stats.perRecipeKcal'), tone: 'gm-chip-warn',
+				stroke: 'var(--gm-warn)', fill: 'var(--gm-warn)', seed: 0.9,
+			},
+			{
+				key: 'protein', title: t('stats.avgProtein'), value: Math.round(Number(s.avg_protein || 0)), icon: Beef,
+				hint: t('stats.perRecipeGrams'), tone: 'gm-chip-ok',
+				stroke: 'var(--gm-ok)', fill: 'var(--gm-ok)', seed: 1.4,
+			},
+			{
+				key: 'types', title: t('stats.mealTypes'), value: mealTypes.length, icon: Layers,
+				hint: t('stats.mealTypesHint'), tone: 'gm-chip-secondary',
+				stroke: 'var(--color-secondary-500)', fill: 'var(--color-secondary-400)', seed: 1.9,
+			},
+		];
+	}, [statsData, mealTypes.length, t]);
+
+	/* ── Columns ── */
+	const columns = useMemo(() => [
+		{
+			key: 'title',
+			header: t('table.name'),
+			headClassName: 'min-w-[240px]',
+			className: 'gm-wrap',
+			cell: row => (
+				<button type='button' onClick={() => setPreview(row)} className='flex w-full min-w-0 items-center gap-3 text-start' title={row.title}>
+					<span className='relative size-11 shrink-0 overflow-hidden rounded-[12px] border border-(--gm-line)' style={{ background: 'color-mix(in srgb, var(--color-primary-50) 70%, var(--gm-paper))' }}>
+						{row.imageUrl ? (
+							<Img src={row.imageUrl} alt='' showBlur={false} className='h-full w-full object-cover' loading='lazy' />
+						) : (
+							<span className='grid h-full place-items-center text-(--color-primary-300)'><ChefHat className='size-5' strokeWidth={1.6} /></span>
+						)}
+					</span>
+					<span className='min-w-0'>
+						<span dir='auto' className='block truncate text-[13px] font-bold gm-ink'>{row.title}</span>
+						<span className='mt-0.5 flex items-center gap-2 text-[11px] gm-muted'>
+							<span className='inline-flex items-center gap-1'>
+								<Utensils className='size-3' />
+								<span className='font-en tabular-nums'>{row.ingredients.length}</span>
+								{t('table.items')}
+							</span>
+							{row.videoUrl && (
+								<span className='inline-flex items-center gap-1 text-(--color-secondary-600)'>
+									<PlayCircle className='size-3' />
+									{t('table.video')}
+								</span>
+							)}
+						</span>
+					</span>
+				</button>
+			),
+		},
+		{
+			key: 'category',
+			header: t('table.category'),
+			cell: row => <MealTypeBadge type={row.category} t={t} />,
+		},
+		{
+			key: 'satiety',
+			header: t('table.satiety'),
+			cell: row => <Badge color={SATIETY_COLOR[row.satiety] || 'slate'} dot>{satietyLabel(row.satiety, t)}</Badge>,
+		},
+		{
+			key: 'nutrition',
+			header: t('table.nutrition'),
+			cell: row => <NutritionCell row={row} t={t} />,
+		},
+		{
+			key: 'actions',
+			header: t('table.actions'),
+			headClassName: 'gm-col-end',
+			className: 'gm-col-end',
+			cell: row => (
+				<GmRowActions
+					options={[
+						{ icon: Eye, tone: 'primary', label: t('table.view'), onClick: () => setPreview(row) },
+						{ icon: PencilLine, tone: 'amber', label: t('table.edit'), onClick: () => openEdit(row) },
+						{ icon: Trash2, tone: 'danger', label: t('table.delete'), onClick: () => setDeleteTarget(row) },
+					]}
+				/>
+			),
+		},
+	], [t, openEdit]);
+
+	const onPageChange = useCallback(({ page: nextPage, per_page }) => {
+		const nextLimit = Number(per_page || perPage);
+		if (nextLimit !== perPage) {
+			setPerPage(nextLimit);
+			setPage(1);
+		} else {
+			setPage(Number(nextPage || 1));
+		}
+	}, [perPage]);
+
+	const queryTrim = search.trim();
+	const chips = [
+		queryTrim && { key: 'q', label: t('roster.searchLabel'), value: `“${queryTrim}”`, onRemove: () => onSearch('') },
+		activeTab !== 'all' && { key: 'meal', label: t('roster.mealType'), value: activeMealName, onRemove: () => onTab('all') },
+	].filter(Boolean);
+
+	return (
+		<div className='gm-surface rs-scope app-stack pb-4'>
+			<div className='rs-summary'>
+				<IntakeHero
+					icon={BookMarked}
+					title={t('page.title')}
+					subtitle={t('page.desc')}
+					ctaLabel={(
+						<>
+							<Plus className='size-4' strokeWidth={2} aria-hidden />
+							<span>{t('addButton')}</span>
+						</>
+					)}
+					onCta={openAdd}
+				/>
+				<section className='grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+					{statCards.map((card, index) => (
+						<GmStatCard key={card.key} card={card} index={index} />
+					))}
+				</section>
+			</div>
+
+			{err && (
+				<div role='alert' className='flex flex-wrap items-center gap-2 rounded-[14px] border border-rose-200/70 bg-rose-50/80 px-3.5 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300'>
+					<XCircle className='size-4 shrink-0' />
+					<span className='min-w-0 flex-1'>{err}</span>
+					<button
+						type='button'
+						onClick={retryAll}
+						disabled={loading}
+						className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5 disabled:opacity-60'
+					>
+						<RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+						{t('table.retry')}
+					</button>
+				</div>
+			)}
+
+			<DataTable
+				className='gm-table'
+				hideToolbar
+				compact
+				toolbar={(
+					<IntakeToolbar
+						search={search}
+						onSearch={onSearch}
+						searching={search.trim() !== debouncedSearch}
+						searchPlaceholder={t('search.placeholder')}
+						searchLabel={t('roster.searchLabel')}
+						clearSearchLabel={t('roster.clearAll')}
+						filterLabel={t('roster.mealType')}
+						filterCount={activeTab === 'all' ? 0 : 1}
+						filterOpen={filterOpen}
+						onFilterToggle={() => setFilterOpen(v => !v)}
+						filterAnchorRef={filterAnchorRef}
+						result={t.rich('roster.resultCount', {
+							count: total,
+							strong: (chunks) => <strong>{chunks}</strong>,
+						})}
+						chips={chips}
+						onClearAll={clearFilters}
+						clearAllLabel={t('roster.clearAll')}
+						activeFiltersLabel={t('roster.activeFilters')}
+					>
+						<IntakeFilterPopover
+							open={filterOpen}
+							anchorRef={filterAnchorRef}
+							onClose={() => setFilterOpen(false)}
+							title={t('roster.mealType')}
+							canReset={activeTab !== 'all'}
+							onReset={() => onTab('all')}
+							resetLabel={t('roster.reset')}
+							doneLabel={t('roster.done')}
+						>
+							<div className='max-h-[min(60vh,420px)] overflow-y-auto'>
+								<IntakeOptionGroup
+									label={t('roster.mealType')}
+									name='recipe-meal-type'
+									options={mealOptions}
+									value={activeTab}
+									onChange={onTab}
+								/>
+							</div>
+						</IntakeFilterPopover>
+					</IntakeToolbar>
+				)}
+				columns={columns}
+				data={recipes}
+				isLoading={loading}
+				rowKey={row => row.id}
+				labels={{
+					emptyTitle: err ? t('errors.load') : t('table.emptyTitle'),
+					emptySubtitle: err ? t('table.retryHint') : hasFilters ? t('roster.emptyHint') : t('table.emptyStart'),
 				}}
-				onSave={handleSave}
-				initial={editRecipe}
-				loading={saving}
-				categoryPresets={categoryPresets}
+				pagination={{ current_page: page, per_page: perPage, total_records: total }}
+				onPageChange={onPageChange}
+				perPageOptions={PER_PAGE_OPTIONS}
+				hoverable
 			/>
-		</>
+
+			<Modal
+				cn='gm-modal-root'
+				panelClassName={GM_MODAL}
+				open={!!preview}
+				onClose={() => setPreview(null)}
+				title={t('preview.title')}
+				maxW='max-w-3xl'
+			>
+				{preview && <RecipePreview recipe={preview} t={t} />}
+			</Modal>
+
+			<Modal
+				cn='gm-modal-root'
+				panelClassName={GM_MODAL}
+				open={formOpen}
+				onClose={closeForm}
+				title={editRecipe ? t('slidePanel.editTitle') : t('slidePanel.addTitle')}
+				maxW='max-w-3xl'
+			>
+				{formOpen && (
+					<RecipeForm initial={editRecipe} mealTypes={mealTypes} saving={saving} onSubmit={handleSave} onCancel={closeForm} />
+				)}
+			</Modal>
+
+			<Modal cn='gm-modal-root' panelClassName={GM_MODAL} open={!!deleteTarget} onClose={closeDelete} title={t('table.delete')} maxW='max-w-md'>
+				<div
+					className='flex items-start gap-3 rounded-[14px] border p-4'
+					style={{
+						borderColor: 'color-mix(in srgb, var(--gm-danger) 25%, transparent)',
+						background: 'color-mix(in srgb, var(--gm-danger) 8%, var(--gm-paper))',
+					}}
+				>
+					<span
+						className='grid size-9 shrink-0 place-items-center rounded-[11px]'
+						style={{ color: 'var(--gm-danger)', background: 'color-mix(in srgb, var(--gm-danger) 14%, var(--gm-paper))' }}
+					>
+						<AlertCircle className='size-[18px]' />
+					</span>
+					<div className='min-w-0 flex-1'>
+						<p dir='auto' className='truncate text-[13.5px] font-bold gm-ink'>{deleteTarget?.title || ''}</p>
+						<p className='mt-1 text-[13px] leading-relaxed gm-ink-soft'>{t('table.confirmDelete')}</p>
+					</div>
+				</div>
+				<div className='gm-modal-foot'>
+					<Button color='neutral' name={t('slidePanel.cancel')} onClick={closeDelete} disabled={deleteLoading} />
+					<Button
+						color='red'
+						name={t('table.delete')}
+						onClick={handleDelete}
+						loading={deleteLoading}
+						disabled={deleteLoading}
+						icon={<Trash2 className='size-4' />}
+					/>
+				</div>
+			</Modal>
+		</div>
 	);
 }

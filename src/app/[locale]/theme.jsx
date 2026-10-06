@@ -269,7 +269,9 @@ export const COLOR_PALETTES = {
 
 const ThemeContext = createContext({
 	theme: 'blue',
+	mode: 'light',
 	setTheme: () => { },
+	setMode: () => { },
 	colors: COLOR_PALETTES.blue,
 });
 
@@ -284,6 +286,7 @@ export const useTheme = () => {
 
 export function ThemeProvider({ children }) {
 	const [theme, setThemeState] = useState('blue');
+	const [mode, setModeState] = useState('light');
 	const [mounted, setMounted] = useState(false);
 
 	useEffect(() => {
@@ -291,6 +294,10 @@ export function ThemeProvider({ children }) {
 		const savedTheme = localStorage.getItem('app-theme');
 		if (savedTheme && COLOR_PALETTES[savedTheme]) {
 			setThemeState(savedTheme);
+		}
+		const savedMode = localStorage.getItem('app-theme-mode');
+		if (savedMode === 'dark' || savedMode === 'light') {
+			setModeState(savedMode);
 		}
 	}, []);
 
@@ -304,16 +311,17 @@ export function ThemeProvider({ children }) {
 			root.style.setProperty(`--color-primary-${shade}`, color);
 		});
 
-		// Apply secondary colors
 		Object.entries(colors.secondary).forEach(([shade, color]) => {
 			root.style.setProperty(`--color-secondary-${shade}`, color);
 		});
 
-		// Apply gradient colors
 		root.style.setProperty('--color-gradient-from', colors.gradient.from);
 		root.style.setProperty('--color-gradient-via', colors.gradient.via);
 		root.style.setProperty('--color-gradient-to', colors.gradient.to);
-	}, [theme, mounted]);
+
+		root.classList.toggle('dark', mode === 'dark');
+		root.dataset.themeMode = mode;
+	}, [theme, mode, mounted]);
 
 	const setTheme = (newTheme) => {
 		if (COLOR_PALETTES[newTheme]) {
@@ -322,9 +330,17 @@ export function ThemeProvider({ children }) {
 		}
 	};
 
+	const setMode = (next) => {
+		const value = next === 'dark' ? 'dark' : 'light';
+		setModeState(value);
+		localStorage.setItem('app-theme-mode', value);
+	};
+
 	const value = {
 		theme,
+		mode,
 		setTheme,
+		setMode,
 		colors: COLOR_PALETTES[theme],
 	};
 

@@ -434,7 +434,7 @@ function isWeakConversationLabel(value, chatId, phone) {
 
 export function formatWhatsAppPhone(phone) {
 	const digits = String(phone || '').replace(/\D/g, '');
-	if (!digits) return '';
+	if (digits.length < 8) return '';
 	if (digits.startsWith('00')) return `+${digits.slice(2)}`;
 	return `+${digits}`;
 }

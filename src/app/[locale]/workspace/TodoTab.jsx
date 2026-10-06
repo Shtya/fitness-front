@@ -1,12 +1,6 @@
-/* 
-  TodoTab — updated to match calendarTab UI pattern
-  - Hero section with gradient (same as calendarTab)
-  - Desktop: slide panel (right) for Add/Edit
-  - Mobile: bottom sheet for Add/Edit
-  - Larger mobile checkbox touch targets
-  - All inputs 16px font size
-  - Tab selector hidden (navigation handled externally)
-  - Consistent design tokens & components with calendarTab
+/*
+  Tasks tab. Surfaces follow the dashboard roster tokens (light and dark).
+  Desktop: side panel for add/edit. Mobile: bottom sheet.
 */
 'use client';
 
@@ -22,6 +16,7 @@ import {
   Sparkles, Pencil,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import '@/components/pages/dashboard/users/roster/roster.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
@@ -53,9 +48,7 @@ import MultiLangText from '@/components/atoms/MultiLangText';
 
 // ─── Design tokens (mirrors calendarTab) ─────────────────────────────────────
 const TODO_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
-
-  .todo-wrap { font-family:'DM Sans',system-ui,sans-serif; color:var(--cal-text,#1a1916); }
+  .todo-wrap { font-family:var(--gm-font, 'DM Sans', system-ui, sans-serif); color:var(--gm-ink, var(--cal-text,#1a1916)); background:transparent; }
   .todo-wrap * { box-sizing:border-box; }
   .todo-wrap ::-webkit-scrollbar { width:4px; height:4px; }
   .todo-wrap ::-webkit-scrollbar-thumb { background:var(--cal-surface4,#e0e0e0); border-radius:4px; }
@@ -72,35 +65,26 @@ const TODO_STYLES = `
     font-size: 16px !important;
   }
 
-  /* ── Hero (same as cal-hero) ── */
-  .todo-hero { position:relative; overflow:hidden; background:var(--cal-grad,linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7)); padding:20px 24px 0; }
-  .todo-hero::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,rgba(255,255,255,0) 60%,rgba(0,0,0,.06) 100%); pointer-events:none; }
-  .todo-hero-noise { position:absolute; inset:0; opacity:.04; pointer-events:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  .todo-hero-dots { position:absolute; inset:0; opacity:.055; pointer-events:none; background-image:radial-gradient(circle,rgba(255,255,255,.85) 1px,transparent 1px); background-size:28px 28px; }
-  .todo-hero-orb1 { position:absolute; width:400px; height:400px; border-radius:50%; background:rgba(255,255,255,.09); filter:blur(60px); top:-160px; left:-100px; pointer-events:none; }
-  .todo-hero-orb2 { position:absolute; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,.06); filter:blur(60px); bottom:-80px; right:-60px; pointer-events:none; }
-  .todo-hero-hl { position:absolute; inset-x:0; top:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.5) 30%,rgba(255,255,255,.5) 70%,transparent); pointer-events:none; }
-
-  .todo-hero-toprow { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
-  .todo-hero-title { font-family:'Instrument Serif',Georgia,serif; font-size:22px; font-weight:400; color:#fff; letter-spacing:-.3px; line-height:1; text-shadow:0 1px 12px rgba(0,0,0,.12); white-space:nowrap; }
-
-  .todo-hero-actions { display:flex; align-items:center; gap:6px; }
-  .todo-hero-btn-solid { height:34px; padding:0 14px; background:#fff; border:none; border-radius:10px; color:var(--color-primary-700,#4338ca); font-family:'DM Sans',system-ui,sans-serif; font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all .2s; box-shadow:0 4px 16px rgba(0,0,0,.12); white-space:nowrap; }
-  .todo-hero-btn-solid:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,.16); }
-  .todo-hero-btn-glass { height:34px; padding:0 14px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22); border-radius:10px; color:#fff; font-family:'DM Sans',system-ui,sans-serif; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all .2s; backdrop-filter:blur(12px); white-space:nowrap; }
-  .todo-hero-btn-glass:hover { background:rgba(255,255,255,.26); }
-  .todo-hero-icon-btn { width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; backdrop-filter:blur(8px); }
-  .todo-hero-icon-btn:hover { background:rgba(255,255,255,.24); }
-  .todo-hero-icon-btn.active { background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.4); }
-
-  /* ── Folder strip (mirrors type strip) ── */
-  .todo-folder-strip { position:relative; z-index:10; display:flex; align-items:center; gap:6px; padding-bottom:16px; overflow-x:auto; scrollbar-width:none; }
+  .todo-hero { position:relative; padding:8px 8px 0; background:transparent; }
+  .todo-hero-noise, .todo-hero-dots, .todo-hero-orb1, .todo-hero-orb2, .todo-hero-hl, .todo-hero::before { display:none; }
+  .todo-hero-toprow { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .todo-hero-title { font-family:var(--gm-display, inherit); font-size:clamp(22px, 2.4vw, 30px); font-weight:700; color:var(--gm-ink); letter-spacing:-.03em; line-height:1.1; }
+  .todo-hero-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .todo-hero-btn-solid { height:40px; padding:0 16px; background:linear-gradient(180deg, var(--color-primary-500), var(--color-primary-600)); border:1px solid color-mix(in srgb, var(--color-primary-700) 40%, transparent); border-radius:12px; color:#fff; font-size:13px; font-weight:650; display:flex; align-items:center; gap:6px; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 8px 16px -10px color-mix(in srgb, var(--color-primary-600) 70%, transparent); white-space:nowrap; }
+  .todo-hero-btn-solid:hover { transform:translateY(-1px); }
+  .todo-hero-btn-solid:active { transform:translateY(0); }
+  .todo-hero-btn-glass, .todo-hero-icon-btn { height:40px; border-radius:12px; background:var(--gm-paper); border:1px solid var(--gm-line); color:var(--gm-ink-soft); font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer; transition:border-color .15s ease, background-color .15s ease; }
+  .todo-hero-btn-glass { padding:0 14px; }
+  .todo-hero-icon-btn { width:40px; justify-content:center; }
+  .todo-hero-btn-glass:hover, .todo-hero-icon-btn:hover { border-color:color-mix(in srgb, var(--color-primary-500) 35%, var(--gm-line)); }
+  .todo-hero-icon-btn.active { color:var(--color-primary-700); border-color:color-mix(in srgb, var(--color-primary-500) 45%, transparent); background:color-mix(in srgb, var(--color-primary-500) 8%, var(--gm-paper)); }
+  .todo-folder-strip { position:relative; z-index:10; display:flex; align-items:center; gap:8px; padding-bottom:14px; overflow-x:auto; scrollbar-width:none; }
   .todo-folder-strip::-webkit-scrollbar { display:none; }
-  .todo-folder-chip { display:flex; align-items:center; gap:5px; padding:5px 12px; border-radius:100px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.12); color:rgba(255,255,255,.8); font-family:'DM Sans',system-ui,sans-serif; font-size:11px; font-weight:500; cursor:pointer; white-space:nowrap; transition:all .2s; backdrop-filter:blur(8px); }
-  .todo-folder-chip:hover { background:rgba(255,255,255,.22); color:#fff; }
-  .todo-folder-chip.active { background:rgba(255,255,255,.98); color:var(--color-primary-700,#4338ca); border-color:transparent; font-weight:700; box-shadow:0 4px 12px rgba(0,0,0,.12); }
-  .todo-folder-count { font-size:9px; font-weight:700; opacity:.6; background:rgba(0,0,0,.12); padding:1px 5px; border-radius:100px; }
-  .todo-folder-chip.active .todo-folder-count { background:var(--cal-accent-lt,rgba(99,102,241,.14)); opacity:1; color:var(--color-primary-700,#4338ca); }
+  .todo-folder-chip { display:flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:999px; border:1px solid var(--gm-line); background:color-mix(in srgb, var(--gm-muted) 8%, var(--gm-paper)); color:var(--gm-ink-soft); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:border-color .15s ease, background-color .15s ease, color .15s ease; }
+  .todo-folder-chip:hover { border-color:color-mix(in srgb, var(--color-primary-500) 30%, var(--gm-line)); }
+  .todo-folder-chip.active { background:color-mix(in srgb, var(--color-primary-500) 10%, var(--gm-paper)); color:var(--color-primary-700); border-color:color-mix(in srgb, var(--color-primary-500) 40%, transparent); }
+  .todo-folder-count { font-size:10px; font-weight:700; min-width:16px; text-align:center; background:color-mix(in srgb, var(--gm-ink) 8%, transparent); padding:1px 5px; border-radius:999px; }
+  .todo-folder-chip.active .todo-folder-count { background:var(--color-primary-600); color:#fff; }
 
   /* ── Body / Sidebar ── */
   .todo-body { display:flex; flex:1; }
@@ -110,10 +94,10 @@ const TODO_STYLES = `
   .todo-sidebar.collapsed { width:72px; }
 
   /* ── Task card ── */
-  .todo-card { background:var(--cal-surface,#fff); border-bottom:1px solid var(--cal-border,rgba(0,0,0,.06)); padding:14px 20px; display:flex; align-items:flex-start; gap:12px; transition:background .15s; position:relative; cursor:pointer; }
-  .todo-card:hover { background:var(--cal-surface2,#f8f8f8); }
+  .todo-card { background:var(--gm-paper, #fff); border-bottom:1px solid var(--gm-line, rgba(0,0,0,.06)); padding:14px 20px; display:flex; align-items:flex-start; gap:12px; transition:background .15s; position:relative; cursor:pointer; }
+  .todo-card:hover { background:color-mix(in srgb, var(--color-primary-500) 5%, var(--gm-paper, #fff)); }
   .todo-card.done { opacity:.55; }
-  .todo-card-accent { position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:0 2px 2px 0; }
+  .todo-card-accent { position:absolute; inset-inline-start:0; top:0; bottom:0; width:3px; }
 
   /* ── Mobile check — big tap target ── */
   .todo-check-mob { flex-shrink:0; background:transparent; border:none; color:var(--cal-text3,#b0ada5); cursor:pointer; padding:8px; margin:-8px; display:flex; align-items:center; justify-content:center; transition:color .15s; -webkit-tap-highlight-color:transparent; min-width:44px; min-height:44px; }
@@ -121,38 +105,39 @@ const TODO_STYLES = `
   .todo-check-mob.done { color:#4ade80; }
 
   /* ── Quick-add bar ── */
-  .todo-quickadd { margin:16px 20px; padding:10px 14px; background:var(--cal-accent-lt,rgba(99,102,241,.12)); border:1px dashed var(--cal-accent-gl,rgba(99,102,241,.22)); border-radius:12px; display:flex; align-items:center; gap:10px; }
-  .todo-quickadd input { flex:1; background:transparent; border:none; outline:none; font-family:'DM Sans',system-ui,sans-serif; font-size:16px; color:var(--cal-text,#1a1916); }
-  .todo-quickadd input::placeholder { color:var(--cal-text3,#b0ada5); }
+  .todo-quickadd { margin:16px 20px; padding:10px 14px; background:color-mix(in srgb, var(--color-primary-500) 7%, var(--gm-paper)); border:1px dashed color-mix(in srgb, var(--color-primary-500) 28%, var(--gm-line)); border-radius:14px; display:flex; align-items:center; gap:10px; }
+  .todo-quickadd input { flex:1; background:transparent; border:none; outline:none; font-size:16px; color:var(--gm-ink); }
+  .todo-quickadd input::placeholder { color:var(--gm-faint, #94a3b8); }
 
   /* ── Desktop slide panel ── */
   .todo-desk-panel-overlay { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.25); backdrop-filter:blur(4px); }
-  .todo-desk-panel { position:fixed; top:0; bottom:0; right:0; z-index:61; width:min(520px,46vw); background:var(--cal-surface,#fff); border-left:1px solid var(--cal-border2,rgba(0,0,0,.10)); box-shadow:-12px 0 48px rgba(0,0,0,.12); display:flex; flex-direction:column; overflow:hidden; }
-  .todo-desk-panel[dir="rtl"] { right:auto; left:0; border-left:none; border-right:1px solid var(--cal-border2,rgba(0,0,0,.10)); box-shadow:12px 0 48px rgba(0,0,0,.12); }
-  .todo-desk-panel-head { padding:20px 22px 16px; border-bottom:1px solid var(--cal-border,rgba(0,0,0,.06)); display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,var(--color-gradient-from,#6366f1),var(--color-gradient-to,#a855f7)); position:relative; overflow:hidden; }
-  .todo-desk-panel-head::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 100%); pointer-events:none; }
-  .todo-desk-panel-htitle { font-family:'Instrument Serif',Georgia,serif; font-size:18px; font-weight:400; color:#fff; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
-  .todo-desk-panel-icon { width:32px; height:32px; background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.3); border-radius:9px; display:flex; align-items:center; justify-content:center; color:#fff; }
-  .todo-desk-panel-close { position:relative; z-index:1; width:34px; height:34px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; }
-  .todo-desk-panel-close:hover { background:rgba(255,255,255,.28); }
+  .todo-desk-panel { position:fixed; top:0; bottom:0; inset-inline-end:0; z-index:61; width:min(520px,46vw); background:var(--gm-paper,#fff); border-inline-start:1px solid var(--gm-line); box-shadow:-12px 0 48px rgba(15,23,42,.12); display:flex; flex-direction:column; overflow:hidden; }
+  .todo-desk-panel[dir="rtl"] { box-shadow:12px 0 48px rgba(15,23,42,.12); }
+  .todo-desk-panel-head { padding:18px 20px 14px; border-bottom:1px solid var(--gm-line); display:flex; align-items:center; justify-content:space-between; background:var(--gm-paper); }
+  .todo-desk-panel-htitle { font-family:var(--gm-display, inherit); font-size:18px; font-weight:700; color:var(--gm-ink); display:flex; align-items:center; gap:10px; }
+  .todo-desk-panel-icon { width:32px; height:32px; background:linear-gradient(150deg, var(--color-gradient-from), var(--color-gradient-to)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; }
+  .todo-desk-panel-close { width:34px; height:34px; background:transparent; border:1px solid var(--gm-line); border-radius:10px; color:var(--gm-ink-soft); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .15s ease; }
+  .todo-desk-panel-close:hover { background:color-mix(in srgb, var(--gm-ink) 6%, transparent); }
   .todo-desk-panel-body { flex:1; overflow-y:auto; }
 
   /* ── Form inside panel ── */
   .todo-form-body { padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
-  .todo-form-footer { padding:14px 20px 18px; border-top:1px solid var(--cal-border,rgba(0,0,0,.06)); display:flex; gap:8px; }
-  .todo-label { font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--cal-text3,#b0ada5); display:flex; align-items:center; gap:4px; margin-bottom:5px; }
-  .todo-input { width:100%; background:var(--cal-surface2,#f8f8f8); border:1px solid rgba(0,0,0,.10); border-radius:10px; padding:9px 12px; color:var(--cal-text,#1a1916); font-family:'DM Sans',system-ui,sans-serif; font-size:16px; outline:none; transition:border-color .2s,box-shadow .2s; }
-  .todo-input:focus { border-color:rgba(99,102,241,.4); box-shadow:0 0 0 3px rgba(99,102,241,.08); }
-  .todo-input::placeholder { color:var(--cal-text3,#b0ada5); }
+  .todo-form-footer { padding:14px 20px 18px; border-top:1px solid var(--gm-line); display:flex; gap:8px; }
+  .todo-label { font-size:11px; font-weight:650; letter-spacing:.04em; text-transform:uppercase; color:var(--gm-muted); display:flex; align-items:center; gap:4px; margin-bottom:5px; }
+  .todo-input { width:100%; background:var(--gm-paper); border:1px solid var(--gm-line); border-radius:12px; padding:9px 12px; color:var(--gm-ink); font-size:16px; outline:none; transition:border-color .15s ease, box-shadow .15s ease; }
+  .todo-input:focus { border-color:var(--color-primary-500); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-primary-500) 16%, transparent); }
+  .todo-input::placeholder { color:var(--gm-faint); }
   .todo-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .todo-btn-ghost { height:36px; padding:0 14px; background:transparent; border:1px solid rgba(0,0,0,.10); border-radius:10px; color:var(--cal-text2,#6b6860); font-family:'DM Sans',system-ui,sans-serif; font-size:13px; font-weight:500; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all .2s; }
-  .todo-btn-ghost:hover { background:var(--cal-surface2,#f8f8f8); }
-  .todo-btn-primary { height:36px; padding:0 16px; background:linear-gradient(135deg,var(--color-gradient-from,#6366f1),var(--color-gradient-to,#a855f7)); border:none; border-radius:10px; color:#fff; font-family:'DM Sans',system-ui,sans-serif; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all .2s; box-shadow:0 2px 12px rgba(99,102,241,.25); }
-  .todo-btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 20px rgba(99,102,241,.35); }
+  .todo-btn-ghost { height:40px; padding:0 14px; background:transparent; border:1px solid var(--gm-line); border-radius:12px; color:var(--gm-ink-soft); font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer; transition:background-color .15s ease; }
+  .todo-btn-ghost:hover { background:color-mix(in srgb, var(--gm-ink) 5%, transparent); }
+  .todo-btn-primary { height:40px; padding:0 16px; background:linear-gradient(180deg, var(--color-primary-500), var(--color-primary-600)); border:1px solid color-mix(in srgb, var(--color-primary-700) 35%, transparent); border-radius:12px; color:#fff; font-size:13px; font-weight:650; display:flex; align-items:center; gap:6px; cursor:pointer; transition:transform .15s ease; box-shadow:inset 0 1px 0 rgba(255,255,255,.22); }
+  .todo-btn-primary:hover { transform:translateY(-1px); }
   .todo-btn-primary:disabled { opacity:.45; transform:none; cursor:not-allowed; }
 
   /* ── Section label ── */
-  .todo-section-lbl { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--cal-text3,#b0ada5); padding:12px 20px 4px; }
+  .todo-section-lbl { font-size:11px; font-weight:650; letter-spacing:.06em; text-transform:uppercase; color:var(--gm-muted); padding:12px 20px 4px; }
+  html.dark .todo-card:hover { background:color-mix(in srgb, var(--gm-ink) 6%, var(--gm-paper)); }
+  html.dark .todo-desk-panel { box-shadow:-12px 0 48px rgba(0,0,0,.45); }
 
   /* ── Responsive ── */
   @media (max-width:1024px) { .todo-sidebar { display:none !important; } }
@@ -169,16 +154,55 @@ const TODO_STYLES = `
   /* checkbox animations */
   @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
   @keyframes check-bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+  .todo-wrap .text-gray-900,
+  .todo-surface .text-gray-900,
+  .todo-wrap .text-gray-800,
+  .todo-surface .text-gray-800,
+  .todo-wrap .text-gray-700,
+  .todo-surface .text-gray-700 { color: var(--gm-ink); }
+  .todo-wrap .text-gray-600,
+  .todo-surface .text-gray-600,
+  .todo-wrap .text-gray-500,
+  .todo-surface .text-gray-500 { color: var(--gm-muted); }
+  .todo-wrap .text-gray-400,
+  .todo-surface .text-gray-400 { color: var(--gm-faint); }
+  .todo-wrap .bg-white,
+  .todo-surface .bg-white { background-color: var(--gm-paper); }
+  .todo-wrap .bg-gray-50,
+  .todo-surface .bg-gray-50,
+  .todo-wrap .bg-gray-100,
+  .todo-surface .bg-gray-100 { background-color: color-mix(in srgb, var(--gm-ink) 5%, var(--gm-paper)); }
+  .todo-wrap .border-gray-100,
+  .todo-surface .border-gray-100,
+  .todo-wrap .border-gray-200,
+  .todo-surface .border-gray-200,
+  .todo-wrap .border-gray-300,
+  .todo-surface .border-gray-300 { border-color: var(--gm-line); }
+  .todo-wrap .hover\\:bg-gray-50:hover,
+  .todo-surface .hover\\:bg-gray-50:hover,
+  .todo-wrap .hover\\:bg-gray-100:hover,
+  .todo-surface .hover\\:bg-gray-100:hover { background-color: color-mix(in srgb, var(--gm-ink) 6%, var(--gm-paper)); }
+  .todo-sidebar { background: var(--gm-paper); border-color: var(--gm-line); }
+  html.dark .todo-wrap .hover\\:bg-blue-50:hover,
+  html.dark .todo-wrap .hover\\:bg-red-50:hover,
+  html.dark .todo-wrap .hover\\:bg-amber-50:hover,
+  html.dark .todo-wrap .hover\\:bg-emerald-50:hover { background-color: color-mix(in srgb, currentColor 14%, var(--gm-paper)); }
 `;
 
 function TodoStyles() {
   useEffect(() => {
-    const id = 'todo-ds-v2';
-    if (!document.getElementById(id)) {
-      const el = document.createElement('style');
-      el.id = id; el.textContent = TODO_STYLES;
+    document.getElementById('todo-ds-v2')?.remove();
+    const id = 'todo-ds-v3';
+    let el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('style');
+      el.id = id;
       document.head.appendChild(el);
     }
+    el.textContent = TODO_STYLES;
+    document.documentElement.dataset.gmUsers = '1';
+    return () => { delete document.documentElement.dataset.gmUsers; };
   }, []);
   return null;
 }
@@ -253,16 +277,16 @@ function SlidePanel({ open, onClose, children, title }) {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }} onClick={onClose} />
           <motion.div key="mob-panel"
-            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-[var(--cal-surface,#fff)] rounded-t-3xl shadow-2xl max-h-[92vh] overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-3xl shadow-2xl max-h-[92vh] overflow-hidden bg-(--gm-paper)"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
             <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-gray-200" />
+              <div className="w-10 h-1 rounded-full bg-(--gm-line)" />
             </div>
             {title && (
-              <div className="flex items-center justify-between px-5 pt-2 pb-3 border-b border-gray-100 flex-shrink-0">
-                <span className="text-[17px] font-normal text-gray-900" style={{ fontFamily: "'Instrument Serif',serif" }}>{title}</span>
-                <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
+              <div className="flex items-center justify-between px-5 pt-2 pb-3 border-b border-(--gm-line) flex-shrink-0">
+                <span className="text-[17px] font-bold gm-ink">{title}</span>
+                <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full border border-(--gm-line) gm-ink-soft">
                   <X size={15} />
                 </button>
               </div>
@@ -737,7 +761,7 @@ function TaskFormContent({ t, editingTask, taskForm, setTaskForm, handleSave, on
             <Select open={statusOpen} onOpenChange={setStatusOpen} value={taskForm.status}
               onValueChange={(v) => { setTaskForm(p => ({ ...p, status: v })); setStatusOpen(false); }}>
               <SelectTrigger className="todo-input" style={{ height: 44, fontSize: 16 }}><SelectValue /></SelectTrigger>
-              <SelectContent className="rounded-lg z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
+              <SelectContent className="todo-surface rounded-lg z-[9999]" style={{ background: 'var(--gm-paper)' }}>
                 {statusOptions.map(s => (
                   <SelectItem key={s.id} value={s.id} className="text-sm">
                     <div className="flex items-center gap-2">
@@ -754,7 +778,7 @@ function TaskFormContent({ t, editingTask, taskForm, setTaskForm, handleSave, on
             <Select open={priorityOpen} onOpenChange={setPriorityOpen} value={taskForm.priority}
               onValueChange={(v) => { setTaskForm(p => ({ ...p, priority: v })); setPriorityOpen(false); }}>
               <SelectTrigger className="todo-input" style={{ height: 44, fontSize: 16 }}><SelectValue /></SelectTrigger>
-              <SelectContent className="rounded-lg z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
+              <SelectContent className="todo-surface rounded-lg z-[9999]" style={{ background: 'var(--gm-paper)' }}>
                 {priorityLevels.map(p => (
                   <SelectItem key={p.id} value={p.id} className="text-sm">
                     <div className="flex items-center gap-2">
@@ -801,7 +825,7 @@ function TaskFormContent({ t, editingTask, taskForm, setTaskForm, handleSave, on
           <Select open={repeatOpen} onOpenChange={setRepeatOpen} value={taskForm.repeat}
             onValueChange={(v) => { setTaskForm(p => ({ ...p, repeat: v })); setRepeatOpen(false); }}>
             <SelectTrigger className="todo-input" style={{ height: 44, fontSize: 16 }}><SelectValue /></SelectTrigger>
-            <SelectContent className="rounded-lg z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
+            <SelectContent className="todo-surface rounded-lg z-[9999]" style={{ background: 'var(--gm-paper)' }}>
               {repeatOptions.map(r => (
                 <SelectItem key={r.id} value={r.id} className="text-sm">{t(`repeat.${r.label}`)}</SelectItem>
               ))}
@@ -1227,7 +1251,7 @@ export default function TodoTab() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="todo-wrap w-[calc(100%+30px)] ltr:ml-[-15px] rtl:mr-[-15px] mt-[-15px] min-h-screen flex flex-col">
+    <div className="todo-wrap gm-surface rs-scope w-[calc(100%+30px)] ltr:ml-[-15px] rtl:mr-[-15px] mt-[-15px] min-h-screen flex flex-col">
       <TodoStyles />
 
       {/* ═══ HERO ════════════════════════════════════════ */}
@@ -1242,9 +1266,8 @@ export default function TodoTab() {
               {currentFolder ? getFolderLabel(currentFolder) : t('todos')}
             </div>
             {filteredTasks.length > 0 && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{ background: 'rgba(255,255,255,.18)', color: 'rgba(255,255,255,.85)' }}>
-                <span style={{ color: '#fff', fontWeight: 700 }}>{filteredTasks.filter(t => !t.completed).length}</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border border-(--gm-line) gm-ink-soft">
+                <span className="font-bold gm-ink">{filteredTasks.filter(t => !t.completed).length}</span>
                 <span>/{filteredTasks.length}</span>
               </div>
             )}
@@ -1311,15 +1334,15 @@ export default function TodoTab() {
       </div>
 
       {/* ═══ BODY ════════════════════════════════════════ */}
-      <div className="todo-body flex-1 bg-gray-50">
+      <div className="todo-body flex-1">
         <div className="todo-main">
           {/* Quick add bar */}
           <QuickAddBar onAdd={handleAddTaskQuick} t={t} />
 
           {/* Task list */}
-          <div className="mx-5 mb-6 bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+          <div className="mx-5 mb-6 overflow-hidden rounded-[16px] border border-(--gm-line) bg-(--gm-paper)">
             {loading ? (
-              <div className="py-16 text-center text-gray-500 text-sm font-medium">
+              <div className="py-16 text-center gm-muted text-sm font-medium">
                 <div className="w-8 h-8 border-2 border-gray-200 border-t-[var(--color-primary-500,#6366f1)] rounded-full animate-spin mx-auto mb-3" />
                 {t('loading')}
               </div>
@@ -1329,8 +1352,8 @@ export default function TodoTab() {
                   style={{ background: 'linear-gradient(135deg,var(--color-primary-50,#eef2ff),var(--color-secondary-50,#f5f3ff))' }}>
                   <ListTodo className="w-7 h-7" style={{ color: 'var(--color-primary-500,#6366f1)' }} />
                 </div>
-                <p className="text-gray-900 font-semibold text-sm">{t('noTasks')}</p>
-                <p className="text-gray-500 text-xs mt-1">{t('addFirstTask')}</p>
+                <p className="gm-ink font-semibold text-sm">{t('noTasks')}</p>
+                <p className="gm-muted text-xs mt-1">{t('addFirstTask')}</p>
               </div>
             ) : (
               <DndContext sensors={sensors} collisionDetection={closestCorners}
@@ -1398,7 +1421,7 @@ export default function TodoTab() {
 
       {/* ═══ ADD FOLDER DIALOG ══════════════════════════ */}
       <Dialog open={showAddFolder} onOpenChange={setShowAddFolder}>
-        <DialogContent className="max-w-sm rounded-lg" style={{ background: 'var(--cal-surface,#fff)' }}>
+        <DialogContent className="todo-surface max-w-sm rounded-lg" style={{ background: 'var(--gm-paper)' }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
               <FolderPlus size={18} style={{ color: 'var(--color-primary-500,#6366f1)' }} />
@@ -1431,7 +1454,7 @@ export default function TodoTab() {
 
       {/* ═══ DELETE FOLDER ══════════════════════════════ */}
       <Dialog open={showDeleteFolderConfirm} onOpenChange={() => { setShowDeleteFolderConfirm(false); setFolderToDelete(null); }}>
-        <DialogContent className="max-w-sm rounded-lg" style={{ background: 'var(--cal-surface,#fff)' }}>
+        <DialogContent className="todo-surface max-w-sm rounded-lg" style={{ background: 'var(--gm-paper)' }}>
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">{t('deleteFolder')}</DialogTitle>
             <DialogDescription className="text-sm text-gray-600 mt-1">{t('deleteFolderDescription')}</DialogDescription>
@@ -1464,8 +1487,7 @@ function FilterPopover({ value, onChange, t }) {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)}
-        className="h-8 px-3 flex items-center gap-1.5 rounded-lg text-white text-xs font-semibold"
-        style={{ background: 'rgba(255,255,255,.16)', border: '1px solid rgba(255,255,255,.22)' }}>
+        className="todo-hero-btn-glass">
         <Filter size={12} />
         <span className="hidden lg:inline">{t(`priorities.${selected?.label}`)}</span>
         <ChevronDown size={10} className="opacity-70" />
@@ -1506,8 +1528,7 @@ function SortPopover({ value, onChange, t }) {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)}
-        className="h-8 px-3 flex items-center gap-1.5 rounded-lg text-white text-xs font-semibold"
-        style={{ background: 'rgba(255,255,255,.16)', border: '1px solid rgba(255,255,255,.22)' }}>
+        className="todo-hero-btn-glass">
         <TrendingUp size={12} />
         <span className="hidden lg:inline">{t(`sort.${selected.label}`)}</span>
         <ChevronDown size={10} className="opacity-70" />
@@ -1553,7 +1574,7 @@ function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, onToggleSubtask,
     )} style={{ animation: isRTL ? 'slide-in-left .3s ease-out' : 'slide-in-right .3s ease-out' }}>
       {/* Head */}
       <div className="sticky top-0 z-10 px-5 py-4 border-b border-gray-100"
-        style={{ background: 'linear-gradient(135deg,var(--color-primary-50,#eef2ff),#fff)' }}>
+        style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary-500) 10%, var(--gm-paper)), var(--gm-paper))' }}>
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t('taskDetails')}</span>
           <div className="flex items-center gap-1.5">
@@ -1810,7 +1831,7 @@ function TaskSubtasksSection({ task, onUpdate, onToggleSubtask, onDeleteSubtask,
 function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm rounded-lg" style={{ background: 'var(--cal-surface,#fff)' }}>
+      <DialogContent className="todo-surface max-w-sm rounded-lg" style={{ background: 'var(--gm-paper)' }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
             <Settings size={18} style={{ color: 'var(--color-primary-500,#6366f1)' }} /> {t('settings')}

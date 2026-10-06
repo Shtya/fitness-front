@@ -93,8 +93,9 @@ export default function middleware(req) {
 
   // Public routes → allow and pass through next-intl (locked pages still blocked for signed-in users)
   if (matchesPublic(pathNoLocale)) {
+    const granted = Array.isArray(user?.granted) ? user.granted : [];
     if (role && isPathLocked(pathNoLocale, locked)) {
-      const first = getEffectiveNavHrefs(role, user?.allowedPages, locked)[0] || NO_ACCESS_REDIRECT;
+      const first = getEffectiveNavHrefs(role, user?.allowedPages, locked, granted)[0] || NO_ACCESS_REDIRECT;
       return NextResponse.redirect(new URL(withLocale(first, currentLocale), req.url));
     }
     return intlMiddleware(req);
@@ -110,7 +111,8 @@ export default function middleware(req) {
     return NextResponse.redirect(to);
   }
 
-  const allowed = getEffectiveNavHrefs(role, user?.allowedPages, locked);
+  const granted = Array.isArray(user?.granted) ? user.granted : [];
+  const allowed = getEffectiveNavHrefs(role, user?.allowedPages, locked, granted);
   if (!allowed.length) {
     return NextResponse.redirect(new URL(withLocale(NO_ACCESS_REDIRECT, currentLocale), req.url));
   }

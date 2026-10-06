@@ -2,14 +2,7 @@
 
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
-	CalendarDays, Plus, Users as UsersIcon, CheckCircle2, XCircle, Shield,
-	ChevronUp, ChevronDown, Eye, Clock, BadgeCheck, PencilLine, PauseCircle,
-	PlayCircle, MessageSquare, PhoneCall, ListChecks, Trash2, EyeOff,
-	Eye as EyeIcon, Sparkles, Dumbbell, Utensils, MessageCircle, Edit3,
-	KeyRound, Copy, User, Mail, Phone, Calendar, Crown, Award, Users,
-	ClipboardList, UserCheck, UserCog, UserCircle, ExternalLink, RefreshCw,
-	AlertCircle,
-	RotateCcw
+	Plus, CheckCircle2, XCircle, Shield, Eye, PencilLine, MessageSquare, PhoneCall, ListChecks, Trash2, EyeOff, Eye as EyeIcon, Sparkles, Dumbbell, Utensils, MessageCircle, User, Mail, Award, ExternalLink, RefreshCw, AlertCircle, RotateCcw, Flame, Clock,
 } from 'lucide-react';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -19,24 +12,36 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useLocale, useTranslations } from 'next-intl';
 
 import api from '@/utils/axios';
-import Select from '@/components/atoms/Select';
 import ActionsMenu from '@/components/molecules/ActionsMenu';
-import Input from '@/components/atoms/Input';
 import Button from '@/components/atoms/Button';
 import { Notification } from '@/config/Notification';
 import {
 	Stepper, PlanPicker, MealPlanPicker, FieldRow, PasswordRow,
-	buildWhatsAppLink, SubscriptionPeriodPicker, formatISO, parseISO
+	buildWhatsAppLink, buildWhatsAppMessage, CopyButton, SubscriptionPeriodPicker, formatISO, parseISO
 } from '@/components/pages/dashboard/users/Atoms';
 import { motion, AnimatePresence } from 'framer-motion';
+import RosterSummary from '@/components/pages/dashboard/users/roster/RosterSummary';
+import RosterToolbar from '@/components/pages/dashboard/users/roster/RosterToolbar';
+import { MemberCell, RoleTag, TierTag, ProgramCell, CoachCell, GenderCell, StatusCell } from '@/components/pages/dashboard/users/roster/RosterCells';
+import '@/components/pages/dashboard/users/roster/roster.css';
 import Flatpickr from 'react-flatpickr';
+import 'flatpickr/dist/themes/airbnb.css';
 import { useAdminCoaches } from '@/hooks/useHierarchy';
 import { useUser } from '@/hooks/useUser';
 import PhoneField from '@/components/atoms/PhoneField';
 import CaloriesStep from '@/components/pages/dashboard/users/CaloriesStep';
-import { Modal, StatCard } from '@/components/dashboard/ui/UI';
-import { PageHeader } from '@/components/molecules/PageHeader';
-import DataTable, { FilterField } from '@/components/atoms/Datatable';
+import { Modal } from '@/components/dashboard/ui/UI';
+import DataTable from '@/components/atoms/Datatable';
+import FloatingInput from '@/components/atoms/FloatingInput';
+import FloatingSelect from '@/components/atoms/FloatingSelect';
+import FloatingDate from '@/components/atoms/FloatingDate';
+import { getStoredPerPage, setStoredPerPage } from '@/lib/table-prefs';
+import ToggleGroup from '@/components/atoms/GmToggleGroup';
+
+export { ToggleGroup };
+
+const GM_MODAL = 'gm-modal';
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 /* ---------- helpers ---------- */
 const toTitle = s => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s);
@@ -70,81 +75,7 @@ function buildEmailFromName(name = '') {
 	return `${safeLocal}@example.com`;
 }
 
-/* ========================= THEME-AWARE BADGE ========================= */
-function Badge({ children, color = 'slate' }) {
-	const map = {
-		green: 'bg-green-100 text-green-700 ring-green-600/10',
-		amber: 'bg-amber-100 text-amber-800 ring-amber-600/10',
-		red: 'bg-red-100 text-red-700 ring-red-600/10',
-		violet: 'bg-violet-100 text-violet-700 ring-violet-600/10',
-		blue: 'bg-blue-100 text-blue-700 ring-blue-600/10',
-		emerald: 'bg-emerald-100 text-emerald-700 ring-emerald-600/10',
-		sky: 'bg-sky-100 text-sky-700 ring-sky-600/10',
-		pink: 'bg-pink-100 text-pink-700 ring-pink-600/10',
-		slate: 'bg-slate-100 text-slate-700 ring-slate-600/10',
-		// theme-primary badge uses CSS vars
-		primary: '',
-	};
-
-	const style = color === 'primary' ? {
-		backgroundColor: 'color-mix(in srgb, var(--color-primary-500) 12%, white)',
-		color: 'var(--color-primary-700)',
-		boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-primary-500) 18%, transparent)',
-	} : {};
-
-	return (
-		<span
-			className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${color === 'primary' ? 'ring-transparent' : (map[color] || map.slate)}`}
-			style={style}
-		>
-			{children}
-		</span>
-	);
-}
-
-const COLOR_MAP = {
-	active: 'green', pending: 'amber', suspended: 'red',
-	admin: 'violet', coach: 'blue', client: 'emerald',
-	male: 'sky', female: 'pink'
-};
 const normStatus = s => (s ? String(s).trim().toLowerCase() : 'pending');
-
-const StatusPill = ({ status, viewerRole }) => {
-	const s = normStatus(status);
-	const color = COLOR_MAP[s] || 'slate';
-	const ok = ['active', 'coach', 'client', 'admin', 'male', 'female'].includes(s);
-
-	let label = s.charAt(0).toUpperCase() + s.slice(1);
-	if (viewerRole && viewerRole.toLowerCase() === 'coach' && s === 'pending') {
-		// For coaches, make "pending" clearer as an approval state
-		label = 'Under review';
-	}
-
-	return (
-		<Badge color={color}>
-			{ok ? <CheckCircle2 className='w-3 h-3' /> : <XCircle className='w-3 h-3' />}
-			{label}
-		</Badge>
-	);
-};
-
-const RolePill = ({ role }) => {
-	const r = normRole(role);
-	// Admin uses theme primary color
-	if (r === 'Admin') {
-		return (
-			<Badge color='primary'>
-				<Shield className='w-3 h-3' /> {r}
-			</Badge>
-		);
-	}
-	const color = r === 'Coach' ? 'violet' : 'slate';
-	return (
-		<Badge color={color}>
-			<Shield className='w-3 h-3' /> {r}
-		</Badge>
-	);
-};
 
 /* ========================= VALIDATION SCHEMAS ========================= */
 const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
@@ -206,108 +137,6 @@ const editUserSchema = yup.object({
 			return new Date(end) >= new Date(start);
 		}),
 });
-
-/* ========================= SHARED MINI UI ========================= */
-
-/* Theme-aware ToggleGroup */
-export function ToggleGroup({ label, options = [], value, onChange, error, className = '' }) {
-	const handleKey = useCallback(e => {
-		if (!options.length) return;
-		const idx = Math.max(0, options.findIndex(o => o.id === value));
-		if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-			e.preventDefault();
-			onChange?.(options[(idx + 1) % options.length].id);
-		}
-		if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-			e.preventDefault();
-			onChange?.(options[(idx - 1 + options.length) % options.length].id);
-		}
-	}, [options, value, onChange]);
-
-	// Active style uses theme CSS vars
-	const activeStyle = {
-		background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))',
-		boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 35%, transparent)',
-	};
-	const activeRingStyle = {
-		boxShadow: '0 0 0 2px color-mix(in srgb, var(--color-primary-400) 50%, transparent)',
-	};
-
-	return (
-		<div className={className}>
-			{label && <label className='mb-2 block text-sm font-semibold text-slate-600 tracking-wide uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.06em' }}>{label}</label>}
-
-			<motion.div
-				role='radiogroup'
-				aria-label={typeof label === 'string' ? label : undefined}
-				onKeyDown={handleKey}
-				initial={{ opacity: 0, y: 4 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.2, ease: 'easeOut' }}
-				className='relative flex flex-wrap gap-2'
-			>
-				{options.map(opt => {
-					const active = value === opt.id;
-					return (
-						<motion.button
-							key={opt.id ?? 'none'}
-							type='button'
-							role='radio'
-							aria-checked={active}
-							onClick={() => onChange?.(opt.id)}
-							whileHover={{ scale: 1.03 }}
-							whileTap={{ scale: 0.96 }}
-							transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-							className='relative px-4 py-[7px] rounded-lg text-sm select-none focus:outline-none transition-all duration-200'
-							style={active ? {
-								...activeStyle,
-								color: '#fff',
-								border: '1px solid transparent',
-							} : {
-								background: '#fff',
-								color: '#475569',
-								border: '1px solid #cbd5e1',
-							}}
-						>
-							{/* Glow layer for active */}
-							<AnimatePresence>
-								{active && (
-									<motion.span
-										layoutId='toggleGlow'
-										className='absolute inset-0 rounded-lg'
-										style={activeRingStyle}
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										exit={{ opacity: 0 }}
-										transition={{ duration: 0.18 }}
-									/>
-								)}
-							</AnimatePresence>
-
-							{/* Hover state for inactive */}
-							{!active && (
-								<span
-									className='absolute inset-0 rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-200'
-									style={{ background: 'color-mix(in srgb, var(--color-primary-500) 6%, white)', border: '1px solid color-mix(in srgb, var(--color-primary-500) 40%, transparent)' }}
-								/>
-							)}
-
-							<span className='relative z-10 font-semibold'>{opt.label}</span>
-						</motion.button>
-					);
-				})}
-			</motion.div>
-
-			<AnimatePresence>
-				{error && (
-					<motion.p key='error' className='text-xs text-rose-500 mt-1.5 flex items-center gap-1' initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}>
-						<XCircle className='w-3 h-3' /> {error}
-					</motion.p>
-				)}
-			</AnimatePresence>
-		</div>
-	);
-}
 
 /* ========================= PLAN PICKER MODAL ========================= */
 function PlanPickerModal({ open, onClose, title, icon: Icon, fetchUrl, assignUrl, userId, onAssigned }) {
@@ -377,38 +206,35 @@ function PlanPickerModal({ open, onClose, title, icon: Icon, fetchUrl, assignUrl
 	const createUrl = isWorkout ? '/workouts/plans' : '/nutrition/meal-plans/create';
 
 	return (
-		<Modal open={open} onClose={onClose} title={title}>
+		<Modal cn="gm-modal-root" panelClassName={GM_MODAL} open={open} onClose={onClose} title={title}>
 			<div className='space-y-4'>
-				{/* Header row: description + action buttons */}
-				<div className='flex items-center justify-between'>
-					<div className='flex items-center gap-2 text-slate-500'>
-						{Icon && <Icon className='w-4 h-4' />}
-						<span className='text-sm'>{t('pickers.selectOne')}</span>
+				<div className='gm-wizard-toolbar'>
+					<div className='flex items-center gap-2.5'>
+						{Icon ? (
+							<span className='gm-plan__icon size-8!'>
+								<Icon className='size-4' />
+							</span>
+						) : null}
+						<span className='text-[13px] font-semibold gm-ink'>{t('pickers.selectOne')}</span>
 					</div>
 					<div className='flex items-center gap-2'>
-						{/* Refresh button */}
 						<button
 							type='button'
 							onClick={loadPlans}
 							disabled={loading}
-							className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all duration-200 disabled:opacity-50'
+							className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5 disabled:opacity-50'
 						>
-							<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-							{t('common.refresh') || 'Refresh'}
+							<RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+							{t('common.refresh')}
 						</button>
-						{/* Create new plan button */}
 						<button
 							type='button'
 							onClick={() => window.open(createUrl, '_blank')}
-							className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all duration-200 hover:opacity-90 shadow-sm'
-							style={{
-								background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))',
-								boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
-							}}
+							className='gm-btn-primary gm-btn-compact'
 						>
-							<Plus className='w-3.5 h-3.5' />
-							{isWorkout ? (t('pickers.createWorkout') || 'New Workout') : (t('pickers.createMeal') || 'New Meal Plan')}
-							<ExternalLink className='w-3 h-3 opacity-70' />
+							<Plus className='size-3.5' />
+							{isWorkout ? t('pickers.createWorkout') : t('pickers.createMeal')}
+							<ExternalLink className='size-3 opacity-70' />
 						</button>
 					</div>
 				</div>
@@ -416,7 +242,7 @@ function PlanPickerModal({ open, onClose, title, icon: Icon, fetchUrl, assignUrl
 				{loading ? (
 					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
 						{Array.from({ length: 6 }).map((_, i) => (
-							<div key={i} className='h-28 rounded-lg border border-slate-200 bg-slate-50 animate-pulse' />
+							<div key={i} className='h-28 animate-pulse rounded-[14px] border' style={{ borderColor: 'var(--gm-line)', background: 'color-mix(in srgb, var(--gm-paper) 55%, transparent)' }} />
 						))}
 					</div>
 				) : (
@@ -530,89 +356,104 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
 	const subscriptionEnd = watch('subscriptionEnd');
 
 	return (
-		<Modal open={open} onClose={onClose} title={`${t('editUser')} • ${user?.name ?? ''}`}>
-			<form className='space-y-5' onSubmit={handleSubmit(onSubmit)}>
-				<div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-					<Controller name='name' control={control} render={({ field }) => <Input label={t('fields.fullName')} placeholder={t('placeholders.fullName')} error={t(errors.name?.message)} icon={<User className='w-4 h-4' />} {...field} />} />
+		<Modal cn="gm-modal-root" panelClassName={GM_MODAL} open={open} onClose={onClose} title={`${t('editUser')} • ${user?.name ?? ''}`}>
+			<form className='space-y-3.5' onSubmit={handleSubmit(onSubmit)}>
+				<section className='gm-wizard-block'>
+					<h3 className='gm-wizard-block__title'>{t('wizard.sectionProfile')}</h3>
+					<Controller name='name' control={control} render={({ field }) => (
+						<FloatingInput label={t('fields.fullName')} value={field.value} onChange={field.onChange} error={errors.name?.message ? t(errors.name.message) : undefined} icon={<User className='size-4' />} />
+					)} />
 					<Controller name='phone' control={control} render={({ field }) => (
 						<PhoneField label={t('fields.phone')} value={field.value || ''} onChange={field.onChange}
 							error={errors.phone?.message ? t(errors.phone.message) : ''} name={field.name}
 							setError={setError} clearErrors={clearErrors} t={t} />
 					)} />
-					<Controller name='email' control={control} render={({ field }) => <Input label={t('fields.email')} type='email' placeholder={t('placeholders.email')} error={errors.email && t(errors.email?.message)} icon={<Mail className='w-4 h-4' />} {...field} />} />
-
-					{/* Password field */}
-					<div className='relative'>
-						<Controller name='password' control={control} render={({ field }) => (
-							<CutomInput label={t('fields.passwordEdit')} type={showPassword ? 'text' : 'password'} placeholder='••••••••'
-								value={field.value || ''} onChange={field.onChange}
-								error={errors.password?.message ? t(errors.password.message) : undefined} />
-						)} />
-						<div className='absolute rtl:left-2 ltr:right-2 top-[31px] flex items-center gap-1'>
-							<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
-							<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
-						</div>
-					</div>
-
+					<Controller name='email' control={control} render={({ field }) => (
+						<FloatingInput label={t('fields.email')} type='email' value={field.value} onChange={field.onChange} error={errors.email?.message ? t(errors.email.message) : undefined} icon={<Mail className='size-4' />} />
+					)} />
 					<Controller name='gender' control={control} render={({ field }) => (
 						<ToggleGroup label={t('fields.gender')} value={field.value} onChange={field.onChange}
 							options={[{ id: 'male', label: t('gender.male') }, { id: 'female', label: t('gender.female') }]}
 							error={errors.gender?.message ? t(errors.gender.message) : undefined} />
 					)} />
+				</section>
 
+				<section className='gm-wizard-block'>
+					<h3 className='gm-wizard-block__title'>{t('wizard.sectionAccess')}</h3>
+					<Controller name='password' control={control} render={({ field }) => (
+						<FloatingInput
+							className='sm:col-span-2'
+							label={t('fields.passwordEdit')}
+							type={showPassword ? 'text' : 'password'}
+							value={field.value || ''}
+							onChange={field.onChange}
+							error={errors.password?.message ? t(errors.password.message) : undefined}
+							clearable={false}
+							suffix={(
+								<>
+									<button type='button' onClick={() => setShowPassword(v => !v)} className='grid size-7 place-items-center rounded-md text-[var(--gm-muted)] hover:bg-[color-mix(in_srgb,var(--color-primary-50)_70%,transparent)]'>
+										{showPassword ? <EyeOff className='size-3.5' /> : <EyeIcon className='size-3.5' />}
+									</button>
+									<button type='button' onClick={generatePassword} className='grid size-7 place-items-center rounded-md text-[var(--gm-muted)] hover:bg-[color-mix(in_srgb,var(--color-primary-50)_70%,transparent)]'>
+										<Sparkles className='size-3.5' />
+									</button>
+								</>
+							)}
+						/>
+					)} />
+					{!isCoachViewer && (
+						<Controller name='role' control={control} render={({ field }) => (
+							<FloatingSelect
+								label={t('fields.role')}
+								options={[
+									{ id: 'Admin', label: t('roles.admin') },
+									{ id: 'Coach', label: t('roles.coach') },
+									{ id: 'Client', label: t('roles.client') },
+								]}
+								value={field.value}
+								onChange={field.onChange}
+								icon={<Shield className='size-4' />}
+								error={errors.role?.message ? t(errors.role.message) : undefined}
+							/>
+						)} />
+					)}
+					<Controller name='status' control={control} render={({ field }) => (
+						<FloatingSelect
+							label={t('fields.status')}
+							options={[{ id: 'Active', label: t('status.active') }, { id: 'Pending', label: t('status.pending') }, { id: 'Suspended', label: t('status.suspended') }]}
+							value={field.value}
+							onChange={field.onChange}
+							icon={<CheckCircle2 className='size-4' />}
+							error={errors.status?.message ? t(errors.status.message) : undefined}
+						/>
+					)} />
+				</section>
+
+				<section className='gm-wizard-block'>
+					<h3 className='gm-wizard-block__title'>{t('wizard.sectionMembership')}</h3>
 					<Controller name='membership' control={control} render={({ field }) => (
 						<ToggleGroup label={t('fields.membership')} value={field.value} onChange={field.onChange}
 							options={[{ id: 'basic', label: t('membership.basic') }, { id: 'gold', label: t('membership.gold') }, { id: 'platinum', label: t('membership.platinum') }]}
 							error={errors.membership?.message ? t(errors.membership.message) : undefined} />
 					)} />
-
-					{!isCoachViewer && (
-						<Controller name='role' control={control} render={({ field }) => (
-							<div className='sm:col-span-1'>
-								<Select
-									label={t('fields.role')}
-									placeholder={t('placeholders.role')}
-									searchable={false}
-									clearable={false}
-									options={[
-										{ id: 'Admin', label: t('roles.admin') },
-										{ id: 'Coach', label: t('roles.coach') },
-										{ id: 'Client', label: t('roles.client') },
-									]}
-									value={field.value}
-									onChange={field.onChange}
-									icon={<Shield className='w-4 h-4' />}
-								/>
-								{errors.role?.message && <p className='text-xs text-rose-500 mt-1'>{t(errors.role.message)}</p>}
-							</div>
-						)} />
-					)}
-
-					<Controller name='status' control={control} render={({ field }) => (
-						<div>
-							<Select label={t('fields.status')} placeholder={t('placeholders.status')} searchable={false} clearable={false}
-								options={[{ id: 'Active', label: t('status.active') }, { id: 'Pending', label: t('status.pending') }, { id: 'Suspended', label: t('status.suspended') }]}
-								value={field.value} onChange={field.onChange} icon={<CheckCircle2 className='w-4 h-4' />} />
-							{errors.status?.message && <p className='text-xs text-rose-500 mt-1'>{t(errors.status.message)}</p>}
-						</div>
-					)} />
-
 					<Controller name='coachId' control={control} render={({ field }) => (
-						<div className='sm:col-span-1'>
-							<Select label={t('fields.coach')} placeholder={t('placeholders.coach')} options={optionsCoach}
-								value={field.value} onChange={field.onChange} icon={<Award className='w-4 h-4' />} />
-							{errors.coachId?.message && <p className='text-xs text-rose-500 mt-1'>{t(errors.coachId.message)}</p>}
-						</div>
+						<FloatingSelect
+							label={t('fields.coach')}
+							options={optionsCoach}
+							value={field.value}
+							onChange={field.onChange}
+							icon={<Award className='size-4' />}
+							error={errors.coachId?.message ? t(errors.coachId.message) : undefined}
+						/>
 					)} />
-
 					<div className='sm:col-span-2'>
 						<SubscriptionPeriodPicker startValue={subscriptionStart} endValue={subscriptionEnd} setValue={setValue}
 							errorStart={errors.subscriptionStart?.message ? t(errors.subscriptionStart.message) : undefined}
 							errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined} />
 					</div>
-				</div>
+				</section>
 
-				<div className='flex justify-end gap-2.5 pt-5 border-t border-slate-100'>
+				<div className='gm-modal-foot'>
 					<Button color='neutral' name={t('common.cancel')} onClick={onClose} />
 					<Button color='primary' type='submit' name={t('common.saveChanges')} loading={saving} disabled={saving} />
 				</div>
@@ -675,8 +516,8 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 
 	const { control, handleSubmit, setValue, getValues, reset, trigger, watch, formState: { errors, isSubmitting }, setError, clearErrors } = useForm({
 		defaultValues: {
-			name: '', email: '', phone: '', role: 'Client', gender: 'male',
-			membership: 'basic', password: '', coachId: null, birthDate: '2000-01-01',
+			name: '', email: '', phone: '', role: 'Client', gender: null,
+			membership: 'basic', password: '', coachId: null, birthDate: '',
 			subscriptionStart: defaultStart, subscriptionEnd: defaultEnd,
 		},
 		resolver: yupResolver(accountSchema),
@@ -706,7 +547,15 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 	const watchedName = watch('name');
 	useEffect(() => {
 		if (!open) return;
-		const nextEmail = buildEmailFromName(watchedName || '');
+		const trimmed = String(watchedName || '').trim();
+		if (!trimmed) {
+			if (!emailAutoLocked) {
+				setValue('email', '', { shouldValidate: false });
+				lastAutoEmailRef.current = '';
+			}
+			return;
+		}
+		const nextEmail = buildEmailFromName(trimmed);
 		const currentEmail = String(getValues('email') || '').trim().toLowerCase();
 		const canAutofill = !emailAutoLocked || !currentEmail || currentEmail === lastAutoEmailRef.current;
 		if (!canAutofill) return;
@@ -768,10 +617,12 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 			const effectiveRole = isCoachViewer ? 'Client' : (data.role || 'Client');
 			const isClient = effectiveRole === 'Client';
 
+			const rawPhone = String(data.phone || '').trim();
+			const phone = /^\+\d{1,4}$/.test(rawPhone) ? undefined : (rawPhone || undefined);
 			const body = {
 				name: data.name,
 				email: data.email,
-				phone: data.phone || undefined,
+				phone,
 				gender: data.gender || undefined,
 				birthDate: data.birthDate || undefined,
 				role: effectiveRole.toLowerCase(),
@@ -852,15 +703,71 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 		send: t('wizard.credentialsAndForm'),
 	};
 
+	const stepMeta = {
+		account: { label: t('wizard.stepAccount'), icon: User },
+		workout: { label: t('wizard.stepWorkout'), icon: Dumbbell },
+		meal: { label: t('wizard.stepMeal'), icon: Utensils },
+		calories: { label: t('wizard.stepCalories'), icon: Flame },
+		send: { label: t('wizard.stepSend'), icon: MessageCircle },
+	};
+
 	return (
-		<Modal open={open} onClose={onClose} title={`${t('wizard.newUser')} • ${stepTitleMap[currentStep]}`}>
-			<Stepper step={stepIndex + 1} steps={steps.length} />
+		<Modal cn="gm-modal-root" panelClassName={`${GM_MODAL} !max-w-3xl`} open={open} onClose={onClose} title={t('wizard.newUser')}>
+			<Stepper
+				step={stepIndex + 1}
+				steps={steps.length}
+				items={steps.map((key) => stepMeta[key])}
+				onStepSelect={(n) => {
+					const next = n - 1;
+					if (next < stepIndex) setStepIndex(next);
+				}}
+			/>
+			<p className='gm-wizard-kicker'>
+				<span className='gm-wizard-kicker__idx'>{String(stepIndex + 1).padStart(2, '0')}</span>
+				<span className='gm-wizard-kicker__title'>{stepTitleMap[currentStep]}</span>
+			</p>
+
+			{IS_DEV && (
+				<div className='mb-4 flex flex-wrap items-center gap-1.5 rounded-[12px] border border-dashed border-amber-400/70 bg-amber-50/60 px-2 py-1.5 text-[11px]'>
+					<span className='rounded-md bg-amber-400 px-1.5 py-0.5 font-bold tracking-wide text-amber-950'>DEV</span>
+					<button
+						type='button'
+						disabled={stepIndex === 0}
+						onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+						className='rounded-md px-2 py-1 font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-40'
+					>
+						‹ Prev
+					</button>
+					{steps.map((key, i) => (
+						<button
+							key={key}
+							type='button'
+							onClick={() => setStepIndex(i)}
+							className={`rounded-md px-2 py-1 font-semibold ${i === stepIndex ? 'bg-amber-400 text-amber-950' : 'text-amber-900 hover:bg-amber-100'}`}
+						>
+							{key}
+						</button>
+					))}
+					<button
+						type='button'
+						disabled={stepIndex === steps.length - 1}
+						onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))}
+						className='rounded-md px-2 py-1 font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-40'
+					>
+						Next ›
+					</button>
+					{!createdUser && <span className='ms-auto text-amber-800/80'>no user created — saves will fail</span>}
+				</div>
+			)}
 
 			{/* ===== ACCOUNT STEP ===== */}
 			{currentStep === 'account' && (
-				<form className='space-y-4' onSubmit={handleSubmit(onSubmitAccount)}>
-					<div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-						<Controller name='name' control={control} render={({ field }) => <Input label={t('fields.fullName')} placeholder={t('placeholders.fullName')} error={t(errors?.name?.message || '')} {...field} />} />
+				<form className='space-y-3.5' onSubmit={handleSubmit(onSubmitAccount)}>
+					<section className='gm-wizard-block'>
+						<h3 className='gm-wizard-block__title'>{t('wizard.sectionProfile')}</h3>
+						<Controller name='name' control={control} render={({ field }) => (
+							<FloatingInput label={t('fields.fullName')} value={field.value} onChange={field.onChange} error={errors?.name?.message ? t(errors.name.message) : undefined} icon={<User className='size-4' />} required />
+						)} />
 						<Controller name='phone' control={control} render={({ field }) => (
 							<PhoneField label={t('fields.phone')} value={field.value || ''} onChange={field.onChange}
 								error={errors?.phone?.message ? t(errors.phone.message) : ''} required={false}
@@ -870,18 +777,19 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 							name='email'
 							control={control}
 							render={({ field }) => (
-								<Input
+								<FloatingInput
 									label={t('fields.email')}
 									type='email'
-									placeholder={t('placeholders.email')}
-									error={t(errors?.email?.message)}
-									{...field}
-									onChange={(e) => {
-										const v = String(e?.target?.value || '').trim().toLowerCase();
+									value={field.value}
+									error={errors?.email?.message ? t(errors.email.message) : undefined}
+									icon={<Mail className='size-4' />}
+									required
+									onChange={(v) => {
+										const next = String(v || '').trim().toLowerCase();
 										const lastAuto = String(lastAutoEmailRef.current || '').trim().toLowerCase();
-										if (!v) setEmailAutoLocked(false);
-										else if (lastAuto && v !== lastAuto) setEmailAutoLocked(true);
-										field.onChange(e);
+										if (!next) setEmailAutoLocked(false);
+										else if (lastAuto && next !== lastAuto) setEmailAutoLocked(true);
+										field.onChange(next);
 									}}
 								/>
 							)}
@@ -890,99 +798,90 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 							name='birthDate'
 							control={control}
 							render={({ field }) => (
-								<div>
-									<label className='text-sm font-[500] text-slate-700'>{t('fields.birthDate') || 'Birth date'}</label>
-									<div className='mt-1 bg-white rounded-lg'>
-										<Flatpickr
-											value={field.value ? parseISO(field.value) : null}
-											options={{
-												dateFormat: 'Y-m-d',
-												maxDate: 'today',
-												disableMobile: true,
-											}}
-											onChange={(dates) => {
-												const d = dates?.[0];
-												field.onChange(d ? formatISO(d, { representation: 'date' }) : '');
-											}}
-											className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
-											style={{ borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }}
-											placeholder={t('fields.birthDate') || 'Birth date'}
-										/>
-									</div>
-								</div>
+								<FloatingDate
+									label={t('fields.birthDate')}
+									value={field.value || ''}
+									onChange={field.onChange}
+									maxDate='today'
+								/>
 							)}
 						/>
-
-						<div className='relative'>
-							<Controller name='password' control={control} render={({ field }) => (
-								<CutomInput label={t('fields.password')} type={showPassword ? 'text' : 'password'} placeholder='••••••••'
-									value={field.value} onChange={field.onChange}
-									error={errors.password?.message ? t(errors.password.message) : undefined} />
-							)} />
-							<div className='absolute rtl:left-2 ltr:right-2 top-[31px] flex items-center gap-1'>
-								<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
-								<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
-							</div>
-						</div>
-
 						<Controller name='gender' control={control} render={({ field }) => (
 							<ToggleGroup label={t('fields.gender')} value={field.value} onChange={field.onChange}
 								options={GENDER_OPTIONS.map(o => ({ id: o.id, label: t(o.label) }))}
 								error={errors.gender?.message ? t(errors.gender.message) : undefined} />
 						)} />
-
-						<Controller name='role' control={control} render={({ field }) => (
-							<ToggleGroup label={t('fields.role')} value={field.value} onChange={field.onChange}
-								options={ROLE_OPTIONS_WIZARD.map(o => ({ id: o.id, label: t(o.label) }))}
-								error={errors.role?.message ? t(errors.role.message) : undefined} />
-						)} />
-
-						{roleAtCreation === 'Client' && (
-							<Controller name='coachId' control={control} render={({ field }) => (
-								<div>
-									<Select searchable={false} label={`${t('fields.coach')} *`} placeholder={t('placeholders.coach')}
-										options={optionsCoach} value={field.value} onChange={field.onChange} icon={<Award className='w-4 h-4' />} />
-									{errors.coachId?.message && <p className='text-xs text-rose-500 mt-1'>{t(errors.coachId.message)}</p>}
-								</div>
+						{!isCoachViewer && (
+							<Controller name='role' control={control} render={({ field }) => (
+								<ToggleGroup label={t('fields.role')} value={field.value} onChange={field.onChange}
+									options={ROLE_OPTIONS_WIZARD.map(o => ({ id: o.id, label: t(o.label) }))}
+									error={errors.role?.message ? t(errors.role.message) : undefined} />
 							)} />
 						)}
+					</section>
 
-						{roleAtCreation === 'Client' && (
+					<section className='gm-wizard-block'>
+						<h3 className='gm-wizard-block__title'>{t('wizard.sectionAccess')}</h3>
+						<Controller name='password' control={control} render={({ field }) => (
+							<FloatingInput
+								className='sm:col-span-2'
+								label={t('fields.password')}
+								type={showPassword ? 'text' : 'password'}
+								value={field.value}
+								onChange={field.onChange}
+								error={errors.password?.message ? t(errors.password.message) : undefined}
+								clearable={false}
+								required
+								suffix={(
+									<>
+										<button type='button' onClick={() => setShowPassword((v) => !v)} className='grid size-7 place-items-center rounded-md text-[var(--gm-muted)] hover:bg-[color-mix(in_srgb,var(--color-primary-50)_70%,transparent)]'>
+											{showPassword ? <EyeOff className='size-3.5' /> : <EyeIcon className='size-3.5' />}
+										</button>
+										<button type='button' onClick={generatePassword} className='grid size-7 place-items-center rounded-md text-[var(--gm-muted)] hover:bg-[color-mix(in_srgb,var(--color-primary-50)_70%,transparent)]'>
+											<Sparkles className='size-3.5' />
+										</button>
+									</>
+								)}
+							/>
+						)} />
+					</section>
+
+					{roleAtCreation === 'Client' && (
+						<section className='gm-wizard-block'>
+							<h3 className='gm-wizard-block__title'>{t('wizard.sectionMembership')}</h3>
+							<Controller name='coachId' control={control} render={({ field }) => (
+								<FloatingSelect
+									label={`${t('fields.coach')}`}
+									required
+									options={optionsCoach}
+									value={field.value}
+									onChange={field.onChange}
+									icon={<Award className='size-4' />}
+									error={errors.coachId?.message ? t(errors.coachId.message) : undefined}
+								/>
+							)} />
 							<Controller name='membership' control={control} render={({ field }) => (
 								<ToggleGroup label={t('fields.membership')} value={field.value} onChange={field.onChange}
 									options={MEMBERSHIP_OPTIONS.map(o => ({ id: o.id, label: t(o.label) }))}
 									error={errors.membership?.message ? t(errors.membership.message) : undefined} />
 							)} />
-						)}
+							<Controller name='subscriptionStart' control={control} render={({ field }) => {
+								const start = field.value;
+								return (
+									<Controller name='subscriptionEnd' control={control} render={({ field: fieldEnd }) => (
+										<SubscriptionPeriodPicker setValue={setValue} startValue={start} endValue={fieldEnd.value || ''}
+											onStartChange={v => field.onChange(v)} onEndChange={v => fieldEnd.onChange(v)}
+											errorStart={errors.subscriptionStart?.message ? t(errors.subscriptionStart.message) : undefined}
+											errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined} t={t} />
+									)} />
+								);
+							}} />
+						</section>
+					)}
 
-						{roleAtCreation === 'Client' && (
-							<div className='sm:col-span-2'>
-								<Controller name='subscriptionStart' control={control} render={({ field }) => {
-									const start = field.value;
-									return (
-										<Controller name='subscriptionEnd' control={control} render={({ field: fieldEnd }) => (
-											<SubscriptionPeriodPicker setValue={setValue} startValue={start} endValue={fieldEnd.value || ''}
-												onStartChange={v => field.onChange(v)} onEndChange={v => fieldEnd.onChange(v)}
-												errorStart={errors.subscriptionStart?.message ? t(errors.subscriptionStart.message) : undefined}
-												errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined} t={t} />
-										)} />
-									);
-								}} />
-							</div>
-						)}
-					</div>
-
-					<div className='flex justify-end pt-2'>
-						<button
-							type='submit'
-							disabled={creating || isSubmitting}
-							className='inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 shadow-md'
-							style={{
-								background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))',
-								boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 35%, transparent)',
-							}}
-						>
-							{(creating || isSubmitting) && <RefreshCw className='w-4 h-4 animate-spin' />}
+					<div className='gm-modal-foot'>
+						<button type='submit' disabled={creating || isSubmitting} className='gm-btn-primary disabled:cursor-not-allowed disabled:opacity-50'>
+							{(creating || isSubmitting) && <RefreshCw className='size-4 animate-spin' />}
 							{creating || isSubmitting ? t('common.creating') : t('wizard.createAndNext')}
 						</button>
 					</div>
@@ -992,34 +891,32 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 			{/* ===== WORKOUT STEP ===== */}
 			{currentStep === 'workout' && (
 				<div className='space-y-4'>
-					{/* Action bar: create + refresh */}
-					<div className='flex items-center justify-between'>
-						<div className='flex items-center gap-2 text-slate-500'>
-							<Dumbbell className='w-4 h-4' />
-							<span className='text-sm font-medium'>{t('pickers.selectOne')}</span>
+					<div className='gm-wizard-toolbar'>
+						<div className='flex items-center gap-2.5'>
+							<span className='gm-plan__icon size-8!'>
+								<Dumbbell className='size-4' />
+							</span>
+							<span className='text-[13px] font-semibold gm-ink'>{t('pickers.selectOne')}</span>
+							{!loadingWorkouts && workoutPlans.length > 0 && <span className='gm-plan__chip'>{workoutPlans.length}</span>}
 						</div>
 						<div className='flex items-center gap-2'>
 							<button
 								type='button'
 								onClick={fetchWorkoutPlans}
 								disabled={loadingWorkouts}
-								className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all duration-200 disabled:opacity-50'
+								className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5 disabled:opacity-50'
 							>
-								<RefreshCw className={`w-3.5 h-3.5 ${loadingWorkouts ? 'animate-spin' : ''}`} />
-								{t('common.refresh') || 'Refresh'}
+								<RefreshCw className={`size-3.5 ${loadingWorkouts ? 'animate-spin' : ''}`} />
+								{t('common.refresh')}
 							</button>
 							<button
 								type='button'
 								onClick={() => window.open('/dashboard/workouts/plans', '_blank')}
-								className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all duration-200 hover:opacity-90 shadow-sm'
-								style={{
-									background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))',
-									boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
-								}}
+								className='gm-btn-primary gm-btn-compact'
 							>
-								<Plus className='w-3.5 h-3.5' />
-								{t('pickers.createWorkout') || 'New Workout'}
-								<ExternalLink className='w-3 h-3 opacity-70' />
+								<Plus className='size-3.5' />
+								{t('pickers.createWorkout')}
+								<ExternalLink className='size-3 opacity-70' />
 							</button>
 						</div>
 					</div>
@@ -1028,14 +925,14 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 						loading={loadingWorkouts}
 						workoutPlans={workoutPlans}
 						visibleWorkouts={visibleWorkouts}
-						setVisibleWorkouts={() => setVisibleWorkouts(v => v + 6)}
-						plans={workoutPlans.slice(0, visibleWorkouts)}
+						setVisibleWorkouts={setVisibleWorkouts}
+						plans={workoutPlans}
 						defaultSelectedId={selectedWorkout}
 						onSelect={setSelectedWorkout}
+						onBack={() => setStepIndex(steps.indexOf('account'))}
 						onSkip={() => setStepIndex(steps.indexOf('meal'))}
 						onAssign={() => assignWorkout(selectedWorkout)}
 						assigning={assigningW}
-						hideSearch
 					/>
 				</div>
 			)}
@@ -1043,34 +940,32 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 			{/* ===== MEAL STEP ===== */}
 			{currentStep === 'meal' && (
 				<div className='space-y-4'>
-					{/* Action bar: create + refresh */}
-					<div className='flex items-center justify-between'>
-						<div className='flex items-center gap-2 text-slate-500'>
-							<Utensils className='w-4 h-4' />
-							<span className='text-sm font-medium'>{t('pickers.selectOne')}</span>
+					<div className='gm-wizard-toolbar'>
+						<div className='flex items-center gap-2.5'>
+							<span className='gm-plan__icon size-8!'>
+								<Utensils className='size-4' />
+							</span>
+							<span className='text-[13px] font-semibold gm-ink'>{t('pickers.selectOne')}</span>
+							{!loadingMeals && mealPlans.length > 0 && <span className='gm-plan__chip'>{mealPlans.length}</span>}
 						</div>
 						<div className='flex items-center gap-2'>
 							<button
 								type='button'
 								onClick={fetchMealPlans}
 								disabled={loadingMeals}
-								className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all duration-200 disabled:opacity-50'
+								className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5 disabled:opacity-50'
 							>
-								<RefreshCw className={`w-3.5 h-3.5 ${loadingMeals ? 'animate-spin' : ''}`} />
-								{t('common.refresh') || 'Refresh'}
+								<RefreshCw className={`size-3.5 ${loadingMeals ? 'animate-spin' : ''}`} />
+								{t('common.refresh')}
 							</button>
 							<button
 								type='button'
 								onClick={() => window.open('/dashboard/nutrition', '_blank')}
-								className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all duration-200 hover:opacity-90 shadow-sm'
-								style={{
-									background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))',
-									boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
-								}}
+								className='gm-btn-primary gm-btn-compact'
 							>
-								<Plus className='w-3.5 h-3.5' />
-								{t('pickers.createMeal') || 'New Meal Plan'}
-								<ExternalLink className='w-3 h-3 opacity-70' />
+								<Plus className='size-3.5' />
+								{t('pickers.createMeal')}
+								<ExternalLink className='size-3 opacity-70' />
 							</button>
 						</div>
 					</div>
@@ -1080,12 +975,11 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 						mealPlans={mealPlans}
 						visibleMeals={visibleMeals}
 						setVisibleMeals={setVisibleMeals}
-						meals={mealPlans.slice(0, visibleMeals)}
+						meals={mealPlans}
 						onBack={() => setStepIndex(steps.indexOf('workout'))}
 						onSkip={() => setStepIndex(steps.indexOf('calories'))}
 						onAssign={handleAssignMeal}
 						assigning={assigningM}
-						hideSearch
 					/>
 				</div>
 			)}
@@ -1094,14 +988,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 			{currentStep === 'calories' && (
 				<CaloriesStep
 					userId={createdUser?.user?.id}
-					initialValues={{
-						caloriesTarget: createdUser?.user?.caloriesTarget,
-						proteinPerDay: createdUser?.user?.proteinPerDay,
-						carbsPerDay: createdUser?.user?.carbsPerDay,
-						fatsPerDay: createdUser?.user?.fatsPerDay,
-						activityLevel: createdUser?.user?.activityLevel,
-						notes: createdUser?.user?.notes,
-					}}
+					initialValues={{}}
 					onBack={() => setStepIndex(steps.indexOf('meal'))}
 					onNext={() => setStepIndex(steps.indexOf('send'))}
 				/>
@@ -1109,25 +996,59 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 
 			{/* ===== SEND CREDENTIALS STEP ===== */}
 			{currentStep === 'send' && (
-				<div className='space-y-5'>
-					{/* Success banner */}
-					<div className='flex items-center gap-3 p-4 rounded-lg border' style={{ background: 'color-mix(in srgb, var(--color-primary-500) 6%, white)', borderColor: 'color-mix(in srgb, var(--color-primary-500) 20%, transparent)' }}>
-						<div className='mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center' style={{ background: 'color-mix(in srgb, var(--color-primary-500) 15%, white)' }}>
-							<CheckCircle2 className='w-5 h-5' style={{ color: 'var(--color-primary-600)' }} />
+				<div className='space-y-4'>
+					<div className='gm-share-hero'>
+						<div className='gm-cred__icon'>
+							<CheckCircle2 className='size-4' />
 						</div>
-						<div>
-							<p className='text-sm font-semibold' style={{ color: 'var(--color-primary-700)' }}>{t('wizard.credsReady')}</p>
-							{/* <p className='text-xs text-slate-500 mt-0.5'>{t('wizard.credsReadyDesc') || 'Share the credentials below with your new user.'}</p> */}
+						<div className='min-w-0'>
+							<h3>{t('wizard.shareTitle')}{getValues('name') ? ` · ${getValues('name')}` : ''}</h3>
+							<p>{t('wizard.shareBody')}</p>
 						</div>
 					</div>
 
 					<div className='space-y-2.5'>
-						<FieldRow icon={<Mail className='h-4 w-4' />} label={t('fields.email')} value={createdUser?.email || getValues('email')} canCopy />
+						<FieldRow icon={<Mail className='size-4' />} label={t('fields.email')} value={createdUser?.email || getValues('email')} canCopy />
 						<PasswordRow label={t('fields.password')} value={getValues('password') ? getValues('password') : t('wizard.passwordByEmail')} canCopy={Boolean(getValues('password'))} />
+						<PhoneField
+							label={t('wizard.phoneForWhatsapp')}
+							value={summaryPhone || ''}
+							onChange={setSummaryPhone}
+						/>
 					</div>
 
-					<div className='flex justify-end pt-2'>
-						<Button color='green' className='!w-fit text-sm' name={t('common.sendWhatsapp')} icon={<MessageCircle size={16} />} onClick={handleSendCreds} />
+					<div className='flex items-center justify-between gap-2'>
+						<span className='text-[11px] font-extrabold uppercase tracking-wide gm-muted'>{t('wizard.messagePreview')}</span>
+						<CopyButton
+							label={t('wizard.copyAll')}
+							text={buildWhatsAppMessage({
+								email: createdUser?.email || getValues('email'),
+								password: getValues('password'),
+								lang,
+							})}
+						/>
+					</div>
+					<pre className='gm-share-preview'>
+						{buildWhatsAppMessage({
+							email: createdUser?.email || getValues('email'),
+							password: getValues('password'),
+							lang,
+						})}
+					</pre>
+
+					<div className='gm-modal-foot'>
+						<button type='button' onClick={onClose} className='gm-btn-ghost rounded-[11px] px-4 py-2 text-[13px] font-medium'>
+							{t('common.done')}
+						</button>
+						<button
+							type='button'
+							onClick={handleSendCreds}
+							disabled={!String(summaryPhone || '').replace(/[^0-9]/g, '')}
+							className='gm-btn-primary disabled:cursor-not-allowed disabled:opacity-50'
+						>
+							<MessageCircle className='size-4' />
+							{t('common.sendWhatsapp')}
+						</button>
 					</div>
 				</div>
 			)}
@@ -1213,6 +1134,10 @@ export default function UsersList() {
 		return () => clearTimeout(tOut);
 	}, [searchText]);
 
+	useEffect(() => {
+		setLimit(getStoredPerPage(10));
+	}, []);
+
 	async function fetchMe() {
 		try {
 			const r = await api.get('/auth/me');
@@ -1265,6 +1190,7 @@ export default function UsersList() {
 				coachName: u.coach?.name || u.coachName || u.assignedCoachName || null,
 				gender: u.gender || null,
 				canEditWorkout: u.canEditWorkout || null,
+				lastLogin: u.lastLogin || null,
 			}));
 
 			setRows(mapped);
@@ -1307,17 +1233,32 @@ export default function UsersList() {
 
 	useEffect(() => { fetchMe(); fetchStats(); }, []);
 	useEffect(() => {
+		document.documentElement.dataset.gmUsers = '1';
+		return () => { delete document.documentElement.dataset.gmUsers; };
+	}, []);
+	const listRole = String(user?.role || myRole || '').toLowerCase();
+	useEffect(() => {
 		fetchUsers();
-	}, [page, limit, sortBy, sortOrder, debounced, roleFilter, hasPlanFilter, user, myRole]);
+		// listRole collapses user.role and /auth/me so the list is not requested twice for the same role.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [page, limit, sortBy, sortOrder, debounced, roleFilter, hasPlanFilter, user?.id, listRole]);
 
-	const deleteUser = async row => {
-		if (!confirm(t('dialogs.deleteUserConfirm', { name: row.name }))) return;
+	const [confirmDelete, setConfirmDelete] = useState(null);
+	const [deletingUser, setDeletingUser] = useState(false);
+	const deleteUser = row => setConfirmDelete(row);
+	const confirmDeleteUser = async () => {
+		const row = confirmDelete;
+		if (!row) return;
+		setDeletingUser(true);
 		try {
 			await api.delete(`/auth/user/${row.id}`);
 			fetchUsers(); fetchStats();
 			Notification(t('alerts.userDeleted'), 'success');
+			setConfirmDelete(null);
 		} catch (e) {
 			Notification(e?.response?.data?.message || t('alerts.deleteFailed'), 'error');
+		} finally {
+			setDeletingUser(false);
 		}
 	};
 
@@ -1369,61 +1310,55 @@ export default function UsersList() {
 	const buildRowActions = row => {
 		const viewer = String(myRole || '').toLowerCase();
 		const isAdmin = viewer === 'admin';
-		const canCoachManage = viewer === 'coach';
-		const canManage = isAdmin || canCoachManage;
+		const canManage = isAdmin || viewer === 'coach';
+		const openWhatsApp = () => {
+			const phone = String(row.phone || '').replace(/[^0-9]/g, '');
+			if (!phone) return Notification(t('alerts.noPhone'), 'error');
+			window.open(`https://wa.me/${phone}`, '_blank');
+		};
 
 		const opts = [
-			{ icon: I(Eye, 'text-slate-600'), label: t('actions.openProfile'), onClick: () => (window.location.href = `/dashboard/users/${row.id}`), className: 'hover:text-slate-800' },
+			{ key: 'profile', group: 'view', icon: I(Eye), label: t('actions.openProfile'), onClick: () => (window.location.href = `/dashboard/users/${row.id}`) },
 		];
-
-		if (canManage) {
-			opts.push(
-				{
-					icon: I(RotateCcw, 'text-cyan-600'),
-					label: t('actions.renewSubscription'),
-					onClick: () => setRenewModal({ open: true, user: row }),
-					className: 'hover:text-cyan-700'
-				},
-				{ icon: I(Dumbbell, 'text-violet-600'), label: t('actions.assignWorkout'), onClick: () => setPickerWorkout({ open: true, user: row }), className: 'hover:text-violet-700' },
-				{ icon: I(Utensils, 'text-amber-600'), label: t('actions.assignMeal'), onClick: () => setPickerMeal({ open: true, user: row }), className: 'hover:text-amber-700' }
-			);
-		}
 
 		if (isAdmin && row.status === 'pending') {
 			opts.push(
-				{
-					icon: I(CheckCircle2, 'text-emerald-600'),
-					label: 'Approve user',
-					onClick: () => updateUserStatus(row, 'active'),
-					className: 'hover:text-emerald-700',
-				},
-				{
-					icon: I(XCircle, 'text-rose-600'),
-					label: 'Reject user',
-					onClick: () => updateUserStatus(row, 'suspended'),
-					className: 'hover:text-rose-700',
-				},
+				{ key: 'approve', group: 'review', icon: I(CheckCircle2), label: 'Approve user', onClick: () => updateUserStatus(row, 'active') },
+				{ key: 'reject', group: 'review', icon: I(XCircle), label: 'Reject user', onClick: () => updateUserStatus(row, 'suspended') },
+			);
+		}
+
+		if (canManage) {
+			opts.push(
+				{ key: 'renew', group: 'program', icon: I(RotateCcw), label: t('actions.renewSubscription'), onClick: () => setRenewModal({ open: true, user: row }) },
+				{ key: 'workout', group: 'program', icon: I(Dumbbell), label: t('actions.assignWorkout'), onClick: () => setPickerWorkout({ open: true, user: row }) },
+				{ key: 'meal', group: 'program', icon: I(Utensils), label: t('actions.assignMeal'), onClick: () => setPickerMeal({ open: true, user: row }) },
 			);
 		}
 
 		if (isAdmin) {
 			opts.push(
-				{ icon: I(PencilLine, 'text-indigo-600'), label: t('actions.editDetails'), onClick: () => { setSelectedUser(row); setEditUserOpen(true); }, className: 'hover:text-indigo-700' },
+				{ key: 'edit', group: 'account', icon: I(PencilLine), label: t('actions.editDetails'), onClick: () => { setSelectedUser(row); setEditUserOpen(true); } },
 				{
-					icon: I(ListChecks, row.canEditWorkout ? 'text-emerald-600' : 'text-slate-400'),
+					key: 'workoutEdit',
+					group: 'account',
+					icon: I(ListChecks),
 					label: row.canEditWorkout ? t('actions.disableWorkoutEdit') : t('actions.enableWorkoutEdit'),
 					onClick: () => toggleWorkoutEdit(row),
-					className: row.canEditWorkout ? 'hover:text-emerald-700' : 'hover:text-slate-600',
 				},
-				{ icon: I(Trash2, 'text-rose-600'), label: t('actions.delete'), onClick: () => deleteUser(row), className: 'text-rose-600 hover:text-rose-700' }
 			);
 		}
 
 		opts.push(
-			{ icon: I(MessageCircle, 'text-emerald-600'), label: t('actions.shareCredsWhatsapp'), onClick: () => openShareCredsModal(row), className: 'hover:text-emerald-700' },
-			{ icon: I(PhoneCall, 'text-green-600'), label: t('actions.whatsapp'), onClick: () => { const phone = String(row.phone || '').replace(/[^0-9]/g, ''); if (!phone) return Notification(t('alerts.noPhone'), 'error'); window.open(`https://wa.me/${phone}`, '_blank'); }, className: 'hover:text-green-700' },
-			{ icon: I(MessageSquare, 'text-sky-600'), label: t('actions.directChat'), onClick: () => window.open(`/dashboard/chat?userId=${row.id}`, '_blank'), className: 'hover:text-sky-700' }
+			{ key: 'shareCreds', group: 'contact', icon: I(MessageCircle), label: t('actions.shareCredsWhatsapp'), onClick: () => openShareCredsModal(row) },
+			{ key: 'whatsapp', group: 'contact', icon: I(PhoneCall), label: t('actions.whatsapp'), onClick: openWhatsApp },
+			{ key: 'chat', group: 'contact', icon: I(MessageSquare), label: t('actions.directChat'), onClick: () => window.open(`/dashboard/chat?userId=${row.id}`, '_blank') },
 		);
+
+		if (isAdmin) {
+			opts.push({ key: 'delete', group: 'danger', icon: I(Trash2), label: t('actions.delete'), onClick: () => deleteUser(row), danger: true });
+		}
+
 		return opts;
 	};
 
@@ -1431,139 +1366,77 @@ export default function UsersList() {
 		{
 			key: 'name',
 			header: t('table.name'),
-			cell: (r) => (
-				<div className='flex items-center gap-2.5'>
-					<div
-						className='w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold'
-						style={{
-							background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500))'
-						}}
-					>
-						{r.name?.[0]?.toUpperCase() || '?'}
-					</div>
-					<span className='font-semibold text-slate-800'>{r.name}</span>
-				</div>
-			),
-			className: 'font-number',
-		},
-		{
-			key: 'email',
-			header: t('table.email'),
-			cell: (r) => <span className='text-slate-500 text-sm'>{r.email}</span>,
-			className: 'font-number',
+			headClassName: 'min-w-[240px]',
+			cell: (r) => <MemberCell row={r} />,
 		},
 		{
 			key: 'role',
 			header: t('table.role'),
-			cell: (r) => <RolePill role={r.role} />,
-			className: 'font-number',
-		},
-		{
-			key: 'gender',
-			header: t('table.gender'),
-			cell: (r) => <StatusPill status={r.gender} />,
-			className: 'font-number',
+			cell: (r) => <RoleTag role={r.role} />,
 		},
 		{
 			key: 'membership',
 			header: t('table.membership'),
-			cell: (r) => (
-				<span className='text-sm font-medium text-slate-600 capitalize'>{r.membership}</span>
-			),
-			className: 'font-number',
+			cell: (r) => <TierTag membership={r.membership} />,
 		},
 		{
-			key: 'planName',
-			header: t('table.exercisePlan'),
-			cell: (r) => (
-				<span className={`text-sm ${r.planName === '-' ? 'text-slate-400' : 'text-slate-700 font-medium'}`}>
-					{r.planName}
-				</span>
-			),
-		},
-		{
-			key: 'planMealName',
-			header: t('table.mealPlan'),
-			cell: (r) => (
-				<span className={`text-sm ${r.planMealName === '-' ? 'text-slate-400' : 'text-slate-700 font-medium'}`}>
-					{r.planMealName}
-				</span>
-			),
+			key: 'program',
+			header: t('roster.program'),
+			headClassName: 'min-w-[180px]',
+			className: 'max-w-[240px]',
+			cell: (r) => <ProgramCell workout={r.planName} meal={r.planMealName} />,
 		},
 		{
 			key: 'coachName',
 			header: t('table.coach'),
-			cell: (r) =>
-				r.coachName ? (
-					<Badge color='violet'>
-						<Shield className='w-3 h-3' /> {r.coachName}
-					</Badge>
-				) : (
-					<span className='text-slate-400 text-sm'>—</span>
-				),
-			className: 'font-number',
+			className: 'max-w-[200px]',
+			cell: (r) => <CoachCell name={r.coachName} />,
 		},
 		{
-			key: 'birthDate',
-			header: t('table.birthDate') || 'Birth date',
-			cell: (r) => <span className='text-sm text-slate-500'>{r.birthDate || '-'}</span>,
-			className: 'font-number text-nowrap',
-		},
-		{
-			key: 'joinDate',
-			header: t('table.joinDate'),
-			cell: (r) => <span className='text-sm text-slate-500'>{r.joinDate}</span>,
-			className: 'font-number text-nowrap',
+			key: 'gender',
+			header: t('table.gender'),
+			cell: (r) => <GenderCell gender={r.gender} />,
 		},
 		{
 			key: 'status',
 			header: t('table.status'),
-			cell: (r) => <StatusPill status={r.status} viewerRole={myRole} />,
-			className: 'font-number',
+			cell: (r) => <StatusCell row={r} />,
 		},
 		{
-			key: 'daysLeft',
-			header: t('table.daysLeft'),
+			key: 'lastLogin',
+			header: t('table.lastLogin'),
 			cell: (r) => {
-				if (!r.subscriptionStart || !r.subscriptionEnd || r.subscriptionEnd === '-') {
-					return <span className='text-slate-400 text-sm'>—</span>;
-				}
-
-				const today = new Date();
-				const end = new Date(r.subscriptionEnd);
-				const diff = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
-
-				if (diff < 0) {
-					return <span className='text-red-500 font-semibold text-sm'>{t('common.expired')}</span>;
-				}
-
+				const when = r.lastLogin ? new Date(r.lastLogin) : null;
+				const label = when && !Number.isNaN(when.getTime())
+					? when.toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-GB', {
+						day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+					})
+					: t('table.never');
 				return (
-					<span
-						className={`font-semibold text-sm ${diff <= 3 ? 'text-red-500' : diff <= 7 ? 'text-orange-500' : 'text-emerald-600'
-							}`}
-					>
-						{diff || '0'} {t('common.days')}
+					<span className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] text-[var(--gm-muted)]">
+						<Clock className="size-3.5 shrink-0" aria-hidden />
+						{label}
 					</span>
 				);
 			},
 		},
 		{
-			key: 'canEditWorkout',
-			header: t('table.workoutEdit'),
-			cell: (r) => r.canEditWorkout ? (
-				<Badge color='emerald'>
-					<CheckCircle2 className='w-3 h-3' /> {t('workoutEdit.enabled')}
-				</Badge>
-			) : (
-				<Badge color='slate'> 
-					<XCircle className='w-3 h-3' /> {t('workoutEdit.disabled')}
-				</Badge>
-			),
-		},
-		{
 			key: 'actions',
 			header: t('table.actions'),
-			cell: (r) => <ActionsMenu options={buildRowActions(r)} align='right' />,
+			cell: (r) => (
+				<ActionsMenu
+					options={buildRowActions(r)}
+					align='right'
+					ariaLabel={t('table.actions')}
+					buttonClassName='rs-row-action'
+					header={(
+						<>
+							<span className='am-head__title'>{r.name}</span>
+							{r.email && <span className='am-head__sub'>{r.email}</span>}
+						</>
+					)}
+				/>
+			),
 		},
 	];
 
@@ -1571,14 +1444,6 @@ export default function UsersList() {
 		if (sortBy === field) setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
 		else { setSortBy(field); setSortOrder('ASC'); }
 	};
-
-	const FILTER_ROLE_OPTIONS = [
-		{ id: 'All', name: t('filters.allRoles') },
-		{ id: 'Coach', name: t('roles.coach') },
-		{ id: 'Client', name: t('roles.client') },
-	];
-
-	const toSelectOptions = arr => arr.map(o => ({ id: o.id, label: o.name }));
 
 	const coaches = useAdminCoaches(user?.id, { page: 1, limit: 100, search: '' });
 
@@ -1601,134 +1466,92 @@ export default function UsersList() {
 		{ id: 'No plan', name: t('filters.noPlan') || 'No plan' },
 	];
 
-	const tableFilters = (
-		<>
-			<FilterField label={t('filters.role') || 'Role'}>
-				<Select
-					searchable={false}
-					clearable={false}
-					placeholder={t('filters.role')}
-					options={toSelectOptions(FILTER_ROLE_OPTIONS)}
-					value={roleFilter}
-					onChange={(id) => setRoleFilter(id)}
-				/>
-			</FilterField>
+	const clearFilters = () => {
+		setSearchText('');
+		setRoleFilter('All');
+		setHasPlanFilter('All');
+		setPage(1);
+	};
 
-			<FilterField label={t('filters.plan') || 'Plan'}>
-				<Select
-					searchable={false}
-					clearable={false}
-					placeholder={t('filters.plan') || 'Plan'}
-					options={toSelectOptions(FILTER_PLAN_OPTIONS)}
-					value={hasPlanFilter}
-					onChange={(id) => setHasPlanFilter(id)}
-				/>
-			</FilterField>
-		</>
-	);
+	const changeSearch = (value) => { setSearchText(value); setPage(1); };
+	const changeRole = (id) => { setRoleFilter(id || 'All'); setPage(1); };
+	const changePlan = (id) => { setHasPlanFilter(id || 'All'); setPage(1); };
+	const roleSegments = [
+		{ id: 'All', name: t('filters.allRoles'), short: t('roster.all') },
+		{ id: 'Coach', name: t('roles.coach') },
+		{ id: 'Client', name: t('roles.client') },
+	];
 
 	return (
-		<div className='space-y-6'>
+		<div className='gm-surface rs-scope app-stack pb-4'>
+			<RosterSummary
+				stats={stats}
+				showMetrics={String(myRole || '').toLowerCase() === 'admin'}
+				canCreate={['admin', 'coach'].includes(viewerRole)}
+				onCreate={() => setWizardOpen(true)}
+				onReviewPending={fetchPendingForReview}
+			/>
 
-			{/* ===== STATS HEADER ===== */}
-			<PageHeader
-				title={t('header.title')}
-				desc={t('header.subtitle')}
-				icon={Users}
-				actions={
-					['admin', 'coach'].includes(viewerRole) && (
-						<motion.button
-							whileHover={{ scale: 1.04 }}
-							whileTap={{ scale: 0.95 }}
-							onClick={() => setWizardOpen(true)}
-							className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
-							style={{
-								background: 'rgba(255,255,255,0.22)',
-								backdropFilter: 'blur(16px)',
-								boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
-							}}
-						>
-							<Plus className="h-4 w-4" />
-							{t('header.createNewUser')}
-						</motion.button>
-					)
-				}
-			>
-				{String(myRole || '').toLowerCase() === 'admin' && (
-					<>
-						<StatCard icon={Users} title={t('stats.totalUsers')} value={stats.totalUsers} />
-						<StatCard icon={UserCheck} title={t('stats.active')} value={stats.activeUsers} />
-						<StatCard icon={UserCog} title={t('stats.coaches')} value={stats.coaches} />
-						<StatCard icon={UserCircle} title={t('stats.clients')} value={stats.clients} />
-					</>
-				)}
-			</PageHeader>
-
-
-
-			{/* ===== TABLE ===== */}
-			<div className='space-y-3'>
-				{err && (
-					<div className='p-3.5 rounded-lg bg-red-50 text-red-700 border border-red-100 text-sm flex items-center gap-2'>
-						<XCircle className='w-4 h-4 flex-shrink-0' /> {err}
-					</div>
-				)}
-				<div className='overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm' style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-					<DataTable
-						columns={columns}
-						data={rows}
-						isLoading={loading}
-						title={t('header.title')}
-						subtitle={t('header.subtitle')}
-						searchValue={searchText}
-						onSearchChange={(value) => {
-							setSearchText(value);
-							setPage(1);
-						}}
-						onSearch={() => setPage(1)}
-						filters={tableFilters}
-						hasActiveFilters={roleFilter !== 'All' || hasPlanFilter !== 'All'}
-						onApplyFilters={() => {
-							setPage(1);
-						}}
-						labels={{
-							searchPlaceholder: t('placeholders.search'),
-							filter: t('common.filters'),
-							apply: t('common.apply'),
-							emptyTitle: t('common.noResults'),
-							emptySubtitle: t('common.tryAdjusting'),
-							preview: t('common.preview'),
-							selectedCount: t.raw('common.selectedCount'),
-							clearSelection: t('common.clearSelection'),
-						}}
-						pagination={{
-							current_page: page,
-							per_page: limit,
-							total_records: total,
-						}}
-						onPageChange={({ page: nextPage, per_page }) => {
-							const nextLimit = Number(per_page ?? limit);
-							setLimit(nextLimit);
-							setPage(Number(nextPage ?? 1));
-						}}
-						perPageOptions={[10, 20, 30, 50]}
-						striped
-						hoverable
-						selectable={viewerRole === 'admin'}
-						bulkActions={viewerRole === 'admin' ? [
-							{
-								key: 'delete',
-								label: t('actions.deleteSelected'),
-								icon: <Trash2 />,
-								variant: 'red',
-								loading: bulkDeleting,
-								confirm: { message: (count) => t('dialogs.deleteMultipleUsersConfirm', { count }) },
-								onClick: (ids) => deleteSelectedUsers(ids),
-							},
-						] : []}
-					/>
+			{err && (
+				<div role='alert' className='flex items-center gap-2 rounded-[14px] border border-rose-200/70 bg-rose-50/80 px-3.5 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300'>
+					<XCircle className='size-4 shrink-0' /> {err}
 				</div>
-			</div>
+			)}
+
+			<DataTable
+				hideToolbar
+				toolbar={(
+					<RosterToolbar
+						search={searchText}
+						onSearch={changeSearch}
+						searching={searchText.trim() !== debounced || (loading && Boolean(debounced))}
+						role={roleFilter}
+						onRole={changeRole}
+						plan={hasPlanFilter}
+						onPlan={changePlan}
+						onClearAll={clearFilters}
+						total={total}
+						roleOptions={roleSegments}
+						planOptions={FILTER_PLAN_OPTIONS}
+					/>
+				)}
+				compact
+				columns={columns}
+				data={rows}
+				isLoading={loading}
+				labels={{
+					emptyTitle: t('common.noResults'),
+					emptySubtitle: t('common.tryAdjusting'),
+					preview: t('common.preview'),
+					selectedCount: t.raw('common.selectedCount'),
+					clearSelection: t('common.clearSelection'),
+				}}
+				pagination={{
+					current_page: page,
+					per_page: limit,
+					total_records: total,
+				}}
+				onPageChange={({ page: nextPage, per_page }) => {
+					const nextLimit = Number(per_page ?? limit);
+					setStoredPerPage(nextLimit);
+					setLimit(nextLimit);
+					setPage(Number(nextPage ?? 1));
+				}}
+				perPageOptions={[10, 20, 30, 50]}
+				hoverable
+				selectable={viewerRole === 'admin'}
+				bulkActions={viewerRole === 'admin' ? [
+					{
+						key: 'delete',
+						label: t('actions.deleteSelected'),
+						icon: <Trash2 />,
+						variant: 'red',
+						loading: bulkDeleting,
+						confirm: { message: (count) => t('dialogs.deleteMultipleUsersConfirm', { count }) },
+						onClick: (ids) => deleteSelectedUsers(ids),
+					},
+				] : []}
+			/>
 
 			{/* ===== MODALS ===== */}
 			<CreateClientWizard
@@ -1767,7 +1590,7 @@ export default function UsersList() {
 			/>
 
 			{/* Share Creds Modal */}
-			<Modal
+			<Modal cn="gm-modal-root" panelClassName={GM_MODAL}
 				open={shareCredsModal.open}
 				onClose={closeShareCredsModal}
 				title={`${t('actions.shareCredsWhatsapp')}${shareCredsModal.row ? ` • ${shareCredsModal.row.name}` : ''}`}
@@ -1779,7 +1602,7 @@ export default function UsersList() {
 						value={shareCredsModal.phone}
 						onChange={(value) => setShareCredsModal(s => ({ ...s, phone: value }))}
 					/>
-					<div className='flex justify-end gap-2.5 pt-3 border-t border-slate-100'>
+					<div className='gm-modal-foot'>
 						<Button color='neutral' name={t('common.cancel')} onClick={closeShareCredsModal} />
 						<Button color='green' name={t('common.sendWhatsapp')} onClick={sendCredsWhatsapp}
 							loading={shareCredsModal.saving} disabled={shareCredsModal.saving} icon={<MessageCircle size={16} />} />
@@ -1799,6 +1622,16 @@ export default function UsersList() {
 				}}
 			/>
 
+
+			<Modal cn="gm-modal-root" panelClassName={GM_MODAL} open={Boolean(confirmDelete)} onClose={() => !deletingUser && setConfirmDelete(null)} title={t('actions.delete')}>
+				<p className='text-sm leading-relaxed gm-ink-soft'>
+					{confirmDelete ? t('dialogs.deleteUserConfirm', { name: confirmDelete.name }) : ''}
+				</p>
+				<div className='gm-modal-foot'>
+					<Button color='neutral' name={t('common.cancel')} onClick={() => setConfirmDelete(null)} disabled={deletingUser} />
+					<Button color='red' name={t('actions.delete')} onClick={confirmDeleteUser} loading={deletingUser} disabled={deletingUser} icon={<Trash2 className='size-4' />} />
+				</div>
+			</Modal>
 
 			{viewerRole === 'admin' && (
 				<EnhancedPendingModal
@@ -1820,19 +1653,19 @@ export default function UsersList() {
 export function CutomInput({ value, onChange, onBlur, name, inputRef, className, cnInput, ...rest }) {
 	return (
 		<div className={`w-full relative ${className || ''}`}>
-			{rest.label && <label className='mb-1.5 block text-sm font-semibold text-slate-600 tracking-wide uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.06em' }}>{rest.label}</label>}
+			{rest.label && <label className='mb-1.5 block ps-1 text-[12px] font-medium gm-muted'>{rest.label}</label>}
 			<div
-				className='relative flex items-center rounded-lg border bg-white transition-all duration-200'
-				style={{ borderColor: '#cbd5e1' }}
+				className='relative flex items-center rounded-[10px] border bg-[color-mix(in_srgb,var(--gm-paper)_55%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition-all duration-200'
+				style={{ borderColor: 'var(--gm-line)' }}
 				onFocus={e => {
 					const wrapper = e.currentTarget;
-					wrapper.style.borderColor = 'var(--color-primary-400)';
-					wrapper.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--color-primary-500) 15%, transparent)';
+					wrapper.style.borderColor = 'var(--color-primary-500)';
+					wrapper.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--color-primary-500) 12%, transparent)';
 				}}
 				onBlur={e => {
 					const wrapper = e.currentTarget;
-					wrapper.style.borderColor = '#cbd5e1';
-					wrapper.style.boxShadow = 'none';
+					wrapper.style.borderColor = 'var(--gm-line)';
+					wrapper.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.72)';
 				}}
 			>
 				<input
@@ -1842,7 +1675,7 @@ export function CutomInput({ value, onChange, onBlur, name, inputRef, className,
 					value={value}
 					onChange={onChange}
 					onBlur={onBlur}
-					className={`${cnInput || ''} h-[43px] w-full rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400`}
+					className={`${cnInput || ''} h-[39px] w-full rounded-[10px] bg-transparent px-3 py-2 text-[13px] gm-ink-soft outline-none placeholder:text-[var(--gm-faint)]`}
 				/>
 			</div>
 			{rest.error && <p className='mt-1.5 text-xs text-rose-500 flex items-center gap-1'><XCircle className='w-3 h-3' />{rest.error}</p>}
@@ -1884,7 +1717,7 @@ function EnhancedPendingModal({
 	};
 
 	return (
-		<Modal
+		<Modal cn="gm-modal-root" panelClassName={GM_MODAL}
 			open={open}
 			onClose={onClose}
 			title={
@@ -1904,8 +1737,8 @@ function EnhancedPendingModal({
 						exit={{ opacity: 0 }}
 						className="flex flex-col items-center justify-center py-12 space-y-3"
 					>
-						<RefreshCw className="w-8 h-8 text-slate-400 animate-spin" />
-						<p className="text-sm text-slate-500 font-medium">
+						<RefreshCw className="size-8 animate-spin gm-muted" />
+						<p className="text-sm font-medium gm-muted">
 							{t_('common.loadingPendingAccounts')}
 						</p>
 					</motion.div>
@@ -1929,10 +1762,10 @@ function EnhancedPendingModal({
 							<CheckCircle2 className="w-8 h-8 text-[var(--color-primary-600)]" />
 						</div>
 						<div className="text-center">
-							<p className="text-sm font-semibold text-slate-700">
+							<p className="text-sm font-semibold gm-ink">
 								{t_('common.noPendingAccounts')}
 							</p>
-							<p className="text-xs text-slate-500 mt-1">
+							<p className="mt-1 text-xs gm-muted">
 								{t_('common.allAccountsReviewed')}
 							</p>
 						</div>
@@ -1966,16 +1799,16 @@ function EnhancedPendingModal({
 											: t_('pending.accountPlural')
 									})}
 								</p>
-								<p className="text-xs text-slate-600 mt-0.5">
+								<p className="mt-0.5 text-xs gm-muted">
 									{t_('pending.bannerDescription')}
 								</p>
 							</div>
 						</div>
 
 						{/* Scrollable table */}
-						<div className="max-h-[420px] overflow-y-auto rounded-lg border border-slate-200 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+						<div className="max-h-[420px] overflow-y-auto rounded-[14px] border bg-[color-mix(in_srgb,var(--gm-paper)_40%,transparent)] scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent" style={{ borderColor: 'var(--gm-line)' }}>
 							<table className="min-w-full text-sm">
-								<thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
+								<thead className="sticky top-0 z-10 gm-ink-soft" style={{ background: 'color-mix(in srgb, var(--color-primary-50) 80%, transparent)' }}>
 									<tr>
 										<th className="px-3 py-2.5 text-left rtl:text-right font-semibold text-xs uppercase tracking-wider">
 											{t_('table.name')}
@@ -2007,12 +1840,13 @@ function EnhancedPendingModal({
 												animate={{ opacity: 1, x: 0 }}
 												exit={{ opacity: 0, x: 20, height: 0 }}
 												transition={{ delay: index * 0.05 }}
-												className="border-t border-slate-100 hover:bg-slate-50/60 transition-colors"
+												className="border-t transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-100)_50%,transparent)]"
+												style={{ borderColor: 'var(--gm-line)' }}
 											>
-												<td className="text-nowrap px-3 py-3 font-semibold text-slate-800">
+												<td className="text-nowrap px-3 py-3 font-semibold gm-ink">
 													{row.name}
 												</td>
-												<td className="px-3 py-3 text-slate-600">
+												<td className="px-3 py-3 gm-ink-soft">
 													{row.email}
 												</td>
 												<td className="px-3 py-3">
@@ -2020,19 +1854,19 @@ function EnhancedPendingModal({
 														{t_(`roles.${row.role}`)}
 													</span>
 												</td>
-												<td className="px-3 text-nowrap py-3 text-slate-600">
+												<td className="px-3 text-nowrap py-3 gm-ink-soft">
 													{row.coachName ? (
 														<span className="inline-flex items-center gap-1">
 															<span className="text-xs">{t_('pending.from')}</span>
 															<span className="font-semibold">{row.coachName}</span>
 														</span>
 													) : (
-														<span className="text-xs italic text-slate-400">
+														<span className="text-xs italic gm-faint">
 															{t_('pending.selfSignup')}
 														</span>
 													)}
 												</td>
-												<td className="px-3 text-nowrap py-3 text-slate-500 text-xs">
+												<td className="px-3 text-nowrap py-3 text-xs gm-muted">
 													{row.createdAt}
 												</td>
 												<td className="px-3 py-3">
@@ -2090,7 +1924,7 @@ function EnhancedPendingModal({
 						</div>
 
 						{/* Footer info */}
-						<div className="flex items-center justify-between pt-1 text-xs text-slate-500">
+						<div className="flex items-center justify-between pt-1 text-xs gm-muted">
 							<span>
 								{t_('pending.footerShowing', {
 									count: pendingModal.items.length,
@@ -2099,7 +1933,7 @@ function EnhancedPendingModal({
 										: t_('pending.accountPlural')
 								})}
 							</span>
-							<span className="text-slate-400">
+							<span className="gm-faint">
 								{t_('pending.footerReview')}
 							</span>
 						</div>
@@ -2176,22 +2010,24 @@ function RenewSubscriptionModal({ open, onClose, user, onSaved }) {
 	};
 
 	return (
-		<Modal
+		<Modal cn="gm-modal-root" panelClassName={GM_MODAL}
 			open={open}
 			onClose={onClose}
 			title={`${t('actions.renewSubscription')}${user?.name ? ` • ${user.name}` : ''}`}
 		>
 			<form className='space-y-5' onSubmit={handleSubmit(onSubmit)}>
-				<div className='rounded-lg border border-slate-200 bg-slate-50 p-3'>
-					<div className='text-sm font-semibold text-slate-700'>{t('renewSubscription.currentData')}</div>
-					<div className='mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm'>
-						<div>
-							<div className='text-slate-500'>{t('fields.fullName')}</div>
-							<div className='font-medium text-slate-800'>{user?.name || '—'}</div>
-						</div>
-						<div>
-							<div className='text-slate-500'>{t('fields.email')}</div>
-							<div className='font-medium text-slate-800'>{user?.email || '—'}</div>
+				<div className='gm-wizard-banner'>
+					<div>
+						<div className='text-[13px] font-semibold gm-ink'>{t('renewSubscription.currentData')}</div>
+						<div className='mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 text-[13px]'>
+							<div>
+								<div className='gm-muted'>{t('fields.fullName')}</div>
+								<div className='font-semibold gm-ink'>{user?.name || '—'}</div>
+							</div>
+							<div>
+								<div className='gm-muted'>{t('fields.email')}</div>
+								<div className='font-semibold gm-ink'>{user?.email || '—'}</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -2204,7 +2040,7 @@ function RenewSubscriptionModal({ open, onClose, user, onSaved }) {
 					errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined}
 				/>
 
-				<div className='flex justify-end gap-2.5 pt-4 border-t border-slate-100'>
+				<div className='gm-modal-foot'>
 					<Button color='neutral' name={t('common.cancel')} onClick={onClose} />
 					<Button
 						color='primary'

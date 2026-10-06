@@ -3,57 +3,29 @@
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
 import {
-	Dumbbell, PencilLine, Eye, Trash2, Layers,
-	Settings, RefreshCcw, Clock, X, Tag, Search, Play,
-	Image as ImageIcon, PlayCircle, TagIcon, ChevronUp, ChevronDown, Copy, Plus
+	AlertCircle, ArrowDownWideNarrow, ArrowUpNarrowWide, CalendarPlus, CopyPlus, Dumbbell, Eye,
+	Gauge, Image as ImageIcon, Layers, PencilLine, Play, PlayCircle, Plus, RefreshCw, Repeat,
+	Tag, Timer, Trash2, UserRound, XCircle,
 } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 
-import api, { baseImg } from '@/utils/axios';
-import { Modal, StatCard, TabsPill } from '@/components/dashboard/ui/UI';
+import api from '@/utils/axios';
+import { Modal } from '@/components/dashboard/ui/UI';
 import Img from '@/components/atoms/Img';
 import Button from '@/components/atoms/Button';
-import Select from '@/components/atoms/Select';
+import Badge from '@/components/atoms/GmBadge';
+import GmRowActions from '@/components/atoms/GmRowActions';
+import GmStatCard from '@/components/molecules/GmStatCard';
+import { TablePagination } from '@/components/atoms/Datatable';
 import { Notification } from '@/config/Notification';
 import { ExerciseForm } from '@/components/pages/dashboard/workouts/ExerciseForm';
-import { PageHeader } from '@/components/molecules/PageHeader';
-import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
-import { useLocale, useTranslations } from 'next-intl';
-import MultiLangText from '@/components/atoms/MultiLangText';
+import { IntakeHero, IntakeToolbar, IntakeFilterPopover, IntakeOptionGroup } from '@/components/pages/dashboard/intake/IntakeChrome';
 import { useUser } from '@/hooks/useUser';
-import { useTheme } from '@/app/[locale]/theme';
-import ActionButtons from '@/components/atoms/Actions';
+import useDebounced from '@/hooks/useDebounced';
+import { categoryLabel, exerciseVideoSrc } from '@/lib/exercise-categories';
 
-const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
-
-export const categoryMap = {
-	Arms: 'الذراعين', Back: 'الظهر', Calves: 'عضلات الساق', Cardio: 'تمارين القلب',
-	Chest: 'الصدر', Core: 'الوسط / البطن', Forearms: 'الساعدين', 'Full Body': 'جسم كامل',
-	General: 'عام', 'Glutes & Hamstrings': 'المؤخرة وأوتار الركبة', Legs: 'الساقين',
-	Other: 'أخرى', 'Quads & Hamstrings': 'عضلات الفخذ الأمامية والخلفية', Shoulders: 'الكتفين',
-	Abs: 'عضلات البطن', Biceps: 'عضلات البايسبس', Triceps: 'عضلات الترايسبس',
-	Neck: 'الرقبة', Hips: 'الوركين', Thighs: 'الفخذين', 'Lower Body': 'الجزء السفلي',
-	'Upper Body': 'الجزء العلوي', 'Lower Back': 'أسفل الظهر', 'Upper Back': 'أعلى الظهر',
-	Mobility: 'مرونة الحركة', Stretching: 'تمارين الإطالة', Strength: 'القوة',
-	Power: 'القوة الانفجارية', HIIT: 'تدريب عالي الكثافة', Pilates: 'البيلاتس',
-	Yoga: 'اليوغا', Meditation: 'التأمل', Warmup: 'الإحماء', Cooldown: 'التهدئة',
-	Balance: 'التوازن', Functional: 'اللياقة الوظيفية', Plyometrics: 'البليومتريكس',
-	Stability: 'الاستقرار', Endurance: 'التحمل', Aerobic: 'تمارين هوائية',
-	Anaerobic: 'تمارين لا هوائية', Flexibility: 'المرونة', Strengthening: 'تقوية العضلات',
-	Treadmill: 'جهاز المشي', Elliptical: 'جهاز الإليبتكال', Rowing: 'جهاز التجديف',
-	Cycling: 'الدراجة الثابتة', 'Stair Climber': 'جهاز صعود الدرج',
-	Running: 'الجري', Walking: 'المشي', Swimming: 'السباحة', Boxing: 'الملاكمة',
-	MartialArts: 'الفنون القتالية',
-};
-
-/* -------------------------------- Helpers -------------------------------- */
-const useDebounced = (value, delay = 350) => {
-	const [deb, setDeb] = useState(value);
-	useEffect(() => {
-		const t = setTimeout(() => setDeb(value), delay);
-		return () => clearTimeout(t);
-	}, [value, delay]);
-	return deb;
-};
+const GM_MODAL = 'gm-modal';
+const PER_PAGE_OPTIONS = [8, 12, 20, 30];
 
 const buildMultipartIfNeeded = payload => {
 	const hasFile = payload.imgFile || payload.videoFile;
@@ -69,55 +41,35 @@ const buildMultipartIfNeeded = payload => {
 	return fd;
 };
 
-/* ---------------------------- Memoized Components --------------------------- */
-
-/** Muscle chip — subtle, pill-shaped tag */
-const Chip = memo(({ children }) => (
-	<span className='inline-flex items-center rounded-full px-2.5 py-0.5 mr-1 mb-1 text-[11px] font-medium tracking-wide bg-[var(--color-secondary-100)] text-[var(--color-secondary-700)]'>
-		{children}
-	</span>
-));
-
-/** Compact icon button used inside cards */
-const IconBtn = memo(({ title, onClick, danger, children }) => (
-	<button
-		type='button'
-		title={title}
-		onClick={onClick}
-		aria-label={title}
-		className={[
-			'size-7 grid place-content-center rounded-lg border transition-all duration-150 active:scale-90',
-			danger
-				? 'border-red-200 bg-white text-rose-600 hover:bg-rose-50'
-				: 'border-[var(--color-primary-200)] bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]',
-		].join(' ')}>
-		{children}
-	</button>
-));
-
-/** Small stat badge */
-const StatPill = memo(({ label, value }) => (
-	<span className='inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2.5 py-0.5 text-xs text-[var(--color-primary-700)]'>
-		<span className='font-semibold text-[var(--color-primary-800)]'>{label}</span>
-		<span className='opacity-70'>{value}</span>
-	</span>
-));
+const toList = v => {
+	if (Array.isArray(v)) return v.filter(Boolean);
+	if (typeof v !== 'string' || !v.trim()) return [];
+	try {
+		const parsed = JSON.parse(v);
+		if (Array.isArray(parsed)) return parsed.filter(Boolean);
+	} catch { }
+	return v.split(',').map(s => s.trim()).filter(Boolean);
+};
 
 /* ------------------------------ Main Component ----------------------------- */
 export default function ExercisesPage() {
 	const t = useTranslations('workouts');
+	const locale = useLocale();
 	const user = useUser();
-	const { colors } = useTheme();
+	const userId = user?.id;
+	const userRole = String(user?.role || '').toLowerCase();
+	const userAdminId = user?.adminId;
+	const userReady = user !== undefined;
 
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [err, setErr] = useState(null);
 
 	const [stats, setStats] = useState(null);
-	const [loadingStats, setLoadingStats] = useState(true);
-
 	const [categories, setCategories] = useState([]);
 	const [activeCat, setActiveCat] = useState('all');
+	const [filterOpen, setFilterOpen] = useState(false);
+	const filterAnchorRef = useRef(null);
 
 	const [page, setPage] = useState(1);
 	const [perPage, setPerPage] = useState(12);
@@ -132,27 +84,31 @@ export default function ExercisesPage() {
 	const [addOpen, setAddOpen] = useState(false);
 	const [duplicateInitial, setDuplicateInitial] = useState(null);
 
-	const [deleteId, setDeleteId] = useState(null);
-	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState(null);
+	const [deleteLoading, setDeleteLoading] = useState(false);
 
 	const reqId = useRef(0);
 	const abortControllerRef = useRef(null);
 
+	useEffect(() => {
+		document.documentElement.dataset.gmUsers = '1';
+		return () => { delete document.documentElement.dataset.gmUsers; };
+	}, []);
+
 	const fetchCategories = useCallback(async () => {
 		try {
 			const res = await api.get('/plan-exercises/categories');
-			const cats = Array.isArray(res.data) ? res.data.filter(Boolean) : [];
-			setCategories(cats);
+			setCategories(Array.isArray(res.data) ? res.data.filter(Boolean) : []);
 		} catch { setCategories([]); }
 	}, []);
 
 	const fetchList = useCallback(async () => {
-		if (user === undefined) return; // wait for client hydration of localStorage
-		if (!user?.id) {
+		if (!userReady) return;
+		if (!userId) {
 			setLoading(false);
 			return;
 		}
-		if (abortControllerRef.current) abortControllerRef.current.abort();
+		abortControllerRef.current?.abort();
 		abortControllerRef.current = new AbortController();
 		setErr(null);
 		setLoading(true);
@@ -162,14 +118,10 @@ export default function ExercisesPage() {
 			if (debounced) params.search = debounced;
 			if (activeCat && activeCat !== 'all') params.category = activeCat;
 
-			const role = String(user.role || '').toLowerCase();
-			const path =
-				role === 'admin' || role === 'super_admin'
-					? '/plan-exercises'
-					: `/plan-exercises?user_id=${user.adminId || user.id}`;
-			const res = await api.get(path, {
-				params, signal: abortControllerRef.current.signal,
-			});
+			const path = userRole === 'admin' || userRole === 'super_admin'
+				? '/plan-exercises'
+				: `/plan-exercises?user_id=${userAdminId || userId}`;
+			const res = await api.get(path, { params, signal: abortControllerRef.current.signal });
 			const data = res.data || {};
 			let records = [], totalRecords = 0, serverPerPage = perPage;
 
@@ -187,56 +139,73 @@ export default function ExercisesPage() {
 
 			if (myId !== reqId.current) return;
 			setTotal(totalRecords);
-			setPerPage(serverPerPage);
+			if (Number.isFinite(serverPerPage) && serverPerPage > 0) setPerPage(serverPerPage);
 			setItems(records);
 		} catch (e) {
 			if (e.name === 'CanceledError') return;
 			if (myId !== reqId.current) return;
-			setErr(e?.response?.data?.message || t('errors.loadExercises'));
+			setErr(e?.response
+				? e.response.data?.message || t('errors.loadExercises')
+				: t('errors.serverUnreachable'));
 		} finally {
 			if (myId === reqId.current) setLoading(false);
 		}
-	}, [page, debounced, sortBy, sortOrder, perPage, activeCat, t, user]);
+	}, [page, debounced, sortBy, sortOrder, perPage, activeCat, t, userReady, userId, userRole, userAdminId]);
 
 	const fetchStats = useCallback(async () => {
-		setLoadingStats(true);
 		try {
-			const params = {};
-			if (debounced) params.search = debounced;
-			if (activeCat && activeCat !== 'all') params.category = activeCat;
-			const res = await api.get('/plan-exercises/stats', { params });
+			const res = await api.get('/plan-exercises/stats');
 			setStats(res.data);
-		} catch { } finally { setLoadingStats(false); }
-	}, [debounced, activeCat]);
+		} catch { }
+	}, []);
 
-	useEffect(() => { setPage(1); }, [debounced, sortBy, sortOrder, perPage, activeCat]);
-	useEffect(() => { fetchCategories(); }, [fetchCategories]);
+	useEffect(() => { fetchCategories(); fetchStats(); }, [fetchCategories, fetchStats]);
+	const retryAll = useCallback(() => { fetchList(); fetchStats(); fetchCategories(); }, [fetchList, fetchStats, fetchCategories]);
 	useEffect(() => { fetchList(); }, [fetchList]);
-	useEffect(() => { fetchStats(); }, [fetchStats]);
-	useEffect(() => () => { if (abortControllerRef.current) abortControllerRef.current.abort(); }, []);
+	useEffect(() => () => abortControllerRef.current?.abort(), []);
 
-	const toggleSort = useCallback(field => {
-		if (sortBy === field) setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
-		else { setSortBy(field); setSortOrder('ASC'); }
+	/* ----------------------------- Filters ---------------------------------- */
+	const onSearch = useCallback(value => { setSearchText(value); setPage(1); }, []);
+	const onCategory = useCallback(key => { setActiveCat(key); setPage(1); }, []);
+
+	const toggleSort = useCallback(() => {
+		if (sortBy === 'created_at') setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
+		else { setSortBy('created_at'); setSortOrder('ASC'); }
+		setPage(1);
 	}, [sortBy]);
 
+	const onPageChange = useCallback(({ page: nextPage, per_page }) => {
+		const nextLimit = Number(per_page ?? perPage);
+		if (nextLimit !== perPage) {
+			setPerPage(nextLimit);
+			setPage(1);
+		} else {
+			setPage(Number(nextPage ?? 1));
+		}
+	}, [perPage]);
+
 	/* ----------------------------- CRUD Handlers ---------------------------- */
-	const askDelete = useCallback(id => { setDeleteId(id); setDeleteOpen(true); }, []);
-	const locale = useLocale();
-	const [deleteLoading, setDeleteLoading] = useState(false);
+	const askDelete = useCallback(exercise => setDeleteTarget(exercise), []);
+	const closeDelete = useCallback(() => { if (!deleteLoading) setDeleteTarget(null); }, [deleteLoading]);
 
 	const handleDelete = useCallback(async () => {
-		if (!deleteId) return;
+		const id = deleteTarget?.id;
+		if (!id) return;
 		setDeleteLoading(true);
 		try {
-			await api.delete(`/plan-exercises/${deleteId}?lang=${locale}`);
-			setItems(arr => arr.filter(x => x.id !== deleteId));
+			await api.delete(`/plan-exercises/${id}?lang=${locale}`);
+			setItems(arr => arr.filter(x => x.id !== id));
 			setTotal(tot => Math.max(0, tot - 1));
+			if (preview?.id === id) setPreview(null);
 			Notification(t('toasts.deleted'), 'success');
+			fetchStats();
 		} catch (e) {
 			Notification(e?.response?.data?.message || t('errors.deleteFailed'), 'error');
-		} finally { setDeleteId(null); setDeleteLoading(false); }
-	}, [deleteId, t, locale]);
+		} finally {
+			setDeleteLoading(false);
+			setDeleteTarget(null);
+		}
+	}, [deleteTarget, locale, preview?.id, t, fetchStats]);
 
 	const createOrUpdate = useCallback(async ({ id, payload }) => {
 		const body = {
@@ -260,42 +229,39 @@ export default function ExercisesPage() {
 		return res.data;
 	}, []);
 
-	const totalPages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, perPage))), [total, perPage]);
+	const rememberCategory = useCallback(category => {
+		if (category) setCategories(prev => (prev.includes(category) ? prev : [...prev, category].sort()));
+	}, []);
 
-	const tabs = useMemo(() => {
-		const base = [{ key: 'all', label: t('filters.all') }];
-		return base.concat((categories || []).map(c => ({
-			key: c, label: locale === 'ar' ? categoryMap[c] || c : c,
-		})));
-	}, [categories, t, locale]);
+	const closeAdd = useCallback(() => { setAddOpen(false); setDuplicateInitial(null); }, []);
+	const closeEdit = useCallback(() => setEditRow(null), []);
 
 	const handleAddSubmit = useCallback(async payload => {
 		try {
 			const saved = await createOrUpdate({ payload });
 			setItems(arr => [saved, ...arr]);
 			setTotal(tot => tot + 1);
-			setAddOpen(false);
-			setDuplicateInitial(null);
+			closeAdd();
 			Notification(t('toasts.created'), 'success');
-			if (saved?.category && !categories.includes(saved.category))
-				setCategories(prev => [...prev, saved.category].sort());
+			rememberCategory(saved?.category);
+			fetchStats();
 		} catch (e) {
 			Notification(e?.response?.data?.message || t('errors.createFailed'), 'error');
 		}
-	}, [createOrUpdate, categories, t]);
+	}, [createOrUpdate, closeAdd, rememberCategory, fetchStats, t]);
 
 	const handleEditSubmit = useCallback(async payload => {
+		if (!editRow) return;
 		try {
 			const saved = await createOrUpdate({ id: editRow.id, payload });
 			setItems(arr => arr.map(e => (e.id === editRow.id ? saved : e)));
 			setEditRow(null);
 			Notification(t('toasts.updated'), 'success');
-			if (saved?.category && !categories.includes(saved.category))
-				setCategories(prev => [...prev, saved.category].sort());
+			rememberCategory(saved?.category);
 		} catch (e) {
 			Notification(e?.response?.data?.message || t('errors.updateFailed'), 'error');
 		}
-	}, [createOrUpdate, editRow, categories, t]);
+	}, [createOrUpdate, editRow, rememberCategory, t]);
 
 	const handleDuplicate = useCallback(exercise => {
 		if (!exercise) return;
@@ -304,243 +270,353 @@ export default function ExercisesPage() {
 		setAddOpen(true);
 	}, []);
 
-	return (
-		<div className='space-y-7'>
+	const openAdd = useCallback(() => { setDuplicateInitial(null); setAddOpen(true); }, []);
 
-			{/* ── Header / Stats ── */}
-			<PageHeader
-				title={t('descriptions.exercises')}
-				desc={t('descriptions.manageLibrary')}
-				icon={Dumbbell}
-				actions={
-					<motion.button
-						whileHover={{ scale: 1.04 }}
-						whileTap={{ scale: 0.95 }}
-						onClick={() => { setDuplicateInitial(null); setAddOpen(true); }}
-						className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
-						style={{
-							background: 'rgba(255,255,255,0.22)',
-							backdropFilter: 'blur(16px)',
-							boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
-						}}
-					>
-						<Plus className="h-4 w-4" />
-						{t('actions.addExercise')}
-					</motion.button>
+	const tabs = useMemo(() => [
+		{ id: 'all', name: t('roster.allCategories'), icon: Layers },
+		...categories.map(c => ({ id: c, name: categoryLabel(c, locale), icon: Tag })),
+	], [categories, t, locale]);
+
+	const queryTrim = searchText.trim();
+	const activeCatName = tabs.find(tab => tab.id === activeCat)?.name;
+	const chips = [
+		queryTrim && { key: 'q', label: t('roster.searchLabel'), value: `“${queryTrim}”`, onRemove: () => onSearch('') },
+		activeCat !== 'all' && { key: 'cat', label: t('roster.category'), value: activeCatName, onRemove: () => onCategory('all') },
+	].filter(Boolean);
+
+	const statCards = useMemo(() => {
+		const totals = stats?.totals || {};
+		const all = Number(totals.totalGlobalExercise || 0);
+		const personal = Number(totals.totalPersonalExercise || 0);
+		const hasPersonal = totals.totalPersonalExercise != null && personal > 0;
+		const shared = Math.max(0, all - personal);
+		const max = Math.max(all, 1);
+		return [
+			{
+				key: 'library',
+				title: t('stats.totalGlobalExercise'),
+				value: shared,
+				icon: Layers,
+				hint: t('stats.libraryHint'),
+				tone: 'gm-chip',
+				stroke: 'var(--color-primary-500)',
+				fill: 'var(--color-primary-400)',
+				seed: 0.4,
+				max,
+			},
+			hasPersonal
+				? {
+					key: 'personal',
+					title: t('stats.totalPersonalExercise'),
+					value: personal,
+					icon: UserRound,
+					hint: t('stats.personalHint'),
+					tone: 'gm-chip-secondary',
+					stroke: 'var(--color-secondary-500)',
+					fill: 'var(--color-secondary-400)',
+					seed: 0.9,
+					max,
 				}
-			>
-				<>
-					<StatCard icon={Layers} title={t('stats.totalGlobalExercise')} value={stats?.totals?.totalGlobalExercise - stats?.totals?.totalPersonalExercise ?? 0} />
-					{stats?.totals?.totalPersonalExercise != null && stats?.totals?.totalPersonalExercise != '0' && (
-						<StatCard icon={Layers} title={t('stats.totalPersonalExercise')} value={stats?.totals?.totalPersonalExercise ?? 0} />
+				: {
+					key: 'recent',
+					title: t('stats.added7d'),
+					value: Number(totals.created7d || 0),
+					icon: CalendarPlus,
+					hint: t('stats.recentHint'),
+					tone: 'gm-chip-secondary',
+					stroke: 'var(--color-secondary-500)',
+					fill: 'var(--color-secondary-400)',
+					seed: 0.9,
+					max,
+				},
+			{
+				key: 'video',
+				title: t('stats.withVideo'),
+				value: Number(totals.withVideo || 0),
+				icon: PlayCircle,
+				hint: t('stats.ofTotal', { total: all }),
+				tone: 'gm-chip-ok',
+				stroke: 'var(--gm-ok)',
+				fill: 'var(--gm-ok)',
+				seed: 1.4,
+				max,
+			},
+			{
+				key: 'image',
+				title: t('stats.withImage'),
+				value: Number(totals.withImage || 0),
+				icon: ImageIcon,
+				hint: t('stats.ofTotal', { total: all }),
+				tone: 'gm-chip-warn',
+				stroke: 'var(--gm-warn)',
+				fill: 'var(--gm-warn)',
+				seed: 1.9,
+				max,
+			},
+		];
+	}, [stats, t]);
+
+	const hasFilters = Boolean(searchText) || activeCat !== 'all';
+	const clearFilters = useCallback(() => { setSearchText(''); setActiveCat('all'); setPage(1); }, []);
+	const SortIcon = sortBy === 'created_at' && sortOrder === 'ASC' ? ArrowUpNarrowWide : ArrowDownWideNarrow;
+	const sortLabel = sortBy === 'created_at'
+		? (sortOrder === 'ASC' ? t('actions.oldestFirst') : t('actions.newestFirst'))
+		: t('actions.sortByDate');
+
+	return (
+		<div className='gm-surface rs-scope app-stack pb-4'>
+			<div className='rs-summary'>
+				<IntakeHero
+					icon={Dumbbell}
+					title={t('descriptions.exercises')}
+					subtitle={t('descriptions.manageLibrary')}
+					ctaLabel={(
+						<>
+							<Plus className='size-4' strokeWidth={2} aria-hidden />
+							<span>{t('actions.addExercise')}</span>
+						</>
 					)}
-					<StatCard icon={Settings} title={t('stats.withVideo')} value={stats?.totals?.withVideo || 0} />
-					<StatCard icon={RefreshCcw} title={t('stats.withImage')} value={stats?.totals?.withImage || 0} />
-				</>
-			</PageHeader>
+					onCta={openAdd}
+				/>
 
-			{/* ── Toolbar: Search + Controls ── */}
-			<div className='flex items-center justify-between gap-3 flex-wrap'>
-
-				{/* Search */}
-				<div className='relative flex-1 max-w-xs'>
-					<Search
-						className='pointer-events-none absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-primary-400)]'
-					/>
-					<input
-						value={searchText}
-						onChange={e => setSearchText(e.target.value)}
-						placeholder={t('placeholders.search')}
-						aria-label={t('placeholders.search')}
-						className={[
-							'h-10 w-full rounded-lg border bg-white text-sm outline-none transition-all duration-200',
-							'ltr:pl-9 ltr:pr-8 rtl:pr-9 rtl:pl-8',
-							'border-[var(--color-primary-200)] text-[var(--color-primary-900)] placeholder:text-[var(--color-primary-400)]',
-							'focus:border-[var(--color-primary-500)] focus:ring-2 focus:ring-[var(--color-primary-200)]',
-							'shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
-						].join(' ')}
-					/>
-					{!!searchText && (
-						<button
-							type='button'
-							onClick={() => setSearchText('')}
-							aria-label={t('actions.clear')}
-							className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-lg text-[var(--color-primary-400)] hover:text-[var(--color-primary-700)] transition-colors'>
-							<X className='w-3.5 h-3.5' />
-						</button>
-					)}
-				</div>
-
-				{/* Right controls */}
-				<div className='flex items-center gap-2'>
-					{/* Per-page select */}
-					<div className='w-[80px]'>
-						<Select
-							searchable={false}
-							clearable={false}
-							className='!w-full'
-							placeholder={t('placeholders.perPage')}
-							options={[
-								{ id: 8, label: 8 }, { id: 12, label: 12 },
-								{ id: 20, label: 20 }, { id: 30, label: 30 },
-							]}
-							value={perPage}
-							onChange={n => setPerPage(Number(n))}
-						/>
-					</div>
-
-					{/* Sort button */}
-					<button
-						onClick={() => toggleSort('created_at')}
-						className={[
-							'inline-flex items-center gap-1.5 rounded-lg border px-3 h-10 text-sm font-medium',
-							'border-[var(--color-primary-200)] bg-white text-[var(--color-primary-800)]',
-							'shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-[var(--color-primary-50)]',
-							'transition-all duration-200 active:scale-[.97]',
-						].join(' ')}>
-						<Clock size={15} className='text-[var(--color-primary-500)]' />
-						<span className='text-xs tracking-wide'>
-							{sortBy === 'created_at'
-								? (sortOrder === 'ASC' ? t('actions.oldestFirst') : t('actions.newestFirst'))
-								: t('actions.sortByDate')}
-						</span>
-						{sortBy === 'created_at'
-							? sortOrder === 'ASC'
-								? <ChevronUp size={13} className='text-[var(--color-primary-400)]' />
-								: <ChevronDown size={13} className='text-[var(--color-primary-400)]' />
-							: null}
-					</button>
-				</div>
+				<section className='grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+					{statCards.map((card, index) => (
+						<GmStatCard key={card.key} card={card} index={index} />
+					))}
+				</section>
 			</div>
 
-			{/* ── Category Tabs ── */}
-			{tabs?.length > 1 && (
-				<TabsPill
-					id='exercise-cats'
-					className='!bg-white'
-					tabs={tabs}
-					active={activeCat}
-					onChange={key => setActiveCat(key)}
-				/>
-			)}
-
-			{/* ── Error banner ── */}
 			{err && (
-				<div className='flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>
-					<X className='mt-0.5 h-4 w-4 shrink-0' />
-					{err}
+				<div role='alert' className='flex flex-wrap items-center gap-2 rounded-[14px] border border-rose-200/70 bg-rose-50/80 px-3.5 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300'>
+					<XCircle className='size-4 shrink-0' />
+					<span className='min-w-0 flex-1'>{err}</span>
+					<button
+						type='button'
+						onClick={retryAll}
+						disabled={loading}
+						className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5 disabled:opacity-60'
+					>
+						<RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+						{t('actions.retry')}
+					</button>
 				</div>
 			)}
 
-			{/* ── Grid ── */}
-			<GridView
-				t={t}
-				loading={loading}
-				items={items}
-				canManageGlobal={String(user?.role || '').toLowerCase() === 'super_admin'}
-				onView={setPreview}
-				onEdit={setEditRow}
-				onDelete={askDelete}
-				onDuplicate={handleDuplicate}
-			/>
+			<section className='gm-panel'>
+				<div className='space-y-4 p-4 sm:p-5'>
+					<IntakeToolbar
+						search={searchText}
+						onSearch={onSearch}
+						searching={searchText.trim() !== debounced}
+						searchPlaceholder={t('placeholders.search')}
+						searchLabel={t('roster.searchLabel')}
+						clearSearchLabel={t('roster.clearAll')}
+						filterLabel={t('roster.category')}
+						filterCount={activeCat === 'all' ? 0 : 1}
+						filterOpen={filterOpen}
+						onFilterToggle={() => setFilterOpen(v => !v)}
+						filterAnchorRef={filterAnchorRef}
+						actions={(
+							<button
+								type='button'
+								onClick={toggleSort}
+								className={`rs-btn${sortOrder === 'ASC' ? ' is-on' : ''}`}
+								aria-pressed={sortOrder === 'ASC'}
+								aria-label={t('actions.sortByDate')}
+							>
+								<SortIcon className='size-4' strokeWidth={2} aria-hidden />
+								<span>{sortLabel}</span>
+							</button>
+						)}
+						result={t.rich('roster.resultCount', {
+							count: total,
+							strong: (chunks) => <strong>{chunks}</strong>,
+						})}
+						chips={chips}
+						onClearAll={clearFilters}
+						clearAllLabel={t('roster.clearAll')}
+						activeFiltersLabel={t('roster.activeFilters')}
+					>
+						<IntakeFilterPopover
+							open={filterOpen}
+							anchorRef={filterAnchorRef}
+							onClose={() => setFilterOpen(false)}
+							title={t('roster.category')}
+							canReset={activeCat !== 'all'}
+							onReset={() => onCategory('all')}
+							resetLabel={t('roster.reset')}
+							doneLabel={t('roster.done')}
+						>
+							<div className='max-h-[min(60vh,420px)] overflow-y-auto'>
+								<IntakeOptionGroup
+									label={t('roster.category')}
+									name='exercise-category'
+									options={tabs}
+									value={activeCat}
+									onChange={onCategory}
+								/>
+							</div>
+						</IntakeFilterPopover>
+					</IntakeToolbar>
 
-			<PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+					{(!err || loading) && <GridView
+						t={t}
+						locale={locale}
+						loading={loading}
+						items={items}
+						skeletonCount={Math.min(perPage, 8)}
+						canManageGlobal={userRole === 'super_admin'}
+						hasFilters={hasFilters}
+						onClearFilters={clearFilters}
+						onAdd={openAdd}
+						onView={setPreview}
+						onEdit={setEditRow}
+						onDelete={askDelete}
+						onDuplicate={handleDuplicate}
+					/>}
+				</div>
 
-			{/* ── Preview Modal ── */}
-			<Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || t('titles.preview')} maxW='max-w-3xl'>
-				{preview && <ExercisePreview t={t} exercise={preview} />}
+				{total > 0 && !err && (
+					<div className='gm-panel__foot'>
+						<TablePagination
+							pagination={{ current_page: page, per_page: perPage, total_records: total }}
+							onPageChange={onPageChange}
+							isLoading={loading}
+							perPageOptions={PER_PAGE_OPTIONS}
+							persistLimit={false}
+						/>
+					</div>
+				)}
+			</section>
+
+			<Modal
+				cn='gm-modal-root'
+				panelClassName={GM_MODAL}
+				open={!!preview}
+				onClose={() => setPreview(null)}
+				title={preview?.name || t('titles.preview')}
+				maxW='max-w-3xl'
+			>
+				{preview && <ExercisePreview t={t} locale={locale} exercise={preview} />}
 			</Modal>
 
-			{/* ── Add / Duplicate Modal ── */}
-			<Modal open={addOpen} onClose={() => { setAddOpen(false); setDuplicateInitial(null); }} title={t('titles.addExercise')}>
-				<ExerciseForm categories={categories} initial={duplicateInitial || null} onSubmit={handleAddSubmit} />
+			<Modal cn='gm-modal-root' panelClassName={GM_MODAL} open={addOpen} onClose={closeAdd} title={t('titles.addExercise')}>
+				{addOpen && (
+					<ExerciseForm categories={categories} initial={duplicateInitial} onSubmit={handleAddSubmit} onCancel={closeAdd} />
+				)}
 			</Modal>
 
-			{/* ── Edit Modal ── */}
-			<Modal open={!!editRow} onClose={() => setEditRow(null)} title={t('titles.editExercise', { name: editRow?.name || '' })}>
-				{editRow && <ExerciseForm categories={categories} initial={editRow} onSubmit={handleEditSubmit} />}
+			<Modal
+				cn='gm-modal-root'
+				panelClassName={GM_MODAL}
+				open={!!editRow}
+				onClose={closeEdit}
+				title={t('titles.editExercise', { name: editRow?.name || '' })}
+			>
+				{editRow && <ExerciseForm categories={categories} initial={editRow} onSubmit={handleEditSubmit} onCancel={closeEdit} />}
 			</Modal>
 
-			{/* ── Delete Confirm ── */}
-			<ConfirmDialog
-				t={t}
-				loading={deleteLoading}
-				open={deleteOpen}
-				onClose={() => { setDeleteOpen(false); setDeleteId(null); }}
-				title={t('confirm.deleteTitle')}
-				message={t('confirm.deleteMsg')}
-				confirmText={t('confirm.deleteBtn')}
-				onConfirm={handleDelete}
-			/>
+			<Modal cn='gm-modal-root' panelClassName={GM_MODAL} open={!!deleteTarget} onClose={closeDelete} title={t('confirm.deleteTitle')} maxW='max-w-md'>
+				<div
+					className='flex items-start gap-3 rounded-[14px] border p-4'
+					style={{
+						borderColor: 'color-mix(in srgb, var(--gm-danger) 25%, transparent)',
+						background: 'color-mix(in srgb, var(--gm-danger) 8%, var(--gm-paper))',
+					}}
+				>
+					<span
+						className='grid size-9 shrink-0 place-items-center rounded-[11px]'
+						style={{ color: 'var(--gm-danger)', background: 'color-mix(in srgb, var(--gm-danger) 14%, var(--gm-paper))' }}
+					>
+						<AlertCircle className='size-[18px]' />
+					</span>
+					<div className='min-w-0 flex-1'>
+						<p dir='auto' className='truncate text-[13.5px] font-bold gm-ink'>{deleteTarget?.name || ''}</p>
+						<p className='mt-1 text-[13px] leading-relaxed gm-ink-soft'>{t('confirm.deleteMsg')}</p>
+					</div>
+				</div>
+				<div className='gm-modal-foot'>
+					<Button color='neutral' name={t('actions.cancel')} onClick={closeDelete} disabled={deleteLoading} />
+					<Button
+						color='red'
+						name={t('confirm.deleteBtn')}
+						onClick={handleDelete}
+						loading={deleteLoading}
+						disabled={deleteLoading}
+						icon={<Trash2 className='size-4' />}
+					/>
+				</div>
+			</Modal>
 		</div>
 	);
 }
 
-/* ─────────────────────────────── Confirm Dialog ──────────────────────────── */
-const ConfirmDialog = memo(({ open, onClose, loading, title, message, onConfirm, confirmText, t }) => (
-	<Modal open={open} onClose={onClose} title={title} maxW='max-w-md'>
-		<div className='space-y-5'>
-			{message && (
-				<p className='text-sm md: leading-relaxed text-[var(--color-primary-600)]'>{message}</p>
-			)}
-			<div className='flex items-center justify-end gap-2'>
-				<Button
-					name={confirmText}
-					loading={loading}
-					color='danger'
-					className='!w-fit'
-					onClick={() => { onConfirm?.(); onClose?.(); }}
-				/>
-			</div>
-		</div>
-	</Modal>
-));
-
 /* ──────────────────────────────── Grid / Cards ───────────────────────────── */
 const SkeletonCard = () => (
-	<div className='overflow-hidden rounded-lg border border-[var(--color-primary-100)] bg-white shadow-sm'>
-		<div className='aspect-[16/8] w-full animate-pulse bg-[var(--color-primary-100)]' />
-		<div className='p-4 space-y-3'>
-			<div className='h-4 w-3/4 rounded-lg animate-pulse bg-[var(--color-primary-100)]' />
-			<div className='h-3 w-1/2 rounded-lg animate-pulse bg-[var(--color-primary-100)]' />
-			<div className='flex gap-2'>
-				<div className='h-5 w-14 rounded-full animate-pulse bg-[var(--color-primary-100)]' />
-				<div className='h-5 w-14 rounded-full animate-pulse bg-[var(--color-primary-100)]' />
+	<div className='gm-media-card pointer-events-none'>
+		<div className='gm-media-card__media'>
+			<div className='gm-skel absolute inset-0 rounded-none!' />
+		</div>
+		<div className='px-3.5 pb-3 pt-3'>
+			<div className='gm-skel h-4 w-3/4' />
+			<div className='gm-skel mt-2 h-3 w-full' />
+			<div className='gm-skel mt-1.5 h-3 w-2/3' />
+			<div className='gm-media-card__foot mt-3 flex items-center justify-between pt-2.5'>
+				<div className='gm-skel h-3.5 w-24' />
+				<div className='gm-skel h-7 w-24 rounded-[10px]!' />
 			</div>
 		</div>
 	</div>
 );
 
-const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, canManageGlobal, t }) => {
+const GRID = 'grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4';
+
+const GridView = memo(function GridView({
+	loading, items, skeletonCount, onView, onEdit, onDelete, onDuplicate, onAdd, onClearFilters,
+	canManageGlobal, hasFilters, t, locale,
+}) {
 	if (loading) {
 		return (
-			<div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
-				{Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+			<div className={GRID} aria-busy='true'>
+				{Array.from({ length: skeletonCount }).map((_, i) => <SkeletonCard key={i} />)}
 			</div>
 		);
 	}
 
 	if (!items?.length) {
 		return (
-			<div className='flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-[var(--color-primary-200)] bg-white py-20 text-center shadow-sm'>
-				<div className='grid h-16 w-16 place-content-center rounded-lg bg-[var(--color-primary-50)]'>
-					<Dumbbell className='h-8 w-8 text-[var(--color-primary-400)]' />
-				</div>
+			<div className='flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed px-6 py-16 text-center' style={{ borderColor: 'var(--gm-line)' }}>
+				<span className='gm-plan__icon size-14! rounded-[18px]!'>
+					<Dumbbell className='size-7' strokeWidth={1.6} />
+				</span>
 				<div>
-					<h3 className='text-base font-semibold text-[var(--color-primary-800)]'>{t('empty.title')}</h3>
-					<p className='mt-1 text-sm text-[var(--color-primary-400)]'>{t('empty.subtitle')}</p>
+					<h3 className='text-[15px] font-bold gm-ink'>{t('empty.title')}</h3>
+					<p className='mt-1 max-w-sm text-[13px] gm-muted'>{hasFilters ? t('roster.emptyHint') : t('empty.subtitle')}</p>
+				</div>
+				<div className='flex flex-wrap justify-center gap-2'>
+					{hasFilters && (
+						<button type='button' onClick={onClearFilters} className='gm-btn-ghost gm-btn-compact'>
+							{t('actions.clear')}
+						</button>
+					)}
+					<button type='button' onClick={onAdd} className='gm-btn-primary gm-btn-compact'>
+						<Plus className='size-3.5' />
+						{t('actions.addExercise')}
+					</button>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
-			{items.map(e => (
+		<div className={GRID}>
+			{items.map((e, i) => (
 				<ExerciseCard
 					key={e.id}
+					index={i}
 					exercise={e}
 					t={t}
+					locale={locale}
 					canManageGlobal={canManageGlobal}
 					onView={onView}
 					onEdit={onEdit}
@@ -552,146 +628,124 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, 
 	);
 });
 
-/** Individual card — extracted for clarity and memoization */
-const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplicate, canManageGlobal }) => {
+const ExerciseCard = memo(function ExerciseCard({ exercise: e, index, t, locale, onView, onEdit, onDelete, onDuplicate, canManageGlobal }) {
 	const hasImg = Boolean(e.img);
-	const sets = e.targetSets ?? 3;
-	const rest = e.rest ?? 90;
-	const hideOwnerActions = e?.adminId == null && !canManageGlobal;
+	const hasVideo = Boolean(e.video);
+	const isPersonal = e?.adminId != null;
+	const hideOwnerActions = !isPersonal && !canManageGlobal;
 
 	return (
 		<motion.div
-			initial={{ opacity: 0, y: 14, scale: 0.97 }}
-			animate={{ opacity: 1, y: 0, scale: 1 }}
-			transition={spring}
-			className='group relative overflow-hidden rounded-lg border border-[var(--color-primary-100)] bg-white shadow-sm hover:shadow-md hover:border-[var(--color-primary-300)] transition-all duration-300'>
+			initial={{ opacity: 0, y: 10 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.28, delay: Math.min(index, 8) * 0.03, ease: [0.2, 0.75, 0.25, 1] }}
+		>
+			<article className='gm-media-card group h-full'>
+				<button
+					type='button'
+					onClick={() => onView(e)}
+					aria-label={`${t('actions.view')}: ${e.name}`}
+					className='gm-media-card__media block w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary-400) focus-visible:ring-inset'
+				>
+					{hasImg ? (
+						<Img
+							showBlur={false}
+							src={e.img}
+							alt={e.name}
+							className='h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transform-none'
+							loading='lazy'
+						/>
+					) : (
+						<span className='grid h-full w-full place-items-center text-(--color-primary-300)'>
+							<Dumbbell className='size-10' strokeWidth={1.4} />
+						</span>
+					)}
 
-			{/* ── Thumbnail ── */}
-			<div className='relative aspect-[16/8] bg-[var(--color-primary-50)]'>
-				{hasImg ? (
-					<Img
-						showBlur={false}
-						src={e.img}
-						alt={e.name}
-						className='h-full w-full object-contain'
-						loading='lazy'
-					/>
-				) : (
-					<div className='flex h-full w-full items-center justify-center text-[var(--color-primary-300)]'>
-						<Play className='w-10 h-10 opacity-40' />
-					</div>
-				)}
+					<span className='gm-media-card__shade' />
 
-				{/* Media badge */}
-				{(hasImg || e.video) && (
-					<span className='absolute bottom-2 ltr:left-2 rtl:right-2 inline-flex items-center gap-1 rounded-lg bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm'>
-						{hasImg ? <ImageIcon size={10} /> : <PlayCircle size={10} />}
-						{hasImg ? t('media.image') : t('media.video')}
-					</span>
-				)}
+					{(hasImg || hasVideo) && (
+						<span className='absolute start-2.5 top-2.5 flex gap-1'>
+							{hasImg && <span className='gm-media-icon' title={t('media.image')}><ImageIcon className='size-3' /></span>}
+							{hasVideo && <span className='gm-media-icon' title={t('media.video')}><PlayCircle className='size-3' /></span>}
+						</span>
+					)}
+					{isPersonal && (
+						<span className='absolute end-2.5 top-2.5'>
+							<Badge color='violet' dot>{t('badges.personal')}</Badge>
+						</span>
+					)}
+					{hasVideo && (
+						<span className='absolute inset-0 grid place-items-center'>
+							<span className='gm-media-play'><Play className='size-4 translate-x-px fill-current' /></span>
+						</span>
+					)}
+					{e.category && (
+						<span className='absolute bottom-2.5 start-2.5 max-w-[calc(100%-20px)]'>
+							<span className='gm-media-badge max-w-full truncate'>
+								<Tag className='size-3 shrink-0' />
+								<span className='truncate'>{categoryLabel(e.category, locale)}</span>
+							</span>
+						</span>
+					)}
+				</button>
 
-				{/* Action panel — revealed on hover */}
-				<div className='absolute  h-fit top-[10px] inset-y-0 ltr:right-0 rtl:left-0 flex items-center px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
-					<div className='rounded-full border border-[var(--color-primary-100)] bg-white/95 p-1 shadow-lg backdrop-blur-sm'>
-						<ActionButtons
-							row={e}
-							gap="gap-1"
-							actions={[
-								{
-									icon: <Eye />,
-									tooltip: t('actions.view'),
-									variant: 'blue',
-									size: 'sm',
-									onClick: row => onView?.(row),
-								},
-								{
-									icon: <PencilLine />,
-									tooltip: t('actions.edit'),
-									variant: 'amber',
-									size: 'sm',
-									hidden: hideOwnerActions,
-									onClick: row => onEdit?.(row),
-								},
-								{
-									icon: <Copy />,
-									tooltip: t('actions.duplicate', { default: 'Duplicate' }),
-									variant: 'purple',
-									size: 'sm',
-									onClick: row => onDuplicate?.(row),
-								},
-								{
-									icon: <Trash2 />,
-									tooltip: t('actions.delete'),
-									variant: 'red',
-									size: 'sm',
-									hidden: hideOwnerActions,
-									onClick: row => onDelete?.(row.id),
-								},
+				<div className='flex flex-1 flex-col px-3.5 pb-3 pt-3'>
+					<p dir='auto' className='truncate text-start text-[14px] font-bold leading-snug gm-ink' title={e.name}>
+						{e.name}
+					</p>
+					<p dir='auto' className={`mt-1 line-clamp-2 min-h-[34px] text-start text-[12px] leading-[17px] ${e.details ? 'gm-muted' : 'gm-faint'}`}>
+						{e.details || t('empty.noDetails')}
+					</p>
+
+					<div className='gm-media-card__foot mt-3 flex items-center justify-between gap-2 pt-2.5'>
+						<div className='flex min-w-0 items-center gap-3 text-[11.5px] font-semibold gm-ink-soft'>
+							<span className='inline-flex items-center gap-1' title={`${t('meta.sets')} × ${t('meta.reps')}`}>
+								<Repeat className='size-3.5 text-(--color-primary-500)' />
+								<span className='font-en tabular-nums' dir='ltr'>{e.targetSets ?? 3}×{e.targetReps ?? 10}</span>
+							</span>
+							<span className='inline-flex items-center gap-1' title={t('meta.rest')}>
+								<Timer className='size-3.5 text-(--color-primary-500)' />
+								<span className='font-en tabular-nums' dir='ltr'>{e.rest ?? 90}s</span>
+							</span>
+						</div>
+						<GmRowActions
+							size='sm'
+							options={[
+								{ icon: Eye, tone: 'primary', label: t('actions.view'), onClick: () => onView(e) },
+								{ icon: PencilLine, tone: 'amber', label: t('actions.edit'), hide: hideOwnerActions, onClick: () => onEdit(e) },
+								{ icon: CopyPlus, tone: 'violet', label: t('actions.duplicate'), onClick: () => onDuplicate(e) },
+								{ icon: Trash2, tone: 'danger', label: t('actions.delete'), hide: hideOwnerActions, onClick: () => onDelete(e) },
 							]}
 						/>
 					</div>
 				</div>
-			</div>
-
-			{/* ── Card body ── */}
-			<div className='p-3.5 space-y-2'>
-
-				{/* Name */}
-				<p
-					className='font-en truncate text-sm font-semibold md: leading-snug text-[var(--color-primary-900)]'
-					title={e.name}>
-					{e.name}
-				</p>
-
-				{/* Category badge */}
-				{e.category && (
-					<span className='inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] shadow-sm'>
-						<Tag size={9} />
-						<MultiLangText>{e.category}</MultiLangText>
-					</span>
-				)}
-
-				{/* Description */}
-				{e.details && (
-					<MultiLangText
-						dir='ltr'
-						className='line-clamp-1 text-xs text-[var(--color-primary-500)]'>
-						{e.details}
-					</MultiLangText>
-				)}
-
-				{/* Stats row */}
-				<div className='flex flex-wrap gap-1.5 pt-0.5'>
-					<span className='inline-flex items-center gap-1 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
-						{t('meta.sets')}
-						<span className='font-bold text-[var(--color-primary-800)]'>{sets}</span>
-					</span>
-					<span className='inline-flex items-center gap-1 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
-						{t('meta.rest')}
-						<span className='font-bold text-[var(--color-primary-800)]'>{rest}s</span>
-					</span>
-					{e.tempo && (
-						<span className='inline-flex items-center gap-1 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
-							{t('meta.tempo')}
-							<span className='font-bold text-[var(--color-primary-800)]'>{e.tempo}</span>
-						</span>
-					)}
-				</div>
-			</div>
+			</article>
 		</motion.div>
 	);
 });
 
 /* ─────────────────────────── Preview Modal Content ──────────────────────── */
-const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
+function MetaTile({ icon: Icon, label, value }) {
+	return (
+		<div className='gm-cred justify-start!'>
+			<span className='gm-cred__icon shrink-0'><Icon className='size-4' /></span>
+			<div className='min-w-0'>
+				<p className='gm-cred__label'>{label}</p>
+				<p className='gm-cred__value font-en tabular-nums' dir='ltr'>{value}</p>
+			</div>
+		</div>
+	);
+}
+
+const ExercisePreview = memo(function ExercisePreview({ exercise, t, locale }) {
 	const hasImg = !!exercise?.img;
 	const hasVideo = !!exercise?.video;
 	const [tab, setTab] = useState(hasImg ? 'image' : 'video');
 
-	useEffect(() => { setTab(hasImg ? 'image' : 'video'); }, [exercise?.id, hasImg, hasVideo]);
+	useEffect(() => { setTab(hasImg ? 'image' : 'video'); }, [exercise?.id, hasImg]);
 
-	const primary = useMemo(() => exercise?.primaryMusclesWorked || [], [exercise]);
-	const secondary = useMemo(() => exercise?.secondaryMusclesWorked || [], [exercise]);
+	const primary = useMemo(() => toList(exercise?.primaryMusclesWorked), [exercise?.primaryMusclesWorked]);
+	const secondary = useMemo(() => toList(exercise?.secondaryMusclesWorked), [exercise?.secondaryMusclesWorked]);
 
 	const mediaTabs = [
 		{ key: 'image', Icon: ImageIcon, disabled: !hasImg },
@@ -700,60 +754,39 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
 
 	return (
 		<div className='space-y-5'>
-
-			{/* Media tab switcher */}
 			{(hasImg || hasVideo) && (
-				<div className='inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary-50)] p-1 shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]'>
-					{mediaTabs.map(({ key, Icon, disabled }) => {
-						const active = tab === key;
-						return (
+				<div className='w-fit rounded-[12px] border p-1' style={{ borderColor: 'var(--gm-line)', background: 'color-mix(in srgb, var(--gm-paper) 62%, transparent)' }}>
+					<div role='radiogroup' className='gm-seg gm-seg--plain'>
+						{mediaTabs.map(({ key, Icon, disabled }) => (
 							<button
 								key={key}
 								type='button'
-								aria-pressed={active}
+								role='radio'
+								aria-checked={tab === key}
 								disabled={disabled}
 								onClick={() => setTab(key)}
-								className={[
-									'inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium outline-none transition-all duration-200',
-									active
-										? 'bg-white text-[var(--color-primary-800)] shadow'
-										: 'text-[var(--color-primary-500)] hover:text-[var(--color-primary-700)]',
-									disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
-								].join(' ')}>
-								<Icon size={14} />
+								className={`gm-seg-item inline-flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40 ${tab === key ? 'is-on' : ''}`}
+							>
+								<Icon className='size-3.5' />
 								{t('media.' + key)}
 							</button>
-						);
-					})}
+						))}
+					</div>
 				</div>
 			)}
 
-			{/* Media frame */}
-			<div className='relative w-full overflow-hidden rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] shadow-sm'>
-				<div className='aspect-video flex items-center justify-center'>
+			<div className='overflow-hidden rounded-2xl border' style={{ borderColor: 'var(--gm-line)', background: 'color-mix(in srgb, var(--color-primary-50) 70%, var(--gm-paper))' }}>
+				<div className='flex aspect-video items-center justify-center'>
 					{tab === 'image' && hasImg ? (
-						<Img
-							src={exercise.img}
-							alt={exercise?.name || t('titles.untitled')}
-							className='h-full w-full object-contain'
-							draggable={false}
-							loading='eager'
-						/>
+						<Img src={exercise.img} alt={exercise?.name || t('titles.untitled')} className='h-full w-full object-contain' draggable={false} loading='eager' />
 					) : tab === 'video' && hasVideo ? (
-						<video
-							src={exercise?.video?.startsWith('http') ? exercise.video : baseImg + exercise.video}
-							controls
-							className='h-full max-h-[400px] w-full rounded-lg object-contain'
-							preload='metadata'
-						/>
+						<video src={exerciseVideoSrc(exercise.video)} controls className='h-full w-full object-contain' preload='metadata' />
 					) : (
 						<div className='flex flex-col items-center gap-3 py-10 text-center'>
-							<div className='grid h-12 w-12 place-items-center rounded-lg bg-[var(--color-primary-100)]'>
-								{tab === 'image'
-									? <ImageIcon size={20} className='text-[var(--color-primary-400)]' />
-									: <PlayCircle size={20} className='text-[var(--color-primary-400)]' />}
-							</div>
-							<p className='text-sm text-[var(--color-primary-500)]'>
+							<span className='gm-plan__icon'>
+								{tab === 'image' ? <ImageIcon className='size-5' /> : <PlayCircle className='size-5' />}
+							</span>
+							<p className='text-[13px] gm-muted'>
 								{t('media.none', { kind: tab === 'image' ? t('media.image') : t('media.video') })}
 							</p>
 						</div>
@@ -761,43 +794,43 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
 				</div>
 			</div>
 
-			{/* Details section */}
-			<div className='space-y-3'>
-				<div className='flex items-start flex-wrap gap-2'>
-					<h3 className='text-lg font-bold text-[var(--color-primary-900)]'>
-						{exercise?.name || t('titles.untitled')}
-					</h3>
+			<div className='space-y-4'>
+				<div className='flex flex-wrap items-center gap-2'>
+					<h3 dir='auto' className='text-[17px] font-bold gm-ink'>{exercise?.name || t('titles.untitled')}</h3>
 					{exercise?.category && (
-						<span className='inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary-700)]'>
-							<TagIcon size={11} />
-							{exercise.category}
-						</span>
+						<Badge color='primary' icon={<Tag className='size-3' />}>{categoryLabel(exercise.category, locale)}</Badge>
 					)}
 				</div>
 
 				{exercise?.details && (
-					<p className='max-w-prose text-sm md: leading-6 text-[var(--color-primary-600)]'>
-						{exercise.details}
-					</p>
+					<p dir='auto' className='max-w-prose whitespace-pre-line text-start text-[13px] leading-6 gm-ink-soft'>{exercise.details}</p>
 				)}
 
-				{/* Stats pills */}
-				<div className='flex flex-wrap gap-2'>
-					<StatPill label={t('meta.sets')} value={exercise?.targetSets ?? 3} />
-					<StatPill label={t('meta.rest')} value={`${exercise?.rest ?? 90}s`} />
-					{exercise?.tempo && <StatPill label={t('meta.tempo')} value={exercise.tempo} />}
+				<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-4'>
+					<MetaTile icon={Layers} label={t('meta.sets')} value={exercise?.targetSets ?? 3} />
+					<MetaTile icon={Repeat} label={t('meta.reps')} value={exercise?.targetReps ?? 10} />
+					<MetaTile icon={Timer} label={t('meta.rest')} value={`${exercise?.rest ?? 90}s`} />
+					<MetaTile icon={Gauge} label={t('meta.tempo')} value={exercise?.tempo || '—'} />
 				</div>
 
-				{/* Muscles */}
 				{(primary.length > 0 || secondary.length > 0) && (
-					<div className='pt-2'>
-						<p className='mb-2 text-[11px] font-semibold uppercase tracking-widest text-[var(--color-primary-400)]'>
-							{t('labels.muscles')}
-						</p>
-						<div className='flex flex-wrap'>
-							{primary.map(m => <Chip key={`p-${m}`}>{m}</Chip>)}
-							{secondary.map(m => <Chip key={`s-${m}`}>{m}</Chip>)}
-						</div>
+					<div className='space-y-2.5'>
+						{primary.length > 0 && (
+							<div>
+								<p className='mb-1.5 text-[12px] font-semibold gm-muted'>{t('labels.primary')}</p>
+								<div className='flex flex-wrap gap-1.5'>
+									{primary.map(m => <Badge key={`p-${m}`} color='blue'>{m}</Badge>)}
+								</div>
+							</div>
+						)}
+						{secondary.length > 0 && (
+							<div>
+								<p className='mb-1.5 text-[12px] font-semibold gm-muted'>{t('labels.secondary')}</p>
+								<div className='flex flex-wrap gap-1.5'>
+									{secondary.map(m => <Badge key={`s-${m}`} color='slate'>{m}</Badge>)}
+								</div>
+							</div>
+						)}
 					</div>
 				)}
 			</div>

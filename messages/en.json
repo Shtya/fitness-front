@@ -27,13 +27,57 @@
 		},
 		"sections": {
 			"admins": "Admins",
-			"others": "Others"
+			"coaches": "Coaches",
+			"clients": "Clients",
+			"misc": "Other roles",
+			"others": "Others",
+			"adminsHint": "Expand a row to manage the coaches and clients under that admin",
+			"coachesHint": "Coaches that are not nested under an admin on this page",
+			"clientsHint": "Client accounts on this page",
+			"miscHint": "Accounts that are not admin, coach, or client",
+			"showCoaches": "Show coaches",
+			"expandClients": "Expand for clients",
+			"clientCount": "{count} clients",
+			"coachesUnder": "Coaches under {name}",
+			"noAdmins": "No admins found",
+			"addCoach": "Add coach",
+			"addClient": "Add client",
+			"addClientFor": "Add client to {name}",
+			"coachCount": "{count} coaches",
+			"activeCount": "{count} active",
+			"unassigned": "No coach",
+			"unassignedHint": "Clients on this admin who are not assigned to a coach",
+			"moveCoach": "Coach",
+			"moved": "Client moved to the selected coach",
+			"moveFailed": "Could not move the client",
+			"copiedTally": "Counts copied",
+			"copyTally": "Copy counts",
+			"listCap": "Showing {shown} of {total}"
 		},
 		"filters": {
 			"searchPlaceholder": "Search by name or email…",
 			"allStatuses": "All statuses",
 			"allRoles": "All roles",
 			"sortLabel": "Sort"
+		},
+		"table": {
+			"user": "User",
+			"admin": "Admin",
+			"coachClient": "Coach / Client",
+			"email": "Email",
+			"phone": "Phone",
+			"role": "Role",
+			"status": "Status",
+			"access": "Access",
+			"joined": "Joined",
+			"lastLogin": "Last login",
+			"never": "Never signed in",
+			"actions": "Actions",
+			"team": "Team"
+		},
+		"statsHints": {
+			"platform": "Across the platform",
+			"thisPage": "On this page"
 		},
 		"sort": {
 			"name_asc": "Name A → Z",
@@ -54,7 +98,9 @@
 			"copyCredentials": "Copy Credentials",
 			"deleteUser": "Delete User",
 			"cancel": "Cancel",
-			"statusUpdated": "Status updated successfully"
+			"statusUpdated": "Status updated successfully",
+			"pageAccess": "Page access",
+			"refresh": "Refresh"
 		},
 		"impersonation": {
 			"loading": "Logging in as user…",
@@ -109,7 +155,11 @@
 			},
 			"validation": {
 				"nameEmail": "Name and email are required"
-			}
+			},
+			"underAdmin": "This account will belong to admin {name}",
+			"underCoach": "Assigned coach: {name}",
+			"coachOptional": "Coach",
+			"noCoach": "No coach yet"
 		},
 		"editModal": {
 			"title": "Edit User Data",
@@ -211,6 +261,22 @@
 		"noTasksDesc": "There are no items for this day. Click Add to create one.",
 		"selectDayTitle": "Select a Day",
 		"selectDayDesc": "Click any day on the calendar to view its tasks and details.",
+		"today": "Today",
+		"completed": "Completed",
+		"tapToSelect": "Tap any day to view its tasks",
+		"events": "events",
+		"activeDays": "active days",
+		"monthView": "Month",
+		"selected": "Selected",
+		"addToThisDay": "Add to This Day",
+		"noTasksSubtitle": "Add a task for this day",
+		"daySat": "Sat",
+		"daySun": "Sun",
+		"dayMon": "Mon",
+		"dayTue": "Tue",
+		"dayWed": "Wed",
+		"dayThu": "Thu",
+		"dayFri": "Fri",
 		"everyXDays": "Every number of days",
 		"everyXDaysLabel": "Every {count} day",
 		"none": "No recurrence",
@@ -580,7 +646,8 @@
 			"billing": "Billing",
 			"timeManagement": "Time Management",
 			"clientIntake": "Client Intake",
-			"main": "Main"
+			"main": "Main",
+			"granted": "Added for this role"
 		},
 		"items": {
 			"forms": "Contact Requests",
@@ -631,7 +698,8 @@
 			"allWallets": "All Wallets",
 			"feedback": "Feedback & Reviews",
 			"siteInspector": "Website Inspector",
-			"pageAccess": "Page Access"
+			"pageAccess": "Page Access",
+			"documentEditor": "Document Editor"
 		},
 		"descriptions": {
 			"aiStudio": "AI-powered tools and smart automation to accelerate your workflow",
@@ -683,7 +751,8 @@
 			"profile_admin": "Your account settings, preferences and security",
 			"profile_client": "Your profile and account settings",
 			"branding": "Customize app name, logos and brand colors",
-			"siteInspector": "Reverse-engineer any public website: stack, design system, components and extractable code"
+			"siteInspector": "Reverse-engineer any public website: stack, design system, components and extractable code",
+			"documentEditor_super": "Smart full-screen workspace for reading and editing structured documents"
 		},
 		"groups": {
 			"ai": "AI Tools",
@@ -740,21 +809,26 @@
 	},
 	"pageAccess": {
 		"title": "Page access",
-		"subtitle": "Choose which sidebar pages each role gets. Signed-in users receive changes within about a minute.",
+		"subtitle": "Every page in the system. Tick who can see it: super admin, admin, coach, or client. Signed-in users receive changes within about a minute.",
+		"pageColumn": "Page",
+		"visibleCount": "{total} pages",
+		"toggleRole": "Show {page} for {role}",
+		"savedAll": "Page access saved",
 		"roles": {
+			"super_admin": "Super admin",
 			"admin": "Admin",
 			"coach": "Coach",
 			"client": "Client"
 		},
 		"modes": {
 			"default": "Shown",
-			"optional": "Marketplace",
-			"locked": "Locked"
+			"optional": "Hidden (legacy)",
+			"locked": "Hidden"
 		},
 		"modeHints": {
 			"default": "Visible in the sidebar by default",
-			"optional": "Hidden until the user adds it from the Marketplace",
-			"locked": "Hidden and blocked, even by direct link"
+			"optional": "Legacy marketplace mode — treated as hidden",
+			"locked": "Hidden from the sidebar and blocked by direct link until you show it"
 		},
 		"searchPlaceholder": "Search pages…",
 		"alwaysShown": "Always shown",
@@ -800,7 +874,24 @@
 		"emptyTitle": "No results",
 		"emptySubtitle": "Try a different word or clear the search.",
 		"defaultDescription": "An elegant, balanced color palette.",
-		"footer": "The change will be applied instantly across the entire dashboard"
+		"footer": "The change will be applied instantly across the entire dashboard",
+		"mode": {
+			"label": "Appearance",
+			"light": "Light",
+			"dark": "Dark",
+			"switchToLight": "Switch to light mode",
+			"switchToDark": "Switch to dark mode"
+		},
+		"palettes": {
+			"teal": "Tropical Teal",
+			"coral": "Coral Reef",
+			"lavender": "Lavender Fields",
+			"mint": "Fresh Mint",
+			"sunset": "Sunset Blaze",
+			"blue": "Sky Blue",
+			"slate": "Midnight Slate",
+			"cyan": "Ocean Breeze"
+		}
 	},
 	"auth": {
 		"signIn": "Sign In",
@@ -1041,6 +1132,12 @@
 			"expired": "Expired",
 			"daysLeft": "days left"
 		},
+		"legal": {
+			"title": "Privacy & legal",
+			"subtitle": "Policies and your account rights",
+			"privacy": "Privacy Policy",
+			"terms": "Terms of Service"
+		},
 		"sides": {
 			"all": "All",
 			"front": "Front",
@@ -1158,7 +1255,19 @@
 	},
 	"weekly": {
 		"title": "Weekly Report",
-		"subtitle": "Share your progress this week so your coach can follow up with you closely",
+		"subtitle": "Share this week's progress with your coach",
+		"basics": "Basics",
+		"tabs": {
+			"new": "New report",
+			"history": "History"
+		},
+		"stars": {
+			"1": "Weak",
+			"2": "Fair",
+			"3": "Good",
+			"4": "Very good",
+			"5": "Excellent"
+		},
 		"weekOf": "Week",
 		"cardioAdherence": "Cardio Adherence",
 		"unreadFeedback": {
@@ -1273,60 +1382,96 @@
 	},
 	"chat": {
 		"search": {
-			"placeholder": "Search by name or email...",
-			"results": "Search Results",
-			"clear": "Clear Search",
-			"noResultsTitle": "No matching results",
+			"placeholder": "Search by name or email",
+			"results": "Search results",
+			"clear": "Clear search",
+			"noResultsTitle": "No matches found",
 			"noResultsHint": "Try a different name or email"
 		},
 		"quick": {
-			"coach": "Contact Coach",
-			"admin": "Contact Admin"
+			"coach": "Contact coach",
+			"admin": "Contact admin",
+			"noCoach": "No coach is assigned to your account",
+			"noAdmin": "No admin is assigned to your account"
 		},
 		"appbar": {
 			"title": "Messages",
-			"subtitle": "Communicate with your coach and clients"
+			"subtitle": "Chat with your coach, clients, and team in one place.",
+			"screenTitle": "Conversations",
+			"screenHint": "Messages",
+			"unreadCount": "{count} unread messages"
 		},
 		"tabs": {
 			"all": "All",
-			"unread": "Unread"
+			"unread": "Unread",
+			"groups": "Groups"
+		},
+		"stats": {
+			"conversations": "Conversations",
+			"conversationsHint": "In your inbox",
+			"unread": "Unread",
+			"unreadHint": "Waiting for a reply",
+			"active": "Open chat",
+			"activeHintOn": "Conversation selected",
+			"activeHintOff": "Pick a conversation"
 		},
 		"empty": {
 			"pick": "Choose a conversation to start chatting",
-			"hint": "Select a conversation from the list"
+			"hint": "Select a conversation from the list or search for someone"
 		},
 		"composer": {
 			"placeholder": "Write a message…",
 			"disabled": "Choose a conversation to start chatting",
 			"remove": "Remove attachment",
 			"send": "Send",
-			"hint": "Shift+Enter for new line • Ctrl/Cmd+Enter to send",
+			"hint": "Shift+Enter for a new line • Enter to send",
 			"voice": "Voice message",
 			"sendVoice": "Send voice",
 			"recording": "Recording…",
-			"cancel": "Cancel"
+			"cancel": "Cancel",
+			"attach": "Attach file",
+			"image": "Attach image",
+			"micDenied": "Microphone permission is required to send voice messages"
 		},
 		"list": {
-			"group": "Group Chat",
-			"direct": "Direct Message",
-			"photo": "📷 Photo",
-			"video": "🎥 Video",
-			"voice": "🎤 Voice message",
-			"file": "📎 File",
+			"group": "Group chat",
+			"direct": "Direct message",
+			"photo": "Photo",
+			"video": "Video",
+			"voice": "Voice message",
+			"file": "File",
 			"empty": "No conversations yet",
+			"emptyUnread": "No unread conversations",
 			"title": "Conversations",
 			"subtitle": "Stay connected",
-			"startHint": "Search to start a new conversation"
+			"startHint": "Search by name or email to start a new chat"
 		},
 		"header": {
-			"typing": "Typing...",
-			"direct": "Online",
-			"loading": "Loading...",
+			"typing": "Typing…",
+			"direct": "Conversation",
+			"online": "Online now",
+			"loading": "Loading…",
 			"noselect": "Choose a conversation"
 		},
 		"actions": {
 			"openList": "Open conversations list",
 			"close": "Close"
+		},
+		"dates": {
+			"today": "Today",
+			"yesterday": "Yesterday"
+		},
+		"common": {
+			"retry": "Retry",
+			"serverUnreachable": "Can't reach the server. Check your connection and try again."
+		},
+		"errors": {
+			"loadConversations": "Couldn't load conversations",
+			"loadMessages": "Couldn't load messages",
+			"searchFailed": "Couldn't search users",
+			"openDirect": "Couldn't open this chat",
+			"sendFailed": "Couldn't send the message",
+			"uploadFailed": "Couldn't upload the attachment"
 		}
 	},
 	"calorie": {
@@ -1351,8 +1496,33 @@
 			"generating": "Generating..."
 		},
 		"header": {
-			"title": "Daily Calorie Calculator",
-			"desc": "Calculate your daily needs based on your goal, and easily calculate food calories."
+			"title": "Calorie Calculator",
+			"desc": "Smart Nutrition"
+		},
+		"tabs": {
+			"profile": "Profile",
+			"meal": "Meal"
+		},
+		"phone": {
+			"bodyData": "Body Data",
+			"bodyDataSub": "Enter your data to calculate calories and macros",
+			"calculate": "Calculate Now",
+			"dailyTarget": "Daily Target",
+			"day": "Day",
+			"macros": "Macros",
+			"macrosSub": "Ideal distribution of food groups",
+			"details": "Details",
+			"bodyFat": "Body Fat %",
+			"leanMass": "Lean Mass",
+			"tip": "Tip: Enter your body fat percentage for more accurate macros based on actual lean mass.",
+			"addFood": "Add Food",
+			"addFoodSub": "Search and add foods to your meal",
+			"searchHint": "Search for a food to add it to your meal",
+			"noFoods": "No foods added",
+			"noFoodsSub": "Search and add foods to build your meal",
+			"clearAll": "Clear All",
+			"add": "Add",
+			"select": "Select..."
 		},
 		"sections": {
 			"dailyNeed": "Daily Need",
@@ -1611,7 +1781,11 @@
 			"totalUsers": "Total Users",
 			"active": "Active Accounts",
 			"coaches": "Coaches",
-			"clients": "Clients"
+			"clients": "Clients",
+			"ofTotal": "{value} of {total}",
+			"pendingCount": "{count} pending",
+			"suspendedCount": "{count} suspended",
+			"allAccounts": "All accounts"
 		},
 		"filters": {
 			"role": "Role",
@@ -1633,6 +1807,8 @@
 			"mealPlan": "Meal Plan",
 			"coach": "Coach",
 			"joinDate": "Join Date",
+			"lastLogin": "Last login",
+			"never": "Never signed in",
 			"status": "Status",
 			"daysLeft": "Days Left",
 			"workoutEdit": "Workout Edit",
@@ -1719,7 +1895,33 @@
 			"credentialsAndForm": "Login Credentials",
 			"createAndNext": "Create and Continue",
 			"credsReady": "Login credentials have been created. You can copy and send them via WhatsApp below.",
-			"passwordByEmail": "Sent via email"
+			"passwordByEmail": "Sent via email",
+			"stepAccount": "Account",
+			"stepWorkout": "Workout",
+			"stepMeal": "Meal",
+			"stepCalories": "Fuel",
+			"stepSend": "Share",
+			"sectionProfile": "Profile",
+			"sectionAccess": "Access",
+			"sectionMembership": "Membership",
+			"searchPlans": "Search plans",
+			"selectedPlan": "Selected",
+			"noPlansTitle": "No workout plans yet",
+			"noPlansHint": "Create a plan, or skip and assign one later.",
+			"noMealsTitle": "No meal plans yet",
+			"noMealsHint": "Create a meal plan, or skip and assign one later.",
+			"noneMatch": "No plans match this search.",
+			"fuelHint": "Set the daily fuel so the client’s tracker starts with real numbers.",
+			"splitHint": "Split updates as you type calories or macros.",
+			"shareTitle": "Hand over the keys",
+			"shareBody": "The account is ready. Copy the login, or send it on WhatsApp in one tap.",
+			"copyAll": "Copy login",
+			"messagePreview": "WhatsApp message",
+			"phoneForWhatsapp": "WhatsApp number",
+			"kcalDay": "kcal / day",
+			"fromMacros": "{kcal} kcal from macros",
+			"customDays": "Custom days",
+			"sameEveryDay": "Same every day"
 		},
 		"calories": {
 			"calories": "Calories",
@@ -1771,7 +1973,11 @@
 			"creating": "Creating...",
 			"expired": "Expired",
 			"days": "Days",
+			"daysShort": "d",
+			"daysLeft": "{days} days left",
+			"clearFilters": "Clear",
 			"back": "Back",
+			"skip": "Skip",
 			"saveAndNext": "Save and Continue",
 			"sendWhatsapp": "Send via WhatsApp",
 			"noCoach": "No Coach",
@@ -1782,7 +1988,8 @@
 			"tryAdjusting": "Try adjusting the search or filters",
 			"preview": "Image Preview",
 			"selectedCount": "{count} selected",
-			"clearSelection": "Clear"
+			"clearSelection": "Clear",
+			"done": "Done"
 		},
 		"alerts": {
 			"credsSent": "Login credentials sent",
@@ -1813,7 +2020,8 @@
 			"saveCaloriesSuccess": "Calories information saved successfully",
 			"subscriptionRenewed": "Subscription renewed successfully",
 			"renewSubscriptionFailed": "Failed to renew subscription",
-			"usersDeleted": "{count} users deleted successfully"
+			"usersDeleted": "{count} users deleted successfully",
+			"macrosCalculated": "Macros calculated"
 		},
 		"errors": {
 			"nameMin": "Name must be at least 2 characters",
@@ -1841,6 +2049,27 @@
 			"deleteUserConfirm": "Are you sure you want to delete {name}? This action cannot be undone.",
 			"resetPasswordAndSendConfirm": "The password for {name} will be reset and new login credentials will be sent via WhatsApp. Do you want to continue?",
 			"deleteMultipleUsersConfirm": "Are you sure you want to delete {count} selected users? This action cannot be undone."
+		},
+		"roster": {
+			"all": "All",
+			"members": "members",
+			"composition": "Account status composition",
+			"reviewPending": "Review {count} pending",
+			"roleSplit": "Role split",
+			"programCoverage": "Program coverage",
+			"withWorkout": "Workout plan",
+			"withMeal": "Meal plan",
+			"program": "Program",
+			"noProgram": "Not assigned",
+			"daysLeftShort": "{days}d left",
+			"searching": "Searching…",
+			"searchLabel": "Search",
+			"filterTitle": "Filter members",
+			"reset": "Reset",
+			"done": "Done",
+			"activeFilters": "Active filters",
+			"clearAll": "Clear all",
+			"resultCount": "{count, plural, =0 {No members} one {<strong>#</strong> member} other {<strong>#</strong> members}}"
 		}
 	},
 	"date": {
@@ -1862,7 +2091,8 @@
 		"adjustFiltersOrAdd": "Adjust filters or add new records."
 	},
 	"Stepper": {
-		"progress": "Progress"
+		"progress": "Progress",
+		"stepOf": "Step {current} of {total}"
 	},
 	"Common": {
 		"seeMore": "See more",
@@ -1887,14 +2117,15 @@
 		"empty": "No plans available. Try another search term.",
 		"untitled": "Untitled plan",
 		"assignedCount": "{count} assigned",
-		"daysCount": "{count} day",
+		"daysCount": "{count, plural, one {# day} other {# days}}",
 		"details": "Details",
 		"moreCount": "+{count} more"
 	},
 	"Meals": {
 		"searchPlaceholder": "Search by meal plan name or description…",
 		"empty": "No meal plans available. Try another search term.",
-		"untitled": "Untitled meal plan"
+		"untitled": "Untitled meal plan",
+		"clientsCount": "{count, plural, =0 {No clients yet} one {# client} other {# clients}}"
 	},
 	"Subscription": {
 		"startLabel": "Subscription start date",
@@ -1936,7 +2167,16 @@
 			"oldestFirst": "Oldest first",
 			"uploadImage": "Upload image",
 			"uploadVideo": "Upload video",
-			"duplicate": "Duplicate exercise"
+			"duplicate": "Duplicate exercise",
+			"cancel": "Cancel",
+			"retry": "Retry"
+		},
+		"sections": {
+			"targets": "Training targets",
+			"media": "Media"
+		},
+		"badges": {
+			"personal": "Personal"
 		},
 		"labels": {
 			"name": "Name",
@@ -2010,11 +2250,16 @@
 			"avgRest": "Average rest (sec)",
 			"added7d": "Added in last 7 days",
 			"totalPersonalExercise": "Your personal exercises",
-			"totalGlobalExercise": "All exercises"
+			"totalGlobalExercise": "All exercises",
+			"libraryHint": "Shared exercise library",
+			"personalHint": "Created by your team",
+			"recentHint": "New this week",
+			"ofTotal": "Out of {total} exercises"
 		},
 		"empty": {
 			"title": "No exercises",
 			"subtitle": "Try a different search or add a new exercise.",
+			"noDetails": "No description added yet.",
 			"simple": "There are currently no exercises."
 		},
 		"confirm": {
@@ -2024,6 +2269,7 @@
 		},
 		"errors": {
 			"loadExercises": "Failed to load exercises",
+			"serverUnreachable": "Can't reach the server. Check your connection or make sure the API is running, then retry.",
 			"createFailed": "Failed to create exercise",
 			"updateFailed": "Failed to update exercise",
 			"deleteFailed": "Failed to delete exercise",
@@ -2046,6 +2292,17 @@
 			"none": "No {kind} available",
 			"noImage": "No image",
 			"noVideo": "No video"
+		},
+		"roster": {
+			"searchLabel": "Search",
+			"resultCount": "{count, plural, =0 {No exercises} one {<strong>#</strong> exercise} other {<strong>#</strong> exercises}}",
+			"activeFilters": "Active filters",
+			"clearAll": "Clear all",
+			"category": "Category",
+			"allCategories": "All categories",
+			"reset": "Reset",
+			"done": "Done",
+			"emptyHint": "Try another name or category."
 		}
 	},
 	"feedback": {
@@ -2083,6 +2340,7 @@
 			"exportCSV": "Download CSV",
 			"noFeedback": "No feedback",
 			"loading": "Loading...",
+			"genericError": "Something went wrong. Please try again.",
 			"description": "Description",
 			"changeStatus": "Change status",
 			"delete": "Delete",
@@ -2125,11 +2383,14 @@
 			"removeDay": "Delete day",
 			"savePlan": "Save plan",
 			"duplicateDay": "Duplicate day",
-			"share": "Share"
+			"share": "Share",
+			"retry": "Retry"
 		},
 		"errors": {
 			"loadExercises": "An error occurred while loading exercises.",
-			"loadPlans": "Unable to load plans."
+			"loadPlans": "Unable to load plans.",
+			"loadPlan": "Unable to load plan details.",
+			"serverUnreachable": "Can't reach the server. Check your connection and try again."
 		},
 		"notifications": {
 			"planDeleted": "Plan deleted successfully.",
@@ -2174,8 +2435,15 @@
 				"desc": "Create training programs, organize days, and assign them to trainees easily."
 			},
 			"stats": {
+				"totalPlans": "Total plans",
+				"totalHint": "Matching the current search",
 				"globalPlans": "Global plans",
+				"globalHint": "Shared library for everyone",
 				"personalPlans": "My personal plans",
+				"personalHint": "Created by your team",
+				"activeOnPage": "Active plans",
+				"clientsOnPage": "Assigned clients",
+				"onThisPage": "On this page",
 				"withoutDays": "Plans without days",
 				"unassigned": "Unassigned plans",
 				"activeAssignments": "Active assignments"
@@ -2186,13 +2454,25 @@
 				"newestFirst": "Newest first",
 				"sortByDate": "Sort by date"
 			},
+			"usersModal": {
+				"title": "Plan users",
+				"count": "{count, plural, one {# user} other {# users}}",
+				"loading": "Loading users…",
+				"loadFailed": "Failed to load users",
+				"subscriptionActive": "Active",
+				"subscriptionInactive": "Inactive",
+				"emptyTitle": "No users",
+				"emptyDesc": "No clients are using this plan yet."
+			},
 			"list": {
 				"noPlansTitle": "No plans currently",
 				"noPlansDesc": "Try searching or create a new plan.",
 				"active": "Active",
 				"inactive": "Inactive",
 				"noDescription": "No notes.",
-				"dayCountLabel": "{count} days"
+				"dayCountLabel": "{count, plural, one {# day} other {# days}}",
+				"clearSearch": "Clear search",
+				"retryHint": "Check your connection, then press Retry."
 			},
 			"modals": {
 				"previewTitle": "Plan preview",
@@ -2207,7 +2487,11 @@
 				"createdAt": "Created",
 				"actions": "Actions",
 				"active": "Active",
-				"inactive": "Inactive"
+				"inactive": "Inactive",
+				"clientsUsing": "Clients",
+				"scope": "Type",
+				"global": "Global",
+				"personal": "Personal"
 			}
 		},
 		"preview": {
@@ -2230,17 +2514,37 @@
 			"selectUsersLabel": "Choose users",
 			"selectUsersPlaceholder": "Search and select users...",
 			"removeUser": "Remove user",
-			"assigning": "Assigning..."
+			"assigning": "Assigning...",
+			"searchLabel": "Search clients by name or email",
+			"selectedCount": "{count, plural, =0 {No clients selected} one {# client selected} other {# clients selected}}",
+			"noClients": "No clients available to assign.",
+			"noMatches": "No clients match your search.",
+			"loadFailed": "Failed to load clients."
 		},
 		"builder": {
 			"namePlaceholder": "Plan name (e.g. Push/Pull/Legs...)",
+			"nameLabel": "Plan name",
+			"notesTitle": "Plan notes",
+			"notePlaceholder": "Write a note for the trainee…",
+			"addNote": "Add note",
+			"removeNote": "Remove note",
+			"emptyNotes": "No notes yet — add one",
+			"dayLabel": "Day",
+			"daysShort": "days",
+			"secondsShort": "s",
+			"addMore": "Add more",
+			"pickBlockHint": "Pick a section below to start adding exercises.",
+			"dragHandle": "Drag to reorder",
+			"durationUnit": "Duration unit",
+			"duration": "Duration",
 			"daysSectionTitle": "Days",
 			"restTime": "Rest time",
 			"exerciseNote": "Exercise note",
 			"validation": {
 				"nameRequired": "Plan name is required",
 				"needDay": "At least one day must be added",
-				"needExercisePerDay": "Each day must contain at least one exercise"
+				"needExercisePerDay": "Each day must contain at least one exercise",
+				"duplicateDay": "This day is already used"
 			},
 			"blocks": {
 				"warmup": "Warm-up",
@@ -2270,6 +2574,13 @@
 			"wednesday": "Wednesday",
 			"thursday": "Thursday",
 			"friday": "Friday"
+		},
+		"roster": {
+			"searchLabel": "Search",
+			"resultCount": "{count, plural, =0 {No workout plans} one {<strong>#</strong> workout plan} other {<strong>#</strong> workout plans}}",
+			"activeFilters": "Active filters",
+			"clearAll": "Clear all",
+			"emptyHint": "Try another plan name."
 		}
 	},
 	"MyWorkouts": {
@@ -2323,7 +2634,10 @@
 			"set": "Set",
 			"weight": "Weight",
 			"reps": "Reps",
-			"done": "Done"
+			"done": "Done",
+			"kg": "kg",
+			"repUnit": "rep",
+			"repUnitPlural": "reps"
 		},
 		"actions": {
 			"removeSet": "Remove set",
@@ -2407,11 +2721,26 @@
 			"ai_assist": "AI assistant",
 			"generate": "Generate",
 			"duplicate": "Duplicate",
-			"duplicated": "Duplicated"
+			"duplicated": "Duplicated",
+			"view_users": "View clients",
+			"retry": "Retry",
+			"remove_item": "Remove item",
+			"remove_supplement": "Remove supplement",
+			"close": "Close",
+			"add_recipe": "Add recipe",
+			"collapse": "Collapse",
+			"expand": "Expand",
+			"assigning": "Assigning…"
 		},
 		"stats": {
 			"global_plans": "Global plans",
-			"my_plans": "My plans"
+			"my_plans": "My plans",
+			"total_plans": "Total plans",
+			"total_hint": "Matching the current search",
+			"global_hint": "Shared with every gym",
+			"my_hint": "Created by your team",
+			"clients_on_page": "Clients on page",
+			"on_this_page": "Counted on this page"
 		},
 		"search": {
 			"placeholder": "Search for a plan by name…",
@@ -2428,7 +2757,14 @@
 			"details_title": "Meal plan details",
 			"duplicate_title": "Duplicate plan",
 			"assign_select_client": "Choose client",
-			"assign_placeholder": "Choose a client from the list"
+			"assign_placeholder": "Choose a client from the list",
+			"plan_users_title": "Plan clients",
+			"assign_title_named": "Assign “{name}”",
+			"plan_users_count": "{count, plural, =0 {No clients} one {# client} other {# clients}}",
+			"subscription_active": "Active",
+			"subscription_inactive": "Inactive",
+			"no_plan_users": "No clients on this plan yet",
+			"no_plan_users_desc": "Assign the plan to a client to see them here."
 		},
 		"form": {
 			"plan_name": "Plan name",
@@ -2447,12 +2783,24 @@
 			"qty": "Quantity",
 			"select_client": "Select client",
 			"alternative_item": "Alternative item",
-			"add_alternative": "Add alternative"
+			"add_alternative": "Add alternative",
+			"unit": "Unit",
+			"kcal_short": "kcal",
+			"meal_n": "Meal {n}",
+			"day_custom_hint": "Custom meals for this day",
+			"day_uses_base": "Uses the base day meals",
+			"meals_count": "{count, plural, =0 {No meals} one {# meal} other {# meals}}",
+			"items_count": "{count, plural, =0 {No items} one {# item} other {# items}}",
+			"kcal_per_day": "kcal / day",
+			"basics": "Plan details",
+			"base_day_hint": "These meals apply to every day unless a day is customized.",
+			"customize_days_hint": "Override the base meals for specific weekdays."
 		},
 		"unit": {
 			"g": "g",
 			"count": "count",
-			"count_short": "piece"
+			"count_short": "piece",
+			"mg": "mg"
 		},
 		"days": {
 			"monday": "Monday",
@@ -2482,17 +2830,29 @@
 			"createdAt": "Created",
 			"actions": "Actions",
 			"description": "Description",
-			"notes": "Notes"
+			"notes": "Notes",
+			"clientsUsing": "Clients",
+			"scope": "Scope",
+			"global": "Global",
+			"personal": "Personal",
+			"schedule": "Schedule",
+			"custom_days": "Custom days",
+			"same_every_day": "Same every day"
 		},
 		"list": {
 			"empty_title": "No plans",
 			"empty_desc": "Try a different search or create a new plan.",
 			"no_desc": "No description.",
-			"no_clients": "No clients"
+			"no_clients": "No clients",
+			"retry_hint": "Check your connection, then retry."
 		},
 		"assign": {
 			"title": "Assign to",
-			"select_client": "Choose a client"
+			"select_client": "Choose a client",
+			"load_failed": "Failed to load clients",
+			"replace_hint": "The selected client’s current meal plan will be replaced by this plan.",
+			"search_label": "Search clients by name or email",
+			"no_matches": "No clients match your search"
 		},
 		"confirm": {
 			"delete_title": "Delete plan?",
@@ -2510,10 +2870,14 @@
 			"ai_filled": "The plan was filled using AI. Review and edit as needed.",
 			"ai_failed": "Failed to generate plan data with AI",
 			"duplicated": "Plan duplicated successfully",
-			"duplicate_failed": "Failed to duplicate plan"
+			"duplicate_failed": "Failed to duplicate plan",
+			"load_failed": "Failed to load plan details"
 		},
 		"notes": {
-			"placeholder": "Write a note and press Enter…"
+			"placeholder": "Write a note and press Enter…",
+			"add": "Add note",
+			"remove": "Remove note",
+			"empty": "No notes yet — add the first one"
 		},
 		"validation": {
 			"required": "Required",
@@ -2522,13 +2886,50 @@
 			"hhmm": "Time format HH:MM",
 			"add_item": "Add at least one item",
 			"add_meal": "Add at least one meal",
-			"plan_name_required": "Plan name is required"
+			"plan_name_required": "Plan name is required",
+			"fix_errors": "Please fix the highlighted fields"
 		},
 		"empty": {
 			"no_meals_hint": "No meals. Press «Add meal» to get started."
 		},
 		"header": {
 			"FiberTarget": "Fiber"
+		},
+		"copy_suffix": "(copy)",
+		"errors": {
+			"load_plans": "Failed to load meal plans",
+			"server_unreachable": "Cannot reach the server. Check your connection and try again."
+		},
+		"builder": {
+			"drag_handle": "Drag to reorder"
+		},
+		"recipes": {
+			"label": "Recipe",
+			"load_failed": "Failed to load recipes",
+			"searchPlaceholder": "Search recipes…",
+			"pickerTitle": "Choose recipe",
+			"empty": "No recipes found"
+		},
+		"ai": {
+			"default_prompt": "Create a 2300 calorie recomposition meal plan with 5 meals per day.",
+			"title": "AI meal plan generator",
+			"prompt_label": "Describe the plan",
+			"hint": "The generated meals replace the base day meals. Review before saving."
+		},
+		"preview": {
+			"every_day": "Every day",
+			"meals_per_day": "Meals / day",
+			"avg_kcal": "Avg kcal / day",
+			"no_meals": "No meals in this plan yet",
+			"created_at": "Created",
+			"updated_at": "Updated"
+		},
+		"roster": {
+			"searchLabel": "Search",
+			"resultCount": "{count, plural, =0 {No meal plans} one {<strong>#</strong> meal plan} other {<strong>#</strong> meal plans}}",
+			"activeFilters": "Active filters",
+			"clearAll": "Clear all",
+			"emptyHint": "Try another plan name."
 		}
 	},
 	"forms": {
@@ -2537,6 +2938,16 @@
 			"new": "New form",
 			"title": "Form management",
 			"desc": "Create and manage your custom forms"
+		},
+		"stats": {
+			"total": "Total forms",
+			"totalHint": "All forms available to you",
+			"own": "My forms",
+			"ownHint": "Created by you",
+			"shared": "Shared forms",
+			"sharedHint": "Shared with you",
+			"fields": "Total fields",
+			"fieldsHint": "Across all forms"
 		},
 		"table": {
 			"title": "Title",
@@ -2610,6 +3021,9 @@
 		"editor": {
 			"fields": "Fields",
 			"add_field": "Add field",
+			"summary": "{fields, plural, =0 {No fields yet} one {# field} other {# fields}} · {required} required",
+			"palette": "Field types",
+			"palette_hint": "Click a type to add it",
 			"label": "Label",
 			"type": "Type",
 			"required": "Required",
@@ -2633,6 +3047,17 @@
 			"create_failed": "Failed to create form",
 			"update_failed": "Failed to update form",
 			"delete_failed": "Failed to delete form"
+		},
+		"roster": {
+			"all": "All",
+			"own": "Mine",
+			"shared": "Shared",
+			"searchLabel": "Search",
+			"owner": "Owner",
+			"resultCount": "{count, plural, =0 {No forms} one {<strong>#</strong> form} other {<strong>#</strong> forms}}",
+			"activeFilters": "Active filters",
+			"clearAll": "Clear all",
+			"emptyHint": "Try another search or owner filter, or create a form."
 		}
 	},
 	"publicForm": {
@@ -2645,7 +3070,8 @@
 		"messages": {
 			"load_failed": "An error occurred while loading the form.",
 			"submit_success": "Form submitted successfully.",
-			"submit_failed": "Failed to submit form, please try again."
+			"submit_failed": "Failed to submit form, please try again.",
+			"upload_failed": "Could not upload the file. Try again."
 		},
 		"errors": {
 			"not_found_title": "Form not found",
@@ -2749,6 +3175,12 @@
 			"all_forms_note": "Only the first page of each form is displayed (aggregated view).",
 			"open": "Open"
 		},
+		"stats": {
+			"totalHint": "All responses loaded for the current form filter",
+			"shownHint": "Still waiting for a coach to look",
+			"reviewedHint": "Already marked reviewed",
+			"formsHint": "Forms that received answers"
+		},
 		"review": {
 			"aria_label": "Set review status",
 			"label": "Review",
@@ -2773,6 +3205,7 @@
 			"refresh": "Refresh",
 			"load_more": "Load More",
 			"delete": "Delete",
+			"cancel": "Cancel",
 			"confirm_delete": "Are you sure you want to delete this item?"
 		},
 		"empty": {
@@ -2802,6 +3235,23 @@
 			"assign_optional": "Assign (optional) — enter user ID",
 			"assign_optional_ph": "You can assign later from the submission details",
 			"cta": "Create"
+		},
+		"roster": {
+			"all": "All",
+			"waiting": "Waiting",
+			"reviewed": "Reviewed",
+			"searchLabel": "Search",
+			"formFilter": "Form",
+			"filters": "Filters",
+			"reset": "Reset",
+			"done": "Done",
+			"resultCount": "{count, plural, =0 {No responses} one {<strong>#</strong> response} other {<strong>#</strong> responses}}",
+			"activeFilters": "Active filters",
+			"clearAll": "Clear all",
+			"reviewPending": "{count, plural, one {# waiting} other {# waiting}}",
+			"emptyHint": "Try another search, form, or review filter.",
+			"markReviewed": "Mark reviewed",
+			"markUnreviewed": "Mark unreviewed"
 		}
 	},
 	"reports": {
@@ -2844,6 +3294,9 @@
 		"filters": {
 			"title": "Filters",
 			"apply": "Apply",
+			"user": "User",
+			"userPlaceholder": "Select a user",
+			"allUsers": "All users",
 			"reviewed": {
 				"label": "Review status",
 				"any": "All",
@@ -2952,6 +3405,9 @@
 	"settings": {
 		"title": "Settings",
 		"subtitle": "Adjust your platform identity and client experience from one place",
+		"loading": "Loading…",
+		"remove": "Remove",
+		"unsavedChanges": "Remember to save your changes",
 		"export": "Export",
 		"import": "Import",
 		"save": "Save changes",
@@ -3397,8 +3853,17 @@
 				"daysElapsed": "Days elapsed",
 				"checkIns": "Weekly reports"
 			},
+			"snapshot": {
+				"title": "Snapshot",
+				"subtitle": "Where this client stands right now",
+				"daysToExpiry": "Days to plan end",
+				"latestWeight": "Latest weight",
+				"latestWaist": "Latest waist",
+				"totalCheckins": "Total check-ins"
+			},
 			"trend": {
 				"title": "Weight progress",
+				"subtitle": "Weight over the tracked period",
 				"legend": {
 					"current": "Current",
 					"min": "Min",
@@ -3411,20 +3876,26 @@
 				}
 			},
 			"workout": {
+				"title": "Workout plan",
+				"subtitle": "Active training plan",
 				"daysShort": "days",
 				"viewPlan": "View plan"
 			},
 			"meal": {
+				"title": "Meal plan",
+				"subtitle": "Active nutrition plan",
 				"daysShort": "days",
 				"viewPlan": "View plan"
 			},
 			"checkins": {
 				"title": "Weekly reports",
+				"subtitle": "Recent weekly check-ins",
 				"empty": "No weekly reports yet",
 				"more": "More"
 			},
 			"identity": {
 				"title": "Client information",
+				"subtitle": "Account and membership",
 				"client": "Client",
 				"membership": "Membership type",
 				"gender": "Gender",
@@ -3440,7 +3911,8 @@
 			"units": {
 				"kg": "kg",
 				"cm": "cm",
-				"days": "day"
+				"days": "day",
+				"dayShort": "d"
 			}
 		},
 		"measurements": {
@@ -3453,13 +3925,23 @@
 		}
 	},
 	"workoutsProgress": {
+		"title": "Workout progress",
+		"subtitle": "Training load, sessions, and personal records",
 		"loading": "Loading...",
 		"empty": "No data available",
 		"kpi": {
+			"title": "Training snapshot",
+			"subtitle": "Updated {date}",
 			"adherence": "Adherence rate",
+			"daysTrained": "{n} days trained",
 			"totalVolume": "Total training volume",
+			"volumeTotal": "Total training volume",
+			"avgPerSession": "{n} kg per session",
 			"kg": "kg",
 			"sessions": "Sessions",
+			"avgSetsPerSession": "{n} sets per session",
+			"lastWorkout": "Last workout",
+			"streak": "{n}-day streak",
 			"prs": "Personal records"
 		},
 		"sessions": {
@@ -3474,8 +3956,13 @@
 			"byAttempts": "Most repeated exercises",
 			"byVolume": "Exercises by training volume"
 		},
+		"top": {
+			"byAttempts": "Most repeated exercises",
+			"byVolume": "Exercises by training volume"
+		},
 		"prs": {
 			"title": "Personal records",
+			"subtitle": "{n} records",
 			"e1rm": "{n} kg (1RM)",
 			"weight": "{n} kg",
 			"reps": "{n} reps"
@@ -3489,23 +3976,38 @@
 		"loading": "Loading...",
 		"empty": "No data available",
 		"kpi": {
+			"title": "Nutrition snapshot",
+			"subtitle": "Meals, adherence, and supplements",
 			"mealsLogged": "Logged meals",
+			"daysCovered": "{n} days covered",
 			"adherence": "Adherence rate",
+			"adherenceAvg": "Average adherence",
+			"scale5": "Scale of 5",
 			"supplements": "Supplements",
-			"daysTracked": "Tracked days"
+			"taken": "Marked taken",
+			"daysTracked": "Tracked days",
+			"lastLog": "Last log",
+			"latestHint": "Most recent entry"
 		},
 		"adherence": {
 			"title": "Daily adherence rate",
+			"subtitle": "How closely meals matched the plan",
 			"caption": "Last 14 days"
 		},
 		"meals": {
 			"title": "Daily meals"
 		},
+		"mealsDensity": {
+			"title": "Meals by day",
+			"subtitle": "How many meals were logged each day"
+		},
 		"topFoods": {
-			"title": "Most frequent foods"
+			"title": "Most frequent foods",
+			"subtitle": "Foods logged most often"
 		},
 		"logs": {
 			"title": "Meal log",
+			"subtitle": "Recent meals and supplements",
 			"at": "at",
 			"adherence": "Adherence: {n}%",
 			"items": "Items",
@@ -3518,9 +4020,20 @@
 		"error": "Error loading reports",
 		"empty": "No weekly reports yet",
 		"kpi": {
+			"title": "Weekly reports",
+			"subtitle": "Read status and photos",
+			"total": "Total",
 			"totalReports": "Total reports",
+			"pages": "{n} pages",
 			"unread": "Unread",
-			"withPhotos": "Contains photos"
+			"unreadHint": "Not opened yet",
+			"withPhotos": "Contains photos",
+			"withPhotosHint": "Reports with photos",
+			"latestWeek": "Latest week"
+		},
+		"list": {
+			"title": "Report list",
+			"subtitle": "Open a week to review the details"
 		},
 		"card": {
 			"weekOf": "Week",
@@ -3543,7 +4056,8 @@
 			"title": "Training",
 			"sleepEnough": "Enough sleep",
 			"intensityOk": "Workout intensity is appropriate",
-			"shapeChange": "Change in physique"
+			"shapeChange": "Change in physique",
+			"cardio": "Cardio adherence"
 		},
 		"measurements": {
 			"title": "Measurements",
@@ -3809,7 +4323,7 @@
 			"header": {
 				"dailyTarget": "Daily target",
 				"todayCalories": "Today's calories",
-				"mealsSelectedDay": "Meals (selected day)",
+				"mealsSelectedDay": "Today's Meals",
 				"notes": "Coach notes",
 				"history": "History",
 				"FiberTarget": "Fiber",
@@ -3830,18 +4344,25 @@
 				"defaultTitle": "Meal {index}",
 				"title": "Meal {index}",
 				"done": "Done",
+				"markAll": "Mark All",
+				"allMarked": "All Marked",
+				"mealsCompleted": "Completed Meals",
 				"markAllDone": "Mark the entire meal as completed",
 				"itemDoneTag": "Done"
 			},
 			"units": {
-				"kcal": "kcal"
+				"kcal": "kcal",
+				"kcalShort": "kcal",
+				"count": "count"
 			},
 			"supplements": {
 				"title": "Supplements",
 				"bestWith": "Best with: {value}",
 				"bestWithLabel": "Best with:",
 				"takenTag": "Taken",
+				"takenShort": "Taken",
 				"markTaken": "Mark as taken",
+				"markTakenShort": "Mark as Taken",
 				"logTitle": "Supplements"
 			},
 			"inline": {
@@ -3862,6 +4383,458 @@
 			"recipe": "Recipe",
 			"showRecipeDetails": "Show details",
 			"closeRecipeDetails": "Close recipe details"
+		},
+		"guide": {
+			"buttonLabel": "Food exchange guide",
+			"title": "Food exchange guide",
+			"subtitle": "Food groups · portions · calories",
+			"disclaimer": "These values are estimates and can vary by brand or preparation. Ask a qualified dietitian for a plan that fits your health needs.",
+			"sections": {
+				"measurements": {
+					"shortTitle": "Measures",
+					"title": "Common measurements",
+					"subtitle": "A quick unit conversion reference",
+					"note": "Keep these measures handy so daily portions stay accurate.",
+					"table": {
+						"headers": [
+							"Unit",
+							"Grams (g)",
+							"Millilitres (ml)"
+						],
+						"rows": [
+							[
+								"1 tablespoon (Tbsp)",
+								"15 g",
+								"15 ml"
+							],
+							[
+								"1 teaspoon (Tsp)",
+								"5 g",
+								"5 ml"
+							],
+							[
+								"4 level tablespoons",
+								"—",
+								"¼ cup"
+							],
+							[
+								"½ cup",
+								"120 g",
+								"120 ml"
+							],
+							[
+								"1 full cup",
+								"240 g",
+								"240 ml"
+							],
+							[
+								"1 ounce (oz)",
+								"30 g",
+								"30 ml"
+							]
+						]
+					},
+					"items": []
+				},
+				"dairy": {
+					"shortTitle": "Dairy",
+					"title": "Milk and dairy group",
+					"subtitle": "1 serving = 12 g carbohydrate",
+					"note": "This group covers different milks. Cheese is counted with meats because of its protein. Cream and thick labneh are counted with fats.",
+					"badge": "1 cup = 240 ml",
+					"caloriesInfo": [
+						{
+							"value": "90 kcal",
+							"label": "Fat-free"
+						},
+						{
+							"value": "120 kcal",
+							"label": "Low-fat"
+						},
+						{
+							"value": "150 kcal",
+							"label": "Whole"
+						}
+					],
+					"itemsTitle": "Exchange list — 1 serving",
+					"items": [
+						{
+							"amount": "1 cup",
+							"name": "Milk (whole / low-fat / fat-free)"
+						},
+						{
+							"amount": "¾ cup",
+							"name": "Yogurt"
+						},
+						{
+							"amount": "1 cup",
+							"name": "Buttermilk"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Evaporated milk"
+						},
+						{
+							"amount": "2 tablespoons",
+							"name": "Dry milk powder"
+						}
+					]
+				},
+				"grains": {
+					"shortTitle": "Starches",
+					"title": "Grains and starches",
+					"subtitle": "1 serving = 15 g carbohydrate = 80 kcal",
+					"note": "This group includes pasta, rice, starchy vegetables, and cooked legumes such as beans, peas, and lentils, plus foods made from grains.",
+					"badge": "15 g carb / serving",
+					"itemsTitle": "Exchange list — 1 serving",
+					"items": [
+						{
+							"amount": "1 slice",
+							"name": "Bread"
+						},
+						{
+							"amount": "¼ loaf",
+							"name": "Arabic or pita bread"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Cooked oats"
+						},
+						{
+							"amount": "½ cup (4 Tbsp)",
+							"name": "Cooked rice"
+						},
+						{
+							"amount": "½ cup (4 Tbsp)",
+							"name": "Cooked pasta"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Cooked lentils"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Cooked green peas"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Cooked chickpeas"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Cooked beans"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Cooked bulgur"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Corn kernels"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Mashed potato"
+						},
+						{
+							"amount": "1 small",
+							"name": "Baked or boiled potato"
+						},
+						{
+							"amount": "¾ cup",
+							"name": "Puffed breakfast cereal"
+						},
+						{
+							"amount": "2 pieces",
+							"name": "Dry toast"
+						},
+						{
+							"amount": "3 pieces",
+							"name": "Digestive biscuits"
+						},
+						{
+							"amount": "½ piece",
+							"name": "Hamburger or hot-dog bun"
+						},
+						{
+							"amount": "3 tablespoons",
+							"name": "White or wheat flour"
+						},
+						{
+							"amount": "3 cups",
+							"name": "Light popcorn (no butter)"
+						}
+					]
+				},
+				"vegetables": {
+					"shortTitle": "Vegetables",
+					"title": "Non-starchy vegetables",
+					"subtitle": "1 serving = 5 g carbohydrate = 25 kcal",
+					"note": "Only non-starchy vegetables belong here. Starchy vegetables such as potato, corn, and peas count in the grains and starches group.",
+					"badge": "5 g carb / serving",
+					"itemsTitle": "Exchange list — 1 serving",
+					"items": [
+						{
+							"amount": "1 cup",
+							"name": "Raw vegetables or green salad"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Cooked vegetables (steamed or boiled)"
+						}
+					]
+				},
+				"fruits": {
+					"shortTitle": "Fruit",
+					"title": "Fruit group",
+					"subtitle": "1 serving = 15 g carbohydrate = 60 kcal",
+					"badge": "60 kcal / serving",
+					"itemsTitle": "Exchange list — 1 serving",
+					"items": [
+						{
+							"amount": "1 medium",
+							"name": "Kiwi"
+						},
+						{
+							"amount": "12",
+							"name": "Cherries"
+						},
+						{
+							"amount": "17 small / 10 large",
+							"name": "Grapes"
+						},
+						{
+							"amount": "1 slice / 1 cup cubes",
+							"name": "Cantaloupe"
+						},
+						{
+							"amount": "2 thin slices / 1¼ cup cubes",
+							"name": "Watermelon"
+						},
+						{
+							"amount": "1 small",
+							"name": "Apple"
+						},
+						{
+							"amount": "1 medium",
+							"name": "Peach"
+						},
+						{
+							"amount": "½ small",
+							"name": "Mango"
+						},
+						{
+							"amount": "2",
+							"name": "Mandarin or clementine"
+						},
+						{
+							"amount": "1 small",
+							"name": "Orange"
+						},
+						{
+							"amount": "1 small",
+							"name": "Pear"
+						},
+						{
+							"amount": "½",
+							"name": "Grapefruit"
+						},
+						{
+							"amount": "1 small / ½ large",
+							"name": "Banana"
+						},
+						{
+							"amount": "½ medium",
+							"name": "Pomegranate"
+						},
+						{
+							"amount": "3",
+							"name": "Dates"
+						},
+						{
+							"amount": "4",
+							"name": "Dried apricots"
+						},
+						{
+							"amount": "1¼",
+							"name": "Dried figs"
+						},
+						{
+							"amount": "2 tablespoons",
+							"name": "Raisins"
+						},
+						{
+							"amount": "¾ cup",
+							"name": "Fresh pineapple or canned in water"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Fresh orange juice"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Apple juice (no added sugar)"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Mango juice"
+						},
+						{
+							"amount": "½ cup",
+							"name": "Mixed fruit juice"
+						}
+					]
+				},
+				"proteins": {
+					"shortTitle": "Proteins",
+					"title": "Meat and protein group",
+					"subtitle": "0 g carbohydrate — grouped by fat",
+					"note": "This group is split into four fat levels. The standard serving is 30 g in each.",
+					"subGroups": [
+						{
+							"title": "Very lean",
+							"note": "Skinless chicken or turkey breast, fresh tuna or tuna canned in water, shrimp, low-fat cheese, egg whites",
+							"badge": "30 g = 35 kcal",
+							"items": [
+								"30 g low-fat cheese (under 3 g fat)",
+								"30 g cottage cheese",
+								"2 egg whites (no yolk)",
+								"30 g grilled skinless chicken breast",
+								"30 g tuna canned in water (drained)",
+								"30 g boiled shrimp"
+							]
+						},
+						{
+							"title": "Lean",
+							"note": "Lean beef or veal, skinless chicken thigh, grilled or boiled fish, tuna canned in oil (drained), grated parmesan, liver",
+							"badge": "30 g = 55 kcal",
+							"items": [
+								"30 g grilled turkey",
+								"30 g grilled beef with visible fat removed"
+							]
+						},
+						{
+							"title": "Medium fat",
+							"note": "Minced meat (under 20% fat), chicken with skin, fried fish, feta, mozzarella, or ricotta, whole egg",
+							"badge": "30 g = 75 kcal",
+							"items": [
+								"1 large whole egg",
+								"30 g medium-fat cheese slices"
+							]
+						},
+						{
+							"title": "High fat",
+							"note": "Full-fat cheeses such as cheddar, American, and Swiss, sausages, and hot dogs — keep this group small",
+							"badge": "30 g = 100 kcal",
+							"items": [
+								"30 g full-fat feta",
+								"30 g full-fat cheese slices",
+								"30 g cheddar",
+								"30 g hot dog or sausage"
+							]
+						}
+					]
+				},
+				"fats": {
+					"shortTitle": "Fats",
+					"title": "Fats and oils",
+					"subtitle": "0 g carbohydrate — 45 kcal / serving",
+					"badge": "45 kcal / serving",
+					"note": "Fats have no carbohydrate but they are calorie-dense. Watch the portion, and choose unsaturated fats when you can.",
+					"itemsTitle": "Exchange list — 1 serving",
+					"items": [
+						{
+							"amount": "1 teaspoon",
+							"name": "Vegetable oil (olive / corn / sunflower)"
+						},
+						{
+							"amount": "1 teaspoon",
+							"name": "Butter (unsalted preferred)"
+						},
+						{
+							"amount": "1 teaspoon",
+							"name": "Ghee or vegetable shortening"
+						},
+						{
+							"amount": "1 teaspoon",
+							"name": "Regular full-fat mayonnaise"
+						},
+						{
+							"amount": "3 teaspoons",
+							"name": "Light mayonnaise"
+						},
+						{
+							"amount": "2 teaspoons",
+							"name": "Tahini"
+						},
+						{
+							"amount": "2 teaspoons",
+							"name": "Natural peanut butter"
+						},
+						{
+							"amount": "1 tablespoon",
+							"name": "Cream cheese"
+						},
+						{
+							"amount": "2 tablespoons",
+							"name": "Heavy cooking cream"
+						},
+						{
+							"amount": "1 tablespoon",
+							"name": "Regular salad dressing"
+						},
+						{
+							"amount": "1 tablespoon",
+							"name": "Seeds (sesame / flax / chia)"
+						},
+						{
+							"amount": "6",
+							"name": "Whole or chopped almonds"
+						},
+						{
+							"amount": "6",
+							"name": "Cashews"
+						},
+						{
+							"amount": "10",
+							"name": "Unsalted roasted peanuts"
+						},
+						{
+							"amount": "8",
+							"name": "Black olives"
+						},
+						{
+							"amount": "10",
+							"name": "Green olives"
+						}
+					]
+				},
+				"extras": {
+					"shortTitle": "Extras",
+					"title": "Extras and sweeteners",
+					"subtitle": "Under 5 g carb = free — or 15 g carb = 60 kcal",
+					"note": "Foods under 5 g carbohydrate and 20 kcal per serving count as free. Added sugars must be counted in the daily plan.",
+					"itemsTitle": "Common sweeteners and extras",
+					"items": [
+						{
+							"amount": "1 tablespoon",
+							"name": "Ketchup — under 5 g carb / under 20 kcal"
+						},
+						{
+							"amount": "1 tablespoon",
+							"name": "Honey — 15 g carb / 60 kcal"
+						},
+						{
+							"amount": "1 tablespoon",
+							"name": "White or brown sugar — 15 g carb / 60 kcal"
+						},
+						{
+							"amount": "1 tablespoon",
+							"name": "Regular jam — 15 g carb / 60 kcal"
+						}
+					]
+				}
+			}
 		}
 	},
 	"timeField": {
@@ -3955,6 +4928,8 @@
 			"clients": "Clients",
 			"packages": "Package management",
 			"subscriptions": "Subscriptions",
+			"payments": "Record payment",
+			"communications": "Messages",
 			"clientPayments": "Client payments"
 		},
 		"tooltips": {
@@ -3972,7 +4947,16 @@
 			"moneyInThisMonth": {
 				"title": "Revenue this month",
 				"subtitle": "Monthly revenue"
-			}
+			},
+			"pendingPayments": "Pending payments",
+			"activeSubscriptions": "Active subscriptions",
+			"monthlyRevenue": "Monthly revenue",
+			"renewalRate": "Renewal rate",
+			"totalClients": "Total clients",
+			"activeClients": "Active clients",
+			"urgentRenewal": "Urgent renewal (under 7 days)",
+			"soonRenewal": "Renewal soon (under 30 days)",
+			"totalPayments": "Total payments"
 		},
 		"packages": {
 			"title": "Package management",
@@ -3980,6 +4964,16 @@
 			"addNew": "Add new package",
 			"edit": "Edit package",
 			"sendWhatsApp": "Send via WhatsApp",
+			"sendToClient": "Send to client on WhatsApp",
+			"sendAllAsPdf": "Send all packages",
+			"mostPopular": "Most popular",
+			"starter": "Starter",
+			"gold": "Gold",
+			"platinum": "Platinum",
+			"packageDetails": "Package details",
+			"editPlan": "Edit package",
+			"addPlan": "Add package",
+			"subtitle": "Create and manage the packages you offer",
 			"exportAll": "Send all packages",
 			"exportingPdf": "Exporting PDF for package:",
 			"exportSuccess": "Packages sent successfully to {phone}",
@@ -3990,7 +4984,13 @@
 				"phoneLabel": "Phone number",
 				"info": "A comprehensive PDF containing details of all available packages will be generated",
 				"send": "Send via WhatsApp",
-				"sending": "Sending..."
+				"sending": "Sending...",
+				"sent": "Sent",
+				"preview": "Message preview",
+				"selectClient": "Choose who receives this",
+				"sendingTo": "Sending to",
+				"offerIntro": "Here is our package offer",
+				"outro": "Reply any time to subscribe or ask a question"
 			},
 			"form": {
 				"nameAr": "Package name (Arabic)",
@@ -4003,8 +5003,12 @@
 				"monthly": "Monthly",
 				"quarterly": "Quarterly",
 				"semiAnnual": "Semi-annual",
-				"annual": "Annual"
+				"annual": "Annual",
+				"oneTime": "One time"
 			}
+		},
+		"pdf": {
+			"allPackages": "All packages"
 		},
 		"clients": {
 			"title": "Client management",
@@ -4021,6 +5025,9 @@
 			"package": "Package",
 			"renewal": "Renewal",
 			"startDate": "Start date",
+			"expired": "Ended",
+			"results": "results",
+			"reminderQueued": "Reminder queued",
 			"status": {
 				"active": "Active",
 				"expiringSoon": "Expiring soon",
@@ -4114,7 +5121,13 @@
 			"amountLow": "Amount (lowest first)",
 			"reset": "Reset",
 			"show": "Show",
-			"hide": "Hide"
+			"hide": "Hide",
+			"status": "Status",
+			"package": "Package",
+			"type": "Type",
+			"subscription": "Subscription",
+			"withdrawal": "Withdrawal",
+			"refund": "Refund"
 		},
 		"payments": {
 			"history": "Payment history",
@@ -4136,6 +5149,15 @@
 			"optional": "Optional",
 			"periodFrom": "From date",
 			"periodTo": "To date",
+			"clientName": "Client name",
+			"clientNamePlaceholder": "e.g. Ahmed Mohamed",
+			"paymentMethod": "Payment method",
+			"notes": "Notes",
+			"notesPlaceholder": "Optional notes",
+			"methodCash": "Cash",
+			"methodBank": "Bank transfer",
+			"methodCard": "Card",
+			"methodWallet": "Wallet",
 			"submit": "Record payment",
 			"submitting": "Recording...",
 			"success": "Payment recorded successfully!",
@@ -4165,7 +5187,15 @@
 			"loading": "Loading...",
 			"noData": "No data",
 			"yes": "Yes",
-			"no": "No"
+			"no": "No",
+			"all": "All",
+			"search": "Search...",
+			"apply": "Apply",
+			"deleted": "Deleted",
+			"saved": "Saved",
+			"refresh": "Refresh",
+			"back": "Back",
+			"whatsapp": "WhatsApp"
 		},
 		"withdrawals": {
 			"title": "Withdrawal requests",
@@ -4185,6 +5215,37 @@
 			"title": "Subscription status",
 			"endDate": "End date",
 			"renewNow": "Renew now"
+		},
+		"communications": {
+			"selectClient": "Choose a client",
+			"chooseClient": "Choose a client...",
+			"chooseClientFirst": "Choose a client to preview or send a message",
+			"messageType": "Message type",
+			"messagePreview": "Message preview",
+			"customPlaceholder": "Write a custom message...",
+			"sendWhatsapp": "Send on WhatsApp",
+			"log": "Message log",
+			"noLogs": "No messages for this client yet",
+			"sendError": "Could not send the message",
+			"greeting": "Hello",
+			"contactUs": "Reply any time if you want to renew or ask a question.",
+			"reminderText": "Your {package} subscription ends in {days} days. Renew early to keep your place.",
+			"types": {
+				"reminder": "Expiry reminder",
+				"renewal": "Renewal request",
+				"welcome": "Welcome",
+				"custom": "Custom message"
+			}
+		},
+		"errors": {
+			"loadStats": "Could not load billing stats",
+			"loadClients": "Could not load clients",
+			"loadPayments": "Could not load payments",
+			"loadPlans": "Could not load packages",
+			"loadInvoices": "Could not load invoices",
+			"savePlan": "Could not save the package",
+			"deletePlan": "Could not delete the package",
+			"deleteInvoice": "Could not update the invoice"
 		}
 	},
 	"profile": {
@@ -4726,10 +5787,31 @@
 		"stats": {
 			"totalRecipes": "Total recipes",
 			"shownOnPage": "Shown on page",
-			"avgCalories": "Average calories"
+			"avgCalories": "Average calories",
+			"totalHint": "Matching current filters",
+			"perRecipeKcal": "kcal per recipe",
+			"avgProtein": "Average protein",
+			"perRecipeGrams": "grams per recipe",
+			"mealTypes": "Meal types",
+			"mealTypesHint": "Categories in the library"
 		},
 		"search": {
 			"placeholder": "Search by recipe name, ingredients, or steps..."
+		},
+		"errors": {
+			"load": "Failed to load recipes",
+			"serverUnreachable": "Can't reach the server. Check your connection or make sure the API is running, then retry.",
+			"save": "Failed to save the recipe",
+			"delete": "Failed to delete the recipe"
+		},
+		"toasts": {
+			"created": "Recipe added",
+			"updated": "Recipe updated",
+			"deleted": "Recipe deleted"
+		},
+		"preview": {
+			"title": "Recipe details",
+			"watchVideo": "Watch video"
 		},
 		"table": {
 			"name": "Recipe name",
@@ -4744,7 +5826,14 @@
 			"filters": "Filters",
 			"apply": "Apply",
 			"emptyTitle": "No recipes",
-			"emptySubtitle": "No matching recipes were found"
+			"emptySubtitle": "No matching recipes were found",
+			"emptyStart": "Add your first recipe to start building the library.",
+			"actions": "Actions",
+			"view": "View",
+			"video": "Video",
+			"clearFilters": "Clear",
+			"retry": "Retry",
+			"retryHint": "Use Retry above once the connection is back."
 		},
 		"slidePanel": {
 			"addTitle": "Add recipe",
@@ -4753,6 +5842,17 @@
 			"changePhoto": "Change photo",
 			"uploadPhoto": "Upload a recipe photo",
 			"photoFormats": "JPG, PNG, WEBP",
+			"photoHint": "Drag & drop or click — JPG, PNG, WEBP",
+			"resetPhoto": "Discard new photo",
+			"createCategory": "Type a new category…",
+			"addItem": "Add",
+			"removeItem": "Remove",
+			"emptyList": "Nothing added yet — click to add",
+			"enterHint": "Press Enter in a list to add the next line",
+			"validation": {
+				"titleRequired": "Recipe name is required",
+				"invalidUrl": "Enter a valid link starting with http:// or https://"
+			},
 			"cancel": "Cancel",
 			"save": "Save changes",
 			"add": "Add recipe",
@@ -4778,6 +5878,7 @@
 				"fat": "Fat",
 				"kcal": "kcal",
 				"grams": "grams",
+				"gramsShort": "g",
 				"ingredientPlaceholder": "Type an ingredient",
 				"stepPlaceholder": "Type a preparation step",
 				"tipsPlaceholder": "Write tips, each line as a separate tip",
@@ -4788,6 +5889,17 @@
 				"medium": "Medium",
 				"high": "High"
 			}
+		},
+		"roster": {
+			"searchLabel": "Search",
+			"resultCount": "{count, plural, =0 {No recipes} one {<strong>#</strong> recipe} other {<strong>#</strong> recipes}}",
+			"activeFilters": "Active filters",
+			"clearAll": "Clear all",
+			"mealType": "Meal type",
+			"allTypes": "All meal types",
+			"reset": "Reset",
+			"done": "Done",
+			"emptyHint": "Try another name or meal type."
 		}
 	},
 	"table": {
@@ -4799,7 +5911,11 @@
 			"firstPage": "First page",
 			"lastPage": "Last page",
 			"prevPage": "Previous page",
-			"nextPage": "Next page"
+			"nextPage": "Next page",
+			"customLimit": "Custom limit",
+			"customLimitHint": "Type a number",
+			"applyLimit": "Apply",
+			"ofTotal": "of {total} users"
 		},
 		"toolbar": {
 			"search": "Search...",
@@ -4817,15 +5933,16 @@
 	},
 	"recipesPage": {
 		"recipe": "Recipe",
+		"kcal": "kcal",
 		"page": {
-			"title": "Diet recipes",
-			"desc": "Browse your healthy recipes and discover new meals"
+			"title": "Recipes",
+			"desc": "Explore your healthy recipes"
 		},
 		"stats": {
-			"totalRecipes": "Total recipes",
+			"totalRecipes": "Total Recipes",
 			"shownOnPage": "Shown",
-			"avgCalories": "Average calories",
-			"avgProtein": "Average protein"
+			"avgCalories": "Average Calories",
+			"avgProtein": "Average Protein"
 		},
 		"tabs": {
 			"all": "All"
@@ -4849,13 +5966,13 @@
 			"medium": "Medium satiety",
 			"high": "High satiety"
 		},
-		"featured": "Featured recipe",
+		"featured": "Featured",
 		"search": {
 			"placeholder": "Search for a recipe..."
 		},
 		"filter": {
-			"title": "Filters and sorting",
-			"maxCalories": "Maximum calories",
+			"title": "Filter Options",
+			"maxCalories": "Max Calories",
 			"mealType": "Meal type"
 		},
 		"sort": {
@@ -4868,13 +5985,13 @@
 			"title": "Name"
 		},
 		"table": {
-			"filters": "Filters",
+			"filters": "Filter",
 			"reset": "Reset",
-			"emptyTitle": "No recipes",
-			"emptySubtitle": "Try changing the filters or searching with a different word"
+			"emptyTitle": "No Recipes",
+			"emptySubtitle": "Try adjusting the filter options"
 		},
 		"card": {
-			"viewFull": "View recipe",
+			"viewFull": "View Recipe",
 			"nutrition": "Nutrition facts",
 			"calories": "Calories",
 			"protein": "Protein",
@@ -5041,7 +6158,8 @@
 			"suspended": "Suspended",
 			"churned": "Churned",
 			"joinedOn": "Joined on {date}",
-			"requiresAttention": "Requires attention"
+			"requiresAttention": "Requires attention",
+			"allClear": "All clear"
 		},
 		"conv": {
 			"nutritionQA": "Nutrition Q&A",
@@ -5065,8 +6183,18 @@
 		}
 	},
 	"clientDashboard": {
-		"title": "Client Dashboard",
-		"subtitle": "Overview of your progress",
+		"title": "Statistics",
+		"subtitle": "Your full progress in one place",
+		"progressRings": "Progress Rings",
+		"progressRingsSub": "Adherence, nutrition, and weekly",
+		"streak": {
+			"thisWeek": "This Week",
+			"sessions": "Sessions",
+			"allTime": "All Time",
+			"totalSessions": "Total Sessions",
+			"weekStart": "Week Start",
+			"weekEnd": "Week End"
+		},
 		"overview": "Overview",
 		"liveLabel": "Live",
 		"refresh": "Refresh",
@@ -5081,7 +6209,7 @@
 			"points": "Points"
 		},
 		"kpi": {
-			"totalSessions": "Total sessions",
+			"totalSessions": "Sessions",
 			"personalRecords": "Personal records",
 			"totalVolume": "Total volume",
 			"totalMeals": "Total meals",
@@ -5811,6 +6939,7 @@
 				"reps": "Reps"
 			},
 			"buttons": {
+				"add": "Add",
 				"addSet": "Add set",
 				"save": "Save"
 			}
@@ -5824,9 +6953,10 @@
 			"save": "Save Changes",
 			"loading": "Loading...",
 			"unsavedChanges": "You have unsaved changes",
-			"savedSuccess": "✓ Saved successfully",
+			"savedSuccess": "Report settings saved",
 			"errors": {
-				"saveFailed": "An error occurred while saving, please try again"
+				"saveFailed": "An error occurred while saving, please try again",
+				"loadFailed": "Couldn't load the report settings"
 			},
 			"tabs": {
 				"fields": "Questions & Groups",
@@ -5841,7 +6971,24 @@
 				"enableGroup": "Enable Group",
 				"addFirstField": "Add First Question",
 				"newGroupDefaultLabel": "New Group",
-				"activeQuestionsSuffix": "active questions"
+				"activeQuestionsSuffix": "active questions",
+				"builtin": "Built-in",
+				"activeCount": "{active}/{total} active",
+				"enabled": "Show this group to clients",
+				"rename": "Rename group",
+				"nameLabel": "Group name",
+				"delete": "Delete group",
+				"collapse": "Collapse",
+				"expand": "Expand",
+				"dragHandle": "Drag to reorder",
+				"restoreFields": "{count, plural, one {Restore # removed question} other {Restore # removed questions}}",
+				"removedSections": "Removed sections:",
+				"restoreSection": "Restore section",
+				"emptyTitle": "No groups yet",
+				"emptyDesc": "Add a group to start building your weekly report questions.",
+				"deleteTitle": "Delete group?",
+				"deleteMsg": "This group and all its questions will be removed from the client report once you save.",
+				"deleteBuiltinMsg": "This built-in section will be hidden from the client report once you save. You can restore it any time."
 			},
 			"fields": {
 				"required": "Required",
@@ -5852,7 +6999,16 @@
 				"helperText": "Helper text",
 				"helperPlaceholder": "e.g. Enter the value here...",
 				"options": "Options (comma-separated)",
-				"optionsPlaceholder": "Excellent, Good, Average, Poor"
+				"optionsPlaceholder": "Excellent, Good, Average, Poor",
+				"edit": "Edit question",
+				"remove": "Remove question",
+				"confirmRemove": "Click again to remove",
+				"questionLabel": "Question text",
+				"typeLabel": "Answer type",
+				"optionsChips": "Options",
+				"optionPlaceholder": "Type an option and press Enter",
+				"optionsEmpty": "Add options",
+				"builtinLocked": "Built-in question with a fixed position"
 			},
 			"fieldTypes": {
 				"boolean": "Yes / No",
@@ -5881,8 +7037,10 @@
 				"reminderMessage": "Automatic reminder message",
 				"reminderMessagePh": "Write the reminder message for clients who haven't submitted a report...",
 				"useDefault": "Restore default message",
-				"defaultInitialMessage": "Hello 👋 It's time to send your weekly follow-up report. Please fill out the report to keep track of your progress and let us know how you're doing. 💪",
-				"defaultReminderMessage": "Reminder 🔔 We haven't received your weekly follow-up report yet. Please complete it as soon as possible to stay on track with your coach. 🏋️"
+				"defaultInitialMessage": "Hello, it's time to send your weekly follow-up report. Please fill it out so we can track your progress and know how you're doing.",
+				"defaultReminderMessage": "Reminder: we haven't received your weekly follow-up report yet. Please complete it as soon as possible to stay on track with your coach.",
+				"decrease": "Decrease",
+				"increase": "Increase"
 			},
 			"days": {
 				"SU": "Sun",
@@ -5915,7 +7073,7 @@
 				"filterLate": "Late",
 				"sendToSelected": "Send reminder to {count} selected",
 				"sendReminder": "Send Reminder",
-				"reminderSent": "Reminders sent successfully ✓",
+				"reminderSent": "Reminders sent successfully",
 				"search": "Search by client name or email...",
 				"selectAll": "Select All",
 				"deselectAll": "Deselect All",
@@ -5926,8 +7084,18 @@
 				"whatsapp": "WhatsApp",
 				"call": "Call",
 				"chat": "Chat",
-				"profile": "Profile"
-			}
+				"profile": "Profile",
+				"phone": "Phone",
+				"noPhoneShort": "No phone",
+				"never": "No reports yet",
+				"loadFailed": "Couldn't load clients",
+				"reminderSentCount": "{count, plural, one {Reminder sent to # client} other {Reminder sent to # clients}}",
+				"reminderNone": "No reminders were sent",
+				"reminderFailed": "Couldn't send reminders",
+				"selectedCount": "{count} selected",
+				"confirmBulkReminder": "Send a report reminder to {count} selected clients?"
+			},
+			"unsavedHint": "Save to apply the changes to your clients' report."
 		},
 		"reports": {
 			"title": "Weekly Reports",
@@ -5942,7 +7110,7 @@
 			"createdAt": "Week Date",
 			"statusReview": "Review Status",
 			"view": "View",
-			"searchPlaceholder": "Search reports...",
+			"searchPlaceholder": "Search by trainee, email or week",
 			"labels": {
 				"total": "Total Reports"
 			},
@@ -5973,7 +7141,8 @@
 			"sort": {
 				"fields": {
 					"created_at": "Created Date",
-					"updated_at": "Updated Date"
+					"updated_at": "Updated Date",
+					"weekOf": "Week date"
 				},
 				"orders": {
 					"desc": "Newest first",
@@ -5981,12 +7150,14 @@
 				}
 			},
 			"messages": {
-				"saved": "Saved"
+				"saved": "Saved",
+				"reviewedSaved": "Report marked as reviewed"
 			},
 			"errors": {
 				"load": "An error occurred while loading reports",
 				"save": "An error occurred while saving feedback",
-				"feedbackEmpty": "Please write feedback first"
+				"feedbackEmpty": "Please write feedback first",
+				"loadUsers": "Couldn't load trainees"
 			},
 			"detail": {
 				"title": "Report Details",
@@ -6041,8 +7212,17 @@
 							"details": "Details"
 						}
 					}
-				}
-			}
+				},
+				"submittedAt": "Submitted",
+				"reviewedAt": "Reviewed on",
+				"customAnswers": "Custom questions",
+				"removedQuestion": "Removed question",
+				"customQuestion": "Custom question",
+				"markReviewed": "Save & mark reviewed",
+				"updateFeedback": "Update feedback",
+				"loadFailed": "Couldn't load this report"
+			},
+			"emptyFiltered": "No reports match your search"
 		},
 		"weekly": {
 			"cardioAdherence": "Did you stick to your assigned cardio?",
@@ -6086,6 +7266,44 @@
 				"left": "Left side photo",
 				"right": "Right side photo"
 			}
+		},
+		"ui": {
+			"title": "Weekly Reports",
+			"subtitle": "Design the weekly check-in, schedule reminders, review submissions and follow up with your clients."
+		},
+		"common": {
+			"serverUnreachable": "Can't reach the server. Check your connection and try again.",
+			"retry": "Retry",
+			"retryHint": "Check your connection, then retry.",
+			"cancel": "Cancel",
+			"confirm": "Confirm",
+			"delete": "Delete",
+			"discard": "Discard",
+			"done": "Done",
+			"clearFilters": "Clear filters",
+			"actions": "Actions"
+		},
+		"stats": {
+			"clientsHint": "Clients in your gym",
+			"submittedHint": "Reported in the last 7 days",
+			"pendingHint": "Last report 7–14 days ago",
+			"lateHint": "No report for 14+ days",
+			"reportsHint": "All weekly reports",
+			"reviewedHint": "Feedback sent",
+			"awaitingHint": "Need your feedback",
+			"matching": "Matching results",
+			"matchingHint": "For the current search and filters",
+			"activeQuestions": "Active questions",
+			"activeQuestionsHint": "Shown to your clients",
+			"visibleGroups": "Visible groups",
+			"visibleGroupsHint": "Out of {total}"
+		},
+		"roster": {
+			"searchLabel": "Search",
+			"resultCount": "{count, plural, =0 {No results} one {<strong>#</strong> result} other {<strong>#</strong> results}}",
+			"activeFilters": "Active filters",
+			"clearAll": "Clear all",
+			"emptyHint": "Try another search or filter."
 		}
 	},
 	"aiContentStudio": {
@@ -7904,5 +9122,365 @@
 		"copyTop": "Copy top classes",
 		"cssModules": "CSS Modules (hashed class names)",
 		"topClasses": "Most used classes"
+	},
+	"documentEditor": {
+		"badge": "Document",
+		"placeholder": "Paste HTML or write Markdown here…\n\n<h1>Heading</h1>\n<p>Paragraph</p>",
+		"loading": "Loading editor…",
+		"words": "words",
+		"chars": "chars",
+		"edit": "Edit",
+		"preview": "Preview",
+		"modeLabel": "Mode",
+		"history": "History",
+		"historyEmpty": "Autosaved drafts appear here.",
+		"newDoc": "New document",
+		"showHistory": "Show history",
+		"hideHistory": "Hide history",
+		"delete": "Delete",
+		"untitled": "Untitled",
+		"saved": "Saved",
+		"previewEmpty": "Start writing here…",
+		"justNow": "Just now",
+		"minAgo": "m ago",
+		"hourAgo": "h ago",
+		"typography": "Typography",
+		"typographyHint": "Applies to the whole document in both Edit and Preview.",
+		"fontSize": "Font size",
+		"lineHeight": "Line height",
+		"letterSpacing": "Letter spacing",
+		"wordSpacing": "Word spacing",
+		"paragraphSpacing": "Paragraph spacing",
+		"arabicFont": "Arabic font",
+		"englishFont": "English font",
+		"reset": "Reset",
+		"rename": "Rename",
+		"renameHint": "Click to rename"
+	},
+	"notifications": {
+		"header": {
+			"title": "Notifications",
+			"subtitle": "{total} notifications · {unread} unread"
+		},
+		"stats": {
+			"total": "All",
+			"unread": "Unread",
+			"read": "Read"
+		},
+		"actions": {
+			"refresh": "Refresh",
+			"markAllRead": "Mark all read"
+		},
+		"tabs": {
+			"all": "All",
+			"unread": "Unread"
+		},
+		"filter": {
+			"all": "Type",
+			"allTypes": "All types"
+		},
+		"bulk": {
+			"selected": "{count} selected",
+			"markRead": "Mark read",
+			"selectAll": "Select all",
+			"clear": "Clear"
+		},
+		"row": {
+			"defaultTitle": "Notification",
+			"markRead": "Mark read",
+			"read": "Read",
+			"open": "Open"
+		},
+		"day": {
+			"today": "Today",
+			"yesterday": "Yesterday"
+		},
+		"time": {
+			"now": "Now",
+			"minutes": "{v}m",
+			"hours": "{v}h",
+			"days": "{v}d"
+		},
+		"empty": {
+			"title": "No notifications",
+			"desc": "Try another tab or filter"
+		},
+		"footer": {
+			"selectAll": "Select all ({count})",
+			"loadMore": "More",
+			"loading": "Loading"
+		}
+	},
+	"landing": {
+		"brand": {
+			"name": "Abdelgany Coaching"
+		},
+		"locale": {
+			"switch": "عربي"
+		},
+		"nav": {
+			"about": "About",
+			"results": "Results",
+			"programs": "Programs",
+			"faq": "FAQ"
+		},
+		"header": {
+			"cta": "Start now"
+		},
+		"hero": {
+			"eyebrow": "Online fitness coaching",
+			"headline1": "Built for your body,",
+			"headline2": "fits your time,",
+			"headline3": "hits your goal.",
+			"sub": "Training and nutrition plans written for you, real weekly check-ins, and accountability that keeps you consistent — run online, felt in real life.",
+			"cta1": "See the programs",
+			"cta2": "See client results",
+			"socialProof": "Rated 4.9 by more than 340 clients",
+			"stat1": "clients coached",
+			"stat2": "goal hit rate",
+			"stat3": "years of experience",
+			"badge": "years coaching"
+		},
+		"marquee": {
+			"0": "Custom training plans",
+			"1": "Full nutrition guidance",
+			"2": "Weekly check-ins",
+			"3": "Real accountability",
+			"4": "Results that last",
+			"5": "Daily support"
+		},
+		"audience": {
+			"0": {
+				"title": "Busy schedules",
+				"desc": "Short on time but serious about the goal? The program is built around your real week — not the other way around."
+			},
+			"1": {
+				"title": "Complete beginners",
+				"desc": "No gym history? That is fine. We start from zero and build confidence along with strength."
+			},
+			"2": {
+				"title": "Fat-loss clients",
+				"desc": "Done with crash diets? This is a structured, evidence-based way to lose fat that you can actually keep."
+			},
+			"3": {
+				"title": "Body recomposition",
+				"desc": "Lose fat and build muscle together — a precise, long-game approach that compounds."
+			},
+			"eyebrow": "Who this is for",
+			"heading": "Different goals. One coach who stays."
+		},
+		"results": {
+			"0": {
+				"name": "Sara M.",
+				"stat": "-14 kg",
+				"goal": "Fat loss",
+				"quote": "I had been trying to lose this weight for three years. In four months with Abdelgany I finally understood what was holding me back."
+			},
+			"1": {
+				"name": "Omar K.",
+				"stat": "+9 kg muscle",
+				"goal": "Recomposition",
+				"quote": "I lost 6 kg of fat and built muscle at the same time. The programming was precise. I never felt like I was guessing."
+			},
+			"2": {
+				"name": "Lina R.",
+				"stat": "-11%",
+				"goal": "Body fat",
+				"quote": "The weekly check-in kept me honest. Abdelgany answered every message. I felt coached, not just subscribed to a plan."
+			},
+			"eyebrow": "Client results",
+			"heading": "Numbers that mean something.",
+			"sub": "These are not cherry-picked exceptions. They are steady results from real clients who stayed with the plan."
+		},
+		"features": {
+			"0": {
+				"title": "A training plan written for you",
+				"desc": "Built around your equipment, schedule, level, and goal — and updated as you progress."
+			},
+			"1": {
+				"title": "Nutrition that adapts",
+				"desc": "No templates. Practical calorie and macro targets that fit your preferences and life."
+			},
+			"2": {
+				"title": "A structured weekly check-in",
+				"desc": "Weekly reviews of weight, photos, adherence, and direct notes."
+			},
+			"3": {
+				"title": "Habits and consistency",
+				"desc": "The part most programs skip. We work on the habits that make the plan hold."
+			},
+			"4": {
+				"title": "Direct access to me",
+				"desc": "Questions get an answer the same day. You will not sit wondering about training, food, or focus."
+			},
+			"5": {
+				"title": "Progress tracking and adjustments",
+				"desc": "The program moves with you. Stalls get handled quickly. Momentum stays."
+			},
+			"eyebrow": "What is included",
+			"heading": "Everything you need. Nothing extra."
+		},
+		"steps": {
+			"0": {
+				"title": "Apply",
+				"desc": "A short form so I understand your history, your goal, and what has not worked."
+			},
+			"1": {
+				"title": "Strategy call",
+				"desc": "A 20-minute call to set the goal, the timeline, and the package that fits."
+			},
+			"2": {
+				"title": "Get your plan",
+				"desc": "Within 48 hours your training and nutrition plan is ready. We review it together."
+			},
+			"3": {
+				"title": "Start and adjust",
+				"desc": "You execute. I follow. Weekly check-ins keep the plan sharp and the progress moving."
+			},
+			"eyebrow": "How to start",
+			"heading": "A simple start. Results that last.",
+			"cta": "Apply for coaching"
+		},
+		"why": {
+			"0": {
+				"title": "A method you can trust",
+				"desc": "Training and nutrition decisions come from research, not trends. No tricks. What works."
+			},
+			"1": {
+				"title": "Real personal attention",
+				"desc": "The client list stays small on purpose so each person gets the attention the goal needs."
+			},
+			"2": {
+				"title": "Results built to last",
+				"desc": "The point is not only a number. It is habits and confidence that stay after the program."
+			},
+			"3": {
+				"title": "Accountability that is real",
+				"desc": "I do not disappear between check-ins. Messages get answers. Data gets reviewed. Your result is the priority."
+			},
+			"eyebrow": "Why me",
+			"heading": "Not a content creator. A coach.",
+			"sub": "Fitness is full of people selling templates. Here you get a coach who reads your data, adjusts the plan, and checks in every week."
+		},
+		"plans": {
+			"0": {
+				"title": "Essentials",
+				"price": "149$",
+				"period": "/ month",
+				"desc": "For beginners who want a clear structure and real support to start well.",
+				"f0": "4-day training plan",
+				"f1": "Calorie and macro targets",
+				"f2": "Check-in every two weeks",
+				"f3": "Email support",
+				"cta": "Start now"
+			},
+			"1": {
+				"title": "Full coaching",
+				"price": "249$",
+				"period": "/ month",
+				"desc": "For clients who want full support, fast adjustments, and a coach who is actually present.",
+				"f0": "5–6 day training plan",
+				"f1": "Full nutrition coaching and meal timing",
+				"f2": "Weekly check-in and photo review",
+				"f3": "Daily WhatsApp access",
+				"f4": "Monthly strategy call",
+				"f5": "Priority plan adjustments",
+				"cta": "Apply now"
+			},
+			"2": {
+				"title": "Recomp",
+				"price": "199$",
+				"period": "/ month",
+				"desc": "Built for body recomposition — muscle and fat loss at the same time.",
+				"f0": "5-day progressive hybrid plan",
+				"f1": "Recomp nutrition targets",
+				"f2": "Weekly check-in",
+				"f3": "WhatsApp support (reply within 48 hours)",
+				"f4": "Quarterly benchmark tests",
+				"cta": "Apply now"
+			},
+			"eyebrow": "Coaching programs",
+			"heading": "Invest in the work, not the guess.",
+			"sub": "Every package includes a personal intro call. No auto-renewal. Cancel any time with 7 days' notice.",
+			"badge": "Most requested",
+			"note": "Prices in US dollars. A minimum of three months is recommended for a result you can see."
+		},
+		"testimonials": {
+			"0": {
+				"name": "Ahmed F.",
+				"role": "Software engineer · fat loss",
+				"quote": "I was skeptical about online coaching, but the detail in my plan changed that quickly. Abdelgany knew exactly what to adjust each week."
+			},
+			"1": {
+				"name": "Nour S.",
+				"role": "Teacher · beginner",
+				"quote": "I had never trained consistently. After 5 months I was down 10 kg, I actually enjoy the gym, and I know what I am doing there."
+			},
+			"2": {
+				"name": "Tarek B.",
+				"role": "Founder · recomposition",
+				"quote": "Training plus nutrition guidance was exactly what I needed. I got leaner and the weights went up. I would not have gotten there alone."
+			},
+			"3": {
+				"name": "Dina H.",
+				"role": "Nurse · fat loss",
+				"quote": "Night shifts broke every other program. Abdelgany built something that fits my actual life. The first time progress has been real and steady."
+			},
+			"4": {
+				"name": "Youssef A.",
+				"role": "Student · muscle gain",
+				"quote": "The weekly check-ins were the most useful part. Someone reviewing every Sunday and adjusting the plan kept me on track for 6 months."
+			},
+			"5": {
+				"name": "Rima T.",
+				"role": "Architect · recomposition",
+				"quote": "I had been going to the gym for two years with nothing to show. After three months on a structured plan I finally understood what creates results."
+			},
+			"eyebrow": "Client notes",
+			"heading": "The people who did the work."
+		},
+		"faq": {
+			"0": {
+				"q": "Is online coaching as effective as in-person training?",
+				"a": "For most goals, yes. What matters is the quality of the program, how consistent the check-ins are, and how responsive the coach is. All three are here. Many clients prefer online coaching because it fits a real schedule."
+			},
+			"1": {
+				"q": "I am a complete beginner — is this for me?",
+				"a": "Yes. A large share of clients start with no gym experience. Plans start from where you are, and the first weeks cover form, technique, and how to train safely."
+			},
+			"2": {
+				"q": "What does it cost, and how long do I commit?",
+				"a": "Packages start at $149 per month. There is no long contract, but three months is the recommended minimum. Real change takes time, and shorter windows rarely do the goal justice."
+			},
+			"3": {
+				"q": "When should I expect to see results?",
+				"a": "Most clients see measurable change by weeks 3–4. Visible progress usually starts around weeks 6–8. Results depend on adherence, starting point, and the goal — clients who follow the plan rarely leave disappointed."
+			},
+			"4": {
+				"q": "What if I fall off or miss a week?",
+				"a": "That is already part of the plan. Life moves, and a good coach adjusts. Check-ins are there to catch problems early and reset without judgment. Sustainable progress is not a straight line."
+			},
+			"5": {
+				"q": "Do I need a gym membership or specific equipment?",
+				"a": "Not necessarily. Plans can be built for a full gym, a simple home setup, or anything in between. Tell me what you have on the application form."
+			},
+			"eyebrow": "FAQ",
+			"heading": "Straight answers to real questions."
+		},
+		"cta": {
+			"heading": "Decide now. Start this week.",
+			"sub": "Spots stay limited on purpose. If you are ready to commit with a clear structure and a coach who is actually there, apply below.",
+			"primary": "Apply for coaching",
+			"secondary": "Ask a question",
+			"note": "Usual reply time: under 24 hours."
+		},
+		"footer": {
+			"tagline": "Science-based online coaching for serious, lasting results.",
+			"nav": "Navigate",
+			"contact": "Contact",
+			"rights": "All rights reserved.",
+			"privacy": "Privacy policy",
+			"terms": "Terms"
+		}
 	}
 }

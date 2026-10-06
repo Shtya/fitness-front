@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { motion } from 'framer-motion';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/themes/material_blue.css';
 import toast from 'react-hot-toast';
@@ -16,8 +17,15 @@ import {
   Award, CreditCard, Banknote, Smartphone, Hash, FileDown, X,
 } from 'lucide-react';
 
-import { PageHeader } from '@/components/molecules/PageHeader';
+import { IntakeHero } from '@/components/pages/dashboard/intake/IntakeChrome';
+import GmStatCard from '@/components/molecules/GmStatCard';
+import '@/components/pages/dashboard/users/roster/roster.css';
+import './billing-scope.css';
 import DataTable, { FilterField } from '@/components/atoms/Datatable';
+import { getStoredPerPage, setStoredPerPage } from '@/lib/table-prefs';
+import FloatingInput from '@/components/atoms/FloatingInput';
+import FloatingSelect from '@/components/atoms/FloatingSelect';
+import FloatingTextarea from '@/components/atoms/FloatingTextarea';
 import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -125,7 +133,7 @@ function buildQuery(obj = {}) {
 /* ─── SURFACE ─── */
 function Surface({ children, className = '', accent = false, glow = false, id }) {
   return (
-    <div id={id} className={cls('relative overflow-hidden rounded-2xl border bg-white/90 backdrop-blur-xl', 'border-[var(--color-primary-100)]', glow ? 'shadow-[0_0_0_1px_var(--color-primary-100),0_4px_6px_-1px_rgba(15,23,42,.05),0_20px_50px_-10px_rgba(15,23,42,.12)]' : 'shadow-[0_1px_3px_rgba(15,23,42,.04),0_10px_30px_rgba(15,23,42,.07)]', className)}>
+    <div id={id} className={cls('relative overflow-hidden rounded-[18px] border border-(--gm-line) bg-(--gm-paper)', glow ? 'shadow-[0_12px_32px_-18px_color-mix(in_srgb,var(--gm-ink)_28%,transparent)]' : 'shadow-[0_1px_2px_color-mix(in_srgb,var(--gm-ink)_6%,transparent)]', className)}>
       {children}
     </div>
   );
@@ -133,7 +141,7 @@ function Surface({ children, className = '', accent = false, glow = false, id })
 
 /* ─── STATUS BADGE ─── */
 function StatusBadge({ status, label, icon: Icon }) {
-  const map = { completed: 'border-emerald-200 bg-emerald-50 text-emerald-700', failed: 'border-rose-200 bg-rose-50 text-rose-700', pending: 'border-amber-200 bg-amber-50 text-amber-700', active: 'border-emerald-200 bg-emerald-50 text-emerald-700', expiring: 'border-rose-200 bg-rose-50 text-rose-700', warn: 'border-amber-200 bg-amber-50 text-amber-700', ended: 'border-slate-200 bg-slate-50 text-slate-600' };
+  const map = { completed: 'bill-badge-ok', failed: 'bill-badge-bad', pending: 'bill-badge-warn', active: 'bill-badge-ok', expiring: 'bill-badge-bad', warn: 'bill-badge-warn', ended: 'bill-badge-muted' };
   return (
     <span className={cls('inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold', map[status] || map.pending)}>
       {Icon && <Icon className="w-3 h-3" aria-hidden="true" />}
@@ -144,7 +152,7 @@ function StatusBadge({ status, label, icon: Icon }) {
 
 /* ─── TOOLTIP ICON BUTTON ─── */
 function TipIconBtn({ tooltip, onClick, disabled, children, variant = 'ghost' }) {
-  const vars = { ghost: 'border-[var(--color-primary-100)] bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]', danger: 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100', success: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100', whatsapp: 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' };
+  const vars = { ghost: 'border-(--gm-line) bg-(--gm-paper) text-(--color-primary-600) hover:bg-[color-mix(in_srgb,var(--color-primary-500)_8%,var(--gm-paper))]', danger: 'bill-badge-bad', success: 'bill-badge-ok', whatsapp: 'bill-badge-ok' };
   return (
     <TooltipProvider>
       <Tooltip>
@@ -161,9 +169,9 @@ function TipIconBtn({ tooltip, onClick, disabled, children, variant = 'ghost' })
 
 /* ─── ACTION PILL ─── */
 function ActionPill({ children }) {
-  return <div className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-primary-100)] bg-white p-1 shadow-sm">{children}</div>;
+  return <div className="inline-flex items-center gap-1 rounded-[12px] border border-(--gm-line) bg-(--gm-paper) p-1">{children}</div>;
 }
-function PillDivider() { return <div className="h-4 w-px bg-slate-100" aria-hidden="true" />; }
+function PillDivider() { return <div className="h-4 w-px bg-(--gm-line)" aria-hidden="true" />; }
 
 /* ─── TAB PANE ─── */
 function TabPane({ children, className = '', id }) {
@@ -190,11 +198,11 @@ function InputField({ label, required, error, icon: Icon, hint, children, htmlFo
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label htmlFor={htmlFor} className="text-sm font-bold text-slate-700">
+        <label htmlFor={htmlFor} className="text-sm font-bold text-(--gm-ink)">
           {label}
           {required && <span className="ms-1 text-rose-500" aria-hidden="true">*</span>}
         </label>
-        {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
+        {hint && <span className="text-[11px] text-(--gm-muted)">{hint}</span>}
       </div>
       <div className="relative">
         {Icon && (
@@ -222,6 +230,11 @@ export default function BillingPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [clientRows, setClientRows] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.dataset.gmUsers = '1';
+    return () => { delete document.documentElement.dataset.gmUsers; };
+  }, []);
 
   const loadOverviewStats = useCallback(async () => {
     try {
@@ -314,48 +327,71 @@ export default function BillingPage() {
     { id: 'communications', label: t('tabs.communications'), icon: MessageCircle },
   ], [t, walletData, clientRows.length, overviewStats]);
 
-  const HEADER_FILTERS = [
-    { key: 'status', label: t('filters.status'), type: 'toggle', options: [{ value: 'completed', label: t('status.completed') }, { value: 'pending', label: t('status.pending') }, { value: 'failed', label: t('status.failed') }] },
-    { key: 'type', label: t('filters.type'), type: 'toggle', options: [{ value: 'subscription', label: t('filters.subscription') }, { value: 'withdrawal', label: t('filters.withdrawal') }, { value: 'refund', label: t('filters.refund') }] },
+  const TONES = [
+    { tone: 'gm-chip', stroke: 'var(--color-primary-500)', fill: 'var(--color-primary-400)' },
+    { tone: 'gm-chip-ok', stroke: 'var(--gm-ok)', fill: 'var(--gm-ok)' },
+    { tone: 'gm-chip-secondary', stroke: 'var(--color-primary-400)', fill: 'var(--color-primary-300)' },
+    { tone: 'gm-chip-warn', stroke: 'var(--gm-warn)', fill: 'var(--gm-warn)' },
   ];
-
-  const [headerFilters, setHeaderFilters] = useState({ status: '', type: '' });
+  const statCards = STATS.map((s, i) => ({
+    key: `${activeTab}-${s.label}`,
+    title: s.label,
+    value: s.value,
+    icon: s.icon,
+    ...TONES[i % TONES.length],
+    seed: 0.35 + i * 0.35,
+    max: Math.max(Number(String(s.value).replace(/[^\d.]/g, '')) || 1, 1),
+  }));
 
   return (
-    <div id="billing-page" className="relative">
-      <PageHeader
-        title={t('title')}
-        desc={t('subtitle')}
-        icon={Wallet}
-        stats={statsLoading ? [] : STATS}
-        tabs={TABS}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        filters={HEADER_FILTERS}
-        filterValues={headerFilters}
-        onFilterChange={(k, v) => setHeaderFilters((f) => ({ ...f, [k]: v }))}
-        onFilterReset={() => setHeaderFilters({ status: '', type: '' })}
-        actions={
-          <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button type="button" aria-label={t('tooltips.pageInfo')} className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/[.16] backdrop-blur-[16px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.3)] transition-transform hover:scale-105 active:scale-95">
-                    <Info className="h-4 w-4 text-white" aria-hidden="true" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs text-xs">{t('tooltips.pageInfo')}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <button type="button" onClick={() => { loadOverviewStats(); loadClientsBase(); }} className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white bg-white/[.22] backdrop-blur-[16px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.3),0_4px_16px_rgba(0,0,0,.1)] transition-transform hover:scale-[1.04] active:scale-95">
-              <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              {t('common.refresh')}
-            </button>
-          </div>
-        }
-      />
+    <div id="billing-page" className="bill-scope gm-surface rs-scope app-stack relative pb-8">
+      <div className="rs-summary">
+        <IntakeHero
+          icon={Wallet}
+          title={t('title')}
+          subtitle={t('subtitle')}
+          extra={(
+            <div className="flex flex-wrap items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" aria-label={t('tooltips.pageInfo')} className="rs-btn">
+                      <Info className="size-4" aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">{t('tooltips.pageInfo')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <button type="button" onClick={() => { loadOverviewStats(); loadClientsBase(); }} className="rs-btn">
+                <RefreshCw className={cls('size-4', statsLoading && 'animate-spin')} aria-hidden="true" />
+                <span>{t('common.refresh')}</span>
+              </button>
+            </div>
+          )}
+        />
+        {!statsLoading && (
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {statCards.map((card, index) => <GmStatCard key={card.key} card={card} index={index} />)}
+          </section>
+        )}
+      </div>
 
-      <div id="billing-content" className="container py-6 lg:py-8">
+      <div role="tablist" aria-label={t('title')} className="rs-seg" style={{ flexWrap: 'wrap', height: 'auto', width: '100%' }}>
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const on = activeTab === tab.id;
+          return (
+            <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={() => handleTabChange(tab.id)} className={cls('rs-seg__btn', on && 'is-on')}>
+              {on && <motion.span layoutId="billing-tab-pill" className="rs-seg__pill" transition={{ type: 'spring', stiffness: 520, damping: 38 }} />}
+              <Icon className="size-3.5" aria-hidden="true" />
+              <span>{tab.label}</span>
+              {tab.count != null && <span className="rs-btn__count">{tab.count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <div id="billing-content" className="py-2">
         {activeTab === 'overview' && <OverviewTab key="overview" t={t} onNav={handleTabChange} />}
         {activeTab === 'clients' && <ClientsTab key="clients" t={t} initialData={clientRows} loading={clientsLoading} onRefresh={loadClientsBase} />}
         {activeTab === 'subscriptions' && <SubscriptionsTab key="subscriptions" t={t} />}
@@ -369,11 +405,24 @@ export default function BillingPage() {
 /* ══════════════════════════════════════════
    OVERVIEW TAB
 ══════════════════════════════════════════ */
+function onTablePage(setPage, setLimit) {
+  return ({ page: nextPage, per_page }) => {
+    const nextLimit = Number(per_page);
+    if (nextLimit) {
+      setStoredPerPage(nextLimit);
+      setLimit(nextLimit);
+    }
+    setPage(Number(nextPage ?? 1));
+  };
+}
+
 function OverviewTab({ t, onNav }) {
   const [filters, setFilters] = useState({ status: '', search: '' });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(() => getStoredPerPage(10));
 
   const loadTransactions = useCallback(async () => {
     try {
@@ -406,6 +455,12 @@ function OverviewTab({ t, onNav }) {
     return matchQ && matchStatus;
   }), [transactions, filters, t]);
 
+  useEffect(() => { setPage(1); }, [filters.search, filters.status]);
+  const pagedTransactions = useMemo(() => {
+    const start = (page - 1) * limit;
+    return filteredTransactions.slice(start, start + limit);
+  }, [filteredTransactions, page, limit]);
+
   const COLUMNS = [
     {
       key: 'status',
@@ -434,7 +489,7 @@ function OverviewTab({ t, onNav }) {
       <DataTable
         title={t('transactions.recent')}
         subtitle={t('transactions.recentSubtitle')}
-        data={filteredTransactions}
+        data={pagedTransactions}
         columns={COLUMNS}
         rowKey={(r) => r.id}
         isLoading={loading}
@@ -467,7 +522,9 @@ function OverviewTab({ t, onNav }) {
             {t('payments.total', { count: filteredTransactions.length })}
           </span>
         }
-        pagination={null}
+        perPageOptions={[10, 20, 30, 50]}
+        pagination={{ current_page: page, per_page: limit, total_records: filteredTransactions.length }}
+        onPageChange={onTablePage(setPage, setLimit)}
       />
     </TabPane>
   );
@@ -481,7 +538,7 @@ function ClientsTab({ t, initialData = [], loading = false, onRefresh }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const perPage = 12;
+  const [limit, setLimit] = useState(() => getStoredPerPage(10));
 
   const filteredData = useMemo(() => initialData
     .filter((c) => {
@@ -496,15 +553,10 @@ function ClientsTab({ t, initialData = [], loading = false, onRefresh }) {
     [search, filters, initialData, t]);
 
   const uniquePackages = useMemo(() => [...new Set(initialData.map((c) => c.package).filter(Boolean))], [initialData]);
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / perPage));
   const pagedData = useMemo(() => {
-    const start = (page - 1) * perPage;
-    return filteredData.slice(start, start + perPage);
-  }, [filteredData, page]);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+    const start = (page - 1) * limit;
+    return filteredData.slice(start, start + limit);
+  }, [filteredData, page, limit]);
   useEffect(() => { setPage(1); }, [search, filters.package, filters.status]);
 
   const COLUMNS = [
@@ -631,16 +683,10 @@ function ClientsTab({ t, initialData = [], loading = false, onRefresh }) {
             </button>
           </div>
         }
-        pagination={null}
+        perPageOptions={[10, 20, 30, 50]}
+        pagination={{ current_page: page, per_page: limit, total_records: filteredData.length }}
+        onPageChange={onTablePage(setPage, setLimit)}
       />
-      <div className="flex items-center justify-between rounded-xl border border-[var(--color-primary-100)] bg-white px-4 py-3 text-xs font-semibold text-slate-600">
-        <span>Showing {pagedData.length} / {filteredData.length}</span>
-        <div className="flex items-center gap-2">
-          <button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="h-8 px-3 rounded-lg border border-slate-200 disabled:opacity-50">Prev</button>
-          <span>{page} / {totalPages}</span>
-          <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} className="h-8 px-3 rounded-lg border border-slate-200 disabled:opacity-50">Next</button>
-        </div>
-      </div>
     </TabPane>
   );
 }
@@ -657,7 +703,7 @@ function PkgCard({ pkg, idx, onEdit, onDelete, onSendWhatsApp, t }) {
   const pal = PALETTES[idx % PALETTES.length];
   const BadgeIcon = pal.BadgeIcon;
   return (
-    <article className={cls('group relative flex flex-col rounded-3xl border-2 overflow-hidden bg-gradient-to-b', pal.gradientFrom, pal.gradientTo, pal.border, 'shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 hover:scale-[1.025]')} aria-label={pkg.name}>
+    <article className={cls('bill-keep group relative flex flex-col rounded-[18px] border-2 overflow-hidden bg-gradient-to-b transition-transform duration-200 hover:-translate-y-1', pal.gradientFrom, pal.gradientTo, pal.border)} aria-label={pkg.name}>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-900 ease-in-out" aria-hidden="true" />
       <div className={cls('absolute inset-x-0 top-0 h-1.5 rounded-t-3xl', pal.accentBg)} aria-hidden="true" />
       {pal.popular && <div className={cls('absolute top-5 -end-8 rotate-45 px-10 py-1 text-[10px] font-black text-white', pal.accentBg)} aria-label={t('packages.mostPopular')}>{t('packages.mostPopular')}</div>}
@@ -669,7 +715,7 @@ function PkgCard({ pkg, idx, onEdit, onDelete, onSendWhatsApp, t }) {
             </div>
             <div className="min-w-0">
               <span className={cls('block text-[11px] font-black uppercase tracking-widest', pal.accentText)}>{pal.badge}</span>
-              <h3 className="text-lg font-black text-slate-900 md: leading-tight truncate">{pkg.name}</h3>
+              <h3 className="text-lg font-black text-slate-900 leading-tight truncate">{pkg.name}</h3>
               <p className="text-[11px] text-slate-400 font-medium truncate">{pkg.nameEn}</p>
             </div>
           </div>
@@ -681,7 +727,7 @@ function PkgCard({ pkg, idx, onEdit, onDelete, onSendWhatsApp, t }) {
         <div className={cls('mb-7 rounded-2xl p-5 text-center border backdrop-blur-sm', pal.priceBg, pal.border)}>
           <p className={cls('text-[11px] font-black uppercase tracking-widest mb-1', pal.accentText)}>{pkg.duration}</p>
           <div className="flex items-baseline justify-center gap-1.5">
-            <span className={cls('text-5xl font-black md: leading-none', pal.accentText)}>{pkg.price.toLocaleString()}</span>
+            <span className={cls('text-5xl font-black leading-none', pal.accentText)}>{pkg.price.toLocaleString()}</span>
             <span className="text-base font-bold text-slate-500">{t('currency')}</span>
           </div>
         </div>
@@ -763,20 +809,21 @@ function SendAllWhatsAppDialog({ packages, t, open, onClose }) {
             <div className="space-y-4">
               <p className="text-sm font-semibold text-slate-600">{t('packages.exportDialog.selectClient')}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="mb-2 block text-xs font-black uppercase tracking-widest text-[var(--color-primary-500)]">{t('form.clientName')}</Label>
-                  <div className="relative">
-                    <User className="absolute top-1/2 -translate-y-1/2 rtl:right-3 ltr:left-3 h-4 w-4 text-slate-400 pointer-events-none" aria-hidden="true" />
-                    <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder={t('form.clientNamePlaceholder')} className={inputBase} />
-                  </div>
-                </div>
-                <div>
-                  <Label className="mb-2 block text-xs font-black uppercase tracking-widest text-[var(--color-primary-500)]">{t('packages.exportDialog.phoneLabel')}</Label>
-                  <div className="relative">
-                    <Phone className="absolute top-1/2 -translate-y-1/2 rtl:right-3 ltr:left-3 h-4 w-4 text-slate-400 pointer-events-none" aria-hidden="true" />
-                    <input value={phoneNumber} onChange={(e) => setPhone(e.target.value)} placeholder="201XXXXXXXXX" type="tel" className={inputBase} />
-                  </div>
-                </div>
+                <FloatingInput
+                  label={t('form.clientName')}
+                  value={clientName}
+                  onChange={setClientName}
+                  placeholder={t('form.clientNamePlaceholder')}
+                  icon={<User className="h-4 w-4" />}
+                />
+                <FloatingInput
+                  label={t('packages.exportDialog.phoneLabel')}
+                  value={phoneNumber}
+                  onChange={setPhone}
+                  placeholder="201XXXXXXXXX"
+                  type="tel"
+                  icon={<Phone className="h-4 w-4" />}
+                />
               </div>
               <div className="rounded-2xl border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] p-4">
                 <p className="text-xs font-black uppercase tracking-widest mb-3 text-[var(--color-primary-500)]">{t('pdf.allPackages')} ({packages.length})</p>
@@ -804,7 +851,7 @@ function SendAllWhatsAppDialog({ packages, t, open, onClose }) {
                   <MessageCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
                   <p className="text-sm font-black text-green-800">{t('packages.exportDialog.preview')}</p>
                 </div>
-                <div className="p-4 bg-white text-xs text-slate-700 md: leading-relaxed space-y-1 max-h-44 overflow-y-auto" dir="rtl">
+                <div className="p-4 bg-white text-xs text-slate-700 leading-relaxed space-y-1 max-h-44 overflow-y-auto" dir="rtl">
                   <p>{t('communications.greeting')} {clientName || `[${t('form.clientName')}]`}! 👋</p>
                   <p>{t('packages.exportDialog.offerIntro')}</p>
                   <br />
@@ -881,11 +928,14 @@ function SinglePkgWhatsAppDialog({ pkg, t, open, onClose }) {
             <p>{pkg.features.slice(0, 3).join(' • ')}{pkg.features.length > 3 ? ` +${pkg.features.length - 3}` : ''}</p>
           </div>
           <div>
-            <Label className="mb-1.5 block text-xs font-black uppercase tracking-widest text-[var(--color-primary-500)]">{t('packages.exportDialog.phoneLabel')}</Label>
-            <div className="relative">
-              <Phone className="absolute top-1/2 -translate-y-1/2 rtl:right-3 ltr:left-3 h-4 w-4 text-slate-400 pointer-events-none" aria-hidden="true" />
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="201XXXXXXXXX" type="tel" className="h-11 w-full rounded-xl border border-[var(--color-primary-200)] bg-white rtl:pr-9 ltr:pl-9 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]" />
-            </div>
+            <FloatingInput
+              label={t('packages.exportDialog.phoneLabel')}
+              value={phone}
+              onChange={setPhone}
+              placeholder="201XXXXXXXXX"
+              type="tel"
+              icon={<Phone className="h-4 w-4" />}
+            />
             <p className="mt-1 text-[11px] text-slate-400">{t('packages.exportDialog.info')}</p>
           </div>
           <div className="flex gap-2">
@@ -937,16 +987,21 @@ function PackageDialog({ open, onClose, t, onSubmit, initialData }) {
           <DialogDescription>{t('packages.subtitle')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
-          <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder={t('packages.form.nameAr')} className="h-10 w-full rounded-lg border border-slate-200 px-3" />
+          <FloatingInput label={t('packages.form.nameAr')} value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} />
           <div className="grid grid-cols-2 gap-2">
-            <input type="number" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} placeholder={t('packages.form.price')} className="h-10 w-full rounded-lg border border-slate-200 px-3" />
-            <select value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 px-3">
-              <option value="monthly">{t('packages.form.monthly')}</option>
-              <option value="quarterly">{t('packages.form.quarterly')}</option>
-              <option value="yearly">{t('packages.form.annual')}</option>
-            </select>
+            <FloatingInput type="number" label={t('packages.form.price')} value={form.price} onChange={(v) => setForm((p) => ({ ...p, price: v }))} />
+            <FloatingSelect
+              label={t('packages.form.duration')}
+              value={form.duration}
+              onChange={(v) => setForm((p) => ({ ...p, duration: v }))}
+              options={[
+                { id: 'monthly', label: t('packages.form.monthly') },
+                { id: 'quarterly', label: t('packages.form.quarterly') },
+                { id: 'yearly', label: t('packages.form.annual') },
+              ]}
+            />
           </div>
-          <textarea rows={4} value={form.featuresText} onChange={(e) => setForm((p) => ({ ...p, featuresText: e.target.value }))} placeholder={t('packages.form.features')} className="w-full rounded-lg border border-slate-200 px-3 py-2" />
+          <FloatingTextarea rows={4} label={t('packages.form.features')} value={form.featuresText} onChange={(v) => setForm((p) => ({ ...p, featuresText: v }))} />
           <DialogFooter>
             <button type="button" onClick={onClose} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600">{t('common.cancel')}</button>
             <button type="submit" className="h-9 rounded-lg bg-[var(--color-primary-600)] px-3 text-sm font-semibold text-white">{t('common.save')}</button>
@@ -1067,6 +1122,8 @@ function SubscriptionsTab({ t }) {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({ client: 'all', fromDate: null, toDate: null, sort: 'newest' });
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(() => getStoredPerPage(10));
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState([]);
 
@@ -1106,6 +1163,12 @@ function SubscriptionsTab({ t }) {
     return rows;
   }, [invoices, search, filters]);
 
+  useEffect(() => { setPage(1); }, [search, filters]);
+  const pagedInvoices = useMemo(() => {
+    const start = (page - 1) * limit;
+    return filteredRows.slice(start, start + limit);
+  }, [filteredRows, page, limit]);
+
   const COLUMNS = [
     { key: 'client', header: t('table.client'), cell: (row) => <div><p className="text-sm font-bold text-slate-900">{row.clientName}</p><p className="text-xs text-slate-400">{row.email}</p><p className="text-xs text-slate-400">{row.phone}</p></div> },
     { key: 'description', header: t('table.description'), cell: (row) => <p className="text-sm text-slate-600 font-medium max-w-[200px] truncate">{row.description}</p> },
@@ -1135,7 +1198,7 @@ function SubscriptionsTab({ t }) {
         <DataTable
           title={t('payments.history')}
           subtitle={t('payments.historyDescription')}
-          data={filteredRows}
+          data={pagedInvoices}
           columns={COLUMNS}
           rowKey={(p) => p.id}
           searchValue={search}
@@ -1182,7 +1245,9 @@ function SubscriptionsTab({ t }) {
               {t('payments.total', { count: filteredRows.length })}
             </span>
           }
-          pagination={null}
+          perPageOptions={[10, 20, 30, 50]}
+          pagination={{ current_page: page, per_page: limit, total_records: filteredRows.length }}
+          onPageChange={onTablePage(setPage, setLimit)}
         />
       )}
     </TabPane>
@@ -1266,7 +1331,7 @@ function PaymentsTab({ t, clients = [], onSuccessRefresh }) {
                 <Receipt className="h-8 w-8 text-white" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-black text-white md: leading-tight">{t('form.title')}</h2>
+                <h2 className="text-2xl font-black text-white leading-tight">{t('form.title')}</h2>
                 <p className="mt-1 text-sm text-white/70 font-medium">{t('form.description')}</p>
               </div>
               {form.amount && (
@@ -1280,28 +1345,27 @@ function PaymentsTab({ t, clients = [], onSuccessRefresh }) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 p-5 sm:p-7" noValidate>
-            <div className="grid grid-cols-2 gap-2">
-              <InputField label={t('form.client')} required error={errors.client} icon={User} htmlFor="payment-client">
-                <Select value={form.client} onValueChange={(v) => set('client', v)}>
-                  <SelectTrigger id="payment-client" className={cls('h-12 w-full rounded-xl rtl:pr-14', errors.client ? 'border-rose-400' : 'border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]')}>
-                    <SelectValue placeholder={t('form.selectClient')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((c) => (
-                      <SelectItem key={c.userId} value={String(c.userId)}>
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-black text-white bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">{c.avatar}</span>
-                          <span className="font-semibold">{c.name}</span>
-                          <span className="text-slate-400 text-xs hidden sm:inline">— {c.package}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </InputField>
-              <InputField label={t('form.amount')} required error={errors.amount} icon={DollarSign} htmlFor="payment-amount">
-                <input id="payment-amount" type="number" step="0.01" min="0" value={form.amount} onChange={(e) => set('amount', e.target.value)} placeholder="0.00" className={inputBase(errors.amount)} aria-invalid={!!errors.amount} />
-              </InputField>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FloatingSelect
+                label={t('form.client')}
+                required
+                searchable
+                error={errors.client}
+                icon={<User className="h-4 w-4" />}
+                value={form.client || null}
+                onChange={(v) => set('client', v)}
+                options={clients.map((c) => ({ id: String(c.userId), label: c.package ? `${c.name} — ${c.package}` : c.name }))}
+              />
+              <FloatingInput
+                label={t('form.amount')}
+                required
+                type="number"
+                error={errors.amount}
+                icon={<DollarSign className="h-4 w-4" />}
+                value={form.amount}
+                onChange={(v) => set('amount', v)}
+                placeholder="0.00"
+              />
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -1331,9 +1395,15 @@ function PaymentsTab({ t, clients = [], onSuccessRefresh }) {
               </div>
             </div>
 
-            <InputField label={t('form.description')} required error={errors.description} icon={FileText} htmlFor="payment-description">
-              <textarea id="payment-description" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} placeholder={t('form.descriptionPlaceholder')} aria-invalid={!!errors.description} className={cls('w-full resize-none rounded-xl border bg-white rtl:pr-14 ltr:pl-14 px-4 pt-3 pb-3', 'text-sm font-medium text-slate-800 placeholder:text-slate-400', 'transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]', errors.description ? 'border-rose-400 bg-rose-50/40' : 'border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]')} />
-            </InputField>
+            <FloatingTextarea
+              label={t('form.description')}
+              required
+              error={errors.description}
+              rows={3}
+              value={form.description}
+              onChange={(v) => set('description', v)}
+              placeholder={t('form.descriptionPlaceholder')}
+            />
 
             <div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1347,9 +1417,13 @@ function PaymentsTab({ t, clients = [], onSuccessRefresh }) {
               <FieldError msg={errors.period} />
             </div>
 
-            <InputField label={t('form.notes')} icon={FileText} htmlFor="payment-notes">
-              <textarea id="payment-notes" rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder={t('form.notesPlaceholder')} className="w-full resize-none rounded-xl border border-[var(--color-primary-200)] bg-white rtl:pr-14 ltr:pl-14 px-4 pt-3 pb-3 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]" />
-            </InputField>
+            <FloatingTextarea
+              label={t('form.notes')}
+              rows={2}
+              value={form.notes}
+              onChange={(v) => set('notes', v)}
+              placeholder={t('form.notesPlaceholder')}
+            />
 
             {(form.client || form.amount) && (
               <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] p-4" aria-live="polite">
@@ -1503,7 +1577,7 @@ function CommunicationsTab({ t, clients = [] }) {
                     <MessageCircle className="h-4 w-4 text-green-600" />
                     <p className="text-xs font-black text-green-800">WhatsApp</p>
                   </div>
-                  <div className="p-4 bg-white text-sm text-slate-700 md: leading-relaxed whitespace-pre-line min-h-[120px]" dir="rtl">
+                  <div className="p-4 bg-white text-sm text-slate-700 leading-relaxed whitespace-pre-line min-h-[120px]" dir="rtl">
                     {messageType === 'custom' ? (
                       <textarea value={customMessage} onChange={(e) => setCustomMessage(e.target.value)} placeholder={t('communications.customPlaceholder')} className="w-full h-32 bg-transparent resize-none focus:outline-none text-sm text-slate-700 placeholder:text-slate-400" />
                     ) : buildMessage()}

@@ -32,6 +32,8 @@ import {
 	X,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
+import '@/components/pages/dashboard/users/roster/roster.css';
+import './ai-free-scope.css';
 import { aiFreeApi } from './ai-free-api';
 import MarkdownMessage, { isMostlyArabic } from './MarkdownMessage';
 import {
@@ -215,7 +217,7 @@ function Composer({
 					if (loading) onStop?.();
 					else onSubmit();
 				}}
-				className="relative rounded-[1.75rem] border border-slate-200/90 bg-white/95 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)] backdrop-blur transition focus-within:border-[var(--color-primary-300)] dark:border-slate-700 dark:bg-slate-950/90"
+				className="relative rounded-[1.75rem] border border-(--gm-line) bg-(--gm-paper) shadow-[0_18px_40px_-28px_color-mix(in_srgb,var(--gm-ink)_35%,transparent)] transition focus-within:border-(--color-primary-400)"
 			>
 				<textarea
 					ref={textareaRef}
@@ -230,7 +232,7 @@ function Composer({
 					rows={1}
 					dir={isMostlyArabic(value) ? 'rtl' : 'auto'}
 					placeholder={placeholder}
-					className={`block w-full resize-none bg-transparent px-5 pb-3 pt-4 text-[15px] leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500 ${
+					className={`block w-full resize-none bg-transparent px-5 pb-3 pt-4 text-[15px] leading-6 text-(--gm-ink) outline-none placeholder:text-(--gm-muted) ${
 						isMostlyArabic(value) ? 'font-ar text-right' : 'font-en'
 					}`}
 					style={
@@ -248,7 +250,7 @@ function Composer({
 							value={provider}
 							onChange={event => onProviderChange(event.target.value)}
 							disabled={loading}
-							className="appearance-none rounded-full border border-slate-200 bg-slate-50 py-1.5 pe-8 ps-3 text-xs font-medium text-slate-600 outline-none transition hover:border-[var(--color-primary-300)] disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+							className="appearance-none rounded-full border border-(--gm-line) bg-(--gm-paper) py-1.5 pe-8 ps-3 text-xs font-medium text-(--gm-ink-soft) outline-none transition hover:border-(--color-primary-400) disabled:opacity-50"
 						>
 							{providers.map(item => (
 								<option key={item.name} value={item.name}>
@@ -261,10 +263,10 @@ function Composer({
 					<button
 						type="submit"
 						disabled={!loading && !value.trim()}
-						className={`ms-auto inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition disabled:opacity-40 ${
+						className={`af-keep ms-auto inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition disabled:opacity-40 ${
 							loading
-								? 'bg-slate-800 dark:bg-slate-200 dark:text-slate-900'
-								: 'bg-[var(--color-primary-500)] shadow-[0_8px_20px_-8px_var(--color-primary-500)] hover:brightness-110'
+								? 'bg-(--gm-ink) text-(--gm-paper)'
+								: 'bg-(--color-primary-500) shadow-[0_8px_20px_-8px_var(--color-primary-500)] hover:brightness-110'
 						}`}
 						aria-label={loading ? stopLabel : sendLabel}
 					>
@@ -307,6 +309,11 @@ export default function AiFreePage() {
 	const [hydrated, setHydrated] = useState(false);
 	const bottomRef = useRef(null);
 	const abortRef = useRef(null);
+
+	useEffect(() => {
+		document.documentElement.dataset.gmUsers = '1';
+		return () => { delete document.documentElement.dataset.gmUsers; };
+	}, []);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
@@ -572,7 +579,7 @@ export default function AiFreePage() {
 
 	if (!hydrated) {
 		return (
-			<div className="grid h-[calc(100dvh-4rem)] min-[1026px]:h-full place-items-center text-sm text-slate-500">
+			<div className="af-scope gm-surface grid h-[calc(100dvh-4rem)] min-[1026px]:h-full place-items-center text-sm text-(--gm-muted)">
 				<Sparkles className="mb-2 h-5 w-5 animate-pulse text-[var(--color-primary-500)]" />
 				{t.thinking}…
 			</div>
@@ -580,7 +587,7 @@ export default function AiFreePage() {
 	}
 
 	return (
-		<div className="relative flex h-[calc(100dvh-4rem)] min-[1026px]:h-full overflow-hidden rounded-none bg-[linear-gradient(180deg,#f4faf6_0%,#eef7f1_42%,#f8fafc_100%)] lg:rounded-xl dark:bg-[linear-gradient(180deg,#0b1220_0%,#0f172a_55%,#020617_100%)]">
+		<div className="af-scope gm-surface rs-scope relative flex h-[calc(100dvh-4rem)] min-[1026px]:h-full overflow-hidden rounded-none lg:rounded-xl">
 			{/* History: expanded panel */}
 			<aside
 				className={`${

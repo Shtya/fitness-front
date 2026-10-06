@@ -1,35 +1,66 @@
 // components/atoms/Textarea.jsx
 'use client';
 
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 
-const Textarea = forwardRef(({ cnLabel, className, label, placeholder = 'Enter text', iconLeft, actionIcon, onAction, onChange, onBlur, cnInput, name, rows = 4, error = null, required = false, ...props }, ref) => {
+const Textarea = forwardRef(({ cnLabel, className = '', label, placeholder = '', iconLeft, actionIcon, onAction, onChange, onBlur, cnInput, name, rows = 4, error = null, required = false, value, ...props }, ref) => {
+  const [focused, setFocused] = useState(false);
+  const str = value == null ? '' : String(value);
+  const floated = focused || str.length > 0;
+
   return (
-    <div className={`w-full ${className}`}>
-      {label && (
-        <label htmlFor={name} className={`mb-1 block text-sm font-medium text-slate-700 ${cnLabel}`}>
-          {label}
-          {required && <span className='text-red-500 ml-1'>*</span>}
-        </label>
-      )}
-
-      <div className={` ${cnInput} relative flex items-center rounded-lg bg-white transition border ${error ? 'border-red-500 ring-2 ring-red-500/20' : props.value ? 'border-indigo-600' : 'border-slate-300'} focus-within:border-indigo-600 focus-within:ring-4 focus-within:ring-indigo-100`}>
-        {iconLeft && (
-          <span className='flex-none text-slate-400 pl-2'>
-            <img src={iconLeft} alt='' className='w-4' />
+    <div className={`relative w-full ${className}`}>
+      <div className={[
+        cnInput || '',
+        'relative rounded-[11px] border px-3 pt-3 pb-2 transition-all duration-200',
+        'bg-[color-mix(in_srgb,var(--gm-paper,#fff)_62%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]',
+        error
+          ? 'border-rose-300'
+          : focused
+            ? 'border-[var(--color-primary-500)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary-500)_12%,transparent)]'
+            : 'border-[var(--gm-line,rgba(92,143,211,0.22))]',
+      ].join(' ')}>
+        {iconLeft ? (
+          <span className="mb-1 inline-flex text-slate-400">
+            <img src={iconLeft} alt="" className="w-4" />
           </span>
-        )}
-
-        <textarea ref={ref} id={name} name={name} placeholder={placeholder} onChange={onChange} onBlur={onBlur} rows={rows} className=' overflow-hidden input-3d p-2 w-full bg-transparent outline-none text-slate-900 placeholder:text-slate-400 resize-none' {...props} />
-
-        {actionIcon && (
-          <button type='button' onClick={onAction} className='cursor-pointer flex items-center justify-center h-full aspect-1/1 absolute right-0 top-1/2 -translate-y-1/2 flex-none bg-indigo-600 hover:bg-indigo-700 p-2 rounded-lg text-white transition'>
-            <img src={actionIcon} alt='' className='w-[20px]' />
+        ) : null}
+        <textarea
+          ref={ref}
+          id={name}
+          name={name}
+          rows={rows}
+          value={value}
+          placeholder={label ? (floated ? (placeholder || ' ') : ' ') : placeholder}
+          onChange={onChange}
+          onFocus={() => setFocused(true)}
+          onBlur={(e) => { setFocused(false); onBlur?.(e); }}
+          className="w-full resize-none bg-transparent text-[13px] text-[var(--gm-ink,#0b214d)] outline-none placeholder:text-[var(--gm-faint,#9aadc4)]"
+          {...props}
+        />
+        {label ? (
+          <label
+            htmlFor={name}
+            className={[
+              cnLabel || '',
+              'pointer-events-none absolute start-3 z-[1] px-1 transition-all duration-200',
+              floated
+                ? 'top-0 -translate-y-1/2 rounded-md bg-[var(--gm-paper,#fff)] text-[11px] font-medium text-[var(--gm-muted,#56719a)]'
+                : 'top-3.5 text-[13px] text-[var(--gm-faint,#7388a7)]',
+              error && floated ? 'text-rose-500' : '',
+            ].join(' ')}
+          >
+            {label}
+            {required ? <span className="ms-0.5 text-rose-500">*</span> : null}
+          </label>
+        ) : null}
+        {actionIcon ? (
+          <button type="button" onClick={onAction} className="absolute end-2 top-2 rounded-lg bg-[var(--color-primary-600)] p-2 text-white">
+            <img src={actionIcon} alt="" className="w-5" />
           </button>
-        )}
+        ) : null}
       </div>
-
-      {error && <p className='text-red-500 text-sm mt-1'>{error}</p>}
+      {error ? <p className="mt-1 text-sm text-rose-500">{error}</p> : null}
     </div>
   );
 });

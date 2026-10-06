@@ -1,22 +1,22 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
+import "@/components/pages/dashboard/users/roster/roster.css";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock,
-  Check, Pencil, Trash2, X, Plus, Settings, Volume2, VolumeX,
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, CalendarDays, Clock,
+  Check, Pencil, Trash2, X, Plus, Settings,
   Repeat, CheckCircle2, Circle, Target, CheckSquare, Users, Bell,
   DollarSign, Phone, Music, Book, Heart, Star, Mail, ShoppingCart,
-  Dumbbell, Lightbulb, Flame, ChevronDown, LayoutGrid, Calendar,
+  Dumbbell, Lightbulb, Flame, LayoutGrid, Calendar,
   Sparkles, ListTodo, Home, FileText,
 } from "lucide-react";
 import { Play, Pause, RotateCcw, Zap, Trophy } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -25,32 +25,27 @@ import MultiLangText from "@/components/atoms/MultiLangText";
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const DESIGN_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
-
   :root {
-    --cal-bg:        color-mix(in srgb, var(--color-primary-50,#eef2ff) 40%, #f6f6f6);
-    --cal-surface:   #ffffff;
-    --cal-surface2:  color-mix(in srgb, var(--color-primary-50,#eef2ff) 25%, #f8f8f8);
-    --cal-surface3:  color-mix(in srgb, var(--color-primary-100,#e0e7ff) 30%, #f0f0f0);
-    --cal-surface4:  color-mix(in srgb, var(--color-primary-100,#e0e7ff) 40%, #e8e8e8);
-    --cal-border:    rgba(0,0,0,.06);
-    --cal-border2:   rgba(0,0,0,.10);
-    --cal-border3:   rgba(0,0,0,.16);
-    --cal-text:      #1a1916;
-    --cal-text2:     #6b6860;
-    --cal-text3:     #b0ada5;
-    --cal-accent:    var(--color-primary-500,#6366f1);
-    --cal-accent-lt: color-mix(in srgb, var(--color-primary-500,#6366f1) 12%, transparent);
-    --cal-accent-gl: color-mix(in srgb, var(--color-primary-500,#6366f1) 22%, transparent);
+    --cal-bg:        transparent;
+    --cal-surface:   var(--gm-paper, #fff);
+    --cal-surface2:  color-mix(in srgb, var(--gm-ink, #0f172a) 4%, var(--gm-paper, #fff));
+    --cal-surface3:  color-mix(in srgb, var(--color-primary-500) 8%, var(--gm-paper, #fff));
+    --cal-surface4:  color-mix(in srgb, var(--gm-ink, #0f172a) 10%, var(--gm-paper, #fff));
+    --cal-border:    var(--gm-line, rgba(15,23,42,.08));
+    --cal-border2:   var(--gm-line, rgba(15,23,42,.12));
+    --cal-border3:   color-mix(in srgb, var(--gm-ink, #0f172a) 18%, transparent);
+    --cal-text:      var(--gm-ink, #0f172a);
+    --cal-text2:     var(--gm-ink-soft, #334155);
+    --cal-text3:     var(--gm-muted, #64748b);
+    --cal-accent:    var(--color-primary-600);
+    --cal-accent-lt: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+    --cal-accent-gl: color-mix(in srgb, var(--color-primary-500) 28%, transparent);
     --cal-radius:    16px;
-    --cal-radius-sm: 10px;
-    --cal-font-d:    'Instrument Serif', Georgia, serif;
-    --cal-font-b:    'DM Sans', system-ui, sans-serif;
-    --cal-shadow:    0 1px 3px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.06);
-    --cal-grad:      linear-gradient(135deg,
-                       var(--color-gradient-from,#6366f1),
-                       var(--color-gradient-via,#8b5cf6),
-                       var(--color-gradient-to,#a855f7));
+    --cal-radius-sm: 12px;
+    --cal-font-d:    var(--gm-display, inherit);
+    --cal-font-b:    var(--gm-font, system-ui, sans-serif);
+    --cal-shadow:    0 1px 2px rgba(15,23,42,.05), 0 12px 28px -18px rgba(15,23,42,.22);
+    --cal-grad:      linear-gradient(180deg, var(--color-primary-500), var(--color-primary-600));
     --cal-ease:      cubic-bezier(.16,1,.3,1);
   }
   .cal-wrap { font-family: var(--cal-font-b); color: var(--cal-text); }
@@ -72,46 +67,34 @@ const DESIGN_STYLES = `
     font-size: 16px !important;
   }
 
-  /* ── Hero ── */
-  .cal-hero { position:relative; overflow:hidden; background:var(--cal-grad); padding:20px 24px 0; }
-  .cal-hero::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,rgba(255,255,255,0) 60%,rgba(0,0,0,.06) 100%); pointer-events:none; }
-  .cal-hero-noise { position:absolute; inset:0; opacity:.04; pointer-events:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  .cal-hero-dots { position:absolute; inset:0; opacity:.055; pointer-events:none; background-image:radial-gradient(circle,rgba(255,255,255,.85) 1px,transparent 1px); background-size:28px 28px; }
-  .cal-hero-orb1 { position:absolute; width:400px; height:400px; border-radius:50%; background:rgba(255,255,255,.09); filter:blur(60px); top:-160px; left:-100px; pointer-events:none; }
-  .cal-hero-orb2 { position:absolute; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,.06); filter:blur(60px); bottom:-80px; right:-60px; pointer-events:none; }
-  .cal-hero-hl { position:absolute; inset-x:0; top:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.5) 30%,rgba(255,255,255,.5) 70%,transparent); pointer-events:none; }
-
-  .cal-hero-toprow { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
-  .cal-hero-nav { display:flex; align-items:center; gap:6px; }
-  .cal-hero-navbtn { width:32px; height:32px; border-radius:10px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; backdrop-filter:blur(8px); }
-  .cal-hero-navbtn:hover { background:rgba(255,255,255,.26); }
-  .cal-hero-month { font-family:var(--cal-font-d); font-size:22px; font-weight:400; color:#fff; letter-spacing:-.3px; line-height:1; text-shadow:0 1px 12px rgba(0,0,0,.12); white-space:nowrap; }
-  .cal-hero-month span { color:rgba(255,255,255,.6); font-size:18px; margin-left:8px; }
-  .cal-hero-actions { display:flex; align-items:center; gap:6px; }
-  .cal-hero-btn-glass { height:34px; padding:0 14px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22); border-radius:10px; color:#fff; font-family:var(--cal-font-b); font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all .2s; backdrop-filter:blur(12px); white-space:nowrap; }
-  .cal-hero-btn-glass:hover { background:rgba(255,255,255,.26); }
-  .cal-hero-btn-solid { height:34px; padding:0 14px; background:#fff; border:none; border-radius:10px; color:var(--color-primary-700,#4338ca); font-family:var(--cal-font-b); font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all .2s; box-shadow:0 4px 16px rgba(0,0,0,.12); white-space:nowrap; }
-  .cal-hero-btn-solid:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,.16); }
-  .cal-hero-icon-btn { width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; backdrop-filter:blur(8px); }
-  .cal-hero-icon-btn:hover { background:rgba(255,255,255,.24); }
-  .cal-hero-icon-btn.active { background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.4); }
-
-  /* ── Commitment widget ── */
-  .cal-commit-wrap { display:flex; align-items:center; gap:10px; padding:7px 12px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22); border-radius:12px; cursor:pointer; transition:all .2s; backdrop-filter:blur(12px); }
-  .cal-commit-wrap:hover { background:rgba(255,255,255,.22); }
-  .cal-commit-label { font-size:9px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.6); display:block; margin-bottom:1px; }
-  .cal-commit-time { font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; font-family:monospace; color:#fff; }
-  .cal-commit-idle { font-size:12px; color:rgba(255,255,255,.7); font-style:italic; font-family:var(--cal-font-d); }
-
-  /* ── Type strip ── */
-  .cal-type-strip { position:relative; z-index:10; display:flex; align-items:center; gap:6px; padding-bottom:16px; overflow-x:auto; scrollbar-width:none; }
+  .cal-hero { position:relative; padding:8px 8px 0; background:transparent; }
+  .cal-hero-noise, .cal-hero-dots, .cal-hero-orb1, .cal-hero-orb2, .cal-hero-hl, .cal-hero::before { display:none; }
+  .cal-hero-toprow { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .cal-hero-nav { display:flex; align-items:center; gap:8px; }
+  .cal-hero-navbtn, .cal-hero-icon-btn, .cal-commit-btn { width:40px; height:40px; border-radius:12px; background:var(--gm-paper); border:1px solid var(--gm-line); color:var(--gm-ink-soft); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:border-color .15s ease, background-color .15s ease; }
+  .cal-hero-navbtn:hover, .cal-hero-icon-btn:hover, .cal-commit-btn:hover { border-color:color-mix(in srgb, var(--color-primary-500) 35%, var(--gm-line)); }
+  .cal-hero-icon-btn.active { color:var(--color-primary-700); border-color:color-mix(in srgb, var(--color-primary-500) 45%, transparent); background:color-mix(in srgb, var(--color-primary-500) 8%, var(--gm-paper)); }
+  .cal-hero-month { font-family:var(--cal-font-d); font-size:clamp(20px, 2.2vw, 28px); font-weight:700; color:var(--gm-ink); letter-spacing:-.03em; line-height:1.1; }
+  .cal-hero-month span { color:var(--gm-muted); font-size:.72em; margin-inline-start:8px; font-weight:600; }
+  .cal-hero-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .cal-hero-btn-glass { height:40px; padding:0 14px; background:var(--gm-paper); border:1px solid var(--gm-line); border-radius:12px; color:var(--gm-ink-soft); font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer; transition:border-color .15s ease; white-space:nowrap; }
+  .cal-hero-btn-glass:hover { border-color:color-mix(in srgb, var(--color-primary-500) 35%, var(--gm-line)); }
+  .cal-hero-btn-solid { height:40px; padding:0 16px; background:linear-gradient(180deg, var(--color-primary-500), var(--color-primary-600)); border:1px solid color-mix(in srgb, var(--color-primary-700) 40%, transparent); border-radius:12px; color:#fff; font-size:13px; font-weight:650; display:flex; align-items:center; gap:6px; cursor:pointer; transition:transform .15s ease; box-shadow:inset 0 1px 0 rgba(255,255,255,.25); white-space:nowrap; }
+  .cal-hero-btn-solid:hover { transform:translateY(-1px); }
+  .cal-hero-btn-solid:active { transform:translateY(0); }
+  .cal-commit-wrap { display:flex; align-items:center; gap:10px; padding:6px 10px; background:var(--gm-paper); border:1px solid var(--gm-line); border-radius:14px; }
+  .cal-commit-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--gm-muted); display:block; margin-bottom:1px; }
+  .cal-commit-time { font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--gm-ink); }
+  .cal-commit-idle { font-size:12px; color:var(--gm-muted); }
+  .cal-commit-btn { width:28px; height:28px; border-radius:8px; }
+  .cal-type-strip { position:relative; z-index:10; display:flex; align-items:center; gap:8px; padding-bottom:14px; overflow-x:auto; scrollbar-width:none; }
   .cal-type-strip::-webkit-scrollbar { display:none; }
-  .cal-type-chip { display:flex; align-items:center; gap:5px; padding:5px 12px; border-radius:100px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.12); color:rgba(255,255,255,.8); font-family:var(--cal-font-b); font-size:11px; font-weight:500; cursor:pointer; white-space:nowrap; transition:all .2s; backdrop-filter:blur(8px); }
-  .cal-type-chip:hover { background:rgba(255,255,255,.22); color:#fff; }
-  .cal-type-chip.active { background:rgba(255,255,255,.98); color:var(--color-primary-700,#4338ca); border-color:transparent; font-weight:700; box-shadow:0 4px 12px rgba(0,0,0,.12); }
-  .cal-type-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-  .cal-type-count { font-size:9px; font-weight:700; opacity:.6; background:rgba(0,0,0,.12); padding:1px 5px; border-radius:100px; }
-  .cal-type-chip.active .cal-type-count { background:var(--cal-accent-lt); opacity:1; color:var(--color-primary-700,#4338ca); }
+  .cal-type-chip { display:flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:999px; border:1px solid var(--gm-line); background:color-mix(in srgb, var(--gm-muted) 8%, var(--gm-paper)); color:var(--gm-ink-soft); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:border-color .15s ease, background-color .15s ease, color .15s ease; }
+  .cal-type-chip:hover { border-color:color-mix(in srgb, var(--color-primary-500) 30%, var(--gm-line)); }
+  .cal-type-chip.active { background:color-mix(in srgb, var(--color-primary-500) 10%, var(--gm-paper)); color:var(--color-primary-700); border-color:color-mix(in srgb, var(--color-primary-500) 40%, transparent); }
+  .cal-type-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .cal-type-count { font-size:10px; font-weight:700; min-width:16px; text-align:center; background:color-mix(in srgb, var(--gm-ink) 8%, transparent); padding:1px 5px; border-radius:999px; }
+  .cal-type-chip.active .cal-type-count { background:var(--color-primary-600); color:#fff; opacity:1; }
 
   /* ── Body layout ── */
   .cal-body { display:flex; flex:1; }
@@ -165,22 +148,23 @@ const DESIGN_STYLES = `
 
   /* ── Sidebar ── */
   .cal-sidebar { width:340px; background:var(--cal-surface);  display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
-  .cal-sidebar-head { padding:22px 20px 16px; background:#467fe8; position:relative; overflow:hidden; }
-   .cal-sidebar-date-row { position:relative; z-index:1; display:flex; align-items:flex-end; gap:14px; margin-bottom:14px; }
-  .cal-sidebar-day-num { font-family:var(--cal-font-d); font-size:60px; font-weight:400; line-height:.9; letter-spacing:-3px; color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.15); }
-  .cal-sidebar-day-name { font-family:var(--cal-font-d); font-size:18px; font-weight:400; color:#fff; line-height:1.2; font-style:italic; }
-  .cal-sidebar-my { font-size:11px; color:rgba(255,255,255,.65); font-weight:500; margin-top:2px; letter-spacing:.03em; }
-  .cal-prog-wrap { position:relative; z-index:1; background:rgba(255,255,255,.2); border-radius:100px; height:3px; overflow:hidden; margin-bottom:6px; }
-  .cal-prog-bar { height:100%; border-radius:100px; background:#fff; transition:width .5s var(--cal-ease); }
-  .cal-prog-lbl { position:relative; z-index:1; font-size:11px; color:rgba(255,255,255,.7); font-weight:500; }
-  .cal-prog-lbl strong { color:#fff; }
+  .cal-sidebar { border-inline-start:1px solid var(--gm-line); }
+  .cal-sidebar-head { padding:18px 18px 14px; background:var(--gm-paper); border-bottom:1px solid var(--gm-line); }
+  .cal-sidebar-date-row { position:relative; z-index:1; display:flex; align-items:flex-end; gap:14px; margin-bottom:14px; }
+  .cal-sidebar-day-num { font-family:var(--cal-font-d); font-size:56px; font-weight:700; line-height:.9; letter-spacing:-.04em; color:var(--gm-ink); }
+  .cal-sidebar-day-name { font-family:var(--cal-font-d); font-size:18px; font-weight:700; color:var(--gm-ink); line-height:1.2; }
+  .cal-sidebar-my { font-size:12px; color:var(--gm-muted); font-weight:600; margin-top:2px; }
+  .cal-prog-wrap { position:relative; z-index:1; background:color-mix(in srgb, var(--gm-ink) 10%, transparent); border-radius:100px; height:4px; overflow:hidden; margin-bottom:6px; }
+  .cal-prog-bar { height:100%; border-radius:100px; background:linear-gradient(90deg, var(--color-primary-500), var(--color-primary-600)); transition:width .5s var(--cal-ease); }
+  .cal-prog-lbl { position:relative; z-index:1; font-size:12px; color:var(--gm-muted); font-weight:600; }
+  .cal-prog-lbl strong { color:var(--gm-ink); }
   .cal-sidebar-add { margin:14px 16px 0; padding:10px 14px; background:var(--cal-accent-lt); border:1px dashed var(--cal-accent-gl); border-radius:10px; color:var(--cal-accent); font-family:var(--cal-font-b); font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; transition:all .2s; width:calc(100% - 32px); }
   .cal-sidebar-add:hover { background:color-mix(in srgb,var(--color-primary-500,#6366f1) 20%,transparent); border-style:solid; }
   .cal-sidebar-items { flex:1; overflow-y:auto; padding:12px 12px 24px; display:flex; flex-direction:column; gap:8px; }
   .cal-item-card { background:var(--cal-surface2); border:1px solid var(--cal-border); border-radius:12px; padding:12px 12px 12px 15px; display:flex; align-items:flex-start; gap:10px; transition:all .2s; position:relative; overflow:hidden; }
   .cal-item-card:hover { border-color:var(--cal-border2); background:var(--cal-surface3); box-shadow:var(--cal-shadow); }
   .cal-item-card.done { opacity:.45; }
-  .cal-item-accent { position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:0 2px 2px 0; }
+  .cal-item-accent { position:absolute; inset-inline-start:0; top:0; bottom:0; width:3px; }
   .cal-item-check { flex-shrink:0; background:transparent; border:none; color:var(--cal-text3); cursor:pointer; padding:0; display:flex; align-items:center; transition:color .15s; margin-top:1px; }
   .cal-item-check:hover { color:#16a34a; }
   .cal-item-check.done { color:#16a34a; }
@@ -275,27 +259,27 @@ const DESIGN_STYLES = `
   /* ── Desktop slide panel for add/edit ── */
   .cal-desk-panel-overlay { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.25); backdrop-filter:blur(4px); }
   .cal-desk-panel {
-    position:fixed; top:0; bottom:0; right:0; z-index:61;
+    position:fixed; top:0; bottom:0; inset-inline-end:0; z-index:61;
     width: min(480px, 44vw);
-    background:var(--cal-surface);
-    border-left:1px solid var(--cal-border2);
-    box-shadow:-12px 0 48px rgba(0,0,0,.12);
+    background:var(--gm-paper);
+    border-inline-start:1px solid var(--gm-line);
+    box-shadow:-12px 0 48px rgba(15,23,42,.12);
     display:flex; flex-direction:column;
     overflow:hidden;
   }
-  .cal-desk-panel[dir="rtl"] { right:auto; left:0; border-left:none; border-right:1px solid var(--cal-border2); box-shadow:12px 0 48px rgba(0,0,0,.12); }
+  .cal-desk-panel[dir="rtl"] { box-shadow:12px 0 48px rgba(15,23,42,.12); }
   .cal-desk-panel-head {
-    padding:20px 22px 16px;
-    border-bottom:1px solid var(--cal-border);
+    padding:18px 20px 14px;
+    border-bottom:1px solid var(--gm-line);
     display:flex; align-items:center; justify-content:space-between;
-    background:linear-gradient(135deg,var(--color-gradient-from,#6366f1),var(--color-gradient-to,#a855f7));
-    position:relative; overflow:hidden;
+    background:var(--gm-paper);
   }
-  .cal-desk-panel-head::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 100%); pointer-events:none; }
-  .cal-desk-panel-htitle { font-family:var(--cal-font-d); font-size:18px; font-weight:400; color:#fff; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
-  .cal-desk-panel-icon { width:32px; height:32px; background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.3); border-radius:9px; display:flex; align-items:center; justify-content:center; color:#fff; }
-  .cal-desk-panel-close { position:relative; z-index:1; width:34px; height:34px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; }
-  .cal-desk-panel-close:hover { background:rgba(255,255,255,.28); }
+  .cal-desk-panel-htitle { font-family:var(--cal-font-d); font-size:18px; font-weight:700; color:var(--gm-ink); display:flex; align-items:center; gap:10px; }
+  .cal-desk-panel-icon { width:32px; height:32px; background:linear-gradient(150deg, var(--color-gradient-from), var(--color-gradient-to)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; }
+  .cal-desk-panel-close { width:34px; height:34px; background:transparent; border:1px solid var(--gm-line); border-radius:10px; color:var(--gm-ink-soft); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .cal-desk-panel-close:hover { background:color-mix(in srgb, var(--gm-ink) 6%, transparent); }
+  .cal-type-row-badge { margin-inline-start:auto; margin-left:0; }
+  html.dark .cal-desk-panel { box-shadow:-12px 0 48px rgba(0,0,0,.45); }
   .cal-desk-panel-body { flex:1; overflow-y:auto; }
 
   /* ── Responsive ── */
@@ -318,12 +302,17 @@ const DESIGN_STYLES = `
 
 function DesignStyles() {
   useEffect(() => {
-    const id = "cal-ds-v5";
-    if (!document.getElementById(id)) {
-      const el = document.createElement("style");
-      el.id = id; el.textContent = DESIGN_STYLES;
+    document.getElementById("cal-ds-v5")?.remove();
+    const id = "cal-ds-v6";
+    let el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement("style");
+      el.id = id;
       document.head.appendChild(el);
     }
+    el.textContent = DESIGN_STYLES;
+    document.documentElement.dataset.gmUsers = "1";
+    return () => { delete document.documentElement.dataset.gmUsers; };
   }, []);
   return null;
 }
@@ -532,18 +521,68 @@ function ItemCard({ item, date, dateStr, eventTypes, completions, onToggle, onEd
       ? t("everyXDaysLabel", { count: item.recurrenceInterval })
       : t(`recurrenceLabels.${item.recurrence}`);
 
+  if (isMobile) {
+    return (
+      <div
+        className="relative overflow-hidden rounded-2xl border border-white/80 bg-[#eef2f9] px-4 py-3 shadow-[5px_5px_8px_rgba(100,116,139,0.36)]"
+        style={{ opacity: done ? 0.78 : 1 }}
+      >
+        <span className="absolute inset-y-2.5 start-0 w-[3px] rounded-full" style={{ background: hex }} />
+        <div className="flex items-center gap-3 ps-2">
+          <button
+            type="button"
+            onClick={() => onToggle(item.id, date)}
+            className={cn(
+              "flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-xl border border-white/80 shadow-[3px_3px_6px_rgba(100,116,139,0.28)]",
+              done ? "bg-[#ecfdf5]" : "bg-[#eef2f9]",
+            )}
+          >
+            {done ? <CheckCircle2 size={18} className="text-[#22c55e]" strokeWidth={2.5} /> : <Circle size={18} className="text-slate-400" strokeWidth={1.8} />}
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className={cn("truncate text-sm font-bold text-slate-800", done && "text-slate-400 line-through")}>{item.title}</div>
+            {item.note ? <div className="mt-0.5 truncate text-[11px] text-slate-400">{item.note}</div> : null}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-400/30 px-2.5 py-1 text-[10px] font-bold" style={{ color: hex, background: `${hex}18` }}>
+                {renderIcon(type?.icon, "h-2.5 w-2.5")} {getTypeLabel(type)}
+              </span>
+              {item.startTime ? (
+                <span className="inline-flex items-center gap-1 rounded-2xl border border-white/80 bg-[#eef2f9] px-2 py-1 text-[10px] font-bold text-slate-500 shadow-[2px_2px_4px_rgba(100,116,139,0.25)]">
+                  <Clock size={9} /> {formatTime(item.startTime)}
+                </span>
+              ) : null}
+              {item.recurrence !== "none" && recLabel ? (
+                <span className="inline-flex items-center gap-1 rounded-2xl border border-white/80 bg-[#eef2f9] px-2 py-1 text-[10px] font-medium text-slate-500 shadow-[2px_2px_4px_rgba(100,116,139,0.25)]">
+                  <Repeat size={9} /> {recLabel}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex shrink-0 gap-1.5">
+            <button type="button" onClick={() => onEdit(item, dateStr, source)} className="flex h-[34px] w-[34px] items-center justify-center rounded-xl border border-white/80 bg-[#eef2f9] text-(--color-primary-500) shadow-[3px_3px_6px_rgba(100,116,139,0.28)]">
+              <Pencil size={13} />
+            </button>
+            <button type="button" onClick={() => onDelete(item)} className="flex h-[34px] w-[34px] items-center justify-center rounded-xl border border-red-200 bg-[#fef2f2] text-red-500 shadow-[3px_3px_6px_rgba(100,116,139,0.22)]">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("cal-item-card", done && "done")}>
       <div className="cal-item-accent" style={{ background: hex }}/>
 
       {/* Check button — bigger on mobile */}
       <button
-        className={cn(isMobile ? "cal-item-check-mob" : "cal-item-check", done && "done")}
+        className={cn("cal-item-check", done && "done")}
         onClick={() => onToggle(item.id, date)}
       >
         {done
-          ? <CheckCircle2 size={isMobile ? 22 : 16} style={{ color:"#4ade80" }}/>
-          : <Circle size={isMobile ? 22 : 16}/>
+          ? <CheckCircle2 size={16} style={{ color:"#4ade80" }}/>
+          : <Circle size={16}/>
         }
       </button>
 
@@ -683,58 +722,68 @@ function ItemFormContent({ t, isRTL, editingItem, itemForm, setItemForm, handleS
 }
 
 // ─── Mobile Day Panel (bottom sheet) ─────────────────────────────────────────
-function MobileDayPanel({ selectedDate, items, completions, eventTypes, selectedType,
-  onToggle, onEdit, onDelete, onAdd, getItemsForDate, getProgressForDate,
-  getTypeLabel, renderIcon, formatTime, t, dayNames, monthNames, isRTL, onClose }) {
+function MobileDayPanel({ selectedDate, completions, eventTypes, selectedType,
+  onToggle, onEdit, onDelete, onAdd, getItemsForDate,
+  getTypeLabel, renderIcon, formatTime, t, dayNames, monthNames, onClose }) {
 
   if (!selectedDate) return null;
-  const dateStr  = selectedDate.toISOString().split("T")[0];
+  const dateStr  = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth()+1).padStart(2,"0")}-${String(selectedDate.getDate()).padStart(2,"0")}`;
   const all      = getItemsForDate(selectedDate);
   const filtered = selectedType === "all" ? all : all.filter(i => i.type === selectedType);
-  const prog     = getProgressForDate(selectedDate);
-
-  const title = (
-    <div className="flex items-center gap-3 flex-1">
-      <div className="font-[var(--cal-font-d)] text-[32px] font-normal md: leading-none text-[var(--cal-text)]">
-        {selectedDate.getDate()}
-      </div>
-      <div>
-        <div className="font-[var(--cal-font-d)] text-[15px] font-normal italic text-[var(--cal-text)]">
-          {dayNames[selectedDate.getDay()]}
-        </div>
-        <div className="text-[10px] font-medium text-[var(--cal-text3)] mt-0.5">
-          {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-        </div>
-      </div>
-      {prog.total > 0 && (
-        <div className="ml-auto flex flex-col items-end gap-1">
-          <div className="bg-[var(--cal-border3)] rounded-full h-1.5 overflow-hidden w-16">
-            <div
-              className="h-full rounded-full transition-[width] duration-500"
-              style={{ width:`${prog.percentage}%`, background:"var(--cal-grad)" }}
-            />
-          </div>
-          <div className="text-[10px] font-semibold text-[var(--cal-text3)]">
-            <span style={{ color:"var(--cal-accent)" }}>{prog.completed}</span>/{prog.total}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const doneCount = filtered.filter(i => completions[`${i.id}_${dateStr}`]).length;
+  const total = filtered.length;
+  const pct = total ? Math.round((doneCount / total) * 100) : 0;
+  const now = new Date();
+  const todayMatch = selectedDate.getFullYear() === now.getFullYear() && selectedDate.getMonth() === now.getMonth() && selectedDate.getDate() === now.getDate();
 
   return (
-    <SlidePanel open={!!selectedDate} onClose={onClose} title={title}>
-      <div className="px-4 pt-3 pb-1">
-        <button className="cal-sidebar-add w-full" onClick={() => onAdd(dateStr)}>
-          <Plus size={12}/> {t("addNewItem")}
+    <SlidePanel open={!!selectedDate} onClose={onClose} className="bg-card">
+      <div className="mx-4 mt-2 mb-3 overflow-hidden rounded-2xl border border-white/35 bg-gradient-to-br from-(--color-primary-800) via-(--color-primary-700) to-(--color-secondary-600) p-4 text-white shadow-[4px_8px_14px_rgba(15,48,120,0.42)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            {todayMatch && (
+              <div className="mb-1.5 inline-flex items-center gap-1 rounded-2xl border border-white/30 bg-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide">
+                <Sparkles size={9} /> {t("today")}
+              </div>
+            )}
+            <div className="text-[11px] text-white/60">{dayNames[selectedDate.getDay()]}</div>
+            <div className="text-[22px] font-black tracking-tight">
+              {selectedDate.getDate()} {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+            </div>
+          </div>
+          <div className="min-w-[68px] rounded-2xl border border-white/30 bg-white/15 px-3 py-2.5 text-center">
+            <div className="text-2xl font-black leading-7">{doneCount}/{total}</div>
+            <div className="text-[9px] font-bold uppercase tracking-wide text-white/55">{t("completed")}</div>
+          </div>
+        </div>
+        {total > 0 && (
+          <div className="mt-3 h-[5px] overflow-hidden rounded-full border border-white/10 bg-white/15">
+            <div className="h-full rounded-full bg-white" style={{ width: `${pct}%` }} />
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 pb-3">
+        <button
+          type="button"
+          onClick={() => onAdd(dateStr)}
+          className="flex h-[46px] w-full items-center justify-center gap-2 rounded-2xl border border-white/80 bg-[#eef2f9] text-[13px] font-bold text-(--color-primary-700) shadow-[5px_5px_8px_rgba(100,116,139,0.36)]"
+        >
+          <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg border border-(--color-primary-400)/30 bg-(--color-primary-500)/10">
+            <Plus size={14} />
+          </span>
+          {t("addToThisDay")}
         </button>
       </div>
-      <div className="px-3 pb-6 pt-2 flex flex-col gap-2">
+
+      <div className="flex flex-col gap-2 px-4 pt-1">
         {!filtered.length ? (
-          <div className="cal-empty-state py-8">
-            <div className="cal-empty-icon"><CalendarIcon size={18}/></div>
-            <div className="cal-empty-title">{t("noTasksTitle")}</div>
-            <div className="cal-empty-sub">{t("noTasksDesc")}</div>
+          <div className="flex flex-col items-center py-8 text-center">
+            <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-[20px] border border-white/80 bg-[#eef2f9] shadow-[5px_5px_8px_rgba(100,116,139,0.36)]">
+              <CalendarDays size={28} className="text-(--color-primary-400)" strokeWidth={1.5} />
+            </div>
+            <div className="text-sm font-bold text-slate-700">{t("noTasksTitle")}</div>
+            <div className="mt-1 text-xs text-slate-400">{t("noTasksSubtitle")}</div>
           </div>
         ) : filtered.map(item => (
           <ItemCard key={item.id} item={item} date={selectedDate} dateStr={dateStr}
@@ -956,6 +1005,9 @@ export default function CalendarPage() {
   const adjustedDayNames = useMemo(() => {
     return Array.from({length:7}, (_,i) => dayNames[(i+settings.startOfWeek)%7]);
   }, [dayNames, settings.startOfWeek]);
+  const shortDayByIndex = useMemo(() => ([
+    t("daySun"), t("dayMon"), t("dayTue"), t("dayWed"), t("dayThu"), t("dayFri"), t("daySat"),
+  ]), [t]);
 
   const getDateString  = (d) => {
     const y = d.getFullYear();
@@ -972,15 +1024,8 @@ export default function CalendarPage() {
   };
   const isWeekend        = (d) => settings.weekendDays.includes(d.getDay());
   const getCompletionKey = (id, d) => `${id}_${getDateString(d)}`;
-  const isItemCompleted  = (id, d) => !!completions[getCompletionKey(id, d)];
   const renderIcon       = (n, cls="h-4 w-4") => { const IC=(n&&ICON_COMPONENTS[n])||CalendarIcon; return <IC className={cls}/>; };
   const getTypeLabel     = (type) => { if (!type) return t("types.all"); if (type.custom) return type.name||""; return type.nameKey?t(type.nameKey):type.name||""; };
-  const getWeekNumber    = (d) => {
-    const u = new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-    const dn = u.getUTCDay()||7; u.setUTCDate(u.getUTCDate()+4-dn);
-    const ys = new Date(Date.UTC(u.getUTCFullYear(),0,1));
-    return Math.ceil((((+u-+ys)/86400000)+1)/7);
-  };
 
   const getItemsForDate = (date) => {
     const ds = getDateString(date);
@@ -1001,12 +1046,6 @@ export default function CalendarPage() {
     });
   };
   const getItemCountByType = (typeId) => typeId==="all" ? items.length : items.filter(i=>i.type===typeId).length;
-  const getProgressForDate = (date) => {
-    const its = getItemsForDate(date);
-    if (!its.length) return {completed:0, total:0, percentage:0};
-    const completed = its.filter(i=>isItemCompleted(i.id,date)).length;
-    return {completed, total:its.length, percentage:Math.round((completed/its.length)*100)};
-  };
 
   const resetItemForm = useCallback(() => {
     setItemForm({ id:"", title:"", note:"", type:"task", startDate:getDateString(new Date()), startTime:"", recurrence:"none", recurrenceInterval:1, recurrenceDays:[] });
@@ -1111,8 +1150,6 @@ export default function CalendarPage() {
     {value:"Flame",       label:t("icons.important"),Icon:Flame      },
   ], [t]);
 
-  const selectedTypeObj = eventTypes.find(tt => tt.id===selectedType);
-
   // ── Build month data ──────────────────────────────────────────────────────
   const weeks = useMemo(() => {
     const y=currentDate.getFullYear(), m=currentDate.getMonth();
@@ -1128,343 +1165,204 @@ export default function CalendarPage() {
     return ws;
   }, [currentDate, settings.startOfWeek]);
 
-  // ── Desktop month view ────────────────────────────────────────────────────
-  const renderDesktopMonth = () => {
-    const gc = settings.showWeekNumbers ? {gridTemplateColumns:"36px repeat(7,1fr)"} : {};
-    return (
-      <div>
-        <div className="cal-day-headers" style={gc}>
-          {settings.showWeekNumbers && <div/>}
-          {adjustedDayNames.map((day,idx) => {
-            const orig=(idx+settings.startOfWeek)%7;
-            return (
-              <div key={idx} className={cn("cal-day-header",(orig===0||orig===6)&&"weekend")}>
-                {day}
-              </div>
-            );
-          })}
-        </div>
-        <div className="cal-grid" style={gc}>
-          {weeks.map((week,wi) => (
-            <>
-              {settings.showWeekNumbers && <div key={`wk-${wi}`} className="cal-week-num-cell">{week[0]&&getWeekNumber(week[0])}</div>}
-              {week.map((date,di) => {
-                const key=date?getDateString(date):`e-${wi}-${di}`;
-                if (!date) return <div key={key} className="cal-cell empty"/>;
-                const ds=getDateString(date);
-                const all=getItemsForDate(date);
-                const fil=selectedType==="all"?all:all.filter(i=>i.type===selectedType);
-                const isToday=ds===todayStr;
-                const isSel=selectedDate&&ds===getDateString(selectedDate);
-                const prog=getProgressForDate(date);
-                const isWknd=isWeekend(date);
-                return (
-                  <div key={ds}
-                    className={cn("cal-cell",isToday&&"today",isSel&&!isToday&&"selected",isWknd&&settings.highlightWeekend&&!isToday&&"weekend")}
-                    onClick={()=>setSelectedDate(date)}>
-                    <div className="flex items-center justify-between mb-[3px]">
-                      <div className="cal-date-num">{date.getDate()}</div>
-                      {prog.total>0&&(
-                        <div className="relative hidden sm:inline-flex items-center justify-center flex-shrink-0">
-                          <ProgressRing pct={prog.percentage} size={24}/>
-                          <span className="absolute text-[8px] font-bold text-[var(--cal-text2)]">{prog.completed}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      {fil.slice(0,3).map(item => {
-                        const type=eventTypes.find(tt=>tt.id===item.type);
-                        const {hex,bg}=resolveTypeHex(type);
-                        const done=isItemCompleted(item.id,date);
-                        return (
-                          <div key={item.id}
-                            className={cn("cal-event-pill group/item",done&&"done")}
-                            style={{background:bg,borderColor:`${hex}25`}}
-                            onClick={e=>e.stopPropagation()}>
-                            <button className="cal-event-pill-check" onClick={e=>{e.stopPropagation();toggleCompletion(item.id,date);}}>
-                              {done?<CheckCircle2 size={9} style={{color:hex}}/>:<Circle size={9} style={{color:`${hex}80`}}/>}
-                            </button>
-                            <span className="cal-event-pill-dot" style={{background:hex}}/>
-                            <MultiLangText className={cn("cal-event-pill-title",done&&"line-through")} style={{color:"var(--cal-text)"}}>{item.title}</MultiLangText>
-                            <div className="flex gap-[2px] opacity-0 group-hover/item:opacity-100 transition-opacity duration-150">
-                              <button
-                                className="w-4 h-4 bg-transparent border-none rounded cursor-pointer flex items-center justify-center text-[var(--cal-text2)]"
-                                onClick={e=>{e.stopPropagation();openEditPanel(item,ds,"calendar");}}>
-                                <Pencil size={8}/>
-                              </button>
-                              <button
-                                className="w-4 h-4 bg-transparent border-none rounded cursor-pointer flex items-center justify-center text-red-400"
-                                onClick={e=>{e.stopPropagation();handleDeleteItem(item);}}>
-                                <Trash2 size={8}/>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {fil.length>3&&<div className="cal-cell-more">+{fil.length-3} {t("more")}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-            </>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // ── Mobile compact calendar ───────────────────────────────────────────────
-  const renderMobileCalendar = () => {
-    const selStr = selectedDate ? getDateString(selectedDate) : null;
-    return (
-      <div className="cal-mob-wrap pb-6 w-full">
-        <div className="cal-mob-dh">
-          {adjustedDayNames.map((day,idx)=>{
-            const orig=(idx+settings.startOfWeek)%7;
-            return (
-              <div key={idx} className={cn("cal-mob-dh-cell",(orig===0||orig===6)&&"wknd")}>
-                {day}
-              </div>
-            );
-          })}
-        </div>
-
-        {weeks.map((week,wi)=>(
-          <div key={wi} className="cal-mob-week">
-            {week.map((date,di)=>{
-              const key=date?getDateString(date):`e-${wi}-${di}`;
-              if (!date) return <div key={key} className="cal-mob-cell empty"/>;
-              const ds=getDateString(date);
-              const all=getItemsForDate(date);
-              const fil=selectedType==="all"?all:all.filter(i=>i.type===selectedType);
-              const isToday=ds===todayStr;
-              const isSel=ds===selStr;
-              const isWknd=isWeekend(date);
-              const dotColors=[...new Set(
-                fil.slice(0,3).map(item=>resolveTypeHex(eventTypes.find(tt=>tt.id===item.type)).hex)
-              )];
-              return (
-                <div key={ds}
-                  className={cn("cal-mob-cell",isToday&&"today",isSel&&"sel",isWknd&&!isToday&&!isSel&&"wknd")}
-                  onClick={()=>{
-                    if (isSel) {
-                      setShowDayPanel(false);
-                      setTimeout(() => setSelectedDate(null), 300);
-                    } else {
-                      setSelectedDate(date);
-                      setShowDayPanel(true);
-                    }
-                  }}>
-                  <div className="cal-mob-num">{date.getDate()}</div>
-                  {dotColors.length>0&&(
-                    <div className="cal-mob-dots">
-                      {dotColors.slice(0,3).map((hex,i)=>(
-                        <div key={i} className="cal-mob-dot"
-                          style={{background: isSel&&!isToday ? "rgba(255,255,255,.8)" : hex}}/>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   // ─── JSX ─────────────────────────────────────────────────────────────────
   return (
-    <div className="cal-wrap !p-0  min-h-screen flex flex-col">
+    <div className="cal-wrap mx-auto flex min-h-0 w-full max-w-[440px] flex-1 flex-col">
       <DesignStyles/>
 
-      {/* Overlay for drawers */}
       {showAddTypeDrawer && (
         <div className="cal-overlay fixed inset-0 z-40" onClick={()=>setShowAddTypeDrawer(false)}/>
       )}
 
-      {/* ═══ HERO ════════════════════════════════════════════════ */}
-      <div className="cal-hero !rounded-[20px_20px_20px_0]">
-        <div className="cal-hero-orb1"/><div className="cal-hero-orb2"/>
-        <div className="cal-hero-noise"/><div className="cal-hero-dots"/><div className="cal-hero-hl"/>
-        <svg className="absolute right-[-40px] top-0 h-full w-auto opacity-[0.04] pointer-events-none"
-          viewBox="0 0 200 300" fill="none" aria-hidden="true">
-          <circle cx="200" cy="150" r="140" stroke="white" strokeWidth="40"/>
-          <circle cx="200" cy="150" r="80"  stroke="white" strokeWidth="20"/>
-        </svg>
-
-        <div className="cal-hero-toprow">
-          {/* Month nav */}
-          <div className="cal-hero-nav">
-            <button className="cal-hero-navbtn"
-              onClick={()=>setCurrentDate(new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1))}>
-              {isRTL?<ChevronRight size={15}/>:<ChevronLeft size={15}/>}
-            </button>
-            <div className="cal-hero-month">
-              {monthNames[currentDate.getMonth()]}
-              <span>{currentDate.getFullYear()}</span>
-            </div>
-            <button className="cal-hero-navbtn"
-              onClick={()=>setCurrentDate(new Date(currentDate.getFullYear(),currentDate.getMonth()+1,1))}>
-              {isRTL?<ChevronLeft size={15}/>:<ChevronRight size={15}/>}
-            </button>
-          </div>
-
-          {/* Commitment (md+) */}
-          <div className="hidden md:block flex-shrink-0">
-            <CountdownTimer t={tCommit} isRTL={isRTL}/>
-          </div>
-
-          {/* Action buttons — NO tab select dropdown */}
-          <div className="cal-hero-actions">
-            {/* Type filter (sm+) */}
-            <div className="hidden sm:block">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="cal-hero-btn-glass">
-                    {renderIcon(selectedTypeObj?.icon||"LayoutGrid","h-4 w-4")}
-                    <span className="hidden lg:inline">{getTypeLabel(selectedTypeObj)}</span>
-                    <ChevronDown size={12} className="opacity-70"/>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="bg-[var(--cal-surface)] border border-[var(--cal-border2)] rounded-[14px] p-2 w-60">
-                  {eventTypes.map(type=>{
-                    const {hex}=resolveTypeHex(type);
-                    return (
-                      <div key={type.id} className={cn("cal-type-row",selectedType===type.id&&"active")} onClick={()=>setSelectedType(type.id)}>
-                        <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{background:hex}}/>
-                        {renderIcon(type.icon,"h-3.5 w-3.5")}
-                        <span className="flex-1">{getTypeLabel(type)}</span>
-                        <span className="cal-type-row-badge">{getItemCountByType(type.id)}</span>
-                      </div>
-                    );
-                  })}
-                  <div className="border-t border-[var(--cal-border)] pt-1.5 mt-1">
-                    <div className="cal-type-row text-[var(--cal-accent)]" onClick={()=>setShowAddTypeDrawer(true)}>
-                      <Plus size={14}/> {t("addNewType")}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Add item — opens slide panel */}
-            <button
-              className="cal-hero-btn-solid"
-              onClick={() => openAddPanel(selectedDate ? getDateString(selectedDate) : getDateString(new Date()))}
-            >
-              <Plus size={14}/> <span className="hidden sm:inline">{t("add")}</span>
-            </button>
-
-            {/* Sound */}
-            <button className={cn("cal-hero-icon-btn",soundEnabled&&"active")}
-              onClick={()=>setSoundEnabled(!soundEnabled)}
-              title={soundEnabled?t("soundOn"):t("soundOff")}>
-              {soundEnabled?<Volume2 size={14}/>:<VolumeX size={14}/>}
-            </button>
-
-            {/* Settings (sm+) */}
-            <button className="cal-hero-icon-btn hidden sm:flex"
-              onClick={()=>setShowSettingsDialog(true)} title={t("settings")}>
-              <Settings size={14}/>
-            </button>
-          </div>
-        </div>
-
-        {/* Type strip */}
-        <div className="cal-type-strip">
-          {eventTypes.map(type=>{
-            const active=selectedType===type.id;
-            return (
-              <button key={type.id} className={cn("cal-type-chip",active&&"active")}
-                onClick={()=>setSelectedType(type.id)}>
-                <span className="cal-type-dot" style={{background:active?"var(--color-primary-600,#4f46e5)":"rgba(255,255,255,.7)"}}/>
-                {getTypeLabel(type)}
-                <span className="cal-type-count">{getItemCountByType(type.id)}</span>
+      <div className="m-[5px] rounded-3xl shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]">
+        <div
+          className="relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-e-[rgba(15,34,128,0.35)] border-b-[rgba(15,34,128,0.45)]"
+          style={{ background: 'linear-gradient(135deg, var(--color-primary-900), var(--color-primary-800), var(--color-primary-700), var(--color-secondary-700))' }}
+        >
+          <div className="pointer-events-none absolute -top-[100px] -start-12 h-[200px] w-[200px] rounded-full bg-white/5" />
+          <div className="pointer-events-none absolute -bottom-12 -end-8 h-[140px] w-[140px] rounded-full bg-white/[0.04]" />
+          <div className="relative flex items-center justify-between gap-2 px-5 pt-4">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={()=>setCurrentDate(new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1))}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-e-[rgba(15,48,120,0.25)] border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white shadow-[2px_3px_6px_rgba(15,23,42,0.35)]"
+              >
+                {isRTL ? <ChevronRight size={16} strokeWidth={2.5} /> : <ChevronLeft size={16} strokeWidth={2.5} />}
               </button>
-            );
-          })}
+              <div>
+                <div className="mb-[-12px] flex items-center gap-[5px] text-[10px] font-medium uppercase tracking-[1px] text-white/55">
+                  <CalendarIcon size={10} />
+                  {currentDate.getFullYear()}
+                </div>
+                <div className="text-2xl font-black tracking-[-0.5px] text-white">{monthNames[currentDate.getMonth()]}</div>
+              </div>
+              <button
+                type="button"
+                onClick={()=>setCurrentDate(new Date(currentDate.getFullYear(),currentDate.getMonth()+1,1))}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-e-[rgba(15,48,120,0.25)] border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white shadow-[2px_3px_6px_rgba(15,23,42,0.35)]"
+              >
+                {isRTL ? <ChevronLeft size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={()=>setShowSettingsDialog(true)}
+                title={t("settings")}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-e-[rgba(15,48,120,0.25)] border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white shadow-[2px_3px_6px_rgba(15,23,42,0.35)]"
+              >
+                <Settings size={15} strokeWidth={2.2} />
+              </button>
+              <button
+                type="button"
+                onClick={() => openAddPanel(selectedDate ? getDateString(selectedDate) : getDateString(new Date()))}
+                className="flex h-9 items-center gap-1.5 rounded-2xl border-[1.2px] border-t-white border-s-white/95 border-e-[rgba(15,48,120,0.12)] border-b-[rgba(15,48,120,0.16)] bg-white px-3 text-xs font-bold text-(--color-primary-700) shadow-[2px_3px_6px_rgba(15,48,120,0.28)]"
+              >
+                <Plus size={14} strokeWidth={2.5} />
+                {t("add")}
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-1 px-4 pb-3 pt-4">
+            {eventTypes.map(type => {
+              const active = selectedType === type.id;
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => setSelectedType(type.id)}
+                  className={cn(
+                    "min-w-0 flex-1 truncate rounded-2xl border-[1.2px] px-1.5 py-1.5 text-center text-[9px] font-bold",
+                    active
+                      ? "border-white/90 bg-white text-(--color-primary-700) shadow-[2px_4px_7px_color-mix(in_srgb,var(--color-primary-900)_40%,transparent)]"
+                      : "border-white/30 bg-white/10 text-white/65",
+                  )}
+                >
+                  {getTypeLabel(type)}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* ═══ BODY ════════════════════════════════════════════════ */}
-      <div className="cal-body  flex-1">
+      <div className="relative mx-3 mt-3 overflow-hidden rounded-[26px] border border-white/85 bg-[#eef2f9] px-3 pb-3 pt-4 shadow-[5px_6px_10px_rgba(100,116,139,0.4)]">
+        <div className="pointer-events-none absolute inset-x-4 top-0 h-[1.5px] rounded-full bg-white/95" />
+        {(() => {
+          let eventDays = 0;
+          let totalEvents = 0;
+          weeks.forEach(week => {
+            week.forEach(date => {
+              if (!date) return;
+              const dayItems = getItemsForDate(date);
+              const filtered = selectedType === "all" ? dayItems : dayItems.filter(i => i.type === selectedType);
+              if (filtered.length) {
+                eventDays += 1;
+                totalEvents += filtered.length;
+              }
+            });
+          });
+          return (
+            <div className="mb-3 flex items-center justify-between rounded-2xl bg-[#e4eaf4] px-2 py-2 shadow-[inset_2px_2px_4px_rgba(100,116,139,0.28)]">
+              <div className="flex items-center gap-2">
+                <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[10px] bg-(--color-primary-500)/10 text-(--color-primary-600)">
+                  <CalendarDays size={14} strokeWidth={2.2} />
+                </span>
+                <span>
+                  <span className="block text-xs font-bold text-slate-800">{totalEvents} {t("events")}</span>
+                  <span className="block text-[10px] font-medium text-slate-400">{eventDays} {t("activeDays")}</span>
+                </span>
+              </div>
+              <span className="rounded-full border border-(--color-primary-400)/30 bg-(--color-primary-500)/10 px-2.5 py-1 text-[10px] font-bold text-(--color-primary-700)">
+                {t("monthView")}
+              </span>
+            </div>
+          );
+        })()}
 
-        {/* Desktop grid */}
-        <div className="cal-main overflow-y-auto">
-          {renderDesktopMonth()}
+        <div className="mb-2 grid grid-cols-7 rounded-2xl bg-white/55 py-2">
+          {adjustedDayNames.map((day, idx) => {
+            const orig = (idx + settings.startOfWeek) % 7;
+            const weekend = orig === 5 || orig === 6;
+            return (
+              <div key={day + idx} className={cn("text-center text-[10px] font-bold tracking-wide", weekend ? "text-(--color-primary-400)" : "text-slate-400")}>
+                {shortDayByIndex[orig] || day.slice(0, 3)}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Mobile compact calendar */}
-        {renderMobileCalendar()}
+        {weeks.map((week, wi) => (
+          <div key={wi} className={cn("mb-1 grid grid-cols-7 rounded-2xl py-0.5", wi % 2 === 1 && "bg-white/30")}>
+            {week.map((date, di) => {
+              if (!date) return <div key={`e-${wi}-${di}`} />;
+              const ds = getDateString(date);
+              const all = getItemsForDate(date);
+              const fil = selectedType === "all" ? all : all.filter(i => i.type === selectedType);
+              const isToday = ds === todayStr;
+              const isSel = selectedDate && ds === getDateString(selectedDate) && !isToday;
+              const count = fil.length;
+              const hasDots = count > 0;
+              const weekend = date.getDay() === 5 || date.getDay() === 6;
+              const extra = Math.max(0, count - 3);
+              return (
+                <button
+                  key={ds}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(date);
+                    setShowDayPanel(true);
+                  }}
+                  className="flex items-center justify-center py-0.5"
+                >
+                  <span
+                    className={cn(
+                      "relative flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-full text-[13px] font-bold",
+                      isToday && "border-[1.4px] border-white/55 bg-gradient-to-br from-(--color-primary-400) via-(--color-primary-600) to-(--color-primary-800) text-white shadow-[2px_4px_7px_color-mix(in_srgb,var(--color-primary-700)_40%,transparent)]",
+                      isSel && "border-[1.4px] border-slate-400/45 bg-[#eef2f9] text-slate-700 shadow-[2px_4px_7px_rgba(100,116,139,0.25)]",
+                      !isToday && !isSel && hasDots && "border border-slate-400/20 bg-white/90 text-slate-700",
+                      !isToday && !isSel && !hasDots && weekend && "border border-slate-300/20 bg-slate-400/10 text-slate-400",
+                      !isToday && !isSel && !hasDots && !weekend && "border border-slate-300/15 bg-white/35 text-slate-700",
+                      hasDots && !isToday && "text-[13px]",
+                    )}
+                  >
+                    <span className={cn(hasDots && "mb-1.5")}>{date.getDate()}</span>
+                    {hasDots && (
+                      <span className="absolute inset-x-1 bottom-1 flex items-center justify-center gap-[2px]">
+                        {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
+                          <span key={i} className={cn("h-[5px] w-[5px] rounded-full", isToday ? "bg-white" : "border border-white/50 bg-slate-900")} />
+                        ))}
+                        {extra > 0 && (
+                          <span className={cn("flex h-2.5 min-w-2.5 items-center justify-center rounded-full text-[7px] font-extrabold leading-none", isToday ? "bg-white text-(--color-primary-700)" : "bg-slate-900 text-white")}>+</span>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
 
-        {/* Desktop sidebar */}
-        <div className={` cal-sidebar flex  ${selectedDate ? "!w-[300px]" : " !w-[250px] "} duration-300`}>
-          {selectedDate ? (
-            <>
-              <div className="cal-sidebar-head">
-                <div className="cal-sidebar-date-row">
-                  <div className="cal-sidebar-day-num">{selectedDate.getDate()}</div>
-                  <div>
-                    <div className="cal-sidebar-day-name">{dayNames[selectedDate.getDay()]}</div>
-                    <div className="cal-sidebar-my">{monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}</div>
-                  </div>
-                </div>
-                {(()=>{
-                  const prog=getProgressForDate(selectedDate);
-                  if (!prog.total) return null;
-                  return (
-                    <div>
-                      <div className="cal-prog-wrap"><div className="cal-prog-bar" style={{width:`${prog.percentage}%`}}/></div>
-                      <div className="cal-prog-lbl"><strong>{prog.completed}</strong> {t("of")} {prog.total} {t("done")} · {prog.percentage}%</div>
-                    </div>
-                  );
-                })()}
-              </div>
-              <button className="cal-sidebar-add"
-                onClick={()=>openAddPanel(getDateString(selectedDate))}>
-                <Plus size={13}/> {t("addNewItem")}
-              </button>
-              <div className="cal-sidebar-items">
-                {(()=>{
-                  const its=getItemsForDate(selectedDate);
-                  const fil=selectedType==="all"?its:its.filter(i=>i.type===selectedType);
-                  const ds=getDateString(selectedDate);
-                  if (!fil.length) return (
-                    <div className="cal-empty-state">
-                      <div className="cal-empty-icon"><CalendarIcon size={22}/></div>
-                      <div className="cal-empty-title">{t("noTasksTitle")}</div>
-                      <div className="cal-empty-sub">{t("noTasksDesc")}</div>
-                    </div>
-                  );
-                  const sorted = fil.slice().sort((a,b) => {
-                    const aDone = isItemCompleted(a.id, selectedDate);
-                    const bDone = isItemCompleted(b.id, selectedDate);
-                    return aDone === bDone ? 0 : aDone ? 1 : -1;
-                  });
-                  return (
-                    <AnimatePresence initial={false}>
-                      {sorted.map(item => (
-                        <motion.div key={item.id} layout initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginBottom: 0 }} transition={{ duration: 0.25 }} style={{ overflow: 'hidden' }}>
-                          <ItemCard item={item} date={selectedDate} dateStr={ds}
-                            eventTypes={eventTypes} completions={completions}
-                            onToggle={toggleCompletion} onEdit={openEditPanel} onDelete={handleDeleteItem}
-                            getTypeLabel={getTypeLabel} renderIcon={renderIcon} formatTime={formatTime}
-                            t={t} dayNames={dayNames} isRTL={isRTL} source="sidebar"/>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  );
-                })()}
-              </div>
-            </>
-          ) : (
-            <div className="cal-empty-state  flex-1">
-              <div className="cal-empty-icon"><CalendarIcon size={22}/></div>
-              <div className="cal-empty-title">{t("selectDayTitle")}</div>
-              <div className="cal-empty-sub">{t("selectDayDesc")}</div>
-            </div>
-          )}
+        <div className="mt-2 flex items-center justify-center gap-4 border-t border-slate-400/20 pt-3">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+            <span className="h-3 w-3 rounded-full border border-white/70 bg-(--color-primary-600)" />
+            {t("today")}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+            <span className="h-3 w-3 rounded-full border-[1.5px] border-(--color-primary-400) bg-(--color-primary-500)/15" />
+            {t("selected")}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex justify-center px-5 py-5">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-[#eef2f9] px-4 py-3 shadow-[4px_4px_8px_rgba(100,116,139,0.34)]">
+          <span className="flex h-[34px] w-[34px] items-center justify-center rounded-xl border border-(--color-primary-400)/30 bg-(--color-primary-500)/10 text-(--color-primary-600)">
+            <CalendarDays size={15} strokeWidth={2.2} />
+          </span>
+          <span className="text-xs font-medium text-slate-500">{t("tapToSelect")}</span>
         </div>
       </div>
 
@@ -1477,7 +1375,7 @@ export default function CalendarPage() {
         onEdit={(item, dateStr) => { openEditPanel(item, dateStr, "mobile"); }}
         onDelete={handleDeleteItem}
         onAdd={(ds) => { openAddPanel(ds); }}
-        getItemsForDate={getItemsForDate} getProgressForDate={getProgressForDate}
+        getItemsForDate={getItemsForDate}
         getTypeLabel={getTypeLabel} renderIcon={renderIcon} formatTime={formatTime}
         t={t} dayNames={dayNames} monthNames={monthNames} isRTL={isRTL}
         onClose={() => {
@@ -1573,6 +1471,15 @@ export default function CalendarPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-2">
+            <div className="cal-settings-row">
+              <div>
+                <div className="cal-settings-lbl">{soundEnabled ? t("soundOn") : t("soundOff")}</div>
+              </div>
+              <Switch checked={soundEnabled} onCheckedChange={setSoundEnabled} />
+            </div>
+            <div className="rounded-2xl border border-white/80 bg-[#eef2f9] px-3 py-2">
+              <CountdownTimer t={tCommit} isRTL={isRTL} />
+            </div>
             {[
               {key:"showWeekNumbers",    label:t("showWeekNumbers"),     desc:t("showWeekNumbersDesc")    },
               {key:"highlightWeekend",   label:t("highlightWeekend"),    desc:t("highlightWeekendDesc")   },
@@ -1691,17 +1598,17 @@ function CountdownTimer({ t, isRTL }) {
         <div className="flex items-center gap-2">
           {!startTime ? (
             <button onClick={()=>setShowPicker(true)}
-              className="w-7 h-7 bg-white/[0.18] border border-white/25 rounded-lg cursor-pointer flex items-center justify-center text-white flex-shrink-0">
+              className="cal-commit-btn shrink-0">
               <Play size={12}/>
             </button>
           ) : (
             <div className="flex gap-1">
               <button onClick={isRunning?()=>setIsRunning(false):()=>setIsRunning(true)}
-                className="w-7 h-7 bg-white/[0.18] border border-white/25 rounded-lg cursor-pointer flex items-center justify-center text-white">
+                className="cal-commit-btn">
                 {isRunning?<Pause size={11}/>:<Play size={11}/>}
               </button>
               <button onClick={reset}
-                className="w-7 h-7 bg-white/10 border border-white/[0.18] rounded-lg cursor-pointer flex items-center justify-center text-white/70">
+                className="cal-commit-btn">
                 <RotateCcw size={11}/>
               </button>
             </div>

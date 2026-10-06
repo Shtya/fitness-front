@@ -1,0 +1,81 @@
+/* Billing chrome follows the users roster. Package cards stay on their light tier palettes. */
+
+.bill-scope {
+	color: var(--gm-ink, #0f172a);
+}
+
+.bill-scope .bg-white,
+.bill-scope .bg-white\/90,
+.bill-scope .bg-white\/80,
+.bill-scope .bg-white\/95 {
+	background-color: var(--gm-paper, #fff) !important;
+}
+
+.bill-scope .bill-keep .bg-white,
+.bill-scope .bill-keep .bg-white\/65,
+.bill-scope .bill-keep .bg-white\/80,
+.bill-scope .bill-keep .bg-white\/90 {
+	background-color: color-mix(in srgb, #fff 72%, transparent) !important;
+}
+
+.bill-scope .bg-slate-50,
+.bill-scope .bg-slate-100,
+.bill-scope .hover\:bg-slate-50:hover,
+.bill-scope .hover\:bg-slate-100:hover {
+	background-color: color-mix(in srgb, var(--gm-ink, #0f172a) 5%, var(--gm-paper, #fff)) !important;
+}
+
+.bill-scope .text-slate-900,
+.bill-scope .text-slate-800,
+.bill-scope .text-slate-700,
+.bill-scope .text-slate-600 {
+	color: var(--gm-ink, #0f172a) !important;
+}
+
+.bill-scope .text-slate-400,
+.bill-scope .text-slate-500 {
+	color: var(--gm-muted, #64748b) !important;
+}
+
+.bill-scope .bill-keep .text-slate-900,
+.bill-scope .bill-keep .text-slate-800,
+.bill-scope .bill-keep .text-slate-700 {
+	color: #0f172a !important;
+}
+
+.bill-scope .bill-keep .text-slate-400,
+.bill-scope .bill-keep .text-slate-500,
+.bill-scope .bill-keep .text-slate-600 {
+	color: #64748b !important;
+}
+
+.bill-scope .border-slate-100,
+.bill-scope .border-slate-200,
+.bill-scope .border-slate-200\/80,
+.bill-scope .border-\[var\(--color-primary-100\)\] {
+	border-color: var(--gm-line, rgba(15, 23, 42, 0.1)) !important;
+}
+
+.bill-scope .bill-badge-ok {
+	border-color: color-mix(in srgb, var(--gm-ok) 35%, transparent);
+	background: color-mix(in srgb, var(--gm-ok) 14%, var(--gm-paper));
+	color: var(--gm-ok);
+}
+
+.bill-scope .bill-badge-bad {
+	border-color: color-mix(in srgb, var(--gm-danger) 35%, transparent);
+	background: color-mix(in srgb, var(--gm-danger) 12%, var(--gm-paper));
+	color: var(--gm-danger);
+}
+
+.bill-scope .bill-badge-warn {
+	border-color: color-mix(in srgb, var(--gm-warn) 35%, transparent);
+	background: color-mix(in srgb, var(--gm-warn) 14%, var(--gm-paper));
+	color: var(--gm-warn);
+}
+
+.bill-scope .bill-badge-muted {
+	border-color: var(--gm-line);
+	background: color-mix(in srgb, var(--gm-ink) 5%, var(--gm-paper));
+	color: var(--gm-muted);
+}

@@ -212,7 +212,7 @@ function ConfirmPopover({ triggerRef, open, onConfirm, onCancel, message, confir
 					<div className="absolute -top-[7px] left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 rounded-sm"
 						style={{ background: "#fff", boxShadow: "-1px -1px 3px rgba(0,0,0,0.07)" }} />
 
-					<div className="relative rounded-lg bg-white border border-slate-200/80 overflow-hidden"
+					<div className={`relative rounded-lg bg-white border border-slate-200/80 overflow-hidden ${typeof document !== 'undefined' && document.documentElement.dataset.gmUsers === '1' ? 'gm-float' : ''}`}
 						style={{ boxShadow: `0 12px 40px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.06), 0 0 0 1px rgba(15,23,42,0.04)` }}>
 						{/* Top accent strip */}
 						<div className="h-0.5 w-full" style={{ background: bg }} />
@@ -297,7 +297,7 @@ function OverflowMenu({ actions, row, triggerRef, open, onClose }) {
 					transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
 					style={{ position: "fixed", left: pos.left, top: pos.top, zIndex: 99998, width: 200 }}
 				>
-					<div className="rounded-lg bg-white border border-slate-200/80 overflow-hidden py-1.5"
+					<div className={`rounded-lg bg-white border border-slate-200/80 overflow-hidden py-1.5 ${typeof document !== 'undefined' && document.documentElement.dataset.gmUsers === '1' ? 'gm-float' : ''}`}
 						style={{ boxShadow: "0 12px 40px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.06)" }}>
 						{actions.map((action, i) => {
 							const v = VARIANTS[action.variant || "slate"];

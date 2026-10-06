@@ -1,30 +1,50 @@
-/* AI Reading Studio — bind chrome to the live system / tenant palette */
+/* AI Reading Studio — same surfaces as the users roster (gm tokens). */
 
 .ai-reading-root {
-	--ar-bg: color-mix(in srgb, var(--color-primary-50, #f8fafc) 72%, #ffffff);
-	--ar-ink: var(--color-primary-950, #0f172a);
-	--ar-muted: color-mix(in srgb, var(--color-primary-700, #334155) 40%, #64748b);
-	--ar-paper: #ffffff;
+	--ar-bg: var(--gm-canvas, transparent);
+	--ar-ink: var(--gm-ink, #0f172a);
+	--ar-muted: var(--gm-muted, #64748b);
+	--ar-paper: var(--gm-paper, #ffffff);
 	--ar-accent: var(--color-primary-600, #4f46e5);
-	--ar-heading: var(--color-primary-800, #1e293b);
-	--ar-border: color-mix(in srgb, var(--color-primary-500, #6366f1) 14%, transparent);
-	--ar-ring: color-mix(in srgb, var(--color-primary-500, #6366f1) 18%, transparent);
+	--ar-heading: var(--gm-ink, #0f172a);
+	--ar-border: var(--gm-line, rgba(15, 23, 42, 0.08));
+	--ar-ring: color-mix(in srgb, var(--color-primary-500, #6366f1) 22%, transparent);
 	color: var(--ar-ink);
 	background: transparent;
 }
 
 .ai-reading-root .ar-surface {
-	background: color-mix(in srgb, var(--ar-paper) 88%, transparent);
+	background: var(--ar-paper);
 	border-color: var(--ar-border);
 }
 
 .ai-reading-root .ar-chip-active {
-	background: linear-gradient(135deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)));
+	background: linear-gradient(180deg, var(--color-primary-500), var(--color-primary-600));
 	color: #fff;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .ai-reading-root .ar-chip-idle {
-	background: color-mix(in srgb, var(--color-primary-50, #f8fafc) 80%, #fff);
+	background: var(--gm-paper, #fff);
 	color: var(--ar-muted);
-	box-shadow: inset 0 0 0 1px var(--ar-ring);
+	box-shadow: inset 0 0 0 1px var(--ar-border);
+}
+
+.ai-reading-root .ar-chip-idle:hover {
+	border-color: color-mix(in srgb, var(--color-primary-500) 35%, var(--ar-border));
+	color: var(--ar-heading);
+}
+
+/* Inner views still use Tailwind bg-white. Paper follows the theme; white text on colored buttons stays. */
+.ai-reading-root .bg-white,
+.ai-reading-root .bg-white\/40,
+.ai-reading-root .bg-white\/50,
+.ai-reading-root .bg-white\/60,
+.ai-reading-root .bg-white\/65,
+.ai-reading-root .bg-white\/70,
+.ai-reading-root .bg-white\/75,
+.ai-reading-root .bg-white\/80,
+.ai-reading-root .bg-white\/90,
+.ai-reading-root .bg-white\/95 {
+	background-color: var(--gm-paper, #fff);
 }

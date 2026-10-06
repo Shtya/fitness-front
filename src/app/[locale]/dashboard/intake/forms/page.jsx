@@ -11,60 +11,67 @@ import React, {
 import { useTranslations } from 'use-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-	FiChevronDown,
-	FiChevronUp,
-	FiEdit2,
-	FiFileText,
-	FiPlus,
-	FiTrash2,
-	FiX,
-	FiCopy,
-	FiSearch,
-	FiEye,
-} from 'react-icons/fi';
-
-
-import api from '@/utils/axios';
-import Button from '@/components/atoms/Button';
-import Input from '@/components/atoms/Input';
-import Select from '@/components/atoms/Select';
-import CheckBox from '@/components/atoms/CheckBox';
-import MultiLangText from '@/components/atoms/MultiLangText';
-
-import { Modal } from '@/components/dashboard/ui/UI';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
-import { Notification } from '@/config/Notification';
-import {
-	PencilLine,
-	Trash2 as LucideTrash2,
-	Files,
-	Sparkles,
+	AlertCircle,
+	AlignLeft,
+	ArrowDown,
+	ArrowUp,
+	CalendarDays,
+	Check,
+	ChevronsUpDown,
+	CircleDot,
+	CopyPlus,
+	Eye,
+	FileText,
+	Hash,
 	Layers,
 	Link as LinkIcon,
-	Zap,
-	Check,
-	AlertCircle,
-	Database,
-	ChevronRight,
+	ListChecks,
+	Mail,
+	Paperclip,
+	PencilLine,
+	Phone,
+	Plus,
+	RefreshCw,
+	Share2,
+	SquareCheck,
+	Trash2,
+	Type,
+	UserCheck,
+	X,
 } from 'lucide-react';
-import { useUser } from '@/hooks/useUser';
-import ActionButtons from '@/components/atoms/Actions';
+
+import api from '@/utils/axios';
+import MultiLangText from '@/components/atoms/MultiLangText';
+import FloatingInput from '@/components/atoms/FloatingInput';
+import FloatingSelect from '@/components/atoms/FloatingSelect';
+import Badge from '@/components/atoms/GmBadge';
+import GmStatCard from '@/components/molecules/GmStatCard';
+import GmRowActions from '@/components/atoms/GmRowActions';
 import DataTable from '@/components/atoms/Datatable';
+import { Modal } from '@/components/dashboard/ui/UI';
+import { Notification } from '@/config/Notification';
+import { useUser } from '@/hooks/useUser';
+import { IntakeHero, IntakeToolbar } from '@/components/pages/dashboard/intake/IntakeChrome';
+import { getStoredPerPage, setStoredPerPage } from '@/lib/table-prefs';
 
 // ─── Constants ───────────────────────────────────────────────
 const FIELD_TYPE_OPTIONS = [
-	{ id: 'text', labelKey: 'types.text', icon: '📝' },
-	{ id: 'email', labelKey: 'types.email', icon: '📧' },
-	{ id: 'number', labelKey: 'types.number', icon: '🔢' },
-	{ id: 'phone', labelKey: 'types.phone', icon: '📱' },
-	{ id: 'date', labelKey: 'types.date', icon: '📅' },
-	{ id: 'textarea', labelKey: 'types.textarea', icon: '📄' },
-	{ id: 'select', labelKey: 'types.select', icon: '📋' },
-	{ id: 'radio', labelKey: 'types.radio', icon: '🔘' },
-	{ id: 'checkbox', labelKey: 'types.checkbox', icon: '☑️' },
-	{ id: 'checklist', labelKey: 'types.checklist', icon: '✅' },
-	{ id: 'file', labelKey: 'types.file', icon: '📎' },
+	{ id: 'text', icon: Type },
+	{ id: 'email', icon: Mail },
+	{ id: 'number', icon: Hash },
+	{ id: 'phone', icon: Phone },
+	{ id: 'date', icon: CalendarDays },
+	{ id: 'textarea', icon: AlignLeft },
+	{ id: 'select', icon: ChevronsUpDown },
+	{ id: 'radio', icon: CircleDot },
+	{ id: 'checkbox', icon: SquareCheck },
+	{ id: 'checklist', icon: ListChecks },
+	{ id: 'file', icon: Paperclip },
 ];
+const OPTION_TYPES = ['select', 'radio', 'checklist'];
+const GM_MODAL = 'gm-modal';
+
+const fieldIconOf = type => FIELD_TYPE_OPTIONS.find(o => o.id === type)?.icon || Type;
 
 // ─── Helpers ──────────────────────────────────────────────────
 function genKey12() {
@@ -75,195 +82,50 @@ function genKey12() {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  DESIGN TOKENS & REUSABLE PRIMITIVES
+//  PRIMITIVES
 // ─────────────────────────────────────────────────────────────
-
-/**
- * Surface card — consistent elevation + optional accent bar
- */
-function Card({ children, className = '', glow = false, accent = false, hover = false }) {
+function IconBtn({ label, onClick, children, danger = false, disabled = false }) {
 	return (
-		<motion.div
-			whileHover={hover ? { y: -1 } : {}}
-			transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-			className={`relative overflow-hidden rounded-lg border bg-white ${className}`}
-			style={{
-				borderColor: glow ? 'var(--color-primary-300)' : 'var(--color-primary-100)',
-				boxShadow: glow
-					? '0 0 0 1px var(--color-primary-200), 0 8px 32px -8px rgba(99,102,241,0.15)'
-					: '0 1px 3px rgba(15,23,42,0.05), 0 4px 12px rgba(15,23,42,0.03)',
-			}}
-		>
-			{accent && (
-				<div
-					className="absolute inset-x-0 top-0 h-0.5"
-					style={{ background: 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))' }}
-				/>
-			)}
-			{children}
-		</motion.div>
-	);
-}
-
-/**
- * Icon container with gradient or semantic variant
- */
-function IconBox({ children, active = false, variant = 'primary', size = 'md' }) {
-	const sizes = { sm: 'h-8 w-8', md: 'h-10 w-10', lg: 'h-11 w-11', xl: 'h-14 w-14' };
-	const iconSizes = { sm: 'text-sm', md: 'text-base', lg: 'text-lg', xl: 'text-xl' };
-
-	let style = {};
-	if (variant === 'danger') style = { background: 'linear-gradient(135deg,#fef2f2,#fee2e2)', color: '#dc2626' };
-	else if (variant === 'success') style = { background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', color: '#16a34a' };
-	else if (variant === 'warning') style = { background: 'linear-gradient(135deg,#fffbeb,#fef3c7)', color: '#d97706' };
-	else if (active) style = {
-		background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-		boxShadow: '0 4px 16px -4px var(--color-primary-500)',
-		color: 'white',
-	};
-	else style = {
-		background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-primary-100))',
-		color: 'var(--color-primary-600)',
-	};
-
-	return (
-		<div className={`grid place-items-center rounded-lg flex-shrink-0 ${sizes[size]} ${iconSizes[size]}`} style={style}>
-			{children}
-		</div>
-	);
-}
-
-/**
- * Badge — tiny semantic label pill
- */
-function Badge({ children, variant = 'primary', icon }) {
-	const styles = {
-		primary: { bg: 'var(--color-primary-50)', border: 'var(--color-primary-200)', text: 'var(--color-primary-700)' },
-		warning: { bg: '#fffbeb', border: '#fde68a', text: '#92400e' },
-		success: { bg: '#f0fdf4', border: '#bbf7d0', text: '#166534' },
-		danger: { bg: '#fef2f2', border: '#fecaca', text: '#991b1b' },
-	};
-	const s = styles[variant] || styles.primary;
-	return (
-		<span
-			className="inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-semibold md: leading-tight"
-			style={{ background: s.bg, borderColor: s.border, color: s.text }}
-		>
-			{icon && <span className="text-[9px] md: leading-none">{icon}</span>}
-			{children}
-		</span>
-	);
-}
-
-/**
- * Small icon action button (square, with tooltip)
- */
-function IconBtn({ tooltip, onClick, children, variant = 'ghost', disabled = false, size = 'md' }) {
-	const [show, setShow] = useState(false);
-	const sizes = { sm: 'h-7 w-7', md: 'h-8 w-8', lg: 'h-9 w-9' };
-	const styles = {
-		ghost: { bg: 'white', border: 'var(--color-primary-200)', color: 'var(--color-primary-600)', shadow: '0 1px 3px rgba(15,23,42,0.07)' },
-		primary: { bg: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))', border: 'transparent', color: 'white', shadow: '0 3px 10px -3px var(--color-primary-500)' },
-		danger: { bg: '#fef2f2', border: '#fecaca', color: '#dc2626', shadow: '0 1px 3px rgba(239,68,68,0.1)' },
-	};
-	const s = styles[variant] || styles.ghost;
-
-	return (
-		<div className="relative">
-			<motion.button
-				type="button"
-				aria-label={tooltip}
-				title={tooltip}
-				onClick={onClick}
-				disabled={disabled}
-				onMouseEnter={() => setShow(true)}
-				onMouseLeave={() => setShow(false)}
-				whileHover={{ scale: disabled ? 1 : 1.08 }}
-				whileTap={{ scale: disabled ? 1 : 0.92 }}
-				className={`inline-flex items-center justify-center rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] ${sizes[size]}`}
-				style={{ background: s.bg, borderColor: s.border, color: s.color, boxShadow: disabled ? 'none' : s.shadow }}
-			>
-				{children}
-			</motion.button>
-
-			<AnimatePresence>
-				{show && !disabled && (
-					<motion.div
-						initial={{ opacity: 0, y: 4, scale: 0.95 }}
-						animate={{ opacity: 1, y: 0, scale: 1 }}
-						exit={{ opacity: 0, y: 4, scale: 0.95 }}
-						transition={{ duration: 0.1 }}
-						className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
-						style={{ background: '#0f172a', boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}
-					>
-						{tooltip}
-						<div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent" style={{ borderTopColor: '#0f172a', marginTop: '-1px' }} />
-					</motion.div>
-				)}
-			</AnimatePresence>
-		</div>
-	);
-}
-
-/**
- * Labeled action button (with tooltip)
- */
-function ActionBtn({ tooltip, onClick, children, variant = 'ghost', disabled = false }) {
-	const styles = {
-		ghost: { bg: 'white', border: 'var(--color-primary-200)', color: 'var(--color-primary-700)', shadow: '0 1px 3px rgba(15,23,42,0.06)' },
-		primary: { bg: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))', border: 'transparent', color: 'white', shadow: '0 4px 14px -4px var(--color-primary-500)' },
-		danger: { bg: '#fef2f2', border: '#fecaca', color: '#dc2626', shadow: '0 1px 3px rgba(239,68,68,0.1)' },
-	};
-	const s = styles[variant] || styles.ghost;
-
-	return (
-		<motion.button
+		<button
 			type="button"
+			aria-label={label}
+			title={label}
 			onClick={onClick}
 			disabled={disabled}
-			title={tooltip}
-			whileHover={{ scale: disabled ? 1 : 1.02 }}
-			whileTap={{ scale: disabled ? 1 : 0.97 }}
-			className="inline-flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-			style={{ background: s.bg, borderColor: s.border, color: s.color, boxShadow: disabled ? 'none' : s.shadow }}
+			className={`grid size-8 place-items-center rounded-lg gm-ink-soft transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${danger
+				? 'hover:bg-[color-mix(in_srgb,var(--gm-danger)_10%,transparent)] hover:text-[var(--gm-danger)]'
+				: 'hover:bg-[color-mix(in_srgb,var(--color-primary-100)_70%,transparent)] hover:text-[var(--color-primary-600)]'
+				}`}
 		>
 			{children}
-		</motion.button>
+		</button>
 	);
 }
 
-/**
- * OptionTag — removable tag in InputList
- */
-function OptionTag({ label, onRemove, disabled }) {
+function Switch({ label, checked, onChange }) {
 	return (
-		<motion.span
-			initial={{ scale: 0.8, opacity: 0 }}
-			animate={{ scale: 1, opacity: 1 }}
-			exit={{ scale: 0.8, opacity: 0 }}
-			transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-			className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold"
-			style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)', color: 'var(--color-primary-800)' }}
+		<button
+			type="button"
+			role="switch"
+			aria-checked={checked}
+			onClick={() => onChange(!checked)}
+			className={`inline-flex items-center gap-2.5 whitespace-nowrap rounded-[10px] px-1.5 py-1 text-[12.5px] font-semibold transition-colors ${checked ? 'text-(--color-primary-700)' : 'gm-ink-soft'}`}
 		>
+			<span
+				className="relative h-[22px] w-10 shrink-0 rounded-full transition-colors"
+				style={{
+					background: checked
+						? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
+						: 'color-mix(in srgb, var(--color-primary-200) 60%, transparent)',
+				}}
+			>
+				<span className={`absolute top-[3px] size-4 rounded-full bg-white shadow-sm transition-all ${checked ? 'start-[21px]' : 'start-[3px]'}`} />
+			</span>
 			{label}
-			{!disabled && (
-				<motion.button
-					type="button"
-					onClick={onRemove}
-					whileHover={{ scale: 1.2 }}
-					whileTap={{ scale: 0.9 }}
-					className="rounded opacity-50 hover:opacity-100 transition-opacity"
-				>
-					<FiX className="h-3 w-3" />
-				</motion.button>
-			)}
-		</motion.span>
+		</button>
 	);
 }
 
-/**
- * InputList — tag-style option input
- */
 function InputList({ label, value = [], onChange, placeholder, disabled = false }) {
 	const [items, setItems] = useState(Array.isArray(value) ? value : []);
 	const [draft, setDraft] = useState('');
@@ -276,7 +138,7 @@ function InputList({ label, value = [], onChange, placeholder, disabled = false 
 		const raw = (text ?? '').trim();
 		if (!raw) return;
 		const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
-		let next = [...items];
+		const next = [...items];
 		for (const p of parts) if (!next.includes(p)) next.push(p);
 		emit(next);
 		setDraft('');
@@ -289,30 +151,63 @@ function InputList({ label, value = [], onChange, placeholder, disabled = false 
 	};
 
 	return (
-		<div>
-			{label && <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{label}</p>}
-			<div
-				className="min-h-[52px] rounded-lg border p-3 transition-colors"
-				style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
-			>
-				<div className="mb-2 flex flex-wrap gap-1.5">
-					<AnimatePresence mode="popLayout">
-						{items.map((opt, i) => (
-							<OptionTag key={`${opt}-${i}`} label={opt} onRemove={() => emit(items.filter((_, j) => j !== i))} disabled={disabled} />
-						))}
-					</AnimatePresence>
-				</div>
-				<input
-					type="text"
-					value={draft}
-					onChange={e => setDraft(e.target.value)}
-					onKeyDown={handleKeyDown}
-					onBlur={() => commitDraft(draft)}
-					placeholder={placeholder}
-					disabled={disabled}
-					className="w-full border-0 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
-				/>
-			</div>
+		<div
+			className="relative flex min-h-11 flex-wrap items-center gap-1.5 rounded-[11px] border border-[var(--gm-line)] px-3 py-2 transition-colors focus-within:border-[var(--color-primary-500)] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary-500)_12%,transparent)]"
+			style={{ background: 'color-mix(in srgb, var(--gm-paper) 62%, transparent)' }}
+		>
+			{label && (
+				<span className="pointer-events-none absolute start-3 top-0 -translate-y-1/2 rounded-md bg-[var(--gm-paper)] px-1 text-[11px] font-medium gm-muted">
+					{label}
+				</span>
+			)}
+			<AnimatePresence mode="popLayout">
+				{items.map((opt, i) => (
+					<motion.span
+						key={`${opt}-${i}`}
+						layout
+						initial={{ scale: 0.85, opacity: 0 }}
+						animate={{ scale: 1, opacity: 1 }}
+						exit={{ scale: 0.85, opacity: 0 }}
+						className="gm-plan__chip text-[var(--color-primary-700)]!"
+					>
+						{opt}
+						{!disabled && (
+							<button
+								type="button"
+								aria-label={`Remove ${opt}`}
+								onClick={() => emit(items.filter((_, j) => j !== i))}
+								className="opacity-60 transition-opacity hover:opacity-100"
+							>
+								<X className="size-3" />
+							</button>
+						)}
+					</motion.span>
+				))}
+			</AnimatePresence>
+			<input
+				type="text"
+				value={draft}
+				onChange={e => setDraft(e.target.value)}
+				onKeyDown={handleKeyDown}
+				onBlur={() => commitDraft(draft)}
+				placeholder={placeholder}
+				disabled={disabled}
+				className="min-w-[140px] flex-1 bg-transparent text-[13px] gm-ink outline-none placeholder:text-[var(--gm-faint)]"
+			/>
+		</div>
+	);
+}
+
+function EmptyBox({ text }) {
+	return (
+		<div
+			className="flex flex-col items-center gap-3 rounded-[16px] border border-dashed px-6 py-12 text-center"
+			style={{ borderColor: 'var(--gm-line)', background: 'color-mix(in srgb, var(--gm-paper) 45%, transparent)' }}
+		>
+			<span className="gm-plan__icon size-12!">
+				<Layers className="size-6" />
+			</span>
+			<p className="text-[13px] font-medium gm-muted">{text}</p>
 		</div>
 	);
 }
@@ -340,165 +235,114 @@ const FieldRow = React.memo(function FieldRow({
 		}
 	}, [labelDraft, field.label, field.key, index, updateFieldProp]);
 
-	const fieldIcon = FIELD_TYPE_OPTIONS.find(o => o.id === field.type)?.icon || '📝';
-	const hasOptions = ['select', 'radio', 'checklist'].includes(field.type);
+	const FieldIcon = fieldIconOf(field.type);
+	const hasOptions = OPTION_TYPES.includes(field.type);
+
+	const finish = () => { commitDrafts(); toggleEditField(index, false); };
 
 	return (
 		<motion.div
 			ref={isNew ? newFieldRef : null}
-			initial={{ opacity: 0, y: 12 }}
+			layout
+			initial={{ opacity: 0, y: 10 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, scale: 0.97 }}
 			transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-			className="group relative"
+			className={`gm-field group ${editing ? 'is-editing' : ''}`}
 		>
-			<div
-				className={`relative overflow-hidden rounded-lg border transition-all duration-200 ${editing
-					? 'border-[color:var(--color-primary-300)] shadow-md shadow-[color:var(--color-primary-100)]'
-					: 'border-[color:var(--color-primary-100)] hover:border-[color:var(--color-primary-200)] hover:shadow-sm'
-					} bg-white`}
-			>
-				{/* Active accent bar */}
-				{editing && (
-					<div
-						className="absolute inset-y-0 ltr:left-0 rtl:right-0 w-1 rounded-l-2xl"
-						style={{ background: 'linear-gradient(180deg, var(--color-gradient-from), var(--color-gradient-to))' }}
-					/>
+			<div className="flex items-center gap-3 px-3 py-2.5">
+				<span className="gm-field__num">{index + 1}</span>
+				<span className="gm-field__icon">
+					<FieldIcon className="size-4" strokeWidth={1.9} />
+				</span>
+
+				{editing ? (
+					<div className="grid min-w-0 flex-1 grid-cols-1 items-center gap-2.5 sm:grid-cols-[minmax(0,1fr)_170px_auto]">
+						<FloatingInput
+							label={t('editor.label')}
+							value={labelDraft}
+							onChange={v => setLabelDraft(v)}
+							onBlur={commitDrafts}
+							required
+						/>
+						<FloatingSelect
+							label={t('editor.type')}
+							value={field.type}
+							onChange={v => v && updateFieldProp(index, 'type', v)}
+							options={typeOptions}
+						/>
+						<Switch
+							label={t('editor.required')}
+							checked={!!field.required}
+							onChange={val => updateFieldProp(index, 'required', !!val)}
+						/>
+					</div>
+				) : (
+					<button
+						type="button"
+						onClick={() => toggleEditField(index, true)}
+						className="min-w-0 flex-1 text-start"
+						aria-label={t('actions.edit_field')}
+					>
+						<span className="flex items-center gap-1.5">
+							<MultiLangText className={`truncate text-[13.5px] font-semibold ${field.label ? 'gm-ink' : 'italic gm-faint'}`}>
+								{field.label || t('labels.no_label')}
+							</MultiLangText>
+							{field.required && <span className="text-[13px] font-bold text-(--gm-danger)">*</span>}
+						</span>
+						<span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11.5px] gm-muted">
+							{t(`types_map.${field.type}`)}
+							{hasOptions && field.options?.length > 0 && (
+								<>
+									<span className="gm-faint">·</span>
+									<span className="truncate">{field.options.slice(0, 3).join(' / ')}{field.options.length > 3 ? ` +${field.options.length - 3}` : ''}</span>
+								</>
+							)}
+						</span>
+					</button>
 				)}
 
-				<div className={`px-4 py-2 ${editing ? 'ltr:pl-5 rtl:pr-5' : ''}`}>
-					{!editing ? (
-						/* ── View mode ── */
-						<div className="flex items-center justify-between gap-3">
-							<div className="flex items-center gap-3 flex-1 min-w-0">
-								{/* Index chip */}
-								<span
-									className="h-6 w-6 flex-shrink-0 grid place-items-center rounded-lg text-[11px] font-bold"
-									style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
-								>
-									{index + 1}
-								</span>
-
-								<span className="text-lg md: leading-none flex-shrink-0">{fieldIcon}</span>
-
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2 flex-wrap">
-										<MultiLangText className="truncate text-sm font-semibold text-slate-900">
-											{field.label || t('labels.no_label')}
-										</MultiLangText>
-										<Badge variant="primary">{t(`types_map.${field.type}`)}</Badge>
-										{field.required && <Badge variant="warning">⚠ {t('labels.required')}</Badge>}
-									</div>
-
-									<p className="mt-0.5 text-[11px] font-mono text-slate-400">{field.key}</p>
-
-									{hasOptions && field.options?.length > 0 && (
-										<div className="mt-2 flex flex-wrap gap-1">
-											{field.options.slice(0, 3).map((opt, i) => <Badge key={i} variant="primary">{opt}</Badge>)}
-											{field.options.length > 3 && <Badge variant="primary">+{field.options.length - 3}</Badge>}
-										</div>
-									)}
-								</div>
-							</div>
-
-							{/* Actions — visible on hover */}
-							<div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-								<IconBtn tooltip={t('actions.move_up')} onClick={() => moveField(index, -1)} disabled={!canMoveUp} size="sm">
-									<FiChevronUp className="h-3.5 w-3.5" />
-								</IconBtn>
-								<IconBtn tooltip={t('actions.move_down')} onClick={() => moveField(index, +1)} disabled={!canMoveDown} size="sm">
-									<FiChevronDown className="h-3.5 w-3.5" />
-								</IconBtn>
-								<IconBtn tooltip={t('actions.edit_field')} onClick={() => toggleEditField(index, true)} variant="primary" size="sm">
-									<FiEdit2 className="h-3 w-3" />
-								</IconBtn>
-								<IconBtn tooltip={t('actions.remove_field')} onClick={() => removeField(index)} variant="danger" size="sm">
-									<FiTrash2 className="h-3 w-3" />
-								</IconBtn>
-							</div>
-						</div>
+				<div className={`flex shrink-0 items-center gap-0.5 ${editing ? 'self-start pt-1.5 sm:self-center sm:pt-0' : 'opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 max-sm:opacity-100'}`}>
+					{editing ? (
+						<button
+							type="button"
+							onClick={finish}
+							aria-label={t('actions.done')}
+							title={t('actions.done')}
+							className="grid size-8 place-items-center rounded-lg text-white shadow-[0_4px_10px_-3px_color-mix(in_srgb,var(--color-primary-600)_60%,transparent)] transition hover:-translate-y-px"
+							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+						>
+							<Check className="size-4" strokeWidth={2.6} />
+						</button>
 					) : (
-						/* ── Edit mode ── */
-						<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 flex items-center  gap-4">
-
-
-							<div className={`flex-1 grid grid-cols-1 gap-4 ${hasOptions ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
-								<div className="md:col-span-1">
-									<Input
-										label={t('editor.label')}
-										placeholder={t('editor.placeholders.label')}
-										value={labelDraft}
-										onChange={v => setLabelDraft(v)}
-										onBlur={commitDrafts}
-									/>
-								</div>
-								<div className="md:col-span-1">
-									<Select
-										clearable={false}
-										searchable={false}
-										label={t('editor.type')}
-										value={field.type}
-										onChange={v => updateFieldProp(index, 'type', v)}
-										options={typeOptions}
-									/>
-								</div>
-								{hasOptions && (
-									<InputList
-										label={t('editor.options')}
-										value={field.options || []}
-										onChange={arr => updateFieldProp(index, 'options', arr)}
-										placeholder={t('editor.placeholders.option')}
-									/>
-								)}
-								<div className=" mt-[30px] ">
-									<CheckBox
-										label={t('editor.required')}
-										initialChecked={!!field.required}
-										onChange={val => updateFieldProp(index, 'required', !!val)}
-									/>
-								</div>
-
-							</div>
-
-
-							<div className="flex justify-end ">
-								<motion.button
-									type="button"
-									onClick={() => { commitDrafts(); toggleEditField(index, false); }}
-									whileHover={{ scale: 1.02 }}
-									whileTap={{ scale: 0.97 }}
-									className="inline-flex h-9 items-center gap-2 rounded-lg px-5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-									style={{
-										background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-										boxShadow: '0 4px 14px -4px var(--color-primary-500)',
-									}}
-								>
-									<Check className="h-3.5 w-3.5" />
-									{t('actions.done')}
-								</motion.button>
-							</div>
-						</motion.div>
+						<>
+							<IconBtn label={t('actions.move_up')} onClick={() => moveField(index, -1)} disabled={!canMoveUp}>
+								<ArrowUp className="size-4" />
+							</IconBtn>
+							<IconBtn label={t('actions.move_down')} onClick={() => moveField(index, +1)} disabled={!canMoveDown}>
+								<ArrowDown className="size-4" />
+							</IconBtn>
+						</>
 					)}
+					<IconBtn label={t('actions.remove_field')} onClick={() => removeField(index)} danger>
+						<Trash2 className="size-4" />
+					</IconBtn>
 				</div>
 			</div>
+
+			{editing && hasOptions && (
+				<div className="px-3 pb-3 sm:ps-[88px]">
+					<InputList
+						label={t('editor.options')}
+						value={field.options || []}
+						onChange={arr => updateFieldProp(index, 'options', arr)}
+						placeholder={t('editor.placeholders.option')}
+					/>
+				</div>
+			)}
 		</motion.div>
 	);
 });
-
-// ─────────────────────────────────────────────────────────────
-//  SKELETON LOADER
-// ─────────────────────────────────────────────────────────────
-function SkeletonRow() {
-	return (
-		<div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-white p-3">
-			<div className="h-8 w-8 animate-pulse rounded-lg bg-slate-100" />
-			<div className="flex-1 space-y-2">
-				<div className="h-3 w-1/3 animate-pulse rounded-full bg-slate-100" />
-				<div className="h-2.5 w-1/4 animate-pulse rounded-full bg-slate-100" />
-			</div>
-		</div>
-	);
-}
 
 // ─────────────────────────────────────────────────────────────
 //  MAIN PAGE
@@ -509,6 +353,9 @@ export default function FormsManagementPage() {
 	const [showDetailsModal, setShowDetailsModal] = useState(false);
 	const [forms, setForms] = useState([]);
 	const [query, setQuery] = useState('');
+	const [ownerFilter, setOwnerFilter] = useState('all');
+	const [page, setPage] = useState(1);
+	const [limit, setLimit] = useState(() => getStoredPerPage(10));
 	const [selectedForm, setSelectedForm] = useState(null);
 	const [isLoading, setIsLoading] = useState(true);
 
@@ -538,6 +385,7 @@ export default function FormsManagementPage() {
 
 	// ── Fetch ──
 	const fetchForms = useCallback(async () => {
+		setIsLoading(true);
 		try {
 			const res = await api.get('/forms');
 			const list = (res?.data?.data || res?.data || []).map(form => ({
@@ -548,21 +396,40 @@ export default function FormsManagementPage() {
 				})),
 			}));
 			setForms(list);
-			if (list.length && !selectedForm) setSelectedForm(list[0]);
 		} catch {
 			Notification(t('messages.load_failed'), 'error');
 		} finally {
 			setIsLoading(false);
 		}
-	}, [selectedForm, t]);
+	}, [t]);
 
 	useEffect(() => { fetchForms(); }, [fetchForms]);
 
 	const deferredQuery = useDeferredValue(query);
 	const filtered = useMemo(() => {
 		const q = (deferredQuery || '').trim().toLowerCase();
-		return q ? forms.filter(f => (f.title || '').toLowerCase().includes(q)) : forms;
-	}, [forms, deferredQuery]);
+		return forms.filter(f => {
+			const own = f.adminId === user?.id;
+			if (ownerFilter === 'own' && !own) return false;
+			if (ownerFilter === 'shared' && own) return false;
+			if (q && !(f.title || '').toLowerCase().includes(q)) return false;
+			return true;
+		});
+	}, [forms, deferredQuery, ownerFilter, user?.id]);
+
+	useEffect(() => { setPage(1); }, [deferredQuery, ownerFilter, limit]);
+
+	const tableRows = useMemo(() => {
+		const start = (page - 1) * limit;
+		return filtered.slice(start, start + limit).map((form) => ({
+			id: form.id,
+			title: form.title,
+			fieldsCount: form.fields?.length ?? 0,
+			requiredCount: (form.fields || []).filter(fld => fld.required).length,
+			ownerType: form.adminId === user?.id ? 'own' : 'shared',
+			raw: form,
+		}));
+	}, [filtered, page, limit, user?.id]);
 
 	const resetFormState = useCallback(() => {
 		setFormTitle(''); setFormFields([]); setEditingMap({});
@@ -716,9 +583,9 @@ export default function FormsManagementPage() {
 		setFormFields(prev => prev.map((f, i) => i === index ? { ...f, [prop]: val } : f));
 	}, []);
 
-	const addInlineField = useCallback(() => {
+	const addInlineField = useCallback((type = 'text') => {
 		const idx = formFields.length;
-		setFormFields(prev => [...prev, { _uid: crypto.randomUUID(), label: '', key: genKey12(), type: 'text', placeholder: '', required: false, options: [], order: idx }]);
+		setFormFields(prev => [...prev, { _uid: crypto.randomUUID(), label: '', key: genKey12(), type, placeholder: '', required: false, options: [], order: idx }]);
 		setEditingMap(m => ({ ...m, [idx]: true }));
 		setTimeout(scrollToNewField, 100);
 	}, [formFields.length, scrollToNewField]);
@@ -761,59 +628,83 @@ export default function FormsManagementPage() {
 		[selectedForm?.fields]
 	);
 
+	const requiredCount = useMemo(() => formFields.filter(f => f.required).length, [formFields]);
+
 	const canEdit = form => !form?.adminId || form?.adminId === user?.id;
-	const isCoachRole = user?.role === 'coach';
 
+	const stats = useMemo(() => {
+		const own = forms.filter(f => f.adminId === user?.id).length;
+		const fields = forms.reduce((sum, f) => sum + (f.fields?.length ?? 0), 0);
+		return { total: forms.length, own, shared: forms.length - own, fields };
+	}, [forms, user?.id]);
 
-	const tableRows = useMemo(() => {
-		return filtered.map((form) => ({
-			id: form.id,
-			title: form.title,
-			fieldsCount: form.fields?.length ?? 0,
-			ownerType: form.adminId === user?.id ? 'own' : 'shared',
-			raw: form,
-		}));
-	}, [filtered, user?.id]);
+	const statCards = [
+		{
+			key: 'total', title: t('stats.total'), value: stats.total, icon: FileText,
+			hint: t('stats.totalHint'), tone: 'gm-chip',
+			stroke: 'var(--color-primary-500)', fill: 'var(--color-primary-400)', seed: 0.4, max: stats.total,
+		},
+		{
+			key: 'own', title: t('stats.own'), value: stats.own, icon: UserCheck,
+			hint: t('stats.ownHint'), tone: 'gm-chip-ok',
+			stroke: 'var(--gm-ok)', fill: 'var(--gm-ok)', seed: 0.9, max: stats.total,
+		},
+		{
+			key: 'shared', title: t('stats.shared'), value: stats.shared, icon: Share2,
+			hint: t('stats.sharedHint'), tone: 'gm-chip-warn',
+			stroke: 'var(--gm-warn)', fill: 'var(--gm-warn)', seed: 1.4, max: stats.total,
+		},
+		{
+			key: 'fields', title: t('stats.fields'), value: stats.fields, icon: Layers,
+			hint: t('stats.fieldsHint'), tone: 'gm-chip-secondary',
+			stroke: 'var(--color-secondary-500)', fill: 'var(--color-secondary-400)', seed: 1.9, max: stats.fields,
+		},
+	];
+
+	const buildRowActions = form => [
+		{ icon: Eye, tone: 'primary', label: t('actions.view'), onClick: () => openDetailsModal(form) },
+		{ icon: LinkIcon, tone: 'cyan', label: t('actions.copy_link'), onClick: () => copyLink(form.id) },
+		{ icon: CopyPlus, tone: 'violet', label: t('actions.duplicate'), onClick: () => handleDuplicateForm(form) },
+		{ icon: PencilLine, tone: 'amber', label: t('actions.edit'), hide: !canEdit(form), onClick: () => openEditFormModal(form, true) },
+		{
+			icon: Trash2, tone: 'danger', label: t('actions.delete'), hide: !canEdit(form),
+			onClick: () => { setDeletingId(form.id); setShowDeleteModal(true); },
+		},
+	];
 
 	const tableColumns = [
 		{
 			key: 'title',
 			header: t('table.title'),
-			cell: (row) => {
-				const form = row.raw;
-
-				return (
-					<button
-						type="button"
-						onClick={() => openDetailsModal(form)}
-						className="w-full text-left"
-					>
-						<div className="flex items-center gap-3 min-w-0">
-							<div
-								className="h-9 w-9 flex-shrink-0 grid place-items-center rounded-lg"
-								style={{
-									background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-								}}
-							>
-								<FiFileText className="h-4 w-4 text-white" />
-							</div>
-
-							<div dir='auto' className="min-w-0  rtl:text-right ltr:text-left  flex-1">
- 									{row.title}
- 							</div>
-						</div>
-					</button>
-				);
-			},
+			className: 'gm-wrap',
+			cell: (row) => (
+				<button
+					type="button"
+					onClick={() => openDetailsModal(row.raw)}
+					className="flex w-full min-w-0 items-center gap-3 text-start"
+				>
+					<span className="gm-plan__icon size-10! shrink-0">
+						<FileText className="size-[18px]" strokeWidth={1.8} />
+					</span>
+					<span className="min-w-0">
+						<span dir="auto" className="block truncate text-[13px] font-semibold gm-ink">
+							{row.title}
+						</span>
+						{row.requiredCount > 0 && (
+							<span className="mt-0.5 block text-[11px] gm-muted">
+								{t('editor.summary', { fields: row.fieldsCount, required: row.requiredCount })}
+							</span>
+						)}
+					</span>
+				</button>
+			),
 		},
 		{
 			key: 'fieldsCount',
 			header: t('table.fields'),
 			cell: (row) => (
-				<span
-					className="rounded-full px-2.5 py-1 text-xs font-bold"
-					style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)' }}
-				>
+				<span className="gm-plan__chip">
+					<Layers className="size-3.5" />
 					{row.fieldsCount}
 				</span>
 			),
@@ -822,357 +713,333 @@ export default function FormsManagementPage() {
 			key: 'ownerType',
 			header: t('table.owner'),
 			cell: (row) =>
-				row.ownerType === 'own' ? (
-					<Badge variant="success">{t('labels.own')}</Badge>
-				) : (
-					<Badge variant="warning">{t('labels.shared')}</Badge>
-				),
+				row.ownerType === 'own'
+					? <Badge color="green" dot>{t('labels.own')}</Badge>
+					: <Badge color="amber" dot>{t('labels.shared')}</Badge>,
 		},
 		{
 			key: 'actions',
 			header: t('table.actions'),
-			cell: (row) => {
-				const form = row.raw;
-
-				return (
-					<ActionButtons
-						row={form}
-						gap="gap-1"
-						actions={[
-							{
-								icon: <FiEye />,
-								tooltip: t('actions.view'),
-								variant: 'slate',
-								size: 'sm',
-								onClick: r => openDetailsModal(r),
-							},
-							{
-								icon: <LinkIcon />,
-								tooltip: t('actions.copy_link'),
-								variant: 'blue',
-								size: 'sm',
-								onClick: r => copyLink(r.id),
-							},
-							{
-								icon: <Files />,
-								tooltip: t('actions.duplicate'),
-								variant: 'purple',
-								size: 'sm',
-								onClick: r => handleDuplicateForm(r),
-							},
-							{
-								icon: <PencilLine />,
-								tooltip: t('actions.edit'),
-								variant: 'amber',
-								size: 'sm',
-								hidden: !canEdit(form),
-								onClick: r => openEditFormModal(r, true),
-							},
-							{
-								icon: <LucideTrash2 />,
-								tooltip: t('actions.delete'),
-								variant: 'red',
-								size: 'sm',
-								hidden: !canEdit(form),
-								onClick: r => {
-									setDeletingId(r.id);
-									setShowDeleteModal(true);
-								},
-							},
-						]}
-					/>
-				);
-			},
+			headClassName: 'gm-col-end',
+			className: 'gm-col-end',
+			cell: (row) => <GmRowActions options={buildRowActions(row.raw)} />,
 		},
 	];
 
+	const closeDelete = () => { if (!isDeleting) { setShowDeleteModal(false); setDeletingId(null); } };
+
+	const ownerSegments = [
+		{ id: 'all', name: t('roster.all'), short: t('roster.all'), icon: Layers },
+		{ id: 'own', name: t('roster.own'), short: t('roster.own'), icon: UserCheck },
+		{ id: 'shared', name: t('roster.shared'), short: t('roster.shared'), icon: Share2 },
+	];
+	const queryTrim = query.trim();
+	const chips = [
+		queryTrim && { key: 'q', label: t('roster.searchLabel'), value: `“${queryTrim}”`, onRemove: () => setQuery('') },
+		ownerFilter !== 'all' && {
+			key: 'owner',
+			label: t('roster.owner'),
+			value: ownerSegments.find(s => s.id === ownerFilter)?.name,
+			onRemove: () => setOwnerFilter('all'),
+		},
+	].filter(Boolean);
+
 	// ─────────────────────────────────────────────────────────────────
 	return (
-		<div className="min-h-screen pb-20">
-
-			{/* ── Page header ── */}
-			<GradientStatsHeader
-				onClick={openCreateFormModal}
-				btnName={t('header.new')}
-				title={t('header.title')}
-				desc={t('header.desc')}
-				icon={Sparkles}
-			/>
-
-			<div className="mt-8">
-				<DataTable
-					columns={tableColumns}
-					data={tableRows}
-					isLoading={isLoading}
-					searchValue={query}
-					onSearchChange={setQuery}
-					onSearch={() => { }}
-					rowKey={(row) => row.id}
-					labels={{
-						searchPlaceholder: t('labels.search', { default: 'Search forms…' }),
-						emptyTitle: t('empty.title'),
-						emptySubtitle: t('empty.subtitle'),
-					}}
-					hoverable
-					striped
-					className="w-full"
+		<div className="gm-surface rs-scope app-stack pb-4">
+			<div className="rs-summary">
+				<IntakeHero
+					icon={FileText}
+					title={t('header.title')}
+					subtitle={t('header.desc')}
+					ctaLabel={<><Plus className="size-4" strokeWidth={2} aria-hidden /><span>{t('header.new')}</span></>}
+					onCta={openCreateFormModal}
 				/>
+				<section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					{statCards.map((card, index) => (
+						<GmStatCard key={card.key} card={card} index={index} />
+					))}
+				</section>
 			</div>
 
-			{/* ═══════════════════════════════════════════════
-          DELETE MODAL
-      ═══════════════════════════════════════════════ */}
+			<DataTable
+				hideToolbar
+				compact
+				toolbar={(
+					<IntakeToolbar
+						search={query}
+						onSearch={(v) => { setQuery(v); setPage(1); }}
+						searching={query !== deferredQuery}
+						searchPlaceholder={t('search')}
+						searchLabel={t('labels.search')}
+						clearSearchLabel={t('roster.clearAll')}
+						segments={ownerSegments}
+						segment={ownerFilter}
+						onSegment={(id) => { setOwnerFilter(id); setPage(1); }}
+						segmentLabel={t('roster.owner')}
+						layoutId="intake-forms-seg"
+						result={t.rich('roster.resultCount', {
+							count: filtered.length,
+							strong: (chunks) => <strong>{chunks}</strong>,
+						})}
+						chips={chips}
+						onClearAll={() => { setQuery(''); setOwnerFilter('all'); setPage(1); }}
+						clearAllLabel={t('roster.clearAll')}
+						activeFiltersLabel={t('roster.activeFilters')}
+					/>
+				)}
+				columns={tableColumns}
+				data={tableRows}
+				isLoading={isLoading}
+				rowKey={(row) => row.id}
+				labels={{
+					emptyTitle: t('empty.title'),
+					emptySubtitle: chips.length ? t('roster.emptyHint') : t('empty.subtitle'),
+				}}
+				pagination={{
+					current_page: page,
+					per_page: limit,
+					total_records: filtered.length,
+				}}
+				onPageChange={({ page: nextPage, per_page }) => {
+					const nextLimit = Number(per_page ?? limit);
+					setStoredPerPage(nextLimit);
+					setLimit(nextLimit);
+					setPage(Number(nextPage ?? 1));
+				}}
+				perPageOptions={[10, 20, 30, 50]}
+				hoverable
+			/>
+
+			{/* ═══════════════ DELETE MODAL ═══════════════ */}
 			<Modal
+				cn="gm-modal-root"
+				panelClassName={GM_MODAL}
 				open={showDeleteModal}
-				onClose={() => { if (!isDeleting) { setShowDeleteModal(false); setDeletingId(null); } }}
+				onClose={closeDelete}
 				title={t('delete.title')}
 				maxW="max-w-md"
 			>
-				<div className="space-y-5 pt-2">
+				<div className="space-y-5">
 					<div
-						className="flex items-start gap-4 rounded-lg border p-4"
-						style={{ borderColor: '#fecaca', background: '#fef2f2' }}
+						className="flex items-start gap-3 rounded-[14px] border p-4"
+						style={{
+							borderColor: 'color-mix(in srgb, var(--gm-danger) 25%, transparent)',
+							background: 'color-mix(in srgb, var(--gm-danger) 8%, var(--gm-paper))',
+						}}
 					>
-						<IconBox variant="danger" size="md">
-							<AlertCircle className="h-5 w-5" />
-						</IconBox>
-						<p className="flex-1 text-sm md: leading-relaxed text-slate-700">{t('delete.message')}</p>
+						<span
+							className="grid size-9 shrink-0 place-items-center rounded-[11px]"
+							style={{ color: 'var(--gm-danger)', background: 'color-mix(in srgb, var(--gm-danger) 14%, var(--gm-paper))' }}
+						>
+							<AlertCircle className="size-[18px]" />
+						</span>
+						<p className="flex-1 text-[13px] leading-relaxed gm-ink-soft">{t('delete.message')}</p>
 					</div>
 
-					<div className="flex justify-end gap-2.5">
-						<Button
-							name={t('actions.cancel')}
-							className="!w-fit"
-							onClick={() => { if (!isDeleting) { setShowDeleteModal(false); setDeletingId(null); } }}
-						/>
-						<Button
-							name={isDeleting ? t('actions.deleting') : t('delete.confirm')}
-							className="!w-fit"
-							color="danger"
+					<div className="gm-modal-foot">
+						<button
+							type="button"
+							onClick={closeDelete}
+							className="gm-btn-ghost rounded-[11px] px-4 py-2 text-[13px] font-medium"
+						>
+							{t('actions.cancel')}
+						</button>
+						<button
+							type="button"
 							onClick={() => deletingId && deleteForm(deletingId)}
 							disabled={isDeleting}
-						/>
+							className="inline-flex h-10 items-center gap-2 rounded-[11px] px-5 text-[13px] font-semibold text-white transition hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+							style={{ background: 'var(--gm-danger)', boxShadow: '0 6px 14px color-mix(in srgb, var(--gm-danger) 25%, transparent)' }}
+						>
+							{isDeleting ? <RefreshCw className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+							{isDeleting ? t('actions.deleting') : t('delete.confirm')}
+						</button>
 					</div>
 				</div>
 			</Modal>
 
+			{/* ═══════════════ DETAILS MODAL ═══════════════ */}
 			<Modal
+				cn="gm-modal-root"
+				panelClassName={GM_MODAL}
 				open={showDetailsModal}
 				onClose={() => setShowDetailsModal(false)}
 				title={selectedForm?.title || t('header.title')}
-				maxW="max-w-4xl"
+				maxW="max-w-3xl"
 			>
 				{selectedForm ? (
-					<div className="space-y-5">
+					<div className="space-y-4">
 						<div className="flex flex-wrap items-center gap-2">
-							<Badge variant="primary" icon="📊">
+							<Badge color="primary" icon={<Layers className="size-3.5" />}>
 								{selectedFormFields.length} {t('labels.fields')}
 							</Badge>
-
-							{isCoachRole && selectedForm.adminId && selectedForm.adminId !== user?.id && (
-								<Badge variant="warning" icon="👤">
-									{t('labels.shared_form')}
-								</Badge>
-							)}
+							{selectedForm.adminId === user?.id
+								? <Badge color="green" dot>{t('labels.own')}</Badge>
+								: <Badge color="amber" dot>{t('labels.shared_form')}</Badge>}
 						</div>
 
-						<div className="max-h-[70vh] overflow-y-auto space-y-2 pr-1">
-							{selectedFormFields.length ? (
-								selectedFormFields.map((field) => {
-									const fieldIcon = FIELD_TYPE_OPTIONS.find(o => o.id === field.type)?.icon || '📝';
-
+						{selectedFormFields.length ? (
+							<div className="space-y-2">
+								{selectedFormFields.map((field, i) => {
+									const FieldIcon = fieldIconOf(field.type);
 									return (
-										<div
-											key={field.id}
-											className="flex items-start gap-3 rounded-lg border p-3.5"
-											style={{
-												borderColor: 'var(--color-primary-100)',
-												background: 'rgba(255,255,255,0.8)',
-											}}
-										>
-											<div className="flex flex-shrink-0 items-center gap-2">
-												<span
-													className="grid h-5 w-5 place-items-center rounded-lg text-[10px] font-bold"
-													style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
-												>
-													{field.order ?? 1}
-												</span>
-												<span className="text-base md: leading-none">{fieldIcon}</span>
-											</div>
-
-											<div className="flex-1 min-w-0">
-												<MultiLangText className="mb-1.5 text-sm font-semibold text-slate-900">
-													{field.label}
-												</MultiLangText>
-
-												<div className="flex flex-wrap gap-1.5">
-													<Badge variant="primary">{t(`types_map.${field.type}`)}</Badge>
-													{field.required && <Badge variant="warning">⚠ {t('labels.required')}</Badge>}
-													{['select', 'radio', 'checklist'].includes(field.type) &&
-														(field.options || []).map((opt, i) => (
-															<Badge key={i} variant="primary">{opt}</Badge>
-														))}
+										<div key={field.id ?? field._uid} className="gm-cred justify-start!">
+											<span className="gm-cred__icon shrink-0">
+												<FieldIcon className="size-4" strokeWidth={1.9} />
+											</span>
+											<div className="min-w-0 flex-1">
+												<div className="flex items-center gap-2">
+													<span className="text-[11px] font-bold gm-faint">{i + 1}.</span>
+													<MultiLangText className="truncate gm-cred__value">{field.label}</MultiLangText>
+												</div>
+												<div className="mt-1.5 flex flex-wrap gap-1.5">
+													<Badge color="primary">{t(`types_map.${field.type}`)}</Badge>
+													{field.required && <Badge color="amber" dot>{t('labels.required')}</Badge>}
+													{OPTION_TYPES.includes(field.type) &&
+														(field.options || []).map((opt, j) => <Badge key={j} color="slate">{opt}</Badge>)}
 												</div>
 											</div>
 										</div>
 									);
-								})
-							) : (
-								<div
-									className="rounded-lg border border-dashed p-12 text-center"
-									style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
+								})}
+							</div>
+						) : (
+							<EmptyBox text={t('empty.no_fields')} />
+						)}
+
+						<div className="gm-modal-foot">
+							<button
+								type="button"
+								onClick={() => copyLink(selectedForm.id)}
+								className="gm-btn-ghost inline-flex items-center gap-2 rounded-[11px] px-4 py-2 text-[13px] font-medium"
+							>
+								<LinkIcon className="size-4" />
+								{t('actions.copy_link')}
+							</button>
+							{canEdit(selectedForm) ? (
+								<button
+									type="button"
+									onClick={() => { setShowDetailsModal(false); openEditFormModal(selectedForm, true); }}
+									className="gm-btn-primary"
 								>
-									<IconBox size="xl" className="mx-auto mb-3">
-										<Layers className="h-7 w-7" style={{ color: 'var(--color-primary-400)' }} />
-									</IconBox>
-									<p className="text-sm font-semibold text-slate-600">{t('empty.no_fields')}</p>
-								</div>
-							)}
+									<PencilLine className="size-4" />
+									{t('actions.edit')}
+								</button>
+							) : null}
 						</div>
 					</div>
 				) : null}
 			</Modal>
 
-			{/* ═══════════════════════════════════════════════
-          CREATE / EDIT MODAL
-      ═══════════════════════════════════════════════ */}
+			{/* ═══════════════ CREATE / EDIT MODAL ═══════════════ */}
 			<Modal
+				cn="gm-modal-root"
+				panelClassName={GM_MODAL}
 				open={showFormModal}
 				onClose={() => setShowFormModal(false)}
 				title={isEditing ? t('edit.title') : t('create.title')}
 				maxW="max-w-5xl"
 			>
 				<form
-					className="space-y-5 pt-4"
+					className="space-y-5"
 					onSubmit={e => { e.preventDefault(); (isEditing ? updateForm : createForm)(); }}
 				>
-					{/* Title input */}
-					<div
-						className="rounded-lg border p-4"
-						style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
-					>
-						<Input
-							placeholder={t('editor.placeholders.form_title')}
-							value={formTitle}
-							onChange={setFormTitle}
-						/>
+					<div className="gm-builder-head">
+						<span className="gm-builder-head__mark">
+							<FileText className="size-5" strokeWidth={1.8} />
+						</span>
+						<div className="min-w-0 flex-1">
+							<input
+								dir="auto"
+								value={formTitle}
+								onChange={e => setFormTitle(e.target.value)}
+								placeholder={t('editor.placeholders.form_title')}
+								aria-label={t('editor.placeholders.form_title')}
+								className="gm-builder-title"
+							/>
+							<p className="mt-1.5 px-1 text-[12px] font-medium gm-muted">
+								{t('editor.summary', { fields: formFields.length, required: requiredCount })}
+							</p>
+						</div>
 					</div>
 
-					{/* Fields builder */}
-					<div>
-						<div className="mb-3 flex items-center justify-between">
-							<div className="flex items-center gap-2.5">
-								<IconBox active size="sm">
-									<Layers className="h-4 w-4" />
-								</IconBox>
-								<h3 className="text-sm font-bold text-slate-900">{t('editor.fields')}</h3>
-								<span
-									className="rounded-full px-2 py-0.5 text-[11px] font-bold"
-									style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)' }}
-								>
-									{formFields.length}
-								</span>
-							</div>
+					<div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_232px]">
+						<div className="relative min-w-0 lg:min-h-[320px]">
+							<div className="flex flex-col gap-2.5 lg:absolute lg:inset-0">
+							{formFields.length ? (
+								<div ref={fieldsContainerRef} className="space-y-2.5 overflow-y-auto p-0.5 max-lg:max-h-[50vh] lg:min-h-0 lg:flex-1">
+									<AnimatePresence mode="popLayout">
+										{formFields.map((f, idx) => (
+											<FieldRow
+												key={f._uid}
+												field={f}
+												index={idx}
+												isNew={idx === formFields.length - 1 && !!editingMap[idx]}
+												editing={!!editingMap[idx]}
+												t={t}
+												typeOptions={typeOptions}
+												formFieldsLength={formFields.length}
+												newFieldRef={newFieldRef}
+												updateFieldProp={updateFieldProp}
+												toggleEditField={toggleEditField}
+												moveField={moveField}
+												removeField={removeField}
+											/>
+										))}
+									</AnimatePresence>
+								</div>
+							) : (
+								<div className="lg:flex-1">
+									<EmptyBox text={t('empty.no_fields')} />
+								</div>
+							)}
 
-							<motion.button
-								type="button"
-								onClick={addInlineField}
-								whileHover={{ scale: 1.03 }}
-								whileTap={{ scale: 0.97 }}
-								className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-								style={{
-									background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-									boxShadow: '0 4px 14px -4px var(--color-primary-500)',
-								}}
-							>
-								<FiPlus className="h-4 w-4" />
+							<button type="button" onClick={() => addInlineField('text')} className="gm-builder-add shrink-0">
+								<Plus className="size-4" strokeWidth={2.2} />
 								{t('editor.add_field')}
-							</motion.button>
+							</button>
+							</div>
 						</div>
 
-						{formFields.length ? (
-							<div
-								ref={fieldsContainerRef}
-								className="max-h-[480px] space-y-2.5 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200"
-							>
-								<AnimatePresence mode="popLayout">
-									{formFields.map((f, idx) => (
-										<FieldRow
-											key={f._uid}
-											field={f}
-											index={idx}
-											isNew={idx === formFields.length - 1 && !!editingMap[idx]}
-											editing={!!editingMap[idx]}
-											t={t}
-											typeOptions={typeOptions}
-											formFieldsLength={formFields.length}
-											newFieldRef={newFieldRef}
-											updateFieldProp={updateFieldProp}
-											toggleEditField={toggleEditField}
-											moveField={moveField}
-											removeField={removeField}
-										/>
-									))}
-								</AnimatePresence>
+						<aside className="gm-builder-palette">
+							<p className="text-[12px] font-bold gm-ink">{t('editor.palette')}</p>
+							<p className="mb-3 mt-0.5 text-[11.5px] gm-muted">{t('editor.palette_hint')}</p>
+							<div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-2">
+								{FIELD_TYPE_OPTIONS.map(({ id, icon: Icon }) => (
+									<button key={id} type="button" onClick={() => addInlineField(id)} className="gm-type-tile">
+										<span className="gm-type-tile__icon">
+											<Icon className="size-4" strokeWidth={1.9} />
+										</span>
+										<span className="truncate">{t(`types_map.${id}`)}</span>
+									</button>
+								))}
 							</div>
-						) : (
-							<motion.div
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								className="rounded-lg border border-dashed p-12 text-center"
-								style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
-							>
-								<IconBox size="xl" className="mx-auto mb-3">
-									<Layers className="h-7 w-7" style={{ color: 'var(--color-primary-400)' }} />
-								</IconBox>
-								<p className="text-sm font-semibold text-slate-600">{t('empty.no_fields')}</p>
-							</motion.div>
-						)}
+						</aside>
 					</div>
 
-					{/* Modal footer */}
-					<div
-						className="flex justify-end gap-2.5 border-t pt-4"
-						style={{ borderColor: 'var(--color-primary-100)' }}
-					>
-						<motion.button
+					<div className="gm-modal-foot">
+						<button
 							type="button"
 							onClick={() => setShowFormModal(false)}
-							whileHover={{ scale: 1.01 }}
-							whileTap={{ scale: 0.98 }}
-							className="inline-flex h-10 items-center rounded-lg border px-5 text-sm font-semibold text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-							style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}
+							className="gm-btn-ghost rounded-[11px] px-4 py-2 text-[13px] font-medium"
 						>
 							{t('actions.cancel')}
-						</motion.button>
-
-						<motion.button
+						</button>
+						<button
 							type="submit"
 							disabled={loading}
-							whileHover={{ scale: loading ? 1 : 1.02 }}
-							whileTap={{ scale: loading ? 1 : 0.97 }}
-							className="inline-flex h-10 items-center gap-2 rounded-lg px-6 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-							style={{
-								background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-								boxShadow: '0 4px 16px -4px var(--color-primary-500)',
-								opacity: loading ? 0.72 : 1,
-								cursor: loading ? 'not-allowed' : 'pointer',
-							}}
+							className="gm-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
 						>
-							{loading ? (
-								<motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-									<Zap className="h-4 w-4" />
-								</motion.span>
-							) : (
-								<>
-									{isEditing ? <FiEdit2 className="h-4 w-4" /> : <FiPlus className="h-4 w-4" />}
-									{isEditing ? t('edit.cta') : t('create.cta')}
-								</>
-							)}
-						</motion.button>
+							{loading
+								? <RefreshCw className="size-4 animate-spin" />
+								: isEditing ? <PencilLine className="size-4" /> : <Plus className="size-4" />}
+							{isEditing ? t('edit.cta') : t('create.cta')}
+						</button>
 					</div>
 				</form>
 			</Modal>
 		</div>
 	);
 }
+

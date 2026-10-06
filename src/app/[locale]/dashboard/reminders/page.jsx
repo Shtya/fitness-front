@@ -525,7 +525,7 @@ export default function RemindersPage() {
 
 	if (loading) {
 		return (
-			<main className='container !px-0'>
+			<main data-plain-page="1" className='report-phone mx-auto min-h-full w-full max-w-[440px] bg-white pt-1 dark:bg-[#0b1220]'>
 				<div className='relative mb-4 overflow-hidden rounded-lg border border-[var(--color-primary-100)] bg-[var(--color-primary-500)]'>
 					<div className='absolute inset-0 theme-gradient-bg opacity-95' />
 					<div
@@ -570,7 +570,7 @@ export default function RemindersPage() {
 
 	if (needsActivation) {
 		return (
-			<main className='container !px-0'>
+			<main data-plain-page="1" className='report-phone mx-auto min-h-full w-full max-w-[440px] bg-white pt-1 dark:bg-[#0b1220]'>
 				<div className='max-w-xl mx-auto mt-10 rounded-lg border border-dashed border-slate-300 bg-white p-6 md:p-8 text-center shadow-sm'>
 					<h1 className='text-xl md:text-2xl font-semibold text-slate-900 mb-3'>{safeT(t, 'permission.title', 'تفعيل الإشعارات مطلوب')}</h1>
 
@@ -605,8 +605,8 @@ export default function RemindersPage() {
 	}
 
 	return (
-		<main className='container !px-0'>
-			<div className='relative z-[10] rounded-lg border border-[var(--color-primary-100)]'>
+		<main data-plain-page="1" className='report-phone mx-auto min-h-full w-full max-w-[440px] bg-white pt-1 dark:bg-[#0b1220]'>
+			<div className='relative z-[10] m-[5px] rounded-3xl shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]'>
 				<div className='absolute rounded-lg inset-0 overflow-hidden'>
 					<div className='absolute inset-0 theme-gradient-bg opacity-95' />
 					<div
@@ -625,8 +625,8 @@ export default function RemindersPage() {
 				<div className='relative p-3 md:p-5 text-white'>
 					<div className='flex flex-row items-center justify-between gap-3'>
 						<div>
-							<h1 className='text-xl md:text-4xl font-semibold max-md:text-center block'>{safeT(t, 'title', 'Reminders')}</h1>
-							<p className='text-white/85 mt-1 hidden md:block'>{safeT(t, 'subtitle', 'Manage your personal reminders')}</p>
+							<h1 className='truncate text-xl font-black leading-6 tracking-[-0.3px]'>{safeT(t, 'title', 'Reminders')}</h1>
+							<p className='mt-0.5 truncate text-[10px] font-medium text-white/55'>{safeT(t, 'subtitle', 'Manage your personal reminders')}</p>
 						</div>
 
 						<div className='flex flex-wrap max-md:justify-center items-center gap-2'>

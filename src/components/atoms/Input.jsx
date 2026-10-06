@@ -53,70 +53,67 @@ export default function Input({
 
   const showClear = clearable && !disabled && internal !== '';
   const hasError = error && error !== 'users';
+  const floated = focused || internal !== '';
 
   return (
-    <div className={`w-full relative ${className}`}>
-      {label && (
-        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
-          {label}{required && <span className="ml-0.5 text-rose-400">*</span>}
-        </label>
-      )}
-
+    <div className={`relative w-full ${className}`}>
       <div className={[
         cnInputParent || '',
-        'relative flex items-center rounded-lg border bg-white transition-all duration-200',
-        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
+        'relative flex h-11 items-center rounded-[11px] border px-3 transition-all duration-200',
+        'bg-[color-mix(in_srgb,var(--gm-paper,#fff)_62%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]',
+        disabled ? 'cursor-not-allowed opacity-60' : '',
         hasError
-          ? 'border-rose-300 ring-2 ring-rose-100'
+          ? 'border-rose-300'
           : focused
-            ? 'border-[color:var(--color-primary-400)] ring-2 ring-[color:var(--color-primary-200)]'
-            : 'border-slate-200 hover:border-slate-300',
+            ? 'border-[var(--color-primary-500)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary-500)_12%,transparent),inset_0_1px_0_rgba(255,255,255,0.8)]'
+            : 'border-[var(--gm-line,rgba(92,143,211,0.22))] hover:border-[color-mix(in_srgb,var(--color-primary-400)_40%,transparent)]',
       ].join(' ')}>
-        {icon && (
-          <span className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex-shrink-0">
-            {icon}
-          </span>
-        )}
-
+        {icon ? (
+          <span className="pointer-events-none me-2 shrink-0 text-[var(--gm-muted,#5879a5)]">{icon}</span>
+        ) : null}
         <input
           ref={inputRef}
           type={type}
           name={name}
-          placeholder={placeholder}
+          placeholder={floated ? (placeholder || ' ') : ' '}
           value={internal}
           onChange={handleChange}
           onBlur={handleBlur}
           onFocus={() => setFocused(true)}
           disabled={disabled}
+          required={required}
           className={[
             cnInput || '',
-            'h-10 w-full !text-base rounded-lg bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
-            icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3',
-            showClear ? 'ltr:pr-8 rtl:pl-8' : 'ltr:pr-3 rtl:pl-3',
+            'h-full w-full bg-transparent text-[13px] text-[var(--gm-ink,#0b214d)] outline-none placeholder:text-[var(--gm-faint,#9aadc4)]',
+            !floated && 'placeholder:text-transparent',
           ].join(' ')}
           aria-invalid={!!hasError}
         />
-
-        {showClear && (
+        {label ? (
+          <label className={[
+            'pointer-events-none absolute z-[1] px-1 text-[var(--gm-faint,#7388a7)] transition-all duration-200 ease-[cubic-bezier(0.2,0.75,0.25,1)]',
+            icon ? 'start-9' : 'start-3',
+            floated
+              ? 'top-0 -translate-y-1/2 rounded-md bg-[var(--gm-paper,#fff)] text-[11px] font-medium text-[var(--gm-muted,#56719a)]'
+              : 'top-1/2 -translate-y-1/2 text-[13px]',
+            hasError && floated ? 'text-rose-500' : '',
+          ].join(' ')}>
+            {label}{required ? <span className="ms-0.5 text-rose-500">*</span> : null}
+          </label>
+        ) : null}
+        {showClear ? (
           <button
             type="button"
             onClick={clearInput}
-            className="absolute rtl:left-2.5 ltr:right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            className="ms-1 grid size-6 shrink-0 place-items-center rounded-md text-[var(--gm-muted,#7388a7)] hover:bg-[var(--gm-paper,#fff)] hover:text-rose-500"
             tabIndex={-1}
+            aria-label="Clear"
           >
-            <X size={12} />
+            <X size={14} />
           </button>
-        )}
+        ) : null}
       </div>
-
-      {hasError && (
-        <p className="mt-1.5 flex items-center gap-1 text-xs text-rose-500">
-          <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-100 shrink-0">
-            <X className="h-2.5 w-2.5" />
-          </span>
-          {error}
-        </p>
-      )}
+      {hasError ? <p className="mt-1 text-xs text-rose-500">{error}</p> : null}
     </div>
   );
 }
@@ -143,9 +140,10 @@ export const Input2 = forwardRef(function Input2(
   },
   ref,
 ) {
-  const val = value ?? '';
+  const val = value == null ? '' : String(value);
   const [focused, setFocused] = useState(false);
   const hasError = error && error !== 'users';
+  const floated = focused || val !== '';
 
   const handleChange = e => onChange?.(e.target.value);
   const handleBlur = e => { setFocused(false); onBlur?.(e); };
@@ -153,69 +151,65 @@ export const Input2 = forwardRef(function Input2(
   const showClear = clearable && !disabled && val !== '';
 
   return (
-    <div className={`w-full relative ${className}`}>
-      {label && (
-        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
-          {label}{required && <span className="ml-0.5 text-rose-400">*</span>}
-        </label>
-      )}
-
+    <div className={`relative w-full ${className}`}>
       <div className={[
         cnInputParent,
-        'relative flex items-center rounded-lg border bg-white transition-all duration-200',
-        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
+        'relative flex h-11 items-center rounded-[11px] border px-3 transition-all duration-200',
+        'bg-[color-mix(in_srgb,var(--gm-paper,#fff)_62%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]',
+        disabled ? 'cursor-not-allowed opacity-60' : '',
         hasError
-          ? 'border-rose-300 ring-2 ring-rose-100'
+          ? 'border-rose-300'
           : focused
-            ? 'border-[color:var(--color-primary-400)] ring-2 ring-[color:var(--color-primary-200)]'
-            : 'border-slate-200 hover:border-slate-300',
+            ? 'border-[var(--color-primary-500)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary-500)_12%,transparent),inset_0_1px_0_rgba(255,255,255,0.8)]'
+            : 'border-[var(--gm-line,rgba(92,143,211,0.22))] hover:border-[color-mix(in_srgb,var(--color-primary-400)_40%,transparent)]',
       ].join(' ')}>
-        {icon && (
-          <span className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex-shrink-0">
-            {icon}
-          </span>
-        )}
-
+        {icon ? (
+          <span className="pointer-events-none me-2 shrink-0 text-[var(--gm-muted,#5879a5)]">{icon}</span>
+        ) : null}
         <input
           ref={ref}
           type={type}
           name={name}
-          placeholder={placeholder}
+          placeholder={floated ? (placeholder || ' ') : ' '}
           value={val}
           onChange={handleChange}
           onBlur={handleBlur}
           onFocus={() => setFocused(true)}
           disabled={disabled}
+          required={required}
           className={[
             cnInput,
-            'h-10 w-full rounded-lg bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
-            icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3',
-            showClear ? 'ltr:pr-8 rtl:pl-8' : 'ltr:pr-3 rtl:pl-3',
+            'h-full w-full bg-transparent text-[13px] text-[var(--gm-ink,#0b214d)] outline-none placeholder:text-[var(--gm-faint,#9aadc4)]',
+            !floated && 'placeholder:text-transparent',
           ].join(' ')}
           aria-invalid={!!hasError}
           {...rest}
         />
-
-        {showClear && (
+        {label ? (
+          <label className={[
+            'pointer-events-none absolute z-[1] px-1 text-[var(--gm-faint,#7388a7)] transition-all duration-200 ease-[cubic-bezier(0.2,0.75,0.25,1)]',
+            icon ? 'start-9' : 'start-3',
+            floated
+              ? 'top-0 -translate-y-1/2 rounded-md bg-[var(--gm-paper,#fff)] text-[11px] font-medium text-[var(--gm-muted,#56719a)]'
+              : 'top-1/2 -translate-y-1/2 text-[13px]',
+            hasError && floated ? 'text-rose-500' : '',
+          ].join(' ')}>
+            {label}{required ? <span className="ms-0.5 text-rose-500">*</span> : null}
+          </label>
+        ) : null}
+        {showClear ? (
           <button
             type="button"
             onClick={clearInput}
-            className="absolute rtl:left-2.5 ltr:right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            className="ms-1 grid size-6 shrink-0 place-items-center rounded-md text-[var(--gm-muted,#7388a7)] hover:bg-[var(--gm-paper,#fff)] hover:text-rose-500"
             tabIndex={-1}
+            aria-label="Clear"
           >
-            <X size={12} />
+            <X size={14} />
           </button>
-        )}
+        ) : null}
       </div>
-
-      {hasError && (
-        <p className="mt-1.5 flex items-center gap-1 text-xs text-rose-500">
-          <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-100 shrink-0">
-            <X className="h-2.5 w-2.5" />
-          </span>
-          {error}
-        </p>
-      )}
+      {hasError ? <p className="mt-1 text-xs text-rose-500">{error}</p> : null}
     </div>
   );
 });

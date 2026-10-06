@@ -29,6 +29,7 @@ import LibraryPanel from '@/components/ai-reading/LibraryPanel';
 import GenerateForm from '@/components/ai-reading/GenerateForm';
 import { uiFontFamily } from '@/lib/ai-reading/fonts';
 import { hydrateAiReadingStore } from '@/lib/ai-reading/storage';
+import '@/components/pages/dashboard/users/roster/roster.css';
 import '@/lib/ai-reading/ai-reading-theme.css';
 
 /** One shell width for every tab — no layout jump. */
@@ -58,6 +59,11 @@ export default function StudioApp({ initialTab = 'home' }) {
 	const [studioSub, setStudioSub] = useState('chat');
 	const [ready, setReady] = useState(false);
 	const [notebookOpen, setNotebookOpen] = useState(false);
+
+	useEffect(() => {
+		document.documentElement.dataset.gmUsers = '1';
+		return () => { delete document.documentElement.dataset.gmUsers; };
+	}, []);
 
 	useEffect(() => {
 		let alive = true;
@@ -102,15 +108,15 @@ export default function StudioApp({ initialTab = 'home' }) {
 
 	return (
 		<div
-			className={`ai-reading-root flex h-full min-h-0 flex-col ${locale === 'ar' ? 'rtl' : 'ltr'}`}
+			className={`ai-reading-root gm-surface rs-scope flex h-full min-h-0 flex-col ${locale === 'ar' ? 'rtl' : 'ltr'}`}
 			style={{ fontFamily: uiFontFamily(locale === 'ar' ? 'ar' : 'en') }}
 		>
-			<header className="z-40 shrink-0 border-b bg-white/80 backdrop-blur-md" style={{ borderColor: 'var(--ar-border)' }}>
+			<header className="z-40 shrink-0 border-b bg-(--gm-paper) backdrop-blur-md" style={{ borderColor: 'var(--ar-border)' }}>
 				<div className={`${SHELL} flex items-center justify-between gap-2 py-2 sm:gap-3 sm:py-3`}>
 					<div className="flex min-w-0 items-center gap-2 sm:gap-3">
 						<span
-							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-md sm:h-10 sm:w-10 sm:rounded-2xl"
-							style={{ background: 'linear-gradient(145deg, var(--color-gradient-from, var(--color-primary-700)), var(--color-gradient-to, var(--color-primary-500)))' }}
+							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white sm:h-10 sm:w-10 sm:rounded-2xl"
+							style={{ background: 'linear-gradient(180deg, var(--color-primary-500), var(--color-primary-600))', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.22)' }}
 						>
 							<BookOpen size={16} />
 						</span>
@@ -125,8 +131,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 						<button
 							type="button"
 							onClick={() => setNotebookOpen(true)}
-							className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/90 p-2 text-[11px] font-semibold ring-1 hover:opacity-90 sm:gap-1.5 sm:px-3 sm:py-1.5"
-							style={{ color: 'var(--ar-muted)', boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
+							className="rs-btn shrink-0"
 							aria-label={t('notebook.open')}
 							title={t('reading.tips.notebook')}
 						>
@@ -135,8 +140,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 						</button>
 						<Link
 							href="/ai-studio/fitness"
-							className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/90 p-2 text-[11px] font-semibold ring-1 hover:opacity-90 sm:gap-1.5 sm:px-3 sm:py-1.5"
-							style={{ color: 'var(--ar-muted)', boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
+							className="rs-btn shrink-0"
 							aria-label={t('nav.fitness')}
 							title={t('nav.fitness')}
 						>
@@ -164,8 +168,8 @@ export default function StudioApp({ initialTab = 'home' }) {
 								{active && (
 									<motion.span
 										layoutId="studio-main-tab"
-										className="absolute inset-0 rounded-full bg-white shadow-sm"
-										style={{ boxShadow: 'inset 0 0 0 1px var(--ar-ring)' }}
+										className="absolute inset-0 rounded-full"
+										style={{ background: 'var(--gm-paper)', boxShadow: 'inset 0 0 0 1px var(--gm-line)' }}
 										transition={{ type: 'spring', stiffness: 400, damping: 32 }}
 									/>
 								)}

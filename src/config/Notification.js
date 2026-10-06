@@ -24,14 +24,20 @@ const colors = {
   },
 };
 
-const config = type => ({
+const config = type => {
+  const icy = typeof document !== 'undefined' && document.documentElement.dataset.gmUsers === '1';
+  return ({
   position: 'top-center',
   duration: 3500,
   style: {
     background: colors[type]?.bg || '#ffffff',
     color: colors[type]?.text || '#111827',
-    boxShadow: '0 4px 20px -2px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.05)',
-    borderRadius: '14px',
+    boxShadow: icy
+      ? 'inset 0 1px 0 rgba(255,255,255,0.9), 0 16px 38px rgba(31,78,137,0.12)'
+      : '0 4px 20px -2px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.05)',
+    border: icy ? '1px solid rgba(105,153,216,0.22)' : undefined,
+    borderRadius: icy ? '16px' : '14px',
+    backdropFilter: icy ? 'blur(16px)' : undefined,
     padding: '12px 18px',
     display: 'flex',
     alignItems: 'center',
@@ -45,7 +51,8 @@ const config = type => ({
     primary: colors[type]?.text,
     secondary: '#fff',
   },
-});
+  });
+};
 
 export function Notification(msg, type = 'info') {
   switch (type) {

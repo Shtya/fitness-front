@@ -26,7 +26,7 @@ function useQueryState(initial = { page: 1, limit: 20, search: '' }) {
   const safe = useMemo(
     () => ({
       page: Math.max(1, Number(page || 1)),
-      limit: Math.min(100, Math.max(1, Number(limit || 20))),
+      limit: Math.min(1000, Math.max(1, Number(limit || 20))),
       search: (search || '').trim(),
     }),
     [page, limit, search],

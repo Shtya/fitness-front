@@ -3,210 +3,117 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslations } from 'use-intl';
 import { useRouter } from 'next/navigation';
-
-import api, { baseImg } from '@/utils/axios';
-import { toast } from 'react-hot-toast';
-
-import { FiSearch, FiTrash2 } from 'react-icons/fi';
-import { FaSpinner } from 'react-icons/fa6';
-
-import Select from '@/components/atoms/Select';
-import Input from '@/components/atoms/Input';
-import { Modal, StatCard } from '@/components/dashboard/ui/UI';
-import MultiLangText from '@/components/atoms/MultiLangText';
-import Img from '@/components/atoms/Img';
-
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
-
 import {
-	FileText,
-	Search,
-	Eye,
-	Sparkles,
-	Users,
-	ExternalLink,
+	AlertCircle,
+	ArrowUpRight,
+	Check,
 	CheckCircle2,
 	Clock,
+	ExternalLink,
+	Eye,
+	FileText,
+	Globe,
+	Inbox,
+	Layers,
+	Mail,
+	Phone,
+	Plus,
+	RefreshCw,
+	Trash2,
 } from 'lucide-react';
-import ActionButtons from '@/components/atoms/Actions';
-import DataTable, { FilterField } from '@/components/atoms/Datatable';
 
-const PAGE_SIZE = 10;
-const cx = (...c) => c.filter(Boolean).join(' ');
+import api, { baseImg } from '@/utils/axios';
+import MultiLangText from '@/components/atoms/MultiLangText';
+import Img from '@/components/atoms/Img';
+import Badge from '@/components/atoms/GmBadge';
+import GmRowActions from '@/components/atoms/GmRowActions';
+import GmStatCard from '@/components/molecules/GmStatCard';
+import DataTable from '@/components/atoms/Datatable';
+import { Modal } from '@/components/dashboard/ui/UI';
+import { Notification } from '@/config/Notification';
+import { IntakeHero, IntakeToolbar, IntakeFilterPopover, IntakeOptionGroup } from '@/components/pages/dashboard/intake/IntakeChrome';
+import { getStoredPerPage, setStoredPerPage } from '@/lib/table-prefs';
 
-// ─────────────────────────────────────────────────────────────
-//  PRIMITIVE UI COMPONENTS
-// ─────────────────────────────────────────────────────────────
-
-/** Elevated card with consistent border + shadow */
-function Card({ children, className = '' }) {
-	return (
-		<div
-			className={cx('overflow-hidden rounded-lg border bg-white', className)}
-			style={{
-				borderColor: 'var(--color-primary-100)',
-				boxShadow: '0 1px 3px rgba(15,23,42,0.05), 0 8px 24px rgba(15,23,42,0.06)',
-			}}
-		>
-			{children}
-		</div>
-	);
-}
-
-/** Pill / badge */
-function Pill({ children, tone = 'primary' }) {
-	const tones = {
-		primary: {
-			border: 'var(--color-primary-200)',
-			bg: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
-			text: 'var(--color-primary-800)',
-		},
-		soft: { border: '#e2e8f0', bg: '#f8fafc', text: '#475569' },
-		success: { border: '#bbf7d0', bg: '#f0fdf4', text: '#166534' },
-		warning: { border: '#fde68a', bg: '#fffbeb', text: '#92400e' },
-	};
-	const s = tones[tone] || tones.primary;
-	return (
-		<span
-			className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-0.5 text-xs font-semibold"
-			style={{ borderColor: s.border, background: s.bg, color: s.text }}
-		>
-			{children}
-		</span>
-	);
-}
-
-/** Tooltip wrapper for icon buttons */
-function TipBtn({ tooltip, onClick, disabled, children, variant = 'ghost' }) {
-	const [show, setShow] = useState(false);
-	const styles = {
-		ghost: { bg: 'white', border: 'var(--color-primary-200)', color: 'var(--color-primary-600)' },
-		view: { bg: 'white', border: '#bae6fd', color: '#0369a1' },
-		danger: { bg: '#fef2f2', border: '#fecaca', color: '#dc2626' },
-	};
-	const s = styles[variant] || styles.ghost;
-	return (
-		<div className="relative">
-			<button
-				type="button"
-				onClick={onClick}
-				disabled={disabled}
-				onMouseEnter={() => setShow(true)}
-				onMouseLeave={() => setShow(false)}
-				className="inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
-				style={{ background: s.bg, borderColor: s.border, color: s.color, boxShadow: '0 1px 3px rgba(15,23,42,0.07)' }}
-			>
-				{children}
-			</button>
-			<div
-				className={cx(
-					'pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white transition-all duration-150',
-					show ? 'opacity-100 -translate-y-0.5' : 'opacity-0 translate-y-1',
-				)}
-				style={{ background: '#0f172a', boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}
-			>
-				{tooltip}
-				<div
-					className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent"
-					style={{ borderTopColor: '#0f172a', marginTop: '-1px' }}
-				/>
-			</div>
-		</div>
-	);
-}
-
-/** Key-value display in detail modal */
-function InfoRow({ k, v, mono = false }) {
-	return (
-		<div
-			className="rounded-lg border p-3"
-			style={{
-				borderColor: 'var(--color-primary-100)',
-				background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
-			}}
-		>
-			<p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{k}</p>
-			<MultiLangText className={cx('mt-1 break-words text-sm font-semibold text-slate-900', mono && 'font-mono text-xs')}>
-				{String(v ?? '—')}
-			</MultiLangText>
-		</div>
-	);
-}
+const GM_MODAL = 'gm-modal';
+const DEFAULT_LIMIT = 10;
 
 // ─────────────────────────────────────────────────────────────
-//  REVIEWED CHECKBOX
+//  REVIEWED TOGGLE
 // ─────────────────────────────────────────────────────────────
 function ReviewedCell({ row, updatingReviewed, setReviewed, t }) {
 	const formId = row.form_id ?? row.form?.id;
 	const key = formId != null && row.id != null ? `${formId}-${row.id}` : '';
 	const loading = key ? updatingReviewed.has(key) : false;
+	const on = !!row.reviewed;
 
 	return (
-		<label
-			className={cx(
-				'inline-flex cursor-pointer select-none items-center gap-2 transition-opacity',
-				loading && 'cursor-not-allowed opacity-60',
-			)}
+		<button
+			type="button"
+			role="switch"
+			aria-checked={on}
 			aria-label={t('review.aria_label')}
+			disabled={loading}
+			onClick={() => setReviewed(row, !on)}
+			className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11.5px] font-semibold transition-all hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60 ${on
+				? 'border-[color-mix(in_srgb,var(--gm-ok)_30%,transparent)] bg-[color-mix(in_srgb,var(--gm-ok)_14%,var(--gm-paper))] text-(--gm-ok)'
+				: 'border-(--gm-line) bg-[color-mix(in_srgb,var(--gm-paper)_80%,transparent)] gm-muted hover:text-(--color-primary-600)'
+				}`}
 		>
-			{/* Hidden native checkbox */}
-			<span className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
-				<input
-					type="checkbox"
-					checked={!!row.reviewed}
-					disabled={loading}
-					onChange={e => setReviewed(row, e.target.checked)}
-					className="peer h-5 w-5 cursor-pointer appearance-none rounded-lg border border-slate-300 bg-white transition-colors checked:border-[color:var(--color-primary-500)] checked:bg-[color:var(--color-primary-500)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] focus-visible:ring-offset-1 disabled:cursor-not-allowed"
-				/>
-				{/* Checkmark SVG */}
-				<svg
-					className="pointer-events-none absolute h-3 w-3 text-white opacity-0 transition-opacity peer-checked:opacity-100"
-					viewBox="0 0 12 12" fill="none"
+			{loading ? (
+				<RefreshCw className="size-3.5 animate-spin" />
+			) : (
+				<span
+					className={`grid size-4 place-items-center rounded-full ${on ? 'bg-(--gm-ok) text-white' : 'border border-current'}`}
 				>
-					<path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-				</svg>
-			</span>
-
-			<span className={cx('text-sm font-medium transition-colors', row.reviewed ? 'text-slate-700' : 'text-slate-400')}>
-				{loading
-					? t('review.loading')
-					: row.reviewed
-						? t('review.checked')
-						: t('review.label')}
-			</span>
-
-			{loading && <FaSpinner className="h-3.5 w-3.5 animate-spin flex-shrink-0 text-[color:var(--color-primary-400)]" />}
-		</label>
+					{on ? <Check className="size-2.5" strokeWidth={3.5} /> : null}
+				</span>
+			)}
+			{loading ? t('review.loading') : on ? t('review.checked') : t('review.label')}
+		</button>
 	);
 }
 
 // ─────────────────────────────────────────────────────────────
 //  ANSWER RENDERING
 // ─────────────────────────────────────────────────────────────
-function AnswerCard({ fieldKey, label, value, forms, submission, t }) {
-	const isUrl = s => typeof s === 'string' && /^(https?:)?\/\//i.test(s.trim());
-	const isProbPath = s => typeof s === 'string' && /\/uploads\/|^uploads\/|^\/uploads\//i.test(s.trim());
-	const isImageUrl = s => typeof s === 'string' && /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(s.trim());
+const isUrl = s => typeof s === 'string' && /^(https?:)?\/\//i.test(s.trim());
+const isProbPath = s => typeof s === 'string' && /\/uploads\/|^uploads\/|^\/uploads\//i.test(s.trim());
+const isImageUrl = s => typeof s === 'string' && /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(s.trim());
 
-	const normalizeUrl = raw => {
-		if (!raw || typeof raw !== 'string') return '';
-		const cleaned = raw.replace(/\\/g, '/').trim();
-		if (isUrl(cleaned)) return cleaned;
-		if (typeof baseImg !== 'undefined' && baseImg) {
-			return cleaned.startsWith('/') ? `${baseImg}${cleaned}` : `${baseImg}/${cleaned}`;
-		}
-		return cleaned;
-	};
+const normalizeUrl = raw => {
+	if (!raw || typeof raw !== 'string') return '';
+	const cleaned = raw.replace(/\\/g, '/').trim();
+	if (isUrl(cleaned)) return cleaned;
+	if (typeof baseImg !== 'undefined' && baseImg) {
+		return cleaned.startsWith('/') ? `${baseImg}${cleaned}` : `${baseImg}/${cleaned}`;
+	}
+	return cleaned;
+};
 
-	const extractFiles = val => {
-		if (Array.isArray(val)) return val.filter(v => typeof v === 'string' && v.trim()).map(v => v.replace(/\\/g, '/').trim());
-		if (typeof val === 'string') {
-			const v = val.trim();
-			if (v.toLowerCase().startsWith('upload') || isUrl(v) || isProbPath(v)) return [v.replace(/\\/g, '/').trim()];
-		}
-		return [];
-	};
+const extractFiles = val => {
+	if (Array.isArray(val)) return val.filter(v => typeof v === 'string' && v.trim()).map(v => v.replace(/\\/g, '/').trim());
+	if (typeof val === 'string') {
+		const v = val.trim();
+		if (v.toLowerCase().startsWith('upload') || isUrl(v) || isProbPath(v)) return [v.replace(/\\/g, '/').trim()];
+	}
+	return [];
+};
 
+function FileLink({ rawUrl }) {
+	return (
+		<a
+			href={normalizeUrl(rawUrl)}
+			target="_blank"
+			rel="noopener noreferrer"
+			className="inline-flex max-w-full items-center gap-1.5 truncate text-[12px] font-medium text-(--color-primary-600) underline-offset-2 hover:underline"
+		>
+			<ExternalLink className="size-3 shrink-0" />
+			<span className="truncate">{rawUrl}</span>
+		</a>
+	);
+}
+
+function AnswerCard({ fieldKey, label, value }) {
 	const files = extractFiles(value);
 	const imageFiles = files.filter(isImageUrl);
 	const otherFiles = files.filter(f => !isImageUrl(f));
@@ -217,107 +124,49 @@ function AnswerCard({ fieldKey, label, value, forms, submission, t }) {
 				: String(value);
 
 	return (
-		<div
-			className="overflow-hidden rounded-lg border bg-white p-4 transition-colors hover:border-[color:var(--color-primary-200)]"
-			style={{ borderColor: 'var(--color-primary-100)' }}
-		>
-			{/* Header row */}
-			<div className="mb-3 flex items-start justify-between gap-2">
-				<MultiLangText dirAuto className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+		<div className="gm-answer">
+			<div className="flex items-start justify-between gap-2">
+				<MultiLangText dirAuto className="min-w-0 text-[11.5px] font-semibold gm-muted">
 					{label}
 				</MultiLangText>
-				<span
-					className="flex-shrink-0 rounded-lg border px-1.5 py-0.5 font-mono text-[10px] font-bold"
-					style={{
-						borderColor: 'var(--color-primary-200)',
-						background: 'var(--color-primary-50)',
-						color: 'var(--color-primary-600)',
-					}}
-				>
-					{fieldKey}
-				</span>
+				<span className="gm-plan__chip shrink-0 font-mono" dir="ltr">{fieldKey}</span>
 			</div>
 
-			{/* Content */}
-			<div className="text-sm text-slate-900">
+			<div className="mt-1.5 text-[13px]">
 				{imageFiles.length > 0 ? (
-					<div>
-						<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+					<div className="space-y-2.5">
+						<div className="grid grid-cols-3 gap-2">
 							{imageFiles.map((rawUrl, i) => (
-								<a key={i} href={normalizeUrl(rawUrl)} target="_blank" rel="noopener noreferrer" className="group block">
-									<div className="overflow-hidden rounded-lg border border-[color:var(--color-primary-100)] transition-all group-hover:border-[color:var(--color-primary-300)] group-hover:shadow-md">
-										<Img src={rawUrl} alt={`${label} ${i + 1}`} className="aspect-square w-full object-cover transition-transform group-hover:scale-105" />
-									</div>
+								<a key={i} href={normalizeUrl(rawUrl)} target="_blank" rel="noopener noreferrer" className="group block overflow-hidden rounded-[10px] border border-(--gm-line)">
+									<Img src={rawUrl} alt={`${label} ${i + 1}`} className="aspect-square w-full object-cover transition-transform group-hover:scale-105" />
 								</a>
 							))}
 						</div>
-						{otherFiles.length > 0 && (
-							<div className="mt-3 space-y-1.5">
-								{otherFiles.map((rawUrl, i) => (
-									<a key={i} href={normalizeUrl(rawUrl)} target="_blank" rel="noopener noreferrer"
-										className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--color-primary-600)] underline-offset-2 hover:underline">
-										<ExternalLink className="h-3 w-3" />
-										{rawUrl}
-									</a>
-								))}
-							</div>
-						)}
+						{otherFiles.map((rawUrl, i) => <FileLink key={i} rawUrl={rawUrl} />)}
 					</div>
 				) : files.length > 0 ? (
-					<div className="space-y-1.5">
-						{files.map((rawUrl, i) => (
-							<a key={i} href={normalizeUrl(rawUrl)} target="_blank" rel="noopener noreferrer"
-								className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--color-primary-600)] underline-offset-2 hover:underline">
-								<ExternalLink className="h-3 w-3" />
-								{rawUrl}
-							</a>
-						))}
+					<div className="flex flex-col gap-1.5">
+						{files.map((rawUrl, i) => <FileLink key={i} rawUrl={rawUrl} />)}
 					</div>
 				) : out ? (
-					<MultiLangText className="break-words font-medium text-slate-800">{out}</MultiLangText>
+					<MultiLangText className="wrap-break-word font-semibold gm-ink">{out}</MultiLangText>
 				) : (
-					<span className="text-slate-400">—</span>
+					<span className="gm-faint">—</span>
 				)}
 			</div>
-
-			{/* Divider */}
-			<div
-				className="mt-3 h-px"
-				style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary-100), transparent)' }}
-			/>
 		</div>
 	);
 }
 
-function renderAnswers(submission, forms, t) {
-	const form = forms.find(f => f.id == (submission.form_id ?? submission.form?.id));
-	const fieldsByKey = new Map((form?.fields || []).map(fld => [fld.key, fld]));
-	const entries = Object.entries(submission.answers || {});
-
-	if (!entries.length) return <p className="text-slate-500">{t('detail.no_answers')}</p>;
-
-	return entries.map(([key, value]) => (
-		<AnswerCard
-			key={key}
-			fieldKey={key}
-			label={fieldsByKey.get(key)?.label || key}
-			value={value}
-			forms={forms}
-			submission={submission}
-			t={t}
-		/>
-	));
-}
-
-// ─────────────────────────────────────────────────────────────
-//  PAGE LOADING SCREEN
-// ─────────────────────────────────────────────────────────────
-function LoadingScreen() {
+function ContactRow({ icon: Icon, label, value, mono = false }) {
 	return (
-		<div className="flex min-h-screen items-center justify-center">
-			<div className="flex flex-col items-center gap-3">
-				<FaSpinner className="h-8 w-8 animate-spin" style={{ color: 'var(--color-primary-500)' }} />
-				<p className="text-sm font-medium text-slate-400">Loading…</p>
+		<div className="gm-cred justify-start!">
+			<span className="gm-cred__icon shrink-0">
+				<Icon className="size-4" />
+			</span>
+			<div className="min-w-0">
+				<p className="gm-cred__label">{label}</p>
+				<p className={`gm-cred__value truncate ${mono ? 'font-mono text-[12px]!' : ''}`} dir="ltr">{value || '—'}</p>
 			</div>
 		</div>
 	);
@@ -326,141 +175,124 @@ function LoadingScreen() {
 // ─────────────────────────────────────────────────────────────
 //  MAIN PAGE
 // ─────────────────────────────────────────────────────────────
-
-const DEFAULT_LIMIT = 10;
-
 export default function SubmissionsPage() {
 	const t = useTranslations('submissions');
 	const router = useRouter();
 
 	const [forms, setForms] = useState([]);
-	const [submissions, setSubmissions] = useState([]);
+	const [allRows, setAllRows] = useState([]);
 	const [updatingReviewed, setUpdatingReviewed] = useState(new Set());
 	const [deletingId, setDeletingId] = useState(null);
+	const [pendingDelete, setPendingDelete] = useState(null);
 
-	const [loadingForms, setLoadingForms] = useState(true);
-	const [loadingSubs, setLoadingSubs] = useState(false);
-
+	const [loadingSubs, setLoadingSubs] = useState(true);
 	const [selectedFormId, setSelectedFormId] = useState('all');
+	const [reviewFilter, setReviewFilter] = useState('all');
+	const [filterOpen, setFilterOpen] = useState(false);
+	const filterAnchorRef = useRef(null);
 	const [query, setQuery] = useState('');
 
 	const [page, setPage] = useState(1);
-	const [limit, setLimit] = useState(DEFAULT_LIMIT);
-	const [total, setTotal] = useState(0);
+	const [limit, setLimit] = useState(() => getStoredPerPage(DEFAULT_LIMIT));
 
-	// Detail modal
 	const [selectedSubmission, setSelectedSubmission] = useState(null);
 	const [showSubmissionModal, setShowSubmissionModal] = useState(false);
 
-	// Debounced search
 	const [debouncedQuery, setDebouncedQuery] = useState('');
 	const debounceTimer = useRef(null);
 
-
-
-
-
-
-	const loadForms = async () => {
-		setLoadingForms(true);
-		try {
-			const res = await api.get('/forms');
-			const list = res?.data?.data || res?.data || [];
-			setForms(Array.isArray(list) ? list : []);
-		} catch {
-			toast.error(t('messages.load_forms_failed'));
-		} finally {
-			setLoadingForms(false);
-		}
-	};
+	useEffect(() => {
+		clearTimeout(debounceTimer.current);
+		debounceTimer.current = setTimeout(() => setDebouncedQuery(query), 300);
+		return () => clearTimeout(debounceTimer.current);
+	}, [query]);
 
 	const normalizeSubmission = sub => ({
 		...sub,
 		form_id: sub?.form?.id ?? sub?.form_id ?? null,
 	});
 
-	const loadSubmissions = useCallback(async ({ forcedPage } = {}) => {
+	const loadForms = useCallback(async () => {
+		try {
+			const res = await api.get('/forms');
+			const list = res?.data?.data || res?.data || [];
+			setForms(Array.isArray(list) ? list : []);
+		} catch {
+			Notification(t('messages.load_forms_failed'), 'error');
+		}
+	}, [t]);
+
+	const loadSubmissions = useCallback(async () => {
+		if (!forms.length) {
+			setAllRows([]);
+			setLoadingSubs(false);
+			return;
+		}
 		setLoadingSubs(true);
 		try {
-			if (selectedFormId === 'all') {
-				const reqs = forms.map(f =>
-					api.get(`/forms/${f.id}/submissions`, { params: { page: 1, limit: 1000 } })
-						.then(r => ({ ...r.data, formId: f.id }))
-						.catch(() => ({ data: [], total: 0, formId: f.id }))
-				);
-
-				const results = await Promise.all(reqs);
-
-				let aggregated = [];
-				for (const r of results) {
-					aggregated = aggregated.concat((r?.data || []).map(normalizeSubmission));
-				}
-
-				aggregated.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-				const q = (debouncedQuery || '').trim().toLowerCase();
-
-				const filteredAggregated = !q
-					? aggregated
-					: aggregated.filter(s => {
-						const formTitle = forms.find(f => f.id == s.form_id)?.title?.toLowerCase() || '';
-						const inAnswers = s.answers &&
-							Object.values(s.answers).some(v =>
-								String(Array.isArray(v) ? v.join(', ') : v).toLowerCase().includes(q)
-							);
-
-						return (
-							formTitle.includes(q) ||
-							(s.email || '').toLowerCase().includes(q) ||
-							(s.phone || '').toLowerCase().includes(q) ||
-							(s.ipAddress || '').toLowerCase().includes(q) ||
-							inAnswers
-						);
-					});
-
-				const currentPage = forcedPage ?? page;
-				const start = (currentPage - 1) * limit;
-				const end = start + limit;
-
-				setTotal(filteredAggregated.length);
-				setSubmissions(filteredAggregated.slice(start, end));
-			} else {
-				const currentPage = forcedPage ?? page;
-				const r = await api.get(`/forms/${selectedFormId}/submissions`, {
-					params: { page: currentPage, limit },
-				});
-				const rows = (r?.data?.data || r?.data || []).map(normalizeSubmission);
-				setSubmissions(rows);
-				setTotal(r?.data?.total ?? rows.length);
-			}
+			const targets = selectedFormId === 'all'
+				? forms
+				: forms.filter(f => String(f.id) === String(selectedFormId));
+			const results = await Promise.all(targets.map(f =>
+				api.get(`/forms/${f.id}/submissions`, { params: { page: 1, limit: 1000 } })
+					.then(r => (r?.data?.data || r?.data || []).map(normalizeSubmission))
+					.catch(() => []),
+			));
+			setAllRows(results.flat().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
 		} catch {
-			toast.error(t('messages.load_submissions_failed'));
+			Notification(t('messages.load_submissions_failed'), 'error');
 		} finally {
 			setLoadingSubs(false);
 		}
-	}, [selectedFormId, forms, page, limit, t, debouncedQuery]);
+	}, [forms, selectedFormId, t]);
 
-	const filteredSubmissions = submissions;
+	useEffect(() => { loadForms(); }, [loadForms]);
+	useEffect(() => { loadSubmissions(); }, [loadSubmissions]);
+	useEffect(() => { setPage(1); }, [selectedFormId, debouncedQuery, reviewFilter, limit]);
 
-	const headerStats = useMemo(() => ({
-		totalShown: filteredSubmissions.length,
-		uniqueForms: new Set(filteredSubmissions.map(s => String(s.form_id ?? ''))).size,
-	}), [filteredSubmissions]);
+	const formTitleOf = useCallback(
+		id => forms.find(f => f.id == id)?.title || t('labels.unknown_form'),
+		[forms, t],
+	);
 
+	const matchesQuery = useCallback((s, q) => {
+		if (!q) return true;
+		const formTitle = formTitleOf(s.form_id).toLowerCase();
+		const inAnswers = s.answers && Object.values(s.answers).some(v =>
+			String(Array.isArray(v) ? v.join(', ') : v).toLowerCase().includes(q),
+		);
+		return (
+			formTitle.includes(q) ||
+			(s.email || '').toLowerCase().includes(q) ||
+			(s.phone || '').toLowerCase().includes(q) ||
+			(s.ipAddress || '').toLowerCase().includes(q) ||
+			inAnswers
+		);
+	}, [formTitleOf]);
 
-		// ── Fetch forms ──
-	useEffect(() => { loadForms(); }, []);
+	const filtered = useMemo(() => {
+		const q = (debouncedQuery || '').trim().toLowerCase();
+		return allRows.filter(s => {
+			if (reviewFilter === 'waiting' && s.reviewed) return false;
+			if (reviewFilter === 'reviewed' && !s.reviewed) return false;
+			return matchesQuery(s, q);
+		});
+	}, [allRows, reviewFilter, debouncedQuery, matchesQuery]);
 
-	useEffect(() => {
-		setPage(1);
-	}, [selectedFormId, debouncedQuery, limit]);
+	const submissions = useMemo(() => {
+		const start = (page - 1) * limit;
+		return filtered.slice(start, start + limit);
+	}, [filtered, page, limit]);
 
-	useEffect(() => {
-		if (!forms.length) return;
-		loadSubmissions({ forcedPage: page });
-	}, [forms, page, loadSubmissions]);
+	const inboxStats = useMemo(() => ({
+		total: allRows.length,
+		reviewed: allRows.filter(s => s.reviewed).length,
+		waiting: allRows.filter(s => !s.reviewed).length,
+		uniqueForms: new Set(allRows.map(s => String(s.form_id ?? ''))).size,
+	}), [allRows]);
 
-	
+	const total = filtered.length;
+
 	// ── Callbacks ──
 	const viewSubmission = useCallback(submission => {
 		setSelectedSubmission(submission);
@@ -474,9 +306,11 @@ export default function SubmissionsPage() {
 		setUpdatingReviewed(prev => new Set([...prev, key]));
 		try {
 			await api.patch(`/forms/${formId}/submissions/${row.id}`, { reviewed: !!checked });
-			setSubmissions(prev => prev.map(s => s.id === row.id ? { ...s, reviewed: !!checked } : s));
+			const patch = s => (s.id === row.id ? { ...s, reviewed: !!checked } : s);
+			setAllRows(prev => prev.map(patch));
+			setSelectedSubmission(prev => (prev?.id === row.id ? { ...prev, reviewed: !!checked } : prev));
 		} catch {
-			toast.error(t('messages.update_reviewed_failed', { default: 'Failed to update' }));
+			Notification(t('messages.update_reviewed_failed'), 'error');
 		} finally {
 			setUpdatingReviewed(prev => { const next = new Set(prev); next.delete(key); return next; });
 		}
@@ -485,285 +319,367 @@ export default function SubmissionsPage() {
 	const deleteSubmission = useCallback(async row => {
 		const formId = row.form_id ?? row.form?.id;
 		if (formId == null || row.id == null) return;
-		if (!window.confirm(t('actions.confirm_delete', { default: 'Delete this response?' }))) return;
 		setDeletingId(row.id);
 		try {
 			await api.delete(`/forms/${formId}/submissions/${row.id}`);
-			setSubmissions(prev => prev.filter(s => s.id !== row.id));
-			setTotal(prev => Math.max(0, (prev ?? 0) - 1));
+			setAllRows(prev => prev.filter(s => s.id !== row.id));
 			if (selectedSubmission?.id === row.id) { setShowSubmissionModal(false); setSelectedSubmission(null); }
-			toast.success(t('messages.delete_success', { default: 'Deleted' }));
+			Notification(t('messages.delete_success'), 'success');
 		} catch {
-			toast.error(t('messages.delete_failed', { default: 'Failed to delete' }));
+			Notification(t('messages.delete_failed'), 'error');
 		} finally {
 			setDeletingId(null);
+			setPendingDelete(null);
 		}
 	}, [selectedSubmission?.id, t]);
 
-	// ── Columns ── 
+	// ── Columns ──
 	const columns = useMemo(() => [
-		{
-			key: 'reviewed',
-			header: t('table.reviewed'),
-			cell: row => (
-				<ReviewedCell
-					row={row}
-					updatingReviewed={updatingReviewed}
-					setReviewed={setReviewed}
-					t={t}
-				/>
-			),
-		},
 		{
 			key: 'form',
 			header: t('table.form'),
-			cell: row => {
-				const form = forms.find(f => f.id == row.form_id);
-
-				return (
-					<button
-						type="button"
-						onClick={() => viewSubmission(row)}
-						className="w-full text-left"
-					>
-						<div className="flex min-w-[200px] items-center gap-3">
-							<div
-								className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg"
-								style={{
-									background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
-								}}
-							>
-								<FileText className="h-4 w-4" style={{ color: 'var(--color-primary-500)' }} />
-							</div>
-
-							<div className="min-w-0">
-								<MultiLangText className="block max-w-[360px] truncate text-sm font-semibold text-slate-900">
-									{form?.title || t('labels.unknown_form')}
-								</MultiLangText>
-								<p className="mt-0.5 text-[11px] text-slate-400 font-en">
-									{new Date(row.created_at).toLocaleDateString()} · {new Date(row.created_at).toLocaleTimeString()}
-								</p>
-							</div>
-						</div>
-					</button>
-				);
-			},
-		},
-		{
-			key: 'email',
-			header: t('table.email'),
+			className: 'gm-wrap',
 			cell: row => (
-				<span className="max-w-[220px] truncate font-en text-sm text-slate-700">
-					{row.email || <span className="text-slate-300">—</span>}
-				</span>
+				<button
+					type="button"
+					onClick={() => viewSubmission(row)}
+					className="flex w-full min-w-0 items-center gap-3 text-start"
+				>
+					<span className="gm-plan__icon size-10!">
+						<FileText className="size-[18px]" strokeWidth={1.8} />
+					</span>
+					<span className="min-w-0">
+						<MultiLangText className="block truncate text-[13px] font-semibold gm-ink">
+							{formTitleOf(row.form_id)}
+						</MultiLangText>
+						<span className="mt-0.5 flex items-center gap-1 text-[11px] font-en gm-faint">
+							<Clock className="size-3" />
+							{row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
+						</span>
+					</span>
+				</button>
 			),
 		},
 		{
-			key: 'phone',
-			header: t('table.phone'),
+			key: 'contact',
+			header: t('detail.contact'),
 			cell: row => (
-				<span className="max-w-[160px] truncate font-en text-sm text-slate-700">
-					{row.phone || <span className="text-slate-300">—</span>}
-				</span>
+				<div className="min-w-0 space-y-0.5 font-en" dir="ltr">
+					<p className="flex items-center gap-1.5 truncate text-[12.5px] font-medium gm-ink-soft">
+						<Mail className="size-3.5 shrink-0 gm-faint" />
+						{row.email || <span className="gm-faint">—</span>}
+					</p>
+					<p className="flex items-center gap-1.5 truncate text-[12px] gm-muted">
+						<Phone className="size-3.5 shrink-0 gm-faint" />
+						{row.phone || <span className="gm-faint">—</span>}
+					</p>
+				</div>
 			),
 		},
 		{
 			key: 'ipAddress',
 			header: t('table.ip'),
 			cell: row => (
-				<span
-					className="inline-flex items-center rounded-lg border px-2.5 py-1 font-mono text-xs font-medium"
-					style={{
-						borderColor: 'var(--color-primary-200)',
-						background: 'var(--color-primary-50)',
-						color: 'var(--color-primary-700)',
-					}}
-				>
+				<span className="gm-plan__chip font-mono" dir="ltr">
+					<Globe className="size-3" />
 					{row.ipAddress || '—'}
 				</span>
 			),
 		},
 		{
-			key: 'created_at',
-			header: t('table.submitted'),
+			key: 'reviewed',
+			header: t('table.reviewed'),
 			cell: row => (
-				<span className="font-en text-sm text-slate-600">
-					{row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
-				</span>
+				<ReviewedCell row={row} updatingReviewed={updatingReviewed} setReviewed={setReviewed} t={t} />
 			),
 		},
 		{
 			key: 'actions',
 			header: t('table.actions'),
+			headClassName: 'gm-col-end',
+			className: 'gm-col-end',
 			cell: row => (
-				<div className="flex justify-end">
-					<ActionButtons
-						row={row}
-						gap="gap-1"
-						actions={[
-							{
-								icon: <Eye className="h-3.5 w-3.5" />,
-								tooltip: t('actions.view'),
-								variant: 'blue',
-								size: 'md',
-								onClick: r => viewSubmission(r),
-							},
-							{
-								icon: deletingId === row.id
-									? <FaSpinner className="h-3.5 w-3.5 animate-spin" />
-									: <FiTrash2 className="h-3.5 w-3.5" />,
-								tooltip: t('actions.delete', { default: 'Delete' }),
-								variant: 'red',
-								size: 'md',
-								disabled: deletingId === row.id,
-								onClick: r => deleteSubmission(r),
-							},
-						]}
-					/>
-				</div>
+				<GmRowActions
+					options={[
+						{ icon: Eye, tone: 'primary', label: t('actions.view'), onClick: () => viewSubmission(row) },
+						{
+							icon: deletingId === row.id ? RefreshCw : Trash2,
+							tone: 'danger',
+							label: t('actions.delete', { default: 'Delete' }),
+							loading: deletingId === row.id,
+							onClick: () => setPendingDelete(row),
+						},
+					]}
+				/>
 			),
 		},
-	], [forms, t, updatingReviewed, deletingId, setReviewed, deleteSubmission, viewSubmission]);
-	// ─────────────────────────────────────────────────────────────
+	], [t, updatingReviewed, deletingId, setReviewed, viewSubmission, formTitleOf]);
 
-	const formFilterOptions = useMemo(() => ([
-		{ id: 'all', label: t('filters.all_forms') },
-		...forms.map(f => ({ id: String(f.id), label: f.title })),
+	const formOptions = useMemo(() => ([
+		{ id: 'all', name: t('filters.all_forms'), icon: Layers },
+		...forms.map(f => ({ id: String(f.id), name: f.title, icon: FileText })),
 	]), [forms, t]);
 
+	const reviewSegments = [
+		{ id: 'all', name: t('roster.all'), short: t('roster.all'), icon: Inbox },
+		{ id: 'waiting', name: t('roster.waiting'), short: t('roster.waiting'), icon: Clock },
+		{ id: 'reviewed', name: t('roster.reviewed'), short: t('roster.reviewed'), icon: CheckCircle2 },
+	];
 
-	// if (loadingForms && !forms.length) return <LoadingScreen />;
-	const tableFilters = (
-		<FilterField label={t('filters.form')}>
-			<Select
-				searchable={false}
-				clearable={false}
-				placeholder={t('filters.all_forms')}
-				options={formFilterOptions}
-				value={selectedFormId}
-				onChange={(val) => {
-					setSelectedFormId(val);
-					setPage(1);
-				}}
-			/>
-		</FilterField>
-	);
+	const queryTrim = query.trim();
+	const selectedFormName = formOptions.find(o => String(o.id) === String(selectedFormId))?.name;
+	const chips = [
+		queryTrim && { key: 'q', label: t('roster.searchLabel'), value: `“${queryTrim}”`, onRemove: () => setQuery('') },
+		reviewFilter !== 'all' && {
+			key: 'review',
+			label: t('table.reviewed'),
+			value: reviewSegments.find(s => s.id === reviewFilter)?.name,
+			onRemove: () => setReviewFilter('all'),
+		},
+		selectedFormId !== 'all' && {
+			key: 'form',
+			label: t('roster.formFilter'),
+			value: selectedFormName,
+			onRemove: () => setSelectedFormId('all'),
+		},
+	].filter(Boolean);
+
+	const statCards = [
+		{
+			key: 'total', title: t('labels.total'), value: inboxStats.total, icon: Inbox,
+			hint: t('stats.totalHint'), tone: 'gm-chip',
+			stroke: 'var(--color-primary-500)', fill: 'var(--color-primary-400)', seed: 0.4, max: Math.max(inboxStats.total, 1),
+		},
+		{
+			key: 'waiting', title: t('roster.waiting'), value: inboxStats.waiting, icon: Clock,
+			hint: t('stats.shownHint'), tone: 'gm-chip-warn',
+			stroke: 'var(--gm-warn)', fill: 'var(--gm-warn)', seed: 0.9, max: Math.max(inboxStats.total, 1),
+			onClick: inboxStats.waiting > 0 ? () => setReviewFilter('waiting') : undefined,
+		},
+		{
+			key: 'reviewed', title: t('review.checked'), value: inboxStats.reviewed, icon: CheckCircle2,
+			hint: t('stats.reviewedHint'), tone: 'gm-chip-ok',
+			stroke: 'var(--gm-ok)', fill: 'var(--gm-ok)', seed: 1.4, max: Math.max(inboxStats.total, 1),
+		},
+		{
+			key: 'forms', title: t('labels.forms'), value: inboxStats.uniqueForms, icon: Layers,
+			hint: t('stats.formsHint'), tone: 'gm-chip-secondary',
+			stroke: 'var(--color-secondary-500)', fill: 'var(--color-secondary-400)', seed: 1.9, max: Math.max(forms.length, 1),
+		},
+	];
+
+	const closeDelete = () => { if (!deletingId) setPendingDelete(null); };
+	const answersCount = Object.keys(selectedSubmission?.answers || {}).length;
+	const selectedForm = selectedSubmission
+		? forms.find(f => f.id == (selectedSubmission.form_id ?? selectedSubmission.form?.id))
+		: null;
+	const fieldsByKey = new Map((selectedForm?.fields || []).map(fld => [fld.key, fld]));
+
 	return (
-		<div className="min-h-screen pb-20">
-
-			{/* ── Header ── */}
-			<GradientStatsHeader
-				title={t('header.title')}
-				desc={t('header.desc')}
-				icon={Sparkles}
-				btnName={t('header.new', { default: t('filters.all_forms') })}
-				onClick={() => router.push('/dashboard/intake/forms')}
-			>
-				<StatCard icon={Users} title={t('labels.total')} value={total || 0} />
-				<StatCard icon={FileText} title={t('labels.shown')} value={headerStats.totalShown} />
-				<StatCard icon={CheckCircle2} title={t('labels.forms')} value={headerStats.uniqueForms} />
-			</GradientStatsHeader>
- 
-
-			{/* ── Table ── */}
-			<div className="mt-6">
-				<DataTable
-					columns={columns}
-					data={filteredSubmissions}
-					isLoading={loadingSubs}
-					rowKey={(row) => row.id}
-					searchValue={query}
-					onSearchChange={(value) => {
-						setQuery(value);
-						setPage(1);
-					}}
-					onSearch={() => setPage(1)}
-					filters={tableFilters}
-					hasActiveFilters={selectedFormId !== 'all'}
-					onApplyFilters={() => {
-						setPage(1);
-						loadSubmissions({ forcedPage: 1 });
-					}}
-					labels={{
-						searchPlaceholder: t('filters.search_placeholder'),
-						filter: t('filters.title', { default: 'Filters' }),
-						apply: t('filters.apply', { default: 'Apply' }),
-						emptyTitle: t('empty.title'),
-						emptySubtitle: selectedFormId === 'all'
-							? t('empty.subtitle_all')
-							: t('empty.subtitle_one'),
-						preview: t('detail.title'),
-					}}
-					pagination={{
-						current_page: page,
-						per_page: limit,
-						total_records: total,
-					}}
-					onPageChange={({ page: nextPage, per_page }) => {
-						setPage(nextPage);
-						if (per_page !== limit) {
-							setLimit(per_page);
-						}
-					}}
-					perPageOptions={[10, 20, 30, 50]}
-					striped
-					hoverable
-					className="w-full"
+		<div className="gm-surface rs-scope app-stack pb-4">
+			<div className="rs-summary">
+				<IntakeHero
+					icon={Inbox}
+					title={t('header.title')}
+					subtitle={t('header.desc')}
+					ctaLabel={<><Plus className="size-4" strokeWidth={2} aria-hidden /><span>{t('header.new')}</span></>}
+					onCta={() => router.push('/dashboard/intake/forms')}
+					extra={inboxStats.waiting > 0 ? (
+						<button type="button" className="rs-review" onClick={() => setReviewFilter('waiting')}>
+							{t('roster.reviewPending', { count: inboxStats.waiting })}
+							<ArrowUpRight className="size-3.5" strokeWidth={2.2} aria-hidden />
+						</button>
+					) : null}
 				/>
+				<section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					{statCards.map((card, index) => (
+						<GmStatCard key={card.key} card={card} index={index} />
+					))}
+				</section>
 			</div>
 
-			{/* ── Submission detail modal ── */}
+			<DataTable
+				hideToolbar
+				compact
+				toolbar={(
+					<IntakeToolbar
+						search={query}
+						onSearch={(v) => { setQuery(v); setPage(1); }}
+						searching={query !== debouncedQuery}
+						searchPlaceholder={t('filters.search_placeholder')}
+						searchLabel={t('roster.searchLabel')}
+						clearSearchLabel={t('roster.clearAll')}
+						segments={reviewSegments}
+						segment={reviewFilter}
+						onSegment={(id) => { setReviewFilter(id); setPage(1); }}
+						segmentLabel={t('table.reviewed')}
+						layoutId="intake-subs-seg"
+						filterLabel={t('roster.filters')}
+						filterCount={selectedFormId === 'all' ? 0 : 1}
+						filterOpen={filterOpen}
+						onFilterToggle={() => setFilterOpen(v => !v)}
+						filterAnchorRef={filterAnchorRef}
+						result={t.rich('roster.resultCount', {
+							count: filtered.length,
+							strong: (chunks) => <strong>{chunks}</strong>,
+						})}
+						chips={chips}
+						onClearAll={() => { setQuery(''); setReviewFilter('all'); setSelectedFormId('all'); setPage(1); }}
+						clearAllLabel={t('roster.clearAll')}
+						activeFiltersLabel={t('roster.activeFilters')}
+					>
+						<IntakeFilterPopover
+							open={filterOpen}
+							anchorRef={filterAnchorRef}
+							onClose={() => setFilterOpen(false)}
+							title={t('roster.formFilter')}
+							canReset={selectedFormId !== 'all'}
+							onReset={() => setSelectedFormId('all')}
+							resetLabel={t('roster.reset')}
+							doneLabel={t('roster.done')}
+						>
+							<IntakeOptionGroup
+								label={t('roster.formFilter')}
+								name="intake-form"
+								options={formOptions}
+								value={selectedFormId}
+								onChange={(id) => { setSelectedFormId(id); setPage(1); }}
+							/>
+						</IntakeFilterPopover>
+					</IntakeToolbar>
+				)}
+				columns={columns}
+				data={submissions}
+				isLoading={loadingSubs}
+				rowKey={row => row.id}
+				labels={{
+					emptyTitle: t('empty.title'),
+					emptySubtitle: chips.length ? t('roster.emptyHint') : (selectedFormId === 'all' ? t('empty.subtitle_all') : t('empty.subtitle_one')),
+				}}
+				pagination={{ current_page: page, per_page: limit, total_records: total }}
+				onPageChange={({ page: nextPage, per_page }) => {
+					const nextLimit = Number(per_page ?? limit);
+					setStoredPerPage(nextLimit);
+					setLimit(nextLimit);
+					setPage(Number(nextPage ?? 1));
+				}}
+				perPageOptions={[10, 20, 30, 50]}
+				hoverable
+			/>
+
 			<Modal
+				cn="gm-modal-root"
+				panelClassName={GM_MODAL}
+				open={!!pendingDelete}
+				onClose={closeDelete}
+				title={t('actions.delete')}
+				maxW="max-w-md"
+			>
+				<div className="space-y-5">
+					<div
+						className="flex items-start gap-3 rounded-[14px] border p-4"
+						style={{
+							borderColor: 'color-mix(in srgb, var(--gm-danger) 25%, transparent)',
+							background: 'color-mix(in srgb, var(--gm-danger) 8%, var(--gm-paper))',
+						}}
+					>
+						<span
+							className="grid size-9 shrink-0 place-items-center rounded-[11px]"
+							style={{ color: 'var(--gm-danger)', background: 'color-mix(in srgb, var(--gm-danger) 14%, var(--gm-paper))' }}
+						>
+							<AlertCircle className="size-[18px]" />
+						</span>
+						<p className="flex-1 text-[13px] leading-relaxed gm-ink-soft">{t('actions.confirm_delete')}</p>
+					</div>
+					<div className="gm-modal-foot">
+						<button type="button" onClick={closeDelete} className="gm-btn-ghost rounded-[11px] px-4 py-2 text-[13px] font-medium">
+							{t('actions.cancel')}
+						</button>
+						<button
+							type="button"
+							onClick={() => pendingDelete && deleteSubmission(pendingDelete)}
+							disabled={!!deletingId}
+							className="inline-flex h-10 items-center gap-2 rounded-[11px] px-5 text-[13px] font-semibold text-white transition hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+							style={{ background: 'var(--gm-danger)', boxShadow: '0 6px 14px color-mix(in srgb, var(--gm-danger) 25%, transparent)' }}
+						>
+							{deletingId ? <RefreshCw className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+							{t('actions.delete')}
+						</button>
+					</div>
+				</div>
+			</Modal>
+
+			<Modal
+				cn="gm-modal-root"
+				panelClassName={GM_MODAL}
 				open={showSubmissionModal && !!selectedSubmission}
 				onClose={() => setShowSubmissionModal(false)}
 				title={t('detail.title')}
 				maxW="max-w-4xl"
 			>
 				{selectedSubmission && (
-					<div className="space-y-6 pt-2">
-						{/* Contact card */}
-						<Card className="p-4">
-							<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-								<div className="flex items-center gap-3">
-									<div
-										className="grid h-10 w-10 place-items-center rounded-lg"
-										style={{ background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))' }}
-									>
-										<FileText className="h-5 w-5" style={{ color: 'var(--color-primary-600)' }} />
-									</div>
-									<div>
-										<p className="text-sm font-bold text-slate-900">{t('detail.contact')}</p>
-										<p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400">
-											<Clock className="h-3 w-3" />
-											{new Date(selectedSubmission.created_at).toLocaleString()}
-										</p>
-									</div>
-								</div>
-
-								<Pill tone="primary">
-									{forms.find(f => f.id == selectedSubmission.form_id)?.title || t('labels.unknown_form')}
-								</Pill>
+					<div className="space-y-5">
+						<div className="gm-builder-head">
+							<span className="gm-builder-head__mark">
+								<FileText className="size-5" strokeWidth={1.8} />
+							</span>
+							<div className="min-w-0 flex-1">
+								<MultiLangText className="truncate text-[16px] font-bold gm-ink">
+									{formTitleOf(selectedSubmission.form_id)}
+								</MultiLangText>
+								<p className="mt-1 flex items-center gap-1.5 text-[12px] font-medium gm-muted">
+									<Clock className="size-3.5" />
+									{selectedSubmission.created_at ? new Date(selectedSubmission.created_at).toLocaleString() : '—'}
+								</p>
 							</div>
+							<Badge color={selectedSubmission.reviewed ? 'green' : 'slate'} dot>
+								{selectedSubmission.reviewed ? t('review.checked') : t('review.unchecked')}
+							</Badge>
+						</div>
 
-							<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-								<InfoRow k={t('table.email')} v={selectedSubmission.email} />
-								<InfoRow k={t('table.phone')} v={selectedSubmission.phone} />
-								<InfoRow k={t('table.ip')} v={selectedSubmission.ipAddress} mono />
-							</div>
-						</Card>
-
-						{/* Answers */}
 						<div>
-							<div className="mb-3 flex items-center justify-between gap-3">
-								<h3 className="text-sm font-bold text-slate-900">{t('detail.answers')}</h3>
-								<Pill tone="soft">
-									{Object.keys(selectedSubmission.answers || {}).length}
-								</Pill>
+							<p className="mb-2.5 text-[12px] font-bold gm-ink">{t('detail.contact')}</p>
+							<div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+								<ContactRow icon={Mail} label={t('table.email')} value={selectedSubmission.email} />
+								<ContactRow icon={Phone} label={t('table.phone')} value={selectedSubmission.phone} />
+								<ContactRow icon={Globe} label={t('table.ip')} value={selectedSubmission.ipAddress} mono />
 							</div>
+						</div>
 
-							<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-								{renderAnswers(selectedSubmission, forms, t)}
+						<div>
+							<div className="mb-2.5 flex items-center gap-2">
+								<p className="text-[12px] font-bold gm-ink">{t('detail.answers')}</p>
+								<Badge color="primary">{answersCount}</Badge>
 							</div>
+							{answersCount ? (
+								<div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+									{Object.entries(selectedSubmission.answers).map(([key, value]) => (
+										<AnswerCard key={key} fieldKey={key} label={fieldsByKey.get(key)?.label || key} value={value} />
+									))}
+								</div>
+							) : (
+								<p className="text-[13px] gm-muted">{t('detail.no_answers')}</p>
+							)}
+						</div>
+
+						<div className="gm-modal-foot">
+							<button
+								type="button"
+								onClick={() => setReviewed(selectedSubmission, !selectedSubmission.reviewed)}
+								className="gm-btn-ghost inline-flex items-center gap-2 rounded-[11px] px-4 py-2 text-[13px] font-medium"
+							>
+								<CheckCircle2 className="size-4" />
+								{selectedSubmission.reviewed ? t('roster.markUnreviewed') : t('roster.markReviewed')}
+							</button>
+							<button
+								type="button"
+								onClick={() => setPendingDelete(selectedSubmission)}
+								className="inline-flex h-10 items-center gap-2 rounded-[11px] px-5 text-[13px] font-semibold text-white"
+								style={{ background: 'var(--gm-danger)', boxShadow: '0 6px 14px color-mix(in srgb, var(--gm-danger) 25%, transparent)' }}
+							>
+								<Trash2 className="size-4" />
+								{t('actions.delete')}
+							</button>
 						</div>
 					</div>
 				)}

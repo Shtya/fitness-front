@@ -1,0 +1,8 @@
+/* Account stats show names and emails, not dashboard counts. */
+.acct-scope .gm-stat .gm-display {
+	font-size: 15px;
+	line-height: 1.35;
+	font-weight: 700;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}

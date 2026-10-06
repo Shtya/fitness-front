@@ -10,6 +10,7 @@ export const PAGE_HREFS_BY_ID = {
 	allUsers: ['/dashboard/users'],
 	allUsers_super: ['/dashboard/super-admin/users'],
 	pageAccess_super: ['/dashboard/super-admin/page-access'],
+	documentEditor_super: ['/dashboard/super-admin/document-editor'],
 	manageForms: ['/dashboard/intake/forms'],
 	responses: ['/dashboard/intake/responses'],
 	forms_super: ['/dashboard/super-admin/forms'],
@@ -149,6 +150,7 @@ export const NAV_HREFS = {
 		'/dashboard',
 		'/dashboard/super-admin/users',
 		'/dashboard/super-admin/page-access',
+		'/dashboard/super-admin/document-editor',
 		'/dashboard/super-admin/forms',
 		'/dashboard/super-admin/feedback',
 		'/dashboard/workouts',
@@ -166,15 +168,36 @@ export const NAV_HREFS = {
 		'/dashboard/quran-revision',
 		'/dashboard/web-translator',
 		'/dashboard/site-inspector',
+		'/dashboard/learning',
+		'/dashboard/learning/management',
+		'/dashboard/learning/study',
 		'/ai-studio',
+		'/money',
 		'/workspace',
 	],
 };
 
 /* ─── Page modes (super admin → Page access) ──────────────────── */
 
+/** `optional` kept for legacy DB rows; UI only offers default | locked. */
 export const PAGE_MODES = ['default', 'optional', 'locked'];
-export const MANAGED_PAGE_ROLES = ['admin', 'coach', 'client'];
+export const VISIBLE_PAGE_MODES = ['default', 'locked'];
+export const MANAGED_PAGE_ROLES = ['super_admin', 'admin', 'coach', 'client'];
+
+/** Keep in sync with backend DEFAULT_LOCKED_PAGE_IDS / ITEM_META.defaultLocked. */
+export const DEFAULT_LOCKED_PAGE_IDS = [
+	'transcript',
+	'learning',
+	'learningManagement',
+	'learningStudy',
+	'webTranslator',
+	'siteInspector',
+	'phoneCheck',
+	'fitnessLeads',
+	'metaWhatsApp',
+	'facebookEngagement',
+	'money',
+];
 
 /** Never lockable: every role must keep a home and an account page. */
 export const REQUIRED_PAGE_IDS = [
@@ -201,7 +224,10 @@ function isRequiredPage(page) {
 /** Mode when the super admin has not configured the page. */
 export function codePageMode(page) {
 	if (isRequiredPage(page)) return 'default';
-	return page?.marketplace ? 'optional' : 'default';
+	/* Store-admin tools stay hidden for gym roles until enabled in Page Access. */
+	if (page?.skipDefaultLock) return 'default';
+	if (page?.defaultLocked || DEFAULT_LOCKED_PAGE_IDS.includes(page?.id)) return 'locked';
+	return 'default';
 }
 
 function ownPageMode(page, access) {
@@ -230,17 +256,25 @@ function legacyItem(item, allow) {
 	const selfOk = allow.has(item.id);
 	const kids = (item.children || []).filter((c) => allow.has(c.id));
 	if (!selfOk && !kids.length) return null;
-	const next = { ...item, required: true, marketplace: false };
+	const next = { ...item, required: true };
+	delete next.marketplace;
+	delete next.defaultLocked;
 	if (item.children) next.children = kids.length ? kids : item.children;
 	return next;
 }
 
 function accessItem(item, access) {
 	const mode = resolvePageMode(item, access);
-	if (mode === 'locked') return null;
-	const next = { ...item, marketplace: mode === 'optional' };
+	/* optional (legacy Marketplace) and locked both hide from the sidebar */
+	if (mode === 'locked' || mode === 'optional') return null;
+	const next = { ...item };
+	delete next.marketplace;
+	delete next.defaultLocked;
 	if (item.children) {
-		const kids = item.children.filter((c) => resolvePageMode({ ...c, parentId: item.id }, access) !== 'locked');
+		const kids = item.children.filter((c) => {
+			const childMode = resolvePageMode({ ...c, parentId: item.id }, access);
+			return childMode !== 'locked' && childMode !== 'optional';
+		});
 		if (!kids.length && !item.href) return null;
 		if (kids.length) next.children = kids;
 		else delete next.children;
@@ -250,18 +284,24 @@ function accessItem(item, access) {
 
 /**
  * Sidebar sections after page access:
- * - legacy allowedPages → allowlist (shown, ignores local hide/marketplace)
- * - otherwise locked pages removed; optional pages become Marketplace items
+ * - legacy allowedPages → allowlist
+ * - otherwise locked / optional pages are removed; Store Admin controls the rest
  */
 export function applyPageAccessToSections(sections, user) {
 	if (!Array.isArray(sections)) return sections;
 	const allow = legacyAllowSet(user?.allowedPages);
 	const access = user?.pageAccess;
+	const isStoreAdmin = String(user?.role || '').toLowerCase() === 'super_admin';
+	const prepare = (item) => (isStoreAdmin ? { ...item, defaultLocked: false, skipDefaultLock: true } : item);
 	return sections
 		.map((section) => ({
 			...section,
 			items: (section.items || [])
-				.map((item) => (allow ? legacyItem(item, allow) : accessItem(item, access)))
+				.map((item) => {
+					const page = prepare(item);
+					if (page.children) page.children = page.children.map(prepare);
+					return allow ? legacyItem(page, allow) : accessItem(page, access);
+				})
 				.filter(Boolean),
 		}))
 		.filter((section) => section.items.length);
@@ -303,8 +343,14 @@ export function isPathLocked(path, locked) {
  * - Non-empty allowedPages → only mapped hrefs for those ids ( ∩ role list)
  * - Locked pages (page access) are removed
  */
-export function getEffectiveNavHrefs(role, allowedPages, locked) {
-	const roleHrefs = (NAV_HREFS[role] || []).filter((h) => !isPathLocked(h, locked));
+export function getEffectiveNavHrefs(role, allowedPages, locked, granted) {
+	const hrefs = new Set((NAV_HREFS[role] || []).filter((h) => !isPathLocked(h, locked)));
+	for (const id of granted || []) {
+		for (const href of PAGE_HREFS_BY_ID[id] || []) {
+			if (!isPathLocked(href, locked)) hrefs.add(href);
+		}
+	}
+	const roleHrefs = [...hrefs];
 	if (!Array.isArray(allowedPages) || allowedPages.length === 0) return roleHrefs;
 
 	const fromIds = new Set();
@@ -381,7 +427,8 @@ export function resolvePostLoginPath(user, intendedPath) {
 	if (!user) return getDefaultPostLoginPath('client');
 	const role = String(user.role || '').toLowerCase();
 	const locked = user.pageAccess?.locked;
-	const allowed = getEffectiveNavHrefs(role, user.allowedPages, locked);
+	const granted = user.pageAccess?.granted;
+	const allowed = getEffectiveNavHrefs(role, user.allowedPages, locked, granted);
 
 	const intended = sanitizeReturnPath(intendedPath);
 	if (intended && pathMatchesAllowlist(intended, allowed) && !isPathLocked(intended, locked)) {

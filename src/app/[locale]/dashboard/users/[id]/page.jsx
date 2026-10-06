@@ -6,7 +6,8 @@ import { useParams, useRouter, useSearchParams, usePathname } from "next/navigat
 import { motion, AnimatePresence, useMotionValueEvent, useScroll } from "framer-motion";
 import { useTranslations } from "use-intl";
 import { useTheme } from "@/app/[locale]/theme";
-import DataTable from "@/components/dashboard/ui/DataTable";
+import DataTable from "@/components/atoms/Datatable";
+import { getStoredPerPage, setStoredPerPage } from "@/lib/table-prefs";
 import { TabsPill, EmptyState, spring } from "@/components/dashboard/ui/UI";
 import {
 	User,
@@ -717,6 +718,14 @@ export default function ClientProfilePage() {
 		return list.sort((a, b) => a.date.localeCompare(b.date));
 	}, [measurements, from, to]);
 
+	const [measPage, setMeasPage] = useState(1);
+	const [measLimit, setMeasLimit] = useState(() => getStoredPerPage(10));
+	useEffect(() => { setMeasPage(1); }, [from, to, measurements]);
+	const pagedMeasurements = useMemo(() => {
+		const start = (measPage - 1) * measLimit;
+		return filteredMeasurements.slice(start, start + measLimit);
+	}, [filteredMeasurements, measPage, measLimit]);
+
 	const measColumns = [
 		{ header: t("measurements.date"), accessor: "date", sortable: true, cell: (r) => fmt(r.date) },
 		{ header: t("measurements.weight"), accessor: "weight", sortable: true },
@@ -829,7 +838,23 @@ export default function ClientProfilePage() {
 									<CardGlass className="p-6 space-y-4">
 										<BodyMeasurementsCard userId={id} href={`/dashboard/users/${id}/body-measurements`} />
 										<SectionTitle icon={ClipboardList}>{t("measurements.title")}</SectionTitle>
-										<DataTable columns={measColumns} data={filteredMeasurements} />
+										<DataTable
+											columns={measColumns}
+											data={pagedMeasurements}
+											hideToolbar
+											compact
+											rowKey={(r, i) => r.id ?? r.date ?? i}
+											perPageOptions={[10, 20, 30, 50]}
+											pagination={{ current_page: measPage, per_page: measLimit, total_records: filteredMeasurements.length }}
+											onPageChange={({ page: nextPage, per_page }) => {
+												const nextLimit = Number(per_page);
+												if (nextLimit) {
+													setStoredPerPage(nextLimit);
+													setMeasLimit(nextLimit);
+												}
+												setMeasPage(Number(nextPage ?? 1));
+											}}
+										/>
 										{!filteredMeasurements.length && (
 											<div className="py-12 text-center text-sm text-slate-500">
 												<EmptyState message={t("measurements.empty")} />

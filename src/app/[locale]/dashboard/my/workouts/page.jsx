@@ -15,7 +15,6 @@ import {
 	Repeat,
 	Timer,
 	Clock,
-	CheckCircle2,
 	Play,
 	Pause,
 	RotateCcw,
@@ -23,10 +22,13 @@ import {
 	StickyNote,
 	ChevronLeft,
 	ChevronRight,
+	ChevronDown,
 	PencilLine,
 	Save,
 	Trash2,
 	Search,
+	Info,
+	Youtube,
 } from 'lucide-react';
 import { Notification } from '@/config/Notification';
 import api from '@/utils/axios';
@@ -137,11 +139,48 @@ function toMMSS(seconds) {
 /* ─────────────────────────────────────────
 	 API HELPERS
 ───────────────────────────────────────── */
+function dayKeyOf(day) {
+	return String(day?.dayOfWeek ?? day?.id ?? '').toLowerCase();
+}
+
+/** Local sample program. `weeklyProgram` is `{ name, program: { days } }`, not a day map. */
+function fallbackPlan() {
+	const days = (Array.isArray(weeklyProgram?.program?.days) ? weeklyProgram.program.days : [])
+		.map(d => ({ ...d, dayOfWeek: dayKeyOf(d), id: dayKeyOf(d) || d.id }))
+		.filter(d => d.dayOfWeek);
+	return {
+		name: weeklyProgram?.name || 'Workout',
+		isActive: true,
+		program: { days },
+		notes: [],
+	};
+}
+
+function trainingKeysFor(days) {
+	const list = Array.isArray(days) ? days : [];
+	const byKey = Object.fromEntries(list.map(d => [dayKeyOf(d), d]).filter(([k]) => k));
+	const withWork = key => {
+		const dp = byKey[key];
+		if (!dp) return false;
+		return (normalizeDayProgram(dp).allExercises || []).length > 0;
+	};
+	const fromWeek = WEEK_ORDER.filter(withWork);
+	if (fromWeek.length) return fromWeek;
+	const extras = list.map(dayKeyOf).filter(k => k && !WEEK_ORDER.includes(k) && withWork(k));
+	if (extras.length) return extras;
+	const any = WEEK_ORDER.filter(d => byKey[d]);
+	return any.length ? any : [...WEEK_ORDER];
+}
+
 async function fetchActivePlan(userId) {
-	const { data } = await api.get('/plans/active', { params: { userId } });
-	if (data?.status === 'none' || data?.error) return { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) }, notes: [] };
-	if (data?.program?.days?.length) return data;
-	return { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) }, notes: [] };
+	try {
+		const { data } = await api.get('/plans/active', { params: { userId } });
+		if (data?.status === 'none' || data?.error) return fallbackPlan();
+		if (data?.program?.days?.length) return data;
+		return fallbackPlan();
+	} catch {
+		return fallbackPlan();
+	}
 }
 
 function normalizeDayProgram(dayProgram = {}) {
@@ -166,7 +205,7 @@ function pickInitialSection(dayProgramNorm) {
 async function fetchLastDayByName(userId, day, onOrBefore) {
 	try {
 		const plan = await fetchActivePlan(userId);
-		const dayProgramRaw = plan?.program?.days?.find(d => String(d.dayOfWeek ?? '').toLowerCase() === day.toLowerCase()) || weeklyProgram[day] || { exercises: [] };
+		const dayProgramRaw = plan?.program?.days?.find(d => dayKeyOf(d) === day.toLowerCase()) || { exercises: [] };
 		const dayProgram = normalizeDayProgram(dayProgramRaw);
 		const exerciseNames = (dayProgram.allExercises || []).map(ex => ex.name).filter(Boolean);
 		if (!exerciseNames.length) return { date: null, day, recordsByExercise: {} };
@@ -317,22 +356,26 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 }
 
  
-function SectionTabs({ tabs, active, onChange }) {
-	if (tabs.length <= 1) return null;
+function SectionTabs({ tabs, active, onChange, tone = 'soft' }) {
+	if (!tabs || tabs.length <= 1) return null;
+	const onPrimary = tone === 'onPrimary';
 	return (
-		<div className="flex gap-1.5 p-1 rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]">
+		<div className={cx('flex gap-1', onPrimary ? '' : 'rounded-full border border-border bg-muted p-1')}>
 			{tabs.map(tab => {
 				const isActive = tab.key === active;
 				return (
 					<button
 						key={tab.key}
+						type="button"
 						onClick={() => onChange(tab.key)}
 						className={cx(
-							'flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200',
-							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]',
-							isActive
-								? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-sm'
-								: 'text-slate-500 hover:text-slate-700 hover:bg-white/60',
+							'h-[30px] min-w-12 flex-1 rounded-2xl px-4 text-[11px] font-bold tracking-wide transition active:scale-95',
+							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
+							onPrimary
+								? (isActive
+									? 'border border-white/90 bg-white text-[var(--color-primary-700)] shadow-[2px_4px_7px_rgba(15,34,128,0.4)]'
+									: 'border border-white/30 bg-white/10 text-white/65 hover:bg-white/20')
+								: (isActive ? 'bg-[var(--color-primary-500)] text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'),
 						)}
 					>
 						{tab.label}
@@ -344,312 +387,158 @@ function SectionTabs({ tabs, active, onChange }) {
 }
 
 /* ─────────────────────────────────────────
-	 EXERCISE LIST (sidebar + mobile scroll)
+	 EXERCISE RAIL
+	 Same navigation idea as the app: a filmstrip of exercise
+	 tiles under the current exercise. Previous / next sit beside
+	 the strip on wider screens so a mouse can move without dragging.
 ───────────────────────────────────────── */
-function ProgressRing({ done, total, size = 44, isCompleted = false }) {
-	const R = (size / 2) - 4;
-	const C = 2 * Math.PI * R;
-	const pct = total > 0 ? Math.min(1, done / total) : 0;
-	const dash = C * pct;
-	const isFullDone = done > 0 && done >= total;
-
-	return (
-		<svg
-			width={size}
-			height={size}
-			viewBox={`0 0 ${size} ${size}`}
-			className="shrink-0 -rotate-90"
-			aria-hidden
-		>
-			<defs>
-				<linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
-					<stop offset="0%" stopColor="var(--color-gradient-from)" />
-					<stop offset="100%" stopColor="var(--color-gradient-to)" />
-				</linearGradient>
-			</defs>
-			{/* Track */}
-			<circle
-				cx={size / 2} cy={size / 2} r={R}
-				fill="none"
-				stroke={isCompleted ? '#d1fae5' : '#e2e8f0'}
-				strokeWidth="3"
-			/>
-			{/* Fill */}
-			{pct > 0 && (
-				<circle
-					cx={size / 2} cy={size / 2} r={R}
-					fill="none"
-					stroke={isCompleted ? '#10b981' : 'url(#ring-grad)'}
-					strokeWidth="3"
-					strokeLinecap="round"
-					strokeDasharray={C}
-					strokeDashoffset={C - dash}
-					className="transition-all duration-500 ease-out"
-				/>
+function ExerciseNote({ note }) {
+	const [open, setOpen] = useState(false);
+	const text = String(note ?? '').trim();
+	if (!text) return null;
+	const long = text.length > 110;
+	const body = (
+		<>
+			<span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-2xl bg-[#fef3c7] text-[#d97706]">
+				<Info size={12} strokeWidth={2} />
+			</span>
+			<span className={cx('min-w-0 flex-1 text-xs font-medium leading-[18px]', !open && long && 'line-clamp-2')}>{text}</span>
+			{long && (
+				<ChevronDown size={14} className={cx('mt-0.5 shrink-0 text-[#d97706] transition-transform', open && 'rotate-180')} />
 			)}
-		</svg>
+		</>
 	);
-}
-
-/* ─────────────────────────────────────────
-	 SET DOTS ROW
-	 Small dot per set — filled when done.
-───────────────────────────────────────── */
-function SetDots({ done, total, isCompleted }) {
-	if (total === 0) return null;
+	const frame = 'flex w-full items-start gap-2 rounded-2xl border border-white/85 border-b-[#fde68a] border-e-[#fde68a] bg-[#fffbeb] px-3.5 py-3.5 text-start text-[#92400e] shadow-[4px_5px_12px_rgba(100,116,139,0.35)]';
+	if (!long) return <div className={frame}>{body}</div>;
 	return (
-		<div className="flex items-center gap-[3px] flex-wrap">
-			{Array.from({ length: total }).map((_, i) => {
-				const isDone = i < done;
-				return (
-					<motion.span
-						key={i}
-						initial={{ scale: 0.6, opacity: 0 }}
-						animate={{ scale: 1, opacity: 1 }}
-						transition={{ delay: i * 0.04, type: 'spring', stiffness: 400, damping: 22 }}
-						className={cx(
-							'rounded-full transition-all duration-300',
-							isDone
-								? isCompleted
-									? 'w-2 h-2 bg-emerald-400 shadow-sm shadow-emerald-200'
-									: 'w-2 h-2 bg-[var(--color-primary-500)] shadow-sm shadow-[var(--color-primary-200)]'
-								: 'w-1.5 h-1.5 bg-slate-200',
-						)}
-					/>
-				);
-			})}
-		</div>
+		<button type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} className={frame}>
+			{body}
+		</button>
 	);
 }
 
 export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, t, completedExercises, toggleExerciseCompletion }) {
+	const scrollerRef = useRef(null);
+	const itemRefs = useRef({});
 	const exercises = Array.isArray(exercisesOverride) ? exercisesOverride : Array.isArray(workout?.exercises) ? workout.exercises : [];
 	const sets = Array.isArray(workout?.sets) ? workout.sets : [];
 	const setsFor = exId => sets.filter(s => s?.exId === exId);
-	const startedAny = useMemo(() => sets.some(s => !!s?.done || Number(s?.weight) > 0 || Number(s?.reps) > 0), [sets]);
+	const activeIndex = Math.max(0, exercises.findIndex(ex => ex?.id === currentExId));
+
+	useEffect(() => {
+		const node = itemRefs.current[currentExId];
+		if (!node) return;
+		node.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+	}, [currentExId, exercises.length]);
 
 	if (!workout || exercises.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center py-10 text-center">
-				<div className="w-12 h-12 rounded-lg bg-[var(--color-primary-50)] flex items-center justify-center mb-3">
-					<Dumbbell size={20} className="text-[var(--color-primary-400)]" />
+			<div className="flex flex-col items-center justify-center py-8 text-center">
+				<div className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-[var(--color-primary-50)] text-[var(--color-primary-400)]">
+					<Dumbbell size={20} />
 				</div>
-				<p className="text-sm font-medium text-slate-500">{t('noExercises')}</p>
+				<p className="text-sm font-medium text-muted-foreground">{t('noExercises')}</p>
 			</div>
 		);
 	}
 
+	const go = step => {
+		const next = exercises[activeIndex + step];
+		if (next) onPick?.(next);
+	};
+
 	return (
-		<div className="lg:space-y-1.5 max-lg:flex max-lg:gap-2 max-lg:overflow-x-auto max-lg:pb-1 max-lg:px-1 scrollbar-hide">
-			{exercises.map((ex, idx) => {
-				const exId = ex?.id ?? `idx-${idx}`;
-				const list = setsFor(exId);
-				const done = list.filter(s => s?.done).length;
-				const total = list.length;
-				const isActive = currentExId === exId;
-				const isCompleted = completedExercises?.has?.(exId);
-				const hasStarted = startedAny && total > 0 && done > 0;
-				const isFullDone = total > 0 && done >= total;
-
-				return (
-					<motion.div
-						key={exId}
-						className="relative max-lg:shrink-0"
-						layout
-						transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-					>
-						<button
-							type="button"
-							onClick={() => onPick?.(ex)}
-							className={cx(
-								'w-full text-left rounded-lg border transition-all duration-200 overflow-hidden',
-								'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]',
-								isCompleted
-									? 'border-emerald-200 bg-emerald-50/60'
-									: isActive
-										? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)] shadow-md shadow-[var(--color-primary-100)]'
-										: 'border-slate-200 bg-white hover:border-[var(--color-primary-200)] hover:bg-[var(--color-primary-50)]/40',
-							)}
-						>
-
-							{/* ── MOBILE CARD ── */}
-							<div className="lg:hidden p-.5">
-								<div className="relative w-16 h-16 rounded-lg overflow-hidden bg-slate-100">
-									{ex?.img
-										? <Img src={ex.img} alt={ex?.name || 'exercise'} className="object-contain w-full h-full" showBlur={false} />
-										: <div className="grid place-items-center w-full h-full"><Dumbbell size={16} className="text-slate-400" /></div>
-									}
-
-									{/* Active ring overlay */}
-									{isActive && !isCompleted && (
-										<div className="absolute inset-0 ring-2 ring-[var(--color-primary-400)] ring-inset rounded-lg" />
+		<div className="flex items-center gap-1.5">
+			<button
+				type="button"
+				onClick={() => go(-1)}
+				disabled={activeIndex <= 0}
+				aria-label={t('pagination.prev')}
+				className="hidden"
+			>
+				<ChevronLeft size={16} className="rtl:scale-x-[-1]" />
+			</button>
+			<div
+				ref={scrollerRef}
+				className="flex min-w-0 flex-1 gap-2 overflow-x-auto px-3 pb-4 pt-3 scrollbar-hide"
+			>
+				{exercises.map((ex, idx) => {
+					const exId = ex?.id ?? `idx-${idx}`;
+					const list = setsFor(exId);
+					const done = list.filter(s => s?.done).length;
+					const total = list.length;
+					const isActive = currentExId === exId;
+					const isCompleted = !!completedExercises?.has?.(exId);
+					const badge = total > 0 ? (isCompleted ? String(total) : done > 0 ? `${done}/${total}` : String(total)) : '';
+					return (
+						<div key={exId} ref={el => { itemRefs.current[exId] = el; }} className={cx('relative shrink-0 pt-2', isActive && 'z-[1] scale-[1.04]', !isActive && !isCompleted && 'opacity-90')}>
+							<button
+								type="button"
+								onClick={() => onPick?.(ex)}
+								aria-current={isActive ? 'true' : undefined}
+								aria-label={ex?.name || t('exerciseFallback')}
+								className="relative grid h-[58px] w-[58px] place-items-center rounded-2xl transition-transform duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]"
+							>
+								<span className={cx(
+									'absolute inset-0 overflow-hidden rounded-[14px] border-[1.4px] bg-[#eef2f9] shadow-[3px_4px_7px_rgba(100,116,139,0.38)]',
+									isActive && 'border-t-white/70 border-s-white/50 border-b-[rgba(37,99,235,0.38)] border-e-[rgba(37,99,235,0.28)] shadow-[3px_5px_10px_rgba(37,99,235,0.42)]',
+									isCompleted && !isActive && 'border-t-white/70 border-s-white/50 border-b-emerald-600/40 border-e-emerald-600/30 shadow-[3px_4px_9px_rgba(5,150,105,0.38)]',
+									!isActive && !isCompleted && 'border-t-white/95 border-s-white/90 border-b-[rgba(100,116,139,0.2)] border-e-[rgba(100,116,139,0.15)]',
+								)}>
+									{ex?.img ? (
+										<>
+											<Img src={ex.img} alt="" className="absolute -inset-1 h-[66px] w-[66px] object-cover opacity-40 blur-[2px]" showBlur={false} />
+											<span className={cx('absolute inset-0', isActive ? 'bg-[rgba(15,48,120,0.08)]' : isCompleted ? 'bg-[rgba(5,150,105,0.12)]' : 'bg-[rgba(100,116,139,0.1)]')} />
+											<Img src={ex.img} alt="" className={cx('relative h-full w-full object-contain', isActive ? 'opacity-100' : 'opacity-80')} showBlur={false} />
+										</>
+									) : (
+										<span className="grid h-full w-full place-items-center"><Dumbbell size={22} className={isActive ? 'text-[var(--color-primary-500)]' : 'text-[var(--color-primary-300)]'} /></span>
 									)}
-
-									{/* Completed overlay */}
-									<AnimatePresence>
-										{isCompleted && (
-											<motion.div
-												initial={{ opacity: 0 }}
-												animate={{ opacity: 1 }}
-												exit={{ opacity: 0 }}
-												className="absolute inset-0 bg-emerald-500/25 flex items-center justify-center rounded-lg"
-											>
-												<div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-md">
-													<Check size={12} strokeWidth={3} className="text-white" />
-												</div>
-											</motion.div>
-										)}
-									</AnimatePresence>
-
-									{/* Progress ring overlaid bottom-right */}
-									{hasStarted && !isCompleted && (
-										<div className="absolute bottom-1 right-1">
-											<div className="relative w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center">
-												<ProgressRing done={done} total={total} size={28} isCompleted={isCompleted} />
-												<span className="absolute text-[8px] font-black text-[var(--color-primary-700)] rotate-90">
-													{done}
-												</span>
-											</div>
-										</div>
+									{isCompleted && (
+										<span className="absolute inset-0 grid place-items-center bg-emerald-500/55">
+											<span className="grid h-[22px] w-[22px] place-items-center rounded-full border border-t-white/50 border-b-emerald-900/40 bg-emerald-600 text-white shadow-[1px_2px_4px_rgba(6,95,70,0.35)]">
+												<Check size={11} strokeWidth={3} />
+											</span>
+										</span>
 									)}
-								</div>
-							</div>
-
-							{/* ── DESKTOP LIST ITEM ── */}
-							<div className="hidden lg:flex items-center gap-3 px-3 py-2.5">
-
-								{/* Thumbnail + ring wrapper */}
-								<div className="relative shrink-0">
-									<div className={cx(
-										'w-11 h-11 rounded-lg overflow-hidden bg-slate-100',
-										isCompleted && 'opacity-80',
+								</span>
+								{badge && (
+									<span className={cx(
+										'absolute -top-1.5 end-[-6px] z-10 grid h-5 min-w-5 place-items-center rounded-full border border-white/40 px-1 text-[9px] font-bold leading-none text-white shadow-[1px_2px_4px_rgba(15,48,120,0.3)]',
+										isCompleted ? 'bg-emerald-600' : isActive ? 'bg-[var(--color-primary-500)]' : 'bg-[var(--color-primary-400)]',
 									)}>
-										{ex?.img
-											? <Img src={ex.img} alt={ex?.name || 'exercise'} className="object-contain w-full h-full" showBlur={false} />
-											: <div className="grid place-items-center w-full h-full"><Dumbbell size={14} className="text-slate-400" /></div>
-										}
-										{/* Completed check overlay */}
-										<AnimatePresence>
-											{isCompleted && (
-												<motion.div
-													initial={{ opacity: 0, scale: 0.7 }}
-													animate={{ opacity: 1, scale: 1 }}
-													exit={{ opacity: 0, scale: 0.7 }}
-													transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-													className="absolute inset-0 bg-emerald-500/30 flex items-center justify-center rounded-lg"
-												>
-													<div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-														<Check size={10} strokeWidth={3} className="text-white" />
-													</div>
-												</motion.div>
-											)}
-										</AnimatePresence>
-									</div>
-
-									{/* SVG ring sits flush around the thumbnail */}
-									{(hasStarted || isCompleted) && (
-										<div className="absolute -inset-[3px] pointer-events-none">
-											<ProgressRing
-												done={isCompleted ? total || 1 : done}
-												total={total || 1}
-												size={50}
-												isCompleted={isCompleted}
-											/>
-										</div>
-									)}
-								</div>
-
-								{/* Text */}
-								<div className="flex-1 min-w-0">
-									<p className={cx(
-										'text-sm font-semibold truncate md: leading-tight',
-										isCompleted ? 'text-emerald-700' : isActive ? 'text-[var(--color-primary-700)]' : 'text-slate-800',
-									)}>
-										{idx + 1}. {ex?.name ?? 'Exercise'}
-									</p>
-
-									{/* Set dots + count */}
-									<div className="mt-1 flex items-center gap-2">
-										{total > 0 ? (
-											<>
-												<SetDots done={isCompleted ? total : done} total={total} isCompleted={isCompleted} />
-												{hasStarted && (
-													<span className={cx(
-														'text-[10px] font-bold tabular-nums',
-														isCompleted ? 'text-emerald-500' : 'text-[var(--color-primary-500)]',
-													)}>
-														{isCompleted ? total : done}/{total}
-													</span>
-												)}
-											</>
-										) : (
-											<span className="text-[10px] text-slate-300">—</span>
-										)}
-									</div>
-								</div>
-
-								{/* Complete toggle button */}
+										{badge}
+									</span>
+								)}
+							</button>
+							{toggleExerciseCompletion && (isActive || isCompleted) && (
 								<button
 									type="button"
-									onClick={e => { e.stopPropagation(); toggleExerciseCompletion?.(exId); }}
+									aria-pressed={isCompleted}
+									aria-label={t('table.done')}
+									title={t('table.done')}
+									onClick={() => toggleExerciseCompletion(exId)}
 									className={cx(
-										'w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0',
-										'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]',
-										'active:scale-90',
-										isCompleted
-											? 'bg-emerald-500 text-white shadow-md shadow-emerald-200'
-											: 'border border-slate-200 text-slate-300 hover:border-[var(--color-primary-300)] hover:text-[var(--color-primary-400)] hover:bg-[var(--color-primary-50)]',
+										'absolute -bottom-1 start-[-4px] z-10 grid h-5 w-5 place-items-center rounded-full border shadow',
+										isCompleted ? 'border-emerald-700 bg-emerald-600 text-white' : 'border-border bg-card text-muted-foreground',
 									)}
-									aria-label={isCompleted ? 'Mark incomplete' : 'Mark complete'}
 								>
-									<AnimatePresence mode="wait" initial={false}>
-										{isCompleted ? (
-											<motion.span
-												key="done"
-												initial={{ scale: 0, rotate: -30 }}
-												animate={{ scale: 1, rotate: 0 }}
-												exit={{ scale: 0 }}
-												transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-											>
-												<Check size={14} strokeWidth={3} />
-											</motion.span>
-										) : (
-											<motion.span
-												key="undone"
-												initial={{ scale: 0 }}
-												animate={{ scale: 1 }}
-												exit={{ scale: 0 }}
-											>
-												<CheckCircle2 size={14} />
-											</motion.span>
-										)}
-									</AnimatePresence>
+									<Check size={10} strokeWidth={3} />
 								</button>
-							</div>
-						</button>
-					</motion.div>
-				);
-			})}
-		</div>
-	);
-}
-
-/* ─────────────────────────────────────────
-	 STAT CHIP (below media)
-───────────────────────────────────────── */
-function StatChip({ icon: Icon, label, value, accent = false }) {
-	return (
-		<div className={cx(
-			'flex items-center gap-2 flex-1 min-w-0 px-3 py-2.5 rounded-lg border',
-			accent ? 'bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-via)] border-transparent' : 'bg-white border-[var(--color-primary-100)]',
-		)}>
-			<div className={cx('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', accent ? 'bg-white/20' : 'bg-[var(--color-primary-50)]')}>
-				<Icon size={14} className={accent ? 'text-white' : 'text-[var(--color-primary-600)]'} strokeWidth={2.5} />
+							)}
+						</div>
+					);
+				})}
 			</div>
-			<div className="min-w-0">
-				<p className={cx('text-[10px] font-medium uppercase tracking-wide truncate', accent ? 'text-white/70' : 'text-slate-400')}>{label}</p>
-				<p className={cx('text-sm font-bold truncate md: leading-tight', accent ? 'text-white' : 'text-slate-800')}>{value || '—'}</p>
-			</div>
+			<button
+				type="button"
+				onClick={() => go(1)}
+				disabled={activeIndex >= exercises.length - 1}
+				aria-label={t('pagination.next')}
+				className="hidden"
+			>
+				<ChevronRight size={16} className="rtl:scale-x-[-1]" />
+			</button>
 		</div>
 	);
 }
@@ -687,35 +576,43 @@ function SetsTable({
 		setValue(setId, field, Number.isFinite(num) ? num : 0);
 	};
 
+	const weightUnit = t('table.kg');
+	const repSingular = t('table.repUnit');
+	const repPlural = t('table.repUnitPlural');
+	const repUnitFor = raw => {
+		const n = Number(raw);
+		if (!Number.isFinite(n) || n === 1) return repSingular;
+		return repPlural;
+	};
+
 	return (
-		<div className="mt-3 rounded-lg border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm">
-			{/* Header */}
-			<div className="grid grid-cols-[auto_1fr_1fr_auto] gap-0 border-b border-[var(--color-primary-100)] bg-[var(--color-primary-50)]">
-				{['#', t('table.weight'), t('table.reps'), t('table.done')].map((h, i) => (
-					<div key={i} className={cx('py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[var(--color-primary-500)]', i === 3 && 'text-center')}>
-						{h}
-					</div>
-				))}
+		<div className="rounded-[26px] border border-white/85 bg-[#eef2f9] p-5 text-[#0f172a] shadow-[5px_6px_16px_rgba(100,116,139,0.4)]">
+			<div className="mb-3 grid grid-cols-[28px_minmax(0,1fr)_minmax(0,1fr)_28px] items-center gap-2.5 px-1 text-[11.5px] font-bold text-[#64748b]">
+				<span className="text-center">{t('table.set')}</span>
+				<span className="text-center">{t('table.weight')}</span>
+				<span className="text-center">{t('table.reps')}</span>
+				<span className="text-center">{t('table.done')}</span>
 			</div>
 
-			{/* Rows */}
-			{currentSets.map((s, i) => (
-				<div
-					key={s.id}
-					className={cx(
-						'grid grid-cols-[auto_1fr_1fr_auto] gap-0 items-center border-b border-[var(--color-primary-50)] last:border-0 transition-colors',
-						s.done ? 'bg-emerald-50/40' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40',
-					)}
-				>
-					{/* Set number */}
-					<div className="py-3 px-3">
-						<span className="w-6 h-6 flex items-center justify-center rounded-lg bg-[var(--color-primary-100)] text-[var(--color-primary-700)] text-xs font-bold">
+			<div className="space-y-3.5">
+				{currentSets.map(s => (
+					<div
+						key={s.id}
+						className={cx(
+							'grid grid-cols-[28px_minmax(0,1fr)_minmax(0,1fr)_28px] items-center gap-2.5 rounded-2xl border p-2.5',
+							s.done
+								? 'border-b-white/90 border-e-white/85 border-t-[rgba(100,116,139,0.25)] border-s-[rgba(100,116,139,0.2)] bg-[var(--color-primary-100)]'
+								: 'border-[rgba(100,116,139,0.18)] bg-[#eef2f9]',
+						)}
+					>
+						<span className={cx(
+							'grid h-[26px] w-[26px] place-items-center rounded-full border-[1.2px] text-[11.5px] font-extrabold tabular-nums shadow-[3px_3px_5px_rgba(100,116,139,0.4)]',
+							s.done
+								? 'border-transparent bg-[var(--color-primary-500)] text-white'
+								: 'border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] text-[#64748b]',
+						)}>
 							{s.set}
 						</span>
-					</div>
-
-					{/* Weight */}
-					<div className="py-2 px-2">
 						<SetInput
 							value={getBuffered(s.id, 'weight', s.weight)}
 							onChange={raw => handleChange(s.id, 'weight', raw)}
@@ -725,11 +622,8 @@ function SetsTable({
 							placeholder="0"
 							inputMode="decimal"
 							aria={t('table.weight')}
+							unit={weightUnit}
 						/>
-					</div>
-
-					{/* Reps */}
-					<div className="py-2 px-2">
 						<SetInput
 							value={getBuffered(s.id, 'reps', s.reps)}
 							onChange={raw => handleChange(s.id, 'reps', raw)}
@@ -739,11 +633,8 @@ function SetsTable({
 							placeholder="0"
 							inputMode="numeric"
 							aria={t('table.reps')}
+							unit={repUnitFor(getBuffered(s.id, 'reps', s.reps))}
 						/>
-					</div>
-
-					{/* Done */}
-					<div className="py-3 px-3 flex justify-center">
 						<button
 							type="button"
 							role="checkbox"
@@ -751,243 +642,121 @@ function SetsTable({
 							onClick={() => toggleDone(s.id)}
 							aria-label={t('table.done')}
 							className={cx(
-								'w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all duration-200 active:scale-90',
+								'grid h-[26px] w-[26px] place-items-center rounded-[9px] border-[1.2px] transition active:scale-90',
 								s.done
-									? 'bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] border-transparent shadow-sm'
-									: 'border-[var(--color-primary-200)] bg-white hover:border-[var(--color-primary-400)]',
+									? 'border-transparent bg-[var(--color-primary-500)] text-white shadow-[3px_3px_5px_rgba(37,99,235,0.5)]'
+									: 'border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] text-transparent shadow-[3px_3px_5px_rgba(100,116,139,0.4)]',
 							)}
 						>
-							{s.done && (
-								<motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
-									<Check size={13} strokeWidth={3} className="text-white" />
-								</motion.div>
-							)}
+							<Check size={13} strokeWidth={3} className={s.done ? 'text-white' : 'text-transparent'} />
 						</button>
 					</div>
-				</div>
-			))}
+				))}
+			</div>
 
-			{/* Footer controls */}
-			<div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[var(--color-primary-50)]/50 border-t border-[var(--color-primary-100)]">
+			<div className="mt-4 flex items-center justify-between gap-3">
+				<button
+					type="button"
+					onClick={addSet}
+					className="inline-flex items-center gap-2.5 rounded-full py-1 text-[12.5px] font-bold text-[var(--color-primary-500)] transition active:scale-[0.98]"
+				>
+					<span className="grid h-[34px] w-[34px] place-items-center rounded-full border border-t-white/40 bg-[var(--color-primary-500)] text-white shadow-[4px_4px_7px_rgba(37,99,235,0.45)]">
+						<Plus size={16} strokeWidth={2.6} />
+					</span>
+					{t('actions.addSet')}
+				</button>
+
 				<div className="flex items-center gap-2">
+					{lastSyncStatus === 'ok' && (
+						<span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200">
+							<Cloud size={11} /> {t('sync.synced')}
+						</span>
+					)}
+					{lastSyncStatus === 'error' && (
+						<span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-600 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200">
+							<CloudOff size={11} /> {t('sync.someFailed')}
+						</span>
+					)}
 					<TooltipProvider delayDuration={200}>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<IconBtn onClick={removeSet} disabled={currentSets.length <= 1} className="w-9 h-9">
-									<Minus size={14} />
-								</IconBtn>
+								<button
+									type="button"
+									onClick={removeSet}
+									disabled={currentSets.length <= 1}
+									aria-label={t('actions.removeSet')}
+									className="grid h-[34px] w-[34px] place-items-center rounded-full border-[1.2px] border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] text-[#64748b] shadow-[4px_4px_7px_rgba(100,116,139,0.42)] transition active:scale-95 disabled:opacity-40"
+								>
+									<Minus size={14} strokeWidth={2.4} />
+								</button>
 							</TooltipTrigger>
 							<TooltipContent><p>{t('actions.removeSet')}</p></TooltipContent>
 						</Tooltip>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<PrimaryBtn onClick={addSet} className="w-9 h-9">
-									<Plus size={14} />
-								</PrimaryBtn>
-							</TooltipTrigger>
-							<TooltipContent><p>{t('actions.addSet')}</p></TooltipContent>
-						</Tooltip>
-					</TooltipProvider>
-				</div>
-
-				<TooltipProvider delayDuration={200}>
-					<div className="flex items-center gap-2">
-						{lastSyncStatus === 'ok' && (
-							<span className="inline-flex items-center gap-1.5 text-emerald-600 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200">
-								<Cloud size={13} /> {t('sync.synced')}
-							</span>
-						)}
-						{lastSyncStatus === 'error' && (
-							<span className="inline-flex items-center gap-1.5 text-rose-600 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200">
-								<CloudOff size={13} /> {t('sync.someFailed')}
-							</span>
-						)}
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<IconBtn onClick={() => trySyncQueue(true)} disabled={syncing} className="w-9 h-9">
+								<button
+									type="button"
+									onClick={() => trySyncQueue(true)}
+									disabled={syncing}
+									aria-label={syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}
+									className="grid h-[34px] w-[34px] place-items-center rounded-full border-[1.2px] border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] shadow-[4px_4px_7px_rgba(100,116,139,0.42)] transition active:scale-95 disabled:opacity-60"
+								>
 									{syncing ? (
-										<span className="w-4 h-4 border-2 border-[var(--color-primary-300)] border-t-transparent rounded-full animate-spin" />
+										<span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-primary-300)] border-t-transparent" />
 									) : unsaved ? (
 										<CloudOff size={15} className="text-amber-500" />
 									) : (
-										<Cloud size={15} className="text-emerald-500" />
+										<Cloud size={15} className="text-muted-foreground" />
 									)}
-								</IconBtn>
+								</button>
 							</TooltipTrigger>
 							<TooltipContent>
 								<p>{syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}</p>
 							</TooltipContent>
 						</Tooltip>
-					</div>
-				</TooltipProvider>
+					</TooltipProvider>
+				</div>
 			</div>
 		</div>
 	);
 }
 
-/** Compact +/- input used in the sets table */
-function SetInput({ value, onChange, onBlur, onMinus, onPlus, placeholder, inputMode, aria }) {
+function SetInput({ value, onChange, onBlur, onMinus, onPlus, placeholder, inputMode, aria, unit }) {
 	return (
-		<div className="relative flex items-center">
+		<div className="flex min-w-0 items-center gap-1 rounded-full border-[1.2px] border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] px-1.5 py-[5px] shadow-[3px_3px_6px_rgba(100,116,139,0.28)]">
 			<button
 				type="button"
 				onClick={onMinus}
 				tabIndex={-1}
-				className="absolute left-1 w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-200)] text-[var(--color-primary-600)] active:scale-90 hover:bg-[var(--color-primary-100)] transition-all z-10"
-			>
-				<Minus size={11} strokeWidth={2.5} />
-			</button>
-			<input
-				type="text"
-				value={value}
-				onChange={e => onChange(e.target.value)}
-				onFocus={e => e.target.select()}
-				onBlur={onBlur}
-				onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
-				inputMode={inputMode}
-				placeholder={placeholder}
 				aria-label={aria}
-				className="w-full h-9 text-center text-base font-bold tabular-nums rounded-lg border border-[var(--color-primary-200)] bg-white outline-none px-8 focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-100)] transition-all"
-			/>
+				className="grid h-7 w-7 shrink-0 place-items-center rounded-full border-[1.2px] border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] text-[#64748b] shadow-[3px_3px_5px_rgba(100,116,139,0.4)] transition active:scale-90"
+			>
+				<Minus size={13} strokeWidth={2.6} />
+			</button>
+			<div className="min-w-0 flex-1">
+				<input
+					type="text"
+					value={value}
+					onChange={e => onChange(e.target.value)}
+					onFocus={e => e.target.select()}
+					onBlur={onBlur}
+					onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+					inputMode={inputMode}
+					placeholder={placeholder}
+					aria-label={aria}
+					className="h-[18px] w-full bg-transparent text-center text-[14.5px] font-extrabold tabular-nums text-[#0f172a] outline-none"
+				/>
+				{unit ? <p className="-mt-px text-center text-[9px] font-bold leading-none text-[#64748b]">{unit}</p> : null}
+			</div>
 			<button
 				type="button"
 				onClick={onPlus}
 				tabIndex={-1}
-				className="absolute right-1 w-7 h-7 flex items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white active:scale-90 hover:opacity-90 transition-all z-10"
+				aria-label={aria}
+				className="grid h-7 w-7 shrink-0 place-items-center rounded-full border-[1.2px] border-t-white/35 border-b-[rgba(15,48,120,0.35)] bg-[var(--color-primary-500)] text-white shadow-[3px_3px_5px_rgba(37,99,235,0.5)] transition active:scale-90"
 			>
-				<Plus size={11} strokeWidth={2.5} />
+				<Plus size={13} strokeWidth={2.6} />
 			</button>
-		</div>
-	);
-}
-
-/* ─────────────────────────────────────────
-	 CARDIO TIMER CARD
-───────────────────────────────────────── */
-function CardioTimerCard({ durationSeconds = 0, note, className = '' }) {
-	const t = useTranslations('cardioTimer');
-	const { remaining, running, paused, start, pause, resume, stop, duration } = useCountdown();
-	const initial = Math.max(0, Math.round(Number(durationSeconds) || 0));
-	const [seconds, setSeconds] = useState(initial);
-	const holdRef = useRef(null);
-	const prevInitial = useRef(initial);
-
-	useEffect(() => {
-		if (prevInitial.current !== initial) { setSeconds(initial); prevInitial.current = initial; }
-	}, [initial]);
-
-	const haptic = useCallback((ms = 10) => {
-		if (typeof window === 'undefined') return;
-		try { window.navigator?.vibrate?.(ms); } catch { }
-	}, []);
-
-	const step = useCallback(delta => setSeconds(s => Math.max(0, s + delta)), []);
-	const startHold = useCallback(d => { step(d); holdRef.current = setInterval(() => step(d), 120); }, [step]);
-	const endHold = useCallback(() => { if (holdRef.current) { clearInterval(holdRef.current); holdRef.current = null; } }, []);
-	useEffect(() => () => { if (holdRef.current) clearInterval(holdRef.current); }, []);
-
-	const handleStart = () => { start(seconds); haptic(20); };
-	const handleReset = () => { stop(); setSeconds(initial); haptic(15); };
-
-	const ring = useMemo(() => {
-		const R = 28, C = 2 * Math.PI * R;
-		const pct = duration > 0 ? remaining / duration : 0;
-		return { R, C, dash: C * pct };
-	}, [remaining, duration]);
-
-	const timeLabel = useMemo(() => toMMSS(running ? remaining : seconds), [running, remaining, seconds]);
-	const isWarning = running && remaining <= 10 && remaining > 0;
-	const isComplete = !running && duration > 0 && remaining === 0;
-
-	return (
-		<div className={cx('mt-3 rounded-lg border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm', className)}>
-			<div className="flex items-center gap-4 p-4">
-				{/* Ring */}
-				<div className="relative shrink-0 w-16 h-16 flex items-center justify-center">
-					<svg width="64" height="64" viewBox="0 0 64 64">
-						<circle cx="32" cy="32" r={ring.R} stroke="#e5e7eb" strokeWidth="5" fill="none" />
-						<circle
-							cx="32" cy="32" r={ring.R}
-							stroke={isWarning ? '#f97316' : isComplete ? '#10b981' : 'url(#cardioGrad)'}
-							strokeWidth="5" fill="none" strokeLinecap="round"
-							strokeDasharray={ring.C} strokeDashoffset={ring.C - ring.dash}
-							className="transition-all duration-300 ease-linear"
-							transform="rotate(-90 32 32)"
-						/>
-						<defs>
-							<linearGradient id="cardioGrad" x1="0" y1="0" x2="1" y2="1">
-								<stop offset="0%" stopColor="var(--color-gradient-from)" />
-								<stop offset="100%" stopColor="var(--color-gradient-to)" />
-							</linearGradient>
-						</defs>
-					</svg>
-					<span className={cx('absolute text-sm font-black tabular-nums', isWarning ? 'text-orange-500' : isComplete ? 'text-emerald-500' : 'text-slate-800')}>
-						{timeLabel}
-					</span>
-				</div>
-
-				{/* Controls */}
-				<div className="flex-1 space-y-2">
-					{!running && (
-						<div className="flex items-center gap-1.5">
-							<button onMouseDown={() => startHold(-15)} onMouseUp={endHold} onMouseLeave={endHold}
-								onTouchStart={() => startHold(-15)} onTouchEnd={endHold}
-								onClick={() => { step(-15); haptic(); }}
-								className="w-8 h-8 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-600)] flex items-center justify-center active:scale-90 transition-all"
-							><Minus size={13} /></button>
-							<div className="flex-1 text-center text-sm font-bold text-[var(--color-primary-700)] bg-[var(--color-primary-50)] rounded-lg py-1.5 border border-[var(--color-primary-100)]">
-								{toMMSS(seconds)}
-							</div>
-							<button onMouseDown={() => startHold(15)} onMouseUp={endHold} onMouseLeave={endHold}
-								onTouchStart={() => startHold(15)} onTouchEnd={endHold}
-								onClick={() => { step(15); haptic(); }}
-								className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white flex items-center justify-center active:scale-90 transition-all"
-							><Plus size={13} /></button>
-							{seconds !== initial && (
-								<button onClick={handleReset} className="w-8 h-8 rounded-lg border border-[var(--color-primary-200)] bg-white text-[var(--color-primary-500)] flex items-center justify-center active:scale-90 transition-all">
-									<RotateCcw size={12} />
-								</button>
-							)}
-						</div>
-					)}
-
-					<div className="flex items-center gap-2">
-						{!running ? (
-							<PrimaryBtn onClick={handleStart} className="flex-1 h-9 text-sm font-bold gap-1.5">
-								<Play size={13} fill="currentColor" /> {t('actions.start')}
-							</PrimaryBtn>
-						) : paused ? (
-							<>
-								<button onClick={() => { resume(); haptic(); }}
-									className="flex-1 h-9 rounded-lg text-sm font-bold text-[var(--color-primary-700)] bg-[var(--color-primary-50)] border border-[var(--color-primary-200)] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-									<Play size={13} fill="currentColor" /> {t('actions.resume')}
-								</button>
-								<IconBtn onClick={() => { stop(); haptic(20); }} className="w-9 h-9 !border-rose-200 !text-rose-500 hover:!bg-rose-50">
-									<X size={14} />
-								</IconBtn>
-							</>
-						) : (
-							<>
-								<button onClick={() => { pause(); haptic(); }}
-									className="flex-1 h-9 rounded-lg text-sm font-bold text-[var(--color-primary-700)] bg-white border border-[var(--color-primary-200)] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-									<Pause size={13} /> {t('actions.pause')}
-								</button>
-								<IconBtn onClick={() => { stop(); haptic(20); }} className="w-9 h-9 !border-rose-200 !text-rose-500 hover:!bg-rose-50">
-									<X size={14} />
-								</IconBtn>
-							</>
-						)}
-					</div>
-				</div>
-			</div>
-
-			{!!note && (
-				<div className="px-4 pb-4">
-					<div className="rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] px-3 py-2.5 text-xs text-slate-600">
-						<span className="font-semibold text-[var(--color-primary-700)]">{t('note')}:</span> {String(note)}
-					</div>
-				</div>
-			)}
 		</div>
 	);
 }
@@ -997,17 +766,35 @@ function CardioTimerCard({ durationSeconds = 0, note, className = '' }) {
 ───────────────────────────────────────── */
 function LoadingSkeleton() {
 	return (
-		<div className="space-y-4 animate-pulse p-4">
-			<div className="h-28 rounded-lg bg-gradient-to-r from-[var(--color-primary-100)] to-[var(--color-primary-50)]" />
-			<div className="flex gap-2">
-				{[1, 2, 3, 4].map(i => <div key={i} className="h-10 w-14 rounded-lg bg-slate-200" />)}
+		<div data-plain-page="1" className="report-phone mx-auto w-full max-w-[440px] animate-pulse space-y-3 bg-white pt-1 dark:bg-[#0b1220]">
+			<div
+				className="rounded-3xl p-4"
+				style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), var(--color-gradient-via))' }}
+			>
+				<div className="flex items-center gap-3">
+					<div className="h-11 w-11 rounded-2xl bg-white/20" />
+					<div className="min-w-0 flex-1 space-y-2">
+						<div className="h-4 w-36 rounded-full bg-white/80" />
+						<div className="h-2.5 w-48 rounded-full bg-white/35" />
+					</div>
+					<div className="h-11 w-11 rounded-2xl bg-white/15" />
+					<div className="h-11 w-11 rounded-2xl bg-white/15" />
+				</div>
+				<div className="mx-0 my-3 h-px bg-white/20" />
+				<div className="flex gap-2">
+					{[1, 2, 3, 4].map(i => (
+						<div key={i} className="h-[58px] min-w-14 flex-1 rounded-2xl bg-white/15" />
+					))}
+				</div>
 			</div>
-			<div className="aspect-video rounded-lg bg-slate-200" />
-			<div className="flex gap-3">
-				<div className="h-14 flex-1 rounded-lg bg-slate-100" />
-				<div className="h-14 flex-1 rounded-lg bg-slate-100" />
+			<div className="overflow-hidden rounded-3xl bg-white/70">
+				<div className="h-[210px] bg-[var(--color-primary-100)]" />
+				<div className="flex gap-2 px-3 py-4">
+					{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-[58px] w-[58px] shrink-0 rounded-2xl bg-[var(--color-primary-50)]" />)}
+				</div>
 			</div>
-			<div className="h-40 rounded-lg bg-slate-100" />
+			<div className="h-14 rounded-2xl bg-white/70" />
+			<div className="h-56 rounded-[26px] bg-white/70" />
 		</div>
 	);
 }
@@ -1545,13 +1332,13 @@ export default function MyWorkoutsPage() {
 						localStorage.setItem('user', JSON.stringify({ ...stored, canEditWorkout: !!freshUser.canEditWorkout }));
 					} catch { }
 				}
-				const serverDays = (Array.isArray(p?.program?.days) ? p.program.days : []).map(d => ({ ...d, _key: String(d.dayOfWeek ?? '').toLowerCase() }));
-				const byKey = Object.fromEntries(serverDays.map(d => [d._key, d]));
-				const allKeys = serverDays.map(d => d._key);
+				const serverDays = Array.isArray(p?.program?.days) ? p.program.days : [];
+				const byKey = Object.fromEntries(serverDays.map(d => [dayKeyOf(d), d]).filter(([k]) => k));
+				const dayPool = trainingKeysFor(serverDays);
 				const savedDay = typeof window !== 'undefined' && localStorage.getItem(LOCAL_KEY_SELECTED_DAY);
-				const initialDayId = savedDay || pickTodayId(allKeys.length ? allKeys : Object.keys(weeklyProgram));
+				const initialDayId = (savedDay && dayPool.includes(savedDay) ? savedDay : null) || pickTodayId(dayPool);
 				setSelectedDay(initialDayId);
-				const dayProgramRaw = byKey[initialDayId] || weeklyProgram[initialDayId] || { id: initialDayId };
+				const dayProgramRaw = byKey[initialDayId] || { id: initialDayId };
 				const dayProgramNorm = normalizeDayProgram(dayProgramRaw);
 				const initSection = pickInitialSection(dayProgramNorm);
 				setActiveSection(initSection);
@@ -1606,8 +1393,8 @@ export default function MyWorkoutsPage() {
 	const changeDay = useCallback(async dayId => {
 		try {
 			setSelectedDay(dayId);
-			const byKey = Object.fromEntries((plan?.program?.days || []).map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
-			const dayProgramRaw = byKey[dayId] || weeklyProgram[dayId] || { id: dayId, name: t('workout') };
+			const byKey = Object.fromEntries((plan?.program?.days || []).map(d => [dayKeyOf(d), d]).filter(([k]) => k));
+			const dayProgramRaw = byKey[dayId] || { id: dayId, name: t('workout') };
 			const dayProgramNorm = normalizeDayProgram(dayProgramRaw);
 			const nextSection = pickInitialSection(dayProgramNorm);
 			setActiveSection(nextSection);
@@ -1776,8 +1563,8 @@ export default function MyWorkoutsPage() {
 			const freshPlan = await fetchActivePlan(USER_ID);
 			setPlan(freshPlan);
 			exitEditMode();
-			const byKey = Object.fromEntries((freshPlan?.program?.days || []).map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
-			const dayProgramRaw = byKey[selectedDay] || weeklyProgram[selectedDay] || { exercises: [] };
+			const byKey = Object.fromEntries((freshPlan?.program?.days || []).map(d => [dayKeyOf(d), d]).filter(([k]) => k));
+			const dayProgramRaw = byKey[selectedDay] || { exercises: [] };
 			const dayProgramNorm = normalizeDayProgram(dayProgramRaw);
 			const session = createSessionFromDay(dayProgramNorm);
 			setWorkout(session);
@@ -1839,11 +1626,32 @@ export default function MyWorkoutsPage() {
 	}, [currentExercise?.id]); // eslint-disable-line
 
 	const dayTabs = useMemo(() => {
-		const byKey = Object.fromEntries((plan?.program?.days || []).map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
-		return WEEK_ORDER
-			.filter(d => byKey[d] || weeklyProgram[d])
-			.map(d => ({ key: d, label: t(`days.${d}`), name: byKey[d]?.name || weeklyProgram[d]?.name || t(`days.${d}`) }));
+		const days = plan?.program?.days || [];
+		const byKey = Object.fromEntries(days.map(d => [dayKeyOf(d), d]).filter(([k]) => k));
+		const keys = trainingKeysFor(days);
+		const dayIdToJs = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+		const today = new Date();
+		const todayJs = today.getDay();
+		return keys.map(d => {
+			const dateObj = new Date(today);
+			const targetJs = dayIdToJs[d];
+			if (targetJs != null) dateObj.setDate(today.getDate() + (targetJs - todayJs));
+			return {
+				key: d,
+				label: WEEK_ORDER.includes(d) ? t(`days.${d}`) : (byKey[d]?.name || d),
+				date: targetJs == null ? null : dateObj.getDate(),
+				name: byKey[d]?.name || t(`days.${d}`),
+			};
+		});
 	}, [plan, t]);
+
+	const fiveDayTabs = useMemo(() => {
+		if (!dayTabs.length) return dayTabs;
+		const idx = dayTabs.findIndex(tb => tb.key === selectedDay);
+		const clampedIdx = idx < 0 ? 0 : idx;
+		const start = Math.max(0, Math.min(clampedIdx - 2, dayTabs.length - 5));
+		return dayTabs.slice(start, start + 5);
+	}, [dayTabs, selectedDay]);
 
 	const sectionTabs = useMemo(() => {
 		const all = workout?.exercises || [];
@@ -1854,8 +1662,26 @@ export default function MyWorkoutsPage() {
 		return list.length ? list : [{ key: 'workout', label: t('sections.workout') }];
 	}, [workout?.exercises, t]);
 
-	const completedCount = useMemo(() => exercisesBySection.filter(ex => completedExercises.has(ex.id)).length, [exercisesBySection, completedExercises]);
-	const totalCount = exercisesBySection.length;
+	const pickExercise = (ex) => {
+		if (!ex) return;
+		setCurrentExId(ex.id);
+		setActiveMedia('image');
+		setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1, normalizeReps(ex?.targetReps) || ex?.targetReps));
+		applyLocalQueuedSnapshotIfAny();
+	};
+
+	const changeSection = (sect) => {
+		setActiveSection(sect);
+		const first = (workout?.exercises || []).find(e => (e.group || 'workout') === sect);
+		if (first) pickExercise(first);
+	};
+
+	const isVideo = !!(currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia]);
+	const mediaOptions = [
+		currentExercise?.img ? { key: 'image', icon: ImageIcon, title: t('showImage') } : null,
+		currentExercise?.video ? { key: 'video', icon: /youtu(\.be|be\.com)/i.test(String(currentExercise.video)) ? Youtube : VideoIcon, title: t('showVideo') } : null,
+		currentExercise?.video2 ? { key: 'video2', icon: VideoIcon, title: t('showVideoAlt') } : null,
+	].filter(Boolean);
 
 	/* ── Render ── */
 	if (loading) return <LoadingSkeleton />;
@@ -1863,13 +1689,13 @@ export default function MyWorkoutsPage() {
 	const hasExercises = !!workout?.exercises?.length;
 	const durationLabel = (() => {
 		const secs = Number(currentExercise?.durationSeconds ?? 0);
-		if (secs >= 60) return `${Math.round(secs / 60)} min`;
-		if (secs > 0) return `${Math.round(secs)} sec`;
+		if (secs >= 60) return `${Math.round(secs / 60)}m`;
+		if (secs > 0) return `${Math.round(secs)}s`;
 		return null;
 	})();
 
 	return (
-		<div className="   space-y-2  bg-slate-50">
+		<div data-plain-page="1" className="report-phone mx-auto w-full max-w-[440px] space-y-3 bg-white pt-1 dark:bg-[#0b1220]">
 			<audio ref={audioRef} src={DEFAULT_SOUNDS[2]} preload="auto" />
 			<NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} title={plan?.name} notes={plan?.notes || []} t={t} />
 
@@ -1886,29 +1712,16 @@ export default function MyWorkoutsPage() {
 			<WorkoutHeader
 				title={t('title')}
 				subtitle={t('subtitle')}
-				planName={plan?.name || null}
-				dayTabs={dayTabs}
+				dayTabs={fiveDayTabs}
 				selectedDay={selectedDay}
 				onDayChange={changeDay}
 				onAudioClick={() => { !hidden && setAudioOpen(v => !v); setHidden(false); }}
 				onNotesClick={() => setNotesOpen(true)}
+				sectionTabs={sectionTabs}
+				activeSection={activeSection}
+				onSectionChange={changeSection}
 				t={t}
 			/>
-
-			{/* Edit plan button — only shown if user has permission and not already editing */}
-			{canEditWorkout && !editMode && (
-				<div className="flex justify-end px-1">
-					<button
-						type="button"
-						onClick={enterEditMode}
-						className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95"
-						style={{ background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))' }}
-					>
-						<PencilLine size={15} />
-						{t('actions.editPlan')}
-					</button>
-				</div>
-			)}
 
 			{/* Edit plan panel — shown when editing */}
 			{editMode && (
@@ -1932,194 +1745,154 @@ export default function MyWorkoutsPage() {
 				key="audio-hub"
 			/>
 
-			{/* ── MAIN CONTENT ── */}
-			<div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-6 lg:pt-6 lg:items-start">
-
-				{/* ── LEFT / MAIN ── */}
-				<div className="space-y-0 lg:space-y-4">
+			{/* ── SESSION ── */}
+			<div className="grid items-start gap-3">
+				<div className="min-w-0 space-y-3">
 					{!hasExercises ? (
-						<div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-							<div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-50)] flex items-center justify-center mb-4 shadow-sm">
-								<Dumbbell size={28} className="text-[var(--color-primary-400)]" />
+						<div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+							<div className="mb-4 grid h-[68px] w-[68px] place-items-center rounded-2xl border border-white/85 bg-[#eef2f9] text-[var(--color-primary-300)] shadow-[4px_5px_12px_rgba(100,116,139,0.35)]">
+								<Dumbbell size={30} />
 							</div>
-							<h3 className="text-base font-bold text-slate-700">{t('noExercises')}</h3>
-							<p className="text-sm text-slate-400 mt-1">{t('pickAnotherDay')}</p>
+							<h3 className="text-base font-bold text-[#0f172a]">{t('noExercises')}</h3>
+							<p className="mt-1.5 text-[13px] font-medium text-[#64748b]">{t('pickAnotherDay')}</p>
 						</div>
 					) : (
 						<>
-							{/* Section tabs */}
-							{sectionTabs.length > 1 && (
-								<div className=" pt-4 pb-0 lg:px-0 lg:pt-0">
-									<SectionTabs tabs={sectionTabs} active={activeSection} onChange={setActiveSection} />
-								</div>
-							)}
-
-
-
-
-							{/* Media card */}
-							<div className="  pt-3 pb-1">
-								<div className="rounded-lg border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm">
-									{/* Image / Video */}
-									<div className="relative aspect-video bg-slate-50">
-										{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? (
-											<InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} />
-										) : (
+							<div className="overflow-hidden rounded-3xl border border-white/85 bg-[#eef2f9] shadow-[5px_6px_16px_rgba(100,116,139,0.4)]">
+								<div className="relative h-[210px] overflow-hidden bg-[#e8edf5]">
+									<div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-[#eef2f9] to-[#e8edf5]" />
+									<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,color-mix(in_srgb,var(--color-primary-800)_33%,transparent),transparent_70%)]" />
+									{isVideo ? (
+										<InlineVideo key={`${currentExercise.id}-${activeMedia}`} src={currentExercise[activeMedia]} />
+									) : currentExercise?.img ? (
+										<>
 											<Img
+												key={`${currentExercise?.id || 'ex'}-blur`}
+												src={currentExercise.img}
+												alt=""
+												className="absolute -inset-5 h-[calc(100%+40px)] w-[calc(100%+40px)] object-cover blur-xl"
 												showBlur={false}
-												key={currentExercise?.id + '-image'}
-												src={currentExercise?.img}
-												alt={currentExercise?.name}
-												className="w-full h-full object-contain"
-												loading="lazy"
 											/>
-										)}
-
-										{/* Exercise name overlay */}
-										{currentExercise?.name && (
-											<div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-3 pt-6 pb-2">
-												<h2 className="text-white font-bold text-sm md: leading-tight">{currentExercise.name}</h2>
-											</div>
-										)}
-
-										{/* Media switcher */}
-										<div className="absolute top-2 right-2">
-											<div className="flex flex-col gap-1 bg-white/80 backdrop-blur-sm rounded-lg p-1 border border-white/60 shadow-sm">
-												{[
-													{ key: 'image', icon: ImageIcon, title: t('showImage'), disabled: !currentExercise?.img },
-													{ key: 'video', icon: VideoIcon, title: t('showVideo'), disabled: !currentExercise?.video },
-													...(currentExercise?.video2 ? [{ key: 'video2', icon: VideoIcon, title: t('showVideoAlt'), disabled: false }] : []),
-												].map(m => (
-													<button
-														key={m.key}
-														onClick={() => !m.disabled && setActiveMedia(m.key)}
-														disabled={m.disabled}
-														aria-pressed={activeMedia === m.key}
-														className={cx(
-															'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
-															activeMedia === m.key ? 'bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100',
-															m.disabled && 'opacity-30 cursor-not-allowed',
-														)}
-														title={m.title}
-														aria-label={m.title}
-													>
-														<m.icon size={14} />
-													</button>
-												))}
-											</div>
-										</div>
-									</div>
-
-									{/* Exercise list (mobile horizontal scroll) */}
-									<div className=" lg:hidden pt-3">
-										<ExerciseList
-											t={t} workout={workout} exercisesOverride={exercisesBySection}
-											currentExId={currentExercise?.id}
-											onPick={ex => {
-												setCurrentExId(ex.id);
-												setActiveMedia('image');
-												setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1, exReps || ex?.targetReps));
-												applyLocalQueuedSnapshotIfAny();
-											}}
-											completedExercises={completedExercises}
-											toggleExerciseCompletion={toggleExerciseCompletion}
-										/>
-									</div>
-
-									{/* Stats row */}
-									<div className="p-3 flex gap-2">
-										<StatChip
-											icon={isCardio ? Clock : Repeat}
-											label={isCardio ? t('notes.duration', { default: 'Duration' }) : t('notes.reps')}
-											value={isCardio ? (durationLabel || '—') : (exReps || '—')}
-											accent
-										/>
-										<StatChip
-											icon={isCardio ? StickyNote : Timer}
-											label={isCardio ? t('notes.note', { default: 'Note' }) : t('notes.tempo')}
-											value={isCardio ? (String(currentExercise?.note ?? '').trim() || '—') : (exTempo || '—')}
-										/>
-									</div>
-
-									{/* Note (non-cardio) */}
-									{!isCardio && String(currentExercise?.note ?? '').trim() && (
-										<div className="px-3 pb-3">
-											<div className="rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] px-3 py-2.5 text-xs text-slate-600">
-												<span className="font-semibold text-[var(--color-primary-700)]">{t('notes.note', { default: 'Note' })}:</span>
-												{String(currentExercise.note).trim()}
-											</div>
+											<div className="absolute inset-0 bg-[rgba(4,8,15,0.45)]" />
+											<Img
+												key={`${currentExercise?.id || 'ex'}-image`}
+												src={currentExercise.img}
+												alt={currentExercise?.name || ''}
+												className="relative h-full w-full object-contain"
+												showBlur={false}
+											/>
+										</>
+									) : (
+										<div className="grid h-full place-items-center text-white/15">
+											<Dumbbell size={52} />
 										</div>
 									)}
+									<div className="absolute inset-x-0 top-0 z-[2] flex items-start justify-between gap-2 p-3.5">
+										<div className="flex min-w-0 flex-1 flex-wrap gap-[7px] pe-2">
+											{!isCardio && exReps ? (
+												<span className="inline-flex items-center gap-[5px] rounded-full border-[1.3px] border-t-white/40 border-b-[rgba(15,48,120,0.4)] bg-[var(--color-primary-500)] px-[11px] py-[7px] text-xs font-bold text-white shadow-[3px_4px_8px_rgba(15,23,42,0.45)]">
+													<Repeat size={11} strokeWidth={2.5} />
+													{exReps}
+												</span>
+											) : null}
+											{!isCardio && exTempo ? (
+												<span className="inline-flex items-center gap-[5px] rounded-full border-[1.3px] border-t-white/35 border-b-[rgba(5,40,50,0.45)] bg-[var(--color-secondary-700)] px-[11px] py-[7px] text-xs font-bold text-white shadow-[3px_4px_8px_rgba(11,61,74,0.45)]">
+													<Timer size={11} strokeWidth={2.5} />
+													{exTempo}
+												</span>
+											) : null}
+											{isCardio && durationLabel ? (
+												<span className="inline-flex items-center gap-[5px] rounded-full border-[1.3px] border-t-white/40 border-b-emerald-900/45 bg-emerald-600 px-[11px] py-[7px] text-xs font-bold text-white shadow-[3px_4px_8px_rgba(6,95,70,0.45)]">
+													<Clock size={11} strokeWidth={2.5} />
+													{durationLabel}
+												</span>
+											) : null}
+										</div>
+										{mediaOptions.length > 1 && (
+											<div className="flex shrink-0 gap-[7px]">
+												{mediaOptions.map(m => {
+													const on = activeMedia === m.key;
+													const Icon = m.icon;
+													return (
+														<button
+															key={m.key}
+															type="button"
+															onClick={() => setActiveMedia(m.key)}
+															aria-pressed={on}
+															title={m.title}
+															aria-label={m.title}
+															className={cx(
+																'grid h-8 w-8 place-items-center rounded-full border-[1.3px] text-white shadow-[3px_4px_8px_rgba(15,23,42,0.45)] transition active:scale-95',
+																on
+																	? 'border-t-white/45 border-b-[rgba(15,48,120,0.4)] bg-[var(--color-primary-500)]'
+																	: 'border-t-white/40 border-b-[rgba(15,48,120,0.32)] bg-white/15',
+															)}
+														>
+															<Icon size={14} />
+														</button>
+													);
+												})}
+											</div>
+										)}
+									</div>
+									{currentExercise?.name && !isVideo && (
+										<h2 className="absolute inset-x-0 bottom-0 z-[2] px-3.5 pb-3.5 pt-12 text-start text-[19px] font-extrabold leading-tight tracking-[-0.2px] text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.5)]">
+											{currentExercise.name}
+										</h2>
+									)}
 								</div>
+								<ExerciseList
+									t={t}
+									workout={workout}
+									exercisesOverride={exercisesBySection}
+									currentExId={currentExercise?.id}
+									onPick={pickExercise}
+									completedExercises={completedExercises}
+									toggleExerciseCompletion={toggleExerciseCompletion}
+								/>
 							</div>
-
-
-
-							{/* Rest timer / Cardio timer */}
-							<div className=" ">
-								{isCardio ? (
-									<CardioTimerCard durationSeconds={currentExercise?.durationSeconds} note={currentExercise?.note} />
-								) : (
-									<RestTimerCard
-										alerting={alerting} setAlerting={setAlerting}
-										initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise.rest : 90}
-										audioEl={audioRef}
-										className="mt-3"
-									/>
-								)}
-							</div>
-
-							{/* Sets table */}
-							{!isCardio && (
-								<div className=" pb-6 lg:pb-0">
-									<SetsTable
-										currentSets={currentSets}
-										currentExercise={currentExercise}
-										workout={workout}
-										t={t}
-										currentExId={currentExId}
-										USER_ID={USER_ID}
-										inputBuffer={inputBuffer}
-										setInputBuffer={setInputBuffer}
-										bump={bump}
-										toggleDone={toggleDone}
-										setValue={setValue}
-										addSet={addSetForCurrentExercise}
-										removeSet={removeSetFromCurrentExercise}
-										trySyncQueue={trySyncQueue}
-										syncing={syncing}
-										unsaved={unsaved}
-										lastSyncStatus={lastSyncStatus}
-									/>
-								</div>
-							)}
+							{!isCardio && <ExerciseNote note={currentExercise?.note} />}
 						</>
 					)}
 				</div>
 
-				{/* ── RIGHT SIDEBAR (desktop only) ── */}
-				<div className="hidden lg:block">
-					<div className="rounded-lg border border-[var(--color-primary-100)] bg-white p-4 shadow-sm sticky top-6">
-						{sectionTabs.length > 1 && (
-							<div className="mb-4">
-								<SectionTabs tabs={sectionTabs} active={activeSection} onChange={setActiveSection} />
-							</div>
+				{hasExercises && (
+					<div className="min-w-0 space-y-3">
+						{isCardio ? (
+							<CardioTimerCard durationSeconds={currentExercise?.durationSeconds} note={currentExercise?.note} />
+						) : (
+							<RestTimerCard
+								alerting={alerting}
+								setAlerting={setAlerting}
+								initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise.rest : 90}
+								audioEl={audioRef}
+							/>
 						)}
-						<ExerciseList
-							t={t} workout={workout} exercisesOverride={exercisesBySection}
-							currentExId={currentExercise?.id}
-							onPick={ex => {
-								setCurrentExId(ex.id);
-								setActiveMedia('image');
-								setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1, exReps || ex?.targetReps));
-								applyLocalQueuedSnapshotIfAny();
-							}}
-							completedExercises={completedExercises}
-							toggleExerciseCompletion={toggleExerciseCompletion}
-						/>
+						{!isCardio && (
+							<SetsTable
+								currentSets={currentSets}
+								currentExercise={currentExercise}
+								workout={workout}
+								t={t}
+								currentExId={currentExId}
+								USER_ID={USER_ID}
+								inputBuffer={inputBuffer}
+								setInputBuffer={setInputBuffer}
+								bump={bump}
+								toggleDone={toggleDone}
+								setValue={setValue}
+								addSet={addSetForCurrentExercise}
+								removeSet={removeSetFromCurrentExercise}
+								trySyncQueue={trySyncQueue}
+								syncing={syncing}
+								unsaved={unsaved}
+								lastSyncStatus={lastSyncStatus}
+							/>
+						)}
 					</div>
-				</div>
+				)}
 			</div>
+
 		</div>
 	);
 }
@@ -2293,114 +2066,93 @@ export function TabsPill({
 
 
 export function HeaderActions({ onAudioClick, onNotesClick, listenLabel, notesLabel }) {
+	const btn = 'grid h-11 w-11 place-items-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-b-[rgba(15,48,120,0.35)] border-e-[rgba(15,48,120,0.25)] bg-white/15 text-white shadow-[2px_3px_6px_rgba(15,23,42,0.35)] transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40';
 	return (
-		<div className="flex items-center gap-2 shrink-0">
-			{/* Audio / Listen */}
-			<button
-				type="button"
-				onClick={onAudioClick}
-				title={listenLabel}
-				aria-label={listenLabel}
-				className={cx(
-					'inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/10',
-					'h-9 px-3',
-					'text-white text-xs font-semibold',
-					'transition-all duration-150 hover:bg-white/20 hover:border-white/40',
-					'active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-				)}
-			>
-				<Headphones size={15} className="shrink-0" />
-				<span className="hidden md:inline">{listenLabel}</span>
+		<div className="flex shrink-0 items-center gap-2">
+			<button type="button" onClick={onAudioClick} title={listenLabel} aria-label={listenLabel} className={btn}>
+				<Headphones size={18} strokeWidth={2} />
 			</button>
-
-			{/* Notes */}
-			<button
-				type="button"
-				onClick={onNotesClick}
-				title={notesLabel}
-				aria-label={notesLabel}
-				className={cx(
-					'inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/10',
-					'h-9 px-3',
-					'text-white text-xs font-semibold',
-					'transition-all duration-150 hover:bg-white/20 hover:border-white/40',
-					'active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-				)}
-			>
-				<StickyNote size={15} className="shrink-0" />
-				<span className="hidden md:inline">{notesLabel}</span>
+			<button type="button" onClick={onNotesClick} title={notesLabel} aria-label={notesLabel} className={btn}>
+				<StickyNote size={18} strokeWidth={2} />
 			</button>
 		</div>
 	);
 }
 
-
 export function WorkoutHeader({
 	title,
 	subtitle,
-	planName,
 	dayTabs = [],
 	selectedDay,
 	onDayChange,
 	onAudioClick,
 	onNotesClick,
+	sectionTabs = [],
+	activeSection,
+	onSectionChange,
 	t,
 }) {
 	return (
-		<div className="relative overflow-hidden rounded-lg">
-			{/* ── Gradient background layer ── */}
-			<div className="absolute inset-0 bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]" />
-
-			{/* ── Subtle dot-grid texture ── */}
+		<div className="rounded-3xl text-white shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]">
 			<div
-				className="absolute inset-0 opacity-[0.07]"
-				style={{
-					/* Pure CSS radial-dot grid — no inline background color, just a pattern */
-					backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-					backgroundSize: '18px 18px',
-				}}
-			/>
+				className="relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-b-[rgba(15,34,128,0.45)] border-e-[rgba(15,34,128,0.35)] pb-2"
+				style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), var(--color-gradient-via, var(--color-primary-700)))' }}
+			>
+				<div className="pointer-events-none absolute -top-10 -start-20 h-[280px] w-[280px] rounded-full bg-white/[0.06]" />
+				<div className="pointer-events-none absolute -bottom-10 -end-16 h-[200px] w-[200px] rounded-full bg-white/[0.04]" />
+				<div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/30" />
 
-			{/* ── Ambient glow orbs ── */}
-			<div className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-			<div className="absolute -bottom-8 -right-6 w-40 h-40 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-
-			{/* ── Content ── */}
-			<div className="relative z-10">
-				{/* Top row: title + actions */}
-				<div className="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
-					<div className="min-w-0">
-						<h1 className="text-xl md:text-3xl font-black text-white md: leading-tight truncate">
-							{title}
-						</h1>
-						{/* Subtitle — desktop only */}
-						{subtitle && (
-							<p className="hidden md:block text-sm text-white/70 mt-0.5 truncate">
-								{subtitle}
-							</p>
-						)}
-
+				<div className="relative">
+					<div className="flex items-center gap-3 px-4 pb-2 pt-4">
+						<div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-b-[rgba(15,48,120,0.35)] border-e-[rgba(15,48,120,0.25)] bg-white/15 shadow-[2px_3px_6px_rgba(15,23,42,0.35)]">
+							<Dumbbell size={20} strokeWidth={2} />
+						</div>
+						<div className="min-w-0 flex-1">
+							<h1 className="truncate text-xl font-black leading-6 tracking-[-0.3px]">{title}</h1>
+							{subtitle ? <p className="mt-0.5 truncate text-[10px] font-medium text-white/55">{subtitle}</p> : null}
+						</div>
+						<HeaderActions
+							onAudioClick={onAudioClick}
+							onNotesClick={onNotesClick}
+							listenLabel={t('listen')}
+							notesLabel={t('notes.show')}
+						/>
 					</div>
 
-					{/* Actions — always visible, responsive labels */}
-					<HeaderActions
-						onAudioClick={onAudioClick}
-						onNotesClick={onNotesClick}
-						listenLabel={t('listen')}
-						notesLabel={t('notes.show')}
-					/>
-				</div>
+					<div className="mx-4 mb-3 h-px bg-white/20" />
 
-				{/* Bottom row: day tabs */}
-				<div className="px-3 pb-3 pt-1">
-					<TabsPill
-						id="day-tabs"
-						tabs={dayTabs}
-						active={selectedDay}
-						onChange={onDayChange}
-						sliceInPhone={false}
-						hiddenArrow={false}
-					/>
+					<div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide">
+						{dayTabs.map(tab => {
+							const on = tab.key === selectedDay;
+							return (
+								<button
+									key={tab.key}
+									type="button"
+									onClick={() => onDayChange(tab.key)}
+									aria-pressed={on}
+									className={cx(
+										'flex h-[58px] min-w-14 shrink-0 flex-col items-center justify-center rounded-2xl px-2 transition active:scale-95',
+										on
+											? 'scale-[1.02] bg-white text-[var(--color-primary-700)] shadow-[4px_5px_10px_color-mix(in_srgb,var(--color-primary-900)_40%,transparent)]'
+											: 'border-[1.3px] border-white/30 bg-white/15 text-white/80',
+									)}
+								>
+									<span className={cx('max-w-full truncate text-[10px] font-bold uppercase tracking-[0.2px]', on ? 'text-[var(--color-primary-700)]' : 'text-white/70')}>
+										{tab.label}
+									</span>
+									<span className={cx('text-lg font-black tabular-nums leading-[22px] tracking-[-0.5px]', on ? 'text-[var(--color-primary-800)]' : 'text-white')}>
+										{tab.date ?? '—'}
+									</span>
+								</button>
+							);
+						})}
+					</div>
+
+					{sectionTabs.length > 1 && (
+						<div className="px-4 pb-3">
+							<SectionTabs tabs={sectionTabs} active={activeSection} onChange={onSectionChange} tone="onPrimary" />
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

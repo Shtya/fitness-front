@@ -1,0 +1,73 @@
+/* AI Free — follow users roster surfaces without rewriting chat logic. */
+
+.af-scope {
+	color: var(--gm-ink, #0f172a);
+	background: var(--gm-canvas, transparent);
+}
+
+.af-scope .bg-white,
+.af-scope .bg-white\/70,
+.af-scope .bg-white\/80,
+.af-scope .bg-white\/90,
+.af-scope .bg-white\/95 {
+	background-color: var(--gm-paper, #fff) !important;
+}
+
+.af-scope .dark\:bg-slate-950,
+.af-scope .dark\:bg-slate-950\/70,
+.af-scope .dark\:bg-slate-950\/90,
+.af-scope .dark\:bg-slate-950\/95,
+.af-scope .dark\:bg-slate-900,
+.af-scope .dark\:bg-slate-900\/80,
+.af-scope .dark\:hover\:bg-slate-900:hover,
+.af-scope .dark\:hover\:bg-slate-900\/80:hover,
+.af-scope .hover\:bg-white\/80:hover {
+	background-color: var(--gm-paper, #fff) !important;
+}
+
+.af-scope .bg-slate-50,
+.af-scope .hover\:bg-slate-100:hover,
+.af-scope .bg-slate-100 {
+	background-color: color-mix(in srgb, var(--gm-ink, #0f172a) 5%, var(--gm-paper, #fff)) !important;
+}
+
+.af-scope .text-slate-900,
+.af-scope .text-slate-800,
+.af-scope .text-slate-700,
+.af-scope .dark\:text-slate-100,
+.af-scope .dark\:text-slate-200,
+.af-scope .dark\:text-slate-300,
+.af-scope .dark\:text-white,
+.af-scope .text-slate-600 {
+	color: var(--gm-ink, #0f172a) !important;
+}
+
+.af-scope .text-slate-400,
+.af-scope .text-slate-500,
+.af-scope .dark\:text-slate-400,
+.af-scope .dark\:text-slate-500,
+.af-scope .placeholder\:text-slate-400::placeholder,
+.af-scope .dark\:placeholder\:text-slate-500::placeholder {
+	color: var(--gm-muted, #64748b) !important;
+}
+
+.af-scope .border-slate-200,
+.af-scope .border-slate-200\/80,
+.af-scope .border-slate-200\/90,
+.af-scope .dark\:border-slate-700,
+.af-scope .dark\:border-slate-800,
+.af-scope .bg-slate-200,
+.af-scope .dark\:bg-slate-800 {
+	border-color: var(--gm-line, rgba(15, 23, 42, 0.1)) !important;
+}
+
+.af-scope .bg-slate-200,
+.af-scope .dark\:bg-slate-800 {
+	background-color: var(--gm-line, rgba(15, 23, 42, 0.1)) !important;
+}
+
+/* Stop control stays high-contrast. */
+.af-scope .af-keep.bg-slate-800 {
+	background-color: var(--gm-ink, #0f172a) !important;
+	color: var(--gm-paper, #fff) !important;
+}

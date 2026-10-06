@@ -1,22 +1,28 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
 	Search, ChevronRight, Users, User, LogIn, RefreshCw, X,
-	Clock, Dumbbell, Crown, Activity, Plus,
-	Building2, CornerDownRight, MoreHorizontal,
+	Clock, Dumbbell, Crown, Plus,
+	Building2, CornerDownRight,
 	CheckCircle2, Ban, Eye, Trash2, KeyRound, Copy, Check,
-	UserCheck, UserCog, UserCircle, Edit, Shield, SortAsc,
-	ChevronDown, Filter, AlertTriangle, Mail, Phone, LayoutGrid,
+	UserCheck, UserCog, UserCircle, Edit, Shield,
+	AlertTriangle, Mail, Phone, LayoutGrid,
 	Link2, MessageSquareText, Wand2,
 } from 'lucide-react';
 import api from '@/utils/axios';
-import { Modal, StatCard } from '@/components/dashboard/ui/UI';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import DataTable, { TablePagination } from '@/components/atoms/Datatable';
+import { getStoredPerPage, setStoredPerPage } from '@/lib/table-prefs';
+import GmStatCard from '@/components/molecules/GmStatCard';
+import ActionsMenu from '@/components/molecules/ActionsMenu';
+import FloatingSelect from '@/components/atoms/FloatingSelect';
+import FloatingInput from '@/components/atoms/FloatingInput';
+import { memberInitials } from '@/components/pages/dashboard/users/roster/RosterCells';
+import '@/components/pages/dashboard/users/roster/roster.css';
 import { UserPageAccessFields, useUserPageAccess } from '@/components/page-access/UserPageAccessEditor';
 import { resolvePostLoginPath } from '@/lib/nav-access';
 import { buildAutoLoginUrl, buildWelcomeMessage, resolveShareLandingPath } from '@/lib/auto-login';
@@ -36,82 +42,68 @@ import { notifyImpersonationChanged } from '@/lib/impersonation';
 const fmt = (d, locale = 'en') =>
 	d ? new Date(d).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB') : '—';
 
-const STATUS_CFG = {
-	active: {
-		cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50',
-		dot: 'bg-emerald-500',
-	},
-	pending: {
-		cls: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/50',
-		dot: 'bg-amber-500',
-	},
-	suspended: {
-		cls: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-900/50',
-		dot: 'bg-red-500',
-	},
+const fmtWhen = (d, locale = 'en') => {
+	if (!d) return '';
+	const date = new Date(d);
+	if (Number.isNaN(date.getTime())) return '';
+	return date.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-GB', {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+	});
 };
 
-const AVATAR_COLORS = [
-	'from-[var(--color-primary-500)] to-[var(--color-secondary-600)]',
-	'from-[var(--color-primary-400)] to-[var(--color-primary-600)]',
-	'from-[var(--color-secondary-400)] to-[var(--color-secondary-600)]',
-	'from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]',
-	'from-cyan-500 to-[var(--color-primary-500)]',
-	'from-[var(--color-secondary-500)] to-[var(--color-primary-700)]',
-];
-
-const SORT_OPTIONS = [
-	{ value: 'name_asc', label: 'Name A→Z' },
-	{ value: 'name_desc', label: 'Name Z→A' },
-	{ value: 'date_desc', label: 'Newest first' },
-	{ value: 'date_asc', label: 'Oldest first' },
-	{ value: 'status', label: 'By status' },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Micro components
-// ─────────────────────────────────────────────────────────────────────────────
-function Avatar({ name, size = 'md' }) {
-	const initials = (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-	const color = AVATAR_COLORS[(name?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
-	const sizeMap = {
-		xs: 'w-6 h-6 text-[9px]',
-		sm: 'w-8 h-8 text-[10px]',
-		md: 'w-10 h-10 text-xs',
-		lg: 'w-12 h-12 text-sm',
-		xl: 'w-14 h-14 text-base',
-	};
+function LastLoginCell({ value, locale, empty }) {
+	const label = fmtWhen(value, locale);
 	return (
-		<div className={`${sizeMap[size]} rounded-lg bg-gradient-to-br ${color} flex items-center justify-center text-white font-black shrink-0 shadow-md ring-2 ring-white/20 dark:ring-black/20`}>
-			{initials}
-		</div>
+		<span className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] text-[var(--gm-muted)]">
+			<Clock className="size-3.5 shrink-0" aria-hidden />
+			{label || empty}
+		</span>
+	);
+}
+
+const SORT_KEYS = ['name_asc', 'name_desc', 'date_desc', 'date_asc', 'status'];
+const ROLE_ICON = { admin: Shield, coach: UserCog, client: User, super_admin: Crown };
+
+function roleTone(role) {
+	const key = String(role || '').toLowerCase();
+	if (key === 'admin' || key === 'super_admin') return 'admin';
+	if (key === 'coach') return 'coach';
+	return 'client';
+}
+
+function Avatar({ name, role = 'client', size = 'md' }) {
+	const tone = roleTone(role);
+	const small = size === 'xs' || size === 'sm';
+	return (
+		<span className={`rs-avatar rs-avatar--${tone}${small ? ' rs-avatar--sm' : ''}`} aria-hidden>
+			{memberInitials(name)}
+		</span>
 	);
 }
 
 function StatusBadge({ status, t }) {
-	const cfg = STATUS_CFG[status] || STATUS_CFG.pending;
-	const label = t ? t(`status.${status}`) : status;
+	const key = status === 'active' || status === 'suspended' ? status : 'pending';
+	const tone = key === 'active' ? 'ok' : key === 'suspended' ? 'danger' : 'warn';
+	const label = t ? t(`status.${key}`) : key;
 	return (
-		<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${cfg.cls}`}>
-			<span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} inline-block`} />
+		<span className={`rs-badge rs-badge--${tone}`}>
+			<span className="rs-badge__dot" aria-hidden />
 			{label}
 		</span>
 	);
 }
 
 function RoleBadge({ role, t }) {
-	const map = {
-		admin: { icon: Building2, cls: 'text-[var(--color-primary-600)] dark:text-[var(--color-primary-400)] bg-[var(--color-primary-50)] dark:bg-[var(--color-primary-950)]/30 border-[var(--color-primary-200)] dark:border-[var(--color-primary-900)]/40' },
-		coach: { icon: Dumbbell, cls: 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-900/40' },
-		client: { icon: User, cls: 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' },
-		super_admin: { icon: Crown, cls: 'text-[var(--color-secondary-600)] dark:text-[var(--color-secondary-400)] bg-[var(--color-secondary-50)] dark:bg-[var(--color-secondary-950)]/30 border-[var(--color-secondary-200)] dark:border-[var(--color-secondary-900)]/40' },
-	};
-	const cfg = map[role] || map.client;
-	const Icon = cfg.icon;
+	const key = String(role || 'client').toLowerCase();
+	const Icon = ROLE_ICON[key] || User;
 	return (
-		<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${cfg.cls}`}>
-			<Icon size={9} />
-			{t ? t(`role.${role}`) : role}
+		<span className={`rs-tag rs-tag--${roleTone(key)}`}>
+			<Icon className="size-3.5" strokeWidth={2} aria-hidden />
+			{t ? t(`role.${key}`) : key}
 		</span>
 	);
 }
@@ -188,7 +180,7 @@ function CredentialsModal({ user, onClose, t }) {
 				initial={{ scale: 0.92, opacity: 0, y: 16 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				exit={{ scale: 0.92, opacity: 0, y: 16 }}
-				className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden"
+				className="gm-modal w-full max-w-md"
 			>
 				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800"
 					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
@@ -200,7 +192,7 @@ function CredentialsModal({ user, onClose, t }) {
 							<KeyRound size={14} />
 						</div>
 						<div>
-							<h3 className="font-black text-slate-900 dark:text-slate-100 text-sm">Login Credentials</h3>
+							<h3 className="text-sm font-semibold text-[var(--gm-ink)]">{t?.('credsModal.title') || 'Login Credentials'}</h3>
 							<p className="text-[10px] text-slate-500">{user.name}</p>
 						</div>
 					</div>
@@ -284,11 +276,11 @@ function EditUserModal({ user, onClose, onUpdated, t }) {
 		setLoading(true);
 		try {
 			await api.put(`/auth/user/${user.id}`, form);
-			toast.success('User updated successfully');
+			toast.success(t('editModal.success'));
 			onUpdated?.();
 			onClose();
 		} catch (e) {
-			toast.error(e?.response?.data?.message || 'Update failed');
+			toast.error(e?.response?.data?.message || t('errors.updateFailed'));
 		} finally { setLoading(false); }
 	};
 
@@ -298,7 +290,7 @@ function EditUserModal({ user, onClose, onUpdated, t }) {
 				initial={{ scale: 0.92, opacity: 0, y: 16 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				exit={{ scale: 0.92, opacity: 0, y: 16 }}
-				className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden"
+				className="gm-modal w-full max-w-md"
 			>
 				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800"
 					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
@@ -310,7 +302,7 @@ function EditUserModal({ user, onClose, onUpdated, t }) {
 							<Edit size={14} />
 						</div>
 						<div>
-							<h3 className="font-black text-slate-900 dark:text-slate-100 text-sm">Edit User</h3>
+							<h3 className="text-sm font-semibold text-[var(--gm-ink)]">{t?.('editModal.title') || 'Edit User'}</h3>
 							<p className="text-[10px] text-slate-500">{user.email}</p>
 						</div>
 					</div>
@@ -319,41 +311,17 @@ function EditUserModal({ user, onClose, onUpdated, t }) {
 					</button>
 				</div>
 
-				<div className="p-5 space-y-4">
-					{[
-						{ key: 'name', label: 'Full Name', type: 'text', ph: 'Enter name', icon: User },
-						{ key: 'email', label: 'Email', type: 'email', ph: 'Enter email', icon: Mail },
-						{ key: 'phone', label: 'Phone', type: 'tel', ph: 'Enter phone', icon: Phone },
-					].map(f => {
-						const Icon = f.icon;
-						return (
-							<div key={f.key}>
-								<label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
-									<Icon size={11} />{f.label}
-								</label>
-								<input
-									type={f.type} value={form[f.key]}
-									onChange={e => set(f.key, e.target.value)}
-									placeholder={f.ph}
-									className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)]/30 focus:border-[var(--color-primary-400)] transition-all"
-								/>
-							</div>
-						);
-					})}
+				<div className="space-y-3 p-5">
+					<FloatingInput label={t('createModal.fields.name')} value={form.name} onChange={(v) => set('name', v)} icon={User} />
+					<FloatingInput label={t('createModal.fields.email')} type="email" value={form.email} onChange={(v) => set('email', v)} icon={Mail} />
+					<FloatingInput label={t('createModal.fields.phone')} type="tel" value={form.phone} onChange={(v) => set('phone', v)} icon={Phone} />
 				</div>
 
-				<div className="flex gap-2 px-5 pb-5">
-					<button onClick={onClose}
-						className="flex-1 h-10 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-					>
-						Cancel
-					</button>
-					<button onClick={submit} disabled={loading}
-						className="flex-1 h-10 rounded-lg text-white text-sm font-bold transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
-						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
-					>
+				<div className="gm-modal-foot px-5 pb-5">
+					<button type="button" onClick={onClose} className="rs-btn">{t('actions.cancel')}</button>
+					<button type="button" onClick={submit} disabled={loading} className="rs-cta disabled:opacity-60">
 						{loading ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-						Save Changes
+						{t('editModal.save')}
 					</button>
 				</div>
 			</motion.div>
@@ -370,11 +338,11 @@ function DeleteModal({ user, onClose, onDeleted, t }) {
 		setLoading(true);
 		try {
 			await api.delete(`/auth/user/${user.id}`);
-			toast.success('User deleted');
+			toast.success(t('deleteModal.success'));
 			onDeleted?.();
 			onClose();
 		} catch (e) {
-			toast.error(e?.response?.data?.message || 'Delete failed');
+			toast.error(e?.response?.data?.message || t('errors.deleteFailed'));
 		} finally { setLoading(false); }
 	};
 
@@ -384,28 +352,28 @@ function DeleteModal({ user, onClose, onDeleted, t }) {
 				initial={{ scale: 0.92, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
 				exit={{ scale: 0.92, opacity: 0 }}
-				className="bg-white dark:bg-slate-900 rounded-lg border border-red-200 dark:border-red-900/50 shadow-2xl w-full max-w-sm overflow-hidden"
+				className="gm-modal w-full max-w-sm"
 			>
 				<div className="p-6 text-center">
 					<div className="w-14 h-14 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex items-center justify-center mx-auto mb-4">
 						<Trash2 size={24} className="text-red-500" />
 					</div>
-					<h3 className="font-black text-slate-900 dark:text-slate-100 text-base mb-1">Delete User?</h3>
-					<p className="text-xs text-slate-500 mb-1">This action cannot be undone.</p>
+					<h3 className="mb-1 text-base font-semibold text-[var(--gm-ink)]">{t?.('deleteModal.title') || 'Delete user?'}</h3>
+					<p className="mb-1 text-xs text-[var(--gm-muted)]">{t('deleteModal.warning')}</p>
 					<p className="text-sm font-bold text-slate-700 dark:text-slate-300">{user.name}</p>
 					<p className="text-xs text-slate-400">{user.email}</p>
 				</div>
-				<div className="flex gap-2 px-5 pb-5">
-					<button onClick={onClose}
-						className="flex-1 h-10 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-					>
-						Cancel
-					</button>
-					<button onClick={doDelete} disabled={loading}
-						className="flex-1 h-10 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+				<div className="gm-modal-foot px-5 pb-5">
+					<button type="button" onClick={onClose} className="rs-btn">{t('actions.cancel')}</button>
+					<button
+						type="button"
+						onClick={doDelete}
+						disabled={loading}
+						className="rs-cta !border-transparent disabled:opacity-60"
+						style={{ background: 'var(--gm-danger)', boxShadow: 'none' }}
 					>
 						{loading ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
-						Delete
+						{t('deleteModal.confirm')}
 					</button>
 				</div>
 			</motion.div>
@@ -417,123 +385,41 @@ function DeleteModal({ user, onClose, onDeleted, t }) {
 // Action Buttons Row (compact)
 // ─────────────────────────────────────────────────────────────────────────────
 function ActionBar({ user, onImpersonate, onStatusChange, onEdit, onDelete, onShowCreds, onPages, t }) {
-	const [menuOpen, setMenu] = useState(false);
-	const menuRef = useRef(null);
-	const { legacy: legacyPages, custom: customPages } = pageAccessCounts(user);
-	const pageCount = legacyPages || customPages;
-
-	useEffect(() => {
-		if (!menuOpen) return;
-		const h = (e) => { if (!menuRef.current?.contains(e.target)) setMenu(false); };
-		document.addEventListener('mousedown', h);
-		return () => document.removeEventListener('mousedown', h);
-	}, [menuOpen]);
+	const icon = (Icon) => <Icon className="h-4 w-4" />;
+	const options = [
+		{ key: 'view', group: 'view', icon: icon(Eye), label: t('actions.viewDashboard'), onClick: () => onImpersonate(user) },
+		{ key: 'pages', group: 'view', icon: icon(LayoutGrid), label: t('actions.pageAccess'), onClick: () => onPages?.(user) },
+		{ key: 'edit', group: 'account', icon: icon(Edit), label: t('actions.editData'), onClick: () => onEdit(user) },
+		{ key: 'creds', group: 'account', icon: icon(KeyRound), label: t('actions.copyCredentials'), onClick: () => onShowCreds(user) },
+		user.status !== 'active' && { key: 'activate', group: 'status', icon: icon(CheckCircle2), label: t('actions.activate'), onClick: () => onStatusChange(user.id, 'active') },
+		user.status !== 'suspended' && { key: 'suspend', group: 'status', icon: icon(Ban), label: t('actions.suspend'), onClick: () => onStatusChange(user.id, 'suspended') },
+		{ key: 'delete', group: 'danger', icon: icon(Trash2), label: t('actions.deleteUser'), onClick: () => onDelete(user), danger: true },
+	].filter(Boolean);
 
 	return (
-		<div className="flex items-center justify-end gap-1.5 shrink-0">
-			{/* Login As — does not change password */}
+		<div className="flex items-center justify-end gap-1.5">
 			<button
 				type="button"
 				onClick={() => onImpersonate(user)}
-				className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white text-[10px] font-bold shadow-sm hover:brightness-105 transition-all"
-				style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
-				title="Login as this user (password unchanged)"
+				className="rs-cta !h-8 !rounded-[9px] !px-2.5 !text-[12px]"
+				style={{ width: 'auto' }}
+				title={t('actions.loginAs')}
 			>
-				<LogIn size={10} />
-				Login
+				<LogIn className="size-3.5" strokeWidth={2} aria-hidden />
+				{t('actions.loginAs')}
 			</button>
-
-			{/* Page access */}
-			<button
-				type="button"
-				onClick={() => onPages?.(user)}
-				className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all hover:opacity-90"
-				style={{
-					color: 'var(--color-primary-700)',
-					background: 'var(--color-primary-50)',
-					borderColor: 'var(--color-primary-200)',
-				}}
-				title="Choose which pages this user can see"
-			>
-				<LayoutGrid size={10} />
-				{pageCount > 0 ? `${pageCount}` : 'Pages'}
-			</button>
-
-			{/* 3-dot menu */}
-			<div className="relative" ref={menuRef}>
-				<button
-					onClick={(e) => { e.stopPropagation(); setMenu(o => !o); }}
-					className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-				>
-					<MoreHorizontal size={14} />
-				</button>
-
-				<AnimatePresence>
-					{menuOpen && (
-						<motion.div
-							initial={{ opacity: 0, scale: 0.9, y: -6 }}
-							animate={{ opacity: 1, scale: 1, y: 0 }}
-							exit={{ opacity: 0, scale: 0.9, y: -6 }}
-							transition={{ duration: 0.14 }}
-							className="absolute ltr:right-0 rtl:left-0 top-9 z-40 w-48 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl py-1 overflow-hidden"
-						>
-							{/* View Dashboard */}
-							<button onClick={() => { onImpersonate(user); setMenu(false); }}
-								className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-[var(--color-primary-50)] dark:hover:bg-[var(--color-primary-950)]/20 hover:text-[var(--color-primary-600)] transition-colors"
-							>
-								<Eye size={12} />View Dashboard
-							</button>
-
-							<button onClick={() => { onPages?.(user); setMenu(false); }}
-								className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-[var(--color-primary-50)] dark:hover:bg-[var(--color-primary-950)]/20 hover:text-[var(--color-primary-600)] transition-colors"
-							>
-								<LayoutGrid size={12} />Page Access
-							</button>
-
-							{/* Edit */}
-							<button onClick={() => { onEdit(user); setMenu(false); }}
-								className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-[var(--color-primary-50)] dark:hover:bg-[var(--color-primary-950)]/20 hover:text-[var(--color-primary-600)] transition-colors"
-							>
-								<Edit size={12} />Edit Data
-							</button>
-
-							{/* Credentials */}
-							<button onClick={() => { onShowCreds(user); setMenu(false); }}
-								className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-[var(--color-primary-50)] dark:hover:bg-[var(--color-primary-950)]/20 hover:text-[var(--color-primary-600)] transition-colors"
-							>
-								<KeyRound size={12} />Copy Credentials
-							</button>
-
-							<div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
-
-							{/* Status changes */}
-							{user.status !== 'active' && (
-								<button onClick={() => { onStatusChange(user.id, 'active'); setMenu(false); }}
-									className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors"
-								>
-									<CheckCircle2 size={12} />Activate
-								</button>
-							)}
-							{user.status !== 'suspended' && (
-								<button onClick={() => { onStatusChange(user.id, 'suspended'); setMenu(false); }}
-									className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors"
-								>
-									<Ban size={12} />Suspend Account
-								</button>
-							)}
-
-							<div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
-
-							{/* Delete */}
-							<button onClick={() => { onDelete(user); setMenu(false); }}
-								className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-							>
-								<Trash2 size={12} />Delete User
-							</button>
-						</motion.div>
-					)}
-				</AnimatePresence>
-			</div>
+			<ActionsMenu
+				options={options}
+				align="right"
+				ariaLabel={t('table.actions')}
+				buttonClassName="rs-row-action"
+				header={(
+					<>
+						<span className="am-head__title">{user.name || '—'}</span>
+						{user.email ? <span className="am-head__sub">{user.email}</span> : null}
+					</>
+				)}
+			/>
 		</div>
 	);
 }
@@ -542,7 +428,7 @@ function ActionBar({ user, onImpersonate, onStatusChange, onEdit, onDelete, onSh
 // Users table (partitioned sections)
 // ─────────────────────────────────────────────────────────────────────────────
 const TABLE_TH =
-	'px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap text-start';
+	'px-3 py-2.5 text-[11px] font-semibold text-[var(--gm-muted)] whitespace-nowrap text-start';
 const TABLE_TD = 'px-3 py-2.5 align-middle text-start';
 
 function pageAccessCounts(user) {
@@ -556,11 +442,11 @@ function AccessCell({ user }) {
 	const tAccess = useTranslations('pageAccess');
 	const { legacy, custom } = pageAccessCounts(user);
 	if (!legacy && !custom) {
-		return <span className="text-[10px] font-semibold text-slate-400">{tAccess('user.roleDefault')}</span>;
+		return <span className="rs-none text-[12px]">{tAccess('user.roleDefault')}</span>;
 	}
 	return (
-		<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--color-primary-50)] text-[var(--color-primary-700)] border border-[var(--color-primary-200)] dark:bg-[var(--color-primary-950)]/30 dark:text-[var(--color-primary-300)] dark:border-[var(--color-primary-900)]/40">
-			<LayoutGrid size={9} />
+		<span className="rs-tag rs-tag--admin">
+			<LayoutGrid className="size-3.5" strokeWidth={2} aria-hidden />
 			{legacy ? tAccess('user.legacy', { count: legacy }) : tAccess('user.customized', { count: custom })}
 		</span>
 	);
@@ -568,38 +454,30 @@ function AccessCell({ user }) {
 
 function UserIdentity({ user, size = 'sm', extra }) {
 	return (
-		<div className="flex items-center gap-2.5 min-w-0">
-			<Avatar name={user.name} size={size} />
-			<div className="min-w-0">
-				<p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{user.name || '—'}</p>
+		<div className="rs-member">
+			<Avatar name={user.name} role={user.role} size={size} />
+			<span className="rs-member__text">
+				<span className="rs-member__name">{user.name || '—'}</span>
 				{extra}
-			</div>
+			</span>
 		</div>
 	);
 }
 
-function UsersTableShell({ title, subtitle, icon: Icon, count, accent = 'primary', children }) {
-	const accentCls =
-		accent === 'cyan'
-			? 'text-cyan-600 dark:text-cyan-400'
-			: accent === 'slate'
-				? 'text-slate-500'
-				: 'text-[var(--color-primary-500)]';
+function UsersTableShell({ title, subtitle, icon: Icon, count, children }) {
 	return (
-		<section className="bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-5">
-			<div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40">
-				<div className="flex items-center gap-2.5 min-w-0">
-					<span className={`w-8 h-8 rounded-lg grid place-items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 ${accentCls}`}>
-						<Icon size={14} />
+		<section className="overflow-hidden rounded-[18px] border border-[var(--gm-line)] bg-[var(--gm-paper)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+			<div className="flex items-center justify-between gap-3 border-b border-[var(--gm-line)] px-4 py-3">
+				<div className="flex min-w-0 items-center gap-2.5">
+					<span className="rs-avatar rs-avatar--sm rs-avatar--admin" aria-hidden>
+						<Icon className="size-3.5" strokeWidth={2} />
 					</span>
 					<div className="min-w-0">
-						<h2 className="text-sm font-black text-slate-900 dark:text-slate-100">{title}</h2>
-						{subtitle ? <p className="text-[10px] text-slate-500 truncate">{subtitle}</p> : null}
+						<h2 className="text-[14px] font-semibold tracking-[-0.02em] text-[var(--gm-ink)]">{title}</h2>
+						{subtitle ? <p className="truncate text-[12px] text-[var(--gm-muted)]">{subtitle}</p> : null}
 					</div>
 				</div>
-				<span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200 shrink-0">
-					{count}
-				</span>
+				<span className="rs-tag rs-tag--admin shrink-0 tabular-nums">{count}</span>
 			</div>
 			<div className="overflow-x-auto">
 				{children}
@@ -619,195 +497,65 @@ function EmptyTableRow({ colSpan, label }) {
 }
 
 /** Flat table for coaches / clients / misc */
-function UsersTable({ title, subtitle, icon, accent, users, actions, locale, t, emptyLabel = 'No users in this section' }) {
+function UsersTable({ title, subtitle, icon, users, actions, locale, t, emptyLabel }) {
+	const columns = [
+		{ key: 'user', header: t('table.user'), cell: (u) => <UserIdentity user={u} /> },
+		{ key: 'email', header: t('table.email'), cell: (u) => (
+			<div className="flex max-w-[220px] items-center gap-1">
+				<span className="truncate text-[12.5px] text-[var(--gm-ink-soft)]">{u.email || '—'}</span>
+				{u.email ? <CopyBtn value={u.email} /> : null}
+			</div>
+		) },
+		{ key: 'phone', header: t('table.phone'), cell: (u) => <span className="text-[12.5px] text-[var(--gm-muted)]">{u.phone || '—'}</span> },
+		{ key: 'role', header: t('table.role'), cell: (u) => <RoleBadge role={u.role} t={t} /> },
+		{ key: 'status', header: t('table.status'), cell: (u) => <StatusBadge status={u.status} t={t} /> },
+		{ key: 'access', header: t('table.access'), cell: (u) => <AccessCell user={u} /> },
+		{ key: 'joined', header: t('table.joined'), cell: (u) => <span className="whitespace-nowrap text-[12px] text-[var(--gm-muted)]">{fmt(u.created_at, locale)}</span> },
+		{ key: 'lastLogin', header: t('table.lastLogin'), cell: (u) => <LastLoginCell value={u.lastLogin} locale={locale} empty={t('table.never')} /> },
+		{ key: 'actions', header: t('table.actions'), cell: (u) => <ActionBar user={u} {...actions} t={t} /> },
+	];
 	return (
-		<UsersTableShell title={title} subtitle={subtitle} icon={icon} count={users.length} accent={accent}>
-			<table className="w-full min-w-[880px] border-collapse">
-				<thead>
-					<tr className="border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-						<th className={TABLE_TH}>User</th>
-						<th className={TABLE_TH}>Email</th>
-						<th className={`${TABLE_TH} hidden md:table-cell`}>Phone</th>
-						<th className={TABLE_TH}>Role</th>
-						<th className={TABLE_TH}>Status</th>
-						<th className={`${TABLE_TH} hidden lg:table-cell`}>Access</th>
-						<th className={`${TABLE_TH} hidden sm:table-cell`}>Joined</th>
-						<th className={`${TABLE_TH} text-end`}>Actions</th>
-					</tr>
-				</thead>
-				<tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-					{users.length === 0 ? (
-						<EmptyTableRow colSpan={8} label={emptyLabel} />
-					) : (
-						users.map(u => (
-							<tr key={u.id} className="hover:bg-[var(--color-primary-50)]/40 dark:hover:bg-[var(--color-primary-950)]/15 transition-colors">
-								<td className={TABLE_TD}>
-									<UserIdentity user={u} />
-								</td>
-								<td className={TABLE_TD}>
-									<div className="flex items-center gap-1 max-w-[200px]">
-										<span className="text-xs text-slate-600 dark:text-slate-300 truncate">{u.email || '—'}</span>
-										{u.email ? <CopyBtn value={u.email} /> : null}
-									</div>
-								</td>
-								<td className={`${TABLE_TD} hidden md:table-cell`}>
-									<span className="text-xs text-slate-500">{u.phone || '—'}</span>
-								</td>
-								<td className={TABLE_TD}><RoleBadge role={u.role} t={t} /></td>
-								<td className={TABLE_TD}><StatusBadge status={u.status} t={t} /></td>
-								<td className={`${TABLE_TD} hidden lg:table-cell`}><AccessCell user={u} /></td>
-								<td className={`${TABLE_TD} hidden sm:table-cell`}>
-									<span className="text-[11px] text-slate-400 whitespace-nowrap">{fmt(u.created_at, locale)}</span>
-								</td>
-								<td className={`${TABLE_TD} text-end`}>
-									<ActionBar user={u} {...actions} t={t} />
-								</td>
-							</tr>
-						))
-					)}
-				</tbody>
-			</table>
+		<UsersTableShell title={title} subtitle={subtitle} icon={icon} count={users.length}>
+			<DataTable
+				hideToolbar
+				compact
+				columns={columns}
+				data={users}
+				rowKey={(u) => u.id}
+				labels={{ emptyTitle: emptyLabel || t('empty.noUsers') }}
+			/>
 		</UsersTableShell>
-	);
-}
-
-/** Coach row inside nested admin tree table (expand → clients) */
-function CoachTableRows({ coach, actions, locale, t, depth = 1 }) {
-	const [open, setOpen] = useState(false);
-	const [clients, setClients] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [loaded, setLoaded] = useState(false);
-
-	const toggle = async (e) => {
-		e?.stopPropagation?.();
-		if (loaded) { setOpen(o => !o); return; }
-		setLoading(true);
-		try {
-			const { data } = await api.get(`/auth/coach/${coach.id}/clients`, { params: { limit: 100 } });
-			setClients(data.items || data.users || []);
-			setLoaded(true);
-			setOpen(true);
-		} catch { toast.error('Failed to load clients'); }
-		finally { setLoading(false); }
-	};
-
-	const pad = depth * 16;
-
-	return (
-		<>
-			<tr className="hover:bg-cyan-50/50 dark:hover:bg-cyan-950/15 transition-colors">
-				<td className={TABLE_TD}>
-					<div className="flex items-center gap-2 min-w-0" style={{ paddingInlineStart: pad }}>
-						<button
-							type="button"
-							onClick={toggle}
-							className="w-6 h-6 rounded-md border border-cyan-200 dark:border-cyan-900/50 bg-cyan-50 dark:bg-cyan-950/30 text-cyan-600 grid place-items-center shrink-0"
-							title="Show clients"
-						>
-							{loading
-								? <RefreshCw size={11} className="animate-spin" />
-								: <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />}
-						</button>
-						<UserIdentity
-							user={coach}
-							size="sm"
-							extra={
-								loaded ? (
-									<span className="text-[10px] text-cyan-600 font-semibold">{clients.length} clients</span>
-								) : (
-									<span className="text-[10px] text-slate-400">Expand for clients</span>
-								)
-							}
-						/>
-					</div>
-				</td>
-				<td className={TABLE_TD}>
-					<div className="flex items-center gap-1 max-w-[200px]">
-						<span className="text-xs text-slate-600 dark:text-slate-300 truncate">{coach.email}</span>
-						<CopyBtn value={coach.email} />
-					</div>
-				</td>
-				<td className={`${TABLE_TD} hidden md:table-cell`}>
-					<span className="text-xs text-slate-500">{coach.phone || '—'}</span>
-				</td>
-				<td className={TABLE_TD}><RoleBadge role="coach" t={t} /></td>
-				<td className={TABLE_TD}><StatusBadge status={coach.status} t={t} /></td>
-				<td className={`${TABLE_TD} hidden lg:table-cell`}><AccessCell user={coach} /></td>
-				<td className={`${TABLE_TD} hidden sm:table-cell`}>
-					<span className="text-[11px] text-slate-400 whitespace-nowrap">{fmt(coach.created_at, locale)}</span>
-				</td>
-				<td className={`${TABLE_TD} text-end`}>
-					<ActionBar user={coach} {...actions} t={t} />
-				</td>
-			</tr>
-			{open && (
-				clients.length === 0 ? (
-					<tr className="bg-slate-50/80 dark:bg-slate-900/40">
-						<td colSpan={8} className="px-3 py-3 text-[11px] text-slate-400 italic" style={{ paddingInlineStart: pad + 40 }}>
-							No clients assigned to this coach
-						</td>
-					</tr>
-				) : clients.map(c => (
-					<tr key={c.id} className="bg-slate-50/70 dark:bg-slate-900/30 hover:bg-[var(--color-primary-50)]/50 dark:hover:bg-[var(--color-primary-950)]/20">
-						<td className={TABLE_TD}>
-							<div className="flex items-center gap-2 min-w-0" style={{ paddingInlineStart: pad + 28 }}>
-								<CornerDownRight size={12} className="text-slate-300 shrink-0" />
-								<UserIdentity user={c} size="xs" />
-							</div>
-						</td>
-						<td className={TABLE_TD}>
-							<div className="flex items-center gap-1 max-w-[200px]">
-								<span className="text-xs text-slate-600 dark:text-slate-300 truncate">{c.email}</span>
-								<CopyBtn value={c.email} />
-							</div>
-						</td>
-						<td className={`${TABLE_TD} hidden md:table-cell`}>
-							<span className="text-xs text-slate-500">{c.phone || '—'}</span>
-						</td>
-						<td className={TABLE_TD}><RoleBadge role="client" t={t} /></td>
-						<td className={TABLE_TD}><StatusBadge status={c.status} t={t} /></td>
-						<td className={`${TABLE_TD} hidden lg:table-cell`}><AccessCell user={c} /></td>
-						<td className={`${TABLE_TD} hidden sm:table-cell`}>
-							<span className="text-[11px] text-slate-400 whitespace-nowrap">{fmt(c.created_at, locale)}</span>
-						</td>
-						<td className={`${TABLE_TD} text-end`}>
-							<ActionBar user={c} {...actions} t={t} />
-						</td>
-					</tr>
-				))
-			)}
-		</>
 	);
 }
 
 /** Admins table — expand row → coaches (+ their clients) */
-function AdminsTable({ admins, actions, locale, t }) {
+function AdminsTable({ admins, actions, locale, t, rosterTick = 0 }) {
 	return (
 		<UsersTableShell
-			title="Admins"
-			subtitle="Expand a row to manage coaches and clients under that admin"
+			title={t('sections.admins')}
+			subtitle={t('sections.adminsHint')}
 			icon={Building2}
 			count={admins.length}
-			accent="primary"
 		>
 			<table className="w-full min-w-[920px] border-collapse">
 				<thead>
-					<tr className="border-b border-slate-100 dark:border-slate-800">
-						<th className={TABLE_TH}>Admin</th>
-						<th className={TABLE_TH}>Email</th>
-						<th className={`${TABLE_TH} hidden md:table-cell`}>Team</th>
-						<th className={TABLE_TH}>Status</th>
-						<th className={`${TABLE_TH} hidden lg:table-cell`}>Access</th>
-						<th className={`${TABLE_TH} hidden sm:table-cell`}>Joined</th>
-						<th className={`${TABLE_TH} text-end`}>Actions</th>
+					<tr className="border-b border-[var(--gm-line)]">
+						<th className={TABLE_TH}>{t('table.admin')}</th>
+						<th className={TABLE_TH}>{t('table.email')}</th>
+						<th className={`${TABLE_TH} hidden md:table-cell`}>{t('table.team')}</th>
+						<th className={TABLE_TH}>{t('table.status')}</th>
+						<th className={`${TABLE_TH} hidden lg:table-cell`}>{t('table.access')}</th>
+						<th className={`${TABLE_TH} hidden sm:table-cell`}>{t('table.joined')}</th>
+						<th className={`${TABLE_TH} hidden md:table-cell`}>{t('table.lastLogin')}</th>
+						<th className={`${TABLE_TH} text-end`}>{t('table.actions')}</th>
 					</tr>
 				</thead>
-				<tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+				<tbody className="divide-y divide-[var(--gm-line)]">
 					{admins.length === 0 ? (
-						<EmptyTableRow colSpan={7} label="No admins found" />
+						<EmptyTableRow colSpan={8} label={t('sections.noAdmins')} />
 					) : (
 						admins.map(admin => (
-							<AdminTableBlock key={admin.id} admin={admin} actions={actions} locale={locale} t={t} />
+							<AdminTableBlock key={admin.id} admin={admin} actions={actions} locale={locale} t={t} rosterTick={rosterTick} />
 						))
 					)}
 				</tbody>
@@ -816,52 +564,109 @@ function AdminsTable({ admins, actions, locale, t }) {
 	);
 }
 
-function AdminTableBlock({ admin, actions, locale, t }) {
+function AdminTableBlock({ admin, actions, locale, t, rosterTick = 0 }) {
 	const [open, setOpen] = useState(false);
 	const [coaches, setCoaches] = useState([]);
+	const [clients, setClients] = useState([]);
+	const [coachTotal, setCoachTotal] = useState(0);
+	const [clientTotal, setClientTotal] = useState(0);
 	const [loading, setLoading] = useState(false);
 	const [loaded, setLoaded] = useState(false);
+	const [movingId, setMovingId] = useState(null);
 	const counts = admin.counts || {};
 	const daysLeft = admin.daysLeft;
 
-	const loadCoaches = async () => {
-		if (loaded) { setOpen(o => !o); return; }
+	const loadRoster = async () => {
 		setLoading(true);
 		try {
-			const { data } = await api.get(`/auth/admin/${admin.id}/coaches`, { params: { limit: 100 } });
-			setCoaches(data.items || []);
+			const [coachesRes, clientsRes] = await Promise.all([
+				api.get(`/auth/admin/${admin.id}/coaches`, { params: { limit: 500, page: 1 } }),
+				api.get(`/auth/admin/${admin.id}/clients`, { params: { limit: 500, page: 1 } }),
+			]);
+			setCoaches(coachesRes.data.items || []);
+			setClients(clientsRes.data.items || []);
+			setCoachTotal(Number(coachesRes.data.total ?? coachesRes.data.items?.length ?? 0));
+			setClientTotal(Number(clientsRes.data.total ?? clientsRes.data.items?.length ?? 0));
 			setLoaded(true);
 			setOpen(true);
-		} catch { toast.error('Failed to load coaches'); }
+		} catch { toast.error(t('errors.loadCoaches')); }
 		finally { setLoading(false); }
+	};
+
+	useEffect(() => {
+		if (!loaded) return;
+		loadRoster();
+		// Reload this admin's roster after a create or move on the page.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [rosterTick]);
+
+	const toggle = () => {
+		if (loaded) { setOpen(o => !o); return; }
+		loadRoster();
+	};
+
+	const grouped = useMemo(() => {
+		const byCoach = new Map(coaches.map((c) => [c.id, []]));
+		const loose = [];
+		for (const client of clients) {
+			const coachId = client.coach?.id;
+			if (coachId && byCoach.has(coachId)) byCoach.get(coachId).push(client);
+			else loose.push(client);
+		}
+		return { byCoach, loose };
+	}, [coaches, clients]);
+
+	const copyTally = async () => {
+		const line = `${admin.name}: ${t('sections.coachCount', { count: counts.coaches ?? coachTotal })}, ${t('sections.clientCount', { count: counts.clients ?? clientTotal })}, ${t('sections.activeCount', { count: counts.activeClients ?? 0 })}`;
+		try {
+			await navigator.clipboard.writeText(line);
+			toast.success(t('sections.copiedTally'));
+		} catch { toast.error(t('errors.loadFailed')); }
+	};
+
+	const addUnder = (preset) => actions.onAddUnder?.(preset);
+
+	const moveClient = async (client, coachId) => {
+		if (!coachId || coachId === client.coach?.id) return;
+		setMovingId(client.id);
+		try {
+			await api.post('/auth/coach/assign', { userId: client.id, coachId });
+			toast.success(t('sections.moved'));
+			await loadRoster();
+		} catch (e) {
+			toast.error(e?.response?.data?.message || t('sections.moveFailed'));
+		} finally { setMovingId(null); }
 	};
 
 	return (
 		<>
-			<tr className="hover:bg-[var(--color-primary-50)]/50 dark:hover:bg-[var(--color-primary-950)]/20 transition-colors">
+			<tr className="transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-500)_6%,transparent)]">
 				<td className={TABLE_TD}>
 					<div className="flex items-center gap-2.5 min-w-0">
 						<button
 							type="button"
-							onClick={loadCoaches}
+							onClick={toggle}
 							className="w-7 h-7 rounded-lg border grid place-items-center shrink-0 transition-colors"
 							style={{
 								background: open ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' : 'var(--color-primary-50)',
 								borderColor: 'var(--color-primary-200)',
 								color: open ? '#fff' : 'var(--color-primary-600)',
 							}}
-							title="Show coaches"
+							title={t('sections.showCoaches')}
 						>
 							{loading
 								? <RefreshCw size={12} className="animate-spin" />
-								: <ChevronRight size={13} className={`transition-transform ${open ? 'rotate-90' : ''}`} />}
+								: <ChevronRight size={13} className={`transition-transform ${open ? 'rotate-90' : 'rtl:rotate-180'}`} />}
 						</button>
 						<UserIdentity
 							user={admin}
 							size="md"
 							extra={
-								<div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+								<div className="mt-0.5 flex flex-wrap items-center gap-1.5">
 									<RoleBadge role="admin" t={t} />
+									<span className="rs-tag rs-tag--coach">{t('sections.coachCount', { count: counts.coaches ?? 0 })}</span>
+									<span className="rs-tag rs-tag--client">{t('sections.clientCount', { count: counts.clients ?? 0 })}</span>
+									<span className="rs-badge rs-badge--ok">{t('sections.activeCount', { count: counts.activeClients ?? 0 })}</span>
 									{daysLeft != null && daysLeft < 30 && (
 										<span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold border ${
 											daysLeft < 7
@@ -869,7 +674,7 @@ function AdminTableBlock({ admin, actions, locale, t }) {
 												: 'bg-amber-50 text-amber-600 border-amber-200'
 										}`}>
 											<Clock size={8} />
-											{daysLeft < 0 ? 'Expired' : `${daysLeft}d`}
+											{daysLeft < 0 ? t('subscription.expired') : `${daysLeft}d`}
 										</span>
 									)}
 								</div>
@@ -879,27 +684,29 @@ function AdminTableBlock({ admin, actions, locale, t }) {
 				</td>
 				<td className={TABLE_TD}>
 					<div className="flex items-center gap-1 max-w-[220px]">
-						<span className="text-xs text-slate-600 dark:text-slate-300 truncate">{admin.email}</span>
+						<span className="truncate text-[12.5px] text-[var(--gm-ink-soft)]">{admin.email}</span>
 						<CopyBtn value={admin.email} />
 					</div>
 				</td>
 				<td className={`${TABLE_TD} hidden md:table-cell`}>
 					<div className="flex flex-wrap gap-1.5">
-						<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-cyan-50 text-cyan-700 dark:bg-cyan-950/30 dark:text-cyan-300">
-							<Dumbbell size={9} />{counts.coaches ?? 0}
-						</span>
-						<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-[var(--color-primary-50)] text-[var(--color-primary-700)]">
-							<Users size={9} />{counts.clients ?? 0}
-						</span>
-						<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
-							<Activity size={9} />{counts.activeClients ?? 0}
-						</span>
+						<button type="button" className="rs-btn !h-8 !px-2.5 !text-[12px]" onClick={() => addUnder({ role: 'coach', adminId: admin.id, adminName: admin.name })}>
+							<Plus className="size-3.5" aria-hidden />
+							{t('sections.addCoach')}
+						</button>
+						<button type="button" className="rs-btn !h-8 !px-2.5 !text-[12px]" onClick={() => addUnder({ role: 'client', adminId: admin.id, adminName: admin.name })}>
+							<Plus className="size-3.5" aria-hidden />
+							{t('sections.addClient')}
+						</button>
 					</div>
 				</td>
 				<td className={TABLE_TD}><StatusBadge status={admin.status} t={t} /></td>
 				<td className={`${TABLE_TD} hidden lg:table-cell`}><AccessCell user={admin} /></td>
 				<td className={`${TABLE_TD} hidden sm:table-cell`}>
-					<span className="text-[11px] text-slate-400 whitespace-nowrap">{fmt(admin.created_at, locale)}</span>
+					<span className="whitespace-nowrap text-[12px] text-[var(--gm-muted)]">{fmt(admin.created_at, locale)}</span>
+				</td>
+				<td className={`${TABLE_TD} hidden md:table-cell`}>
+					<LastLoginCell value={admin.lastLogin} locale={locale} empty={t('table.never')} />
 				</td>
 				<td className={`${TABLE_TD} text-end`}>
 					<ActionBar user={admin} {...actions} t={t} />
@@ -907,44 +714,119 @@ function AdminTableBlock({ admin, actions, locale, t }) {
 			</tr>
 
 			{open && (
-				<tr className="bg-slate-50/90 dark:bg-slate-950/40">
-					<td colSpan={7} className="p-0">
-						<div className="border-y border-slate-200 dark:border-slate-800 mx-0">
-							<div className="px-3 py-2 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800">
-								<Dumbbell size={12} className="text-cyan-500" />
-								<p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-									Coaches under {admin.name} ({coaches.length})
+				<tr className="bg-[color-mix(in_srgb,var(--gm-muted)_6%,var(--gm-paper))]">
+					<td colSpan={8} className="p-0">
+						<div className="border-y border-[var(--gm-line)]">
+							<div className="flex flex-wrap items-center gap-2 border-b border-[var(--gm-line)] px-3 py-2.5">
+								<p className="text-[13px] font-semibold text-[var(--gm-ink)]">
+									{t('sections.coachesUnder', { name: admin.name })}
 								</p>
+								<span className="rs-tag rs-tag--coach">{t('sections.coachCount', { count: counts.coaches ?? coachTotal })}</span>
+								<span className="rs-tag rs-tag--client">{t('sections.clientCount', { count: counts.clients ?? clientTotal })}</span>
+								<button type="button" className="rs-btn !h-8 !px-2.5 !text-[12px]" onClick={copyTally}>
+									<Copy className="size-3.5" aria-hidden />
+									{t('sections.copyTally')}
+								</button>
+								<button type="button" className="rs-btn !h-8 !px-2.5 !text-[12px] md:hidden" onClick={() => addUnder({ role: 'coach', adminId: admin.id, adminName: admin.name })}>
+									<Plus className="size-3.5" aria-hidden />
+									{t('sections.addCoach')}
+								</button>
+								{(coachTotal > coaches.length || clientTotal > clients.length) && (
+									<span className="text-[12px] text-[var(--gm-muted)]">
+										{t('sections.listCap', { shown: Math.max(coaches.length, clients.length), total: Math.max(coachTotal, clientTotal) })}
+									</span>
+								)}
 							</div>
-							{coaches.length === 0 ? (
-								<p className="px-4 py-4 text-xs text-slate-400 italic">No coaches assigned yet</p>
+							{coaches.length === 0 && clients.length === 0 ? (
+								<p className="px-4 py-4 text-[12.5px] text-[var(--gm-muted)]">{t('empty.noCoaches')}</p>
 							) : (
-								<div className="overflow-x-auto">
-									<table className="w-full min-w-[860px] border-collapse">
-										<thead>
-											<tr className="border-b border-slate-100 dark:border-slate-800">
-												<th className={TABLE_TH}>Coach / Client</th>
-												<th className={TABLE_TH}>Email</th>
-												<th className={`${TABLE_TH} hidden md:table-cell`}>Phone</th>
-												<th className={TABLE_TH}>Role</th>
-												<th className={TABLE_TH}>Status</th>
-												<th className={`${TABLE_TH} hidden lg:table-cell`}>Access</th>
-												<th className={`${TABLE_TH} hidden sm:table-cell`}>Joined</th>
-												<th className={`${TABLE_TH} text-end`}>Actions</th>
-											</tr>
-										</thead>
-										<tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900/60">
-											{coaches.map(coach => (
-												<CoachTableRows
-													key={coach.id}
-													coach={coach}
-													actions={actions}
-													locale={locale}
-													t={t}
-												/>
+								<div className="flex flex-col">
+									{coaches.map((coach) => {
+										const mine = grouped.byCoach.get(coach.id) || [];
+										const coachUser = { ...coach, role: 'coach' };
+										return (
+											<section key={coach.id} className="border-b border-[var(--gm-line)] last:border-b-0">
+												<div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+													<UserIdentity
+														user={coachUser}
+														extra={<span className="text-[11px] font-semibold text-[var(--color-secondary-600)]">{t('sections.clientCount', { count: mine.length })}</span>}
+													/>
+													<span className="truncate text-[12px] text-[var(--gm-muted)]">{coach.email}</span>
+													<StatusBadge status={coach.status} t={t} />
+													<LastLoginCell value={coach.lastLogin} locale={locale} empty={t('table.never')} />
+													<button
+														type="button"
+														className="rs-btn !h-8 !px-2.5 !text-[12px]"
+														onClick={() => addUnder({ role: 'client', adminId: admin.id, adminName: admin.name, coachId: coach.id, coachName: coach.name })}
+													>
+														<Plus className="size-3.5" aria-hidden />
+														{t('sections.addClientFor', { name: coach.name || coach.email })}
+													</button>
+													<div className="ms-auto">
+														<ActionBar user={coachUser} {...actions} t={t} />
+													</div>
+												</div>
+												{mine.length === 0 ? (
+													<p className="px-4 pb-3 text-[12px] text-[var(--gm-muted)]" style={{ paddingInlineStart: 52 }}>{t('empty.noClients')}</p>
+												) : mine.map((client) => (
+													<div key={client.id} className="flex flex-wrap items-center gap-2 border-t border-[var(--gm-line)] px-3 py-2" style={{ paddingInlineStart: 44 }}>
+														<CornerDownRight className="size-3.5 shrink-0 text-[var(--gm-faint)] rtl:-scale-x-100" aria-hidden />
+														<UserIdentity user={{ ...client, role: 'client' }} size="sm" />
+														<span className="truncate text-[12px] text-[var(--gm-muted)]">{client.email}</span>
+														<StatusBadge status={client.status} t={t} />
+														<LastLoginCell value={client.lastLogin} locale={locale} empty={t('table.never')} />
+														<label className="ms-auto flex items-center gap-1.5 text-[11px] text-[var(--gm-muted)]">
+															{t('sections.moveCoach')}
+															<select
+																className="h-8 max-w-[180px] rounded-lg border border-[var(--gm-line)] bg-[var(--gm-paper)] px-2 text-[12px] text-[var(--gm-ink)]"
+																value={client.coach?.id || ''}
+																disabled={movingId === client.id}
+																onChange={(e) => moveClient(client, e.target.value)}
+															>
+																{coaches.map((c) => (
+																	<option key={c.id} value={c.id}>{c.name || c.email}</option>
+																))}
+															</select>
+														</label>
+														<ActionBar user={{ ...client, role: 'client' }} {...actions} t={t} />
+													</div>
+												))}
+											</section>
+										);
+									})}
+									{grouped.loose.length > 0 && (
+										<section className="border-t border-[var(--gm-line)]">
+											<div className="px-3 py-2">
+												<p className="text-[12.5px] font-semibold text-[var(--gm-ink)]">{t('sections.unassigned')}</p>
+												<p className="text-[12px] text-[var(--gm-muted)]">{t('sections.unassignedHint')}</p>
+											</div>
+											{grouped.loose.map((client) => (
+												<div key={client.id} className="flex flex-wrap items-center gap-2 border-t border-[var(--gm-line)] px-3 py-2">
+													<UserIdentity user={{ ...client, role: 'client' }} size="sm" />
+													<span className="truncate text-[12px] text-[var(--gm-muted)]">{client.email}</span>
+													<StatusBadge status={client.status} t={t} />
+													<LastLoginCell value={client.lastLogin} locale={locale} empty={t('table.never')} />
+													{coaches.length > 0 && (
+														<label className="ms-auto flex items-center gap-1.5 text-[11px] text-[var(--gm-muted)]">
+															{t('sections.moveCoach')}
+															<select
+																className="h-8 max-w-[180px] rounded-lg border border-[var(--gm-line)] bg-[var(--gm-paper)] px-2 text-[12px] text-[var(--gm-ink)]"
+																value=""
+																disabled={movingId === client.id}
+																onChange={(e) => moveClient(client, e.target.value)}
+															>
+																<option value="">{t('sections.unassigned')}</option>
+																{coaches.map((c) => (
+																	<option key={c.id} value={c.id}>{c.name || c.email}</option>
+																))}
+															</select>
+														</label>
+													)}
+													<ActionBar user={{ ...client, role: 'client' }} {...actions} t={t} />
+												</div>
 											))}
-										</tbody>
-									</table>
+										</section>
+									)}
 								</div>
 							)}
 						</div>
@@ -980,7 +862,7 @@ function PagesAccessModal({ user, onClose, onSaved }) {
 				initial={{ scale: 0.94, opacity: 0, y: 16 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				exit={{ scale: 0.94, opacity: 0, y: 16 }}
-				className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[88vh]"
+				className="gm-modal flex max-h-[88vh] w-full max-w-xl flex-col"
 			>
 				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0"
 					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
@@ -1034,13 +916,40 @@ function generatePassword(len = 12) {
 	return out;
 }
 
-function CreateUserModal({ open, onClose, onCreated, t }) {
+function blankCreateForm(preset) {
+	return {
+		name: '',
+		email: '',
+		phone: '',
+		role: preset?.role || 'admin',
+		password: '',
+		adminId: preset?.adminId || '',
+		coachId: preset?.coachId || '',
+	};
+}
+
+function CreateUserModal({ open, onClose, onCreated, t, preset = null }) {
 	const locale = useLocale();
 	const [step, setStep] = useState(1); // 1 account · 2 pages · 3 share
-	const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'admin', password: '' });
+	const [form, setForm] = useState(() => blankCreateForm(preset));
+	const [coachOptions, setCoachOptions] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [created, setCreated] = useState(null); // { id, name, email, password, role }
 	const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+	useEffect(() => {
+		if (!open) return;
+		setForm(blankCreateForm(preset));
+		setCreated(null);
+		setStep(1);
+		setCoachOptions([]);
+		if (!preset?.adminId || preset?.coachId || preset?.role === 'coach') return;
+		let cancelled = false;
+		api.get(`/auth/admin/${preset.adminId}/coaches`, { params: { limit: 500, page: 1 } })
+			.then(({ data }) => { if (!cancelled) setCoachOptions(data.items || []); })
+			.catch(() => { if (!cancelled) setCoachOptions([]); });
+		return () => { cancelled = true; };
+	}, [open, preset]);
 	const tAccess = useTranslations('pageAccess');
 	const access = useUserPageAccess(created?.id, created?.role);
 
@@ -1097,6 +1006,8 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 				phone: form.phone.trim() || undefined,
 				role: form.role,
 				...(form.password.trim() ? { password: form.password.trim() } : {}),
+				...(form.adminId ? { adminId: form.adminId } : {}),
+				...(form.role === 'client' && form.coachId ? { coachId: form.coachId } : {}),
 			};
 			const { data } = await api.post('/auth/admin/users', payload);
 			const password = data.tempPassword || form.password.trim() || '';
@@ -1129,7 +1040,7 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 	};
 
 	const handleClose = () => {
-		setForm({ name: '', email: '', phone: '', role: 'admin', password: '' });
+		setForm(blankCreateForm(null));
 		setCreated(null);
 		setStep(1);
 		onClose();
@@ -1149,7 +1060,7 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 				initial={{ scale: 0.93, opacity: 0, y: 20 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				exit={{ scale: 0.93, opacity: 0, y: 20 }}
-				className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg overflow-hidden"
+				className="gm-modal w-full max-w-lg"
 			>
 				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800"
 					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
@@ -1161,7 +1072,7 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 							<Plus size={16} />
 						</div>
 						<div className="min-w-0">
-							<h3 className="font-black text-slate-900 dark:text-slate-100 text-sm">Create New User</h3>
+							<h3 className="text-sm font-semibold text-[var(--gm-ink)]">{t?.('createModal.title') || 'Create New User'}</h3>
 							<p className="text-[10px] text-slate-500">
 								Step {step} of 3 — {stepMeta.find(s => s.n === step)?.label}
 							</p>
@@ -1188,6 +1099,12 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 					{/* ── Step 1: Account ── */}
 					{step === 1 && (
 						<>
+							{preset?.adminName && (
+								<p className="rounded-[12px] border border-[var(--gm-line)] bg-[color-mix(in_srgb,var(--color-primary-500)_8%,var(--gm-paper))] px-3 py-2 text-[12.5px] text-[var(--gm-ink-soft)]">
+									{t('createModal.underAdmin', { name: preset.adminName })}
+									{preset.coachName ? ` · ${t('createModal.underCoach', { name: preset.coachName })}` : ''}
+								</p>
+							)}
 							<div>
 								<label className="flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
 									<User size={10} /> Full Name <span className="text-red-500">*</span>
@@ -1252,20 +1169,28 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 									</button>
 								</div>
 							</div>
-							<div>
-								<label className="flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
-									<Shield size={10} /> Role
-								</label>
-								<select
-									value={form.role}
-									onChange={e => set('role', e.target.value)}
-									className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm appearance-none"
-								>
-									<option value="admin">Admin</option>
-									<option value="coach">Coach</option>
-									<option value="client">Client</option>
-								</select>
-							</div>
+							<FloatingSelect
+								label={t('createModal.fields.role')}
+								value={form.role}
+								disabled={Boolean(preset?.role)}
+								onChange={(id) => set('role', id || 'admin')}
+								options={[
+									{ id: 'admin', label: t('role.admin') },
+									{ id: 'coach', label: t('role.coach') },
+									{ id: 'client', label: t('role.client') },
+								]}
+							/>
+							{form.role === 'client' && preset?.adminId && !preset?.coachId && (
+								<FloatingSelect
+									label={t('createModal.coachOptional')}
+									value={form.coachId || 'none'}
+									onChange={(id) => set('coachId', !id || id === 'none' ? '' : id)}
+									options={[
+										{ id: 'none', label: t('createModal.noCoach') },
+										...coachOptions.map((c) => ({ id: c.id, label: c.name || c.email })),
+									]}
+								/>
+							)}
 						</>
 					)}
 
@@ -1395,23 +1320,24 @@ export default function SuperAdminUsersPage() {
 	const router = useRouter();
 	const t = useTranslations('superAdmin');
 	const locale = useLocale();
-	const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState('');
+	const [debounced, setDebounced] = useState('');
 	const [statusFilter, setStatus] = useState('');
-	const [roleFilter, setRole] = useState('');   // '', 'admin', 'coach', 'client'
+	const [roleFilter, setRole] = useState('');
 	const [sortBy, setSortBy] = useState('date_desc');
 	const [page, setPage] = useState(1);
-	const [totalPages, setTotalPgs] = useState(1);
+	const [limit, setLimit] = useState(10);
 	const [totalCount, setCount] = useState(0);
 	const [createOpen, setCreate] = useState(false);
+	const [createPreset, setCreatePreset] = useState(null);
+	const [rosterTick, setRosterTick] = useState(0);
 	const [editUser, setEditUser] = useState(null);
 	const [deleteUser, setDeleteUser] = useState(null);
 	const [credsUser, setCredsUser] = useState(null);
 	const [pagesUser, setPagesUser] = useState(null);
-	const searchTimer = useRef(null);
 
 	const stats = useMemo(() => ({
 		totalUsers: items.length,
@@ -1426,31 +1352,38 @@ export default function SuperAdminUsersPage() {
 		try {
 			const { data } = await api.get('/auth/super-admin/overview', {
 				params: {
-					page, limit: 15, includeTree: true,
-					...(search && { search }),
+					page, limit, includeTree: true,
+					...(debounced && { search: debounced }),
 					...(statusFilter && { status: statusFilter }),
 					...(roleFilter && { role: roleFilter }),
 					...(sortBy && { sort: sortBy }),
 				},
 			});
 			setItems(data.items || []);
-			setTotalPgs(data.totalPages || 1);
 			setCount(data.total || 0);
-		} catch { toast.error('Failed to load users'); }
+		} catch { toast.error(t('errors.loadFailed')); }
 		finally { setLoading(false); }
-	}, [page, search, statusFilter, roleFilter, sortBy]);
+	}, [page, limit, debounced, statusFilter, roleFilter, sortBy, t]);
+
+	useEffect(() => {
+		const id = setTimeout(() => setDebounced(search.trim()), 350);
+		return () => clearTimeout(id);
+	}, [search]);
+
+	useEffect(() => {
+		setLimit(getStoredPerPage(10));
+	}, []);
+
+	useEffect(() => {
+		document.documentElement.dataset.gmUsers = '1';
+		return () => { delete document.documentElement.dataset.gmUsers; };
+	}, []);
 
 	useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-	const handleSearch = v => {
-		setSearch(v); setPage(1);
-		clearTimeout(searchTimer.current);
-		searchTimer.current = setTimeout(fetchUsers, 450);
-	};
-
 	// ── Impersonate (does NOT change the user's password) ──
 	const handleImpersonate = useCallback(async (target) => {
-		const toastId = toast.loading('Logging in as user…');
+		const toastId = toast.loading(t('impersonation.loading'));
 		try {
 			const prev = {
 				accessToken: localStorage.getItem('accessToken'),
@@ -1474,17 +1407,17 @@ export default function SuperAdminUsersPage() {
 				body: JSON.stringify({ accessToken, refreshToken, user }),
 			});
 
-			toast.success(`Logged in as ${user.name}`, { id: toastId });
+			toast.success(t('impersonation.success', { name: user.name }), { id: toastId });
 
 			const dest = resolvePostLoginPath(user);
 			router.push(`/${locale}${dest}`);
 		} catch (e) {
-			toast.error(e?.response?.data?.message || 'Impersonation failed', { id: toastId });
+			toast.error(e?.response?.data?.message || t('impersonation.failed'), { id: toastId });
 			localStorage.removeItem('super_admin_prev_session');
 			localStorage.removeItem('impersonated_user');
 			notifyImpersonationChanged();
 		}
-	}, [router, locale]);
+	}, [router, locale, t]);
 
 
 
@@ -1492,10 +1425,10 @@ export default function SuperAdminUsersPage() {
 	const handleStatusChange = useCallback(async (userId, status) => {
 		try {
 			await api.put(`/auth/status/${userId}`, { status });
-			toast.success(`Status updated to ${status}`);
+			toast.success(t('actions.statusUpdated'));
 			fetchUsers();
-		} catch { toast.error('Status update failed'); }
-	}, [fetchUsers]);
+		} catch { toast.error(t('errors.statusFailed')); }
+	}, [fetchUsers, t]);
 
 	// ── Delete ──
 	const handleDelete = useCallback(async () => {
@@ -1511,13 +1444,63 @@ export default function SuperAdminUsersPage() {
 		[items],
 	);
 
-	const pageNums = useMemo(() => {
-		const range = []; const delta = 2;
-		const left = Math.max(1, page - delta);
-		const right = Math.min(totalPages, page + delta);
-		for (let i = left; i <= right; i++) range.push(i);
-		return range;
-	}, [page, totalPages]);
+	const roleSegments = [
+		{ id: '', label: t('filters.allRoles'), Icon: Users },
+		{ id: 'admin', label: t('role.admin'), Icon: Shield },
+		{ id: 'coach', label: t('role.coach'), Icon: UserCog },
+		{ id: 'client', label: t('role.client'), Icon: User },
+	];
+
+	const statCards = [
+		{
+			key: 'total',
+			title: t('stats.totalUsers'),
+			value: totalCount,
+			icon: Users,
+			hint: t('statsHints.platform'),
+			tone: 'gm-chip',
+			stroke: 'var(--color-primary-500)',
+			fill: 'var(--color-primary-400)',
+			seed: 0.4,
+			max: Math.max(totalCount, 1),
+		},
+		{
+			key: 'active',
+			title: t('stats.active'),
+			value: stats.activeUsers,
+			icon: UserCheck,
+			hint: t('statsHints.thisPage'),
+			tone: 'gm-chip-ok',
+			stroke: 'var(--gm-ok)',
+			fill: 'var(--gm-ok)',
+			seed: 0.9,
+			max: Math.max(totalCount, 1),
+		},
+		{
+			key: 'coaches',
+			title: t('stats.coaches'),
+			value: stats.coaches,
+			icon: UserCog,
+			hint: t('statsHints.thisPage'),
+			tone: 'gm-chip-secondary',
+			stroke: 'var(--color-secondary-500)',
+			fill: 'var(--color-secondary-400)',
+			seed: 1.4,
+			max: Math.max(totalCount, 1),
+		},
+		{
+			key: 'clients',
+			title: t('stats.clients'),
+			value: stats.clients,
+			icon: UserCircle,
+			hint: t('statsHints.thisPage'),
+			tone: 'gm-chip-warn',
+			stroke: 'var(--gm-warn)',
+			fill: 'var(--gm-warn)',
+			seed: 1.9,
+			max: Math.max(totalCount, 1),
+		},
+	];
 
 	const sharedActions = {
 		onImpersonate: handleImpersonate,
@@ -1526,216 +1509,180 @@ export default function SuperAdminUsersPage() {
 		onDelete: (u) => setDeleteUser(u),
 		onShowCreds: (u) => setCredsUser(u),
 		onPages: (u) => setPagesUser(u),
+		onAddUnder: (preset) => { setCreatePreset(preset); setCreate(true); },
 		t,
 		locale,
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 dark:bg-[#0b1120]" dir={dir}>
-
-			{/* ── GradientStatsHeader ── */}
-			<GradientStatsHeader
-				onClick={() => setCreate(true)}
-				btnName="Create User"
-				title={t ? t('title') : 'Super Admin — Users'}
-				desc={`${totalCount} total users managed`}
-				loadingStats={loading}
-			>
-				<StatCard icon={Users} title="Total Users" value={stats.totalUsers} />
-				<StatCard icon={UserCheck} title="Active" value={stats.activeUsers} />
-				<StatCard icon={UserCog} title="Coaches" value={stats.coaches} />
-				<StatCard icon={UserCircle} title="Clients" value={stats.clients} />
-			</GradientStatsHeader>
-
-			<div className="p-4 md:p-6">
-
-				{/* ── Filters Bar ── */}
-				<motion.div
-					initial={{ opacity: 0, y: 10 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.15 }}
-					className="bg-white dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 p-3 mb-5 shadow-sm"
-				>
-					<div className="flex flex-col sm:flex-row gap-2.5">
-						{/* Search */}
-						<div className="relative flex-1">
-							<Search size={14} className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-							<input
-								value={search}
-								onChange={e => handleSearch(e.target.value)}
-								placeholder="Search by name, email…"
-								className="w-full h-10 ltr:pl-9 rtl:pr-9 ltr:pr-4 rtl:pl-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-[var(--color-primary-400)] transition-all"
-								style={{ '--tw-ring-color': 'rgba(99,102,241,0.25)' }}
-							/>
-						</div>
-
-						{/* Role filter */}
-						<div className="relative">
-							<Filter size={12} className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-							<select
-								value={roleFilter}
-								onChange={e => { setRole(e.target.value); setPage(1); }}
-								className="h-10 ltr:pl-8 rtl:pr-8 ltr:pr-8 rtl:pl-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[130px] cursor-pointer"
-							>
-								<option value="">All Roles</option>
-								<option value="admin">Admin</option>
-								<option value="coach">Coach</option>
-								<option value="client">Client</option>
-							</select>
-						</div>
-
-						{/* Status filter */}
-						<div className="relative">
-							<div className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-400 pointer-events-none" />
-							<select
-								value={statusFilter}
-								onChange={e => { setStatus(e.target.value); setPage(1); }}
-								className="h-10 ltr:pl-7 rtl:pr-7 ltr:pr-8 rtl:pl-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[140px] cursor-pointer"
-							>
-								<option value="">All Statuses</option>
-								<option value="active">Active</option>
-								<option value="pending">Pending</option>
-								<option value="suspended">Suspended</option>
-							</select>
-						</div>
-
-						{/* Sort */}
-						<div className="relative">
-							<SortAsc size={12} className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-							<select
-								value={sortBy}
-								onChange={e => { setSortBy(e.target.value); setPage(1); }}
-								className="h-10 ltr:pl-8 rtl:pr-8 ltr:pr-8 rtl:pl-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[148px] cursor-pointer"
-							>
-								{SORT_OPTIONS.map(o => (
-									<option key={o.value} value={o.value}>{o.label}</option>
-								))}
-							</select>
-						</div>
-
-						{/* Refresh */}
-						<motion.button
-							whileHover={{ rotate: 180 }} transition={{ duration: 0.4 }}
-							onClick={fetchUsers}
-							className="w-10 h-10 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-[var(--color-primary-500)] transition-colors"
-						>
-							<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-						</motion.button>
+		<div className="gm-surface rs-scope app-stack pb-4">
+			<div className="rs-summary">
+				<header className="rs-hero">
+					<span className="rs-hero__mark" aria-hidden>
+						<Crown strokeWidth={1.7} />
+					</span>
+					<div className="rs-hero__text">
+						<h1 className="rs-hero__title">{t('header.title')}</h1>
+						<p className="rs-hero__sub">{t('header.subtitle')}</p>
 					</div>
-				</motion.div>
-
-				{/* ── Content ── */}
-				{loading ? (
-					<div className="flex flex-col items-center justify-center py-28 gap-4">
-						<div className="w-14 h-14 rounded-lg flex items-center justify-center shadow-xl"
-							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
-						>
-							<RefreshCw size={22} className="animate-spin text-white" />
-						</div>
-						<p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading users…</p>
-					</div>
-				) : items.length === 0 ? (
-					<div className="flex flex-col items-center justify-center py-28 text-slate-400 gap-4">
-						<div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-							<Users size={28} className="opacity-40" />
-						</div>
-						<p className="font-bold text-slate-600 dark:text-slate-400">No users found</p>
-						<p className="text-sm text-slate-400">Try adjusting the filters or search term</p>
-					</div>
-				) : (
-					<>
-						{(!roleFilter || roleFilter === 'admin') && admins.length > 0 && (
-							<AdminsTable
-								admins={admins}
-								actions={sharedActions}
-								locale={locale}
-								t={t}
-							/>
-						)}
-
-						{(!roleFilter || roleFilter === 'coach') && coaches.length > 0 && (
-							<UsersTable
-								title="Coaches"
-								subtitle="Standalone coaches (not nested under an admin in this list)"
-								icon={Dumbbell}
-								accent="cyan"
-								users={coaches}
-								actions={sharedActions}
-								locale={locale}
-								t={t}
-								emptyLabel="No coaches found"
-							/>
-						)}
-
-						{(!roleFilter || roleFilter === 'client') && clients.length > 0 && (
-							<UsersTable
-								title="Clients"
-								subtitle="Client accounts in the current page"
-								icon={UserCircle}
-								accent="slate"
-								users={clients}
-								actions={sharedActions}
-								locale={locale}
-								t={t}
-								emptyLabel="No clients found"
-							/>
-						)}
-
-						{!roleFilter && misc.length > 0 && (
-							<UsersTable
-								title="Other roles"
-								subtitle="Accounts that are not admin / coach / client"
-								icon={Shield}
-								accent="slate"
-								users={misc}
-								actions={sharedActions}
-								locale={locale}
-								t={t}
-							/>
-						)}
-
-						{/* Pagination */}
-						{totalPages > 1 && (
-							<div className="flex items-center justify-center gap-1.5 mt-8">
-								<button
-									disabled={page === 1}
-									onClick={() => setPage(p => p - 1)}
-									className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-								>
-									← Prev
-								</button>
-								{page > 3 && <span className="text-slate-400 text-xs">…</span>}
-								{pageNums.map(n => (
-									<button
-										key={n}
-										onClick={() => setPage(n)}
-										className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${n === page
-												? 'text-white shadow-lg'
-												: 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-											}`}
-										style={n === page ? { background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' } : {}}
-									>
-										{n}
-									</button>
-								))}
-								{page < totalPages - 2 && <span className="text-slate-400 text-xs">…</span>}
-								<button
-									disabled={page === totalPages}
-									onClick={() => setPage(p => p + 1)}
-									className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-								>
-									Next →
-								</button>
-							</div>
-						)}
-					</>
-				)}
+					<button type="button" className="rs-cta" onClick={() => { setCreatePreset(null); setCreate(true); }}>
+						<Plus className="size-4" strokeWidth={2} aria-hidden />
+						<span>{t('header.createNewUser')}</span>
+					</button>
+				</header>
+				<section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					{statCards.map((card, index) => (
+						<GmStatCard key={card.key} card={card} index={index} />
+					))}
+				</section>
 			</div>
+
+			<div className="rs-toolbar">
+				<label className="rs-search">
+					<span className="rs-search__icon" aria-hidden>
+						<Search className="size-4" strokeWidth={2} />
+					</span>
+					<input
+						type="search"
+						value={search}
+						onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+						placeholder={t('filters.searchPlaceholder')}
+						className="rs-search__input"
+					/>
+				</label>
+
+				<div className="rs-seg max-w-full" style={{ flexWrap: 'wrap' }} role="radiogroup" aria-label={t('filters.allRoles')}>
+					{roleSegments.map((opt) => {
+						const on = roleFilter === opt.id;
+						const Icon = opt.Icon;
+						return (
+							<button
+								key={opt.id || 'all'}
+								type="button"
+								role="radio"
+								aria-checked={on}
+								className={`rs-seg__btn${on ? ' is-on' : ''}`}
+								onClick={() => { setRole(opt.id); setPage(1); }}
+							>
+								{on ? <span className="rs-seg__pill" aria-hidden /> : null}
+								<Icon className="size-3.5" strokeWidth={2} aria-hidden />
+								<span>{opt.label}</span>
+							</button>
+						);
+					})}
+				</div>
+
+				<div className="w-full min-w-[160px] sm:w-44">
+					<FloatingSelect
+						label={t('filters.allStatuses')}
+						value={statusFilter || 'all'}
+						onChange={(id) => { setStatus(!id || id === 'all' ? '' : id); setPage(1); }}
+						options={[
+							{ id: 'all', label: t('filters.allStatuses') },
+							{ id: 'active', label: t('status.active') },
+							{ id: 'pending', label: t('status.pending') },
+							{ id: 'suspended', label: t('status.suspended') },
+						]}
+					/>
+				</div>
+				<div className="w-full min-w-[160px] sm:w-48">
+					<FloatingSelect
+						label={t('filters.sortLabel')}
+						value={sortBy}
+						onChange={(id) => { setSortBy(id || 'date_desc'); setPage(1); }}
+						options={SORT_KEYS.map((id) => ({ id, label: t(`sort.${id}`) }))}
+					/>
+				</div>
+				<button type="button" className="rs-btn" onClick={fetchUsers} aria-label={t('actions.refresh')}>
+					<RefreshCw className={`size-4${loading ? ' animate-spin' : ''}`} strokeWidth={2} aria-hidden />
+					<span className="hidden sm:inline">{t('actions.refresh')}</span>
+				</button>
+			</div>
+
+			{loading && items.length === 0 ? (
+				<div className="flex flex-col items-center justify-center gap-3 py-24">
+					<span className="rs-hero__mark !h-12 !w-12 !rounded-2xl" aria-hidden>
+						<RefreshCw className="size-5 animate-spin" />
+					</span>
+					<p className="text-sm text-[var(--gm-muted)]">{t('loading')}</p>
+				</div>
+			) : items.length === 0 ? (
+				<div className="flex flex-col items-center justify-center gap-2 py-24 text-center">
+					<span className="rs-avatar rs-avatar--admin" aria-hidden>
+						<Users className="size-4" />
+					</span>
+					<p className="text-sm font-semibold text-[var(--gm-ink)]">{t('empty.noUsers')}</p>
+					<p className="text-[13px] text-[var(--gm-muted)]">{t('empty.tryAdjust')}</p>
+				</div>
+			) : (
+				<div className="flex flex-col gap-4">
+					{(!roleFilter || roleFilter === 'admin') && admins.length > 0 && (
+						<AdminsTable admins={admins} actions={sharedActions} locale={locale} t={t} rosterTick={rosterTick} />
+					)}
+					{(!roleFilter || roleFilter === 'coach') && coaches.length > 0 && (
+						<UsersTable
+							title={t('sections.coaches')}
+							subtitle={t('sections.coachesHint')}
+							icon={Dumbbell}
+							users={coaches}
+							actions={sharedActions}
+							locale={locale}
+							t={t}
+							emptyLabel={t('empty.noCoaches')}
+						/>
+					)}
+					{(!roleFilter || roleFilter === 'client') && clients.length > 0 && (
+						<UsersTable
+							title={t('sections.clients')}
+							subtitle={t('sections.clientsHint')}
+							icon={UserCircle}
+							users={clients}
+							actions={sharedActions}
+							locale={locale}
+							t={t}
+							emptyLabel={t('empty.noClients')}
+						/>
+					)}
+					{!roleFilter && misc.length > 0 && (
+						<UsersTable
+							title={t('sections.misc')}
+							subtitle={t('sections.miscHint')}
+							icon={Shield}
+							users={misc}
+							actions={sharedActions}
+							locale={locale}
+							t={t}
+						/>
+					)}
+					{totalCount > 0 && (
+						<TablePagination
+							pagination={{ current_page: page, per_page: limit, total_records: totalCount }}
+							onPageChange={({ page: nextPage, per_page }) => {
+								const nextLimit = Number(per_page);
+								if (nextLimit && nextLimit !== limit) {
+									setStoredPerPage(nextLimit);
+									setLimit(nextLimit);
+									setPage(1);
+									return;
+								}
+								setPage(Number(nextPage ?? 1));
+							}}
+							isLoading={loading}
+						/>
+					)}
+				</div>
+			)}
 
 			{/* ── Modals ── */}
 			<AnimatePresence>
 				{createOpen && (
-					<CreateUserModal open={createOpen} onClose={() => setCreate(false)} onCreated={fetchUsers} t={t} />
+					<CreateUserModal
+						open={createOpen}
+						preset={createPreset}
+						onClose={() => { setCreate(false); setCreatePreset(null); }}
+						onCreated={() => { fetchUsers(); setRosterTick((n) => n + 1); }}
+						t={t}
+					/>
 				)}
 			</AnimatePresence>
 

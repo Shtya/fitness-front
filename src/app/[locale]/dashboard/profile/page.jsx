@@ -1,5 +1,7 @@
 "use client" ///settings/profile.js
 import { useState } from 'react';
+import FloatingInput from '@/components/atoms/FloatingInput';
+import FloatingSelect from '@/components/atoms/FloatingSelect';
 
 export default function ProfileSettings() {
   const [userData, setUserData] = useState({
@@ -46,44 +48,22 @@ export default function ProfileSettings() {
       <div className='bg-white rounded-lg shadow p-6'>
         <form onSubmit={handleSubmit}>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Full Name</label>
-              <input type='text' name='name' value={userData.name} onChange={handleInputChange} className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500' />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Email Address</label>
-              <input type='email' name='email' value={userData.email} onChange={handleInputChange} className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500' />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Phone Number</label>
-              <input type='tel' name='phone' value={userData.phone} onChange={handleInputChange} className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500' />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Age</label>
-              <input type='number' name='age' value={userData.age} onChange={handleInputChange} className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500' />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Height (cm)</label>
-              <input type='number' name='height' value={userData.height} onChange={handleInputChange} className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500' />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Weight (kg)</label>
-              <input type='number' name='weight' value={userData.weight} onChange={handleInputChange} className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500' step='0.1' />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Gender</label>
-              <select name='gender' value={userData.gender} onChange={handleInputChange} className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'>
-                <option value='male'>Male</option>
-                <option value='female'>Female</option>
-                <option value='other'>Other</option>
-              </select>
-            </div>
+            <FloatingInput label="Full Name" value={userData.name} onChange={(v) => setUserData((p) => ({ ...p, name: v }))} />
+            <FloatingInput label="Email Address" type="email" value={userData.email} onChange={(v) => setUserData((p) => ({ ...p, email: v }))} />
+            <FloatingInput label="Phone Number" type="tel" value={userData.phone} onChange={(v) => setUserData((p) => ({ ...p, phone: v }))} />
+            <FloatingInput label="Age" type="number" value={userData.age} onChange={(v) => setUserData((p) => ({ ...p, age: v }))} />
+            <FloatingInput label="Height (cm)" type="number" value={userData.height} onChange={(v) => setUserData((p) => ({ ...p, height: v }))} />
+            <FloatingInput label="Weight (kg)" type="number" value={userData.weight} onChange={(v) => setUserData((p) => ({ ...p, weight: v }))} />
+            <FloatingSelect
+              label="Gender"
+              value={userData.gender}
+              onChange={(v) => setUserData((p) => ({ ...p, gender: v }))}
+              options={[
+                { id: 'male', label: 'Male' },
+                { id: 'female', label: 'Female' },
+                { id: 'other', label: 'Other' },
+              ]}
+            />
           </div>
 
           <div className='mb-6'>

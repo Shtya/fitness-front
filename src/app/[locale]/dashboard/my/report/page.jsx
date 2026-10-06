@@ -5,19 +5,19 @@ import { useTranslations } from 'next-intl';
 import {
   Camera, UploadCloud, CheckCircle2, Loader2, Info, X, Images,
   Plus, ClipboardList, Eye, Utensils, Dumbbell, Ruler, ChevronRight,
-  ChevronLeft, Star as StarIcon, Sparkles, TrendingUp, Moon
+  ChevronLeft, Star as StarIcon, TrendingUp, History, RefreshCw, Bell
 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 
 import Input from '@/components/atoms/Input';
+import FloatingSelect from '@/components/atoms/FloatingSelect';
+import FloatingTextarea from '@/components/atoms/FloatingTextarea';
 import Textarea from '@/components/atoms/Textarea';
 import Select from '@/components/atoms/Select';
 import InputDate from '@/components/atoms/InputDate';
-import { Switcher } from '@/components/atoms/Switcher';
 import Img from '@/components/atoms/Img';
-import { Modal } from '@/components/dashboard/ui/UI';
 import api from '@/utils/axios';
 
 /* ─────────────────────────── API helpers ─────────────────────────── */
@@ -70,10 +70,18 @@ async function markReportAsRead(id) {
 }
 
 /* ─────────────────────────── Button ─────────────────────────── */
+const NEU_FIELD = '!rounded-2xl !border-white/85 !bg-[#eef2f9] !shadow-[3px_3px_6px_rgba(100,116,139,0.22)]';
+function PhoneInput(props) {
+  return <Input clearable={false} {...props} cnInputParent={NEU_FIELD} />;
+}
+function PhoneDate(props) {
+  return <InputDate {...props} cnInput={`${NEU_FIELD} !h-11`} />;
+}
+
 const Button = ({ children, className = '', disabled, onClick, type = 'button', color = 'primary' }) => {
   const variants = {
-    primary: 'bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] text-white hover:opacity-90 shadow-md shadow-[var(--color-primary-300)]/40 disabled:opacity-50',
-    neutral: 'bg-white border border-[var(--color-primary-200)] text-[var(--color-primary-700)] hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] disabled:opacity-50',
+    primary: 'bg-gradient-to-r from-(--color-gradient-from) via-(--color-gradient-via) to-(--color-gradient-to) text-white shadow-[2px_3px_6px_color-mix(in_srgb,var(--color-primary-900)_35%,transparent)] disabled:opacity-55',
+    neutral: 'border border-white/85 bg-[#eef2f9] text-slate-600 shadow-[3px_3px_6px_rgba(100,116,139,0.22)] disabled:opacity-50',
     danger: 'bg-rose-500 text-white hover:bg-rose-600 disabled:opacity-50 shadow-sm',
     ghost: 'text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)] border border-transparent hover:border-[var(--color-primary-200)]',
   };
@@ -96,17 +104,17 @@ const Button = ({ children, className = '', disabled, onClick, type = 'button', 
 /* ─────────────────────────── Section Card ─────────────────────────── */
 function Section({ icon: Icon = Info, title, children, extra, accent }) {
   return (
-    <section className='rounded-2xl bg-white border border-[var(--color-primary-100)] shadow-sm shadow-[var(--color-primary-100)]/60 overflow-hidden'>
-      <header className='px-5 py-4 border-b border-[var(--color-primary-100)] bg-gradient-to-r from-[var(--color-primary-50)] to-white flex items-center justify-between'>
-        <div className='flex items-center gap-3'>
-          <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] flex items-center justify-center shadow-sm'>
-            <Icon className='w-4 h-4 text-white' />
+    <section className='overflow-hidden rounded-3xl border border-white/85 bg-[#eef2f9] shadow-[5px_5px_8px_rgba(100,116,139,0.32)]'>
+      <header className='flex items-center justify-between gap-2 border-b border-slate-400/15 bg-[rgba(37,99,235,0.06)] px-4 py-3'>
+        <div className='flex min-w-0 items-center gap-2.5'>
+          <div className='grid h-[30px] w-[30px] shrink-0 place-items-center rounded-xl bg-gradient-to-br from-(--color-gradient-from) to-(--color-gradient-to) text-white'>
+            <Icon size={14} strokeWidth={2.2} />
           </div>
-          <h2 className='font-bold text-slate-800 text-base'>{title}</h2>
+          <h2 className='truncate text-sm font-bold text-slate-800'>{title}</h2>
         </div>
         {extra || null}
       </header>
-      <div className='p-5 space-y-3'>{children}</div>
+      <div className='space-y-2 p-4'>{children}</div>
     </section>
   );
 }
@@ -114,36 +122,46 @@ function Section({ icon: Icon = Info, title, children, extra, accent }) {
 /* ─────────────────────────── Switch Row ─────────────────────────── */
 function SwitchRow({ label, value, onChange, description }) {
   return (
-    <div className='flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-slate-50/80 border border-slate-100 hover:bg-[var(--color-primary-50)]/60 hover:border-[var(--color-primary-100)] transition-all duration-200 group'>
-      <div className='flex-1'>
-        <div className='text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors'>{label}</div>
-        {description && <div className='text-xs text-slate-400 mt-0.5'>{description}</div>}
+    <div className='flex items-center justify-between gap-3 rounded-2xl border border-white/80 bg-[#eef2f9] px-3 py-2.5 shadow-[3px_3px_6px_rgba(100,116,139,0.18)]'>
+      <div className='min-w-0 flex-1'>
+        <div className='text-[13px] font-medium text-slate-800'>{label}</div>
+        {description && <div className='mt-0.5 text-[11px] text-slate-400'>{description}</div>}
       </div>
-      <Switcher checked={!!value} onChange={onChange} />
+      <button
+        type='button'
+        role='switch'
+        aria-checked={!!value}
+        onClick={() => onChange(!value)}
+        className={value
+          ? 'relative h-7 w-12 shrink-0 rounded-full bg-(--color-primary-400)'
+          : 'relative h-7 w-12 shrink-0 rounded-full bg-[#d1d5db]'}
+      >
+        <span className={value
+          ? 'absolute end-0.5 top-0.5 h-6 w-6 rounded-full bg-(--color-primary-600) shadow'
+          : 'absolute start-0.5 top-0.5 h-6 w-6 rounded-full bg-[#f4f4f5] shadow'} />
+      </button>
     </div>
   );
 }
 
 /* ─────────────────────────── Rating Stars ─────────────────────────── */
-const sizeMap = { sm: 'w-5 h-5', md: 'w-7 h-7', lg: 'w-9 h-9' };
-
-function RatingStars({ label, value = 0, onChange = () => {}, max = 5, size = 'md', readOnly = false, required }) {
+function RatingStars({ label, value = 0, onChange = () => {}, max = 5, readOnly = false, required }) {
+  const tStars = useTranslations('weekly.stars');
   const [hovered, setHovered] = useState(0);
   const items = useMemo(() => Array.from({ length: max }, (_, i) => i + 1), [max]);
   const display = hovered || value;
-
-  const labels = ['', 'ضعيف', 'مقبول', 'جيد', 'جيد جداً', 'ممتاز'];
+  const labels = ['', tStars('1'), tStars('2'), tStars('3'), tStars('4'), tStars('5')];
 
   return (
     <div className='space-y-2'>
       {label && (
-        <label className='block text-sm font-medium text-slate-700'>
+        <label className='block text-[13px] font-medium text-slate-600'>
           {label}
           {required && <span className='text-rose-500 ml-1'>*</span>}
         </label>
       )}
-      <div className='flex items-center gap-2 p-3 rounded-xl bg-slate-50/80 border border-slate-100'>
-        <div className='flex items-center gap-1'>
+      <div className='flex flex-wrap items-center gap-2 rounded-2xl border border-white/80 bg-[#eef2f9] p-3 shadow-[3px_3px_6px_rgba(100,116,139,0.18)]'>
+        <div className='flex items-center gap-1.5'>
           {items.map(n => (
             <button
               key={n}
@@ -152,20 +170,14 @@ function RatingStars({ label, value = 0, onChange = () => {}, max = 5, size = 'm
               onClick={() => !readOnly && onChange(String(n))}
               onMouseEnter={() => !readOnly && setHovered(n)}
               onMouseLeave={() => !readOnly && setHovered(0)}
-              className='focus:outline-none transition-transform hover:scale-110 active:scale-95'
+              className='focus:outline-none'
             >
-              <svg viewBox='0 0 24 24' className={[sizeMap[size], 'transition-all duration-150'].join(' ')}>
-                <path
-                  d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
-                  className={n <= display ? 'fill-amber-400 stroke-amber-400' : 'fill-slate-200 stroke-slate-200'}
-                  strokeWidth='0.5'
-                />
-              </svg>
+              <StarIcon size={28} strokeWidth={1.6} className={n <= display ? 'fill-amber-400 text-amber-400' : 'fill-transparent text-slate-300'} />
             </button>
           ))}
         </div>
         {display > 0 && (
-          <span className='text-xs font-semibold text-[var(--color-primary-600)] bg-[var(--color-primary-50)] px-2 py-0.5 rounded-full border border-[var(--color-primary-100)]'>
+          <span className='text-xs font-medium text-(--color-primary-600)'>
             {labels[display]}
           </span>
         )}
@@ -180,9 +192,9 @@ function ImagePicker({ openPopup, label, file, onPick, pickedUrl, onClearPicked,
   const hasPicked = !!pickedUrl;
 
   return (
-    <div className='rounded-xl border border-[var(--color-primary-100)] bg-white overflow-hidden group'>
-      <div className='px-3 py-2 bg-gradient-to-r from-[var(--color-primary-50)] to-white border-b border-[var(--color-primary-100)]'>
-        <span className='text-xs font-semibold text-[var(--color-primary-700)]'>{label}</span>
+    <div className='group overflow-hidden rounded-3xl border border-white/85 bg-[#eef2f9] shadow-[4px_4px_8px_rgba(100,116,139,0.22)]'>
+      <div className='border-b border-slate-400/15 px-3 py-2'>
+        <span className='text-xs font-bold text-slate-600'>{label}</span>
       </div>
 
       <input ref={inputRef} type='file' accept='image/*' className='hidden' onChange={e => onPick((e.target.files && e.target.files[0]) || null)} />
@@ -218,7 +230,7 @@ function ImagePicker({ openPopup, label, file, onPick, pickedUrl, onClearPicked,
         <button
           type='button'
           onClick={openPopup || (() => inputRef.current?.click())}
-          className='w-full h-36 flex flex-col items-center justify-center gap-2 bg-gradient-to-b from-slate-50 to-white text-slate-400 hover:text-[var(--color-primary-500)] hover:from-[var(--color-primary-50)]/50 hover:to-white border-2 border-dashed border-slate-200 hover:border-[var(--color-primary-200)] transition-all duration-200'
+          className='flex h-36 w-full flex-col items-center justify-center gap-2 bg-[#eef2f9] text-slate-400'
         >
           <div className='w-10 h-10 rounded-full bg-slate-100 group-hover:bg-[var(--color-primary-100)] flex items-center justify-center transition-colors'>
             <Camera className='w-5 h-5' />
@@ -317,47 +329,24 @@ function StatBadge({ label, value, unit }) {
   );
 }
 
-/* ─────────────────────────── Progress Ring ─────────────────────────── */
-function ProgressRing({ pct, size = 48 }) {
-  const r = (size - 6) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-
-  return (
-    <svg width={size} height={size} className='-rotate-90'>
-      <circle cx={size / 2} cy={size / 2} r={r} stroke='#e0e7ff' strokeWidth={5} fill='none' />
-      <circle
-        cx={size / 2} cy={size / 2} r={r}
-        stroke='url(#pg)' strokeWidth={5} fill='none'
-        strokeDasharray={circ} strokeDashoffset={offset}
-        strokeLinecap='round' style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-      />
-      <defs>
-        <linearGradient id='pg' x1='0%' y1='0%' x2='100%' y2='0%'>
-          <stop offset='0%' stopColor='var(--color-gradient-from)' />
-          <stop offset='100%' stopColor='var(--color-gradient-to)' />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
-
 /* ─────────────────────────── Custom Field Renderer ─────────────────────────── */
 function CustomFieldInput({ field, value, onChange }) {
   const { type, label, placeholder, options, required } = field;
-
-  const fieldLabel = (
-    <span className='block text-sm font-medium text-slate-700 mb-1.5'>
-      {label || 'سؤال'}
-      {required && <span className='text-rose-500 ml-1'>*</span>}
-    </span>
-  );
+  const fieldLabel = label || 'سؤال';
 
   if (type === 'boolean') {
     return (
-      <div className='flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-slate-50/80 border border-slate-100'>
-        <span className='text-sm font-medium text-slate-700'>{label}{required && <span className='text-rose-500 ml-1'>*</span>}</span>
-        <Switcher checked={!!value} onChange={v => onChange(v)} />
+      <div className='flex items-center justify-between gap-3 rounded-2xl border border-white/80 bg-[#eef2f9] px-3 py-2.5 shadow-[3px_3px_6px_rgba(100,116,139,0.18)]'>
+        <span className='text-[13px] font-medium text-slate-800'>{label}{required && <span className='text-rose-500 ms-1'>*</span>}</span>
+        <button
+          type='button'
+          role='switch'
+          aria-checked={!!value}
+          onClick={() => onChange(!value)}
+          className={value ? 'relative h-7 w-12 shrink-0 rounded-full bg-(--color-primary-400)' : 'relative h-7 w-12 shrink-0 rounded-full bg-[#d1d5db]'}
+        >
+          <span className={value ? 'absolute end-0.5 top-0.5 h-6 w-6 rounded-full bg-(--color-primary-600) shadow' : 'absolute start-0.5 top-0.5 h-6 w-6 rounded-full bg-[#f4f4f5] shadow'} />
+        </button>
       </div>
     );
   }
@@ -365,7 +354,7 @@ function CustomFieldInput({ field, value, onChange }) {
   if (type === 'rating') {
     return (
       <div className='space-y-1'>
-        {fieldLabel}
+        <span className='block text-sm font-medium text-slate-700'>{fieldLabel}{required && <span className='text-rose-500 ms-1'>*</span>}</span>
         <div className='flex items-center gap-1 p-3 rounded-xl bg-slate-50/80 border border-slate-100'>
           {[1,2,3,4,5].map(n => (
             <button key={n} type='button' onClick={() => onChange(n)}
@@ -383,45 +372,27 @@ function CustomFieldInput({ field, value, onChange }) {
 
   if (type === 'textarea') {
     return (
-      <div>
-        {fieldLabel}
-        <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder || ''}
-          rows={3} className='w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40' />
-      </div>
+      <FloatingTextarea label={fieldLabel} required={required} value={value || ''} onChange={onChange} placeholder={placeholder || ''} rows={3} />
     );
   }
 
   if (type === 'select' && options?.length) {
     return (
-      <div>
-        {fieldLabel}
-        <select value={value || ''} onChange={e => onChange(e.target.value)}
-          className='w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40'>
-          <option value=''>{placeholder || 'اختر...'}</option>
-          {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-        </select>
-      </div>
+      <FloatingSelect
+        label={fieldLabel}
+        required={required}
+        value={value || null}
+        onChange={onChange}
+        options={options.map((opt) => ({ id: opt, label: opt }))}
+      />
     );
   }
 
   if (type === 'number') {
-    return (
-      <div>
-        {fieldLabel}
-        <input type='number' value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder || ''}
-          className='w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40' />
-      </div>
-    );
+    return <PhoneInput type='number' label={fieldLabel} required={required} value={value ?? ''} onChange={onChange} placeholder={placeholder || ''} />;
   }
 
-  // default: text
-  return (
-    <div>
-      {fieldLabel}
-      <input type='text' value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder || ''}
-        className='w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40' />
-    </div>
-  );
+  return <PhoneInput label={fieldLabel} required={required} value={value || ''} onChange={onChange} placeholder={placeholder || ''} />;
 }
 
 /* ─────────────────────────── Custom Section ─────────────────────────── */
@@ -450,7 +421,8 @@ export default function WeeklyReportPage() {
   const [reportsError, setReportsError] = useState('');
   const [reportsPage, setReportsPage] = useState(1);
   const [reportsHasMore, setReportsHasMore] = useState(false);
-  const [showPrevModal, setShowPrevModal] = useState(false);
+  const [tab, setTab] = useState('new');
+  const [refreshing, setRefreshing] = useState(false);
   const [activeReport, setActiveReport] = useState(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
@@ -547,27 +519,20 @@ export default function WeeklyReportPage() {
   });
 
   const weekOf = watch('weekOf');
-  const cardioAdherence = watch('cardioAdherence');
   const m = watch('measurements');
   const addPhotoVals = watch('addPhoto');
 
   const measurementOptions = useMemo(() => measureList.map(mm => ({ id: mm.id, label: `${mm.date}${mm.weight ? ` • ${mm.weight}kg` : ''}` })), [measureList]);
   const photoSetOptions = useMemo(() => historyRows.map(r => ({ id: r.id, label: `${r.takenAt}${r.weight ? ` • ${r.weight}kg` : ''}` })), [historyRows]);
 
-  const reqTotal = useMemo(() => {
-    const anyMeas = ['weight', 'waist', 'chest', 'hips', 'arms', 'thighs'].some(k => `${m?.[k] ?? ''}`.trim() !== '');
-    return 2 + (anyMeas ? 1 : 0);
-  }, [m]);
-
-  const reqDone = useMemo(() => {
-    const base = (weekOf ? 1 : 0) + (cardioAdherence ? 1 : 0);
-    const anyMeas = ['weight', 'waist', 'chest', 'hips', 'arms', 'thighs'].some(k => `${m?.[k] ?? ''}`.trim() !== '');
-    return base + (anyMeas && m?.date ? 1 : 0);
-  }, [weekOf, cardioAdherence, m]);
-
-  const reqPct = Math.round((reqDone / reqTotal) * 100) || 0;
-
   /* ── effects ── */
+  useEffect(() => {
+    const pane = document.querySelector('[data-dashboard-content]');
+    if (!pane) return undefined;
+    pane.dataset.plainPage = '1';
+    return () => { delete pane.dataset.plainPage; };
+  }, []);
+
   useEffect(() => {
     getClientReportConfig().then(cfg => { if (cfg) setReportConfig(cfg); });
   }, []);
@@ -604,6 +569,19 @@ export default function WeeklyReportPage() {
       finally { setReportsLoading(false); }
     })();
   }, [reportsPage, t]);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      const [cfg, count] = await Promise.all([getClientReportConfig(), fetchUnreadFeedbackCount()]);
+      if (cfg) setReportConfig(cfg);
+      setUnreadFeedbackCount(count);
+      const res = await fetchMyReports({ page: reportsPage, limit: 5 });
+      setMyReports(res.items || []);
+      setReportsHasMore(res.hasMore);
+    } catch { /* keep current data */ }
+    finally { setRefreshing(false); }
+  }
 
   /* ── helpers ── */
   function hydrateMeasurement(mm) {
@@ -764,48 +742,127 @@ export default function WeeklyReportPage() {
 
   /* ── render ── */
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className='relative space-y-5 pb-24'>
-
-      {/* ── Hero Header ── */}
-      <div className='rounded-2xl overflow-hidden border border-[var(--color-primary-200)] shadow-lg shadow-[var(--color-primary-100)]/60'>
-        {/* gradient top bar */}
-        <div className='h-1.5 w-full bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]' />
-
-        <div className='bg-white px-5 py-5'>
-          <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
-            {/* left */}
-            <div className='flex items-start gap-4'>
-              <div className='w-12 h-12 rounded-2xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center shadow-md shadow-[var(--color-primary-300)]/40 shrink-0'>
-                <Sparkles className='w-6 h-6 text-white' />
-              </div>
-              <div>
-                <div className='flex items-center gap-2 flex-wrap'>
-                  <h1 className='text-xl font-extrabold text-slate-900'>{t('weekly.title')}</h1>
-                  {unreadFeedbackCount > 0 && (
-                    <span className='inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200'>
-                      <span className='w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse' />
-                      {unreadLoading ? '...' : t('weekly.unreadFeedback.badge', { count: unreadFeedbackCount })}
-                    </span>
-                  )}
-                </div>
-                <p className='mt-0.5 mb-3 text-slate-500 text-sm'>{t('weekly.subtitle')}</p>
-								<Button type='button' color='neutral' onClick={() => setShowPrevModal(true)} className='shrink-0'>
-                <ClipboardList className='w-4 h-4 text-[var(--color-primary-500)]' />
-                <span className=' inline'>{t('weekly.prevReports.goTo')}</span>
-              </Button>
-              </div>
+    <div data-plain-page="1" className='report-phone -mx-[var(--app-gutter)] min-h-full bg-white px-[var(--app-gutter)] pt-1 dark:bg-[#0b1220]'>
+    <div className='mx-auto w-full max-w-[440px]'>
+      <div className='m-[5px] rounded-3xl shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]'>
+        <div
+          className='relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-e-[rgba(15,34,128,0.35)] border-b-[rgba(15,34,128,0.45)]'
+          style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), #1a3fbf)' }}
+        >
+          <div className='pointer-events-none absolute -top-24 -start-16 h-[280px] w-[280px] rounded-full bg-white/5' />
+          <div className='pointer-events-none absolute -bottom-16 -end-12 h-[200px] w-[200px] rounded-full bg-white/[0.04]' />
+          <div className='relative flex items-center gap-3 p-4'>
+            <div className='grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/40 bg-white/15 text-white'>
+              <ClipboardList size={20} strokeWidth={1.8} />
             </div>
- 
+            <div className='min-w-0 flex-1'>
+              <div className='flex flex-wrap items-center gap-2'>
+                <h1 className='truncate text-xl font-black leading-6 tracking-[-0.3px] text-white'>{t('weekly.title')}</h1>
+                {unreadFeedbackCount > 0 && (
+                  <span className='inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800'>
+                    <Bell size={11} strokeWidth={2.4} />
+                    {unreadLoading ? '...' : t('weekly.unreadFeedback.badge', { count: unreadFeedbackCount })}
+                  </span>
+                )}
+              </div>
+              <p className='mt-0.5 line-clamp-2 text-[10px] font-medium text-white/55'>{t('weekly.subtitle')}</p>
+            </div>
+            <button type='button' onClick={onRefresh} className='grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white'>
+              <RefreshCw size={18} strokeWidth={2.2} className={refreshing ? 'animate-spin' : ''} />
+            </button>
           </div>
+          <div className='flex gap-2 px-4 pb-4'>
+            {[
+              { key: 'new', label: t('weekly.tabs.new'), Icon: Plus },
+              { key: 'history', label: t('weekly.tabs.history'), Icon: History },
+            ].map(item => {
+              const active = tab === item.key;
+              const Icon = item.Icon;
+              return (
+                <button
+                  key={item.key}
+                  type='button'
+                  onClick={() => setTab(item.key)}
+                  className={active
+                    ? 'flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-white bg-white py-2.5 text-[13px] font-bold text-(--color-primary-700) shadow-[2px_3px_6px_rgba(15,34,128,0.25)]'
+                    : 'flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-white/20 bg-white/15 py-2.5 text-[13px] font-bold text-white/90'}
+                >
+                  <Icon size={14} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
-          {/* Week + Cardio row */}
-          <div className='mt-5 grid grid-cols-1 md:grid-cols-2 gap-4'>
+      {tab === 'history' && (
+        <div className='space-y-3 px-3 pt-3'>
+          {reportsLoading ? (
+            <div className='flex h-32 flex-col items-center justify-center gap-2 text-sm text-slate-500'>
+              <Loader2 className='h-6 w-6 animate-spin text-(--color-primary-400)' />
+              {t('weekly.prevReports.loading')}
+            </div>
+          ) : reportsError ? (
+            <div className='flex h-32 items-center justify-center text-sm text-rose-600'>{reportsError}</div>
+          ) : myReports.length === 0 ? (
+            <div className='flex flex-col items-center justify-center gap-3 py-12 text-sm text-slate-400'>
+              <div className='grid h-[72px] w-[72px] place-items-center rounded-full border border-white/85 bg-[#eef2f9] shadow-[4px_4px_8px_rgba(100,116,139,0.28)]'>
+                <History size={32} />
+              </div>
+              {t('weekly.prevReports.empty')}
+            </div>
+          ) : (
+            <>
+              {myReports.map(r => (
+                <div key={r.id} className='rounded-3xl border border-white/85 bg-[#eef2f9] p-4 shadow-[5px_5px_8px_rgba(100,116,139,0.32)]'>
+                  <div className='text-sm font-bold text-slate-800'>{t('weekly.prevReports.weekOf')}: {r.weekOf}</div>
+                  <div className='mt-1 text-[11px] text-slate-400'>
+                    {t('weekly.prevReports.createdAt')}: {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
+                  </div>
+                  <div className='mt-2 flex items-center justify-between gap-2'>
+                    {r.coachFeedback ? (
+                      r.isRead ? (
+                        <span className='rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700'>{t('weekly.prevReports.noteRead')}</span>
+                      ) : (
+                        <span className='rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700'>{t('weekly.prevReports.noteUnread')}</span>
+                      )
+                    ) : (
+                      <span className='rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500'>{t('weekly.prevReports.noNote')}</span>
+                    )}
+                    {r.coachFeedback && (
+                      <button type='button' onClick={() => handleOpenFeedback(r)} className='inline-flex items-center gap-1.5 rounded-2xl border border-t-white/35 border-b-[rgba(15,48,120,0.3)] bg-(--color-primary-600) px-3 py-2 text-[11px] font-bold text-white'>
+                        <Eye size={14} /> {t('weekly.prevReports.viewNote')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div className='flex items-center justify-between pt-1'>
+                <div className='text-xs text-slate-400'>{t('weekly.prevReports.pagination', { page: reportsPage })}</div>
+                <div className='flex items-center gap-2'>
+                  <Button type='button' color='neutral' className='!px-3 !py-1.5 text-xs' disabled={reportsPage <= 1} onClick={() => setReportsPage(p => Math.max(1, p - 1))}>
+                    <ChevronRight className='h-3.5 w-3.5' /> {t('weekly.prevReports.prev')}
+                  </Button>
+                  <Button type='button' color='neutral' className='!px-3 !py-1.5 text-xs' disabled={!reportsHasMore} onClick={() => setReportsPage(p => p + 1)}>
+                    {t('weekly.prevReports.next')} <ChevronLeft className='h-3.5 w-3.5' />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+    <form onSubmit={handleSubmit(onSubmit)} className={tab === 'history' ? 'hidden' : 'space-y-4 px-3 pt-3'}>
+          <Section title={t('weekly.basics')} icon={ClipboardList}>
+          <div className='grid grid-cols-1 gap-4'>
             <div className='space-y-1.5'>
               <Controller
                 control={control}
                 name='weekOf'
                 render={({ field }) => (
-                  <InputDate
+                  <PhoneDate
                     label={<span>{t('weekly.weekOf')} <span className='text-rose-500'>*</span></span>}
                     type='date'
                     value={field.value}
@@ -837,8 +894,7 @@ export default function WeeklyReportPage() {
               {errors?.cardioAdherence?.message && <div className='text-[11px] text-rose-500 mt-1 flex items-center gap-1'><X className='w-3 h-3' />{errors.cardioAdherence.message}</div>}
             </div>
           </div>
-        </div>
-      </div>
+          </Section>
 
       {/* ── Diet Section ── */}
       {isSecEnabled('diet') && (
@@ -853,22 +909,19 @@ export default function WeeklyReportPage() {
         {isFieldEnabled('diet','wantSpecific') && (
         <div className='pt-1'>
           <Controller name='diet.wantSpecific' control={control} render={({ field }) => (
-            <Input label={t('weekly.diet.wantSpecific.title')} value={field.value} onChange={field.onChange} placeholder={t('weekly.diet.wantSpecific.ph')} />
+            <PhoneInput label={t('weekly.diet.wantSpecific.title')} value={field.value} onChange={field.onChange} placeholder={t('weekly.diet.wantSpecific.ph')} />
           )} />
         </div>
         )}
 
         {watch('diet.dietDeviation.hasDeviation') && isFieldEnabled('diet','dietDeviation') && (
-          <div className='mt-2 p-4 rounded-xl bg-amber-50/60 border border-amber-100 space-y-3'>
-            <div className='text-xs font-semibold text-amber-700 flex items-center gap-1.5'>
-              <Info className='w-3.5 h-3.5' /> {t('weekly.diet.deviation.title')}
-            </div>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+          <div className='mt-2 space-y-3'>
+            <div className='grid grid-cols-1 grid-cols-1 gap-3'>
               <Controller name='diet.dietDeviation.times' control={control} render={({ field }) => (
-                <Input label={t('weekly.diet.deviation.times')} type='number' inputMode='numeric' value={field.value} onChange={val => field.onChange(String(val))} />
+                <PhoneInput label={t('weekly.diet.deviation.times')} type='number' inputMode='numeric' value={field.value} onChange={val => field.onChange(String(val))} />
               )} />
               <Controller name='diet.dietDeviation.details' control={control} render={({ field }) => (
-                <Input label={t('weekly.diet.deviation.details')} value={field.value} onChange={e => field.onChange(e.target.value)} placeholder={t('weekly.diet.deviation.ph')} />
+                <PhoneInput label={t('weekly.diet.deviation.details')} value={field.value} onChange={e => field.onChange(e.target.value)} placeholder={t('weekly.diet.deviation.ph')} />
               )} />
             </div>
           </div>
@@ -893,27 +946,24 @@ export default function WeeklyReportPage() {
         </div>
 
         {watch('training.daysDeviation.hasDeviation') && isFieldEnabled('training','daysDeviation') && (
-          <div className='mt-2 p-4 rounded-xl bg-rose-50/50 border border-rose-100 space-y-3'>
-            <div className='text-xs font-semibold text-rose-700 flex items-center gap-1.5'>
-              <Info className='w-3.5 h-3.5' /> {t('weekly.training.daysDeviation')}
-            </div>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+          <div className='mt-2 space-y-3'>
+            <div className='grid grid-cols-1 grid-cols-1 gap-3'>
               <Controller name='training.daysDeviation.count' control={control} render={({ field }) => (
-                <Input label={t('weekly.training.deviation.count')} type='number' inputMode='numeric' value={field.value} onChange={val => field.onChange(String(val))} />
+                <PhoneInput label={t('weekly.training.deviation.count')} type='number' inputMode='numeric' value={field.value} onChange={val => field.onChange(String(val))} />
               )} />
               <Controller name='training.daysDeviation.reason' control={control} render={({ field }) => (
-                <Input label={t('weekly.training.deviation.reason')} value={field.value} onChange={e => field.onChange(e.target.value)} />
+                <PhoneInput label={t('weekly.training.deviation.reason')} value={field.value} onChange={e => field.onChange(e.target.value)} />
               )} />
             </div>
           </div>
         )}
 
-        <div className='mt-2 grid grid-cols-1 md:grid-cols-2 gap-3'>
+        <div className='mt-2 grid grid-cols-1 grid-cols-1 gap-3'>
           {isFieldEnabled('training','sleepHours') && <Controller name='training.sleepHours' control={control} render={({ field }) => (
-            <Input label={t('weekly.training.sleepHours')} type='number' inputMode='numeric' value={field.value} onChange={val => field.onChange(String(val))} />
+            <PhoneInput label={t('weekly.training.sleepHours')} type='number' inputMode='numeric' value={field.value} onChange={val => field.onChange(String(val))} />
           )} />}
           {isFieldEnabled('training','programNotes') && <Controller name='training.programNotes' control={control} render={({ field }) => (
-            <Input label={t('weekly.training.notes.title')} value={field.value} onChange={e => field.onChange(e.target.value)} placeholder={t('weekly.training.notes.ph')} />
+            <PhoneInput label={t('weekly.training.notes.title')} value={field.value} onChange={e => field.onChange(e.target.value)} placeholder={t('weekly.training.notes.ph')} />
           )} />}
         </div>
 
@@ -965,10 +1015,10 @@ export default function WeeklyReportPage() {
         )}
 
         {showAddMeasureForm && (
-          <div className='mt-3 p-4 rounded-xl bg-[var(--color-primary-50)]/50 border border-[var(--color-primary-100)] space-y-4'>
-            <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+          <div className='mt-3 space-y-4 rounded-3xl border border-white/80 bg-[#eef2f9] p-4 shadow-[3px_3px_6px_rgba(100,116,139,0.18)]'>
+            <div className='grid grid-cols-2 grid-cols-2 gap-3'>
               <Controller name='measurements.date' control={control} render={({ field }) => (
-                <InputDate
+                <PhoneDate
                   label={<span>{t('weekly.measurements.date')}{['weight','waist','chest'].some(k => `${m?.[k]??''}`.trim()!=='') ? <span className='text-rose-500'> *</span>:null}</span>}
                   value={field.value}
                   onChange={v => {
@@ -979,12 +1029,12 @@ export default function WeeklyReportPage() {
                   error={errors?.measurements?.date?.message}
                 />
               )} />
-              <Controller name='measurements.weight' control={control} render={({ field }) => <Input label={t('weekly.measurements.weight')} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
-              <Controller name='measurements.waist' control={control} render={({ field }) => <Input label={t('weekly.measurements.waist')} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
-              <Controller name='measurements.chest' control={control} render={({ field }) => <Input label={t('weekly.measurements.chest')} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
-              <Controller name='measurements.hips' control={control} render={({ field }) => <Input label={t('weekly.measurements.hips') || 'الأرداف'} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
-              <Controller name='measurements.arms' control={control} render={({ field }) => <Input label={t('weekly.measurements.arms') || 'الذراعان'} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
-              <Controller name='measurements.thighs' control={control} render={({ field }) => <Input label={t('weekly.measurements.thighs') || 'الأفخاذ'} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
+              <Controller name='measurements.weight' control={control} render={({ field }) => <PhoneInput label={t('weekly.measurements.weight')} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
+              <Controller name='measurements.waist' control={control} render={({ field }) => <PhoneInput label={t('weekly.measurements.waist')} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
+              <Controller name='measurements.chest' control={control} render={({ field }) => <PhoneInput label={t('weekly.measurements.chest')} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
+              <Controller name='measurements.hips' control={control} render={({ field }) => <PhoneInput label={t('weekly.measurements.hips') || 'الأرداف'} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
+              <Controller name='measurements.arms' control={control} render={({ field }) => <PhoneInput label={t('weekly.measurements.arms') || 'الذراعان'} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
+              <Controller name='measurements.thighs' control={control} render={({ field }) => <PhoneInput label={t('weekly.measurements.thighs') || 'الأفخاذ'} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />} />
             </div>
             <div className='flex gap-2'>
               <Button type='button' onClick={saveMeasurementInline}>
@@ -1012,7 +1062,7 @@ export default function WeeklyReportPage() {
         }
       >
         {/* Picker row */}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-3 pb-2'>
+        <div className='grid grid-cols-1 grid-cols-1 gap-3 pb-2'>
           <Select
             label={t('weekly.photos.pickSet')}
             value={photoSelect}
@@ -1030,8 +1080,8 @@ export default function WeeklyReportPage() {
 
         {/* Upload new photo set form */}
         {showAddPhotoForm && (
-          <div className='p-4 rounded-xl bg-[var(--color-primary-50)]/50 border border-[var(--color-primary-100)] space-y-4'>
-            <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+          <div className='space-y-4 rounded-3xl border border-white/80 bg-[#eef2f9] p-4 shadow-[3px_3px_6px_rgba(100,116,139,0.18)]'>
+            <div className='grid grid-cols-2 grid-cols-2 gap-3'>
               {['front','back','right','left'].map(side => (
                 <Controller key={side} name={`addPhoto.${side}`} control={control} render={({ field }) => (
                   <ImagePicker
@@ -1046,9 +1096,9 @@ export default function WeeklyReportPage() {
               ))}
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+            <div className='grid grid-cols-1 grid-cols-1 gap-3'>
               <Controller name='addPhoto.date' control={control} render={({ field }) => (
-                <InputDate
+                <PhoneDate
                   label={<span>{t('weekly.photos.date')}{hasAnyPhotoNew ? <span className='text-rose-500'> *</span> : null}</span>}
                   type='date' value={field.value}
                   onChange={v => field.onChange(typeof v === 'string' ? v : v?.target?.value)}
@@ -1056,10 +1106,10 @@ export default function WeeklyReportPage() {
                 />
               )} />
               <Controller name='addPhoto.weight' control={control} render={({ field }) => (
-                <Input label={t('weekly.photos.weight')} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />
+                <PhoneInput label={t('weekly.photos.weight')} type='number' inputMode='decimal' value={field.value} onChange={val => field.onChange(String(val))} />
               )} />
               <Controller name='addPhoto.note' control={control} render={({ field }) => (
-                <Input label={t('weekly.photos.note')} value={field.value} onChange={e => field.onChange(e.target.value)} />
+                <PhoneInput label={t('weekly.photos.note')} value={field.value} onChange={e => field.onChange(e.target.value)} />
               )} />
             </div>
 
@@ -1077,7 +1127,7 @@ export default function WeeklyReportPage() {
 
         {/* Preview picked sides */}
         {!showAddPhotoForm && (
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-1'>
+          <div className='grid grid-cols-2 grid-cols-2 gap-3 mt-1'>
             {['front','back','right','left'].map(side => (
               <ImagePicker
                 key={side}
@@ -1118,40 +1168,14 @@ export default function WeeklyReportPage() {
         </div>
       )}
 
-      {/* ── Sticky Submit Bar ── */}
-      <div className='fixed inset-x-0 bottom-0 z-40 px-3 pb-3'>
-        <div className='mx-auto max-w-4xl'>
-          <div className='rounded-2xl border border-[var(--color-primary-100)] bg-white/95 backdrop-blur-md shadow-xl shadow-[var(--color-primary-100)]/50 overflow-hidden'>
-            {/* progress bar */}
-            <div className='h-1 w-full bg-slate-100'>
-              <div
-                className='h-full bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] transition-[width] duration-500 ease-out'
-                style={{ width: `${reqPct}%` }}
-              />
-            </div>
-
-            <div className='px-4 py-3 flex items-center justify-between gap-3'>
-              <div className='flex items-center gap-3'>
-                <div className='hidden sm:flex items-center gap-2'>
-                  <div className='w-8 h-8 relative'>
-                    <ProgressRing pct={reqPct} size={32} />
-                    <span className='absolute inset-0 flex items-center justify-center text-[9px] font-black text-[var(--color-primary-700)]'>{reqPct}%</span>
-                  </div>
-                </div>
-                <div>
-                  <div className='text-xs font-semibold text-slate-700'>{t('weekly.submit.hint')}</div>
-                  <div className='text-[10px] text-slate-400'>{reqDone}/{reqTotal} {t('weekly.submit.fieldsComplete') || 'حقول مكتملة'}</div>
-                </div>
-              </div>
-
-              <Button type='submit' disabled={submitting} className='!px-6 !py-2.5'>
-                {submitting ? <Loader2 className='w-4 h-4 animate-spin' /> : <UploadCloud className='w-4 h-4' />}
-                {submitting ? t('weekly.submit.sending') : t('weekly.submit.cta')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <button
+        type='submit'
+        disabled={submitting}
+        className='flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-(--color-gradient-from) via-(--color-gradient-via) to-(--color-gradient-to) py-3.5 text-[15px] font-bold text-white shadow-[3px_5px_10px_color-mix(in_srgb,var(--color-primary-900)_40%,transparent)] disabled:opacity-55'
+      >
+        {submitting ? <Loader2 className='h-4 w-4 animate-spin' /> : <ClipboardList size={18} strokeWidth={2.2} />}
+        {submitting ? t('weekly.submit.sending') : t('weekly.submit.cta')}
+      </button>
 
       {/* ── Photo picker modal ── */}
       {showPickModal && (
@@ -1164,78 +1188,12 @@ export default function WeeklyReportPage() {
         />
       )}
 
-      {/* ── Previous reports modal ── */}
-      <Modal open={showPrevModal} onClose={() => setShowPrevModal(false)} title={t('weekly.prevReports.title')} maxW='max-w-3xl' maxHBody='max-h-[70vh]'>
-        {reportsLoading ? (
-          <div className='h-32 flex flex-col items-center justify-center gap-2 text-slate-500 text-sm'>
-            <Loader2 className='w-6 h-6 animate-spin text-[var(--color-primary-400)]' />
-            {t('weekly.prevReports.loading')}
-          </div>
-        ) : reportsError ? (
-          <div className='h-32 flex items-center justify-center text-rose-600 text-sm'>{reportsError}</div>
-        ) : myReports.length === 0 ? (
-          <div className='h-32 flex flex-col items-center justify-center gap-2 text-slate-400 text-sm'>
-            <ClipboardList className='w-8 h-8 opacity-40' />
-            {t('weekly.prevReports.empty')}
-          </div>
-        ) : (
-          <>
-            <div className='space-y-3'>
-              {myReports.map(r => (
-                <div key={r.id} className='rounded-xl border border-[var(--color-primary-100)] bg-gradient-to-r from-[var(--color-primary-50)]/40 to-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:border-[var(--color-primary-200)] transition-colors'>
-                  <div className='space-y-1.5'>
-                    <div className='text-sm font-bold text-slate-900'>
-                      {t('weekly.prevReports.weekOf')}: <span className='text-[var(--color-primary-700)]'>{r.weekOf}</span>
-                    </div>
-                    <div className='text-[11px] text-slate-400'>
-                      {t('weekly.prevReports.createdAt')}: {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
-                    </div>
-                    <div>
-                      {r.coachFeedback ? (
-                        r.isRead ? (
-                          <span className='inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 border border-emerald-200 text-[11px] font-semibold'>
-                            <CheckCircle2 className='w-3.5 h-3.5' /> {t('weekly.prevReports.noteRead')}
-                          </span>
-                        ) : (
-                          <span className='inline-flex items-center gap-1.5 rounded-full bg-amber-50 text-amber-700 px-2.5 py-1 border border-amber-200 text-[11px] font-semibold'>
-                            <span className='w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse' /> {t('weekly.prevReports.noteUnread')}
-                          </span>
-                        )
-                      ) : (
-                        <span className='inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-500 px-2.5 py-1 border border-slate-200 text-[11px]'>
-                          <Info className='w-3.5 h-3.5' /> {t('weekly.prevReports.noNote')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {r.coachFeedback && (
-                    <Button type='button' color={r.isRead ? 'neutral' : 'primary'} className='!px-3 !py-1.5 text-xs shrink-0' onClick={() => handleOpenFeedback(r)}>
-                      <Eye className='w-3.5 h-3.5' /> {t('weekly.prevReports.viewNote')}
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className='mt-4 flex items-center justify-between'>
-              <div className='text-xs text-slate-400'>{t('weekly.prevReports.pagination', { page: reportsPage })}</div>
-              <div className='flex items-center gap-2'>
-                <Button type='button' color='neutral' className='!px-3 !py-1.5 text-xs' disabled={reportsPage <= 1} onClick={() => setReportsPage(p => Math.max(1, p - 1))}>
-                  <ChevronRight className='w-3.5 h-3.5' /> {t('weekly.prevReports.prev')}
-                </Button>
-                <Button type='button' color='neutral' className='!px-3 !py-1.5 text-xs' disabled={!reportsHasMore} onClick={() => setReportsPage(p => p + 1)}>
-                  {t('weekly.prevReports.next')} <ChevronLeft className='w-3.5 h-3.5' />
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </Modal>
+    </form>
 
       {/* ── Feedback modal ── */}
       {showFeedbackModal && activeReport && (
         <div className='fixed inset-0 z-[9999000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4'>
-          <div className='w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200'>
+          <div className='w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/85 bg-[#f8fafc] shadow-[0_16px_40px_rgba(100,116,139,0.35)]'>
             <div className='h-1 w-full bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]' />
             <div className='px-5 py-4 border-b border-[var(--color-primary-100)] bg-gradient-to-r from-[var(--color-primary-50)] to-white flex items-center justify-between'>
               <div className='flex items-center gap-3'>
@@ -1272,6 +1230,7 @@ export default function WeeklyReportPage() {
           </div>
         </div>
       )}
-    </form>
+    </div>
+    </div>
   );
 }

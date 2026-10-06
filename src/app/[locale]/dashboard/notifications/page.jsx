@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Inbox, Check, CheckCheck, Loader2, ChevronDown, X, BellRing, ArrowUpRight, Zap, MailOpen, RefreshCw, Filter, Sparkles } from 'lucide-react';
+import { Bell, Inbox, Check, CheckCheck, Loader2, ChevronDown, X, ArrowUpRight, Zap, MailOpen, RefreshCw, Filter, Sparkles } from 'lucide-react';
 import io from 'socket.io-client';
 import { useTranslations, useLocale } from 'next-intl';
 import api from '@/utils/axios';
@@ -57,13 +57,13 @@ function groupByDay(items = []) {
 }
 
 const TYPE_STYLE = {
-  system: { bg: 'bg-[var(--color-primary-100)]', tx: 'text-[var(--color-primary-700)]' },
-  message: { bg: 'bg-emerald-100', tx: 'text-emerald-700' },
-  alert: { bg: 'bg-rose-100', tx: 'text-rose-700' },
-  info: { bg: 'bg-sky-100', tx: 'text-sky-700' },
-  warning: { bg: 'bg-amber-100', tx: 'text-amber-700' },
+  system: { bg: 'bg-[color-mix(in_srgb,var(--color-primary-500)_16%,transparent)]', tx: 'text-[var(--color-primary-700)] dark:text-[var(--color-primary-200)]' },
+  message: { bg: 'bg-emerald-500/15', tx: 'text-emerald-700 dark:text-emerald-300' },
+  alert: { bg: 'bg-rose-500/15', tx: 'text-rose-700 dark:text-rose-300' },
+  info: { bg: 'bg-sky-500/15', tx: 'text-sky-700 dark:text-sky-300' },
+  warning: { bg: 'bg-amber-500/15', tx: 'text-amber-700 dark:text-amber-300' },
 };
-const tStyle = type => TYPE_STYLE[(type || '').toLowerCase()] || { bg: 'bg-slate-100', tx: 'text-slate-500' };
+const tStyle = type => TYPE_STYLE[(type || '').toLowerCase()] || { bg: 'bg-[color-mix(in_srgb,var(--gm-ink)_8%,transparent)]', tx: 'gm-muted' };
 
 /* ─── data hook ─── */
 function useFeed({ pageSize = 30 } = {}) {
@@ -131,15 +131,15 @@ function useFeed({ pageSize = 30 } = {}) {
 /* ─── skeleton ─── */
 function Skel() {
   return (
-    <div className='divide-y divide-slate-100'>
+    <div className='divide-y divide-(--gm-line)'>
       {[...Array(7)].map((_, i) => (
         <div key={i} className='flex items-start gap-3 px-4 py-3'>
-          <div className='h-7 w-7 rounded-lg bg-slate-100 animate-pulse flex-shrink-0 mt-0.5' />
+          <div className='gm-skel mt-0.5 size-7 shrink-0 rounded-lg' />
           <div className='flex-1 space-y-1.5 pt-0.5'>
-            <div className='h-2.5 w-1/3 rounded-full bg-slate-100 animate-pulse' />
-            <div className='h-2 w-2/3 rounded-full bg-slate-100 animate-pulse' />
+            <div className='gm-skel h-2.5 w-1/3 rounded-full' />
+            <div className='gm-skel h-2 w-2/3 rounded-full' />
           </div>
-          <div className='h-2 w-6 rounded-full bg-slate-100 animate-pulse mt-1' />
+          <div className='gm-skel mt-1 h-2 w-6 rounded-full' />
         </div>
       ))}
     </div>
@@ -159,8 +159,7 @@ function Row({ n, onRead, selected, onToggle, t }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.15 }}
-      className={`group relative flex items-start gap-3 px-4 py-2.5 border-b border-slate-100 last:border-0 transition-colors duration-100
-        ${unread ? 'bg-[var(--color-primary-50)]/60 hover:bg-[var(--color-primary-100)]/40' : 'hover:bg-slate-50/50'}`}>
+      className={`group relative mb-2 flex items-start gap-3 rounded-2xl border border-white/80 px-3 py-3 shadow-[3px_3px_6px_rgba(100,116,139,0.18)] ${unread ? 'bg-[#e7efff]' : 'bg-[#eef2f9]'}`}>
       {/* unread strip */}
       {unread && <div className='absolute inset-y-0 start-0 w-[3px] rounded-e-full bg-[var(--color-primary-500)]' />}
 
@@ -172,7 +171,7 @@ function Row({ n, onRead, selected, onToggle, t }) {
         }}
         className={`absolute start-1.5 top-3 h-[15px] w-[15px] rounded border-[1.5px] items-center justify-center cursor-pointer transition-all
           hidden group-hover:flex
-          ${selected ? '!flex border-[var(--color-primary-500)] bg-[var(--color-primary-500)]' : 'border-slate-300 bg-white'}`}>
+          ${selected ? '!flex border-[var(--color-primary-500)] bg-[var(--color-primary-500)]' : 'border-(--gm-line) bg-(--gm-paper)'}`}>
         {selected && <Check className='h-2 w-2 text-white' strokeWidth={3} />}
       </div>
 
@@ -184,7 +183,7 @@ function Row({ n, onRead, selected, onToggle, t }) {
       {/* content: title on top, description below */}
       <div className='flex-1 min-w-0'>
         <div className='flex items-start justify-between gap-2'>
-          <p className={`text-[12.5px] md: leading-snug ${unread ? 'font-semibold text-slate-900' : 'font-medium text-slate-600'}`}>{n.title || t('row.defaultTitle')}</p>
+          <p className={`text-[13px] leading-snug ${unread ? 'font-semibold gm-ink' : 'font-medium gm-muted'}`}>{n.title || t('row.defaultTitle')}</p>
           {/* time + type badge */}
           <div className='flex items-center gap-1.5 flex-shrink-0 mt-0.5'>
             {/* action row */}
@@ -195,23 +194,23 @@ function Row({ n, onRead, selected, onToggle, t }) {
                   <Check className='h-2.5 w-2.5' strokeWidth={3} /> {t('row.markRead')}
                 </motion.button>
               ) : (
-                <span className='inline-flex items-center gap-1 text-[10px] text-slate-400 px-2 py-0.5 rounded-full bg-slate-100'>
+                <span className='inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--gm-ink)_6%,transparent)] px-2 py-0.5 text-[10px] gm-faint'>
                   <MailOpen className='h-2.5 w-2.5' /> {t('row.read')}
                 </span>
               )}
               {n.url && (
-                <a href={n.url} className='inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-400 hover:text-[var(--color-primary-600)] transition-colors'>
+                <a href={n.url} className='inline-flex items-center gap-0.5 text-[10px] font-medium gm-faint transition-colors hover:text-[var(--color-primary-600)]'>
                   {t('row.open')} <ArrowUpRight className='h-2.5 w-2.5' />
                 </a>
               )}
             </div>
 
-            <span className='text-[10px] text-slate-400 tabular-nums'>{time}</span>
+            <span className='text-[10px] tabular-nums gm-faint'>{time}</span>
           </div>
         </div>
 
         {/* description row */}
-        {n.message && <p className='text-[11.5px] mt-[-4px] text-slate-500 md: leading-relaxed line-clamp-1 '>{n.message}</p>}
+        {n.message && <p className='mt-0.5 line-clamp-1 text-[12px] leading-relaxed gm-muted'>{n.message}</p>}
       </div>
     </motion.div>
   );
@@ -231,26 +230,25 @@ function TypeMenu({ value, options, onChange, t }) {
 
   return (
     <div ref={ref} className='relative'>
-      <button onClick={() => setOpen(o => !o)} className='inline-flex items-center gap-1 h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors' style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-        <Filter className='h-3 w-3 text-slate-400' />
+      <button type='button' onClick={() => setOpen(o => !o)} className={`rs-btn${open || value !== 'all' ? ' is-on' : ''}`} aria-expanded={open}>
+        <Filter className='size-4' strokeWidth={2} />
         <span>{value === 'all' ? t('filter.all') : value}</span>
-        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.12 }}>
-          <ChevronDown className='h-3 w-3 text-slate-400' />
-        </motion.span>
+        <ChevronDown className={`rs-btn__chev size-3.5${open ? ' rotate-180' : ''}`} strokeWidth={2.2} />
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.11 }} className='absolute end-0 mt-1 w-32 rounded-xl border border-slate-200 bg-white z-20 overflow-hidden py-1' style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.16 }} className='absolute end-0 z-20 mt-2 min-w-40 overflow-hidden rounded-[14px] border border-(--gm-line) bg-(--gm-paper) py-1 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.45)]'>
             {options.map(opt => (
               <button
                 key={opt}
+                type='button'
                 onClick={() => {
                   onChange(opt);
                   setOpen(false);
                 }}
-                className={`w-full text-start px-3 py-1.5 text-[11px] font-medium flex items-center gap-1.5 hover:bg-slate-50 transition-colors
-                  ${opt === value ? 'text-[var(--color-primary-700)]' : 'text-slate-600'}`}>
-                {opt === value && <div className='h-1.5 w-1.5 rounded-full bg-[var(--color-primary-500)] flex-shrink-0' />}
+                className={`flex w-full items-center gap-1.5 px-3 py-2 text-start text-[12.5px] font-medium transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-500)_8%,transparent)]
+                  ${opt === value ? 'text-[var(--color-primary-700)] dark:text-[var(--color-primary-200)]' : 'gm-ink-soft'}`}>
+                {opt === value && <div className='size-1.5 shrink-0 rounded-full bg-[var(--color-primary-500)]' />}
                 {opt === 'all' ? t('filter.allTypes') : opt}
               </button>
             ))}
@@ -341,122 +339,65 @@ export default function NotificationsPage() {
     setHasMore(true);
   }, [tab, type]);
 
+  const total = items.length;
+
   return (
-    <div className='min-h-screen bg-slate-100' dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* ── HERO HEADER ── */}
-      <div className='relative overflow-hidden px-4 sm:px-6 pt-4 pb-4' style={{ background: 'linear-gradient(135deg, var(--color-primary-800) 0%, var(--color-primary-700) 50%, var(--color-secondary-600) 100%)' }}>
-        {/* decorative */}
-        <div className='absolute -top-10 -start-10 w-44 h-44 rounded-full opacity-20 blur-3xl pointer-events-none' style={{ background: 'radial-gradient(circle, var(--color-primary-400), transparent)' }} />
-        <div className='absolute -bottom-8 -end-8 w-36 h-36 rounded-full opacity-15 blur-2xl pointer-events-none' style={{ background: 'radial-gradient(circle, var(--color-secondary-400), transparent)' }} />
-        <div className='absolute inset-0 opacity-[0.035] pointer-events-none mix-blend-overlay' style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
-        <div className='absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent' />
-        <div className='absolute -top-6 -end-6 w-28 h-28 rounded-full border border-white/10 pointer-events-none' />
-
-        <div className='relative z-10 flex items-center justify-between gap-3'>
-          {/* icon + title */}
-          <div className='flex items-center gap-2.5'>
-            <div className='relative'>
-              <div className='h-10 w-10 rounded-xl bg-white/[0.15] backdrop-blur-sm flex items-center justify-center' style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25),0 2px 10px rgba(0,0,0,0.12)' }}>
-                <BellRing className='h-5 w-5 text-white' />
-              </div>
-              {unread > 0 && (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className='absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] rounded-full px-1 flex items-center justify-center text-[9px] font-black text-white' style={{ background: 'linear-gradient(135deg,#f43f5e,#e11d48)', boxShadow: '0 2px 6px rgba(244,63,94,.5)' }}>
-                  {unread > 99 ? '99+' : unread}
-                </motion.div>
-              )}
+    <div data-plain-page="1" className='report-phone -mx-[var(--app-gutter)] min-h-full bg-white px-[var(--app-gutter)] pt-1 dark:bg-[#0b1220]' dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className='mx-auto w-full max-w-[440px] space-y-3'>
+      <div className='m-[5px] rounded-3xl shadow-[5px_7px_14px_color-mix(in_srgb,var(--color-primary-900)_45%,transparent)]'>
+        <div className='relative overflow-hidden rounded-3xl border-[1.5px] border-t-white/40 border-s-white/30 border-e-[rgba(15,34,128,0.35)] border-b-[rgba(15,34,128,0.45)] pb-3' style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-primary-700), #1a3fbf)' }}>
+          <div className='pointer-events-none absolute -start-16 -top-10 h-[200px] w-[200px] rounded-full bg-white/[0.06]' />
+          <div className='relative flex items-center gap-3 p-4 pb-2'>
+            <div className='grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white'>
+              <Bell className='h-5 w-5' />
             </div>
-            <div>
-              <h1 className='text-[15px] font-black text-white md: leading-tight'>{tAll('header.title')}</h1>
-              <p className='text-[10px] text-white/50 font-medium mt-0.5'>{tAll('header.subtitle', { total: items.length, unread })}</p>
+            <div className='min-w-0 flex-1'>
+              <h1 className='truncate text-xl font-black leading-6 tracking-[-0.3px] text-white'>{tAll('header.title')}</h1>
+              <p className='mt-0.5 truncate text-[10px] font-medium text-white/55'>{tAll('header.subtitle', { total, unread })}</p>
             </div>
+            <button type='button' onClick={refresh} aria-label={tAll('actions.refresh')} className='grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white'>
+              <RefreshCw className={`h-[18px] w-[18px]${spinning ? ' animate-spin' : ''}`} />
+            </button>
+            <button type='button' onClick={markAll} disabled={!unread} aria-label={tAll('actions.markAllRead')} className='grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/90 bg-white text-(--color-primary-700) disabled:opacity-40'>
+              <CheckCheck className='h-[18px] w-[18px]' />
+            </button>
           </div>
-
-          {/* stats pills — center */}
-          <div className='hidden sm:flex items-center gap-2'>
+          <div className='mx-4 mb-2 h-px bg-white/20' />
+          <div className='flex gap-1.5 px-4'>
             {[
-              { l: tAll('stats.total'), v: items.length },
-              { l: tAll('stats.unread'), v: unread },
-              { l: tAll('stats.read'), v: items.length - unread },
-            ].map((s, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 + i * 0.04 }} className='rounded-lg px-2.5 py-1.5 bg-white/[0.10] border border-white/15 text-center min-w-[48px]'>
-                <p className='text-[8px] text-white/40 font-bold uppercase tracking-wider md: leading-none mb-0.5'>{s.l}</p>
-                <p className='text-[14px] font-black text-white tabular-nums md: leading-tight'>{s.v}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* actions */}
-          <div className='flex items-center gap-1.5'>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={refresh} className='h-8 w-8 rounded-xl bg-white/[0.12] flex items-center justify-center text-white/60 hover:bg-white/[0.20] border border-white/15 transition-all' title={tAll('actions.refresh')}>
-              <motion.div animate={{ rotate: spinning ? 360 : 0 }} transition={{ duration: 0.55 }}>
-                <RefreshCw className='h-3.5 w-3.5' />
-              </motion.div>
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.92 }} onClick={markAll} className='inline-flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white/[0.12] text-white text-[11px] font-bold border border-white/15 hover:bg-white/[0.20] transition-all' title={tAll('actions.markAllRead')}>
-              <CheckCheck className='h-3.5 w-3.5' />
-              <span className='hidden sm:inline'>{tAll('actions.markAllRead')}</span>
-            </motion.button>
+              ['all', tAll('tabs.all'), total],
+              ['unread', tAll('tabs.unread'), unread],
+            ].map(([k, l, count]) => {
+              const on = tab === k;
+              return (
+                <button key={k} type='button' onClick={() => setTab(k)} className={`flex h-9 min-w-0 flex-1 items-center justify-center gap-1 truncate rounded-2xl px-2 text-[11px] font-bold ${on ? 'border border-white/90 bg-white text-(--color-primary-700) shadow-[2px_4px_7px_rgba(30,58,138,0.35)]' : 'border border-white/30 bg-white/10 text-white/70'}`}>
+                  <span className='truncate'>{l}</span>
+                  <span className={`rounded-full px-1.5 text-[10px] ${on ? 'bg-(--color-primary-50) text-(--color-primary-700)' : 'bg-white/15 text-white'}`}>{count}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
-
-      {/* ── TOOLBAR: type dropdown LEFT, tabs RIGHT ── */}
-      <div className='bg-white border-b border-slate-200 px-4 sm:px-6 py-2' style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div className='flex items-center justify-between gap-3'>
-          {/* LEFT: type filter dropdown */}
-          <TypeMenu value={type} options={types} onChange={setType} t={tAll} />
-
-          {/* RIGHT: all / unread tabs */}
-          <div className='flex items-center gap-1 bg-slate-100 rounded-lg p-0.5'>
-            {[
-              ['all', tAll('tabs.all')],
-              ['unread', tAll('tabs.unread')],
-            ].map(([k, l]) => (
-              <button
-                key={k}
-                onClick={() => setTab(k)}
-                className='relative h-7 px-3.5 rounded-md text-[11px] font-bold transition-all'
-                style={
-                  tab === k
-                    ? {
-                        background: 'var(--color-primary-600)',
-                        color: 'white',
-                        boxShadow: '0 1px 4px var(--color-primary-400,rgba(99,102,241,.3))',
-                      }
-                    : {
-                        background: 'transparent',
-                        color: 'var(--color-primary-600)',
-                      }
-                }>
-                {l}
-                {k === 'unread' && unread > 0 && (
-                  <span className='absolute -top-0.5 -end-0.5 min-w-[14px] h-[14px] rounded-full text-[8px] font-black text-white flex items-center justify-center px-0.5' style={{ background: '#f43f5e' }}>
-                    {unread}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <TypeMenu value={type} options={types} onChange={setType} t={tAll} />
 
       {/* ── BULK BAR ── */}
       <AnimatePresence>
         {sel.size > 0 && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className='overflow-hidden border-b border-slate-200'>
-            <div className='flex items-center justify-between gap-2 px-4 sm:px-6 py-1.5' style={{ background: 'var(--color-primary-50)' }}>
-              <p className='text-[11px] font-bold' style={{ color: 'var(--color-primary-700)' }}>
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className='overflow-hidden'>
+            <div className='flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-(--gm-line) bg-[color-mix(in_srgb,var(--color-primary-500)_8%,var(--gm-paper))] px-3 py-2'>
+              <p className='text-[12.5px] font-semibold gm-ink'>
                 {tAll('bulk.selected', { count: sel.size })}
               </p>
-              <div className='flex items-center gap-1.5'>
-                <button onClick={markSelRead} className='inline-flex items-center gap-1 text-[10px] font-bold h-6 px-2.5 rounded-lg border transition-colors' style={{ borderColor: 'var(--color-primary-300)', color: 'var(--color-primary-700)', background: 'white' }}>
-                  <Check className='h-2.5 w-2.5' strokeWidth={3} /> {tAll('bulk.markRead')}
+              <div className='flex flex-wrap items-center gap-1.5'>
+                <button type='button' onClick={markSelRead} className='rs-btn is-on'>
+                  <Check className='size-3.5' strokeWidth={2.4} /> {tAll('bulk.markRead')}
                 </button>
-                <button onClick={selAll} className='text-[10px] font-bold h-6 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors'>
+                <button type='button' onClick={selAll} className='rs-btn'>
                   {tAll('bulk.selectAll')}
                 </button>
-                <button onClick={clearSel} className='h-6 w-6 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors'>
-                  <X className='h-2.5 w-2.5' />
+                <button type='button' onClick={clearSel} className='rs-btn' aria-label={tAll('bulk.selectAll')}>
+                  <X className='size-3.5' />
                 </button>
               </div>
             </div>
@@ -465,28 +406,28 @@ export default function NotificationsPage() {
       </AnimatePresence>
 
       {/* ── LIST ── */}
-      <div className='bg-white' style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
+      <div className='space-y-2'>
         {loading ? (
           <Skel />
         ) : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='py-14 text-center'>
-            <div className='mx-auto mb-2.5 h-10 w-10 rounded-xl flex items-center justify-center' style={{ background: 'var(--color-primary-100)' }}>
-              <Inbox className='h-4.5 w-4.5' style={{ color: 'var(--color-primary-500)' }} />
+            <div className='mx-auto mb-2.5 grid size-10 place-items-center rounded-xl bg-[color-mix(in_srgb,var(--color-primary-500)_12%,transparent)]'>
+              <Inbox className='size-4 text-[var(--color-primary-600)]' />
             </div>
-            <p className='font-semibold text-slate-700 text-[13px] mb-1'>{tAll('empty.title')}</p>
-            <p className='text-[11px] text-slate-400'>{tAll('empty.desc')}</p>
+            <p className='mb-1 text-[13px] font-semibold gm-ink'>{tAll('empty.title')}</p>
+            <p className='text-[12px] gm-muted'>{tAll('empty.desc')}</p>
           </motion.div>
         ) : (
           <AnimatePresence mode='popLayout'>
             {grouped.map(({ d, l }, gi) => (
               <motion.div key={d} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: gi * 0.02 }}>
                 {/* day divider */}
-                <div className='sticky top-0 z-10 flex items-center gap-2 px-4 py-1.5' style={{ background: 'rgba(248,250,252,0.95)', backdropFilter: 'blur(4px)', borderBottom: '1px solid rgba(226,232,240,0.5)' }}>
-                  <div className='h-px flex-1' style={{ background: 'linear-gradient(to right, var(--color-primary-200), transparent)' }} />
-                  <span className='text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border' style={{ color: 'var(--color-primary-600)', background: 'var(--color-primary-50)', borderColor: 'var(--color-primary-200)' }}>
+                <div className='sticky top-0 z-10 flex items-center gap-2 border-b border-(--gm-line) bg-(--gm-paper) px-4 py-2'>
+                  <div className='h-px flex-1 bg-(--gm-line)' />
+                  <span className='rounded-full border border-(--gm-line) bg-[color-mix(in_srgb,var(--color-primary-500)_8%,var(--gm-paper))] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary-700)] dark:text-[var(--color-primary-200)]'>
                     <DayLabel iso={d} t={tAll} />
                   </span>
-                  <div className='h-px flex-1' style={{ background: 'linear-gradient(to left, var(--color-primary-200), transparent)' }} />
+                  <div className='h-px flex-1 bg-(--gm-line)' />
                 </div>
 
                 <AnimatePresence>
@@ -501,21 +442,17 @@ export default function NotificationsPage() {
 
         {/* footer */}
         {!loading && filtered.length > 0 && (
-          <div className='flex items-center justify-between gap-2 px-4 sm:px-6 py-2.5 border-t border-slate-100'>
-            <button onClick={selAll} className='text-[11px] font-semibold px-3 py-1 rounded-full border transition-colors' style={{ color: 'var(--color-primary-600)', borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}>
+          <div className='flex flex-wrap items-center justify-between gap-2 border-t border-(--gm-line) px-4 py-3 sm:px-5'>
+            <button type='button' onClick={selAll} className='rs-btn'>
               {tAll('footer.selectAll', { count: filtered.length })}
             </button>
             {hasMore && (
               <motion.button
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={more}
                 disabled={loadMore}
-                className='inline-flex items-center gap-1.5 text-[11px] font-bold h-7 px-3.5 rounded-full transition-all disabled:opacity-50'
-                style={{
-                  background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700))',
-                  color: 'white',
-                  boxShadow: '0 2px 8px var(--color-primary-400,rgba(99,102,241,.3))',
-                }}>
+                className='rs-cta'
+                style={{ width: 'auto' }}>
                 {loadMore ? (
                   <>
                     <Loader2 className='h-3 w-3 animate-spin' /> {tAll('footer.loading')}
@@ -529,6 +466,7 @@ export default function NotificationsPage() {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
