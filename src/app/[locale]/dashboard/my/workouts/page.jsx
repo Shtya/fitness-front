@@ -31,14 +31,13 @@ import {
 	Youtube,
 } from 'lucide-react';
 import { Notification } from '@/config/Notification';
-import api from '@/utils/axios';
+import api, { baseImg } from '@/utils/axios';
 import weeklyProgram from './exercises';
 import { createSessionFromDay } from '@/components/pages/workouts/helpers';
 import { RestTimerCard } from '@/components/pages/workouts/RestTimerCard';
 import { AudioHubInline } from '@/components/pages/workouts/AudioHub';
 import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
-import Img from '@/components/atoms/Img';
 import { useCountdown } from '@/hooks/workouts/useCountdown';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -249,9 +248,35 @@ function removeQueueItem(item) { saveQueue(loadQueue().filter(x => queueKey(x) !
 	 PRIMITIVE COMPONENTS
 ───────────────────────────────────────── */
 
+function mediaUrl(src) {
+	if (src == null) return '';
+	const value = String(src).trim();
+	if (!value) return '';
+	if (/^(https?:|data:|blob:)/i.test(value)) return value;
+	const base = String(baseImg || '').replace(/\/+$/, '');
+	return base ? `${base}/${value.replace(/^\/+/, '')}` : value;
+}
+
+function youtubeId(url) {
+	const match = String(url).match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/i);
+	return match?.[1] || '';
+}
+
 export function InlineVideo({ src }) {
-	const ref = useRef(null);
-	return <video muted ref={ref} src={src} className="w-full h-full object-contain bg-white" playsInline controls />;
+	const url = mediaUrl(src);
+	const id = youtubeId(url);
+	if (id) {
+		return (
+			<iframe
+				className="absolute inset-0 z-[1] h-full w-full bg-black"
+				src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`}
+				title="Exercise video"
+				allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+				allowFullScreen
+			/>
+		);
+	}
+	return <video className="absolute inset-0 z-[1] h-full w-full bg-black object-contain" src={url} controls playsInline />;
 }
 
 /** Minimal icon button — ghost style */
@@ -487,9 +512,9 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 								)}>
 									{ex?.img ? (
 										<>
-											<Img src={ex.img} alt="" className="absolute -inset-1 h-[66px] w-[66px] object-cover opacity-40 blur-[2px]" showBlur={false} />
+											<img src={mediaUrl(ex.img)} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-[2px]" />
 											<span className={cx('absolute inset-0', isActive ? 'bg-[rgba(15,48,120,0.08)]' : isCompleted ? 'bg-[rgba(5,150,105,0.12)]' : 'bg-[rgba(100,116,139,0.1)]')} />
-											<Img src={ex.img} alt="" className={cx('relative h-full w-full object-contain', isActive ? 'opacity-100' : 'opacity-80')} showBlur={false} />
+											<img src={mediaUrl(ex.img)} alt="" className={cx('absolute inset-0 h-full w-full object-contain', isActive ? 'opacity-100' : 'opacity-80')} />
 										</>
 									) : (
 										<span className="grid h-full w-full place-items-center"><Dumbbell size={22} className={isActive ? 'text-[var(--color-primary-500)]' : 'text-[var(--color-primary-300)]'} /></span>
@@ -987,7 +1012,7 @@ function AddExerciseModal({ open, section, onClose, onAdd, t }) {
 								>
 									<div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
 										{ex.img
-											? <img src={ex.img} alt="" className="w-full h-full object-contain" />
+											? <img src={mediaUrl(ex.img)} alt="" className="h-full w-full object-contain" />
 											: <Dumbbell size={18} className="text-slate-300 group-hover:text-[var(--color-primary-400)] transition-colors" />
 										}
 									</div>
@@ -1103,7 +1128,7 @@ function EditPlanPanel({ editDayExercises, onUpdate, onDelete, onAddClick, onSav
 							{exercises.map((ex, idx) => (
 								<div key={`${ex.id}-${idx}`} className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border border-slate-200">
 									<div className="w-8 h-8 rounded-lg bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
-										{ex.img ? <img src={ex.img} alt="" className="w-full h-full object-contain" /> : <Dumbbell size={12} className="text-slate-400" />}
+										{ex.img ? <img src={mediaUrl(ex.img)} alt="" className="h-full w-full object-contain" /> : <Dumbbell size={12} className="text-slate-400" />}
 									</div>
 									<div className="flex-1 min-w-0">
 										<p className="text-xs font-semibold text-slate-800 truncate">{ex.name}</p>
@@ -1182,7 +1207,7 @@ export default function MyWorkoutsPage() {
 
 	/* ── Media preload ── */
 	const preloadMedia = useCallback(exercises => {
-		exercises?.forEach(ex => { if (ex?.img) { const img = new Image(); img.src = ex.img; } });
+		exercises?.forEach(ex => { if (ex?.img) { const img = new Image(); img.src = mediaUrl(ex.img); } });
 	}, []);
 
 	/* ── Record helpers ── */
@@ -1766,20 +1791,18 @@ export default function MyWorkoutsPage() {
 										<InlineVideo key={`${currentExercise.id}-${activeMedia}`} src={currentExercise[activeMedia]} />
 									) : currentExercise?.img ? (
 										<>
-											<Img
+											<img
 												key={`${currentExercise?.id || 'ex'}-blur`}
-												src={currentExercise.img}
+												src={mediaUrl(currentExercise.img)}
 												alt=""
-												className="absolute -inset-5 h-[calc(100%+40px)] w-[calc(100%+40px)] object-cover blur-xl"
-												showBlur={false}
+												className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl"
 											/>
-											<div className="absolute inset-0 bg-[rgba(4,8,15,0.45)]" />
-											<Img
+											<div className="absolute inset-0 bg-[rgba(4,8,15,0.35)]" />
+											<img
 												key={`${currentExercise?.id || 'ex'}-image`}
-												src={currentExercise.img}
+												src={mediaUrl(currentExercise.img)}
 												alt={currentExercise?.name || ''}
-												className="relative h-full w-full object-contain"
-												showBlur={false}
+												className="absolute inset-0 z-[1] h-full w-full object-contain"
 											/>
 										</>
 									) : (
