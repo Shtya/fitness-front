@@ -21,6 +21,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { IMPERSONATION_EVENT, notifyImpersonationChanged } from '@/lib/impersonation';
+import { setStoredUser } from '@/app/role-access';
 import { SidebarChromeProvider } from './SidebarChromeContext';
 import ClientFloatingBar from './ClientFloatingBar';
 import './sidebar-glass.css';
@@ -136,7 +137,7 @@ export default function Layout({ children }) {
 			const prev = JSON.parse(raw);
 			localStorage.setItem('accessToken',  prev.accessToken);
 			localStorage.setItem('refreshToken', prev.refreshToken);
-			localStorage.setItem('user',         prev.user);
+			setStoredUser(typeof prev.user === 'string' ? JSON.parse(prev.user) : prev.user);
 			localStorage.removeItem('impersonated_user');
 			localStorage.removeItem('super_admin_prev_session');
 			notifyImpersonationChanged();

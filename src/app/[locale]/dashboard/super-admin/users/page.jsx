@@ -27,6 +27,7 @@ import { UserPageAccessFields, useUserPageAccess } from '@/components/page-acces
 import { resolvePostLoginPath } from '@/lib/nav-access';
 import { buildAutoLoginUrl, buildWelcomeMessage, resolveShareLandingPath } from '@/lib/auto-login';
 import { notifyImpersonationChanged } from '@/lib/impersonation';
+import { setStoredUser } from '@/app/role-access';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme-aware CSS variables helper
@@ -1397,7 +1398,7 @@ export default function SuperAdminUsersPage() {
 
 			localStorage.setItem('accessToken', accessToken);
 			localStorage.setItem('refreshToken', refreshToken);
-			localStorage.setItem('user', JSON.stringify(user));
+			setStoredUser(user);
 			localStorage.setItem('impersonated_user', JSON.stringify(user));
 			notifyImpersonationChanged();
 

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, LogOut, AlertCircle, Bell, CheckCheck } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
+import { setStoredUser } from '@/app/role-access';
 import { useRouter } from '@/i18n/navigation';
 import LanguageToggle from '../atoms/LanguageToggle';
 import { useTranslations } from 'next-intl';
@@ -78,7 +79,7 @@ export default function Header({ onMenu }) {
 	const handleLogout = async () => {
 		try {
 			await fetch('/api/auth/logout', { method: 'POST' });
-			localStorage.removeItem('user');
+			setStoredUser(null);
 			localStorage.removeItem('accessToken');
 			localStorage.removeItem('refreshToken');
 		} catch (err) {

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import api from '@/utils/axios';
+import { setStoredUser } from '@/app/role-access';
 
 const PAGE_FIELDS = ['allowedPages', 'loginLandingPage', 'pageAccess'];
 const MIN_INTERVAL_MS = 60_000;
@@ -32,8 +33,7 @@ export function usePageAccessSync(userId) {
 
 				const next = { ...stored };
 				for (const key of PAGE_FIELDS) next[key] = data[key] ?? null;
-				localStorage.setItem('user', JSON.stringify(next));
-				window.dispatchEvent(new Event('sobha-user-updated'));
+				setStoredUser(next);
 
 				await fetch('/api/auth/login', {
 					method: 'POST',

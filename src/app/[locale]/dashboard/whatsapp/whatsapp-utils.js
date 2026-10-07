@@ -706,6 +706,13 @@ export function firstStrongTextDirection(text) {
 	return 'ltr';
 }
 
+/** Latin message that is not mostly Arabic — safe to offer an Arabic translation. */
+export function isEnglishMessageText(text) {
+	const value = String(text || '').trim();
+	if (!value || !LATIN_CHAR_RE.test(value)) return false;
+	return !isMostlyArabicText(value);
+}
+
 export function isMostlyArabicText(text) {
 	const value = String(text || '');
 	if (!value.trim()) return false;

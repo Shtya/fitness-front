@@ -22,6 +22,7 @@ import {
 	Settings,
 	Calculator,
 } from 'lucide-react';
+import { setStoredUser } from '@/app/role-access';
 
 const COPY = {
 	en: {
@@ -135,7 +136,7 @@ export default function ClientFloatingBar({ user }) {
 	const logout = async () => {
 		try {
 			await fetch('/api/auth/logout', { method: 'POST' });
-			localStorage.removeItem('user');
+			setStoredUser(null);
 			localStorage.removeItem('accessToken');
 			localStorage.removeItem('refreshToken');
 		} catch {}

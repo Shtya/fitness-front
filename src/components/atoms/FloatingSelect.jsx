@@ -19,6 +19,7 @@ export default function FloatingSelect({
 	creatable = false,
 	searchable = false,
 	createPlaceholder = '',
+	menuZIndex = 1200000,
 }) {
 	const uid = useId();
 	const btnRef = useRef(null);
@@ -150,7 +151,7 @@ export default function FloatingSelect({
 							top: pos.top,
 							left: pos.left,
 							width: pos.width,
-							zIndex: 1200000,
+							zIndex: menuZIndex,
 							background: 'var(--gm-paper, #fff)',
 							borderColor: 'var(--gm-line, rgba(105,153,216,0.22))',
 							boxShadow: 'var(--gm-shadow-3, 0 16px 40px rgba(28,77,137,0.14))',

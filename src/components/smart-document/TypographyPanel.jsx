@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { RotateCcw, Type } from 'lucide-react';
-import { ARABIC_FONTS, ENGLISH_FONTS, TYPOGRAPHY_DEFAULTS, TYPOGRAPHY_RANGES } from './typography';
+import { ARABIC_FONTS, ENGLISH_FONTS, FONT_VARIABLE_CLASSES, TYPOGRAPHY_DEFAULTS, TYPOGRAPHY_RANGES } from './typography';
 
 const PANEL_W = 320;
 const GUTTER = 8;
@@ -124,7 +124,7 @@ export default function TypographyPanel({ settings, onChange, labels = {} }) {
 				? createPortal(
 					<div
 						ref={panelRef}
-						className="sd-typo-panel"
+						className={`sd-typo-panel ${FONT_VARIABLE_CLASSES}`}
 						role="dialog"
 						aria-label={L.typography}
 						style={{ top: pos.top, left: pos.left, width: pos.width }}

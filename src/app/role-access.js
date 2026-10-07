@@ -24,8 +24,10 @@ export function setStoredUser(user) {
   } else {
     window.localStorage.setItem(LS_KEY, JSON.stringify(user));
   }
-  // same-tab notify (storage doesn't fire in same tab)
+  // `storage` does not fire in the same tab. Both names stay: older callers
+  // dispatch only one of them, and the shell must hear either.
   window.dispatchEvent(new Event('app:user-updated'));
+  window.dispatchEvent(new Event('sobha-user-updated'));
 }
 
 /* ---------------- NAV utilities ---------------- */
@@ -87,9 +89,11 @@ export function useAuthRole() {
 
     window.addEventListener('storage', onStorage);
     window.addEventListener('app:user-updated', onLocal);
+    window.addEventListener('sobha-user-updated', onLocal);
     return () => {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('app:user-updated', onLocal);
+      window.removeEventListener('sobha-user-updated', onLocal);
     };
   }, []);
 

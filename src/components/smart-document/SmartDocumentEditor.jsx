@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+	Bookmark,
+	Check,
 	CheckSquare,
 	Clock3,
 	Code2,
+	Copy,
 	Eye,
 	FilePlus2,
 	History,
@@ -15,6 +18,7 @@ import {
 import { detectDominantDir } from '@/lib/smart-document/structure';
 import MarkdownVisualEditor from './MarkdownVisualEditor';
 import TypographyPanel from './TypographyPanel';
+import WordLookup, { captureLookup } from './WordLookup';
 import { htmlToPlainText, isHtmlSource } from './source-format';
 import { FONT_VARIABLE_CLASSES, TYPOGRAPHY_DEFAULTS, normalizeTypography, typographyStyle } from './typography';
 import './smart-document.css';
@@ -92,7 +96,11 @@ export default function SmartDocumentEditor({
 	const [typography, setTypography] = useState(TYPOGRAPHY_DEFAULTS);
 	const [docVersion, setDocVersion] = useState(0);
 	const [renamingId, setRenamingId] = useState(null);
+	const [copiedId, setCopiedId] = useState(null);
 	const [renameDraft, setRenameDraft] = useState('');
+	const [peek, setPeek] = useState(null);
+	const [offer, setOffer] = useState(null);
+	const [shelfOpen, setShelfOpen] = useState(false);
 	const renameRef = useRef(null);
 
 	const textRef = useRef('');
@@ -290,6 +298,20 @@ export default function SmartDocumentEditor({
 		if (mode === 'edit') requestAnimationFrame(() => taRef.current?.focus());
 	};
 
+	const copyHistoryItem = async (item, e) => {
+		e?.preventDefault?.();
+		e?.stopPropagation?.();
+		const raw = String(item?.content || '');
+		const plain = isHtmlSource(raw) ? htmlToPlainText(raw) : raw;
+		try {
+			await navigator.clipboard.writeText(plain);
+			setCopiedId(item.id);
+			window.setTimeout(() => setCopiedId(current => (current === item.id ? null : current)), 1200);
+		} catch {
+			/* clipboard blocked */
+		}
+	};
+
 	const deleteHistoryItem = (id, e) => {
 		e?.stopPropagation?.();
 		setHistory((prev) => {
@@ -336,6 +358,25 @@ export default function SmartDocumentEditor({
 		setRenameDraft('');
 	};
 
+	const takeSelection = (host, point, open) => {
+		const hit = captureLookup(host);
+		if (!hit?.word) {
+			if (!open) setOffer(null);
+			return;
+		}
+		const rect = hit.rect;
+		const anchor = rect && (rect.width || rect.height)
+			? { x: rect.left + rect.width / 2, top: rect.top, bottom: rect.bottom }
+			: { x: point.x, top: point.y, bottom: point.y };
+		const payload = { word: hit.word, sentence: hit.sentence || '', ...anchor, at: Date.now() };
+		if (open) {
+			setOffer(null);
+			setPeek(payload);
+			return;
+		}
+		setOffer(payload);
+	};
+
 	if (!ready) {
 		return (
 			<div className={`sd-shell sd-shell--md ${FONT_VARIABLE_CLASSES}`}>
@@ -367,54 +408,66 @@ export default function SmartDocumentEditor({
 					{history.map((item) => (
 						<li key={item.id}>
 							<div className={`sd-history-item ${item.id === activeId ? 'is-active' : ''}`}>
-								{renamingId === item.id ? (
-									<input
-										ref={renameRef}
-										className="sd-history-rename"
-										value={renameDraft}
-										maxLength={72}
-										aria-label={labels.rename || 'Rename'}
-										onChange={(e) => setRenameDraft(e.target.value)}
-										onClick={(e) => e.stopPropagation()}
-										onBlur={commitRename}
-										onKeyDown={(e) => {
-											if (e.key === 'Enter') {
-												e.preventDefault();
-												commitRename();
-											} else if (e.key === 'Escape') {
-												e.preventDefault();
-												cancelRename();
-											}
-										}}
-									/>
-								) : (
+								<div className="sd-history-item-main">
+									{renamingId === item.id ? (
+										<input
+											ref={renameRef}
+											className="sd-history-rename"
+											value={renameDraft}
+											maxLength={72}
+											aria-label={labels.rename || 'Rename'}
+											onChange={(e) => setRenameDraft(e.target.value)}
+											onClick={(e) => e.stopPropagation()}
+											onBlur={commitRename}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													commitRename();
+												} else if (e.key === 'Escape') {
+													e.preventDefault();
+													cancelRename();
+												}
+											}}
+										/>
+									) : (
+										<button
+											type="button"
+											className="sd-history-item-title"
+											title={labels.renameHint || 'Click to rename'}
+											onClick={(e) => startRename(item, e)}
+										>
+											{item.title || labels.untitled || 'Untitled'}
+										</button>
+									)}
 									<button
 										type="button"
-										className="sd-history-item-title"
-										title={labels.renameHint || 'Click to rename'}
-										onClick={(e) => startRename(item, e)}
+										className="sd-history-item-open"
+										onClick={() => openHistoryItem(item)}
 									>
-										{item.title || labels.untitled || 'Untitled'}
+										<span className="sd-history-item-meta">
+											<Clock3 size={11} />
+											{formatWhen(item.updatedAt, labels)}
+										</span>
 									</button>
-								)}
-								<button
-									type="button"
-									className="sd-history-item-open"
-									onClick={() => openHistoryItem(item)}
-								>
-									<span className="sd-history-item-meta">
-										<Clock3 size={11} />
-										{formatWhen(item.updatedAt, labels)}
-									</span>
-								</button>
-								<button
-									type="button"
-									className="sd-history-del"
-									title={labels.delete || 'Delete'}
-									onClick={(e) => deleteHistoryItem(item.id, e)}
-								>
-									<Trash2 size={12} />
-								</button>
+								</div>
+								<div className="sd-history-actions">
+									<button
+										type="button"
+										className="sd-history-del"
+										title={labels.delete || 'Delete'}
+										onClick={(e) => deleteHistoryItem(item.id, e)}
+									>
+										<Trash2 size={12} />
+									</button>
+									<button
+										type="button"
+										className="sd-history-copy"
+										title={labels.copy || 'Copy text'}
+										onClick={(e) => copyHistoryItem(item, e)}
+									>
+										{copiedId === item.id ? <Check size={12} /> : <Copy size={12} />}
+									</button>
+								</div>
 							</div>
 						</li>
 					))}
@@ -439,6 +492,14 @@ export default function SmartDocumentEditor({
 					</div>
 
 					<div className="sd-chrome-actions">
+						<button
+							type="button"
+							className={`sd-icon-btn sd-lookup-launch${shelfOpen ? ' is-open' : ''}`}
+							title={labels.shelfButton || 'Review words'}
+							onClick={() => setShelfOpen((v) => !v)}
+						>
+							<Bookmark size={15} />
+						</button>
 						<TypographyPanel settings={typography} onChange={updateTypography} labels={labels} />
 						<div className="sd-seg" role="tablist" aria-label={labels.modeLabel || 'Mode'}>
 							<button
@@ -480,7 +541,22 @@ export default function SmartDocumentEditor({
 					</div>
 				</header>
 
-				<div className={`sd-canvas sd-canvas--bleed ${mode === 'edit' ? 'is-source' : 'is-preview'}`}>
+				<div
+					className={`sd-canvas sd-canvas--bleed ${mode === 'edit' ? 'is-source' : 'is-preview'}`}
+					onMouseUp={(e) => {
+						if (e.detail >= 2) return;
+						if (e.target.closest('button, a, input, label, .sd-lookup-pin')) return;
+						const host = e.currentTarget;
+						const point = { x: e.clientX, y: e.clientY };
+						window.setTimeout(() => takeSelection(host, point, false), 0);
+					}}
+					onDoubleClick={(e) => {
+						if (e.target.closest('button, a, input, label')) return;
+						const host = e.currentTarget;
+						const point = { x: e.clientX, y: e.clientY };
+						window.setTimeout(() => takeSelection(host, point, true), 30);
+					}}
+				>
 					{mode === 'edit' ? (
 						<textarea
 							ref={taRef}
@@ -505,6 +581,19 @@ export default function SmartDocumentEditor({
 					)}
 				</div>
 			</div>
+			<WordLookup
+				labels={labels}
+				peek={peek}
+				onClosePeek={() => setPeek(null)}
+				offer={offer}
+				onOpenOffer={(payload) => {
+					setOffer(null);
+					setPeek(payload);
+				}}
+				onClearOffer={() => setOffer(null)}
+				shelfOpen={shelfOpen}
+				onShelfOpen={setShelfOpen}
+			/>
 		</div>
 	);
 }

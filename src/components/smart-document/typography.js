@@ -35,15 +35,15 @@ const naskhArabic = Noto_Naskh_Arabic({
 export const FONT_VARIABLE_CLASSES = [plexArabic.variable, readexArabic.variable, naskhArabic.variable].join(' ');
 
 export const ARABIC_FONTS = {
-	plex: { label: 'IBM Plex Arabic', sample: 'أبجد هوز', stack: 'var(--sd-font-plex-ar)' },
-	readex: { label: 'Readex Pro', sample: 'أبجد هوز', stack: 'var(--sd-font-readex-ar)' },
-	naskh: { label: 'Noto Naskh', sample: 'أبجد هوز', stack: 'var(--sd-font-naskh-ar)' },
+	plex: { label: 'IBM Plex Arabic', sample: 'أبجد هوز', stack: plexArabic.style.fontFamily },
+	readex: { label: 'Readex Pro', sample: 'أبجد هوز', stack: readexArabic.style.fontFamily },
+	naskh: { label: 'Noto Naskh', sample: 'أبجد هوز', stack: naskhArabic.style.fontFamily },
 };
 
 export const ENGLISH_FONTS = {
 	inter: { label: 'Inter', sample: 'Aa', stack: "var(--font-inter), 'Segoe UI', system-ui, sans-serif" },
-	dmSans: { label: 'DM Sans', sample: 'Aa', stack: 'var(--font-dm-sans), system-ui, sans-serif' },
-	serif: { label: 'Serif', sample: 'Aa', stack: "Georgia, 'Times New Roman', serif" },
+	dmSans: { label: 'DM Sans', sample: 'Aa', stack: "var(--font-dm-sans), 'Segoe UI', system-ui, sans-serif" },
+	serif: { label: 'Serif', sample: 'Aa', stack: "Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif" },
 };
 
 export const TYPOGRAPHY_DEFAULTS = Object.freeze({

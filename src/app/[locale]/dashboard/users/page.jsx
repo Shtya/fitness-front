@@ -30,6 +30,7 @@ import { useAdminCoaches } from '@/hooks/useHierarchy';
 import { useUser } from '@/hooks/useUser';
 import PhoneField from '@/components/atoms/PhoneField';
 import CaloriesStep from '@/components/pages/dashboard/users/CaloriesStep';
+import { ageFromBirth } from '@/lib/calorie-engine';
 import { Modal } from '@/components/dashboard/ui/UI';
 import DataTable from '@/components/atoms/Datatable';
 import FloatingInput from '@/components/atoms/FloatingInput';
@@ -989,6 +990,12 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 				<CaloriesStep
 					userId={createdUser?.user?.id}
 					initialValues={{}}
+					clientSeed={{
+						name: getValues('name'),
+						email: createdUser?.email || getValues('email') || '',
+						sex: getValues('gender') || '',
+						age: ageFromBirth(getValues('birthDate')),
+					}}
 					onBack={() => setStepIndex(steps.indexOf('meal'))}
 					onNext={() => setStepIndex(steps.indexOf('send'))}
 				/>

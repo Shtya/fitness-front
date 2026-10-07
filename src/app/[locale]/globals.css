@@ -2805,6 +2805,55 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   flex-shrink: 0;
 }
 
+.wa-message-translation {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(11, 20, 26, 0.05);
+  font-family: var(--font-arabic), "Segoe UI", Tahoma, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: start;
+}
+
+.wa-message-mine .wa-message-translation {
+  background: rgba(11, 20, 26, 0.06);
+}
+
+.wa-message-translation-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #667781;
+}
+
+.wa-message-translation-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.wa-message-translation-status {
+  display: inline-flex;
+  color: #667781;
+}
+
+.wa-message-translation-error {
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+html.dark .wa-message-translation {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.dark .wa-message-translation-label,
+html.dark .wa-message-translation-status {
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .wa-message-hover-btn {
   position: relative;
   display: grid;

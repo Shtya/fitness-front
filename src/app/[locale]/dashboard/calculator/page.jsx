@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 
 import { DEFAULT_FOODS } from './FoodCalorieDB';
+import { Notification } from '@/config/Notification';
+import { saveCalculation, upsertDeviceProfile } from '@/lib/calorie-saved';
 
 /* ---------------------------------------------
   STORAGE
@@ -356,6 +358,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
   const [progress, setProgress] = useState(0);
   const [tab, setTab] = useState('profile');
   const [validationMsg, setValidationMsg] = useState('');
+  const [calcSaved, setCalcSaved] = useState(false);
 
   /* load */
   useEffect(() => {
@@ -380,8 +383,10 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
 
   /* persist */
   useEffect(() => {
-    localStorage.setItem(LS.PROFILE, JSON.stringify({ sex, age, height, weight, bodyFat, activity, goal }));
-  }, [sex, age, height, weight, bodyFat, activity, goal]);
+    const profile = { sex, age, height, weight, bodyFat, activity, goal };
+    localStorage.setItem(LS.PROFILE, JSON.stringify(profile));
+    if (showSummary) upsertDeviceProfile(profile);
+  }, [sex, age, height, weight, bodyFat, activity, goal, showSummary]);
 
   useEffect(() => {
     localStorage.setItem(LS.MEAL, JSON.stringify(mealItems));
@@ -773,6 +778,23 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                       ))}
                     </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const profile = { sex, age, height, weight, bodyFat, activity, goal };
+                      try {
+                        const saved = await saveCalculation(profile, `${weight || ''} kg`);
+                        setCalcSaved(Boolean(saved));
+                      } catch (error) {
+                        setCalcSaved(false);
+                        Notification(error?.response?.data?.message || t('phone.saveCalc'), 'error');
+                      }
+                    }}
+                    disabled={!targetCalories}
+                    className="flex h-11 w-full items-center justify-center rounded-2xl border border-(--color-primary-600)/30 bg-white text-sm font-bold text-(--color-primary-700) disabled:opacity-40"
+                  >
+                    {calcSaved ? `✓ ${t('phone.saveCalc')}` : t('phone.saveCalc')}
+                  </button>
                   <div className="flex items-start gap-2 rounded-2xl bg-amber-50 px-3 py-2.5 text-[11px] text-amber-700">
                     <Info size={13} className="mt-0.5 shrink-0" />
                     <span>{t('phone.tip')}</span>

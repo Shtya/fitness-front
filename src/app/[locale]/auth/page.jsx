@@ -314,7 +314,7 @@ export default function AuthPage() {
         const { data: user } = await axiosInstance.get("/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (typeof window !== "undefined") localStorage.setItem("user", JSON.stringify(user || {}));
+        if (typeof window !== "undefined") loginPersist(user || {});
         await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -48,6 +48,7 @@ import {
 	LayoutGrid,
 	ListChecks,
 	ListFilter,
+	Languages,
 	Loader2,
 	LogOut,
 	Mail,
@@ -164,6 +165,7 @@ import {
 	isSelfChatConversation,
 	isEmailMemoAiConversation,
 	messageMatchesAckTarget,
+	isEnglishMessageText,
 	messageTextPresentation,
 	normalizeWhatsAppIdentity,
 	looksLikeMarkdown,
@@ -6683,11 +6685,14 @@ function MessageHoverActions({
 	showTranscribe = false,
 	showCopy = false,
 	showDownloadVideo = false,
+	showTranslate = false,
+	translating = false,
 	onEmoji,
 	onReply,
 	onTranscribe,
 	onDownloadVideo,
 	onCopy,
+	onTranslate,
 	onMore,
 }) {
 	const ar = locale === 'ar';
@@ -6707,6 +6712,7 @@ function MessageHoverActions({
 	const transcribeLabel = ar ? 'تفريغ' : 'Transcribe';
 	const downloadVideoLabel = ar ? 'تحميل الفيديو' : 'Download video';
 	const moreLabel = ar ? 'المزيد' : 'More';
+	const translateLabel = ar ? 'ترجم للعربي' : 'Translate to Arabic';
 
 	return (
 		<div
@@ -6754,6 +6760,21 @@ function MessageHoverActions({
 			>
 				<Reply size={15} strokeWidth={2.1} aria-hidden />
 			</HoverActionButton>
+			{showTranslate ? (
+				<HoverActionButton
+					onPointerDown={event => event.stopPropagation()}
+					onClick={onTranslate}
+					tooltip={translateLabel}
+					disabled={translating}
+					className="wa-message-hover-btn"
+				>
+					{translating ? (
+						<Loader2 size={14} strokeWidth={2.2} className="animate-spin" aria-hidden />
+					) : (
+						<Languages size={14} strokeWidth={2.2} aria-hidden />
+					)}
+				</HoverActionButton>
+			) : null}
 			{showTranscribe ? (
 				<HoverActionButton
 					onClick={onTranscribe}
@@ -9443,6 +9464,7 @@ function WhatsAppWorkspaceContent() {
 	const [splitPickMode, setSplitPickMode] = useState(false);
 	const [splitLiveMessage, setSplitLiveMessage] = useState(null);
 	const [messages, setMessages] = useState([]);
+	const [messageTranslations, setMessageTranslations] = useState({});
 	// Rendered alongside `messages` so the pane can go blank on the very first
 	// render after a chat switch, instead of showing the previous chat's history
 	// until effects run.
@@ -16248,6 +16270,52 @@ function WhatsAppWorkspaceContent() {
 		return true;
 	};
 
+	const toggleIncomingTranslation = async (message, text) => {
+		const id = message?.id;
+		const source = String(text || '').trim();
+		if (!id || !source) return;
+		const existing = messageTranslations[id];
+		if (existing?.open && (existing.text || existing.loading)) {
+			setMessageTranslations(prev => ({ ...prev, [id]: { ...prev[id], open: false } }));
+			return;
+		}
+		if (existing?.text && !existing.error) {
+			setMessageTranslations(prev => ({ ...prev, [id]: { ...prev[id], open: true, error: null } }));
+			return;
+		}
+		setMessageTranslations(prev => ({
+			...prev,
+			[id]: { ...(prev[id] || {}), open: true, loading: true, error: null },
+		}));
+		try {
+			const { data } = await api.post(
+				'/meta-whatsapp/translate',
+				{ text: source.slice(0, 4000), targetLang: 'ar' },
+				{ timeout: 30000 },
+			);
+			setMessageTranslations(prev => ({
+				...prev,
+				[id]: {
+					open: true,
+					loading: false,
+					text: String(data?.translatedText || '').trim(),
+					error: null,
+				},
+			}));
+		} catch (err) {
+			const msg = err?.response?.data?.message;
+			setMessageTranslations(prev => ({
+				...prev,
+				[id]: {
+					...(prev[id] || {}),
+					open: true,
+					loading: false,
+					error: typeof msg === 'string' ? msg : (locale === 'ar' ? 'تعذّرت الترجمة' : 'Could not translate'),
+				},
+			}));
+		}
+	};
+
 	const handleMessageAction = async (message, action) => {
 		if (!message || message.optimistic) return;
 		setActionMessageId(null);
@@ -22201,6 +22269,26 @@ function WhatsAppWorkspaceContent() {
 																						)}
 																					/>
 																				) : null}
+																				{messageTranslations[message.id]?.open ? (
+																					<div className="wa-message-translation" dir="rtl">
+																						<span className="wa-message-translation-label">
+																							{locale === 'ar' ? 'بالعربي' : 'Arabic'}
+																						</span>
+																						{messageTranslations[message.id]?.loading ? (
+																							<span className="wa-message-translation-status">
+																								<Loader2 size={12} className="animate-spin" />
+																							</span>
+																						) : messageTranslations[message.id]?.error ? (
+																							<span className="wa-message-translation-error">
+																								{messageTranslations[message.id].error}
+																							</span>
+																						) : (
+																							<span className="wa-message-translation-text">
+																								{messageTranslations[message.id]?.text}
+																							</span>
+																						)}
+																					</div>
+																				) : null}
 																				<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
 																					{message.isStarred && <Star size={11} fill="currentColor" />}
 																					{message.isPinned && <Pin size={11} fill="currentColor" />}
@@ -22302,6 +22390,12 @@ function WhatsAppWorkspaceContent() {
 																				!hideDeletedBody &&
 																				Boolean(String(captionText || '').trim())
 																			}
+																			showTranslate={
+																				!mine &&
+																				!hideDeletedBody &&
+																				isEnglishMessageText(captionText)
+																			}
+																			translating={Boolean(messageTranslations[message.id]?.loading)}
 																			showDownloadVideo={Boolean(
 																				socialVideoLink &&
 																					!socialDownloads[message.id],
@@ -22336,6 +22430,11 @@ function WhatsAppWorkspaceContent() {
 																				);
 																			}}
 																			onCopy={() => handleMessageAction(message, 'copy')}
+																			onTranslate={event => {
+																				event.preventDefault();
+																				event.stopPropagation();
+																				void toggleIncomingTranslation(message, captionText);
+																			}}
 																			onMore={event => {
 																				event.preventDefault();
 																				event.stopPropagation();

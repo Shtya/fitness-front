@@ -27,9 +27,11 @@ export const useUser = () => {
     update();
     window.addEventListener('storage', update);
     window.addEventListener('sobha-user-updated', update);
+    window.addEventListener('app:user-updated', update);
     return () => {
       window.removeEventListener('storage', update);
       window.removeEventListener('sobha-user-updated', update);
+      window.removeEventListener('app:user-updated', update);
     };
   }, []);
 

@@ -4,13 +4,18 @@ import { useForm, Controller } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { motion } from 'framer-motion';
-import { Flame, Beef, Wheat, Droplets, Leaf, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Calculator, Flame, Beef, Wheat, Droplets, Leaf, Sparkles } from 'lucide-react';
 
 import FloatingInput from '@/components/atoms/FloatingInput';
+import FloatingSelect from '@/components/atoms/FloatingSelect';
 import ToggleGroup from '@/components/atoms/GmToggleGroup';
 import api from '@/utils/axios';
 import { Notification } from '@/config/Notification';
 import { useTranslations } from 'next-intl';
+import { bodyFromAnswers, targetsFromProfile } from '@/lib/calorie-engine';
+import { fetchCalculations, saveCalculation } from '@/lib/calorie-saved';
+import CalorieCalcDialog from '@/components/pages/dashboard/users/CalorieCalcDialog';
 
 const calculateMacros = (calories) => {
 	if (!calories) return { protein: '', carbs: '', fat: '', fiber: '' };
@@ -38,8 +43,15 @@ const caloriesSchema = yup.object({
 	notes: yup.string().max(1000, 'calories.errors.notesMax').nullable().transform(v => (v === '' ? null : v)),
 });
 
-export default function CaloriesStep({ userId, initialValues = {}, onBack, onNext }) {
+export default function CaloriesStep({ userId, initialValues = {}, clientSeed = {}, onBack, onNext }) {
 	const t = useTranslations('users');
+	const [responses, setResponses] = useState([]);
+	const [responseId, setResponseId] = useState('none');
+	const [calcId, setCalcId] = useState('none');
+	const [savedCalcs, setSavedCalcs] = useState([]);
+	const [calcOpen, setCalcOpen] = useState(false);
+	const [calcDraft, setCalcDraft] = useState(null);
+	const autoEmail = useRef('');
 
 	const { control, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm({
 		resolver: yupResolver(caloriesSchema),
@@ -54,6 +66,97 @@ export default function CaloriesStep({ userId, initialValues = {}, onBack, onNex
 			notes: initialValues.notes ?? '',
 		},
 	});
+
+	const seedProfile = useMemo(() => ({
+		sex: clientSeed.sex || '',
+		age: clientSeed.age || '',
+		name: clientSeed.name || '',
+		height: '',
+		weight: '',
+		bodyFat: '',
+		activity: '1.55',
+		goal: '0',
+	}), [clientSeed.sex, clientSeed.age, clientSeed.name]);
+
+	const refreshCalcs = () => {
+		fetchCalculations().then(setSavedCalcs).catch(() => setSavedCalcs([]));
+	};
+
+	const fillFromResponse = (row, { announce = true } = {}) => {
+		if (!row) return;
+		setResponseId(String(row.id));
+		const body = bodyFromAnswers(row.answers, seedProfile);
+		const profile = { ...body, activity: '1.55', goal: '0', name: seedProfile.name || '' };
+		const targets = targetsFromProfile(profile);
+		if (!targets) {
+			setCalcDraft(profile);
+			setCalcOpen(true);
+			if (announce) Notification(t('calories.heightGap'), 'warning');
+			return;
+		}
+		applyTargets(targets);
+	};
+
+	const applyTargets = (targets) => {
+		setValue('caloriesTarget', targets.caloriesTarget, { shouldDirty: true, shouldValidate: true });
+		setValue('proteinPerDay', targets.proteinPerDay, { shouldDirty: true, shouldValidate: true });
+		setValue('carbsPerDay', targets.carbsPerDay, { shouldDirty: true, shouldValidate: true });
+		setValue('fatsPerDay', targets.fatsPerDay, { shouldDirty: true, shouldValidate: true });
+		setValue('FiberTarget', targets.FiberTarget, { shouldDirty: true, shouldValidate: true });
+		if (targets.activityLevel) setValue('activityLevel', targets.activityLevel, { shouldDirty: true });
+		Notification(t('calories.applied'), 'success');
+	};
+
+	const applyResponse = (id) => {
+		setResponseId(id || 'none');
+		if (!id || id === 'none') return;
+		const row = responses.find(item => String(item.id) === String(id));
+		if (row) fillFromResponse(row);
+	};
+
+	const applySaved = (id) => {
+		setCalcId(id || 'none');
+		if (!id || id === 'none') return;
+		const row = savedCalcs.find(item => String(item.id) === String(id));
+		if (row?.targets) applyTargets(row.targets);
+	};
+
+	useEffect(() => {
+		let cancelled = false;
+		refreshCalcs();
+		api.get('/forms/submissions')
+			.then(({ data }) => {
+				if (!cancelled) setResponses(Array.isArray(data) ? data : []);
+			})
+			.catch(() => { if (!cancelled) setResponses([]); });
+		return () => { cancelled = true; };
+	}, []);
+
+	useEffect(() => {
+		const email = String(clientSeed.email || '').trim().toLowerCase();
+		if (!email || autoEmail.current === email || !responses.length) return;
+		const match = responses.find(row => String(row.email || '').trim().toLowerCase() === email);
+		if (!match) return;
+		autoEmail.current = email;
+		fillFromResponse(match);
+	}, [clientSeed.email, responses]);
+
+	const responseOptions = useMemo(() => ([
+		{ id: 'none', label: t('calories.pickReport') },
+		...responses.map(row => {
+			const when = row.createdAt ? String(row.createdAt).slice(0, 10) : '';
+			const bits = [row.name, row.email, row.formTitle, when].filter(Boolean);
+			return { id: String(row.id), label: bits.join(' · ') || t('calories.unknownPerson') };
+		}),
+	]), [responses, t]);
+
+	const calcOptions = useMemo(() => ([
+		{ id: 'none', label: t('calories.pickCalc') },
+		...savedCalcs.map(row => ({
+			id: row.id,
+			label: `${row.name || t('calories.savedCalc')} · ${row.targets?.caloriesTarget || 0} kcal`,
+		})),
+	]), [savedCalcs, t]);
 
 	const caloriesTarget = Number(watch('caloriesTarget') || 0);
 	const protein = Number(watch('proteinPerDay') || 0);
@@ -108,7 +211,38 @@ export default function CaloriesStep({ userId, initialValues = {}, onBack, onNex
 			className='space-y-4'
 			onSubmit={handleSubmit(onSubmit)}
 		>
-			<p className='text-[12.5px] leading-relaxed gm-muted'>{t('wizard.fuelHint')}</p>
+			{/* <p className='text-[12.5px] leading-relaxed gm-muted'>{t('wizard.fuelHint')}</p> */}
+			<p className='text-[12.5px] font-semibold gm-ink'>{t('calories.sourceHint')}</p>
+
+			<div className='grid gap-3 sm:grid-cols-[1fr_1fr_auto]'>
+				<FloatingSelect
+					searchable
+					createPlaceholder={t('calories.searchResponse')}
+					menuZIndex={1300000}
+					label={t('calories.fromReport')}
+					value={responseId}
+					onChange={applyResponse}
+					options={responseOptions}
+				/>
+				<FloatingSelect
+					searchable
+					label={t('calories.savedCalcs')}
+					value={calcId}
+					onChange={applySaved}
+					options={calcOptions}
+				/>
+			<button
+				type='button'
+				onClick={() => {
+					setCalcDraft({ ...seedProfile, name: seedProfile.name || '' });
+					setCalcOpen(true);
+				}}
+				className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5'
+			>
+				<Calculator className='size-3.5' />
+				{t('calories.openCalc')}
+			</button>
+			</div>
 
 			<div className='gm-fuel'>
 				<div className='gm-fuel__top'>
@@ -134,7 +268,7 @@ export default function CaloriesStep({ userId, initialValues = {}, onBack, onNex
 							)}
 						/>
 					</div>
-					<button
+					{/* <button
 						type='button'
 						onClick={autoFillMacros}
 						disabled={!caloriesTarget}
@@ -142,7 +276,7 @@ export default function CaloriesStep({ userId, initialValues = {}, onBack, onNex
 					>
 						<Sparkles className='size-3.5' />
 						{t('calories.autoFill')}
-					</button>
+					</button> */}
 				</div>
 
 				<div className='gm-fuel__split' aria-hidden>
@@ -236,6 +370,21 @@ export default function CaloriesStep({ userId, initialValues = {}, onBack, onNex
 					{t('common.saveAndNext')}
 				</button>
 			</div>
+			<CalorieCalcDialog
+				open={calcOpen}
+				initial={calcDraft}
+				onClose={() => setCalcOpen(false)}
+				onSave={async ({ profile, targets, name }) => {
+					try {
+						await saveCalculation(profile, name || seedProfile.name || `${profile.weight || ''} kg`);
+						refreshCalcs();
+						applyTargets(targets);
+						setCalcOpen(false);
+					} catch (error) {
+						Notification(error?.response?.data?.message || t('alerts.saveCaloriesFailed'), 'error');
+					}
+				}}
+			/>
 		</motion.form>
 	);
 }
