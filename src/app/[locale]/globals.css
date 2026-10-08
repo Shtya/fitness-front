@@ -2168,8 +2168,10 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   overflow-anchor: none;
 }
 
-.wa-message-row.wa-follows-same {
-  padding-bottom: 8px;
+/* The gap belongs to the row *before* the next bubble: tight inside a sender run,
+   a full step when the sender changes, so runs read as one turn of conversation. */
+.wa-message-row.wa-precedes-same {
+  padding-bottom: 2px;
 }
 
 .wa-message-row + .wa-message-row,
@@ -14918,5 +14920,230 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	.wa-web-desktop .wa-chat-workspace .wa-chat-card {
 		border-top-left-radius: 0;
 		border-top-right-radius: 0;
+	}
+}
+
+/* ===== WhatsApp workspace — refinement layer (2026-10) =====
+   Final pass on top of the WA Web redesign. Rules here fix concrete defects found in
+   visual QA (bidi timestamps, mobile composer crush, header layout, dead thread space)
+   and tighten list hierarchy. Selectors are deliberately specific because the earlier
+   layers lean on !important. */
+
+/* Timestamps follow the interface language, not the language of the message they sit in:
+   an Arabic bubble in the English UI must still read "5:54 PM", never "PM 5:54". */
+html[dir='ltr'] .wa-message-bubble .wa-message-meta {
+	direction: ltr;
+	unicode-bidi: isolate;
+}
+
+html[dir='rtl'] .wa-message-bubble .wa-message-meta {
+	direction: rtl;
+	unicode-bidi: isolate;
+}
+
+.wa-message-meta,
+.wa-conversation-row .time-chat {
+	font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard focus that is visible on every surface of the chat. */
+.wa-conversation-row:focus-visible {
+	outline: 2px solid #00a884;
+	outline-offset: -2px;
+}
+
+.wa-header-icon-btn:focus-visible,
+.wa-chat-toolbar .wa-action-menu-trigger:focus-visible,
+.wa-archived-row:focus-visible,
+.wa-jump-bottom:focus-visible {
+	outline: 2px solid #00a884 !important;
+	outline-offset: 2px;
+}
+
+.wa-input-pill:focus-within {
+	box-shadow: 0 0 0 1px rgba(0, 168, 132, 0.35);
+}
+
+/* Chat list: name → last message → time, with unread carried by weight and colour
+   as well as the badge, so the list scans without reading every row. */
+.wa-web-desktop .wa-chat-list .wa-conversation-row .title-chat,
+.wa-chat-list .wa-conversation-row .title-chat {
+	font-weight: 600 !important;
+}
+
+.wa-web-desktop .wa-chat-list .wa-conversation-row.is-unread .title-chat,
+.wa-chat-list .wa-conversation-row.is-unread .title-chat {
+	font-weight: 700 !important;
+}
+
+.wa-web-desktop .wa-chat-list .wa-conversation-row.is-unread .desc-chat:not(.is-typing),
+.wa-chat-list .wa-conversation-row.is-unread .desc-chat:not(.is-typing) {
+	color: #3b4a54 !important;
+	font-weight: 500 !important;
+}
+
+.dark .wa-chat-list .wa-conversation-row.is-unread .desc-chat:not(.is-typing) {
+	color: #d1d7db !important;
+}
+
+/* Archived is a utility row, not a heading: it should not out-shout the chats below. */
+.wa-chat-list .wa-archived-row__title {
+	font-size: 15px !important;
+	font-weight: 500 !important;
+}
+
+.wa-chat-list .wa-archived-row__count {
+	font-size: 13px !important;
+	color: #00a884 !important;
+	font-weight: 600 !important;
+}
+
+@media (min-width: 769px) {
+	/* The mobile back chevron leaked onto desktop next to the close button. */
+	.wa-chat-toolbar .wa-chat-back-btn {
+		display: none !important;
+	}
+
+	.wa-web-desktop .wa-archived-row {
+		font-weight: 500;
+	}
+}
+
+@media (max-width: 768px) {
+	/* The header's last slot belongs to the actions menu; the empty placeholder used to
+	   take it and push the menu into the middle of the bar. */
+	.wa-chat-toolbar .wa-chat-mobile-actions:empty {
+		display: none !important;
+	}
+
+	.wa-chat-toolbar > .wa-chat-toolbar__identity {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	/* The badge already says "something is on"; a filled green button on top of it reads
+	   as a pressed state that never releases. */
+	.wa-chat-toolbar .wa-action-menu-trigger.is-active:not([aria-expanded='true']) {
+		background: transparent !important;
+		border-color: transparent !important;
+		color: #54656f !important;
+	}
+
+	.wa-chat-toolbar .wa-action-menu-trigger[aria-expanded='true'] {
+		background: #f0f2f5 !important;
+	}
+
+	/* Phone composer: keep the input wide. Schedule, saved replies, AI image and the voice
+	   changer move into the + sheet, so the bar is + · emoji · input · camera · mic/send. */
+	.wa-input-pill .wa-composer-tool--desktop {
+		display: none !important;
+	}
+
+	/* With the extra tools gone there is room for proper 40px touch targets. */
+	.wa-input-pill .wa-input-action.wa-input-action,
+	.wa-input-pill .wa-send-button.wa-send-button {
+		width: 40px !important;
+		height: 40px !important;
+		min-width: 40px !important;
+		min-height: 40px !important;
+	}
+
+	/* Pad the thread by the composer's real height instead of a fixed 220px guess,
+	   which left a screen-height gap whenever the AI bar was empty. */
+	.wa-chat-thread-pane .wa-message-wallpaper.wa-message-wallpaper,
+	.wa-chat-thread-pane .wa-message-wallpaper.wa-has-ai-suggestions {
+		padding-bottom: calc(var(--wa-composer-stack-h, 66px) + 12px) !important;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-conversation-row,
+	.wa-header-icon-btn,
+	.wa-input-pill {
+		transition: none !important;
+	}
+}
+
+/* Empty list states always offer the way back, e.g. clearing a search that matched nothing. */
+.wa-chat-list-empty__action {
+	margin-top: 4px;
+	height: 36px;
+	padding: 0 16px;
+	border: 1px solid #d1d7db;
+	border-radius: 999px;
+	background: #ffffff;
+	color: #008069;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.wa-chat-list-empty__action:hover {
+	background: #f0f2f5;
+	border-color: #c4ccd1;
+}
+
+.wa-chat-list-empty__action:focus-visible {
+	outline: 2px solid #00a884;
+	outline-offset: 2px;
+}
+
+.dark .wa-chat-list-empty__action {
+	background: transparent;
+	border-color: #3b4a54;
+	color: #00a884;
+}
+
+/* Failed send: icon + word inside the bubble, icon only in the chat list preview. */
+.wa-delivery-retry {
+	gap: 3px;
+	padding: 0 2px;
+	border-radius: 4px;
+	color: #e11d48;
+	cursor: pointer;
+}
+
+.wa-delivery-retry__label {
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 15px;
+}
+
+.wa-delivery-retry:hover .wa-delivery-retry__label {
+	text-decoration: underline;
+}
+
+.wa-delivery-retry:focus-visible {
+	outline: 2px solid #e11d48;
+	outline-offset: 1px;
+}
+
+.wa-conversation-row .wa-delivery-retry__label {
+	display: none;
+}
+
+/* The phone layout used to cap itself at 430px, leaving empty gutters on large phones
+   and tablets. Let the shell, and the composer floating over it, use the full width. */
+@media (max-width: 768px) {
+	.wa-mobile-shell {
+		max-width: 100% !important;
+	}
+
+	.wa-composer-stack {
+		width: 100%;
+	}
+
+	/* The count already sits at the end of the row; a second copy on the avatar is noise.
+	   (Desktop hides it the same way and only uses it for the collapsed rail.) */
+	.wa-chat-list .wa-unread-avatar-badge {
+		display: none;
+	}
+}
+
+/* On tablets the full width would stretch text bubbles past a comfortable line length. */
+@media (min-width: 600px) and (max-width: 768px) {
+	.wa-chat-thread-pane .wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-email) {
+		max-width: min(75%, 42rem) !important;
 	}
 }

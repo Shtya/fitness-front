@@ -653,7 +653,7 @@ export default function StickersPanel({
 												event.stopPropagation();
 												void deleteSticker(item);
 											}}
-											className="absolute right-1 top-1 z-10 grid h-5 w-5 place-items-center rounded-full bg-black/60 text-white opacity-0 shadow-sm transition hover:bg-rose-600 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-60 max-[768px]:opacity-100"
+											className="absolute right-1 top-1 z-10 grid h-5 w-5 place-items-center rounded-full bg-black/60 text-white opacity-0 shadow-sm transition hover:bg-rose-600 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-60 max-[769px]:opacity-100"
 										>
 											{deletingId === item.id ? <Loader2 size={10} className="animate-spin" /> : <X size={11} strokeWidth={2.6} />}
 										</button>

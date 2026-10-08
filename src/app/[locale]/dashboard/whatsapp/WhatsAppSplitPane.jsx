@@ -647,7 +647,7 @@ export default function WhatsAppSplitPane({
 				if (!file) return;
 				void sendVoiceFile(file);
 			};
-			recorder.start(250);
+			recorder.start();
 			recordingTimerRef.current = setInterval(() => {
 				if (mediaRecorderRef.current?.state !== 'recording') return;
 				recordingSecondsRef.current += 1;
