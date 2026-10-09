@@ -2706,14 +2706,15 @@ html.dark .hm {
 }
 
 /* 3D dumbbell */
+/* Phones: tucked behind the big headline (strong white type), clear of the paragraph. */
 .hm-dumbbell {
 	position: absolute;
 	z-index: 0;
-	inset-inline-end: -18%;
-	top: 70px;
+	inset-inline-end: -30%;
+	top: 56px;
 	width: 92%;
-	height: 340px;
-	opacity: 0.6;
+	height: 256px;
+	opacity: 0.42;
 	pointer-events: none;
 }
 
@@ -3005,7 +3006,6 @@ html.dark .hm {
 	width: 0.42em;
 	height: 0.42em;
 	color: var(--color-primary-200);
-	transform: rotate(-30deg);
 }
 
 /* ---------- Workflow: pinned sideways scene (wide screens) ---------- */

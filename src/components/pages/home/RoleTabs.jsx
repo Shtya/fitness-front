@@ -73,7 +73,7 @@ export default function RoleTabs() {
 	}));
 
 	return (
-		<section id="role-tabs-section" aria-labelledby="role-tabs-heading" className="hm-section">
+		<section id="role-tabs-section" aria-labelledby="role-tabs-heading" className="hm-section hm-section--chalk">
 			<div className="hm-container">
 				<SectionHead
 					id="role-tabs-heading"

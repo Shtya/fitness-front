@@ -84,7 +84,16 @@ function JourneyPinned() {
 				);
 			});
 		}, section);
-		return () => ctx.revert();
+		// This scene mounts after hydration, later than the pins below it (inbox),
+		// which measured the page without this pin's spacer. Re-order and re-measure.
+		const { ScrollTrigger } = getGsap();
+		ScrollTrigger.sort();
+		ScrollTrigger.refresh();
+		return () => {
+			ctx.revert();
+			ScrollTrigger.sort();
+			ScrollTrigger.refresh();
+		};
 	}, []);
 
 	const jump = index => {

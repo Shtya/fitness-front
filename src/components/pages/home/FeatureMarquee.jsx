@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { useMessages, useTranslations } from "next-intl";
-import { Dumbbell } from "lucide-react";
+import { CircleDot } from "lucide-react";
 import { getGsap, prefersReducedMotion } from "./motion/gsap";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -15,7 +15,7 @@ function Row({ words, reverse }) {
 			{items.map((word, index) => (
 				<span key={index} className="hm-marquee__item">
 					<span className={index % 2 ? "is-outline" : ""}>{word}</span>
-					<Dumbbell className="hm-marquee__mark" size={34} strokeWidth={2.2} aria-hidden="true" />
+					<CircleDot className="hm-marquee__mark" size={34} strokeWidth={2.4} aria-hidden="true" />
 				</span>
 			))}
 		</div>

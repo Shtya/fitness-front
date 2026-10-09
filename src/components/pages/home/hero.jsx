@@ -282,8 +282,8 @@ export default function Hero() {
 					<h1 id="hero-title" ref={titleRef} className="hm-display hm-hero__title">
 						{t("title")}
 					</h1>
-					<p className="hm-lead hm-hero__reveal mt-8">{t("description")}</p>
-					<div className="hm-hero__reveal mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+					<p className="hm-lead hm-hero__reveal mt-7 max-w-[34rem]">{t("description")}</p>
+					<div className="hm-hero__reveal mt-9 flex flex-wrap items-center gap-x-5 gap-y-4">
 						<Link href="/auth" className="hm-btn hm-btn--glow" data-magnetic="0.4">
 							<span>{t("cta.getStarted")}</span>
 						</Link>

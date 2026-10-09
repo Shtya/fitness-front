@@ -894,13 +894,13 @@
 		}
 	},
 	"auth": {
-		"signIn": "Sign In",
+		"signIn": "Sign in",
 		"subtitle": "Welcome back! Please enter your details",
 		"email": "Email",
 		"enterEmail": "Enter your email",
 		"password": "Password",
 		"enterPassword": "Enter your password",
-		"signInButton": "Sign In",
+		"signInButton": "Sign in",
 		"loading": {
 			"signingIn": "Signing in..."
 		},
@@ -932,6 +932,36 @@
 			"stat2Label": "Pro Coaches",
 			"stat3Val": "98%",
 			"stat3Label": "Client Satisfaction"
+		},
+		"v2": {
+			"title": "Pick up where you left off",
+			"lead": "Clients, plans, check-ins and chats, exactly where you left them.",
+			"formTitle": "Sign in",
+			"formLead": "Use the email and password for your account.",
+			"home": "Back to site",
+			"notes": {
+				"report": "Weekly report received",
+				"reportMeta": "Sarah Ali · 3 photos",
+				"plan": "Plan updated",
+				"planMeta": "Lower body A · squat 72.5 kg",
+				"chat": "New message",
+				"chatMeta": "Omar: can we move tomorrow to 7pm?"
+			},
+			"noteLabel": "Waiting for you"
+		},
+		"v3": {
+			"title": "Load the bar.",
+			"lead": "Sign in and pick up exactly where you left off.",
+			"kg": "kg",
+			"status": {
+				"empty": "Empty bar. Start with your email.",
+				"email": "Plates on. Now your password.",
+				"ready": "Loaded. Ready to lift.",
+				"loading": "Lifting…",
+				"error": "Missed the lift. Check your details.",
+				"success": "Locked out. Welcome back."
+			},
+			"readoutLabel": "On the bar"
 		}
 	},
 	"myProfile": {
@@ -6325,17 +6355,17 @@
 	},
 	"home": {
 		"hero": {
-			"badge": "All-in-one management platform",
-			"title": "Your clients, plans and check-ins in one place",
-			"description": "So7baFit gives coaches and their teams one workspace for intake forms, workout and nutrition plans, weekly reports and every WhatsApp conversation.",
+			"badge": "Coaching operating system",
+			"title": "Run every client from one quiet desk",
+			"description": "Intake, workouts, nutrition, weekly reports and WhatsApp — one workspace for coaches and their team, without tab-hopping between apps.",
 			"cta": {
 				"getStarted": "Get started",
 				"watchDemo": "Watch Demo"
 			},
 			"trust": {
-				"activeUsers": "A unified client management experience",
-				"rating": "Better organization for daily operations",
-				"community": "Active Now"
+				"activeUsers": "Unified client file",
+				"rating": "Plans + reports in one place",
+				"community": "Live now"
 			},
 			"stats": {
 				"coaches": {
@@ -6794,6 +6824,7 @@
 			}
 		},
 		"contact": {
+			"badge": "Contact",
 			"title": "Talk to our team",
 			"description": "Tell us a bit about yourself and your goals, and our team will get back to you as soon as possible.",
 			"form": {
@@ -6975,6 +7006,7 @@
 			}
 		},
 		"inbox": {
+			"badge": "WhatsApp inbox",
 			"title": "Every client conversation sits next to their plan",
 			"lead": "Connect your WhatsApp number and answer clients as a team, with their plan, reports and history one click away.",
 			"points": {
@@ -7045,8 +7077,8 @@
 			}
 		},
 		"close": {
-			"title": "Start with your first client today",
-			"lead": "Set up your workspace, invite your coaches and send your first intake form in minutes.",
+			"title": "Open your coaching desk today",
+			"lead": "Create the workspace, invite coaches, and send the first intake form in minutes — not another week of scattered chats.",
 			"primary": "Get started",
 			"secondary": "Talk to us"
 		},

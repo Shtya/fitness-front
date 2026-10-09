@@ -104,7 +104,7 @@ export default function ContactUs() {
 	};
 
 	return (
-		<section id="contact-section" aria-labelledby="contact-heading" className="hm-section">
+		<section id="contact-section" aria-labelledby="contact-heading" className="hm-section hm-section--chalk">
 			<div className="hm-container hm-contact">
 				<div className="hm-contact__intro">
 					<h2 id="contact-heading" className="hm-h2">

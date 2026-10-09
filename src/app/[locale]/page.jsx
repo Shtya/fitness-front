@@ -3,12 +3,11 @@
 /**
  * So7baFit homepage — "Night session".
  *
- * A theme-tinted night carries the bold moments (hero, inbox, theme, footer); tinted
- * paper sits between them. The accent is always the live theme colour, so the theme
- * picker re-skins the page, with a wipe from the swatch you pick.
- * Scroll tells the story: the hero's scattered client file gathers, the six workflow
- * stages pass sideways like sets, the inbox conversation plays as you read, and the
- * feature band moves with your scroll speed. Reduced motion turns all of it off.
+ * Rhythm: night hero (the coaching desk) → ruled-paper workflow (pinned, sideways)
+ * → night inbox (pinned, the conversation plays) → accent feature band → paper roles
+ * → night theme (palette wipe) → voices → FAQ → contact → night close.
+ * The accent is always the live theme colour (--color-primary-*). Reduced motion
+ * turns off smooth scroll, pins and scrubs; everything stays readable and usable.
  */
 
 import { useLocale } from "next-intl";
