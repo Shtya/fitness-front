@@ -7,6 +7,8 @@ import { useLocale } from 'next-intl';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { usePathname, useRouter } from '@/i18n/navigation';
+import { useTheme } from '@/app/[locale]/theme';
 import {
 	Activity,
 	AlertCircle,
@@ -61,6 +63,7 @@ import {
 	Expand,
 	MessageCircle,
 	Mic,
+	Moon,
 	MoreHorizontal,
 	PanelLeft,
 	PanelLeftClose,
@@ -85,6 +88,7 @@ import {
 	SmilePlus,
 	Sparkles,
 	Star,
+	Sun,
 	Trash2,
 	TrendingUp,
 	User,
@@ -713,6 +717,12 @@ const translations = {
 		settingsDemo: 'Demo mode',
 		settingsNotifications: 'Notifications',
 		settingsPrivacy: 'Privacy',
+		darkMode: 'Dark mode',
+		lightMode: 'Light mode',
+		toggleDarkMode: 'Toggle dark mode',
+		language: 'Language',
+		switchToEnglish: 'English',
+		switchToArabic: 'العربية',
 		whatsappNotifications: 'WhatsApp Notifications',
 		whatsappNotificationsHint:
 			'Turn off to silence WhatsApp message, assignment, and connection alerts for this account on this device. Other app notifications are not affected.',
@@ -1201,6 +1211,12 @@ const translations = {
 		settingsDemo: 'الوضع التجريبي',
 		settingsNotifications: 'الإشعارات',
 		settingsPrivacy: 'الخصوصية',
+		darkMode: 'الوضع الداكن',
+		lightMode: 'الوضع الفاتح',
+		toggleDarkMode: 'تبديل الوضع الداكن',
+		language: 'اللغة',
+		switchToEnglish: 'English',
+		switchToArabic: 'العربية',
 		whatsappNotifications: 'إشعارات واتساب',
 		whatsappNotificationsHint:
 			'أوقف هذا الخيار لإسكات تنبيهات الرسائل والتعيين وحالة الاتصال لهذا الحساب على هذا الجهاز. لا يؤثر على باقي إشعارات التطبيق.',
@@ -7889,40 +7905,70 @@ function ConversationActionMenu({
 	);
 }
 
-function MobileWhatsAppHeader({ title, showTitle = true, scrolled = false, onSearch, onCamera, onMore }) {
+function MobileWhatsAppHeader({
+	title,
+	showTitle = true,
+	scrolled = false,
+	onSearch,
+	onCamera,
+	onMore,
+	locale = 'en',
+}) {
+	const ar = String(locale).toLowerCase().startsWith('ar');
 	return (
 		<header className={`wa-mobile-header ${scrolled ? 'is-scrolled' : ''} hidden shrink-0 flex-col px-4 pb-2 min-[769px]:hidden`}>
-			<div className="flex justify-between mt-2 h-11 items-center   gap-3">
-				<button type="button" onClick={onMore} aria-label="More options" className="grid h-7 w-7 place-items-center rounded-full bg-[#F0F2F5]">
+			<div className="mt-2 flex h-11 items-center justify-between gap-3 pt-[env(safe-area-inset-top,0px)]">
+				<button
+					type="button"
+					onClick={onMore}
+					aria-label={ar ? 'المزيد' : 'More options'}
+					className="grid h-7 w-7 place-items-center rounded-full bg-[#F0F2F5]"
+				>
 					<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
 						<rect width="28" height="28" rx="14" fill="#0A0A0A" fillOpacity="0.03" />
 						<path fillRule="evenodd" clipRule="evenodd" d="M10 14.0001C10 14.9114 9.26127 15.6501 8.35 15.6501C7.43873 15.6501 6.7 14.9114 6.7 14.0001C6.7 13.0888 7.43873 12.3501 8.35 12.3501C9.26127 12.3501 10 13.0888 10 14.0001ZM15.65 14.0001C15.65 14.9114 14.9112 15.6501 14 15.6501C13.0887 15.6501 12.35 14.9114 12.35 14.0001C12.35 13.0888 13.0887 12.3501 14 12.3501C14.9112 12.3501 15.65 13.0888 15.65 14.0001ZM19.65 15.6501C20.5613 15.6501 21.3 14.9114 21.3 14.0001C21.3 13.0888 20.5613 12.3501 19.65 12.3501C18.7387 12.3501 18 13.0888 18 14.0001C18 14.9114 18.7387 15.6501 19.65 15.6501Z" fill="#0A0A0A" />
 					</svg>
-
 				</button>
-				<div className='flex items-center gap-2'>
-					<button type="button" onClick={onCamera} aria-label="Camera" className="grid h-7 w-7 place-items-center rounded-full bg-[#F0F2F5]">
+				<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={onCamera}
+						aria-label={ar ? 'الكاميرا' : 'Camera'}
+						className="grid h-7 w-7 place-items-center rounded-full bg-[#F0F2F5]"
+					>
 						<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<rect width="28" height="28" rx="14" fill="#0A0A0A" fillOpacity="0.03" />
 							<path fillRule="evenodd" clipRule="evenodd" d="M11.8699 7C11.6312 7 11.4004 7.08539 11.2191 7.24074L9.45833 8.75H7C5.89543 8.75 5 9.64543 5 10.75V19.25C5 20.3546 5.89543 21.25 7 21.25H21C22.1046 21.25 23 20.3546 23 19.25V10.75C23 9.64543 22.1046 8.75 21 8.75H18.5417L16.7809 7.24074C16.5996 7.08539 16.3688 7 16.1301 7H11.8699ZM14 19C16.2091 19 18 17.2091 18 15C18 12.7909 16.2091 11 14 11C11.7909 11 10 12.7909 10 15C10 17.2091 11.7909 19 14 19ZM14 17.75C15.5188 17.75 16.75 16.5188 16.75 15C16.75 13.4812 15.5188 12.25 14 12.25C12.4812 12.25 11.25 13.4812 11.25 15C11.25 16.5188 12.4812 17.75 14 17.75ZM19.5 13.25C20.0523 13.25 20.5 12.8023 20.5 12.25C20.5 11.6977 20.0523 11.25 19.5 11.25C18.9477 11.25 18.5 11.6977 18.5 12.25C18.5 12.8023 18.9477 13.25 19.5 13.25Z" fill="#0A0A0A" />
 						</svg>
-
 					</button>
-					<button type="button" onClick={onSearch} aria-label="New chat" className="wa-new-chat grid h-7 w-7 place-items-center rounded-full bg-[#00A884] text-white">
+					<button
+						type="button"
+						onClick={onSearch}
+						aria-label={ar ? 'محادثة جديدة' : 'New chat'}
+						className="wa-new-chat grid h-7 w-7 place-items-center rounded-full bg-[#00A884] text-white"
+					>
 						<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<rect width="28" height="28" rx="14" fill="#1DAB61" />
 							<path fillRule="evenodd" clipRule="evenodd" d="M14.9 8.7501C14.9 8.25304 14.4971 7.8501 14 7.8501C13.5029 7.8501 13.1 8.25304 13.1 8.7501V13.1001H8.75001C8.25295 13.1001 7.85001 13.503 7.85001 14.0001C7.85001 14.4972 8.25295 14.9001 8.75001 14.9001H13.1V19.2501C13.1 19.7472 13.5029 20.1501 14 20.1501C14.4971 20.1501 14.9 19.7472 14.9 19.2501V14.9001H19.25C19.7471 14.9001 20.15 14.4972 20.15 14.0001C20.15 13.503 19.7471 13.1001 19.25 13.1001H14.9V8.7501Z" fill="white" />
 						</svg>
-
 					</button>
 				</div>
 			</div>
-			{showTitle && <h1 className="mt-1 mb-1 title-whatsapp">{title}</h1>}
+			{showTitle && <h1 className="title-whatsapp mt-1 mb-1">{title}</h1>}
 		</header>
 	);
 }
 
-function MobileWhatsAppNav({ activeTab, onSelect, labels, unreadCount }) {
+function MobileWhatsAppNav({
+	activeTab,
+	onSelect,
+	labels,
+	unreadCount,
+	darkMode = false,
+	onToggleDarkMode,
+	onSwitchLocale,
+	locale = 'en',
+}) {
 	const items = [
 		{
 			id: 'statuses', icon: <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -7969,8 +8015,9 @@ function MobileWhatsAppNav({ activeTab, onSelect, labels, unreadCount }) {
 			, label: labels.settings
 		},
 	];
+	const ar = String(locale).toLowerCase().startsWith('ar');
 	return (
-		<nav className="wa-mobile-nav hidden shrink-0 grid-cols-5 border-t border-white/10 bg-[#111b21]/95 pb-[max(6px,env(safe-area-inset-bottom))] pt-2 backdrop-blur min-[769px]:hidden">
+		<nav className="wa-mobile-nav relative hidden shrink-0 grid-cols-5 border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]">
 			{items.map(({ id, icon: Icon, label, badge }) => {
 				const active = activeTab === id;
 				const iconNode = isValidElement(Icon)
@@ -7982,32 +8029,81 @@ function MobileWhatsAppNav({ activeTab, onSelect, labels, unreadCount }) {
 						'aria-hidden': Icon.props['aria-hidden'] ?? true,
 					})
 					: <Icon size={22} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />;
+				const isSettings = id === 'settings';
 				return (
-					<button key={id} type="button" onClick={() => onSelect(id)} className={`wa-mobile-nav-item ${active ? 'is-active font-semibold text-[#0A0A0A]' : ''} relative flex min-w-0 flex-col items-center gap-1 text-[10px]`}>
-						<span className="wa-mobile-nav-icon relative grid h-8 min-w-12 place-items-center rounded-full px-3">
-							{iconNode}
-							{badge > 0 && (
-								<span className="absolute -end-0.5 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#1DAB61] px-1 text-[10px] font-bold text-white">
-									{badge > 99 ? '99+' : badge}
-								</span>
-							)}
-						</span>
-						<span className="w-full truncate px-1">{label}</span>
-					</button>
+					<div key={id} className="relative flex min-w-0 flex-col items-center">
+						{isSettings ? (
+							<div className="wa-mobile-nav-tools absolute bottom-[calc(100%+6px)] z-10 flex flex-col items-center gap-1.5">
+								{typeof onToggleDarkMode === 'function' ? (
+									<button
+										type="button"
+										onClick={onToggleDarkMode}
+										aria-label={labels.toggleDarkMode || (darkMode ? labels.lightMode : labels.darkMode)}
+										title={darkMode ? labels.lightMode : labels.darkMode}
+										className="grid h-9 w-9 place-items-center rounded-full border border-[#d1d7db] bg-white text-[#54656f] shadow-sm dark:border-[#3b4a54] dark:bg-[#202c33] dark:text-[#e9edef]"
+									>
+										{darkMode ? <Sun size={16} strokeWidth={2.1} /> : <Moon size={16} strokeWidth={2.1} />}
+									</button>
+								) : null}
+								{typeof onSwitchLocale === 'function' ? (
+									<button
+										type="button"
+										onClick={() => onSwitchLocale(ar ? 'en' : 'ar')}
+										aria-label={labels.language}
+										title={ar ? labels.switchToEnglish : labels.switchToArabic}
+										className="grid h-9 min-w-9 place-items-center rounded-full border border-[#d1d7db] bg-white px-2 text-[11px] font-bold text-[#008069] shadow-sm dark:border-[#3b4a54] dark:bg-[#202c33] dark:text-[#25d366]"
+									>
+										{ar ? 'EN' : 'ع'}
+									</button>
+								) : null}
+							</div>
+						) : null}
+						<button
+							type="button"
+							onClick={() => onSelect(id)}
+							className={`wa-mobile-nav-item ${active ? 'is-active font-semibold text-[#0A0A0A]' : ''} relative flex min-w-0 flex-col items-center gap-1 text-[10px]`}
+						>
+							<span className="wa-mobile-nav-icon relative grid h-8 min-w-12 place-items-center rounded-full px-3">
+								{iconNode}
+								{badge > 0 && (
+									<span className="absolute -end-0.5 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#1DAB61] px-1 text-[10px] font-bold text-white">
+										{badge > 99 ? '99+' : badge}
+									</span>
+								)}
+							</span>
+							<span className="w-full truncate px-1">{label}</span>
+						</button>
+					</div>
 				);
 			})}
-			<span className="wa-home-indicator opacity-0 !bg-[#0A0A0A] col-span-5 mx-auto mt-3 block h-[5px] w-[140px] rounded-full bg-current" aria-hidden="true" />
 		</nav>
 	);
 }
 
-function MobileOverflowMenu({ open, tabs: menuTabs, labels, onSelect, onProfile, onClose }) {
+function MobileOverflowMenu({
+	open,
+	tabs: menuTabs,
+	labels,
+	onSelect,
+	onProfile,
+	onClose,
+	locale = 'en',
+	darkMode = false,
+	onToggleDarkMode,
+	onSwitchLocale,
+}) {
 	const { openSidebar } = useSidebarChrome();
+	const ar = String(locale).toLowerCase().startsWith('ar');
 	if (!open) return null;
 	return (
 		<>
-			<button type="button" aria-label="Close menu" onClick={onClose} className="fixed inset-0 z-190 bg-transparent min-[769px]:hidden" />
-			<div className="wa-mobile-menu absolute start-4 top-[52px] z-200 min-w-52 overflow-hidden rounded-xl py-2 shadow-2xl min-[769px]:hidden">
+			<button
+				type="button"
+				aria-label={ar ? 'إغلاق القائمة' : 'Close menu'}
+				onClick={onClose}
+				className="fixed inset-0 z-190 bg-transparent min-[769px]:hidden"
+			/>
+			<div className="wa-mobile-menu absolute start-4 top-[calc(52px+env(safe-area-inset-top,0px))] z-200 min-w-52 overflow-hidden rounded-xl py-2 shadow-2xl min-[769px]:hidden">
 				<button type="button" onClick={() => { onProfile(); onClose(); }} className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10">
 					<User size={18} className="text-[#8696a0]" />
 					<span>{labels.profile}</span>
@@ -8019,6 +8115,32 @@ function MobileOverflowMenu({ open, tabs: menuTabs, labels, onSelect, onProfile,
 					</button>
 				))}
 				<div className="my-1 h-px bg-[#8696a0]/20" aria-hidden="true" />
+				{typeof onToggleDarkMode === 'function' ? (
+					<button
+						type="button"
+						onClick={() => {
+							onToggleDarkMode();
+							onClose();
+						}}
+						className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10"
+					>
+						{darkMode ? <Sun size={18} className="text-[#8696a0]" /> : <Moon size={18} className="text-[#8696a0]" />}
+						<span>{darkMode ? labels.lightMode : labels.darkMode}</span>
+					</button>
+				) : null}
+				{typeof onSwitchLocale === 'function' ? (
+					<button
+						type="button"
+						onClick={() => {
+							onSwitchLocale(ar ? 'en' : 'ar');
+							onClose();
+						}}
+						className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10"
+					>
+						<Languages size={18} className="text-[#8696a0]" />
+						<span>{ar ? labels.switchToEnglish : labels.switchToArabic}</span>
+					</button>
+				) : null}
 				<button type="button" onClick={() => { onClose(); openSidebar(); }} className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10">
 					<PanelLeft size={18} className="text-[#8696a0] rtl:scale-x-[-1]" />
 					<span>{labels.openSidebar}</span>
@@ -9508,6 +9630,78 @@ const WaConversationRow = memo(function WaConversationRow({
 function WhatsAppWorkspaceContent() {
 	const locale = useLocale();
 	const t = translations[locale] || translations.en;
+	const pathname = usePathname();
+	const router = useRouter();
+	const { mode: themeMode, setMode: setThemeMode } = useTheme();
+	const darkMode = themeMode === 'dark';
+	const switchLocale = useCallback(
+		nextLocale => {
+			const next = nextLocale === 'en' ? 'en' : 'ar';
+			if (next === locale) return;
+			router.replace(pathname, { locale: next });
+		},
+		[locale, pathname, router],
+	);
+	const toggleDarkMode = useCallback(() => {
+		setThemeMode(darkMode ? 'light' : 'dark');
+	}, [darkMode, setThemeMode]);
+
+	// Match WhatsApp light/dark status-bar colours while this page is open (PWA).
+	useEffect(() => {
+		if (typeof document === 'undefined') return undefined;
+		const color = darkMode ? '#0b141a' : '#ffffff';
+		const statusStyle = darkMode ? 'black' : 'default';
+
+		const previousThemeNodes = Array.from(
+			document.querySelectorAll('meta[name="theme-color"]'),
+		).map(node => ({
+			node,
+			content: node.getAttribute('content'),
+			media: node.getAttribute('media'),
+		}));
+
+		// Drop media-query variants so system dark mode cannot paint a dark bar
+		// over a light WhatsApp chrome (same as native WA light mode).
+		previousThemeNodes.forEach(({ node }) => {
+			node.removeAttribute('media');
+			node.setAttribute('content', color);
+		});
+		if (previousThemeNodes.length === 0) {
+			const node = document.createElement('meta');
+			node.setAttribute('name', 'theme-color');
+			node.setAttribute('content', color);
+			document.head.appendChild(node);
+			previousThemeNodes.push({ node, content: null, media: null });
+		}
+
+		let statusNode = document.querySelector(
+			'meta[name="apple-mobile-web-app-status-bar-style"]',
+		);
+		const previousStatus = statusNode?.getAttribute('content') ?? null;
+		if (!statusNode) {
+			statusNode = document.createElement('meta');
+			statusNode.setAttribute('name', 'apple-mobile-web-app-status-bar-style');
+			document.head.appendChild(statusNode);
+		}
+		statusNode.setAttribute('content', statusStyle);
+
+		return () => {
+			previousThemeNodes.forEach(({ node, content, media }) => {
+				if (!node.isConnected) return;
+				if (content == null) {
+					node.remove();
+					return;
+				}
+				node.setAttribute('content', content);
+				if (media) node.setAttribute('media', media);
+				else node.removeAttribute('media');
+			});
+			if (statusNode?.isConnected) {
+				if (previousStatus == null) statusNode.remove();
+				else statusNode.setAttribute('content', previousStatus);
+			}
+		};
+	}, [darkMode]);
 	const demo = useDemoMode();
 	const {
 		queryClient,
@@ -14892,15 +15086,19 @@ function WhatsAppWorkspaceContent() {
 			const targetConversationId = conversationId;
 			const caption = getDraft().trim();
 			const replySnapshot = replyingTo;
+			// Drop staged chips immediately — bubbles appear in-thread with a clock,
+			// then flip to checkmarks when WhatsApp confirms (no top progress bar).
+			setComposerImages([]);
+			if (caption) setDraft('');
+			setReplyingTo(null);
 			setSending(true);
-			setUploadProgress(0);
+			setUploadProgress(null);
 
 			try {
 				for (let index = 0; index < stagedComposerImages.length; index += 1) {
 					const item = stagedComposerImages[index];
 					const imageCaption = index === 0 ? caption : '';
 					const imageReply = index === 0 ? replySnapshot : null;
-					markComposerImageUploading(item.id, true);
 
 					const clientMessageId = newClientMessageId();
 					const optimisticPreviewUrl = URL.createObjectURL(item.file);
@@ -14928,7 +15126,7 @@ function WhatsAppWorkspaceContent() {
 								replySnapshot: imageReply,
 								optimisticMessage,
 								skipSendingState: true,
-								clearUploadProgress: false,
+								clearUploadProgress: true,
 								removeOnFailure: true,
 							}),
 							WHATSAPP_MEDIA_SEND_TIMEOUT_MS,
@@ -14947,8 +15145,6 @@ function WhatsAppWorkspaceContent() {
 								: mediaUploadFailedMessage(error, locale),
 						);
 						return;
-					} finally {
-						markComposerImageUploading(item.id, false);
 					}
 
 					if (!sent) {
@@ -14960,12 +15156,6 @@ function WhatsAppWorkspaceContent() {
 							setReplyingTo(current => current || imageReply);
 						}
 						return;
-					}
-
-					removeComposerImageById(item.id);
-					if (index === 0) {
-						if (caption) setDraft('');
-						setReplyingTo(null);
 					}
 				}
 			} finally {
@@ -15348,7 +15538,10 @@ function WhatsAppWorkspaceContent() {
 		if (!options.skipSendingState) {
 			setSending(true);
 		}
-		setUploadProgress(0);
+		// Never surface a top-of-thread upload bar — progress lives on the bubble status.
+		if (options.clearUploadProgress !== false) {
+			setUploadProgress(null);
+		}
 		try {
 			let outgoingFile = file;
 			if (type === 'image') {
@@ -15372,15 +15565,9 @@ function WhatsAppWorkspaceContent() {
 					timeout: WHATSAPP_MEDIA_SEND_TIMEOUT_MS,
 					maxBodyLength: Infinity,
 					maxContentLength: Infinity,
-					onUploadProgress: event => {
-						if (!event?.total) return;
-						const pct = Math.round((event.loaded / event.total) * 100);
-						setUploadProgress(Math.min(99, Math.max(0, pct)));
-					},
 				},
 			);
 			uploadedFileId = uploaded.fileId;
-			setUploadProgress(100);
 			const { data } = await api.post(
 				`/whatsapp/conversations/${targetConversationId}/messages`,
 				{
@@ -19908,7 +20095,7 @@ function WhatsAppWorkspaceContent() {
 
 	return (
 		<div
-			className={`wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-[#0b141a] text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:gap-0 min-[769px]:overflow-hidden min-[769px]:bg-transparent dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
+			className={`wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-white text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:gap-0 min-[769px]:overflow-hidden min-[769px]:bg-transparent dark:bg-[#0b141a] dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
 			lang={locale}
 			dir={locale === 'ar' ? 'rtl' : 'ltr'}
 			style={{
@@ -19947,6 +20134,7 @@ function WhatsAppWorkspaceContent() {
 		>
 			{!(isConversationWorkspaceTab(activeTab) && conversationId) && (
 				<MobileWhatsAppHeader
+					locale={locale}
 					title={
 						activeTab === 'statuses'
 							? t.updates
@@ -19968,6 +20156,10 @@ function WhatsAppWorkspaceContent() {
 				open={mobileMenuOpen}
 				tabs={availableTabs.filter(([key]) => !['chats', 'channels', 'statuses', 'groups'].includes(key))}
 				labels={t}
+				locale={locale}
+				darkMode={darkMode}
+				onToggleDarkMode={toggleDarkMode}
+				onSwitchLocale={switchLocale}
 				onSelect={tab => void loadTabData(tab)}
 				onProfile={() => void loadTabData('profile')}
 				onClose={() => setMobileMenuOpen(false)}
@@ -20195,6 +20387,9 @@ function WhatsAppWorkspaceContent() {
 					showAutoForward={canUseWhatsApp || canManageWhatsApp || isAdmin}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
+					darkMode={darkMode}
+					onToggleDarkMode={toggleDarkMode}
+					onSwitchLocale={switchLocale}
 				/>
 			<div className={`wa-web-main min-h-0 flex-1 max-[769px]:min-h-0 ${
 				activeTab === 'board' || activeTab === 'fakeChat'
@@ -21533,26 +21728,6 @@ function WhatsAppWorkspaceContent() {
 														: `${inChatSearchHits.length} result(s)`}
 												</p>
 											) : null}
-										</div>
-									) : null}
-									{uploadProgress != null ? (
-										<div className="flex shrink-0 items-center gap-2 border-b border-emerald-100 bg-emerald-50 px-4 py-1.5 text-[11px] font-semibold text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
-											<span>
-												{uploadProgress >= 100
-													? locale === 'ar'
-														? 'جاري الإرسال'
-														: 'Sending'
-													: locale === 'ar'
-														? 'رفع الملف'
-														: 'Uploading'}
-											</span>
-											<div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-emerald-200/70">
-												<div
-													className="h-full rounded-full bg-[#00A884] transition-[width]"
-													style={{ width: `${uploadProgress}%` }}
-												/>
-											</div>
-											<span>{uploadProgress}%</span>
 										</div>
 									) : null}
 									{activeMessageGroup ? (
@@ -24980,6 +25155,10 @@ function WhatsAppWorkspaceContent() {
 					onSelect={tab => void loadTabData(tab)}
 					labels={t}
 					unreadCount={unreadConversationCount}
+					locale={locale}
+					darkMode={darkMode}
+					onToggleDarkMode={toggleDarkMode}
+					onSwitchLocale={switchLocale}
 				/>
 			)}
 			<MessageReactionPicker

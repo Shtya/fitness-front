@@ -58,7 +58,12 @@ export function generateStaticParams() {
 }
 
 export const viewport = {
-  themeColor: '#1e293b',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b141a' },
+  ],
+  colorScheme: 'light dark',
+  viewportFit: 'cover',
 };
 
 export const metadata = {
@@ -68,6 +73,14 @@ export const metadata = {
   keywords: 'fitness, workout, nutrition, personal trainer, exercise, health, wellness, body transformation, muscle building, weight loss',
   verification: {
     google: 'google62432cad2b17f9f3.html',
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'so7bafit',
+    statusBarStyle: 'default',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
 
   openGraph: {

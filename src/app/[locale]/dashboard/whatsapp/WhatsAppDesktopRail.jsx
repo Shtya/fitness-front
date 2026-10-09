@@ -6,12 +6,14 @@ import {
 	LayoutGrid,
 	Mails,
 	MessageCircle,
+	Moon,
 	PanelLeftClose,
 	PanelLeftOpen,
 	Radio,
 	Settings,
 	Smartphone,
 	Sparkles,
+	Sun,
 	User,
 	Users,
 	Zap,
@@ -40,6 +42,9 @@ export default function WhatsAppDesktopRail({
 	showBoard = true,
 	showFakeChat = true,
 	showAutoForward = true,
+	darkMode = false,
+	onToggleDarkMode,
+	onSwitchLocale,
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const { focusMode, setFocusMode, hideEdgeDock } = useSidebarChrome();
@@ -203,6 +208,28 @@ export default function WhatsAppDesktopRail({
 			<div className="wa-desktop-rail__spacer min-h-2 flex-1" aria-hidden="true" />
 
 			<div className="wa-desktop-rail__footer flex w-full flex-col items-center gap-2.5 pb-2.5">
+				{typeof onToggleDarkMode === 'function' ? (
+					<button
+						type="button"
+						className="wa-desktop-rail__settings"
+						onClick={onToggleDarkMode}
+						aria-label={labels.toggleDarkMode || (darkMode ? labels.lightMode : labels.darkMode)}
+						title={darkMode ? labels.lightMode || (ar ? 'الوضع الفاتح' : 'Light mode') : labels.darkMode || (ar ? 'الوضع الداكن' : 'Dark mode')}
+					>
+						{darkMode ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
+					</button>
+				) : null}
+				{typeof onSwitchLocale === 'function' ? (
+					<button
+						type="button"
+						className="wa-desktop-rail__settings text-[11px] font-bold"
+						onClick={() => onSwitchLocale(ar ? 'en' : 'ar')}
+						aria-label={labels.language || (ar ? 'اللغة' : 'Language')}
+						title={ar ? labels.switchToEnglish || 'English' : labels.switchToArabic || 'العربية'}
+					>
+						{ar ? 'EN' : 'ع'}
+					</button>
+				) : null}
 				{showSettings ? (
 					<button
 						type="button"
