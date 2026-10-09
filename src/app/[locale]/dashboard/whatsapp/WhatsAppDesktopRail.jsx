@@ -6,6 +6,7 @@ import {
 	LayoutGrid,
 	Mails,
 	MessageCircle,
+	Languages,
 	Moon,
 	PanelLeftClose,
 	PanelLeftOpen,
@@ -207,67 +208,88 @@ export default function WhatsAppDesktopRail({
 
 			<div className="wa-desktop-rail__spacer min-h-2 flex-1" aria-hidden="true" />
 
-			<div className="wa-desktop-rail__footer flex w-full flex-col items-center gap-2.5 pb-2.5">
+			<div className="wa-desktop-rail__footer wa-ui-rail-foot">
 				{typeof onToggleDarkMode === 'function' ? (
 					<button
 						type="button"
-						className="wa-desktop-rail__settings"
+						role="switch"
+						aria-checked={darkMode}
+						className="wa-ui-rail-theme"
 						onClick={onToggleDarkMode}
-						aria-label={labels.toggleDarkMode || (darkMode ? labels.lightMode : labels.darkMode)}
-						title={darkMode ? labels.lightMode || (ar ? 'الوضع الفاتح' : 'Light mode') : labels.darkMode || (ar ? 'الوضع الداكن' : 'Dark mode')}
+						aria-label={labels.darkMode || (ar ? 'الوضع الداكن' : 'Dark mode')}
+						title={
+							darkMode
+								? labels.lightMode || (ar ? 'التبديل إلى الوضع الفاتح' : 'Switch to light mode')
+								: labels.darkMode || (ar ? 'التبديل إلى الوضع الداكن' : 'Switch to dark mode')
+						}
 					>
-						{darkMode ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
+						{/* Both icons sit in the track; the thumb slides under the active one. */}
+						<span className="wa-ui-rail-theme__thumb" aria-hidden="true" />
+						<Sun size={14} strokeWidth={2} className="wa-ui-rail-theme__icon is-sun" aria-hidden="true" />
+						<Moon size={14} strokeWidth={2} className="wa-ui-rail-theme__icon is-moon" aria-hidden="true" />
 					</button>
 				) : null}
 				{typeof onSwitchLocale === 'function' ? (
 					<button
 						type="button"
-						className="wa-desktop-rail__settings text-[11px] font-bold"
+						className="wa-ui-rail-btn"
 						onClick={() => onSwitchLocale(ar ? 'en' : 'ar')}
-						aria-label={labels.language || (ar ? 'اللغة' : 'Language')}
+						aria-label={
+							ar
+								? labels.switchToEnglish || 'Switch to English'
+								: labels.switchToArabic || 'التبديل إلى العربية'
+						}
 						title={ar ? labels.switchToEnglish || 'English' : labels.switchToArabic || 'العربية'}
 					>
-						{ar ? 'EN' : 'ع'}
+						<Languages size={20} strokeWidth={1.75} aria-hidden="true" />
+						<span className="wa-ui-rail-btn__tag" aria-hidden="true">
+							{ar ? 'EN' : 'ع'}
+						</span>
 					</button>
 				) : null}
 				{showSettings ? (
 					<button
 						type="button"
-						className={`wa-desktop-rail__settings ${
-							activeTab === 'settings' ? 'is-active' : ''
-						}`}
+						className={`wa-ui-rail-btn${activeTab === 'settings' ? ' is-active' : ''}`}
 						onClick={() => (onOpenSettings ? onOpenSettings() : onSelect('settings'))}
 						aria-label={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 						aria-current={activeTab === 'settings' ? 'page' : undefined}
 						title={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 					>
-						<Settings size={18} strokeWidth={1.75} />
+						<Settings size={20} strokeWidth={1.75} aria-hidden="true" />
 					</button>
 				) : null}
+				<span className="wa-ui-rail-foot__divider" aria-hidden="true" />
 				<button
 					type="button"
-					className={`wa-desktop-rail__avatar-btn relative rounded-full ${
-						activeTab === 'profile' ? 'is-active' : ''
-					}`}
+					className={`wa-desktop-rail__avatar-btn wa-ui-rail-avatar${
+						activeTab === 'profile' ? ' is-active' : ''
+					}${connected ? ' is-online' : ''}`}
 					onClick={onOpenProfile}
-					aria-label={ar ? 'الملف الشخصي' : 'Profile'}
+					aria-label={
+						connected
+							? ar
+								? 'الملف الشخصي، متصل'
+								: 'Profile, connected'
+							: ar
+								? 'الملف الشخصي'
+								: 'Profile'
+					}
 					aria-current={activeTab === 'profile' ? 'page' : undefined}
 					title={ar ? 'الملف الشخصي' : 'Profile'}
 				>
-					<span className="wa-desktop-rail__avatar relative grid size-8 place-items-center overflow-hidden rounded-full">
+					<span className="wa-desktop-rail__avatar wa-ui-rail-avatar__img">
 						{avatarUrl ? (
 							// eslint-disable-next-line @next/next/no-img-element
 							<img src={avatarUrl} alt="" className="size-full object-cover" />
 						) : (
 							<span className="wa-desktop-rail__avatar-fallback grid size-full place-items-center">
-								<User size={15} strokeWidth={2} />
+								<User size={18} strokeWidth={1.9} aria-hidden="true" />
 							</span>
 						)}
 					</span>
-					{/* Online dot sits on the button (not inside overflow:hidden avatar). */}
-					{connected ? (
-						<span className="wa-desktop-rail__online-dot" aria-hidden="true" />
-					) : null}
+					{/* Online dot sits on the button (not inside the clipped avatar). */}
+					{connected ? <span className="wa-desktop-rail__online-dot" aria-hidden="true" /> : null}
 				</button>
 			</div>
 		</aside>

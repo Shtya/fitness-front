@@ -2,74 +2,112 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { Check, Eye, EyeOff, MessageSquareText, MousePointer2, PanelLeft, Pin } from 'lucide-react';
 
-function OptionRow({ checked, label, hint, onChange }) {
+const extraCopy = {
+	en: {
+		what: 'What to blur',
+		reveal: 'Revealing',
+		on: 'On',
+		off: 'Off',
+		statusOff: 'Chats are visible',
+		statusNothing: 'Pick what to hide below',
+		statusList: 'Hiding the chat list',
+		statusThread: 'Hiding the open chat',
+		statusBoth: 'Hiding the chat list and the open chat',
+		offHint: 'Choosing an option turns blur on.',
+		needsHover: 'Needs “Reveal on hover”',
+	},
+	ar: {
+		what: 'ما الذي يتم تمويهه',
+		reveal: 'الإظهار',
+		on: 'مفعّل',
+		off: 'متوقف',
+		statusOff: 'المحادثات ظاهرة',
+		statusNothing: 'اختر ما تريد إخفاءه بالأسفل',
+		statusList: 'إخفاء قائمة المحادثات',
+		statusThread: 'إخفاء المحادثة المفتوحة',
+		statusBoth: 'إخفاء القائمة والمحادثة المفتوحة',
+		offHint: 'اختيار أي خيار يفعّل التمويه.',
+		needsHover: 'يتطلب «الإظهار عند المرور»',
+	},
+};
+
+function OptionRow({ id, checked, label, hint, icon: Icon, onChange, disabled = false, nested = false }) {
 	return (
-		<label className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
+		<label
+			htmlFor={id}
+			className={`wa-ui-blur__option${checked ? ' is-checked' : ''}${disabled ? ' is-disabled' : ''}${
+				nested ? ' is-nested' : ''
+			}`}
+		>
+			<span className="wa-ui-blur__option-icon" aria-hidden="true">
+				<Icon size={17} strokeWidth={1.9} />
+			</span>
+			<span className="wa-ui-blur__option-copy">
+				<span className="wa-ui-blur__option-label">{label}</span>
+				{hint ? <span className="wa-ui-blur__option-hint">{hint}</span> : null}
+			</span>
 			<input
+				id={id}
 				type="checkbox"
+				className="sr-only"
 				checked={checked}
+				disabled={disabled}
 				onChange={event => onChange(event.target.checked)}
-				className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[var(--color-primary-500)]"
 			/>
-			<span className="min-w-0">
-				<span className="block text-[12px] font-bold leading-4 text-slate-800 dark:text-slate-100">
-					{label}
-				</span>
-				{hint ? (
-					<span className="mt-0.5 block text-[10px] leading-4 text-slate-500">{hint}</span>
-				) : null}
+			<span className="wa-ui-blur__check" aria-hidden="true">
+				{checked ? <Check size={13} strokeWidth={3} /> : null}
 			</span>
 		</label>
 	);
 }
 
-export default function WhatsAppPrivacyBlurControl({
-	value,
-	onChange,
-	labels,
-}) {
+export default function WhatsAppPrivacyBlurControl({ value, onChange, labels }) {
+	const locale = useLocale();
+	const x = extraCopy[String(locale).startsWith('ar') ? 'ar' : 'en'];
 	const [open, setOpen] = useState(false);
 	const [position, setPosition] = useState(null);
 	const rootRef = useRef(null);
 	const buttonRef = useRef(null);
 	const menuRef = useRef(null);
+	const switchRef = useRef(null);
 	const enabled = Boolean(value?.enabled);
+	const list = Boolean(value?.list);
+	const thread = Boolean(value?.thread);
+	const hoverReveal = Boolean(value?.hoverReveal);
+	const persistReveal = Boolean(value?.persistReveal);
 
 	useEffect(() => {
 		if (!open) return undefined;
 		const updatePosition = () => {
 			const rect = buttonRef.current?.getBoundingClientRect();
 			if (!rect) return;
-			const width = 280;
-			const left = Math.min(
-				Math.max(8, rect.right - width),
-				window.innerWidth - width - 8,
-			);
-			setPosition({
-				top: rect.bottom + 6,
-				left,
-				width,
-			});
+			const width = Math.min(320, window.innerWidth - 16);
+			const rtl = document.documentElement.dir === 'rtl';
+			const preferred = rtl ? rect.left : rect.right - width;
+			const left = Math.min(Math.max(8, preferred), window.innerWidth - width - 8);
+			setPosition({ top: rect.bottom + 8, left, width });
 		};
 		updatePosition();
 		const closeOnOutsideClick = event => {
-			if (
-				!rootRef.current?.contains(event.target) &&
-				!menuRef.current?.contains(event.target)
-			) {
+			if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) {
 				setOpen(false);
 			}
 		};
 		const closeOnEscape = event => {
-			if (event.key === 'Escape') setOpen(false);
+			if (event.key !== 'Escape') return;
+			setOpen(false);
+			buttonRef.current?.focus();
 		};
+		const focusTimer = window.setTimeout(() => switchRef.current?.focus(), 30);
 		document.addEventListener('pointerdown', closeOnOutsideClick);
 		document.addEventListener('keydown', closeOnEscape);
 		window.addEventListener('resize', updatePosition);
 		window.addEventListener('scroll', updatePosition, true);
 		return () => {
+			window.clearTimeout(focusTimer);
 			document.removeEventListener('pointerdown', closeOnOutsideClick);
 			document.removeEventListener('keydown', closeOnEscape);
 			window.removeEventListener('resize', updatePosition);
@@ -78,6 +116,15 @@ export default function WhatsAppPrivacyBlurControl({
 	}, [open]);
 
 	const patch = next => onChange({ ...value, ...next });
+	const status = !enabled
+		? x.statusOff
+		: list && thread
+			? x.statusBoth
+			: list
+				? x.statusList
+				: thread
+					? x.statusThread
+					: x.statusNothing;
 
 	return (
 		<div ref={rootRef} className="wa-privacy-blur-control relative shrink-0">
@@ -107,58 +154,77 @@ export default function WhatsAppPrivacyBlurControl({
 					<div
 						ref={menuRef}
 						role="dialog"
-						aria-label={labels.blurOptions}
-						className="wa-privacy-blur-menu fixed z-500 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+						aria-labelledby="wa-blur-title"
+						dir={String(locale).startsWith('ar') ? 'rtl' : 'ltr'}
+						className="wa-ui-blur"
 						style={position}
 					>
-						<div className="mb-1 flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2 py-1.5 dark:bg-slate-800">
-							<div className="min-w-0">
-								<p className="text-[12px] font-black text-slate-800 dark:text-slate-100">
+						<div className={`wa-ui-blur__head${enabled ? ' is-on' : ''}`}>
+							<span className="wa-ui-blur__glyph" aria-hidden="true">
+								{enabled ? <EyeOff size={18} strokeWidth={2} /> : <Eye size={18} strokeWidth={2} />}
+							</span>
+							<div className="wa-ui-blur__head-copy">
+								<p id="wa-blur-title" className="wa-ui-blur__title">
 									{labels.blurTitle}
 								</p>
-								<p className="text-[10px] text-slate-500">{labels.blurHint}</p>
+								<p className="wa-ui-blur__status" aria-live="polite">
+									{status}
+								</p>
 							</div>
 							<button
+								ref={switchRef}
 								type="button"
 								role="switch"
 								aria-checked={enabled}
 								aria-label={labels.blurToggle}
 								onClick={() => patch({ enabled: !enabled })}
-								className={`relative h-5 w-9 shrink-0 overflow-hidden rounded-full ${
-									enabled ? 'bg-[var(--color-primary-500)]' : 'bg-slate-200 dark:bg-slate-700'
-								}`}
+								className="wa-ui-switch"
 							>
-								<span
-									className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-md transition-all ${
-										enabled ? 'start-[18px]' : 'start-0.5'
-									}`}
-								/>
+								<span className="wa-ui-switch__thumb" />
 							</button>
 						</div>
-						<OptionRow
-							checked={Boolean(value?.list)}
-							label={labels.blurList}
-							hint={labels.blurListHint}
-							onChange={list => patch({ list, enabled: true })}
-						/>
-						<OptionRow
-							checked={Boolean(value?.thread)}
-							label={labels.blurThread}
-							hint={labels.blurThreadHint}
-							onChange={thread => patch({ thread, enabled: true })}
-						/>
-						<OptionRow
-							checked={Boolean(value?.hoverReveal)}
-							label={labels.blurHover}
-							hint={labels.blurHoverHint}
-							onChange={hoverReveal => patch({ hoverReveal, enabled: true })}
-						/>
-						<OptionRow
-							checked={Boolean(value?.persistReveal)}
-							label={labels.blurPersist}
-							hint={labels.blurPersistHint}
-							onChange={persistReveal => patch({ persistReveal, enabled: true })}
-						/>
+
+						<div className={`wa-ui-blur__body${enabled ? '' : ' is-off'}`}>
+							<p className="wa-ui-blur__section">{x.what}</p>
+							<OptionRow
+								id="wa-blur-list"
+								icon={PanelLeft}
+								checked={list}
+								label={labels.blurList}
+								hint={labels.blurListHint}
+								onChange={next => patch({ list: next, enabled: true })}
+							/>
+							<OptionRow
+								id="wa-blur-thread"
+								icon={MessageSquareText}
+								checked={thread}
+								label={labels.blurThread}
+								hint={labels.blurThreadHint}
+								onChange={next => patch({ thread: next, enabled: true })}
+							/>
+
+							<p className="wa-ui-blur__section">{x.reveal}</p>
+							<OptionRow
+								id="wa-blur-hover"
+								icon={MousePointer2}
+								checked={hoverReveal}
+								label={labels.blurHover}
+								hint={labels.blurHoverHint}
+								onChange={next => patch({ hoverReveal: next, enabled: true })}
+							/>
+							<OptionRow
+								id="wa-blur-persist"
+								icon={Pin}
+								nested
+								checked={persistReveal}
+								// Only meaningful while hover-reveal is on; still uncheckable if it was left on.
+								disabled={!hoverReveal && !persistReveal}
+								label={labels.blurPersist}
+								hint={!hoverReveal ? x.needsHover : labels.blurPersistHint}
+								onChange={next => patch({ persistReveal: next, enabled: true })}
+							/>
+							{!enabled ? <p className="wa-ui-blur__footnote">{x.offHint}</p> : null}
+						</div>
 					</div>,
 					document.body,
 				)}

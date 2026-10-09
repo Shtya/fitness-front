@@ -26179,7 +26179,7 @@ function WhatsAppWorkspaceContent() {
 											),
 											preferWhatsAppAckStatus(messageInfo.status, ack.status),
 										)
-									: String(senderView?.status || ack.status || messageInfo.status || 'delivered');
+									: 'sent';
 								const formatInfoTime = value => {
 									if (!value) return null;
 									const date = new Date(value);
@@ -26197,33 +26197,42 @@ function WhatsAppWorkspaceContent() {
 												liveThreadMessage?.sentAt,
 								);
 								const deliveredAt = formatInfoTime(
-									outbound
-										? messageInfo.statusUpdatedAt || ack.statusUpdatedAt
-										: senderView?.deliveredAt || ack.deliveredAt,
+									messageInfo.statusUpdatedAt || ack.statusUpdatedAt,
 								);
 								const readAt = formatInfoTime(
 									outbound
 										? messageInfo.statusUpdatedAt || ack.statusUpdatedAt
 										: senderView?.readAt || ack.readAt,
 								);
+								const arrivedLocallyAt = formatInfoTime(
+									senderView?.arrivedLocallyAt ||
+										ack.arrivedLocallyAt ||
+										liveThreadMessage?.createdAt,
+								);
+								const readLocally = Boolean(
+									senderView?.readLocally ?? ack.readLocally,
+								);
+								const stillUnreadLocally = Boolean(
+									senderView?.stillUnreadLocally ?? ack.stillUnreadLocally,
+								);
 								const isFailed = outbound && statusLabel === 'failed';
-								const isPending = statusLabel === 'pending';
-								const isSent =
-									!isFailed &&
-									!isPending &&
-									(outbound
-										? ['sent', 'delivered', 'read', 'played'].includes(statusLabel)
-										: Boolean(senderView?.sent ?? ack.sent ?? true));
+								const isPending = outbound && statusLabel === 'pending';
+								const isSent = outbound
+									? !isFailed &&
+										!isPending &&
+										['sent', 'delivered', 'read', 'played'].includes(statusLabel)
+									: Boolean(senderView?.sent ?? true);
+								// Inbound: never invent their ✓✓ from CRM presence.
 								const isDelivered = outbound
 									? Boolean(ack.delivered) ||
 										ack.deliveryRemaining === 0 ||
 										['delivered', 'read', 'played'].includes(statusLabel)
-									: Boolean(senderView?.delivered ?? ack.delivered);
+									: false;
 								const isRead = outbound
 									? Boolean(ack.read) ||
 										ack.readRemaining === 0 ||
 										['read', 'played'].includes(statusLabel)
-									: Boolean(senderView?.read ?? ack.read);
+									: false;
 								const isPlayed =
 									outbound &&
 									(Boolean(ack.played) ||
@@ -26248,18 +26257,8 @@ function WhatsAppWorkspaceContent() {
 												failed: 'Failed',
 											}[statusLabel] || statusLabel
 									: locale === 'ar'
-										? {
-												pending: 'لسه عند السيرفر',
-												sent: 'عندها ✓ (اتبعتت)',
-												delivered: 'عندها ✓✓ رمادي (وصلت لجهازك)',
-												read: 'عندها ✓✓ أزرق (إنت شوفتها)',
-											}[statusLabel] || statusLabel
-										: {
-												pending: 'Pending on server',
-												sent: 'They see ✓ (sent)',
-												delivered: 'They see ✓✓ grey (delivered to you)',
-												read: 'They see ✓✓ blue (you read it)',
-											}[statusLabel] || statusLabel;
+										? 'علامات ✓✓ عندها مش معروفة من واتساب للمستلم'
+										: "Their ✓✓ ticks aren't exposed by WhatsApp to recipients";
 								const previewText =
 									String(
 										liveThreadMessage?.text ||
@@ -26318,49 +26317,79 @@ function WhatsAppWorkspaceContent() {
 											{
 												id: 'sent',
 												label: locale === 'ar' ? 'هي بعتها' : 'They sent it',
-												hint: locale === 'ar' ? 'عندها ✓ صح واحدة' : 'They see ✓',
-												done: isSent || isDelivered || isRead,
+												hint:
+													locale === 'ar'
+														? 'مؤكد عندنا إنها اتبعتت (✓)'
+														: 'Confirmed she sent it (✓)',
+												done: isSent,
 												time: sentAt,
 												icon: 'single',
 												tone: 'sent',
 											},
 											{
-												id: 'delivered',
+												id: 'their-delivered',
 												label:
 													locale === 'ar'
-														? 'وصلت لجهازك / للـ CRM'
-														: 'Delivered to your device',
+														? 'علامتين صح رمادي عندها'
+														: 'Their ✓✓ grey (delivered)',
 												hint:
 													locale === 'ar'
-														? 'عندها ✓✓ رمادي'
-														: 'They see ✓✓ grey',
-												done: isDelivered || isRead,
-												time: isDelivered || isRead ? deliveredAt || sentAt : null,
+														? 'واتساب مش بيدي للمستلم يشوف علامتهم'
+														: 'WhatsApp does not expose this to recipients',
+												done: false,
+												time: null,
 												icon: 'double',
 												tone: 'delivered',
 											},
 											{
-												id: 'read',
+												id: 'their-read',
 												label:
 													locale === 'ar'
-														? 'إنت فتحتها / اتقرت'
-														: 'You opened / read it',
+														? 'علامتين صح زرقاء عندها'
+														: 'Their ✓✓ blue (read)',
 												hint:
 													locale === 'ar'
-														? ack.readReceiptsEnabled === false ||
-															senderView?.readReceiptsEnabled === false
-															? 'إيصالات القراءة مقفولة — مش هتزرق عندها'
-															: 'عندها ✓✓ أزرق'
-														: ack.readReceiptsEnabled === false ||
-															  senderView?.readReceiptsEnabled === false
-															? 'Read receipts off — stays grey for them'
-															: 'They see ✓✓ blue',
-												done: isRead,
-												time: isRead ? readAt : null,
+														? 'مش معروف من هنا — مفيش API للمستلم'
+														: 'Unknown here — no recipient API',
+												done: false,
+												time: null,
 												icon: 'double',
 												tone: 'read',
 											},
 										];
+								const localInboundRows = !outbound
+									? [
+											{
+												id: 'arrived',
+												label:
+													locale === 'ar'
+														? 'وصلت عندك في الـ CRM'
+														: 'Arrived in your CRM',
+												hint:
+													locale === 'ar'
+														? 'ده عندك محليًا — مش معناه ✓✓ عندها'
+														: 'Local only — not their ✓✓',
+												done: Boolean(arrivedLocallyAt || sentAt),
+												time: arrivedLocallyAt || sentAt,
+											},
+											{
+												id: 'local-read',
+												label:
+													locale === 'ar'
+														? 'اتقرت / اتفتحت عندك'
+														: 'Read / opened on your side',
+												hint: stillUnreadLocally
+													? locale === 'ar'
+														? 'لسه ضمن غير المقروء'
+														: 'Still in your unread window'
+													: locale === 'ar'
+														? 'مش ضمن غير المقروء دلوقتي'
+														: 'Not in your unread window now',
+												done: readLocally,
+												time: readLocally ? readAt : null,
+											},
+										]
+									: [];
 								const StatusGlyph = ({ kind }) => {
 									if (kind === 'failed') {
 										return <AlertCircle size={22} className="text-rose-500" />;
@@ -26376,15 +26405,17 @@ function WhatsAppWorkspaceContent() {
 									}
 									return <Check size={22} className="text-[#8696A0]" strokeWidth={2.5} />;
 								};
-								const currentKind = isFailed
-									? 'failed'
-									: isPending
-										? 'pending'
-										: isRead
-											? 'read'
-											: isDelivered
-												? 'delivered'
-												: 'sent';
+								const currentKind = outbound
+									? isFailed
+										? 'failed'
+										: isPending
+											? 'pending'
+											: isRead
+												? 'read'
+												: isDelivered
+													? 'delivered'
+													: 'sent'
+									: 'sent';
 								return (
 									<div className="mt-4 space-y-4 px-5 pb-5 text-sm">
 										<div className="rounded-xl bg-slate-50 p-3 dark:bg-[#111b21]">
@@ -26406,8 +26437,8 @@ function WhatsAppWorkspaceContent() {
 															? 'حالة رسالتك عنده دلوقتي'
 															: 'Status of your message on their side'
 														: locale === 'ar'
-															? 'إيه اللي ظاهر عندها على الرسالة دي'
-															: 'What they see on this message'}
+															? 'علامات الصح عندها'
+															: 'Their check marks'}
 												</p>
 												<p className="text-base font-bold">{statusText}</p>
 											</div>
@@ -26419,8 +26450,8 @@ function WhatsAppWorkspaceContent() {
 														? 'إيصالات رسالتك (✓ / ✓✓)'
 														: 'Your message receipts (✓ / ✓✓)'
 													: locale === 'ar'
-														? 'العلامات اللي ظاهرالها (تقريبي)'
-														: 'Ticks they likely see (estimated)'}
+														? 'إيه اللي نقدر نؤكده عن علاماتها'
+														: 'What we can confirm about their ticks'}
 											</div>
 											<div className="divide-y divide-slate-200 dark:divide-[#3b4a54]">
 												{receiptRows.map(row => (
@@ -26456,8 +26487,8 @@ function WhatsAppWorkspaceContent() {
 																{row.done && row.time ? ` · ${row.time}` : ''}
 																{!row.done
 																	? locale === 'ar'
-																		? ' · لسه'
-																		: ' · not yet'
+																		? ' · مش معروف'
+																		: ' · unknown'
 																	: ''}
 															</p>
 														</div>
@@ -26465,12 +26496,36 @@ function WhatsAppWorkspaceContent() {
 												))}
 											</div>
 										</div>
-										{!outbound ? (
-											<p className="text-[11px] leading-relaxed text-slate-500 dark:text-[#8696a0]">
-												{locale === 'ar'
-													? 'مثال: لو كانت باعت والنت عندك قافل، هتفضل عندها ✓ لحد ما توصل لجهازك (✓✓ رمادي)، ولما تفتح الشات وتتبعت إيصالات القراءة تبقى ✓✓ أزرق.'
-													: 'Example: if they sent while you were offline, they keep ✓ until it reaches your device (✓✓ grey), then ✓✓ blue after you open the chat and read receipts go out.'}
-											</p>
+										{localInboundRows.length ? (
+											<div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[#3b4a54]">
+												<div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold dark:border-[#3b4a54] dark:text-[#8696a0]">
+													{locale === 'ar'
+														? 'عندك أنت (محلي — مش علاماتها)'
+														: 'On your side (local — not their ticks)'}
+												</div>
+												<div className="divide-y divide-slate-200 dark:divide-[#3b4a54]">
+													{localInboundRows.map(row => (
+														<div
+															key={row.id}
+															className="flex items-start justify-between gap-3 px-3 py-3"
+														>
+															<div className="min-w-0">
+																<p className="font-semibold">{row.label}</p>
+																<p className="text-xs text-slate-500 dark:text-[#8696a0]">
+																	{row.hint}
+																</p>
+															</div>
+															<strong className="shrink-0 text-end text-xs">
+																{row.done
+																	? row.time || (locale === 'ar' ? 'نعم' : 'Yes')
+																	: locale === 'ar'
+																		? 'لسه'
+																		: 'Not yet'}
+															</strong>
+														</div>
+													))}
+												</div>
+											</div>
 										) : null}
 									</div>
 								);

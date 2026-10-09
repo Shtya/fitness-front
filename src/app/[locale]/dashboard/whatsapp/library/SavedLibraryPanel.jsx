@@ -5,13 +5,19 @@ import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
 	AudioLines,
-	Bookmark,
+	Check,
 	FileText,
+	Folder,
+	FolderInput,
 	FolderPlus,
 	Image as ImageIcon,
+	Inbox,
+	Layers,
 	Loader2,
+	Pause,
 	Pencil,
 	Play,
+	Search,
 	Send,
 	Trash2,
 	Video,
@@ -50,6 +56,14 @@ const copy = {
 		close: 'Close',
 		items: 'items',
 		moveTo: 'Move to',
+		folders: 'Folders',
+		search: 'Search saved items',
+		searchChats: 'Search chats',
+		noMatches: 'No saved items match your search.',
+		send: 'Send',
+		converted: 'Converted',
+		current: 'Current chat',
+		types: { voice: 'Voice note', audio: 'Audio', video: 'Video', image: 'Photo', sticker: 'Sticker', document: 'Document' },
 	},
 	ar: {
 		title: 'المكتبة المحفوظة',
@@ -81,6 +95,14 @@ const copy = {
 		close: 'إغلاق',
 		items: 'عنصر',
 		moveTo: 'نقل إلى',
+		folders: 'المجلدات',
+		search: 'ابحث في المحفوظات',
+		searchChats: 'ابحث عن محادثة',
+		noMatches: 'لا توجد عناصر مطابقة للبحث.',
+		send: 'إرسال',
+		converted: 'محوّل',
+		current: 'المحادثة الحالية',
+		types: { voice: 'رسالة صوتية', audio: 'صوت', video: 'فيديو', image: 'صورة', sticker: 'ستيكر', document: 'مستند' },
 	},
 };
 
@@ -134,6 +156,8 @@ export default function SavedLibraryPanel({
 	const [busyItemId, setBusyItemId] = useState('');
 	const [sendTarget, setSendTarget] = useState(null);
 	const [playingId, setPlayingId] = useState('');
+	const [query, setQuery] = useState('');
+	const [chatQuery, setChatQuery] = useState('');
 	const audioRef = useRef(null);
 
 	const loadFolders = useCallback(async () => {
@@ -310,250 +334,302 @@ export default function SavedLibraryPanel({
 		return folders.find((folder) => folder.id === selectedFolder)?.name || t.allItems;
 	}, [selectedFolder, folders, t.allItems, t.unsorted]);
 
+	const needle = query.trim().toLowerCase();
+	const visibleItems = needle
+		? items.filter(item =>
+				[item.title, item.mediaType, t.types[item.mediaType]]
+					.filter(Boolean)
+					.some(part => String(part).toLowerCase().includes(needle)),
+			)
+		: items;
+	const chatNeedle = chatQuery.trim().toLowerCase();
+	const visibleChats = chatNeedle
+		? conversations.filter(conversation =>
+				String(conversation.title || '').toLowerCase().includes(chatNeedle),
+			)
+		: conversations;
+	const navItems = [
+		{ id: null, name: t.allItems, itemCount: null, Icon: Layers },
+		{ id: 'root', name: t.unsorted, itemCount: rootCount, Icon: Inbox },
+	];
+
 	if (!open || typeof document === 'undefined') return null;
+
+	const renderNav = (folder, Icon, editable) => {
+		const active = selectedFolder === folder.id;
+		return (
+			<div key={String(folder.id)} className={`wa-ui-lib__nav-row${active ? ' is-active' : ''}`}>
+				<button
+					type="button"
+					aria-current={active ? 'true' : undefined}
+					onClick={() => setSelectedFolder(folder.id)}
+					className="wa-ui-lib__nav-btn"
+				>
+					<Icon size={17} strokeWidth={1.9} aria-hidden="true" />
+					<span className="wa-ui-lib__nav-name">{folder.name}</span>
+					{folder.itemCount != null ? (
+						<span className="wa-ui-lib__nav-count">{folder.itemCount}</span>
+					) : null}
+				</button>
+				{editable ? (
+					<span className="wa-ui-lib__nav-tools">
+						<button
+							type="button"
+							aria-label={`${t.rename}: ${folder.name}`}
+							title={t.rename}
+							onClick={() => void renameFolder(folder)}
+							className="wa-ui-icon-btn wa-ui-icon-btn--sm"
+						>
+							<Pencil size={14} strokeWidth={2} />
+						</button>
+						<button
+							type="button"
+							aria-label={`${t.remove}: ${folder.name}`}
+							title={t.remove}
+							onClick={() => void deleteFolder(folder)}
+							className="wa-ui-icon-btn wa-ui-icon-btn--sm wa-ui-lib__danger"
+						>
+							<Trash2 size={14} strokeWidth={2} />
+						</button>
+					</span>
+				) : null}
+			</div>
+		);
+	};
 
 	return createPortal(
 		<div
-			className="fixed inset-0 z-[125] grid place-items-end bg-black/45 p-4 backdrop-blur-sm sm:place-items-center"
+			className="wa-ui-scrim is-sheet-on-phone"
+			style={{ zIndex: 125 }}
 			onClick={() => onClose?.()}
+			onKeyDown={event => {
+				if (event.key === 'Escape' && !sendTarget) onClose?.();
+			}}
 		>
 			<div
 				role="dialog"
-				aria-label={t.title}
+				aria-modal="true"
+				aria-labelledby="wa-lib-title"
 				dir={ar ? 'rtl' : 'ltr'}
-				className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-				onClick={(event) => event.stopPropagation()}
+				className="wa-ui-modal wa-ui-lib"
+				style={{ '--wa-ui-modal-width': '880px', '--wa-ui-modal-height': '640px' }}
+				onClick={event => event.stopPropagation()}
 			>
-				<div className="flex items-start justify-between gap-3 border-b px-5 py-4">
-					<div className="min-w-0">
-						<h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
-							<Bookmark size={18} className="text-emerald-600" />
+				<div className="wa-ui-modal__header">
+					<div className="wa-ui-modal__heading">
+						<h3 id="wa-lib-title" className="wa-ui-modal__title">
 							{t.title}
 						</h3>
-						<p className="mt-1 text-xs leading-snug text-slate-500">{t.subtitle}</p>
+						<p className="wa-ui-modal__subtitle">{t.subtitle}</p>
 					</div>
 					<button
 						type="button"
+						autoFocus
 						aria-label={t.close}
+						title={t.close}
 						onClick={() => onClose?.()}
-						className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
+						className="wa-ui-icon-btn"
 					>
-						<X size={18} />
+						<X size={18} strokeWidth={2} />
 					</button>
 				</div>
 
-				<div className="flex min-h-0 flex-1 flex-col sm:flex-row">
-					<aside className="shrink-0 border-b bg-slate-50 p-3 sm:w-56 sm:border-b-0 sm:border-e">
-						<div className="flex gap-1 overflow-x-auto sm:flex-col sm:overflow-visible">
-							{[
-								{ id: null, name: t.allItems, itemCount: null },
-								{ id: 'root', name: t.unsorted, itemCount: rootCount },
-								...folders,
-							].map((folder) => {
-								const active = selectedFolder === folder.id;
-								return (
-									<div key={String(folder.id)} className="group flex items-center gap-1">
-										<button
-											type="button"
-											onClick={() => setSelectedFolder(folder.id)}
-											className={`flex min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-start text-sm font-medium transition ${
-												active
-													? 'bg-emerald-600 text-white'
-													: 'text-slate-700 hover:bg-slate-200'
-											}`}
-										>
-											<span className="truncate">{folder.name}</span>
-											{folder.itemCount != null ? (
-												<span className={`text-xs ${active ? 'text-white/80' : 'text-slate-400'}`}>
-													{folder.itemCount}
-												</span>
-											) : null}
-										</button>
-										{folder.id && folder.id !== 'root' ? (
-											<span className="hidden shrink-0 gap-0.5 group-hover:flex">
-												<button
-													type="button"
-													aria-label={t.rename}
-													title={t.rename}
-													onClick={() => void renameFolder(folder)}
-													className="rounded p-1 text-slate-500 hover:bg-slate-200"
-												>
-													<Pencil size={13} />
-												</button>
-												<button
-													type="button"
-													aria-label={t.remove}
-													title={t.remove}
-													onClick={() => void deleteFolder(folder)}
-													className="rounded p-1 text-slate-500 hover:bg-rose-100 hover:text-rose-600"
-												>
-													<Trash2 size={13} />
-												</button>
-											</span>
-										) : null}
-									</div>
-								);
-							})}
+				<div className="wa-ui-lib__body">
+					<nav className="wa-ui-lib__nav" aria-label={t.folders}>
+						<div className="wa-ui-lib__nav-list">
+							{navItems.map(item => renderNav(item, item.Icon, false))}
+							{folders.length ? <p className="wa-ui-lib__nav-section">{t.folders}</p> : null}
+							{folders.map(folder => renderNav(folder, Folder, true))}
 						</div>
-
 						{creatingFolder ? (
-							<div className="mt-2 flex gap-1">
+							<form
+								className="wa-ui-lib__new-folder"
+								onSubmit={event => {
+									event.preventDefault();
+									void createFolder();
+								}}
+							>
 								<input
 									autoFocus
 									value={newFolderName}
 									placeholder={t.folderName}
-									onChange={(event) => setNewFolderName(event.target.value)}
-									onKeyDown={(event) => {
-										if (event.key === 'Enter') void createFolder();
-										if (event.key === 'Escape') setCreatingFolder(false);
+									aria-label={t.folderName}
+									onChange={event => setNewFolderName(event.target.value)}
+									onKeyDown={event => {
+										if (event.key === 'Escape') {
+											event.stopPropagation();
+											setCreatingFolder(false);
+										}
 									}}
-									className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-emerald-400"
+									className="wa-ui-input"
 								/>
 								<button
-									type="button"
-									onClick={() => void createFolder()}
-									className="rounded-lg bg-emerald-600 px-2 py-1.5 text-xs font-semibold text-white"
+									type="submit"
+									disabled={!newFolderName.trim()}
+									aria-label={t.create}
+									title={t.create}
+									className="wa-ui-icon-btn wa-ui-lib__confirm"
 								>
-									{t.create}
+									<Check size={16} strokeWidth={2.4} />
 								</button>
-							</div>
+							</form>
 						) : (
-							<button
-								type="button"
-								onClick={() => setCreatingFolder(true)}
-								className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200"
-							>
-								<FolderPlus size={15} />
-								{t.newFolder}
+							<button type="button" onClick={() => setCreatingFolder(true)} className="wa-ui-lib__add-folder">
+								<FolderPlus size={17} strokeWidth={1.9} aria-hidden="true" />
+								<span>{t.newFolder}</span>
 							</button>
 						)}
-					</aside>
+					</nav>
 
-					<div className="min-h-0 flex-1 overflow-y-auto p-3">
-						{loading ? (
-							<div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
-								<Loader2 size={16} className="animate-spin" />
-								{t.loading}
-							</div>
-						) : !items.length ? (
-							<div className="py-16 text-center">
-								<p className="text-sm font-medium text-slate-600">{t.empty}</p>
-								<p className="mt-1 text-xs text-slate-400">{t.emptyHint}</p>
-							</div>
-						) : (
-							<>
-								<p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-									{folderName} · {items.length} {t.items}
-								</p>
-								<ul className="space-y-2">
-									{items.map((item) => {
+					<section className="wa-ui-lib__main" aria-labelledby="wa-lib-folder">
+						<div className="wa-ui-lib__toolbar">
+							<p id="wa-lib-folder" className="wa-ui-lib__folder-title">
+								{folderName}
+								{!loading ? <span className="wa-ui-lib__folder-count">{items.length}</span> : null}
+							</p>
+							<label className="wa-ui-search wa-ui-lib__search">
+								<Search size={16} strokeWidth={2} aria-hidden="true" />
+								<input
+									type="search"
+									value={query}
+									onChange={event => setQuery(event.target.value)}
+									placeholder={t.search}
+									aria-label={t.search}
+									className="wa-ui-input"
+								/>
+							</label>
+						</div>
+
+						<div className="wa-ui-lib__list">
+							{loading ? (
+								<ul className="wa-ui-lib__items" aria-busy="true" aria-label={t.loading}>
+									{[0, 1, 2].map(row => (
+										<li key={row} className="wa-ui-lib__item is-skeleton">
+											<span className="wa-ui-lib__thumb" />
+											<span className="wa-ui-lib__skeleton-lines">
+												<span />
+												<span />
+											</span>
+										</li>
+									))}
+								</ul>
+							) : !items.length ? (
+								<div className="wa-ui-lib__empty">
+									<Inbox size={28} strokeWidth={1.6} aria-hidden="true" />
+									<p className="wa-ui-lib__empty-title">{t.empty}</p>
+									<p>{t.emptyHint}</p>
+								</div>
+							) : !visibleItems.length ? (
+								<div className="wa-ui-lib__empty">
+									<Search size={24} strokeWidth={1.6} aria-hidden="true" />
+									<p>{t.noMatches}</p>
+								</div>
+							) : (
+								<ul className="wa-ui-lib__items">
+									{visibleItems.map(item => {
 										const Icon = ICON_BY_TYPE[item.mediaType] || FileText;
 										const playable = ['voice', 'audio'].includes(item.mediaType);
+										const playing = playingId === item.id;
 										const busy = busyItemId === item.id;
+										const size = formatSize(item.fileSizeBytes);
 										return (
-											<li
-												key={item.id}
-												className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-slate-300"
-											>
-												<span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500">
-													<Icon size={17} />
-												</span>
-												<div className="min-w-0 flex-1">
-													<p className="truncate text-sm font-semibold text-slate-800">
+											<li key={item.id} className={`wa-ui-lib__item${busy ? ' is-busy' : ''}`}>
+												{playable ? (
+													<button
+														type="button"
+														aria-label={`${playing ? 'Pause' : 'Play'}: ${item.title}`}
+														aria-pressed={playing}
+														onClick={() => togglePlay(item)}
+														className={`wa-ui-lib__thumb is-playable${playing ? ' is-playing' : ''}`}
+													>
+														{playing ? (
+															<Pause size={18} strokeWidth={2} fill="currentColor" />
+														) : (
+															<Play size={18} strokeWidth={2} fill="currentColor" />
+														)}
+													</button>
+												) : (
+													<span className={`wa-ui-lib__thumb is-${item.mediaType || 'file'}`} aria-hidden="true">
+														<Icon size={19} strokeWidth={1.8} />
+													</span>
+												)}
+												<div className="wa-ui-lib__copy">
+													<p className="wa-ui-lib__title" dir="auto" title={item.title}>
 														{item.title}
 													</p>
-													<p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
-														<span>{item.mediaType}</span>
+													<p className="wa-ui-lib__meta">
+														<span>{t.types[item.mediaType] || item.mediaType}</span>
 														{item.durationSeconds ? (
-															<span className="tabular-nums">
-																{formatClock(item.durationSeconds)}
-															</span>
+															<span className="tabular-nums">{formatClock(item.durationSeconds)}</span>
 														) : null}
-														{formatSize(item.fileSizeBytes) ? (
-															<span>{formatSize(item.fileSizeBytes)}</span>
-														) : null}
+														{size ? <span className="tabular-nums">{size}</span> : null}
 														{item.source === 'voice_edit' ? (
-															<span className="rounded bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">
-																converted
-															</span>
+															<span className="wa-ui-badge wa-ui-badge--accent">{t.converted}</span>
 														) : null}
 													</p>
 												</div>
 
-												{playable ? (
+												<div className="wa-ui-lib__actions">
+													<label className="wa-ui-lib__move" title={t.moveTo}>
+														<FolderInput size={15} strokeWidth={1.9} aria-hidden="true" />
+														<select
+															value={item.folderId || ''}
+															disabled={busy}
+															aria-label={`${t.moveTo}: ${item.title}`}
+															onChange={event => void moveItem(item, event.target.value)}
+														>
+															<option value="">{t.unsorted}</option>
+															{folders.map(folder => (
+																<option key={folder.id} value={folder.id}>
+																	{folder.name}
+																</option>
+															))}
+														</select>
+													</label>
 													<button
 														type="button"
-														aria-label="Play"
-														onClick={() => togglePlay(item)}
-														className={`grid size-8 shrink-0 place-items-center rounded-full transition ${
-															playingId === item.id
-																? 'bg-emerald-600 text-white'
-																: 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-														}`}
+														disabled={busy}
+														onClick={() => {
+															setChatQuery('');
+															setSendTarget(sendTarget?.id === item.id ? null : item);
+														}}
+														className="wa-ui-btn wa-ui-btn--secondary wa-ui-btn--sm wa-ui-lib__send"
 													>
-														<Play size={14} />
+														{busy ? (
+															<Loader2 size={14} className="animate-spin" aria-hidden="true" />
+														) : (
+															<Send size={14} strokeWidth={2} className="rtl:-scale-x-100" aria-hidden="true" />
+														)}
+														<span>{busy ? t.sending : t.send}</span>
 													</button>
-												) : null}
-
-												<select
-													value={item.folderId || ''}
-													disabled={busy}
-													aria-label={t.moveTo}
-													onChange={(event) => void moveItem(item, event.target.value)}
-													className="hidden shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 outline-none focus:border-emerald-400 sm:block"
-												>
-													<option value="">{t.unsorted}</option>
-													{folders.map((folder) => (
-														<option key={folder.id} value={folder.id}>
-															{folder.name}
-														</option>
-													))}
-												</select>
-
-												<button
-													type="button"
-													disabled={busy}
-													onClick={() =>
-														setSendTarget(sendTarget?.id === item.id ? null : item)
-													}
-													className="flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
-												>
-													{busy ? (
-														<Loader2 size={13} className="animate-spin" />
-													) : (
-														<Send size={13} />
-													)}
-													{busy ? t.sending : t.sendTo}
-												</button>
-
-												<button
-													type="button"
-													disabled={busy}
-													aria-label={t.rename}
-													title={t.rename}
-													onClick={() => void renameItem(item)}
-													className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-												>
-													<Pencil size={15} />
-												</button>
-
-												<button
-													type="button"
-													disabled={busy}
-													aria-label={t.remove}
-													title={t.remove}
-													onClick={() => void deleteItem(item)}
-													className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-												>
-													<Trash2 size={15} />
-												</button>
+													<button
+														type="button"
+														disabled={busy}
+														aria-label={`${t.rename}: ${item.title}`}
+														title={t.rename}
+														onClick={() => void renameItem(item)}
+														className="wa-ui-icon-btn wa-ui-icon-btn--sm"
+													>
+														<Pencil size={15} strokeWidth={1.9} />
+													</button>
+													<button
+														type="button"
+														disabled={busy}
+														aria-label={`${t.remove}: ${item.title}`}
+														title={t.remove}
+														onClick={() => void deleteItem(item)}
+														className="wa-ui-icon-btn wa-ui-icon-btn--sm wa-ui-lib__danger"
+													>
+														<Trash2 size={15} strokeWidth={1.9} />
+													</button>
+												</div>
 											</li>
 										);
 									})}
 								</ul>
-							</>
-						)}
-					</div>
+							)}
+						</div>
+					</section>
 				</div>
 
 				<audio
@@ -567,42 +643,93 @@ export default function SavedLibraryPanel({
 
 			{sendTarget ? (
 				<div
-					className="fixed inset-0 z-[126] grid place-items-center bg-black/40 p-4"
-					onClick={() => setSendTarget(null)}
+					className="wa-ui-scrim is-sheet-on-phone"
+					style={{ zIndex: 126 }}
+					onClick={event => {
+						event.stopPropagation();
+						setSendTarget(null);
+					}}
+					onKeyDown={event => {
+						if (event.key === 'Escape') {
+							event.stopPropagation();
+							setSendTarget(null);
+						}
+					}}
 				>
 					<div
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="wa-lib-send-title"
 						dir={ar ? 'rtl' : 'ltr'}
-						className="max-h-[70vh] w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl"
-						onClick={(event) => event.stopPropagation()}
+						className="wa-ui-modal wa-ui-lib-send"
+						style={{ '--wa-ui-modal-width': '400px', '--wa-ui-modal-height': '560px' }}
+						onClick={event => event.stopPropagation()}
 					>
-						<div className="flex items-center justify-between border-b px-4 py-3">
-							<h4 className="text-sm font-bold text-slate-900">{t.pickChat}</h4>
+						<div className="wa-ui-modal__header">
+							<div className="wa-ui-modal__heading">
+								<h4 id="wa-lib-send-title" className="wa-ui-modal__title">
+									{t.pickChat}
+								</h4>
+								<p className="wa-ui-modal__subtitle" dir="auto">
+									{sendTarget.title}
+								</p>
+							</div>
 							<button
 								type="button"
+								aria-label={t.close}
+								title={t.close}
 								onClick={() => setSendTarget(null)}
-								className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100"
+								className="wa-ui-icon-btn"
 							>
-								<X size={16} />
+								<X size={18} strokeWidth={2} />
 							</button>
 						</div>
-						<div className="max-h-[58vh] overflow-y-auto p-2">
-							{!conversations.length ? (
-								<p className="px-3 py-8 text-center text-sm text-slate-500">{t.noChats}</p>
+						<div className="wa-ui-lib__send-search">
+							<label className="wa-ui-search">
+								<Search size={16} strokeWidth={2} aria-hidden="true" />
+								<input
+									autoFocus
+									type="search"
+									value={chatQuery}
+									onChange={event => setChatQuery(event.target.value)}
+									placeholder={t.searchChats}
+									aria-label={t.searchChats}
+									className="wa-ui-input"
+								/>
+							</label>
+						</div>
+						<div className="wa-ui-lib__chats">
+							{!visibleChats.length ? (
+								<p className="wa-ui-lib__empty">{t.noChats}</p>
 							) : (
-								conversations.map((conversation) => (
-									<button
-										key={conversation.id}
-										type="button"
-										onClick={() => void sendItem(sendTarget, conversation.id)}
-										className={`flex w-full items-center gap-2 rounded-xl p-3 text-start text-sm hover:bg-slate-100 ${
-											conversation.id === activeConversationId ? 'bg-slate-50' : ''
-										}`}
-									>
-										<span className="truncate font-medium text-slate-800">
-											{conversation.title}
-										</span>
-									</button>
-								))
+								visibleChats.map(conversation => {
+									const current = conversation.id === activeConversationId;
+									const initials =
+										String(conversation.title || '?')
+											.trim()
+											.split(/\s+/)
+											.slice(0, 2)
+											.filter(part => /\p{L}/u.test(part[0]))
+											.map(part => part[0])
+											.join('')
+											.toUpperCase() || '#';
+									return (
+										<button
+											key={conversation.id}
+											type="button"
+											onClick={() => void sendItem(sendTarget, conversation.id)}
+											className={`wa-ui-lib__chat${current ? ' is-current' : ''}`}
+										>
+											<span className="wa-ui-lib__chat-avatar" aria-hidden="true">
+												{initials}
+											</span>
+											<span className="wa-ui-lib__chat-name" dir="auto">
+												{conversation.title}
+											</span>
+											{current ? <span className="wa-ui-badge">{t.current}</span> : null}
+										</button>
+									);
+								})
 							)}
 						</div>
 					</div>

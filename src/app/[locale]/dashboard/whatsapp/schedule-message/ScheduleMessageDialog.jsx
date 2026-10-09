@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
+	AlertCircle,
 	CalendarClock,
 	Check,
 	Loader2,
@@ -45,6 +46,20 @@ const copy = {
 		updated: 'Schedule updated',
 		failed: 'Could not schedule message',
 		updateFailed: 'Could not update schedule',
+		quick: 'Quick picks',
+		inOneHour: 'In 1 hour',
+		tonight: 'Tonight, 8 PM',
+		tomorrow: 'Tomorrow, 9 AM',
+		repeatOn: 'Repeat on',
+		chars: '{count} characters',
+		removeChat: 'Remove {name}',
+		summaryOnce: 'Sends {when}',
+		summaryDaily: 'Sends every day at {time}',
+		summaryDays: 'Sends every {days} at {time}',
+		summaryUntil: ', until {date}',
+		pastTime: 'This time has passed. Pick a time at least 1 minute from now.',
+		noDays: 'Pick at least one day.',
+		noChats: 'No chats match.',
 	},
 	ar: {
 		title: 'جدولة رسالة',
@@ -77,6 +92,20 @@ const copy = {
 		updated: 'تم تحديث الجدولة',
 		failed: 'تعذّرت جدولة الرسالة',
 		updateFailed: 'تعذّر تحديث الجدولة',
+		quick: 'اختيارات سريعة',
+		inOneHour: 'بعد ساعة',
+		tonight: 'الليلة ٨ م',
+		tomorrow: 'غدًا ٩ ص',
+		repeatOn: 'التكرار في',
+		chars: '{count} حرف',
+		removeChat: 'إزالة {name}',
+		summaryOnce: 'تُرسل {when}',
+		summaryDaily: 'تُرسل كل يوم الساعة {time}',
+		summaryDays: 'تُرسل كل {days} الساعة {time}',
+		summaryUntil: ' حتى {date}',
+		pastTime: 'هذا الوقت فات. اختر وقتًا بعد دقيقة على الأقل.',
+		noDays: 'اختر يومًا واحدًا على الأقل.',
+		noChats: 'لا توجد محادثات مطابقة.',
 	},
 };
 
@@ -98,10 +127,37 @@ function clamp(value, min, max) {
 	return Math.min(max, Math.max(min, value));
 }
 
+// JS weekday index (0 = Sunday). 2024-01-07 was a Sunday.
+function weekdayLabel(index, ar, style = 'short') {
+	return new Date(2024, 0, 7 + index).toLocaleDateString(ar ? 'ar-EG' : undefined, { weekday: style });
+}
+
+function formatTimeOfDay(value, ar) {
+	const [h, m] = String(value || '').split(':').map(Number);
+	if (!Number.isFinite(h) || !Number.isFinite(m)) return value || '';
+	return new Date(2024, 0, 1, h, m).toLocaleTimeString(ar ? 'ar-EG' : undefined, {
+		hour: 'numeric',
+		minute: '2-digit',
+	});
+}
+
+function initialsOf(title) {
+	return (
+		String(title || '?')
+			.trim()
+			.split(/\s+/)
+			.slice(0, 2)
+			.filter(part => /\p{L}/u.test(part[0]))
+											.map(part => part[0])
+			.join('')
+			.toUpperCase() || '#'
+	);
+}
+
 function computePopoverPosition(anchorEl) {
 	const margin = 10;
-	const width = Math.min(380, (window.innerWidth || 1280) - margin * 2);
-	const maxHeight = Math.min(560, (window.innerHeight || 800) - margin * 2);
+	const width = Math.min(420, (window.innerWidth || 1280) - margin * 2);
+	const maxHeight = Math.min(640, (window.innerHeight || 800) - margin * 2);
 	const rect = anchorEl?.getBoundingClientRect?.();
 	if (!rect) {
 		return {
@@ -348,14 +404,79 @@ export default function ScheduleMessageDialog({
 		}
 	};
 
+	const onceDate = new Date(onceAt);
+	const oncePast =
+		mode === 'once' && (!Number.isFinite(onceDate.getTime()) || onceDate.getTime() <= Date.now() + 60_000);
+	const noDays = mode === 'custom' && !daysOfWeek.length;
+	const canSubmit =
+		!submitting && Boolean(messageText.trim()) && selectedIds.size > 0 && !oncePast && !noDays;
+	const endLabel = endDate
+		? new Date(`${endDate}T00:00`).toLocaleDateString(ar ? 'ar-EG' : undefined, {
+				month: 'short',
+				day: 'numeric',
+			})
+		: '';
+	let summary = '';
+	if (mode === 'once' && !oncePast) {
+		summary = formatTemplate(t.summaryOnce, {
+			when: onceDate.toLocaleString(ar ? 'ar-EG' : undefined, {
+				weekday: 'short',
+				month: 'short',
+				day: 'numeric',
+				hour: 'numeric',
+				minute: '2-digit',
+			}),
+		});
+	} else if (mode === 'daily') {
+		summary = formatTemplate(t.summaryDaily, { time: formatTimeOfDay(timeOfDay, ar) });
+	} else if (mode === 'custom' && daysOfWeek.length) {
+		summary = formatTemplate(t.summaryDays, {
+			days:
+				// Mon–Fri is only 'the workweek' in English; Arabic locales often work Sun–Thu.
+				!ar && daysOfWeek.join(',') === '1,2,3,4,5'
+					? 'weekday'
+					: daysOfWeek.map(day => weekdayLabel(day, ar)).join(ar ? '، ' : ', '),
+			time: formatTimeOfDay(timeOfDay, ar),
+		});
+	}
+	if (summary && mode !== 'once' && endLabel) summary += formatTemplate(t.summaryUntil, { date: endLabel });
+
+	const quickPicks = (() => {
+		const now = new Date();
+		const inHour = new Date(now.getTime() + 60 * 60 * 1000);
+		const tonight = new Date(now);
+		tonight.setHours(20, 0, 0, 0);
+		const tomorrow = new Date(now);
+		tomorrow.setDate(tomorrow.getDate() + 1);
+		tomorrow.setHours(9, 0, 0, 0);
+		return [
+			['hour', t.inOneHour, inHour],
+			tonight.getTime() > now.getTime() + 15 * 60 * 1000 ? ['tonight', t.tonight, tonight] : null,
+			['tomorrow', t.tomorrow, tomorrow],
+		].filter(Boolean);
+	})();
+	const modes = editing
+		? editingSchedule?.scheduleKind === 'once'
+			? [['once', t.once]]
+			: [
+					['daily', t.daily],
+					['custom', t.customDays],
+				]
+		: [
+				['once', t.once],
+				['daily', t.daily],
+				['custom', t.customDays],
+			];
+
 	if (!open || !position || typeof document === 'undefined') return null;
 
 	return createPortal(
 		<div
 			ref={panelRef}
 			role="dialog"
-			aria-label={editing ? t.editTitle : t.title}
-			className="wa-schedule-popover"
+			aria-labelledby="wa-sched-title"
+			dir={ar ? 'rtl' : 'ltr'}
+			className="wa-ui-schedule"
 			style={{
 				top: position.top,
 				left: position.left,
@@ -364,56 +485,73 @@ export default function ScheduleMessageDialog({
 			}}
 			onPointerDown={event => event.stopPropagation()}
 		>
-			<header className="wa-schedule-popover__header">
-				<div className="wa-schedule-popover__heading">
-					<span className="wa-schedule-popover__icon" aria-hidden="true">
-						<CalendarClock size={16} strokeWidth={2.1} />
-					</span>
-					<div className="min-w-0">
-						<h3>{editing ? t.editTitle : t.title}</h3>
-						<p>{editing ? t.editSubtitle : t.subtitle}</p>
-					</div>
+			<div className="wa-ui-modal__header">
+				<div className="wa-ui-modal__heading">
+					<h3 id="wa-sched-title" className="wa-ui-modal__title">
+						{editing ? t.editTitle : t.title}
+					</h3>
+					<p className="wa-ui-modal__subtitle">{editing ? t.editSubtitle : t.subtitle}</p>
 				</div>
 				<button
 					type="button"
-					className="wa-schedule-popover__close"
+					className="wa-ui-icon-btn"
 					aria-label={t.cancel}
+					title={t.cancel}
 					onClick={() => onOpenChange?.(false)}
 				>
-					<X size={16} strokeWidth={2.2} />
+					<X size={18} strokeWidth={2} />
 				</button>
-			</header>
+			</div>
 
-			<div className="wa-schedule-popover__body nice-scroll">
-				<section className="wa-schedule-popover__section">
-					<label className="wa-schedule-popover__label">{t.message}</label>
+			<div className="wa-ui-schedule__body">
+				<div className="wa-ui-schedule__field">
+					<div className="wa-ui-schedule__label-row">
+						<label htmlFor="wa-sched-message" className="wa-ui-schedule__label">
+							{t.message}
+						</label>
+						{messageText ? (
+							<span className="wa-ui-schedule__aside">
+								{formatTemplate(t.chars, { count: messageText.length })}
+							</span>
+						) : null}
+					</div>
 					<textarea
+						id="wa-sched-message"
+						autoFocus={!messageText}
 						value={messageText}
 						onChange={event => setMessageText(event.target.value)}
 						rows={3}
+						dir="auto"
 						placeholder={t.messagePlaceholder}
-						className="wa-schedule-popover__textarea"
+						className="wa-ui-input wa-ui-schedule__textarea"
 					/>
-				</section>
+				</div>
 
-				<section className="wa-schedule-popover__section">
-					<div className="wa-schedule-popover__row">
-						<label className="wa-schedule-popover__label">{t.recipients}</label>
-						<span className="wa-schedule-popover__count">
+				<div className="wa-ui-schedule__field">
+					<div className="wa-ui-schedule__label-row">
+						<span className="wa-ui-schedule__label" id="wa-sched-recipients">
+							{t.recipients}
+						</span>
+						<span className="wa-ui-schedule__aside">
 							{formatTemplate(t.selectedCount, { count: selectedIds.size })}
 						</span>
 					</div>
-					<div className="wa-schedule-popover__chips">
+					<div className="wa-ui-schedule__recipients" aria-labelledby="wa-sched-recipients">
 						{selectedChips.map(item => (
-							<span key={item.id} className="wa-schedule-popover__chip">
-								<span className="truncate">{item.title}</span>
+							<span key={item.id} className="wa-ui-schedule__recipient">
+								<span className="wa-ui-schedule__avatar" aria-hidden="true">
+									{initialsOf(item.title)}
+								</span>
+								<span className="wa-ui-schedule__recipient-name" dir="auto">
+									{item.title}
+								</span>
 								{!editing ? (
 									<button
 										type="button"
-										aria-label="Remove"
+										aria-label={formatTemplate(t.removeChat, { name: item.title })}
 										onClick={() => toggleConversation(String(item.id))}
 									>
-										<X size={11} strokeWidth={2.4} />
+										<X size={13} strokeWidth={2.2} />
 									</button>
 								) : null}
 							</span>
@@ -421,122 +559,102 @@ export default function ScheduleMessageDialog({
 						{!editing ? (
 							<button
 								type="button"
-								className="wa-schedule-popover__add"
+								aria-expanded={pickerOpen}
+								aria-controls="wa-sched-picker"
+								className="wa-ui-schedule__add"
 								onClick={() => setPickerOpen(current => !current)}
 							>
-								<Plus size={13} strokeWidth={2.4} />
+								<Plus size={15} strokeWidth={2.2} aria-hidden="true" />
 								{t.addMore}
 							</button>
 						) : null}
 					</div>
 					{pickerOpen && !editing ? (
-						<div className="wa-schedule-popover__picker">
-							<div className="wa-schedule-popover__search">
-								<Search size={14} strokeWidth={2} />
+						<div id="wa-sched-picker" className="wa-ui-schedule__picker">
+							<label className="wa-ui-search">
+								<Search size={16} strokeWidth={2} aria-hidden="true" />
 								<input
+									autoFocus
 									value={search}
 									onChange={event => setSearch(event.target.value)}
+									onKeyDown={event => {
+										if (event.key === 'Escape') {
+											event.stopPropagation();
+											setPickerOpen(false);
+										}
+									}}
 									placeholder={t.searchChats}
+									aria-label={t.searchChats}
+									className="wa-ui-input"
 								/>
-							</div>
-							<div className="wa-schedule-popover__picker-list nice-scroll">
-								{filteredConversations.map(item => {
-									const checked = selectedIds.has(String(item.id));
-									return (
-										<button
-											key={item.id}
-											type="button"
-											className={`wa-schedule-popover__picker-item ${checked ? 'is-checked' : ''}`}
-											onClick={() => toggleConversation(String(item.id))}
-										>
-											<span className="wa-schedule-popover__check" aria-hidden="true">
-												{checked ? <Check size={12} strokeWidth={2.6} /> : null}
-											</span>
-											<span className="truncate">{item.title}</span>
-										</button>
-									);
-								})}
+							</label>
+							<div className="wa-ui-schedule__picker-list" role="group" aria-label={t.recipients}>
+								{filteredConversations.length ? (
+									filteredConversations.map(item => {
+										const checked = selectedIds.has(String(item.id));
+										return (
+											<button
+												key={item.id}
+												type="button"
+												role="checkbox"
+												aria-checked={checked}
+												className={`wa-ui-schedule__picker-item${checked ? ' is-checked' : ''}`}
+												onClick={() => toggleConversation(String(item.id))}
+											>
+												<span className="wa-ui-schedule__avatar" aria-hidden="true">
+													{initialsOf(item.title)}
+												</span>
+												<span className="wa-ui-schedule__picker-name" dir="auto">
+													{item.title}
+												</span>
+												<span className="wa-ui-schedule__check" aria-hidden="true">
+													{checked ? <Check size={13} strokeWidth={3} /> : null}
+												</span>
+											</button>
+										);
+									})
+								) : (
+									<p className="wa-ui-schedule__empty">{t.noChats}</p>
+								)}
 							</div>
 						</div>
 					) : null}
-				</section>
+				</div>
 
-				<section className="wa-schedule-popover__section">
-					<label className="wa-schedule-popover__label">{t.when}</label>
-					{!editing || editingSchedule?.scheduleKind === 'once' ? (
-						<div className="wa-schedule-popover__segment" role="tablist">
-							{(editing
-								? [['once', t.once]]
-								: [
-										['once', t.once],
-										['daily', t.daily],
-										['custom', t.customDays],
-									]
-							).map(([value, label]) => (
+				<div className="wa-ui-schedule__field">
+					<span className="wa-ui-schedule__label" id="wa-sched-when">
+						{t.when}
+					</span>
+					{modes.length > 1 ? (
+						<div className="wa-ui-segment" role="radiogroup" aria-labelledby="wa-sched-when">
+							{modes.map(([value, label]) => (
 								<button
 									key={value}
 									type="button"
-									role="tab"
-									aria-selected={mode === value}
-									className={mode === value ? 'is-active' : ''}
-									onClick={() => setMode(value)}
-									disabled={editing && value !== 'once'}
-								>
-									{label}
-								</button>
-							))}
-						</div>
-					) : (
-						<div className="wa-schedule-popover__segment" role="tablist">
-							{(
-								[
-									['daily', t.daily],
-									['custom', t.customDays],
-								]
-							).map(([value, label]) => (
-								<button
-									key={value}
-									type="button"
-									role="tab"
-									aria-selected={mode === value}
-									className={mode === value ? 'is-active' : ''}
+									role="radio"
+									aria-checked={mode === value}
+									className="wa-ui-segment__item"
 									onClick={() => setMode(value)}
 								>
 									{label}
 								</button>
 							))}
 						</div>
-					)}
+					) : null}
 
 					{mode === 'once' ? (
-						<label className="wa-schedule-popover__field">
-							<span>{t.dateTime}</span>
-							<input
-								type="datetime-local"
-								value={onceAt}
-								onChange={event => setOnceAt(event.target.value)}
-							/>
-						</label>
-					) : (
-						<div className="wa-schedule-popover__stack">
-							<label className="wa-schedule-popover__field">
-								<span>{t.timeOfDay}</span>
-								<input
-									type="time"
-									value={timeOfDay}
-									onChange={event => setTimeOfDay(event.target.value)}
-								/>
-							</label>
-							{mode === 'custom' ? (
-								<div className="wa-schedule-popover__days">
-									{t.days.map((label, index) => {
-										const active = daysOfWeek.includes(index);
+						<>
+							{!editing ? (
+								<div className="wa-ui-schedule__quick" role="group" aria-label={t.quick}>
+									{quickPicks.map(([key, label, date]) => {
+										const value = defaultDateTimeLocal(date);
 										return (
 											<button
-												key={`${label}-${index}`}
+												key={key}
 												type="button"
-												className={active ? 'is-active' : ''}
-												onClick={() => toggleDay(index)}
+												aria-pressed={onceAt === value}
+												className="wa-ui-chip"
+												onClick={() => setOnceAt(value)}
 											>
 												{label}
 											</button>
@@ -544,36 +662,96 @@ export default function ScheduleMessageDialog({
 									})}
 								</div>
 							) : null}
-							<label className="wa-schedule-popover__field">
-								<span>{t.endDate}</span>
+							<label className="wa-ui-schedule__sub-field">
+								<span>{t.dateTime}</span>
 								<input
-									type="date"
-									value={endDate}
-									onChange={event => setEndDate(event.target.value)}
+									type="datetime-local"
+									value={onceAt}
+									min={defaultDateTimeLocal(new Date(Date.now() + 2 * 60 * 1000))}
+									onChange={event => setOnceAt(event.target.value)}
+									aria-invalid={oncePast || undefined}
+									className="wa-ui-input"
 								/>
 							</label>
-						</div>
+						</>
+					) : (
+						<>
+							{mode === 'custom' ? (
+								<div className="wa-ui-schedule__sub-field">
+									<span id="wa-sched-days">{t.repeatOn}</span>
+									<div className="wa-ui-schedule__days" role="group" aria-labelledby="wa-sched-days">
+										{[0, 1, 2, 3, 4, 5, 6].map(index => {
+											const active = daysOfWeek.includes(index);
+											return (
+												<button
+													key={index}
+													type="button"
+													aria-pressed={active}
+													aria-label={weekdayLabel(index, ar, 'long')}
+													title={weekdayLabel(index, ar, 'long')}
+													className="wa-ui-schedule__day"
+													onClick={() => toggleDay(index)}
+												>
+													{/* Two letters in English: S/S and T/T were ambiguous. */}
+													{ar ? t.days[index] : weekdayLabel(index, false).slice(0, 2)}
+												</button>
+											);
+										})}
+									</div>
+								</div>
+							) : null}
+							<div className="wa-ui-schedule__pair">
+								<label className="wa-ui-schedule__sub-field">
+									<span>{t.timeOfDay}</span>
+									<input
+										type="time"
+										value={timeOfDay}
+										onChange={event => setTimeOfDay(event.target.value)}
+										className="wa-ui-input"
+									/>
+								</label>
+								<label className="wa-ui-schedule__sub-field">
+									<span>{t.endDate}</span>
+									<input
+										type="date"
+										value={endDate}
+										onChange={event => setEndDate(event.target.value)}
+										className="wa-ui-input"
+									/>
+								</label>
+							</div>
+						</>
 					)}
-				</section>
+				</div>
 			</div>
 
-			<footer className="wa-schedule-popover__footer">
-				<button
-					type="button"
-					className="wa-schedule-popover__ghost"
-					onClick={() => onOpenChange?.(false)}
-				>
+			<div className="wa-ui-schedule__summary" aria-live="polite">
+				{oncePast || noDays ? (
+					<p className="wa-ui-schedule__summary-text is-warning">
+						<AlertCircle size={15} strokeWidth={2} aria-hidden="true" />
+						{oncePast ? t.pastTime : t.noDays}
+					</p>
+				) : summary ? (
+					<p className="wa-ui-schedule__summary-text">
+						<CalendarClock size={15} strokeWidth={2} aria-hidden="true" />
+						{summary}
+					</p>
+				) : null}
+			</div>
+
+			<div className="wa-ui-modal__footer">
+				<button type="button" className="wa-ui-btn wa-ui-btn--secondary" onClick={() => onOpenChange?.(false)}>
 					{t.cancel}
 				</button>
 				<button
 					type="button"
-					className="wa-schedule-popover__primary"
-					disabled={submitting}
+					className="wa-ui-btn wa-ui-btn--primary"
+					disabled={!canSubmit}
 					onClick={() => void submit()}
 				>
 					{submitting ? (
 						<>
-							<Loader2 size={14} className="animate-spin" />
+							<Loader2 size={15} className="animate-spin" aria-hidden="true" />
 							{editing ? t.saving : t.scheduling}
 						</>
 					) : editing ? (
@@ -582,7 +760,7 @@ export default function ScheduleMessageDialog({
 						t.schedule
 					)}
 				</button>
-			</footer>
+			</div>
 		</div>,
 		document.body,
 	);

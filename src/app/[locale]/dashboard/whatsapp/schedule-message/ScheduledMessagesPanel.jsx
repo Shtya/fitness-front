@@ -86,7 +86,8 @@ function describeSchedule(item, t, ar) {
 		.sort((a, b) => a - b);
 	let dayLabel = t.recurring;
 	if (days.length === 7) dayLabel = t.daily;
-	else if (days.join(',') === '1,2,3,4,5') dayLabel = t.weekdays;
+	// Mon–Fri is only 'weekdays' in English; Arabic locales often work Sun–Thu.
+	else if (!ar && days.join(',') === '1,2,3,4,5') dayLabel = t.weekdays;
 	else if (days.length) dayLabel = days.map(day => weekdayName(day, ar)).join(ar ? '، ' : ', ');
 	return item.timeOfDay ? `${dayLabel} · ${item.timeOfDay}` : dayLabel;
 }
