@@ -2554,6 +2554,215 @@ const CHAT_VIEWER_ZOOM_MIN = 1;
 const CHAT_VIEWER_ZOOM_MAX = 4;
 const CHAT_VIEWER_ZOOM_STEP = 0.35;
 
+/** Full-screen profile photo (WhatsApp CDN URL) with zoom — portals to body. */
+function ProfilePhotoViewer({ src, label = '', onClose, onRequestFreshUrl }) {
+	const [url, setUrl] = useState(src || '');
+	const [visible, setVisible] = useState(false);
+	const [zoom, setZoom] = useState(1);
+	const [pan, setPan] = useState({ x: 0, y: 0 });
+	const [loadingFresh, setLoadingFresh] = useState(false);
+	const dragRef = useRef(null);
+	const stageRef = useRef(null);
+	const refreshUrlRef = useRef(onRequestFreshUrl);
+	refreshUrlRef.current = onRequestFreshUrl;
+	const onCloseRef = useRef(onClose);
+	onCloseRef.current = onClose;
+
+	useEffect(() => {
+		setUrl(src || '');
+	}, [src]);
+
+	useEffect(() => {
+		const frame = window.requestAnimationFrame(() => setVisible(true));
+		const onKey = event => {
+			if (event.key === 'Escape') onCloseRef.current?.();
+		};
+		window.addEventListener('keydown', onKey);
+		return () => {
+			window.cancelAnimationFrame(frame);
+			window.removeEventListener('keydown', onKey);
+		};
+	}, []);
+
+	useEffect(() => {
+		const refresh = refreshUrlRef.current;
+		if (!refresh) return undefined;
+		let cancelled = false;
+		setLoadingFresh(true);
+		void Promise.resolve(refresh())
+			.then(next => {
+				if (cancelled || !next) return;
+				setUrl(String(next));
+			})
+			.finally(() => {
+				if (!cancelled) setLoadingFresh(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	const resetTransform = useCallback(() => {
+		setZoom(1);
+		setPan({ x: 0, y: 0 });
+	}, []);
+
+	const clampZoom = value =>
+		Math.min(CHAT_VIEWER_ZOOM_MAX, Math.max(CHAT_VIEWER_ZOOM_MIN, value));
+
+	const adjustZoom = useCallback(delta => {
+		setZoom(current => clampZoom(Number((current + delta).toFixed(2))));
+		if (delta < 0) {
+			setPan(current => ({
+				x: current.x * 0.85,
+				y: current.y * 0.85,
+			}));
+		}
+	}, []);
+
+	const onStagePointerDown = useCallback(
+		event => {
+			if (event.button !== 0) return;
+			event.currentTarget.setPointerCapture?.(event.pointerId);
+			dragRef.current = {
+				x: event.clientX,
+				y: event.clientY,
+				panX: pan.x,
+				panY: pan.y,
+				moved: false,
+				zoomAtStart: zoom,
+			};
+		},
+		[pan.x, pan.y, zoom],
+	);
+
+	const onStagePointerMove = useCallback(event => {
+		const drag = dragRef.current;
+		if (!drag) return;
+		const dx = event.clientX - drag.x;
+		const dy = event.clientY - drag.y;
+		if (Math.abs(dx) > 3 || Math.abs(dy) > 3) drag.moved = true;
+		if (drag.zoomAtStart > 1.02) {
+			setPan({ x: drag.panX + dx, y: drag.panY + dy });
+		}
+	}, []);
+
+	const onStagePointerUp = useCallback(() => {
+		dragRef.current = null;
+	}, []);
+
+	const onStageDoubleClick = useCallback(() => {
+		if (zoom > 1.05) {
+			resetTransform();
+			return;
+		}
+		setZoom(2.25);
+	}, [resetTransform, zoom]);
+
+	const onWheel = useCallback(
+		event => {
+			event.preventDefault();
+			adjustZoom(event.deltaY > 0 ? -CHAT_VIEWER_ZOOM_STEP : CHAT_VIEWER_ZOOM_STEP);
+		},
+		[adjustZoom],
+	);
+
+	if (!src && !url) return null;
+
+	const zoomLabel = `${Math.round(zoom * 100)}%`;
+	const viewer = (
+		<div
+			role="dialog"
+			aria-modal="true"
+			aria-label={label || 'Profile photo'}
+			className={`wa-chat-image-viewer ${visible ? 'is-visible' : ''}`}
+			onClick={onClose}
+		>
+			<div className="wa-chat-image-viewer__backdrop" aria-hidden="true" />
+			<div className="wa-chat-image-viewer__shell" onClick={event => event.stopPropagation()}>
+				<div className="wa-chat-image-viewer__stage">
+					<header className="wa-chat-image-viewer__toolbar wa-chat-image-viewer__toolbar--overlay">
+						<div className="wa-chat-image-viewer__meta">
+							<span className="wa-chat-image-viewer__caption" title={label}>
+								{label || (loadingFresh ? '…' : '')}
+							</span>
+						</div>
+						<div className="wa-chat-image-viewer__actions">
+							<span className="wa-chat-image-viewer__zoom-label">{zoomLabel}</span>
+							<button
+								type="button"
+								aria-label="Zoom out"
+								className="wa-chat-image-viewer__icon-btn"
+								onClick={() => adjustZoom(-CHAT_VIEWER_ZOOM_STEP)}
+							>
+								<ZoomOut size={20} />
+							</button>
+							<button
+								type="button"
+								aria-label="Zoom in"
+								className="wa-chat-image-viewer__icon-btn"
+								onClick={() => adjustZoom(CHAT_VIEWER_ZOOM_STEP)}
+							>
+								<ZoomIn size={20} />
+							</button>
+							<button
+								type="button"
+								aria-label="Reset zoom"
+								className="wa-chat-image-viewer__icon-btn"
+								onClick={resetTransform}
+							>
+								<Minimize2 size={18} />
+							</button>
+							<button
+								type="button"
+								onClick={onClose}
+								aria-label="Close image viewer"
+								className="wa-chat-image-viewer__icon-btn is-close"
+							>
+								<X size={22} />
+							</button>
+						</div>
+					</header>
+					<div
+						ref={stageRef}
+						className="wa-chat-image-viewer__canvas-wrap"
+						onPointerDown={onStagePointerDown}
+						onPointerMove={onStagePointerMove}
+						onPointerUp={onStagePointerUp}
+						onPointerCancel={onStagePointerUp}
+						onDoubleClick={onStageDoubleClick}
+						onWheel={onWheel}
+					>
+						<div
+							className="wa-chat-image-viewer__canvas"
+							style={{
+								transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+							}}
+						>
+							{url ? (
+								<img
+									key={url}
+									src={url}
+									alt={label || 'Profile photo'}
+									referrerPolicy="no-referrer"
+									draggable={false}
+									className="wa-chat-image-viewer__image is-ready"
+								/>
+							) : (
+								<div className="wa-chat-image-viewer__placeholder" aria-hidden="true">
+									<ImageIcon size={42} strokeWidth={1.5} />
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+
+	return typeof document !== 'undefined' ? createPortal(viewer, document.body) : null;
+}
+
 function ChatImageViewer({
 	images,
 	activeId,
@@ -11637,20 +11846,88 @@ function WhatsAppWorkspaceContent() {
 		[currentUserId],
 	);
 
-	const refreshOnlineContacts = useCallback(async () => {
-		if (!accountId) {
-			setOnlineContacts([]);
-			return;
-		}
-		try {
-			const { data } = await api.get('/whatsapp/presence/online', {
-				params: { accountId },
+	const refreshOnlineContacts = useCallback(
+		async (options = {}) => {
+			if (!accountId) {
+				setOnlineContacts([]);
+				return;
+			}
+			const includeOffline = Boolean(options.includeOffline);
+			try {
+				const { data } = await api.get('/whatsapp/presence/online', {
+					params: {
+						accountId,
+						...(includeOffline ? { includeOffline: '1' } : {}),
+					},
+				});
+				applyOnlineContactsSnapshot(data);
+				return data;
+			} catch {
+				/* ignore transient presence refresh errors */
+				return null;
+			}
+		},
+		[accountId, applyOnlineContactsSnapshot],
+	);
+
+	/** Pull presence (incl. lastSeen) for an open chat so header/info stay accurate. */
+	const hydrateConversationPresence = useCallback(
+		async targetConversationId => {
+			const id = String(targetConversationId || '').trim();
+			if (!accountId || !id) return;
+			let data = null;
+			try {
+				const response = await api.get('/whatsapp/presence/online', {
+					params: { accountId, includeOffline: '1' },
+				});
+				data = response.data;
+			} catch {
+				return;
+			}
+			const items = Array.isArray(data?.items) ? data.items : [];
+			// Keep the Online bar on live contacts only — never dump offline rows into it.
+			const liveOnly = {
+				...data,
+				items: items.filter(
+					item => item?.online || item?.typing || item?.recording,
+				),
+			};
+			applyOnlineContactsSnapshot(liveOnly);
+
+			const hit = items.find(item => String(item.conversationId) === id);
+			if (!hit) return;
+			setConversations(current => {
+				const row = current.find(item => item.id === id);
+				if (!row) return current;
+				const presence = {
+					online: Boolean(hit.online),
+					typing: Boolean(hit.typing),
+					recording: Boolean(hit.recording),
+					state: hit.state || (hit.online ? 'available' : 'unavailable'),
+					t: hit.updatedAt || Date.now(),
+					senderName: '',
+					confirmedOffline: !hit.online && hit.state === 'unavailable',
+				};
+				presence.lastSeen =
+					resolvePresenceLastSeen(row.presence, {
+						...presence,
+						lastSeen: hit.lastSeen,
+					}) || undefined;
+				if (isSameConversationPresence(row, presence)) return current;
+				return current.map(item =>
+					item.id === id
+						? {
+								...item,
+								isTyping: presence.typing,
+								typing: presence.typing,
+								presence,
+							}
+						: item,
+				);
 			});
-			applyOnlineContactsSnapshot(data);
-		} catch {
-			/* ignore transient presence refresh errors */
-		}
-	}, [accountId, applyOnlineContactsSnapshot]);
+		},
+		[accountId, applyOnlineContactsSnapshot],
+	);
 
 	const selectWhatsAppAccount = useCallback(
 		nextAccountId => {
@@ -13175,6 +13452,15 @@ function WhatsAppWorkspaceContent() {
 		}, 30_000);
 		return () => window.clearInterval(timer);
 	}, [conversationId, conversationInfoTarget?.id]);
+
+	useEffect(() => {
+		if (!conversationId) return undefined;
+		const conv =
+			conversationsRef.current.find(item => item.id === conversationId) || null;
+		if (conv?.type === 'group') return undefined;
+		void hydrateConversationPresence(conversationId);
+		return undefined;
+	}, [conversationId, hydrateConversationPresence]);
 
 	useEffect(() => {
 		syncingInboxRef.current = syncingInbox;
@@ -16932,7 +17218,22 @@ function WhatsAppWorkspaceContent() {
 				const { data } = await api.get(
 					`/whatsapp/conversations/${conversationId}/messages/${message.id}/info`,
 				);
-				setMessageInfo({ ...data, message });
+				const liveStatus = preferWhatsAppAckStatus(
+					message?.status,
+					preferWhatsAppAckStatus(data?.status, data?.acknowledgements?.status),
+				);
+				setMessageInfo({
+					...data,
+					status: liveStatus,
+					acknowledgements: {
+						...(data?.acknowledgements || {}),
+						status: liveStatus,
+					},
+					message: {
+						...message,
+						status: liveStatus,
+					},
+				});
 			} catch (error) {
 				setMessageInfo(null);
 				toast.error(error.response?.data?.message || 'Could not load message info');
@@ -19886,20 +20187,27 @@ function WhatsAppWorkspaceContent() {
 
 	const openConversationInfo = async conversation => {
 		if (!conversation) return;
-		setConversationInfoTarget(conversation);
+		const live =
+			conversationsRef.current.find(item => item.id === conversation.id) || conversation;
+		setConversationInfoTarget(live);
 		setConversationInfoGroup(
-			conversation.type === 'group'
-				? conversation.group || { subject: conversationTitle(conversation), participants: [] }
+			live.type === 'group'
+				? live.group || { subject: conversationTitle(live), participants: [] }
 				: null,
 		);
-		if (conversation.type !== 'group' || !accountId) {
+		if (live.type !== 'group') {
+			setLoadingConversationInfoGroup(false);
+			void hydrateConversationPresence(live.id);
+			return;
+		}
+		if (!accountId) {
 			setLoadingConversationInfoGroup(false);
 			return;
 		}
 		const requestId = ++conversationInfoRequestId.current;
 		setLoadingConversationInfoGroup(true);
 		try {
-			let groupId = resolveGroupIdForConversation(conversation);
+			let groupId = resolveGroupIdForConversation(live);
 			if (!groupId) {
 				const { data: groupRows } = await api.get(`/whatsapp/accounts/${accountId}/groups`);
 				if (requestId !== conversationInfoRequestId.current) return;
@@ -19907,9 +20215,9 @@ function WhatsAppWorkspaceContent() {
 					setGroups(groupRows);
 					const match = groupRows.find(
 						item =>
-							item.conversationId === conversation.id ||
-							String(item.waId || '') === String(conversation.providerChatId || '') ||
-							String(item.waId || '') === String(conversation.group?.waId || ''),
+							item.conversationId === live.id ||
+							String(item.waId || '') === String(live.providerChatId || '') ||
+							String(item.waId || '') === String(live.group?.waId || ''),
 					);
 					groupId = match?.id || null;
 				}
@@ -19934,7 +20242,7 @@ function WhatsAppWorkspaceContent() {
 			});
 			setConversations(current =>
 				current.map(item =>
-					item.id === conversation.id
+					item.id === live.id
 						? {
 								...item,
 								group: {
@@ -25403,23 +25711,60 @@ function WhatsAppWorkspaceContent() {
 			{conversationInfoTarget && (() => {
 				const liveInfoConversation =
 					(conversations || []).find(item => item.id === conversationInfoTarget.id) ||
+					(selectedConversation?.id === conversationInfoTarget.id
+						? selectedConversation
+						: null) ||
 					conversationInfoTarget;
 				const infoAvatarSrc =
 					conversationAvatarUrl(liveInfoConversation) ||
 					conversationInfoGroup?.avatarUrl ||
 					'';
 				void presenceClock;
+				const barPresence = (onlineContacts || []).find(
+					item => item.conversationId === liveInfoConversation.id,
+				);
+				const mergedPresence = {
+					...(liveInfoConversation.presence || {}),
+					...(barPresence
+						? {
+								online: Boolean(
+									barPresence.online ||
+										barPresence.typing ||
+										barPresence.recording ||
+										liveInfoConversation.presence?.online,
+								),
+								typing: Boolean(
+									barPresence.typing || liveInfoConversation.presence?.typing,
+								),
+								recording: Boolean(
+									barPresence.recording ||
+										liveInfoConversation.presence?.recording,
+								),
+								lastSeen:
+									resolvePresenceLastSeen(liveInfoConversation.presence, {
+										online: Boolean(barPresence.online),
+										typing: Boolean(barPresence.typing),
+										recording: Boolean(barPresence.recording),
+										lastSeen: barPresence.lastSeen,
+										t: barPresence.updatedAt || Date.now(),
+									}) || liveInfoConversation.presence?.lastSeen,
+								state:
+									barPresence.state ||
+									liveInfoConversation.presence?.state ||
+									'unknown',
+								confirmedOffline:
+									Boolean(liveInfoConversation.presence?.confirmedOffline) ||
+									(barPresence.state === 'unavailable' && !barPresence.online),
+							}
+						: {}),
+				};
 				const presenceSubtitle =
 					liveInfoConversation.type === 'group'
 						? null
-						: conversationPresenceSubtitle(
-								liveInfoConversation.presence,
-								locale,
-								formatLastSeen,
-							);
+						: conversationPresenceSubtitle(mergedPresence, locale, formatLastSeen);
 				const presenceValue =
-					liveInfoConversation.presence?.typing || liveInfoConversation.presence?.recording
-						? liveInfoConversation.presence?.recording
+					mergedPresence.typing || mergedPresence.recording
+						? mergedPresence.recording
 							? locale === 'ar'
 								? 'يسجل صوت الآن'
 								: 'recording…'
@@ -25433,6 +25778,18 @@ function WhatsAppWorkspaceContent() {
 					setConversationInfoGroup(null);
 					setLoadingConversationInfoGroup(false);
 					setConversationInfoAvatarPreview(null);
+				};
+				const openProfilePhoto = () => {
+					if (!infoAvatarSrc) return;
+					const title =
+						conversationInfoGroup?.subject ||
+						conversationTitle(liveInfoConversation) ||
+						'';
+					setConversationInfoAvatarPreview({
+						url: infoAvatarSrc,
+						conversationId: liveInfoConversation.id,
+						label: title,
+					});
 				};
 				return (
 				<div
@@ -25469,7 +25826,7 @@ function WhatsAppWorkspaceContent() {
 									aria-label={
 										locale === 'ar' ? 'عرض الصورة بحجم كبير' : 'View profile photo'
 									}
-									onClick={() => setConversationInfoAvatarPreview(infoAvatarSrc)}
+									onClick={openProfilePhoto}
 								>
 									<Avatar
 										label={conversationTitle(liveInfoConversation)}
@@ -25541,7 +25898,9 @@ function WhatsAppWorkspaceContent() {
 									className="flex items-start justify-between gap-4 border-b pb-2 last:border-0"
 								>
 									<span className="text-[#667781]">{label}</span>
-									<strong className="max-w-[60%] text-end">{value || '—'}</strong>
+									<strong className="max-w-[60%] text-end">
+										{value == null || value === '' ? '—' : value}
+									</strong>
 								</div>
 							))}
 						</div>
@@ -25628,35 +25987,47 @@ function WhatsAppWorkspaceContent() {
 				</div>
 				);
 			})()}
-			{conversationInfoAvatarPreview ? (
-				<div
-					className="fixed inset-0 z-[120] flex flex-col bg-black/90"
-					role="dialog"
-					aria-modal="true"
-					aria-label={locale === 'ar' ? 'صورة الملف الشخصي' : 'Profile photo'}
-					onClick={() => setConversationInfoAvatarPreview(null)}
-				>
-					<div className="flex shrink-0 items-center justify-end p-3">
-						<button
-							type="button"
-							className="rounded-full p-2 text-white/90 hover:bg-white/10"
-							aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
-							onClick={() => setConversationInfoAvatarPreview(null)}
-						>
-							<X size={22} />
-						</button>
-					</div>
-					<div className="grid min-h-0 flex-1 place-items-center p-4">
-						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img
-							src={conversationInfoAvatarPreview}
-							alt=""
-							referrerPolicy="no-referrer"
-							className="max-h-full max-w-full object-contain"
-							onClick={event => event.stopPropagation()}
-						/>
-					</div>
-				</div>
+			{conversationInfoAvatarPreview?.url ? (
+				<ProfilePhotoViewer
+					src={conversationInfoAvatarPreview.url}
+					label={conversationInfoAvatarPreview.label || ''}
+					onClose={() => setConversationInfoAvatarPreview(null)}
+					onRequestFreshUrl={async () => {
+						const id = conversationInfoAvatarPreview.conversationId;
+						if (!id) return conversationInfoAvatarPreview.url;
+						try {
+							const { data } = await api.post(
+								`/whatsapp/conversations/${id}/avatar/refresh`,
+							);
+							const next = String(data?.avatarUrl || '').trim();
+							if (!next) return conversationInfoAvatarPreview.url;
+							setConversations(current =>
+								current.map(item => {
+									if (item.id !== id) return item;
+									if (item.contact) {
+										return {
+											...item,
+											contact: { ...item.contact, avatarUrl: next },
+										};
+									}
+									if (item.group) {
+										return {
+											...item,
+											group: { ...item.group, avatarUrl: next },
+										};
+									}
+									return item;
+								}),
+							);
+							setConversationInfoAvatarPreview(current =>
+								current ? { ...current, url: next } : current,
+							);
+							return next;
+						} catch {
+							return conversationInfoAvatarPreview.url;
+						}
+					}}
+				/>
 			) : null}
 			{(sharingMessageIds?.length || forwardingMessage) && (
 				<div
@@ -25765,134 +26136,234 @@ function WhatsAppWorkspaceContent() {
 			)}
 			{messageInfo && (
 				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center" onClick={() => setMessageInfo(null)}>
-					<div className="w-full max-w-md rounded-2xl bg-white p-5 text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]" onClick={event => event.stopPropagation()}>
-						<div className="flex items-center justify-between">
+					<div className="w-full max-w-md overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]" onClick={event => event.stopPropagation()}>
+						<div className="flex items-center justify-between px-5 pt-5">
 							<h3 className="text-lg font-bold">{locale === 'ar' ? 'معلومات الرسالة' : 'Message info'}</h3>
 							<button type="button" onClick={() => setMessageInfo(null)} className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-white/10"><X size={18} /></button>
 						</div>
-						{loadingMessageInfo ? (
-							<div className="grid min-h-40 place-items-center"><Loader2 className="animate-spin text-[#00a884]" /></div>
+						{loadingMessageInfo || messageInfo.loading ? (
+							<div className="grid min-h-40 place-items-center p-5"><Loader2 className="animate-spin text-[#00a884]" /></div>
 						) : (
 							(() => {
+								const liveThreadMessage =
+									(conversationMessages || []).find(
+										item => item.id === messageInfo.message?.id || item.id === messageInfo.id,
+									) || messageInfo.message;
 								const ack =
 									messageInfo.acknowledgements ||
 									messageInfo.provider?.acknowledgements ||
 									{};
 								const outbound =
-									String(messageInfo.direction || '').toLowerCase() === 'outbound' ||
-									messageInfo.provider?.fromMe === true;
+									String(messageInfo.direction || liveThreadMessage?.direction || '').toLowerCase() ===
+										'outbound' ||
+									messageInfo.provider?.fromMe === true ||
+									Boolean(liveThreadMessage?.fromMe);
 								const statusLabel = preferWhatsAppAckStatus(
-									messageInfo.message?.status,
-									messageInfo.status,
+									preferWhatsAppAckStatus(
+										liveThreadMessage?.status,
+										messageInfo.message?.status,
+									),
+									preferWhatsAppAckStatus(messageInfo.status, ack.status),
 								);
-								const statusUpdatedAt = messageInfo.statusUpdatedAt
-									? new Date(messageInfo.statusUpdatedAt).toLocaleString()
-									: null;
-								const formatAck = (done, mark) => {
-									if (!outbound) return locale === 'ar' ? 'غير متاح للوارد' : 'N/A (inbound)';
-									if (done) {
-										return statusUpdatedAt ? `${mark} · ${statusUpdatedAt}` : mark;
-									}
-									return '—';
+								const sentAtRaw =
+									messageInfo.sentAt ||
+									liveThreadMessage?.sentAt ||
+									liveThreadMessage?.createdAt ||
+									null;
+								const statusUpdatedAtRaw =
+									messageInfo.statusUpdatedAt ||
+									ack.statusUpdatedAt ||
+									liveThreadMessage?.statusUpdatedAt ||
+									null;
+								const formatInfoTime = value => {
+									if (!value) return null;
+									const date = new Date(value);
+									if (Number.isNaN(date.getTime())) return null;
+									return date.toLocaleString(locale === 'ar' ? 'ar-EG' : undefined);
 								};
-								const rows = [
-									[
-										locale === 'ar' ? 'الحالة' : 'Status',
-										locale === 'ar'
-											? (
-													{
-														pending: 'قيد الانتظار',
-														sent: 'أُرسلت',
-														delivered: 'تم التسليم',
-														read: 'تمت القراءة',
-														played: 'تم التشغيل',
-														failed: 'فشل الإرسال',
-													}[statusLabel] || statusLabel
-												)
-											: statusLabel,
-									],
-									[
-										locale === 'ar' ? 'الاتجاه' : 'Direction',
-										outbound
-											? locale === 'ar'
-												? 'صادرة'
-												: 'outbound'
-											: locale === 'ar'
-												? 'واردة'
-												: 'inbound',
-									],
-									[
-										locale === 'ar' ? 'وقت الإرسال' : 'Sent',
-										messageInfo.sentAt
-											? new Date(messageInfo.sentAt).toLocaleString()
-											: '—',
-									],
-								];
-								if (outbound) {
-									rows.push(
-										[
-											locale === 'ar' ? 'تم التسليم' : 'Delivered',
-											formatAck(
-												Boolean(
-													ack.delivered ||
-														ack.deliveryRemaining === 0 ||
-														['delivered', 'read', 'played'].includes(statusLabel),
-												),
-												'✓',
-											),
-										],
-										[
-											locale === 'ar' ? 'تمت القراءة' : 'Read',
-											formatAck(
-												Boolean(
-													ack.read ||
-														ack.readRemaining === 0 ||
-														['read', 'played'].includes(statusLabel),
-												),
-												'✓✓',
-											),
-										],
-										[
-											locale === 'ar' ? 'تم التشغيل' : 'Played',
-											formatAck(
-												Boolean(
-													ack.played ||
-														ack.playedRemaining === 0 ||
-														statusLabel === 'played',
-												),
-												'✓',
-											),
-										],
+								const sentAt = formatInfoTime(sentAtRaw);
+								const statusUpdatedAt = formatInfoTime(statusUpdatedAtRaw);
+								const isFailed = statusLabel === 'failed';
+								const isPending = statusLabel === 'pending';
+								const isSent =
+									!isFailed &&
+									!isPending &&
+									['sent', 'delivered', 'read', 'played'].includes(statusLabel);
+								const isDelivered =
+									Boolean(ack.delivered) ||
+									ack.deliveryRemaining === 0 ||
+									['delivered', 'read', 'played'].includes(statusLabel);
+								const isRead =
+									Boolean(ack.read) ||
+									ack.readRemaining === 0 ||
+									['read', 'played'].includes(statusLabel);
+								const isPlayed =
+									Boolean(ack.played) ||
+									ack.playedRemaining === 0 ||
+									statusLabel === 'played';
+								const statusText =
+									locale === 'ar'
+										? {
+												pending: 'قيد الانتظار',
+												sent: 'أُرسلت',
+												delivered: 'تم التسليم',
+												read: 'تمت القراءة',
+												played: 'تم التشغيل',
+												failed: 'فشل الإرسال',
+											}[statusLabel] || statusLabel
+										: {
+												pending: 'Pending',
+												sent: 'Sent',
+												delivered: 'Delivered',
+												read: 'Read',
+												played: 'Played',
+												failed: 'Failed',
+											}[statusLabel] || statusLabel;
+								const previewText =
+									String(
+										liveThreadMessage?.text ||
+											messageInfo.message?.text ||
+											'',
+									).trim() ||
+									(locale === 'ar'
+										? messageInfo.type || 'رسالة'
+										: messageInfo.type || 'Message');
+								const receiptRows = outbound
+									? [
+											{
+												id: 'sent',
+												label: locale === 'ar' ? 'أُرسلت' : 'Sent',
+												done: isSent || isDelivered || isRead,
+												time: sentAt,
+												icon: 'single',
+												tone: 'sent',
+											},
+											{
+												id: 'delivered',
+												label: locale === 'ar' ? 'تم التسليم' : 'Delivered',
+												done: isDelivered || isRead,
+												time: isDelivered || isRead ? statusUpdatedAt || sentAt : null,
+												icon: 'double',
+												tone: 'delivered',
+											},
+											{
+												id: 'read',
+												label: locale === 'ar' ? 'تمت القراءة' : 'Read',
+												done: isRead,
+												time: isRead ? statusUpdatedAt : null,
+												icon: 'double',
+												tone: 'read',
+											},
+											...(String(liveThreadMessage?.type || messageInfo.type || '')
+												.toLowerCase()
+												.match(/audio|ptt|voice/)
+												? [
+														{
+															id: 'played',
+															label: locale === 'ar' ? 'تم التشغيل' : 'Played',
+															done: isPlayed,
+															time: isPlayed ? statusUpdatedAt : null,
+															icon: 'single',
+															tone: 'played',
+														},
+													]
+												: []),
+										]
+									: [];
+								const renderReceiptIcon = row => {
+									if (!row.done) {
+										return (
+											<span className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-[#111b21] dark:text-[#667781]">
+												—
+											</span>
+										);
+									}
+									if (row.icon === 'double') {
+										return (
+											<span
+												className={`grid h-8 w-8 place-items-center rounded-full ${
+													row.tone === 'read'
+														? 'bg-[#53BDEB]/15 text-[#53BDEB]'
+														: 'bg-slate-100 text-[#8696A0] dark:bg-[#111b21]'
+												}`}
+											>
+												<CheckCheck size={18} strokeWidth={2.4} />
+											</span>
+										);
+									}
+									return (
+										<span className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-[#8696A0] dark:bg-[#111b21]">
+											<Check size={18} strokeWidth={2.4} />
+										</span>
 									);
-								} else {
-									rows.push([
-										locale === 'ar' ? 'ملاحظة' : 'Note',
-										locale === 'ar'
-											? 'إيصالات التسليم والقراءة تظهر للرسائل الصادرة فقط'
-											: 'Delivery and read receipts apply to outbound messages only',
-									]);
-								}
+								};
 								return (
-									<div className="mt-4 space-y-3 text-sm">
+									<div className="mt-4 space-y-4 px-5 pb-5 text-sm">
 										<div className="rounded-xl bg-slate-50 p-3 dark:bg-[#111b21]">
-											<p className="wa-privacy-identity font-semibold">
-												{messageInfo.message?.text || messageInfo.type}
+											<p className="wa-privacy-identity line-clamp-4 font-semibold" dir="auto">
+												{previewText}
 											</p>
 											<p className="mt-1 text-xs text-slate-500 dark:text-[#8696a0]">
-												{messageInfo.sentAt
-													? new Date(messageInfo.sentAt).toLocaleString()
-													: '—'}
+												{sentAt || '—'}
 											</p>
 										</div>
-										{rows.map(([label, value]) => (
-											<div
-												key={label}
-												className="flex justify-between gap-4 border-b border-slate-200 pb-2 last:border-0 dark:border-[#3b4a54]"
-											>
-												<span className="text-slate-500 dark:text-[#8696a0]">{label}</span>
-												<strong className="max-w-[65%] text-end">{value || '—'}</strong>
+										<div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-[#3b4a54]">
+											<span className="text-slate-500 dark:text-[#8696a0]">
+												{locale === 'ar' ? 'الحالة عنده' : 'Status on their side'}
+											</span>
+											<strong className="inline-flex items-center gap-1.5">
+												{outbound ? (
+													isFailed ? (
+														<AlertCircle size={16} className="text-rose-500" />
+													) : isPending ? (
+														<Clock size={16} className="text-slate-400" />
+													) : isRead ? (
+														<CheckCheck size={16} className="text-[#53BDEB]" />
+													) : isDelivered ? (
+														<CheckCheck size={16} className="text-[#8696A0]" />
+													) : (
+														<Check size={16} className="text-[#8696A0]" />
+													)
+												) : null}
+												{statusText}
+											</strong>
+										</div>
+										{outbound ? (
+											<div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[#3b4a54]">
+												<div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-[#3b4a54] dark:text-[#8696a0]">
+													{locale === 'ar'
+														? 'إيصالات التسليم والقراءة'
+														: 'Delivery & read receipts'}
+												</div>
+												<div className="divide-y divide-slate-200 dark:divide-[#3b4a54]">
+													{receiptRows.map(row => (
+														<div
+															key={row.id}
+															className="flex items-center gap-3 px-3 py-3"
+														>
+															{renderReceiptIcon(row)}
+															<div className="min-w-0 flex-1">
+																<p className="font-semibold">{row.label}</p>
+																<p className="text-xs text-slate-500 dark:text-[#8696a0]">
+																	{row.done
+																		? row.time ||
+																			(locale === 'ar' ? 'تم' : 'Done')
+																		: locale === 'ar'
+																			? 'لسه'
+																			: 'Not yet'}
+																</p>
+															</div>
+														</div>
+													))}
+												</div>
 											</div>
-										))}
+										) : (
+											<p className="rounded-xl bg-slate-50 px-3 py-3 text-xs text-slate-500 dark:bg-[#111b21] dark:text-[#8696a0]">
+												{locale === 'ar'
+													? 'إيصالات التسليم والقراءة تظهر للرسائل الصادرة منك فقط — عشان تتأكد إيه اللي حصل عند الطرف التاني.'
+													: 'Delivery and read receipts only apply to messages you sent — so you can confirm status on their side.'}
+											</p>
+										)}
 									</div>
 								);
 							})()
