@@ -10030,6 +10030,7 @@ function WhatsAppWorkspaceContent() {
 	const [conversationInfoTarget, setConversationInfoTarget] = useState(null);
 	const [conversationInfoGroup, setConversationInfoGroup] = useState(null);
 	const [loadingConversationInfoGroup, setLoadingConversationInfoGroup] = useState(false);
+	const [conversationInfoAvatarPreview, setConversationInfoAvatarPreview] = useState(null);
 	const conversationInfoRequestId = useRef(0);
 	const [notes, setNotes] = useState([]);
 	const [noteDraft, setNoteDraft] = useState('');
@@ -13166,13 +13167,14 @@ function WhatsAppWorkspaceContent() {
 	}, [conversations]);
 
 	useEffect(() => {
-		if (!conversationId) return undefined;
+		const watchingPresence = Boolean(conversationId || conversationInfoTarget?.id);
+		if (!watchingPresence) return undefined;
 		setPresenceClock(Date.now());
 		const timer = window.setInterval(() => {
 			setPresenceClock(Date.now());
 		}, 30_000);
 		return () => window.clearInterval(timer);
-	}, [conversationId]);
+	}, [conversationId, conversationInfoTarget?.id]);
 
 	useEffect(() => {
 		syncingInboxRef.current = syncingInbox;
@@ -25398,15 +25400,44 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				</div>
 			)}
-			{conversationInfoTarget && (
+			{conversationInfoTarget && (() => {
+				const liveInfoConversation =
+					(conversations || []).find(item => item.id === conversationInfoTarget.id) ||
+					conversationInfoTarget;
+				const infoAvatarSrc =
+					conversationAvatarUrl(liveInfoConversation) ||
+					conversationInfoGroup?.avatarUrl ||
+					'';
+				void presenceClock;
+				const presenceSubtitle =
+					liveInfoConversation.type === 'group'
+						? null
+						: conversationPresenceSubtitle(
+								liveInfoConversation.presence,
+								locale,
+								formatLastSeen,
+							);
+				const presenceValue =
+					liveInfoConversation.presence?.typing || liveInfoConversation.presence?.recording
+						? liveInfoConversation.presence?.recording
+							? locale === 'ar'
+								? 'يسجل صوت الآن'
+								: 'recording…'
+							: locale === 'ar'
+								? 'يكتب الآن'
+								: 'typing…'
+						: presenceSubtitle?.text || '—';
+				const closeConversationInfo = () => {
+					conversationInfoRequestId.current += 1;
+					setConversationInfoTarget(null);
+					setConversationInfoGroup(null);
+					setLoadingConversationInfoGroup(false);
+					setConversationInfoAvatarPreview(null);
+				};
+				return (
 				<div
 					className="fixed inset-0 z-[110] grid place-items-end bg-black/25 p-4 backdrop-blur-sm sm:place-items-center"
-					onClick={() => {
-						conversationInfoRequestId.current += 1;
-						setConversationInfoTarget(null);
-						setConversationInfoGroup(null);
-						setLoadingConversationInfoGroup(false);
-					}}
+					onClick={closeConversationInfo}
 				>
 					<div
 						className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white p-5 text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]"
@@ -25424,30 +25455,39 @@ function WhatsAppWorkspaceContent() {
 							</h3>
 							<button
 								type="button"
-								onClick={() => {
-									conversationInfoRequestId.current += 1;
-									setConversationInfoTarget(null);
-									setConversationInfoGroup(null);
-									setLoadingConversationInfoGroup(false);
-								}}
+								onClick={closeConversationInfo}
 								className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-white/10"
 							>
 								<X size={18} />
 							</button>
 						</div>
 						<div className="mt-4 flex shrink-0 flex-col items-center text-center">
-							<Avatar
-								label={conversationTitle(conversationInfoTarget)}
-								size={20}
-								src={
-									conversationAvatarUrl(conversationInfoTarget) ||
-									conversationInfoGroup?.avatarUrl ||
-									''
-								}
-								isGroup={conversationInfoTarget.type === 'group'}
-							/>
+							{infoAvatarSrc ? (
+								<button
+									type="button"
+									className="rounded-full transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary-500)]"
+									aria-label={
+										locale === 'ar' ? 'عرض الصورة بحجم كبير' : 'View profile photo'
+									}
+									onClick={() => setConversationInfoAvatarPreview(infoAvatarSrc)}
+								>
+									<Avatar
+										label={conversationTitle(liveInfoConversation)}
+										size={20}
+										src={infoAvatarSrc}
+										isGroup={conversationInfoTarget.type === 'group'}
+									/>
+								</button>
+							) : (
+								<Avatar
+									label={conversationTitle(liveInfoConversation)}
+									size={20}
+									src=""
+									isGroup={conversationInfoTarget.type === 'group'}
+								/>
+							)}
 							<h4 className="wa-privacy-identity mt-3 text-xl font-bold">
-								{conversationInfoGroup?.subject || conversationTitle(conversationInfoTarget)}
+								{conversationInfoGroup?.subject || conversationTitle(liveInfoConversation)}
 							</h4>
 							<p className="wa-privacy-identity text-sm text-[#667781]">
 								{conversationInfoTarget.type === 'group'
@@ -25457,9 +25497,9 @@ function WhatsAppWorkspaceContent() {
 											conversationInfoTarget.group?.participantCount ||
 											0
 										} ${locale === 'ar' ? 'عضو' : 'members'}`
-									: conversationInfoTarget.contact?.phoneNumber ||
-										conversationInfoTarget.contact?.waId ||
-										conversationInfoTarget.providerChatId ||
+									: liveInfoConversation.contact?.phoneNumber ||
+										liveInfoConversation.contact?.waId ||
+										liveInfoConversation.providerChatId ||
 										'—'}
 							</p>
 						</div>
@@ -25476,17 +25516,20 @@ function WhatsAppWorkspaceContent() {
 								[locale === 'ar' ? 'الحساب' : 'Account', selectedAccount?.label],
 								[
 									locale === 'ar' ? 'تم التعيين إلى' : 'Assigned to',
-									conversationInfoTarget.assignedUser?.name ||
+									liveInfoConversation.assignedUser?.name ||
 										(locale === 'ar' ? 'بدون تعيين' : 'Unassigned'),
 								],
 								[
 									locale === 'ar' ? 'رسائل غير مقروءة' : 'Unread messages',
-									Number(conversationInfoTarget.unreadCount) || 0,
+									Number(liveInfoConversation.unreadCount) || 0,
 								],
+								...(conversationInfoTarget.type === 'group'
+									? []
+									: [[locale === 'ar' ? 'آخر ظهور' : 'Last seen', presenceValue]]),
 								[
 									locale === 'ar' ? 'آخر رسالة' : 'Last message',
-									conversationInfoTarget.lastMessageAt
-										? new Date(conversationInfoTarget.lastMessageAt).toLocaleString()
+									liveInfoConversation.lastMessageAt
+										? new Date(liveInfoConversation.lastMessageAt).toLocaleString()
 										: '—',
 								],
 								...(conversationInfoTarget.type === 'group' && conversationInfoGroup?.description
@@ -25583,7 +25626,38 @@ function WhatsAppWorkspaceContent() {
 						) : null}
 					</div>
 				</div>
-			)}
+				);
+			})()}
+			{conversationInfoAvatarPreview ? (
+				<div
+					className="fixed inset-0 z-[120] flex flex-col bg-black/90"
+					role="dialog"
+					aria-modal="true"
+					aria-label={locale === 'ar' ? 'صورة الملف الشخصي' : 'Profile photo'}
+					onClick={() => setConversationInfoAvatarPreview(null)}
+				>
+					<div className="flex shrink-0 items-center justify-end p-3">
+						<button
+							type="button"
+							className="rounded-full p-2 text-white/90 hover:bg-white/10"
+							aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
+							onClick={() => setConversationInfoAvatarPreview(null)}
+						>
+							<X size={22} />
+						</button>
+					</div>
+					<div className="grid min-h-0 flex-1 place-items-center p-4">
+						{/* eslint-disable-next-line @next/next/no-img-element */}
+						<img
+							src={conversationInfoAvatarPreview}
+							alt=""
+							referrerPolicy="no-referrer"
+							className="max-h-full max-w-full object-contain"
+							onClick={event => event.stopPropagation()}
+						/>
+					</div>
+				</div>
+			) : null}
 			{(sharingMessageIds?.length || forwardingMessage) && (
 				<div
 					className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center"
