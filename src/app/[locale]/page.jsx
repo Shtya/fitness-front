@@ -1,33 +1,52 @@
 "use client";
 
 /**
- * DESIGN DIRECTION: Photographic product.
- * VISUAL CONCEPT: A full-bleed gym photo carries the first screen, with the real session logger inside a phone. Below, warm paper and a brand-color band break the page so it is not one black field.
- * COMPOSITION: Photo hero + phone, then the six-stage client file, then role cards on the live theme gradient, then quotes, theme swatches, questions, and the existing contact form.
- * SIGNATURE MOMENT: Workout / meals / report swaps both the background photo and the phone.
- * TRADE-OFF: Pricing stays off. No invented user counts. Theme picker stays live.
+ * So7baFit homepage — "Night session".
+ *
+ * A theme-tinted night carries the bold moments (hero, inbox, theme, footer); tinted
+ * paper sits between them. The accent is always the live theme colour, so the theme
+ * picker re-skins the page, with a wipe from the swatch you pick.
+ * Scroll tells the story: the hero's scattered client file gathers, the six workflow
+ * stages pass sideways like sets, the inbox conversation plays as you read, and the
+ * feature band moves with your scroll speed. Reduced motion turns all of it off.
  */
 
-import FitnessHero from "@/components/pages/home/hero";
-import Journey from "@/components/pages/home/Journey";
-import RoleTabsDemo from "@/components/pages/home/RoleTabs";
-import Testimonials from "@/components/pages/home/Testimonials";
-import ContactUs from "@/components/pages/home/Contactus";
-import FAQs from "@/components/pages/home/Faqs";
+import { useLocale } from "next-intl";
 import Navbar from "@/components/pages/home/Navbar";
+import Hero from "@/components/pages/home/hero";
+import Journey from "@/components/pages/home/Journey";
+import InboxShowcase from "@/components/pages/home/InboxShowcase";
+import RoleTabs from "@/components/pages/home/RoleTabs";
 import ThemeShowcaseSection from "@/components/pages/home/ThemeSection";
+import Testimonials from "@/components/pages/home/Testimonials";
+import FAQs from "@/components/pages/home/Faqs";
+import ContactUs from "@/components/pages/home/Contactus";
 import LandingClose from "@/components/pages/home/LandingClose";
+import FeatureMarquee from "@/components/pages/home/FeatureMarquee";
+import SmoothScroll from "@/components/pages/home/motion/SmoothScroll";
+import MagneticLayer from "@/components/pages/home/motion/MagneticLayer";
+import { archivo } from "@/components/pages/home/fonts";
+import "@/components/pages/home/home.css";
 
 export default function Page() {
+	const locale = useLocale();
 	return (
-		<div className="min-h-screen w-full overflow-x-hidden bg-[#0b0b0c] text-white antialiased">
+		<div
+			className={`hm ${archivo.variable} min-h-screen w-full overflow-x-clip`}
+			lang={locale}
+			dir={locale === "ar" ? "rtl" : "ltr"}
+		>
+			<SmoothScroll />
+			<MagneticLayer />
 			<Navbar />
 			<main>
-				<FitnessHero />
+				<Hero />
 				<Journey />
-				<RoleTabsDemo />
-				<Testimonials />
+				<InboxShowcase />
+				<FeatureMarquee />
+				<RoleTabs />
 				<ThemeShowcaseSection />
+				<Testimonials />
 				<FAQs />
 				<ContactUs />
 			</main>

@@ -6326,10 +6326,10 @@
 	"home": {
 		"hero": {
 			"badge": "All-in-one management platform",
-			"title": "One platform to manage clients and plans",
-			"description": "Organize the entire client journey inside one system that brings together client management, training and nutrition plans, weekly reports, and conversations between admins, coaches, and clients in a clear and professional experience.",
+			"title": "Your clients, plans and check-ins in one place",
+			"description": "So7baFit gives coaches and their teams one workspace for intake forms, workout and nutrition plans, weekly reports and every WhatsApp conversation.",
 			"cta": {
-				"getStarted": "Get Started",
+				"getStarted": "Get started",
 				"watchDemo": "Watch Demo"
 			},
 			"trust": {
@@ -6354,6 +6354,27 @@
 					"value": "24/7",
 					"label": "Continuous follow-up"
 				}
+			},
+			"secondary": "See how it works",
+			"board": {
+				"label": "A coaching week in So7baFit",
+				"client": "Sarah Ali",
+				"clientGoal": "Fat loss · week 6 of 12",
+				"message": "Weekly check-in done. Photos attached, waist down again.",
+				"messageTime": "9:41 AM",
+				"report": "Weekly report",
+				"reportReceived": "Received",
+				"weight": "Weight",
+				"waist": "Waist",
+				"photos": "Photos",
+				"sleep": "Sleep",
+				"photosValue": "3 photos",
+				"sleepValue": "7.5 h avg",
+				"plan": "Lower body A",
+				"planUpdated": "Updated by Coach Ahmed",
+				"exercise": "Back squat",
+				"sets": "4 sets",
+				"reply": "Great week. Squat goes up to 72.5 kg on Monday."
 			}
 		},
 		"theme": {
@@ -6674,7 +6695,7 @@
 		},
 		"testimonials": {
 			"badge": "User testimonials",
-			"title": "Experiences that reflect the system’s value",
+			"title": "What coaches and their clients say",
 			"description": "The platform helped organize the client journey more clearly, improve cooperation between admins and coaches, and simplify daily follow-up.",
 			"items": [
 				{
@@ -6768,24 +6789,24 @@
 			"cta": {
 				"title": "Still have a question?",
 				"description": "You can contact us for more clarification about how the system works or which pages and permissions are available.",
-				"email": "Email us",
+				"email": "Send us a message",
 				"call": "Call us"
 			}
 		},
 		"contact": {
-			"title": "Contact Us",
+			"title": "Talk to our team",
 			"description": "Tell us a bit about yourself and your goals, and our team will get back to you as soon as possible.",
 			"form": {
 				"ariaLabel": "Contact form",
-				"submit": "Send Message",
+				"submit": "Send message",
 				"submitting": "Sending...",
 				"successTitle": "Message sent successfully",
 				"successDesc": "Thanks for reaching out. We’ll contact you soon.",
 				"errorGeneric": "Something went wrong. Please try again.",
 				"fields": {
-					"username": "Full Name",
-					"email": "Email Address",
-					"phone": "Phone Number",
+					"username": "Full name",
+					"email": "Email address",
+					"phone": "Phone number",
 					"teamSize": "Who is this for?"
 				},
 				"placeholders": {
@@ -6907,9 +6928,11 @@
 				"about": "About",
 				"community": "Features",
 				"pricing": "Pricing",
-				"joinNow": "Get Started",
-				"faqs": "Faqs",
-				"contact": "Contact us"
+				"joinNow": "Get started",
+				"faqs": "FAQ",
+				"contact": "Contact us",
+				"workflow": "How it works",
+				"inbox": "WhatsApp inbox"
 			},
 			"langSwitch": {
 				"ariaToAr": "التبديل إلى العربية",
@@ -6947,8 +6970,98 @@
 				"open": "Open menu",
 				"close": "Close menu",
 				"joinCta": "Start using the system",
-				"sectionNav": "Navigation"
+				"sectionNav": "Navigation",
+				"skipToContent": "Skip to content"
 			}
+		},
+		"inbox": {
+			"title": "Every client conversation sits next to their plan",
+			"lead": "Connect your WhatsApp number and answer clients as a team, with their plan, reports and history one click away.",
+			"points": {
+				"team": {
+					"title": "One number, the whole team",
+					"text": "Assign chats to coaches and control who can view or reply."
+				},
+				"context": {
+					"title": "Context without switching apps",
+					"text": "Open the client file, latest report or plan from inside the chat."
+				},
+				"routine": {
+					"title": "Routine work on autopilot",
+					"text": "Schedule check-in reminders and keep voice notes and media in a saved library."
+				}
+			},
+			"demo": {
+				"search": "Search chats",
+				"filters": {
+					"all": "All",
+					"unread": "Unread",
+					"mine": "Assigned to me"
+				},
+				"assigned": "Coach Ahmed",
+				"typing": "typing…",
+				"compose": "Type a message",
+				"chats": [
+					{
+						"name": "Sarah Ali",
+						"text": "Check-in done, photos attached",
+						"time": "9:41",
+						"unread": 2
+					},
+					{
+						"name": "Omar Khaled",
+						"text": "Can we move tomorrow to 7pm?",
+						"time": "9:12",
+						"unread": 0
+					},
+					{
+						"name": "Morning group",
+						"text": "Mona: finished day 3!",
+						"time": "8:30",
+						"unread": 5
+					},
+					{
+						"name": "Youssef Nabil",
+						"text": "Voice message · 0:42",
+						"time": "Yesterday",
+						"unread": 0
+					}
+				],
+				"thread": [
+					{
+						"from": "client",
+						"text": "Weekly check-in done. Photos attached, waist down again."
+					},
+					{
+						"from": "coach",
+						"text": "Great week. Squat goes up to 72.5 kg on Monday."
+					},
+					{
+						"from": "client",
+						"text": "Deal! Same meal plan?"
+					}
+				],
+				"scheduled": "Check-in reminder scheduled for Friday 9:00 AM"
+			}
+		},
+		"close": {
+			"title": "Start with your first client today",
+			"lead": "Set up your workspace, invite your coaches and send your first intake form in minutes.",
+			"primary": "Get started",
+			"secondary": "Talk to us"
+		},
+		"marquee": {
+			"label": "What So7baFit covers",
+			"words": [
+				"Workouts",
+				"Nutrition",
+				"Check-ins",
+				"WhatsApp",
+				"Progress",
+				"Billing",
+				"Forms",
+				"Reports"
+			]
 		}
 	},
 	"mobile": {

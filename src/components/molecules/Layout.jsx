@@ -445,7 +445,9 @@ export default function Layout({ children }) {
 									isAppShell ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'overflow-x-hidden',
 								].filter(Boolean).join(' ')}
 								data-dashboard-content
-								data-sidebar-offset={focusMode && !isWhatsAppRoute ? 'true' : undefined}
+								// Only routes with the dashboard chrome reserve room for the edge dock; the
+								// landing page and auth/form routes are full-bleed.
+								data-sidebar-offset={focusMode && !isWhatsAppRoute && !isAuthRoute ? 'true' : undefined}
 								data-ai-studio={isAiStudioRoute ? 'true' : undefined}
 							>
 								{showStaffChrome && (

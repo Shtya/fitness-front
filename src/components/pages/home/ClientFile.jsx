@@ -4,21 +4,15 @@ import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import { Check, Minus, Plus, Camera, MessageCircle, Utensils } from "lucide-react";
-import { ExerciseBanner, MealBanner, ReportBanner } from "./FileArt";
+import { MealBanner, ReportBanner } from "./FileArt";
 
 const STAGE_IDS = ["intake", "review", "account", "plans", "assignment", "followup"];
 
-function displayFont(locale) {
-	return locale === "ar"
-		? "var(--font-arabic), sans-serif"
-		: "var(--font-space-grotesk), var(--font-open-sans), sans-serif";
-}
-
 function PaperRow({ label, value, mark }) {
 	return (
-		<div className="flex items-baseline justify-between gap-4 border-b border-[#e6dfd2] py-3 last:border-b-0">
-			<span className="text-[13px] text-[#6d655c]">{label}</span>
-			<span className="text-end text-[14px] font-semibold text-[#1c1916]">
+		<div className="flex items-baseline justify-between gap-4 border-b border-[var(--hm-line)] py-3 last:border-b-0">
+			<span className="text-[13px] text-[var(--hm-muted)]">{label}</span>
+			<span className="text-end text-[14px] font-semibold text-[var(--hm-ink)]">
 				{mark ? (
 					<span className="inline-flex items-center gap-2">
 						<span
@@ -37,19 +31,19 @@ function PaperRow({ label, value, mark }) {
 
 function CheckLine({ text, done }) {
 	return (
-		<li className="flex items-start gap-3 border-b border-[#e6dfd2] py-3 last:border-b-0">
+		<li className="flex items-start gap-3 border-b border-[var(--hm-line)] py-3 last:border-b-0">
 			<span
 				aria-hidden="true"
 				className={[
 					"mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border",
 					done
 						? "border-[var(--color-primary-600)] bg-[var(--color-primary-600)] text-white"
-						: "border-[#cfc6b8] bg-transparent",
+						: "border-[var(--hm-line-strong)] bg-transparent",
 				].join(" ")}
 			>
 				{done ? <Check size={10} strokeWidth={3} /> : null}
 			</span>
-			<span className={["text-[14px] leading-snug", done ? "text-[#1c1916]" : "text-[#5c554c]"].join(" ")}>
+			<span className={["text-[14px] leading-snug", done ? "text-[var(--hm-ink)]" : "text-[var(--hm-ink-2)]"].join(" ")}>
 				{text}
 			</span>
 		</li>
@@ -74,17 +68,16 @@ function SetLogger({ locale }) {
 
 	return (
 		<div>
-			<ExerciseBanner title={t("exercise.name")} subtitle={t("exercise.target")} />
 			<div className="mb-4 flex items-end justify-between gap-3">
 				<div>
-					<p className="text-[15px] font-semibold text-[#1c1916]">{t("exercise.name")}</p>
-					<p className="mt-0.5 text-[12px] text-[var(--color-primary-700)]">{t("exercise.target")}</p>
+					<p className="text-[15px] font-semibold text-[var(--hm-ink)]">{t("exercise.name")}</p>
+					<p className="mt-0.5 text-[12px] text-[var(--hm-accent-strong)]">{t("exercise.target")}</p>
 				</div>
-				<div className="flex items-center gap-1 text-[#6d655c]">
+				<div className="flex items-center gap-1 text-[var(--hm-muted)]">
 					<button
 						type="button"
 						onClick={() => setRest((value) => Math.max(15, value - 15))}
-						className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#efeae1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]"
+						className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[var(--hm-chalk)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]"
 						aria-label="−15"
 					>
 						<Minus size={12} />
@@ -95,7 +88,7 @@ function SetLogger({ locale }) {
 					<button
 						type="button"
 						onClick={() => setRest((value) => value + 15)}
-						className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#efeae1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]"
+						className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[var(--hm-chalk)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]"
 						aria-label="+15"
 					>
 						<Plus size={12} />
@@ -103,7 +96,7 @@ function SetLogger({ locale }) {
 				</div>
 			</div>
 
-			<div className="mb-2 grid grid-cols-[36px_1fr_1fr] px-1 text-[11px] font-semibold text-[#5c564e] ltr:uppercase ltr:tracking-[0.12em]">
+			<div className="mb-2 grid grid-cols-[36px_1fr_1fr] px-1 text-[11px] font-semibold text-[var(--hm-muted)]">
 				<span className="text-center">{t("table.done")}</span>
 				<span className="text-center">{t("table.weight")}</span>
 				<span className="text-center">{t("table.reps")}</span>
@@ -115,7 +108,7 @@ function SetLogger({ locale }) {
 						key={i}
 						className={[
 							"grid grid-cols-[36px_1fr_1fr] items-center rounded-md px-1 py-1.5",
-							set.done ? "bg-[var(--color-primary-50)]" : "bg-[#efeae1]",
+							set.done ? "bg-[var(--hm-accent-soft)]" : "bg-[var(--hm-chalk)]",
 						].join(" ")}
 					>
 						<div className="flex justify-center">
@@ -126,7 +119,7 @@ function SetLogger({ locale }) {
 								onClick={() => toggle(i)}
 								className={[
 									"flex h-8 w-8 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]",
-									set.done ? "bg-[var(--color-primary-600)] text-white" : "bg-white text-transparent",
+									set.done ? "bg-[var(--color-primary-600)] text-white" : "bg-[var(--hm-bg)] text-transparent",
 								].join(" ")}
 							>
 								<Check size={14} strokeWidth={3} />
@@ -167,18 +160,18 @@ function Stepper({ value, onDec, onInc, decLabel }) {
 				type="button"
 				aria-label={decLabel}
 				onClick={onDec}
-				className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-[#3a342c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]"
+				className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--hm-bg)] text-[var(--hm-ink-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]"
 			>
 				<Minus size={12} />
 			</button>
-			<span className="min-w-[3.2rem] text-center text-[13px] font-semibold tabular-nums text-[#1c1916]">
+			<span className="min-w-[3.2rem] text-center text-[13px] font-semibold tabular-nums text-[var(--hm-ink)]">
 				{value}
 			</span>
 			<button
 				type="button"
 				aria-label={decLabel}
 				onClick={onInc}
-				className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-[#3a342c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]"
+				className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--hm-bg)] text-[var(--hm-ink-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)]"
 			>
 				<Plus size={12} />
 			</button>
@@ -199,9 +192,9 @@ function StageBody({ stage }) {
 		return (
 			<div className="grid grid-cols-3 gap-2">
 				{[0, 1, 2].map((i) => (
-					<div key={i} className="rounded-lg bg-[#efeae1] px-2 py-3">
+					<div key={i} className="rounded-lg bg-[var(--hm-chalk)] px-2 py-3">
 						<span className="mb-2 block h-1.5 w-8 rounded-full bg-[var(--color-primary-500)]" />
-						<span className="block text-[11px] leading-snug text-[#3a342c]">{tHow(`steps.0.features.${i}`)}</span>
+						<span className="block text-[11px] leading-snug text-[var(--hm-ink-2)]">{tHow(`steps.0.features.${i}`)}</span>
 					</div>
 				))}
 			</div>
@@ -211,7 +204,7 @@ function StageBody({ stage }) {
 	if (stage === "review") {
 		return (
 			<div>
-				<p className="mb-4 text-[14px] leading-relaxed text-[#4a453e]">{tSteps("steps.review.description")}</p>
+				<p className="mb-4 text-[14px] leading-relaxed text-[var(--hm-ink-2)]">{tSteps("steps.review.description")}</p>
 				<ul>
 					<CheckLine done text={tHow("steps.0.features.0")} />
 					<CheckLine done text={tHow("steps.0.features.1")} />
@@ -224,17 +217,17 @@ function StageBody({ stage }) {
 	if (stage === "account") {
 		const people = [
 			{ role: tNav("roles.client"), name: tPeople("items.0.name"), tone: "bg-[var(--color-primary-600)]" },
-			{ role: tDash("hero.coachLabel"), name: tPeople("items.1.name"), tone: "bg-[#1c1916]" },
+			{ role: tDash("hero.coachLabel"), name: tPeople("items.1.name"), tone: "bg-[var(--hm-ink)] !text-[var(--hm-bg)]" },
 		];
 		return (
 			<div className="grid grid-cols-2 gap-3">
 				{people.map((person) => (
-					<div key={person.role} className="rounded-xl bg-[#efeae1] p-3">
+					<div key={person.role} className="rounded-xl bg-[var(--hm-chalk)] p-3">
 						<div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full text-[15px] font-semibold text-white ${person.tone}`}>
 							{person.name.slice(0, 1)}
 						</div>
-						<p className="text-[12px] text-[#6d655c]">{person.role}</p>
-						<p className="text-[16px] font-semibold text-[#1c1916]">{person.name}</p>
+						<p className="text-[12px] text-[var(--hm-muted)]">{person.role}</p>
+						<p className="text-[16px] font-semibold text-[var(--hm-ink)]">{person.name}</p>
 					</div>
 				))}
 			</div>
@@ -244,22 +237,22 @@ function StageBody({ stage }) {
 	if (stage === "plans") {
 		return (
 			<div className="grid gap-3">
-				<div className="flex items-center gap-3 rounded-xl bg-[#efeae1] p-3">
+				<div className="flex items-center gap-3 rounded-xl bg-[var(--hm-chalk)] p-3">
 					<span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--color-primary-600)] text-white">
 						<DumbbellMark />
 					</span>
 					<div>
-						<p className="text-[12px] text-[#6d655c]">{tDash("plans.exercisePlan")}</p>
-						<p className="font-semibold text-[#1c1916]">{tExercise("exercise.name")}</p>
+						<p className="text-[12px] text-[var(--hm-muted)]">{tDash("plans.exercisePlan")}</p>
+						<p className="font-semibold text-[var(--hm-ink)]">{tExercise("exercise.name")}</p>
 					</div>
 				</div>
-				<div className="flex items-center gap-3 rounded-xl bg-[#efeae1] p-3">
-					<span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#1c1916] text-white">
+				<div className="flex items-center gap-3 rounded-xl bg-[var(--hm-chalk)] p-3">
+					<span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--hm-ink)] text-[var(--hm-bg)]">
 						<Utensils size={18} />
 					</span>
 					<div>
-						<p className="text-[12px] text-[#6d655c]">{tDash("plans.mealPlan")}</p>
-						<p className="font-semibold text-[#1c1916]">{tRoles("client.features.nutrition.title")}</p>
+						<p className="text-[12px] text-[var(--hm-muted)]">{tDash("plans.mealPlan")}</p>
+						<p className="font-semibold text-[var(--hm-ink)]">{tRoles("client.features.nutrition.title")}</p>
 					</div>
 				</div>
 			</div>
@@ -276,9 +269,9 @@ function StageBody({ stage }) {
 						{ icon: MessageCircle, label: tRoles("client.features.chat.badge") },
 						{ icon: Utensils, label: tRoles("client.features.nutrition.badge") },
 					].map(({ icon: Icon, label }) => (
-						<div key={label} className="rounded-lg bg-[#efeae1] px-2 py-3 text-center">
-							<Icon className="mx-auto mb-2 h-4 w-4 text-[var(--color-primary-700)]" />
-							<p className="text-[11px] font-semibold leading-snug text-[#1c1916]">{label}</p>
+						<div key={label} className="rounded-lg bg-[var(--hm-chalk)] px-2 py-3 text-center">
+							<Icon className="mx-auto mb-2 h-4 w-4 text-[var(--hm-accent-strong)]" />
+							<p className="text-[11px] font-semibold leading-snug text-[var(--hm-ink)]">{label}</p>
 						</div>
 					))}
 				</div>
@@ -338,41 +331,36 @@ export default function ClientFile({ stage = "assignment", scene, headline, show
 	const tPeople = useTranslations("home.testimonials");
 	const tNav = useTranslations("home.navbar");
 	const tDash = useTranslations("clientDashboard");
-	const font = displayFont(locale);
 	const index = Math.max(0, STAGE_IDS.indexOf(stage));
 	const title = headline || tSteps(`steps.${stage}.title`);
 
 	return (
 		<article
 			aria-label={title}
-			className="relative overflow-hidden rounded-[18px] bg-white text-[#1c1916] shadow-[0_24px_70px_rgba(28,25,22,0.16)] ring-1 ring-black/5"
+			className="hm-surface relative overflow-hidden rounded-[20px] text-[var(--hm-ink)]"
 		>
-			<div
-				aria-hidden="true"
-				className="h-[3px] w-full"
-				style={{
-					background:
-						"linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))",
-				}}
-			/>
+			{/* Where this client is in the six-stage journey. */}
+			<div aria-hidden="true" className="h-1 w-full bg-[var(--hm-chalk)]">
+				<motion.div
+					className="h-full bg-[var(--hm-accent)]"
+					initial={false}
+					animate={{ width: `${((index + 1) / STAGE_IDS.length) * 100}%` }}
+					transition={{ duration: reduced ? 0 : 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+				/>
+			</div>
 			<header className="flex items-start justify-between gap-4 px-5 pb-4 pt-5 sm:px-6">
 				<div className="min-w-0">
-					<p className="text-[11px] font-semibold text-[#5c564e] ltr:uppercase ltr:tracking-[0.16em]">
+					<p className="text-[13px] text-[var(--hm-muted)]">
 						{tPeople("items.0.name")}
-						<span className="px-1.5 text-[#c9c0b3]">/</span>
+						<span className="px-1.5 text-[var(--hm-line-strong)]">/</span>
 						{tNav("roles.client")}
 					</p>
-					<h3
-						className="mt-1 text-[1.35rem] leading-tight text-[#1c1916] sm:text-[1.6rem]"
-						style={{ fontFamily: font }}
-					>
-						{title}
-					</h3>
+					<h3 className="hm-h3 mt-1 sm:text-[1.6rem]">{title}</h3>
 				</div>
 				{showIndex ? (
-					<p className="shrink-0 pt-1 text-[12px] tabular-nums text-[#6a6258]">
+					<p className="shrink-0 pt-1 text-[12px] tabular-nums text-[var(--hm-muted)]">
 						{String(index + 1).padStart(2, "0")}
-						<span className="text-[#c9c0b3]"> / 06</span>
+						<span className="text-[var(--hm-line-strong)]"> / 06</span>
 					</p>
 				) : null}
 			</header>
@@ -391,11 +379,11 @@ export default function ClientFile({ stage = "assignment", scene, headline, show
 				</AnimatePresence>
 			</div>
 
-			<footer className="flex items-center justify-between gap-3 border-t border-[#e6dfd2] px-5 py-3 text-[12px] text-[#6d655c] sm:px-6">
+			<footer className="flex items-center justify-between gap-3 border-t border-[var(--hm-line)] px-5 py-3 text-[12px] text-[var(--hm-muted)] sm:px-6">
 				<span>
 					{tDash("hero.coachLabel")} · {tPeople("items.1.name")}
 				</span>
-				<span className="text-[#6a6258]">{footerNote || tDash("hero.weeklyReport")}</span>
+				<span className="text-[var(--hm-muted)]">{footerNote || tDash("hero.weeklyReport")}</span>
 			</footer>
 		</article>
 	);

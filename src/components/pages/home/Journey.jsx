@@ -1,133 +1,160 @@
 "use client";
 
-import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { CalendarRange, ClipboardList, Dumbbell, LineChart, Search, UserRound } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import ClientFile, { STAGE_IDS } from "./ClientFile";
+import JourneyCompact from "./JourneyCompact";
+import { getGsap } from "./motion/gsap";
 
-function displayFont(locale) {
-	return locale === "ar"
-		? "var(--font-arabic), sans-serif"
-		: "var(--font-space-grotesk), var(--font-open-sans), sans-serif";
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/** Wide screens with motion get the pinned, sideways scene; everyone else the tap-through. */
+function useWideMotion() {
+	const [ok, setOk] = useState(false);
+	useEffect(() => {
+		const wide = window.matchMedia("(min-width: 1024px)");
+		const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+		const update = () => setOk(wide.matches && !calm.matches);
+		update();
+		wide.addEventListener("change", update);
+		calm.addEventListener("change", update);
+		return () => {
+			wide.removeEventListener("change", update);
+			calm.removeEventListener("change", update);
+		};
+	}, []);
+	return ok;
 }
 
-export default function Journey() {
-	const [stage, setStage] = useState("intake");
-	const locale = useLocale();
+/**
+ * The six stages pass sideways like sets on a timeline while the section is pinned.
+ * The rail at the bottom scrubs with the scroll and doubles as stage navigation.
+ */
+function JourneyPinned() {
 	const t = useTranslations("home.steps");
-	const tHow = useTranslations("home.howItWorks");
-	const font = displayFont(locale);
-	const active = STAGE_IDS.includes(stage) ? stage : "intake";
-	const icons = {
-		intake: ClipboardList,
-		review: Search,
-		account: UserRound,
-		plans: CalendarRange,
-		assignment: Dumbbell,
-		followup: LineChart,
+	const tCommon = useTranslations("home.howItWorks");
+	const sectionRef = useRef(null);
+	const trackRef = useRef(null);
+	const triggerRef = useRef(null);
+	const [active, setActive] = useState(0);
+
+	useIsoLayoutEffect(() => {
+		const section = sectionRef.current;
+		const track = trackRef.current;
+		if (!section || !track) return undefined;
+		const { gsap } = getGsap();
+		const rtl = document.documentElement.dir === "rtl";
+		const ctx = gsap.context(() => {
+			const distance = () => track.scrollWidth - window.innerWidth;
+			const tween = gsap.to(track, {
+				x: () => (rtl ? distance() : -distance()),
+				ease: "none",
+				scrollTrigger: {
+					trigger: section,
+					start: "top top",
+					end: () => `+=${distance()}`,
+					pin: true,
+					scrub: 0.7,
+					invalidateOnRefresh: true,
+					onUpdate: self => {
+						const index = Math.min(STAGE_IDS.length - 1, Math.round(self.progress * (STAGE_IDS.length - 1)));
+						setActive(current => (current === index ? current : index));
+						gsap.set(".hm-stages__fill", { scaleX: self.progress });
+					},
+				},
+			});
+			triggerRef.current = tween.scrollTrigger;
+
+			// Each panel's number and copy slide a little slower than the track: depth.
+			gsap.utils.toArray(".hm-stage", track).forEach(panel => {
+				gsap.fromTo(
+					panel.querySelector(".hm-stage__num"),
+					{ xPercent: rtl ? -30 : 30 },
+					{
+						xPercent: rtl ? 30 : -30,
+						ease: "none",
+						scrollTrigger: {
+							trigger: panel,
+							containerAnimation: tween,
+							start: "left right",
+							end: "right left",
+							scrub: true,
+						},
+					},
+				);
+			});
+		}, section);
+		return () => ctx.revert();
+	}, []);
+
+	const jump = index => {
+		const st = triggerRef.current;
+		if (!st) return;
+		const y = st.start + (st.end - st.start) * (index / (STAGE_IDS.length - 1));
+		if (window.__hmLenis) window.__hmLenis.scrollTo(y, { duration: 1.2 });
+		else window.scrollTo({ top: y, behavior: "smooth" });
 	};
 
 	return (
 		<section
+			ref={sectionRef}
 			id="how-it-works-section"
 			aria-labelledby="journey-heading"
-			className="bg-[#f3efe6] px-5 py-20 text-[#1c1916] sm:px-8 sm:py-28 lg:px-12"
+			className="hm-stages"
 		>
-			<div className="mx-auto max-w-[1180px]">
-				<div className="max-w-xl">
-					<p className="text-[12px] font-semibold text-[#8a5a32] ltr:uppercase ltr:tracking-[0.18em]">{t("badge")}</p>
-					<h2
-						id="journey-heading"
-						className="mt-4 text-[clamp(2rem,4vw,3.4rem)] leading-[1.02] text-[#1c1916] ltr:tracking-[-0.04em]"
-						style={{ fontFamily: font }}
-					>
-						{tHow("title")}
-					</h2>
-					<p className="mt-4 text-[15px] leading-relaxed text-[#5c5348]">{t("description")}</p>
-				</div>
-
-				<div className="mt-8 flex gap-2 overflow-x-auto pb-1 lg:hidden">
-						{STAGE_IDS.map((id, i) => {
-							const on = active === id;
-							const Icon = icons[id];
-							return (
-								<button
-									key={id}
-									type="button"
-									aria-pressed={on}
-									onClick={() => setStage(id)}
-									className={[
-										"flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]",
-										on ? "bg-[#1c1916] text-white" : "bg-white text-[#5c5348]",
-									].join(" ")}
-								>
-									<Icon className="h-4 w-4" aria-hidden="true" />
-									<span className="tabular-nums opacity-50">{String(i + 1).padStart(2, "0")}</span>
-									{t(`steps.${id}.title`)}
-								</button>
-							);
-						})}
-				</div>
-
-				<div className="mt-10 grid items-start gap-10 lg:grid-cols-12 lg:gap-16">
-				<div className="lg:col-span-5 lg:sticky lg:top-24 lg:self-start">
-					<div className="lg:hidden">
-						<p className="mb-4 text-[15px] leading-relaxed text-[#5c5348]">{t(`steps.${active}.description`)}</p>
-					</div>
-					<ClientFile stage={active} />
-				</div>
-
-				<div className="hidden lg:col-span-7 lg:block">
-					<ol className="border-t border-black/10">
-						{STAGE_IDS.map((id, i) => {
-							const on = active === id;
-							const Icon = icons[id];
-							return (
-								<li key={id}>
-									<button
-										type="button"
-										aria-expanded={on}
-										aria-controls={`journey-panel-${id}`}
-										onClick={() => setStage(id)}
-										className="group grid w-full grid-cols-[3rem_1fr] gap-3 border-b border-black/10 py-5 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-400)] sm:py-6"
-									>
-										<span
-											className={[
-												"flex h-12 w-12 items-center justify-center rounded-2xl",
-												on ? "bg-[var(--color-primary-600)] text-white" : "bg-white text-[#5c5348]",
-											].join(" ")}
-										>
-											<Icon className="h-5 w-5" aria-hidden="true" />
-										</span>
-										<span className="min-w-0">
-											<span className="block text-[12px] tabular-nums text-[#8a8176]">{String(i + 1).padStart(2, "0")}</span>
-											<span
-												className={[
-													"mt-1 block text-[1.35rem] leading-tight ltr:tracking-[-0.03em]",
-													on ? "text-[#1c1916]" : "text-[#8a8176] group-hover:text-[#1c1916]",
-												].join(" ")}
-												style={{ fontFamily: font }}
-											>
-												{t(`steps.${id}.title`)}
-											</span>
-											<span
-												id={`journey-panel-${id}`}
-												className={[
-													"block overflow-hidden text-[14px] leading-relaxed text-[#5c5348] transition-[max-height,margin,opacity] duration-300",
-													on ? "mt-2 max-h-40 opacity-100" : "max-h-0 opacity-0",
-												].join(" ")}
-											>
-												{t(`steps.${id}.description`)}
-											</span>
-										</span>
-									</button>
-								</li>
-							);
-						})}
-					</ol>
-				</div>
-				</div>
+			<div className="hm-container hm-stages__head">
+				<h2 id="journey-heading" className="hm-h2">
+					{t("title")}
+				</h2>
+				<p className="hm-lead">{t("description")}</p>
 			</div>
+
+			<div ref={trackRef} className="hm-stages__track">
+				{STAGE_IDS.map((id, i) => (
+					<article key={id} className="hm-stage" aria-labelledby={`stage-${id}`}>
+						<div className="hm-stage__copy">
+							<span className="hm-stage__num" aria-hidden="true">
+								{String(i + 1).padStart(2, "0")}
+							</span>
+							<h3 id={`stage-${id}`} className="hm-stage__title">
+								{t(`steps.${id}.title`)}
+							</h3>
+							<p className="hm-stage__desc">{t(`steps.${id}.description`)}</p>
+						</div>
+						<div className="hm-stage__file">
+							<ClientFile stage={id} />
+						</div>
+					</article>
+				))}
+			</div>
+
+			<nav className="hm-container hm-stages__rail" aria-label={tCommon("badge")}>
+				<span className="hm-stages__bar" aria-hidden="true">
+					<span className="hm-stages__fill" />
+				</span>
+				<ol>
+					{STAGE_IDS.map((id, i) => (
+						<li key={id}>
+							<button
+								type="button"
+								aria-current={active === i ? "step" : undefined}
+								onClick={() => jump(i)}
+								className="hm-stages__dot hm-focus"
+							>
+								<span className="tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+								<span className="hm-stages__dot-label">{t(`steps.${id}.title`)}</span>
+							</button>
+						</li>
+					))}
+				</ol>
+			</nav>
 		</section>
 	);
+}
+
+export default function Journey() {
+	const wide = useWideMotion();
+	// Stable host: GSAP pinning wraps the section in a pin-spacer, so React must own
+	// the parent it swaps children in, not the shared <main>.
+	return <div className="hm-pin-host">{wide ? <JourneyPinned /> : <JourneyCompact />}</div>;
 }

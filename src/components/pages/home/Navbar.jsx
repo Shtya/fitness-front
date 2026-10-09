@@ -128,7 +128,7 @@ export function LangSwitch({ tone = "surface" }) {
 			aria-label={isEN ? t("langSwitch.ariaToAr") : t("langSwitch.ariaToEn")}
 			className={[
 				"inline-flex h-10 items-center justify-center rounded-full px-3 text-[13px] font-semibold transition-colors disabled:cursor-wait disabled:opacity-50",
-				onPhoto ? "text-white hover:bg-white/15" : "text-[#161616] hover:bg-black/5",
+				onPhoto ? "text-white hover:bg-white/15" : "text-[var(--hm-ink,#161616)] hover:bg-[var(--hm-chalk,rgba(0,0,0,0.05))]",
 			].join(" ")}
 			style={isEN ? { fontFamily: "var(--font-arabic), sans-serif" } : undefined}
 		>
@@ -355,8 +355,8 @@ export default function PowerfulNavbar() {
 	const [user, setUser] = useState(null);
 
 	const navItems = [
-		{ label: t("nav.home"), href: "#hero", id: "hero", icon: Home },
-		{ label: t("nav.about"), href: "#how-it-works-section", id: "how-it-works-section", icon: Info },
+		{ label: t("nav.workflow"), href: "#how-it-works-section", id: "how-it-works-section", icon: Info },
+		{ label: t("nav.inbox"), href: "#inbox-section", id: "inbox-section", icon: MessageCircle },
 		{ label: t("nav.community"), href: "#role-tabs-section", id: "role-tabs-section", icon: Layers },
 		{ label: t("nav.faqs"), href: "#faqs-section", id: "faqs-section", icon: CircleHelp },
 		{ label: t("nav.contact"), href: "#contact-section", id: "contact-section", icon: Mail },
@@ -370,7 +370,7 @@ export default function PowerfulNavbar() {
 	}, []);
 
 	useEffect(() => {
-		const onScroll = () => setScrolled(window.scrollY > 24);
+		const onScroll = () => setScrolled(window.scrollY > 12);
 		onScroll();
 		window.addEventListener("scroll", onScroll, { passive: true });
 		return () => window.removeEventListener("scroll", onScroll);
@@ -384,165 +384,151 @@ export default function PowerfulNavbar() {
 	}, [mobileOpen]);
 
 	useEffect(() => {
-		const ids = ["hero", "how-it-works-section", "role-tabs-section", "faqs-section", "contact-section"];
-		const nodes = ids.map((id) => document.getElementById(id)).filter(Boolean);
+		if (!mobileOpen) return undefined;
+		const onKey = event => {
+			if (event.key === "Escape") setMobileOpen(false);
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, [mobileOpen]);
+
+	useEffect(() => {
+		const ids = ["hero", ...navItems.map(item => item.id)];
+		const nodes = ids.map(id => document.getElementById(id)).filter(Boolean);
 		if (!nodes.length) return undefined;
 		const observer = new IntersectionObserver(
-			(entries) => {
+			entries => {
 				const hit = entries
-					.filter((entry) => entry.isIntersecting)
+					.filter(entry => entry.isIntersecting)
 					.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
 				if (hit?.target?.id) setActiveId(hit.target.id);
 			},
-			{ rootMargin: "-30% 0px -55% 0px", threshold: [0.15, 0.4] }
+			{ rootMargin: "-30% 0px -55% 0px", threshold: [0.15, 0.4] },
 		);
-		nodes.forEach((node) => observer.observe(node));
+		nodes.forEach(node => observer.observe(node));
 		return () => observer.disconnect();
+		// navItems are static per locale.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const solid = scrolled || mobileOpen;
 
 	return (
-		<header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4" dir={isRTL ? "rtl" : "ltr"}>
-			{mobileOpen && (
-				<button
-					type="button"
-					aria-label={t("mobile.close")}
-					className="fixed inset-0 bg-black/50"
-					onClick={() => setMobileOpen(false)}
-				/>
-			)}
+		<header className={`hm-nav${solid ? " is-solid" : ""}`} dir={isRTL ? "rtl" : "ltr"}>
+			<a href="#hero-title" className="hm-skip">
+				{t("mobile.skipToContent")}
+			</a>
+			<div className="hm-container hm-nav__bar">
+				<Link href="/" className="hm-nav__brand hm-focus">
+					<img src={BRAND_LOGO_SRC} alt="" className="h-8 w-8 shrink-0 object-contain" />
+					<span>{t("brand.name")}</span>
+				</Link>
 
-			<div className="relative mx-auto max-w-[1180px]">
-				<div
-					className={[
-						"flex h-14 items-center justify-between gap-2 rounded-full px-1.5 sm:px-2",
-						solid
-							? "bg-[#141414] shadow-[0_18px_50px_rgba(0,0,0,0.38)] ring-1 ring-white/10"
-							: "bg-black/45 shadow-[0_10px_28px_rgba(0,0,0,0.22)] ring-1 ring-white/30 backdrop-blur-xl",
-					].join(" ")}
-				>
-					<Link href="/" className="flex min-w-0 items-center gap-2 ps-1.5 no-underline">
-						<img src={BRAND_LOGO_SRC} alt="" className="h-9 w-9 shrink-0 object-contain" />
-						<span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-white">{t("brand.name")}</span>
-					</Link>
-
-					<nav
-						className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-0.5 lg:flex"
-						aria-label={t("mobile.sectionNav")}
-					>
-						{navItems.map((item) => {
-							const on = activeId === item.id;
-							return (
-								<a
-									key={item.id}
-									href={item.href}
-									aria-current={on ? "true" : undefined}
-									className={[
-										"rounded-full px-3.5 py-2 text-[13px] font-semibold no-underline transition-colors",
-										on ? "bg-white text-[#161616]" : "text-white/90 hover:bg-white/10 hover:text-white",
-									].join(" ")}
-								>
-									{item.label}
-								</a>
-							);
-						})}
-					</nav>
-
-					<div className="flex shrink-0 items-center">
-						<LangSwitch tone="photo" />
-						{user ? (
-							<div className="hidden md:block">
-								<AvatarButton user={user} isRTL={isRTL} />
-							</div>
-						) : (
-							<Link
-								href="/auth"
-								className="ms-1 hidden h-10 items-center rounded-full bg-white px-4 text-[13px] font-semibold text-[#161616] no-underline md:inline-flex"
+				<nav className="hm-nav__links" aria-label={t("mobile.sectionNav")}>
+					{navItems.map(item => {
+						const on = activeId === item.id;
+						return (
+							<a
+								key={item.id}
+								href={item.href}
+								aria-current={on ? "true" : undefined}
+								className="hm-nav__link hm-focus"
 							>
-								{t("nav.joinNow")}
-							</Link>
-						)}
-						<button
-							type="button"
-							onClick={() => setMobileOpen((open) => !open)}
-							aria-expanded={mobileOpen}
-							aria-label={mobileOpen ? t("mobile.close") : t("mobile.open")}
-							className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white hover:bg-white/10 lg:hidden"
-						>
-							{mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-						</button>
-					</div>
+								{item.label}
+							</a>
+						);
+					})}
+				</nav>
+
+				<div className="hm-nav__actions">
+					<LangSwitch />
+					{user ? (
+						<div className="hidden md:block">
+							<AvatarButton user={user} isRTL={isRTL} />
+						</div>
+					) : (
+						<Link href="/auth" className="hm-btn hm-btn--primary hm-nav__cta">
+							{t("nav.joinNow")}
+						</Link>
+					)}
+					<button
+						type="button"
+						onClick={() => setMobileOpen(open => !open)}
+						aria-expanded={mobileOpen}
+						aria-controls="hm-mobile-menu"
+						aria-label={mobileOpen ? t("mobile.close") : t("mobile.open")}
+						className="hm-nav__burger hm-focus"
+					>
+						{mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+					</button>
 				</div>
+			</div>
 
-				<AnimatePresence>
-					{mobileOpen && (
-						<motion.div
-							initial={{ opacity: 0, y: -8 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -8 }}
-							transition={{ duration: 0.18 }}
-							className="mt-2 max-h-[min(72svh,560px)] overflow-y-auto rounded-3xl bg-[#141414] p-2 text-white shadow-[0_24px_60px_rgba(0,0,0,0.4)] ring-1 ring-white/10"
-						>
-							<nav className="flex flex-col" aria-label={t("mobile.sectionNav")}>
-								{navItems.map((item) => {
-									const Icon = item.icon;
-									const on = activeId === item.id;
-									return (
-										<a
-											key={item.id}
-											href={item.href}
-											onClick={() => setMobileOpen(false)}
-											className={[
-												"flex items-center gap-3 rounded-2xl px-4 py-3.5 text-[16px] font-semibold no-underline",
-												on ? "bg-white text-[#161616]" : "text-white hover:bg-white/10",
-											].join(" ")}
-										>
-											<Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-											{item.label}
-										</a>
-									);
-								})}
-							</nav>
-
-							{user ? (
-								<div className="mt-1 border-t border-white/10 pt-1">
-									<Link
-										href={getDashboardPath(user)}
+			<AnimatePresence>
+				{mobileOpen && (
+					<motion.div
+						id="hm-mobile-menu"
+						initial={{ opacity: 0, y: -6 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -6, transition: { duration: 0.12 } }}
+						transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+						className="hm-nav__sheet"
+					>
+						<nav className="hm-container flex flex-col" aria-label={t("mobile.sectionNav")}>
+							{navItems.map(item => {
+								const Icon = item.icon;
+								const on = activeId === item.id;
+								return (
+									<a
+										key={item.id}
+										href={item.href}
 										onClick={() => setMobileOpen(false)}
-										className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-[15px] font-semibold text-white no-underline hover:bg-white/10"
+										aria-current={on ? "true" : undefined}
+										className="hm-nav__sheet-link hm-focus"
 									>
-										<LayoutDashboard className="h-5 w-5" aria-hidden="true" />
-										{t("dropdown.dashboard")}
-									</Link>
-									<button
-										type="button"
-										onClick={() => {
-											localStorage.removeItem("user");
-											setUser(null);
-											setMobileOpen(false);
-										}}
-										className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-[15px] font-semibold text-red-300 hover:bg-white/10"
-									>
-										<LogOut className="h-5 w-5" aria-hidden="true" />
-										{t("dropdown.signOut")}
-									</button>
-								</div>
-							) : (
-								<div className="p-2 pt-1">
+										<Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+										{item.label}
+									</a>
+								);
+							})}
+							<div className="mt-3 border-t border-[var(--hm-line)] pt-4">
+								{user ? (
+									<div className="flex flex-col gap-1">
+										<Link
+											href={getDashboardPath(user)}
+											onClick={() => setMobileOpen(false)}
+											className="hm-nav__sheet-link hm-focus"
+										>
+											<LayoutDashboard className="h-5 w-5" aria-hidden="true" />
+											{t("dropdown.dashboard")}
+										</Link>
+										<button
+											type="button"
+											onClick={() => {
+												localStorage.removeItem("user");
+												setUser(null);
+												setMobileOpen(false);
+											}}
+											className="hm-nav__sheet-link is-danger hm-focus"
+										>
+											<LogOut className="h-5 w-5" aria-hidden="true" />
+											{t("dropdown.signOut")}
+										</button>
+									</div>
+								) : (
 									<Link
 										href="/auth"
 										onClick={() => setMobileOpen(false)}
-										className="flex h-12 items-center justify-center rounded-full bg-white text-[15px] font-semibold text-[#161616] no-underline"
+										className="hm-btn hm-btn--primary w-full"
 									>
 										{t("nav.joinNow")}
 									</Link>
-								</div>
-							)}
-						</motion.div>
-					)}
-				</AnimatePresence>
-			</div>
+								)}
+							</div>
+						</nav>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</header>
 	);
 }

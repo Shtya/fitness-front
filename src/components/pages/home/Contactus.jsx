@@ -1,57 +1,40 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import api from "@/utils/axios";
-import { Check, ChevronDown, User, Users, AlertCircle, Loader2 } from "lucide-react";
-// ─── AOS Init Hook ────────────────────────────────────────────────────────────
-function useAOS() {
-	useEffect(() => {
-		if (typeof window === "undefined") return;
-		import("aos").then((AOS) => {
-			AOS.init({ duration: 600, easing: "ease-out-cubic", once: true, offset: 50 });
-		});
-	}, []);
+import { AlertCircle, Check, ChevronDown, Loader2, User, Users } from "lucide-react";
+
+const COUNTRY_CODES = [
+	{ code: "+20", country: "Egypt" },
+	{ code: "+966", country: "Saudi Arabia" },
+	{ code: "+971", country: "UAE" },
+	{ code: "+1", country: "USA" },
+	{ code: "+44", country: "UK" },
+];
+
+function FieldError({ id, message }) {
+	if (!message) return null;
+	return (
+		<p id={id} role="alert" className="hm-field__error">
+			<AlertCircle aria-hidden="true" size={14} />
+			{message}
+		</p>
+	);
 }
 
-// ─── Shared class helpers ─────────────────────────────────────────────────────
-const inputCls = (filled, hasError) =>
-	[
-		"w-full bg-transparent px-0 py-3",
-		"border-b-2 transition-colors duration-200 outline-none",
-		"font-body text-sm text-white placeholder:text-white/30",
-		hasError
-			? "border-red-500/70 focus:border-red-500"
-			: filled
-				? "border-[var(--color-primary-500)]"
-				: "border-white/[0.15] focus:border-[var(--color-primary-500)]/70",
-	].join(" ");
-
-const labelCls =
-	"mb-2 block font-body text-xs font-bold uppercase tracking-[0.12em] text-white/45";
-
-const errorCls =
-	"mt-1.5 flex items-center gap-1.5 font-body text-[11px] font-semibold text-red-400";
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function ContactUs() {
 	const t = useTranslations("home.contact");
-	useAOS();
-
+	const tHow = useTranslations("home.howItWorks");
+	const reduced = useReducedMotion();
 	const [countryCode, setCountryCode] = useState("+20");
-	const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
 	const [submitError, setSubmitError] = useState(null);
-	const dropdownRef = useRef(null);
-	const locale = useLocale();
-	const font = locale === "ar" ? "var(--font-arabic), sans-serif" : "var(--font-space-grotesk), var(--font-open-sans), sans-serif";
-	const brand = useTranslations("home.navbar");
-	const voices = useTranslations("home.testimonials");
 
-	// ── Validation schema ───────────────────────────────────────────────────
 	const schema = useMemo(
 		() =>
 			yup.object({
@@ -73,7 +56,7 @@ export default function ContactUs() {
 					.oneOf(["solo", "team"], t("form.errors.teamSizeRequired") || "Please select a team size")
 					.required(t("form.errors.teamSizeRequired") || "Please select a team size"),
 			}),
-		[t]
+		[t],
 	);
 
 	const {
@@ -88,37 +71,13 @@ export default function ContactUs() {
 		defaultValues: { username: "", email: "", phone: "", teamSize: "" },
 	});
 
-	const watchedValues = watch();
-
-	// ── Static data ─────────────────────────────────────────────────────────
-	const countryCodes = useMemo(() => [
-		{ code: "+20", flag: "🇪🇬", country: "Egypt" },
-		{ code: "+1", flag: "🇺🇸", country: "USA" },
-		{ code: "+44", flag: "🇬🇧", country: "UK" },
-		{ code: "+971", flag: "🇦🇪", country: "UAE" },
-		{ code: "+966", flag: "🇸🇦", country: "Saudi Arabia" },
-	], []);
-
-	const teamSizeOptions = useMemo(() => [
+	const teamSize = watch("teamSize");
+	const teamSizeOptions = [
 		{ id: "solo", label: t("form.teamSize.solo"), description: t("form.teamSize.soloDesc"), icon: User },
 		{ id: "team", label: t("form.teamSize.team"), description: t("form.teamSize.teamDesc"), icon: Users },
-	], [t]);
+	];
 
-	// ── Close country dropdown on outside click ──────────────────────────────
-	useEffect(() => {
-		if (!showCountryDropdown) return;
-		const fn = (e) => {
-			if (dropdownRef.current && !dropdownRef.current.contains(e.target))
-				setShowCountryDropdown(false);
-		};
-		document.addEventListener("mousedown", fn);
-		return () => document.removeEventListener("mousedown", fn);
-	}, [showCountryDropdown]);
-
-	const selectedCountry = countryCodes.find((c) => c.code === countryCode);
-
-	// ── Submit handler ───────────────────────────────────────────────────────
-	const onSubmit = async (data) => {
+	const onSubmit = async data => {
 		setSubmitError(null);
 		try {
 			const payload = {
@@ -140,69 +99,64 @@ export default function ContactUs() {
 			await api.post("/feedback", payload);
 			setSubmitted(true);
 		} catch (err) {
-			setSubmitError(
-				err?.response?.data?.message || err?.message || t("form.errorGeneric")
-			);
+			setSubmitError(err?.response?.data?.message || err?.message || t("form.errorGeneric"));
 		}
 	};
 
 	return (
-		<section
-			id="contact-section"
-			aria-labelledby="contact-heading"
-			className="bg-[#f3efe6] px-5 py-20 text-[#1c1916] sm:px-8 sm:py-28 lg:px-12"
-		>
-			<div className="mx-auto max-w-[1180px]">
-				<div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
+		<section id="contact-section" aria-labelledby="contact-heading" className="hm-section">
+			<div className="hm-container hm-contact">
+				<div className="hm-contact__intro">
+					<h2 id="contact-heading" className="hm-h2">
+						{t("title")}
+					</h2>
+					<p className="hm-lead mt-5">{t("description")}</p>
 
-					{/* ── Left: Form column ── */}
-					<div
-						className="space-y-8"
-						data-aos="fade-right"
-						data-aos-duration="700"
-					>
+					{/* What happens after they get in touch: the real onboarding order. */}
+					<ol className="hm-contact__steps">
+						{[0, 1, 2].map(i => (
+							<li key={i}>
+								<span className="hm-contact__step-num" aria-hidden="true">
+									{i + 1}
+								</span>
+								<span>
+									<b>{tHow(`steps.${i}.title`)}</b>
+									<span className="hm-body block">{tHow(`steps.${i}.description`)}</span>
+								</span>
+							</li>
+						))}
+					</ol>
+				</div>
 
-						<div>
-							<h2
-								id="contact-heading"
-								className="text-[clamp(2rem,4vw,3.25rem)] leading-[1.02] text-[#1c1916] ltr:tracking-[-0.04em]"
-								style={{ fontFamily: font }}
-							>
-								{t("title")}
-							</h2>
-							<p className="mt-4 max-w-md text-[15px] leading-relaxed text-[#5c5348]">{t("description")}</p>
-						</div> 
-
-						{/* ── Success state ── */}
+				<div className="hm-contact__panel hm-surface">
+					<AnimatePresence mode="wait" initial={false}>
 						{submitted ? (
-							<div className="flex flex-col items-center gap-5 rounded-[28px] bg-[#161616] py-16 text-center shadow-[0_24px_60px_rgba(28,25,22,0.18)]">
-								<div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-xl">
-									<Check aria-hidden="true" className="h-8 w-8 text-white" strokeWidth={3} />
-								</div>
-								<div>
-									<h3 className="font-body mb-1 text-2xl font-black text-white">
-										{t("form.successTitle")}
-									</h3>
-									<p className="font-body text-sm text-white/50">
-										{t("form.successDesc")}
-									</p>
-								</div>
-							</div>
+							<motion.div
+								key="done"
+								className="hm-contact__done"
+								role="status"
+								initial={reduced ? false : { opacity: 0, scale: 0.98 }}
+								animate={{ opacity: 1, scale: 1 }}
+								transition={{ duration: 0.3 }}
+							>
+								<span className="hm-contact__done-icon" aria-hidden="true">
+									<Check size={28} strokeWidth={3} />
+								</span>
+								<h3 className="hm-h3">{t("form.successTitle")}</h3>
+								<p className="hm-body">{t("form.successDesc")}</p>
+							</motion.div>
 						) : (
-							/* ── Form ── */
-							<form
+							<motion.form
+								key="form"
 								noValidate
 								onSubmit={handleSubmit(onSubmit)}
-								className="space-y-6 rounded-[28px] bg-[#161616] p-6 shadow-[0_24px_60px_rgba(28,25,22,0.18)] sm:p-8"
+								className="hm-contact__form"
 								aria-label={t("form.ariaLabel") || "Contact form"}
+								exit={reduced ? undefined : { opacity: 0, transition: { duration: 0.15 } }}
 							>
-								{/* Name + Email row */}
-								<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-									{/* Username */}
-									<div>
-										<label htmlFor="contact-username" className={labelCls}>
-											{t("form.fields.username")}
-										</label>
+								<div className="grid gap-5 sm:grid-cols-2">
+									<div className="hm-field">
+										<label htmlFor="contact-username">{t("form.fields.username")}</label>
 										<input
 											id="contact-username"
 											type="text"
@@ -211,243 +165,106 @@ export default function ContactUs() {
 											aria-invalid={!!errors.username}
 											aria-describedby={errors.username ? "err-username" : undefined}
 											{...register("username")}
-											className={inputCls(!!watchedValues.username, !!errors.username)}
 										/>
-										{errors.username && (
-											<p id="err-username" role="alert" className={errorCls}>
-												<AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-												{errors.username.message}
-											</p>
-										)}
+										<FieldError id="err-username" message={errors.username?.message} />
 									</div>
-
-									{/* Email */}
-									<div>
-										<label htmlFor="contact-email" className={labelCls}>
-											{t("form.fields.email")}
-										</label>
+									<div className="hm-field">
+										<label htmlFor="contact-email">{t("form.fields.email")}</label>
 										<input
 											id="contact-email"
 											type="email"
 											autoComplete="email"
+											inputMode="email"
 											placeholder={t("form.placeholders.email") || "you@example.com"}
 											aria-invalid={!!errors.email}
 											aria-describedby={errors.email ? "err-email" : undefined}
 											{...register("email")}
-											className={inputCls(!!watchedValues.email, !!errors.email)}
 										/>
-										{errors.email && (
-											<p id="err-email" role="alert" className={errorCls}>
-												<AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-												{errors.email.message}
-											</p>
-										)}
+										<FieldError id="err-email" message={errors.email?.message} />
 									</div>
 								</div>
 
-								{/* Global submit error */}
-								{submitError && (
-									<p role="alert" className={errorCls}>
-										<AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-										{submitError}
-									</p>
-								)}
-
-								{/* Phone */}
-								<div>
-									<label htmlFor="contact-phone" className={labelCls}>
-										{t("form.fields.phone")}
-									</label>
-									<div className="flex items-end gap-3">
-										{/* Country code picker */}
-										<div className="relative shrink-0" ref={dropdownRef}>
-											<button
-												type="button"
-												aria-haspopup="listbox"
-												aria-expanded={showCountryDropdown}
-												aria-label="Select country code"
-												onClick={() => setShowCountryDropdown((v) => !v)}
-												className="flex items-center gap-1.5 border-b-2 border-white/[0.15] pb-3 font-body text-sm text-white outline-none transition-colors duration-200 hover:border-[var(--color-primary-500)]/60 focus-visible:border-[var(--color-primary-500)]"
+								<div className="hm-field">
+									<label htmlFor="contact-phone">{t("form.fields.phone")}</label>
+									<div className="hm-field__phone" dir="ltr">
+										<span className="hm-field__select">
+											<select
+												value={countryCode}
+												onChange={event => setCountryCode(event.target.value)}
+												aria-label={t("form.fields.phone")}
 											>
-												<span className="text-lg" aria-hidden="true">{selectedCountry?.flag}</span>
-												<span>{countryCode}</span>
-												<ChevronDown
-													aria-hidden="true"
-													className={[
-														"h-4 w-4 text-white/40 transition-transform duration-200",
-														showCountryDropdown ? "rotate-180" : "rotate-0",
-													].join(" ")}
-												/>
-											</button>
-
-											{/* Dropdown */}
-											<div
-												role="listbox"
-												aria-label="Country codes"
-												className={[
-													"absolute top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-white/[0.08] bg-slate-800 shadow-2xl transition-all duration-200 ltr:left-0 rtl:right-0",
-													showCountryDropdown
-														? "pointer-events-auto translate-y-0 opacity-100 scale-100"
-														: "pointer-events-none -translate-y-2 opacity-0 scale-[0.97]",
-												].join(" ")}
-											>
-												{countryCodes.map((c) => (
-													<button
-														key={c.code}
-														type="button"
-														role="option"
-														aria-selected={countryCode === c.code}
-														onClick={() => {
-															setCountryCode(c.code);
-															setShowCountryDropdown(false);
-														}}
-														className={[
-															"flex w-full items-center gap-3 px-4 py-3 text-start font-body text-sm transition-colors duration-150",
-															countryCode === c.code
-																? "bg-[var(--color-primary-500)]/[0.12] text-[var(--color-primary-300)]"
-																: "hover:bg-white/[0.06] text-white",
-														].join(" ")}
-													>
-														<span className="text-lg" aria-hidden="true">{c.flag}</span>
-														<span className="font-bold">{c.code}</span>
-														<span className="text-white/45">{c.country}</span>
-													</button>
+												{COUNTRY_CODES.map(item => (
+													<option key={item.code} value={item.code}>
+														{item.code} {item.country}
+													</option>
 												))}
-											</div>
-										</div>
-
-										{/* Phone number input */}
-										<div className="flex-1">
-											<input
-												id="contact-phone"
-												type="tel"
-												autoComplete="tel"
-												placeholder="000 000 0000"
-												aria-invalid={!!errors.phone}
-												aria-describedby={errors.phone ? "err-phone" : undefined}
-												{...register("phone")}
-												className={inputCls(!!watchedValues.phone, !!errors.phone)}
-											/>
-										</div>
+											</select>
+											<span aria-hidden="true">{countryCode}</span>
+											<ChevronDown size={16} aria-hidden="true" />
+										</span>
+										<input
+											id="contact-phone"
+											type="tel"
+											autoComplete="tel-national"
+											inputMode="tel"
+											placeholder="10 1234 5678"
+											aria-invalid={!!errors.phone}
+											aria-describedby={errors.phone ? "err-phone" : undefined}
+											{...register("phone")}
+										/>
 									</div>
-									{errors.phone && (
-										<p id="err-phone" role="alert" className={errorCls}>
-											<AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-											{errors.phone.message}
-										</p>
-									)}
+									<FieldError id="err-phone" message={errors.phone?.message} />
 								</div>
 
-								{/* Team size */}
-								<div>
-									<p id="teamsize-label" className={labelCls}>
-										{t("form.fields.teamSize")}
-									</p>
+								<fieldset className="hm-field">
+									<legend>{t("form.fields.teamSize")}</legend>
 									<div
 										role="radiogroup"
-										aria-labelledby="teamsize-label"
 										aria-describedby={errors.teamSize ? "err-teamsize" : undefined}
-										className="mt-1 space-y-3"
+										className="grid gap-3 sm:grid-cols-2"
 									>
-										{teamSizeOptions.map((option) => {
+										{teamSizeOptions.map(option => {
 											const Icon = option.icon;
-											const isSelected = watchedValues.teamSize === option.id;
-
+											const selected = teamSize === option.id;
 											return (
 												<button
 													key={option.id}
 													type="button"
 													role="radio"
-													aria-checked={isSelected}
+													aria-checked={selected}
 													onClick={() => setValue("teamSize", option.id, { shouldValidate: true })}
-													className={[
-														"flex w-full items-start gap-4 rounded-xl border p-4 text-start transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]",
-														isSelected
-															? "border-[var(--color-primary-500)]/70 bg-[var(--color-primary-500)]/[0.07]"
-															: errors.teamSize
-																? "border-red-500/40 bg-white/[0.02] hover:border-red-500/60"
-																: "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.18]",
-													].join(" ")}
+													className={`hm-choice hm-focus${errors.teamSize && !selected ? " is-error" : ""}`}
 												>
-													<div
-														className={[
-															"flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors duration-200",
-															isSelected
-																? "bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]"
-																: "bg-white/[0.06]",
-														].join(" ")}
-														aria-hidden="true"
-													>
-														<Icon className={["h-5 w-5", isSelected ? "text-white" : "text-white/40"].join(" ")} />
-													</div>
-
-													<div className="min-w-0 flex-1">
-														<div className="flex items-center justify-between gap-2">
-															<h4 className={["font-body text-sm font-bold", isSelected ? "text-white" : "text-white/70"].join(" ")}>
-																{option.label}
-															</h4>
-															{isSelected && (
-																<span
-																	aria-hidden="true"
-																	className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]"
-																>
-																	<Check className="h-3 w-3 text-white" strokeWidth={3} />
-																</span>
-															)}
-														</div>
-														<p className="mt-0.5 text-xs leading-relaxed text-white/55">
-															{option.description}
-														</p>
-													</div>
+													<span className="hm-choice__icon" aria-hidden="true">
+														<Icon size={18} strokeWidth={2} />
+													</span>
+													<span className="min-w-0 flex-1">
+														<span className="hm-choice__title">{option.label}</span>
+														<span className="hm-choice__desc">{option.description}</span>
+													</span>
+													<span className="hm-choice__radio" aria-hidden="true" />
 												</button>
 											);
 										})}
 									</div>
-									{errors.teamSize && (
-										<p id="err-teamsize" role="alert" className={errorCls}>
-											<AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-											{errors.teamSize.message}
-										</p>
+									<FieldError id="err-teamsize" message={errors.teamSize?.message} />
+								</fieldset>
+
+								{submitError ? <FieldError id="err-submit" message={submitError} /> : null}
+
+								<button type="submit" disabled={isSubmitting} className="hm-btn hm-btn--primary w-full" data-magnetic="0.15">
+									{isSubmitting ? (
+										<>
+											<Loader2 aria-hidden="true" size={18} className="animate-spin" />
+											{t("form.submitting")}
+										</>
+									) : (
+										t("form.submit")
 									)}
-								</div>
-
-								{/* Submit button */}
-								<button
-									type="submit"
-									disabled={isSubmitting}
-									className="w-full rounded-full bg-white px-8 py-3.5 text-[15px] font-semibold text-[#12110f] transition-transform duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0c] disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									<span className="relative flex items-center justify-center gap-2">
-										{isSubmitting ? (
-											<>
-												<Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
-												{t("form.submitting")}
-											</>
-										) : (
-											t("form.submit")
-										)}
-									</span>
 								</button>
-							</form>
+							</motion.form>
 						)}
-					</div>
-
-					<aside className="lg:sticky lg:top-28 lg:self-start lg:pt-4">
-						<blockquote className="border-t border-black/10 pt-6">
-							<p
-								className="text-[1.35rem] leading-snug text-[#1c1916] ltr:tracking-[-0.03em]"
-								style={{ fontFamily: font }}
-							>
-								{voices("items.1.text")}
-							</p>
-							<footer className="mt-6 text-[13px] text-[#6d655c]">
-								<span className="font-semibold text-[#1c1916]">{voices("items.1.name")}</span>
-								<span className="mx-2 text-black/20">/</span>
-								{voices("items.1.role")}
-							</footer>
-						</blockquote>
-						<p className="mt-8 text-[13px] leading-relaxed text-[#6d655c]">{brand("brand.tagline")}</p>
-					</aside>
+					</AnimatePresence>
 				</div>
 			</div>
 		</section>

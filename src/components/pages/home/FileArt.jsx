@@ -1,33 +1,36 @@
 "use client";
 
-export const SCENE_PHOTOS = {
-	workout: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1800&q=80",
-	meals: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1800&q=80",
-	report: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1800&q=80",
-	intake: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80",
-};
+import { Camera, Dumbbell, Utensils } from "lucide-react";
 
-export function PhotoBanner({ src, title, subtitle }) {
+/**
+ * Section headers inside the homepage's client-file replica. These used to be
+ * hot-linked stock photos; a product-style header reads as the real app and loads
+ * nothing extra.
+ */
+export function FileHeader({ icon: Icon, title, subtitle }) {
 	return (
-		<div className="relative mb-4 h-40 overflow-hidden rounded-2xl">
-			<img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
-			<div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-			<div className="absolute inset-x-0 bottom-0 p-4 text-white">
-				<p className="text-[16px] font-semibold leading-tight">{title}</p>
-				{subtitle ? <p className="mt-1 text-[12px] text-white/80">{subtitle}</p> : null}
-			</div>
+		<div className="mb-4 flex items-center gap-3 rounded-xl bg-[var(--hm-chalk)] p-3">
+			<span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--hm-accent)] text-white">
+				<Icon size={18} strokeWidth={2} aria-hidden="true" />
+			</span>
+			<span className="min-w-0">
+				<span className="block text-[15px] font-semibold leading-tight text-[var(--hm-ink)]">{title}</span>
+				{subtitle ? (
+					<span className="mt-0.5 block text-[12.5px] text-[var(--hm-muted)]">{subtitle}</span>
+				) : null}
+			</span>
 		</div>
 	);
 }
 
-export function ExerciseBanner({ title, subtitle }) {
-	return <PhotoBanner src={SCENE_PHOTOS.workout} title={title} subtitle={subtitle} />;
+export function ExerciseBanner(props) {
+	return <FileHeader icon={Dumbbell} {...props} />;
 }
 
-export function MealBanner({ title, subtitle }) {
-	return <PhotoBanner src={SCENE_PHOTOS.meals} title={title} subtitle={subtitle} />;
+export function MealBanner(props) {
+	return <FileHeader icon={Utensils} {...props} />;
 }
 
-export function ReportBanner({ title, subtitle }) {
-	return <PhotoBanner src={SCENE_PHOTOS.report} title={title} subtitle={subtitle} />;
+export function ReportBanner(props) {
+	return <FileHeader icon={Camera} {...props} />;
 }
