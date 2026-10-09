@@ -372,7 +372,7 @@ body {
 
 .scrollbar-custom {
   scrollbar-width: thin;
-  scrollbar-color: #c7d2fe #f3f4f6;
+  scrollbar-color: rgba(0, 168, 132, 0.4) transparent;
 }
 
 .scrollbar-custom::-webkit-scrollbar {
@@ -381,18 +381,25 @@ body {
 }
 
 .scrollbar-custom::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: transparent;
   border-radius: 100vh;
 }
 
 .scrollbar-custom::-webkit-scrollbar-thumb {
-  background-color: #6366f1;
+  background-color: rgba(0, 168, 132, 0.4);
   border-radius: 100vh;
-  border: 2px solid #f3f4f6;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-  background-color: #4f46e5;
+  background-color: rgba(0, 168, 132, 0.6);
+}
+
+.scrollbar-custom::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .container {
@@ -414,22 +421,28 @@ body {
 
 .nice-scroll {
   scrollbar-width: thin; /* Firefox */
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: rgba(0, 168, 132, 0.4) transparent;
 }
 .nice-scroll::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
+  height: 8px;
 }
 .nice-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 .nice-scroll::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1; /* slate-300 */
+  background-color: rgba(0, 168, 132, 0.35);
   border-radius: 9999px;
   border: 2px solid transparent;
-  background-clip: content-box;
+  background-clip: padding-box;
 }
 .nice-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8; /* slate-400 */
+  background-color: rgba(0, 168, 132, 0.55);
+}
+.nice-scroll::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .wa-ai-suggestions-scroller {
@@ -9142,13 +9155,13 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	.wa-web-desktop .wa-composer-stack {
 		border: 0 !important;
 		border-top: 1px solid #e9edef !important;
-		background: #ffffff !important;
+		background: #f0f2f5 !important;
 		padding: 8px 12px 10px !important;
 		min-height: 0 !important;
 	}
 
 	.wa-web-desktop .wa-composer-stack.is-voice-recording {
-		background: linear-gradient(180deg, rgba(0, 168, 132, 0.08) 0%, #ffffff 70%) !important;
+		background: linear-gradient(180deg, rgba(0, 168, 132, 0.08) 0%, #f0f2f5 70%) !important;
 		box-shadow: inset 0 2px 0 rgba(0, 168, 132, 0.2);
 	}
 
@@ -9177,7 +9190,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	.wa-web-desktop .wa-composer .wa-input-pill {
 		border: 0 !important;
 		border-radius: 24px !important;
-		background: #f0f2f5 !important;
+		background: #ffffff !important;
 		box-shadow: none !important;
 		min-height: 48px !important;
 		color: #111b21 !important;
@@ -9538,7 +9551,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		min-width: 0;
 	}
 
-	.wa-chat-toolbar > div:first-child > button {
+	/* Back button only: the profile beside it is also a <button> and was being
+	   squeezed to 28px, which hid the contact name on phones. */
+	.wa-chat-toolbar > div:first-child > .wa-chat-back-btn {
 		width: 28px !important;
 		height: 36px !important;
 		color: #0A0A0A !important;
@@ -14052,13 +14067,13 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
   }
 
   .wa-web-desktop .wa-composer {
-    background: #ffffff !important;
+    background: #f0f2f5 !important;
     border-top: 1px solid #e9edef !important;
     padding: 8px 12px 10px !important;
   }
 
   .wa-web-desktop .wa-composer .wa-input-pill {
-    background: #f0f2f5 !important;
+    background: #ffffff !important;
     border: 0 !important;
     box-shadow: none !important;
   }
@@ -15439,7 +15454,7 @@ html.wa-privacy-on .wa-board-client-chip__avatar {
 	}
 
 	.wa-web-desktop .wa-chat-thread-pane .wa-composer-stack {
-		background: #f0f2f5;
+		background: #f0f2f5 !important;
 	}
 }
 

@@ -1,22 +1,75 @@
 'use client';
 
-import { Headphones, Pause, Play, Send, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Headphones, Pause, Play, Send, Trash2 } from 'lucide-react';
 
-const WAVE_HEIGHTS = [
-	8, 18, 13, 25, 10, 31, 16, 23, 9, 15, 28, 12, 35, 18, 24, 11, 30, 14, 9, 20, 32, 16, 27, 12, 8, 23, 18, 34, 15, 26,
-	10, 19, 31, 14, 22, 9, 29, 17, 24, 12, 34, 18, 27, 10, 20, 31, 15, 23, 8, 17, 28, 13, 34, 18, 24, 11, 29, 15, 22, 9,
-	31, 17, 25, 12,
-];
+const LEVEL_BARS = 44;
+const SAMPLE_MS = 90;
 
 function formatTimer(seconds) {
 	const value = Math.max(0, Number(seconds) || 0);
-	return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
+	return `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
+}
+
+/**
+ * Real microphone levels for the live waveform. The bars used to be a fixed pattern
+ * that kept bouncing even when the mic picked up nothing; now silence draws flat.
+ */
+function useLiveLevels(stream, active) {
+	const [levels, setLevels] = useState(() => Array(LEVEL_BARS).fill(0));
+	const contextRef = useRef(null);
+	const analyserRef = useRef(null);
+
+	useEffect(() => {
+		if (!stream || typeof window === 'undefined') return undefined;
+		const AudioCtx = window.AudioContext || window.webkitAudioContext;
+		if (!AudioCtx) return undefined;
+		let context;
+		try {
+			context = new AudioCtx();
+			const source = context.createMediaStreamSource(stream);
+			const analyser = context.createAnalyser();
+			analyser.fftSize = 512;
+			source.connect(analyser);
+			contextRef.current = context;
+			analyserRef.current = analyser;
+		} catch {
+			return undefined;
+		}
+		return () => {
+			analyserRef.current = null;
+			contextRef.current = null;
+			context?.close?.().catch(() => {});
+		};
+	}, [stream]);
+
+	useEffect(() => {
+		if (!active) return undefined;
+		const buffer = new Uint8Array(512);
+		const timer = window.setInterval(() => {
+			const analyser = analyserRef.current;
+			if (!analyser) return;
+			analyser.getByteTimeDomainData(buffer);
+			let sum = 0;
+			for (let i = 0; i < buffer.length; i += 1) {
+				const centered = (buffer[i] - 128) / 128;
+				sum += centered * centered;
+			}
+			// Speech RMS rarely passes ~0.3; scale so normal talking fills the bar.
+			const level = Math.min(1, Math.sqrt(sum / buffer.length) * 3.2);
+			setLevels(current => [...current.slice(1), level]);
+		}, SAMPLE_MS);
+		return () => window.clearInterval(timer);
+	}, [active]);
+
+	return levels;
 }
 
 export function VoiceRecordingBar({
 	seconds,
 	paused = false,
 	labels,
+	stream = null,
 	onCancel,
 	onPause,
 	onResume,
@@ -31,124 +84,118 @@ export function VoiceRecordingBar({
 	onStop,
 }) {
 	const send = onSend || onStop;
-	const previewRatio = Math.min(1, Math.max(0, Number(previewProgress) || 0));
-	const previewPercent = `${previewRatio * 100}%`;
-	const previewLabel = previewPlaying
-		? labels.recordingPreviewPlaying || 'Playing'
-		: labels.recordingPreviewPaused || labels.recordingPreviewMode || 'Preview';
+	const levels = useLiveLevels(stream, !paused && !previewActive);
+	// WebM from MediaRecorder starts with a placeholder duration; until the real one
+	// is known, the recorded seconds are the honest total.
+	const previewTotal = Number(previewDuration) >= 1 ? Number(previewDuration) : Math.max(1, Number(seconds) || 0);
+	const previewRatio =
+		Number(previewDuration) >= 1
+			? Math.min(1, Math.max(0, Number(previewProgress) || 0))
+			: Math.min(1, Math.max(0, (Number(previewCurrentTime) || 0) / previewTotal));
+	const status = previewActive
+		? previewPlaying
+			? labels.recordingPreviewPlaying || 'Playing'
+			: labels.recordingPreviewPaused || labels.recordingPreviewMode || 'Preview'
+		: paused
+			? labels.recordingPaused || 'Paused'
+			: labels.recordingVoice || 'Recording';
 	const previewToggleTitle = previewActive
 		? previewPlaying
 			? labels.recordingPreviewPause || labels.recordingPause
 			: labels.recordingPreviewResume || labels.recordingResume
 		: labels.recordingPreview;
+	const pauseTitle = paused ? labels.recordingResume : labels.recordingPause;
 
 	return (
 		<div
-			className={`wa-recording-bar${paused ? ' is-paused' : ''}${previewActive ? ' is-preview' : ''}`}
-			role="status"
-			aria-live="polite"
+			className={`wa-ui-rec${paused ? ' is-paused' : ''}${previewActive ? ' is-preview' : ''}`}
+			role="group"
+			aria-label={labels.recordingVoice}
 		>
-			<p className="sr-only">{labels.recordingVoice}</p>
 			<button
 				type="button"
-				className="wa-recording-cancel"
+				className="wa-ui-icon-btn wa-ui-rec__discard"
 				title={labels.cancelRecording}
 				aria-label={labels.cancelRecording}
 				onClick={onCancel}
 			>
-				<X size={15} strokeWidth={2.4} aria-hidden="true" />
-				<span>{labels.recordingCancel}</span>
+				<Trash2 size={19} strokeWidth={1.9} aria-hidden="true" />
 			</button>
-			<div
-				className={`wa-recording-panel${paused ? ' is-paused' : ''}${previewActive ? ' is-preview' : ''}`}
-			>
-				<div className="wa-recording-mic" aria-hidden="true">
-					{previewActive ? (
-						<Headphones size={11} strokeWidth={2.2} />
-					) : (
-						<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
-							<path
-								fill="currentColor"
-								d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm4.89-3a4.89 4.89 0 0 1-9.78 0H5.5a6.5 6.5 0 0 0 5.75 6.21V21h1.5v-3.79A6.5 6.5 0 0 0 18.5 11h-1.61Z"
-							/>
-						</svg>
-					)}
-				</div>
-				<span className="wa-recording-live">
-					<i className="wa-recording-live-dot" />
-					{previewActive ? previewLabel : paused ? labels.recordingPaused : labels.recordingLive}
-				</span>
-				{previewActive ? (
-					<div className="wa-recording-preview-track">
-						<div className="wa-recording-preview-fill" style={{ width: previewPercent }} />
-						<input
-							type="range"
-							min={0}
-							max={1000}
-							step={1}
-							value={Math.round(previewRatio * 1000)}
-							className="wa-recording-preview-range"
-							aria-label={labels.recordingPreviewSeek || 'Preview progress'}
-							onChange={event => onPreviewSeek?.(Number(event.target.value) / 1000)}
-							onInput={event => onPreviewSeek?.(Number(event.target.value) / 1000)}
-						/>
-					</div>
-				) : (
-					<div className="wa-recording-waveform" aria-hidden="true">
-						{WAVE_HEIGHTS.map((height, index) => (
-							<span
-								key={`${height}-${index}`}
-								style={{
-									height: `${Math.max(3, Math.round(height * 0.28))}px`,
-									animationDelay: `${-(index % 9) * 90}ms`,
-								}}
-							/>
-						))}
-					</div>
-				)}
-				<div className="wa-recording-timer">
+
+			<div className="wa-ui-rec__status" role="status" aria-live="polite">
+				<span className="wa-ui-rec__dot" aria-hidden="true" />
+				<span className="wa-ui-rec__time">
 					{previewActive
-						? `${formatTimer(previewCurrentTime)} / ${formatTimer(previewDuration || seconds)}`
+						? `${formatTimer(previewCurrentTime)} / ${formatTimer(previewTotal)}`
 						: formatTimer(seconds)}
-				</div>
+				</span>
+				<span className="sr-only">{status}</span>
 			</div>
-			<button
-				type="button"
-				className="wa-recording-pause"
-				title={paused ? labels.recordingResume : labels.recordingPause}
-				aria-label={paused ? labels.recordingResume : labels.recordingPause}
-				onClick={paused ? onResume : onPause}
-			>
-				{paused ? <Play size={13} fill="currentColor" /> : <Pause size={13} fill="currentColor" />}
-				<span>{paused ? labels.recordingResume : labels.recordingPause}</span>
-			</button>
+
+			{previewActive ? (
+				<div className="wa-ui-rec__track">
+					<div className="wa-ui-rec__track-fill" style={{ width: `${previewRatio * 100}%` }} />
+					<input
+						type="range"
+						min={0}
+						max={1000}
+						step={1}
+						value={Math.round(previewRatio * 1000)}
+						className="wa-ui-rec__range"
+						aria-label={labels.recordingPreviewSeek || 'Preview progress'}
+						onChange={event => onPreviewSeek?.(Number(event.target.value) / 1000)}
+						onInput={event => onPreviewSeek?.(Number(event.target.value) / 1000)}
+					/>
+				</div>
+			) : (
+				<div className="wa-ui-rec__wave" aria-hidden="true">
+					{levels.map((level, index) => (
+						<span key={index} style={{ height: `${Math.max(3, Math.round(level * 26))}px` }} />
+					))}
+				</div>
+			)}
+
 			{onPreview ? (
 				<button
 					type="button"
-					className={`wa-recording-preview${previewActive ? ' is-active' : ''}${previewPlaying ? ' is-playing' : ''}`}
+					className={`wa-ui-icon-btn${previewActive ? ' is-on' : ''}`}
 					title={previewToggleTitle}
 					aria-label={previewToggleTitle}
+					aria-pressed={previewActive}
 					onClick={onPreview}
 				>
-					{previewActive ? (
-						previewPlaying ? (
-							<Pause size={13} fill="currentColor" />
-						) : (
-							<Play size={13} fill="currentColor" />
-						)
+					{previewActive && previewPlaying ? (
+						<Pause size={18} strokeWidth={2} />
+					) : previewActive ? (
+						<Play size={18} strokeWidth={2} />
 					) : (
-						<Headphones size={14} />
+						<Headphones size={18} strokeWidth={1.9} />
 					)}
 				</button>
 			) : null}
+
 			<button
 				type="button"
-				className="wa-recording-send"
+				className="wa-ui-icon-btn wa-ui-rec__pause"
+				title={pauseTitle}
+				aria-label={pauseTitle}
+				onClick={paused ? onResume : onPause}
+			>
+				{paused ? (
+					<span className="wa-ui-rec__resume-dot" aria-hidden="true" />
+				) : (
+					<Pause size={18} strokeWidth={2} fill="currentColor" />
+				)}
+			</button>
+
+			<button
+				type="button"
+				className="wa-ui-rec__send"
 				title={labels.sendRecording || labels.send}
 				aria-label={labels.sendRecording || labels.send}
 				onClick={send}
 			>
-				<Send size={15} />
+				<Send size={18} strokeWidth={2} className="rtl:-scale-x-100" />
 			</button>
 		</div>
 	);

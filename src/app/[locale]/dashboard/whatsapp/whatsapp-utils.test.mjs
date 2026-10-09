@@ -400,6 +400,31 @@ test('pinned conversations stay above newer activity', () => {
 	);
 });
 
+test('pinned chats keep pin order and ignore newer messages among pins', () => {
+	const result = sortConversationsByActivity([
+		{
+			id: 'ahmed',
+			isPinned: true,
+			pinnedAt: '2026-10-09T08:00:00.000Z',
+			lastMessageAt: '2026-10-01T00:00:00.000Z',
+		},
+		{
+			id: 'sara',
+			isPinned: true,
+			pinnedAt: '2026-10-09T09:00:00.000Z',
+			lastMessageAt: '2026-10-09T12:00:00.000Z',
+		},
+		{
+			id: 'fresh',
+			lastMessageAt: '2026-10-09T13:00:00.000Z',
+		},
+	]);
+	assert.deepEqual(
+		result.map(item => item.id),
+		['sara', 'ahmed', 'fresh'],
+	);
+});
+
 test('conversationTitle prefers alias names and formats the phone otherwise', () => {
 	assert.equal(conversationTitle({ group: { subject: 'Support' } }), 'Support');
 	assert.equal(conversationTitle({ contact: { name: 'Ahmed' } }), 'Ahmed');

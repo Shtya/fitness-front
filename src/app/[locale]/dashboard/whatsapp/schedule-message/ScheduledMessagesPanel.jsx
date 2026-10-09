@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+	CalendarClock,
 	ChevronLeft,
 	ChevronRight,
 	Loader2,
@@ -9,106 +10,90 @@ import {
 	Pencil,
 	Play,
 	Plus,
+	Repeat,
 	Trash2,
+	Users,
 	X,
 } from 'lucide-react';
 
 const copy = {
 	en: {
 		title: 'Scheduled',
-		recipients: '{count}',
-		next: '{when}',
+		chats: count => (count === 1 ? '1 chat' : `${count} chats`),
+		next: 'Next',
 		pause: 'Pause',
 		resume: 'Resume',
 		edit: 'Edit',
 		cancel: 'Delete',
-		hide: 'Hide',
-		add: 'Add',
+		hide: 'Hide scheduled',
 		addNew: 'New schedule',
-		kind: {
-			once: 'Once',
-			recurring: 'Recurring',
-		},
+		previous: 'Previous',
+		following: 'Next',
+		paused: 'Paused',
+		sending: 'Sending',
+		daily: 'Every day',
+		weekdays: 'Weekdays',
+		once: 'Once',
+		recurring: 'Recurring',
+		loading: 'Loading scheduled messages',
 	},
 	ar: {
 		title: 'مجدولة',
-		recipients: '{count}',
-		next: '{when}',
-		pause: 'إيقاف',
+		chats: count => (count === 1 ? 'شات واحد' : `${count} شات`),
+		next: 'التالي',
+		pause: 'إيقاف مؤقت',
 		resume: 'استئناف',
 		edit: 'تعديل',
 		cancel: 'حذف',
-		hide: 'إخفاء',
-		add: 'إضافة',
+		hide: 'إخفاء المجدولة',
 		addNew: 'جدولة جديدة',
-		kind: {
-			once: 'مرة',
-			recurring: 'متكرر',
-		},
+		previous: 'السابق',
+		following: 'التالي',
+		paused: 'متوقفة',
+		sending: 'جارٍ الإرسال',
+		daily: 'كل يوم',
+		weekdays: 'أيام العمل',
+		once: 'مرة واحدة',
+		recurring: 'متكررة',
+		loading: 'جارٍ تحميل الرسائل المجدولة',
 	},
 };
 
-function formatTemplate(template, values) {
-	return String(template || '').replace(/\{(\w+)\}/g, (_, key) => String(values?.[key] ?? ''));
-}
-
 function formatWhen(value, ar) {
-	if (!value) return '—';
+	if (!value) return '';
 	const date = new Date(value);
-	if (!Number.isFinite(date.getTime())) return '—';
+	if (!Number.isFinite(date.getTime())) return '';
 	return date.toLocaleString(ar ? 'ar-EG' : undefined, {
+		weekday: 'short',
 		month: 'short',
 		day: 'numeric',
-		hour: '2-digit',
+		hour: 'numeric',
 		minute: '2-digit',
 	});
 }
 
-function describeSchedule(item, t, ar) {
-	if (item.scheduleKind === 'once') {
-		return `${t.kind.once} · ${formatWhen(item.scheduledAt || item.nextRunAt, ar)}`;
-	}
-	const days = Array.isArray(item.daysOfWeek) ? item.daysOfWeek : [];
-	const dayLabel =
-		days.length === 7 ? (ar ? 'يومي' : 'Daily') : days.length ? days.join(',') : t.kind.recurring;
-	return `${dayLabel} · ${item.timeOfDay || ''}`;
+// daysOfWeek uses JS weekday numbers (0 = Sunday). 2024-01-07 was a Sunday.
+function weekdayName(index, ar) {
+	const date = new Date(2024, 0, 7 + Number(index));
+	return date.toLocaleDateString(ar ? 'ar-EG' : undefined, { weekday: 'short' });
 }
 
-function statusTone(status) {
-	switch (status) {
-		case 'paused':
-			return 'bg-amber-400';
-		case 'processing':
-			return 'bg-sky-400';
-		default:
-			return 'bg-emerald-500';
-	}
+function describeSchedule(item, t, ar) {
+	if (item.scheduleKind === 'once') return t.once;
+	const days = (Array.isArray(item.daysOfWeek) ? item.daysOfWeek : [])
+		.map(Number)
+		.filter(day => day >= 0 && day <= 6)
+		.sort((a, b) => a - b);
+	let dayLabel = t.recurring;
+	if (days.length === 7) dayLabel = t.daily;
+	else if (days.join(',') === '1,2,3,4,5') dayLabel = t.weekdays;
+	else if (days.length) dayLabel = days.map(day => weekdayName(day, ar)).join(ar ? '، ' : ', ');
+	return item.timeOfDay ? `${dayLabel} · ${item.timeOfDay}` : dayLabel;
 }
 
 function isLiveSchedule(item) {
 	const status = String(item?.status || '').toLowerCase();
 	return status === 'active' || status === 'paused' || status === 'processing';
-}
-
-function IconBtn({ title, onClick, disabled, tone = 'slate', children }) {
-	const tones = {
-		slate: 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-100',
-		emerald:
-			'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40',
-		rose: 'text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30',
-	};
-	return (
-		<button
-			type="button"
-			disabled={disabled}
-			onClick={onClick}
-			title={title}
-			aria-label={title}
-			className={`grid h-5 w-5 place-items-center rounded-md transition disabled:opacity-40 ${tones[tone] || tones.slate}`}
-		>
-			{children}
-		</button>
-	);
 }
 
 export default function ScheduledMessagesPanel({
@@ -126,20 +111,36 @@ export default function ScheduledMessagesPanel({
 }) {
 	const t = ar ? copy.ar : copy.en;
 	const scrollerRef = useRef(null);
+	const [edges, setEdges] = useState({ start: false, end: false });
 	const list = (Array.isArray(schedules) ? schedules : []).filter(isLiveSchedule);
 
+	// Prev/next only show when there is somewhere to go, like WhatsApp's carousels.
+	const measureEdges = useCallback(() => {
+		const node = scrollerRef.current;
+		if (!node) return;
+		const max = node.scrollWidth - node.clientWidth;
+		const offset = Math.abs(node.scrollLeft);
+		setEdges(current => {
+			const next = { start: offset > 2, end: max - offset > 2 };
+			return current.start === next.start && current.end === next.end ? current : next;
+		});
+	}, []);
+
 	useEffect(() => {
-		if (!open || !scrollerRef.current) return;
+		if (!open || !scrollerRef.current) return undefined;
 		scrollerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-	}, [open, list.length]);
+		measureEdges();
+		window.addEventListener('resize', measureEdges);
+		return () => window.removeEventListener('resize', measureEdges);
+	}, [open, list.length, measureEdges]);
 
 	if (!open) return null;
 
 	if (loading) {
 		return (
-			<div className="flex shrink-0 items-center gap-1.5 border-b border-[#d1d7db] bg-[#e9edef] px-2.5 py-1 text-[10px] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
-				<Loader2 size={11} className="animate-spin text-emerald-600" />
-				{t.title}
+			<div className="wa-ui-sched is-loading" role="status" aria-label={t.loading}>
+				<Loader2 size={14} className="animate-spin" aria-hidden="true" />
+				<span>{t.title}</span>
 			</div>
 		);
 	}
@@ -149,159 +150,158 @@ export default function ScheduledMessagesPanel({
 	const scrollBy = direction => {
 		const node = scrollerRef.current;
 		if (!node) return;
-		const delta = Math.max(140, Math.round(node.clientWidth * 0.65)) * direction;
+		const delta = Math.max(180, Math.round(node.clientWidth * 0.7)) * direction;
 		node.scrollBy({ left: ar ? -delta : delta, behavior: 'smooth' });
 	};
 
 	return (
-		<div className="shrink-0 border-b border-[#d1d7db] bg-[#e9edef] px-2 py-1 dark:border-slate-800 dark:bg-slate-900/85">
-			<div className="mb-1 flex items-center gap-1">
-				<span className="text-[10px] font-bold uppercase tracking-[0.06em] text-slate-600 dark:text-slate-300">
-					{t.title}
-				</span>
-				<span className="grid h-4 min-w-4 place-items-center rounded-full bg-emerald-600 px-1 text-[9px] font-bold text-white">
-					{list.length}
-				</span>
-
-				{typeof onAdd === 'function' ? (
-					<button
-						type="button"
-						onClick={event => onAdd(event)}
-						className="ms-0.5 inline-flex h-5 items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-emerald-700"
-						title={t.addNew}
-					>
-						<Plus size={11} strokeWidth={2.6} />
-						<span>{t.add}</span>
-					</button>
-				) : null}
-
-				<div className="ms-auto flex items-center gap-0.5">
-					{list.length > 1 ? (
-						<>
-							<button
-								type="button"
-								className="grid h-5 w-5 place-items-center rounded-md text-slate-500 hover:bg-white/80 dark:hover:bg-slate-800"
-								onClick={() => scrollBy(-1)}
-								aria-label="Previous"
-							>
-								{ar ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-							</button>
-							<button
-								type="button"
-								className="grid h-5 w-5 place-items-center rounded-md text-slate-500 hover:bg-white/80 dark:hover:bg-slate-800"
-								onClick={() => scrollBy(1)}
-								aria-label="Next"
-							>
-								{ar ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-							</button>
-						</>
+		<section className="wa-ui-sched" aria-label={`${t.title} (${list.length})`}>
+			<div className="wa-ui-sched__bar">
+				<CalendarClock size={16} strokeWidth={1.9} className="wa-ui-sched__glyph" aria-hidden="true" />
+				<span className="wa-ui-sched__title">{t.title}</span>
+				<span className="wa-ui-sched__count">{list.length}</span>
+				<div className="wa-ui-sched__tools">
+					{edges.start ? (
+						<button
+							type="button"
+							className="wa-ui-icon-btn wa-ui-icon-btn--sm"
+							onClick={() => scrollBy(-1)}
+							aria-label={t.previous}
+							title={t.previous}
+						>
+							{ar ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+						</button>
+					) : null}
+					{edges.end ? (
+						<button
+							type="button"
+							className="wa-ui-icon-btn wa-ui-icon-btn--sm"
+							onClick={() => scrollBy(1)}
+							aria-label={t.following}
+							title={t.following}
+						>
+							{ar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+						</button>
+					) : null}
+					{typeof onAdd === 'function' ? (
+						<button
+							type="button"
+							onClick={event => onAdd(event)}
+							className="wa-ui-btn wa-ui-btn--ghost wa-ui-btn--sm wa-ui-sched__add"
+							title={t.addNew}
+						>
+							<Plus size={15} strokeWidth={2.2} aria-hidden="true" />
+							<span>{t.addNew}</span>
+						</button>
 					) : null}
 					{typeof onHide === 'function' ? (
 						<button
 							type="button"
-							className="grid h-5 w-5 place-items-center rounded-md text-slate-500 hover:bg-white/80 dark:hover:bg-slate-800"
+							className="wa-ui-icon-btn wa-ui-icon-btn--sm"
 							onClick={onHide}
 							title={t.hide}
 							aria-label={t.hide}
 						>
-							<X size={11} strokeWidth={2.4} />
+							<X size={16} strokeWidth={2} />
 						</button>
 					) : null}
 				</div>
 			</div>
 
-			<div
-				ref={scrollerRef}
-				className="flex gap-1.5 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-			>
+			<ul ref={scrollerRef} className="wa-ui-sched__list" onScroll={measureEdges}>
 				{list.map(item => {
 					const busy = busyId === item.id;
-					const title = item.text || item.title || 'Scheduled';
-					const canEdit = item.status === 'active' || item.status === 'paused';
-					const chats = formatTemplate(t.recipients, {
-						count: item.recipients?.length || 0,
-					});
-					const when = item.nextRunAt ? formatWhen(item.nextRunAt, ar) : '';
+					const status = String(item.status || '').toLowerCase();
+					const title = item.text || item.title || t.title;
+					const canEdit = status === 'active' || status === 'paused';
+					const recipients = item.recipients?.length || 0;
+					const when = formatWhen(item.nextRunAt || item.scheduledAt, ar);
+					const recurring = item.scheduleKind !== 'once';
 
 					return (
-						<div
-							key={item.id}
-							className="flex w-[min(188px,68vw)] shrink-0 overflow-hidden rounded-md border border-white bg-white shadow-[0_1px_1px_rgba(11,20,26,0.06)] dark:border-slate-700 dark:bg-slate-950/80"
-						>
-							<span className={`w-[3px] shrink-0 ${statusTone(item.status)}`} aria-hidden="true" />
-							<div className="min-w-0 flex-1 px-1.5 py-1">
-								<div className="flex items-start gap-1">
-									<p className="min-w-0 flex-1 truncate text-[11px] font-semibold leading-none text-slate-800 dark:text-slate-100">
-										{title}
-									</p>
-									{item.status === 'paused' ? (
-										<span className="shrink-0 rounded bg-amber-100 px-1 py-px text-[8px] font-bold uppercase text-amber-700 dark:bg-amber-950/50 dark:text-amber-200">
-											{ar ? 'وقف' : 'Paused'}
-										</span>
-									) : null}
-								</div>
-								<p className="mt-0.5 truncate text-[9px] leading-tight text-slate-500 dark:text-slate-400">
-									{describeSchedule(item, t, ar)}
-									{' · '}
-									{chats}
-									{ar ? ' شات' : ' chats'}
-								</p>
-								{when ? (
-									<p className="mt-0.5 truncate text-[9px] font-semibold leading-tight text-emerald-600 dark:text-emerald-400">
-										{formatTemplate(t.next, { when })}
-									</p>
+						<li key={item.id} className={`wa-ui-sched__card is-${status}`} aria-busy={busy || undefined}>
+							<p className="wa-ui-sched__text" dir="auto" title={title}>
+								{title}
+							</p>
+							<p className="wa-ui-sched__meta">
+								{recurring ? <Repeat size={12} strokeWidth={2} aria-hidden="true" /> : null}
+								<span className="truncate">{describeSchedule(item, t, ar)}</span>
+								{recipients > 0 ? (
+									<>
+										<span aria-hidden="true">·</span>
+										<Users size={12} strokeWidth={2} aria-hidden="true" />
+										<span className="shrink-0">{t.chats(recipients)}</span>
+									</>
 								) : null}
-								<div className="mt-1 flex items-center gap-0.5">
+							</p>
+							<div className="wa-ui-sched__foot">
+								{status === 'paused' ? (
+									<span className="wa-ui-badge wa-ui-badge--warning">{t.paused}</span>
+								) : status === 'processing' ? (
+									<span className="wa-ui-badge">{t.sending}</span>
+								) : when ? (
+									<span className="wa-ui-sched__when">
+										<span className="sr-only">{t.next}: </span>
+										{when}
+									</span>
+								) : (
+									<span />
+								)}
+								<span className="wa-ui-sched__actions">
 									{canEdit ? (
-										<IconBtn title={t.edit} disabled={busy} onClick={() => onEdit?.(item)} tone="emerald">
-											<Pencil size={10} strokeWidth={2.3} />
-										</IconBtn>
+										<button
+											type="button"
+											className="wa-ui-icon-btn wa-ui-icon-btn--sm"
+											disabled={busy}
+											onClick={() => onEdit?.(item)}
+											title={t.edit}
+											aria-label={t.edit}
+										>
+											<Pencil size={14} strokeWidth={2} />
+										</button>
 									) : null}
-									{item.status === 'active' ? (
-										<IconBtn title={t.pause} disabled={busy} onClick={() => onPause?.(item)}>
-											{busy ? <Loader2 size={10} className="animate-spin" /> : <Pause size={10} />}
-										</IconBtn>
+									{status === 'active' ? (
+										<button
+											type="button"
+											className="wa-ui-icon-btn wa-ui-icon-btn--sm"
+											disabled={busy}
+											onClick={() => onPause?.(item)}
+											title={t.pause}
+											aria-label={t.pause}
+										>
+											{busy ? <Loader2 size={14} className="animate-spin" /> : <Pause size={14} strokeWidth={2} />}
+										</button>
 									) : null}
-									{item.status === 'paused' ? (
-										<IconBtn
-											title={t.resume}
+									{status === 'paused' ? (
+										<button
+											type="button"
+											className="wa-ui-icon-btn wa-ui-icon-btn--sm"
 											disabled={busy}
 											onClick={() => onResume?.(item)}
-											tone="emerald"
+											title={t.resume}
+											aria-label={t.resume}
 										>
-											{busy ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
-										</IconBtn>
+											{busy ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} strokeWidth={2} />}
+										</button>
 									) : null}
 									{canEdit ? (
-										<IconBtn
-											title={t.cancel}
+										<button
+											type="button"
+											className="wa-ui-icon-btn wa-ui-icon-btn--sm wa-ui-sched__delete"
 											disabled={busy}
 											onClick={() => onCancel?.(item)}
-											tone="rose"
+											title={t.cancel}
+											aria-label={t.cancel}
 										>
-											{busy ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
-										</IconBtn>
+											<Trash2 size={14} strokeWidth={2} />
+										</button>
 									) : null}
-								</div>
+								</span>
 							</div>
-						</div>
+						</li>
 					);
 				})}
-
-				{typeof onAdd === 'function' ? (
-					<button
-						type="button"
-						onClick={event => onAdd(event)}
-						className="flex h-auto w-[72px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-emerald-400/70 bg-emerald-50/70 px-1 py-1.5 text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100 dark:border-emerald-700/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
-						title={t.addNew}
-					>
-						<span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-white">
-							<Plus size={12} strokeWidth={2.6} />
-						</span>
-						<span className="text-[9px] font-bold leading-none">{t.add}</span>
-					</button>
-				) : null}
-			</div>
-		</div>
+			</ul>
+		</section>
 	);
 }

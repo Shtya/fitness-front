@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, isValidElement, lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { cloneElement, Fragment, isValidElement, lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocale } from 'next-intl';
@@ -38,6 +38,8 @@ import {
 	EyeOff,
 	ExternalLink,
 	FileText,
+	CircleDashed,
+	Pencil,
 	FileVideo,
 	FolderKanban,
 	Forward,
@@ -45,6 +47,7 @@ import {
 	Image as ImageIcon,
 	ImageOff,
 	Images,
+	Info,
 	LayoutGrid,
 	ListChecks,
 	ListFilter,
@@ -93,6 +96,7 @@ import {
 	UserCircle2,
 	UserRound,
 	Users,
+	UsersRound,
 	Video,
 	Wifi,
 	WifiOff,
@@ -227,6 +231,8 @@ import {
 	waScrollTo,
 } from './wa-scroll-debug';
 import './wa-story-panel.css';
+import './wa-ui.css';
+import { useMenuKeyboard } from './wa-ui-menu';
 import {
 	downloadContactVcard,
 	extractRawVcardFromMessage,
@@ -347,7 +353,8 @@ import {
 	rememberFailedOutbound,
 	restoreFailedOutbound,
 } from './wa-failed-outbox';
-import { estimateMessageRowSize, estimatePrependedThreadHeight, messageRowKey } from './wa-thread-virtual.js';
+import { estimateMessageRowSize, estimateTextRowSize, messageRowKey, THREAD_ROW_EXTRAS } from './wa-thread-virtual.js';
+import { readThreadLayout, threadDayKey } from './wa-thread-layout.js';
 import { WaMeasuredThreadRow } from './wa-measured-thread-row';
 import { getAttachmentStreamUrl, absoluteApiUrl, forgetAttachmentStreamUrl } from './whatsapp-media-stream';
 import {
@@ -362,6 +369,7 @@ import {
 	routeMessageCommand,
 } from './demo/demo-command-adapter';
 import AiReplySuggestions, { PromptInstructionsDropdown } from './ai/AiReplySuggestions';
+import ComposerWritingAssist from './ai/ComposerWritingAssist';
 import WhatsAppWorkspaceAiParts from './ai/WhatsAppWorkspaceAiParts';
 import { useWhatsAppAi } from './ai/use-whatsapp-ai';
 import WhatsAppPrivacyBlurControl from './WhatsAppPrivacyBlurControl';
@@ -6986,6 +6994,7 @@ function MessageActionMenu({
 		computeAnchoredMenuPosition(anchorRect, { width: 248, height: 0 }, { mine }),
 	);
 	const menuRef = useRef(null);
+	useMenuKeyboard(menuRef, { open: Boolean(open && message), onClose });
 	const boardItemRef = useRef(null);
 	const boardCloseTimerRef = useRef(null);
 	const [boardFlyoutPos, setBoardFlyoutPos] = useState(null);
@@ -7105,13 +7114,72 @@ function MessageActionMenu({
 		String(message.direction || '').toLowerCase() !== 'inbound' &&
 		!message.optimistic;
 	const actions = [
+		{ id: 'reply', label: ar ? 'رد' : 'Reply', icon: Reply, group: 'core' },
+		hasCopyableText && { id: 'copy', label: ar ? 'نسخ النص' : 'Copy text', icon: Copy, group: 'core' },
+		isOutboundText && { id: 'edit', label: ar ? 'تعديل' : 'Edit', icon: Pencil, group: 'core' },
+		{ id: 'forward', label: ar ? 'إرسال إلى…' : 'Send to…', icon: Forward, group: 'core' },
+		{
+			id: 'pin',
+			label: message.isPinned ? (ar ? 'إلغاء التثبيت' : 'Unpin') : ar ? 'تثبيت' : 'Pin',
+			icon: Pin,
+			group: 'core',
+		},
+		{
+			id: 'star',
+			label: message.isStarred
+				? ar
+					? 'إزالة من المهم'
+					: 'Remove from important'
+				: ar
+					? 'حفظ كمهم'
+					: 'Save as important',
+			icon: Star,
+			group: 'core',
+		},
+		canSelect && {
+			id: canSelectMedia && !canSelectTranscript ? 'selectMedia' : 'select',
+			label: ar ? 'تحديد' : 'Select',
+			icon: ListChecks,
+			group: 'organize',
+		},
+		canUseBoard &&
+			canSelectTranscript && {
+				id: 'addToBoard',
+				label: ar ? 'إضافة للمهام' : 'Add to tasks',
+				icon: LayoutGrid,
+				submenu: true,
+				group: 'organize',
+			},
+		canUseGroups && {
+			id: 'addToGroup',
+			label: ar ? 'إضافة لمجموعة رسائل' : 'Add to message group',
+			icon: FolderKanban,
+			group: 'organize',
+		},
+		canSaveToLibrary && {
+			id: 'saveToLibrary',
+			label: ar ? 'حفظ في المكتبة…' : 'Save to library…',
+			icon: BookmarkPlus,
+			group: 'organize',
+		},
+		canViewGallery && {
+			id: 'viewGallery',
+			label: ar ? 'عرض في المعرض' : 'View in gallery',
+			icon: Images,
+			group: 'organize',
+		},
+		canAddToStory && {
+			id: 'addToStory',
+			label: ar ? 'إضافة إلى الحالة…' : 'Add to story…',
+			icon: CircleDashed,
+			group: 'organize',
+		},
 		(isVoice || isVideo) && {
 			id: 'transcribe',
 			label: ar ? 'تحويل إلى نص' : 'Transcribe',
 			icon: isVideo && !isVoice ? Video : Mic,
+			group: 'media',
 		},
-		// The voice editor accepts any audio track, so a voice note can be trimmed and
-		// cleaned up the same way a video can.
 		canEditAsVoice && {
 			id: 'sendAsVoice',
 			label: isVoice
@@ -7122,72 +7190,16 @@ function MessageActionMenu({
 					? 'إرسال كرسالة صوتية…'
 					: 'Send as voice message…',
 			icon: AudioLines,
-		},
-		canSaveToLibrary && {
-			id: 'saveToLibrary',
-			label: ar ? 'حفظ في المكتبة…' : 'Save to library…',
-			icon: BookmarkPlus,
-		},
-		canAddToStory && {
-			id: 'addToStory',
-			label: ar ? 'إضافة إلى الحالة…' : 'Add to story…',
-			icon: Sparkles,
+			group: 'media',
 		},
 		socialVideoLink && {
 			id: 'downloadSocialVideo',
 			label: ar ? 'تحميل الفيديو' : 'Download video',
 			icon: FileVideo,
+			group: 'media',
 		},
-		canUseBoard &&
-			canSelectTranscript && {
-				id: 'addToBoard',
-				label: ar ? 'إضافة للمهام…' : 'Add to tasks…',
-				icon: LayoutGrid,
-				submenu: true,
-			},
-		canUseGroups && {
-			id: 'addToGroup',
-			label: ar ? 'إضافة لمجموعة رسائل' : 'Add to message group',
-			icon: FolderKanban,
-		},
-		canViewGallery && {
-			id: 'viewGallery',
-			label: ar ? 'عرض في المعرض' : 'View in gallery',
-			icon: Images,
-		},
-		canSelect && {
-			id: canSelectMedia && !canSelectTranscript ? 'selectMedia' : 'select',
-			label: ar ? 'تحديد' : 'Select',
-			icon: ListChecks,
-		},
-		hasCopyableText && { id: 'copy', label: ar ? 'نسخ النص' : 'Copy text', icon: Copy },
-		{ id: 'reply', label: ar ? 'رد' : 'Reply', icon: Reply },
-		isOutboundText && { id: 'edit', label: ar ? 'تعديل' : 'Edit', icon: FileText },
-		{ id: 'forward', label: ar ? 'إرسال إلى…' : 'Send to…', icon: Send },
-		{ id: 'info', label: ar ? 'معلومات' : 'Info', icon: MessageCircle },
-		{
-			id: 'star',
-			label: message.isStarred
-				? ar
-					? 'إزالة من المهم (داخل النظام)'
-					: 'Remove from important'
-				: ar
-					? 'حفظ كمهم (داخل النظام)'
-					: 'Save as important',
-			icon: Star,
-		},
-		{
-			id: 'pin',
-			label: message.isPinned
-				? ar
-					? 'إلغاء التثبيت (داخل النظام)'
-					: 'Unpin'
-				: ar
-					? 'تثبيت (داخل النظام)'
-					: 'Pin',
-			icon: Pin,
-		},
-		{ id: 'delete', label: ar ? 'حذف' : 'Delete', icon: Trash2, destructive: true },
+		{ id: 'info', label: ar ? 'معلومات الرسالة' : 'Message info', icon: Info, group: 'info' },
+		{ id: 'delete', label: ar ? 'حذف' : 'Delete', icon: Trash2, destructive: true, group: 'danger' },
 	].filter(Boolean);
 
 	const runAction = (actionId, event) => {
@@ -7205,55 +7217,50 @@ function MessageActionMenu({
 
 	const renderMenuItems = (options = {}) => {
 		const { attachBoardRef = false } = options;
-		return actions.map(action => {
+		return actions.map((action, index) => {
 			const Icon = action.icon;
-			const filled =
-				action.id === 'star'
-					? Boolean(message.isStarred)
-					: action.id === 'pin'
-						? Boolean(message.isPinned)
-						: false;
 			const isBoard = action.id === 'addToBoard';
+			const showSeparator = index > 0 && actions[index - 1].group !== action.group;
 			return (
-				<button
-					key={action.id}
-					ref={isBoard && attachBoardRef ? boardItemRef : undefined}
-					type="button"
-					disabled={busy}
-					onMouseEnter={() => {
-						if (isBoard) openBoardSubmenu();
-						else scheduleBoardSubmenuClose();
-					}}
-					onMouseDown={event => {
-						if (isBoard) {
-							event.preventDefault();
-							event.stopPropagation();
-						}
-					}}
-					onClick={event => runAction(action.id, event)}
-					aria-expanded={isBoard ? boardOpen : undefined}
-					aria-haspopup={isBoard ? 'menu' : undefined}
-					className={`wa-message-action-item ${action.destructive ? 'is-destructive' : ''} ${
-						isBoard && boardOpen ? 'is-active' : ''
-					}`}
-				>
-					<span className="flex min-w-0 flex-1 items-center gap-1">
-						{action.label}
+				<Fragment key={action.id}>
+					{showSeparator ? <div className="wa-ui-menu__sep" role="separator" /> : null}
+					<button
+						ref={isBoard && attachBoardRef ? boardItemRef : undefined}
+						type="button"
+						role="menuitem"
+						disabled={busy}
+						onMouseEnter={() => {
+							if (isBoard) openBoardSubmenu();
+							else scheduleBoardSubmenuClose();
+						}}
+						onMouseDown={event => {
+							if (isBoard) {
+								event.preventDefault();
+								event.stopPropagation();
+							}
+						}}
+						onClick={event => runAction(action.id, event)}
+						aria-expanded={isBoard ? boardOpen : undefined}
+						aria-haspopup={isBoard ? 'menu' : undefined}
+						className={`wa-ui-menu__item ${action.destructive ? 'is-danger' : ''} ${
+							isBoard && boardOpen ? 'is-highlighted' : ''
+						}`}
+					>
+						<Icon className="wa-ui-menu__icon" strokeWidth={1.8} aria-hidden="true" />
+						<span className="wa-ui-menu__label">{action.label}</span>
 						{action.submenu ? (
-							<ChevronRight
-								size={14}
-								className={`opacity-50 transition-transform rtl:rotate-180 ${
-									boardOpen && isBoard ? 'rotate-90 rtl:-rotate-90' : ''
-								}`}
-							/>
+							<span className="wa-ui-menu__trail">
+								<ChevronRight
+									size={16}
+									className={`rtl:rotate-180 transition-transform ${
+										boardOpen && isBoard ? 'rotate-90 rtl:-rotate-90' : ''
+									}`}
+									aria-hidden="true"
+								/>
+							</span>
 						) : null}
-					</span>
-					<Icon
-						size={16}
-						strokeWidth={2.1}
-						fill={filled ? 'currentColor' : 'none'}
-					/>
-				</button>
+					</button>
+				</Fragment>
 			);
 		});
 	};
@@ -7308,15 +7315,16 @@ function MessageActionMenu({
 		) : null;
 
 	const renderReactions = () => (
-		<div className="wa-message-action-reactions-wrap">
-			<div className="wa-message-action-reactions">
+		<>
+			<div className="wa-ui-reactions" role="group" aria-label={ar ? 'تفاعل سريع' : 'Quick reactions'}>
 				{QUICK_REACTIONS.map(emoji => (
 					<button
 						key={emoji}
 						type="button"
 						disabled={busy}
 						onClick={() => onReact(emoji)}
-						className="wa-message-action-react"
+						aria-label={`${ar ? 'تفاعل' : 'React'} ${emoji}`}
+						className="wa-ui-reaction"
 					>
 						{emoji}
 					</button>
@@ -7325,7 +7333,7 @@ function MessageActionMenu({
 					type="button"
 					aria-expanded={reactionsExpanded}
 					onClick={() => setReactionsExpanded(current => !current)}
-					className={`wa-message-action-react-more ${reactionsExpanded ? 'is-open' : ''}`}
+					className="wa-ui-reaction wa-ui-reaction--more"
 					aria-label={
 						reactionsExpanded
 							? ar
@@ -7336,29 +7344,26 @@ function MessageActionMenu({
 								: 'More reactions'
 					}
 				>
-					{reactionsExpanded ? (
-						<X size={16} strokeWidth={2.4} />
-					) : (
-						<Plus size={18} strokeWidth={2.3} />
-					)}
+					{reactionsExpanded ? <X size={18} strokeWidth={2} /> : <Plus size={18} strokeWidth={2} />}
 				</button>
 			</div>
 			{reactionsExpanded ? (
-				<div className="wa-message-action-reactions-grid">
+				<div className="wa-ui-reactions-grid">
 					{MORE_REACTIONS.map(emoji => (
 						<button
 							key={emoji}
 							type="button"
 							disabled={busy}
 							onClick={() => onReact(emoji)}
-							className="wa-message-action-react"
+							aria-label={`${ar ? 'تفاعل' : 'React'} ${emoji}`}
+							className="wa-ui-reaction"
 						>
 							{emoji}
 						</button>
 					))}
 				</div>
 			) : null}
-		</div>
+		</>
 	);
 	const previewType = String(message.type || '').toLowerCase();
 	const previewText = message.text || (isVoice
@@ -7385,7 +7390,9 @@ function MessageActionMenu({
 			<div
 				ref={menuRef}
 				data-message-action-menu
-				className="wa-message-action-menu hidden min-[769px]:block"
+				role="menu"
+				aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}
+				className="wa-message-action-menu wa-ui-menu wa-ui-scroll hidden min-[769px]:block"
 				style={{
 					top: desktopPos.top,
 					left: desktopPos.left,
@@ -7395,7 +7402,7 @@ function MessageActionMenu({
 				onMouseLeave={scheduleBoardSubmenuClose}
 			>
 				{renderReactions()}
-				<div className="wa-message-action-list">{renderMenuItems({ attachBoardRef: true })}</div>
+				{renderMenuItems({ attachBoardRef: true })}
 			</div>
 			{renderBoardFlyout()}
 
@@ -7435,10 +7442,10 @@ function MessageActionMenu({
 							</p>
 						</div>
 					</div>
-					<div className="mx-auto mb-2.5 w-fit overflow-hidden rounded-full bg-white shadow-xl">
+					<div className="wa-ui-menu wa-ui-reactions-pill mx-auto mb-2.5 w-fit">
 						{renderReactions()}
 					</div>
-					<div className="wa-message-action-sheet overflow-hidden">
+					<div className="wa-message-action-sheet wa-ui-menu" role="menu" aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}>
 						{renderMenuItems({ attachBoardRef: false })}
 						{renderBoardSheet()}
 					</div>
@@ -7725,6 +7732,9 @@ function MultiMessageActionMenu({
 	);
 }
 
+/** Wide enough for the longest label ("Open beside current chat") in either language. */
+const CONVERSATION_MENU_WIDTH = 252;
+
 function ConversationActionMenu({
 	conversation,
 	anchorRect,
@@ -7735,8 +7745,11 @@ function ConversationActionMenu({
 	onAction,
 }) {
 	const [mounted, setMounted] = useState(false);
-	const [pos, setPos] = useState(() => computeBesideMenuPosition(anchorRect));
+	const [pos, setPos] = useState(() =>
+		computeBesideMenuPosition(anchorRect, { width: CONVERSATION_MENU_WIDTH, height: 340 }),
+	);
 	const menuRef = useRef(null);
+	useMenuKeyboard(menuRef, { open: Boolean(conversation), onClose });
 	useEffect(() => setMounted(true), []);
 	useEffect(() => {
 		if (!conversation) return undefined;
@@ -7744,7 +7757,7 @@ function ConversationActionMenu({
 			const measured = menuRef.current?.getBoundingClientRect();
 			setPos(
 				computeBesideMenuPosition(anchorRect, {
-					width: measured?.width || 228,
+					width: CONVERSATION_MENU_WIDTH,
 					height: measured?.height || 280,
 				}),
 			);
@@ -7766,6 +7779,7 @@ function ConversationActionMenu({
 			id: 'openBeside',
 			label: ar ? 'فتح بجانب الشات الحالي' : 'Open beside current chat',
 			icon: Columns2,
+			group: 'open',
 		},
 		{
 			id: 'pin',
@@ -7799,20 +7813,30 @@ function ConversationActionMenu({
 					: 'Archive chat',
 			icon: Archive,
 		},
-		canAssign && { id: 'assign', label: ar ? 'تعيين إلى شخص' : 'Assign to person', icon: UserPlus },
-		{ id: 'info', label: ar ? 'معلومات المحادثة' : 'Conversation info', icon: MessageCircle },
+		canAssign && { id: 'assign', label: ar ? 'تعيين إلى شخص' : 'Assign to person', icon: UserPlus, group: 'manage' },
+		{ id: 'info', label: ar ? 'معلومات المحادثة' : 'Conversation info', icon: Info, group: 'manage' },
 	].filter(Boolean);
+	const preview =
+		conversationPreview(conversation, locale) ||
+		(ar ? 'لا توجد رسائل' : 'No messages');
 	return createPortal(
 		<>
 			<button
 				type="button"
+				tabIndex={-1}
 				aria-label={ar ? 'إغلاق القائمة' : 'Close menu'}
 				onClick={onClose}
-				className="fixed inset-0 z-[105] bg-transparent"
+				onContextMenu={event => {
+					event.preventDefault();
+					onClose();
+				}}
+				className="fixed inset-0 z-[105] cursor-default bg-transparent"
 			/>
 			<div
 				ref={menuRef}
-				className="wa-conversation-action-menu"
+				role="menu"
+				aria-label={conversationTitle(conversation)}
+				className="wa-conversation-action-menu wa-ui-menu"
 				style={{
 					top: pos.top,
 					left: pos.left,
@@ -7820,50 +7844,45 @@ function ConversationActionMenu({
 				}}
 				onClick={event => event.stopPropagation()}
 			>
-				<div className="wa-conversation-action-head">
+				<div className="wa-ui-menu__header">
 					<Avatar
 						label={conversationTitle(conversation)}
-						size={8}
+						size={9}
 						src={conversationAvatarUrl(conversation)}
 						isGroup={conversation.type === 'group'}
+						className="!ring-0"
 					/>
 					<div className="min-w-0 flex-1">
-						<p className="truncate text-[13px] font-semibold leading-tight">
+						<p className="wa-ui-menu__header-title" dir="auto">
 							{conversationTitle(conversation)}
 						</p>
-						<p className="truncate text-[11px] leading-tight text-[#667781]">
-							{conversation.lastMessage?.text || conversation.lastMessage?.type || (ar ? 'لا توجد رسائل' : 'No messages')}
+						<p className="wa-ui-menu__header-sub" dir="auto">
+							{preview}
 						</p>
 					</div>
 				</div>
-				<div className="wa-conversation-action-list">
-					{actions.map(action => {
-						const Icon = action.icon;
-						return (
+				{actions.map((action, index) => {
+					const Icon = action.icon;
+					const previousGroup = actions[index - 1]?.group || 'state';
+					const group = action.group || 'state';
+					return (
+						<Fragment key={action.id}>
+							{index > 0 && group !== previousGroup ? (
+								<div className="wa-ui-menu__sep" role="separator" />
+							) : null}
 							<button
-								key={action.id}
 								type="button"
+								role="menuitem"
 								disabled={busy}
 								onClick={() => onAction(action.id)}
-								className="wa-conversation-action-item"
+								className="wa-ui-menu__item"
 							>
-								<span>{action.label}</span>
-								<Icon
-									size={16}
-									strokeWidth={2.1}
-									fill={
-										(action.id === 'pin' && conversation.isPinned) ||
-										(action.id === 'mute' && conversation.isMuted) ||
-										(action.id === 'favorite' && conversation.isFavorite) ||
-										(action.id === 'archive' && conversation.isArchived)
-											? 'currentColor'
-											: 'none'
-									}
-								/>
+								<Icon className="wa-ui-menu__icon" strokeWidth={1.8} aria-hidden="true" />
+								<span className="wa-ui-menu__label">{action.label}</span>
 							</button>
-						);
-					})}
-				</div>
+						</Fragment>
+					);
+				})}
 			</div>
 		</>,
 		document.body,
@@ -8600,6 +8619,24 @@ function MessageLinkPreview({ text, labels }) {
 	);
 }
 
+const waAvatarRefreshInFlight = new Set();
+
+function requestWhatsAppAvatarRefresh(conversationId, onFreshUrl) {
+	const id = String(conversationId || '').trim();
+	if (!id || waAvatarRefreshInFlight.has(id)) return;
+	waAvatarRefreshInFlight.add(id);
+	api
+		.post(`/whatsapp/conversations/${id}/avatar/refresh`)
+		.then(({ data }) => {
+			const next = String(data?.avatarUrl || '').trim();
+			if (next) onFreshUrl?.(next);
+		})
+		.catch(() => undefined)
+		.finally(() => {
+			setTimeout(() => waAvatarRefreshInFlight.delete(id), 12_000);
+		});
+}
+
 function Avatar({
 	label = '?',
 	size = 10,
@@ -8608,6 +8645,8 @@ function Avatar({
 	src = '',
 	videoSrc = '',
 	priority = false,
+	conversationId = '',
+	onAvatarRefreshed,
 }) {
 	const placeholderStyle = avatarPlaceholderStyle(label);
 	const initials = isGroup ? '' : avatarInitials(label);
@@ -8645,6 +8684,10 @@ function Avatar({
 					referrerPolicy="no-referrer"
 					onError={event => {
 						event.currentTarget.style.display = 'none';
+						if (!conversationId) return;
+						requestWhatsAppAvatarRefresh(conversationId, nextUrl => {
+							onAvatarRefreshed?.(nextUrl);
+						});
 					}}
 					className="absolute inset-0 h-full w-full rounded-full object-cover"
 				/>
@@ -9052,7 +9095,7 @@ function AccountSwitcherDropdown({
 						ref={menuRef}
 						role="listbox"
 						aria-label={labels.accounts}
-						className="fixed z-500 max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+						className="wa-ui-scroll nice-scroll fixed z-500 max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
 						style={position}
 					>
 						{accounts.map(account => {
@@ -9325,6 +9368,8 @@ const WaConversationRow = memo(function WaConversationRow({
 								size={9}
 								isGroup={isGroup}
 								src={conversationAvatarUrl(conversation)}
+								conversationId={conversation.id}
+								onAvatarRefreshed={url => actions.applyAvatar?.(conversation.id, url)}
 								className="!ring-0"
 							/>
 						</button>
@@ -9335,6 +9380,8 @@ const WaConversationRow = memo(function WaConversationRow({
 						size={11}
 						isGroup={isGroup}
 						src={conversationAvatarUrl(conversation)}
+						conversationId={conversation.id}
+						onAvatarRefreshed={url => actions.applyAvatar?.(conversation.id, url)}
 					/>
 				)}
 				{!isGroup && conversation.presence?.online && !unread && (
@@ -10314,10 +10361,76 @@ function WhatsAppWorkspaceContent() {
 		},
 		[isThreadScrollLocked],
 	);
+	// Row estimates calibrated to the rendered thread (see wa-thread-layout.js). Rows above
+	// the viewport that were never measured get corrected with a programmatic scrollTo the
+	// first time they render; accurate estimates keep those corrections near zero, so
+	// scrolling up no longer gets pulled back down.
+	const threadLayoutRef = useRef(null);
+	const rowEstimateCacheRef = useRef(new Map());
+	const threadIsGroupChatRef = useRef(false);
+	threadIsGroupChatRef.current =
+		selectedConversation?.type === 'group' ||
+		String(selectedConversation?.providerChatId || '').endsWith('@g.us');
+	const estimateThreadRow = useCallback((rows, index) => {
+		const row = rows?.[index];
+		const layout = threadLayoutRef.current;
+		if (!row || !layout) return estimateMessageRowSize(row);
+		const edge = (item, fromEnd) =>
+			item
+				? item.kind === 'image-gallery'
+					? item.messages?.[fromEnd ? item.messages.length - 1 : 0]
+					: item.message
+				: null;
+		const first = edge(row, false);
+		const last = edge(row, true);
+		const previous = edge(rows[index - 1], true);
+		const next = edge(rows[index + 1], false);
+		const isGroupChat = threadIsGroupChatRef.current;
+		const dayOf = message => threadDayKey(message?.providerTimestamp || message?.created_at);
+		const startsNewDay = !previous || dayOf(first) !== dayOf(previous);
+		const precedesSame =
+			Boolean(next) && messagesFormBubbleCluster(last, next, { isGroupChat });
+		const showsSenderName =
+			isGroupChat &&
+			first?.direction !== 'outbound' &&
+			!(previous && messagesFormBubbleCluster(previous, first, { isGroupChat }));
+		const signature = [
+			layout.version,
+			startsNewDay ? 1 : 0,
+			precedesSame ? 1 : 0,
+			showsSenderName ? 1 : 0,
+			String(first?.text || '').length,
+			(first?.reactions || []).length,
+			first?.replyTo ? 1 : 0,
+		].join('|');
+		const cache = rowEstimateCacheRef.current;
+		const key = messageRowKey(row);
+		const hit = cache.get(key);
+		if (hit && hit.signature === signature) return hit.size;
+		const size =
+			estimateTextRowSize(row, layout, { startsNewDay, precedesSame, showsSenderName }) ??
+			estimateMessageRowSize(row) + (startsNewDay ? THREAD_ROW_EXTRAS.dateSeparator : 0);
+		if (cache.size > 6000) cache.clear();
+		cache.set(key, { signature, size });
+		return size;
+	}, []);
+	const threadHasRows = messageRows.length > 0;
+	useLayoutEffect(() => {
+		const box = messageBoxRef.current;
+		if (!box || !threadHasRows) return undefined;
+		const update = () => {
+			threadLayoutRef.current = readThreadLayout(box, threadLayoutRef.current);
+		};
+		update();
+		window.addEventListener('resize', update);
+		return () => window.removeEventListener('resize', update);
+		// Re-read once the thread settles: while it is still opening the rows can lay out
+		// differently (fonts, settling styles), and an early read mis-sized every estimate.
+	}, [conversationId, threadHasRows, threadSettled]);
 	const messageVirtual = useWaVirtualRows({
 		count: messageRows.length,
 		scrollRef: messageBoxRef,
-		estimateSize: index => estimateMessageRowSize(messageRowsRef.current[index]),
+		estimateSize: index => estimateThreadRow(messageRowsRef.current, index),
 		overscan: 10,
 		enabled: virtualizeMessages,
 		getItemKey: index => messageRowKey(messageRowsRef.current[index]),
@@ -10349,7 +10462,7 @@ function WhatsAppWorkspaceContent() {
 		// restore was pending is what made the button silently do nothing, because
 		// the pending anchor could outlive the effect that was supposed to clear it.
 		olderScrollRestoreRef.current = null;
-		suppressOlderLoadUntilRef.current = Date.now() + 600;
+		suppressOlderLoadUntilRef.current = Date.now() + 900;
 
 		pinThreadToBottomRef.current = true;
 		userScrollingThreadRef.current = false;
@@ -10360,21 +10473,20 @@ function WhatsAppWorkspaceContent() {
 		jumpToBottomInFlightRef.current = true;
 		setShowJumpToBottom(false);
 
-		let attempts = 0;
-		const maxAttempts = 30;
-
-		const applyJump = () => {
+		const applyJump = (behavior = 'auto') => {
 			const el = messageBoxRef.current;
 			if (!el) return false;
 			const rows = messageRowsRef.current;
 			const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
+			const smooth = behavior === 'smooth';
 			if (useVirtual) {
 				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
 					align: 'end',
-					behavior: 'auto',
+					behavior: smooth ? 'smooth' : 'auto',
 				});
 				const total = Number(messageVirtualRef.current?.totalSize) || 0;
-				if (total > 0) {
+				// Instant offset snap fights smooth scrolling — only use it for corrections.
+				if (total > 0 && !smooth) {
 					messageVirtualRef.current?.scrollToOffset?.(total, { align: 'end' });
 				}
 			}
@@ -10382,30 +10494,35 @@ function WhatsAppWorkspaceContent() {
 				Number(el.scrollHeight) || 0,
 				Number(messageVirtualRef.current?.totalSize) || 0,
 			);
-			// Force even when already near target — virtualizer height can lag.
-			const oldTop = Number(el.scrollTop) || 0;
-			el.scrollTop = target;
-			waScrollLog(
-				'jumpMessagesToBottom',
-				`user-jump-to-bottom:attempt-${attempts}`,
-				el,
-				oldTop,
-				el.scrollTop,
-				{ pin: true, force: true, target },
-			);
+			if (smooth) {
+				waScrollTo(
+					el,
+					{ top: target, behavior: 'smooth' },
+					'jumpMessagesToBottom',
+					'user-jump-to-bottom:smooth',
+					{ pin: true, force: true, target },
+				);
+			} else {
+				waScrollApply(
+					el,
+					target,
+					'jumpMessagesToBottom',
+					'user-jump-to-bottom:snap',
+					{ pin: true, force: true, target },
+				);
+			}
 			return isThreadPinnedToBottom(el);
 		};
 
-		const finish = () => {
+		const startLateCorrections = () => {
+			if (!isCurrentRun()) return;
 			jumpToBottomInFlightRef.current = false;
 			const el = messageBoxRef.current;
 			if (!el) return;
-			// User explicitly asked for bottom — keep pin on.
 			pinThreadToBottomRef.current = true;
 			setShowJumpToBottom(shouldShowJumpToBottom(el));
-			// Media decode and virtualizer re-measure land well after the rAF loop
-			// gives up. A single 120ms pass was not enough, so the position drifted
-			// back and the button reappeared — which read as "the button did nothing".
+			// After smooth scroll, virtualizer/media may still grow the thread —
+			// snap corrections keep the pin without interrupting the animation.
 			let latePasses = 0;
 			const latePass = () => {
 				run.timer = 0;
@@ -10416,7 +10533,7 @@ function WhatsAppWorkspaceContent() {
 				latePasses += 1;
 				if (threadDistanceFromBottom(node) > 8) {
 					jumpToBottomInFlightRef.current = true;
-					applyJump();
+					applyJump('auto');
 					jumpToBottomInFlightRef.current = false;
 				}
 				setShowJumpToBottom(shouldShowJumpToBottom(node));
@@ -10425,18 +10542,34 @@ function WhatsAppWorkspaceContent() {
 			run.timer = window.setTimeout(latePass, 120);
 		};
 
-		const tick = () => {
-			run.frame = 0;
-			if (!isCurrentRun()) return;
-			attempts += 1;
-			if (applyJump() || attempts >= maxAttempts) {
-				finish();
-				return;
-			}
-			run.frame = requestAnimationFrame(tick);
-		};
+		const distance = threadDistanceFromBottom(box);
+		// Already near bottom — snap is fine and avoids a tiny pointless animation.
+		if (distance <= 48) {
+			applyJump('auto');
+			startLateCorrections();
+			return;
+		}
 
-		run.frame = requestAnimationFrame(tick);
+		applyJump('smooth');
+
+		const el = messageBoxRef.current;
+		let settled = false;
+		const settle = () => {
+			if (settled || !isCurrentRun()) return;
+			settled = true;
+			if (run.timer) {
+				window.clearTimeout(run.timer);
+				run.timer = 0;
+			}
+			if (el) el.removeEventListener('scrollend', onScrollEnd);
+			startLateCorrections();
+		};
+		const onScrollEnd = () => settle();
+		if (el && typeof el.addEventListener === 'function') {
+			el.addEventListener('scrollend', onScrollEnd, { once: true });
+		}
+		// Fallback when scrollend is unsupported or the smooth scroll is cancelled.
+		run.timer = window.setTimeout(settle, 520);
 	}, [cancelJumpToBottomRun]);
 
 	const visibleMessageRows = useMemo(() => {
@@ -11089,12 +11222,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			return true;
 		});
-		const sorted = [...scoped].sort((a, b) => {
-			if (Boolean(a.isPinned) !== Boolean(b.isPinned)) return a.isPinned ? -1 : 1;
-			const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
-			const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
-			return bTime - aTime;
-		});
+		const sorted = sortConversationsByActivity(scoped);
 		if (!chatSearch.trim()) return sorted;
 		const q = foldWhatsAppSearchText(chatSearch);
 		if (!q) return sorted;
@@ -12722,6 +12850,23 @@ function WhatsAppWorkspaceContent() {
 		openStory: story => openStoryGroup(story),
 		togglePinned: (conversation, event) => toggleConversationPinned(conversation, event),
 		toggleFavorite: (conversation, event) => toggleConversationFavorite(conversation, event),
+		applyAvatar: (conversationId, avatarUrl) => {
+			const nextUrl = String(avatarUrl || '').trim();
+			const targetId = String(conversationId || '').trim();
+			if (!targetId || !nextUrl) return;
+			const patchAvatar = item => {
+				if (!item || item.id !== targetId) return item;
+				if (item.contact) {
+					return { ...item, contact: { ...item.contact, avatarUrl: nextUrl } };
+				}
+				if (item.group) {
+					return { ...item, group: { ...item.group, avatarUrl: nextUrl } };
+				}
+				return item;
+			};
+			setConversations(current => current.map(patchAvatar));
+			setSelectedConversation(current => patchAvatar(current));
+		},
 	};
 	const conversationRowActions = useMemo(() => {
 		const handlers = conversationRowHandlersRef;
@@ -13924,6 +14069,29 @@ function WhatsAppWorkspaceContent() {
 					scheduleReloadConversations(accountIdRef.current);
 				}
 				notifyWhatsAppUnreadChanged();
+			} else if (
+				event.event === 'conversation_updated' &&
+				event.payload?.reason === 'avatar_hydrated' &&
+				accountIdRef.current
+			) {
+				const targetId = event.payload.conversationId;
+				const avatarUrl = String(event.payload.avatarUrl || '').trim();
+				if (targetId && avatarUrl) {
+					const patchAvatar = item => {
+						if (!item || item.id !== targetId) return item;
+						if (item.contact) {
+							return { ...item, contact: { ...item.contact, avatarUrl } };
+						}
+						if (item.group) {
+							return { ...item, group: { ...item.group, avatarUrl } };
+						}
+						return item;
+					};
+					setConversations(current => current.map(patchAvatar));
+					setSelectedConversation(current => patchAvatar(current));
+				} else {
+					scheduleReloadConversations(accountIdRef.current);
+				}
 			} else if (
 				['conversation_updated', 'conversation_assignment'].includes(event.event) &&
 				accountIdRef.current
@@ -16531,13 +16699,6 @@ function WhatsAppWorkspaceContent() {
 					`/whatsapp/conversations/${conversationId}/messages/${message.id}/info`,
 				);
 				setMessageInfo({ ...data, message });
-				if (!data?.provider) {
-					toast(
-						locale === 'ar'
-							? 'تفاصيل القراءة من واتساب غير متاحة لهذا الاتصال. الحالة المعروضة من النظام.'
-							: 'WhatsApp read-receipt details are not available for this connection. Showing in-app status only.',
-					);
-				}
 			} catch (error) {
 				setMessageInfo(null);
 				toast.error(error.response?.data?.message || 'Could not load message info');
@@ -17533,7 +17694,10 @@ function WhatsAppWorkspaceContent() {
 				next.filter(isRenderableWhatsAppMessage),
 			);
 			const addedRows = Math.max(0, nextRows.length - messageRowsRef.current.length);
-			const estimatedPrependedHeight = estimatePrependedThreadHeight(nextRows, addedRows);
+			let estimatedPrependedHeight = 0;
+			for (let i = 0; i < Math.min(addedRows, nextRows.length); i += 1) {
+				estimatedPrependedHeight += estimateThreadRow(nextRows, i);
+			}
 			const virtualizedThread = messageRowsRef.current.length >= 32;
 
 			// Recapture immediately before React prepends older history.
@@ -17782,19 +17946,38 @@ function WhatsAppWorkspaceContent() {
 		const actionKey = `pin:${conversation.id}`;
 		if (pendingPreferenceActions.has(actionKey)) return;
 		const previousPinned = Boolean(conversation.isPinned);
+		const previousPinnedAt = conversation.pinnedAt || null;
 		const nextPinned = !conversation.isPinned;
+		const nextPinnedAt = nextPinned ? new Date().toISOString() : null;
 		setPendingPreferenceActions(current => new Set(current).add(actionKey));
 		setConversations(current =>
 			sortConversationsByActivity(
 				current.map(item =>
-					item.id === conversation.id ? { ...item, isPinned: nextPinned } : item,
+					item.id === conversation.id
+						? { ...item, isPinned: nextPinned, pinnedAt: nextPinnedAt }
+						: item,
 				),
 			),
 		);
 		try {
-			await api.put(`/whatsapp/conversations/${conversation.id}/pin`, {
+			const { data } = await api.put(`/whatsapp/conversations/${conversation.id}/pin`, {
 				isPinned: nextPinned,
 			});
+			const confirmedPinnedAt =
+				data?.pinnedAt != null ? data.pinnedAt : nextPinnedAt;
+			setConversations(current =>
+				sortConversationsByActivity(
+					current.map(item =>
+						item.id === conversation.id
+							? {
+									...item,
+									isPinned: nextPinned,
+									pinnedAt: nextPinned ? confirmedPinnedAt : null,
+								}
+							: item,
+					),
+				),
+			);
 			const cached = accountId
 				? conversationsCacheRef.current.get(accountId)
 				: null;
@@ -17803,7 +17986,13 @@ function WhatsAppWorkspaceContent() {
 					...cached,
 					items: sortConversationsByActivity(
 						cached.items.map(item =>
-							item.id === conversation.id ? { ...item, isPinned: nextPinned } : item,
+							item.id === conversation.id
+								? {
+										...item,
+										isPinned: nextPinned,
+										pinnedAt: nextPinned ? confirmedPinnedAt : null,
+									}
+								: item,
 						),
 					),
 					cachedAt: Date.now(),
@@ -17814,7 +18003,13 @@ function WhatsAppWorkspaceContent() {
 			setConversations(current =>
 				sortConversationsByActivity(
 					current.map(item =>
-						item.id === conversation.id ? { ...item, isPinned: previousPinned } : item,
+						item.id === conversation.id
+							? {
+									...item,
+									isPinned: previousPinned,
+									pinnedAt: previousPinnedAt,
+								}
+							: item,
 					),
 				),
 			);
@@ -20534,11 +20729,8 @@ function WhatsAppWorkspaceContent() {
 													showOnlineBar ? 'is-active' : ''
 												}`}
 											>
-												{showOnlineBar ? (
-													<Eye size={18} strokeWidth={2.1} />
-												) : (
-													<EyeOff size={18} strokeWidth={2.1} />
-												)}
+												{/* People, not an eye: the eye belongs to the privacy blur next to it. */}
+												<UsersRound size={18} strokeWidth={2} />
 											</button>
 											<WhatsAppPrivacyBlurControl
 												value={privacyBlur}
@@ -21076,6 +21268,13 @@ function WhatsAppWorkspaceContent() {
 															size={10}
 															isGroup={selectedConversation.type === 'group'}
 															src={conversationAvatarUrl(selectedConversation)}
+															conversationId={selectedConversation.id}
+															onAvatarRefreshed={url => {
+																conversationRowHandlersRef.current?.applyAvatar?.(
+																	selectedConversation.id,
+																	url,
+																);
+															}}
 														/>
 													)}
 												</div>
@@ -22030,6 +22229,19 @@ function WhatsAppWorkspaceContent() {
 														: quotedMessagePreview(message.replyTo, locale, {
 																isGroupChat,
 															});
+													// WhatsApp always names who is quoted: "You" for your own message,
+													// the contact in a one-to-one chat. Groups already carry senderName.
+													const quotedDirection = (quotedSource || message.replyTo)?.direction;
+													const quotedMine = quotedDirection === 'outbound';
+													const quotedAuthor =
+														quotedPreview?.senderName ||
+														(quotedMine
+															? locale === 'ar'
+																? 'أنت'
+																: 'You'
+															: quotedDirection === 'inbound' && !isGroupChat
+																? conversationTitle(selectedConversation)
+																: null);
 													const quotedBodyPresentation =
 														quotedPreview && !quotedPreview.isVoice
 															? messageTextPresentation(quotedPreview.body)
@@ -22238,7 +22450,7 @@ function WhatsAppWorkspaceContent() {
 																	{message.replyTo && quotedPreview ? (
 																		<button
 																			type="button"
-																			className="wa-reply-quote mb-2"
+																			className={`wa-reply-quote mb-2 ${quotedMine ? 'is-mine' : 'is-theirs'}`}
 																			aria-label={locale === 'ar' ? 'الانتقال إلى الرسالة الأصلية' : 'Go to original message'}
 																			onPointerDown={event => event.stopPropagation()}
 																			onClick={event => {
@@ -22249,9 +22461,9 @@ function WhatsAppWorkspaceContent() {
 																			}}
 																		>
 																			<div className="wa-reply-quote__content">
-																				{quotedPreview.senderName ? (
-																					<p className="wa-reply-quote__sender">
-																						{quotedPreview.senderName}
+																				{quotedAuthor ? (
+																					<p className="wa-reply-quote__sender" dir="auto">
+																						{quotedAuthor}
 																					</p>
 																				) : null}
 																				<p
@@ -22869,29 +23081,60 @@ function WhatsAppWorkspaceContent() {
 												const snippet =
 													preview?.body || quotedMessageLabel(replyingTo, locale);
 												const snippetPresentation = messageTextPresentation(snippet);
+												// Who is being quoted, the way WhatsApp labels it: "You" for your own
+												// message, the sender in a group, the contact in a one-to-one chat.
+												const replyAuthor =
+													replyingTo.direction === 'outbound'
+														? locale === 'ar'
+															? 'أنت'
+															: 'You'
+														: preview?.senderName ||
+															replyingTo.senderName ||
+															conversationTitle(selectedConversation);
+												const ReplyKindIcon = preview?.isVoice
+													? Mic
+													: preview?.isMediaOnly
+														? ImageIcon
+														: null;
 												return (
-												<div className="wa-reply-preview">
-													<Reply size={16} className="wa-reply-preview__icon" aria-hidden="true" />
-													<div className="wa-reply-preview__copy">
-														<p className="wa-reply-preview__title">
-															{locale === 'ar' ? 'الرد على رسالة' : 'Replying to message'}
+												<div
+													className={`wa-reply-preview wa-ui-reply ${
+														replyingTo.direction === 'outbound' ? 'is-mine' : 'is-theirs'
+													}`}
+													role="status"
+													aria-label={
+														locale === 'ar'
+															? `الرد على ${replyAuthor}`
+															: `Replying to ${replyAuthor}`
+													}
+												>
+													<div className="wa-ui-reply__copy">
+														<p className="wa-ui-reply__author" dir="auto">
+															{replyAuthor}
 														</p>
 														<p
-															className={`wa-reply-preview__snippet ${snippetPresentation.className || ''}`}
+															className={`wa-ui-reply__snippet ${snippetPresentation.className || ''}`}
 															dir={snippetPresentation.dir}
 															lang={snippetPresentation.lang}
-															style={snippetPresentation.style}
 														>
-															{snippet}
+															{ReplyKindIcon ? (
+																<ReplyKindIcon size={14} strokeWidth={2} aria-hidden="true" />
+															) : null}
+															<span>
+																{preview?.isVoice
+																	? `${locale === 'ar' ? 'رسالة صوتية' : 'Voice message'}${snippet ? ` · ${snippet}` : ''}`
+																	: snippet}
+															</span>
 														</p>
 													</div>
 													<button
 														type="button"
 														onClick={() => setReplyingTo(null)}
 														aria-label={locale === 'ar' ? 'إلغاء الرد' : 'Cancel reply'}
-														className="wa-reply-preview__close"
+														title={locale === 'ar' ? 'إلغاء الرد' : 'Cancel reply'}
+														className="wa-ui-icon-btn wa-ui-icon-btn--sm"
 													>
-														<X size={16} />
+														<X size={16} strokeWidth={2} />
 													</button>
 												</div>
 												);
@@ -22929,6 +23172,7 @@ function WhatsAppWorkspaceContent() {
 											{recordingVoice ? (
 												<div dir="ltr" className="wa-input-pill wa-recording-pill is-live flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1">
 													<VoiceRecordingBar
+														stream={recordingStreamRef.current}
 														seconds={recordingSeconds}
 														paused={recordingPaused}
 														labels={t}
@@ -23001,6 +23245,15 @@ function WhatsAppWorkspaceContent() {
 													>
 														<Sparkles size={18} strokeWidth={2} />
 													</button>
+													{!demo.settings.enabled && canUseWhatsApp ? (
+														<ComposerWritingAssist
+															locale={locale}
+															conversationId={conversationId}
+															getDraft={getDraft}
+															disabled={sending || !conversationId}
+															onApply={text => setDraft(text)}
+														/>
+													) : null}
 													<IsolatedComposerTextarea
 														apiRef={composerApiRef}
 														draftRef={draftRef}
@@ -24243,7 +24496,7 @@ function WhatsAppWorkspaceContent() {
 											/>
 										</div>
 									</div>
-									<div className="min-h-0 flex-1 overflow-y-auto p-2">
+									<div className="wa-ui-scroll nice-scroll min-h-0 flex-1 overflow-y-auto p-2">
 										{(() => {
 											const query = foldWhatsAppSearchText(storyShareSearch);
 											const chats = effectiveConversations.filter(item => {
@@ -24783,76 +25036,142 @@ function WhatsAppWorkspaceContent() {
 				}}
 			/>
 			{conversationAssignTarget && (
-				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/25 p-4 backdrop-blur-sm sm:place-items-center" onClick={() => setConversationAssignTarget(null)}>
-					<div className="max-h-[70vh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
-						<div className="flex items-center justify-between border-b px-4 py-3">
-							<div>
-								<h3 className="text-lg font-bold">{locale === 'ar' ? 'تعيين المحادثة' : 'Assign conversation'}</h3>
-								<p className="wa-privacy-identity text-sm text-[#667781]">{conversationTitle(conversationAssignTarget)}</p>
+				<div
+					className="wa-ui-scrim is-sheet-on-phone"
+					style={{ zIndex: 110 }}
+					onClick={() => setConversationAssignTarget(null)}
+					onKeyDown={event => {
+						if (event.key === 'Escape') setConversationAssignTarget(null);
+					}}
+				>
+					<div
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="wa-assign-target-title"
+						className="wa-ui-modal wa-ui-assign-modal"
+						style={{ '--wa-ui-modal-width': '440px', '--wa-ui-modal-height': '640px' }}
+						onClick={event => event.stopPropagation()}
+					>
+						<div className="wa-ui-modal__header">
+							<div className="wa-ui-modal__heading">
+								<h3 id="wa-assign-target-title" className="wa-ui-modal__title">
+									{locale === 'ar' ? 'تعيين المحادثة' : 'Assign chat'}
+								</h3>
+								<p className="wa-ui-modal__subtitle wa-privacy-identity" dir="auto">
+									{conversationTitle(conversationAssignTarget)}
+								</p>
 							</div>
-							<button type="button" onClick={() => setConversationAssignTarget(null)} className="rounded-full p-2 hover:bg-slate-100"><X size={18} /></button>
-						</div>
-						<div className="max-h-[58vh] overflow-y-auto p-2">
-							<p className="px-3 pb-2 text-[11px] leading-snug text-[#667781]">
-								{locale === 'ar'
-									? 'عرض + استخدام مطلوبان للتعيين. غيّر الصلاحيات من المربعات.'
-									: 'View + Use are required to assign. Use the checkboxes to change permissions.'}
-							</p>
 							<button
 								type="button"
+								autoFocus
+								aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
+								title={locale === 'ar' ? 'إغلاق' : 'Close'}
+								onClick={() => setConversationAssignTarget(null)}
+								className="wa-ui-icon-btn"
+							>
+								<X size={18} strokeWidth={2} />
+							</button>
+						</div>
+						<div className="wa-ui-assign__list wa-ui-scroll">
+							<button
+								type="button"
+								aria-pressed={!conversationAssignTarget.assignedUserId}
 								onClick={() => {
 									void assignConversationTarget(conversationAssignTarget.id, '');
 									setConversationAssignTarget(null);
 								}}
-								className="flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100"
+								className={`wa-ui-assign__row is-standalone ${
+									conversationAssignTarget.assignedUserId ? '' : 'is-selected'
+								}`}
 							>
-								<div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100"><X size={18} /></div>
-								<span className="font-semibold">{locale === 'ar' ? 'بدون تعيين' : 'Unassigned'}</span>
+								<span className="wa-ui-assign__avatar" aria-hidden="true">
+									<X size={18} strokeWidth={1.9} />
+								</span>
+								<span className="wa-ui-assign__copy">
+									<span className="wa-ui-assign__name">
+										{locale === 'ar' ? 'بدون تعيين' : 'Unassigned'}
+									</span>
+									<span className="wa-ui-assign__sub">
+										{locale === 'ar' ? 'لا أحد مسؤول عن المحادثة' : 'No one owns this chat'}
+									</span>
+								</span>
+								<span className="wa-ui-assign__check" aria-hidden="true">
+									{conversationAssignTarget.assignedUserId ? null : (
+										<Check size={14} strokeWidth={2.8} />
+									)}
+								</span>
 							</button>
-							{assignableStaff.map(user => (
-								<div
-									key={user.id}
-									className="rounded-xl p-2 hover:bg-slate-50"
-								>
-									<button
-										type="button"
-										onClick={() => {
-											void assignConversationTarget(conversationAssignTarget.id, user.id);
-											setConversationAssignTarget(null);
-										}}
-										className="flex w-full items-center gap-3 text-start"
+							<p className="wa-ui-menu__section wa-ui-assign__section">
+								<span>{locale === 'ar' ? 'الفريق' : 'Team'}</span>
+							</p>
+							{assignableStaff.map(user => {
+								const assigned = conversationAssignTarget.assignedUserId === user.id;
+								return (
+									<div
+										key={user.id}
+										className={`wa-ui-assign__person ${assigned ? 'is-selected' : ''}`}
 									>
-										<Avatar label={user.name} size={10} src={user.avatarUrl} />
-										<div className="min-w-0 flex-1">
-											<p className="truncate font-semibold">{user.name}</p>
-											<p className="truncate text-xs text-[#667781]">
-												{user.assignable
-													? staffAssignHint(
-															report?.staff?.find(item => item.userId === user.id),
-															locale,
-														) || user.email
-													: locale === 'ar'
-														? 'فعّل عرض واستخدام للتعيين'
-														: 'Enable View + Use to assign'}
-											</p>
+										<div className="wa-ui-assign__person-head">
+											<button
+												type="button"
+												aria-pressed={assigned}
+												onClick={() => {
+													void assignConversationTarget(conversationAssignTarget.id, user.id);
+													setConversationAssignTarget(null);
+												}}
+												className="wa-ui-assign__row"
+											>
+												<Avatar label={user.name} size={10} src={user.avatarUrl} />
+												<span className="wa-ui-assign__copy">
+													<span className="wa-ui-assign__name">
+														<span className="truncate">{user.name}</span>
+													</span>
+													<span
+														className={`wa-ui-assign__sub ${user.assignable ? '' : 'is-warning'}`}
+													>
+														{user.assignable
+															? staffAssignHint(
+																	report?.staff?.find(item => item.userId === user.id),
+																	locale,
+																) || user.email
+															: locale === 'ar'
+																? 'يحتاج عرض + استخدام للتعيين'
+																: 'Needs View + Use to be assigned'}
+													</span>
+												</span>
+												<span className="wa-ui-assign__check" aria-hidden="true">
+													{assigned ? <Check size={14} strokeWidth={2.8} /> : null}
+												</span>
+											</button>
 										</div>
-										{conversationAssignTarget.assignedUserId === user.id && <Check size={18} className="text-[#00a884]" />}
-									</button>
-									{(canManageWhatsApp || isAdmin) && !user.isOwner ? (
-										<StaffPermissionChips
-											person={user}
-											onToggle={toggleStaffPermission}
-											locale={locale}
-											className="mt-2 ps-12"
-										/>
-									) : null}
-								</div>
-							))}
+										{(canManageWhatsApp || isAdmin) && !user.isOwner ? (
+											<div className="wa-ui-assign__perms">
+												<StaffPermissionChips
+													person={user}
+													onToggle={toggleStaffPermission}
+													locale={locale}
+												/>
+											</div>
+										) : null}
+									</div>
+								);
+							})}
 							{assignableStaff.length === 0 ? (
-								<p className="px-3 py-4 text-center text-sm text-[#667781]">
-									{locale === 'ar' ? 'لا يوجد موظفون' : 'No staff found'}
-								</p>
+								<div className="wa-ui-assign__empty">
+									<UsersRound size={22} strokeWidth={1.6} aria-hidden="true" />
+									<p>{locale === 'ar' ? 'لا يوجد موظفون' : 'No staff found'}</p>
+								</div>
 							) : null}
+						</div>
+						<div className="wa-ui-modal__footer">
+							<p className="wa-ui-modal__footer-note">
+								<Info size={14} strokeWidth={2} aria-hidden="true" />
+								<span>
+									{locale === 'ar'
+										? 'العرض والاستخدام مطلوبان للتعيين. تُحفظ الصلاحيات فور تغييرها.'
+										: 'View + Use are required to assign. Access changes save instantly.'}
+								</span>
+							</p>
 						</div>
 					</div>
 				</div>
@@ -25078,7 +25397,7 @@ function WhatsAppWorkspaceContent() {
 								<X size={18} />
 							</button>
 						</div>
-						<div className="max-h-[58vh] overflow-y-auto p-2">
+						<div className="wa-ui-scroll nice-scroll max-h-[58vh] overflow-y-auto p-2">
 							{effectiveConversations
 								.filter(
 									item =>
@@ -25158,21 +25477,126 @@ function WhatsAppWorkspaceContent() {
 						{loadingMessageInfo ? (
 							<div className="grid min-h-40 place-items-center"><Loader2 className="animate-spin text-[#00a884]" /></div>
 						) : (
-							<div className="mt-4 space-y-3 text-sm">
-								<div className="rounded-xl bg-slate-50 p-3">
-									<p className="wa-privacy-identity font-semibold">{messageInfo.message?.text || messageInfo.type}</p>
-									<p className="mt-1 text-xs text-slate-500">{new Date(messageInfo.sentAt).toLocaleString()}</p>
-								</div>
-								{[
-									[locale === 'ar' ? 'الحالة' : 'Status', messageInfo.status],
-									[locale === 'ar' ? 'الاتجاه' : 'Direction', messageInfo.direction],
-									[locale === 'ar' ? 'تم التسليم' : 'Delivered', messageInfo.provider?.acknowledgements?.deliveryRemaining === 0 ? '✓' : '—'],
-									[locale === 'ar' ? 'تمت القراءة' : 'Read', messageInfo.provider?.acknowledgements?.readRemaining === 0 ? '✓✓' : '—'],
-									[locale === 'ar' ? 'تم التشغيل' : 'Played', messageInfo.provider?.acknowledgements?.playedRemaining === 0 ? '✓' : '—'],
-								].map(([label, value]) => (
-									<div key={label} className="flex justify-between gap-4 border-b pb-2 last:border-0"><span className="text-slate-500">{label}</span><strong>{value || '—'}</strong></div>
-								))}
-							</div>
+							(() => {
+								const ack =
+									messageInfo.acknowledgements ||
+									messageInfo.provider?.acknowledgements ||
+									{};
+								const outbound =
+									String(messageInfo.direction || '').toLowerCase() === 'outbound' ||
+									messageInfo.provider?.fromMe === true;
+								const statusLabel = String(messageInfo.status || '—');
+								const statusUpdatedAt = messageInfo.statusUpdatedAt
+									? new Date(messageInfo.statusUpdatedAt).toLocaleString()
+									: null;
+								const formatAck = (done, mark) => {
+									if (!outbound) return locale === 'ar' ? 'غير متاح للوارد' : 'N/A (inbound)';
+									if (done) {
+										return statusUpdatedAt ? `${mark} · ${statusUpdatedAt}` : mark;
+									}
+									return '—';
+								};
+								const rows = [
+									[
+										locale === 'ar' ? 'الحالة' : 'Status',
+										locale === 'ar'
+											? (
+													{
+														pending: 'قيد الانتظار',
+														sent: 'أُرسلت',
+														delivered: 'تم التسليم',
+														read: 'تمت القراءة',
+														played: 'تم التشغيل',
+														failed: 'فشل الإرسال',
+													}[statusLabel] || statusLabel
+												)
+											: statusLabel,
+									],
+									[
+										locale === 'ar' ? 'الاتجاه' : 'Direction',
+										outbound
+											? locale === 'ar'
+												? 'صادرة'
+												: 'outbound'
+											: locale === 'ar'
+												? 'واردة'
+												: 'inbound',
+									],
+									[
+										locale === 'ar' ? 'وقت الإرسال' : 'Sent',
+										messageInfo.sentAt
+											? new Date(messageInfo.sentAt).toLocaleString()
+											: '—',
+									],
+								];
+								if (outbound) {
+									rows.push(
+										[
+											locale === 'ar' ? 'تم التسليم' : 'Delivered',
+											formatAck(
+												Boolean(
+													ack.delivered ||
+														ack.deliveryRemaining === 0 ||
+														['delivered', 'read', 'played'].includes(statusLabel),
+												),
+												'✓',
+											),
+										],
+										[
+											locale === 'ar' ? 'تمت القراءة' : 'Read',
+											formatAck(
+												Boolean(
+													ack.read ||
+														ack.readRemaining === 0 ||
+														['read', 'played'].includes(statusLabel),
+												),
+												'✓✓',
+											),
+										],
+										[
+											locale === 'ar' ? 'تم التشغيل' : 'Played',
+											formatAck(
+												Boolean(
+													ack.played ||
+														ack.playedRemaining === 0 ||
+														statusLabel === 'played',
+												),
+												'✓',
+											),
+										],
+									);
+								} else {
+									rows.push([
+										locale === 'ar' ? 'ملاحظة' : 'Note',
+										locale === 'ar'
+											? 'إيصالات التسليم والقراءة تظهر للرسائل الصادرة فقط'
+											: 'Delivery and read receipts apply to outbound messages only',
+									]);
+								}
+								return (
+									<div className="mt-4 space-y-3 text-sm">
+										<div className="rounded-xl bg-slate-50 p-3">
+											<p className="wa-privacy-identity font-semibold">
+												{messageInfo.message?.text || messageInfo.type}
+											</p>
+											<p className="mt-1 text-xs text-slate-500">
+												{messageInfo.sentAt
+													? new Date(messageInfo.sentAt).toLocaleString()
+													: '—'}
+											</p>
+										</div>
+										{rows.map(([label, value]) => (
+											<div
+												key={label}
+												className="flex justify-between gap-4 border-b pb-2 last:border-0"
+											>
+												<span className="text-slate-500">{label}</span>
+												<strong className="max-w-[65%] text-end">{value || '—'}</strong>
+											</div>
+										))}
+									</div>
+								);
+							})()
 						)}
 					</div>
 				</div>

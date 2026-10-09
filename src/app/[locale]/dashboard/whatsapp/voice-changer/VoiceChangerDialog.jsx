@@ -25,7 +25,6 @@ import {
 	X,
 	Zap,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -330,14 +329,14 @@ function formatClock(seconds) {
 function VoiceCloneGuide({ ar }) {
 	const guide = ar ? CLONE_GUIDE.ar : CLONE_GUIDE.en;
 	return (
-		<div className="space-y-2.5 rounded-xl border border-violet-200 bg-violet-50/80 p-2.5 dark:border-violet-800 dark:bg-violet-950/30">
-			<p className="text-[11px] leading-4 text-slate-600 dark:text-slate-300">{guide.intro}</p>
+		<div className="space-y-2.5 rounded-xl border border-[var(--wa-ui-border)] bg-[var(--wa-ui-surface-2)] p-3">
+			<p className="text-[12.5px] leading-5 text-[var(--wa-ui-text-2)]">{guide.intro}</p>
 			{guide.sections.map(section => (
 				<div key={section.title}>
-					<p className="mb-1 text-[11px] font-bold text-violet-900 dark:text-violet-200">{section.title}</p>
+					<p className="mb-1 text-[12.5px] font-bold text-[var(--wa-ui-text)]">{section.title}</p>
 					<ul className="space-y-1 ps-3.5">
 						{section.items.map(item => (
-							<li key={item} className="list-disc text-[10px] leading-4 text-slate-600 dark:text-slate-300">
+							<li key={item} className="list-disc text-[12px] leading-5 text-[var(--wa-ui-text-2)]">
 								{item}
 							</li>
 						))}
@@ -345,8 +344,8 @@ function VoiceCloneGuide({ ar }) {
 				</div>
 			))}
 			<div>
-				<p className="text-[11px] font-bold text-violet-900 dark:text-violet-200">{guide.linksTitle}</p>
-				<p className="mt-0.5 text-[10px] leading-4 text-slate-500">{guide.linksHint}</p>
+				<p className="text-[12.5px] font-bold text-[var(--wa-ui-text)]">{guide.linksTitle}</p>
+				<p className="mt-0.5 text-[12px] leading-5 text-[var(--wa-ui-text-3)]">{guide.linksHint}</p>
 				<div className="mt-1.5 space-y-1.5">
 					{CLONE_CLEANUP_LINKS.map(link => (
 						<a
@@ -354,14 +353,14 @@ function VoiceCloneGuide({ ar }) {
 							href={link.href}
 							target="_blank"
 							rel="noreferrer"
-							className="flex items-start gap-2 rounded-lg border border-violet-200 bg-white px-2 py-1.5 text-start transition hover:border-violet-400 hover:bg-violet-50 dark:border-violet-800 dark:bg-slate-950 dark:hover:bg-violet-950/40"
+							className="flex items-start gap-2 rounded-lg border border-[var(--wa-ui-border)] bg-[var(--wa-ui-surface)] px-2.5 py-2 text-start transition hover:bg-[var(--wa-ui-hover)]"
 						>
-							<ExternalLink size={12} className="mt-0.5 shrink-0 text-violet-700 dark:text-violet-300" />
+							<ExternalLink size={12} className="mt-0.5 shrink-0 text-[var(--wa-ui-icon)]" />
 							<span className="min-w-0">
-								<span className="block text-[11px] font-bold text-slate-800 dark:text-slate-100">
+								<span className="block text-[12.5px] font-bold text-slate-800 dark:text-slate-100">
 									{ar ? link.ar : link.en}
 								</span>
-								<span className="block text-[10px] leading-4 text-slate-500">{ar ? link.hintAr : link.hintEn}</span>
+								<span className="block text-[12px] leading-5 text-[var(--wa-ui-text-3)]">{ar ? link.hintAr : link.hintEn}</span>
 							</span>
 						</a>
 					))}
@@ -849,11 +848,9 @@ export default function VoiceChangerDialog({
 		}
 	};
 
-	const fieldClass =
-		'h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-[11px] outline-none transition focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:focus:ring-emerald-900/40';
+	const fieldClass = 'wa-ui-input wa-ui-vc__field';
 
-	const ghostBtn =
-		'inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-[10px] font-semibold text-slate-500 transition hover:bg-white hover:text-slate-800 disabled:opacity-50 dark:hover:bg-slate-900 dark:hover:text-slate-100';
+	const ghostBtn = 'wa-ui-btn wa-ui-btn--ghost wa-ui-btn--sm shrink-0';
 
 	const presetOptions = FFMPEG_PRESETS.map(item => ({
 		value: item.id,
@@ -870,7 +867,7 @@ export default function VoiceChangerDialog({
 			: (voiceOptions.find(item => item.value === voiceId)?.label || '');
 
 	const renderPlayer = () => (
-		<div className="overflow-hidden rounded-xl border border-emerald-100 bg-white p-2 dark:border-emerald-900/40 dark:bg-slate-950">
+		<div className="overflow-hidden rounded-xl border border-[var(--wa-ui-border)] bg-[var(--wa-ui-surface-2)] p-2.5">
 			<audio
 				ref={audioRef}
 				src={previewUrl || undefined}
@@ -890,7 +887,7 @@ export default function VoiceChangerDialog({
 					type="button"
 					onClick={togglePlayback}
 					disabled={!hasSample || converting}
-					className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-600 text-white disabled:opacity-40"
+					className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--wa-ui-accent-strong)] text-white disabled:opacity-40"
 					aria-label={playing ? t.stop : t.preview}
 				>
 					{converting ? (
@@ -905,20 +902,20 @@ export default function VoiceChangerDialog({
 					type="button"
 					onClick={seekPlayback}
 					disabled={!previewUrl || converting}
-					className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-200 disabled:opacity-50 dark:bg-slate-700"
+					className="relative h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--wa-ui-pressed)] disabled:opacity-50"
 					aria-label={t.preview}
 				>
 					<span
-						className="absolute inset-y-0 start-0 rounded-full bg-emerald-500"
+						className="absolute inset-y-0 start-0 rounded-full bg-[var(--wa-ui-accent)]"
 						style={{ width: `${duration ? Math.min(100, (playTime / duration) * 100) : 0}%` }}
 					/>
 				</button>
-				<span className="shrink-0 font-mono text-[10px] font-bold text-slate-500">
+				<span className="shrink-0 text-[12px] font-medium tabular-nums text-[var(--wa-ui-text-3)]">
 					{formatClock(playTime)} / {formatClock(duration || RECORD_SECONDS)}
 				</span>
 			</div>
 			<div className="mt-1.5 flex items-center justify-between gap-2">
-				<span className="truncate text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+				<span className="truncate text-[12px] text-[var(--wa-ui-text-3)]">
 					{converting ? t.listening : hasSample ? `${activeEffectLabel} · ${t.sampleReady}` : t.tryHint}
 				</span>
 			</div>
@@ -933,9 +930,7 @@ export default function VoiceChangerDialog({
 				title={converting ? t.listening : hasSample ? t.reRecord : t.preview}
 				onClick={recording ? stopPreviewRecording : () => startPreviewRecording(false)}
 				disabled={converting}
-				className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold leading-none text-white shadow-sm transition disabled:opacity-60 ${
-					recording ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
-				}`}
+				className={`wa-ui-btn wa-ui-btn--sm shrink-0 ${recording ? 'wa-ui-btn--danger' : 'wa-ui-btn--primary'}`}
 			>
 				{converting ? (
 					<Loader2 size={13} className="animate-spin" />
@@ -959,11 +954,11 @@ export default function VoiceChangerDialog({
 		if (item.needsKey && !providerKeySaved(item.id)) {
 			return (
 				<div className="space-y-2">
-					<p className="text-[10px] leading-4 text-slate-500">
+					<p className="text-[12px] leading-5 text-[var(--wa-ui-text-3)]">
 						{ar ? item.keyHintAr || t.pasteKeyHint : item.keyHint || t.pasteKeyHint}
 					</p>
 					{credential?.source && credential.source !== 'saved' && credential.configured ? (
-						<p className="text-[10px] leading-4 text-slate-500">{t.fallbackKeyHint}</p>
+						<p className="text-[12px] leading-5 text-[var(--wa-ui-text-3)]">{t.fallbackKeyHint}</p>
 					) : null}
 					<div className="flex items-center gap-1.5">
 						<input
@@ -974,15 +969,14 @@ export default function VoiceChangerDialog({
 							placeholder={item.id === 'huggingface' ? 'hf_...' : item.id === 'elevenlabs' ? 'sk_...' : 'sk-...'}
 							className={fieldClass}
 						/>
-						<Button
+						<button
 							type="button"
-							size="sm"
-							className="h-8 shrink-0 px-2 text-[11px]"
+							className="wa-ui-btn wa-ui-btn--primary wa-ui-btn--sm shrink-0"
 							onClick={() => saveKey(item.id)}
 							disabled={savingKey || !apiKeyDraft.trim()}
 						>
 							{savingKey ? <Loader2 size={12} className="animate-spin" /> : t.saveKey}
-						</Button>
+						</button>
 						{keyLink}
 					</div>
 				</div>
@@ -1003,15 +997,14 @@ export default function VoiceChangerDialog({
 								placeholder={credential?.configured ? t.newKey : 'sk_...'}
 								className={fieldClass}
 							/>
-							<Button
+							<button
 								type="button"
-								size="sm"
-								className="h-8 shrink-0 px-2 text-[11px]"
+								className="wa-ui-btn wa-ui-btn--primary wa-ui-btn--sm shrink-0"
 								onClick={() => saveKey(item.id)}
 								disabled={savingKey || !apiKeyDraft.trim()}
 							>
 								{savingKey ? <Loader2 size={12} className="animate-spin" /> : t.saveKey}
-							</Button>
+							</button>
 							{credential?.configured ? (
 								<button type="button" className={ghostBtn} onClick={() => { setEditingKey(false); setApiKeyDraft(''); }}>
 									{t.cancelEdit}
@@ -1021,7 +1014,7 @@ export default function VoiceChangerDialog({
 						</div>
 					) : (
 						<div className="flex items-center gap-1">
-							<span className="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900">
+							<span className="wa-ui-badge wa-ui-badge--accent">
 								<KeyRound size={10} />
 								{credential?.source === 'environment'
 									? t.fromEnv
@@ -1033,7 +1026,7 @@ export default function VoiceChangerDialog({
 							{credential?.source === 'saved' ? (
 								<button
 									type="button"
-									className={`${ghostBtn} text-rose-600 hover:text-rose-700`}
+									className={`${ghostBtn} wa-ui-btn--danger-text`}
 									title={t.removeKey}
 									disabled={savingKey}
 									onClick={() => removeKey(item.id)}
@@ -1052,16 +1045,16 @@ export default function VoiceChangerDialog({
 						aria-label={t.cloneName}
 						className={fieldClass}
 					/>
-					<p className="text-[10px] leading-4 text-slate-500">{cloneHintText}</p>
+					<p className="text-[12px] leading-5 text-[var(--wa-ui-text-3)]">{cloneHintText}</p>
 					<button
 						type="button"
 						onClick={() => revealGuide(true)}
-						className="inline-flex h-7 items-center gap-1 rounded-lg border border-violet-200 bg-white px-2 text-[10px] font-bold text-violet-800 hover:bg-violet-50 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-200"
+						className="wa-ui-btn wa-ui-btn--secondary wa-ui-btn--sm self-start"
 					>
 						<HelpCircle size={12} />
 						{t.guideOpenInClone}
 					</button>
-					<p className="text-[10px] leading-4 text-slate-500">{ar ? item.keyHintAr : item.keyHint}</p>
+					<p className="text-[12px] leading-5 text-[var(--wa-ui-text-3)]">{ar ? item.keyHintAr : item.keyHint}</p>
 					<div className="flex flex-wrap gap-1">
 						{[
 							{ id: 'upload', label: t.cloneFromUpload },
@@ -1073,19 +1066,16 @@ export default function VoiceChangerDialog({
 								type="button"
 								onClick={() => setCloneSampleMode(option.id)}
 								disabled={cloning}
-								className={`inline-flex h-7 items-center rounded-lg px-2 text-[10px] font-bold transition ${
-									cloneSampleMode === option.id
-										? 'bg-violet-600 text-white'
-										: 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-								}`}
+								aria-pressed={cloneSampleMode === option.id}
+								className="wa-ui-chip"
 							>
 								{option.label}
 							</button>
 						))}
 					</div>
 					{cloneSampleMode === 'chat' ? (
-						<div className="space-y-2 rounded-xl border border-violet-200 bg-violet-50/60 p-2.5 dark:border-violet-800 dark:bg-violet-950/25">
-							<p className="text-[10px] leading-4 text-slate-600 dark:text-slate-300">{t.chooseChatHint}</p>
+						<div className="space-y-2 rounded-xl border border-[var(--wa-ui-border)] bg-[var(--wa-ui-surface-2)] p-3">
+							<p className="text-[12px] leading-5 text-[var(--wa-ui-text-2)]">{t.chooseChatHint}</p>
 							<button
 								type="button"
 								onClick={() =>
@@ -1095,7 +1085,7 @@ export default function VoiceChangerDialog({
 									})
 								}
 								disabled={cloning || !onChooseChat}
-								className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-violet-300 bg-white text-[12px] font-bold text-violet-800 shadow-sm transition hover:bg-violet-50 disabled:opacity-50 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-100"
+								className="wa-ui-btn wa-ui-btn--secondary w-full"
 							>
 								<MessageCircle size={14} />
 								{t.chooseChat}
@@ -1108,7 +1098,7 @@ export default function VoiceChangerDialog({
 							type="button"
 							onClick={() => cloneFileRef.current?.click()}
 							disabled={cloning}
-							className={`${ghostBtn} h-8 border border-slate-200 bg-white px-2.5 text-slate-700 dark:border-slate-700`}
+							className="wa-ui-btn wa-ui-btn--secondary wa-ui-btn--sm"
 						>
 							<Upload size={12} />
 							{t.cloneUpload}
@@ -1133,9 +1123,7 @@ export default function VoiceChangerDialog({
 							type="button"
 							onClick={() => startPreviewRecording(true)}
 							disabled={cloning || converting}
-							className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold leading-none text-white ${
-								recording && cloneCaptureRef.current ? 'bg-rose-600' : 'bg-emerald-600'
-							}`}
+							className={`wa-ui-btn wa-ui-btn--sm shrink-0 self-start ${recording && cloneCaptureRef.current ? 'wa-ui-btn--danger' : 'wa-ui-btn--primary'}`}
 						>
 							{recording && cloneCaptureRef.current ? <Square size={11} /> : <Mic size={13} />}
 							{recording && cloneCaptureRef.current ? `${t.stop} ${recordLeft}` : t.cloneRecord}
@@ -1146,14 +1134,14 @@ export default function VoiceChangerDialog({
 							{cloneSamples.map((file, index) => (
 								<li
 									key={`${file.name}-${index}`}
-									className="flex items-center gap-2 rounded-lg bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+									className="flex items-center gap-2 rounded-lg bg-[var(--wa-ui-surface-2)] px-2.5 py-1.5 text-[12px] text-[var(--wa-ui-text-2)]"
 								>
 									<span className="min-w-0 flex-1 truncate">{file.name}</span>
 									<button
 										type="button"
 										aria-label={t.removeKey}
 										onClick={() => setCloneSamples(current => current.filter((_, itemIndex) => itemIndex !== index))}
-										className="grid h-5 w-5 place-items-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+										className="wa-ui-icon-btn wa-ui-icon-btn--sm"
 									>
 										<X size={11} />
 									</button>
@@ -1161,12 +1149,12 @@ export default function VoiceChangerDialog({
 							))}
 						</ul>
 					) : null}
-					<label className="flex items-start gap-2 text-[10px] leading-4 text-slate-600 dark:text-slate-300">
+					<label className="flex items-start gap-2 text-[12px] leading-5 text-[var(--wa-ui-text-2)]">
 						<input
 							type="checkbox"
 							checked={cloneConsent}
 							onChange={event => setCloneConsent(event.target.checked)}
-							className="mt-0.5 accent-emerald-600"
+							className="mt-0.5 h-4 w-4 accent-[#00a884]"
 						/>
 						<span>{t.cloneConsent}</span>
 					</label>
@@ -1174,13 +1162,13 @@ export default function VoiceChangerDialog({
 						type="button"
 						onClick={() => submitClone(item.id)}
 						disabled={cloning || !providerKeySaved(item.id)}
-						className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-[11px] font-bold text-white disabled:opacity-50"
+						className="wa-ui-btn wa-ui-btn--primary wa-ui-btn--sm self-start"
 					>
 						{cloning ? <Loader2 size={13} className="animate-spin" /> : <UserRound size={13} />}
 						{cloning ? t.cloneCreating : t.cloneCreate}
 					</button>
 					{cloneError ? (
-						<p className="rounded-lg bg-rose-50 px-2 py-1.5 text-[10px] leading-4 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+						<p className="rounded-lg bg-[var(--wa-ui-danger-soft)] px-2.5 py-2 text-[12px] leading-5 text-[var(--wa-ui-danger)]">
 							{t.cloneErrorKeepOpen} {cloneError}
 						</p>
 					) : null}
@@ -1197,7 +1185,7 @@ export default function VoiceChangerDialog({
 							{tryButton}
 						</div>
 					) : null}
-					{item.voices?.length ? <p className="text-[10px] leading-4 text-emerald-700">{t.cloneReady}</p> : null}
+					{item.voices?.length ? <p className="text-[12px] leading-5 text-[var(--wa-ui-accent-strong)]">{t.cloneReady}</p> : null}
 					{recording || hasSample || previewUrl ? renderPlayer() : null}
 				</div>
 			);
@@ -1231,9 +1219,9 @@ export default function VoiceChangerDialog({
 				</div>
 
 				{recording ? (
-					<div className="flex items-center gap-2 rounded-lg bg-rose-50 px-2 py-1.5 dark:bg-rose-950/40">
+					<div className="flex items-center gap-2 rounded-lg bg-[var(--wa-ui-danger-soft)] px-2.5 py-2">
 						<span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-rose-500" />
-						<span className="text-[11px] font-bold text-rose-700 dark:text-rose-300">{t.speakNow}</span>
+						<span className="text-[12.5px] font-bold text-rose-700 dark:text-rose-300">{t.speakNow}</span>
 						<div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-rose-200 dark:bg-rose-900">
 							<span
 								className="block h-full rounded-full bg-rose-500 transition-[width] duration-150"
@@ -1242,10 +1230,10 @@ export default function VoiceChangerDialog({
 								}}
 							/>
 						</div>
-						<span className="font-mono text-[10px] font-bold text-rose-600">{recordLeft}s</span>
+						<span className="font-mono text-[12px] font-bold text-rose-600">{recordLeft}s</span>
 					</div>
 				) : (
-					<p className="text-[10px] leading-4 text-slate-500">{hasSample ? t.sampleReady : t.tryHint}</p>
+					<p className="text-[12px] leading-5 text-[var(--wa-ui-text-3)]">{hasSample ? t.sampleReady : t.tryHint}</p>
 				)}
 
 				{item.id === 'ffmpeg' && preset === 'custom' ? (
@@ -1256,9 +1244,10 @@ export default function VoiceChangerDialog({
 							max={12}
 							value={pitchSemitones}
 							onChange={event => setPitchSemitones(Number(event.target.value))}
-							className="w-full accent-emerald-600"
+							aria-label={t.preset}
+							className="w-full accent-[#00a884]"
 						/>
-						<span className="w-6 text-end font-mono text-[11px] font-bold">{pitchSemitones}</span>
+						<span className="w-8 text-end text-[12.5px] font-medium tabular-nums">{pitchSemitones}</span>
 					</label>
 				) : null}
 
@@ -1272,15 +1261,14 @@ export default function VoiceChangerDialog({
 							placeholder={credential?.configured ? t.newKey : item.id === 'huggingface' ? 'hf_...' : 'sk-...'}
 							className={fieldClass}
 						/>
-						<Button
+						<button
 							type="button"
-							size="sm"
-							className="h-8 shrink-0 px-2 text-[11px]"
+							className="wa-ui-btn wa-ui-btn--primary wa-ui-btn--sm shrink-0"
 							onClick={() => saveKey(item.id)}
 							disabled={savingKey || !apiKeyDraft.trim()}
 						>
 							{savingKey ? <Loader2 size={12} className="animate-spin" /> : t.saveKey}
-						</Button>
+						</button>
 						{credential?.configured ? (
 							<button type="button" className={ghostBtn} onClick={() => { setEditingKey(false); setApiKeyDraft(''); }}>
 								{t.cancelEdit}
@@ -1292,7 +1280,7 @@ export default function VoiceChangerDialog({
 
 				{item.needsKey && !showKeyForm ? (
 					<div className="flex items-center gap-1">
-						<span className="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900">
+						<span className="wa-ui-badge wa-ui-badge--accent">
 							<KeyRound size={10} />
 							{credential?.source === 'environment'
 								? t.fromEnv
@@ -1308,7 +1296,7 @@ export default function VoiceChangerDialog({
 						{credential?.source === 'saved' ? (
 							<button
 								type="button"
-								className={`${ghostBtn} text-rose-600 hover:text-rose-700`}
+								className={`${ghostBtn} wa-ui-btn--danger-text`}
 								title={t.removeKey}
 								disabled={savingKey}
 								onClick={() => removeKey(item.id)}
@@ -1335,7 +1323,7 @@ export default function VoiceChangerDialog({
 		>
 			<DialogContent
 				dir={ar ? 'rtl' : 'ltr'}
-				className="flex !max-h-[min(82vh,580px)] w-full max-w-md !flex-col !gap-0 overflow-hidden !p-0 sm:!max-w-md"
+				className="wa-ui-vc flex !max-h-[min(86vh,640px)] w-full max-w-md !flex-col !gap-0 overflow-hidden !p-0 sm:!max-w-md"
 				onPointerDownOutside={event => {
 					const target = event.target;
 					if (target instanceof Element && target.closest('[data-wa-select-menu],[role="listbox"]')) {
@@ -1360,21 +1348,21 @@ export default function VoiceChangerDialog({
 					if (busy) event.preventDefault();
 				}}
 			>
-				<DialogHeader className="shrink-0 space-y-1 border-b border-slate-100 px-4 pb-2.5 pe-12 pt-3 dark:border-slate-800">
-					<DialogTitle className="flex items-center gap-2 text-sm">
-						<span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-							<AudioLines size={14} />
-						</span>
+				<DialogHeader className="wa-ui-vc__header shrink-0 space-y-0.5 px-5 pb-3 pe-12 pt-4 text-start">
+					<DialogTitle className="text-[16px] font-semibold leading-[22px] text-[var(--wa-ui-text)]">
 						{t.title}
-						{/* <DialogDescription className="min-w-0 flex-1 text-[11px] leading-4 text-slate-500">{t.subtitle}</DialogDescription> */}
+						{/* <DialogDescription className="min-w-0 flex-1 text-[12.5px] leading-5 text-[var(--wa-ui-text-3)]">{t.subtitle}</DialogDescription> */}
 					</DialogTitle>
-					<div className="flex items-start justify-between gap-2">
+					{t.subtitle ? (
+						<p className="text-[13px] leading-[18px] text-[var(--wa-ui-text-3)]">{t.subtitle}</p>
+					) : null}
+					<div className="hidden">
 						{/* <button
 							type="button"
 							title={t.guideHover}
 							aria-expanded={guideOpen}
 							onClick={() => revealGuide(!guideOpen)}
-							className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-lg px-2 text-[10px] font-bold leading-none ${
+							className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-lg px-2 text-[12px] font-bold leading-none ${
 								guideOpen
 									? 'bg-violet-600 text-white'
 									: 'bg-violet-50 text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100 dark:bg-violet-950/50 dark:text-violet-200 dark:ring-violet-800'
@@ -1384,18 +1372,18 @@ export default function VoiceChangerDialog({
 							{guideOpen ? t.guideHide : t.guideButton}
 						</button> */}
 					</div>
-					{/* <p className="text-[10px] leading-4 text-amber-700/90 dark:text-amber-300/80">{t.disclaimer}</p> */}
+					{/* <p className="text-[12px] leading-4 text-amber-700/90 dark:text-amber-300/80">{t.disclaimer}</p> */}
 					{/* {provider === 'off' ? (
-						<p className="text-[10px] font-semibold leading-4 text-emerald-700 dark:text-emerald-300">{t.noneSelected}</p>
+						<p className="text-[12px] font-semibold leading-4 text-emerald-700 dark:text-emerald-300">{t.noneSelected}</p>
 					) : null} */}
 				</DialogHeader>
 
 				{loading ? (
 					<div className="flex flex-1 items-center justify-center py-10">
-						<Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+						<Loader2 className="h-5 w-5 animate-spin text-[var(--wa-ui-accent)]" />
 					</div>
 				) : (
-					<div ref={listRef} className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-2">
+					<div ref={listRef} className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
 						{guideOpen ? (
 							<div ref={guideRef} data-voice-clone-guide="">
 								<VoiceCloneGuide ar={ar} />
@@ -1411,44 +1399,36 @@ export default function VoiceChangerDialog({
 								<div
 									key={item.id}
 									data-provider={item.id}
-									className={`overflow-hidden rounded-xl border transition ${
-										active || expanded
-											? 'border-emerald-400 bg-emerald-50/70 dark:border-emerald-500/60 dark:bg-emerald-950/30'
-											: 'border-transparent hover:border-slate-200 hover:bg-slate-50 dark:hover:border-slate-700 dark:hover:bg-slate-900'
-									}`}
+									className={`wa-ui-vc__provider${active ? ' is-active' : ''}${expanded ? ' is-expanded' : ''}`}
 								>
-									<div className="flex items-center gap-2 px-2.5 py-2">
+									<div className="flex items-center gap-3 px-3 py-2.5">
 										<input
 											type="checkbox"
 											checked={active}
 											onChange={() => toggleUseProvider(item)}
 											aria-label={t.useModel}
-											className="h-4 w-4 shrink-0 cursor-pointer accent-emerald-600"
+											className="wa-ui-vc__use h-[18px] w-[18px] shrink-0 cursor-pointer"
 										/>
 										<button
 											type="button"
 											title={ar ? item.descriptionAr : item.description}
 											onClick={() => togglePanel(item)}
-											className="flex min-w-0 flex-1 items-center gap-2 text-start leading-none"
+											className="wa-ui-vc__provider-btn flex min-w-0 flex-1 items-center gap-3 text-start leading-none"
 										>
 											<span
-												className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${
-													active
-														? 'bg-emerald-600 text-white'
-														: 'bg-slate-100 text-slate-500 dark:bg-slate-800'
-												}`}
+												className="wa-ui-vc__provider-icon"
 											>
-												<Icon size={12} />
+												<Icon size={16} strokeWidth={1.9} />
 											</span>
-											<span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-none text-slate-800 dark:text-slate-100">
+											<span className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-5 text-[var(--wa-ui-text)]">
 												{ar ? item.labelAr : item.label}
 											</span>
 											{cloneModel ? (
 												<span
 													title={ar ? 'موديل استنساخ صوت' : 'Voice clone model'}
-													className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-black uppercase leading-none tracking-wide text-violet-800 ring-1 ring-violet-300 dark:bg-violet-950/70 dark:text-violet-200 dark:ring-violet-700"
+													className="wa-ui-badge shrink-0"
 												>
-													<Copy size={9} strokeWidth={2.6} />
+													<Copy size={11} strokeWidth={2.2} aria-hidden="true" />
 													{t.cloneBadge}
 												</span>
 											) : null}
@@ -1464,25 +1444,20 @@ export default function VoiceChangerDialog({
 																: 'API key required'
 															: undefined
 												}
-												className={`inline-flex shrink-0 items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide ${
-													keyReady
-														? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-														: item.needsKey
-															? 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300'
-															: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-												}`}
+												className={`wa-ui-badge shrink-0 ${keyReady || !item.needsKey ? 'wa-ui-badge--accent' : ''}`}
 											>
-												{keyReady ? <Check size={9} strokeWidth={2.8} /> : null}
+												{keyReady ? <Check size={11} strokeWidth={2.6} aria-hidden="true" /> : null}
 												{item.needsKey ? (keyReady ? t.keyAdded : t.needsKey) : t.free}
 											</span>
 											<ChevronDown
 												size={14}
-												className={`shrink-0 text-slate-400 transition-transform ${expanded ? 'rotate-180 text-emerald-600' : ''}`}
+												aria-hidden="true"
+												className={`shrink-0 text-[var(--wa-ui-text-3)] transition-transform ${expanded ? 'rotate-180' : ''}`}
 											/>
 										</button>
 									</div>
 									{expanded ? (
-										<div className="border-t border-emerald-100/80 px-2.5 pb-2 pt-1.5 dark:border-emerald-900/40">
+										<div className="wa-ui-vc__fields px-3 pb-3 pt-1">
 											{renderFields(item)}
 										</div>
 									) : null}
@@ -1492,14 +1467,13 @@ export default function VoiceChangerDialog({
 					</div>
 				)}
 
-				<div className="flex shrink-0 items-center justify-end gap-1.5 border-t border-slate-200/80 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
-					<Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => !busy && onOpenChange(false)}>
+				<div className="wa-ui-modal__footer">
+					<button type="button" className="wa-ui-btn wa-ui-btn--secondary" onClick={() => !busy && onOpenChange(false)}>
 						{t.cancel}
-					</Button>
-					<Button
+					</button>
+					<button
 						type="button"
-						size="sm"
-						className="h-8 px-3 text-xs"
+						className="wa-ui-btn wa-ui-btn--primary"
 						onClick={save}
 						disabled={
 							saving ||
@@ -1508,7 +1482,7 @@ export default function VoiceChangerDialog({
 						}
 					>
 						{saving ? <Loader2 size={14} className="animate-spin" /> : t.save}
-					</Button>
+					</button>
 				</div>
 			</DialogContent>
 		</Dialog>

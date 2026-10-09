@@ -20,7 +20,7 @@ const copy = {
 		subtitle: 'Send later to one or more chats',
 		editSubtitle: 'Update message or timing',
 		message: 'Message',
-		messagePlaceholder: 'Type the message to sendâ€¦',
+		messagePlaceholder: 'Type the message to send…',
 		recipients: 'Send to',
 		addMore: 'Add chats',
 		searchChats: 'Search chats',
@@ -35,8 +35,8 @@ const copy = {
 		days: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
 		schedule: 'Schedule',
 		save: 'Save',
-		scheduling: 'Schedulingâ€¦',
-		saving: 'Savingâ€¦',
+		scheduling: 'Scheduling…',
+		saving: 'Saving…',
 		cancel: 'Cancel',
 		emptyMessage: 'Write the message to schedule.',
 		needRecipients: 'Select at least one chat.',
@@ -47,36 +47,36 @@ const copy = {
 		updateFailed: 'Could not update schedule',
 	},
 	ar: {
-		title: 'Ø¬Ø¯ÙˆÙ„Ø© Ø±Ø³Ø§Ù„Ø©',
-		editTitle: 'ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©',
-		subtitle: 'Ø£Ø±Ø³Ù„ Ù„Ø§Ø­Ù‚Ù‹Ø§ Ù„Ø´Ø§Øª ÙˆØ§Ø­Ø¯ Ø£Ùˆ Ø£ÙƒØ«Ø±',
-		editSubtitle: 'Ø¹Ø¯Ù‘Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø£Ùˆ Ø§Ù„Ù…ÙˆØ¹Ø¯',
-		message: 'Ø§Ù„Ø±Ø³Ø§Ù„Ø©',
-		messagePlaceholder: 'Ø§ÙƒØªØ¨ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø±Ø§Ø¯ Ø¥Ø±Ø³Ø§Ù„Ù‡Ø§â€¦',
-		recipients: 'Ø¥Ù„Ù‰',
-		addMore: 'Ø¥Ø¶Ø§ÙØ© Ø´Ø§ØªØ§Øª',
-		searchChats: 'Ø§Ø¨Ø­Ø« ÙÙŠ Ø§Ù„Ø´Ø§ØªØ§Øª',
-		selectedCount: '{count} Ù…Ø­Ø¯Ø¯',
-		when: 'Ø§Ù„Ù…ÙˆØ¹Ø¯',
-		once: 'Ù…Ø±Ø©',
-		daily: 'ÙŠÙˆÙ…ÙŠ',
-		customDays: 'Ù…Ø®ØµØµ',
-		dateTime: 'Ø§Ù„ØªØ§Ø±ÙŠØ® ÙˆØ§Ù„ÙˆÙ‚Øª',
-		timeOfDay: 'Ø§Ù„ÙˆÙ‚Øª',
-		endDate: 'ÙŠÙ†ØªÙ‡ÙŠ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)',
-		days: ['Ø­', 'Ù†', 'Ø«', 'Ø±', 'Ø®', 'Ø¬', 'Ø³'],
-		schedule: 'Ø¬Ø¯ÙˆÙ„Ø©',
-		save: 'Ø­ÙØ¸',
-		scheduling: 'Ø¬Ø§Ø±ÙŠâ€¦',
-		saving: 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸â€¦',
-		cancel: 'Ø¥Ù„ØºØ§Ø¡',
-		emptyMessage: 'Ø§ÙƒØªØ¨ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø±Ø§Ø¯ Ø¬Ø¯ÙˆÙ„ØªÙ‡Ø§.',
-		needRecipients: 'Ø§Ø®ØªÙŽØ± Ø´Ø§Øª ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.',
-		needFutureTime: 'Ø§Ø®ØªÙŽØ± ÙˆÙ‚Øª Ø¨Ø¹Ø¯ Ø¯Ù‚ÙŠÙ‚Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.',
-		created: 'ØªÙ…Øª Ø¬Ø¯ÙˆÙ„Ø© Ø§Ù„Ø±Ø³Ø§Ù„Ø©',
-		updated: 'ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©',
-		failed: 'ØªØ¹Ø°Ù‘Ø±Øª Ø¬Ø¯ÙˆÙ„Ø© Ø§Ù„Ø±Ø³Ø§Ù„Ø©',
-		updateFailed: 'ØªØ¹Ø°Ù‘Ø± ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©',
+		title: 'جدولة رسالة',
+		editTitle: 'تعديل الجدولة',
+		subtitle: 'أرسل لاحقًا لشات واحد أو أكثر',
+		editSubtitle: 'عدّل الرسالة أو الموعد',
+		message: 'الرسالة',
+		messagePlaceholder: 'اكتب الرسالة المراد إرسالها…',
+		recipients: 'إلى',
+		addMore: 'إضافة شاتات',
+		searchChats: 'ابحث في الشاتات',
+		selectedCount: '{count} محدد',
+		when: 'الموعد',
+		once: 'مرة',
+		daily: 'يومي',
+		customDays: 'مخصص',
+		dateTime: 'التاريخ والوقت',
+		timeOfDay: 'الوقت',
+		endDate: 'ينتهي (اختياري)',
+		days: ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'],
+		schedule: 'جدولة',
+		save: 'حفظ',
+		scheduling: 'جاري…',
+		saving: 'جاري الحفظ…',
+		cancel: 'إلغاء',
+		emptyMessage: 'اكتب الرسالة المراد جدولتها.',
+		needRecipients: 'اختَر شات واحد على الأقل.',
+		needFutureTime: 'اختَر وقت بعد دقيقة على الأقل.',
+		created: 'تمت جدولة الرسالة',
+		updated: 'تم تحديث الجدولة',
+		failed: 'تعذّرت جدولة الرسالة',
+		updateFailed: 'تعذّر تحديث الجدولة',
 	},
 };
 
@@ -293,7 +293,7 @@ export default function ScheduleMessageDialog({
 					payload.timeOfDay = timeOfDay;
 					payload.daysOfWeek = mode === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : daysOfWeek;
 					if (!payload.daysOfWeek.length) {
-						toast.error(ar ? 'Ø§Ø®ØªÙŽØ± ÙŠÙˆÙ… ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„' : 'Select at least one weekday');
+						toast.error(ar ? 'اختَر يوم واحد على الأقل' : 'Select at least one weekday');
 						setSubmitting(false);
 						return;
 					}
@@ -325,7 +325,7 @@ export default function ScheduleMessageDialog({
 					payload.timeOfDay = timeOfDay;
 					payload.daysOfWeek = mode === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : daysOfWeek;
 					if (!payload.daysOfWeek.length) {
-						toast.error(ar ? 'Ø§Ø®ØªÙŽØ± ÙŠÙˆÙ… ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„' : 'Select at least one weekday');
+						toast.error(ar ? 'اختَر يوم واحد على الأقل' : 'Select at least one weekday');
 						setSubmitting(false);
 						return;
 					}

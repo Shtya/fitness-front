@@ -209,7 +209,7 @@ export function WaCustomSelect({
 							data-wa-select-menu="true"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className={`wa-custom-select-menu fixed overflow-y-auto overscroll-contain rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-[0_18px_48px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.06)] ring-1 ring-black/[0.03] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)] dark:ring-white/[0.04] ${
+							className={`wa-custom-select-menu wa-ui-scroll nice-scroll fixed overflow-y-auto overscroll-contain rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-[0_18px_48px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.06)] ring-1 ring-black/[0.03] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)] dark:ring-white/[0.04] ${
 								position.openUp ? 'wa-custom-select-menu--up' : 'wa-custom-select-menu--down'
 							}`}
 							style={{

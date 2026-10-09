@@ -20,4 +20,13 @@ export const whatsappAiApi = {
 			)
 			.then(response => response.data);
 	},
+	writingAssist(conversationId, payload = {}, signal) {
+		return api
+			.post(
+				`/whatsapp/conversations/${conversationId}/writing-assist`,
+				payload,
+				{ signal, timeout: 150000 },
+			)
+			.then(response => response.data);
+	},
 };

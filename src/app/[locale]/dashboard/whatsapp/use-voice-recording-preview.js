@@ -26,21 +26,28 @@ export function useVoiceRecordingPreview({
 
 	const syncProgressFromAudio = useCallback(() => {
 		const audio = voicePreviewAudioRef.current;
-		if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
-		const current = Math.min(audio.duration, Math.max(0, audio.currentTime || 0));
+		if (!audio) return;
+		// MediaRecorder WebM starts with a placeholder duration (Infinity or 0.001s) until
+		// it has played through. Track playback anyway; the bar falls back to the recorded
+		// seconds while the real duration is unknown.
+		const played = Math.max(0, audio.currentTime || 0);
+		const known = Number.isFinite(audio.duration) && audio.duration >= 1;
+		const current = known ? Math.min(audio.duration, played) : played;
 		setVoicePreviewCurrentTime(current);
-		setVoicePreviewProgress(current / audio.duration);
+		setVoicePreviewDuration(known ? audio.duration : 0);
+		setVoicePreviewProgress(known ? current / audio.duration : 0);
 	}, []);
 
 	const attachPreviewAudio = useCallback(
 		audio => {
 			audio.onloadedmetadata = () => {
-				if (Number.isFinite(audio.duration) && audio.duration > 0) {
+				if (Number.isFinite(audio.duration) && audio.duration >= 1) {
 					setVoicePreviewDuration(audio.duration);
 				}
 				syncProgressFromAudio();
 			};
 			audio.ontimeupdate = () => syncProgressFromAudio();
+			audio.ondurationchange = () => syncProgressFromAudio();
 			audio.onended = () => {
 				setVoicePreviewPlaying(false);
 				syncProgressFromAudio();
@@ -58,6 +65,7 @@ export function useVoiceRecordingPreview({
 			audio.pause();
 			audio.onloadedmetadata = null;
 			audio.ontimeupdate = null;
+			audio.ondurationchange = null;
 			audio.onended = null;
 			audio.onerror = null;
 			audio.src = '';
@@ -137,7 +145,7 @@ export function useVoiceRecordingPreview({
 			if (!audio) return;
 
 			setVoicePreviewActive(true);
-			if (Number.isFinite(audio.duration) && audio.duration > 0) {
+			if (Number.isFinite(audio.duration) && audio.duration >= 1) {
 				setVoicePreviewDuration(audio.duration);
 			}
 			await audio.play();
@@ -160,7 +168,7 @@ export function useVoiceRecordingPreview({
 	const seekVoicePreview = useCallback(
 		ratio => {
 			const audio = voicePreviewAudioRef.current;
-			if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+			if (!audio || !Number.isFinite(audio.duration) || audio.duration < 1) return;
 			const nextRatio = clampRatio(ratio);
 			audio.currentTime = nextRatio * audio.duration;
 			syncProgressFromAudio();

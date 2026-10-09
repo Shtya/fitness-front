@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMenuKeyboard } from './wa-ui-menu';
 
 function clamp(value, min, max) {
 	return Math.min(max, Math.max(min, value));
@@ -19,16 +20,6 @@ function scrollNodeByDelta(node, deltaY) {
 	return true;
 }
 
-const ICON_TONES = {
-	green: 'bg-emerald-100 text-emerald-700',
-	lime: 'bg-lime-100 text-lime-700',
-	blue: 'bg-sky-100 text-sky-700',
-	navy: 'bg-indigo-100 text-indigo-700',
-	orange: 'bg-orange-100 text-orange-600',
-	purple: 'bg-violet-100 text-violet-700',
-	pink: 'bg-rose-100 text-rose-600',
-	slate: 'bg-slate-100 text-slate-600',
-};
 
 export function WaActionMenu({
 	actions = [],
@@ -49,6 +40,7 @@ export function WaActionMenu({
 	const compact = size === 'sm';
 	const visibleActions = useMemo(() => actions.filter(action => !action.hidden), [actions]);
 	const activeCount = visibleActions.filter(action => action.active).length;
+	useMenuKeyboard(menuRef, { open: open && Boolean(position), onClose: () => setOpen(false) });
 
 	const runAction = (event, action) => {
 		event.preventDefault();
@@ -67,7 +59,7 @@ export function WaActionMenu({
 			const margin = 8;
 			const viewportH = window.innerHeight || 720;
 			const viewportW = window.innerWidth || 1280;
-			const width = Math.min(Math.max(compact ? 300 : 320, rect.width), viewportW - margin * 2);
+			const width = Math.min(Math.max(264, rect.width), viewportW - margin * 2);
 			const spaceBelow = Math.max(0, viewportH - rect.bottom - margin - gap);
 			const spaceAbove = Math.max(0, rect.top - margin - gap);
 			const openUp = spaceBelow < 240 && spaceAbove > spaceBelow;
@@ -83,9 +75,6 @@ export function WaActionMenu({
 			if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) {
 				setOpen(false);
 			}
-		};
-		const closeOnEscape = event => {
-			if (event.key === 'Escape') setOpen(false);
 		};
 		const onWheelCapture = event => {
 			const menu = menuRef.current;
@@ -109,7 +98,6 @@ export function WaActionMenu({
 			event.stopPropagation();
 		};
 		document.addEventListener('pointerdown', closeOnOutsideClick);
-		document.addEventListener('keydown', closeOnEscape);
 		document.addEventListener('wheel', onWheelCapture, { capture: true, passive: false });
 		document.addEventListener('touchstart', onTouchStartCapture, { capture: true, passive: true });
 		document.addEventListener('touchmove', onTouchMoveCapture, { capture: true, passive: false });
@@ -117,7 +105,6 @@ export function WaActionMenu({
 		window.addEventListener('scroll', updatePosition, true);
 		return () => {
 			document.removeEventListener('pointerdown', closeOnOutsideClick);
-			document.removeEventListener('keydown', closeOnEscape);
 			document.removeEventListener('wheel', onWheelCapture, true);
 			document.removeEventListener('touchstart', onTouchStartCapture, true);
 			document.removeEventListener('touchmove', onTouchMoveCapture, true);
@@ -184,80 +171,54 @@ export function WaActionMenu({
 							role="menu"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className="fixed z-[1600] overflow-y-auto overscroll-contain rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.14)] dark:border-slate-700 dark:bg-[#233138]"
+							className="wa-ui-menu wa-ui-scroll fixed z-[1600]"
 							style={{
 								top: position.top,
 								left: position.left,
 								width: position.width,
 								maxHeight: position.maxHeight,
+								'--wa-ui-origin': 'top right',
 							}}
 						>
 							{visibleActions.map((action, index) => {
 								const Icon = action.icon;
 								const isDisabled = Boolean(action.disabled);
-								const tone = action.iconTone || 'slate';
 								const showDivider = Boolean(action.dividerBefore) && index > 0;
 								const opensSubmenu = Boolean(action.opensSubmenu) && !action.active;
 								return (
 									<div key={action.id}>
-										{showDivider ? (
-											<div
-												className="mx-2 my-1.5 h-px bg-slate-100 dark:bg-white/10"
-												aria-hidden="true"
-											/>
-										) : null}
+										{showDivider ? <div className="wa-ui-menu__sep" role="separator" /> : null}
 										<button
 											type="button"
 											role="menuitem"
 											disabled={isDisabled}
+											title={action.description || undefined}
+											aria-description={action.description || undefined}
 											onPointerDown={event => runAction(event, action)}
 											onClick={event => runAction(event, action)}
 											className={cn(
-												'flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-start transition-colors',
-												isDisabled
-													? 'cursor-not-allowed opacity-40'
-													: 'hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none dark:hover:bg-white/5',
-												action.active && !isDisabled ? 'bg-slate-50 dark:bg-white/5' : '',
-												action.tone === 'danger' && !isDisabled ? 'text-rose-600' : '',
+												'wa-ui-menu__item',
+												action.tone === 'danger' ? 'is-danger' : '',
 											)}
 										>
-											<span
-												className={cn(
-													'grid h-9 w-9 shrink-0 place-items-center rounded-lg',
-													ICON_TONES[tone] || ICON_TONES.slate,
-												)}
-												aria-hidden="true"
-											>
-												{Icon ? (
-													<Icon
-														size={18}
-														strokeWidth={1.9}
-														className="shrink-0"
-														fill={action.iconFill ? 'currentColor' : 'none'}
-													/>
-												) : null}
-											</span>
-											<span className="min-w-0 flex-1">
-												<span className="block truncate text-[14px] font-bold leading-5 text-[#111b21] dark:text-[#e9edef]">
-													{action.label}
-												</span>
-												{action.description ? (
-													<span className="mt-0.5 block truncate text-[12px] leading-4 text-slate-500">
-														{action.description}
-													</span>
-												) : null}
-											</span>
-											{action.active && !opensSubmenu && !isDisabled ? (
-												<Check size={16} strokeWidth={2.4} className="shrink-0 text-emerald-600" />
-											) : opensSubmenu ? (
-												<ChevronRight
-													size={16}
-													strokeWidth={2}
-													className="shrink-0 text-slate-300 rtl:rotate-180"
+											{Icon ? (
+												<Icon
+													className="wa-ui-menu__icon"
+													strokeWidth={1.8}
+													fill={action.iconFill ? 'currentColor' : 'none'}
+													aria-hidden="true"
 												/>
-											) : (
-												<span className="h-4 w-4 shrink-0" aria-hidden="true" />
-											)}
+											) : null}
+											<span className="wa-ui-menu__label">{action.label}</span>
+											{action.active && !opensSubmenu && !isDisabled ? (
+												<span className="wa-ui-menu__trail wa-ui-menu__trail--check">
+													<Check size={16} strokeWidth={2.4} aria-label="On" />
+												</span>
+											) : opensSubmenu ? (
+												<span className="wa-ui-menu__trail">
+													<ChevronRight size={16} strokeWidth={2} className="rtl:rotate-180" aria-hidden="true" />
+												</span>
+											) : null}
 										</button>
 									</div>
 								);

@@ -1,14 +1,47 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { Copy, Image as ImageIcon, Loader2, Smile, Sparkles, Sticker, Upload, X } from 'lucide-react';
+import {
+	Activity,
+	Clock3,
+	Copy,
+	Hand,
+	Heart,
+	Image as ImageIcon,
+	Leaf,
+	Loader2,
+	RefreshCw,
+	Search,
+	Smile,
+	Sparkles,
+	Sticker,
+	Trash2,
+	Upload,
+	X,
+} from 'lucide-react';
 import api from '@/utils/axios';
 import { clipboardImageFiles } from '../whatsapp-utils';
 import AiGenerateForm from './AiGenerateForm';
 import StickerPromptStudio from './StickerPromptStudio';
 import GiphyPicker from './GiphyPicker';
+import {
+	EMOJI_CATEGORIES,
+	EMOJIS_BY_CATEGORY,
+	readRecentEmojis,
+	rememberEmoji,
+	searchEmojis,
+} from './emoji-catalog';
+
+const CATEGORY_ICONS = {
+	recent: Clock3,
+	smileys: Smile,
+	people: Hand,
+	hearts: Heart,
+	nature: Leaf,
+	activity: Activity,
+};
 
 const STICKER_EDGE = 512;
 const STICKER_TARGET_BYTES = 480 * 1024;
@@ -90,21 +123,17 @@ async function minimizeStickerFile(file, options = {}) {
 	}
 }
 
-const EMOJIS = [
-	'😀', '😂', '🥰', '😍', '😊', '😭', '😎', '🤔',
-	'👍', '👏', '🙏', '❤️', '🔥', '🎉', '💪', '✅',
-	'👀', '✨', '😅', '🙌', '🤝', '💯', '🫡', '🌹',
-];
-
-function computePanelPosition(anchorRect, { wide = false, tall = false } = {}) {
+function computePanelPosition(anchorRect, { wide = false, tall = false } = {}, composerTop = null) {
 	const margin = 12;
 	const viewportW = window.innerWidth || 1280;
 	const viewportH = window.innerHeight || 720;
 	if (viewportW < 769) {
-		return { mode: 'sheet' };
+		// Sits directly on top of the composer, like the phone apps' emoji keyboard.
+		const bottom = composerTop != null ? Math.max(0, Math.round(viewportH - composerTop)) : 88;
+		return { mode: 'sheet', bottom };
 	}
-	const width = Math.min(wide ? 560 : 420, viewportW - margin * 2);
-	const height = Math.min(tall ? 680 : 520, viewportH - margin * 2);
+	const width = Math.min(wide ? 560 : 408, viewportW - margin * 2);
+	const height = Math.min(tall ? 640 : 440, viewportH - margin * 2);
 	const gap = 8;
 	const rect = anchorRect || {
 		top: viewportH - 64,
@@ -178,17 +207,68 @@ export default function StickersPanel({
 	const fileRef = useRef(null);
 	const autoHealRef = useRef('');
 	const previewsRef = useRef({});
-	const actionBtnClass =
-		'inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg px-2.5 text-[11px] font-bold leading-none disabled:opacity-50';
+	const emojiScrollRef = useRef(null);
+	const searchRef = useRef(null);
+	const [emojiQuery, setEmojiQuery] = useState('');
+	const [recentEmojis, setRecentEmojis] = useState([]);
+	const [activeCategory, setActiveCategory] = useState('smileys');
+	const actionBtnClass = 'wa-ui-btn wa-ui-btn--secondary wa-ui-btn--sm';
 	const tabs = [
 		['emoji', Smile, ar ? 'إيموجي' : 'Emoji'],
 		['gif', ImageIcon, 'GIF'],
 		['sticker', Sticker, ar ? 'ستيكرز' : 'Stickers'],
 	];
+	const emojiSections = useMemo(() => {
+		const sections = EMOJI_CATEGORIES.map(category => ({
+			id: category.id,
+			label: ar ? category.ar : category.en,
+			items: EMOJIS_BY_CATEGORY[category.id].map(item => item.emoji),
+		}));
+		return recentEmojis.length
+			? [{ id: 'recent', label: ar ? 'المستخدمة مؤخرًا' : 'Recent', items: recentEmojis }, ...sections]
+			: sections;
+	}, [ar, recentEmojis]);
+	const emojiResults = useMemo(() => searchEmojis(emojiQuery), [emojiQuery]);
+	const pickEmoji = emoji => {
+		onInsertEmoji?.(emoji);
+		setRecentEmojis(current => rememberEmoji(emoji, current));
+	};
+	const jumpToCategory = id => {
+		setEmojiQuery('');
+		setActiveCategory(id);
+		const node = emojiScrollRef.current?.querySelector(`[data-emoji-section="${id}"]`);
+		if (node) emojiScrollRef.current.scrollTo({ top: node.offsetTop - 4, behavior: 'smooth' });
+	};
+	const syncActiveCategory = () => {
+		const root = emojiScrollRef.current;
+		if (!root || emojiQuery) return;
+		const sections = [...root.querySelectorAll('[data-emoji-section]')];
+		let current = sections[0]?.dataset.emojiSection;
+		for (const section of sections) {
+			if (section.offsetTop - root.scrollTop <= 24) current = section.dataset.emojiSection;
+		}
+		if (current && current !== activeCategory) setActiveCategory(current);
+	};
 
 	useEffect(() => {
 		autoHealRef.current = '';
 	}, [accountId]);
+
+	useEffect(() => {
+		if (!open) return;
+		const recent = readRecentEmojis();
+		setRecentEmojis(recent);
+		setActiveCategory(recent.length ? 'recent' : 'smileys');
+		setEmojiQuery('');
+	}, [open]);
+
+	useEffect(() => {
+		if (!open || tab !== 'emoji') return undefined;
+		// Desktop only: focusing a field on a phone would pop the keyboard over the picker.
+		if (window.innerWidth < 769) return undefined;
+		const timer = window.setTimeout(() => searchRef.current?.focus(), 60);
+		return () => window.clearTimeout(timer);
+	}, [open, tab]);
 
 	useEffect(() => {
 		if (!open) {
@@ -210,10 +290,16 @@ export default function StickersPanel({
 		if (!open) return undefined;
 		const update = () =>
 			setPosition(
-				computePanelPosition(anchorRef?.current?.getBoundingClientRect(), {
-					wide: stickerMode === 'ai' || promptOpen,
-					tall: stickerMode === 'ai' || promptOpen || tab === 'sticker',
-				}),
+				computePanelPosition(
+					anchorRef?.current?.getBoundingClientRect(),
+					{
+						wide: stickerMode === 'ai' || promptOpen,
+						tall: stickerMode === 'ai' || promptOpen,
+					},
+					document
+						.querySelector('.wa-chat-thread-pane .wa-composer-stack')
+						?.getBoundingClientRect().top ?? null,
+				),
 			);
 		update();
 		window.addEventListener('resize', update);
@@ -232,7 +318,10 @@ export default function StickersPanel({
 			onClose?.();
 		};
 		const onKey = event => {
-			if (event.key === 'Escape') onClose?.();
+			if (event.key !== 'Escape') return;
+			if (event.target === searchRef.current && searchRef.current?.value) return;
+			onClose?.();
+			anchorRef?.current?.focus?.();
 		};
 		document.addEventListener('pointerdown', onPointer);
 		document.addEventListener('keydown', onKey);
@@ -429,13 +518,17 @@ export default function StickersPanel({
 					height: position.height,
 					zIndex: 1400,
 				}
-			: undefined;
+			: position?.mode === 'sheet'
+				? { bottom: position.bottom }
+				: undefined;
+	const expanded = stickerMode === 'ai' || promptOpen;
 
 	return createPortal(
 		<section
 			ref={panelRef}
 			role="dialog"
-			aria-label={ar ? 'إيموجي وستيكرز' : 'Emoji, GIF and stickers'}
+			aria-label={ar ? 'إيموجي و GIF وستيكرز' : 'Emoji, GIF and stickers'}
+			dir={ar ? 'rtl' : 'ltr'}
 			onPaste={event => {
 				if (tab !== 'sticker') return;
 				const files = clipboardImageFiles(event);
@@ -444,55 +537,108 @@ export default function StickersPanel({
 				event.stopPropagation();
 				void addFiles(files);
 			}}
-			className={
-				position?.mode === 'sheet'
-					? `wa-sticker-panel fixed inset-x-0 bottom-[88px] z-[1400] mx-auto flex ${stickerMode === 'ai' || promptOpen ? 'h-[80dvh]' : 'h-[62dvh]'} max-w-[560px] flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.12)] dark:border-slate-700 dark:bg-slate-900`
-					: 'wa-sticker-panel flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900'
-			}
+			className={`wa-sticker-panel wa-ui-picker ${
+				position?.mode === 'sheet' ? 'is-sheet' : 'is-popover'
+			}${expanded ? ' is-expanded' : ''}`}
 			style={style}
 		>
-			<div className="flex h-14 shrink-0 items-stretch border-b border-slate-100 dark:border-slate-800">
-				<div className="grid min-w-0 flex-1 grid-cols-3">
-					{tabs.map(([id, Icon, label]) => (
-						<button
-							key={id}
-							type="button"
-							aria-label={label}
-							aria-pressed={tab === id}
-							onClick={() => {
-								setTab(id);
-								if (id !== 'sticker') {
-									setStickerMode('library');
-									setPromptOpen(false);
+			<div className="wa-ui-picker__head">
+				{tab === 'emoji' ? (
+					<label className="wa-ui-search wa-ui-picker__search">
+						<Search size={16} strokeWidth={2} aria-hidden="true" />
+						<input
+							ref={searchRef}
+							type="search"
+							className="wa-ui-input"
+							value={emojiQuery}
+							onChange={event => setEmojiQuery(event.target.value)}
+							onKeyDown={event => {
+								if (event.key === 'Escape' && emojiQuery) {
+									event.stopPropagation();
+									setEmojiQuery('');
+								}
+								if (event.key === 'Enter' && emojiResults[0]) {
+									event.preventDefault();
+									pickEmoji(emojiResults[0]);
 								}
 							}}
-							className={`grid h-full place-items-center gap-0.5 border-b-2 px-1 text-[10px] font-bold ${
-								tab === id ? 'border-[#16B96B] text-[#16B96B]' : 'border-transparent text-[#667781]'
-							}`}
-						>
-							<Icon size={20} />
-							<span className="leading-none">{label}</span>
-						</button>
-					))}
-				</div>
-				<button type="button" aria-label="Close" onClick={onClose} className="grid h-full w-12 shrink-0 place-items-center text-[#667781]">
-					<X size={21} />
+							placeholder={ar ? 'ابحث عن إيموجي' : 'Search emoji'}
+							aria-label={ar ? 'ابحث عن إيموجي' : 'Search emoji'}
+						/>
+					</label>
+				) : (
+					<p className="wa-ui-picker__title">
+						{tab === 'gif' ? 'GIF' : stickerMode === 'ai' ? (ar ? 'ستيكر AI' : 'AI sticker') : ar ? 'ستيكرز' : 'Stickers'}
+					</p>
+				)}
+				<button
+					type="button"
+					aria-label={ar ? 'إغلاق' : 'Close'}
+					title={ar ? 'إغلاق' : 'Close'}
+					onClick={onClose}
+					className="wa-ui-icon-btn"
+				>
+					<X size={18} strokeWidth={2} />
 				</button>
 			</div>
 
 			{tab === 'emoji' ? (
-				<div className="grid flex-1 grid-cols-6 content-start gap-2 overflow-y-auto p-3 sm:grid-cols-7">
-					{EMOJIS.map(emoji => (
-						<button
-							key={emoji}
-							type="button"
-							onClick={() => onInsertEmoji?.(emoji)}
-							className="grid aspect-square place-items-center rounded-xl text-2xl transition-transform hover:bg-slate-50 active:scale-90"
-						>
-							{emoji}
-						</button>
-					))}
-				</div>
+				<>
+					{!emojiQuery ? (
+						<div className="wa-ui-picker__cats" role="tablist" aria-label={ar ? 'فئات الإيموجي' : 'Emoji categories'}>
+							{emojiSections.map(section => {
+								const Icon = CATEGORY_ICONS[section.id] || Smile;
+								return (
+									<button
+										key={section.id}
+										type="button"
+										role="tab"
+										aria-selected={activeCategory === section.id}
+										aria-label={section.label}
+										title={section.label}
+										onClick={() => jumpToCategory(section.id)}
+										className="wa-ui-picker__cat"
+									>
+										<Icon size={18} strokeWidth={1.9} />
+									</button>
+								);
+							})}
+						</div>
+					) : null}
+					<div ref={emojiScrollRef} className="wa-ui-picker__body" onScroll={syncActiveCategory}>
+						{emojiQuery ? (
+							emojiResults.length ? (
+								<div className="wa-ui-picker__grid" role="listbox" aria-label={ar ? 'نتائج البحث' : 'Search results'}>
+									{emojiResults.map(emoji => (
+										<button key={emoji} type="button" className="wa-ui-picker__emoji" onClick={() => pickEmoji(emoji)}>
+											{emoji}
+										</button>
+									))}
+								</div>
+							) : (
+								<p className="wa-ui-picker__empty">{ar ? 'لا توجد نتائج' : 'No emoji found'}</p>
+							)
+						) : (
+							emojiSections.map(section => (
+								<div key={section.id} data-emoji-section={section.id} className="wa-ui-picker__section">
+									<p className="wa-ui-picker__section-title">{section.label}</p>
+									<div className="wa-ui-picker__grid">
+										{section.items.map(emoji => (
+											<button
+												key={`${section.id}-${emoji}`}
+												type="button"
+												className="wa-ui-picker__emoji"
+												onClick={() => pickEmoji(emoji)}
+											>
+												{emoji}
+											</button>
+										))}
+									</div>
+								</div>
+							))
+						)}
+					</div>
+				</>
 			) : tab === 'gif' ? (
 				process.env.NEXT_PUBLIC_GIPHY_API_KEY || process.env.NEXT_PUBLIC_TENOR_API_KEY ? (
 					<GiphyPicker
@@ -502,82 +648,81 @@ export default function StickersPanel({
 						onPick={file => onSendSticker?.(file)}
 					/>
 				) : (
-					<div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-[#667781]">
-						<ImageIcon size={30} />
-						<p className="text-sm font-semibold">
-							{ar ? 'أضف مفتاح Giphy أو Tenor في البيئة' : 'Add Giphy or Tenor API key in env'}
+					<div className="wa-ui-picker__placeholder">
+						<ImageIcon size={28} strokeWidth={1.6} aria-hidden="true" />
+						<p className="wa-ui-picker__placeholder-title">
+							{ar ? 'الـGIF غير مفعّل' : 'GIFs aren’t set up yet'}
 						</p>
-						<p className="text-xs opacity-80">
-							NEXT_PUBLIC_GIPHY_API_KEY / NEXT_PUBLIC_TENOR_API_KEY
+						<p>
+							{ar ? 'أضف مفتاح Giphy أو Tenor في متغيرات البيئة:' : 'Add a Giphy or Tenor key to the environment:'}
 						</p>
+						<code dir="ltr">NEXT_PUBLIC_GIPHY_API_KEY · NEXT_PUBLIC_TENOR_API_KEY</code>
 					</div>
 				)
 			) : (
 				<div className="flex min-h-0 flex-1 flex-col">
-					<div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+					<div className="wa-ui-picker__toolbar">
 						{stickerMode === 'ai' ? (
+							<button type="button" onClick={() => setStickerMode('library')} className={actionBtnClass}>
+								<Sticker size={14} strokeWidth={2} aria-hidden="true" />
+								{ar ? 'رجوع للمكتبة' : 'Back to library'}
+							</button>
+						) : (
 							<>
 								<button
 									type="button"
-									onClick={() => setStickerMode('library')}
-									className={`${actionBtnClass} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200`}
+									onClick={syncStickers}
+									disabled={syncing || !accountId}
+									className={actionBtnClass}
+									title={ar ? 'استيراد الستيكرز اللي وصلت على واتساب' : 'Import stickers received on WhatsApp'}
 								>
-									{ar ? 'المكتبة' : 'Library'}
+									{syncing ? (
+										<Loader2 size={14} className="animate-spin" aria-hidden="true" />
+									) : (
+										<RefreshCw size={14} strokeWidth={2} aria-hidden="true" />
+									)}
+									{ar ? 'مزامنة' : 'Sync'}
 								</button>
-								<span className="text-xs font-bold text-slate-700 dark:text-slate-100">
-									{ar ? 'ستيكر AI' : 'AI Sticker'}
-								</span>
-							</>
-						) : (
-							<>
-						<button
-							type="button"
-							onClick={syncStickers}
-							disabled={syncing || !accountId}
-							className={`${actionBtnClass} bg-emerald-50 text-emerald-700`}
-						>
-							{syncing ? <Loader2 size={12} className="animate-spin" /> : null}
-							{ar ? 'مزامنة واتساب' : 'Sync WhatsApp'}
-						</button>
-						<button
-							type="button"
-							onClick={() => fileRef.current?.click()}
-							disabled={uploading || !accountId}
-							className={`${actionBtnClass} bg-slate-100 text-slate-700`}
-						>
-							{uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-							{ar ? 'رفع' : 'Upload'}
-						</button>
-						<button
-							type="button"
-							onClick={() => {
-								setPromptOpen(false);
-								setStickerMode(current => (current === 'ai' ? 'library' : 'ai'));
-							}}
-							aria-pressed={stickerMode === 'ai'}
-							title={ar ? 'توليد ستيكر بالذكاء الاصطناعي' : 'Generate an AI sticker'}
-							className={`${actionBtnClass} ${
-								stickerMode === 'ai' ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 text-emerald-700'
-							}`}
-						>
-							<Sparkles size={12} />
-							{ar ? 'ستيكر AI' : 'AI Sticker'}
-						</button>
-						<button
-							type="button"
-							onClick={() => {
-								setStickerMode('library');
-								setPromptOpen(current => !current);
-							}}
-							aria-pressed={promptOpen}
-							title={ar ? 'برومبت توليد استيكر بـ ChatGPT' : 'ChatGPT sticker generation prompt'}
-							className={`${actionBtnClass} ${
-								promptOpen ? 'bg-violet-100 text-violet-800' : 'bg-violet-50 text-violet-700'
-							}`}
-						>
-							<Copy size={12} />
-							{ar ? 'برومبت' : 'Prompt'}
-						</button>
+								<button
+									type="button"
+									onClick={() => fileRef.current?.click()}
+									disabled={uploading || !accountId}
+									className={actionBtnClass}
+								>
+									{uploading ? (
+										<Loader2 size={14} className="animate-spin" aria-hidden="true" />
+									) : (
+										<Upload size={14} strokeWidth={2} aria-hidden="true" />
+									)}
+									{ar ? 'رفع' : 'Upload'}
+								</button>
+								<span className="wa-ui-picker__toolbar-gap" aria-hidden="true" />
+								<button
+									type="button"
+									onClick={() => {
+										setPromptOpen(false);
+										setStickerMode(current => (current === 'ai' ? 'library' : 'ai'));
+									}}
+									aria-pressed={stickerMode === 'ai'}
+									title={ar ? 'توليد ستيكر بالذكاء الاصطناعي' : 'Generate an AI sticker'}
+									className="wa-ui-btn wa-ui-btn--ghost wa-ui-btn--sm wa-ui-picker__toggle"
+								>
+									<Sparkles size={14} strokeWidth={2} aria-hidden="true" />
+									{ar ? 'ستيكر AI' : 'AI sticker'}
+								</button>
+								<button
+									type="button"
+									onClick={() => {
+										setStickerMode('library');
+										setPromptOpen(current => !current);
+									}}
+									aria-pressed={promptOpen}
+									title={ar ? 'برومبت توليد استيكر بـ ChatGPT' : 'ChatGPT sticker generation prompt'}
+									className="wa-ui-btn wa-ui-btn--ghost wa-ui-btn--sm wa-ui-picker__toggle"
+								>
+									<Copy size={14} strokeWidth={2} aria-hidden="true" />
+									{ar ? 'برومبت' : 'Prompt'}
+								</button>
 							</>
 						)}
 						<input
@@ -594,7 +739,7 @@ export default function StickersPanel({
 						/>
 					</div>
 					<div
-						className={`min-h-0 flex-1 ${stickerMode === 'ai' || promptOpen ? 'flex overflow-hidden p-0' : 'overflow-y-auto p-2'}`}
+						className={`min-h-0 flex-1 ${expanded ? 'flex overflow-hidden p-0' : 'wa-ui-picker__body'}`}
 						onDragOver={event => event.preventDefault()}
 						onDrop={event => {
 							if (stickerMode === 'ai') return;
@@ -621,25 +766,28 @@ export default function StickersPanel({
 						) : promptOpen ? (
 							<StickerPromptStudio locale={locale} actionBtnClass={actionBtnClass} />
 						) : loading ? (
-							<div className="grid h-full place-items-center text-[#667781]">
-								<Loader2 className="animate-spin" />
+							<div className="wa-ui-picker__stickers" aria-busy="true">
+								{Array.from({ length: 8 }, (_, index) => (
+									<span key={index} className="wa-ui-picker__sticker is-skeleton" />
+								))}
 							</div>
 						) : stickers.length ? (
-							<div className="grid grid-cols-4 gap-1.5">
+							<div className="wa-ui-picker__stickers">
 								{stickers.map(item => (
-									<div key={item.id} className="group relative aspect-square">
+									<div key={item.id} className="wa-ui-picker__sticker">
 										<button
 											type="button"
 											title={ar ? 'إرسال الستيكر' : 'Send sticker'}
+											aria-label={ar ? 'إرسال الستيكر' : 'Send sticker'}
 											onClick={() => void sendSticker(item)}
-											className="h-full w-full overflow-hidden rounded-xl bg-[#F0F2F5] p-1 transition hover:bg-emerald-50"
+											className="wa-ui-picker__sticker-send"
 										>
 											{previews[item.id] ? (
-												<img src={previews[item.id]} alt="" className="h-full w-full object-contain" />
+												<img src={previews[item.id]} alt="" />
 											) : (
-												<span className="grid h-full place-items-center px-1 text-center text-[9px] font-semibold leading-3 text-slate-400">
-													<Sticker className="mb-1 text-slate-300" size={18} />
-													{ar ? 'غير متوفر هنا' : 'Missing on this machine'}
+												<span className="wa-ui-picker__sticker-missing">
+													<Sticker size={18} strokeWidth={1.6} aria-hidden="true" />
+													{ar ? 'غير متوفر هنا' : 'Not on this device'}
 												</span>
 											)}
 										</button>
@@ -653,27 +801,53 @@ export default function StickersPanel({
 												event.stopPropagation();
 												void deleteSticker(item);
 											}}
-											className="absolute right-1 top-1 z-10 grid h-5 w-5 place-items-center rounded-full bg-black/60 text-white opacity-0 shadow-sm transition hover:bg-rose-600 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-60 max-[769px]:opacity-100"
+											className="wa-ui-picker__sticker-delete"
 										>
-											{deletingId === item.id ? <Loader2 size={10} className="animate-spin" /> : <X size={11} strokeWidth={2.6} />}
+											{deletingId === item.id ? (
+												<Loader2 size={12} className="animate-spin" />
+											) : (
+												<Trash2 size={13} strokeWidth={2} />
+											)}
 										</button>
 									</div>
 								))}
 							</div>
 						) : (
-							<div className="flex h-full flex-col items-center justify-center gap-2 px-5 text-center text-[#667781]">
-								<Sticker size={30} />
-								<p className="text-sm font-semibold">{ar ? 'مكتبة الستيكرز' : 'Sticker library'}</p>
-								<p className="text-xs leading-5">
+							<div className="wa-ui-picker__placeholder">
+								<Sticker size={28} strokeWidth={1.6} aria-hidden="true" />
+								<p className="wa-ui-picker__placeholder-title">{ar ? 'مكتبة الستيكرز فاضية' : 'No stickers yet'}</p>
+								<p>
 									{ar
-										? 'اعمل Ctrl+V هنا، أو ارفع صورة، أو زامن الستيكرز اللي وصلت على واتساب.'
-										: 'Paste with Ctrl+V, upload an image, or sync stickers already received on WhatsApp.'}
+										? 'الصق صورة بـ Ctrl+V، أو ارفع صورة، أو زامن الستيكرز اللي وصلت على واتساب.'
+										: 'Paste an image with Ctrl+V, upload one, or sync stickers you received on WhatsApp.'}
 								</p>
 							</div>
 						)}
 					</div>
 				</div>
 			)}
+
+			<div className="wa-ui-picker__tabs" role="tablist" aria-label={ar ? 'نوع المحتوى' : 'Picker type'}>
+				{tabs.map(([id, Icon, label]) => (
+					<button
+						key={id}
+						type="button"
+						role="tab"
+						aria-selected={tab === id}
+						onClick={() => {
+							setTab(id);
+							if (id !== 'sticker') {
+								setStickerMode('library');
+								setPromptOpen(false);
+							}
+						}}
+						className="wa-ui-picker__tab"
+					>
+						<Icon size={18} strokeWidth={1.9} aria-hidden="true" />
+						<span>{label}</span>
+					</button>
+				))}
+			</div>
 		</section>,
 		document.body,
 	);

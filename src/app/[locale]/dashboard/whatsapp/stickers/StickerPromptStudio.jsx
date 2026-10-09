@@ -116,16 +116,16 @@ export default function StickerPromptStudio({ locale = 'en', actionBtnClass }) {
 				dir={ar ? 'rtl' : 'ltr'}
 			/>
 			<div className="flex flex-wrap gap-2">
-				<button type="button" onClick={() => void copyCurrent()} className={`${actionBtnClass} bg-emerald-50 text-emerald-700`}>
+				<button type="button" onClick={() => void copyCurrent()} className={actionBtnClass}>
 					{copied ? <Check size={12} /> : <Copy size={12} />}
 					{copied ? (ar ? 'تم' : 'Copied') : ar ? 'نسخ' : 'Copy'}
 				</button>
-				<button type="button" onClick={saveCurrent} className={`${actionBtnClass} bg-violet-50 text-violet-700`}>
+				<button type="button" onClick={saveCurrent} className={actionBtnClass}>
 					<Save size={12} />
 					{ar ? 'حفظ' : 'Save'}
 				</button>
 				{canDelete ? (
-					<button type="button" onClick={removeCurrent} className={`${actionBtnClass} bg-rose-50 text-rose-700`}>
+					<button type="button" onClick={removeCurrent} className={`${actionBtnClass} wa-ui-btn--danger-text`}>
 						<Trash2 size={12} />
 						{ar ? 'حذف' : 'Delete'}
 					</button>

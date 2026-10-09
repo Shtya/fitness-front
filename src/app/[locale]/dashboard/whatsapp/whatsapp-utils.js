@@ -528,15 +528,31 @@ function conversationSortTime(conversation) {
 	).getTime();
 }
 
-/** WhatsApp keeps pinned chats on top and orders the rest by newest activity.
- *  Realtime preview patches must re-apply that order, otherwise an incoming
- *  message updates the row in place without bubbling the chat up. */
+function conversationPinnedAtTime(conversation) {
+	const raw = conversation?.pinnedAt;
+	if (!raw) return 0;
+	const time = new Date(raw).getTime();
+	return Number.isFinite(time) ? time : 0;
+}
+
+/**
+ * Pinned chats stay on top in stable pin order (most recently pinned first).
+ * New messages must NOT reshuffle the pinned section — only unpinned chats
+ * reorder by newest activity.
+ */
 export function sortConversationsByActivity(conversations = []) {
 	return [...conversations].sort((a, b) => {
 		const aAi = isEmailMemoAiConversation(a);
 		const bAi = isEmailMemoAiConversation(b);
 		if (aAi !== bAi) return aAi ? -1 : 1;
-		if (Boolean(a?.isPinned) !== Boolean(b?.isPinned)) return a?.isPinned ? -1 : 1;
+		const aPinned = Boolean(a?.isPinned);
+		const bPinned = Boolean(b?.isPinned);
+		if (aPinned !== bPinned) return aPinned ? -1 : 1;
+		if (aPinned && bPinned) {
+			const pinDiff = conversationPinnedAtTime(b) - conversationPinnedAtTime(a);
+			if (pinDiff) return pinDiff;
+			return String(a?.id).localeCompare(String(b?.id));
+		}
 		const difference = conversationSortTime(b) - conversationSortTime(a);
 		if (difference) return difference;
 		return String(a?.id).localeCompare(String(b?.id));
