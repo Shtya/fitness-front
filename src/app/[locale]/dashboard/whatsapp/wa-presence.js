@@ -16,6 +16,25 @@ export function isSameConversationPresence(conversation, presence) {
 }
 
 /**
+ * Keep / stamp last-online when WhatsApp omits lastSeen on unavailable.
+ * If we watched them online, the moment we lose them is the last online time.
+ */
+export function resolvePresenceLastSeen(previousPresence, next = {}) {
+	const fromPayload = Number(next.lastSeen || 0);
+	if (fromPayload > 0) return fromPayload;
+	const prevSeen = Number(previousPresence?.lastSeen || 0);
+	if (prevSeen > 0) return prevSeen;
+	const wasLive = Boolean(
+		previousPresence?.online || previousPresence?.typing || previousPresence?.recording,
+	);
+	const nowLive = Boolean(next.online || next.typing || next.recording);
+	if (wasLive && !nowLive) {
+		return Number(previousPresence?.t || Date.now()) || Date.now();
+	}
+	return 0;
+}
+
+/**
  * Chat-header subtitle for contact presence.
  * Never invent "Offline" from a missing/expired subscription — only from explicit unavailable.
  */

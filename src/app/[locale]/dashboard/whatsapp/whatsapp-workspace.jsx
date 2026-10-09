@@ -311,7 +311,11 @@ function WaPaneLoading({ label }) {
 	);
 }
 import { staffAssignHint } from './whatsapp-staff-pace';
-import { conversationPresenceSubtitle, isSameConversationPresence } from './wa-presence';
+import {
+	conversationPresenceSubtitle,
+	isSameConversationPresence,
+	resolvePresenceLastSeen,
+} from './wa-presence';
 import { BoardColumnPicker, BoardColumnPickerMenu } from './BoardColumnPicker';
 import { createBoardCardFromMessages } from './whatsapp-board-api';
 import { WaCustomSelect } from './WaCustomSelect';
@@ -7964,10 +7968,6 @@ function MobileWhatsAppNav({
 	onSelect,
 	labels,
 	unreadCount,
-	darkMode = false,
-	onToggleDarkMode,
-	onSwitchLocale,
-	locale = 'en',
 }) {
 	const items = [
 		{
@@ -8015,7 +8015,6 @@ function MobileWhatsAppNav({
 			, label: labels.settings
 		},
 	];
-	const ar = String(locale).toLowerCase().startsWith('ar');
 	return (
 		<nav className="wa-mobile-nav relative hidden shrink-0 grid-cols-5 border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]">
 			{items.map(({ id, icon: Icon, label, badge }) => {
@@ -8029,35 +8028,8 @@ function MobileWhatsAppNav({
 						'aria-hidden': Icon.props['aria-hidden'] ?? true,
 					})
 					: <Icon size={22} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />;
-				const isSettings = id === 'settings';
 				return (
 					<div key={id} className="relative flex min-w-0 flex-col items-center">
-						{isSettings ? (
-							<div className="wa-mobile-nav-tools absolute bottom-[calc(100%+6px)] z-10 flex flex-col items-center gap-1.5">
-								{typeof onToggleDarkMode === 'function' ? (
-									<button
-										type="button"
-										onClick={onToggleDarkMode}
-										aria-label={labels.toggleDarkMode || (darkMode ? labels.lightMode : labels.darkMode)}
-										title={darkMode ? labels.lightMode : labels.darkMode}
-										className="grid h-9 w-9 place-items-center rounded-full border border-[#d1d7db] bg-white text-[#54656f] shadow-sm dark:border-[#3b4a54] dark:bg-[#202c33] dark:text-[#e9edef]"
-									>
-										{darkMode ? <Sun size={16} strokeWidth={2.1} /> : <Moon size={16} strokeWidth={2.1} />}
-									</button>
-								) : null}
-								{typeof onSwitchLocale === 'function' ? (
-									<button
-										type="button"
-										onClick={() => onSwitchLocale(ar ? 'en' : 'ar')}
-										aria-label={labels.language}
-										title={ar ? labels.switchToEnglish : labels.switchToArabic}
-										className="grid h-9 min-w-9 place-items-center rounded-full border border-[#d1d7db] bg-white px-2 text-[11px] font-bold text-[#008069] shadow-sm dark:border-[#3b4a54] dark:bg-[#202c33] dark:text-[#25d366]"
-									>
-										{ar ? 'EN' : 'ع'}
-									</button>
-								) : null}
-							</div>
-						) : null}
 						<button
 							type="button"
 							onClick={() => onSelect(id)}
@@ -8104,17 +8076,6 @@ function MobileOverflowMenu({
 				className="fixed inset-0 z-190 bg-transparent min-[769px]:hidden"
 			/>
 			<div className="wa-mobile-menu absolute start-4 top-[calc(52px+env(safe-area-inset-top,0px))] z-200 min-w-52 overflow-hidden rounded-xl py-2 shadow-2xl min-[769px]:hidden">
-				<button type="button" onClick={() => { onProfile(); onClose(); }} className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10">
-					<User size={18} className="text-[#8696a0]" />
-					<span>{labels.profile}</span>
-				</button>
-				{menuTabs.map(([id, Icon]) => (
-					<button key={id} type="button" onClick={() => { onSelect(id); onClose(); }} className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10">
-						<Icon size={18} className="text-[#8696a0]" />
-						<span>{labels[id]}</span>
-					</button>
-				))}
-				<div className="my-1 h-px bg-[#8696a0]/20" aria-hidden="true" />
 				{typeof onToggleDarkMode === 'function' ? (
 					<button
 						type="button"
@@ -8141,6 +8102,19 @@ function MobileOverflowMenu({
 						<span>{ar ? labels.switchToEnglish : labels.switchToArabic}</span>
 					</button>
 				) : null}
+				{(typeof onToggleDarkMode === 'function' || typeof onSwitchLocale === 'function') ? (
+					<div className="my-1 h-px bg-[#8696a0]/20" aria-hidden="true" />
+				) : null}
+				<button type="button" onClick={() => { onProfile(); onClose(); }} className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10">
+					<User size={18} className="text-[#8696a0]" />
+					<span>{labels.profile}</span>
+				</button>
+				{menuTabs.map(([id, Icon]) => (
+					<button key={id} type="button" onClick={() => { onSelect(id); onClose(); }} className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10">
+						<Icon size={18} className="text-[#8696a0]" />
+						<span>{labels[id]}</span>
+					</button>
+				))}
 				<button type="button" onClick={() => { onClose(); openSidebar(); }} className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm active:bg-white/10">
 					<PanelLeft size={18} className="text-[#8696a0] rtl:scale-x-[-1]" />
 					<span>{labels.openSidebar}</span>
@@ -8234,8 +8208,8 @@ function MobileAttachmentSheet({
 				aria-label={ar ? 'المزيد من الخيارات' : 'More options'}
 				className={
 					isDesktop
-						? 'wa-attachment-popover bg-white px-1.5 py-1.5'
-						: 'wa-attachment-sheet absolute inset-x-0 bottom-0 mx-auto max-w-[430px] rounded-t-[20px] bg-white px-3 pb-[max(18px,env(safe-area-inset-bottom))] pt-2.5 shadow-2xl'
+						? 'wa-attachment-popover bg-white px-1.5 py-1.5 dark:bg-[#233138] dark:text-[#e9edef]'
+						: 'wa-attachment-sheet absolute inset-x-0 bottom-0 mx-auto max-w-[430px] rounded-t-[20px] bg-white px-3 pb-[max(18px,env(safe-area-inset-bottom))] pt-2.5 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]'
 				}
 				style={
 					isDesktop
@@ -9638,6 +9612,27 @@ function WhatsAppWorkspaceContent() {
 		nextLocale => {
 			const next = nextLocale === 'en' ? 'en' : 'ar';
 			if (next === locale) return;
+			try {
+				document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=${60 * 60 * 24 * 365}`;
+				document.documentElement.lang = next;
+				document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
+			} catch {
+				/* ignore cookie / DOM errors in restricted contexts */
+			}
+			// Hard assign so the client-only WhatsApp workspace remounts in the new
+			// locale (soft next-intl replace was leaving mobile stuck on Arabic).
+			const fullPath =
+				typeof window !== 'undefined'
+					? window.location.pathname
+					: `/${locale}${pathname || '/dashboard/whatsapp'}`;
+			const segs = fullPath.split('/').filter(Boolean);
+			if (segs[0] === 'en' || segs[0] === 'ar') segs[0] = next;
+			else segs.unshift(next);
+			const search = typeof window !== 'undefined' ? window.location.search : '';
+			if (typeof window !== 'undefined') {
+				window.location.assign(`/${segs.join('/')}${search}`);
+				return;
+			}
 			router.replace(pathname, { locale: next });
 		},
 		[locale, pathname, router],
@@ -9737,6 +9732,8 @@ function WhatsAppWorkspaceContent() {
 	const [syncPhoneClosed, setSyncPhoneClosed] = useState(false);
 	const [syncStage, setSyncStage] = useState('');
 	const [conversationId, setConversationId] = useState(null);
+	/** Tick so relative "last seen Xm ago" refreshes while the chat is open. */
+	const [presenceClock, setPresenceClock] = useState(0);
 	const [secondaryConversationId, setSecondaryConversationId] = useState(null);
 	const [splitPickMode, setSplitPickMode] = useState(false);
 	const [splitLiveMessage, setSplitLiveMessage] = useState(null);
@@ -10387,6 +10384,25 @@ function WhatsAppWorkspaceContent() {
 		[accounts, accountId],
 	);
 	const isAccountConnected = selectedAccount?.status === 'connected';
+	const railAvatarUrl = useMemo(() => {
+		const fromAccount = String(selectedAccount?.avatarUrl || '').trim();
+		if (fromAccount) return fromAccount;
+		try {
+			const user = JSON.parse(localStorage.getItem('user') || 'null');
+			return String(
+				user?.avatar ||
+					user?.avatarUrl ||
+					user?.image ||
+					user?.photo ||
+					user?.profileImage ||
+					user?.profilePicture ||
+					'',
+			).trim();
+		} catch {
+			return '';
+		}
+	}, [selectedAccount?.avatarUrl, currentUserId]);
+
 	const effectiveConversations = useMemo(
 		() =>
 			buildEffectiveConversations({
@@ -11563,17 +11579,25 @@ function WhatsAppWorkspaceContent() {
 						// Snapshot no longer lists this chat as live — clear only unconfirmed online.
 						if (item.presence?.confirmedOffline) return item;
 						changed = true;
+						const cleared = {
+							online: false,
+							typing: false,
+							recording: false,
+							state: 'unknown',
+							t: Date.now(),
+						};
+						const stampedLastSeen =
+							resolvePresenceLastSeen(item.presence, cleared) || undefined;
 						return {
 							...item,
 							isTyping: false,
 							typing: false,
 							presence: {
 								...(item.presence || {}),
-								online: false,
-								typing: false,
-								recording: false,
-								state: item.presence?.confirmedOffline ? 'unavailable' : 'unknown',
-								t: Date.now(),
+								...cleared,
+								lastSeen: stampedLastSeen,
+								// Soft drop from live list — not a confirmed WA unavailable.
+								confirmedOffline: false,
 							},
 						};
 					}
@@ -11582,11 +11606,15 @@ function WhatsAppWorkspaceContent() {
 						typing: Boolean(live.typing),
 						recording: Boolean(live.recording),
 						state: live.state,
-						lastSeen: live.lastSeen || undefined,
 						t: live.updatedAt || Date.now(),
 						senderName: '',
 						confirmedOffline: live.state === 'unavailable' && !live.online,
 					};
+					const resolvedLastSeen = resolvePresenceLastSeen(item.presence, {
+						...presence,
+						lastSeen: live.lastSeen,
+					});
+					presence.lastSeen = resolvedLastSeen || undefined;
 					if (isSameConversationPresence(item, presence)) return item;
 					changed = true;
 					return {
@@ -13138,6 +13166,15 @@ function WhatsAppWorkspaceContent() {
 	}, [conversations]);
 
 	useEffect(() => {
+		if (!conversationId) return undefined;
+		setPresenceClock(Date.now());
+		const timer = window.setInterval(() => {
+			setPresenceClock(Date.now());
+		}, 30_000);
+		return () => window.clearInterval(timer);
+	}, [conversationId]);
+
+	useEffect(() => {
 		syncingInboxRef.current = syncingInbox;
 	}, [syncingInbox]);
 
@@ -14320,6 +14357,14 @@ function WhatsAppWorkspaceContent() {
 				const senderName = String(event.payload?.senderName || '');
 				const lastSeen = Number(event.payload?.lastSeen || 0);
 				const state = String(event.payload?.state || 'unavailable');
+				const existing = conversationsRef.current.find(item => item.id === targetId);
+				const resolvedLastSeen = resolvePresenceLastSeen(existing?.presence, {
+					online: isOnline,
+					typing,
+					recording,
+					lastSeen,
+					t: event.payload?.t || Date.now(),
+				});
 				const presence = {
 					typing,
 					recording,
@@ -14327,13 +14372,13 @@ function WhatsAppWorkspaceContent() {
 					state,
 					t: event.payload?.t || Date.now(),
 					senderName: typing ? senderName : '',
-					lastSeen: lastSeen || undefined,
+					lastSeen: resolvedLastSeen || undefined,
 					confirmedOffline: state === 'unavailable' && !isOnline,
 					lastSeenRestricted: Boolean(event.payload?.lastSeenRestricted),
 				};
 				setConversations(current => {
-					const existing = current.find(item => item.id === targetId);
-					if (!existing || isSameConversationPresence(existing, presence)) return current;
+					const row = current.find(item => item.id === targetId);
+					if (!row || isSameConversationPresence(row, presence)) return current;
 					return current.map(item =>
 						item.id === targetId
 							? { ...item, isTyping: typing, typing, presence }
@@ -14355,7 +14400,7 @@ function WhatsAppWorkspaceContent() {
 						state: presence.state,
 						typing,
 						recording,
-						lastSeen: lastSeen || 0,
+						lastSeen: resolvedLastSeen || 0,
 						updatedAt: Number(presence.t) || Date.now(),
 					};
 					if (idx < 0) {
@@ -20379,6 +20424,7 @@ function WhatsAppWorkspaceContent() {
 					channelUnreadCount={unreadChannelCount}
 					locale={locale}
 					connected={isAccountConnected}
+					avatarUrl={railAvatarUrl}
 					showSettings={canManageWhatsApp || isAdmin}
 					showAccounts
 					showReports
@@ -21500,6 +21546,7 @@ function WhatsAppWorkspaceContent() {
 																	/>
 																)
 																: (() => {
+																		void presenceClock;
 																		const subtitle = conversationPresenceSubtitle(
 																			selectedConversation.presence,
 																			locale,
@@ -25155,10 +25202,6 @@ function WhatsAppWorkspaceContent() {
 					onSelect={tab => void loadTabData(tab)}
 					labels={t}
 					unreadCount={unreadConversationCount}
-					locale={locale}
-					darkMode={darkMode}
-					onToggleDarkMode={toggleDarkMode}
-					onSwitchLocale={switchLocale}
 				/>
 			)}
 			<MessageReactionPicker
@@ -25366,7 +25409,7 @@ function WhatsAppWorkspaceContent() {
 					}}
 				>
 					<div
-						className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-2xl"
+						className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white p-5 text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]"
 						onClick={event => event.stopPropagation()}
 					>
 						<div className="flex shrink-0 items-center justify-between">
@@ -25387,7 +25430,7 @@ function WhatsAppWorkspaceContent() {
 									setConversationInfoGroup(null);
 									setLoadingConversationInfoGroup(false);
 								}}
-								className="rounded-full p-2 hover:bg-slate-100"
+								className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-white/10"
 							>
 								<X size={18} />
 							</button>
@@ -25551,13 +25594,13 @@ function WhatsAppWorkspaceContent() {
 						sharingSourceConversationIdRef.current = null;
 					}}
 				>
-					<div className="max-h-[70vh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
-						<div className="flex items-center justify-between border-b px-4 py-3">
+					<div className="max-h-[70vh] w-full max-w-md overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]" onClick={event => event.stopPropagation()}>
+						<div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-[#3b4a54]">
 							<div className="min-w-0">
 								<h3 className="text-lg font-bold">
 									{locale === 'ar' ? 'إرسال إلى' : 'Send to'}
 								</h3>
-								<p className="mt-0.5 text-xs text-[#667781]">
+								<p className="mt-0.5 text-xs text-[#667781] dark:text-[#8696a0]">
 									{locale === 'ar'
 										? `${sharingMessageIds?.length || 1} رسالة · تظهر كأنها مرسلة منك · الردود تُحفظ مع الاقتباس فوقها`
 										: `${sharingMessageIds?.length || 1} message(s) · sent as yours · replies keep the quote on top`}
@@ -25571,7 +25614,7 @@ function WhatsAppWorkspaceContent() {
 									setForwardingMessage(null);
 									sharingSourceConversationIdRef.current = null;
 								}}
-								className="rounded-full p-2 hover:bg-slate-100 disabled:opacity-50"
+								className="rounded-full p-2 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-white/10"
 							>
 								<X size={18} />
 							</button>
@@ -25591,8 +25634,8 @@ function WhatsAppWorkspaceContent() {
 											type="button"
 											onClick={() => void shareMessagesAsOriginal(item.id)}
 											disabled={Boolean(sharingTargetConversationId)}
-											className={`flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100 disabled:opacity-60 ${
-												isSending ? 'bg-slate-50' : ''
+											className={`flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100 disabled:opacity-60 dark:hover:bg-white/5 ${
+												isSending ? 'bg-slate-50 dark:bg-white/10' : ''
 											}`}
 										>
 											<Avatar
@@ -25617,7 +25660,7 @@ function WhatsAppWorkspaceContent() {
 									item.id !== (sharingSourceConversationIdRef.current || conversationId) &&
 									item.accountId === selectedConversation?.accountId,
 							) && (
-								<p className="px-3 py-8 text-center text-sm text-[#667781]">
+								<p className="px-3 py-8 text-center text-sm text-[#667781] dark:text-[#8696a0]">
 									{locale === 'ar' ? 'لا توجد محادثات أخرى في هذا الحساب' : 'No other chats on this account'}
 								</p>
 							)}
@@ -25627,20 +25670,20 @@ function WhatsAppWorkspaceContent() {
 			)}
 			{deleteMessageTarget && (
 				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center" onClick={() => setDeleteMessageTarget(null)}>
-					<div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
+					<div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]" onClick={event => event.stopPropagation()}>
 						<div className="px-5 pb-3 pt-5">
 							<h3 className="text-lg font-bold">{locale === 'ar' ? 'حذف الرسالة؟' : 'Delete message?'}</h3>
-							<p className="mt-1 text-sm text-[#667781]">{locale === 'ar' ? 'اختر طريقة حذف هذه الرسالة.' : 'Choose how this message should be deleted.'}</p>
+							<p className="mt-1 text-sm text-[#667781] dark:text-[#8696a0]">{locale === 'ar' ? 'اختر طريقة حذف هذه الرسالة.' : 'Choose how this message should be deleted.'}</p>
 						</div>
-						<button type="button" onClick={() => void deleteSelectedMessage('local')} className="flex w-full items-center justify-between border-t px-5 py-4 font-semibold text-[#d70040] hover:bg-slate-50">
+						<button type="button" onClick={() => void deleteSelectedMessage('local')} className="flex w-full items-center justify-between border-t border-slate-200 px-5 py-4 font-semibold text-[#d70040] hover:bg-slate-50 dark:border-[#3b4a54] dark:hover:bg-white/5">
 							{locale === 'ar' ? 'حذف لدي' : 'Delete for me'} <Trash2 size={20} />
 						</button>
 						{deleteMessageTarget.direction === 'outbound' && (
-							<button type="button" onClick={() => void deleteSelectedMessage('everyone')} className="flex w-full items-center justify-between border-t px-5 py-4 font-semibold text-[#d70040] hover:bg-slate-50">
+							<button type="button" onClick={() => void deleteSelectedMessage('everyone')} className="flex w-full items-center justify-between border-t border-slate-200 px-5 py-4 font-semibold text-[#d70040] hover:bg-slate-50 dark:border-[#3b4a54] dark:hover:bg-white/5">
 								{locale === 'ar' ? 'حذف لدى الجميع' : 'Delete for everyone'} <Users size={20} />
 							</button>
 						)}
-						<button type="button" onClick={() => setDeleteMessageTarget(null)} className="w-full border-t px-5 py-4 font-semibold hover:bg-slate-50">
+						<button type="button" onClick={() => setDeleteMessageTarget(null)} className="w-full border-t border-slate-200 px-5 py-4 font-semibold hover:bg-slate-50 dark:border-[#3b4a54] dark:hover:bg-white/5">
 							{locale === 'ar' ? 'إلغاء' : 'Cancel'}
 						</button>
 					</div>
@@ -25648,10 +25691,10 @@ function WhatsAppWorkspaceContent() {
 			)}
 			{messageInfo && (
 				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center" onClick={() => setMessageInfo(null)}>
-					<div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={event => event.stopPropagation()}>
+					<div className="w-full max-w-md rounded-2xl bg-white p-5 text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]" onClick={event => event.stopPropagation()}>
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-bold">{locale === 'ar' ? 'معلومات الرسالة' : 'Message info'}</h3>
-							<button type="button" onClick={() => setMessageInfo(null)} className="rounded-full p-2 hover:bg-slate-100"><X size={18} /></button>
+							<button type="button" onClick={() => setMessageInfo(null)} className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-white/10"><X size={18} /></button>
 						</div>
 						{loadingMessageInfo ? (
 							<div className="grid min-h-40 place-items-center"><Loader2 className="animate-spin text-[#00a884]" /></div>
@@ -25664,7 +25707,10 @@ function WhatsAppWorkspaceContent() {
 								const outbound =
 									String(messageInfo.direction || '').toLowerCase() === 'outbound' ||
 									messageInfo.provider?.fromMe === true;
-								const statusLabel = String(messageInfo.status || '—');
+								const statusLabel = preferWhatsAppAckStatus(
+									messageInfo.message?.status,
+									messageInfo.status,
+								);
 								const statusUpdatedAt = messageInfo.statusUpdatedAt
 									? new Date(messageInfo.statusUpdatedAt).toLocaleString()
 									: null;
@@ -25754,11 +25800,11 @@ function WhatsAppWorkspaceContent() {
 								}
 								return (
 									<div className="mt-4 space-y-3 text-sm">
-										<div className="rounded-xl bg-slate-50 p-3">
+										<div className="rounded-xl bg-slate-50 p-3 dark:bg-[#111b21]">
 											<p className="wa-privacy-identity font-semibold">
 												{messageInfo.message?.text || messageInfo.type}
 											</p>
-											<p className="mt-1 text-xs text-slate-500">
+											<p className="mt-1 text-xs text-slate-500 dark:text-[#8696a0]">
 												{messageInfo.sentAt
 													? new Date(messageInfo.sentAt).toLocaleString()
 													: '—'}
@@ -25767,9 +25813,9 @@ function WhatsAppWorkspaceContent() {
 										{rows.map(([label, value]) => (
 											<div
 												key={label}
-												className="flex justify-between gap-4 border-b pb-2 last:border-0"
+												className="flex justify-between gap-4 border-b border-slate-200 pb-2 last:border-0 dark:border-[#3b4a54]"
 											>
-												<span className="text-slate-500">{label}</span>
+												<span className="text-slate-500 dark:text-[#8696a0]">{label}</span>
 												<strong className="max-w-[65%] text-end">{value || '—'}</strong>
 											</div>
 										))}

@@ -7851,6 +7851,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		pointer-events: none;
 	}
 
+	.wa-desktop-rail__avatar-btn {
+		position: relative;
+		overflow: visible;
+	}
+
 	.wa-desktop-rail__avatar {
 		position: relative;
 		display: grid;
@@ -7872,13 +7877,15 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-desktop-rail__online-dot {
 		position: absolute;
-		inset-inline-end: 0;
-		bottom: 0;
-		width: 8px;
-		height: 8px;
-		border: 2px solid #fff;
+		inset-inline-end: -1px;
+		bottom: -1px;
+		z-index: 2;
+		width: 10px;
+		height: 10px;
+		border: 2px solid #f0f2f5;
 		border-radius: 999px;
 		background: #25d366;
+		pointer-events: none;
 	}
 
 	.wa-web-main {
@@ -13836,7 +13843,7 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 
   .wa-desktop-rail {
     color: #54656f;
-    border-inline-end: 1px solid #e9edef;
+    border-inline-end: 1px solid var(--wa-border, #e9edef);
     background: #f0f2f5;
   }
 
@@ -13893,6 +13900,11 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
   .wa-desktop-rail__online-dot {
     border: 2px solid #f0f2f5;
     background: #25d366;
+  }
+
+  html.dark .wa-desktop-rail__online-dot,
+  .dark .wa-desktop-rail__online-dot {
+    border-color: #202c33;
   }
 
   .wa-desktop-rail__badge {
@@ -15358,7 +15370,7 @@ html.wa-privacy-on .wa-board-client-chip__avatar {
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
-		border-bottom: 1px solid #e9edef !important;
+		border-bottom: 1px solid var(--wa-border, #e9edef) !important;
 	}
 
 	.wa-web-desktop .wa-chat-list .wa-conversation-row:hover > .min-w-0,

@@ -263,10 +263,11 @@ export default function WhatsAppDesktopRail({
 								<User size={15} strokeWidth={2} />
 							</span>
 						)}
-						{connected ? (
-							<span className="wa-desktop-rail__online-dot absolute end-0 bottom-0 size-2 rounded-full" />
-						) : null}
 					</span>
+					{/* Online dot sits on the button (not inside overflow:hidden avatar). */}
+					{connected ? (
+						<span className="wa-desktop-rail__online-dot" aria-hidden="true" />
+					) : null}
 				</button>
 			</div>
 		</aside>

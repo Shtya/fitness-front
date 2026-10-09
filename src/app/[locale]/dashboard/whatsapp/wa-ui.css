@@ -1484,6 +1484,19 @@ html.dark .wa-web-desktop:not(#wa-dark) .wa-chat-card {
 html.dark .wa-web-desktop:not(#wa-dark) .wa-desktop-rail {
 	background: #202c33 !important;
 	border-color: #222d34 !important;
+	border-inline-end-color: #222d34 !important;
+}
+
+html.dark .wa-web-desktop:not(#wa-dark) .wa-chat-list .wa-conversation-row > .min-w-0 {
+	border-bottom-color: #222d34 !important;
+}
+
+html.dark .wa-web-desktop:not(#wa-dark) .wa-desktop-rail__divider {
+	background: #3b4a54 !important;
+}
+
+html.dark .wa-web-desktop:not(#wa-dark) .wa-desktop-rail__online-dot {
+	border-color: #202c33 !important;
 }
 
 html.dark .wa-web-desktop:not(#wa-dark) .wa-desktop-rail__item {

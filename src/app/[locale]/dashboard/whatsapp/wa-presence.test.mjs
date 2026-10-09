@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
 	conversationPresenceSubtitle,
 	isSameConversationPresence,
+	resolvePresenceLastSeen,
 } from './wa-presence.js';
 
 const presence = {
@@ -61,4 +62,17 @@ test('subtitle never invents Offline for unknown presence', () => {
 		),
 		{ kind: 'lastSeen', text: 'last seen: 1m ago' },
 	);
+});
+
+test('resolvePresenceLastSeen keeps payload and previous lastSeen', () => {
+	assert.equal(resolvePresenceLastSeen({ lastSeen: 10 }, { lastSeen: 99 }), 99);
+	assert.equal(resolvePresenceLastSeen({ lastSeen: 10 }, { lastSeen: 0, online: false }), 10);
+});
+
+test('resolvePresenceLastSeen stamps when contact goes online→offline without lastSeen', () => {
+	const stamped = resolvePresenceLastSeen(
+		{ online: true, lastSeen: 0, t: 1_700_000_000_000 },
+		{ online: false, typing: false, recording: false, lastSeen: 0 },
+	);
+	assert.equal(stamped, 1_700_000_000_000);
 });

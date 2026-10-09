@@ -6,8 +6,8 @@
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "any",
-  "start_url": "/ar/open?source=pwa",
-  "id": "/ar/open",
+  "start_url": "/open?source=pwa",
+  "id": "/open",
   "scope": "/",
   "icons": [
     {
@@ -29,7 +29,5 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["health", "fitness", "lifestyle"],
-  "lang": "ar",
-  "dir": "rtl"
+  "categories": ["health", "fitness", "lifestyle"]
 }
