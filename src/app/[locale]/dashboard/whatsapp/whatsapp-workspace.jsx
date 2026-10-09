@@ -301,7 +301,7 @@ function WaPaneLoading({ label }) {
 	);
 }
 import { staffAssignHint } from './whatsapp-staff-pace';
-import { isSameConversationPresence } from './wa-presence';
+import { conversationPresenceSubtitle, isSameConversationPresence } from './wa-presence';
 import { BoardColumnPicker, BoardColumnPickerMenu } from './BoardColumnPicker';
 import { createBoardCardFromMessages } from './whatsapp-board-api';
 import { WaCustomSelect } from './WaCustomSelect';
@@ -10217,6 +10217,19 @@ function WhatsAppWorkspaceContent() {
 	const selectedConversationSource = resolveConversationSource(selectedConversation);
 	const selectedDemoRuntimeId =
 		selectedConversation?.demoOverlayId || selectedConversation?.rawDemoId || '';
+	/** Lets task cards name the client they belong to instead of a bare conversation id. */
+	const boardConversationLookup = useMemo(() => {
+		const lookup = new Map();
+		for (const item of conversations || []) {
+			if (!item?.id) continue;
+			lookup.set(String(item.id), {
+				title: conversationTitle(item),
+				avatarUrl: conversationAvatarUrl(item),
+				isGroup: item.type === 'group',
+			});
+		}
+		return lookup;
+	}, [conversations]);
 	const currentAccess = selectedAccount?.currentAccess || {};
 	const whatsappNotificationsEnabled = currentAccess.notificationsEnabled !== false;
 	whatsappNotificationsEnabledRef.current = whatsappNotificationsEnabled;
@@ -11211,6 +11224,54 @@ function WhatsAppWorkspaceContent() {
 					return current;
 				}
 				return normalized;
+			});
+			// Keep inbox/header dots in sync with the account-scoped snapshot.
+			const byId = new Map(normalized.map(item => [item.conversationId, item]));
+			setConversations(current => {
+				let changed = false;
+				const next = current.map(item => {
+					const live = byId.get(item.id);
+					if (!live) {
+						if (!item.presence?.online && !item.presence?.typing && !item.presence?.recording) {
+							return item;
+						}
+						// Snapshot no longer lists this chat as live — clear only unconfirmed online.
+						if (item.presence?.confirmedOffline) return item;
+						changed = true;
+						return {
+							...item,
+							isTyping: false,
+							typing: false,
+							presence: {
+								...(item.presence || {}),
+								online: false,
+								typing: false,
+								recording: false,
+								state: item.presence?.confirmedOffline ? 'unavailable' : 'unknown',
+								t: Date.now(),
+							},
+						};
+					}
+					const presence = {
+						online: Boolean(live.online),
+						typing: Boolean(live.typing),
+						recording: Boolean(live.recording),
+						state: live.state,
+						lastSeen: live.lastSeen || undefined,
+						t: live.updatedAt || Date.now(),
+						senderName: '',
+						confirmedOffline: live.state === 'unavailable' && !live.online,
+					};
+					if (isSameConversationPresence(item, presence)) return item;
+					changed = true;
+					return {
+						...item,
+						isTyping: presence.typing,
+						typing: presence.typing,
+						presence,
+					};
+				});
+				return changed ? next : current;
 			});
 			const pinnedStoredId = readStoredPinnedOnlineContactId(currentUserId);
 			if (pinnedStoredId) {
@@ -13893,14 +13954,17 @@ function WhatsAppWorkspaceContent() {
 				const isOnline = Boolean(event.payload?.isOnline);
 				const senderName = String(event.payload?.senderName || '');
 				const lastSeen = Number(event.payload?.lastSeen || 0);
+				const state = String(event.payload?.state || 'unavailable');
 				const presence = {
 					typing,
 					recording,
 					online: isOnline,
-					state: event.payload?.state || 'unavailable',
+					state,
 					t: event.payload?.t || Date.now(),
 					senderName: typing ? senderName : '',
 					lastSeen: lastSeen || undefined,
+					confirmedOffline: state === 'unavailable' && !isOnline,
+					lastSeenRestricted: Boolean(event.payload?.lastSeenRestricted),
 				};
 				setConversations(current => {
 					const existing = current.find(item => item.id === targetId);
@@ -20934,39 +20998,47 @@ function WhatsAppWorkspaceContent() {
 																		senderName={selectedConversation.presence?.senderName || ''}
 																	/>
 																)
-																: selectedConversation.presence?.online
-																	? (
-																		<span className="wa-online-status inline-flex items-center gap-1.5">
-																			<span className="wa-online-dot" aria-hidden="true" />
-																			{locale === 'ar' ? 'متصل الآن' : 'Online'}
-																		</span>
-																	)
-																	: selectedConversation.presence &&
-																		  (selectedConversation.presence.state ||
-																				selectedConversation.presence.online === false)
-																		? (
-																			<span className="wa-offline-status inline-flex items-center gap-1.5 text-slate-400">
-																				<span
-																					className="inline-block h-2 w-2 rounded-full bg-slate-400"
-																					aria-hidden="true"
-																				/>
-																				{locale === 'ar' ? 'غير متصل' : 'Offline'}
-																			</span>
-																		)
-																	: selectedConversation.presence?.lastSeen
-																		? (
-																			<span className="wa-last-seen text-slate-400">
-																				{formatLastSeen(selectedConversation.presence.lastSeen, locale)}
-																			</span>
-																		)
-																		: (
+																: (() => {
+																		const subtitle = conversationPresenceSubtitle(
+																			selectedConversation.presence,
+																			locale,
+																			formatLastSeen,
+																		);
+																		if (subtitle?.kind === 'online') {
+																			return (
+																				<span className="wa-online-status inline-flex items-center gap-1.5">
+																					<span className="wa-online-dot" aria-hidden="true" />
+																					{subtitle.text}
+																				</span>
+																			);
+																		}
+																		if (subtitle?.kind === 'lastSeen') {
+																			return (
+																				<span className="wa-last-seen text-slate-400">
+																					{subtitle.text}
+																				</span>
+																			);
+																		}
+																		if (subtitle?.kind === 'offline') {
+																			return (
+																				<span className="wa-offline-status inline-flex items-center gap-1.5 text-slate-400">
+																					<span
+																						className="inline-block h-2 w-2 rounded-full bg-slate-400"
+																						aria-hidden="true"
+																					/>
+																					{subtitle.text}
+																				</span>
+																			);
+																		}
+																		return (
 																			<span className="wa-chat-assignee-pill inline-flex max-w-full items-center gap-1.5">
 																				<UserRound size={12} strokeWidth={2.3} className="shrink-0 opacity-70" />
 																				<span className="truncate">
 																					{selectedConversation.assignedUser?.name || t.unassign}
 																				</span>
 																			</span>
-																		)}
+																		);
+																	})()}
 													</p>
 													<p className="wa-chat-contact-hint hidden text-[11px] text-[#667781]">
 														{selectedConversation.isTyping || selectedConversation.typing || selectedConversation.presence?.typing
@@ -20979,11 +21051,14 @@ function WhatsAppWorkspaceContent() {
 																	senderName={selectedConversation.presence?.senderName || ''}
 																/>
 															)
-															: selectedConversation.presence?.online
-																? (locale === 'ar' ? 'متصل الآن' : 'Online')
-																: selectedConversation.presence?.lastSeen
-																	? formatLastSeen(selectedConversation.presence.lastSeen, locale)
-																	: locale === 'ar' ? 'اضغط هنا لمعلومات جهة الاتصال' : 'tap here for contact info'}
+															: conversationPresenceSubtitle(
+																	selectedConversation.presence,
+																	locale,
+																	formatLastSeen,
+																)?.text ||
+																(locale === 'ar'
+																	? 'اضغط هنا لمعلومات جهة الاتصال'
+																	: 'tap here for contact info')}
 													</p>
 												</div>
 											</div>
@@ -22783,6 +22858,10 @@ function WhatsAppWorkspaceContent() {
 													>
 														<Plus size={22} strokeWidth={2.1} />
 													</button>
+													{/* The typing field itself. Desktop lays it out flat inside the pill (display:
+													    contents); phones draw it as its own white field with attach, camera and
+													    mic/send outside it, the way the WhatsApp app does. */}
+													<div className="wa-input-field">
 													<button
 														type="button"
 														ref={stickerButtonRef}
@@ -22821,6 +22900,7 @@ function WhatsAppWorkspaceContent() {
 														onEnterSubmit={sendMessage}
 														onPaste={handleComposerPaste}
 													/>
+													</div>
 													<button
 														type="button"
 														aria-label="Camera"
@@ -24254,6 +24334,7 @@ function WhatsAppWorkspaceContent() {
 							<WhatsAppBoardTab
 								accountId={accountId}
 								locale={locale}
+								conversationLookup={boardConversationLookup}
 								onOpenConversation={conversationIdToOpen => {
 									if (!conversationIdToOpen) return;
 									openConversationFromReport(conversationIdToOpen);

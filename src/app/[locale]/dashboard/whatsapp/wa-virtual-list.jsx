@@ -247,6 +247,10 @@ export function useWaVirtualRows({
 			typeof shouldAdjustScrollPositionOnItemSizeChange === 'function'
 				? shouldAdjustScrollPositionOnItemSizeChange
 				: undefined,
+		// Rows are measured from their ref callbacks, i.e. inside React's commit. A flushSync
+		// there is ignored by React 19 (with a console error) and only forces extra sync
+		// renders elsewhere; batched updates land in the same frame anyway.
+		useFlushSync: false,
 	});
 
 	const items = enabled ? virtualizer.getVirtualItems() : [];

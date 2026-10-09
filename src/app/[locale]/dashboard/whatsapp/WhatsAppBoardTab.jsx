@@ -90,6 +90,7 @@ export function WhatsAppBoardTab({
 	accountId,
 	locale = 'en',
 	onOpenConversation,
+	conversationLookup = null,
 }) {
 	const board = useWhatsAppBoardApi(accountId);
 
@@ -130,6 +131,7 @@ export function WhatsAppBoardTab({
 				boardApi={board}
 				locale={locale}
 				onOpenConversation={onOpenConversation}
+				conversationLookup={conversationLookup}
 			/>
 		</div>
 	);

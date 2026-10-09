@@ -688,13 +688,13 @@ const ARABIC_CHAR_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\uf
 const LATIN_CHAR_RE = /[A-Za-z]/;
 
 export const ARABIC_MESSAGE_FONT_FAMILY =
-	'var(--font-arabic), "Segoe UI", Tahoma, "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif';
+	'"Segoe UI", -apple-system, BlinkMacSystemFont, "SF Arabic", "Noto Sans Arabic", "Noto Naskh Arabic", Tahoma, Roboto, Arial, sans-serif';
 
 export const DEFAULT_MESSAGE_FONT_FAMILY =
-	'var(--font-dm-sans), system-ui, -apple-system, sans-serif';
+	'"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif';
 
 export const WA_UI_FONT_FAMILY =
-	'var(--font-dm-sans), system-ui, -apple-system, sans-serif';
+	'"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif';
 
 /** First strong letter wins: Arabic → rtl, Latin → ltr. Skips digits/punctuation/space. */
 export function firstStrongTextDirection(text) {

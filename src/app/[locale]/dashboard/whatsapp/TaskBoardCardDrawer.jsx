@@ -74,6 +74,7 @@ const PRIORITY_OPTIONS = [
 function labelPillClass(label) {
 	const name = String(label?.name || '').toLowerCase();
 	const color = String(label?.color || '').toLowerCase();
+	if (LABEL_PILL[color]) return LABEL_PILL[color];
 	if (name.includes('urgent') || color.includes('f1') || color.includes('ef')) return LABEL_PILL.pink;
 	if (name.includes('personal') || color.includes('f5') || color.includes('ff9')) return LABEL_PILL.orange;
 	if (name.includes('work') || color.includes('8d') || color.includes('a1')) return LABEL_PILL.purple;
@@ -792,7 +793,9 @@ export default function TaskBoardCardDrawer({
 							</label>
 							<input
 								type="date"
-								value={draft.dueDate || ''}
+								// The API can return a full ISO timestamp; a date input only accepts yyyy-mm-dd
+								// and silently shows an empty field otherwise.
+								value={/^\d{4}-\d{2}-\d{2}/.test(String(draft.dueDate || '')) ? String(draft.dueDate).slice(0, 10) : ''}
 								onChange={event =>
 									queueSave({ dueDate: event.target.value || null }, { immediate: true })
 								}
@@ -898,7 +901,7 @@ export default function TaskBoardCardDrawer({
 					<section>
 						<div className="mb-2 flex items-center justify-between">
 							<label className="text-[10px] font-bold uppercase tracking-wide text-[#8a95a5]">
-								{ar ? 'العناصر المستخدمة' : 'Used items'}
+								{ar ? 'قائمة المهام' : 'Checklist'}
 							</label>
 							<span className="rounded-full bg-[#eef2f6] px-2 py-0.5 text-[10px] font-semibold text-[#667781]">
 								{doneCount}/{checklist.length}
@@ -1006,7 +1009,15 @@ export default function TaskBoardCardDrawer({
 								</button>
 							))}
 							{availableLabels
-								.filter(label => !(draft.labels || []).some(item => item.id === label.id))
+								.filter(
+									label =>
+										!(draft.labels || []).some(
+											item =>
+												item.id === label.id ||
+												String(item.name || '').trim().toLowerCase() ===
+													String(label.name || '').trim().toLowerCase(),
+										),
+								)
 								.map(label => (
 									<button
 										key={label.id}

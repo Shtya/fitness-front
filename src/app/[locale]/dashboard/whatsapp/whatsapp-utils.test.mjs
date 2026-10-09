@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+	ARABIC_MESSAGE_FONT_FAMILY,
+	DEFAULT_MESSAGE_FONT_FAMILY,
 	conversationTitle,
 	isChannelConversation,
 	firstMessageLink,
@@ -646,15 +648,15 @@ test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	const arabic = messageTextPresentation('رسالة عربية');
 	assert.equal(arabic.dir, 'rtl');
 	assert.equal(arabic.style.textAlign, 'start');
-	assert.match(arabic.style.fontFamily, /--font-arabic/);
+	assert.equal(arabic.style.fontFamily, ARABIC_MESSAGE_FONT_FAMILY);
 	assert.equal(arabic.style.fontWeight, 400);
 	assert.equal(messageTextPresentation('English message').dir, 'ltr');
 	const startsEnglish = messageTextPresentation('Hello world مرحباً');
 	assert.equal(startsEnglish.dir, 'ltr');
-	assert.match(startsEnglish.style.fontFamily, /--font-dm-sans/);
+	assert.equal(startsEnglish.style.fontFamily, DEFAULT_MESSAGE_FONT_FAMILY);
 	const startsArabic = messageTextPresentation('مرحبا Hello');
 	assert.equal(startsArabic.dir, 'rtl');
-	assert.match(startsArabic.style.fontFamily, /--font-arabic/);
+	assert.equal(startsArabic.style.fontFamily, ARABIC_MESSAGE_FONT_FAMILY);
 	const numberedArabic = messageTextPresentation(
 		'1- وانت بتحط الخطوه بيقول لك اختار شركه الشحن',
 	);

@@ -1034,8 +1034,10 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-mobile-shell {
-  --wa-font-ui: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
-  --wa-font-ui-ar: var(--font-arabic), 'Tajawal', 'Cairo', 'Noto Sans Arabic', Tahoma, sans-serif;
+  /* System stack, as WhatsApp Web and the phone apps use: Segoe UI on Windows, SF on Apple,
+     Roboto on Android. Arabic resolves to the platform's own Arabic face. */
+  --wa-font-ui: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Helvetica, Arial, 'Noto Sans', sans-serif;
+  --wa-font-ui-ar: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Arabic', 'Noto Sans Arabic', 'Noto Naskh Arabic', Tahoma, Roboto, Arial, sans-serif;
   --wa-font-message-en: var(--wa-font-ui);
   --wa-font-message-ar: var(--wa-font-ui-ar);
   --wa-app-bg: #ffffff;
@@ -15145,5 +15147,435 @@ html[dir='rtl'] .wa-message-bubble .wa-message-meta {
 @media (min-width: 600px) and (max-width: 768px) {
 	.wa-chat-thread-pane .wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-email) {
 		max-width: min(75%, 42rem) !important;
+	}
+}
+
+/* ===== WhatsApp workspace — premium pass 2 ===== */
+
+/* Initials instead of a generic silhouette: who-is-who reads before photos load. */
+.wa-avatar-initials {
+	font-family: var(--wa-font-ui, inherit);
+	font-size: 0.92em;
+	font-weight: 600;
+	line-height: 1;
+	letter-spacing: 0.01em;
+	user-select: none;
+}
+
+@media (min-width: 769px) {
+	/* Filter chips were 10px text — below comfortable reading size. */
+	.wa-web-desktop .wa-desktop-filter-pills {
+		gap: 6px;
+		padding-block: 2px 8px;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.wa-web-desktop .wa-desktop-filter-pills::-webkit-scrollbar {
+		display: none;
+	}
+
+	.wa-web-desktop .wa-desktop-filter-pills .wa-filter-pill {
+		flex: 0 0 auto;
+		height: 32px;
+		padding: 0 14px;
+		border-radius: 999px;
+		font-size: 13px;
+		font-weight: 500;
+		line-height: 32px;
+		white-space: nowrap;
+		cursor: pointer;
+		transition: background-color 140ms ease, color 140ms ease;
+	}
+
+	.wa-web-desktop .wa-desktop-filter-pills .wa-filter-pill.is-active {
+		font-weight: 600;
+	}
+
+	.wa-web-desktop .wa-desktop-filter-pills .wa-filter-pill:focus-visible {
+		outline: 2px solid #00a884;
+		outline-offset: 2px;
+	}
+
+	/* List-header tools: quiet ghost icons like the thread header, not bordered tiles. */
+	.wa-web-desktop .wa-chat-list .wa-desktop-chat-list-tools .wa-header-icon-btn,
+	.wa-web-desktop .wa-chat-list .wa-desktop-chat-list-tools .wa-privacy-blur-toggle {
+		width: 36px !important;
+		min-width: 36px !important;
+		height: 36px !important;
+		border-color: transparent !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-desktop-chat-list-tools .wa-header-icon-btn:hover,
+	.wa-web-desktop .wa-chat-list .wa-desktop-chat-list-tools .wa-privacy-blur-toggle:hover {
+		background: #f0f2f5 !important;
+		color: #111b21 !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-desktop-chat-list-tools .wa-privacy-blur-toggle.is-active,
+	.wa-web-desktop .wa-chat-list .wa-desktop-chat-list-tools .wa-privacy-blur-toggle.is-open {
+		background: #e7f8f3 !important;
+		color: #008069 !important;
+	}
+
+	.wa-web-desktop .wa-desktop-chat-list-actions {
+		gap: 2px !important;
+	}
+
+	/* Composer: secondary tools step back so the input and the mic/send lead. */
+	.wa-input-pill .wa-composer-tool--desktop {
+		color: #8696a0 !important;
+	}
+
+	.wa-input-pill .wa-composer-tool--desktop:hover {
+		color: #3b4a54 !important;
+	}
+
+	.wa-input-pill .wa-composer-tool--desktop.is-active {
+		color: #008069 !important;
+	}
+
+	.wa-composer-end-actions .wa-mic-button {
+		position: relative;
+		margin-inline-start: 6px;
+		color: #3b4a54 !important;
+	}
+
+	.wa-composer-end-actions .wa-mic-button::before {
+		content: '';
+		position: absolute;
+		inset-inline-start: -5px;
+		top: 50%;
+		width: 1px;
+		height: 20px;
+		background: #d1d7db;
+		transform: translateY(-50%);
+		pointer-events: none;
+	}
+}
+
+/* Task card → WhatsApp client: who the task is for, one click back to the chat. */
+.wa-board-client-chip {
+	display: inline-flex;
+	max-width: 100%;
+	height: 26px;
+	align-items: center;
+	gap: 6px;
+	padding: 0 9px 0 3px;
+	border: 1px solid #d7ece2;
+	border-radius: 999px;
+	background: #f2faf6;
+	color: #0b6e4f;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.wa-board-client-chip:hover {
+	background: #e3f5ec;
+	border-color: #b9e2cf;
+}
+
+.wa-board-client-chip:focus-visible {
+	outline: 2px solid #00a884;
+	outline-offset: 2px;
+}
+
+.wa-board-client-chip__avatar {
+	display: grid;
+	flex: 0 0 20px;
+	width: 20px;
+	height: 20px;
+	place-items: center;
+	overflow: hidden;
+	border-radius: 999px;
+	background: #c9f0d9;
+	color: #00704f;
+	font-size: 10px;
+	font-weight: 700;
+}
+
+.wa-board-client-chip__avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+html.wa-privacy-on .wa-board-client-chip__avatar {
+	filter: blur(4px);
+}
+
+/* Touch screens have no hover, so the drag handle was invisible there. Keep it quietly on show. */
+@media (hover: none) {
+	.wa-board-card .wa-board-card__drag {
+		opacity: 0.7;
+		width: 32px;
+		height: 32px;
+	}
+}
+
+/* ===== WhatsApp parity — desktop (WhatsApp Web metrics) =====
+   Values follow WhatsApp Web: 72px rows, 49px avatars, 17/14/12 list type in regular weight,
+   regular-weight header name, flat date chips, grey composer bar with a white field. */
+@media (min-width: 769px) {
+	.wa-web-desktop .wa-chat-list .wa-conversation-row {
+		min-height: 72px !important;
+		height: 72px;
+		gap: 15px !important;
+		padding: 0 15px 0 13px !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row > .wa-conversation-avatar > .wa-avatar-3d {
+		width: 49px !important;
+		height: 49px !important;
+		font-size: 17px !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row > .min-w-0 {
+		align-self: stretch;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		border-bottom: 1px solid #e9edef !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row:hover > .min-w-0,
+	.wa-web-desktop .wa-chat-list .wa-conversation-row.is-active > .min-w-0 {
+		border-bottom-color: transparent !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row .title-chat,
+	.wa-web-desktop .wa-chat-list .wa-conversation-row.is-unread .title-chat {
+		font-size: 17px !important;
+		font-weight: 400 !important;
+		line-height: 21px !important;
+		letter-spacing: 0 !important;
+		color: #111b21 !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row .desc-chat {
+		margin-top: 2px;
+		font-size: 14px !important;
+		line-height: 20px !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row.is-unread .desc-chat:not(.is-typing) {
+		font-weight: 400 !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row .time-chat {
+		font-size: 12px !important;
+		line-height: 14px !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row.is-active {
+		background: #f0f2f5 !important;
+	}
+
+	.wa-web-desktop .wa-chat-list .wa-conversation-row:hover:not(.is-active) {
+		background: #f5f6f6 !important;
+	}
+
+	/* Thread header */
+	.wa-web-desktop .wa-chat-toolbar .wa-chat-avatar-ring,
+	.wa-web-desktop .wa-chat-toolbar .wa-chat-avatar-ring > div,
+	.wa-web-desktop .wa-chat-toolbar .wa-avatar-3d {
+		width: 40px !important;
+		height: 40px !important;
+		min-width: 40px !important;
+		min-height: 40px !important;
+		font-size: 15px !important;
+		box-shadow: none !important;
+	}
+
+	.wa-web-desktop .wa-chat-toolbar .wa-chat-contact h3 {
+		font-size: 16px !important;
+		font-weight: 400 !important;
+		line-height: 21px !important;
+		letter-spacing: 0 !important;
+	}
+
+	.wa-web-desktop .wa-chat-toolbar .wa-chat-assignee,
+	.wa-web-desktop .wa-chat-toolbar .wa-online-status {
+		font-size: 13px !important;
+		font-weight: 400 !important;
+		line-height: 20px !important;
+		margin-top: 0 !important;
+	}
+
+	/* Thread: bubbles sit in from the edges as on WhatsApp Web. */
+	.wa-web-desktop .wa-chat-thread-pane .wa-message-wallpaper {
+		padding-inline: clamp(24px, 6%, 72px) !important;
+	}
+
+	/* Composer: grey bar, white field. */
+	.wa-web-desktop .wa-chat-thread-pane .wa-composer {
+		background: #f0f2f5 !important;
+		border-top: 0 !important;
+		padding: 6px 16px 8px !important;
+	}
+
+	.wa-web-desktop .wa-chat-thread-pane .wa-composer .wa-input-pill:not(.wa-recording-pill) {
+		background: #ffffff !important;
+		min-height: 46px !important;
+		height: auto !important;
+		border-radius: 24px !important;
+		box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.08) !important;
+	}
+
+	.wa-web-desktop .wa-chat-thread-pane .wa-composer .wa-input-pill textarea {
+		font-size: 15px !important;
+		line-height: 20px !important;
+		color: #111b21 !important;
+	}
+
+	.wa-web-desktop .wa-chat-thread-pane .wa-composer .wa-input-pill textarea::placeholder {
+		color: #667781 !important;
+	}
+
+	.wa-web-desktop .wa-chat-thread-pane .wa-composer-stack {
+		background: #f0f2f5;
+	}
+}
+
+/* Date chips: flat white tag, regular weight — the WhatsApp look on every screen. */
+.wa-message-thread .wa-date-separator {
+	padding: 5px 12px 6px !important;
+	border: 0 !important;
+	border-radius: 7.5px !important;
+	background: #ffffff !important;
+	color: #54656f !important;
+	font-size: 12.5px !important;
+	font-weight: 400 !important;
+	line-height: 21px !important;
+	box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13) !important;
+}
+
+/* ===== WhatsApp parity — phone composer =====
+   Desktop keeps one flat pill: the field wrapper does not exist for layout there. */
+.wa-input-field {
+	display: contents;
+}
+
+@media (max-width: 768px) {
+	/* Like the app: a light bar, the + on its own, a white rounded field holding emoji and
+	   text, then camera and mic outside it. Typing swaps camera + mic for a round send. */
+	.wa-chat-thread-pane .wa-composer-stack {
+		background: #f6f6f6 !important;
+		box-shadow: 0 -0.5px 0 rgba(0, 0, 0, 0.12) !important;
+		backdrop-filter: none !important;
+	}
+
+	.wa-chat-thread-pane .wa-composer {
+		background: transparent !important;
+		border-top: 0 !important;
+		padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+	}
+
+	.wa-chat-thread-pane .wa-composer .wa-input-pill:not(.wa-recording-pill) {
+		min-height: 40px !important;
+		/* An older rule capped this at 42px, so a multi-line draft spilled over the thread. */
+		max-height: none !important;
+		height: auto !important;
+		gap: 2px !important;
+		padding: 0 !important;
+		align-items: flex-end !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	.wa-chat-thread-pane .wa-composer .wa-input-pill:focus-within {
+		box-shadow: none !important;
+	}
+
+	.wa-chat-thread-pane .wa-composer .wa-input-field {
+		display: flex;
+		flex: 1 1 auto;
+		min-width: 0;
+		min-height: 40px;
+		align-items: flex-end;
+		gap: 0;
+		padding: 0 6px 0 2px;
+		border: 1px solid #dcdfe2;
+		border-radius: 20px;
+		background: #ffffff;
+		transition: border-color 140ms ease;
+	}
+
+	.wa-chat-thread-pane .wa-composer .wa-input-field:focus-within {
+		border-color: #b9c0c6;
+	}
+
+	.wa-chat-thread-pane .wa-composer .wa-input-field textarea {
+		min-height: 38px !important;
+		padding-block: 9px !important;
+		font-size: 16px !important;
+		line-height: 20px !important;
+		color: #111b21 !important;
+		background: transparent !important;
+	}
+
+	.wa-chat-thread-pane .wa-composer .wa-input-field .wa-input-action.wa-input-action {
+		width: 38px !important;
+		min-width: 38px !important;
+		height: 38px !important;
+		min-height: 38px !important;
+		color: #54656f !important;
+	}
+
+	.wa-chat-thread-pane .wa-composer .wa-input-pill > .wa-input-action,
+	.wa-chat-thread-pane .wa-composer .wa-composer-end-actions .wa-input-action {
+		color: #111b21 !important;
+	}
+
+	.wa-chat-thread-pane .wa-composer .wa-input-pill .wa-send-button.wa-send-button {
+		background: #00a884 !important;
+		color: #ffffff !important;
+		box-shadow: none !important;
+	}
+
+	/* While typing the app shows only send on the right. */
+	.wa-chat-thread-pane .wa-composer .wa-input-pill:has(.wa-send-button) .wa-camera-button {
+		display: none !important;
+	}
+}
+
+/* ===== WhatsApp parity — phone chat list (iOS app metrics) ===== */
+@media (max-width: 768px) {
+	.wa-mobile-shell .wa-chat-list .wa-conversation-row > .wa-conversation-avatar,
+	.wa-mobile-shell .wa-chat-list .wa-conversation-row > .wa-conversation-avatar > .wa-avatar-3d {
+		width: 52px !important;
+		height: 52px !important;
+		min-width: 52px !important;
+	}
+
+	.wa-mobile-shell .wa-chat-list .wa-conversation-row > .wa-conversation-avatar > .wa-avatar-3d {
+		font-size: 18px !important;
+	}
+
+	.wa-mobile-shell .wa-chat-list .wa-conversation-row .title-chat,
+	.wa-mobile-shell .wa-chat-list .wa-conversation-row.is-unread .title-chat {
+		font-size: 17px !important;
+		font-weight: 600 !important;
+		/* 100% line-height clipped Arabic descenders. */
+		line-height: 22px !important;
+		letter-spacing: -0.01em !important;
+		color: #111b21 !important;
+	}
+
+	.wa-mobile-shell .wa-chat-list .wa-conversation-row .desc-chat {
+		font-size: 15px !important;
+		line-height: 20px !important;
+	}
+
+	.wa-mobile-shell .wa-chat-list .wa-conversation-row .time-chat {
+		font-size: 14px !important;
 	}
 }

@@ -112,14 +112,19 @@ const TIP_ALIGN = {
 	center: 'left-1/2 -translate-x-1/2',
 };
 
-/** Instant hover / keyboard-focus tooltip with a title + short description. */
+/**
+ * Instant hover / focus tooltip with a title + short description.
+ * Uses focus-within, not has(:focus-visible): Tailwind ships that utility in the one global
+ * stylesheet, and a `:has(...) *` rule made every DOM change anywhere in the app re-check
+ * ancestors — measured ~16ms extra per inserted chat row on /dashboard/whatsapp.
+ */
 export function Tip({ label, desc, theme, align = 'center', children }) {
 	return (
 		<span className="group/tip relative inline-flex">
 			{children}
 			<span
 				role="tooltip"
-				className={`pointer-events-none absolute top-full z-[70] mt-2 w-max max-w-[15rem] rounded-lg px-2.5 py-1.5 text-start opacity-0 shadow-lg transition-opacity duration-75 group-hover/tip:opacity-100 group-has-focus-visible/tip:opacity-100 ${TIP_ALIGN[align] || TIP_ALIGN.center}`}
+				className={`pointer-events-none absolute top-full z-[70] mt-2 w-max max-w-[15rem] rounded-lg px-2.5 py-1.5 text-start opacity-0 shadow-lg transition-opacity duration-75 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100 ${TIP_ALIGN[align] || TIP_ALIGN.center}`}
 				style={{ background: theme.ink, color: theme.paper }}
 			>
 				<span className="block text-[11px] font-semibold leading-tight">{label}</span>

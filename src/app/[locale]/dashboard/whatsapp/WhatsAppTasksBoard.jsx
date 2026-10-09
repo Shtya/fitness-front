@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
@@ -19,6 +19,7 @@ import {
 	Link2,
 	ListFilter,
 	Loader2,
+	MessageCircle,
 	MessageSquare,
 	MoreHorizontal,
 	Paperclip,
@@ -30,6 +31,7 @@ import {
 	Tag,
 	Timer,
 	Trash2,
+	UserRound,
 	X,
 } from 'lucide-react';
 import {
@@ -218,9 +220,37 @@ function animateBoardCardFlip(cardIds, firstRects, durationMs = 520) {
 	return Promise.all(animations).then(() => undefined);
 }
 
+/** Pill tone for a stored label colour: a palette id ("pink"), or any hex bucketed by hue. */
+function labelToneFromColor(color) {
+	if (LABEL_PILL[color]) return LABEL_PILL[color];
+	const match = color.match(/^#?([0-9a-f]{6})$/);
+	if (!match) return null;
+	const value = parseInt(match[1], 16);
+	const r = ((value >> 16) & 255) / 255;
+	const g = ((value >> 8) & 255) / 255;
+	const b = (value & 255) / 255;
+	const max = Math.max(r, g, b);
+	const delta = max - Math.min(r, g, b);
+	if (delta < 0.08) return null;
+	let hue;
+	if (max === r) hue = ((g - b) / delta) % 6;
+	else if (max === g) hue = (b - r) / delta + 2;
+	else hue = (r - g) / delta + 4;
+	hue = (hue * 60 + 360) % 360;
+	if (hue >= 320 || hue < 15) return LABEL_PILL.pink;
+	if (hue < 65) return LABEL_PILL.orange;
+	if (hue < 175) return LABEL_PILL.green;
+	if (hue < 245) return LABEL_PILL.blue;
+	return LABEL_PILL.purple;
+}
+
 function labelPillClass(label) {
 	const name = String(label?.name || '').toLowerCase();
-	const color = String(label?.color || '').toLowerCase();
+	const color = String(label?.color || '').trim().toLowerCase();
+	// The colour the user picked wins; matching hex fragments used to send most palette
+	// colours (#f13d72, #8d58de, #17b77a) to the blue fallback.
+	const tone = labelToneFromColor(color);
+	if (tone) return tone;
 	if (name.includes('integration') || name.includes('template') || color.includes('ef') || color.includes('f4')) {
 		return LABEL_PILL.pink;
 	}
@@ -398,6 +428,13 @@ function SortableTaskCard({
 	locale = 'en',
 }) {
 	const ar = locale === 'ar';
+	const boardConversations = useContext(BoardConversationContext);
+	const linkedClient = card.conversationId
+		? boardConversations.lookup?.get(String(card.conversationId)) || null
+		: null;
+	const linkedClientInitial = linkedClient
+		? Array.from(String(linkedClient.title).replace(/^[^\p{L}]+/u, ''))[0]?.toLocaleUpperCase() || ''
+		: '';
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: card.id,
 		data: { type: 'card', cardId: card.id, listId },
@@ -474,7 +511,7 @@ function SortableTaskCard({
 
 			<button
 				type="button"
-				className="absolute end-1.5 top-1.5 z-[3] grid h-7 w-7 cursor-grab place-items-center rounded-md bg-white/90 text-[#9aa5b5] opacity-0 transition-opacity duration-150 hover:bg-[#f1f4f7] hover:text-[#4b5565] focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing"
+				className="wa-board-card__drag absolute end-1.5 top-1.5 z-[3] grid h-7 w-7 cursor-grab place-items-center rounded-md bg-white/90 text-[#9aa5b5] opacity-0 transition-opacity duration-150 hover:bg-[#f1f4f7] hover:text-[#4b5565] focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing"
 				aria-label={ar ? 'سحب البطاقة' : 'Drag card'}
 				onClick={event => event.stopPropagation()}
 				{...attributes}
@@ -628,10 +665,41 @@ function SortableTaskCard({
 						) : null}
 					</div>
 				) : null}
+
+				{linkedClient ? (
+					<div className="mt-2.5 ps-[26px]">
+						<button
+							type="button"
+							onClick={event => {
+								event.stopPropagation();
+								boardConversations.onOpen?.(card.conversationId);
+							}}
+							title={ar ? `فتح محادثة ${linkedClient.title}` : `Open chat with ${linkedClient.title}`}
+							className="wa-board-client-chip"
+						>
+							<span className="wa-board-client-chip__avatar" aria-hidden>
+								{linkedClient.avatarUrl ? (
+									<img src={linkedClient.avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
+								) : linkedClientInitial ? (
+									linkedClientInitial
+								) : (
+									<UserRound size={12} strokeWidth={2.2} />
+								)}
+							</span>
+							<span className="min-w-0 truncate" dir="auto">
+								{linkedClient.title}
+							</span>
+							<MessageCircle size={12} className="shrink-0 opacity-70" aria-hidden />
+						</button>
+					</div>
+				) : null}
 			</div>
 		</article>
 	);
 }
+
+/** Inbox data for task cards: who a card belongs to, and how to jump to that chat. */
+const BoardConversationContext = createContext({ lookup: null, onOpen: null });
 
 function ColumnDropArea({ listId, children, empty }) {
 	const { setNodeRef, isOver } = useDroppable({
@@ -900,6 +968,7 @@ export default function WhatsAppTasksBoard({
 	boardApi,
 	locale = 'en',
 	onOpenConversation,
+	conversationLookup = null,
 }) {
 	const ar = locale === 'ar';
 	const {
@@ -965,9 +1034,16 @@ export default function WhatsAppTasksBoard({
 		return { total, completed, inProgress, overdue, completedPct, progressPct, overduePct };
 	}, [cards, lists]);
 
+	// Every "add label" mints a new id, so the same name exists once per card. Group by name
+	// so the filter and the drawer's suggestions list each label once.
 	const labels = useMemo(() => {
 		const map = new Map();
-		cards.forEach(card => (card.labels || []).forEach(label => map.set(label.id, label)));
+		cards.forEach(card =>
+			(card.labels || []).forEach(label => {
+				const key = String(label.name || '').trim().toLowerCase();
+				if (key && !map.has(key)) map.set(key, label);
+			}),
+		);
 		return [...map.values()];
 	}, [cards]);
 
@@ -1039,7 +1115,16 @@ export default function WhatsAppTasksBoard({
 			);
 		}
 		if (filterLabel !== 'all') {
-			rows = rows.filter(card => card.labels?.some(label => label.id === filterLabel));
+			const selectedName = String(labels.find(label => label.id === filterLabel)?.name || '')
+				.trim()
+				.toLowerCase();
+			rows = rows.filter(card =>
+				card.labels?.some(
+					label =>
+						label.id === filterLabel ||
+						(selectedName && String(label.name || '').trim().toLowerCase() === selectedName),
+				),
+			);
 		}
 		if (filterStatus === 'active') {
 			rows = rows.filter(card => !card.isCompleted);
@@ -1357,15 +1442,17 @@ export default function WhatsAppTasksBoard({
 	};
 
 	return (
+		<BoardConversationContext.Provider value={{ lookup: conversationLookup, onOpen: onOpenConversation }}>
 		<div
-			className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-transparent px-1 text-[#182235] sm:px-2"
+			className="wa-tasks-board flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-transparent px-3 text-[#182235] sm:px-2"
 			dir={ar ? 'rtl' : 'ltr'}
 			onClick={event => event.stopPropagation()}
 			onMouseDown={event => event.stopPropagation()}
 		>
 			<header className="flex shrink-0 flex-col gap-3 pt-1 sm:pt-2">
 				<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-					<div className="min-w-0">
+					{/* The phone header already names this screen; repeating it pushed the columns below the fold. */}
+					<div className="min-w-0 max-[769px]:hidden">
 						<h1 className="text-[20px] font-semibold leading-7 tracking-tight text-[#111827]">
 							{ar ? 'لوحة المهام' : 'Tasks board'}
 						</h1>
@@ -1842,5 +1929,6 @@ export default function WhatsAppTasksBoard({
 				/>
 			) : null}
 		</div>
+		</BoardConversationContext.Provider>
 	);
 }
