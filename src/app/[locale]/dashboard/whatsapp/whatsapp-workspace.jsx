@@ -9790,6 +9790,9 @@ function WhatsAppWorkspaceContent() {
 	const [conversationActionAnchor, setConversationActionAnchor] = useState(null);
 	const [conversationAssignTarget, setConversationAssignTarget] = useState(null);
 	const [conversationInfoTarget, setConversationInfoTarget] = useState(null);
+	const [conversationInfoGroup, setConversationInfoGroup] = useState(null);
+	const [loadingConversationInfoGroup, setLoadingConversationInfoGroup] = useState(false);
+	const conversationInfoRequestId = useRef(0);
 	const [notes, setNotes] = useState([]);
 	const [noteDraft, setNoteDraft] = useState('');
 	const [showNotes, setShowNotes] = useState(false);
@@ -18366,7 +18369,7 @@ function WhatsAppWorkspaceContent() {
 		} else if (action === 'assign') {
 			setConversationAssignTarget(conversation);
 		} else if (action === 'info') {
-			setConversationInfoTarget(conversation);
+			void openConversationInfo(conversation);
 		}
 	};
 
@@ -19437,6 +19440,94 @@ function WhatsAppWorkspaceContent() {
 			}
 		} finally {
 			if (requestId === groupRequestId.current) setLoadingGroup(false);
+		}
+	};
+
+	const resolveGroupIdForConversation = conversation => {
+		if (!conversation || conversation.type !== 'group') return null;
+		if (conversation.group?.id) return conversation.group.id;
+		const byConversation = (groups || []).find(item => item.conversationId === conversation.id);
+		if (byConversation?.id) return byConversation.id;
+		const chatId = String(conversation.providerChatId || conversation.group?.waId || '');
+		const byWaId = (groups || []).find(
+			item => String(item.waId || '') === chatId || String(item.waId || '') === String(conversation.group?.waId || ''),
+		);
+		return byWaId?.id || null;
+	};
+
+	const openConversationInfo = async conversation => {
+		if (!conversation) return;
+		setConversationInfoTarget(conversation);
+		setConversationInfoGroup(
+			conversation.type === 'group'
+				? conversation.group || { subject: conversationTitle(conversation), participants: [] }
+				: null,
+		);
+		if (conversation.type !== 'group' || !accountId) {
+			setLoadingConversationInfoGroup(false);
+			return;
+		}
+		const requestId = ++conversationInfoRequestId.current;
+		setLoadingConversationInfoGroup(true);
+		try {
+			let groupId = resolveGroupIdForConversation(conversation);
+			if (!groupId) {
+				const { data: groupRows } = await api.get(`/whatsapp/accounts/${accountId}/groups`);
+				if (requestId !== conversationInfoRequestId.current) return;
+				if (Array.isArray(groupRows)) {
+					setGroups(groupRows);
+					const match = groupRows.find(
+						item =>
+							item.conversationId === conversation.id ||
+							String(item.waId || '') === String(conversation.providerChatId || '') ||
+							String(item.waId || '') === String(conversation.group?.waId || ''),
+					);
+					groupId = match?.id || null;
+				}
+			}
+			if (!groupId) {
+				if (requestId === conversationInfoRequestId.current) {
+					setLoadingConversationInfoGroup(false);
+				}
+				return;
+			}
+			const { data } = await api.get(
+				`/whatsapp/accounts/${accountId}/groups/${groupId}`,
+				{ params: { refresh: true } },
+			);
+			if (requestId !== conversationInfoRequestId.current) return;
+			setConversationInfoGroup(data);
+			setGroups(current => {
+				if (!current.some(item => item.id === data.id)) {
+					return [...current, data];
+				}
+				return current.map(item => (item.id === data.id ? { ...item, ...data } : item));
+			});
+			setConversations(current =>
+				current.map(item =>
+					item.id === conversation.id
+						? {
+								...item,
+								group: {
+									...(item.group || {}),
+									...data,
+									participants: data.participants || item.group?.participants || [],
+								},
+							}
+						: item,
+				),
+			);
+		} catch (error) {
+			if (requestId === conversationInfoRequestId.current) {
+				toast.error(
+					error.response?.data?.message ||
+						(locale === 'ar' ? 'تعذر تحميل أعضاء الجروب' : 'Could not load group members'),
+				);
+			}
+		} finally {
+			if (requestId === conversationInfoRequestId.current) {
+				setLoadingConversationInfoGroup(false);
+			}
 		}
 	};
 
@@ -20957,7 +21048,23 @@ function WhatsAppWorkspaceContent() {
 													{unreadConversationCount > 99 ? '99+' : unreadConversationCount}
 												</span>
 											) : null}
-											<div className="wa-chat-toolbar__profile flex min-w-0 items-center gap-3">
+											<button
+												type="button"
+												className="wa-chat-toolbar__profile flex min-w-0 items-center gap-3 text-start"
+												onClick={() => {
+													if (isEmailMemoAiConversation(selectedConversation)) return;
+													void openConversationInfo(selectedConversation);
+												}}
+												aria-label={
+													selectedConversation.type === 'group'
+														? locale === 'ar'
+															? 'معلومات الجروب والأعضاء'
+															: 'Group info and members'
+														: locale === 'ar'
+															? 'معلومات جهة الاتصال'
+															: 'Contact info'
+												}
+											>
 												<div className="wa-chat-avatar-ring shrink-0">
 													{isEmailMemoAiConversation(selectedConversation) ? (
 														<div className="grid h-10 w-10 place-items-center rounded-full bg-[#eff6ff] text-[#2563eb] ring-2 ring-white dark:bg-[#1e3a5f] dark:text-[#93c5fd] dark:ring-slate-900">
@@ -21056,12 +21163,16 @@ function WhatsAppWorkspaceContent() {
 																	locale,
 																	formatLastSeen,
 																)?.text ||
-																(locale === 'ar'
-																	? 'اضغط هنا لمعلومات جهة الاتصال'
-																	: 'tap here for contact info')}
+																(selectedConversation.type === 'group'
+																	? locale === 'ar'
+																		? 'اضغط هنا لمعلومات الجروب والأعضاء'
+																		: 'tap here for group info and members'
+																	: locale === 'ar'
+																		? 'اضغط هنا لمعلومات جهة الاتصال'
+																		: 'tap here for contact info')}
 													</p>
 												</div>
-											</div>
+											</button>
 										</div>
 										<div className="flex items-center gap-1 min-[769px]:hidden">
 											<WaActionMenu
@@ -24747,36 +24858,188 @@ function WhatsAppWorkspaceContent() {
 				</div>
 			)}
 			{conversationInfoTarget && (
-				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/25 p-4 backdrop-blur-sm sm:place-items-center" onClick={() => setConversationInfoTarget(null)}>
-					<div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={event => event.stopPropagation()}>
-						<div className="flex items-center justify-between">
-							<h3 className="text-lg font-bold">{locale === 'ar' ? 'معلومات المحادثة' : 'Conversation info'}</h3>
-							<button type="button" onClick={() => setConversationInfoTarget(null)} className="rounded-full p-2 hover:bg-slate-100"><X size={18} /></button>
+				<div
+					className="fixed inset-0 z-[110] grid place-items-end bg-black/25 p-4 backdrop-blur-sm sm:place-items-center"
+					onClick={() => {
+						conversationInfoRequestId.current += 1;
+						setConversationInfoTarget(null);
+						setConversationInfoGroup(null);
+						setLoadingConversationInfoGroup(false);
+					}}
+				>
+					<div
+						className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-2xl"
+						onClick={event => event.stopPropagation()}
+					>
+						<div className="flex shrink-0 items-center justify-between">
+							<h3 className="text-lg font-bold">
+								{conversationInfoTarget.type === 'group'
+									? locale === 'ar'
+										? 'معلومات الجروب'
+										: 'Group info'
+									: locale === 'ar'
+										? 'معلومات المحادثة'
+										: 'Conversation info'}
+							</h3>
+							<button
+								type="button"
+								onClick={() => {
+									conversationInfoRequestId.current += 1;
+									setConversationInfoTarget(null);
+									setConversationInfoGroup(null);
+									setLoadingConversationInfoGroup(false);
+								}}
+								className="rounded-full p-2 hover:bg-slate-100"
+							>
+								<X size={18} />
+							</button>
 						</div>
-						<div className="mt-4 flex flex-col items-center text-center">
-							<Avatar label={conversationTitle(conversationInfoTarget)} size={20} src={conversationAvatarUrl(conversationInfoTarget)} isGroup={conversationInfoTarget.type === 'group'} />
-							<h4 className="wa-privacy-identity mt-3 text-xl font-bold">{conversationTitle(conversationInfoTarget)}</h4>
+						<div className="mt-4 flex shrink-0 flex-col items-center text-center">
+							<Avatar
+								label={conversationTitle(conversationInfoTarget)}
+								size={20}
+								src={
+									conversationAvatarUrl(conversationInfoTarget) ||
+									conversationInfoGroup?.avatarUrl ||
+									''
+								}
+								isGroup={conversationInfoTarget.type === 'group'}
+							/>
+							<h4 className="wa-privacy-identity mt-3 text-xl font-bold">
+								{conversationInfoGroup?.subject || conversationTitle(conversationInfoTarget)}
+							</h4>
 							<p className="wa-privacy-identity text-sm text-[#667781]">
-								{conversationInfoTarget.contact?.phoneNumber ||
-									conversationInfoTarget.contact?.waId ||
-									conversationInfoTarget.providerChatId ||
-									'—'}
+								{conversationInfoTarget.type === 'group'
+									? `${
+											conversationInfoGroup?.participantCount ||
+											conversationInfoGroup?.participants?.length ||
+											conversationInfoTarget.group?.participantCount ||
+											0
+										} ${locale === 'ar' ? 'عضو' : 'members'}`
+									: conversationInfoTarget.contact?.phoneNumber ||
+										conversationInfoTarget.contact?.waId ||
+										conversationInfoTarget.providerChatId ||
+										'—'}
 							</p>
 						</div>
-						<div className="mt-5 space-y-3 text-sm">
+						<div className="mt-5 shrink-0 space-y-3 text-sm">
 							{[
-								[locale === 'ar' ? 'النوع' : 'Type', conversationInfoTarget.type || 'chat'],
+								[
+									locale === 'ar' ? 'النوع' : 'Type',
+									conversationInfoTarget.type === 'group'
+										? locale === 'ar'
+											? 'جروب'
+											: 'Group'
+										: conversationInfoTarget.type || 'chat',
+								],
 								[locale === 'ar' ? 'الحساب' : 'Account', selectedAccount?.label],
-								[locale === 'ar' ? 'تم التعيين إلى' : 'Assigned to', conversationInfoTarget.assignedUser?.name || (locale === 'ar' ? 'بدون تعيين' : 'Unassigned')],
-								[locale === 'ar' ? 'رسائل غير مقروءة' : 'Unread messages', Number(conversationInfoTarget.unreadCount) || 0],
-								[locale === 'ar' ? 'آخر رسالة' : 'Last message', conversationInfoTarget.lastMessageAt ? new Date(conversationInfoTarget.lastMessageAt).toLocaleString() : '—'],
+								[
+									locale === 'ar' ? 'تم التعيين إلى' : 'Assigned to',
+									conversationInfoTarget.assignedUser?.name ||
+										(locale === 'ar' ? 'بدون تعيين' : 'Unassigned'),
+								],
+								[
+									locale === 'ar' ? 'رسائل غير مقروءة' : 'Unread messages',
+									Number(conversationInfoTarget.unreadCount) || 0,
+								],
+								[
+									locale === 'ar' ? 'آخر رسالة' : 'Last message',
+									conversationInfoTarget.lastMessageAt
+										? new Date(conversationInfoTarget.lastMessageAt).toLocaleString()
+										: '—',
+								],
+								...(conversationInfoTarget.type === 'group' && conversationInfoGroup?.description
+									? [[locale === 'ar' ? 'الوصف' : 'Description', conversationInfoGroup.description]]
+									: []),
 							].map(([label, value]) => (
-								<div key={label} className="flex items-start justify-between gap-4 border-b pb-2 last:border-0">
+								<div
+									key={label}
+									className="flex items-start justify-between gap-4 border-b pb-2 last:border-0"
+								>
 									<span className="text-[#667781]">{label}</span>
 									<strong className="max-w-[60%] text-end">{value || '—'}</strong>
 								</div>
 							))}
 						</div>
+						{conversationInfoTarget.type === 'group' ? (
+							<div className="mt-5 min-h-0 flex-1 overflow-hidden">
+								<h4 className="mb-3 flex items-center gap-2 text-sm font-bold">
+									<Users size={16} className="text-[var(--color-primary-500)]" />
+									{locale === 'ar' ? 'الأعضاء' : 'Members'}
+								</h4>
+								{loadingConversationInfoGroup ? (
+									<div className="grid min-h-32 place-items-center">
+										<Loader2
+											size={24}
+											className="animate-spin text-[var(--color-primary-500)]"
+										/>
+									</div>
+								) : (
+									<div className="nice-scroll max-h-[40vh] space-y-2 overflow-y-auto pr-1">
+										{(conversationInfoGroup?.participants || []).map(participant => {
+											const phoneHint = String(participant.waId || '')
+												.replace(/@.*$/, '')
+												.split(':')[0]
+												.replace(/\D/g, '');
+											const fromInbox = (conversations || []).find(item => {
+												if (item?.type === 'group') return false;
+												const contactId = String(
+													item?.contact?.waId || item?.providerChatId || '',
+												);
+												const digits = String(
+													item?.contact?.phoneNumber || '',
+												).replace(/\D/g, '');
+												return (
+													contactId === participant.waId ||
+													(phoneHint &&
+														(digits === phoneHint ||
+															contactId.replace(/@.*$/, '').replace(/\D/g, '') ===
+																phoneHint))
+												);
+											});
+											const title =
+												String(participant.displayName || '').trim() ||
+												String(fromInbox?.contact?.name || '').trim() ||
+												conversationTitle(fromInbox) ||
+												(phoneHint ? `+${phoneHint}` : '') ||
+												String(participant.waId || '—');
+											const avatarSrc =
+												fromInbox
+													? conversationAvatarUrl(fromInbox)
+													: inboxAvatarForWaId(conversations, participant.waId);
+											return (
+												<div
+													key={participant.id || participant.waId}
+													className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 dark:border-slate-800"
+												>
+													<Avatar label={title} size={9} src={avatarSrc} />
+													<div className="min-w-0 flex-1">
+														<p className="truncate text-sm font-bold">{title}</p>
+														{phoneHint && !String(title).includes(phoneHint) ? (
+															<p className="truncate text-xs text-slate-400">
+																+{phoneHint}
+															</p>
+														) : null}
+													</div>
+													{participant.isAdmin || participant.isSuperAdmin ? (
+														<span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-600 dark:bg-amber-950/30">
+															{locale === 'ar' ? 'مشرف' : 'Admin'}
+														</span>
+													) : null}
+												</div>
+											);
+										})}
+										{!conversationInfoGroup?.participants?.length ? (
+											<p className="py-6 text-center text-sm text-slate-400">
+												{locale === 'ar'
+													? 'لا يوجد أعضاء محمّلون بعد'
+													: 'No members loaded yet'}
+											</p>
+										) : null}
+									</div>
+								)}
+							</div>
+						) : null}
 					</div>
 				</div>
 			)}
