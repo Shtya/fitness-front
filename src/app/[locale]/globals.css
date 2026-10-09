@@ -12011,6 +12011,21 @@ html.wa-privacy-on.wa-privacy-thread .wa-message-bubble > p {
 	opacity: 1;
 }
 
+/* Profile photos: inbox stores a tiny WA "preview" thumb. Scale to stage while
+   avatar/refresh?quality=full loads the Baileys `image` (full) CDN URL. */
+.wa-chat-image-viewer--profile .wa-chat-image-viewer__canvas-wrap {
+	padding: 72px 24px 48px;
+}
+
+.wa-chat-image-viewer--profile .wa-chat-image-viewer__image--profile {
+	width: min(92vw, 640px);
+	height: auto;
+	max-width: min(92vw, 640px);
+	max-height: min(85dvh, 100%);
+	object-fit: contain;
+	image-rendering: auto;
+}
+
 .wa-chat-image-viewer__image.is-pending {
 	opacity: 0;
 }

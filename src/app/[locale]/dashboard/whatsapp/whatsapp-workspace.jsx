@@ -2675,7 +2675,7 @@ function ProfilePhotoViewer({ src, label = '', onClose, onRequestFreshUrl }) {
 			role="dialog"
 			aria-modal="true"
 			aria-label={label || 'Profile photo'}
-			className={`wa-chat-image-viewer ${visible ? 'is-visible' : ''}`}
+			className={`wa-chat-image-viewer wa-chat-image-viewer--profile ${visible ? 'is-visible' : ''}`}
 			onClick={onClose}
 		>
 			<div className="wa-chat-image-viewer__backdrop" aria-hidden="true" />
@@ -2746,7 +2746,7 @@ function ProfilePhotoViewer({ src, label = '', onClose, onRequestFreshUrl }) {
 									alt={label || 'Profile photo'}
 									referrerPolicy="no-referrer"
 									draggable={false}
-									className="wa-chat-image-viewer__image is-ready"
+									className="wa-chat-image-viewer__image wa-chat-image-viewer__image--profile is-ready"
 								/>
 							) : (
 								<div className="wa-chat-image-viewer__placeholder" aria-hidden="true">
@@ -25996,8 +25996,10 @@ function WhatsAppWorkspaceContent() {
 						const id = conversationInfoAvatarPreview.conversationId;
 						if (!id) return conversationInfoAvatarPreview.url;
 						try {
+							// Baileys profilePictureUrl(jid, 'image') — full CDN photo, not preview thumb.
 							const { data } = await api.post(
 								`/whatsapp/conversations/${id}/avatar/refresh`,
+								{ quality: 'full' },
 							);
 							const next = String(data?.avatarUrl || '').trim();
 							if (!next) return conversationInfoAvatarPreview.url;
@@ -26145,79 +26147,118 @@ function WhatsAppWorkspaceContent() {
 							<div className="grid min-h-40 place-items-center p-5"><Loader2 className="animate-spin text-[#00a884]" /></div>
 						) : (
 							(() => {
+								const targetId = String(
+									messageInfo.message?.id || messageInfo.id || '',
+								);
 								const liveThreadMessage =
 									(conversationMessages || []).find(
-										item => item.id === messageInfo.message?.id || item.id === messageInfo.id,
+										item => String(item.id) === targetId,
 									) || messageInfo.message;
 								const ack =
 									messageInfo.acknowledgements ||
 									messageInfo.provider?.acknowledgements ||
 									{};
+								const direction = String(
+									messageInfo.direction ||
+										liveThreadMessage?.direction ||
+										messageInfo.message?.direction ||
+										'',
+								).toLowerCase();
 								const outbound =
-									String(messageInfo.direction || liveThreadMessage?.direction || '').toLowerCase() ===
-										'outbound' ||
+									direction === 'outbound' ||
+									direction === 'out' ||
 									messageInfo.provider?.fromMe === true ||
-									Boolean(liveThreadMessage?.fromMe);
-								const statusLabel = preferWhatsAppAckStatus(
-									preferWhatsAppAckStatus(
-										liveThreadMessage?.status,
-										messageInfo.message?.status,
-									),
-									preferWhatsAppAckStatus(messageInfo.status, ack.status),
-								);
-								const sentAtRaw =
-									messageInfo.sentAt ||
-									liveThreadMessage?.sentAt ||
-									liveThreadMessage?.createdAt ||
-									null;
-								const statusUpdatedAtRaw =
-									messageInfo.statusUpdatedAt ||
-									ack.statusUpdatedAt ||
-									liveThreadMessage?.statusUpdatedAt ||
-									null;
+									liveThreadMessage?.fromMe === true ||
+									messageInfo.message?.fromMe === true;
+								const senderView = messageInfo.senderReceiptView || null;
+								const statusLabel = outbound
+									? preferWhatsAppAckStatus(
+											preferWhatsAppAckStatus(
+												liveThreadMessage?.status,
+												messageInfo.message?.status,
+											),
+											preferWhatsAppAckStatus(messageInfo.status, ack.status),
+										)
+									: String(senderView?.status || ack.status || messageInfo.status || 'delivered');
 								const formatInfoTime = value => {
 									if (!value) return null;
 									const date = new Date(value);
 									if (Number.isNaN(date.getTime())) return null;
 									return date.toLocaleString(locale === 'ar' ? 'ar-EG' : undefined);
 								};
-								const sentAt = formatInfoTime(sentAtRaw);
-								const statusUpdatedAt = formatInfoTime(statusUpdatedAtRaw);
-								const isFailed = statusLabel === 'failed';
+								const sentAt = formatInfoTime(
+									outbound
+										? messageInfo.sentAt ||
+												liveThreadMessage?.sentAt ||
+												liveThreadMessage?.createdAt
+										: senderView?.sentAt ||
+												ack.sentAt ||
+												messageInfo.sentAt ||
+												liveThreadMessage?.sentAt,
+								);
+								const deliveredAt = formatInfoTime(
+									outbound
+										? messageInfo.statusUpdatedAt || ack.statusUpdatedAt
+										: senderView?.deliveredAt || ack.deliveredAt,
+								);
+								const readAt = formatInfoTime(
+									outbound
+										? messageInfo.statusUpdatedAt || ack.statusUpdatedAt
+										: senderView?.readAt || ack.readAt,
+								);
+								const isFailed = outbound && statusLabel === 'failed';
 								const isPending = statusLabel === 'pending';
 								const isSent =
 									!isFailed &&
 									!isPending &&
-									['sent', 'delivered', 'read', 'played'].includes(statusLabel);
-								const isDelivered =
-									Boolean(ack.delivered) ||
-									ack.deliveryRemaining === 0 ||
-									['delivered', 'read', 'played'].includes(statusLabel);
-								const isRead =
-									Boolean(ack.read) ||
-									ack.readRemaining === 0 ||
-									['read', 'played'].includes(statusLabel);
+									(outbound
+										? ['sent', 'delivered', 'read', 'played'].includes(statusLabel)
+										: Boolean(senderView?.sent ?? ack.sent ?? true));
+								const isDelivered = outbound
+									? Boolean(ack.delivered) ||
+										ack.deliveryRemaining === 0 ||
+										['delivered', 'read', 'played'].includes(statusLabel)
+									: Boolean(senderView?.delivered ?? ack.delivered);
+								const isRead = outbound
+									? Boolean(ack.read) ||
+										ack.readRemaining === 0 ||
+										['read', 'played'].includes(statusLabel)
+									: Boolean(senderView?.read ?? ack.read);
 								const isPlayed =
-									Boolean(ack.played) ||
-									ack.playedRemaining === 0 ||
-									statusLabel === 'played';
-								const statusText =
-									locale === 'ar'
+									outbound &&
+									(Boolean(ack.played) ||
+										ack.playedRemaining === 0 ||
+										statusLabel === 'played');
+								const statusText = outbound
+									? locale === 'ar'
 										? {
-												pending: 'قيد الانتظار',
-												sent: 'أُرسلت',
-												delivered: 'تم التسليم',
-												read: 'تمت القراءة',
-												played: 'تم التشغيل',
+												pending: 'لسه بتتبعت',
+												sent: 'اتبعتت ✓',
+												delivered: 'وصلتله ✓✓',
+												read: 'قراها ✓✓',
+												played: 'شغّلها',
 												failed: 'فشل الإرسال',
 											}[statusLabel] || statusLabel
 										: {
 												pending: 'Pending',
-												sent: 'Sent',
-												delivered: 'Delivered',
-												read: 'Read',
+												sent: 'Sent ✓',
+												delivered: 'Delivered ✓✓',
+												read: 'Read ✓✓',
 												played: 'Played',
 												failed: 'Failed',
+											}[statusLabel] || statusLabel
+									: locale === 'ar'
+										? {
+												pending: 'لسه عند السيرفر',
+												sent: 'عندها ✓ (اتبعتت)',
+												delivered: 'عندها ✓✓ رمادي (وصلت لجهازك)',
+												read: 'عندها ✓✓ أزرق (إنت شوفتها)',
+											}[statusLabel] || statusLabel
+										: {
+												pending: 'Pending on server',
+												sent: 'They see ✓ (sent)',
+												delivered: 'They see ✓✓ grey (delivered to you)',
+												read: 'They see ✓✓ blue (you read it)',
 											}[statusLabel] || statusLabel;
 								const previewText =
 									String(
@@ -26232,7 +26273,8 @@ function WhatsAppWorkspaceContent() {
 									? [
 											{
 												id: 'sent',
-												label: locale === 'ar' ? 'أُرسلت' : 'Sent',
+												label: locale === 'ar' ? 'اتبعتت' : 'Sent',
+												hint: locale === 'ar' ? 'علامة صح واحدة' : 'Single check',
 												done: isSent || isDelivered || isRead,
 												time: sentAt,
 												icon: 'single',
@@ -26240,17 +26282,19 @@ function WhatsAppWorkspaceContent() {
 											},
 											{
 												id: 'delivered',
-												label: locale === 'ar' ? 'تم التسليم' : 'Delivered',
+												label: locale === 'ar' ? 'وصلت لجهازه' : 'Delivered',
+												hint: locale === 'ar' ? 'علامتين صح رمادي' : 'Double grey checks',
 												done: isDelivered || isRead,
-												time: isDelivered || isRead ? statusUpdatedAt || sentAt : null,
+												time: isDelivered || isRead ? deliveredAt || sentAt : null,
 												icon: 'double',
 												tone: 'delivered',
 											},
 											{
 												id: 'read',
-												label: locale === 'ar' ? 'تمت القراءة' : 'Read',
+												label: locale === 'ar' ? 'فتحها / قراها' : 'Read',
+												hint: locale === 'ar' ? 'علامتين صح زرقاء' : 'Double blue checks',
 												done: isRead,
-												time: isRead ? statusUpdatedAt : null,
+												time: isRead ? readAt : null,
 												icon: 'double',
 												tone: 'read',
 											},
@@ -26260,43 +26304,87 @@ function WhatsAppWorkspaceContent() {
 												? [
 														{
 															id: 'played',
-															label: locale === 'ar' ? 'تم التشغيل' : 'Played',
+															label: locale === 'ar' ? 'شغّل الصوت' : 'Played',
+															hint: locale === 'ar' ? 'استمع للرسالة' : 'Listened',
 															done: isPlayed,
-															time: isPlayed ? statusUpdatedAt : null,
+															time: isPlayed ? readAt : null,
 															icon: 'single',
 															tone: 'played',
 														},
 													]
 												: []),
 										]
-									: [];
-								const renderReceiptIcon = row => {
-									if (!row.done) {
-										return (
-											<span className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-[#111b21] dark:text-[#667781]">
-												—
-											</span>
-										);
+									: [
+											{
+												id: 'sent',
+												label: locale === 'ar' ? 'هي بعتها' : 'They sent it',
+												hint: locale === 'ar' ? 'عندها ✓ صح واحدة' : 'They see ✓',
+												done: isSent || isDelivered || isRead,
+												time: sentAt,
+												icon: 'single',
+												tone: 'sent',
+											},
+											{
+												id: 'delivered',
+												label:
+													locale === 'ar'
+														? 'وصلت لجهازك / للـ CRM'
+														: 'Delivered to your device',
+												hint:
+													locale === 'ar'
+														? 'عندها ✓✓ رمادي'
+														: 'They see ✓✓ grey',
+												done: isDelivered || isRead,
+												time: isDelivered || isRead ? deliveredAt || sentAt : null,
+												icon: 'double',
+												tone: 'delivered',
+											},
+											{
+												id: 'read',
+												label:
+													locale === 'ar'
+														? 'إنت فتحتها / اتقرت'
+														: 'You opened / read it',
+												hint:
+													locale === 'ar'
+														? ack.readReceiptsEnabled === false ||
+															senderView?.readReceiptsEnabled === false
+															? 'إيصالات القراءة مقفولة — مش هتزرق عندها'
+															: 'عندها ✓✓ أزرق'
+														: ack.readReceiptsEnabled === false ||
+															  senderView?.readReceiptsEnabled === false
+															? 'Read receipts off — stays grey for them'
+															: 'They see ✓✓ blue',
+												done: isRead,
+												time: isRead ? readAt : null,
+												icon: 'double',
+												tone: 'read',
+											},
+										];
+								const StatusGlyph = ({ kind }) => {
+									if (kind === 'failed') {
+										return <AlertCircle size={22} className="text-rose-500" />;
 									}
-									if (row.icon === 'double') {
-										return (
-											<span
-												className={`grid h-8 w-8 place-items-center rounded-full ${
-													row.tone === 'read'
-														? 'bg-[#53BDEB]/15 text-[#53BDEB]'
-														: 'bg-slate-100 text-[#8696A0] dark:bg-[#111b21]'
-												}`}
-											>
-												<CheckCheck size={18} strokeWidth={2.4} />
-											</span>
-										);
+									if (kind === 'pending') {
+										return <Clock size={22} className="text-slate-400" />;
 									}
-									return (
-										<span className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-[#8696A0] dark:bg-[#111b21]">
-											<Check size={18} strokeWidth={2.4} />
-										</span>
-									);
+									if (kind === 'read') {
+										return <CheckCheck size={22} className="text-[#53BDEB]" strokeWidth={2.5} />;
+									}
+									if (kind === 'delivered') {
+										return <CheckCheck size={22} className="text-[#8696A0]" strokeWidth={2.5} />;
+									}
+									return <Check size={22} className="text-[#8696A0]" strokeWidth={2.5} />;
 								};
+								const currentKind = isFailed
+									? 'failed'
+									: isPending
+										? 'pending'
+										: isRead
+											? 'read'
+											: isDelivered
+												? 'delivered'
+												: 'sent';
 								return (
 									<div className="mt-4 space-y-4 px-5 pb-5 text-sm">
 										<div className="rounded-xl bg-slate-50 p-3 dark:bg-[#111b21]">
@@ -26307,63 +26395,83 @@ function WhatsAppWorkspaceContent() {
 												{sentAt || '—'}
 											</p>
 										</div>
-										<div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-[#3b4a54]">
-											<span className="text-slate-500 dark:text-[#8696a0]">
-												{locale === 'ar' ? 'الحالة عنده' : 'Status on their side'}
+										<div className="flex items-center gap-3 rounded-2xl border border-[#00a884]/35 bg-[#00a884]/10 px-3 py-3">
+											<span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#111b21] text-white shadow-sm">
+												<StatusGlyph kind={currentKind} />
 											</span>
-											<strong className="inline-flex items-center gap-1.5">
-												{outbound ? (
-													isFailed ? (
-														<AlertCircle size={16} className="text-rose-500" />
-													) : isPending ? (
-														<Clock size={16} className="text-slate-400" />
-													) : isRead ? (
-														<CheckCheck size={16} className="text-[#53BDEB]" />
-													) : isDelivered ? (
-														<CheckCheck size={16} className="text-[#8696A0]" />
-													) : (
-														<Check size={16} className="text-[#8696A0]" />
-													)
-												) : null}
-												{statusText}
-											</strong>
-										</div>
-										{outbound ? (
-											<div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[#3b4a54]">
-												<div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-[#3b4a54] dark:text-[#8696a0]">
-													{locale === 'ar'
-														? 'إيصالات التسليم والقراءة'
-														: 'Delivery & read receipts'}
-												</div>
-												<div className="divide-y divide-slate-200 dark:divide-[#3b4a54]">
-													{receiptRows.map(row => (
-														<div
-															key={row.id}
-															className="flex items-center gap-3 px-3 py-3"
-														>
-															{renderReceiptIcon(row)}
-															<div className="min-w-0 flex-1">
-																<p className="font-semibold">{row.label}</p>
-																<p className="text-xs text-slate-500 dark:text-[#8696a0]">
-																	{row.done
-																		? row.time ||
-																			(locale === 'ar' ? 'تم' : 'Done')
-																		: locale === 'ar'
-																			? 'لسه'
-																			: 'Not yet'}
-																</p>
-															</div>
-														</div>
-													))}
-												</div>
+											<div className="min-w-0 flex-1">
+												<p className="text-xs font-medium text-slate-500 dark:text-[#8696a0]">
+													{outbound
+														? locale === 'ar'
+															? 'حالة رسالتك عنده دلوقتي'
+															: 'Status of your message on their side'
+														: locale === 'ar'
+															? 'إيه اللي ظاهر عندها على الرسالة دي'
+															: 'What they see on this message'}
+												</p>
+												<p className="text-base font-bold">{statusText}</p>
 											</div>
-										) : (
-											<p className="rounded-xl bg-slate-50 px-3 py-3 text-xs text-slate-500 dark:bg-[#111b21] dark:text-[#8696a0]">
+										</div>
+										<div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[#3b4a54]">
+											<div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold dark:border-[#3b4a54] dark:text-[#8696a0]">
+												{outbound
+													? locale === 'ar'
+														? 'إيصالات رسالتك (✓ / ✓✓)'
+														: 'Your message receipts (✓ / ✓✓)'
+													: locale === 'ar'
+														? 'العلامات اللي ظاهرالها (تقريبي)'
+														: 'Ticks they likely see (estimated)'}
+											</div>
+											<div className="divide-y divide-slate-200 dark:divide-[#3b4a54]">
+												{receiptRows.map(row => (
+													<div
+														key={row.id}
+														className={`flex items-center gap-3 px-3 py-3 ${
+															row.done ? '' : 'opacity-45'
+														}`}
+													>
+														<span
+															className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
+																!row.done
+																	? 'bg-slate-100 text-slate-400 dark:bg-[#111b21] dark:text-[#667781]'
+																	: row.tone === 'read'
+																		? 'bg-[#53BDEB]/20 text-[#53BDEB]'
+																		: 'bg-slate-100 text-[#8696A0] dark:bg-[#111b21]'
+															}`}
+														>
+															{row.done ? (
+																row.icon === 'double' ? (
+																	<CheckCheck size={20} strokeWidth={2.5} />
+																) : (
+																	<Check size={20} strokeWidth={2.5} />
+																)
+															) : (
+																<span className="text-sm font-bold">—</span>
+															)}
+														</span>
+														<div className="min-w-0 flex-1">
+															<p className="font-semibold">{row.label}</p>
+															<p className="text-xs text-slate-500 dark:text-[#8696a0]">
+																{row.hint}
+																{row.done && row.time ? ` · ${row.time}` : ''}
+																{!row.done
+																	? locale === 'ar'
+																		? ' · لسه'
+																		: ' · not yet'
+																	: ''}
+															</p>
+														</div>
+													</div>
+												))}
+											</div>
+										</div>
+										{!outbound ? (
+											<p className="text-[11px] leading-relaxed text-slate-500 dark:text-[#8696a0]">
 												{locale === 'ar'
-													? 'إيصالات التسليم والقراءة تظهر للرسائل الصادرة منك فقط — عشان تتأكد إيه اللي حصل عند الطرف التاني.'
-													: 'Delivery and read receipts only apply to messages you sent — so you can confirm status on their side.'}
+													? 'مثال: لو كانت باعت والنت عندك قافل، هتفضل عندها ✓ لحد ما توصل لجهازك (✓✓ رمادي)، ولما تفتح الشات وتتبعت إيصالات القراءة تبقى ✓✓ أزرق.'
+													: 'Example: if they sent while you were offline, they keep ✓ until it reaches your device (✓✓ grey), then ✓✓ blue after you open the chat and read receipts go out.'}
 											</p>
-										)}
+										) : null}
 									</div>
 								);
 							})()
