@@ -6,13 +6,15 @@ import {
 	Dumbbell, Menu, X, LogOut, LayoutDashboard,
 	User, Crown, Shield, Star, ChevronDown,
 	Building2, Wallet, CalendarDays, MessageCircle,
-	Home, Info, Layers, CircleHelp, Mail,
+	Home, Info, Layers, CircleHelp, Mail, Sun, Moon, ArrowLeft, ArrowRight,
 } from "lucide-react";
 import { useState, useEffect, useRef, useTransition, useMemo } from "react";
 import { Link } from "@/i18n/navigation";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BRAND_LOGO_SRC } from "@/lib/brand";
 import { resolvePostLoginPath } from "@/lib/nav-access";
+import { clearClientSession } from "@/lib/session-cleanup";
+import { useTheme } from "@/app/[locale]/theme";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -79,13 +81,14 @@ function getRoleLabel(role, t) {
 
 function getRoleQuickLinks(role, t) {
 	const isAdmin = ["admin", "super_admin", "coach"].includes(role);
+	const link = (key, href, Icon, tone) => ({ href, icon: <Icon />, label: t(`quickLinks.${key}`), hint: t(`quickLinks.hints.${key}`), tone });
 	const common = [
-		{ href: "/workspace?tab=calendar", icon: <CalendarDays className="h-3.5 w-3.5" />, label: t("quickLinks.myCalendar") },
-		{ href: "/dashboard/whatsapp", icon: <MessageCircle className="h-3.5 w-3.5" />, label: t("quickLinks.whatsapp") },
-		{ href: "/money", icon: <Wallet className="h-3.5 w-3.5" />, label: t("quickLinks.money") },
+		link("myCalendar", "/workspace?tab=calendar", CalendarDays, "sky"),
+		link("whatsapp", "/dashboard/whatsapp", MessageCircle, "wa"),
+		link("money", "/money", Wallet, "amber"),
 	];
-	if (isAdmin) return [{ href: "/dashboard/workspace", icon: <Building2 className="h-3.5 w-3.5" />, label: t("quickLinks.workspace") }, ...common];
-	return [{ href: "/dashboard/my/workouts", icon: <Dumbbell className="h-3.5 w-3.5" />, label: t("quickLinks.myExercise") }, ...common];
+	if (isAdmin) return [link("workspace", "/dashboard/workspace", Building2, "accent"), ...common];
+	return [link("myExercise", "/dashboard/my/workouts", Dumbbell, "accent"), ...common];
 }
 
 // ─── LangSwitch ───────────────────────────────────────────────────────────────
@@ -137,208 +140,188 @@ export function LangSwitch({ tone = "surface" }) {
 	);
 }
 
-// ─── UserDropdown ─────────────────────────────────────────────────────────────
+// ─── Account menu ─────────────────────────────────────────────────────────────
 
-function UserDropdown({ user, onClose, isRTL }) {
+function AccountMenu({ user, onClose, onSignOut, triggerRef }) {
 	const t = useTranslations("home.navbar");
+	const locale = useLocale();
+	const { mode, setMode } = useTheme();
+	const menuRef = useRef(null);
 	const quickLinks = getRoleQuickLinks(user.role, t);
 	const lastIsOdd = quickLinks.length % 2 === 1;
+	const isDark = mode === "dark";
+	const Forward = locale === "ar" ? ArrowLeft : ArrowRight;
 
-	const handleLogout = () => { localStorage.removeItem("user"); window.location.href = "/"; };
+	// Focus the first item on open; arrows / Home / End move between items.
+	useEffect(() => {
+		menuRef.current?.querySelector("[data-um-item]")?.focus({ preventScroll: true });
+	}, []);
+
+	const onKeyDown = event => {
+		const items = [...(menuRef.current?.querySelectorAll("[data-um-item]") || [])];
+		const index = items.indexOf(document.activeElement);
+		const go = next => {
+			event.preventDefault();
+			items[(next + items.length) % items.length]?.focus();
+		};
+		if (event.key === "ArrowDown") go(index + 1);
+		else if (event.key === "ArrowUp") go(index - 1);
+		else if (event.key === "Home") go(0);
+		else if (event.key === "End") go(items.length - 1);
+		else if (event.key === "Escape") {
+			event.preventDefault();
+			onClose();
+			triggerRef.current?.focus();
+		} else if (event.key === "Tab") onClose();
+	};
 
 	return (
-		<>
-			<style>{`
-        @keyframes _onl { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.5)} 50%{box-shadow:0 0 0 4px rgba(16,185,129,0)} }
-        .ud-online { animation:_onl 2.4s ease infinite; }
-        .ud-row:hover .ud-arr { opacity:1; transform:translateX(${isRTL ? "-2px" : "2px"}); }
-        .ud-qlink { transition:transform 0.18s ease, background 0.18s ease, border-color 0.18s ease; }
-        .ud-qlink:hover { transform:translateY(-2px); background:rgba(99,102,241,0.14) !important; border-color:rgba(99,102,241,0.4) !important; }
-      `}</style>
-			<motion.div
-				role="menu"
-				aria-label={t("dropdown.openMenu")}
-				initial={{ opacity: 0, y: -10, scale: 0.95 }}
-				animate={{ opacity: 1, y: 0, scale: 1 }}
-				exit={{ opacity: 0, y: -8, scale: 0.96, transition: { duration: 0.14 } }}
-				transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.7 }}
-				className="absolute top-[calc(100%+14px)] z-50 w-[290px] rounded-[16px] overflow-hidden"
-				style={{
-					[isRTL ? "left" : "right"]: 0,
-					direction: isRTL ? "rtl" : "ltr",
-					transformOrigin: isRTL ? "top left" : "top right",
-					background: "rgba(10,10,22,0.98)",
-					border: "1px solid rgba(255,255,255,0.08)",
-					backdropFilter: "blur(28px)",
-					boxShadow: "0 24px 70px rgba(0,0,0,0.7), 0 0 0 1px rgba(99,102,241,0.06)",
-				}}
-			>
-				{/* Caret pointing to the avatar trigger */}
-				<span
-					aria-hidden="true"
-					className="absolute -top-[6px] h-3 w-3 rotate-45"
-					style={{
-						[isRTL ? "left" : "right"]: 18,
-						background: "rgba(10,10,22,0.98)",
-						borderTop: "1px solid rgba(255,255,255,0.08)",
-						[isRTL ? "borderLeft" : "borderRight"]: "1px solid rgba(255,255,255,0.08)",
-					}}
-				/>
-
-				{/* Accent bar */}
-				<div style={{ height: "2.5px", background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
-
-				{/* User info */}
-				<div className="px-4 pt-4 pb-3.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-					<div className="flex items-center gap-3">
-						<div className="relative shrink-0">
-							<div className="h-12 w-12 rounded-[13px] flex items-center justify-center text-[16px] font-black text-white"
-								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 6px 18px rgba(99,102,241,0.4)" }}>
-								{getInitials(user.name)}
-							</div>
-							<span className={`ud-online absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} h-3.5 w-3.5 rounded-full bg-emerald-400 border-[2.5px] border-[#0a0a16] block`} />
-						</div>
-						<div className="min-w-0 flex-1">
-							<p className="text-[14px] font-bold text-white truncate md: leading-tight">{user.name}</p>
-							<p className="text-[11px] text-white/40 truncate mt-0.5">{user.email}</p>
-							<span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white"
-								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
-								{getRoleIcon(user.role)}{getRoleLabel(user.role, t)}
-							</span>
-						</div>
-					</div> 
-				</div>
-
-				{/* Quick links */}
-				{quickLinks.length > 0 && (
-					<div className="px-3 pt-3 pb-1">
-						<p className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/25 mb-2 px-1">{t("quickLinks.sectionLabel")}</p>
-						<div className="grid grid-cols-2 gap-1.5">
-							{quickLinks.map((l, index) => (
-								<Link
-									key={l.href}
-									href={l.href}
-									onClick={onClose}
-									role="menuitem"
-									className={`ud-qlink flex items-center gap-2 px-2.5 py-2.5 rounded-[11px] text-[11px] font-bold no-underline ${lastIsOdd && index === quickLinks.length - 1 ? "col-span-2" : ""}`}
-									style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.75)" }}
-								>
-									<span className="h-6 w-6 rounded-[7px] flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.14)", color: "var(--color-primary-400)" }}>
-										{l.icon}
-									</span>
-									<span className="truncate">{l.label}</span>
-								</Link>
-							))}
-						</div>
-						<div className="mt-3 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+		<motion.div
+			ref={menuRef}
+			role="menu"
+			aria-label={t("dropdown.openMenu")}
+			onKeyDown={onKeyDown}
+			initial={{ opacity: 0, y: -8, scale: 0.97 }}
+			animate={{ opacity: 1, y: 0, scale: 1 }}
+			exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.12 } }}
+			transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+			className="hm-um"
+		>
+			{/* Identity card in the organisation's colours */}
+			<div className="hm-um__card">
+				<div className="hm-um__card-top">
+					<span className="hm-um__avatar is-lg" aria-hidden="true">
+						{getInitials(user.name)}
+						<i className="hm-um__online" />
+					</span>
+					<div className="hm-um__who">
+						<p className="hm-um__name" dir="auto">{user.name}</p>
+						{user.email ? <p className="hm-um__email" dir="ltr">{user.email}</p> : null}
 					</div>
-				)}
-
-				{/* Actions */}
-				<div className="p-1.5 space-y-px">
-					{[
-						{ href: getDashboardPath(user), icon: <LayoutDashboard className="h-[14px] w-[14px]" />, label: t("dropdown.dashboard"), accent: true },
-						{ href: "/profile", icon: <User className="h-[14px] w-[14px]" />, label: t("dropdown.myProfile"), accent: false },
-					].map((item) => (
-						<Link
-							key={item.label}
-							href={item.href}
-							onClick={onClose}
-							role="menuitem"
-							className="ud-row group flex items-center gap-2.5 px-2.5 py-2.5 rounded-[11px] no-underline transition-colors duration-150 hover:bg-white/[0.055]"
-						>
-							<div className="h-8 w-8 rounded-[9px] flex items-center justify-center text-white shrink-0 transition-transform duration-200 group-hover:scale-105"
-								style={item.accent
-									? { background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }
-									: { background: "rgba(255,255,255,0.06)" }
-								}>
-								{item.icon}
-							</div>
-							<span className="flex-1 text-[12.5px] font-semibold text-white/65 group-hover:text-white transition-colors">{item.label}</span>
-							<svg className="ud-arr h-3 w-3 text-white/25 opacity-0 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-								style={isRTL ? { transform: "scaleX(-1)" } : {}}>
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-							</svg>
-						</Link>
-					))}
 				</div>
-
-				{/* Sign out */}
-				<div className="p-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-					<button onClick={handleLogout} role="menuitem"
-						className="group flex w-full items-center gap-2.5 px-2.5 py-2.5 rounded-[11px] transition-colors duration-150 hover:bg-red-500/[0.1] cursor-pointer">
-						<div className="h-8 w-8 rounded-[9px] flex items-center justify-center text-red-400 transition-colors shrink-0"
-							style={{ background: "rgba(239,68,68,0.12)" }}>
-							<LogOut className="h-[13px] w-[13px]" />
-						</div>
-						<span className="text-[12.5px] font-semibold text-red-400 group-hover:text-red-300 transition-colors">{t("dropdown.signOut")}</span>
-					</button>
+				<div className="hm-um__chips">
+					<span className="hm-um__chip">
+						{getRoleIcon(user.role)}
+						{getRoleLabel(user.role, t)}
+					</span>
+					<span className="hm-um__chip is-status">
+						<i aria-hidden="true" />
+						{t("dropdown.online")}
+					</span>
 				</div>
-			</motion.div>
-		</>
+				<Link href={getDashboardPath(user)} onClick={onClose} role="menuitem" data-um-item className="hm-um__cta">
+					<LayoutDashboard aria-hidden="true" />
+					<span>{t("dropdown.openDashboard")}</span>
+					<Forward className="hm-um__cta-arrow" aria-hidden="true" />
+				</Link>
+			</div>
+
+			{quickLinks.length > 0 && (
+				<div className="hm-um__section">
+					<p className="hm-um__label">{t("quickLinks.sectionLabel")}</p>
+					<div className="hm-um__grid">
+						{quickLinks.map((l, index) => (
+							<Link
+								key={l.href}
+								href={l.href}
+								onClick={onClose}
+								role="menuitem"
+								data-um-item
+								className={`hm-um__tile is-${l.tone}${lastIsOdd && index === quickLinks.length - 1 ? " is-wide" : ""}`}
+							>
+								<span className="hm-um__tile-icon" aria-hidden="true">{l.icon}</span>
+								<span className="hm-um__tile-text">
+									<b>{l.label}</b>
+									<small>{l.hint}</small>
+								</span>
+							</Link>
+						))}
+					</div>
+				</div>
+			)}
+
+			<div className="hm-um__section is-list">
+				<Link href="/profile" onClick={onClose} role="menuitem" data-um-item className="hm-um__row">
+					<span className="hm-um__row-icon" aria-hidden="true"><User /></span>
+					<span className="flex-1">{t("dropdown.myProfile")}</span>
+					<Forward className="hm-um__row-arrow" aria-hidden="true" />
+				</Link>
+				<button
+					type="button"
+					role="menuitemcheckbox"
+					aria-checked={isDark}
+					data-um-item
+					onClick={() => setMode(isDark ? "light" : "dark")}
+					className="hm-um__row"
+				>
+					<span className="hm-um__row-icon" aria-hidden="true">{isDark ? <Moon /> : <Sun />}</span>
+					<span className="flex-1">{t("dropdown.darkMode")}</span>
+					<span className={`hm-um__switch${isDark ? " is-on" : ""}`} aria-hidden="true"><i /></span>
+				</button>
+			</div>
+
+			<div className="hm-um__section is-list">
+				<button type="button" role="menuitem" data-um-item onClick={onSignOut} className="hm-um__row is-danger">
+					<span className="hm-um__row-icon" aria-hidden="true"><LogOut /></span>
+					<span className="flex-1">{t("dropdown.signOut")}</span>
+				</button>
+			</div>
+		</motion.div>
 	);
 }
 
-// ─── AvatarButton ─────────────────────────────────────────────────────────────
-
-function AvatarButton({ user, isRTL }) {
+function AvatarButton({ user, onSignOut }) {
 	const t = useTranslations("home.navbar");
 	const [open, setOpen] = useState(false);
 	const ref = useRef(null);
+	const triggerRef = useRef(null);
 	const firstName = user.name?.split(" ")[0] ?? user.name;
 
 	useEffect(() => {
-		function h(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
-		document.addEventListener("mousedown", h);
-		return () => document.removeEventListener("mousedown", h);
-	}, []);
-	useEffect(() => {
-		function h(e) { if (e.key === "Escape") setOpen(false); }
-		document.addEventListener("keydown", h);
-		return () => document.removeEventListener("keydown", h);
-	}, []);
+		if (!open) return undefined;
+		const onDown = e => {
+			if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+		};
+		document.addEventListener("pointerdown", onDown);
+		return () => document.removeEventListener("pointerdown", onDown);
+	}, [open]);
 
 	return (
-		<div
-			ref={ref}
-			className="relative"
-			data-aos="zoom-in"
-			data-aos-delay="220"
-			data-aos-duration="650"
-		>
-			<motion.button
-				onClick={() => setOpen((v) => !v)}
+		<div ref={ref} className="relative">
+			<button
+				ref={triggerRef}
+				type="button"
+				onClick={() => setOpen(v => !v)}
+				onKeyDown={e => {
+					if (e.key === "ArrowDown" && !open) {
+						e.preventDefault();
+						setOpen(true);
+					}
+				}}
 				aria-label={t("dropdown.openMenu")}
 				aria-haspopup="menu"
 				aria-expanded={open}
-				whileTap={{ scale: 0.96 }}
-				className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-[12px] cursor-pointer outline-none transition-[background,border-color,box-shadow] duration-200"
-				style={{
-					border: open
-						? "1px solid rgba(99,102,241,0.45)"
-						: "1px solid rgba(255,255,255,0.08)",
-					background: open
-						? "rgba(99,102,241,0.12)"
-						: "rgba(255,255,255,0.03)",
-					boxShadow: open ? "0 0 0 3px rgba(99,102,241,0.12)" : "none",
-				}}
+				className={`hm-um-trigger hm-focus${open ? " is-open" : ""}`}
 			>
-				<div className="relative shrink-0">
-					<div className="h-[28px] w-[28px] rounded-[9px] flex items-center justify-center text-[12px] font-black text-white transition-transform duration-200"
-						style={{
-							background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))",
-							boxShadow: open ? "0 0 0 2px rgba(99,102,241,0.35)" : "none",
-						}}>
-						{getInitials(user.name)}
-					</div>
-					<span className="absolute -bottom-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-[2px] border-[#08081a] block"
-						style={isRTL ? { left: "-2px" } : { right: "-2px" }} />
-				</div>
-				<span className="hidden sm:block text-[12px] font-bold text-white max-w-[72px] truncate">{firstName}</span>
-				<ChevronDown className={`h-[13px] w-[13px] shrink-0 transition-transform duration-250 ${open ? "rotate-180 text-white/60" : "text-white/30"}`} />
-			</motion.button>
+				<span className="hm-um__avatar" aria-hidden="true">
+					{getInitials(user.name)}
+					<i className="hm-um__online" />
+				</span>
+				<span className="hm-um-trigger__name" dir="auto">{firstName}</span>
+				<ChevronDown className="hm-um-trigger__chev" aria-hidden="true" />
+			</button>
 			<AnimatePresence>
-				{open && <UserDropdown user={user} onClose={() => setOpen(false)} isRTL={isRTL} />}
+				{open && (
+					<AccountMenu
+						user={user}
+						triggerRef={triggerRef}
+						onClose={() => setOpen(false)}
+						onSignOut={() => {
+							setOpen(false);
+							onSignOut();
+						}}
+					/>
+				)}
 			</AnimatePresence>
 		</div>
 	);
@@ -411,6 +394,17 @@ export default function PowerfulNavbar() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
+	// End the server session too, not just the cached user.
+	const signOut = async () => {
+		try {
+			await fetch("/api/auth/logout", { method: "POST" });
+		} catch {
+			/* still clear this device */
+		}
+		await clearClientSession();
+		setUser(null);
+	};
+
 	const solid = scrolled || mobileOpen;
 
 	return (
@@ -420,7 +414,7 @@ export default function PowerfulNavbar() {
 			</a>
 			<div className="hm-container hm-nav__bar">
 				<Link href="/" className="hm-nav__brand hm-focus">
-					<img src={BRAND_LOGO_SRC} alt="" className="h-8 w-8 shrink-0 object-contain" />
+					<img src={BRAND_LOGO_SRC} alt="" className="hm-logo h-9 w-9 shrink-0 object-contain" />
 					<span>{t("brand.name")}</span>
 				</Link>
 
@@ -444,7 +438,7 @@ export default function PowerfulNavbar() {
 					<LangSwitch />
 					{user ? (
 						<div className="hidden md:block">
-							<AvatarButton user={user} isRTL={isRTL} />
+							<AvatarButton user={user} onSignOut={signOut} />
 						</div>
 					) : (
 						<Link href="/auth" className="hm-btn hm-btn--primary hm-nav__cta">
@@ -505,9 +499,8 @@ export default function PowerfulNavbar() {
 										<button
 											type="button"
 											onClick={() => {
-												localStorage.removeItem("user");
-												setUser(null);
 												setMobileOpen(false);
+												signOut();
 											}}
 											className="hm-nav__sheet-link is-danger hm-focus"
 										>

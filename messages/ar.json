@@ -7041,7 +7041,14 @@
 				"myCalendar": "التقويم",
 				"whatsapp": "واتساب",
 				"money": "إدارة الأموال",
-				"myExercise": "تماريني"
+				"myExercise": "تماريني",
+				"hints": {
+					"workspace": "العملاء والخطط",
+					"myExercise": "حصة اليوم",
+					"myCalendar": "الحصص والمتابعات",
+					"whatsapp": "محادثات العملاء",
+					"money": "المدفوعات والفواتير"
+				}
 			},
 			"dropdown": {
 				"openMenu": "فتح قائمة المستخدم",
@@ -7049,7 +7056,10 @@
 				"myProfile": "الملف الشخصي",
 				"signOut": "تسجيل الخروج",
 				"points": "النقاط",
-				"pts": "نقطة"
+				"pts": "نقطة",
+				"online": "متصل",
+				"openDashboard": "افتح لوحة التحكم",
+				"darkMode": "الوضع الداكن"
 			},
 			"mobile": {
 				"open": "فتح القائمة",

@@ -6987,7 +6987,14 @@
 				"myCalendar": "Calendar",
 				"whatsapp": "WhatsApp",
 				"money": "Money Management",
-				"myExercise": "My Workouts"
+				"myExercise": "My Workouts",
+				"hints": {
+					"workspace": "Clients & plans",
+					"myExercise": "Today's session",
+					"myCalendar": "Sessions & check-ins",
+					"whatsapp": "Client chats",
+					"money": "Payments & invoices"
+				}
 			},
 			"dropdown": {
 				"openMenu": "Open user menu",
@@ -6995,7 +7002,10 @@
 				"myProfile": "My Profile",
 				"signOut": "Sign Out",
 				"points": "Points",
-				"pts": "pts"
+				"pts": "pts",
+				"online": "Online",
+				"openDashboard": "Open dashboard",
+				"darkMode": "Dark mode"
 			},
 			"mobile": {
 				"open": "Open menu",

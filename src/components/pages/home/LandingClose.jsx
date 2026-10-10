@@ -75,7 +75,7 @@ export default function LandingClose() {
 				<div className="hm-footer__bottom">
 					<div className="max-w-sm">
 						<Link href="/" className="hm-footer__brand hm-focus">
-							<img src={BRAND_LOGO_SRC} alt="" className="h-8 w-8 rounded-md object-contain" />
+							<img src={BRAND_LOGO_SRC} alt="" className="hm-logo h-9 w-9 object-contain" />
 							<span>{nav("brand.name")}</span>
 						</Link>
 						<p className="mt-3 text-[14px] leading-relaxed text-[var(--night-muted)]">{t("brand.description")}</p>
