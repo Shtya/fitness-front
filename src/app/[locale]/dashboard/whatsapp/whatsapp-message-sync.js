@@ -96,9 +96,8 @@ export function shouldReloadOpenChatMessages({
  * Whether the open thread is missing inbox tip / unread rows the list already shows.
  *
  * - `needed` → hit Postgres (may be a quiet tip repair with no unread badge).
- * - `showUi` → paint the bottom shimmer skeleton. Only when unread > 0 AND the
- *   warm/painted tip is still missing — never overlay a thread that already has
- *   the inbox last message.
+ * - `showUi` → full-pane thread skeleton until the tip page lands. Only when
+ *   unread > 0 AND the warm/painted tip is still missing.
  */
 export function openChatCatchUpPlan({
 	cacheItems = [],

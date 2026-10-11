@@ -14023,34 +14023,14 @@ function WhatsAppWorkspaceContent() {
 		};
 		const finishCatchUp = (itemsAfter = []) => {
 			if (!isCurrentRequest()) return;
-			// Only animate/finish the shimmer if it was actually shown.
+			// Only clear the full-pane unread skeleton if it was actually shown.
 			if (messageCatchUpRef.current?.conversationId !== id) return;
-			const beforeIds = new Set(
-				(cached?.items || [])
-					.map(item => String(item?.id || ''))
-					.filter(Boolean),
-			);
-			const received = (Array.isArray(itemsAfter) ? itemsAfter : []).filter(
-				item => {
-					const mid = String(item?.id || '');
-					return mid && !beforeIds.has(mid) && !mid.startsWith('inbox-preview-');
-				},
-			).length;
-			const expected = Math.max(
-				1,
-				Number(messageCatchUpRef.current?.expected) || catchUp.expected || 1,
-			);
-			setMessageCatchUp({
-				conversationId: id,
-				expected,
-				received: Math.min(expected, Math.max(received, 0)),
-			});
-			setMessageCatchUpProgress(100);
-			window.setTimeout(() => {
-				if (conversationIdRef.current !== id) return;
-				setMessageCatchUp(null);
-				setMessageCatchUpProgress(0);
-			}, 450);
+			setMessageCatchUp(null);
+			setMessageCatchUpProgress(0);
+			setLoadingMessages(false);
+			pinThreadToBottomRef.current = true;
+			scrollMessagesToBottom('auto', { force: true });
+			void itemsAfter;
 		};
 		const markReadIfNeeded = () => {
 			if (canSync && isConversationWorkspaceTab(activeTabRef.current)) {
@@ -14075,7 +14055,8 @@ function WhatsAppWorkspaceContent() {
 			// overlay up. Flipping it off early let the settle loop declare victory on a
 			// half-painted thread, which is what opened chats mid-conversation.
 			if (threadComplete) {
-				setLoadingMessages(false);
+				// Unread catch-up keeps the full-pane skeleton until the tip lands.
+				setLoadingMessages(Boolean(catchUp.showUi));
 				setMessagesSyncHint('');
 				scrollMessagesToBottom();
 				// WhatsApp Web model: warm in-memory thread opens instantly.
@@ -14097,9 +14078,9 @@ function WhatsAppWorkspaceContent() {
 				}
 				if (catchUp.needed) beginCatchUp();
 			} else {
-				// Partial cache already painted rows — keep them visible; only the
-				// empty-pane spinner uses loadingMessages.
-				setLoadingMessages(false);
+				// Partial cache must keep loadingMessages true so the settle loop
+				// keeps pinning to bottom until the first full page lands.
+				setLoadingMessages(true);
 				if (catchUp.needed) beginCatchUp();
 			}
 		} else if (starredOnly && cached?.items) {
@@ -14112,10 +14093,7 @@ function WhatsAppWorkspaceContent() {
 			scrollMessagesToBottom();
 			if (cacheIsFresh && !forceProvider) return;
 		} else {
-			const alreadyPainted =
-				messagesOwnerRef.current === id &&
-				(conversationMessagesRef.current?.length || 0) > 0;
-			setLoadingMessages(!alreadyPainted);
+			setLoadingMessages(true);
 			if (catchUp.needed) beginCatchUp();
 			// Keeps this chat's already-rendered messages (no blank flash) while
 			// dropping anything that belonged to the chat the user just left.
@@ -14212,15 +14190,15 @@ function WhatsAppWorkspaceContent() {
 					writeConversationMessages(id, () => items);
 				}
 			}
-			const stillNeedsCatchUp = openChatCatchUpPlan({
+			const afterPlan = openChatCatchUpPlan({
 				cacheItems: items,
-				unreadCount: 0,
+				unreadCount: conversationUnreadCount(conversationMeta),
 				lastMessage: conversationMeta?.lastMessage || null,
-			}).needed;
+			});
 			if (isCurrentRequest()) {
-				setLoadingMessages(false);
+				setLoadingMessages(Boolean(afterPlan.showUi));
 				setMessagesSyncHint('');
-				if (!stillNeedsCatchUp) finishCatchUp(items);
+				if (!afterPlan.showUi) finishCatchUp(items);
 				else if (catchUp.needed) beginCatchUp();
 				if (items.length > 0) scrollMessagesToBottom();
 			}
@@ -14278,7 +14256,7 @@ function WhatsAppWorkspaceContent() {
 			const backfill = shouldProviderBackfill({
 				canSync: allowProviderSync,
 				starredOnly,
-				forceProvider: forceProvider || (catchUp.needed && stillNeedsCatchUp),
+				forceProvider: forceProvider || (catchUp.needed && afterPlan.needed),
 				historySyncBlocked,
 				itemCount: items.length,
 				providerHydratedAt: seededHydratedAt,
@@ -14503,8 +14481,8 @@ function WhatsAppWorkspaceContent() {
 					};
 					writeConversationMessages(id, () => [previewRow]);
 					setHasMoreMessages(true);
-					// Pane already has a row — no full-thread skeleton over it.
-					setLoadingMessages(false);
+					// Keep loading true so settle pins to bottom (not mid/top thread).
+					setLoadingMessages(true);
 					paintedForCatchUp = [previewRow];
 				} else {
 					clearConversationMessages(id);
@@ -14523,7 +14501,7 @@ function WhatsAppWorkspaceContent() {
 				unreadCount: conversationUnreadCount(conv),
 				lastMessage: conv?.lastMessage || null,
 			});
-			// Shimmer overlay only for unread rows still missing from the painted tip.
+			// Unread + missing tip → full-pane skeleton until the page arrives.
 			if (openCatchUp.showUi) {
 				setMessageCatchUp({
 					conversationId: id,
@@ -14531,6 +14509,7 @@ function WhatsAppWorkspaceContent() {
 					received: 0,
 				});
 				setMessageCatchUpProgress(8);
+				setLoadingMessages(true);
 			} else {
 				setMessageCatchUp(null);
 				setMessageCatchUpProgress(0);
@@ -14953,6 +14932,7 @@ function WhatsAppWorkspaceContent() {
 					received: 0,
 				});
 				setMessageCatchUpProgress(8);
+				setLoadingMessages(true);
 			} else if (messageCatchUpRef.current?.conversationId === conversationId) {
 				setMessageCatchUp(null);
 				setMessageCatchUpProgress(0);
@@ -15025,7 +15005,8 @@ function WhatsAppWorkspaceContent() {
 		}
 	}, [conversationId]);
 
-	// Drop unread shimmer as soon as the inbox tip is in the painted thread.
+	// Drop full-pane unread skeleton as soon as the inbox tip is painted, then
+	// pin to the latest messages (never leave the thread stuck at the top).
 	useEffect(() => {
 		if (!messageCatchUp || messageCatchUp.conversationId !== conversationId) return;
 		const tipPlan = openChatCatchUpPlan({
@@ -15033,14 +15014,19 @@ function WhatsAppWorkspaceContent() {
 			unreadCount: messageCatchUp.expected,
 			lastMessage: selectedConversation?.lastMessage || null,
 		});
-		if (!tipPlan.showUi) {
-			setMessageCatchUp(null);
-			setMessageCatchUpProgress(0);
-		}
+		if (tipPlan.showUi) return;
+		setMessageCatchUp(null);
+		setMessageCatchUpProgress(0);
+		setLoadingMessages(false);
+		pinThreadToBottomRef.current = true;
+		requestAnimationFrame(() => {
+			scrollMessagesToBottom('auto', { force: true });
+		});
 	}, [
 		conversationId,
 		effectiveMessages,
 		messageCatchUp,
+		scrollMessagesToBottom,
 		selectedConversation?.lastMessage,
 	]);
 
@@ -15131,9 +15117,11 @@ function WhatsAppWorkspaceContent() {
 			lastHeight = height;
 			lastMeasuredCount = measured;
 
-			// Never settle while the first page is still in flight — the message list
-			// is about to grow and any "pinned" frame here is temporary.
-			const stillLoading = loadingMessagesRef.current;
+			// Never settle while the first page / unread catch-up is still in flight —
+			// the message list is about to grow and any "pinned" frame here is temporary.
+			const stillLoading =
+				loadingMessagesRef.current ||
+				messageCatchUpRef.current?.conversationId === conversationIdRef.current;
 			if (pinned && stableFrames >= 3 && !stillLoading) {
 				setThreadSettled(true);
 				setShowJumpToBottom(false);
@@ -23870,19 +23858,27 @@ function WhatsAppWorkspaceContent() {
 												: ''
 										}`}
 									>
-										{/* Full-pane spinner only for a blank first load.
-										    Unread catch-up uses wa-catchup shimmer instead —
-										    never cover already-painted rows with this overlay. */}
+										{/* Full-pane skeleton: empty first load, OR unread
+										    catch-up until the tip page is in the thread. */}
 										{Boolean(conversationId) &&
-										effectiveMessages.length === 0 &&
-										loadingMessages ? (
+										(Boolean(
+											messageCatchUp &&
+												messageCatchUp.conversationId === conversationId,
+										) ||
+											(effectiveMessages.length === 0 && loadingMessages)) ? (
 											<div
 												className="wa-thread-loader"
 												role="status"
 												aria-live="polite"
 												aria-busy="true"
 												aria-label={
-													messagesSyncHint || t.loadingMessages
+													messageCatchUp &&
+													messageCatchUp.conversationId === conversationId
+														? t.loadingNewMessages.replace(
+																'{count}',
+																String(messageCatchUp.expected),
+															)
+														: messagesSyncHint || t.loadingMessages
 												}
 											>
 												<div className="wa-thread-loader__mark">
@@ -23892,12 +23888,23 @@ function WhatsAppWorkspaceContent() {
 													/>
 												</div>
 												<p className="wa-thread-loader__label">
-													{messagesSyncHint || t.loadingMessages}
+													{messageCatchUp &&
+													messageCatchUp.conversationId === conversationId
+														? t.loadingNewMessages.replace(
+																'{count}',
+																String(messageCatchUp.expected),
+															)
+														: messagesSyncHint || t.loadingMessages}
 												</p>
 											</div>
 										) : null}
 										{effectiveMessages.length === 0 ? (
-											!loadingMessages && threadSettled ? (
+											!loadingMessages &&
+											threadSettled &&
+											!(
+												messageCatchUp &&
+												messageCatchUp.conversationId === conversationId
+											) ? (
 												<div className="flex min-h-full flex-1 flex-col items-center justify-center gap-3 text-center">
 													<div className="rounded-2xl bg-white/90 p-4 shadow-sm dark:bg-slate-800/90">
 														<MessageCircle
@@ -23918,9 +23925,13 @@ function WhatsAppWorkspaceContent() {
 										) : (
 											<div
 												className={`wa-message-thread${
-													// Reveal bubbles as soon as we have rows; keep
-													// settling scroll work in the background.
-													threadSettled || effectiveMessages.length > 0
+													// Keep bubbles hidden until scroll is pinned bottom.
+													// Revealing early is what left opens stuck at the top.
+													threadSettled &&
+													!(
+														messageCatchUp &&
+														messageCatchUp.conversationId === conversationId
+													)
 														? ' is-ready'
 														: ' is-settling'
 												}`}
@@ -25111,30 +25122,7 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										)}
 									</div>
-									{messageCatchUp &&
-									messageCatchUp.conversationId === conversationId ? (
-										<div className="wa-catchup" role="status" aria-live="polite" aria-busy="true">
-											<span className="sr-only">
-												{t.loadingNewMessages.replace('{count}', String(messageCatchUp.expected))}
-											</span>
-											{Array.from({
-												length: Math.max(
-													1,
-													Math.min(3, Number(messageCatchUp.expected || 1) - Number(messageCatchUp.received || 0)),
-												),
-											}).map((_, index) => (
-												<span
-													key={index}
-													className="wa-catchup__bubble"
-													style={{ '--wa-catchup-w': ['62%', '44%', '54%'][index % 3] }}
-													aria-hidden="true"
-												>
-													<i />
-													<i />
-												</span>
-											))}
-										</div>
-									) : null}
+									{/* Unread catch-up uses the full-pane wa-thread-loader above. */}
 									{showJumpToBottom && conversationId ? (
 										<button
 											type="button"
