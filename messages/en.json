@@ -6241,6 +6241,62 @@
 			"noChange": "No change",
 			"ofTotal": "of total",
 			"pending": "Pending"
+		},
+		"home": {
+			"greeting": {
+				"morning": "Good morning, {name}",
+				"afternoon": "Good afternoon, {name}",
+				"evening": "Good evening, {name}"
+			},
+			"summary": "{active} of {total} clients active · {pending, plural, =0 {nothing waiting on you} one {# item waiting on you} other {# items waiting on you}}",
+			"updated": "Updated {time}",
+			"range": {
+				"label": "Period",
+				"d7": "7 days",
+				"d14": "14 days",
+				"d30": "30 days",
+				"custom": "Custom"
+			},
+			"roster": {
+				"title": "Your clients",
+				"active": "Active",
+				"inactive": "Inactive",
+				"activeShare": "{pct}% active",
+				"joined": "Joined",
+				"left": "Left",
+				"net": "Net",
+				"files": "Files uploaded",
+				"tiers": "By membership"
+			},
+			"needs": {
+				"title": "Needs you",
+				"sub": "Open items across your clients",
+				"clear": "Nothing is waiting. Nice work.",
+				"notifications": "Unread notifications",
+				"forms": "New form responses",
+				"reports": "Weekly reports to review",
+				"videos": "Workout videos to review",
+				"food": "Food suggestions to review"
+			},
+			"activity": {
+				"title": "Activity",
+				"sub": "Daily, {from} – {to}",
+				"total": "Total",
+				"avg": "Daily average",
+				"peak": "Best day",
+				"activeDays": "Active days"
+			},
+			"consistency": {
+				"title": "Training consistency",
+				"sub": "Days with logged training",
+				"ofDays": "{active} of {days} days",
+				"less": "Less",
+				"more": "More"
+			},
+			"conversations": {
+				"open": "Open WhatsApp",
+				"share": "{pct}% of messages"
+			}
 		}
 	},
 	"clientDashboard": {

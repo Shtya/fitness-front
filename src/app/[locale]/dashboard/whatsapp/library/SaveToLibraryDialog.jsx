@@ -160,7 +160,7 @@ export default function SaveToLibraryDialog({
 
 	return createPortal(
 		<div
-			className="fixed inset-0 z-[135] grid place-items-end bg-black/45 p-4 backdrop-blur-sm sm:place-items-center"
+			className="wa-ldlg-scrim fixed inset-0 z-[135] grid place-items-end bg-black/45 p-4 backdrop-blur-sm sm:place-items-center"
 			onClick={() => {
 				if (!saving) onClose?.();
 			}}
@@ -169,7 +169,7 @@ export default function SaveToLibraryDialog({
 				role="dialog"
 				aria-label={t.title}
 				dir={ar ? 'rtl' : 'ltr'}
-				className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl"
+				className="wa-dk wa-ldlg w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl"
 				onClick={(event) => event.stopPropagation()}
 			>
 				<div className="flex items-start justify-between gap-3 border-b px-5 py-4">

@@ -1,21 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { motion, useReducedMotion } from 'framer-motion';
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
-	AreaChart, Area, BarChart, Bar,
-	XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts';
-import {
-	Users, UserPlus, Bell, FileText, Activity, Utensils,
-	MessageSquare, Clock, Award, Zap, BarChart2, RefreshCw,
-	AlertCircle, TrendingUp, Dumbbell, CheckCircle2, XCircle,
-	Sparkles, Star, Shield, Flame,
+	AlertCircle, ArrowLeft, ArrowRight, Bell, CheckCircle2, Dumbbell, FileText,
+	Inbox, MessageCircle, RefreshCw, Utensils, UserPlus, Video,
 } from 'lucide-react';
-import GmStatCard from '@/components/molecules/GmStatCard';
+import { Link } from '@/i18n/navigation';
 import api from '@/utils/axios';
 import '@/components/pages/dashboard/users/roster/roster.css';
+import './dashboard-home.css';
 
 const PREVIEW_DATA = {
 	kpis: {
@@ -71,18 +67,13 @@ const PREVIEW_DATA = {
 
 const n = (v) => Number(v) || 0;
 
-const INK = {
-	primary: 'var(--color-primary-500)',
-	secondary: 'var(--color-secondary-500)',
-	ok: 'var(--gm-ok)',
-	warn: 'var(--gm-warn)',
-	danger: 'var(--gm-danger)',
-};
+const TIER_COLORS = ['var(--color-primary-600)', '#f59e0b', 'var(--color-primary-300)', '#a855f7', '#10b981', '#64748b'];
 
-const fmtDate = (d, locale) =>
-	new Date(d).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB', {
-		month: 'short', day: 'numeric',
-	});
+// Arabic month names, Western digits — matches the numbers everywhere else in the app.
+const intlLocale = (locale) => (locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB');
+
+const fmtDay = (d, locale) =>
+	new Date(d).toLocaleDateString(intlLocale(locale), { month: 'short', day: 'numeric' });
 
 function isoLocal(d) {
 	const y = d.getFullYear();
@@ -91,474 +82,430 @@ function isoLocal(d) {
 	return `${y}-${m}-${day}`;
 }
 
-function last13Days() {
+function lastDays(count) {
 	const to = new Date();
 	const from = new Date();
-	from.setDate(to.getDate() - 12);
+	from.setDate(to.getDate() - (count - 1));
 	return { from: isoLocal(from), to: isoLocal(to) };
 }
 
-const axisTick = { fill: 'var(--gm-faint)', fontSize: 11 };
+const PRESETS = [7, 14, 30];
 
-function ChartTooltip({ active, payload, label, locale }) {
-	if (!active || !payload?.length) return null;
-	return (
-		<div className="rounded-xl border border-[var(--gm-line)] bg-[var(--gm-paper)] px-3.5 py-2.5 text-xs shadow-[var(--gm-shadow-2)]">
-			<p className="mb-2 border-b border-[var(--gm-line)] pb-1.5 font-medium text-[var(--gm-muted)]">
-				{fmtDate(label, locale)}
-			</p>
-			{payload.map((p, i) => (
-				<div key={i} className="mt-1 flex items-center gap-2">
-					<span className="size-1.5 shrink-0 rounded-full" style={{ background: p.color }} />
-					<span className="text-[var(--gm-muted)]">{p.name}</span>
-					<span className="ms-auto ps-3 font-bold tabular-nums text-[var(--gm-ink)]">{p.value}</span>
-				</div>
-			))}
-		</div>
-	);
+function initials(name) {
+	const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+	if (!parts.length) return '#';
+	return parts.slice(0, 2).map((p) => p[0]).join('').toUpperCase();
 }
 
-function Panel({ children, className = '', delay = 0 }) {
+function useCount(target) {
 	const reduce = useReducedMotion();
+	const [value, setValue] = useState(reduce ? target : 0);
+	useEffect(() => {
+		if (reduce) { setValue(target); return undefined; }
+		let frame = 0;
+		const start = performance.now();
+		const tick = (now) => {
+			const t = Math.min(1, (now - start) / 700);
+			setValue(Math.round(target * (1 - (1 - t) ** 3)));
+			if (t < 1) frame = requestAnimationFrame(tick);
+		};
+		frame = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(frame);
+	}, [target, reduce]);
+	return value;
+}
+
+function Card({ children, className = '', delay = 0, as: Tag = 'section', ...rest }) {
+	const reduce = useReducedMotion();
+	const M = motion[Tag] || motion.section;
 	return (
-		<motion.section
-			initial={reduce ? false : { opacity: 0, y: 14 }}
+		<M
+			initial={reduce ? false : { opacity: 0, y: 12 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ delay: reduce ? 0 : delay, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-			className={`h-full rounded-[20px] border border-[var(--gm-line)] bg-[var(--gm-paper)] p-4 shadow-[var(--gm-shadow-3d)] sm:p-5 ${className}`}
+			className={`dh-card ${className}`}
+			{...rest}
 		>
 			{children}
-		</motion.section>
+		</M>
 	);
 }
 
-function PanelHead({ icon: Icon, title, subtitle, tone = 'gm-chip', right }) {
+function CardHead({ title, sub, right }) {
 	return (
-		<div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-			<div className="flex min-w-0 items-center gap-3">
-				<div className={`grid size-10 shrink-0 place-items-center rounded-[13px] border border-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] ${tone}`}>
-					<Icon className="size-4" strokeWidth={1.75} />
-				</div>
-				<div className="min-w-0">
-					<p className="text-sm font-semibold leading-tight text-[var(--gm-ink)]">{title}</p>
-					{subtitle ? <p className="mt-0.5 text-xs text-[var(--gm-muted)]">{subtitle}</p> : null}
+		<header className="dh-card__head">
+			<div className="min-w-0">
+				<h2 className="dh-card__title">{title}</h2>
+				{sub ? <p className="dh-card__sub">{sub}</p> : null}
+			</div>
+			{right}
+		</header>
+	);
+}
+
+/* ── Clients ─────────────────────────────────────────────────────────── */
+
+function RosterCard({ kpis, tiers, t, h, locale }) {
+	const total = n(kpis.totalClients);
+	const active = Math.min(total, n(kpis.activeClients));
+	const pct = total ? Math.round((active / total) * 100) : 0;
+	const joined = n(kpis.newClients);
+	const left = n(kpis.churnedThisRange);
+	const net = joined - left;
+	const shown = useCount(total);
+	const tierTotal = tiers.reduce((s, d) => s + n(d.value), 0);
+	const nf = new Intl.NumberFormat(intlLocale(locale));
+
+	return (
+		<Card className="dh-roster" delay={0.04}>
+			<CardHead title={h('roster.title')} />
+			<div className="dh-roster__hero">
+				<p className="dh-num dh-num--xl">{nf.format(shown)}</p>
+				<div className="dh-roster__share">
+					<p className="dh-roster__pct">{h('roster.activeShare', { pct })}</p>
+					<div className="dh-meter" role="img" aria-label={h('roster.activeShare', { pct })}>
+						<span style={{ width: `${pct}%` }} />
+					</div>
+					<p className="dh-roster__legend">
+						<span><i className="is-on" />{h('roster.active')} {nf.format(active)}</span>
+						<span><i />{h('roster.inactive')} {nf.format(total - active)}</span>
+					</p>
 				</div>
 			</div>
-			{right ? <div className="flex flex-wrap items-center gap-2">{right}</div> : null}
-		</div>
-	);
-}
 
-function MiniStat({ value, label, color }) {
-	return (
-		<div className="min-w-[72px] rounded-xl border border-[var(--gm-line)] bg-[color-mix(in_srgb,var(--gm-muted)_6%,var(--gm-paper))] px-2.5 py-1.5 text-center">
-			<p className="text-sm font-bold leading-none tabular-nums" style={{ color }}>{value}</p>
-			<p className="mt-1 text-[10px] font-medium text-[var(--gm-faint)]">{label}</p>
-		</div>
-	);
-}
-
-function Track({ pct, color, delay = 0 }) {
-	const [drawn, setDrawn] = useState(false);
-	useEffect(() => {
-		const id = requestAnimationFrame(() => setDrawn(true));
-		return () => cancelAnimationFrame(id);
-	}, []);
-	return (
-		<div className="h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--gm-muted)_14%,transparent)]">
-			<div
-				className="h-full rounded-full"
-				style={{
-					width: drawn ? `${pct}%` : '0%',
-					background: color,
-					transition: `width 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
-				}}
-			/>
-		</div>
-	);
-}
-
-function ActivityChart({ usersData, mealData, exerciseData, t, locale }) {
-	const uKey = t('charts.newUsers');
-	const mKey = t('charts.mealLogs');
-	const eKey = t('charts.exerciseVolume');
-	const byDate = new Map();
-	const put = (rows, key) => {
-		for (const row of rows || []) {
-			if (!row?.date) continue;
-			const cur = byDate.get(row.date) || { date: row.date, [uKey]: 0, [mKey]: 0, [eKey]: 0 };
-			cur[key] = n(row.value);
-			byDate.set(row.date, cur);
-		}
-	};
-	put(usersData, uKey);
-	put(mealData, mKey);
-	put(exerciseData, eKey);
-	const combined = [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-	const series = [
-		{ key: uKey, color: INK.primary, grad: 'dashUsers' },
-		{ key: mKey, color: INK.secondary, grad: 'dashMeals' },
-		{ key: eKey, color: INK.ok, grad: 'dashTrain' },
-	];
-	const totalMeals = mealData.reduce((s, d) => s + n(d.value), 0);
-	const totalEx = exerciseData.reduce((s, d) => s + n(d.value), 0);
-	const peakMeal = mealData.length ? Math.max(...mealData.map((d) => n(d.value))) : 0;
-
-	return (
-		<div className="lg:col-span-2">
-			<Panel delay={0.08}>
-				<PanelHead
-					icon={TrendingUp}
-					title={t('charts.activityTrends')}
-					subtitle={t('charts.activityTrendsSub')}
-					right={(
-						<>
-							<MiniStat value={totalMeals} label={t('charts.mealLogs')} color={INK.secondary} />
-							<MiniStat value={totalEx} label={t('charts.exerciseVolume')} color={INK.ok} />
-							<MiniStat value={peakMeal} label={t('charts.peakDay')} color={INK.primary} />
-						</>
-					)}
-				/>
-				<div className="h-[230px] w-full" dir="ltr">
-					<ResponsiveContainer width="100%" height="100%">
-						<AreaChart data={combined} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-							<defs>
-								{series.map((s) => (
-									<linearGradient key={s.grad} id={s.grad} x1="0" y1="0" x2="0" y2="1">
-										<stop offset="0%" stopColor={s.color} stopOpacity={0.22} />
-										<stop offset="100%" stopColor={s.color} stopOpacity={0} />
-									</linearGradient>
-								))}
-							</defs>
-							<CartesianGrid strokeDasharray="4 4" stroke="var(--gm-line)" vertical={false} />
-							<XAxis dataKey="date" tickFormatter={(d) => fmtDate(d, locale)} tick={axisTick} axisLine={false} tickLine={false} interval={2} />
-							<YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} width={32} />
-							<Tooltip content={<ChartTooltip locale={locale} />} />
-							<Legend wrapperStyle={{ paddingTop: 12, fontSize: 11 }} formatter={(v) => <span style={{ color: 'var(--gm-muted)', fontWeight: 500 }}>{v}</span>} />
-							{series.map((s) => (
-								<Area
-									key={s.key}
-									type="monotone"
-									dataKey={s.key}
-									stroke={s.color}
-									strokeWidth={2}
-									fill={`url(#${s.grad})`}
-									dot={false}
-									activeDot={{ r: 4, fill: s.color, stroke: 'var(--gm-paper)', strokeWidth: 2 }}
-								/>
-							))}
-						</AreaChart>
-					</ResponsiveContainer>
+			<dl className="dh-roster__stats">
+				<div>
+					<dt>{h('roster.joined')}</dt>
+					<dd className="is-up"><bdi dir="ltr">+{nf.format(joined)}</bdi></dd>
 				</div>
-			</Panel>
+				<div>
+					<dt>{h('roster.left')}</dt>
+					<dd className={left ? 'is-down' : ''}><bdi dir="ltr">{left ? `−${nf.format(left)}` : nf.format(0)}</bdi></dd>
+				</div>
+				<div>
+					<dt>{h('roster.net')}</dt>
+					<dd className={net > 0 ? 'is-up' : net < 0 ? 'is-down' : ''}>
+						<bdi dir="ltr">{net > 0 ? '+' : net < 0 ? '−' : ''}{nf.format(Math.abs(net))}</bdi>
+					</dd>
+				</div>
+				<div>
+					<dt>{h('roster.files')}</dt>
+					<dd>{nf.format(n(kpis.assetsUploaded))}</dd>
+				</div>
+			</dl>
+
+			{tierTotal > 0 ? (
+				<div className="dh-tiers">
+					<p className="dh-label">{h('roster.tiers')}</p>
+					<div className="dh-tiers__bar">
+						{tiers.map((d, i) => (
+							<span
+								key={d.label || i}
+								style={{ flexGrow: n(d.value), background: TIER_COLORS[i % TIER_COLORS.length] }}
+								title={`${t(`membership.${d.label}`)}: ${n(d.value)}`}
+							/>
+						))}
+					</div>
+					<ul className="dh-tiers__list">
+						{tiers.map((d, i) => (
+							<li key={d.label || i}>
+								<i style={{ background: TIER_COLORS[i % TIER_COLORS.length] }} />
+								<span className="flex-1 truncate">{t(`membership.${d.label}`)}</span>
+								<b>{nf.format(n(d.value))}</b>
+								<small>{Math.round((n(d.value) / tierTotal) * 100)}%</small>
+							</li>
+						))}
+					</ul>
+				</div>
+			) : null}
+		</Card>
+	);
+}
+
+/* ── What needs the coach ─────────────────────────────────────────────── */
+
+function NeedsCard({ kpis, queue, h, locale }) {
+	const Forward = locale === 'ar' ? ArrowLeft : ArrowRight;
+	const nf = new Intl.NumberFormat(intlLocale(locale));
+	const items = [
+		{ key: 'reports', value: n(queue.weeklyReportsPending), icon: FileText, href: '/dashboard/reports', tone: 'primary' },
+		{ key: 'videos', value: n(queue.videosPending) || n(kpis.pendingExerciseVideos), icon: Video, href: '/dashboard/workouts', tone: 'violet' },
+		{ key: 'food', value: n(queue.foodSuggestionsPending), icon: Utensils, href: '/dashboard/nutrition', tone: 'green' },
+		{ key: 'forms', value: n(kpis.formsSubmissions), icon: Inbox, href: '/dashboard/intake/responses', tone: 'sky' },
+		{ key: 'notifications', value: n(kpis.unreadNotifications), icon: Bell, href: '/dashboard/notifications', tone: 'amber' },
+	];
+	const open = items.filter((i) => i.value > 0);
+	const done = items.filter((i) => i.value === 0);
+
+	return (
+		<Card className="dh-needs" delay={0.08}>
+			<CardHead
+				title={h('needs.title')}
+				sub={h('needs.sub')}
+				right={open.length ? <span className="dh-badge is-warn">{nf.format(open.length)}</span> : null}
+			/>
+			{open.length === 0 ? (
+				<div className="dh-clear">
+					<CheckCircle2 aria-hidden="true" />
+					<p>{h('needs.clear')}</p>
+				</div>
+			) : null}
+			<ul className="dh-needs__list">
+				{[...open, ...done].map(({ key, value, icon: Icon, href, tone }) => (
+					<li key={key}>
+						<Link href={href} className={`dh-need is-${tone}${value ? '' : ' is-done'}`}>
+							<span className="dh-need__icon" aria-hidden="true"><Icon /></span>
+							<span className="dh-need__label">{h(`needs.${key}`)}</span>
+							{value ? (
+								<b className="dh-need__count">{nf.format(value)}</b>
+							) : (
+								<CheckCircle2 className="dh-need__ok" aria-hidden="true" />
+							)}
+							<Forward className="dh-need__arrow" aria-hidden="true" />
+						</Link>
+					</li>
+				))}
+			</ul>
+		</Card>
+	);
+}
+
+/* ── Activity ─────────────────────────────────────────────────────────── */
+
+function ActivityTooltip({ active, payload, label, locale, name }) {
+	if (!active || !payload?.length) return null;
+	return (
+		<div className="dh-tip">
+			<p>{fmtDay(label, locale)}</p>
+			<b>{payload[0].value}</b> <span>{name}</span>
 		</div>
 	);
 }
 
-function MembershipCard({ data, t }) {
-	const total = data.reduce((s, d) => s + n(d.value), 0);
-	const tiers = [
-		{ color: INK.primary, icon: Shield },
-		{ color: INK.warn, icon: Star },
-		{ color: INK.secondary, icon: Sparkles },
+function ActivityCard({ series, t, h, locale, from, to }) {
+	const tabs = [
+		{ key: 'exercise', label: t('charts.exerciseVolume'), icon: Dumbbell, data: series.exerciseVolumeDaily || [], color: 'var(--color-primary-500)' },
+		{ key: 'meals', label: t('charts.mealLogs'), icon: Utensils, data: series.mealLogsDaily || [], color: '#10b981' },
+		{ key: 'clients', label: t('charts.newUsers'), icon: UserPlus, data: series.usersCreatedDaily || [], color: '#f59e0b' },
 	];
+	const [tab, setTab] = useState('exercise');
+	const current = tabs.find((x) => x.key === tab) || tabs[0];
+	const rows = [...current.data].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+	const values = rows.map((r) => n(r.value));
+	const total = values.reduce((s, v) => s + v, 0);
+	const peak = values.length ? Math.max(...values) : 0;
+	const activeDays = values.filter((v) => v > 0).length;
+	const avg = values.length ? total / values.length : 0;
+	const nf = new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 1 });
+	const sub = h('activity.sub', { from: fmtDay(from, locale), to: fmtDay(to, locale) });
 
 	return (
-		<Panel delay={0.14}>
-			<PanelHead
-				icon={Award}
-				title={t('charts.membershipTiers')}
-				subtitle={t('charts.membershipSub')}
-				tone="gm-chip-warn"
+		<Card className="dh-activity" delay={0.12}>
+			<CardHead
+				title={h('activity.title')}
+				sub={sub}
 				right={(
-					<div className="text-end">
-						<p className="text-2xl font-bold leading-none tabular-nums text-[var(--gm-ink)]">{total}</p>
-						<p className="mt-0.5 text-[10px] uppercase tracking-wider text-[var(--gm-faint)]">{t('kpi.totalClients')}</p>
+					<div className="dh-tabs" role="tablist" aria-label={h('activity.title')}>
+						{tabs.map(({ key, label, icon: Icon }) => (
+							<button
+								key={key}
+								type="button"
+								role="tab"
+								aria-selected={tab === key}
+								onClick={() => setTab(key)}
+								className="dh-tab"
+							>
+								<Icon aria-hidden="true" />
+								{label}
+							</button>
+						))}
 					</div>
 				)}
 			/>
-			<div className="space-y-4">
-				{data.map((d, i) => {
-					const tier = tiers[i] || tiers[0];
-					const pct = total ? Math.round((n(d.value) / total) * 100) : 0;
-					const Icon = tier.icon;
-					return (
-						<div key={d.label || i}>
-							<div className="mb-1.5 flex items-center justify-between gap-2">
-								<div className="flex min-w-0 items-center gap-2">
-									<span className="grid size-6 place-items-center rounded-md" style={{ background: `color-mix(in srgb, ${tier.color} 16%, var(--gm-paper))`, color: tier.color }}>
-										<Icon className="size-3" />
-									</span>
-									<span className="truncate text-sm font-medium text-[var(--gm-ink-soft)]">{t(`membership.${d.label}`)}</span>
-								</div>
-								<div className="flex items-center gap-2">
-									<span className="text-sm font-bold tabular-nums text-[var(--gm-ink)]">{n(d.value)}</span>
-									<span className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white" style={{ background: tier.color }}>{pct}%</span>
-								</div>
-							</div>
-							<Track pct={pct} color={tier.color} delay={120 + i * 80} />
-						</div>
-					);
-				})}
-			</div>
-			{data.length === 0 ? <p className="text-sm text-[var(--gm-muted)]">{t('empty.noData')}</p> : null}
-		</Panel>
-	);
-}
-
-function MealLogsBar({ data, t, locale }) {
-	const logsKey = t('charts.logs');
-	const formatted = data.map((d) => ({ date: d.date, [logsKey]: n(d.value) }));
-	const total = data.reduce((s, d) => s + n(d.value), 0);
-	const avg = data.length ? (total / data.length).toFixed(1) : '0';
-	const peak = data.length ? Math.max(...data.map((d) => n(d.value))) : 0;
-
-	return (
-		<div className="lg:col-span-2">
-			<Panel delay={0.1}>
-				<PanelHead
-					icon={Utensils}
-					title={t('charts.mealLogsTitle')}
-					subtitle={t('charts.mealLogsSub')}
-					tone="gm-chip-secondary"
-					right={(
-						<>
-							<MiniStat value={total} label={t('charts.total')} color={INK.secondary} />
-							<MiniStat value={avg} label={t('charts.dailyAvg')} color={INK.primary} />
-							<MiniStat value={peak} label={t('charts.peak')} color={INK.ok} />
-						</>
-					)}
-				/>
-				<div className="h-[190px] w-full" dir="ltr">
+			<dl className="dh-activity__stats" style={{ '--tone': current.color }}>
+				<div><dt>{h('activity.total')}</dt><dd className="dh-num">{nf.format(total)}</dd></div>
+				<div><dt>{h('activity.avg')}</dt><dd className="dh-num">{nf.format(avg)}</dd></div>
+				<div><dt>{h('activity.peak')}</dt><dd className="dh-num">{nf.format(peak)}</dd></div>
+				<div><dt>{h('activity.activeDays')}</dt><dd className="dh-num">{nf.format(activeDays)}<small>/{nf.format(values.length)}</small></dd></div>
+			</dl>
+			<div className="dh-activity__chart" dir="ltr" role="img" aria-label={`${current.label}: ${sub}`}>
+				{rows.length ? (
 					<ResponsiveContainer width="100%" height="100%">
-						<BarChart data={formatted} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barSize={16}>
-							<CartesianGrid strokeDasharray="4 4" stroke="var(--gm-line)" vertical={false} />
-							<XAxis dataKey="date" tickFormatter={(d) => fmtDate(d, locale)} tick={axisTick} axisLine={false} tickLine={false} interval={2} />
-							<YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} width={32} />
-							<Tooltip content={<ChartTooltip locale={locale} />} cursor={{ fill: 'color-mix(in srgb, var(--gm-muted) 8%, transparent)' }} />
-							<Bar dataKey={logsKey} fill={INK.secondary} radius={[6, 6, 0, 0]} />
+						<BarChart data={rows} margin={{ top: 6, right: 4, bottom: 0, left: -8 }} barCategoryGap="22%">
+							<CartesianGrid stroke="var(--gm-line)" strokeDasharray="3 5" vertical={false} />
+							<XAxis
+								dataKey="date"
+								tickFormatter={(d) => fmtDay(d, locale)}
+								tick={{ fill: 'var(--gm-faint)', fontSize: 11 }}
+								axisLine={false}
+								tickLine={false}
+								interval="preserveStartEnd"
+								minTickGap={18}
+							/>
+							<YAxis tick={{ fill: 'var(--gm-faint)', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={34} />
+							<Tooltip
+								cursor={{ fill: 'color-mix(in srgb, var(--gm-muted) 9%, transparent)', radius: 8 }}
+								content={<ActivityTooltip locale={locale} name={current.label} />}
+							/>
+							<Bar dataKey="value" radius={[7, 7, 3, 3]} isAnimationActive>
+								{rows.map((r) => (
+									<Cell
+										key={r.date}
+										fill={current.color}
+										fillOpacity={n(r.value) === peak && peak > 0 ? 1 : 0.38}
+									/>
+								))}
+							</Bar>
 						</BarChart>
 					</ResponsiveContainer>
-				</div>
-			</Panel>
-		</div>
-	);
-}
-
-function ExerciseCard({ data, t, locale }) {
-	const total = data.reduce((s, d) => s + n(d.value), 0);
-	const peak = data.length ? Math.max(...data.map((d) => n(d.value))) : 0;
-	const activeDays = data.filter((d) => n(d.value) > 0).length;
-	const consistency = data.length ? Math.round((activeDays / data.length) * 100) : 0;
-	const [ringPct, setRingPct] = useState(0);
-	useEffect(() => {
-		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (reduce) { setRingPct(consistency); return; }
-		const id = setTimeout(() => setRingPct(consistency), 280);
-		return () => clearTimeout(id);
-	}, [consistency]);
-	const R = 28;
-	const circ = 2 * Math.PI * R;
-	const heat = [
-		'color-mix(in srgb, var(--gm-muted) 16%, transparent)',
-		'color-mix(in srgb, var(--color-primary-300) 55%, var(--gm-paper))',
-		'color-mix(in srgb, var(--color-primary-400) 78%, var(--gm-paper))',
-		'var(--color-primary-500)',
-		'var(--color-primary-700)',
-	];
-
-	return (
-		<Panel delay={0.12}>
-			<PanelHead icon={Dumbbell} title={t('charts.exerciseVolume')} subtitle={t('charts.exerciseVolumeSub')} tone="gm-chip-ok" />
-			<div className="mb-5 flex items-center gap-4">
-				<svg viewBox="0 0 72 72" className="size-[72px] shrink-0" aria-hidden>
-					<circle cx="36" cy="36" r={R} fill="none" stroke="var(--gm-line)" strokeWidth="6" />
-					<circle
-						cx="36" cy="36" r={R} fill="none" stroke="var(--gm-ok)" strokeWidth="6" strokeLinecap="round"
-						strokeDasharray={circ}
-						strokeDashoffset={circ - (circ * ringPct) / 100}
-						transform="rotate(-90 36 36)"
-						style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1)' }}
-					/>
-					<text x="36" y="40" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--gm-ink)">{consistency}%</text>
-				</svg>
-				<div className="grid min-w-0 flex-1 grid-cols-3 gap-2">
-					{[
-						{ val: total, label: t('charts.totalSessions'), color: INK.primary },
-						{ val: peak, label: t('charts.peakDay'), color: INK.ok },
-						{ val: `${consistency}%`, label: t('charts.consistency'), color: INK.secondary },
-					].map((s) => (
-						<div key={s.label} className="rounded-xl border border-[var(--gm-line)] bg-[color-mix(in_srgb,var(--gm-muted)_6%,var(--gm-paper))] px-2 py-2.5 text-center">
-							<p className="text-lg font-bold leading-none tabular-nums" style={{ color: s.color }}>{s.val}</p>
-							<p className="mt-1.5 text-[10px] font-medium leading-tight text-[var(--gm-faint)]">{s.label}</p>
-						</div>
-					))}
-				</div>
-			</div>
-			<p className="mb-2.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--gm-faint)]">{t('charts.last13Days')}</p>
-			<div className="grid grid-cols-[repeat(13,minmax(0,1fr))] gap-1.5">
-				{data.map((d, i) => {
-					const v = n(d.value);
-					const lvl = v === 0 ? 0 : v < 5 ? 1 : v < 10 ? 2 : v < 14 ? 3 : 4;
-					return (
-						<div
-							key={d.date || i}
-							title={`${fmtDate(d.date, locale)}: ${v}`}
-							className="aspect-square rounded-[4px] transition-transform duration-150 hover:scale-110"
-							style={{ background: heat[lvl] }}
-						/>
-					);
-				})}
-			</div>
-			<div className="mt-2 flex items-center justify-end gap-1">
-				<span className="me-0.5 text-[10px] text-[var(--gm-faint)]">0</span>
-				{heat.map((c, i) => <div key={i} className="size-2.5 rounded-[3px]" style={{ background: c }} />)}
-				<span className="ms-0.5 text-[10px] text-[var(--gm-faint)]">+</span>
-			</div>
-		</Panel>
-	);
-}
-
-function ReviewQueue({ data, t }) {
-	const items = [
-		{ label: t('charts.weeklyReports'), val: n(data.weeklyReportsPending), icon: FileText, color: INK.primary },
-		{ label: t('charts.pendingVideos'), val: n(data.videosPending), icon: Activity, color: INK.secondary },
-		{ label: t('charts.foodSuggestions'), val: n(data.foodSuggestionsPending), icon: Utensils, color: INK.ok },
-	];
-	const anyPending = items.some((i) => i.val > 0);
-
-	return (
-		<Panel delay={0.16}>
-			<PanelHead
-				icon={Clock}
-				title={t('charts.reviewQueue')}
-				subtitle={t('charts.reviewQueueSub')}
-				tone="gm-chip-warn"
-				right={anyPending ? (
-					<span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={{ color: 'var(--gm-warn)', borderColor: 'color-mix(in srgb, var(--gm-warn) 35%, transparent)', background: 'color-mix(in srgb, var(--gm-warn) 12%, var(--gm-paper))' }}>
-						<Flame className="size-3" />
-						{t('status.requiresAttention')}
-					</span>
 				) : (
-					<span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={{ color: 'var(--gm-ok)', borderColor: 'color-mix(in srgb, var(--gm-ok) 35%, transparent)', background: 'color-mix(in srgb, var(--gm-ok) 12%, var(--gm-paper))' }}>
-						<CheckCircle2 className="size-3" />
-						{t('status.allClear')}
-					</span>
+					<p className="dh-empty">{t('empty.noData')}</p>
 				)}
-			/>
-			<div className="space-y-2">
-				{items.map((item) => {
-					const Icon = item.icon;
-					return (
-						<div key={item.label} className="flex items-center justify-between gap-3 rounded-xl border border-transparent bg-[color-mix(in_srgb,var(--gm-muted)_6%,var(--gm-paper))] px-3.5 py-3 transition-colors hover:border-[var(--gm-line)]">
-							<div className="flex min-w-0 items-center gap-2.5">
-								<span className="grid size-8 shrink-0 place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${item.color} 14%, var(--gm-paper))`, color: item.color }}>
-									<Icon className="size-3.5" />
-								</span>
-								<span className="truncate text-sm font-medium text-[var(--gm-ink-soft)]">{item.label}</span>
-							</div>
-							{item.val > 0
-								? <span className="text-xl font-bold tabular-nums" style={{ color: item.color }}>{item.val}</span>
-								: <CheckCircle2 className="size-[18px] shrink-0 text-[var(--gm-ok)]" />}
-						</div>
-					);
-				})}
 			</div>
-		</Panel>
+		</Card>
 	);
 }
 
-function TopConversations({ data, t }) {
-	const max = Math.max(1, ...data.map((d) => n(d.messages)));
-	const palette = [INK.primary, 'var(--color-secondary-600)', INK.secondary, 'var(--color-primary-300)', 'var(--gm-faint)'];
-	const totalMsgs = data.reduce((s, d) => s + n(d.messages), 0);
+/* ── Training consistency ─────────────────────────────────────────────── */
+
+function ConsistencyCard({ data, h, locale }) {
+	const rows = [...data].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+	const values = rows.map((r) => n(r.value));
+	const max = Math.max(1, ...values);
+	const active = values.filter((v) => v > 0).length;
+	const pct = rows.length ? Math.round((active / rows.length) * 100) : 0;
+	const cols = rows.length <= 16 ? rows.length || 1 : Math.ceil(rows.length / 2);
+	const nf = new Intl.NumberFormat(intlLocale(locale));
+	const level = (v) => (v === 0 ? 0 : Math.min(4, Math.ceil((v / max) * 4)));
 
 	return (
-		<Panel delay={0.18}>
-			<PanelHead
-				icon={MessageSquare}
+		<Card className="dh-consistency" delay={0.16}>
+			<CardHead title={h('consistency.title')} sub={h('consistency.sub')} />
+			<div className="dh-consistency__top">
+				<p className="dh-num dh-num--lg">{nf.format(pct)}<small>%</small></p>
+				<p className="dh-consistency__of">{h('consistency.ofDays', { active: nf.format(active), days: nf.format(rows.length) })}</p>
+			</div>
+			<div className="dh-heat" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+				{rows.map((r) => {
+					const v = n(r.value);
+					return (
+						<span key={r.date} className={`dh-heat__cell is-${level(v)}`} title={`${fmtDay(r.date, locale)} · ${v}`}>
+							<b>{new Date(r.date).getDate()}</b>
+						</span>
+					);
+				})}
+			</div>
+			<div className="dh-heat__legend" aria-hidden="true">
+				<span>{h('consistency.less')}</span>
+				{[0, 1, 2, 3, 4].map((l) => <i key={l} className={`dh-heat__cell is-${l}`} />)}
+				<span>{h('consistency.more')}</span>
+			</div>
+		</Card>
+	);
+}
+
+/* ── Conversations ───────────────────────────────────────────────────── */
+
+function ConversationsCard({ data, t, h, locale }) {
+	const total = data.reduce((s, d) => s + n(d.messages), 0);
+	const max = Math.max(1, ...data.map((d) => n(d.messages)));
+	const nf = new Intl.NumberFormat(intlLocale(locale));
+	const Forward = locale === 'ar' ? ArrowLeft : ArrowRight;
+
+	return (
+		<Card className="dh-convos" delay={0.2}>
+			<CardHead
 				title={t('charts.topConversations')}
-				subtitle={t('charts.topConversationsSub')}
-				tone="gm-chip-secondary"
+				sub={`${nf.format(total)} ${t('charts.totalMessages')}`}
 				right={(
-					<div className="text-end">
-						<p className="text-2xl font-bold leading-none tabular-nums" style={{ color: INK.primary }}>{totalMsgs}</p>
-						<p className="mt-0.5 text-[10px] text-[var(--gm-faint)]">{t('charts.totalMessages')}</p>
-					</div>
+					<Link href="/dashboard/whatsapp" className="dh-link">
+						<MessageCircle aria-hidden="true" />
+						{h('conversations.open')}
+						<Forward aria-hidden="true" className="dh-link__arrow" />
+					</Link>
 				)}
 			/>
 			{data.length === 0 ? (
-				<p className="text-sm text-[var(--gm-muted)]">{t('empty.noData')}</p>
+				<p className="dh-empty">{t('empty.noData')}</p>
 			) : (
-				<div className="space-y-3.5">
-					{data.map((d, i) => (
-						<div key={d.conversationId || i}>
-							<div className="mb-1.5 flex items-center justify-between gap-2">
-								<div className="flex min-w-0 items-center gap-2">
-									<span className="grid size-[18px] shrink-0 place-items-center rounded-full text-[9px] font-bold text-white" style={{ background: palette[i] || INK.primary }}>{i + 1}</span>
-									<span className="truncate text-sm font-medium text-[var(--gm-ink-soft)]">{d.name || `${t('charts.conversation')} ${i + 1}`}</span>
+				<ol className="dh-convos__list">
+					{data.map((d, i) => {
+						const name = d.name || `${t('charts.conversation')} ${i + 1}`;
+						const share = total ? Math.round((n(d.messages) / total) * 100) : 0;
+						return (
+							<li key={d.conversationId || i}>
+								<span className={`dh-avatar${d.name ? '' : ' is-anon'}`} aria-hidden="true">
+									{d.name ? initials(d.name) : i + 1}
+								</span>
+								<div className="min-w-0 flex-1">
+									<div className="dh-convos__row">
+										<span className="truncate" dir="auto">{name}</span>
+										<b>{nf.format(n(d.messages))}</b>
+									</div>
+									<div className="dh-convos__track" title={h('conversations.share', { pct: share })}>
+										<span style={{ width: `${(n(d.messages) / max) * 100}%` }} />
+									</div>
 								</div>
-								<div className="flex shrink-0 items-center gap-1">
-									<span className="text-sm font-bold tabular-nums" style={{ color: palette[i] || INK.primary }}>{n(d.messages)}</span>
-									<span className="text-[11px] text-[var(--gm-muted)]">{t('charts.messages')}</span>
-								</div>
-							</div>
-							<Track pct={(n(d.messages) / max) * 100} color={palette[i] || INK.primary} delay={80 + i * 70} />
-						</div>
-					))}
-				</div>
+							</li>
+						);
+					})}
+				</ol>
 			)}
-		</Panel>
+		</Card>
 	);
 }
 
-function Skel({ className = '' }) {
-	return <div className={`animate-pulse rounded-lg bg-[color-mix(in_srgb,var(--gm-muted)_16%,transparent)] ${className}`} />;
-}
+/* ── Loading ─────────────────────────────────────────────────────────── */
 
 function DashboardSkeleton() {
 	return (
-		<div className="space-y-5" aria-busy="true">
-			<div className="flex items-center gap-3">
-				<Skel className="size-14 rounded-[18px]" />
-				<div className="space-y-2">
-					<Skel className="h-7 w-40" />
-					<Skel className="h-3 w-64" />
-				</div>
-			</div>
-			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-				{Array.from({ length: 8 }).map((_, i) => <Skel key={i} className="h-[108px] rounded-[20px]" />)}
-			</div>
-			<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-				<Skel className="h-72 rounded-[20px] lg:col-span-2" />
-				<Skel className="h-72 rounded-[20px]" />
-			</div>
+		<div className="dh-grid" aria-busy="true">
+			<div className="dh-skel dh-roster" />
+			<div className="dh-skel dh-needs" />
+			<div className="dh-skel dh-activity" />
+			<div className="dh-skel dh-consistency" />
+			<div className="dh-skel dh-convos" />
 		</div>
 	);
 }
 
+/* ── Page ────────────────────────────────────────────────────────────── */
+
 export default function DashboardPage({ PREVIEW = false, api: apiClient = api }) {
 	const t = useTranslations('dashboard');
+	const h = useTranslations('dashboard.home');
 	const locale = useLocale();
-	const initialRange = last13Days();
+	const initialRange = lastDays(14);
 	const [data, setData] = useState(PREVIEW ? PREVIEW_DATA : null);
 	const [loading, setLoading] = useState(!PREVIEW);
 	const [err, setErr] = useState('');
 	const [from, setFrom] = useState(initialRange.from);
 	const [to, setTo] = useState(initialRange.to);
+	const [preset, setPreset] = useState(14);
+	const [updatedAt, setUpdatedAt] = useState(null);
+	const [userName, setUserName] = useState('');
+	const [hour, setHour] = useState(null);
 
 	useEffect(() => {
 		document.documentElement.dataset.gmUsers = '1';
+		try {
+			const u = JSON.parse(localStorage.getItem('user') || 'null');
+			setUserName((u?.name || u?.email || '').split(/[\s@]/)[0]);
+		} catch {
+			/* no stored user */
+		}
+		setHour(new Date().getHours());
 		return () => { delete document.documentElement.dataset.gmUsers; };
 	}, []);
 
 	const fetchStats = useCallback(async () => {
-		if (PREVIEW) return;
+		if (PREVIEW || !from || !to || from > to) return;
 		setLoading(true);
 		setErr('');
 		try {
 			const res = await apiClient.get('/admin/stats', { params: { from, to } });
 			setData(res.data);
+			setUpdatedAt(new Date());
 		} catch (e) {
 			setErr(e?.response?.data?.message || t('error.loadFailed'));
 			setData(null);
@@ -567,114 +514,109 @@ export default function DashboardPage({ PREVIEW = false, api: apiClient = api })
 		}
 	}, [PREVIEW, apiClient, from, to, t]);
 
-	useEffect(() => { if (!PREVIEW) fetchStats(); }, []);
+	// Refetch whenever the period changes.
+	useEffect(() => { fetchStats(); }, [fetchStats]);
+
+	const pickPreset = (days) => {
+		setPreset(days);
+		if (days) {
+			const r = lastDays(days);
+			setFrom(r.from);
+			setTo(r.to);
+		}
+	};
 
 	const { kpis, series, breakdowns, reviewsQueue } = data || {};
-	const peakKpi = kpis
-		? Math.max(1, kpis.totalClients, kpis.activeClients, kpis.newClients, kpis.unreadNotifications, kpis.formsSubmissions, kpis.churnedThisRange, kpis.assetsUploaded, kpis.pendingExerciseVideos)
-		: 1;
-	const metricCards = kpis ? [
-		{ title: t('kpi.totalClients'), value: kpis.totalClients, hint: t('kpi.totalClientsSub'), icon: Users, tone: 'gm-chip', stroke: INK.primary, fill: 'var(--color-primary-400)', seed: 0.2, max: peakKpi },
-		{ title: t('kpi.activeClients'), value: kpis.activeClients, hint: t('kpi.activeClientsSub'), icon: Zap, tone: 'gm-chip-ok', stroke: INK.ok, fill: INK.ok, seed: 0.6, max: peakKpi },
-		{ title: t('kpi.newClients'), value: kpis.newClients, hint: t('kpi.newClientsSub'), icon: UserPlus, tone: 'gm-chip-secondary', stroke: INK.secondary, fill: 'var(--color-secondary-400)', seed: 1, max: peakKpi },
-		{ title: t('kpi.notifications'), value: kpis.unreadNotifications, hint: t('kpi.notificationsSub'), icon: Bell, tone: 'gm-chip-warn', stroke: INK.warn, fill: INK.warn, seed: 1.4, max: peakKpi },
-		{ title: t('kpi.formSubmissions'), value: kpis.formsSubmissions, hint: t('kpi.formSubmissionsSub'), icon: FileText, tone: 'gm-chip', stroke: INK.primary, fill: 'var(--color-primary-300)', seed: 1.8, max: peakKpi },
-		{ title: t('kpi.churned'), value: kpis.churnedThisRange, hint: t('kpi.churnedSub'), icon: XCircle, tone: 'gm-chip-warn', stroke: INK.danger, fill: INK.danger, seed: 2.2, max: peakKpi },
-		{ title: t('kpi.assetsUploaded'), value: kpis.assetsUploaded, hint: t('kpi.assetsUploadedSub'), icon: BarChart2, tone: 'gm-chip-secondary', stroke: INK.secondary, fill: 'var(--color-secondary-300)', seed: 2.6, max: peakKpi },
-		{ title: t('kpi.pendingVideos'), value: kpis.pendingExerciseVideos, hint: t('kpi.pendingVideosSub'), icon: Activity, tone: 'gm-chip-ok', stroke: INK.ok, fill: INK.ok, seed: 3, max: peakKpi },
-	] : [];
+	const pending = useMemo(() => {
+		if (!kpis) return 0;
+		const q = reviewsQueue || {};
+		return [q.weeklyReportsPending, q.videosPending || kpis.pendingExerciseVideos, q.foodSuggestionsPending, kpis.formsSubmissions, kpis.unreadNotifications]
+			.filter((v) => n(v) > 0).length;
+	}, [kpis, reviewsQueue]);
 
+	const greetingKey = hour == null ? null : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
 	const showSkeleton = loading && !kpis;
+	const dateInput = 'dh-date';
 
 	return (
-		<div className="gm-surface rs-scope app-stack pb-4">
-			<header className="rs-hero">
-				<span className="rs-hero__mark" aria-hidden>
-					<Activity strokeWidth={1.7} />
-				</span>
-				<div className="rs-hero__text">
-					<h1 className="rs-hero__title">{t('title')}</h1>
-					<p className="rs-hero__sub">{t('subtitle')}</p>
-					<p className="mt-1 text-[12px] text-[var(--gm-faint)]">{t('dateRange', { from, to })}</p>
+		<div className="gm-surface rs-scope dh app-stack pb-6">
+			<header className="dh-top">
+				<div className="min-w-0">
+					<p className="dh-eyebrow">
+						{new Date().toLocaleDateString(intlLocale(locale), { weekday: 'long', day: 'numeric', month: 'long' })}
+					</p>
+					<h1 className="dh-title">
+						{greetingKey && userName ? h(`greeting.${greetingKey}`, { name: userName }) : t('title')}
+					</h1>
+					{kpis ? (
+						<p className="dh-summary">
+							{h('summary', { active: n(kpis.activeClients), total: n(kpis.totalClients), pending })}
+						</p>
+					) : null}
 				</div>
-				<div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
-					<label className="flex min-w-[140px] flex-1 flex-col gap-1 text-[11px] font-medium text-[var(--gm-muted)]">
-						{t('filters.from')}
-						<input
-							type="date"
-							value={from}
-							onChange={(e) => setFrom(e.target.value)}
-							className="h-10 rounded-xl border border-[var(--gm-line)] bg-[var(--gm-paper)] px-2 text-[13px] text-[var(--gm-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-primary-500)_35%,transparent)] dark:[color-scheme:dark]"
-						/>
-					</label>
-					<label className="flex min-w-[140px] flex-1 flex-col gap-1 text-[11px] font-medium text-[var(--gm-muted)]">
-						{t('filters.to')}
-						<input
-							type="date"
-							value={to}
-							onChange={(e) => setTo(e.target.value)}
-							className="h-10 rounded-xl border border-[var(--gm-line)] bg-[var(--gm-paper)] px-2 text-[13px] text-[var(--gm-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-primary-500)_35%,transparent)] dark:[color-scheme:dark]"
-						/>
-					</label>
+
+				<div className="dh-controls">
+					<div className="dh-range" role="group" aria-label={h('range.label')}>
+						{PRESETS.map((d) => (
+							<button key={d} type="button" aria-pressed={preset === d} onClick={() => pickPreset(d)}>
+								{h(`range.d${d}`)}
+							</button>
+						))}
+						<button type="button" aria-pressed={preset === 0} onClick={() => pickPreset(0)}>
+							{h('range.custom')}
+						</button>
+					</div>
 					<button
 						type="button"
 						onClick={fetchStats}
-						disabled={loading || PREVIEW || !from || !to}
-						className="rs-btn"
-						style={{ width: 'auto' }}
+						disabled={loading || PREVIEW}
+						className="dh-refresh"
+						aria-label={t('refresh')}
+						title={updatedAt ? h('updated', { time: updatedAt.toLocaleTimeString(intlLocale(locale), { hour: 'numeric', minute: '2-digit' }) }) : t('refresh')}
 					>
-						<RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-						{t('refresh')}
+						<RefreshCw className={loading ? 'animate-spin' : ''} aria-hidden="true" />
 					</button>
 				</div>
+
+				{preset === 0 ? (
+					<div className="dh-custom">
+						<label>
+							{t('filters.from')}
+							<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={dateInput} />
+						</label>
+						<label>
+							{t('filters.to')}
+							<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={dateInput} />
+						</label>
+					</div>
+				) : null}
 			</header>
 
 			{err ? (
-				<div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-rose-200/70 bg-rose-50/80 px-3.5 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
-					<span className="inline-flex items-center gap-2"><AlertCircle className="size-4 shrink-0" />{err}</span>
-					<button type="button" onClick={fetchStats} className="text-xs font-bold underline underline-offset-2">{t('error.retry')}</button>
+				<div role="alert" className="dh-alert">
+					<span><AlertCircle aria-hidden="true" />{err}</span>
+					<button type="button" onClick={fetchStats}>{t('error.retry')}</button>
 				</div>
 			) : null}
 
 			{showSkeleton ? <DashboardSkeleton /> : null}
 
 			{!showSkeleton && !kpis && !err ? (
-				<Panel>
-					<p className="text-sm font-semibold text-[var(--gm-ink)]">{t('empty.title')}</p>
-					<p className="mt-1 text-sm text-[var(--gm-muted)]">{t('empty.subtitle')}</p>
-				</Panel>
+				<Card>
+					<p className="dh-card__title">{t('empty.title')}</p>
+					<p className="dh-card__sub">{t('empty.subtitle')}</p>
+				</Card>
 			) : null}
 
 			{!showSkeleton && kpis ? (
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-					{metricCards.map((card, i) => <GmStatCard key={card.title} card={card} index={i} />)}
-				</div>
-			) : null}
-
-			{!showSkeleton && series && breakdowns ? (
-				<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-					<ActivityChart
-						usersData={series.usersCreatedDaily || []}
-						mealData={series.mealLogsDaily || []}
-						exerciseData={series.exerciseVolumeDaily || []}
-						t={t}
-						locale={locale}
-					/>
-					<MembershipCard data={breakdowns.membershipCounts || []} t={t} />
-				</div>
-			) : null}
-
-			{!showSkeleton && series && reviewsQueue ? (
-				<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-					<MealLogsBar data={series.mealLogsDaily || []} t={t} locale={locale} />
-					<ReviewQueue data={reviewsQueue} t={t} />
-				</div>
-			) : null}
-
-			{!showSkeleton && series && breakdowns ? (
-				<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-					<ExerciseCard data={series.exerciseVolumeDaily || []} t={t} locale={locale} />
-					<TopConversations data={breakdowns.messagesPerConversationTop5 || []} t={t} />
+				<div className={`dh-grid${loading ? ' is-loading' : ''}`}>
+					<RosterCard kpis={kpis} tiers={breakdowns?.membershipCounts || []} t={t} h={h} locale={locale} />
+					<NeedsCard kpis={kpis} queue={reviewsQueue || {}} h={h} locale={locale} />
+					{series ? <ActivityCard series={series} t={t} h={h} locale={locale} from={from} to={to} /> : null}
+					{series ? <ConsistencyCard data={series.exerciseVolumeDaily || []} h={h} locale={locale} /> : null}
+					{breakdowns ? (
+						<ConversationsCard data={breakdowns.messagesPerConversationTop5 || []} t={t} h={h} locale={locale} />
+					) : null}
 				</div>
 			) : null}
 		</div>

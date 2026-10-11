@@ -192,7 +192,7 @@ export default function ComposerWritingAssist({
 			? createPortal(
 					<div
 						ref={panelRef}
-						className="wa-writing-assist__panel fixed z-[500] overflow-hidden rounded-2xl border border-[#e9edef] bg-white shadow-[0_16px_48px_rgba(11,20,26,0.22)]"
+						className="wa-dk wa-writing-assist__panel fixed z-[500] overflow-hidden rounded-2xl border border-[#e9edef] bg-white shadow-[0_16px_48px_rgba(11,20,26,0.22)]"
 						style={{
 							left: position.left,
 							width: position.width,

@@ -15625,3 +15625,326 @@ html.wa-privacy-on .wa-board-client-chip__avatar {
 		font-size: 14px !important;
 	}
 }
+
+/* ── Chat image viewer v2 ("wa-iv"): ambient backdrop, floating glass controls ── */
+.wa-iv .wa-chat-image-viewer__backdrop {
+	overflow: hidden;
+	background: #05090c;
+	backdrop-filter: none;
+}
+
+.wa-iv__ambient {
+	position: absolute;
+	inset: -12%;
+	width: 124%;
+	height: 124%;
+	object-fit: cover;
+	filter: blur(70px) saturate(1.5) brightness(0.55);
+	opacity: 0.85;
+	transform: scale(1.1);
+	transition: opacity 400ms ease;
+	pointer-events: none;
+}
+
+.wa-iv .wa-chat-image-viewer__backdrop::after {
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(70% 60% at 50% 45%, transparent 0%, rgba(5, 9, 12, 0.55) 100%),
+		linear-gradient(180deg, rgba(5, 9, 12, 0.55) 0%, transparent 22%, transparent 70%, rgba(5, 9, 12, 0.8) 100%);
+	content: "";
+}
+
+/* Toolbar: no slab — two floating glass islands */
+.wa-iv .wa-chat-image-viewer__toolbar--overlay {
+	top: 16px;
+	inset-inline: 16px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	backdrop-filter: none;
+	pointer-events: none;
+}
+
+.wa-iv .wa-iv__meta,
+.wa-iv .wa-chat-image-viewer__actions {
+	pointer-events: auto;
+}
+
+.wa-iv .wa-iv__meta,
+.wa-iv__zoom,
+.wa-iv .wa-chat-image-viewer__actions > .wa-chat-image-viewer__icon-btn {
+	background: rgba(17, 27, 33, 0.55);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(18px) saturate(1.4);
+}
+
+.wa-iv .wa-iv__meta {
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+	max-width: min(52vw, 460px);
+	padding: 6px 14px 6px 6px;
+	border-radius: 999px;
+}
+
+[dir="rtl"] .wa-iv .wa-iv__meta {
+	padding: 6px 6px 6px 14px;
+}
+
+.wa-iv__avatar {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	flex-shrink: 0;
+	place-items: center;
+	border-radius: 999px;
+	background: linear-gradient(140deg, #25d366, #128c7e);
+	color: #fff;
+	font-size: 15px;
+	font-weight: 800;
+}
+
+.wa-iv__who {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	flex-direction: column;
+	line-height: 1.25;
+}
+
+.wa-iv__who b {
+	overflow: hidden;
+	font-size: 14px;
+	font-weight: 700;
+	color: #fff;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-iv__who small {
+	overflow: hidden;
+	font-size: 12px;
+	color: rgba(233, 237, 239, 0.62);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-iv .wa-iv__counter {
+	gap: 3px;
+	flex-shrink: 0;
+	padding: 4px 10px;
+	border: 0;
+	background: rgba(255, 255, 255, 0.1);
+	font-variant-numeric: tabular-nums;
+}
+
+.wa-iv .wa-iv__counter i {
+	font-style: normal;
+	opacity: 0.45;
+}
+
+.wa-iv .wa-chat-image-viewer__actions {
+	gap: 8px;
+}
+
+.wa-iv__zoom {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 4px;
+	border-radius: 999px;
+}
+
+.wa-iv__zoom .wa-chat-image-viewer__icon-btn {
+	width: 36px;
+	height: 36px;
+}
+
+.wa-iv__zoom .wa-chat-image-viewer__icon-btn:disabled {
+	opacity: 0.32;
+	cursor: default;
+	background: transparent;
+}
+
+.wa-iv .wa-chat-image-viewer__zoom-label {
+	min-width: 54px;
+	height: 30px;
+	padding: 0 8px;
+	border: 0;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.08);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	transition: background 140ms ease;
+}
+
+.wa-iv .wa-chat-image-viewer__zoom-label:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.wa-iv .wa-chat-image-viewer__actions > .wa-chat-image-viewer__icon-btn {
+	width: 44px;
+	height: 44px;
+}
+
+.wa-iv .wa-chat-image-viewer__actions > .wa-chat-image-viewer__icon-btn:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.wa-iv .wa-chat-image-viewer__icon-btn.is-close:hover {
+	background: #f15c6d;
+	box-shadow: none;
+}
+
+.wa-iv .wa-chat-image-viewer__icon-btn:focus-visible,
+.wa-iv .wa-chat-image-viewer__zoom-label:focus-visible,
+.wa-iv .wa-chat-image-viewer__nav:focus-visible,
+.wa-iv .wa-chat-image-viewer__thumb:focus-visible {
+	outline: 2px solid #25d366;
+	outline-offset: 2px;
+}
+
+/* Photo: bigger stage, rounded, lifted */
+.wa-iv .wa-chat-image-viewer__canvas-wrap {
+	padding: 84px 96px 136px;
+}
+
+.wa-iv .wa-chat-image-viewer__image,
+.wa-iv .wa-chat-image-viewer__preview {
+	border-radius: 14px;
+	box-shadow:
+		0 0 0 1px rgba(255, 255, 255, 0.06),
+		0 40px 90px -20px rgba(0, 0, 0, 0.75);
+}
+
+/* Prev / next: quiet until hovered */
+.wa-iv .wa-chat-image-viewer__nav {
+	width: 52px;
+	height: 52px;
+	border: 0;
+	background: rgba(17, 27, 33, 0.45);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(18px);
+	opacity: 0.75;
+}
+
+.wa-iv .wa-chat-image-viewer__nav:hover {
+	background: rgba(255, 255, 255, 0.92);
+	color: #111b21;
+	opacity: 1;
+}
+
+.wa-iv .wa-chat-image-viewer__nav.is-prev {
+	inset-inline-start: 22px;
+}
+
+.wa-iv .wa-chat-image-viewer__nav.is-next {
+	inset-inline-end: 22px;
+}
+
+/* Film strip: a centred glass tray */
+.wa-iv .wa-iv__strip {
+	display: flex;
+	justify-content: center;
+	padding: 0 16px max(16px, env(safe-area-inset-bottom));
+	background: none;
+}
+
+.wa-iv .wa-iv__strip .wa-chat-image-viewer__thumbs-fade {
+	display: none;
+}
+
+.wa-iv .wa-chat-image-viewer__thumbs {
+	max-width: min(100%, 980px);
+	min-height: 0;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 10px;
+	border-radius: 22px;
+	background: rgba(17, 27, 33, 0.55);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 18px 40px -16px rgba(0, 0, 0, 0.7);
+	backdrop-filter: blur(18px) saturate(1.4);
+	-webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+	mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+}
+
+.wa-iv .wa-chat-image-viewer__thumb {
+	width: 52px;
+	height: 52px;
+	border: 0;
+	border-radius: 12px;
+	opacity: 0.5;
+	transform: none;
+	box-shadow: none;
+}
+
+.wa-iv .wa-chat-image-viewer__thumb:hover {
+	opacity: 0.9;
+	transform: translateY(-2px);
+}
+
+.wa-iv .wa-chat-image-viewer__thumb.is-active {
+	width: 52px;
+	height: 52px;
+	opacity: 1;
+	transform: translateY(-3px);
+	box-shadow:
+		0 0 0 2px #fff,
+		0 0 0 4px #25d366,
+		0 10px 22px -8px rgba(0, 0, 0, 0.7);
+}
+
+.wa-iv .wa-chat-image-viewer__thumb.is-load-more {
+	width: 76px;
+	border: 0;
+	box-shadow: inset 0 0 0 1px rgba(37, 211, 102, 0.4);
+}
+
+@media (max-width: 768px) {
+	.wa-iv .wa-chat-image-viewer__toolbar--overlay {
+		top: 10px;
+		inset-inline: 10px;
+	}
+
+	.wa-iv .wa-iv__meta {
+		max-width: 50vw;
+	}
+
+	.wa-iv .wa-iv__zoom {
+		display: none;
+	}
+
+	.wa-iv .wa-chat-image-viewer__canvas-wrap {
+		padding: 72px 12px 112px;
+	}
+
+	.wa-iv .wa-chat-image-viewer__nav {
+		width: 42px;
+		height: 42px;
+	}
+
+	.wa-iv .wa-chat-image-viewer__nav.is-prev {
+		inset-inline-start: 8px;
+	}
+
+	.wa-iv .wa-chat-image-viewer__nav.is-next {
+		inset-inline-end: 8px;
+	}
+
+	.wa-iv .wa-chat-image-viewer__thumb,
+	.wa-iv .wa-chat-image-viewer__thumb.is-active {
+		width: 44px;
+		height: 44px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-iv__ambient {
+		transition: none;
+	}
+}

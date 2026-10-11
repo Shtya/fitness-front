@@ -169,7 +169,7 @@ export function BoardColumnPicker({
 				<div
 					ref={menuRef}
 					role="menu"
-					className="fixed z-[240] overflow-hidden rounded-xl border border-[#e6ebf1] bg-white shadow-[0_8px_24px_rgba(30,43,65,0.14)]"
+					className="wa-dk fixed z-[240] overflow-hidden rounded-xl border border-[#e6ebf1] bg-white shadow-[0_8px_24px_rgba(30,43,65,0.14)]"
 					style={{
 						top: menuPos.top,
 						left: menuPos.left,
@@ -337,7 +337,7 @@ export function BoardColumnPickerMenu({
 	};
 
 	return (
-		<div className={`w-[220px] overflow-hidden rounded-xl border border-[#e6ebf1] bg-white shadow-lg ${className}`}>
+		<div className={`wa-dk w-[220px] overflow-hidden rounded-xl border border-[#e6ebf1] bg-white shadow-lg ${className}`}>
 			<div className="border-b border-[#edf0f4] px-3 py-2 text-[11px] font-bold text-[#182235]">
 				{ar ? 'أرسل إلى عمود' : 'Send to column'}
 			</div>

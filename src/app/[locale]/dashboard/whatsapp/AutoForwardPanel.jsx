@@ -206,7 +206,7 @@ export default function AutoForwardPanel({ accountId, locale = 'en', conversatio
 		(chatById.get(id) && conversationTitle(chatById.get(id))) || fallback || (ar ? 'شات' : 'Chat');
 
 	return (
-		<div className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6" dir={ar ? 'rtl' : 'ltr'}>
+		<div className="wa-dk mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6" dir={ar ? 'rtl' : 'ltr'}>
 			<header className="flex items-start gap-3">
 				<span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1DAB61] text-white">
 					<Forward size={20} />

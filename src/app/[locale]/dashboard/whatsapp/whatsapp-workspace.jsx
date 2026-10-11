@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, Fragment, isValidElement, lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { cloneElement, Fragment, isValidElement, lazy, memo, Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocale } from 'next-intl';
@@ -3036,49 +3036,79 @@ function ChatImageViewer({
 			role="dialog"
 			aria-modal="true"
 			aria-label="Chat image viewer"
-			className={`wa-chat-image-viewer ${visible ? 'is-visible' : ''}`}
+			className={`wa-chat-image-viewer wa-iv ${visible ? 'is-visible' : ''}`}
 			onClick={onClose}
 		>
-			<div className="wa-chat-image-viewer__backdrop" aria-hidden="true" />
+			<div className="wa-chat-image-viewer__backdrop" aria-hidden="true">
+				{displaySrc ? <img src={displaySrc} alt="" className="wa-iv__ambient" draggable={false} /> : null}
+			</div>
 			<div className="wa-chat-image-viewer__shell" onClick={event => event.stopPropagation()}>
 				<div className="wa-chat-image-viewer__stage">
 					<header className="wa-chat-image-viewer__toolbar wa-chat-image-viewer__toolbar--overlay">
-						<div className="wa-chat-image-viewer__meta">
-							<span className="wa-chat-image-viewer__counter">
-								{index + 1} / {images.length}
+						<div className="wa-chat-image-viewer__meta wa-iv__meta">
+							<span className="wa-iv__avatar" aria-hidden="true">
+								{(image.fromMe ? 'You' : image.senderName || image.fileName || '•').trim().charAt(0).toUpperCase()}
 							</span>
-							{metaLine ? (
-								<span className="wa-chat-image-viewer__caption" title={metaLine}>
-									{metaLine}
+							<span className="wa-iv__who">
+								<b title={image.fromMe ? 'You' : image.senderName || ''}>
+									{image.fromMe ? 'You' : image.senderName || 'Photo'}
+								</b>
+								{metaLine ? (
+									<small title={metaLine}>
+										{[image.sentAt ? relativeTime(image.sentAt, Date.now(), locale) : null, image.fileName || null]
+											.filter(Boolean)
+											.join(' · ')}
+									</small>
+								) : null}
+							</span>
+							{canNavigate ? (
+								<span className="wa-chat-image-viewer__counter wa-iv__counter">
+									{index + 1}
+									<i>/</i>
+									{images.length}
 								</span>
 							) : null}
 						</div>
 						<div className="wa-chat-image-viewer__actions">
-							<span className="wa-chat-image-viewer__zoom-label">{zoomLabel}</span>
-							<button
-								type="button"
-								aria-label="Zoom out"
-								className="wa-chat-image-viewer__icon-btn"
-								onClick={() => adjustZoom(-CHAT_VIEWER_ZOOM_STEP)}
-							>
-								<ZoomOut size={20} />
-							</button>
-							<button
-								type="button"
-								aria-label="Zoom in"
-								className="wa-chat-image-viewer__icon-btn"
-								onClick={() => adjustZoom(CHAT_VIEWER_ZOOM_STEP)}
-							>
-								<ZoomIn size={20} />
-							</button>
-							<button
-								type="button"
-								aria-label="Reset zoom"
-								className="wa-chat-image-viewer__icon-btn"
-								onClick={resetTransform}
-							>
-								<Minimize2 size={18} />
-							</button>
+							<div className="wa-iv__zoom" role="group" aria-label="Zoom">
+								<button
+									type="button"
+									aria-label="Zoom out"
+									className="wa-chat-image-viewer__icon-btn"
+									disabled={zoom <= CHAT_VIEWER_ZOOM_MIN + 0.001}
+									onClick={() => adjustZoom(-CHAT_VIEWER_ZOOM_STEP)}
+								>
+									<ZoomOut size={18} />
+								</button>
+								<button
+									type="button"
+									className="wa-chat-image-viewer__zoom-label"
+									onClick={resetTransform}
+									title="Reset zoom (0)"
+									aria-label={`Zoom ${zoomLabel}, reset`}
+								>
+									{zoomLabel}
+								</button>
+								<button
+									type="button"
+									aria-label="Zoom in"
+									className="wa-chat-image-viewer__icon-btn"
+									disabled={zoom >= CHAT_VIEWER_ZOOM_MAX - 0.001}
+									onClick={() => adjustZoom(CHAT_VIEWER_ZOOM_STEP)}
+								>
+									<ZoomIn size={18} />
+								</button>
+								<button
+									type="button"
+									aria-label="Fit to screen"
+									title="Fit (0)"
+									className="wa-chat-image-viewer__icon-btn"
+									disabled={zoom === 1 && pan.x === 0 && pan.y === 0}
+									onClick={resetTransform}
+								>
+									<Minimize2 size={16} />
+								</button>
+							</div>
 							{downloadHref ? (
 								<a
 									href={downloadHref}
@@ -3184,7 +3214,7 @@ function ChatImageViewer({
 					</div>
 
 					{canNavigate ? (
-						<div className="wa-chat-image-viewer__thumbs-wrap wa-chat-image-viewer__thumbs-wrap--overlay">
+						<div className="wa-chat-image-viewer__thumbs-wrap wa-chat-image-viewer__thumbs-wrap--overlay wa-iv__strip">
 							<div className="wa-chat-image-viewer__thumbs-fade is-start" aria-hidden="true" />
 							<div
 								ref={thumbStripRef}
@@ -4245,6 +4275,251 @@ function VoiceReplyPreview({ reply }) {
 				<Mic size={13} /> {formatClock(reply.duration)}
 			</span>
 		</div>
+	);
+}
+
+/** Group-info member list: admins first, search when the group is large. */
+function WaInfoMemberList({ participants, locale, resolve }) {
+	const [query, setQuery] = useState('');
+	const rows = useMemo(
+		() =>
+			(participants || [])
+				.map(participant => ({
+					participant,
+					admin: Boolean(participant.isAdmin || participant.isSuperAdmin),
+					owner: Boolean(participant.isSuperAdmin),
+					...resolve(participant),
+				}))
+				.sort((a, b) => Number(b.owner) - Number(a.owner) || Number(b.admin) - Number(a.admin)),
+		[participants, resolve],
+	);
+	const term = query.trim().toLowerCase();
+	const visible = term
+		? rows.filter(row => `${row.title} ${row.phoneHint}`.toLowerCase().includes(term.replace(/^\+/, '')))
+		: rows;
+	const ar = locale === 'ar';
+
+	if (!rows.length) {
+		return <p className="wa-gi__empty">{ar ? 'لا يوجد أعضاء محمّلون بعد' : 'No members loaded yet'}</p>;
+	}
+
+	return (
+		<>
+			{rows.length > 6 ? (
+				<label className="wa-gi__search">
+					<Search size={15} strokeWidth={2.2} aria-hidden="true" />
+					<input
+						type="search"
+						value={query}
+						onChange={event => setQuery(event.target.value)}
+						placeholder={ar ? 'ابحث عن عضو' : 'Search members'}
+						aria-label={ar ? 'ابحث عن عضو' : 'Search members'}
+					/>
+				</label>
+			) : null}
+			<ul className="wa-gi__list">
+				{visible.map(({ participant, title, phoneHint, avatarSrc, admin, owner }) => (
+					<li key={participant.id || participant.waId} className="wa-gi__member">
+						<Avatar label={title} size={10} src={avatarSrc} />
+						<div className="min-w-0 flex-1">
+							<p className="wa-gi__member-name wa-privacy-identity" dir="auto">
+								{title}
+							</p>
+							{phoneHint && !String(title).includes(phoneHint) ? (
+								<p className="wa-gi__member-phone wa-privacy-identity" dir="ltr">
+									+{phoneHint}
+								</p>
+							) : null}
+						</div>
+						{admin ? (
+							<span className={`wa-gi__role${owner ? ' is-owner' : ''}`}>
+								{owner ? (ar ? 'المالك' : 'Owner') : ar ? 'مشرف' : 'Admin'}
+							</span>
+						) : null}
+					</li>
+				))}
+				{term && !visible.length ? (
+					<li className="wa-gi__empty">{ar ? 'لا نتائج' : 'No matching members'}</li>
+				) : null}
+			</ul>
+		</>
+	);
+}
+
+/**
+ * Shared shell for the workspace's small dialogs: the wa-ui modal kit, an icon badge in
+ * the header, Escape / backdrop to close (unless busy) and a bottom sheet on phones.
+ */
+function WaDialog({
+	title,
+	subtitle,
+	icon,
+	tone = 'accent',
+	width = 440,
+	height,
+	zIndex = 110,
+	onClose,
+	closeDisabled = false,
+	closeLabel = 'Close',
+	className = '',
+	footer,
+	children,
+}) {
+	const titleId = useId();
+	const onCloseRef = useRef(onClose);
+	const blockedRef = useRef(closeDisabled);
+	onCloseRef.current = onClose;
+	blockedRef.current = closeDisabled;
+
+	useEffect(() => {
+		const onKeyDown = event => {
+			if (event.key !== 'Escape' || event.defaultPrevented || blockedRef.current) return;
+			event.preventDefault();
+			onCloseRef.current?.();
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, []);
+
+	return (
+		<div
+			className="wa-ui-scrim is-sheet-on-phone wa-dx-scrim"
+			style={{ zIndex }}
+			role="presentation"
+			onClick={() => {
+				if (!blockedRef.current) onCloseRef.current?.();
+			}}
+		>
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby={titleId}
+				className={`wa-ui-modal wa-dx ${className}`}
+				style={{
+					'--wa-ui-modal-width': `${width}px`,
+					...(height ? { '--wa-ui-modal-height': `${height}px` } : null),
+				}}
+				onClick={event => event.stopPropagation()}
+			>
+				<div className="wa-ui-modal__header wa-dx__header">
+					{icon ? (
+						<span className={`wa-dx__icon is-${tone}`} aria-hidden="true">
+							{icon}
+						</span>
+					) : null}
+					<div className="wa-ui-modal__heading">
+						<h3 id={titleId} className="wa-ui-modal__title">
+							{title}
+						</h3>
+						{subtitle ? <p className="wa-ui-modal__subtitle">{subtitle}</p> : null}
+					</div>
+					<button
+						type="button"
+						className="wa-ui-icon-btn"
+						disabled={closeDisabled}
+						aria-label={closeLabel}
+						title={closeLabel}
+						onClick={() => onClose?.()}
+					>
+						<X size={18} strokeWidth={2} />
+					</button>
+				</div>
+				{children}
+				{footer ? <div className="wa-ui-modal__footer">{footer}</div> : null}
+			</div>
+		</div>
+	);
+}
+
+/** Searchable chat list used by "Send to", story share and contact share. */
+function WaChatPicker({
+	items,
+	locale,
+	onPick,
+	busyId = '',
+	emptyText,
+	actionIcon,
+	limit = 300,
+	autoFocus = false,
+}) {
+	const [query, setQuery] = useState('');
+	const ar = locale === 'ar';
+	const term = foldWhatsAppSearchText(query);
+	const rows = useMemo(() => {
+		const list = items || [];
+		if (!term) return list.slice(0, limit);
+		return list
+			.filter(item => {
+				const title = foldWhatsAppSearchText(conversationTitle(item));
+				const phone = foldWhatsAppSearchText(
+					item.phoneNumber || item.contactPhone || item.contact?.phoneNumber || item.providerChatId || '',
+				);
+				return title.includes(term) || phone.includes(term);
+			})
+			.slice(0, limit);
+	}, [items, term, limit]);
+	const busy = Boolean(busyId);
+
+	return (
+		<>
+			<div className="wa-dx__search-wrap">
+				<label className="wa-dx__search">
+					<Search size={16} strokeWidth={2.2} aria-hidden="true" />
+					<input
+						type="search"
+						value={query}
+						autoFocus={autoFocus}
+						onChange={event => setQuery(event.target.value)}
+						placeholder={ar ? 'ابحث باسم أو رقم' : 'Search name or number'}
+						aria-label={ar ? 'ابحث عن محادثة' : 'Search chats'}
+					/>
+				</label>
+			</div>
+			<div className="wa-dx__list wa-ui-scroll nice-scroll">
+				{rows.length ? (
+					rows.map(item => {
+						const title = conversationTitle(item);
+						const isGroup = item.type === 'group' || String(item.providerChatId || '').endsWith('@g.us');
+						const phone = String(item.contact?.phoneNumber || item.phoneNumber || '').trim();
+						const sub = isGroup ? (ar ? 'جروب' : 'Group') : phone && !title.includes(phone) ? phone : '';
+						const sending = busyId && busyId === item.id;
+						return (
+							<button
+								key={item.id}
+								type="button"
+								disabled={busy}
+								onClick={() => onPick(item)}
+								className={`wa-dx__row${sending ? ' is-busy' : ''}`}
+							>
+								<Avatar label={title} size={10} src={conversationAvatarUrl(item)} isGroup={isGroup} />
+								<span className="wa-dx__row-copy">
+									<span className="wa-dx__row-title wa-privacy-identity" dir="auto">
+										{title}
+									</span>
+									{sub ? (
+										<span className="wa-dx__row-sub wa-privacy-identity" dir={isGroup ? 'auto' : 'ltr'}>
+											{sub}
+										</span>
+									) : null}
+								</span>
+								<span className="wa-dx__row-action" aria-hidden="true">
+									{sending ? (
+										<Loader2 size={17} className="animate-spin" />
+									) : (
+										actionIcon || <Send size={16} strokeWidth={2.2} />
+									)}
+								</span>
+							</button>
+						);
+					})
+				) : (
+					<div className="wa-dx__empty">
+						<Search size={22} strokeWidth={1.8} aria-hidden="true" />
+						<p>{term ? (ar ? 'لا نتائج لهذا البحث' : 'No chats match your search') : emptyText}</p>
+					</div>
+				)}
+			</div>
+		</>
 	);
 }
 
@@ -14199,7 +14474,11 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		const token = localStorage.getItem('accessToken');
 		if (!token) return;
-		const socket = io(`${process.env.NEXT_PUBLIC_BASE_URL}/whatsapp`, {
+		// Live events come from whichever server owns the WhatsApp sessions. Locally the API
+		// runs with WHATSAPP_SESSIONS_ENABLED=false, so point this at that server instead.
+		const socketBaseUrl =
+			process.env.NEXT_PUBLIC_WHATSAPP_SOCKET_URL || process.env.NEXT_PUBLIC_BASE_URL;
+		const socket = io(`${socketBaseUrl}/whatsapp`, {
 			// Read per handshake so reconnects use the token refreshed by the API client.
 			auth: (cb) => cb({ token: localStorage.getItem('accessToken') || token }),
 			transports: ['websocket', 'polling'],
@@ -14280,6 +14559,9 @@ function WhatsAppWorkspaceContent() {
 			connectedAt = Date.now();
 			setSocketLive(true);
 			rewatchRooms();
+		});
+		socket.on('connect_error', error => {
+			console.warn(`[whatsapp socket] ${socketBaseUrl}: ${error?.message || error}`);
 		});
 		socket.on('disconnect', (reason) => {
 			setSocketLive(false);
@@ -20623,12 +20905,25 @@ function WhatsAppWorkspaceContent() {
 				}}
 			/>
 			{muteDurationOpen && muteTargetConversation ? (
-				<div className="wa-modal-backdrop" role="dialog" aria-modal="true">
-					<div className="wa-modal-sheet">
-						<p className="wa-modal-sheet__title">
-							{locale === 'ar' ? 'كتم الإشعارات' : 'Mute notifications'}
+				<WaDialog
+					zIndex={600}
+					width={400}
+					icon={<BellOff size={18} strokeWidth={2.1} />}
+					title={locale === 'ar' ? 'كتم الإشعارات' : 'Mute notifications'}
+					subtitle={conversationTitle(muteTargetConversation)}
+					closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+					onClose={() => {
+						setMuteDurationOpen(false);
+						setMuteTargetConversation(null);
+					}}
+				>
+					<div className="wa-dx__body">
+						<p className="wa-dx__lead">
+							{locale === 'ar'
+								? 'مش هتوصلك إشعارات من المحادثة دي طول المدة اللي تختارها.'
+								: 'You won’t get notifications from this chat for the time you pick.'}
 						</p>
-						<div className="wa-modal-sheet__actions">
+						<div className="wa-dx__options">
 							{[
 								{ minutes: 60 * 8, label: locale === 'ar' ? '٨ ساعات' : '8 hours' },
 								{ minutes: 60 * 24, label: locale === 'ar' ? 'يوم واحد' : '1 day' },
@@ -20638,91 +20933,106 @@ function WhatsAppWorkspaceContent() {
 								<button
 									key={String(option.minutes)}
 									type="button"
-									className="wa-modal-sheet__option"
+									className="wa-dx__option"
 									onClick={() => void applyMuteDuration(muteTargetConversation, option.minutes)}
 								>
-									{option.label}
+									<span className="wa-dx__option-icon" aria-hidden="true">
+										{option.minutes ? <Clock size={16} strokeWidth={2.1} /> : <BellOff size={16} strokeWidth={2.1} />}
+									</span>
+									<span className="wa-dx__option-label">{option.label}</span>
+									<ChevronRight size={16} className="wa-dx__option-chev rtl:rotate-180" aria-hidden="true" />
 								</button>
 							))}
-							<button
-								type="button"
-								className="wa-modal-sheet__cancel"
-								onClick={() => {
-									setMuteDurationOpen(false);
-									setMuteTargetConversation(null);
-								}}
-							>
-								{locale === 'ar' ? 'إلغاء' : 'Cancel'}
-							</button>
 						</div>
 					</div>
-				</div>
+				</WaDialog>
 			) : null}
 			{shareContactOpen ? (
-				<div className="wa-modal-backdrop" role="dialog" aria-modal="true">
-					<div className="wa-modal-sheet wa-modal-sheet--list">
-						<div className="wa-modal-sheet__head">
-							<p className="wa-modal-sheet__title">
-								{locale === 'ar' ? 'إرسال جهة اتصال' : 'Send contact'}
-							</p>
-							<button
-								type="button"
-								onClick={() => setShareContactOpen(false)}
-								className="wa-modal-sheet__icon-close"
-								aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
-							>
-								<X size={16} />
-							</button>
-						</div>
-						<div className="wa-modal-sheet__scroll">
-							{conversations
-								.filter(item => item.id !== conversationId && !String(item.providerChatId || '').endsWith('@g.us'))
-								.slice(0, 40)
-								.map(item => (
-									<button
-										key={item.id}
-										type="button"
-										className="wa-modal-sheet__list-item"
-										onClick={() => void shareContactFromConversation(item)}
-									>
-										<span className="wa-modal-sheet__avatar">
-											<User size={16} />
-										</span>
-										<span className="wa-modal-sheet__list-label">
-											{conversationTitle(item)}
-										</span>
-									</button>
-								))}
-						</div>
-					</div>
-				</div>
+				<WaDialog
+					zIndex={600}
+					width={440}
+					height={620}
+					icon={<UserRound size={18} strokeWidth={2.1} />}
+					title={locale === 'ar' ? 'إرسال جهة اتصال' : 'Send contact'}
+					subtitle={locale === 'ar' ? 'اختار جهة الاتصال اللي هتتبعت كـ vCard' : 'Pick a contact to share as a vCard'}
+					closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+					onClose={() => setShareContactOpen(false)}
+				>
+					<WaChatPicker
+						autoFocus
+						locale={locale}
+						items={conversations.filter(
+							item => item.id !== conversationId && !String(item.providerChatId || '').endsWith('@g.us'),
+						)}
+						onPick={item => void shareContactFromConversation(item)}
+						actionIcon={<UserPlus size={16} strokeWidth={2.2} />}
+						emptyText={locale === 'ar' ? 'لا توجد جهات اتصال' : 'No contacts yet'}
+					/>
+				</WaDialog>
 			) : null}
 			{editingMessage ? (
-				<div className="wa-modal-backdrop" role="dialog" aria-modal="true">
-					<div className="wa-modal-sheet">
-						<p className="wa-modal-sheet__title">
-							{locale === 'ar' ? 'تعديل الرسالة' : 'Edit message'}
-						</p>
-						<textarea
-							value={editDraft}
-							onChange={event => setEditDraft(event.target.value)}
-							rows={4}
-							className="wa-modal-sheet__textarea"
-						/>
-						<div className="wa-modal-sheet__footer">
-							<button type="button" className="wa-modal-sheet__cancel" onClick={() => setEditingMessage(null)}>
+				<WaDialog
+					zIndex={600}
+					width={480}
+					icon={<Pencil size={17} strokeWidth={2.1} />}
+					title={locale === 'ar' ? 'تعديل الرسالة' : 'Edit message'}
+					subtitle={
+						locale === 'ar'
+							? 'التعديل بيظهر للطرف التاني مع علامة «معدّلة»'
+							: 'The other side sees it marked as “Edited”'
+					}
+					closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+					onClose={() => setEditingMessage(null)}
+					footer={
+						<>
+							<span className="wa-ui-modal__footer-note">
+								<kbd className="wa-dx__kbd">Ctrl</kbd>+<kbd className="wa-dx__kbd">Enter</kbd>
+								{locale === 'ar' ? 'للحفظ' : 'to save'}
+							</span>
+							<button type="button" className="wa-ui-btn wa-ui-btn--ghost" onClick={() => setEditingMessage(null)}>
 								{locale === 'ar' ? 'إلغاء' : 'Cancel'}
 							</button>
 							<button
 								type="button"
-								className="wa-primary-btn"
+								className="wa-ui-btn wa-ui-btn--primary"
+								disabled={!String(editDraft || '').trim()}
 								onClick={() => void submitEditMessage()}
 							>
+								<Check size={16} strokeWidth={2.4} />
 								{locale === 'ar' ? 'حفظ' : 'Save'}
 							</button>
-						</div>
+						</>
+					}
+				>
+					<div className="wa-dx__body">
+						{editingMessage.text ? (
+							<div className="wa-dx__quote">
+								<span className="wa-dx__quote-label">{locale === 'ar' ? 'الأصلية' : 'Original'}</span>
+								<p className="wa-privacy-identity" dir="auto">
+									{editingMessage.text}
+								</p>
+							</div>
+						) : null}
+						<textarea
+							value={editDraft}
+							autoFocus
+							dir="auto"
+							onChange={event => setEditDraft(event.target.value)}
+							onKeyDown={event => {
+								if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+									event.preventDefault();
+									if (String(editDraft || '').trim()) void submitEditMessage();
+								}
+							}}
+							onFocus={event => {
+								const length = event.currentTarget.value.length;
+								event.currentTarget.setSelectionRange(length, length);
+							}}
+							rows={4}
+							className="wa-ui-input wa-dx__textarea"
+						/>
 					</div>
-				</div>
+				</WaDialog>
 			) : null}
 			{/* Desktop nav lives in the left rail — no top PageHeader on web. */}
 			<div className="wa-web-workspace min-h-0 flex-1 max-[769px]:contents min-[769px]:flex min-[769px]:overflow-hidden">
@@ -24982,111 +25292,29 @@ function WhatsAppWorkspaceContent() {
 						)}
 
 						{storyShareOpen && selectedStatus ? (
-							<div
-								className="fixed inset-0 z-[120] grid place-items-end bg-black/50 p-4 sm:place-items-center"
-								role="dialog"
-								aria-modal="true"
-								aria-label={t.sendStoryPickChat}
-								onClick={() => {
-									if (sendingStoryShareId) return;
+							<WaDialog
+								zIndex={120}
+								width={440}
+								height={640}
+								icon={<Share2 size={17} strokeWidth={2.1} />}
+								title={t.sendStoryAsMedia}
+								subtitle={t.sendStoryAsMediaHint}
+								closeDisabled={Boolean(sendingStoryShareId)}
+								closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+								onClose={() => {
 									setStoryShareOpen(false);
 									setStoryPaused(false);
 								}}
 							>
-								<div
-									className="flex max-h-[75vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-slate-900 dark:text-slate-100"
-									onClick={event => event.stopPropagation()}
-								>
-									<div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-										<div className="min-w-0">
-											<h3 className="truncate text-base font-bold">{t.sendStoryAsMedia}</h3>
-											<p className="mt-0.5 text-xs text-slate-500">{t.sendStoryAsMediaHint}</p>
-										</div>
-										<button
-											type="button"
-											disabled={Boolean(sendingStoryShareId)}
-											onClick={() => {
-												setStoryShareOpen(false);
-												setStoryPaused(false);
-											}}
-											className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"
-											aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
-										>
-											<X size={18} />
-										</button>
-									</div>
-									<div className="border-b border-slate-200 px-3 py-2 dark:border-slate-700">
-										<div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 dark:bg-slate-800">
-											<Search size={15} className="shrink-0 text-slate-400" />
-											<input
-												type="search"
-												value={storyShareSearch}
-												onChange={event => setStoryShareSearch(event.target.value)}
-												placeholder={t.sendStorySearch}
-												autoFocus
-												className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-											/>
-										</div>
-									</div>
-									<div className="wa-ui-scroll nice-scroll min-h-0 flex-1 overflow-y-auto p-2">
-										{(() => {
-											const query = foldWhatsAppSearchText(storyShareSearch);
-											const chats = effectiveConversations.filter(item => {
-												if (query) {
-													const title = foldWhatsAppSearchText(conversationTitle(item));
-													const phone = foldWhatsAppSearchText(
-														item.phoneNumber ||
-															item.contactPhone ||
-															item.contact?.phoneNumber ||
-															item.providerChatId ||
-															'',
-													);
-													if (!title.includes(query) && !phone.includes(query)) {
-														return false;
-													}
-												}
-												return true;
-											});
-											if (!chats.length) {
-												return (
-													<p className="px-3 py-10 text-center text-sm text-slate-500">
-														{locale === 'ar' ? 'لا توجد محادثات' : 'No chats found'}
-													</p>
-												);
-											}
-											return chats.map(item => {
-												const isSending = sendingStoryShareId === item.id;
-												return (
-													<button
-														key={item.id}
-														type="button"
-														disabled={Boolean(sendingStoryShareId)}
-														onClick={() => void sendStoryAsMediaToChat(item)}
-														className={`flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100 disabled:opacity-60 dark:hover:bg-slate-800 ${
-															isSending ? 'bg-slate-50 dark:bg-slate-800/60' : ''
-														}`}
-													>
-														<Avatar
-															label={conversationTitle(item)}
-															size={10}
-															src={conversationAvatarUrl(item)}
-															isGroup={item.type === 'group'}
-														/>
-														<span className="min-w-0 flex-1 truncate font-semibold">
-															{conversationTitle(item)}
-														</span>
-														{isSending ? (
-															<Loader2 size={18} className="animate-spin text-[#00a884]" />
-														) : (
-															<Send size={18} className="text-[#00a884]" />
-														)}
-													</button>
-												);
-											});
-										})()}
-									</div>
-								</div>
-							</div>
+								<WaChatPicker
+									autoFocus
+									locale={locale}
+									items={effectiveConversations}
+									busyId={sendingStoryShareId}
+									onPick={item => void sendStoryAsMediaToChat(item)}
+									emptyText={locale === 'ar' ? 'لا توجد محادثات' : 'No chats found'}
+								/>
+							</WaDialog>
 						) : null}
 					</div>
 				)}
@@ -25791,198 +26019,206 @@ function WhatsAppWorkspaceContent() {
 						label: title,
 					});
 				};
+				const isGroupInfo = conversationInfoTarget.type === 'group';
+				const infoTitle =
+					conversationInfoGroup?.subject || conversationTitle(liveInfoConversation);
+				const memberCount =
+					conversationInfoGroup?.participantCount ||
+					conversationInfoGroup?.participants?.length ||
+					conversationInfoTarget.group?.participantCount ||
+					0;
+				const infoSubtitle = isGroupInfo
+					? `${memberCount} ${locale === 'ar' ? 'عضو' : memberCount === 1 ? 'member' : 'members'}`
+					: liveInfoConversation.contact?.phoneNumber ||
+						liveInfoConversation.contact?.waId ||
+						liveInfoConversation.providerChatId ||
+						'—';
+				const unreadCount = Number(liveInfoConversation.unreadCount) || 0;
+				const lastMessageAt = liveInfoConversation.lastMessageAt
+					? new Date(liveInfoConversation.lastMessageAt)
+					: null;
+				const infoTiles = [
+					{
+						key: 'account',
+						icon: <MessageCircle size={16} strokeWidth={2} />,
+						label: locale === 'ar' ? 'الحساب' : 'Account',
+						value: selectedAccount?.label || '—',
+					},
+					{
+						key: 'assigned',
+						icon: <UserRound size={16} strokeWidth={2} />,
+						label: locale === 'ar' ? 'مسند إلى' : 'Assigned to',
+						value:
+							liveInfoConversation.assignedUser?.name ||
+							(locale === 'ar' ? 'غير مسند' : 'Unassigned'),
+						muted: !liveInfoConversation.assignedUser?.name,
+					},
+					{
+						key: 'unread',
+						icon: <Bell size={16} strokeWidth={2} />,
+						label: locale === 'ar' ? 'غير مقروءة' : 'Unread',
+						value: unreadCount ? String(unreadCount) : locale === 'ar' ? 'لا شيء' : 'All read',
+						accent: unreadCount > 0,
+						muted: !unreadCount,
+					},
+					{
+						key: 'last',
+						icon: <Clock size={16} strokeWidth={2} />,
+						label: isGroupInfo
+							? locale === 'ar'
+								? 'آخر رسالة'
+								: 'Last message'
+							: locale === 'ar'
+								? 'آخر ظهور'
+								: 'Last seen',
+						value: isGroupInfo
+							? lastMessageAt
+								? relativeTime(lastMessageAt.toISOString(), Date.now(), locale)
+								: '—'
+							: presenceValue,
+						title: lastMessageAt ? lastMessageAt.toLocaleString() : undefined,
+					},
+				];
 				return (
 				<div
-					className="fixed inset-0 z-[110] grid place-items-end bg-black/25 p-4 backdrop-blur-sm sm:place-items-center"
+					className="wa-gi-overlay fixed inset-0 z-[110] grid place-items-end bg-black/30 p-0 backdrop-blur-sm sm:place-items-center sm:p-4"
 					onClick={closeConversationInfo}
+					role="presentation"
 				>
 					<div
-						className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white p-5 text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]"
+						className="wa-gi"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="wa-gi-title"
 						onClick={event => event.stopPropagation()}
 					>
-						<div className="flex shrink-0 items-center justify-between">
-							<h3 className="text-lg font-bold">
-								{conversationInfoTarget.type === 'group'
+						<div className="wa-gi__cover" aria-hidden="true">
+							<span className="wa-gi__cover-label">
+								{isGroupInfo
 									? locale === 'ar'
 										? 'معلومات الجروب'
 										: 'Group info'
 									: locale === 'ar'
 										? 'معلومات المحادثة'
-										: 'Conversation info'}
-							</h3>
-							<button
-								type="button"
-								onClick={closeConversationInfo}
-								className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-white/10"
-							>
-								<X size={18} />
-							</button>
+										: 'Contact info'}
+							</span>
 						</div>
-						<div className="mt-4 flex shrink-0 flex-col items-center text-center">
+						<button
+							type="button"
+							onClick={closeConversationInfo}
+							className="wa-gi__close"
+							aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
+						>
+							<X size={18} strokeWidth={2.2} />
+						</button>
+
+						<div className="wa-gi__identity">
 							{infoAvatarSrc ? (
 								<button
 									type="button"
-									className="rounded-full transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary-500)]"
-									aria-label={
-										locale === 'ar' ? 'عرض الصورة بحجم كبير' : 'View profile photo'
-									}
+									className="wa-gi__avatar is-clickable"
+									aria-label={locale === 'ar' ? 'عرض الصورة بحجم كبير' : 'View profile photo'}
 									onClick={openProfilePhoto}
 								>
-									<Avatar
-										label={conversationTitle(liveInfoConversation)}
-										size={20}
-										src={infoAvatarSrc}
-										isGroup={conversationInfoTarget.type === 'group'}
-									/>
+									<Avatar label={conversationTitle(liveInfoConversation)} size={20} src={infoAvatarSrc} isGroup={isGroupInfo} />
 								</button>
 							) : (
-								<Avatar
-									label={conversationTitle(liveInfoConversation)}
-									size={20}
-									src=""
-									isGroup={conversationInfoTarget.type === 'group'}
-								/>
+								<span className="wa-gi__avatar">
+									<Avatar label={conversationTitle(liveInfoConversation)} size={20} src="" isGroup={isGroupInfo} />
+								</span>
 							)}
-							<h4 className="wa-privacy-identity mt-3 text-xl font-bold">
-								{conversationInfoGroup?.subject || conversationTitle(liveInfoConversation)}
-							</h4>
-							<p className="wa-privacy-identity text-sm text-[#667781]">
-								{conversationInfoTarget.type === 'group'
-									? `${
-											conversationInfoGroup?.participantCount ||
-											conversationInfoGroup?.participants?.length ||
-											conversationInfoTarget.group?.participantCount ||
-											0
-										} ${locale === 'ar' ? 'عضو' : 'members'}`
-									: liveInfoConversation.contact?.phoneNumber ||
-										liveInfoConversation.contact?.waId ||
-										liveInfoConversation.providerChatId ||
-										'—'}
-							</p>
-						</div>
-						<div className="mt-5 shrink-0 space-y-3 text-sm">
-							{[
-								[
-									locale === 'ar' ? 'النوع' : 'Type',
-									conversationInfoTarget.type === 'group'
+							<h3 id="wa-gi-title" className="wa-gi__name wa-privacy-identity" dir="auto">
+								{infoTitle}
+							</h3>
+							<p className="wa-gi__sub wa-privacy-identity">
+								<span className={`wa-gi__chip ${isGroupInfo ? 'is-group' : ''}`}>
+									{isGroupInfo ? <Users size={13} strokeWidth={2.2} /> : <UserRound size={13} strokeWidth={2.2} />}
+									{isGroupInfo
 										? locale === 'ar'
 											? 'جروب'
 											: 'Group'
-										: conversationInfoTarget.type || 'chat',
-								],
-								[locale === 'ar' ? 'الحساب' : 'Account', selectedAccount?.label],
-								[
-									locale === 'ar' ? 'تم التعيين إلى' : 'Assigned to',
-									liveInfoConversation.assignedUser?.name ||
-										(locale === 'ar' ? 'بدون تعيين' : 'Unassigned'),
-								],
-								[
-									locale === 'ar' ? 'رسائل غير مقروءة' : 'Unread messages',
-									Number(liveInfoConversation.unreadCount) || 0,
-								],
-								...(conversationInfoTarget.type === 'group'
-									? []
-									: [[locale === 'ar' ? 'آخر ظهور' : 'Last seen', presenceValue]]),
-								[
-									locale === 'ar' ? 'آخر رسالة' : 'Last message',
-									liveInfoConversation.lastMessageAt
-										? new Date(liveInfoConversation.lastMessageAt).toLocaleString()
-										: '—',
-								],
-								...(conversationInfoTarget.type === 'group' && conversationInfoGroup?.description
-									? [[locale === 'ar' ? 'الوصف' : 'Description', conversationInfoGroup.description]]
-									: []),
-							].map(([label, value]) => (
-								<div
-									key={label}
-									className="flex items-start justify-between gap-4 border-b pb-2 last:border-0"
-								>
-									<span className="text-[#667781]">{label}</span>
-									<strong className="max-w-[60%] text-end">
-										{value == null || value === '' ? '—' : value}
-									</strong>
-								</div>
-							))}
+										: locale === 'ar'
+											? 'محادثة'
+											: 'Chat'}
+								</span>
+								<span dir={isGroupInfo ? 'auto' : 'ltr'}>{infoSubtitle}</span>
+							</p>
 						</div>
-						{conversationInfoTarget.type === 'group' ? (
-							<div className="mt-5 min-h-0 flex-1 overflow-hidden">
-								<h4 className="mb-3 flex items-center gap-2 text-sm font-bold">
-									<Users size={16} className="text-[var(--color-primary-500)]" />
-									{locale === 'ar' ? 'الأعضاء' : 'Members'}
-								</h4>
-								{loadingConversationInfoGroup ? (
-									<div className="grid min-h-32 place-items-center">
-										<Loader2
-											size={24}
-											className="animate-spin text-[var(--color-primary-500)]"
-										/>
+
+						<div className="wa-gi__body nice-scroll">
+							{isGroupInfo && conversationInfoGroup?.description ? (
+								<p className="wa-gi__desc" dir="auto">
+									{conversationInfoGroup.description}
+								</p>
+							) : null}
+
+							<dl className="wa-gi__tiles">
+								{infoTiles.map(tile => (
+									<div
+										key={tile.key}
+										className={`wa-gi__tile${tile.accent ? ' is-accent' : ''}${tile.muted ? ' is-muted' : ''}`}
+										title={tile.title}
+									>
+										<dt>
+											<span className="wa-gi__tile-icon" aria-hidden="true">
+												{tile.icon}
+											</span>
+											{tile.label}
+										</dt>
+										<dd dir="auto">{tile.value == null || tile.value === '' ? '—' : tile.value}</dd>
 									</div>
-								) : (
-									<div className="nice-scroll max-h-[40vh] space-y-2 overflow-y-auto pr-1">
-										{(conversationInfoGroup?.participants || []).map(participant => {
-											const phoneHint = String(participant.waId || '')
-												.replace(/@.*$/, '')
-												.split(':')[0]
-												.replace(/\D/g, '');
-											const fromInbox = (conversations || []).find(item => {
-												if (item?.type === 'group') return false;
-												const contactId = String(
-													item?.contact?.waId || item?.providerChatId || '',
-												);
-												const digits = String(
-													item?.contact?.phoneNumber || '',
-												).replace(/\D/g, '');
-												return (
-													contactId === participant.waId ||
-													(phoneHint &&
-														(digits === phoneHint ||
-															contactId.replace(/@.*$/, '').replace(/\D/g, '') ===
-																phoneHint))
-												);
-											});
-											const title =
-												String(participant.displayName || '').trim() ||
-												String(fromInbox?.contact?.name || '').trim() ||
-												conversationTitle(fromInbox) ||
-												(phoneHint ? `+${phoneHint}` : '') ||
-												String(participant.waId || '—');
-											const avatarSrc =
-												fromInbox
+								))}
+							</dl>
+
+							{isGroupInfo ? (
+								<section className="wa-gi__members" aria-labelledby="wa-gi-members">
+									<header className="wa-gi__members-head">
+										<h4 id="wa-gi-members">
+											<Users size={16} strokeWidth={2.2} />
+											{locale === 'ar' ? 'الأعضاء' : 'Members'}
+										</h4>
+										{memberCount ? <span className="wa-gi__count">{memberCount}</span> : null}
+									</header>
+									{loadingConversationInfoGroup ? (
+										<div className="wa-gi__loading">
+											<Loader2 size={22} className="animate-spin" />
+										</div>
+									) : (
+										<WaInfoMemberList
+											participants={conversationInfoGroup?.participants || []}
+											locale={locale}
+											resolve={participant => {
+												const phoneHint = String(participant.waId || '')
+													.replace(/@.*$/, '')
+													.split(':')[0]
+													.replace(/\D/g, '');
+												const fromInbox = (conversations || []).find(item => {
+													if (item?.type === 'group') return false;
+													const contactId = String(item?.contact?.waId || item?.providerChatId || '');
+													const digits = String(item?.contact?.phoneNumber || '').replace(/\D/g, '');
+													return (
+														contactId === participant.waId ||
+														(phoneHint &&
+															(digits === phoneHint ||
+																contactId.replace(/@.*$/, '').replace(/\D/g, '') === phoneHint))
+													);
+												});
+												const title =
+													String(participant.displayName || '').trim() ||
+													String(fromInbox?.contact?.name || '').trim() ||
+													conversationTitle(fromInbox) ||
+													(phoneHint ? `+${phoneHint}` : '') ||
+													String(participant.waId || '—');
+												const avatarSrc = fromInbox
 													? conversationAvatarUrl(fromInbox)
 													: inboxAvatarForWaId(conversations, participant.waId);
-											return (
-												<div
-													key={participant.id || participant.waId}
-													className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 dark:border-slate-800"
-												>
-													<Avatar label={title} size={9} src={avatarSrc} />
-													<div className="min-w-0 flex-1">
-														<p className="truncate text-sm font-bold">{title}</p>
-														{phoneHint && !String(title).includes(phoneHint) ? (
-															<p className="truncate text-xs text-slate-400">
-																+{phoneHint}
-															</p>
-														) : null}
-													</div>
-													{participant.isAdmin || participant.isSuperAdmin ? (
-														<span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-600 dark:bg-amber-950/30">
-															{locale === 'ar' ? 'مشرف' : 'Admin'}
-														</span>
-													) : null}
-												</div>
-											);
-										})}
-										{!conversationInfoGroup?.participants?.length ? (
-											<p className="py-6 text-center text-sm text-slate-400">
-												{locale === 'ar'
-													? 'لا يوجد أعضاء محمّلون بعد'
-													: 'No members loaded yet'}
-											</p>
-										) : null}
-									</div>
-								)}
-							</div>
-						) : null}
+												return { title, phoneHint, avatarSrc };
+											}}
+										/>
+									)}
+								</section>
+							) : null}
+						</div>
 					</div>
 				</div>
 				);
@@ -26032,119 +26268,114 @@ function WhatsAppWorkspaceContent() {
 				/>
 			) : null}
 			{(sharingMessageIds?.length || forwardingMessage) && (
-				<div
-					className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center"
-					onClick={() => {
-						if (sharingTargetConversationId) return;
+				<WaDialog
+					width={440}
+					height={640}
+					icon={<Forward size={18} strokeWidth={2.1} />}
+					title={locale === 'ar' ? 'إرسال إلى' : 'Send to'}
+					subtitle={
+						locale === 'ar'
+							? `${sharingMessageIds?.length || 1} رسالة · تظهر كأنها مرسلة منك`
+							: `${sharingMessageIds?.length || 1} message${(sharingMessageIds?.length || 1) === 1 ? '' : 's'} · sent as yours`
+					}
+					closeDisabled={Boolean(sharingTargetConversationId)}
+					closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+					onClose={() => {
 						setSharingMessageIds(null);
 						setForwardingMessage(null);
 						sharingSourceConversationIdRef.current = null;
 					}}
+					footer={
+						<span className="wa-ui-modal__footer-note">
+							<Info size={14} strokeWidth={2.2} aria-hidden="true" />
+							{locale === 'ar'
+								? 'الردود تتبعت ومعاها الاقتباس فوقها'
+								: 'Replies keep their quote on top'}
+						</span>
+					}
 				>
-					<div className="max-h-[70vh] w-full max-w-md overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]" onClick={event => event.stopPropagation()}>
-						<div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-[#3b4a54]">
-							<div className="min-w-0">
-								<h3 className="text-lg font-bold">
-									{locale === 'ar' ? 'إرسال إلى' : 'Send to'}
-								</h3>
-								<p className="mt-0.5 text-xs text-[#667781] dark:text-[#8696a0]">
-									{locale === 'ar'
-										? `${sharingMessageIds?.length || 1} رسالة · تظهر كأنها مرسلة منك · الردود تُحفظ مع الاقتباس فوقها`
-										: `${sharingMessageIds?.length || 1} message(s) · sent as yours · replies keep the quote on top`}
+					<WaChatPicker
+						autoFocus
+						locale={locale}
+						items={effectiveConversations.filter(
+							item =>
+								item.id !== (sharingSourceConversationIdRef.current || conversationId) &&
+								item.accountId === selectedConversation?.accountId,
+						)}
+						busyId={sharingTargetConversationId}
+						onPick={item => void shareMessagesAsOriginal(item.id)}
+						emptyText={locale === 'ar' ? 'لا توجد محادثات أخرى في هذا الحساب' : 'No other chats on this account'}
+					/>
+				</WaDialog>
+			)}
+			{deleteMessageTarget && (
+				<WaDialog
+					width={420}
+					tone="danger"
+					icon={<Trash2 size={18} strokeWidth={2.1} />}
+					title={locale === 'ar' ? 'حذف الرسالة؟' : 'Delete message?'}
+					subtitle={locale === 'ar' ? 'اختر طريقة حذف هذه الرسالة.' : 'Choose how this message should be deleted.'}
+					closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+					onClose={() => setDeleteMessageTarget(null)}
+					footer={
+						<button type="button" className="wa-ui-btn wa-ui-btn--ghost" onClick={() => setDeleteMessageTarget(null)}>
+							{locale === 'ar' ? 'إلغاء' : 'Cancel'}
+						</button>
+					}
+				>
+					<div className="wa-dx__body">
+						{String(deleteMessageTarget.text || '').trim() ? (
+							<div className="wa-dx__quote">
+								<p className="wa-privacy-identity" dir="auto">
+									{deleteMessageTarget.text}
 								</p>
 							</div>
-							<button
-								type="button"
-								disabled={Boolean(sharingTargetConversationId)}
-								onClick={() => {
-									setSharingMessageIds(null);
-									setForwardingMessage(null);
-									sharingSourceConversationIdRef.current = null;
-								}}
-								className="rounded-full p-2 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-white/10"
-							>
-								<X size={18} />
+						) : null}
+						<div className="wa-dx__choices">
+							<button type="button" className="wa-dx__choice" onClick={() => void deleteSelectedMessage('local')}>
+								<span className="wa-dx__choice-icon" aria-hidden="true">
+									<Trash2 size={18} strokeWidth={2.1} />
+								</span>
+								<span className="wa-dx__choice-copy">
+									<b>{locale === 'ar' ? 'حذف لدي' : 'Delete for me'}</b>
+									<small>
+										{locale === 'ar' ? 'تختفي من عندك بس، والطرف التاني لسه شايفها' : 'Removed on your side only'}
+									</small>
+								</span>
 							</button>
-						</div>
-						<div className="wa-ui-scroll nice-scroll max-h-[58vh] overflow-y-auto p-2">
-							{effectiveConversations
-								.filter(
-									item =>
-										item.id !== (sharingSourceConversationIdRef.current || conversationId) &&
-										item.accountId === selectedConversation?.accountId,
-								)
-								.map(item => {
-									const isSending = sharingTargetConversationId === item.id;
-									return (
-										<button
-											key={item.id}
-											type="button"
-											onClick={() => void shareMessagesAsOriginal(item.id)}
-											disabled={Boolean(sharingTargetConversationId)}
-											className={`flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100 disabled:opacity-60 dark:hover:bg-white/5 ${
-												isSending ? 'bg-slate-50 dark:bg-white/10' : ''
-											}`}
-										>
-											<Avatar
-												label={conversationTitle(item)}
-												size={10}
-												src={conversationAvatarUrl(item)}
-												isGroup={item.type === 'group'}
-											/>
-											<span className="min-w-0 flex-1 truncate font-semibold">
-												{conversationTitle(item)}
-											</span>
-											{isSending ? (
-												<Loader2 size={18} className="animate-spin text-[#00a884]" />
-											) : (
-												<Send size={18} className="text-[#00a884]" />
-											)}
-										</button>
-									);
-								})}
-							{!effectiveConversations.some(
-								item =>
-									item.id !== (sharingSourceConversationIdRef.current || conversationId) &&
-									item.accountId === selectedConversation?.accountId,
-							) && (
-								<p className="px-3 py-8 text-center text-sm text-[#667781] dark:text-[#8696a0]">
-									{locale === 'ar' ? 'لا توجد محادثات أخرى في هذا الحساب' : 'No other chats on this account'}
-								</p>
+							{deleteMessageTarget.direction === 'outbound' && (
+								<button type="button" className="wa-dx__choice is-strong" onClick={() => void deleteSelectedMessage('everyone')}>
+									<span className="wa-dx__choice-icon" aria-hidden="true">
+										<Users size={18} strokeWidth={2.1} />
+									</span>
+									<span className="wa-dx__choice-copy">
+										<b>{locale === 'ar' ? 'حذف لدى الجميع' : 'Delete for everyone'}</b>
+										<small>
+											{locale === 'ar'
+												? 'تتشال من المحادثة عند كل الأطراف'
+												: 'Removed from this chat for everyone'}
+										</small>
+									</span>
+								</button>
 							)}
 						</div>
 					</div>
-				</div>
-			)}
-			{deleteMessageTarget && (
-				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center" onClick={() => setDeleteMessageTarget(null)}>
-					<div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]" onClick={event => event.stopPropagation()}>
-						<div className="px-5 pb-3 pt-5">
-							<h3 className="text-lg font-bold">{locale === 'ar' ? 'حذف الرسالة؟' : 'Delete message?'}</h3>
-							<p className="mt-1 text-sm text-[#667781] dark:text-[#8696a0]">{locale === 'ar' ? 'اختر طريقة حذف هذه الرسالة.' : 'Choose how this message should be deleted.'}</p>
-						</div>
-						<button type="button" onClick={() => void deleteSelectedMessage('local')} className="flex w-full items-center justify-between border-t border-slate-200 px-5 py-4 font-semibold text-[#d70040] hover:bg-slate-50 dark:border-[#3b4a54] dark:hover:bg-white/5">
-							{locale === 'ar' ? 'حذف لدي' : 'Delete for me'} <Trash2 size={20} />
-						</button>
-						{deleteMessageTarget.direction === 'outbound' && (
-							<button type="button" onClick={() => void deleteSelectedMessage('everyone')} className="flex w-full items-center justify-between border-t border-slate-200 px-5 py-4 font-semibold text-[#d70040] hover:bg-slate-50 dark:border-[#3b4a54] dark:hover:bg-white/5">
-								{locale === 'ar' ? 'حذف لدى الجميع' : 'Delete for everyone'} <Users size={20} />
-							</button>
-						)}
-						<button type="button" onClick={() => setDeleteMessageTarget(null)} className="w-full border-t border-slate-200 px-5 py-4 font-semibold hover:bg-slate-50 dark:border-[#3b4a54] dark:hover:bg-white/5">
-							{locale === 'ar' ? 'إلغاء' : 'Cancel'}
-						</button>
-					</div>
-				</div>
+				</WaDialog>
 			)}
 			{messageInfo && (
-				<div className="fixed inset-0 z-[110] grid place-items-end bg-black/35 p-4 sm:place-items-center" onClick={() => setMessageInfo(null)}>
-					<div className="w-full max-w-md overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-[#233138] dark:text-[#e9edef]" onClick={event => event.stopPropagation()}>
-						<div className="flex items-center justify-between px-5 pt-5">
-							<h3 className="text-lg font-bold">{locale === 'ar' ? 'معلومات الرسالة' : 'Message info'}</h3>
-							<button type="button" onClick={() => setMessageInfo(null)} className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-white/10"><X size={18} /></button>
-						</div>
+				<WaDialog
+					width={460}
+					height={720}
+					icon={<Info size={18} strokeWidth={2.1} />}
+					title={locale === 'ar' ? 'معلومات الرسالة' : 'Message info'}
+					closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+					onClose={() => setMessageInfo(null)}
+				>
+					<div className="wa-dx__body wa-dx__body--scroll wa-ui-scroll nice-scroll">
 						{loadingMessageInfo || messageInfo.loading ? (
-							<div className="grid min-h-40 place-items-center p-5"><Loader2 className="animate-spin text-[#00a884]" /></div>
+							<div className="wa-dx__loading">
+								<Loader2 size={22} className="animate-spin" />
+							</div>
 						) : (
 							(() => {
 								const targetId = String(
@@ -26417,21 +26648,19 @@ function WhatsAppWorkspaceContent() {
 													: 'sent'
 									: 'sent';
 								return (
-									<div className="mt-4 space-y-4 px-5 pb-5 text-sm">
-										<div className="rounded-xl bg-slate-50 p-3 dark:bg-[#111b21]">
-											<p className="wa-privacy-identity line-clamp-4 font-semibold" dir="auto">
+									<div className="wa-mi">
+										<div className={`wa-mi__bubble ${outbound ? 'is-mine' : 'is-theirs'}`}>
+											<p className="wa-privacy-identity" dir="auto">
 												{previewText}
 											</p>
-											<p className="mt-1 text-xs text-slate-500 dark:text-[#8696a0]">
-												{sentAt || '—'}
-											</p>
+											<span className="wa-mi__bubble-time">{sentAt || '—'}</span>
 										</div>
-										<div className="flex items-center gap-3 rounded-2xl border border-[#00a884]/35 bg-[#00a884]/10 px-3 py-3">
-											<span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#111b21] text-white shadow-sm">
+										<div className={`wa-mi__status is-${currentKind}`}>
+											<span className="wa-mi__status-glyph">
 												<StatusGlyph kind={currentKind} />
 											</span>
 											<div className="min-w-0 flex-1">
-												<p className="text-xs font-medium text-slate-500 dark:text-[#8696a0]">
+												<p className="wa-mi__status-label">
 													{outbound
 														? locale === 'ar'
 															? 'حالة رسالتك عنده دلوقتي'
@@ -26440,11 +26669,11 @@ function WhatsAppWorkspaceContent() {
 															? 'علامات الصح عندها'
 															: 'Their check marks'}
 												</p>
-												<p className="text-base font-bold">{statusText}</p>
+												<p className="wa-mi__status-value">{statusText}</p>
 											</div>
 										</div>
-										<div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[#3b4a54]">
-											<div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold dark:border-[#3b4a54] dark:text-[#8696a0]">
+										<section className="wa-mi__card">
+											<h4 className="wa-mi__card-title">
 												{outbound
 													? locale === 'ar'
 														? 'إيصالات رسالتك (✓ / ✓✓)'
@@ -26452,87 +26681,71 @@ function WhatsAppWorkspaceContent() {
 													: locale === 'ar'
 														? 'إيه اللي نقدر نؤكده عن علاماتها'
 														: 'What we can confirm about their ticks'}
-											</div>
-											<div className="divide-y divide-slate-200 dark:divide-[#3b4a54]">
+											</h4>
+											<ol className="wa-mi__timeline">
 												{receiptRows.map(row => (
-													<div
+													<li
 														key={row.id}
-														className={`flex items-center gap-3 px-3 py-3 ${
-															row.done ? '' : 'opacity-45'
-														}`}
+														className={`wa-mi__step${row.done ? ' is-done' : ''} is-${row.tone}`}
 													>
-														<span
-															className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
-																!row.done
-																	? 'bg-slate-100 text-slate-400 dark:bg-[#111b21] dark:text-[#667781]'
-																	: row.tone === 'read'
-																		? 'bg-[#53BDEB]/20 text-[#53BDEB]'
-																		: 'bg-slate-100 text-[#8696A0] dark:bg-[#111b21]'
-															}`}
-														>
+														<span className="wa-mi__step-dot" aria-hidden="true">
 															{row.done ? (
 																row.icon === 'double' ? (
-																	<CheckCheck size={20} strokeWidth={2.5} />
+																	<CheckCheck size={16} strokeWidth={2.6} />
 																) : (
-																	<Check size={20} strokeWidth={2.5} />
+																	<Check size={16} strokeWidth={2.6} />
 																)
 															) : (
-																<span className="text-sm font-bold">—</span>
+																<Clock size={14} strokeWidth={2.2} />
 															)}
 														</span>
-														<div className="min-w-0 flex-1">
-															<p className="font-semibold">{row.label}</p>
-															<p className="text-xs text-slate-500 dark:text-[#8696a0]">
-																{row.hint}
-																{row.done && row.time ? ` · ${row.time}` : ''}
-																{!row.done
-																	? locale === 'ar'
-																		? ' · مش معروف'
-																		: ' · unknown'
-																	: ''}
-															</p>
+														<div className="wa-mi__step-copy">
+															<p className="wa-mi__step-label">{row.label}</p>
+															<p className="wa-mi__step-hint">{row.hint}</p>
 														</div>
-													</div>
+														<span className="wa-mi__step-time">
+															{row.done
+																? row.time || (locale === 'ar' ? 'تم' : 'Done')
+																: locale === 'ar'
+																	? 'مش معروف'
+																	: 'Unknown'}
+														</span>
+													</li>
 												))}
-											</div>
-										</div>
+											</ol>
+										</section>
 										{localInboundRows.length ? (
-											<div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[#3b4a54]">
-												<div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold dark:border-[#3b4a54] dark:text-[#8696a0]">
+											<section className="wa-mi__card">
+												<h4 className="wa-mi__card-title">
 													{locale === 'ar'
 														? 'عندك أنت (محلي — مش علاماتها)'
 														: 'On your side (local — not their ticks)'}
-												</div>
-												<div className="divide-y divide-slate-200 dark:divide-[#3b4a54]">
+												</h4>
+												<ul className="wa-mi__rows">
 													{localInboundRows.map(row => (
-														<div
-															key={row.id}
-															className="flex items-start justify-between gap-3 px-3 py-3"
-														>
+														<li key={row.id} className={`wa-mi__row${row.done ? ' is-done' : ''}`}>
 															<div className="min-w-0">
-																<p className="font-semibold">{row.label}</p>
-																<p className="text-xs text-slate-500 dark:text-[#8696a0]">
-																	{row.hint}
-																</p>
+																<p className="wa-mi__step-label">{row.label}</p>
+																<p className="wa-mi__step-hint">{row.hint}</p>
 															</div>
-															<strong className="shrink-0 text-end text-xs">
+															<strong className="wa-mi__row-value">
 																{row.done
 																	? row.time || (locale === 'ar' ? 'نعم' : 'Yes')
 																	: locale === 'ar'
 																		? 'لسه'
 																		: 'Not yet'}
 															</strong>
-														</div>
+														</li>
 													))}
-												</div>
-											</div>
+												</ul>
+											</section>
 										) : null}
 									</div>
 								);
 							})()
 						)}
 					</div>
-				</div>
+				</WaDialog>
 			)}
 			<MountWhenOpened open={scheduleDialogOpen}>
 				<ScheduleMessageDialog

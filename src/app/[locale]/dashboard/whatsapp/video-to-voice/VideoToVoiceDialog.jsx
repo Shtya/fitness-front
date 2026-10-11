@@ -464,7 +464,7 @@ export default function VideoToVoiceDialog({
 
 	return createPortal(
 		<div
-			className="fixed inset-0 z-[130] grid place-items-end bg-black/45 p-4 backdrop-blur-sm sm:place-items-center"
+			className="wa-ldlg-scrim fixed inset-0 z-[130] grid place-items-end bg-black/45 p-4 backdrop-blur-sm sm:place-items-center"
 			onClick={() => {
 				if (!busy) onClose?.();
 			}}
@@ -473,7 +473,7 @@ export default function VideoToVoiceDialog({
 				role="dialog"
 				aria-label={t.title}
 				dir={ar ? 'rtl' : 'ltr'}
-				className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl"
+				className="wa-dk wa-ldlg max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl"
 				onClick={(event) => event.stopPropagation()}
 			>
 				<div className="flex items-start justify-between gap-3 border-b px-5 py-4">

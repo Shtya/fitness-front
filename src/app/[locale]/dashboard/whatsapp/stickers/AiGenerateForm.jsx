@@ -316,7 +316,7 @@ export default function AiGenerateForm({
 		'inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg px-2.5 text-[11px] font-bold leading-none disabled:opacity-50';
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col" dir={ar ? 'rtl' : 'ltr'}>
+		<div className="wa-dk flex min-h-0 flex-1 flex-col" dir={ar ? 'rtl' : 'ltr'}>
 			<div
 				className={`grid min-h-0 flex-1 ${
 					isSticker

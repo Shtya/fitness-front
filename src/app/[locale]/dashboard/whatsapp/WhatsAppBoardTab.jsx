@@ -7,7 +7,7 @@ function BoardSkeleton({ locale = 'en' }) {
 	const ar = locale === 'ar';
 	return (
 		<div
-			className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden px-1 sm:px-2"
+			className="wa-dk flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden px-1 sm:px-2"
 			dir={ar ? 'rtl' : 'ltr'}
 			aria-busy="true"
 			aria-label={ar ? 'جارِ تحميل لوحة المهام' : 'Loading tasks board'}
@@ -104,7 +104,7 @@ export function WhatsAppBoardTab({
 
 	if (board.loading && !board.lists.length) {
 		return (
-			<div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+			<div className="wa-dk flex h-full min-h-0 flex-1 flex-col overflow-hidden">
 				<BoardSkeleton locale={locale} />
 			</div>
 		);
@@ -126,7 +126,7 @@ export function WhatsAppBoardTab({
 	}
 
 	return (
-		<div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+		<div className="wa-dk flex h-full min-h-0 flex-1 flex-col overflow-hidden">
 			<WhatsAppTasksBoard
 				boardApi={board}
 				locale={locale}

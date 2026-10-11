@@ -632,7 +632,7 @@ export default function TaskBoardCardDrawer({
 	};
 
 	return (
-		<div className="fixed inset-0 z-[100000] flex" dir={ar ? 'rtl' : 'ltr'} onPaste={onPaste}>
+		<div className="wa-dk fixed inset-0 z-[100000] flex" dir={ar ? 'rtl' : 'ltr'} onPaste={onPaste}>
 			<button
 				type="button"
 				aria-label={ar ? 'إغلاق' : 'Close'}
@@ -1334,25 +1334,26 @@ export default function TaskBoardCardDrawer({
 			</aside>
 
 			{lightboxSrc ? (
-				<div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/70 p-4">
+				<div className="wa-ui-scrim fixed inset-0 z-[100001] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
 					<button
 						type="button"
 						aria-label={ar ? 'إغلاق' : 'Close'}
 						className="absolute inset-0"
 						onClick={() => setLightboxSrc('')}
 					/>
-					<div className="relative z-[1] max-h-[90vh] max-w-[90vw] overflow-hidden rounded-2xl bg-black/20 p-2">
+					<div className="relative z-[1] max-h-[90vh] max-w-[90vw] animate-[wa-ui-pop_180ms_ease-out] overflow-hidden rounded-2xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
 						<img
 							src={lightboxSrc}
 							alt=""
-							className="max-h-[86vh] max-w-[86vw] object-contain"
+							className="block max-h-[86vh] max-w-[86vw] rounded-2xl object-contain"
 						/>
 						<button
 							type="button"
-							className="absolute end-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-black/60 text-white"
+							className="absolute end-3 top-3 grid h-10 w-10 place-items-center rounded-full border border-white/25 bg-black/45 text-white backdrop-blur-md transition hover:bg-black/70"
+							aria-label={ar ? 'إغلاق' : 'Close'}
 							onClick={() => setLightboxSrc('')}
 						>
-							<X size={16} />
+							<X size={18} />
 						</button>
 					</div>
 				</div>

@@ -618,7 +618,7 @@ export function ChatDocumentViewer({ open, onClose, file, locale = 'en' }) {
 				aria-label={t.close}
 				onClick={onClose}
 			/>
-			<div className="wa-doc-viewer-panel" role="dialog" aria-modal="true" aria-label={name}>
+			<div className="wa-dk wa-doc-viewer-panel" role="dialog" aria-modal="true" aria-label={name}>
 				<header className="wa-doc-viewer-header">
 					<div className="min-w-0 flex-1">
 						<p className="truncate text-[15px] font-bold tracking-tight text-slate-900" title={name}>

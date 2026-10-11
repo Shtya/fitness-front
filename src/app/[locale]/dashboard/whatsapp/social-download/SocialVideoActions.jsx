@@ -128,14 +128,14 @@ export default function SocialVideoActions({
 			{pickerOpen && typeof document !== 'undefined'
 				? createPortal(
 						<div
-							className="fixed inset-0 z-[126] grid place-items-center bg-black/40 p-4"
+							className="wa-ldlg-scrim fixed inset-0 z-[126] grid place-items-center bg-black/40 p-4"
 							onClick={() => setPickerOpen(false)}
 						>
 							<div
 								role="dialog"
 								aria-label={t.pickChat}
 								dir={ar ? 'rtl' : 'ltr'}
-								className="max-h-[70vh] w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl"
+								className="wa-dk wa-ldlg max-h-[70vh] w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl"
 								onClick={event => event.stopPropagation()}
 							>
 								<div className="flex items-center justify-between border-b px-4 py-3">
