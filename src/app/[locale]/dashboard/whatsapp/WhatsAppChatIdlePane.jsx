@@ -1,92 +1,114 @@
 'use client';
 
+import { memo, useEffect, useRef } from 'react';
 import './wa-chat-idle.css';
 
 /**
  * Empty chat-thread pane (no conversation selected).
  *
- * A small conversation plays out on a loop: a message arrives, a second one follows,
- * someone types, a reply lands, its ticks turn blue and a reaction pops on. Two quiet
- * companions (a voice note and a photo) float around it. Pure CSS (transform/opacity
- * only) and fully static under prefers-reduced-motion.
+ * The animated scene is intentionally prop-free and memo-locked so parent
+ * re-renders (chat-list scroll / hover prefetch) never restart the loop.
  */
-export default function WhatsAppChatIdlePane({
-	title,
-	hint,
-	unreadLabel,
-	steps,
-}) {
-	const stepList = Array.isArray(steps) && steps.length ? steps : [];
+const IdleScene = memo(
+	function IdleScene() {
+		return (
+			<div className="wa-idle-scene" aria-hidden="true">
+				<span className="wa-idle-scene__aurora" />
+				<span className="wa-idle-scene__glow" />
+				<span className="wa-idle-scene__orb wa-idle-scene__orb--a" />
+				<span className="wa-idle-scene__orb wa-idle-scene__orb--b" />
 
-	return (
-		<div className="wa-chat-idle" role="status" aria-live="polite">
-			<div className="wa-chat-idle__stage">
-				<div className="wa-idle-scene" aria-hidden="true">
-					<span className="wa-idle-scene__glow" />
+				<div className="wa-idle-card">
+					<span className="wa-idle-card__sheen" />
+					<div className="wa-idle-card__head">
+						<span className="wa-idle-card__avatar">
+							<span className="wa-idle-card__online" />
+						</span>
+						<span className="wa-idle-card__lines">
+							<span />
+							<span />
+						</span>
+					</div>
 
-					<div className="wa-idle-card">
-						<div className="wa-idle-card__head">
-							<span className="wa-idle-card__avatar" />
-							<span className="wa-idle-card__lines">
-								<span />
-								<span />
+					<div className="wa-idle-card__thread">
+						<span className="wa-idle-card__wallpaper" />
+
+						<div className="wa-idle-msg wa-idle-msg--in wa-idle-msg--a">
+							<span className="wa-idle-msg__line" style={{ width: '92%' }} />
+							<span className="wa-idle-msg__line" style={{ width: '58%' }} />
+							<span className="wa-idle-msg__reaction">
+								<svg viewBox="0 0 24 24">
+									<path d="M12 20.5s-7.5-4.4-7.5-10.1A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 7.5 2.8c0 5.7-7.5 10.1-7.5 10.1Z" />
+								</svg>
 							</span>
 						</div>
 
-						<div className="wa-idle-card__thread">
-							<div className="wa-idle-msg wa-idle-msg--in wa-idle-msg--a">
-								<span className="wa-idle-msg__line" style={{ width: '92%' }} />
-								<span className="wa-idle-msg__line" style={{ width: '58%' }} />
-								<span className="wa-idle-msg__reaction">
-									<svg viewBox="0 0 24 24">
-										<path d="M12 20.5s-7.5-4.4-7.5-10.1A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 7.5 2.8c0 5.7-7.5 10.1-7.5 10.1Z" />
-									</svg>
-								</span>
-							</div>
+						<div className="wa-idle-msg wa-idle-msg--in wa-idle-msg--b">
+							<span className="wa-idle-msg__line" style={{ width: '70%' }} />
+						</div>
 
-							<div className="wa-idle-msg wa-idle-msg--in wa-idle-msg--b">
-								<span className="wa-idle-msg__line" style={{ width: '70%' }} />
-							</div>
+						<div className="wa-idle-typing">
+							<span />
+							<span />
+							<span />
+						</div>
 
-							<div className="wa-idle-typing">
-								<span />
-								<span />
-								<span />
-							</div>
-
-							<div className="wa-idle-msg wa-idle-msg--out wa-idle-msg--c">
-								<span className="wa-idle-msg__line" style={{ width: '86%' }} />
-								<span className="wa-idle-msg__line" style={{ width: '64%' }} />
-								<span className="wa-idle-msg__ticks">
-									<svg viewBox="0 0 18 12">
-										<path d="m1 6.5 3.2 3.2L10.5 2.5" />
-										<path d="m7.4 9.4.3.3L14 2.5" />
-									</svg>
-								</span>
-							</div>
+						<div className="wa-idle-msg wa-idle-msg--out wa-idle-msg--c">
+							<span className="wa-idle-msg__line" style={{ width: '86%' }} />
+							<span className="wa-idle-msg__line" style={{ width: '64%' }} />
+							<span className="wa-idle-msg__ticks">
+								<svg viewBox="0 0 18 12">
+									<path d="m1 6.5 3.2 3.2L10.5 2.5" />
+									<path d="m7.4 9.4.3.3L14 2.5" />
+								</svg>
+							</span>
 						</div>
 					</div>
-
-					<div className="wa-idle-chip wa-idle-chip--voice">
-						<span className="wa-idle-chip__play">
-							<svg viewBox="0 0 12 12">
-								<path d="M3.5 2.2v7.6L9.6 6 3.5 2.2Z" />
-							</svg>
-						</span>
-						<span className="wa-idle-chip__wave">
-							{[0.45, 0.8, 0.55, 1, 0.65, 0.9, 0.4, 0.7, 0.5].map((h, i) => (
-								<span key={i} style={{ '--h': h, '--i': i }} />
-							))}
-						</span>
-					</div>
-
-					<div className="wa-idle-chip wa-idle-chip--photo">
-						<svg viewBox="0 0 40 32">
-							<circle cx="28" cy="10" r="4" />
-							<path d="M3 28 14 15l8 9 5-5 10 9H3Z" />
-						</svg>
-					</div>
 				</div>
+
+				<div className="wa-idle-chip wa-idle-chip--voice">
+					<span className="wa-idle-chip__play">
+						<svg viewBox="0 0 12 12">
+							<path d="M3.5 2.2v7.6L9.6 6 3.5 2.2Z" />
+						</svg>
+					</span>
+					<span className="wa-idle-chip__wave">
+						{[0.42, 0.78, 0.55, 1, 0.62, 0.9, 0.38, 0.72, 0.5, 0.85].map((h, i) => (
+							<span key={i} style={{ '--h': h, '--i': i }} />
+						))}
+					</span>
+				</div>
+
+				<div className="wa-idle-chip wa-idle-chip--photo">
+					<span className="wa-idle-chip__photo-glow" />
+					<svg viewBox="0 0 40 32">
+						<circle cx="28" cy="10" r="4" />
+						<path d="M3 28 14 15l8 9 5-5 10 9H3Z" />
+					</svg>
+				</div>
+			</div>
+		);
+	},
+	() => true,
+);
+
+function WhatsAppChatIdlePane({ title, hint, unreadLabel, steps }) {
+	const rootRef = useRef(null);
+	const stepList = Array.isArray(steps) && steps.length ? steps : [];
+
+	useEffect(() => {
+		const node = rootRef.current;
+		if (!node) return undefined;
+		const id = window.requestAnimationFrame(() => {
+			node.classList.add('is-ready');
+		});
+		return () => window.cancelAnimationFrame(id);
+	}, []);
+
+	return (
+		<div ref={rootRef} className="wa-chat-idle" role="status" aria-live="polite">
+			<div className="wa-chat-idle__stage">
+				<IdleScene />
 
 				<section className="wa-chat-idle__copy">
 					<h2 className="wa-chat-idle__title">{title}</h2>
@@ -164,3 +186,5 @@ export default function WhatsAppChatIdlePane({
 		</div>
 	);
 }
+
+export default memo(WhatsAppChatIdlePane);

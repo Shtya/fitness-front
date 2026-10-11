@@ -1,17 +1,21 @@
 /*
- * Empty chat pane: "a conversation quietly happening".
+ * Empty chat pane — cinematic micro-conversation.
  *
- * One 12s loop drives every message so they stay in sync; companions float on their own
- * slower, offset cycles so the scene never repeats exactly. Only transform and opacity
- * animate (compositor-only, no layout or paint work), and everything is sized in em
- * from a container query so the scene scales with the pane instead of the viewport.
+ * Stability rules:
+ * - No container-type:size / cqmin (sibling chat-list scroll was invalidating
+ *   the container and restarting every loop on hover/scroll).
+ * - Infinite loops only start after .wa-chat-idle.is-ready (once per mount).
+ * - Scene DOM is memo-locked in JS; this file only uses transform/opacity.
  */
 
 html .wa-chat-idle:not(#wa-idle) {
 	--idle-bg: #f7f5f3;
 	--idle-card: #ffffff;
-	--idle-card-edge: rgba(11, 20, 26, 0.06);
-	--idle-shadow: 0 1px 2px rgba(11, 20, 26, 0.05), 0 18px 40px -18px rgba(11, 20, 26, 0.22);
+	--idle-card-edge: rgba(11, 20, 26, 0.07);
+	--idle-shadow:
+		0 1px 2px rgba(11, 20, 26, 0.04),
+		0 18px 44px -20px rgba(11, 20, 26, 0.28),
+		0 40px 80px -48px rgba(29, 170, 97, 0.35);
 	--idle-skeleton: #e9edef;
 	--idle-in: #f2f3f3;
 	--idle-in-line: #d6dbde;
@@ -20,12 +24,13 @@ html .wa-chat-idle:not(#wa-idle) {
 	--idle-tick: #8696a0;
 	--idle-tick-read: #53bdeb;
 	--idle-accent: #1daa61;
-	--idle-glow: rgba(29, 170, 97, 0.12);
+	--idle-glow: rgba(29, 170, 97, 0.16);
 	--idle-text: #111b21;
 	--idle-text-2: #667781;
-	--idle-loop: 12s;
+	--idle-loop: 16s;
+	--idle-ease: cubic-bezier(0.22, 1, 0.36, 1);
+	--idle-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
 
-	container-type: size;
 	position: relative;
 	display: flex;
 	align-items: center;
@@ -34,13 +39,17 @@ html .wa-chat-idle:not(#wa-idle) {
 	overflow: hidden;
 	background: var(--idle-bg);
 	color: var(--idle-text);
+	isolation: isolate;
 }
 
 html.dark .wa-chat-idle:not(#wa-idle) {
 	--idle-bg: #161717;
 	--idle-card: #1d1f1f;
-	--idle-card-edge: rgba(255, 255, 255, 0.05);
-	--idle-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 22px 44px -20px rgba(0, 0, 0, 0.7);
+	--idle-card-edge: rgba(255, 255, 255, 0.06);
+	--idle-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.35),
+		0 22px 48px -18px rgba(0, 0, 0, 0.75),
+		0 40px 80px -40px rgba(33, 192, 99, 0.22);
 	--idle-skeleton: #2e2f2f;
 	--idle-in: #2a2c2c;
 	--idle-in-line: #444747;
@@ -48,7 +57,7 @@ html.dark .wa-chat-idle:not(#wa-idle) {
 	--idle-out-line: #2f7a57;
 	--idle-tick: #8a9296;
 	--idle-accent: #21c063;
-	--idle-glow: rgba(33, 192, 99, 0.1);
+	--idle-glow: rgba(33, 192, 99, 0.14);
 	--idle-text: #fafafa;
 	--idle-text-2: #a5a5a5;
 }
@@ -61,8 +70,8 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 	max-width: 560px;
 	flex-direction: column;
 	align-items: center;
-	/* Everything below is sized in em off this, so the scene scales with the pane. */
-	font-size: clamp(10px, 2.6cqmin, 16px);
+	/* Stable vs. chat-list reflows — never tie scale to container queries. */
+	font-size: clamp(11px, 1.35vw, 16px);
 }
 
 /* ------------------------------------------------------------------ */
@@ -71,32 +80,152 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 .wa-idle-scene {
 	position: relative;
 	display: grid;
-	width: 26em;
-	height: 20em;
+	width: 28em;
+	height: 21.5em;
 	place-items: center;
 	margin-bottom: 2.2em;
-	animation: wa-idle-enter 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	perspective: 900px;
+	transform: translateZ(0);
+	contain: layout style;
+	opacity: 0;
+}
+
+.wa-chat-idle.is-ready .wa-idle-scene {
+	animation: wa-idle-enter 900ms var(--idle-ease) both;
 }
 
 @keyframes wa-idle-enter {
 	from {
 		opacity: 0;
-		transform: translateY(0.8em) scale(0.98);
+		transform: translateY(1.2em) scale(0.96);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.wa-idle-scene__aurora {
+	position: absolute;
+	inset: -8% -4%;
+	border-radius: 50%;
+	background:
+		conic-gradient(
+			from 180deg at 50% 50%,
+			transparent 0deg,
+			rgba(29, 170, 97, 0.1) 80deg,
+			transparent 160deg,
+			rgba(83, 189, 235, 0.08) 240deg,
+			transparent 320deg
+		);
+	opacity: 0;
+	filter: blur(12px);
+	pointer-events: none;
+}
+
+.wa-chat-idle.is-ready .wa-idle-scene__aurora {
+	animation: wa-idle-aurora var(--idle-loop) linear infinite;
+}
+
+@keyframes wa-idle-aurora {
+	0% {
+		opacity: 0.35;
+		transform: rotate(0deg) scale(1);
+	}
+	50% {
+		opacity: 0.7;
+		transform: rotate(180deg) scale(1.06);
+	}
+	100% {
+		opacity: 0.35;
+		transform: rotate(360deg) scale(1);
 	}
 }
 
 .wa-idle-scene__glow {
 	position: absolute;
-	inset: 8% 12%;
+	inset: 10% 14%;
 	border-radius: 50%;
-	background: radial-gradient(closest-side, var(--idle-glow), transparent);
-	animation: wa-idle-breathe 9s ease-in-out infinite;
+	background: radial-gradient(closest-side, var(--idle-glow), transparent 72%);
+	opacity: 0;
+	pointer-events: none;
+}
+
+.wa-chat-idle.is-ready .wa-idle-scene__glow {
+	animation: wa-idle-breathe 8s ease-in-out infinite;
 }
 
 @keyframes wa-idle-breathe {
+	0%,
+	100% {
+		opacity: 0.45;
+		transform: scale(0.96);
+	}
 	50% {
-		opacity: 0.55;
-		transform: scale(1.06);
+		opacity: 0.95;
+		transform: scale(1.1);
+	}
+}
+
+.wa-idle-scene__orb {
+	position: absolute;
+	border-radius: 50%;
+	pointer-events: none;
+	filter: blur(0.5px);
+	opacity: 0;
+}
+
+.wa-idle-scene__orb--a {
+	top: 12%;
+	inset-inline-start: 8%;
+	width: 0.55em;
+	height: 0.55em;
+	background: var(--idle-accent);
+	box-shadow: 0 0 12px var(--idle-glow);
+}
+
+.wa-idle-scene__orb--b {
+	bottom: 18%;
+	inset-inline-end: 10%;
+	width: 0.35em;
+	height: 0.35em;
+	background: var(--idle-tick-read);
+	box-shadow: 0 0 10px rgba(83, 189, 235, 0.45);
+}
+
+.wa-chat-idle.is-ready .wa-idle-scene__orb--a {
+	animation: wa-idle-orb-a 11s ease-in-out infinite;
+}
+
+.wa-chat-idle.is-ready .wa-idle-scene__orb--b {
+	animation: wa-idle-orb-b 13s ease-in-out infinite;
+}
+
+@keyframes wa-idle-orb-a {
+	0%,
+	100% {
+		opacity: 0.15;
+		transform: translate(0, 0);
+	}
+	40% {
+		opacity: 0.85;
+		transform: translate(1.2em, 0.8em);
+	}
+	70% {
+		opacity: 0.4;
+		transform: translate(0.4em, 1.6em);
+	}
+}
+
+@keyframes wa-idle-orb-b {
+	0%,
+	100% {
+		opacity: 0.2;
+		transform: translate(0, 0);
+	}
+	55% {
+		opacity: 0.9;
+		transform: translate(-1.4em, -1em);
 	}
 }
 
@@ -104,42 +233,150 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 .wa-idle-card {
 	position: relative;
 	z-index: 1;
-	width: 17em;
-	padding: 0.9em 0.9em 1.1em;
+	width: 17.5em;
+	padding: 0.95em 0.95em 1.15em;
 	border: 1px solid var(--idle-card-edge);
-	border-radius: 1.4em;
+	border-radius: 1.45em;
 	background: var(--idle-card);
 	box-shadow: var(--idle-shadow);
-	animation: wa-idle-float 8s ease-in-out infinite;
+	transform-style: preserve-3d;
+	overflow: hidden;
+	opacity: 0;
+}
+
+.wa-chat-idle.is-ready .wa-idle-card {
+	animation:
+		wa-idle-card-in 900ms 80ms var(--idle-ease) both,
+		wa-idle-float 9s 1s ease-in-out infinite;
+}
+
+@keyframes wa-idle-card-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.8em) rotateX(8deg) scale(0.97);
+	}
+	to {
+		opacity: 1;
+		transform: rotateX(0deg);
+	}
 }
 
 @keyframes wa-idle-float {
+	0%,
+	100% {
+		transform: translateY(0) rotateX(0deg) rotateZ(0deg);
+	}
 	50% {
-		transform: translateY(-0.35em);
+		transform: translateY(-0.45em) rotateX(1.2deg) rotateZ(-0.4deg);
+	}
+}
+
+.wa-idle-card__sheen {
+	position: absolute;
+	inset: -40% -60%;
+	background: linear-gradient(
+		105deg,
+		transparent 40%,
+		rgba(255, 255, 255, 0.28) 48%,
+		rgba(255, 255, 255, 0.02) 56%,
+		transparent 64%
+	);
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(-30%) rotate(8deg);
+}
+
+html.dark .wa-idle-card__sheen {
+	background: linear-gradient(
+		105deg,
+		transparent 40%,
+		rgba(255, 255, 255, 0.08) 48%,
+		transparent 58%
+	);
+}
+
+.wa-chat-idle.is-ready .wa-idle-card__sheen {
+	animation: wa-idle-sheen 16s ease-in-out infinite;
+}
+
+@keyframes wa-idle-sheen {
+	0%,
+	28%,
+	100% {
+		opacity: 0;
+		transform: translateX(-40%) rotate(8deg);
+	}
+	36% {
+		opacity: 1;
+	}
+	48% {
+		opacity: 0;
+		transform: translateX(40%) rotate(8deg);
 	}
 }
 
 .wa-idle-card__head {
+	position: relative;
+	z-index: 1;
 	display: flex;
 	align-items: center;
-	gap: 0.6em;
-	padding-bottom: 0.8em;
+	gap: 0.65em;
+	padding-bottom: 0.85em;
 	border-bottom: 1px solid var(--idle-skeleton);
 }
 
 .wa-idle-card__avatar {
-	width: 2em;
-	height: 2em;
+	position: relative;
+	width: 2.1em;
+	height: 2.1em;
 	flex: 0 0 auto;
 	border-radius: 50%;
-	background: linear-gradient(135deg, var(--idle-accent), color-mix(in srgb, var(--idle-accent) 55%, #0b7a52));
-	opacity: 0.85;
+	background: linear-gradient(
+		145deg,
+		var(--idle-accent),
+		color-mix(in srgb, var(--idle-accent) 45%, #0b7a52)
+	);
+	box-shadow: 0 4px 12px -4px var(--idle-glow);
+}
+
+.wa-idle-card__online {
+	position: absolute;
+	inset-inline-end: -0.05em;
+	bottom: -0.05em;
+	width: 0.55em;
+	height: 0.55em;
+	border: 0.14em solid var(--idle-card);
+	border-radius: 50%;
+	background: var(--idle-accent);
+	opacity: 0;
+}
+
+.wa-chat-idle.is-ready .wa-idle-card__online {
+	animation: wa-idle-online 16s ease-in-out infinite;
+}
+
+@keyframes wa-idle-online {
+	0%,
+	8% {
+		opacity: 0;
+		transform: scale(0.4);
+	}
+	14%,
+	88% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	94%,
+	100% {
+		opacity: 0;
+		transform: scale(0.6);
+	}
 }
 
 .wa-idle-card__lines {
 	display: grid;
 	flex: 1;
-	gap: 0.35em;
+	gap: 0.38em;
 }
 
 .wa-idle-card__lines span {
@@ -149,22 +386,37 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 }
 
 .wa-idle-card__lines span:first-child {
-	width: 52%;
+	width: 54%;
 }
 
 .wa-idle-card__lines span:last-child {
-	width: 30%;
+	width: 32%;
 	opacity: 0.7;
 }
 
 .wa-idle-card__thread {
 	position: relative;
+	z-index: 1;
 	display: flex;
-	height: 11.6em;
+	height: 12em;
 	flex-direction: column;
 	justify-content: flex-end;
-	gap: 0.5em;
-	padding-top: 0.8em;
+	gap: 0.55em;
+	padding-top: 0.85em;
+}
+
+.wa-idle-card__wallpaper {
+	position: absolute;
+	inset: 0.4em 0 0;
+	opacity: 0.35;
+	background-image: radial-gradient(circle at 1px 1px, var(--idle-skeleton) 1px, transparent 0);
+	background-size: 0.85em 0.85em;
+	mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 88%, transparent);
+	pointer-events: none;
+}
+
+html.dark .wa-idle-card__wallpaper {
+	opacity: 0.2;
 }
 
 /* Messages */
@@ -172,11 +424,19 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 	position: relative;
 	display: grid;
 	gap: 0.38em;
-	padding: 0.65em 0.75em;
-	border-radius: 0.85em;
+	padding: 0.68em 0.78em;
+	border-radius: 0.9em;
 	opacity: 0;
+	box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.06);
+}
+
+html.dark .wa-idle-msg {
+	box-shadow: none;
+}
+
+.wa-chat-idle.is-ready .wa-idle-msg {
 	animation-duration: var(--idle-loop);
-	animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+	animation-timing-function: var(--idle-ease);
 	animation-iteration-count: infinite;
 	animation-fill-mode: both;
 }
@@ -190,7 +450,7 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 .wa-idle-msg--in {
 	width: 68%;
 	align-self: flex-start;
-	border-end-start-radius: 0.25em;
+	border-end-start-radius: 0.22em;
 	background: var(--idle-in);
 	transform-origin: bottom left;
 }
@@ -202,8 +462,8 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 .wa-idle-msg--out {
 	width: 72%;
 	align-self: flex-end;
-	padding-bottom: 1.15em;
-	border-end-end-radius: 0.25em;
+	padding-bottom: 1.2em;
+	border-end-end-radius: 0.22em;
 	background: var(--idle-out);
 	transform-origin: bottom right;
 }
@@ -224,123 +484,154 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 	width: 46%;
 }
 
-.wa-idle-msg--a {
+.wa-chat-idle.is-ready .wa-idle-msg--a {
 	animation-name: wa-idle-msg-a;
 }
 
-.wa-idle-msg--b {
+.wa-chat-idle.is-ready .wa-idle-msg--b {
 	animation-name: wa-idle-msg-b;
 }
 
-.wa-idle-msg--c {
+.wa-chat-idle.is-ready .wa-idle-msg--c {
 	animation-name: wa-idle-msg-c;
 }
 
 @keyframes wa-idle-msg-a {
 	0%,
-	4% {
+	3% {
 		opacity: 0;
-		transform: translateY(0.6em) scale(0.94);
+		transform: translateY(0.85em) scale(0.9);
+		filter: blur(2px);
 	}
-	11%,
-	86% {
+	9% {
+		opacity: 1;
+		transform: translateY(-0.08em) scale(1.02);
+		filter: none;
+	}
+	12%,
+	84% {
 		opacity: 1;
 		transform: none;
+		filter: none;
 	}
-	94%,
+	92%,
 	100% {
 		opacity: 0;
-		transform: translateY(-0.3em);
+		transform: translateY(-0.4em) scale(0.98);
+		filter: blur(1px);
 	}
 }
 
 @keyframes wa-idle-msg-b {
 	0%,
-	15% {
+	14% {
 		opacity: 0;
-		transform: translateY(0.6em) scale(0.94);
+		transform: translateY(0.85em) scale(0.9);
+		filter: blur(2px);
 	}
-	22%,
-	86% {
+	20% {
+		opacity: 1;
+		transform: translateY(-0.08em) scale(1.02);
+		filter: none;
+	}
+	23%,
+	84% {
 		opacity: 1;
 		transform: none;
+		filter: none;
 	}
-	94%,
+	92%,
 	100% {
 		opacity: 0;
-		transform: translateY(-0.3em);
+		transform: translateY(-0.4em) scale(0.98);
+		filter: blur(1px);
 	}
 }
 
 @keyframes wa-idle-msg-c {
 	0%,
-	47% {
+	46% {
 		opacity: 0;
-		transform: translateY(0.6em) scale(0.94);
+		transform: translateY(0.85em) scale(0.9);
+		filter: blur(2px);
 	}
-	54%,
-	86% {
+	52% {
+		opacity: 1;
+		transform: translateY(-0.1em) scale(1.03);
+		filter: none;
+	}
+	56%,
+	84% {
 		opacity: 1;
 		transform: none;
+		filter: none;
 	}
-	94%,
+	92%,
 	100% {
 		opacity: 0;
-		transform: translateY(-0.3em);
+		transform: translateY(-0.4em) scale(0.98);
+		filter: blur(1px);
 	}
 }
 
-/* Typing indicator: shows in the reply's slot, then hands over to it */
+/* Typing indicator */
 .wa-idle-typing {
 	position: absolute;
 	inset-inline-end: 0;
 	bottom: 0;
 	display: flex;
-	gap: 0.3em;
-	padding: 0.7em 0.8em;
-	border-radius: 0.85em;
-	border-end-end-radius: 0.25em;
+	gap: 0.32em;
+	padding: 0.72em 0.85em;
+	border-radius: 0.9em;
+	border-end-end-radius: 0.22em;
 	background: var(--idle-out);
 	opacity: 0;
-	animation: wa-idle-typing var(--idle-loop) ease-in-out infinite both;
+	box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.06);
 }
 
 [dir='rtl'] .wa-idle-typing {
-	border-end-end-radius: 0.85em;
-	border-end-start-radius: 0.25em;
+	border-end-end-radius: 0.9em;
+	border-end-start-radius: 0.22em;
+}
+
+.wa-chat-idle.is-ready .wa-idle-typing {
+	animation: wa-idle-typing var(--idle-loop) var(--idle-ease) infinite both;
 }
 
 .wa-idle-typing span {
-	width: 0.45em;
-	height: 0.45em;
+	width: 0.42em;
+	height: 0.42em;
 	border-radius: 50%;
 	background: var(--idle-out-line);
-	animation: wa-idle-dot 1.2s ease-in-out infinite;
 }
 
-.wa-idle-typing span:nth-child(2) {
-	animation-delay: 0.15s;
+.wa-chat-idle.is-ready .wa-idle-typing span {
+	animation: wa-idle-dot 1.15s ease-in-out infinite;
 }
 
-.wa-idle-typing span:nth-child(3) {
-	animation-delay: 0.3s;
+.wa-chat-idle.is-ready .wa-idle-typing span:nth-child(2) {
+	animation-delay: 0.14s;
+}
+
+.wa-chat-idle.is-ready .wa-idle-typing span:nth-child(3) {
+	animation-delay: 0.28s;
 }
 
 @keyframes wa-idle-typing {
 	0%,
-	27% {
+	26% {
 		opacity: 0;
-		transform: scale(0.9);
+		transform: scale(0.86) translateY(0.3em);
 	}
-	31%,
-	44% {
+	30%,
+	43% {
 		opacity: 1;
 		transform: none;
 	}
-	48%,
+	47%,
 	100% {
 		opacity: 0;
-		transform: scale(0.96);
+		transform: scale(0.94) translateY(0.1em);
 	}
 }
 
@@ -348,16 +639,16 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 	0%,
 	60%,
 	100% {
-		opacity: 0.55;
+		opacity: 0.5;
 		transform: none;
 	}
 	30% {
 		opacity: 1;
-		transform: translateY(-0.18em);
+		transform: translateY(-0.22em);
 	}
 }
 
-/* Ticks: sent (grey) then read (blue) */
+/* Ticks */
 .wa-idle-msg__ticks {
 	position: absolute;
 	inset-inline-end: 0.6em;
@@ -380,58 +671,70 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 	stroke: var(--idle-tick);
 }
 
-/* Read state is a second, blue copy faded in on top (opacity only, no colour paints). */
 .wa-idle-msg__ticks::after {
 	content: '';
 	position: absolute;
 	inset: 0;
 	background: var(--idle-tick-read);
-	-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 12' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 6.5 3.2 3.2L10.5 2.5'/%3E%3Cpath d='m7.4 9.4.3.3L14 2.5'/%3E%3C/svg%3E") center / contain no-repeat;
-	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 12' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 6.5 3.2 3.2L10.5 2.5'/%3E%3Cpath d='m7.4 9.4.3.3L14 2.5'/%3E%3C/svg%3E") center / contain no-repeat;
+	-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 12' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 6.5 3.2 3.2L10.5 2.5'/%3E%3Cpath d='m7.4 9.4.3.3L14 2.5'/%3E%3C/svg%3E")
+		center / contain no-repeat;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 12' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 6.5 3.2 3.2L10.5 2.5'/%3E%3Cpath d='m7.4 9.4.3.3L14 2.5'/%3E%3C/svg%3E")
+		center / contain no-repeat;
 	opacity: 0;
+}
+
+.wa-chat-idle.is-ready .wa-idle-msg__ticks::after {
 	animation: wa-idle-read var(--idle-loop) ease-out infinite both;
 }
 
 @keyframes wa-idle-read {
 	0%,
-	60% {
+	58% {
 		opacity: 0;
 	}
-	64%,
+	63%,
 	100% {
 		opacity: 1;
 	}
 }
 
-/* Heart reaction landing on the first message */
+/* Heart reaction */
 .wa-idle-msg__reaction {
 	position: absolute;
-	inset-inline-end: -0.4em;
-	bottom: -0.65em;
+	inset-inline-end: -0.45em;
+	bottom: -0.7em;
 	display: grid;
-	width: 1.5em;
-	height: 1.5em;
+	width: 1.55em;
+	height: 1.55em;
 	place-items: center;
 	border: 0.15em solid var(--idle-card);
 	border-radius: 50%;
 	background: var(--idle-in);
 	opacity: 0;
-	animation: wa-idle-react var(--idle-loop) cubic-bezier(0.34, 1.4, 0.64, 1) infinite both;
+	box-shadow: 0 4px 12px -4px rgba(241, 92, 109, 0.55);
+}
+
+.wa-chat-idle.is-ready .wa-idle-msg__reaction {
+	animation: wa-idle-react var(--idle-loop) var(--idle-spring) infinite both;
 }
 
 .wa-idle-msg__reaction svg {
-	width: 0.85em;
-	height: 0.85em;
+	width: 0.88em;
+	height: 0.88em;
 	fill: #f15c6d;
 }
 
 @keyframes wa-idle-react {
 	0%,
-	69% {
+	68% {
 		opacity: 0;
-		transform: scale(0.4);
+		transform: scale(0.2) translateY(0.4em);
 	}
-	74%,
+	74% {
+		opacity: 1;
+		transform: scale(1.18) translateY(-0.12em);
+	}
+	80%,
 	100% {
 		opacity: 1;
 		transform: none;
@@ -449,28 +752,52 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 	border: 1px solid var(--idle-card-edge);
 	background: var(--idle-card);
 	box-shadow: var(--idle-shadow);
+	opacity: 0;
+	backdrop-filter: blur(8px);
 }
 
 .wa-idle-chip--voice {
-	bottom: 2.4em;
-	inset-inline-start: 0.6em;
-	gap: 0.5em;
-	padding: 0.45em 0.8em 0.45em 0.45em;
+	bottom: 2.2em;
+	inset-inline-start: 0.35em;
+	gap: 0.55em;
+	padding: 0.48em 0.85em 0.48em 0.48em;
 	border-radius: 2em;
-	animation: wa-idle-drift-a 9s ease-in-out infinite;
 }
 
 [dir='rtl'] .wa-idle-chip--voice {
-	padding: 0.45em 0.45em 0.45em 0.8em;
+	padding: 0.48em 0.48em 0.48em 0.85em;
+}
+
+.wa-chat-idle.is-ready .wa-idle-chip--voice {
+	animation:
+		wa-idle-chip-in 900ms 180ms var(--idle-ease) both,
+		wa-idle-drift-a 10s 1s ease-in-out infinite;
 }
 
 .wa-idle-chip__play {
 	display: grid;
-	width: 1.7em;
-	height: 1.7em;
+	width: 1.75em;
+	height: 1.75em;
 	place-items: center;
 	border-radius: 50%;
 	background: var(--idle-accent);
+	box-shadow: 0 6px 14px -6px var(--idle-glow);
+}
+
+.wa-chat-idle.is-ready .wa-idle-chip__play {
+	animation: wa-idle-play-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes wa-idle-play-pulse {
+	0%,
+	100% {
+		transform: scale(1);
+		box-shadow: 0 6px 14px -6px var(--idle-glow);
+	}
+	50% {
+		transform: scale(1.06);
+		box-shadow: 0 8px 18px -4px var(--idle-glow);
+	}
 }
 
 .wa-idle-chip__play svg {
@@ -486,73 +813,121 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
 
 .wa-idle-chip__wave {
 	display: flex;
-	height: 1.4em;
+	height: 1.45em;
 	align-items: center;
-	gap: 0.18em;
+	gap: 0.16em;
 }
 
 .wa-idle-chip__wave span {
-	width: 0.2em;
+	width: 0.18em;
 	height: 100%;
 	border-radius: 1em;
-	background: var(--idle-in-line);
+	background: linear-gradient(180deg, var(--idle-accent), var(--idle-in-line));
 	transform: scaleY(var(--h));
-	animation: wa-idle-wave 2.4s ease-in-out infinite;
-	animation-delay: calc(var(--i) * -0.27s);
+	opacity: 0.85;
+}
+
+.wa-chat-idle.is-ready .wa-idle-chip__wave span {
+	animation: wa-idle-wave 1.8s ease-in-out infinite;
+	animation-delay: calc(var(--i) * -0.16s);
 }
 
 @keyframes wa-idle-wave {
+	0%,
+	100% {
+		transform: scaleY(var(--h));
+	}
 	50% {
-		transform: scaleY(calc(var(--h) * 0.45));
+		transform: scaleY(calc(var(--h) * 0.35));
 	}
 }
 
 .wa-idle-chip--photo {
-	top: 1.2em;
-	inset-inline-end: 1.4em;
-	width: 4.6em;
-	height: 3.8em;
+	top: 1em;
+	inset-inline-end: 1.1em;
+	width: 4.8em;
+	height: 4em;
 	justify-content: center;
 	padding: 0.35em;
-	border-radius: 0.9em;
-	animation: wa-idle-drift-b 11s ease-in-out infinite;
+	border-radius: 1em;
+	overflow: hidden;
+}
+
+.wa-chat-idle.is-ready .wa-idle-chip--photo {
+	animation:
+		wa-idle-chip-in 900ms 260ms var(--idle-ease) both,
+		wa-idle-drift-b 12s 1.1s ease-in-out infinite;
+}
+
+.wa-idle-chip__photo-glow {
+	position: absolute;
+	inset: -20%;
+	background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.45), transparent 55%);
+	opacity: 0.5;
+	pointer-events: none;
 }
 
 .wa-idle-chip--photo svg {
+	position: relative;
 	width: 100%;
 	height: 100%;
-	border-radius: 0.6em;
-	background: linear-gradient(160deg, #cfe9ff, #a7e3c4);
-	fill: rgba(255, 255, 255, 0.85);
+	border-radius: 0.7em;
+	background: linear-gradient(155deg, #cfe9ff 0%, #9ad7ff 42%, #a7e3c4 100%);
+	fill: rgba(255, 255, 255, 0.9);
 }
 
 html.dark .wa-idle-chip--photo svg {
-	background: linear-gradient(160deg, #24435a, #1f5a42);
+	background: linear-gradient(155deg, #24435a, #1f5a42);
 	fill: rgba(255, 255, 255, 0.55);
+}
+
+.wa-chat-idle.is-ready .wa-idle-chip--photo svg {
+	animation: wa-idle-photo-ken 12s ease-in-out infinite;
+}
+
+@keyframes wa-idle-photo-ken {
+	0%,
+	100% {
+		transform: scale(1) translate(0, 0);
+	}
+	50% {
+		transform: scale(1.08) translate(-2%, 1%);
+	}
+}
+
+@keyframes wa-idle-chip-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.7em) scale(0.94);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
 }
 
 @keyframes wa-idle-drift-a {
 	0%,
 	100% {
-		transform: translate(0, 0) rotate(-2deg);
+		transform: translate3d(0, 0, 0) rotate(-2.5deg);
 	}
 	50% {
-		transform: translate(0.3em, -0.55em) rotate(1deg);
+		transform: translate3d(0.35em, -0.7em, 0) rotate(1.5deg);
 	}
 }
 
 @keyframes wa-idle-drift-b {
 	0%,
 	100% {
-		transform: translate(0, 0) rotate(3deg);
+		transform: translate3d(0, 0, 0) rotate(3deg);
 	}
 	50% {
-		transform: translate(-0.35em, 0.5em) rotate(-1deg);
+		transform: translate3d(-0.45em, 0.55em, 0) rotate(-1.5deg);
 	}
 }
 
 /* ------------------------------------------------------------------ */
-/* Copy: quiet and secondary                                           */
+/* Copy                                                                */
 /* ------------------------------------------------------------------ */
 html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__copy {
 	display: flex;
@@ -561,16 +936,31 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__copy {
 	align-items: center;
 	gap: 0.5em;
 	text-align: center;
-	animation: wa-idle-enter 700ms 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	opacity: 0;
+}
+
+.wa-chat-idle.is-ready .wa-chat-idle__copy {
+	animation: wa-idle-copy-in 800ms 220ms var(--idle-ease) both;
+}
+
+@keyframes wa-idle-copy-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.6em);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
 }
 
 html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__title {
 	margin: 0;
 	color: var(--idle-text);
-	font-size: 1.35em;
-	font-weight: 500;
-	line-height: 1.3;
-	letter-spacing: -0.01em;
+	font-size: 1.4em;
+	font-weight: 560;
+	line-height: 1.28;
+	letter-spacing: -0.02em;
 	white-space: normal;
 	background: none;
 	-webkit-text-fill-color: currentColor;
@@ -586,15 +976,15 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__hint {
 html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__unread {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.5em;
-	margin-top: 0.3em;
-	padding: 0.35em 0.85em;
-	border: 1px solid var(--idle-card-edge);
+	gap: 0.55em;
+	margin-top: 0.35em;
+	padding: 0.4em 0.95em;
+	border: 1px solid color-mix(in srgb, var(--idle-accent) 22%, var(--idle-card-edge));
 	border-radius: 2em;
-	background: var(--idle-card);
+	background: color-mix(in srgb, var(--idle-accent) 8%, var(--idle-card));
 	color: var(--idle-text-2);
 	font-size: 0.9em;
-	font-weight: 500;
+	font-weight: 560;
 	box-shadow: none;
 }
 
@@ -603,31 +993,63 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__unread {
 	height: 0.5em;
 	border-radius: 50%;
 	background: var(--idle-accent);
+	box-shadow: 0 0 0 0 color-mix(in srgb, var(--idle-accent) 45%, transparent);
 }
 
-/* Short panes: drop the scene before the copy gets squeezed */
-@container (max-height: 360px) {
+.wa-chat-idle.is-ready .wa-chat-idle__unread-dot {
+	animation: wa-idle-unread-pulse 2.4s ease-out infinite;
+}
+
+@keyframes wa-idle-unread-pulse {
+	0% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--idle-accent) 45%, transparent);
+	}
+	70% {
+		box-shadow: 0 0 0 0.55em transparent;
+	}
+	100% {
+		box-shadow: 0 0 0 0 transparent;
+	}
+}
+
+@media (max-height: 560px) {
+	.wa-idle-scene {
+		width: 24em;
+		height: 18.5em;
+		margin-bottom: 1.4em;
+	}
+}
+
+@media (max-height: 420px) {
 	.wa-idle-scene {
 		display: none;
 	}
 }
 
-/* ------------------------------------------------------------------ */
-/* Reduced motion: the finished conversation, still                    */
-/* ------------------------------------------------------------------ */
 @media (prefers-reduced-motion: reduce) {
 	.wa-idle-scene,
 	.wa-idle-scene *,
 	.wa-idle-msg__ticks::after,
-	html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__copy {
+	html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__copy,
+	.wa-chat-idle__unread-dot {
 		animation: none !important;
+	}
+
+	.wa-idle-scene,
+	.wa-idle-card,
+	.wa-idle-chip,
+	html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__copy {
+		opacity: 1;
+		transform: none;
 	}
 
 	.wa-idle-msg,
 	.wa-idle-msg__reaction,
-	.wa-idle-msg__ticks::after {
+	.wa-idle-msg__ticks::after,
+	.wa-idle-card__online {
 		opacity: 1;
 		transform: none;
+		filter: none;
 	}
 
 	.wa-idle-typing {

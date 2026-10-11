@@ -1400,7 +1400,9 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   z-index: 2;
   margin-top: 6px;
   text-align: center;
-  animation: wa-idle-fade-in 0.55s ease 0.08s both;
+  /* Enter motion lives in wa-chat-idle.css (.is-ready) so list scroll/hover
+     re-renders cannot restart a one-shot fade on this node. */
+  animation: none;
 }
 
 .wa-chat-idle__title {
@@ -1470,7 +1472,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   box-shadow:
     0 8px 20px rgba(39, 74, 71, 0.06),
     0 1px 3px rgba(39, 74, 71, 0.04);
-  animation: wa-idle-fade-in 0.55s ease 0.14s both;
+  animation: none;
   overflow: hidden;
 }
 

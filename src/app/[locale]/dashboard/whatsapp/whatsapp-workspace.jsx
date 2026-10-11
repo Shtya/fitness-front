@@ -10238,7 +10238,7 @@ function Empty({ icon: Icon = MessageCircle, title, hint, action = null, classNa
 	);
 }
 
-function ChatIdlePane({ title, hint, unreadLabel, steps }) {
+const ChatIdlePane = memo(function ChatIdlePane({ title, hint, unreadLabel, steps }) {
 	return (
 		<WhatsAppChatIdlePane
 			title={title}
@@ -10247,7 +10247,7 @@ function ChatIdlePane({ title, hint, unreadLabel, steps }) {
 			steps={steps}
 		/>
 	);
-}
+});
 
 function TabLoading({ label = 'Loading…' }) {
 	return (
