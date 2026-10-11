@@ -22,6 +22,7 @@ import {
 	firstStrongTextDirection,
 	messageTextPresentation,
 	groupSenderIdentity,
+	messagesFormBubbleCluster,
 	collapseQuotedPreviewText,
 	quotedMessageLabel,
 	quotedMessagePreview,
@@ -810,6 +811,35 @@ test('group sender identity prefers stored name over raw WhatsApp id', () => {
 	assert.equal(sender.avatarUrl, 'https://example.com/a.jpg');
 	assert.equal(sender.key, '246896262172848@lid');
 	assert.match(sender.color, /^#/);
+});
+
+test('group bubble cluster stacks same sender even without waId / with unix timestamps', () => {
+	const a = {
+		id: 'm1',
+		direction: 'inbound',
+		senderName: 'Ahmed Magdy',
+		timestamp: 1710000000,
+	};
+	const b = {
+		id: 'm2',
+		direction: 'inbound',
+		senderName: 'Ahmed Magdy',
+		timestamp: 1710000060,
+	};
+	assert.equal(messagesFormBubbleCluster(a, b, { isGroupChat: true }), true);
+	assert.notEqual(groupSenderIdentity(a).key, a.id);
+	assert.equal(groupSenderIdentity(a).key, groupSenderIdentity(b).key);
+});
+
+test('group bubble cluster breaks when the sender changes', () => {
+	assert.equal(
+		messagesFormBubbleCluster(
+			{ direction: 'inbound', senderName: 'Ahmed Magdy', senderWaId: '1@lid' },
+			{ direction: 'inbound', senderName: 'Other', senderWaId: '2@lid' },
+			{ isGroupChat: true },
+		),
+		false,
+	);
 });
 
 test('inbox avatar lookup uses a matching direct chat photo', () => {

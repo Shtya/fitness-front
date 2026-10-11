@@ -1767,7 +1767,7 @@ const GROUP_SENDER_COLORS = [
 ];
 
 export function groupSenderIdentity(message) {
-	const waId = String(message?.senderWaId || '').trim();
+	const waId = String(message?.senderWaId || message?.raw?.participant || '').trim();
 	const name = String(
 		message?.senderName ||
 			message?.contactName ||
@@ -1777,17 +1777,43 @@ export function groupSenderIdentity(message) {
 	).trim();
 	const fallback = waId ? waId.replace(/@.*$/, '') : '';
 	const label = name || fallback;
-	const seed = waId || label;
+	const seed = waId || label || 'unknown';
 	let hash = 0;
 	for (let i = 0; i < seed.length; i += 1) {
 		hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
 	}
+	// Never key by message id — that made every group bubble a solo turn
+	// (avatar + name + large gap) even when the same person spoke twice.
 	return {
-		key: waId || label || String(message?.id || ''),
+		key: waId || (label ? `name:${label.toLowerCase()}` : 'unknown'),
 		name: label,
 		avatarUrl: String(message?.senderAvatarUrl || '').trim(),
 		color: GROUP_SENDER_COLORS[hash % GROUP_SENDER_COLORS.length],
 	};
+}
+
+function messageDayKey(message) {
+	const raw = message?.providerTimestamp || message?.created_at || message?.timestamp;
+	if (raw == null || raw === '') return '';
+	if (typeof raw === 'number' || /^\d+$/.test(String(raw).trim())) {
+		const n = Number(raw);
+		if (!Number.isFinite(n) || n <= 0) return '';
+		const ms = n < 1e12 ? n * 1000 : n;
+		const d = new Date(ms);
+		return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : '';
+	}
+	const d = new Date(raw);
+	if (Number.isFinite(d.getTime())) return d.toISOString().slice(0, 10);
+	return String(raw).slice(0, 10);
+}
+
+function sameGroupSender(left, right) {
+	const a = groupSenderIdentity(left);
+	const b = groupSenderIdentity(right);
+	if (a.key && b.key && a.key !== 'unknown' && a.key === b.key) return true;
+	const nameA = String(a.name || '').trim().toLowerCase();
+	const nameB = String(b.name || '').trim().toLowerCase();
+	return Boolean(nameA && nameB && nameA === nameB);
 }
 
 /** Same author + same day → WhatsApp stacks bubbles tightly with one tail. */
@@ -1796,19 +1822,10 @@ export function messagesFormBubbleCluster(left, right, { isGroupChat = false } =
 	const leftOut = String(left.direction || '').toLowerCase() === 'outbound';
 	const rightOut = String(right.direction || '').toLowerCase() === 'outbound';
 	if (leftOut !== rightOut) return false;
-	const dayLeft = String(left.providerTimestamp || left.created_at || left.timestamp || '').slice(
-		0,
-		10,
-	);
-	const dayRight = String(
-		right.providerTimestamp || right.created_at || right.timestamp || '',
-	).slice(0, 10);
+	const dayLeft = messageDayKey(left);
+	const dayRight = messageDayKey(right);
 	if (dayLeft && dayRight && dayLeft !== dayRight) return false;
-	if (isGroupChat && !leftOut) {
-		const keyLeft = groupSenderIdentity(left).key;
-		const keyRight = groupSenderIdentity(right).key;
-		if (!keyLeft || !keyRight || keyLeft !== keyRight) return false;
-	}
+	if (isGroupChat && !leftOut && !sameGroupSender(left, right)) return false;
 	return true;
 }
 

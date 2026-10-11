@@ -2009,7 +2009,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 
 /* Gap lives in padding so the measuring virtualizer includes it. */
 .wa-message-row {
-  padding-bottom: 12px;
+  padding-bottom: 8px;
   overflow-anchor: none;
 }
 
@@ -2025,7 +2025,11 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-row:has(.wa-message-voice) {
-  padding-bottom: 12px;
+  padding-bottom: 8px;
+}
+
+.wa-message-row.wa-precedes-same:has(.wa-message-voice) {
+  padding-bottom: 2px;
 }
 
 .wa-message-row:has(.wa-date-separator) {
@@ -2328,8 +2332,12 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   padding: 6px 9px 8px 9px;
   border-radius: 7.5px;
   position: relative;
-  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.08);
   overflow: hidden;
+}
+
+.wa-message-bubble.wa-follows-same {
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.05);
 }
 
 .wa-message-mine {
