@@ -1,0 +1,132 @@
+/**
+ * Generates src/app/[locale]/dashboard/whatsapp/wa-desktop-palette.css.
+ *
+ * The WhatsApp page's dark styles (wa-ui.css, globals.css) hard-code the 2022 WhatsApp Web
+ * teal-grey palette (#111b21, #202c33, #2a3942, #00a884 …). The desktop layer moves to the
+ * current neutral palette (#161717, #1d1f1f, #2e2f2f, #21c063 …). Rather than hand-copy
+ * hundreds of rules, this script finds every dark-mode rule that uses an old colour and
+ * re-emits the same selector with the new colour, inside a desktop-only media query, so the
+ * phone layout is untouched.
+ *
+ * Run after editing those stylesheets:  node scripts/generate-wa-desktop-palette.mjs
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import postcss from 'postcss';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const dir = path.join(root, 'src/app/[locale]');
+const sources = [
+	path.join(dir, 'dashboard/whatsapp/wa-ui.css'),
+	path.join(dir, 'globals.css'),
+];
+const out = path.join(dir, 'dashboard/whatsapp/wa-desktop-palette.css');
+
+// old rgb -> new rgb (dark mode only)
+const MAP = new Map(
+	[
+		['11,20,26', '22,23,23'], // #0b141a wallpaper / deepest panel
+		['17,27,33', '22,23,23'], // #111b21 panels
+		['12,19,24', '22,23,23'],
+		['24,34,41', '36,38,38'], // #182229 hover
+		['31,44,51', '29,31,31'], // #1f2c33 cards
+		['32,44,51', '29,31,31'], // #202c33 headers / incoming
+		['35,49,56', '29,31,31'], // #233138 popovers
+		['27,38,44', '29,31,31'], // #1b262c
+		['42,57,66', '46,47,47'], // #2a3942 inputs / hover
+		['50,67,77', '54,56,56'], // #32434d pressed
+		['55,66,72', '59,61,61'], // #374248
+		['34,45,52', '34,36,36'], // #222d34 separators
+		['47,59,67', '46,47,47'], // #2f3b43 borders
+		['59,74,84', '59,61,61'], // #3b4a54 strong borders
+		['134,150,160', '165,165,165'], // #8696a0 secondary text
+		['174,186,193', '174,174,174'], // #aebac1 icons
+		['0,168,132', '33,192,99'], // #00a884 accent
+		['0,92,75', '20,77,55'], // #005c4b outgoing
+		['10,51,44', '16,53,41'], // #0a332c selected chip
+		['0,128,105', '33,192,99'], // #008069
+	].map(([from, to]) => [from, to.split(',').map(Number)]),
+);
+
+// Theme-neutral rules: only the accent moves (#00a884 -> #1daa61, the current WhatsApp green).
+const ACCENT_MAP = new Map(
+	[
+		['0,168,132', '29,170,97'],
+		['0,128,105', '27,135,85'],
+		['6,207,156', '29,170,97'],
+	].map(([from, to]) => [from, to.split(',').map(Number)]),
+);
+
+const hexToRgb = hex => {
+	const h = hex.length === 4 ? [...hex.slice(1)].map(c => c + c).join('') : hex.slice(1, 7);
+	return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)).join(',');
+};
+const toHex = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+
+function remap(value, map = MAP) {
+	let changed = false;
+	let next = value.replace(/#([0-9a-f]{6}|[0-9a-f]{3})\b/gi, match => {
+		const target = map.get(hexToRgb(match.toLowerCase()));
+		if (!target) return match;
+		changed = true;
+		return toHex(target);
+	});
+	next = next.replace(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(,\s*[\d.]+\s*)?\)/gi, (match, r, g, b, alpha) => {
+		const target = map.get(`${r},${g},${b}`);
+		if (!target) return match;
+		changed = true;
+		return alpha ? `rgba(${target.join(', ')}${alpha.replace(/\s+/g, ' ')})` : `rgb(${target.join(', ')})`;
+	});
+	return changed ? next : null;
+}
+
+const isDarkSelector = selector =>
+	/(^|\s|,)(html\.dark|\.dark|html\[data-theme-mode=['"]?dark)/.test(selector);
+
+const outRoot = postcss.root();
+let count = 0;
+for (const file of sources) {
+	const ast = postcss.parse(fs.readFileSync(file, 'utf8'), { from: file });
+	ast.walkRules(rule => {
+		const dark = isDarkSelector(rule.selector);
+		if (!rule.selector.includes('wa-') && !dark) return;
+		// Skip anything already scoped to phones or to print.
+		for (let p = rule.parent; p && p.type !== 'root'; p = p.parent) {
+			if (p.type === 'atrule' && /max-width|print/.test(p.params)) return;
+			if (p.type === 'atrule' && /keyframes/.test(p.name)) return;
+		}
+		const decls = [];
+		rule.walkDecls(decl => {
+			const next = remap(decl.value, dark ? MAP : ACCENT_MAP);
+			if (next) decls.push(decl.clone({ value: next }));
+		});
+		if (!decls.length) return;
+		const copy = postcss.rule({ selector: rule.selector });
+		decls.forEach(d => copy.append(d));
+		let target = outRoot;
+		// Keep the original min-width / supports wrappers so the cascade matches.
+		const wrappers = [];
+		for (let p = rule.parent; p && p.type !== 'root'; p = p.parent) {
+			if (p.type === 'atrule') wrappers.unshift(p);
+		}
+		for (const w of wrappers) {
+			const at = postcss.atRule({ name: w.name, params: w.params });
+			target.append(at);
+			target = at;
+		}
+		target.append(copy);
+		count += 1;
+	});
+}
+
+const media = postcss.atRule({ name: 'media', params: '(min-width: 769px)' });
+outRoot.each(node => media.append(node.clone()));
+const header = `/*
+ * GENERATED by scripts/generate-wa-desktop-palette.mjs — do not edit by hand.
+ * Desktop-only remap of the dark WhatsApp palette to the current WhatsApp Web greys.
+ * ${count} rules.
+ */
+`;
+fs.writeFileSync(out, header + media.toString() + '\n');
+console.log(`wrote ${path.relative(root, out)} (${count} rules)`);

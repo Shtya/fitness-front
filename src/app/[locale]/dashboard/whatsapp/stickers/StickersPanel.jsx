@@ -143,8 +143,14 @@ function computePanelPosition(anchorRect, { wide = false, tall = false } = {}, c
 		width: 32,
 		height: 32,
 	};
-	let left = rect.left + rect.width / 2 - width / 2;
-	left = Math.max(margin, Math.min(left, viewportW - width - margin));
+	// WhatsApp Web opens the picker from the composer's leading edge and keeps it inside the
+	// conversation pane, so it never covers the chat list.
+	const pane = document.querySelector('.wa-chat-thread-pane')?.getBoundingClientRect();
+	const minLeft = pane ? pane.left + margin : margin;
+	const maxLeft = (pane ? pane.right : viewportW) - width - margin;
+	const rtl = document.documentElement.dir === 'rtl';
+	let left = rtl ? rect.right + 16 - width : rect.left - 16;
+	left = Math.max(minLeft, Math.min(left, Math.max(minLeft, maxLeft)));
 	let top = rect.top - gap - height;
 	if (top < margin) {
 		top = Math.min(rect.bottom + gap, viewportH - height - margin);

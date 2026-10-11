@@ -15,8 +15,6 @@ import {
 	AudioLines,
 	AlertTriangle,
 	Archive,
-	ArrowDownLeft,
-	ArrowUpRight,
 	BarChart3,
 	Bell,
 	BellOff,
@@ -247,6 +245,9 @@ import {
 } from './wa-scroll-debug';
 import './wa-story-panel.css';
 import './wa-ui.css';
+import './wa-mobile.css';
+import './wa-desktop-palette.css';
+import './wa-desktop.css';
 import { useMenuKeyboard } from './wa-ui-menu';
 import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
 import {
@@ -4858,6 +4859,7 @@ function WaGroupsBrowser({
 	onSelect,
 	onRefresh,
 	onOpenChat,
+	onCloseDetails,
 }) {
 	const [query, setQuery] = useState('');
 	const ar = locale === 'ar';
@@ -4917,7 +4919,7 @@ function WaGroupsBrowser({
 	);
 
 	return (
-		<div className="wa-grp">
+		<div className={`wa-grp${selectedGroup ? ' has-selection' : ''}`}>
 			<aside className="wa-grp-side">
 				<header className="wa-grp-side__head">
 					<div className="min-w-0">
@@ -4995,6 +4997,16 @@ function WaGroupsBrowser({
 			</aside>
 
 			<section className="wa-grp-main wa-ui-scroll nice-scroll">
+				{/* Phones show the list and the details one at a time; this returns to the list. */}
+				{selectedGroup && onCloseDetails ? (
+					<div className="wa-grp-back-bar">
+						<button type="button" className="wa-grp-back" onClick={onCloseDetails}>
+							<ChevronLeft size={26} strokeWidth={2.4} className="rtl:rotate-180" aria-hidden="true" />
+							{t.groups}
+						</button>
+						<span className="wa-grp-back-bar__title">{ar ? 'معلومات الجروب' : 'Group info'}</span>
+					</div>
+				) : null}
 				{!selectedGroup ? (
 					<div className="wa-grp-empty">
 						<span className="wa-grp-empty__icon" aria-hidden="true">
@@ -8728,16 +8740,18 @@ function MessageActionMenu({
 
 			{/* Mobile sheet */}
 			<div
-				className="fixed inset-0 z-[100] hidden overflow-y-auto bg-black/20 px-3 backdrop-blur-md max-[769px]:block"
+				className={`wa-mam fixed inset-0 z-[100] hidden overflow-y-auto bg-black/20 px-3 backdrop-blur-md max-[769px]:block ${
+					message.direction === 'outbound' ? 'is-out' : 'is-in'
+				}`}
 				onClick={onClose}
 			>
 				<div
-					className="relative mx-auto w-full max-w-md pb-5"
+					className="wa-mam__stack relative mx-auto w-full max-w-md pb-5"
 					style={{ top: mobileTop }}
 					onClick={event => event.stopPropagation()}
 				>
-					<div className={`mb-3 flex ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
-						<div className={`max-w-[88%] overflow-hidden rounded-2xl px-3.5 py-2.5 text-sm shadow-xl ${
+					<div className={`wa-mam__preview mb-3 flex ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+						<div className={`wa-mam__bubble max-w-[88%] overflow-hidden rounded-2xl px-3.5 py-2.5 text-sm shadow-xl ${
 							message.direction === 'outbound' ? 'bg-[#d9fdd3]' : 'bg-white'
 						}`}>
 							{previewImageUrl && (
@@ -8754,7 +8768,7 @@ function MessageActionMenu({
 									/>
 								</p>
 							</div>
-							<p className="mt-1 text-end text-[10px] text-[#667781]">
+							<p className="wa-mam__time mt-1 text-end text-[10px] text-[#667781]">
 								{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], {
 									hour: '2-digit',
 									minute: '2-digit',
@@ -8762,10 +8776,10 @@ function MessageActionMenu({
 							</p>
 						</div>
 					</div>
-					<div className="wa-ui-menu wa-ui-reactions-pill mx-auto mb-2.5 w-fit">
+					<div className="wa-mam__reactions wa-ui-menu wa-ui-reactions-pill mx-auto mb-2.5 w-fit">
 						{renderReactions()}
 					</div>
-					<div className="wa-message-action-sheet wa-ui-menu" role="menu" aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}>
+					<div className="wa-mam__menu wa-message-action-sheet wa-ui-menu" role="menu" aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}>
 						{renderMenuItems({ attachBoardRef: false })}
 						{renderBoardSheet()}
 					</div>
@@ -9094,8 +9108,10 @@ function ConversationActionMenu({
 	}, [conversation, anchorRect]);
 	if (!mounted || !conversation) return null;
 	const ar = locale === 'ar';
+	// Split view needs a wide screen; phones open one chat at a time.
+	const canOpenBeside = typeof window === 'undefined' || window.innerWidth > 768;
 	const actions = [
-		{
+		canOpenBeside && {
 			id: 'openBeside',
 			label: ar ? 'فتح بجانب الشات الحالي' : 'Open beside current chat',
 			icon: Columns2,
@@ -9150,7 +9166,7 @@ function ConversationActionMenu({
 					event.preventDefault();
 					onClose();
 				}}
-				className="fixed inset-0 z-[105] cursor-default bg-transparent"
+				className="wa-cam-scrim fixed inset-0 z-[105] cursor-default bg-transparent"
 			/>
 			<div
 				ref={menuRef}
@@ -9268,7 +9284,10 @@ function MobileWhatsAppNav({
 	onSelect,
 	labels,
 	unreadCount,
+	avatarUrl = '',
+	locale = 'en',
 }) {
+	const youLabel = String(locale).toLowerCase().startsWith('ar') ? 'أنت' : 'You';
 	const items = [
 		{
 			id: 'statuses', icon: <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -9312,12 +9331,12 @@ function MobileWhatsAppNav({
 			id: 'settings', icon: <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 				<path d="M16.0001 27.7641C16.3026 27.7641 16.5926 27.7389 16.9077 27.7137L17.5884 29.012C17.7144 29.2894 18.0043 29.4406 18.3447 29.3902C18.6598 29.3398 18.8741 29.1003 18.9245 28.7725L19.1262 27.3356C19.706 27.1843 20.2733 26.9574 20.8405 26.7179L21.8993 27.6759C22.1262 27.9028 22.4413 27.9406 22.7565 27.7767C23.0212 27.6129 23.1346 27.323 23.0716 26.9952L22.7817 25.5834C23.2607 25.2431 23.7397 24.8523 24.1808 24.4238L25.4918 24.9784C25.8069 25.1044 26.0968 25.0414 26.3363 24.7515C26.5506 24.5246 26.5758 24.1969 26.3994 23.9196L25.6304 22.6969C25.9708 22.2053 26.2607 21.6758 26.5254 21.1212L27.975 21.1842C28.3027 21.2095 28.58 21.0204 28.6809 20.7179C28.7817 20.4027 28.6935 20.1002 28.4288 19.8985L27.2943 19.0036C27.4456 18.4363 27.5716 17.8313 27.6221 17.2136L28.9834 16.7724C29.2985 16.659 29.5002 16.4195 29.5002 16.0918C29.5002 15.764 29.2985 15.5245 28.9834 15.4111L27.6221 14.9699C27.5716 14.3523 27.4456 13.7598 27.2943 13.18L28.4288 12.285C28.6809 12.0833 28.7817 11.7934 28.6809 11.4783C28.58 11.1758 28.3027 10.9867 27.975 11.0119L26.5254 11.0623C26.2607 10.5077 25.9708 9.99088 25.6304 9.48667L26.3994 8.26397C26.5758 7.99927 26.5506 7.67153 26.3363 7.44464C26.0968 7.16733 25.8069 7.0917 25.4918 7.21775L24.1808 7.75977C23.7397 7.3438 23.2607 6.94043 22.7817 6.60009L23.0716 5.20092C23.1346 4.86058 23.0212 4.57067 22.7565 4.4194C22.4413 4.25554 22.1388 4.28075 21.8993 4.52025L20.8405 5.46563C20.2733 5.21353 19.706 5.01185 19.1262 4.84798L18.9245 3.4236C18.8741 3.09586 18.6598 2.86897 18.3447 2.80595C18.0043 2.76813 17.7144 2.90679 17.5884 3.17149L16.9077 4.46982C16.5926 4.44461 16.3026 4.43201 16.0001 4.43201C15.685 4.43201 15.4077 4.44461 15.0799 4.46982L14.4119 3.17149C14.2732 2.90679 13.9833 2.76813 13.6429 2.80595C13.3278 2.86897 13.1135 3.09586 13.0631 3.4236L12.8614 4.84798C12.2816 5.01185 11.7144 5.21353 11.1597 5.46563L10.1009 4.52025C9.8488 4.28075 9.54628 4.25554 9.24375 4.4194C8.96644 4.57067 8.85299 4.86058 8.91602 5.20092L9.21854 6.60009C8.72694 6.94043 8.24795 7.3438 7.81937 7.75977L6.49583 7.21775C6.1807 7.0917 5.89078 7.16733 5.65129 7.44464C5.4496 7.67153 5.42439 7.99927 5.58826 8.25137L6.35717 9.48667C6.01684 9.99088 5.73952 10.5077 5.46221 11.0623L4.01262 11.0119C3.69749 10.9867 3.42018 11.1758 3.30673 11.4783C3.20589 11.7934 3.29412 12.0833 3.55883 12.285L4.6933 13.18C4.54203 13.7598 4.41598 14.3523 4.37817 14.9699L3.00421 15.4111C2.68908 15.5119 2.5 15.7514 2.5 16.0918C2.5 16.4321 2.68908 16.6716 3.00421 16.7724L4.37817 17.2136C4.41598 17.8313 4.54203 18.4363 4.6933 19.0036L3.55883 19.8985C3.30673 20.1002 3.21849 20.4027 3.30673 20.7179C3.42018 21.0204 3.69749 21.2095 4.01262 21.1842L5.46221 21.1212C5.72692 21.6758 6.01684 22.2053 6.35717 22.6969L5.58826 23.9196C5.41179 24.1969 5.437 24.5246 5.65129 24.7515C5.89078 25.0414 6.1807 25.1044 6.49583 24.9784L7.81937 24.4238C8.24795 24.8523 8.72694 25.2431 9.21854 25.5834L8.91602 26.9952C8.85299 27.323 8.96644 27.6129 9.24375 27.7767C9.54628 27.9406 9.8614 27.9028 10.1009 27.6759L11.1471 26.7179C11.7144 26.9574 12.2816 27.1843 12.8614 27.3356L13.0631 28.7725C13.1135 29.1003 13.3278 29.3398 13.6556 29.3902C13.9833 29.4406 14.2732 29.2894 14.4119 29.012L15.0799 27.7137C15.3951 27.7389 15.685 27.7641 16.0001 27.7641ZM19.0379 15.2724C18.4707 13.7598 17.3363 12.9279 15.9623 12.9279C15.748 12.9279 15.5211 12.9531 15.143 13.0413L11.79 7.30598C13.0505 6.68833 14.4749 6.34799 16.0001 6.34799C21.143 6.34799 25.1767 10.243 25.58 15.2724H19.0379ZM6.38238 16.1044C6.38238 12.827 7.92021 9.94046 10.3278 8.17574L13.706 13.9489C13.0757 14.6296 12.7732 15.3607 12.7732 16.1422C12.7732 16.8985 13.0505 17.5918 13.706 18.2977L10.2522 23.9574C7.8824 22.1927 6.38238 19.3439 6.38238 16.1044ZM14.5253 16.1296C14.5253 15.3229 15.2186 14.6926 15.9749 14.6926C16.7816 14.6926 17.4497 15.3229 17.4497 16.1296C17.4497 16.9237 16.7816 17.5792 15.9749 17.5792C15.2186 17.5792 14.5253 16.9237 14.5253 16.1296ZM16.0001 25.8482C14.4371 25.8482 12.9875 25.4952 11.7018 24.8523L15.143 19.2305C15.5085 19.3187 15.748 19.3439 15.9623 19.3439C17.3489 19.3439 18.4833 18.4867 19.0379 16.9489H25.58C25.1767 21.9532 21.143 25.8482 16.0001 25.8482Z" fill="#767779" />
 			</svg>
-			, label: labels.settings
+			, label: youLabel, avatar: true
 		},
 	];
 	return (
 		<nav className="wa-mobile-nav relative hidden shrink-0 grid-cols-5 border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]">
-			{items.map(({ id, icon: Icon, label, badge }) => {
+			{items.map(({ id, icon: Icon, label, badge, avatar }) => {
 				const active = activeTab === id;
 				const iconNode = isValidElement(Icon)
 					? cloneElement(Icon, {
@@ -9336,7 +9355,14 @@ function MobileWhatsAppNav({
 							className={`wa-mobile-nav-item ${active ? 'is-active font-semibold text-[#0A0A0A]' : ''} relative flex min-w-0 flex-col items-center gap-1 text-[10px]`}
 						>
 							<span className="wa-mobile-nav-icon relative grid h-8 min-w-12 place-items-center rounded-full px-3">
-								{iconNode}
+								{avatar && avatarUrl ? (
+									<span className="wa-m-tab-avatar">
+										{/* eslint-disable-next-line @next/next/no-img-element */}
+										<img src={avatarUrl} alt="" />
+									</span>
+								) : (
+									iconNode
+								)}
 								{badge > 0 && (
 									<span className="absolute -end-0.5 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#1DAB61] px-1 text-[10px] font-bold text-white">
 										{badge > 99 ? '99+' : badge}
@@ -9521,10 +9547,10 @@ function MobileAttachmentSheet({
 						: undefined
 				}
 			>
-				{!isDesktop && <div className="mx-auto mb-2.5 h-1 w-8 rounded-full bg-slate-300" />}
+				{!isDesktop && <div className="wa-att-grabber mx-auto mb-2.5 h-1 w-8 rounded-full bg-slate-300" />}
 
 				{aiEnabled && (
-					<div className="mb-1 rounded-xl border border-violet-100 bg-violet-50/80 px-2 py-1.5">
+					<div className="wa-att-ai mb-1 rounded-xl border border-violet-100 bg-violet-50/80 px-2 py-1.5">
 						<div className="flex items-center gap-2">
 							<span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-violet-600 text-white">
 								<Sparkles size={12} />
@@ -9588,27 +9614,27 @@ function MobileAttachmentSheet({
 					</div>
 				)}
 
-				<div className="flex flex-col">
+				<div className="wa-att-list flex flex-col">
 					{actions.map(([id, Icon, label, color]) => (
 						<button
 							key={id}
 							type="button"
 							onClick={() => onAction(id)}
-							className={`flex w-full items-center text-start last:border-0 hover:bg-black/[0.04] active:bg-black/[0.05] ${
+							className={`wa-att-item flex w-full items-center text-start last:border-0 hover:bg-black/[0.04] active:bg-black/[0.05] ${
 								isDesktop
 									? 'min-h-9 gap-2 rounded-lg px-1.5 py-1'
 									: 'min-h-11 gap-2.5 border-b border-black/5 px-0.5 py-2'
 							}`}
 						>
 							<span
-								className={`grid shrink-0 place-items-center rounded-full text-white ${
+								className={`wa-att-icon grid shrink-0 place-items-center rounded-full text-white ${
 									isDesktop ? 'h-7 w-7' : 'h-9 w-9'
 								}`}
-								style={{ background: color }}
+								style={{ background: color, '--att': color }}
 							>
 								<Icon size={isDesktop ? 13 : 17} strokeWidth={2.2} />
 							</span>
-							<span className={`font-semibold text-[#111b21] ${isDesktop ? 'text-[12px]' : 'text-[14px]'}`}>
+							<span className={`wa-att-label font-semibold text-[#111b21] ${isDesktop ? 'text-[12px]' : 'text-[14px]'}`}>
 								{label}
 							</span>
 						</button>
@@ -9621,48 +9647,60 @@ function MobileAttachmentSheet({
 }
 
 function MobileCallsView({ logs, labels, locale, loading }) {
+	const ar = String(locale).toLowerCase().startsWith('ar');
 	const calls = logs.filter(log =>
 		/call|voice_call|video_call/i.test(
 			`${log.type || ''} ${log.event || ''} ${log.action || ''} ${log.message || ''}`,
 		),
 	);
 	return (
-		<section className="wa-mobile-calls min-h-full bg-white px-4 pb-28 min-[769px]:hidden">
-			<div className="mb-5 rounded-2xl bg-[#F0F2F5] p-4">
-				<div className="flex items-center gap-3">
-					<span className="grid h-11 w-11 place-items-center rounded-full bg-[#D9FDD3] text-[#00A884]"><Phone size={22} /></span>
-					<div>
-						<h2 className="font-semibold text-[#111B21]">{labels.calls}</h2>
-						<p className="text-[13px] text-[#667781]">{labels.callsUnavailable}</p>
-					</div>
-				</div>
-			</div>
+		<section className="wa-mobile-calls wa-m-calls min-h-full pb-28 min-[769px]:hidden">
+			<header className="wa-m-section__head">
+				<h2>{ar ? 'الأخيرة' : 'Recent'}</h2>
+			</header>
 			{loading ? (
 				<TabLoading label={labels.loading} />
 			) : calls.length === 0 ? (
-				<Empty icon={Phone} title={labels.noCalls} hint={labels.callsUnavailable} />
+				<div className="wa-m-empty">
+					<span className="wa-m-empty__icon" aria-hidden="true">
+						<Phone size={30} strokeWidth={1.8} />
+					</span>
+					<p className="wa-m-empty__title">{labels.noCalls}</p>
+					<p className="wa-m-empty__hint">{labels.callsUnavailable}</p>
+				</div>
 			) : (
-				<div>
+				<ul className="wa-m-call-list">
 					{calls.map(call => {
 						const outgoing = /outgoing|outbound/i.test(`${call.type || ''} ${call.event || ''}`);
+						const missed = /missed|reject/i.test(`${call.type || ''} ${call.event || ''} ${call.status || ''}`);
 						const video = /video/i.test(`${call.type || ''} ${call.event || ''}`);
 						const label = call.contactName || call.name || call.phoneNumber || call.waId || labels.calls;
+						const at = call.created_at || call.createdAt;
 						return (
-							<div key={call.id} className="flex min-h-[72px] items-center gap-3 border-b border-[#E9EDEF] py-2">
-								<Avatar label={label} size={12} src={call.avatarUrl} />
-								<div className="min-w-0 flex-1">
-									<p className="truncate font-semibold text-[#111B21]">{label}</p>
-									<p className="mt-0.5 flex items-center gap-1 text-[13px] text-[#667781]">
-										{outgoing ? <ArrowUpRight size={14} className="text-[#00A884]" /> : <ArrowDownLeft size={14} />}
-										{call.created_at || call.createdAt
-											? new Date(call.created_at || call.createdAt).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
-											: labels.calls}
-									</p>
+							<li key={call.id} className="wa-m-call">
+								<Avatar label={label} size={10} src={call.avatarUrl} />
+								<div className="wa-m-call__body">
+									<div className="min-w-0 flex-1">
+										<p className={`wa-m-call__name${missed ? ' is-missed' : ''}`} dir="auto">
+											{label}
+										</p>
+										<p className="wa-m-call__kind">
+											{video ? <Video size={14} aria-hidden="true" /> : <Phone size={13} aria-hidden="true" />}
+											{outgoing
+												? ar ? 'صادرة' : 'Outgoing'
+												: missed
+													? ar ? 'فائتة' : 'Missed'
+													: ar ? 'واردة' : 'Incoming'}
+										</p>
+									</div>
+									<span className="wa-m-call__time">
+										{at ? conversationTimestamp(at, locale) : ''}
+									</span>
 								</div>
-							</div>
+							</li>
 						);
 					})}
-				</div>
+				</ul>
 			)}
 		</section>
 	);
@@ -10898,7 +10936,7 @@ const WaConversationRow = memo(function WaConversationRow({
 					</p>
 					{unread && (
 						<span
-							className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-[10px] font-bold text-white"
+							className="wa-row-unread grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-[10px] font-bold text-white"
 							style={{ background: GRADIENT }}
 						>
 							{unreadCount > 99 ? '99+' : unreadCount}
@@ -11064,6 +11102,7 @@ function WhatsAppWorkspaceContent() {
 	const [storyPanelMode, setStoryPanelMode] = useState('active');
 	const [storyFilter, setStoryFilter] = useState('all');
 	const [storySearch, setStorySearch] = useState('');
+	const [mobileStatusComposerOpen, setMobileStatusComposerOpen] = useState(false);
 	const [loadingStatusHistory, setLoadingStatusHistory] = useState(false);
 	const [statusFetchHint, setStatusFetchHint] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState(null);
@@ -11348,6 +11387,25 @@ function WhatsAppWorkspaceContent() {
 	const [loadingConversationInfoGroup, setLoadingConversationInfoGroup] = useState(false);
 	const [conversationInfoAvatarPreview, setConversationInfoAvatarPreview] = useState(null);
 	const conversationInfoRequestId = useRef(0);
+	// Escape closes the info panel (the photo preview first), like WhatsApp Web. Open menus
+	// handle their own Escape, so leave the key to them while one is showing.
+	useEffect(() => {
+		if (!conversationInfoTarget) return undefined;
+		const onKeyDown = event => {
+			if (event.key !== 'Escape' || event.defaultPrevented) return;
+			if (document.querySelector('.wa-ui-menu.fixed, .wa-message-action-menu, .wa-conversation-action-menu')) return;
+			if (conversationInfoAvatarPreview) {
+				setConversationInfoAvatarPreview(null);
+				return;
+			}
+			conversationInfoRequestId.current += 1;
+			setConversationInfoTarget(null);
+			setConversationInfoGroup(null);
+			setLoadingConversationInfoGroup(false);
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [conversationInfoTarget, conversationInfoAvatarPreview]);
 	const [notes, setNotes] = useState([]);
 	const [noteDraft, setNoteDraft] = useState('');
 	const [showNotes, setShowNotes] = useState(false);
@@ -20220,16 +20278,21 @@ function WhatsAppWorkspaceContent() {
 				disabled: demoBlocked || demoChat || !conversationId,
 				onClick: toggleGroupSelectMode,
 			},
-			{
-				id: 'split',
-				label: secondaryConversationId ? t.closeSplitChat : t.openSplitChat,
-				description: t.splitChat,
-				icon: Columns2,
-				iconTone: 'navy',
-				active: Boolean(secondaryConversationId || splitPickMode),
-				disabled: demoBlocked,
-				onClick: toggleSplitChat,
-			},
+			// Split view needs a wide screen; phones only get the close action if one is open.
+			...(typeof window !== 'undefined' && window.innerWidth <= 768 && !secondaryConversationId
+				? []
+				: [
+						{
+							id: 'split',
+							label: secondaryConversationId ? t.closeSplitChat : t.openSplitChat,
+							description: t.splitChat,
+							icon: Columns2,
+							iconTone: 'navy',
+							active: Boolean(secondaryConversationId || splitPickMode),
+							disabled: demoBlocked,
+							onClick: toggleSplitChat,
+						},
+					]),
 		];
 	}, [
 		accountId,
@@ -21816,6 +21879,10 @@ function WhatsAppWorkspaceContent() {
 					onSearch={() => {
 						if (!isConversationWorkspaceTab(activeTab)) void loadTabData('chats');
 						setSearchOpen(true);
+						// Phones: put the cursor in the chat search so the user can find who to message.
+						window.setTimeout(() => {
+							document.querySelector('.wa-m-search input')?.focus();
+						}, 60);
 					}}
 					onCamera={() => void loadTabData('statuses')}
 					onMore={() => setMobileMenuOpen(current => !current)}
@@ -22835,47 +22902,57 @@ function WhatsAppWorkspaceContent() {
 												</span>
 											) : null}
 										</h1>
-										{/* <label className="relative block">
-											<Search size={20} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[#667781]" />
+										<label className="wa-m-search">
+											<Search size={18} strokeWidth={2.2} aria-hidden="true" />
 											<input
+												type="search"
 												aria-label={t.search}
 												value={chatSearch}
 												onChange={event => setChatSearch(event.target.value)}
-												placeholder={locale === 'ar' ? 'ابحث في المحادثات' : 'Ask Meta AI or Search'}
-												className="search-input h-9 w-full rounded-[10px] bg-[#F0F2F5] ps-10 pe-3 text-[15px] text-[#111B21] outline-none placeholder:text-[#667781]"
+												placeholder={locale === 'ar' ? 'بحث' : 'Search'}
+												enterKeyHint="search"
 											/>
-										</label> */}
+											{chatSearch ? (
+												<button
+													type="button"
+													className="wa-m-search__clear"
+													aria-label={locale === 'ar' ? 'مسح البحث' : 'Clear search'}
+													onClick={() => setChatSearch('')}
+												>
+													<X size={12} strokeWidth={3} />
+												</button>
+											) : null}
+										</label>
 
-										<div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+										<div className="wa-m-chips" role="tablist" aria-label={t.chats}>
 											{[
 												['all', t.allChats],
-												['unread', t.unreadChats],
+												['unread', t.unreadChats, unreadConversationCount],
 												['favorites', t.favoriteChats],
 												['important', t.importantChats],
-											].map(([value, label]) => (
+											].map(([value, label, count]) => (
 												<button
 													key={value}
 													type="button"
-													onClick={() => setConversationFilter(value)}
-													className={`h-[28px] shrink-0 rounded-[19px] px-3 text-[11px] font-semibold ${conversationFilter === value
-														? 'bg-[#D9FDD3] text-[#008069]'
-														: 'bg-[#F0F2F5] text-[#54656F]'
-														}`}
+													role="tab"
+													aria-selected={activeTab !== 'channels' && conversationFilter === value}
+													onClick={() => {
+														if (activeTab === 'channels') void loadTabData('chats');
+														setConversationFilter(value);
+													}}
+													className={`wa-m-chip${activeTab !== 'channels' && conversationFilter === value ? ' is-active' : ''}`}
 												>
 													{label}
+													{count ? <span className="wa-m-chip__count">{count > 99 ? '99+' : count}</span> : null}
 												</button>
 											))}
-											<button type="button" onClick={() => void loadTabData('groups')} className="h-[28px] shrink-0 rounded-[19px] bg-[#F0F2F5] px-3 text-[11px] font-semibold text-[#54656F]">
+											<button type="button" onClick={() => void loadTabData('groups')} className="wa-m-chip">
 												{t.groups}
 											</button>
 											<button
 												type="button"
 												onClick={() => void loadTabData('channels')}
-												className={`h-[28px] shrink-0 rounded-[19px] px-3 text-[11px] font-semibold ${
-													activeTab === 'channels'
-														? 'bg-[#D9FDD3] text-[#008069]'
-														: 'bg-[#F0F2F5] text-[#54656F]'
-												}`}
+												className={`wa-m-chip${activeTab === 'channels' ? ' is-active' : ''}`}
 											>
 												{t.channels}
 											</button>
@@ -25442,12 +25519,242 @@ function WhatsAppWorkspaceContent() {
 							onSelect={openGroupDetails}
 							onRefresh={() => loadTabData('groups')}
 							onOpenChat={openGroupChat}
+							onCloseDetails={() => {
+								groupRequestId.current += 1;
+								setLoadingGroup(false);
+								setSelectedGroup(null);
+							}}
 						/>
 					)
 				)}
 
 				{activeTab === 'statuses' && (
 					<div className="wa-dk wa-secondary-pane wa-statuses-pane wa-stx">
+						{/* Phone layout: WhatsApp iOS "Updates" (status cards + channels). Desktop keeps the stories board below. */}
+						{storyPanelMode === 'active'
+							? (() => {
+									const ar = locale === 'ar';
+									const canPublishStatus =
+										canUseWhatsApp &&
+										selectedAccount?.providerCapabilities?.statusPublish !== false &&
+										String(selectedAccount?.providerName || '').toLowerCase() !== 'baileys';
+									const nameOf = story => {
+										const rawName =
+											story.latest.contactName ||
+											(story.latest.isOwn ? (ar ? 'حالتي' : 'My status') : '');
+										const digits = String(rawName || story.senderWaId || '')
+											.replace(/@.*$/, '')
+											.replace(/\D/g, '');
+										return rawName || formatWhatsAppPhone(digits) || String(story.senderWaId || '').replace(/@.*$/, '');
+									};
+									const toneOf = seed => {
+										let hash = 0;
+										for (const ch of String(seed || '')) hash = (hash * 31 + ch.codePointAt(0)) % 360;
+										return { background: `linear-gradient(160deg, hsl(${hash} 45% 42%), hsl(${(hash + 40) % 360} 50% 24%))` };
+									};
+									const own = groupedStatuses.find(story => story.isOwn);
+									const others = groupedStatuses.filter(story => !story.isOwn);
+									const channels = effectiveConversations.filter(item => isChannelConversation(item));
+									const addStatus = () => {
+										if (canPublishStatus) {
+											setMobileStatusComposerOpen(true);
+											return;
+										}
+										toast(
+											ar
+												? 'نشر الحالة متاح من تطبيق واتساب على الموبايل للحساب ده.'
+												: 'For this account, post statuses from the WhatsApp app on your phone.',
+										);
+									};
+									const card = story => {
+										const name = nameOf(story);
+										const thumb = storyThumbs[story.latest.id];
+										const type = String(story.latest.type || '').toLowerCase();
+										const caption = String(story.latest.caption || '').trim();
+										return (
+											<button
+												type="button"
+												key={story.senderWaId}
+												className={`wa-m-status-card${story.isViewed ? ' is-viewed' : ''}`}
+												onClick={() => openStoryGroup(story)}
+											>
+												<span className="wa-m-status-card__media" style={toneOf(name)}>
+													{thumb?.url ? (
+														thumb.type === 'video' ? (
+															<video src={`${thumb.url}#t=0.1`} muted playsInline preload="metadata" />
+														) : (
+															<img src={thumb.url} alt="" loading="lazy" />
+														)
+													) : type === 'text' || type === 'chat' ? (
+														<span className="wa-m-status-card__text" dir="auto">
+															{caption}
+														</span>
+													) : story.latest.contactAvatarUrl ? (
+														<img src={story.latest.contactAvatarUrl} alt="" className="is-blurred" loading="lazy" />
+													) : null}
+												</span>
+												<span className="wa-m-status-card__ring">
+													<Avatar label={name} size={10} src={story.latest.contactAvatarUrl || ''} />
+												</span>
+												<span className="wa-m-status-card__name wa-privacy-identity" dir="auto">
+													{name}
+												</span>
+											</button>
+										);
+									};
+									return (
+										<div className="wa-m-updates">
+											<section className="wa-m-section">
+												<header className="wa-m-section__head">
+													<h2>{ar ? 'الحالة' : 'Status'}</h2>
+													<span className="wa-m-section__tools">
+														<button
+															type="button"
+															className="wa-m-round"
+															aria-label={ar ? 'إضافة حالة بالكاميرا' : 'Add photo status'}
+															onClick={addStatus}
+														>
+															<Camera size={18} strokeWidth={2} />
+														</button>
+														<button
+															type="button"
+															className="wa-m-round"
+															aria-label={ar ? 'حالة مكتوبة' : 'Text status'}
+															onClick={addStatus}
+														>
+															<Pencil size={16} strokeWidth={2.2} />
+														</button>
+													</span>
+												</header>
+												<div className="wa-m-status-strip">
+													{own ? (
+														card(own)
+													) : (
+														<button type="button" className="wa-m-status-card is-add" onClick={addStatus}>
+															<span className="wa-m-status-card__me">
+																<Avatar label={selectedAccount?.label || 'Me'} size={14} src={railAvatarUrl || ''} />
+																<span className="wa-m-status-card__plus" aria-hidden="true">
+																	<Plus size={16} strokeWidth={3} />
+																</span>
+															</span>
+															<span className="wa-m-status-card__name">{ar ? 'إضافة حالة' : 'Add status'}</span>
+														</button>
+													)}
+													{others.map(card)}
+												</div>
+												{tabLoading && !groupedStatuses.length ? (
+													<p className="wa-m-note">{t.loading}</p>
+												) : !others.length ? (
+													<p className="wa-m-note">
+														{!isAccountConnected
+															? t.connectToSeeStories
+															: ar
+																? 'مفيش تحديثات حالة جديدة.'
+																: 'No status updates right now.'}
+													</p>
+												) : null}
+												<button type="button" className="wa-m-link-row" onClick={() => setStoryPanelMode('history')}>
+													{t.storyHistory}
+													<ChevronRight size={16} className="rtl:rotate-180" aria-hidden="true" />
+												</button>
+											</section>
+
+											<section className="wa-m-section">
+												<header className="wa-m-section__head">
+													<h2>{t.channels}</h2>
+													{channels.length ? (
+														<button type="button" className="wa-m-pill" onClick={() => void loadTabData('channels')}>
+															{ar ? 'عرض الكل' : 'See all'}
+														</button>
+													) : null}
+												</header>
+												{channels.length ? (
+													<ul className="wa-m-channel-list">
+														{channels.slice(0, 12).map(item => {
+															const unread = conversationUnreadCount(item);
+															const title = conversationTitle(item);
+															const preview = String(item.lastMessage?.text || '').replace(/\s+/g, ' ').trim();
+															return (
+																<li key={item.id}>
+																	<button
+																		type="button"
+																		className="wa-m-channel"
+																		onClick={() => {
+																			setActiveTab('channels');
+																			openConversation(item.id, item);
+																		}}
+																	>
+																		<Avatar label={title} size={13} src={conversationAvatarUrl(item)} />
+																		<span className="wa-m-channel__body">
+																			<span className="wa-m-channel__top">
+																				<span className="wa-m-channel__name wa-privacy-identity" dir="auto">
+																					{title}
+																				</span>
+																				<span className={`wa-m-channel__time${unread ? ' is-unread' : ''}`}>
+																					{item.lastMessageAt ? conversationTimestamp(item.lastMessage?.providerTimestamp || item.lastMessageAt, locale) : ''}
+																				</span>
+																			</span>
+																			<span className="wa-m-channel__bottom">
+																				<span className="wa-m-channel__preview" dir="auto">
+																					{preview || (ar ? 'وسائط' : 'Media')}
+																				</span>
+																				{unread ? (
+																					<span className="wa-m-channel__badge">{unread > 999 ? '999+' : unread}</span>
+																				) : null}
+																			</span>
+																		</span>
+																	</button>
+																</li>
+															);
+														})}
+													</ul>
+												) : (
+													<p className="wa-m-note">{ar ? 'مش متابع أي قنوات.' : 'You are not following any channels.'}</p>
+												)}
+											</section>
+
+											{mobileStatusComposerOpen ? (
+												<WaDialog
+													zIndex={600}
+													width={420}
+													icon={<Pencil size={17} strokeWidth={2.1} />}
+													title={ar ? 'حالة مكتوبة' : 'Text status'}
+													closeLabel={ar ? 'إغلاق' : 'Close'}
+													onClose={() => setMobileStatusComposerOpen(false)}
+												>
+													<form
+														className="wa-dx__body"
+														onSubmit={event => {
+															void publishStory(event);
+															setMobileStatusComposerOpen(false);
+														}}
+													>
+														<textarea
+															autoFocus
+															dir="auto"
+															rows={4}
+															maxLength={700}
+															value={statusDraft}
+															onChange={event => setStatusDraft(event.target.value)}
+															placeholder={t.statusUpdate}
+															className="wa-ui-input wa-dx__textarea"
+														/>
+														<div className="mt-3 flex justify-end">
+															<button
+																type="submit"
+																className="wa-ui-btn wa-ui-btn--primary"
+																disabled={publishingStatus || !statusDraft.trim()}
+															>
+																{t.publishStatus}
+															</button>
+														</div>
+													</form>
+												</WaDialog>
+											) : null}
+										</div>
+									);
+								})()
+							: null}
 						<header className="wa-stx-head">
 							<div className="wa-stx-head__id">
 								<span className="wa-stx-head__icon" aria-hidden="true">
@@ -26784,6 +27091,25 @@ function WhatsAppWorkspaceContent() {
 						</div>
 					) : (
 						<div className="wa-dk wa-settings-pane space-y-4">
+							{/* Phone "You" tab: the account card on top, like WhatsApp. Opens the accounts manager. */}
+							{selectedAccount ? (
+								<button
+									type="button"
+									className="wa-m-profile-cell"
+									onClick={() => void loadTabData('accounts')}
+								>
+									<Avatar label={selectedAccount.label || 'Me'} size={14} src={railAvatarUrl || ''} />
+									<span className="wa-m-profile-cell__copy">
+										<span className="wa-m-profile-cell__name wa-privacy-identity" dir="auto">
+											{selectedAccount.label || formatWhatsAppPhone(selectedAccount.phoneNumber) || t.accounts}
+										</span>
+										<span className="wa-m-profile-cell__sub wa-privacy-identity" dir="ltr">
+											{formatWhatsAppPhone(selectedAccount.phoneNumber) || selectedAccount.status || ''}
+										</span>
+									</span>
+									<ChevronRight size={18} className="wa-m-profile-cell__chev rtl:rotate-180" aria-hidden="true" />
+								</button>
+							) : null}
 							<div
 								role="tablist"
 								aria-label={t.settings}
@@ -26968,6 +27294,8 @@ function WhatsAppWorkspaceContent() {
 					onSelect={tab => void loadTabData(tab)}
 					labels={t}
 					unreadCount={unreadConversationCount}
+					avatarUrl={railAvatarUrl}
+					locale={locale}
 				/>
 			)}
 			<MessageReactionPicker

@@ -1,0 +1,1400 @@
+/*
+ * WhatsApp Web desktop layer.
+ *
+ * Everything here sits inside a min-width: 769px media query (the app's desktop
+ * breakpoint), so the phone layer in wa-mobile.css is never touched. Values follow the
+ * current WhatsApp Web design: neutral greys in dark mode, white panels with a warm
+ * doodle wallpaper in light mode, green accents.
+ *
+ * Prefix: html .wa-web-desktop.wa-web-desktop:not(#wa-d) — the id in :not() plus the
+ * doubled class beat the generated html.dark .wa-web-desktop:not(#wa-dark) rules in
+ * wa-ui.css, and this file loads after it so equal weight resolves here.
+ */
+
+@media (min-width: 769px) {
+	:root {
+		--d-app: #ffffff;
+		--d-rail: #f7f5f3;
+		--d-header: #ffffff;
+		--d-hover: #f5f6f6;
+		--d-selected: #f0f2f5;
+		--d-field: #f6f5f4;
+		--d-field-focus: #ffffff;
+		--d-text: #111b21;
+		--d-text-2: #667781;
+		--d-icon: #54656f;
+		--d-sep: #e9edef;
+		--d-accent: #1daa61;
+		--d-accent-text: #1b8755;
+		--d-badge: #1daa61;
+		--d-badge-text: #ffffff;
+		--d-chip-border: #e9edef;
+		--d-chip-on: #d9fdd3;
+		--d-chip-on-text: #15603e;
+		--d-in: #ffffff;
+		--d-out: #d9fdd3;
+		--d-meta: #667781;
+		--d-wall: #f5f1eb;
+		--d-composer: #ffffff;
+		--d-menu: #ffffff;
+		--d-menu-hover: #f5f6f6;
+		--d-thumb: rgba(11, 20, 26, 0.2);
+
+		/* Shared popup/dialog tokens (wa-ui.css) */
+		--wa-ui-surface: #ffffff;
+		--wa-ui-surface-2: #f7f5f3;
+		--wa-ui-hover: #f5f6f6;
+		--wa-ui-pressed: #ebebeb;
+		--wa-ui-border: #e9edef;
+		--wa-ui-accent: #1daa61;
+		--wa-ui-accent-strong: #1b8755;
+		--wa-ui-accent-soft: #e7fce3;
+	}
+
+	html.dark,
+	html[data-theme-mode='dark'] {
+		--d-app: #161717;
+		--d-rail: #1d1f1f;
+		--d-header: #161717;
+		--d-hover: #242626;
+		--d-selected: #2e2f2f;
+		--d-field: #242626;
+		--d-field-focus: #242626;
+		--d-text: #fafafa;
+		--d-text-2: #a5a5a5;
+		--d-icon: #a5a5a5;
+		--d-sep: #222424;
+		--d-accent: #21c063;
+		--d-accent-text: #21c063;
+		--d-badge: #21c063;
+		--d-badge-text: #161717;
+		--d-chip-border: #2e2f2f;
+		--d-chip-on: #103529;
+		--d-chip-on-text: #d9fdd3;
+		--d-in: #242626;
+		--d-out: #144d37;
+		--d-meta: rgba(255, 255, 255, 0.6);
+		--d-wall: #161717;
+		--d-composer: #242626;
+		--d-menu: #1d1f1f;
+		--d-menu-hover: #2e2f2f;
+		--d-thumb: rgba(255, 255, 255, 0.16);
+
+		--wa-ui-surface: #1d1f1f;
+		--wa-ui-surface-2: #161717;
+		--wa-ui-hover: #2e2f2f;
+		--wa-ui-pressed: #363838;
+		--wa-ui-border: #2e2f2f;
+		--wa-ui-border-strong: #3b3d3d;
+		--wa-ui-text: #fafafa;
+		--wa-ui-text-2: #d6d6d6;
+		--wa-ui-text-3: #a5a5a5;
+		--wa-ui-icon: #a5a5a5;
+		--wa-ui-accent: #21c063;
+		--wa-ui-accent-strong: #21c063;
+		--wa-ui-accent-soft: rgba(33, 192, 99, 0.14);
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Shell surfaces                                                    */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d),
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-web-workspace,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-web-main,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list-header,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list-scroll,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-list {
+		background-color: var(--d-app) !important;
+		color: var(--d-text);
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list {
+		border-inline-end: 1px solid var(--d-sep) !important;
+	}
+
+	/* WhatsApp Web has no rule between the list header and the rows. */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list-header {
+		border-bottom: 0 !important;
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Navigation rail: icons only, tooltips on hover                     */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail {
+		border-inline-end: 1px solid var(--d-sep) !important;
+		background: var(--d-rail) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__label {
+		position: absolute !important;
+		width: 1px !important;
+		height: 1px !important;
+		overflow: hidden !important;
+		clip: rect(0 0 0 0) !important;
+		white-space: nowrap !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item {
+		width: 40px !important;
+		height: 40px !important;
+		margin: 2px auto !important;
+		gap: 0 !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		color: var(--d-icon) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item:hover {
+		background: var(--d-selected) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item.is-active {
+		background: var(--d-selected) !important;
+		color: var(--d-text) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item.is-active::before {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item svg {
+		width: 24px !important;
+		height: 24px !important;
+	}
+
+	/* Labels stay in the DOM for screen readers; the buttons carry native title tooltips. */
+
+	/* Unread dots on rail items stay WhatsApp green */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item [class*='badge'],
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item .rounded-full:not(svg) {
+		border-color: var(--d-rail) !important;
+		background: var(--d-badge) !important;
+		color: var(--d-badge-text) !important;
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Chat list header, search, filters                                 */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-chat-list-heading {
+		color: var(--d-text) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-chat-list-heading .wa-header-icon-btn,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list-header .wa-header-icon-btn {
+		border: 0 !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		color: var(--d-icon) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list-header .wa-header-icon-btn:hover {
+		background: var(--d-selected) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-search-inline {
+		height: 40px !important;
+		border: 1px solid transparent !important;
+		border-radius: 999px !important;
+		background: var(--d-field) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-search-inline:focus-within {
+		border-color: var(--d-accent) !important;
+		background: var(--d-field-focus) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-search-inline input {
+		background: transparent !important;
+		color: var(--d-text) !important;
+		font-size: 15px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-search-inline input::placeholder {
+		color: var(--d-text-2) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-search-inline svg {
+		color: var(--d-icon) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill {
+		height: 32px !important;
+		padding: 0 12px !important;
+		border: 1px solid var(--d-chip-border) !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		color: var(--d-text-2) !important;
+		font-size: 15px !important;
+		font-weight: 400 !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill:hover {
+		background: var(--d-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill.is-active,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill[aria-pressed='true'],
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill[aria-selected='true'] {
+		border-color: transparent !important;
+		background: var(--d-chip-on) !important;
+		color: var(--d-chip-on-text) !important;
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Conversation rows                                                  */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-list {
+		padding: 0 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row {
+		margin: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:hover {
+		background: var(--d-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-active {
+		background: var(--d-selected) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-active::before {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .title-chat {
+		color: var(--d-text) !important;
+		font-size: 17px !important;
+		font-weight: 400 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-unread .title-chat {
+		font-weight: 500 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .desc-chat {
+		color: var(--d-text-2) !important;
+		font-size: 14px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .time-chat {
+		color: var(--d-text-2) !important;
+		font-size: 12px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-unread .time-chat {
+		color: var(--d-accent-text) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .wa-row-unread {
+		min-width: 20px !important;
+		height: 20px !important;
+		padding: 0 6px !important;
+		background: var(--d-badge) !important;
+		color: var(--d-badge-text) !important;
+		font-size: 12px !important;
+		font-weight: 600 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .wa-conversation-pin,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .wa-conversation-preference svg {
+		color: var(--d-text-2) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .wa-avatar-3d,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar .wa-avatar-3d {
+		--tw-ring-shadow: 0 0 #0000 !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row {
+		color: var(--d-text) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row:hover {
+		background: var(--d-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row svg,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row__count {
+		color: var(--d-accent-text) !important;
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Conversation header                                                */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar {
+		min-height: 64px;
+		border-bottom: 1px solid var(--d-sep) !important;
+		background: var(--d-header) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar h3 {
+		color: var(--d-text) !important;
+		font-size: 16px !important;
+		font-weight: 500 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar p,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-assignee {
+		color: var(--d-text-2) !important;
+		font-size: 13px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar .wa-header-icon-btn,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar .wa-toolbar-icon-btn {
+		border: 0 !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		color: var(--d-icon) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar .wa-header-icon-btn:hover,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar .wa-toolbar-icon-btn:hover,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar .wa-action-menu-trigger[aria-expanded='true'] {
+		background: var(--d-selected) !important;
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Wallpaper                                                          */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-thread-pane,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-wallpaper-host {
+		background-color: var(--d-wall) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-wallpaper-layer {
+		background-color: var(--d-wall) !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-wallpaper-layer {
+		background-image:
+			linear-gradient(rgba(22, 23, 23, 0.975), rgba(22, 23, 23, 0.975)),
+			url('/bg-whatsapp.svg') !important;
+		background-repeat: no-repeat, repeat !important;
+		background-size: auto, 420px 564px !important;
+		opacity: 1 !important;
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Bubbles                                                            */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-bubble.wa-message-other:not(.wa-message-sticker) {
+		background-color: var(--d-in) !important;
+		color: var(--d-text) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-bubble.wa-message-mine:not(.wa-message-sticker) {
+		background-color: var(--d-out) !important;
+		color: var(--d-text) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-bubble.wa-message-other.wa-has-tail::before {
+		background-color: var(--d-in) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-bubble.wa-message-mine.wa-has-tail::before {
+		background-color: var(--d-out) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-bubble {
+		box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-meta,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-time {
+		color: var(--d-meta) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-date-separator {
+		border: 0 !important;
+		border-radius: 8px !important;
+		background: var(--d-in) !important;
+		color: var(--d-text-2) !important;
+		font-size: 12.5px !important;
+		font-weight: 400 !important;
+		box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-reply-quote {
+		background: rgba(0, 0, 0, 0.06) !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-reply-quote {
+		background: rgba(255, 255, 255, 0.06) !important;
+	}
+
+	/* Media that is still loading or unavailable */
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-photo-state:not(.is-loading-preview) {
+		background: var(--d-hover) !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-photo-state__icon {
+		background: rgba(255, 255, 255, 0.08) !important;
+		color: var(--d-text-2) !important;
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Composer: floating pill on the wallpaper                           */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer-stack,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer {
+		border: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer {
+		padding: 8px 16px 12px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill {
+		min-height: 52px !important;
+		border: 0 !important;
+		border-radius: 26px !important;
+		background: var(--d-composer) !important;
+		box-shadow: 0 1px 2px rgba(11, 20, 26, 0.1) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-composer-input {
+		color: var(--d-text) !important;
+		font-size: 15px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-composer-input::placeholder {
+		color: var(--d-text-2) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-input-action.wa-input-action {
+		color: var(--d-icon) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-input-action.wa-input-action:hover {
+		background: var(--d-selected) !important;
+	}
+
+	/* Mic is a plain icon; send is the green circle (WhatsApp Web) */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action.wa-input-action {
+		background: transparent !important;
+		color: var(--d-icon) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action.wa-input-action:hover {
+		background: var(--d-selected) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-mic-button::before,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-mic-button::after {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-send-button.wa-send-button.wa-send-button {
+		border-radius: 999px !important;
+		background: var(--d-accent) !important;
+		color: #ffffff !important;
+		box-shadow: none !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-send-button.wa-send-button.wa-send-button {
+		color: #161717 !important;
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Scrollbars: thin, neutral                                          */
+	/* ---------------------------------------------------------------- */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .nice-scroll,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-scroll {
+		scrollbar-color: var(--d-thumb) transparent !important;
+		scrollbar-width: thin !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .nice-scroll::-webkit-scrollbar,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-scroll::-webkit-scrollbar {
+		width: 6px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .nice-scroll::-webkit-scrollbar-thumb,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-scroll::-webkit-scrollbar-thumb {
+		border-radius: 3px !important;
+		background: var(--d-thumb) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .nice-scroll::-webkit-scrollbar-track,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-scroll::-webkit-scrollbar-track {
+		background: transparent !important;
+	}
+}
+
+@media (min-width: 769px) {
+	/* One continuous wallpaper behind the messages and the floating composer */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-thread-pane {
+		background-color: var(--d-wall) !important;
+		background-image:
+			linear-gradient(rgba(245, 241, 235, 0.55), rgba(245, 241, 235, 0.55)),
+			url('/bg-whatsapp.svg') !important;
+		background-repeat: no-repeat, repeat !important;
+		background-size: auto, 420px 564px !important;
+		background-attachment: fixed, fixed !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-thread-pane {
+		background-image:
+			linear-gradient(rgba(22, 23, 23, 0.975), rgba(22, 23, 23, 0.975)),
+			url('/bg-whatsapp.svg') !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-wallpaper-host,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-wallpaper-layer,
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-wallpaper-layer {
+		background: transparent !important;
+	}
+
+	/* Header actions: plain round icon buttons, no boxed group */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar-actions__group {
+		gap: 4px;
+		padding: 0 !important;
+		border: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar-actions__divider {
+		background: var(--d-sep) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar .wa-header-icon-btn,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-toolbar .wa-action-menu-trigger {
+		width: 40px !important;
+		height: 40px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-assign-field {
+		height: 36px;
+		padding: 0 4px 0 10px !important;
+		border: 1px solid var(--d-sep) !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-assign-field .wa-custom-select-trigger {
+		border: 0 !important;
+		background: transparent !important;
+		color: var(--d-text) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-assign-field svg {
+		color: var(--d-icon) !important;
+	}
+
+	/* The card wrapper the dashboard draws around the thread */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-web-main > .rounded-2xl,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-workspace > .rounded-2xl {
+		border-color: transparent !important;
+		border-radius: 0 !important;
+		background: var(--d-app) !important;
+		box-shadow: none !important;
+	}
+}
+
+/* ==================================================================== */
+/* Contact / group info: right-hand panel that pushes the chat          */
+/* ==================================================================== */
+@media (min-width: 769px) {
+	html .wa-web-desktop:not(#wa-d) {
+		--d-info-w: clamp(340px, 30vw, 460px);
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay {
+		inset: 0 0 0 auto !important;
+		display: block !important;
+		width: var(--d-info-w);
+		padding: 0 !important;
+		background: transparent !important;
+		-webkit-backdrop-filter: none !important;
+		backdrop-filter: none !important;
+	}
+
+	/* The chat narrows instead of being covered, like WhatsApp Web. */
+	html .wa-web-desktop:not(#wa-d):has(.wa-gi-overlay) .wa-web-main {
+		margin-inline-end: var(--d-info-w);
+	}
+
+	html[dir='rtl'] .wa-web-desktop:not(#wa-d) .wa-gi-overlay {
+		inset: 0 auto 0 0 !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi {
+		display: flex !important;
+		width: 100% !important;
+		max-width: none !important;
+		height: 100vh !important;
+		max-height: none !important;
+		flex-direction: column;
+		margin: 0 !important;
+		overflow-y: auto !important;
+		border: 0 !important;
+		border-inline-start: 1px solid var(--d-sep) !important;
+		border-radius: 0 !important;
+		background: var(--d-app) !important;
+		color: var(--d-text) !important;
+		box-shadow: none !important;
+		animation: wa-d-panel-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+	}
+
+	@keyframes wa-d-panel-in {
+		from {
+			opacity: 0;
+			transform: translateX(16px);
+		}
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi::before {
+		display: none !important;
+	}
+
+	/* Title bar: X then "Contact info" */
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__cover {
+		position: sticky !important;
+		top: 0;
+		z-index: 3;
+		display: flex !important;
+		height: 64px !important;
+		min-height: 64px;
+		flex: 0 0 auto;
+		align-items: center;
+		padding: 0 20px 0 68px !important;
+		background: var(--d-header) !important;
+		background-image: none !important;
+	}
+
+	html[dir='rtl'] .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__cover {
+		padding: 0 68px 0 20px !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__cover::before,
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__cover::after {
+		display: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__cover-label {
+		position: static !important;
+		color: var(--d-text) !important;
+		font-size: 16px !important;
+		font-weight: 500 !important;
+		letter-spacing: 0 !important;
+		text-transform: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__close {
+		position: absolute !important;
+		top: 12px !important;
+		inset-inline-start: 16px !important;
+		inset-inline-end: auto !important;
+		z-index: 4;
+		width: 40px !important;
+		height: 40px !important;
+		border: 0 !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		color: var(--d-icon) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__close:hover {
+		background: var(--d-selected) !important;
+	}
+
+	/* Identity block */
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__identity {
+		margin: 0 !important;
+		padding: 28px 24px 24px !important;
+		border-bottom: 8px solid var(--d-rail);
+		background: var(--d-app) !important;
+		text-align: center;
+	}
+
+	html.dark .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__identity {
+		border-bottom-color: #111212;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__avatar {
+		width: 200px !important;
+		height: 200px !important;
+		margin: 0 auto 16px !important;
+		padding: 0 !important;
+		border: 0 !important;
+		background: none !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__avatar .wa-avatar-3d {
+		width: 200px !important;
+		height: 200px !important;
+		--tw-ring-shadow: 0 0 #0000 !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__avatar .wa-avatar-initials {
+		font-size: 72px !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__name {
+		margin: 0 !important;
+		color: var(--d-text) !important;
+		font-size: 24px !important;
+		font-weight: 400 !important;
+		line-height: 30px !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__sub {
+		justify-content: center;
+		gap: 8px !important;
+		margin: 4px 0 0 !important;
+		color: var(--d-text-2) !important;
+		font-size: 16px !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__chip {
+		border: 0 !important;
+		background: var(--d-selected) !important;
+		color: var(--d-text-2) !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__body {
+		flex: 1 0 auto;
+		max-height: none !important;
+		overflow: visible !important;
+		padding: 0 !important;
+		background: var(--d-app) !important;
+	}
+
+	/* Details as WhatsApp Web list rows */
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__tiles {
+		display: flex !important;
+		flex-direction: column;
+		gap: 0 !important;
+		margin: 0 !important;
+		padding: 8px 0 !important;
+		border-bottom: 8px solid var(--d-rail);
+		background: transparent !important;
+	}
+
+	html.dark .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__tiles {
+		border-bottom-color: #111212;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__tile {
+		display: flex !important;
+		min-height: 56px;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		margin: 0 !important;
+		padding: 0 24px !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__tile:hover {
+		background: var(--d-hover) !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__tile dt {
+		display: flex !important;
+		align-items: center;
+		gap: 20px;
+		margin: 0 !important;
+		color: var(--d-text) !important;
+		font-size: 15px !important;
+		font-weight: 400 !important;
+		letter-spacing: 0 !important;
+		text-transform: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__tile-icon {
+		width: 24px !important;
+		height: 24px !important;
+		border: 0 !important;
+		background: transparent !important;
+		color: var(--d-icon) !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__tile dd {
+		margin: 0 !important;
+		color: var(--d-text-2) !important;
+		font-size: 14px !important;
+		font-weight: 400 !important;
+		text-align: end;
+	}
+
+	/* Group pieces */
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__desc {
+		margin: 0 !important;
+		padding: 16px 24px !important;
+		border: 0 !important;
+		border-bottom: 8px solid var(--d-rail) !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		color: var(--d-text) !important;
+		font-size: 14px !important;
+	}
+
+	html.dark .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__desc {
+		border-bottom-color: #111212 !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__members-head {
+		margin: 0 !important;
+		padding: 16px 24px 8px !important;
+		color: var(--d-text-2) !important;
+		font-size: 14px !important;
+		font-weight: 400 !important;
+		text-transform: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__search {
+		margin: 0 24px 8px !important;
+		border: 0 !important;
+		border-radius: 999px !important;
+		background: var(--d-field) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__list {
+		margin: 0 !important;
+		padding: 0 !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__member {
+		min-height: 64px;
+		margin: 0 !important;
+		padding: 8px 24px !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__member:hover {
+		background: var(--d-hover) !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__member-name {
+		color: var(--d-text) !important;
+		font-size: 16px !important;
+		font-weight: 400 !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__member-phone {
+		color: var(--d-text-2) !important;
+		font-size: 13px !important;
+	}
+
+	html .wa-web-desktop:not(#wa-d) .wa-gi-overlay .wa-gi__role {
+		border: 1px solid var(--d-sep) !important;
+		border-radius: 4px !important;
+		background: transparent !important;
+		color: var(--d-accent-text) !important;
+		font-size: 11px !important;
+		font-weight: 400 !important;
+	}
+}
+
+/* ==================================================================== */
+/* Attach ("+") popover, menus                                           */
+/* ==================================================================== */
+@media (min-width: 769px) {
+	html .wa-attachment-popover:not(#wa-d) {
+		padding: 8px !important;
+		border: 0 !important;
+		border-radius: 16px !important;
+		background: var(--d-menu) !important;
+		color: var(--d-text) !important;
+		box-shadow: 0 2px 5px rgba(11, 20, 26, 0.26), 0 2px 10px rgba(11, 20, 26, 0.16) !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-item {
+		min-height: 40px !important;
+		gap: 14px !important;
+		padding: 0 12px !important;
+		border: 0 !important;
+		border-radius: 8px !important;
+		background: transparent !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-item:hover {
+		background: var(--d-menu-hover) !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-icon {
+		width: 22px !important;
+		height: 22px !important;
+		background: transparent !important;
+		color: var(--att) !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-icon svg {
+		width: 20px;
+		height: 20px;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-label {
+		color: var(--d-text) !important;
+		font-size: 14.5px !important;
+		font-weight: 400 !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-ai {
+		margin: 0 0 6px !important;
+		padding: 8px 12px !important;
+		border: 0 !important;
+		border-bottom: 1px solid var(--d-sep) !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-ai > div:first-child > span:first-child {
+		width: 22px !important;
+		height: 22px !important;
+		background: transparent !important;
+		color: #a78bfa !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-ai p {
+		color: var(--d-text) !important;
+		font-size: 14.5px !important;
+		font-weight: 400 !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-ai p + p {
+		color: var(--d-text-2) !important;
+		font-size: 12px !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-ai > div:nth-child(2) {
+		border-top-color: var(--d-sep) !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-ai > div:nth-child(2) span {
+		color: var(--d-text-2) !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) .wa-att-ai > div:nth-child(2) > button:last-child {
+		border-color: var(--d-sep) !important;
+		background: transparent !important;
+		color: var(--d-icon) !important;
+	}
+
+	html .wa-attachment-popover:not(#wa-d) [role='switch'][aria-checked='true'] {
+		background: var(--d-accent) !important;
+	}
+
+	/* Shared dropdowns and context menus: WhatsApp Web rows */
+	html .wa-ui-menu:not(.wa-mam__reactions):not(#wa-d) {
+		border-color: transparent !important;
+		border-radius: 16px !important;
+		background: var(--d-menu) !important;
+		box-shadow: 0 2px 5px rgba(11, 20, 26, 0.26), 0 2px 10px rgba(11, 20, 26, 0.16) !important;
+	}
+
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__item {
+		min-height: 40px !important;
+		border-radius: 8px !important;
+		color: var(--d-text) !important;
+		font-size: 14.5px !important;
+	}
+
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__item:hover,
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__item.is-highlighted {
+		background: var(--d-menu-hover) !important;
+	}
+
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__item:focus-visible {
+		outline: 2px solid var(--d-accent);
+		outline-offset: -2px;
+	}
+
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__icon {
+		color: var(--d-icon) !important;
+	}
+
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__item.is-danger,
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__item.is-danger .wa-ui-menu__icon {
+		color: #f15c6d !important;
+	}
+
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__sep {
+		background: var(--d-sep) !important;
+	}
+
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__header-title {
+		color: var(--d-text) !important;
+	}
+
+	html .wa-ui-menu:not(#wa-d) .wa-ui-menu__header-sub {
+		color: var(--d-text-2) !important;
+	}
+}
+
+/* ==================================================================== */
+/* Empty conversation state: flat, like WhatsApp Web                     */
+/* ==================================================================== */
+@media (min-width: 769px) {
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle {
+		background: var(--d-rail) !important;
+		background-image: none !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle {
+		background: var(--d-app) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle::before,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle::after,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__stage::before,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__stage::after,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__orbit-dotted,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__orbit-main,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__progress-arc,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__core-glow,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__float,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__ambient,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__dots {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__visual {
+		position: relative !important;
+		width: 120px !important;
+		height: 120px !important;
+		margin-bottom: 28px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__core {
+		width: 120px !important;
+		height: 120px !important;
+		border: 0 !important;
+		border-radius: 999px !important;
+		background: var(--d-selected) !important;
+		box-shadow: none !important;
+		animation: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__whatsapp {
+		width: 56px !important;
+		height: 56px !important;
+		color: var(--d-text-2) !important;
+		fill: currentColor;
+		filter: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__whatsapp path {
+		fill: currentColor !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__title {
+		color: var(--d-text) !important;
+		font-size: 32px !important;
+		font-weight: 300 !important;
+		letter-spacing: 0 !important;
+		background: none !important;
+		-webkit-text-fill-color: currentColor !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__unread {
+		margin-top: 12px !important;
+		padding: 0 !important;
+		border: 0 !important;
+		background: transparent !important;
+		color: var(--d-text-2) !important;
+		font-size: 14px !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__unread svg {
+		color: var(--d-text-2) !important;
+	}
+}
+
+@media (min-width: 769px) {
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__visual::before,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__visual::after,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__core::before,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__core::after {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__stage {
+		width: min(560px, 90%) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__copy {
+		width: 100%;
+		max-width: none !important;
+	}
+}
+
+@media (min-width: 769px) {
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__dot,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__ring-dot,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__plus {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__whatsapp path {
+		stroke: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-idle__title {
+		white-space: nowrap;
+	}
+}
+
+/* ==================================================================== */
+/* Groups browser: flush list panel + details pane                       */
+/* ==================================================================== */
+@media (min-width: 769px) {
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp {
+		grid-template-columns: clamp(340px, 30vw, 420px) minmax(0, 1fr) !important;
+		gap: 0 !important;
+		height: 100%;
+		padding: 0 !important;
+		background: var(--d-app) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-side {
+		width: auto !important;
+		min-width: 0;
+		max-height: none !important;
+		height: 100% !important;
+		margin: 0 !important;
+		border: 0 !important;
+		border-inline-end: 1px solid var(--d-sep) !important;
+		border-radius: 0 !important;
+		background: var(--d-app) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-side__head {
+		padding: 16px 16px 8px 20px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-side__title {
+		color: var(--d-text) !important;
+		font-size: 22px !important;
+		font-weight: 700 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-side__sub {
+		color: var(--d-text-2) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-search-wrap {
+		padding: 0 12px 8px !important;
+		border: 0 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-search-wrap .wa-dx__search {
+		height: 40px !important;
+		border: 1px solid transparent !important;
+		border-radius: 999px !important;
+		background: var(--d-field) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-search-wrap .wa-dx__search:focus-within {
+		border-color: var(--d-accent) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-list {
+		padding: 0 !important;
+		border: 0 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-row {
+		min-height: 72px;
+		margin: 0 !important;
+		padding: 0 16px !important;
+		gap: 14px !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-row:hover {
+		background: var(--d-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-row.is-active {
+		background: var(--d-selected) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-row.is-active::before {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-row .wa-avatar-3d {
+		width: 49px !important;
+		height: 49px !important;
+		--tw-ring-shadow: 0 0 #0000 !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-row__copy {
+		align-self: stretch;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		border-bottom: 1px solid var(--d-sep);
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-row__name {
+		color: var(--d-text) !important;
+		font-size: 17px !important;
+		font-weight: 400 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-row__sub {
+		color: var(--d-text-2) !important;
+		font-size: 14px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-main {
+		margin: 0 !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		background: var(--d-app) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-grp-empty__icon {
+		background: var(--d-selected) !important;
+		color: var(--d-text-2) !important;
+	}
+}
+
+/* ==================================================================== */
+/* Settings: category list on the left, content on the right             */
+/* ==================================================================== */
+@media (min-width: 769px) {
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-pane {
+		display: grid !important;
+		grid-template-columns: clamp(260px, 26vw, 340px) minmax(0, 1fr);
+		align-items: start;
+		column-gap: 24px;
+		row-gap: 16px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-pane > * {
+		grid-column: 2;
+		margin-top: 0 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-pane > .wa-settings-tablist {
+		position: sticky;
+		top: 0;
+		grid-column: 1;
+		grid-row: 1 / span 40;
+		display: flex !important;
+		flex-direction: column;
+		gap: 0 !important;
+		padding: 8px 0 !important;
+		overflow: visible !important;
+		border: 0 !important;
+		border-radius: 12px !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-tablist::before,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-tablist::after {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-tab {
+		width: 100%;
+		min-height: 56px;
+		justify-content: flex-start !important;
+		gap: 18px !important;
+		padding: 0 16px !important;
+		border: 0 !important;
+		border-radius: 10px !important;
+		background: transparent !important;
+		color: var(--d-text) !important;
+		font-size: 16px !important;
+		font-weight: 400 !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-tab svg {
+		width: 22px !important;
+		height: 22px !important;
+		color: var(--d-icon) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-tab:hover {
+		background: var(--d-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-tab.is-active {
+		background: var(--d-selected) !important;
+		color: var(--d-text) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-tab.is-active svg {
+		color: var(--d-accent-text) !important;
+	}
+
+	/* Content cards: flat sections */
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-pane > .rounded-2xl,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-pane > div > .rounded-2xl {
+		border-color: var(--d-sep) !important;
+		border-radius: 12px !important;
+		background: var(--d-app) !important;
+		box-shadow: none !important;
+	}
+}
+
+@media (min-width: 769px) {
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-pane .wa-custom-select-trigger,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-settings-pane select {
+		border-color: var(--d-sep) !important;
+		background: var(--d-field) !important;
+		color: var(--d-text) !important;
+		box-shadow: none !important;
+	}
+}
+
+@media (min-width: 769px) {
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-avatar-online-dot {
+		border-color: var(--d-app) !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-st-card {
+		background-color: #1d1f1f !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-st-card__new {
+		color: #161717 !important;
+	}
+}
