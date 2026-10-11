@@ -243,29 +243,6 @@ function offsetWithin(root, node, offset) {
 	return count;
 }
 
-function rangeFromOffsets(root, start, end) {
-	const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-	const range = document.createRange();
-	let count = 0;
-	let startSet = false;
-	let node = walker.nextNode();
-	while (node) {
-		const len = node.textContent?.length || 0;
-		const next = count + len;
-		if (!startSet && start <= next) {
-			range.setStart(node, Math.min(len, Math.max(0, start - count)));
-			startSet = true;
-		}
-		if (startSet && end <= next) {
-			range.setEnd(node, Math.min(len, Math.max(0, end - count)));
-			return range;
-		}
-		count = next;
-		node = walker.nextNode();
-	}
-	return null;
-}
-
 function blockOf(node, host) {
 	const el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
 	const block = el?.closest?.(BLOCK_SELECTOR);
@@ -278,13 +255,12 @@ function captureFromTextarea(textarea) {
 	if (end <= start) return null;
 	const word = cleanLookupText(textarea.value.slice(start, end));
 	if (!word) return null;
+	// Read sentence context without rewriting the native selection — mutating
+	// selectionRange here makes the caret disappear or turn transparent after clicks.
 	let sentence = '';
 	if (wordCount(word) === 1) {
 		const span = sentenceAround(textarea.value, start, end);
-		if (span) {
-			textarea.setSelectionRange(span.from, span.to);
-			sentence = span.sentence;
-		}
+		if (span) sentence = span.sentence;
 	}
 	return { word, sentence, rect: null };
 }
@@ -297,7 +273,9 @@ function captureFromDom(host) {
 	const word = cleanLookupText(range.toString());
 	if (!word) return null;
 	let sentence = '';
-	let rect = range.getBoundingClientRect();
+	const rect = range.getBoundingClientRect();
+	// Do not replace the live DOM selection (TipTap/ProseMirror caret desyncs
+	// and browsers apply a transparent caret while selection is rewritten).
 	if (wordCount(word) === 1) {
 		const startBlock = blockOf(range.startContainer, host);
 		const endBlock = blockOf(range.endContainer, host);
@@ -306,15 +284,7 @@ function captureFromDom(host) {
 			const start = offsetWithin(startBlock, range.startContainer, range.startOffset);
 			const end = offsetWithin(startBlock, range.endContainer, range.endOffset);
 			const span = sentenceAround(text, start, end);
-			if (span) {
-				const next = rangeFromOffsets(startBlock, span.from, span.to);
-				if (next) {
-					sel.removeAllRanges();
-					sel.addRange(next);
-					rect = next.getBoundingClientRect();
-					sentence = span.sentence;
-				}
-			}
+			if (span) sentence = span.sentence;
 		}
 	}
 	return { word, sentence, rect };

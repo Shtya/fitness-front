@@ -405,6 +405,9 @@ html.dark .sd-icon-btn {
 	padding: 1.35rem 1.5rem 3rem;
 	background: color-mix(in srgb, var(--sd-ink) 3.5%, transparent);
 	color: var(--sd-ink);
+	-webkit-text-fill-color: currentColor;
+	caret-color: var(--sd-ink);
+	cursor: text;
 	font-family: var(--sd-font-doc);
 	font-size: var(--sd-fs);
 	line-height: var(--sd-lh);
@@ -413,7 +416,6 @@ html.dark .sd-icon-btn {
 	tab-size: 2;
 	unicode-bidi: plaintext;
 	text-align: start;
-	caret-color: var(--color-primary-500, #0d9488);
 }
 
 .sd-canvas--bleed.is-source {
@@ -447,6 +449,8 @@ html.dark .sd-icon-btn {
 	padding: 1.35rem 1.5rem 3rem;
 	min-height: 100%;
 	color: var(--sd-ink);
+	-webkit-text-fill-color: currentColor;
+	caret-color: var(--sd-ink);
 	font-family: var(--sd-font-doc);
 	font-size: var(--sd-fs);
 	line-height: var(--sd-lh);
@@ -476,11 +480,25 @@ html.dark .sd-icon-btn {
 	min-height: calc(100dvh - 12rem);
 	white-space: pre-wrap;
 	word-wrap: break-word;
+	color: var(--sd-ink);
+	-webkit-text-fill-color: currentColor;
+	caret-color: var(--sd-ink);
+	cursor: text;
 	font-family: var(--sd-font-doc);
 	font-size: var(--sd-fs);
 	line-height: var(--sd-lh);
 	letter-spacing: var(--sd-ls);
 	word-spacing: var(--sd-ws);
+}
+
+/* ProseMirror hides the caret while unfocused; keep it solid whenever we are editing. */
+.sd-visual.ProseMirror-focused,
+.sd-visual.ProseMirror-focused * {
+	caret-color: var(--sd-ink);
+}
+
+.sd-visual.ProseMirror-hideselection {
+	caret-color: var(--sd-ink);
 }
 
 .sd-visual p.is-editor-empty:first-child::before {

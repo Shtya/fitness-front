@@ -361,7 +361,7 @@ export default function SmartDocumentEditor({
 	const takeSelection = (host, point, open) => {
 		const hit = captureLookup(host);
 		if (!hit?.word) {
-			if (!open) setOffer(null);
+			if (!open) setOffer((prev) => (prev ? null : prev));
 			return;
 		}
 		const rect = hit.rect;
@@ -375,6 +375,11 @@ export default function SmartDocumentEditor({
 			return;
 		}
 		setOffer(payload);
+	};
+
+	const keepEditorFocus = (host, prior) => {
+		if (!(prior instanceof HTMLElement) || !host?.contains(prior)) return;
+		if (document.activeElement !== prior) prior.focus({ preventScroll: true });
 	};
 
 	if (!ready) {
@@ -548,13 +553,21 @@ export default function SmartDocumentEditor({
 						if (e.target.closest('button, a, input, label, .sd-lookup-pin')) return;
 						const host = e.currentTarget;
 						const point = { x: e.clientX, y: e.clientY };
-						window.setTimeout(() => takeSelection(host, point, false), 0);
+						const prior = document.activeElement;
+						window.setTimeout(() => {
+							takeSelection(host, point, false);
+							keepEditorFocus(host, prior);
+						}, 0);
 					}}
 					onDoubleClick={(e) => {
 						if (e.target.closest('button, a, input, label')) return;
 						const host = e.currentTarget;
 						const point = { x: e.clientX, y: e.clientY };
-						window.setTimeout(() => takeSelection(host, point, true), 30);
+						const prior = document.activeElement;
+						window.setTimeout(() => {
+							takeSelection(host, point, true);
+							keepEditorFocus(host, prior);
+						}, 30);
 					}}
 				>
 					{mode === 'edit' ? (

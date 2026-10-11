@@ -7,6 +7,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { TableKit } from '@tiptap/extension-table';
 import { Markdown } from '@tiptap/markdown';
+import 'prosemirror-view/style/prosemirror.css';
 import { formatHtmlSource, htmlForEditor, isHtmlSource } from './source-format';
 
 /**
@@ -35,7 +36,17 @@ export default function MarkdownVisualEditor({ markdown, onChange, onBlur, place
 		content: html ? htmlForEditor(markdown) : markdown || '',
 		contentType: html ? 'html' : 'markdown',
 		editorProps: {
-			attributes: { class: 'sd-md sd-visual', spellcheck: 'true' },
+			attributes: {
+				class: 'sd-md sd-visual',
+				spellcheck: 'true',
+				style: 'caret-color: var(--sd-ink); -webkit-text-fill-color: currentColor;',
+			},
+			handleDOMEvents: {
+				mousedown: (view) => {
+					if (!view.hasFocus()) view.focus();
+					return false;
+				},
+			},
 		},
 		onUpdate: ({ editor: ed }) => {
 			if (html) onChangeRef.current?.(formatHtmlSource(ed.getHTML()));
