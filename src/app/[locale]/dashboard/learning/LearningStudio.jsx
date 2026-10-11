@@ -2405,7 +2405,7 @@ export default function LearningStudio({ system = 'management' }) {
 			/>
 
 			{(aiBusy || importBusy) && (
-				<div className="pointer-events-none fixed bottom-5 end-5 z-[80] rounded-2xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-lg">
+				<div className="pointer-events-none fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] end-5 z-[80] rounded-2xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-lg">
 					<span className="inline-flex items-center gap-2">
 						<Loader2 size={14} className="animate-spin" />
 						{importBusy ? t.aiWorking : t.aiWorking}

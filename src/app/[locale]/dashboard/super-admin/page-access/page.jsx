@@ -235,7 +235,7 @@ export default function PageAccessPage() {
 				)}
 			</div>
 
-			<div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--gm-line)] bg-[color-mix(in_srgb,var(--gm-paper)_92%,transparent)] px-4 py-3 backdrop-blur">
+			<div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--gm-line)] bg-[color-mix(in_srgb,var(--gm-paper)_92%,transparent)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
 				<div className="mx-auto flex max-w-5xl flex-wrap items-center justify-end gap-2">
 					{isDirty ? <span className="me-auto text-[12px] font-medium text-[var(--gm-warn)]">{t('unsaved')}</span> : null}
 					<button type="button" onClick={discard} disabled={!isDirty || saveMutation.isPending} className="rs-btn" style={{ width: 'auto' }}>

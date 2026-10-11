@@ -803,7 +803,7 @@ export default function WeeklyReportsPage() {
 						animate={{ opacity: 1, y: 0, scale: 1 }}
 						exit={{ opacity: 0, y: 24, scale: 0.97 }}
 						transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-						className='pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4'
+						className='pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 flex justify-center px-4'
 					>
 						<div
 							role='region'

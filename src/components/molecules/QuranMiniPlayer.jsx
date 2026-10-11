@@ -47,7 +47,7 @@ export default function QuranMiniPlayer() {
 			<button
 				type="button"
 				onClick={() => setHidden(false)}
-				className="fixed bottom-4 end-4 z-[190000] inline-flex items-center gap-2 rounded-full px-3.5 py-2.5 text-white text-xs font-bold shadow-lg"
+				className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] end-4 z-[190000] inline-flex items-center gap-2 rounded-full px-3.5 py-2.5 text-white text-xs font-bold shadow-lg"
 				style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 				title={isAr ? 'إظهار مشغّل القرآن' : 'Show Quran player'}
 			>

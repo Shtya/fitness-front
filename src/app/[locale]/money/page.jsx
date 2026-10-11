@@ -633,7 +633,7 @@ function BottomSheet({ open, onClose, title, children }) {
 				<>
 					<motion.div key="bov" className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm"
 						initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: .22 }} onClick={onClose} />
-					<motion.div key="bs" className=" w-[calc(100%-10px)] fixed bottom-0 left-0 right-0 z-[51] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[91vh] overflow-hidden pb-6"
+					<motion.div key="bs" className=" w-[calc(100%-10px)] fixed bottom-0 left-0 right-0 z-[51] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[91vh] overflow-hidden pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
 						initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ duration: .35, ease: [0.16, 1, 0.3, 1] }}>
 						<div className="flex justify-center pt-2.5 pb-1 flex-shrink-0">
 							<div className="w-8 h-1 rounded-full bg-[var(--color-primary-200)]" />

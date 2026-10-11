@@ -1088,7 +1088,7 @@ export default function SettingsPage() {
 			<motion.div
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
-				className="fixed inset-x-0 bottom-0 z-50 border-t-2 bg-white/98 backdrop-blur-xl shadow-2xl"
+				className="fixed inset-x-0 bottom-0 z-50 border-t-2 bg-white/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl shadow-2xl"
 				style={{
 					borderColor: 'var(--color-primary-200)',
 				}}>

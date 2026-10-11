@@ -826,7 +826,8 @@
 	}
 
 	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-message-wallpaper {
-		padding: 8px 10px 12px !important;
+		/* Keep the app's measured composer height (it includes the home-indicator inset). */
+		padding: 8px 10px calc(var(--wa-composer-stack-h, 66px) + 12px) !important;
 	}
 
 	/* Header: back + count, avatar, name/subtitle, actions; translucent like the iOS nav bar */
@@ -1088,7 +1089,7 @@
 	}
 
 	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-composer {
-		padding: 6px 8px calc(6px + env(safe-area-inset-bottom)) !important;
+		padding: 6px 8px calc(6px + var(--wa-safe-bottom)) !important;
 		border-top: 0.5px solid var(--m-tabbar-sep) !important;
 	}
 
@@ -1260,7 +1261,7 @@
 /* ==================================================================== */
 @media (max-width: 768px) {
 	html .wa-attachment-sheet:not(#wa-m) {
-		padding: 8px 16px max(20px, env(safe-area-inset-bottom)) !important;
+		padding: 8px 16px max(20px, calc(8px + var(--wa-safe-bottom))) !important;
 		border-radius: 14px 14px 0 0 !important;
 		background: var(--m-grouped) !important;
 		color: var(--m-text) !important;
@@ -1628,7 +1629,7 @@
 	/* Container is transparent: the chat card and the menu are separate surfaces */
 	html .wa-conversation-action-menu:not(#wa-m) {
 		top: auto !important;
-		bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+		bottom: calc(16px + var(--wa-safe-bottom)) !important;
 		left: 16px !important;
 		right: 16px !important;
 		width: auto !important;
@@ -1913,7 +1914,7 @@
 		flex: 1 0 auto;
 		max-height: none !important;
 		overflow: visible !important;
-		padding: 0 16px calc(24px + env(safe-area-inset-bottom)) !important;
+		padding: 0 16px calc(24px + var(--wa-safe-bottom)) !important;
 		background: transparent !important;
 	}
 
@@ -2980,5 +2981,91 @@
 		left: auto !important;
 		right: -9px !important;
 		transform: none;
+	}
+}
+
+/* ==================================================================== */
+/* iPhone bottom safe area + keyboard                                    */
+/* One variable, one owner per element: every bottom-anchored surface    */
+/* pads by --wa-safe-bottom exactly once. mobile-viewport.js adds        */
+/* .wa-kb-open while the keyboard is up, which drops the inset (the       */
+/* keyboard covers the home indicator) and sizes the shell to the        */
+/* visible area via --wa-app-h.                                           */
+/* ==================================================================== */
+@media (max-width: 768px) {
+	:root {
+		--wa-safe-bottom: env(safe-area-inset-bottom, 0px);
+	}
+
+	html.wa-kb-open {
+		--wa-safe-bottom: 0px;
+	}
+
+	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) {
+		height: var(--wa-app-h, 100dvh) !important;
+		max-height: var(--wa-app-h, 100dvh) !important;
+	}
+
+	/* Tab bar: icons/labels, then the home-indicator strip */
+	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-mobile-nav {
+		padding-bottom: max(6px, calc(var(--wa-safe-bottom) + 2px)) !important;
+	}
+
+	/* Composer: the form owns the inset, the wrapper adds none */
+	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-chat-thread-pane .wa-composer-stack,
+	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-composer-stack {
+		padding-bottom: 0 !important;
+	}
+
+	/* Contact / group info: the scrolling body owns the inset */
+	html .wa-gi-overlay:not(#wa-m) .wa-gi {
+		padding-bottom: 0 !important;
+	}
+
+	/* Sheets that sit on the bottom edge */
+	html .wa-ui-scrim.is-sheet-on-phone:not(#wa-m) > .wa-ui-modal,
+	html .wa-ui-assign.is-sheet:not(#wa-m),
+	html .wa-ldlg:not(#wa-m) {
+		padding-bottom: var(--wa-safe-bottom) !important;
+	}
+
+	/* The emoji sheet sits on top of the composer, never on the screen edge */
+	html .wa-ui-picker.is-sheet:not(#wa-m) .wa-ui-picker__tabs {
+		padding-bottom: 6px !important;
+	}
+
+	/* Long-press menus can scroll to the bottom edge: keep the last row clear */
+	html .wa-mam:not(#wa-m) .wa-mam__stack {
+		padding-bottom: calc(20px + var(--wa-safe-bottom)) !important;
+	}
+}
+
+@media (max-width: 768px) {
+	/* Keyboard up (iOS): fixed bottom surfaces sit on the keyboard, not behind it */
+	html.wa-kb-open .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-composer-stack {
+		bottom: var(--wa-kb-inset, 0px) !important;
+	}
+
+	html.wa-kb-open .wa-ui-scrim.is-sheet-on-phone:not(#wa-m),
+	html.wa-kb-open .wa-ldlg-scrim:not(#wa-m) {
+		bottom: var(--wa-kb-inset, 0px) !important;
+		height: auto !important;
+	}
+}
+
+@media (max-width: 768px) {
+	/* Keyboard up: sheets and full-screen pages fit the visible area, so a focused field
+	   (dialog search, member search) is never pushed above the screen. */
+	html.wa-kb-open .wa-ui-scrim.is-sheet-on-phone:not(#wa-m) > .wa-ui-modal,
+	html.wa-kb-open .wa-ldlg:not(#wa-m) {
+		max-height: calc(var(--wa-app-h, 100dvh) - 12px) !important;
+	}
+
+	html.wa-kb-open .wa-gi-overlay:not(#wa-m) .wa-gi {
+		height: var(--wa-app-h, 100dvh) !important;
+	}
+
+	html.wa-kb-open .wa-gi-overlay:not(#wa-m) {
+		bottom: var(--wa-kb-inset, 0px) !important;
 	}
 }

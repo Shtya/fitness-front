@@ -250,6 +250,7 @@ import './wa-desktop-palette.css';
 import './wa-desktop.css';
 import { useMenuKeyboard } from './wa-ui-menu';
 import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
+import { installMobileViewport } from './mobile-viewport';
 import {
 	downloadContactVcard,
 	extractRawVcardFromMessage,
@@ -2870,6 +2871,8 @@ function LocationMessage({ message, location, type, locale = 'en', conversationI
 }
 
 export default function WhatsAppWorkspace() {
+	// Phones: keyboard-aware app height and safe-area handling (see mobile-viewport.js).
+	useEffect(() => installMobileViewport(), []);
 	return (
 		<DemoModeProvider>
 			<WhatsAppWorkspaceContent />

@@ -473,7 +473,7 @@ export default function NutritionGuideModal({ open, onClose }) {
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 370, damping: 44 }}
             dir={isRTL ? 'rtl' : 'ltr'}
-            className="fixed inset-x-0 bottom-0 top-[2%] z-[91] flex flex-col rounded-t-3xl overflow-hidden sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[min(700px,95vw)] sm:rounded-3xl sm:top-[2%] sm:bottom-[2%]"
+            className="fixed inset-x-0 bottom-0 top-[2%] z-[91] flex flex-col rounded-t-3xl overflow-hidden pb-[env(safe-area-inset-bottom)] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[min(700px,95vw)] sm:rounded-3xl sm:top-[2%] sm:bottom-[2%]"
             style={{
               background: '#f8fafc',
               boxShadow: '0 -40px 100px rgba(0,0,0,0.4)',

@@ -1415,7 +1415,7 @@ export default function FormSubmissionPage() {
 
         {/* ── Sticky submit bar ── */}
         <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 120, damping: 20 }} className='fixed bottom-0 left-0 right-0 z-30 pointer-events-none'>
-          <div className='pointer-events-auto border-t bg-white/95 backdrop-blur-md' style={{ borderColor: colors.primary[150] || colors.primary[200] }}>
+          <div className='pointer-events-auto border-t bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md' style={{ borderColor: colors.primary[150] || colors.primary[200] }}>
             <div className='max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4'>
               <p className='flex-1 text-base font-medium hidden sm:block' style={{ color: colors.primary[600] }}>
                 {t('footer.review_before_submit')}

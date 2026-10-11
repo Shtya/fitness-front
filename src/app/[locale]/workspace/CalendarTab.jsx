@@ -475,7 +475,7 @@ function SlidePanel({ open, onClose, children, title, className }) {
             className={cn(
               "fixed bottom-0 left-0 right-0 z-50 flex flex-col",
               "bg-[var(--cal-surface)] rounded-t-3xl shadow-2xl",
-              "max-h-[92vh] overflow-hidden",
+              "max-h-[92vh] overflow-hidden pb-[env(safe-area-inset-bottom)]",
               className
             )}
             initial={{ y: "100%" }}

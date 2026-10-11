@@ -277,7 +277,7 @@ function SlidePanel({ open, onClose, children, title }) {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }} onClick={onClose} />
           <motion.div key="mob-panel"
-            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-3xl shadow-2xl max-h-[92vh] overflow-hidden bg-(--gm-paper)"
+            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-3xl shadow-2xl max-h-[92vh] overflow-hidden bg-(--gm-paper) pb-[env(safe-area-inset-bottom)]"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
             <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">

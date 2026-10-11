@@ -359,7 +359,7 @@ export function ListenBar({
 
 	return (
 		<div
-			className="fixed inset-x-0 bottom-0 z-[58] border-t px-3 py-3 shadow-2xl"
+			className="fixed inset-x-0 bottom-0 z-[58] border-t px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-2xl"
 			style={{
 				background: theme.paper,
 				borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`,

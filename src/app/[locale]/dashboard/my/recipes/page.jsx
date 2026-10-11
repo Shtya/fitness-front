@@ -348,7 +348,7 @@ function RecipeModal({ recipe, onClose, t, tMt }) {
 					<motion.div
 						initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
 						transition={{ type: 'spring', stiffness: 320, damping: 38 }}
-						className="fixed inset-x-0 bottom-0 z-[81] mx-auto flex h-[91dvh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-[28px] bg-[#f8fafc]"
+						className="fixed inset-x-0 bottom-0 z-[81] mx-auto flex h-[91dvh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-[28px] bg-[#f8fafc] pb-[env(safe-area-inset-bottom)]"
 						style={{ boxShadow: '0 -8px 24px rgba(100,116,139,0.35)' }}
 					>
 						{/* drag pill */}

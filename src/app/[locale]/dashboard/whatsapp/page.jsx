@@ -7,6 +7,9 @@ export const viewport = {
 	themeColor: '#ffffff',
 	colorScheme: 'light dark',
 	viewportFit: 'cover',
+	// Android: the keyboard shrinks the layout so 100dvh ends at the keyboard. iOS ignores
+	// this; mobile-viewport.js handles it there.
+	interactiveWidget: 'resizes-content',
 };
 
 export const metadata = {

@@ -146,7 +146,7 @@ function NutritionRecipeSheet({ recipe, onClose }) {
       {recipe && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='fixed inset-0 z-[80] bg-black/75 backdrop-blur-md' onClick={onClose} />
-          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 38 }} className='fixed inset-x-0 bottom-0 top-[4%] z-[81] flex flex-col bg-white rounded-t-3xl overflow-hidden sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-[3%] sm:bottom-[3%] sm:w-[min(680px,94vw)] sm:rounded-3xl' style={{ boxShadow: '0 -24px 80px rgba(99,102,241,0.22), 0 40px 120px rgba(0,0,0,0.4)' }}>
+          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 38 }} className='fixed inset-x-0 bottom-0 top-[4%] z-[81] flex flex-col bg-white rounded-t-3xl overflow-hidden pb-[env(safe-area-inset-bottom)] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-[3%] sm:bottom-[3%] sm:w-[min(680px,94vw)] sm:rounded-3xl' style={{ boxShadow: '0 -24px 80px rgba(99,102,241,0.22), 0 40px 120px rgba(0,0,0,0.4)' }}>
             <div className='sm:hidden absolute top-2 inset-x-0 flex justify-center z-10'>
               <div className='h-1 w-10 rounded-full bg-[var(--color-primary-200)]' />
             </div>

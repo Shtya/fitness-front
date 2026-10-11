@@ -48,7 +48,7 @@ export function RunProgressDock({ open, execution, running, onClose }) {
   const prettyFail = finished && execution?.status === 'FAILED' && failErr ? prettyStudioError(failErr, t) : null;
 
   return (
-    <div className="pointer-events-none fixed bottom-5 end-4 z-[90] w-[min(248px,calc(100vw-1.5rem))]">
+    <div className="pointer-events-none fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] end-4 z-[90] w-[min(248px,calc(100vw-1.5rem))]">
       <div
         className="pointer-events-auto overflow-hidden rounded-[18px] border border-[#E5E7EB] bg-white/95 backdrop-blur-xl"
         style={{ boxShadow: '0 14px 40px -18px rgba(15,23,42,0.42), 0 1px 0 rgba(255,255,255,0.8) inset' }}
