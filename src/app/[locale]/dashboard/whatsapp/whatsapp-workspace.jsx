@@ -342,6 +342,7 @@ import {
 	MESSAGE_PAGE_SIZE,
 	MESSAGES_CACHE_TTL_MS,
 	isMessageThreadCacheComplete,
+	openChatCatchUpPlan,
 	openChatMessagesStaleTime,
 	shouldProviderBackfill,
 	shouldReloadOpenChatMessages,
@@ -815,6 +816,8 @@ const translations = {
 		unreadMessagesLong: '{count} unread messages',
 		noMessagesYet: 'No messages in this conversation yet',
 		loadingMessages: 'Loading messages…',
+		loadingNewMessages: 'Loading {count} new messages…',
+		loadingNewMessagesProgress: 'Loaded {received} of {expected}…',
 		messagesStillSyncing:
 			'WhatsApp is still syncing with the phone. Retrying automatically…',
 		mediaUnavailable: 'Media unavailable',
@@ -1309,6 +1312,8 @@ const translations = {
 		unreadMessagesLong: '{count} رسالة غير مقروءة',
 		noMessagesYet: 'لا توجد رسائل في هذه المحادثة بعد',
 		loadingMessages: 'جارِ تحميل الرسائل…',
+		loadingNewMessages: 'جارِ تحميل {count} رسائل جديدة…',
+		loadingNewMessagesProgress: 'تم تحميل {received} من {expected}…',
 		messagesStillSyncing:
 			'واتساب ما زال يزامن مع الهاتف. جارٍ إعادة المحاولة تلقائياً…',
 		mediaUnavailable: 'تعذر عرض الوسائط',
@@ -4135,16 +4140,18 @@ async function prepareVoicePlayback(sourceUrl, mimeType) {
 
 function VoicePlayIcon() {
 	return (
-		<svg className="wa-voice-play-icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-			<path fill="currentColor" d="M8.2 5.8c0-.9.9-1.5 1.7-1.1l10.2 5.7c.9.5.9 1.7 0 2.2l-10.2 5.7c-.8.4-1.7-.2-1.7-1.1V5.8Z" />
+		<svg className="wa-voice-play-icon is-play" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+			{/* Centroid sits on x=12.5, so the triangle reads as centred in the disc. */}
+			<path fill="currentColor" d="M8.6 6.4c0-1.06 1.15-1.72 2.07-1.19l9.06 5.6c.86.53.86 1.79 0 2.32l-9.06 5.6c-.92.53-2.07-.13-2.07-1.19V6.4Z" />
 		</svg>
 	);
 }
 
 function VoicePauseIcon() {
 	return (
-		<svg className="wa-voice-play-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-			<path fill="currentColor" d="M7.5 5.5h2.8c.6 0 1 .4 1 1v11c0 .6-.4 1-1 1H7.5c-.6 0-1-.4-1-1v-11c0-.6.4-1 1-1Zm6.2 0h2.8c.6 0 1 .4 1 1v11c0 .6-.4 1-1 1h-2.8c-.6 0-1-.4-1-1v-11c0-.6.4-1 1-1Z" />
+		<svg className="wa-voice-play-icon is-pause" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+			<rect x="6.5" y="5" width="4" height="14" rx="1.6" fill="currentColor" />
+			<rect x="13.5" y="5" width="4" height="14" rx="1.6" fill="currentColor" />
 		</svg>
 	);
 }
@@ -4188,7 +4195,8 @@ function VoiceLoadingIcon() {
 	);
 }
 
-function VoicePlaybackButton({ playing, loading, failed, onClick, labels = {} }) {
+function VoicePlaybackButton({ playing, loading, failed, onClick, labels = {}, progress = 0 }) {
+	const ringProgress = Math.max(0, Math.min(1, Number(progress) || 0));
 	const ar = String(labels.retry || labels.tapToRetry || '').includes('إعادة') ||
 		String(labels.tapToRetry || '').includes('اضغط');
 	const label = loading
@@ -4203,9 +4211,23 @@ function VoicePlaybackButton({ playing, loading, failed, onClick, labels = {} })
 			type="button"
 			onClick={onClick}
 			aria-label={label}
-			className={`wa-voice-play grid shrink-0 place-items-center ${playing ? 'is-playing' : ''} ${loading ? 'is-loading' : ''} ${failed ? 'is-failed' : ''}`}
+			className={`wa-voice-play wa-vp grid shrink-0 place-items-center ${playing ? 'is-playing' : ''} ${loading ? 'is-loading' : ''} ${failed ? 'is-failed' : ''}`}
 		>
-			{loading ? <VoiceLoadingIcon /> : playing ? <VoicePauseIcon /> : <VoicePlayIcon />}
+			<svg className="wa-vp__ring" viewBox="0 0 44 44" aria-hidden="true">
+				<circle className="wa-vp__track" cx="22" cy="22" r="20.5" />
+				<circle
+					className="wa-vp__progress"
+					cx="22"
+					cy="22"
+					r="20.5"
+					pathLength="100"
+					strokeDasharray="100"
+					strokeDashoffset={100 - ringProgress * 100}
+				/>
+			</svg>
+			<span className="wa-vp__disc">
+				{loading ? <VoiceLoadingIcon /> : playing ? <VoicePauseIcon /> : <VoicePlayIcon />}
+			</span>
 		</button>
 	);
 }
@@ -4520,6 +4542,264 @@ function WaChatPicker({
 				)}
 			</div>
 		</>
+	);
+}
+
+/** Groups tab: searchable group list + details (info cards, admins-first member list). */
+function WaGroupsBrowser({
+	groups,
+	selectedGroup,
+	loadingGroup,
+	conversations,
+	locale,
+	t,
+	onSelect,
+	onRefresh,
+	onOpenChat,
+}) {
+	const [query, setQuery] = useState('');
+	const ar = locale === 'ar';
+	const term = foldWhatsAppSearchText(query);
+	const conversationById = useMemo(() => {
+		const map = new Map();
+		for (const item of conversations || []) map.set(item.id, item);
+		return map;
+	}, [conversations]);
+	const groupAvatar = group => {
+		const conversation = group?.conversationId ? conversationById.get(group.conversationId) : null;
+		return conversation ? conversationAvatarUrl(conversation) : '';
+	};
+	const memberCount = group => group?.participantCount || group?.participants?.length || 0;
+	const visible = useMemo(
+		() =>
+			term
+				? (groups || []).filter(group => foldWhatsAppSearchText(group.subject || '').includes(term))
+				: groups || [],
+		[groups, term],
+	);
+	const totalMembers = (groups || []).reduce((sum, group) => sum + memberCount(group), 0);
+	const participants = selectedGroup?.participants || [];
+	const admins = participants.filter(item => item.isAdmin || item.isSuperAdmin).length;
+	const ownerDigits = String(selectedGroup?.ownerWaId || '')
+		.replace(/@.*$/, '')
+		.split(':')[0];
+	const owner =
+		(ownerDigits &&
+			participants.find(item => String(item.waId || '').replace(/@.*$/, '').split(':')[0] === ownerDigits)) ||
+		participants.find(item => item.isSuperAdmin);
+	const resolveMember = useCallback(
+		participant => {
+			const phoneHint = String(participant.waId || '')
+				.replace(/@.*$/, '')
+				.split(':')[0]
+				.replace(/\D/g, '');
+			const fromInbox = (conversations || []).find(item => {
+				if (item?.type === 'group') return false;
+				const contactId = String(item?.contact?.waId || item?.providerChatId || '');
+				const digits = String(item?.contact?.phoneNumber || '').replace(/\D/g, '');
+				return (
+					contactId === participant.waId ||
+					(phoneHint && (digits === phoneHint || contactId.replace(/@.*$/, '').replace(/\D/g, '') === phoneHint))
+				);
+			});
+			const title =
+				String(participant.displayName || '').trim() ||
+				String(fromInbox?.contact?.name || '').trim() ||
+				(fromInbox ? conversationTitle(fromInbox) : '') ||
+				(phoneHint ? `+${phoneHint}` : '') ||
+				String(participant.waId || '—');
+			const avatarSrc = fromInbox ? conversationAvatarUrl(fromInbox) : inboxAvatarForWaId(conversations, participant.waId);
+			return { title, phoneHint, avatarSrc };
+		},
+		[conversations],
+	);
+
+	return (
+		<div className="wa-grp">
+			<aside className="wa-grp-side">
+				<header className="wa-grp-side__head">
+					<div className="min-w-0">
+						<h2 className="wa-grp-side__title">
+							{t.groups}
+							<span className="wa-grp-badge">{(groups || []).length}</span>
+						</h2>
+						<p className="wa-grp-side__sub">
+							{ar
+								? `${totalMembers.toLocaleString()} عضو في كل الجروبات`
+								: `${totalMembers.toLocaleString()} members across all groups`}
+						</p>
+					</div>
+					<button
+						type="button"
+						aria-label={t.refresh}
+						title={t.refresh}
+						onClick={onRefresh}
+						className="wa-ui-icon-btn wa-grp-refresh"
+					>
+						<RefreshCw size={16} strokeWidth={2} />
+					</button>
+				</header>
+				<div className="wa-grp-search-wrap">
+					<label className="wa-dx__search">
+						<Search size={16} strokeWidth={2.2} aria-hidden="true" />
+						<input
+							type="search"
+							value={query}
+							onChange={event => setQuery(event.target.value)}
+							placeholder={ar ? 'ابحث عن جروب' : 'Search groups'}
+							aria-label={ar ? 'ابحث عن جروب' : 'Search groups'}
+						/>
+					</label>
+				</div>
+				<div className="wa-grp-list wa-ui-scroll nice-scroll" role="listbox" aria-label={t.groups}>
+					{visible.length ? (
+						visible.map(group => {
+							const active = selectedGroup?.id === group.id;
+							const count = memberCount(group);
+							return (
+								<button
+									type="button"
+									key={group.id}
+									role="option"
+									aria-selected={active}
+									onClick={() => onSelect(group)}
+									className={`wa-grp-row${active ? ' is-active' : ''}`}
+								>
+									<Avatar label={group.subject} size={11} src={groupAvatar(group)} isGroup />
+									<span className="wa-grp-row__copy">
+										<span className="wa-grp-row__name wa-privacy-identity" dir="auto">
+											{group.subject || (ar ? 'جروب بدون اسم' : 'Untitled group')}
+										</span>
+										<span className="wa-grp-row__sub">
+											<Users size={12} strokeWidth={2.2} aria-hidden="true" />
+											{count} {ar ? 'عضو' : count === 1 ? 'member' : 'members'}
+										</span>
+									</span>
+									{group.conversationId ? null : (
+										<span className="wa-grp-row__tag" title={ar ? 'مفيش شات محفوظ للجروب ده' : 'No saved chat for this group'}>
+											{ar ? 'بدون شات' : 'No chat'}
+										</span>
+									)}
+								</button>
+							);
+						})
+					) : (
+						<div className="wa-dx__empty">
+							<Users size={22} strokeWidth={1.8} aria-hidden="true" />
+							<p>{term ? (ar ? 'لا نتائج لهذا البحث' : 'No groups match your search') : t.noGroups}</p>
+						</div>
+					)}
+				</div>
+			</aside>
+
+			<section className="wa-grp-main wa-ui-scroll nice-scroll">
+				{!selectedGroup ? (
+					<div className="wa-grp-empty">
+						<span className="wa-grp-empty__icon" aria-hidden="true">
+							<Users size={28} strokeWidth={1.8} />
+						</span>
+						<h3>{t.groupDetails}</h3>
+						<p>
+							{ar
+								? 'اختار جروب من القايمة عشان تشوف الأعضاء والمشرفين والوصف.'
+								: 'Pick a group from the list to see its members, admins and description.'}
+						</p>
+					</div>
+				) : (
+					<>
+						<div className="wa-grp-hero">
+							<div className="wa-grp-hero__id">
+								<Avatar label={selectedGroup.subject} size={16} src={groupAvatar(selectedGroup)} isGroup />
+								<div className="min-w-0">
+									<h2 className="wa-grp-hero__name wa-privacy-identity" dir="auto">
+										{selectedGroup.subject}
+									</h2>
+									<p className="wa-grp-hero__meta">
+										<span className="wa-gi__chip is-group">
+											<Users size={13} strokeWidth={2.2} />
+											{ar ? 'جروب' : 'Group'}
+										</span>
+										{memberCount(selectedGroup)} {ar ? 'عضو' : 'members'}
+									</p>
+								</div>
+							</div>
+							<button
+								type="button"
+								onClick={() => onOpenChat(selectedGroup)}
+								disabled={!selectedGroup.conversationId}
+								title={selectedGroup.conversationId ? undefined : ar ? 'مفيش شات محفوظ للجروب ده' : 'No saved chat for this group'}
+								className="wa-ui-btn wa-ui-btn--primary"
+							>
+								<MessageCircle size={16} strokeWidth={2.2} />
+								{t.openGroupChat}
+							</button>
+						</div>
+
+						{loadingGroup ? (
+							<div className="wa-acc-card wa-dx__loading">
+								<Loader2 size={24} className="animate-spin" />
+							</div>
+						) : (
+							<>
+								<dl className="wa-grp-stats">
+									<div className="wa-acc-detail">
+										<dt>
+											<span className="wa-acc-detail__icon is-ok">
+												<Users size={16} />
+											</span>
+											{ar ? 'الأعضاء' : 'Members'}
+										</dt>
+										<dd>{memberCount(selectedGroup).toLocaleString()}</dd>
+									</div>
+									<div className="wa-acc-detail">
+										<dt>
+											<span className="wa-acc-detail__icon">
+												<ShieldCheck size={16} />
+											</span>
+											{t.groupAdmins}
+										</dt>
+										<dd>{participants.length ? admins : '—'}</dd>
+									</div>
+									<div className="wa-acc-detail">
+										<dt>
+											<span className="wa-acc-detail__icon">
+												<Star size={16} />
+											</span>
+											{t.groupOwner}
+										</dt>
+										<dd className="wa-privacy-identity" dir="auto" title={ownerDigits ? `+${ownerDigits}` : undefined}>
+											{owner ? resolveMember(owner).title : ownerDigits ? `+${ownerDigits}` : '—'}
+										</dd>
+									</div>
+								</dl>
+
+								<div className="wa-acc-card">
+									<h3 className="wa-acc-card__title">{t.groupDescription}</h3>
+									{selectedGroup.description ? (
+										<p className="wa-grp-desc" dir="auto">
+											{selectedGroup.description}
+										</p>
+									) : (
+										<p className="wa-grp-desc is-empty">{ar ? 'مفيش وصف للجروب ده.' : 'This group has no description.'}</p>
+									)}
+								</div>
+
+								<div className="wa-acc-card">
+									<header className="wa-gi__members-head">
+										<h4>
+											<Users size={16} strokeWidth={2.2} />
+											{t.groupParticipants}
+										</h4>
+										{participants.length ? <span className="wa-gi__count">{participants.length}</span> : null}
+									</header>
+									<WaInfoMemberList participants={participants} locale={locale} resolve={resolveMember} />
+								</div>
+							</>
+						)}
+					</>
+				)}
+			</section>
+		</div>
 	);
 }
 
@@ -5410,6 +5690,7 @@ function VoiceMessage({
 							failed={loadFailed}
 							onClick={() => void toggle()}
 							labels={labels}
+							progress={progress}
 						/>
 						<div className="wa-voice-main">
 							<div className="wa-voice-main-row">
@@ -9593,6 +9874,8 @@ function AccountSwitcherDropdown({
 	onChange,
 	labels,
 	statusLabels,
+	locale = 'en',
+	onManage,
 }) {
 	const [open, setOpen] = useState(false);
 	const [position, setPosition] = useState(null);
@@ -9607,7 +9890,7 @@ function AccountSwitcherDropdown({
 		const updatePosition = () => {
 			const rect = buttonRef.current?.getBoundingClientRect();
 			if (!rect) return;
-			const width = Math.max(rect.width, 260);
+			const width = Math.max(rect.width, 300);
 			const left = Math.min(
 				Math.max(8, rect.left),
 				Math.max(8, window.innerWidth - width - 8),
@@ -9644,8 +9927,18 @@ function AccountSwitcherDropdown({
 
 	if (!accounts.length) return null;
 
+	const toneOf = status =>
+		status === 'connected'
+			? 'ok'
+			: ['connecting', 'qr_pending'].includes(status)
+				? 'wait'
+				: status === 'error'
+					? 'err'
+					: 'off';
+	const ar = locale === 'ar';
+
 	return (
-		<div ref={rootRef} className="relative min-w-[200px] max-w-[280px]">
+		<div ref={rootRef} className="wa-asw relative min-w-[220px] max-w-[300px]">
 			<button
 				ref={buttonRef}
 				type="button"
@@ -9653,19 +9946,17 @@ function AccountSwitcherDropdown({
 				aria-haspopup="listbox"
 				aria-expanded={open}
 				onClick={() => setOpen(current => !current)}
-				className="wa-account-switcher wa-btn-3d flex h-10 w-full items-center gap-2.5 rounded-[14px] border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition-all hover:border-[var(--color-primary-300)] hover:bg-slate-50 focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+				className={`wa-asw__trigger is-${toneOf(selected?.status)}${open ? ' is-open' : ''}`}
 			>
-				<Avatar label={selected?.label || '?'} size={7} className="shrink-0" />
-				<span className="min-w-0 flex-1 truncate text-start text-slate-800 dark:text-slate-100">
-					{selected?.label || labels.accounts}
+				<span className="wa-asw__avatar">
+					<Avatar label={selected?.label || '?'} size={8} />
+					<span className="wa-asw__dot" aria-hidden="true" />
 				</span>
-				{selectedStatus && (
-					<span className={`h-2 w-2 shrink-0 rounded-full ${selectedStatus.dot}`} />
-				)}
-				<ChevronDown
-					size={15}
-					className={`shrink-0 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}
-				/>
+				<span className="wa-asw__copy">
+					<span className="wa-asw__name">{selected?.label || labels.accounts}</span>
+					{selectedStatus ? <span className="wa-asw__status">{selectedStatus.label}</span> : null}
+				</span>
+				<ChevronDown size={16} className="wa-asw__chev" aria-hidden="true" />
 			</button>
 			{open &&
 				position &&
@@ -9675,50 +9966,68 @@ function AccountSwitcherDropdown({
 						ref={menuRef}
 						role="listbox"
 						aria-label={labels.accounts}
-						className="wa-ui-scroll nice-scroll fixed z-500 max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+						className="wa-asw-menu"
 						style={position}
 					>
-						{accounts.map(account => {
-							const meta = statusMeta(account.status, statusLabels, account);
-							const active = account.id === value;
-							return (
-								<button
-									key={account.id}
-									type="button"
-									role="option"
-									aria-selected={active}
-									onClick={() => {
-										onChange(account.id);
-										setOpen(false);
-									}}
-									className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-start transition-colors ${
-										active
-											? 'bg-[var(--color-primary-50)] text-[var(--color-primary-700)] dark:bg-slate-800 dark:text-[var(--color-primary-300)]'
-											: 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
-									}`}
-								>
-									<Avatar label={account.label} size={9} className="shrink-0" />
-									<div className="min-w-0 flex-1">
-										<p className="truncate text-sm font-bold">{account.label}</p>
-										<p className="truncate text-[11px] opacity-70">
-											{account.phoneNumber || account.providerName}
-										</p>
-									</div>
-									<span
-										className={`flex max-w-[40%] shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${meta.bg} ${meta.text}`}
+						<div className="wa-asw-menu__head">
+							<span>{ar ? 'تبديل الحساب' : 'Switch account'}</span>
+							<span className="wa-asw-menu__count">{accounts.length}</span>
+						</div>
+						<div className="wa-asw-menu__list wa-ui-scroll nice-scroll">
+							{accounts.map(account => {
+								const meta = statusMeta(account.status, statusLabels, account);
+								const tone = toneOf(account.status);
+								const active = account.id === value;
+								return (
+									<button
+										key={account.id}
+										type="button"
+										role="option"
+										aria-selected={active}
+										onClick={() => {
+											onChange(account.id);
+											setOpen(false);
+										}}
+										className={`wa-asw-row is-${tone}${active ? ' is-active' : ''}`}
 										title={meta.hint || meta.label}
 									>
-										<span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} />
-										<span className="min-w-0 truncate">{meta.label}</span>
-									</span>
-									{active ? (
-										<Check size={14} className="shrink-0 text-[var(--color-primary-600)]" />
-									) : (
-										<span className="w-3.5 shrink-0" />
-									)}
-								</button>
-							);
-						})}
+										<span className="wa-asw__avatar">
+											<Avatar label={account.label} size={10} />
+											<span className="wa-asw__dot" aria-hidden="true" />
+										</span>
+										<span className="wa-asw-row__copy">
+											<span className="wa-asw-row__name">{account.label}</span>
+											<span className="wa-asw-row__sub">
+												<span className={`wa-asw-row__state is-${tone}`}>{meta.label}</span>
+												<span className="wa-asw-row__sep" aria-hidden="true" />
+												<span dir={account.phoneNumber ? 'ltr' : undefined}>
+													{account.phoneNumber
+														? `+${String(account.phoneNumber).replace(/^\+/, '')}`
+														: account.providerName}
+												</span>
+											</span>
+										</span>
+										<span className="wa-asw-row__check" aria-hidden="true">
+											{active ? <Check size={14} strokeWidth={2.8} /> : null}
+										</span>
+									</button>
+								);
+							})}
+						</div>
+						{onManage ? (
+							<button
+								type="button"
+								className="wa-asw-menu__manage"
+								onClick={() => {
+									setOpen(false);
+									onManage();
+								}}
+							>
+								<Settings size={15} strokeWidth={2} />
+								{ar ? 'إدارة الحسابات' : 'Manage accounts'}
+								<ChevronRight size={15} className="wa-asw-menu__manage-chev rtl:rotate-180" />
+							</button>
+						) : null}
 					</div>,
 					document.body,
 				)}
@@ -10237,6 +10546,8 @@ function WhatsAppWorkspaceContent() {
 	const [statuses, setStatuses] = useState([]);
 	const [statusHistory, setStatusHistory] = useState([]);
 	const [storyPanelMode, setStoryPanelMode] = useState('active');
+	const [storyFilter, setStoryFilter] = useState('all');
+	const [storySearch, setStorySearch] = useState('');
 	const [loadingStatusHistory, setLoadingStatusHistory] = useState(false);
 	const [statusFetchHint, setStatusFetchHint] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState(null);
@@ -10347,6 +10658,11 @@ function WhatsAppWorkspaceContent() {
 	const hasMoreMessagesRef = useRef(true);
 	hasMoreMessagesRef.current = hasMoreMessages;
 	const [loadingMessages, setLoadingMessages] = useState(false);
+	/** Soft catch-up when inbox shows unread/new preview the warm thread does not have yet. */
+	const [messageCatchUp, setMessageCatchUp] = useState(null);
+	const [messageCatchUpProgress, setMessageCatchUpProgress] = useState(0);
+	const messageCatchUpRef = useRef(null);
+	messageCatchUpRef.current = messageCatchUp;
 	const [threadSettled, setThreadSettled] = useState(true);
 	const [showJumpToBottom, setShowJumpToBottom] = useState(false);
 	const [messagesSyncHint, setMessagesSyncHint] = useState('');
@@ -13066,6 +13382,52 @@ function WhatsAppWorkspaceContent() {
 		const cacheIsFresh =
 			Boolean(cached?.items?.length) &&
 			Date.now() - cached.cachedAt < MESSAGES_CACHE_TTL;
+		const catchUp = openChatCatchUpPlan({
+			cacheItems: cached?.items || [],
+			unreadCount: conversationUnreadCount(conversationMeta),
+			lastMessage: conversationMeta?.lastMessage || null,
+		});
+		const beginCatchUp = () => {
+			if (!catchUp.needed || starredOnly || !isCurrentRequest()) return;
+			setMessageCatchUp({
+				conversationId: id,
+				expected: catchUp.expected,
+				received: 0,
+			});
+			setMessageCatchUpProgress(8);
+		};
+		const finishCatchUp = (itemsAfter = []) => {
+			if (!isCurrentRequest()) return;
+			if (!catchUp.needed) {
+				if (messageCatchUpRef.current?.conversationId === id) {
+					setMessageCatchUp(null);
+					setMessageCatchUpProgress(0);
+				}
+				return;
+			}
+			const beforeIds = new Set(
+				(cached?.items || [])
+					.map(item => String(item?.id || ''))
+					.filter(Boolean),
+			);
+			const received = (Array.isArray(itemsAfter) ? itemsAfter : []).filter(
+				item => {
+					const mid = String(item?.id || '');
+					return mid && !beforeIds.has(mid) && !mid.startsWith('inbox-preview-');
+				},
+			).length;
+			setMessageCatchUp({
+				conversationId: id,
+				expected: catchUp.expected,
+				received: Math.min(catchUp.expected, Math.max(received, 0)),
+			});
+			setMessageCatchUpProgress(100);
+			window.setTimeout(() => {
+				if (conversationIdRef.current !== id) return;
+				setMessageCatchUp(null);
+				setMessageCatchUpProgress(0);
+			}, 450);
+		};
 		const markReadIfNeeded = () => {
 			if (canSync && isConversationWorkspaceTab(activeTabRef.current)) {
 				api
@@ -13102,13 +13464,17 @@ function WhatsAppWorkspaceContent() {
 						itemCount: cached.items.length,
 						hasMore: cached.hasMore !== false,
 						socketHealthy: Boolean(socketRef.current?.connected),
+						needsCatchUp: catchUp.needed,
 					})
 				) {
+					finishCatchUp(sortedCached);
 					markReadIfNeeded();
 					return;
 				}
+				if (catchUp.needed) beginCatchUp();
 			} else {
 				setLoadingMessages(true);
+				if (catchUp.needed) beginCatchUp();
 			}
 		} else if (starredOnly && cached?.items) {
 			writeConversationMessages(id, () =>
@@ -13121,6 +13487,7 @@ function WhatsAppWorkspaceContent() {
 			if (cacheIsFresh && !forceProvider) return;
 		} else {
 			setLoadingMessages(true);
+			if (catchUp.needed) beginCatchUp();
 			// Keeps this chat's already-rendered messages (no blank flash) while
 			// dropping anything that belonged to the chat the user just left.
 			if (!starredOnly) {
@@ -13135,9 +13502,10 @@ function WhatsAppWorkspaceContent() {
 			const threadComplete = isMessageThreadCacheComplete(cached);
 			// Socket / inbox often seeds RQ with 1 fresh row. A long staleTime then
 			// makes fetchQuery return that partial page and never hit Postgres.
-			if (!threadComplete || forceProvider) {
+			// Unread catch-up must always hit Postgres even when the warm page looks complete.
+			if (!threadComplete || forceProvider || catchUp.needed) {
 				await queryClient.cancelQueries({ queryKey });
-				if (!threadComplete) {
+				if (!threadComplete || catchUp.needed) {
 					queryClient.removeQueries({ queryKey });
 				}
 			}
@@ -13155,11 +13523,13 @@ function WhatsAppWorkspaceContent() {
 						cachedAt: Date.now(),
 					};
 				},
-				staleTime: openChatMessagesStaleTime({
-					forceProvider,
-					cache: cached,
-					cacheIsFresh,
-				}),
+				staleTime: catchUp.needed
+					? 0
+					: openChatMessagesStaleTime({
+							forceProvider,
+							cache: cached,
+							cacheIsFresh,
+						}),
 			});
 			if (!isCurrentRequest()) return;
 			const pageItems = Array.isArray(storedItems)
@@ -13213,9 +13583,16 @@ function WhatsAppWorkspaceContent() {
 					writeConversationMessages(id, () => items);
 				}
 			}
+			const stillNeedsCatchUp = openChatCatchUpPlan({
+				cacheItems: items,
+				unreadCount: 0,
+				lastMessage: conversationMeta?.lastMessage || null,
+			}).needed;
 			if (isCurrentRequest()) {
 				setLoadingMessages(false);
 				setMessagesSyncHint('');
+				if (!stillNeedsCatchUp) finishCatchUp(items);
+				else if (catchUp.needed) beginCatchUp();
 				if (items.length > 0) scrollMessagesToBottom();
 			}
 			markReadIfNeeded();
@@ -13263,6 +13640,7 @@ function WhatsAppWorkspaceContent() {
 						),
 					);
 				}
+				finishCatchUp(items);
 				scrollMessagesToBottom();
 			};
 
@@ -13271,7 +13649,7 @@ function WhatsAppWorkspaceContent() {
 			const backfill = shouldProviderBackfill({
 				canSync: allowProviderSync,
 				starredOnly,
-				forceProvider,
+				forceProvider: forceProvider || (catchUp.needed && stillNeedsCatchUp),
 				historySyncBlocked,
 				itemCount: items.length,
 				providerHydratedAt: seededHydratedAt,
@@ -13372,6 +13750,7 @@ function WhatsAppWorkspaceContent() {
 										seededLastSync,
 									lastSyncReason: synced?.syncReason || synced?.syncError || backfill.reason,
 								});
+								finishCatchUp(items);
 							}
 						} else {
 							providerHistorySyncBlockedUntilRef.current = 0;
@@ -13381,6 +13760,9 @@ function WhatsAppWorkspaceContent() {
 						}
 					} catch (error) {
 						providerHistorySyncBlockedUntilRef.current = Date.now() + 8_000;
+						if (isCurrentRequest()) {
+							finishCatchUp(items);
+						}
 						if (isCurrentRequest() && !items.length) {
 							setMessagesSyncHint('');
 							setLoadingMessages(false);
@@ -13415,6 +13797,7 @@ function WhatsAppWorkspaceContent() {
 				}
 				setLoadingMessages(false);
 				setMessagesSyncHint('');
+				finishCatchUp(items);
 				scrollMessagesToBottom();
 			}
 		} catch (error) {
@@ -13424,6 +13807,10 @@ function WhatsAppWorkspaceContent() {
 				error?.code === 'ERR_CANCELED' ||
 				error?.message === 'canceled';
 			if (cancelled) return;
+			if (messageCatchUpRef.current?.conversationId === id) {
+				setMessageCatchUp(null);
+				setMessageCatchUpProgress(0);
+			}
 			if (!cached?.items?.length) {
 				clearConversationMessages(id);
 				toast.error(error.response?.data?.message || 'Could not load messages');
@@ -13469,11 +13856,28 @@ function WhatsAppWorkspaceContent() {
 				conversationsRef.current.find(item => item.id === id) ||
 				null;
 
+			const openCatchUp = openChatCatchUpPlan({
+				cacheItems: warmCache?.items || [],
+				unreadCount: conversationUnreadCount(conv),
+				lastMessage: conv?.lastMessage || null,
+			});
+			if (openCatchUp.needed) {
+				setMessageCatchUp({
+					conversationId: id,
+					expected: openCatchUp.expected,
+					received: 0,
+				});
+				setMessageCatchUpProgress(8);
+			} else {
+				setMessageCatchUp(null);
+				setMessageCatchUpProgress(0);
+			}
 			if (isMessageThreadCacheComplete(warmCache)) {
 				const sorted = mergeMessages([], warmCache.items, id);
 				writeConversationMessages(id, () => sorted);
 				messagesCacheRef.current.set(cacheKey, { ...warmCache, items: sorted });
 				setHasMoreMessages(Boolean(warmCache.hasMore));
+				// Keep the soft catch-up bar when inbox shows unread the warm cache lacks.
 				setLoadingMessages(false);
 			} else if (!starredOnly) {
 				const preview = conv?.lastMessage;
@@ -13892,15 +14296,34 @@ function WhatsAppWorkspaceContent() {
 		}
 		const loadKey = `${conversationId}:${conversationFilter}`;
 		const cachedPage = cacheKey ? messagesCacheRef.current.get(cacheKey) : null;
+		const openMeta =
+			conversationsRef.current.find(item => item.id === conversationId) || null;
+		const openCatchUp = openChatCatchUpPlan({
+			cacheItems: cachedPage?.items || [],
+			unreadCount: conversationUnreadCount(openMeta),
+			lastMessage: openMeta?.lastMessage || null,
+		});
 		const shouldReloadMessages = shouldReloadOpenChatMessages({
 			switchedConversation,
 			loadKey,
 			lastOpenLoadKey: lastOpenMessagesLoadKeyRef.current,
 			cache: cachedPage,
+			needsCatchUp: openCatchUp.needed,
 		});
 		if (shouldReloadMessages) {
 			lastOpenMessagesLoadKeyRef.current = loadKey;
+			if (openCatchUp.needed) {
+				setMessageCatchUp({
+					conversationId,
+					expected: openCatchUp.expected,
+					received: 0,
+				});
+				setMessageCatchUpProgress(8);
+			}
 			loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled).catch(() => { });
+		} else if (messageCatchUpRef.current?.conversationId === conversationId) {
+			setMessageCatchUp(null);
+			setMessageCatchUpProgress(0);
 		}
 		if (selectedConversationSource === 'real_overlay') {
 			markRuntimeReadRef.current?.(selectedDemoRuntimeId);
@@ -13940,6 +14363,30 @@ function WhatsAppWorkspaceContent() {
 		}, 18_000);
 		return () => window.clearTimeout(timer);
 	}, [conversationId, loadingMessages]);
+
+	useEffect(() => {
+		if (
+			!messageCatchUp ||
+			messageCatchUp.conversationId !== conversationId ||
+			messageCatchUpProgress >= 100
+		) {
+			return undefined;
+		}
+		const timer = window.setInterval(() => {
+			setMessageCatchUpProgress(current => {
+				if (current >= 92) return current;
+				return Math.min(92, current + (current < 40 ? 7 : current < 70 ? 4 : 2));
+			});
+		}, 280);
+		return () => window.clearInterval(timer);
+	}, [conversationId, messageCatchUp, messageCatchUpProgress]);
+
+	useEffect(() => {
+		if (!conversationId) {
+			setMessageCatchUp(null);
+			setMessageCatchUpProgress(0);
+		}
+	}, [conversationId]);
 
 	useEffect(() => {
 		const box = messageBoxRef.current;
@@ -21086,6 +21533,8 @@ function WhatsAppWorkspaceContent() {
 									onChange={selectWhatsAppAccount}
 									labels={t}
 									statusLabels={t}
+									locale={locale}
+									onManage={() => void loadTabData('accounts')}
 								/>
 							)}
 						</div>
@@ -21127,177 +21576,199 @@ function WhatsAppWorkspaceContent() {
 						</div>
 					</Card>
 				)}
-				{activeTab === 'accounts' && bootStatus === 'success' && (
-					<div className="grid gap-4 min-[769px]:grid-cols-[360px_1fr]">
-						<Card className="p-4">
+				{activeTab === 'accounts' && bootStatus === 'success' && (() => {
+					const accountTone = status =>
+						status === 'connected'
+							? 'ok'
+							: ['connecting', 'qr_pending'].includes(status)
+								? 'wait'
+								: status === 'error'
+									? 'err'
+									: 'off';
+					const counts = accounts.reduce(
+						(acc, item) => {
+							acc[accountTone(item.status)] += 1;
+							return acc;
+						},
+						{ ok: 0, wait: 0, err: 0, off: 0 },
+					);
+					const ar = locale === 'ar';
+					const selectedTone = selectedAccount ? accountTone(selectedAccount.status) : 'off';
+					const selectedMeta = selectedAccount ? statusMeta(selectedAccount.status, t, selectedAccount) : null;
+					const lastConnected = selectedAccount?.lastConnectedAt
+						? new Date(selectedAccount.lastConnectedAt)
+						: null;
+					return (
+					<div className="wa-acc">
+						<aside className="wa-acc-side">
+							<header className="wa-acc-side__head">
+								<div>
+									<h2 className="wa-acc-side__title">{t.accounts}</h2>
+									<p className="wa-acc-side__sub">
+										{ar ? `${accounts.length} حساب مرتبط بالمساحة` : `${accounts.length} linked to this workspace`}
+									</p>
+								</div>
+							</header>
+							<div className="wa-acc-counts" role="list">
+								<span role="listitem" className="wa-acc-count is-ok">
+									<b>{counts.ok}</b>
+									{ar ? 'متصل' : 'Online'}
+								</span>
+								<span role="listitem" className="wa-acc-count is-wait">
+									<b>{counts.wait}</b>
+									{ar ? 'بانتظار الربط' : 'Linking'}
+								</span>
+								<span role="listitem" className="wa-acc-count is-off">
+									<b>{counts.off + counts.err}</b>
+									{ar ? 'غير متصل' : 'Offline'}
+								</span>
+							</div>
 							{isAdmin && (
-								<>
-									<h2 className="mb-3 flex items-center gap-2 text-sm font-black">
-										<Sparkles size={14} className="text-[var(--color-primary-500)]" />
-										{t.newAccount}
-									</h2>
-									<form onSubmit={createAccount} className="flex gap-2">
-										<label className="sr-only" htmlFor="whatsapp-account-name">
-											{t.accountName}
-										</label>
-										<input
-											id="whatsapp-account-name"
-											value={newAccountName}
-											onChange={event => setNewAccountName(event.target.value)}
-											placeholder={t.accountName}
-											className="h-11 flex-1 rounded-xl border border-slate-200 bg-transparent px-3.5 outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700"
-										/>
-										<button
-											type="submit"
-											aria-label={t.newAccount}
-											disabled={accountBusy}
-											className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white transition-transform hover:-translate-y-px disabled:opacity-50"
-											style={{ background: GRADIENT, boxShadow: GLOW }}
-										>
-											{accountBusy ? (
-												<Loader2 size={18} className="animate-spin" />
-											) : (
-												<Plus size={18} />
-											)}
-										</button>
-									</form>
-								</>
+								<form onSubmit={createAccount} className="wa-acc-create">
+									<label className="sr-only" htmlFor="whatsapp-account-name">
+										{t.accountName}
+									</label>
+									<Plus size={16} strokeWidth={2.2} className="wa-acc-create__icon" aria-hidden="true" />
+									<input
+										id="whatsapp-account-name"
+										value={newAccountName}
+										onChange={event => setNewAccountName(event.target.value)}
+										placeholder={ar ? 'اسم حساب جديد…' : 'New account name…'}
+									/>
+									<button
+										type="submit"
+										disabled={accountBusy || !String(newAccountName || '').trim()}
+										className="wa-acc-create__btn"
+									>
+										{accountBusy ? <Loader2 size={15} className="animate-spin" /> : null}
+										{ar ? 'إضافة' : 'Add'}
+									</button>
+								</form>
 							)}
-							<div className="mt-5 space-y-2">
+							<div className="wa-acc-list wa-ui-scroll nice-scroll" role="listbox" aria-label={t.accounts}>
 								{accounts.map(account => {
 									const meta = statusMeta(account.status, t, account);
+									const tone = accountTone(account.status);
 									const active = account.id === accountId;
 									return (
 										<button
 											key={account.id}
+											type="button"
+											role="option"
+											aria-selected={active}
 											onClick={() => selectWhatsAppAccount(account.id)}
-											className={`flex w-full items-center gap-3 rounded-xl border p-3 text-start transition-all ${active
-												? 'border-[var(--color-primary-300)] bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] dark:border-[var(--color-primary-700)] dark:from-slate-800 dark:to-slate-800'
-												: 'border-slate-200 hover:border-slate-300 dark:border-slate-700'
-												}`}
+											className={`wa-acc-row is-${tone}${active ? ' is-active' : ''}`}
 										>
-											<Avatar label={account.label} size={10} />
-											<div className="min-w-0 flex-1">
-												<p className="truncate font-bold">{account.label}</p>
-												<p className="truncate text-xs text-slate-500">{account.phoneNumber || account.providerName}</p>
-											</div>
-											<span
-												className={`flex max-w-[42%] shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-bold ${meta.bg} ${meta.text}`}
-												title={meta.hint || meta.label}
-											>
-												<span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} />
-												<span className="min-w-0 truncate">{meta.label}</span>
+											<span className="wa-acc-row__avatar">
+												<Avatar label={account.label} size={10} />
+												<span className="wa-acc-row__dot" aria-hidden="true" />
+											</span>
+											<span className="wa-acc-row__copy">
+												<span className="wa-acc-row__name">{account.label}</span>
+												<span className="wa-acc-row__sub" dir={account.phoneNumber ? 'ltr' : undefined}>
+													{account.phoneNumber ? `+${String(account.phoneNumber).replace(/^\+/, '')}` : account.providerName}
+												</span>
+											</span>
+											<span className={`wa-acc-pill is-${tone}`} title={meta.hint || meta.label}>
+												{meta.label}
 											</span>
 										</button>
 									);
 								})}
 							</div>
-						</Card>
-						<Card className="overflow-hidden p-0">
+						</aside>
+
+						<section className="wa-acc-main wa-ui-scroll nice-scroll">
 							{!selectedAccount ? (
-								<div className="p-5">
+								<div className="wa-acc-card">
 									<Empty icon={Smartphone} title={t.noAccounts} hint={t.noAccountsHint} />
 								</div>
 							) : (
-								<div>
-									<div
-										className="relative overflow-hidden p-5"
-										style={{ background: statusGradient(selectedAccount.status) }}
-									>
-										<div
-											className="pointer-events-none absolute inset-0 opacity-[0.06]"
-											style={{
-												backgroundImage:
-													'repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(255,255,255,1) 31px,rgba(255,255,255,1) 32px), repeating-linear-gradient(90deg,transparent,transparent 31px,rgba(255,255,255,1) 31px,rgba(255,255,255,1) 32px)',
-											}}
-										/>
-										<div className="relative flex flex-wrap items-center justify-between gap-4">
-											<div className="flex items-center gap-3">
-												<Avatar label={selectedAccount.label} size={13} className="ring-4 ring-white/25" />
-												<div>
-													<div className="flex items-center gap-2">
-														<h2 className="text-xl font-black text-white">{selectedAccount.label}</h2>
-														{selectedAccount.status === 'connected' && (
-															<span className="relative flex h-1.5 w-1.5">
-																<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-																<span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-															</span>
-														)}
-													</div>
-													<p className="text-sm text-white/70">
-														{selectedAccount.phoneNumber || selectedAccount.providerName}
-													</p>
+								<>
+									<div className={`wa-acc-hero is-${selectedTone}`}>
+										<div className="wa-acc-hero__id">
+											<span className="wa-acc-hero__avatar">
+												<Avatar label={selectedAccount.label} size={16} />
+												<span className="wa-acc-hero__dot" aria-hidden="true" />
+											</span>
+											<div className="min-w-0">
+												<div className="wa-acc-hero__title-row">
+													<h2 className="wa-acc-hero__name">{selectedAccount.label}</h2>
+													<span className={`wa-acc-pill is-${selectedTone}`}>
+														{selectedTone === 'ok' ? <span className="wa-acc-live" aria-hidden="true" /> : null}
+														{selectedMeta?.label}
+													</span>
 												</div>
-											</div>
-											<div className="flex flex-wrap gap-2">
-												{canUseWhatsApp && selectedAccount.status === 'connected' && (
-													<button
-														onClick={() => syncAccount()}
-														className="flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm font-bold text-white backdrop-blur transition-colors hover:bg-white/20"
-													>
-														<RefreshCw size={15} /> {t.sync}
-													</button>
-												)}
-												{canManageWhatsApp && (selectedAccount.status === 'connected' ? (
-													<>
-														<button onClick={() => disconnectAccount(false)} className="flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm font-bold text-white backdrop-blur transition-colors hover:bg-white/20">
-															<WifiOff size={15} /> {t.disconnect}
-														</button>
-														<button onClick={() => disconnectAccount(true)} className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-sm font-bold text-rose-600 shadow-md transition-transform hover:-translate-y-px">
-															<LogOut size={15} /> {t.logout}
-														</button>
-													</>
-												) : (
-													<button
-														onClick={() =>
-															connectAccount(undefined, {
-																force: ['connecting', 'qr_pending', 'error'].includes(
-																	selectedAccount.status,
-																),
-															})
-														}
-														disabled={accountBusy}
-														className="flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-bold text-emerald-600 shadow-md transition-transform hover:-translate-y-px disabled:opacity-50"
-													>
-														{accountBusy ? (
-															<Loader2 size={15} className="animate-spin" />
-														) : (
-															<Wifi size={15} />
-														)}{' '}
-														{['connecting', 'qr_pending', 'error'].includes(
-															selectedAccount.status,
-														)
-															? t.restartConnection
-															: t.connect}
-													</button>
-												))}
-												{isAdmin && canManageWhatsApp && (
-													<button
-														type="button"
-														onClick={deleteAccount}
-														disabled={accountBusy}
-														aria-label={t.deleteAccount}
-														title={t.deleteAccount}
-														className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-2 text-sm font-bold text-white shadow-md transition-colors hover:bg-rose-700 disabled:opacity-50"
-													>
-														<Trash2 size={15} /> {t.deleteAccount}
-													</button>
-												)}
+												<p className="wa-acc-hero__meta">
+													{selectedAccount.phoneNumber ? (
+														<span dir="ltr">+{String(selectedAccount.phoneNumber).replace(/^\+/, '')}</span>
+													) : null}
+													<span className="wa-acc-chip">
+														<ShieldCheck size={13} strokeWidth={2.2} />
+														{selectedAccount.providerName}
+													</span>
+												</p>
 											</div>
 										</div>
+										<div className="wa-acc-hero__actions">
+											{selectedAccount.status === 'connected' ? (
+												<>
+													<button type="button" onClick={() => setActiveTab('chats')} className="wa-ui-btn wa-ui-btn--primary">
+														<MessageCircle size={16} strokeWidth={2.2} />
+														{t.openWhatsAppInbox}
+													</button>
+													{canUseWhatsApp && (
+														<button type="button" onClick={() => syncAccount()} className="wa-ui-btn wa-ui-btn--secondary">
+															<RefreshCw size={15} strokeWidth={2.2} />
+															{t.sync}
+														</button>
+													)}
+													{canManageWhatsApp && (
+														<button
+															type="button"
+															onClick={() => disconnectAccount(false)}
+															className="wa-ui-icon-btn wa-acc-icon-btn"
+															title={t.disconnect}
+															aria-label={t.disconnect}
+														>
+															<WifiOff size={17} strokeWidth={2.1} />
+														</button>
+													)}
+												</>
+											) : canManageWhatsApp ? (
+												<button
+													type="button"
+													onClick={() =>
+														connectAccount(undefined, {
+															force: ['connecting', 'qr_pending', 'error'].includes(selectedAccount.status),
+														})
+													}
+													disabled={accountBusy}
+													className="wa-ui-btn wa-ui-btn--primary"
+												>
+													{accountBusy ? <Loader2 size={15} className="animate-spin" /> : <Wifi size={15} strokeWidth={2.2} />}
+													{['connecting', 'qr_pending', 'error'].includes(selectedAccount.status)
+														? t.restartConnection
+														: t.connect}
+												</button>
+											) : null}
+										</div>
 										{selectedAccount.status === 'error' && (
-											<p className="mt-3 text-sm text-amber-100/95">
+											<p className="wa-acc-hero__note is-err">
+												<AlertTriangle size={15} strokeWidth={2.2} />
 												{selectedAccount.lastError || t.restartConnectionHint}
 											</p>
 										)}
 										{selectedAccount.status === 'connecting' && !qr && !pairingCode && (
-											<p className="mt-3 text-sm text-white/80">
+											<p className="wa-acc-hero__note">
+												<Loader2 size={15} className="animate-spin" />
 												{accStatus?.hint || t.syncingPhone}
 											</p>
 										)}
 									</div>
-									<div className="space-y-5 p-5">
-										{canManageWhatsApp && selectedAccount.status !== 'connected' && (
+
+									{canManageWhatsApp && selectedAccount.status !== 'connected' && (
+										<div className="wa-acc-card">
 											<WhatsAppAccountLinkPanel
 												labels={t}
 												account={selectedAccount}
@@ -21339,66 +21810,144 @@ function WhatsAppWorkspaceContent() {
 												syncProgress={syncProgress}
 												conversationCount={conversations.length}
 											/>
-										)}
-										{selectedAccount.status === 'connected' && (
-											<div className="space-y-4">
-												{(selectedAccount.syncPhase === 'hydrating' ||
-													(syncingInbox && conversations.length === 0)) && (
+										</div>
+									)}
+
+									{selectedAccount.status === 'connected' && (
+										<>
+											{(selectedAccount.syncPhase === 'hydrating' ||
+												(syncingInbox && conversations.length === 0)) && (
+												<div className="wa-acc-card">
 													<WhatsAppRestoreProgress
 														labels={t}
 														account={selectedAccount}
 														syncProgress={syncProgress}
 														conversationCount={conversations.length}
 													/>
-												)}
-												<div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-													<p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-														{t.accounts}
-													</p>
-													<p className="mt-1 text-sm font-black text-emerald-600">{accStatus?.label}</p>
-													{selectedAccount.phoneNumber ? (
-														<p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200" dir="ltr">
-															{selectedAccount.phoneNumber}
-														</p>
-													) : null}
-													<p className="mt-3 text-xs text-slate-500">{t.connectionMethodLabel}</p>
-													<p className="text-sm font-bold text-slate-900 dark:text-white">
-														{selectedAccount.connectionMethod === 'pairing_code'
-															? t.connectionMethodPhone
-															: t.connectionMethodQr}
-													</p>
-													<div className="mt-4 flex flex-wrap gap-2">
-														<button
-															type="button"
-															onClick={() => setActiveTab('chats')}
-															className="rounded-xl bg-[var(--color-primary-500)] px-4 py-2 text-sm font-bold text-white hover:bg-[var(--color-primary-600)]"
-														>
-															{t.openWhatsAppInbox}
-														</button>
-														{canManageWhatsApp && (
-															<button
-																type="button"
-																onClick={() => disconnectAccount(false)}
-																className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 dark:border-slate-600 dark:text-slate-300"
-															>
-																{t.disconnect}
-															</button>
-														)}
+												</div>
+											)}
+											<div className="wa-acc-card">
+												<h3 className="wa-acc-card__title">{ar ? 'تفاصيل الاتصال' : 'Connection details'}</h3>
+												<dl className="wa-acc-details">
+													<div className="wa-acc-detail">
+														<dt>
+															<span className={`wa-acc-detail__icon is-${selectedTone}`}>
+																{selectedTone === 'ok' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+															</span>
+															{t.status}
+														</dt>
+														<dd>{accStatus?.label || selectedMeta?.label}</dd>
 													</div>
-												</div>
-												<div className="grid gap-3 sm:grid-cols-3">
-													<StatTile icon={ShieldCheck} label={t.provider} value={selectedAccount.providerName} bg="bg-[var(--color-primary-50)]" color="var(--color-primary-500)" />
-													<StatTile icon={accStatus?.dot === 'bg-emerald-500' ? CheckCircle2 : AlertTriangle} label={t.status} value={accStatus?.label} bg={accStatus?.bg} color={accStatus?.dot === 'bg-emerald-500' ? '#10b981' : accStatus?.dot === 'bg-rose-500' ? '#f43f5e' : '#f59e0b'} />
-													<StatTile icon={Clock} label={t.lastConnected} value={selectedAccount.lastConnectedAt ? new Date(selectedAccount.lastConnectedAt).toLocaleString() : '—'} bg="bg-[var(--color-secondary-50)]" color="var(--color-secondary-500)" />
-												</div>
+													<div className="wa-acc-detail">
+														<dt>
+															<span className="wa-acc-detail__icon">
+																<Phone size={16} />
+															</span>
+															{ar ? 'الرقم' : 'Phone'}
+														</dt>
+														<dd dir="ltr">
+															{selectedAccount.phoneNumber
+																? `+${String(selectedAccount.phoneNumber).replace(/^\+/, '')}`
+																: '—'}
+														</dd>
+													</div>
+													<div className="wa-acc-detail">
+														<dt>
+															<span className="wa-acc-detail__icon">
+																<Smartphone size={16} />
+															</span>
+															{t.connectionMethodLabel}
+														</dt>
+														<dd>
+															{selectedAccount.connectionMethod === 'pairing_code'
+																? t.connectionMethodPhone
+																: t.connectionMethodQr}
+														</dd>
+													</div>
+													<div className="wa-acc-detail">
+														<dt>
+															<span className="wa-acc-detail__icon">
+																<ShieldCheck size={16} />
+															</span>
+															{t.provider}
+														</dt>
+														<dd>{selectedAccount.providerName || '—'}</dd>
+													</div>
+													<div className="wa-acc-detail">
+														<dt>
+															<span className="wa-acc-detail__icon">
+																<Clock size={16} />
+															</span>
+															{t.lastConnected}
+														</dt>
+														<dd title={lastConnected ? lastConnected.toLocaleString() : undefined}>
+															{lastConnected
+																? relativeTime(lastConnected.toISOString(), Date.now(), locale)
+																: '—'}
+														</dd>
+													</div>
+													<div className="wa-acc-detail">
+														<dt>
+															<span className="wa-acc-detail__icon">
+																<MessageCircle size={16} />
+															</span>
+															{t.chats || (ar ? 'المحادثات' : 'Chats')}
+														</dt>
+														<dd>{conversations.length.toLocaleString()}</dd>
+													</div>
+												</dl>
 											</div>
-										)}
-									</div>
-								</div>
+										</>
+									)}
+
+									{canManageWhatsApp && (selectedAccount.status === 'connected' || (isAdmin)) && (
+										<div className="wa-acc-card wa-acc-danger">
+											<h3 className="wa-acc-card__title">{ar ? 'منطقة الخطر' : 'Danger zone'}</h3>
+											{selectedAccount.status === 'connected' && (
+												<div className="wa-acc-danger__row">
+													<div>
+														<p className="wa-acc-danger__label">{t.logout}</p>
+														<p className="wa-acc-danger__hint">
+															{ar
+																? 'يفك ربط الجهاز من واتساب. هتحتاج تمسح QR من جديد.'
+																: 'Unlinks this device from WhatsApp. You’ll need to scan a QR again.'}
+														</p>
+													</div>
+													<button type="button" onClick={() => disconnectAccount(true)} className="wa-ui-btn wa-acc-btn-danger-outline">
+														<LogOut size={15} strokeWidth={2.2} />
+														{t.logout}
+													</button>
+												</div>
+											)}
+											{isAdmin && (
+												<div className="wa-acc-danger__row">
+													<div>
+														<p className="wa-acc-danger__label">{t.deleteAccount}</p>
+														<p className="wa-acc-danger__hint">
+															{ar
+																? 'يحذف الحساب ومحادثاته من المساحة نهائياً.'
+																: 'Removes the account and its chats from this workspace for good.'}
+														</p>
+													</div>
+													<button
+														type="button"
+														onClick={deleteAccount}
+														disabled={accountBusy}
+														className="wa-ui-btn wa-ui-btn--danger"
+													>
+														<Trash2 size={15} strokeWidth={2.2} />
+														{t.deleteAccount}
+													</button>
+												</div>
+											)}
+										</div>
+									)}
+								</>
 							)}
-						</Card>
+						</section>
 					</div>
-				)} 
+					);
+				})()}
 
 				{isConversationWorkspaceTab(activeTab) && (
 					<div className="wa-chat-workspace flex h-full min-h-0 flex-col">
@@ -23814,6 +24363,49 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										)}
 									</div>
+									{messageCatchUp &&
+									messageCatchUp.conversationId === conversationId ? (
+										<div
+											className="wa-catchup-bar"
+											role="status"
+											aria-live="polite"
+											aria-busy={messageCatchUpProgress < 100}
+										>
+											<div className="wa-catchup-bar__meta">
+												<span className="wa-catchup-bar__spinner" aria-hidden="true" />
+												<span className="wa-catchup-bar__label">
+													{messageCatchUp.received > 0
+														? t.loadingNewMessagesProgress
+																.replace(
+																	'{received}',
+																	String(messageCatchUp.received),
+																)
+																.replace(
+																	'{expected}',
+																	String(messageCatchUp.expected),
+																)
+														: t.loadingNewMessages.replace(
+																'{count}',
+																String(messageCatchUp.expected),
+															)}
+												</span>
+											</div>
+											<div
+												className="wa-catchup-bar__track"
+												aria-hidden="true"
+											>
+												<div
+													className="wa-catchup-bar__fill"
+													style={{
+														width: `${Math.max(
+															6,
+															Math.min(100, messageCatchUpProgress),
+														)}%`,
+													}}
+												/>
+											</div>
+										</div>
+									) : null}
 									{showJumpToBottom && conversationId ? (
 										<button
 											type="button"
@@ -24248,178 +24840,63 @@ function WhatsAppWorkspaceContent() {
 							</div>
 						</div>
 					) : (
-						<div className="wa-groups-pane grid h-full min-h-0 gap-0 min-[769px]:grid-cols-[minmax(280px,360px)_1fr]">
-							<aside className="wa-groups-list flex min-h-0 flex-col overflow-hidden border-e border-[var(--wa-border,#e9edef)] bg-white">
-								<div className="wa-secondary-pane__header">
-									<div className="wa-secondary-pane__heading">
-										<Users size={18} strokeWidth={1.75} aria-hidden="true" />
-										<div>
-											<h2 className="wa-secondary-pane__title">{t.groups}</h2>
-										</div>
-									</div>
-									<button
-										type="button"
-										aria-label={t.refresh}
-										onClick={() => loadTabData('groups')}
-										className="wa-toolbar-icon-btn"
-										title={t.refresh}
-									>
-										<RefreshCw size={16} strokeWidth={1.85} />
-									</button>
-								</div>
-								<div className="min-h-0 flex-1 overflow-y-auto nice-scroll">
-									{groups.length === 0 ? (
-										<div className="p-5">
-											<Empty icon={Users} title={t.noGroups} />
-										</div>
-									) : (
-										<div>
-											{groups.map(group => (
-												<button
-													type="button"
-													key={group.id}
-													onClick={() => openGroupDetails(group)}
-													className={`wa-conversation-row relative flex w-full items-center gap-3 text-start ${
-														selectedGroup?.id === group.id ? 'is-active' : ''
-													}`}
-												>
-													<Avatar label={group.subject} size={11} />
-													<div className="min-w-0 flex-1">
-														<p className="title-chat truncate">{group.subject}</p>
-														<p className="desc-chat text-xs text-[#667781]">
-															{group.participantCount || group.participants?.length || 0}{' '}
-															{t.groupParticipants.toLowerCase()}
-														</p>
-													</div>
-												</button>
-											))}
-										</div>
-									)}
-								</div>
-							</aside>
-
-							<section className="wa-groups-detail flex min-h-0 flex-col overflow-hidden bg-white">
-								{!selectedGroup ? (
-									<div className="flex flex-1 items-center justify-center p-5">
-										<Empty icon={Users} title={t.groupDetails} hint={t.selectConversation} />
-									</div>
-								) : (
-									<>
-										<div className="wa-secondary-pane__header flex-wrap">
-											<div className="flex min-w-0 flex-1 items-center gap-3">
-												<Avatar label={selectedGroup.subject} size={12} />
-												<div className="min-w-0 flex-1">
-													<h2 className="wa-secondary-pane__title truncate">{selectedGroup.subject}</h2>
-													<p className="wa-secondary-pane__subtitle">
-														{selectedGroup.participantCount || selectedGroup.participants?.length || 0}{' '}
-														{t.groupParticipants.toLowerCase()}
-													</p>
-												</div>
-											</div>
-											<button
-												type="button"
-												onClick={() => openGroupChat(selectedGroup)}
-												disabled={!selectedGroup.conversationId}
-												className="wa-primary-btn disabled:cursor-not-allowed disabled:opacity-40"
-											>
-												<MessageCircle size={16} /> {t.openGroupChat}
-											</button>
-										</div>
-
-										<div className="min-h-0 flex-1 overflow-y-auto p-5 nice-scroll">
-											{loadingGroup ? (
-												<div className="grid min-h-48 place-items-center">
-													<Loader2 size={28} className="animate-spin text-[var(--color-primary-500)]" />
-												</div>
-											) : (
-												<div className="space-y-5">
-													<div className="grid gap-3 sm:grid-cols-2">
-														<div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60">
-															<p className="text-xs font-bold uppercase tracking-wide text-slate-400">{t.groupDescription}</p>
-															<p className="mt-2 text-sm">{selectedGroup.description || '—'}</p>
-														</div>
-														<div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60">
-															<p className="text-xs font-bold uppercase tracking-wide text-slate-400">{t.groupOwner}</p>
-															<p className="mt-2 text-sm">{String(selectedGroup.ownerWaId || '—').replace(/@.*$/, '')}</p>
-														</div>
-													</div>
-													<div>
-														<h3 className="mb-3 flex items-center gap-2 font-black">
-															<Users size={16} className="text-[var(--color-primary-500)]" />
-															{t.groupParticipants}
-														</h3>
-														<div className="grid gap-2 sm:grid-cols-2">
-															{(selectedGroup.participants || []).map(participant => (
-																<div key={participant.id || participant.waId} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 dark:border-slate-800">
-																	<Avatar label={participant.displayName || participant.waId} size={9} />
-																	<div className="min-w-0 flex-1">
-																		<p className="truncate text-sm font-bold">{participant.displayName || String(participant.waId).replace(/@.*$/, '')}</p>
-																		<p className="truncate text-xs text-slate-400">{String(participant.waId).replace(/@.*$/, '')}</p>
-																	</div>
-																	{participant.isAdmin && (
-																		<span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-600 dark:bg-amber-950/30">
-																			{t.groupAdmins}
-																		</span>
-																	)}
-																</div>
-															))}
-														</div>
-														{!selectedGroup.participants?.length && (
-															<p className="py-8 text-center text-sm text-slate-400">{t.noGroups}</p>
-														)}
-													</div>
-												</div>
-											)}
-										</div>
-									</>
-								)}
-							</section>
-						</div>
+						<WaGroupsBrowser
+							groups={groups}
+							selectedGroup={selectedGroup}
+							loadingGroup={loadingGroup}
+							conversations={conversations}
+							locale={locale}
+							t={t}
+							onSelect={openGroupDetails}
+							onRefresh={() => loadTabData('groups')}
+							onOpenChat={openGroupChat}
+						/>
 					)
 				)}
 
 				{activeTab === 'statuses' && (
-					<div className="wa-secondary-pane wa-statuses-pane">
-						<header className="wa-secondary-pane__header">
-							<div className="wa-secondary-pane__heading">
-								<Zap size={18} strokeWidth={1.75} aria-hidden="true" />
-								<div>
-									<h2 className="wa-secondary-pane__title">{t.statuses}</h2>
+					<div className="wa-dk wa-secondary-pane wa-statuses-pane wa-stx">
+						<header className="wa-stx-head">
+							<div className="wa-stx-head__id">
+								<span className="wa-stx-head__icon" aria-hidden="true">
+									<Zap size={20} strokeWidth={2} />
+								</span>
+								<div className="min-w-0">
+									<h2 className="wa-stx-head__title">{t.statuses}</h2>
+									<p className="wa-stx-head__stats">
+										<span>
+											<b>{groupedStatuses.length}</b> {locale === 'ar' ? 'شخص' : 'people'}
+										</span>
+										<span>
+											<b>{statuses.length}</b> {locale === 'ar' ? 'ستوري' : 'stories'}
+										</span>
+										<span className="is-new">
+											<b>{groupedStatuses.filter(story => !story.isViewed && !story.isOwn).length}</b>{' '}
+											{locale === 'ar' ? 'جديد' : 'new'}
+										</span>
+									</p>
 								</div>
 							</div>
-							<button
-								type="button"
-								onClick={() => {
-									if (storyPanelMode === 'history') void loadStatusHistory(accountId);
-									else void loadTabData('statuses', true);
-								}}
-								disabled={syncingStatuses || loadingStatusHistory}
-								className="wa-toolbar-icon-btn disabled:opacity-50"
-								title={t.refresh}
-							>
-								<RefreshCw
-									size={16}
-									className={
-										syncingStatuses || loadingStatusHistory ? 'animate-spin' : undefined
-									}
-								/>
-							</button>
-						</header>
-						<div className="wa-statuses-body min-h-0 flex-1 overflow-y-auto p-4 nice-scroll">
-							<div
-								className="wa-story-seg-wrap"
-								role="tablist"
-								aria-label={t.statuses}
-							>
-								<div className="wa-story-seg">
+							<div className="wa-stx-head__tools">
+								{storyPanelMode === 'active' ? (
+									<label className="wa-dx__search wa-stx-search">
+										<Search size={16} strokeWidth={2.2} aria-hidden="true" />
+										<input
+											type="search"
+											value={storySearch}
+											onChange={event => setStorySearch(event.target.value)}
+											placeholder={locale === 'ar' ? 'ابحث باسم' : 'Search people'}
+											aria-label={locale === 'ar' ? 'ابحث باسم' : 'Search people'}
+										/>
+									</label>
+								) : null}
+								<div className="wa-story-seg" role="tablist" aria-label={t.statuses}>
 									<button
 										type="button"
 										role="tab"
 										aria-selected={storyPanelMode === 'active'}
 										onClick={() => setStoryPanelMode('active')}
-										className={`wa-story-seg__btn${
-											storyPanelMode === 'active' ? ' is-active' : ''
-										}`}
+										className={`wa-story-seg__btn${storyPanelMode === 'active' ? ' is-active' : ''}`}
 									>
 										{t.activeStories}
 									</button>
@@ -24428,19 +24905,34 @@ function WhatsAppWorkspaceContent() {
 										role="tab"
 										aria-selected={storyPanelMode === 'history'}
 										onClick={() => setStoryPanelMode('history')}
-										className={`wa-story-seg__btn${
-											storyPanelMode === 'history' ? ' is-active' : ''
-										}`}
+										className={`wa-story-seg__btn${storyPanelMode === 'history' ? ' is-active' : ''}`}
 									>
 										{t.storyHistory}
 										{groupedStatusHistory.length > 0 ? (
-											<span className="wa-story-seg__count">
-												{groupedStatusHistory.length}
-											</span>
+											<span className="wa-story-seg__count">{groupedStatusHistory.length}</span>
 										) : null}
 									</button>
 								</div>
+								<button
+									type="button"
+									onClick={() => {
+										if (storyPanelMode === 'history') void loadStatusHistory(accountId);
+										else void loadTabData('statuses', true);
+									}}
+									disabled={syncingStatuses || loadingStatusHistory}
+									className="wa-ui-icon-btn wa-grp-refresh"
+									title={t.refresh}
+									aria-label={t.refresh}
+								>
+									<RefreshCw
+										size={16}
+										strokeWidth={2}
+										className={syncingStatuses || loadingStatusHistory ? 'animate-spin' : undefined}
+									/>
+								</button>
 							</div>
+						</header>
+						<div className="wa-statuses-body min-h-0 flex-1 overflow-y-auto nice-scroll">
 							{storyPanelMode === 'active' && canUseWhatsApp && (
 								selectedAccount?.providerCapabilities?.statusPublish === false ||
 								String(selectedAccount?.providerName || '').toLowerCase() === 'baileys'
@@ -24499,64 +24991,217 @@ function WhatsAppWorkspaceContent() {
 									}
 								/>
 							) : storyPanelMode === 'active' ? (
-								<div className="wa-stories-grid">
-										{groupedStatuses.map((story, storyIndex) => {
+								(() => {
+									const ar = locale === 'ar';
+									const storyName = story => {
 										const rawName =
 											story.latest.contactName ||
-											(story.latest.isOwn
-												? selectedAccount?.label || t.accounts
-												: '');
-										const digits = String(
-											rawName || story.senderWaId || '',
-										)
+											(story.latest.isOwn ? selectedAccount?.label || t.accounts : '');
+										const digits = String(rawName || story.senderWaId || '')
 											.replace(/@.*$/, '')
 											.replace(/\D/g, '');
-										const name =
+										return (
 											rawName ||
 											formatWhatsAppPhone(digits) ||
-											String(story.senderWaId || '').replace(/@.*$/, '');
+											String(story.senderWaId || '').replace(/@.*$/, '')
+										);
+									};
+									const kindOf = story => {
+										const type = String(story.latest.type || '').toLowerCase();
+										if (type === 'video') return 'video';
+										if (type === 'text' || type === 'chat') return 'text';
+										return 'photo';
+									};
+									// Deep, per-person gradient behind text stories and cards still loading media.
+									const storyTone = seed => {
+										let hash = 0;
+										for (const ch of String(seed || '')) hash = (hash * 31 + ch.codePointAt(0)) % 360;
+										return {
+											background: `linear-gradient(160deg, hsl(${hash} 52% 38%), hsl(${(hash + 48) % 360} 58% 20%))`,
+										};
+									};
+									const term = foldWhatsAppSearchText(storySearch);
+									const searched = term
+										? groupedStatuses.filter(story => foldWhatsAppSearchText(storyName(story)).includes(term))
+										: groupedStatuses;
+									const filtered = searched.filter(story => {
+										if (storyFilter === 'all') return true;
+										if (storyFilter === 'new') return !story.isViewed;
+										return kindOf(story) === storyFilter;
+									});
+									const counts = {
+										all: searched.length,
+										new: searched.filter(story => !story.isViewed).length,
+										photo: searched.filter(story => kindOf(story) === 'photo').length,
+										video: searched.filter(story => kindOf(story) === 'video').length,
+										text: searched.filter(story => kindOf(story) === 'text').length,
+									};
+									const filters = [
+										{ id: 'all', label: ar ? 'الكل' : 'All' },
+										{ id: 'new', label: ar ? 'جديد' : 'New' },
+										{ id: 'photo', label: ar ? 'صور' : 'Photos', icon: <ImageIcon size={14} strokeWidth={2.2} /> },
+										{ id: 'video', label: ar ? 'فيديو' : 'Videos', icon: <Video size={14} strokeWidth={2.2} /> },
+										{ id: 'text', label: ar ? 'نص' : 'Text', icon: <FileText size={14} strokeWidth={2.2} /> },
+									];
+									const own = filtered.filter(story => story.isOwn);
+									const recent = filtered.filter(story => !story.isOwn && !story.isViewed);
+									const seen = filtered.filter(story => !story.isOwn && story.isViewed);
+									const sections = [
+										{ id: 'own', title: ar ? 'حالتي' : 'My status', items: own },
+										{ id: 'recent', title: ar ? 'تحديثات جديدة' : 'Recent updates', items: recent },
+										{ id: 'seen', title: ar ? 'تمت مشاهدتها' : 'Viewed', items: seen },
+									];
+									let cardIndex = 0;
+									const renderCard = (story, position, sectionId) => {
+										const index = cardIndex++;
+										const name = storyName(story);
 										const viewed = story.isViewed;
 										const thumb = storyThumbs[story.latest.id];
-										const ringSize = 128;
+										const kind = kindOf(story);
+										const caption = String(story.latest.caption || '').trim();
+										const avatarUrl = story.latest.contactAvatarUrl || '';
+										const total = story.items.length;
+										const featured = sectionId === 'recent' && position === 0 && !term && storyFilter !== 'text';
 										return (
 											<button
 												type="button"
 												key={story.senderWaId}
 												onClick={() => openStoryGroup(story)}
-												className={`wa-stories-card group ${viewed ? 'is-viewed' : 'is-unseen'}`}
+												className={`wa-st-card ${viewed ? 'is-viewed' : 'is-unseen'}${featured ? ' is-featured' : ''}`}
+												aria-label={`${name}, ${relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}`}
 											>
-												<div
-													className="relative mx-auto transition-transform duration-200 group-hover:scale-[1.03]"
-													style={{ width: ringSize, height: ringSize }}
-												>
-													<StoryRing
-														size={ringSize}
-														strokeWidth={3.5}
-														segmentsViewed={story.items.map(item => viewedStatusIds.has(item.id))}
-														idSuffix={String(story.senderWaId).replace(/[^a-zA-Z0-9_-]/g, '_')}
-													/>
-													<div className="absolute inset-[7px] overflow-hidden rounded-full border-[3px] border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
-														<StoryThumbnail
-															label={name}
-															size={22}
-															viewed={viewed}
-															priority={storyIndex < 14}
-															thumbUrl={thumb?.url}
-															thumbType={thumb?.type}
-															avatarUrl={story.latest.contactAvatarUrl || ''}
-														/>
-													</div>
-												</div>
-												<p className={`wa-stories-card__name ${viewed ? 'is-viewed' : 'is-unseen'}`}>
-													{name}
-												</p>
-												<p className="wa-stories-card__time">
-													{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}
-												</p>
+												<span className="wa-st-card__media" style={storyTone(name)}>
+													{thumb?.url ? (
+														thumb.type === 'video' ? (
+															<video src={`${thumb.url}#t=0.1`} muted playsInline preload="metadata" />
+														) : (
+															<img
+																src={thumb.url}
+																alt=""
+																loading={index < 12 ? 'eager' : 'lazy'}
+																decoding="async"
+															/>
+														)
+													) : kind === 'text' ? (
+														<span className="wa-st-card__text" dir="auto">
+															{caption || name}
+														</span>
+													) : avatarUrl ? (
+														<img src={avatarUrl} alt="" className="is-blurred" loading="lazy" referrerPolicy="no-referrer" />
+													) : (
+														<span className="wa-st-card__initials" aria-hidden="true">
+															{String(name || '?').trim().charAt(0).toUpperCase()}
+														</span>
+													)}
+												</span>
+												<span className="wa-st-card__shade" aria-hidden="true" />
+												<span className="wa-st-card__bars" aria-hidden="true">
+													{story.items.slice(0, 12).map(item => (
+														<i key={item.id} className={viewedStatusIds.has(item.id) ? 'is-seen' : ''} />
+													))}
+												</span>
+												<span className="wa-st-card__top">
+													<span className="wa-st-card__avatar">
+														<Avatar label={name} size={featured ? 11 : 9} src={avatarUrl} />
+													</span>
+													{featured ? (
+														<span className="wa-st-card__flag">
+															<Sparkles size={12} strokeWidth={2.4} />
+															{ar ? 'الأحدث' : 'Latest'}
+														</span>
+													) : null}
+													{kind === 'video' ? (
+														<span className="wa-st-card__kind" aria-hidden="true">
+															<Play size={12} strokeWidth={2.6} fill="currentColor" />
+														</span>
+													) : null}
+												</span>
+												<span className="wa-st-card__foot">
+													<b className="wa-privacy-identity" dir="auto">
+														{name}
+													</b>
+													<small>
+														{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}
+														{total > 1 ? ` · ${total} ${ar ? 'ستوري' : 'stories'}` : ''}
+													</small>
+													{featured && caption && kind !== 'text' ? (
+														<span className="wa-st-card__caption" dir="auto">
+															{caption}
+														</span>
+													) : null}
+												</span>
+												{!viewed && story.unviewedCount ? (
+													<span className="wa-st-card__new">{story.unviewedCount}</span>
+												) : null}
 											</button>
 										);
-									})}
-								</div>
+									};
+									return (
+										<div className="wa-st">
+											{searched.length > 1 ? (
+												<div className="wa-st-rail wa-ui-scroll" role="list" aria-label={ar ? 'وصول سريع' : 'Quick access'}>
+													{searched.map(story => {
+														const name = storyName(story);
+														return (
+															<button
+																type="button"
+																role="listitem"
+																key={story.senderWaId}
+																onClick={() => openStoryGroup(story)}
+																className={`wa-st-rail__item ${story.isViewed ? 'is-viewed' : 'is-unseen'}`}
+																title={name}
+															>
+																<span className="wa-st-rail__ring">
+																	<Avatar label={name} size={12} src={story.latest.contactAvatarUrl || ''} />
+																</span>
+																<span className="wa-st-rail__name wa-privacy-identity" dir="auto">
+																	{story.isOwn ? (ar ? 'أنا' : 'You') : name}
+																</span>
+															</button>
+														);
+													})}
+												</div>
+											) : null}
+											<div className="wa-st-chips" role="tablist" aria-label={ar ? 'تصفية' : 'Filter'}>
+												{filters.map(filter => (
+													<button
+														key={filter.id}
+														type="button"
+														role="tab"
+														aria-selected={storyFilter === filter.id}
+														disabled={filter.id !== 'all' && !counts[filter.id]}
+														onClick={() => setStoryFilter(filter.id)}
+														className={`wa-st-chip${storyFilter === filter.id ? ' is-active' : ''}`}
+													>
+														{filter.icon || null}
+														{filter.label}
+														<span>{counts[filter.id]}</span>
+													</button>
+												))}
+											</div>
+											{filtered.length ? (
+												sections.map(section =>
+													section.items.length ? (
+														<section key={section.id} className={`wa-st__section is-${section.id}`}>
+															<h3 className="wa-st__title">
+																{section.title}
+																<span>{section.items.length}</span>
+															</h3>
+															<div className="wa-st__grid">
+																{section.items.map((story, position) => renderCard(story, position, section.id))}
+															</div>
+														</section>
+													) : null,
+												)
+											) : (
+												<div className="wa-dx__empty">
+													<Search size={22} strokeWidth={1.8} aria-hidden="true" />
+													<p>{ar ? 'مفيش ستوريز بالفلتر ده' : 'No stories match this filter'}</p>
+												</div>
+											)}
+										</div>
+									);
+								})()
 							) : loadingStatusHistory ? (
 								<TabLoading label={t.loading} />
 							) : groupedStatusHistory.length === 0 ? (
@@ -25496,7 +26141,7 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'emails' && (
-					<div className="wa-secondary-pane wa-emails-pane">
+					<div className="wa-dk wa-secondary-pane wa-emails-pane">
 						<div className="min-h-0 flex-1 overflow-y-auto nice-scroll">
 							<Suspense
 								fallback={
@@ -25513,17 +26158,8 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'reports' && (
-					<div className="wa-secondary-pane wa-reports-pane">
-						<header className="wa-secondary-pane__header">
-							<div className="wa-secondary-pane__heading">
-								<TrendingUp size={18} strokeWidth={1.75} aria-hidden="true" />
-								<div>
-									<h2 className="wa-secondary-pane__title">{t.reports}</h2>
-									<p className="wa-secondary-pane__subtitle">{t.reportsHint}</p>
-								</div>
-							</div>
-						</header>
-						<div className="min-h-0 flex-1 overflow-y-auto p-4 nice-scroll">
+					<div className="wa-dk wa-secondary-pane wa-reports-pane wa-rp-pane">
+						<div className="wa-rp-scroll min-h-0 flex-1 overflow-y-auto nice-scroll">
 						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
 							<WhatsAppReportsTab
 								locale={locale}
@@ -25555,7 +26191,7 @@ function WhatsAppWorkspaceContent() {
 							</div>
 						</div>
 					) : (
-						<div className="wa-settings-pane space-y-4">
+						<div className="wa-dk wa-settings-pane space-y-4">
 							<div
 								role="tablist"
 								aria-label={t.settings}

@@ -6,6 +6,7 @@ import {
 	MESSAGES_CACHE_TTL_MS,
 	PROVIDER_SYNC_FRESH_MS,
 	isMessageThreadCacheComplete,
+	openChatCatchUpPlan,
 	openChatMessagesStaleTime,
 	shouldProviderBackfill,
 	shouldReloadOpenChatMessages,
@@ -119,6 +120,58 @@ test('page-full warm cache skips open-chat network', () => {
 		}),
 		true,
 	);
+});
+
+test('unread / missing last message forces catch-up and blocks soft-open skip', () => {
+	const cacheItems = [
+		{ id: 'm1' },
+		{ id: 'm2' },
+	];
+	const plan = openChatCatchUpPlan({
+		cacheItems,
+		unreadCount: 3,
+		lastMessage: { id: 'm-new', providerMessageId: 'p-new' },
+	});
+	assert.equal(plan.needed, true);
+	assert.equal(plan.expected, 3);
+	assert.equal(
+		shouldSkipOpenChatNetwork({
+			cacheIsFresh: true,
+			itemCount: MESSAGE_PAGE_SIZE,
+			needsCatchUp: plan.needed,
+		}),
+		false,
+	);
+	assert.equal(
+		shouldReloadOpenChatMessages({
+			switchedConversation: false,
+			loadKey: 'a:all',
+			lastOpenLoadKey: 'a:all',
+			cache: { items: cacheItems, hasMore: false },
+			needsCatchUp: plan.needed,
+		}),
+		true,
+	);
+});
+
+test('inbox preview row does not count as having the real last message', () => {
+	const plan = openChatCatchUpPlan({
+		cacheItems: [{ id: 'inbox-preview-c1', text: 'hi' }],
+		unreadCount: 2,
+		lastMessage: { id: 'real-1' },
+	});
+	assert.equal(plan.needed, true);
+	assert.equal(plan.expected, 2);
+});
+
+test('thread that already has last message and no unread skips catch-up', () => {
+	const plan = openChatCatchUpPlan({
+		cacheItems: [{ id: 'm1' }, { id: 'm2' }],
+		unreadCount: 0,
+		lastMessage: { id: 'm2' },
+	});
+	assert.equal(plan.needed, false);
+	assert.equal(plan.expected, 0);
 });
 
 test('short warm hydrated cache skips open-chat network when thread is complete', () => {

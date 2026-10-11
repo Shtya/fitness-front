@@ -20,7 +20,7 @@ export const tw = {
 	seg5: 'grid shrink-0 grid-cols-5 gap-0.5 rounded-[10px] bg-[#e9edef] p-0.5 dark:bg-[#1f2c34]',
 	segSm: 'mb-2 grid grid-cols-2 gap-1 rounded-[10px] bg-[#e9edef] p-0.5 dark:bg-[#1f2c34]',
 	segBtn:
-		'inline-flex h-8 cursor-pointer items-center justify-center gap-0.5 rounded-lg border-0 bg-transparent px-0.5 text-[10px] font-bold text-[#54656f]',
+		'inline-flex h-8 cursor-pointer items-center justify-center gap-0.5 rounded-lg border-0 bg-transparent px-0.5 text-[10px] font-bold text-[#54656f] dark:text-[#aebac1]',
 	segBtnActive: 'bg-white text-[#008069] shadow-sm dark:bg-[#111b21] dark:text-[#25d366]',
 	clipTray:
 		'shrink-0 rounded-[10px] border border-dashed border-[#cfd6db] bg-white p-2 dark:border-[#2a3942] dark:bg-[#111b21]',
@@ -28,7 +28,7 @@ export const tw = {
 	clipTitle: 'm-0 text-[11px] font-extrabold uppercase tracking-wide text-[#667781]',
 	clipHint: 'm-0 text-[10px] leading-snug text-[#8696a0]',
 	clipEmpty:
-		'flex min-h-[52px] cursor-text flex-col items-center justify-center gap-1 rounded-lg bg-[#f0f2f5] px-2 py-3 text-[11px] text-[#667781] outline-none focus:ring-2 focus:ring-[#1dab61]/40',
+		'flex min-h-[52px] cursor-text flex-col items-center justify-center gap-1 rounded-lg bg-[#f0f2f5] px-2 py-3 text-[11px] text-[#667781] outline-none focus:ring-2 focus:ring-[#1dab61]/40 dark:bg-[#0b141a] dark:text-[#8696a0]',
 	clipGrid: 'grid grid-cols-4 gap-1.5',
 	clipItem:
 		'group relative aspect-square overflow-hidden rounded-lg bg-[#e9edef] ring-1 ring-[#d1d7db]',
@@ -44,7 +44,7 @@ export const tw = {
 	cardH3:
 		'm-0 text-[12px] font-extrabold uppercase tracking-wide text-[#667781]',
 	cardHead: 'flex items-center justify-between gap-1.5',
-	label: 'flex flex-col gap-1 text-[11px] font-semibold text-[#54656f]',
+	label: 'flex flex-col gap-1 text-[11px] font-semibold text-[#54656f] dark:text-[#aebac1]',
 	input:
 		'box-border h-[30px] w-full rounded-lg border border-[#d1d7db] bg-[#f0f2f5] px-2 text-xs text-[#111b21] outline-none dark:border-[#2a3942] dark:bg-[#0b141a] dark:text-[#e9edef]',
 	textarea:
@@ -52,9 +52,9 @@ export const tw = {
 	check: '!flex min-h-6 !flex-row items-center !gap-2 overflow-visible',
 	rowBtns: 'flex flex-wrap gap-1.5 overflow-visible',
 	fileBtn:
-		'inline-flex h-8 min-h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#d1d7db] bg-[#f0f2f5] px-2.5 text-[11px] font-bold text-[#111b21]',
-	pasteTarget: 'border-[#1dab61] bg-[#d9fdd3] text-[#008069] shadow-[0_0_0_2px_rgba(29,171,97,0.25)]',
-	btnAccent: 'border-[#a7e4b5] bg-[#d9fdd3] text-[#008069]',
+		'inline-flex h-8 min-h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#d1d7db] bg-[#f0f2f5] px-2.5 text-[11px] font-bold text-[#111b21] dark:border-[#2a3942] dark:bg-[#0b141a] dark:text-[#e9edef]',
+	pasteTarget: 'border-[#1dab61] bg-[#d9fdd3] text-[#008069] shadow-[0_0_0_2px_rgba(29,171,97,0.25)] dark:bg-[#005c4b]/40 dark:text-[#21c063]',
+	btnAccent: 'border-[#a7e4b5] bg-[#d9fdd3] text-[#008069] dark:border-[#00a884]/40 dark:bg-[#005c4b]/40 dark:text-[#21c063]',
 	fileInputHidden: 'hidden',
 	hint: 'm-0 text-xs leading-snug text-[#667781]',
 	msgList: 'm-0 flex max-h-[min(280px,40vh)] min-h-0 list-none flex-col gap-1 overflow-auto p-0',
@@ -67,14 +67,14 @@ export const tw = {
 	listChatItemPaste: 'border-[#1dab61] shadow-[0_0_0_2px_rgba(29,171,97,0.2)]',
 	listChatHead: 'flex items-center justify-between gap-2',
 	listChatDelete: 'cursor-pointer border-0 bg-transparent p-1 text-[#e35d6a]',
-	actions: 'flex shrink-0 flex-col gap-1.5 border-t border-[#e9edef] bg-[#f0f2f5] pt-1',
+	actions: 'flex shrink-0 flex-col gap-1.5 border-t border-[#e9edef] bg-[#f0f2f5] pt-1 dark:border-[#2a3942] dark:bg-[#111b21]',
 	actionsRow: 'grid grid-cols-2 gap-1.5',
 	shot: 'inline-flex h-[38px] cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-linear-to-br from-[#1dab61] to-[#128c7e] text-xs font-extrabold text-white shadow-[0_8px_18px_-10px_rgba(29,171,97,0.8)] disabled:cursor-wait disabled:opacity-65',
 	reset:
-		'inline-flex h-[34px] cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-[#d1d7db] bg-white text-xs font-bold text-[#54656f]',
+		'inline-flex h-[34px] cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-[#d1d7db] bg-white text-xs font-bold text-[#54656f] dark:border-[#2a3942] dark:bg-[#202c33] dark:text-[#d1d7db]',
 	stage: 'relative grid min-h-0 place-items-center justify-center overflow-hidden px-1 py-2 max-[900px]:order-[-1]',
 	stageEditToggle:
-		'absolute end-2 top-2 z-10 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-[#d1d7db] bg-white px-3 text-xs font-bold text-[#111b21] shadow-sm hover:bg-[#f0f2f5]',
+		'absolute end-2 top-2 z-10 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-[#d1d7db] bg-white px-3 text-xs font-bold text-[#111b21] shadow-sm hover:bg-[#f0f2f5] dark:border-[#2a3942] dark:bg-[#202c33] dark:text-[#e9edef] dark:hover:bg-[#2a3942]',
 	stageEditToggleOn: 'border-[#1dab61] bg-[#1dab61] text-white hover:bg-[#179c57]',
 	/** Outer box = scaled visual size; inner keeps fixed 414×896 layout. */
 	phoneWrap: 'relative shrink-0',
@@ -187,7 +187,7 @@ export const tw = {
 	timingBox:
 		'mb-2 flex flex-col gap-2 rounded-lg border border-[#d1d7db] bg-[#f0f2f5] p-2 dark:border-[#2a3942] dark:bg-[#0b141a]',
 	timingRow: 'flex flex-wrap items-end gap-2',
-	timingLabel: 'flex min-w-[88px] flex-1 flex-col gap-1 text-[11px] font-semibold text-[#54656f]',
+	timingLabel: 'flex min-w-[88px] flex-1 flex-col gap-1 text-[11px] font-semibold text-[#54656f] dark:text-[#aebac1]',
 	timingCheck: 'inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#111b21]',
 	timingSelect: 'box-border h-[30px] w-full rounded-lg border border-[#d1d7db] bg-white px-2 text-xs text-[#111b21] outline-none dark:border-[#2a3942] dark:bg-[#111b21] dark:text-[#e9edef]',
 	timingHint: 'm-0 text-[10px] leading-snug text-[#8696a0]',
@@ -313,7 +313,7 @@ export const tw = {
 	json: 'box-border max-h-[min(62vh,560px)] min-h-[360px] w-full resize-y rounded-lg border border-[#d1d7db] bg-[#0b141a] p-2 font-mono text-[11px] leading-snug text-[#d1e7dd]',
 	err: 'm-0 text-[11px] text-[#e35d6a]',
 	help: 'text-[11px] text-[#667781]',
-	helpPre: 'overflow-auto whitespace-pre-wrap rounded-lg bg-[#f0f2f5] p-2 text-[10px]',
+	helpPre: 'overflow-auto whitespace-pre-wrap rounded-lg bg-[#f0f2f5] p-2 text-[10px] dark:bg-[#0b141a] dark:text-[#d1d7db]',
 	shareRoot: 'fixed inset-0 z-80 flex items-end justify-center',
 	shareBackdrop: 'absolute inset-0 border-0 bg-[rgba(11,20,26,0.45)]',
 	shareSheet:
@@ -322,7 +322,7 @@ export const tw = {
 	shareHead: 'flex items-start justify-between gap-2',
 	shareTitle: 'm-0 text-[15px] font-extrabold text-[#111b21] dark:text-[#e9edef]',
 	shareSub: 'mt-0.5 text-xs text-[#667781]',
-	shareClose: 'grid h-[30px] w-[30px] place-items-center rounded-full border-0 bg-[#f0f2f5]',
+	shareClose: 'grid h-[30px] w-[30px] place-items-center rounded-full border-0 bg-[#f0f2f5] dark:bg-[#2a3942] dark:text-[#e9edef]',
 	sharePreviewBtn:
 		'group relative mx-auto flex h-40 w-[88px] cursor-zoom-in items-center justify-center overflow-hidden rounded-[10px] border border-[#e9edef] bg-[#f0f2f5] p-0',
 	sharePreview: 'h-full w-full object-cover',
@@ -334,17 +334,17 @@ export const tw = {
 		'absolute end-3 top-3 grid h-10 w-10 place-items-center rounded-full border-0 bg-white/15 text-white backdrop-blur-sm hover:bg-white/25',
 	shareLightboxImg:
 		'max-h-[min(92vh,920px)] max-w-[min(100%,420px)] rounded-none object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)]',
-	shareSearch: 'flex h-9 items-center gap-2 rounded-[10px] bg-[#f0f2f5] px-2.5 text-[#667781]',
+	shareSearch: 'flex h-9 items-center gap-2 rounded-[10px] bg-[#f0f2f5] px-2.5 text-[#667781] dark:bg-[#2a3942] dark:text-[#8696a0]',
 	shareSearchInput: 'flex-1 border-0 bg-transparent text-[13px] text-[#111b21] outline-none',
 	shareList: 'nice-scroll flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto',
 	shareEmpty: 'my-4 text-center text-[13px] text-[#667781]',
 	shareRow:
-		'flex cursor-pointer items-center gap-2.5 rounded-[10px] border-0 bg-transparent px-1.5 py-2 text-start hover:bg-[#f0f2f5]',
+		'flex cursor-pointer items-center gap-2.5 rounded-[10px] border-0 bg-transparent px-1.5 py-2 text-start hover:bg-[#f0f2f5] dark:hover:bg-[#2a3942]',
 	shareAvatar: 'grid h-9 w-9 place-items-center rounded-full bg-[#128c7e] text-sm font-bold text-white',
 	shareName: 'min-w-0 flex-1 truncate text-[13px] font-[650] text-[#111b21] dark:text-[#e9edef]',
 	shareFooter: 'flex gap-2',
 	shareGhost:
-		'h-9 flex-1 cursor-pointer rounded-[10px] border border-[#d1d7db] bg-white text-xs font-bold text-[#54656f]',
+		'h-9 flex-1 cursor-pointer rounded-[10px] border border-[#d1d7db] bg-white text-xs font-bold text-[#54656f] dark:border-[#2a3942] dark:bg-[#202c33] dark:text-[#d1d7db]',
 
 	/* Contact info (WhatsApp iOS) */
 	ciRoot: 'flex min-h-0 flex-1 flex-col bg-[#f2f2f7]',

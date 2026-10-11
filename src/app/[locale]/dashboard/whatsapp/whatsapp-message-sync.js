@@ -83,11 +83,50 @@ export function shouldReloadOpenChatMessages({
 	loadKey = '',
 	lastOpenLoadKey = '',
 	cache = null,
+	needsCatchUp = false,
 	pageSize = MESSAGE_PAGE_SIZE,
 } = {}) {
+	if (needsCatchUp) return true;
 	if (switchedConversation) return true;
 	if (lastOpenLoadKey !== loadKey) return true;
 	return !isMessageThreadCacheComplete(cache, pageSize);
+}
+
+/**
+ * Whether the open thread is missing inbox-preview / unread rows the list already shows.
+ * Used to force a Postgres catch-up and drive the "loading N new messages" bar.
+ */
+export function openChatCatchUpPlan({
+	cacheItems = [],
+	unreadCount = 0,
+	lastMessage = null,
+} = {}) {
+	const unread = Math.max(0, Math.floor(Number(unreadCount) || 0));
+	const items = Array.isArray(cacheItems) ? cacheItems : [];
+	const lastId = String(lastMessage?.id || '').trim();
+	const lastProviderId = String(lastMessage?.providerMessageId || '').trim();
+	const hasRealLast =
+		!lastId && !lastProviderId
+			? items.length > 0
+			: items.some(item => {
+					const id = String(item?.id || '');
+					if (id.startsWith('inbox-preview-')) return false;
+					if (lastId && id === lastId) return true;
+					if (
+						lastProviderId &&
+						String(item?.providerMessageId || '') === lastProviderId
+					) {
+						return true;
+					}
+					return false;
+				});
+	if (hasRealLast && unread <= 0) {
+		return { needed: false, expected: 0 };
+	}
+	if (!hasRealLast && unread <= 0) {
+		return { needed: true, expected: 1 };
+	}
+	return { needed: true, expected: Math.max(unread, hasRealLast ? unread : 1) };
 }
 
 /**
@@ -99,8 +138,10 @@ export function shouldSkipOpenChatNetwork({
 	itemCount = 0,
 	hasMore = true,
 	socketHealthy = false,
+	needsCatchUp = false,
 	pageSize = MESSAGE_PAGE_SIZE,
 } = {}) {
+	if (needsCatchUp) return false;
 	if (forceProvider || itemCount <= 0) return false;
 	// A lone inbox/socket row is not a hydrated thread — always fetch Postgres.
 	if (itemCount <= 1) return false;
