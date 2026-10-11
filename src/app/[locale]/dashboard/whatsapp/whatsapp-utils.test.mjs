@@ -27,6 +27,10 @@ import {
 	quotedMessagePreview,
 	isDeletedWhatsAppMessage,
 	deletedWhatsAppMessageLabel,
+	conversationPreview,
+	conversationPreviewShowsReaction,
+	conversationReactionPreviewText,
+	latestPeerReaction,
 	normalizeComposerImageFile,
 	truncateQuotedPreviewText,
 	quotedPreviewFromMessage,
@@ -1625,4 +1629,39 @@ test('computeAnchoredMenuPosition right-aligns outgoing menus and keeps them on 
 	);
 	assert.equal(narrow.width, 200 - 24);
 	assert.equal(narrow.left, 12);
+});
+
+test('inbox preview shows peer reaction like WhatsApp instead of plain voice+ticks', () => {
+	const voice = {
+		id: 'm1',
+		type: 'ptt',
+		direction: 'outbound',
+		status: 'played',
+		text: '',
+		reactions: [
+			{ actorKey: 'me', emoji: '👍', reactedAt: '2026-01-01T10:00:00.000Z' },
+			{ actorKey: '20123456789', emoji: '🔥', reactedAt: '2026-01-01T12:00:00.000Z' },
+		],
+	};
+	assert.equal(latestPeerReaction(voice)?.emoji, '🔥');
+	assert.equal(
+		conversationReactionPreviewText(voice, 'en'),
+		'Reacted 🔥 to your voice message',
+	);
+	assert.equal(
+		conversationReactionPreviewText(voice, 'ar'),
+		'تفاعل بـ 🔥 على رسالة صوتية',
+	);
+	assert.equal(
+		conversationPreview({ lastMessage: voice }, 'en'),
+		'Reacted 🔥 to your voice message',
+	);
+	assert.equal(conversationPreviewShowsReaction({ lastMessage: voice }, 'en'), true);
+	assert.equal(
+		conversationPreview(
+			{ lastMessage: { ...voice, reactions: [{ actorKey: 'me', emoji: '👍' }] } },
+			'en',
+		),
+		'Voice message',
+	);
 });

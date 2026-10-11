@@ -691,10 +691,13 @@ html {
   transform: translateZ(0);
 }
 
+/* Hides buttons that download managers (IDM, RealPlayer) inject into pages. Our own
+   elements and icons are excluded: lucide names its icon `lucide-download`, which
+   this rule used to hide (the image viewer lost its download icon). */
 [id*='IDM'],
-[class*='idm'],
-[id*='download'],
-[class*='download'],
+[class*='idm']:not(svg):not([class*='wa-']),
+[id*='download']:not(svg):not([id^='wa-']),
+[class*='download']:not(svg):not([class*='lucide']):not([class*='wa-']),
 [id*='realplayer'],
 [class*='realplayer'] {
   display: none !important;
@@ -8733,6 +8736,14 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		font-size: 13px !important;
 		font-weight: 400 !important;
 		line-height: 18px !important;
+	}
+
+	.wa-web-desktop .wa-conversation-row .wa-conversation-preview--reaction {
+		color: #54656f !important;
+	}
+
+	html.dark .wa-web-desktop .wa-conversation-row .wa-conversation-preview--reaction {
+		color: #aebac1 !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row .desc-chat.is-typing,

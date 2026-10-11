@@ -595,6 +595,10 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 				(preview.clientMessageId &&
 					conversation.lastMessage?.clientMessageId === preview.clientMessageId),
 		);
+		const mergedReactions =
+			preview.reactions != null
+				? normalizeWhatsAppReactions(preview.reactions)
+				: conversation.lastMessage?.reactions;
 		const lastMessage =
 			isLatest && hasRenderablePreview
 				? sameLastMessage
@@ -607,29 +611,51 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 							),
 							providerTimestamp:
 								nextTimestamp || conversation.lastMessage?.providerTimestamp,
+							...(preview.reactions != null ? { reactions: mergedReactions } : {}),
 						}
 					: {
 							...preview,
 							providerTimestamp:
 								nextTimestamp || preview.providerTimestamp,
+							...(preview.reactions != null ? { reactions: mergedReactions } : {}),
 						}
 				: sameLastMessage && conversation.lastMessage
 					? {
 							...conversation.lastMessage,
 							status: preferWhatsAppAckStatus(conversation.lastMessage.status, preview.status),
+							...(preview.reactions != null ? { reactions: mergedReactions } : {}),
 						}
 					: conversation.lastMessage;
+		const reactionBumpAt = latestPeerReaction({
+			reactions: preview.reactions != null ? mergedReactions : lastMessage?.reactions,
+		})?.reactedAt;
+		const reactionBumpTime = new Date(reactionBumpAt || 0).getTime();
+		const shouldBumpForReaction =
+			Number.isFinite(reactionBumpTime) &&
+			reactionBumpTime > 0 &&
+			(!Number.isFinite(currentTime) || reactionBumpTime >= currentTime);
+		if (shouldBumpForReaction) reorder = true;
 		return {
 			...conversation,
 			unreadCount,
 			...(isLatest && hasRenderablePreview
 				? {
-						lastMessageAt: nextTimestamp || conversation.lastMessageAt,
+						lastMessageAt:
+							(shouldBumpForReaction && reactionBumpAt) ||
+							nextTimestamp ||
+							conversation.lastMessageAt,
 						lastMessage,
 					}
 				: lastMessage !== conversation.lastMessage
-					? { lastMessage }
-					: {}),
+					? {
+							lastMessage,
+							...(shouldBumpForReaction && reactionBumpAt
+								? { lastMessageAt: reactionBumpAt }
+								: {}),
+						}
+					: shouldBumpForReaction && reactionBumpAt
+						? { lastMessageAt: reactionBumpAt }
+						: {}),
 		};
 	});
 
@@ -639,6 +665,142 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 
 export function conversationUnreadCount(conversation) {
 	return Math.max(0, Number(conversation?.unreadCount) || 0);
+}
+
+/** Normalize reaction rows from REST/socket/optimistic payloads. */
+export function normalizeWhatsAppReactions(reactions) {
+	if (!Array.isArray(reactions)) return [];
+	const byActor = new Map();
+	for (const reaction of reactions) {
+		if (!reaction || typeof reaction !== 'object') continue;
+		const actorKey = String(reaction.actorKey || reaction.actor_key || '').trim();
+		const emoji = String(reaction.emoji || '').trim();
+		if (!actorKey || !emoji) continue;
+		byActor.set(actorKey, {
+			id: reaction.id || `${actorKey}:${emoji}`,
+			actorKey,
+			emoji,
+			reactedAt: reaction.reactedAt || reaction.reacted_at || reaction.timestamp || null,
+			actorName: String(reaction.actorName || reaction.actor_name || '').trim() || null,
+			actorPhone: String(reaction.actorPhone || reaction.actor_phone || '').trim() || null,
+			actorAvatarUrl: reaction.actorAvatarUrl || reaction.actor_avatar_url || null,
+		});
+	}
+	return [...byActor.values()];
+}
+
+/** Newest peer reaction (not from us) — drives WhatsApp-style inbox preview. */
+export function latestPeerReaction(message) {
+	const peers = normalizeWhatsAppReactions(message?.reactions).filter(
+		reaction => reaction.actorKey !== 'me',
+	);
+	if (!peers.length) return null;
+	return peers.reduce((best, reaction) => {
+		const bestTime = new Date(best?.reactedAt || 0).getTime();
+		const nextTime = new Date(reaction.reactedAt || 0).getTime();
+		if (!Number.isFinite(bestTime)) return reaction;
+		if (Number.isFinite(nextTime) && nextTime >= bestTime) return reaction;
+		return best;
+	}, peers[0]);
+}
+
+export function conversationMessageTypeLabel(message, locale = 'en') {
+	const ar = String(locale || 'en').toLowerCase().startsWith('ar');
+	const type = String(message?.type || '').toLowerCase();
+	const labels = ar
+		? {
+				image: 'صورة',
+				photo: 'صورة',
+				video: 'فيديو',
+				audio: 'رسالة صوتية',
+				ptt: 'رسالة صوتية',
+				voice: 'رسالة صوتية',
+				location: 'موقع',
+				live_location: 'موقع مباشر',
+				document: 'مستند',
+				sticker: 'ملصق',
+				contact: 'جهة اتصال',
+				contacts: 'جهات اتصال',
+			}
+		: {
+				image: 'Photo',
+				photo: 'Photo',
+				video: 'Video',
+				audio: 'Voice message',
+				ptt: 'Voice message',
+				voice: 'Voice message',
+				location: 'Location',
+				live_location: 'Live location',
+				document: 'Document',
+				sticker: 'Sticker',
+				contact: 'Contact',
+				contacts: 'Contacts',
+			};
+	if (labels[type]) return labels[type];
+	const text = String(message?.text || '')
+		.replace(/\s+/g, ' ')
+		.trim();
+	if (!text) return ar ? 'رسالة' : 'Message';
+	return text.length > 40 ? `${text.slice(0, 37)}…` : text;
+}
+
+/**
+ * WhatsApp chat-list line when someone reacted to the latest message.
+ * Returns null when there is no peer reaction to surface.
+ */
+export function conversationReactionPreviewText(message, locale = 'en') {
+	const peer = latestPeerReaction(message);
+	if (!peer?.emoji) return null;
+	const ar = String(locale || 'en').toLowerCase().startsWith('ar');
+	const target = conversationMessageTypeLabel(message, locale);
+	const outbound = String(message?.direction || '').toLowerCase() === 'outbound';
+	if (ar) {
+		return outbound
+			? `تفاعل بـ ${peer.emoji} على ${target}`
+			: `تفاعل بـ ${peer.emoji} مع «${target}»`;
+	}
+	return outbound
+		? `Reacted ${peer.emoji} to your ${String(target).toLowerCase()}`
+		: `Reacted ${peer.emoji} to «${target}»`;
+}
+
+/** Inbox subtitle for a conversation row (reaction > deleted > text/media). */
+export function conversationPreview(conversation, locale = 'en') {
+	const message = conversation?.lastMessage;
+	if (!message) return '';
+	if (isDeletedWhatsAppMessage(message)) {
+		return deletedWhatsAppMessageLabel(locale);
+	}
+	const reactionText = conversationReactionPreviewText(message, locale);
+	if (reactionText) return reactionText;
+	const ar = String(locale || 'en').toLowerCase().startsWith('ar');
+	const text = String(message.text || '').trim();
+	const type = String(message.type || '').toLowerCase();
+	const mediaTypes = new Set([
+		'image',
+		'photo',
+		'video',
+		'audio',
+		'ptt',
+		'voice',
+		'location',
+		'live_location',
+		'document',
+		'sticker',
+		'contact',
+		'contacts',
+	]);
+	const mediaLabel = mediaTypes.has(type)
+		? conversationMessageTypeLabel(message, locale)
+		: '';
+	const preview = text || mediaLabel || '';
+	if (!preview) return '';
+	const shouldShowSender = message.direction === 'outbound' && !mediaLabel;
+	return shouldShowSender ? (ar ? `أنت: ${preview}` : `You: ${preview}`) : preview;
+}
+
+export function conversationPreviewShowsReaction(conversation, locale = 'en') {
+	return Boolean(conversationReactionPreviewText(conversation?.lastMessage, locale));
 }
 
 /** Chip filters that can be applied to the already-loaded All inbox. */

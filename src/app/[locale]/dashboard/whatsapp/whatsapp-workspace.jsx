@@ -201,6 +201,10 @@ import {
 	seekRatio,
 	sortConversationsByActivity,
 	updateConversationPreview,
+	conversationPreview,
+	conversationPreviewShowsReaction,
+	normalizeWhatsAppReactions,
+	latestPeerReaction,
 	visibleMessageText,
 	clipboardImageFiles,
 	isComposerImageFile,
@@ -2633,6 +2637,26 @@ function WaLocationViewer({ location, title, address, isLive, locale = 'en', onC
 	);
 }
 
+/** One request per message, shared by every render: coordinates the bubble did not get. */
+const locationFetchCache = new Map();
+function fetchMessageLocation(conversationId, messageId) {
+	const key = `${conversationId}:${messageId}`;
+	if (!locationFetchCache.has(key)) {
+		locationFetchCache.set(
+			key,
+			api
+				.get(`/whatsapp/conversations/${conversationId}/messages/${messageId}/location`, { timeout: 45000 })
+				.then(({ data }) => data?.location || data?.data?.location || null)
+				.catch(error => {
+					// Let a later render retry transient failures.
+					locationFetchCache.delete(key);
+					throw error;
+				}),
+		);
+	}
+	return locationFetchCache.get(key);
+}
+
 function LocationMessage({ message, location, type, locale = 'en', conversationId = null }) {
 	const [mapFailed, setMapFailed] = useState(false);
 	const [opening, setOpening] = useState(false);
@@ -2657,6 +2681,34 @@ function LocationMessage({ message, location, type, locale = 'en', conversationI
 	const address = String(resolved?.address || '').trim();
 	const preview = resolved?.previewDataUrl;
 	const mosaic = hasCoords ? locationTileMosaic(lat, lng, 16) : null;
+	const canFetch =
+		Boolean(conversationId && message?.id) &&
+		!String(message.id).startsWith('live:') &&
+		!String(message.id).startsWith('pending:');
+	const [autoState, setAutoState] = useState('idle');
+	// Older or cached rows can arrive without coordinates; the server has them.
+	useEffect(() => {
+		if (hasCoords || !canFetch) return undefined;
+		let cancelled = false;
+		setAutoState('loading');
+		fetchMessageLocation(conversationId, message.id)
+			.then(fetched => {
+				if (cancelled) return;
+				if (Number.isFinite(Number(fetched?.latitude)) && Number.isFinite(Number(fetched?.longitude))) {
+					setFetchedLocation(current => current || { ...(resolved || {}), ...fetched });
+					setAutoState('done');
+				} else {
+					setAutoState('missing');
+				}
+			})
+			.catch(() => {
+				if (!cancelled) setAutoState('missing');
+			});
+		return () => {
+			cancelled = true;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- once per message
+	}, [hasCoords, canFetch, conversationId, message?.id]);
 	const directionsHref = hasCoords
 		? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lng}`)}`
 		: null;
@@ -2742,7 +2794,7 @@ function LocationMessage({ message, location, type, locale = 'en', conversationI
 						))}
 					</span>
 				) : (
-					<span className="wa-loc__fallback" aria-hidden="true" />
+					<span className={`wa-loc__fallback${autoState === 'loading' ? ' is-loading' : ''}`} aria-hidden="true" />
 				)}
 				<span className="wa-loc__pin" aria-hidden="true">
 					<MapPin size={30} strokeWidth={2.2} fill="currentColor" />
@@ -2759,9 +2811,13 @@ function LocationMessage({ message, location, type, locale = 'en', conversationI
 						? arabic
 							? 'افتح الخريطة'
 							: 'Open map'
-						: arabic
-							? 'حمّل الموقع'
-							: 'Load location'}
+						: autoState === 'loading'
+							? arabic
+								? 'بيحمّل الموقع…'
+								: 'Loading location…'
+							: arabic
+								? 'حاول تاني'
+								: 'Try again'}
 				</span>
 			</button>
 			<div className="wa-loc__body">
@@ -2771,6 +2827,13 @@ function LocationMessage({ message, location, type, locale = 'en', conversationI
 				{address ? (
 					<p className="wa-loc__address" dir="auto">
 						{address}
+					</p>
+				) : null}
+				{!hasCoords && autoState === 'missing' ? (
+					<p className="wa-loc__address">
+						{arabic
+							? 'تفاصيل الموقع مش متاحة دلوقتي.'
+							: 'Location details are not available right now.'}
 					</p>
 				) : null}
 				{hasCoords ? (
@@ -3889,28 +3952,18 @@ function ownReactionEmoji(message) {
 	)?.emoji || '';
 }
 
-/**
- * Reactions arrive from three places (optimistic UI, REST, socket) and not always
- * with the same field names. Without this, a chip that has `actor_key` / missing
- * `emoji` is dropped by the renderer and looks like the reaction never landed —
- * even though WhatsApp on the phone already shows it.
- */
-function normalizeWhatsAppReactions(reactions) {
-	if (!Array.isArray(reactions)) return [];
-	const byActor = new Map();
-	for (const reaction of reactions) {
-		if (!reaction || typeof reaction !== 'object') continue;
-		const actorKey = String(reaction.actorKey || reaction.actor_key || '').trim();
-		const emoji = String(reaction.emoji || '').trim();
-		if (!actorKey || !emoji) continue;
-		byActor.set(actorKey, {
-			id: reaction.id || `${actorKey}:${emoji}`,
-			actorKey,
-			emoji,
-			reactedAt: reaction.reactedAt || reaction.reacted_at || reaction.timestamp || null,
-		});
-	}
-	return [...byActor.values()];
+/** The socket sends the full list: replace it (so removals stick), keeping known names. */
+function replaceReactionList(next = [], previous = []) {
+	const known = new Map(normalizeWhatsAppReactions(previous).map(reaction => [reaction.actorKey, reaction]));
+	return normalizeWhatsAppReactions(next).map(reaction => {
+		const before = known.get(reaction.actorKey);
+		return {
+			...reaction,
+			actorName: reaction.actorName || before?.actorName || null,
+			actorPhone: reaction.actorPhone || before?.actorPhone || null,
+			actorAvatarUrl: reaction.actorAvatarUrl || before?.actorAvatarUrl || null,
+		};
+	});
 }
 
 function mergeReactionLists(preferred = [], fallback = []) {
@@ -3919,7 +3972,13 @@ function mergeReactionLists(preferred = [], fallback = []) {
 		merged.set(reaction.actorKey, reaction);
 	}
 	for (const reaction of normalizeWhatsAppReactions(preferred)) {
-		merged.set(reaction.actorKey, reaction);
+		const previous = merged.get(reaction.actorKey);
+		merged.set(reaction.actorKey, {
+			...reaction,
+			actorName: reaction.actorName || previous?.actorName || null,
+			actorPhone: reaction.actorPhone || previous?.actorPhone || null,
+			actorAvatarUrl: reaction.actorAvatarUrl || previous?.actorAvatarUrl || null,
+		});
 	}
 	return [...merged.values()];
 }
@@ -5071,7 +5130,7 @@ function WaReactionSummary({ reactions, mine, locale, resolve, disabled = false,
 	const people = useMemo(
 		() =>
 			reactions
-				.map(reaction => ({ ...reaction, person: resolve(reaction.actorKey) }))
+				.map(reaction => ({ ...reaction, person: resolve(reaction) }))
 				// You first, then newest first, like WhatsApp.
 				.sort((a, b) => {
 					if (a.actorKey === 'me') return -1;
@@ -5094,12 +5153,21 @@ function WaReactionSummary({ reactions, mine, locale, resolve, disabled = false,
 			const rect = pillRef.current?.getBoundingClientRect();
 			if (!rect) return;
 			const width = Math.min(300, window.innerWidth - 16);
-			const height = Math.min(360, 112 + people.length * 52);
-			const below = window.innerHeight - rect.bottom;
-			const top = below > height + 12 || below > rect.top ? rect.bottom + 6 : rect.top - height - 6;
+			const wanted = Math.min(360, 60 + people.length * 54);
+			const below = window.innerHeight - rect.bottom - 12;
+			const above = rect.top - 12;
 			let left = mine ? rect.right - width : rect.left;
 			left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
-			setPosition({ top: Math.max(8, top), left, width, maxHeight: height });
+			if (below >= wanted || below >= above) {
+				setPosition({ top: rect.bottom + 6, left, width, maxHeight: Math.max(160, Math.min(360, below)) });
+			} else {
+				setPosition({
+					bottom: window.innerHeight - rect.top + 6,
+					left,
+					width,
+					maxHeight: Math.max(160, Math.min(360, above)),
+				});
+			}
 		};
 		place();
 		const onPointer = event => {
@@ -5162,7 +5230,12 @@ function WaReactionSummary({ reactions, mine, locale, resolve, disabled = false,
 							role="dialog"
 							aria-label={ar ? 'التفاعلات' : 'Reactions'}
 							dir={ar ? 'rtl' : 'ltr'}
-							style={{ top: position.top, left: position.left, width: position.width, maxHeight: position.maxHeight }}
+							style={{
+								...(position.bottom != null ? { bottom: position.bottom } : { top: position.top }),
+								left: position.left,
+								width: position.width,
+								maxHeight: position.maxHeight,
+							}}
 							onPointerDown={event => event.stopPropagation()}
 							onClick={event => event.stopPropagation()}
 						>
@@ -9634,30 +9707,6 @@ function messageDayLabel(value, locale) {
 	return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric' }).format(date);
 }
 
-function conversationPreview(conversation, locale = 'en') {
-	const message = conversation?.lastMessage;
-	if (!message) return '';
-	if (isDeletedWhatsAppMessage(message)) {
-		return deletedWhatsAppMessageLabel(locale);
-	}
-	const text = String(message.text || '').trim();
-	const type = String(message.type || '').toLowerCase();
-	const mediaLabel = {
-		image: 'Photo',
-		video: 'Video',
-		audio: 'Voice message',
-		ptt: 'Voice message',
-		voice: 'Voice message',
-		location: 'Location',
-		live_location: 'Live location',
-		document: 'Document',
-		sticker: 'Sticker',
-	}[type];
-	const preview = text || mediaLabel || '';
-	const shouldShowSender = message.direction === 'outbound' && !mediaLabel;
-	return shouldShowSender ? `You: ${preview}` : preview;
-}
-
 function CameraPreviewIcon({ className = '' }) {
 	return (
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
@@ -10630,6 +10679,7 @@ const WaConversationRow = memo(function WaConversationRow({
 	const titlePresentation = messageTextPresentation(title);
 	const previewText = conversationPreview(conversation, locale);
 	const lastMessageDeleted = isDeletedWhatsAppMessage(conversation.lastMessage);
+	const previewShowsReaction = conversationPreviewShowsReaction(conversation, locale);
 	const typing = Boolean(
 		conversation.isTyping ||
 		conversation.typing ||
@@ -10818,7 +10868,9 @@ const WaConversationRow = memo(function WaConversationRow({
 								{lastMessageDeleted && (
 									<Trash2 size={14} strokeWidth={2} className="shrink-0" aria-hidden="true" />
 								)}
-								{!lastMessageDeleted && conversation.lastMessage?.direction === 'outbound' && (
+								{!lastMessageDeleted &&
+									!previewShowsReaction &&
+									conversation.lastMessage?.direction === 'outbound' && (
 									<span className="shrink-0">
 										<DeliveryTicks
 											message={conversation.lastMessage}
@@ -10827,13 +10879,15 @@ const WaConversationRow = memo(function WaConversationRow({
 										/>
 									</span>
 								)}
-								{!lastMessageDeleted && (
+								{!lastMessageDeleted && !previewShowsReaction && (
 									<ConversationPreviewIcon
 										type={conversation.lastMessage?.type}
 									/>
 								)}
 								<span
-									className={`truncate ${previewPresentation.className}`}
+									className={`truncate ${previewPresentation.className}${
+										previewShowsReaction ? ' wa-conversation-preview--reaction' : ''
+									}`}
 									dir={previewPresentation.dir}
 									lang={previewPresentation.lang}
 								>
@@ -11729,7 +11783,8 @@ function WhatsAppWorkspaceContent() {
 		[effectiveConversations, effectiveMessages, selectedConversation],
 	);
 	const resolveReactor = useCallback(
-		actorKey => {
+		reaction => {
+			const actorKey = typeof reaction === 'string' ? reaction : reaction?.actorKey;
 			const ar = locale === 'ar';
 			if (actorKey === 'me') {
 				return {
@@ -11747,11 +11802,13 @@ function WhatsAppWorkspaceContent() {
 				selectedConversation?.type === 'group' ||
 				String(selectedConversation?.providerChatId || '').endsWith('@g.us');
 			// In a one-to-one chat the only other person who can react is the contact.
-			let name = String(hit?.name || '').trim();
+			let name = String(reaction?.actorName || hit?.name || '').trim();
 			if (!name && !isGroupChat && selectedConversation) name = conversationTitle(selectedConversation);
-			const phoneDigits = String(hit?.phone || '').replace(/\D/g, '') || (isLid ? '' : digits);
+			const phoneDigits =
+				String(reaction?.actorPhone || hit?.phone || '').replace(/\D/g, '') || (isLid ? '' : digits);
 			const phone = phoneDigits ? formatWhatsAppPhone(phoneDigits) : '';
 			const avatar =
+				reaction?.actorAvatarUrl ||
 				inboxAvatarForWaId(effectiveConversations, raw) ||
 				(!isGroupChat && selectedConversation ? conversationAvatarUrl(selectedConversation) : '');
 			return {
@@ -15696,21 +15753,55 @@ function WhatsAppWorkspaceContent() {
 					}),
 				);
 			}
-			if (
-				event.event === 'message_reactions' &&
-				eventConversationId === activeConversationId
-			) {
+			if (event.event === 'message_reactions' && eventConversationId) {
+				const reactedMessageId =
+					event.payload.messageId || event.payload.providerMessageId;
 				updateCachedMessage(
-					activeConversationId,
-					event.payload.messageId || event.payload.providerMessageId,
+					eventConversationId,
+					reactedMessageId,
 					message => ({
 						...message,
-						reactions: mergeReactionLists(
+						reactions: replaceReactionList(
 							event.payload.reactions,
 							message.reactions,
 						),
 					}),
 				);
+				// WhatsApp inbox: show peer reactions on the chat-list preview row.
+				setConversations(current => {
+					let touched = false;
+					const next = current.map(item => {
+						if (item.id !== eventConversationId) return item;
+						const last = item.lastMessage;
+						if (!last) return item;
+						const sameLast =
+							(event.payload.messageId && last.id === event.payload.messageId) ||
+							(event.payload.providerMessageId &&
+								last.providerMessageId === event.payload.providerMessageId);
+						if (!sameLast) return item;
+						touched = true;
+						const reactions = replaceReactionList(
+							event.payload.reactions,
+							last.reactions,
+						);
+						const peerAt = latestPeerReaction({ reactions })?.reactedAt;
+						const peerTime = new Date(peerAt || 0).getTime();
+						const currentTime = new Date(
+							item.lastMessageAt || last.providerTimestamp || 0,
+						).getTime();
+						const bump =
+							Number.isFinite(peerTime) &&
+							peerTime > 0 &&
+							(!Number.isFinite(currentTime) || peerTime >= currentTime);
+						return {
+							...item,
+							lastMessage: { ...last, reactions },
+							...(bump && peerAt ? { lastMessageAt: peerAt } : {}),
+						};
+					});
+					if (!touched) return current;
+					return sortConversationsByActivity(next);
+				});
 			}
 			if (event.event === 'attachment_ready' && event.payload?.attachmentId) {
 				const attachmentId = String(event.payload.attachmentId);

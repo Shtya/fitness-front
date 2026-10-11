@@ -12808,3 +12808,83 @@ html.dark .wa-locv__chip.is-active {
 		animation: none;
 	}
 }
+
+.wa-loc__fallback.is-loading {
+	animation: wa-loc-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes wa-loc-shimmer {
+	50% {
+		opacity: 0.55;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-loc__fallback.is-loading {
+		animation: none;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Fix: video volume panel                                              */
+/* The rotated range kept its 80px horizontal layout box, so inside the   */
+/* 34px panel it sat off-centre (track on the edge, thumb in a corner).   */
+/* Centre it absolutely, then rotate.                                    */
+/* ------------------------------------------------------------------ */
+
+.wa-video-controls__volume .wa-video-controls__volume-panel.wa-video-controls__volume-panel {
+	display: block !important;
+	overflow: visible;
+}
+
+.wa-video-controls__volume .wa-video-controls__volume-slider.wa-video-controls__volume-slider {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 84px !important;
+	min-width: 84px !important;
+	margin: 0;
+	transform: translate(-50%, -50%) rotate(-90deg) !important;
+}
+
+/* Clicking the speaker left focus on it, and :focus-within kept the panel open
+   while the video played. Only keyboard focus should hold it open. */
+.wa-video-controls__volume:focus-within:not(:hover):not(:has(:focus-visible)) .wa-video-controls__volume-panel {
+	opacity: 0 !important;
+	visibility: hidden !important;
+	pointer-events: none !important;
+	transform: translateX(-50%) translateY(4px) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Fix: voice waveform progress running past the playhead               */
+/* Fixed 3px bars + 2px gaps overflowed narrow bubbles; the clipped row  */
+/* no longer spanned the full width, so bar positions and the dot (a %   */
+/* of the width) drifted apart. Bars now shrink to fit, so the i-th bar  */
+/* sits at i/(n-1) of the width, exactly where the dot is.               */
+/* ------------------------------------------------------------------ */
+
+.wa-message-wallpaper .wa-voice-message.wa-voice-message .wa-voice-waveform-bars.wa-voice-waveform-bars {
+	gap: 1.5px !important;
+	padding-inline: 6px !important;
+	justify-content: space-between !important;
+	overflow: hidden;
+}
+
+.wa-message-wallpaper .wa-voice-message.wa-voice-message .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar {
+	flex: 1 1 0 !important;
+	width: auto !important;
+	min-width: 1px !important;
+	max-width: 3px !important;
+}
+
+/* Colours: globals.css loads after this file and its old teal "unplayed" rule
+   tied on specificity, so it won. One extra class settles it. */
+.wa-message-wallpaper .wa-voice-message.wa-voice-message .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar.is-unplayed {
+	background: var(--wa-vn-rest) !important;
+}
+
+.wa-message-wallpaper .wa-voice-message.wa-voice-message .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar.is-played-incoming,
+.wa-message-wallpaper .wa-voice-message.wa-voice-message .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar.is-played-outgoing {
+	background: var(--wa-vn-progress) !important;
+}
