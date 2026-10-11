@@ -58,6 +58,12 @@ import {
 	LogOut,
 	Mail,
 	MapPin,
+	Navigation,
+	Utensils,
+	Coffee,
+	Pill,
+	Banknote,
+	Fuel,
 	Maximize2,
 	Minimize2,
 	Expand,
@@ -157,6 +163,7 @@ import {
 	defaultLibraryItemTitle,
 	textWithoutFirstLink,
 	formatWhatsAppPhone,
+	whatsAppIdDigits,
 	getStoryMediaEmbed,
 	groupConsecutiveImageMessages,
 	groupSenderIdentity,
@@ -237,6 +244,7 @@ import {
 import './wa-story-panel.css';
 import './wa-ui.css';
 import { useMenuKeyboard } from './wa-ui-menu';
+import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
 import {
 	downloadContactVcard,
 	extractRawVcardFromMessage,
@@ -2413,10 +2421,224 @@ function ContactMessageCard({
 	);
 }
 
+/** 3×3 OpenStreetMap tiles positioned so the exact coordinate sits at the centre. */
+function locationTileMosaic(lat, lng, zoom = 16) {
+	if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+	const n = 2 ** zoom;
+	const latRad = (lat * Math.PI) / 180;
+	const fx = ((lng + 180) / 360) * n;
+	const fy = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
+	if (!Number.isFinite(fx) || !Number.isFinite(fy)) return null;
+	const tx = Math.floor(fx);
+	const ty = Math.floor(fy);
+	const tiles = [];
+	for (let dy = -1; dy <= 1; dy += 1) {
+		for (let dx = -1; dx <= 1; dx += 1) {
+			const x = (((tx + dx) % n) + n) % n;
+			const y = ty + dy;
+			if (y < 0 || y >= n) continue;
+			tiles.push({
+				key: `${dx}:${dy}`,
+				src: `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`,
+				left: (dx + 1) * 256,
+				top: (dy + 1) * 256,
+			});
+		}
+	}
+	// Pixel position of the point inside the 768×768 mosaic.
+	return { tiles, pointX: (fx - tx + 1) * 256, pointY: (fy - ty + 1) * 256 };
+}
+
+function formatCoordinate(value, positive, negative) {
+	const abs = Math.abs(value);
+	const degrees = Math.floor(abs);
+	const minutesFloat = (abs - degrees) * 60;
+	const minutes = Math.floor(minutesFloat);
+	const seconds = ((minutesFloat - minutes) * 60).toFixed(1);
+	return `${degrees}°${minutes}′${seconds}″ ${value >= 0 ? positive : negative}`;
+}
+
+const LOCATION_NEARBY = [
+	{ id: 'restaurants', icon: Utensils, en: 'Restaurants', ar: 'مطاعم', query: 'restaurants' },
+	{ id: 'cafes', icon: Coffee, en: 'Cafés', ar: 'كافيهات', query: 'cafes' },
+	{ id: 'pharmacy', icon: Pill, en: 'Pharmacies', ar: 'صيدليات', query: 'pharmacy' },
+	{ id: 'atm', icon: Banknote, en: 'ATMs', ar: 'ماكينات ATM', query: 'atm' },
+	{ id: 'fuel', icon: Fuel, en: 'Gas', ar: 'بنزينة', query: 'gas station' },
+];
+
+/** In-chat map: live Google Maps (no API key needed for the embed) + place details. */
+function WaLocationViewer({ location, title, address, isLive, locale = 'en', onClose }) {
+	const ar = String(locale).toLowerCase().startsWith('ar');
+	const lat = Number(location.latitude);
+	const lng = Number(location.longitude);
+	const [satellite, setSatellite] = useState(false);
+	const [nearby, setNearby] = useState('');
+	const [copied, setCopied] = useState('');
+	const onCloseRef = useRef(onClose);
+	onCloseRef.current = onClose;
+	const coords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+	const point = `${lat},${lng}`;
+	const nearbyItem = LOCATION_NEARBY.find(item => item.id === nearby);
+	const query = nearbyItem ? `${nearbyItem.query} near ${point}` : point;
+	const embedSrc = `https://www.google.com/maps?q=${encodeURIComponent(query)}&ll=${point}&z=${nearbyItem ? 15 : 17}&t=${satellite ? 'k' : 'm'}&hl=${ar ? 'ar' : 'en'}&output=embed`;
+	const openHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(point)}`;
+	const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(point)}`;
+
+	useEffect(() => {
+		const onKey = event => {
+			if (event.key === 'Escape') onCloseRef.current?.();
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, []);
+
+	const copyValue = async (value, key) => {
+		try {
+			await navigator.clipboard.writeText(value);
+			setCopied(key);
+			window.setTimeout(() => setCopied(current => (current === key ? '' : current)), 1400);
+		} catch {
+			toast.error(ar ? 'تعذر النسخ' : 'Could not copy');
+		}
+	};
+
+	return createPortal(
+		<div className="wa-locv-scrim" role="presentation" onClick={() => onCloseRef.current?.()}>
+			<div
+				className="wa-locv"
+				role="dialog"
+				aria-modal="true"
+				aria-label={title}
+				dir={ar ? 'rtl' : 'ltr'}
+				onClick={event => event.stopPropagation()}
+			>
+				<div className="wa-locv__map">
+					<iframe
+						key={embedSrc}
+						title={title}
+						src={embedSrc}
+						loading="lazy"
+						referrerPolicy="no-referrer-when-downgrade"
+						allowFullScreen
+					/>
+					<div className="wa-locv__map-tools">
+						<div className="wa-locv__seg" role="group" aria-label={ar ? 'نوع الخريطة' : 'Map type'}>
+							<button type="button" className={!satellite ? 'is-active' : ''} onClick={() => setSatellite(false)}>
+								{ar ? 'خريطة' : 'Map'}
+							</button>
+							<button type="button" className={satellite ? 'is-active' : ''} onClick={() => setSatellite(true)}>
+								{ar ? 'قمر صناعي' : 'Satellite'}
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<aside className="wa-locv__side">
+					<header className="wa-locv__head">
+						<span className="wa-locv__head-icon" aria-hidden="true">
+							<MapPin size={18} strokeWidth={2.2} />
+						</span>
+						<div className="min-w-0 flex-1">
+							<h2 className="wa-locv__title" dir="auto">
+								{title}
+							</h2>
+							{isLive ? (
+								<span className="wa-locv__live">
+									<span aria-hidden="true" />
+									{ar ? 'موقع مباشر' : 'Live location'}
+								</span>
+							) : null}
+						</div>
+						<button type="button" className="wa-locv__close" onClick={() => onCloseRef.current?.()} aria-label={ar ? 'إغلاق' : 'Close'}>
+							<X size={18} strokeWidth={2.2} />
+						</button>
+					</header>
+
+					<div className="wa-locv__body wa-ui-scroll nice-scroll">
+						{address ? (
+							<p className="wa-locv__address" dir="auto">
+								{address}
+							</p>
+						) : null}
+
+						<div className="wa-locv__actions">
+							<a className="wa-locv__primary" href={directionsHref} target="_blank" rel="noopener noreferrer">
+								<Navigation size={16} strokeWidth={2.2} />
+								{ar ? 'الاتجاهات' : 'Directions'}
+							</a>
+							<a className="wa-locv__secondary" href={openHref} target="_blank" rel="noopener noreferrer">
+								<ExternalLink size={15} strokeWidth={2.2} />
+								{ar ? 'افتح في Google Maps' : 'Open in Google Maps'}
+							</a>
+						</div>
+
+						<section className="wa-locv__block">
+							<p className="wa-locv__label">{ar ? 'الإحداثيات' : 'Coordinates'}</p>
+							<button type="button" className="wa-locv__coord" onClick={() => void copyValue(coords, 'dec')}>
+								<span dir="ltr">{coords}</span>
+								{copied === 'dec' ? <Check size={14} strokeWidth={2.6} /> : <Copy size={14} strokeWidth={2.2} />}
+							</button>
+							<p className="wa-locv__dms" dir="ltr">
+								{formatCoordinate(lat, 'N', 'S')} · {formatCoordinate(lng, 'E', 'W')}
+							</p>
+							<button type="button" className="wa-locv__link" onClick={() => void copyValue(openHref, 'link')}>
+								{copied === 'link' ? <Check size={13} strokeWidth={2.6} /> : <Copy size={13} strokeWidth={2.2} />}
+								{copied === 'link'
+									? ar
+										? 'اتنسخ اللينك'
+										: 'Link copied'
+									: ar
+										? 'انسخ لينك الموقع'
+										: 'Copy map link'}
+							</button>
+						</section>
+
+						<section className="wa-locv__block">
+							<p className="wa-locv__label">{ar ? 'إيه اللي جنبه؟' : 'What’s nearby'}</p>
+							<div className="wa-locv__chips">
+								<button
+									type="button"
+									className={`wa-locv__chip${!nearby ? ' is-active' : ''}`}
+									onClick={() => setNearby('')}
+								>
+									<MapPin size={14} strokeWidth={2.2} />
+									{ar ? 'المكان' : 'The pin'}
+								</button>
+								{LOCATION_NEARBY.map(item => {
+									const Icon = item.icon;
+									return (
+										<button
+											key={item.id}
+											type="button"
+											className={`wa-locv__chip${nearby === item.id ? ' is-active' : ''}`}
+											onClick={() => setNearby(current => (current === item.id ? '' : item.id))}
+										>
+											<Icon size={14} strokeWidth={2.2} />
+											{ar ? item.ar : item.en}
+										</button>
+									);
+								})}
+							</div>
+							<p className="wa-locv__hint">
+								{ar
+									? 'اضغط على أي مكان في الخريطة عشان تشوف تفاصيله.'
+									: 'Click any place on the map to see its details.'}
+							</p>
+						</section>
+					</div>
+				</aside>
+			</div>
+		</div>,
+		document.body,
+	);
+}
+
 function LocationMessage({ message, location, type, locale = 'en', conversationId = null }) {
 	const [mapFailed, setMapFailed] = useState(false);
 	const [opening, setOpening] = useState(false);
-	const resolved = location || whatsAppLocationFromMessage(message);
+	const [fetchedLocation, setFetchedLocation] = useState(null);
+	const [viewerOpen, setViewerOpen] = useState(false);
+	const resolved = fetchedLocation || location || whatsAppLocationFromMessage(message);
 	const isLive =
 		Boolean(resolved?.isLive) ||
 		['live_location', 'livelocation'].includes(String(type || message?.type || '').toLowerCase());
@@ -2427,123 +2649,159 @@ function LocationMessage({ message, location, type, locale = 'en', conversationI
 			: 'موقع'
 		: isLive
 			? 'Live location'
-			: 'Location';
+			: 'Pinned location';
 	const lat = Number(resolved?.latitude);
 	const lng = Number(resolved?.longitude);
 	const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
 	const title = String(resolved?.name || '').trim() || fallbackLabel;
 	const address = String(resolved?.address || '').trim();
-	const href = whatsAppLocationHref(message, resolved);
-	const subtitle =
-		address ||
-		(arabic ? 'عرض على الخريطة' : 'Open in Maps');
 	const preview = resolved?.previewDataUrl;
-	const tileUrl = hasCoords && !preview ? openStreetMapTileUrl(lat, lng) : null;
-	const showPin = Boolean((tileUrl && !mapFailed) || (!preview && !tileUrl) || (preview && mapFailed));
-	const openMaps = async event => {
-		event.preventDefault();
-		event.stopPropagation();
-		let mapsHref = href;
+	const mosaic = hasCoords ? locationTileMosaic(lat, lng, 16) : null;
+	const directionsHref = hasCoords
+		? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lng}`)}`
+		: null;
+
+	// Coordinates are sometimes only on the server (older rows): fetch them, then open the map.
+	const openViewer = async event => {
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
+		if (hasCoords) {
+			setViewerOpen(true);
+			return;
+		}
+		const href = whatsAppLocationHref(message, resolved);
 		if (
-			!mapsHref &&
 			conversationId &&
 			message?.id &&
 			!String(message.id).startsWith('live:') &&
 			!String(message.id).startsWith('pending:')
 		) {
 			setOpening(true);
-			let authFailed = false;
-			let apiFailed = false;
-			let notConnected = false;
 			try {
 				const { data } = await api.get(
 					`/whatsapp/conversations/${conversationId}/messages/${message.id}/location`,
 					{ timeout: 45000 },
 				);
-				const location = data?.location || data?.data?.location || null;
-				mapsHref = whatsAppLocationHref({ ...message, location }, location);
+				const fetched = data?.location || data?.data?.location || null;
+				if (Number.isFinite(Number(fetched?.latitude)) && Number.isFinite(Number(fetched?.longitude))) {
+					setFetchedLocation({ ...(resolved || {}), ...fetched });
+					setViewerOpen(true);
+					return;
+				}
 			} catch (error) {
-				authFailed = Number(error?.response?.status) === 401;
-				const apiMessage = String(
-					error?.response?.data?.message || error?.message || '',
-				).toLowerCase();
-				notConnected = apiMessage.includes('not connected');
-				apiFailed = true;
-				mapsHref = null;
+				if (Number(error?.response?.status) === 401) return;
+				const apiMessage = String(error?.response?.data?.message || error?.message || '').toLowerCase();
+				if (apiMessage.includes('not connected') && !href) {
+					toast.error(
+						arabic ? 'اربط واتساب أولاً ثم أعد فتح الموقع' : 'Link WhatsApp first, then open this location again',
+					);
+					return;
+				}
 			} finally {
 				setOpening(false);
 			}
-			if (!mapsHref && authFailed) return;
-			if (!mapsHref && notConnected) {
-				toast.error(
-					arabic
-						? 'اربط واتساب أولاً ثم أعد فتح الموقع'
-						: 'Link WhatsApp first, then open this location again',
-				);
-				return;
-			}
-			if (!mapsHref && apiFailed) {
-				toast.error(
-					arabic
-						? 'إحداثيات هذه الرسالة غير محفوظة. اطلب إرسال الموقع مرة أخرى'
-						: 'This location was not saved. Ask them to send it again',
-				);
-				return;
-			}
 		}
-		if (!mapsHref) {
-			toast.error(arabic ? 'لا يمكن فتح هذا الموقع' : 'This location cannot be opened');
+		if (href) {
+			window.open(href, '_blank', 'noopener,noreferrer');
 			return;
 		}
-		window.open(mapsHref, '_blank', 'noopener,noreferrer');
+		toast.error(
+			arabic
+				? 'إحداثيات هذه الرسالة غير محفوظة. اطلب إرسال الموقع مرة أخرى'
+				: 'This location was not saved. Ask them to send it again',
+		);
 	};
-	const map = (
-		<div className="wa-location-map">
-			{preview && !mapFailed ? (
-				<img
-					src={preview}
-					alt=""
-					loading="lazy"
-					className="wa-location-map-media"
-					onError={() => setMapFailed(true)}
-				/>
-			) : tileUrl && !mapFailed ? (
-				<img
-					src={tileUrl}
-					alt=""
-					loading="lazy"
-					className="wa-location-map-media"
-					onError={() => setMapFailed(true)}
-				/>
-			) : (
-				<div className="wa-location-map-fallback" aria-hidden="true">
-					<span className="wa-location-map-roads" />
-				</div>
-			)}
-			{showPin ? (
-				<span className="wa-location-map-pin" aria-hidden="true">
-					<MapPin size={26} strokeWidth={2.2} />
+
+	return (
+		<div className={`wa-loc${isLive ? ' is-live' : ''}`} onPointerDown={event => event.stopPropagation()}>
+			<button
+				type="button"
+				className="wa-loc__map"
+				onClick={event => void openViewer(event)}
+				disabled={opening}
+				aria-label={arabic ? `اعرض ${title} على الخريطة` : `Show ${title} on the map`}
+			>
+				{preview && (!mosaic || mapFailed) ? (
+					<img src={preview} alt="" loading="lazy" className="wa-loc__preview" />
+				) : mosaic && !mapFailed ? (
+					<span
+						className="wa-loc__tiles"
+						style={{ left: `calc(50% - ${mosaic.pointX}px)`, top: `calc(50% - ${mosaic.pointY}px)` }}
+						aria-hidden="true"
+					>
+						{mosaic.tiles.map(tile => (
+							<img
+								key={tile.key}
+								src={tile.src}
+								alt=""
+								loading="lazy"
+								draggable={false}
+								style={{ left: tile.left, top: tile.top }}
+								onError={() => setMapFailed(true)}
+							/>
+						))}
+					</span>
+				) : (
+					<span className="wa-loc__fallback" aria-hidden="true" />
+				)}
+				<span className="wa-loc__pin" aria-hidden="true">
+					<MapPin size={30} strokeWidth={2.2} fill="currentColor" />
 				</span>
+				{isLive ? (
+					<span className="wa-loc__live">
+						<span aria-hidden="true" />
+						{arabic ? 'مباشر' : 'Live'}
+					</span>
+				) : null}
+				<span className="wa-loc__open">
+					{opening ? <Loader2 size={13} className="animate-spin" /> : <Maximize2 size={13} strokeWidth={2.4} />}
+					{hasCoords
+						? arabic
+							? 'افتح الخريطة'
+							: 'Open map'
+						: arabic
+							? 'حمّل الموقع'
+							: 'Load location'}
+				</span>
+			</button>
+			<div className="wa-loc__body">
+				<p className="wa-loc__title" dir="auto">
+					{title}
+				</p>
+				{address ? (
+					<p className="wa-loc__address" dir="auto">
+						{address}
+					</p>
+				) : null}
+				{hasCoords ? (
+					<p className="wa-loc__coords" dir="ltr">
+						{lat.toFixed(5)}, {lng.toFixed(5)}
+					</p>
+				) : null}
+			</div>
+			{hasCoords ? (
+				<div className="wa-loc__actions">
+					<button type="button" onClick={event => void openViewer(event)}>
+						<MapPin size={14} strokeWidth={2.2} />
+						{arabic ? 'عرض' : 'View'}
+					</button>
+					<a href={directionsHref} target="_blank" rel="noopener noreferrer" onClick={event => event.stopPropagation()}>
+						<Navigation size={14} strokeWidth={2.2} />
+						{arabic ? 'الاتجاهات' : 'Directions'}
+					</a>
+				</div>
+			) : null}
+			{viewerOpen && hasCoords && typeof document !== 'undefined' ? (
+				<WaLocationViewer
+					location={{ latitude: lat, longitude: lng }}
+					title={title}
+					address={address}
+					isLive={isLive}
+					locale={locale}
+					onClose={() => setViewerOpen(false)}
+				/>
 			) : null}
 		</div>
-	);
-	return (
-		<button
-			type="button"
-			className="wa-location-link"
-			onPointerDown={event => event.stopPropagation()}
-			onClick={openMaps}
-			disabled={opening}
-			aria-label={subtitle || title}
-		>
-			<div className="wa-location-card">
-				{map}
-				<div className="wa-location-copy">
-					<p className="wa-location-title">{title}</p>
-					{subtitle ? <p className="wa-location-sub">{subtitle}</p> : null}
-				</div>
-			</div>
-		</button>
 	);
 }
 
@@ -4195,8 +4453,7 @@ function VoiceLoadingIcon() {
 	);
 }
 
-function VoicePlaybackButton({ playing, loading, failed, onClick, labels = {}, progress = 0 }) {
-	const ringProgress = Math.max(0, Math.min(1, Number(progress) || 0));
+function VoicePlaybackButton({ playing, loading, failed, onClick, labels = {} }) {
 	const ar = String(labels.retry || labels.tapToRetry || '').includes('إعادة') ||
 		String(labels.tapToRetry || '').includes('اضغط');
 	const label = loading
@@ -4213,21 +4470,7 @@ function VoicePlaybackButton({ playing, loading, failed, onClick, labels = {}, p
 			aria-label={label}
 			className={`wa-voice-play wa-vp grid shrink-0 place-items-center ${playing ? 'is-playing' : ''} ${loading ? 'is-loading' : ''} ${failed ? 'is-failed' : ''}`}
 		>
-			<svg className="wa-vp__ring" viewBox="0 0 44 44" aria-hidden="true">
-				<circle className="wa-vp__track" cx="22" cy="22" r="20.5" />
-				<circle
-					className="wa-vp__progress"
-					cx="22"
-					cy="22"
-					r="20.5"
-					pathLength="100"
-					strokeDasharray="100"
-					strokeDashoffset={100 - ringProgress * 100}
-				/>
-			</svg>
-			<span className="wa-vp__disc">
-				{loading ? <VoiceLoadingIcon /> : playing ? <VoicePauseIcon /> : <VoicePlayIcon />}
-			</span>
+			{loading ? <VoiceLoadingIcon /> : playing ? <VoicePauseIcon /> : <VoicePlayIcon />}
 		</button>
 	);
 }
@@ -4263,10 +4506,10 @@ function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
 					);
 				})}
 			</span>
-			{!failed && clamped > 0.008 && clamped < 0.995 ? (
+			{!failed ? (
 				<span
 					className={`wa-voice-thumb ${mine ? 'is-outgoing' : 'is-incoming'}`}
-					style={{ left: `${clamped * 100}%` }}
+					style={{ left: `calc(6px + (100% - 12px) * ${clamped})` }}
 				/>
 			) : null}
 		</button>
@@ -4803,6 +5046,203 @@ function WaGroupsBrowser({
 	);
 }
 
+/**
+ * WhatsApp-style reaction pill under a bubble: the top emojis + a total. Clicking it
+ * opens "who reacted" with a tab per emoji; your own row removes your reaction.
+ */
+function WaReactionSummary({ reactions, mine, locale, resolve, disabled = false, onRemoveMine }) {
+	const ar = locale === 'ar';
+	const [open, setOpen] = useState(false);
+	const [tab, setTab] = useState('all');
+	const [position, setPosition] = useState(null);
+	const pillRef = useRef(null);
+	const popRef = useRef(null);
+
+	const groups = useMemo(() => {
+		const map = new Map();
+		for (const reaction of reactions) {
+			if (!map.has(reaction.emoji)) map.set(reaction.emoji, []);
+			map.get(reaction.emoji).push(reaction);
+		}
+		return [...map.entries()]
+			.map(([emoji, list]) => ({ emoji, list }))
+			.sort((a, b) => b.list.length - a.list.length);
+	}, [reactions]);
+	const people = useMemo(
+		() =>
+			reactions
+				.map(reaction => ({ ...reaction, person: resolve(reaction.actorKey) }))
+				// You first, then newest first, like WhatsApp.
+				.sort((a, b) => {
+					if (a.actorKey === 'me') return -1;
+					if (b.actorKey === 'me') return 1;
+					return new Date(b.reactedAt || 0).getTime() - new Date(a.reactedAt || 0).getTime();
+				}),
+		[reactions, resolve],
+	);
+	const total = reactions.length;
+	const iReacted = reactions.some(reaction => reaction.actorKey === 'me');
+	const visiblePeople = tab === 'all' ? people : people.filter(item => item.emoji === tab);
+	const hoverTitle = people
+		.slice(0, 8)
+		.map(item => `${item.emoji} ${item.person.name}`)
+		.join('\n') + (people.length > 8 ? `\n+${people.length - 8}` : '');
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const place = () => {
+			const rect = pillRef.current?.getBoundingClientRect();
+			if (!rect) return;
+			const width = Math.min(300, window.innerWidth - 16);
+			const height = Math.min(360, 112 + people.length * 52);
+			const below = window.innerHeight - rect.bottom;
+			const top = below > height + 12 || below > rect.top ? rect.bottom + 6 : rect.top - height - 6;
+			let left = mine ? rect.right - width : rect.left;
+			left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+			setPosition({ top: Math.max(8, top), left, width, maxHeight: height });
+		};
+		place();
+		const onPointer = event => {
+			if (pillRef.current?.contains(event.target) || popRef.current?.contains(event.target)) return;
+			setOpen(false);
+		};
+		const onKey = event => {
+			if (event.key === 'Escape') setOpen(false);
+		};
+		document.addEventListener('pointerdown', onPointer);
+		document.addEventListener('keydown', onKey);
+		window.addEventListener('resize', place);
+		window.addEventListener('scroll', place, true);
+		return () => {
+			document.removeEventListener('pointerdown', onPointer);
+			document.removeEventListener('keydown', onKey);
+			window.removeEventListener('resize', place);
+			window.removeEventListener('scroll', place, true);
+		};
+	}, [open, mine, people.length]);
+
+	useEffect(() => {
+		if (tab !== 'all' && !groups.some(group => group.emoji === tab)) setTab('all');
+	}, [groups, tab]);
+
+	if (!total) return null;
+
+	return (
+		<div className={`wa-message-reactions wa-rx ${mine ? 'is-outgoing' : 'is-incoming'}`}>
+			<button
+				ref={pillRef}
+				type="button"
+				className={`wa-rx__pill${iReacted ? ' is-mine' : ''}${open ? ' is-open' : ''}`}
+				title={hoverTitle}
+				aria-haspopup="dialog"
+				aria-expanded={open}
+				aria-label={ar ? `${total} تفاعل، اعرض مين تفاعل` : `${total} reactions, see who reacted`}
+				onPointerDown={event => event.stopPropagation()}
+				onClick={event => {
+					event.preventDefault();
+					event.stopPropagation();
+					setTab('all');
+					setOpen(current => !current);
+				}}
+			>
+				<span className="wa-rx__emojis" aria-hidden="true">
+					{groups.slice(0, 3).map(group => (
+						<span key={group.emoji} className="wa-rx__emoji">
+							{group.emoji}
+						</span>
+					))}
+				</span>
+				{total > 1 ? <span className="wa-rx__total">{total}</span> : null}
+			</button>
+			{open && position && typeof document !== 'undefined'
+				? createPortal(
+						<div
+							ref={popRef}
+							className="wa-rx-pop"
+							role="dialog"
+							aria-label={ar ? 'التفاعلات' : 'Reactions'}
+							dir={ar ? 'rtl' : 'ltr'}
+							style={{ top: position.top, left: position.left, width: position.width, maxHeight: position.maxHeight }}
+							onPointerDown={event => event.stopPropagation()}
+							onClick={event => event.stopPropagation()}
+						>
+							<div className="wa-rx-pop__tabs" role="tablist">
+								<button
+									type="button"
+									role="tab"
+									aria-selected={tab === 'all'}
+									className={`wa-rx-pop__tab${tab === 'all' ? ' is-active' : ''}`}
+									onClick={() => setTab('all')}
+								>
+									{ar ? 'الكل' : 'All'}
+									<span>{total}</span>
+								</button>
+								{groups.map(group => (
+									<button
+										key={group.emoji}
+										type="button"
+										role="tab"
+										aria-selected={tab === group.emoji}
+										className={`wa-rx-pop__tab${tab === group.emoji ? ' is-active' : ''}`}
+										onClick={() => setTab(group.emoji)}
+									>
+										<span className="wa-rx-pop__tab-emoji">{group.emoji}</span>
+										<span>{group.list.length}</span>
+									</button>
+								))}
+							</div>
+							<ul className="wa-rx-pop__list wa-ui-scroll nice-scroll">
+								{visiblePeople.map(item => {
+									const isMe = item.actorKey === 'me';
+									const row = (
+										<>
+											<Avatar label={item.person.name} size={9} src={item.person.avatar || ''} />
+											<span className="wa-rx-pop__who">
+												<span className="wa-rx-pop__name wa-privacy-identity" dir="auto">
+													{item.person.name}
+												</span>
+												<span className="wa-rx-pop__sub" dir={item.person.sub && !isMe ? 'ltr' : undefined}>
+													{isMe
+														? ar
+															? 'اضغط عشان تشيل تفاعلك'
+															: 'Tap to remove'
+														: item.person.sub || ''}
+												</span>
+											</span>
+											<span className="wa-rx-pop__emoji" aria-hidden="true">
+												{item.emoji}
+											</span>
+										</>
+									);
+									return (
+										<li key={item.actorKey}>
+											{isMe ? (
+												<button
+													type="button"
+													className="wa-rx-pop__row is-me"
+													disabled={disabled}
+													onClick={() => {
+														setOpen(false);
+														onRemoveMine?.(item.emoji);
+													}}
+												>
+													{row}
+												</button>
+											) : (
+												<div className="wa-rx-pop__row">{row}</div>
+											)}
+										</li>
+									);
+								})}
+							</ul>
+						</div>,
+						document.body,
+					)
+				: null}
+		</div>
+	);
+}
+
 function VoiceAvatar({ label = '?', src = '', mine = false }) {
 	return (
 		<div className={`wa-voice-avatar-wrap ${mine ? 'is-outgoing' : 'is-incoming'}`}>
@@ -5010,6 +5450,8 @@ function VoiceMessage({
 	onDownload,
 	downloading = false,
 	menuLabels = {},
+	messageId = '',
+	messageStatus = '',
 }) {
 	const audioRef = useRef(null);
 	const containerRef = useRef(null);
@@ -5024,6 +5466,13 @@ function VoiceMessage({
 	if (!playerTokenRef.current) playerTokenRef.current = nextVoicePlayerToken();
 	const startPlaybackRef = useRef(null);
 	const [playing, setPlaying] = useState(false);
+	// Outgoing: the recipient's real "played" receipt. Incoming: whether this browser
+	// has listened (WhatsApp does not expose that to linked devices).
+	const playedLocally = useVoicePlayed(mine ? '' : messageId);
+	const played = mine ? String(messageStatus || '').toLowerCase() === 'played' : playedLocally;
+	useEffect(() => {
+		if (playing && !mine) markVoicePlayed(messageId);
+	}, [playing, mine, messageId]);
 	const [playLoading, setPlayLoading] = useState(false);
 	const [loadFailed, setLoadFailed] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
@@ -5673,7 +6122,7 @@ function VoiceMessage({
 	return (
 		<div
 			ref={containerRef}
-			className={`wa-voice-message ${mine ? 'is-outgoing' : 'is-incoming'} ${loadFailed ? 'is-failed' : ''} ${showPlaySpinner ? 'is-loading' : ''}`}
+			className={`wa-voice-message ${mine ? 'is-outgoing' : 'is-incoming'} ${played ? 'is-played' : 'is-unplayed'} ${playing ? 'is-playing' : ''} ${loadFailed ? 'is-failed' : ''} ${showPlaySpinner ? 'is-loading' : ''}`}
 		>
 			<audio
 				ref={audioRef}
@@ -5690,7 +6139,6 @@ function VoiceMessage({
 							failed={loadFailed}
 							onClick={() => void toggle()}
 							labels={labels}
-							progress={progress}
 						/>
 						<div className="wa-voice-main">
 							<div className="wa-voice-main-row">
@@ -6363,6 +6811,8 @@ function ChatVideoPlayer({
 	const renderVideoWrap = fullscreen => (
 		<div
 			className={`wa-video-wrap ${playing ? 'is-playing' : 'is-paused'} ${
+				!playing && currentTime < 0.05 && !fullscreen ? 'is-fresh' : ''
+			} ${
 				fullscreen ? 'is-expanded' : ''
 			} ${hasReservedAspect ? (reservedPortrait ? 'is-portrait' : 'is-landscape') : ''} ${
 				selectMode ? 'pointer-events-none' : ''
@@ -6450,9 +6900,15 @@ function ChatVideoPlayer({
 					onClick={togglePlayback}
 				>
 					<span className="wa-video-play__icon" aria-hidden="true">
-						<Play size={22} strokeWidth={2.2} fill="currentColor" className="ms-0.5" />
+						<Play size={24} strokeWidth={2.2} fill="currentColor" className="ms-0.5" />
 					</span>
 				</button>
+			) : null}
+			{!selectMode && !playing && currentTime < 0.05 && !fullscreen && duration > 0 ? (
+				<span className="wa-video-chip" aria-hidden="true">
+					<Video size={13} strokeWidth={2.4} />
+					{formatClock(duration)}
+				</span>
 			) : null}
 			{!selectMode ? renderControls(fullscreen) : null}
 		</div>
@@ -6501,6 +6957,8 @@ export function MediaAttachment({
 	sessionReady = true,
 	messageRaw = null,
 	messageDurationSeconds = 0,
+	messageId = '',
+	messageStatus = '',
 	selectMode = false,
 	avatarLabel = '?',
 	avatarSrc = '',
@@ -6871,6 +7329,8 @@ export function MediaAttachment({
 				attachmentType={type || 'ptt'}
 				avatarLabel={avatarLabel}
 				avatarSrc={avatarSrc}
+				messageId={messageId}
+				messageStatus={messageStatus}
 				onTranscribe={typeof onTranscribe === 'function' ? onTranscribe : null}
 				onEditAsVoice={
 					typeof onSendAsVoice === 'function' ? () => onSendAsVoice(attachment) : null
@@ -7396,6 +7856,8 @@ function MessageAttachments({
 					selectMode={selectMode}
 					messageRaw={messageRaw}
 					messageDurationSeconds={voiceDuration}
+					messageId={message?.id || ''}
+					messageStatus={message?.status || ''}
 					avatarLabel={avatarLabel}
 					avatarSrc={avatarSrc}
 					onTranscribe={onTranscribe}
@@ -11265,6 +11727,40 @@ function WhatsAppWorkspaceContent() {
 				participants: selectedConversation?.group?.participants || [],
 			}),
 		[effectiveConversations, effectiveMessages, selectedConversation],
+	);
+	const resolveReactor = useCallback(
+		actorKey => {
+			const ar = locale === 'ar';
+			if (actorKey === 'me') {
+				return {
+					name: ar ? 'إنت' : 'You',
+					sub: '',
+					avatar: railAvatarUrl || '',
+				};
+			}
+			const raw = String(actorKey || '');
+			const isLid = /@lid$/i.test(raw);
+			// Drop the device suffix (2010…:12@s.whatsapp.net) before matching.
+			const digits = whatsAppIdDigits(raw.split('@')[0].split(':')[0]);
+			const hit = mentionDirectory instanceof Map ? mentionDirectory.get(digits) : null;
+			const isGroupChat =
+				selectedConversation?.type === 'group' ||
+				String(selectedConversation?.providerChatId || '').endsWith('@g.us');
+			// In a one-to-one chat the only other person who can react is the contact.
+			let name = String(hit?.name || '').trim();
+			if (!name && !isGroupChat && selectedConversation) name = conversationTitle(selectedConversation);
+			const phoneDigits = String(hit?.phone || '').replace(/\D/g, '') || (isLid ? '' : digits);
+			const phone = phoneDigits ? formatWhatsAppPhone(phoneDigits) : '';
+			const avatar =
+				inboxAvatarForWaId(effectiveConversations, raw) ||
+				(!isGroupChat && selectedConversation ? conversationAvatarUrl(selectedConversation) : '');
+			return {
+				name: name || phone || (ar ? 'جهة غير معروفة' : 'Unknown contact'),
+				sub: name && phone && phone !== name ? phone : '',
+				avatar,
+			};
+		},
+		[effectiveConversations, locale, mentionDirectory, railAvatarUrl, selectedConversation],
 	);
 	const reactionPickerMessage = useMemo(() => {
 		if (!reactionPickerMessageId) return null;
@@ -24119,24 +24615,83 @@ function WhatsAppWorkspaceContent() {
 																					/>
 																				) : null}
 																				{messageTranslations[message.id]?.open ? (
-																					<div className="wa-message-translation" dir="rtl">
-																						<span className="wa-message-translation-label">
-																							{locale === 'ar' ? 'بالعربي' : 'Arabic'}
-																						</span>
-																						{messageTranslations[message.id]?.loading ? (
-																							<span className="wa-message-translation-status">
-																								<Loader2 size={12} className="animate-spin" />
-																							</span>
-																						) : messageTranslations[message.id]?.error ? (
-																							<span className="wa-message-translation-error">
-																								{messageTranslations[message.id].error}
-																							</span>
-																						) : (
-																							<span className="wa-message-translation-text">
-																								{messageTranslations[message.id]?.text}
-																							</span>
-																						)}
-																					</div>
+																					(() => {
+																						const translation = messageTranslations[message.id] || {};
+																						const ar = locale === 'ar';
+																						return (
+																							<div
+																								className={`wa-tr${translation.loading ? ' is-loading' : ''}${translation.error ? ' is-error' : ''}`}
+																								onClick={event => event.stopPropagation()}
+																							>
+																								<div className="wa-tr__head">
+																									<span className="wa-tr__badge">
+																										<Languages size={13} strokeWidth={2.2} aria-hidden="true" />
+																										{ar ? 'مترجمة' : 'Translated'}
+																										<span className="wa-tr__langs" dir="ltr">
+																											EN <span aria-hidden="true">→</span> AR
+																										</span>
+																									</span>
+																									<span className="wa-tr__actions">
+																										{translation.text && !translation.loading ? (
+																											<button
+																												type="button"
+																												className="wa-tr__btn"
+																												title={ar ? 'نسخ الترجمة' : 'Copy translation'}
+																												aria-label={ar ? 'نسخ الترجمة' : 'Copy translation'}
+																												onClick={() => {
+																													void navigator.clipboard
+																														?.writeText(translation.text)
+																														.then(() => toast.success(ar ? 'اتنسخت الترجمة' : 'Translation copied'))
+																														.catch(() => {});
+																												}}
+																											>
+																												<Copy size={13} strokeWidth={2.2} />
+																											</button>
+																										) : null}
+																										<button
+																											type="button"
+																											className="wa-tr__btn"
+																											title={ar ? 'إخفاء الترجمة' : 'Hide translation'}
+																											aria-label={ar ? 'إخفاء الترجمة' : 'Hide translation'}
+																											onClick={() =>
+																												setMessageTranslations(prev => ({
+																													...prev,
+																													[message.id]: { ...prev[message.id], open: false },
+																												}))
+																											}
+																										>
+																											<X size={13} strokeWidth={2.4} />
+																										</button>
+																									</span>
+																								</div>
+																								{translation.loading ? (
+																									<div className="wa-tr__skeleton" role="status" aria-label={ar ? 'جارٍ الترجمة' : 'Translating'}>
+																										<i />
+																										<i />
+																									</div>
+																								) : translation.error ? (
+																									<div className="wa-tr__error" role="alert">
+																										<span>{translation.error}</span>
+																										<button
+																											type="button"
+																											className="wa-tr__retry"
+																											onClick={() => void toggleIncomingTranslation(message, captionText)}
+																										>
+																											<RefreshCw size={12} strokeWidth={2.4} />
+																											{ar ? 'حاول تاني' : 'Retry'}
+																										</button>
+																									</div>
+																								) : (
+																									<div className="wa-tr__text" dir="rtl" lang="ar">
+																										<WhatsAppFormattedText
+																											text={translation.text || ''}
+																											mentionDirectory={mentionDirectory}
+																										/>
+																									</div>
+																								)}
+																							</div>
+																						);
+																					})()
 																				) : null}
 																				<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
 																					{message.isStarred && <Star size={11} fill="currentColor" />}
@@ -24176,49 +24731,14 @@ function WhatsAppWorkspaceContent() {
 																		</div>
 																	)}
 																	{normalizeWhatsAppReactions(message.reactions).length > 0 && (
-																		<div className={`wa-message-reactions ${mine ? 'is-outgoing' : 'is-incoming'}`}>
-																			{Object.values(
-																				normalizeWhatsAppReactions(message.reactions).reduce((groups, reaction) => {
-																					const emoji = reaction.emoji || '';
-																					if (!emoji) return groups;
-																					if (!groups[emoji]) {
-																						groups[emoji] = { emoji, count: 0, mine: false };
-																					}
-																					groups[emoji].count += 1;
-																					if (reaction.actorKey === 'me') groups[emoji].mine = true;
-																					return groups;
-																				}, {}),
-																			).map(group => (
-																				<button
-																					key={group.emoji}
-																					type="button"
-																					disabled={reactingMessageIds.has(message.id)}
-																					title={
-																						group.mine
-																							? locale === 'ar'
-																								? 'إزالة تفاعلك'
-																								: 'Remove your reaction'
-																							: group.emoji
-																					}
-																					// The bubble starts a long-press gesture on pointerdown; a tap
-																					// on the chip is not a long press on the message.
-																					onPointerDown={event => event.stopPropagation()}
-																					// Tapping the chip is how WhatsApp toggles your own reaction off.
-																					// `reactToMessage` already treats re-picking the same emoji as a clear.
-																					onClick={event => {
-																						event.preventDefault();
-																						event.stopPropagation();
-																						if (group.mine) void reactToMessage(message, group.emoji);
-																					}}
-																					className={`wa-message-reaction-chip ${group.mine ? 'is-mine' : ''}`}
-																				>
-																					<span className="wa-message-reaction-emoji">{group.emoji}</span>
-																					{group.count > 1 && (
-																						<span className="wa-message-reaction-count">{group.count}</span>
-																					)}
-																				</button>
-																			))}
-																		</div>
+																		<WaReactionSummary
+																			reactions={normalizeWhatsAppReactions(message.reactions)}
+																			mine={mine}
+																			locale={locale}
+																			resolve={resolveReactor}
+																			disabled={reactingMessageIds.has(message.id)}
+																			onRemoveMine={emoji => void reactToMessage(message, emoji)}
+																		/>
 																	)}
 																</div>
 																{!message.optimistic &&
@@ -24365,45 +24885,26 @@ function WhatsAppWorkspaceContent() {
 									</div>
 									{messageCatchUp &&
 									messageCatchUp.conversationId === conversationId ? (
-										<div
-											className="wa-catchup-bar"
-											role="status"
-											aria-live="polite"
-											aria-busy={messageCatchUpProgress < 100}
-										>
-											<div className="wa-catchup-bar__meta">
-												<span className="wa-catchup-bar__spinner" aria-hidden="true" />
-												<span className="wa-catchup-bar__label">
-													{messageCatchUp.received > 0
-														? t.loadingNewMessagesProgress
-																.replace(
-																	'{received}',
-																	String(messageCatchUp.received),
-																)
-																.replace(
-																	'{expected}',
-																	String(messageCatchUp.expected),
-																)
-														: t.loadingNewMessages.replace(
-																'{count}',
-																String(messageCatchUp.expected),
-															)}
+										<div className="wa-catchup" role="status" aria-live="polite" aria-busy="true">
+											<span className="sr-only">
+												{t.loadingNewMessages.replace('{count}', String(messageCatchUp.expected))}
+											</span>
+											{Array.from({
+												length: Math.max(
+													1,
+													Math.min(3, Number(messageCatchUp.expected || 1) - Number(messageCatchUp.received || 0)),
+												),
+											}).map((_, index) => (
+												<span
+													key={index}
+													className="wa-catchup__bubble"
+													style={{ '--wa-catchup-w': ['62%', '44%', '54%'][index % 3] }}
+													aria-hidden="true"
+												>
+													<i />
+													<i />
 												</span>
-											</div>
-											<div
-												className="wa-catchup-bar__track"
-												aria-hidden="true"
-											>
-												<div
-													className="wa-catchup-bar__fill"
-													style={{
-														width: `${Math.max(
-															6,
-															Math.min(100, messageCatchUpProgress),
-														)}%`,
-													}}
-												/>
-											</div>
+											))}
 										</div>
 									) : null}
 									{showJumpToBottom && conversationId ? (
