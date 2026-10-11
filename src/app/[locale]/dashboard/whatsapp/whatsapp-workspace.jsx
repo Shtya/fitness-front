@@ -14002,23 +14002,29 @@ function WhatsAppWorkspaceContent() {
 			lastMessage: conversationMeta?.lastMessage || null,
 		});
 		const beginCatchUp = () => {
-			if (!catchUp.needed || starredOnly || !isCurrentRequest()) return;
+			if (starredOnly || !isCurrentRequest()) return;
+			// Decide shimmer from what is actually painted, not only the RQ/cache
+			// seed — inbox preview may already include the tip.
+			const livePlan = openChatCatchUpPlan({
+				cacheItems:
+					messagesOwnerRef.current === id
+						? conversationMessagesRef.current || []
+						: cached?.items || [],
+				unreadCount: conversationUnreadCount(conversationMeta),
+				lastMessage: conversationMeta?.lastMessage || null,
+			});
+			if (!livePlan.showUi) return;
 			setMessageCatchUp({
 				conversationId: id,
-				expected: catchUp.expected,
+				expected: livePlan.expected,
 				received: 0,
 			});
 			setMessageCatchUpProgress(8);
 		};
 		const finishCatchUp = (itemsAfter = []) => {
 			if (!isCurrentRequest()) return;
-			if (!catchUp.needed) {
-				if (messageCatchUpRef.current?.conversationId === id) {
-					setMessageCatchUp(null);
-					setMessageCatchUpProgress(0);
-				}
-				return;
-			}
+			// Only animate/finish the shimmer if it was actually shown.
+			if (messageCatchUpRef.current?.conversationId !== id) return;
 			const beforeIds = new Set(
 				(cached?.items || [])
 					.map(item => String(item?.id || ''))
@@ -14030,10 +14036,14 @@ function WhatsAppWorkspaceContent() {
 					return mid && !beforeIds.has(mid) && !mid.startsWith('inbox-preview-');
 				},
 			).length;
+			const expected = Math.max(
+				1,
+				Number(messageCatchUpRef.current?.expected) || catchUp.expected || 1,
+			);
 			setMessageCatchUp({
 				conversationId: id,
-				expected: catchUp.expected,
-				received: Math.min(catchUp.expected, Math.max(received, 0)),
+				expected,
+				received: Math.min(expected, Math.max(received, 0)),
 			});
 			setMessageCatchUpProgress(100);
 			window.setTimeout(() => {
@@ -14087,7 +14097,9 @@ function WhatsAppWorkspaceContent() {
 				}
 				if (catchUp.needed) beginCatchUp();
 			} else {
-				setLoadingMessages(true);
+				// Partial cache already painted rows — keep them visible; only the
+				// empty-pane spinner uses loadingMessages.
+				setLoadingMessages(false);
 				if (catchUp.needed) beginCatchUp();
 			}
 		} else if (starredOnly && cached?.items) {
@@ -14100,7 +14112,10 @@ function WhatsAppWorkspaceContent() {
 			scrollMessagesToBottom();
 			if (cacheIsFresh && !forceProvider) return;
 		} else {
-			setLoadingMessages(true);
+			const alreadyPainted =
+				messagesOwnerRef.current === id &&
+				(conversationMessagesRef.current?.length || 0) > 0;
+			setLoadingMessages(!alreadyPainted);
 			if (catchUp.needed) beginCatchUp();
 			// Keeps this chat's already-rendered messages (no blank flash) while
 			// dropping anything that belonged to the chat the user just left.
@@ -14470,12 +14485,46 @@ function WhatsAppWorkspaceContent() {
 				conversationsRef.current.find(item => item.id === id) ||
 				null;
 
+			let paintedForCatchUp = warmCache?.items || [];
+			if (isMessageThreadCacheComplete(warmCache)) {
+				const sorted = mergeMessages([], warmCache.items, id);
+				writeConversationMessages(id, () => sorted);
+				messagesCacheRef.current.set(cacheKey, { ...warmCache, items: sorted });
+				setHasMoreMessages(Boolean(warmCache.hasMore));
+				setLoadingMessages(false);
+				paintedForCatchUp = sorted;
+			} else if (!starredOnly) {
+				const preview = conv?.lastMessage;
+				if (preview && isRenderableWhatsAppMessage(preview)) {
+					const previewRow = {
+						...preview,
+						id: preview.id || `inbox-preview-${id}`,
+						conversationId: preview.conversationId || id,
+					};
+					writeConversationMessages(id, () => [previewRow]);
+					setHasMoreMessages(true);
+					// Pane already has a row — no full-thread skeleton over it.
+					setLoadingMessages(false);
+					paintedForCatchUp = [previewRow];
+				} else {
+					clearConversationMessages(id);
+					setHasMoreMessages(true);
+					setLoadingMessages(true);
+					paintedForCatchUp = [];
+				}
+			} else {
+				clearConversationMessages(id);
+				setHasMoreMessages(true);
+				setLoadingMessages(true);
+				paintedForCatchUp = [];
+			}
 			const openCatchUp = openChatCatchUpPlan({
-				cacheItems: warmCache?.items || [],
+				cacheItems: paintedForCatchUp,
 				unreadCount: conversationUnreadCount(conv),
 				lastMessage: conv?.lastMessage || null,
 			});
-			if (openCatchUp.needed) {
+			// Shimmer overlay only for unread rows still missing from the painted tip.
+			if (openCatchUp.showUi) {
 				setMessageCatchUp({
 					conversationId: id,
 					expected: openCatchUp.expected,
@@ -14485,35 +14534,6 @@ function WhatsAppWorkspaceContent() {
 			} else {
 				setMessageCatchUp(null);
 				setMessageCatchUpProgress(0);
-			}
-			if (isMessageThreadCacheComplete(warmCache)) {
-				const sorted = mergeMessages([], warmCache.items, id);
-				writeConversationMessages(id, () => sorted);
-				messagesCacheRef.current.set(cacheKey, { ...warmCache, items: sorted });
-				setHasMoreMessages(Boolean(warmCache.hasMore));
-				// Keep the soft catch-up bar when inbox shows unread the warm cache lacks.
-				setLoadingMessages(false);
-			} else if (!starredOnly) {
-				const preview = conv?.lastMessage;
-				if (preview && isRenderableWhatsAppMessage(preview)) {
-					writeConversationMessages(id, () => [
-						{
-							...preview,
-							id: preview.id || `inbox-preview-${id}`,
-							conversationId: preview.conversationId || id,
-						},
-					]);
-					setHasMoreMessages(true);
-					setLoadingMessages(true);
-				} else {
-					clearConversationMessages(id);
-					setHasMoreMessages(true);
-					setLoadingMessages(true);
-				}
-			} else {
-				clearConversationMessages(id);
-				setHasMoreMessages(true);
-				setLoadingMessages(true);
 			}
 
 			lastAutoScrolledMessageRef.current = null;
@@ -14926,13 +14946,16 @@ function WhatsAppWorkspaceContent() {
 		});
 		if (shouldReloadMessages) {
 			lastOpenMessagesLoadKeyRef.current = loadKey;
-			if (openCatchUp.needed) {
+			if (openCatchUp.showUi) {
 				setMessageCatchUp({
 					conversationId,
 					expected: openCatchUp.expected,
 					received: 0,
 				});
 				setMessageCatchUpProgress(8);
+			} else if (messageCatchUpRef.current?.conversationId === conversationId) {
+				setMessageCatchUp(null);
+				setMessageCatchUpProgress(0);
 			}
 			loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled).catch(() => { });
 		} else if (messageCatchUpRef.current?.conversationId === conversationId) {
@@ -15001,6 +15024,25 @@ function WhatsAppWorkspaceContent() {
 			setMessageCatchUpProgress(0);
 		}
 	}, [conversationId]);
+
+	// Drop unread shimmer as soon as the inbox tip is in the painted thread.
+	useEffect(() => {
+		if (!messageCatchUp || messageCatchUp.conversationId !== conversationId) return;
+		const tipPlan = openChatCatchUpPlan({
+			cacheItems: effectiveMessages,
+			unreadCount: messageCatchUp.expected,
+			lastMessage: selectedConversation?.lastMessage || null,
+		});
+		if (!tipPlan.showUi) {
+			setMessageCatchUp(null);
+			setMessageCatchUpProgress(0);
+		}
+	}, [
+		conversationId,
+		effectiveMessages,
+		messageCatchUp,
+		selectedConversation?.lastMessage,
+	]);
 
 	useEffect(() => {
 		const box = messageBoxRef.current;
@@ -23828,12 +23870,12 @@ function WhatsAppWorkspaceContent() {
 												: ''
 										}`}
 									>
-										{/* Skeleton only while the pane is empty. Once any
-										    messages are painted, hide it immediately — do not
-										    wait on threadSettled / late loadingMessages flips. */}
+										{/* Full-pane spinner only for a blank first load.
+										    Unread catch-up uses wa-catchup shimmer instead —
+										    never cover already-painted rows with this overlay. */}
 										{Boolean(conversationId) &&
 										effectiveMessages.length === 0 &&
-										(loadingMessages || !threadSettled) ? (
+										loadingMessages ? (
 											<div
 												className="wa-thread-loader"
 												role="status"

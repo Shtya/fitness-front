@@ -93,8 +93,12 @@ export function shouldReloadOpenChatMessages({
 }
 
 /**
- * Whether the open thread is missing inbox-preview / unread rows the list already shows.
- * Used to force a Postgres catch-up and drive the "loading N new messages" bar.
+ * Whether the open thread is missing inbox tip / unread rows the list already shows.
+ *
+ * - `needed` → hit Postgres (may be a quiet tip repair with no unread badge).
+ * - `showUi` → paint the bottom shimmer skeleton. Only when unread > 0 AND the
+ *   warm/painted tip is still missing — never overlay a thread that already has
+ *   the inbox last message.
  */
 export function openChatCatchUpPlan({
 	cacheItems = [],
@@ -105,28 +109,33 @@ export function openChatCatchUpPlan({
 	const items = Array.isArray(cacheItems) ? cacheItems : [];
 	const lastId = String(lastMessage?.id || '').trim();
 	const lastProviderId = String(lastMessage?.providerMessageId || '').trim();
-	const hasRealLast =
-		!lastId && !lastProviderId
-			? items.length > 0
-			: items.some(item => {
-					const id = String(item?.id || '');
-					if (id.startsWith('inbox-preview-')) return false;
-					if (lastId && id === lastId) return true;
-					if (
-						lastProviderId &&
-						String(item?.providerMessageId || '') === lastProviderId
-					) {
-						return true;
-					}
-					return false;
-				});
-	if (hasRealLast && unread <= 0) {
-		return { needed: false, expected: 0 };
+	const hasInboxTip = Boolean(lastId || lastProviderId);
+	const hasRealLast = !hasInboxTip
+		? items.length > 0
+		: items.some(item => {
+				const id = String(item?.id || '');
+				if (id.startsWith('inbox-preview-')) return false;
+				if (lastId && id === lastId) return true;
+				if (
+					lastProviderId &&
+					String(item?.providerMessageId || '') === lastProviderId
+				) {
+					return true;
+				}
+				return false;
+			});
+	// Tip already in the thread — badge alone is mark-as-read, not a skeleton.
+	if (hasRealLast) {
+		return { needed: false, expected: 0, showUi: false };
 	}
-	if (!hasRealLast && unread <= 0) {
-		return { needed: true, expected: 1 };
+	if (unread > 0) {
+		return { needed: true, expected: unread, showUi: true };
 	}
-	return { needed: true, expected: Math.max(unread, hasRealLast ? unread : 1) };
+	// No unread badge but inbox tip is ahead of cache (reaction / preview drift).
+	if (hasInboxTip) {
+		return { needed: true, expected: 1, showUi: false };
+	}
+	return { needed: false, expected: 0, showUi: false };
 }
 
 /**
