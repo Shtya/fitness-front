@@ -3858,208 +3858,6 @@ html.dark .wa-ui-schedule__sub-field .wa-ui-input {
 	}
 }
 
-/* ------------------------------------------------------------------ */
-/* Desktop rail footer: theme switch, language, settings, profile       */
-/* ------------------------------------------------------------------ */
-
-.wa-desktop-rail__footer.wa-ui-rail-foot {
-	gap: 6px;
-	padding-bottom: 12px;
-}
-
-.wa-ui-rail-btn {
-	position: relative;
-	display: grid;
-	width: 40px;
-	height: 40px;
-	place-items: center;
-	border: 0;
-	border-radius: 12px;
-	background: transparent;
-	color: #54656f;
-	cursor: pointer;
-	transition: background-color 120ms ease, color 120ms ease;
-}
-
-.wa-ui-rail-btn:hover {
-	background: rgba(11, 20, 26, 0.06);
-	color: #111b21;
-}
-
-.wa-ui-rail-btn.is-active {
-	background: rgba(0, 168, 132, 0.12);
-	color: #008069;
-}
-
-.wa-ui-rail-btn:focus-visible,
-.wa-ui-rail-theme:focus-visible,
-.wa-ui-rail-avatar:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 2px #f0f2f5, 0 0 0 4px rgba(0, 168, 132, 0.6);
-}
-
-.wa-ui-rail-btn__tag {
-	position: absolute;
-	inset-inline-end: 3px;
-	bottom: 3px;
-	min-width: 16px;
-	height: 14px;
-	padding: 0 3px;
-	border-radius: 4px;
-	background: #54656f;
-	color: #ffffff;
-	font-size: 9px;
-	font-weight: 700;
-	line-height: 14px;
-	text-align: center;
-}
-
-/* Sun/moon pill switch. The thumb sits under the active mode's icon. */
-.wa-ui-rail-theme {
-	position: relative;
-	display: flex;
-	width: 46px;
-	height: 26px;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 4px;
-	/* Sun left, moon right in both languages, like a physical switch. */
-	direction: ltr;
-	padding: 0 6px;
-	border: 0;
-	border-radius: 999px;
-	background: rgba(11, 20, 26, 0.08);
-	cursor: pointer;
-	transition: background-color 160ms ease;
-}
-
-.wa-ui-rail-theme:hover {
-	background: rgba(11, 20, 26, 0.12);
-}
-
-.wa-ui-rail-theme__thumb {
-	position: absolute;
-	top: 3px;
-	left: 3px;
-	width: 20px;
-	height: 20px;
-	border-radius: 999px;
-	background: #ffffff;
-	box-shadow: 0 1px 3px rgba(11, 20, 26, 0.25);
-	transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.wa-ui-rail-theme[aria-checked='true'] .wa-ui-rail-theme__thumb {
-	transform: translateX(20px);
-}
-
-.wa-ui-rail-theme__icon {
-	position: relative;
-	z-index: 1;
-	color: #8696a0;
-	transition: color 160ms ease;
-}
-
-.wa-ui-rail-theme[aria-checked='false'] .wa-ui-rail-theme__icon.is-sun {
-	color: #e59a00;
-}
-
-.wa-ui-rail-theme[aria-checked='true'] .wa-ui-rail-theme__icon.is-moon {
-	color: #53bdeb;
-}
-
-.wa-ui-rail-foot__divider {
-	width: 24px;
-	height: 1px;
-	margin: 2px 0;
-	background: #d1d7db;
-}
-
-.wa-desktop-rail__avatar-btn.wa-ui-rail-avatar {
-	display: grid;
-	width: 40px;
-	height: 40px;
-	place-items: center;
-	padding: 0;
-	border: 0;
-	border-radius: 999px;
-	background: transparent;
-	cursor: pointer;
-}
-
-.wa-ui-rail-avatar .wa-ui-rail-avatar__img {
-	width: 34px;
-	height: 34px;
-	border: 0;
-	background: #dfe5e7;
-	color: #54656f;
-	box-shadow: 0 0 0 2px transparent;
-	transition: box-shadow 140ms ease;
-}
-
-.wa-ui-rail-avatar:hover .wa-ui-rail-avatar__img {
-	box-shadow: 0 0 0 2px #d1d7db;
-}
-
-.wa-ui-rail-avatar.is-active .wa-ui-rail-avatar__img {
-	box-shadow: 0 0 0 2px #00a884;
-}
-
-.wa-ui-rail-avatar .wa-desktop-rail__online-dot {
-	inset-inline-end: 2px;
-	bottom: 2px;
-	width: 11px;
-	height: 11px;
-}
-
-html.dark .wa-ui-rail-btn {
-	color: #aebac1;
-}
-
-html.dark .wa-ui-rail-btn:hover {
-	background: rgba(233, 237, 239, 0.08);
-	color: #e9edef;
-}
-
-html.dark .wa-ui-rail-btn.is-active {
-	background: rgba(0, 168, 132, 0.18);
-	color: #21c063;
-}
-
-html.dark .wa-ui-rail-btn__tag {
-	background: #aebac1;
-	color: #111b21;
-}
-
-html.dark .wa-ui-rail-theme {
-	background: rgba(233, 237, 239, 0.1);
-}
-
-html.dark .wa-ui-rail-theme__thumb {
-	background: #374248;
-}
-
-html.dark .wa-ui-rail-foot__divider {
-	background: #3b4a54;
-}
-
-html.dark .wa-ui-rail-avatar .wa-ui-rail-avatar__img {
-	background: #2a3942 !important;
-	color: #aebac1;
-}
-
-html.dark .wa-ui-rail-btn:focus-visible,
-html.dark .wa-ui-rail-theme:focus-visible,
-html.dark .wa-ui-rail-avatar:focus-visible {
-	box-shadow: 0 0 0 2px #202c33, 0 0 0 4px rgba(0, 168, 132, 0.6);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.wa-ui-rail-theme__thumb {
-		transition: none;
-	}
-}
-
 /* ================================================================== */
 /* Redesign: group info, voice note, reply preview, recording bar       */
 /* ================================================================== */
@@ -5696,81 +5494,181 @@ html.dark .wa-ldlg .text-emerald-600 {
 }
 
 /* ------------------------------------------------------------------ */
-/* Rail footer v2: theme, language and settings as one matching set     */
+/* Rail footer dock: theme, language, settings + profile              */
+/* One floating capsule; buttons lift on hover, icons move with intent, */
+/* a press gives a small squeeze, tooltips appear on hover and focus.   */
 /* ------------------------------------------------------------------ */
 
 .wa-desktop-rail__footer.wa-ui-rail-foot {
+	--dock-surface: #ffffff;
+	--dock-edge: rgba(11, 20, 26, 0.07);
+	--dock-shadow: 0 1px 2px rgba(11, 20, 26, 0.06), 0 10px 24px -14px rgba(11, 20, 26, 0.28);
+	--dock-icon: #54656f;
+	--dock-icon-hover: #111b21;
+	--dock-hover: #f0f2f5;
+	--dock-accent: #1daa61;
+	--dock-accent-soft: rgba(29, 170, 97, 0.12);
+	--dock-ring: rgba(29, 170, 97, 0.55);
+	--dock-rail: #f7f5f3;
+	--dock-tip-bg: #111b21;
+	--dock-tip-fg: #ffffff;
+	--dock-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--dock-spring: cubic-bezier(0.34, 1.5, 0.64, 1);
+
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 8px;
+	gap: 10px;
 	padding-bottom: 12px;
 }
 
-.wa-rf {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 4px;
-	padding: 4px;
-	border: 1px solid rgba(11, 20, 26, 0.07);
-	border-radius: 16px;
-	background: rgba(255, 255, 255, 0.7);
-	box-shadow: 0 1px 2px rgba(11, 20, 26, 0.05);
+html.dark .wa-desktop-rail__footer.wa-ui-rail-foot {
+	--dock-surface: #242626;
+	--dock-edge: rgba(255, 255, 255, 0.06);
+	--dock-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 26px -14px rgba(0, 0, 0, 0.8);
+	--dock-icon: #a5a5a5;
+	--dock-icon-hover: #fafafa;
+	--dock-hover: #2e2f2f;
+	--dock-accent: #21c063;
+	--dock-accent-soft: rgba(33, 192, 99, 0.14);
+	--dock-ring: rgba(33, 192, 99, 0.6);
+	--dock-rail: #1d1f1f;
+	--dock-tip-bg: #fafafa;
+	--dock-tip-fg: #111b21;
 }
 
+/* The capsule */
+.wa-rf {
+	display: flex;
+	width: 44px;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	padding: 4px;
+	border: 1px solid var(--dock-edge);
+	border-radius: 22px;
+	background: var(--dock-surface);
+	box-shadow: var(--dock-shadow);
+}
+
+.wa-desktop-rail__footer .wa-ui-rail-foot__divider {
+	display: none;
+}
+
+/* Buttons */
 .wa-rf__btn {
 	position: relative;
 	display: grid;
-	width: 40px;
-	height: 40px;
+	width: 36px;
+	height: 36px;
 	place-items: center;
-	overflow: hidden;
 	padding: 0;
 	border: 0;
-	border-radius: 12px;
+	border-radius: 50%;
 	background: transparent;
-	color: #54656f;
+	color: var(--dock-icon);
 	cursor: pointer;
-	transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+	transition:
+		background-color 160ms ease,
+		color 160ms ease,
+		transform 220ms var(--dock-ease);
+	animation: wa-dock-in 360ms var(--dock-ease) both;
 }
 
-.wa-rf__btn:hover {
-	background: rgba(11, 20, 26, 0.06);
-	color: #111b21;
+.wa-rf__btn:nth-child(2) {
+	animation-delay: 50ms;
+}
+
+.wa-rf__btn:nth-child(3) {
+	animation-delay: 100ms;
+}
+
+@keyframes wa-dock-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px) scale(0.92);
+	}
+}
+
+.wa-rf__btn svg,
+.wa-rf__glyph {
+	transition: transform 320ms var(--dock-spring), opacity 200ms ease;
+}
+
+.wa-rf__btn svg {
+	width: 19px;
+	height: 19px;
+	stroke-width: 1.9;
+}
+
+@media (hover: hover) {
+	.wa-rf__btn:hover {
+		background: var(--dock-hover);
+		color: var(--dock-icon-hover);
+		transform: translateY(-1px);
+	}
+
+	/* Each icon moves the way its action does */
+	.wa-rf__btn.is-settings:hover svg {
+		transform: rotate(60deg);
+	}
+
+	.wa-rf__btn.is-locale:hover .wa-rf__glyph {
+		transform: translateY(-1px) scale(1.08);
+	}
+
+	.wa-rf__btn.is-theme:not(.is-dark):hover .wa-rf__theme-icon.is-moon {
+		transform: rotate(-18deg) scale(1.06);
+	}
+
+	.wa-rf__btn.is-theme.is-dark:hover .wa-rf__theme-icon.is-sun {
+		transform: rotate(45deg) scale(1.06);
+	}
 }
 
 .wa-rf__btn:active {
-	transform: scale(0.94);
+	transform: scale(0.9);
+	transition-duration: 80ms;
 }
 
-.wa-rf__btn:focus-visible {
+.wa-rf__btn:focus-visible,
+.wa-ui-rail-avatar:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 2px #00a884;
+	box-shadow: 0 0 0 2px var(--dock-surface), 0 0 0 4px var(--dock-ring);
 }
 
-.wa-rf__btn.is-active {
-	background: rgba(0, 168, 132, 0.14);
-	color: #008069;
+/* Active / enabled states: a soft green tint, never heavy */
+.wa-rf__btn.is-active,
+.wa-rf__btn.is-theme.is-dark {
+	background: var(--dock-accent-soft);
+	color: var(--dock-accent);
 }
 
-.wa-rf__btn.is-settings svg {
-	transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+.wa-rf__btn.is-active::after,
+.wa-rf__btn.is-theme.is-dark::after {
+	content: '';
+	position: absolute;
+	inset-inline-start: -5px;
+	top: 50%;
+	width: 3px;
+	height: 14px;
+	border-radius: 2px;
+	background: var(--dock-accent);
+	transform: translateY(-50%);
 }
 
-.wa-rf__btn.is-settings:hover svg {
-	transform: rotate(60deg);
+/* Theme switch: sun and moon cross-fade with a quarter turn */
+.wa-rf__btn.is-theme {
+	overflow: visible;
 }
 
-/* Theme: one icon at a time, the other rotates out. */
 .wa-rf__theme-icon {
 	grid-area: 1 / 1;
-	transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease;
 }
 
 .wa-rf__btn.is-theme .wa-rf__theme-icon.is-sun {
 	opacity: 0;
-	transform: rotate(-90deg) scale(0.5);
+	transform: rotate(-90deg) scale(0.6);
 }
 
 .wa-rf__btn.is-theme .wa-rf__theme-icon.is-moon {
@@ -5785,131 +5683,165 @@ html.dark .wa-ldlg .text-emerald-600 {
 
 .wa-rf__btn.is-theme.is-dark .wa-rf__theme-icon.is-moon {
 	opacity: 0;
-	transform: rotate(90deg) scale(0.5);
+	transform: rotate(90deg) scale(0.6);
 }
 
-.wa-rf__btn.is-theme:hover {
-	color: #5b5bd6;
-}
-
-.wa-rf__btn.is-theme.is-dark:hover {
-	color: #f5b544;
-}
-
-/* Language: the target script drawn like an icon, same weight and box. */
+/* Language glyph: same optical size as the icons */
 .wa-rf__glyph {
 	display: grid;
-	min-width: 22px;
-	height: 22px;
+	width: 20px;
+	height: 20px;
 	place-items: center;
-	padding: 0 3px;
-	border: 1.8px solid currentColor;
+	border: 1.6px solid currentColor;
 	border-radius: 6px;
+	font-size: 11px;
 	font-weight: 700;
 	line-height: 1;
 }
 
 .wa-rf__glyph.is-arabic {
-	font-family: 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif;
-	font-size: 13px;
-	padding-bottom: 2px;
+	font-family: var(--wa-font-ui-ar, 'Segoe UI', Tahoma, sans-serif);
+	font-size: 12px;
+	padding-bottom: 1px;
 }
 
 .wa-rf__glyph.is-latin {
 	font-size: 9.5px;
-	letter-spacing: 0.04em;
+	letter-spacing: 0.02em;
 }
 
-.wa-rf__btn.is-locale:hover {
-	color: #008069;
-}
-
-/* Avatar: same 40px footprint, ring instead of a different shape language. */
-.wa-desktop-rail__footer .wa-ui-rail-foot__divider {
-	display: none;
-}
-
+/* Profile */
 .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar {
 	position: relative;
-	width: 44px;
-	height: 44px;
-	border-radius: 999px;
+	display: grid;
+	width: 42px;
+	height: 42px;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	cursor: pointer;
+	transition: transform 220ms var(--dock-ease);
+	animation: wa-dock-in 360ms 150ms var(--dock-ease) both;
 }
 
 .wa-ui-rail-avatar .wa-ui-rail-avatar__img {
-	width: 40px;
-	height: 40px;
-	box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px rgba(11, 20, 26, 0.1);
-	transition: box-shadow 160ms ease, transform 160ms ease;
+	display: grid;
+	width: 40px !important;
+	height: 40px !important;
+	overflow: hidden;
+	place-items: center;
+	border-radius: 50%;
+	background: var(--dock-surface) !important;
+	color: var(--dock-icon);
+	box-shadow: 0 0 0 1px var(--dock-edge), var(--dock-shadow);
+	transition: box-shadow 200ms ease;
 }
 
-.wa-ui-rail-avatar:hover .wa-ui-rail-avatar__img {
-	box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px rgba(0, 168, 132, 0.55);
-	transform: scale(1.04);
+@media (hover: hover) {
+	.wa-desktop-rail__avatar-btn.wa-ui-rail-avatar:hover {
+		transform: translateY(-1px);
+	}
+
+	.wa-ui-rail-avatar:hover .wa-ui-rail-avatar__img {
+		box-shadow: 0 0 0 2px var(--dock-rail), 0 0 0 4px var(--dock-accent-soft), var(--dock-shadow);
+	}
+}
+
+.wa-desktop-rail__avatar-btn.wa-ui-rail-avatar:active {
+	transform: scale(0.94);
 }
 
 .wa-ui-rail-avatar.is-active .wa-ui-rail-avatar__img {
-	box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #00a884;
+	box-shadow: 0 0 0 2px var(--dock-rail), 0 0 0 4px var(--dock-accent);
 }
 
+/* Online: a green dot cut out of the avatar's corner, with one soft pulse on load */
 .wa-ui-rail-avatar .wa-desktop-rail__online-dot {
+	position: absolute;
 	inset-inline-end: 1px;
 	bottom: 1px;
 	width: 12px;
 	height: 12px;
-	border: 2px solid #ffffff;
+	border: 2.5px solid var(--dock-rail);
+	border-radius: 50%;
+	background: var(--dock-accent);
 }
 
-html.dark .wa-rf {
-	border-color: rgba(233, 237, 239, 0.06);
-	background: rgba(255, 255, 255, 0.04);
-	box-shadow: none;
+.wa-ui-rail-avatar .wa-desktop-rail__online-dot::after {
+	content: '';
+	position: absolute;
+	inset: -2.5px;
+	border-radius: 50%;
+	box-shadow: 0 0 0 0 var(--dock-ring);
+	animation: wa-dock-online 1.6s 500ms ease-out 2 both;
 }
 
-html.dark .wa-web-desktop:not(#wa-dark) .wa-rf__btn,
-html.dark .wa-rf__btn {
-	color: #aebac1;
+@keyframes wa-dock-online {
+	from {
+		box-shadow: 0 0 0 0 var(--dock-ring);
+	}
+	to {
+		box-shadow: 0 0 0 7px transparent;
+	}
 }
 
-html.dark .wa-web-desktop:not(#wa-dark) .wa-rf__btn:hover,
-html.dark .wa-rf__btn:hover {
-	background: rgba(233, 237, 239, 0.08);
-	color: #e9edef;
+/* Tooltip (rendered on <body> by the rail, so the scrolling rail cannot clip it) */
+.wa-dock-tip {
+	position: fixed;
+	z-index: 400;
+	padding: 6px 10px;
+	border-radius: 8px;
+	background: #111b21;
+	color: #ffffff;
+	font-size: 12.5px;
+	font-weight: 500;
+	line-height: 16px;
+	white-space: nowrap;
+	pointer-events: none;
+	box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
+	opacity: 0;
+	transform: translate(-4px, -50%);
+	transition: opacity 140ms ease, transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-html.dark .wa-rf__btn.is-theme.is-dark:hover {
-	color: #f5b544;
+.wa-dock-tip.is-rtl {
+	transform: translate(4px, -50%);
 }
 
-html.dark .wa-rf__btn.is-locale:hover {
-	color: #21c063;
+.wa-dock-tip.is-visible {
+	opacity: 1;
+	transform: translate(0, -50%);
 }
 
-html.dark .wa-rf__btn.is-active {
-	background: rgba(0, 168, 132, 0.2);
-	color: #21c063;
-}
-
-html.dark .wa-ui-rail-avatar .wa-ui-rail-avatar__img {
-	box-shadow: 0 0 0 2px #202c33, 0 0 0 3.5px rgba(233, 237, 239, 0.14);
-}
-
-html.dark .wa-ui-rail-avatar:hover .wa-ui-rail-avatar__img {
-	box-shadow: 0 0 0 2px #202c33, 0 0 0 3.5px rgba(0, 168, 132, 0.6);
-}
-
-html.dark .wa-ui-rail-avatar.is-active .wa-ui-rail-avatar__img {
-	box-shadow: 0 0 0 2px #202c33, 0 0 0 4px #00a884;
-}
-
-html.dark .wa-ui-rail-avatar .wa-desktop-rail__online-dot {
-	border-color: #202c33;
+html.dark .wa-dock-tip {
+	background: #fafafa;
+	color: #111b21;
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.wa-rf__theme-icon,
-	.wa-rf__btn.is-settings svg {
-		transition: none;
+	.wa-rf__btn,
+	.wa-rf__btn svg,
+	.wa-rf__glyph,
+	.wa-desktop-rail__avatar-btn.wa-ui-rail-avatar,
+	.wa-ui-rail-avatar .wa-desktop-rail__online-dot::after,
+	.wa-dock-tip {
+		animation: none !important;
+		transition: opacity 120ms ease, background-color 120ms ease !important;
+	}
+
+	.wa-rf__btn:hover,
+	.wa-rf__btn:active,
+	.wa-desktop-rail__avatar-btn.wa-ui-rail-avatar:hover,
+	.wa-desktop-rail__avatar-btn.wa-ui-rail-avatar:active,
+	.wa-rf__btn:hover svg,
+	.wa-rf__btn:hover .wa-rf__glyph {
+		transform: none !important;
+	}
+
+	.wa-rf__btn.is-theme .wa-rf__theme-icon {
+		transform: none !important;
 	}
 }
 
@@ -11973,44 +11905,46 @@ html.dark .wa-wa__field.is-recording {
 /* ------------------------------------------------------------------ */
 
 .wa-message-reactions.wa-rx {
-	bottom: -14px;
+	/* Tucks 3px under the bubble's bottom edge: that is inside the bubble's 6px bottom
+	   padding, so it can never reach the time or the ticks above it. */
+	bottom: -19px;
+	inset-inline-start: 8px;
+	inset-inline-end: auto;
 }
 
 .wa-rx__pill {
+	--wa-rx-ring: #f5f1eb;
 	display: inline-flex;
-	height: 26px;
+	height: 22px;
+	min-width: 26px;
 	align-items: center;
-	gap: 4px;
-	padding: 0 7px 0 5px;
-	border: 2px solid #efeae2;
-	border-radius: 999px;
+	justify-content: center;
+	gap: 3px;
+	padding: 0 5px;
+	border: 0;
+	border-radius: 11px;
 	background: #ffffff;
-	box-shadow: 0 1px 3px rgba(11, 20, 26, 0.16);
-	color: #54656f;
+	box-shadow: 0 0 0 1.5px var(--wa-rx-ring), 0 1px 1.5px 1.5px rgba(11, 20, 26, 0.1);
+	color: #667781;
 	font: inherit;
 	line-height: 1;
 	cursor: pointer;
 	user-select: none;
-	transition: transform 140ms var(--wa-ui-ease-out), box-shadow 140ms ease;
-}
-
-[dir='rtl'] .wa-rx__pill {
-	padding: 0 5px 0 7px;
+	transition: background-color 120ms ease;
 }
 
 .wa-rx__pill:hover,
 .wa-rx__pill.is-open {
-	box-shadow: 0 3px 10px rgba(11, 20, 26, 0.2);
-	transform: translateY(-1px);
+	background: #f5f6f6;
+}
+
+.wa-rx__pill:active {
+	transform: scale(0.96);
 }
 
 .wa-rx__pill:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 2px #00a884;
-}
-
-.wa-rx__pill.is-mine {
-	background: #e7f8f2;
+	outline: 2px solid #1daa61;
+	outline-offset: 2px;
 }
 
 .wa-rx__emojis {
@@ -12019,33 +11953,36 @@ html.dark .wa-wa__field.is-recording {
 }
 
 .wa-rx__emoji {
-	font-size: 15px;
+	font-size: 14px;
 	line-height: 1;
 }
 
 .wa-rx__emoji + .wa-rx__emoji {
-	margin-inline-start: -3px;
+	margin-inline-start: 1px;
 }
 
 .wa-rx__total {
-	color: #54656f;
+	padding-inline-end: 1px;
+	color: #667781;
 	font-size: 12px;
-	font-weight: 600;
+	font-weight: 500;
 	font-variant-numeric: tabular-nums;
 }
 
 html.dark .wa-rx__pill {
-	border-color: #0b141a;
-	background: #202c33;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+	--wa-rx-ring: #161717;
+	background: #242626;
+	box-shadow: 0 0 0 1.5px var(--wa-rx-ring), 0 1px 1.5px 1.5px rgba(0, 0, 0, 0.3);
+	color: #a5a5a5;
 }
 
-html.dark .wa-rx__pill.is-mine {
-	background: #1d3a34;
+html.dark .wa-rx__pill:hover,
+html.dark .wa-rx__pill.is-open {
+	background: #2e2f2f;
 }
 
 html.dark .wa-rx__total {
-	color: #aebac1;
+	color: #a5a5a5;
 }
 
 /* Popover */

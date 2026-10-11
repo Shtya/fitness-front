@@ -1214,17 +1214,18 @@
 }
 
 @media (max-width: 768px) {
-	/* Reactions hang just below the bubble so they never cover the time */
+	/* Reactions tuck just under the bubble edge (inside its bottom padding), never over the time */
 	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-message-bubble > .wa-rx {
 		top: auto !important;
-		bottom: -22px !important;
+		bottom: -19px !important;
+		inset-inline-start: 10px !important;
 		background: transparent !important;
 	}
 
 	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-message-bubble > .wa-rx .wa-rx__pill {
-		border: 2px solid var(--m-wall) !important;
+		--wa-rx-ring: var(--m-wall);
+		border: 0 !important;
 		background: var(--m-in) !important;
-		box-shadow: none !important;
 	}
 
 	/* No divider between the camera and the mic on phones */

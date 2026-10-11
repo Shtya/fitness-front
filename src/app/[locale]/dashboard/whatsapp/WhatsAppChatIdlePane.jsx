@@ -1,8 +1,14 @@
 'use client';
 
+import './wa-chat-idle.css';
+
 /**
  * Empty chat-thread pane (no conversation selected).
- * Visual source: WhatsApp Session Restore reference HTML.
+ *
+ * A small conversation plays out on a loop: a message arrives, a second one follows,
+ * someone types, a reply lands, its ticks turn blue and a reaction pops on. Two quiet
+ * companions (a voice note and a photo) float around it. Pure CSS (transform/opacity
+ * only) and fully static under prefers-reduced-motion.
  */
 export default function WhatsAppChatIdlePane({
 	title,
@@ -14,140 +20,80 @@ export default function WhatsAppChatIdlePane({
 
 	return (
 		<div className="wa-chat-idle" role="status" aria-live="polite">
-			<div className="wa-chat-idle__ambient" aria-hidden="true" />
-			<div className="wa-chat-idle__dots" aria-hidden="true" />
-			<div className="wa-chat-idle__dots wa-chat-idle__dots--end" aria-hidden="true" />
-
 			<div className="wa-chat-idle__stage">
-				<section className="wa-chat-idle__visual" aria-hidden="true">
-					<div className="wa-chat-idle__orbit-dotted" />
-					<div className="wa-chat-idle__orbit-main" />
-					<div className="wa-chat-idle__progress-arc" />
-					<div className="wa-chat-idle__core-glow" />
+				<div className="wa-idle-scene" aria-hidden="true">
+					<span className="wa-idle-scene__glow" />
 
-					<div className="wa-chat-idle__float wa-chat-idle__float--sync">
-						<svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-							<path
-								d="M25.5 12.5A10.5 10.5 0 0 0 7 9.8L5 12"
-								stroke="currentColor"
-								strokeWidth="2.5"
-								strokeLinecap="round"
-							/>
-							<path
-								d="m4.5 7.5.5 5 5-.5"
-								stroke="currentColor"
-								strokeWidth="2.5"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-							<path
-								d="M6.5 19.5A10.5 10.5 0 0 0 25 22.2L27 20"
-								stroke="currentColor"
-								strokeWidth="2.5"
-								strokeLinecap="round"
-							/>
-							<path
-								d="m27.5 24.5-.5-5-5 .5"
-								stroke="currentColor"
-								strokeWidth="2.5"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-						</svg>
+					<div className="wa-idle-card">
+						<div className="wa-idle-card__head">
+							<span className="wa-idle-card__avatar" />
+							<span className="wa-idle-card__lines">
+								<span />
+								<span />
+							</span>
+						</div>
+
+						<div className="wa-idle-card__thread">
+							<div className="wa-idle-msg wa-idle-msg--in wa-idle-msg--a">
+								<span className="wa-idle-msg__line" style={{ width: '92%' }} />
+								<span className="wa-idle-msg__line" style={{ width: '58%' }} />
+								<span className="wa-idle-msg__reaction">
+									<svg viewBox="0 0 24 24">
+										<path d="M12 20.5s-7.5-4.4-7.5-10.1A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 7.5 2.8c0 5.7-7.5 10.1-7.5 10.1Z" />
+									</svg>
+								</span>
+							</div>
+
+							<div className="wa-idle-msg wa-idle-msg--in wa-idle-msg--b">
+								<span className="wa-idle-msg__line" style={{ width: '70%' }} />
+							</div>
+
+							<div className="wa-idle-typing">
+								<span />
+								<span />
+								<span />
+							</div>
+
+							<div className="wa-idle-msg wa-idle-msg--out wa-idle-msg--c">
+								<span className="wa-idle-msg__line" style={{ width: '86%' }} />
+								<span className="wa-idle-msg__line" style={{ width: '64%' }} />
+								<span className="wa-idle-msg__ticks">
+									<svg viewBox="0 0 18 12">
+										<path d="m1 6.5 3.2 3.2L10.5 2.5" />
+										<path d="m7.4 9.4.3.3L14 2.5" />
+									</svg>
+								</span>
+							</div>
+						</div>
 					</div>
 
-					<div className="wa-chat-idle__float wa-chat-idle__float--lock">
-						<svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-							<rect
-								x="8"
-								y="14"
-								width="16"
-								height="13"
-								rx="2.5"
-								stroke="currentColor"
-								strokeWidth="2.3"
-							/>
-							<path
-								d="M12 14V10a4 4 0 0 1 8 0v4"
-								stroke="currentColor"
-								strokeWidth="2.3"
-							/>
-							<circle cx="16" cy="20.5" r="1.5" fill="currentColor" />
-						</svg>
+					<div className="wa-idle-chip wa-idle-chip--voice">
+						<span className="wa-idle-chip__play">
+							<svg viewBox="0 0 12 12">
+								<path d="M3.5 2.2v7.6L9.6 6 3.5 2.2Z" />
+							</svg>
+						</span>
+						<span className="wa-idle-chip__wave">
+							{[0.45, 0.8, 0.55, 1, 0.65, 0.9, 0.4, 0.7, 0.5].map((h, i) => (
+								<span key={i} style={{ '--h': h, '--i': i }} />
+							))}
+						</span>
 					</div>
 
-					<div className="wa-chat-idle__float wa-chat-idle__float--message">
-						<svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-							<path
-								d="M7 8.5h18v13H13l-5 4v-17Z"
-								stroke="currentColor"
-								strokeWidth="2.2"
-								strokeLinejoin="round"
-							/>
-							<path
-								d="M12 13h8M12 17h5"
-								stroke="currentColor"
-								strokeWidth="2"
-								strokeLinecap="round"
-							/>
+					<div className="wa-idle-chip wa-idle-chip--photo">
+						<svg viewBox="0 0 40 32">
+							<circle cx="28" cy="10" r="4" />
+							<path d="M3 28 14 15l8 9 5-5 10 9H3Z" />
 						</svg>
 					</div>
-
-					<div className="wa-chat-idle__float wa-chat-idle__float--phone">
-						<svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-							<rect
-								x="9"
-								y="4.5"
-								width="14"
-								height="23"
-								rx="2.4"
-								stroke="currentColor"
-								strokeWidth="2.2"
-							/>
-							<path
-								d="M14 24h4"
-								stroke="currentColor"
-								strokeWidth="2"
-								strokeLinecap="round"
-							/>
-						</svg>
-					</div>
-
-					<div className="wa-chat-idle__core">
-						<svg className="wa-chat-idle__whatsapp" viewBox="0 0 104 104" fill="none">
-							<path
-								d="M52 10.5C29.1 10.5 10.5 28.9 10.5 51.6c0 8.1 2.4 15.7 6.9 22.1L12 94l20.9-5.3c5.8 3.2 12.3 4.9 19.1 4.9 22.9 0 41.5-18.4 41.5-41.9C93.5 28.9 74.9 10.5 52 10.5Z"
-								stroke="#08bf83"
-								strokeWidth="6.8"
-							/>
-							<path
-								d="M39.7 35.1c-.9-2.1-1.8-2.2-2.7-2.2h-2.3c-.8 0-2 .3-3.1 1.5-1.1 1.2-4.1 4-4.1 9.7s4.2 11.3 4.8 12.1c.6.8 8.1 13 20 17.7 9.9 3.9 11.9 3.1 14 2.9 2.1-.2 6.8-2.8 7.8-5.5 1-2.7 1-5  .7-5.5-.3-.5-1.1-.8-2.3-1.4-1.2-.6-6.8-3.4-7.9-3.8-1.1-.4-1.9-.6-2.7.6-.8 1.2-3 3.8-3.7 4.6-.7.8-1.4.9-2.6.3-1.2-.6-4.9-1.8-9.3-5.7-3.4-3-5.7-6.7-6.4-7.9-.7-1.2-.1-1.8.5-2.4.5-.5 1.2-1.4 1.8-2.1.6-.7.8-1.2 1.2-2 .4-.8.2-1.5-.1-2.1l-3.6-8.8Z"
-								fill="#08bf83"
-							/>
-						</svg>
-					</div>
-
-					<span className="wa-chat-idle__dot wa-chat-idle__dot--1" />
-					<span className="wa-chat-idle__dot wa-chat-idle__dot--2" />
-					<span className="wa-chat-idle__dot wa-chat-idle__dot--3" />
-					<span className="wa-chat-idle__dot wa-chat-idle__dot--4" />
-					<span className="wa-chat-idle__ring-dot" />
-					<span className="wa-chat-idle__plus">+</span>
-				</section>
+				</div>
 
 				<section className="wa-chat-idle__copy">
 					<h2 className="wa-chat-idle__title">{title}</h2>
 					{hint ? <p className="wa-chat-idle__hint">{hint}</p> : null}
 					{unreadLabel ? (
 						<div className="wa-chat-idle__unread">
-							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path
-									d="m13 2-7 11h5l-1 9 7-12h-5l1-8Z"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinejoin="round"
-								/>
-							</svg>
+							<span className="wa-chat-idle__unread-dot" aria-hidden="true" />
 							<span>{unreadLabel}</span>
 						</div>
 					) : null}

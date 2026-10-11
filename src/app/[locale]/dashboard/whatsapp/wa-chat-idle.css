@@ -1,0 +1,636 @@
+/*
+ * Empty chat pane: "a conversation quietly happening".
+ *
+ * One 12s loop drives every message so they stay in sync; companions float on their own
+ * slower, offset cycles so the scene never repeats exactly. Only transform and opacity
+ * animate (compositor-only, no layout or paint work), and everything is sized in em
+ * from a container query so the scene scales with the pane instead of the viewport.
+ */
+
+html .wa-chat-idle:not(#wa-idle) {
+	--idle-bg: #f7f5f3;
+	--idle-card: #ffffff;
+	--idle-card-edge: rgba(11, 20, 26, 0.06);
+	--idle-shadow: 0 1px 2px rgba(11, 20, 26, 0.05), 0 18px 40px -18px rgba(11, 20, 26, 0.22);
+	--idle-skeleton: #e9edef;
+	--idle-in: #f2f3f3;
+	--idle-in-line: #d6dbde;
+	--idle-out: #d9fdd3;
+	--idle-out-line: #a9dcb0;
+	--idle-tick: #8696a0;
+	--idle-tick-read: #53bdeb;
+	--idle-accent: #1daa61;
+	--idle-glow: rgba(29, 170, 97, 0.12);
+	--idle-text: #111b21;
+	--idle-text-2: #667781;
+	--idle-loop: 12s;
+
+	container-type: size;
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+	overflow: hidden;
+	background: var(--idle-bg);
+	color: var(--idle-text);
+}
+
+html.dark .wa-chat-idle:not(#wa-idle) {
+	--idle-bg: #161717;
+	--idle-card: #1d1f1f;
+	--idle-card-edge: rgba(255, 255, 255, 0.05);
+	--idle-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 22px 44px -20px rgba(0, 0, 0, 0.7);
+	--idle-skeleton: #2e2f2f;
+	--idle-in: #2a2c2c;
+	--idle-in-line: #444747;
+	--idle-out: #144d37;
+	--idle-out-line: #2f7a57;
+	--idle-tick: #8a9296;
+	--idle-accent: #21c063;
+	--idle-glow: rgba(33, 192, 99, 0.1);
+	--idle-text: #fafafa;
+	--idle-text-2: #a5a5a5;
+}
+
+html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__stage {
+	overflow: visible;
+	max-height: none;
+	display: flex;
+	width: 100%;
+	max-width: 560px;
+	flex-direction: column;
+	align-items: center;
+	/* Everything below is sized in em off this, so the scene scales with the pane. */
+	font-size: clamp(10px, 2.6cqmin, 16px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Scene                                                              */
+/* ------------------------------------------------------------------ */
+.wa-idle-scene {
+	position: relative;
+	display: grid;
+	width: 26em;
+	height: 20em;
+	place-items: center;
+	margin-bottom: 2.2em;
+	animation: wa-idle-enter 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes wa-idle-enter {
+	from {
+		opacity: 0;
+		transform: translateY(0.8em) scale(0.98);
+	}
+}
+
+.wa-idle-scene__glow {
+	position: absolute;
+	inset: 8% 12%;
+	border-radius: 50%;
+	background: radial-gradient(closest-side, var(--idle-glow), transparent);
+	animation: wa-idle-breathe 9s ease-in-out infinite;
+}
+
+@keyframes wa-idle-breathe {
+	50% {
+		opacity: 0.55;
+		transform: scale(1.06);
+	}
+}
+
+/* The chat card */
+.wa-idle-card {
+	position: relative;
+	z-index: 1;
+	width: 17em;
+	padding: 0.9em 0.9em 1.1em;
+	border: 1px solid var(--idle-card-edge);
+	border-radius: 1.4em;
+	background: var(--idle-card);
+	box-shadow: var(--idle-shadow);
+	animation: wa-idle-float 8s ease-in-out infinite;
+}
+
+@keyframes wa-idle-float {
+	50% {
+		transform: translateY(-0.35em);
+	}
+}
+
+.wa-idle-card__head {
+	display: flex;
+	align-items: center;
+	gap: 0.6em;
+	padding-bottom: 0.8em;
+	border-bottom: 1px solid var(--idle-skeleton);
+}
+
+.wa-idle-card__avatar {
+	width: 2em;
+	height: 2em;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: linear-gradient(135deg, var(--idle-accent), color-mix(in srgb, var(--idle-accent) 55%, #0b7a52));
+	opacity: 0.85;
+}
+
+.wa-idle-card__lines {
+	display: grid;
+	flex: 1;
+	gap: 0.35em;
+}
+
+.wa-idle-card__lines span {
+	height: 0.45em;
+	border-radius: 1em;
+	background: var(--idle-skeleton);
+}
+
+.wa-idle-card__lines span:first-child {
+	width: 52%;
+}
+
+.wa-idle-card__lines span:last-child {
+	width: 30%;
+	opacity: 0.7;
+}
+
+.wa-idle-card__thread {
+	position: relative;
+	display: flex;
+	height: 11.6em;
+	flex-direction: column;
+	justify-content: flex-end;
+	gap: 0.5em;
+	padding-top: 0.8em;
+}
+
+/* Messages */
+.wa-idle-msg {
+	position: relative;
+	display: grid;
+	gap: 0.38em;
+	padding: 0.65em 0.75em;
+	border-radius: 0.85em;
+	opacity: 0;
+	animation-duration: var(--idle-loop);
+	animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+	animation-iteration-count: infinite;
+	animation-fill-mode: both;
+}
+
+.wa-idle-msg__line {
+	display: block;
+	height: 0.45em;
+	border-radius: 1em;
+}
+
+.wa-idle-msg--in {
+	width: 68%;
+	align-self: flex-start;
+	border-end-start-radius: 0.25em;
+	background: var(--idle-in);
+	transform-origin: bottom left;
+}
+
+.wa-idle-msg--in .wa-idle-msg__line {
+	background: var(--idle-in-line);
+}
+
+.wa-idle-msg--out {
+	width: 72%;
+	align-self: flex-end;
+	padding-bottom: 1.15em;
+	border-end-end-radius: 0.25em;
+	background: var(--idle-out);
+	transform-origin: bottom right;
+}
+
+.wa-idle-msg--out .wa-idle-msg__line {
+	background: var(--idle-out-line);
+}
+
+[dir='rtl'] .wa-idle-msg--in {
+	transform-origin: bottom right;
+}
+
+[dir='rtl'] .wa-idle-msg--out {
+	transform-origin: bottom left;
+}
+
+.wa-idle-msg--b {
+	width: 46%;
+}
+
+.wa-idle-msg--a {
+	animation-name: wa-idle-msg-a;
+}
+
+.wa-idle-msg--b {
+	animation-name: wa-idle-msg-b;
+}
+
+.wa-idle-msg--c {
+	animation-name: wa-idle-msg-c;
+}
+
+@keyframes wa-idle-msg-a {
+	0%,
+	4% {
+		opacity: 0;
+		transform: translateY(0.6em) scale(0.94);
+	}
+	11%,
+	86% {
+		opacity: 1;
+		transform: none;
+	}
+	94%,
+	100% {
+		opacity: 0;
+		transform: translateY(-0.3em);
+	}
+}
+
+@keyframes wa-idle-msg-b {
+	0%,
+	15% {
+		opacity: 0;
+		transform: translateY(0.6em) scale(0.94);
+	}
+	22%,
+	86% {
+		opacity: 1;
+		transform: none;
+	}
+	94%,
+	100% {
+		opacity: 0;
+		transform: translateY(-0.3em);
+	}
+}
+
+@keyframes wa-idle-msg-c {
+	0%,
+	47% {
+		opacity: 0;
+		transform: translateY(0.6em) scale(0.94);
+	}
+	54%,
+	86% {
+		opacity: 1;
+		transform: none;
+	}
+	94%,
+	100% {
+		opacity: 0;
+		transform: translateY(-0.3em);
+	}
+}
+
+/* Typing indicator: shows in the reply's slot, then hands over to it */
+.wa-idle-typing {
+	position: absolute;
+	inset-inline-end: 0;
+	bottom: 0;
+	display: flex;
+	gap: 0.3em;
+	padding: 0.7em 0.8em;
+	border-radius: 0.85em;
+	border-end-end-radius: 0.25em;
+	background: var(--idle-out);
+	opacity: 0;
+	animation: wa-idle-typing var(--idle-loop) ease-in-out infinite both;
+}
+
+[dir='rtl'] .wa-idle-typing {
+	border-end-end-radius: 0.85em;
+	border-end-start-radius: 0.25em;
+}
+
+.wa-idle-typing span {
+	width: 0.45em;
+	height: 0.45em;
+	border-radius: 50%;
+	background: var(--idle-out-line);
+	animation: wa-idle-dot 1.2s ease-in-out infinite;
+}
+
+.wa-idle-typing span:nth-child(2) {
+	animation-delay: 0.15s;
+}
+
+.wa-idle-typing span:nth-child(3) {
+	animation-delay: 0.3s;
+}
+
+@keyframes wa-idle-typing {
+	0%,
+	27% {
+		opacity: 0;
+		transform: scale(0.9);
+	}
+	31%,
+	44% {
+		opacity: 1;
+		transform: none;
+	}
+	48%,
+	100% {
+		opacity: 0;
+		transform: scale(0.96);
+	}
+}
+
+@keyframes wa-idle-dot {
+	0%,
+	60%,
+	100% {
+		opacity: 0.55;
+		transform: none;
+	}
+	30% {
+		opacity: 1;
+		transform: translateY(-0.18em);
+	}
+}
+
+/* Ticks: sent (grey) then read (blue) */
+.wa-idle-msg__ticks {
+	position: absolute;
+	inset-inline-end: 0.6em;
+	bottom: 0.35em;
+	width: 1.05em;
+	height: 0.7em;
+}
+
+.wa-idle-msg__ticks svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	fill: none;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.7;
+}
+
+.wa-idle-msg__ticks svg path {
+	stroke: var(--idle-tick);
+}
+
+/* Read state is a second, blue copy faded in on top (opacity only, no colour paints). */
+.wa-idle-msg__ticks::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: var(--idle-tick-read);
+	-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 12' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 6.5 3.2 3.2L10.5 2.5'/%3E%3Cpath d='m7.4 9.4.3.3L14 2.5'/%3E%3C/svg%3E") center / contain no-repeat;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 12' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 6.5 3.2 3.2L10.5 2.5'/%3E%3Cpath d='m7.4 9.4.3.3L14 2.5'/%3E%3C/svg%3E") center / contain no-repeat;
+	opacity: 0;
+	animation: wa-idle-read var(--idle-loop) ease-out infinite both;
+}
+
+@keyframes wa-idle-read {
+	0%,
+	60% {
+		opacity: 0;
+	}
+	64%,
+	100% {
+		opacity: 1;
+	}
+}
+
+/* Heart reaction landing on the first message */
+.wa-idle-msg__reaction {
+	position: absolute;
+	inset-inline-end: -0.4em;
+	bottom: -0.65em;
+	display: grid;
+	width: 1.5em;
+	height: 1.5em;
+	place-items: center;
+	border: 0.15em solid var(--idle-card);
+	border-radius: 50%;
+	background: var(--idle-in);
+	opacity: 0;
+	animation: wa-idle-react var(--idle-loop) cubic-bezier(0.34, 1.4, 0.64, 1) infinite both;
+}
+
+.wa-idle-msg__reaction svg {
+	width: 0.85em;
+	height: 0.85em;
+	fill: #f15c6d;
+}
+
+@keyframes wa-idle-react {
+	0%,
+	69% {
+		opacity: 0;
+		transform: scale(0.4);
+	}
+	74%,
+	100% {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Floating companions                                                 */
+/* ------------------------------------------------------------------ */
+.wa-idle-chip {
+	position: absolute;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	border: 1px solid var(--idle-card-edge);
+	background: var(--idle-card);
+	box-shadow: var(--idle-shadow);
+}
+
+.wa-idle-chip--voice {
+	bottom: 2.4em;
+	inset-inline-start: 0.6em;
+	gap: 0.5em;
+	padding: 0.45em 0.8em 0.45em 0.45em;
+	border-radius: 2em;
+	animation: wa-idle-drift-a 9s ease-in-out infinite;
+}
+
+[dir='rtl'] .wa-idle-chip--voice {
+	padding: 0.45em 0.45em 0.45em 0.8em;
+}
+
+.wa-idle-chip__play {
+	display: grid;
+	width: 1.7em;
+	height: 1.7em;
+	place-items: center;
+	border-radius: 50%;
+	background: var(--idle-accent);
+}
+
+.wa-idle-chip__play svg {
+	width: 0.7em;
+	height: 0.7em;
+	margin-inline-start: 0.1em;
+	fill: #ffffff;
+}
+
+[dir='rtl'] .wa-idle-chip__play svg {
+	transform: scaleX(-1);
+}
+
+.wa-idle-chip__wave {
+	display: flex;
+	height: 1.4em;
+	align-items: center;
+	gap: 0.18em;
+}
+
+.wa-idle-chip__wave span {
+	width: 0.2em;
+	height: 100%;
+	border-radius: 1em;
+	background: var(--idle-in-line);
+	transform: scaleY(var(--h));
+	animation: wa-idle-wave 2.4s ease-in-out infinite;
+	animation-delay: calc(var(--i) * -0.27s);
+}
+
+@keyframes wa-idle-wave {
+	50% {
+		transform: scaleY(calc(var(--h) * 0.45));
+	}
+}
+
+.wa-idle-chip--photo {
+	top: 1.2em;
+	inset-inline-end: 1.4em;
+	width: 4.6em;
+	height: 3.8em;
+	justify-content: center;
+	padding: 0.35em;
+	border-radius: 0.9em;
+	animation: wa-idle-drift-b 11s ease-in-out infinite;
+}
+
+.wa-idle-chip--photo svg {
+	width: 100%;
+	height: 100%;
+	border-radius: 0.6em;
+	background: linear-gradient(160deg, #cfe9ff, #a7e3c4);
+	fill: rgba(255, 255, 255, 0.85);
+}
+
+html.dark .wa-idle-chip--photo svg {
+	background: linear-gradient(160deg, #24435a, #1f5a42);
+	fill: rgba(255, 255, 255, 0.55);
+}
+
+@keyframes wa-idle-drift-a {
+	0%,
+	100% {
+		transform: translate(0, 0) rotate(-2deg);
+	}
+	50% {
+		transform: translate(0.3em, -0.55em) rotate(1deg);
+	}
+}
+
+@keyframes wa-idle-drift-b {
+	0%,
+	100% {
+		transform: translate(0, 0) rotate(3deg);
+	}
+	50% {
+		transform: translate(-0.35em, 0.5em) rotate(-1deg);
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Copy: quiet and secondary                                           */
+/* ------------------------------------------------------------------ */
+html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__copy {
+	display: flex;
+	max-width: 32em;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5em;
+	text-align: center;
+	animation: wa-idle-enter 700ms 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__title {
+	margin: 0;
+	color: var(--idle-text);
+	font-size: 1.35em;
+	font-weight: 500;
+	line-height: 1.3;
+	letter-spacing: -0.01em;
+	white-space: normal;
+	background: none;
+	-webkit-text-fill-color: currentColor;
+}
+
+html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__hint {
+	margin: 0;
+	color: var(--idle-text-2);
+	font-size: 1em;
+	line-height: 1.45;
+}
+
+html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__unread {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+	margin-top: 0.3em;
+	padding: 0.35em 0.85em;
+	border: 1px solid var(--idle-card-edge);
+	border-radius: 2em;
+	background: var(--idle-card);
+	color: var(--idle-text-2);
+	font-size: 0.9em;
+	font-weight: 500;
+	box-shadow: none;
+}
+
+.wa-chat-idle__unread-dot {
+	width: 0.5em;
+	height: 0.5em;
+	border-radius: 50%;
+	background: var(--idle-accent);
+}
+
+/* Short panes: drop the scene before the copy gets squeezed */
+@container (max-height: 360px) {
+	.wa-idle-scene {
+		display: none;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion: the finished conversation, still                    */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+	.wa-idle-scene,
+	.wa-idle-scene *,
+	.wa-idle-msg__ticks::after,
+	html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__copy {
+		animation: none !important;
+	}
+
+	.wa-idle-msg,
+	.wa-idle-msg__reaction,
+	.wa-idle-msg__ticks::after {
+		opacity: 1;
+		transform: none;
+	}
+
+	.wa-idle-typing {
+		display: none;
+	}
+}

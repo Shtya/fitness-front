@@ -18,8 +18,102 @@ import {
 	Users,
 	Zap,
 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useSidebarChrome } from '@/components/molecules/SidebarChromeContext';
+
+/**
+ * Tooltip for the footer dock. The rail scrolls (overflow: auto), which clips anything
+ * drawn outside it, so one tooltip is rendered on <body> and placed beside whichever
+ * [data-tip] button is hovered (after a short delay) or keyboard-focused (at once).
+ * Buttons keep their aria-label, so the tooltip is visual only (aria-hidden).
+ */
+function useDockTooltip(rtl) {
+	const [tip, setTip] = useState(null);
+	const timerRef = useRef(0);
+
+	const hide = useCallback(() => {
+		window.clearTimeout(timerRef.current);
+		setTip(current => (current ? { ...current, visible: false } : current));
+	}, []);
+
+	const show = useCallback(
+		(element, immediate) => {
+			window.clearTimeout(timerRef.current);
+			const rect = element.getBoundingClientRect();
+			const next = {
+				text: element.dataset.tip,
+				x: rtl ? rect.left - 12 : rect.right + 12,
+				y: rect.top + rect.height / 2,
+			};
+			if (!next.text) return;
+			if (immediate) {
+				setTip({ ...next, visible: true });
+				return;
+			}
+			setTip(current => ({ ...next, visible: Boolean(current?.visible) }));
+			timerRef.current = window.setTimeout(() => {
+				setTip(current => (current ? { ...current, visible: true } : current));
+			}, 300);
+		},
+		[rtl],
+	);
+
+	useEffect(() => {
+		if (!tip?.visible) return undefined;
+		window.addEventListener('scroll', hide, true);
+		window.addEventListener('resize', hide);
+		return () => {
+			window.removeEventListener('scroll', hide, true);
+			window.removeEventListener('resize', hide);
+		};
+	}, [tip?.visible, hide]);
+
+	useEffect(() => () => window.clearTimeout(timerRef.current), []);
+
+	const target = event => {
+		const element = event.target?.closest?.('[data-tip]');
+		return element && event.currentTarget.contains(element) ? element : null;
+	};
+
+	const handlers = {
+		onPointerOver: event => {
+			if (event.pointerType === 'touch') return;
+			const element = target(event);
+			if (element) show(element, false);
+		},
+		onPointerOut: event => {
+			const element = target(event);
+			if (element && !element.contains(event.relatedTarget)) hide();
+		},
+		onPointerDown: hide,
+		onFocus: event => {
+			const element = target(event);
+			if (element?.matches?.(':focus-visible')) show(element, true);
+		},
+		onBlur: hide,
+		onKeyDown: event => {
+			if (event.key === 'Escape') hide();
+		},
+	};
+
+	const node =
+		tip && typeof document !== 'undefined'
+			? createPortal(
+					<div
+						className={`wa-dock-tip${tip.visible ? ' is-visible' : ''}${rtl ? ' is-rtl' : ''}`}
+						aria-hidden="true"
+						style={rtl ? { top: tip.y, right: window.innerWidth - tip.x } : { top: tip.y, left: tip.x }}
+					>
+						{tip.text}
+					</div>,
+					document.body,
+				)
+			: null;
+
+	return { handlers, node };
+}
 
 /**
  * Desktop left rail — compact WhatsApp Web-style navigation.
@@ -48,6 +142,7 @@ export default function WhatsAppDesktopRail({
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const { focusMode, setFocusMode, hideEdgeDock } = useSidebarChrome();
+	const dockTip = useDockTooltip(ar);
 
 	const primaryItems = [
 		{
@@ -207,7 +302,8 @@ export default function WhatsAppDesktopRail({
 
 			<div className="wa-desktop-rail__spacer min-h-2 flex-1" aria-hidden="true" />
 
-			<div className="wa-desktop-rail__footer wa-ui-rail-foot">
+			<div className="wa-desktop-rail__footer wa-ui-rail-foot" {...dockTip.handlers}>
+				{dockTip.node}
 				{/* One matching set: theme, language and settings share the same square button. */}
 				<div className="wa-rf" role="group" aria-label={ar ? 'تفضيلات' : 'Preferences'}>
 					{typeof onToggleDarkMode === 'function' ? (
@@ -218,7 +314,8 @@ export default function WhatsAppDesktopRail({
 							className={`wa-rf__btn is-theme${darkMode ? ' is-dark' : ''}`}
 							onClick={onToggleDarkMode}
 							aria-label={labels.darkMode || (ar ? 'الوضع الداكن' : 'Dark mode')}
-							title={
+							// Styled tooltip (also shown on keyboard focus); the name comes from aria-label.
+							data-tip={
 								darkMode
 									? labels.lightMode || (ar ? 'التبديل إلى الوضع الفاتح' : 'Switch to light mode')
 									: labels.darkMode || (ar ? 'التبديل إلى الوضع الداكن' : 'Switch to dark mode')
@@ -238,7 +335,7 @@ export default function WhatsAppDesktopRail({
 									? labels.switchToEnglish || 'Switch to English'
 									: labels.switchToArabic || 'التبديل إلى العربية'
 							}
-							title={ar ? labels.switchToEnglish || 'English' : labels.switchToArabic || 'العربية'}
+							data-tip={ar ? labels.switchToEnglish || 'English' : labels.switchToArabic || 'العربية'}
 						>
 							<span className={`wa-rf__glyph${ar ? ' is-latin' : ' is-arabic'}`} aria-hidden="true">
 								{ar ? 'EN' : 'ع'}
@@ -252,7 +349,7 @@ export default function WhatsAppDesktopRail({
 							onClick={() => (onOpenSettings ? onOpenSettings() : onSelect('settings'))}
 							aria-label={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 							aria-current={activeTab === 'settings' ? 'page' : undefined}
-							title={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
+							data-tip={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 						>
 							<Settings size={19} strokeWidth={1.9} aria-hidden="true" />
 						</button>
@@ -275,7 +372,7 @@ export default function WhatsAppDesktopRail({
 								: 'Profile'
 					}
 					aria-current={activeTab === 'profile' ? 'page' : undefined}
-					title={ar ? 'الملف الشخصي' : 'Profile'}
+					data-tip={ar ? 'الملف الشخصي' : 'Profile'}
 				>
 					<span className="wa-desktop-rail__avatar wa-ui-rail-avatar__img">
 						{avatarUrl ? (

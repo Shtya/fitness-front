@@ -15128,6 +15128,12 @@ function WhatsAppWorkspaceContent() {
 				);
 				return;
 			}
+			// Never hard-cap settle while the first fetch is still loading — that
+			// made bubbles is-ready under a still-visible skeleton for 1–2s.
+			if (attempts >= hardCapAttempts && stillLoading) {
+				rafId = requestAnimationFrame(tick);
+				return;
+			}
 			rafId = requestAnimationFrame(tick);
 		};
 
@@ -23822,7 +23828,11 @@ function WhatsAppWorkspaceContent() {
 												: ''
 										}`}
 									>
+										{/* Skeleton only while the pane is empty. Once any
+										    messages are painted, hide it immediately — do not
+										    wait on threadSettled / late loadingMessages flips. */}
 										{Boolean(conversationId) &&
+										effectiveMessages.length === 0 &&
 										(loadingMessages || !threadSettled) ? (
 											<div
 												className="wa-thread-loader"
@@ -23866,11 +23876,16 @@ function WhatsAppWorkspaceContent() {
 										) : (
 											<div
 												className={`wa-message-thread${
-													threadSettled ? ' is-ready' : ' is-settling'
+													// Reveal bubbles as soon as we have rows; keep
+													// settling scroll work in the background.
+													threadSettled || effectiveMessages.length > 0
+														? ' is-ready'
+														: ' is-settling'
 												}`}
 											>
 												{messagesSyncHint &&
-												!(loadingMessages || !threadSettled) ? (
+												!loadingMessages &&
+												threadSettled ? (
 													<div className="sticky top-0 z-10 mx-auto mb-2 w-fit rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm dark:bg-slate-800/95">
 														<span className="inline-flex items-center gap-1.5">
 															<Loader2 size={12} className="animate-spin" />
