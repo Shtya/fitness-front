@@ -23858,14 +23858,25 @@ function WhatsAppWorkspaceContent() {
 												: ''
 										}`}
 									>
-										{/* Full-pane skeleton: empty first load, OR unread
-										    catch-up until the tip page is in the thread. */}
+										{/* Keep the pane busy while the first page loads, unread
+										    catch-up runs, or settle still hides bubbles (opacity 0).
+										    Avoid a blank wallpaper between click and reveal. */}
 										{Boolean(conversationId) &&
 										(Boolean(
 											messageCatchUp &&
 												messageCatchUp.conversationId === conversationId,
 										) ||
-											(effectiveMessages.length === 0 && loadingMessages)) ? (
+											loadingMessages ||
+											!threadSettled) &&
+										!(
+											threadSettled &&
+											!loadingMessages &&
+											!(
+												messageCatchUp &&
+												messageCatchUp.conversationId === conversationId
+											) &&
+											effectiveMessages.length === 0
+										) ? (
 											<div
 												className="wa-thread-loader"
 												role="status"
@@ -23881,6 +23892,13 @@ function WhatsAppWorkspaceContent() {
 														: messagesSyncHint || t.loadingMessages
 												}
 											>
+												<div className="wa-thread-loader__stack" aria-hidden="true">
+													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in" />
+													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in wa-thread-loader__bubble--short" />
+													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--out" />
+													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--out wa-thread-loader__bubble--mid" />
+													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in wa-thread-loader__bubble--mid" />
+												</div>
 												<div className="wa-thread-loader__mark">
 													<span
 														className="wa-thread-loader__ring"

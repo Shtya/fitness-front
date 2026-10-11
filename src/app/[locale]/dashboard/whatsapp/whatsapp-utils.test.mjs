@@ -997,6 +997,18 @@ test('isRenderableWhatsAppMessage removes empty provider placeholders', () => {
 		}),
 		'https://www.google.com/maps?q=30.04,31.23',
 	);
+	// Plain chat text that merely contains a maps short-link must stay text —
+	// WhatsApp does not turn those into native location pins.
+	const mapsInChat = {
+		type: 'chat',
+		text: 'العنوان: https://maps.app.goo.gl/txhH136ejUEdYusB8?g_st=aw',
+	};
+	assert.equal(isWhatsAppLocationMessage(mapsInChat), false);
+	assert.equal(whatsAppLocationFromMessage(mapsInChat), null);
+	assert.equal(
+		whatsAppLocationHref(mapsInChat),
+		'https://maps.app.goo.gl/txhH136ejUEdYusB8?g_st=aw',
+	);
 });
 
 test('conversationUnreadCount follows CRM unreadCount, not last-message direction', () => {

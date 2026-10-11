@@ -1570,9 +1570,14 @@ function locationFromMapsUrl(value) {
 	return null;
 }
 
-export function isWhatsAppLocationMessage(message) {
+function isNativeWhatsAppLocationType(message) {
 	const type = String(message?.type || '').toLowerCase();
-	if (type === 'location' || type === 'live_location' || type === 'livelocation') return true;
+	return type === 'location' || type === 'live_location' || type === 'livelocation';
+}
+
+export function isWhatsAppLocationMessage(message) {
+	if (isNativeWhatsAppLocationType(message)) return true;
+	// Real pin / live payloads only — never a maps URL inside ordinary chat text.
 	return Boolean(whatsAppLocationFromMessage(message));
 }
 
@@ -1599,7 +1604,12 @@ export function whatsAppLocationFromMessage(message) {
 		Boolean(message.raw?.location?.isLive),
 	);
 	if (stored) return stored;
-	return locationFromMapsUrl(message.text || message.location?.url || message.raw?.url || '');
+	// WhatsApp keeps goo.gl / maps.app links as normal linked text. Only use a
+	// maps-URL fallback when the message is already a native location type.
+	if (!isNativeWhatsAppLocationType(message)) return null;
+	return locationFromMapsUrl(
+		message.location?.url || message.raw?.url || message.text || '',
+	);
 }
 
 export function whatsAppLocationHref(message, location = null) {
