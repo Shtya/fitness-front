@@ -8604,6 +8604,9 @@ function MessageReactionPicker({
 	);
 }
 
+/** Compact, like WhatsApp Web's message menu. */
+const MESSAGE_MENU_WIDTH = 216;
+
 function MessageActionMenu({
 	open,
 	message,
@@ -8630,7 +8633,7 @@ function MessageActionMenu({
 	// Height 0 means "not measured yet", which resolves to the viewport limit so the
 	// very first paint cannot clip an option before the real height is known.
 	const [desktopPos, setDesktopPos] = useState(() =>
-		computeAnchoredMenuPosition(anchorRect, { width: 248, height: 0 }, { mine }),
+		computeAnchoredMenuPosition(anchorRect, { width: MESSAGE_MENU_WIDTH, height: 0 }, { mine }),
 	);
 	const menuRef = useRef(null);
 	useMenuKeyboard(menuRef, { open: Boolean(open && message), onClose });
@@ -8678,7 +8681,7 @@ function MessageActionMenu({
 				computeAnchoredMenuPosition(
 					anchorRect,
 					{
-						width: node?.getBoundingClientRect().width || 248,
+						width: node?.getBoundingClientRect().width || MESSAGE_MENU_WIDTH,
 						// `scrollHeight`, not the bounding box: the box reports the height it
 						// was capped to, so measuring it would only ever re-confirm the cap
 						// and the options below it would stay hidden.
@@ -9035,7 +9038,7 @@ function MessageActionMenu({
 				style={{
 					top: desktopPos.top,
 					left: desktopPos.left,
-					width: desktopPos.width || 248,
+					width: desktopPos.width || MESSAGE_MENU_WIDTH,
 					maxHeight: desktopPos.maxHeight || undefined,
 				}}
 				onMouseLeave={scheduleBoardSubmenuClose}

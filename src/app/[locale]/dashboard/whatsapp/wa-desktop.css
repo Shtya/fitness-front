@@ -1287,3 +1287,39 @@
 		color: #161717 !important;
 	}
 }
+
+/* Message action menu: compact, like WhatsApp Web's message menu */
+@media (min-width: 769px) {
+	html .wa-message-action-menu.wa-ui-menu:not(#wa-d) {
+		padding: 6px !important;
+		border-radius: 14px !important;
+	}
+
+	html .wa-message-action-menu.wa-ui-menu:not(#wa-d) .wa-ui-menu__item {
+		min-height: 34px !important;
+		gap: 10px !important;
+		padding: 0 10px !important;
+		border-radius: 7px !important;
+		font-size: 13.5px !important;
+	}
+
+	html .wa-message-action-menu.wa-ui-menu:not(#wa-d) .wa-ui-menu__icon {
+		width: 17px !important;
+		height: 17px !important;
+	}
+
+	html .wa-message-action-menu.wa-ui-menu:not(#wa-d) .wa-ui-menu__sep {
+		margin: 4px 2px !important;
+	}
+
+	html .wa-message-action-menu.wa-ui-menu:not(#wa-d) .wa-ui-reactions {
+		margin: 0 0 4px !important;
+		padding: 0 0 6px !important;
+	}
+
+	html .wa-message-action-menu.wa-ui-menu:not(#wa-d) .wa-ui-reaction {
+		width: 28px !important;
+		height: 28px !important;
+		font-size: 19px !important;
+	}
+}
