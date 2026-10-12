@@ -379,7 +379,13 @@ import {
 import { estimateMessageRowSize, estimateTextRowSize, messageRowKey, THREAD_ROW_EXTRAS } from './wa-thread-virtual.js';
 import { readThreadLayout, threadDayKey } from './wa-thread-layout.js';
 import { WaMeasuredThreadRow } from './wa-measured-thread-row';
-import { getAttachmentStreamUrl, absoluteApiUrl, forgetAttachmentStreamUrl } from './whatsapp-media-stream';
+import {
+	getAttachmentStreamUrl,
+	absoluteApiUrl,
+	forgetAttachmentStreamUrl,
+	voicePlaybackFormat,
+	withPlaybackFormat,
+} from './whatsapp-media-stream';
 import {
 	buildEffectiveConversations,
 	buildEffectiveMessages,
@@ -3633,12 +3639,12 @@ async function readBlobErrorMessage(blob) {
 	}
 }
 
-async function fetchAttachmentContentBlob(attachmentId, { timeout = 120_000 } = {}) {
+async function fetchAttachmentContentBlob(attachmentId, { timeout = 120_000, format = '' } = {}) {
 	const debugMedia =
 		typeof window !== 'undefined' &&
 		window.localStorage?.getItem('WA_MEDIA_DEBUG') === '1';
 	const started = debugMedia ? performance.now() : 0;
-	const response = await api.get(`/whatsapp/attachments/${attachmentId}/content`, {
+	const response = await api.get(withPlaybackFormat(`/whatsapp/attachments/${attachmentId}/content`, format), {
 		responseType: 'blob',
 		validateStatus: () => true,
 		timeout,
@@ -3763,22 +3769,28 @@ function drainAttachmentFetchQueue() {
 	}
 }
 
+function attachmentBlobKey(attachmentId, format = '') {
+	const id = String(attachmentId || '');
+	return format ? `${id}|${format}` : id;
+}
+
 function requestAttachmentBlob(
 	attachmentId,
-	{ timeout = 120_000, priority = false, kind = '' } = {},
+	{ timeout = 120_000, priority = false, kind = '', format = '' } = {},
 ) {
 	const id = String(attachmentId || '');
 	if (!id) return Promise.reject(new Error('Attachment is unavailable'));
-	const cached = attachmentBlobCache.get(id);
+	const key = attachmentBlobKey(id, format);
+	const cached = attachmentBlobCache.get(key);
 	if (cached) return Promise.resolve(cached);
-	const pending = attachmentBlobRequests.get(id);
+	const pending = attachmentBlobRequests.get(key);
 	if (pending) return pending;
 
 	const promise = new Promise((resolve, reject) => {
 		const run = () =>
-			fetchAttachmentContentBlob(id, { timeout })
+			fetchAttachmentContentBlob(id, { timeout, format })
 				.then(blob => {
-					rememberAttachmentBlob(id, blob);
+					rememberAttachmentBlob(key, blob);
 					resolve(blob);
 				})
 				.catch(reject);
@@ -3790,10 +3802,10 @@ function requestAttachmentBlob(
 		else attachmentFetchQueue.push(entry);
 		drainAttachmentFetchQueue();
 	}).finally(() => {
-		attachmentBlobRequests.delete(id);
+		attachmentBlobRequests.delete(key);
 	});
 
-	attachmentBlobRequests.set(id, promise);
+	attachmentBlobRequests.set(key, promise);
 	return promise;
 }
 
@@ -3804,14 +3816,16 @@ function rememberAttachmentBlob(attachmentId, blob) {
 function forgetAttachmentBlob(attachmentId) {
 	const id = String(attachmentId || '');
 	if (!id) return;
-	attachmentBlobCache.delete(id);
-	attachmentBlobRequests.delete(id);
+	for (const key of [id, attachmentBlobKey(id, 'm4a')]) {
+		attachmentBlobCache.delete(key);
+		attachmentBlobRequests.delete(key);
+	}
 }
 
-function getCachedAttachmentBlob(attachmentId) {
+function getCachedAttachmentBlob(attachmentId, format = '') {
 	const id = String(attachmentId || '');
 	if (!id) return null;
-	return attachmentBlobCache.get(id) || null;
+	return attachmentBlobCache.get(attachmentBlobKey(id, format)) || null;
 }
 
 /** Defers media requests until the bubble is close to the viewport. */
@@ -5521,7 +5535,7 @@ function VoiceMessage({
 	url,
 	attachmentId,
 	mine,
-	mimeType,
+	mimeType: sourceMimeType,
 	fileName,
 	demoAttachment = false,
 	seed,
@@ -5573,6 +5587,9 @@ function VoiceMessage({
 		Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0,
 	);
 	const canFetchAttachment = demoAttachment || isPersistedAttachmentId(attachmentId);
+	// Demo media and in-browser recordings never go through the converting endpoint.
+	const playbackFormat = demoAttachment ? '' : voicePlaybackFormat();
+	const mimeType = playbackFormat ? 'audio/mp4' : sourceMimeType;
 	const isNearViewport = useNearViewport(containerRef, { rootMargin: '900px' });
 	const alreadyOnDisk = String(downloadStatus || '').toLowerCase() === 'downloaded';
 
@@ -5713,7 +5730,7 @@ function VoiceMessage({
 				return existingStream;
 			}
 			try {
-				const streamUrl = await getAttachmentStreamUrl(attachmentId);
+				const streamUrl = withPlaybackFormat(await getAttachmentStreamUrl(attachmentId), playbackFormat);
 				setPlaybackUrl(streamUrl);
 				setLoadFailed(false);
 				return streamUrl;
@@ -5740,7 +5757,9 @@ function VoiceMessage({
 			try {
 				let blob = voiceBlobRef.current;
 				if (!blob) {
-					const cached = canFetchAttachment ? getCachedAttachmentBlob(attachmentId) : null;
+					const cached = canFetchAttachment
+						? getCachedAttachmentBlob(attachmentId, playbackFormat)
+						: null;
 					if (cached) {
 						blob = cached;
 					}
@@ -5760,6 +5779,7 @@ function VoiceMessage({
 										timeout: priority ? 45_000 : softFail ? 25_000 : 35_000,
 										priority: priority || !softFail || alreadyOnDisk,
 										kind: attachmentType || 'ptt',
+										format: playbackFormat,
 									});
 							if (
 								next &&
@@ -5848,6 +5868,7 @@ function VoiceMessage({
 		canFetchAttachment,
 		demoAttachment,
 		mimeType,
+		playbackFormat,
 		playbackUrl,
 		url,
 	]);
@@ -5872,12 +5893,14 @@ function VoiceMessage({
 				cancelled = true;
 			};
 		}
-		const cached = canFetchAttachment ? getCachedAttachmentBlob(attachmentId) : null;
+		const cached = canFetchAttachment
+			? getCachedAttachmentBlob(attachmentId, playbackFormat)
+			: null;
 		if (cached) {
 			void hydrateFromBlob(cached, { analyze: true });
 		}
 		return undefined;
-	}, [attachmentId, canFetchAttachment, hydrateFromBlob, isNearViewport, url]);
+	}, [attachmentId, canFetchAttachment, hydrateFromBlob, isNearViewport, playbackFormat, url]);
 
 	useEffect(() => {
 		if (!isNearViewport) return undefined;

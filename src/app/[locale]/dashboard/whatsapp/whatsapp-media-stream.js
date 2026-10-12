@@ -92,3 +92,23 @@ export function forgetAttachmentStreamUrl(attachmentId) {
 	const id = String(attachmentId || '');
 	if (id) streamUrlCache.delete(id);
 }
+
+let detectedVoiceFormat = null;
+
+/**
+ * WhatsApp voice notes are Ogg/Opus, which iOS Safari's <audio> cannot decode.
+ * Returns 'm4a' on those browsers so the server sends an AAC copy, '' elsewhere.
+ */
+export function voicePlaybackFormat() {
+	if (detectedVoiceFormat !== null) return detectedVoiceFormat;
+	if (typeof document === 'undefined') return '';
+	const probe = document.createElement('audio');
+	const canOpus = probe.canPlayType?.('audio/ogg; codecs="opus"') || '';
+	detectedVoiceFormat = canOpus ? '' : 'm4a';
+	return detectedVoiceFormat;
+}
+
+export function withPlaybackFormat(url, format) {
+	if (!url || !format) return url;
+	return `${url}${url.includes('?') ? '&' : '?'}format=${encodeURIComponent(format)}`;
+}
