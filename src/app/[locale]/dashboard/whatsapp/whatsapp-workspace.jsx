@@ -151,6 +151,10 @@ import {
 	conversationAvatarUrl,
 	inboxAvatarForWaId,
 	buildWhatsAppMentionDirectory,
+	buildComposerMentionCandidates,
+	encodeComposerMentions,
+	filterComposerMentionCandidates,
+	findComposerMentionQuery,
 	resolveWhatsAppMentionLabel,
 	conversationUnreadCount,
 	conversationMatchesInboxFilter,
@@ -1762,9 +1766,27 @@ function IsolatedComposerTextarea({
 	onTyping,
 	onEnterSubmit,
 	onPaste,
+	mentionCandidates = null,
+	mentionLoading = false,
+	onMentionOpen,
+	locale = 'en',
 }) {
 	const [draft, setDraft] = useState('');
 	const textareaRef = useRef(null);
+	const pickedMentionsRef = useRef([]);
+	const mentionQueryRef = useRef(null);
+	const [mentionQuery, setMentionQueryState] = useState(null);
+	const [mentionIndex, setMentionIndex] = useState(0);
+	const setMentionQuery = useCallback(next => {
+		const current = mentionQueryRef.current;
+		if (!next || current?.start !== next.start || current?.query !== next.query) {
+			setMentionIndex(0);
+		}
+		mentionQueryRef.current = next;
+		setMentionQueryState(next);
+	}, []);
+	const [mentionAnchor, setMentionAnchor] = useState(null);
+	const mentionsEnabled = Array.isArray(mentionCandidates);
 
 	const apply = useCallback(
 		next => {
@@ -1774,6 +1796,10 @@ function IsolatedComposerTextarea({
 			draftRef.current = text;
 			setDraft(text);
 			onHasTextChange?.(Boolean(text.trim()));
+			if (!text) {
+				pickedMentionsRef.current = [];
+				setMentionQuery(null);
+			}
 			requestAnimationFrame(() => {
 				const node = textareaRef.current;
 				if (!node) return;
@@ -1781,7 +1807,7 @@ function IsolatedComposerTextarea({
 				node.style.height = `${Math.min(node.scrollHeight, 112)}px`;
 			});
 		},
-		[draftRef, onHasTextChange],
+		[draftRef, onHasTextChange, setMentionQuery],
 	);
 
 	useLayoutEffect(() => {
@@ -1789,37 +1815,292 @@ function IsolatedComposerTextarea({
 			getDraft: () => String(draftRef.current || ''),
 			setDraft: apply,
 			focus: () => textareaRef.current?.focus(),
+			getMentions: () => [...pickedMentionsRef.current],
 		};
 		return () => {
 			if (apiRef.current?.setDraft === apply) apiRef.current = null;
 		};
 	}, [apiRef, apply, draftRef]);
 
+	const mentionMatches = useMemo(
+		() =>
+			mentionsEnabled && mentionQuery
+				? filterComposerMentionCandidates(mentionCandidates, mentionQuery.query)
+				: [],
+		[mentionCandidates, mentionQuery, mentionsEnabled],
+	);
+	const mentionOpen =
+		mentionsEnabled && Boolean(mentionQuery) && (mentionMatches.length > 0 || mentionLoading);
+
+	const syncMentionQuery = useCallback(
+		node => {
+			if (!mentionsEnabled || !node) {
+				setMentionQuery(null);
+				return;
+			}
+			const next = findComposerMentionQuery(node.value, node.selectionStart ?? node.value.length);
+			if (next && !mentionQueryRef.current) onMentionOpen?.();
+			setMentionQuery(next);
+			if (next) {
+				const rect = node.getBoundingClientRect();
+				setMentionAnchor({ left: rect.left, top: rect.top, width: rect.width });
+			}
+		},
+		[mentionsEnabled, onMentionOpen, setMentionQuery],
+	);
+
+	useEffect(() => {
+		if (!mentionsEnabled) setMentionQuery(null);
+	}, [mentionsEnabled, setMentionQuery]);
+
+	const pickMention = candidate => {
+		const node = textareaRef.current;
+		const query = mentionQuery;
+		if (!candidate || !query) return;
+		const current = String(draftRef.current || '');
+		const insert = `@${candidate.label} `;
+		const next = `${current.slice(0, query.start)}${insert}${current.slice(query.end)}`;
+		pickedMentionsRef.current = [
+			...pickedMentionsRef.current.filter(item => item.waId !== candidate.waId),
+			{ label: candidate.label, waId: candidate.waId },
+		];
+		apply(next);
+		setMentionQuery(null);
+		const caret = query.start + insert.length;
+		requestAnimationFrame(() => {
+			if (!node) return;
+			node.focus();
+			node.setSelectionRange(caret, caret);
+		});
+	};
+
 	const presentation = messageTextPresentation(draft);
+	const ar = locale === 'ar';
 
 	return (
-		<textarea
-			ref={textareaRef}
-			aria-label={ariaLabel}
-			value={draft}
-			onChange={event => {
-				apply(event.target.value);
-				onTyping?.();
-			}}
-			onPaste={onPaste}
-			onKeyDown={event => {
-				if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-					event.preventDefault();
-					onEnterSubmit?.(event);
-				}
-			}}
-			rows={1}
-			dir={presentation.dir}
-			lang={presentation.lang}
-			style={presentation.style}
-			placeholder={placeholder}
-			className={`wa-composer-input max-h-28 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${presentation.className || ''}`}
-		/>
+		<>
+			<textarea
+				ref={textareaRef}
+				aria-label={ariaLabel}
+				aria-autocomplete={mentionsEnabled ? 'list' : undefined}
+				aria-expanded={mentionsEnabled ? mentionOpen : undefined}
+				value={draft}
+				onChange={event => {
+					apply(event.target.value);
+					syncMentionQuery(event.target);
+					onTyping?.();
+				}}
+				onClick={event => syncMentionQuery(event.currentTarget)}
+				onBlur={() => window.setTimeout(() => setMentionQuery(null), 150)}
+				onPaste={onPaste}
+				onKeyDown={event => {
+					if (mentionOpen && !event.nativeEvent.isComposing) {
+						if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+							event.preventDefault();
+							const step = event.key === 'ArrowDown' ? 1 : -1;
+							const size = Math.max(1, mentionMatches.length);
+							setMentionIndex(current => (current + step + size) % size);
+							return;
+						}
+						if ((event.key === 'Enter' || event.key === 'Tab') && mentionMatches.length) {
+							event.preventDefault();
+							pickMention(mentionMatches[Math.min(mentionIndex, mentionMatches.length - 1)]);
+							return;
+						}
+						if (event.key === 'Escape') {
+							event.preventDefault();
+							setMentionQuery(null);
+							return;
+						}
+					}
+					if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+						event.preventDefault();
+						onEnterSubmit?.(event);
+					}
+				}}
+				onKeyUp={event => {
+					if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+						syncMentionQuery(event.currentTarget);
+					}
+				}}
+				rows={1}
+				dir={presentation.dir}
+				lang={presentation.lang}
+				style={presentation.style}
+				placeholder={placeholder}
+				className={`wa-composer-input max-h-28 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${presentation.className || ''}`}
+			/>
+			{mentionOpen && mentionAnchor && typeof document !== 'undefined'
+				? createPortal(
+						<div
+							role="listbox"
+							aria-label={ar ? 'منشن عضو' : 'Mention a member'}
+							dir={ar ? 'rtl' : 'ltr'}
+							className="fixed z-[80] max-h-64 overflow-y-auto rounded-xl border border-black/10 bg-white py-1 shadow-2xl dark:border-white/10 dark:bg-[#233138]"
+							style={{
+								left: Math.max(8, mentionAnchor.left - 8),
+								bottom: Math.max(8, window.innerHeight - mentionAnchor.top + 10),
+								width: Math.min(360, Math.max(240, mentionAnchor.width + 16), window.innerWidth - 16),
+							}}
+							onMouseDown={event => event.preventDefault()}
+						>
+							{mentionMatches.length === 0 ? (
+								<div className="px-3 py-2.5 text-[13px] text-[#667781] dark:text-[#8696A0]">
+									{ar ? 'جاري تحميل الأعضاء…' : 'Loading members…'}
+								</div>
+							) : (
+								mentionMatches.map((candidate, index) => (
+									<button
+										key={candidate.waId}
+										type="button"
+										role="option"
+										aria-selected={index === mentionIndex}
+										onMouseEnter={() => setMentionIndex(index)}
+										onClick={() => pickMention(candidate)}
+										className={`flex w-full items-center gap-3 px-3 py-2 text-start ${
+											index === mentionIndex ? 'bg-[#F0F2F5] dark:bg-[#182229]' : ''
+										}`}
+									>
+										<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#DFE5E7] text-sm font-semibold text-[#54656F] dark:bg-[#6A7175] dark:text-white">
+											{String(candidate.label || '?').replace(/^\+/, '').slice(0, 1).toUpperCase()}
+										</span>
+										<span className="min-w-0 flex-1">
+											<span className="block truncate text-[14.5px] text-[#111B21] dark:text-[#E9EDEF]">
+												{candidate.label}
+											</span>
+											{candidate.name && candidate.phone ? (
+												<span className="block truncate text-[12.5px] text-[#667781] dark:text-[#8696A0]" dir="ltr">
+													{formatWhatsAppPhone(candidate.phone)}
+												</span>
+											) : null}
+										</span>
+										{candidate.isAdmin ? (
+											<span className="shrink-0 rounded bg-[#D9FDD3] px-1.5 py-0.5 text-[11px] text-[#008069] dark:bg-[#005C4B] dark:text-[#E9EDEF]">
+												{ar ? 'مشرف' : 'Admin'}
+											</span>
+										) : null}
+									</button>
+								))
+							)}
+						</div>,
+						document.body,
+					)
+				: null}
+		</>
+	);
+}
+
+function GroupMessageReceiptsPanel({ receipts, locale, formatTime, resolveMember }) {
+	const ar = locale === 'ar';
+	const read = Array.isArray(receipts?.read) ? receipts.read : [];
+	const delivered = Array.isArray(receipts?.delivered) ? receipts.delivered : [];
+	const remaining = Array.isArray(receipts?.remaining) ? receipts.remaining : [];
+	const total = Number(receipts?.total) || read.length + delivered.length + remaining.length;
+	const sections = [
+		{
+			id: 'read',
+			title: ar ? 'قرأها' : 'Read by',
+			items: read,
+			timeOf: entry => entry.readAt,
+			icon: <CheckCheck size={18} className="text-[#53BDEB]" strokeWidth={2.5} />,
+		},
+		{
+			id: 'delivered',
+			title: ar ? 'وصلتله ولسه ما قرأهاش' : 'Delivered to (not read yet)',
+			items: delivered,
+			timeOf: entry => entry.deliveredAt,
+			icon: <CheckCheck size={18} className="text-[#8696A0]" strokeWidth={2.5} />,
+		},
+		{
+			id: 'remaining',
+			title: ar ? 'لسه ما وصلتلوش' : 'Not delivered yet',
+			items: remaining,
+			timeOf: () => null,
+			icon: <Check size={18} className="text-[#8696A0]" strokeWidth={2.5} />,
+		},
+	];
+	return (
+		<>
+			<div className={`wa-mi__status is-${remaining.length || delivered.length ? (remaining.length ? 'sent' : 'delivered') : 'read'}`}>
+				<span className="wa-mi__status-glyph">
+					{remaining.length ? (
+						<Check size={22} className="text-[#8696A0]" strokeWidth={2.5} />
+					) : (
+						<CheckCheck
+							size={22}
+							className={delivered.length ? 'text-[#8696A0]' : 'text-[#53BDEB]'}
+							strokeWidth={2.5}
+						/>
+					)}
+				</span>
+				<div className="min-w-0 flex-1">
+					<p className="wa-mi__status-label">{ar ? 'رسالة جروب' : 'Group message'}</p>
+					<p className="wa-mi__status-value">
+						{ar
+							? `قرأها ${read.length} من ${total}`
+							: `Read by ${read.length} of ${total}`}
+					</p>
+				</div>
+			</div>
+			{receipts?.tracked === false ? (
+				<p className="wa-mi__step-hint px-1">
+					{ar
+						? 'مفيش إيصالات متسجلة للرسالة دي لسه. الإيصالات بتتسجل للرسايل اللي اتبعتت بعد التحديث ده، وبس من الأعضاء اللي مفعّلين علامات القراءة.'
+						: 'No member receipts recorded for this message yet. Receipts are stored for messages sent after this update, and only from members who have read receipts on.'}
+				</p>
+			) : null}
+			{receipts?.participantsKnown === false ? (
+				<p className="wa-mi__step-hint px-1">
+					{ar
+						? 'قائمة أعضاء الجروب مش متحمّلة — افتح معلومات الجروب مرة عشان تظهر.'
+						: 'Group member list is not loaded yet — open the group info once to load it.'}
+				</p>
+			) : null}
+			{sections.map(section =>
+				section.items.length ? (
+					<section key={section.id} className="wa-mi__card">
+						<h4 className="wa-mi__card-title flex items-center gap-2">
+							{section.icon}
+							<span className="flex-1">{section.title}</span>
+							<span className="text-[12px] font-normal text-[#667781]">{section.items.length}</span>
+						</h4>
+						<ul className="wa-mi__rows">
+							{section.items.map(entry => {
+								const member = resolveMember(entry);
+								const time = formatTime(section.timeOf(entry));
+								return (
+									<li key={`${section.id}:${entry.key}`} className="wa-mi__row is-done">
+										<div className="flex min-w-0 items-center gap-3">
+											{member.avatar ? (
+												<img
+													src={member.avatar}
+													alt=""
+													className="size-9 shrink-0 rounded-full object-cover"
+													loading="lazy"
+												/>
+											) : (
+												<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#DFE5E7] text-sm font-semibold text-[#54656F]">
+													{String(member.name || '?').replace(/^\+/, '').slice(0, 1).toUpperCase()}
+												</span>
+											)}
+											<div className="min-w-0">
+												<p className="wa-mi__step-label truncate">{member.name}</p>
+												{member.sub ? (
+													<p className="wa-mi__step-hint truncate" dir="ltr">
+														{member.sub}
+													</p>
+												) : null}
+											</div>
+										</div>
+										{time ? <strong className="wa-mi__row-value">{time}</strong> : null}
+									</li>
+								);
+							})}
+						</ul>
+					</section>
+				) : null,
+			)}
+		</>
 	);
 }
 
@@ -11866,6 +12147,44 @@ function WhatsAppWorkspaceContent() {
 			}),
 		[effectiveConversations, effectiveMessages, selectedConversation],
 	);
+	const selectedIsGroupChat =
+		selectedConversation?.type === 'group' ||
+		String(selectedConversation?.providerChatId || '').endsWith('@g.us');
+	const composerMentionCandidates = useMemo(
+		() =>
+			selectedIsGroupChat && !demo.settings.enabled
+				? buildComposerMentionCandidates({
+						participants: selectedConversation?.group?.participants || [],
+						directory: mentionDirectory,
+						selfPhone: selectedAccount?.phoneNumber,
+					})
+				: null,
+		[
+			selectedIsGroupChat,
+			demo.settings.enabled,
+			selectedConversation?.group?.participants,
+			mentionDirectory,
+			selectedAccount?.phoneNumber,
+		],
+	);
+	const messageInfoTargetRef = useRef(null);
+	const messageInfoRefreshTimerRef = useRef(null);
+	const refreshOpenMessageInfoRef = useRef(null);
+	useEffect(() => {
+		if (!messageInfo) messageInfoTargetRef.current = null;
+	}, [messageInfo]);
+	useEffect(
+		() => () => {
+			if (messageInfoRefreshTimerRef.current) window.clearTimeout(messageInfoRefreshTimerRef.current);
+		},
+		[],
+	);
+	const [mentionMembersLoading, setMentionMembersLoading] = useState(false);
+	const ensureMentionMembersRef = useRef(null);
+	const mentionMembersLoadedRef = useRef(new Set());
+	const handleComposerMentionOpen = useCallback(() => {
+		void ensureMentionMembersRef.current?.();
+	}, []);
 	const resolveReactor = useCallback(
 		reaction => {
 			const actorKey = typeof reaction === 'string' ? reaction : reaction?.actorKey;
@@ -15822,6 +16141,10 @@ function WhatsAppWorkspaceContent() {
 				if (openId) void loadMessageSchedulesRef.current?.(openId);
 				return;
 			}
+			if (event.event === 'message_receipts') {
+				refreshOpenMessageInfoRef.current?.(event.payload?.messageId);
+				return;
+			}
 			if (event.event === 'message_status' && eventConversationId) {
 				const nextStatus = event.payload?.status;
 				const applyAck = items => {
@@ -16936,7 +17259,9 @@ function WhatsAppWorkspaceContent() {
 		if (!conversationId || !getDraft().trim() || sending) return;
 		pinThreadToBottomRef.current = true;
 		const targetConversationId = conversationId;
-		const text = getDraft().trim();
+		const { text, mentions } = composerMentionCandidates
+			? encodeComposerMentions(getDraft().trim(), composerApiRef.current?.getMentions?.() || [])
+			: { text: getDraft().trim(), mentions: [] };
 		const replySnapshot = replyingTo;
 		if (demo.settings.enabled) {
 			setSending(true);
@@ -16984,6 +17309,7 @@ function WhatsAppWorkspaceContent() {
 			optimistic: true,
 			quotedProviderMessageId: replySnapshot?.providerMessageId || null,
 			replyTo: replySnapshot || null,
+			...(mentions.length ? { mentions } : {}),
 		};
 		setDraft('');
 		setReplyingTo(null);
@@ -17005,6 +17331,7 @@ function WhatsAppWorkspaceContent() {
 				text,
 				clientMessageId,
 				quotedProviderMessageId: replySnapshot?.providerMessageId || undefined,
+				...(mentions.length ? { mentions } : {}),
 			});
 			const confirmedMessage = {
 				...data.message,
@@ -17185,6 +17512,9 @@ function WhatsAppWorkspaceContent() {
 				text: message.text,
 				clientMessageId,
 				quotedProviderMessageId: message.quotedProviderMessageId || undefined,
+				...(Array.isArray(message.mentions) && message.mentions.length
+					? { mentions: message.mentions }
+					: {}),
 			});
 			const confirmedMessage = {
 				...data.message,
@@ -18648,6 +18978,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (action === 'info') {
+			messageInfoTargetRef.current = { conversationId, message };
 			setMessageInfo({ loading: true, message });
 			setLoadingMessageInfo(true);
 			try {
@@ -21706,6 +22037,78 @@ function WhatsAppWorkspaceContent() {
 			if (requestId === conversationInfoRequestId.current) {
 				setLoadingConversationInfoGroup(false);
 			}
+		}
+	};
+
+	refreshOpenMessageInfoRef.current = messageId => {
+		const target = messageInfoTargetRef.current;
+		if (!target || String(target.message?.id || '') !== String(messageId || '')) return;
+		if (messageInfoRefreshTimerRef.current) return;
+		messageInfoRefreshTimerRef.current = window.setTimeout(async () => {
+			messageInfoRefreshTimerRef.current = null;
+			if (messageInfoTargetRef.current !== target) return;
+			try {
+				const { data } = await api.get(
+					`/whatsapp/conversations/${target.conversationId}/messages/${target.message.id}/info`,
+				);
+				if (messageInfoTargetRef.current !== target) return;
+				setMessageInfo(current =>
+					current && !current.loading
+						? { ...current, groupReceipts: data?.groupReceipts ?? current.groupReceipts }
+						: current,
+				);
+			} catch {
+				/* keep the receipts already on screen */
+			}
+		}, 800);
+	};
+
+	ensureMentionMembersRef.current = async () => {
+		const live = conversationsRef.current.find(item => item.id === conversationId);
+		if (!live || live.type !== 'group' || !accountId) return;
+		if (mentionMembersLoadedRef.current.has(live.id)) return;
+		mentionMembersLoadedRef.current.add(live.id);
+		const hasMembers = (live.group?.participants || []).length > 0;
+		if (!hasMembers) setMentionMembersLoading(true);
+		try {
+			let groupId = resolveGroupIdForConversation(live);
+			if (!groupId) {
+				const { data: groupRows } = await api.get(`/whatsapp/accounts/${accountId}/groups`);
+				if (Array.isArray(groupRows)) {
+					setGroups(groupRows);
+					groupId =
+						groupRows.find(
+							item =>
+								item.conversationId === live.id ||
+								String(item.waId || '') === String(live.providerChatId || ''),
+						)?.id || null;
+				}
+			}
+			if (!groupId) return;
+			const { data } = await api.get(`/whatsapp/accounts/${accountId}/groups/${groupId}`, {
+				params: { refresh: !hasMembers },
+			});
+			if (!Array.isArray(data?.participants)) return;
+			setConversations(current =>
+				current.map(item =>
+					item.id === live.id
+						? {
+								...item,
+								group: {
+									...(item.group || {}),
+									...data,
+									participants: data.participants.length
+										? data.participants
+										: item.group?.participants || [],
+								},
+							}
+						: item,
+				),
+			);
+		} catch {
+			mentionMembersLoadedRef.current.delete(live.id);
+		} finally {
+			setMentionMembersLoading(false);
 		}
 	};
 
@@ -25455,6 +25858,10 @@ function WhatsAppWorkspaceContent() {
 														onTyping={notifyPeerTyping}
 														onEnterSubmit={sendMessage}
 														onPaste={handleComposerPaste}
+														mentionCandidates={composerMentionCandidates}
+														mentionLoading={mentionMembersLoading}
+														onMentionOpen={handleComposerMentionOpen}
+														locale={locale}
 													/>
 													</div>
 													<button
@@ -28140,7 +28547,15 @@ function WhatsAppWorkspaceContent() {
 										liveThreadMessage?.text ||
 											messageInfo.message?.text ||
 											'',
-									).trim() ||
+									)
+										.trim()
+										.replace(/@\d{8,32}\b/g, token =>
+											resolveWhatsAppMentionLabel(
+												token,
+												mentionDirectory,
+												liveThreadMessage?.mentionLabels || messageInfo.message?.mentionLabels,
+											),
+										) ||
 									(locale === 'ar'
 										? messageInfo.type || 'رسالة'
 										: messageInfo.type || 'Message');
@@ -28292,6 +28707,33 @@ function WhatsAppWorkspaceContent() {
 													? 'delivered'
 													: 'sent'
 									: 'sent';
+								const groupReceipts =
+									outbound && !isFailed && !isPending ? messageInfo.groupReceipts : null;
+								if (groupReceipts) {
+									return (
+										<div className="wa-mi">
+											<div className="wa-mi__bubble is-mine">
+												<p className="wa-privacy-identity" dir="auto">
+													{previewText}
+												</p>
+												<span className="wa-mi__bubble-time">{sentAt || '—'}</span>
+											</div>
+											<GroupMessageReceiptsPanel
+												receipts={groupReceipts}
+												locale={locale}
+												formatTime={formatInfoTime}
+												resolveMember={entry =>
+													resolveReactor({
+														actorKey: entry.key,
+														actorName: entry.name,
+														actorPhone: entry.phone,
+														actorAvatarUrl: entry.avatarUrl,
+													})
+												}
+											/>
+										</div>
+									);
+								}
 								return (
 									<div className="wa-mi">
 										<div className={`wa-mi__bubble ${outbound ? 'is-mine' : 'is-theirs'}`}>

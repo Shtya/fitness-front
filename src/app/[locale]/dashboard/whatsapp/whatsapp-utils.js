@@ -1224,6 +1224,86 @@ export function buildWhatsAppMentionDirectory({
 	return directory;
 }
 
+/** The `@query` being typed at the caret, or null when the caret is not in one. */
+export function findComposerMentionQuery(text, caret) {
+	const value = String(text || '');
+	const end = Math.max(0, Math.min(Number(caret) || 0, value.length));
+	const start = value.lastIndexOf('@', end - 1);
+	if (start < 0) return null;
+	if (start > 0 && !/\s/.test(value[start - 1])) return null;
+	const query = value.slice(start + 1, end);
+	if (query.length > 40 || /[\r\n]/.test(query) || /^\s/.test(query) || /\s{2}/.test(query)) {
+		return null;
+	}
+	return { start, end, query };
+}
+
+/** Group members the composer can @mention, best-known name first. */
+export function buildComposerMentionCandidates({ participants = [], directory, selfPhone = '' } = {}) {
+	const selfDigits = String(selfPhone || '').replace(/\D/g, '');
+	const seen = new Set();
+	const result = [];
+	for (const participant of participants || []) {
+		const waId = String(participant?.waId || '').trim();
+		const digits = whatsAppIdDigits(waId.split(':')[0]);
+		if (!waId || !digits || seen.has(digits)) continue;
+		const isLid = /@lid$/i.test(waId);
+		const hit = directory instanceof Map ? directory.get(digits) : null;
+		const phone = String(hit?.phone || (isLid ? '' : digits)).replace(/\D/g, '');
+		if (selfDigits && (digits === selfDigits || phone === selfDigits)) continue;
+		seen.add(digits);
+		const ownName = isWeakMentionLabel(participant?.displayName, waId, phone)
+			? ''
+			: String(participant.displayName).trim();
+		const name = ownName || hit?.name || '';
+		result.push({
+			waId,
+			digits,
+			name,
+			phone,
+			label: name || (phone ? formatWhatsAppPhone(phone) : digits),
+			isAdmin: Boolean(participant?.isAdmin || participant?.isSuperAdmin),
+		});
+	}
+	return result.sort((a, b) => {
+		if (Boolean(a.name) !== Boolean(b.name)) return a.name ? -1 : 1;
+		return a.label.localeCompare(b.label);
+	});
+}
+
+export function filterComposerMentionCandidates(candidates, query, limit = 50) {
+	const needle = String(query || '').trim().toLowerCase();
+	const needleDigits = needle.replace(/\D/g, '');
+	const list = (candidates || []).filter(candidate => {
+		if (!needle) return true;
+		if (candidate.label.toLowerCase().includes(needle)) return true;
+		if (candidate.name && candidate.name.toLowerCase().includes(needle)) return true;
+		return Boolean(needleDigits) && String(candidate.phone || candidate.digits).includes(needleDigits);
+	});
+	return list.slice(0, limit);
+}
+
+/**
+ * Swap readable `@Name` tokens picked in the composer for the `@<digits>` form
+ * WhatsApp needs, and return the matching member JIDs.
+ */
+export function encodeComposerMentions(text, picked = []) {
+	let value = String(text || '');
+	const mentions = [];
+	const ordered = [...(picked || [])]
+		.filter(item => item?.label && item?.waId)
+		.sort((a, b) => b.label.length - a.label.length);
+	for (const item of ordered) {
+		const token = `@${item.label}`;
+		if (!value.includes(token)) continue;
+		const digits = whatsAppIdDigits(String(item.waId).split(':')[0]);
+		if (!digits) continue;
+		value = value.split(token).join(`@${digits}`);
+		if (!mentions.includes(item.waId)) mentions.push(item.waId);
+	}
+	return { text: value, mentions };
+}
+
 export function resolveWhatsAppMentionLabel(mentionText, directory, mentionLabels) {
 	const digits = whatsAppIdDigits(mentionText);
 	const override =
