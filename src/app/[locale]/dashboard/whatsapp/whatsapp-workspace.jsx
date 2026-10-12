@@ -12932,12 +12932,22 @@ function WhatsAppWorkspaceContent() {
 		const map = new Map();
 		for (const status of statuses) {
 			if (!status?.isOwn && !status?.senderWaId) continue;
-			const key = status.senderWaId || (status.isOwn ? 'own' : status.id);
+			// One card per person: WhatsApp can deliver the same sender as a LID and as a phone JID.
+			const phone = String(status.senderPhone || '').replace(/\D/g, '');
+			const key = status.isOwn
+				? 'own'
+				: phone
+					? `p:${phone}`
+					: normalizeWhatsAppIdentity(status.senderWaId) || status.id;
 			if (!map.has(key)) map.set(key, []);
 			map.get(key).push(status);
 		}
-		return [...map.entries()]
-			.map(([senderWaId, items]) => {
+		return [...map.values()]
+			.map(items => {
+				const senderWaId =
+					items.find(item => item.senderWaId && !/@lid$/i.test(item.senderWaId))?.senderWaId ||
+					items.find(item => item.senderWaId)?.senderWaId ||
+					(items.some(item => item.isOwn) ? 'own' : items[0]?.id);
 				const deduped = [];
 				const seen = new Set();
 				for (const item of [...items].sort(
@@ -13034,8 +13044,13 @@ function WhatsAppWorkspaceContent() {
 	const storiesBySender = useMemo(() => {
 		const map = new Map();
 		for (const story of groupedStatuses) {
-			const key = normalizeWhatsAppIdentity(story.senderWaId);
-			if (key && !story.isOwn) map.set(key, story);
+			if (story.isOwn) continue;
+			for (const item of story.items) {
+				const key = normalizeWhatsAppIdentity(item.senderWaId);
+				if (key) map.set(key, story);
+				const phone = String(item.senderPhone || '').replace(/\D/g, '');
+				if (phone) map.set(phone, story);
+			}
 		}
 		return map;
 	}, [groupedStatuses]);
@@ -13048,7 +13063,9 @@ function WhatsAppWorkspaceContent() {
 				conversation?.contact?.phoneNumber,
 			];
 			for (const identity of identities) {
-				const story = storiesBySender.get(normalizeWhatsAppIdentity(identity));
+				const key = normalizeWhatsAppIdentity(identity);
+				const story =
+					storiesBySender.get(key) || storiesBySender.get(String(key).replace(/\D/g, ''));
 				if (story) return story;
 			}
 			return null;
@@ -26536,30 +26553,6 @@ function WhatsAppWorkspaceContent() {
 									};
 									return (
 										<div className="wa-st">
-											{searched.length > 1 ? (
-												<div className="wa-st-rail wa-ui-scroll" role="list" aria-label={ar ? 'وصول سريع' : 'Quick access'}>
-													{searched.map(story => {
-														const name = storyName(story);
-														return (
-															<button
-																type="button"
-																role="listitem"
-																key={story.senderWaId}
-																onClick={() => openStoryGroup(story)}
-																className={`wa-st-rail__item ${story.isViewed ? 'is-viewed' : 'is-unseen'}`}
-																title={name}
-															>
-																<span className="wa-st-rail__ring">
-																	<Avatar label={name} size={12} src={story.latest.contactAvatarUrl || ''} />
-																</span>
-																<span className="wa-st-rail__name wa-privacy-identity" dir="auto">
-																	{story.isOwn ? (ar ? 'أنا' : 'You') : name}
-																</span>
-															</button>
-														);
-													})}
-												</div>
-											) : null}
 											<div className="wa-st-chips" role="tablist" aria-label={ar ? 'تصفية' : 'Filter'}>
 												{filters.map(filter => (
 													<button

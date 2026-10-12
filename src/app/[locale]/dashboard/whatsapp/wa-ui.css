@@ -8500,28 +8500,40 @@ html.dark .wa-st-chip.is-active {
 	min-height: 100%;
 }
 
-/* Unseen: animated gradient border instead of a flat green line */
-@property --wa-st-angle {
-	syntax: '<angle>';
-	initial-value: 0deg;
-	inherits: false;
-}
-
+/* Unseen: a quiet translucent inner ring — the card itself carries the color. */
 .wa-st-card.is-unseen::after {
 	inset: 0;
-	padding: 2.5px;
 	border: 0;
-	background: conic-gradient(from var(--wa-st-angle), #25d366, #12b886, #128c7e, #53bdeb, #25d366);
-	-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-	-webkit-mask-composite: xor;
-	mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-	animation: wa-st-spin 4s linear infinite;
+	box-shadow:
+		inset 0 0 0 1.5px rgba(37, 211, 102, 0.55),
+		inset 0 0 0 3px rgba(255, 255, 255, 0.08);
 }
 
-@keyframes wa-st-spin {
-	to {
-		--wa-st-angle: 360deg;
-	}
+.wa-st-card.is-unseen {
+	box-shadow:
+		0 1px 2px rgba(11, 20, 26, 0.1),
+		0 8px 22px -14px rgba(18, 140, 126, 0.45);
+}
+
+.wa-st-card.is-viewed {
+	box-shadow: 0 1px 2px rgba(11, 20, 26, 0.08), 0 6px 18px -14px rgba(11, 20, 26, 0.4);
+}
+
+.wa-st-card.wa-st-card:hover {
+	box-shadow: 0 2px 4px rgba(11, 20, 26, 0.12), 0 16px 30px -16px rgba(11, 20, 26, 0.55);
+}
+
+.wa-st-card.wa-st-card:focus-visible {
+	box-shadow: var(--wa-ui-ring);
+}
+
+.wa-st-card__bars i {
+	height: 2.5px;
+	background: rgba(255, 255, 255, 0.92);
+}
+
+.wa-st-card__bars i.is-seen {
+	background: rgba(255, 255, 255, 0.38);
 }
 
 .wa-st-card__top {
@@ -8645,12 +8657,6 @@ html.dark .wa-st-chip.is-active {
 		grid-column: 1 / -1;
 		grid-row: auto;
 		aspect-ratio: 4 / 5;
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.wa-st-card.is-unseen::after {
-		animation: none;
 	}
 }
 
