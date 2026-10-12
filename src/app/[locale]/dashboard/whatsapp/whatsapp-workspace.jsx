@@ -28068,6 +28068,15 @@ function WhatsAppWorkspaceContent() {
 					});
 				};
 				const isGroupInfo = conversationInfoTarget.type === 'group';
+				const infoStory = isGroupInfo ? null : storyForConversation(liveInfoConversation);
+				const infoStoryUnseen = Boolean(
+					infoStory?.items.some(item => !viewedStatusIds.has(item.id)),
+				);
+				const openInfoStory = () => {
+					if (!infoStory) return;
+					closeConversationInfo();
+					openStoryGroup(infoStory);
+				};
 				const infoTitle =
 					conversationInfoGroup?.subject || conversationTitle(liveInfoConversation);
 				const memberCount =
@@ -28161,7 +28170,17 @@ function WhatsAppWorkspaceContent() {
 						</button>
 
 						<div className="wa-gi__identity">
-							{infoAvatarSrc ? (
+							{infoStory ? (
+								<button
+									type="button"
+									className={`wa-gi__avatar is-clickable has-story ${infoStoryUnseen ? 'is-unseen' : 'is-viewed'}`}
+									aria-label={locale === 'ar' ? 'عرض الحالة' : 'View status'}
+									title={locale === 'ar' ? 'عرض الحالة' : 'View status'}
+									onClick={openInfoStory}
+								>
+									<Avatar label={conversationTitle(liveInfoConversation)} size={20} src={infoAvatarSrc || ''} isGroup={false} />
+								</button>
+							) : infoAvatarSrc ? (
 								<button
 									type="button"
 									className="wa-gi__avatar is-clickable"
@@ -28191,6 +28210,34 @@ function WhatsAppWorkspaceContent() {
 								</span>
 								<span dir={isGroupInfo ? 'auto' : 'ltr'}>{infoSubtitle}</span>
 							</p>
+							{infoStory ? (
+								<div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+									<button
+										type="button"
+										onClick={openInfoStory}
+										className="inline-flex items-center gap-2 rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-3.5 py-1.5 text-[13px] font-medium text-[#008069] transition-colors hover:bg-[#25D366]/20 dark:text-[#25D366]"
+									>
+										<Zap size={14} strokeWidth={2.2} aria-hidden="true" />
+										{locale === 'ar' ? 'عرض الحالة' : 'View status'}
+										<span className="text-[12px] font-normal opacity-75">
+											{infoStory.items.length > 1
+												? `${infoStory.items.length} ${locale === 'ar' ? 'تحديثات' : 'updates'} · `
+												: ''}
+											{relativeTime(infoStory.latest.publishedAt, Date.now(), locale)}
+										</span>
+									</button>
+									{infoAvatarSrc ? (
+										<button
+											type="button"
+											onClick={openProfilePhoto}
+											className="inline-flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-[13px] text-[#54656F] transition-colors hover:bg-black/5 dark:border-white/15 dark:text-[#AEBAC1] dark:hover:bg-white/5"
+										>
+											<ImageIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+											{locale === 'ar' ? 'صورة البروفايل' : 'Profile photo'}
+										</button>
+									) : null}
+								</div>
+							) : null}
 						</div>
 
 						<div className="wa-gi__body nice-scroll">

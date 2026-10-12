@@ -8500,6 +8500,31 @@ html.dark .wa-st-chip.is-active {
 	min-height: 100%;
 }
 
+/* Contact info: story ring around the large avatar, WhatsApp style. */
+html .wa-gi-overlay .wa-gi__avatar.has-story {
+	border-radius: 9999px !important;
+	outline: 3px solid #25d366 !important;
+	outline-offset: 5px !important;
+	cursor: pointer;
+	transition: outline-color 160ms ease, transform 160ms ease;
+}
+
+html .wa-gi-overlay .wa-gi__avatar.has-story.is-viewed {
+	outline-color: #cbd5e1 !important;
+}
+
+html.dark .wa-gi-overlay .wa-gi__avatar.has-story.is-viewed {
+	outline-color: #54656f !important;
+}
+
+html .wa-gi-overlay .wa-gi__avatar.has-story:hover {
+	transform: scale(1.02);
+}
+
+html .wa-gi-overlay .wa-gi__avatar.has-story:focus-visible {
+	outline-color: #53bdeb !important;
+}
+
 /* Unseen: a quiet translucent inner ring — the card itself carries the color. */
 .wa-st-card.is-unseen::after {
 	inset: 0;
