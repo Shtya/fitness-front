@@ -12,7 +12,8 @@
 
 const MINUTE = 60 * 1000;
 
-export const SHOWCASE_RANDOM_SEED = 'showcase';
+// The backend stores randomSeed as a 32-bit integer; this value also marks the showcase profile.
+export const SHOWCASE_RANDOM_SEED = 74_270_301;
 
 const ASSETS = {
 	photoDashboard: { kind: 'url', url: '/screens/web/dashboard.png', mime: 'image/png', name: 'dashboard.png' },

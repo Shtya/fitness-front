@@ -43,6 +43,10 @@ function entity(payload) {
 	return payload?.item || payload?.data || payload;
 }
 
+function isShowcaseProfile(profile) {
+	return Number(profile?.randomSeed ?? profile?.random_seed) === SHOWCASE_RANDOM_SEED;
+}
+
 function normalizeSettings(payload) {
 	const value = entity(payload) || {};
 	return {
@@ -809,10 +813,7 @@ export function DemoModeProvider({ children }) {
 	]);
 
 	const showcaseProfile = useMemo(
-		() =>
-			profiles.find(
-				profile => (profile.randomSeed || profile.random_seed) === SHOWCASE_RANDOM_SEED,
-			) || null,
+		() => profiles.find(isShowcaseProfile) || null,
 		[profiles],
 	);
 
@@ -823,7 +824,7 @@ export function DemoModeProvider({ children }) {
 			setError('');
 			try {
 				const previousIds = profiles
-					.filter(profile => (profile.randomSeed || profile.random_seed) === SHOWCASE_RANDOM_SEED)
+					.filter(isShowcaseProfile)
 					.map(profile => String(profile.id));
 				const { profileId } = await seedShowcaseProfile({ api: demoApi, locale, onProgress });
 				const wasActive = previousIds.includes(String(activeProfileIdRef.current));

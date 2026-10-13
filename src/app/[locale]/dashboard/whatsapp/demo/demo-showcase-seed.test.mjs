@@ -8,7 +8,14 @@ function fakeApi({ failOnMessage = -1 } = {}) {
 	let messageCount = 0;
 	return {
 		calls,
-		createProfile: async payload => ({ id: randomUUID(), ...payload }),
+		createProfile: async payload => {
+			// Mirrors CreateDemoProfileDto: @IsInt() @Min(-2147483648) @Max(2147483647).
+			const seed = payload.randomSeed;
+			if (seed !== undefined && !(Number.isInteger(seed) && seed >= -2147483648 && seed <= 2147483647)) {
+				throw new Error('randomSeed must be an integer number');
+			}
+			return { id: randomUUID(), ...payload };
+		},
 		uploadMedia: async (profileId, file) => {
 			const id = randomUUID();
 			calls.uploads.push({ id, profileId, file });
