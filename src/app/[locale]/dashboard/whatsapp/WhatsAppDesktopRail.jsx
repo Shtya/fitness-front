@@ -2,6 +2,7 @@
 
 import {
 	BarChart3,
+	BookUser,
 	Forward,
 	LayoutGrid,
 	Mails,
@@ -171,6 +172,11 @@ export default function WhatsAppDesktopRail({
 			id: 'groups',
 			label: labels.groups || labels.communities || (ar ? 'مجموعات' : 'Groups'),
 			icon: Users,
+		},
+		{
+			id: 'contacts',
+			label: labels.contacts || (ar ? 'جهات الاتصال' : 'Contacts'),
+			icon: BookUser,
 		},
 	];
 

@@ -93,17 +93,7 @@ export default function LanguageToggle({ collapsed = false , cn }) {
 				whileHover={{ scale: 1.02 }}
 			>
 				{/* Shimmer effect */}
-				<motion.span 
-					className='pointer-events-none absolute -top-1/2 left-0 right-0 h-full translate-y-1/2 rotate-12 bg-white/20'
-					animate={{
-						x: ['-100%', '100%']
-					}}
-					transition={{
-						duration: 3,
-						repeat: Infinity,
-						ease: "linear"
-					}}
-				/>
+				<span className='lang-toggle-sweep pointer-events-none absolute -top-1/2 left-0 right-0 h-full translate-y-1/2 rotate-12 bg-white/20' />
 
 				{/* Focus ring */}
 				<AnimatePresence>
@@ -120,19 +110,9 @@ export default function LanguageToggle({ collapsed = false , cn }) {
 				{/* Globe icon with current locale */}
 				<div className={`relative z-10 flex flex-col items-center justify-center h-full text-white `}>
 					<Globe className={`w-5 h-5 mb-0.5 ${cn && "hidden"}`} strokeWidth={2.5} />
-					<motion.span
-						className="text-[10px] font-black tracking-wider"
-						animate={{ 
-							scale: [1, 1.1, 1]
-						}}
-						transition={{
-							duration: 2,
-							repeat: Infinity,
-							ease: "easeInOut"
-						}}
-					>
+					<span className="lang-toggle-pulse text-[10px] font-black tracking-wider">
 						{locale.toUpperCase()}
-					</motion.span>
+					</span>
 				</div>
 
 				{/* Loading overlay */}
@@ -174,17 +154,7 @@ export default function LanguageToggle({ collapsed = false , cn }) {
 			whileHover={{ scale: 1.01 }}
 		>
 			{/* Shimmer effect */}
-			<motion.span 
-				className='pointer-events-none absolute -top-1/2 left-0 right-0 h-full translate-y-1/2 rotate-12 bg-white/20'
-				animate={{
-					x: ['-100%', '100%']
-				}}
-				transition={{
-					duration: 3,
-					repeat: Infinity,
-					ease: "linear"
-				}}
-			/>
+			<span className='lang-toggle-sweep pointer-events-none absolute -top-1/2 left-0 right-0 h-full translate-y-1/2 rotate-12 bg-white/20' />
 
 			{/* Focus ring */}
 			<AnimatePresence>
@@ -246,20 +216,7 @@ export default function LanguageToggle({ collapsed = false , cn }) {
 					<span className='pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-br from-white/70 to-white/40' />
 					
 					{/* Animated glow */}
-					<motion.span
-						className='absolute inset-0 rounded-lg'
-						animate={{
-							boxShadow: [
-								'0 0 0 0 rgba(255,255,255,0.4)',
-								'0 0 0 4px rgba(255,255,255,0)',
-							]
-						}}
-						transition={{
-							duration: 1.5,
-							repeat: Infinity,
-							ease: "easeInOut"
-						}}
-					/>
+					<span className='lang-toggle-glow absolute inset-0 rounded-lg' />
 				</motion.div>
 			</div>
 

@@ -1022,6 +1022,7 @@ export default function FakeChatStudio({
 			await api.post(`/whatsapp/conversations/${conversation.id}/messages`, {
 				type: 'image',
 				fileId: uploaded.fileId,
+				fileName: uploaded.fileName || file.name,
 				caption: undefined,
 				clientMessageId: `fake-chat:${Date.now()}`,
 			});

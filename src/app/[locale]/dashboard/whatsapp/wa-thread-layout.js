@@ -5,6 +5,8 @@
  * mismatch there becomes a programmatic scroll correction mid-gesture.
  */
 
+import { setBounded } from './wa-bounded-cache.js';
+
 let canvasContext = null;
 
 function measureContext() {
@@ -126,9 +128,16 @@ export function readThreadLayout(box, previous = null) {
 	};
 }
 
-/** Local calendar day, cheap enough to call per row (no Intl formatting). */
+const dayKeyCache = new Map();
+
+/** Local calendar day, cheap enough to call per row (no Intl formatting; cached per timestamp). */
 export function threadDayKey(value) {
-	const date = value ? new Date(value) : null;
-	if (!date || Number.isNaN(date.getTime())) return '';
-	return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+	if (!value) return '';
+	const cached = dayKeyCache.get(value);
+	if (cached !== undefined) return cached;
+	const date = new Date(value);
+	const key = Number.isNaN(date.getTime())
+		? ''
+		: `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+	return setBounded(dayKeyCache, value, key, 8000);
 }

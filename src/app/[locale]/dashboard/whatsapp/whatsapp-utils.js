@@ -1920,9 +1920,17 @@ export function groupSenderIdentity(message) {
 	};
 }
 
+const messageDayKeyCache = new Map();
+
 function messageDayKey(message) {
 	const raw = message?.providerTimestamp || message?.created_at || message?.timestamp;
 	if (raw == null || raw === '') return '';
+	const cached = messageDayKeyCache.get(raw);
+	if (cached !== undefined) return cached;
+	return setBounded(messageDayKeyCache, raw, computeMessageDayKey(raw), 8000);
+}
+
+function computeMessageDayKey(raw) {
 	if (typeof raw === 'number' || /^\d+$/.test(String(raw).trim())) {
 		const n = Number(raw);
 		if (!Number.isFinite(n) || n <= 0) return '';

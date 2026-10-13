@@ -777,6 +777,49 @@ input[type='number'] {
   -moz-appearance: textfield;
 }
 
+/* LanguageToggle ambient loops: CSS so they run on the compositor, not a JS frame loop on every page. */
+@keyframes lang-toggle-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes lang-toggle-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+@keyframes lang-toggle-glow {
+  from {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  to {
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0);
+  }
+}
+.lang-toggle-sweep {
+  animation: lang-toggle-sweep 3s linear infinite;
+}
+.lang-toggle-pulse {
+  animation: lang-toggle-pulse 2s ease-in-out infinite;
+}
+.lang-toggle-glow {
+  animation: lang-toggle-glow 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lang-toggle-sweep,
+  .lang-toggle-pulse,
+  .lang-toggle-glow {
+    animation: none;
+  }
+}
+
 @keyframes pressPulse {
   0% {
     box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
@@ -5647,6 +5690,25 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	animation: none;
 }
 
+/* Keeps the white header readable over bright media without reserving a band above it. */
+.wa-story-viewer__scrim {
+	position: absolute;
+	inset-inline: 0;
+	z-index: 5;
+	pointer-events: none;
+}
+
+.wa-story-viewer__scrim--top {
+	top: 0;
+	height: 7.5rem;
+	background: linear-gradient(
+		to bottom,
+		rgba(0, 0, 0, 0.62),
+		rgba(0, 0, 0, 0.28) 55%,
+		transparent
+	);
+}
+
 /* Instagram-style side peeks: previous person (start) / next person (end) */
 .wa-story-peek {
 	position: relative;
@@ -5804,6 +5866,59 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		max-width: 100%;
 		gap: 0;
 		padding-inline: 0;
+	}
+
+	/* Phone: full-bleed like WhatsApp — no frame, no rounded card, no gutter. */
+	.wa-story-viewer {
+		padding: 0;
+		background: #000;
+		backdrop-filter: none;
+	}
+
+	.wa-story-viewer__carousel,
+	.wa-story-viewer__carousel.is-expanded,
+	.wa-story-viewer__stage.is-expanded .wa-story-viewer__carousel {
+		width: 100%;
+		max-width: none;
+		height: 100vh;
+		height: 100dvh;
+	}
+
+	.wa-story-viewer__card {
+		border-radius: 0;
+		box-shadow: none;
+	}
+
+	.wa-story-viewer__progress {
+		top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+		inset-inline: 0.5rem;
+	}
+
+	.wa-story-viewer__header {
+		top: calc(env(safe-area-inset-top, 0px) + 0.875rem);
+		padding-inline: 0.5rem;
+	}
+
+	.wa-story-viewer__scrim--top {
+		height: calc(env(safe-area-inset-top, 0px) + 6.5rem);
+	}
+
+	.wa-story-ctl {
+		width: 2.25rem;
+		height: 2.25rem;
+	}
+
+	/* Already full-screen on a phone. */
+	.wa-story-ctl--expand {
+		display: none;
+	}
+
+	.wa-story-viewer__embed {
+		padding-top: calc(env(safe-area-inset-top, 0px) + 4.5rem);
+	}
+
+	.wa-story-viewer__reply {
+		padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 	}
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
 	Activity,
@@ -123,6 +123,21 @@ async function minimizeStickerFile(file, options = {}) {
 	}
 }
 
+const EMOJI_FIRST_PAINT = 56;
+const EMOJI_IDLE_BATCH = 24;
+
+function budgetedSections(sections, budget) {
+	if (!Number.isFinite(budget)) return sections;
+	const out = [];
+	let left = budget;
+	for (const section of sections) {
+		if (left <= 0) break;
+		out.push(section.items.length <= left ? section : { ...section, items: section.items.slice(0, left) });
+		left -= section.items.length;
+	}
+	return out;
+}
+
 function computePanelPosition(anchorRect, { wide = false, tall = false } = {}, composerTop = null) {
 	const margin = 12;
 	const viewportW = window.innerWidth || 1280;
@@ -235,11 +250,16 @@ export default function StickersPanel({
 			: sections;
 	}, [ar, recentEmojis]);
 	const emojiResults = useMemo(() => searchEmojis(emojiQuery), [emojiQuery]);
+	const emojiTotal = useMemo(() => emojiSections.reduce((sum, section) => sum + section.items.length, 0), [emojiSections]);
+	// The first draw of each emoji glyph is expensive (font fallback + color rasterization), so the
+	// picker paints one screenful and fills the rest in idle batches instead of one long frame.
+	const [emojiBudget, setEmojiBudget] = useState(EMOJI_FIRST_PAINT);
 	const pickEmoji = emoji => {
 		onInsertEmoji?.(emoji);
 		setRecentEmojis(current => rememberEmoji(emoji, current));
 	};
 	const jumpToCategory = id => {
+		if (emojiBudget < emojiTotal) flushSync(() => setEmojiBudget(Infinity));
 		setEmojiQuery('');
 		setActiveCategory(id);
 		const node = emojiScrollRef.current?.querySelector(`[data-emoji-section="${id}"]`);
@@ -267,6 +287,17 @@ export default function StickersPanel({
 		setActiveCategory(recent.length ? 'recent' : 'smileys');
 		setEmojiQuery('');
 	}, [open]);
+
+	useEffect(() => {
+		if (!open || tab !== 'emoji' || emojiBudget >= emojiTotal) return undefined;
+		const grow = () => setEmojiBudget(current => current + EMOJI_IDLE_BATCH);
+		if (typeof window.requestIdleCallback === 'function') {
+			const handle = window.requestIdleCallback(grow, { timeout: 250 });
+			return () => window.cancelIdleCallback(handle);
+		}
+		const timer = window.setTimeout(grow, 32);
+		return () => window.clearTimeout(timer);
+	}, [open, tab, emojiBudget, emojiTotal]);
 
 	useEffect(() => {
 		if (!open || tab !== 'emoji') return undefined;
@@ -625,7 +656,7 @@ export default function StickersPanel({
 								<p className="wa-ui-picker__empty">{ar ? 'لا توجد نتائج' : 'No emoji found'}</p>
 							)
 						) : (
-							emojiSections.map(section => (
+							budgetedSections(emojiSections, emojiBudget).map(section => (
 								<div key={section.id} data-emoji-section={section.id} className="wa-ui-picker__section">
 									<p className="wa-ui-picker__section-title">{section.label}</p>
 									<div className="wa-ui-picker__grid">

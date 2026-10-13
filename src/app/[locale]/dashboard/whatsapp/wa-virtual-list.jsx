@@ -1,9 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import {
+	Virtualizer,
+	elementScroll,
+	observeElementOffset,
+	observeElementRect,
+} from '@tanstack/react-virtual';
 import { waScrollLog, waScrollMark } from './wa-scroll-debug';
-import { computeRowWindow, isSameRowWindow } from './wa-row-window';
+import { chunkedVirtualRange, computeRowWindow, isSameRowWindow } from './wa-row-window';
 
 export { computeRowWindow, isSameRowWindow };
 
@@ -36,6 +42,8 @@ export function useWaScrollWindow({
 	count,
 	rowHeight = 72,
 	overscan = 12,
+	/** Rows per window change; see computeRowWindow. */
+	step = 1,
 	enabled = true,
 	minCountToWindow = 48,
 	/** 'end' = chat thread (latest at bottom). 'start' = inbox list (latest at top). */
@@ -51,6 +59,7 @@ export function useWaScrollWindow({
 			count,
 			rowHeight,
 			overscan,
+			step,
 			clientHeight: 800,
 			scrollTop: initialAlign === 'start' ? 0 : Math.max(0, count * rowHeight - 800),
 		}),
@@ -110,6 +119,7 @@ export function useWaScrollWindow({
 					count,
 					rowHeight: h,
 					overscan,
+					step,
 				});
 			}
 
@@ -120,6 +130,7 @@ export function useWaScrollWindow({
 					count,
 					rowHeight: h,
 					overscan,
+					step,
 				});
 			}
 
@@ -130,9 +141,10 @@ export function useWaScrollWindow({
 				count,
 				rowHeight: h,
 				overscan,
+				step,
 			});
 		});
-	}, [shouldWindow, count, rowHeight, overscan, initialAlign, scrollRef]);
+	}, [shouldWindow, count, rowHeight, overscan, step, initialAlign, scrollRef]);
 
 	// Tab switches unmount the inbox list while the hook state survives. On remount
 	// scrollTop resets to 0 but start/end can still point mid-list — huge topPad, blank UI.
@@ -162,6 +174,7 @@ export function useWaScrollWindow({
 				count,
 				rowHeight,
 				overscan,
+				step,
 			});
 			setWindowState(current => (isSameRowWindow(current, next) ? current : next));
 		};
@@ -169,7 +182,7 @@ export function useWaScrollWindow({
 		return () => {
 			if (frameId) cancelAnimationFrame(frameId);
 		};
-	}, [visible, shouldWindow, count, rowHeight, overscan, scrollRef]);
+	}, [visible, shouldWindow, count, rowHeight, overscan, step, scrollRef]);
 
 	const scrollFrameRef = useRef(0);
 	const scrollNodeRef = useRef(null);
@@ -197,11 +210,12 @@ export function useWaScrollWindow({
 					count,
 					rowHeight,
 					overscan,
+					step,
 				});
 				setWindowState(current => (isSameRowWindow(current, next) ? current : next));
 			});
 		},
-		[shouldWindow, count, rowHeight, overscan, scrollRef],
+		[shouldWindow, count, rowHeight, overscan, step, scrollRef],
 	);
 
 	const slice = useMemo(() => {
@@ -223,6 +237,7 @@ export function useWaScrollWindow({
 				count,
 				rowHeight,
 				overscan,
+				step,
 			});
 		}
 		return {
@@ -233,28 +248,71 @@ export function useWaScrollWindow({
 			bottomPad: Math.max(0, (count - end) * rowHeight),
 			rowHeight,
 		};
-	}, [shouldWindow, windowState, count, rowHeight, overscan]);
+	}, [shouldWindow, windowState, count, rowHeight, overscan, step]);
 
 	return { shouldWindow, onScroll, ...slice };
 }
 
+/** The range a bottom-pinned viewport will show: last rows filling one viewport height. */
+function endAnchoredRange(instance, range) {
+	const measurements = instance?.getMeasurements?.() || [];
+	const viewport = Number(instance?.scrollRect?.height) || 800;
+	const last = range.count - 1;
+	let first = last;
+	let filled = Number(measurements[last]?.size) || 0;
+	while (first > 0 && filled < viewport) {
+		first -= 1;
+		filled += Number(measurements[first]?.size) || 0;
+	}
+	return { ...range, startIndex: first, endIndex: last };
+}
+
+function virtualRenderSignature(instance) {
+	const items = instance.getVirtualItems();
+	return {
+		first: items.length ? items[0].index : -1,
+		last: items.length ? items[items.length - 1].index : -1,
+		measurements: instance.getMeasurements(),
+	};
+}
+
 /**
- * Optional TanStack virtualizer for absolute-position layouts.
+ * TanStack virtualizer for absolute-position layouts.
+ *
+ * useVirtualizer re-renders its host on every one-row range shift (flushSync while
+ * scrolling). The host here is the whole workspace, so that cost a full workspace render
+ * per scrolled row. This drives the same core Virtualizer, renders whole chunks of rows,
+ * and re-renders only when the chunked range or the measured sizes change.
  */
 export function useWaVirtualRows({
 	count,
 	scrollRef,
 	estimateSize,
 	overscan = 12,
+	/** Rows per rendered-range change; see chunkedVirtualRange. */
+	chunk = 8,
 	enabled = true,
 	getItemKey = null,
 	shouldAdjustScrollPositionOnItemSizeChange = null,
+	/** () => boolean. While true, render the last rows (one viewport + overscan) whatever the scroll offset. */
+	anchorToEnd = null,
 }) {
-	const virtualizer = useVirtualizer({
+	const rerender = useReducer(x => x + 1, 0)[1];
+	const renderedRef = useRef(null);
+	const anchorToEndRef = useRef(anchorToEnd);
+	anchorToEndRef.current = anchorToEnd;
+	const virtualizerRef = useRef(null);
+	const options = {
 		count: enabled ? count : 0,
 		getScrollElement: () => scrollRef?.current || null,
 		estimateSize: typeof estimateSize === 'function' ? estimateSize : () => estimateSize || 72,
 		overscan,
+		rangeExtractor: range => {
+			if (range.count > 0 && anchorToEndRef.current?.()) {
+				return chunkedVirtualRange(endAnchoredRange(virtualizerRef.current, range), chunk);
+			}
+			return chunkedVirtualRange(range, chunk);
+		},
 		enabled: Boolean(enabled && count > 0),
 		getItemKey:
 			typeof getItemKey === 'function' ? getItemKey : index => index,
@@ -262,14 +320,38 @@ export function useWaVirtualRows({
 			typeof shouldAdjustScrollPositionOnItemSizeChange === 'function'
 				? shouldAdjustScrollPositionOnItemSizeChange
 				: undefined,
-		// Keep the default useFlushSync (true). React 19 logs "flushSync was called from inside a
-		// lifecycle method" in development when a row is measured during commit; that call is a
-		// no-op, not an extra render. Turning it off showed no measurable gain, and it makes
-		// scroll-driven range updates async, so the synchronous default stays.
-	});
+		observeElementRect,
+		observeElementOffset,
+		scrollToFn: elementScroll,
+		onChange: (instance, sync) => {
+			const next = virtualRenderSignature(instance);
+			const prev = renderedRef.current;
+			if (
+				prev &&
+				prev.first === next.first &&
+				prev.last === next.last &&
+				prev.measurements === next.measurements
+			) {
+				return;
+			}
+			renderedRef.current = next;
+			// Scroll-driven range changes stay synchronous so new rows paint in the same frame.
+			if (sync) flushSync(rerender);
+			else rerender();
+		},
+	};
+	const [virtualizer] = useState(() => new Virtualizer(options));
+	virtualizerRef.current = virtualizer;
+	virtualizer.setOptions(options);
+	useLayoutEffect(() => virtualizer._didMount(), [virtualizer]);
+	useLayoutEffect(() => virtualizer._willUpdate());
 
 	const items = enabled ? virtualizer.getVirtualItems() : [];
 	const totalSize = enabled ? virtualizer.getTotalSize() : 0;
+	const rendered = enabled ? virtualRenderSignature(virtualizer) : null;
+	useLayoutEffect(() => {
+		renderedRef.current = rendered;
+	});
 
 	return {
 		virtualizer,

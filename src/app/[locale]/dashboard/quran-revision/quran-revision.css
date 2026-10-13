@@ -273,6 +273,9 @@
 	--qr-unit-row: 3.2rem;
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
+	/* Rows must never shrink below their card when the list is height-capped */
+	grid-auto-rows: max-content;
+	align-content: start;
 	gap: 0.35rem;
 	max-height: calc(var(--qr-unit-row) * 5);
 	overflow: auto;
@@ -288,14 +291,15 @@
 	border: 1px solid var(--gm-line, #e2e8f0);
 	background: var(--gm-paper, #fff);
 	border-radius: 0.6rem;
-	padding-block: 0.4rem;
+	padding-block: 0.35rem;
 	padding-inline: 0.5rem 1.55rem;
 	cursor: pointer;
 	text-align: start;
-	min-height: 0;
+	min-height: 2.6rem;
 	min-width: 0;
 	transition: border-color 0.14s ease, background 0.14s ease;
-	display: block;
+	display: flex;
+	align-items: center;
 	position: relative;
 }
 
@@ -345,6 +349,7 @@
 }
 
 .qr-studio .qr-unit-line {
+	flex: 1 1 auto;
 	display: flex;
 	flex-wrap: nowrap;
 	align-items: baseline;
@@ -395,7 +400,8 @@
 		serif !important;
 	font-weight: 400;
 	font-style: normal;
-	line-height: 1.45;
+	/* Uthmani marks sit far above/below the baseline; the row clips overflow */
+	line-height: 1.9;
 	color: var(--qr-ink);
 	direction: rtl;
 }
