@@ -12,6 +12,7 @@ import {
 import { asList, demoApi } from './demo-api';
 import { createDemoEventScheduler } from './demo-event-scheduler';
 import { rawDemoId } from './demo-read-model';
+import { SHOWCASE_RANDOM_SEED, seedShowcaseProfile } from './demo-showcase-seed';
 
 const DEFAULT_SETTINGS = {
 	enabled: false,
@@ -25,6 +26,7 @@ const DEFAULT_SETTINGS = {
 		randomTyping: false,
 		randomDelays: false,
 		hideDemoBadge: false,
+		showcaseOnly: false,
 	},
 };
 
@@ -806,9 +808,92 @@ export function DemoModeProvider({ children }) {
 		settings.randomSeed,
 	]);
 
+	const showcaseProfile = useMemo(
+		() =>
+			profiles.find(
+				profile => (profile.randomSeed || profile.random_seed) === SHOWCASE_RANDOM_SEED,
+			) || null,
+		[profiles],
+	);
+
+	/** Builds a fresh presentation profile and replaces any older one. Does not switch the view. */
+	const generateShowcase = useCallback(
+		async ({ locale, onProgress } = {}) => {
+			setSaving(true);
+			setError('');
+			try {
+				const previousIds = profiles
+					.filter(profile => (profile.randomSeed || profile.random_seed) === SHOWCASE_RANDOM_SEED)
+					.map(profile => String(profile.id));
+				const { profileId } = await seedShowcaseProfile({ api: demoApi, locale, onProgress });
+				const wasActive = previousIds.includes(String(activeProfileIdRef.current));
+				if (wasActive) {
+					activeProfileIdRef.current = String(profileId);
+					await demoApi.activateProfile(profileId);
+				}
+				for (const id of previousIds) await demoApi.deleteProfile(id).catch(() => undefined);
+				if (wasActive) {
+					await demoApi.updateSettings({ activeProfileId: profileId, enabled: settings.enabled });
+				}
+				setProfiles(asList(await demoApi.listProfiles()));
+				if (wasActive) {
+					setSettings(current => ({ ...current, activeProfileId: String(profileId) }));
+					setRuntime({ conversations: {} });
+					await loadProfileData(profileId);
+				}
+				return profileId;
+			} catch (requestError) {
+				setError(
+					requestError?.response?.data?.message ||
+						requestError?.message ||
+						'Could not generate presentation data.',
+				);
+				throw requestError;
+			} finally {
+				setSaving(false);
+			}
+		},
+		[loadProfileData, profiles, settings.enabled],
+	);
+
+	/** Hides every real chat and shows only the presentation profile. */
+	const startPresentation = useCallback(
+		async ({ locale, onProgress } = {}) => {
+			const flags = { ...settings.featureFlags, showcaseOnly: true, useFakeMessages: true, useFakeTyping: true };
+			// Flag first: activating a profile enables demo mode, which must never flash real chats.
+			await updateSettings({ featureFlags: flags });
+			try {
+				const profileId = showcaseProfile?.id || (await generateShowcase({ locale, onProgress }));
+				if (String(settings.activeProfileId) !== String(profileId) || !settings.enabled) {
+					await activateProfile(profileId);
+				}
+				await updateSettings({ enabled: true, featureFlags: flags });
+			} catch (startError) {
+				await updateSettings({
+					featureFlags: { ...settings.featureFlags, showcaseOnly: false },
+				}).catch(() => undefined);
+				throw startError;
+			}
+		},
+		[activateProfile, generateShowcase, settings, showcaseProfile, updateSettings],
+	);
+
+	const stopPresentation = useCallback(
+		() =>
+			updateSettings({
+				enabled: false,
+				featureFlags: { ...settings.featureFlags, showcaseOnly: false },
+			}),
+		[settings.featureFlags, updateSettings],
+	);
+
 	const value = useMemo(
 		() => ({
 			settings,
+			showcaseProfile,
+			generateShowcase,
+			startPresentation,
+			stopPresentation,
 			profiles,
 			data,
 			runtime,
@@ -871,6 +956,10 @@ export function DemoModeProvider({ children }) {
 			updateProfile,
 			cloneProfile,
 			updateSettings,
+			showcaseProfile,
+			generateShowcase,
+			startPresentation,
+			stopPresentation,
 		],
 	);
 

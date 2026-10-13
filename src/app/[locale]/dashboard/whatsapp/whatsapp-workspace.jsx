@@ -1739,6 +1739,9 @@ const tabs = [
 	['settings', Settings],
 ];
 
+// The only tabs that render the sample profile instead of the real account.
+const SHOWCASE_TABS = new Set(['chats', 'settings']);
+
 const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 const GLOW = '0 10px 24px -10px var(--color-primary-400)';
 const BRAND_GRADIENT = 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-secondary-500) 100%)';
@@ -7570,6 +7573,7 @@ export function MediaAttachment({
 			return response.blob();
 		}
 		const attachmentId = String(attachment?.id || '');
+		if (demoAttachment && attachmentId) return demoApi.getMedia(rawDemoId(attachmentId));
 		if (
 			attachmentId.startsWith('pending-att:') ||
 			attachmentId.startsWith('pending:') ||
@@ -12506,7 +12510,12 @@ function WhatsAppWorkspaceContent() {
 		[accounts, accountId],
 	);
 	const isAccountConnected = selectedAccount?.status === 'connected';
+	// Presentation mode: only the generated sample profile may reach the screen.
+	const showcaseOnly = Boolean(
+		demo.settings.enabled && demo.settings.featureFlags?.showcaseOnly === true,
+	);
 	const railAvatarUrl = useMemo(() => {
+		if (showcaseOnly) return '';
 		const fromAccount = String(selectedAccount?.avatarUrl || '').trim();
 		if (fromAccount) return fromAccount;
 		try {
@@ -12523,7 +12532,7 @@ function WhatsAppWorkspaceContent() {
 		} catch {
 			return '';
 		}
-	}, [selectedAccount?.avatarUrl, currentUserId]);
+	}, [selectedAccount?.avatarUrl, currentUserId, showcaseOnly]);
 
 	const effectiveConversations = useMemo(
 		() =>
@@ -12565,6 +12574,7 @@ function WhatsAppWorkspaceContent() {
 				demoState: demo.data,
 				runtime: demo.runtime,
 				enabled: demo.settings.enabled,
+				featureFlags: demo.settings.featureFlags,
 			}),
 		[
 			conversationMessages,
@@ -12572,12 +12582,13 @@ function WhatsAppWorkspaceContent() {
 			demo.data,
 			demo.runtime,
 			demo.settings.enabled,
+			demo.settings.featureFlags,
 		],
 	);
 	const effectiveMessages = useMemo(() => {
-		if (activeMessageGroup && Array.isArray(groupViewMessages)) return groupViewMessages;
+		if (!showcaseOnly && activeMessageGroup && Array.isArray(groupViewMessages)) return groupViewMessages;
 		return baseEffectiveMessages;
-	}, [activeMessageGroup, groupViewMessages, baseEffectiveMessages]);
+	}, [activeMessageGroup, groupViewMessages, baseEffectiveMessages, showcaseOnly]);
 	const mentionDirectory = useMemo(
 		() =>
 			buildWhatsAppMentionDirectory({
@@ -12689,7 +12700,7 @@ function WhatsAppWorkspaceContent() {
 	}, [conversations]);
 	const currentAccess = selectedAccount?.currentAccess || {};
 	const whatsappNotificationsEnabled = currentAccess.notificationsEnabled !== false;
-	whatsappNotificationsEnabledRef.current = whatsappNotificationsEnabled;
+	whatsappNotificationsEnabledRef.current = whatsappNotificationsEnabled && !showcaseOnly;
 	const canUseWhatsApp = Boolean(currentAccess.canUse);
 	const isDesktopLayout = useDesktopLayout();
 	const canManageWhatsApp = Boolean(currentAccess.canManage);
@@ -12702,6 +12713,7 @@ function WhatsAppWorkspaceContent() {
 	const availableTabs = useMemo(
 		() =>
 			tabs.filter(([key]) => {
+				if (showcaseOnly && !SHOWCASE_TABS.has(key)) return false;
 				if (key === 'settings') return canManageWhatsApp || isAdmin;
 				if (key === 'reports') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'board') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
@@ -12709,8 +12721,15 @@ function WhatsAppWorkspaceContent() {
 				if (key === 'autoForward') return canUseWhatsApp || canManageWhatsApp || isAdmin;
 				return true;
 			}),
-		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, isAdmin],
+		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, isAdmin, showcaseOnly],
 	);
+	useEffect(() => {
+		if (!showcaseOnly) return;
+		if (activeTab && !SHOWCASE_TABS.has(activeTab)) setActiveTab('chats');
+		if (conversationId && !isDemoId(conversationId)) setConversationId(null);
+		if (secondaryConversationId && !isDemoId(secondaryConversationId)) setSecondaryConversationId(null);
+		if (activeMessageGroup) setActiveMessageGroup(null);
+	}, [showcaseOnly, activeTab, conversationId, secondaryConversationId, activeMessageGroup]);
 	const unreadConversationCount = useMemo(
 		() =>
 			effectiveConversations.reduce((total, conversation) => {
@@ -21419,7 +21438,7 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const loadTabData = async (tab, force = false) => {
-		if (tab === 'notifications') {
+		if (tab === 'notifications' || (showcaseOnly && !SHOWCASE_TABS.has(tab))) {
 			setActiveTab('chats');
 			return;
 		}
@@ -23251,12 +23270,13 @@ function WhatsAppWorkspaceContent() {
 					locale={locale}
 					connected={isAccountConnected}
 					avatarUrl={railAvatarUrl}
+					showcaseOnly={showcaseOnly}
 					showSettings={canManageWhatsApp || isAdmin}
-					showAccounts
-					showReports
-					showBoard={canManageWhatsApp || canAssignWhatsApp || isAdmin}
-					showFakeChat={canManageWhatsApp || canAssignWhatsApp || isAdmin}
-					showAutoForward={canUseWhatsApp || canManageWhatsApp || isAdmin}
+					showAccounts={!showcaseOnly}
+					showReports={!showcaseOnly}
+					showBoard={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
+					showFakeChat={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
+					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 					darkMode={darkMode}
@@ -23285,7 +23305,7 @@ function WhatsAppWorkspaceContent() {
 									{locale === 'ar' ? 'وضع تجريبي — ليس واتساب الحقيقي' : 'DEMO — not live WhatsApp'}
 								</span>
 							)}
-							{accounts.length > 0 && (
+							{accounts.length > 0 && !showcaseOnly && (
 								<AccountSwitcherDropdown
 									accounts={accounts}
 									value={accountId}
@@ -27540,7 +27560,7 @@ function WhatsAppWorkspaceContent() {
 					) : (
 						<div className="wa-dk wa-settings-pane space-y-4">
 							{/* Phone "You" tab: the account card on top, like WhatsApp. Opens the accounts manager. */}
-							{selectedAccount ? (
+							{selectedAccount && !showcaseOnly ? (
 								<button
 									type="button"
 									className="wa-m-profile-cell"
@@ -27611,7 +27631,7 @@ function WhatsAppWorkspaceContent() {
 									<DemoModeSettings
 										locale={locale}
 										realAccountId={accountId}
-										realConversations={conversations}
+										realConversations={showcaseOnly ? [] : conversations}
 									/>
 								</Suspense>
 							)}

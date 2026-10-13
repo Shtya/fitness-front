@@ -108,6 +108,85 @@ test('backend demo timestamps and attachments map into the WhatsApp read model',
 	assert.equal(result[0].attachments[0].demoAttachment, true);
 });
 
+test('showcase-only mode shows fake chats only and never real messages', () => {
+	const demoState = {
+		contacts: [{ id: 'fake-contact', name: 'Fake contact' }],
+		conversations: [
+			{ id: 'fake-conversation', contactId: 'fake-contact', sourceType: 'fake' },
+			{ id: 'overlay-1', sourceType: 'real_overlay', realConversationId: 'real-1' },
+		],
+		messagesByConversation: {},
+	};
+	const featureFlags = { showcaseOnly: true, overlayRealChats: true, useFakeContacts: true };
+	const conversations = buildEffectiveConversations({
+		realConversations: [{ id: 'real-1', name: 'Real person' }],
+		enabled: true,
+		demoState,
+		runtime: { conversations: {} },
+		featureFlags,
+	});
+	assert.deepEqual(conversations.map(item => item.id), ['demo:fake-conversation']);
+
+	const realMessages = [{ id: 'real-message', text: 'private' }];
+	for (const selectedConversation of [null, { id: 'real-1', sourceType: 'real' }]) {
+		assert.deepEqual(
+			buildEffectiveMessages({ realMessages, selectedConversation, demoState, enabled: true, featureFlags }),
+			[],
+		);
+	}
+	assert.equal(
+		buildEffectiveMessages({ realMessages, selectedConversation: null, demoState, enabled: false, featureFlags }),
+		realMessages,
+	);
+});
+
+test('demo stickers, shared contacts and group senders reach the bubble fields', () => {
+	const [conversation] = buildEffectiveConversations({
+		enabled: true,
+		featureFlags: { showcaseOnly: true },
+		demoState: {
+			contacts: [{ id: 'team', name: 'Team' }],
+			conversations: [{ id: 'group-1', contactId: 'team', overrides: { type: 'group' } }],
+			messagesByConversation: {},
+		},
+		runtime: { conversations: {} },
+	});
+	assert.equal(conversation.type, 'group');
+
+	const messages = buildEffectiveMessages({
+		selectedConversation: conversation,
+		enabled: true,
+		featureFlags: { showcaseOnly: true },
+		demoState: {
+			messagesByConversation: {
+				'group-1': [
+					{
+						id: 'sticker',
+						type: 'sticker',
+						direction: 'inbound',
+						timestamp: '2026-07-21T12:00:00.000Z',
+						attachments: [{ id: 'a1', kind: 'image' }],
+						metadata: { senderName: 'Mona', senderWaId: '201000000001@c.us' },
+					},
+					{
+						id: 'card',
+						type: 'contact',
+						direction: 'outbound',
+						timestamp: '2026-07-21T12:01:00.000Z',
+						metadata: { sharedContact: { displayName: 'Omar', phones: [{ phone: '+20 100 000 0002' }] } },
+					},
+				],
+			},
+		},
+		runtime: { conversations: {} },
+	});
+	assert.equal(messages[0].attachments[0].type, 'sticker');
+	assert.equal(messages[0].senderName, 'Mona');
+	assert.equal(messages[0].fromMe, false);
+	assert.equal(messages[1].sharedContact.displayName, 'Omar');
+	assert.equal(messages[1].fromMe, true);
+});
+
 test('scheduler adds deterministic typing stop and typing-before-message events', () => {
 	const scheduled = prepareScheduledEvents(
 		[

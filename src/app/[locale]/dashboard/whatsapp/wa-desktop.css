@@ -413,6 +413,14 @@
 		box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13) !important;
 	}
 
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-bubble.wa-message-sticker {
+		width: min(72%, 190px) !important;
+		min-width: 0 !important;
+		max-width: min(72%, 190px) !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
 	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-meta,
 	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-message-time {
 		color: var(--d-meta) !important;

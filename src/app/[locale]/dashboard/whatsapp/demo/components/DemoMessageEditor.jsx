@@ -162,7 +162,7 @@ export default function DemoMessageEditor({
 								: form.type === 'video'
 									? 'video/mp4,video/webm'
 									: form.type === 'audio'
-										? 'audio/mpeg,audio/ogg,audio/webm,audio/mp4'
+										? 'audio/mpeg,audio/ogg,audio/webm,audio/mp4,audio/wav'
 										: '.pdf,.doc,.docx,.xls,.xlsx'
 						}
 						onChange={event =>

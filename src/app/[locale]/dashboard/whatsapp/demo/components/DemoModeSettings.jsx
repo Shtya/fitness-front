@@ -16,6 +16,7 @@ import { useDemoMode } from '../DemoModeProvider';
 import DemoInfoTip from './DemoInfoTip';
 import DemoJsonPanel from './DemoJsonPanel';
 import DemoModeTabs from './DemoModeTabs';
+import DemoPresentationCard from './DemoPresentationCard';
 import DemoProfilePicker from './DemoProfilePicker';
 import DemoStudio from './DemoStudio';
 
@@ -64,6 +65,7 @@ export default function DemoModeSettings({ locale, realAccountId, realConversati
 
 	return (
 		<>
+			<DemoPresentationCard demo={demo} labels={labels} locale={locale} />
 			<section
 				dir={labels.dir}
 				className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-900"

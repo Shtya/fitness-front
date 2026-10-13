@@ -137,6 +137,7 @@ export default function WhatsAppDesktopRail({
 	showBoard = true,
 	showFakeChat = true,
 	showAutoForward = true,
+	showcaseOnly = false,
 	darkMode = false,
 	onToggleDarkMode,
 	onSwitchLocale,
@@ -145,7 +146,7 @@ export default function WhatsAppDesktopRail({
 	const { focusMode, setFocusMode, hideEdgeDock } = useSidebarChrome();
 	const dockTip = useDockTooltip(ar);
 
-	const primaryItems = [
+	const allPrimaryItems = [
 		{
 			id: 'chats',
 			label: labels.chats || (ar ? 'محادثات' : 'Chats'),
@@ -179,6 +180,9 @@ export default function WhatsAppDesktopRail({
 			icon: BookUser,
 		},
 	];
+	const primaryItems = showcaseOnly
+		? allPrimaryItems.filter(item => item.id === 'chats')
+		: allPrimaryItems;
 
 	const utilityItems = [
 		showAccounts

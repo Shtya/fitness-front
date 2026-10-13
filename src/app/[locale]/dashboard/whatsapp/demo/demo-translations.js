@@ -1,5 +1,19 @@
 const en = {
 	dir: 'ltr',
+	presentationTitle: 'Presentation mode',
+	presentationHint:
+		'Show someone how WhatsApp works without opening your real account. Your real chats, contacts and groups are hidden until you stop.',
+	presentationIncludes:
+		'Includes sample contacts, a group, photos, videos, voice notes, documents, locations, live location, stickers, contact cards, replies, reactions and live typing.',
+	presentationStart: 'Start presentation',
+	presentationStop: 'Stop presentation',
+	presentationLive: 'Presenting — only sample data is visible',
+	presentationOff: 'Off — your real WhatsApp is visible',
+	presentationRegenerate: 'Regenerate sample data',
+	presentationPreparing: 'Preparing sample data…',
+	presentationReady: 'Sample data is ready',
+	presentationNotReady: 'Sample data will be created on first start (about 2 MB).',
+	presentationFailed: 'Could not prepare the presentation.',
 	demoMode: 'Demo / Fake Mode',
 	demoModeHint:
 		'Build safe fake WhatsApp conversations for demos and training — nothing is written to real client chats.',
@@ -227,6 +241,20 @@ const en = {
 const ar = {
 	...en,
 	dir: 'rtl',
+	presentationTitle: 'وضع العرض',
+	presentationHint:
+		'اعرض لأي حد إزاي واتساب بيشتغل من غير ما تفتح حسابك الحقيقي. محادثاتك وجهات اتصالك وجروباتك الحقيقية بتختفي لحد ما توقف العرض.',
+	presentationIncludes:
+		'فيه جهات اتصال وهمية وجروب وصور وفيديوهات ورسائل صوتية وملفات ومواقع وموقع مباشر وملصقات وجهات اتصال مشاركة وردود وتفاعلات وكتابة مباشرة.',
+	presentationStart: 'ابدأ العرض',
+	presentationStop: 'أوقف العرض',
+	presentationLive: 'العرض شغال — البيانات الوهمية بس هي اللي ظاهرة',
+	presentationOff: 'متوقف — واتساب الحقيقي ظاهر',
+	presentationRegenerate: 'إعادة إنشاء البيانات الوهمية',
+	presentationPreparing: 'جاري تجهيز البيانات الوهمية…',
+	presentationReady: 'البيانات الوهمية جاهزة',
+	presentationNotReady: 'هيتم إنشاء البيانات الوهمية أول مرة تبدأ فيها العرض (حوالي 2 ميجا).',
+	presentationFailed: 'تعذر تجهيز العرض.',
 	demoMode: 'الوضع التجريبي / الوهمي',
 	demoModeHint:
 		'أنشئ محادثات واتساب وهمية بأمان للعروض والتدريب — دون الكتابة في محادثات العملاء الحقيقية.',

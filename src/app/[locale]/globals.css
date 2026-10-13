@@ -8893,7 +8893,6 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	.wa-web-desktop .wa-message-bubble.wa-message-sticker {
 		padding: 0 !important;
 	}
-
 	.wa-web-desktop .wa-message-bubble.wa-message-location {
 		width: 240px;
 		max-width: min(76%, 240px) !important;
@@ -9913,6 +9912,13 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		background: transparent !important;
 		box-shadow: none !important;
 		overflow: visible;
+	}
+
+	/* The phone media-bubble width (min(90%, 360px)) otherwise beats the sticker cap. */
+	.wa-message-bubble.wa-message-media.wa-message-sticker {
+		width: min(60%, 190px) !important;
+		min-width: 0 !important;
+		max-width: min(60%, 190px) !important;
 	}
 
 	.wa-message-media.wa-message-mine,

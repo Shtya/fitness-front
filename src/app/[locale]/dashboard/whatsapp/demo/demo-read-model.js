@@ -70,22 +70,29 @@ function normalizeMessage(message = {}, sourceType = 'demo') {
 		message.created_at ||
 		message.createdAt ||
 		new Date().toISOString();
+	const metadata = message.metadata && typeof message.metadata === 'object' ? message.metadata : {};
+	const type = message.type || 'text';
 	return {
 		...message,
 		id: namespaceDemoId(message.id),
 		rawDemoId: rawDemoId(message.id),
-		type: message.type || 'text',
+		type,
 		text: message.text || message.body || '',
 		direction: message.direction === 'inbound' ? 'inbound' : 'outbound',
+		fromMe: message.direction !== 'inbound',
 		status: message.status || (message.direction === 'inbound' ? 'read' : 'sent'),
 		providerTimestamp: createdAt,
 		created_at: message.created_at || message.createdAt || createdAt,
+		senderName: message.senderName || metadata.senderName || undefined,
+		senderWaId: message.senderWaId || metadata.senderWaId || undefined,
+		sharedContact: message.sharedContact || metadata.sharedContact || undefined,
 		attachments: Array.isArray(message.attachments)
 			? message.attachments.map(attachment => ({
 					...attachment,
 					id: namespaceDemoId(attachment.id),
 					rawDemoId: rawDemoId(attachment.id),
-					type: attachment.type || attachment.kind,
+					// The backend stores sticker uploads as images; the bubble keys on the attachment type.
+					type: type === 'sticker' ? 'sticker' : attachment.type || attachment.kind,
 					demoAttachment: true,
 				}))
 			: [],
@@ -133,13 +140,15 @@ function normalizeDemoConversation(conversation, demoState, runtime) {
 	].map(message => normalizeMessage(message, 'demo'));
 	const lastMessage = latestMessage(allMessages);
 	const contact = normalizeContact(contactFor(demoState, conversation));
+	const overrides =
+		conversation.overrides && typeof conversation.overrides === 'object' ? conversation.overrides : {};
 	return {
 		...conversation,
 		id: namespaceDemoId(rawId),
 		rawDemoId: rawId,
 		sourceType: 'demo',
 		effectiveSource: 'demo',
-		type: conversation.type || 'direct',
+		type: overrides.type === 'group' ? 'group' : conversation.type || 'direct',
 		contact,
 		contactId: contact.id,
 		isPinned: Boolean(conversation.isPinned ?? conversation.pinned),
@@ -248,6 +257,13 @@ export function buildEffectiveConversations({
 	featureFlags = {},
 }) {
 	if (!enabled) return realConversations;
+	if (featureFlags.showcaseOnly === true) {
+		return sortEffectiveConversations(
+			(demoState?.conversations || [])
+				.filter(conversation => sourceTypeOf(conversation) !== 'real_overlay')
+				.map(conversation => normalizeDemoConversation(conversation, demoState, runtime)),
+		);
+	}
 
 	const overlays = (demoState?.conversations || []).filter(
 		conversation => sourceTypeOf(conversation) === 'real_overlay',
@@ -279,9 +295,13 @@ export function buildEffectiveMessages({
 	demoState,
 	runtime,
 	enabled = false,
+	featureFlags = {},
 }) {
-	if (!enabled || !selectedConversation) return realMessages;
+	if (!enabled) return realMessages;
+	const showcaseOnly = featureFlags.showcaseOnly === true;
+	if (!selectedConversation) return showcaseOnly ? [] : realMessages;
 	const source = selectedConversation.effectiveSource || selectedConversation.sourceType;
+	if (showcaseOnly && source !== 'demo') return [];
 	if (source === 'demo') {
 		const rawId = selectedConversation.rawDemoId || rawDemoId(selectedConversation.id);
 		const state = runtimeFor(runtime, rawId);
