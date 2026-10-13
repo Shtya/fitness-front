@@ -12856,3 +12856,91 @@ html.dark .wa-locv__chip.is-active {
 .wa-message-wallpaper .wa-voice-message.wa-voice-message .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar.is-played-outgoing {
 	background: var(--wa-vn-progress) !important;
 }
+
+/* Long-press surfaces: a press opens a menu, so it must not start a text
+   selection or the iOS callout. Message bubbles stay selectable. */
+.wa-conversation-row,
+.wa-cam-scrim,
+.wa-conversation-action-menu,
+.wa-message-action-menu,
+.wa-mam,
+.wa-ui-menu {
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+}
+
+.wa-conversation-action-menu :is(input, textarea, [contenteditable='true']),
+.wa-message-action-menu :is(input, textarea, [contenteditable='true']),
+.wa-mam :is(input, textarea, [contenteditable='true']),
+.wa-ui-menu :is(input, textarea, [contenteditable='true']) {
+	-webkit-user-select: text;
+	user-select: text;
+}
+
+/* Story ring and its avatar both fill the square avatar slot, so they stay
+   concentric at every slot size the shells assign (44–54px) and in RTL. */
+.wa-story-ring {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.wa-story-avatar {
+	position: absolute;
+	inset: 4px;
+	z-index: 1;
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 9999px;
+	background: #fff;
+}
+
+html.dark .wa-story-avatar {
+	background: transparent;
+}
+
+.wa-story-avatar > .wa-avatar-3d {
+	width: 100% !important;
+	height: 100% !important;
+	min-width: 0 !important;
+	min-height: 0 !important;
+}
+
+/* View-once media never renders here; WhatsApp only opens it on the phone. */
+.wa-view-once {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 196px;
+	padding: 6px 4px 2px;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.wa-view-once__icon {
+	flex: none;
+	color: #00a884;
+}
+
+.wa-view-once__text {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	line-height: 1.25;
+}
+
+.wa-view-once__title {
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.wa-view-once__hint {
+	font-size: 12px;
+	opacity: 0.62;
+}

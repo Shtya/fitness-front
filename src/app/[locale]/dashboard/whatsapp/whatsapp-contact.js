@@ -1,4 +1,5 @@
 import { formatWhatsAppPhone } from './whatsapp-utils.js';
+import { saveFilesToDevice } from './wa-save-file.js';
 
 const CONTACT_TYPES = new Set([
 	'contact',
@@ -224,19 +225,14 @@ export function buildContactVcard(contact) {
 	return lines.join('\r\n');
 }
 
-export function downloadContactVcard(contact) {
+export async function downloadContactVcard(contact) {
 	const vcard =
 		(contact?.__rawVcard && String(contact.__rawVcard).trim()) || buildContactVcard(contact);
-	const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
-	const url = URL.createObjectURL(blob);
-	const anchor = document.createElement('a');
 	const safeName = String(contact?.displayName || 'contact')
 		.replace(/[^\w\u0600-\u06FF\s-]+/g, '')
 		.trim()
 		.replace(/\s+/g, '_')
 		.slice(0, 48) || 'contact';
-	anchor.href = url;
-	anchor.download = `${safeName}.vcf`;
-	anchor.click();
-	URL.revokeObjectURL(url);
+	const file = new File([vcard], `${safeName}.vcf`, { type: 'text/vcard' });
+	return saveFilesToDevice([file]);
 }

@@ -40,6 +40,7 @@ import {
 	IPHONE_DEVICE,
 	nextId,
 } from './capture';
+import { saveMediaFiles } from '../wa-save-prompt';
 import {
 	applyChatPackToState,
 	bumpChatToTop,
@@ -973,8 +974,6 @@ export default function FakeChatStudio({
 			await new Promise(r => window.requestAnimationFrame(() => r()));
 			const fileName = `whatsapp-${state.screen}-${stamp.replace(':', '-')}.png`;
 			const dataUrl = await captureNodeAsPng(screen, {
-				fileName,
-				download,
 				width: IPHONE_XR.width,
 				height: IPHONE_XR.height,
 			});
@@ -983,7 +982,12 @@ export default function FakeChatStudio({
 			}
 			setSharePreview(dataUrl);
 			setShareOpen(true);
-			if (download) toast.success(ar ? 'تم التحميل' : 'Downloaded');
+			if (download) {
+				const result = await saveMediaFiles([dataUrlToFile(dataUrl, fileName)], {
+					locale: ar ? 'ar' : 'en',
+				});
+				if (result.status === 'downloaded') toast.success(ar ? 'تم التحميل' : 'Downloaded');
+			}
 		} catch (error) {
 			console.error('[fake-chat capture]', error);
 			toast.error(error?.message || (ar ? 'فشل التصوير' : 'Capture failed'));
@@ -2278,10 +2282,11 @@ export default function FakeChatStudio({
 				onShare={item => void shareToChat(item)}
 				onDownload={() => {
 					if (!sharePreview) return;
-					const link = document.createElement('a');
-					link.href = sharePreview;
-					link.download = `whatsapp-${formatIosStatusTime().replace(':', '-')}.png`;
-					link.click();
+					const file = dataUrlToFile(
+						sharePreview,
+						`whatsapp-${formatIosStatusTime().replace(':', '-')}.png`,
+					);
+					void saveMediaFiles([file], { locale: ar ? 'ar' : 'en' });
 				}}
 			/>
 		</div>

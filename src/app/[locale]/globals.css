@@ -1851,6 +1851,13 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   background-size: 200% 100%;
 }
 
+.wa-thread-loader__pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
 .wa-thread-loader__mark {
   display: grid;
   place-items: center;

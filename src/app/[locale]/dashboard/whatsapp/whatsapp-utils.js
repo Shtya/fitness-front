@@ -704,7 +704,31 @@ export function latestPeerReaction(message) {
 	}, peers[0]);
 }
 
+/** View-once media only opens on the phone; the server already withholds bytes and caption. */
+export function isViewOnceMessage(message) {
+	if (!message) return false;
+	return message.isViewOnce === true || String(message.type || '').toLowerCase() === 'view_once';
+}
+
+/** Touch-first devices open the on-screen keyboard on focus, so pickers must not autofocus there. */
+export function shouldAutoFocusTextEntry(win) {
+	if (!win || typeof win.matchMedia !== 'function') return false;
+	return !win.matchMedia('(hover: none), (pointer: coarse)').matches;
+}
+
+export function viewOnceMessageLabel(message, locale = 'en') {
+	const ar = String(locale || 'en').toLowerCase().startsWith('ar');
+	const type = String(message?.type || '').toLowerCase();
+	if (type === 'image' || type === 'photo') return ar ? 'صورة للعرض مرة واحدة' : 'View once photo';
+	if (type === 'video') return ar ? 'فيديو للعرض مرة واحدة' : 'View once video';
+	if (['audio', 'ptt', 'voice'].includes(type)) {
+		return ar ? 'رسالة صوتية للعرض مرة واحدة' : 'View once voice message';
+	}
+	return ar ? 'رسالة للعرض مرة واحدة' : 'View once message';
+}
+
 export function conversationMessageTypeLabel(message, locale = 'en') {
+	if (isViewOnceMessage(message)) return viewOnceMessageLabel(message, locale);
 	const ar = String(locale || 'en').toLowerCase().startsWith('ar');
 	const type = String(message?.type || '').toLowerCase();
 	const labels = ar
@@ -790,6 +814,7 @@ export function conversationPreview(conversation, locale = 'en') {
 		'contact',
 		'contacts',
 	]);
+	if (isViewOnceMessage(message)) return viewOnceMessageLabel(message, locale);
 	const mediaLabel = mediaTypes.has(type)
 		? conversationMessageTypeLabel(message, locale)
 		: '';
@@ -1712,6 +1737,7 @@ export function isRenderableWhatsAppMessage(message) {
 	if (!message) return false;
 	const deleted = isDeletedWhatsAppMessage(message);
 	if (deleted) return true;
+	if (isViewOnceMessage(message)) return true;
 	if (visibleMessageText(message.text)) return true;
 	if (isWhatsAppLocationMessage(message)) return true;
 	if (
@@ -2699,6 +2725,7 @@ export function buildChatViewerImages(messages = [], registered = {}) {
 				id,
 				messageId: message?.id || null,
 				fileName: attachment?.fileName || registeredItem?.fileName || '',
+				mimeType: attachment?.mimeType || '',
 				url: fullUrl,
 				previewUrl: preview,
 				width: Number(dims?.width) || 0,

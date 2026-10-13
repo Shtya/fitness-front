@@ -204,6 +204,9 @@ import {
 	sortConversationsByActivity,
 	updateConversationPreview,
 	conversationPreview,
+	isViewOnceMessage,
+	shouldAutoFocusTextEntry,
+	viewOnceMessageLabel,
 	conversationPreviewShowsReaction,
 	normalizeWhatsAppReactions,
 	latestPeerReaction,
@@ -371,6 +374,9 @@ import {
 	readCachedMessagePage,
 	writeCachedMessagePage,
 } from './whatsapp-idb-cache';
+import { waPerfMark } from './wa-perf';
+import { shouldSaveViaShareSheet, toMediaFile } from './wa-save-file';
+import { saveMediaFiles } from './wa-save-prompt';
 import { useWaScrollWindow, useWaVirtualRows, WaVirtualSpacer } from './wa-virtual-list';
 import { createByteBoundedCache, setBounded } from './wa-bounded-cache';
 import {
@@ -851,6 +857,7 @@ const translations = {
 		openFile: 'Open',
 		downloadFile: 'Save as...',
 		saveAsFile: 'Save as...',
+		download: 'Download',
 		selectMedia: 'Select media',
 		cancelSelectMedia: 'Cancel',
 		downloadSelectedMedia: 'Download selected',
@@ -1347,6 +1354,7 @@ const translations = {
 		openFile: 'فتح',
 		downloadFile: 'حفظ باسم...',
 		saveAsFile: 'حفظ باسم...',
+		download: 'تنزيل',
 		selectMedia: 'تحديد وسائط',
 		cancelSelectMedia: 'إلغاء',
 		downloadSelectedMedia: 'تنزيل المحدد',
@@ -2468,6 +2476,7 @@ function ImageMessage({
 	return (
 		<button
 			type="button"
+			data-wa-press-surface
 			aria-label={isBroken ? retryLabel : alt || 'Open image preview'}
 			aria-busy={isPending}
 			onClick={event => {
@@ -2652,12 +2661,13 @@ function ContactMessageCard({
 		event.stopPropagation();
 		if (!contact) return;
 		const payload = rawVcard ? { ...contact, __rawVcard: rawVcard } : contact;
-		try {
-			downloadContactVcard(payload);
-			toast.success(ar ? 'تم تنزيل جهة الاتصال' : 'Contact saved');
-		} catch {
-			toast.error(ar ? 'تعذر حفظ جهة الاتصال' : 'Could not save contact');
-		}
+		downloadContactVcard(payload)
+			.then(result => {
+				if (result.status === 'downloaded') {
+					toast.success(ar ? 'تم تنزيل جهة الاتصال' : 'Contact saved');
+				}
+			})
+			.catch(() => toast.error(ar ? 'تعذر حفظ جهة الاتصال' : 'Could not save contact'));
 	};
 
 	return (
@@ -3449,6 +3459,43 @@ function ChatImageViewer({
 		setPan({ x: 0, y: 0 });
 	}, []);
 
+	const [savingImage, setSavingImage] = useState(false);
+	const canSaveImage = Boolean(
+		image &&
+			(isPersistedAttachmentId(String(image.id || '')) ||
+				(image.url && isLocalMediaUrl(image.url) && !isInlineImageDataUrl(image.url))),
+	);
+	const saveCurrentImage = useCallback(async () => {
+		if (!image || savingImage) return;
+		const id = String(image.id || '');
+		setSavingImage(true);
+		try {
+			let blob = isPersistedAttachmentId(id) ? getCachedAttachmentBlob(id) : null;
+			if (!blob && isPersistedAttachmentId(id)) {
+				blob = await requestAttachmentBlob(id, { timeout: 60_000, priority: true, kind: 'image' });
+			}
+			if (!blob && image.url && isLocalMediaUrl(image.url) && !isInlineImageDataUrl(image.url)) {
+				const response = await fetch(image.url);
+				if (response.ok) blob = await response.blob();
+			}
+			if (!blob) throw new Error('Original image is unavailable');
+			const file = toMediaFile(blob, {
+				fileName: image.fileName,
+				mimeType: image.mimeType,
+				kind: 'image',
+				sentAt: image.sentAt,
+			});
+			const result = await saveMediaFiles([file], { locale });
+			if (result.status === 'downloaded') {
+				toast.success(locale === 'ar' ? 'بدأ التحميل' : 'Download started');
+			}
+		} catch {
+			toast.error(locale === 'ar' ? 'تعذر حفظ الصورة' : 'Could not save the image');
+		} finally {
+			setSavingImage(false);
+		}
+	}, [image, locale, savingImage]);
+
 	const clampZoom = value =>
 		Math.min(CHAT_VIEWER_ZOOM_MAX, Math.max(CHAT_VIEWER_ZOOM_MIN, value));
 
@@ -3639,7 +3686,6 @@ function ChatImageViewer({
 	const displaySrc =
 		(fullSrc && !brokenUrls[fullSrc] ? fullSrc : null) || previewSrc || null;
 	const hasDistinctFull = Boolean(fullSrc && fullSrc !== previewSrc);
-	const downloadHref = displaySrc || undefined;
 	const metaParts = [
 		image.sentAt ? relativeTime(image.sentAt, Date.now(), locale) : null,
 		!image.fromMe && image.senderName ? image.senderName : null,
@@ -3726,16 +3772,25 @@ function ChatImageViewer({
 									<Minimize2 size={16} />
 								</button>
 							</div>
-							{downloadHref ? (
-								<a
-									href={downloadHref}
-									download={image.fileName || true}
-									aria-label="Download image"
+							{canSaveImage ? (
+								<button
+									type="button"
+									aria-label={locale === 'ar' ? 'حفظ الصورة' : 'Save image'}
+									title={locale === 'ar' ? 'حفظ الصورة' : 'Save image'}
 									className="wa-chat-image-viewer__icon-btn"
-									onClick={event => event.stopPropagation()}
+									disabled={savingImage}
+									aria-busy={savingImage || undefined}
+									onClick={event => {
+										event.stopPropagation();
+										void saveCurrentImage();
+									}}
 								>
-									<Download size={20} />
-								</a>
+									{savingImage ? (
+										<Loader2 size={20} className="animate-spin" />
+									) : (
+										<Download size={20} />
+									)}
+								</button>
 							) : null}
 							<button
 								type="button"
@@ -4443,7 +4498,7 @@ function StoryRing({ size = 80, strokeWidth = 3, segmentsViewed, idSuffix = '' }
 	// only some rings were rendering their stroke.
 	const gradId = `storyRingGradient-${idSuffix || Math.random().toString(36).slice(2)}`;
 	return (
-		<svg width={size} height={size} className=" opacity-80 pointer-events-none absolute inset-0">
+		<svg viewBox={`0 0 ${size} ${size}`} className="wa-story-ring opacity-80" aria-hidden="true">
 			<defs>
 				<linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
 					<stop offset="0%" stopColor="#25D366" />
@@ -4841,6 +4896,7 @@ function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
 		<button
 			type="button"
 			dir="ltr"
+			data-wa-press-surface
 			onClick={onSeek}
 			disabled={loading || failed}
 			aria-label="Seek voice message"
@@ -5066,7 +5122,16 @@ function WaChatPicker({
 	autoFocus = false,
 }) {
 	const [query, setQuery] = useState('');
+	const [desktopFocus] = useState(() => shouldAutoFocusTextEntry(typeof window === 'undefined' ? null : window));
 	const ar = locale === 'ar';
+
+	useEffect(() => {
+		if (desktopFocus || typeof document === 'undefined') return;
+		const active = document.activeElement;
+		if (active instanceof HTMLElement && (active.matches('input, textarea') || active.isContentEditable)) {
+			active.blur();
+		}
+	}, [desktopFocus]);
 	const term = foldWhatsAppSearchText(query);
 	const rows = useMemo(() => {
 		const list = items || [];
@@ -5091,7 +5156,7 @@ function WaChatPicker({
 					<input
 						type="search"
 						value={query}
-						autoFocus={autoFocus}
+						autoFocus={autoFocus && desktopFocus}
 						onChange={event => setQuery(event.target.value)}
 						placeholder={ar ? 'ابحث باسم أو رقم' : 'Search name or number'}
 						aria-label={ar ? 'ابحث عن محادثة' : 'Search chats'}
@@ -5651,6 +5716,7 @@ function isPersistedAttachmentId(value) {
 function isSharableChatMessage(message) {
 	if (!message?.id || message.optimistic) return false;
 	if (message.deletedMode && message.deletedMode !== 'none') return false;
+	if (isViewOnceMessage(message)) return false;
 	return true;
 }
 
@@ -6613,9 +6679,39 @@ function attachmentExtension(fileName, mimeType) {
  * Away-clicks are matched by attribute rather than ref containment: the video's
  * fullscreen viewer renders through a portal, so one ref cannot cover both trees
  * and the menu would close before its own click landed.
+ *
+ * The popup is portalled with fixed coordinates: the video frame clips its
+ * overflow, so a menu opened from the top bar was invisible and taps on it
+ * landed on the message above.
  */
+const MEDIA_MENU_ITEM_HEIGHT = 35;
+const MEDIA_MENU_MIN_WIDTH = 190;
+
+function mediaMenuPosition(trigger, itemCount) {
+	const rect = trigger.getBoundingClientRect();
+	const vw = window.innerWidth;
+	const vh = window.innerHeight;
+	const height = itemCount * MEDIA_MENU_ITEM_HEIGHT + 12;
+	const spaceAbove = rect.top;
+	const spaceBelow = vh - rect.bottom;
+	const openUp = spaceAbove >= height + 8 || spaceAbove > spaceBelow;
+	const rtl = getComputedStyle(trigger).direction === 'rtl';
+	const maxStart = vw - 8 - MEDIA_MENU_MIN_WIDTH;
+	return {
+		position: 'fixed',
+		zIndex: 20040,
+		top: openUp ? 'auto' : rect.bottom + 8,
+		bottom: openUp ? vh - rect.top + 8 : 'auto',
+		left: rtl ? Math.max(8, Math.min(rect.left, maxStart)) : 'auto',
+		right: rtl ? 'auto' : Math.max(8, Math.min(vw - rect.right, maxStart)),
+		maxHeight: Math.max(120, (openUp ? spaceAbove : spaceBelow) - 16),
+		overflowY: 'auto',
+	};
+}
+
 function MediaOverflowMenu({ items, label = 'More', iconSize = 17, className = '' }) {
 	const [open, setOpen] = useState(false);
+	const [menuStyle, setMenuStyle] = useState(null);
 	const usable = (items || []).filter(Boolean);
 
 	useEffect(() => {
@@ -6627,11 +6723,19 @@ function MediaOverflowMenu({ items, label = 'More', iconSize = 17, className = '
 		const onKey = event => {
 			if (event.key === 'Escape') setOpen(false);
 		};
+		const onViewportChange = event => {
+			if (event.target?.closest?.('[data-wa-media-menu]')) return;
+			setOpen(false);
+		};
 		document.addEventListener('pointerdown', onAway, true);
 		document.addEventListener('keydown', onKey);
+		window.addEventListener('resize', onViewportChange);
+		window.addEventListener('scroll', onViewportChange, true);
 		return () => {
 			document.removeEventListener('pointerdown', onAway, true);
 			document.removeEventListener('keydown', onKey);
+			window.removeEventListener('resize', onViewportChange);
+			window.removeEventListener('scroll', onViewportChange, true);
 		};
 	}, [open]);
 
@@ -6653,13 +6757,25 @@ function MediaOverflowMenu({ items, label = 'More', iconSize = 17, className = '
 				onClick={event => {
 					event.preventDefault();
 					event.stopPropagation();
-					setOpen(value => !value);
+					if (open) {
+						setOpen(false);
+						return;
+					}
+					setMenuStyle(mediaMenuPosition(event.currentTarget, usable.length));
+					setOpen(true);
 				}}
 			>
 				<MoreHorizontal size={iconSize} strokeWidth={2.2} />
 			</button>
-			{open ? (
-				<div className="wa-video-menu" role="menu">
+			{open && menuStyle && typeof document !== 'undefined' ? createPortal(
+				<div
+					className="wa-video-menu"
+					role="menu"
+					data-wa-media-menu
+					style={menuStyle}
+					onPointerDown={event => event.stopPropagation()}
+					onClick={event => event.stopPropagation()}
+				>
 					{usable.map(item => (
 						<button
 							key={item.key}
@@ -6685,7 +6801,8 @@ function MediaOverflowMenu({ items, label = 'More', iconSize = 17, className = '
 							<span className="wa-video-menu__label">{item.label}</span>
 						</button>
 					))}
-				</div>
+				</div>,
+				document.body,
 			) : null}
 		</div>
 	);
@@ -7288,6 +7405,7 @@ function ChatVideoPlayer({
 				<button
 					type="button"
 					className="wa-video-play"
+					data-wa-press-surface
 					aria-label={playLabel}
 					onClick={togglePlayback}
 				>
@@ -7359,7 +7477,9 @@ export function MediaAttachment({
 	onSaveToLibrary = null,
 	sendAsVoiceLabel = '',
 	sendingAsVoice = false,
+	sentAt = null,
 }) {
+	const locale = useLocale();
 	const initialLocalPreview = localAttachmentPreview(attachment);
 	const [url, setUrl] = useState(() => initialLocalPreview);
 	const [loading, setLoading] = useState(() => !initialLocalPreview);
@@ -7696,6 +7816,62 @@ export function MediaAttachment({
 		});
 	}, [attachment.id, attachment.fileName, onImageReady, type, url]);
 
+	const saveAttachmentToDevice = async blob => {
+		const file = toMediaFile(blob, {
+			fileName: attachment.fileName,
+			mimeType: attachment.mimeType,
+			kind: type || 'document',
+			sentAt,
+		});
+		const result = await saveMediaFiles([file], { locale });
+		if (result.status === 'downloaded') {
+			toast.success(labels.downloadStarted || (locale === 'ar' ? 'بدأ التحميل' : 'Download started'));
+		}
+	};
+
+	const handleFileAction = async action => {
+		if (fileAction) return;
+		setFileAction(action);
+		try {
+			const blob = await loadAttachmentBlob();
+			if (action === 'download') {
+				await saveAttachmentToDevice(blob);
+			} else if (typeof onOpenDocument === 'function') {
+				const fileName = attachment.fileName || labels.fileAttachment || 'attachment';
+				const extension = String(attachmentExtension(fileName, attachment.mimeType) || '')
+					.toLowerCase()
+					.replace(/[^a-z0-9]/g, '');
+				let previewBlob = blob;
+				let previewMime = attachment.mimeType || blob?.type || '';
+				if (extension === 'pdf') {
+					previewMime = 'application/pdf';
+					if (!String(blob?.type || '').toLowerCase().includes('pdf')) {
+						previewBlob = blob.slice(0, blob.size, 'application/pdf');
+					}
+				}
+				onOpenDocument({
+					name: fileName,
+					fileName: attachment.fileName,
+					mimeType: previewMime,
+					blob: previewBlob,
+					attachmentId: attachment.id,
+				});
+			} else {
+				const objectUrl = URL.createObjectURL(blob);
+				window.open(objectUrl, '_blank', 'noopener,noreferrer');
+				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+			}
+		} catch {
+			if (action === 'download') {
+				toast.error(locale === 'ar' ? 'تعذر حفظ الملف' : 'Could not save the file');
+			} else {
+				setFailed(true);
+			}
+		} finally {
+			setFileAction('');
+		}
+	};
+
 	if (isVoice) {
 		const fromName = durationFromFileName(attachment.fileName);
 		const fromMessage =
@@ -7730,54 +7906,12 @@ export function MediaAttachment({
 				onSaveToLibrary={
 					typeof onSaveToLibrary === 'function' ? () => onSaveToLibrary(attachment) : null
 				}
+				onDownload={isPendingAttachment ? null : () => handleFileAction('download')}
+				downloading={fileAction === 'download'}
 				menuLabels={labels}
 			/>
 		);
 	}
-
-	const handleFileAction = async action => {
-		if (fileAction) return;
-		setFileAction(action);
-		try {
-			const blob = await loadAttachmentBlob();
-			if (action === 'download') {
-				const objectUrl = URL.createObjectURL(blob);
-				const anchor = document.createElement('a');
-				anchor.href = objectUrl;
-				anchor.download = attachment.fileName || 'attachment';
-				anchor.click();
-				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-			} else if (typeof onOpenDocument === 'function') {
-				const fileName = attachment.fileName || labels.fileAttachment || 'attachment';
-				const extension = String(attachmentExtension(fileName, attachment.mimeType) || '')
-					.toLowerCase()
-					.replace(/[^a-z0-9]/g, '');
-				let previewBlob = blob;
-				let previewMime = attachment.mimeType || blob?.type || '';
-				if (extension === 'pdf') {
-					previewMime = 'application/pdf';
-					if (!String(blob?.type || '').toLowerCase().includes('pdf')) {
-						previewBlob = blob.slice(0, blob.size, 'application/pdf');
-					}
-				}
-				onOpenDocument({
-					name: fileName,
-					fileName: attachment.fileName,
-					mimeType: previewMime,
-					blob: previewBlob,
-					attachmentId: attachment.id,
-				});
-			} else {
-				const objectUrl = URL.createObjectURL(blob);
-				window.open(objectUrl, '_blank', 'noopener,noreferrer');
-				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-			}
-		} catch {
-			setFailed(true);
-		} finally {
-			setFileAction('');
-		}
-	};
 
 	if (isDocument) {
 		const extension = attachmentExtension(attachment.fileName, attachment.mimeType);
@@ -8141,6 +8275,34 @@ export function MediaAttachment({
 	);
 }
 
+const VIEW_ONCE_MESSAGE_ACTIONS = new Set(['reply', 'pin', 'star', 'info', 'delete']);
+
+function ViewOncePlaceholder({ message, locale }) {
+	const ar = String(locale || '').toLowerCase().startsWith('ar');
+	return (
+		<div className="wa-view-once" role="note">
+			<svg className="wa-view-once__icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+				<circle
+					cx="12"
+					cy="12"
+					r="10"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="1.8"
+					strokeDasharray="3.2 2.4"
+				/>
+				<path d="M10.6 8.6 12.6 7.4V16.6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+			</svg>
+			<span className="wa-view-once__text">
+				<span className="wa-view-once__title">{viewOnceMessageLabel(message, locale)}</span>
+				<span className="wa-view-once__hint">
+					{ar ? 'افتحها على هاتفك' : 'Open it on your phone'}
+				</span>
+			</span>
+		</div>
+	);
+}
+
 function MessageAttachments({
 	attachments,
 	mine,
@@ -8257,6 +8419,7 @@ function MessageAttachments({
 					onSaveToLibrary={onSaveToLibrary}
 					sendAsVoiceLabel={sendAsVoiceLabel}
 					sendingAsVoice={sendingAsVoice}
+					sentAt={message?.sentAt || message?.createdAt || null}
 				/>
 			))}
 		</>
@@ -8637,6 +8800,12 @@ function MessageActionMenu({
 	);
 	const menuRef = useRef(null);
 	useMenuKeyboard(menuRef, { open: Boolean(open && message), onClose });
+	const sheetBackdropHandlers = useLongPressBackdrop({
+		open: open ? message?.id || true : false,
+		onClose,
+		isBackdrop: isMessageSheetBackdrop,
+	});
+	const pressGuard = useFreshPressGuard(open ? message?.id || true : false);
 	const boardItemRef = useRef(null);
 	const boardCloseTimerRef = useRef(null);
 	const [boardFlyoutPos, setBoardFlyoutPos] = useState(null);
@@ -8738,6 +8907,7 @@ function MessageActionMenu({
 
 	if (!open || !message) return null;
 	const ar = locale === 'ar';
+	const viewOnce = isViewOnceMessage(message);
 	const canSelectTranscript = isSelectableTranscriptMessage(message);
 	const canSelectMedia = messageHasSelectableMedia(message);
 	const canViewGallery = messageHasGalleryMedia(message);
@@ -8842,7 +9012,9 @@ function MessageActionMenu({
 		},
 		{ id: 'info', label: ar ? 'معلومات الرسالة' : 'Message info', icon: Info, group: 'info' },
 		{ id: 'delete', label: ar ? 'حذف' : 'Delete', icon: Trash2, destructive: true, group: 'danger' },
-	].filter(Boolean);
+	].filter(
+		action => action && (!viewOnce || VIEW_ONCE_MESSAGE_ACTIONS.has(action.id)),
+	);
 
 	const runAction = (actionId, event) => {
 		event?.preventDefault?.();
@@ -9035,6 +9207,7 @@ function MessageActionMenu({
 				role="menu"
 				aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}
 				className="wa-message-action-menu wa-ui-menu wa-ui-scroll hidden min-[769px]:block"
+				{...pressGuard}
 				style={{
 					top: desktopPos.top,
 					left: desktopPos.left,
@@ -9053,12 +9226,12 @@ function MessageActionMenu({
 				className={`wa-mam fixed inset-0 z-[100] hidden overflow-y-auto bg-black/20 px-3 backdrop-blur-md max-[769px]:block ${
 					message.direction === 'outbound' ? 'is-out' : 'is-in'
 				}`}
-				onClick={onClose}
+				{...sheetBackdropHandlers}
 			>
 				<div
 					className="wa-mam__stack relative mx-auto w-full max-w-md pb-5"
 					style={{ top: mobileTop }}
-					onClick={event => event.stopPropagation()}
+					{...pressGuard}
 				>
 					<div className={`wa-mam__preview mb-3 flex ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
 						<div className={`wa-mam__bubble max-w-[88%] overflow-hidden rounded-2xl px-3.5 py-2.5 text-sm shadow-xl ${
@@ -9379,6 +9552,108 @@ function MultiMessageActionMenu({
 /** Wide enough for the longest label ("Open beside current chat") in either language. */
 const CONVERSATION_MENU_WIDTH = 252;
 
+const LONG_PRESS_MS = 500;
+
+/** A long-press can leave a native selection behind; iOS then spends the next
+ *  tap clearing it instead of delivering the click that should close the menu. */
+function clearLongPressSelection() {
+	if (typeof window === 'undefined') return;
+	const clear = () => {
+		try {
+			window.getSelection()?.removeAllRanges();
+		} catch {
+			/* ignore */
+		}
+	};
+	clear();
+	window.requestAnimationFrame(clear);
+}
+
+/**
+ * Backdrop handlers for menus opened by a long-press. The release of the
+ * opening press can land a click on the freshly mounted backdrop, so only a
+ * press that started on the backdrop may close it. Holding on the backdrop
+ * hands the point to `onLongPress` (open the menu for whatever is underneath).
+ */
+const isBackdropElement = event => event.target === event.currentTarget;
+
+const isMessageSheetBackdrop = event =>
+	!event.target?.closest?.('.wa-mam__bubble, .wa-mam__reactions, .wa-mam__menu');
+
+function useLongPressBackdrop({ open, onClose, onLongPress, isBackdrop = isBackdropElement }) {
+	const stateRef = useRef({ armed: false, timer: 0, x: 0, y: 0 });
+	useEffect(() => {
+		const state = stateRef.current;
+		state.armed = false;
+		window.clearTimeout(state.timer);
+	}, [open]);
+	useEffect(() => () => window.clearTimeout(stateRef.current.timer), []);
+	const stopTimer = () => window.clearTimeout(stateRef.current.timer);
+	return {
+		onPointerDown: event => {
+			if (!isBackdrop(event)) return;
+			const state = stateRef.current;
+			state.armed = true;
+			state.x = event.clientX;
+			state.y = event.clientY;
+			stopTimer();
+			if (!onLongPress) return;
+			state.timer = window.setTimeout(() => {
+				state.armed = false;
+				clearLongPressSelection();
+				onLongPress(state.x, state.y);
+			}, LONG_PRESS_MS);
+		},
+		onPointerMove: event => {
+			const state = stateRef.current;
+			if (Math.hypot(event.clientX - state.x, event.clientY - state.y) > 8) stopTimer();
+		},
+		onPointerUp: stopTimer,
+		onPointerCancel: () => {
+			stopTimer();
+			stateRef.current.armed = false;
+		},
+		onClick: event => {
+			if (!isBackdrop(event)) return;
+			const state = stateRef.current;
+			if (!state.armed) return;
+			state.armed = false;
+			onClose();
+		},
+		onContextMenu: event => {
+			if (!isBackdrop(event)) return;
+			event.preventDefault();
+			stopTimer();
+			stateRef.current.armed = false;
+			if (onLongPress) onLongPress(event.clientX, event.clientY);
+			else onClose();
+		},
+	};
+}
+
+/**
+ * Menu-body guard for long-press menus: the finger that opened the menu is
+ * still down when items mount under it, and its release can click whichever
+ * item (Delete, Archive…) now sits there. Only a press that starts inside the
+ * menu after it opened may activate an item; keyboard clicks (detail 0) pass.
+ */
+function useFreshPressGuard(open) {
+	const freshRef = useRef(false);
+	useEffect(() => {
+		freshRef.current = false;
+	}, [open]);
+	return {
+		onPointerDownCapture: () => {
+			freshRef.current = true;
+		},
+		onClickCapture: event => {
+			if (freshRef.current || event.detail === 0) return;
+			event.preventDefault();
+			event.stopPropagation();
+		},
+	};
+}
+
 function ConversationActionMenu({
 	conversation,
 	anchorRect,
@@ -9387,8 +9662,15 @@ function ConversationActionMenu({
 	busy,
 	onClose,
 	onAction,
+	onLongPressAt,
 }) {
 	const [mounted, setMounted] = useState(false);
+	const backdropHandlers = useLongPressBackdrop({
+		open: conversation,
+		onClose,
+		onLongPress: onLongPressAt,
+	});
+	const pressGuard = useFreshPressGuard(conversation);
 	const [pos, setPos] = useState(() =>
 		computeBesideMenuPosition(anchorRect, { width: CONVERSATION_MENU_WIDTH, height: 340 }),
 	);
@@ -9471,11 +9753,7 @@ function ConversationActionMenu({
 				type="button"
 				tabIndex={-1}
 				aria-label={ar ? 'إغلاق القائمة' : 'Close menu'}
-				onClick={onClose}
-				onContextMenu={event => {
-					event.preventDefault();
-					onClose();
-				}}
+				{...backdropHandlers}
 				className="wa-cam-scrim fixed inset-0 z-[105] cursor-default bg-transparent"
 			/>
 			<div
@@ -9488,6 +9766,7 @@ function ConversationActionMenu({
 					left: pos.left,
 					width: pos.width,
 				}}
+				{...pressGuard}
 				onClick={event => event.stopPropagation()}
 			>
 				<div className="wa-ui-menu__header">
@@ -11091,6 +11370,7 @@ const WaConversationRow = memo(function WaConversationRow({
 			}`}
 			aria-current={active && !isSplitSecondary ? 'true' : undefined}
 			data-selected={active ? 'true' : undefined}
+			data-conversation-id={conversation.id}
 		>
 			<div className="wa-conversation-avatar relative grid h-11 w-11 shrink-0 place-items-center">
 				{story ? (
@@ -11110,7 +11390,7 @@ const WaConversationRow = memo(function WaConversationRow({
 								event.stopPropagation();
 								actions.openStory(story);
 							}}
-							className="relative z-1 grid h-9 w-9 place-items-center rounded-full bg-white"
+							className="wa-story-avatar"
 						>
 							<Avatar
 								label={title}
@@ -11525,7 +11805,6 @@ function WhatsAppWorkspaceContent() {
 	const [loadingMessages, setLoadingMessages] = useState(false);
 	/** Soft catch-up when inbox shows unread/new preview the warm thread does not have yet. */
 	const [messageCatchUp, setMessageCatchUp] = useState(null);
-	const [messageCatchUpProgress, setMessageCatchUpProgress] = useState(0);
 	const messageCatchUpRef = useRef(null);
 	messageCatchUpRef.current = messageCatchUp;
 	const [threadSettled, setThreadSettled] = useState(true);
@@ -12063,6 +12342,9 @@ function WhatsAppWorkspaceContent() {
 	const conversationsRequestId = useRef(0);
 	const conversationSearchRequestId = useRef(0);
 	const tabRequestId = useRef(0);
+	/** Tabs whose data is already on screen for an account: revisits refresh in the
+	 *  background instead of swapping the pane for a spinner. */
+	const loadedTabKeysRef = useRef(new Set());
 
 	const selectedAccount = useMemo(
 		() => accounts.find(item => item.id === accountId) || null,
@@ -12607,6 +12889,13 @@ function WhatsAppWorkspaceContent() {
 		setTranscriptionSources(null);
 		setMessageTranscripts({});
 	}, [conversationId]);
+
+	// A chat-list menu belongs to the screen it was opened on.
+	useEffect(() => {
+		suppressConversationClickRef.current = false;
+		setConversationActionTarget(null);
+		setConversationActionAnchor(null);
+	}, [conversationId, activeTab]);
 
 	useEffect(() => {
 		const ids = (conversationMessages || [])
@@ -14381,14 +14670,12 @@ function WhatsAppWorkspaceContent() {
 				expected: livePlan.expected,
 				received: 0,
 			});
-			setMessageCatchUpProgress(8);
 		};
 		const finishCatchUp = (itemsAfter = []) => {
 			if (!isCurrentRequest()) return;
 			// Only clear the full-pane unread skeleton if it was actually shown.
 			if (messageCatchUpRef.current?.conversationId !== id) return;
 			setMessageCatchUp(null);
-			setMessageCatchUpProgress(0);
 			setLoadingMessages(false);
 			pinThreadToBottomRef.current = true;
 			scrollMessagesToBottom('auto', { force: true });
@@ -14778,7 +15065,6 @@ function WhatsAppWorkspaceContent() {
 			if (cancelled) return;
 			if (messageCatchUpRef.current?.conversationId === id) {
 				setMessageCatchUp(null);
-				setMessageCatchUpProgress(0);
 			}
 			if (!cached?.items?.length) {
 				clearConversationMessages(id);
@@ -14814,6 +15100,7 @@ function WhatsAppWorkspaceContent() {
 	const openConversation = useCallback(
 		(id, conversationMeta) => {
 			if (!id) return;
+			waPerfMark('chat:open');
 			cancelIdleMessagePrefetch(id);
 			const starredOnly =
 				conversationFilterRef.current === 'important' ||
@@ -14870,11 +15157,9 @@ function WhatsAppWorkspaceContent() {
 					expected: openCatchUp.expected,
 					received: 0,
 				});
-				setMessageCatchUpProgress(8);
 				setLoadingMessages(true);
 			} else {
 				setMessageCatchUp(null);
-				setMessageCatchUpProgress(0);
 			}
 
 			lastAutoScrolledMessageRef.current = null;
@@ -15293,16 +15578,13 @@ function WhatsAppWorkspaceContent() {
 					expected: openCatchUp.expected,
 					received: 0,
 				});
-				setMessageCatchUpProgress(8);
 				setLoadingMessages(true);
 			} else if (messageCatchUpRef.current?.conversationId === conversationId) {
 				setMessageCatchUp(null);
-				setMessageCatchUpProgress(0);
 			}
 			loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled).catch(() => { });
 		} else if (messageCatchUpRef.current?.conversationId === conversationId) {
 			setMessageCatchUp(null);
-			setMessageCatchUpProgress(0);
 		}
 		if (selectedConversationSource === 'real_overlay') {
 			markRuntimeReadRef.current?.(selectedDemoRuntimeId);
@@ -15344,26 +15626,8 @@ function WhatsAppWorkspaceContent() {
 	}, [conversationId, loadingMessages]);
 
 	useEffect(() => {
-		if (
-			!messageCatchUp ||
-			messageCatchUp.conversationId !== conversationId ||
-			messageCatchUpProgress >= 100
-		) {
-			return undefined;
-		}
-		const timer = window.setInterval(() => {
-			setMessageCatchUpProgress(current => {
-				if (current >= 92) return current;
-				return Math.min(92, current + (current < 40 ? 7 : current < 70 ? 4 : 2));
-			});
-		}, 280);
-		return () => window.clearInterval(timer);
-	}, [conversationId, messageCatchUp, messageCatchUpProgress]);
-
-	useEffect(() => {
 		if (!conversationId) {
 			setMessageCatchUp(null);
-			setMessageCatchUpProgress(0);
 		}
 	}, [conversationId]);
 
@@ -15378,7 +15642,6 @@ function WhatsAppWorkspaceContent() {
 		});
 		if (tipPlan.showUi) return;
 		setMessageCatchUp(null);
-		setMessageCatchUpProgress(0);
 		setLoadingMessages(false);
 		pinThreadToBottomRef.current = true;
 		requestAnimationFrame(() => {
@@ -18110,11 +18373,12 @@ function WhatsAppWorkspaceContent() {
 				if (!demoAttachment && !isPersistedAttachmentId(id)) continue;
 				items.push({
 					id,
-					fileName: attachment.fileName || `attachment-${id.slice(0, 8)}`,
+					fileName: attachment.fileName || '',
 					mimeType: attachment.mimeType,
 					type: attachment.type,
 					demoAttachment,
 					messageId: message.id,
+					sentAt: message.sentAt || message.createdAt || null,
 				});
 			}
 		}
@@ -18159,10 +18423,16 @@ function WhatsAppWorkspaceContent() {
 						? await demoApi.getMedia(rawDemoId(id))
 						: await requestAttachmentBlob(id, { timeout: 90_000, priority: true });
 					if (!blob || blob.size < 8) throw new Error('empty');
-					entries.push({
-						name: uniqueName(meta?.fileName || `whatsapp-${id.slice(0, 8)}`),
-						blob,
+					const named = toMediaFile(blob, {
+						fileName: meta?.fileName,
+						mimeType: meta?.mimeType,
+						kind: meta?.type,
+						sentAt: meta?.sentAt,
 					});
+					const name = uniqueName(named.name);
+					entries.push(
+						name === named.name ? named : new File([named], name, { type: named.type }),
+					);
 					ok += 1;
 				} catch {
 					failed += 1;
@@ -18174,26 +18444,23 @@ function WhatsAppWorkspaceContent() {
 				return;
 			}
 
-			// Single file: keep a normal download. Multiple: one zip.
-			if (entries.length === 1) {
-				const objectUrl = URL.createObjectURL(entries[0].blob);
-				const anchor = document.createElement('a');
-				anchor.href = objectUrl;
-				anchor.download = entries[0].name;
-				document.body.appendChild(anchor);
-				anchor.click();
-				anchor.remove();
-				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+			// iPhone: hand the originals to the Share Sheet (Save N Images / Save to Files).
+			// Elsewhere one file downloads as-is and several are zipped.
+			let result;
+			if (
+				entries.length === 1 ||
+				shouldSaveViaShareSheet(typeof navigator === 'undefined' ? null : navigator, entries)
+			) {
+				result = await saveMediaFiles(entries, { locale });
 			} else {
 				const JSZip = (await import('jszip')).default;
 				const zip = new JSZip();
 				for (const entry of entries) {
-					zip.file(entry.name, entry.blob);
+					zip.file(entry.name, entry);
 				}
 				const zipBlob = await zip.generateAsync({
 					type: 'blob',
-					compression: 'DEFLATE',
-					compressionOptions: { level: 6 },
+					compression: 'STORE',
 				});
 				const stamp = new Date().toISOString().slice(0, 10);
 				const chatLabel = String(selectedChatTitle || t.selectedMediaZipName)
@@ -18201,17 +18468,14 @@ function WhatsAppWorkspaceContent() {
 					.trim()
 					.slice(0, 40);
 				const zipName = `${chatLabel || t.selectedMediaZipName}-${stamp}.zip`;
-				const objectUrl = URL.createObjectURL(zipBlob);
-				const anchor = document.createElement('a');
-				anchor.href = objectUrl;
-				anchor.download = zipName;
-				document.body.appendChild(anchor);
-				anchor.click();
-				anchor.remove();
-				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+				result = await saveMediaFiles([new File([zipBlob], zipName, { type: 'application/zip' })], {
+					locale,
+				});
 			}
 
-			if (failed === 0) {
+			if (result.status === 'cancelled' || result.status === 'needs-gesture') {
+				toast.dismiss(loadingToast);
+			} else if (failed === 0) {
 				toast.success(t.selectedMediaDownloaded.replace('{count}', String(ok)), {
 					id: loadingToast,
 				});
@@ -18241,6 +18505,7 @@ function WhatsAppWorkspaceContent() {
 		t.selectedMediaPartialFail,
 		t.selectedMediaZipEmpty,
 		t.selectedMediaZipName,
+		locale,
 	]);
 
 	useEffect(() => {
@@ -19591,16 +19856,20 @@ function WhatsAppWorkspaceContent() {
 
 	const startMessageLongPress = (event, message) => {
 		if (typeof window === 'undefined' || window.innerWidth > 768) return;
-		if (event.target.closest('button, a, audio, input, textarea, [role="button"]')) return;
+		// Media surfaces (photo, video play, voice waveform) are buttons only for their
+		// tap action; holding them must still reach the message menu like WhatsApp.
+		const control = event.target.closest('button, a, audio, input, textarea, [role="button"]');
+		if (control && !control.hasAttribute('data-wa-press-surface')) return;
 		clearTimeout(longPressTimerRef.current);
 		const anchorRect = event.currentTarget.getBoundingClientRect();
 		longPressOriginRef.current = { x: event.clientX, y: event.clientY };
 		longPressTimerRef.current = setTimeout(() => {
 			if (navigator.vibrate) navigator.vibrate(15);
+			clearLongPressSelection();
 			setReactionPickerMessageId(null);
 			setActionMessageAnchor(anchorRect);
 			setActionMessageId(message.id);
-		}, 500);
+		}, LONG_PRESS_MS);
 	};
 	const cancelMessageLongPress = event => {
 		const origin = longPressOriginRef.current;
@@ -20833,9 +21102,31 @@ function WhatsAppWorkspaceContent() {
 		conversationLongPressTimerRef.current = setTimeout(() => {
 			suppressConversationClickRef.current = true;
 			if (navigator.vibrate) navigator.vibrate(15);
+			clearLongPressSelection();
 			setConversationActionAnchor(anchorRect);
 			setConversationActionTarget(conversation);
-		}, 500);
+		}, LONG_PRESS_MS);
+	};
+
+	/** Long-press on the menu backdrop: reopen the menu for the row underneath. */
+	const openConversationActionsAt = (x, y) => {
+		const row =
+			typeof document === 'undefined'
+				? null
+				: document
+						.elementsFromPoint(x, y)
+						.map(element => element.closest?.('[data-conversation-id]'))
+						.find(Boolean);
+		const id = row?.getAttribute('data-conversation-id');
+		const next = id ? filteredConversations.find(item => item.id === id) : null;
+		if (!row || !next) {
+			closeConversationActions();
+			return;
+		}
+		suppressConversationClickRef.current = true;
+		if (navigator.vibrate) navigator.vibrate(15);
+		setConversationActionAnchor(row.getBoundingClientRect());
+		setConversationActionTarget(next);
 	};
 
 	const cancelConversationLongPress = event => {
@@ -20924,6 +21215,7 @@ function WhatsAppWorkspaceContent() {
 			setActiveTab('chats');
 			return;
 		}
+		if (tab !== activeTab) waPerfMark(`tab:${tab}`);
 		setActiveTab(tab);
 		setTabError('');
 		if (tab === 'profile') return;
@@ -20983,7 +21275,12 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (tab === 'settings' && !canManageWhatsApp && !isAdmin) return;
-		setTabLoading(true);
+		const loadedKey =
+			tab === 'reports'
+				? `${targetAccountId}:reports:${reportPeriodDaysRef.current}`
+				: `${targetAccountId}:${tab}`;
+		const showSpinner = force || !loadedTabKeysRef.current.has(loadedKey);
+		setTabLoading(showSpinner);
 		setTabError('');
 		try {
 			if (tab === 'groups') {
@@ -21024,10 +21321,13 @@ function WhatsAppWorkspaceContent() {
 					);
 				}
 			}
+			if (isCurrentRequest()) loadedTabKeysRef.current.add(loadedKey);
 		} catch (error) {
 			if (isCurrentRequest()) {
 				setTabError(error.response?.data?.message || 'Could not load section');
-				toast.error(error.response?.data?.message || 'Could not load section');
+				if (showSpinner) {
+					toast.error(error.response?.data?.message || 'Could not load section');
+				}
 			}
 		} finally {
 			if (isCurrentRequest()) setTabLoading(false);
@@ -23791,7 +24091,7 @@ function WhatsAppWorkspaceContent() {
 								<>
 									<header className="wa-chat-toolbar flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
 										<div className="wa-chat-toolbar__identity flex min-w-0 items-center gap-3">
-											<button type="button" aria-label={locale === 'ar' ? 'رجوع إلى المحادثات' : 'Back to chats'} onClick={() => setConversationId(null)} className="wa-header-icon-btn wa-chat-back-btn grid shrink-0 place-items-center min-[769px]:hidden">
+											<button type="button" aria-label={locale === 'ar' ? 'رجوع إلى المحادثات' : 'Back to chats'} onClick={() => { waPerfMark('chat:back'); setConversationId(null); }} className="wa-header-icon-btn wa-chat-back-btn grid shrink-0 place-items-center min-[769px]:hidden">
 												{locale === 'ar' ? <ChevronRight size={20} strokeWidth={2.2} /> : <ChevronLeft size={20} strokeWidth={2.2} />}
 											</button>
 											{unreadConversationCount > 0 ? (
@@ -24189,6 +24489,67 @@ function WhatsAppWorkspaceContent() {
 									<>
 									<div className="wa-chat-wallpaper-host">
 									<div className="wa-chat-wallpaper-layer" aria-hidden="true" />
+									{/* Keep the pane busy while the first page loads, unread
+									    catch-up runs, or settle still hides bubbles (opacity 0).
+									    Lives outside the scroller so it covers the visible
+									    viewport instead of riding the scrolled content. */}
+									{Boolean(conversationId) &&
+									(Boolean(
+										messageCatchUp &&
+											messageCatchUp.conversationId === conversationId,
+									) ||
+										loadingMessages ||
+										!threadSettled) &&
+									!(
+										threadSettled &&
+										!loadingMessages &&
+										!(
+											messageCatchUp &&
+											messageCatchUp.conversationId === conversationId
+										) &&
+										effectiveMessages.length === 0
+									) ? (
+										<div
+											className="wa-thread-loader"
+											role="status"
+											aria-live="polite"
+											aria-busy="true"
+											aria-label={
+												messageCatchUp &&
+												messageCatchUp.conversationId === conversationId
+													? t.loadingNewMessages.replace(
+															'{count}',
+															String(messageCatchUp.expected),
+														)
+													: messagesSyncHint || t.loadingMessages
+											}
+										>
+											<div className="wa-thread-loader__stack" aria-hidden="true">
+												<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in" />
+												<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in wa-thread-loader__bubble--short" />
+												<span className="wa-thread-loader__bubble wa-thread-loader__bubble--out" />
+												<span className="wa-thread-loader__bubble wa-thread-loader__bubble--out wa-thread-loader__bubble--mid" />
+												<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in wa-thread-loader__bubble--mid" />
+											</div>
+											<div className="wa-thread-loader__pill">
+												<span className="wa-thread-loader__mark">
+													<span
+														className="wa-thread-loader__ring"
+														aria-hidden="true"
+													/>
+												</span>
+												<p className="wa-thread-loader__label">
+													{messageCatchUp &&
+													messageCatchUp.conversationId === conversationId
+														? t.loadingNewMessages.replace(
+																'{count}',
+																String(messageCatchUp.expected),
+															)
+														: messagesSyncHint || t.loadingMessages}
+												</p>
+											</div>
+										</div>
+									) : null}
 									<div
 										ref={messageBoxRef}
 										onWheel={() => {
@@ -24304,64 +24665,6 @@ function WhatsAppWorkspaceContent() {
 												: ''
 										}`}
 									>
-										{/* Keep the pane busy while the first page loads, unread
-										    catch-up runs, or settle still hides bubbles (opacity 0).
-										    Avoid a blank wallpaper between click and reveal. */}
-										{Boolean(conversationId) &&
-										(Boolean(
-											messageCatchUp &&
-												messageCatchUp.conversationId === conversationId,
-										) ||
-											loadingMessages ||
-											!threadSettled) &&
-										!(
-											threadSettled &&
-											!loadingMessages &&
-											!(
-												messageCatchUp &&
-												messageCatchUp.conversationId === conversationId
-											) &&
-											effectiveMessages.length === 0
-										) ? (
-											<div
-												className="wa-thread-loader"
-												role="status"
-												aria-live="polite"
-												aria-busy="true"
-												aria-label={
-													messageCatchUp &&
-													messageCatchUp.conversationId === conversationId
-														? t.loadingNewMessages.replace(
-																'{count}',
-																String(messageCatchUp.expected),
-															)
-														: messagesSyncHint || t.loadingMessages
-												}
-											>
-												<div className="wa-thread-loader__stack" aria-hidden="true">
-													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in" />
-													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in wa-thread-loader__bubble--short" />
-													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--out" />
-													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--out wa-thread-loader__bubble--mid" />
-													<span className="wa-thread-loader__bubble wa-thread-loader__bubble--in wa-thread-loader__bubble--mid" />
-												</div>
-												<div className="wa-thread-loader__mark">
-													<span
-														className="wa-thread-loader__ring"
-														aria-hidden="true"
-													/>
-												</div>
-												<p className="wa-thread-loader__label">
-													{messageCatchUp &&
-													messageCatchUp.conversationId === conversationId
-														? t.loadingNewMessages.replace(
-																'{count}',
-																String(messageCatchUp.expected),
-															)
-														: messagesSyncHint || t.loadingMessages}
-												</p>
-											</div>
-										) : null}
 										{effectiveMessages.length === 0 ? (
 											!loadingMessages &&
 											threadSettled &&
@@ -25082,7 +25385,9 @@ function WhatsAppWorkspaceContent() {
 																			) : null}
 																		</button>
 																	) : null}
-																	{!hideDeletedBody && attachments?.length
+																	{!hideDeletedBody && isViewOnceMessage(message) ? (
+																		<ViewOncePlaceholder message={message} locale={locale} />
+																	) : !hideDeletedBody && attachments?.length
 																		? (
 																			<MessageAttachments
 																				attachments={attachments}
@@ -27808,6 +28113,7 @@ function WhatsAppWorkspaceContent() {
 			<ConversationActionMenu
 				conversation={conversationActionTarget}
 				anchorRect={conversationActionAnchor}
+				onLongPressAt={openConversationActionsAt}
 				locale={locale}
 				canAssign={!demo.settings.enabled && canAssignWhatsApp}
 				busy={

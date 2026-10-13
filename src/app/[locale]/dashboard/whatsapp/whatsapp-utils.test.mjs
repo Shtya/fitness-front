@@ -29,6 +29,8 @@ import {
 	isDeletedWhatsAppMessage,
 	deletedWhatsAppMessageLabel,
 	conversationPreview,
+	isViewOnceMessage,
+	shouldAutoFocusTextEntry,
 	conversationPreviewShowsReaction,
 	conversationReactionPreviewText,
 	latestPeerReaction,
@@ -1706,4 +1708,26 @@ test('inbox preview shows peer reaction like WhatsApp instead of plain voice+tic
 		),
 		'Voice message',
 	);
+});
+
+test('view-once messages render as a placeholder and never leak their caption', () => {
+	const stub = { id: 'v1', type: 'view_once', text: null, attachments: [] };
+	assert.equal(isViewOnceMessage(stub), true);
+	assert.equal(isRenderableWhatsAppMessage(stub), true);
+	assert.equal(conversationPreview({ lastMessage: stub }, 'en'), 'View once message');
+
+	const photo = { id: 'v2', type: 'image', isViewOnce: true, text: 'hidden', direction: 'inbound' };
+	assert.equal(conversationPreview({ lastMessage: photo }, 'en'), 'View once photo');
+	assert.equal(conversationPreview({ lastMessage: photo }, 'ar'), 'صورة للعرض مرة واحدة');
+
+	assert.equal(isViewOnceMessage({ id: 'p', type: 'image' }), false);
+	assert.equal(isViewOnceMessage(null), false);
+});
+
+test('chat pickers autofocus only on fine-pointer devices so phones keep the keyboard closed', () => {
+	const fakeWindow = matches => ({ matchMedia: () => ({ matches }) });
+	assert.equal(shouldAutoFocusTextEntry(fakeWindow(false)), true);
+	assert.equal(shouldAutoFocusTextEntry(fakeWindow(true)), false);
+	assert.equal(shouldAutoFocusTextEntry(null), false);
+	assert.equal(shouldAutoFocusTextEntry({}), false);
 });

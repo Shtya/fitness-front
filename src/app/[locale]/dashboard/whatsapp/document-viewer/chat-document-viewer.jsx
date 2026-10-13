@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { MarkdownContent } from './markdown-content';
 import { detectPreviewKind, isOleBuffer, isZipBuffer } from './mime';
 import { parseWorkbookSheets } from './excel-preview';
+import { toMediaFile } from '../wa-save-file';
+import { saveMediaFiles } from '../wa-save-prompt';
 import './chat-document-viewer.css';
 
 const DOCX_VIEWER_STYLE_OVERRIDES = `
@@ -602,12 +604,8 @@ export function ChatDocumentViewer({ open, onClose, file, locale = 'en' }) {
 
 	const download = () => {
 		if (!blob) return;
-		const url = URL.createObjectURL(blob);
-		const anchor = document.createElement('a');
-		anchor.href = url;
-		anchor.download = name || 'attachment';
-		anchor.click();
-		window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+		const saveFile = toMediaFile(blob, { fileName: name, mimeType, kind: 'document' });
+		void saveMediaFiles([saveFile], { locale });
 	};
 
 	return (

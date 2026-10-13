@@ -252,7 +252,7 @@ async function runToPng(toPng, node, width, height, pixelRatio, fontEmbedCSS) {
 
 export async function captureNodeAsPng(
 	node,
-	{ fileName = 'whatsapp-fake-chat.png', download = false, width: forceW, height: forceH } = {},
+	{ width: forceW, height: forceH } = {},
 ) {
 	if (!node || typeof window === 'undefined') {
 		throw new Error('Nothing to capture');
@@ -295,12 +295,6 @@ export async function captureNodeAsPng(
 			}
 		}
 
-		if (download) {
-			const link = document.createElement('a');
-			link.download = fileName;
-			link.href = dataUrl;
-			link.click();
-		}
 		return dataUrl;
 	} finally {
 		restoreScroll();
