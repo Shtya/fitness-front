@@ -1,9 +1,26 @@
-import { IBM_Plex_Sans_Arabic, Noto_Naskh_Arabic, Readex_Pro } from 'next/font/google';
+import {
+	Almarai,
+	Amiri,
+	Atkinson_Hyperlegible,
+	Cairo,
+	IBM_Plex_Sans,
+	IBM_Plex_Sans_Arabic,
+	Literata,
+	Lora,
+	Markazi_Text,
+	Merriweather,
+	Noto_Naskh_Arabic,
+	Noto_Sans_Arabic,
+	Readex_Pro,
+	Source_Serif_4,
+	Tajawal,
+} from 'next/font/google';
 
 /*
  * Arabic faces load the `arabic` subset only, with no generated fallback face.
  * The browser then picks them per glyph: Arabic letters use the Arabic face,
  * Latin letters and digits fall through to the English face in the same stack.
+ * Only the default face is preloaded; the others download the first time they render.
  */
 const plexArabic = IBM_Plex_Sans_Arabic({
 	subsets: ['arabic'],
@@ -32,18 +49,154 @@ const naskhArabic = Noto_Naskh_Arabic({
 	preload: false,
 });
 
-export const FONT_VARIABLE_CLASSES = [plexArabic.variable, readexArabic.variable, naskhArabic.variable].join(' ');
+const notoSansArabic = Noto_Sans_Arabic({
+	subsets: ['arabic'],
+	variable: '--sd-font-noto-sans-ar',
+	display: 'swap',
+	adjustFontFallback: false,
+	fallback: [],
+	preload: false,
+});
+
+const almaraiArabic = Almarai({
+	subsets: ['arabic'],
+	weight: ['300', '400', '700'],
+	variable: '--sd-font-almarai-ar',
+	display: 'swap',
+	adjustFontFallback: false,
+	fallback: [],
+	preload: false,
+});
+
+const cairoArabic = Cairo({
+	subsets: ['arabic'],
+	variable: '--sd-font-cairo-ar',
+	display: 'swap',
+	adjustFontFallback: false,
+	fallback: [],
+	preload: false,
+});
+
+const tajawalArabic = Tajawal({
+	subsets: ['arabic'],
+	weight: ['300', '400', '500', '700'],
+	variable: '--sd-font-tajawal-ar',
+	display: 'swap',
+	adjustFontFallback: false,
+	fallback: [],
+	preload: false,
+});
+
+const amiriArabic = Amiri({
+	subsets: ['arabic'],
+	weight: ['400', '700'],
+	variable: '--sd-font-amiri-ar',
+	display: 'swap',
+	adjustFontFallback: false,
+	fallback: [],
+	preload: false,
+});
+
+const markaziArabic = Markazi_Text({
+	subsets: ['arabic'],
+	variable: '--sd-font-markazi-ar',
+	display: 'swap',
+	adjustFontFallback: false,
+	fallback: [],
+	preload: false,
+});
+
+const literata = Literata({
+	subsets: ['latin', 'latin-ext'],
+	variable: '--sd-font-literata',
+	display: 'swap',
+	preload: false,
+});
+
+const sourceSerif = Source_Serif_4({
+	subsets: ['latin', 'latin-ext'],
+	variable: '--sd-font-source-serif',
+	display: 'swap',
+	preload: false,
+});
+
+const merriweather = Merriweather({
+	subsets: ['latin', 'latin-ext'],
+	variable: '--sd-font-merriweather',
+	display: 'swap',
+	preload: false,
+});
+
+const lora = Lora({
+	subsets: ['latin', 'latin-ext'],
+	variable: '--sd-font-lora',
+	display: 'swap',
+	preload: false,
+});
+
+const atkinson = Atkinson_Hyperlegible({
+	subsets: ['latin', 'latin-ext'],
+	weight: ['400', '700'],
+	variable: '--sd-font-atkinson',
+	display: 'swap',
+	preload: false,
+});
+
+const plexSans = IBM_Plex_Sans({
+	subsets: ['latin', 'latin-ext'],
+	weight: ['300', '400', '500', '600', '700'],
+	variable: '--sd-font-plex-sans',
+	display: 'swap',
+	preload: false,
+});
+
+export const FONT_VARIABLE_CLASSES = [
+	plexArabic,
+	readexArabic,
+	naskhArabic,
+	notoSansArabic,
+	almaraiArabic,
+	cairoArabic,
+	tajawalArabic,
+	amiriArabic,
+	markaziArabic,
+	literata,
+	sourceSerif,
+	merriweather,
+	lora,
+	atkinson,
+	plexSans,
+]
+	.map((font) => font.variable)
+	.join(' ');
+
+const AR_SAMPLE = 'أبجد هوز';
 
 export const ARABIC_FONTS = {
-	plex: { label: 'IBM Plex Arabic', sample: 'أبجد هوز', stack: plexArabic.style.fontFamily },
-	readex: { label: 'Readex Pro', sample: 'أبجد هوز', stack: readexArabic.style.fontFamily },
-	naskh: { label: 'Noto Naskh', sample: 'أبجد هوز', stack: naskhArabic.style.fontFamily },
+	plex: { label: 'IBM Plex Arabic', sample: AR_SAMPLE, stack: plexArabic.style.fontFamily },
+	readex: { label: 'Readex Pro', sample: AR_SAMPLE, stack: readexArabic.style.fontFamily },
+	notoSans: { label: 'Noto Sans Arabic', sample: AR_SAMPLE, stack: notoSansArabic.style.fontFamily },
+	almarai: { label: 'Almarai', sample: AR_SAMPLE, stack: almaraiArabic.style.fontFamily },
+	cairo: { label: 'Cairo', sample: AR_SAMPLE, stack: cairoArabic.style.fontFamily },
+	tajawal: { label: 'Tajawal', sample: AR_SAMPLE, stack: tajawalArabic.style.fontFamily },
+	naskh: { label: 'Noto Naskh', sample: AR_SAMPLE, stack: naskhArabic.style.fontFamily },
+	amiri: { label: 'Amiri', sample: AR_SAMPLE, stack: amiriArabic.style.fontFamily },
+	markazi: { label: 'Markazi Text', sample: AR_SAMPLE, stack: markaziArabic.style.fontFamily },
 };
 
+const SANS_TAIL = "'Segoe UI', system-ui, sans-serif";
+const SERIF_TAIL = "Georgia, 'Times New Roman', serif";
+
 export const ENGLISH_FONTS = {
-	inter: { label: 'Inter', sample: 'Aa', stack: "var(--font-inter), 'Segoe UI', system-ui, sans-serif" },
-	dmSans: { label: 'DM Sans', sample: 'Aa', stack: "var(--font-dm-sans), 'Segoe UI', system-ui, sans-serif" },
-	serif: { label: 'Serif', sample: 'Aa', stack: "Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif" },
+	inter: { label: 'Inter', sample: 'Aa', stack: `var(--font-inter), ${SANS_TAIL}` },
+	dmSans: { label: 'DM Sans', sample: 'Aa', stack: `var(--font-dm-sans), ${SANS_TAIL}` },
+	plexSans: { label: 'IBM Plex Sans', sample: 'Aa', stack: `${plexSans.style.fontFamily}, ${SANS_TAIL}` },
+	atkinson: { label: 'Atkinson', sample: 'Aa', stack: `${atkinson.style.fontFamily}, ${SANS_TAIL}` },
+	literata: { label: 'Literata', sample: 'Aa', stack: `${literata.style.fontFamily}, ${SERIF_TAIL}` },
+	sourceSerif: { label: 'Source Serif', sample: 'Aa', stack: `${sourceSerif.style.fontFamily}, ${SERIF_TAIL}` },
+	merriweather: { label: 'Merriweather', sample: 'Aa', stack: `${merriweather.style.fontFamily}, ${SERIF_TAIL}` },
+	lora: { label: 'Lora', sample: 'Aa', stack: `${lora.style.fontFamily}, ${SERIF_TAIL}` },
+	serif: { label: 'Georgia', sample: 'Aa', stack: `Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif` },
 };
 
 export const TYPOGRAPHY_DEFAULTS = Object.freeze({

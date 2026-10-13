@@ -36,6 +36,7 @@ function FontChoices({ fonts, value, onPick, lang }) {
 					key={id}
 					type="button"
 					aria-pressed={value === id}
+					title={font.label}
 					className={`sd-typo-font${value === id ? ' is-active' : ''}`}
 					onClick={() => onPick(id)}
 				>

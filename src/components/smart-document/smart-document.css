@@ -14,6 +14,10 @@
 	--sd-ls: 0em;
 	--sd-ws: 0em;
 	--sd-ps: 0.9em;
+	--sd-caret: var(--color-primary-600, #0d9488);
+	--sd-selection: color-mix(in srgb, var(--color-primary-500, #0d9488) 30%, transparent);
+	/* Dark bar with a white halo: Windows draws the stock I-beam by inverting pixels, so it vanishes over glyphs. */
+	--sd-ibeam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='24' viewBox='0 0 16 24'%3E%3Cpath d='M4.5 2.5h7M8 2.5v19M4.5 21.5h7' fill='none' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M4.5 2.5h7M8 2.5v19M4.5 21.5h7' fill='none' stroke='%23111827' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") 8 12, text;
 	display: grid;
 	grid-template-columns: 0fr 1fr;
 	min-height: calc(100vh - 4.25rem);
@@ -39,6 +43,8 @@
 }
 
 html.dark .sd-shell--md {
+	--sd-caret: var(--color-primary-300, #5eead4);
+	--sd-selection: color-mix(in srgb, var(--color-primary-400, #2dd4bf) 34%, transparent);
 	--sd-ink: #e7e5e4;
 	--sd-muted: #a8a29e;
 	--sd-line: rgba(231, 229, 228, 0.12);
@@ -491,14 +497,32 @@ html.dark .sd-icon-btn {
 	word-spacing: var(--sd-ws);
 }
 
-/* ProseMirror hides the caret while unfocused; keep it solid whenever we are editing. */
-.sd-visual.ProseMirror-focused,
-.sd-visual.ProseMirror-focused * {
-	caret-color: var(--sd-ink);
+/* globals.css sets `[dir] body * { font-family }` on every element, which out-ranks the
+   single-class rules above; this keeps the chosen document fonts on the text itself. */
+.sd-shell .sd-markdown-source,
+.sd-shell .sd-markdown-preview,
+.sd-shell .sd-visual,
+.sd-shell .sd-visual :not(pre, pre *, code, code *) {
+	font-family: var(--sd-font-doc);
 }
 
-.sd-visual.ProseMirror-hideselection {
-	caret-color: var(--sd-ink);
+.sd-shell .sd-markdown-source,
+.sd-shell .sd-markdown-preview,
+.sd-shell .sd-visual {
+	cursor: var(--sd-ibeam);
+	caret-color: var(--sd-caret);
+}
+
+/* ProseMirror hides the caret while unfocused; keep it solid whenever we are editing. */
+.sd-shell .sd-visual.ProseMirror-focused,
+.sd-shell .sd-visual.ProseMirror-focused *,
+.sd-shell .sd-visual.ProseMirror-hideselection {
+	caret-color: var(--sd-caret);
+}
+
+.sd-shell .sd-markdown-source::selection {
+	background: var(--sd-selection);
+	color: inherit;
 }
 
 .sd-visual p.is-editor-empty:first-child::before {
@@ -510,7 +534,7 @@ html.dark .sd-icon-btn {
 }
 
 .sd-visual ::selection {
-	background: color-mix(in srgb, var(--color-primary-500, #0d9488) 24%, transparent);
+	background: var(--sd-selection);
 }
 
 .sd-visual ul[data-type='taskList'] {
@@ -796,6 +820,9 @@ html.dark .sd-icon-btn {
 }
 
 .sd-typo-font-name {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	font-size: 0.62rem;
 	font-weight: 650;
 	color: #64748b;
