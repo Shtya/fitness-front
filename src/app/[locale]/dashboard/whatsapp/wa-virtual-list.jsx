@@ -7,6 +7,30 @@ import { computeRowWindow, isSameRowWindow } from './wa-row-window';
 
 export { computeRowWindow, isSameRowWindow };
 
+/**
+ * Scroll metrics for the rows container. When it grows to its full content height
+ * and an ancestor scrolls instead (mobile inbox: header + rows scroll together),
+ * measure that ancestor, offset by where the rows start inside it.
+ */
+function readScrollViewport(node) {
+	if (!node) return null;
+	if (node.scrollHeight > node.clientHeight + 1) {
+		return { scrollTop: node.scrollTop, clientHeight: node.clientHeight };
+	}
+	for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+		if (parent.scrollHeight <= parent.clientHeight + 1) continue;
+		const overflowY = getComputedStyle(parent).overflowY;
+		if (overflowY !== 'auto' && overflowY !== 'scroll') continue;
+		const offset =
+			node.getBoundingClientRect().top - parent.getBoundingClientRect().top + parent.scrollTop;
+		return {
+			scrollTop: Math.max(0, parent.scrollTop - offset),
+			clientHeight: parent.clientHeight,
+		};
+	}
+	return { scrollTop: node.scrollTop, clientHeight: node.clientHeight };
+}
+
 /** Hook: keep a window in sync with a scroll container. */
 export function useWaScrollWindow({
 	count,
@@ -50,13 +74,9 @@ export function useWaScrollWindow({
 			return;
 		}
 
-		const node = scrollRef?.current;
-		const realScrollTop =
-			node && typeof node.scrollTop === 'number' ? node.scrollTop : null;
-		const realClientHeight =
-			node && typeof node.clientHeight === 'number' && node.clientHeight > 0
-				? node.clientHeight
-				: 800;
+		const viewport = readScrollViewport(scrollRef?.current);
+		const realScrollTop = viewport ? viewport.scrollTop : null;
+		const realClientHeight = viewport?.clientHeight > 0 ? viewport.clientHeight : 800;
 		const prepended = count - prevCount;
 		const h = Math.max(24, Number(rowHeight) || 72);
 
@@ -135,20 +155,15 @@ export function useWaScrollWindow({
 				});
 				return;
 			}
-			const scrollTop = Number(node.scrollTop) || 0;
-			const clientHeight =
-				typeof node.clientHeight === 'number' && node.clientHeight > 0
-					? node.clientHeight
-					: 800;
-			setWindowState(
-				computeRowWindow({
-					scrollTop,
-					clientHeight,
-					count,
-					rowHeight,
-					overscan,
-				}),
-			);
+			const viewport = readScrollViewport(node);
+			const next = computeRowWindow({
+				scrollTop: Number(viewport.scrollTop) || 0,
+				clientHeight: viewport.clientHeight > 0 ? viewport.clientHeight : 800,
+				count,
+				rowHeight,
+				overscan,
+			});
+			setWindowState(current => (isSameRowWindow(current, next) ? current : next));
 		};
 		syncFromScroll();
 		return () => {
@@ -170,15 +185,15 @@ export function useWaScrollWindow({
 	const onScroll = useCallback(
 		event => {
 			if (!shouldWindow) return;
-			scrollNodeRef.current = event.currentTarget;
+			scrollNodeRef.current = scrollRef?.current || event.currentTarget;
 			if (scrollFrameRef.current) return;
 			scrollFrameRef.current = requestAnimationFrame(() => {
 				scrollFrameRef.current = 0;
-				const node = scrollNodeRef.current;
-				if (!node) return;
+				const viewport = readScrollViewport(scrollNodeRef.current);
+				if (!viewport) return;
 				const next = computeRowWindow({
-					scrollTop: node.scrollTop,
-					clientHeight: node.clientHeight,
+					scrollTop: viewport.scrollTop,
+					clientHeight: viewport.clientHeight,
 					count,
 					rowHeight,
 					overscan,
@@ -186,7 +201,7 @@ export function useWaScrollWindow({
 				setWindowState(current => (isSameRowWindow(current, next) ? current : next));
 			});
 		},
-		[shouldWindow, count, rowHeight, overscan],
+		[shouldWindow, count, rowHeight, overscan, scrollRef],
 	);
 
 	const slice = useMemo(() => {

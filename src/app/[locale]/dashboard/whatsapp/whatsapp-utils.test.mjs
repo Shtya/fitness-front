@@ -79,7 +79,41 @@ import {
 	viewerThumbSrc,
 	viewerFullSrc,
 	statusMessageIdentityKey,
+	viewOnceMessageHint,
+	quotedMediaPreviewFromRaw,
 } from './whatsapp-utils.js';
+
+test('view-once hint depends on direction and whether the recipient opened it', () => {
+	assert.equal(viewOnceMessageHint({ direction: 'inbound' }, 'en'), 'Open it on your phone');
+	assert.equal(viewOnceMessageHint({ direction: 'inbound' }, 'ar'), 'افتحها على هاتفك');
+	assert.equal(viewOnceMessageHint({ direction: 'outbound', status: 'delivered' }, 'en'), 'Only the recipient can open it, once');
+	assert.equal(viewOnceMessageHint({ direction: 'outbound', status: 'read' }, 'en'), 'Opened');
+	assert.equal(viewOnceMessageHint({ direction: 'outbound', status: 'played' }, 'ar'), 'تم الفتح');
+});
+
+test('a reply to view-once media quotes the label, never the caption or thumbnail', () => {
+	const stub = { id: 'q1', type: 'view_once', isViewOnce: true, text: null, senderName: 'Mona' };
+	const preview = quotedMessagePreview(stub, 'en', { isGroupChat: true });
+	assert.equal(preview.body, 'View once message');
+	assert.equal(preview.senderName, 'Mona');
+	assert.equal(preview.isViewOnce, true);
+	assert.equal(quotedMessagePreview({ type: 'image', isViewOnce: true, text: 'leak' }, 'ar').body, 'صورة للعرض مرة واحدة');
+
+	const thumb = Buffer.from('thumb').toString('base64');
+	const replyRaw = quoted => ({
+		message: { extendedTextMessage: { text: 'wow', contextInfo: { stanzaId: 'Q', quotedMessage: quoted } } },
+	});
+	assert.equal(quotedMediaPreviewFromRaw(replyRaw({ imageMessage: { viewOnce: true, jpegThumbnail: thumb } })), null);
+	assert.equal(
+		quotedMediaPreviewFromRaw(replyRaw({ viewOnceMessageV2: { message: { imageMessage: { jpegThumbnail: thumb } } } })),
+		null,
+	);
+	assert.ok(quotedMediaPreviewFromRaw(replyRaw({ imageMessage: { jpegThumbnail: thumb } })));
+	assert.equal(
+		quotedPreviewFromMessage({ replyTo: { isViewOnce: true, previewDataUrl: 'data:image/jpeg;base64,x' } }),
+		null,
+	);
+});
 
 test('mergeMessages deduplicates provider messages and sorts chronologically', () => {
 	const result = mergeMessages(

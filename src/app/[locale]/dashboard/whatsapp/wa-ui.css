@@ -12923,9 +12923,42 @@ html.dark .wa-story-avatar {
 	-webkit-user-select: none;
 }
 
+button.wa-view-once {
+	width: 100%;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+}
+
+button.wa-view-once:hover .wa-view-once__title {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+button.wa-view-once:focus-visible {
+	outline: 2px solid #00a884;
+	outline-offset: 2px;
+}
+
 .wa-view-once__icon {
 	flex: none;
 	color: #00a884;
+}
+
+.wa-view-once-info p {
+	margin: 0 0 10px;
+	font-size: 14px;
+	line-height: 1.55;
+}
+
+.wa-view-once-info p:last-child {
+	margin-bottom: 0;
+	opacity: 0.72;
 }
 
 .wa-view-once__text {

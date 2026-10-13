@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, Fragment, isValidElement, lazy, memo, Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { cloneElement, Fragment, isValidElement, lazy, memo, Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocale } from 'next-intl';
@@ -206,6 +206,7 @@ import {
 	conversationPreview,
 	isViewOnceMessage,
 	shouldAutoFocusTextEntry,
+	viewOnceMessageHint,
 	viewOnceMessageLabel,
 	conversationPreviewShowsReaction,
 	normalizeWhatsAppReactions,
@@ -377,6 +378,8 @@ import {
 import { waPerfMark } from './wa-perf';
 import { shouldSaveViaShareSheet, toMediaFile } from './wa-save-file';
 import { saveMediaFiles } from './wa-save-prompt';
+import { StoryReactionBar, StoryViewersSheet, StoryViewsButton } from './WaStoryInteractions';
+import { applyStoryInteractionUpdate, storyMessageKey } from './wa-story-interactions';
 import { useWaScrollWindow, useWaVirtualRows, WaVirtualSpacer } from './wa-virtual-list';
 import { createByteBoundedCache, setBounded } from './wa-bounded-cache';
 import {
@@ -957,6 +960,10 @@ const translations = {
 		replyToStoryPlaceholder: 'Reply to this story…',
 		storyReplySent: 'Reply sent',
 		storyReplyUnavailable: 'Cannot reply to this story',
+		storyReactionSent: 'Reaction sent',
+		storyReactionAlready: 'You already reacted with this emoji',
+		storyReactUnavailable: 'Cannot react to this story',
+		storyStatusQuote: 'Status',
 		sendStoryAsMedia: 'Send as media',
 		sendStoryAsMediaHint: 'Send this story media to any chat',
 		sendStoryPickChat: 'Choose a chat',
@@ -1454,6 +1461,10 @@ const translations = {
 		replyToStoryPlaceholder: 'اكتب ردًا على هذه الحالة…',
 		storyReplySent: 'تم إرسال الرد',
 		storyReplyUnavailable: 'تعذر الرد على هذه الحالة',
+		storyReactionSent: 'تم إرسال التفاعل',
+		storyReactionAlready: 'تفاعلت بهذا الرمز بالفعل',
+		storyReactUnavailable: 'تعذر التفاعل مع هذه الحالة',
+		storyStatusQuote: 'الحالة',
 		sendStoryAsMedia: 'إرسال كوسائط',
 		sendStoryAsMediaHint: 'أرسل وسائط هذه الحالة إلى أي محادثة',
 		sendStoryPickChat: 'اختر محادثة',
@@ -8277,29 +8288,118 @@ export function MediaAttachment({
 
 const VIEW_ONCE_MESSAGE_ACTIONS = new Set(['reply', 'pin', 'star', 'info', 'delete']);
 
-function ViewOncePlaceholder({ message, locale }) {
-	const ar = String(locale || '').toLowerCase().startsWith('ar');
+function ViewOnceIcon({ size = 22, className = 'wa-view-once__icon' }) {
 	return (
-		<div className="wa-view-once" role="note">
-			<svg className="wa-view-once__icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-				<circle
-					cx="12"
-					cy="12"
-					r="10"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="1.8"
-					strokeDasharray="3.2 2.4"
-				/>
-				<path d="M10.6 8.6 12.6 7.4V16.6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
-			</svg>
+		<svg className={className} viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+			<circle
+				cx="12"
+				cy="12"
+				r="10"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="1.8"
+				strokeDasharray="3.2 2.4"
+			/>
+			<path d="M10.6 8.6 12.6 7.4V16.6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+		</svg>
+	);
+}
+
+function ViewOncePlaceholder({ message, locale, onOpen }) {
+	const label = viewOnceMessageLabel(message, locale);
+	const hint = viewOnceMessageHint(message, locale);
+	const body = (
+		<>
+			<ViewOnceIcon />
 			<span className="wa-view-once__text">
-				<span className="wa-view-once__title">{viewOnceMessageLabel(message, locale)}</span>
-				<span className="wa-view-once__hint">
-					{ar ? 'افتحها على هاتفك' : 'Open it on your phone'}
-				</span>
+				<span className="wa-view-once__title">{label}</span>
+				<span className="wa-view-once__hint">{hint}</span>
 			</span>
-		</div>
+		</>
+	);
+	// Select mode: the bubble tap toggles selection, so this stays inert.
+	if (!onOpen) {
+		return (
+			<div className="wa-view-once" role="note">
+				{body}
+			</div>
+		);
+	}
+	return (
+		<button
+			type="button"
+			className="wa-view-once is-actionable"
+			data-wa-press-surface
+			aria-haspopup="dialog"
+			aria-label={`${label}. ${hint}`}
+			onClick={event => {
+				event.stopPropagation();
+				onOpen(message);
+			}}
+		>
+			{body}
+		</button>
+	);
+}
+
+function ViewOnceInfoDialog({ message, locale, accountPhone, onClose }) {
+	const ar = String(locale || '').toLowerCase().startsWith('ar');
+	const outbound = message?.direction === 'outbound';
+	const opened = outbound && ['read', 'played'].includes(message?.status);
+	const phone = accountPhone ? formatWhatsAppPhone(accountPhone) : '';
+	const lines = outbound
+		? [
+				ar
+					? 'الوسائط المرسلة للعرض مرة واحدة يفتحها المستلم مرة واحدة فقط، ولا يمكنك أنت ولا هذه اللوحة عرضها بعد الإرسال.'
+					: 'View once media you send can be opened only once by the recipient. Neither you nor this dashboard can view it after sending.',
+				opened
+					? ar
+						? 'فتحها المستلم بالفعل.'
+						: 'The recipient has already opened it.'
+					: ar
+						? 'لم يفتحها المستلم بعد.'
+						: 'The recipient hasn’t opened it yet.',
+			]
+		: [
+				ar
+					? 'لحماية الخصوصية، واتساب لا يرسل محتوى رسائل «العرض مرة واحدة» إلى الأجهزة المرتبطة مثل واتساب ويب وهذه اللوحة، لذلك لا يمكن فتحها هنا.'
+					: 'For privacy, WhatsApp doesn’t deliver view once content to linked devices such as WhatsApp Web or this dashboard, so it can’t be opened here.',
+				phone ? (
+					<>
+						{ar
+							? 'افتحها من تطبيق واتساب على الهاتف المسجَّل عليه الرقم '
+							: 'Open it in the WhatsApp app on the phone registered to '}
+						<bdi dir="ltr">{phone}</bdi>.
+					</>
+				) : ar
+						? 'افتحها من تطبيق واتساب على الهاتف المسجَّل عليه هذا الحساب.'
+						: 'Open it in the WhatsApp app on the phone this account is registered on.',
+				ar
+					? 'بعد فتحها على الهاتف تختفي ولا يمكن عرضها مرة أخرى في أي مكان.'
+					: 'Once opened on the phone, it disappears and can’t be viewed again anywhere.',
+			];
+	return (
+		<WaDialog
+			zIndex={600}
+			width={420}
+			icon={<ViewOnceIcon size={18} className="" />}
+			title={viewOnceMessageLabel(message, locale)}
+			closeLabel={ar ? 'إغلاق' : 'Close'}
+			onClose={onClose}
+			footer={
+				<button type="button" className="wa-ui-btn wa-ui-btn--primary" onClick={onClose}>
+					{ar ? 'حسنًا' : 'OK'}
+				</button>
+			}
+		>
+			<div className="wa-dx__body wa-view-once-info">
+				{lines.map((line, index) => (
+					<p key={index} dir="auto">
+						{line}
+					</p>
+				))}
+			</div>
+		</WaDialog>
 	);
 }
 
@@ -10824,6 +10924,22 @@ function Empty({ icon: Icon = MessageCircle, title, hint, action = null, classNa
 	);
 }
 
+const DESKTOP_LAYOUT_QUERY = '(min-width: 769px)';
+function subscribeDesktopLayout(onChange) {
+	const media = window.matchMedia(DESKTOP_LAYOUT_QUERY);
+	media.addEventListener('change', onChange);
+	return () => media.removeEventListener('change', onChange);
+}
+
+/** True when the chat pane sits beside the list (the CSS `min-[769px]` breakpoint). */
+function useDesktopLayout() {
+	return useSyncExternalStore(
+		subscribeDesktopLayout,
+		() => window.matchMedia(DESKTOP_LAYOUT_QUERY).matches,
+		() => true,
+	);
+}
+
 const ChatIdlePane = memo(function ChatIdlePane({ title, hint, unreadLabel, steps }) {
 	return (
 		<WhatsAppChatIdlePane
@@ -11708,6 +11824,17 @@ function WhatsAppWorkspaceContent() {
 	const [storyShareSearch, setStoryShareSearch] = useState('');
 	const [sendingStoryShareId, setSendingStoryShareId] = useState(null);
 	const [storyViewerEmbed, setStoryViewerEmbed] = useState(null);
+	const [storyViewersOpen, setStoryViewersOpen] = useState(false);
+	const [storyViewers, setStoryViewers] = useState({
+		statusId: null,
+		loading: false,
+		error: '',
+		data: null,
+	});
+	const [sendingStoryReaction, setSendingStoryReaction] = useState(null);
+	const storyViewersOpenRef = useRef(false);
+	const storyViewersRequestRef = useRef(0);
+	const storyInteractionEventRef = useRef(null);
 	const storyLoopRef = useRef(false);
 	const storyQueueRef = useRef([]);
 	const storyIndexRef = useRef(0);
@@ -11964,6 +12091,7 @@ function WhatsAppWorkspaceContent() {
 	const [messageInfo, setMessageInfo] = useState(null);
 	const [loadingMessageInfo, setLoadingMessageInfo] = useState(false);
 	const [deleteMessageTarget, setDeleteMessageTarget] = useState(null);
+	const [viewOnceInfoMessage, setViewOnceInfoMessage] = useState(null);
 	const [transcriptionSources, setTranscriptionSources] = useState(null);
 	const [transcriptionIntent, setTranscriptionIntent] = useState(null);
 	const pendingCopyMessagesRef = useRef([]);
@@ -12536,6 +12664,7 @@ function WhatsAppWorkspaceContent() {
 	const whatsappNotificationsEnabled = currentAccess.notificationsEnabled !== false;
 	whatsappNotificationsEnabledRef.current = whatsappNotificationsEnabled;
 	const canUseWhatsApp = Boolean(currentAccess.canUse);
+	const isDesktopLayout = useDesktopLayout();
 	const canManageWhatsApp = Boolean(currentAccess.canManage);
 	const canAssignWhatsApp = Boolean(currentAccess.canAssign);
 	const canComposeInConversation =
@@ -13525,7 +13654,8 @@ function WhatsAppWorkspaceContent() {
 		minCountToWindow: 40,
 		initialAlign: 'start',
 		scrollRef: chatListScrollRef,
-		visible: chatListVisible,
+		// Mobile hides the inbox while a chat is open; re-read scroll when it returns.
+		visible: chatListVisible && (isDesktopLayout || !conversationId),
 	});
 	const visibleConversations = useMemo(
 		() =>
@@ -14209,6 +14339,27 @@ function WhatsAppWorkspaceContent() {
 		}
 		return next;
 	}, [queryClient, resetConversationsCache]);
+
+	const handleChatListScroll = event => {
+		chatListWindow.onScroll(event);
+		listScrollPrefetchBlockedUntilRef.current = Date.now() + 280;
+		if (hoverPrefetchTimerRef.current) {
+			window.clearTimeout(hoverPrefetchTimerRef.current);
+			hoverPrefetchTimerRef.current = null;
+		}
+		if (collapsedChatTip) setCollapsedChatTip(null);
+		const node = event.currentTarget;
+		if (
+			!accountId ||
+			loadingMoreConversations ||
+			conversations.length >= conversationTotal
+		) {
+			return;
+		}
+		const nearBottom =
+			node.scrollHeight - node.scrollTop - node.clientHeight < 120;
+		if (nearBottom) void loadMoreConversations();
+	};
 
 	const loadMoreConversations = async () => {
 		if (!accountId || loadingMoreConversations || conversations.length >= conversationTotal) return;
@@ -16391,8 +16542,9 @@ function WhatsAppWorkspaceContent() {
 							conversationTitle(peer) ||
 							event.payload?.contactName ||
 							(isArabic ? 'رسالة واتساب' : 'WhatsApp');
-						const body =
-							String(event.payload?.text || '').trim() ||
+						const body = isViewOnceMessage(event.payload)
+							? viewOnceMessageLabel(event.payload, activeLocale)
+							: String(event.payload?.text || '').trim() ||
 							(event.payload?.type === 'image'
 								? isArabic
 									? 'صورة'
@@ -16788,6 +16940,13 @@ function WhatsAppWorkspaceContent() {
 					silent: true,
 					force: true,
 				});
+			}
+			if (
+				event.event === 'status_interactions_updated' &&
+				event.accountId === accountIdRef.current &&
+				event.payload?.statusMessageId
+			) {
+				storyInteractionEventRef.current?.(event.payload);
 			}
 			if (event.event === 'qr') {
 				const nextQr = event.payload?.qr || null;
@@ -20397,6 +20556,21 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const jumpToQuotedMessage = async sourceMessage => {
+		if (sourceMessage?.replyTo?.isStatus) {
+			const key = storyMessageKey(sourceMessage.replyTo.providerMessageId);
+			const matches = item => storyMessageKey(item?.providerStatusId) === key;
+			const group = key
+				? (groupedStatusesRef.current || []).find(item => item?.items?.some(matches))
+				: null;
+			if (group) {
+				openStoryGroup({ ...group, startIndex: group.items.findIndex(matches) });
+			} else {
+				toast.error(
+					locale === 'ar' ? 'هذه الحالة لم تعد متاحة' : 'This story is no longer available',
+				);
+			}
+			return;
+		}
 		const target = quotedTargetFromMessage(sourceMessage);
 		if (!target.id && !target.providerMessageId) {
 			toast.error(
@@ -21504,6 +21678,7 @@ function WhatsAppWorkspaceContent() {
 		setStoryPaused(false);
 		setStoryShareOpen(false);
 		setStoryViewerEmbed(null);
+		resetStoryViewers();
 		markStatusesViewed(status.id);
 		const statusType = String(status.type || '').toLowerCase();
 		const isTextStory = statusType === 'text' || statusType === 'chat';
@@ -21897,10 +22072,138 @@ function WhatsAppWorkspaceContent() {
 		setStoryPaused(false);
 		setStoryExpanded(false);
 		setStatusMediaUrl(null);
+		resetStoryViewers();
 		revokeStoryPeekMedia();
 		if (statusMediaUrlRef.current) {
 			URL.revokeObjectURL(statusMediaUrlRef.current);
 			statusMediaUrlRef.current = null;
+		}
+	};
+
+	function resetStoryViewers() {
+		storyViewersRequestRef.current += 1;
+		storyViewersOpenRef.current = false;
+		setStoryViewersOpen(false);
+		setStoryViewers({ statusId: null, loading: false, error: '', data: null });
+		setSendingStoryReaction(null);
+	}
+
+	const loadStoryViewers = async (status, { silent = false } = {}) => {
+		if (!status?.id || !accountId || !status.isOwn) return;
+		const requestId = ++storyViewersRequestRef.current;
+		setStoryViewers(current => ({
+			statusId: status.id,
+			loading: true,
+			error: '',
+			data: silent && current.statusId === status.id ? current.data : null,
+		}));
+		try {
+			const { data } = await api.get(
+				`/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(status.id)}/viewers`,
+			);
+			if (requestId !== storyViewersRequestRef.current) return;
+			setStoryViewers({ statusId: status.id, loading: false, error: '', data });
+			const patch = {
+				statusMessageId: storyMessageKey(status.providerStatusId),
+				viewerCount: Number(data?.viewerCount) || 0,
+				reactionCount: Number(data?.reactionCount) || 0,
+			};
+			applyStoryInteractionPatch(patch);
+		} catch (error) {
+			if (requestId !== storyViewersRequestRef.current) return;
+			setStoryViewers(current => ({
+				...current,
+				statusId: status.id,
+				loading: false,
+				error:
+					error?.response?.data?.message ||
+					error?.message ||
+					(locale === 'ar' ? 'تعذر تحميل المشاهدات' : 'Could not load views'),
+			}));
+		}
+	};
+
+	const openStoryViewers = () => {
+		if (!selectedStatus?.isOwn) return;
+		storyViewersOpenRef.current = true;
+		setStoryViewersOpen(true);
+		setStoryPaused(true);
+		void loadStoryViewers(selectedStatus);
+	};
+
+	const closeStoryViewers = () => {
+		storyViewersOpenRef.current = false;
+		setStoryViewersOpen(false);
+		setStoryPaused(false);
+	};
+
+	/** Live counts/reaction from the socket (or a fresh viewer list) across every story list. */
+	function applyStoryInteractionPatch(payload) {
+		setStatuses(current => applyStoryInteractionUpdate(current, payload));
+		setStatusHistory(current => applyStoryInteractionUpdate(current, payload));
+		setStoryQueue(current => applyStoryInteractionUpdate(current, payload));
+		setSelectedStatus(current =>
+			current ? applyStoryInteractionUpdate([current], payload)[0] : current,
+		);
+	}
+
+	storyInteractionEventRef.current = payload => {
+		applyStoryInteractionPatch(payload);
+		const shown = storyViewersOpenRef.current ? selectedStatus : null;
+		if (
+			shown?.isOwn &&
+			!('myReaction' in payload) &&
+			storyMessageKey(shown.providerStatusId) === payload.statusMessageId
+		) {
+			void loadStoryViewers(shown, { silent: true });
+		}
+	};
+
+	const reactToCurrentStory = async emoji => {
+		if (!accountId || !selectedStatus || selectedStatus.isOwn || sendingStoryReaction) return false;
+		if (!canUseWhatsApp || demo.settings.enabled) {
+			toast.error(t.storyReactUnavailable);
+			return false;
+		}
+		const status = selectedStatus;
+		const previous = status.myReaction || null;
+		if (previous === emoji) {
+			toast(t.storyReactionAlready, { icon: emoji });
+			return false;
+		}
+		const statusMessageId = storyMessageKey(status.providerStatusId);
+		setSendingStoryReaction(emoji);
+		applyStoryInteractionPatch({ statusMessageId, myReaction: emoji });
+		try {
+			const { data } = await api.post(
+				`/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(status.id)}/reactions`,
+				{ emoji },
+			);
+			applyStoryInteractionPatch({
+				statusMessageId,
+				myReaction: data?.reaction?.emoji || emoji,
+			});
+			if (data?.conversation?.id) {
+				setConversations(current =>
+					current.some(item => item.id === data.conversation.id)
+						? current
+						: [data.conversation, ...current],
+				);
+			}
+			if (data?.duplicate) {
+				toast(t.storyReactionAlready, { icon: emoji });
+				return false;
+			}
+			toast.success(t.storyReactionSent, { icon: emoji });
+			return true;
+		} catch (error) {
+			applyStoryInteractionPatch({ statusMessageId, myReaction: previous });
+			toast.error(
+				error?.response?.data?.message || error?.message || t.storyReactUnavailable,
+			);
+			return false;
+		} finally {
+			setSendingStoryReaction(null);
 		}
 	};
 
@@ -22058,48 +22361,26 @@ function WhatsAppWorkspaceContent() {
 			toast.error(t.storyReplyUnavailable);
 			return;
 		}
-		const senderWaId = String(selectedStatus.senderWaId || '').trim();
-		if (!senderWaId) {
+		if (!String(selectedStatus.senderWaId || '').trim() || !selectedStatus.id) {
 			toast.error(t.storyReplyUnavailable);
 			return;
 		}
 		setSendingStoryReply(true);
 		setStoryPaused(true);
 		try {
-			let targetConversation =
-				effectiveConversations.find(conversation => {
-					const identities = [
-						conversation?.providerChatId,
-						conversation?.contact?.waId,
-						conversation?.contact?.phoneNumber,
-					];
-					return identities.some(
-						identity =>
-							normalizeWhatsAppIdentity(identity) ===
-							normalizeWhatsAppIdentity(senderWaId),
-					);
-				}) || null;
-			if (!targetConversation) {
-				const { data } = await api.post(
-					`/whatsapp/accounts/${accountId}/conversations/open`,
-					{
-						chatId: senderWaId,
-						title: selectedStatus.contactName || undefined,
-					},
+			// The server sends it into the poster's chat quoting the story, so it shows
+			// there (and on their phone) as a reply to this status.
+			const { data } = await api.post(
+				`/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(selectedStatus.id)}/reply`,
+				{ text, clientMessageId: `story-reply-${selectedStatus.id}-${Date.now()}` },
+			);
+			if (data?.conversation?.id) {
+				setConversations(current =>
+					current.some(item => item.id === data.conversation.id)
+						? current
+						: [data.conversation, ...current],
 				);
-				targetConversation = data;
-				if (data?.id) {
-					setConversations(current => {
-						if (current.some(item => item.id === data.id)) return current;
-						return [data, ...current];
-					});
-				}
 			}
-			if (!targetConversation?.id) throw new Error(t.storyReplyUnavailable);
-			await api.post(`/whatsapp/conversations/${targetConversation.id}/messages`, {
-				type: 'text',
-				text,
-			});
 			setStoryReplyDraft('');
 			toast.success(t.storyReplySent);
 			setStoryPaused(false);
@@ -22117,7 +22398,12 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		if (!selectedStatus) return undefined;
 		const onKeyDown = event => {
-			if (event.key === 'Escape') closeStory();
+			if (event.key !== 'Escape') return;
+			if (storyViewersOpenRef.current) {
+				closeStoryViewers();
+				return;
+			}
+			closeStory();
 		};
 		window.addEventListener('keydown', onKeyDown);
 		return () => window.removeEventListener('keydown', onKeyDown);
@@ -23454,7 +23740,11 @@ function WhatsAppWorkspaceContent() {
 							</button>
 							<div
 								className="wa-chat-list-scroll min-h-0 flex-1 min-[769px]:flex min-[769px]:flex-col min-[769px]:overflow-hidden"
-								onScroll={event => setMobileHeaderScrolled(event.currentTarget.scrollTop > 0)}
+								onScroll={event => {
+									setMobileHeaderScrolled(event.currentTarget.scrollTop > 0);
+									// On phones this wrapper (header + rows) is the scroller, not the list.
+									handleChatListScroll(event);
+								}}
 							>
 								<div className="wa-chat-list-header border-b border-slate-100 p-3 dark:border-slate-800">
 									{splitPickMode && (
@@ -23761,26 +24051,7 @@ function WhatsAppWorkspaceContent() {
 								<div
 									ref={chatListScrollRef}
 									className="wa-conversation-list min-h-0 flex-1 overflow-y-auto p-2 nice-scroll"
-									onScroll={event => {
-										chatListWindow.onScroll(event);
-										listScrollPrefetchBlockedUntilRef.current = Date.now() + 280;
-										if (hoverPrefetchTimerRef.current) {
-											window.clearTimeout(hoverPrefetchTimerRef.current);
-											hoverPrefetchTimerRef.current = null;
-										}
-										if (collapsedChatTip) setCollapsedChatTip(null);
-										const node = event.currentTarget;
-										if (
-											!accountId ||
-											loadingMoreConversations ||
-											conversations.length >= conversationTotal
-										) {
-											return;
-										}
-										const nearBottom =
-											node.scrollHeight - node.scrollTop - node.clientHeight < 120;
-										if (nearBottom) void loadMoreConversations();
-									}}
+									onScroll={handleChatListScroll}
 								>
 									{activeTab !== 'channels' && conversationFilter === 'archived' ? (
 										<button
@@ -24068,7 +24339,8 @@ function WhatsAppWorkspaceContent() {
 						<WaErrorBoundary locale={locale}>
 						<section className={`wa-chat-thread-pane relative ${!conversationId ? 'hidden min-[769px]:flex' : 'flex'} h-full min-h-0 min-w-0 flex-col overflow-hidden`}>
 							{!selectedConversation ? (
-								<ChatIdlePane
+								// Mobile hides this pane, so skip mounting its animated scene there.
+								!isDesktopLayout ? null : <ChatIdlePane
 									title={
 										cloneVoicePickMode
 											? t.cloneVoicePickIdle
@@ -25126,7 +25398,7 @@ function WhatsAppWorkspaceContent() {
 													// the contact in a one-to-one chat. Groups already carry senderName.
 													const quotedDirection = (quotedSource || message.replyTo)?.direction;
 													const quotedMine = quotedDirection === 'outbound';
-													const quotedAuthor =
+													const quotedAuthorName =
 														quotedPreview?.senderName ||
 														(quotedMine
 															? locale === 'ar'
@@ -25135,6 +25407,11 @@ function WhatsAppWorkspaceContent() {
 															: quotedDirection === 'inbound' && !isGroupChat
 																? conversationTitle(selectedConversation)
 																: null);
+													const quotedAuthor = message.replyTo?.isStatus
+														? [quotedAuthorName, t.storyStatusQuote]
+																.filter(Boolean)
+																.join(' · ')
+														: quotedAuthorName;
 													const quotedBodyPresentation =
 														quotedPreview && !quotedPreview.isVoice
 															? messageTextPresentation(quotedPreview.body)
@@ -25386,7 +25663,15 @@ function WhatsAppWorkspaceContent() {
 																		</button>
 																	) : null}
 																	{!hideDeletedBody && isViewOnceMessage(message) ? (
-																		<ViewOncePlaceholder message={message} locale={locale} />
+																		<ViewOncePlaceholder
+																			message={message}
+																			locale={locale}
+																			onOpen={
+																				mediaSelectMode || ticketSelectMode || groupSelectMode
+																					? undefined
+																					: setViewOnceInfoMessage
+																			}
+																		/>
 																	) : !hideDeletedBody && attachments?.length
 																		? (
 																			<MessageAttachments
@@ -26978,685 +27263,6 @@ function WhatsAppWorkspaceContent() {
 								</div>
 							)}
 						</div>
-
-						{selectedStatus && (
-							<div
-								role="dialog"
-								aria-modal="true"
-								aria-label={t.storyFrom}
-								className="wa-story-viewer fixed inset-0 z-50 flex cursor-default items-center justify-center bg-slate-950/85 p-2 backdrop-blur-sm sm:p-4"
-								onClick={closeStory}
-								onKeyDown={event => {
-									if (event.key === 'Escape') closeStory();
-								}}
-							>
-								{(() => {
-									const queue = storyQueue.length ? storyQueue : [selectedStatus];
-									const people =
-										storyPeopleQueue.length > 0
-											? storyPeopleQueue
-											: [];
-									const peopleIdx =
-										people.length > 0 ? storyPeopleIndex : -1;
-									const prevPerson =
-										peopleIdx > 0 ? people[peopleIdx - 1] : null;
-									const nextPerson =
-										peopleIdx >= 0 && peopleIdx < people.length - 1
-											? people[peopleIdx + 1]
-											: storyLoop && people.length > 1
-												? people[0]
-												: null;
-									const personPeekStatus = person => {
-										if (!person) return null;
-										const playable = (person.items || []).filter(
-											isPlayableStoryItem,
-										);
-										return (
-											playable.find(item => !viewedStatusIds.has(item.id)) ||
-											playable[0] ||
-											person.latest ||
-											null
-										);
-									};
-									const prevPeekStatus = personPeekStatus(prevPerson);
-									const nextPeekStatus = personPeekStatus(nextPerson);
-									const peekFor = item => {
-										if (!item?.id) return null;
-										return (
-											storyPeekMedia[item.id] ||
-											storyThumbs[item.id] ||
-											null
-										);
-									};
-									const personLabel = person => {
-										const item = person?.latest || personPeekStatus(person);
-										return (
-											item?.contactName ||
-											(item?.isOwn || person?.isOwn
-												? selectedAccount?.label
-												: formatWhatsAppPhone(
-														String(item?.senderWaId || person?.senderWaId || '')
-															.replace(/@.*$/, '')
-															.replace(/\D/g, ''),
-													) ||
-													String(
-														item?.senderWaId || person?.senderWaId || '',
-													).replace(/@.*$/, '')) ||
-											''
-										);
-									};
-									const renderPeek = (person, statusItem, side) => {
-										if (!person || !statusItem || storyExpanded) return null;
-										const peek = peekFor(statusItem);
-										const peekType = String(
-											peek?.type || statusItem.type || '',
-										).toLowerCase();
-										const isVideoPeek = peekType.includes('video');
-										const label = personLabel(person);
-										return (
-											<button
-												type="button"
-												key={`${side}-${person.senderWaId}`}
-												className={`wa-story-peek wa-story-peek--${side}`}
-												onClick={event => {
-													event.preventDefault();
-													event.stopPropagation();
-													goStoryPerson(side === 'prev' ? -1 : 1);
-												}}
-												aria-label={
-													side === 'prev' ? t.previousStory : t.nextStory
-												}
-												title={
-													side === 'prev' ? t.previousStory : t.nextStory
-												}
-											>
-												<span className="wa-story-peek__frame">
-													{peek?.url ? (
-														isVideoPeek ? (
-															<video
-																src={peek.url}
-																muted
-																playsInline
-																preload="metadata"
-																className="wa-story-peek__media"
-															/>
-														) : (
-															<img
-																src={peek.url}
-																alt=""
-																className="wa-story-peek__media"
-															/>
-														)
-													) : (
-														<span
-															className={`wa-story-peek__fallback bg-gradient-to-br ${gradientFor(statusItem.providerStatusId || statusItem.id || person.senderWaId)}`}
-														/>
-													)}
-													<span className="wa-story-peek__scrim" />
-													<span className="wa-story-peek__hint" aria-hidden="true">
-														{side === 'prev'
-															? locale === 'ar'
-																? <ChevronRight size={16} />
-																: <ChevronLeft size={16} />
-															: locale === 'ar'
-																? <ChevronLeft size={16} />
-																: <ChevronRight size={16} />}
-													</span>
-													<span className="wa-story-peek__meta">
-														<Avatar
-															label={label}
-															size={8}
-															src={
-																statusItem.contactAvatarUrl ||
-																person.latest?.contactAvatarUrl ||
-																''
-															}
-														/>
-														<span className="wa-story-peek__name">
-															{label}
-														</span>
-													</span>
-												</span>
-											</button>
-										);
-									};
-									return (
-										<div
-											className={`wa-story-viewer__stage ${storyExpanded ? 'is-expanded' : ''}`}
-											onClick={event => event.stopPropagation()}
-										>
-											{renderPeek(prevPerson, prevPeekStatus, 'prev')}
-											<div
-												className={`wa-story-viewer__carousel ${
-													storyExpanded ? 'is-expanded' : ''
-												}`}
-											>
-												<AnimatePresence
-													initial={false}
-													custom={storyPersonSlideDir}
-													mode="sync"
-												>
-													<motion.div
-														key={
-															selectedStatus.senderWaId ||
-															selectedStatus.id ||
-															selectedStatus.providerStatusId
-														}
-														custom={storyPersonSlideDir}
-														variants={STORY_PERSON_SLIDE_VARIANTS}
-														initial="enter"
-														animate="center"
-														exit="exit"
-														transition={STORY_PERSON_SLIDE_TRANSITION}
-														className="wa-story-viewer__card relative flex h-full w-full cursor-default flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl"
-														onAnimationComplete={definition => {
-															if (definition === 'center') {
-																storyPersonAnimatingRef.current = false;
-																if (storyPersonAnimUnlockTimerRef.current) {
-																	window.clearTimeout(
-																		storyPersonAnimUnlockTimerRef.current,
-																	);
-																	storyPersonAnimUnlockTimerRef.current = null;
-																}
-															}
-														}}
-													>
-									<div className="absolute inset-x-3 top-3 z-10 flex gap-1.5">
-										{queue.map((item, index) => (
-											<div
-												key={item.id || index}
-												className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25"
-											>
-												<div
-													ref={index === storyIndex ? storyProgressBarRef : undefined}
-													className="h-full rounded-full bg-white"
-													style={{
-														width:
-															index < storyIndex
-																? '100%'
-																: index > storyIndex
-																	? '0%'
-																	: `${storyProgressRef.current}%`,
-														transition: 'none',
-													}}
-												/>
-											</div>
-										))}
-									</div>
-									<div className="absolute inset-x-0 top-5 z-40 flex items-center gap-2 px-4 py-3 pointer-events-none sm:gap-3">
-										<div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2.5">
-											<Avatar label={selectedStatus.contactName || selectedStatus.senderWaId} size={8} />
-											<div className="min-w-0 flex-1">
-												<p className="truncate text-sm font-black">
-													{selectedStatus.contactName ||
-														(selectedStatus.isOwn
-															? selectedAccount?.label
-															: formatWhatsAppPhone(
-																	String(selectedStatus.senderWaId || '')
-																		.replace(/@.*$/, '')
-																		.replace(/\D/g, ''),
-																) ||
-																String(selectedStatus.senderWaId || '').replace(
-																	/@.*$/,
-																	'',
-																))}
-												</p>
-												<p className="text-[11px] text-white/60">{new Date(selectedStatus.publishedAt).toLocaleString()}</p>
-											</div>
-										</div>
-										<button
-											type="button"
-											onClick={event => {
-												event.preventDefault();
-												event.stopPropagation();
-												openStorySharePicker();
-											}}
-											disabled={
-												Boolean(sendingStoryShareId) ||
-												loadingStory ||
-												!canUseWhatsApp ||
-												demo.settings.enabled
-											}
-											title={t.sendStoryAsMediaHint}
-											className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-40"
-											aria-label={t.sendStoryAsMedia}
-										>
-											{sendingStoryShareId ? (
-												<Loader2 size={17} className="animate-spin" />
-											) : (
-												<Share2 size={17} />
-											)}
-										</button>
-										<button
-											type="button"
-											onClick={event => {
-												event.preventDefault();
-												event.stopPropagation();
-												setStoryLoop(current => !current);
-											}}
-											title={storyLoop ? t.loopStoryOn : t.loopStoryOff}
-											className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
-												storyLoop
-													? 'bg-emerald-500 text-white hover:bg-emerald-400'
-													: 'bg-black/40 hover:bg-black/60'
-											}`}
-											aria-label={t.loopStory}
-											aria-pressed={storyLoop}
-										>
-											<Repeat size={17} />
-										</button>
-										<button
-											type="button"
-											onClick={event => {
-												event.preventDefault();
-												event.stopPropagation();
-												setStoryExpanded(current => !current);
-											}}
-											title={storyExpanded ? t.collapseStory : t.expandStory}
-											className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
-												storyExpanded
-													? 'bg-emerald-500 text-white hover:bg-emerald-400'
-													: 'bg-black/40 hover:bg-black/60'
-											}`}
-											aria-label={storyExpanded ? t.collapseStory : t.expandStory}
-											aria-pressed={storyExpanded}
-										>
-											{storyExpanded ? (
-												<Minimize2 size={17} />
-											) : (
-												<Maximize2 size={17} />
-											)}
-										</button>
-										{String(selectedStatus?.type || '')
-											.toLowerCase()
-											.includes('video') && (
-										<button
-											type="button"
-											onClick={event => {
-												event.preventDefault();
-												event.stopPropagation();
-												setStoryMuted(current => !current);
-											}}
-											title={storyMuted ? t.unmuteStory : t.muteStory}
-											className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
-												storyMuted
-													? 'bg-black/40 hover:bg-black/60'
-													: 'bg-emerald-500 text-white hover:bg-emerald-400'
-											}`}
-											aria-label={storyMuted ? t.unmuteStory : t.muteStory}
-											aria-pressed={!storyMuted}
-										>
-											{storyMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
-										</button>
-										)}
-										<button
-											type="button"
-											onClick={event => {
-												event.preventDefault();
-												event.stopPropagation();
-												setStoryPaused(current => !current);
-											}}
-											className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
-											aria-label={
-												storyPaused
-													? locale === 'ar'
-														? 'تشغيل القصة'
-														: 'Play story'
-													: locale === 'ar'
-														? 'إيقاف القصة'
-														: 'Pause story'
-											}
-										>
-											{storyPaused ? (
-												<Play size={18} className="ms-0.5" fill="currentColor" />
-											) : (
-												<Pause size={18} fill="currentColor" />
-											)}
-										</button>
-										<button
-											type="button"
-											onClick={event => {
-												event.preventDefault();
-												event.stopPropagation();
-												closeStory();
-											}}
-											className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
-											aria-label={locale === 'ar' ? 'إغلاق القصة' : 'Close story'}
-										>
-											<X size={19} />
-										</button>
-									</div>
-									{!storyViewerEmbed && (
-										<>
-											{/* In-story item prev/next (same person) — visible when multiple segments */}
-											{queue.length > 1 && storyIndex > 0 && (
-												<button
-													type="button"
-													aria-label={t.previousStoryItem}
-													title={t.previousStoryItem}
-													onClick={event => {
-														event.preventDefault();
-														event.stopPropagation();
-														goStory(-1);
-													}}
-													className="wa-story-nav-btn wa-story-nav-btn--prev absolute start-2 top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/65"
-												>
-													{locale === 'ar' ? (
-														<ChevronRight size={22} />
-													) : (
-														<ChevronLeft size={22} />
-													)}
-												</button>
-											)}
-											{queue.length > 1 && storyIndex < queue.length - 1 && (
-												<button
-													type="button"
-													aria-label={t.nextStoryItem}
-													title={t.nextStoryItem}
-													onClick={event => {
-														event.preventDefault();
-														event.stopPropagation();
-														goStory(1);
-													}}
-													className="wa-story-nav-btn wa-story-nav-btn--next absolute end-2 top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/65"
-												>
-													{locale === 'ar' ? (
-														<ChevronLeft size={22} />
-													) : (
-														<ChevronRight size={22} />
-													)}
-												</button>
-											)}
-											{/* Tap zones: item first, then person */}
-											<button
-												type="button"
-												aria-label={t.previousStoryItem}
-												onClick={() => {
-													if (storyIndex > 0) goStory(-1);
-													else goStoryPerson(-1);
-												}}
-												className="absolute bottom-24 start-0 top-24 z-20 flex w-[28%] cursor-default items-center justify-start bg-transparent p-3 md:w-[18%]"
-											/>
-											<button
-												type="button"
-												aria-label={t.nextStoryItem}
-												onClick={() => {
-													if (storyIndex < queue.length - 1) goStory(1);
-													else goStoryPerson(1);
-												}}
-												className="absolute bottom-24 end-0 top-24 z-20 flex w-[28%] cursor-default items-center justify-end bg-transparent p-3 md:w-[18%]"
-											/>
-										</>
-									)}
-									<div className="wa-story-viewer__media relative z-10 flex min-h-0 flex-1 items-center justify-center pt-20">
-										{loadingStory ? (
-											<Loader2 size={32} className="animate-spin" />
-										) : storyViewerEmbed ? (
-											<div className="relative z-30 flex h-full w-full flex-col gap-2 px-3 pb-3 pt-2">
-												<div className="flex items-center justify-between gap-2">
-													<button
-														type="button"
-														onClick={() => {
-															setStoryViewerEmbed(null);
-															setStoryPaused(false);
-														}}
-														className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/20"
-													>
-														{locale === 'ar' ? 'رجوع للحالة' : 'Back to story'}
-													</button>
-													<a
-														href={storyViewerEmbed.openUrl}
-														target="_blank"
-														rel="noreferrer"
-														onClick={event => event.stopPropagation()}
-														className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/20"
-													>
-														<ExternalLink size={13} />
-														{t.openLinkExternally}
-													</a>
-												</div>
-												<div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-black">
-													<iframe
-														title={t.viewLinkInStory}
-														src={storyViewerEmbed.embedUrl}
-														className="absolute inset-0 h-full w-full border-0"
-														allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-														allowFullScreen
-														referrerPolicy="strict-origin-when-cross-origin"
-													/>
-												</div>
-											</div>
-										) : String(selectedStatus.type).toLowerCase().includes('video') && statusMediaUrl ? (
-											<video
-												ref={storyVideoRef}
-												src={statusMediaUrl}
-												controls={false}
-												autoPlay
-												playsInline
-												muted={storyMuted}
-												onLoadedMetadata={event => {
-													const duration = Number(event.currentTarget.duration);
-													if (Number.isFinite(duration) && duration > 0) {
-														setStoryDurationMs(duration * 1000);
-													}
-													event.currentTarget.muted = storyMuted;
-												}}
-												onTimeUpdate={event => {
-													const node = event.currentTarget;
-													const duration = Number(node.duration);
-													if (
-														!Number.isFinite(duration) ||
-														duration <= 0 ||
-														storyPaused
-													) {
-														return;
-													}
-													const pct = Math.min(
-														100,
-														(Math.max(0, node.currentTime) / duration) * 100,
-													);
-													setStoryProgress(pct);
-												}}
-												onEnded={() => {
-													finishStorySegmentRef.current();
-												}}
-												onCanPlay={event => {
-													event.currentTarget.muted = storyMuted;
-													if (!storyPaused) {
-														event.currentTarget.play().catch(() => undefined);
-													}
-												}}
-												onError={() => {
-													setStatusMediaUrl(null);
-													toast.error(t.mediaUnavailable);
-												}}
-												className="pointer-events-none max-h-full max-w-full w-full object-contain"
-											/>
-										) : statusMediaUrl ? (
-											<img
-												src={statusMediaUrl}
-												alt={selectedStatus.caption || 'WhatsApp story'}
-												className="pointer-events-none max-h-full max-w-full w-full object-contain"
-												onError={() => {
-													setStatusMediaUrl(null);
-													toast.error(t.mediaUnavailable);
-												}}
-											/>
-										) : (
-											<div className={`grid h-full w-full place-items-center bg-gradient-to-br ${gradientFor(selectedStatus.providerStatusId)}`}>
-												<div className="max-w-md px-8 text-center">
-													{storyMediaError ? (
-														<>
-															<p className="text-lg font-bold leading-relaxed text-white/95">
-																{t.mediaUnavailable}
-															</p>
-															<p className="mt-2 text-sm text-white/75">{storyMediaError}</p>
-															{!isUnrecoverableStoryMediaError(storyMediaError) ? (
-															<button
-																type="button"
-																onClick={event => {
-																	event.stopPropagation();
-																	const notConnected =
-																		/not connected|session_not_ready|qr_pending/i.test(
-																			String(storyMediaError || ''),
-																		) ||
-																		selectedAccount?.status !== 'connected';
-																	if (notConnected) {
-																		closeStory();
-																		void loadTabData('accounts');
-																		toast(
-																			locale === 'ar'
-																				? 'اربط واتساب من صفحة الحسابات ثم افتح الحالة مرة أخرى'
-																				: 'Link WhatsApp from Accounts, then open the story again',
-																		);
-																		return;
-																	}
-																	void openStory(
-																		selectedStatus,
-																		storyQueue,
-																		storyIndex,
-																	);
-																}}
-																className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
-															>
-																<RefreshCw size={15} />
-																{/not connected|qr_pending/i.test(
-																	String(storyMediaError || ''),
-																) || selectedAccount?.status !== 'connected'
-																	? t.connect || (locale === 'ar' ? 'ربط الحساب' : 'Connect')
-																	: t.refresh}
-															</button>
-															) : (
-																<button
-																	type="button"
-																	onClick={event => {
-																		event.stopPropagation();
-																		if (storyQueue.length > storyIndex + 1) {
-																			goStory(1);
-																			return;
-																		}
-																		closeStory();
-																	}}
-																	className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
-																>
-																	{storyQueue.length > storyIndex + 1
-																		? locale === 'ar'
-																			? 'التالي'
-																			: 'Next'
-																		: locale === 'ar'
-																			? 'إغلاق'
-																			: 'Close'}
-																</button>
-															)}
-														</>
-													) : selectedStatus.caption ? (
-														renderStoryLinkedText(
-															selectedStatus.caption,
-															'whitespace-pre-wrap text-2xl font-black leading-relaxed sm:text-3xl',
-														)
-													) : (
-														<p className="text-3xl font-black leading-relaxed">
-															{t.mediaUnavailable}
-														</p>
-													)}
-													{firstMessageLink(selectedStatus.caption || '') &&
-														getStoryMediaEmbed(
-															firstMessageLink(selectedStatus.caption || '').href,
-														) && (
-															<button
-																type="button"
-																onClick={() =>
-																	openStoryLink(
-																		firstMessageLink(selectedStatus.caption || '')
-																			.href,
-																	)
-																}
-																className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
-															>
-																<Play size={15} fill="currentColor" />
-																{t.viewLinkInStory}
-															</button>
-														)}
-												</div>
-											</div>
-										)}
-									</div>
-									{selectedStatus.caption && statusMediaUrl && !storyViewerEmbed && (
-										<div className="relative z-30 bg-black/35 px-5 py-3 text-center text-sm">
-											{renderStoryLinkedText(selectedStatus.caption)}
-										</div>
-									)}
-									{!selectedStatus.isOwn &&
-										!selectedStatus.isHistory &&
-										canUseWhatsApp &&
-										!demo.settings.enabled && (
-										<form
-											onSubmit={replyToCurrentStory}
-											className="relative z-40 flex items-center gap-2 border-t border-white/10 bg-black/45 px-3 py-3 backdrop-blur-md"
-											onClick={event => event.stopPropagation()}
-										>
-											<Reply size={16} className="shrink-0 text-white/70" />
-											<input
-												type="text"
-												value={storyReplyDraft}
-												onChange={event => setStoryReplyDraft(event.target.value)}
-												onFocus={() => setStoryPaused(true)}
-												placeholder={t.replyToStoryPlaceholder}
-												maxLength={1000}
-												disabled={sendingStoryReply}
-												className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 text-sm text-white outline-none placeholder:text-white/45 focus:border-emerald-400/70"
-											/>
-											<button
-												type="submit"
-												disabled={sendingStoryReply || !storyReplyDraft.trim()}
-												className="inline-flex h-11 items-center gap-1.5 rounded-full bg-emerald-500 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-400 disabled:opacity-45"
-											>
-												{sendingStoryReply ? (
-													<Loader2 size={15} className="animate-spin" />
-												) : (
-													<>
-														<Send size={14} />
-														{t.replyToStory}
-													</>
-												)}
-											</button>
-										</form>
-									)}
-											</motion.div>
-												</AnimatePresence>
-											</div>
-											{renderPeek(nextPerson, nextPeekStatus, 'next')}
-										</div>
-									);
-								})()}
-							</div>
-						)}
-
-						{storyShareOpen && selectedStatus ? (
-							<WaDialog
-								zIndex={120}
-								width={440}
-								height={640}
-								icon={<Share2 size={17} strokeWidth={2.1} />}
-								title={t.sendStoryAsMedia}
-								subtitle={t.sendStoryAsMediaHint}
-								closeDisabled={Boolean(sendingStoryShareId)}
-								closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
-								onClose={() => {
-									setStoryShareOpen(false);
-									setStoryPaused(false);
-								}}
-							>
-								<WaChatPicker
-									autoFocus
-									locale={locale}
-									items={effectiveConversations}
-									busyId={sendingStoryShareId}
-									onPick={item => void sendStoryAsMediaToChat(item)}
-									emptyText={locale === 'ar' ? 'لا توجد محادثات' : 'No chats found'}
-								/>
-							</WaDialog>
-						) : null}
 					</div>
 				)}
 
@@ -28709,6 +28315,14 @@ function WhatsAppWorkspaceContent() {
 					/>
 				</WaDialog>
 			)}
+			{viewOnceInfoMessage && (
+				<ViewOnceInfoDialog
+					message={viewOnceInfoMessage}
+					locale={locale}
+					accountPhone={selectedAccount?.phoneNumber}
+					onClose={() => setViewOnceInfoMessage(null)}
+				/>
+			)}
 			{deleteMessageTarget && (
 				<WaDialog
 					width={420}
@@ -29336,6 +28950,721 @@ function WhatsAppWorkspaceContent() {
 						}}
 					/>
 				</Suspense>
+			) : null}
+			{selectedStatus && (
+				<div
+					role="dialog"
+					aria-modal="true"
+					aria-label={t.storyFrom}
+					className="wa-story-viewer fixed inset-0 z-50 flex cursor-default items-center justify-center bg-slate-950/85 p-2 backdrop-blur-sm sm:p-4"
+					onClick={closeStory}
+					onKeyDown={event => {
+						if (event.key === 'Escape' && !storyViewersOpenRef.current) closeStory();
+					}}
+				>
+					{(() => {
+						const queue = storyQueue.length ? storyQueue : [selectedStatus];
+						const people =
+							storyPeopleQueue.length > 0
+								? storyPeopleQueue
+								: [];
+						const peopleIdx =
+							people.length > 0 ? storyPeopleIndex : -1;
+						const prevPerson =
+							peopleIdx > 0 ? people[peopleIdx - 1] : null;
+						const nextPerson =
+							peopleIdx >= 0 && peopleIdx < people.length - 1
+								? people[peopleIdx + 1]
+								: storyLoop && people.length > 1
+									? people[0]
+									: null;
+						const personPeekStatus = person => {
+							if (!person) return null;
+							const playable = (person.items || []).filter(
+								isPlayableStoryItem,
+							);
+							return (
+								playable.find(item => !viewedStatusIds.has(item.id)) ||
+								playable[0] ||
+								person.latest ||
+								null
+							);
+						};
+						const prevPeekStatus = personPeekStatus(prevPerson);
+						const nextPeekStatus = personPeekStatus(nextPerson);
+						const peekFor = item => {
+							if (!item?.id) return null;
+							return (
+								storyPeekMedia[item.id] ||
+								storyThumbs[item.id] ||
+								null
+							);
+						};
+						const personLabel = person => {
+							const item = person?.latest || personPeekStatus(person);
+							return (
+								item?.contactName ||
+								(item?.isOwn || person?.isOwn
+									? selectedAccount?.label
+									: formatWhatsAppPhone(
+											String(item?.senderWaId || person?.senderWaId || '')
+												.replace(/@.*$/, '')
+												.replace(/\D/g, ''),
+										) ||
+										String(
+											item?.senderWaId || person?.senderWaId || '',
+										).replace(/@.*$/, '')) ||
+								''
+							);
+						};
+						const renderPeek = (person, statusItem, side) => {
+							if (!person || !statusItem || storyExpanded) return null;
+							const peek = peekFor(statusItem);
+							const peekType = String(
+								peek?.type || statusItem.type || '',
+							).toLowerCase();
+							const isVideoPeek = peekType.includes('video');
+							const label = personLabel(person);
+							return (
+								<button
+									type="button"
+									key={`${side}-${person.senderWaId}`}
+									className={`wa-story-peek wa-story-peek--${side}`}
+									onClick={event => {
+										event.preventDefault();
+										event.stopPropagation();
+										goStoryPerson(side === 'prev' ? -1 : 1);
+									}}
+									aria-label={
+										side === 'prev' ? t.previousStory : t.nextStory
+									}
+									title={
+										side === 'prev' ? t.previousStory : t.nextStory
+									}
+								>
+									<span className="wa-story-peek__frame">
+										{peek?.url ? (
+											isVideoPeek ? (
+												<video
+													src={peek.url}
+													muted
+													playsInline
+													preload="metadata"
+													className="wa-story-peek__media"
+												/>
+											) : (
+												<img
+													src={peek.url}
+													alt=""
+													className="wa-story-peek__media"
+												/>
+											)
+										) : (
+											<span
+												className={`wa-story-peek__fallback bg-gradient-to-br ${gradientFor(statusItem.providerStatusId || statusItem.id || person.senderWaId)}`}
+											/>
+										)}
+										<span className="wa-story-peek__scrim" />
+										<span className="wa-story-peek__hint" aria-hidden="true">
+											{side === 'prev'
+												? locale === 'ar'
+													? <ChevronRight size={16} />
+													: <ChevronLeft size={16} />
+												: locale === 'ar'
+													? <ChevronLeft size={16} />
+													: <ChevronRight size={16} />}
+										</span>
+										<span className="wa-story-peek__meta">
+											<Avatar
+												label={label}
+												size={8}
+												src={
+													statusItem.contactAvatarUrl ||
+													person.latest?.contactAvatarUrl ||
+													''
+												}
+											/>
+											<span className="wa-story-peek__name">
+												{label}
+											</span>
+										</span>
+									</span>
+								</button>
+							);
+						};
+						return (
+							<div
+								className={`wa-story-viewer__stage ${storyExpanded ? 'is-expanded' : ''}`}
+								onClick={event => event.stopPropagation()}
+							>
+								{renderPeek(prevPerson, prevPeekStatus, 'prev')}
+								<div
+									className={`wa-story-viewer__carousel ${
+										storyExpanded ? 'is-expanded' : ''
+									}`}
+								>
+									<AnimatePresence
+										initial={false}
+										custom={storyPersonSlideDir}
+										mode="sync"
+									>
+										<motion.div
+											key={
+												selectedStatus.senderWaId ||
+												selectedStatus.id ||
+												selectedStatus.providerStatusId
+											}
+											custom={storyPersonSlideDir}
+											variants={STORY_PERSON_SLIDE_VARIANTS}
+											initial="enter"
+											animate="center"
+											exit="exit"
+											transition={STORY_PERSON_SLIDE_TRANSITION}
+											className="wa-story-viewer__card relative flex h-full w-full cursor-default flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl"
+											onAnimationComplete={definition => {
+												if (definition === 'center') {
+													storyPersonAnimatingRef.current = false;
+													if (storyPersonAnimUnlockTimerRef.current) {
+														window.clearTimeout(
+															storyPersonAnimUnlockTimerRef.current,
+														);
+														storyPersonAnimUnlockTimerRef.current = null;
+													}
+												}
+											}}
+										>
+						<div className="absolute inset-x-3 top-3 z-10 flex gap-1.5">
+							{queue.map((item, index) => (
+								<div
+									key={item.id || index}
+									className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25"
+								>
+									<div
+										ref={index === storyIndex ? storyProgressBarRef : undefined}
+										className="h-full rounded-full bg-white"
+										style={{
+											width:
+												index < storyIndex
+													? '100%'
+													: index > storyIndex
+														? '0%'
+														: `${storyProgressRef.current}%`,
+											transition: 'none',
+										}}
+									/>
+								</div>
+							))}
+						</div>
+						<div className="absolute inset-x-0 top-5 z-40 flex items-center gap-2 px-4 py-3 pointer-events-none sm:gap-3">
+							<div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2.5">
+								<Avatar label={selectedStatus.contactName || selectedStatus.senderWaId} size={8} />
+								<div className="min-w-0 flex-1">
+									<p className="truncate text-sm font-black">
+										{selectedStatus.contactName ||
+											(selectedStatus.isOwn
+												? selectedAccount?.label
+												: formatWhatsAppPhone(
+														String(selectedStatus.senderWaId || '')
+															.replace(/@.*$/, '')
+															.replace(/\D/g, ''),
+													) ||
+													String(selectedStatus.senderWaId || '').replace(
+														/@.*$/,
+														'',
+													))}
+									</p>
+									<p className="text-[11px] text-white/60">{new Date(selectedStatus.publishedAt).toLocaleString()}</p>
+								</div>
+							</div>
+							<button
+								type="button"
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
+									openStorySharePicker();
+								}}
+								disabled={
+									Boolean(sendingStoryShareId) ||
+									loadingStory ||
+									!canUseWhatsApp ||
+									demo.settings.enabled
+								}
+								title={t.sendStoryAsMediaHint}
+								className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-40"
+								aria-label={t.sendStoryAsMedia}
+							>
+								{sendingStoryShareId ? (
+									<Loader2 size={17} className="animate-spin" />
+								) : (
+									<Share2 size={17} />
+								)}
+							</button>
+							<button
+								type="button"
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
+									setStoryLoop(current => !current);
+								}}
+								title={storyLoop ? t.loopStoryOn : t.loopStoryOff}
+								className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
+									storyLoop
+										? 'bg-emerald-500 text-white hover:bg-emerald-400'
+										: 'bg-black/40 hover:bg-black/60'
+								}`}
+								aria-label={t.loopStory}
+								aria-pressed={storyLoop}
+							>
+								<Repeat size={17} />
+							</button>
+							<button
+								type="button"
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
+									setStoryExpanded(current => !current);
+								}}
+								title={storyExpanded ? t.collapseStory : t.expandStory}
+								className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
+									storyExpanded
+										? 'bg-emerald-500 text-white hover:bg-emerald-400'
+										: 'bg-black/40 hover:bg-black/60'
+								}`}
+								aria-label={storyExpanded ? t.collapseStory : t.expandStory}
+								aria-pressed={storyExpanded}
+							>
+								{storyExpanded ? (
+									<Minimize2 size={17} />
+								) : (
+									<Maximize2 size={17} />
+								)}
+							</button>
+							{String(selectedStatus?.type || '')
+								.toLowerCase()
+								.includes('video') && (
+							<button
+								type="button"
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
+									setStoryMuted(current => !current);
+								}}
+								title={storyMuted ? t.unmuteStory : t.muteStory}
+								className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
+									storyMuted
+										? 'bg-black/40 hover:bg-black/60'
+										: 'bg-emerald-500 text-white hover:bg-emerald-400'
+								}`}
+								aria-label={storyMuted ? t.unmuteStory : t.muteStory}
+								aria-pressed={!storyMuted}
+							>
+								{storyMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+							</button>
+							)}
+							<button
+								type="button"
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
+									setStoryPaused(current => !current);
+								}}
+								className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
+								aria-label={
+									storyPaused
+										? locale === 'ar'
+											? 'تشغيل القصة'
+											: 'Play story'
+										: locale === 'ar'
+											? 'إيقاف القصة'
+											: 'Pause story'
+								}
+							>
+								{storyPaused ? (
+									<Play size={18} className="ms-0.5" fill="currentColor" />
+								) : (
+									<Pause size={18} fill="currentColor" />
+								)}
+							</button>
+							<button
+								type="button"
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
+									closeStory();
+								}}
+								className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
+								aria-label={locale === 'ar' ? 'إغلاق القصة' : 'Close story'}
+							>
+								<X size={19} />
+							</button>
+						</div>
+						{!storyViewerEmbed && (
+							<>
+								{/* In-story item prev/next (same person) — visible when multiple segments */}
+								{queue.length > 1 && storyIndex > 0 && (
+									<button
+										type="button"
+										aria-label={t.previousStoryItem}
+										title={t.previousStoryItem}
+										onClick={event => {
+											event.preventDefault();
+											event.stopPropagation();
+											goStory(-1);
+										}}
+										className="wa-story-nav-btn wa-story-nav-btn--prev absolute start-2 top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/65"
+									>
+										{locale === 'ar' ? (
+											<ChevronRight size={22} />
+										) : (
+											<ChevronLeft size={22} />
+										)}
+									</button>
+								)}
+								{queue.length > 1 && storyIndex < queue.length - 1 && (
+									<button
+										type="button"
+										aria-label={t.nextStoryItem}
+										title={t.nextStoryItem}
+										onClick={event => {
+											event.preventDefault();
+											event.stopPropagation();
+											goStory(1);
+										}}
+										className="wa-story-nav-btn wa-story-nav-btn--next absolute end-2 top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/65"
+									>
+										{locale === 'ar' ? (
+											<ChevronLeft size={22} />
+										) : (
+											<ChevronRight size={22} />
+										)}
+									</button>
+								)}
+								{/* Tap zones: item first, then person */}
+								<button
+									type="button"
+									aria-label={t.previousStoryItem}
+									onClick={() => {
+										if (storyIndex > 0) goStory(-1);
+										else goStoryPerson(-1);
+									}}
+									className="absolute bottom-24 start-0 top-24 z-20 flex w-[28%] cursor-default items-center justify-start bg-transparent p-3 md:w-[18%]"
+								/>
+								<button
+									type="button"
+									aria-label={t.nextStoryItem}
+									onClick={() => {
+										if (storyIndex < queue.length - 1) goStory(1);
+										else goStoryPerson(1);
+									}}
+									className="absolute bottom-24 end-0 top-24 z-20 flex w-[28%] cursor-default items-center justify-end bg-transparent p-3 md:w-[18%]"
+								/>
+							</>
+						)}
+						<div className="wa-story-viewer__media relative z-10 flex min-h-0 flex-1 items-center justify-center pt-20">
+							{loadingStory ? (
+								<Loader2 size={32} className="animate-spin" />
+							) : storyViewerEmbed ? (
+								<div className="relative z-30 flex h-full w-full flex-col gap-2 px-3 pb-3 pt-2">
+									<div className="flex items-center justify-between gap-2">
+										<button
+											type="button"
+											onClick={() => {
+												setStoryViewerEmbed(null);
+												setStoryPaused(false);
+											}}
+											className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/20"
+										>
+											{locale === 'ar' ? 'رجوع للحالة' : 'Back to story'}
+										</button>
+										<a
+											href={storyViewerEmbed.openUrl}
+											target="_blank"
+											rel="noreferrer"
+											onClick={event => event.stopPropagation()}
+											className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/20"
+										>
+											<ExternalLink size={13} />
+											{t.openLinkExternally}
+										</a>
+									</div>
+									<div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-black">
+										<iframe
+											title={t.viewLinkInStory}
+											src={storyViewerEmbed.embedUrl}
+											className="absolute inset-0 h-full w-full border-0"
+											allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+											allowFullScreen
+											referrerPolicy="strict-origin-when-cross-origin"
+										/>
+									</div>
+								</div>
+							) : String(selectedStatus.type).toLowerCase().includes('video') && statusMediaUrl ? (
+								<video
+									ref={storyVideoRef}
+									src={statusMediaUrl}
+									controls={false}
+									autoPlay
+									playsInline
+									muted={storyMuted}
+									onLoadedMetadata={event => {
+										const duration = Number(event.currentTarget.duration);
+										if (Number.isFinite(duration) && duration > 0) {
+											setStoryDurationMs(duration * 1000);
+										}
+										event.currentTarget.muted = storyMuted;
+									}}
+									onTimeUpdate={event => {
+										const node = event.currentTarget;
+										const duration = Number(node.duration);
+										if (
+											!Number.isFinite(duration) ||
+											duration <= 0 ||
+											storyPaused
+										) {
+											return;
+										}
+										const pct = Math.min(
+											100,
+											(Math.max(0, node.currentTime) / duration) * 100,
+										);
+										setStoryProgress(pct);
+									}}
+									onEnded={() => {
+										finishStorySegmentRef.current();
+									}}
+									onCanPlay={event => {
+										event.currentTarget.muted = storyMuted;
+										if (!storyPaused) {
+											event.currentTarget.play().catch(() => undefined);
+										}
+									}}
+									onError={() => {
+										setStatusMediaUrl(null);
+										toast.error(t.mediaUnavailable);
+									}}
+									className="pointer-events-none max-h-full max-w-full w-full object-contain"
+								/>
+							) : statusMediaUrl ? (
+								<img
+									src={statusMediaUrl}
+									alt={selectedStatus.caption || 'WhatsApp story'}
+									className="pointer-events-none max-h-full max-w-full w-full object-contain"
+									onError={() => {
+										setStatusMediaUrl(null);
+										toast.error(t.mediaUnavailable);
+									}}
+								/>
+							) : (
+								<div className={`grid h-full w-full place-items-center bg-gradient-to-br ${gradientFor(selectedStatus.providerStatusId)}`}>
+									<div className="max-w-md px-8 text-center">
+										{storyMediaError ? (
+											<>
+												<p className="text-lg font-bold leading-relaxed text-white/95">
+													{t.mediaUnavailable}
+												</p>
+												<p className="mt-2 text-sm text-white/75">{storyMediaError}</p>
+												{!isUnrecoverableStoryMediaError(storyMediaError) ? (
+												<button
+													type="button"
+													onClick={event => {
+														event.stopPropagation();
+														const notConnected =
+															/not connected|session_not_ready|qr_pending/i.test(
+																String(storyMediaError || ''),
+															) ||
+															selectedAccount?.status !== 'connected';
+														if (notConnected) {
+															closeStory();
+															void loadTabData('accounts');
+															toast(
+																locale === 'ar'
+																	? 'اربط واتساب من صفحة الحسابات ثم افتح الحالة مرة أخرى'
+																	: 'Link WhatsApp from Accounts, then open the story again',
+															);
+															return;
+														}
+														void openStory(
+															selectedStatus,
+															storyQueue,
+															storyIndex,
+														);
+													}}
+													className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
+												>
+													<RefreshCw size={15} />
+													{/not connected|qr_pending/i.test(
+														String(storyMediaError || ''),
+													) || selectedAccount?.status !== 'connected'
+														? t.connect || (locale === 'ar' ? 'ربط الحساب' : 'Connect')
+														: t.refresh}
+												</button>
+												) : (
+													<button
+														type="button"
+														onClick={event => {
+															event.stopPropagation();
+															if (storyQueue.length > storyIndex + 1) {
+																goStory(1);
+																return;
+															}
+															closeStory();
+														}}
+														className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
+													>
+														{storyQueue.length > storyIndex + 1
+															? locale === 'ar'
+																? 'التالي'
+																: 'Next'
+															: locale === 'ar'
+																? 'إغلاق'
+																: 'Close'}
+													</button>
+												)}
+											</>
+										) : selectedStatus.caption ? (
+											renderStoryLinkedText(
+												selectedStatus.caption,
+												'whitespace-pre-wrap text-2xl font-black leading-relaxed sm:text-3xl',
+											)
+										) : (
+											<p className="text-3xl font-black leading-relaxed">
+												{t.mediaUnavailable}
+											</p>
+										)}
+										{firstMessageLink(selectedStatus.caption || '') &&
+											getStoryMediaEmbed(
+												firstMessageLink(selectedStatus.caption || '').href,
+											) && (
+												<button
+													type="button"
+													onClick={() =>
+														openStoryLink(
+															firstMessageLink(selectedStatus.caption || '')
+																.href,
+														)
+													}
+													className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
+												>
+													<Play size={15} fill="currentColor" />
+													{t.viewLinkInStory}
+												</button>
+											)}
+									</div>
+								</div>
+							)}
+						</div>
+						{selectedStatus.caption && statusMediaUrl && !storyViewerEmbed && (
+							<div className="relative z-30 bg-black/35 px-5 py-3 text-center text-sm">
+								{renderStoryLinkedText(selectedStatus.caption)}
+							</div>
+						)}
+						{selectedStatus.isOwn && !demo.settings.enabled && (
+							<StoryViewsButton
+								count={Number(selectedStatus.viewerCount) || 0}
+								locale={locale}
+								onOpen={openStoryViewers}
+							/>
+						)}
+						{!selectedStatus.isOwn &&
+							!selectedStatus.isHistory &&
+							canUseWhatsApp &&
+							!demo.settings.enabled && (
+							<StoryReactionBar
+								locale={locale}
+								selected={selectedStatus.myReaction || null}
+								sendingEmoji={sendingStoryReaction}
+								disabled={sendingStoryReply}
+								onReact={reactToCurrentStory}
+							/>
+						)}
+						{!selectedStatus.isOwn &&
+							!selectedStatus.isHistory &&
+							canUseWhatsApp &&
+							!demo.settings.enabled && (
+							<form
+								onSubmit={replyToCurrentStory}
+								className="relative z-40 flex items-center gap-2 border-t border-white/10 bg-black/45 px-3 py-3 backdrop-blur-md"
+								onClick={event => event.stopPropagation()}
+							>
+								<Reply size={16} className="shrink-0 text-white/70" />
+								<input
+									type="text"
+									value={storyReplyDraft}
+									onChange={event => setStoryReplyDraft(event.target.value)}
+									onFocus={() => setStoryPaused(true)}
+									placeholder={t.replyToStoryPlaceholder}
+									maxLength={1000}
+									disabled={sendingStoryReply}
+									className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 text-sm text-white outline-none placeholder:text-white/45 focus:border-emerald-400/70"
+								/>
+								<button
+									type="submit"
+									disabled={sendingStoryReply || !storyReplyDraft.trim()}
+									className="inline-flex h-11 items-center gap-1.5 rounded-full bg-emerald-500 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-400 disabled:opacity-45"
+								>
+									{sendingStoryReply ? (
+										<Loader2 size={15} className="animate-spin" />
+									) : (
+										<>
+											<Send size={14} />
+											{t.replyToStory}
+										</>
+									)}
+								</button>
+							</form>
+						)}
+						{selectedStatus.isOwn ? (
+							<StoryViewersSheet
+								open={storyViewersOpen}
+								locale={locale}
+								loading={storyViewers.loading}
+								error={storyViewers.error}
+								data={storyViewers.data}
+								onRetry={() => loadStoryViewers(selectedStatus)}
+								onClose={closeStoryViewers}
+								renderAvatar={viewer => (
+									<Avatar
+										label={viewer.name || viewer.phone || '?'}
+										src={viewer.avatarUrl || undefined}
+										size={10}
+									/>
+								)}
+							/>
+						) : null}
+								</motion.div>
+									</AnimatePresence>
+								</div>
+								{renderPeek(nextPerson, nextPeekStatus, 'next')}
+							</div>
+						);
+					})()}
+				</div>
+			)}
+
+			{storyShareOpen && selectedStatus ? (
+				<WaDialog
+					zIndex={120}
+					width={440}
+					height={640}
+					icon={<Share2 size={17} strokeWidth={2.1} />}
+					title={t.sendStoryAsMedia}
+					subtitle={t.sendStoryAsMediaHint}
+					closeDisabled={Boolean(sendingStoryShareId)}
+					closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+					onClose={() => {
+						setStoryShareOpen(false);
+						setStoryPaused(false);
+					}}
+				>
+					<WaChatPicker
+						autoFocus
+						locale={locale}
+						items={effectiveConversations}
+						busyId={sendingStoryShareId}
+						onPick={item => void sendStoryAsMediaToChat(item)}
+						emptyText={locale === 'ar' ? 'لا توجد محادثات' : 'No chats found'}
+					/>
+				</WaDialog>
 			) : null}
 			<ChatImageViewer
 				images={chatImages}

@@ -727,6 +727,26 @@ export function viewOnceMessageLabel(message, locale = 'en') {
 	return ar ? 'رسالة للعرض مرة واحدة' : 'View once message';
 }
 
+/** Second line under the view-once label: the recipient opens it on the phone; the sender never can. */
+export function viewOnceMessageHint(message, locale = 'en') {
+	const ar = String(locale || 'en').toLowerCase().startsWith('ar');
+	if (message?.direction === 'outbound') {
+		if (['read', 'played'].includes(message?.status)) return ar ? 'تم الفتح' : 'Opened';
+		return ar ? 'يفتحها المستلم مرة واحدة فقط' : 'Only the recipient can open it, once';
+	}
+	return ar ? 'افتحها على هاتفك' : 'Open it on your phone';
+}
+
+/** Quoted view-once content (a reply's contextInfo copy) — wrapped or flagged on the media node. */
+function isViewOnceQuotedContent(quoted) {
+	if (!quoted || typeof quoted !== 'object') return false;
+	const content = quoted.ephemeralMessage?.message || quoted;
+	if (content.viewOnceMessage || content.viewOnceMessageV2 || content.viewOnceMessageV2Extension) {
+		return true;
+	}
+	return ['imageMessage', 'videoMessage', 'audioMessage'].some(key => content[key]?.viewOnce === true);
+}
+
 export function conversationMessageTypeLabel(message, locale = 'en') {
 	if (isViewOnceMessage(message)) return viewOnceMessageLabel(message, locale);
 	const ar = String(locale || 'en').toLowerCase().startsWith('ar');
@@ -1858,7 +1878,9 @@ export function mediaPreviewFromRaw(raw) {
 }
 
 export function quotedMediaPreviewFromRaw(raw) {
-	return mediaPreviewFromContent(baileysContextInfoFromRaw(raw)?.quotedMessage);
+	const quoted = baileysContextInfoFromRaw(raw)?.quotedMessage;
+	if (isViewOnceQuotedContent(quoted)) return null;
+	return mediaPreviewFromContent(quoted);
 }
 
 const GROUP_SENDER_COLORS = [
@@ -1944,6 +1966,7 @@ export function deletedWhatsAppMessageLabel(locale = 'en') {
 }
 
 export function quotedPreviewFromMessage(message) {
+	if (isViewOnceMessage(message?.replyTo)) return null;
 	return (
 		message?.replyTo?.previewDataUrl ||
 		quotedMediaPreviewFromRaw(message?.raw) ||
@@ -2098,6 +2121,15 @@ export function quotedMessagePreview(replyTo, locale = 'en', options = {}) {
 	const type = String(replyTo?.type || '').toLowerCase();
 	const senderName = String(replyTo?.senderName || '').trim() || null;
 	const showSender = Boolean(options.isGroupChat && senderName);
+
+	if (isViewOnceMessage(replyTo)) {
+		return {
+			senderName: showSender ? senderName : null,
+			body: viewOnceMessageLabel(replyTo, locale),
+			isMediaOnly: true,
+			isViewOnce: true,
+		};
+	}
 
 	if (isVoiceMessageType(type)) {
 		const voice = quotedVoicePresentation(replyTo, locale);
