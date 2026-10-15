@@ -23641,7 +23641,8 @@ function WhatsAppWorkspaceContent() {
 				'--color-gradient-to': '#128C7E',
 			}}
 		>
-			{!(isConversationWorkspaceTab(activeTab) && conversationId) && (
+			{/* Wallet scrolls the header away with the page; other tabs keep it pinned. */}
+			{!(isConversationWorkspaceTab(activeTab) && conversationId) && activeTab !== 'wallet' && (
 				<MobileWhatsAppHeader
 					locale={locale}
 					title={
@@ -28294,9 +28295,25 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'wallet' && (
-					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
-						<WhatsAppWalletTab locale={locale} />
-					</Suspense>
+					<>
+						<MobileWhatsAppHeader
+							locale={locale}
+							title={t.wallet || t.title}
+							onSearch={() => {
+								void loadTabData('chats');
+								setSearchOpen(true);
+								window.setTimeout(() => {
+									document.querySelector('.wa-m-search input')?.focus();
+								}, 60);
+							}}
+							onCamera={() => void loadTabData('statuses')}
+							onMore={() => setMobileMenuOpen(current => !current)}
+							showTitle
+						/>
+						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+							<WhatsAppWalletTab locale={locale} />
+						</Suspense>
+					</>
 				)}
 
 				{contactsPopupOpen ? (

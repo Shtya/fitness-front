@@ -72,13 +72,22 @@ export function installMobileViewport(win = typeof window === 'undefined' ? null
 			viewportHeight: vv.height,
 			offsetTop: vv.offsetTop,
 		});
-		if (keyboard.open && isEditableElement(win.document.activeElement)) {
+		const active = win.document.activeElement;
+		if (keyboard.open && isEditableElement(active)) {
 			root.classList.add('wa-kb-open');
-			root.style.setProperty('--wa-app-h', `${keyboard.visibleHeight}px`);
-			root.style.setProperty('--wa-kb-inset', `${keyboard.inset}px`);
-			// iOS pans the page to reveal the field; the shell is already sized to the visible
-			// area, so pin the page back to the top instead of letting the header slide away.
-			if ((vv.offsetTop || 0) > 0 || (win.scrollY || 0) > 0) win.scrollTo(0, 0);
+			// Scrollable utility forms (wallet, etc.): shrinking the shell + scrollTo(0)
+			// fights iOS and makes the focused input bounce. Let the pane scroll instead.
+			const scrollFriendly = Boolean(active?.closest?.('[data-wa-kb-scroll]'));
+			if (scrollFriendly) {
+				root.style.removeProperty('--wa-app-h');
+				root.style.removeProperty('--wa-kb-inset');
+			} else {
+				root.style.setProperty('--wa-app-h', `${keyboard.visibleHeight}px`);
+				root.style.setProperty('--wa-kb-inset', `${keyboard.inset}px`);
+				// iOS pans the page to reveal the field; the shell is already sized to the visible
+				// area, so pin the page back to the top instead of letting the header slide away.
+				if ((vv.offsetTop || 0) > 0 || (win.scrollY || 0) > 0) win.scrollTo(0, 0);
+			}
 		} else {
 			clear();
 		}
