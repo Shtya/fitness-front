@@ -67,6 +67,9 @@ export const whatsappAiAgentApi = {
 	createKnowledge(accountId, payload) {
 		return api.post(`${agentBase(accountId)}/knowledge`, payload).then(response => response.data);
 	},
+	addStarterKnowledge(accountId) {
+		return api.post(`${agentBase(accountId)}/knowledge/starter`).then(response => response.data);
+	},
 	updateKnowledge(accountId, id, payload) {
 		return api.put(`${agentBase(accountId)}/knowledge/${id}`, payload).then(response => response.data);
 	},

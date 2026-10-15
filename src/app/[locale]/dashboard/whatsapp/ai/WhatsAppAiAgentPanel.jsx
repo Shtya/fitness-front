@@ -15,6 +15,7 @@ import {
 	Search,
 	Send,
 	Settings2,
+	Sparkles,
 	Trash2,
 	X,
 } from 'lucide-react';
@@ -168,6 +169,11 @@ function settingsToDraft(settings) {
 	};
 }
 
+function applyRecommended(draft) {
+	if (!draft?.recommended) return draft;
+	return settingsToDraft({ ...draft, ...draft.recommended });
+}
+
 function draftToPayload(draft) {
 	return {
 		enabled: Boolean(draft.enabled),
@@ -222,7 +228,7 @@ function formatClock(date, locale) {
 
 /* ------------------------------------------------------------------ setup */
 
-function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSubmit }) {
+function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSubmit, onApplyRecommended }) {
 	const update = (key, value) => setDraft(current => ({ ...current, [key]: value }));
 	const updatePermission = (key, value) =>
 		setDraft(current => ({ ...current, permissions: { ...current.permissions, [key]: value } }));
@@ -273,6 +279,15 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 					{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
 					{text.save}
 				</button>
+				{draft.recommended ? (
+					<div className="wa-ag-rail-span">
+						<button type="button" className="wa-ag-ghost w-full justify-center" onClick={onApplyRecommended} disabled={saving}>
+							<Sparkles size={14} />
+							{text.applyRecommended}
+						</button>
+						<p className="wa-ag-hint mt-1.5">{text.applyRecommendedHint}</p>
+					</div>
+				) : null}
 				{saved && !error ? <p className="wa-ag-note is-ok wa-ag-rail-span">{text.saved}</p> : null}
 				{error ? <p className="wa-ag-note is-bad wa-ag-rail-span">{error}</p> : null}
 			</aside>
@@ -722,6 +737,21 @@ function KnowledgeSection({ text, accountId }) {
 		}
 	};
 
+	const addStarter = async () => {
+		setBusy(true);
+		setError('');
+		try {
+			const added = await whatsappAiAgentApi.addStarterKnowledge(accountId);
+			if (Array.isArray(added) && added.length) {
+				setEntries(current => [...added, ...(current || [])]);
+			}
+		} catch (starterError) {
+			setError(apiErrorMessage(starterError, 'Failed to save'));
+		} finally {
+			setBusy(false);
+		}
+	};
+
 	const remove = async entry => {
 		if (!window.confirm(text.kbDeleteConfirm)) return;
 		setError('');
@@ -782,6 +812,10 @@ function KnowledgeSection({ text, accountId }) {
 						<Plus size={14} />
 						{text.kbAdd}
 					</button>
+					<button type="button" className="wa-ag-ghost" onClick={() => void addStarter()} disabled={busy}>
+						{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+						{text.kbStarter}
+					</button>
 				</div>
 
 				{editing ? (
@@ -838,7 +872,14 @@ function KnowledgeSection({ text, accountId }) {
 				{entries == null ? (
 					<div className="grid min-h-24 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
 				) : entries.length === 0 ? (
-					<p className="wa-ag-empty">{text.kbEmpty}</p>
+					<div className="wa-ag-empty">
+						<p>{text.kbEmpty}</p>
+						<button type="button" className="wa-ag-save mt-3" onClick={() => void addStarter()} disabled={busy}>
+							{busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+							{text.kbStarter}
+						</button>
+						<p className="wa-ag-hint mt-2">{text.kbStarterHint}</p>
+					</div>
 				) : filtered.length === 0 ? (
 					<p className="wa-ag-empty">{text.kbNoMatch}</p>
 				) : (
@@ -1135,7 +1176,7 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 	}, []);
 
 	const submit = async event => {
-		event.preventDefault();
+		event?.preventDefault?.();
 		if (!draft) return;
 		setSaving(true);
 		setSaveError('');
@@ -1204,12 +1245,34 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 				})}
 			</div>
 
+			<div className="wa-ag-body nice-scroll">
 			{loadError ? (
 				<p className="wa-ag-note is-bad flex items-center gap-2"><X size={14} />{loadError}</p>
 			) : !draft ? (
 				<div className="grid min-h-32 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
 			) : section === 'setup' ? (
-				<SetupSection text={text} lang={lang} draft={draft} setDraft={setDraftDirty} saving={saving} saved={saved} error={saveError} onSubmit={submit} />
+				<>
+					{draft.prefilled?.length > 0 && !saved ? (
+						<div className="wa-ag-prefill" role="status">
+							<p>{text.prefilledNote}</p>
+							<button type="button" className="wa-ag-ghost" onClick={submit} disabled={saving}>
+								{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+								{text.save}
+							</button>
+						</div>
+					) : null}
+					<SetupSection
+						text={text}
+						lang={lang}
+						draft={draft}
+						setDraft={setDraftDirty}
+						saving={saving}
+						saved={saved}
+						error={saveError}
+						onSubmit={submit}
+						onApplyRecommended={() => setDraftDirty(current => applyRecommended(current))}
+					/>
+				</>
 			) : section === 'models' ? (
 				<ModelsSection text={text} accountId={accountId} draft={draft} setDraft={setDraftDirty} onSaved={() => setSaved(true)} alerts={draft.providerAlerts || []} />
 			) : section === 'knowledge' ? (
@@ -1225,6 +1288,7 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 			) : (
 				<ActivitySection text={text} accountId={accountId} locale={locale} />
 			)}
+			</div>
 		</section>
 	);
 }

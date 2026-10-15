@@ -1,12 +1,19 @@
-/* WhatsApp AI agent desk — compact, readable columns, never a stretched form. */
+/* WhatsApp AI agent desk — compact, readable columns, never a stretched form.
+   The pane fills the workspace height; header + tabs stay put and only
+   .wa-ag-body scrolls, so the last section is never cut off. */
 .wa-agent-pane {
-	padding-inline: 4px;
-	padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+	display: flex;
+	height: 100%;
+	min-height: 0;
+	flex-direction: column;
+	overflow: hidden;
+	padding: 4px 4px 0;
 }
 
 @media (min-width: 769px) {
 	.wa-agent-pane {
-		padding: 4px 8px calc(56px + env(safe-area-inset-bottom, 0px));
+		max-height: calc(100dvh - 25px);
+		padding: 4px 8px 0;
 	}
 }
 
@@ -22,17 +29,36 @@
 	--ag-green-soft: #e7f8ec;
 	--ag-shadow: 0 1px 2px rgba(17, 27, 33, 0.04), 0 10px 28px -18px rgba(17, 27, 33, 0.28);
 	box-sizing: border-box;
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
 	width: min(1040px, 100%);
+	min-height: 0;
 	margin-inline: auto;
-	padding: 4px 0 56px;
+	padding: 4px 0 0;
 	color: var(--ag-ink);
 }
 
-.wa-ag.is-test {
+.wa-ag-head,
+.wa-ag-tabs {
+	flex: 0 0 auto;
+}
+
+.wa-ag-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	margin-inline: -4px;
+	padding: 2px 4px calc(40px + env(safe-area-inset-bottom, 0px));
+}
+
+.wa-ag.is-test .wa-ag-body {
 	display: flex;
 	flex-direction: column;
-	min-height: calc(100dvh - 210px);
-	padding-bottom: 12px;
+	overflow: hidden;
+	padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
 }
 
 .wa-ag.is-test .wa-ag-head p {
@@ -41,6 +67,34 @@
 
 .wa-ag.is-test .wa-ag-head {
 	margin-bottom: 8px;
+}
+
+.wa-ag-prefill {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	border: 1px solid #f3e1a6;
+	border-radius: 14px;
+	background: #fff8e1;
+	color: #6b5310;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.45;
+}
+
+.wa-ag-prefill p {
+	flex: 1 1 16rem;
+	margin: 0;
+}
+
+html.dark .wa-ag-prefill,
+.dark .wa-ag-prefill {
+	border-color: #4a3c12;
+	background: #2b2410;
+	color: #f5d67b;
 }
 
 html.dark .wa-ag,
@@ -185,7 +239,7 @@ html.dark .wa-ag,
 
 .wa-ag-rail {
 	position: sticky;
-	top: 8px;
+	top: 0;
 	display: grid;
 	gap: 12px;
 	padding: 14px;
@@ -500,8 +554,8 @@ html.dark .wa-ag,
 
 .wa-ag-chat {
 	display: flex;
-	flex: 1;
-	min-height: 22rem;
+	flex: 1 1 auto;
+	min-height: 0;
 	flex-direction: column;
 	overflow: hidden;
 	border: 1px solid var(--ag-line);
@@ -557,8 +611,8 @@ html.dark .wa-ag-chat-bar,
 
 .wa-ag-thread {
 	display: flex;
-	flex: 1;
-	min-height: 16rem;
+	flex: 1 1 auto;
+	min-height: 0;
 	flex-direction: column;
 	gap: 6px;
 	padding: 12px 10px 16px;
@@ -826,13 +880,8 @@ html.dark .wa-ag-chat-input,
 }
 
 @media (max-width: 768px) {
-	.wa-ag {
-		padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-	}
-
-	.wa-ag.is-test {
-		min-height: calc(100dvh - 148px);
-		padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+	.wa-ag-body {
+		padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 	}
 
 	.wa-ag-head {
