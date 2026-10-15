@@ -16,6 +16,7 @@ import {
 	Sun,
 	User,
 	Users,
+	Wallet,
 	Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -135,6 +136,7 @@ export default function WhatsAppDesktopRail({
 	showBoard = true,
 	showFakeChat = true,
 	showAutoForward = true,
+	showWallet = false,
 	showAgent = false,
 	showcaseOnly = false,
 	darkMode = false,
@@ -213,6 +215,13 @@ export default function WhatsAppDesktopRail({
 					id: 'autoForward',
 					label: labels.autoForward || (ar ? 'تحويل تلقائي' : 'Auto-forward'),
 					icon: Forward,
+				}
+			: null,
+		showWallet
+			? {
+					id: 'wallet',
+					label: labels.wallet || (ar ? 'محفظتي' : 'Wallet'),
+					icon: Wallet,
 				}
 			: null,
 	].filter(Boolean);

@@ -45,6 +45,7 @@ import {
 	FileVideo,
 	FolderKanban,
 	Forward,
+	Wallet,
 	Globe2,
 	Image as ImageIcon,
 	ImageOff,
@@ -307,6 +308,7 @@ const WhatsAppBoardTab = lazy(() =>
 );
 const FakeChatStudio = lazy(() => import('./fake-chat/FakeChatStudio'));
 const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
+const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const ContactsPanel = lazy(() => import('./ContactsPanel'));
 const DemoModeSettings = lazy(() => import('./demo/components/DemoModeSettings'));
 const WhatsAppAiSettings = lazy(() => import('./ai/WhatsAppAiSettings'));
@@ -485,6 +487,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'board',
 	'fakeChat',
 	'autoForward',
+	'wallet',
 	'agent',
 	'settings',
 	'profile',
@@ -772,6 +775,7 @@ const translations = {
 		boardHint: 'Trello-style tasks for this WhatsApp account. Drag cards, add checklists, and link chats.',
 		fakeChat: 'Fake chat',
 		autoForward: 'Auto-forward',
+		wallet: 'Wallet',
 		contacts: 'Contacts',
 		openSidebar: 'Open sidebar',
 		addToBoard: 'Add to tasks board',
@@ -1290,6 +1294,7 @@ const translations = {
 		boardHint: 'مهام على شكل Trello لهذا الحساب. اسحب البطاقات، أضف قوائم، واربط الشات.',
 		fakeChat: 'شات وهمي',
 		autoForward: 'تحويل تلقائي',
+		wallet: 'محفظتي',
 		contacts: 'جهات الاتصال',
 		openSidebar: 'فتح القائمة الجانبية',
 		addToBoard: 'إضافة للوحة المهام',
@@ -1797,6 +1802,7 @@ const tabs = [
 	['board', LayoutGrid],
 	['fakeChat', Sparkles],
 	['autoForward', Forward],
+	['wallet', Wallet],
 	['settings', Settings],
 ];
 
@@ -10341,7 +10347,7 @@ function MobileOverflowMenu({
 				onClick={onClose}
 				className="fixed inset-0 z-190 bg-transparent min-[769px]:hidden"
 			/>
-			<div className="wa-mobile-menu absolute start-4 top-[calc(52px+env(safe-area-inset-top,0px))] z-200 min-w-52 overflow-hidden rounded-xl py-2 shadow-2xl min-[769px]:hidden">
+			<div className="wa-mobile-menu absolute start-4 top-[calc(52px+env(safe-area-inset-top,0px))] z-200 max-h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] min-w-52 overflow-y-auto overscroll-contain rounded-xl py-2 shadow-2xl min-[769px]:hidden">
 				{typeof onToggleDarkMode === 'function' ? (
 					<button
 						type="button"
@@ -22040,7 +22046,7 @@ function WhatsAppWorkspaceContent() {
 		setTabError('');
 		if (tab === 'profile') return;
 		if (tab === 'emails') return;
-		if (tab === 'board' || tab === 'fakeChat' || tab === 'autoForward' || tab === 'agent') return;
+		if (tab === 'board' || tab === 'fakeChat' || tab === 'autoForward' || tab === 'wallet' || tab === 'agent') return;
 		if (!accountId) return;
 		const targetAccountId = accountId;
 		const requestId = ++tabRequestId.current;
@@ -23661,7 +23667,7 @@ function WhatsAppWorkspaceContent() {
 			)}
 			<MobileOverflowMenu
 				open={mobileMenuOpen}
-				tabs={availableTabs.filter(([key]) => !['chats', 'channels', 'statuses', 'groups', 'agent', 'contacts'].includes(key))}
+				tabs={availableTabs.filter(([key]) => !['chats', 'channels', 'statuses', 'groups', 'contacts'].includes(key))}
 				labels={t}
 				locale={locale}
 				darkMode={darkMode}
@@ -23921,6 +23927,7 @@ function WhatsAppWorkspaceContent() {
 					showBoard={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
 					showFakeChat={!showcaseOnly && fakeChatAllowed}
 					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
+					showWallet={!showcaseOnly}
 					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
@@ -28286,6 +28293,12 @@ function WhatsAppWorkspaceContent() {
 					</Suspense>
 				)}
 
+				{activeTab === 'wallet' && (
+					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+						<WhatsAppWalletTab locale={locale} />
+					</Suspense>
+				)}
+
 				{contactsPopupOpen ? (
 					<WaDialog
 						title={t.contacts}
@@ -28583,7 +28596,6 @@ function WhatsAppWorkspaceContent() {
 					unreadCount={unreadConversationCount}
 					avatarUrl={railAvatarUrl}
 					locale={locale}
-					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 				/>
 			)}
 			<MessageReactionPicker
