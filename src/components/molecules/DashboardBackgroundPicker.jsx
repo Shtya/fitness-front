@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, ClipboardPaste, ImagePlus, Loader2, RotateCcw } from 'lucide-react';
+import { Check, ClipboardPaste, ImagePlus, Loader2, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useUser } from '@/hooks/useUser';
 import {
@@ -10,7 +10,9 @@ import {
 	backgroundCss,
 	blobToDataUrl,
 	effectiveBackground,
+	galleryImageUrl,
 	prepareBackgroundImage,
+	removeGalleryImage,
 	setPersonalBackground,
 	setSystemBackground,
 	uploadSystemBackground,
@@ -91,6 +93,22 @@ export default function DashboardBackgroundPicker({ t }) {
 		[isSuperAdmin],
 	);
 
+	const remove = useCallback(
+		async image => {
+			if (!window.confirm(label('deleteConfirm', 'Delete this image for everyone?'))) return;
+			setBusy(true);
+			try {
+				await removeGalleryImage(image.id);
+			} catch {
+				toast.error(label('failed', "Couldn't change the background."));
+			} finally {
+				setBusy(false);
+			}
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[],
+	);
+
 	useEffect(() => {
 		const onPaste = event => {
 			const file = imageFromClipboard(event);
@@ -102,7 +120,7 @@ export default function DashboardBackgroundPicker({ t }) {
 		return () => window.removeEventListener('paste', onPaste);
 	}, [applyImage]);
 
-	const customActive = active?.kind === 'image';
+	const customActive = active?.kind === 'image' && String(active.value).startsWith('data:');
 
 	return (
 		<div className='tp-bg' aria-busy={busy}>
@@ -133,6 +151,50 @@ export default function DashboardBackgroundPicker({ t }) {
 						</button>
 					);
 				})}
+				{snapshot.gallery.map((image, index) => {
+					const src = galleryImageUrl(image.url);
+					if (!src) return null;
+					const background = { kind: 'image', value: image.url };
+					const on = isSame(active, background);
+					const name = `${label('images', 'Images')} ${DASHBOARD_BG_PRESETS.length + index + 1}`;
+					return (
+						<div key={image.id} className='tp-bg__cell'>
+							<button
+								type='button'
+								role='radio'
+								aria-checked={on}
+								aria-label={name}
+								disabled={busy}
+								className={`tp-bg__tile${on ? ' is-on' : ''}`}
+								style={{ backgroundImage: `url("${src}")` }}
+								onClick={() => apply(background)}>
+								{on ? <Check className='tp-bg__check' strokeWidth={3} aria-hidden /> : null}
+							</button>
+							{isSuperAdmin ? (
+								<button
+									type='button'
+									className='tp-bg__del'
+									disabled={busy}
+									title={label('delete', 'Delete image')}
+									aria-label={`${label('delete', 'Delete image')}: ${name}`}
+									onClick={() => remove(image)}>
+									<Trash2 aria-hidden />
+								</button>
+							) : null}
+						</div>
+					);
+				})}
+				{isSuperAdmin ? (
+					<button
+						type='button'
+						className='tp-bg__tile is-add'
+						disabled={busy}
+						title={label('addImage', 'Add image')}
+						aria-label={label('addImage', 'Add image')}
+						onClick={() => fileRef.current?.click()}>
+						{busy ? <Loader2 className='animate-spin' aria-hidden /> : <Plus aria-hidden />}
+					</button>
+				) : null}
 			</div>
 
 			<p className='tp-bg__label'>{label('gradients', 'Gradients')}</p>
@@ -178,7 +240,11 @@ export default function DashboardBackgroundPicker({ t }) {
 						<ClipboardPaste className='tp-bg__drop-icon' aria-hidden />
 					)}
 					<p className='tp-bg__drop-text'>
-						{busy ? label('uploading', 'Applying…') : label('pasteHint', 'Paste an image (Ctrl+V), drop it here, or choose a file')}
+						{busy
+							? label('uploading', 'Applying…')
+							: isSuperAdmin
+								? label('pasteHintSystem', 'Paste an image (Ctrl+V), drop it here, or choose a file. It is added to Images so everyone can use it.')
+								: label('pasteHint', 'Paste an image (Ctrl+V), drop it here, or choose a file')}
 					</p>
 					<button type='button' className='tp-bg__btn' disabled={busy} onClick={() => fileRef.current?.click()}>
 						<ImagePlus aria-hidden />

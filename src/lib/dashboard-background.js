@@ -28,13 +28,14 @@ export const DASHBOARD_BG_GRADIENTS = [
 ];
 
 const SYSTEM_CACHE_KEY = 'dashboard-bg:system';
+const GALLERY_CACHE_KEY = 'dashboard-bg:gallery';
 const personalKey = userId => `dashboard-bg:personal:${userId || 'anon'}`;
 const DATA_URL_RE = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
 const UPLOAD_RE = /^\/uploads\/branding\/[A-Za-z0-9_-]+\.(png|jpe?g|webp|gif)$/;
 /** localStorage is ~5 MB per origin and shared with the rest of the app. */
 const MAX_PERSONAL_IMAGE_CHARS = 1_800_000;
 
-let state = { userId: null, system: null, personal: null, ready: false };
+let state = { userId: null, system: null, personal: null, gallery: [], ready: false };
 const listeners = new Set();
 
 function emit(next) {
@@ -86,19 +87,35 @@ function applyToDocument() {
 	else document.documentElement.style.removeProperty('--gm-bg-user');
 }
 
+export function galleryImageUrl(url) {
+	return UPLOAD_RE.test(String(url || '')) ? `${baseImg}${url}` : '';
+}
+
+/** Server response → store; a personal pick of a deleted gallery image falls back to the system one. */
+function applyServerAppearance(data, { clearPersonal = false } = {}) {
+	const system = data?.background || null;
+	const gallery = Array.isArray(data?.gallery) ? data.gallery.filter(item => UPLOAD_RE.test(String(item?.url || ''))) : [];
+	writeJson(SYSTEM_CACHE_KEY, system);
+	writeJson(GALLERY_CACHE_KEY, gallery);
+	let personal = clearPersonal ? null : state.personal;
+	const personalUpload = personal?.kind === 'image' && UPLOAD_RE.test(String(personal.value || ''));
+	if (personalUpload && !gallery.some(item => item.url === personal.value)) personal = null;
+	if (personal !== state.personal) writeJson(personalKey(state.userId), personal);
+	emit({ system, gallery, personal });
+}
+
 export async function initDashboardBackground(userId) {
 	emit({
 		userId: userId || null,
 		system: readJson(SYSTEM_CACHE_KEY),
+		gallery: readJson(GALLERY_CACHE_KEY) || [],
 		personal: readJson(personalKey(userId)),
 		ready: true,
 	});
 	if (!userId) return;
 	try {
 		const { data } = await api.get('/appearance/dashboard-background', { skipAuthRedirect: true });
-		const system = data?.background || null;
-		writeJson(SYSTEM_CACHE_KEY, system);
-		emit({ system });
+		applyServerAppearance(data);
 	} catch {
 		/* Cached or stylesheet default stays applied. */
 	}
@@ -118,20 +135,20 @@ export function setPersonalBackground(background) {
 
 export async function setSystemBackground(background) {
 	const { data } = await api.put('/appearance/dashboard-background', background || { kind: 'default' });
-	const system = data?.background || null;
-	writeJson(SYSTEM_CACHE_KEY, system);
-	writeJson(personalKey(state.userId), null);
-	emit({ system, personal: null });
+	applyServerAppearance(data, { clearPersonal: true });
 }
 
+/** Super admin: adds the image to the shared Images list and makes it the system background. */
 export async function uploadSystemBackground(blob, fileName) {
 	const form = new FormData();
 	form.append('file', blob, fileName);
 	const { data } = await api.post('/appearance/dashboard-background/image', form);
-	const system = data?.background || null;
-	writeJson(SYSTEM_CACHE_KEY, system);
-	writeJson(personalKey(state.userId), null);
-	emit({ system, personal: null });
+	applyServerAppearance(data, { clearPersonal: true });
+}
+
+export async function removeGalleryImage(id) {
+	const { data } = await api.delete(`/appearance/dashboard-background/gallery/${encodeURIComponent(id)}`);
+	applyServerAppearance(data);
 }
 
 /** Downscales a pasted/dropped image so it fits storage and loads fast. */
