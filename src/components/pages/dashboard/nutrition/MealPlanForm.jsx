@@ -5,8 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Controller, useController, useFieldArray, useForm, useFormState, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
-	AlertCircle, CalendarCog, CalendarDays, ChefHat, ChevronDown, Clock, FileText, Flame,
-	Layers, NotebookPen, Pill, Plus, Replace, Search, Sparkles, UtensilsCrossed, X,
+	AlertCircle, AlertTriangle, CalendarCheck, CalendarCog, CalendarDays, ChefHat, ChevronDown, Clock, Copy, FileText, Flame,
+	Layers, NotebookPen, Pill, Plus, Replace, Search, Sparkles, Undo2, UtensilsCrossed, X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -25,7 +25,7 @@ import { Notification } from '@/config/Notification';
 import useDebounced from '@/hooks/useDebounced';
 import {
 	DAY_KEYS, UNITS, aiMealsToForm, blankAlternative, blankItem, blankMeal, blankSupplement, buildAiPrompt, buildPlanSchema,
-	formToPayload, getErr, mealKcal, mealsKcal, parseAiPlan, planToFormValues, toDecimalInput,
+	cloneMeals, formToPayload, getErr, kcalOutliers, mealKcal, mealsKcal, parseAiPlan, planToFormValues, toDecimalInput, weekKcal,
 } from './mealPlanModel';
 
 const GRADIENT = { background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' };
@@ -511,18 +511,45 @@ const MealsEditor = memo(function MealsEditor({ fields, move, remove, name, cont
 });
 
 /* ─────────────────────────── Day overrides ─────────────────────────── */
-function DayOverrideBlock({ dayKey, control, setValue, open, onToggle, t }) {
+const WARN_TEXT = 'text-amber-600';
+const WARN_SURFACE = { borderColor: 'color-mix(in srgb, #f59e0b 45%, transparent)', background: 'color-mix(in srgb, #f59e0b 8%, transparent)' };
+
+function ApplyToAllButton({ onConfirm, t }) {
+	const [armed, setArmed] = useState(false);
+	useEffect(() => {
+		if (!armed) return undefined;
+		const id = setTimeout(() => setArmed(false), 3000);
+		return () => clearTimeout(id);
+	}, [armed]);
+	return (
+		<button
+			type='button'
+			onClick={() => (armed ? onConfirm() : setArmed(true))}
+			onBlur={() => setArmed(false)}
+			className={`gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5 ${armed ? WARN_TEXT : ''}`}
+		>
+			{armed ? <AlertTriangle className='size-3.5' /> : <CalendarCheck className='size-3.5' />}
+			{armed ? t('clickAgainToConfirm') : t('form.apply_to_all')}
+		</button>
+	);
+}
+
+function DayOverrideBlock({ dayKey, control, setValue, getBaseMeals, onApplyToAll, kcal, flagged, open, onToggle, t }) {
 	const name = `dayOverrides.${dayKey}`;
-	const { fields, append, remove, move } = useFieldArray({ control, name });
+	const { fields, append, remove, move, replace } = useFieldArray({ control, name });
 	const { errors } = useFormState({ control, name });
 	const hasError = Boolean(errors?.dayOverrides?.[dayKey]);
 	const expanded = open || hasError;
 	const addMeal = () => append(blankMeal(t('form.meal_n', { n: fields.length + 1 })));
+	const copyBase = () => replace(cloneMeals(getBaseMeals()));
 
 	return (
 		<section
 			className='overflow-hidden rounded-2xl border'
-			style={{ borderColor: hasError ? 'color-mix(in srgb, var(--gm-danger) 40%, transparent)' : 'var(--gm-line)', background: 'color-mix(in srgb, var(--gm-paper) 40%, transparent)' }}
+			style={{
+				borderColor: hasError ? 'color-mix(in srgb, var(--gm-danger) 40%, transparent)' : flagged ? WARN_SURFACE.borderColor : 'var(--gm-line)',
+				background: 'color-mix(in srgb, var(--gm-paper) 40%, transparent)',
+			}}
 		>
 			<button
 				type='button'
@@ -535,11 +562,31 @@ function DayOverrideBlock({ dayKey, control, setValue, open, onToggle, t }) {
 					<span className='block text-[13px] font-bold gm-ink'>{t(`days.${dayKey}`)}</span>
 					<span className='block truncate text-[11.5px] gm-muted'>{fields.length ? t('form.day_custom_hint') : t('form.day_uses_base')}</span>
 				</span>
+				<span className={`gm-plan__chip shrink-0 font-en tabular-nums ${flagged ? 'text-amber-600!' : ''}`}>
+					{flagged ? <AlertTriangle className='size-3' /> : <Flame className='size-3' />}
+					{fmtNum(kcal)} {t('form.kcal_short')}
+				</span>
 				{fields.length > 0 && <Badge color='primary' icon={<UtensilsCrossed className='size-3' />}>{t('form.meals_count', { count: fields.length })}</Badge>}
 				<ChevronDown className={`size-4 shrink-0 gm-muted transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
 			</button>
 			{expanded && (
 				<div className='space-y-3 border-t border-(--gm-line) p-2.5 sm:p-3'>
+					<div className='flex flex-wrap items-center gap-2'>
+						{fields.length ? (
+							<>
+								<ApplyToAllButton onConfirm={() => onApplyToAll(dayKey)} t={t} />
+								<button type='button' onClick={() => replace([])} className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5'>
+									<Undo2 className='size-3.5' />
+									{t('form.reset_to_base')}
+								</button>
+							</>
+						) : (
+							<button type='button' onClick={copyBase} className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5'>
+								<Copy className='size-3.5' />
+								{t('form.copy_base')}
+							</button>
+						)}
+					</div>
 					<MealsEditor fields={fields} move={move} remove={remove} name={name} control={control} setValue={setValue} onAdd={addMeal} t={t} />
 					{fields.length > 0 && (
 						<button type='button' onClick={addMeal} className='gm-btn-ghost gm-btn-compact inline-flex items-center gap-1.5'>
@@ -554,15 +601,62 @@ function DayOverrideBlock({ dayKey, control, setValue, open, onToggle, t }) {
 }
 
 /* ─────────────────────────── Summary ─────────────────────────── */
-function PlanSummary({ control, t }) {
+function PlanSummary({ control, week, warn, t }) {
 	const meals = useWatch({ control, name: 'baseMeals' });
 	const list = meals || [];
 	const items = list.reduce((sum, m) => sum + (m?.items?.length || 0), 0);
+	const values = week.map(d => d.kcal);
+	const min = Math.min(...values);
+	const max = Math.max(...values);
+	const kcalLabel = Math.round(min) === Math.round(max) ? fmtNum(max) : `${fmtNum(min)}–${fmtNum(max)}`;
 	return (
 		<div className='flex flex-wrap items-center gap-1.5'>
 			<span className='gm-plan__chip font-en tabular-nums'><UtensilsCrossed className='size-3' />{t('form.meals_count', { count: list.length })}</span>
 			<span className='gm-plan__chip font-en tabular-nums'><Layers className='size-3' />{t('form.items_count', { count: items })}</span>
-			<span className='gm-plan__chip font-en tabular-nums text-(--color-primary-700)!'><Flame className='size-3' />{fmtNum(mealsKcal(list))} {t('form.kcal_per_day')}</span>
+			<span className={`gm-plan__chip font-en tabular-nums ${warn ? 'text-amber-600!' : 'text-(--color-primary-700)!'}`}>
+				{warn ? <AlertTriangle className='size-3' /> : <Flame className='size-3' />}
+				<span dir='ltr'>{kcalLabel}</span> {t('form.kcal_per_day')}
+			</span>
+		</div>
+	);
+}
+
+/** Per-day calories as the client will receive them, with a warning when one day drifts from the rest. */
+function WeekKcalStrip({ week, flagged, t }) {
+	return (
+		<div className='space-y-2'>
+			<p className='text-[11.5px] font-semibold gm-muted'>{t('form.week_title')}</p>
+			<div className='flex flex-wrap gap-1.5'>
+				{week.map(d => {
+					const isFlagged = flagged.has(d.key);
+					return (
+						<span
+							key={d.key}
+							className={`inline-flex items-center gap-1.5 rounded-xl border px-2 py-1 text-[11.5px] ${isFlagged ? 'font-semibold text-amber-600' : 'gm-ink-soft'}`}
+							style={isFlagged ? WARN_SURFACE : { borderColor: 'var(--gm-line)' }}
+						>
+							<span>{t(`days.${d.key}`)}</span>
+							<span className='font-en tabular-nums'>{fmtNum(d.kcal)}</span>
+							{d.custom ? <CalendarCog className='size-3 opacity-70' aria-label={t('form.day_custom_hint')} /> : null}
+						</span>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+function KcalGapNotice({ outliers, confirming, t }) {
+	if (!outliers.length) return null;
+	const days = outliers.map(d => `${t(`days.${d.key}`)} (${fmtNum(d.kcal)})`).join('، ');
+	return (
+		<div role='alert' className='flex items-start gap-2.5 rounded-2xl border p-3' style={WARN_SURFACE}>
+			<AlertTriangle className='mt-0.5 size-4 shrink-0 text-amber-600' />
+			<div className='min-w-0 space-y-0.5'>
+				<p className='text-[12.5px] font-bold text-amber-600'>{t('form.kcal_gap_title')}</p>
+				<p className='text-[12px] leading-relaxed gm-ink-soft'>{t('form.kcal_gap_hint', { days })}</p>
+				{confirming ? <p className='text-[12px] font-semibold gm-ink'>{t('form.kcal_gap_confirm_hint')}</p> : null}
+			</div>
 		</div>
 	);
 }
@@ -574,13 +668,25 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel, onCanc
 	const defaultTitle = t('form.meal_n', { n: 1 });
 	const defaults = useMemo(() => planToFormValues(initialPlan, defaultTitle), [initialPlan, defaultTitle]);
 
-	const { control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
+	const { control, handleSubmit, setValue, getValues, formState: { errors, isSubmitting } } = useForm({
 		resolver: yupResolver(schema),
 		defaultValues: defaults,
 		mode: 'onBlur',
 	});
 	const base = useFieldArray({ control, name: 'baseMeals' });
 	const customizeDays = useWatch({ control, name: 'customizeDays' });
+	const watchedBase = useWatch({ control, name: 'baseMeals' });
+	const watchedOverrides = useWatch({ control, name: 'dayOverrides' });
+	const week = useMemo(
+		() => weekKcal({ baseMeals: watchedBase, customizeDays, dayOverrides: watchedOverrides }),
+		[watchedBase, customizeDays, watchedOverrides],
+	);
+	const outliers = useMemo(() => kcalOutliers(week), [week]);
+	const flaggedDays = useMemo(() => new Set(outliers.map(d => d.key)), [outliers]);
+	const weekSignature = week.map(d => `${d.key}:${Math.round(d.kcal)}`).join('|');
+	const [confirmedSignature, setConfirmedSignature] = useState(null);
+	const confirming = outliers.length > 0 && confirmedSignature === weekSignature;
+	const getBaseMeals = useCallback(() => getValues('baseMeals') || [], [getValues]);
 
 	const [notes, setNotes] = useState(() => toListRows(defaults.notesList));
 	const [openDays, setOpenDays] = useState({});
@@ -621,7 +727,26 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel, onCanc
 		}
 	};
 
+	const applyDayToAll = useCallback(dayKey => {
+		const meals = cloneMeals(getValues(`dayOverrides.${dayKey}`) || []);
+		if (!meals.length) return;
+		base.replace(meals);
+		for (const k of DAY_KEYS) setValue(`dayOverrides.${k}`, [], { shouldDirty: true });
+		setValue('customizeDays', false, { shouldDirty: true });
+		setOpenDays({});
+		Notification(t('form.applied_to_all', { day: t(`days.${dayKey}`) }), 'success');
+	}, [base, getValues, setValue, t]);
+
 	const onValid = async data => {
+		const gaps = kcalOutliers(weekKcal(data));
+		if (gaps.length) {
+			const signature = weekKcal(data).map(d => `${d.key}:${Math.round(d.kcal)}`).join('|');
+			if (confirmedSignature !== signature) {
+				setConfirmedSignature(signature);
+				Notification(t('form.kcal_gap_toast'), 'warning');
+				return;
+			}
+		}
 		await onSubmitPayload(formToPayload(data, fromListRows(notes)));
 	};
 	const onInvalid = () => Notification(t('validation.fix_errors'), 'error');
@@ -720,8 +845,21 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel, onCanc
 									className='overflow-hidden'
 								>
 									<div className='space-y-2 pt-3.5'>
-										{DAY_KEYS.map(key => (
-											<DayOverrideBlock key={key} dayKey={key} control={control} setValue={setValue} open={!!openDays[key]} onToggle={toggleDay} t={t} />
+										<WeekKcalStrip week={week} flagged={flaggedDays} t={t} />
+										{DAY_KEYS.map((key, i) => (
+											<DayOverrideBlock
+												key={key}
+												dayKey={key}
+												control={control}
+												setValue={setValue}
+												getBaseMeals={getBaseMeals}
+												onApplyToAll={applyDayToAll}
+												kcal={week[i].kcal}
+												flagged={flaggedDays.has(key)}
+												open={!!openDays[key]}
+												onToggle={toggleDay}
+												t={t}
+											/>
 										))}
 									</div>
 								</motion.div>
@@ -760,6 +898,8 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel, onCanc
 				)}
 			</AnimatePresence>
 
+			<KcalGapNotice outliers={outliers} confirming={confirming} t={t} />
+
 			<div
 				className='sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 border-t px-1 pb-1 pt-3 backdrop-blur-md'
 				style={{ borderColor: 'var(--gm-line)', background: 'color-mix(in srgb, var(--gm-paper) 90%, transparent)' }}
@@ -774,11 +914,11 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel, onCanc
 						<Sparkles className='size-3.5' />
 						{t('btn.ai_assist')}
 					</button>
-					<PlanSummary control={control} t={t} />
+					<PlanSummary control={control} week={week} warn={outliers.length > 0} t={t} />
 				</div>
 				<div className='flex flex-wrap items-center gap-2.5'>
 					{onCancel && <Button color='neutral' name={t('btn.cancel')} onClick={onCancel} disabled={isSubmitting} />}
-					<Button color='primary' type='submit' name={submitLabel} loading={isSubmitting} disabled={isSubmitting} />
+					<Button color='primary' type='submit' name={confirming ? t('form.kcal_gap_save_anyway') : submitLabel} loading={isSubmitting} disabled={isSubmitting} />
 				</div>
 			</div>
 		</form>

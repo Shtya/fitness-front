@@ -2903,7 +2903,17 @@
 			"kcal_per_day": "kcal / day",
 			"basics": "Plan details",
 			"base_day_hint": "These meals apply to every day unless a day is customized.",
-			"customize_days_hint": "Override the base meals for specific weekdays."
+			"customize_days_hint": "Override the base meals for specific weekdays.",
+			"copy_base": "Start from the base meals",
+			"reset_to_base": "Use the base meals",
+			"apply_to_all": "Apply this day to all days",
+			"applied_to_all": "{day} meals now apply to every day",
+			"week_title": "What the client gets each day (kcal)",
+			"kcal_gap_title": "Calories differ a lot between days",
+			"kcal_gap_hint": "{days} do not match the rest of the week. If you built the whole plan inside one day, open it and use “Apply this day to all days”.",
+			"kcal_gap_confirm_hint": "If this is intentional, press “Save anyway”.",
+			"kcal_gap_toast": "Check the daily calories before saving. Press save again if this is intentional.",
+			"kcal_gap_save_anyway": "Save anyway"
 		},
 		"unit": {
 			"g": "g",

@@ -178,6 +178,33 @@ export function formToPayload(data, notes) {
 export const mealKcal = meal => (meal?.items || []).reduce((sum, it) => sum + coerceNum(it?.calories), 0);
 export const mealsKcal = meals => (meals || []).reduce((sum, m) => sum + mealKcal(m), 0);
 
+/** What each weekday will actually serve the client once saved (mirrors formToPayload). */
+export function weekKcal({ baseMeals, customizeDays, dayOverrides }) {
+	const baseKcal = mealsKcal(baseMeals);
+	return DAY_KEYS.map(key => {
+		const own = customizeDays ? dayOverrides?.[key] || [] : [];
+		const custom = own.length > 0;
+		return { key, custom, kcal: custom ? mealsKcal(own) : baseKcal };
+	});
+}
+
+/** Relative gap between the lightest and heaviest day that we treat as a likely mistake. */
+export const KCAL_GAP_WARN = 0.15;
+
+/**
+ * Days whose calories sit far from the rest of the week. A single customized day
+ * (e.g. Saturday at 2,000 kcal while the base serves 1,270) is the classic slip.
+ */
+export function kcalOutliers(week, gap = KCAL_GAP_WARN) {
+	const values = week.map(d => d.kcal);
+	const max = Math.max(...values, 0);
+	const min = Math.min(...values);
+	if (!max || (max - min) / max <= gap) return [];
+	const sorted = [...values].sort((a, b) => a - b);
+	const median = sorted[Math.floor(sorted.length / 2)];
+	return week.filter(d => Math.abs(d.kcal - median) / Math.max(median, d.kcal, 1) > gap);
+}
+
 /* ─────────────────────────── AI ─────────────────────────── */
 export function buildAiPrompt(userText) {
 	return `Return ONLY valid JSON matching exactly:
