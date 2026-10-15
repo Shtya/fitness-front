@@ -18,10 +18,11 @@ import Header from './Header';
 import LastRouteTracker from './LastRouteTracker';
 import LastRouteRestorer from './LastRouteRestorer';
 import { useRouter, useParams } from 'next/navigation';
-import { LogIn, LogOut, Shield } from 'lucide-react';
+import { ChevronDown, ChevronUp, LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { IMPERSONATION_EVENT, notifyImpersonationChanged } from '@/lib/impersonation';
 import { setStoredUser } from '@/app/role-access';
+import { initDashboardBackground } from '@/lib/dashboard-background';
 import { SidebarChromeProvider } from './SidebarChromeContext';
 import ClientFloatingBar from './ClientFloatingBar';
 import './sidebar-glass.css';
@@ -36,7 +37,28 @@ const LS_OFFSET_KEY = 'sidebar:offset';
 // ImpersonationBar
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ImpersonationBar({ onExit }) {
+const IMPERSONATION_COLLAPSED_KEY = 'impersonation-bar:collapsed';
+
+function useImpersonationCollapsed() {
+	const [collapsed, setCollapsed] = useState(false);
+
+	useEffect(() => {
+		try {
+			setCollapsed(localStorage.getItem(IMPERSONATION_COLLAPSED_KEY) === '1');
+		} catch {}
+	}, []);
+
+	const update = useCallback(next => {
+		setCollapsed(next);
+		try {
+			localStorage.setItem(IMPERSONATION_COLLAPSED_KEY, next ? '1' : '0');
+		} catch {}
+	}, []);
+
+	return [collapsed, update];
+}
+
+function ImpersonationBar({ onExit, collapsed, onCollapsedChange: toggleCollapsed }) {
 	const [user, setUser] = useState(null);
 
 	useEffect(() => {
@@ -58,45 +80,77 @@ function ImpersonationBar({ onExit }) {
 
 	if (!user) return null;
 
+	const gradient =
+		'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-via, var(--color-gradient-from)), var(--color-gradient-to))';
+
 	return (
-		<motion.div
-			initial={{ y: -40, opacity: 0 }}
-			animate={{ y: 0, opacity: 1 }}
-			exit={{ y: -40, opacity: 0 }}
-			transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-			className="fixed top-0 inset-x-0 z-[200000] flex items-center justify-between gap-3 px-3 sm:px-5 py-2.5 text-white shadow-lg"
-			style={{
-				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-via, var(--color-gradient-from)), var(--color-gradient-to))',
-				paddingTop: 'max(0.55rem, env(safe-area-inset-top))',
-			}}
+		<div
+			className="pointer-events-none fixed inset-x-0 top-0 z-[200000] flex justify-center"
 			role="status"
 			aria-live="polite"
 		>
-			<div className="flex items-center gap-2.5 min-w-0">
-				<div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0">
-					<Shield size={14} />
-				</div>
-				<div className="min-w-0">
-					<p className="text-[10px] font-bold opacity-80 uppercase tracking-widest leading-none mb-0.5">
-						Viewing as
-					</p>
-					<p className="text-sm font-black truncate leading-tight">
-						{user.name}
-						<span className="font-normal opacity-75 ms-1.5 text-xs hidden sm:inline">({user.email})</span>
-					</p>
-				</div>
-			</div>
-
-			<button
-				type="button"
-				onClick={onExit}
-				className="shrink-0 inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white text-slate-900 text-xs sm:text-sm font-bold shadow-md hover:bg-white/95 transition-colors"
-			>
-				<LogOut size={13} />
-				<span className="hidden xs:inline sm:inline">Return to Super Admin</span>
-				<span className="sm:hidden">Exit</span>
-			</button>
-		</motion.div>
+			<AnimatePresence mode="wait" initial={false}>
+				{collapsed ? (
+					<motion.button
+						key="tab"
+						type="button"
+						onClick={() => toggleCollapsed(false)}
+						initial={{ y: -24, opacity: 0 }}
+						animate={{ y: 0, opacity: 1 }}
+						exit={{ y: -24, opacity: 0 }}
+						transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+						className="pointer-events-auto inline-flex items-center gap-1.5 rounded-b-xl px-3 pb-1 pt-[max(0.25rem,env(safe-area-inset-top))] text-white opacity-80 shadow-md transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+						style={{ background: gradient }}
+						title={`Viewing as ${user.name}`}
+						aria-label={`Viewing as ${user.name}. Show impersonation bar`}
+					>
+						<Shield size={12} />
+						<ChevronDown size={14} />
+					</motion.button>
+				) : (
+					<motion.div
+						key="pill"
+						initial={{ y: -40, opacity: 0 }}
+						animate={{ y: 0, opacity: 1 }}
+						exit={{ y: -40, opacity: 0 }}
+						transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+						className="pointer-events-auto mx-2 mt-[max(0.5rem,env(safe-area-inset-top))] flex max-w-[calc(100vw-1rem)] items-center gap-2 rounded-2xl py-1.5 pe-1.5 ps-2 text-white shadow-lg ring-1 ring-white/20"
+						style={{ background: gradient }}
+					>
+						<div className="shrink-0 rounded-lg bg-white/20 p-1.5">
+							<Shield size={13} />
+						</div>
+						<div className="min-w-0">
+							<p className="mb-0.5 text-[9px] font-bold uppercase leading-none tracking-widest opacity-80">
+								Viewing as
+							</p>
+							<p className="max-w-[40vw] truncate text-xs font-black leading-tight sm:max-w-88">
+								{user.name}
+								<span className="ms-1.5 hidden font-normal opacity-75 md:inline">({user.email})</span>
+							</p>
+						</div>
+						<button
+							type="button"
+							onClick={onExit}
+							className="ms-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 shadow-sm transition-colors hover:bg-white/95"
+						>
+							<LogOut size={12} />
+							<span className="hidden sm:inline">Return to Super Admin</span>
+							<span className="sm:hidden">Exit</span>
+						</button>
+						<button
+							type="button"
+							onClick={() => toggleCollapsed(true)}
+							className="grid size-7 shrink-0 place-items-center rounded-lg bg-white/15 transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+							title="Hide"
+							aria-label="Hide impersonation bar"
+						>
+							<ChevronUp size={15} />
+						</button>
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</div>
 	);
 }
 
@@ -116,6 +170,7 @@ export default function Layout({ children }) {
 	const [role, setRole]       = useState('user');
 	const [isMobile, setIsMobile] = useState(false);
 	const [isImpersonating, setIsImpersonating] = useState(false);
+	const [impersonationCollapsed, setImpersonationCollapsed] = useImpersonationCollapsed();
 
 	// Detect impersonation (same-tab nav won't fire `storage` — listen to custom event + route)
 	useEffect(() => {
@@ -208,6 +263,12 @@ export default function Layout({ children }) {
 
 	const user = useUser();
 	usePageAccessSync(user?.id);
+	const userReady = user !== undefined;
+	const userId = user?.id;
+	useEffect(() => {
+		if (!userReady) return;
+		void initDashboardBackground(userId);
+	}, [userReady, userId]);
 	useEffect(() => {
 		if (user) {
 			try { setRole(user?.role); } catch {}
@@ -450,6 +511,9 @@ export default function Layout({ children }) {
 								data-sidebar-offset={focusMode && !isWhatsAppRoute && !isAuthRoute ? 'true' : undefined}
 								data-ai-studio={isAiStudioRoute ? 'true' : undefined}
 							>
+								{isImpersonating && !impersonationCollapsed ? (
+									<div aria-hidden className="h-[max(3.5rem,calc(env(safe-area-inset-top)+3rem))] shrink-0" />
+								) : null}
 								{showStaffChrome && (
 									<div
 										className={[
@@ -473,7 +537,6 @@ export default function Layout({ children }) {
 										transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
 										className={isAppShell ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : undefined}
 									>
-										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
 										<div
 											id="body"
 											className={[
@@ -494,7 +557,6 @@ export default function Layout({ children }) {
 													: pathname !== '/' && !isPresentationRoute
 														? 'min-h-screen'
 														: '',
-												isImpersonating ? 'pt-14' : '',
 												isClientShell && !isChatRoute ? 'pb-[var(--client-dock)]' : '',
 											].filter(Boolean).join(' ')}
 										>
@@ -516,7 +578,11 @@ export default function Layout({ children }) {
 					{/* ── Impersonation Bar (top) ── */}
 					<AnimatePresence>
 						{isImpersonating && (
-							<ImpersonationBar onExit={handleExitImpersonation} />
+							<ImpersonationBar
+								onExit={handleExitImpersonation}
+								collapsed={impersonationCollapsed}
+								onCollapsedChange={setImpersonationCollapsed}
+							/>
 						)}
 					</AnimatePresence>
 

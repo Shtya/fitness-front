@@ -864,6 +864,26 @@
 		}
 	},
 	"themeSwitcher": {
+		"tabs": {
+			"colors": "Colors",
+			"background": "Background"
+		},
+		"background": {
+			"images": "Images",
+			"gradients": "Gradients",
+			"custom": "Custom image",
+			"default": "Default",
+			"pasteHint": "Paste an image (Ctrl+V), drop it here, or choose a file",
+			"choose": "Choose image",
+			"uploading": "Applying…",
+			"scopeSystem": "As super admin, your choice becomes the default background for everyone.",
+			"scopePersonal": "Only you will see this background.",
+			"useSystem": "Use system default",
+			"resetSystem": "Reset to default",
+			"tooLarge": "This image is too large to save. Try a smaller one.",
+			"notImage": "Paste or choose an image file.",
+			"failed": "Couldn't change the background."
+		},
 		"ariaLabel": "Theme color picker",
 		"trigger": "Theme",
 		"title": "Choose Theme",

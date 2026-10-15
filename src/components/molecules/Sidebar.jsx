@@ -6,7 +6,7 @@ import api from '@/utils/axios';
 import { clearClientSession } from '@/lib/session-cleanup';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, ChevronRight, BrainCircuit, GanttChart, FileText, FilePenLine, Inbox, Layers, Layers3, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Sliders, AudioLines, ShieldAlert, Radar, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, Maximize2, ScanLine, Library, ScanSearch, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, ChevronRight, BrainCircuit, GanttChart, FileText, FilePenLine, Inbox, Layers, Layers3, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Sliders, AudioLines, ShieldAlert, Radar, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, Maximize2, ScanLine, Library, ScanSearch, Moon, Sun, Image as ImageIcon } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -26,6 +26,7 @@ import { createVisiblePoller } from '@/lib/visible-poll';
 import { syncAppBadge } from '@/lib/app-badge';
 import { applyPageAccessToSections } from '@/lib/nav-access';
 import { useSidebarChrome } from './SidebarChromeContext';
+import DashboardBackgroundPicker from './DashboardBackgroundPicker';
 import {
 	readingThemeToSidebarPalette,
 	useAiReadingChrome,
@@ -1629,6 +1630,8 @@ function ThemePreview() {
 const ThemePanel = React.forwardRef(function ThemePanel({ themeEntries, currentTheme, currentPalette, mode, onMode, onSelect, pos, tTheme }, ref) {
   const isDark = mode === 'dark';
   const reduceMotion = useReducedMotion();
+  const [tab, setTab] = useState('colors');
+  const tabLabel = (id, fallback) => (tTheme?.has?.(`tabs.${id}`) ? tTheme(`tabs.${id}`) : fallback);
   const paletteName = (key, palette) => (tTheme?.has?.(`palettes.${key}`) ? tTheme(`palettes.${key}`) : palette.name);
 
   const onGridKeyDown = e => {
@@ -1687,7 +1690,28 @@ const ThemePanel = React.forwardRef(function ThemePanel({ themeEntries, currentT
         })}
       </div>
 
+      <div className='tp-tabs' role='tablist'>
+        {[
+          { id: 'colors', Icon: Palette, label: tabLabel('colors', 'Colors') },
+          { id: 'background', Icon: ImageIcon, label: tabLabel('background', 'Background') },
+        ].map(({ id, Icon, label }) => (
+          <button
+            key={id}
+            type='button'
+            role='tab'
+            aria-selected={tab === id}
+            className={`tp-tabs__btn${tab === id ? ' is-on' : ''}`}
+            onClick={() => setTab(id)}>
+            <Icon aria-hidden strokeWidth={2.1} />
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className='tp-scroll'>
+        {tab === 'background' ? (
+          <DashboardBackgroundPicker t={tTheme} />
+        ) : (
         <div className='tp-grid' role='radiogroup' aria-label={tTheme?.('ariaLabel') || 'Theme color picker'} onKeyDown={onGridKeyDown}>
           {themeEntries.map(([key, palette], idx) => {
             const isActive = currentTheme === key;
@@ -1730,9 +1754,10 @@ const ThemePanel = React.forwardRef(function ThemePanel({ themeEntries, currentT
             );
           })}
         </div>
+        )}
       </div>
 
-      {tTheme?.('footer') ? <p className='tp-foot'>{tTheme('footer')}</p> : null}
+      {tab === 'colors' && tTheme?.('footer') ? <p className='tp-foot'>{tTheme('footer')}</p> : null}
     </motion.div>
   );
 });
