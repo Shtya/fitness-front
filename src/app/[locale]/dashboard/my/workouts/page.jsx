@@ -35,6 +35,7 @@ import api, { baseImg } from '@/utils/axios';
 import weeklyProgram from './exercises';
 import { createSessionFromDay } from '@/components/pages/workouts/helpers';
 import { RestTimerCard } from '@/components/pages/workouts/RestTimerCard';
+import CardioTimerCard from '@/components/pages/workouts/CardioTimerCard';
 import { AudioHubInline } from '@/components/pages/workouts/AudioHub';
 import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
