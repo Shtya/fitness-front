@@ -100,13 +100,20 @@ export const AGENT_COPY = {
 		kbSave: 'Save entry',
 		categories: { project: 'Project', service: 'Service', price: 'Price', policy: 'Policy', faq: 'FAQ', other: 'Other' },
 		// test
-		testHint: 'Try the agent with your current (even unsaved) settings. Nothing is sent to WhatsApp.',
-		testPlaceholder: 'Write as the customer…',
+		testHint: 'Private test chat. Uses your current settings and knowledge base — nothing is sent to WhatsApp.',
+		testPlaceholder: 'Message',
 		testSend: 'Send',
-		testReset: 'Reset',
-		testEmpty: 'Start a conversation as a customer.',
-		testThinking: 'Thinking…',
+		testReset: 'Clear chat',
+		testEmptyTitle: 'This is a private test chat',
+		testEmpty: 'Write as the customer. Replies use your current settings and knowledge base.',
+		testKbHint: 'Ask about anything you added to the knowledge base.',
+		testThinking: 'typing…',
 		testNoReply: 'The agent chose not to reply.',
+		testOnline: 'Test · not sent to WhatsApp',
+		testToday: 'Today',
+		modelFailedThisTurn: '{model} did not work this time ({reason}).',
+		modelSwitchedTo: 'Switched to {model} so you still get a reply.',
+		fallbackBanner: '{from} failed this turn ({reason}). Using {to} instead.',
 		reasoning: 'Why',
 		sources: 'Sources',
 		noSources: 'No knowledge entries were used.',
@@ -283,13 +290,20 @@ export const AGENT_COPY = {
 		kbCancel: 'إلغاء',
 		kbSave: 'حفظ المدخل',
 		categories: { project: 'مشروع', service: 'خدمة', price: 'سعر', policy: 'سياسة', faq: 'سؤال شائع', other: 'أخرى' },
-		testHint: 'جرّب الوكيل بالإعدادات الحالية (حتى غير المحفوظة). لا يُرسل أي شيء إلى واتساب.',
-		testPlaceholder: 'اكتب بصفتك العميل…',
+		testHint: 'محادثة تجريبية خاصة. تستخدم إعداداتك الحالية وقاعدة المعرفة — لا يُرسل شيء إلى واتساب.',
+		testPlaceholder: 'رسالة',
 		testSend: 'إرسال',
-		testReset: 'إعادة ضبط',
-		testEmpty: 'ابدأ محادثة بصفتك عميلًا.',
-		testThinking: 'يفكّر…',
+		testReset: 'مسح المحادثة',
+		testEmptyTitle: 'هذه محادثة تجريبية خاصة',
+		testEmpty: 'اكتب بصفتك العميل. الردود تستخدم إعداداتك الحالية وقاعدة المعرفة.',
+		testKbHint: 'اسأل عن أي شيء أضفته في قاعدة المعرفة.',
+		testThinking: 'يكتب…',
 		testNoReply: 'قرر الوكيل عدم الرد.',
+		testOnline: 'تجربة · لا تُرسل إلى واتساب',
+		testToday: 'اليوم',
+		modelFailedThisTurn: '{model} لم يشتغل هذه المرة ({reason}).',
+		modelSwitchedTo: 'تم التحويل إلى {model} حتى يصلك رد.',
+		fallbackBanner: '{from} فشل هذه المرة ({reason}). يتم الرد عبر {to}.',
 		reasoning: 'السبب',
 		sources: 'المصادر',
 		noSources: 'لم تُستخدم مدخلات من قاعدة المعرفة.',
@@ -374,6 +388,10 @@ export function agentCopy(locale) {
 
 export function reasonLabel(copy, reason) {
 	return copy.reasons[reason] || reason;
+}
+
+export function fillTemplate(template, vars = {}) {
+	return String(template || '').replace(/\{(\w+)\}/g, (_, key) => (vars[key] == null ? '' : String(vars[key])));
 }
 
 export function splitList(value) {

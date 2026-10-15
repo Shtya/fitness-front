@@ -11,7 +11,6 @@ import {
 	Pencil,
 	Plus,
 	RefreshCw,
-	RotateCcw,
 	Save,
 	Search,
 	Send,
@@ -21,19 +20,11 @@ import {
 } from 'lucide-react';
 import { WaCustomSelect } from '../WaCustomSelect';
 import { apiErrorMessage, whatsappAiAgentApi } from './whatsapp-ai-api';
-import { agentCopy, reasonLabel, splitList } from './agent-copy';
-
-const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
-const GLOW = '0 10px 24px -10px var(--color-primary-400)';
-const fieldClass =
-	'wa-input-3d w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-900';
-const ghostButton =
-	'inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800';
-const primaryButtonClass =
-	'inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white transition disabled:cursor-wait disabled:opacity-60';
+import { agentCopy, fillTemplate, splitList } from './agent-copy';
+import './wa-agent.css';
 
 const PROVIDERS = [
-	{ value: 'ai-free', label: 'AI Free (auto chain)' },
+	{ value: 'ai-free', label: 'AI Free' },
 	{ value: 'llm7-free', label: 'LLM7' },
 	{ value: 'pollinations-free', label: 'Pollinations' },
 	{ value: 'dragify-free', label: 'Dragify' },
@@ -41,20 +32,20 @@ const PROVIDERS = [
 ];
 const DIALECTS = {
 	en: [
-		{ value: 'auto', label: "Match the customer" },
-		{ value: 'msa', label: 'Modern Standard Arabic' },
-		{ value: 'egyptian', label: 'Egyptian Arabic' },
-		{ value: 'gulf', label: 'Gulf Arabic' },
-		{ value: 'levantine', label: 'Levantine Arabic' },
+		{ value: 'auto', label: 'Match customer' },
+		{ value: 'msa', label: 'MSA' },
+		{ value: 'egyptian', label: 'Egyptian' },
+		{ value: 'gulf', label: 'Gulf' },
+		{ value: 'levantine', label: 'Levantine' },
 		{ value: 'english', label: 'English' },
 	],
 	ar: [
-		{ value: 'auto', label: 'مطابقة لهجة العميل' },
-		{ value: 'msa', label: 'العربية الفصحى' },
-		{ value: 'egyptian', label: 'المصرية' },
-		{ value: 'gulf', label: 'الخليجية' },
-		{ value: 'levantine', label: 'الشامية' },
-		{ value: 'english', label: 'الإنجليزية' },
+		{ value: 'auto', label: 'لهجة العميل' },
+		{ value: 'msa', label: 'فصحى' },
+		{ value: 'egyptian', label: 'مصرية' },
+		{ value: 'gulf', label: 'خليجية' },
+		{ value: 'levantine', label: 'شامية' },
+		{ value: 'english', label: 'إنجليزية' },
 	],
 };
 const TONES = {
@@ -70,7 +61,7 @@ const TONES = {
 		{ value: 'professional', label: 'احترافية' },
 		{ value: 'friendly', label: 'ودّية' },
 		{ value: 'sales', label: 'بيعية' },
-		{ value: 'support', label: 'دعم فني' },
+		{ value: 'support', label: 'دعم' },
 		{ value: 'formal', label: 'رسمية' },
 		{ value: 'concise', label: 'مختصرة' },
 	],
@@ -98,48 +89,73 @@ function Switch({ checked, onChange, label, disabled }) {
 			aria-label={label}
 			disabled={disabled}
 			onClick={() => onChange(!checked)}
-			className={`relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors disabled:opacity-50 ${
-				checked ? 'bg-[var(--color-primary-500)]' : 'bg-slate-200 dark:bg-slate-700'
-			}`}
+			className={`wa-ag-switch${checked ? ' is-on' : ''}`}
 		>
-			<span
-				className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200 ${
-					checked ? 'start-[22px]' : 'start-0.5'
-				}`}
-			/>
+			<span />
 		</button>
 	);
 }
 
-function ToggleRow({ label, hint, checked, onChange }) {
+function Toggle({ label, hint, checked, onChange }) {
 	return (
-		<div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-700">
-			<div className="min-w-0">
-				<p className="text-xs font-bold text-slate-800 dark:text-slate-100">{label}</p>
-				{hint ? <p className="mt-0.5 text-[11px] leading-4 text-slate-400">{hint}</p> : null}
+		<div className="wa-ag-toggle">
+			<div>
+				<p className="text-[12.5px] font-bold leading-4">{label}</p>
+				{hint ? <p className="wa-ag-hint mt-0.5">{hint}</p> : null}
 			</div>
 			<Switch label={label} checked={Boolean(checked)} onChange={onChange} />
 		</div>
 	);
 }
 
-function Section({ title, hint, children }) {
+function Field({ label, hint, wide, num, children }) {
 	return (
-		<fieldset className="space-y-3 rounded-2xl border border-slate-200 p-3.5 dark:border-slate-700">
-			<legend className="px-1 text-sm font-black text-slate-800 dark:text-slate-100">{title}</legend>
-			{hint ? <p className="-mt-1 text-[11px] leading-4 text-slate-500">{hint}</p> : null}
+		<div className={`wa-ag-field${wide ? ' is-wide' : ''}${num ? ' is-num' : ''}`}>
+			{label ? <span className="wa-ag-label">{label}</span> : null}
 			{children}
-		</fieldset>
+			{hint ? <span className="wa-ag-hint">{hint}</span> : null}
+		</div>
 	);
 }
 
-function Field({ label, hint, children }) {
+function Chips({ label, value, onChange, options, ariaLabel }) {
 	return (
-		<label className="block space-y-1 text-xs font-bold">
-			<span>{label}</span>
-			{children}
-			{hint ? <span className="block text-[11px] font-normal text-slate-400">{hint}</span> : null}
-		</label>
+		<div className="wa-ag-field is-wide">
+			{label ? <span className="wa-ag-label">{label}</span> : null}
+			<div className="wa-ag-chips" role="listbox" aria-label={ariaLabel || label}>
+				{options.map(option => (
+					<button
+						key={option.value}
+						type="button"
+						role="option"
+						aria-selected={value === option.value}
+						onClick={() => onChange(option.value)}
+						className={`wa-ag-chip${value === option.value ? ' is-on' : ''}`}
+					>
+						{option.label}
+					</button>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function Segmented({ value, onChange, options, ariaLabel }) {
+	return (
+		<div className="wa-ag-seg" role="radiogroup" aria-label={ariaLabel}>
+			{options.map(option => (
+				<button
+					key={option.value}
+					type="button"
+					role="radio"
+					aria-checked={value === option.value}
+					onClick={() => onChange(option.value)}
+					className={value === option.value ? 'is-on' : ''}
+				>
+					{option.label}
+				</button>
+			))}
+		</div>
 	);
 }
 
@@ -187,29 +203,46 @@ function draftToPayload(draft) {
 	};
 }
 
+function providerLabel(draft, text) {
+	if (draft.provider === 'external') return text.externalModels;
+	return labelForProvider(draft.provider, text);
+}
+
+function labelForProvider(name, text) {
+	if (name === 'external') return text.externalModels;
+	return PROVIDERS.find(item => item.value === name)?.label || name;
+}
+
+function formatClock(date, locale) {
+	return new Intl.DateTimeFormat(String(locale || 'en').toLowerCase().startsWith('ar') ? 'ar' : 'en', {
+		hour: 'numeric',
+		minute: '2-digit',
+	}).format(date);
+}
+
 /* ------------------------------------------------------------------ setup */
 
 function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSubmit }) {
 	const update = (key, value) => setDraft(current => ({ ...current, [key]: value }));
 	const updatePermission = (key, value) =>
 		setDraft(current => ({ ...current, permissions: { ...current.permissions, [key]: value } }));
-	const modeOptions = [
-		{ value: 'auto', label: text.modeAuto },
-		{ value: 'suggest', label: text.modeSuggest },
-	];
-	return (
-		<form onSubmit={onSubmit} className="space-y-4">
-			<div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 p-3.5 dark:border-slate-700">
-				<div>
-					<p className="text-sm font-bold text-slate-800 dark:text-slate-100">{text.enabled}</p>
-					<p className="mt-0.5 text-xs text-slate-400">{text.enabledHint}</p>
-				</div>
-				<Switch label={text.enabled} checked={Boolean(draft.enabled)} onChange={value => update('enabled', value)} />
-			</div>
 
-			<div className="grid gap-3 sm:grid-cols-2">
-				<Field label={text.scope}>
-					<WaCustomSelect
+	return (
+		<form onSubmit={onSubmit} className="wa-ag-desk">
+			<aside className="wa-ag-rail">
+				<div className="wa-ag-rail-span">
+					<h3>{text.enabled}</h3>
+					<p className="wa-ag-hint">{text.enabledHint}</p>
+					<div className="flex items-center justify-between gap-3">
+						<span className="text-[13px] font-bold">
+							{draft.enabled ? (draft.defaultMode === 'auto' ? text.chip.auto : text.chip.suggest) : text.chip.off}
+						</span>
+						<Switch label={text.enabled} checked={Boolean(draft.enabled)} onChange={value => update('enabled', value)} />
+					</div>
+				</div>
+				<div>
+					<span className="wa-ag-label">{text.scope}</span>
+					<Segmented
 						ariaLabel={text.scope}
 						value={draft.scope}
 						onChange={value => update('scope', value)}
@@ -218,101 +251,110 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 							{ value: 'selected', label: text.scopeSelected },
 						]}
 					/>
-				</Field>
-				<Field label={text.defaultMode}>
-					<WaCustomSelect
+				</div>
+				<div>
+					<span className="wa-ag-label">{text.defaultMode}</span>
+					<Segmented
 						ariaLabel={text.defaultMode}
 						value={draft.defaultMode}
 						onChange={value => update('defaultMode', value)}
-						options={modeOptions}
+						options={[
+							{ value: 'auto', label: text.modeAuto },
+							{ value: 'suggest', label: text.modeSuggest },
+						]}
 					/>
-				</Field>
-			</div>
-			<p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800/60" dir="auto">
-				{text.provider}: <span className="font-bold text-slate-700 dark:text-slate-200">{draft.provider === 'external' ? text.externalModels : (PROVIDERS.find(item => item.value === draft.provider)?.label || draft.provider)}</span>
-				{' · '}
-				{text.model}: <span className="font-bold text-slate-700 dark:text-slate-200" dir="ltr">{draft.model || 'auto'}</span>
-			</p>
-
-			<Section title={text.sectionIdentity}>
-				<div className="grid gap-3 sm:grid-cols-2">
-					<Field label={text.agentName}>
-						<input value={draft.agentName || ''} onChange={event => update('agentName', event.target.value)} maxLength={80} dir="auto" className={fieldClass} />
-					</Field>
-					<Field label={text.businessName}>
-						<input value={draft.businessName || ''} onChange={event => update('businessName', event.target.value)} maxLength={120} dir="auto" className={fieldClass} />
-					</Field>
 				</div>
-				<Field label={text.persona}>
-					<textarea value={draft.persona || ''} onChange={event => update('persona', event.target.value)} rows={3} maxLength={2000} dir="auto" className={`${fieldClass} resize-y`} />
-				</Field>
-				<div className="grid gap-3 sm:grid-cols-3">
-					<Field label={text.dialect}>
-						<WaCustomSelect ariaLabel={text.dialect} value={draft.dialect} onChange={value => update('dialect', value)} options={DIALECTS[lang]} />
-					</Field>
-					<Field label={text.tone}>
-						<WaCustomSelect ariaLabel={text.tone} value={draft.tone} onChange={value => update('tone', value)} options={TONES[lang]} />
-					</Field>
-					<Field label={text.replyLength}>
-						<WaCustomSelect ariaLabel={text.replyLength} value={draft.replyLength} onChange={value => update('replyLength', value)} options={LENGTHS[lang]} />
-					</Field>
+				<div className="wa-ag-rail-span wa-ag-model">
+					<span className="wa-ag-label">{text.provider}</span>
+					<b dir="auto">{providerLabel(draft, text)}</b>
+					<span dir="ltr">{text.model}: {draft.model || 'auto'}</span>
 				</div>
-			</Section>
+				<button type="submit" disabled={saving} className="wa-ag-save wa-ag-rail-span">
+					{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+					{text.save}
+				</button>
+				{saved && !error ? <p className="wa-ag-note is-ok wa-ag-rail-span">{text.saved}</p> : null}
+				{error ? <p className="wa-ag-note is-bad wa-ag-rail-span">{error}</p> : null}
+			</aside>
 
-			<Section title={text.sectionRules}>
-				<Field label={text.rules}>
-					<textarea value={draft.rules || ''} onChange={event => update('rules', event.target.value)} rows={4} maxLength={4000} dir="auto" className={`${fieldClass} resize-y`} />
-				</Field>
-				<div className="grid gap-3 sm:grid-cols-2">
-					<Field label={text.allowedTopics}>
-						<input value={draft.allowedTopicsText} onChange={event => update('allowedTopicsText', event.target.value)} dir="auto" className={fieldClass} />
-					</Field>
-					<Field label={text.forbiddenTopics}>
-						<input value={draft.forbiddenTopicsText} onChange={event => update('forbiddenTopicsText', event.target.value)} dir="auto" className={fieldClass} />
-					</Field>
-				</div>
-			</Section>
+			<div className="wa-ag-mods">
+				<section className="wa-ag-mod">
+					<h3>{text.sectionIdentity}</h3>
+					<div className="wa-ag-fields">
+						<Field label={text.agentName}>
+							<input value={draft.agentName || ''} onChange={event => update('agentName', event.target.value)} maxLength={80} dir="auto" className="wa-ag-input" />
+						</Field>
+						<Field label={text.businessName}>
+							<input value={draft.businessName || ''} onChange={event => update('businessName', event.target.value)} maxLength={120} dir="auto" className="wa-ag-input" />
+						</Field>
+						<Field label={text.persona} wide>
+							<textarea value={draft.persona || ''} onChange={event => update('persona', event.target.value)} rows={3} maxLength={2000} dir="auto" className="wa-ag-area" />
+						</Field>
+						<Chips label={text.dialect} value={draft.dialect} onChange={value => update('dialect', value)} options={DIALECTS[lang]} />
+						<Chips label={text.tone} value={draft.tone} onChange={value => update('tone', value)} options={TONES[lang]} />
+						<Chips label={text.replyLength} value={draft.replyLength} onChange={value => update('replyLength', value)} options={LENGTHS[lang]} />
+					</div>
+				</section>
 
-			<Section title={text.sectionPermissions} hint={text.permissionsHint}>
-				<div className="grid gap-2 sm:grid-cols-2">
-					<ToggleRow label={text.permQuote} checked={draft.permissions?.quotePrices} onChange={value => updatePermission('quotePrices', value)} />
-					<ToggleRow label={text.permCommit} checked={draft.permissions?.makeCommitments} onChange={value => updatePermission('makeCommitments', value)} />
-					<ToggleRow label={text.permDiscount} checked={draft.permissions?.offerDiscounts} onChange={value => updatePermission('offerDiscounts', value)} />
-					<ToggleRow label={text.permLinks} checked={draft.permissions?.shareLinks} onChange={value => updatePermission('shareLinks', value)} />
-				</div>
-			</Section>
+				<section className="wa-ag-mod">
+					<h3>{text.sectionRules}</h3>
+					<div className="wa-ag-fields">
+						<Field label={text.rules} wide>
+							<textarea value={draft.rules || ''} onChange={event => update('rules', event.target.value)} rows={4} maxLength={4000} dir="auto" className="wa-ag-area" />
+						</Field>
+						<Field label={text.allowedTopics}>
+							<input value={draft.allowedTopicsText} onChange={event => update('allowedTopicsText', event.target.value)} dir="auto" className="wa-ag-input" />
+						</Field>
+						<Field label={text.forbiddenTopics}>
+							<input value={draft.forbiddenTopicsText} onChange={event => update('forbiddenTopicsText', event.target.value)} dir="auto" className="wa-ag-input" />
+						</Field>
+					</div>
+				</section>
 
-			<Section title={text.sectionContext}>
-				<div className="grid gap-2 sm:grid-cols-2">
-					<ToggleRow label={text.useKnowledgeBase} checked={draft.useKnowledgeBase} onChange={value => update('useKnowledgeBase', value)} />
-					<ToggleRow label={text.knowledgeOnly} hint={text.knowledgeOnlyHint} checked={draft.knowledgeOnly} onChange={value => update('knowledgeOnly', value)} />
-					<ToggleRow label={text.useContactMemory} checked={draft.useContactMemory} onChange={value => update('useContactMemory', value)} />
-					<Field label={text.contextLimit}>
-						<input type="number" min="4" max="40" value={draft.contextMessageLimit ?? 12} onChange={event => update('contextMessageLimit', event.target.value)} className={fieldClass} />
-					</Field>
-				</div>
-			</Section>
+				<section className="wa-ag-mod">
+					<h3>{text.sectionPermissions}</h3>
+					<p className="wa-ag-hint">{text.permissionsHint}</p>
+					<Toggle label={text.permQuote} checked={draft.permissions?.quotePrices} onChange={value => updatePermission('quotePrices', value)} />
+					<Toggle label={text.permCommit} checked={draft.permissions?.makeCommitments} onChange={value => updatePermission('makeCommitments', value)} />
+					<Toggle label={text.permDiscount} checked={draft.permissions?.offerDiscounts} onChange={value => updatePermission('offerDiscounts', value)} />
+					<Toggle label={text.permLinks} checked={draft.permissions?.shareLinks} onChange={value => updatePermission('shareLinks', value)} />
+				</section>
 
-			<Section title={text.sectionDisclosure}>
-				<ToggleRow label={text.discloseAi} checked={draft.discloseAi} onChange={value => update('discloseAi', value)} />
-				{draft.discloseAi ? (
-					<Field label={text.disclosureText}>
-						<input value={draft.disclosureText || ''} onChange={event => update('disclosureText', event.target.value)} maxLength={300} dir="auto" className={fieldClass} />
-					</Field>
-				) : null}
-			</Section>
+				<section className="wa-ag-mod">
+					<h3>{text.sectionContext}</h3>
+					<Toggle label={text.useKnowledgeBase} checked={draft.useKnowledgeBase} onChange={value => update('useKnowledgeBase', value)} />
+					<Toggle label={text.knowledgeOnly} hint={text.knowledgeOnlyHint} checked={draft.knowledgeOnly} onChange={value => update('knowledgeOnly', value)} />
+					<Toggle label={text.useContactMemory} checked={draft.useContactMemory} onChange={value => update('useContactMemory', value)} />
+					<div className="mt-3 wa-ag-fields">
+						<Field label={text.contextLimit} num>
+							<input type="number" min="4" max="40" value={draft.contextMessageLimit ?? 12} onChange={event => update('contextMessageLimit', event.target.value)} className="wa-ag-input" />
+						</Field>
+					</div>
+				</section>
 
-			<Section title={text.sectionHandoff}>
-				<div className="grid gap-3 sm:grid-cols-2">
-					<Field label={text.handoffKeywords} hint={text.handoffKeywordsHint}>
-						<input value={draft.handoffKeywordsText} onChange={event => update('handoffKeywordsText', event.target.value)} dir="auto" className={fieldClass} />
-					</Field>
-					<Field label={text.handoffMessage}>
-						<input value={draft.handoffMessage || ''} onChange={event => update('handoffMessage', event.target.value)} maxLength={500} dir="auto" className={fieldClass} />
-					</Field>
-					<Field label={text.mediaPolicy}>
-						<WaCustomSelect
-							ariaLabel={text.mediaPolicy}
+				<section className="wa-ag-mod">
+					<h3>{text.sectionDisclosure}</h3>
+					<Toggle label={text.discloseAi} checked={draft.discloseAi} onChange={value => update('discloseAi', value)} />
+					{draft.discloseAi ? (
+						<div className="mt-3">
+							<Field label={text.disclosureText} wide>
+								<input value={draft.disclosureText || ''} onChange={event => update('disclosureText', event.target.value)} maxLength={300} dir="auto" className="wa-ag-input" />
+							</Field>
+						</div>
+					) : null}
+				</section>
+
+				<section className="wa-ag-mod">
+					<h3>{text.sectionHandoff}</h3>
+					<div className="wa-ag-fields">
+						<Field label={text.handoffKeywords} hint={text.handoffKeywordsHint}>
+							<input value={draft.handoffKeywordsText} onChange={event => update('handoffKeywordsText', event.target.value)} dir="auto" className="wa-ag-input" />
+						</Field>
+						<Field label={text.handoffMessage} wide>
+							<input value={draft.handoffMessage || ''} onChange={event => update('handoffMessage', event.target.value)} maxLength={500} dir="auto" className="wa-ag-input" />
+						</Field>
+						<Chips
+							label={text.mediaPolicy}
 							value={draft.mediaPolicy}
 							onChange={value => update('mediaPolicy', value)}
 							options={[
@@ -321,52 +363,48 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 								{ value: 'ignore', label: text.mediaIgnore },
 							]}
 						/>
-					</Field>
-					<ToggleRow label={text.allowGroups} checked={draft.allowGroups} onChange={value => update('allowGroups', value)} />
-					<Field label={text.debounce}>
-						<input type="number" min="2" max="120" value={draft.debounceSeconds ?? 8} onChange={event => update('debounceSeconds', event.target.value)} className={fieldClass} />
-					</Field>
-					<Field label={text.humanPause}>
-						<input type="number" min="1" max="1440" value={draft.humanPauseMinutes ?? 30} onChange={event => update('humanPauseMinutes', event.target.value)} className={fieldClass} />
-					</Field>
-					<Field label={text.maxPerHour}>
-						<input type="number" min="1" max="120" value={draft.maxRepliesPerHour ?? 12} onChange={event => update('maxRepliesPerHour', event.target.value)} className={fieldClass} />
-					</Field>
-					<Field label={`${text.minConfidence}: ${Math.round(Number(draft.minConfidence ?? 0.55) * 100)}%`}>
-						<input
-							type="range"
-							min="0"
-							max="1"
-							step="0.05"
-							value={draft.minConfidence ?? 0.55}
-							onChange={event => update('minConfidence', Number(event.target.value))}
-							className="w-full accent-[var(--color-primary-600)]"
-						/>
-					</Field>
-				</div>
-			</Section>
+						<Field label={text.debounce} num>
+							<input type="number" min="2" max="120" value={draft.debounceSeconds ?? 8} onChange={event => update('debounceSeconds', event.target.value)} className="wa-ag-input" />
+						</Field>
+						<Field label={text.humanPause} num>
+							<input type="number" min="1" max="1440" value={draft.humanPauseMinutes ?? 30} onChange={event => update('humanPauseMinutes', event.target.value)} className="wa-ag-input" />
+						</Field>
+						<Field label={text.maxPerHour} num>
+							<input type="number" min="1" max="120" value={draft.maxRepliesPerHour ?? 12} onChange={event => update('maxRepliesPerHour', event.target.value)} className="wa-ag-input" />
+						</Field>
+						<Field label={`${text.minConfidence}: ${Math.round(Number(draft.minConfidence ?? 0.55) * 100)}%`} wide>
+							<input
+								type="range"
+								min="0"
+								max="1"
+								step="0.05"
+								value={draft.minConfidence ?? 0.55}
+								onChange={event => update('minConfidence', Number(event.target.value))}
+								className="max-w-xs accent-[#1dab61]"
+							/>
+						</Field>
+					</div>
+					<div className="mt-3">
+						<Toggle label={text.allowGroups} checked={draft.allowGroups} onChange={value => update('allowGroups', value)} />
+					</div>
+				</section>
 
-			<p className={`rounded-xl px-3 py-2 text-xs leading-5 ${draft.actorConfigured ? 'bg-slate-50 text-slate-500 dark:bg-slate-800/60' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'}`}>
-				{draft.actorConfigured ? text.actorNote : text.actorMissing}
-			</p>
-			{draft.lastError ? (
-				<p className="text-xs text-rose-600">
-					<span className="font-bold">{text.lastError}:</span> {draft.lastError}
+				<p className={`wa-ag-note${draft.actorConfigured ? '' : ' is-warn'}`}>
+					{draft.actorConfigured ? text.actorNote : text.actorMissing}
 				</p>
-			) : null}
-			{error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
-			{saved && !error ? <p className="text-xs font-semibold text-emerald-600">{text.saved}</p> : null}
-			<button type="submit" disabled={saving} style={{ background: GRADIENT, boxShadow: GLOW }} className={primaryButtonClass}>
-				{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-				{text.save}
-			</button>
+				{draft.lastError ? (
+					<p className="wa-ag-note is-bad">
+						{text.lastError}: {draft.lastError}
+					</p>
+				) : null}
+			</div>
 		</form>
 	);
 }
 
 /* ---------------------------------------------------------------- models */
 
-function ModelsSection({ text, accountId, draft, setDraft, onSaved }) {
+function ModelsSection({ text, accountId, draft, setDraft, onSaved, alerts = [] }) {
 	const [catalog, setCatalog] = useState(null);
 	const [externals, setExternals] = useState([]);
 	const [error, setError] = useState('');
@@ -468,19 +506,24 @@ function ModelsSection({ text, accountId, draft, setDraft, onSaved }) {
 
 	const presets = catalog?.externalPresets || [];
 	const providers = catalog?.providers || [];
+	const externalAlert = (alerts || []).find(item => item.provider === 'external');
 
 	return (
-		<div className="space-y-5">
-			<Section title={text.builtInModels} hint={text.builtInModelsHint}>
+		<div className="wa-ag-mods">
+			<section className="wa-ag-mod">
+				<h3>{text.builtInModels}</h3>
+				<p className="wa-ag-hint">{text.builtInModelsHint}</p>
 				{!providers.length ? (
-					<div className="grid min-h-16 place-items-center"><Loader2 className="animate-spin text-[var(--color-primary-500)]" /></div>
+					<div className="grid min-h-16 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
 				) : (
-					<ul className="grid gap-2">
-						{providers.map(provider => (
-							<li key={provider.name} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-								<p className="text-sm font-black text-slate-800 dark:text-slate-100">{provider.label}</p>
-								<p className="mt-0.5 text-[11px] text-slate-400">{provider.description}</p>
-								<div className="mt-2 flex flex-wrap gap-1.5">
+					<div className="wa-ag-cards is-split">
+						{providers.map(provider => {
+							const alert = (alerts || []).find(item => item.provider === provider.name);
+							return (
+							<article key={provider.name} className="wa-ag-card">
+								<h4>{provider.label}</h4>
+								<p className="wa-ag-hint mt-1">{provider.description}</p>
+								<div className="wa-ag-chips mt-3">
 									{(provider.models || [{ id: 'auto', label: 'Auto' }]).map(item => {
 										const active = draft.provider === provider.name && (draft.model || 'auto') === item.id;
 										return (
@@ -489,65 +532,77 @@ function ModelsSection({ text, accountId, draft, setDraft, onSaved }) {
 												type="button"
 												disabled={Boolean(busy)}
 												onClick={() => void activate(provider.name, item.id, null)}
-												className={`rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${
-													active
-														? 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200'
-														: 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700'
-												}`}
+												className={`wa-ag-chip${active ? ' is-on' : ''}`}
 											>
-												{active ? text.inUse : text.useThisModel}: {item.label}
+												{item.label}
+												{active ? ` · ${text.inUse}` : ''}
 											</button>
 										);
 									})}
 								</div>
-							</li>
-						))}
-					</ul>
+								{alert ? (
+									<p className="wa-ag-note is-warn mt-2" role="status">
+										{fillTemplate(text.modelFailedThisTurn, { model: provider.label, reason: alert.error })}
+										{alert.recoveredBy
+											? ` ${fillTemplate(text.modelSwitchedTo, { model: labelForProvider(alert.recoveredBy, text) })}`
+											: ''}
+									</p>
+								) : null}
+							</article>
+							);
+						})}
+					</div>
 				)}
-			</Section>
+			</section>
 
-			<Section title={text.externalModels} hint={text.externalModelsHint}>
-				<div className="flex justify-end">
-					<button type="button" className={ghostButton} onClick={() => setForm({ preset: 'openai', label: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: '', isActive: true })}>
-						<Plus size={15} />
+			<section className="wa-ag-mod">
+				<div className="mb-2 flex items-center justify-between gap-2">
+					<div>
+						<h3 className="!mb-0">{text.externalModels}</h3>
+						<p className="wa-ag-hint mt-1">{text.externalModelsHint}</p>
+					</div>
+					<button type="button" className="wa-ag-ghost" onClick={() => setForm({ preset: 'openai', label: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: '', isActive: true })}>
+						<Plus size={14} />
 						{text.addExternal}
 					</button>
 				</div>
 				{form ? (
-					<form onSubmit={saveExternal} className="space-y-2 rounded-2xl border border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/40 p-3 dark:border-[var(--color-primary-900)] dark:bg-[var(--color-primary-950)]/20">
-						<div className="grid gap-2 sm:grid-cols-2">
+					<form onSubmit={saveExternal} className="mb-3 rounded-2xl bg-[var(--ag-fill)] p-3">
+						<div className="wa-ag-fields">
 							<Field label={text.extPreset}>
-								<WaCustomSelect
-									ariaLabel={text.extPreset}
-									value={form.preset}
-									onChange={value => {
-										const preset = presets.find(item => item.id === value);
-										setForm(current => ({
-											...current,
-											preset: value,
-											baseUrl: preset?.baseUrl || current.baseUrl,
-											label: current.label || preset?.label || '',
-										}));
-									}}
-									options={(presets.length ? presets : [{ id: 'custom', label: 'Custom' }]).map(item => ({ value: item.id, label: item.label }))}
-								/>
+								<div className="wa-ag-select">
+									<WaCustomSelect
+										ariaLabel={text.extPreset}
+										value={form.preset}
+										onChange={value => {
+											const preset = presets.find(item => item.id === value);
+											setForm(current => ({
+												...current,
+												preset: value,
+												baseUrl: preset?.baseUrl || current.baseUrl,
+												label: current.label || preset?.label || '',
+											}));
+										}}
+										options={(presets.length ? presets : [{ id: 'custom', label: 'Custom' }]).map(item => ({ value: item.id, label: item.label }))}
+									/>
+								</div>
 							</Field>
 							<Field label={text.extLabel}>
-								<input required value={form.label} onChange={event => setForm(current => ({ ...current, label: event.target.value }))} maxLength={80} dir="auto" className={fieldClass} />
+								<input required value={form.label} onChange={event => setForm(current => ({ ...current, label: event.target.value }))} maxLength={80} dir="auto" className="wa-ag-input" />
 							</Field>
 							<Field label={text.extBaseUrl}>
-								<input required={form.preset === 'custom'} value={form.baseUrl} onChange={event => setForm(current => ({ ...current, baseUrl: event.target.value }))} dir="ltr" className={fieldClass} />
+								<input required={form.preset === 'custom'} value={form.baseUrl} onChange={event => setForm(current => ({ ...current, baseUrl: event.target.value }))} dir="ltr" className="wa-ag-input" />
 							</Field>
 							<Field label={text.extModel}>
-								<input required value={form.model} onChange={event => setForm(current => ({ ...current, model: event.target.value }))} dir="ltr" className={fieldClass} />
+								<input required value={form.model} onChange={event => setForm(current => ({ ...current, model: event.target.value }))} dir="ltr" className="wa-ag-input" />
 							</Field>
 							<Field label={text.extApiKey} hint={form.id ? text.extApiKeyKeep : undefined}>
-								<input type="password" autoComplete="off" value={form.apiKey} onChange={event => setForm(current => ({ ...current, apiKey: event.target.value }))} className={fieldClass} />
+								<input type="password" autoComplete="off" value={form.apiKey} onChange={event => setForm(current => ({ ...current, apiKey: event.target.value }))} className="wa-ag-input" />
 							</Field>
 						</div>
-						<div className="flex flex-wrap justify-end gap-2">
-							<button type="button" className={ghostButton} onClick={() => setForm(null)}>{text.kbCancel}</button>
-							<button type="submit" disabled={busy === 'form'} style={{ background: GRADIENT, boxShadow: GLOW }} className={primaryButtonClass}>
+						<div className="mt-3 flex flex-wrap justify-end gap-2">
+							<button type="button" className="wa-ag-ghost" onClick={() => setForm(null)}>{text.kbCancel}</button>
+							<button type="submit" disabled={busy === 'form'} className="wa-ag-save">
 								{busy === 'form' ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
 								{text.kbSave}
 							</button>
@@ -555,28 +610,36 @@ function ModelsSection({ text, accountId, draft, setDraft, onSaved }) {
 					</form>
 				) : null}
 				{externals.length === 0 && !form ? (
-					<p className="rounded-xl border border-dashed border-slate-300 px-3 py-6 text-center text-xs text-slate-500 dark:border-slate-600">{text.extEmpty}</p>
+					<p className="wa-ag-empty">{text.extEmpty}</p>
 				) : (
-					<ul className="grid gap-2">
+					<ul className="wa-ag-cards">
 						{externals.map(item => {
 							const active = draft.provider === 'external' && draft.externalModelId === item.id;
 							return (
-								<li key={item.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+								<li key={item.id} className="wa-ag-card">
 									<div className="flex flex-wrap items-start gap-2">
 										<div className="min-w-0 flex-1">
-											<p className="text-sm font-black text-slate-800 dark:text-slate-100" dir="auto">{item.label}</p>
-											<p className="mt-0.5 font-mono text-[11px] text-slate-400" dir="ltr">{item.model} · {item.baseUrl}</p>
-											{item.keyLast4 ? <p className="text-[11px] text-slate-400">••••{item.keyLast4}</p> : null}
-											{item.lastTestOk === false && item.lastTestMessage ? <p className="text-[11px] text-rose-600">{item.lastTestMessage}</p> : null}
-											{item.lastTestOk === true ? <p className="text-[11px] text-emerald-600">{text.extTestOk}</p> : null}
+											<h4 dir="auto">{item.label}</h4>
+											<p className="wa-ag-hint mt-1 font-mono" dir="ltr">{item.model} · {item.baseUrl}</p>
+											{item.keyLast4 ? <p className="wa-ag-hint">••••{item.keyLast4}</p> : null}
+											{item.lastTestOk === false && item.lastTestMessage ? <p className="wa-ag-note is-bad">{item.lastTestMessage}</p> : null}
+											{item.lastTestOk === true ? <p className="wa-ag-note is-ok">{text.extTestOk}</p> : null}
+											{active && externalAlert ? (
+												<p className="wa-ag-note is-warn">
+													{fillTemplate(text.modelFailedThisTurn, { model: item.label, reason: externalAlert.error })}
+													{externalAlert.recoveredBy
+														? ` ${fillTemplate(text.modelSwitchedTo, { model: labelForProvider(externalAlert.recoveredBy, text) })}`
+														: ''}
+												</p>
+											) : null}
 										</div>
 										<div className="flex flex-wrap gap-1">
-											<button type="button" className={ghostButton} disabled={Boolean(busy)} onClick={() => void activate('external', item.model, item.id)}>
+											<button type="button" className={`wa-ag-chip${active ? ' is-on' : ''}`} disabled={Boolean(busy)} onClick={() => void activate('external', item.model, item.id)}>
 												{active ? text.inUse : text.useThisModel}
 											</button>
-											<button type="button" className={ghostButton} disabled={Boolean(busy)} onClick={() => void testExternal(item)}>{text.extTest}</button>
-											<button type="button" className={ghostButton} onClick={() => setForm({ ...item, apiKey: '' })}>{text.kbEdit}</button>
-											<button type="button" className={ghostButton} onClick={() => void removeExternal(item)}>{text.kbDelete}</button>
+											<button type="button" className="wa-ag-ghost" disabled={Boolean(busy)} onClick={() => void testExternal(item)}>{text.extTest}</button>
+											<button type="button" className="wa-ag-ghost" onClick={() => setForm({ ...item, apiKey: '' })}>{text.kbEdit}</button>
+											<button type="button" className="wa-ag-ghost" onClick={() => void removeExternal(item)}>{text.kbDelete}</button>
 										</div>
 									</div>
 								</li>
@@ -584,8 +647,8 @@ function ModelsSection({ text, accountId, draft, setDraft, onSaved }) {
 						})}
 					</ul>
 				)}
-			</Section>
-			{error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
+			</section>
+			{error ? <p className="wa-ag-note is-bad">{error}</p> : null}
 		</div>
 	);
 }
@@ -693,146 +756,135 @@ function KnowledgeSection({ text, accountId }) {
 	];
 
 	return (
-		<div className="space-y-3">
-			<div className="flex flex-wrap items-center gap-2">
-				<div className="relative min-w-[12rem] flex-1">
-					<Search size={14} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
-					<input
-						value={query}
-						onChange={event => setQuery(event.target.value)}
-						placeholder={text.kbSearch}
-						aria-label={text.kbSearch}
-						dir="auto"
-						className={`${fieldClass} ps-8`}
+		<div className="wa-ag-mods">
+			<section className="wa-ag-mod">
+				<div className="mb-3 flex flex-wrap items-end gap-2">
+					<Field label={text.kbSearch}>
+						<div className="relative">
+							<Search size={14} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[#8696a0]" />
+							<input
+								value={query}
+								onChange={event => setQuery(event.target.value)}
+								placeholder={text.kbSearch}
+								aria-label={text.kbSearch}
+								dir="auto"
+								className="wa-ag-input ps-8"
+							/>
+						</div>
+					</Field>
+					<Chips
+						ariaLabel={text.kbCategory}
+						value={category}
+						onChange={setCategory}
+						options={categoryOptions}
 					/>
+					<button type="button" className="wa-ag-ghost" onClick={() => setEditing({ ...EMPTY_ENTRY })}>
+						<Plus size={14} />
+						{text.kbAdd}
+					</button>
 				</div>
-				<div className="w-44">
-					<WaCustomSelect ariaLabel={text.kbCategory} value={category} onChange={setCategory} options={categoryOptions} />
-				</div>
-				<button type="button" className={ghostButton} onClick={() => setEditing({ ...EMPTY_ENTRY })}>
-					<Plus size={15} />
-					{text.kbAdd}
-				</button>
-			</div>
 
-			{editing ? (
-				<form onSubmit={save} className="space-y-2 rounded-2xl border border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/40 p-3 dark:border-[var(--color-primary-900)] dark:bg-[var(--color-primary-950)]/20">
-					<div className="grid gap-2 sm:grid-cols-[1fr_11rem]">
-						<input
-							required
-							value={editing.title}
-							onChange={event => setEditing(current => ({ ...current, title: event.target.value }))}
-							maxLength={200}
-							placeholder={text.kbTitle}
-							aria-label={text.kbTitle}
-							dir="auto"
-							className={fieldClass}
-						/>
-						<WaCustomSelect
-							ariaLabel={text.kbCategory}
-							value={editing.category}
-							onChange={value => setEditing(current => ({ ...current, category: value }))}
-							options={CATEGORY_IDS.map(id => ({ value: id, label: text.categories[id] }))}
-						/>
-					</div>
-					<textarea
-						required
-						value={editing.content}
-						onChange={event => setEditing(current => ({ ...current, content: event.target.value }))}
-						rows={5}
-						maxLength={8000}
-						placeholder={text.kbContent}
-						aria-label={text.kbContent}
-						dir="auto"
-						className={`${fieldClass} resize-y`}
-					/>
-					<input
-						value={editing.tagsText}
-						onChange={event => setEditing(current => ({ ...current, tagsText: event.target.value }))}
-						placeholder={text.kbTags}
-						aria-label={text.kbTags}
-						dir="auto"
-						className={fieldClass}
-					/>
-					<div className="flex flex-wrap items-center gap-2">
-						<label className="me-auto inline-flex items-center gap-2 text-xs font-bold">
-							<Switch label={text.kbActive} checked={Boolean(editing.isActive)} onChange={value => setEditing(current => ({ ...current, isActive: value }))} />
-							{editing.isActive ? text.kbActive : text.kbInactive}
-						</label>
-						<button type="button" className={ghostButton} onClick={() => setEditing(null)}>
-							{text.kbCancel}
-						</button>
-						<button type="submit" disabled={busy} style={{ background: GRADIENT, boxShadow: GLOW }} className={primaryButtonClass}>
-							{busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-							{text.kbSave}
-						</button>
-					</div>
-				</form>
-			) : null}
+				{editing ? (
+					<form onSubmit={save} className="mb-3 rounded-2xl bg-[var(--ag-fill)] p-3">
+						<div className="wa-ag-fields">
+							<Field label={text.kbTitle}>
+								<input
+									required
+									value={editing.title}
+									onChange={event => setEditing(current => ({ ...current, title: event.target.value }))}
+									maxLength={200}
+									dir="auto"
+									className="wa-ag-input"
+								/>
+							</Field>
+							<Chips
+								label={text.kbCategory}
+								value={editing.category}
+								onChange={value => setEditing(current => ({ ...current, category: value }))}
+								options={CATEGORY_IDS.map(id => ({ value: id, label: text.categories[id] }))}
+							/>
+							<Field label={text.kbContent} wide>
+								<textarea
+									required
+									value={editing.content}
+									onChange={event => setEditing(current => ({ ...current, content: event.target.value }))}
+									rows={5}
+									maxLength={8000}
+									dir="auto"
+									className="wa-ag-area"
+								/>
+							</Field>
+							<Field label={text.kbTags}>
+								<input
+									value={editing.tagsText}
+									onChange={event => setEditing(current => ({ ...current, tagsText: event.target.value }))}
+									dir="auto"
+									className="wa-ag-input"
+								/>
+							</Field>
+						</div>
+						<div className="mt-3 flex flex-wrap items-center gap-2">
+							<Toggle label={editing.isActive ? text.kbActive : text.kbInactive} checked={Boolean(editing.isActive)} onChange={value => setEditing(current => ({ ...current, isActive: value }))} />
+							<button type="button" className="wa-ag-ghost ms-auto" onClick={() => setEditing(null)}>{text.kbCancel}</button>
+							<button type="submit" disabled={busy} className="wa-ag-save">
+								{busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+								{text.kbSave}
+							</button>
+						</div>
+					</form>
+				) : null}
 
-			{error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
-			{entries == null ? (
-				<div className="grid min-h-24 place-items-center"><Loader2 className="animate-spin text-[var(--color-primary-500)]" /></div>
-			) : entries.length === 0 ? (
-				<p className="rounded-xl border border-dashed border-slate-300 px-3 py-6 text-center text-xs text-slate-500 dark:border-slate-600">{text.kbEmpty}</p>
-			) : filtered.length === 0 ? (
-				<p className="px-3 py-4 text-center text-xs text-slate-500">{text.kbNoMatch}</p>
-			) : (
-				<ul className="grid gap-2 md:grid-cols-2">
-					{filtered.map(entry => (
-						<li key={entry.id} className={`rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900 ${entry.isActive ? '' : 'opacity-60'}`}>
-							<div className="mb-1 flex items-start gap-2">
-								<span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-500 dark:bg-slate-800">
-									{text.categories[entry.category] || entry.category}
-								</span>
-								<p className="min-w-0 flex-1 truncate text-sm font-bold text-slate-800 dark:text-slate-100" dir="auto">{entry.title}</p>
-								<Switch label={entry.isActive ? text.kbActive : text.kbInactive} checked={entry.isActive} onChange={() => void toggleActive(entry)} />
-							</div>
-							<p className="line-clamp-3 whitespace-pre-line text-xs leading-5 text-slate-500" dir="auto">{entry.content}</p>
-							{entry.tags?.length ? (
-								<p className="mt-1 flex flex-wrap gap-1">
-									{entry.tags.map(tag => (
-										<span key={tag} className="rounded bg-[var(--color-primary-50)] px-1.5 text-[10px] font-bold text-[var(--color-primary-700)] dark:bg-[var(--color-primary-950)]/40" dir="auto">#{tag}</span>
-									))}
-								</p>
-							) : null}
-							<div className="mt-2 flex justify-end gap-1">
-								<button
-									type="button"
-									title={text.kbEdit}
-									aria-label={text.kbEdit}
-									onClick={() => setEditing({ ...entry, tagsText: (entry.tags || []).join(', ') })}
-									className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-								>
-									<Pencil size={14} />
-								</button>
-								<button
-									type="button"
-									title={text.kbDelete}
-									aria-label={text.kbDelete}
-									onClick={() => void remove(entry)}
-									className="grid h-8 w-8 place-items-center rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-								>
-									<Trash2 size={14} />
-								</button>
-							</div>
-						</li>
-					))}
-				</ul>
-			)}
+				{error ? <p className="wa-ag-note is-bad">{error}</p> : null}
+				{entries == null ? (
+					<div className="grid min-h-24 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
+				) : entries.length === 0 ? (
+					<p className="wa-ag-empty">{text.kbEmpty}</p>
+				) : filtered.length === 0 ? (
+					<p className="wa-ag-empty">{text.kbNoMatch}</p>
+				) : (
+					<ul className="wa-ag-cards is-split">
+						{filtered.map(entry => (
+							<li key={entry.id} className={`wa-ag-card ${entry.isActive ? '' : 'opacity-60'}`}>
+								<div className="mb-1 flex items-start gap-2">
+									<span className="wa-ag-chip is-on !h-6 text-[10px]">{text.categories[entry.category] || entry.category}</span>
+									<p className="min-w-0 flex-1 truncate text-[13.5px] font-bold" dir="auto">{entry.title}</p>
+									<Switch label={entry.isActive ? text.kbActive : text.kbInactive} checked={entry.isActive} onChange={() => void toggleActive(entry)} />
+								</div>
+								<p className="line-clamp-3 text-xs leading-5 text-[var(--ag-muted)]" dir="auto">{entry.content}</p>
+								{entry.tags?.length ? (
+									<p className="mt-2 flex flex-wrap gap-1">
+										{entry.tags.map(tag => (
+											<span key={tag} className="wa-ag-chip !h-6 text-[10px]" dir="auto">#{tag}</span>
+										))}
+									</p>
+								) : null}
+								<div className="mt-2 flex justify-end gap-1">
+									<button type="button" title={text.kbEdit} aria-label={text.kbEdit} onClick={() => setEditing({ ...entry, tagsText: (entry.tags || []).join(', ') })} className="wa-ag-ghost !h-8 !w-8 !px-0">
+										<Pencil size={14} />
+									</button>
+									<button type="button" title={text.kbDelete} aria-label={text.kbDelete} onClick={() => void remove(entry)} className="wa-ag-ghost !h-8 !w-8 !px-0 text-rose-500">
+										<Trash2 size={14} />
+									</button>
+								</div>
+							</li>
+						))}
+					</ul>
+				)}
+			</section>
 		</div>
 	);
 }
 
 /* ------------------------------------------------------------------- test */
 
-function TestSection({ text, accountId, draft }) {
+function TestSection({ text, accountId, draft, locale, onAlerts }) {
 	const [messages, setMessages] = useState([]);
 	const [input, setInput] = useState('');
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState('');
 	const controllerRef = useRef(null);
 	const scrollRef = useRef(null);
+	const inputRef = useRef(null);
 
 	useEffect(() => () => controllerRef.current?.abort(), []);
 	useEffect(() => {
@@ -845,13 +897,15 @@ function TestSection({ text, accountId, draft }) {
 		setMessages([]);
 		setPending(false);
 		setError('');
+		inputRef.current?.focus();
 	};
 
 	const send = async event => {
 		event.preventDefault();
 		const content = input.trim();
 		if (!content || pending) return;
-		const transcript = [...messages, { role: 'customer', content }];
+		const at = new Date();
+		const transcript = [...messages, { role: 'customer', content, at }];
 		setMessages(transcript);
 		setInput('');
 		setPending(true);
@@ -870,62 +924,101 @@ function TestSection({ text, accountId, draft }) {
 				},
 				controller.signal,
 			);
-			setMessages(current => [...current, { role: 'agent', content: result.decision === 'skip' ? '' : result.reply, result }]);
+			if (result.providerAlerts) onAlerts?.(result.providerAlerts);
+			setMessages(current => [
+				...current,
+				{
+					role: 'agent',
+					content: result.decision === 'skip' ? '' : result.reply,
+					at: new Date(),
+					result,
+				},
+			]);
 		} catch (testError) {
 			if (controller.signal.aborted) return;
+			const alerts = testError?.response?.data?.providerAlerts;
+			if (alerts) onAlerts?.(alerts);
 			setError(apiErrorMessage(testError, 'Test failed'));
 		} finally {
 			if (controllerRef.current === controller) setPending(false);
 		}
 	};
 
+	const agentName = draft.agentName || text.title;
+
 	return (
-		<div className="space-y-3">
-			<div className="flex items-center gap-2">
-				<p className="flex-1 text-xs leading-5 text-slate-500">{text.testHint}</p>
-				<button type="button" className={ghostButton} onClick={reset} disabled={!messages.length && !pending}>
-					<RotateCcw size={14} />
+		<div className="wa-ag-chat">
+			<header className="wa-ag-chat-bar">
+				<span className="wa-ag-chat-avatar" aria-hidden="true">
+					<Bot size={18} />
+				</span>
+				<div className="min-w-0 flex-1">
+					<p className="wa-ag-chat-name" dir="auto">{agentName}</p>
+					<p className="wa-ag-chat-status">{pending ? text.testThinking : text.testOnline}</p>
+				</div>
+				<button type="button" className="wa-ag-ghost" onClick={reset} disabled={!messages.length && !pending && !error}>
+					<Trash2 size={14} />
 					{text.testReset}
 				</button>
-			</div>
-			<div ref={scrollRef} className="nice-scroll max-h-[28rem] min-h-[12rem] space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/40">
-				{!messages.length && !pending ? <p className="py-10 text-center text-xs text-slate-400">{text.testEmpty}</p> : null}
-				{messages.map((message, index) =>
-					message.role === 'customer' ? (
-						<div key={index} className="flex justify-end">
-							<p className="max-w-[80%] whitespace-pre-line rounded-2xl rounded-ee-sm bg-[var(--color-primary-500)] px-3 py-2 text-sm text-white" dir="auto">{message.content}</p>
-						</div>
-					) : (
-						<div key={index} className="flex justify-start">
-							<div className="max-w-[85%] space-y-1.5 rounded-2xl rounded-es-sm bg-white px-3 py-2 text-sm shadow-sm dark:bg-slate-900">
+			</header>
+			<div ref={scrollRef} className="wa-ag-thread nice-scroll">
+				<div className="wa-ag-day">{text.testToday}</div>
+				{!messages.length && !pending ? (
+					<div className="wa-ag-chat-empty">
+						<p className="wa-ag-chat-empty-title">{text.testEmptyTitle}</p>
+						<p>{text.testEmpty}</p>
+						{draft.useKnowledgeBase ? <p className="wa-ag-chat-empty-kb">{text.testKbHint}</p> : null}
+					</div>
+				) : null}
+				{messages.map((message, index) => {
+					if (message.role === 'system') return null;
+					const outbound = message.role === 'customer';
+					const time = message.at ? formatClock(message.at instanceof Date ? message.at : new Date(message.at), locale) : '';
+					return (
+						<div key={`${message.role}-${index}`} className={`wa-ag-row${outbound ? ' is-out' : ''}`}>
+							{!outbound && message.result?.fallbacks?.length ? (
+								<p className="wa-ag-sys" role="status">
+									{fillTemplate(text.fallbackBanner, {
+										from: labelForProvider(message.result.fallbacks[0].provider, text),
+										reason: message.result.fallbacks[0].error,
+										to: labelForProvider(message.result.provider, text),
+									})}
+								</p>
+							) : null}
+							<div className={`wa-ag-bubble${outbound ? ' is-out' : ' is-in'}`}>
 								{message.content ? (
-									<p className="whitespace-pre-line text-slate-800 dark:text-slate-100" dir="auto">{message.content}</p>
+									<p dir="auto">{message.content}</p>
 								) : (
-									<p className="italic text-slate-400">{text.testNoReply}</p>
+									<p className="italic text-[var(--ag-faint)]">{text.testNoReply}</p>
 								)}
-								<TestResultMeta text={text} result={message.result} />
+								{!outbound ? <TestResultMeta text={text} result={message.result} /> : null}
+								<span className="wa-ag-time">{time}</span>
 							</div>
 						</div>
-					),
-				)}
+					);
+				})}
 				{pending ? (
-					<p className="inline-flex items-center gap-2 text-xs text-slate-400"><Loader2 size={13} className="animate-spin" />{text.testThinking}</p>
+					<div className="wa-ag-row">
+						<div className="wa-ag-bubble is-in is-typing" aria-label={text.testThinking}>
+							<i /><i /><i />
+						</div>
+					</div>
 				) : null}
 			</div>
-			{error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
-			<form onSubmit={send} className="flex gap-2">
+			{error ? <p className="wa-ag-note is-bad wa-ag-chat-error" role="alert">{error}</p> : null}
+			<form onSubmit={send} className="wa-ag-composer">
 				<input
+					ref={inputRef}
 					value={input}
 					onChange={event => setInput(event.target.value)}
 					placeholder={text.testPlaceholder}
 					aria-label={text.testPlaceholder}
 					maxLength={2000}
 					dir="auto"
-					className={fieldClass}
+					className="wa-ag-chat-input"
 				/>
-				<button type="submit" disabled={pending || !input.trim()} style={{ background: GRADIENT, boxShadow: GLOW }} className={primaryButtonClass}>
-					<Send size={15} className="rtl:-scale-x-100" />
-					{text.testSend}
+				<button type="submit" disabled={pending || !input.trim()} className="wa-ag-send" aria-label={text.testSend}>
+					<Send size={16} className="rtl:-scale-x-100" />
 				</button>
 			</form>
 		</div>
@@ -934,34 +1027,15 @@ function TestSection({ text, accountId, draft }) {
 
 function TestResultMeta({ text, result }) {
 	if (!result) return null;
-	const tone =
-		result.delivery === 'would_send'
-			? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
-			: result.delivery === 'would_skip'
-				? 'bg-slate-100 text-slate-500 dark:bg-slate-800'
-				: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300';
 	const knowledge = (result.sources || []).filter(source => source.type === 'knowledge');
 	return (
-		<div className="space-y-1 border-t border-slate-100 pt-1.5 text-[11px] text-slate-500 dark:border-slate-800">
-			<div className="flex flex-wrap items-center gap-1.5">
-				<span className={`rounded-md px-1.5 py-0.5 font-bold ${tone}`}>{text.delivery[result.delivery] || result.delivery}</span>
-				<span>{text.confidence}: {Math.round(Number(result.confidence || 0) * 100)}%</span>
-				<span className="text-slate-400" dir="ltr">{result.provider} · {result.model} · {Math.round((result.latencyMs || 0) / 100) / 10}s</span>
-			</div>
-			{result.reasons?.length ? (
-				<p className="flex flex-wrap gap-1">
-					{result.reasons.map(reason => (
-						<span key={reason} className="rounded bg-amber-100/70 px-1.5 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">{reasonLabel(text, reason)}</span>
-					))}
-				</p>
-			) : null}
-			{result.reasoning ? (
-				<p dir="auto"><span className="font-bold">{text.reasoning}:</span> {result.reasoning}</p>
-			) : null}
-			<p dir="auto">
-				<span className="font-bold">{text.sources}:</span>{' '}
-				{knowledge.length ? knowledge.map(source => source.title).join(' · ') : text.noSources}
+		<div className="wa-ag-meta">
+			<p>
+				<span>{text.delivery[result.delivery] || result.delivery}</span>
+				<span dir="ltr"> · {labelForProvider(result.provider, text)}</span>
+				{result.model ? <span dir="ltr"> · {result.model}</span> : null}
 			</p>
+			<p dir="auto">{text.sources}: {knowledge.length ? knowledge.map(source => source.title).join(' · ') : text.noSources}</p>
 		</div>
 	);
 }
@@ -998,39 +1072,34 @@ function ActivitySection({ text, accountId, locale }) {
 		[locale],
 	);
 	return (
-		<div className="space-y-2">
-			<div className="flex justify-end">
-				<button type="button" className={ghostButton} onClick={() => void load()} disabled={loading}>
+		<section className="wa-ag-mod">
+			<div className="mb-2 flex justify-end">
+				<button type="button" className="wa-ag-ghost" onClick={() => void load()} disabled={loading}>
 					<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
 					{text.refresh}
 				</button>
 			</div>
-			{error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
+			{error ? <p className="wa-ag-note is-bad">{error}</p> : null}
 			{runs == null ? (
-				<div className="grid min-h-24 place-items-center"><Loader2 className="animate-spin text-[var(--color-primary-500)]" /></div>
+				<div className="grid min-h-24 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
 			) : runs.length === 0 ? (
-				<p className="rounded-xl border border-dashed border-slate-300 px-3 py-6 text-center text-xs text-slate-500 dark:border-slate-600">{text.activityEmpty}</p>
+				<p className="wa-ag-empty">{text.activityEmpty}</p>
 			) : (
-				<ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
+				<ul className="divide-y divide-[var(--ag-line)]">
 					{runs.map(run => (
-						<li key={run.id} className="space-y-1 px-3 py-2 text-xs">
+						<li key={run.id} className="space-y-1 py-2.5 text-xs">
 							<div className="flex flex-wrap items-center gap-2">
-								<span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-									{text.outcomes[run.outcome] || run.outcome}
-								</span>
-								<span className="text-slate-400">{run.createdAt ? formatter.format(new Date(run.createdAt)) : ''}</span>
-								{run.latencyMs != null ? <span className="text-slate-400" dir="ltr">{Math.round(run.latencyMs / 100) / 10}s</span> : null}
-								{(run.reasons || []).map(reason => (
-									<span key={reason} className="rounded bg-amber-100/70 px-1.5 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">{reasonLabel(text, reason)}</span>
-								))}
+								<span className="wa-ag-chip is-on !h-6 text-[10px]">{text.outcomes[run.outcome] || run.outcome}</span>
+								<span className="text-[var(--ag-faint)]">{run.createdAt ? formatter.format(new Date(run.createdAt)) : ''}</span>
+								{run.latencyMs != null ? <span className="text-[var(--ag-faint)]" dir="ltr">{Math.round(run.latencyMs / 100) / 10}s</span> : null}
 							</div>
-							{run.reply ? <p className="line-clamp-2 text-slate-600 dark:text-slate-300" dir="auto">{run.reply}</p> : null}
-							{run.error ? <p className="text-rose-600">{run.error}</p> : null}
+							{run.reply ? <p className="line-clamp-2 text-[var(--ag-muted)]" dir="auto">{run.reply}</p> : null}
+							{run.error ? <p className="wa-ag-note is-bad">{run.error}</p> : null}
 						</li>
 					))}
 				</ul>
 			)}
-		</div>
+		</section>
 	);
 }
 
@@ -1089,27 +1158,33 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 		{ id: 'activity', label: text.tabs.activity, icon: Activity },
 	];
 
+	const live = draft
+		? draft.enabled
+			? draft.defaultMode === 'auto'
+				? text.chip.auto
+				: text.chip.suggest
+			: text.chip.off
+		: null;
+
 	return (
-		<section
-			data-wa-ai-agent-panel
-			className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-900"
-		>
-			<div className="mb-4 flex items-start gap-3">
-				<div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--color-primary-50)] text-[var(--color-primary-500)] dark:bg-[var(--color-primary-950)]/40">
+		<section data-wa-ai-agent-panel className={`wa-ag${section === 'test' ? ' is-test' : ''}`}>
+			<div className="wa-ag-head">
+				<div className="wa-ag-mark">
 					<Bot size={20} />
 				</div>
 				<div className="min-w-0 flex-1">
-					<h3 className="font-black text-slate-900 dark:text-white">{text.title}</h3>
-					<p className="mt-1 text-xs leading-5 text-slate-500">{text.description}</p>
+					<h2>{text.title}</h2>
+					<p>{text.description}</p>
 				</div>
-				{draft ? (
-					<span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${draft.enabled ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
-						{draft.enabled ? (draft.defaultMode === 'auto' ? text.chip.auto : text.chip.suggest) : text.chip.off}
+				{live ? (
+					<span className={`wa-ag-live${draft.enabled ? ' is-on' : ''}`}>
+						<i />
+						{live}
 					</span>
 				) : null}
 			</div>
 
-			<div role="tablist" aria-label={text.title} className="mb-4 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+			<div role="tablist" aria-label={text.title} className="wa-ag-tabs">
 				{tabs.map(tab => {
 					const Icon = tab.icon;
 					const selected = section === tab.id;
@@ -1120,29 +1195,33 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 							role="tab"
 							aria-selected={selected}
 							onClick={() => setSection(tab.id)}
-							className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-black transition ${
-								selected ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-							}`}
+							className={`wa-ag-tab${selected ? ' is-on' : ''}`}
 						>
 							<Icon size={14} />
-							{tab.label}
+							<span>{tab.label}</span>
 						</button>
 					);
 				})}
 			</div>
 
 			{loadError ? (
-				<p className="flex items-center gap-2 text-xs font-semibold text-rose-600"><X size={14} />{loadError}</p>
+				<p className="wa-ag-note is-bad flex items-center gap-2"><X size={14} />{loadError}</p>
 			) : !draft ? (
-				<div className="grid min-h-32 place-items-center"><Loader2 className="animate-spin text-[var(--color-primary-500)]" /></div>
+				<div className="grid min-h-32 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
 			) : section === 'setup' ? (
 				<SetupSection text={text} lang={lang} draft={draft} setDraft={setDraftDirty} saving={saving} saved={saved} error={saveError} onSubmit={submit} />
 			) : section === 'models' ? (
-				<ModelsSection text={text} accountId={accountId} draft={draft} setDraft={setDraftDirty} onSaved={() => setSaved(true)} />
+				<ModelsSection text={text} accountId={accountId} draft={draft} setDraft={setDraftDirty} onSaved={() => setSaved(true)} alerts={draft.providerAlerts || []} />
 			) : section === 'knowledge' ? (
 				<KnowledgeSection text={text} accountId={accountId} />
 			) : section === 'test' ? (
-				<TestSection text={text} accountId={accountId} draft={draft} />
+				<TestSection
+					text={text}
+					accountId={accountId}
+					draft={draft}
+					locale={locale}
+					onAlerts={alerts => setDraft(current => ({ ...current, providerAlerts: alerts }))}
+				/>
 			) : (
 				<ActivitySection text={text} accountId={accountId} locale={locale} />
 			)}

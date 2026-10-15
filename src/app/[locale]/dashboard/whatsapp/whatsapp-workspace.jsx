@@ -23779,7 +23779,7 @@ function WhatsAppWorkspaceContent() {
 						: 'overflow-y-auto nice-scroll'
 			}`}>
 				{/* Compact account switcher for desktop utility tabs (replaces PageHeader actions). */}
-				{['accounts', 'reports', 'settings', 'profile', 'agent'].includes(activeTab) ? (
+				{['accounts', 'reports', 'settings', 'profile'].includes(activeTab) ? (
 					<div className="mb-4 hidden items-center justify-between gap-3 min-[769px]:flex">
 						<div>
 							<h2 className="text-lg font-black text-slate-900 dark:text-white">
@@ -28155,7 +28155,7 @@ function WhatsAppWorkspaceContent() {
 				) : null}
 
 				{activeTab === 'agent' && (
-					<div className="wa-dk wa-secondary-pane space-y-4">
+					<div className="wa-dk wa-secondary-pane wa-agent-pane min-h-0">
 						{accountId ? (
 							<Suspense fallback={<WaPaneLoading label={t.loading} />}>
 								<WhatsAppAiAgentPanel key={accountId} locale={locale} accountId={accountId} />
