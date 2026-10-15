@@ -1172,7 +1172,7 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 				<div className="wa-ag-mark">
 					<Bot size={20} />
 				</div>
-				<div className="min-w-0 flex-1">
+				<div className="wa-ag-copy">
 					<h2>{text.title}</h2>
 					<p>{text.description}</p>
 				</div>

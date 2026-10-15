@@ -66,7 +66,13 @@ html.dark .wa-ag,
 	display: flex;
 	align-items: flex-start;
 	gap: 14px;
+	width: 100%;
 	margin-bottom: 14px;
+}
+
+.wa-ag-copy {
+	flex: 1 1 0;
+	min-width: 0;
 }
 
 .wa-ag-mark {
@@ -90,14 +96,19 @@ html.dark .wa-ag,
 
 .wa-ag-head p {
 	margin: 4px 0 0;
-	max-width: 46ch;
+	max-width: 42rem;
 	color: var(--ag-muted);
 	font-size: 12.5px;
+	font-weight: 500;
 	line-height: 1.45;
+	white-space: normal;
+	word-break: normal;
+	overflow-wrap: break-word;
 }
 
 .wa-ag-live {
 	margin-inline-start: auto;
+	flex: 0 0 auto;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
