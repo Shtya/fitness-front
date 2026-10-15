@@ -324,7 +324,27 @@
 			"moveFailed": "تعذّر نقل العميل",
 			"copiedTally": "تم نسخ الأعداد",
 			"copyTally": "نسخ الأعداد",
-			"listCap": "يُعرض {shown} من {total}"
+			"listCap": "يُعرض {shown} من {total}",
+			"teamOf": "فريق {name}",
+			"clientsOf": "عملاء {name}",
+			"noTeamYet": "لا يوجد مدربون أو عملاء بعد. أضف أول واحد للبدء."
+		},
+		"roster": {
+			"client": "العميل",
+			"coach": "المدرب",
+			"workoutPlan": "النظام التدريبي",
+			"mealPlan": "النظام الغذائي",
+			"details": "التفاصيل",
+			"subscription": "الاشتراك",
+			"noPlan": "بدون نظام",
+			"kcal": "{count} سعرة",
+			"protein": "{count} جم بروتين",
+			"age": "{count} سنة",
+			"male": "ذكر",
+			"female": "أنثى",
+			"endsOn": "ينتهي {date}",
+			"expiredOn": "انتهى {date}",
+			"none": "—"
 		},
 		"filters": {
 			"searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني…",

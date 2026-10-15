@@ -52,7 +52,27 @@
 			"moveFailed": "Could not move the client",
 			"copiedTally": "Counts copied",
 			"copyTally": "Copy counts",
-			"listCap": "Showing {shown} of {total}"
+			"listCap": "Showing {shown} of {total}",
+			"teamOf": "{name}'s team",
+			"clientsOf": "Clients of {name}",
+			"noTeamYet": "No coaches or clients yet. Add the first one to get started."
+		},
+		"roster": {
+			"client": "Client",
+			"coach": "Coach",
+			"workoutPlan": "Workout plan",
+			"mealPlan": "Meal plan",
+			"details": "Details",
+			"subscription": "Subscription",
+			"noPlan": "No plan",
+			"kcal": "{count} kcal",
+			"protein": "{count}g protein",
+			"age": "{count} yrs",
+			"male": "Male",
+			"female": "Female",
+			"endsOn": "Ends {date}",
+			"expiredOn": "Expired {date}",
+			"none": "—"
 		},
 		"filters": {
 			"searchPlaceholder": "Search by name or email…",

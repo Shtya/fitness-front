@@ -429,7 +429,7 @@ export default function ClientMealPlanPage() {
   }, [activeDay]);
 
   const user = useUser();
-  const nav = useTranslations('nav.labels');
+  const nav = useTranslations('nav.items');
   const hasNotes = !!(plan?.notes && String(plan.notes).trim().length);
   const takenMeals = useMemo(() => {
     if (!activeDayKey) return 0;

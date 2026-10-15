@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import {
 	Search, ChevronRight, Users, User, LogIn, RefreshCw, X,
 	Clock, Dumbbell, Crown, Plus,
-	Building2, CornerDownRight,
+	Building2, Utensils,
 	CheckCircle2, Ban, Eye, Trash2, KeyRound, Copy, Check,
 	UserCheck, UserCog, UserCircle, Edit, Shield,
 	AlertTriangle, Mail, Phone, LayoutGrid,
@@ -531,6 +531,7 @@ function UsersTable({ title, subtitle, icon, users, actions, locale, t, emptyLab
 
 /** Admins table — expand row → coaches (+ their clients) */
 function AdminsTable({ admins, actions, locale, t, rosterTick = 0 }) {
+	const th = `${TABLE_TH} bg-[color-mix(in_srgb,var(--gm-muted)_5%,var(--gm-paper))]`;
 	return (
 		<UsersTableShell
 			title={t('sections.admins')}
@@ -538,17 +539,17 @@ function AdminsTable({ admins, actions, locale, t, rosterTick = 0 }) {
 			icon={Building2}
 			count={admins.length}
 		>
-			<table className="w-full min-w-[920px] border-collapse">
+			<table className="w-full min-w-[1180px] border-collapse">
 				<thead>
 					<tr className="border-b border-[var(--gm-line)]">
-						<th className={TABLE_TH}>{t('table.admin')}</th>
-						<th className={TABLE_TH}>{t('table.email')}</th>
-						<th className={`${TABLE_TH} hidden md:table-cell`}>{t('table.team')}</th>
-						<th className={TABLE_TH}>{t('table.status')}</th>
-						<th className={`${TABLE_TH} hidden lg:table-cell`}>{t('table.access')}</th>
-						<th className={`${TABLE_TH} hidden sm:table-cell`}>{t('table.joined')}</th>
-						<th className={`${TABLE_TH} hidden md:table-cell`}>{t('table.lastLogin')}</th>
-						<th className={`${TABLE_TH} text-end`}>{t('table.actions')}</th>
+						<th className={th}>{t('table.admin')}</th>
+						<th className={th}>{t('table.email')}</th>
+						<th className={th}>{t('table.team')}</th>
+						<th className={th}>{t('table.status')}</th>
+						<th className={th}>{t('table.access')}</th>
+						<th className={th}>{t('table.joined')}</th>
+						<th className={th}>{t('table.lastLogin')}</th>
+						<th className={`${th} text-end`}>{t('table.actions')}</th>
 					</tr>
 				</thead>
 				<tbody className="divide-y divide-[var(--gm-line)]">
@@ -562,6 +563,164 @@ function AdminsTable({ admins, actions, locale, t, rosterTick = 0 }) {
 				</tbody>
 			</table>
 		</UsersTableShell>
+	);
+}
+
+const COMPACT_BTN = 'rs-btn !h-8 !px-2.5 !text-[12px] whitespace-nowrap';
+
+/** Count chips that only render when there is something to count. */
+function TeamCounts({ coaches = 0, clients = 0, active = 0, t }) {
+	return (
+		<>
+			{coaches > 0 ? <span className="rs-tag rs-tag--coach whitespace-nowrap">{t('sections.coachCount', { count: coaches })}</span> : null}
+			{clients > 0 ? <span className="rs-tag rs-tag--client whitespace-nowrap">{t('sections.clientCount', { count: clients })}</span> : null}
+			{active > 0 ? <span className="rs-badge rs-badge--ok whitespace-nowrap">{t('sections.activeCount', { count: active })}</span> : null}
+		</>
+	);
+}
+
+function ageFromBirthDate(value) {
+	if (!value) return null;
+	const born = new Date(value);
+	if (Number.isNaN(born.getTime())) return null;
+	const now = new Date();
+	let age = now.getFullYear() - born.getFullYear();
+	const beforeBirthday =
+		now.getMonth() < born.getMonth() ||
+		(now.getMonth() === born.getMonth() && now.getDate() < born.getDate());
+	if (beforeBirthday) age -= 1;
+	return age > 0 && age < 120 ? age : null;
+}
+
+function PlanChip({ plan, icon: Icon, tone, t }) {
+	if (!plan?.name) {
+		return <span className="whitespace-nowrap text-[12px] text-[var(--gm-faint)]">{t('roster.noPlan')}</span>;
+	}
+	return (
+		<span
+			className={`rs-tag rs-tag--${tone} inline-flex max-w-[200px] items-center gap-1 whitespace-nowrap`}
+			title={plan.name}
+		>
+			<Icon className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+			<span className="truncate">{plan.name}</span>
+		</span>
+	);
+}
+
+function ClientDetails({ client, t }) {
+	const age = ageFromBirthDate(client.birthDate);
+	const gender = String(client.gender || '').toLowerCase();
+	const items = [
+		gender === 'male' || gender === 'female' ? t(`roster.${gender}`) : null,
+		age ? t('roster.age', { count: age }) : null,
+		client.caloriesTarget ? t('roster.kcal', { count: client.caloriesTarget }) : null,
+		client.proteinPerDay ? t('roster.protein', { count: client.proteinPerDay }) : null,
+		client.membership && client.membership !== '-' ? client.membership : null,
+	].filter(Boolean);
+	if (!items.length) return <span className="text-[12px] text-[var(--gm-faint)]">{t('roster.none')}</span>;
+	return (
+		<span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+			{items.map((item) => (
+				<span
+					key={item}
+					className="rounded-full border border-[var(--gm-line)] bg-[var(--gm-paper)] px-2 py-0.5 text-[11.5px] text-[var(--gm-ink-soft)]"
+				>
+					{item}
+				</span>
+			))}
+		</span>
+	);
+}
+
+function SubscriptionCell({ value, locale, t }) {
+	if (!value) return <span className="text-[12px] text-[var(--gm-faint)]">{t('roster.none')}</span>;
+	const end = new Date(value);
+	if (Number.isNaN(end.getTime())) return <span className="text-[12px] text-[var(--gm-faint)]">{t('roster.none')}</span>;
+	const daysLeft = Math.ceil((end.getTime() - Date.now()) / 86_400_000);
+	const date = fmt(value, locale);
+	const tone =
+		daysLeft < 0 ? 'text-red-600' : daysLeft < 7 ? 'text-amber-600' : 'text-[var(--gm-muted)]';
+	return (
+		<span className={`inline-flex items-center gap-1 whitespace-nowrap text-[12px] font-medium ${tone}`}>
+			<Clock className="size-3.5 shrink-0" aria-hidden />
+			{daysLeft < 0 ? t('roster.expiredOn', { date }) : t('roster.endsOn', { date })}
+		</span>
+	);
+}
+
+/** One row per client: identity, both plans, a few profile facts, status. */
+function ClientsTable({ clients, coaches, movingId, onMove, actions, locale, t, unassigned = false }) {
+	const th = `${TABLE_TH} !py-2 bg-[color-mix(in_srgb,var(--gm-muted)_4%,var(--gm-paper))]`;
+	const canMove = coaches.length > 0;
+	return (
+		<div className="overflow-x-auto">
+			<table className="w-full min-w-[1120px] border-collapse">
+				<thead>
+					<tr className="border-b border-[var(--gm-line)]">
+						<th className={th}>{t('roster.client')}</th>
+						<th className={th}>{t('roster.workoutPlan')}</th>
+						<th className={th}>{t('roster.mealPlan')}</th>
+						<th className={th}>{t('roster.details')}</th>
+						<th className={th}>{t('roster.subscription')}</th>
+						<th className={th}>{t('table.status')}</th>
+						<th className={th}>{t('table.lastLogin')}</th>
+						{canMove ? <th className={th}>{t('roster.coach')}</th> : null}
+						<th className={`${th} text-end`}>{t('table.actions')}</th>
+					</tr>
+				</thead>
+				<tbody className="divide-y divide-[var(--gm-line)]">
+					{clients.map((client) => {
+						const clientUser = { ...client, role: 'client' };
+						return (
+							<tr key={client.id} className="transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-500)_4%,transparent)]">
+								<td className={`${TABLE_TD} !py-2`}>
+									<div className="flex items-center gap-2 whitespace-nowrap">
+										<Avatar name={client.name} role="client" size="sm" />
+										<span className="text-[13px] font-semibold text-[var(--gm-ink)]">{client.name || '—'}</span>
+										{client.email ? (
+											<span className="max-w-[200px] truncate text-[12px] text-[var(--gm-muted)]" title={client.email}>
+												{client.email}
+											</span>
+										) : null}
+									</div>
+								</td>
+								<td className={`${TABLE_TD} !py-2`}>
+									<PlanChip plan={client.workoutPlan} icon={Dumbbell} tone="coach" t={t} />
+								</td>
+								<td className={`${TABLE_TD} !py-2`}>
+									<PlanChip plan={client.mealPlan} icon={Utensils} tone="client" t={t} />
+								</td>
+								<td className={`${TABLE_TD} !py-2`}><ClientDetails client={client} t={t} /></td>
+								<td className={`${TABLE_TD} !py-2`}><SubscriptionCell value={client.subscriptionEnd} locale={locale} t={t} /></td>
+								<td className={`${TABLE_TD} !py-2`}><StatusBadge status={client.status} t={t} /></td>
+								<td className={`${TABLE_TD} !py-2`}>
+									<LastLoginCell value={client.lastLogin} locale={locale} empty={t('table.never')} />
+								</td>
+								{canMove ? (
+									<td className={`${TABLE_TD} !py-2`}>
+										<select
+											className="h-8 w-[160px] rounded-lg border border-[var(--gm-line)] bg-[var(--gm-paper)] px-2 text-[12px] text-[var(--gm-ink)]"
+											value={unassigned ? '' : client.coach?.id || ''}
+											disabled={movingId === client.id}
+											aria-label={t('sections.moveCoach')}
+											onChange={(e) => onMove(client, e.target.value)}
+										>
+											{unassigned ? <option value="">{t('sections.unassigned')}</option> : null}
+											{coaches.map((c) => (
+												<option key={c.id} value={c.id}>{c.name || c.email}</option>
+											))}
+										</select>
+									</td>
+								) : null}
+								<td className={`${TABLE_TD} !py-2 text-end`}>
+									<ActionBar user={clientUser} {...actions} t={t} />
+								</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
+		</div>
 	);
 }
 
@@ -617,8 +776,11 @@ function AdminTableBlock({ admin, actions, locale, t, rosterTick = 0 }) {
 		return { byCoach, loose };
 	}, [coaches, clients]);
 
+	const coachCount = loaded ? coachTotal : counts.coaches ?? 0;
+	const clientCount = loaded ? clientTotal : counts.clients ?? 0;
+
 	const copyTally = async () => {
-		const line = `${admin.name}: ${t('sections.coachCount', { count: counts.coaches ?? coachTotal })}, ${t('sections.clientCount', { count: counts.clients ?? clientTotal })}, ${t('sections.activeCount', { count: counts.activeClients ?? 0 })}`;
+		const line = `${admin.name}: ${t('sections.coachCount', { count: coachCount })}, ${t('sections.clientCount', { count: clientCount })}, ${t('sections.activeCount', { count: counts.activeClients ?? 0 })}`;
 		try {
 			await navigator.clipboard.writeText(line);
 			toast.success(t('sections.copiedTally'));
@@ -626,6 +788,8 @@ function AdminTableBlock({ admin, actions, locale, t, rosterTick = 0 }) {
 	};
 
 	const addUnder = (preset) => actions.onAddUnder?.(preset);
+	const addCoach = () => addUnder({ role: 'coach', adminId: admin.id, adminName: admin.name });
+	const addClient = () => addUnder({ role: 'client', adminId: admin.id, adminName: admin.name });
 
 	const moveClient = async (client, coachId) => {
 		if (!coachId || coachId === client.coach?.id) return;
@@ -639,74 +803,69 @@ function AdminTableBlock({ admin, actions, locale, t, rosterTick = 0 }) {
 		} finally { setMovingId(null); }
 	};
 
+	const hasCoaches = coaches.length > 0;
+	const clientsTableProps = { coaches, movingId, onMove: moveClient, actions, locale, t };
+
 	return (
 		<>
 			<tr className="transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-500)_6%,transparent)]">
 				<td className={TABLE_TD}>
-					<div className="flex items-center gap-2.5 min-w-0">
+					<div className="flex items-center gap-2.5 whitespace-nowrap">
 						<button
 							type="button"
 							onClick={toggle}
-							className="w-7 h-7 rounded-lg border grid place-items-center shrink-0 transition-colors"
+							className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border transition-colors"
 							style={{
 								background: open ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' : 'var(--color-primary-50)',
 								borderColor: 'var(--color-primary-200)',
 								color: open ? '#fff' : 'var(--color-primary-600)',
 							}}
 							title={t('sections.showCoaches')}
+							aria-expanded={open}
 						>
 							{loading
 								? <RefreshCw size={12} className="animate-spin" />
 								: <ChevronRight size={13} className={`transition-transform ${open ? 'rotate-90' : 'rtl:rotate-180'}`} />}
 						</button>
-						<UserIdentity
-							user={admin}
-							size="md"
-							extra={
-								<div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-									<RoleBadge role="admin" t={t} />
-									<span className="rs-tag rs-tag--coach">{t('sections.coachCount', { count: counts.coaches ?? 0 })}</span>
-									<span className="rs-tag rs-tag--client">{t('sections.clientCount', { count: counts.clients ?? 0 })}</span>
-									<span className="rs-badge rs-badge--ok">{t('sections.activeCount', { count: counts.activeClients ?? 0 })}</span>
-									{daysLeft != null && daysLeft < 30 && (
-										<span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold border ${
-											daysLeft < 7
-												? 'bg-red-50 text-red-600 border-red-200'
-												: 'bg-amber-50 text-amber-600 border-amber-200'
-										}`}>
-											<Clock size={8} />
-											{daysLeft < 0 ? t('subscription.expired') : `${daysLeft}d`}
-										</span>
-									)}
-								</div>
-							}
-						/>
+						<Avatar name={admin.name} role="admin" />
+						<span className="text-[13.5px] font-semibold text-[var(--gm-ink)]">{admin.name || '—'}</span>
+						<TeamCounts coaches={counts.coaches ?? 0} clients={counts.clients ?? 0} active={counts.activeClients ?? 0} t={t} />
+						{daysLeft != null && daysLeft < 30 && (
+							<span className={`inline-flex items-center gap-0.5 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-bold ${
+								daysLeft < 7
+									? 'border-red-200 bg-red-50 text-red-600'
+									: 'border-amber-200 bg-amber-50 text-amber-600'
+							}`}>
+								<Clock size={9} />
+								{daysLeft < 0 ? t('subscription.expired') : `${daysLeft}d`}
+							</span>
+						)}
 					</div>
 				</td>
 				<td className={TABLE_TD}>
-					<div className="flex items-center gap-1 max-w-[220px]">
-						<span className="truncate text-[12.5px] text-[var(--gm-ink-soft)]">{admin.email}</span>
+					<div className="flex max-w-[240px] items-center gap-1 whitespace-nowrap">
+						<span className="truncate text-[12.5px] text-[var(--gm-ink-soft)]" title={admin.email}>{admin.email}</span>
 						<CopyBtn value={admin.email} />
 					</div>
 				</td>
-				<td className={`${TABLE_TD} hidden md:table-cell`}>
-					<div className="flex flex-wrap gap-1.5">
-						<button type="button" className="rs-btn !h-8 !px-2.5 !text-[12px]" onClick={() => addUnder({ role: 'coach', adminId: admin.id, adminName: admin.name })}>
+				<td className={TABLE_TD}>
+					<div className="flex flex-nowrap items-center gap-1.5">
+						<button type="button" className={COMPACT_BTN} onClick={addCoach}>
 							<Plus className="size-3.5" aria-hidden />
 							{t('sections.addCoach')}
 						</button>
-						<button type="button" className="rs-btn !h-8 !px-2.5 !text-[12px]" onClick={() => addUnder({ role: 'client', adminId: admin.id, adminName: admin.name })}>
+						<button type="button" className={COMPACT_BTN} onClick={addClient}>
 							<Plus className="size-3.5" aria-hidden />
 							{t('sections.addClient')}
 						</button>
 					</div>
 				</td>
 				<td className={TABLE_TD}><StatusBadge status={admin.status} t={t} /></td>
-				<td className={`${TABLE_TD} hidden lg:table-cell`}><AccessCell user={admin} /></td>
-				<td className={`${TABLE_TD} hidden sm:table-cell`}>
+				<td className={`${TABLE_TD} whitespace-nowrap`}><AccessCell user={admin} /></td>
+				<td className={TABLE_TD}>
 					<span className="whitespace-nowrap text-[12px] text-[var(--gm-muted)]">{fmt(admin.created_at, locale)}</span>
 				</td>
-				<td className={`${TABLE_TD} hidden md:table-cell`}>
+				<td className={TABLE_TD}>
 					<LastLoginCell value={admin.lastLogin} locale={locale} empty={t('table.never')} />
 				</td>
 				<td className={`${TABLE_TD} text-end`}>
@@ -715,121 +874,103 @@ function AdminTableBlock({ admin, actions, locale, t, rosterTick = 0 }) {
 			</tr>
 
 			{open && (
-				<tr className="bg-[color-mix(in_srgb,var(--gm-muted)_6%,var(--gm-paper))]">
+				<tr>
 					<td colSpan={8} className="p-0">
-						<div className="border-y border-[var(--gm-line)]">
-							<div className="flex flex-wrap items-center gap-2 border-b border-[var(--gm-line)] px-3 py-2.5">
-								<p className="text-[13px] font-semibold text-[var(--gm-ink)]">
-									{t('sections.coachesUnder', { name: admin.name })}
-								</p>
-								<span className="rs-tag rs-tag--coach">{t('sections.coachCount', { count: counts.coaches ?? coachTotal })}</span>
-								<span className="rs-tag rs-tag--client">{t('sections.clientCount', { count: counts.clients ?? clientTotal })}</span>
-								<button type="button" className="rs-btn !h-8 !px-2.5 !text-[12px]" onClick={copyTally}>
-									<Copy className="size-3.5" aria-hidden />
-									{t('sections.copyTally')}
-								</button>
-								<button type="button" className="rs-btn !h-8 !px-2.5 !text-[12px] md:hidden" onClick={() => addUnder({ role: 'coach', adminId: admin.id, adminName: admin.name })}>
-									<Plus className="size-3.5" aria-hidden />
-									{t('sections.addCoach')}
-								</button>
-								{(coachTotal > coaches.length || clientTotal > clients.length) && (
-									<span className="text-[12px] text-[var(--gm-muted)]">
-										{t('sections.listCap', { shown: Math.max(coaches.length, clients.length), total: Math.max(coachTotal, clientTotal) })}
-									</span>
+						<div className="bg-[color-mix(in_srgb,var(--color-primary-500)_5%,var(--gm-paper))] px-4 py-3">
+							<div className="overflow-hidden rounded-[14px] border border-[var(--gm-line)] bg-[var(--gm-paper)] shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+								<div className="flex items-center justify-between gap-3 whitespace-nowrap border-b border-[var(--gm-line)] px-4 py-2.5">
+									<div className="flex min-w-0 items-center gap-2">
+										<span className="rs-avatar rs-avatar--sm rs-avatar--coach" aria-hidden>
+											<Users className="size-3.5" strokeWidth={2} />
+										</span>
+										<p className="text-[13.5px] font-semibold text-[var(--gm-ink)]">
+											{hasCoaches
+												? t('sections.teamOf', { name: admin.name })
+												: t('sections.clientsOf', { name: admin.name })}
+										</p>
+										<TeamCounts coaches={coachCount} clients={clientCount} t={t} />
+										{(coachTotal > coaches.length || clientTotal > clients.length) && (
+											<span className="text-[12px] text-[var(--gm-muted)]">
+												{t('sections.listCap', { shown: Math.max(coaches.length, clients.length), total: Math.max(coachTotal, clientTotal) })}
+											</span>
+										)}
+									</div>
+									<div className="flex shrink-0 flex-nowrap items-center gap-1.5">
+										{coachCount + clientCount > 0 ? (
+											<button type="button" className={COMPACT_BTN} onClick={copyTally}>
+												<Copy className="size-3.5" aria-hidden />
+												{t('sections.copyTally')}
+											</button>
+										) : null}
+										<button type="button" className={COMPACT_BTN} onClick={addCoach}>
+											<Plus className="size-3.5" aria-hidden />
+											{t('sections.addCoach')}
+										</button>
+										<button type="button" className={COMPACT_BTN} onClick={addClient}>
+											<Plus className="size-3.5" aria-hidden />
+											{t('sections.addClient')}
+										</button>
+									</div>
+								</div>
+
+								{!hasCoaches && clients.length === 0 ? (
+									<div className="flex flex-col items-center gap-1.5 px-4 py-8 text-center">
+										<span className="rs-avatar rs-avatar--admin" aria-hidden>
+											<Users className="size-4" />
+										</span>
+										<p className="text-[12.5px] text-[var(--gm-muted)]">{t('sections.noTeamYet')}</p>
+									</div>
+								) : !hasCoaches ? (
+									<ClientsTable clients={clients} {...clientsTableProps} />
+								) : (
+									<div className="flex flex-col">
+										{coaches.map((coach) => {
+											const mine = grouped.byCoach.get(coach.id) || [];
+											const coachUser = { ...coach, role: 'coach' };
+											return (
+												<section key={coach.id} className="border-b border-[var(--gm-line)] last:border-b-0">
+													<div className="flex items-center gap-2.5 overflow-x-auto whitespace-nowrap bg-[color-mix(in_srgb,var(--color-secondary-500)_6%,var(--gm-paper))] px-4 py-2">
+														<Avatar name={coach.name} role="coach" size="sm" />
+														<span className="text-[13px] font-semibold text-[var(--gm-ink)]">{coach.name || '—'}</span>
+														<RoleBadge role="coach" t={t} />
+														{coach.email ? (
+															<span className="max-w-[220px] truncate text-[12px] text-[var(--gm-muted)]" title={coach.email}>{coach.email}</span>
+														) : null}
+														<span className="rs-tag rs-tag--client">{t('sections.clientCount', { count: mine.length })}</span>
+														<StatusBadge status={coach.status} t={t} />
+														<LastLoginCell value={coach.lastLogin} locale={locale} empty={t('table.never')} />
+														<div className="ms-auto flex shrink-0 items-center gap-1.5">
+															<button
+																type="button"
+																className={COMPACT_BTN}
+																onClick={() => addUnder({ role: 'client', adminId: admin.id, adminName: admin.name, coachId: coach.id, coachName: coach.name })}
+															>
+																<Plus className="size-3.5" aria-hidden />
+																{t('sections.addClient')}
+															</button>
+															<ActionBar user={coachUser} {...actions} t={t} />
+														</div>
+													</div>
+													{mine.length === 0 ? (
+														<p className="px-4 py-3 text-[12px] text-[var(--gm-muted)]">{t('empty.noClients')}</p>
+													) : (
+														<ClientsTable clients={mine} {...clientsTableProps} />
+													)}
+												</section>
+											);
+										})}
+										{grouped.loose.length > 0 && (
+											<section className="border-t border-[var(--gm-line)]">
+												<div className="flex items-center gap-2 whitespace-nowrap bg-[color-mix(in_srgb,var(--gm-muted)_6%,var(--gm-paper))] px-4 py-2">
+													<span className="text-[13px] font-semibold text-[var(--gm-ink)]">{t('sections.unassigned')}</span>
+													<span className="text-[12px] text-[var(--gm-muted)]">{t('sections.unassignedHint')}</span>
+												</div>
+												<ClientsTable clients={grouped.loose} {...clientsTableProps} unassigned />
+											</section>
+										)}
+									</div>
 								)}
 							</div>
-							{coaches.length === 0 && clients.length === 0 ? (
-								<p className="px-4 py-4 text-[12.5px] text-[var(--gm-muted)]">{t('empty.noCoaches')}</p>
-							) : (
-								<div className="flex flex-col">
-									{coaches.map((coach) => {
-										const mine = grouped.byCoach.get(coach.id) || [];
-										const coachUser = { ...coach, role: 'coach' };
-										return (
-											<section key={coach.id} className="border-b border-[var(--gm-line)] last:border-b-0">
-												<div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-													<UserIdentity
-														user={coachUser}
-														extra={<span className="text-[11px] font-semibold text-[var(--color-secondary-600)]">{t('sections.clientCount', { count: mine.length })}</span>}
-													/>
-													<span className="truncate text-[12px] text-[var(--gm-muted)]">{coach.email}</span>
-													<StatusBadge status={coach.status} t={t} />
-													<LastLoginCell value={coach.lastLogin} locale={locale} empty={t('table.never')} />
-													<button
-														type="button"
-														className="rs-btn !h-8 !px-2.5 !text-[12px]"
-														onClick={() => addUnder({ role: 'client', adminId: admin.id, adminName: admin.name, coachId: coach.id, coachName: coach.name })}
-													>
-														<Plus className="size-3.5" aria-hidden />
-														{t('sections.addClientFor', { name: coach.name || coach.email })}
-													</button>
-													<div className="ms-auto">
-														<ActionBar user={coachUser} {...actions} t={t} />
-													</div>
-												</div>
-												{mine.length === 0 ? (
-													<p className="px-4 pb-3 text-[12px] text-[var(--gm-muted)]" style={{ paddingInlineStart: 52 }}>{t('empty.noClients')}</p>
-												) : mine.map((client) => (
-													<div key={client.id} className="flex flex-wrap items-center gap-2 border-t border-[var(--gm-line)] px-3 py-2" style={{ paddingInlineStart: 44 }}>
-														<CornerDownRight className="size-3.5 shrink-0 text-[var(--gm-faint)] rtl:-scale-x-100" aria-hidden />
-														<UserIdentity user={{ ...client, role: 'client' }} size="sm" />
-														<span className="truncate text-[12px] text-[var(--gm-muted)]">{client.email}</span>
-														<StatusBadge status={client.status} t={t} />
-														<LastLoginCell value={client.lastLogin} locale={locale} empty={t('table.never')} />
-														<label className="ms-auto flex items-center gap-1.5 text-[11px] text-[var(--gm-muted)]">
-															{t('sections.moveCoach')}
-															<select
-																className="h-8 max-w-[180px] rounded-lg border border-[var(--gm-line)] bg-[var(--gm-paper)] px-2 text-[12px] text-[var(--gm-ink)]"
-																value={client.coach?.id || ''}
-																disabled={movingId === client.id}
-																onChange={(e) => moveClient(client, e.target.value)}
-															>
-																{coaches.map((c) => (
-																	<option key={c.id} value={c.id}>{c.name || c.email}</option>
-																))}
-															</select>
-														</label>
-														<ActionBar user={{ ...client, role: 'client' }} {...actions} t={t} />
-													</div>
-												))}
-											</section>
-										);
-									})}
-									{grouped.loose.length > 0 && (
-										<section className="border-t border-[var(--gm-line)]">
-											<div className="px-3 py-2">
-												<p className="text-[12.5px] font-semibold text-[var(--gm-ink)]">{t('sections.unassigned')}</p>
-												<p className="text-[12px] text-[var(--gm-muted)]">{t('sections.unassignedHint')}</p>
-											</div>
-											{grouped.loose.map((client) => (
-												<div key={client.id} className="flex flex-wrap items-center gap-2 border-t border-[var(--gm-line)] px-3 py-2">
-													<UserIdentity user={{ ...client, role: 'client' }} size="sm" />
-													<span className="truncate text-[12px] text-[var(--gm-muted)]">{client.email}</span>
-													<StatusBadge status={client.status} t={t} />
-													<LastLoginCell value={client.lastLogin} locale={locale} empty={t('table.never')} />
-													{coaches.length > 0 && (
-														<label className="ms-auto flex items-center gap-1.5 text-[11px] text-[var(--gm-muted)]">
-															{t('sections.moveCoach')}
-															<select
-																className="h-8 max-w-[180px] rounded-lg border border-[var(--gm-line)] bg-[var(--gm-paper)] px-2 text-[12px] text-[var(--gm-ink)]"
-																value=""
-																disabled={movingId === client.id}
-																onChange={(e) => moveClient(client, e.target.value)}
-															>
-																<option value="">{t('sections.unassigned')}</option>
-																{coaches.map((c) => (
-																	<option key={c.id} value={c.id}>{c.name || c.email}</option>
-																))}
-															</select>
-														</label>
-													)}
-													<ActionBar user={{ ...client, role: 'client' }} {...actions} t={t} />
-												</div>
-											))}
-										</section>
-									)}
-								</div>
-							)}
 						</div>
 					</td>
 				</tr>
