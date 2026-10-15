@@ -2247,15 +2247,16 @@ export function groupConsecutiveImageMessages(messages = []) {
 			previous?.kind === 'image-gallery' &&
 			previous.senderKey === senderKey
 		) {
+			// Key stays on the first bubble: appending an image or confirming an upload
+			// (pending:<clientId> → server id) must not remount the gallery.
 			previous.messages.push(message);
 			previous.attachments.push(...images);
-			previous.key = `${previous.messages[0].id}:${message.id}`;
 			continue;
 		}
 		if (images.length > 0) {
 			rows.push({
 				kind: 'image-gallery',
-				key: message.id,
+				key: message.clientMessageId || message.id,
 				senderKey,
 				messages: [message],
 				attachments: [...images],

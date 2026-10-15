@@ -8,6 +8,7 @@ import {
 	isMessageThreadCacheComplete,
 	openChatCatchUpPlan,
 	openChatMessagesStaleTime,
+	firstUnreadMessageId,
 	shouldProviderBackfill,
 	shouldReloadOpenChatMessages,
 	shouldSkipOpenChatNetwork,
@@ -87,6 +88,38 @@ test('thread with local rows skips provider even without hydration watermark', (
 	});
 	assert.equal(result.needed, false);
 	assert.equal(result.reason, 'local_replica');
+});
+
+test('a lone live row in a never-hydrated chat pulls history once', () => {
+	assert.deepEqual(
+		shouldProviderBackfill({ canSync: true, itemCount: 1, now }),
+		{ needed: true, reason: 'sparse_unhydrated' },
+	);
+	assert.equal(
+		shouldProviderBackfill({
+			canSync: true,
+			itemCount: 1,
+			lastProviderSyncAt: new Date(now - 60_000).toISOString(),
+			now,
+		}).needed,
+		false,
+	);
+});
+
+test('unread divider sits above the earliest of the last N inbound messages', () => {
+	const rows = [
+		{ id: 'a', direction: 'outbound' },
+		{ id: 'b', direction: 'inbound' },
+		{ id: 'c', direction: 'inbound' },
+		{ id: 'd', direction: 'inbound' },
+	];
+	assert.equal(firstUnreadMessageId(rows, 2), 'c');
+	assert.equal(firstUnreadMessageId(rows, 3), 'b');
+	assert.equal(firstUnreadMessageId(rows, 0), null);
+	// Not enough inbound rows loaded yet / answered since.
+	assert.equal(firstUnreadMessageId(rows, 4), null);
+	assert.equal(firstUnreadMessageId([...rows, { id: 'e', fromMe: true }], 1), null);
+	assert.equal(firstUnreadMessageId([{ id: 'inbox-preview-x', direction: 'inbound' }], 1), null);
 });
 
 test('stale watermark does not re-pull when local rows exist', () => {

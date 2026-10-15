@@ -21,6 +21,7 @@ import {
 	Bookmark,
 	BookmarkPlus,
 	BookUser,
+	Bot,
 	Copy,
 	Check,
 	CheckCheck,
@@ -308,6 +309,8 @@ const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
 const ContactsPanel = lazy(() => import('./ContactsPanel'));
 const DemoModeSettings = lazy(() => import('./demo/components/DemoModeSettings'));
 const WhatsAppAiSettings = lazy(() => import('./ai/WhatsAppAiSettings'));
+const WhatsAppAiAgentPanel = lazy(() => import('./ai/WhatsAppAiAgentPanel'));
+const AiAgentChatBar = lazy(() => import('./ai/AiAgentChatBar'));
 const CloneChatVoicePanel = lazy(() => import('./voice-changer/CloneChatVoicePanel'));
 const VoiceChangerDialog = lazy(() => import('./voice-changer/VoiceChangerDialog'));
 const VideoToVoiceDialog = lazy(() => import('./video-to-voice/VideoToVoiceDialog'));
@@ -365,6 +368,7 @@ import {
 import {
 	MESSAGE_PAGE_SIZE,
 	MESSAGES_CACHE_TTL_MS,
+	firstUnreadMessageId,
 	isMessageThreadCacheComplete,
 	openChatCatchUpPlan,
 	openChatMessagesStaleTime,
@@ -373,6 +377,12 @@ import {
 	shouldSkipOpenChatNetwork,
 	trimBackgroundThreadCache,
 } from './whatsapp-message-sync';
+import { usePullToRefresh } from './use-pull-to-refresh';
+import { AI_AGENT_STATE_EVENT, agentRowBadge } from './ai/agent-events';
+import { whatsappAiAgentApi } from './ai/whatsapp-ai-api';
+import MessageQuickActions from './MessageQuickActions';
+import WaSwipeRow from './WaSwipeRow';
+import { SWIPE_REPLY_TRIGGER_PX, swipeReplyState } from './wa-message-gestures';
 import {
 	readCachedMessagePage,
 	writeCachedMessagePage,
@@ -760,6 +770,13 @@ const translations = {
 		openBoardTab: 'Open tasks board',
 		settings: 'Settings',
 		settingsAi: 'AI replies',
+		settingsAgent: 'AI agent',
+		agentBadges: {
+			auto: 'AI agent replies automatically',
+			suggest: 'AI agent suggests replies',
+			draft: 'AI draft waiting for approval',
+			handoff: 'AI handed this chat to the team',
+		},
 		settingsDemo: 'Demo mode',
 		settingsNotifications: 'Notifications',
 		settingsPrivacy: 'Privacy',
@@ -954,6 +971,13 @@ const translations = {
 		send: 'Send',
 		sync: 'Sync',
 		older: 'Load older messages',
+		unreadMessagesDivider: 'Unread messages',
+		unreadMessagesDividerCount: '{count} unread messages',
+		syncingMessages: 'Syncing…',
+		pullToRefresh: 'Pull to refresh',
+		releaseToRefresh: 'Release to refresh',
+		refreshing: 'Refreshing…',
+		refreshFailed: 'Could not refresh. Check your connection.',
 		loadMoreImages: 'Load older images',
 		viewInGallery: 'View in gallery',
 		assign: 'Assign',
@@ -1262,6 +1286,13 @@ const translations = {
 		openBoardTab: 'فتح لوحة المهام',
 		settings: 'الإعدادات',
 		settingsAi: 'ردود الذكاء الاصطناعي',
+		settingsAgent: 'وكيل الذكاء الاصطناعي',
+		agentBadges: {
+			auto: 'الوكيل يرد تلقائيًا',
+			suggest: 'الوكيل يقترح الردود',
+			draft: 'مسودة رد بانتظار الموافقة',
+			handoff: 'حوّل الوكيل المحادثة إلى الفريق',
+		},
 		settingsDemo: 'الوضع التجريبي',
 		settingsNotifications: 'الإشعارات',
 		settingsPrivacy: 'الخصوصية',
@@ -1456,6 +1487,13 @@ const translations = {
 		send: 'إرسال',
 		sync: 'مزامنة',
 		older: 'تحميل رسائل أقدم',
+		unreadMessagesDivider: 'الرسائل غير المقروءة',
+		unreadMessagesDividerCount: '{count} رسائل غير مقروءة',
+		syncingMessages: 'جارٍ المزامنة…',
+		pullToRefresh: 'اسحب للتحديث',
+		releaseToRefresh: 'اترك للتحديث',
+		refreshing: 'جارٍ التحديث…',
+		refreshFailed: 'تعذّر التحديث. تحقّق من الاتصال.',
 		loadMoreImages: 'تحميل صور أقدم',
 		viewInGallery: 'عرض في المعرض',
 		assign: 'إسناد',
@@ -9684,6 +9722,18 @@ function MultiMessageActionMenu({
 const CONVERSATION_MENU_WIDTH = 252;
 
 const LONG_PRESS_MS = 500;
+const PHONE_VIEWPORT_QUERY = '(max-width: 768px)';
+function subscribePhoneViewport(onChange) {
+	if (typeof window === 'undefined' || !window.matchMedia) return () => { };
+	const query = window.matchMedia(PHONE_VIEWPORT_QUERY);
+	query.addEventListener?.('change', onChange);
+	return () => query.removeEventListener?.('change', onChange);
+}
+function readPhoneViewport() {
+	return typeof window !== 'undefined' && Boolean(window.matchMedia?.(PHONE_VIEWPORT_QUERY).matches);
+}
+/** Matches `.wa-unread-divider` height + margins in wa-ui.css. */
+const UNREAD_DIVIDER_HEIGHT = 48;
 
 /** A long-press can leave a native selection behind; iOS then spends the next
  *  tap clearing it instead of delivering the click that should close the menu. */
@@ -11448,6 +11498,7 @@ const WaConversationRow = memo(function WaConversationRow({
 	locale,
 	t,
 	actions,
+	agentBadge = null,
 }) {
 	const title = conversationTitle(conversation);
 	const titlePresentation = messageTextPresentation(title);
@@ -11580,6 +11631,16 @@ const WaConversationRow = memo(function WaConversationRow({
 						{title}
 					</p>
 					<div className="flex shrink-0 items-center gap-1">
+						{agentBadge ? (
+							<span
+								className={`wa-agent-row-badge is-${agentBadge}`}
+								data-wa-agent-badge={agentBadge}
+								title={t.agentBadges?.[agentBadge]}
+								aria-label={t.agentBadges?.[agentBadge]}
+							>
+								<Bot size={12} strokeWidth={2.2} />
+							</span>
+						) : null}
 						{conversation.isMuted ? (
 							<span
 								className="text-slate-400"
@@ -11961,6 +12022,8 @@ function WhatsAppWorkspaceContent() {
 	const hasMoreMessagesRef = useRef(true);
 	hasMoreMessagesRef.current = hasMoreMessages;
 	const [loadingMessages, setLoadingMessages] = useState(false);
+	/** Conversation whose cached thread is painted while a provider catch-up runs. */
+	const [threadSyncingId, setThreadSyncingId] = useState(null);
 	/** Soft catch-up when inbox shows unread/new preview the warm thread does not have yet. */
 	const [messageCatchUp, setMessageCatchUp] = useState(null);
 	const messageCatchUpRef = useRef(null);
@@ -12279,6 +12342,13 @@ function WhatsAppWorkspaceContent() {
 	}, []);
 	const messageBoxRef = useRef(null);
 	const longPressTimerRef = useRef(null);
+	const longPressOpenedAtRef = useRef(0);
+	const swipeReplyRef = useRef(null);
+	const swipeConsumedAtRef = useRef(0);
+	/** Phone tap quick-action bar: `{ messageId, rect, mine }`. */
+	const [quickActions, setQuickActions] = useState(null);
+	const [openSwipeRowId, setOpenSwipeRowId] = useState(null);
+	const phoneViewport = useSyncExternalStore(subscribePhoneViewport, readPhoneViewport, () => false);
 	const longPressOriginRef = useRef(null);
 	const conversationLongPressTimerRef = useRef(null);
 	const conversationLongPressOriginRef = useRef(null);
@@ -12705,6 +12775,37 @@ function WhatsAppWorkspaceContent() {
 	const isDesktopLayout = useDesktopLayout();
 	const canManageWhatsApp = Boolean(currentAccess.canManage);
 	const canAssignWhatsApp = Boolean(currentAccess.canAssign);
+	const [agentRowStates, setAgentRowStates] = useState(() => new Map());
+	const agentAccountId = !showcaseOnly && !demo.settings.enabled ? selectedAccount?.id || '' : '';
+	useEffect(() => {
+		setAgentRowStates(new Map());
+		if (!agentAccountId) return undefined;
+		const controller = new AbortController();
+		whatsappAiAgentApi
+			.listConversationStates(agentAccountId, controller.signal)
+			.then(result => {
+				if (!result?.settings?.enabled) return;
+				setAgentRowStates(new Map((result.conversations || []).map(state => [state.conversationId, state])));
+			})
+			.catch(() => {
+				/* badges are optional */
+			});
+		return () => controller.abort();
+	}, [agentAccountId]);
+	useEffect(() => {
+		if (!agentAccountId) return undefined;
+		const onState = event => {
+			const next = event.detail;
+			if (!next?.conversationId) return;
+			setAgentRowStates(current => {
+				const map = new Map(current);
+				map.set(next.conversationId, { ...(current.get(next.conversationId) || {}), ...next });
+				return map;
+			});
+		};
+		window.addEventListener(AI_AGENT_STATE_EVENT, onState);
+		return () => window.removeEventListener(AI_AGENT_STATE_EVENT, onState);
+	}, [agentAccountId]);
 	const canComposeInConversation =
 		(canUseWhatsApp || demo.settings.enabled) &&
 		canRouteDemoWrite(demo.settings.enabled, selectedConversation) &&
@@ -12756,6 +12857,38 @@ function WhatsAppWorkspaceContent() {
 	);
 	const messageRowsRef = useRef(messageRows);
 	messageRowsRef.current = messageRows;
+	// Unread count captured when the chat opens (before mark-as-read clears it), so the
+	// divider stays where the unread run started for as long as the chat is open.
+	const [unreadAtOpen, setUnreadAtOpen] = useState(null);
+	useLayoutEffect(() => {
+		if (!conversationId) {
+			setUnreadAtOpen(null);
+			return;
+		}
+		const meta = conversationsRef.current.find(item => item.id === conversationId);
+		const count = conversationUnreadCount(meta);
+		setUnreadAtOpen(count > 0 ? { conversationId, count } : null);
+	}, [conversationId]);
+	const unreadDividerMessageId = useMemo(() => {
+		if (!unreadAtOpen || unreadAtOpen.conversationId !== conversationId) return null;
+		return firstUnreadMessageId(
+			effectiveMessages.filter(isRenderableWhatsAppMessage),
+			unreadAtOpen.count,
+		);
+	}, [conversationId, effectiveMessages, unreadAtOpen]);
+	const unreadDividerIdRef = useRef(unreadDividerMessageId);
+	unreadDividerIdRef.current = unreadDividerMessageId;
+	const quickActionsMessage = useMemo(
+		() =>
+			quickActions?.messageId
+				? effectiveMessages.find(item => item?.id === quickActions.messageId) || null
+				: null,
+		[effectiveMessages, quickActions],
+	);
+	const closeQuickActions = useCallback(() => setQuickActions(null), []);
+	useEffect(() => {
+		setQuickActions(null);
+	}, [conversationId]);
 	const threadVirtualLatchRef = useRef({ conversationId: null, enabled: false, opening: false });
 	if (threadVirtualLatchRef.current.conversationId !== conversationId) {
 		// `opening` lasts until the thread settles at the bottom (behind the loader).
@@ -12822,6 +12955,13 @@ function WhatsAppWorkspaceContent() {
 			isGroupChat &&
 			first?.direction !== 'outbound' &&
 			!(previous && messagesFormBubbleCluster(previous, first, { isGroupChat }));
+		const dividerId = unreadDividerIdRef.current;
+		const hasUnreadDivider = Boolean(
+			dividerId &&
+				(row.kind === 'image-gallery'
+					? row.messages?.some(item => item?.id === dividerId)
+					: row.message?.id === dividerId),
+		);
 		const signature = [
 			layout.version,
 			startsNewDay ? 1 : 0,
@@ -12830,14 +12970,17 @@ function WhatsAppWorkspaceContent() {
 			String(first?.text || '').length,
 			(first?.reactions || []).length,
 			first?.replyTo ? 1 : 0,
+			hasUnreadDivider ? 1 : 0,
+			row.kind === 'image-gallery' ? row.attachments?.length || 0 : 0,
 		].join('|');
 		const cache = rowEstimateCacheRef.current;
 		const key = messageRowKey(row);
 		const hit = cache.get(key);
 		if (hit && hit.signature === signature) return hit.size;
 		const size =
-			estimateTextRowSize(row, layout, { startsNewDay, precedesSame, showsSenderName }) ??
-			estimateMessageRowSize(row) + (startsNewDay ? THREAD_ROW_EXTRAS.dateSeparator : 0);
+			(estimateTextRowSize(row, layout, { startsNewDay, precedesSame, showsSenderName }) ??
+				estimateMessageRowSize(row) + (startsNewDay ? THREAD_ROW_EXTRAS.dateSeparator : 0)) +
+			(hasUnreadDivider ? UNREAD_DIVIDER_HEIGHT : 0);
 		if (cache.size > 6000) cache.clear();
 		cache.set(key, { signature, size });
 		return size;
@@ -15235,7 +15378,10 @@ function WhatsAppWorkspaceContent() {
 					}
 				};
 				if (items.length > 0) {
-					void finishProviderSync();
+					if (isCurrentRequest()) setThreadSyncingId(id);
+					void finishProviderSync().finally(() => {
+						setThreadSyncingId(current => (current === id ? null : current));
+					});
 				} else {
 					await finishProviderSync();
 				}
@@ -15285,6 +15431,39 @@ function WhatsAppWorkspaceContent() {
 
 	const loadMessagesRef = useRef(loadMessages);
 	loadMessagesRef.current = loadMessages;
+
+	// Pull-to-refresh: connection status (accounts), inbox page 1, the open thread, and a
+	// socket reconnect if it dropped. Painted data stays on screen while this runs.
+	const refreshFromPull = useCallback(async () => {
+		const socket = socketRef.current;
+		if (socket && !socket.connected) socket.connect();
+		const activeAccountId = accountIdRef.current;
+		const activeConversationId = conversationIdRef.current;
+		const tasks = [loadAccounts()];
+		if (activeAccountId) {
+			tasks.push(
+				loadConversations(activeAccountId, 1, false, {
+					force: true,
+					background: true,
+					filter: conversationFilterRef.current === 'archived' ? 'archived' : 'all',
+				}),
+			);
+		}
+		if (activeConversationId && !isDemoId(activeConversationId)) {
+			tasks.push(loadMessagesRef.current?.(activeConversationId, true, { forceProvider: false }));
+		}
+		const results = await Promise.allSettled(tasks);
+		const failed = results.find(
+			result => result.status === 'rejected' && !isRequestCancelled(result.reason),
+		);
+		if (failed) {
+			toast.error(failed.reason?.response?.data?.message || t.refreshFailed);
+		}
+	}, [loadAccounts, loadConversations, t.refreshFailed]);
+	const chatListPull = usePullToRefresh(chatListScrollRef, refreshFromPull, {
+		enabled: isConversationWorkspaceTab(activeTab),
+		attachKey: activeTab,
+	});
 
 	const cancelIdleMessagePrefetch = useCallback((keepConversationId = null) => {
 		if (hoverPrefetchTimerRef.current) {
@@ -15867,6 +16046,47 @@ function WhatsAppWorkspaceContent() {
 		threadSettledRef.current = threadSettled;
 		if (threadSettled) threadVirtualLatchRef.current.opening = false;
 	}, [threadSettled]);
+
+	// After the open settles at the bottom, bring the unread divider into view when the
+	// unread run is taller than the viewport (WhatsApp opens at the first unread).
+	const unreadRevealDoneRef = useRef(null);
+	useEffect(() => {
+		if (!threadSettled || !conversationId || !unreadDividerMessageId) return undefined;
+		if (unreadRevealDoneRef.current === conversationId) return undefined;
+		unreadRevealDoneRef.current = conversationId;
+		const box = messageBoxRef.current;
+		if (!box) return undefined;
+		let frame = 0;
+		const reveal = () => {
+			const divider = box.querySelector('[data-wa-unread-divider]');
+			if (!divider) return false;
+			const boxRect = box.getBoundingClientRect();
+			const rect = divider.getBoundingClientRect();
+			if (rect.top >= boxRect.top + 4 && rect.bottom <= boxRect.bottom - 4) return true;
+			pinThreadToBottomRef.current = false;
+			box.scrollTop += rect.top - boxRect.top - 12;
+			setShowJumpToBottom(true);
+			return true;
+		};
+		if (reveal()) return undefined;
+		const index = messageRowsRef.current.findIndex(row =>
+			row?.kind === 'image-gallery'
+				? row.messages?.some(item => item?.id === unreadDividerMessageId)
+				: row?.message?.id === unreadDividerMessageId,
+		);
+		if (index < 0) return undefined;
+		pinThreadToBottomRef.current = false;
+		messageVirtualRef.current?.scrollToIndex?.(index, { align: 'start' });
+		frame = requestAnimationFrame(() => {
+			frame = requestAnimationFrame(() => {
+				reveal();
+			});
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [threadSettled, conversationId, unreadDividerMessageId]);
+	useEffect(() => {
+		if (unreadRevealDoneRef.current !== conversationId) unreadRevealDoneRef.current = null;
+	}, [conversationId]);
 
 	useEffect(() => {
 		return () => {
@@ -16518,6 +16738,12 @@ function WhatsAppWorkspaceContent() {
 			if (event.accountId && watchedAccountId && event.accountId !== watchedAccountId) return;
 			const activeConversationId = conversationIdRef.current;
 			const eventConversationId = event.conversationId || event.payload?.conversationId;
+			if (event.event === 'ai_agent.state') {
+				if (eventConversationId) {
+					window.dispatchEvent(new CustomEvent(AI_AGENT_STATE_EVENT, { detail: event.payload }));
+				}
+				return;
+			}
 			if (event.event === 'message' && eventConversationId) {
 				const targetConversationId = eventConversationId;
 				const previous = messagesCacheRef.current.get(targetConversationId);
@@ -20077,6 +20303,8 @@ function WhatsAppWorkspaceContent() {
 		longPressOriginRef.current = { x: event.clientX, y: event.clientY };
 		longPressTimerRef.current = setTimeout(() => {
 			if (navigator.vibrate) navigator.vibrate(15);
+			longPressOpenedAtRef.current = Date.now();
+			setQuickActions(null);
 			clearLongPressSelection();
 			setReactionPickerMessageId(null);
 			setActionMessageAnchor(anchorRect);
@@ -20095,6 +20323,112 @@ function WhatsAppWorkspaceContent() {
 		clearTimeout(longPressTimerRef.current);
 		longPressTimerRef.current = null;
 		longPressOriginRef.current = null;
+	};
+
+	// Swipe-to-reply (touch only). Moves the bubble line imperatively so a drag never
+	// re-renders the thread; the bubble has `touch-action: pan-y` so vertical scroll wins.
+	const beginSwipeReply = (event, message) => {
+		if (event.pointerType !== 'touch' || typeof window === 'undefined') return;
+		if (window.innerWidth > 768 || message?.optimistic || message?.isDeleted) return;
+		const line = event.currentTarget.closest('.wa-message-line') || event.currentTarget;
+		swipeReplyRef.current = {
+			message,
+			line,
+			pointerId: event.pointerId,
+			x: event.clientX,
+			y: event.clientY,
+			axis: null,
+			armed: false,
+			icon: null,
+		};
+	};
+	const moveSwipeReply = event => {
+		const swipe = swipeReplyRef.current;
+		if (!swipe || swipe.pointerId !== event.pointerId) return;
+		const rtl = document.documentElement.dir === 'rtl';
+		const next = swipeReplyState({
+			dx: event.clientX - swipe.x,
+			dy: event.clientY - swipe.y,
+			rtl,
+			locked: swipe.axis,
+		});
+		if (next.axis === 'y') {
+			swipeReplyRef.current = null;
+			return;
+		}
+		if (next.axis !== 'x') return;
+		if (!swipe.axis) {
+			swipe.axis = 'x';
+			clearTimeout(longPressTimerRef.current);
+			longPressTimerRef.current = null;
+			const host = swipe.line.parentElement;
+			if (host) {
+				if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+				const icon = document.createElement('span');
+				icon.className = 'wa-swipe-reply-icon';
+				icon.setAttribute('aria-hidden', 'true');
+				icon.innerHTML =
+					'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"' +
+					(rtl ? ' style="transform:scaleX(-1)"' : '') +
+					'><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
+				host.appendChild(icon);
+				swipe.icon = icon;
+			}
+			swipe.line.classList.add('is-swiping');
+		}
+		swipe.line.style.transform = next.offset ? `translateX(${next.offset}px)` : '';
+		if (swipe.icon) {
+			swipe.icon.style.opacity = String(Math.min(1, Math.abs(next.offset) / SWIPE_REPLY_TRIGGER_PX));
+			swipe.icon.classList.toggle('is-armed', next.armed);
+		}
+		if (next.armed && !swipe.armed && navigator.vibrate) navigator.vibrate(10);
+		swipe.armed = next.armed;
+	};
+	const endSwipeReply = event => {
+		const swipe = swipeReplyRef.current;
+		if (!swipe || (event && swipe.pointerId !== event.pointerId)) return;
+		swipeReplyRef.current = null;
+		if (swipe.axis !== 'x') return;
+		swipeConsumedAtRef.current = Date.now();
+		const { line, icon } = swipe;
+		line.classList.remove('is-swiping');
+		line.classList.add('is-swipe-settling');
+		line.style.transform = '';
+		if (icon) icon.style.opacity = '0';
+		window.setTimeout(() => {
+			line.classList.remove('is-swipe-settling');
+			icon?.remove();
+		}, 200);
+		if (swipe.armed && event?.type === 'pointerup') {
+			setQuickActions(null);
+			void handleMessageAction(swipe.message, 'reply');
+		}
+	};
+
+	/** Phone tap on a bubble: show the quick action bar (or toggle it off). */
+	const openMessageQuickActions = (event, message, mine) => {
+		if (typeof window === 'undefined' || window.innerWidth > 768) return;
+		if (Date.now() - swipeConsumedAtRef.current < 450) return;
+		if (Date.now() - longPressOpenedAtRef.current < 800) return;
+		if (actionMessageId || message?.optimistic || selectedMessageIds.size) return;
+		if (
+			event.target.closest?.(
+				'button, a, audio, video, input, textarea, [role="button"], [data-wa-press-surface]',
+			)
+		) {
+			return;
+		}
+		if (String(window.getSelection?.() || '').trim()) return;
+		const rect = event.currentTarget.getBoundingClientRect();
+		setQuickActions(current =>
+			current?.messageId === message.id
+				? null
+				: {
+					messageId: message.id,
+					rect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
+					mine,
+				},
+		);
 	};
 
 	const openComposerFilePicker = ({ accept, capture } = {}) => {
@@ -20936,6 +21270,40 @@ function WhatsAppWorkspaceContent() {
 			toast.success(locale === 'ar' ? 'تم تعليم المحادثة كغير مقروءة' : 'Marked as unread');
 		} catch {
 			toast.error(locale === 'ar' ? 'تعذر تعليم كغير مقروء' : 'Could not mark unread');
+		}
+	};
+
+	/** Inbox swipe action: flip read/unread for any row, not only the open chat. */
+	const toggleConversationReadState = async conversation => {
+		if (!conversation || demo.settings.enabled || isDemoId(conversation.id)) return;
+		const wasUnread = conversationUnreadCount(conversation) > 0;
+		try {
+			if (wasUnread) {
+				await api.post(`/whatsapp/conversations/${conversation.id}/read`, null, {
+					params: { manual: true },
+				});
+				setConversationUnreadCount(conversation.id, 0);
+			} else {
+				const { data } = await api.post(`/whatsapp/conversations/${conversation.id}/unread`);
+				const next = Number(data?.unreadCount) || 1;
+				setConversations(current =>
+					current.map(item =>
+						item.id === conversation.id ? { ...item, unreadCount: next } : item,
+					),
+				);
+			}
+			notifyWhatsAppUnreadChanged();
+		} catch (error) {
+			toast.error(
+				error.response?.data?.message ||
+					(locale === 'ar'
+						? wasUnread
+							? 'تعذر تعليم المحادثة كمقروءة'
+							: 'تعذر تعليم كغير مقروء'
+						: wasUnread
+							? 'Could not mark as read'
+							: 'Could not mark unread'),
+			);
 		}
 	};
 
@@ -22932,6 +23300,57 @@ function WhatsAppWorkspaceContent() {
 
 	const accStatus = selectedAccount ? statusMeta(selectedAccount.status, t, selectedAccount) : null;
 
+	// Inbox swipe: inline-start side = read/unread + pin; inline-end side = archive + ⋯
+	// (⋯ opens the conversation sheet, which is the bottom sheet on phones).
+	const rowSwipeEnabled = phoneViewport && !chatListCollapsed && !demo.settings.enabled;
+	const swipeStartActionsFor = conversation => {
+		const ar = locale === 'ar';
+		const unread = conversationUnreadCount(conversation) > 0;
+		return [
+			{
+				id: 'read',
+				label: unread ? (ar ? 'مقروءة' : 'Read') : ar ? 'غير مقروءة' : 'Unread',
+				icon: unread ? CheckCheck : Mail,
+				tone: 'info',
+				onSelect: () => void toggleConversationReadState(conversation),
+			},
+			{
+				id: 'pin',
+				label: conversation.isPinned ? (ar ? 'إلغاء التثبيت' : 'Unpin') : ar ? 'تثبيت' : 'Pin',
+				icon: Pin,
+				tone: 'muted',
+				onSelect: () => void toggleConversationPinned(conversation),
+			},
+		];
+	};
+	const swipeEndActionsFor = conversation => {
+		const ar = locale === 'ar';
+		return [
+			{
+				id: 'more',
+				label: ar ? 'المزيد' : 'More',
+				icon: MoreHorizontal,
+				tone: 'neutral',
+				onSelect: () => {
+					const row =
+						typeof document === 'undefined'
+							? null
+							: document.querySelector(`[data-conversation-id="${conversation.id}"]`);
+					suppressConversationClickRef.current = true;
+					setConversationActionAnchor(row?.getBoundingClientRect() || null);
+					setConversationActionTarget(conversation);
+				},
+			},
+			{
+				id: 'archive',
+				label: conversation.isArchived ? (ar ? 'إلغاء الأرشفة' : 'Unarchive') : ar ? 'أرشفة' : 'Archive',
+				icon: Archive,
+				tone: 'primary',
+				onSelect: () => void toggleConversationArchived(conversation),
+			},
+		];
+	};
+
 	if (!tabReady || !activeTab) {
 		return (
 			<div
@@ -24107,6 +24526,32 @@ function WhatsAppWorkspaceContent() {
 									className="wa-conversation-list min-h-0 flex-1 overflow-y-auto p-2 nice-scroll"
 									onScroll={handleChatListScroll}
 								>
+									{chatListPull.pull > 0 || chatListPull.refreshing ? (
+										<div
+											className="wa-pull-indicator"
+											data-wa-pull-indicator=""
+											role="status"
+											aria-live="polite"
+											style={{ height: chatListPull.refreshing ? 44 : chatListPull.pull }}
+										>
+											<span className="wa-pull-indicator__chip">
+												{chatListPull.refreshing ? (
+													<Loader2 size={14} className="animate-spin" aria-hidden="true" />
+												) : (
+													<RefreshCw
+														size={14}
+														aria-hidden="true"
+														style={{ transform: `rotate(${Math.round(chatListPull.pull * 3)}deg)` }}
+													/>
+												)}
+												{chatListPull.refreshing
+													? t.refreshing
+													: chatListPull.armed
+														? t.releaseToRefresh
+														: t.pullToRefresh}
+											</span>
+										</div>
+									) : null}
 									{activeTab !== 'channels' && conversationFilter === 'archived' ? (
 										<button
 											type="button"
@@ -24328,8 +24773,16 @@ function WhatsAppWorkspaceContent() {
 										<>
 											<WaVirtualSpacer height={chatListWindow.topPad} />
 											{visibleConversations.map(conversation => (
-												<WaConversationRow
+												<WaSwipeRow
 													key={conversation.id}
+													rowKey={conversation.id}
+													openKey={openSwipeRowId}
+													onOpenChange={setOpenSwipeRowId}
+													enabled={rowSwipeEnabled}
+													startActions={rowSwipeEnabled ? swipeStartActionsFor(conversation) : []}
+													endActions={rowSwipeEnabled ? swipeEndActionsFor(conversation) : []}
+												>
+												<WaConversationRow
 													conversation={conversation}
 													active={conversation.id === conversationId || conversation.id === secondaryConversationId}
 													isSplitSecondary={conversation.id === secondaryConversationId}
@@ -24343,7 +24796,9 @@ function WhatsAppWorkspaceContent() {
 													locale={locale}
 													t={t}
 													actions={conversationRowActions}
+													agentBadge={agentRowBadge(agentRowStates.get(conversation.id))}
 												/>
+												</WaSwipeRow>
 											))}
 											<WaVirtualSpacer height={chatListWindow.bottomPad} />
 											{conversations.length < conversationTotal && (
@@ -24668,7 +25123,68 @@ function WhatsAppWorkspaceContent() {
 											/>
 											{browserOnline ? t.reconnectingSocket : t.computerOffline}
 										</div>
+									) : threadSyncingId && threadSyncingId === conversationId ? (
+										<div className="pointer-events-none relative z-20 h-0 shrink-0">
+											<div className="absolute inset-x-0 top-2 flex justify-center">
+												<span
+													role="status"
+													data-wa-thread-syncing=""
+													className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-[12px] font-semibold text-emerald-700 shadow-sm ring-1 ring-black/5 dark:bg-[#202c33]/95 dark:text-emerald-300"
+												>
+													<Loader2 size={12} className="animate-spin" aria-hidden="true" />
+													{t.syncingMessages}
+												</span>
+											</div>
+										</div>
 									) : null}
+									{!demo.settings.enabled && !showcaseOnly && conversationId ? (
+										<Suspense fallback={null}>
+											<AiAgentChatBar
+												conversationId={conversationId}
+												locale={locale}
+												canUse={Boolean(canUseWhatsApp || canManageWhatsApp || isAdmin)}
+												onSent={message => {
+													const targetId = message?.conversationId || conversationId;
+													persistConversationMessages(targetId, current =>
+														mergeMessages(current, [message], targetId),
+													);
+												}}
+											/>
+										</Suspense>
+									) : null}
+									<MessageQuickActions
+										open={Boolean(quickActionsMessage)}
+										anchorRect={quickActions?.rect || null}
+										mine={Boolean(quickActions?.mine)}
+										locale={locale}
+										reactions={QUICK_REACTIONS.slice(0, 4)}
+										canReact={Boolean(quickActionsMessage && !isViewOnceMessage(quickActionsMessage))}
+										canCopy={Boolean(String(quickActionsMessage?.text || '').trim())}
+										onClose={closeQuickActions}
+										onReact={emoji => {
+											const target = quickActionsMessage;
+											closeQuickActions();
+											if (target) void reactToMessage(target, emoji);
+										}}
+										onReply={() => {
+											const target = quickActionsMessage;
+											closeQuickActions();
+											if (target) void handleMessageAction(target, 'reply');
+										}}
+										onCopy={() => {
+											const target = quickActionsMessage;
+											closeQuickActions();
+											if (target) void handleMessageAction(target, 'copy');
+										}}
+										onMore={() => {
+											const target = quickActionsMessage;
+											const rect = quickActions?.rect;
+											closeQuickActions();
+											if (!target) return;
+											setActionMessageAnchor(rect || null);
+											setActionMessageId(target.id);
+										}}
+									/>
 									<ScheduledMessagesPanel
 										ar={locale === 'ar'}
 										open={schedulesPanelOpen}
@@ -25513,6 +26029,16 @@ function WhatsAppWorkspaceContent() {
 																	{dayLabel}
 																</div>
 															)}
+															{unreadDividerMessageId &&
+															rowItems.some(item => item?.id === unreadDividerMessageId) ? (
+																<div className="wa-unread-divider" role="separator" data-wa-unread-divider="">
+																	<span>
+																		{unreadAtOpen?.count > 1
+																			? t.unreadMessagesDividerCount.replace('{count}', String(unreadAtOpen.count))
+																			: t.unreadMessagesDivider}
+																	</span>
+																</div>
+															) : null}
 																	<div className={`wa-message-line flex min-w-0 w-full max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}>
 																<div className={`wa-message-cluster group flex min-w-0 w-full max-w-full ${mine ? 'flex-row-reverse items-start' : 'items-start'} gap-1.5`}>
 																{showSelectCheck && (
@@ -25573,10 +26099,20 @@ function WhatsAppWorkspaceContent() {
 																		}
 																		if (mediaSelectMode || ticketSelectMode || groupSelectMode) return;
 																		startMessageLongPress(event, message);
+																		beginSwipeReply(event, message);
 																	}}
-																	onPointerMove={cancelMessageLongPress}
-																	onPointerUp={cancelMessageLongPress}
-																	onPointerCancel={cancelMessageLongPress}
+																	onPointerMove={event => {
+																		cancelMessageLongPress(event);
+																		moveSwipeReply(event);
+																	}}
+																	onPointerUp={event => {
+																		cancelMessageLongPress(event);
+																		endSwipeReply(event);
+																	}}
+																	onPointerCancel={event => {
+																		cancelMessageLongPress(event);
+																		endSwipeReply(event);
+																	}}
 																	onClickCapture={event => {
 																		if (!isMultiSelectClick(event) || message.optimistic) return;
 																		event.preventDefault();
@@ -25610,7 +26146,7 @@ function WhatsAppWorkspaceContent() {
 																			applyGroupMessageSelection(message);
 																		}
 																	}}
-																		onClick={() => {
+																		onClick={event => {
 																			if (selectableInGroupMode) {
 																				applyGroupMessageSelection(message);
 																				return;
@@ -25619,7 +26155,12 @@ function WhatsAppWorkspaceContent() {
 																				applyMessagesSelection(ticketSelectionTargets);
 																				return;
 																			}
-																			if (!selectableInMediaMode) return;
+																			if (!selectableInMediaMode) {
+																				if (!mediaSelectMode && !ticketSelectMode && !groupSelectMode) {
+																					openMessageQuickActions(event, message, mine);
+																				}
+																				return;
+																			}
 																			if (downloadableAttachments.length) {
 																				applyMediaSelection(downloadableAttachments);
 																				return;
@@ -27585,6 +28126,7 @@ function WhatsAppWorkspaceContent() {
 							>
 								{[
 									{ id: 'ai', label: t.settingsAi, icon: Sparkles },
+									{ id: 'agent', label: t.settingsAgent, icon: Bot },
 									{ id: 'demo', label: t.settingsDemo, icon: Zap },
 									{ id: 'notifications', label: t.settingsNotifications, icon: Bell },
 									{ id: 'privacy', label: t.settingsPrivacy, icon: ShieldCheck },
@@ -27625,6 +28167,11 @@ function WhatsAppWorkspaceContent() {
 									/>
 								</Suspense>
 								</>
+							)}
+							{settingsSection === 'agent' && accountId && (
+								<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+									<WhatsAppAiAgentPanel key={accountId} locale={locale} accountId={accountId} />
+								</Suspense>
 							)}
 							{settingsSection === 'demo' && (
 								<Suspense fallback={<WaPaneLoading label={t.loading} />}>

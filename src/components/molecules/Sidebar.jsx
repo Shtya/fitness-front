@@ -23,6 +23,7 @@ import {
 	META_WHATSAPP_UNREAD_EVENT,
 } from '@/lib/outreach-unread';
 import { createVisiblePoller } from '@/lib/visible-poll';
+import { syncAppBadge } from '@/lib/app-badge';
 import { applyPageAccessToSections } from '@/lib/nav-access';
 import { useSidebarChrome } from './SidebarChromeContext';
 import {
@@ -659,6 +660,9 @@ export function useUnreadWhatsApp(pollMs = 120000) {
     }
   }, []);
   useVisibleBadgePoll(load, pollMs, WHATSAPP_UNREAD_EVENT);
+  useEffect(() => {
+    syncAppBadge(total);
+  }, [total]);
   return { unreadWhatsApp: total, reloadUnreadWhatsApp: load };
 }
 

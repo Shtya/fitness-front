@@ -1533,6 +1533,31 @@
 		align-items: flex-end;
 	}
 
+	/* The pressed bubble lifts out of the thread: grow from the bubble's own side. */
+	html .wa-mam:not(#wa-m) .wa-mam__stack {
+		transform-origin: top left;
+		animation: wa-mam-stack-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+	}
+	html .wa-mam.is-out:not(#wa-m) .wa-mam__stack,
+	html[dir='rtl'] .wa-mam.is-in:not(#wa-m) .wa-mam__stack {
+		transform-origin: top right;
+	}
+	html[dir='rtl'] .wa-mam.is-out:not(#wa-m) .wa-mam__stack {
+		transform-origin: top left;
+	}
+	@keyframes wa-mam-stack-in {
+		from {
+			opacity: 0;
+			transform: translateY(8px) scale(0.92);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		html .wa-mam:not(#wa-m),
+		html .wa-mam:not(#wa-m) .wa-mam__stack {
+			animation: none;
+		}
+	}
+
 	/* Reactions bar sits above the bubble */
 	html .wa-mam:not(#wa-m) .wa-mam__reactions {
 		order: -1;

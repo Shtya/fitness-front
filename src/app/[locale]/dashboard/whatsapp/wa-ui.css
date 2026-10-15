@@ -1434,6 +1434,254 @@ html.dark .wa-message-wallpaper .wa-date-separator {
 	box-shadow: none;
 }
 
+.wa-quick-actions {
+	position: fixed;
+	z-index: 20020;
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	border-radius: 999px;
+	background: #fff;
+	padding: 4px 6px;
+	box-shadow: 0 6px 24px rgba(11, 20, 26, 0.18), 0 1px 3px rgba(11, 20, 26, 0.12);
+	animation: wa-quick-actions-in 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes wa-quick-actions-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px) scale(0.94);
+	}
+}
+.wa-quick-actions__emoji {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	place-items: center;
+	border-radius: 999px;
+	font-size: 22px;
+	line-height: 1;
+	transition: transform 120ms ease;
+}
+.wa-quick-actions__emoji:active {
+	transform: scale(1.25);
+}
+.wa-quick-actions__btn {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	place-items: center;
+	border-radius: 999px;
+	color: #54656f;
+}
+.wa-quick-actions__btn:active,
+.wa-quick-actions__emoji:active {
+	background: rgba(11, 20, 26, 0.06);
+}
+.wa-quick-actions__divider {
+	width: 1px;
+	height: 22px;
+	margin: 0 4px;
+	background: rgba(11, 20, 26, 0.12);
+}
+html.dark .wa-quick-actions {
+	background: #233138;
+}
+html.dark .wa-quick-actions__btn {
+	color: #aebac1;
+}
+html.dark .wa-quick-actions__divider {
+	background: rgba(233, 237, 239, 0.14);
+}
+
+/* Swipe-to-reply: the bubble line follows the finger; the icon fades in behind it. */
+.wa-message-line.is-swiping {
+	transition: none !important;
+}
+.wa-message-line.is-swipe-settling {
+	transition: transform 180ms ease-out !important;
+}
+.wa-swipe-reply-icon {
+	position: absolute;
+	top: 50%;
+	inset-inline-start: 4px;
+	display: grid;
+	width: 32px;
+	height: 32px;
+	margin-top: -16px;
+	place-items: center;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.9);
+	color: #54656f;
+	opacity: 0;
+	transform: scale(0.6);
+	pointer-events: none;
+	transition: opacity 120ms ease, transform 120ms ease;
+}
+.wa-swipe-reply-icon.is-armed {
+	color: #008069;
+	transform: scale(1);
+}
+html.dark .wa-swipe-reply-icon {
+	background: rgba(32, 44, 51, 0.92);
+	color: #aebac1;
+}
+@media (hover: none) {
+	.wa-message-wallpaper .wa-message-bubble {
+		touch-action: pan-y;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.wa-quick-actions {
+		animation: none;
+	}
+}
+
+/* Inbox row swipe actions (phones). */
+.wa-swipe-row {
+	position: relative;
+	overflow: hidden;
+}
+.wa-swipe-row__content {
+	position: relative;
+	z-index: 1;
+	background: var(--m-bg, #fff);
+	touch-action: pan-y;
+	will-change: transform;
+}
+.wa-swipe-row__pane {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	display: flex;
+	visibility: hidden;
+}
+.wa-swipe-row__pane.is-start {
+	inset-inline-start: 0;
+}
+.wa-swipe-row__pane.is-end {
+	inset-inline-end: 0;
+}
+.wa-swipe-row[data-swipe-side='start'] .wa-swipe-row__pane.is-start,
+.wa-swipe-row[data-swipe-side='end'] .wa-swipe-row__pane.is-end {
+	visibility: visible;
+}
+.wa-swipe-row__action {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #fff;
+}
+.wa-swipe-row__action.is-neutral {
+	background: #8696a0;
+}
+.wa-swipe-row__action.is-primary {
+	background: #008069;
+}
+.wa-swipe-row__action.is-info {
+	background: #027eb5;
+}
+.wa-swipe-row__action.is-muted {
+	background: #54656f;
+}
+
+.wa-pull-indicator {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	overflow: hidden;
+	padding-bottom: 8px;
+}
+.wa-pull-indicator__chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	border-radius: 999px;
+	background: #fff;
+	padding: 4px 12px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #008069;
+	box-shadow: 0 1px 3px rgba(11, 20, 26, 0.16);
+}
+html.dark .wa-pull-indicator__chip {
+	background: #202c33;
+	color: #00a884;
+}
+
+/* AI agent marker in the chat list. */
+.wa-agent-row-badge {
+	display: inline-grid;
+	place-items: center;
+	width: 18px;
+	height: 18px;
+	border-radius: 999px;
+	background: #e7f8f0;
+	color: #008069;
+}
+.wa-agent-row-badge.is-suggest {
+	background: #eef2ff;
+	color: #4f46e5;
+}
+.wa-agent-row-badge.is-draft {
+	background: #fef3c7;
+	color: #b45309;
+	box-shadow: 0 0 0 2px #fde68a;
+}
+.wa-agent-row-badge.is-handoff {
+	background: #fee2e2;
+	color: #b91c1c;
+}
+html.dark .wa-agent-row-badge {
+	background: rgba(0, 168, 132, 0.18);
+	color: #34d399;
+}
+html.dark .wa-agent-row-badge.is-suggest {
+	background: rgba(99, 102, 241, 0.2);
+	color: #a5b4fc;
+}
+html.dark .wa-agent-row-badge.is-draft {
+	background: rgba(245, 158, 11, 0.2);
+	color: #fcd34d;
+	box-shadow: none;
+}
+html.dark .wa-agent-row-badge.is-handoff {
+	background: rgba(239, 68, 68, 0.2);
+	color: #fca5a5;
+}
+
+/* "Unread messages" band above the first unread message (WhatsApp-style). Height is
+   mirrored by UNREAD_DIVIDER_HEIGHT in whatsapp-workspace.jsx. */
+.wa-message-wallpaper .wa-unread-divider {
+	display: flex;
+	height: 32px;
+	align-items: center;
+	justify-content: center;
+	margin: 6px -16px 10px;
+	background: rgba(255, 255, 255, 0.55);
+}
+.wa-message-wallpaper .wa-unread-divider > span {
+	border-radius: 8px;
+	background: #fff;
+	padding: 2px 14px;
+	font-size: 12.5px;
+	font-weight: 600;
+	line-height: 20px;
+	color: #54656f;
+	box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+}
+html.dark .wa-message-wallpaper .wa-unread-divider {
+	background: rgba(11, 20, 26, 0.45);
+}
+html.dark .wa-message-wallpaper .wa-unread-divider > span {
+	background: #182229;
+	color: #8696a0;
+	box-shadow: none;
+}
+
 html.dark .wa-message-wallpaper .wa-voice-bar.is-unplayed {
 	background: rgba(233, 237, 239, 0.32);
 }

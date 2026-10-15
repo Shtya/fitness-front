@@ -686,6 +686,27 @@ test('groupConsecutiveImageMessages groups only adjacent images from the same se
 	assert.equal(rows[2].attachments.length, 1);
 });
 
+test('image gallery key survives upload confirmation and appended images', () => {
+	const pending = {
+		id: 'pending:c-1',
+		clientMessageId: 'c-1',
+		direction: 'outbound',
+		attachments: [{ id: 'blob-1', type: 'image' }],
+	};
+	const confirmed = { ...pending, id: 'server-uuid-1' };
+	const second = {
+		id: 'server-uuid-2',
+		clientMessageId: 'c-2',
+		direction: 'outbound',
+		attachments: [{ id: 'att-2', type: 'image' }],
+	};
+	const before = groupConsecutiveImageMessages([pending]);
+	const after = groupConsecutiveImageMessages([confirmed, second]);
+	assert.equal(before[0].key, 'c-1');
+	assert.equal(after.length, 1);
+	assert.equal(after[0].key, before[0].key);
+});
+
 test('image galleries support one, two, three and four image layouts', () => {
 	for (const count of [1, 2, 3, 4]) {
 		const messages = Array.from({ length: count }, (_, index) => ({

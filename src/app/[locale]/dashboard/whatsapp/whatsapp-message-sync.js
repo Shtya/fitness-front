@@ -20,6 +20,7 @@ export const BACKGROUND_THREAD_KEEP = MESSAGE_PAGE_SIZE * 2;
 export const MESSAGES_CACHE_TTL_MS = 5 * 60_000;
 /** Skip provider sync/latest while hydration watermark is this fresh. */
 export const PROVIDER_SYNC_FRESH_MS = 5 * 60_000;
+export const SPARSE_THREAD_ROWS = 5;
 
 export function hydrationTimestampMs(value) {
 	if (value == null || value === '') return 0;
@@ -138,6 +139,28 @@ export function openChatCatchUpPlan({
 }
 
 /**
+ * Message the "unread messages" divider sits above: the earliest of the last
+ * `unreadCount` inbound messages. Null until real rows (not the inbox preview)
+ * cover that many inbound messages, or when an outbound message is newer than
+ * the unread run (the chat was answered, so nothing is unread any more).
+ */
+export function firstUnreadMessageId(messages = [], unreadCount = 0) {
+	const wanted = Math.max(0, Math.floor(Number(unreadCount) || 0));
+	if (!wanted || !Array.isArray(messages) || !messages.length) return null;
+	let found = 0;
+	for (let index = messages.length - 1; index >= 0; index -= 1) {
+		const message = messages[index];
+		const id = String(message?.id || '');
+		if (!id || id.startsWith('inbox-preview-')) return null;
+		const outbound = message.direction === 'outbound' || message.fromMe === true;
+		if (outbound) return null;
+		found += 1;
+		if (found === wanted) return id;
+	}
+	return null;
+}
+
+/**
  * Soft-open: paint from cache and skip GET + sync when the thread is warm.
  */
 export function shouldSkipOpenChatNetwork({
@@ -189,6 +212,15 @@ export function shouldProviderBackfill({
 			return { needed: false, reason: 'hydrated_empty' };
 		}
 		return { needed: true, reason: 'empty_thread' };
+	}
+	// One live row in a chat whose history was never imported (server mirrors this
+	// in whatsapp-sync-policy.ts and stamps the watermark after one pull).
+	if (
+		itemCount < SPARSE_THREAD_ROWS &&
+		hydrationTimestampMs(lastProviderSyncAt) <= 0 &&
+		hydrationTimestampMs(providerHydratedAt) <= 0
+	) {
+		return { needed: true, reason: 'sparse_unhydrated' };
 	}
 	// Local Postgres rows are the replica. Do not POST sync/latest on open
 	// just because the 5-minute watermark expired or was never stored on the client.
