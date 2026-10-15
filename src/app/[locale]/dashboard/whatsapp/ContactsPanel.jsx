@@ -803,7 +803,13 @@ function RowSkeleton() {
 	);
 }
 
-export default function ContactsPanel({ accountId, locale = 'en', canUse = false, onOpenConversation }) {
+export default function ContactsPanel({
+	accountId,
+	locale = 'en',
+	canUse = false,
+	onOpenConversation,
+	embedded = false,
+}) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const copy = ar ? COPY.ar : COPY.en;
 	const queryClient = useQueryClient();
@@ -1011,14 +1017,24 @@ export default function ContactsPanel({ accountId, locale = 'en', canUse = false
 	const duplicateGroups = duplicates.data?.groups || [];
 
 	return (
-		<div className="wa-dk mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6" dir={ar ? 'rtl' : 'ltr'}>
-			<header className="flex items-start gap-3">
-				<span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1DAB61] text-white max-[768px]:hidden">
-					<BookUser size={20} />
-				</span>
+		<div
+			className={
+				embedded
+					? 'flex w-full flex-col gap-4 p-1'
+					: 'wa-dk mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6'
+			}
+			dir={ar ? 'rtl' : 'ltr'}
+		>
+			<header className={`flex items-start gap-3 ${embedded ? 'px-1' : ''}`}>
+				{embedded ? null : (
+					<span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1DAB61] text-white max-[768px]:hidden">
+						<BookUser size={20} />
+					</span>
+				)}
 				<div className="min-w-0 flex-1">
-					{/* Phones already show the tab title in the WhatsApp header. */}
-					<h2 className="text-lg font-black text-slate-900 dark:text-white max-[768px]:sr-only">{copy.title}</h2>
+					{embedded ? null : (
+						<h2 className="text-lg font-black text-slate-900 dark:text-white max-[768px]:sr-only">{copy.title}</h2>
+					)}
 					<p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
 				</div>
 				<button

@@ -222,6 +222,14 @@
 		color: var(--d-icon) !important;
 	}
 
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-contacts-plus {
+		width: 40px !important;
+		height: 40px !important;
+		background: #1dab61 !important;
+		color: #fff !important;
+		box-shadow: none !important;
+	}
+
 	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill {
 		height: 32px !important;
 		padding: 0 12px !important;

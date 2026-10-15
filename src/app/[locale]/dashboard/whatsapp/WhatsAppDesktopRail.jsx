@@ -2,7 +2,7 @@
 
 import {
 	BarChart3,
-	BookUser,
+	Bot,
 	Forward,
 	LayoutGrid,
 	Mails,
@@ -10,7 +10,6 @@ import {
 	Moon,
 	PanelLeftClose,
 	PanelLeftOpen,
-	Radio,
 	Settings,
 	Smartphone,
 	Sparkles,
@@ -125,7 +124,6 @@ export default function WhatsAppDesktopRail({
 	onSelect,
 	labels = {},
 	unreadCount = 0,
-	channelUnreadCount = 0,
 	locale = 'en',
 	onOpenSettings,
 	onOpenProfile,
@@ -137,6 +135,7 @@ export default function WhatsAppDesktopRail({
 	showBoard = true,
 	showFakeChat = true,
 	showAutoForward = true,
+	showAgent = false,
 	showcaseOnly = false,
 	darkMode = false,
 	onToggleDarkMode,
@@ -154,12 +153,6 @@ export default function WhatsAppDesktopRail({
 			badge: unreadCount,
 		},
 		{
-			id: 'channels',
-			label: labels.channels || (ar ? 'قنوات' : 'Channels'),
-			icon: Radio,
-			badge: channelUnreadCount,
-		},
-		{
 			id: 'emails',
 			label: labels.emails || (ar ? 'إيميلات' : 'Emails'),
 			icon: Mails,
@@ -174,12 +167,14 @@ export default function WhatsAppDesktopRail({
 			label: labels.groups || labels.communities || (ar ? 'مجموعات' : 'Groups'),
 			icon: Users,
 		},
-		{
-			id: 'contacts',
-			label: labels.contacts || (ar ? 'جهات الاتصال' : 'Contacts'),
-			icon: BookUser,
-		},
-	];
+		showAgent
+			? {
+					id: 'agent',
+					label: labels.agent || (ar ? 'الذكاء الاصطناعي' : 'AI'),
+					icon: Bot,
+				}
+			: null,
+	].filter(Boolean);
 	const primaryItems = showcaseOnly
 		? allPrimaryItems.filter(item => item.id === 'chats')
 		: allPrimaryItems;

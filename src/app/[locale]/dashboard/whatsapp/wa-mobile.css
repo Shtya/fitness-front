@@ -145,6 +145,17 @@
 	}
 
 	/* Search field */
+	.wa-m-search-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0 0 12px;
+	}
+
+	.wa-m-search-row .wa-m-search {
+		margin-bottom: 0;
+	}
+
 	.wa-m-search {
 		position: relative;
 		display: flex;

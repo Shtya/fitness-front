@@ -856,6 +856,17 @@ export const WHATSAPP_INBOX_CHIP_FILTERS = new Set([
 	'starred',
 ]);
 
+/** Fake Chat stays hidden except for this local owner account. */
+export const FAKE_CHAT_ADMIN_EMAIL = 'admin@gmail.com';
+
+export function canShowFakeChat(email) {
+	return String(email || '').trim().toLowerCase() === FAKE_CHAT_ADMIN_EMAIL;
+}
+
+export function isChannelsInboxFilter(filter) {
+	return String(filter || '').toLowerCase() === 'channels';
+}
+
 /**
  * Client-side match for All / Unread / Favorites / Important chips.
  * Important uses hasImportantMessages (set when starring or after a background important fetch).

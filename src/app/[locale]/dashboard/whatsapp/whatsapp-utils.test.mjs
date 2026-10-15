@@ -53,6 +53,8 @@ import {
 	updateConversationPreview,
 	conversationUnreadCount,
 	conversationMatchesInboxFilter,
+	canShowFakeChat,
+	isChannelsInboxFilter,
 	localMediaFileUrl,
 	isPlayableVideoUrl,
 	mediaDimensionsFromRaw,
@@ -1141,6 +1143,15 @@ test('conversationMatchesInboxFilter applies unread/favorites/important locally'
 		false,
 	);
 	assert.equal(conversationMatchesInboxFilter({ unreadCount: 0 }, 'all'), true);
+});
+
+test('Fake Chat is only for admin@gmail.com and channels is a chip filter', () => {
+	assert.equal(canShowFakeChat('admin@gmail.com'), true);
+	assert.equal(canShowFakeChat('Admin@Gmail.com'), true);
+	assert.equal(canShowFakeChat('pm@gmail.com'), false);
+	assert.equal(canShowFakeChat(''), false);
+	assert.equal(isChannelsInboxFilter('channels'), true);
+	assert.equal(isChannelsInboxFilter('unread'), false);
 });
 
 test('updateConversationPreview clears unread when the latest message is from us', () => {

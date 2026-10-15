@@ -80,7 +80,6 @@ import {
 	Play,
 	Plus,
 	Phone,
-	Radio,
 	RefreshCw,
 	Repeat,
 	Reply,
@@ -161,6 +160,8 @@ import {
 	conversationUnreadCount,
 	conversationMatchesInboxFilter,
 	WHATSAPP_INBOX_CHIP_FILTERS,
+	canShowFakeChat,
+	isChannelsInboxFilter,
 	isChannelConversation,
 	firstMessageLink,
 	firstSocialVideoLink,
@@ -484,12 +485,13 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'board',
 	'fakeChat',
 	'autoForward',
+	'agent',
 	'settings',
 	'profile',
 ]);
 
 function isConversationWorkspaceTab(tab) {
-	return tab === 'chats' || tab === 'channels';
+	return tab === 'chats';
 }
 
 function resolveWhatsAppStorageUserId(userId) {
@@ -699,15 +701,33 @@ function resolveStoredWhatsAppUserId() {
 	}
 }
 
-function defaultWhatsAppActiveTab() {
+function resolveStoredWhatsAppUserEmail() {
+	if (typeof window === 'undefined') return '';
+	try {
+		const user = JSON.parse(window.localStorage.getItem('user') || 'null');
+		return String(user?.email || '').trim();
+	} catch {
+		return '';
+	}
+}
+
+function readPersistedWhatsAppTab() {
 	if (typeof window === 'undefined') return null;
 	const userId = resolveStoredWhatsAppUserId();
-	const stored =
-		readStoredWhatsAppActiveTab(userId) ||
-		readStoredWhatsAppActiveTab(null);
-	if (stored === 'notifications') return 'chats';
+	return readStoredWhatsAppActiveTab(userId) || readStoredWhatsAppActiveTab(null);
+}
+
+function defaultWhatsAppActiveTab() {
+	if (typeof window === 'undefined') return null;
+	const stored = readPersistedWhatsAppTab();
+	if (stored === 'notifications' || stored === 'channels' || stored === 'contacts') return 'chats';
+	if (stored === 'fakeChat' && !canShowFakeChat(resolveStoredWhatsAppUserEmail())) return 'chats';
 	if (stored && WHATSAPP_PERSISTED_TABS.has(stored)) return stored;
 	return 'chats';
+}
+
+function defaultWhatsAppConversationFilter() {
+	return readPersistedWhatsAppTab() === 'channels' ? 'channels' : 'all';
 }
 
 function isRequestCancelled(error) {
@@ -771,6 +791,7 @@ const translations = {
 		settings: 'Settings',
 		settingsAi: 'AI replies',
 		settingsAgent: 'AI agent',
+		agent: 'AI',
 		agentBadges: {
 			auto: 'AI agent replies automatically',
 			suggest: 'AI agent suggests replies',
@@ -1287,6 +1308,7 @@ const translations = {
 		settings: 'الإعدادات',
 		settingsAi: 'ردود الذكاء الاصطناعي',
 		settingsAgent: 'وكيل الذكاء الاصطناعي',
+		agent: 'الذكاء الاصطناعي',
 		agentBadges: {
 			auto: 'الوكيل يرد تلقائيًا',
 			suggest: 'الوكيل يقترح الردود',
@@ -1766,10 +1788,9 @@ const translations = {
 const tabs = [
 	['accounts', Smartphone],
 	['chats', MessageCircle],
-	['channels', Radio],
 	['statuses', Zap],
 	['groups', Users],
-	['contacts', BookUser],
+	['agent', Bot],
 	['reports', BarChart3],
 	['board', LayoutGrid],
 	['fakeChat', Sparkles],
@@ -10056,6 +10077,7 @@ function MobileWhatsAppNav({
 	unreadCount,
 	avatarUrl = '',
 	locale = 'en',
+	showAgent = false,
 }) {
 	const youLabel = String(locale).toLowerCase().startsWith('ar') ? 'أنت' : 'You';
 	const items = [
@@ -10097,6 +10119,13 @@ function MobileWhatsAppNav({
 			</svg>
 			, label: labels.chats, badge: unreadCount
 		},
+		...(showAgent
+			? [{
+				id: 'agent',
+				icon: <Bot size={22} strokeWidth={2} />,
+				label: labels.agent || (String(locale).toLowerCase().startsWith('ar') ? 'ذكاء' : 'AI'),
+			}]
+			: []),
 		{
 			id: 'settings', icon: <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 				<path d="M16.0001 27.7641C16.3026 27.7641 16.5926 27.7389 16.9077 27.7137L17.5884 29.012C17.7144 29.2894 18.0043 29.4406 18.3447 29.3902C18.6598 29.3398 18.8741 29.1003 18.9245 28.7725L19.1262 27.3356C19.706 27.1843 20.2733 26.9574 20.8405 26.7179L21.8993 27.6759C22.1262 27.9028 22.4413 27.9406 22.7565 27.7767C23.0212 27.6129 23.1346 27.323 23.0716 26.9952L22.7817 25.5834C23.2607 25.2431 23.7397 24.8523 24.1808 24.4238L25.4918 24.9784C25.8069 25.1044 26.0968 25.0414 26.3363 24.7515C26.5506 24.5246 26.5758 24.1969 26.3994 23.9196L25.6304 22.6969C25.9708 22.2053 26.2607 21.6758 26.5254 21.1212L27.975 21.1842C28.3027 21.2095 28.58 21.0204 28.6809 20.7179C28.7817 20.4027 28.6935 20.1002 28.4288 19.8985L27.2943 19.0036C27.4456 18.4363 27.5716 17.8313 27.6221 17.2136L28.9834 16.7724C29.2985 16.659 29.5002 16.4195 29.5002 16.0918C29.5002 15.764 29.2985 15.5245 28.9834 15.4111L27.6221 14.9699C27.5716 14.3523 27.4456 13.7598 27.2943 13.18L28.4288 12.285C28.6809 12.0833 28.7817 11.7934 28.6809 11.4783C28.58 11.1758 28.3027 10.9867 27.975 11.0119L26.5254 11.0623C26.2607 10.5077 25.9708 9.99088 25.6304 9.48667L26.3994 8.26397C26.5758 7.99927 26.5506 7.67153 26.3363 7.44464C26.0968 7.16733 25.8069 7.0917 25.4918 7.21775L24.1808 7.75977C23.7397 7.3438 23.2607 6.94043 22.7817 6.60009L23.0716 5.20092C23.1346 4.86058 23.0212 4.57067 22.7565 4.4194C22.4413 4.25554 22.1388 4.28075 21.8993 4.52025L20.8405 5.46563C20.2733 5.21353 19.706 5.01185 19.1262 4.84798L18.9245 3.4236C18.8741 3.09586 18.6598 2.86897 18.3447 2.80595C18.0043 2.76813 17.7144 2.90679 17.5884 3.17149L16.9077 4.46982C16.5926 4.44461 16.3026 4.43201 16.0001 4.43201C15.685 4.43201 15.4077 4.44461 15.0799 4.46982L14.4119 3.17149C14.2732 2.90679 13.9833 2.76813 13.6429 2.80595C13.3278 2.86897 13.1135 3.09586 13.0631 3.4236L12.8614 4.84798C12.2816 5.01185 11.7144 5.21353 11.1597 5.46563L10.1009 4.52025C9.8488 4.28075 9.54628 4.25554 9.24375 4.4194C8.96644 4.57067 8.85299 4.86058 8.91602 5.20092L9.21854 6.60009C8.72694 6.94043 8.24795 7.3438 7.81937 7.75977L6.49583 7.21775C6.1807 7.0917 5.89078 7.16733 5.65129 7.44464C5.4496 7.67153 5.42439 7.99927 5.58826 8.25137L6.35717 9.48667C6.01684 9.99088 5.73952 10.5077 5.46221 11.0623L4.01262 11.0119C3.69749 10.9867 3.42018 11.1758 3.30673 11.4783C3.20589 11.7934 3.29412 12.0833 3.55883 12.285L4.6933 13.18C4.54203 13.7598 4.41598 14.3523 4.37817 14.9699L3.00421 15.4111C2.68908 15.5119 2.5 15.7514 2.5 16.0918C2.5 16.4321 2.68908 16.6716 3.00421 16.7724L4.37817 17.2136C4.41598 17.8313 4.54203 18.4363 4.6933 19.0036L3.55883 19.8985C3.30673 20.1002 3.21849 20.4027 3.30673 20.7179C3.42018 21.0204 3.69749 21.2095 4.01262 21.1842L5.46221 21.1212C5.72692 21.6758 6.01684 22.2053 6.35717 22.6969L5.58826 23.9196C5.41179 24.1969 5.437 24.5246 5.65129 24.7515C5.89078 25.0414 6.1807 25.1044 6.49583 24.9784L7.81937 24.4238C8.24795 24.8523 8.72694 25.2431 9.21854 25.5834L8.91602 26.9952C8.85299 27.323 8.96644 27.6129 9.24375 27.7767C9.54628 27.9406 9.8614 27.9028 10.1009 27.6759L11.1471 26.7179C11.7144 26.9574 12.2816 27.1843 12.8614 27.3356L13.0631 28.7725C13.1135 29.1003 13.3278 29.3398 13.6556 29.3902C13.9833 29.4406 14.2732 29.2894 14.4119 29.012L15.0799 27.7137C15.3951 27.7389 15.685 27.7641 16.0001 27.7641ZM19.0379 15.2724C18.4707 13.7598 17.3363 12.9279 15.9623 12.9279C15.748 12.9279 15.5211 12.9531 15.143 13.0413L11.79 7.30598C13.0505 6.68833 14.4749 6.34799 16.0001 6.34799C21.143 6.34799 25.1767 10.243 25.58 15.2724H19.0379ZM6.38238 16.1044C6.38238 12.827 7.92021 9.94046 10.3278 8.17574L13.706 13.9489C13.0757 14.6296 12.7732 15.3607 12.7732 16.1422C12.7732 16.8985 13.0505 17.5918 13.706 18.2977L10.2522 23.9574C7.8824 22.1927 6.38238 19.3439 6.38238 16.1044ZM14.5253 16.1296C14.5253 15.3229 15.2186 14.6926 15.9749 14.6926C16.7816 14.6926 17.4497 15.3229 17.4497 16.1296C17.4497 16.9237 16.7816 17.5792 15.9749 17.5792C15.2186 17.5792 14.5253 16.9237 14.5253 16.1296ZM16.0001 25.8482C14.4371 25.8482 12.9875 25.4952 11.7018 24.8523L15.143 19.2305C15.5085 19.3187 15.748 19.3439 15.9623 19.3439C17.3489 19.3439 18.4833 18.4867 19.0379 16.9489H25.58C25.1767 21.9532 21.143 25.8482 16.0001 25.8482Z" fill="#767779" />
@@ -10105,7 +10134,7 @@ function MobileWhatsAppNav({
 		},
 	];
 	return (
-		<nav className="wa-mobile-nav relative hidden shrink-0 grid-cols-5 border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]">
+		<nav className={`wa-mobile-nav relative hidden shrink-0 ${showAgent ? 'grid-cols-6' : 'grid-cols-5'} border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]`}>
 			{items.map(({ id, icon: Icon, label, badge, avatar }) => {
 				const active = activeTab === id;
 				const iconNode = isValidElement(Icon)
@@ -11083,6 +11112,7 @@ function ConversationFilterDropdown({ value, onChange, labels, variant = 'dropdo
 		{ value: 'all', label: labels.all },
 		{ value: 'unread', label: labels.unread },
 		{ value: 'favorites', label: labels.favorites },
+		...(labels.channels ? [{ value: 'channels', label: labels.channels }] : []),
 		{ value: 'important', label: labels.important },
 	];
 	const selected = options.find(option => option.value === value) || options[0];
@@ -11125,7 +11155,7 @@ function ConversationFilterDropdown({ value, onChange, labels, variant = 'dropdo
 	if (variant === 'pills') {
 		return (
 			<div
-				className="wa-desktop-filter-pills flex gap-1 px-1 pb-1"
+				className="wa-desktop-filter-pills flex gap-1 overflow-x-auto px-1 pb-1"
 				role="listbox"
 				aria-label="Conversation type"
 			>
@@ -12243,7 +12273,8 @@ function WhatsAppWorkspaceContent() {
 	const [searchOpen, setSearchOpen] = useState(false);
 	const searchInputRef = useRef(null);
 	const [privacyBlur, setPrivacyBlur] = useState(() => readWhatsAppPrivacyBlur());
-	const [conversationFilter, setConversationFilter] = useState('all');
+	const [conversationFilter, setConversationFilter] = useState(defaultWhatsAppConversationFilter);
+	const [contactsPopupOpen, setContactsPopupOpen] = useState(false);
 	const [archivedCount, setArchivedCount] = useState(0);
 	const [pendingPreferenceActions, setPendingPreferenceActions] = useState(() => new Set());
 	const [assignmentFilter, setAssignmentFilter] = useState('');
@@ -12811,18 +12842,21 @@ function WhatsAppWorkspaceContent() {
 		canRouteDemoWrite(demo.settings.enabled, selectedConversation) &&
 		(!demo.settings.enabled || demo.settings.featureFlags.useFakeMessages !== false) &&
 		!isEmailMemoAiConversation(selectedConversation);
+	const fakeChatAllowed = canShowFakeChat(resolveStoredWhatsAppUserEmail());
+	const viewingChannels = isChannelsInboxFilter(conversationFilter);
 	const availableTabs = useMemo(
 		() =>
 			tabs.filter(([key]) => {
 				if (showcaseOnly && !SHOWCASE_TABS.has(key)) return false;
 				if (key === 'settings') return canManageWhatsApp || isAdmin;
+				if (key === 'agent') return canManageWhatsApp || isAdmin;
 				if (key === 'reports') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'board') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
-				if (key === 'fakeChat') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
+				if (key === 'fakeChat') return fakeChatAllowed;
 				if (key === 'autoForward') return canUseWhatsApp || canManageWhatsApp || isAdmin;
 				return true;
 			}),
-		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, isAdmin, showcaseOnly],
+		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, fakeChatAllowed, isAdmin, showcaseOnly],
 	);
 	useEffect(() => {
 		if (!showcaseOnly) return;
@@ -12831,6 +12865,19 @@ function WhatsAppWorkspaceContent() {
 		if (secondaryConversationId && !isDemoId(secondaryConversationId)) setSecondaryConversationId(null);
 		if (activeMessageGroup) setActiveMessageGroup(null);
 	}, [showcaseOnly, activeTab, conversationId, secondaryConversationId, activeMessageGroup]);
+	useEffect(() => {
+		if (activeTab === 'channels') {
+			setConversationFilter('channels');
+			setActiveTab('chats');
+			return;
+		}
+		if (activeTab === 'contacts') {
+			setContactsPopupOpen(true);
+			setActiveTab('chats');
+			return;
+		}
+		if (activeTab === 'fakeChat' && !fakeChatAllowed) setActiveTab('chats');
+	}, [activeTab, fakeChatAllowed]);
 	const unreadConversationCount = useMemo(
 		() =>
 			effectiveConversations.reduce((total, conversation) => {
@@ -13801,7 +13848,7 @@ function WhatsAppWorkspaceContent() {
 			? conversationFilter
 			: 'all';
 		const scoped = effectiveConversations.filter(conversation => {
-			if (activeTab === 'channels' ? !isChannelConversation(conversation) : isChannelConversation(conversation)) {
+			if (isChannelsInboxFilter(conversationFilter) ? !isChannelConversation(conversation) : isChannelConversation(conversation)) {
 				return false;
 			}
 			if (archivedView ? !conversation.isArchived : conversation.isArchived) {
@@ -13837,7 +13884,7 @@ function WhatsAppWorkspaceContent() {
 			);
 			return title.includes(q) || phone.includes(q) || preview.includes(q);
 		});
-	}, [effectiveConversations, chatSearch, activeTab, conversationFilter]);
+	}, [effectiveConversations, chatSearch, conversationFilter]);
 
 	const chatListVisible = isConversationWorkspaceTab(activeTab);
 	const chatListWindow = useWaScrollWindow({
@@ -13860,12 +13907,12 @@ function WhatsAppWorkspaceContent() {
 	const archivedChatsCount = useMemo(() => {
 		const local = effectiveConversations.filter(conversation => {
 			if (!conversation.isArchived) return false;
-			return activeTab === 'channels'
+			return isChannelsInboxFilter(conversationFilter)
 				? isChannelConversation(conversation)
 				: !isChannelConversation(conversation);
 		}).length;
 		return Math.max(local, archivedCount);
-	}, [effectiveConversations, activeTab, archivedCount]);
+	}, [effectiveConversations, conversationFilter, archivedCount]);
 
 	const loadAccounts = useCallback(async () => {
 		const { data } = await api.get('/whatsapp/accounts');
@@ -14306,7 +14353,8 @@ function WhatsAppWorkspaceContent() {
 				// Never steal focus from Task Board / Emails / Reports / Settings.
 				const tab = activeTabRef.current;
 				if (isConversationWorkspaceTab(tab) || tab === 'accounts') {
-					setActiveTab(isChannelConversation(requested) ? 'channels' : 'chats');
+					setActiveTab('chats');
+					if (isChannelConversation(requested)) setConversationFilter('channels');
 				}
 			}
 			setConversationPage(cached.page);
@@ -14519,7 +14567,8 @@ function WhatsAppWorkspaceContent() {
 			// conversationId is present — only switch when already in the chat workspace.
 			const tab = activeTabRef.current;
 			if (isConversationWorkspaceTab(tab) || tab === 'accounts') {
-				setActiveTab(isChannelConversation(requested) ? 'channels' : 'chats');
+				setActiveTab('chats');
+				if (isChannelConversation(requested)) setConversationFilter('channels');
 			}
 		}
 		// Chip backfill must not reset All-inbox pagination / totals.
@@ -15564,6 +15613,11 @@ function WhatsAppWorkspaceContent() {
 				}
 			}
 			setConversationId(id);
+			if (isChannelConversation(conv)) {
+				setConversationFilter('channels');
+			} else if (isChannelsInboxFilter(conversationFilterRef.current)) {
+				setConversationFilter('all');
+			}
 		},
 		[cancelIdleMessagePrefetch, clearConversationMessages, writeConversationMessages],
 	);
@@ -21810,12 +21864,26 @@ function WhatsAppWorkspaceContent() {
 			setActiveTab('chats');
 			return;
 		}
+		if (tab === 'channels') {
+			setConversationFilter('channels');
+			setActiveTab('chats');
+			return;
+		}
+		if (tab === 'contacts') {
+			setContactsPopupOpen(true);
+			if (!isConversationWorkspaceTab(activeTab)) setActiveTab('chats');
+			return;
+		}
+		if (tab === 'fakeChat' && !fakeChatAllowed) {
+			setActiveTab('chats');
+			return;
+		}
 		if (tab !== activeTab) waPerfMark(`tab:${tab}`);
 		setActiveTab(tab);
 		setTabError('');
 		if (tab === 'profile') return;
 		if (tab === 'emails') return;
-		if (tab === 'board' || tab === 'fakeChat' || tab === 'autoForward' || tab === 'contacts') return;
+		if (tab === 'board' || tab === 'fakeChat' || tab === 'autoForward' || tab === 'agent') return;
 		if (!accountId) return;
 		const targetAccountId = accountId;
 		const requestId = ++tabRequestId.current;
@@ -21959,6 +22027,7 @@ function WhatsAppWorkspaceContent() {
 				return sortConversationsByActivity([conversation, ...current]);
 			});
 		}
+		setContactsPopupOpen(false);
 		openConversation(conversationId, conversation);
 		void loadTabData('chats');
 	};
@@ -23435,7 +23504,7 @@ function WhatsAppWorkspaceContent() {
 			)}
 			<MobileOverflowMenu
 				open={mobileMenuOpen}
-				tabs={availableTabs.filter(([key]) => !['chats', 'channels', 'statuses', 'groups'].includes(key))}
+				tabs={availableTabs.filter(([key]) => !['chats', 'channels', 'statuses', 'groups', 'agent', 'contacts'].includes(key))}
 				labels={t}
 				locale={locale}
 				darkMode={darkMode}
@@ -23685,7 +23754,6 @@ function WhatsAppWorkspaceContent() {
 					onSelect={tab => void loadTabData(tab)}
 					labels={t}
 					unreadCount={unreadConversationCount}
-					channelUnreadCount={unreadChannelCount}
 					locale={locale}
 					connected={isAccountConnected}
 					avatarUrl={railAvatarUrl}
@@ -23694,8 +23762,9 @@ function WhatsAppWorkspaceContent() {
 					showAccounts={!showcaseOnly}
 					showReports={!showcaseOnly}
 					showBoard={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
-					showFakeChat={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
+					showFakeChat={!showcaseOnly && fakeChatAllowed}
 					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
+					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 					darkMode={darkMode}
@@ -23710,7 +23779,7 @@ function WhatsAppWorkspaceContent() {
 						: 'overflow-y-auto nice-scroll'
 			}`}>
 				{/* Compact account switcher for desktop utility tabs (replaces PageHeader actions). */}
-				{['accounts', 'reports', 'settings', 'profile'].includes(activeTab) ? (
+				{['accounts', 'reports', 'settings', 'profile', 'agent'].includes(activeTab) ? (
 					<div className="mb-4 hidden items-center justify-between gap-3 min-[769px]:flex">
 						<div>
 							<h2 className="text-lg font-black text-slate-900 dark:text-white">
@@ -24299,9 +24368,9 @@ function WhatsAppWorkspaceContent() {
 										<div className="wa-desktop-chat-list-heading">
 											<div className="wa-desktop-chat-list-title-wrap">
 												<h2 className="wa-desktop-chat-list-title">
-													{activeTab === 'channels' ? t.channels : t.chats}
+													{viewingChannels ? t.channels : t.chats}
 												</h2>
-												{(activeTab === 'channels'
+												{(viewingChannels
 													? unreadChannelCount
 													: unreadConversationCount) > 0 ? (
 													<span
@@ -24309,17 +24378,17 @@ function WhatsAppWorkspaceContent() {
 														title={t.unreadMessagesLong.replace(
 															'{count}',
 															String(
-																activeTab === 'channels'
+																viewingChannels
 																	? unreadChannelCount
 																	: unreadConversationCount,
 															),
 														)}
 													>
-														{(activeTab === 'channels'
+														{(viewingChannels
 															? unreadChannelCount
 															: unreadConversationCount) > 99
 															? '99+'
-															: activeTab === 'channels'
+															: viewingChannels
 																? unreadChannelCount
 																: unreadConversationCount}
 													</span>
@@ -24382,7 +24451,8 @@ function WhatsAppWorkspaceContent() {
 											</button>
 										</div>
 									</div>
-									<div className="wa-desktop-search-inline wa-desktop-search-always mb-2.5 hidden min-[769px]:flex">
+									<div className="mb-2.5 hidden items-center gap-2 min-[769px]:flex">
+										<div className="wa-desktop-search-inline wa-desktop-search-always min-w-0 flex-1">
 										<Search size={19} className="wa-desktop-search-inline__icon" />
 										<input
 											ref={searchInputRef}
@@ -24409,6 +24479,16 @@ function WhatsAppWorkspaceContent() {
 												<X size={12} strokeWidth={2.4} />
 											</button>
 										) : null}
+										</div>
+										<button
+											type="button"
+											className="wa-contacts-plus"
+											aria-label={t.contacts}
+											title={t.contacts}
+											onClick={() => setContactsPopupOpen(true)}
+										>
+											<Plus size={18} strokeWidth={2.4} />
+										</button>
 									</div>
 									<div className="mb-1.5 hidden min-[769px]:block">
 										<ConversationFilterDropdown
@@ -24419,14 +24499,15 @@ function WhatsAppWorkspaceContent() {
 												all: t.allChats,
 												unread: t.unreadChats,
 												favorites: t.favoriteChats,
+												channels: t.channels,
 												important: t.importantChats,
 											}}
 										/>
 									</div>
 									<div className="wa-mobile-chat-tools hidden">
 										<h1 className="mb-2 title-whatsapp flex items-center gap-2">
-											<span>{activeTab === 'channels' ? t.channels : t.chats}</span>
-											{(activeTab === 'channels'
+											<span>{viewingChannels ? t.channels : t.chats}</span>
+											{(viewingChannels
 												? unreadChannelCount
 												: unreadConversationCount) > 0 ? (
 												<span
@@ -24434,23 +24515,24 @@ function WhatsAppWorkspaceContent() {
 													title={t.unreadMessagesLong.replace(
 														'{count}',
 														String(
-															activeTab === 'channels'
+															viewingChannels
 																? unreadChannelCount
 																: unreadConversationCount,
 														),
 													)}
 												>
-													{(activeTab === 'channels'
+													{(viewingChannels
 														? unreadChannelCount
 														: unreadConversationCount) > 99
 														? '99+'
-														: activeTab === 'channels'
+														: viewingChannels
 															? unreadChannelCount
 															: unreadConversationCount}
 												</span>
 											) : null}
 										</h1>
-										<label className="wa-m-search">
+										<div className="wa-m-search-row">
+										<label className="wa-m-search min-w-0 flex-1">
 											<Search size={18} strokeWidth={2.2} aria-hidden="true" />
 											<input
 												type="search"
@@ -24471,24 +24553,32 @@ function WhatsAppWorkspaceContent() {
 												</button>
 											) : null}
 										</label>
+										<button
+											type="button"
+											className="wa-contacts-plus"
+											aria-label={t.contacts}
+											title={t.contacts}
+											onClick={() => setContactsPopupOpen(true)}
+										>
+											<Plus size={18} strokeWidth={2.4} />
+										</button>
+										</div>
 
 										<div className="wa-m-chips" role="tablist" aria-label={t.chats}>
 											{[
 												['all', t.allChats],
 												['unread', t.unreadChats, unreadConversationCount],
 												['favorites', t.favoriteChats],
+												['channels', t.channels, unreadChannelCount],
 												['important', t.importantChats],
 											].map(([value, label, count]) => (
 												<button
 													key={value}
 													type="button"
 													role="tab"
-													aria-selected={activeTab !== 'channels' && conversationFilter === value}
-													onClick={() => {
-														if (activeTab === 'channels') void loadTabData('chats');
-														setConversationFilter(value);
-													}}
-													className={`wa-m-chip${activeTab !== 'channels' && conversationFilter === value ? ' is-active' : ''}`}
+													aria-selected={conversationFilter === value}
+													onClick={() => setConversationFilter(value)}
+													className={`wa-m-chip${conversationFilter === value ? ' is-active' : ''}`}
 												>
 													{label}
 													{count ? <span className="wa-m-chip__count">{count > 99 ? '99+' : count}</span> : null}
@@ -24496,13 +24586,6 @@ function WhatsAppWorkspaceContent() {
 											))}
 											<button type="button" onClick={() => void loadTabData('groups')} className="wa-m-chip">
 												{t.groups}
-											</button>
-											<button
-												type="button"
-												onClick={() => void loadTabData('channels')}
-												className={`wa-m-chip${activeTab === 'channels' ? ' is-active' : ''}`}
-											>
-												{t.channels}
 											</button>
 											{/* Saved media is not a conversation filter, but this row is the only
 											    always-visible tab strip — the composer button needs an open chat. */}
@@ -24552,7 +24635,7 @@ function WhatsAppWorkspaceContent() {
 											</span>
 										</div>
 									) : null}
-									{activeTab !== 'channels' && conversationFilter === 'archived' ? (
+									{!viewingChannels && conversationFilter === 'archived' ? (
 										<button
 											type="button"
 											className="wa-archived-row"
@@ -24686,7 +24769,7 @@ function WhatsAppWorkspaceContent() {
 														<p className="text-sm font-semibold text-slate-600">{t.qrExpired}</p>
 													) : (
 														<p className="text-sm font-semibold text-slate-500">
-															{activeTab === 'channels'
+															{viewingChannels
 																? t.connectToSeeChannels
 																: t.connectToSeeChats}
 														</p>
@@ -24732,7 +24815,7 @@ function WhatsAppWorkspaceContent() {
 																label: locale === 'ar' ? 'مسح البحث' : 'Clear search',
 																onClick: () => setChatSearch(''),
 															}
-														: ['unread', 'favorites'].includes(conversationFilter)
+														: ['unread', 'favorites', 'channels'].includes(conversationFilter)
 															? {
 																	label: locale === 'ar' ? 'عرض كل المحادثات' : 'Show all chats',
 																	onClick: () => setConversationFilter('all'),
@@ -24757,15 +24840,15 @@ function WhatsAppWorkspaceContent() {
 															? locale === 'ar'
 																? 'لا توجد محادثات في المفضلة'
 																: 'No favourite chats'
+														: conversationFilter === 'channels'
+															? t.noChannels
 														: conversationFilter === 'archived'
 															? t.noArchivedConversations
 															: conversationFilter === 'important'
 																? t.noImportantConversations
-														: conversationScope === 'assigned'
+															: conversationScope === 'assigned'
 															? t.noAssignedConversations
-															: activeTab === 'channels'
-																? t.noChannels
-																: t.noConversations
+															: t.noConversations
 											}
 										/>
 										)
@@ -27364,7 +27447,14 @@ function WhatsAppWorkspaceContent() {
 												<header className="wa-m-section__head">
 													<h2>{t.channels}</h2>
 													{channels.length ? (
-														<button type="button" className="wa-m-pill" onClick={() => void loadTabData('channels')}>
+														<button
+															type="button"
+															className="wa-m-pill"
+															onClick={() => {
+																setConversationFilter('channels');
+																void loadTabData('chats');
+															}}
+														>
 															{ar ? 'عرض الكل' : 'See all'}
 														</button>
 													) : null}
@@ -27381,7 +27471,8 @@ function WhatsAppWorkspaceContent() {
 																		type="button"
 																		className="wa-m-channel"
 																		onClick={() => {
-																			setActiveTab('channels');
+																			setConversationFilter('channels');
+																			void loadTabData('chats');
 																			openConversation(item.id, item);
 																		}}
 																	>
@@ -28037,15 +28128,44 @@ function WhatsAppWorkspaceContent() {
 					</Suspense>
 				)}
 
-				{activeTab === 'contacts' && (
-					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
-						<ContactsPanel
-							accountId={accountId}
-							locale={locale}
-							canUse={canUseWhatsApp || canManageWhatsApp}
-							onOpenConversation={openConversationFromContact}
-						/>
-					</Suspense>
+				{contactsPopupOpen ? (
+					<WaDialog
+						title={t.contacts}
+						subtitle={locale === 'ar' ? 'ابحث عن رقم، اعرض بياناته، وابدأ شات.' : 'Look up a number, see their profile, and start a chat.'}
+						icon={<BookUser size={18} />}
+						width={760}
+						height={780}
+						zIndex={140}
+						onClose={() => setContactsPopupOpen(false)}
+						closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+						className="wa-contacts-dialog"
+					>
+						<div className="min-h-0 flex-1 overflow-y-auto nice-scroll px-1 pb-3">
+							<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+								<ContactsPanel
+									accountId={accountId}
+									locale={locale}
+									canUse={canUseWhatsApp || canManageWhatsApp}
+									embedded
+									onOpenConversation={openConversationFromContact}
+								/>
+							</Suspense>
+						</div>
+					</WaDialog>
+				) : null}
+
+				{activeTab === 'agent' && (
+					<div className="wa-dk wa-secondary-pane space-y-4">
+						{accountId ? (
+							<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+								<WhatsAppAiAgentPanel key={accountId} locale={locale} accountId={accountId} />
+							</Suspense>
+						) : (
+							<p className="rounded-2xl border border-dashed border-slate-300 px-4 py-10 text-center text-sm text-slate-500 dark:border-slate-600">
+								{t.accounts}
+							</p>
+						)}
+					</div>
 				)}
 
 				{activeTab === 'emails' && (
@@ -28126,7 +28246,6 @@ function WhatsAppWorkspaceContent() {
 							>
 								{[
 									{ id: 'ai', label: t.settingsAi, icon: Sparkles },
-									{ id: 'agent', label: t.settingsAgent, icon: Bot },
 									{ id: 'demo', label: t.settingsDemo, icon: Zap },
 									{ id: 'notifications', label: t.settingsNotifications, icon: Bell },
 									{ id: 'privacy', label: t.settingsPrivacy, icon: ShieldCheck },
@@ -28167,11 +28286,6 @@ function WhatsAppWorkspaceContent() {
 									/>
 								</Suspense>
 								</>
-							)}
-							{settingsSection === 'agent' && accountId && (
-								<Suspense fallback={<WaPaneLoading label={t.loading} />}>
-									<WhatsAppAiAgentPanel key={accountId} locale={locale} accountId={accountId} />
-								</Suspense>
 							)}
 							{settingsSection === 'demo' && (
 								<Suspense fallback={<WaPaneLoading label={t.loading} />}>
@@ -28311,6 +28425,7 @@ function WhatsAppWorkspaceContent() {
 					unreadCount={unreadConversationCount}
 					avatarUrl={railAvatarUrl}
 					locale={locale}
+					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 				/>
 			)}
 			<MessageReactionPicker

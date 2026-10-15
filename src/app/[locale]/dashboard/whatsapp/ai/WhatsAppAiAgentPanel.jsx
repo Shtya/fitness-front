@@ -5,6 +5,7 @@ import {
 	Activity,
 	BookOpen,
 	Bot,
+	Cpu,
 	FlaskConical,
 	Loader2,
 	Pencil,
@@ -158,6 +159,7 @@ function draftToPayload(draft) {
 		defaultMode: draft.defaultMode,
 		provider: draft.provider,
 		model: String(draft.model || '').trim() || 'auto',
+		externalModelId: draft.provider === 'external' ? draft.externalModelId || null : null,
 		agentName: draft.agentName || '',
 		businessName: draft.businessName || '',
 		persona: draft.persona || '',
@@ -225,24 +227,12 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 						options={modeOptions}
 					/>
 				</Field>
-				<Field label={text.provider}>
-					<WaCustomSelect
-						ariaLabel={text.provider}
-						value={draft.provider}
-						onChange={value => update('provider', value)}
-						options={PROVIDERS}
-					/>
-				</Field>
-				<Field label={text.model} hint={text.modelHint}>
-					<input
-						value={draft.model || ''}
-						onChange={event => update('model', event.target.value)}
-						maxLength={80}
-						dir="ltr"
-						className={fieldClass}
-					/>
-				</Field>
 			</div>
+			<p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800/60" dir="auto">
+				{text.provider}: <span className="font-bold text-slate-700 dark:text-slate-200">{draft.provider === 'external' ? text.externalModels : (PROVIDERS.find(item => item.value === draft.provider)?.label || draft.provider)}</span>
+				{' · '}
+				{text.model}: <span className="font-bold text-slate-700 dark:text-slate-200" dir="ltr">{draft.model || 'auto'}</span>
+			</p>
 
 			<Section title={text.sectionIdentity}>
 				<div className="grid gap-3 sm:grid-cols-2">
@@ -371,6 +361,232 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 				{text.save}
 			</button>
 		</form>
+	);
+}
+
+/* ---------------------------------------------------------------- models */
+
+function ModelsSection({ text, accountId, draft, setDraft, onSaved }) {
+	const [catalog, setCatalog] = useState(null);
+	const [externals, setExternals] = useState([]);
+	const [error, setError] = useState('');
+	const [busy, setBusy] = useState('');
+	const [form, setForm] = useState(null);
+
+	useEffect(() => {
+		const controller = new AbortController();
+		Promise.all([
+			whatsappAiAgentApi.catalog(accountId, controller.signal),
+			whatsappAiAgentApi.listExternalModels(accountId, controller.signal),
+		])
+			.then(([nextCatalog, nextExternals]) => {
+				setCatalog(nextCatalog);
+				setExternals(Array.isArray(nextExternals) ? nextExternals : []);
+			})
+			.catch(loadError => {
+				if (!controller.signal.aborted) setError(apiErrorMessage(loadError, 'Failed to load'));
+			});
+		return () => controller.abort();
+	}, [accountId]);
+
+	const activate = async (provider, model, externalModelId = null) => {
+		setBusy(`${provider}:${model || externalModelId}`);
+		setError('');
+		try {
+			const next = await whatsappAiAgentApi.updateSettings(accountId, {
+				...draftToPayload(draft),
+				provider,
+				model: model || 'auto',
+				externalModelId,
+			});
+			setDraft(settingsToDraft(next));
+			onSaved?.();
+		} catch (saveError) {
+			setError(apiErrorMessage(saveError, 'Failed to save'));
+		} finally {
+			setBusy('');
+		}
+	};
+
+	const saveExternal = async event => {
+		event.preventDefault();
+		if (!form) return;
+		setBusy('form');
+		setError('');
+		const payload = {
+			preset: form.preset,
+			label: form.label.trim(),
+			baseUrl: form.baseUrl.trim(),
+			model: form.model.trim(),
+			apiKey: form.apiKey.trim(),
+			isActive: form.isActive !== false,
+		};
+		try {
+			const saved = form.id
+				? await whatsappAiAgentApi.updateExternalModel(accountId, form.id, payload)
+				: await whatsappAiAgentApi.createExternalModel(accountId, payload);
+			setExternals(current => {
+				const list = current.filter(item => item.id !== saved.id);
+				return [saved, ...list];
+			});
+			setForm(null);
+		} catch (saveError) {
+			setError(apiErrorMessage(saveError, 'Failed to save'));
+		} finally {
+			setBusy('');
+		}
+	};
+
+	const removeExternal = async item => {
+		if (!window.confirm(text.extDeleteConfirm)) return;
+		setError('');
+		try {
+			await whatsappAiAgentApi.deleteExternalModel(accountId, item.id);
+			setExternals(current => current.filter(row => row.id !== item.id));
+			if (draft.externalModelId === item.id) {
+				setDraft(current => ({ ...current, provider: 'ai-free', model: 'auto', externalModelId: null }));
+			}
+		} catch (deleteError) {
+			setError(apiErrorMessage(deleteError, 'Failed to delete'));
+		}
+	};
+
+	const testExternal = async item => {
+		setBusy(`test:${item.id}`);
+		setError('');
+		try {
+			await whatsappAiAgentApi.testExternalModel(accountId, item.id);
+			setExternals(current =>
+				current.map(row => (row.id === item.id ? { ...row, lastTestOk: true, lastTestMessage: text.extTestOk } : row)),
+			);
+		} catch (testError) {
+			setError(apiErrorMessage(testError, 'Test failed'));
+		} finally {
+			setBusy('');
+		}
+	};
+
+	const presets = catalog?.externalPresets || [];
+	const providers = catalog?.providers || [];
+
+	return (
+		<div className="space-y-5">
+			<Section title={text.builtInModels} hint={text.builtInModelsHint}>
+				{!providers.length ? (
+					<div className="grid min-h-16 place-items-center"><Loader2 className="animate-spin text-[var(--color-primary-500)]" /></div>
+				) : (
+					<ul className="grid gap-2">
+						{providers.map(provider => (
+							<li key={provider.name} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+								<p className="text-sm font-black text-slate-800 dark:text-slate-100">{provider.label}</p>
+								<p className="mt-0.5 text-[11px] text-slate-400">{provider.description}</p>
+								<div className="mt-2 flex flex-wrap gap-1.5">
+									{(provider.models || [{ id: 'auto', label: 'Auto' }]).map(item => {
+										const active = draft.provider === provider.name && (draft.model || 'auto') === item.id;
+										return (
+											<button
+												key={item.id}
+												type="button"
+												disabled={Boolean(busy)}
+												onClick={() => void activate(provider.name, item.id, null)}
+												className={`rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${
+													active
+														? 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200'
+														: 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700'
+												}`}
+											>
+												{active ? text.inUse : text.useThisModel}: {item.label}
+											</button>
+										);
+									})}
+								</div>
+							</li>
+						))}
+					</ul>
+				)}
+			</Section>
+
+			<Section title={text.externalModels} hint={text.externalModelsHint}>
+				<div className="flex justify-end">
+					<button type="button" className={ghostButton} onClick={() => setForm({ preset: 'openai', label: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: '', isActive: true })}>
+						<Plus size={15} />
+						{text.addExternal}
+					</button>
+				</div>
+				{form ? (
+					<form onSubmit={saveExternal} className="space-y-2 rounded-2xl border border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/40 p-3 dark:border-[var(--color-primary-900)] dark:bg-[var(--color-primary-950)]/20">
+						<div className="grid gap-2 sm:grid-cols-2">
+							<Field label={text.extPreset}>
+								<WaCustomSelect
+									ariaLabel={text.extPreset}
+									value={form.preset}
+									onChange={value => {
+										const preset = presets.find(item => item.id === value);
+										setForm(current => ({
+											...current,
+											preset: value,
+											baseUrl: preset?.baseUrl || current.baseUrl,
+											label: current.label || preset?.label || '',
+										}));
+									}}
+									options={(presets.length ? presets : [{ id: 'custom', label: 'Custom' }]).map(item => ({ value: item.id, label: item.label }))}
+								/>
+							</Field>
+							<Field label={text.extLabel}>
+								<input required value={form.label} onChange={event => setForm(current => ({ ...current, label: event.target.value }))} maxLength={80} dir="auto" className={fieldClass} />
+							</Field>
+							<Field label={text.extBaseUrl}>
+								<input required={form.preset === 'custom'} value={form.baseUrl} onChange={event => setForm(current => ({ ...current, baseUrl: event.target.value }))} dir="ltr" className={fieldClass} />
+							</Field>
+							<Field label={text.extModel}>
+								<input required value={form.model} onChange={event => setForm(current => ({ ...current, model: event.target.value }))} dir="ltr" className={fieldClass} />
+							</Field>
+							<Field label={text.extApiKey} hint={form.id ? text.extApiKeyKeep : undefined}>
+								<input type="password" autoComplete="off" value={form.apiKey} onChange={event => setForm(current => ({ ...current, apiKey: event.target.value }))} className={fieldClass} />
+							</Field>
+						</div>
+						<div className="flex flex-wrap justify-end gap-2">
+							<button type="button" className={ghostButton} onClick={() => setForm(null)}>{text.kbCancel}</button>
+							<button type="submit" disabled={busy === 'form'} style={{ background: GRADIENT, boxShadow: GLOW }} className={primaryButtonClass}>
+								{busy === 'form' ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+								{text.kbSave}
+							</button>
+						</div>
+					</form>
+				) : null}
+				{externals.length === 0 && !form ? (
+					<p className="rounded-xl border border-dashed border-slate-300 px-3 py-6 text-center text-xs text-slate-500 dark:border-slate-600">{text.extEmpty}</p>
+				) : (
+					<ul className="grid gap-2">
+						{externals.map(item => {
+							const active = draft.provider === 'external' && draft.externalModelId === item.id;
+							return (
+								<li key={item.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+									<div className="flex flex-wrap items-start gap-2">
+										<div className="min-w-0 flex-1">
+											<p className="text-sm font-black text-slate-800 dark:text-slate-100" dir="auto">{item.label}</p>
+											<p className="mt-0.5 font-mono text-[11px] text-slate-400" dir="ltr">{item.model} · {item.baseUrl}</p>
+											{item.keyLast4 ? <p className="text-[11px] text-slate-400">••••{item.keyLast4}</p> : null}
+											{item.lastTestOk === false && item.lastTestMessage ? <p className="text-[11px] text-rose-600">{item.lastTestMessage}</p> : null}
+											{item.lastTestOk === true ? <p className="text-[11px] text-emerald-600">{text.extTestOk}</p> : null}
+										</div>
+										<div className="flex flex-wrap gap-1">
+											<button type="button" className={ghostButton} disabled={Boolean(busy)} onClick={() => void activate('external', item.model, item.id)}>
+												{active ? text.inUse : text.useThisModel}
+											</button>
+											<button type="button" className={ghostButton} disabled={Boolean(busy)} onClick={() => void testExternal(item)}>{text.extTest}</button>
+											<button type="button" className={ghostButton} onClick={() => setForm({ ...item, apiKey: '' })}>{text.kbEdit}</button>
+											<button type="button" className={ghostButton} onClick={() => void removeExternal(item)}>{text.kbDelete}</button>
+										</div>
+									</div>
+								</li>
+							);
+						})}
+					</ul>
+				)}
+			</Section>
+			{error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
+		</div>
 	);
 }
 
@@ -867,6 +1083,7 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 
 	const tabs = [
 		{ id: 'setup', label: text.tabs.setup, icon: Settings2 },
+		{ id: 'models', label: text.tabs.models, icon: Cpu },
 		{ id: 'knowledge', label: text.tabs.knowledge, icon: BookOpen },
 		{ id: 'test', label: text.tabs.test, icon: FlaskConical },
 		{ id: 'activity', label: text.tabs.activity, icon: Activity },
@@ -920,6 +1137,8 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 				<div className="grid min-h-32 place-items-center"><Loader2 className="animate-spin text-[var(--color-primary-500)]" /></div>
 			) : section === 'setup' ? (
 				<SetupSection text={text} lang={lang} draft={draft} setDraft={setDraftDirty} saving={saving} saved={saved} error={saveError} onSubmit={submit} />
+			) : section === 'models' ? (
+				<ModelsSection text={text} accountId={accountId} draft={draft} setDraft={setDraftDirty} onSaved={() => setSaved(true)} />
 			) : section === 'knowledge' ? (
 				<KnowledgeSection text={text} accountId={accountId} />
 			) : section === 'test' ? (

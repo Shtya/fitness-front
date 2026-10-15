@@ -13225,3 +13225,29 @@ button.wa-view-once:focus-visible {
 	font-size: 12px;
 	opacity: 0.62;
 }
+
+.wa-contacts-plus {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	flex: 0 0 auto;
+	place-items: center;
+	border: 0;
+	border-radius: 999px;
+	background: #1dab61;
+	color: #fff;
+	cursor: pointer;
+}
+
+.wa-contacts-plus:hover {
+	background: #179c57;
+}
+
+.wa-contacts-plus:focus-visible {
+	outline: 2px solid #1dab61;
+	outline-offset: 2px;
+}
+
+.wa-contacts-dialog {
+	min-height: min(780px, calc(100dvh - 24px));
+}

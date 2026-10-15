@@ -41,6 +41,26 @@ export const whatsappAiAgentApi = {
 	updateSettings(accountId, payload) {
 		return api.put(`${agentBase(accountId)}/settings`, payload).then(response => response.data);
 	},
+	catalog(accountId, signal) {
+		return api.get(`${agentBase(accountId)}/catalog`, { signal }).then(response => response.data);
+	},
+	listExternalModels(accountId, signal) {
+		return api.get(`${agentBase(accountId)}/models`, { signal }).then(response => response.data);
+	},
+	createExternalModel(accountId, payload) {
+		return api.post(`${agentBase(accountId)}/models`, payload).then(response => response.data);
+	},
+	updateExternalModel(accountId, id, payload) {
+		return api.put(`${agentBase(accountId)}/models/${id}`, payload).then(response => response.data);
+	},
+	deleteExternalModel(accountId, id) {
+		return api.delete(`${agentBase(accountId)}/models/${id}`).then(response => response.data);
+	},
+	testExternalModel(accountId, id) {
+		return api
+			.post(`${agentBase(accountId)}/models/${id}/test`, {}, { timeout: 30000 })
+			.then(response => response.data);
+	},
 	listKnowledge(accountId, signal) {
 		return api.get(`${agentBase(accountId)}/knowledge`, { signal }).then(response => response.data);
 	},

@@ -29,4 +29,8 @@ test('agent copy has the same keys in Arabic and English', () => {
 	assert.deepEqual(keys(AGENT_COPY.ar), keys(AGENT_COPY.en));
 	assert.equal(agentCopy('ar-EG'), AGENT_COPY.ar);
 	assert.equal(reasonLabel(AGENT_COPY.en, 'unknown_reason'), 'unknown_reason');
+	assert.equal(AGENT_COPY.en.tabs.models, 'Models');
+	assert.equal(AGENT_COPY.ar.tabs.models, 'النماذج');
+	assert.ok(AGENT_COPY.en.builtInModels);
+	assert.ok(AGENT_COPY.en.externalModels);
 });
