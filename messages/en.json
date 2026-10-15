@@ -9876,7 +9876,8 @@
 			"empty_title": "No foods found",
 			"empty_filtered": "Try another word or clear the filters",
 			"empty_start": "Add the first food for your team",
-			"retry_hint": "Check your connection and try again"
+			"retry_hint": "Check your connection and try again",
+			"per_100_hint": "/100g"
 		},
 		"badges": {
 			"verified": "Verified",

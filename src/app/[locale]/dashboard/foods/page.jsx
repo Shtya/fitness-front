@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-	AlertCircle, Apple, BadgeCheck, Database, Flame, Globe2, Layers, Lock, PencilLine, Plus, RefreshCw, Save, Trash2, Users, XCircle,
+	AlertCircle, Apple, BadgeCheck, Beef, Candy, Database, Droplets, Flame, Globe2, Layers, Leaf, Lock, PencilLine, Plus, RefreshCw, Save, Trash2,
+	Users, Wheat, XCircle,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -21,24 +22,39 @@ import { FoodFields, emptyFoodDraft, foodToDraft, saveFood, validateFoodDraft } 
 import { FOOD_CATEGORIES, foodName } from '@/lib/food-nutrition';
 
 const GM_MODAL = 'gm-modal';
-const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+const PER_PAGE_OPTIONS = [25, 50, 100, 200];
 const fmt = n => (n == null ? '—' : Math.round(Number(n) * 10) / 10);
 
-function NutritionCell({ row, t }) {
-	const unit = row.baseUnit === 'ml' ? t('form.unit_ml') : t('form.unit_g');
+const NUTRIENTS = [
+	{ key: 'kcal', Icon: Flame, color: 'var(--color-primary-600)' },
+	{ key: 'protein', Icon: Beef, color: '#e11d48' },
+	{ key: 'carbs', Icon: Wheat, color: '#d97706' },
+	{ key: 'fat', Icon: Droplets, color: '#0284c7' },
+	{ key: 'fiber', Icon: Leaf, color: '#16a34a' },
+	{ key: 'sugar', Icon: Candy, color: '#db2777' },
+];
+
+function NutrientHeader({ Icon, color, label, hint }) {
 	return (
-		<div className='flex flex-wrap items-center gap-x-2.5 gap-y-1' dir='ltr'>
-			<span className='gm-plan__chip font-en tabular-nums text-(--color-primary-700)!'>
-				<Flame className='size-3' />
-				{fmt(row.kcal)}
-				<span className='font-normal gm-faint'>/100{unit}</span>
-			</span>
-			{['protein', 'carbs', 'fat', 'fiber', 'sugar'].map(key => (
-				<span key={key} className='font-en text-[11.5px] tabular-nums gm-ink-soft' title={t(`macros.${key}`)}>
-					<span className='gm-muted'>{t(`macros.${key}_short`)}</span> {row[key] == null ? '—' : `${fmt(row[key])}g`}
-				</span>
-			))}
-		</div>
+		<span className='inline-flex items-center gap-1.5 whitespace-nowrap'>
+			<Icon className='size-3.5 shrink-0' style={{ color }} aria-hidden />
+			{label}
+			{hint ? <span className='font-en text-[10px] font-normal gm-faint'>{hint}</span> : null}
+		</span>
+	);
+}
+
+function NutrientValue({ value, unit, color, strong = false }) {
+	if (value == null) return <span className='font-en text-[12px] gm-faint'>—</span>;
+	return (
+		<span
+			dir='ltr'
+			className={`inline-flex min-w-[54px] items-baseline justify-center gap-0.5 rounded-[8px] px-2 py-[3px] font-en tabular-nums ${strong ? 'text-[13px] font-bold' : 'text-[12.5px] font-semibold'}`}
+			style={{ color, background: `color-mix(in srgb, ${color} 10%, transparent)` }}
+		>
+			{fmt(value)}
+			<span className='text-[10px] font-medium opacity-70'>{unit}</span>
+		</span>
 	);
 }
 
@@ -97,7 +113,7 @@ export default function FoodsPage() {
 	const [scope, setScope] = useState('all');
 	const [category, setCategory] = useState('all');
 	const [page, setPage] = useState(1);
-	const [perPage, setPerPage] = useState(25);
+	const [perPage, setPerPage] = useState(50);
 	const [filterOpen, setFilterOpen] = useState(false);
 	const filterAnchorRef = useRef(null);
 
@@ -185,21 +201,22 @@ export default function FoodsPage() {
 		{
 			key: 'name',
 			header: t('table.name'),
-			headClassName: 'min-w-[220px]',
-			className: 'gm-wrap',
+			headClassName: 'min-w-[260px]',
+			className: 'max-w-[380px]',
 			cell: row => {
 				const secondary = locale === 'ar' ? row.nameEn : row.nameAr;
 				const piece = row.pieceGrams ? `${(locale === 'ar' ? row.pieceLabelAr : row.pieceLabelEn) || t('table.piece')} = ${fmt(row.pieceGrams)}g` : '';
 				return (
-					<span className='block min-w-0'>
-						<span className='flex items-center gap-1.5'>
-							<span dir='auto' className='truncate text-[13px] font-bold gm-ink'>{foodName(row, locale)}</span>
-							{row.verified ? <BadgeCheck className='size-3.5 shrink-0 text-(--color-primary-500)' aria-label={t('badges.verified')} /> : null}
-						</span>
-						<span className='mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] gm-muted'>
-							{secondary ? <span dir='auto' className='truncate'>{secondary}</span> : null}
-							{piece ? <span className='font-en tabular-nums'>{piece}</span> : null}
-						</span>
+					<span className='flex min-w-0 items-center gap-1.5 whitespace-nowrap' title={[foodName(row, locale), secondary, piece].filter(Boolean).join(' · ')}>
+						<span dir='auto' className='truncate text-[13px] font-bold gm-ink'>{foodName(row, locale)}</span>
+						{row.verified ? <BadgeCheck className='size-3.5 shrink-0 text-(--color-primary-500)' aria-label={t('badges.verified')} /> : null}
+						{secondary ? (
+							<>
+								<span className='shrink-0 gm-faint'>·</span>
+								<span dir='auto' className='truncate text-[12px] gm-muted'>{secondary}</span>
+							</>
+						) : null}
+						{piece ? <span className='shrink-0 font-en text-[11px] tabular-nums gm-faint'>({piece})</span> : null}
 					</span>
 				);
 			},
@@ -209,11 +226,20 @@ export default function FoodsPage() {
 			header: t('table.category'),
 			cell: row => <Badge color='slate'>{t(`categories.${row.category}`)}</Badge>,
 		},
-		{
-			key: 'nutrition',
-			header: t('table.per_100'),
-			cell: row => <NutritionCell row={row} t={t} />,
-		},
+		...NUTRIENTS.map(({ key, Icon, color }) => ({
+			key,
+			header: <NutrientHeader Icon={Icon} color={color} label={t(`macros.${key}`)} hint={key === 'kcal' ? t('table.per_100_hint') : null} />,
+			headClassName: 'text-center!',
+			className: 'text-center',
+			cell: row => (
+				<NutrientValue
+					value={row[key]}
+					unit={key === 'kcal' ? t('macros.kcal_unit') : t('macros.g_unit')}
+					color={color}
+					strong={key === 'kcal'}
+				/>
+			),
+		})),
 		{
 			key: 'scope',
 			header: t('table.scope'),
