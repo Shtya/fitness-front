@@ -5046,332 +5046,168 @@
 		}
 	},
 	"billing": {
-		"title": "Billing and payment management",
-		"subtitle": "Track and manage your wallet, subscriptions, and payments from one place",
+		"title": "Billing",
+		"subtitle": "Record client payments, follow up on renewals and manage your packages.",
 		"currency": "EGP",
 		"tabs": {
-			"overview": "Overview",
-			"clients": "Clients",
-			"packages": "Package management",
-			"subscriptions": "Subscriptions",
-			"payments": "Record payment",
-			"communications": "Messages",
-			"clientPayments": "Client payments"
+			"renewals": "Renewals",
+			"payments": "Payments",
+			"packages": "Packages"
 		},
-		"tooltips": {
-			"pageInfo": "Here you can manage everything related to your payments, subscriptions, and invoices"
-		},
-		"kpi": {
-			"walletBalance": {
-				"title": "Wallet balance",
-				"subtitle": "Currently available"
-			},
-			"totalEarned": {
-				"title": "Total earnings",
-				"subtitle": "Total amount earned"
-			},
-			"moneyInThisMonth": {
-				"title": "Revenue this month",
-				"subtitle": "Monthly revenue"
-			},
-			"pendingPayments": "Pending payments",
-			"activeSubscriptions": "Active subscriptions",
-			"monthlyRevenue": "Monthly revenue",
-			"renewalRate": "Renewal rate",
-			"totalClients": "Total clients",
-			"activeClients": "Active clients",
-			"urgentRenewal": "Urgent renewal (under 7 days)",
-			"soonRenewal": "Renewal soon (under 30 days)",
-			"totalPayments": "Total payments"
-		},
-		"packages": {
-			"title": "Package management",
-			"description": "Create, edit, and manage your subscription packages",
-			"addNew": "Add new package",
-			"edit": "Edit package",
-			"sendWhatsApp": "Send via WhatsApp",
-			"sendToClient": "Send to client on WhatsApp",
-			"sendAllAsPdf": "Send all packages",
-			"mostPopular": "Most popular",
-			"starter": "Starter",
-			"gold": "Gold",
-			"platinum": "Platinum",
-			"packageDetails": "Package details",
-			"editPlan": "Edit package",
-			"addPlan": "Add package",
-			"subtitle": "Create and manage the packages you offer",
-			"exportAll": "Send all packages",
-			"exportingPdf": "Exporting PDF for package:",
-			"exportSuccess": "Packages sent successfully to {phone}",
-			"dialogDescription": "Fill in the details below to create or edit the package",
-			"exportDialog": {
-				"title": "Send all packages",
-				"description": "A PDF file containing all packages will be generated and sent via WhatsApp",
-				"phoneLabel": "Phone number",
-				"info": "A comprehensive PDF containing details of all available packages will be generated",
-				"send": "Send via WhatsApp",
-				"sending": "Sending...",
-				"sent": "Sent",
-				"preview": "Message preview",
-				"selectClient": "Choose who receives this",
-				"sendingTo": "Sending to",
-				"offerIntro": "Here is our package offer",
-				"outro": "Reply any time to subscribe or ask a question"
-			},
-			"form": {
-				"nameAr": "Package name (Arabic)",
-				"nameEn": "Package name (English)",
-				"price": "Price",
-				"duration": "Duration",
-				"features": "Features",
-				"feature": "Feature",
-				"addFeature": "Add feature",
-				"monthly": "Monthly",
-				"quarterly": "Quarterly",
-				"semiAnnual": "Semi-annual",
-				"annual": "Annual",
-				"oneTime": "One time"
-			}
-		},
-		"pdf": {
-			"allPackages": "All packages"
-		},
-		"clients": {
-			"title": "Client management",
-			"description": "Track client subscriptions and renewal dates",
-			"search": "Search for a client...",
-			"daysLeft": "Days left",
-			"days": "Day",
-			"renewalDate": "Renewal date",
-			"sendReminder": "Send reminder",
-			"noResults": "No results",
-			"management": "Client management",
-			"managementSubtitle": "View clients in a table with search and pagination",
-			"contact": "Contact",
-			"package": "Package",
-			"renewal": "Renewal",
-			"startDate": "Start date",
-			"expired": "Ended",
-			"results": "results",
-			"reminderQueued": "Reminder queued",
-			"status": {
-				"active": "Active",
-				"expiringSoon": "Expiring soon",
-				"renewalDue": "Renewal due",
-				"ended": "Ended"
-			},
-			"stats": {
-				"total": "Total clients",
-				"active": "Active",
-				"renewSoon": "Renew soon",
-				"renewUrgent": "Urgent renewal",
-				"ended": "Ended"
-			},
-			"statsSubtitle": {
-				"total": "All",
-				"active": "More than 30 days",
-				"renewSoon": "8 to 30 days",
-				"renewUrgent": "Within 7 days",
-				"ended": "Already ended"
-			},
-			"statsHint": {
-				"total": "Total client base",
-				"active": "Stable subscriptions",
-				"renewSoon": "Follow up before expiration",
-				"renewUrgent": "Send reminder now",
-				"ended": "Opportunity to resubscribe"
-			}
-		},
-		"table": {
-			"client": "Client",
-			"status": "Status",
-			"description": "Description",
-			"period": "Period",
-			"date": "Date",
-			"amount": "Amount",
-			"actions": "Actions",
-			"to": "To",
-			"view": "View"
-		},
-		"subscriptions": {
-			"stats": {
-				"active": "Active subscriptions",
-				"revenue": "Monthly revenue",
-				"renewal": "Renewal rate"
-			}
-		},
-		"transactions": {
-			"recent": "Recent transactions",
-			"recentSubtitle": "View recent transactions in a table with pagination",
-			"empty": "No transactions yet",
-			"examples": {
-				"subscription": "Monthly subscription payment - Premium package",
-				"withdrawal": "Withdrawal request to bank account",
-				"refund": "Refund - Subscription cancellation",
-				"annual": "Annual subscription payment - Enterprise package"
-			}
-		},
-		"transactionTypes": {
-			"subscription_payment": "Subscription payment",
-			"withdrawal": "Withdrawal",
-			"refund": "Refund",
-			"deposit": "Deposit",
-			"transfer": "Transfer"
-		},
-		"status": {
-			"completed": "Completed",
-			"pending": "Pending",
-			"failed": "Failed",
-			"paid": "Paid",
-			"unpaid": "Unpaid",
-			"approved": "Approved",
-			"rejected": "Rejected"
-		},
-		"filters": {
-			"title": "Filter and search",
-			"subtitle": "Filter results quickly and clearly",
-			"client": "Client",
-			"selectClient": "Select client",
-			"allClients": "All clients",
-			"fromDate": "From date",
-			"toDate": "To date",
-			"selectDate": "Select date",
-			"paidStatus": "Payment status",
-			"all": "All",
-			"paid": "Paid",
-			"unpaid": "Unpaid",
-			"sort": "Sort by",
-			"newest": "Newest first",
-			"oldest": "Oldest first",
-			"amountHigh": "Amount (highest first)",
-			"amountLow": "Amount (lowest first)",
-			"reset": "Reset",
-			"show": "Show",
-			"hide": "Hide",
-			"status": "Status",
-			"package": "Package",
-			"type": "Type",
-			"subscription": "Subscription",
-			"withdrawal": "Withdrawal",
-			"refund": "Refund"
-		},
-		"payments": {
-			"history": "Payment history",
-			"historyDescription": "A complete record of all transactions",
-			"total": "Total: {count} transactions",
-			"empty": "No payments recorded",
-			"emptyDescription": "No payments have been recorded yet",
-			"period": "Period",
-			"markAsPaid": "Mark as paid"
-		},
-		"form": {
-			"title": "Record a new payment",
-			"description": "Description",
-			"client": "Select client",
-			"selectClient": "Select a client from the list",
-			"amount": "Amount",
-			"descriptionPlaceholder": "Enter a detailed payment description...",
-			"period": "Subscription period",
-			"optional": "Optional",
-			"periodFrom": "From date",
-			"periodTo": "To date",
-			"clientName": "Client name",
-			"clientNamePlaceholder": "e.g. Ahmed Mohamed",
-			"paymentMethod": "Payment method",
-			"notes": "Notes",
-			"notesPlaceholder": "Optional notes",
-			"methodCash": "Cash",
-			"methodBank": "Bank transfer",
-			"methodCard": "Card",
-			"methodWallet": "Wallet",
-			"submit": "Record payment",
-			"submitting": "Recording...",
-			"success": "Payment recorded successfully!",
-			"errors": {
-				"clientRequired": "A client must be selected",
-				"amountRequired": "A valid amount must be entered",
-				"descriptionRequired": "A payment description is required",
-				"periodRequired": "Start and end dates must both be entered",
-				"submitFailed": "Failed to record payment. Try again"
-			}
-		},
-		"pagination": {
-			"prev": "Previous",
-			"next": "Next"
-		},
-		"common": {
-			"viewAll": "View all",
-			"system": "System",
-			"adminUser": "Admin",
-			"superAdmin": "Super admin",
-			"edit": "Edit",
-			"delete": "Delete",
+		"actions": {
+			"record": "Record payment",
+			"recordFor": "Record payment",
+			"refresh": "Refresh",
+			"retry": "Retry",
 			"cancel": "Cancel",
 			"save": "Save",
-			"update": "Update",
-			"export": "Export",
-			"loading": "Loading...",
-			"noData": "No data",
-			"yes": "Yes",
-			"no": "No",
+			"edit": "Edit",
+			"delete": "Delete",
+			"addPackage": "Add package",
+			"whatsapp": "Send WhatsApp reminder"
+		},
+		"toolbar": {
+			"search": "Search",
+			"filters": "Filters",
+			"clearAll": "Clear all",
+			"activeFilters": "Active filters",
+			"reset": "Reset",
+			"done": "Done"
+		},
+		"kpi": {
+			"thisMonth": "Collected this month",
+			"thisMonthHint": "{count, plural, =0 {No payments yet} one {# payment} other {# payments}} · last month {last}",
+			"active": "Active subscriptions",
+			"activeHint": "out of {total} clients",
+			"expiring": "Ending within 7 days",
+			"expiringHint": "Remind them to renew",
+			"expired": "Expired",
+			"expiredHint": "{none, plural, =0 {Everyone has a subscription} other {+ # without a subscription}}"
+		},
+		"status": {
+			"active": "Active",
+			"expiring": "Ending soon",
+			"expired": "Expired",
+			"none": "No subscription"
+		},
+		"paymentStatus": {
+			"pending": "Pending",
+			"failed": "Failed",
+			"canceled": "Canceled",
+			"refunded": "Refunded",
+			"succeeded": "Paid"
+		},
+		"methods": {
+			"cash": "Cash",
+			"bank_transfer": "Bank transfer",
+			"card": "Card",
+			"wallet": "Mobile wallet",
+			"other": "Other",
+			"fawry": "Fawry",
+			"paymob": "Paymob",
+			"stripe": "Stripe",
+			"paypal": "PayPal"
+		},
+		"renewals": {
+			"searchPlaceholder": "Search by name, phone or email…",
+			"resultCount": "<strong>{count}</strong> clients",
 			"all": "All",
-			"search": "Search...",
-			"apply": "Apply",
-			"deleted": "Deleted",
-			"saved": "Saved",
-			"refresh": "Refresh",
-			"back": "Back",
-			"whatsapp": "WhatsApp"
+			"client": "Client",
+			"package": "Package",
+			"ends": "Subscription ends",
+			"status": "Status",
+			"lastPayment": "Last payment",
+			"daysLeft": "{days, plural, =0 {Ends today} one {# day left} other {# days left}}",
+			"daysAgo": "{days, plural, one {Ended # day ago} other {Ended # days ago}}",
+			"noPhone": "No phone number",
+			"emptyTitle": "No clients yet",
+			"emptyStart": "Clients you add from the Users page show up here.",
+			"emptyFiltered": "No clients match this search",
+			"whatsappEnding": "Hi {name}, your subscription ends on {date}. Would you like to renew?",
+			"whatsappExpired": "Hi {name}, your subscription ended on {date}. Ready to get back to training? Reply here to renew.",
+			"whatsappNone": "Hi {name}, reply here and we will set up your subscription."
 		},
-		"withdrawals": {
-			"title": "Withdrawal requests",
-			"pending": "Under review",
-			"approved": "Approved",
-			"rejected": "Rejected",
-			"rejectionReason": "Rejection reason",
-			"examples": {
-				"rejectionReason": "Insufficient balance for the requested withdrawal"
-			},
-			"actions": {
-				"approve": "Approve",
-				"reject": "Reject"
+		"payments": {
+			"searchPlaceholder": "Search by client, phone or note…",
+			"resultCount": "<strong>{count}</strong> payments · {total}",
+			"periodAll": "All time",
+			"periodThisMonth": "This month",
+			"periodLastMonth": "Last month",
+			"all": "All",
+			"date": "Date",
+			"client": "Client",
+			"for": "For",
+			"method": "Method",
+			"amount": "Amount",
+			"period": "{from} → {to}",
+			"emptyTitle": "No payments yet",
+			"emptyStart": "Use “Record payment” whenever a client pays you.",
+			"emptyFiltered": "No payments match these filters",
+			"deleteTitle": "Delete payment",
+			"deleteConfirm": "This removes the payment from your records.",
+			"deleteRevert": "The subscription period it added will be rolled back too."
+		},
+		"form": {
+			"title": "Record payment",
+			"client": "Client",
+			"current": "Subscription ends {date}",
+			"currentExpired": "Subscription ended {date}",
+			"currentNone": "No subscription yet",
+			"package": "Package",
+			"noPackage": "No package",
+			"noPackagesHint": "Add your packages from the Packages tab to fill the price and dates automatically.",
+			"amount": "Amount",
+			"paidAt": "Payment date",
+			"method": "Payment method",
+			"extend": "Extend subscription",
+			"extendHint": "Updates the client’s subscription dates.",
+			"from": "From",
+			"to": "To",
+			"newEnd": "Subscription will end on {date}",
+			"notes": "Note (optional)",
+			"errors": {
+				"client": "Choose a client",
+				"amount": "Enter an amount greater than 0",
+				"period": "Choose both subscription dates",
+				"periodOrder": "The end date must be after the start date"
 			}
 		},
-		"subscription": {
-			"title": "Subscription status",
-			"endDate": "End date",
-			"renewNow": "Renew now"
-		},
-		"communications": {
-			"selectClient": "Choose a client",
-			"chooseClient": "Choose a client...",
-			"chooseClientFirst": "Choose a client to preview or send a message",
-			"messageType": "Message type",
-			"messagePreview": "Message preview",
-			"customPlaceholder": "Write a custom message...",
-			"sendWhatsapp": "Send on WhatsApp",
-			"log": "Message log",
-			"noLogs": "No messages for this client yet",
-			"sendError": "Could not send the message",
-			"greeting": "Hello",
-			"contactUs": "Reply any time if you want to renew or ask a question.",
-			"reminderText": "Your {package} subscription ends in {days} days. Renew early to keep your place.",
-			"types": {
-				"reminder": "Expiry reminder",
-				"renewal": "Renewal request",
-				"welcome": "Welcome",
-				"custom": "Custom message"
+		"packages": {
+			"hint": "Your packages fill in the price and subscription dates when you record a payment.",
+			"name": "Name",
+			"price": "Price",
+			"duration": "Duration",
+			"clients": "Active clients",
+			"length": "Length",
+			"unitMonths": "Months",
+			"unitDays": "Days",
+			"months": "{count, plural, one {# month} other {# months}}",
+			"days": "{count, plural, one {# day} other {# days}}",
+			"description": "Description (optional)",
+			"addTitle": "Add package",
+			"editTitle": "Edit package",
+			"emptyTitle": "No packages yet",
+			"emptyStart": "Add packages like “Monthly” or “3 months” to record payments faster.",
+			"deleteTitle": "Delete package",
+			"deleteConfirm": "Past payments and subscriptions keep their history.",
+			"errors": {
+				"name": "Enter a package name",
+				"price": "Enter a valid price",
+				"length": "Length must be at least 1"
 			}
+		},
+		"toasts": {
+			"recorded": "Payment recorded",
+			"recordedExtended": "Payment recorded · subscription now ends {date}",
+			"deleted": "Payment deleted",
+			"deletedReverted": "Payment deleted and the subscription dates were restored",
+			"planSaved": "Package saved",
+			"planDeleted": "Package deleted"
 		},
 		"errors": {
-			"loadStats": "Could not load billing stats",
-			"loadClients": "Could not load clients",
-			"loadPayments": "Could not load payments",
-			"loadPlans": "Could not load packages",
-			"loadInvoices": "Could not load invoices",
-			"savePlan": "Could not save the package",
-			"deletePlan": "Could not delete the package",
-			"deleteInvoice": "Could not update the invoice"
+			"load": "Couldn’t load billing data",
+			"save": "Couldn’t save",
+			"delete": "Couldn’t delete"
 		}
 	},
 	"profile": {

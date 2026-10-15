@@ -95,7 +95,7 @@ export default function GmStatCard({ card, index }) {
 					<div className='gm-display mt-1.5 text-[28px] font-bold leading-none gm-ink'>{card.value ?? 0}</div>
 					{card.hint ? <div className='mt-1 whitespace-nowrap text-[10.5px] font-medium leading-snug gm-faint'>{card.hint}</div> : null}
 				</div>
-				<Sparkline value={card.value} max={card.max} color={card.stroke} fill={card.fill} seed={card.seed} />
+				<Sparkline value={card.spark ?? card.value} max={card.max} color={card.stroke} fill={card.fill} seed={card.seed} />
 			</Tag>
 		</motion.div>
 	);
