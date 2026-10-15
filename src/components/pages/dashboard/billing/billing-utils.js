@@ -32,16 +32,22 @@ function addMonths(ymd, months) {
 }
 
 const INTERVAL_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 };
+const DEFAULT_PERIOD_MONTHS = 3;
+
+/** End of a period starting on `start`: the package length, or 3 months when there is no package. */
+export function periodEnd(start, plan) {
+	if (!start || !YMD.test(start)) return '';
+	if (plan?.durationDays > 0) return addDays(start, plan.durationDays - 1);
+	const months = INTERVAL_MONTHS[plan?.interval];
+	if (months) return addDays(addMonths(start, months * Math.max(1, plan.intervalCount || 1)), -1);
+	return addMonths(start, DEFAULT_PERIOD_MONTHS);
+}
 
 /** Form prefill only — the server re-validates the period it receives. */
 export function suggestPeriod(plan, currentEnd) {
 	const today = todayYmd();
 	const start = currentEnd && YMD.test(currentEnd) && currentEnd >= today ? addDays(currentEnd, 1) : today;
-	if (!plan) return { start, end: '' };
-	if (plan.durationDays > 0) return { start, end: addDays(start, plan.durationDays - 1) };
-	const months = INTERVAL_MONTHS[plan.interval];
-	if (!months) return { start, end: '' };
-	return { start, end: addDays(addMonths(start, months * Math.max(1, plan.intervalCount || 1)), -1) };
+	return { start, end: periodEnd(start, plan) };
 }
 
 /** A package's length as { unit, count } for display and editing. */

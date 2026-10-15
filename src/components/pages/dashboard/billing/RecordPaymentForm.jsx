@@ -6,10 +6,12 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import api from '@/utils/axios';
 import Button from '@/components/atoms/Button';
+import FloatingDate from '@/components/atoms/FloatingDate';
 import FloatingSelect from '@/components/atoms/FloatingSelect';
 import { GmSwitch, MiniField } from '@/components/atoms/GmFormParts';
 import { Notification } from '@/config/Notification';
-import { PAYMENT_METHODS, apiError, formatDate, formatMoney, suggestPeriod, todayYmd } from './billing-utils';
+import { PAYMENT_METHODS, apiError, formatDate, formatMoney, periodEnd, suggestPeriod, todayYmd } from './billing-utils';
+import 'flatpickr/dist/themes/airbnb.css';
 
 function ChoiceChip({ active, onClick, children }) {
 	return (
@@ -47,17 +49,21 @@ function CurrentSubscription({ client, t, locale }) {
 export default function RecordPaymentForm({ clients, plans, initialClientId, onSaved, onCancel }) {
 	const t = useTranslations('billing');
 	const locale = useLocale();
-	const [form, setForm] = useState(() => ({
-		userId: initialClientId || null,
-		planId: null,
-		amount: '',
-		method: 'cash',
-		paidAt: todayYmd(),
-		extend: false,
-		periodFrom: '',
-		periodTo: '',
-		notes: '',
-	}));
+	const [form, setForm] = useState(() => {
+		const initialClient = clients.find(c => c.id === initialClientId);
+		const period = suggestPeriod(null, initialClient?.subscriptionEnd);
+		return {
+			userId: initialClientId || null,
+			planId: null,
+			amount: '',
+			method: 'cash',
+			paidAt: todayYmd(),
+			extend: true,
+			periodFrom: period.start,
+			periodTo: period.end,
+			notes: '',
+		};
+	});
 	const [errors, setErrors] = useState({});
 	const [saving, setSaving] = useState(false);
 
@@ -98,6 +104,12 @@ export default function RecordPaymentForm({ clients, plans, initialClientId, onS
 
 	const toggleExtend = on => {
 		setForm(f => ({ ...f, extend: on, ...applyPeriod(plan, client, on) }));
+		setErrors({});
+	};
+
+	const pickPeriodFrom = start => {
+		if (!start) return;
+		setForm(f => ({ ...f, periodFrom: start, periodTo: periodEnd(start, plan) }));
 		setErrors({});
 	};
 
@@ -184,7 +196,13 @@ export default function RecordPaymentForm({ clients, plans, initialClientId, onS
 					onChange={v => set('amount', v.replace(/[^\d.]/g, ''))}
 					error={Boolean(errors.amount)}
 				/>
-				<MiniField type='date' numeric label={t('form.paidAt')} value={form.paidAt} onChange={v => set('paidAt', v)} />
+				<FloatingDate
+					size='sm'
+					label={t('form.paidAt')}
+					value={form.paidAt}
+					maxDate={todayYmd()}
+					onChange={v => v && set('paidAt', v)}
+				/>
 			</div>
 
 			<div>
@@ -209,8 +227,21 @@ export default function RecordPaymentForm({ clients, plans, initialClientId, onS
 				</div>
 				{form.extend && (
 					<div className='mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2'>
-						<MiniField type='date' numeric label={t('form.from')} value={form.periodFrom} onChange={v => set('periodFrom', v)} error={Boolean(errors.period)} />
-						<MiniField type='date' numeric label={t('form.to')} value={form.periodTo} onChange={v => set('periodTo', v)} error={Boolean(errors.period)} />
+						<FloatingDate
+							size='sm'
+							label={t('form.from')}
+							value={form.periodFrom}
+							onChange={pickPeriodFrom}
+							error={Boolean(errors.period)}
+						/>
+						<FloatingDate
+							size='sm'
+							label={t('form.to')}
+							value={form.periodTo}
+							minDate={form.periodFrom || undefined}
+							onChange={v => v && set('periodTo', v)}
+							error={Boolean(errors.period)}
+						/>
 						{form.periodTo && !errors.period ? (
 							<p className='text-[11.5px] font-semibold text-(--gm-ok) sm:col-span-2'>
 								{t('form.newEnd', { date: formatDate(form.periodTo, locale) })}
