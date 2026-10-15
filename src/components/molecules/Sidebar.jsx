@@ -6,7 +6,7 @@ import api from '@/utils/axios';
 import { clearClientSession } from '@/lib/session-cleanup';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, ChevronRight, BrainCircuit, GanttChart, FileText, FilePenLine, Inbox, Layers, Layers3, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Sliders, AudioLines, ShieldAlert, Radar, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, Maximize2, ScanLine, Library, ScanSearch, Moon, Sun, Image as ImageIcon } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, ChevronRight, BrainCircuit, GanttChart, FileText, FilePenLine, Inbox, Layers, Layers3, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Sliders, AudioLines, ShieldAlert, Radar, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, Maximize2, ScanLine, Library, ScanSearch, Moon, Sun, Image as ImageIcon, Database } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -233,6 +233,7 @@ export const ITEM_META = {
   feedback_super: { id: 'feedback_super', nameKey: 'feedback', href: '/dashboard/super-admin/feedback', icon: MessageSquare, descKey: 'descriptions.feedback_super', group: 'management', defaultVisible: true, required: false },
   allExercises: { id: 'allExercises', nameKey: 'allExercises', href: '/dashboard/workouts', icon: Target, descKey: 'descriptions.allExercises', group: 'content', defaultVisible: true, required: false },
   allRecipes: { id: 'allRecipes', nameKey: 'allRecipes', href: '/dashboard/recipes', icon: BookOpen, descKey: 'descriptions.allRecipes', group: 'content', defaultVisible: true, required: false },
+  foodsDatabase: { id: 'foodsDatabase', nameKey: 'foodsDatabase', href: '/dashboard/foods', icon: Database, descKey: 'descriptions.foodsDatabase', group: 'content', defaultVisible: true, required: false },
   workoutPlans: { id: 'workoutPlans', nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: Layers, descKey: 'descriptions.workoutPlans', group: 'content', defaultVisible: true, required: false },
   mealPlans: { id: 'mealPlans', nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat, descKey: 'descriptions.mealPlans', group: 'content', defaultVisible: true, required: false },
   reports: { id: 'reports', nameKey: 'reports', href: '/dashboard/reports', icon: BarChart3, descKey: 'descriptions.reports', group: 'content', defaultVisible: true, required: false },
@@ -283,7 +284,7 @@ export const NAV = [
   {
     role: 'admin',
     sectionKey: 'sections.content',
-    items: [{ ...ITEM_META.allExercises }, { ...ITEM_META.allRecipes }, { ...ITEM_META.workoutPlans }, { ...ITEM_META.mealPlans }, { ...ITEM_META.reports }],
+    items: [{ ...ITEM_META.allExercises }, { ...ITEM_META.allRecipes }, { ...ITEM_META.foodsDatabase }, { ...ITEM_META.workoutPlans }, { ...ITEM_META.mealPlans }, { ...ITEM_META.reports }],
   },
   {
     role: 'admin',
@@ -364,7 +365,7 @@ export const NAV = [
   {
     role: 'coach',
     sectionKey: 'sections.content',
-    items: [{ ...ITEM_META.allExercises }, { ...ITEM_META.allRecipes }, { ...ITEM_META.workoutPlans }, { ...ITEM_META.mealPlans }, { ...ITEM_META.reports }],
+    items: [{ ...ITEM_META.allExercises }, { ...ITEM_META.allRecipes }, { ...ITEM_META.foodsDatabase }, { ...ITEM_META.workoutPlans }, { ...ITEM_META.mealPlans }, { ...ITEM_META.reports }],
   },
   {
     role: 'coach',
@@ -408,7 +409,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.management',
-    items: [{ ...ITEM_META.allUsers_super }, { ...ITEM_META.pageAccess_super }, { ...ITEM_META.documentEditor_super }, { ...ITEM_META.allExercises }, { ...ITEM_META.feedback_super }, { ...ITEM_META.forms_super }],
+    items: [{ ...ITEM_META.allUsers_super }, { ...ITEM_META.pageAccess_super }, { ...ITEM_META.documentEditor_super }, { ...ITEM_META.allExercises }, { ...ITEM_META.foodsDatabase }, { ...ITEM_META.feedback_super }, { ...ITEM_META.forms_super }],
   },
   {
     role: 'super_admin',

@@ -1,14 +1,14 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Controller, useController, useFieldArray, useForm, useFormState, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
-	AlertCircle, AlertTriangle, CalendarCheck, CalendarCog, CalendarDays, ChefHat, ChevronDown, Clock, Copy, FileText, Flame,
-	Layers, NotebookPen, Pill, Plus, Replace, Search, Sparkles, Undo2, UtensilsCrossed, X,
+	AlertCircle, AlertTriangle, Beef, CalendarCheck, CalendarCog, CalendarDays, ChefHat, ChevronDown, Clock, Copy, Droplets, FileText, Flame,
+	Layers, Leaf, Link2, NotebookPen, Pill, Plus, Replace, Search, Sparkles, Undo2, UtensilsCrossed, Wheat, X,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import api from '@/utils/axios';
 import Button from '@/components/atoms/Button';
@@ -23,6 +23,9 @@ import {
 } from '@/components/atoms/GmFormParts';
 import { Notification } from '@/config/Notification';
 import useDebounced from '@/hooks/useDebounced';
+import FoodNameField from '@/components/pages/dashboard/foods/FoodNameField';
+import { QuickFoodPanel } from '@/components/pages/dashboard/foods/FoodForm';
+import { defaultUnitFor, foodName, foodRef, itemNutrition, nutritionFor, sumNutrition, unitsForFood } from '@/lib/food-nutrition';
 import {
 	DAY_KEYS, UNITS, aiMealsToForm, blankAlternative, blankItem, blankMeal, blankSupplement, buildAiPrompt, buildPlanSchema,
 	cloneMeals, formToPayload, getErr, kcalOutliers, mealKcal, mealsKcal, parseAiPlan, planToFormValues, toDecimalInput, weekKcal,
@@ -54,8 +57,10 @@ function TimeField({ label, value, onChange, onBlur, error, className = '' }) {
 function QtyUnitControl({ control, path, t, className = '' }) {
 	const qty = useController({ control, name: `${path}.quantity` });
 	const unit = useController({ control, name: `${path}.unit` });
+	const food = useWatch({ control, name: `${path}.food` });
 	const current = unit.field.value || 'g';
 	const error = Boolean(qty.fieldState.error);
+	const units = unitsForFood(food) || UNITS;
 
 	return (
 		<div className={`relative flex h-9 min-w-0 items-center gap-1 ps-2.5 pe-1 ${FIELD_SHELL} ${error ? FIELD_ERROR : ''} ${className}`} style={FIELD_BG}>
@@ -70,7 +75,7 @@ function QtyUnitControl({ control, path, t, className = '' }) {
 				className='w-full min-w-0 bg-transparent font-en text-[12.5px] font-semibold tabular-nums text-(--gm-ink) outline-none'
 			/>
 			<span role='group' aria-label={t('form.unit')} className='flex shrink-0 gap-0.5 rounded-xl p-0.5' style={{ background: 'color-mix(in srgb, var(--color-primary-100) 60%, transparent)' }}>
-				{UNITS.map(u => {
+				{units.map(u => {
 					const on = current === u;
 					return (
 						<button
@@ -91,6 +96,21 @@ function QtyUnitControl({ control, path, t, className = '' }) {
 
 function KcalControl({ control, path, t, className = '' }) {
 	const { field, fieldState } = useController({ control, name: `${path}.calories` });
+	const food = useWatch({ control, name: `${path}.food` });
+	if (food) {
+		return (
+			<div
+				className={`relative flex h-9 min-w-0 items-center gap-1.5 px-2.5 ${FIELD_SHELL} ${className}`}
+				style={{ background: 'color-mix(in srgb, var(--color-primary-50) 70%, transparent)' }}
+				title={t('form.kcal_auto_hint')}
+			>
+				<span className={MINI_LABEL}>{t('form.calories')}</span>
+				<Link2 className='size-3 shrink-0 text-(--color-primary-500)' aria-hidden />
+				<span className='w-full min-w-0 truncate font-en text-[12.5px] font-bold tabular-nums text-(--color-primary-700)' dir='ltr'>{fmtNum(field.value)}</span>
+				<span className='shrink-0 text-[10.5px] font-semibold gm-faint'>{t('form.kcal_short')}</span>
+			</div>
+		);
+	}
 	return (
 		<MiniField
 			numeric
@@ -127,31 +147,140 @@ const rowStyle = (row, extra) => ({
 	...extra,
 });
 
+const DIRTY = { shouldDirty: true };
+
+/**
+ * Item name with catalog search. Picking a food links the item (calories become automatic);
+ * typing over a linked name unlinks it so a renamed item never keeps another food's macros.
+ */
+function ItemNameField({ control, path, setValue, onCreateFood, t, className }) {
+	const locale = useLocale();
+	const { field, fieldState } = useController({ control, name: `${path}.name` });
+	const type = useWatch({ control, name: `${path}.type` });
+	const food = useWatch({ control, name: `${path}.food` });
+	const quantity = useWatch({ control, name: `${path}.quantity` });
+	const unit = useWatch({ control, name: `${path}.unit` });
+
+	if (type === 'recipe') {
+		return <MiniField className={className} label={t('form.item_name')} value={field.value} error={Boolean(fieldState.error)} onChange={field.onChange} onBlur={field.onBlur} />;
+	}
+
+	const unlink = () => {
+		for (const key of ['food', 'nutrition', 'id', 'sourceId']) setValue(`${path}.${key}`, null, DIRTY);
+	};
+
+	const link = picked => {
+		const ref = foodRef(picked);
+		const nextUnit = defaultUnitFor(ref);
+		const keepQty = nextUnit === unit && Number(quantity) > 0;
+		const nextQty = keepQty ? quantity : nextUnit === 'count' ? 1 : 100;
+		const n = nutritionFor(ref, nextQty, nextUnit);
+		setValue(`${path}.name`, foodName(ref, locale), { ...DIRTY, shouldValidate: true });
+		setValue(`${path}.type`, 'food', DIRTY);
+		setValue(`${path}.id`, ref.id, DIRTY);
+		setValue(`${path}.sourceId`, ref.id, DIRTY);
+		setValue(`${path}.food`, ref, DIRTY);
+		setValue(`${path}.nutrition`, null, DIRTY);
+		setValue(`${path}.unit`, nextUnit, DIRTY);
+		setValue(`${path}.quantity`, nextQty, DIRTY);
+		setValue(`${path}.calories`, n?.kcal ?? 0, { ...DIRTY, shouldValidate: true });
+	};
+
+	return (
+		<FoodNameField
+			className={className}
+			label={t('form.item_name')}
+			value={field.value}
+			error={Boolean(fieldState.error)}
+			linked={Boolean(food)}
+			onChange={v => {
+				field.onChange(v);
+				if (food) unlink();
+				else if (String(v).trim().toLowerCase().includes('egg')) setValue(`${path}.unit`, 'count', DIRTY);
+			}}
+			onBlur={field.onBlur}
+			onPick={link}
+			onCreate={name => onCreateFood({ name, link })}
+			onUnlink={unlink}
+		/>
+	);
+}
+
+const MACRO_CHIPS = [
+	{ key: 'protein', Icon: Beef, color: 'var(--color-primary-500)' },
+	{ key: 'carbs', Icon: Wheat, color: 'var(--gm-warn)' },
+	{ key: 'fat', Icon: Droplets, color: 'var(--color-secondary-500)' },
+	{ key: 'fiber', Icon: Leaf, color: 'var(--gm-ok)' },
+	{ key: 'sugar', Icon: Sparkles, color: '#ec4899' },
+];
+
+function MacroChips({ n, compact = false }) {
+	const tf = useTranslations('foods');
+	return (
+		<span className='inline-flex flex-wrap items-center gap-x-2.5 gap-y-1' dir='ltr'>
+			{MACRO_CHIPS.map(({ key, Icon, color }) => (
+				<span key={key} className='inline-flex items-center gap-1 font-en text-[11px] font-semibold tabular-nums gm-ink-soft' title={tf(`macros.${key}`)}>
+					<Icon className='size-3' style={{ color }} />
+					{compact ? null : <span className='font-normal gm-muted'>{tf(`macros.${key}`)}</span>}
+					{n[key] == null ? '—' : `${n[key]}g`}
+				</span>
+			))}
+		</span>
+	);
+}
+
+/** Keeps calories in sync with a linked food and shows the item's macros. */
+function ItemNutritionLine({ control, path, setValue, t, className = '' }) {
+	const item = useWatch({ control, name: path });
+	const food = item?.food;
+	const key = food ? `${food.id}|${item?.quantity ?? ''}|${item?.unit ?? ''}` : '';
+	const lastKey = useRef(key);
+
+	useEffect(() => {
+		if (lastKey.current === key) return;
+		lastKey.current = key;
+		if (!food) return;
+		const n = nutritionFor(food, item?.quantity, item?.unit);
+		const kcal = n?.kcal ?? 0;
+		if (Number(item?.calories) !== kcal) setValue(`${path}.calories`, kcal, { ...DIRTY, shouldValidate: true });
+	}, [key, food, item?.quantity, item?.unit, item?.calories, path, setValue]);
+
+	const n = itemNutrition(item);
+	if (!n) {
+		if (food && item?.unit === 'count' && !food.pieceGrams) {
+			return <p className={`text-[11px] font-medium text-amber-600 ${className}`}>{t('form.piece_unknown')}</p>;
+		}
+		return null;
+	}
+	return (
+		<p className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] ${className}`}>
+			<span className='inline-flex items-center gap-1 font-semibold text-(--color-primary-600)'>
+				<Link2 className='size-3' />
+				<span className='font-en tabular-nums' dir='ltr'>{n.grams}g</span>
+			</span>
+			<MacroChips n={n} />
+		</p>
+	);
+}
+
 const ItemRow = memo(function ItemRow({ id, control, path, index, onRemove, setValue, t }) {
 	const row = useSortableRow(id);
 	const type = useWatch({ control, name: `${path}.type` });
 	const alts = useFieldArray({ control, name: `${path}.alternatives` });
+	const [creating, setCreating] = useState(null);
+	const closeCreate = useCallback(() => setCreating(null), []);
 
 	return (
 		<div ref={row.ref} style={rowStyle(row)} className={`${ROW_CLASS} ${row.isDragging ? 'opacity-80 shadow-lg' : 'hover:border-[color-mix(in_srgb,var(--color-primary-400)_35%,transparent)]'}`}>
 			<div className='flex flex-wrap items-center gap-1.5 lg:flex-nowrap'>
 				<DragHandle handle={row.handle} label={t('builder.drag_handle')} />
-				<Controller
-					name={`${path}.name`}
+				<ItemNameField
 					control={control}
-					render={({ field, fieldState }) => (
-						<MiniField
-							className='min-w-0 flex-1 basis-[calc(100%-6rem)] lg:basis-auto'
-							label={t('form.item_name')}
-							value={field.value}
-							error={Boolean(fieldState.error)}
-							onChange={v => {
-								field.onChange(v);
-								if (String(v).trim().toLowerCase().includes('egg')) setValue(`${path}.unit`, 'count', { shouldDirty: true });
-							}}
-							onBlur={field.onBlur}
-						/>
-					)}
+					path={path}
+					setValue={setValue}
+					onCreateFood={setCreating}
+					t={t}
+					className='min-w-0 flex-1 basis-[calc(100%-6rem)] lg:basis-auto'
 				/>
 				{type === 'recipe' && (
 					<span className='hidden lg:inline-flex'>
@@ -159,7 +288,7 @@ const ItemRow = memo(function ItemRow({ id, control, path, index, onRemove, setV
 					</span>
 				)}
 				<div className='order-last grid w-full grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-1.5 ps-7 lg:order-0 lg:flex lg:w-auto lg:ps-0'>
-					<QtyUnitControl control={control} path={path} t={t} className='lg:w-[172px]' />
+					<QtyUnitControl control={control} path={path} t={t} className='lg:w-[196px]' />
 					<KcalControl control={control} path={path} t={t} className='lg:w-[104px]' />
 				</div>
 				<button
@@ -174,6 +303,7 @@ const ItemRow = memo(function ItemRow({ id, control, path, index, onRemove, setV
 				<RemoveButton onClick={() => onRemove(index)} label={t('btn.remove_item')} />
 			</div>
 
+			<ItemNutritionLine control={control} path={path} setValue={setValue} t={t} className='mt-1 ps-8' />
 			<FieldErrors control={control} paths={[`${path}.name`, `${path}.calories`, `${path}.quantity`]} />
 
 			{alts.fields.length > 0 && (
@@ -182,24 +312,45 @@ const ItemRow = memo(function ItemRow({ id, control, path, index, onRemove, setV
 						<Replace className='size-3' />
 						{t('form.alternative_item')}
 					</p>
-					{alts.fields.map((a, ai) => (
-						<div key={a.id} className='flex flex-wrap items-center gap-1.5 lg:flex-nowrap'>
-							<Controller
-								name={`${path}.alternatives.${ai}.name`}
-								control={control}
-								render={({ field }) => (
-									<MiniField className='min-w-0 flex-1 basis-[calc(100%-3rem)] lg:basis-auto' label={t('form.item_name')} value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
-								)}
-							/>
-							<div className='order-last grid w-full grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-1.5 lg:order-0 lg:flex lg:w-auto'>
-								<QtyUnitControl control={control} path={`${path}.alternatives.${ai}`} t={t} className='lg:w-[172px]' />
-								<KcalControl control={control} path={`${path}.alternatives.${ai}`} t={t} className='lg:w-[104px]' />
+					{alts.fields.map((a, ai) => {
+						const altPath = `${path}.alternatives.${ai}`;
+						return (
+							<div key={a.id}>
+								<div className='flex flex-wrap items-center gap-1.5 lg:flex-nowrap'>
+									<ItemNameField
+										control={control}
+										path={altPath}
+										setValue={setValue}
+										onCreateFood={setCreating}
+										t={t}
+										className='min-w-0 flex-1 basis-[calc(100%-3rem)] lg:basis-auto'
+									/>
+									<div className='order-last grid w-full grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-1.5 lg:order-0 lg:flex lg:w-auto'>
+										<QtyUnitControl control={control} path={altPath} t={t} className='lg:w-[196px]' />
+										<KcalControl control={control} path={altPath} t={t} className='lg:w-[104px]' />
+									</div>
+									<RemoveButton onClick={() => alts.remove(ai)} label={t('btn.remove_alternative')} />
+								</div>
+								<ItemNutritionLine control={control} path={altPath} setValue={setValue} t={t} className='mt-1' />
 							</div>
-							<RemoveButton onClick={() => alts.remove(ai)} label={t('btn.remove_alternative')} />
-						</div>
-					))}
+						);
+					})}
 				</div>
 			)}
+
+			<AnimatePresence>
+				{creating && (
+					<QuickFoodPanel
+						key={creating.name}
+						initialName={creating.name}
+						onClose={closeCreate}
+						onCreated={food => {
+							creating.link(food);
+							setCreating(null);
+						}}
+					/>
+				)}
+			</AnimatePresence>
 		</div>
 	);
 });
@@ -417,11 +568,23 @@ const MealBlocks = memo(function MealBlocks({ control, basePath, setValue, t }) 
 
 function MealStats({ control, path, t }) {
 	const items = useWatch({ control, name: `${path}.items` });
+	const totals = sumNutrition(items);
 	return (
-		<span className='gm-plan__chip font-en tabular-nums'>
-			<Flame className='size-3' />
-			{fmtNum(mealKcal({ items }))} {t('form.kcal_short')}
-		</span>
+		<>
+			<span className='gm-plan__chip font-en tabular-nums'>
+				<Flame className='size-3' />
+				{fmtNum(mealKcal({ items }))} {t('form.kcal_short')}
+			</span>
+			{totals.linked > 0 && (
+				<span
+					className='hidden items-center rounded-xl border px-2 py-1 sm:inline-flex'
+					style={{ borderColor: 'var(--gm-line)' }}
+					title={totals.linked < (items?.length || 0) ? t('form.macros_partial') : undefined}
+				>
+					<MacroChips n={totals} compact />
+				</span>
+			)}
+		</>
 	);
 }
 
@@ -609,6 +772,7 @@ function PlanSummary({ control, week, warn, t }) {
 	const min = Math.min(...values);
 	const max = Math.max(...values);
 	const kcalLabel = Math.round(min) === Math.round(max) ? fmtNum(max) : `${fmtNum(min)}–${fmtNum(max)}`;
+	const totals = sumNutrition(list.flatMap(m => m?.items || []));
 	return (
 		<div className='flex flex-wrap items-center gap-1.5'>
 			<span className='gm-plan__chip font-en tabular-nums'><UtensilsCrossed className='size-3' />{t('form.meals_count', { count: list.length })}</span>
@@ -617,6 +781,11 @@ function PlanSummary({ control, week, warn, t }) {
 				{warn ? <AlertTriangle className='size-3' /> : <Flame className='size-3' />}
 				<span dir='ltr'>{kcalLabel}</span> {t('form.kcal_per_day')}
 			</span>
+			{totals.linked > 0 && (
+				<span className='hidden items-center rounded-xl border px-2 py-1 md:inline-flex' style={{ borderColor: 'var(--gm-line)' }} title={t('form.base_macros_hint')}>
+					<MacroChips n={totals} compact />
+				</span>
+			)}
 		</div>
 	);
 }

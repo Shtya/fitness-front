@@ -675,6 +675,7 @@
 			"allUsers": "All Users",
 			"allExercises": "All Exercises",
 			"allRecipes": "All Recipes",
+			"foodsDatabase": "Foods Database",
 			"workoutPlans": "Workout Plans",
 			"mealPlans": "Meal Plans",
 			"reports": "Reports",
@@ -736,6 +737,7 @@
 			"feedback_super": "Review user feedback and reports",
 			"allExercises": "Library of all exercises and training content",
 			"allRecipes": "Complete recipe library for nutrition planning",
+			"foodsDatabase": "Nutrition values per 100 g for automatic meal plan calculations",
 			"workoutPlans": "Create and manage structured training programs",
 			"mealPlans": "Design and assign meal plans to clients",
 			"reports": "Analytics and performance reports",
@@ -2913,13 +2915,18 @@
 			"kcal_gap_hint": "{days} do not match the rest of the week. If you built the whole plan inside one day, open it and use “Apply this day to all days”.",
 			"kcal_gap_confirm_hint": "If this is intentional, press “Save anyway”.",
 			"kcal_gap_toast": "Check the daily calories before saving. Press save again if this is intentional.",
-			"kcal_gap_save_anyway": "Save anyway"
+			"kcal_gap_save_anyway": "Save anyway",
+			"kcal_auto_hint": "Calculated from the foods database and the quantity",
+			"piece_unknown": "This food has no piece weight — use grams instead",
+			"macros_partial": "Totals include only items linked to the foods database",
+			"base_macros_hint": "Macros of the base day (linked foods only)"
 		},
 		"unit": {
 			"g": "g",
 			"count": "count",
 			"count_short": "piece",
-			"mg": "mg"
+			"mg": "mg",
+			"ml": "ml"
 		},
 		"days": {
 			"monday": "Monday",
@@ -9824,6 +9831,153 @@
 			"rights": "All rights reserved.",
 			"privacy": "Privacy policy",
 			"terms": "Terms"
+		}
+	},
+	"foods": {
+		"page": {
+			"title": "Foods database",
+			"desc": "Nutrition values per 100 g used to calculate meal plans automatically."
+		},
+		"actions": {
+			"add": "Add food",
+			"edit": "Edit",
+			"delete": "Delete",
+			"save": "Save",
+			"cancel": "Cancel",
+			"close": "Close",
+			"retry": "Retry"
+		},
+		"toolbar": {
+			"search_placeholder": "Search in Arabic or English…",
+			"search_label": "Search",
+			"filters": "Filters",
+			"scope": "Source",
+			"category": "Category",
+			"clear_all": "Clear all",
+			"active_filters": "Active filters",
+			"reset": "Reset",
+			"done": "Done",
+			"result_count": "<strong>{count}</strong> foods"
+		},
+		"scope": {
+			"all": "All foods",
+			"global": "Global database",
+			"mine": "My team"
+		},
+		"table": {
+			"name": "Food",
+			"category": "Category",
+			"per_100": "Per 100",
+			"scope": "Source",
+			"actions": "Actions",
+			"piece": "Piece",
+			"read_only": "Read only",
+			"read_only_hint": "Global foods can only be edited by the super admin",
+			"empty_title": "No foods found",
+			"empty_filtered": "Try another word or clear the filters",
+			"empty_start": "Add the first food for your team",
+			"retry_hint": "Check your connection and try again"
+		},
+		"badges": {
+			"verified": "Verified",
+			"team": "Team food",
+			"global": "Global"
+		},
+		"macros": {
+			"kcal": "Calories",
+			"protein": "Protein",
+			"carbs": "Carbs",
+			"fat": "Fat",
+			"fiber": "Fiber",
+			"sugar": "Sugar",
+			"protein_short": "P",
+			"carbs_short": "C",
+			"fat_short": "F",
+			"fiber_short": "Fib",
+			"sugar_short": "Sug",
+			"kcal_unit": "kcal",
+			"g_unit": "g"
+		},
+		"form": {
+			"name_ar": "Arabic name",
+			"name_en": "English name",
+			"category": "Category",
+			"base_unit": "Values are per",
+			"per_100_g": "per 100 g",
+			"per_100_ml": "per 100 ml",
+			"unit_g": "g",
+			"unit_ml": "ml",
+			"per_100_title": "Nutrition per 100 {unit}",
+			"kcal_estimate": "From the macros ≈ {kcal} kcal",
+			"kcal_mismatch": "Calories look off — the macros give ≈ {kcal} kcal",
+			"use_estimate": "Use it",
+			"piece_grams": "One piece weighs",
+			"piece_label_ar": "Piece name (Arabic)",
+			"piece_label_en": "Piece name (English)",
+			"piece_hint": "Optional: fill it for foods counted by piece (egg, banana, loaf) so coaches can enter “2 pieces”.",
+			"aliases": "Other names (for search)",
+			"brand": "Brand",
+			"verified": "Verified (shown to everyone as trusted)",
+			"errors": {
+				"name": "Enter an Arabic or English name",
+				"required": "Required",
+				"macros_over_100": "Protein + carbs + fat cannot exceed 100 g per 100 g"
+			}
+		},
+		"modal": {
+			"add_title": "Add food",
+			"edit_title": "Edit food",
+			"confirm_delete": "This food will be removed from search. Plans that already use it keep their saved values."
+		},
+		"quick": {
+			"title": "Add a new food",
+			"hint": "Saved to your team’s database and linked to this item.",
+			"save_and_use": "Save and use"
+		},
+		"picker": {
+			"placeholder": "Type a food name…",
+			"searching": "Searching…",
+			"no_results": "No matching food yet",
+			"error": "Search is unavailable right now",
+			"similar": "Similar names",
+			"results": "Foods",
+			"add_new": "Add “{name}” as a new food",
+			"linked": "Linked to the foods database",
+			"unlink": "Unlink (enter calories manually)"
+		},
+		"toasts": {
+			"created": "Food added",
+			"updated": "Food updated",
+			"deleted": "Food deleted"
+		},
+		"errors": {
+			"load": "Could not load foods",
+			"save": "Could not save the food",
+			"delete": "Could not delete the food",
+			"server_unreachable": "Server unreachable"
+		},
+		"categories": {
+			"all": "All categories",
+			"meat": "Meat & poultry",
+			"seafood": "Seafood",
+			"dairy": "Dairy & eggs",
+			"grains": "Grains & bread",
+			"fruits": "Fruits",
+			"vegetables": "Vegetables",
+			"legumes": "Legumes",
+			"nuts": "Nuts & seeds",
+			"fats": "Fats & oils",
+			"sweets": "Sweets & snacks",
+			"beverages": "Beverages",
+			"fast_food": "Fast food",
+			"arabic": "Arabic dishes",
+			"condiments": "Sauces & condiments",
+			"supplements": "Supplements",
+			"international": "International dishes",
+			"canned": "Canned food",
+			"breakfast": "Breakfast",
+			"soups": "Soups",
+			"other": "Other"
 		}
 	}
 }

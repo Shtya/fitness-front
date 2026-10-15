@@ -1,12 +1,13 @@
 import * as yup from 'yup';
+import { foodRefFromSnapshot } from '@/lib/food-nutrition';
 
 export const DAY_KEYS = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-export const UNITS = ['g', 'mg', 'count'];
+export const UNITS = ['g', 'mg', 'ml', 'count'];
 
 const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/;
 const emptyToNull = (value, original) => (original === '' || original == null ? null : value);
 
-const normalizeUnit = u => (u === 'mg' ? 'mg' : u === 'count' ? 'count' : 'g');
+const normalizeUnit = u => (u === 'mg' || u === 'ml' || u === 'count' ? u : 'g');
 const normalizeTime = v => {
 	const s = String(v ?? '').trim();
 	const m = s.match(/^(\d{1,2}):(\d{2})/);
@@ -25,8 +26,9 @@ export const toDecimalInput = v => String(v ?? '')
 	.replace(/[^\d.]/g, '')
 	.replace(/(\..*)\./g, '$1');
 
-export const blankItem = () => ({ name: '', type: 'food', id: null, sourceId: null, quantity: null, unit: 'g', calories: 0, alternative: null, alternatives: [] });
-export const blankAlternative = () => ({ name: '', type: 'food', id: null, quantity: null, unit: 'g', calories: 0 });
+// `food` (per-100 values of a linked catalog food) and `nutrition` (saved snapshot) are editor-only.
+export const blankItem = () => ({ name: '', type: 'food', id: null, sourceId: null, quantity: null, unit: 'g', calories: 0, food: null, nutrition: null, alternative: null, alternatives: [] });
+export const blankAlternative = () => ({ name: '', type: 'food', id: null, quantity: null, unit: 'g', calories: 0, food: null, nutrition: null });
 export const blankSupplement = () => ({ name: '', time: '', bestWith: '' });
 export const blankMeal = title => ({ title, time: '', items: [blankItem()], supplements: [] });
 export const emptyOverrides = () => Object.fromEntries(DAY_KEYS.map(k => [k, []]));
@@ -82,44 +84,60 @@ export function buildPlanSchema(t) {
 }
 
 /* ─────────────────────────── Mapping ─────────────────────────── */
-function sanitizeItem(it) {
+const editorFood = (row, type) => {
+	if (type === 'recipe') return { food: null, nutrition: null };
+	const nutrition = row?.nutrition && typeof row.nutrition === 'object' ? row.nutrition : null;
+	return { food: row?.food ?? foodRefFromSnapshot(row), nutrition };
+};
+
+// The meal plan DTO rejects unknown fields, so `withEditor` is only for form state.
+function sanitizeItem(it, withEditor) {
 	const alt = it?.alternative;
 	const hasAlt = alt && String(alt?.name ?? '').trim();
 	const resolvedId = it?.sourceId ?? it?.id ?? null;
+	const type = it?.type === 'recipe' || it?.itemType === 'recipe' ? 'recipe' : 'food';
 	return {
 		name: it?.name ?? '',
-		type: it?.type === 'recipe' || it?.itemType === 'recipe' ? 'recipe' : 'food',
+		type,
 		id: resolvedId,
 		sourceId: resolvedId,
 		unit: normalizeUnit(it?.unit),
 		quantity: numOrNull(it?.quantity),
 		calories: coerceNum(it?.calories),
+		...(withEditor ? editorFood(it, type) : {}),
 		alternative: hasAlt
 			? { name: String(alt.name).trim(), type: alt?.type === 'recipe' ? 'recipe' : 'food', id: alt?.id ?? null, quantity: numOrNull(alt.quantity), unit: normalizeUnit(alt.unit), calories: coerceNum(alt.calories) }
 			: null,
 		alternatives: Array.isArray(it?.alternatives)
-			? it.alternatives.map(a => ({
-				name: a?.name ?? '',
-				type: a?.type === 'recipe' || a?.itemType === 'recipe' ? 'recipe' : 'food',
-				id: a?.id ?? a?.sourceId ?? null,
-				quantity: numOrNull(a?.quantity),
-				unit: normalizeUnit(a?.unit),
-				calories: numOrNull(a?.calories),
-			}))
+			? it.alternatives.map(a => {
+				const altType = a?.type === 'recipe' || a?.itemType === 'recipe' ? 'recipe' : 'food';
+				return {
+					name: a?.name ?? '',
+					type: altType,
+					id: a?.id ?? a?.sourceId ?? null,
+					quantity: numOrNull(a?.quantity),
+					unit: normalizeUnit(a?.unit),
+					calories: numOrNull(a?.calories),
+					...(withEditor ? editorFood(a, altType) : {}),
+				};
+			})
 			: [],
 	};
 }
 
 const sanitizeSupplement = s => ({ name: s?.name ?? '', time: normalizeTime(s?.time), bestWith: s?.bestWith ? String(s.bestWith) : '' });
 
-export const cloneMeals = (meals = []) => (meals || []).map(m => ({
+const mapMeals = (meals, withEditor) => (meals || []).map(m => ({
 	title: m?.title ?? '',
 	time: normalizeTime(m?.time),
-	items: (m?.items || []).map(sanitizeItem),
+	items: (m?.items || []).map(it => sanitizeItem(it, withEditor)),
 	supplements: (m?.supplements || []).map(sanitizeSupplement),
 }));
 
-const toServerMeals = (meals = []) => cloneMeals(meals).map(m => ({ ...m, time: m.time || null }));
+/** Editor copy of meals (keeps the linked-food data used for live macros). */
+export const cloneMeals = (meals = []) => mapMeals(meals, true);
+
+const toServerMeals = (meals = []) => mapMeals(meals, false).map(m => ({ ...m, time: m.time || null }));
 
 const legacyFoodsToMeals = (foods = []) => (foods?.length ? [{ title: 'Meal', time: '', items: foods, supplements: [] }] : []);
 export const dayMealsOf = day => (day?.meals?.length ? day.meals : legacyFoodsToMeals(day?.foods));
