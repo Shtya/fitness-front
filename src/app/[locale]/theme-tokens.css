@@ -671,8 +671,8 @@ html[data-theme-mode='dark'] {
 
 /* Icy user-management surface — rebrand by editing these variables only. */
 .dashboard-icy {
-  /* --gm-bg-user is set on <html> by lib/dashboard-background.js (system default or personal choice). */
-  --gm-bg-image: var(--gm-bg-user, url("/bg-main-3.png"));
+  /* --gm-bg-user / --gm-bg-overlay are set on <html> by lib/dashboard-background.js (system default or personal choice). */
+  --gm-bg-image: var(--gm-bg-overlay, linear-gradient(transparent, transparent)), var(--gm-bg-user, url("/bg-main-3.png"));
   --gm-ink: var(--color-primary-900);
   --gm-ink-soft: var(--color-primary-800);
   --gm-muted: color-mix(in srgb, var(--color-primary-700) 58%, #64748b);

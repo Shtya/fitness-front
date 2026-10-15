@@ -486,6 +486,7 @@ export function conversationTitle(conversation) {
 	if (groupSubject && !isWeakConversationLabel(groupSubject, chatId, phone)) {
 		return groupSubject;
 	}
+	if (isGroup) return 'Group';
 	// WhatsApp order: saved contact → profile display name → phone.
 	if (contactName && !isWeakConversationLabel(contactName, chatId, phone)) {
 		return contactName;
@@ -493,7 +494,6 @@ export function conversationTitle(conversation) {
 	if (pushName && !isWeakConversationLabel(pushName, chatId, phone)) {
 		return pushName;
 	}
-	if (isGroup) return 'Group';
 	if (isChannel) return 'Channel';
 
 	const phoneFromChat = chatId.match(/^(\d{8,15})@(c\.us|s\.whatsapp\.net)$/i);

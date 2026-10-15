@@ -11183,6 +11183,10 @@ html.dark .wa-message-wallpaper .wa-voice-message.wa-voice-message.is-incoming.i
 	transform: translate(-50%, -50%) scale(1.25);
 }
 
+.wa-message-wallpaper .wa-voice-message .wa-voice-waveform.is-scrubbing .wa-voice-thumb.wa-voice-thumb {
+	transform: translate(-50%, -50%) scale(1.5);
+}
+
 /* Meta + speed: quiet text, the speed pill only as loud as the timestamp */
 .wa-message-wallpaper .wa-voice-message .wa-voice-duration {
 	color: var(--wa-vn-meta) !important;

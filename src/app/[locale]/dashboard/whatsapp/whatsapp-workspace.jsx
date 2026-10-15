@@ -979,6 +979,7 @@ const translations = {
 		recordingFailed: 'Voice recording failed',
 		recordingStartFailed: 'Could not start voice recording',
 		voiceChanger: 'Voice changer settings',
+		voiceChangerOn: 'Voice changer is ON — your voice notes will be changed',
 		voiceChanging: 'Changing voice…',
 		moreActions: 'More',
 		sendAsVoice: 'Send as voice message',
@@ -1496,6 +1497,7 @@ const translations = {
 		recordingFailed: 'فشل تسجيل الرسالة الصوتية',
 		recordingStartFailed: 'تعذر بدء تسجيل الرسالة الصوتية',
 		voiceChanger: 'إعدادات تغيير الصوت',
+		voiceChangerOn: 'تغيير الصوت شغّال — الفويسات هتتبعت بالصوت المتغيّر',
 		voiceChanging: 'جارِ تغيير الصوت…',
 		moreActions: 'المزيد',
 		sendAsVoice: 'إرسال كرسالة صوتية',
@@ -4988,19 +4990,117 @@ function VoicePlaybackButton({ playing, loading, failed, onClick, labels = {} })
 	);
 }
 
-function VoiceWaveform({ peaks, progress, mine, loading, failed, onSeek }) {
+function VoiceWaveform({
+	peaks,
+	progress,
+	mine,
+	loading,
+	failed,
+	onSeek,
+	onScrubStart,
+	onScrubMove,
+	onScrubEnd,
+}) {
 	const items = isUsefulWaveform(peaks) ? peaks : seededWaveform(String(peaks?.length || 'voice'), 40);
-	const clamped = Math.max(0, Math.min(1, Number(progress) || 0));
+	const dragRef = useRef(null);
+	const suppressClickRef = useRef(false);
+	const [dragRatio, setDragRatio] = useState(null);
+	const progressRatio = Math.max(0, Math.min(1, Number(progress) || 0));
+	const clamped = dragRatio ?? progressRatio;
 	const lastIndex = Math.max(1, items.length - 1);
+
+	// Waveform bars are always LTR (WhatsApp-style); do not flip for page RTL.
+	const ratioAt = (event, element) => {
+		const rect = element.getBoundingClientRect();
+		return seekRatio(event.clientX, rect.left, rect.width, false);
+	};
+
+	const handlePointerDown = event => {
+		suppressClickRef.current = false;
+		if (loading || failed || event.button > 0) return;
+		const element = event.currentTarget;
+		if (event.pointerType === 'touch') {
+			// On touch only the thumb grabs — holding / swiping elsewhere keeps the
+			// bubble's long-press menu and swipe-to-reply.
+			const rect = element.getBoundingClientRect();
+			const thumbX = rect.left + 6 + (rect.width - 12) * progressRatio;
+			if (Math.abs(event.clientX - thumbX) > 22) return;
+		}
+		event.stopPropagation();
+		try {
+			element.setPointerCapture(event.pointerId);
+		} catch {
+			/* capture is best-effort */
+		}
+		const ratio = ratioAt(event, element);
+		dragRef.current = { id: event.pointerId, x: event.clientX, moved: false, ratio };
+		setDragRatio(ratio);
+		onScrubStart?.();
+		onScrubMove?.(ratio);
+	};
+
+	const handlePointerMove = event => {
+		const drag = dragRef.current;
+		if (!drag || drag.id !== event.pointerId) return;
+		event.stopPropagation();
+		if (Math.abs(event.clientX - drag.x) > 3) drag.moved = true;
+		drag.ratio = ratioAt(event, event.currentTarget);
+		setDragRatio(drag.ratio);
+		onScrubMove?.(drag.ratio);
+	};
+
+	const finishDrag = event => {
+		const drag = dragRef.current;
+		if (!drag || drag.id !== event.pointerId) return;
+		dragRef.current = null;
+		event.stopPropagation();
+		suppressClickRef.current = true;
+		setDragRatio(null);
+		onScrubEnd?.(drag.ratio);
+	};
+
+	const handleKeyDown = event => {
+		if (loading || failed) return;
+		const step = event.shiftKey ? 0.2 : 0.05;
+		const next =
+			event.key === 'Home'
+				? 0
+				: event.key === 'End'
+					? 1
+					: event.key === 'ArrowLeft'
+						? progressRatio - step
+						: event.key === 'ArrowRight'
+							? progressRatio + step
+							: null;
+		if (next == null) return;
+		event.preventDefault();
+		onScrubEnd?.(Math.max(0, Math.min(1, next)));
+	};
+
 	return (
 		<button
 			type="button"
 			dir="ltr"
 			data-wa-press-surface
-			onClick={onSeek}
+			onClick={event => {
+				if (suppressClickRef.current) {
+					suppressClickRef.current = false;
+					return;
+				}
+				onSeek?.(event);
+			}}
+			onPointerDown={handlePointerDown}
+			onPointerMove={handlePointerMove}
+			onPointerUp={finishDrag}
+			onPointerCancel={finishDrag}
+			onKeyDown={handleKeyDown}
 			disabled={loading || failed}
+			role="slider"
+			aria-valuemin={0}
+			aria-valuemax={100}
+			aria-valuenow={Math.round(clamped * 100)}
 			aria-label="Seek voice message"
-			className={`wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60 ${failed ? 'is-failed' : ''}`}
+			className={`wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60 ${failed ? 'is-failed' : ''} ${dragRatio != null ? 'is-scrubbing' : ''}`}
 		>
 			<span className="wa-voice-waveform-bars" aria-hidden="true">
 				{items.map((height, index) => {
@@ -6010,6 +6110,8 @@ function VoiceMessage({
 	const analyzedRef = useRef(false);
 	const ignoreAudioErrorRef = useRef(false);
 	const playGenerationRef = useRef(0);
+	const pendingSeekRef = useRef(null);
+	const scrubRef = useRef(null);
 	const wasSessionReadyRef = useRef(sessionReady);
 	const playerTokenRef = useRef(null);
 	if (!playerTokenRef.current) playerTokenRef.current = nextVoicePlayerToken();
@@ -6052,6 +6154,8 @@ function VoiceMessage({
 		setBars(fallbackBars);
 		setPlaybackUrl(null);
 		setCurrentTime(0);
+		pendingSeekRef.current = null;
+		scrubRef.current = null;
 		setPlaying(false);
 		setLoadFailed(false);
 		setPlayLoading(false);
@@ -6504,12 +6608,14 @@ function VoiceMessage({
 				// Blob URLs are usually ready immediately; try play() first so we do
 				// not sit on a spinner waiting for canplay that a src-swap aborted.
 				const kickPlay = async () => {
-					if (fromStart) {
+					const pendingSeek = pendingSeekRef.current;
+					if (fromStart || pendingSeek != null) {
 						try {
-							audio.currentTime = 0;
+							audio.currentTime = fromStart ? 0 : pendingSeek;
 						} catch {
 							/* ignore */
 						}
+						pendingSeekRef.current = null;
 					}
 					audio.playbackRate = playbackRate;
 					claimVoicePlayback(playerTokenRef.current);
@@ -6628,14 +6734,46 @@ function VoiceMessage({
 		if (audioRef.current) audioRef.current.playbackRate = next;
 	};
 
-	const seekTo = event => {
+	const seekToRatio = ratio => {
+		if (!duration || loadFailed) return;
+		const target = Math.max(0, Math.min(1, Number(ratio) || 0)) * duration;
 		const audio = audioRef.current;
-		if (!audio || !duration || !playbackUrl || loadFailed) return;
+		if (audio && playbackUrl && audio.readyState >= 1) {
+			try {
+				audio.currentTime = target;
+				pendingSeekRef.current = null;
+			} catch {
+				pendingSeekRef.current = target;
+			}
+		} else {
+			// Not loaded yet — startPlayback applies it on the first play.
+			pendingSeekRef.current = target;
+		}
+		setCurrentTime(target);
+	};
+
+	const seekTo = event => {
 		const rect = event.currentTarget.getBoundingClientRect();
 		// Waveform bars are always LTR (WhatsApp-style); do not flip seek for page RTL.
-		const ratio = seekRatio(event.clientX, rect.left, rect.width, false);
-		audio.currentTime = ratio * duration;
-		setCurrentTime(audio.currentTime);
+		seekToRatio(seekRatio(event.clientX, rect.left, rect.width, false));
+	};
+
+	const beginScrub = () => {
+		const audio = audioRef.current;
+		const wasPlaying = Boolean(audio && !audio.paused);
+		scrubRef.current = { wasPlaying };
+		if (wasPlaying) audio.pause();
+	};
+
+	const previewScrub = ratio => {
+		if (duration > 0) setCurrentTime(Math.max(0, Math.min(1, ratio)) * duration);
+	};
+
+	const endScrub = ratio => {
+		const wasPlaying = Boolean(scrubRef.current?.wasPlaying);
+		scrubRef.current = null;
+		seekToRatio(ratio);
+		if (wasPlaying) void startPlaybackRef.current?.();
 	};
 
 	const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
@@ -6707,6 +6845,9 @@ function VoiceMessage({
 									loading={waveformBusy}
 									failed={loadFailed}
 									onSeek={seekTo}
+									onScrubStart={beginScrub}
+									onScrubMove={previewScrub}
+									onScrubEnd={endScrub}
 								/>
 								{!loadFailed ? (
 									<VoicePlaybackRate value={playbackRate} onChange={cyclePlaybackRate} />
@@ -18790,7 +18931,7 @@ function WhatsAppWorkspaceContent() {
 		const targetConversationId = conversationId;
 		const replySnapshot = replyingTo;
 		const clientMessageId = newClientMessageId();
-		const optimisticMessage = buildOptimisticMediaMessage({
+		let optimisticMessage = buildOptimisticMediaMessage({
 			conversationId: targetConversationId,
 			clientMessageId,
 			type: 'voice',
@@ -18829,6 +18970,22 @@ function WhatsAppWorkspaceContent() {
 					voiceId: settings.voiceId,
 				});
 				toast.dismiss('whatsapp-voice-changer');
+				// The bubble kept the raw recording's blob; play the changed voice instead.
+				// New attachment id so VoiceMessage drops any prefetched copy of the raw take.
+				const changed = {
+					...optimisticMessage,
+					attachments: buildOptimisticMediaMessage({
+						clientMessageId: `${clientMessageId}-changed`,
+						type: 'voice',
+						file: outgoing,
+						previewUrl: URL.createObjectURL(outgoing),
+					}).attachments,
+				};
+				releaseOptimisticMediaPreview(optimisticMessage);
+				optimisticMessage = changed;
+				persistConversationMessages(targetConversationId, current =>
+					current.map(message => (message.id === changed.id ? changed : message)),
+				);
 			} catch (error) {
 				releaseOptimisticMediaPreview(optimisticMessage);
 				persistConversationMessages(targetConversationId, current =>
@@ -27217,8 +27374,9 @@ function WhatsAppWorkspaceContent() {
 															<button
 																type="button"
 																disabled={sending}
-																title={t.voiceChanger}
-																aria-label={t.voiceChanger}
+																title={voiceChangerSettings?.enabled ? t.voiceChangerOn : t.voiceChanger}
+																aria-label={voiceChangerSettings?.enabled ? t.voiceChangerOn : t.voiceChanger}
+																aria-pressed={Boolean(voiceChangerSettings?.enabled)}
 																onClick={() => setVoiceChangerOpen(true)}
 																className={`wa-voice-changer-button wa-input-action wa-composer-tool--desktop ${
 																	voiceChangerSettings?.enabled ? 'is-active' : ''

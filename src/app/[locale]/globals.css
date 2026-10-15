@@ -6599,6 +6599,18 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	background: #00a884;
 }
 
+.wa-voice-waveform:not(:disabled) {
+	cursor: grab;
+}
+
+.wa-voice-waveform.is-scrubbing {
+	cursor: grabbing;
+}
+
+.wa-voice-waveform.is-scrubbing .wa-voice-thumb {
+	transform: translate(-50%, -50%) scale(1.45);
+}
+
 .wa-voice-play {
 	width: 26px;
 	height: 26px;
@@ -6919,9 +6931,70 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	padding: 0 !important;
 }
 
-.wa-input-pill .wa-voice-changer-button.is-active {
-	color: #008069 !important;
-	background: rgba(0, 168, 132, 0.12) !important;
+.wa-input-pill .wa-voice-changer-button.is-active,
+.wa-input-pill .wa-voice-changer-button.is-active:hover,
+.wa-input-pill .wa-voice-changer-button.is-active:focus-visible,
+.wa-web-desktop .wa-input-pill .wa-voice-changer-button.is-active,
+.wa-web-desktop .wa-input-pill .wa-voice-changer-button.is-active:hover,
+.wa-web-desktop .wa-input-pill .wa-voice-changer-button.is-active:focus-visible {
+	position: relative;
+	isolation: isolate;
+	color: #fff !important;
+	background: linear-gradient(135deg, #00a884 0%, #7c3aed 100%) !important;
+}
+
+.wa-input-pill .wa-voice-changer-button.is-active::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	border-radius: 50%;
+	box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55);
+	animation: wa-voice-changer-ring 1.6s ease-out infinite;
+	pointer-events: none;
+}
+
+.wa-input-pill .wa-voice-changer-button.is-active::after {
+	content: '';
+	position: absolute;
+	top: 3px;
+	inset-inline-end: 3px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #ff3b5c;
+	box-shadow: 0 0 0 2px #fff;
+	animation: wa-voice-changer-blink 1s ease-in-out infinite;
+	pointer-events: none;
+}
+
+@keyframes wa-voice-changer-ring {
+	0% {
+		box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55);
+	}
+	70% {
+		box-shadow: 0 0 0 10px rgba(124, 58, 237, 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+	}
+}
+
+@keyframes wa-voice-changer-blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.2;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-input-pill .wa-voice-changer-button.is-active::before,
+	.wa-input-pill .wa-voice-changer-button.is-active::after {
+		animation: none;
+	}
 }
 
 .wa-input-pill .wa-send-button {

@@ -180,7 +180,7 @@ html.dark .wa-web-desktop:not(#wa-dark) .wa-chat-toolbar .truncate:not(.font-sem
 		url('/bg-whatsapp.svg')
 	}
 	html.dark .wa-web-desktop:not(#wa-dark) .wa-chat-toolbar button,
-html.dark .wa-web-desktop:not(#wa-dark) .wa-composer button:not(.wa-ui-rec__send):not([class*='bg-']) {
+html.dark .wa-web-desktop:not(#wa-dark) .wa-composer button:not(.wa-ui-rec__send):not([class*='bg-']):not(.wa-voice-changer-button.is-active) {
 	color: #aeaeae !important
 	}
 	.wa-ui-assign__row:focus-visible {
@@ -1020,10 +1020,6 @@ html.dark .wa-web-desktop:not(#wa-dark) .wa-composer .wa-input-pill .wa-mic-butt
 	}
 	.wa-voice-mic-badge {
 	background: #1daa61
-	}
-	.wa-input-pill .wa-voice-changer-button.is-active {
-	color: #1b8755 !important;
-	background: rgba(29, 170, 97, 0.12) !important
 	}
 	.wa-input-pill .wa-send-button:hover,
 .wa-input-pill .wa-send-button:focus-visible {
