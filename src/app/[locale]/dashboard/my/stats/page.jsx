@@ -13,83 +13,65 @@ import {
   AlertCircle, Zap, User, CheckCircle2, Award, Calendar,
   Activity, Weight, BarChart3,
 } from 'lucide-react';
-
-/* ════════════════════════════════════════════════════════
-   PREVIEW DATA  — maps to both API responses
-════════════════════════════════════════════════════════ */
-const PREVIEW_DATA = {
-  overview: {
-    user: {
-      name: 'Ahmed Abdelrahman',
-      membership: 'gold',
-      points: 153,
-      coach: { name: 'Ahmed Coach' },
-      activeMealPlan:     { name: '4800 Calorie Professional Athlete' },
-      activeExercisePlan: { name: 'Push Pull Legs' },
-    },
-    workout: {
-      totalSessions: 4,
-      totalVolume: 3421,
-      avgVolumePerSession: 855,
-      complianceRate: 13,
-      personalRecords: 5,
-    },
-    nutrition: {
-      totalMeals: 4,
-      avgAdherence: 3.25,
-      perfectDays: 1,
-    },
-    measurements: {
-      hasEnoughData: true,
-      latest: { weight: '80.00', date: '2025-12-07' },
-      changes: { weight: -20, waist: null, chest: null },
-    },
-    weeklySummary: {
-      workouts: 6,
-      meals: 3,
-      weeklyReportSubmitted: true,
-    },
-  },
-  timeline: {
-    exerciseVolumeByDay: [
-      { date: '2026-02-28', value: 2  }, { date: '2026-03-01', value: 5  },
-      { date: '2026-03-02', value: 8  }, { date: '2026-03-03', value: 4  },
-      { date: '2026-03-04', value: 11 }, { date: '2026-03-05', value: 7  },
-      { date: '2026-03-06', value: 9  }, { date: '2026-03-07', value: 14 },
-      { date: '2026-03-08', value: 6  }, { date: '2026-03-09', value: 10 },
-      { date: '2026-03-10', value: 8  }, { date: '2026-03-11', value: 16 },
-      { date: '2026-03-12', value: 5  },
-    ],
-    mealLogsByDay: [
-      { date: '2026-02-28', value: 0 }, { date: '2026-03-01', value: 1 },
-      { date: '2026-03-02', value: 0 }, { date: '2026-03-03', value: 5 },
-      { date: '2026-03-04', value: 7 }, { date: '2026-03-05', value: 1 },
-      { date: '2026-03-06', value: 1 }, { date: '2026-03-07', value: 3 },
-      { date: '2026-03-08', value: 0 }, { date: '2026-03-09', value: 0 },
-      { date: '2026-03-10', value: 3 }, { date: '2026-03-11', value: 4 },
-      { date: '2026-03-12', value: 0 },
-    ],
-    weightByDay: [
-      { date: '2025-10-20', value: 74  },
-      { date: '2025-10-26', value: 80  },
-      { date: '2025-11-17', value: 50  },
-      { date: '2025-11-20', value: 100 },
-      { date: '2025-12-07', value: 80  },
-    ],
-    recentWorkouts: [
-      { exerciseName: 'Bench Press',               date: '2026-03-11', totalVolume: 450,  isPersonalRecord: false },
-      { exerciseName: 'Cable Seated Wide-grip Row', date: '2026-03-11', totalVolume: 160,  isPersonalRecord: true  },
-      { exerciseName: 'Smith Decline Bench Press',  date: '2026-03-10', totalVolume: 425,  isPersonalRecord: true  },
-      { exerciseName: 'Sled 45° Leg Press',         date: '2025-11-17', totalVolume: 1470, isPersonalRecord: false },
-      { exerciseName: 'Dumbbell Bench Press',       date: '2026-01-11', totalVolume: 560,  isPersonalRecord: true  },
-    ],
-  },
-};
+import api from '@/utils/axios';
 
 /* ════════════════════════════════════════════════════════
    UTILS
 ════════════════════════════════════════════════════════ */
 const n = (v) => Number(v) || 0;
+
+/** Local calendar day (YYYY-MM-DD) — toISOString() would shift late-evening logs to the next UTC day. */
+const localYmd = (value) => {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const lastDays = (count) => Array.from({ length: count }, (_, i) => {
+  const d = new Date();
+  d.setDate(d.getDate() - (count - 1 - i));
+  return localYmd(d);
+});
+
+/** Shapes the two `/stats/my/*` responses into what the cards render. */
+function buildStats(ov, tl) {
+  const workouts = Array.isArray(tl?.workouts) ? tl.workouts : [];
+  const meals = Array.isArray(tl?.nutrition) ? tl.nutrition : [];
+  const measurements = Array.isArray(tl?.measurements) ? tl.measurements : [];
+
+  const exMap = {};
+  const mealMap = {};
+  workouts.forEach(w => { const d = String(w.date || '').slice(0, 10); if (d) exMap[d] = (exMap[d] || 0) + 1; });
+  meals.forEach(m => { const d = localYmd(m.date); if (d) mealMap[d] = (mealMap[d] || 0) + 1; });
+  const days = lastDays(13);
+
+  return {
+    overview: {
+      user: ov?.user || {},
+      workout: ov?.overview?.workout || {},
+      nutrition: ov?.overview?.nutrition || {},
+      measurements: ov?.overview?.measurements || { changes: {} },
+      weeklySummary: ov?.weeklySummary || {},
+    },
+    timeline: {
+      exerciseVolumeByDay: days.map(d => ({ date: d, value: exMap[d] || 0 })),
+      mealLogsByDay: days.map(d => ({ date: d, value: mealMap[d] || 0 })),
+      weightByDay: measurements
+        .map(m => ({ date: m.date, value: parseFloat(m.data?.weight) }))
+        .filter(m => Number.isFinite(m.value) && m.value > 0),
+      recentWorkouts: workouts
+        .slice()
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.data?.created_at || '').localeCompare(String(a.data?.created_at || '')))
+        .slice(0, 5)
+        .map(w => ({
+          exerciseName: w.data?.exerciseName,
+          date: w.date,
+          totalVolume: w.data?.totalVolume,
+          isPersonalRecord: !!w.data?.isPersonalRecord,
+        })),
+    },
+  };
+}
 
 const fmtDate = (d, locale) =>
   new Date(d).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US', {
@@ -232,8 +214,12 @@ const ChartTooltip = ({ active, payload, label, locale }) => {
 ════════════════════════════════════════════════════════ */
 const HeroBanner = ({ overview, t }) => {
   const { user, workout, weeklySummary } = overview;
-  const tier     = TIER_CFG[user.membership] || TIER_CFG.basic;
+  const membership = String(user.membership || '').trim();
+  const hasMembership = Boolean(membership) && membership !== '-';
+  const tierKey  = membership.toLowerCase();
+  const tier     = TIER_CFG[tierKey] || TIER_CFG.basic;
   const TierIcon = tier.Icon;
+  const tierText = TIER_CFG[tierKey] ? t(`membership.${tier.label}`) : membership;
   const pct      = Math.min(n(workout.complianceRate), 100);
 
   const [filled, setFilled] = useState(false);
@@ -241,9 +227,9 @@ const HeroBanner = ({ overview, t }) => {
   const circ = 2 * Math.PI * 34;
 
   const pills = [
-    { icon: Dumbbell,     val: weeklySummary.workouts,                          label: t('hero.weeklyWorkouts')  },
-    { icon: Utensils,     val: weeklySummary.meals,                             label: t('hero.weeklyMeals')     },
-    { icon: Trophy,       val: workout.personalRecords,                          label: t('hero.personalRecords') },
+    { icon: Dumbbell,     val: n(weeklySummary.workouts),                       label: t('hero.weeklyWorkouts')  },
+    { icon: Utensils,     val: n(weeklySummary.meals),                          label: t('hero.weeklyMeals')     },
+    { icon: Trophy,       val: n(workout.personalRecords),                      label: t('hero.personalRecords') },
     { icon: CheckCircle2, val: weeklySummary.weeklyReportSubmitted ? '✓' : '✗', label: t('hero.weeklyReport')    },
   ];
 
@@ -260,21 +246,25 @@ const HeroBanner = ({ overview, t }) => {
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
               <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55">{t('liveLabel')}</span>
             </div>
-            <h1 className="truncate text-2xl font-black leading-7 text-white">{user.name}</h1>
+            <h1 dir="auto" className="truncate text-2xl font-black leading-7 text-white">{user.name || '—'}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <div className="flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2.5 py-1">
-                <TierIcon size={10} className="text-white" />
-                <span className="text-[10px] font-semibold text-white">{t(`membership.${tier.label}`)}</span>
-              </div>
+              {hasMembership && (
+                <div className="flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2.5 py-1">
+                  <TierIcon size={10} className="text-white" />
+                  <span dir="auto" className="text-[10px] font-semibold text-white">{tierText}</span>
+                </div>
+              )}
               <div className="flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2.5 py-1">
                 <Star size={10} className="fill-amber-200 text-amber-200" />
-                <span className="text-[10px] font-semibold text-white">{user.points} {t('hero.points')}</span>
+                <span className="text-[10px] font-semibold text-white">{n(user.points)} {t('hero.points')}</span>
               </div>
             </div>
-            <p className="mt-2 flex items-center gap-1 text-[10px] text-white/45">
-              <User size={10} />
-              {t('hero.coachLabel')}: {user.coach?.name}
-            </p>
+            {user.coach?.name && (
+              <p className="mt-2 flex items-center gap-1 text-[10px] text-white/45">
+                <User size={10} />
+                {t('hero.coachLabel')}: <span dir="auto">{user.coach.name}</span>
+              </p>
+            )}
           </div>
           <div className="relative h-[88px] w-[88px] shrink-0">
             <svg width="88" height="88" className="-rotate-90">
@@ -383,11 +373,11 @@ const ActivityChart = ({ exerciseData, mealData, t, locale }) => {
 const WorkoutStatsCard = ({ workout, t }) => {
   const [ref, inView] = useInView(0.1);
   const rows = [
-    { label: t('workout.totalSessions'),   val: workout.totalSessions,                          color: P500      },
-    { label: t('workout.totalVolume'),      val: `${n(workout.totalVolume).toLocaleString()} kg`, color: P600      },
-    { label: t('workout.avgVolume'),        val: `${workout.avgVolumePerSession} kg`,             color: S500      },
-    { label: t('workout.personalRecords'), val: workout.personalRecords,                         color: '#f59e0b' },
-    { label: t('workout.compliance'),      val: `${workout.complianceRate}%`,                    color: '#10b981' },
+    { label: t('workout.totalSessions'),   val: n(workout.totalSessions),                                color: P500      },
+    { label: t('workout.totalVolume'),      val: `${n(workout.totalVolume).toLocaleString()} kg`,         color: P600      },
+    { label: t('workout.avgVolume'),        val: `${n(workout.avgVolumePerSession).toLocaleString()} kg`, color: S500      },
+    { label: t('workout.personalRecords'), val: n(workout.personalRecords),                              color: '#f59e0b' },
+    { label: t('workout.compliance'),      val: `${n(workout.complianceRate)}%`,                         color: '#10b981' },
   ];
 
   return (
@@ -463,7 +453,8 @@ const MealLogsBar = ({ data, t, locale }) => {
 ════════════════════════════════════════════════════════ */
 const NutritionCard = ({ nutrition, t }) => {
   const [ref, inView] = useInView(0.1);
-  const adherencePct = Math.round((nutrition.avgAdherence / 5) * 100);
+  const avgAdherence = n(nutrition.avgAdherence);
+  const adherencePct = Math.min(100, Math.round((avgAdherence / 5) * 100));
   const [filled, setFilled] = useState(false);
   useEffect(() => {
     if (inView) { const id = setTimeout(() => setFilled(true), 300); return () => clearTimeout(id); }
@@ -499,9 +490,9 @@ const NutritionCard = ({ nutrition, t }) => {
           </div>
           <div className="flex-1 space-y-2.5">
             {[
-              { label: t('nutrition.totalMeals'),   val: nutrition.totalMeals,                    color: S500      },
-              { label: t('nutrition.perfectDays'),  val: nutrition.perfectDays,                   color: '#10b981' },
-              { label: t('nutrition.avgAdherence'), val: `${nutrition.avgAdherence.toFixed(1)}/5`, color: P500      },
+              { label: t('nutrition.totalMeals'),   val: n(nutrition.totalMeals),        color: S500      },
+              { label: t('nutrition.perfectDays'),  val: n(nutrition.perfectDays),       color: '#10b981' },
+              { label: t('nutrition.avgAdherence'), val: `${avgAdherence.toFixed(1)}/5`, color: P500      },
             ].map((row, i) => (
               <div key={i} className="flex justify-between items-center">
                 <span className="text-xs text-slate-500">{row.label}</span>
@@ -552,7 +543,11 @@ const WeightChart = ({ data, measurements, t, locale }) => {
           iconColor="text-emerald-600"
           right={
             <div className="flex items-center gap-2">
-              <StatBadge value={`${measurements.latest?.weight} kg`} label={t('weight.current')} color="#10b981" />
+              <StatBadge
+                value={n(measurements.latest?.weight) ? `${n(measurements.latest.weight)} kg` : `${vals[vals.length - 1]} kg`}
+                label={t('weight.current')}
+                color="#10b981"
+              />
               <StatBadge value={`${avg} kg`}                         label={t('weight.avg')}     color={P500}    />
               {change !== null && change !== undefined && (
                 <StatBadge
@@ -741,7 +736,7 @@ const PlansCard = ({ user, measurements, t }) => {
             {t('measurements.title')}
           </p>
           {[
-            { label: t('measurements.weight'), val: measurements.latest?.weight ? `${measurements.latest.weight} kg` : '—', color: '#10b981' },
+            { label: t('measurements.weight'), val: n(measurements.latest?.weight) ? `${n(measurements.latest.weight)} kg` : '—', color: '#10b981' },
             {
               label: t('measurements.change'),
               val:   measurements.changes?.weight != null
@@ -759,7 +754,7 @@ const PlansCard = ({ user, measurements, t }) => {
             <span className="text-sm text-slate-500 font-medium flex items-center gap-1.5">
               <Star size={12} style={{ color: '#f59e0b' }} />{t('plans.points')}
             </span>
-            <span className="text-sm font-bold tabular-nums" style={{ color: '#f59e0b' }}>{user.points}</span>
+            <span className="text-sm font-bold tabular-nums" style={{ color: '#f59e0b' }}>{n(user.points)}</span>
           </div>
         </div>
       </Card>
@@ -895,63 +890,35 @@ function DualProgress({ overview, t }) {
 /* ════════════════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════════════════ */
-export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClient }) {
+export default function ClientDashboardPage() {
   const t      = useTranslations('clientDashboard');
   const locale = useLocale();
-  const isRtl  = locale === 'ar';
 
-  const [data,    setData]    = useState(PREVIEW_MODE ? PREVIEW_DATA : null);
-  const [loading, setLoading] = useState(false);
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
   const [err,     setErr]     = useState('');
+  const reqId = useRef(0);
 
   const fetchData = useCallback(async () => {
-    if (PREVIEW_MODE) return;
+    const id = ++reqId.current;
     setLoading(true); setErr('');
     try {
       const [ovRes, tlRes] = await Promise.all([
-        apiClient.get(`/api/v1/stats/my/overview?lang=${locale}`),
-        apiClient.get(`/api/v1/stats/my/progress-timeline?months=6&lang=${locale}`),
+        api.get('/stats/my/overview'),
+        api.get('/stats/my/progress-timeline', { params: { months: 6 } }),
       ]);
-
-      const exMap = {}, mealMap = {};
-      (tlRes.data.workouts  || []).forEach(w => { exMap[w.date]                  = (exMap[w.date]                  || 0) + 1; });
-      (tlRes.data.nutrition || []).forEach(m => { const d = m.date.slice(0, 10); mealMap[d] = (mealMap[d] || 0) + 1; });
-
-      const days = Array.from({ length: 13 }, (_, i) => {
-        const dt = new Date(); dt.setDate(dt.getDate() - (12 - i));
-        return dt.toISOString().slice(0, 10);
-      });
-
-      const ov = ovRes.data;
-      setData({
-        overview: {
-          user:          ov.user,
-          workout:       ov.overview.workout,
-          nutrition:     ov.overview.nutrition,
-          measurements:  ov.overview.measurements,
-          weeklySummary: ov.weeklySummary,
-        },
-        timeline: {
-          exerciseVolumeByDay: days.map(d => ({ date: d, value: exMap[d]   || 0 })),
-          mealLogsByDay:       days.map(d => ({ date: d, value: mealMap[d] || 0 })),
-          weightByDay: (tlRes.data.measurements || []).map(m => ({
-            date:  m.date,
-            value: parseFloat(m.data.weight),
-          })),
-          recentWorkouts: (tlRes.data.workouts || []).slice(0, 5).map(w => ({
-            exerciseName:     w.data.exerciseName,
-            date:             w.date,
-            totalVolume:      w.data.totalVolume,
-            isPersonalRecord: w.data.isPersonalRecord,
-          })),
-        },
-      });
+      if (id !== reqId.current) return;
+      setData(buildStats(ovRes.data, tlRes.data));
     } catch (e) {
-      setErr(e?.response?.data?.message || t('error.loadFailed'));
-    } finally { setLoading(false); }
-  }, [PREVIEW_MODE, apiClient, locale, t]);
+      if (id !== reqId.current) return;
+      const msg = e?.response?.data?.message;
+      setErr((Array.isArray(msg) ? msg.join(' · ') : msg) || t('error.loadFailed'));
+    } finally {
+      if (id === reqId.current) setLoading(false);
+    }
+  }, [t]);
 
-  useEffect(() => { if (!PREVIEW_MODE) fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     const shell = document.querySelector('.dashboard-icy');
@@ -976,10 +943,10 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
   const { overview, timeline } = data || {};
 
   const metricCards = overview ? [
-    { icon: Dumbbell, label: t('kpi.totalSessions'),   value: overview.workout.totalSessions,   accentColor: P500,      accentBg: 'bg-[var(--color-primary-50)]' },
-    { icon: Trophy,   label: t('kpi.personalRecords'), value: overview.workout.personalRecords, accentColor: '#d97706', accentBg: 'bg-amber-50' },
-    { icon: Target,   label: t('kpi.compliance'),      value: overview.workout.complianceRate,  sub: '%', accentColor: '#10b981', accentBg: 'bg-emerald-50' },
-    { icon: Zap,      label: 'kg',                     value: overview.workout.totalVolume,     accentColor: S500,      accentBg: 'bg-[var(--color-secondary-50)]' },
+    { icon: Dumbbell, label: t('kpi.totalSessions'),   value: n(overview.workout.totalSessions),   accentColor: P500,      accentBg: 'bg-[var(--color-primary-50)]' },
+    { icon: Trophy,   label: t('kpi.personalRecords'), value: n(overview.workout.personalRecords), accentColor: '#d97706', accentBg: 'bg-amber-50' },
+    { icon: Target,   label: t('kpi.compliance'),      value: n(overview.workout.complianceRate),  sub: '%', accentColor: '#10b981', accentBg: 'bg-emerald-50' },
+    { icon: Zap,      label: 'kg',                     value: n(overview.workout.totalVolume),     accentColor: S500,      accentBg: 'bg-[var(--color-secondary-50)]' },
   ] : [];
 
   return (
@@ -1003,7 +970,8 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
               <button
                 type="button"
                 onClick={fetchData}
-                disabled={loading || PREVIEW_MODE}
+                disabled={loading}
+                aria-label={t('refresh')}
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-t-white/45 border-b-[rgba(15,48,120,0.35)] bg-white/15 text-white disabled:opacity-55"
               >
                 <RefreshCw size={18} strokeWidth={2} className={loading ? 'animate-spin' : ''} />
@@ -1053,13 +1021,15 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
         )}
 
         {/* ROW 4: Weight chart (2/3) + Plans & measurements (1/3) */}
-        {timeline && overview && timeline.weightByDay.length > 0 && (
+        {timeline && overview && (
           <div className="flex flex-col gap-4">
-            <WeightChart
-              data={timeline.weightByDay}
-              measurements={overview.measurements}
-              t={t} locale={locale}
-            />
+            {timeline.weightByDay.length > 0 && (
+              <WeightChart
+                data={timeline.weightByDay}
+                measurements={overview.measurements}
+                t={t} locale={locale}
+              />
+            )}
             <PlansCard user={overview.user} measurements={overview.measurements} t={t} />
           </div>
         )}
@@ -1068,13 +1038,15 @@ export default function ClientDashboardPage({ PREVIEW_MODE = true, api: apiClien
         {timeline && (
           <div className="flex flex-col gap-4">
             <ExerciseHeatmap data={timeline.exerciseVolumeByDay} t={t} />
-            <RecentWorkouts  data={timeline.recentWorkouts}      t={t} locale={locale} />
+            {timeline.recentWorkouts.length > 0 && (
+              <RecentWorkouts data={timeline.recentWorkouts} t={t} locale={locale} />
+            )}
           </div>
         )}
 
       </div>
 
-      {loading && <LoadingOverlay t={t} />}
+      {loading && !data && <LoadingOverlay t={t} />}
     </div>
   );
 }
