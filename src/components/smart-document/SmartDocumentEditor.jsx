@@ -17,6 +17,8 @@ import {
 	PanelLeftOpen,
 	Share2,
 	Trash2,
+	Users,
+	X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useLocale } from 'next-intl';
@@ -81,6 +83,54 @@ function formatWhen(ts, labels) {
 	return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function formatVisitTime(visit, locale) {
+	const stamp = typeof visit?.stamp === 'string' ? visit.stamp : '';
+	if (stamp && !/^\d{4}-\d{2}-\d{2}T/.test(stamp)) return stamp;
+	const raw = visit?.at || stamp;
+	if (!raw) return '—';
+	const d = new Date(raw);
+	if (Number.isNaN(d.getTime())) return String(raw);
+	try {
+		return d.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-GB', {
+			timeZone: 'Africa/Cairo',
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hour12: false,
+		});
+	} catch {
+		return d.toISOString();
+	}
+}
+
+function visitLocationLabel(visit, labels) {
+	const loc = String(visit?.location || '').trim();
+	if (loc) {
+		if (/local network/i.test(loc)) {
+			return labels.shareVisitLocal || 'Local network (this device / LAN)';
+		}
+		return loc;
+	}
+	const ip = String(visit?.ip || '');
+	if (!ip || ip === 'unknown' || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+		return labels.shareVisitLocal || 'Local network (this device / LAN)';
+	}
+	return labels.shareVisitUnknownLocation || 'Unknown location';
+}
+
+function visitBrowserLine(visit, labels) {
+	const parts = [visit?.browser, visit?.os, visit?.device].filter(Boolean);
+	if (parts.length) return parts.join(' · ');
+	return labels.shareVisitUnknownBrowser || 'Unknown browser';
+}
+
+function visitDeviceLine(visit) {
+	return [visit?.platform, visit?.screen, visit?.timezone, visit?.language].filter(Boolean).join(' · ');
+}
+
 export default function SmartDocumentEditor({
 	placeholder = 'Write Markdown…',
 	storageKey = 'so7ba:smart-document',
@@ -112,6 +162,9 @@ export default function SmartDocumentEditor({
 	const [shareTokens, setShareTokens] = useState({});
 	const [sharing, setSharing] = useState(false);
 	const [shareCopied, setShareCopied] = useState(false);
+	const [visitsOpen, setVisitsOpen] = useState(false);
+	const [visitsLoading, setVisitsLoading] = useState(false);
+	const [visitRows, setVisitRows] = useState([]);
 	const renameRef = useRef(null);
 
 	const textRef = useRef('');
@@ -357,6 +410,26 @@ export default function SmartDocumentEditor({
 			window.prompt(labels.shareCopyHint || 'Copy this link', url);
 		}
 	}, [activeShareToken, buildShareUrl, labels, shareActiveDocument]);
+
+	const loadVisits = useCallback(async () => {
+		if (!activeShareToken) {
+			toast.error(labels.shareVisitsNeedShare || 'Share the document first');
+			return;
+		}
+		setVisitsOpen(true);
+		setVisitsLoading(true);
+		try {
+			const { data } = await api.get(
+				`/smart-documents/shares/${encodeURIComponent(activeShareToken)}/visits`,
+			);
+			setVisitRows(Array.isArray(data?.visits) ? data.visits : []);
+		} catch {
+			toast.error(labels.shareVisitsFailed || 'Could not load visitors');
+			setVisitRows([]);
+		} finally {
+			setVisitsLoading(false);
+		}
+	}, [activeShareToken, labels]);
 
 	useEffect(() => {
 		const onHide = () => {
@@ -627,6 +700,16 @@ export default function SmartDocumentEditor({
 								<Share2 size={15} />
 							)}
 						</button>
+						{activeShareToken ? (
+							<button
+								type="button"
+								className={`sd-icon-btn${visitsOpen ? ' is-open' : ''}`}
+								title={labels.shareVisitors || 'Who opened this link'}
+								onClick={() => void loadVisits()}
+							>
+								<Users size={15} />
+							</button>
+						) : null}
 						<button
 							type="button"
 							className={`sd-icon-btn sd-lookup-launch${shelfOpen ? ' is-open' : ''}`}
@@ -737,6 +820,89 @@ export default function SmartDocumentEditor({
 				shelfOpen={shelfOpen}
 				onShelfOpen={setShelfOpen}
 			/>
+
+			{visitsOpen ? (
+				<div className="sd-visits-backdrop" role="presentation" onClick={() => setVisitsOpen(false)}>
+					<aside
+						className="sd-visits-panel"
+						role="dialog"
+						aria-label={labels.shareVisitors || 'Visitors'}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<header className="sd-visits-head">
+							<div>
+								<p className="sd-visits-kicker">{labels.shareVisitors || 'Visitors'}</p>
+								<p className="sd-visits-sub">
+									{labels.shareVisitorsHint || 'Every open of the share link is listed here.'}
+								</p>
+							</div>
+							<button
+								type="button"
+								className="sd-icon-btn"
+								onClick={() => setVisitsOpen(false)}
+								title={labels.close || 'Close'}
+							>
+								<X size={15} />
+							</button>
+						</header>
+						<div className="sd-visits-body">
+							{visitsLoading ? (
+								<div className="sd-visits-empty">
+									<Loader2 size={16} className="animate-spin" />
+									{labels.loading || 'Loading…'}
+								</div>
+							) : !visitRows.length ? (
+								<div className="sd-visits-empty">
+									{labels.shareVisitsEmpty || 'No one has opened the link yet.'}
+								</div>
+							) : (
+								<ul className="sd-visits-list">
+									{visitRows.map((visit, index) => {
+										const deviceLine = visitDeviceLine(visit);
+										const isp = visit?.isp ? String(visit.isp) : '';
+										return (
+											<li key={`${visit.at || index}-${visit.ip || index}`} className="sd-visits-item">
+												<div className="sd-visits-item-time">{formatVisitTime(visit, locale)}</div>
+												<div className="sd-visits-item-main">
+													<div className="sd-visits-row">
+														<span className="sd-visits-label">{labels.shareVisitLocation || 'Location'}</span>
+														<span>{visitLocationLabel(visit, labels)}</span>
+													</div>
+													<div className="sd-visits-row">
+														<span className="sd-visits-label">{labels.shareVisitBrowser || 'Browser'}</span>
+														<span>{visitBrowserLine(visit, labels)}</span>
+													</div>
+													<div className="sd-visits-row">
+														<span className="sd-visits-label">{labels.shareVisitIp || 'IP'}</span>
+														<span className="sd-visits-mono">{visit.ip || '—'}</span>
+													</div>
+													{isp ? (
+														<div className="sd-visits-row">
+															<span className="sd-visits-label">{labels.shareVisitIsp || 'ISP'}</span>
+															<span>{isp}</span>
+														</div>
+													) : null}
+													{deviceLine ? (
+														<div className="sd-visits-row">
+															<span className="sd-visits-label">{labels.shareVisitDevice || 'Device'}</span>
+															<span className="sd-visits-item-meta">{deviceLine}</span>
+														</div>
+													) : null}
+												</div>
+											</li>
+										);
+									})}
+								</ul>
+							)}
+						</div>
+						<footer className="sd-visits-foot">
+							<button type="button" className="sd-visits-refresh" onClick={() => void loadVisits()}>
+								{labels.shareVisitsRefresh || 'Refresh'}
+							</button>
+						</footer>
+					</aside>
+				</div>
+			) : null}
 		</div>
 	);
 }

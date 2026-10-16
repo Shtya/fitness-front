@@ -9354,7 +9354,21 @@
 		"shareFailed": "Could not create share link",
 		"shareMissing": "This shared document was not found or was removed.",
 		"shareSaving": "Saving…",
-		"shareHint": "Anyone with the link can view and edit this document"
+		"shareHint": "Anyone with the link can view and edit this document",
+		"shareVisitors": "Who opened this",
+		"shareVisitorsHint": "Every open is logged with time (Cairo), location from IP, browser, device, and screen.",
+		"shareVisitsEmpty": "No one has opened the link yet.",
+		"shareVisitsFailed": "Could not load visitors",
+		"shareVisitsNeedShare": "Share the document first",
+		"shareVisitsRefresh": "Refresh",
+		"shareVisitUnknownLocation": "Unknown location",
+		"shareVisitLocal": "Local network (this device / LAN)",
+		"shareVisitUnknownBrowser": "Unknown browser",
+		"shareVisitLocation": "Location",
+		"shareVisitBrowser": "Browser",
+		"shareVisitIp": "IP",
+		"shareVisitIsp": "ISP",
+		"shareVisitDevice": "Device"
 	},
 	"notifications": {
 		"header": {

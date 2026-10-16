@@ -9883,7 +9883,21 @@
 		"shareFailed": "تعذر إنشاء رابط المشاركة",
 		"shareMissing": "المستند المشترك غير موجود أو تم حذفه.",
 		"shareSaving": "جارِ الحفظ…",
-		"shareHint": "أي شخص لديه الرابط يمكنه عرض المستند وتعديله"
+		"shareHint": "أي شخص لديه الرابط يمكنه عرض المستند وتعديله",
+		"shareVisitors": "مين فتح اللينك",
+		"shareVisitorsHint": "كل فتح بيتسجّل بالوقت (توقيت القاهرة) والمكان من الـIP والمتصفح والجهاز والشاشة.",
+		"shareVisitsEmpty": "لسه محدش فتح اللينك.",
+		"shareVisitsFailed": "تعذر تحميل الزوار",
+		"shareVisitsNeedShare": "شارك المستند أولاً",
+		"shareVisitsRefresh": "تحديث",
+		"shareVisitUnknownLocation": "مكان غير معروف",
+		"shareVisitLocal": "شبكة محلية (الجهاز ده / LAN)",
+		"shareVisitUnknownBrowser": "متصفح غير معروف",
+		"shareVisitLocation": "المكان",
+		"shareVisitBrowser": "المتصفح",
+		"shareVisitIp": "IP",
+		"shareVisitIsp": "مزود الخدمة",
+		"shareVisitDevice": "الجهاز"
 	},
 	"foods": {
 		"page": {

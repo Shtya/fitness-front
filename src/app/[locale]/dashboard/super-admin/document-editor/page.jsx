@@ -93,6 +93,20 @@ export default function DocumentEditorPage() {
 					shareCopyHint: t('shareCopyHint'),
 					shareEmpty: t('shareEmpty'),
 					shareFailed: t('shareFailed'),
+					shareVisitors: t('shareVisitors'),
+					shareVisitorsHint: t('shareVisitorsHint'),
+					shareVisitsEmpty: t('shareVisitsEmpty'),
+					shareVisitsFailed: t('shareVisitsFailed'),
+					shareVisitsNeedShare: t('shareVisitsNeedShare'),
+					shareVisitsRefresh: t('shareVisitsRefresh'),
+					shareVisitUnknownLocation: t('shareVisitUnknownLocation'),
+					shareVisitLocal: t('shareVisitLocal'),
+					shareVisitUnknownBrowser: t('shareVisitUnknownBrowser'),
+					shareVisitLocation: t('shareVisitLocation'),
+					shareVisitBrowser: t('shareVisitBrowser'),
+					shareVisitIp: t('shareVisitIp'),
+					shareVisitIsp: t('shareVisitIsp'),
+					shareVisitDevice: t('shareVisitDevice'),
 				}}
 			/>
 		</div>

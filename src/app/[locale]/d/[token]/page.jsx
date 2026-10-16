@@ -13,11 +13,56 @@ import '@/components/smart-document/smart-document.css';
 
 const SAVE_MS = 1000;
 
+function browserHintFromClient() {
+	try {
+		const brands = navigator.userAgentData?.brands;
+		if (Array.isArray(brands) && brands.length) {
+			const pick = brands.find(
+				(b) =>
+					b?.brand &&
+					!/not.?a.?brand/i.test(b.brand) &&
+					!/chromium/i.test(b.brand),
+			);
+			if (pick?.brand) return String(pick.brand).slice(0, 40);
+			const chromium = brands.find((b) => /chromium/i.test(b?.brand || ''));
+			if (chromium?.brand) return 'Chrome';
+		}
+	} catch {
+		/* ignore */
+	}
+	return '';
+}
+
+function collectBrowserMeta() {
+	if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+		return {};
+	}
+	const screenSize =
+		typeof window.screen?.width === 'number'
+			? `${window.screen.width}×${window.screen.height}`
+			: '';
+	let timezone = '';
+	try {
+		timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+	} catch {
+		timezone = '';
+	}
+	return {
+		userAgent: navigator.userAgent || '',
+		browserHint: browserHintFromClient(),
+		language: navigator.language || '',
+		platform: navigator.platform || '',
+		timezone,
+		screen: screenSize,
+	};
+}
+
 export default function SharedSmartDocumentPage() {
 	const params = useParams();
 	const token = String(params?.token || '');
 	const locale = useLocale();
 	const t = useTranslations('documentEditor');
+	const ar = locale === 'ar';
 
 	const [ready, setReady] = useState(false);
 	const [missing, setMissing] = useState(false);
@@ -31,6 +76,7 @@ export default function SharedSmartDocumentPage() {
 
 	const textRef = useRef('');
 	const saveTimer = useRef(null);
+	const visitSentRef = useRef(false);
 	const shellStyle = useMemo(() => typographyStyle(typography), [typography]);
 
 	useEffect(() => {
@@ -49,6 +95,19 @@ export default function SharedSmartDocumentPage() {
 				setTypography(normalizeTypography(data?.typography || null));
 				setDocVersion((v) => v + 1);
 				setReady(true);
+
+				if (!visitSentRef.current) {
+					visitSentRef.current = true;
+					void api
+						.post(
+							`/smart-documents/public/${encodeURIComponent(token)}/visit`,
+							collectBrowserMeta(),
+							{ skipAuthRedirect: true },
+						)
+						.catch(() => {
+							/* visit logging is best-effort */
+						});
+				}
 			} catch {
 				if (!cancelled) {
 					setMissing(true);
@@ -73,12 +132,12 @@ export default function SharedSmartDocumentPage() {
 				setSavedFlash(true);
 				window.setTimeout(() => setSavedFlash(false), 1200);
 			} catch {
-				toast.error(locale === 'ar' ? 'تعذر حفظ التعديلات' : 'Could not save changes');
+				toast.error(ar ? 'تعذر حفظ التعديلات' : 'Could not save changes');
 			} finally {
 				setSaving(false);
 			}
 		},
-		[token, locale],
+		[token, ar],
 	);
 
 	const scheduleSave = useCallback(
