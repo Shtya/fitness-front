@@ -1,0 +1,233 @@
+/*
+ * Create / Edit meal plan modal.
+ * Scoped to `.gm-mp-modal` (the panel) and `.gm-mp` (the form) so the shared `.gm-modal` and
+ * form atoms used elsewhere stay untouched.
+ */
+
+/* Panel: fixed header, one scrolling body, footer flush with the bottom edge. */
+.gm-modal.gm-mp-modal {
+	display: flex;
+	flex-direction: column;
+	max-height: min(92dvh, 1040px);
+	padding: 0 !important;
+}
+
+.gm-modal.gm-mp-modal > div:first-child {
+	/* phone drag handle */
+	margin: 10px auto 0;
+}
+
+.gm-modal.gm-mp-modal > div:nth-child(2) {
+	/* header */
+	flex: none;
+	margin: 0 !important;
+	padding: 18px 24px 16px;
+	border-bottom: 1px solid var(--gm-line);
+}
+
+.gm-modal.gm-mp-modal > div:nth-child(2) h3 {
+	font-family: var(--gm-display);
+	font-size: 18px;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+.gm-modal.gm-mp-modal > div:last-child {
+	/* body */
+	flex: 1 1 auto;
+	min-height: 0;
+	max-height: none !important;
+	margin: 0 !important;
+	padding: 20px 24px 0 !important;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+}
+
+@media (max-width: 767px) {
+	.gm-modal.gm-mp-modal {
+		max-height: calc(100dvh - 24px);
+	}
+	.gm-modal.gm-mp-modal > div:nth-child(2) h3 {
+		font-size: 16px;
+	}
+	.gm-mp-section {
+		padding: 12px;
+	}
+	.gm-modal.gm-mp-modal > div:nth-child(2) {
+		padding: 10px 16px 12px;
+	}
+	.gm-modal.gm-mp-modal > div:last-child {
+		padding: 16px 16px 0 !important;
+	}
+}
+
+/* Sections */
+.gm-mp-section {
+	border: 1px solid var(--gm-line);
+	border-radius: 18px;
+	padding: 16px;
+	background: color-mix(in srgb, var(--gm-paper) 72%, transparent);
+}
+
+@media (min-width: 640px) {
+	.gm-mp-section {
+		padding: 18px 20px;
+	}
+}
+
+/* Meal card */
+.gm-mp-meal {
+	border: 1px solid var(--gm-line);
+	border-radius: 16px;
+	background: var(--gm-paper);
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--color-primary-900) 5%, transparent);
+	transition: border-color 0.16s, box-shadow 0.16s;
+}
+
+.gm-mp-meal.is-dragging {
+	border-color: var(--color-primary-300);
+	box-shadow: var(--gm-shadow-2);
+}
+
+.gm-mp-meal.has-error {
+	border-color: color-mix(in srgb, var(--gm-danger) 45%, transparent);
+}
+
+.gm-mp-meal__head {
+	background: color-mix(in srgb, var(--color-primary-50) 55%, transparent);
+	border-radius: 15px 15px 0 0;
+}
+
+.gm-mp-meal__head.is-collapsed {
+	border-radius: 15px;
+}
+
+html.dark .gm-mp-meal__head,
+html[data-theme-mode="dark"] .gm-mp-meal__head {
+	background: color-mix(in srgb, var(--color-primary-900) 30%, transparent);
+}
+
+/* Rows (items / supplements) */
+.gm-mp-row {
+	position: relative;
+	transition: background-color 0.14s;
+}
+
+.gm-mp-row:hover {
+	background: color-mix(in srgb, var(--color-primary-50) 45%, transparent);
+}
+
+html.dark .gm-mp-row:hover,
+html[data-theme-mode="dark"] .gm-mp-row:hover {
+	background: color-mix(in srgb, var(--color-primary-900) 22%, transparent);
+}
+
+.gm-mp-row.is-dragging {
+	z-index: 5;
+	background: var(--gm-paper);
+	box-shadow: var(--gm-shadow-2);
+	border-radius: 12px;
+}
+
+.gm-mp-alt {
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--gm-warn) 7%, transparent);
+	box-shadow: inset 3px 0 0 color-mix(in srgb, var(--gm-warn) 55%, transparent);
+}
+
+[dir="rtl"] .gm-mp-alt {
+	box-shadow: inset -3px 0 0 color-mix(in srgb, var(--gm-warn) 55%, transparent);
+}
+
+.gm-mp-subhead {
+	background: color-mix(in srgb, var(--color-primary-50) 35%, transparent);
+}
+
+html.dark .gm-mp-subhead,
+html[data-theme-mode="dark"] .gm-mp-subhead {
+	background: color-mix(in srgb, var(--color-primary-900) 18%, transparent);
+}
+
+/*
+ * On wide screens each meal is a table: one column header row replaces the floating label on
+ * every field. The labels stay in the DOM (visually hidden) so inputs keep their names.
+ */
+@media (min-width: 1024px) {
+	.gm-mp-cols .gm-mp-grid span.pointer-events-none.absolute.top-0 {
+		position: absolute !important;
+		width: 1px;
+		height: 1px;
+		padding: 0 !important;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+		border: 0;
+	}
+}
+
+/* Footer: solid, full-bleed, never over the content. */
+.gm-mp-foot {
+	position: sticky;
+	bottom: 0;
+	z-index: 20;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 0 -24px;
+	padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+	border-top: 1px solid var(--gm-line);
+	background: var(--gm-paper);
+	box-shadow: 0 -12px 24px -20px color-mix(in srgb, var(--color-primary-900) 45%, transparent);
+}
+
+@media (max-width: 767px) {
+	.gm-mp-foot {
+		margin: 0 -16px;
+		padding-inline: 16px;
+	}
+}
+
+/* Auto-calculated calories + unit switch: tinted in light, quiet in dark. */
+.gm-mp-linked {
+	background: color-mix(in srgb, var(--color-primary-50) 70%, transparent);
+}
+
+.gm-mp-units {
+	background: color-mix(in srgb, var(--color-primary-100) 60%, transparent);
+}
+
+html.dark .gm-mp-linked,
+html[data-theme-mode="dark"] .gm-mp-linked {
+	background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+}
+
+html.dark .gm-mp-linked span.font-bold,
+html[data-theme-mode="dark"] .gm-mp-linked span.font-bold {
+	color: var(--color-primary-300);
+}
+
+html.dark .gm-mp-units,
+html[data-theme-mode="dark"] .gm-mp-units {
+	background: color-mix(in srgb, var(--color-primary-400) 14%, transparent);
+}
+
+html.dark .gm-mp-units button[aria-pressed="true"],
+html[data-theme-mode="dark"] .gm-mp-units button[aria-pressed="true"] {
+	background: color-mix(in srgb, var(--color-primary-400) 30%, transparent);
+	color: #fff;
+}
+
+html.dark .gm-mp .gm-plan__chip,
+html[data-theme-mode="dark"] .gm-mp .gm-plan__chip {
+	background: color-mix(in srgb, var(--color-primary-400) 14%, transparent);
+	color: var(--gm-ink-soft);
+}
+
+html.dark .gm-mp .gm-mp-accent,
+html[data-theme-mode="dark"] .gm-mp .gm-mp-accent {
+	color: var(--color-primary-300) !important;
+}

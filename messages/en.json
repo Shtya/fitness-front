@@ -3003,7 +3003,9 @@
 			"placeholder": "Write a note and press Enter…",
 			"add": "Add note",
 			"remove": "Remove note",
-			"empty": "No notes yet — add the first one"
+			"empty": "No notes yet — add the first one",
+			"show_all": "Show all {count}",
+			"show_less": "Show less"
 		},
 		"validation": {
 			"required": "Required",
@@ -3016,7 +3018,8 @@
 			"fix_errors": "Please fix the highlighted fields"
 		},
 		"empty": {
-			"no_meals_hint": "No meals. Press «Add meal» to get started."
+			"no_meals_hint": "No meals. Press «Add meal» to get started.",
+			"no_items": "No items yet. Add a food, recipe or supplement below."
 		},
 		"header": {
 			"FiberTarget": "Fiber"
@@ -5877,7 +5880,7 @@
 			"customLimit": "Custom limit",
 			"customLimitHint": "Type a number",
 			"applyLimit": "Apply",
-			"ofTotal": "of {total} users"
+			"ofTotal": "of {total}"
 		},
 		"toolbar": {
 			"search": "Search...",

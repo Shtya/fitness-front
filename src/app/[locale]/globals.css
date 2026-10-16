@@ -4162,6 +4162,7 @@ html.dark .wa-location-map {
 }
 
 .wa-file-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -4173,6 +4174,55 @@ html.dark .wa-location-map {
   border: 0;
   border-radius: 8px;
   background: transparent;
+}
+
+.wa-file-card.is-select-mode {
+  cursor: pointer;
+  outline: 1.5px solid transparent;
+  transition: outline-color 0.15s ease, background-color 0.15s ease;
+}
+
+.wa-file-card.is-select-mode.is-selected {
+  outline-color: #1dab61;
+  background: rgba(29, 171, 97, 0.1);
+}
+
+.dark .wa-file-card.is-select-mode.is-selected,
+html.dark .wa-file-card.is-select-mode.is-selected {
+  background: rgba(29, 171, 97, 0.18);
+}
+
+.wa-file-card-check {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  z-index: 2;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.wa-file-card-check.is-on {
+  border-color: #1dab61;
+  background: #1dab61;
+}
+
+.dark .wa-file-card-check,
+html.dark .wa-file-card-check {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.dark .wa-file-card-check.is-on,
+html.dark .wa-file-card-check.is-on {
+  border-color: #1dab61;
+  background: #1dab61;
 }
 
 .wa-file-card.is-incoming {
@@ -6789,6 +6839,10 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 .wa-select-toolbar__btn--copy {
 	background: #027eb5;
+}
+
+.wa-select-toolbar__btn--download {
+	background: #0f766e;
 }
 
 .wa-select-toolbar__divider {

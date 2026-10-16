@@ -577,7 +577,7 @@ export default function WeeklyReportsPage() {
 					) : null}
 					onCta={activeTab === 'fields' && config ? addGroup : undefined}
 				/>
-				<section className='grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+				<section className='grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4'>
 					{statCards.map((card, index) => <GmStatCard key={card.key} card={card} index={index} />)}
 				</section>
 			</div>
@@ -679,7 +679,7 @@ export default function WeeklyReportsPage() {
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -6 }}
 										transition={{ duration: 0.22, ease: [0.2, 0.75, 0.25, 1] }}
-										className='grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4'
+										className='grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4'
 									>
 										<FloatingSelect
 											searchable

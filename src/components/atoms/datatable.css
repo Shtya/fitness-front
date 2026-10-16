@@ -1,4 +1,9 @@
-/* DataTable — shared table surface. Tokens fall back for pages outside `.dashboard-icy`. */
+/*
+ * DataTable — shared table surface for the whole dashboard.
+ * Rows read as records, not spreadsheet cells: a quiet header line, hairline separators, a
+ * soft rounded highlight with a leading rail on hover/selection, actions that come forward
+ * with the row, and stacked cards on phones. Tokens fall back for pages outside `.dashboard-icy`.
+ */
 
 .dt {
 	--dt-paper: var(--gm-paper, #ffffff);
@@ -6,14 +11,17 @@
 	--dt-ink-soft: var(--gm-ink-soft, #1e293b);
 	--dt-muted: var(--gm-muted, #64748b);
 	--dt-faint: var(--gm-faint, #94a3b8);
-	--dt-hair: color-mix(in srgb, var(--gm-line, #e2e8f0) 62%, transparent);
+	--dt-hair: color-mix(in srgb, var(--gm-line, #e2e8f0) 55%, transparent);
 	--dt-hair-strong: color-mix(in srgb, var(--gm-line, #e2e8f0) 100%, transparent);
 	--dt-tint: color-mix(in srgb, var(--color-primary-50, #f0f9ff) 55%, var(--dt-paper));
-	--dt-hover: color-mix(in srgb, var(--color-primary-50, #f0f9ff) 70%, var(--dt-paper));
-	--dt-selected: color-mix(in srgb, var(--color-primary-500, #0ea5e9) 7%, var(--dt-paper));
+	--dt-hover: color-mix(in srgb, var(--color-primary-50, #f0f9ff) 80%, var(--dt-paper));
+	--dt-selected: color-mix(in srgb, var(--color-primary-500, #0ea5e9) 8%, var(--dt-paper));
+	--dt-rail: var(--color-primary-500, #0ea5e9);
 	--dt-raise: #ffffff;
 	--dt-accent: var(--color-primary-600, #0284c7);
 	--dt-radius: 20px;
+	--dt-row-radius: 12px;
+	--dt-gutter: 10px;
 	position: relative;
 	width: 100%;
 	color: var(--dt-ink-soft);
@@ -21,11 +29,12 @@
 
 html.dark .dt,
 html[data-theme-mode='dark'] .dt {
-	--dt-hair: color-mix(in srgb, #ffffff 8%, transparent);
-	--dt-hair-strong: color-mix(in srgb, #ffffff 13%, transparent);
+	--dt-hair: color-mix(in srgb, #ffffff 7%, transparent);
+	--dt-hair-strong: color-mix(in srgb, #ffffff 12%, transparent);
 	--dt-tint: color-mix(in srgb, var(--dt-paper) 86%, #ffffff 3%);
-	--dt-hover: color-mix(in srgb, var(--dt-paper) 88%, var(--color-primary-400, #38bdf8) 9%);
-	--dt-selected: color-mix(in srgb, var(--dt-paper) 84%, var(--color-primary-400, #38bdf8) 14%);
+	--dt-hover: color-mix(in srgb, var(--dt-paper) 86%, var(--color-primary-400, #38bdf8) 9%);
+	--dt-selected: color-mix(in srgb, var(--dt-paper) 82%, var(--color-primary-400, #38bdf8) 15%);
+	--dt-rail: var(--color-primary-400, #38bdf8);
 	--dt-raise: color-mix(in srgb, var(--dt-paper) 78%, #ffffff 12%);
 	--dt-accent: var(--color-primary-300, #7dd3fc);
 }
@@ -34,12 +43,12 @@ html[data-theme-mode='dark'] .dt {
 	position: relative;
 	overflow: hidden;
 	border-radius: var(--dt-radius);
-	background: color-mix(in srgb, var(--dt-paper) 94%, transparent);
+	background: color-mix(in srgb, var(--dt-paper) 95%, transparent);
 	border: 1px solid var(--dt-hair-strong);
 	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.7),
 		0 1px 2px rgba(15, 23, 42, 0.04),
-		0 18px 40px -22px color-mix(in srgb, var(--color-primary-900, #0c4a6e) 22%, transparent);
+		0 18px 40px -26px color-mix(in srgb, var(--color-primary-900, #0c4a6e) 24%, transparent);
 	-webkit-backdrop-filter: blur(14px) saturate(140%);
 	backdrop-filter: blur(14px) saturate(140%);
 	animation: dt-rise 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -62,7 +71,7 @@ html[data-theme-mode='dark'] .dt-card {
 
 /* ─── Header region (toolbar + selection) ─────────────────────── */
 .dt-head {
-	padding: 18px 20px;
+	padding: 16px 20px;
 	border-bottom: 1px solid var(--dt-hair);
 }
 
@@ -72,10 +81,11 @@ html[data-theme-mode='dark'] .dt-card {
 	align-items: center;
 	gap: 10px;
 	margin-bottom: 12px;
-	padding: 7px 8px 7px 8px;
+	padding: 6px 6px 6px 8px;
 	border-radius: 14px;
-	background: color-mix(in srgb, var(--color-primary-500, #0ea5e9) 8%, var(--dt-paper));
-	border: 1px solid color-mix(in srgb, var(--color-primary-500, #0ea5e9) 22%, transparent);
+	color: var(--dt-ink);
+	background: color-mix(in srgb, var(--color-primary-500, #0ea5e9) 9%, var(--dt-paper));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary-500, #0ea5e9) 22%, transparent);
 }
 
 .dt-selbar__count {
@@ -90,23 +100,22 @@ html[data-theme-mode='dark'] .dt-card {
 .dt-selbar__num {
 	display: inline-grid;
 	place-items: center;
-	min-width: 24px;
-	height: 24px;
-	padding: 0 7px;
+	min-width: 26px;
+	height: 26px;
+	padding: 0 8px;
 	border-radius: 8px;
-	font-size: 12px;
+	font-size: 12.5px;
 	font-weight: 750;
 	font-variant-numeric: tabular-nums;
 	color: #fff;
 	background: var(--color-primary-600, #0284c7);
-	box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary-600, #0284c7) 35%, transparent);
 }
 
 .dt-selbar__clear {
-	height: 28px;
+	height: 30px;
 	padding: 0 10px;
 	border-radius: 8px;
-	font-size: 12px;
+	font-size: 12.5px;
 	font-weight: 600;
 	color: var(--dt-muted);
 	transition: background-color 0.15s ease, color 0.15s ease;
@@ -121,6 +130,7 @@ html[data-theme-mode='dark'] .dt-card {
 .dt-scroll {
 	position: relative;
 	overflow-x: auto;
+	padding: 4px var(--dt-gutter) 6px;
 	scrollbar-width: thin;
 	scrollbar-color: color-mix(in srgb, var(--dt-faint) 50%, transparent) transparent;
 }
@@ -129,36 +139,63 @@ html[data-theme-mode='dark'] .dt-card {
 	width: 100%;
 	border-collapse: separate;
 	border-spacing: 0;
-	font-size: 13px;
+	font-size: 13.5px;
 }
 
+/* Header: a quiet line of labels, not a filled band. */
 .dt-th {
-	height: 46px;
-	padding: 0 16px;
+	height: 44px;
+	padding: 0 14px;
 	text-align: start;
 	vertical-align: middle;
 	white-space: nowrap;
-	background: var(--dt-tint);
-	border-bottom: 1px solid var(--dt-hair);
+	background: transparent;
+	border-bottom: 1px solid var(--dt-hair-strong);
 }
 
 .dt-th__label {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	font-size: 11.5px;
-	font-weight: 650;
-	letter-spacing: 0.01em;
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0;
 	color: var(--dt-muted);
+}
+
+.dt-th__sortbtn {
+	margin-inline: -6px;
+	padding: 4px 6px;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.dt-th__sortbtn:hover {
+	color: var(--dt-ink);
+	background: color-mix(in srgb, var(--dt-ink) 5%, transparent);
+}
+
+.dt-th__sortbtn:focus-visible {
+	outline: 2px solid color-mix(in srgb, var(--color-primary-500, #0ea5e9) 55%, transparent);
+	outline-offset: 1px;
 }
 
 .dt-th__sort {
 	color: var(--dt-faint);
-	opacity: 0.7;
+	transition: color 0.14s ease;
+}
+
+.dt-th__sortbtn.is-sorted {
+	color: var(--dt-accent);
+}
+
+.dt-th__sortbtn.is-sorted .dt-th__sort {
+	color: currentColor;
 }
 
 .dt-td {
-	padding: 14px 16px;
+	padding: 13px 14px;
 	text-align: start;
 	vertical-align: middle;
 	white-space: nowrap;
@@ -167,11 +204,16 @@ html[data-theme-mode='dark'] .dt-card {
 	text-overflow: ellipsis;
 	color: var(--dt-ink-soft);
 	border-bottom: 1px solid var(--dt-hair);
-	transition: background-color 0.14s ease;
+	transition: background-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.dt-td--primary {
+	color: var(--dt-ink);
+	font-weight: 500;
 }
 
 .dt.is-compact .dt-td {
-	padding-block: 10px;
+	padding-block: 9px;
 }
 
 .dt.is-compact .dt-th {
@@ -180,12 +222,12 @@ html[data-theme-mode='dark'] .dt-card {
 
 .dt-th:first-child,
 .dt-td:first-child {
-	padding-inline-start: 22px;
+	padding-inline-start: 16px;
 }
 
 .dt-th:last-child,
 .dt-td:last-child {
-	padding-inline-end: 22px;
+	padding-inline-end: 16px;
 }
 
 .dt-td.gm-wrap {
@@ -203,27 +245,46 @@ html[data-theme-mode='dark'] .dt-card {
 }
 
 .dt-row:last-child .dt-td {
-	border-bottom: 0;
+	border-bottom-color: transparent;
+}
+
+/* Row ends round off so a highlighted row reads as one record. */
+.dt-row .dt-td:first-child {
+	border-start-start-radius: var(--dt-row-radius);
+	border-end-start-radius: var(--dt-row-radius);
+}
+
+.dt-row .dt-td:last-child {
+	border-start-end-radius: var(--dt-row-radius);
+	border-end-end-radius: var(--dt-row-radius);
 }
 
 .dt.is-striped .dt-row:nth-child(even) .dt-td {
 	background: color-mix(in srgb, var(--dt-tint) 60%, transparent);
 }
 
-.dt.is-hoverable .dt-row:hover .dt-td {
+.dt.is-hoverable .dt-row:hover .dt-td,
+.dt-row:focus-within .dt-td {
 	background: var(--dt-hover);
+	border-bottom-color: transparent;
 }
 
 .dt-row.is-selected .dt-td {
 	background: var(--dt-selected) !important;
+	border-bottom-color: transparent;
 }
 
+/* Leading rail: the signature cue for the row in focus. */
+.dt.is-hoverable .dt-row:hover .dt-td:first-child,
+.dt-row:focus-within .dt-td:first-child,
 .dt-row.is-selected .dt-td:first-child {
-	box-shadow: inset 2px 0 0 var(--color-primary-500, #0ea5e9);
+	box-shadow: inset 3px 0 0 var(--dt-rail);
 }
 
+[dir='rtl'] .dt.is-hoverable .dt-row:hover .dt-td:first-child,
+[dir='rtl'] .dt-row:focus-within .dt-td:first-child,
 [dir='rtl'] .dt-row.is-selected .dt-td:first-child {
-	box-shadow: inset -2px 0 0 var(--color-primary-500, #0ea5e9);
+	box-shadow: inset -3px 0 0 var(--dt-rail);
 }
 
 .dt.is-animated .dt-row {
@@ -251,16 +312,41 @@ html[data-theme-mode='dark'] .dt-card {
 	background: var(--dt-paper);
 	overflow: visible;
 	max-width: none;
-	box-shadow: -14px 0 18px -18px rgba(15, 23, 42, 0.35);
 }
 
 .dt-th.dt-sticky-end {
 	z-index: 3;
-	background: var(--dt-tint);
+	background: var(--dt-paper);
 }
 
-[dir='rtl'] .dt-sticky-end {
-	box-shadow: 14px 0 18px -18px rgba(15, 23, 42, 0.35);
+/* Edge so scrolled columns visibly pass under the pinned actions. */
+.dt-td.dt-sticky-end:not(:hover) {
+	box-shadow: -14px 0 16px -16px rgba(15, 23, 42, 0.35);
+}
+
+[dir='rtl'] .dt-td.dt-sticky-end:not(:hover) {
+	box-shadow: 14px 0 16px -16px rgba(15, 23, 42, 0.35);
+}
+
+html.dark .dt-td.dt-sticky-end:not(:hover),
+html[data-theme-mode='dark'] .dt-td.dt-sticky-end:not(:hover) {
+	box-shadow: -14px 0 16px -16px rgba(0, 0, 0, 0.7);
+}
+
+/* Contextual actions: quiet until the row is in play (mouse/trackpad only). */
+@media (hover: hover) and (pointer: fine) {
+	.dt-td--actions > * {
+		opacity: 0.5;
+		filter: saturate(0.4);
+		transition: opacity 0.16s ease, filter 0.16s ease;
+	}
+
+	.dt-row:hover .dt-td--actions > *,
+	.dt-row:focus-within .dt-td--actions > *,
+	.dt-row.is-selected .dt-td--actions > * {
+		opacity: 1;
+		filter: none;
+	}
 }
 
 /* ─── Checkbox ───────────────────────────────────────────────── */
@@ -268,8 +354,8 @@ html[data-theme-mode='dark'] .dt-card {
 	position: relative;
 	display: inline-grid;
 	place-items: center;
-	width: 20px;
-	height: 20px;
+	width: 24px;
+	height: 24px;
 	cursor: pointer;
 }
 
@@ -300,7 +386,6 @@ html[data-theme-mode='dark'] .dt-card {
 .dt-check.is-on .dt-check__box {
 	border-color: transparent;
 	background: var(--color-primary-600, #0284c7);
-	box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary-600, #0284c7) 32%, transparent);
 }
 
 .dt-check:active .dt-check__box {
@@ -313,9 +398,9 @@ html[data-theme-mode='dark'] .dt-card {
 	border-radius: 6px;
 	background: linear-gradient(
 		90deg,
-		color-mix(in srgb, var(--dt-muted) 10%, transparent) 0%,
-		color-mix(in srgb, var(--dt-muted) 18%, transparent) 50%,
-		color-mix(in srgb, var(--dt-muted) 10%, transparent) 100%
+		color-mix(in srgb, var(--dt-muted) 9%, transparent) 0%,
+		color-mix(in srgb, var(--dt-muted) 17%, transparent) 50%,
+		color-mix(in srgb, var(--dt-muted) 9%, transparent) 100%
 	);
 	background-size: 220% 100%;
 	animation: dt-shimmer 1.4s ease-in-out infinite;
@@ -324,7 +409,7 @@ html[data-theme-mode='dark'] .dt-card {
 .dt-skel--avatar {
 	width: 36px;
 	height: 36px;
-	border-radius: 999px;
+	border-radius: 11px;
 	flex-shrink: 0;
 }
 
@@ -355,46 +440,35 @@ html[data-theme-mode='dark'] .dt-card {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 14px;
-	padding: 64px 24px;
+	gap: 10px;
+	padding: 56px 24px;
 	text-align: center;
 	white-space: normal;
 }
 
 .dt-empty__icon {
-	position: relative;
 	display: grid;
 	place-items: center;
-	width: 56px;
-	height: 56px;
-	border-radius: 18px;
-	color: var(--color-primary-500, #0ea5e9);
-	background: linear-gradient(160deg, var(--dt-raise), var(--dt-tint));
-	border: 1px solid var(--dt-hair-strong);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.8),
-		0 10px 24px -14px color-mix(in srgb, var(--color-primary-700, #0369a1) 40%, transparent);
-}
-
-.dt-empty__icon::after {
-	content: '';
-	position: absolute;
-	inset: -8px;
-	border-radius: 24px;
-	border: 1px dashed var(--dt-hair-strong);
+	width: 52px;
+	height: 52px;
+	margin-bottom: 4px;
+	border-radius: 16px;
+	color: var(--dt-accent);
+	background: color-mix(in srgb, var(--color-primary-500, #0ea5e9) 9%, var(--dt-paper));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary-500, #0ea5e9) 16%, transparent);
 }
 
 .dt-empty__title {
-	margin: 4px 0 0;
-	font-size: 14px;
+	margin: 0;
+	font-size: 15px;
 	font-weight: 650;
 	color: var(--dt-ink);
 }
 
 .dt-empty__sub {
 	margin: 0;
-	max-width: 320px;
-	font-size: 12.5px;
+	max-width: 340px;
+	font-size: 13px;
 	line-height: 1.5;
 	color: var(--dt-muted);
 }
@@ -406,9 +480,8 @@ html[data-theme-mode='dark'] .dt-card {
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px 20px;
-	padding: 14px 20px;
+	padding: 12px 20px;
 	border-top: 1px solid var(--dt-hair);
-	background: color-mix(in srgb, var(--dt-tint) 55%, transparent);
 }
 
 .dt-range {
@@ -431,21 +504,16 @@ html[data-theme-mode='dark'] .dt-card {
 	display: inline-flex;
 	align-items: center;
 	gap: 2px;
-	padding: 3px;
-	border-radius: 12px;
-	background: color-mix(in srgb, var(--dt-muted) 8%, var(--dt-paper));
-	border: 1px solid var(--dt-hair);
-	box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 .dt-pager__btn {
 	display: inline-grid;
 	place-items: center;
-	min-width: 30px;
-	height: 30px;
+	min-width: 34px;
+	height: 34px;
 	padding: 0 8px;
-	border-radius: 9px;
-	font-size: 12.5px;
+	border-radius: 10px;
+	font-size: 13px;
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 	color: var(--dt-muted);
@@ -457,7 +525,7 @@ html[data-theme-mode='dark'] .dt-card {
 
 .dt-pager__btn:hover:not(:disabled):not(.is-current) {
 	color: var(--dt-ink);
-	background: color-mix(in srgb, var(--dt-raise) 70%, transparent);
+	background: color-mix(in srgb, var(--dt-ink) 5%, transparent);
 }
 
 .dt-pager__btn:focus-visible {
@@ -471,12 +539,10 @@ html[data-theme-mode='dark'] .dt-card {
 }
 
 .dt-pager__btn.is-current {
-	color: var(--dt-accent);
-	font-weight: 750;
-	background: var(--dt-raise);
-	box-shadow:
-		0 1px 2px rgba(15, 23, 42, 0.1),
-		0 0 0 1px color-mix(in srgb, var(--color-primary-500, #0ea5e9) 22%, transparent);
+	color: #fff;
+	font-weight: 700;
+	background: var(--color-primary-600, #0284c7);
+	box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--color-primary-600, #0284c7) 60%, transparent);
 }
 
 .dt-pager__gap {
@@ -491,7 +557,7 @@ html[data-theme-mode='dark'] .dt-card {
 .dt-pager__compact {
 	display: none;
 	padding: 0 8px;
-	font-size: 12.5px;
+	font-size: 13px;
 	font-weight: 650;
 	font-variant-numeric: tabular-nums;
 	color: var(--dt-ink-soft);
@@ -500,7 +566,7 @@ html[data-theme-mode='dark'] .dt-card {
 .dt-pager__sep {
 	width: 1px;
 	height: 16px;
-	margin: 0 3px;
+	margin: 0 4px;
 	background: var(--dt-hair-strong);
 }
 
@@ -525,7 +591,7 @@ html[data-theme-mode='dark'] .dt-card {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-	font-size: 12px;
+	font-size: 12.5px;
 	color: var(--dt-muted);
 }
 
@@ -533,16 +599,15 @@ html[data-theme-mode='dark'] .dt-card {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	height: 32px;
+	height: 34px;
 	padding: 0 8px 0 11px;
 	border-radius: 10px;
-	font-size: 12.5px;
+	font-size: 13px;
 	font-weight: 650;
 	font-variant-numeric: tabular-nums;
 	color: var(--dt-ink-soft);
 	background: var(--dt-raise);
 	border: 1px solid var(--dt-hair-strong);
-	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 	transition:
 		border-color 0.15s ease,
 		box-shadow 0.15s ease;
@@ -882,6 +947,138 @@ html[data-theme-mode='dark'] .dt-menu__input {
 	font-size: 11.5px;
 	font-weight: 650;
 	color: var(--dt-muted);
+}
+
+/* ─── Phones: every row becomes a card ───────────────────────── */
+@media (max-width: 639px) {
+	.dt--cards .dt-scroll {
+		overflow: visible;
+		padding: 10px;
+	}
+
+	.dt--cards .dt-table,
+	.dt--cards .dt-table > tbody {
+		display: block;
+	}
+
+	.dt--cards .dt-table > thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	/* Card: title across the top, details in two columns, actions along the bottom. */
+	.dt--cards .dt-row {
+		position: relative;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px 14px;
+		margin-bottom: 10px;
+		padding: 14px;
+		border-radius: 16px;
+		background: var(--dt-paper);
+		box-shadow: inset 0 0 0 1px var(--dt-hair-strong);
+	}
+
+	.dt--cards .dt-row:last-child {
+		margin-bottom: 0;
+	}
+
+	.dt--cards .dt-row.is-selected {
+		background: var(--dt-selected);
+		box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--dt-rail) 55%, transparent);
+	}
+
+	.dt--cards .dt-row > .dt-td {
+		width: auto !important;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 4px;
+		max-width: none;
+		min-width: 0;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		background: transparent !important;
+		box-shadow: none !important;
+		white-space: normal;
+		text-align: start;
+	}
+
+	.dt--cards .dt-row > .dt-td[data-label]::before {
+		content: attr(data-label);
+		font-size: 11.5px;
+		font-weight: 600;
+		line-height: 1.2;
+		color: var(--dt-muted);
+	}
+
+	.dt--cards .dt-row > .dt-td > * {
+		max-width: 100%;
+		min-width: 0;
+	}
+
+	/* The first data column is the card's title. */
+	.dt--cards .dt-row > .dt-td--primary {
+		grid-column: 1 / -1;
+		order: -1;
+		padding-bottom: 12px;
+		border-bottom: 1px solid var(--dt-hair);
+		font-size: 14.5px;
+		font-weight: 600;
+	}
+
+	.dt--cards .dt-row > .dt-td--primary::before,
+	.dt--cards .dt-row > .dt-td--actions::before {
+		display: none;
+	}
+
+	.dt--cards .dt-row > .dt-td--select {
+		position: absolute;
+		top: 12px;
+		inset-inline-end: 12px;
+		width: auto;
+	}
+
+	.dt--cards .dt-row:has(> .dt-td--select) > .dt-td--primary {
+		padding-inline-end: 34px;
+	}
+
+	.dt--cards .dt-row > .dt-td--index {
+		display: none;
+	}
+
+	.dt--cards .dt-row > .dt-td--actions {
+		position: static;
+		grid-column: 1 / -1;
+		order: 99;
+		flex-direction: row;
+		justify-content: flex-end;
+		padding-top: 12px;
+		border-top: 1px solid var(--dt-hair);
+	}
+
+	/* Empty / loading rows keep their full-width look. */
+	.dt--cards .dt-table > tbody > tr:not(.dt-row) {
+		display: block;
+	}
+
+	.dt--cards .dt-table > tbody > tr:not(.dt-row) > td {
+		display: block;
+		border: 0;
+	}
+
+	.dt--cards .dt-row[aria-hidden] > .dt-td::before {
+		display: none;
+	}
+
+	.dt-head {
+		padding: 12px;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

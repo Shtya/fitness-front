@@ -4099,11 +4099,12 @@ async function fetchAttachmentContentBlob(attachmentId, { timeout = 120_000, for
 		.split(';')[0]
 		.trim()
 		.toLowerCase();
+	// Reject API error bodies only — do not block text/* documents (.txt, .csv, mis-typed docs).
 	if (
 		headerType.includes('json') ||
 		blobType.includes('json') ||
 		headerType.includes('text/html') ||
-		blobType.includes('text/')
+		blobType.includes('text/html')
 	) {
 		throw new Error((await readBlobErrorMessage(blob)) || 'Media unavailable');
 	}
@@ -7717,6 +7718,9 @@ export function MediaAttachment({
 	messageId = '',
 	messageStatus = '',
 	selectMode = false,
+	selected = false,
+	onToggleSelect = null,
+	hideFileActions = false,
 	avatarLabel = '?',
 	avatarSrc = '',
 	onTranscribe = null,
@@ -8175,12 +8179,40 @@ export function MediaAttachment({
 		const isPdf = extKey === 'pdf';
 		const fileIconKey = isPdf ? 'pdf' : isExcel ? 'xlsx' : isWord ? 'doc' : extKey;
 		const saveLabel = labels.saveAsFile || labels.downloadFile;
+		const canToggleSelect = selectMode && typeof onToggleSelect === 'function';
 		return (
 			<div
 				ref={containerRef}
-				className={`wa-file-card ${mine ? 'is-outgoing' : 'is-incoming'}`}
+				role={canToggleSelect ? 'checkbox' : undefined}
+				aria-checked={canToggleSelect ? selected : undefined}
+				tabIndex={canToggleSelect ? 0 : undefined}
+				onClick={
+					canToggleSelect
+						? event => {
+								event.preventDefault();
+								event.stopPropagation();
+								onToggleSelect(String(attachment?.id || ''));
+							}
+						: undefined
+				}
+				onKeyDown={
+					canToggleSelect
+						? event => {
+								if (event.key !== 'Enter' && event.key !== ' ') return;
+								event.preventDefault();
+								event.stopPropagation();
+								onToggleSelect(String(attachment?.id || ''));
+							}
+						: undefined
+				}
+				className={`wa-file-card ${mine ? 'is-outgoing' : 'is-incoming'}${selectMode ? ' is-select-mode' : ''}${selected ? ' is-selected' : ''}`}
 				data-ext={extKey || undefined}
 			>
+				{selectMode ? (
+					<span className={`wa-file-card-check${selected ? ' is-on' : ''}`} aria-hidden="true">
+						{selected ? <Check size={12} strokeWidth={3} /> : null}
+					</span>
+				) : null}
 				<div className="wa-file-card-head">
 					<span className="wa-file-card-icon wa-file-card-icon-image" data-ext={extKey || undefined} aria-hidden="true">
 						<WhatsAppFileTypeIcon extKey={fileIconKey} />
@@ -8194,29 +8226,31 @@ export function MediaAttachment({
 						</span>
 					</span>
 				</div>
-				<div className="wa-file-card-actions">
-					<button
-						type="button"
-						onClick={() => handleFileAction('open')}
-						disabled={Boolean(fileAction)}
-						className="wa-file-card-action"
-					>
-						{fileAction === 'open' ? <Loader2 size={14} className="animate-spin" /> : null}
-						{labels.openFile}
-					</button>
-					<button
-						type="button"
-						onClick={() => handleFileAction('download')}
-						disabled={Boolean(fileAction)}
-						className="wa-file-card-action"
-					>
-						{fileAction === 'download' ? <Loader2 size={14} className="animate-spin" /> : null}
-						{saveLabel}
-					</button>
-				</div>
-				{failed && (
+				{!selectMode && !hideFileActions ? (
+					<div className="wa-file-card-actions">
+						<button
+							type="button"
+							onClick={() => handleFileAction('open')}
+							disabled={Boolean(fileAction)}
+							className="wa-file-card-action"
+						>
+							{fileAction === 'open' ? <Loader2 size={14} className="animate-spin" /> : null}
+							{labels.openFile}
+						</button>
+						<button
+							type="button"
+							onClick={() => handleFileAction('download')}
+							disabled={Boolean(fileAction)}
+							className="wa-file-card-action"
+						>
+							{fileAction === 'download' ? <Loader2 size={14} className="animate-spin" /> : null}
+							{saveLabel}
+						</button>
+					</div>
+				) : null}
+				{failed && !selectMode && !hideFileActions ? (
 					<p className="wa-file-card-error">{labels.mediaUnavailable}</p>
-				)}
+				) : null}
 			</div>
 		);
 	}
@@ -8651,6 +8685,9 @@ function MessageAttachments({
 	messageRaw = null,
 	message = null,
 	selectMode = false,
+	selectedAttachmentIds = null,
+	onToggleAttachmentSelect = null,
+	hideFileActions = false,
 	avatarLabel = '?',
 	avatarSrc = '',
 	onTranscribe = null,
@@ -8745,6 +8782,9 @@ function MessageAttachments({
 					onOpenDocument={onOpenDocument}
 					sessionReady={sessionReady}
 					selectMode={selectMode}
+					selected={Boolean(selectedAttachmentIds?.has?.(String(attachment.id)))}
+					onToggleSelect={onToggleAttachmentSelect}
+					hideFileActions={hideFileActions}
 					messageRaw={messageRaw}
 					messageDurationSeconds={voiceDuration}
 					messageId={message?.id || ''}
@@ -19031,20 +19071,118 @@ function WhatsAppWorkspaceContent() {
 					fileName: attachment.fileName || '',
 					mimeType: attachment.mimeType,
 					type: attachment.type,
+					url: attachment.url || '',
 					demoAttachment,
 					messageId: message.id,
-					sentAt: message.sentAt || message.createdAt || null,
+					sentAt:
+						message.sentAt ||
+						message.providerTimestamp ||
+						message.timestamp ||
+						message.createdAt ||
+						null,
 				});
 			}
 		}
 		return items;
 	}, []);
 
-	const downloadSelectedMedia = useCallback(async () => {
-		const selected = [...selectedMediaIds];
-		if (!selected.length || downloadingSelectedMedia) return;
+	const downloadSelectedMedia = useCallback(async (options = {}) => {
+		const fromSelectedMessages = Boolean(options?.fromSelectedMessages);
+		if (downloadingSelectedMedia) return;
+
 		const catalog = collectDownloadableAttachments(effectiveMessages);
 		const byId = new Map(catalog.map(item => [item.id, item]));
+
+		let selectedIds = [];
+		/** @type {Map<string, Set<string>>} messageId → attachment ids included in this download */
+		const includedByMessage = new Map();
+		const isGroupChat =
+			selectedConversation?.type === 'group' ||
+			String(selectedConversation?.providerChatId || '').endsWith('@g.us');
+
+		const exportSenderLabel = message => {
+			if (!message) return locale === 'ar' ? 'مجهول' : 'Unknown';
+			if (message.direction === 'outbound') {
+				return (
+					selectedAccount?.label ||
+					selectedAccount?.phoneNumber ||
+					(locale === 'ar' ? 'أنت' : 'You')
+				);
+			}
+			const named = String(message.senderName || '').trim();
+			if (named) return named;
+			if (!isGroupChat && selectedChatTitle) return selectedChatTitle;
+			return locale === 'ar' ? 'جهة اتصال' : 'Contact';
+		};
+
+		const exportTimeLabel = message => {
+			const raw =
+				message?.providerTimestamp ||
+				message?.timestamp ||
+				message?.sentAt ||
+				message?.createdAt ||
+				message?.created_at ||
+				null;
+			const date = raw ? new Date(raw) : null;
+			if (!date || Number.isNaN(date.getTime())) return '';
+			return date.toLocaleTimeString(locale === 'ar' ? 'ar-EG' : undefined, {
+				hour: '2-digit',
+				minute: '2-digit',
+			});
+		};
+
+		if (fromSelectedMessages) {
+			const selectedMsgs = sortMessagesByTime(
+				(effectiveMessages || []).filter(message =>
+					selectedMessageIds.has(String(message?.id || '')),
+				),
+			);
+			for (const message of selectedMsgs) {
+				const messageId = String(message?.id || '');
+				if (!messageId) continue;
+				const ids = new Set();
+				for (const attachment of message?.attachments || []) {
+					const id = String(attachment?.id || '');
+					if (!id) continue;
+					const demoAttachment = Boolean(attachment?.demoAttachment || isDemoId(id));
+					if (!demoAttachment && !isPersistedAttachmentId(id)) continue;
+					if (!byId.has(id)) {
+						byId.set(id, {
+							id,
+							fileName: attachment.fileName || '',
+							mimeType: attachment.mimeType,
+							type: attachment.type,
+							url: attachment.url || '',
+							demoAttachment,
+							messageId,
+							sentAt:
+								message.sentAt ||
+								message.providerTimestamp ||
+								message.timestamp ||
+								message.createdAt ||
+								null,
+						});
+					}
+					ids.add(id);
+					selectedIds.push(id);
+				}
+				if (ids.size || String(visibleMessageText(message?.text) || '').trim()) {
+					includedByMessage.set(messageId, ids);
+				}
+			}
+		} else {
+			selectedIds = [...selectedMediaIds];
+			for (const id of selectedIds) {
+				const meta = byId.get(id);
+				const messageId = String(meta?.messageId || '');
+				if (!messageId) continue;
+				if (!includedByMessage.has(messageId)) includedByMessage.set(messageId, new Set());
+				includedByMessage.get(messageId).add(id);
+			}
+		}
+
+		if (!selectedIds.length && !includedByMessage.size) return;
+
 		setDownloadingSelectedMedia(true);
 		const loadingToast = toast.loading(t.downloadingSelectedMedia);
 		let ok = 0;
@@ -19069,15 +19207,73 @@ function WhatsAppWorkspaceContent() {
 			return next;
 		};
 
+		const fetchBlobViaUrl = async url => {
+			const href = absoluteApiUrl(url) || url;
+			if (!href) throw new Error('no-url');
+			const token =
+				typeof window !== 'undefined' ? window.localStorage?.getItem('accessToken') : null;
+			const response = await fetch(href, {
+				mode: 'cors',
+				credentials: 'omit',
+				headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+			});
+			if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
+			const blob = await response.blob();
+			if (!blob?.size) throw new Error('empty');
+			return blob;
+		};
+
+		const loadOneBlob = async id => {
+			const meta = byId.get(id);
+			if (meta?.demoAttachment) {
+				const blob = await demoApi.getMedia(rawDemoId(id));
+				if (!blob || blob.size < 8) throw new Error('empty');
+				return blob;
+			}
+			const cached = getCachedAttachmentBlob(id);
+			if (cached && cached.size >= 8) return cached;
+
+			const kind = String(meta?.type || 'document').toLowerCase();
+			try {
+				const blob = await requestAttachmentBlob(id, {
+					timeout: 120_000,
+					priority: true,
+					kind,
+				});
+				if (!blob || blob.size < 8) throw new Error('empty');
+				return blob;
+			} catch (firstError) {
+				await new Promise(resolve => window.setTimeout(resolve, 600));
+				forgetAttachmentBlob(id);
+				try {
+					const blob = await requestAttachmentBlob(id, {
+						timeout: 120_000,
+						priority: true,
+						kind,
+					});
+					if (!blob || blob.size < 8) throw new Error('empty');
+					return blob;
+				} catch {
+					if (meta?.url) return fetchBlobViaUrl(meta.url);
+					throw firstError;
+				}
+			}
+		};
+
 		try {
 			const entries = [];
-			for (const id of selected) {
+			const savedNamesByAttachmentId = new Map();
+
+			// Sequential + retry: parallel floods the WA media pull and everything fails.
+			for (let index = 0; index < selectedIds.length; index += 1) {
+				const id = selectedIds[index];
 				const meta = byId.get(id);
+				toast.loading(
+					`${t.downloadingSelectedMedia} (${index + 1}/${selectedIds.length})`,
+					{ id: loadingToast },
+				);
 				try {
-					const blob = meta?.demoAttachment
-						? await demoApi.getMedia(rawDemoId(id))
-						: await requestAttachmentBlob(id, { timeout: 90_000, priority: true });
-					if (!blob || blob.size < 8) throw new Error('empty');
+					const blob = await loadOneBlob(id);
 					const named = toMediaFile(blob, {
 						fileName: meta?.fileName,
 						mimeType: meta?.mimeType,
@@ -19085,13 +19281,77 @@ function WhatsAppWorkspaceContent() {
 						sentAt: meta?.sentAt,
 					});
 					const name = uniqueName(named.name);
-					entries.push(
-						name === named.name ? named : new File([named], name, { type: named.type }),
-					);
+					const file =
+						name === named.name ? named : new File([named], name, { type: named.type });
+					entries.push(file);
+					savedNamesByAttachmentId.set(id, name);
 					ok += 1;
 				} catch {
 					failed += 1;
 				}
+			}
+
+			// One .txt in chat order: [time] sender — caption, then file names under it.
+			const messageById = new Map(
+				(effectiveMessages || []).map(message => [String(message?.id || ''), message]),
+			);
+			const orderedMessageIds = sortMessagesByTime(
+				[...includedByMessage.keys()]
+					.map(id => messageById.get(id))
+					.filter(Boolean),
+			).map(message => String(message.id));
+
+			const textLines = [];
+			for (const messageId of orderedMessageIds) {
+				const message = messageById.get(messageId);
+				const caption = String(visibleMessageText(message?.text) || '').trim();
+				const timeLabel = exportTimeLabel(message);
+				const senderLabel = exportSenderLabel(message);
+				const header = [timeLabel ? `[${timeLabel}]` : '', senderLabel].filter(Boolean).join(' ');
+				if (caption) {
+					if (header) textLines.push(`${header}`);
+					textLines.push(caption);
+				} else if (header && includedByMessage.get(messageId)?.size) {
+					textLines.push(header);
+				}
+				const attachmentIds = includedByMessage.get(messageId);
+				if (!attachmentIds?.size) continue;
+				for (const attachment of message?.attachments || []) {
+					const id = String(attachment?.id || '');
+					if (!attachmentIds.has(id)) continue;
+					const label =
+						savedNamesByAttachmentId.get(id) ||
+						String(attachment?.fileName || byId.get(id)?.fileName || id).trim();
+					if (label) textLines.push(label);
+				}
+				if (caption || attachmentIds.size) textLines.push('');
+			}
+
+			while (textLines.length && textLines[textLines.length - 1] === '') {
+				textLines.pop();
+			}
+
+			if (textLines.length) {
+				const stamp = new Date().toISOString().slice(0, 10).replace(/[^\d-]/g, '');
+				const textFile = toMediaFile(
+					new Blob([`${textLines.join('\n')}\n`], { type: 'text/plain;charset=utf-8' }),
+					{
+						fileName: stamp ? `selected-${stamp}.txt` : 'selected-messages.txt',
+						mimeType: 'text/plain',
+						kind: 'document',
+						sentAt: null,
+					},
+				);
+				const name = uniqueName(textFile.name);
+				entries.push(
+					name === textFile.name ? textFile : new File([textFile], name, { type: 'text/plain' }),
+				);
+			}
+
+			// Selected media but every fetch failed — don't silently hand a lone txt.
+			if (selectedIds.length > 0 && ok === 0) {
+				toast.error(t.selectedMediaZipEmpty, { id: loadingToast });
+				return;
 			}
 
 			if (!entries.length) {
@@ -19099,43 +19359,71 @@ function WhatsAppWorkspaceContent() {
 				return;
 			}
 
-			// iPhone: hand the originals to the Share Sheet (Save N Images / Save to Files).
-			// Elsewhere one file downloads as-is and several are zipped.
-			let result;
-			if (
-				entries.length === 1 ||
-				shouldSaveViaShareSheet(typeof navigator === 'undefined' ? null : navigator, entries)
-			) {
-				result = await saveMediaFiles(entries, { locale });
-			} else {
-				const JSZip = (await import('jszip')).default;
-				const zip = new JSZip();
-				for (const entry of entries) {
-					zip.file(entry.name, entry);
+			toast.loading(t.downloadingSelectedMedia, { id: loadingToast });
+
+			const clearSelection = () => {
+				if (fromSelectedMessages) {
+					setTicketSelectMode(false);
+					setGroupSelectMode(false);
+					setSelectedMessageIds(new Set());
+				} else {
+					setMediaSelectMode(false);
+					setSelectedMediaIds(new Set());
 				}
-				const zipBlob = await zip.generateAsync({
-					type: 'blob',
-					compression: 'STORE',
-				});
-				const stamp = new Date().toISOString().slice(0, 10);
-				const chatLabel = String(selectedChatTitle || t.selectedMediaZipName)
-					.replace(/[\\/:*?"<>|]+/g, ' ')
-					.trim()
-					.slice(0, 40);
-				const zipName = `${chatLabel || t.selectedMediaZipName}-${stamp}.zip`;
-				result = await saveMediaFiles([new File([zipBlob], zipName, { type: 'application/zip' })], {
-					locale,
-				});
+			};
+
+			let result;
+			try {
+				const preferShare = shouldSaveViaShareSheet(
+					typeof navigator === 'undefined' ? null : navigator,
+					entries,
+				);
+				// Always zip when we have media files so the caption .txt stays with them.
+				const mustZip = ok > 0 && entries.length > 1;
+				if (!mustZip && (entries.length === 1 || preferShare)) {
+					result = await saveMediaFiles(entries, { locale });
+				} else {
+					const JSZip = (await import('jszip')).default;
+					const zip = new JSZip();
+					for (const entry of entries) {
+						zip.file(entry.name, entry);
+					}
+					const zipBlob = await zip.generateAsync({
+						type: 'blob',
+						compression: 'STORE',
+					});
+					const stamp = new Date().toISOString().slice(0, 10);
+					const chatLabel = String(selectedChatTitle || t.selectedMediaZipName)
+						.replace(/[\\/:*?"<>|]+/g, ' ')
+						.trim()
+						.slice(0, 40);
+					const zipName = `${chatLabel || t.selectedMediaZipName}-${stamp}.zip`;
+					result = await saveMediaFiles(
+						[new File([zipBlob], zipName, { type: 'application/zip' })],
+						{ locale },
+					);
+				}
+			} catch {
+				toast.error(t.selectedMediaZipEmpty, { id: loadingToast });
+				return;
 			}
 
 			if (result.status === 'cancelled' || result.status === 'needs-gesture') {
 				toast.dismiss(loadingToast);
-			} else if (failed === 0) {
-				toast.success(t.selectedMediaDownloaded.replace('{count}', String(ok)), {
-					id: loadingToast,
-				});
-				setMediaSelectMode(false);
-				setSelectedMediaIds(new Set());
+				return;
+			}
+
+			if (result.status !== 'downloaded' && result.status !== 'shared') {
+				toast.error(t.selectedMediaZipEmpty, { id: loadingToast });
+				return;
+			}
+
+			if (failed === 0) {
+				toast.success(
+					t.selectedMediaDownloaded.replace('{count}', String(ok || textLines.length || 1)),
+					{ id: loadingToast },
+				);
+				clearSelection();
 			} else {
 				toast.error(
 					t.selectedMediaPartialFail
@@ -19143,6 +19431,7 @@ function WhatsAppWorkspaceContent() {
 						.replace('{failed}', String(failed)),
 					{ id: loadingToast },
 				);
+				clearSelection();
 			}
 		} catch {
 			toast.error(t.selectedMediaZipEmpty, { id: loadingToast });
@@ -19153,8 +19442,11 @@ function WhatsAppWorkspaceContent() {
 		collectDownloadableAttachments,
 		downloadingSelectedMedia,
 		effectiveMessages,
+		selectedAccount,
 		selectedChatTitle,
+		selectedConversation,
 		selectedMediaIds,
+		selectedMessageIds,
 		t.downloadingSelectedMedia,
 		t.selectedMediaDownloaded,
 		t.selectedMediaPartialFail,
@@ -25885,6 +26177,21 @@ function WhatsAppWorkspaceContent() {
 															<AudioLines size={13} strokeWidth={2.25} />
 															{t.transcribeSelected}
 														</button>
+														<button
+															type="button"
+															disabled={!selectedMessageIds.size || downloadingSelectedMedia}
+															onClick={() =>
+																void downloadSelectedMedia({ fromSelectedMessages: true })
+															}
+															className="wa-select-toolbar__btn wa-select-toolbar__btn--download disabled:opacity-40"
+														>
+															{downloadingSelectedMedia ? (
+																<Loader2 size={13} strokeWidth={2.25} className="animate-spin" />
+															) : (
+																<Download size={13} strokeWidth={2.25} />
+															)}
+															{t.downloadSelectedMedia}
+														</button>
 														<span className="wa-select-toolbar__divider" aria-hidden="true" />
 														<button
 															type="button"
@@ -26537,11 +26844,29 @@ function WhatsAppWorkspaceContent() {
 																						? selectedAccount?.avatarUrl || ''
 																						: conversationAvatarUrl(selectedConversation)
 																				}
-																				selectMode={Boolean(
-																					mediaSelectMode ||
-																						ticketSelectMode ||
-																						groupSelectMode,
+																				selectMode={Boolean(mediaSelectMode)}
+																				selectedAttachmentIds={
+																					mediaSelectMode ? selectedMediaIds : null
+																				}
+																				hideFileActions={Boolean(
+																					ticketSelectMode ||
+																						groupSelectMode ||
+																						downloadingSelectedMedia,
 																				)}
+																				onToggleAttachmentSelect={
+																					mediaSelectMode
+																						? attachmentId => {
+																								const id = String(attachmentId || '');
+																								if (!id) return;
+																								setSelectedMediaIds(current => {
+																									const next = new Set(current);
+																									if (next.has(id)) next.delete(id);
+																									else next.add(id);
+																									return next;
+																								});
+																							}
+																						: null
+																				}
 																				onTranscribe={
 																					isVideoTranscriptMessage
 																						? event => {

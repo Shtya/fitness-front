@@ -1510,34 +1510,256 @@ html[dir="rtl"] .gm-surface {
   -webkit-backdrop-filter: blur(18px);
 }
 
+/* Stat card (GmStatCard): label + icon, the number (the hero), a hint, and a share line when there is a whole. */
 .gm-stat {
+  --gm-stat-accent: var(--color-primary-500);
+  font-family: "Sora", "Readex Pro", var(--font-inter), var(--font-arabic), system-ui, sans-serif;
+  position: relative;
   display: flex;
-  min-height: 108px;
+  flex-direction: column;
+  height: 100%;
+  min-height: 104px;
   min-width: 0;
-  overflow: visible;
-  align-items: center;
-  gap: 16px;
-  padding: 18px 18px 16px;
-  border-radius: 20px;
-  background: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--gm-paper) 94%, transparent),
-    color-mix(in srgb, var(--gm-paper) 70%, transparent)
-  );
+  padding: 14px 16px 16px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--gm-paper) 92%, transparent);
   border: 1px solid var(--gm-line);
-  box-shadow: var(--gm-shadow-3d);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  transform-style: preserve-3d;
-  perspective: 800px;
-  will-change: transform;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 2px color-mix(in srgb, var(--color-primary-900) 5%, transparent),
+    0 8px 18px -12px color-mix(in srgb, var(--color-primary-800) 24%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: border-color 0.18s var(--gm-ease), box-shadow 0.18s var(--gm-ease);
 }
 
-.gm-stat:hover {
+/* Card typefaces win over the global [dir] body * font for the card and everything in it. */
+[dir] body .gm-stat,
+[dir] body .gm-stat * {
+  font-family: "Sora", "Readex Pro", var(--font-inter), var(--font-arabic), system-ui, sans-serif;
+}
+
+.gm-stat__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gm-stat__title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--gm-ink-soft);
+}
+
+.gm-stat .gm-stat__icon {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 0 !important;
+  border-radius: 17px !important;
+  color: #fff !important;
+  background:
+    radial-gradient(120% 90% at 30% 15%, color-mix(in srgb, var(--gm-stat-accent) 55%, #fff) 0%, transparent 60%),
+    linear-gradient(150deg, color-mix(in srgb, var(--gm-stat-accent) 85%, #fff) 0%, var(--gm-stat-accent) 50%, color-mix(in srgb, var(--gm-stat-accent) 78%, #000) 100%) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    0 14px 10px -10px color-mix(in srgb, var(--color-primary-800) 20%, transparent),
-    0 28px 48px -16px color-mix(in srgb, var(--color-primary-800) 28%, transparent);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -3px 6px color-mix(in srgb, var(--gm-stat-accent) 55%, #000 30%),
+    0 10px 18px -8px color-mix(in srgb, var(--gm-stat-accent) 70%, transparent),
+    0 2px 4px -1px color-mix(in srgb, var(--gm-stat-accent) 35%, transparent) !important;
+  transform: translateZ(0);
+}
+
+/* Glass highlight across the top of the tile. */
+.gm-stat .gm-stat__icon::after {
+  content: "";
+  position: absolute;
+  inset: 3px 6px auto;
+  height: 45%;
+  border-radius: 14px 14px 18px 18px / 14px 14px 10px 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.gm-stat .gm-stat__icon svg {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 1.5px 1.5px color-mix(in srgb, var(--gm-stat-accent) 60%, #000 40%));
+}
+
+.gm-stat__go {
+  flex: none;
+  color: var(--gm-faint);
+  opacity: 0;
+  transition: opacity 0.16s var(--gm-ease), color 0.16s;
+}
+
+.gm-stat__line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-top: 8px;
+}
+
+.gm-stat .gm-stat__value {
+  font-family: inherit;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--gm-ink);
+}
+
+.gm-stat .gm-stat__value.is-text {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.gm-stat__pct {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gm-stat-accent);
+  background: color-mix(in srgb, var(--gm-stat-accent) 12%, transparent);
+}
+
+.gm-stat__hint {
+  margin-top: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--gm-muted);
+}
+
+/* Share of the whole: a line along the bottom edge. */
+.gm-stat__track {
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--gm-stat-accent) 14%, transparent);
+}
+
+.gm-stat__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--gm-stat-accent);
+  transform-origin: left center;
+}
+
+[dir="rtl"] .gm-stat__fill {
+  transform-origin: right center;
+}
+
+/* Only cards that do something look like they do something. */
+.gm-stat--action {
+  cursor: pointer;
+}
+
+.gm-stat--action:hover {
+  border-color: color-mix(in srgb, var(--gm-stat-accent) 38%, var(--gm-line));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 14px 26px -16px color-mix(in srgb, var(--color-primary-800) 34%, transparent);
+}
+
+.gm-stat--action:hover .gm-stat__go,
+.gm-stat--action:focus-visible .gm-stat__go {
+  opacity: 1;
+  color: var(--gm-stat-accent);
+}
+
+.gm-stat--action:focus-visible {
+  outline: none;
+  border-color: var(--gm-stat-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gm-stat-accent) 26%, transparent);
+}
+
+@media (max-width: 639px) {
+  .gm-stat {
+    min-height: 0;
+    padding: 12px;
+    border-radius: 14px;
+  }
+  .gm-stat__top {
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .gm-stat__title {
+    font-size: 12px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .gm-stat .gm-stat__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px !important;
+  }
+  .gm-stat .gm-stat__icon::after {
+    inset: 2px 4px auto;
+    border-radius: 10px 10px 13px 13px / 10px 10px 7px 7px;
+  }
+  .gm-stat .gm-stat__icon svg {
+    width: 21px;
+    height: 21px;
+  }
+  .gm-stat__line {
+    margin-top: 6px;
+    gap: 6px;
+  }
+  .gm-stat .gm-stat__value {
+    font-size: 24px;
+  }
+  .gm-stat__pct {
+    padding: 1px 6px;
+    font-size: 11px;
+  }
+  .gm-stat__hint {
+    margin-top: 3px;
+    font-size: 11px;
+  }
+}
+
+/* Dark: same tile, a deeper shadow so it still lifts off the card. */
+html.dark .gm-stat .gm-stat__icon,
+html[data-theme-mode="dark"] .gm-stat .gm-stat__icon {
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -3px 6px color-mix(in srgb, var(--gm-stat-accent) 50%, #000 40%),
+    0 10px 20px -8px rgba(0, 0, 0, 0.6) !important;
+}
+
+@media (max-width: 380px) {
+  .gm-stat .gm-stat__value {
+    font-size: 22px;
+  }
 }
 
 .gm-chip {
@@ -2053,6 +2275,7 @@ html[data-theme-mode="dark"] .gm-stat {
     color-mix(in srgb, var(--color-primary-900) 55%, transparent)
   );
 }
+
 
 
 

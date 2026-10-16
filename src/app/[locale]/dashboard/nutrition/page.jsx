@@ -301,11 +301,11 @@ export default function NutritionManagementPage() {
 			},
 			{
 				key: 'global', title: t('stats.global_plans'), value: Number(stats?.globalPlansCount || 0), icon: Globe2,
-				hint: t('stats.global_hint'), tone: 'gm-chip-secondary', stroke: 'var(--color-secondary-500)', fill: 'var(--color-secondary-400)', seed: 0.9,
+				hint: t('stats.global_hint'), tone: 'gm-chip-secondary', stroke: 'var(--color-secondary-500)', fill: 'var(--color-secondary-400)', seed: 0.9, max: total,
 			},
 			{
 				key: 'personal', title: t('stats.my_plans'), value: Number(stats?.myPlansCount || 0), icon: UserRound,
-				hint: t('stats.my_hint'), tone: 'gm-chip-ok', stroke: 'var(--gm-ok)', fill: 'var(--gm-ok)', seed: 1.4,
+				hint: t('stats.my_hint'), tone: 'gm-chip-ok', stroke: 'var(--gm-ok)', fill: 'var(--gm-ok)', seed: 1.4, max: total,
 			},
 			{
 				key: 'clients', title: t('stats.clients_on_page'), value: pageClients, icon: Users,
@@ -409,7 +409,7 @@ export default function NutritionManagementPage() {
 					)}
 					onCta={() => setCreateOpen(true)}
 				/>
-				<section className='grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+				<section className='grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4'>
 					{statCards.map((card, index) => (
 						<GmStatCard key={card.key} card={card} index={index} />
 					))}
@@ -493,7 +493,7 @@ export default function NutritionManagementPage() {
 
 			<Modal
 				cn='gm-modal-root'
-				panelClassName={GM_MODAL}
+				panelClassName={`${GM_MODAL} gm-mp-modal`}
 				scrollRef={scrollRef}
 				open={createOpen}
 				onClose={() => setCreateOpen(false)}
@@ -505,7 +505,7 @@ export default function NutritionManagementPage() {
 
 			<Modal
 				cn='gm-modal-root'
-				panelClassName={GM_MODAL}
+				panelClassName={`${GM_MODAL} gm-mp-modal`}
 				scrollRef={scrollRef}
 				open={!!editRow}
 				onClose={closeEdit}

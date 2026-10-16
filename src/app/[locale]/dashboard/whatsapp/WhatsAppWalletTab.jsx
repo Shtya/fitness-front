@@ -1,24 +1,27 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'framer-motion';
 import {
-	CalendarClock,
+	BarChart3,
+	Calculator,
 	Check,
-	ChevronDown,
+	ChevronLeft,
 	Coins,
+	Filter,
 	HandCoins,
 	Hourglass,
 	Layers,
 	Loader2,
+	Minus,
 	Pencil,
 	Plus,
 	Receipt,
+	RotateCcw,
 	Trash2,
-	TrendingUp,
 	Wallet,
 	X,
 } from 'lucide-react';
@@ -82,6 +85,24 @@ function formatMonth(ym, ar) {
 	if (!ym) return '';
 	const d = new Date(`${ym}-01T00:00:00`);
 	return Number.isNaN(d.getTime()) ? ym : d.toLocaleDateString(ar ? 'ar-EG' : 'en-GB', { month: 'long' });
+}
+
+/** Shift `todayYmd()` back by `days` (Cairo calendar day). */
+function ymdDaysAgo(days) {
+	const [y, m, d] = todayYmd().split('-').map(Number);
+	const dt = new Date(Date.UTC(y, m - 1, d));
+	dt.setUTCDate(dt.getUTCDate() - Math.max(0, Number(days) || 0));
+	return dt.toISOString().slice(0, 10);
+}
+
+/** Spend totals keyed by YMD, oldest → newest. */
+function dailySpendSeries(rows) {
+	const map = new Map();
+	for (const row of rows) {
+		if (!row.date) continue;
+		map.set(row.date, round2((map.get(row.date) || 0) + (Number(row.amount) || 0)));
+	}
+	return [...map.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
 }
 
 /** Mirrors the server summary so a delete / toggle shows instantly; the server snapshot replaces it after. */
@@ -171,7 +192,7 @@ function removeExpenseLocally(snapshot, expense) {
 }
 
 const fieldClass =
-	'h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 focus:border-[#1DAB61] focus:ring-4 focus:ring-[#1DAB61]/12 aria-invalid:border-rose-400 aria-invalid:focus:ring-rose-500/12 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:hover:border-slate-600';
+	'h-12 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 text-base font-medium sm:h-11 sm:text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 focus:border-[#1DAB61] focus:ring-4 focus:ring-[#1DAB61]/12 aria-invalid:border-rose-400 aria-invalid:focus:ring-rose-500/12 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:hover:border-slate-600';
 const primaryButton =
 	'inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1DAB61] px-5 text-sm font-bold text-white shadow-[0_6px_16px_-8px_rgba(29,171,97,0.8)] transition hover:bg-[#179c57] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none';
 
@@ -189,41 +210,186 @@ function Field({ label, hint, error, className = '', children }) {
 	);
 }
 
-/** Bottom sheet on phones, centered card on larger screens. */
+const PHONE_QUERY = '(max-width: 768px)';
+
+function subscribePhone(callback) {
+	const mq = window.matchMedia(PHONE_QUERY);
+	mq.addEventListener('change', callback);
+	return () => mq.removeEventListener('change', callback);
+}
+
+/** Same breakpoint as the WhatsApp mobile shell, so sheets and layout switch together. */
+function useIsPhone() {
+	return useSyncExternalStore(
+		subscribePhone,
+		() => window.matchMedia(PHONE_QUERY).matches,
+		() => false,
+	);
+}
+
+/**
+ * Height the on-screen keyboard covers. iOS keeps position:fixed anchored to the full layout
+ * height, so a bottom sheet has to lift itself by this much to keep its fields visible.
+ */
+function useKeyboardInset(active) {
+	const [inset, setInset] = useState(0);
+	useEffect(() => {
+		const vv = typeof window === 'undefined' ? null : window.visualViewport;
+		if (!active || !vv) return undefined;
+		const update = () => {
+			const next = Math.round(window.innerHeight - vv.height - vv.offsetTop);
+			setInset(next > 80 ? next : 0);
+		};
+		update();
+		vv.addEventListener('resize', update);
+		vv.addEventListener('scroll', update);
+		return () => {
+			vv.removeEventListener('resize', update);
+			vv.removeEventListener('scroll', update);
+			setInset(0);
+		};
+	}, [active]);
+	return inset;
+}
+
+/**
+ * Bottom sheet on phones (slides up, drag the header down to dismiss, lifts above the keyboard,
+ * scrolls inside itself), centered dialog on larger screens.
+ */
 function Sheet({ open, ar, title, onClose, children }) {
 	const closeLabel = ar ? 'إغلاق' : 'Close';
+	const phone = useIsPhone();
+	const reduceMotion = useReducedMotion();
+	const dragControls = useDragControls();
+	const panelRef = useRef(null);
+	const closeRef = useRef(onClose);
+	const keyboard = useKeyboardInset(open && phone);
+	const [mounted, setMounted] = useState(false);
+
+	useEffect(() => {
+		closeRef.current = onClose;
+	}, [onClose]);
+	useEffect(() => setMounted(true), []);
+
 	useEffect(() => {
 		if (!open) return undefined;
+		const previous = document.activeElement;
 		const onKey = event => {
-			if (event.key === 'Escape') onClose();
+			if (event.key === 'Escape') closeRef.current();
 		};
 		window.addEventListener('keydown', onKey);
-		return () => window.removeEventListener('keydown', onKey);
-	}, [open, onClose]);
+		// Move focus into the sheet (unless a field already took it) so keyboard and screen-reader
+		// users land where the content is; give it back to the trigger on close.
+		const timer = window.setTimeout(() => {
+			const panel = panelRef.current;
+			if (panel && !panel.contains(document.activeElement)) panel.focus({ preventScroll: true });
+		}, 40);
+		return () => {
+			window.removeEventListener('keydown', onKey);
+			window.clearTimeout(timer);
+			if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
+		};
+	}, [open]);
 
-	if (!open || typeof document === 'undefined') return null;
+	if (!mounted) return null;
+
+	const panelMotion = reduceMotion
+		? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.12 } }
+		: phone
+			? {
+					initial: { y: '100%' },
+					animate: { y: 0, transition: { type: 'spring', stiffness: 460, damping: 42, mass: 0.9 } },
+					exit: { y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } },
+				}
+			: {
+					initial: { opacity: 0, scale: 0.97, y: 8 },
+					animate: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 520, damping: 40 } },
+					exit: { opacity: 0, scale: 0.98, transition: { duration: 0.12 } },
+				};
+
 	return createPortal(
-		<div className="fixed inset-0 z-400 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
-			<button type="button" aria-label={closeLabel} onClick={onClose} className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" />
-			<div
-				data-wa-kb-scroll=""
-				className="relative w-full max-w-md rounded-t-3xl bg-white p-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl dark:bg-slate-900"
-			>
-				<div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200 sm:hidden dark:bg-slate-700" aria-hidden="true" />
-				<div className="mb-4 flex items-center justify-between gap-3">
-					<h3 className="text-base font-black text-slate-900 dark:text-white">{title}</h3>
-					<button
+		<AnimatePresence>
+			{open ? (
+				<div
+					key="sheet"
+					className={`fixed inset-0 z-400 flex justify-center ${phone ? 'items-end' : 'items-center p-4'}`}
+					role="dialog"
+					aria-modal="true"
+					aria-label={title}
+					dir={ar ? 'rtl' : 'ltr'}
+				>
+					<motion.button
 						type="button"
-						onClick={onClose}
+						tabIndex={-1}
 						aria-label={closeLabel}
-						className="grid h-8 w-8 place-items-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+						onClick={() => closeRef.current()}
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0, transition: { duration: 0.18 } }}
+						className="absolute inset-0 touch-none bg-slate-950/50 backdrop-blur-[2px]"
+					/>
+					<motion.div
+						ref={panelRef}
+						tabIndex={-1}
+						data-wa-kb-scroll=""
+						{...panelMotion}
+						drag={phone && !reduceMotion ? 'y' : false}
+						dragControls={dragControls}
+						dragListener={false}
+						dragConstraints={{ top: 0, bottom: 0 }}
+						dragElastic={{ top: 0, bottom: 0.8 }}
+						onDragEnd={(_, info) => {
+							if (info.offset.y > 110 || info.velocity.y > 650) closeRef.current();
+						}}
+						style={
+							phone
+								? {
+										marginBottom: keyboard,
+										maxHeight: keyboard
+											? `calc(100dvh - ${keyboard}px - 12px)`
+											: 'calc(100dvh - max(20px, env(safe-area-inset-top)) - 8px)',
+									}
+								: { maxHeight: 'min(720px, calc(100dvh - 32px))' }
+						}
+						className={`wa-dk relative flex w-full flex-col overflow-hidden bg-white shadow-[0_-12px_40px_-12px_rgba(15,23,42,0.35)] outline-none dark:bg-slate-900 ${
+							phone ? 'rounded-t-[28px]' : 'max-w-md rounded-[28px]'
+						}`}
 					>
-						<X size={16} />
-					</button>
+						<div
+							onPointerDown={event => {
+								if (phone) dragControls.start(event);
+							}}
+							className={`shrink-0 ${phone ? 'cursor-grab touch-none active:cursor-grabbing' : ''}`}
+						>
+							{phone ? (
+								<div className="flex justify-center pt-2.5 pb-1" aria-hidden="true">
+									<span className="h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600" />
+								</div>
+							) : null}
+							<div className={`flex items-center justify-between gap-3 px-5 ${phone ? 'pb-2' : 'pt-5 pb-3'}`}>
+								<h3 className="min-w-0 truncate text-[17px] font-black text-slate-900 dark:text-white">{title}</h3>
+								<button
+									type="button"
+									onClick={() => closeRef.current()}
+									onPointerDown={event => event.stopPropagation()}
+									aria-label={closeLabel}
+									className="-me-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+								>
+									<X size={20} />
+								</button>
+							</div>
+						</div>
+						<div
+							className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-1 ${
+								phone && !keyboard ? 'pb-[max(20px,env(safe-area-inset-bottom))]' : 'pb-5'
+							}`}
+						>
+							{children}
+						</div>
+					</motion.div>
 				</div>
-				{children}
-			</div>
-		</div>,
+			) : null}
+		</AnimatePresence>,
 		document.body,
 	);
 }
@@ -748,7 +914,11 @@ const ADD_TYPES = [
 	['expense', Receipt, 'text-rose-600 dark:text-rose-400'],
 ];
 
-function AddCard({
+/** Bottom sheet to pick entry type and fill the form — opened from the hero Add button. */
+function AddEntrySheet({
+	open,
+	initialType = 'money',
+	onClose,
 	ar,
 	money,
 	usdToEgp,
@@ -767,11 +937,10 @@ function AddCard({
 	resetKey,
 }) {
 	const [type, setType] = useState('money');
-	const [open, setOpen] = useState(false);
-	const pick = key => {
-		setType(key);
-		setOpen(true);
-	};
+	useEffect(() => {
+		if (open) setType(initialType);
+	}, [open, resetKey, initialType]);
+
 	const hints = {
 		money: ar ? 'فلوس جاتلك أو مستنيها' : 'Money received or on its way',
 		gold: ar ? 'الوزن والعيار وبنحسب القيمة بسعر النهارده' : 'Weight and karat, valued at today’s price',
@@ -797,30 +966,12 @@ function AddCard({
 	};
 
 	return (
-		<section data-wa-kb-scroll="" className={`${surfaceCard} p-3.5 sm:p-5`}>
-			<div className="flex items-center gap-3">
-				<span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#1DAB61]/10 text-[#1DAB61]">
-					<Plus size={18} strokeWidth={2.5} />
-				</span>
-				<div className="min-w-0 flex-1">
-					<h3 className="text-[15px] font-black text-slate-900 dark:text-white">{ar ? 'إضافة حركة' : 'New entry'}</h3>
-					<p className="truncate text-xs text-slate-500 dark:text-slate-400">{hints[type]}</p>
-				</div>
-				<button
-					type="button"
-					onClick={() => setOpen(current => !current)}
-					aria-expanded={open}
-					aria-label={open ? (ar ? 'قفل الإضافة' : 'Collapse') : ar ? 'فتح الإضافة' : 'Expand'}
-					className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-				>
-					<ChevronDown size={18} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-				</button>
-			</div>
-
+		<Sheet open={open} ar={ar} title={ar ? 'إضافة حركة' : 'New entry'} onClose={onClose}>
+			<p className="mb-3 text-xs text-slate-500 dark:text-slate-400">{hints[type]}</p>
 			<div
 				role="tablist"
 				aria-label={ar ? 'نوع الحركة' : 'Entry type'}
-				className="mt-4 grid grid-cols-4 gap-1 rounded-2xl bg-slate-100/90 p-1 dark:bg-slate-800/80"
+				className="grid grid-cols-4 gap-1 rounded-2xl bg-slate-100/90 p-1 dark:bg-slate-800/80"
 			>
 				{ADD_TYPES.map(([key, Icon, tone]) => {
 					const active = type === key;
@@ -830,7 +981,7 @@ function AddCard({
 							type="button"
 							role="tab"
 							aria-selected={active}
-							onClick={() => pick(key)}
+							onClick={() => setType(key)}
 							className={`relative flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[11.5px] font-bold transition-colors sm:h-11 sm:flex-row sm:gap-2 sm:text-[13px] ${
 								active ? 'text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
 							}`}
@@ -848,23 +999,20 @@ function AddCard({
 					);
 				})}
 			</div>
-
 			<AnimatePresence initial={false} mode="wait">
-				{open ? (
-					<motion.div
-						key={type}
-						role="tabpanel"
-						initial={{ opacity: 0, y: 6 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, y: -4 }}
-						transition={{ duration: 0.16, ease: 'easeOut' }}
-						className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800"
-					>
-						{forms[type]}
-					</motion.div>
-				) : null}
+				<motion.div
+					key={type}
+					role="tabpanel"
+					initial={{ opacity: 0, y: 6 }}
+					animate={{ opacity: 1, y: 0 }}
+					exit={{ opacity: 0, y: -4 }}
+					transition={{ duration: 0.16, ease: 'easeOut' }}
+					className="mt-4"
+				>
+					{forms[type]}
+				</motion.div>
 			</AnimatePresence>
-		</section>
+		</Sheet>
 	);
 }
 
@@ -1109,15 +1257,25 @@ function LedgerMeta({ row, ar }) {
 
 const pillClass = 'inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-full px-2.5 text-[11px] font-bold';
 
-function LedgerStatus({ row, ar, today, locked, onToggle }) {
+function LedgerStatus({ row, ar, today, locked, onToggle, interactive = true, compact = false }) {
+	const pill = compact
+		? 'inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[11px] font-bold'
+		: pillClass;
 	if (row.type === 'money') {
 		const received = row.source.kind === 'received';
 		const overdue = !received && row.date < today;
 		const tone = received
-			? 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900'
+			? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900'
 			: overdue
-				? 'bg-rose-50 text-rose-700 ring-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900'
-				: 'bg-amber-50 text-amber-700 ring-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900';
+				? 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900'
+				: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900';
+		const content = (
+			<>
+				{received ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Hourglass size={12} aria-hidden="true" />}
+				{received ? (ar ? 'وصلت' : 'Received') : overdue ? (ar ? 'متأخرة' : 'Overdue') : ar ? 'لسه' : 'Waiting'}
+			</>
+		);
+		if (!interactive) return <span className={`${pill} ring-1 ${tone}`}>{content}</span>;
 		return (
 			<button
 				type="button"
@@ -1126,20 +1284,19 @@ function LedgerStatus({ row, ar, today, locked, onToggle }) {
 				disabled={locked}
 				onClick={onToggle}
 				title={received ? (ar ? 'لسه ماوصلتش' : 'Mark as not received') : ar ? 'وصلت' : 'Mark as received'}
-				className={`${pillClass} ring-1 transition active:scale-95 ${tone}`}
+				className={`${pill} ring-1 transition hover:brightness-95 active:scale-95 ${tone}`}
 			>
-				{received ? <Check size={12} strokeWidth={3} /> : <Hourglass size={12} />}
-				{received ? (ar ? 'وصلت' : 'Received') : overdue ? (ar ? 'متأخرة' : 'Overdue') : ar ? 'لسه' : 'Waiting'}
+				{content}
 			</button>
 		);
 	}
 	if (row.type === 'gold') {
-		return <span className={`${pillClass} ${LEDGER_TONES.gold.badge}`}>{ar ? `عيار ${row.source.karat}` : `${row.source.karat}K`}</span>;
+		return <span className={`${pill} ${LEDGER_TONES.gold.badge}`}>{ar ? `عيار ${row.source.karat}` : `${row.source.karat}K`}</span>;
 	}
 	if (row.type === 'lent') {
-		return <span className={`${pillClass} ${LEDGER_TONES.lent.badge}`}>{ar ? 'عند ناس' : 'Lent out'}</span>;
+		return <span className={`${pill} ${LEDGER_TONES.lent.badge}`}>{ar ? 'عند ناس' : 'Lent out'}</span>;
 	}
-	return <span className={`${pillClass} ${LEDGER_TONES.expense.badge}`}>{ar ? 'اتصرف' : 'Spent'}</span>;
+	return <span className={`${pill} ${LEDGER_TONES.expense.badge}`}>{ar ? 'اتصرف' : 'Spent'}</span>;
 }
 
 function LedgerAmount({ row, money }) {
@@ -1183,6 +1340,145 @@ function LedgerActions({ ar, onEdit, onDelete }) {
 	);
 }
 
+/** Filter / chart panels for the ledger — opened from the toolbar icon. */
+function LedgerFilterSheet({ open, ar, type, moneyFilter, counts, expenseMin, expenseDays, onClose, onApplyMoney, onApplyExpense, onOpenChart }) {
+	const [draftMoney, setDraftMoney] = useState(moneyFilter);
+	const [draftMin, setDraftMin] = useState(expenseMin);
+	const [draftDays, setDraftDays] = useState(expenseDays);
+
+	useEffect(() => {
+		if (!open) return;
+		setDraftMoney(moneyFilter);
+		setDraftMin(expenseMin);
+		setDraftDays(expenseDays);
+	}, [open, moneyFilter, expenseMin, expenseDays]);
+
+	const title = type === 'expense' ? (ar ? 'فلاتر الصرف' : 'Spend filters') : ar ? 'فلاتر الفلوس' : 'Money filters';
+
+	return (
+		<Sheet open={open} ar={ar} title={title} onClose={onClose}>
+			{type === 'money' ? (
+				<div className="flex flex-col gap-3">
+					<p className="text-xs text-slate-500 dark:text-slate-400">{ar ? 'اعرض حسب حالة الاستلام' : 'Filter by received status'}</p>
+					<div className="flex flex-col gap-1.5">
+						{[
+							['all', ar ? 'الكل' : 'All', counts.money],
+							['pending', ar ? 'لسه ماوصلتش' : 'Waiting', counts.pending],
+							['received', ar ? 'وصلت' : 'Received', counts.received],
+						].map(([key, label, count]) => (
+							<button
+								key={key}
+								type="button"
+								onClick={() => setDraftMoney(key)}
+								className={`flex h-11 items-center justify-between rounded-xl border px-3.5 text-sm font-bold transition ${
+									draftMoney === key
+										? 'border-[#1DAB61] bg-[#1DAB61]/10 text-[#128c4f] dark:text-[#4ade80]'
+										: 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+								}`}
+							>
+								{label}
+								<span className="tabular-nums opacity-60">{count}</span>
+							</button>
+						))}
+					</div>
+					<button
+						type="button"
+						className={`${primaryButton} mt-1`}
+						onClick={() => {
+							onApplyMoney(draftMoney);
+							onClose();
+						}}
+					>
+						{ar ? 'تطبيق' : 'Apply'}
+					</button>
+				</div>
+			) : (
+				<div className="flex flex-col gap-3">
+					<Field label={ar ? 'المبلغ أكبر من' : 'Amount above'} hint={ar ? 'ج.م' : 'EGP'}>
+						<input
+							inputMode="decimal"
+							value={draftMin}
+							onChange={event => setDraftMin(event.target.value)}
+							placeholder="0"
+							className={`${fieldClass} font-bold tabular-nums`}
+						/>
+					</Field>
+					<Field label={ar ? 'آخر كام يوم' : 'Last N days'} hint={ar ? 'فاضي = الكل' : 'Empty = all'}>
+						<input
+							inputMode="numeric"
+							value={draftDays}
+							onChange={event => setDraftDays(event.target.value.replace(/[^\d]/g, ''))}
+							placeholder={ar ? 'مثلاً 7' : 'e.g. 7'}
+							className={`${fieldClass} font-bold tabular-nums`}
+						/>
+					</Field>
+					<button
+						type="button"
+						className={`${primaryButton}`}
+						onClick={() => {
+							onApplyExpense({ min: draftMin, days: draftDays });
+							onClose();
+						}}
+					>
+						{ar ? 'تطبيق' : 'Apply'}
+					</button>
+					<button
+						type="button"
+						onClick={() => {
+							onClose();
+							onOpenChart();
+						}}
+						className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+					>
+						<BarChart3 size={16} />
+						{ar ? 'استهلاك كل يوم' : 'Daily spending chart'}
+					</button>
+					<button
+						type="button"
+						onClick={() => {
+							setDraftMin('');
+							setDraftDays('');
+							onApplyExpense({ min: '', days: '' });
+							onClose();
+						}}
+						className="text-xs font-bold text-slate-400 underline"
+					>
+						{ar ? 'مسح الفلاتر' : 'Clear filters'}
+					</button>
+				</div>
+			)}
+		</Sheet>
+	);
+}
+
+function SpendDailyChart({ open, ar, money, series, onClose }) {
+	const max = series.reduce((m, [, v]) => Math.max(m, v), 0) || 1;
+	return (
+		<Sheet open={open} ar={ar} title={ar ? 'الاستهلاك اليومي' : 'Daily spending'} onClose={onClose}>
+			{!series.length ? (
+				<p className="py-6 text-center text-sm text-slate-400">{ar ? 'مفيش مصاريف في الفلتر الحالي' : 'No spend in the current filter'}</p>
+			) : (
+				<ul className="flex max-h-[60vh] flex-col gap-2.5 overflow-y-auto pe-1">
+					{series.map(([date, amount]) => (
+						<li key={date} className="flex flex-col gap-1">
+							<div className="flex items-baseline justify-between gap-2 text-[11px]">
+								<span className="font-bold tabular-nums text-slate-500">{formatDay(date, ar)}</span>
+								<span className="font-black tabular-nums text-rose-600 dark:text-rose-400">{money(amount)}</span>
+							</div>
+							<div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+								<div
+									className="h-full rounded-full bg-rose-500/90 transition-[width]"
+									style={{ width: `${Math.max(6, (amount / max) * 100)}%` }}
+								/>
+							</div>
+						</li>
+					))}
+				</ul>
+			)}
+		</Sheet>
+	);
+}
+
 /** Every entry (money, gold, lent, spend) in one filterable table; stacked rows on phones. */
 function LedgerTable({
 	ar,
@@ -1191,19 +1487,24 @@ function LedgerTable({
 	data,
 	type,
 	onTypeChange,
-	moneyFilter,
-	onMoneyFilterChange,
 	lockedIds,
 	onToggle,
 	onEdit,
 	onDelete,
 	anchorRef,
+	moneyFilter,
+	onMoneyFilterChange,
+	onOpenRow,
 }) {
 	const allRows = useMemo(() => buildLedgerRows(data), [data]);
 	const priceNf = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }), []);
 	const gold = data?.gold;
 	const lent = data?.lent;
 	const expenses = data?.expenses;
+	const [expenseMin, setExpenseMin] = useState('');
+	const [expenseDays, setExpenseDays] = useState('');
+	const [filtersOpen, setFiltersOpen] = useState(false);
+	const [chartOpen, setChartOpen] = useState(false);
 
 	const counts = useMemo(() => {
 		const next = { all: allRows.length, money: 0, gold: 0, lent: 0, expense: 0, pending: 0, received: 0 };
@@ -1215,36 +1516,57 @@ function LedgerTable({
 	}, [allRows]);
 
 	const rows = useMemo(() => {
+		let list;
 		if (type === 'money') {
 			const items = allRows.filter(row => row.type === 'money');
 			const pending = items.filter(row => row.source.kind === 'pending');
 			const received = items.filter(row => row.source.kind === 'received');
-			if (moneyFilter === 'pending') return pending;
-			if (moneyFilter === 'received') return received;
-			return [...pending, ...received];
+			if (moneyFilter === 'pending') list = pending;
+			else if (moneyFilter === 'received') list = received;
+			else list = [...pending, ...received];
+		} else if (type !== 'all') {
+			list = allRows.filter(row => row.type === type);
+		} else {
+			// Newest first; gold has no date, so it sits at the bottom.
+			list = [...allRows].sort((a, b) => {
+				if (!a.date && !b.date) return 0;
+				if (!a.date) return 1;
+				if (!b.date) return -1;
+				return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
+			});
 		}
-		if (type !== 'all') return allRows.filter(row => row.type === type);
-		// Newest first; gold has no date, so it sits at the bottom.
-		return [...allRows].sort((a, b) => {
-			if (!a.date && !b.date) return 0;
-			if (!a.date) return 1;
-			if (!b.date) return -1;
-			return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
-		});
-	}, [allRows, type, moneyFilter]);
+
+		if (type === 'expense') {
+			const min = parseAmount(expenseMin);
+			const since = expenseDays ? ymdDaysAgo(Number(expenseDays)) : null;
+			list = list.filter(row => {
+				if (Number.isFinite(min) && min > 0 && !(Number(row.amount) > min)) return false;
+				if (since && (!row.date || row.date < since)) return false;
+				return true;
+			});
+		}
+		return list;
+	}, [allRows, type, moneyFilter, expenseMin, expenseDays]);
+
+	const spendSeries = useMemo(() => dailySpendSeries(rows.filter(row => row.type === 'expense')), [rows]);
 
 	const total = useMemo(() => {
 		if (type === 'gold') return gold?.totalValue != null ? money(gold.totalValue) : null;
 		if (type === 'lent') return money(lent?.total);
-		if (type === 'expense') return money(expenses?.total);
+		if (type === 'expense') return money(round2(rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)));
 		if (type === 'money') return money(round2(rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)));
 		return null;
-	}, [type, rows, gold, lent, expenses, money]);
+	}, [type, rows, gold, lent, money]);
 
 	const unavailable =
 		(type === 'gold' && gold?.available === false) ||
 		(type === 'lent' && lent?.available === false) ||
 		(type === 'expense' && expenses?.available === false);
+
+	const filtersAvailable = type === 'money' || type === 'expense';
+	const filtersActive =
+		(type === 'money' && moneyFilter !== 'all') ||
+		(type === 'expense' && (Boolean(String(expenseMin).trim()) || Boolean(String(expenseDays).trim())));
 
 	const tabs = [
 		['all', ar ? 'الكل' : 'All', Layers, counts.all],
@@ -1266,8 +1588,8 @@ function LedgerTable({
 						<p className="text-[11px] text-slate-400">
 							{type === 'expense' && expenses?.month
 								? ar
-									? `الشهر ده ${money(expenses.spentThisMonth)} · ${formatMonth(expenses.month, ar)}`
-									: `${money(expenses.spentThisMonth)} this month · ${formatMonth(expenses.month, ar)}`
+									? null 
+									: null
 								: type === 'gold' && gold?.holdings?.length
 									? formatGrams(gold.totalGrams, ar)
 									: ar
@@ -1275,17 +1597,48 @@ function LedgerTable({
 										: `${rows.length} ${rows.length === 1 ? 'entry' : 'entries'}`}
 						</p>
 					</div>
-					{total ? (
-						<p className="shrink-0 text-end">
-							<span className="block text-[10.5px] font-bold text-slate-400">{ar ? 'الإجمالي' : 'Total'}</span>
-							<span
-								className={`text-base font-black tabular-nums sm:text-lg ${type === 'money' ? 'text-slate-900 dark:text-white' : LEDGER_TONES[type].amount}`}
+					<div className="flex shrink-0 items-end gap-2">
+						{filtersAvailable ? (
+							<button
+								type="button"
+								onClick={() => setFiltersOpen(true)}
+								aria-label={ar ? 'فلاتر' : 'Filters'}
+								title={ar ? 'فلاتر' : 'Filters'}
+								className={`relative grid h-11 w-11 place-items-center rounded-xl border transition sm:h-9 sm:w-9 ${
+									filtersActive
+										? 'border-[#1DAB61] bg-[#1DAB61]/10 text-[#128c4f] dark:text-[#4ade80]'
+										: 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
+								}`}
 							>
-								{type === 'expense' ? '− ' : ''}
-								{total}
-							</span>
-						</p>
-					) : null}
+								<Filter size={15} />
+								{filtersActive ? (
+									<span className="absolute end-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#1DAB61]" aria-hidden="true" />
+								) : null}
+							</button>
+						) : null}
+						{type === 'expense' ? (
+							<button
+								type="button"
+								onClick={() => setChartOpen(true)}
+								aria-label={ar ? 'رسم الاستهلاك' : 'Spending chart'}
+								title={ar ? 'استهلاك كل يوم' : 'Daily spending'}
+								className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 text-rose-500 sm:h-9 sm:w-9 transition hover:bg-rose-50 dark:border-slate-700 dark:hover:bg-rose-950/30"
+							>
+								<BarChart3 size={15} />
+							</button>
+						) : null}
+						{total ? (
+							<p className="text-end">
+								<span className="block text-[10.5px] font-bold text-slate-400">{ar ? 'الإجمالي' : 'Total'}</span>
+								<span
+									className={`text-base font-black tabular-nums sm:text-lg ${type === 'money' ? 'text-slate-900 dark:text-white' : LEDGER_TONES[type].amount}`}
+								>
+									{type === 'expense' ? '− ' : ''}
+									{total}
+								</span>
+							</p>
+						) : null}
+					</div>
 				</div>
 
 				<div
@@ -1303,7 +1656,7 @@ function LedgerTable({
 									role="tab"
 									aria-selected={active}
 									onClick={() => onTypeChange(key)}
-									className={`flex min-w-0 flex-col items-center justify-center gap-0.5 whitespace-nowrap rounded-lg px-1 py-1.5 text-[11px] font-bold transition sm:h-9 sm:flex-row sm:gap-1.5 sm:px-3 sm:py-0 sm:text-xs ${
+									className={`flex min-w-0 flex-col items-center justify-center min-h-12 gap-0.5 whitespace-nowrap rounded-lg px-1 py-1.5 text-[11px] font-bold transition [touch-action:manipulation] sm:h-9 sm:min-h-0 sm:flex-row sm:gap-1.5 sm:px-3 sm:py-0 sm:text-xs ${
 										active
 											? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white'
 											: 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
@@ -1330,30 +1683,7 @@ function LedgerTable({
 					</div>
 				</div>
 
-				{type === 'money' && counts.money ? (
-					<div className="flex flex-wrap gap-1.5">
-						{[
-							['all', ar ? 'الكل' : 'All', counts.money],
-							['pending', ar ? 'لسه' : 'Waiting', counts.pending],
-							['received', ar ? 'وصلت' : 'Received', counts.received],
-						].map(([key, label, count]) => (
-							<button
-								key={key}
-								type="button"
-								onClick={() => onMoneyFilterChange(key)}
-								className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-bold transition ${
-									moneyFilter === key
-										? 'border-[#1DAB61] bg-[#1DAB61]/10 text-[#128c4f] dark:text-[#4ade80]'
-										: 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
-								}`}
-							>
-								{label} <span className="tabular-nums opacity-60">{count}</span>
-							</button>
-						))}
-					</div>
-				) : null}
-
-				{(type === 'gold' || type === 'all') && gold?.quote ? (
+				{type === 'gold' && gold?.quote ? (
 					<div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold tabular-nums">
 						<span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
 							<Coins size={12} />
@@ -1370,6 +1700,28 @@ function LedgerTable({
 					</div>
 				) : null}
 			</div>
+
+			{filtersAvailable ? (
+				<LedgerFilterSheet
+					open={filtersOpen}
+					ar={ar}
+					type={type}
+					moneyFilter={moneyFilter}
+					counts={counts}
+					expenseMin={expenseMin}
+					expenseDays={expenseDays}
+					onClose={() => setFiltersOpen(false)}
+					onApplyMoney={onMoneyFilterChange}
+					onApplyExpense={({ min, days }) => {
+						setExpenseMin(min);
+						setExpenseDays(days);
+					}}
+					onOpenChart={() => setChartOpen(true)}
+				/>
+			) : null}
+			{type === 'expense' ? (
+				<SpendDailyChart open={chartOpen} ar={ar} money={money} series={spendSeries} onClose={() => setChartOpen(false)} />
+			) : null}
 
 			{unavailable ? (
 				<div className="border-t border-slate-100 px-4 py-10 text-center text-sm text-slate-400 dark:border-slate-800">
@@ -1451,33 +1803,41 @@ function LedgerTable({
 					<ul className="divide-y divide-slate-100 border-t border-slate-100 sm:hidden dark:divide-slate-800 dark:border-slate-800">
 						{rows.map(row => {
 							const locked = lockedIds.has(row.id);
+							const muted = row.type === 'money' && row.source.kind === 'received';
 							return (
-								<li key={row.key} className={`flex items-start gap-3 px-3 py-3 ${locked ? 'pointer-events-none opacity-60' : ''}`}>
-									<LedgerIcon type={row.type} size="sm" />
-									<div className="min-w-0 flex-1">
-										<div className="flex items-start justify-between gap-3">
-											<p
-												className={`min-w-0 truncate pt-1 text-sm font-bold ${
-													row.type === 'money' && row.source.kind === 'received'
-														? 'text-slate-500 dark:text-slate-400'
-														: 'text-slate-900 dark:text-white'
-												}`}
-											>
-												{row.name}
-											</p>
-											<div className="shrink-0 pt-1 text-end text-sm">
-												<LedgerAmount row={row} money={money} />
-											</div>
-										</div>
-										<div className="mt-1.5 flex items-center justify-between gap-2">
-											<div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-												<LedgerStatus row={row} ar={ar} today={today} locked={locked} onToggle={() => onToggle(row.source)} />
+								<li key={row.key}>
+									<button
+										type="button"
+										onClick={() => onOpenRow(row)}
+										aria-busy={locked || undefined}
+										className={`flex w-full items-center gap-3 px-4 py-3.5 text-start transition-colors [touch-action:manipulation] active:bg-slate-100 dark:active:bg-slate-800/70 ${
+											locked ? 'opacity-60' : ''
+										}`}
+									>
+										<LedgerIcon type={row.type} />
+										<span className="flex min-w-0 flex-1 flex-col gap-1">
+											<span className="flex items-baseline justify-between gap-3">
+												<span
+													className={`min-w-0 truncate text-[15px] font-bold ${muted ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`}
+												>
+													{row.name}
+												</span>
+												<span className="shrink-0 text-[15px]">
+													<LedgerAmount row={row} money={money} />
+												</span>
+											</span>
+											<span className="flex min-w-0 items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+												<LedgerStatus row={row} ar={ar} today={today} interactive={false} compact />
 												{row.date ? <span className="tabular-nums">{formatDay(row.date, ar)}</span> : null}
 												<LedgerMeta row={row} ar={ar} />
-											</div>
-											<LedgerActions ar={ar} onEdit={() => onEdit(row)} onDelete={() => onDelete(row)} />
-										</div>
-									</div>
+											</span>
+										</span>
+										{locked ? (
+											<Loader2 size={16} className="shrink-0 animate-spin text-slate-400" />
+										) : (
+											<ChevronLeft size={18} className={`shrink-0 text-slate-300 dark:text-slate-600 ${ar ? '' : 'rotate-180'}`} aria-hidden="true" />
+										)}
+									</button>
 								</li>
 							);
 						})}
@@ -1502,123 +1862,546 @@ function MoneyFigure({ value, ar, className = '', unitClassName = '' }) {
 const surfaceCard =
 	'rounded-3xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-16px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900/60';
 
-const STAT_TONES = {
-	green: 'bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/50',
-	amber: 'bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/50',
-	sky: 'bg-sky-50 text-sky-600 ring-sky-100 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-900/50',
-};
-
-/** One stat inside the stats strip: a row on phones, a column from `sm` up. */
-function SummaryCard({ icon: Icon, label, value, hint, tone, ar }) {
+/** The four things people add, one tap away and inside the thumb zone on phones. */
+function QuickActions({ ar, onPick }) {
+	const actions = [
+		['money', Wallet, ar ? 'فلوس' : 'Money', 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300'],
+		['gold', Coins, ar ? 'دهب' : 'Gold', 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300'],
+		['lent', HandCoins, ar ? 'سلفة' : 'Loan', 'bg-sky-50 text-sky-600 dark:bg-sky-950/40 dark:text-sky-300'],
+		['expense', Receipt, ar ? 'مصروف' : 'Expense', 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300'],
+	];
 	return (
-		<div className="flex min-w-0 items-center gap-3 px-4 py-3.5 sm:flex-col sm:items-stretch sm:gap-3 sm:p-5">
-			<div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-none">
-				<span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ring-1 ${STAT_TONES[tone]}`}>
-					<Icon size={18} />
-				</span>
-				<div className="min-w-0">
-					<p className="truncate text-[13px] font-bold text-slate-600 dark:text-slate-300">{label}</p>
-					{hint ? <p className="truncate text-[11px] text-slate-400 sm:hidden">{hint}</p> : null}
-				</div>
-			</div>
-			<div className="shrink-0 text-end sm:mt-auto sm:text-start">
-				<MoneyFigure
-					value={value}
-					ar={ar}
-					className="block text-[17px] font-black leading-tight text-slate-900 sm:text-[22px] dark:text-white"
-					unitClassName="text-[11px] text-slate-400 sm:text-xs"
-				/>
-				{hint ? <p className="mt-0.5 hidden truncate text-[11px] text-slate-400 sm:block">{hint}</p> : null}
-			</div>
-		</div>
+		<nav aria-label={ar ? 'إضافة' : 'Add'} className={`${surfaceCard} grid grid-cols-4 gap-1 p-2`}>
+			{actions.map(([key, Icon, label, tone]) => (
+				<button
+					key={key}
+					type="button"
+					onClick={() => onPick(key)}
+					aria-label={ar ? `إضافة ${label}` : `Add ${label.toLowerCase()}`}
+					className="group flex min-h-[76px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 transition [touch-action:manipulation] hover:bg-slate-50 active:scale-[0.97] active:bg-slate-100 dark:hover:bg-slate-800/60 dark:active:bg-slate-800"
+				>
+					<span className={`relative grid h-11 w-11 place-items-center rounded-2xl ${tone}`}>
+						<Icon size={20} aria-hidden="true" />
+						<span className="absolute -end-1 -bottom-1 grid h-4.5 w-4.5 place-items-center rounded-full bg-[#1DAB61] text-white ring-2 ring-white dark:ring-slate-900">
+							<Plus size={11} strokeWidth={3.5} aria-hidden="true" />
+						</span>
+					</span>
+					<span className="max-w-full truncate text-xs font-bold text-slate-700 dark:text-slate-200">{label}</span>
+				</button>
+			))}
+		</nav>
 	);
 }
 
-/** The headline card: balance first, then what sits around it. Tiles jump to their rows in the table. */
-function BalanceHero({ ar, summary, goldValueNow, lentTotal, spentThisMonth, onEditBalance, onJump }) {
-	const balance = Number(summary?.balance) || 0;
-	const tiles = [
-		{ key: 'gold', icon: Coins, label: ar ? 'قيمة الدهب' : 'Gold value', value: goldValueNow },
-		{ key: 'lent', icon: HandCoins, label: ar ? 'عند ناس' : 'Lent out', value: lentTotal },
-		{ key: 'expense', icon: Receipt, label: ar ? 'مصروف الشهر' : 'Spent this month', value: spentThisMonth },
-		{ key: 'pending', icon: Hourglass, label: ar ? 'في الطريق' : 'On the way', value: Number(summary?.pendingTotal) || 0 },
-	];
+/** Phone detail view of one entry: everything about it plus its actions, at full thumb size. */
+function EntrySheet({ row, ar, money, today, quote, locked, onClose, onToggle, onEdit, onDelete }) {
+	const [confirming, setConfirming] = useState(false);
+	const [shown, setShown] = useState(row);
+	if (row && row !== shown) setShown(row);
+	const current = row || shown;
+	const priceNf = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }), []);
+
+	useEffect(() => {
+		if (!row) setConfirming(false);
+	}, [row]);
+
+	const title = current ? ledgerTypeLabel(current.type, ar) : '';
+	const item = current?.source;
+	const details = [];
+	if (current) {
+		if (current.type === 'money') {
+			const received = item.kind === 'received';
+			details.push([received ? (ar ? 'وصلت يوم' : 'Received on') : ar ? 'متوقعة يوم' : 'Expected on', formatDay(current.date, ar)]);
+			if (item.currency === 'USD') {
+				details.push([ar ? 'بالدولار' : 'In USD', formatUsd(item.amount)]);
+				if (item.fxRate) details.push([ar ? 'سعر الدولار' : 'USD rate', formatFxRate(item.fxRate, ar)]);
+			}
+		} else if (current.type === 'gold') {
+			details.push([ar ? 'الوزن' : 'Weight', formatGrams(item.grams, ar)]);
+			details.push([ar ? 'العيار' : 'Karat', ar ? `عيار ${item.karat}` : `${item.karat}K`]);
+			const price = quote?.perGram?.[item.karat];
+			if (price) details.push([ar ? 'سعر الجرام النهارده' : 'Price per gram today', `${priceNf.format(price)} ${ar ? 'ج.م' : 'EGP'}`]);
+		} else {
+			details.push([current.type === 'lent' ? (ar ? 'اتسلفت يوم' : 'Lent on') : ar ? 'اتصرف يوم' : 'Spent on', formatDay(current.date, ar)]);
+		}
+	}
 
 	return (
-		<section className="relative isolate overflow-hidden rounded-[28px] bg-[linear-gradient(140deg,#0b3a29_0%,#0e5a39_48%,#16894f_100%)] p-5 text-white shadow-[0_22px_44px_-24px_rgba(11,58,41,0.9)] ring-1 ring-inset ring-white/10 sm:p-6">
-			<span
-				aria-hidden="true"
-				className="pointer-events-none absolute -end-16 -top-24 -z-10 h-64 w-64 rounded-full bg-[#2fe08a]/25 blur-3xl"
-			/>
-			<span
-				aria-hidden="true"
-				className="pointer-events-none absolute -bottom-28 -start-10 -z-10 h-56 w-56 rounded-full bg-[#0b2a1e]/60 blur-3xl"
-			/>
+		<Sheet open={Boolean(row)} ar={ar} title={title} onClose={onClose}>
+			{current ? (
+				<div className="flex flex-col gap-5">
+					<div className="flex items-start gap-3">
+						<LedgerIcon type={current.type} />
+						<div className="min-w-0 flex-1">
+							<p className="text-lg font-black leading-snug wrap-break-word text-slate-900 dark:text-white">{current.name}</p>
+							<div className="mt-1.5">
+								<LedgerStatus row={current} ar={ar} today={today} interactive={false} />
+							</div>
+						</div>
+					</div>
 
-			<div className="flex items-start justify-between gap-3">
-				<div className="flex items-center gap-2.5">
-					<span className="grid h-9 w-9 place-items-center rounded-xl bg-white/12 ring-1 ring-white/15">
-						<Wallet size={17} />
-					</span>
-					<div>
-						<p className="text-[13px] font-bold text-white/90">{ar ? 'الرصيد المتاح' : 'Available balance'}</p>
-						<p className="text-[11px] text-white/55">{ar ? 'الفلوس اللي معاك دلوقتي' : 'Cash in hand right now'}</p>
+					<div className="rounded-2xl bg-slate-50 px-4 py-3.5 dark:bg-slate-800/50">
+						<p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+							{current.type === 'gold' ? (ar ? 'قيمته النهارده' : 'Worth today') : ar ? 'المبلغ' : 'Amount'}
+						</p>
+						{current.amount == null ? (
+							<p className="mt-1 text-[28px] font-black text-slate-400">—</p>
+						) : (
+							<p className={`mt-1 text-[28px] font-black leading-tight ${current.type === 'money' ? 'text-slate-900 dark:text-white' : LEDGER_TONES[current.type].amount}`}>
+								{current.type === 'expense' ? '− ' : ''}
+								<MoneyFigure value={current.amount} ar={ar} unitClassName="text-sm opacity-60" />
+							</p>
+						)}
+					</div>
+
+					{details.length ? (
+						<dl className="divide-y divide-slate-100 dark:divide-slate-800">
+							{details.map(([label, value]) => (
+								<div key={label} className="flex items-center justify-between gap-4 py-3 text-sm">
+									<dt className="text-slate-500 dark:text-slate-400">{label}</dt>
+									<dd className="font-bold tabular-nums text-slate-900 dark:text-white">{value}</dd>
+								</div>
+							))}
+						</dl>
+					) : null}
+
+					{confirming ? (
+						<div role="alert" className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/60 dark:bg-rose-950/30">
+							<p className="text-sm font-bold text-rose-800 dark:text-rose-200">
+								{ar ? `هتمسح "${current.name}" من السجل. متأكد؟` : `Delete “${current.name}” from your wallet?`}
+							</p>
+							<div className="grid grid-cols-2 gap-2">
+								<button
+									type="button"
+									onClick={() => setConfirming(false)}
+									className="h-12 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 transition active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+								>
+									{ar ? 'لأ، سيبها' : 'Keep it'}
+								</button>
+								<button
+									type="button"
+									disabled={locked}
+									onClick={() => {
+										onDelete(current);
+										onClose();
+									}}
+									className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-rose-600 text-sm font-bold text-white transition hover:bg-rose-700 active:scale-[0.98] disabled:opacity-50"
+								>
+									<Trash2 size={16} />
+									{ar ? 'امسح' : 'Delete'}
+								</button>
+							</div>
+						</div>
+					) : (
+						<div className="flex flex-col gap-2.5">
+							{current.type === 'money' ? (
+								<button
+									type="button"
+									disabled={locked}
+									onClick={() => onToggle(item)}
+									className={
+										item.kind === 'received'
+											? 'inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 transition active:scale-[0.98] disabled:opacity-50 dark:border-slate-700 dark:text-slate-200'
+											: `${primaryButton} h-12`
+									}
+								>
+									{locked ? (
+										<Loader2 size={16} className="animate-spin" />
+									) : item.kind === 'received' ? (
+										<Hourglass size={16} />
+									) : (
+										<Check size={16} strokeWidth={3} />
+									)}
+									{item.kind === 'received' ? (ar ? 'رجّعها لسه ماوصلتش' : 'Mark as not received') : ar ? 'وصلت' : 'Mark as received'}
+								</button>
+							) : null}
+							<div className="grid grid-cols-2 gap-2.5">
+								<button
+									type="button"
+									disabled={locked}
+									onClick={() => {
+										onClose();
+										onEdit(current);
+									}}
+									className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+								>
+									<Pencil size={16} />
+									{ar ? 'تعديل' : 'Edit'}
+								</button>
+								<button
+									type="button"
+									disabled={locked}
+									onClick={() => setConfirming(true)}
+									className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-rose-200 text-sm font-bold text-rose-600 transition hover:bg-rose-50 active:scale-[0.98] disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30"
+								>
+									<Trash2 size={16} />
+									{ar ? 'مسح' : 'Delete'}
+								</button>
+							</div>
+						</div>
+					)}
+				</div>
+			) : null}
+		</Sheet>
+	);
+}
+
+/** Quick what-if sums over the wallet: pick parts, add or subtract your own values. */
+function CalcSheet({ open, ar, onClose, sources }) {
+	const nf = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }), []);
+	const unit = ar ? 'ج.م' : 'EGP';
+	const [picked, setPicked] = useState(() => new Set(['cash', 'gold']));
+	const [extras, setExtras] = useState([]);
+	const [sign, setSign] = useState(1);
+	const [draft, setDraft] = useState('');
+	const [label, setLabel] = useState('');
+	const draftValue = parseAmount(draft);
+	const draftValid = Number.isFinite(draftValue) && draftValue > 0;
+
+	const terms = [
+		...sources.filter(source => picked.has(source.key)).map(source => ({ key: source.key, label: source.label, value: source.value })),
+		...extras.map(extra => ({ key: extra.id, label: extra.label, value: extra.value })),
+	];
+	const total = round2(terms.reduce((sum, term) => sum + term.value, 0));
+
+	const toggle = key =>
+		setPicked(current => {
+			const next = new Set(current);
+			if (next.has(key)) next.delete(key);
+			else next.add(key);
+			return next;
+		});
+	const addExtra = () => {
+		if (!draftValid) return;
+		setExtras(current => [
+			...current,
+			{ id: `x${Date.now()}${current.length}`, label: label.trim() || (sign > 0 ? (ar ? 'قيمة' : 'Value') : ar ? 'خصم' : 'Minus'), value: sign * draftValue },
+		]);
+		setDraft('');
+		setLabel('');
+	};
+
+	return (
+		<Sheet open={open} ar={ar} title={ar ? 'حاسبة' : 'Calculator'} onClose={onClose}>
+			<div className="flex flex-col gap-5">
+				<div className="rounded-2xl bg-[#0c4430] px-4 py-4 text-white dark:bg-[#0a3a29]">
+					<p className="text-xs font-semibold text-emerald-100/75">{ar ? 'النتيجة' : 'Result'}</p>
+					<p className={`mt-1 truncate text-[34px] font-black leading-none tabular-nums ${total < 0 ? 'text-rose-200' : ''}`}>
+						{nf.format(total)}
+						<span className="ms-1.5 text-base font-bold text-emerald-100/60">{unit}</span>
+					</p>
+					<p className="mt-2.5 text-xs leading-relaxed text-emerald-100/70 tabular-nums" dir="ltr">
+						{terms.length
+							? terms.map((term, index) => `${index === 0 ? (term.value < 0 ? '− ' : '') : term.value < 0 ? ' − ' : ' + '}${nf.format(Math.abs(term.value))}`).join('')
+							: ar
+								? 'اختار من تحت'
+								: 'Pick something below'}
+					</p>
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<p className="text-[11.5px] font-bold text-slate-600 dark:text-slate-300">{ar ? 'من محفظتك' : 'From your wallet'}</p>
+					<div className="grid grid-cols-2 gap-2">
+						{sources.map(source => {
+							const on = picked.has(source.key);
+							return (
+								<button
+									key={source.key}
+									type="button"
+									role="checkbox"
+									aria-checked={on}
+									onClick={() => toggle(source.key)}
+									className={`flex min-h-[60px] min-w-0 items-center gap-2.5 rounded-2xl border px-3 text-start transition [touch-action:manipulation] active:scale-[0.98] ${
+										on
+											? 'border-[#1DAB61] bg-[#1DAB61]/[0.07] ring-1 ring-[#1DAB61]/30'
+											: 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/40 dark:hover:bg-slate-800'
+									}`}
+								>
+									<span
+										className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 transition ${
+											on ? 'border-[#1DAB61] bg-[#1DAB61] text-white' : 'border-slate-300 text-transparent dark:border-slate-600'
+										}`}
+										aria-hidden="true"
+									>
+										<Check size={12} strokeWidth={3.5} />
+									</span>
+									<span className="min-w-0">
+										<span className="block truncate text-xs font-bold text-slate-500 dark:text-slate-400">{source.label}</span>
+										<span className="block truncate text-sm font-black tabular-nums text-slate-900 dark:text-white">
+											{nf.format(source.value)}
+										</span>
+									</span>
+								</button>
+							);
+						})}
 					</div>
 				</div>
-				<button
-					type="button"
-					onClick={onEditBalance}
-					className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/12 px-3.5 text-xs font-bold text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/20 active:scale-95"
-				>
-					<Pencil size={13} />
-					{ar ? 'تعديل' : 'Edit'}
-				</button>
+
+				<div className="flex flex-col gap-2">
+					<p className="text-[11.5px] font-bold text-slate-600 dark:text-slate-300">{ar ? 'ضيف قيمة بإيدك' : 'Add your own value'}</p>
+					<form
+						className="flex flex-col gap-2"
+						onSubmit={event => {
+							event.preventDefault();
+							addExtra();
+						}}
+					>
+						<div className="flex gap-2">
+							<div className="grid shrink-0 grid-cols-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800" role="radiogroup" aria-label={ar ? 'العملية' : 'Operation'}>
+								{[
+									[1, Plus, ar ? 'زائد' : 'Add'],
+									[-1, Minus, ar ? 'ناقص' : 'Subtract'],
+								].map(([value, Icon, name]) => (
+									<button
+										key={value}
+										type="button"
+										role="radio"
+										aria-checked={sign === value}
+										aria-label={name}
+										onClick={() => setSign(value)}
+										className={`grid h-10 w-10 place-items-center rounded-lg transition ${
+											sign === value
+												? value > 0
+													? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-950'
+													: 'bg-white text-rose-600 shadow-sm dark:bg-slate-950'
+												: 'text-slate-500'
+										}`}
+									>
+										<Icon size={18} strokeWidth={2.5} />
+									</button>
+								))}
+							</div>
+							<input
+								inputMode="decimal"
+								value={draft}
+								onChange={event => setDraft(event.target.value)}
+								placeholder={ar ? 'المبلغ' : 'Amount'}
+								aria-label={ar ? 'المبلغ' : 'Amount'}
+								className={`${fieldClass} font-bold tabular-nums`}
+							/>
+						</div>
+						<div className="flex gap-2">
+							<input
+								value={label}
+								onChange={event => setLabel(event.target.value)}
+								maxLength={40}
+								placeholder={ar ? 'اسمها (اختياري)' : 'Label (optional)'}
+								aria-label={ar ? 'اسم القيمة' : 'Label'}
+								className={fieldClass}
+							/>
+							<button type="submit" disabled={!draftValid} className={`${primaryButton} h-12 shrink-0 sm:h-11`}>
+								<Plus size={16} />
+								{ar ? 'ضيف' : 'Add'}
+							</button>
+						</div>
+					</form>
+
+					{extras.length ? (
+						<ul className="flex flex-col divide-y divide-slate-100 rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
+							{extras.map(extra => (
+								<li key={extra.id} className="flex items-center gap-3 ps-3.5 pe-1">
+									<span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-600 dark:text-slate-300">{extra.label}</span>
+									<span
+										className={`shrink-0 text-sm font-black tabular-nums ${extra.value < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}
+										dir="ltr"
+									>
+										{extra.value < 0 ? '− ' : '+ '}
+										{nf.format(Math.abs(extra.value))}
+									</span>
+									<button
+										type="button"
+										onClick={() => setExtras(current => current.filter(item => item.id !== extra.id))}
+										aria-label={ar ? `شيل ${extra.label}` : `Remove ${extra.label}`}
+										className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800"
+									>
+										<X size={16} />
+									</button>
+								</li>
+							))}
+						</ul>
+					) : null}
+				</div>
+
+				{picked.size || extras.length ? (
+					<button
+						type="button"
+						onClick={() => {
+							setPicked(new Set());
+							setExtras([]);
+						}}
+						className="inline-flex h-11 items-center justify-center gap-2 self-center rounded-xl px-4 text-sm font-bold text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+					>
+						<RotateCcw size={15} />
+						{ar ? 'ابدأ من الأول' : 'Start over'}
+					</button>
+				) : null}
+			</div>
+		</Sheet>
+	);
+}
+
+/** Banknote-style guilloché rosette: a few phase-shifted wave rings, drawn once. */
+function guillochePaths() {
+	const paths = [];
+	const cx = 160;
+	const cy = 160;
+	for (let ring = 0; ring < 9; ring += 1) {
+		const radius = 52 + ring * 12;
+		const amp = 7 + (ring % 3) * 2;
+		const waves = 18 + (ring % 2) * 6;
+		const phase = ring * 0.45;
+		let d = '';
+		for (let step = 0; step <= 360; step += 2) {
+			const t = (step * Math.PI) / 180;
+			const r = radius + amp * Math.sin(waves * t + phase);
+			const x = (cx + r * Math.cos(t)).toFixed(1);
+			const y = (cy + r * Math.sin(t)).toFixed(1);
+			d += `${step === 0 ? 'M' : 'L'}${x} ${y}`;
+		}
+		paths.push(`${d}Z`);
+	}
+	return paths;
+}
+const GUILLOCHE = guillochePaths();
+
+/**
+ * The headline card. Balance first; under it one bar shows how everything you have splits
+ * (cash, gold, lent out, on the way). Each legend entry jumps to its rows in the table.
+ */
+function BalanceHero({ ar, summary, goldValueNow, lentTotal, spentThisMonth, onEditBalance, onJump, onCalc }) {
+	const balance = Number(summary?.balance) || 0;
+	const pending = Number(summary?.pendingTotal) || 0;
+	const parts = [
+		{ key: 'cash', label: ar ? 'كاش' : 'Cash', value: Math.max(0, balance), swatch: 'bg-white' },
+		{ key: 'gold', label: ar ? 'دهب' : 'Gold', value: goldValueNow, swatch: 'bg-[#f2c94c]' },
+		{ key: 'lent', label: ar ? 'عند ناس' : 'Lent out', value: lentTotal, swatch: 'bg-[#8fd3ff]' },
+		{
+			key: 'pending',
+			label: ar ? 'في الطريق' : 'On the way',
+			value: pending,
+			swatch: 'bg-[repeating-linear-gradient(135deg,rgba(255,255,255,0.75)_0_3px,rgba(255,255,255,0.18)_3px_6px)]',
+		},
+	];
+	const total = parts.reduce((sum, part) => sum + part.value, 0);
+
+	return (
+		<section className="relative isolate overflow-hidden rounded-[30px] bg-[#0c4430] text-white shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_24px_48px_-28px_rgba(6,40,27,0.95)] dark:bg-[#0a3a29]">
+			{/* Light from the top edge + the rosette, both quiet enough to read over */}
+			<span
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_85%_-10%,rgba(52,211,153,0.35),transparent_60%),radial-gradient(90%_70%_at_0%_110%,rgba(3,25,17,0.7),transparent_65%)]"
+			/>
+			<svg
+				aria-hidden="true"
+				viewBox="0 0 320 320"
+				className="pointer-events-none absolute -end-24 -top-28 -z-10 h-[340px] w-[340px] text-white opacity-[0.09] sm:-end-16"
+			>
+				{GUILLOCHE.map((d, index) => (
+					<path key={index} d={d} fill="none" stroke="currentColor" strokeWidth="0.8" />
+				))}
+			</svg>
+
+			<div className="px-5 pt-5 sm:px-7 sm:pt-6">
+				<div className="flex items-center justify-between gap-3">
+					<p className="text-sm font-semibold text-emerald-100/80">{ar ? 'الرصيد المتاح' : 'Available balance'}</p>
+					<div className="-me-1.5 flex items-center">
+						<button
+							type="button"
+							onClick={onCalc}
+							aria-label={ar ? 'حاسبة' : 'Calculator'}
+							title={ar ? 'حاسبة' : 'Calculator'}
+							className="grid h-11 w-11 place-items-center rounded-full text-emerald-50/90 transition [touch-action:manipulation] hover:bg-white/10 active:scale-95 active:bg-white/15"
+						>
+							<Calculator size={17} />
+						</button>
+						<button
+							type="button"
+							onClick={onEditBalance}
+							aria-label={ar ? 'تعديل الرصيد' : 'Edit balance'}
+							title={ar ? 'تعديل الرصيد' : 'Edit balance'}
+							className="grid h-11 w-11 place-items-center rounded-full text-emerald-50/90 transition [touch-action:manipulation] hover:bg-white/10 active:scale-95 active:bg-white/15"
+						>
+							<Pencil size={17} />
+						</button>
+					</div>
+				</div>
+
+				<p className="mt-1 max-w-full">
+					<MoneyFigure
+						value={balance}
+						ar={ar}
+						className="block truncate text-[44px] font-black leading-none tracking-[-0.03em] sm:text-[54px]"
+						unitClassName="ms-2 text-lg font-bold tracking-normal text-emerald-100/60 sm:text-xl"
+					/>
+				</p>
+
+				{total > 0 ? (
+					<p className="mt-3 text-[13px] text-emerald-100/70">
+						{ar ? 'كل اللي ليك ' : 'Everything you have '}
+						<MoneyFigure value={total} ar={ar} className="font-bold text-white" unitClassName="text-[11px] text-emerald-100/60" />
+					</p>
+				) : null}
+			</div>
+
+			{total > 0 ? (
+				<div className="px-5 pt-5 sm:px-7">
+					<div
+						className="flex h-2.5 w-full gap-[3px] overflow-hidden rounded-full"
+						role="img"
+						aria-label={parts
+							.filter(part => part.value > 0)
+							.map(part => `${part.label} ${Math.round((part.value / total) * 100)}%`)
+							.join('، ')}
+					>
+						{parts
+							.filter(part => part.value > 0)
+							.map(part => (
+								<span key={part.key} className={`h-full rounded-full ${part.swatch}`} style={{ flexGrow: part.value, flexBasis: 0, minWidth: 6 }} />
+							))}
+					</div>
+				</div>
+			) : null}
+
+			<div className="grid grid-cols-2 gap-x-2 px-3 pt-3 pb-2 sm:grid-cols-4 sm:px-5">
+				{parts.map(part => {
+					const share = total > 0 ? Math.round((part.value / total) * 100) : 0;
+					return (
+						<button
+							key={part.key}
+							type="button"
+							onClick={() => (part.key === 'cash' ? onEditBalance() : onJump(part.key))}
+							className="flex min-h-[56px] min-w-0 flex-col justify-center rounded-2xl px-2 py-2 text-start transition [touch-action:manipulation] hover:bg-white/[0.06] active:bg-white/10"
+						>
+							<span className="flex items-center gap-1.5 text-xs text-emerald-100/75">
+								<span className={`h-2.5 w-2.5 shrink-0 rounded-full ${part.swatch}`} aria-hidden="true" />
+								<span className="truncate">{part.label}</span>
+								{share > 0 ? <span className="tabular-nums text-emerald-100/45">{share}%</span> : null}
+							</span>
+							<MoneyFigure
+								value={part.value}
+								ar={ar}
+								className={`mt-1 block truncate text-[15px] font-bold leading-tight ${part.value > 0 ? 'text-white' : 'text-white/40'}`}
+								unitClassName="text-[10px] font-semibold text-emerald-100/50"
+							/>
+						</button>
+					);
+				})}
 			</div>
 
 			<button
 				type="button"
-				onClick={onEditBalance}
-				aria-label={ar ? 'تعديل الرصيد' : 'Edit balance'}
-				className="mt-5 block max-w-full text-start"
+				onClick={() => onJump('expense')}
+				className="flex w-full items-center gap-3 border-t border-white/[0.08] bg-black/[0.12] px-5 py-3.5 text-start transition [touch-action:manipulation] hover:bg-black/20 sm:px-7"
 			>
-				<MoneyFigure
-					value={balance}
-					ar={ar}
-					className="block truncate text-[40px] font-black leading-none tracking-tight sm:text-5xl"
-					unitClassName="text-lg text-white/60 sm:text-xl"
-				/>
+				<span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 text-rose-200">
+					<Receipt size={15} aria-hidden="true" />
+				</span>
+				<span className="min-w-0 flex-1 truncate text-[13px] text-emerald-100/80">
+					{ar ? 'صرفت الشهر ده' : 'Spent this month'}
+				</span>
+				<MoneyFigure value={spentThisMonth} ar={ar} className="shrink-0 text-sm font-bold text-white" unitClassName="text-[10px] text-emerald-100/55" />
+				<ChevronLeft size={16} className={`shrink-0 text-emerald-100/50 ${ar ? '' : 'rotate-180'}`} aria-hidden="true" />
 			</button>
-			{goldValueNow > 0 ? (
-				<p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-black/15 px-2.5 py-1 text-[11.5px] font-semibold text-white/80">
-					<TrendingUp size={12} />
-					{ar ? 'الإجمالي مع الدهب' : 'Net worth with gold'}
-					<MoneyFigure value={balance + goldValueNow} ar={ar} className="font-black text-white" unitClassName="text-[10px] text-white/60" />
-				</p>
-			) : null}
-
-			<div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-				{tiles.map(tile => (
-					<button
-						key={tile.key}
-						type="button"
-						onClick={() => onJump(tile.key)}
-						className="group flex min-w-0 flex-col gap-2 rounded-2xl bg-white/[0.07] p-3 text-start ring-1 ring-white/10 transition hover:bg-white/[0.12] active:scale-[0.98]"
-					>
-						<span className="flex items-center gap-1.5 text-[11px] font-semibold text-white/65">
-							<span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-white/12">
-								<tile.icon size={13} />
-							</span>
-							<span className="truncate">{tile.label}</span>
-						</span>
-						<MoneyFigure
-							value={tile.value}
-							ar={ar}
-							className={`block truncate text-[15px] font-black leading-tight ${tile.value > 0 ? 'text-white' : 'text-white/45'}`}
-							unitClassName="text-[10px] text-white/55"
-						/>
-					</button>
-				))}
-			</div>
 		</section>
 	);
 }
@@ -1629,16 +2412,26 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 	const money = useMoneyFormat(ar);
 	const queryClient = useQueryClient();
 	const [balanceOpen, setBalanceOpen] = useState(false);
+	const [addOpen, setAddOpen] = useState(false);
+	const [calcOpen, setCalcOpen] = useState(false);
+	const [addType, setAddType] = useState('money');
+	const [moneyFilter, setMoneyFilter] = useState('all');
+	const [openEntry, setOpenEntry] = useState(null);
 	const [editing, setEditing] = useState(null);
 	const [editingGold, setEditingGold] = useState(null);
 	const [editingLent, setEditingLent] = useState(null);
 	const [editingExpense, setEditingExpense] = useState(null);
-	const [filter, setFilter] = useState('all');
 	const [ledgerType, setLedgerType] = useState('all');
 	const ledgerRef = useRef(null);
 	const [lockedIds, setLockedIds] = useState(() => new Set());
 	const [addFormKey, setAddFormKey] = useState(0);
 	const today = todayYmd();
+
+	const closeAddAfterSuccess = () => {
+		setAddFormKey(key => key + 1);
+		setAddOpen(false);
+		toast.success(ar ? 'اتضافت' : 'Added');
+	};
 
 	const trackerQuery = useQuery({
 		queryKey: TRACKER_KEY,
@@ -1659,7 +2452,7 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 		mutationFn: payload => api.post('/money/tracker/items', payload),
 		onSuccess: res => {
 			applySnapshot(res);
-			setAddFormKey(key => key + 1);
+			closeAddAfterSuccess();
 			setLedgerType(current => (current === 'all' || current === 'money' ? current : 'money'));
 		},
 		onError: error => toast.error(apiError(error, ar ? 'تعذر الإضافة' : 'Could not add item')),
@@ -1678,7 +2471,7 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 		mutationFn: payload => api.post('/money/tracker/gold', payload),
 		onSuccess: res => {
 			applySnapshot(res);
-			setAddFormKey(key => key + 1);
+			closeAddAfterSuccess();
 			setLedgerType(current => (current === 'all' || current === 'gold' ? current : 'gold'));
 		},
 		onError: error => toast.error(apiError(error, ar ? 'تعذر إضافة الدهب' : 'Could not add gold')),
@@ -1697,7 +2490,7 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 		mutationFn: payload => api.post('/money/tracker/lent', payload),
 		onSuccess: res => {
 			applySnapshot(res);
-			setAddFormKey(key => key + 1);
+			closeAddAfterSuccess();
 			setLedgerType(current => (current === 'all' || current === 'lent' ? current : 'lent'));
 		},
 		onError: error => toast.error(apiError(error, ar ? 'تعذر إضافة السلفة' : 'Could not add lent money')),
@@ -1716,7 +2509,7 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 		mutationFn: payload => api.post('/money/tracker/expenses', payload),
 		onSuccess: res => {
 			applySnapshot(res);
-			setAddFormKey(key => key + 1);
+			closeAddAfterSuccess();
 			setLedgerType(current => (current === 'all' || current === 'expense' ? current : 'expense'));
 		},
 		onError: error => toast.error(apiError(error, ar ? 'تعذر إضافة المصروف' : 'Could not add expense')),
@@ -1778,10 +2571,13 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 	const goldValueNow = Number(gold?.totalValue) || 0;
 	const lentTotal = Number(lent?.total) || 0;
 	const spentThisMonth = Number(expenses?.spentThisMonth) || 0;
+	const ledgerRows = useMemo(() => buildLedgerRows(data), [data]);
+	// Looked up by type + id (not key): toggling a money item changes its kind but it's the same entry.
+	const openRow = openEntry ? ledgerRows.find(row => row.type === openEntry.type && row.id === openEntry.id) || null : null;
 	const jumpToLedger = key => {
 		if (key === 'pending') {
 			setLedgerType('money');
-			setFilter('pending');
+			setMoneyFilter('pending');
 		} else {
 			setLedgerType(key);
 		}
@@ -1813,13 +2609,6 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 
 	return (
 		<div className="wa-dk mx-auto flex w-full max-w-4xl flex-col gap-4 p-3 pb-6 sm:gap-5 sm:p-4 md:p-6" dir={ar ? 'rtl' : 'ltr'}>
-			<header className="hidden items-center gap-3 min-[769px]:flex">
-				<span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#1DAB61] text-white">
-					<Wallet size={19} />
-				</span>
-				<h2 className="text-lg font-black text-slate-900 dark:text-white">{ar ? 'محفظتي' : 'My wallet'}</h2>
-			</header>
-
 			{trackerQuery.isLoading ? (
 				<div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
 					<Loader2 size={16} className="animate-spin" />
@@ -1842,54 +2631,15 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 						spentThisMonth={spentThisMonth}
 						onEditBalance={() => setBalanceOpen(true)}
 						onJump={jumpToLedger}
+						onCalc={() => setCalcOpen(true)}
 					/>
 
-					<section
-						className={`${surfaceCard} grid grid-cols-1 divide-y divide-slate-100 overflow-hidden sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-slate-800`}
-					>
-						<SummaryCard
-							ar={ar}
-							icon={TrendingUp}
-							tone="green"
-							label={ar ? 'جالي الشهر ده' : 'Received'}
-							value={summary?.receivedThisMonth}
-							hint={formatMonth(summary?.month, ar)}
-						/>
-						<SummaryCard
-							ar={ar}
-							icon={Hourglass}
-							tone="amber"
-							label={ar ? 'فاضل الشهر ده' : 'Due this month'}
-							value={summary?.pendingThisMonth}
-							hint={formatMonth(summary?.month, ar)}
-						/>
-						<SummaryCard
-							ar={ar}
-							icon={CalendarClock}
-							tone="sky"
-							label={ar ? 'الشهر الجاي' : 'Next month'}
-							value={summary?.pendingNextMonth}
-							hint={formatMonth(summary?.nextMonth, ar)}
-						/>
-					</section>
-
-					<AddCard
+					<QuickActions
 						ar={ar}
-						money={money}
-						usdToEgp={usdToEgp}
-						gold={gold}
-						lent={lent}
-						expenses={expenses}
-						resetKey={addFormKey}
-						moneyPending={createMutation.isPending}
-						goldPending={createGoldMutation.isPending}
-						lentPending={createLentMutation.isPending}
-						expensePending={createExpenseMutation.isPending}
-						onAddMoney={payload => createMutation.mutate(payload)}
-						onAddGold={payload => createGoldMutation.mutate(payload)}
-						onAddLent={payload => createLentMutation.mutate(payload)}
-						onAddExpense={payload => createExpenseMutation.mutate(payload)}
-						onRetryExpenses={() => void queryClient.invalidateQueries({ queryKey: TRACKER_KEY })}
+						onPick={type => {
+							setAddType(type);
+							setAddOpen(true);
+						}}
 					/>
 
 					<LedgerTable
@@ -1899,13 +2649,14 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 						data={data}
 						type={ledgerType}
 						onTypeChange={setLedgerType}
-						moneyFilter={filter}
-						onMoneyFilterChange={setFilter}
 						lockedIds={lockedIds}
 						onToggle={toggleItem}
 						onEdit={editRow}
 						onDelete={deleteRow}
 						anchorRef={ledgerRef}
+						moneyFilter={moneyFilter}
+						onMoneyFilterChange={setMoneyFilter}
+						onOpenRow={row => setOpenEntry({ type: row.type, id: row.id })}
 					/>
 				</>
 			)}
@@ -1918,6 +2669,50 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 				pending={balanceMutation.isPending}
 				onClose={() => setBalanceOpen(false)}
 				onSubmit={payload => balanceMutation.mutate(payload)}
+			/>
+			<AddEntrySheet
+				open={addOpen}
+				initialType={addType}
+				onClose={() => setAddOpen(false)}
+				ar={ar}
+				money={money}
+				usdToEgp={usdToEgp}
+				gold={gold}
+				lent={lent}
+				expenses={expenses}
+				resetKey={addFormKey}
+				moneyPending={createMutation.isPending}
+				goldPending={createGoldMutation.isPending}
+				lentPending={createLentMutation.isPending}
+				expensePending={createExpenseMutation.isPending}
+				onAddMoney={payload => createMutation.mutate(payload)}
+				onAddGold={payload => createGoldMutation.mutate(payload)}
+				onAddLent={payload => createLentMutation.mutate(payload)}
+				onAddExpense={payload => createExpenseMutation.mutate(payload)}
+				onRetryExpenses={() => void queryClient.invalidateQueries({ queryKey: TRACKER_KEY })}
+			/>
+			<CalcSheet
+				open={calcOpen}
+				ar={ar}
+				onClose={() => setCalcOpen(false)}
+				sources={[
+					{ key: 'cash', label: ar ? 'الكاش' : 'Cash', value: Number(summary?.balance) || 0 },
+					{ key: 'gold', label: ar ? 'الدهب' : 'Gold', value: goldValueNow },
+					{ key: 'lent', label: ar ? 'عند ناس' : 'Lent out', value: lentTotal },
+					{ key: 'pending', label: ar ? 'في الطريق' : 'On the way', value: Number(summary?.pendingTotal) || 0 },
+				]}
+			/>
+			<EntrySheet
+				row={openRow}
+				ar={ar}
+				money={money}
+				today={today}
+				quote={gold?.quote}
+				locked={openRow ? lockedIds.has(openRow.id) : false}
+				onClose={() => setOpenEntry(null)}
+				onToggle={toggleItem}
+				onEdit={editRow}
+				onDelete={deleteRow}
 			/>
 			<EditItemSheet
 				item={editing}

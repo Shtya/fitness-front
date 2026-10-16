@@ -11,7 +11,7 @@ import {
 	Search, Download, ChevronDown,
 	ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 	Image as ImageIcon, X, Maximize2, SlidersHorizontal,
-	Inbox, Filter, ArrowUpDown, ZoomIn, ZoomOut, Check, Minus,
+	Inbox, Filter, ArrowUpDown, ArrowUp, ArrowDown, ZoomIn, ZoomOut, Check, Minus,
 } from "lucide-react";
 import { baseImg } from "@/utils/axios";
 import { useLocale, useTranslations } from "next-intl";
@@ -50,6 +50,22 @@ function normalizeImages(value, fallbackAlt = "") {
 		if (src) return [{ src, alt: value.alt ?? fallbackAlt }];
 	}
 	return [];
+}
+
+/** Plain-text name of a column, for phone-card labels and sort buttons. */
+function columnLabel(col) {
+	if (typeof col.label === "string") return col.label;
+	if (typeof col.header === "string" || typeof col.header === "number") return String(col.header);
+	return "";
+}
+
+function compareValues(a, b, locale) {
+	if (a == null || a === "") return b == null || b === "" ? 0 : 1;
+	if (b == null || b === "") return -1;
+	const na = typeof a === "number" ? a : Number(a);
+	const nb = typeof b === "number" ? b : Number(b);
+	if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+	return String(a).localeCompare(String(b), locale, { numeric: true, sensitivity: "base" });
 }
 
 function parseLimit(raw) {
@@ -682,12 +698,15 @@ const RowCheckbox = memo(function RowCheckbox({ checked, indeterminate = false, 
 	);
 });
 
-function ColumnHeader({ col }) {
+function ColumnHeader({ col, sort, onSort }) {
+	if (!col.sortable) return <span className="dt-th__label">{col.header}</span>;
+	const dir = sort?.key === col.key ? sort.dir : null;
+	const Icon = dir === "asc" ? ArrowUp : dir === "desc" ? ArrowDown : ArrowUpDown;
 	return (
-		<span className="dt-th__label">
+		<button type="button" onClick={() => onSort(col)} className={cn("dt-th__label dt-th__sortbtn", dir && "is-sorted")}>
 			{col.header}
-			{col.sortable && <ArrowUpDown size={11} className="dt-th__sort" aria-hidden />}
-		</span>
+			<Icon size={12} className="dt-th__sort" aria-hidden />
+		</button>
 	);
 }
 
@@ -706,11 +725,22 @@ export default function DataTable({
 	calm = false,
 	showRowIndex = false,
 	selectable = false, bulkActions = [], onSelectionChange,
+	sort: controlledSort, onSortChange,
+	mobileLayout = "cards",
 }) {
+	const locale = useLocale();
 	columns = columns.map((col) => (col?.key || col?.accessor == null ? col : { ...col, key: col.accessor }));
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [imgModal, setImgModal] = useState({ open: false, src: "", alt: "" });
 	const [selected, setSelected] = useState(() => new Set());
+
+	const [localSort, setLocalSort] = useState(null);
+	const sort = controlledSort !== undefined ? controlledSort : localSort;
+	const onSort = useCallback((col) => {
+		const next = sort?.key !== col.key ? { key: col.key, dir: "asc" } : sort.dir === "asc" ? { key: col.key, dir: "desc" } : null;
+		if (onSortChange) onSortChange(next);
+		else setLocalSort(next);
+	}, [sort, onSortChange]);
 
 	const openImage = useCallback((src, alt = "") => setImgModal({ open: true, src, alt }), []);
 	const closeImage = useCallback(() => setImgModal({ open: false, src: "", alt: "" }), []);
@@ -749,6 +779,29 @@ export default function DataTable({
 
 	const hasFilters = Boolean(filters);
 
+	// Rows paired with their original index, sorted locally unless the page sorts on the server.
+	const entries = useMemo(() => {
+		const list = data.map((row, i) => ({ row, i }));
+		if (!sort || onSortChange) return list;
+		const col = columns.find((c) => c.key === sort.key);
+		if (!col) return list;
+		const get = typeof col.sortValue === "function" ? col.sortValue : (row) => row?.[col.key];
+		const sign = sort.dir === "desc" ? -1 : 1;
+		const blank = (v) => v == null || v === "";
+		// Empty cells stay at the bottom in both directions.
+		return list.sort((a, b) => {
+			const va = get(a.row);
+			const vb = get(b.row);
+			if (blank(va) || blank(vb)) return (blank(va) ? 1 : 0) - (blank(vb) ? 1 : 0) || a.i - b.i;
+			return sign * compareValues(va, vb, locale) || a.i - b.i;
+		});
+	}, [data, sort, onSortChange, columns, locale]);
+
+	const firstDataKey = useMemo(
+		() => columns.find((c) => !ACTION_KEYS.has(c.key) && c.type !== "img" && c.type !== "imgs")?.key,
+		[columns],
+	);
+
 	const allColumns = useMemo(() => {
 		let cols = columns;
 		if (showRowIndex) {
@@ -778,7 +831,7 @@ export default function DataTable({
 	const showHead = !hideToolbar || toolbar || (selectable && selected.size > 0);
 
 	return (
-		<div className={cn("dt", compact && "is-compact", striped && "is-striped", hoverable && "is-hoverable", !calm && "is-animated", className)}>
+		<div className={cn("dt", compact && "is-compact", striped && "is-striped", hoverable && "is-hoverable", !calm && "is-animated", mobileLayout === "cards" && "dt--cards", className)}>
 			<div className="dt-card">
 				{showHead && (
 					<div className="dt-head">
@@ -866,9 +919,10 @@ export default function DataTable({
 									<th
 										key={col.key}
 										scope="col"
+										aria-sort={col.sortable ? (sort?.key === col.key ? (sort.dir === "asc" ? "ascending" : "descending") : "none") : undefined}
 										className={cn("dt-th", col.headClassName, ACTION_KEYS.has(col.key) && "dt-sticky-end")}
 									>
-										<ColumnHeader col={col} />
+										<ColumnHeader col={col} sort={sort} onSort={onSort} />
 									</th>
 								))}
 							</tr>
@@ -890,7 +944,7 @@ export default function DataTable({
 									</td>
 								</tr>
 							) : (
-								data.map((row, i) => {
+								entries.map(({ row, i }) => {
 									const key = rowKey(row, i);
 									const isSelected = selectable && selected.has(key);
 									return (
@@ -901,23 +955,26 @@ export default function DataTable({
 											aria-selected={selectable ? isSelected : undefined}
 										>
 											{allColumns.map((col) => {
-												const cls = cn("dt-td", col.className, ACTION_KEYS.has(col.key) && "dt-sticky-end");
+												const isAction = ACTION_KEYS.has(col.key);
+													const cls = cn("dt-td", col.className, isAction && "dt-sticky-end dt-td--actions", col.key === firstDataKey && "dt-td--primary", col.key === "__select__" && "dt-td--select", col.key === "__idx__" && "dt-td--index");
+													const label = columnLabel(col);
+													const cellProps = { className: cls, "data-label": label || undefined };
 												if (col.type === "img") {
 													return (
-														<td key={col.key} className={cls}>
+														<td key={col.key} {...cellProps}>
 															<ImgCell src={row[col.key]} alt={col.header ?? ""} onOpen={openImage} />
 														</td>
 													);
 												}
 												if (col.type === "imgs") {
 													return (
-														<td key={col.key} className={cls}>
+														<td key={col.key} {...cellProps}>
 															<ImgsCell images={normalizeImages(row[col.key], col.header ?? "")} onOpen={openImage} />
 														</td>
 													);
 												}
 												return (
-													<td key={col.key} className={cls}>
+													<td key={col.key} {...cellProps}>
 														{typeof col.cell === "function" ? col.cell(row, i, helpers) : (
 															<span className="block max-w-[220px] truncate" title={row[col.key] != null ? String(row[col.key]) : undefined}>
 																{row[col.key]}
