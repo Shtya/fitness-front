@@ -357,6 +357,38 @@ html.dark .sd-saved {
 	background: color-mix(in srgb, var(--sd-ink) 5%, transparent);
 }
 
+.sd-icon-btn:disabled {
+	opacity: 0.55;
+	cursor: wait;
+}
+
+.sd-share-btn.is-live {
+	color: var(--color-primary-600, #0d9488);
+	border-color: color-mix(in srgb, var(--color-primary-500, #14b8a6) 35%, var(--sd-line));
+}
+
+.sd-share-btn.is-copied {
+	color: #059669;
+}
+
+.sd-shell--shared {
+	min-height: 100dvh;
+	height: 100dvh;
+}
+
+.sd-shell--shared .sd-main {
+	width: 100%;
+	max-width: none;
+}
+
+.sd-shell--shared .sd-chrome--shared {
+	justify-content: space-between;
+}
+
+.sd-shell--shared .sd-canvas {
+	height: calc(100dvh - 3.25rem);
+}
+
 html.dark .sd-icon-btn {
 	background: rgba(15, 23, 42, 0.55);
 }

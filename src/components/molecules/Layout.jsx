@@ -308,7 +308,8 @@ export default function Layout({ children }) {
 	const isBareViewport =
 		pathname.startsWith('/auth') ||
 		pathname.startsWith('/open') ||
-		pathname.startsWith('/particle-playground');
+		pathname.startsWith('/particle-playground') ||
+		pathname.startsWith('/d/');
 	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
 	const isMetaWhatsAppRoute = pathname.includes('/dashboard/meta-whatsapp');
 	const isChatRoute = pathname.includes('/dashboard/chat');

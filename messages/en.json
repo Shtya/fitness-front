@@ -9344,7 +9344,17 @@
 		"close": "Close",
 		"shelfTitle": "Words to review",
 		"shelfHint": "Check a word once you have come back to it. It leaves this list.",
-		"shelfButton": "Review words"
+		"shelfButton": "Review words",
+		"share": "Share document",
+		"shareAgain": "Copy share link — also refreshes the live document",
+		"shareCopied": "Share link copied",
+		"shareReady": "Share link ready",
+		"shareCopyHint": "Copy this link",
+		"shareEmpty": "Write something before sharing",
+		"shareFailed": "Could not create share link",
+		"shareMissing": "This shared document was not found or was removed.",
+		"shareSaving": "Saving…",
+		"shareHint": "Anyone with the link can view and edit this document"
 	},
 	"notifications": {
 		"header": {

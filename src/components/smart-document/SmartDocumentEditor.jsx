@@ -11,10 +11,16 @@ import {
 	Eye,
 	FilePlus2,
 	History,
+	Link2,
+	Loader2,
 	PanelLeftClose,
 	PanelLeftOpen,
+	Share2,
 	Trash2,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useLocale } from 'next-intl';
+import api from '@/utils/axios';
 import { detectDominantDir } from '@/lib/smart-document/structure';
 import MarkdownVisualEditor from './MarkdownVisualEditor';
 import TypographyPanel from './TypographyPanel';
@@ -80,10 +86,12 @@ export default function SmartDocumentEditor({
 	storageKey = 'so7ba:smart-document',
 	labels = {},
 }) {
+	const locale = useLocale();
 	const draftKey = `${storageKey}:draft`;
 	const historyKey = `${storageKey}:history`;
 	const activeIdKey = `${storageKey}:activeId`;
 	const typographyKey = `${storageKey}:typography`;
+	const sharesKey = `${storageKey}:shares`;
 
 	const [mode, setMode] = useState('edit'); // edit | preview
 	const [text, setText] = useState('');
@@ -101,6 +109,9 @@ export default function SmartDocumentEditor({
 	const [peek, setPeek] = useState(null);
 	const [offer, setOffer] = useState(null);
 	const [shelfOpen, setShelfOpen] = useState(false);
+	const [shareTokens, setShareTokens] = useState({});
+	const [sharing, setSharing] = useState(false);
+	const [shareCopied, setShareCopied] = useState(false);
 	const renameRef = useRef(null);
 
 	const textRef = useRef('');
@@ -200,8 +211,31 @@ export default function SmartDocumentEditor({
 		setActiveId(id);
 		setDocDir(detectDominantDir(initial));
 		setTypography(normalizeTypography(readJson(typographyKey, null)));
+		setShareTokens(readJson(sharesKey, {}) || {});
 		setReady(true);
-	}, [draftKey, historyKey, activeIdKey, typographyKey]);
+	}, [draftKey, historyKey, activeIdKey, typographyKey, sharesKey]);
+
+	const activeShareToken = activeId ? shareTokens[activeId] || null : null;
+
+	const rememberShareToken = useCallback(
+		(docId, token) => {
+			if (!docId || !token) return;
+			setShareTokens((prev) => {
+				const next = { ...(prev || {}), [docId]: token };
+				writeJson(sharesKey, next);
+				return next;
+			});
+		},
+		[sharesKey],
+	);
+
+	const buildShareUrl = useCallback(
+		(token) => {
+			if (typeof window === 'undefined' || !token) return '';
+			return `${window.location.origin}/${locale}/d/${token}`;
+		},
+		[locale],
+	);
 
 	const updateTypography = useCallback(
 		(next) => {
@@ -252,6 +286,77 @@ export default function SmartDocumentEditor({
 			dirtyRef.current = false;
 		}
 	}, [persistDraft, upsertHistory]);
+
+	const shareActiveDocument = useCallback(async () => {
+		if (sharing) return;
+		flushSave();
+		const content = String(textRef.current || '');
+		if (!content.trim()) {
+			toast.error(labels.shareEmpty || 'Write something before sharing');
+			return;
+		}
+		let docId = activeIdRef.current;
+		if (!docId) {
+			docId = upsertHistory(content, null) || uid();
+			activeIdRef.current = docId;
+			setActiveId(docId);
+		}
+		const title =
+			history.find((h) => h.id === docId)?.title || titleFromSource(content) || labels.untitled || 'Untitled';
+		setSharing(true);
+		try {
+			const { data } = await api.post('/smart-documents/shares', {
+				localDocId: docId,
+				title,
+				content,
+				typography,
+				token: shareTokens[docId] || null,
+			});
+			const token = String(data?.token || '');
+			if (!token) throw new Error('no-token');
+			rememberShareToken(docId, token);
+			const url = buildShareUrl(token);
+			try {
+				await navigator.clipboard.writeText(url);
+				setShareCopied(true);
+				window.setTimeout(() => setShareCopied(false), 1600);
+				toast.success(labels.shareCopied || 'Share link copied');
+			} catch {
+				toast.success(labels.shareReady || 'Share link ready');
+				window.prompt(labels.shareCopyHint || 'Copy this link', url);
+			}
+		} catch {
+			toast.error(labels.shareFailed || 'Could not create share link');
+		} finally {
+			setSharing(false);
+		}
+	}, [
+		sharing,
+		flushSave,
+		upsertHistory,
+		history,
+		labels,
+		typography,
+		shareTokens,
+		rememberShareToken,
+		buildShareUrl,
+	]);
+
+	const copyExistingShareLink = useCallback(async () => {
+		if (!activeShareToken) {
+			void shareActiveDocument();
+			return;
+		}
+		const url = buildShareUrl(activeShareToken);
+		try {
+			await navigator.clipboard.writeText(url);
+			setShareCopied(true);
+			window.setTimeout(() => setShareCopied(false), 1600);
+			toast.success(labels.shareCopied || 'Share link copied');
+		} catch {
+			window.prompt(labels.shareCopyHint || 'Copy this link', url);
+		}
+	}, [activeShareToken, buildShareUrl, labels, shareActiveDocument]);
 
 	useEffect(() => {
 		const onHide = () => {
@@ -497,6 +602,31 @@ export default function SmartDocumentEditor({
 					</div>
 
 					<div className="sd-chrome-actions">
+						<button
+							type="button"
+							className={`sd-icon-btn sd-share-btn${activeShareToken ? ' is-live' : ''}${shareCopied ? ' is-copied' : ''}`}
+							title={
+								activeShareToken
+									? labels.shareAgain || 'Copy share link (updates the live doc)'
+									: labels.share || 'Share document'
+							}
+							disabled={sharing}
+							onClick={() => void shareActiveDocument()}
+							onContextMenu={(e) => {
+								e.preventDefault();
+								void copyExistingShareLink();
+							}}
+						>
+							{sharing ? (
+								<Loader2 size={15} className="animate-spin" />
+							) : shareCopied ? (
+								<Check size={15} />
+							) : activeShareToken ? (
+								<Link2 size={15} />
+							) : (
+								<Share2 size={15} />
+							)}
+						</button>
 						<button
 							type="button"
 							className={`sd-icon-btn sd-lookup-launch${shelfOpen ? ' is-open' : ''}`}

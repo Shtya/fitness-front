@@ -19125,10 +19125,17 @@ function WhatsAppWorkspaceContent() {
 				null;
 			const date = raw ? new Date(raw) : null;
 			if (!date || Number.isNaN(date.getTime())) return '';
-			return date.toLocaleTimeString(locale === 'ar' ? 'ar-EG' : undefined, {
+			const loc = locale === 'ar' ? 'ar-EG' : undefined;
+			const day = date.toLocaleDateString(loc, {
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+			});
+			const time = date.toLocaleTimeString(loc, {
 				hour: '2-digit',
 				minute: '2-digit',
 			});
+			return `${day} ${time}`;
 		};
 
 		if (fromSelectedMessages) {

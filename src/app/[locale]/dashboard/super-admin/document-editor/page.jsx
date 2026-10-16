@@ -86,6 +86,13 @@ export default function DocumentEditorPage() {
 					shelfTitle: t('shelfTitle'),
 					shelfHint: t('shelfHint'),
 					shelfButton: t('shelfButton'),
+					share: t('share'),
+					shareAgain: t('shareAgain'),
+					shareCopied: t('shareCopied'),
+					shareReady: t('shareReady'),
+					shareCopyHint: t('shareCopyHint'),
+					shareEmpty: t('shareEmpty'),
+					shareFailed: t('shareFailed'),
 				}}
 			/>
 		</div>
