@@ -18618,6 +18618,10 @@ function WhatsAppWorkspaceContent() {
 			}
 			const form = new FormData();
 			form.append('file', outgoingFile);
+			// Send the browser's UTF-8 name separately — Multer often mangles Arabic in originalname.
+			if (outgoingFile?.name) {
+				form.append('fileName', String(outgoingFile.name));
+			}
 			const { data: uploaded } = await api.post(
 				`/whatsapp/accounts/${targetAccountId}/media`,
 				form,
@@ -18628,12 +18632,16 @@ function WhatsAppWorkspaceContent() {
 				},
 			);
 			uploadedFileId = uploaded.fileId;
+			const displayFileName =
+				String(outgoingFile?.name || '').trim() ||
+				String(uploaded.fileName || '').trim() ||
+				undefined;
 			const { data } = await api.post(
 				`/whatsapp/conversations/${targetConversationId}/messages`,
 				{
 					type,
 					fileId: uploaded.fileId,
-					fileName: uploaded.fileName || outgoingFile?.name || undefined,
+					fileName: displayFileName,
 					caption: caption || undefined,
 					clientMessageId,
 					quotedProviderMessageId: replySnapshot?.providerMessageId || undefined,

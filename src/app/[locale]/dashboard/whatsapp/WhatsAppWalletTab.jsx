@@ -172,7 +172,12 @@ function removeLentLocally(snapshot, loan) {
 	if (!snapshot?.lent) return snapshot;
 	const loans = snapshot.lent.loans.filter(row => row.id !== loan.id);
 	const total = round2(loans.reduce((sum, row) => sum + (Number(row.amount) || 0), 0));
-	return { ...snapshot, lent: { ...snapshot.lent, loans, total } };
+	const amount = Number(loan.amount) || 0;
+	const summary =
+		loan.affectsBalance === true && snapshot.summary
+			? { ...snapshot.summary, balance: round2((Number(snapshot.summary.balance) || 0) + amount) }
+			: snapshot.summary;
+	return { ...snapshot, summary, lent: { ...snapshot.lent, loans, total } };
 }
 
 function removeExpenseLocally(snapshot, expense) {
@@ -185,10 +190,39 @@ function removeExpenseLocally(snapshot, expense) {
 		month && String(expense.date || '').startsWith(month)
 			? round2((Number(snapshot.expenses.spentThisMonth) || 0) - amount)
 			: snapshot.expenses.spentThisMonth;
-	const summary = snapshot.summary
-		? { ...snapshot.summary, balance: round2((Number(snapshot.summary.balance) || 0) + amount) }
-		: snapshot.summary;
+	const deducted = expense.affectsBalance !== false;
+	const summary =
+		deducted && snapshot.summary
+			? { ...snapshot.summary, balance: round2((Number(snapshot.summary.balance) || 0) + amount) }
+			: snapshot.summary;
 	return { ...snapshot, summary, expenses: { ...snapshot.expenses, items, total, spentThisMonth } };
+}
+
+/** Shared checkbox: deduct this amount from the available cash balance. */
+function AffectsBalanceToggle({ ar, checked, onChange, kind = 'expense' }) {
+	const title = ar ? 'خصم من الرصيد المتاح' : 'Deduct from available balance';
+	const hint =
+		kind === 'lent'
+			? ar
+				? 'لو السلفة من فلوس برة الرصيد المتتبع، شيل العلامة'
+				: 'Uncheck if this loan was not from your tracked balance'
+			: ar
+				? 'لو دي فلوس كانت معاك برة الرصيد المتتبع، شيل العلامة'
+				: 'Uncheck if this spend was not from your tracked balance';
+	return (
+		<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-slate-600">
+			<input
+				type="checkbox"
+				checked={checked}
+				onChange={event => onChange(event.target.checked)}
+				className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#1DAB61] focus:ring-[#1DAB61]/30 dark:border-slate-600 dark:bg-slate-950"
+			/>
+			<span className="min-w-0">
+				<span className="block text-[13px] font-bold text-slate-800 dark:text-slate-100">{title}</span>
+				<span className="mt-0.5 block text-[11.5px] font-medium leading-snug text-slate-500 dark:text-slate-400">{hint}</span>
+			</span>
+		</label>
+	);
 }
 
 const fieldClass =
@@ -792,6 +826,7 @@ function AddLentForm({ ar, pending, onSubmit, available }) {
 	const [person, setPerson] = useState('');
 	const [amount, setAmount] = useState('');
 	const [date, setDate] = useState(todayYmd);
+	const [affectsBalance, setAffectsBalance] = useState(true);
 	const value = parseAmount(amount);
 	const amountInvalid = amount.trim() !== '' && !(Number.isFinite(value) && value > 0);
 	const valid = person.trim() && Number.isFinite(value) && value > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
@@ -809,7 +844,7 @@ function AddLentForm({ ar, pending, onSubmit, available }) {
 			className="flex flex-col gap-4"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ person: person.trim(), amount: value, date });
+				if (valid) onSubmit({ person: person.trim(), amount: value, date, affectsBalance });
 			}}
 		>
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_9.5rem_10rem]">
@@ -836,6 +871,7 @@ function AddLentForm({ ar, pending, onSubmit, available }) {
 					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
 				</Field>
 			</div>
+			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="lent" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} w-full sm:w-auto sm:self-end`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
 				{ar ? 'إضافة السلفة' : 'Add loan'}
@@ -848,6 +884,7 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 	const [name, setName] = useState('');
 	const [amount, setAmount] = useState('');
 	const [date, setDate] = useState(todayYmd);
+	const [affectsBalance, setAffectsBalance] = useState(true);
 	const value = parseAmount(amount);
 	const amountInvalid = amount.trim() !== '' && !(Number.isFinite(value) && value > 0);
 	const valid = name.trim() && Number.isFinite(value) && value > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
@@ -872,7 +909,7 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 			className="flex flex-col gap-4"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ name: name.trim(), amount: value, date });
+				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance });
 			}}
 		>
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_9.5rem_10rem]">
@@ -899,6 +936,7 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
 				</Field>
 			</div>
+			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="expense" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} w-full sm:w-auto sm:self-end`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
 				{ar ? 'إضافة المصروف' : 'Add expense'}
@@ -1020,6 +1058,7 @@ function LentEditForm({ loan, ar, pending, onSubmit }) {
 	const [person, setPerson] = useState(loan.person);
 	const [amount, setAmount] = useState(() => String(loan.amount));
 	const [date, setDate] = useState(loan.date);
+	const [affectsBalance, setAffectsBalance] = useState(() => loan.affectsBalance === true);
 	const value = parseAmount(amount);
 	const valid = person.trim() && Number.isFinite(value) && value > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
 
@@ -1028,7 +1067,7 @@ function LentEditForm({ loan, ar, pending, onSubmit }) {
 			className="flex flex-col gap-3"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ person: person.trim(), amount: value, date });
+				if (valid) onSubmit({ person: person.trim(), amount: value, date, affectsBalance });
 			}}
 		>
 			<label className="flex flex-col gap-1.5">
@@ -1050,6 +1089,7 @@ function LentEditForm({ loan, ar, pending, onSubmit }) {
 					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
 				</label>
 			</div>
+			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="lent" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} mt-2`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
 				{ar ? 'حفظ' : 'Save'}
@@ -1062,6 +1102,7 @@ function ExpenseEditForm({ expense, ar, pending, onSubmit }) {
 	const [name, setName] = useState(expense.name);
 	const [amount, setAmount] = useState(() => String(expense.amount));
 	const [date, setDate] = useState(expense.date);
+	const [affectsBalance, setAffectsBalance] = useState(() => expense.affectsBalance !== false);
 	const value = parseAmount(amount);
 	const valid = name.trim() && Number.isFinite(value) && value > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
 
@@ -1070,7 +1111,7 @@ function ExpenseEditForm({ expense, ar, pending, onSubmit }) {
 			className="flex flex-col gap-3"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ name: name.trim(), amount: value, date });
+				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance });
 			}}
 		>
 			<label className="flex flex-col gap-1.5">
@@ -1092,6 +1133,7 @@ function ExpenseEditForm({ expense, ar, pending, onSubmit }) {
 					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
 				</label>
 			</div>
+			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="expense" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} mt-2`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
 				{ar ? 'حفظ' : 'Save'}
@@ -1294,9 +1336,25 @@ function LedgerStatus({ row, ar, today, locked, onToggle, interactive = true, co
 		return <span className={`${pill} ${LEDGER_TONES.gold.badge}`}>{ar ? `عيار ${row.source.karat}` : `${row.source.karat}K`}</span>;
 	}
 	if (row.type === 'lent') {
-		return <span className={`${pill} ${LEDGER_TONES.lent.badge}`}>{ar ? 'عند ناس' : 'Lent out'}</span>;
+		const offBalance = row.source?.affectsBalance !== true;
+		return (
+			<span className={`${pill} ${LEDGER_TONES.lent.badge}`}>
+				{ar ? 'عند ناس' : 'Lent out'}
+				{offBalance ? (
+					<span className="ms-1 opacity-70">{ar ? '· مش من الرصيد' : '· off balance'}</span>
+				) : null}
+			</span>
+		);
 	}
-	return <span className={`${pill} ${LEDGER_TONES.expense.badge}`}>{ar ? 'اتصرف' : 'Spent'}</span>;
+	const offBalance = row.source?.affectsBalance === false;
+	return (
+		<span className={`${pill} ${LEDGER_TONES.expense.badge}`}>
+			{ar ? 'اتصرف' : 'Spent'}
+			{offBalance ? (
+				<span className="ms-1 opacity-70">{ar ? '· مش من الرصيد' : '· off balance'}</span>
+			) : null}
+		</span>
+	);
 }
 
 function LedgerAmount({ row, money }) {
@@ -1923,6 +1981,14 @@ function EntrySheet({ row, ar, money, today, quote, locked, onClose, onToggle, o
 			if (price) details.push([ar ? 'سعر الجرام النهارده' : 'Price per gram today', `${priceNf.format(price)} ${ar ? 'ج.م' : 'EGP'}`]);
 		} else {
 			details.push([current.type === 'lent' ? (ar ? 'اتسلفت يوم' : 'Lent on') : ar ? 'اتصرف يوم' : 'Spent on', formatDay(current.date, ar)]);
+			if (current.type === 'expense' || current.type === 'lent') {
+				const deducted =
+					current.type === 'expense' ? item.affectsBalance !== false : item.affectsBalance === true;
+				details.push([
+					ar ? 'من الرصيد المتاح' : 'From available balance',
+					deducted ? (ar ? 'نعم، اتخصم' : 'Yes, deducted') : ar ? 'لأ، برة الرصيد' : 'No, off balance',
+				]);
+			}
 		}
 	}
 
