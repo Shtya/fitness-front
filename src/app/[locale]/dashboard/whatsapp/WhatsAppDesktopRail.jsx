@@ -2,6 +2,7 @@
 
 import {
 	BarChart3,
+	BookOpen,
 	Bot,
 	Forward,
 	LayoutGrid,
@@ -137,6 +138,7 @@ export default function WhatsAppDesktopRail({
 	showFakeChat = true,
 	showAutoForward = true,
 	showWallet = false,
+	showAdhkar = false,
 	showAgent = false,
 	showcaseOnly = false,
 	darkMode = false,
@@ -222,6 +224,13 @@ export default function WhatsAppDesktopRail({
 					id: 'wallet',
 					label: labels.wallet || (ar ? 'محفظتي' : 'Wallet'),
 					icon: Wallet,
+				}
+			: null,
+		showAdhkar
+			? {
+					id: 'adhkar',
+					label: labels.adhkar || (ar ? 'أذكاري' : 'My Adhkar'),
+					icon: BookOpen,
 				}
 			: null,
 	].filter(Boolean);

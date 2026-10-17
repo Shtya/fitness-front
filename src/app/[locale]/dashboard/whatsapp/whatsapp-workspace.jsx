@@ -20,6 +20,7 @@ import {
 	BellOff,
 	Bookmark,
 	BookmarkPlus,
+	BookOpen,
 	BookUser,
 	Bot,
 	Copy,
@@ -309,6 +310,7 @@ const WhatsAppBoardTab = lazy(() =>
 const FakeChatStudio = lazy(() => import('./fake-chat/FakeChatStudio'));
 const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
+const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const ContactsPanel = lazy(() => import('./ContactsPanel'));
 const DemoModeSettings = lazy(() => import('./demo/components/DemoModeSettings'));
 const WhatsAppAiSettings = lazy(() => import('./ai/WhatsAppAiSettings'));
@@ -488,6 +490,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'fakeChat',
 	'autoForward',
 	'wallet',
+	'adhkar',
 	'agent',
 	'settings',
 	'profile',
@@ -776,6 +779,7 @@ const translations = {
 		fakeChat: 'Fake chat',
 		autoForward: 'Auto-forward',
 		wallet: 'Wallet',
+		adhkar: 'My Adhkar',
 		contacts: 'Contacts',
 		openSidebar: 'Open sidebar',
 		addToBoard: 'Add to tasks board',
@@ -1295,6 +1299,7 @@ const translations = {
 		fakeChat: 'شات وهمي',
 		autoForward: 'تحويل تلقائي',
 		wallet: 'محفظتي',
+		adhkar: 'أذكاري',
 		contacts: 'جهات الاتصال',
 		openSidebar: 'فتح القائمة الجانبية',
 		addToBoard: 'إضافة للوحة المهام',
@@ -1803,6 +1808,7 @@ const tabs = [
 	['fakeChat', Sparkles],
 	['autoForward', Forward],
 	['wallet', Wallet],
+	['adhkar', BookOpen],
 	['settings', Settings],
 ];
 
@@ -22353,7 +22359,15 @@ function WhatsAppWorkspaceContent() {
 		setTabError('');
 		if (tab === 'profile') return;
 		if (tab === 'emails') return;
-		if (tab === 'board' || tab === 'fakeChat' || tab === 'autoForward' || tab === 'wallet' || tab === 'agent') return;
+		if (
+			tab === 'board' ||
+			tab === 'fakeChat' ||
+			tab === 'autoForward' ||
+			tab === 'wallet' ||
+			tab === 'adhkar' ||
+			tab === 'agent'
+		)
+			return;
 		if (!accountId) return;
 		const targetAccountId = accountId;
 		const requestId = ++tabRequestId.current;
@@ -23949,7 +23963,9 @@ function WhatsAppWorkspaceContent() {
 			}}
 		>
 			{/* Wallet scrolls the header away with the page; other tabs keep it pinned. */}
-			{!(isConversationWorkspaceTab(activeTab) && conversationId) && activeTab !== 'wallet' && (
+			{!(isConversationWorkspaceTab(activeTab) && conversationId) &&
+				activeTab !== 'wallet' &&
+				activeTab !== 'adhkar' && (
 				<MobileWhatsAppHeader
 					locale={locale}
 					title={
@@ -24236,6 +24252,7 @@ function WhatsAppWorkspaceContent() {
 					showFakeChat={!showcaseOnly && fakeChatAllowed}
 					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
 					showWallet={!showcaseOnly}
+					showAdhkar={!showcaseOnly}
 					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
@@ -28656,6 +28673,28 @@ function WhatsAppWorkspaceContent() {
 					</>
 				)}
 
+				{activeTab === 'adhkar' && (
+					<>
+						<MobileWhatsAppHeader
+							locale={locale}
+							title={t.adhkar || t.title}
+							onSearch={() => {
+								void loadTabData('chats');
+								setSearchOpen(true);
+								window.setTimeout(() => {
+									document.querySelector('.wa-m-search input')?.focus();
+								}, 60);
+							}}
+							onCamera={() => void loadTabData('statuses')}
+							onMore={() => setMobileMenuOpen(current => !current)}
+							showTitle={false}
+						/>
+						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+							<WhatsAppAdhkarTab locale={locale} onExit={() => void loadTabData('chats')} />
+						</Suspense>
+					</>
+				)}
+
 				{contactsPopupOpen ? (
 					<WaDialog
 						title={t.contacts}
@@ -28945,7 +28984,8 @@ function WhatsAppWorkspaceContent() {
 				)}
 			</div>
 			</div>
-			{!(isConversationWorkspaceTab(activeTab) && conversationId) && (
+			{/* Adhkar is a focused reading space: no bottom tab bar (it has its own way back). */}
+			{!(isConversationWorkspaceTab(activeTab) && conversationId) && activeTab !== 'adhkar' && (
 				<MobileWhatsAppNav
 					activeTab={activeTab}
 					onSelect={tab => void loadTabData(tab)}
