@@ -1,9 +1,10 @@
 'use client';
 
-import { memo, useEffect, useId, useLayoutEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import './wa-chat-idle.css';
+import { GameStage, GamesLauncher } from './games/WaGames';
 
 if (typeof window !== 'undefined') gsap.registerPlugin(MotionPathPlugin);
 
@@ -394,11 +395,34 @@ const RelayScene = memo(
 	() => true,
 );
 
+/** Arabic UI? Read from the document (the pane gets no locale prop). */
+function useIsArabic() {
+	const [ar, setAr] = useState(false);
+	useEffect(() => {
+		const html = document.documentElement;
+		setAr(String(html.lang || '').toLowerCase().startsWith('ar') || html.dir === 'rtl');
+	}, []);
+	return ar;
+}
+
 function WhatsAppChatIdlePane({ title, hint, unreadLabel, steps }) {
 	const stepList = Array.isArray(steps) && steps.length ? steps : [];
+	const ar = useIsArabic();
+	// While no chat is open, a game can take over this space.
+	const [game, setGame] = useState(null);
+	const closeGame = useCallback(() => setGame(null), []);
+
+	if (game) {
+		return (
+			<div className="wa-chat-idle is-playing">
+				<GameStage ar={ar} gameId={game} onClose={closeGame} onSwitch={setGame} />
+			</div>
+		);
+	}
 
 	return (
 		<div className="wa-chat-idle" role="status" aria-live="polite">
+			<GamesLauncher ar={ar} onPick={setGame} />
 			<div className="wa-chat-idle__stage">
 				<RelayScene />
 

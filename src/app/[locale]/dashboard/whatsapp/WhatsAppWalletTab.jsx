@@ -6,10 +6,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'framer-motion';
 import {
+	ArrowDownLeft,
+	ArrowUpRight,
+	ArrowRight,
 	BarChart3,
 	Calculator,
+	Calendar,
 	Check,
 	ChevronLeft,
+	ChevronRight,
 	Coins,
 	Filter,
 	HandCoins,
@@ -20,6 +25,7 @@ import {
 	Pencil,
 	Plus,
 	Receipt,
+	Repeat,
 	RotateCcw,
 	Trash2,
 	Wallet,
@@ -81,10 +87,44 @@ function formatDay(ymd, ar) {
 	return d.toLocaleDateString(ar ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'short' });
 }
 
+function formatWeekdayDay(ymd, ar) {
+	if (!ymd) return '';
+	const d = new Date(`${ymd}T00:00:00`);
+	if (Number.isNaN(d.getTime())) return ymd;
+	return d.toLocaleDateString(ar ? 'ar-EG' : 'en-GB', { weekday: 'short', day: 'numeric' });
+}
+
 function formatMonth(ym, ar) {
 	if (!ym) return '';
 	const d = new Date(`${ym}-01T00:00:00`);
 	return Number.isNaN(d.getTime()) ? ym : d.toLocaleDateString(ar ? 'ar-EG' : 'en-GB', { month: 'long' });
+}
+
+function formatMonthYear(ym, ar) {
+	if (!ym) return '';
+	const d = new Date(`${ym}-01T00:00:00`);
+	return Number.isNaN(d.getTime())
+		? ym
+		: d.toLocaleDateString(ar ? 'ar-EG' : 'en-GB', { month: 'long', year: 'numeric' });
+}
+
+/** Shift a `YYYY-MM` key by `delta` months. */
+function shiftMonthYm(ym, delta) {
+	const [y, m] = String(ym || '')
+		.split('-')
+		.map(Number);
+	if (!y || !m) return ym;
+	const d = new Date(Date.UTC(y, m - 1 + Number(delta || 0), 1));
+	return d.toISOString().slice(0, 7);
+}
+
+/** Progress fill color: quiet green for small days → amber → rose for the heaviest day. */
+function spendBarColor(ratio) {
+	const t = Math.min(1, Math.max(0, ratio));
+	const hue = Math.round(145 - t * 145);
+	const sat = Math.round(55 + t * 25);
+	const light = Math.round(48 - t * 6);
+	return `hsl(${hue} ${sat}% ${light}%)`;
 }
 
 /** Shift `todayYmd()` back by `days` (Cairo calendar day). */
@@ -138,6 +178,7 @@ function applyLocally(snapshot, item, action, today) {
 						date: today,
 						egpAmount: amount,
 						fxRate: row.currency === 'USD' ? lockedRate : null,
+						recurring: row.recurring === true,
 					}
 				: row,
 		);
@@ -153,11 +194,77 @@ function applyLocally(snapshot, item, action, today) {
 						kind: 'pending',
 						egpAmount: amount,
 						fxRate: row.currency === 'USD' ? snapshot.fx?.usdToEgp ?? row.fxRate : null,
+						recurring: row.recurring === true,
 					}
 				: row,
 		);
 	}
-	return { ...snapshot, summary: s, items };
+	const next = { ...snapshot, summary: s, items };
+	return { ...next, forecast: rebuildForecast(next) };
+}
+
+/** Flip monthly flag on a money or spend row and refresh the next-month forecast. */
+function toggleRecurringLocally(snapshot, row) {
+	if (!snapshot) return snapshot;
+	if (row.type === 'money') {
+		const item = row.source;
+		const items = (snapshot.items || []).map(entry =>
+			entry.id === item.id && entry.kind === item.kind ? { ...entry, recurring: !entry.recurring } : entry,
+		);
+		const next = { ...snapshot, items };
+		return { ...next, forecast: rebuildForecast(next) };
+	}
+	if (row.type === 'expense' && snapshot.expenses) {
+		const expense = row.source;
+		const items = snapshot.expenses.items.map(entry =>
+			entry.id === expense.id ? { ...entry, recurring: !entry.recurring } : entry,
+		);
+		const next = { ...snapshot, expenses: { ...snapshot.expenses, items } };
+		return { ...next, forecast: rebuildForecast(next) };
+	}
+	return snapshot;
+}
+
+function monthBoundsFromKey(ym) {
+	if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return null;
+	const start = `${ym}-01`;
+	const [y, m] = ym.split('-').map(Number);
+	const endDate = new Date(Date.UTC(y, m, 0));
+	const end = endDate.toISOString().slice(0, 10);
+	return { start, end };
+}
+
+/** Mirrors backend expenseCountsInNextMonthOut for optimistic forecast. */
+function expenseCountsInNextMonthOut(expense, nextMonthKey) {
+	if (expense.affectsBalance === false) return false;
+	const date = String(expense.date || '').slice(0, 10);
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+	const bounds = monthBoundsFromKey(nextMonthKey);
+	if (!bounds) return expense.recurring === true;
+	if (date > bounds.end) return false;
+	if (expense.recurring) return true;
+	return date >= bounds.start && date <= bounds.end;
+}
+
+function rebuildForecast(snapshot) {
+	const balance = Number(snapshot?.summary?.balance) || 0;
+	const nextMonth = snapshot?.summary?.nextMonth || snapshot?.forecast?.nextMonth || '';
+	let nextMonthIn = 0;
+	for (const item of snapshot?.items || []) {
+		if (!item.recurring) continue;
+		nextMonthIn = round2(nextMonthIn + (Number(item.egpAmount ?? item.amount) || 0));
+	}
+	let nextMonthOut = 0;
+	for (const expense of snapshot?.expenses?.items || []) {
+		if (!expenseCountsInNextMonthOut(expense, nextMonth)) continue;
+		nextMonthOut = round2(nextMonthOut + (Number(expense.amount) || 0));
+	}
+	return {
+		nextMonthIn,
+		nextMonthOut,
+		projectedBalance: round2(balance + nextMonthIn - nextMonthOut),
+		nextMonth,
+	};
 }
 
 function removeGoldLocally(snapshot, holding) {
@@ -187,15 +294,46 @@ function removeExpenseLocally(snapshot, expense) {
 	const amount = Number(expense.amount) || 0;
 	const month = snapshot.expenses.month;
 	const spentThisMonth =
-		month && String(expense.date || '').startsWith(month)
+		expense.balanceApplied === true && month && String(expense.date || '').startsWith(month)
 			? round2((Number(snapshot.expenses.spentThisMonth) || 0) - amount)
 			: snapshot.expenses.spentThisMonth;
-	const deducted = expense.affectsBalance !== false;
+	const deducted = expense.balanceApplied === true;
 	const summary =
 		deducted && snapshot.summary
 			? { ...snapshot.summary, balance: round2((Number(snapshot.summary.balance) || 0) + amount) }
 			: snapshot.summary;
-	return { ...snapshot, summary, expenses: { ...snapshot.expenses, items, total, spentThisMonth } };
+	const next = { ...snapshot, summary, expenses: { ...snapshot.expenses, items, total, spentThisMonth } };
+	return { ...next, forecast: rebuildForecast(next) };
+}
+
+/** Shared checkbox: this amount repeats every month (salary in / rent out). */
+function RecurringMonthlyToggle({ ar, checked, onChange, kind = 'money' }) {
+	const title = ar ? 'بيتكرر كل شهر' : 'Repeats every month';
+	const hint =
+		kind === 'expense'
+			? ar
+				? 'زي مرتب بتديه أو إيجار — هيتخصم تاني الشهر الجاي في التوقّع'
+				: 'Like rent or a salary you pay — counted again next month in the forecast'
+			: ar
+				? 'زي المرتب — هيتضاف تاني الشهر الجاي في التوقّع'
+				: 'Like a salary — counted again next month in the forecast';
+	return (
+		<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-slate-600">
+			<input
+				type="checkbox"
+				checked={checked}
+				onChange={event => onChange(event.target.checked)}
+				className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#1DAB61] focus:ring-[#1DAB61]/30 dark:border-slate-600 dark:bg-slate-950"
+			/>
+			<span className="min-w-0 flex-1">
+				<span className="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-100">
+					<Repeat size={14} className="shrink-0 text-[#1DAB61]" aria-hidden="true" />
+					{title}
+				</span>
+				<span className="mt-0.5 block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{hint}</span>
+			</span>
+		</label>
+	);
 }
 
 /** Shared checkbox: deduct this amount from the available cash balance. */
@@ -241,6 +379,47 @@ function Field({ label, hint, error, className = '', children }) {
 			{children}
 			{error ? <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">{error}</span> : null}
 		</label>
+	);
+}
+
+/** Date input with a visible calendar control (native picker icon is often invisible in dark/custom UIs). */
+function DateInput({ value, onChange, ar, className = '', ...props }) {
+	const ref = useRef(null);
+	const openPicker = event => {
+		event.preventDefault();
+		const el = ref.current;
+		if (!el) return;
+		try {
+			if (typeof el.showPicker === 'function') el.showPicker();
+			else {
+				el.focus();
+				el.click();
+			}
+		} catch {
+			el.focus();
+		}
+	};
+	return (
+		<div className="relative min-w-0">
+			<input
+				ref={ref}
+				type="date"
+				value={value}
+				onChange={onChange}
+				className={`${fieldClass} pe-11 tabular-nums [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`}
+				{...props}
+			/>
+			<button
+				type="button"
+				tabIndex={-1}
+				aria-label={ar ? 'اختيار التاريخ' : 'Pick date'}
+				title={ar ? 'اختيار التاريخ' : 'Pick date'}
+				onClick={openPicker}
+				className="absolute end-1.5 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+			>
+				<Calendar size={16} aria-hidden="true" />
+			</button>
+		</div>
 	);
 }
 
@@ -535,6 +714,7 @@ function EditItemForm({ item, ar, money, usdToEgp, pending, onSubmit }) {
 	const [name, setName] = useState(item.name);
 	const [amount, setAmount] = useState(() => (item.currency === 'USD' ? `$${item.amount}` : String(item.amount)));
 	const [date, setDate] = useState(item.date);
+	const [recurring, setRecurring] = useState(item.recurring === true);
 	const parsed = parseMoneyInput(amount);
 	const value = parsed.amount;
 	const currency = parsed.currency;
@@ -547,7 +727,7 @@ function EditItemForm({ item, ar, money, usdToEgp, pending, onSubmit }) {
 			className="flex flex-col gap-3"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ name: name.trim(), amount: value, currency, date });
+				if (valid) onSubmit({ name: name.trim(), amount: value, currency, date, recurring });
 			}}
 		>
 			<label className="flex flex-col gap-1.5">
@@ -572,9 +752,10 @@ function EditItemForm({ item, ar, money, usdToEgp, pending, onSubmit }) {
 					<span className="text-xs font-bold text-slate-500 dark:text-slate-400">
 						{received ? (ar ? 'وصلت يوم' : 'Received on') : ar ? 'متوقعة يوم' : 'Expected on'}
 					</span>
-					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
+					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
 				</label>
 			</div>
+			<RecurringMonthlyToggle ar={ar} checked={recurring} onChange={setRecurring} kind="money" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} mt-2`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
 				{ar ? 'حفظ' : 'Save'}
@@ -588,6 +769,7 @@ function AddItemForm({ ar, money, usdToEgp, pending, onSubmit }) {
 	const [amount, setAmount] = useState('');
 	const [date, setDate] = useState(todayYmd);
 	const [received, setReceived] = useState(false);
+	const [recurring, setRecurring] = useState(false);
 	const parsed = parseMoneyInput(amount);
 	const value = parsed.amount;
 	const currency = parsed.currency;
@@ -599,10 +781,10 @@ function AddItemForm({ ar, money, usdToEgp, pending, onSubmit }) {
 			className="flex flex-col gap-4"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ name: name.trim(), amount: value, currency, date, received });
+				if (valid) onSubmit({ name: name.trim(), amount: value, currency, date, received, recurring });
 			}}
 		>
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(9.5rem,11rem)_10rem]">
+			<div className="grid grid-cols-[minmax(0,1fr)_5.75rem] gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(5.75rem,7.5rem)_9.5rem]">
 				<Field label={ar ? 'الاسم' : 'Name'} className="col-span-2 sm:col-span-1">
 					<input
 						value={name}
@@ -629,10 +811,11 @@ function AddItemForm({ ar, money, usdToEgp, pending, onSubmit }) {
 						{currency === 'USD' ? <UsdFxBadge ar={ar} money={money} amount={value} rate={usdToEgp} /> : null}
 					</div>
 				</Field>
-				<Field label={ar ? 'التاريخ' : 'Date'}>
-					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
+				<Field label={ar ? 'التاريخ' : 'Date'} className="col-span-2 sm:col-span-1">
+					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
 				</Field>
 			</div>
+			<RecurringMonthlyToggle ar={ar} checked={recurring} onChange={setRecurring} kind="money" />
 			<div className="flex flex-wrap items-center gap-3">
 				<button
 					type="button"
@@ -847,7 +1030,7 @@ function AddLentForm({ ar, pending, onSubmit, available }) {
 				if (valid) onSubmit({ person: person.trim(), amount: value, date, affectsBalance });
 			}}
 		>
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_9.5rem_10rem]">
+			<div className="grid grid-cols-[minmax(0,1fr)_5.75rem] gap-3 sm:grid-cols-[minmax(0,1.5fr)_5.75rem_9.5rem]">
 				<Field label={ar ? 'مع مين؟' : 'Who has it?'} className="col-span-2 sm:col-span-1">
 					<input
 						value={person}
@@ -867,8 +1050,8 @@ function AddLentForm({ ar, pending, onSubmit, available }) {
 						className={`${fieldClass} font-bold tabular-nums`}
 					/>
 				</Field>
-				<Field label={ar ? 'تاريخ السلفة' : 'Lent on'}>
-					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
+				<Field label={ar ? 'تاريخ السلفة' : 'Lent on'} className="col-span-2 sm:col-span-1">
+					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
 				</Field>
 			</div>
 			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="lent" />
@@ -885,6 +1068,7 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 	const [amount, setAmount] = useState('');
 	const [date, setDate] = useState(todayYmd);
 	const [affectsBalance, setAffectsBalance] = useState(true);
+	const [recurring, setRecurring] = useState(false);
 	const value = parseAmount(amount);
 	const amountInvalid = amount.trim() !== '' && !(Number.isFinite(value) && value > 0);
 	const valid = name.trim() && Number.isFinite(value) && value > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
@@ -909,10 +1093,10 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 			className="flex flex-col gap-4"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance });
+				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance, recurring });
 			}}
 		>
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_9.5rem_10rem]">
+			<div className="grid grid-cols-[minmax(0,1fr)_5.75rem] gap-3 sm:grid-cols-[minmax(0,1.5fr)_5.75rem_9.5rem]">
 				<Field label={ar ? 'صرفت في إيه؟' : 'Spent on'} className="col-span-2 sm:col-span-1">
 					<input
 						value={name}
@@ -932,11 +1116,19 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 						className={`${fieldClass} font-bold tabular-nums`}
 					/>
 				</Field>
-				<Field label={ar ? 'تاريخ الصرف' : 'Date'}>
-					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
+				<Field label={ar ? 'تاريخ الصرف' : 'Date'} className="col-span-2 sm:col-span-1">
+					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
 				</Field>
 			</div>
+			{affectsBalance && date > todayYmd() ? (
+				<p className="rounded-xl bg-violet-50 px-3.5 py-2.5 text-[12px] font-semibold leading-snug text-violet-800 dark:bg-violet-950/40 dark:text-violet-200">
+					{ar
+						? 'التاريخ في المستقبل — مش هيتخصم من الرصيد دلوقتي، هيتطبّق يوم التاريخ ده ويظهر في توقّع الشهر الجاي.'
+						: 'Future date — won’t leave your balance now; it applies on that day and shows in next-month forecast.'}
+				</p>
+			) : null}
 			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="expense" />
+			<RecurringMonthlyToggle ar={ar} checked={recurring} onChange={setRecurring} kind="expense" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} w-full sm:w-auto sm:self-end`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
 				{ar ? 'إضافة المصروف' : 'Add expense'}
@@ -1086,7 +1278,7 @@ function LentEditForm({ loan, ar, pending, onSubmit }) {
 				</label>
 				<label className="flex min-w-0 flex-col gap-1.5">
 					<span className="text-xs font-bold text-slate-500 dark:text-slate-400">{ar ? 'تاريخ السلفة' : 'Lent on'}</span>
-					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
+					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
 				</label>
 			</div>
 			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="lent" />
@@ -1103,6 +1295,7 @@ function ExpenseEditForm({ expense, ar, pending, onSubmit }) {
 	const [amount, setAmount] = useState(() => String(expense.amount));
 	const [date, setDate] = useState(expense.date);
 	const [affectsBalance, setAffectsBalance] = useState(() => expense.affectsBalance !== false);
+	const [recurring, setRecurring] = useState(() => expense.recurring === true);
 	const value = parseAmount(amount);
 	const valid = name.trim() && Number.isFinite(value) && value > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
 
@@ -1111,7 +1304,7 @@ function ExpenseEditForm({ expense, ar, pending, onSubmit }) {
 			className="flex flex-col gap-3"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance });
+				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance, recurring });
 			}}
 		>
 			<label className="flex flex-col gap-1.5">
@@ -1130,10 +1323,18 @@ function ExpenseEditForm({ expense, ar, pending, onSubmit }) {
 				</label>
 				<label className="flex min-w-0 flex-col gap-1.5">
 					<span className="text-xs font-bold text-slate-500 dark:text-slate-400">{ar ? 'تاريخ الصرف' : 'Spent on'}</span>
-					<input type="date" value={date} onChange={event => setDate(event.target.value)} className={`${fieldClass} tabular-nums`} />
+					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
 				</label>
 			</div>
+			{affectsBalance && date > todayYmd() ? (
+				<p className="rounded-xl bg-violet-50 px-3.5 py-2.5 text-[12px] font-semibold leading-snug text-violet-800 dark:bg-violet-950/40 dark:text-violet-200">
+					{ar
+						? 'التاريخ في المستقبل — مش هيتخصم دلوقتي، هيتطبّق يوم التاريخ.'
+						: 'Future date — won’t deduct now; applies on that day.'}
+				</p>
+			) : null}
 			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="expense" />
+			<RecurringMonthlyToggle ar={ar} checked={recurring} onChange={setRecurring} kind="expense" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} mt-2`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
 				{ar ? 'حفظ' : 'Save'}
@@ -1347,6 +1548,15 @@ function LedgerStatus({ row, ar, today, locked, onToggle, interactive = true, co
 		);
 	}
 	const offBalance = row.source?.affectsBalance === false;
+	const scheduled = !offBalance && row.source?.balanceApplied !== true && row.date && row.date > today;
+	if (scheduled) {
+		return (
+			<span className={`${pill} bg-violet-50 text-violet-700 ring-1 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900`}>
+				<Hourglass size={12} aria-hidden="true" />
+				{ar ? 'مجدول' : 'Scheduled'}
+			</span>
+		);
+	}
 	return (
 		<span className={`${pill} ${LEDGER_TONES.expense.badge}`}>
 			{ar ? 'اتصرف' : 'Spent'}
@@ -1381,9 +1591,26 @@ function LedgerAmount({ row, money }) {
 	);
 }
 
-function LedgerActions({ ar, onEdit, onDelete }) {
+function LedgerActions({ ar, recurring, onToggleRecurring, onEdit, onDelete }) {
+	const monthly = recurring === true;
 	return (
 		<div className="flex shrink-0 items-center justify-end">
+			{onToggleRecurring ? (
+				<button
+					type="button"
+					onClick={onToggleRecurring}
+					aria-pressed={monthly}
+					aria-label={monthly ? (ar ? 'إلغاء التكرار الشهري' : 'Stop monthly repeat') : ar ? 'تكرار كل شهر' : 'Repeat every month'}
+					title={monthly ? (ar ? 'بيتكرر كل شهر — دوس للإلغاء' : 'Repeats monthly — click to stop') : ar ? 'خلّيه يتكرر كل شهر' : 'Mark as monthly'}
+					className={`grid h-8 w-8 place-items-center rounded-lg transition ${
+						monthly
+							? 'bg-emerald-50 text-[#1DAB61] ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900'
+							: 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+					}`}
+				>
+					<Repeat size={14} />
+				</button>
+			) : null}
 			<button
 				type="button"
 				onClick={onEdit}
@@ -1398,60 +1625,129 @@ function LedgerActions({ ar, onEdit, onDelete }) {
 	);
 }
 
+function FilterChoice({ active, label, count, onClick, icon: Icon }) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={`flex h-11 items-center justify-between gap-3 rounded-xl border px-3.5 text-sm font-bold transition ${
+				active
+					? 'border-[#1DAB61] bg-[#1DAB61]/10 text-[#128c4f] dark:text-[#4ade80]'
+					: 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+			}`}
+		>
+			<span className="inline-flex min-w-0 items-center gap-2">
+				{Icon ? <Icon size={14} className="shrink-0 opacity-80" aria-hidden="true" /> : null}
+				<span className="truncate">{label}</span>
+			</span>
+			{count != null ? <span className="tabular-nums opacity-60">{count}</span> : null}
+		</button>
+	);
+}
+
 /** Filter / chart panels for the ledger — opened from the toolbar icon. */
-function LedgerFilterSheet({ open, ar, type, moneyFilter, counts, expenseMin, expenseDays, onClose, onApplyMoney, onApplyExpense, onOpenChart }) {
+function LedgerFilterSheet({
+	open,
+	ar,
+	type,
+	moneyFilter,
+	moneyRecurring,
+	counts,
+	expenseMin,
+	expenseDays,
+	expenseRecurring,
+	onClose,
+	onApplyMoney,
+	onApplyExpense,
+	onOpenChart,
+}) {
 	const [draftMoney, setDraftMoney] = useState(moneyFilter);
+	const [draftMoneyRecurring, setDraftMoneyRecurring] = useState(moneyRecurring);
 	const [draftMin, setDraftMin] = useState(expenseMin);
 	const [draftDays, setDraftDays] = useState(expenseDays);
+	const [draftExpenseRecurring, setDraftExpenseRecurring] = useState(expenseRecurring);
 
 	useEffect(() => {
 		if (!open) return;
 		setDraftMoney(moneyFilter);
+		setDraftMoneyRecurring(moneyRecurring);
 		setDraftMin(expenseMin);
 		setDraftDays(expenseDays);
-	}, [open, moneyFilter, expenseMin, expenseDays]);
+		setDraftExpenseRecurring(expenseRecurring);
+	}, [open, moneyFilter, moneyRecurring, expenseMin, expenseDays, expenseRecurring]);
 
 	const title = type === 'expense' ? (ar ? 'فلاتر الصرف' : 'Spend filters') : ar ? 'فلاتر الفلوس' : 'Money filters';
+	const recurringChoices = [
+		['all', ar ? 'الكل' : 'All', type === 'expense' ? counts.expense : counts.money, null],
+		['monthly', ar ? 'كل شهر' : 'Monthly', type === 'expense' ? counts.expenseMonthly : counts.moneyMonthly, Repeat],
+		['once', ar ? 'مرة واحدة' : 'One-time', type === 'expense' ? counts.expenseOnce : counts.moneyOnce, null],
+	];
 
 	return (
 		<Sheet open={open} ar={ar} title={title} onClose={onClose}>
 			{type === 'money' ? (
-				<div className="flex flex-col gap-3">
-					<p className="text-xs text-slate-500 dark:text-slate-400">{ar ? 'اعرض حسب حالة الاستلام' : 'Filter by received status'}</p>
+				<div className="flex flex-col gap-4">
 					<div className="flex flex-col gap-1.5">
+						<p className="text-xs text-slate-500 dark:text-slate-400">{ar ? 'حالة الاستلام' : 'Received status'}</p>
 						{[
 							['all', ar ? 'الكل' : 'All', counts.money],
 							['pending', ar ? 'لسه ماوصلتش' : 'Waiting', counts.pending],
 							['received', ar ? 'وصلت' : 'Received', counts.received],
 						].map(([key, label, count]) => (
-							<button
+							<FilterChoice key={key} active={draftMoney === key} label={label} count={count} onClick={() => setDraftMoney(key)} />
+						))}
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<p className="text-xs text-slate-500 dark:text-slate-400">{ar ? 'التكرار' : 'Repeat'}</p>
+						{recurringChoices.map(([key, label, count, Icon]) => (
+							<FilterChoice
 								key={key}
-								type="button"
-								onClick={() => setDraftMoney(key)}
-								className={`flex h-11 items-center justify-between rounded-xl border px-3.5 text-sm font-bold transition ${
-									draftMoney === key
-										? 'border-[#1DAB61] bg-[#1DAB61]/10 text-[#128c4f] dark:text-[#4ade80]'
-										: 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-								}`}
-							>
-								{label}
-								<span className="tabular-nums opacity-60">{count}</span>
-							</button>
+								active={draftMoneyRecurring === key}
+								label={label}
+								count={count}
+								icon={Icon}
+								onClick={() => setDraftMoneyRecurring(key)}
+							/>
 						))}
 					</div>
 					<button
 						type="button"
 						className={`${primaryButton} mt-1`}
 						onClick={() => {
-							onApplyMoney(draftMoney);
+							onApplyMoney({ status: draftMoney, recurring: draftMoneyRecurring });
 							onClose();
 						}}
 					>
 						{ar ? 'تطبيق' : 'Apply'}
 					</button>
+					<button
+						type="button"
+						onClick={() => {
+							setDraftMoney('all');
+							setDraftMoneyRecurring('all');
+							onApplyMoney({ status: 'all', recurring: 'all' });
+							onClose();
+						}}
+						className="text-xs font-bold text-slate-400 underline"
+					>
+						{ar ? 'مسح الفلاتر' : 'Clear filters'}
+					</button>
 				</div>
 			) : (
-				<div className="flex flex-col gap-3">
+				<div className="flex flex-col gap-4">
+					<div className="flex flex-col gap-1.5">
+						<p className="text-xs text-slate-500 dark:text-slate-400">{ar ? 'التكرار' : 'Repeat'}</p>
+						{recurringChoices.map(([key, label, count, Icon]) => (
+							<FilterChoice
+								key={key}
+								active={draftExpenseRecurring === key}
+								label={label}
+								count={count}
+								icon={Icon}
+								onClick={() => setDraftExpenseRecurring(key)}
+							/>
+						))}
+					</div>
 					<Field label={ar ? 'المبلغ أكبر من' : 'Amount above'} hint={ar ? 'ج.م' : 'EGP'}>
 						<input
 							inputMode="decimal"
@@ -1474,7 +1770,7 @@ function LedgerFilterSheet({ open, ar, type, moneyFilter, counts, expenseMin, ex
 						type="button"
 						className={`${primaryButton}`}
 						onClick={() => {
-							onApplyExpense({ min: draftMin, days: draftDays });
+							onApplyExpense({ min: draftMin, days: draftDays, recurring: draftExpenseRecurring });
 							onClose();
 						}}
 					>
@@ -1496,7 +1792,8 @@ function LedgerFilterSheet({ open, ar, type, moneyFilter, counts, expenseMin, ex
 						onClick={() => {
 							setDraftMin('');
 							setDraftDays('');
-							onApplyExpense({ min: '', days: '' });
+							setDraftExpenseRecurring('all');
+							onApplyExpense({ min: '', days: '', recurring: 'all' });
 							onClose();
 						}}
 						className="text-xs font-bold text-slate-400 underline"
@@ -1509,30 +1806,100 @@ function LedgerFilterSheet({ open, ar, type, moneyFilter, counts, expenseMin, ex
 	);
 }
 
-function SpendDailyChart({ open, ar, money, series, onClose }) {
-	const max = series.reduce((m, [, v]) => Math.max(m, v), 0) || 1;
+function SpendDailyChart({ open, ar, money, series, today, onClose }) {
+	const thisMonth = String(today || todayYmd()).slice(0, 7);
+	const [month, setMonth] = useState(thisMonth);
+
+	useEffect(() => {
+		if (open) setMonth(thisMonth);
+	}, [open, thisMonth]);
+
+	const monthSeries = useMemo(
+		() => series.filter(([date]) => String(date).startsWith(month)),
+		[series, month],
+	);
+	const max = monthSeries.reduce((m, [, v]) => Math.max(m, v), 0) || 1;
+	const monthTotal = round2(monthSeries.reduce((sum, [, v]) => sum + (Number(v) || 0), 0));
+	const relative =
+		month === thisMonth
+			? ar
+				? 'الشهر ده'
+				: 'This month'
+			: month === shiftMonthYm(thisMonth, 1)
+				? ar
+					? 'الشهر الجاي'
+					: 'Next month'
+				: month === shiftMonthYm(thisMonth, -1)
+					? ar
+						? 'الشهر اللي فات'
+						: 'Last month'
+					: null;
+
 	return (
 		<Sheet open={open} ar={ar} title={ar ? 'الاستهلاك اليومي' : 'Daily spending'} onClose={onClose}>
-			{!series.length ? (
-				<p className="py-6 text-center text-sm text-slate-400">{ar ? 'مفيش مصاريف في الفلتر الحالي' : 'No spend in the current filter'}</p>
-			) : (
-				<ul className="flex max-h-[60vh] flex-col gap-2.5 overflow-y-auto pe-1">
-					{series.map(([date, amount]) => (
-						<li key={date} className="flex flex-col gap-1">
-							<div className="flex items-baseline justify-between gap-2 text-[11px]">
-								<span className="font-bold tabular-nums text-slate-500">{formatDay(date, ar)}</span>
-								<span className="font-black tabular-nums text-rose-600 dark:text-rose-400">{money(amount)}</span>
-							</div>
-							<div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-								<div
-									className="h-full rounded-full bg-rose-500/90 transition-[width]"
-									style={{ width: `${Math.max(6, (amount / max) * 100)}%` }}
-								/>
-							</div>
-						</li>
-					))}
-				</ul>
-			)}
+			<div className="flex flex-col gap-3">
+				<div className="flex items-center gap-2 rounded-2xl bg-slate-50 p-1.5 dark:bg-slate-800/60" dir="ltr">
+					<button
+						type="button"
+						onClick={() => setMonth(current => shiftMonthYm(current, -1))}
+						aria-label={ar ? 'الشهر السابق' : 'Previous month'}
+						className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-white hover:text-slate-800 dark:hover:bg-slate-900 dark:hover:text-slate-100"
+					>
+						<ChevronLeft size={18} />
+					</button>
+					<div className="min-w-0 flex-1 text-center" dir={ar ? 'rtl' : 'ltr'}>
+						<p className="truncate text-sm font-black text-slate-900 dark:text-white">{formatMonthYear(month, ar)}</p>
+						{relative ? <p className="text-[11px] font-bold text-slate-400">{relative}</p> : null}
+					</div>
+					<button
+						type="button"
+						onClick={() => setMonth(current => shiftMonthYm(current, 1))}
+						aria-label={ar ? 'الشهر التالي' : 'Next month'}
+						className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-white hover:text-slate-800 dark:hover:bg-slate-900 dark:hover:text-slate-100"
+					>
+						<ChevronRight size={18} />
+					</button>
+				</div>
+
+				{monthSeries.length ? (
+					<p className="flex items-baseline justify-between gap-2 px-0.5 text-[12px]">
+						<span className="font-bold text-slate-400">{ar ? 'إجمالي الشهر' : 'Month total'}</span>
+						<span className="font-black tabular-nums text-slate-800 dark:text-slate-100">{money(monthTotal)}</span>
+					</p>
+				) : null}
+
+				{!monthSeries.length ? (
+					<p className="py-8 text-center text-sm text-slate-400">
+						{ar ? 'مفيش صرف في الشهر ده' : 'No spending in this month'}
+					</p>
+				) : (
+					<ul className="flex max-h-[55vh] flex-col gap-2.5 overflow-y-auto pe-1">
+						{monthSeries.map(([date, amount]) => {
+							const ratio = amount / max;
+							const barColor = spendBarColor(ratio);
+							return (
+								<li key={date} className="flex flex-col gap-1">
+									<div className="flex items-baseline justify-between gap-2 text-[11px]">
+										<span className="font-bold tabular-nums text-slate-500">{formatWeekdayDay(date, ar)}</span>
+										<span className="font-black tabular-nums" style={{ color: barColor }}>
+											{money(amount)}
+										</span>
+									</div>
+									<div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+										<div
+											className="h-full rounded-full transition-[width]"
+											style={{
+												width: `${Math.max(8, ratio * 100)}%`,
+												backgroundColor: barColor,
+											}}
+										/>
+									</div>
+								</li>
+							);
+						})}
+					</ul>
+				)}
+			</div>
 		</Sheet>
 	);
 }
@@ -1547,11 +1914,14 @@ function LedgerTable({
 	onTypeChange,
 	lockedIds,
 	onToggle,
+	onToggleRecurring,
 	onEdit,
 	onDelete,
 	anchorRef,
 	moneyFilter,
 	onMoneyFilterChange,
+	moneyRecurring,
+	onMoneyRecurringChange,
 	onOpenRow,
 }) {
 	const allRows = useMemo(() => buildLedgerRows(data), [data]);
@@ -1561,17 +1931,44 @@ function LedgerTable({
 	const expenses = data?.expenses;
 	const [expenseMin, setExpenseMin] = useState('');
 	const [expenseDays, setExpenseDays] = useState('');
+	const [expenseRecurring, setExpenseRecurring] = useState('all');
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [chartOpen, setChartOpen] = useState(false);
 
 	const counts = useMemo(() => {
-		const next = { all: allRows.length, money: 0, gold: 0, lent: 0, expense: 0, pending: 0, received: 0 };
+		const next = {
+			all: allRows.length,
+			money: 0,
+			gold: 0,
+			lent: 0,
+			expense: 0,
+			pending: 0,
+			received: 0,
+			moneyMonthly: 0,
+			moneyOnce: 0,
+			expenseMonthly: 0,
+			expenseOnce: 0,
+		};
 		for (const row of allRows) {
 			next[row.type] += 1;
-			if (row.type === 'money') next[row.source.kind === 'received' ? 'received' : 'pending'] += 1;
+			if (row.type === 'money') {
+				next[row.source.kind === 'received' ? 'received' : 'pending'] += 1;
+				if (row.source?.recurring) next.moneyMonthly += 1;
+				else next.moneyOnce += 1;
+			}
+			if (row.type === 'expense') {
+				if (row.source?.recurring) next.expenseMonthly += 1;
+				else next.expenseOnce += 1;
+			}
 		}
 		return next;
 	}, [allRows]);
+
+	const matchRecurring = (row, mode) => {
+		if (mode === 'monthly') return row.source?.recurring === true;
+		if (mode === 'once') return row.source?.recurring !== true;
+		return true;
+	};
 
 	const rows = useMemo(() => {
 		let list;
@@ -1582,6 +1979,7 @@ function LedgerTable({
 			if (moneyFilter === 'pending') list = pending;
 			else if (moneyFilter === 'received') list = received;
 			else list = [...pending, ...received];
+			list = list.filter(row => matchRecurring(row, moneyRecurring));
 		} else if (type !== 'all') {
 			list = allRows.filter(row => row.type === type);
 		} else {
@@ -1598,15 +1996,19 @@ function LedgerTable({
 			const min = parseAmount(expenseMin);
 			const since = expenseDays ? ymdDaysAgo(Number(expenseDays)) : null;
 			list = list.filter(row => {
+				if (!matchRecurring(row, expenseRecurring)) return false;
 				if (Number.isFinite(min) && min > 0 && !(Number(row.amount) > min)) return false;
 				if (since && (!row.date || row.date < since)) return false;
 				return true;
 			});
 		}
 		return list;
-	}, [allRows, type, moneyFilter, expenseMin, expenseDays]);
+	}, [allRows, type, moneyFilter, moneyRecurring, expenseMin, expenseDays, expenseRecurring]);
 
-	const spendSeries = useMemo(() => dailySpendSeries(rows.filter(row => row.type === 'expense')), [rows]);
+	const spendSeries = useMemo(
+		() => dailySpendSeries(allRows.filter(row => row.type === 'expense')),
+		[allRows],
+	);
 
 	const total = useMemo(() => {
 		if (type === 'gold') return gold?.totalValue != null ? money(gold.totalValue) : null;
@@ -1623,8 +2025,9 @@ function LedgerTable({
 
 	const filtersAvailable = type === 'money' || type === 'expense';
 	const filtersActive =
-		(type === 'money' && moneyFilter !== 'all') ||
-		(type === 'expense' && (Boolean(String(expenseMin).trim()) || Boolean(String(expenseDays).trim())));
+		(type === 'money' && (moneyFilter !== 'all' || moneyRecurring !== 'all')) ||
+		(type === 'expense' &&
+			(expenseRecurring !== 'all' || Boolean(String(expenseMin).trim()) || Boolean(String(expenseDays).trim())));
 
 	const tabs = [
 		['all', ar ? 'الكل' : 'All', Layers, counts.all],
@@ -1640,8 +2043,8 @@ function LedgerTable({
 	return (
 		<section ref={anchorRef} className={`${surfaceCard} scroll-mt-3 overflow-hidden`}>
 			<div className="flex flex-col gap-3 p-3 sm:p-4">
-				<div className="flex items-end justify-between gap-3">
-					<div className="min-w-0">
+				<div className="flex items-end gap-3">
+					<div className="min-w-0 flex-1">
 						<h3 className="text-sm font-black text-slate-900 dark:text-white">{ar ? 'كل الحركات' : 'All entries'}</h3>
 						<p className="text-[11px] text-slate-400">
 							{type === 'expense' && expenses?.month
@@ -1655,7 +2058,19 @@ function LedgerTable({
 										: `${rows.length} ${rows.length === 1 ? 'entry' : 'entries'}`}
 						</p>
 					</div>
-					<div className="flex shrink-0 items-end gap-2">
+					{/* dir=ltr + ml-auto: keep total then icons on the physical right in both AR/EN. */}
+					<div className="ml-auto flex shrink-0 flex-row items-end gap-2" dir="ltr">
+						{total ? (
+							<p className="text-end">
+								<span className="block text-[10.5px] font-bold text-slate-400">{ar ? 'الإجمالي' : 'Total'}</span>
+								<span
+									className={`text-base font-black tabular-nums sm:text-lg ${type === 'money' ? 'text-slate-900 dark:text-white' : LEDGER_TONES[type].amount}`}
+								>
+									{type === 'expense' ? '− ' : ''}
+									{total}
+								</span>
+							</p>
+						) : null}
 						{filtersAvailable ? (
 							<button
 								type="button"
@@ -1680,21 +2095,10 @@ function LedgerTable({
 								onClick={() => setChartOpen(true)}
 								aria-label={ar ? 'رسم الاستهلاك' : 'Spending chart'}
 								title={ar ? 'استهلاك كل يوم' : 'Daily spending'}
-								className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 text-rose-500 sm:h-9 sm:w-9 transition hover:bg-rose-50 dark:border-slate-700 dark:hover:bg-rose-950/30"
+								className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 text-rose-500 transition hover:bg-rose-50 sm:h-9 sm:w-9 dark:border-slate-700 dark:hover:bg-rose-950/30"
 							>
 								<BarChart3 size={15} />
 							</button>
-						) : null}
-						{total ? (
-							<p className="text-end">
-								<span className="block text-[10.5px] font-bold text-slate-400">{ar ? 'الإجمالي' : 'Total'}</span>
-								<span
-									className={`text-base font-black tabular-nums sm:text-lg ${type === 'money' ? 'text-slate-900 dark:text-white' : LEDGER_TONES[type].amount}`}
-								>
-									{type === 'expense' ? '− ' : ''}
-									{total}
-								</span>
-							</p>
 						) : null}
 					</div>
 				</div>
@@ -1765,20 +2169,33 @@ function LedgerTable({
 					ar={ar}
 					type={type}
 					moneyFilter={moneyFilter}
+					moneyRecurring={moneyRecurring}
 					counts={counts}
 					expenseMin={expenseMin}
 					expenseDays={expenseDays}
+					expenseRecurring={expenseRecurring}
 					onClose={() => setFiltersOpen(false)}
-					onApplyMoney={onMoneyFilterChange}
-					onApplyExpense={({ min, days }) => {
+					onApplyMoney={({ status, recurring }) => {
+						onMoneyFilterChange(status);
+						onMoneyRecurringChange(recurring);
+					}}
+					onApplyExpense={({ min, days, recurring }) => {
 						setExpenseMin(min);
 						setExpenseDays(days);
+						setExpenseRecurring(recurring || 'all');
 					}}
 					onOpenChart={() => setChartOpen(true)}
 				/>
 			) : null}
 			{type === 'expense' ? (
-				<SpendDailyChart open={chartOpen} ar={ar} money={money} series={spendSeries} onClose={() => setChartOpen(false)} />
+				<SpendDailyChart
+					open={chartOpen}
+					ar={ar}
+					money={money}
+					series={spendSeries}
+					today={today}
+					onClose={() => setChartOpen(false)}
+				/>
 			) : null}
 
 			{unavailable ? (
@@ -1829,8 +2246,14 @@ function LedgerTable({
 													>
 														{row.name}
 													</p>
-													<p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400 empty:hidden">
+													<p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 empty:hidden">
 														<LedgerMeta row={row} ar={ar} />
+														{row.source?.recurring ? (
+															<span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-px font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+																<Repeat size={10} aria-hidden="true" />
+																{ar ? 'كل شهر' : 'Monthly'}
+															</span>
+														) : null}
 													</p>
 												</div>
 											</div>
@@ -1850,7 +2273,15 @@ function LedgerTable({
 											<LedgerAmount row={row} money={money} />
 										</td>
 										<td className={`${td} w-px`}>
-											<LedgerActions ar={ar} onEdit={() => onEdit(row)} onDelete={() => onDelete(row)} />
+											<LedgerActions
+												ar={ar}
+												recurring={row.source?.recurring}
+												onToggleRecurring={
+													row.type === 'money' || row.type === 'expense' ? () => onToggleRecurring(row) : undefined
+												}
+												onEdit={() => onEdit(row)}
+												onDelete={() => onDelete(row)}
+											/>
 										</td>
 									</tr>
 								);
@@ -1884,9 +2315,15 @@ function LedgerTable({
 													<LedgerAmount row={row} money={money} />
 												</span>
 											</span>
-											<span className="flex min-w-0 items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+											<span className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
 												<LedgerStatus row={row} ar={ar} today={today} interactive={false} compact />
 												{row.date ? <span className="tabular-nums">{formatDay(row.date, ar)}</span> : null}
+												{row.source?.recurring ? (
+													<span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+														<Repeat size={11} aria-hidden="true" />
+														{ar ? 'كل شهر' : 'Monthly'}
+													</span>
+												) : null}
 												<LedgerMeta row={row} ar={ar} />
 											</span>
 										</span>
@@ -1952,7 +2389,7 @@ function QuickActions({ ar, onPick }) {
 }
 
 /** Phone detail view of one entry: everything about it plus its actions, at full thumb size. */
-function EntrySheet({ row, ar, money, today, quote, locked, onClose, onToggle, onEdit, onDelete }) {
+function EntrySheet({ row, ar, money, today, quote, locked, onClose, onToggle, onToggleRecurring, onEdit, onDelete }) {
 	const [confirming, setConfirming] = useState(false);
 	const [shown, setShown] = useState(row);
 	if (row && row !== shown) setShown(row);
@@ -1982,12 +2419,23 @@ function EntrySheet({ row, ar, money, today, quote, locked, onClose, onToggle, o
 		} else {
 			details.push([current.type === 'lent' ? (ar ? 'اتسلفت يوم' : 'Lent on') : ar ? 'اتصرف يوم' : 'Spent on', formatDay(current.date, ar)]);
 			if (current.type === 'expense' || current.type === 'lent') {
-				const deducted =
-					current.type === 'expense' ? item.affectsBalance !== false : item.affectsBalance === true;
-				details.push([
-					ar ? 'من الرصيد المتاح' : 'From available balance',
-					deducted ? (ar ? 'نعم، اتخصم' : 'Yes, deducted') : ar ? 'لأ، برة الرصيد' : 'No, off balance',
-				]);
+				if (current.type === 'expense') {
+					if (item.affectsBalance === false) {
+						details.push([ar ? 'من الرصيد المتاح' : 'From available balance', ar ? 'لأ، برة الرصيد' : 'No, off balance']);
+					} else if (item.balanceApplied === true) {
+						details.push([ar ? 'من الرصيد المتاح' : 'From available balance', ar ? 'نعم، اتخصم' : 'Yes, deducted']);
+					} else {
+						details.push([
+							ar ? 'من الرصيد المتاح' : 'From available balance',
+							ar ? 'هيتخصم يوم التاريخ' : 'Deducts on that date',
+						]);
+					}
+				} else {
+					details.push([
+						ar ? 'من الرصيد المتاح' : 'From available balance',
+						item.affectsBalance === true ? (ar ? 'نعم، اتخصم' : 'Yes, deducted') : ar ? 'لأ، برة الرصيد' : 'No, off balance',
+					]);
+				}
 			}
 		}
 	}
@@ -2079,6 +2527,28 @@ function EntrySheet({ row, ar, money, today, quote, locked, onClose, onToggle, o
 										<Check size={16} strokeWidth={3} />
 									)}
 									{item.kind === 'received' ? (ar ? 'رجّعها لسه ماوصلتش' : 'Mark as not received') : ar ? 'وصلت' : 'Mark as received'}
+								</button>
+							) : null}
+							{current.type === 'money' || current.type === 'expense' ? (
+								<button
+									type="button"
+									disabled={locked}
+									onClick={() => onToggleRecurring(current)}
+									aria-pressed={item.recurring === true}
+									className={`inline-flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-bold transition active:scale-[0.98] disabled:opacity-50 ${
+										item.recurring
+											? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
+											: 'border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200'
+									}`}
+								>
+									{locked ? <Loader2 size={16} className="animate-spin" /> : <Repeat size={16} />}
+									{item.recurring
+										? ar
+											? 'بيتكرر كل شهر'
+											: 'Repeats every month'
+										: ar
+											? 'خلّيه يتكرر كل شهر'
+											: 'Repeat every month'}
 								</button>
 							) : null}
 							<div className="grid grid-cols-2 gap-2.5">
@@ -2332,11 +2802,16 @@ const GUILLOCHE = guillochePaths();
 
 /**
  * The headline card. Balance first; under it one bar shows how everything you have splits
- * (cash, gold, lent out, on the way). Each legend entry jumps to its rows in the table.
+ * (cash, gold, lent out, on the way). Monthly coming-in / going-out / forecast live in the
+ * same footer language as "spent this month" so the top stays one composition.
  */
-function BalanceHero({ ar, summary, goldValueNow, lentTotal, spentThisMonth, onEditBalance, onJump, onCalc }) {
+function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, spentThisMonth, onEditBalance, onJump, onCalc }) {
 	const balance = Number(summary?.balance) || 0;
 	const pending = Number(summary?.pendingTotal) || 0;
+	const nextIn = Number(forecast?.nextMonthIn) || 0;
+	const nextOut = Number(forecast?.nextMonthOut) || 0;
+	const projected = Number(forecast?.projectedBalance) || 0;
+	const showForecast = nextIn > 0 || nextOut > 0;
 	const parts = [
 		{ key: 'cash', label: ar ? 'كاش' : 'Cash', value: Math.max(0, balance), swatch: 'bg-white' },
 		{ key: 'gold', label: ar ? 'دهب' : 'Gold', value: goldValueNow, swatch: 'bg-[#f2c94c]' },
@@ -2349,6 +2824,26 @@ function BalanceHero({ ar, summary, goldValueNow, lentTotal, spentThisMonth, onE
 		},
 	];
 	const total = parts.reduce((sum, part) => sum + part.value, 0);
+	const flowCells = [
+		{
+			key: 'in',
+			label: ar ? 'هيدخل' : 'Coming in',
+			value: nextIn,
+			Icon: ArrowDownLeft,
+			tone: 'text-emerald-200',
+			amount: 'text-emerald-100',
+			prefix: '+ ',
+		},
+		{
+			key: 'out',
+			label: ar ? 'هيخرج' : 'Going out',
+			value: nextOut,
+			Icon: ArrowUpRight,
+			tone: 'text-rose-200',
+			amount: 'text-rose-100',
+			prefix: '− ',
+		},
+	];
 
 	return (
 		<section className="relative isolate overflow-hidden rounded-[30px] bg-[#0c4430] text-white shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_24px_48px_-28px_rgba(6,40,27,0.95)] dark:bg-[#0a3a29]">
@@ -2454,10 +2949,72 @@ function BalanceHero({ ar, summary, goldValueNow, lentTotal, spentThisMonth, onE
 				})}
 			</div>
 
+			{showForecast ? (
+				<div
+					className="border-t border-white/[0.08] bg-black/[0.14]"
+					aria-label={ar ? 'هيبقى معايا الشهر الجاي' : 'What you’ll have next month'}
+				>
+					<div className="px-5 pt-3.5 sm:px-7">
+						<div className="flex items-center gap-1.5">
+							<Repeat size={12} className="text-emerald-200/80" aria-hidden="true" />
+							<p className="text-[11px] font-bold tracking-wide text-emerald-100/65">
+								{ar ? 'توقّع الشهر الجاي' : 'Next month expectation'}
+								{forecast?.nextMonth ? (
+									<span className="ms-1.5 font-semibold tabular-nums text-emerald-100/40">{forecast.nextMonth}</span>
+								) : null}
+							</p>
+						</div>
+						<p className="mt-2 text-[12px] font-semibold text-emerald-100/70">
+							{ar ? 'هيبقى معايا تقريباً' : 'You’ll roughly have'}
+						</p>
+						<p className={`mt-0.5 truncate text-[26px] font-black leading-none tracking-[-0.02em] sm:text-[30px] ${projected < 0 ? 'text-rose-200' : 'text-white'}`}>
+							<MoneyFigure
+								value={projected}
+								ar={ar}
+								className="inline"
+								unitClassName="ms-1.5 text-sm font-bold tracking-normal text-emerald-100/55"
+							/>
+						</p>
+						<p className="mt-2 text-[10.5px] font-medium leading-snug text-emerald-100/45">
+							{ar ? 'رصيدك الحالي' : 'Your balance'}{' '}
+							<MoneyFigure value={balance} ar={ar} className="tabular-nums text-emerald-100/75" unitClassName="text-[9px] text-emerald-100/40" />
+							<span className="mx-1 text-emerald-100/35">+</span>
+							{ar ? 'وارد' : 'in'}{' '}
+							<MoneyFigure value={nextIn} ar={ar} className="tabular-nums text-emerald-200/85" unitClassName="text-[9px] text-emerald-100/40" />
+							<span className="mx-1 text-emerald-100/35">−</span>
+							{ar ? 'خارج' : 'out'}{' '}
+							<MoneyFigure value={nextOut} ar={ar} className="tabular-nums text-rose-200/85" unitClassName="text-[9px] text-emerald-100/40" />
+						</p>
+					</div>
+					<div className="mt-3 grid grid-cols-2 gap-1 border-t border-white/[0.06] px-3 py-2.5 sm:px-5">
+						{flowCells.map(cell => {
+							const Icon = cell.Icon;
+							return (
+								<div key={cell.key} className="flex min-w-0 flex-col justify-center rounded-2xl px-2.5 py-2 sm:px-3">
+									<span className={`inline-flex items-center gap-1 text-[10.5px] font-bold ${cell.tone}`}>
+										<Icon size={11} aria-hidden="true" />
+										<span className="truncate">{cell.label}</span>
+									</span>
+									<p className={`mt-1 truncate text-[14px] font-black leading-tight tabular-nums sm:text-[15px] ${cell.amount}`}>
+										{cell.prefix}
+										<MoneyFigure
+											value={Math.abs(cell.value)}
+											ar={ar}
+											className="inline"
+											unitClassName="text-[9px] font-semibold text-emerald-100/45"
+										/>
+									</p>
+								</div>
+							);
+						})}
+					</div>
+				</div>
+			) : null}
+
 			<button
 				type="button"
 				onClick={() => onJump('expense')}
-				className="flex w-full items-center gap-3 border-t border-white/[0.08] bg-black/[0.12] px-5 py-3.5 text-start transition [touch-action:manipulation] hover:bg-black/20 sm:px-7"
+				className="flex w-full items-center gap-3 border-t border-white/[0.08] bg-black/[0.18] px-5 py-3.5 text-start transition [touch-action:manipulation] hover:bg-black/25 sm:px-7"
 			>
 				<span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 text-rose-200">
 					<Receipt size={15} aria-hidden="true" />
@@ -2473,8 +3030,9 @@ function BalanceHero({ ar, summary, goldValueNow, lentTotal, spentThisMonth, onE
 }
 
 /** Personal money tracker: balance in hand, money received, and money still expected. */
-export default function WhatsAppWalletTab({ locale = 'en' }) {
+export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
+	const phone = useIsPhone();
 	const money = useMoneyFormat(ar);
 	const queryClient = useQueryClient();
 	const [balanceOpen, setBalanceOpen] = useState(false);
@@ -2482,6 +3040,7 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 	const [calcOpen, setCalcOpen] = useState(false);
 	const [addType, setAddType] = useState('money');
 	const [moneyFilter, setMoneyFilter] = useState('all');
+	const [moneyRecurring, setMoneyRecurring] = useState('all');
 	const [openEntry, setOpenEntry] = useState(null);
 	const [editing, setEditing] = useState(null);
 	const [editingGold, setEditingGold] = useState(null);
@@ -2644,6 +3203,7 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 		if (key === 'pending') {
 			setLedgerType('money');
 			setMoneyFilter('pending');
+			setMoneyRecurring('all');
 		} else {
 			setLedgerType(key);
 		}
@@ -2655,6 +3215,25 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 			snapshot => applyLocally(snapshot, item, 'toggle', today),
 			() => api.post(`/money/tracker/items/${item.kind}/${item.id}/toggle`),
 		);
+	const toggleRecurring = row => {
+		const next = !(row.source?.recurring === true);
+		if (row.type === 'money') {
+			const item = row.source;
+			return runOptimistic(
+				item.id,
+				snapshot => toggleRecurringLocally(snapshot, row),
+				() => api.patch(`/money/tracker/items/${item.kind}/${item.id}`, { recurring: next }),
+			);
+		}
+		if (row.type === 'expense') {
+			const expense = row.source;
+			return runOptimistic(
+				expense.id,
+				snapshot => toggleRecurringLocally(snapshot, row),
+				() => api.patch(`/money/tracker/expenses/${expense.id}`, { recurring: next }),
+			);
+		}
+	};
 	const editRow = row => {
 		if (row.type === 'gold') setEditingGold(row.source);
 		else if (row.type === 'lent') setEditingLent(row.source);
@@ -2674,7 +3253,27 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 	};
 
 	return (
-		<div className="wa-dk mx-auto flex w-full max-w-4xl flex-col gap-4 p-3 pb-6 sm:gap-5 sm:p-4 md:p-6" dir={ar ? 'rtl' : 'ltr'}>
+		<div
+			className={`wa-dk mx-auto flex w-full max-w-4xl flex-col gap-4 p-3 sm:gap-5 sm:p-4 md:p-6 ${
+				phone && onExit ? 'min-h-full pb-[max(24px,env(safe-area-inset-bottom))] pt-0' : 'pb-6'
+			}`}
+			dir={ar ? 'rtl' : 'ltr'}
+		>
+			{phone && onExit ? (
+				<header className="sticky top-0 z-20 -mx-3 mb-1 flex items-center gap-2 border-b border-slate-200/80 bg-white/95 px-2 py-1.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90 sm:mx-0">
+					<button
+						type="button"
+						onClick={onExit}
+						aria-label={ar ? 'رجوع إلى المحادثات' : 'Back to chats'}
+						className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-700 transition [touch-action:manipulation] hover:bg-slate-100 active:scale-95 dark:text-slate-200 dark:hover:bg-slate-800"
+					>
+						<ArrowRight size={22} className={ar ? '' : 'rotate-180'} aria-hidden="true" />
+					</button>
+					<div className="min-w-0 flex-1">
+						<p className="truncate text-[17px] font-black text-slate-900 dark:text-white">{ar ? 'محفظتي' : 'Wallet'}</p>
+					</div>
+				</header>
+			) : null}
 			{trackerQuery.isLoading ? (
 				<div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
 					<Loader2 size={16} className="animate-spin" />
@@ -2692,6 +3291,7 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 					<BalanceHero
 						ar={ar}
 						summary={summary}
+						forecast={data?.forecast}
 						goldValueNow={goldValueNow}
 						lentTotal={lentTotal}
 						spentThisMonth={spentThisMonth}
@@ -2717,11 +3317,14 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 						onTypeChange={setLedgerType}
 						lockedIds={lockedIds}
 						onToggle={toggleItem}
+						onToggleRecurring={toggleRecurring}
 						onEdit={editRow}
 						onDelete={deleteRow}
 						anchorRef={ledgerRef}
 						moneyFilter={moneyFilter}
 						onMoneyFilterChange={setMoneyFilter}
+						moneyRecurring={moneyRecurring}
+						onMoneyRecurringChange={setMoneyRecurring}
 						onOpenRow={row => setOpenEntry({ type: row.type, id: row.id })}
 					/>
 				</>
@@ -2777,6 +3380,7 @@ export default function WhatsAppWalletTab({ locale = 'en' }) {
 				locked={openRow ? lockedIds.has(openRow.id) : false}
 				onClose={() => setOpenEntry(null)}
 				onToggle={toggleItem}
+				onToggleRecurring={toggleRecurring}
 				onEdit={editRow}
 				onDelete={deleteRow}
 			/>

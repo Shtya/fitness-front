@@ -400,3 +400,10 @@ html .wa-chat-idle:not(#wa-idle) .wa-chat-idle__unread {
 		animation: none !important;
 	}
 }
+
+/* A game is open: it takes the whole pane. */
+html .wa-chat-idle.is-playing:not(#wa-idle) {
+	align-items: stretch;
+	justify-content: stretch;
+	padding: 0;
+}

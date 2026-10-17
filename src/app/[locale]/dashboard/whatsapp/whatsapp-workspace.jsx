@@ -28652,25 +28652,10 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'wallet' && (
-					<>
-						<MobileWhatsAppHeader
-							locale={locale}
-							title={t.wallet || t.title}
-							onSearch={() => {
-								void loadTabData('chats');
-								setSearchOpen(true);
-								window.setTimeout(() => {
-									document.querySelector('.wa-m-search input')?.focus();
-								}, 60);
-							}}
-							onCamera={() => void loadTabData('statuses')}
-							onMore={() => setMobileMenuOpen(current => !current)}
-							showTitle
-						/>
-						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
-							<WhatsAppWalletTab locale={locale} />
-						</Suspense>
-					</>
+					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+						{/* Phone: immersive wallet — no WA header/nav; back lives inside the tab. */}
+						<WhatsAppWalletTab locale={locale} onExit={() => void loadTabData('chats')} />
+					</Suspense>
 				)}
 
 				{activeTab === 'adhkar' && (
@@ -28984,8 +28969,10 @@ function WhatsAppWorkspaceContent() {
 				)}
 			</div>
 			</div>
-			{/* Adhkar is a focused reading space: no bottom tab bar (it has its own way back). */}
-			{!(isConversationWorkspaceTab(activeTab) && conversationId) && activeTab !== 'adhkar' && (
+			{/* Adhkar / Wallet are focused spaces: no bottom tab bar (each has its own way back). */}
+			{!(isConversationWorkspaceTab(activeTab) && conversationId) &&
+				activeTab !== 'adhkar' &&
+				activeTab !== 'wallet' && (
 				<MobileWhatsAppNav
 					activeTab={activeTab}
 					onSelect={tab => void loadTabData(tab)}
