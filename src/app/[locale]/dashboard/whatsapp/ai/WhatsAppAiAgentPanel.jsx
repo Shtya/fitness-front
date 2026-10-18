@@ -526,6 +526,7 @@ function ModelsSection({ text, accountId, draft, setDraft, onSaved, alerts = [] 
 	return (
 		<div className="wa-ag-mods">
 			<section className="wa-ag-mod">
+				<p className="wa-ag-note mb-3" role="note">{text.apiKeyPlaceHint}</p>
 				<h3>{text.builtInModels}</h3>
 				<p className="wa-ag-hint">{text.builtInModelsHint}</p>
 				{!providers.length ? (
@@ -1066,9 +1067,26 @@ function TestSection({ text, accountId, draft, locale, onAlerts }) {
 	);
 }
 
+function formatUsd(value) {
+	if (value == null || !Number.isFinite(Number(value))) return null;
+	const n = Number(value);
+	if (n === 0) return '$0';
+	if (n < 0.0001) return `$${n.toFixed(6)}`;
+	if (n < 0.01) return `$${n.toFixed(4)}`;
+	return `$${n.toFixed(4)}`;
+}
+
+function costLabel(text, costSource) {
+	if (costSource === 'provider') return text.costProvider;
+	if (costSource === 'free') return text.costFree;
+	return text.costEstimated;
+}
+
 function TestResultMeta({ text, result }) {
 	if (!result) return null;
 	const knowledge = (result.sources || []).filter(source => source.type === 'knowledge');
+	const cost = formatUsd(result.estimatedCostUsd ?? result.usage?.estimatedCostUsd);
+	const tokens = result.totalTokens ?? result.usage?.totalTokens;
 	return (
 		<div className="wa-ag-meta">
 			<p>
@@ -1076,6 +1094,15 @@ function TestResultMeta({ text, result }) {
 				<span dir="ltr"> · {labelForProvider(result.provider, text)}</span>
 				{result.model ? <span dir="ltr"> · {result.model}</span> : null}
 			</p>
+			{cost != null || tokens ? (
+				<p dir="ltr">
+					{text.requestCost}: {cost || '—'}
+					{result.costSource || result.usage?.costSource
+						? ` (${costLabel(text, result.costSource || result.usage?.costSource)})`
+						: ''}
+					{tokens != null ? ` · ${fillTemplate(text.requestTokens, { total: tokens })}` : ''}
+				</p>
+			) : null}
 			<p dir="auto">{text.sources}: {knowledge.length ? knowledge.map(source => source.title).join(' · ') : text.noSources}</p>
 		</div>
 	);
@@ -1112,9 +1139,21 @@ function ActivitySection({ text, accountId, locale }) {
 		() => new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }),
 		[locale],
 	);
+	const totalCost = useMemo(() => {
+		if (!runs?.length) return 0;
+		return runs.reduce((sum, run) => sum + (Number(run.estimatedCostUsd) || 0), 0);
+	}, [runs]);
 	return (
 		<section className="wa-ag-mod">
-			<div className="mb-2 flex justify-end">
+			<p className="wa-ag-hint mb-2">{text.activityCostHint}</p>
+			<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+				{runs?.length ? (
+					<p className="text-xs font-semibold text-[var(--ag-muted)]" dir="ltr">
+						{text.activityTotalCost}: {formatUsd(totalCost)}
+					</p>
+				) : (
+					<span />
+				)}
 				<button type="button" className="wa-ag-ghost" onClick={() => void load()} disabled={loading}>
 					<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
 					{text.refresh}
@@ -1127,17 +1166,37 @@ function ActivitySection({ text, accountId, locale }) {
 				<p className="wa-ag-empty">{text.activityEmpty}</p>
 			) : (
 				<ul className="divide-y divide-[var(--ag-line)]">
-					{runs.map(run => (
-						<li key={run.id} className="space-y-1 py-2.5 text-xs">
-							<div className="flex flex-wrap items-center gap-2">
-								<span className="wa-ag-chip is-on !h-6 text-[10px]">{text.outcomes[run.outcome] || run.outcome}</span>
-								<span className="text-[var(--ag-faint)]">{run.createdAt ? formatter.format(new Date(run.createdAt)) : ''}</span>
-								{run.latencyMs != null ? <span className="text-[var(--ag-faint)]" dir="ltr">{Math.round(run.latencyMs / 100) / 10}s</span> : null}
-							</div>
-							{run.reply ? <p className="line-clamp-2 text-[var(--ag-muted)]" dir="auto">{run.reply}</p> : null}
-							{run.error ? <p className="wa-ag-note is-bad">{run.error}</p> : null}
-						</li>
-					))}
+					{runs.map(run => {
+						const cost = formatUsd(run.estimatedCostUsd);
+						return (
+							<li key={run.id} className="space-y-1 py-2.5 text-xs">
+								<div className="flex flex-wrap items-center gap-2">
+									<span className="wa-ag-chip is-on !h-6 text-[10px]">{text.outcomes[run.outcome] || run.outcome}</span>
+									<span className="text-[var(--ag-faint)]">{run.createdAt ? formatter.format(new Date(run.createdAt)) : ''}</span>
+									{run.latencyMs != null ? <span className="text-[var(--ag-faint)]" dir="ltr">{Math.round(run.latencyMs / 100) / 10}s</span> : null}
+									{cost != null ? (
+										<span className="font-semibold text-[#1dab61]" dir="ltr">
+											{text.requestCost}: {cost}
+											{run.costSource ? ` · ${costLabel(text, run.costSource)}` : ''}
+										</span>
+									) : null}
+									{run.totalTokens != null ? (
+										<span className="text-[var(--ag-faint)]" dir="ltr">
+											{fillTemplate(text.requestTokens, { total: run.totalTokens })}
+										</span>
+									) : null}
+								</div>
+								{run.provider || run.model ? (
+									<p className="text-[var(--ag-faint)]" dir="ltr">
+										{labelForProvider(run.provider, text)}
+										{run.model ? ` · ${run.model}` : ''}
+									</p>
+								) : null}
+								{run.reply ? <p className="line-clamp-2 text-[var(--ag-muted)]" dir="auto">{run.reply}</p> : null}
+								{run.error ? <p className="wa-ag-note is-bad">{run.error}</p> : null}
+							</li>
+						);
+					})}
 				</ul>
 			)}
 		</section>

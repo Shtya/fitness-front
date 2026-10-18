@@ -620,19 +620,29 @@ html[data-theme-mode='dark'] .adk-btn:not(.adk-btn--quiet) {
 }
 
 .adk-reader__name {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	min-width: 0;
 	font-size: 17px;
 	font-weight: 800;
 	color: var(--adk-ink);
 }
 
+.adk-reader__name-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .adk-reader__count {
-	font-size: 12.5px;
+	flex: none;
+	font-size: 13px;
 	font-weight: 600;
 	color: var(--adk-muted);
 	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
 }
 
 .adk-reader__tools {
@@ -692,7 +702,8 @@ button.adk-count:not(:disabled):hover {
 	flex: 1;
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	/* room for the floating dock */
+	touch-action: pan-y;
+	/* room for the floating dock (desktop); phone hides the dock */
 	padding: 12px 12px calc(env(safe-area-inset-bottom) + 112px);
 }
 
@@ -871,6 +882,30 @@ button.adk-count:not(:disabled):hover {
 	line-height: 2.05;
 }
 
+/* Three protective surahs on one screen (الإخلاص · الفلق · الناس) */
+.adk-parts {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0;
+	width: 100%;
+}
+
+.adk-parts .adk-text {
+	margin: 0 auto;
+	padding: 6px 0 14px;
+}
+
+.adk-parts .adk-text + .adk-text {
+	padding-top: 16px;
+	border-top: 1px solid color-mix(in srgb, var(--adk-gold) 35%, transparent);
+}
+
+.adk-tap.has-parts .adk-parts .adk-text {
+	font-size: 22px;
+	line-height: 2.05;
+}
+
 @media (min-width: 640px) {
 	.adk-text {
 		font-size: 30px;
@@ -878,6 +913,10 @@ button.adk-count:not(:disabled):hover {
 	}
 	.adk-text.is-long {
 		font-size: 26px;
+	}
+	.adk-tap.has-parts .adk-parts .adk-text {
+		font-size: 26px;
+		line-height: 2.1;
 	}
 }
 
@@ -1024,14 +1063,9 @@ button.adk-count:not(:disabled):hover {
 	width: 100%;
 	align-items: flex-start;
 	gap: 12px;
-	padding: 14px 16px;
+	padding: 14px 16px 8px;
 	border-radius: 20px;
 	text-align: start;
-}
-
-.adk-note__sum:focus-visible {
-	outline: 2px solid var(--adk-olive);
-	outline-offset: 2px;
 }
 
 .adk-note__icon {
@@ -1059,27 +1093,6 @@ button.adk-count:not(:disabled):hover {
 	font-weight: 500;
 	line-height: 1.9;
 	color: var(--adk-ink-2);
-}
-
-.adk-note__toggle {
-	display: inline-flex;
-	flex: none;
-	align-self: flex-start;
-	align-items: center;
-	gap: 4px;
-	margin-top: 6px;
-	font-size: 12.5px;
-	font-weight: 700;
-	color: var(--adk-olive-strong);
-	white-space: nowrap;
-}
-
-.adk-note__toggle svg {
-	transition: transform 0.2s ease;
-}
-
-.adk-note__sum[aria-expanded='true'] .adk-note__toggle svg {
-	transform: rotate(180deg);
 }
 
 .adk-note__more {
@@ -1365,6 +1378,18 @@ textarea.adk-input {
 		inset 0 0 0 1px var(--adk-line),
 		0 18px 40px -18px rgba(30, 42, 34, 0.45);
 	animation: adk-rise 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Phone: swipe only — hide prev/next bar.
+   Must come after .adk-dock { display:flex } so it wins the cascade. */
+@media (max-width: 768px) {
+	.adk-dock {
+		display: none !important;
+	}
+
+	.adk-reader__scroll {
+		padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+	}
 }
 
 .adk-dock .adk-nav__btn {

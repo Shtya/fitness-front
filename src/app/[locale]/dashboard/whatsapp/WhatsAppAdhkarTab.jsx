@@ -9,7 +9,6 @@ import {
 	BookOpen,
 	CalendarCheck,
 	Check,
-	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
 	Flame,
@@ -170,7 +169,6 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 	const [openId, setOpenId] = useState(null);
 	const [page, setPage] = useState(0);
 	const [dir, setDir] = useState(1);
-	const [expanded, setExpanded] = useState(false);
 	const [finished, setFinished] = useState(false);
 	const [armedDelete, setArmedDelete] = useState(false);
 	const [custom, setCustom] = useState(() => loadCustomDuas(userId));
@@ -183,6 +181,7 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 	const [mounted, setMounted] = useState(false);
 	const advanceTimer = useRef(0);
 	const returnFocus = useRef(null);
+	const swipeStart = useRef(null);
 
 	useEffect(() => setMounted(true), []);
 	useEffect(() => saveCustomDuas(userId, custom), [userId, custom]);
@@ -234,7 +233,6 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 		setDir(1);
 		setPage(firstOpen < 0 ? 0 : firstOpen);
 		setFinished(list.length > 0 && firstOpen < 0);
-		setExpanded(false);
 		setArmedDelete(false);
 	};
 
@@ -251,12 +249,36 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 			window.clearTimeout(advanceTimer.current);
 			setDir(next >= safePage ? 1 : -1);
 			setPage(Math.max(0, Math.min(items.length - 1, next)));
-			setExpanded(false);
 			setArmedDelete(false);
 			setFinished(false);
 		},
 		[safePage, items.length],
 	);
+
+	/** Horizontal finger swipe: left = next, right = previous (same as arrow keys in AR/EN). */
+	const onReaderPointerDown = useCallback(event => {
+		if (event.pointerType === 'mouse' && event.button !== 0) return;
+		if (event.target?.closest?.('button, a, input, textarea, select')) return;
+		swipeStart.current = { x: event.clientX, y: event.clientY, id: event.pointerId };
+	}, []);
+
+	const onReaderPointerUp = useCallback(
+		event => {
+			const start = swipeStart.current;
+			swipeStart.current = null;
+			if (!start || start.id !== event.pointerId || finished || !items.length) return;
+			const dx = event.clientX - start.x;
+			const dy = event.clientY - start.y;
+			if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+			if (dx < 0) goTo(safePage + 1);
+			else goTo(safePage - 1);
+		},
+		[finished, items.length, goTo, safePage],
+	);
+
+	const onReaderPointerCancel = useCallback(() => {
+		swipeStart.current = null;
+	}, []);
 
 	const bump = useCallback(() => {
 		if (!current) return;
@@ -278,7 +300,6 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 			}
 			setDir(1);
 			setPage(target);
-			setExpanded(false);
 		}, prefersReducedMotion() ? 0 : AUTO_ADVANCE_MS);
 	}, [current, progress, items, safePage]);
 
@@ -288,7 +309,6 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 		const need = Number(current.count) || 1;
 		const next = isDone(current, progress) ? progress : { ...progress, [current.id]: need };
 		if (next !== progress) setProgress(next);
-		setExpanded(false);
 		setArmedDelete(false);
 		if (safePage < items.length - 1) {
 			setDir(1);
@@ -322,16 +342,6 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 		setFinished(false);
 		setDir(-1);
 		setPage(0);
-	};
-
-	const toggleFavorite = () => {
-		if (!current) return;
-		setFavorites(prev => {
-			const next = new Set(prev);
-			if (next.has(current.id)) next.delete(current.id);
-			else next.add(current.id);
-			return next;
-		});
 	};
 
 	const removeCustom = id => {
@@ -416,7 +426,6 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 	const need = current ? Number(current.count) || 1 : 1;
 	const taps = current ? Math.min(Number(progress[current.id]) || 0, need) : 0;
 	const done = current ? taps >= need : false;
-	const isFav = current ? favorites.has(current.id) : false;
 	const openStats = openId ? sectionStats[openId] : { total: 0, done: 0 };
 	const isComplete = id => sectionStats[id].total > 0 && sectionStats[id].done === sectionStats[id].total;
 	// What to read next: the section for this time of day, or the next unfinished one after it.
@@ -443,15 +452,19 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 						<X size={22} aria-hidden />
 					</button>
 					<div className="adk-reader__title">
-						<div className="adk-reader__name">{sectionName(openId)}</div>
-						<div className="adk-reader__count">
-							{current && !finished
-								? ar
-									? `${fmt(safePage + 1)} من ${fmt(items.length)} · أتممت ${fmt(openStats.done)}`
-									: `${safePage + 1} of ${items.length} · ${openStats.done} done`
-								: ar
-									? `أتممت ${fmt(openStats.done)} من ${fmt(openStats.total)}`
-									: `${openStats.done} of ${openStats.total} done`}
+						<div className="adk-reader__name">
+							<span className="adk-reader__name-text">{sectionName(openId)}</span>
+							{items.length > 0 ? (
+								<span className="adk-reader__count" aria-live="polite">
+									{current && !finished
+										? ar
+											? `${fmt(safePage + 1)} من ${fmt(items.length)}`
+											: `${safePage + 1} of ${items.length}`
+										: ar
+											? `${fmt(openStats.done)} من ${fmt(openStats.total)}`
+											: `${openStats.done} of ${openStats.total}`}
+								</span>
+							) : null}
 						</div>
 					</div>
 					{openId === 'custom' ? (
@@ -459,30 +472,17 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 							<Plus size={22} aria-hidden />
 						</button>
 					) : null}
-					{current && !finished ? (
-						current.custom ? (
-							<button
-								type="button"
-								onClick={() => (armedDelete ? removeCustom(current.id) : setArmedDelete(true))}
-								onBlur={() => setArmedDelete(false)}
-								aria-label={armedDelete ? (ar ? 'اضغط مرة أخرى للحذف' : 'Tap again to delete') : ar ? 'حذف الدعاء' : 'Delete dua'}
-								title={armedDelete ? (ar ? 'اضغط مرة أخرى للحذف' : 'Tap again to delete') : ar ? 'حذف' : 'Delete'}
-								className={`adk-icon-btn adk-icon-btn--danger ${armedDelete ? 'is-armed' : ''}`}
-							>
-								<Trash2 size={20} aria-hidden />
-							</button>
-						) : (
-							<button
-								type="button"
-								onClick={toggleFavorite}
-								aria-pressed={isFav}
-								aria-label={isFav ? (ar ? 'إزالة من المحفوظ' : 'Remove from saved') : ar ? 'احفظه في المحفوظ' : 'Save'}
-								title={isFav ? (ar ? 'إزالة من المحفوظ' : 'Remove from saved') : ar ? 'احفظه في المحفوظ' : 'Save'}
-								className={`adk-icon-btn ${isFav ? 'is-on' : ''}`}
-							>
-								<BookMarked size={21} fill={isFav ? 'currentColor' : 'none'} aria-hidden />
-							</button>
-						)
+					{current && !finished && current.custom ? (
+						<button
+							type="button"
+							onClick={() => (armedDelete ? removeCustom(current.id) : setArmedDelete(true))}
+							onBlur={() => setArmedDelete(false)}
+							aria-label={armedDelete ? (ar ? 'اضغط مرة أخرى للحذف' : 'Tap again to delete') : ar ? 'حذف الدعاء' : 'Delete dua'}
+							title={armedDelete ? (ar ? 'اضغط مرة أخرى للحذف' : 'Tap again to delete') : ar ? 'حذف' : 'Delete'}
+							className={`adk-icon-btn adk-icon-btn--danger ${armedDelete ? 'is-armed' : ''}`}
+						>
+							<Trash2 size={20} aria-hidden />
+						</button>
 					) : null}
 				</div>
 				<div className="adk-reader__progress" aria-hidden>
@@ -490,7 +490,12 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 				</div>
 			</div>
 
-			<div className="adk-reader__scroll">
+			<div
+				className="adk-reader__scroll"
+				onPointerDown={onReaderPointerDown}
+				onPointerUp={onReaderPointerUp}
+				onPointerCancel={onReaderPointerCancel}
+			>
 				<div className="adk-reader__inner">
 					<section className="adk-card" aria-live="polite">
 						{!current ? (
@@ -553,65 +558,82 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 												: ar ? `اضغط على الذكر مع كل مرة تقرؤه، ${fmt(taps)} من ${fmt(need)}` : `Tap the dhikr each time you say it, ${taps} of ${need}`
 										}
 										onClick={bump}
-										className={`adk-tap ${done ? 'is-done' : ''}`}
+										className={`adk-tap ${done ? 'is-done' : ''} ${current.parts?.length ? 'has-parts' : ''}`}
 									>
-										<p className={`adk-text adk-serif ${current.text.length > 260 ? 'is-long' : ''}`} lang="ar" dir="rtl">
-											{current.text}
-										</p>
+										{current.parts?.length ? (
+											<div className="adk-parts" lang="ar" dir="rtl">
+												{current.parts.map((part, i) => (
+													<p
+														key={i}
+														className={`adk-text adk-serif ${part.length > 160 ? 'is-long' : ''}`}
+													>
+														{part}
+													</p>
+												))}
+											</div>
+										) : (
+											<p className={`adk-text adk-serif ${current.text.length > 260 ? 'is-long' : ''}`} lang="ar" dir="rtl">
+												{current.text}
+											</p>
+										)}
 									</div>
 
-									<div className={`adk-reps ${done ? 'is-done' : ''}`}>
-										{need <= 10 ? (
-											<span className="adk-reps__dots" aria-hidden>
-												{Array.from({ length: need }, (_, i) => (
-													<span key={i} className={i < taps ? 'is-on' : ''} />
-												))}
-											</span>
-										) : (
-											<span className="adk-reps__bar" aria-hidden>
-												<span style={{ width: `${(taps / need) * 100}%` }} />
-											</span>
-										)}
-										<span className="adk-reps__label" key={`${current.id}-${taps}`}>
-											{done ? (
-												<>
-													<Check size={14} strokeWidth={3} aria-hidden />
-													{ar ? 'تمّ' : 'Done'}
-												</>
-											) : need > 10 ? (
-												<span dir="ltr">{fmt(taps)} / {fmt(need)}</span>
-											) : (
-												repeatLabel(need, ar, fmt)
-											)}
-										</span>
-										{taps > 0 ? (
-											<button type="button" className="adk-reps__reset" onClick={resetItem} aria-label={ar ? 'تصفير العدّ' : 'Reset count'} title={ar ? 'تصفير العدّ' : 'Reset count'}>
-												<RotateCcw size={14} aria-hidden />
-											</button>
-										) : null}
-									</div>
+									{need > 1 || done || taps > 0 ? (
+										<div className={`adk-reps ${done ? 'is-done' : ''}`}>
+											{need > 1 ? (
+												need <= 10 ? (
+													<span className="adk-reps__dots" aria-hidden>
+														{Array.from({ length: need }, (_, i) => (
+															<span key={i} className={i < taps ? 'is-on' : ''} />
+														))}
+													</span>
+												) : (
+													<span className="adk-reps__bar" aria-hidden>
+														<span style={{ width: `${(taps / need) * 100}%` }} />
+													</span>
+												)
+											) : null}
+											{need > 1 || done ? (
+												<span className="adk-reps__label" key={`${current.id}-${taps}`}>
+													{done ? (
+														<>
+															<Check size={14} strokeWidth={3} aria-hidden />
+															{ar ? 'تمّ' : 'Done'}
+														</>
+													) : need > 10 ? (
+														<span dir="ltr">{fmt(taps)} / {fmt(need)}</span>
+													) : (
+														repeatLabel(need, ar, fmt)
+													)}
+												</span>
+											) : null}
+											{taps > 0 ? (
+												<button type="button" className="adk-reps__reset" onClick={resetItem} aria-label={ar ? 'تصفير العدّ' : 'Reset count'} title={ar ? 'تصفير العدّ' : 'Reset count'}>
+													<RotateCcw size={14} aria-hidden />
+												</button>
+											) : null}
+										</div>
+									) : null}
 								</div>
 
-								{/* Benefit and explanation are always shown in Arabic, as written in the source. */}
+								{/* Benefit, explanation, and source stay open — always Arabic as in the source. */}
 								<div className="adk-note" dir="rtl" lang="ar">
-									<button type="button" className="adk-note__sum" onClick={() => setExpanded(v => !v)} aria-expanded={expanded}>
+									<div className="adk-note__sum">
 										<Sparkles size={18} className="adk-note__icon" aria-hidden />
 										<span className="adk-note__body">
 											<span className="adk-note__label">الفائدة</span>
 											<span className="adk-note__text adk-naskh">{current.benefit}</span>
-											<span className="adk-note__toggle">
-												{expanded ? 'إخفاء الشرح' : 'اقرأ الشرح والمصدر'}
-												<ChevronDown size={16} aria-hidden />
-											</span>
 										</span>
-									</button>
-									{expanded ? (
-										<div className="adk-note__more adk-rise">
-											<p className="adk-naskh">{current.explanation}</p>
-											<p className="adk-source">
-												<BookOpen size={15} aria-hidden style={{ flex: 'none', marginTop: 4 }} />
-												<span className="adk-naskh">المصدر: {current.source}</span>
-											</p>
+									</div>
+									{(current.explanation || current.source) ? (
+										<div className="adk-note__more">
+											{current.explanation ? <p className="adk-naskh">{current.explanation}</p> : null}
+											{current.source ? (
+												<p className="adk-source">
+													<BookOpen size={15} aria-hidden style={{ flex: 'none', marginTop: 4 }} />
+													<span className="adk-naskh">المصدر: {current.source}</span>
+												</p>
+											) : null}
 										</div>
 									) : null}
 								</div>
@@ -628,7 +650,11 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 						<PrevIcon size={20} aria-hidden />
 						{ar ? 'السابق' : 'Previous'}
 					</button>
-					<span className="adk-nav__kbd">{ar ? 'اضغط الذكر أو المسافة للعدّ · «التالي» يعني أتممته' : 'Tap the text or Space to count · Next marks it done'}</span>
+					<span className="adk-nav__kbd">
+						{ar
+							? 'اسحب يمين أو شمال للتنقل · اضغط الذكر للعدّ'
+							: 'Swipe left or right to move · Tap the text to count'}
+					</span>
 					<button type="button" className="adk-nav__btn adk-nav__btn--next" onClick={completeAndNext}>
 						{safePage >= items.length - 1 ? (ar ? 'إنهاء' : 'Finish') : ar ? 'التالي' : 'Next'}
 						{safePage >= items.length - 1 ? <Check size={20} aria-hidden /> : <NextIcon size={20} aria-hidden />}

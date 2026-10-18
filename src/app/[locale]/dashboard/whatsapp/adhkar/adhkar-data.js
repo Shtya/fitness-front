@@ -6,7 +6,15 @@
  * Do not invent hadith wording or unauthenticated “virtues”.
  */
 
-/** @typedef {{ id: string; text: string; count: number; benefit: string; benefitEn: string; explanation: string; explanationEn: string; source: string }} AdhkarItem */
+/** @typedef {{ id: string; text: string; parts?: string[]; count: number; benefit: string; benefitEn: string; explanation: string; explanationEn: string; source: string }} AdhkarItem */
+
+const SURAH_IKHLAS =
+	'قُلْ هُوَ اللَّهُ أَحَدٌ ۝ اللَّهُ الصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ';
+const SURAH_FALAQ =
+	'قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ۝ مِن شَرِّ مَا خَلَقَ ۝ وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ۝ وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ ۝ وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ';
+const SURAH_NAS =
+	'قُلْ أَعُوذُ بِرَبِّ النَّاسِ ۝ مَلِكِ النَّاسِ ۝ إِلَٰهِ النَّاسِ ۝ مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ۝ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ۝ مِنَ الْجِنَّةِ وَالنَّاسِ';
+const MUAWWIDHAT_PARTS = [SURAH_IKHLAS, SURAH_FALAQ, SURAH_NAS];
 
 /** @type {AdhkarItem[]} */
 export const MORNING_ADHKAR = [
@@ -23,36 +31,17 @@ export const MORNING_ADHKAR = [
 		source: 'البقرة: ٢٥٥ — البخاري في صحيحه (فضائلها مع أذكار النوم/الحفظ)',
 	},
 	{
-		id: 'm-ikhlas',
-		text: 'قُلْ هُوَ اللَّهُ أَحَدٌ ۝ اللَّهُ الصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ',
+		id: 'm-muawwidhat',
+		parts: MUAWWIDHAT_PARTS,
+		text: MUAWWIDHAT_PARTS.join('\n'),
 		count: 3,
-		benefit: 'مع المعوذتين: تكفي من كل شيء بإذن الله.',
-		benefitEn: 'With al-Falaq and an-Nas: sufficient against all harm, by Allah’s leave.',
+		benefit: 'الإخلاص والمعوذتان: تكفي من كل شيء بإذن الله.',
+		benefitEn: 'Al-Ikhlas with al-Falaq and an-Nas: sufficient against all harm, by Allah’s leave.',
 		explanation:
 			'يُستحب قراءة سور الإخلاص والفلق والناس ثلاث مرات صباحًا ومساءً. قال النبي ﷺ: «إنها تكفيك من كل شيء» (حديث حسن).',
 		explanationEn:
 			'It is recommended to recite al-Ikhlas, al-Falaq, and an-Nas three times morning and evening. The Prophet ﷺ said they suffice you against everything (hasan report).',
-		source: 'الإخلاص ١–٤ — أبو داود والترمذي والنسائي (حسن)',
-	},
-	{
-		id: 'm-falaq',
-		text: 'قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ۝ مِن شَرِّ مَا خَلَقَ ۝ وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ۝ وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ ۝ وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ',
-		count: 3,
-		benefit: 'استعاذة من الشرور الظاهرة والخفية.',
-		benefitEn: 'Seeking refuge from seen and unseen harms.',
-		explanation: 'سورة الفلق من المعوذتين، تُقرأ مع الإخلاص والناس ثلاثًا صباحًا ومساءً كما في السنن.',
-		explanationEn: 'Al-Falaq is one of the two protective surahs; recited with al-Ikhlas and an-Nas three times morning and evening.',
-		source: 'الفلق ١–٥ — السنن (مع الإخلاص والناس)',
-	},
-	{
-		id: 'm-nas',
-		text: 'قُلْ أَعُوذُ بِرَبِّ النَّاسِ ۝ مَلِكِ النَّاسِ ۝ إِلَٰهِ النَّاسِ ۝ مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ۝ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ۝ مِنَ الْجِنَّةِ وَالنَّاسِ',
-		count: 3,
-		benefit: 'استعاذة من وسوسة الشيطان.',
-		benefitEn: 'Seeking refuge from Satan’s whispers.',
-		explanation: 'سورة الناس تُتمّ المعوذتين مع الإخلاص؛ ثلاث مرات صباحًا ومساءً.',
-		explanationEn: 'An-Nas completes the protective set with al-Ikhlas; three times morning and evening.',
-		source: 'الناس ١–٦ — السنن',
+		source: 'الإخلاص والفلق والناس — أبو داود والترمذي والنسائي (حسن)',
 	},
 	{
 		id: 'm-asbahna-mulk',
@@ -202,9 +191,7 @@ export const EVENING_ADHKAR = [
 			'آية الكرسي: من قرأها إذا أمسى حُفظ من الجن حتى يصبح (كما في الصحيح).',
 		explanationEn: 'Ayat al-Kursi: whoever recites it in the evening is guarded until morning (as in the authentic reports).',
 	},
-	{ ...MORNING_ADHKAR[1], id: 'e-ikhlas' },
-	{ ...MORNING_ADHKAR[2], id: 'e-falaq' },
-	{ ...MORNING_ADHKAR[3], id: 'e-nas' },
+	{ ...MORNING_ADHKAR[1], id: 'e-muawwidhat' },
 	{
 		id: 'e-amsayna-mulk',
 		text: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لَا إِلَٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ، رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَٰذِهِ اللَّيْلَةِ وَخَيْرَ مَا بَعْدَهَا، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِي هَٰذِهِ اللَّيْلَةِ وَشَرِّ مَا بَعْدَهَا، رَبِّ أَعُوذُ بِكَ مِنَ الْكَسَلِ وَسُوءِ الْكِبَرِ، رَبِّ أَعُوذُ بِكَ مِنْ عَذَابٍ فِي النَّارِ وَعَذَابٍ فِي الْقَبْرِ',
@@ -245,11 +232,11 @@ export const EVENING_ADHKAR = [
 		explanationEn: 'Evening wording for fulfilling thanks (Abu Dawud — hasan).',
 		source: 'أبو داود — حسن',
 	},
-	{ ...MORNING_ADHKAR[8], id: 'e-afini' },
-	{ ...MORNING_ADHKAR[9], id: 'e-hasbiya' },
-	{ ...MORNING_ADHKAR[10], id: 'e-bismillah-la-yadur' },
-	{ ...MORNING_ADHKAR[11], id: 'e-raditu' },
-	{ ...MORNING_ADHKAR[12], id: 'e-ya-hayy' },
+	{ ...MORNING_ADHKAR[6], id: 'e-afini' },
+	{ ...MORNING_ADHKAR[7], id: 'e-hasbiya' },
+	{ ...MORNING_ADHKAR[8], id: 'e-bismillah-la-yadur' },
+	{ ...MORNING_ADHKAR[9], id: 'e-raditu' },
+	{ ...MORNING_ADHKAR[10], id: 'e-ya-hayy' },
 	{
 		id: 'e-fitrah',
 		text: 'أَمْسَيْنَا عَلَىٰ فِطْرَةِ الْإِسْلَامِ، وَعَلَىٰ كَلِمَةِ الْإِخْلَاصِ، وَعَلَىٰ دِينِ نَبِيِّنَا مُحَمَّدٍ ﷺ، وَعَلَىٰ مِلَّةِ أَبِينَا إِبْرَاهِيمَ حَنِيفًا مُسْلِمًا وَمَا كَانَ مِنَ الْمُشْرِكِينَ',
@@ -270,9 +257,9 @@ export const EVENING_ADHKAR = [
 		explanationEn: 'Whoever says it three times in the evening will not be harmed by a sting that night (Muslim).',
 		source: 'مسلم',
 	},
-	{ ...MORNING_ADHKAR[14], id: 'e-subhanallah' },
-	{ ...MORNING_ADHKAR[15], id: 'e-tahlil-10' },
-	{ ...MORNING_ADHKAR[16], id: 'e-salawat' },
+	{ ...MORNING_ADHKAR[12], id: 'e-subhanallah' },
+	{ ...MORNING_ADHKAR[13], id: 'e-tahlil-10' },
+	{ ...MORNING_ADHKAR[14], id: 'e-salawat' },
 ];
 
 /** @type {AdhkarItem[]} */
@@ -288,34 +275,15 @@ export const SLEEP_ADHKAR = [
 		source: 'البقرة: ٢٥٥ — البخاري',
 	},
 	{
-		id: 's-ikhlas',
-		text: MORNING_ADHKAR[1].text,
+		id: 's-muawwidhat',
+		parts: MUAWWIDHAT_PARTS,
+		text: MUAWWIDHAT_PARTS.join('\n'),
 		count: 3,
-		benefit: 'تكفي مع المعوذتين.',
-		benefitEn: 'Suffice with the two protective surahs.',
+		benefit: 'الإخلاص والمعوذتان تكفي عند النوم.',
+		benefitEn: 'Al-Ikhlas with the two protective surahs suffice at sleep.',
 		explanation: 'كان النبي ﷺ يجمع كفيه وينفث فيهما بالإخلاص والمعوذتين ويمسح بهما ما استطاع من جسده عند النوم (البخاري ومسلم).',
 		explanationEn: 'The Prophet ﷺ would cup his hands, blow into them with al-Ikhlas and the Mu‘awwidhatayn, and wipe over his body before sleep (Bukhari & Muslim).',
-		source: 'الإخلاص — البخاري ومسلم',
-	},
-	{
-		id: 's-falaq',
-		text: MORNING_ADHKAR[2].text,
-		count: 3,
-		benefit: 'من المعوذتين عند النوم.',
-		benefitEn: 'One of the two protective surahs at sleep.',
-		explanation: 'تُقرأ مع الإخلاص والناس كما فعل النبي ﷺ قبل النوم.',
-		explanationEn: 'Recited with al-Ikhlas and an-Nas as the Prophet ﷺ did before sleep.',
-		source: 'الفلق — البخاري ومسلم',
-	},
-	{
-		id: 's-nas',
-		text: MORNING_ADHKAR[3].text,
-		count: 3,
-		benefit: 'من المعوذتين عند النوم.',
-		benefitEn: 'One of the two protective surahs at sleep.',
-		explanation: 'تُقرأ مع الإخلاص والفلق قبل النوم.',
-		explanationEn: 'Recited with al-Ikhlas and al-Falaq before sleep.',
-		source: 'الناس — البخاري ومسلم',
+		source: 'الإخلاص والفلق والناس — البخاري ومسلم',
 	},
 	{
 		id: 's-bismika',
