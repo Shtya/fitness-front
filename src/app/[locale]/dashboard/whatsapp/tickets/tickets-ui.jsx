@@ -1,39 +1,80 @@
 'use client';
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, Check, Circle, CircleDot, Flag, MoreHorizontal, Pencil, Pin, PinOff, Play, RotateCcw, Trash2, Undo2 } from 'lucide-react';
 import './tickets-ui.css';
 
 /* ─── Menu ───────────────────────────────────────────────────────── */
+const GAP = 6;
+const EDGE = 8;
+
 /**
  * Small accessible menu. `items`: { id, label, icon, onSelect, checked, danger, hint } or
  * { divider: true } or { heading }. Arrow keys move, Esc closes and returns focus.
+ * The list is portalled to <body> and positioned against the trigger, so scrolling boards and
+ * clipped cards never cut it off; it flips above the trigger when there is no room below.
  */
 export function MiniMenu({ label, icon, text, items, align = 'end', className = '', buttonClassName = 'tkx-iconbtn', disabled, title }) {
 	const [open, setOpen] = useState(false);
-	const [up, setUp] = useState(false);
+	const [pos, setPos] = useState(null); // { left, top, up }
 	const wrap = useRef(null);
 	const btn = useRef(null);
 	const list = useRef(null);
 	const id = useId();
 
-	useEffect(() => {
-		if (!open) return undefined;
-		const r = wrap.current.getBoundingClientRect();
-		setUp(r.bottom + 320 > window.innerHeight && r.top > 320);
-		const first = list.current?.querySelector('[role^="menuitem"]:not([disabled])');
-		first?.focus();
-		const onDown = event => {
-			if (!wrap.current?.contains(event.target)) setOpen(false);
-		};
-		document.addEventListener('pointerdown', onDown);
-		return () => document.removeEventListener('pointerdown', onDown);
-	}, [open]);
-
 	const close = (refocus = true) => {
 		setOpen(false);
+		setPos(null);
 		if (refocus) window.setTimeout(() => btn.current?.focus(), 0);
 	};
+
+	// Measure the list, then place it next to the trigger inside the viewport.
+	const place = () => {
+		const b = btn.current;
+		const l = list.current;
+		if (!b || !l) return;
+		const r = b.getBoundingClientRect();
+		if (r.bottom < 0 || r.top > window.innerHeight) {
+			close(false);
+			return;
+		}
+		const w = l.offsetWidth;
+		const h = l.offsetHeight;
+		const rtl = (wrap.current?.closest('[dir]')?.getAttribute('dir') || document.documentElement.dir) === 'rtl';
+		const toEnd = (align === 'end') !== rtl; // "end" is the right edge in LTR, the left in RTL
+		let left = toEnd ? r.right - w : r.left;
+		left = Math.min(Math.max(EDGE, left), window.innerWidth - w - EDGE);
+		const below = r.bottom + GAP;
+		const above = r.top - GAP - h;
+		const up = below + h > window.innerHeight - EDGE && above >= EDGE;
+		let top = up ? above : below;
+		top = Math.min(Math.max(EDGE, top), window.innerHeight - h - EDGE);
+		setPos(prev => (prev && prev.left === left && prev.top === top && prev.up === up ? prev : { left, top, up }));
+	};
+
+	useLayoutEffect(() => {
+		if (!open || !list.current) return undefined;
+		// Carry the board's colour tokens and direction into the portal.
+		copyCustomProps(wrap.current, list.current);
+		const dir = wrap.current?.closest('[dir]')?.getAttribute('dir');
+		if (dir) list.current.setAttribute('dir', dir);
+		place();
+		list.current.querySelector('[role^="menuitem"]:not([disabled])')?.focus({ preventScroll: true });
+		const onDown = event => {
+			if (!wrap.current?.contains(event.target) && !list.current?.contains(event.target)) close(false);
+		};
+		const onMove = () => place();
+		document.addEventListener('pointerdown', onDown);
+		window.addEventListener('scroll', onMove, true);
+		window.addEventListener('resize', onMove);
+		return () => {
+			document.removeEventListener('pointerdown', onDown);
+			window.removeEventListener('scroll', onMove, true);
+			window.removeEventListener('resize', onMove);
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [open]);
 
 	const onKeyDown = event => {
 		const els = [...list.current.querySelectorAll('[role^="menuitem"]:not([disabled])')];
@@ -55,7 +96,9 @@ export function MiniMenu({ label, icon, text, items, align = 'end', className = 
 			event.stopPropagation();
 			close();
 		} else if (event.key === 'Tab') {
+			// The list lives at the end of <body>: hand focus back to the trigger, then let Tab move on.
 			close(false);
+			btn.current?.focus();
 		}
 	};
 
@@ -73,49 +116,63 @@ export function MiniMenu({ label, icon, text, items, align = 'end', className = 
 				disabled={disabled}
 				onClick={event => {
 					event.stopPropagation();
-					setOpen(v => !v);
+					if (open) close(false);
+					else setOpen(true);
 				}}
 			>
 				{icon}
 				{text ? <span>{text}</span> : null}
 			</button>
-			{open ? (
-				<div id={id} ref={list} role="menu" aria-label={label} className={`tkx-menu__list is-${align} ${up ? 'is-up' : ''}`} onKeyDown={onKeyDown}>
-					{items.map((item, i) => {
-						if (item.divider) return <div key={`d${i}`} className="tkx-menu__divider" role="separator" />;
-						if (item.heading) {
-							return (
-								<div key={`h${i}`} className="tkx-menu__heading" role="presentation">
-									{item.heading}
-								</div>
-							);
-						}
-						const checkable = item.checked !== undefined;
-						return (
-							<button
-								key={item.id}
-								type="button"
-								role={checkable ? 'menuitemradio' : 'menuitem'}
-								aria-checked={checkable ? Boolean(item.checked) : undefined}
-								className={`tkx-menu__item ${item.danger ? 'is-danger' : ''} ${item.checked ? 'is-checked' : ''}`}
-								disabled={item.disabled}
-								onClick={event => {
-									event.stopPropagation();
-									const keep = item.onSelect?.();
-									if (keep !== true) close();
-								}}
-							>
-								<span className="tkx-menu__icon" aria-hidden>
-									{item.icon}
-								</span>
-								<span className="tkx-menu__label">{item.label}</span>
-								{item.hint ? <kbd className="tkx-kbd">{item.hint}</kbd> : null}
-								{checkable && item.checked ? <Check size={15} className="tkx-menu__tick" aria-hidden /> : null}
-							</button>
-						);
-					})}
-				</div>
-			) : null}
+			{open
+				? createPortal(
+						<div
+							id={id}
+							ref={list}
+							role="menu"
+							aria-label={label}
+							className={`tkx-menu__list is-portal ${pos?.up ? 'is-up' : ''}`}
+							style={pos ? { left: pos.left, top: pos.top } : { left: -9999, top: 0, visibility: 'hidden' }}
+							onKeyDown={onKeyDown}
+							onPointerDown={event => event.stopPropagation()}
+						>
+							{items.map((item, i) => {
+								if (item.divider) return <div key={`d${i}`} className="tkx-menu__divider" role="separator" />;
+								if (item.heading) {
+									return (
+										<div key={`h${i}`} className="tkx-menu__heading" role="presentation">
+											{item.heading}
+										</div>
+									);
+								}
+								const checkable = item.checked !== undefined;
+								return (
+									<button
+										key={item.id}
+										type="button"
+										role={checkable ? 'menuitemradio' : 'menuitem'}
+										aria-checked={checkable ? Boolean(item.checked) : undefined}
+										className={`tkx-menu__item ${item.danger ? 'is-danger' : ''} ${item.checked ? 'is-checked' : ''}`}
+										disabled={item.disabled}
+										onClick={event => {
+											event.stopPropagation();
+											const keep = item.onSelect?.();
+											if (keep !== true) close();
+											else window.requestAnimationFrame(place);
+										}}
+									>
+										<span className="tkx-menu__icon" aria-hidden>
+											{item.icon}
+										</span>
+										<span className="tkx-menu__label">{item.label}</span>
+										{item.hint ? <kbd className="tkx-kbd">{item.hint}</kbd> : null}
+										{checkable && item.checked ? <Check size={15} className="tkx-menu__tick" aria-hidden /> : null}
+									</button>
+								);
+							})}
+						</div>,
+						document.body,
+					)
+				: null}
 		</div>
 	);
 }
@@ -253,10 +310,15 @@ const FLIP_ID = 'tk-flip';
  */
 export function useFlip(containerRef, active = true) {
 	const layout = useRef(new Map());
+	const lastOrder = useRef('');
 	useLayoutEffect(() => {
 		const root = containerRef.current;
 		if (!root) return;
 		const base = root.getBoundingClientRect();
+		// Only a change of order (drag, add, remove) slides items; a resize or re-wrap just re-measures.
+		const order = [...root.querySelectorAll('[data-flip]')].map(el => el.dataset.flip).join('|');
+		const reordered = order !== lastOrder.current;
+		lastOrder.current = order;
 		const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 		const next = new Map();
 		root.querySelectorAll('[data-flip]').forEach(el => {
@@ -276,7 +338,7 @@ export function useFlip(containerRef, active = true) {
 			box.bottom = box.top + box.height;
 			next.set(id, box);
 			const prev = layout.current.get(id);
-			if (!active || reduce || !prev) return;
+			if (!active || reduce || !prev || (!reordered && !running.length)) return;
 			const dx = prev.left + ox - box.left;
 			const dy = prev.top + oy - box.top;
 			if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
@@ -335,7 +397,7 @@ export function useSortable({ containerRef, ids, isPinned, onCommit, axis = 'gri
 		const rect = source.getBoundingClientRect();
 		const start = { x: event.clientX, y: event.clientY };
 		const off = { x: start.x - rect.left, y: start.y - rect.top };
-		const scroller = containerRef.current?.closest('.tk-board') || containerRef.current;
+		const scroller = containerRef.current?.closest('.tk-scroll') || containerRef.current;
 		let armed = false;
 		let last = start;
 		let float = null;

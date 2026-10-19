@@ -141,7 +141,8 @@ export function TicketsLauncher({ ar, onAdd }) {
 	useEffect(() => {
 		if (!open) return undefined;
 		const onDown = event => {
-			if (!wrap.current?.contains(event.target)) setOpen(false);
+			// The composer's priority menu is portalled to <body>; picking from it is still "inside".
+			if (!wrap.current?.contains(event.target) && !event.target.closest?.('.tkx-menu__list')) setOpen(false);
 		};
 		const onKey = event => {
 			if (event.key === 'Escape') setOpen(false);
@@ -386,7 +387,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const date = new Intl.DateTimeFormat(locale(ar), { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
 
 	return (
-		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-list'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
+		<section className={`tk-board tk-scroll ${view === 'wall' ? 'is-wall' : 'is-list'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
 			<header className="tk-board__head">
 				<div className="tk-board__titles">
 					<h2 id="tk-heading" className="tk-board__title">

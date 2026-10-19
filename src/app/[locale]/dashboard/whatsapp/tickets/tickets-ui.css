@@ -374,3 +374,20 @@ html.dark .tk-float .tk {
 .tk-float .tk__actions {
 	opacity: 0;
 }
+
+/* the menu list is portalled to <body> and placed against its trigger (fixed) */
+.tkx-menu__list.is-portal,
+.tkx-menu__list.is-portal.is-up {
+	position: fixed;
+	right: auto;
+	bottom: auto;
+	inset-inline: auto;
+	z-index: 2100;
+	max-height: calc(100dvh - 16px);
+	overflow-y: auto;
+	transform-origin: top;
+}
+
+.tkx-menu__list.is-portal.is-up {
+	transform-origin: bottom;
+}

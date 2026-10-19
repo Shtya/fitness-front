@@ -173,6 +173,7 @@ function WallNote({ ticket, c, ar, y, fresh, baseActions, onDelete, canMove, dra
 			data-flip={ticket.id}
 			data-note-id={ticket.id}
 			tabIndex={0}
+			title={canMove ? c.dragHint : undefined}
 			aria-label={`${ticket.title}. ${c.status[ticket.status]}. ${c.priorityLong[ticket.priority]}${ticket.pinned ? `. ${c.pinned}` : ''}`}
 			className={[
 				'tw-note',
