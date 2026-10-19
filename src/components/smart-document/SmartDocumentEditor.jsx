@@ -9,6 +9,7 @@ import {
 	Code2,
 	Copy,
 	Eye,
+	FileDown,
 	FilePlus2,
 	History,
 	Link2,
@@ -27,6 +28,7 @@ import { detectDominantDir } from '@/lib/smart-document/structure';
 import MarkdownVisualEditor from './MarkdownVisualEditor';
 import TypographyPanel from './TypographyPanel';
 import WordLookup, { captureLookup } from './WordLookup';
+import { downloadWordDocument } from './export-document';
 import { htmlToPlainText, isHtmlSource } from './source-format';
 import { FONT_VARIABLE_CLASSES, TYPOGRAPHY_DEFAULTS, normalizeTypography, typographyStyle } from './typography';
 import './smart-document.css';
@@ -161,6 +163,7 @@ export default function SmartDocumentEditor({
 	const [shelfOpen, setShelfOpen] = useState(false);
 	const [shareTokens, setShareTokens] = useState({});
 	const [sharing, setSharing] = useState(false);
+	const [exporting, setExporting] = useState(false);
 	const [shareCopied, setShareCopied] = useState(false);
 	const [visitsOpen, setVisitsOpen] = useState(false);
 	const [visitsLoading, setVisitsLoading] = useState(false);
@@ -476,6 +479,47 @@ export default function SmartDocumentEditor({
 		if (mode === 'edit') requestAnimationFrame(() => taRef.current?.focus());
 	};
 
+	const exportActiveDocument = useCallback(async () => {
+		flushSave();
+		const content = String(textRef.current || '');
+		if (!content.trim()) {
+			toast.error(labels.exportEmpty || 'Write something before exporting');
+			return;
+		}
+		const title =
+			history.find((h) => h.id === activeIdRef.current)?.title ||
+			titleFromSource(content) ||
+			labels.untitled ||
+			'Untitled';
+		setExporting(true);
+		try {
+			// Prefer the live preview DOM when open — keeps tables/formatting as seen.
+			let bodyHtml = '';
+			if (mode === 'preview' && typeof document !== 'undefined') {
+				const preview = document.querySelector('.sd-markdown-preview .ProseMirror, .sd-markdown-preview .sd-md');
+				if (preview?.innerHTML?.trim()) bodyHtml = preview.innerHTML;
+			}
+			await Promise.resolve(
+				downloadWordDocument({
+					title,
+					source: content,
+					bodyHtml: bodyHtml || undefined,
+					dir: docDir,
+					typography,
+				}),
+			);
+			toast.success(labels.exportDone || 'Document downloaded');
+		} catch (error) {
+			if (error?.code === 'empty') {
+				toast.error(labels.exportEmpty || 'Write something before exporting');
+			} else {
+				toast.error(labels.exportFailed || 'Could not export document');
+			}
+		} finally {
+			setExporting(false);
+		}
+	}, [docDir, flushSave, history, labels, mode, typography]);
+
 	const copyHistoryItem = async (item, e) => {
 		e?.preventDefault?.();
 		e?.stopPropagation?.();
@@ -675,6 +719,20 @@ export default function SmartDocumentEditor({
 					</div>
 
 					<div className="sd-chrome-actions">
+						<button
+							type="button"
+							className="sd-icon-btn sd-export-btn"
+							title={labels.export || 'Export as Word document'}
+							disabled={exporting}
+							onClick={() => void exportActiveDocument()}
+						>
+							{exporting ? (
+								<Loader2 size={15} className="animate-spin" />
+							) : (
+								<FileDown size={15} />
+							)}
+							<span className="sd-export-label">{labels.exportShort || labels.export || 'Export'}</span>
+						</button>
 						<button
 							type="button"
 							className={`sd-icon-btn sd-share-btn${activeShareToken ? ' is-live' : ''}${shareCopied ? ' is-copied' : ''}`}

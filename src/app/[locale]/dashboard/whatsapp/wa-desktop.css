@@ -508,8 +508,16 @@
 		box-shadow: none !important;
 	}
 
-	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action.wa-input-action:hover {
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action.wa-input-action:hover:not(:disabled),
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action.wa-input-action:focus-visible:not(:disabled) {
 		background: var(--d-selected) !important;
+		color: var(--d-accent) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action.wa-input-action:hover:not(:disabled) .wa-composer-mic-icon,
+	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action.wa-input-action:focus-visible:not(:disabled) .wa-composer-mic-icon {
+		color: var(--d-accent) !important;
+		fill: currentColor !important;
 	}
 
 	html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-composer .wa-mic-button::before,

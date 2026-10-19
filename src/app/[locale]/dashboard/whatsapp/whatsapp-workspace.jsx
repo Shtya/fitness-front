@@ -133,6 +133,7 @@ import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import SocialVideoActions from './social-download/SocialVideoActions';
 import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
 import PinnedMessagesPanel from './PinnedMessagesPanel';
+import ChatSearchBar from './ChatSearchBar';
 import {
 	loadConversationHistoryForClone,
 	loadMoreConversationHistoryForClone,
@@ -1148,6 +1149,10 @@ const translations = {
 		archiveChat: 'Archive chat',
 		unarchiveChat: 'Unarchive chat',
 		archiveUpdated: 'Archived chats updated',
+		deleteChat: 'Delete chat',
+		deleteChatConfirm:
+			'Delete this chat from your inbox? It will reappear if a new message arrives.',
+		chatDeleted: 'Chat deleted',
 		noArchivedConversations: 'No archived chats',
 		assignedTo: 'Assigned to',
 		chatActions: 'Chat actions',
@@ -1676,6 +1681,10 @@ const translations = {
 		archiveChat: 'أرشفة المحادثة',
 		unarchiveChat: 'إلغاء أرشفة المحادثة',
 		archiveUpdated: 'تم تحديث المحادثات المؤرشفة',
+		deleteChat: 'حذف المحادثة',
+		deleteChatConfirm:
+			'حذف هذه المحادثة من صندوق الوارد؟ هترجع تاني لو جت رسالة جديدة.',
+		chatDeleted: 'تم حذف المحادثة',
 		noArchivedConversations: 'لا توجد محادثات مؤرشفة',
 		assignedTo: 'المسند إلى',
 		chatActions: 'إجراءات المحادثة',
@@ -10085,7 +10094,7 @@ function ConversationActionMenu({
 	});
 	const pressGuard = useFreshPressGuard(conversation);
 	const [pos, setPos] = useState(() =>
-		computeBesideMenuPosition(anchorRect, { width: CONVERSATION_MENU_WIDTH, height: 340 }),
+		computeBesideMenuPosition(anchorRect, { width: CONVERSATION_MENU_WIDTH, height: 380 }),
 	);
 	const menuRef = useRef(null);
 	useMenuKeyboard(menuRef, { open: Boolean(conversation), onClose });
@@ -10097,7 +10106,7 @@ function ConversationActionMenu({
 			setPos(
 				computeBesideMenuPosition(anchorRect, {
 					width: CONVERSATION_MENU_WIDTH,
-					height: measured?.height || 280,
+					height: measured?.height || 380,
 				}),
 			);
 		};
@@ -10156,6 +10165,13 @@ function ConversationActionMenu({
 		},
 		canAssign && { id: 'assign', label: ar ? 'تعيين إلى شخص' : 'Assign to person', icon: UserPlus, group: 'manage' },
 		{ id: 'info', label: ar ? 'معلومات المحادثة' : 'Conversation info', icon: Info, group: 'manage' },
+		{
+			id: 'delete',
+			label: ar ? 'حذف المحادثة' : 'Delete chat',
+			icon: Trash2,
+			destructive: true,
+			group: 'danger',
+		},
 	].filter(Boolean);
 	const preview =
 		conversationPreview(conversation, locale) ||
@@ -10213,7 +10229,7 @@ function ConversationActionMenu({
 								role="menuitem"
 								disabled={busy}
 								onClick={() => onAction(action.id)}
-								className="wa-ui-menu__item"
+								className={`wa-ui-menu__item${action.destructive ? ' is-danger' : ''}`}
 							>
 								<Icon className="wa-ui-menu__icon" strokeWidth={1.8} aria-hidden="true" />
 								<span className="wa-ui-menu__label">{action.label}</span>
@@ -12529,7 +12545,10 @@ function WhatsAppWorkspaceContent() {
 	const [inChatSearchOpen, setInChatSearchOpen] = useState(false);
 	const [inChatSearchQuery, setInChatSearchQuery] = useState('');
 	const [inChatSearchHits, setInChatSearchHits] = useState([]);
+	const [inChatSearchActiveIndex, setInChatSearchActiveIndex] = useState(-1);
 	const [inChatSearchBusy, setInChatSearchBusy] = useState(false);
+	const inChatSearchReqRef = useRef(0);
+	const inChatSearchTimerRef = useRef(0);
 	const [editingMessage, setEditingMessage] = useState(null);
 	const [editDraft, setEditDraft] = useState('');
 	const [uploadProgress, setUploadProgress] = useState(null);
@@ -17357,7 +17376,39 @@ function WhatsAppWorkspaceContent() {
 					return touched ? next : current;
 				});
 			}
-			if (event.event === 'conversation_updated' && event.payload?.preview && accountIdRef.current) {
+			if (event.event === 'conversation_deleted' && event.payload?.conversationId) {
+				const deletedId = event.payload.conversationId;
+				const wasArchived = Boolean(
+					conversationsRef.current.find(item => item.id === deletedId)?.isArchived,
+				);
+				setConversations(current => current.filter(item => item.id !== deletedId));
+				if (wasArchived) {
+					setArchivedCount(current => Math.max(0, current - 1));
+				}
+				const cachedAccountId = accountIdRef.current;
+				const cached = cachedAccountId
+					? conversationsCacheRef.current.get(cachedAccountId)
+					: null;
+				if (cached) {
+					conversationsCacheRef.current.set(cachedAccountId, {
+						...cached,
+						items: (cached.items || []).filter(item => item.id !== deletedId),
+						archivedCount: wasArchived
+							? Math.max(0, (cached.archivedCount || 1) - 1)
+							: cached.archivedCount || 0,
+						cachedAt: Date.now(),
+					});
+				}
+				messagesCacheRef.current.delete(deletedId);
+				if (conversationIdRef.current === deletedId) {
+					setConversationId(null);
+					clearConversationMessages(null);
+				}
+				if (secondaryConversationIdRef.current === deletedId) {
+					setSecondaryConversationId(null);
+				}
+				notifyWhatsAppUnreadChanged();
+			} else if (event.event === 'conversation_updated' && event.payload?.preview && accountIdRef.current) {
 				// Common case: a message arrived somewhere in this account — patch
 				// just that conversation's preview/unread count in place. A chat
 				// that is not in the list yet (first ever message) has nothing to
@@ -22018,31 +22069,84 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const runInChatSearch = async query => {
-		const q = String(query || '').trim();
-		setInChatSearchQuery(q);
-		if (!conversationId || !q) {
-			setInChatSearchHits([]);
+	const sortInChatSearchHits = items => {
+		const list = Array.isArray(items) ? [...items] : [];
+		const stamp = message =>
+			new Date(
+				message?.providerTimestamp ||
+					message?.timestamp ||
+					message?.sentAt ||
+					message?.createdAt ||
+					message?.created_at ||
+					0,
+			).getTime();
+		return list.sort((a, b) => stamp(b) - stamp(a));
+	};
+
+	const goToInChatSearchHit = (index, hits = inChatSearchHits) => {
+		if (!hits.length) {
+			setInChatSearchActiveIndex(-1);
 			return;
 		}
-		const localHits = (messages || []).filter(message =>
-			String(message.text || '')
-				.toLowerCase()
-				.includes(q.toLowerCase()),
+		const next = Math.min(Math.max(index, 0), hits.length - 1);
+		setInChatSearchActiveIndex(next);
+		const hit = hits[next];
+		if (hit) void jumpToPinnedMessage(hit);
+	};
+
+	const stepInChatSearch = delta => {
+		if (!inChatSearchHits.length) return;
+		const base = inChatSearchActiveIndex < 0 ? 0 : inChatSearchActiveIndex;
+		goToInChatSearchHit(base + delta);
+	};
+
+	const runInChatSearch = query => {
+		const raw = String(query ?? '');
+		const q = raw.trim();
+		setInChatSearchQuery(raw);
+		const reqId = ++inChatSearchReqRef.current;
+		window.clearTimeout(inChatSearchTimerRef.current);
+		if (!conversationId || !q) {
+			setInChatSearchHits([]);
+			setInChatSearchActiveIndex(-1);
+			setInChatSearchBusy(false);
+			return;
+		}
+		const localHits = sortInChatSearchHits(
+			(messages || []).filter(message =>
+				String(message.text || '')
+					.toLowerCase()
+					.includes(q.toLowerCase()),
+			),
 		);
 		setInChatSearchHits(localHits);
-		setInChatSearchBusy(true);
-		try {
-			const { data } = await api.get(`/whatsapp/conversations/${conversationId}/messages`, {
-				params: { q, limit: 50, live: '0' },
-			});
-			const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
-			if (items.length) setInChatSearchHits(items);
-		} catch {
-			/* keep local hits */
-		} finally {
-			setInChatSearchBusy(false);
+		if (localHits.length) {
+			setInChatSearchActiveIndex(0);
+			void jumpToPinnedMessage(localHits[0]);
+		} else {
+			setInChatSearchActiveIndex(-1);
 		}
+		setInChatSearchBusy(true);
+		inChatSearchTimerRef.current = window.setTimeout(async () => {
+			try {
+				const { data } = await api.get(`/whatsapp/conversations/${conversationId}/messages`, {
+					params: { q, limit: 50, live: '0' },
+				});
+				if (reqId !== inChatSearchReqRef.current) return;
+				const items = sortInChatSearchHits(
+					Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [],
+				);
+				if (items.length) {
+					setInChatSearchHits(items);
+					setInChatSearchActiveIndex(0);
+					void jumpToPinnedMessage(items[0]);
+				}
+			} catch {
+				/* keep local hits */
+			} finally {
+				if (reqId === inChatSearchReqRef.current) setInChatSearchBusy(false);
+			}
+		}, 300);
 	};
 
 	const shareContactFromConversation = async contactConversation => {
@@ -22191,6 +22295,7 @@ function WhatsAppWorkspaceContent() {
 					if (inChatSearchOpen) {
 						setInChatSearchQuery('');
 						setInChatSearchHits([]);
+						setInChatSearchActiveIndex(-1);
 					}
 				},
 			},
@@ -22343,8 +22448,94 @@ function WhatsAppWorkspaceContent() {
 		setInChatSearchOpen(false);
 		setInChatSearchQuery('');
 		setInChatSearchHits([]);
+		setInChatSearchActiveIndex(-1);
+		inChatSearchReqRef.current += 1;
 		clearPendingVoiceDraft();
 	}, [conversationId, clearPendingVoiceDraft]);
+
+	const removeConversationFromInbox = useCallback(
+		(targetId, options = {}) => {
+			if (!targetId) return;
+			const wasArchived = Boolean(options.wasArchived);
+			setConversations(current => current.filter(item => item.id !== targetId));
+			if (wasArchived) {
+				setArchivedCount(current => Math.max(0, current - 1));
+			}
+			const cached = accountId ? conversationsCacheRef.current.get(accountId) : null;
+			if (cached) {
+				conversationsCacheRef.current.set(accountId, {
+					...cached,
+					items: (cached.items || []).filter(item => item.id !== targetId),
+					archivedCount: wasArchived
+						? Math.max(0, (cached.archivedCount || 1) - 1)
+						: cached.archivedCount || 0,
+					cachedAt: Date.now(),
+				});
+			}
+			messagesCacheRef.current.delete(targetId);
+			if (conversationIdRef.current === targetId) {
+				setConversationId(null);
+				clearConversationMessages(null);
+			}
+			if (secondaryConversationIdRef.current === targetId) {
+				setSecondaryConversationId(null);
+			}
+		},
+		[accountId, clearConversationMessages],
+	);
+
+	const deleteConversationChat = async conversation => {
+		if (!conversation?.id) return;
+		if (isEmailMemoAiConversation(conversation)) {
+			toast.error(
+				locale === 'ar'
+					? 'لا يمكن حذف محادثة النظام دي'
+					: 'This system chat cannot be deleted',
+			);
+			return;
+		}
+		const title = conversationTitle(conversation) || t.deleteChat;
+		const confirmed = window.confirm(
+			`${t.deleteChatConfirm}\n\n${title}`,
+		);
+		if (!confirmed) return;
+		const actionKey = `delete:${conversation.id}`;
+		if (pendingPreferenceActions.has(actionKey)) return;
+		const isDemoConversation = demo.settings.enabled || isDemoId(conversation.id);
+		const previous = conversation;
+		setPendingPreferenceActions(current => new Set(current).add(actionKey));
+		removeConversationFromInbox(conversation.id, {
+			wasArchived: Boolean(conversation.isArchived),
+		});
+		try {
+			if (isDemoConversation) {
+				if (typeof demo.deleteConversation === 'function') {
+					await demo.deleteConversation(conversation.id);
+				}
+			} else {
+				await api.delete(`/whatsapp/conversations/${conversation.id}`);
+			}
+			toast.success(t.chatDeleted);
+		} catch (error) {
+			setConversations(current => {
+				if (current.some(item => item.id === previous.id)) return current;
+				return sortConversationsByActivity([previous, ...current]);
+			});
+			if (previous.isArchived) {
+				setArchivedCount(current => current + 1);
+			}
+			toast.error(
+				error.response?.data?.message ||
+					(locale === 'ar' ? 'تعذر حذف المحادثة' : 'Could not delete chat'),
+			);
+		} finally {
+			setPendingPreferenceActions(current => {
+				const next = new Set(current);
+				next.delete(actionKey);
+				return next;
+			});
+		}
+	};
 
 	const toggleConversationArchived = async (conversation, event) => {
 		event?.stopPropagation?.();
@@ -22504,6 +22695,8 @@ function WhatsAppWorkspaceContent() {
 			void toggleConversationFavorite(conversation);
 		} else if (action === 'archive') {
 			void toggleConversationArchived(conversation);
+		} else if (action === 'delete') {
+			void deleteConversationChat(conversation);
 		} else if (action === 'assign') {
 			setConversationAssignTarget(conversation);
 		} else if (action === 'info') {
@@ -24907,16 +25100,6 @@ function WhatsAppWorkspaceContent() {
 
 				{isConversationWorkspaceTab(activeTab) && (
 					<div className="wa-chat-workspace flex h-full min-h-0 flex-col">
-					{showOnlineBar ? (
-					<OnlineContactsBar
-						contacts={presenceBarContacts}
-						pinnedId={pinnedOnlineContactId}
-						selectedId={conversationId}
-						onSelect={id => openConversationRef.current?.(id)}
-						onTogglePin={togglePinnedOnlineContact}
-						labels={t}
-					/>
-					) : null}
 					<Card
 						className={`wa-chat-card min-h-0 flex-1 grid h-full min-h-[600px] overflow-hidden min-[769px]:overflow-visible max-[769px]:min-h-0 max-[769px]:rounded-none max-[769px]:border-0 ${
 							chatListCollapsed ? 'is-list-collapsed' : ''
@@ -25085,23 +25268,6 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										</div>
 										<div className="wa-desktop-chat-list-actions">
-											<button
-												type="button"
-												onClick={toggleShowOnlineBar}
-												aria-pressed={showOnlineBar}
-												aria-label={
-													showOnlineBar ? t.hideOnlineBar : t.showOnlineBar
-												}
-												title={
-													showOnlineBar ? t.hideOnlineBar : t.showOnlineBar
-												}
-												className={`wa-header-icon-btn ${
-													showOnlineBar ? 'is-active' : ''
-												}`}
-											>
-												{/* People, not an eye: the eye belongs to the privacy blur next to it. */}
-												<UsersRound size={18} strokeWidth={2} />
-											</button>
 											<WhatsAppPrivacyBlurControl
 												value={privacyBlur}
 												onChange={setPrivacyBlur}
@@ -26045,37 +26211,26 @@ function WhatsAppWorkspaceContent() {
 										</div>
 									) : null}
 									{inChatSearchOpen ? (
-										<div className="flex shrink-0 flex-col gap-2 border-b border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-											<div className="flex items-center gap-2">
-												<Search size={14} className="text-slate-400" />
-												<input
-													value={inChatSearchQuery}
-													onChange={event => void runInChatSearch(event.target.value)}
-													placeholder={locale === 'ar' ? 'ابحث داخل المحادثة…' : 'Search in chat…'}
-													className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-transparent px-2 py-1.5 text-sm outline-none dark:border-slate-700"
-													autoFocus
-												/>
-												{inChatSearchBusy ? <Loader2 size={14} className="animate-spin text-slate-400" /> : null}
-												<button
-													type="button"
-													className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-800"
-													onClick={() => {
-														setInChatSearchOpen(false);
-														setInChatSearchQuery('');
-														setInChatSearchHits([]);
-													}}
-												>
-													<X size={14} />
-												</button>
-											</div>
-											{inChatSearchQuery.trim() ? (
-												<p className="text-[11px] text-slate-500">
-													{locale === 'ar'
-														? `${inChatSearchHits.length} نتيجة`
-														: `${inChatSearchHits.length} result(s)`}
-												</p>
-											) : null}
-										</div>
+										<ChatSearchBar
+											ar={locale === 'ar'}
+											query={inChatSearchQuery}
+											onQuery={value => runInChatSearch(value)}
+											busy={inChatSearchBusy}
+											hits={inChatSearchHits}
+											activeIndex={inChatSearchActiveIndex}
+											onStep={stepInChatSearch}
+											onPick={index => goToInChatSearchHit(index)}
+											peerName={selectedChatTitle}
+											onClose={() => {
+												inChatSearchReqRef.current += 1;
+												window.clearTimeout(inChatSearchTimerRef.current);
+												setInChatSearchOpen(false);
+												setInChatSearchQuery('');
+												setInChatSearchHits([]);
+												setInChatSearchActiveIndex(-1);
+												setInChatSearchBusy(false);
+											}}
+										/>
 									) : null}
 									{activeMessageGroup ? (
 										<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-sky-100 bg-sky-50 px-4 py-2 text-[12px] font-semibold text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/40 dark:text-sky-200">

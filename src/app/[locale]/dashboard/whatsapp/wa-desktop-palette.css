@@ -851,7 +851,11 @@ html.dark .wa-web-desktop:not(#wa-dark) .wa-composer .wa-input-pill .wa-mic-butt
 	background: linear-gradient(145deg, #21c063, #21c063) !important
 	}
 	html.dark .wa-web-desktop:not(#wa-dark) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action:hover:not(:disabled) {
-	color: #161717 !important
+	color: #ffffff !important
+	}
+	html.dark .wa-web-desktop:not(#wa-dark) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action:hover:not(:disabled) .wa-composer-mic-icon {
+	color: #ffffff !important;
+	fill: currentColor !important
 	}
 	.wa-web-desktop .wa-composer .wa-input-pill .wa-mic-button.is-armed {
 	--wa-vn-accent: #1daa61

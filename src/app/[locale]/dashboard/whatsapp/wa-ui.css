@@ -10733,8 +10733,13 @@ html.dark .wa-web-desktop:not(#wa-dark) .wa-composer .wa-input-pill .wa-mic-butt
 }
 
 html.dark .wa-web-desktop:not(#wa-dark) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action:hover:not(:disabled) {
-	color: #0b141a !important;
+	color: #ffffff !important;
 	background: linear-gradient(145deg, #2fd774, #00b894) !important;
+}
+
+html.dark .wa-web-desktop:not(#wa-dark) .wa-composer .wa-input-pill .wa-mic-button.wa-input-action.wa-input-action:hover:not(:disabled) .wa-composer-mic-icon {
+	color: #ffffff !important;
+	fill: currentColor !important;
 }
 
 .wa-web-desktop .wa-composer .wa-input-pill .wa-mic-button.is-armed {

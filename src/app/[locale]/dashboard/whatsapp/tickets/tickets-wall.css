@@ -675,3 +675,32 @@ html.dark .tw-hint {
 .tw-frame.is-stacked .tw-row {
 	margin-bottom: 14px;
 }
+
+/* quiet notes: the number and the check circle show up when you reach for the note */
+.tw-paper .tw-no,
+.tw-paper .tw-check {
+	opacity: 0;
+	transition:
+		opacity 0.18s ease,
+		background-color 0.2s ease,
+		color 0.2s ease,
+		box-shadow 0.2s ease,
+		transform 0.12s ease;
+}
+
+.tw-note:hover .tw-no,
+.tw-note:hover .tw-check,
+.tw-note:focus-within .tw-no,
+.tw-note:focus-within .tw-check,
+.tw-note.is-editing .tw-no,
+.tw-note.is-editing .tw-check {
+	opacity: 1;
+}
+
+/* touch screens have no hover: keep them visible there */
+@media (hover: none) {
+	.tw-paper .tw-no,
+	.tw-paper .tw-check {
+		opacity: 1;
+	}
+}

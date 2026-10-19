@@ -961,26 +961,38 @@ html .wa-chat-idle.has-tickets:not(#wa-idle) .wa-chat-idle__stage:has(.tk-board.
 	}
 }
 
-/* The whole board scrolls as one column (header, tools, then the tickets), so a short or
-   narrow pane never squeezes the list/wall into a tiny window of its own. */
+/* The board is never taller than the pane: the title and the add field stay put and the
+   tickets scroll inside their own area (the wall, or the list). The flex chain shrinks
+   (min-height: 0 all the way down) so the inner area gets exactly the space that is left. */
 .tk-board {
-	overflow-x: hidden;
-	overflow-y: auto;
-	margin-inline: -6px;
-	padding: 2px 6px 24px;
-	scrollbar-width: thin;
-}
-
-.tk-board .tk-list {
-	overflow: visible;
+	overflow: hidden;
 }
 
 .tk-board .tk-content {
-	flex: none;
+	min-height: 0;
+	flex: 1 1 auto;
+}
+
+.tk-board .tk-list {
+	min-height: 0;
+	flex: 1 1 auto;
+	margin: 0 -6px;
+	padding: 2px 6px 16px;
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.tk-board .tw-frame {
+	min-height: 0;
+	flex: 1 1 auto;
 }
 
 .tk-board .tw-wall {
-	overflow: visible;
+	min-height: 160px;
+	flex: 1 1 auto;
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 /* ================================================================== */

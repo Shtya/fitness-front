@@ -387,7 +387,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const date = new Intl.DateTimeFormat(locale(ar), { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
 
 	return (
-		<section className={`tk-board tk-scroll ${view === 'wall' ? 'is-wall' : 'is-list'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
+		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-list'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
 			<header className="tk-board__head">
 				<div className="tk-board__titles">
 					<h2 id="tk-heading" className="tk-board__title">
@@ -443,7 +443,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 						showAdd
 					/>
 				) : (
-					<ul className="tk-list can-drag" ref={listRef}>
+					<ul className="tk-list tk-scroll can-drag" ref={listRef}>
 						{listItems.map(ticket => (
 							<TicketCard
 								key={ticket.id}

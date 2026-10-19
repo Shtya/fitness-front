@@ -99,7 +99,7 @@ function NotePaper({ ticket, c, ar, editing, draft, setDraft, finishEdit, field,
 			)}
 
 			<div className="tw-bottom">
-				<StatusChip status={ticket.status} c={c} />
+				{ticket.status !== 'todo' ? <StatusChip status={ticket.status} c={c} /> : null}
 				{carried ? <span className="tw-carried">{ar ? 'من امبارح' : 'From yesterday'}</span> : null}
 				<button
 					type="button"
@@ -236,7 +236,7 @@ export default function TicketsWall({ ar, c, items, freshId, baseActions, onDele
 
 	return (
 		<div className={`tw-frame ${stacked ? 'is-stacked' : ''} ${canDrag ? 'can-drag' : ''}`}>
-			<div className="tw-wall" ref={wallRef}>
+			<div className="tw-wall tk-scroll" ref={wallRef}>
 				{rows.map((row, r) => (
 					<div className="tw-row" key={r}>
 						{stacked ? null : (
