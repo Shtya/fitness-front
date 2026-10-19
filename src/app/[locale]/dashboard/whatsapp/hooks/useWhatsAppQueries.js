@@ -89,6 +89,7 @@ export async function fetchConversations(accountId, params = {}) {
 
 export async function fetchMessages(conversationId, params = {}) {
 	const starredOnly = Boolean(params.starredOnly || params.importantOnly);
+	const pinnedOnly = Boolean(params.pinnedOnly);
 	const { data } = await api.get(`/whatsapp/conversations/${conversationId}/messages`, {
 		params: {
 			limit: params.limit || 100,
@@ -97,6 +98,7 @@ export async function fetchMessages(conversationId, params = {}) {
 			// backfill must never stampede getMessages across the inbox.
 			live: params.live === true || params.live === 1 || params.live === '1' ? 1 : 0,
 			starredOnly: starredOnly ? 1 : undefined,
+			pinnedOnly: pinnedOnly ? 1 : undefined,
 		},
 		signal: params.signal,
 	});

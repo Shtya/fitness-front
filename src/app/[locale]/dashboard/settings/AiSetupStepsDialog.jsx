@@ -71,7 +71,7 @@ export function AiSetupStepsDialog({ open, onOpenChange, provider, t }) {
 	const links = providerLinks(provider);
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-md rounded-2xl">
+			<DialogContent className="wa-dk wa-pop max-w-md rounded-2xl">
 				<DialogHeader>
 					<DialogTitle className="text-base font-semibold text-slate-900">
 						{t('keys.setupTitle', { name: provider.name })}

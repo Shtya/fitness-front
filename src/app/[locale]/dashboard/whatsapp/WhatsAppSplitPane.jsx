@@ -253,6 +253,7 @@ export default function WhatsAppSplitPane({
 	const [recordingStarting, setRecordingStarting] = useState(false);
 	const [recordingPaused, setRecordingPaused] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
+	const [pendingVoiceDraft, setPendingVoiceDraft] = useState(null);
 	const scrollRef = useRef(null);
 	const loadingOlderRef = useRef(false);
 	const messagesRef = useRef([]);
@@ -527,11 +528,47 @@ export default function WhatsAppSplitPane({
 		}
 	};
 
-	const sendVoiceFile = async file => {
-		if (!file || !conversationId || !accountId || sending) return;
+	const clearPendingVoiceDraft = useCallback(() => {
+		setPendingVoiceDraft(current => {
+			if (current?.previewUrl) {
+				try {
+					URL.revokeObjectURL(current.previewUrl);
+				} catch {
+					/* ignore */
+				}
+			}
+			return null;
+		});
+	}, []);
+
+	const restorePendingVoiceDraft = useCallback((file, seconds = 1) => {
+		if (!file) return;
+		setPendingVoiceDraft(current => {
+			if (current?.previewUrl) {
+				try {
+					URL.revokeObjectURL(current.previewUrl);
+				} catch {
+					/* ignore */
+				}
+			}
+			return {
+				file,
+				seconds: Math.max(1, Number(seconds) || 1),
+				previewUrl: URL.createObjectURL(file),
+			};
+		});
+	}, []);
+
+	const sendVoiceFile = async (file, meta = {}) => {
+		const durationSec = Math.max(1, Number(meta.seconds) || 1);
+		if (!file || !conversationId || !accountId || sending) {
+			if (file) restorePendingVoiceDraft(file, durationSec);
+			return false;
+		}
 		if (file.size > 25 * 1024 * 1024) {
 			toast.error(ar ? 'حجم الملف يجب ألا يتجاوز 25 ميجابايت' : 'File size must not exceed 25 MB');
-			return;
+			restorePendingVoiceDraft(file, durationSec);
+			return false;
 		}
 		const clientMessageId = newClientMessageId();
 		const previewUrl = URL.createObjectURL(file);
@@ -560,12 +597,16 @@ export default function WhatsAppSplitPane({
 			setMessages(current =>
 				mergeMessages(current, [{ ...data.message, clientMessageId }], conversationId),
 			);
+			clearPendingVoiceDraft();
+			return true;
 		} catch (error) {
 			setMessages(current => current.filter(item => item.id !== optimistic.id));
+			restorePendingVoiceDraft(file, durationSec);
 			toast.error(
 				mediaUploadFailedMessage(error, locale) ||
 					(ar ? 'تعذر إرسال الرسالة الصوتية' : 'Could not send voice message'),
 			);
+			return false;
 		} finally {
 			window.setTimeout(() => URL.revokeObjectURL(previewUrl), 8000);
 			setSending(false);
@@ -597,7 +638,11 @@ export default function WhatsAppSplitPane({
 		}
 	};
 
-	const isVoiceRecordingMode = recordingVoice || recordingStarting;
+	const isVoiceRecordingMode = recordingVoice || recordingStarting || Boolean(pendingVoiceDraft?.file);
+
+	useEffect(() => {
+		clearPendingVoiceDraft();
+	}, [conversationId, clearPendingVoiceDraft]);
 
 	const startVoiceRecording = async () => {
 		if (!conversationId || sending || recordingVoice || recordingStarting) return;
@@ -645,7 +690,7 @@ export default function WhatsAppSplitPane({
 				if (discard || !chunks.length) return;
 				const file = buildVoiceNoteFile(chunks, recorder, durationSec);
 				if (!file) return;
-				void sendVoiceFile(file);
+				void sendVoiceFile(file, { seconds: durationSec });
 			};
 			recorder.start();
 			recordingTimerRef.current = setInterval(() => {
@@ -854,6 +899,27 @@ export default function WhatsAppSplitPane({
 								previewDuration={voicePreviewDuration}
 								onPreviewSeek={seekVoicePreview}
 								onSend={() => stopVoiceRecording(true)}
+							/>
+						</div>
+					) : pendingVoiceDraft?.file ? (
+						<div dir="ltr" className="wa-input-pill wa-recording-pill is-ready flex min-h-10 min-w-0 flex-1 items-center rounded-full px-1 py-1">
+							<VoiceRecordingBar
+								ready
+								sending={sending}
+								seconds={pendingVoiceDraft.seconds}
+								labels={{
+									...labels,
+									voiceReadyToSend: ar ? 'جاهز للإرسال' : 'Ready to send',
+									voiceReadyHint: ar
+										? 'فشل الإرسال — اضغط إرسال للمحاولة مرة أخرى'
+										: 'Send failed — tap send to try again',
+								}}
+								onCancel={clearPendingVoiceDraft}
+								onSend={() => {
+									const draftVoice = pendingVoiceDraft;
+									if (!draftVoice?.file || sending) return;
+									void sendVoiceFile(draftVoice.file, { seconds: draftVoice.seconds });
+								}}
 							/>
 						</div>
 					) : (

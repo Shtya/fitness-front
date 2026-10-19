@@ -1323,7 +1323,7 @@ export default function VoiceChangerDialog({
 		>
 			<DialogContent
 				dir={ar ? 'rtl' : 'ltr'}
-				className="wa-ui-vc flex !max-h-[min(86vh,640px)] w-full max-w-md !flex-col !gap-0 overflow-hidden !p-0 sm:!max-w-md"
+				className="wa-ui-vc wa-pop flex !max-h-[min(86vh,640px)] w-full max-w-md !flex-col !gap-0 overflow-hidden !p-0 sm:!max-w-md"
 				onPointerDownOutside={event => {
 					const target = event.target;
 					if (target instanceof Element && target.closest('[data-wa-select-menu],[role="listbox"]')) {

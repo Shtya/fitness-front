@@ -1098,9 +1098,31 @@ html.dark .wa-ui-btn--primary {
 }
 
 .wa-ui-rec.is-paused .wa-ui-rec__dot,
-.wa-ui-rec.is-preview .wa-ui-rec__dot {
+.wa-ui-rec.is-preview .wa-ui-rec__dot,
+.wa-ui-rec.is-ready .wa-ui-rec__dot {
 	background: var(--wa-ui-text-3);
 	animation: none;
+}
+
+.wa-ui-rec.is-ready .wa-ui-rec__dot.is-ready {
+	background: #f15c6d;
+	opacity: 0.85;
+}
+
+.wa-ui-rec__ready-label {
+	min-width: 0;
+	flex: 1 1 auto;
+	overflow: hidden;
+	color: var(--wa-ui-text-3);
+	font-size: 12.5px;
+	font-weight: 600;
+	line-height: 16px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-ui-rec__wave.is-ready > span {
+	opacity: 0.55;
 }
 
 @keyframes wa-ui-rec-pulse {
@@ -2338,6 +2360,39 @@ html.dark .wa-web-desktop:not(#wa-dark) .wa-composer button:not(.wa-ui-rec__send
 .wa-ui-sched__delete:hover:not(:disabled) {
 	background: var(--wa-ui-danger-soft);
 	color: var(--wa-ui-danger);
+}
+
+.wa-ui-sched__empty-hint {
+	min-width: 0;
+	flex: 1;
+	overflow: hidden;
+	color: var(--wa-ui-text-3);
+	font-size: 12.5px;
+	font-weight: 500;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-ui-pins__jump {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	text-align: start;
+	cursor: pointer;
+}
+
+.wa-ui-pins__jump:hover .wa-ui-sched__text {
+	color: var(--wa-ui-accent-strong);
+}
+
+.wa-ui-pins__card .wa-ui-sched__foot {
+	margin-top: 2px;
 }
 
 @media (max-width: 480px) {
@@ -7115,6 +7170,233 @@ html.dark .wa-dk .border-\[\#e4e4e7\],
 html.dark .wa-dk.border-\[\#e4e4e7\] {
 	border-color: rgba(233, 237, 239, 0.09);
 }
+
+/* Popup coverage: utilities the dialogs use that the generated layer above missed. */
+html.dark .wa-dk .text-slate-500,
+html.dark .wa-dk.text-slate-500 {
+	color: #8696a0;
+}
+
+html.dark .wa-dk .text-slate-400,
+html.dark .wa-dk.text-slate-400 {
+	color: #6c7a83;
+}
+
+html.dark .wa-dk .text-emerald-600,
+html.dark .wa-dk.text-emerald-600 {
+	color: hsl(152 65% 62%);
+}
+
+html.dark .wa-dk .text-rose-600,
+html.dark .wa-dk.text-rose-600 {
+	color: hsl(345 83% 72%);
+}
+
+html.dark .wa-dk .text-sky-600,
+html.dark .wa-dk.text-sky-600 {
+	color: hsl(213 90% 72%);
+}
+
+html.dark .wa-dk .text-\[\#128c7e\],
+html.dark .wa-dk.text-\[\#128c7e\] {
+	color: #00a884;
+}
+
+html.dark .wa-dk .text-\[\#2c82de\],
+html.dark .wa-dk.text-\[\#2c82de\] {
+	color: hsl(213 90% 72%);
+}
+
+html.dark .wa-dk .text-\[\#2563eb\],
+html.dark .wa-dk.text-\[\#2563eb\] {
+	color: hsl(213 90% 72%);
+}
+
+html.dark .wa-dk .text-\[\#2781e8\],
+html.dark .wa-dk.text-\[\#2781e8\] {
+	color: hsl(213 90% 72%);
+}
+
+html.dark .wa-dk .text-amber-900,
+html.dark .wa-dk.text-amber-900 {
+	color: hsl(38 90% 70%);
+}
+
+html.dark .wa-dk .text-amber-900\/80,
+html.dark .wa-dk.text-amber-900\/80 {
+	color: hsl(38 90% 70%);
+}
+
+html.dark .wa-dk .hover\:text-\[\#172033\]:hover,
+html.dark .wa-dk.hover\:text-\[\#172033\]:hover {
+	color: #e9edef;
+}
+
+html.dark .wa-dk .hover\:text-\[\#4b5565\]:hover,
+html.dark .wa-dk.hover\:text-\[\#4b5565\]:hover {
+	color: #e9edef;
+}
+
+html.dark .wa-dk .hover\:text-slate-900:hover,
+html.dark .wa-dk.hover\:text-slate-900:hover {
+	color: #e9edef;
+}
+
+html.dark .wa-dk .hover\:text-emerald-600:hover,
+html.dark .wa-dk.hover\:text-emerald-600:hover {
+	color: hsl(152 65% 62%);
+}
+
+html.dark .wa-dk .hover\:text-emerald-700:hover,
+html.dark .wa-dk.hover\:text-emerald-700:hover {
+	color: hsl(152 65% 62%);
+}
+
+html.dark .wa-dk .hover\:text-rose-600:hover,
+html.dark .wa-dk.hover\:text-rose-600:hover {
+	color: hsl(345 83% 72%);
+}
+
+html.dark .wa-dk .hover\:bg-slate-100:hover,
+html.dark .wa-dk.hover\:bg-slate-100:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-slate-200:hover,
+html.dark .wa-dk.hover\:bg-slate-200:hover {
+	background-color: rgba(50, 67, 77, 1);
+}
+
+html.dark .wa-dk .hover\:bg-white:hover,
+html.dark .wa-dk.hover\:bg-white:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-white\/70:hover,
+html.dark .wa-dk.hover\:bg-white\/70:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#f5f7fa\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#f5f7fa\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#f1f4f7\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#f1f4f7\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#f8fafb\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#f8fafb\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#f8fafc\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#f8fafc\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#eceff3\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#eceff3\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#faf7ff\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#faf7ff\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#f5faff\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#f5faff\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#f4fcf8\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#f4fcf8\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-\[\#fff6f8\]:hover,
+html.dark .wa-dk.hover\:bg-\[\#fff6f8\]:hover {
+	background-color: rgba(42, 57, 66, 1);
+}
+
+html.dark .wa-dk .hover\:bg-rose-50:hover,
+html.dark .wa-dk.hover\:bg-rose-50:hover {
+	background-color: hsl(356 70% 58% / 0.15);
+}
+
+html.dark .wa-dk .hover\:bg-emerald-50:hover,
+html.dark .wa-dk.hover\:bg-emerald-50:hover {
+	background-color: hsl(152 70% 58% / 0.15);
+}
+
+html.dark .wa-dk .hover\:border-slate-300:hover,
+html.dark .wa-dk.hover\:border-slate-300:hover {
+	border-color: hsl(213 55% 60% / 0.28);
+}
+
+html.dark .wa-dk .border-black\/6,
+html.dark .wa-dk.border-black\/6 {
+	border-color: rgba(233, 237, 239, 0.09);
+}
+
+html.dark .wa-dk .border-black\/5,
+html.dark .wa-dk.border-black\/5 {
+	border-color: rgba(233, 237, 239, 0.09);
+}
+
+html.dark .wa-dk .border-black\/10,
+html.dark .wa-dk.border-black\/10 {
+	border-color: rgba(233, 237, 239, 0.12);
+}
+
+html.dark .wa-dk .border-amber-200\/80,
+html.dark .wa-dk.border-amber-200\/80 {
+	border-color: hsl(38 70% 58% / 0.3);
+}
+
+html.dark .wa-dk .border-red-200,
+html.dark .wa-dk.border-red-200 {
+	border-color: hsl(0 70% 60% / 0.3);
+}
+
+html.dark .wa-dk .border-emerald-200,
+html.dark .wa-dk.border-emerald-200 {
+	border-color: hsl(149 55% 60% / 0.28);
+}
+
+html.dark .wa-dk .bg-red-50,
+html.dark .wa-dk.bg-red-50 {
+	background-color: hsl(0 70% 58% / 0.15);
+}
+
+html.dark .wa-dk .bg-white\/55,
+html.dark .wa-dk.bg-white\/55 {
+	background-color: rgba(17, 27, 33, 0.55);
+}
+
+html.dark .wa-dk .bg-white\/95,
+html.dark .wa-dk.bg-white\/95 {
+	background-color: rgba(31, 44, 51, 0.95);
+}
+
+html.dark .wa-dk .bg-slate-200\/80,
+html.dark .wa-dk.bg-slate-200\/80 {
+	background-color: rgba(42, 57, 66, 0.8);
+}
+
+html.dark .wa-dk .bg-slate-300,
+html.dark .wa-dk.bg-slate-300 {
+	background-color: rgba(59, 74, 84, 1);
+}
+
+html.dark .wa-dk .bg-amber-50\/70,
+html.dark .wa-dk.bg-amber-50\/70 {
+	background-color: hsl(48 70% 58% / 0.12);
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Dark mode: secondary tabs (updates, groups, emails, reports, settings) */

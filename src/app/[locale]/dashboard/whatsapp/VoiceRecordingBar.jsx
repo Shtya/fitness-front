@@ -68,6 +68,8 @@ function useLiveLevels(stream, active) {
 export function VoiceRecordingBar({
 	seconds,
 	paused = false,
+	ready = false,
+	sending = false,
 	labels,
 	stream = null,
 	onCancel,
@@ -84,7 +86,7 @@ export function VoiceRecordingBar({
 	onStop,
 }) {
 	const send = onSend || onStop;
-	const levels = useLiveLevels(stream, !paused && !previewActive);
+	const levels = useLiveLevels(stream, !ready && !paused && !previewActive);
 	// WebM from MediaRecorder starts with a placeholder duration; until the real one
 	// is known, the recorded seconds are the honest total.
 	const previewTotal = Number(previewDuration) >= 1 ? Number(previewDuration) : Math.max(1, Number(seconds) || 0);
@@ -92,13 +94,15 @@ export function VoiceRecordingBar({
 		Number(previewDuration) >= 1
 			? Math.min(1, Math.max(0, Number(previewProgress) || 0))
 			: Math.min(1, Math.max(0, (Number(previewCurrentTime) || 0) / previewTotal));
-	const status = previewActive
-		? previewPlaying
-			? labels.recordingPreviewPlaying || 'Playing'
-			: labels.recordingPreviewPaused || labels.recordingPreviewMode || 'Preview'
-		: paused
-			? labels.recordingPaused || 'Paused'
-			: labels.recordingVoice || 'Recording';
+	const status = ready
+		? labels.voiceReadyHint || labels.voiceReadyToSend || 'Ready to send'
+		: previewActive
+			? previewPlaying
+				? labels.recordingPreviewPlaying || 'Playing'
+				: labels.recordingPreviewPaused || labels.recordingPreviewMode || 'Preview'
+			: paused
+				? labels.recordingPaused || 'Paused'
+				: labels.recordingVoice || 'Recording';
 	const previewToggleTitle = previewActive
 		? previewPlaying
 			? labels.recordingPreviewPause || labels.recordingPause
@@ -108,9 +112,10 @@ export function VoiceRecordingBar({
 
 	return (
 		<div
-			className={`wa-ui-rec${paused ? ' is-paused' : ''}${previewActive ? ' is-preview' : ''}`}
+			className={`wa-ui-rec${paused ? ' is-paused' : ''}${previewActive ? ' is-preview' : ''}${ready ? ' is-ready' : ''}`}
 			role="group"
-			aria-label={labels.recordingVoice}
+			aria-label={ready ? labels.voiceReadyToSend || labels.recordingVoice : labels.recordingVoice}
+			aria-busy={sending || undefined}
 		>
 			<button
 				type="button"
@@ -123,13 +128,17 @@ export function VoiceRecordingBar({
 			</button>
 
 			<div className="wa-ui-rec__status" role="status" aria-live="polite">
-				<span className="wa-ui-rec__dot" aria-hidden="true" />
+				<span className={`wa-ui-rec__dot${ready ? ' is-ready' : ''}`} aria-hidden="true" />
 				<span className="wa-ui-rec__time">
 					{previewActive
 						? `${formatTimer(previewCurrentTime)} / ${formatTimer(previewTotal)}`
 						: formatTimer(seconds)}
 				</span>
-				<span className="sr-only">{status}</span>
+				{ready ? (
+					<span className="wa-ui-rec__ready-label">{labels.voiceReadyHint || status}</span>
+				) : (
+					<span className="sr-only">{status}</span>
+				)}
 			</div>
 
 			{previewActive ? (
@@ -147,6 +156,12 @@ export function VoiceRecordingBar({
 						onInput={event => onPreviewSeek?.(Number(event.target.value) / 1000)}
 					/>
 				</div>
+			) : ready ? (
+				<div className="wa-ui-rec__wave is-ready" aria-hidden="true">
+					{Array.from({ length: 18 }, (_, index) => (
+						<span key={index} style={{ height: `${6 + ((index * 5) % 14)}px` }} />
+					))}
+				</div>
 			) : (
 				<div className="wa-ui-rec__wave" aria-hidden="true">
 					{levels.map((level, index) => (
@@ -155,7 +170,7 @@ export function VoiceRecordingBar({
 				</div>
 			)}
 
-			{onPreview ? (
+			{!ready && onPreview ? (
 				<button
 					type="button"
 					className={`wa-ui-icon-btn${previewActive ? ' is-on' : ''}`}
@@ -163,6 +178,7 @@ export function VoiceRecordingBar({
 					aria-label={previewToggleTitle}
 					aria-pressed={previewActive}
 					onClick={onPreview}
+					disabled={sending}
 				>
 					{previewActive && previewPlaying ? (
 						<Pause size={18} strokeWidth={2} />
@@ -174,19 +190,22 @@ export function VoiceRecordingBar({
 				</button>
 			) : null}
 
-			<button
-				type="button"
-				className="wa-ui-icon-btn wa-ui-rec__pause"
-				title={pauseTitle}
-				aria-label={pauseTitle}
-				onClick={paused ? onResume : onPause}
-			>
-				{paused ? (
-					<span className="wa-ui-rec__resume-dot" aria-hidden="true" />
-				) : (
-					<Pause size={18} strokeWidth={2} fill="currentColor" />
-				)}
-			</button>
+			{!ready ? (
+				<button
+					type="button"
+					className="wa-ui-icon-btn wa-ui-rec__pause"
+					title={pauseTitle}
+					aria-label={pauseTitle}
+					onClick={paused ? onResume : onPause}
+					disabled={sending}
+				>
+					{paused ? (
+						<span className="wa-ui-rec__resume-dot" aria-hidden="true" />
+					) : (
+						<Pause size={18} strokeWidth={2} fill="currentColor" />
+					)}
+				</button>
+			) : null}
 
 			<button
 				type="button"
@@ -194,6 +213,7 @@ export function VoiceRecordingBar({
 				title={labels.sendRecording || labels.send}
 				aria-label={labels.sendRecording || labels.send}
 				onClick={send}
+				disabled={sending}
 			>
 				<Send size={18} strokeWidth={2} className="rtl:-scale-x-100" />
 			</button>

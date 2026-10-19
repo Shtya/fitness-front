@@ -389,7 +389,7 @@ function ConfirmDeleteDialog({ open, locale, title, description, onConfirm, onCl
 	const ar = locale === 'ar';
 	return (
 		<Dialog open={open} onOpenChange={next => (!next ? onClose() : undefined)}>
-			<DialogContent className="max-w-sm rounded-2xl">
+			<DialogContent className="wa-dk wa-pop max-w-sm rounded-2xl">
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
@@ -1505,7 +1505,7 @@ export default function WhatsAppTasksBoard({
 								) : null}
 							</button>
 						</PopoverTrigger>
-						<PopoverContent align="start" className="z-[120000] w-[320px] space-y-3 p-3">
+						<PopoverContent align="start" className="wa-dk wa-pop-menu z-[120000] w-[320px] space-y-3 p-3">
 							<div className="rounded-xl bg-[#f8fafb] p-2">
 								<p className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-[#7c8797]">
 									<Tag size={11} />
@@ -1641,7 +1641,7 @@ export default function WhatsAppTasksBoard({
 								<span className="hidden md:inline">{ar ? 'الإعدادات' : 'Settings'}</span>
 							</button>
 						</PopoverTrigger>
-						<PopoverContent align="end" className="z-[120000] w-[300px] space-y-2 p-3">
+						<PopoverContent align="end" className="wa-dk wa-pop-menu z-[120000] w-[300px] space-y-2 p-3">
 							<div>
 								<p className="text-[13px] font-semibold text-[#172033]">
 									{ar ? 'إعدادات اللوحة' : 'Board settings'}

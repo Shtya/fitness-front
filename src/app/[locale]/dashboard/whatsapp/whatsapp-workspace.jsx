@@ -132,6 +132,7 @@ import {
 import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import SocialVideoActions from './social-download/SocialVideoActions';
 import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
+import PinnedMessagesPanel from './PinnedMessagesPanel';
 import {
 	loadConversationHistoryForClone,
 	loadMoreConversationHistoryForClone,
@@ -261,6 +262,7 @@ import './wa-ui.css';
 import './wa-mobile.css';
 import './wa-desktop-palette.css';
 import './wa-desktop.css';
+import './wa-popups.css';
 import { useMenuKeyboard } from './wa-ui-menu';
 import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
 import { installMobileViewport } from './mobile-viewport';
@@ -789,6 +791,12 @@ const translations = {
 		scheduleMessage: 'Schedule message',
 		scheduleMessageHint: 'Send later once or on a recurring schedule',
 		scheduledMessages: 'Scheduled messages',
+		pinnedMessages: 'Pinned messages',
+		showPinnedMessages: 'Show pinned messages',
+		hidePinnedMessages: 'Hide pinned',
+		noPinnedMessages: 'No pinned messages in this chat',
+		pinMessage: 'Pin',
+		unpinMessage: 'Unpin',
 		copyMessage: 'Copy text',
 		copiedMessage: 'Copied',
 		selectMoreMessages: 'Select more',
@@ -966,6 +974,8 @@ const translations = {
 		recordingLive: 'LIVE',
 		recordingPaused: 'PAUSED',
 		recordingCancel: 'Cancel',
+		voiceReadyToSend: 'Ready to send',
+		voiceReadyHint: 'Send failed — tap send to try again',
 		cancelRecording: 'Cancel recording',
 		stopRecording: 'Stop recording',
 		recordingPause: 'Pause',
@@ -1308,7 +1318,13 @@ const translations = {
 		addToBoardNow: 'إضافة للمهام…',
 		scheduleMessage: 'جدولة الرسالة',
 		scheduleMessageHint: 'أرسل لاحقًا مرة واحدة أو بشكل متكرر',
-		scheduledMessages: 'رسائل مجدولة',
+		scheduledMessages: 'الرسائل المجدولة',
+		pinnedMessages: 'الرسائل المثبّتة',
+		showPinnedMessages: 'عرض الرسائل المثبّتة',
+		hidePinnedMessages: 'إخفاء المثبّتة',
+		noPinnedMessages: 'لا توجد رسائل مثبّتة في هذه المحادثة',
+		pinMessage: 'تثبيت',
+		unpinMessage: 'إلغاء التثبيت',
 		copyMessage: 'نسخ النص',
 		copiedMessage: 'تم النسخ',
 		selectMoreMessages: 'تحديد المزيد',
@@ -1486,6 +1502,8 @@ const translations = {
 		recordingLive: 'مباشر',
 		recordingPaused: 'متوقف',
 		recordingCancel: 'إلغاء',
+		voiceReadyToSend: 'جاهز للإرسال',
+		voiceReadyHint: 'فشل الإرسال — اضغط إرسال للمحاولة مرة أخرى',
 		cancelRecording: 'إلغاء التسجيل',
 		stopRecording: 'إيقاف التسجيل',
 		recordingPause: 'إيقاف',
@@ -12258,6 +12276,8 @@ function WhatsAppWorkspaceContent() {
 	const [recordingStarting, setRecordingStarting] = useState(false);
 	const [recordingPaused, setRecordingPaused] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
+	/** Kept after a failed send so the user can retry without re-recording. */
+	const [pendingVoiceDraft, setPendingVoiceDraft] = useState(null);
 	const [voiceChangerOpen, setVoiceChangerOpen] = useState(false);
 	const [cloneVoicePickMode, setCloneVoicePickMode] = useState(false);
 	const [cloneVoicePickSampleBase, setCloneVoicePickSampleBase] = useState(0);
@@ -12308,6 +12328,9 @@ function WhatsAppWorkspaceContent() {
 	const [messageSchedules, setMessageSchedules] = useState([]);
 	const [messageSchedulesLoading, setMessageSchedulesLoading] = useState(false);
 	const [messageScheduleBusyId, setMessageScheduleBusyId] = useState('');
+	const [pinsPanelOpen, setPinsPanelOpen] = useState(false);
+	const [pinnedMessages, setPinnedMessages] = useState([]);
+	const [pinnedMessagesLoading, setPinnedMessagesLoading] = useState(false);
 	const liveMessageSchedules = useMemo(
 		() =>
 			(Array.isArray(messageSchedules) ? messageSchedules : []).filter(item => {
@@ -12344,11 +12367,18 @@ function WhatsAppWorkspaceContent() {
 	const toggleSchedulesPanel = useCallback(event => {
 		event?.stopPropagation?.();
 		if (liveMessageSchedules.length > 0) {
+			setPinsPanelOpen(false);
 			setSchedulesPanelOpen(current => !current);
 			return;
 		}
 		openSchedulePopover(event);
 	}, [liveMessageSchedules.length, openSchedulePopover]);
+
+	const togglePinsPanel = useCallback(event => {
+		event?.stopPropagation?.();
+		setSchedulesPanelOpen(false);
+		setPinsPanelOpen(current => !current);
+	}, []);
 
 	const openEditSchedule = useCallback((schedule, event) => {
 		if (!schedule?.id) return;
@@ -16491,14 +16521,45 @@ function WhatsAppWorkspaceContent() {
 		}
 	}, []);
 
+	const loadPinnedMessages = useCallback(async targetConversationId => {
+		if (!targetConversationId || isDemoId(targetConversationId)) {
+			setPinnedMessages([]);
+			return;
+		}
+		setPinnedMessagesLoading(true);
+		try {
+			const items = await fetchMessages(targetConversationId, {
+				limit: 100,
+				pinnedOnly: true,
+				live: 0,
+			});
+			setPinnedMessages(
+				(Array.isArray(items) ? items : [])
+					.filter(item => item?.isPinned)
+					.sort((a, b) => {
+						const ta = new Date(a.providerTimestamp || a.createdAt || 0).getTime();
+						const tb = new Date(b.providerTimestamp || b.createdAt || 0).getTime();
+						return tb - ta;
+					}),
+			);
+		} catch {
+			setPinnedMessages([]);
+		} finally {
+			setPinnedMessagesLoading(false);
+		}
+	}, []);
+
 	useEffect(() => {
 		if (!conversationId || demo.settings.enabled) {
 			setMessageSchedules([]);
 			setSchedulesPanelOpen(false);
+			setPinnedMessages([]);
+			setPinsPanelOpen(false);
 			return;
 		}
 		void loadMessageSchedules(conversationId);
-	}, [conversationId, demo.settings.enabled, loadMessageSchedules]);
+		void loadPinnedMessages(conversationId);
+	}, [conversationId, demo.settings.enabled, loadMessageSchedules, loadPinnedMessages]);
 
 	useEffect(() => {
 		if (!liveMessageSchedules.length) setSchedulesPanelOpen(false);
@@ -17275,6 +17336,9 @@ function WhatsAppWorkspaceContent() {
 					);
 					if (importantView && changes.isStarred === true) {
 						void loadMessagesRef.current?.(activeConversationId, false)?.catch?.(() => {});
+					}
+					if (Object.prototype.hasOwnProperty.call(changes, 'isPinned')) {
+						void loadPinnedMessages(activeConversationId);
 					}
 				}
 			}
@@ -18982,10 +19046,46 @@ function WhatsAppWorkspaceContent() {
 		};
 	}, [conversationId, demo.settings.enabled]);
 
-	const sendRecordedVoice = async file => {
-		if (!file || !conversationId || !accountId) return false;
+	const clearPendingVoiceDraft = useCallback(() => {
+		setPendingVoiceDraft(current => {
+			if (current?.previewUrl) {
+				try {
+					URL.revokeObjectURL(current.previewUrl);
+				} catch {
+					/* ignore */
+				}
+			}
+			return null;
+		});
+	}, []);
+
+	const restorePendingVoiceDraft = useCallback((file, seconds = 1) => {
+		if (!file) return;
+		setPendingVoiceDraft(current => {
+			if (current?.previewUrl && current.previewUrl !== file?.previewUrl) {
+				try {
+					URL.revokeObjectURL(current.previewUrl);
+				} catch {
+					/* ignore */
+				}
+			}
+			return {
+				file,
+				seconds: Math.max(1, Number(seconds) || 1),
+				previewUrl: URL.createObjectURL(file),
+			};
+		});
+	}, []);
+
+	const sendRecordedVoice = async (file, meta = {}) => {
+		const durationSec = Math.max(1, Number(meta.seconds) || 1);
+		if (!file || !conversationId || !accountId) {
+			if (file) restorePendingVoiceDraft(file, durationSec);
+			return false;
+		}
 		if (file.size > 25 * 1024 * 1024) {
 			toast.error('File size must not exceed 25 MB');
+			restorePendingVoiceDraft(file, durationSec);
 			return false;
 		}
 		const targetConversationId = conversationId;
@@ -19006,11 +19106,23 @@ function WhatsAppWorkspaceContent() {
 			setReplyingTo(null);
 		}
 
+		const restoreDraftAndBubble = () => {
+			releaseOptimisticMediaPreview(optimisticMessage);
+			persistConversationMessages(targetConversationId, current =>
+				current.filter(message => message.id !== optimisticMessage.id),
+			);
+			if (conversationIdRef.current === targetConversationId) {
+				setReplyingTo(current => current || replySnapshot);
+			}
+			restorePendingVoiceDraft(file, durationSec);
+		};
+
 		const settings = voiceChangerSettingsRef.current;
 		const provider = String(settings?.provider || 'off');
 		const useChanger = Boolean(settings?.enabled) && provider !== 'off';
 		const catalogItem = settings?.catalog?.find(item => item.id === provider);
 		if (useChanger && catalogItem?.needsKey && !settings?.credentials?.[provider]?.configured) {
+			restoreDraftAndBubble();
 			toast.error(
 				locale === 'ar'
 					? 'احفظ مفتاح الـ API أولاً من إعدادات تغيير الصوت.'
@@ -19047,13 +19159,7 @@ function WhatsAppWorkspaceContent() {
 					current.map(message => (message.id === changed.id ? changed : message)),
 				);
 			} catch (error) {
-				releaseOptimisticMediaPreview(optimisticMessage);
-				persistConversationMessages(targetConversationId, current =>
-					current.filter(message => message.id !== optimisticMessage.id),
-				);
-				if (conversationIdRef.current === targetConversationId) {
-					setReplyingTo(current => current || replySnapshot);
-				}
+				restoreDraftAndBubble();
 				toast.error((await readVoiceChangerError(error, locale)) || t.voiceChanging, {
 					id: 'whatsapp-voice-changer',
 				});
@@ -19063,13 +19169,21 @@ function WhatsAppWorkspaceContent() {
 			}
 		}
 
-		return sendFile(outgoing, 'voice', {
+		const ok = await sendFile(outgoing, 'voice', {
 			clientMessageId,
 			optimisticMessage,
 			conversationId: targetConversationId,
 			replySnapshot,
 			caption: '',
+			// Drop the optimistic bubble on failure — the recording returns to the composer.
+			removeOnFailure: true,
 		});
+		if (ok) {
+			clearPendingVoiceDraft();
+		} else {
+			restorePendingVoiceDraft(file, durationSec);
+		}
+		return ok;
 	};
 
 	const collectDownloadableAttachments = useCallback((messageList = []) => {
@@ -20270,6 +20384,19 @@ function WhatsAppWorkspaceContent() {
 			conversationFilterRef.current === 'starred';
 		markMessageActionPending(message.id, true);
 		updateCachedMessage(conversationId, message.id, current => ({ ...current, [field]: enabled }));
+		if (action === 'pin') {
+			setPinnedMessages(current => {
+				if (enabled) {
+					const next = [
+						{ ...message, isPinned: true },
+						...(current || []).filter(item => item?.id !== message.id),
+					];
+					return next;
+				}
+				return (current || []).filter(item => item?.id !== message.id);
+			});
+			if (enabled) setPinsPanelOpen(true);
+		}
 		if (action === 'star' && importantView && !enabled) {
 			writeConversationMessages(conversationId, current =>
 				(current || []).filter(item => item?.id !== message.id),
@@ -20293,6 +20420,15 @@ function WhatsAppWorkspaceContent() {
 				...current,
 				...(data.changes || { [field]: enabled }),
 			}));
+			if (action === 'pin') {
+				const changes = data.changes || { isPinned: enabled };
+				setPinnedMessages(current => {
+					if (!enabled) return (current || []).filter(item => item?.id !== message.id);
+					const merged = { ...message, ...changes, isPinned: true };
+					const without = (current || []).filter(item => item?.id !== message.id);
+					return [merged, ...without];
+				});
+			}
 			if (action === 'star' && importantView && !enabled) {
 				const remaining = (messagesCacheRef.current.get(messagesCacheKey(conversationId, true))?.items || [])
 					.filter(item => item?.id !== message.id);
@@ -20324,6 +20460,15 @@ function WhatsAppWorkspaceContent() {
 			}
 		} catch (error) {
 			updateCachedMessage(conversationId, message.id, current => ({ ...current, [field]: message[field] }));
+			if (action === 'pin') {
+				setPinnedMessages(current => {
+					if (message.isPinned) {
+						const without = (current || []).filter(item => item?.id !== message.id);
+						return [{ ...message, isPinned: true }, ...without];
+					}
+					return (current || []).filter(item => item?.id !== message.id);
+				});
+			}
 			toast.error(error.response?.data?.message || `Could not ${action} message`);
 		} finally {
 			markMessageActionPending(message.id, false);
@@ -21047,10 +21192,12 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const isVoiceRecordingMode = recordingVoice || recordingStarting;
+	const isVoiceRecordingMode =
+		recordingVoice || recordingStarting || Boolean(pendingVoiceDraft?.file);
 
 	const startVoiceRecording = async () => {
 		if (!conversationId || sending || recordingVoice || recordingStarting || voiceChanging) return;
+		if (pendingVoiceDraft?.file) clearPendingVoiceDraft();
 		setAttachmentSheetOpen(false);
 		setStickerPanelOpen(false);
 		setAiImagePanelOpen(false);
@@ -21119,7 +21266,7 @@ function WhatsAppWorkspaceContent() {
 
 				const file = buildVoiceNoteFile(chunks, recorder, durationSec);
 				if (!file) return;
-				void sendRecordedVoice(file);
+				void sendRecordedVoice(file, { seconds: durationSec });
 			};
 
 			// One complete blob on stop. A 250ms timeslice splits the WebM header
@@ -21520,6 +21667,40 @@ function WhatsAppWorkspaceContent() {
 			locale === 'ar'
 				? 'تعذر العثور على الرسالة الأصلية'
 				: 'Could not find the original message',
+		);
+	};
+
+	const jumpToPinnedMessage = async message => {
+		if (!message?.id && !message?.providerMessageId) return;
+		const target = {
+			id: message.id || null,
+			providerMessageId: message.providerMessageId || null,
+		};
+		const inView = conversationMessagesRef.current.some(item =>
+			messageMatchesQuotedTarget(item, target),
+		);
+		if (inView) {
+			scrollAndHighlightQuotedMessage(target);
+			return;
+		}
+		let pages = 0;
+		while (pages < 12 && hasMoreMessagesRef.current && !isDemoId(conversationId)) {
+			pages += 1;
+			const loaded = await loadOlder({ preserveScroll: false, ignoreThrottle: true });
+			if (conversationIdRef.current !== conversationId) return;
+			const next =
+				messagesCacheRef.current.get(conversationId)?.items ||
+				conversationMessagesRef.current;
+			if (next.some(item => messageMatchesQuotedTarget(item, target))) {
+				window.setTimeout(() => scrollAndHighlightQuotedMessage(target), 60);
+				return;
+			}
+			if (!loaded) break;
+		}
+		toast.error(
+			locale === 'ar'
+				? 'تعذر العثور على الرسالة المثبّتة'
+				: 'Could not find the pinned message',
 		);
 	};
 
@@ -21982,8 +22163,23 @@ function WhatsAppWorkspaceContent() {
 				onClick: event => toggleConversationMuted(selectedConversation, event),
 			},
 			{
-				id: 'search',
+				id: 'pinned-messages',
 				dividerBefore: true,
+				label: t.pinnedMessages,
+				description:
+					locale === 'ar'
+						? 'عرض الرسائل المثبّتة والانتقال إليها'
+						: 'View pinned messages and jump to them',
+				icon: Pin,
+				iconTone: 'blue',
+				iconFill: pinsPanelOpen || pinnedMessages.length > 0,
+				active: pinsPanelOpen,
+				disabled: demoBlocked || demoChat || !conversationId,
+				badge: pinnedMessages.length > 0 ? pinnedMessages.length : undefined,
+				onClick: event => togglePinsPanel(event),
+			},
+			{
+				id: 'search',
 				label: locale === 'ar' ? 'بحث في الشات' : 'Search in chat',
 				description: locale === 'ar' ? 'ابحث عن رسائل داخل هذه المحادثة' : 'Find messages in this chat',
 				icon: Search,
@@ -22111,6 +22307,8 @@ function WhatsAppWorkspaceContent() {
 		mediaSelectMode,
 		messageGroupsOpen,
 		pendingPreferenceActions,
+		pinnedMessages.length,
+		pinsPanelOpen,
 		secondaryConversationId,
 		selectedConversation,
 		selectedMessageIds,
@@ -22120,6 +22318,7 @@ function WhatsAppWorkspaceContent() {
 		ticketSelectMode,
 		toggleConversationFavorite,
 		toggleConversationMuted,
+		togglePinsPanel,
 		toggleConversationPinned,
 		toggleGroupSelectMode,
 		toggleMediaSelectMode,
@@ -22144,7 +22343,8 @@ function WhatsAppWorkspaceContent() {
 		setInChatSearchOpen(false);
 		setInChatSearchQuery('');
 		setInChatSearchHits([]);
-	}, [conversationId]);
+		clearPendingVoiceDraft();
+	}, [conversationId, clearPendingVoiceDraft]);
 
 	const toggleConversationArchived = async (conversation, event) => {
 		event?.stopPropagation?.();
@@ -25587,6 +25787,33 @@ function WhatsAppWorkspaceContent() {
 											</button>
 										</div>
 										<div className="flex items-center gap-1 min-[769px]:hidden">
+											{!demo.settings.enabled && conversationId ? (
+												<button
+													type="button"
+													title={
+														pinsPanelOpen
+															? t.hidePinnedMessages
+															: pinnedMessages.length
+																? t.showPinnedMessages
+																: t.pinnedMessages
+													}
+													aria-label={t.pinnedMessages}
+													aria-pressed={pinsPanelOpen || undefined}
+													onClick={togglePinsPanel}
+													className={`wa-header-icon-btn relative shadow-none ${pinsPanelOpen ? 'is-active' : ''}`}
+												>
+													<Pin
+														size={18}
+														strokeWidth={2.05}
+														fill={pinnedMessages.length ? 'currentColor' : 'none'}
+													/>
+													{pinnedMessages.length > 0 ? (
+														<span className="wa-toolbar-icon-btn__badge">
+															{pinnedMessages.length > 9 ? '9+' : pinnedMessages.length}
+														</span>
+													) : null}
+												</button>
+											) : null}
 											<WaActionMenu
 												actions={chatToolbarActions}
 												ariaLabel={t.chatActions}
@@ -25628,6 +25855,33 @@ function WhatsAppWorkspaceContent() {
 														{liveMessageSchedules.length > 0 ? (
 															<span className="wa-toolbar-icon-btn__badge">
 																{liveMessageSchedules.length > 9 ? '9+' : liveMessageSchedules.length}
+															</span>
+														) : null}
+													</button>
+												) : null}
+												{!demo.settings.enabled && conversationId ? (
+													<button
+														type="button"
+														title={
+															pinsPanelOpen
+																? t.hidePinnedMessages
+																: pinnedMessages.length
+																	? t.showPinnedMessages
+																	: t.pinnedMessages
+														}
+														aria-label={t.pinnedMessages}
+														aria-pressed={pinsPanelOpen || undefined}
+														onClick={togglePinsPanel}
+														className={`wa-header-icon-btn relative ${pinsPanelOpen ? 'is-active' : ''}`}
+													>
+														<Pin
+															size={18}
+															strokeWidth={2.05}
+															fill={pinnedMessages.length ? 'currentColor' : 'none'}
+														/>
+														{pinnedMessages.length > 0 ? (
+															<span className="wa-toolbar-icon-btn__badge">
+																{pinnedMessages.length > 9 ? '9+' : pinnedMessages.length}
 															</span>
 														) : null}
 													</button>
@@ -25769,6 +26023,20 @@ function WhatsAppWorkspaceContent() {
 										onResume={resumeMessageSchedule}
 										onEdit={schedule => openEditSchedule(schedule)}
 										onCancel={cancelMessageSchedule}
+									/>
+									<PinnedMessagesPanel
+										ar={locale === 'ar'}
+										open={pinsPanelOpen}
+										messages={pinnedMessages}
+										loading={pinnedMessagesLoading}
+										busyId={
+											[...pendingMessageActions].find(id =>
+												pinnedMessages.some(item => item.id === id),
+											) || ''
+										}
+										onHide={() => setPinsPanelOpen(false)}
+										onJump={message => void jumpToPinnedMessage(message)}
+										onUnpin={message => void handleMessageAction(message, 'pin')}
 									/>
 									{(conversationFilter === 'important' || conversationFilter === 'starred') && conversationId && !activeMessageGroup ? (
 										<div className="flex shrink-0 items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2 text-[12px] font-semibold text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
@@ -27592,6 +27860,23 @@ function WhatsAppWorkspaceContent() {
 														previewDuration={voicePreviewDuration}
 														onPreviewSeek={seekVoicePreview}
 														onSend={() => stopVoiceRecording(true)}
+													/>
+												</div>
+											) : pendingVoiceDraft?.file ? (
+												<div dir="ltr" className="wa-input-pill wa-recording-pill is-ready flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1">
+													<VoiceRecordingBar
+														ready
+														sending={sending || voiceChanging}
+														seconds={pendingVoiceDraft.seconds}
+														labels={t}
+														onCancel={clearPendingVoiceDraft}
+														onSend={() => {
+															const draft = pendingVoiceDraft;
+															if (!draft?.file || sending || voiceChanging) return;
+															void sendRecordedVoice(draft.file, {
+																seconds: draft.seconds,
+															});
+														}}
 													/>
 												</div>
 											) : voiceChanging ? (

@@ -431,6 +431,11 @@ html.dark .wa-ag,
 	background: var(--ag-green);
 }
 
+html.dark .wa-ag-switch:not(.is-on),
+.dark .wa-ag-switch:not(.is-on) {
+	background: #3b3f40;
+}
+
 .wa-ag-switch span {
 	position: absolute;
 	top: 2px;

@@ -1,0 +1,304 @@
+/*
+ * One finish for every popup on the WhatsApp page.
+ *
+ * Three families of dialogs live here:
+ *   .wa-ui-modal   — kit dialogs (schedule, assign, library, voice changer …)
+ *   .wa-ldlg       — Tailwind dialogs (save to library, add to story, video → voice …)
+ *   .wa-pop        — shadcn <DialogContent> (transcription, AI setup, tasks)
+ * They share the kit tokens (--wa-ui-*), which already have light and dark values, so this
+ * file only adds the finish: a softer blurred scrim, a larger radius, a layered shadow, a
+ * calmer header and footer, focus rings in WhatsApp green, and one entrance motion.
+ * Colours for light-only Tailwind utilities inside them come from the .wa-dk layer in wa-ui.css.
+ */
+
+:root {
+	--wa-pop-radius: 22px;
+	--wa-pop-ease: cubic-bezier(0.2, 0.9, 0.25, 1.04);
+	--wa-pop-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 2px 6px rgba(11, 20, 26, 0.05), 0 34px 80px -24px rgba(11, 20, 26, 0.42);
+	--wa-pop-footer: color-mix(in srgb, var(--wa-ui-surface) 94%, var(--wa-ui-text) 3%);
+}
+
+html.dark,
+html[data-theme-mode='dark'] {
+	--wa-pop-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 0 0 1px rgba(0, 0, 0, 0.25), 0 40px 90px -24px rgba(0, 0, 0, 0.8);
+	--wa-pop-footer: color-mix(in srgb, var(--wa-ui-surface) 88%, #000 12%);
+}
+
+/* ─── shadcn dialogs: follow the kit surface in both themes (all widths) ─── */
+.wa-pop[data-slot='dialog-content'] {
+	border-color: var(--wa-ui-border) !important;
+	background: var(--wa-ui-surface) !important;
+	color: var(--wa-ui-text);
+	/* Buttons and accents inside use the WhatsApp green instead of the dashboard blue. */
+	--color-primary-50: #effbf5;
+	--color-primary-100: #d6f5e5;
+	--color-primary-200: #ade9c9;
+	--color-primary-300: #79d8a6;
+	--color-primary-400: #3fc283;
+	--color-primary-500: #1daa61;
+	--color-primary-600: #138a52;
+	--color-primary-700: #0f7444;
+	--color-primary-800: #0b5c36;
+	--color-primary-900: #084429;
+}
+
+html.dark .wa-pop[data-slot='dialog-content'],
+html[data-theme-mode='dark'] .wa-pop[data-slot='dialog-content'] {
+	--color-primary-50: rgba(33, 192, 99, 0.12);
+	--color-primary-100: rgba(33, 192, 99, 0.18);
+	--color-primary-200: rgba(33, 192, 99, 0.3);
+	--color-primary-300: rgba(33, 192, 99, 0.55);
+	--color-primary-400: #3fd27f;
+	--color-primary-500: #21c063;
+	--color-primary-600: #21c063;
+	--color-primary-700: #1daa61;
+	--color-primary-800: #7ee2a8;
+	--color-primary-900: #b6f0cf;
+}
+
+/* White text on bright green is hard to read: dark ink, like WhatsApp's own dark buttons. */
+html.dark .wa-pop .text-white.bg-\[var\(--color-primary-600\)\],
+html[data-theme-mode='dark'] .wa-pop .text-white.bg-\[var\(--color-primary-600\)\] {
+	color: #07170e;
+}
+
+[data-slot='dialog-overlay']:has(+ .wa-pop) {
+	background: var(--wa-ui-scrim);
+	-webkit-backdrop-filter: blur(6px) saturate(115%);
+	backdrop-filter: blur(6px) saturate(115%);
+}
+
+/* Radix popovers (filters, board settings …) */
+.wa-pop-menu[data-slot='popover-content'] {
+	border: 1px solid var(--wa-ui-border) !important;
+	border-radius: 16px !important;
+	background: var(--wa-ui-surface) !important;
+	color: var(--wa-ui-text);
+	box-shadow: var(--wa-ui-shadow-pop) !important;
+}
+
+/* header */
+.wa-pop [data-slot='dialog-header'] {
+	padding: 20px 64px 14px 22px !important;
+}
+
+[dir='rtl'].wa-pop [data-slot='dialog-header'],
+[dir='rtl'] .wa-pop [data-slot='dialog-header'] {
+	padding: 20px 22px 14px 64px !important;
+}
+
+.wa-pop [data-slot='dialog-title'] {
+	gap: 12px !important;
+	color: var(--wa-ui-text) !important;
+	font-size: 17px !important;
+	font-weight: 650 !important;
+	line-height: 1.3 !important;
+	letter-spacing: -0.01em;
+}
+
+.wa-pop [data-slot='dialog-title'] > span:first-child:has(> svg) {
+	width: 40px !important;
+	height: 40px !important;
+	flex: none;
+	border-radius: 12px !important;
+	background: var(--wa-ui-accent-soft) !important;
+	color: var(--wa-ui-accent-strong) !important;
+}
+
+.wa-pop [data-slot='dialog-title'] > span:first-child:has(> svg) svg {
+	width: 20px;
+	height: 20px;
+}
+
+.wa-pop [data-slot='dialog-description'] {
+	color: var(--wa-ui-text-3) !important;
+	font-size: 13px !important;
+	line-height: 1.5 !important;
+}
+
+.wa-pop [data-slot='dialog-header']:has([data-slot='dialog-title'] > span:first-child > svg) [data-slot='dialog-description'] {
+	padding-inline-start: 52px;
+}
+
+/* close */
+.wa-pop > [data-slot='dialog-close'] {
+	top: 18px !important;
+	width: 36px !important;
+	height: 36px !important;
+	border: 0 !important;
+	border-radius: 12px !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	transform: none !important;
+	-webkit-backdrop-filter: none !important;
+	backdrop-filter: none !important;
+}
+
+.wa-pop > [data-slot='dialog-close'] > span:first-child {
+	display: none;
+}
+
+.wa-pop > [data-slot='dialog-close'] svg {
+	width: 20px !important;
+	height: 20px !important;
+	color: var(--wa-ui-icon) !important;
+}
+
+.wa-pop > [data-slot='dialog-close']:hover {
+	background: var(--wa-ui-hover) !important;
+}
+
+.wa-pop > [data-slot='dialog-close']:hover svg {
+	color: var(--wa-ui-text) !important;
+}
+
+/* sticky action bar at the bottom of long dialogs */
+.wa-pop > .shrink-0.border-t {
+	border-color: var(--wa-ui-border) !important;
+	background: var(--wa-pop-footer) !important;
+	box-shadow: none !important;
+}
+
+/* fields */
+.wa-pop textarea,
+.wa-pop input:not([type='range']):not([type='checkbox']):not([type='radio']) {
+	border-color: var(--wa-ui-border) !important;
+	color: var(--wa-ui-text);
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wa-pop textarea:focus,
+.wa-pop input:not([type='range']):not([type='checkbox']):not([type='radio']):focus,
+.wa-ldlg textarea:focus,
+.wa-ldlg input:not([type='range']):not([type='checkbox']):not([type='radio']):focus,
+.wa-ui-modal textarea:focus,
+.wa-ui-modal input:not([type='range']):not([type='checkbox']):not([type='radio']):focus,
+[role='dialog']:has(> .wa-ui-modal__header) textarea:focus,
+[role='dialog']:has(> .wa-ui-modal__header) input:not([type='range']):not([type='checkbox']):not([type='radio']):focus {
+	border-color: var(--wa-ui-accent) !important;
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--wa-ui-accent) 22%, transparent) !important;
+	outline: none;
+}
+
+.wa-pop textarea::placeholder,
+.wa-pop input::placeholder {
+	color: var(--wa-ui-text-3);
+}
+
+.wa-pop ::-webkit-scrollbar,
+.wa-ldlg ::-webkit-scrollbar,
+.wa-ui-modal ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+.wa-pop ::-webkit-scrollbar-thumb,
+.wa-ldlg ::-webkit-scrollbar-thumb,
+.wa-ui-modal ::-webkit-scrollbar-thumb {
+	border: 2px solid transparent;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--wa-ui-text) 18%, transparent) padding-box;
+}
+
+/* ─── Desktop finish for all three families (phones keep the iOS sheet layer) ─── */
+@media (min-width: 769px) {
+	.wa-ui-scrim,
+	.wa-ldlg-scrim {
+		-webkit-backdrop-filter: blur(6px) saturate(115%);
+		backdrop-filter: blur(6px) saturate(115%);
+	}
+
+	.wa-ui-modal,
+	[role='dialog']:has(> .wa-ui-modal__header),
+	.wa-ldlg,
+	.wa-pop[data-slot='dialog-content'] {
+		border: 1px solid var(--wa-ui-border) !important;
+		border-radius: var(--wa-pop-radius) !important;
+		box-shadow: var(--wa-pop-shadow) !important;
+	}
+
+	.wa-ui-modal,
+	[role='dialog']:has(> .wa-ui-modal__header),
+	.wa-ldlg,
+	.wa-pop.wa-pop[data-slot='dialog-content'][data-state='open'] {
+		animation: wa-pop-in 0.3s var(--wa-pop-ease);
+	}
+
+	/* kit dialog header & footer */
+	.wa-ui-modal__header {
+		padding: 20px 18px 14px 22px;
+	}
+
+	[dir='rtl'] .wa-ui-modal__header {
+		padding: 20px 22px 14px 18px;
+	}
+
+	.wa-ui-modal__title {
+		font-size: 17px;
+		font-weight: 650;
+		letter-spacing: -0.01em;
+	}
+
+	.wa-ui-modal__subtitle {
+		margin-top: 4px;
+		font-size: 13px;
+		line-height: 1.5;
+	}
+
+	.wa-ui-modal__body {
+		padding: 2px 22px 18px;
+	}
+
+	.wa-ui-modal__footer {
+		padding: 14px 22px;
+		background: var(--wa-pop-footer);
+	}
+
+	/* Tailwind dialog header */
+	.wa-ldlg > .border-b:first-child {
+		padding: 18px 18px 16px 22px !important;
+	}
+
+	[dir='rtl'].wa-ldlg > .border-b:first-child {
+		padding: 18px 22px 16px 18px !important;
+	}
+
+	.wa-ldlg > .border-b:first-child h3,
+	.wa-ldlg > .border-b:first-child h4 {
+		font-size: 17px;
+		font-weight: 650;
+		letter-spacing: -0.01em;
+	}
+
+	.wa-ldlg > .border-b:first-child h3 > svg:first-child {
+		width: 20px;
+		height: 20px;
+		padding: 10px;
+	}
+
+	.wa-ldlg > .border-b:first-child p {
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--wa-ui-text-3);
+	}
+
+	.wa-ldlg > .border-t:last-child {
+		border-color: var(--wa-ui-border) !important;
+		background: var(--wa-pop-footer) !important;
+	}
+}
+
+@keyframes wa-pop-in {
+	from {
+		opacity: 0;
+		transform: translateY(10px) scale(0.965);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-ui-modal,
+	.wa-ldlg,
+	.wa-pop[data-slot='dialog-content'] {
+		animation: none !important;
+	}
+}

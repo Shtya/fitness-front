@@ -610,7 +610,7 @@ export default function TranscriptionDialog({
 		>
 			<DialogContent
 				dir={locale === 'ar' ? 'rtl' : 'ltr'}
-				className={`!flex max-h-[min(92dvh,calc(100dvh-1.25rem))] min-h-0 w-full flex-col gap-0 overflow-hidden rounded-2xl p-0 ${
+				className={`wa-dk wa-pop !flex max-h-[min(92dvh,calc(100dvh-1.25rem))] min-h-0 w-full flex-col gap-0 overflow-hidden rounded-2xl p-0 ${
 					isBundle ? 'sm:max-w-xl' : 'sm:max-w-lg'
 				}`}
 				onEscapeKeyDown={event => {

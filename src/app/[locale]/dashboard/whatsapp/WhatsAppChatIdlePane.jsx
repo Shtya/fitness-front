@@ -5,6 +5,8 @@ import gsap from 'gsap';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import './wa-chat-idle.css';
 import { GameStage, GamesLauncher } from './games/WaGames';
+import { TicketsBoard, TicketsLauncher, TicketsToast } from './tickets/DailyTickets';
+import { useDailyTickets } from './tickets/use-daily-tickets';
 
 if (typeof window !== 'undefined') gsap.registerPlugin(MotionPathPlugin);
 
@@ -412,6 +414,59 @@ function WhatsAppChatIdlePane({ title, hint, unreadLabel, steps }) {
 	const [game, setGame] = useState(null);
 	const closeGame = useCallback(() => setGame(null), []);
 
+	// Daily task tickets: once there is one, a board takes the Relay scene's place.
+	const store = useDailyTickets();
+	const hasTickets = store.tickets.length > 0;
+	const [view, setView] = useState('relay');
+	const [leaving, setLeaving] = useState(false);
+	const [focusComposer, setFocusComposer] = useState(false);
+	const [undoItem, setUndoItem] = useState(null);
+	const firstSync = useRef(true);
+
+	useEffect(() => {
+		if (!store.ready) return undefined;
+		const want = hasTickets ? 'board' : 'relay';
+		if (firstSync.current) {
+			// Opening the page with tickets already saved: show the board straight away.
+			firstSync.current = false;
+			setView(want);
+			return undefined;
+		}
+		if (want === view) {
+			setLeaving(false);
+			return undefined;
+		}
+		setLeaving(true);
+		const id = window.setTimeout(() => {
+			setView(want);
+			setLeaving(false);
+		}, want === 'board' ? 260 : 220);
+		return () => window.clearTimeout(id);
+	}, [store.ready, hasTickets, view]);
+
+	const { add, remove, restore, indexOf } = store;
+	const addFromCorner = useCallback(
+		(title, opts) => {
+			add(title, opts);
+			setFocusComposer(true);
+		},
+		[add],
+	);
+	// Undo keeps each ticket's slot so it comes back exactly where it was.
+	const deleteTicket = useCallback(
+		ticket => {
+			const index = indexOf(ticket.id);
+			remove(ticket.id);
+			setUndoItem({ key: `${ticket.id}-${Date.now()}`, items: [{ ...ticket, _index: index }] });
+		},
+		[remove, indexOf],
+	);
+	const undoDelete = useCallback(() => {
+		if (undoItem) restore(undoItem.items);
+		setUndoItem(null);
+	}, [restore, undoItem]);
+	const dismissUndo = useCallback(() => setUndoItem(null), []);
+
 	if (game) {
 		return (
 			<div className="wa-chat-idle is-playing">
@@ -421,9 +476,19 @@ function WhatsAppChatIdlePane({ title, hint, unreadLabel, steps }) {
 	}
 
 	return (
-		<div className="wa-chat-idle" role="status" aria-live="polite">
-			<GamesLauncher ar={ar} onPick={setGame} />
+		<div
+			className={`wa-chat-idle ${view === 'board' ? 'has-tickets' : ''}`}
+			{...(view === 'board' ? {} : { role: 'status', 'aria-live': 'polite' })}
+		>
+			<div className="wa-idle-corner">
+				{!hasTickets && view === 'relay' ? <TicketsLauncher ar={ar} onAdd={addFromCorner} /> : null}
+				<GamesLauncher ar={ar} onPick={setGame} />
+			</div>
 			<div className="wa-chat-idle__stage">
+				{view === 'board' ? (
+					<TicketsBoard ar={ar} store={store} onDelete={deleteTicket} leaving={leaving} focusComposer={focusComposer} />
+				) : (
+				<div className={`wa-idle-swap ${leaving ? 'is-leaving' : ''}`}>
 				<RelayScene />
 
 				<section className="wa-chat-idle__copy">
@@ -436,6 +501,8 @@ function WhatsAppChatIdlePane({ title, hint, unreadLabel, steps }) {
 						</div>
 					) : null}
 				</section>
+				</div>
+				)}
 
 				{stepList.length > 0 ? (
 					<section className="wa-chat-idle__steps" aria-label="Restoration progress">
@@ -499,6 +566,7 @@ function WhatsAppChatIdlePane({ title, hint, unreadLabel, steps }) {
 					</section>
 				) : null}
 			</div>
+			<TicketsToast ar={ar} item={undoItem} onUndo={undoDelete} onDismiss={dismissUndo} />
 		</div>
 	);
 }

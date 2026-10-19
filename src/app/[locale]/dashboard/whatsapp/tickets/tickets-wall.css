@@ -1,0 +1,670 @@
+/*
+ * Wall view of the daily tickets. A slim oak frame around a linen wall, twine strung in rows,
+ * paper notes (colour = priority) held by 3D push pins. Calm by default; motion only answers
+ * an action (new note swings in, done gets stamped, removed note falls, reorder slides).
+ */
+
+.tw-frame,
+.tw-float {
+	--tw-oak: #d9bb8c;
+	--tw-oak-2: #c49f6a;
+	--tw-wall: #f5f2eb;
+	--tw-wall-2: #ece7dc;
+	--tw-twine: #b39470;
+	--tw-ink: #2b2219;
+	--tw-ink-2: rgba(43, 34, 25, 0.62);
+	--tw-high-a: #fbd7cb;
+	--tw-high-b: #f6c3b2;
+	--tw-medium-a: #fbe9b7;
+	--tw-medium-b: #f5dc96;
+	--tw-low-a: #dcebd2;
+	--tw-low-b: #c9e0bc;
+	--tw-done: #1f8a50;
+	--tw-hand: 'Caveat', 'Aref Ruqaa', 'Segoe Print', 'Comic Sans MS', cursive;
+}
+
+html.dark .tw-frame,
+html.dark .tw-float {
+	--tw-oak: #6f5838;
+	--tw-oak-2: #5a462b;
+	--tw-wall: #1f1e1c;
+	--tw-wall-2: #1a1918;
+	--tw-twine: #7d6748;
+	--tw-high-a: #e8b9aa;
+	--tw-high-b: #dca693;
+	--tw-medium-a: #ead39a;
+	--tw-medium-b: #ddc27c;
+	--tw-low-a: #c4d8b8;
+	--tw-low-b: #b1caa3;
+}
+
+/* the handwriting must beat the WhatsApp shell's forced UI font */
+[dir] body .tw-frame .tw-text.tw-text.tw-text.tw-text.tw-text,
+[dir] body .tw-frame .tw-text.tw-text.tw-text.tw-text.tw-text *,
+[dir] body .tw-float .tw-text.tw-text.tw-text.tw-text.tw-text,
+[dir] body .tw-float .tw-text.tw-text.tw-text.tw-text.tw-text * {
+	font-family: var(--tw-hand) !important;
+}
+
+.tw-frame {
+	position: relative;
+	display: flex;
+	min-height: 0;
+	flex-direction: column;
+	padding: 9px;
+	border-radius: 18px;
+	background:
+		repeating-linear-gradient(90deg, rgba(120, 80, 35, 0.07) 0 1px, transparent 1px 9px),
+		linear-gradient(180deg, var(--tw-oak), var(--tw-oak-2));
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.35),
+		0 1px 2px rgba(0, 0, 0, 0.08),
+		0 24px 48px -30px rgba(40, 25, 10, 0.55);
+}
+
+html.dark .tw-frame {
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.08),
+		0 24px 48px -26px rgba(0, 0, 0, 0.8);
+}
+
+.tw-wall {
+	min-height: 200px;
+	overflow-y: auto;
+	padding: 26px 18px 10px;
+	border-radius: 11px;
+	background:
+		repeating-linear-gradient(0deg, rgba(120, 100, 70, 0.035) 0 1px, transparent 1px 3px),
+		repeating-linear-gradient(90deg, rgba(120, 100, 70, 0.03) 0 1px, transparent 1px 3px),
+		linear-gradient(180deg, var(--tw-wall), var(--tw-wall-2));
+	box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.12);
+	scrollbar-width: thin;
+}
+
+html.dark .tw-wall {
+	background:
+		repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px),
+		linear-gradient(180deg, var(--tw-wall), var(--tw-wall-2));
+	box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.tw-row {
+	position: relative;
+	margin-bottom: 26px;
+}
+
+.tw-string {
+	position: absolute;
+	top: 0;
+	left: -18px;
+	width: calc(100% + 36px);
+	height: 22px;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.tw-string path {
+	fill: none;
+	stroke: var(--tw-twine);
+	stroke-width: 1.6;
+	stroke-linecap: round;
+	vector-effect: non-scaling-stroke;
+	filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.14));
+}
+
+.tw-row__notes {
+	display: grid;
+	gap: 18px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* ─── note ─── */
+.tw-note {
+	position: relative;
+	display: flex;
+	justify-content: center;
+	padding-top: calc(var(--y) + 6px);
+	outline: none;
+}
+
+/* an open menu or a focused note sits above its neighbours */
+.tw-note:focus-within,
+.tw-note:hover {
+	z-index: 20;
+}
+
+.tw-pin {
+	position: absolute;
+	top: calc(var(--y) - 17px);
+	left: 50%;
+	z-index: 3;
+	transform: translateX(-50%) rotate(14deg);
+	pointer-events: none;
+	transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.tkx-pushpin {
+	display: block;
+	overflow: visible;
+	filter: drop-shadow(1px 3px 2px rgba(0, 0, 0, 0.28));
+}
+
+.tw-paper {
+	position: relative;
+	display: flex;
+	width: 100%;
+	max-width: 210px;
+	min-height: 158px;
+	flex-direction: column;
+	gap: 6px;
+	padding: 18px 12px 10px;
+	border-radius: 3px 3px 10px 3px;
+	color: var(--tw-ink);
+	background:
+		radial-gradient(130% 80% at 20% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
+		linear-gradient(176deg, var(--a), var(--b));
+	box-shadow:
+		0 1px 1px rgba(0, 0, 0, 0.1),
+		0 14px 18px -14px rgba(60, 40, 15, 0.55);
+	transform: rotate(var(--tilt));
+	transform-origin: 50% 0;
+	transition:
+		transform 0.42s cubic-bezier(0.3, 1.4, 0.5, 1),
+		box-shadow 0.25s ease,
+		filter 0.3s ease,
+		opacity 0.3s ease;
+	--a: var(--tw-medium-a);
+	--b: var(--tw-medium-b);
+}
+
+.tw-paper.is-high {
+	--a: var(--tw-high-a);
+	--b: var(--tw-high-b);
+}
+
+.tw-paper.is-low {
+	--a: var(--tw-low-a);
+	--b: var(--tw-low-b);
+}
+
+/* a soft lifted corner */
+.tw-paper::after {
+	content: '';
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	width: 22px;
+	height: 22px;
+	border-radius: 0 0 10px 0;
+	background: linear-gradient(315deg, rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.25) 45%, transparent 50%);
+	pointer-events: none;
+}
+
+html.dark .tw-paper {
+	box-shadow:
+		0 1px 1px rgba(0, 0, 0, 0.4),
+		0 16px 20px -14px rgba(0, 0, 0, 0.9);
+}
+
+.tw-paper.is-pinned {
+	box-shadow:
+		0 0 0 1.5px rgba(242, 181, 29, 0.75),
+		0 1px 1px rgba(0, 0, 0, 0.1),
+		0 16px 22px -14px rgba(120, 80, 10, 0.55);
+}
+
+.tw-note:hover .tw-paper,
+.tw-note:focus-visible .tw-paper,
+.tw-note:focus-within .tw-paper {
+	transform: rotate(0deg) translateY(-2px);
+	box-shadow:
+		0 1px 1px rgba(0, 0, 0, 0.1),
+		0 22px 26px -16px rgba(60, 40, 15, 0.55);
+}
+
+.tw-note:hover .tw-pin {
+	transform: translateX(-50%) rotate(4deg);
+}
+
+.tw-note:focus-visible .tw-paper {
+	outline: 2.5px solid #21c063;
+	outline-offset: 4px;
+}
+
+.tw-frame.can-drag .tw-note:not(.tw-note--add) .tw-paper {
+	cursor: grab;
+}
+
+/* top row: priority, pinned, number, menu */
+.tw-top {
+	display: flex;
+	min-height: 26px;
+	align-items: center;
+	gap: 5px;
+}
+
+.tw-paper .tkx-prio {
+	--c: #8a5a00;
+	font-size: 10.5px;
+	background: rgba(255, 255, 255, 0.42);
+}
+
+.tw-paper .tkx-prio.is-high {
+	--c: #b42318;
+}
+
+.tw-paper .tkx-prio.is-low {
+	--c: #20683f;
+}
+
+.tw-pinned {
+	display: grid;
+	width: 20px;
+	height: 20px;
+	place-items: center;
+	border-radius: 999px;
+	color: #a06c00;
+	background: rgba(255, 255, 255, 0.5);
+}
+
+.tw-no {
+	margin-inline-start: auto;
+	font-size: 10.5px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: var(--tw-ink-2);
+}
+
+.tw-paper .tkx-menu {
+	margin-inline-end: -6px;
+}
+
+.tw-paper .tkx-iconbtn--ticket {
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	color: var(--tw-ink-2);
+	opacity: 0;
+	transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.tw-note:hover .tkx-iconbtn--ticket,
+.tw-note:focus-within .tkx-iconbtn--ticket,
+.tw-paper .tkx-iconbtn--ticket.is-open {
+	opacity: 1;
+}
+
+.tw-paper .tkx-iconbtn--ticket:hover,
+.tw-paper .tkx-iconbtn--ticket.is-open {
+	color: var(--tw-ink);
+	background: rgba(255, 255, 255, 0.45);
+}
+
+@media (hover: none) {
+	.tw-paper .tkx-iconbtn--ticket {
+		opacity: 1;
+	}
+}
+
+/* the title, handwritten */
+.tw-text {
+	display: -webkit-box;
+	min-height: 0;
+	flex: 0 1 auto;
+	margin: auto 0;
+	overflow: hidden;
+	font-size: 22px;
+	font-weight: 600;
+	line-height: 1.12;
+	text-align: center;
+	overflow-wrap: anywhere;
+	color: var(--tw-ink);
+	-webkit-line-clamp: 4;
+	-webkit-box-orient: vertical;
+	align-content: center;
+}
+
+.tw-text:not(.tw-text--edit) span {
+	background-image: linear-gradient(var(--tw-ink), var(--tw-ink));
+	background-repeat: no-repeat;
+	background-position: 0 60%;
+	background-size: 0% 2px;
+	transition: background-size 0.5s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+[dir='rtl'] .tw-text:not(.tw-text--edit) span {
+	background-position: 100% 60%;
+}
+
+.wa-chat-idle .tw-text--edit.tw-text--edit {
+	display: block;
+	width: 100%;
+	min-height: 84px;
+	padding: 6px 8px;
+	border: 1.5px dashed rgba(43, 34, 25, 0.4);
+	border-radius: 6px;
+	outline: none;
+	resize: none;
+	color: var(--tw-ink);
+	background: rgba(255, 255, 255, 0.35);
+	box-shadow: none;
+}
+
+/* bottom row: status + done button */
+.tw-bottom {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 30px;
+}
+
+.tw-paper .tkx-status {
+	color: var(--tw-ink-2);
+	font-size: 11.5px;
+}
+
+.tw-paper .tkx-status.is-todo {
+	--c: #8a7a66;
+}
+
+.tw-paper .tkx-status.is-doing {
+	--c: #1d63c4;
+}
+
+.tw-paper .tkx-status.is-done {
+	--c: var(--tw-done);
+}
+
+.tw-carried {
+	font-size: 11px;
+	font-weight: 700;
+	color: #93400e;
+}
+
+.tw-check {
+	display: grid;
+	width: 30px;
+	height: 30px;
+	flex: none;
+	place-items: center;
+	margin-inline-start: auto;
+	border-radius: 999px;
+	color: transparent;
+	background: rgba(255, 255, 255, 0.4);
+	box-shadow: inset 0 0 0 1.5px rgba(43, 34, 25, 0.35);
+	cursor: pointer;
+	transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+}
+
+.tw-check:hover {
+	color: rgba(31, 138, 80, 0.7);
+	box-shadow: inset 0 0 0 1.5px var(--tw-done);
+}
+
+.tw-check:active {
+	transform: scale(0.88);
+}
+
+.tw-check[aria-pressed='true'] {
+	color: #fff;
+	background: var(--tw-done);
+	box-shadow: none;
+}
+
+.tw-check:focus-visible {
+	outline: 2px solid #21c063;
+	outline-offset: 2px;
+}
+
+/* done */
+.tw-note.is-done .tw-paper {
+	filter: saturate(0.45);
+	opacity: 0.86;
+}
+
+.tw-note.is-done .tw-text {
+	color: var(--tw-ink-2);
+}
+
+.tw-note.is-done .tw-text span {
+	background-size: 100% 2px;
+}
+
+.tw-stamp {
+	position: absolute;
+	bottom: 13px;
+	left: 50%;
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding: 1px 7px 1px 5px;
+	border: 2px solid var(--tw-done);
+	border-radius: 7px;
+	font-size: 12px;
+	font-weight: 800;
+	color: var(--tw-done);
+	background: rgba(255, 255, 255, 0.3);
+	transform: translateX(-50%) rotate(-8deg);
+	mix-blend-mode: multiply;
+	opacity: 0.85;
+	pointer-events: none;
+}
+
+.tw-note.is-stamped .tw-stamp {
+	animation: tw-stamp 0.45s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+/* in progress: a quiet blue tape line at the top */
+.tw-note.is-doing .tw-paper::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	inset-inline: 18%;
+	height: 3px;
+	border-radius: 0 0 3px 3px;
+	background: #2f7fe0;
+	opacity: 0.75;
+}
+
+/* the empty paper at the end */
+.tw-paper--add {
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 158px;
+	color: var(--tw-ink-2);
+	background: transparent;
+	border: 1.5px dashed color-mix(in srgb, var(--tw-twine) 70%, transparent);
+	box-shadow: none;
+	cursor: pointer;
+	transform: none;
+	opacity: 0.85;
+}
+
+.tw-paper--add::after {
+	display: none;
+}
+
+.tw-paper--add span {
+	font-size: 13px;
+	font-weight: 600;
+}
+
+html.dark .tw-paper--add {
+	color: #bba98c;
+}
+
+.tw-note--add:hover .tw-paper--add {
+	opacity: 1;
+	transform: none;
+	background: color-mix(in srgb, var(--tw-twine) 10%, transparent);
+	box-shadow: none;
+}
+
+.tw-paper--add:focus-visible {
+	outline: 2.5px solid #21c063;
+	outline-offset: 4px;
+}
+
+/* drag */
+.tw-note.is-dragging .tw-paper {
+	opacity: 0.32;
+	filter: grayscale(0.4);
+	box-shadow: none;
+	outline: 2px dashed color-mix(in srgb, var(--tw-twine) 80%, transparent);
+	outline-offset: 2px;
+}
+
+.tw-note.is-dragging .tw-pin {
+	opacity: 0;
+}
+
+.tw-float {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 2000;
+	pointer-events: none;
+}
+
+.tw-float .tw-paper {
+	max-width: none;
+	transform: rotate(3deg) scale(1.04);
+	box-shadow:
+		0 2px 4px rgba(0, 0, 0, 0.12),
+		0 30px 40px -18px rgba(40, 25, 10, 0.55);
+}
+
+.tw-hint {
+	display: inline-flex;
+	align-items: center;
+	align-self: center;
+	gap: 5px;
+	margin: 8px 0 0;
+	font-size: 11.5px;
+	font-weight: 600;
+	color: color-mix(in srgb, var(--tw-ink) 70%, transparent);
+	opacity: 0.8;
+}
+
+html.dark .tw-hint {
+	color: #d8c6a8;
+}
+
+/* ─── stacked: one column on narrow panes ─── */
+.tw-frame.is-stacked .tw-wall {
+	padding: 16px 12px 4px;
+}
+
+.tw-frame.is-stacked .tw-row {
+	margin-bottom: 14px;
+}
+
+.tw-frame.is-stacked .tw-note {
+	padding-top: 6px;
+}
+
+.tw-frame.is-stacked .tw-pin {
+	top: -8px;
+	left: 26px;
+	transform: rotate(14deg);
+}
+
+[dir='rtl'] .tw-frame.is-stacked .tw-pin {
+	right: 26px;
+	left: auto;
+}
+
+.tw-frame.is-stacked .tw-paper {
+	max-width: none;
+	min-height: 0;
+	transform: none;
+}
+
+.tw-frame.is-stacked .tw-text {
+	font-size: 21px;
+	text-align: start;
+	-webkit-line-clamp: 3;
+}
+
+/* ─── motion ─── */
+.tw-note.is-new .tw-paper {
+	animation: tw-swing 0.9s cubic-bezier(0.3, 1, 0.4, 1);
+}
+
+.tw-note.is-new .tw-pin {
+	animation: tw-pin-in 0.34s 0.26s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+
+.tw-note.is-leaving .tw-paper {
+	animation: tw-fall 0.38s cubic-bezier(0.5, 0, 0.9, 0.5) forwards;
+}
+
+.tw-note.is-leaving .tw-pin {
+	animation: tw-pin-out 0.22s ease-in forwards;
+}
+
+@keyframes tw-swing {
+	0% {
+		opacity: 0;
+		transform: translateY(-22px) rotate(-12deg);
+	}
+	35% {
+		opacity: 1;
+		transform: rotate(7deg);
+	}
+	60% {
+		transform: rotate(-3.5deg);
+	}
+	82% {
+		transform: rotate(1.5deg);
+	}
+	100% {
+		transform: rotate(var(--tilt));
+	}
+}
+
+@keyframes tw-pin-in {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -18px) rotate(14deg) scale(1.4);
+	}
+}
+
+@keyframes tw-fall {
+	to {
+		opacity: 0;
+		transform: translateY(80px) rotate(22deg);
+	}
+}
+
+@keyframes tw-pin-out {
+	to {
+		opacity: 0;
+		transform: translate(-50%, -26px) rotate(40deg);
+	}
+}
+
+@keyframes tw-stamp {
+	from {
+		opacity: 0;
+		transform: translateX(-50%) rotate(-20deg) scale(1.9);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tw-paper,
+	.tw-pin,
+	.tw-stamp,
+	.tw-text span {
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
+/* on a finished note the stamp says it; the status line would repeat it */
+.tw-note.is-done .tw-bottom .tkx-status {
+	visibility: hidden;
+}
