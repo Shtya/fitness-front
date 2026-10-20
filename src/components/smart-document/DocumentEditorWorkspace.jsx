@@ -4,9 +4,9 @@ import { useTranslations } from 'next-intl';
 import SmartDocumentEditor from './SmartDocumentEditor';
 
 /**
- * The super-admin smart document editor with its translated labels. Shared by the
- * /dashboard/super-admin/document-editor page and the WhatsApp "Documents" tab, so both
- * open the same documents and history (same storage key).
+ * The smart document editor with its translated labels. Shared by the
+ * /dashboard/super-admin/document-editor page and the WhatsApp "Documents" tab
+ * (admin + super admin), so both open the same documents and history (same storage key).
  */
 export default function DocumentEditorWorkspace({ className = 'min-h-[calc(100vh-3.25rem)] px-2 py-2 sm:px-3 sm:py-3' }) {
 	const t = useTranslations('documentEditor');

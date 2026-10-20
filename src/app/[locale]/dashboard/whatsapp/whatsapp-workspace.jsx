@@ -789,6 +789,7 @@ const translations = {
 		autoForward: 'Auto-forward',
 		wallet: 'Wallet',
 		adhkar: 'My Adhkar',
+		documents: 'Documents',
 		contacts: 'Contacts',
 		openSidebar: 'Open sidebar',
 		addToBoard: 'Add to tasks board',
@@ -1322,6 +1323,7 @@ const translations = {
 		autoForward: 'تحويل تلقائي',
 		wallet: 'محفظتي',
 		adhkar: 'أذكاري',
+		documents: 'المستندات',
 		contacts: 'جهات الاتصال',
 		openSidebar: 'فتح القائمة الجانبية',
 		addToBoard: 'إضافة للوحة المهام',
@@ -1844,6 +1846,7 @@ const tabs = [
 	['autoForward', Forward],
 	['wallet', Wallet],
 	['adhkar', BookOpen],
+	['documents', FileText],
 	['settings', Settings],
 ];
 
@@ -12384,7 +12387,6 @@ function WhatsAppWorkspaceContent() {
 	const [bootStatus, setBootStatus] = useState('loading');
 	const [bootError, setBootError] = useState('');
 	const [isAdmin, setIsAdmin] = useState(false);
-	const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 	const [currentUserId, setCurrentUserId] = useState(
 		() => resolveStoredWhatsAppUserId() || 'anonymous',
 	);
@@ -12799,6 +12801,7 @@ function WhatsAppWorkspaceContent() {
 	const conversationsRef = useRef([]);
 	/** AI Memo Emails chat: 'chat' (the memos) or 'settings' (Email Memo configuration). */
 	const [emailMemoView, setEmailMemoView] = useState('chat');
+	const [memoSettingsMounted, setMemoSettingsMounted] = useState(false);
 	const emailMemoSettingsOnOpenRef = useRef(false);
 	const patchArchivedUnread = useCallback(delta => {
 		const amount = Number(delta) || 0;
@@ -13257,6 +13260,7 @@ function WhatsAppWorkspaceContent() {
 				if (key === 'board') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'fakeChat') return fakeChatAllowed;
 				if (key === 'autoForward') return canUseWhatsApp || canManageWhatsApp || isAdmin;
+				if (key === 'documents') return isAdmin;
 				return true;
 			}),
 		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, fakeChatAllowed, isAdmin, showcaseOnly],
@@ -13437,11 +13441,19 @@ function WhatsAppWorkspaceContent() {
 	}, []);
 	const showEmailMemoSettings =
 		emailMemoView === 'settings' && isEmailMemoAiConversation(selectedConversation);
+	const isMemoChat = isEmailMemoAiConversation(selectedConversation);
 	// Each chat opens on its messages; the Emails tab asks for the settings view instead.
 	useEffect(() => {
-		setEmailMemoView(emailMemoSettingsOnOpenRef.current ? 'settings' : 'chat');
+		const next = emailMemoSettingsOnOpenRef.current ? 'settings' : 'chat';
 		emailMemoSettingsOnOpenRef.current = false;
+		setEmailMemoView(next);
+		setMemoSettingsMounted(next === 'settings');
 	}, [conversationId]);
+	useEffect(() => {
+		if (!isMemoChat) return undefined;
+		void import('../email-memo/EmailMemoWorkspace');
+		return undefined;
+	}, [isMemoChat]);
 	const threadHasRows = messageRows.length > 0;
 	useLayoutEffect(() => {
 		const box = messageBoxRef.current;
@@ -13820,7 +13832,6 @@ function WhatsAppWorkspaceContent() {
 				.filter(Boolean)
 				.map(role => String(role).toUpperCase());
 			setIsAdmin(roles.includes('ADMIN') || roles.includes('SUPER_ADMIN'));
-			setIsSuperAdmin(roles.includes('SUPER_ADMIN'));
 			setCurrentUserId(String(user?.id || 'anonymous'));
 		} catch {
 			setIsAdmin(false);
@@ -23016,7 +23027,7 @@ function WhatsAppWorkspaceContent() {
 			setActiveTab('chats');
 			return;
 		}
-		if (tab === 'documents' && !isSuperAdmin) {
+		if (tab === 'documents' && !isAdmin) {
 			setActiveTab('chats');
 			return;
 		}
@@ -24995,7 +25006,7 @@ function WhatsAppWorkspaceContent() {
 			{/* Desktop nav lives in the left rail — no top PageHeader on web. */}
 			<div className="wa-web-workspace min-h-0 flex-1 max-[769px]:contents min-[769px]:flex min-[769px]:overflow-hidden">
 				<WhatsAppDesktopRail
-					activeTab={showEmailMemoSettings ? 'emails' : activeTab}
+					activeTab={activeTab}
 					onSelect={tab => void loadTabData(tab)}
 					labels={t}
 					unreadCount={unreadConversationCount}
@@ -25011,7 +25022,7 @@ function WhatsAppWorkspaceContent() {
 					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
 					showWallet={!showcaseOnly}
 					showAdhkar={!showcaseOnly}
-					showDocuments={!showcaseOnly && isSuperAdmin}
+					showDocuments={!showcaseOnly && isAdmin}
 					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
@@ -26229,12 +26240,8 @@ function WhatsAppWorkspaceContent() {
 															: 'Contact info'
 												}
 											>
-												<div className="wa-chat-avatar-ring shrink-0">
-													{isEmailMemoAiConversation(selectedConversation) ? (
-														<div className="grid h-10 w-10 place-items-center rounded-full bg-[#eff6ff] text-[#2563eb] ring-2 ring-white dark:bg-[#1e3a5f] dark:text-[#93c5fd] dark:ring-slate-900">
-															<Mail size={18} />
-														</div>
-													) : (
+												{isEmailMemoAiConversation(selectedConversation) ? null : (
+													<div className="wa-chat-avatar-ring shrink-0">
 														<Avatar
 															label={conversationTitle(selectedConversation)}
 															size={10}
@@ -26248,8 +26255,8 @@ function WhatsAppWorkspaceContent() {
 																);
 															}}
 														/>
-													)}
-												</div>
+													</div>
+												)}
 												<div className="wa-chat-contact min-w-0">
 													<h3
 														className={`truncate text-sm font-semibold tracking-tight ${selectedChatTitlePresentation.className}`}
@@ -26393,7 +26400,6 @@ function WhatsAppWorkspaceContent() {
 													className={emailMemoView === 'chat' ? 'is-on' : ''}
 													onClick={() => setEmailMemoView('chat')}
 												>
-													<MessageCircle size={15} aria-hidden="true" />
 													<span>{locale === 'ar' ? 'الشات' : 'Chat'}</span>
 												</button>
 												<button
@@ -26401,9 +26407,11 @@ function WhatsAppWorkspaceContent() {
 													role="tab"
 													aria-selected={emailMemoView === 'settings'}
 													className={emailMemoView === 'settings' ? 'is-on' : ''}
-													onClick={() => setEmailMemoView('settings')}
+													onClick={() => {
+														setMemoSettingsMounted(true);
+														setEmailMemoView('settings');
+													}}
 												>
-													<Settings size={15} aria-hidden="true" />
 													<span>{locale === 'ar' ? 'الإعدادات' : 'Settings'}</span>
 												</button>
 											</div>
@@ -26742,10 +26750,15 @@ function WhatsAppWorkspaceContent() {
 										</Suspense>
 									) : (
 									<>
-									<div className="wa-chat-wallpaper-host">
+									<div className={`wa-chat-wallpaper-host${showEmailMemoSettings ? ' is-memo-settings' : ''}`}>
 									<div className="wa-chat-wallpaper-layer" aria-hidden="true" />
-									{showEmailMemoSettings ? (
-										<div className="wa-memo-settings-pane" role="tabpanel">
+									{memoSettingsMounted && isMemoChat ? (
+										<div
+											className={`wa-memo-settings-pane${showEmailMemoSettings ? '' : ' is-off'}`}
+											role="tabpanel"
+											hidden={!showEmailMemoSettings}
+											aria-hidden={!showEmailMemoSettings}
+										>
 											<Suspense fallback={<WaPaneLoading label={t.loading} />}>
 												<EmailMemoWorkspace variant="panel" />
 											</Suspense>
@@ -29611,7 +29624,7 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				)}
 
-				{activeTab === 'documents' && isSuperAdmin && (
+				{activeTab === 'documents' && isAdmin && (
 					<div className="wa-dk wa-secondary-pane wa-documents-pane">
 						<div className="min-h-0 flex-1 overflow-y-auto nice-scroll">
 							<Suspense fallback={<WaPaneLoading label={t.loading} />}>

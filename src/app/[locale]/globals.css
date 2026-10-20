@@ -8721,10 +8721,16 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		display: none !important;
 	}
 
-	.wa-web-desktop .wa-conversation-row:hover .wa-conversation-pin,
 	.wa-web-desktop .wa-conversation-pin.is-on {
 		display: grid !important;
 		place-items: center;
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.wa-web-desktop .wa-conversation-row:hover .wa-conversation-pin {
+			display: grid !important;
+			place-items: center;
+		}
 	}
 
 	.wa-web-desktop .wa-chat-list.is-collapsed .wa-conversation-row:hover .wa-conversation-pin,
@@ -9616,7 +9622,6 @@ html.dark .wa-file-card-action + .wa-file-card-action {
     display: none;
   }
 
-  .wa-conversation-row:hover .wa-conversation-pin,
   .wa-conversation-row .wa-conversation-pin.is-on {
     display: inline-flex;
     align-items: center;

@@ -378,13 +378,20 @@
 		font-weight: 600 !important;
 	}
 
-	/* Pin is grey on WhatsApp; the favourite star only shows when it is on. */
+	/* Pin/star live behind swipe on phones. Never reveal them with :hover —
+	   the first tap would otherwise stick as hover and eat the open-chat click. */
 	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-conversation-preference {
 		color: var(--m-text-2) !important;
 	}
 
-	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-conversation-preference:not(.wa-conversation-pin):not(.is-on) {
+	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-conversation-preference:not(.is-on) {
 		display: none !important;
+		pointer-events: none !important;
+	}
+
+	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-conversation-row:hover .wa-conversation-pin:not(.is-on) {
+		display: none !important;
+		pointer-events: none !important;
 	}
 
 	/* ---------------------------------------------------------------- */

@@ -58,7 +58,7 @@ const COPY = {
 		openOriginal: 'Open original',
 		closePhoto: 'Close photo',
 		offlineLine: 'WhatsApp is offline, so numbers can’t be verified right now.',
-		findPlaceholder: 'Phone number with country code',
+		findPlaceholder: 'Phone number',
 		findHint: 'Type the number with its country code, or pick the country first.',
 		countryShort: 'Auto',
 		newContact: 'New contact',
@@ -167,7 +167,7 @@ const COPY = {
 		openOriginal: 'فتح الأصل',
 		closePhoto: 'إغلاق الصورة',
 		offlineLine: 'واتساب مش متصل، فمش هنقدر نتحقق من الأرقام دلوقتي.',
-		findPlaceholder: 'رقم الموبايل بكود الدولة',
+		findPlaceholder: 'رقم الموبايل',
 		findHint: 'اكتب الرقم بكود الدولة، أو اختار الدولة الأول.',
 		countryShort: 'تلقائي',
 		newContact: 'جهة اتصال جديدة',
@@ -434,6 +434,16 @@ function PhoneText({ phone, className = '' }) {
 	);
 }
 
+function contactListName(contact) {
+	const name = String(contact?.displayName || contact?.whatsappName || contact?.localName || '').trim();
+	if (!name) return null;
+	const digits = String(contact?.phone?.digits || contact?.phone?.e164 || '').replace(/\D/g, '');
+	const nameDigits = name.replace(/\D/g, '');
+	if (digits && nameDigits === digits) return null;
+	if (/^\+?\d[\d\s-]*$/.test(name) && nameDigits.length >= 8) return null;
+	return name;
+}
+
 function FieldError({ children }) {
 	if (!children) return null;
 	return (
@@ -598,7 +608,7 @@ function LookupCard({ copy, lookup, canUse, onSave, onUpdate, onStartChat, start
 	const status = lookup.registration.status;
 	const pictureUrl =
 		profile?.picture?.status === 'available' ? profile.picture.url : contact?.avatarUrl || null;
-	const title = contact?.isSaved ? contact.displayName : null;
+	const title = contactListName(contact) || lookup.profile?.pushName || null;
 	const rows = profileRows(lookup).filter(row => row.key !== 'pushName');
 	const canChat = canStartChatFor(lookup);
 
@@ -753,7 +763,7 @@ function LookupCard({ copy, lookup, canUse, onSave, onUpdate, onStartChat, start
 function ContactRow({ copy, contact, canUse, onStartChat, startingId, onUpdate, onRemove, onSync, busy, onPreview }) {
 	const [mode, setMode] = useState(null);
 	const [alsoWhatsApp, setAlsoWhatsApp] = useState(contact.sync.status === 'synced');
-	const name = contact.displayName;
+	const name = contactListName(contact);
 	const syncStatus = contact.sync.status;
 	const canSyncNow = syncStatus === 'not_requested' || canRetrySync(contact);
 
@@ -1228,7 +1238,12 @@ export default function ContactsPanel({
 							<X size={15} />
 						</button>
 					) : null}
-					<button type="submit" disabled={!canUse || lookupMutation.isPending || !phone.trim()} className="wct-search__go">
+					<button
+						type="submit"
+						disabled={!canUse || lookupMutation.isPending || !phone.trim()}
+						className="wct-search__go"
+						aria-label={copy.lookup}
+					>
 						{lookupMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
 						<span>{copy.lookup}</span>
 					</button>

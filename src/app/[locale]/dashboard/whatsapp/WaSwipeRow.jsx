@@ -3,7 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { dragRowOffset, ROW_ACTION_WIDTH, settleRowSwipe } from './wa-message-gestures';
 
-const AXIS_LOCK_PX = 10;
+const AXIS_LOCK_PX = 16;
+const CLICK_SUPPRESS_PX = ROW_ACTION_WIDTH * 0.2;
 
 /**
  * Touch swipe actions for an inbox row (phones only). `startActions` sit under the
@@ -62,11 +63,14 @@ export default function WaSwipeRow({
 		const dy = event.clientY - drag.y;
 		if (!drag.axis) {
 			if (Math.abs(dx) < AXIS_LOCK_PX && Math.abs(dy) < AXIS_LOCK_PX) return;
-			drag.axis = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
-			if (drag.axis === 'y') {
+			// A tap after scrolling often has a few pixels of jitter. Treat it as a
+			// vertical scroll unless the finger clearly travels sideways.
+			if (Math.abs(dx) <= Math.abs(dy) || Math.abs(dx) < AXIS_LOCK_PX) {
+				drag.axis = 'y';
 				dragRef.current = null;
 				return;
 			}
+			drag.axis = 'x';
 		}
 		const rtl = isRtl(contentRef.current);
 		apply(
@@ -84,6 +88,13 @@ export default function WaSwipeRow({
 		if (!drag || drag.id !== event.pointerId) return;
 		dragRef.current = null;
 		if (drag.axis !== 'x') return;
+		const moved = Math.abs(offsetRef.current);
+		// Tiny sideways drags (or leftover scroll jitter) must still open the chat.
+		if (moved < CLICK_SUPPRESS_PX) {
+			apply(0, true);
+			onOpenChange?.(null);
+			return;
+		}
 		suppressClickRef.current = true;
 		const rtl = isRtl(contentRef.current);
 		const settled = settleRowSwipe({

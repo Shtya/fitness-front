@@ -19,7 +19,7 @@
 	display: inline-flex;
 	height: 32px;
 	align-items: center;
-	gap: 6px;
+	justify-content: center;
 	padding: 0 12px;
 	border-radius: 9px;
 	font-size: 13px;
@@ -46,18 +46,6 @@
 	outline-offset: 2px;
 }
 
-@media (max-width: 520px) {
-	.wa-memo-switch button span {
-		display: none;
-	}
-
-	.wa-memo-switch button {
-		width: 36px;
-		justify-content: center;
-		padding: 0;
-	}
-}
-
 /* covers the thread (and its loader) while the settings are open */
 .wa-memo-settings-pane {
 	position: absolute;
@@ -67,6 +55,15 @@
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	scrollbar-width: thin;
+}
+
+.wa-memo-settings-pane.is-off {
+	display: none;
+}
+
+.wa-chat-wallpaper-host.is-memo-settings > :not(.wa-memo-settings-pane) {
+	visibility: hidden;
+	pointer-events: none;
 }
 
 /* Documents tab */

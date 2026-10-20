@@ -586,23 +586,9 @@ html.dark .wct-empty__art {
 	}
 }
 
-/* narrow dialogs / phones */
+/* narrow dialogs / phones — keep the search on one row so Check cannot
+   wrap over the Saved / All numbers toolbar. */
 @media (max-width: 520px) {
-	.wct-search {
-		height: auto;
-		flex-wrap: wrap;
-	}
-
-	.wct .wct-search__input {
-		height: 42px;
-		flex: 1 1 140px;
-	}
-
-	.wct-search__go {
-		width: 100%;
-		justify-content: center;
-	}
-
 	.wct-new span {
 		display: none;
 	}
@@ -773,7 +759,67 @@ html.dark .wct-empty__art {
 	border-radius: 14px;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 640px) {
+	.wct-search {
+		height: 48px;
+		flex-wrap: nowrap;
+		gap: 4px;
+		min-width: 0;
+	}
+
+	.wct-country {
+		max-width: 42%;
+		flex-shrink: 0;
+		padding: 0 8px;
+		overflow: hidden;
+	}
+
+	.wct-country__dial {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.wct .wct-search__input {
+		flex: 1 1 auto;
+		min-width: 0;
+		height: 38px;
+		padding: 0 4px;
+	}
+
+	.wct-search__go {
+		width: auto;
+		min-width: 38px;
+		flex-shrink: 0;
+		padding: 0 10px;
+		justify-content: center;
+	}
+
+	.wct-search__go span {
+		display: none;
+	}
+
+	.wct-list__bar {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		align-items: center;
+		gap: 8px 10px;
+	}
+
+	.wct-list__title {
+		grid-column: 1 / -1;
+		margin: 0;
+	}
+
+	.wct-seg {
+		min-width: 0;
+		justify-self: start;
+	}
+
+	.wct-new {
+		justify-self: end;
+	}
+
 	.wct-empty {
 		flex-wrap: wrap;
 	}
