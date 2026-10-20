@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CalendarDays, Check, CheckCheck, ListChecks, Pin, Plus, Ticket, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Check, CheckCheck, ListChecks, Pin, Plus, Repeat, Ticket, Trash2, Undo2, X } from 'lucide-react';
 import { MAX_TITLE, dayKey } from './use-daily-tickets';
 import { COPY, sortTickets } from './tickets-model';
-import { DetailsHint, MiniMenu, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, stepInOrder, ticketKeyHandler, useSortable } from './tickets-ui';
+import { DetailsHint, MiniMenu, RepeatBadge, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, stepInOrder, ticketKeyHandler, useSortable } from './tickets-ui';
 import TicketDialog from './TicketDialog';
 import TicketsWall from './TicketsWall';
 import './daily-tickets.css';
@@ -93,6 +93,7 @@ function Composer({ ar, onAdd, autoFocus, compact, inputRef }) {
 	const id = useId();
 	const [value, setValue] = useState('');
 	const [steps, setSteps] = useState(1);
+	const [daily, setDaily] = useState(false);
 	const ownInput = useRef(null);
 	const input = inputRef || ownInput;
 	useEffect(() => {
@@ -101,7 +102,7 @@ function Composer({ ar, onAdd, autoFocus, compact, inputRef }) {
 	const submit = event => {
 		event.preventDefault();
 		if (!value.trim()) return;
-		onAdd(value, { steps });
+		onAdd(value, { steps, repeat: daily ? 'daily' : 'none' });
 		setValue('');
 		setSteps(1);
 		input.current?.focus();
@@ -140,6 +141,17 @@ function Composer({ ar, onAdd, autoFocus, compact, inputRef }) {
 					})),
 				]}
 			/>
+			<button
+				type="button"
+				className={`tkx-chipbtn tk-composer__prio tk-composer__daily ${daily ? 'is-on' : ''}`}
+				aria-pressed={daily}
+				onClick={() => setDaily(v => !v)}
+				title={`${c.repeatDaily} · ${c.dailyHint}`}
+				aria-label={c.repeatDaily}
+			>
+				<Repeat size={15} aria-hidden />
+				{compact ? null : <span>{c.daily}</span>}
+			</button>
 			<button type="submit" className="tk-composer__add" disabled={!value.trim()} aria-label={t.add}>
 				<Plus size={17} aria-hidden />
 				<span>{t.add}</span>
@@ -317,6 +329,7 @@ function TicketCard({ ticket, ar, c, fresh, baseActions, onDelete, canMove, drag
 						)}
 						<div className="tk__meta">
 							{ticket.status !== 'todo' ? <StatusChip status={ticket.status} c={c} /> : null}
+							<RepeatBadge ticket={ticket} c={c} />
 							<DetailsHint ticket={ticket} c={c} />
 							<span>{ticket.done ? t.closed(timeOf(ticket.doneAt, ar)) : t.opened(timeOf(ticket.createdAt, ar))}</span>
 							{ticket.day !== today && !ticket.done ? <span className="tk__tag">{carriedLabel(ticket.day, ar)}</span> : null}
@@ -391,6 +404,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 		setStatus: store.setStatus,
 		setSteps: store.setSteps,
 		setDetails: store.setDetails,
+		setRepeat: store.setRepeat,
 		togglePinned: store.togglePinned,
 		rename: store.rename,
 		move: moveVisible,

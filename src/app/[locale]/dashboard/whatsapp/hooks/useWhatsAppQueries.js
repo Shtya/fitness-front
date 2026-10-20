@@ -83,6 +83,10 @@ export async function fetchConversations(accountId, params = {}) {
 			typeof data?.archivedCount === 'number' && Number.isFinite(data.archivedCount)
 				? data.archivedCount
 				: 0,
+		archivedUnreadCount:
+			typeof data?.archivedUnreadCount === 'number' && Number.isFinite(data.archivedUnreadCount)
+				? data.archivedUnreadCount
+				: 0,
 		cachedAt: Date.now(),
 	};
 }

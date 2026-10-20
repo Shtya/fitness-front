@@ -283,6 +283,12 @@ function virtualRenderSignature(instance) {
  * scrolling). The host here is the whole workspace, so that cost a full workspace render
  * per scrolled row. This drives the same core Virtualizer, renders whole chunks of rows,
  * and re-renders only when the chunked range or the measured sizes change.
+ *
+ * Even chunked, the owner (the 30k-line workspace) re-rendered synchronously inside the
+ * scroll event every time new rows were measured. With `renderOwner`, a range or size
+ * change re-renders only the <WaVirtualRowsHost> that draws the rows; the owner renders
+ * only while `renderOwner()` is true (e.g. while a scroll anchor is being restored).
+ * `items` and `totalSize` on the returned object always read the live virtualizer.
  */
 export function useWaVirtualRows({
 	count,
@@ -296,8 +302,16 @@ export function useWaVirtualRows({
 	shouldAdjustScrollPositionOnItemSizeChange = null,
 	/** () => boolean. While true, render the last rows (one viewport + overscan) whatever the scroll offset. */
 	anchorToEnd = null,
+	/**
+	 * () => boolean. When given, a range or size change re-renders the owner only while it
+	 * returns true; otherwise only the subscribed <WaVirtualRowsHost> re-renders.
+	 */
+	renderOwner = null,
 }) {
 	const rerender = useReducer(x => x + 1, 0)[1];
+	const renderOwnerRef = useRef(renderOwner);
+	renderOwnerRef.current = renderOwner;
+	const subscribersRef = useRef(new Set());
 	const renderedRef = useRef(null);
 	const anchorToEndRef = useRef(anchorToEnd);
 	anchorToEndRef.current = anchorToEnd;
@@ -335,9 +349,16 @@ export function useWaVirtualRows({
 				return;
 			}
 			renderedRef.current = next;
+			const ownerToo = typeof renderOwnerRef.current !== 'function' || renderOwnerRef.current() !== false;
+			const subscribers = subscribersRef.current;
+			const notify = () => {
+				if (ownerToo || !subscribers.size) rerender();
+				// The host re-renders on its own too: it may be memoised against the owner.
+				for (const fn of subscribers) fn();
+			};
 			// Scroll-driven range changes stay synchronous so new rows paint in the same frame.
-			if (sync) flushSync(rerender);
-			else rerender();
+			if (sync) flushSync(notify);
+			else notify();
 		},
 	};
 	const [virtualizer] = useState(() => new Virtualizer(options));
@@ -355,8 +376,18 @@ export function useWaVirtualRows({
 
 	return {
 		virtualizer,
-		items,
-		totalSize,
+		enabled,
+		/** Live values: the owner may not have re-rendered since the last scroll. */
+		get items() {
+			return enabled ? virtualizer.getVirtualItems() : items;
+		},
+		get totalSize() {
+			return enabled ? virtualizer.getTotalSize() : totalSize;
+		},
+		subscribe: fn => {
+			subscribersRef.current.add(fn);
+			return () => subscribersRef.current.delete(fn);
+		},
 		scrollToIndex: (index, opts) => {
 			const box = scrollRef?.current;
 			const oldTop = box ? Number(box.scrollTop) || 0 : 0;
@@ -392,6 +423,22 @@ export function useWaVirtualRows({
 		getScrollOffset: () => virtualizer.scrollOffset,
 		measureElement: virtualizer.measureElement,
 	};
+}
+
+/**
+ * Draws the virtual rows of a useWaVirtualRows list and re-renders by itself when the
+ * visible range or the measured sizes change, so scrolling never re-renders the owner.
+ * `children` is a render function: ({ items, totalSize }) => ReactNode.
+ */
+export function WaVirtualRowsHost({ virtual, children }) {
+	const [, bump] = useReducer(x => x + 1, 0);
+	const subscribe = virtual?.subscribe;
+	useLayoutEffect(() => (typeof subscribe === 'function' ? subscribe(bump) : undefined), [subscribe]);
+	const enabled = Boolean(virtual?.enabled);
+	return children({
+		items: enabled ? virtual.virtualizer.getVirtualItems() : [],
+		totalSize: enabled ? virtual.virtualizer.getTotalSize() : 0,
+	});
 }
 
 export function WaVirtualSpacer({ height }) {

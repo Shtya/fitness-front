@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Check, CheckCheck, Pin, Plus } from 'lucide-react';
-import { MAX_TITLE, dayKey } from './use-daily-tickets';
-import { DetailsHint, PushPin, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
+import { Check, CheckCheck, Pin, Plus } from 'lucide-react';
+import { MAX_TITLE } from './use-daily-tickets';
+import { DetailsHint, PushPin, RepeatBadge, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
 import './tickets-wall.css';
 
 /*
@@ -33,14 +33,6 @@ function useHandFonts() {
 	}, []);
 }
 
-const timeOf = (ms, ar) => new Intl.DateTimeFormat(ar ? 'ar-EG-u-nu-latn' : 'en-US', { hour: 'numeric', minute: '2-digit' }).format(ms);
-
-function whenLabel(ticket, c, ar) {
-	if (ticket.done && ticket.doneAt) return c.doneAt(timeOf(ticket.doneAt, ar));
-	if (ticket.day !== dayKey()) return c.fromYesterday;
-	return c.today(timeOf(ticket.createdAt, ar));
-}
-
 function NotePaper({ ticket, c, ar, tone, editing, draft, setDraft, finishEdit, field, actions, onToggleDone }) {
 	return (
 		<div
@@ -48,6 +40,7 @@ function NotePaper({ ticket, c, ar, tone, editing, draft, setDraft, finishEdit, 
 		>
 			<div className="tw-top">
 				{ticket.status !== 'todo' ? <StatusChip status={ticket.status} c={c} /> : null}
+				<RepeatBadge ticket={ticket} c={c} compact />
 				{ticket.pinned ? (
 					<span className="tw-pinned" title={c.pinned}>
 						<Pin size={12} fill="currentColor" aria-hidden />
@@ -88,10 +81,6 @@ function NotePaper({ ticket, c, ar, tone, editing, draft, setDraft, finishEdit, 
 			
 
 			<div className="tw-bottom">
-				<span className={`tw-when ${ticket.day !== dayKey() && !ticket.done ? 'is-carried' : ''}`}>
-					<CalendarDays size={14} aria-hidden />
-					{whenLabel(ticket, c, ar)}
-				</span>
 				<DetailsHint ticket={ticket} c={c} />
 				<button
 					type="button"
@@ -183,7 +172,7 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 			onPointerDown={editing ? undefined : event => onPointerDown(event, ticket.id)}
 		>
 			<span className="tw-pin">
-				<PushPin color={PINS[h % PINS.length]} gold={ticket.pinned} size={ticket.pinned ? 34 : 30} />
+				<PushPin color={PINS[h % PINS.length]} gold={ticket.pinned} size={ticket.pinned ? 28 : 24} />
 			</span>
 			<NotePaper
 				ticket={ticket}

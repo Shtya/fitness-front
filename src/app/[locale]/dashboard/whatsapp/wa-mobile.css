@@ -264,6 +264,20 @@
 		font-weight: 600 !important;
 	}
 
+	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-archived-row__unread {
+		display: inline-grid !important;
+		min-width: 20px !important;
+		height: 20px !important;
+		place-items: center !important;
+		padding: 0 6px !important;
+		border-radius: 999px !important;
+		background: var(--m-unread, #25d366) !important;
+		color: #111b21 !important;
+		font-size: 12px !important;
+		font-weight: 700 !important;
+		line-height: 1 !important;
+	}
+
 	/* ---------------------------------------------------------------- */
 	/* Chat rows                                                          */
 	/* ---------------------------------------------------------------- */
@@ -464,7 +478,7 @@
 	}
 
 	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-archived-row__count,
-	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-archived-row [class*="count"] {
+	html .wa-mobile-shell.wa-web-desktop:not(#wa-m) .wa-archived-row [class*="count"]:not(.wa-archived-row__unread) {
 		color: var(--m-text-2) !important;
 		font-size: 15px !important;
 		font-weight: 400 !important;

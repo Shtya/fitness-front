@@ -1,0 +1,239 @@
+/*
+ * Email Memo settings: one header with the main actions, a row of tabs (Gmail, AI memo,
+ * WhatsApp, senders, activity) and a single panel for the open tab. Used as a page and,
+ * with .wem--panel, inside the "AI Memo Emails" chat.
+ */
+
+.wem {
+	--wem-bg: #f7f8fa;
+	--wem-surface: #ffffff;
+	--wem-edge: rgba(15, 23, 42, 0.08);
+	--wem-text: #111827;
+	--wem-text-2: #6b7280;
+	--wem-accent: #6366f1;
+	--wem-accent-soft: rgba(99, 102, 241, 0.1);
+	--wem-ok: #16a34a;
+	--wem-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 28px -20px rgba(15, 23, 42, 0.35);
+	min-height: 100%;
+	color: var(--wem-text);
+	background: var(--wem-bg);
+}
+
+html.dark .wem,
+html[data-theme-mode='dark'] .wem {
+	--wem-bg: #111414;
+	--wem-surface: #1b1e1e;
+	--wem-edge: rgba(255, 255, 255, 0.08);
+	--wem-text: #f3f4f6;
+	--wem-text-2: #9ca3af;
+	--wem-accent: #818cf8;
+	--wem-accent-soft: rgba(129, 140, 248, 0.14);
+	--wem-ok: #4ade80;
+	--wem-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* header */
+.wem-head {
+	position: sticky;
+	top: 0;
+	z-index: 20;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	padding: 14px 20px;
+	border-bottom: 1px solid var(--wem-edge);
+	background: color-mix(in srgb, var(--wem-surface) 92%, transparent);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+}
+
+.wem-head h1 {
+	color: var(--wem-text) !important;
+}
+
+.wem-head p {
+	color: var(--wem-text-2) !important;
+}
+
+.wem-head__promise {
+	display: none;
+	max-width: 260px;
+	font-size: 12px;
+	line-height: 1.35;
+	color: var(--wem-text-2);
+}
+
+@media (min-width: 1280px) {
+	.wem:not(.wem--panel) .wem-head__promise {
+		display: inline;
+	}
+}
+
+.wem-progress {
+	margin: 12px 20px 0;
+	padding: 12px 16px;
+	border-radius: 14px;
+	background: var(--wem-surface);
+	box-shadow:
+		inset 0 0 0 1px var(--wem-edge),
+		var(--wem-shadow);
+}
+
+/* tabs */
+.wem-tabs {
+	display: flex;
+	gap: 6px;
+	margin: 14px 20px 0;
+	padding: 4px;
+	overflow-x: auto;
+	border-radius: 14px;
+	background: var(--wem-surface);
+	box-shadow: inset 0 0 0 1px var(--wem-edge);
+	scrollbar-width: none;
+}
+
+.wem-tabs::-webkit-scrollbar {
+	display: none;
+}
+
+.wem-tab {
+	display: inline-flex;
+	height: 38px;
+	flex: 1 0 auto;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	padding: 0 14px;
+	border-radius: 10px;
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+	color: var(--wem-text-2);
+	cursor: pointer;
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.wem-tab:hover {
+	color: var(--wem-text);
+	background: color-mix(in srgb, var(--wem-text) 5%, transparent);
+}
+
+.wem-tab.is-on {
+	color: var(--wem-accent);
+	background: var(--wem-accent-soft);
+}
+
+.wem-tab:focus-visible {
+	outline: 2px solid var(--wem-accent);
+	outline-offset: 2px;
+}
+
+.wem-tab__dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 999px;
+	background: #cbd5e1;
+}
+
+.wem-tab__dot.is-ok {
+	background: var(--wem-ok);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--wem-ok) 20%, transparent);
+}
+
+/* body: one panel at a time */
+.wem-body {
+	display: flex;
+	width: 100%;
+	max-width: 980px;
+	flex-direction: column;
+	gap: 16px;
+	margin: 0 auto;
+	padding: 16px 20px 32px;
+}
+
+.wem-pane {
+	min-width: 0;
+}
+
+.wem-card {
+	position: relative;
+	padding: 20px;
+	border-radius: 18px;
+	background: var(--wem-surface);
+	box-shadow:
+		inset 0 0 0 1px var(--wem-edge),
+		var(--wem-shadow);
+	animation: wem-in 0.2s ease;
+}
+
+/* the senders / activity sections keep their own card classes; align them with the panel */
+.wem-body > section {
+	border-radius: 18px !important;
+	animation: wem-in 0.2s ease;
+}
+
+html.dark .wem-body > section,
+html[data-theme-mode='dark'] .wem-body > section {
+	background: var(--wem-surface) !important;
+	border-color: var(--wem-edge) !important;
+}
+
+/* inside the AI Memo Emails chat: denser, no page chrome */
+.wem--panel {
+	min-height: 100%;
+}
+
+.wem--panel .wem-head {
+	padding: 12px 16px;
+}
+
+.wem--panel .wem-tabs {
+	margin: 12px 16px 0;
+}
+
+.wem--panel .wem-body {
+	padding: 12px 16px 24px;
+}
+
+@media (max-width: 640px) {
+	.wem-head,
+	.wem--panel .wem-head {
+		padding: 10px 12px;
+	}
+
+	.wem-tabs,
+	.wem--panel .wem-tabs {
+		margin: 10px 12px 0;
+	}
+
+	.wem-body,
+	.wem--panel .wem-body {
+		padding: 10px 12px 24px;
+	}
+
+	.wem-tab {
+		flex: 0 0 auto;
+		padding: 0 12px;
+	}
+
+	.wem-card {
+		padding: 14px;
+	}
+}
+
+@keyframes wem-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wem-card,
+	.wem-body > section {
+		animation: none;
+	}
+}

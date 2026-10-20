@@ -64,6 +64,11 @@ export default function DemoStudio({
 	realConversations = [],
 }) {
 	const demo = useDemoMode();
+	// The studio edits the profile even while demo mode is off: load it on open.
+	const ensureDemoData = demo.ensureProfileData;
+	useEffect(() => {
+		if (open) void ensureDemoData?.();
+	}, [open, ensureDemoData]);
 	const [selectedContactId, setSelectedContactId] = useState(null);
 	const [contactDialogOpen, setContactDialogOpen] = useState(false);
 	const [editingContact, setEditingContact] = useState(null);

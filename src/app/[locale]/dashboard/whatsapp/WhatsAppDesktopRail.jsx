@@ -1,6 +1,6 @@
 'use client';
 
-import {
+import { FileText,
 	BarChart3,
 	BookOpen,
 	Bot,
@@ -139,6 +139,7 @@ export default function WhatsAppDesktopRail({
 	showAutoForward = true,
 	showWallet = false,
 	showAdhkar = false,
+	showDocuments = false,
 	showAgent = false,
 	showcaseOnly = false,
 	darkMode = false,
@@ -231,6 +232,13 @@ export default function WhatsAppDesktopRail({
 					id: 'adhkar',
 					label: labels.adhkar || (ar ? 'أذكاري' : 'My Adhkar'),
 					icon: BookOpen,
+				}
+			: null,
+		showDocuments
+			? {
+					id: 'documents',
+					label: labels.documents || (ar ? 'المستندات' : 'Documents'),
+					icon: FileText,
 				}
 			: null,
 	].filter(Boolean);

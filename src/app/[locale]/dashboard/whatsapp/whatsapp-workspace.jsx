@@ -266,6 +266,7 @@ import './wa-mobile.css';
 import './wa-desktop-palette.css';
 import './wa-desktop.css';
 import './wa-desktop-chats.css';
+import './wa-memo-docs.css';
 import './wa-popups.css';
 import { useMenuKeyboard } from './wa-ui-menu';
 import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
@@ -298,6 +299,7 @@ import WhatsAppAccountLinkPanel, {
 } from './WhatsAppAccountLinkPanel';
 
 const EmailMemoWorkspace = lazy(() => import('../email-memo/EmailMemoWorkspace'));
+const DocumentEditorWorkspace = lazy(() => import('@/components/smart-document/DocumentEditorWorkspace'));
 // Transient viewers that most sessions never open. The document viewer alone
 // pulls mammoth + xlsx, which dominated the route's first-load JS.
 const TranscriptionDialog = lazy(() => import('../transcript/transcription-dialog'));
@@ -407,7 +409,7 @@ import {
 	formatStoryViewTime,
 	storyMessageKey,
 } from './wa-story-interactions';
-import { useWaScrollWindow, useWaVirtualRows, WaVirtualSpacer } from './wa-virtual-list';
+import { useWaScrollWindow, useWaVirtualRows, WaVirtualRowsHost, WaVirtualSpacer } from './wa-virtual-list';
 import { createByteBoundedCache, setBounded } from './wa-bounded-cache';
 import {
 	autoRetryDelayMs,
@@ -497,6 +499,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'autoForward',
 	'wallet',
 	'adhkar',
+	'documents',
 	'agent',
 	'settings',
 	'profile',
@@ -1149,6 +1152,7 @@ const translations = {
 		chooseOrCreateGroup: 'Choose a group or create one',
 		archived: 'Archived',
 		archivedChats: 'Archived chats',
+		archivedUnread: '{count} unread in archive',
 		archiveChat: 'Archive chat',
 		unarchiveChat: 'Unarchive chat',
 		archiveUpdated: 'Archived chats updated',
@@ -1681,6 +1685,7 @@ const translations = {
 		chooseOrCreateGroup: 'اختار مجموعة أو أنشئ واحدة',
 		archived: 'مؤرشفة',
 		archivedChats: 'المحادثات المؤرشفة',
+		archivedUnread: '{count} غير مقروءة في الأرشيف',
 		archiveChat: 'أرشفة المحادثة',
 		unarchiveChat: 'إلغاء أرشفة المحادثة',
 		archiveUpdated: 'تم تحديث المحادثات المؤرشفة',
@@ -1890,6 +1895,52 @@ function DeliveryTicks({ message, size = 13, className = '', selfChat = false })
 		return <CheckCheck size={size} className={`text-[#8696A0] ${className}`} />;
 	}
 	return <Check size={size} className={className} />;
+}
+
+/**
+ * Chat-list search field that keeps its own text. Typing re-renders only this field; the
+ * workspace (and with it the open thread) gets the value once typing pauses, then filters
+ * and searches. Clearing is passed on at once, and a value the workspace sets itself
+ * (for example clearing the search when the list collapses) is shown immediately.
+ * `children(localValue, clear)` renders the field's extras (clear button, hints).
+ */
+function WaChatSearchInput({ value, onCommit, delay = 160, inputRef, children, ...inputProps }) {
+	const [local, setLocal] = useState(value);
+	const committedRef = useRef(value);
+	const timerRef = useRef(0);
+	useEffect(() => {
+		if (value === committedRef.current) return;
+		committedRef.current = value;
+		window.clearTimeout(timerRef.current);
+		setLocal(value);
+	}, [value]);
+	useEffect(() => () => window.clearTimeout(timerRef.current), []);
+	const commit = next => {
+		window.clearTimeout(timerRef.current);
+		committedRef.current = next;
+		onCommit(next);
+	};
+	const clear = () => {
+		setLocal('');
+		commit('');
+	};
+	return (
+		<>
+			<input
+				ref={inputRef}
+				{...inputProps}
+				value={local}
+				onChange={event => {
+					const next = event.target.value;
+					setLocal(next);
+					window.clearTimeout(timerRef.current);
+					if (!next) commit('');
+					else timerRef.current = window.setTimeout(() => commit(next), delay);
+				}}
+			/>
+			{typeof children === 'function' ? children(local, clear) : null}
+		</>
+	);
 }
 
 function IsolatedComposerTextarea({
@@ -12033,7 +12084,46 @@ const WaConversationRow = memo(function WaConversationRow({
 	);
 });
 
+/**
+ * Same bubble content: rows are rebuilt as new objects whenever the message list changes,
+ * but the message objects inside them keep their identity unless that message changed.
+ */
+function sameThreadRow(a, b) {
+	if (a === b) return true;
+	if (!a || !b || a.kind !== b.kind || a.key !== b.key) return false;
+	if (a.kind !== 'image-gallery') return a.message === b.message;
+	if (a.messages.length !== b.messages.length || a.attachments.length !== b.attachments.length) return false;
+	for (let i = 0; i < a.messages.length; i += 1) if (a.messages[i] !== b.messages[i]) return false;
+	return true;
+}
+
+/** A quoted reply is drawn from the conversation's messages, so it follows them. */
+function threadRowQuotes(row) {
+	if (row?.kind === 'image-gallery') return Boolean(row.messages[row.messages.length - 1]?.replyTo);
+	return Boolean(row?.message?.replyTo);
+}
+
+/** Same names and phones for every id (mention directories are rebuilt on each list update). */
+function sameMentionDirectory(a, b) {
+	if (a === b) return true;
+	if (!a || !b || a.size !== b.size) return false;
+	for (const [id, entry] of a) {
+		const other = b.get(id);
+		if (!other || other.name !== entry.name || other.phone !== entry.phone) return false;
+	}
+	return true;
+}
+
+/** Same values in the same order (Object.is), for thread row reuse. */
+function sameThreadRowDeps(a, b) {
+	if (a === b) return true;
+	if (!a || !b || a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i += 1) if (!Object.is(a[i], b[i])) return false;
+	return true;
+}
+
 function WhatsAppWorkspaceContent() {
+	/* __QA_PROBE_START */ const __qaT0 = typeof performance !== 'undefined' ? performance.now() : 0; if (typeof window !== 'undefined') window.__waRenders = (window.__waRenders || 0) + 1; useLayoutEffect(() => { if (typeof window !== 'undefined') (window.__waRenderMs = window.__waRenderMs || []).push(performance.now() - __qaT0); }); /* __QA_PROBE_END */
 	const locale = useLocale();
 	const t = translations[locale] || translations.en;
 	const pathname = usePathname();
@@ -12294,6 +12384,7 @@ function WhatsAppWorkspaceContent() {
 	const [bootStatus, setBootStatus] = useState('loading');
 	const [bootError, setBootError] = useState('');
 	const [isAdmin, setIsAdmin] = useState(false);
+	const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 	const [currentUserId, setCurrentUserId] = useState(
 		() => resolveStoredWhatsAppUserId() || 'anonymous',
 	);
@@ -12558,6 +12649,7 @@ function WhatsAppWorkspaceContent() {
 	const [conversationFilter, setConversationFilter] = useState(defaultWhatsAppConversationFilter);
 	const [contactsPopupOpen, setContactsPopupOpen] = useState(false);
 	const [archivedCount, setArchivedCount] = useState(0);
+	const [archivedUnreadCount, setArchivedUnreadCount] = useState(0);
 	const [pendingPreferenceActions, setPendingPreferenceActions] = useState(() => new Set());
 	const [assignmentFilter, setAssignmentFilter] = useState('');
 	const [searchingConversations, setSearchingConversations] = useState(false);
@@ -12705,6 +12797,28 @@ function WhatsAppWorkspaceContent() {
 	// The socket effect mounts once, so it must not close over `locale` directly.
 	const localeRef = useRef(locale);
 	const conversationsRef = useRef([]);
+	/** AI Memo Emails chat: 'chat' (the memos) or 'settings' (Email Memo configuration). */
+	const [emailMemoView, setEmailMemoView] = useState('chat');
+	const emailMemoSettingsOnOpenRef = useRef(false);
+	const patchArchivedUnread = useCallback(delta => {
+		const amount = Number(delta) || 0;
+		if (!amount) return;
+		setArchivedUnreadCount(current => {
+			const next = Math.max(0, current + amount);
+			const cachedAccountId = accountIdRef.current;
+			const cached = cachedAccountId
+				? conversationsCacheRef.current.get(cachedAccountId)
+				: null;
+			if (cachedAccountId && cached) {
+				conversationsCacheRef.current.set(cachedAccountId, {
+					...cached,
+					archivedUnreadCount: next,
+					cachedAt: Date.now(),
+				});
+			}
+			return next;
+		});
+	}, []);
 	const chatListScrollRef = useRef(null);
 	const syncingInboxRef = useRef(false);
 	const previousAccountIdRef = useRef(null);
@@ -12975,15 +13089,19 @@ function WhatsAppWorkspaceContent() {
 		if (!showcaseOnly && activeMessageGroup && Array.isArray(groupViewMessages)) return groupViewMessages;
 		return baseEffectiveMessages;
 	}, [activeMessageGroup, groupViewMessages, baseEffectiveMessages, showcaseOnly]);
-	const mentionDirectory = useMemo(
-		() =>
-			buildWhatsAppMentionDirectory({
-				conversations: effectiveConversations,
-				messages: effectiveMessages,
-				participants: selectedConversation?.group?.participants || [],
-			}),
-		[effectiveConversations, effectiveMessages, selectedConversation],
-	);
+	const mentionDirectoryRef = useRef(null);
+	const mentionDirectory = useMemo(() => {
+		const next = buildWhatsAppMentionDirectory({
+			conversations: effectiveConversations,
+			messages: effectiveMessages,
+			participants: selectedConversation?.group?.participants || [],
+		});
+		// Keep the previous map when nothing in it changed, so thread rows that draw
+		// mentions are not rebuilt on every presence or unread update.
+		if (sameMentionDirectory(mentionDirectoryRef.current, next)) return mentionDirectoryRef.current;
+		mentionDirectoryRef.current = next;
+		return next;
+	}, [effectiveConversations, effectiveMessages, selectedConversation]);
 	const selectedIsGroupChat =
 		selectedConversation?.type === 'group' ||
 		String(selectedConversation?.providerChatId || '').endsWith('@g.us');
@@ -13166,7 +13284,7 @@ function WhatsAppWorkspaceContent() {
 	const unreadConversationCount = useMemo(
 		() =>
 			effectiveConversations.reduce((total, conversation) => {
-				if (isChannelConversation(conversation)) return total;
+				if (isChannelConversation(conversation) || conversation.isArchived) return total;
 				return total + conversationUnreadCount(conversation);
 			}, 0),
 		[effectiveConversations],
@@ -13317,6 +13435,13 @@ function WhatsAppWorkspaceContent() {
 		cache.set(key, { signature, size });
 		return size;
 	}, []);
+	const showEmailMemoSettings =
+		emailMemoView === 'settings' && isEmailMemoAiConversation(selectedConversation);
+	// Each chat opens on its messages; the Emails tab asks for the settings view instead.
+	useEffect(() => {
+		setEmailMemoView(emailMemoSettingsOnOpenRef.current ? 'settings' : 'chat');
+		emailMemoSettingsOnOpenRef.current = false;
+	}, [conversationId]);
 	const threadHasRows = messageRows.length > 0;
 	useLayoutEffect(() => {
 		const box = messageBoxRef.current;
@@ -13341,6 +13466,13 @@ function WhatsAppWorkspaceContent() {
 		// While a chat opens, render the newest rows first instead of the top of the
 		// thread (scrollTop is still 0 until the settle loop pins it to the bottom).
 		anchorToEnd: () => threadVirtualLatchRef.current.opening && pinThreadToBottomRef.current,
+		// Scrolling re-renders only the rows host. The workspace still re-renders on range and
+		// size changes while a chat opens or an older-messages scroll anchor is being restored,
+		// because those effects read totalSize during render.
+		renderOwner: () =>
+			Boolean(olderScrollRestoreRef.current) ||
+			!threadSettledRef.current ||
+			Boolean(threadVirtualLatchRef.current.opening),
 	});
 	const messageVirtualRef = useRef(messageVirtual);
 	messageVirtualRef.current = messageVirtual;
@@ -13478,18 +13610,39 @@ function WhatsAppWorkspaceContent() {
 		run.timer = window.setTimeout(settle, 520);
 	}, [cancelJumpToBottomRun]);
 
-	const visibleMessageRows = useMemo(() => {
-		if (!virtualizeMessages) {
-			return messageRows.map((row, rowIndex) => ({ row, rowIndex, start: null }));
-		}
-		return messageVirtual.items
-			.map(item => ({
-				row: messageRows[item.index],
-				rowIndex: item.index,
-				start: item.start,
-			}))
-			.filter(item => item.row);
-	}, [messageRows, messageVirtual.items, virtualizeMessages]);
+	// Built row bodies are kept across workspace renders and reused while the row, its
+	// neighbours and everything a row draws from (threadRowDeps, set before the return) are
+	// unchanged. Presence, typing, unread counts and dialogs re-render the workspace often;
+	// without this every visible bubble was rebuilt each time. Handlers inside a row read the
+	// latest workspace values through threadLiveRef, and functions handed to child components
+	// go through threadStableFns, so a reused row never acts on stale state.
+	const threadRowCacheRef = useRef(null);
+	if (!threadRowCacheRef.current || threadRowCacheRef.current.conversationId !== conversationId) {
+		threadRowCacheRef.current = { conversationId, map: new Map() };
+	}
+	const threadRowCache = threadRowCacheRef.current.map;
+	if (threadRowCache.size > 800) threadRowCache.clear();
+	const threadLiveRef = useRef(null);
+	const threadStableFnsRef = useRef(null);
+	if (!threadStableFnsRef.current) {
+		threadStableFnsRef.current = {
+			openConversationFromContact: (...args) => threadLiveRef.current.openConversationFromContact(...args),
+			registerChatImage: (...args) => threadLiveRef.current.registerChatImage(...args),
+			resolveReactor: (...args) => threadLiveRef.current.resolveReactor(...args),
+		};
+	}
+	const threadStableFns = threadStableFnsRef.current;
+	/** Rows to draw for the virtualizer's current items (all rows when not virtualised). */
+	const visibleRowsFor = items =>
+		virtualizeMessages
+			? items
+					.map(item => ({
+						row: messageRows[item.index],
+						rowIndex: item.index,
+						start: item.start,
+					}))
+					.filter(item => item.row)
+			: messageRows.map((row, rowIndex) => ({ row, rowIndex, start: null }));
 	const registerChatImage = useCallback(
 		(id, image) => {
 			setRegisteredChatImages(current => {
@@ -13667,6 +13820,7 @@ function WhatsAppWorkspaceContent() {
 				.filter(Boolean)
 				.map(role => String(role).toUpperCase());
 			setIsAdmin(roles.includes('ADMIN') || roles.includes('SUPER_ADMIN'));
+			setIsSuperAdmin(roles.includes('SUPER_ADMIN'));
 			setCurrentUserId(String(user?.id || 'anonymous'));
 		} catch {
 			setIsAdmin(false);
@@ -14199,6 +14353,19 @@ function WhatsAppWorkspaceContent() {
 		return Math.max(local, archivedCount);
 	}, [effectiveConversations, conversationFilter, archivedCount]);
 
+	const archivedInboxUnreadCount = useMemo(() => {
+		const local = effectiveConversations.reduce((total, conversation) => {
+			if (!conversation.isArchived) return total;
+			const inThisInbox = isChannelsInboxFilter(conversationFilter)
+				? isChannelConversation(conversation)
+				: !isChannelConversation(conversation);
+			if (!inThisInbox) return total;
+			return total + conversationUnreadCount(conversation);
+		}, 0);
+		if (conversationFilter === 'archived') return local;
+		return Math.max(local, archivedUnreadCount);
+	}, [effectiveConversations, conversationFilter, archivedUnreadCount]);
+
 	const loadAccounts = useCallback(async () => {
 		const { data } = await api.get('/whatsapp/accounts');
 		const list = Array.isArray(data) ? data : [];
@@ -14648,6 +14815,9 @@ function WhatsAppWorkspaceContent() {
 			if (typeof cached.archivedCount === 'number') {
 				setArchivedCount(cached.archivedCount);
 			}
+			if (typeof cached.archivedUnreadCount === 'number') {
+				setArchivedUnreadCount(cached.archivedUnreadCount);
+			}
 			if (cacheIsFresh && options.background !== true) {
 				if (serverSnapshotIsFresh) return cached;
 				void loadConversations(id, 1, false, {
@@ -14765,6 +14935,8 @@ function WhatsAppWorkspaceContent() {
 			scope: data?.scope || 'all',
 			archivedCount:
 				typeof data?.archivedCount === 'number' ? data.archivedCount : undefined,
+			archivedUnreadCount:
+				typeof data?.archivedUnreadCount === 'number' ? data.archivedUnreadCount : undefined,
 			cachedAt: Date.now(),
 			// Socket patches bump cachedAt; fetchedAt only moves on a full first-page server read.
 			fetchedAt:
@@ -14864,6 +15036,9 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (typeof next.archivedCount === 'number') {
 			setArchivedCount(next.archivedCount);
+		}
+		if (typeof next.archivedUnreadCount === 'number') {
+			setArchivedUnreadCount(next.archivedUnreadCount);
 		}
 		return next;
 	}, [queryClient, resetConversationsCache]);
@@ -15044,6 +15219,10 @@ function WhatsAppWorkspaceContent() {
 	const setConversationUnreadCount = useCallback((id, unreadCount) => {
 		if (!id) return;
 		const normalizedCount = Math.max(0, Number(unreadCount) || 0);
+		const existing = conversationsRef.current.find(item => item.id === id);
+		if (existing?.isArchived) {
+			patchArchivedUnread(normalizedCount - conversationUnreadCount(existing));
+		}
 		setConversations(current => {
 			const next = current.map(conversation =>
 				conversation.id === id
@@ -15063,7 +15242,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			return next;
 		});
-	}, []);
+	}, [patchArchivedUnread]);
 
 	// Patches a single conversation's preview/unread count in place instead of
 	// refetching the whole list — avoids the flicker/scroll-jump of a full reload
@@ -15074,6 +15253,12 @@ function WhatsAppWorkspaceContent() {
 			payload.conversationId === conversationIdRef.current &&
 			isConversationWorkspaceTab(activeTabRef.current);
 		const nextPayload = viewingOpenChat ? { ...payload, unreadCount: 0 } : payload;
+		const existing = conversationsRef.current.find(item => item.id === payload?.conversationId);
+		if (existing?.isArchived && nextPayload && 'unreadCount' in nextPayload) {
+			patchArchivedUnread(
+				Math.max(0, Number(nextPayload.unreadCount) || 0) - conversationUnreadCount(existing),
+			);
+		}
 		setConversations(current => {
 			const next = updateConversationPreview(current, nextPayload);
 			if (next === current) return current;
@@ -15088,7 +15273,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			return next;
 		});
-	}, []);
+	}, [patchArchivedUnread]);
 
 	const updateCachedMessage = useCallback((targetConversationId, messageId, updater) => {
 		if (!targetConversationId || !messageId) return;
@@ -16036,7 +16221,6 @@ function WhatsAppWorkspaceContent() {
 				return item;
 			};
 			setConversations(current => current.map(patchAvatar));
-			setSelectedConversation(current => patchAvatar(current));
 		},
 	};
 	const conversationRowActions = useMemo(() => {
@@ -16991,6 +17175,7 @@ function WhatsAppWorkspaceContent() {
 		loadAccounts,
 		loadConversations,
 		loadMessages,
+		patchArchivedUnread,
 		queryClient,
 		scheduleReloadConversations,
 		setConversationUnreadCount,
@@ -17035,6 +17220,7 @@ function WhatsAppWorkspaceContent() {
 			handlers().scheduleReloadConversations?.(...args);
 		const setConversationUnreadCount = (...args) =>
 			handlers().setConversationUnreadCount?.(...args);
+		const patchArchivedUnread = (...args) => handlers().patchArchivedUnread?.(...args);
 		const updateCachedMessage = (...args) => handlers().updateCachedMessage?.(...args);
 		const writeConversationMessages = (...args) =>
 			handlers().writeConversationMessages?.(...args);
@@ -17433,12 +17619,14 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (event.event === 'conversation_deleted' && event.payload?.conversationId) {
 				const deletedId = event.payload.conversationId;
-				const wasArchived = Boolean(
-					conversationsRef.current.find(item => item.id === deletedId)?.isArchived,
+				const deletedConversation = conversationsRef.current.find(
+					item => item.id === deletedId,
 				);
+				const wasArchived = Boolean(deletedConversation?.isArchived);
 				setConversations(current => current.filter(item => item.id !== deletedId));
 				if (wasArchived) {
 					setArchivedCount(current => Math.max(0, current - 1));
+					patchArchivedUnread(-conversationUnreadCount(deletedConversation));
 				}
 				const cachedAccountId = accountIdRef.current;
 				const cached = cachedAccountId
@@ -17496,7 +17684,6 @@ function WhatsAppWorkspaceContent() {
 						return item;
 					};
 					setConversations(current => current.map(patchAvatar));
-					setSelectedConversation(current => patchAvatar(current));
 				} else {
 					scheduleReloadConversations(accountIdRef.current);
 				}
@@ -17822,9 +18009,26 @@ function WhatsAppWorkspaceContent() {
 		if (!id || !['connecting', 'qr_pending', 'disconnected', 'error'].includes(status)) {
 			return undefined;
 		}
+		// Nothing on offer (no QR / pairing code) means nobody is linking right now: a
+		// disconnected account at once, a pending one after ~20s of empty answers. Then ask
+		// every ~15s instead of every 2.5s (it was ~50 requests a minute, forever). A new QR
+		// still shows at once: it is also pushed over the socket, and any status change
+		// restarts this effect at full speed.
+		const QUIET_EVERY = 6;
+		const EMPTY_BEFORE_QUIET = 8;
+		let quiet = false;
+		let quietTicks = 0;
+		let emptyAnswers = 0;
 		const pollQr = async () => {
+			if (quiet && ++quietTicks < QUIET_EVERY) return;
+			quietTicks = 0;
 			try {
 				const { data } = await api.get(`/whatsapp/accounts/${id}/qr`);
+				const offered = Boolean(data.qr || data.pairingCode);
+				emptyAnswers = offered ? 0 : emptyAnswers + 1;
+				quiet =
+					!offered &&
+					(['disconnected', 'error'].includes(status) || emptyAnswers >= EMPTY_BEFORE_QUIET);
 				if (data.qr) {
 					setQr(data.qr);
 					setQrExpired(false);
@@ -22515,6 +22719,7 @@ function WhatsAppWorkspaceContent() {
 			setConversations(current => current.filter(item => item.id !== targetId));
 			if (wasArchived) {
 				setArchivedCount(current => Math.max(0, current - 1));
+				patchArchivedUnread(-(Math.max(0, Number(options.unreadCount) || 0)));
 			}
 			const cached = accountId ? conversationsCacheRef.current.get(accountId) : null;
 			if (cached) {
@@ -22536,7 +22741,7 @@ function WhatsAppWorkspaceContent() {
 				setSecondaryConversationId(null);
 			}
 		},
-		[accountId, clearConversationMessages],
+		[accountId, clearConversationMessages, patchArchivedUnread],
 	);
 
 	const deleteConversationChat = async conversation => {
@@ -22561,6 +22766,7 @@ function WhatsAppWorkspaceContent() {
 		setPendingPreferenceActions(current => new Set(current).add(actionKey));
 		removeConversationFromInbox(conversation.id, {
 			wasArchived: Boolean(conversation.isArchived),
+			unreadCount: conversationUnreadCount(conversation),
 		});
 		try {
 			if (isDemoConversation) {
@@ -22578,6 +22784,7 @@ function WhatsAppWorkspaceContent() {
 			});
 			if (previous.isArchived) {
 				setArchivedCount(current => current + 1);
+				patchArchivedUnread(conversationUnreadCount(previous));
 			}
 			toast.error(
 				error.response?.data?.message ||
@@ -22611,6 +22818,10 @@ function WhatsAppWorkspaceContent() {
 		setArchivedCount(current =>
 			nextArchived ? current + (previousArchived ? 0 : 1) : Math.max(0, current - 1),
 		);
+		const unread = conversationUnreadCount(conversation);
+		if (unread && nextArchived !== previousArchived) {
+			patchArchivedUnread(nextArchived ? unread : -unread);
+		}
 		try {
 			if (!isDemoConversation) {
 				await api.put(`/whatsapp/conversations/${conversation.id}/archive`, {
@@ -22646,6 +22857,9 @@ function WhatsAppWorkspaceContent() {
 			setArchivedCount(current =>
 				previousArchived ? current + (nextArchived ? 0 : 1) : Math.max(0, current - 1),
 			);
+			if (unread && nextArchived !== previousArchived) {
+				patchArchivedUnread(nextArchived ? -unread : unread);
+			}
 			toast.error(error.response?.data?.message || 'Could not update archived chat');
 		} finally {
 			setPendingPreferenceActions(current => {
@@ -22802,11 +23016,28 @@ function WhatsAppWorkspaceContent() {
 			setActiveTab('chats');
 			return;
 		}
+		if (tab === 'documents' && !isSuperAdmin) {
+			setActiveTab('chats');
+			return;
+		}
+		// Email Memo lives in its chat now: open "AI Memo Emails" on its Settings view.
+		// Without that chat (not created yet) the standalone workspace below still opens.
+		if (tab === 'emails') {
+			const memoChat = (conversationsRef.current || []).find(item => isEmailMemoAiConversation(item));
+			if (memoChat) {
+				if (memoChat.id === conversationIdRef.current) setEmailMemoView('settings');
+				else emailMemoSettingsOnOpenRef.current = true;
+				setActiveTab('chats');
+				openConversation(memoChat.id, memoChat);
+				return;
+			}
+		}
 		if (tab !== activeTab) waPerfMark(`tab:${tab}`);
 		setActiveTab(tab);
 		setTabError('');
 		if (tab === 'profile') return;
 		if (tab === 'emails') return;
+		if (tab === 'documents') return;
 		if (
 			tab === 'board' ||
 			tab === 'fakeChat' ||
@@ -24371,6 +24602,85 @@ function WhatsAppWorkspaceContent() {
 		);
 	}
 
+	// Latest workspace values for thread row handlers (see threadRowCache).
+	threadLiveRef.current = {
+		applyGroupMessageSelection,
+		applyMediaSelection,
+		applyMessagesSelection,
+		beginSwipeReply,
+		cancelMessageLongPress,
+		closeReactionPicker,
+		endSwipeReply,
+		groupSelectMode,
+		handleMessageAction,
+		highlightedMessageKey,
+		jumpToQuotedMessage,
+		libraryTitleForMessage,
+		mediaSelectMode,
+		mentionDirectory,
+		moveSwipeReply,
+		openConversationFromContact,
+		openMessageContextMenu,
+		openMessageGroup,
+		openMessageQuickActions,
+		openVideoToVoiceEditor,
+		reactToMessage,
+		registerChatImage,
+		registeredChatImages,
+		resolveReactor,
+		selectedMediaIds,
+		selectedMessageIds,
+		setActionMessageAnchor,
+		setActionMessageId,
+		setLibrarySaveTarget,
+		setMessageTranslations,
+		setSelectedMediaIds,
+		setStoryTarget,
+		socialDownloads,
+		startMessageLongPress,
+		startSocialVideoDownload,
+		t,
+		ticketSelectMode,
+		toggleIncomingTranslation,
+		toggleReactionPicker,
+		unreadDividerMessageId,
+	};
+	// Everything a thread row draws from; a cached row is rebuilt when any of these changes.
+	const threadRowDeps = [
+		accountId,
+		actionMessageAnchor,
+		actionMessageId,
+		collectDownloadableAttachments,
+		conversationId,
+		conversations.length,
+		demo.settings.enabled,
+		downloadingSelectedMedia,
+		effectiveConversations.length,
+		groupSelectMode,
+		isAccountConnected,
+		locale,
+		mediaSelectMode,
+		mentionDirectory,
+		messageGroupMembership,
+		messageTranscripts,
+		messageTranslations,
+		pendingMessageActions,
+		reactingMessageIds,
+		reactionPickerMessageId,
+		scheduleConversationOptions?.length || 0,
+		selectedAccount ? [selectedAccount.id, selectedAccount.label, selectedAccount.phoneNumber, selectedAccount.wid, selectedAccount.avatarUrl].join('|') : '',
+		selectedConversation ? [selectedConversation.id, selectedConversation.type, selectedConversation.providerChatId, selectedConversation.isEmailMemoAi, selectedConversation.contact?.phoneNumber, conversationTitle(selectedConversation), conversationAvatarUrl(selectedConversation)].join('|') : '',
+		selectedMediaIds,
+		selectedMessageIds,
+		socialDownloads,
+		t,
+		ticketSelectMode,
+		unreadAtOpen,
+		unreadDividerMessageId,
+		videoToVoiceTarget,
+		virtualizeMessages,
+	];
+
 	return (
 		<div
 			className={`wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-white text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:gap-0 min-[769px]:overflow-hidden min-[769px]:bg-transparent dark:bg-[#0b141a] dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
@@ -24685,7 +24995,7 @@ function WhatsAppWorkspaceContent() {
 			{/* Desktop nav lives in the left rail — no top PageHeader on web. */}
 			<div className="wa-web-workspace min-h-0 flex-1 max-[769px]:contents min-[769px]:flex min-[769px]:overflow-hidden">
 				<WhatsAppDesktopRail
-					activeTab={activeTab}
+					activeTab={showEmailMemoSettings ? 'emails' : activeTab}
 					onSelect={tab => void loadTabData(tab)}
 					labels={t}
 					unreadCount={unreadConversationCount}
@@ -24701,6 +25011,7 @@ function WhatsAppWorkspaceContent() {
 					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
 					showWallet={!showcaseOnly}
 					showAdhkar={!showcaseOnly}
+					showDocuments={!showcaseOnly && isSuperAdmin}
 					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
@@ -25364,36 +25675,41 @@ function WhatsAppWorkspaceContent() {
 									<div className="mb-2.5 hidden items-center gap-2 min-[769px]:flex">
 										<div className="wa-desktop-search-inline wa-desktop-search-always min-w-0 flex-1">
 										<Search size={19} className="wa-desktop-search-inline__icon" />
-										<input
-											ref={searchInputRef}
+										<WaChatSearchInput
+											inputRef={searchInputRef}
 											className="outline-none"
 											aria-label={t.search}
 											value={chatSearch}
-											onChange={event => setChatSearch(event.target.value)}
+											onCommit={setChatSearch}
 											placeholder={
 												locale === 'ar'
 													? 'ابحث أو ابدأ محادثة جديدة'
 													: 'Search or start a new chat'
 											}
-										/>
-										{searchingConversations ? (
-											<Loader2 size={13} className="wa-desktop-search-inline__spin" />
-										) : null}
-										{!chatSearch && !searchingConversations ? (
-											<kbd className="wa-search-kbd" aria-hidden="true">
-												{typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ K' : 'Ctrl K'}
-											</kbd>
-										) : null}
-										{chatSearch ? (
-											<button
-												type="button"
-												className="wa-desktop-search-inline__close"
-												aria-label={locale === 'ar' ? 'مسح البحث' : 'Clear search'}
-												onClick={() => setChatSearch('')}
-											>
-												<X size={12} strokeWidth={2.4} />
-											</button>
-										) : null}
+										>
+											{(searchText, clearSearch) => (
+												<>
+													{searchingConversations ? (
+														<Loader2 size={13} className="wa-desktop-search-inline__spin" />
+													) : null}
+													{!searchText && !searchingConversations ? (
+														<kbd className="wa-search-kbd" aria-hidden="true">
+															{typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ K' : 'Ctrl K'}
+														</kbd>
+													) : null}
+													{searchText ? (
+														<button
+															type="button"
+															className="wa-desktop-search-inline__close"
+															aria-label={locale === 'ar' ? 'مسح البحث' : 'Clear search'}
+															onClick={clearSearch}
+														>
+															<X size={12} strokeWidth={2.4} />
+														</button>
+													) : null}
+												</>
+											)}
+										</WaChatSearchInput>
 										</div>
 										<button
 											type="button"
@@ -25454,24 +25770,27 @@ function WhatsAppWorkspaceContent() {
 										<div className="wa-m-search-row">
 										<label className="wa-m-search min-w-0 flex-1">
 											<Search size={18} strokeWidth={2.2} aria-hidden="true" />
-											<input
+											<WaChatSearchInput
 												type="search"
 												aria-label={t.search}
 												value={chatSearch}
-												onChange={event => setChatSearch(event.target.value)}
+												onCommit={setChatSearch}
 												placeholder={locale === 'ar' ? 'بحث' : 'Search'}
 												enterKeyHint="search"
-											/>
-											{chatSearch ? (
-												<button
-													type="button"
-													className="wa-m-search__clear"
-													aria-label={locale === 'ar' ? 'مسح البحث' : 'Clear search'}
-													onClick={() => setChatSearch('')}
-												>
-													<X size={12} strokeWidth={3} />
-												</button>
-											) : null}
+											>
+												{(searchText, clearSearch) =>
+													searchText ? (
+														<button
+															type="button"
+															className="wa-m-search__clear"
+															aria-label={locale === 'ar' ? 'مسح البحث' : 'Clear search'}
+															onClick={clearSearch}
+														>
+															<X size={12} strokeWidth={3} />
+														</button>
+													) : null
+												}
+											</WaChatSearchInput>
 										</label>
 										<button
 											type="button"
@@ -25582,7 +25901,17 @@ function WhatsAppWorkspaceContent() {
 												<Archive size={20} />
 											</span>
 											<span className="wa-archived-row__title">{t.archived}</span>
-											{archivedChatsCount > 0 ? (
+											{archivedInboxUnreadCount > 0 ? (
+												<span
+													className="wa-archived-row__unread"
+													title={t.archivedUnread.replace(
+														'{count}',
+														String(archivedInboxUnreadCount),
+													)}
+												>
+													{archivedInboxUnreadCount > 99 ? '99+' : archivedInboxUnreadCount}
+												</span>
+											) : archivedChatsCount > 0 ? (
 												<span className="wa-archived-row__count">{archivedChatsCount}</span>
 											) : null}
 											<ChevronRight size={18} className="wa-archived-row__chevron" />
@@ -26055,6 +26384,30 @@ function WhatsAppWorkspaceContent() {
 												buttonClassName="wa-header-icon-btn shadow-none"
 											/>
 										</div>
+										{isEmailMemoAiConversation(selectedConversation) ? (
+											<div className="wa-memo-switch" role="tablist" aria-label={locale === 'ar' ? 'عرض' : 'View'}>
+												<button
+													type="button"
+													role="tab"
+													aria-selected={emailMemoView === 'chat'}
+													className={emailMemoView === 'chat' ? 'is-on' : ''}
+													onClick={() => setEmailMemoView('chat')}
+												>
+													<MessageCircle size={15} aria-hidden="true" />
+													<span>{locale === 'ar' ? 'الشات' : 'Chat'}</span>
+												</button>
+												<button
+													type="button"
+													role="tab"
+													aria-selected={emailMemoView === 'settings'}
+													className={emailMemoView === 'settings' ? 'is-on' : ''}
+													onClick={() => setEmailMemoView('settings')}
+												>
+													<Settings size={15} aria-hidden="true" />
+													<span>{locale === 'ar' ? 'الإعدادات' : 'Settings'}</span>
+												</button>
+											</div>
+										) : null}
 										<div className="wa-chat-toolbar-actions hidden items-center gap-2 min-[769px]:flex">
 											<div className="wa-chat-toolbar-actions__group">
 												{!demo.settings.enabled && conversationId && accountId ? (
@@ -26391,6 +26744,13 @@ function WhatsAppWorkspaceContent() {
 									<>
 									<div className="wa-chat-wallpaper-host">
 									<div className="wa-chat-wallpaper-layer" aria-hidden="true" />
+									{showEmailMemoSettings ? (
+										<div className="wa-memo-settings-pane" role="tabpanel">
+											<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+												<EmailMemoWorkspace variant="panel" />
+											</Suspense>
+										</div>
+									) : null}
 									{/* Keep the pane busy while the first page loads, unread
 									    catch-up runs, or settle still hides bubbles (opacity 0).
 									    Lives outside the scroller so it covers the visible
@@ -26859,19 +27219,33 @@ function WhatsAppWorkspaceContent() {
 														</button>
 													)
 												) : null}
+												<WaVirtualRowsHost virtual={messageVirtual}>
+												{({ items: virtualItems, totalSize: virtualTotalSize }) => (
 												<div
 													className={virtualizeMessages ? 'wa-message-virtual-list' : undefined}
 													style={
 														virtualizeMessages
 															? {
-																	height: messageVirtual.totalSize,
+																	height: virtualTotalSize,
 																	position: 'relative',
 																	width: '100%',
 																}
 															: undefined
 													}
 												>
-												{visibleMessageRows.map(({ row, rowIndex, start }) => {
+												{visibleRowsFor(virtualItems).map(({ row, rowIndex, start }) => {
+													const rowCacheKey = row.key || messageRowKey(row);
+													const cachedRow = threadRowCache.get(rowCacheKey);
+													const rowBody =
+														cachedRow &&
+														cachedRow.rowIndex === rowIndex &&
+														sameThreadRow(cachedRow.row, row) &&
+														sameThreadRow(cachedRow.prev, messageRows[rowIndex - 1]) &&
+														sameThreadRow(cachedRow.next, messageRows[rowIndex + 1]) &&
+														(cachedRow.messages === conversationMessages || !threadRowQuotes(row)) &&
+														sameThreadRowDeps(cachedRow.deps, threadRowDeps)
+															? cachedRow.body
+															: (() => {
 													const groupedImages = row.kind === 'image-gallery';
 													const message = groupedImages
 														? row.messages[row.messages.length - 1]
@@ -26980,14 +27354,14 @@ function WhatsAppWorkspaceContent() {
 														selectableInMediaMode &&
 														(downloadableAttachments.length
 															? downloadableAttachments.every(item =>
-																	selectedMediaIds.has(item.id),
+																	threadLiveRef.current.selectedMediaIds.has(item.id),
 																)
 															: selectedMessageIds.has(message.id));
 													const messageSelected =
 														(selectableInTicketMode || selectableInGroupMode) &&
 														(groupedImages
 															? (row.messages || []).some(item =>
-																	selectedMessageIds.has(item.id),
+																	threadLiveRef.current.selectedMessageIds.has(item.id),
 																)
 															: selectedMessageIds.has(message.id));
 													const showSelectCheck =
@@ -27072,8 +27446,8 @@ function WhatsAppWorkspaceContent() {
 														.join(' ');
 													const isQuotedHighlight = rowItems.some(
 														item =>
-															item?.id === highlightedMessageKey ||
-															item?.providerMessageId === highlightedMessageKey,
+															item?.id === threadLiveRef.current.highlightedMessageKey ||
+															item?.providerMessageId === threadLiveRef.current.highlightedMessageKey,
 													);
 													const fallbackMediaPreview =
 														!attachments?.length &&
@@ -27105,7 +27479,7 @@ function WhatsAppWorkspaceContent() {
 																</div>
 															)}
 															{unreadDividerMessageId &&
-															rowItems.some(item => item?.id === unreadDividerMessageId) ? (
+															rowItems.some(item => item?.id === threadLiveRef.current.unreadDividerMessageId) ? (
 																<div className="wa-unread-divider" role="separator" data-wa-unread-divider="">
 																	<span>
 																		{unreadAtOpen?.count > 1
@@ -27129,19 +27503,19 @@ function WhatsAppWorkspaceContent() {
 																		}
 																		onClick={() => {
 																			if (selectableInGroupMode) {
-																				applyGroupMessageSelection(message);
+																				threadLiveRef.current.applyGroupMessageSelection(message);
 																				return;
 																			}
 																			if (selectableInTicketMode) {
-																				applyMessagesSelection(ticketSelectionTargets);
+																				threadLiveRef.current.applyMessagesSelection(ticketSelectionTargets);
 																				return;
 																			}
 																			if (downloadableAttachments.length) {
-																				applyMediaSelection(downloadableAttachments);
+																				threadLiveRef.current.applyMediaSelection(downloadableAttachments);
 																				return;
 																			}
 																			if (messageHasSelectableMedia(message) || isSharableChatMessage(message)) {
-																				applyGroupMessageSelection(message);
+																				threadLiveRef.current.applyGroupMessageSelection(message);
 																			}
 																		}}
 																		className={`mt-2 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
@@ -27169,81 +27543,81 @@ function WhatsAppWorkspaceContent() {
 																	onPointerDown={event => {
 																		if (isMultiSelectClick(event)) {
 																			event.preventDefault();
-																			cancelMessageLongPress(event);
+																			threadLiveRef.current.cancelMessageLongPress(event);
 																			return;
 																		}
-																		if (mediaSelectMode || ticketSelectMode || groupSelectMode) return;
-																		startMessageLongPress(event, message);
-																		beginSwipeReply(event, message);
+																		if (threadLiveRef.current.mediaSelectMode || threadLiveRef.current.ticketSelectMode || threadLiveRef.current.groupSelectMode) return;
+																		threadLiveRef.current.startMessageLongPress(event, message);
+																		threadLiveRef.current.beginSwipeReply(event, message);
 																	}}
 																	onPointerMove={event => {
-																		cancelMessageLongPress(event);
-																		moveSwipeReply(event);
+																		threadLiveRef.current.cancelMessageLongPress(event);
+																		threadLiveRef.current.moveSwipeReply(event);
 																	}}
 																	onPointerUp={event => {
-																		cancelMessageLongPress(event);
-																		endSwipeReply(event);
+																		threadLiveRef.current.cancelMessageLongPress(event);
+																		threadLiveRef.current.endSwipeReply(event);
 																	}}
 																	onPointerCancel={event => {
-																		cancelMessageLongPress(event);
-																		endSwipeReply(event);
+																		threadLiveRef.current.cancelMessageLongPress(event);
+																		threadLiveRef.current.endSwipeReply(event);
 																	}}
 																	onClickCapture={event => {
 																		if (!isMultiSelectClick(event) || message.optimistic) return;
 																		event.preventDefault();
 																		event.stopPropagation();
-																		if (groupSelectMode) {
-																			applyGroupMessageSelection(message);
+																		if (threadLiveRef.current.groupSelectMode) {
+																			threadLiveRef.current.applyGroupMessageSelection(message);
 																			return;
 																		}
-																		if (mediaSelectMode) {
+																		if (threadLiveRef.current.mediaSelectMode) {
 																			if (downloadableAttachments.length) {
-																				applyMediaSelection(downloadableAttachments);
+																				threadLiveRef.current.applyMediaSelection(downloadableAttachments);
 																			} else if (messageHasSelectableMedia(message)) {
-																				applyGroupMessageSelection(message);
+																				threadLiveRef.current.applyGroupMessageSelection(message);
 																			}
 																			return;
 																		}
 																		if (
-																			ticketSelectMode ||
+																			threadLiveRef.current.ticketSelectMode ||
 																			isSharableChatMessage(message)
 																		) {
-																			applyMessagesSelection(
+																			threadLiveRef.current.applyMessagesSelection(
 																				groupedImages ? row.messages || [message] : [message],
 																			);
 																			return;
 																		}
 																		if (downloadableAttachments.length) {
-																			applyMediaSelection(downloadableAttachments);
+																			threadLiveRef.current.applyMediaSelection(downloadableAttachments);
 																			return;
 																		}
 																		if (messageHasSelectableMedia(message) || isSharableChatMessage(message)) {
-																			applyGroupMessageSelection(message);
+																			threadLiveRef.current.applyGroupMessageSelection(message);
 																		}
 																	}}
 																		onClick={event => {
 																			if (selectableInGroupMode) {
-																				applyGroupMessageSelection(message);
+																				threadLiveRef.current.applyGroupMessageSelection(message);
 																				return;
 																			}
 																			if (selectableInTicketMode) {
-																				applyMessagesSelection(ticketSelectionTargets);
+																				threadLiveRef.current.applyMessagesSelection(ticketSelectionTargets);
 																				return;
 																			}
 																			if (!selectableInMediaMode) {
-																				if (!mediaSelectMode && !ticketSelectMode && !groupSelectMode) {
-																					openMessageQuickActions(event, message, mine);
+																				if (!threadLiveRef.current.mediaSelectMode && !threadLiveRef.current.ticketSelectMode && !threadLiveRef.current.groupSelectMode) {
+																					threadLiveRef.current.openMessageQuickActions(event, message, mine);
 																				}
 																				return;
 																			}
 																			if (downloadableAttachments.length) {
-																				applyMediaSelection(downloadableAttachments);
+																				threadLiveRef.current.applyMediaSelection(downloadableAttachments);
 																				return;
 																			}
-																			applyGroupMessageSelection(message);
+																			threadLiveRef.current.applyGroupMessageSelection(message);
 																		}}
 																		onContextMenu={event => {
-																		openMessageContextMenu(event, message);
+																		threadLiveRef.current.openMessageContextMenu(event, message);
 																	}}
 															className={`wa-message-bubble relative min-w-0 max-w-[65%] shrink ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isDeleted ? (keepsDeletedContent ? 'wa-message-deleted-kept' : 'wa-message-deleted') : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${isContactMsg ? 'wa-message-contact' : ''} ${
 																		hideDeletedBody
@@ -27260,7 +27634,7 @@ function WhatsAppWorkspaceContent() {
 																			type="button"
 																			onClick={event => {
 																				event.stopPropagation();
-																				void openMessageGroup({
+																				void threadLiveRef.current.openMessageGroup({
 																					id: membership.groupId,
 																					name: membership.groupName,
 																				});
@@ -27296,8 +27670,8 @@ function WhatsAppWorkspaceContent() {
 																			onClick={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				if (mediaSelectMode || ticketSelectMode || groupSelectMode) return;
-																				void jumpToQuotedMessage(message);
+																				if (threadLiveRef.current.mediaSelectMode || threadLiveRef.current.ticketSelectMode || threadLiveRef.current.groupSelectMode) return;
+																				void threadLiveRef.current.jumpToQuotedMessage(message);
 																			}}
 																		>
 																			<div className="wa-reply-quote__content">
@@ -27348,7 +27722,7 @@ function WhatsAppWorkspaceContent() {
 																				attachments={attachments}
 																				mine={mine}
 																				labels={t}
-																				onImageReady={registerChatImage}
+																				onImageReady={threadStableFns.registerChatImage}
 																				onOpenImage={setActiveChatImageId}
 																				onOpenDocument={setDocumentPreview}
 																				sessionReady={isAccountConnected}
@@ -27378,7 +27752,7 @@ function WhatsAppWorkspaceContent() {
 																						? attachmentId => {
 																								const id = String(attachmentId || '');
 																								if (!id) return;
-																								setSelectedMediaIds(current => {
+																								threadLiveRef.current.setSelectedMediaIds(current => {
 																									const next = new Set(current);
 																									if (next.has(id)) next.delete(id);
 																									else next.add(id);
@@ -27392,23 +27766,23 @@ function WhatsAppWorkspaceContent() {
 																						? event => {
 																								event?.preventDefault?.();
 																								event?.stopPropagation?.();
-																								void handleMessageAction(message, 'transcribe');
+																								void threadLiveRef.current.handleMessageAction(message, 'transcribe');
 																							}
 																						: null
 																				}
 								onSendAsVoice={attachment => {
-									openVideoToVoiceEditor(message, attachment);
+									threadLiveRef.current.openVideoToVoiceEditor(message, attachment);
 								}}
 								onSaveToLibrary={attachment => {
 									const attachmentId = String(attachment?.id || '');
 									if (!isPersistedAttachmentId(attachmentId)) {
-										toast.error(t.sendAsVoiceFailed);
+										toast.error(threadLiveRef.current.t.sendAsVoiceFailed);
 										return;
 									}
-									setLibrarySaveTarget({
+									threadLiveRef.current.setLibrarySaveTarget({
 										attachmentId,
 										messageId: message.id,
-										defaultTitle: libraryTitleForMessage(message, attachmentId),
+										defaultTitle: threadLiveRef.current.libraryTitleForMessage(message, attachmentId),
 									});
 								}}
 																				sendAsVoiceLabel={t.sendAsVoice}
@@ -27477,7 +27851,7 @@ function WhatsAppWorkspaceContent() {
 																				locale={locale}
 																				accountId={accountId}
 																				conversations={effectiveConversations}
-																				onOpenConversation={openConversationFromContact}
+																				onOpenConversation={threadStableFns.openConversationFromContact}
 																			/>
 																			<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
 																				{message.isStarred && <Star size={11} fill="currentColor" />}
@@ -27545,16 +27919,16 @@ function WhatsAppWorkspaceContent() {
 																				conversationId={conversationId}
 																				conversations={scheduleConversationOptions}
 																				onRetry={() =>
-																					startSocialVideoDownload(
+																					threadLiveRef.current.startSocialVideoDownload(
 																						message,
-																						socialDownloads[message.id]?.sourceUrl ||
+																						threadLiveRef.current.socialDownloads[message.id]?.sourceUrl ||
 																							firstSocialVideoLink(message.text)?.href,
 																					)
 																				}
 																				onAddToStory={() => {
-																					const download = socialDownloads[message.id];
+																					const download = threadLiveRef.current.socialDownloads[message.id];
 																					if (!download?.id) return;
-																					setStoryTarget({
+																					threadLiveRef.current.setStoryTarget({
 																						socialDownloadId: download.id,
 																						messageId: message.id,
 																						previewUrl: absoluteApiUrl(download.url) || '',
@@ -27589,7 +27963,7 @@ function WhatsAppWorkspaceContent() {
 																							<WhatsAppFormattedText
 																								text={value}
 																								forceMarkdown={captionIsMarkdown}
-																								mentionDirectory={mentionDirectory}
+																								mentionDirectory={threadLiveRef.current.mentionDirectory}
 																								mentionLabels={message.mentionLabels}
 																							/>
 																						)}
@@ -27635,7 +28009,7 @@ function WhatsAppWorkspaceContent() {
 																											title={ar ? 'إخفاء الترجمة' : 'Hide translation'}
 																											aria-label={ar ? 'إخفاء الترجمة' : 'Hide translation'}
 																											onClick={() =>
-																												setMessageTranslations(prev => ({
+																												threadLiveRef.current.setMessageTranslations(prev => ({
 																													...prev,
 																													[message.id]: { ...prev[message.id], open: false },
 																												}))
@@ -27656,7 +28030,7 @@ function WhatsAppWorkspaceContent() {
 																										<button
 																											type="button"
 																											className="wa-tr__retry"
-																											onClick={() => void toggleIncomingTranslation(message, captionText)}
+																											onClick={() => void threadLiveRef.current.toggleIncomingTranslation(message, captionText)}
 																										>
 																											<RefreshCw size={12} strokeWidth={2.4} />
 																											{ar ? 'حاول تاني' : 'Retry'}
@@ -27716,9 +28090,9 @@ function WhatsAppWorkspaceContent() {
 																			reactions={normalizeWhatsAppReactions(message.reactions)}
 																			mine={mine}
 																			locale={locale}
-																			resolve={resolveReactor}
+																			resolve={threadStableFns.resolveReactor}
 																			disabled={reactingMessageIds.has(message.id)}
-																			onRemoveMine={emoji => void reactToMessage(message, emoji)}
+																			onRemoveMine={emoji => void threadLiveRef.current.reactToMessage(message, emoji)}
 																		/>
 																	)}
 																</div>
@@ -27753,10 +28127,10 @@ function WhatsAppWorkspaceContent() {
 																			onEmoji={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				setActionMessageId(null);
-																				setActionMessageAnchor(null);
+																				threadLiveRef.current.setActionMessageId(null);
+																				threadLiveRef.current.setActionMessageAnchor(null);
 																				const bar = event.currentTarget.closest('.wa-message-hover-actions');
-																				toggleReactionPicker(
+																				threadLiveRef.current.toggleReactionPicker(
 																					message,
 																					(bar || event.currentTarget).getBoundingClientRect(),
 																				);
@@ -27764,31 +28138,31 @@ function WhatsAppWorkspaceContent() {
 																			onReply={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				void handleMessageAction(message, 'reply');
+																				void threadLiveRef.current.handleMessageAction(message, 'reply');
 																			}}
 																			onTranscribe={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				void handleMessageAction(message, 'transcribe');
+																				void threadLiveRef.current.handleMessageAction(message, 'transcribe');
 																			}}
 																			onDownloadVideo={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				void handleMessageAction(
+																				void threadLiveRef.current.handleMessageAction(
 																					message,
 																					'downloadSocialVideo',
 																				);
 																			}}
-																			onCopy={() => handleMessageAction(message, 'copy')}
+																			onCopy={() => threadLiveRef.current.handleMessageAction(message, 'copy')}
 																			onTranslate={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				void toggleIncomingTranslation(message, captionText);
+																				void threadLiveRef.current.toggleIncomingTranslation(message, captionText);
 																			}}
 																			onMore={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				closeReactionPicker();
+																				threadLiveRef.current.closeReactionPicker();
 																				const bar =
 																					event.currentTarget.closest(
 																						'.wa-message-hover-actions',
@@ -27796,8 +28170,8 @@ function WhatsAppWorkspaceContent() {
 																				const rect = (
 																					bar || event.currentTarget
 																				).getBoundingClientRect();
-																				setActionMessageAnchor(rect);
-																				setActionMessageId(current =>
+																				threadLiveRef.current.setActionMessageAnchor(rect);
+																				threadLiveRef.current.setActionMessageId(current =>
 																					current === message.id ? null : message.id,
 																				);
 																			}}
@@ -27811,7 +28185,7 @@ function WhatsAppWorkspaceContent() {
 																			isVideo={isVideoTranscriptMessage}
 																			anchorRect={actionMessageAnchor}
 																			previewImageUrl={(attachments || [])
-																				.map(attachment => registeredChatImages[attachment.id]?.url)
+																				.map(attachment => threadLiveRef.current.registeredChatImages[attachment.id]?.url)
 																				.find(Boolean)}
 																			busy={pendingMessageActions.has(message.id)}
 																			accountId={accountId}
@@ -27826,17 +28200,17 @@ function WhatsAppWorkspaceContent() {
 																				!isDemoId(conversationId)
 																			}
 																			onBoardSuccess={() => {
-																				toast.success(t.sentToBoard);
+																				toast.success(threadLiveRef.current.t.sentToBoard);
 																			}}
 																			onClose={() => {
-																				setActionMessageId(null);
-																				setActionMessageAnchor(null);
+																				threadLiveRef.current.setActionMessageId(null);
+																				threadLiveRef.current.setActionMessageAnchor(null);
 																			}}
-																			onAction={action => void handleMessageAction(message, action)}
+																			onAction={action => void threadLiveRef.current.handleMessageAction(message, action)}
 																			onReact={emoji => {
-																				setActionMessageId(null);
-																				setActionMessageAnchor(null);
-																				void reactToMessage(message, emoji);
+																				threadLiveRef.current.setActionMessageId(null);
+																				threadLiveRef.current.setActionMessageAnchor(null);
+																				void threadLiveRef.current.reactToMessage(message, emoji);
 																			}}
 																			mentionDirectory={mentionDirectory}
 																		/>
@@ -27846,6 +28220,17 @@ function WhatsAppWorkspaceContent() {
 															</div>
 														</div>
 													);
+													threadRowCache.set(rowCacheKey, {
+															row,
+															rowIndex,
+															prev: messageRows[rowIndex - 1],
+															next: messageRows[rowIndex + 1],
+															messages: conversationMessages,
+															deps: threadRowDeps,
+															body: rowBody,
+														});
+													return rowBody;
+													})();
 													return virtualizeMessages ? (
 														<WaMeasuredThreadRow
 															key={row.key || messageRowKey(row)}
@@ -27861,6 +28246,8 @@ function WhatsAppWorkspaceContent() {
 													);
 												})}
 												</div>
+												)}
+												</WaVirtualRowsHost>
 											</div>
 										)}
 									</div>
@@ -29221,6 +29608,16 @@ function WhatsAppWorkspaceContent() {
 								{t.accounts}
 							</p>
 						)}
+					</div>
+				)}
+
+				{activeTab === 'documents' && isSuperAdmin && (
+					<div className="wa-dk wa-secondary-pane wa-documents-pane">
+						<div className="min-h-0 flex-1 overflow-y-auto nice-scroll">
+							<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+								<DocumentEditorWorkspace className="wa-documents-editor" />
+							</Suspense>
+						</div>
 					</div>
 				)}
 

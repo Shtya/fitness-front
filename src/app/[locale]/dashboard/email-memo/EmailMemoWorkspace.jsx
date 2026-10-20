@@ -7,13 +7,13 @@ import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
 import {
-	ArrowDown,
 	Ban,
 	Check,
 	ChevronDown,
 	ChevronUp,
 	Copy,
 	ExternalLink,
+	Inbox,
 	Eye,
 	EyeOff,
 	Loader2,
@@ -32,6 +32,7 @@ import {
 import { emailMemoApi } from '@/lib/email-memo/email-memo-api';
 import { ReadyCheck, STUDIO, StudioSparkleLogo } from '../ai-content-studio/components/studio-theme';
 import { EmailMemoSelect } from './EmailMemoSelect';
+import './email-memo.css';
 
 const FOCUS =
 	'w-full rounded-[14px] border border-[#E5E7EB] bg-white px-3.5 py-2.5 text-sm text-[#1a1a1a] outline-none transition focus:border-[#6366F1] focus:ring-2 focus:ring-[#E0E7FF] dark:border-slate-700 dark:bg-slate-900 dark:text-white';
@@ -298,7 +299,7 @@ function StudioButton({ children, onClick, disabled, primary, className = '', ty
 	);
 }
 
-export default function EmailMemoWorkspace() {
+export default function EmailMemoWorkspace({ variant = 'page' }) {
 	const t = useTranslations('emailMemo');
 	const locale = useLocale();
 	const isRtl = locale === 'ar';
@@ -309,6 +310,8 @@ export default function EmailMemoWorkspace() {
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState('');
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	/** Which part of the configuration is on screen (tabs). */
+	const [section, setSection] = useState('gmail');
 	const [settingsTab, setSettingsTab] = useState('email');
 	const [settings, setSettings] = useState(null);
 	const [detail, setDetail] = useState(null);
@@ -864,42 +867,9 @@ export default function EmailMemoWorkspace() {
 	}
 
 	return (
-		<div dir={isRtl ? 'rtl' : 'ltr'} className="relative flex min-h-0 flex-col">
-			<div
-				className="pointer-events-none absolute left-[8%] top-[-80px] h-[380px] w-[520px] rounded-full blur-3xl"
-				style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(59,130,246,0.08) 45%, transparent 70%)' }}
-			/>
-			<div
-				className="pointer-events-none absolute right-[6%] top-[18%] h-[320px] w-[420px] rounded-full blur-3xl"
-				style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.12) 0%, transparent 70%)' }}
-			/>
-			<div
-				className="pointer-events-none absolute left-0 top-8 h-80 w-72 opacity-[0.32]"
-				style={{
-					backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.7) 1px, transparent 0)',
-					backgroundSize: '18px 18px',
-					maskImage: 'linear-gradient(135deg, black 0%, transparent 75%)',
-					WebkitMaskImage: 'linear-gradient(135deg, black 0%, transparent 75%)',
-				}}
-			/>
-			<div
-				className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 opacity-[0.28]"
-				style={{
-					backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.65) 1px, transparent 0)',
-					backgroundSize: '18px 18px',
-					maskImage: 'linear-gradient(315deg, black 0%, transparent 72%)',
-					WebkitMaskImage: 'linear-gradient(315deg, black 0%, transparent 72%)',
-				}}
-			/>
-			<svg className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.2]" aria-hidden>
-				<path d="M-80 70 C 160 -10, 280 190, 560 70 S 980 -40, 1400 90" fill="none" stroke="#C4B5FD" strokeWidth="1.5" />
-				<path d="M-40 200 C 220 120, 400 300, 720 160 S 1140 80, 1500 210" fill="none" stroke="#93C5FD" strokeWidth="1.3" />
-			</svg>
+		<div dir={isRtl ? 'rtl' : 'ltr'} className={`wem relative flex min-h-0 flex-col ${variant === 'panel' ? 'wem--panel' : ''}`}>
 
-			<header
-				className="relative z-20 mx-5 mt-5 flex min-h-[72px] shrink-0 flex-wrap items-center gap-2 rounded-[20px] bg-white px-5 py-2.5 sm:mx-7 sm:px-6"
-				style={{ boxShadow: STUDIO.shadow }}
-			>
+			<header className="wem-head">
 				<div className="flex min-w-0 flex-1 items-center gap-3">
 					<StudioSparkleLogo size={40} />
 					<div className="min-w-0">
@@ -908,7 +878,7 @@ export default function EmailMemoWorkspace() {
 					</div>
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
-					<span className="hidden text-[12px] text-[#6B7280] sm:inline">{t('promise')}</span>
+					<span className="wem-head__promise">{t('promise')}</span>
 					<StudioButton onClick={() => setSettingsOpen(true)}>
 						<Settings size={13} /> {t('settings')}
 					</StudioButton>
@@ -928,10 +898,7 @@ export default function EmailMemoWorkspace() {
 			</header>
 
 			{sendProgress ? (
-				<div
-					className="relative z-20 mx-5 mt-2 rounded-[16px] border border-[#E5E7EB] bg-white px-5 py-3 sm:mx-7"
-					style={{ boxShadow: STUDIO.shadow }}
-				>
+				<div className="wem-progress">
 					<div className="flex items-center justify-between gap-3 text-[12px] font-semibold text-[#111827]">
 						<span>
 							{sendProgress.phase === 'collect'
@@ -979,10 +946,32 @@ export default function EmailMemoWorkspace() {
 				</div>
 			) : null}
 
-			<div className="relative z-10 mx-auto w-full max-w-6xl space-y-10 px-5 py-5 pb-16 sm:px-7">
-				<section className="mb-4 flex flex-col items-stretch gap-6 overflow-visible pb-8 lg:flex-row lg:items-start lg:gap-3">
-					<div className="min-w-0 flex-1 order-1">
-					<CollapsibleCard
+			<nav className="wem-tabs" role="tablist" aria-label={t('settings')}>
+				{[
+					['gmail', Mails, t('gmail'), gmailOk],
+					['ai', Sparkles, t('aiMemo'), true],
+					['whatsapp', MessageCircle, t('whatsapp'), waOk],
+					['senders', Ban, t('senders'), null],
+					['activity', Inbox, t('activity'), null],
+				].map(([key, Icon, label, ok]) => (
+					<button
+						key={key}
+						type="button"
+						role="tab"
+						aria-selected={section === key}
+						className={`wem-tab ${section === key ? 'is-on' : ''}`}
+						onClick={() => setSection(key)}
+					>
+						<Icon size={15} aria-hidden />
+						<span>{label}</span>
+						{ok === null ? null : <span className={`wem-tab__dot ${ok ? 'is-ok' : ''}`} aria-hidden />}
+					</button>
+				))}
+			</nav>
+
+			<div className="wem-body">
+				<>
+					{section === 'gmail' ? <div className="wem-pane"><CollapsibleCard
 						open={gmailOpen}
 						onToggle={() => setGmailOpen((v) => !v)}
 						expandLabel={t('expand')}
@@ -1169,13 +1158,121 @@ export default function EmailMemoWorkspace() {
 						) : null}
 							</>
 						) : null}
-					</CollapsibleCard>
-					</div>
-
-					<FlowArrow isRtl={isRtl} className="order-2" />
-
-					<div className="min-w-0 flex-1 order-5">
-					<CollapsibleCard
+					</CollapsibleCard></div> : null}
+					{section === 'ai' ? <div className="wem-pane"><CollapsibleCard
+						open={aiOpen}
+						onToggle={() => setAiOpen((v) => !v)}
+						expandLabel={t('expand')}
+						collapseLabel={t('collapse')}
+						collapsed={
+							<div>
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-2 font-bold text-[#111827] dark:text-white">
+										<Sparkles size={18} className="text-[#6366F1]" />
+										{t('aiMemo')}
+									</div>
+									<span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
+										<ReadyCheck size={14} /> {t('freeActive')}
+									</span>
+								</div>
+ 								<p className="mt-1 text-[11px] text-[#6B7280]">
+									{t('emailsToday')} {overview.usage?.emailsProcessedToday || 0} · {t('everyHours', { h: settings?.pollIntervalHours || 1 })}
+								</p>
+							</div>
+						}
+					>
+						<div className="mb-4 flex items-center justify-between">
+							<div className="flex items-center gap-2 font-bold text-[#111827] dark:text-white">
+								<Sparkles size={18} className="text-[#6366F1]" />
+								{t('aiMemo')}
+							</div>
+							<span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
+								<ReadyCheck size={14} /> {t('freeActive')}
+							</span>
+						</div>
+						<p className="text-sm font-bold">{overview.ai.label || t('aiFree')}</p>
+						<div className="mt-3 flex flex-wrap gap-1.5">
+							{(overview.ai.providers || [{ id: 'ai-free', label: t('aiFree') }]).map((provider) => (
+								<button
+									key={provider.id}
+									type="button"
+									onClick={() => settings && setSettings({ ...settings, aiProvider: provider.id })}
+									className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+										(settings?.aiProvider || overview.ai.provider) === provider.id
+											? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+											: 'border-[#E5E7EB] text-[#6B7280]'
+									}`}
+								>
+									{provider.label}
+								</button>
+							))}
+						</div>
+						{settings ? (
+							<div className="mt-4 space-y-3">
+								<label className="block">
+									<p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('pollInterval')}</p>
+									<EmailMemoSelect
+										ariaLabel={t('pollInterval')}
+										value={String(settings.pollIntervalHours || 1)}
+										onChange={(hours) => setSettings({ ...settings, pollIntervalHours: Number(hours) })}
+										options={POLL_HOURS.map((hours) => ({ value: String(hours), label: t('everyHours', { h: hours }) }))}
+									/>
+									{/* <p className="mt-1 text-[11px] text-[#6B7280]">{t('pollIntervalHint')}</p> */}
+								</label>
+								<p className="text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('memoLength')}</p>
+								<div className="flex flex-wrap gap-1.5">
+									{['short', 'medium', 'detailed'].map((len) => (
+										<button
+											key={len}
+											type="button"
+											onClick={() => setSettings({ ...settings, memoLength: len })}
+											className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+												settings.memoLength === len ? 'text-white' : 'bg-slate-100 text-slate-600'
+											}`}
+											style={settings.memoLength === len ? { background: STUDIO.gradient } : undefined}
+										>
+											{t(len)}
+										</button>
+									))}
+								</div>
+								<div className="flex flex-wrap gap-1.5">
+									{[
+										['includeSender', t('includeSender')],
+										['includeSubject', t('includeSubject')],
+										['includeSummary', t('includeSummary')],
+										['includeAction', t('includeAction')],
+										['includeDeadline', t('includeDeadline')],
+									].map(([field, label]) => (
+										<button
+											key={field}
+											type="button"
+											onClick={() => setSettings({ ...settings, [field]: !settings[field] })}
+											className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+												settings[field] ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-[#E5E7EB] text-[#9CA3AF] line-through'
+											}`}
+										>
+											{label}
+										</button>
+									))}
+								</div>
+								<StudioButton className="mt-1" onClick={saveSettings} disabled={busy === 'settings'}>
+									{busy === 'settings' ? <Loader2 className="animate-spin" size={14} /> : t('save')}
+								</StudioButton>
+							</div>
+						) : null}
+						<div className="mt-4 rounded-[16px] border border-[#E5E7EB] bg-slate-50 p-3 dark:bg-slate-800/50">
+							<p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('aiPreview')}</p>
+							<pre className="max-h-48 overflow-auto whitespace-pre-wrap text-[12px] leading-relaxed text-slate-700 dark:text-slate-200">
+								{overview.ai.preview || t('aiPreviewEmpty')}
+							</pre>
+						</div>
+						{/* <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+							<UsageStat label={t('emailsToday')} value={overview.usage?.emailsProcessedToday || 0} />
+							<UsageStat label={t('aiToday')} value={overview.usage?.aiRequestsToday || 0} />
+							<UsageStat label={t('waToday')} value={overview.usage?.whatsappSentToday || 0} />
+						</div> */}
+					</CollapsibleCard></div> : null}
+					{section === 'whatsapp' ? <div className="wem-pane"><CollapsibleCard
 						open={waOpen}
 						onToggle={() => setWaOpen((v) => !v)}
 						expandLabel={t('expand')}
@@ -1459,129 +1556,10 @@ export default function EmailMemoWorkspace() {
 								? t('deliveryInSiteOnlyHint')
 								: t('waSendHint')}
 						</p>
-					</CollapsibleCard>
-					</div>
+					</CollapsibleCard></div> : null}
+				</>
 
-					<FlowArrow isRtl={isRtl} className="order-4" />
-
-					<div className="min-w-0 flex-1 order-3">
-					<CollapsibleCard
-						open={aiOpen}
-						onToggle={() => setAiOpen((v) => !v)}
-						expandLabel={t('expand')}
-						collapseLabel={t('collapse')}
-						collapsed={
-							<div>
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-2 font-bold text-[#111827] dark:text-white">
-										<Sparkles size={18} className="text-[#6366F1]" />
-										{t('aiMemo')}
-									</div>
-									<span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
-										<ReadyCheck size={14} /> {t('freeActive')}
-									</span>
-								</div>
- 								<p className="mt-1 text-[11px] text-[#6B7280]">
-									{t('emailsToday')} {overview.usage?.emailsProcessedToday || 0} · {t('everyHours', { h: settings?.pollIntervalHours || 1 })}
-								</p>
-							</div>
-						}
-					>
-						<div className="mb-4 flex items-center justify-between">
-							<div className="flex items-center gap-2 font-bold text-[#111827] dark:text-white">
-								<Sparkles size={18} className="text-[#6366F1]" />
-								{t('aiMemo')}
-							</div>
-							<span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
-								<ReadyCheck size={14} /> {t('freeActive')}
-							</span>
-						</div>
-						<p className="text-sm font-bold">{overview.ai.label || t('aiFree')}</p>
-						<div className="mt-3 flex flex-wrap gap-1.5">
-							{(overview.ai.providers || [{ id: 'ai-free', label: t('aiFree') }]).map((provider) => (
-								<button
-									key={provider.id}
-									type="button"
-									onClick={() => settings && setSettings({ ...settings, aiProvider: provider.id })}
-									className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-										(settings?.aiProvider || overview.ai.provider) === provider.id
-											? 'border-indigo-200 bg-indigo-50 text-indigo-700'
-											: 'border-[#E5E7EB] text-[#6B7280]'
-									}`}
-								>
-									{provider.label}
-								</button>
-							))}
-						</div>
-						{settings ? (
-							<div className="mt-4 space-y-3">
-								<label className="block">
-									<p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('pollInterval')}</p>
-									<EmailMemoSelect
-										ariaLabel={t('pollInterval')}
-										value={String(settings.pollIntervalHours || 1)}
-										onChange={(hours) => setSettings({ ...settings, pollIntervalHours: Number(hours) })}
-										options={POLL_HOURS.map((hours) => ({ value: String(hours), label: t('everyHours', { h: hours }) }))}
-									/>
-									{/* <p className="mt-1 text-[11px] text-[#6B7280]">{t('pollIntervalHint')}</p> */}
-								</label>
-								<p className="text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('memoLength')}</p>
-								<div className="flex flex-wrap gap-1.5">
-									{['short', 'medium', 'detailed'].map((len) => (
-										<button
-											key={len}
-											type="button"
-											onClick={() => setSettings({ ...settings, memoLength: len })}
-											className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-												settings.memoLength === len ? 'text-white' : 'bg-slate-100 text-slate-600'
-											}`}
-											style={settings.memoLength === len ? { background: STUDIO.gradient } : undefined}
-										>
-											{t(len)}
-										</button>
-									))}
-								</div>
-								<div className="flex flex-wrap gap-1.5">
-									{[
-										['includeSender', t('includeSender')],
-										['includeSubject', t('includeSubject')],
-										['includeSummary', t('includeSummary')],
-										['includeAction', t('includeAction')],
-										['includeDeadline', t('includeDeadline')],
-									].map(([field, label]) => (
-										<button
-											key={field}
-											type="button"
-											onClick={() => setSettings({ ...settings, [field]: !settings[field] })}
-											className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-												settings[field] ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-[#E5E7EB] text-[#9CA3AF] line-through'
-											}`}
-										>
-											{label}
-										</button>
-									))}
-								</div>
-								<StudioButton className="mt-1" onClick={saveSettings} disabled={busy === 'settings'}>
-									{busy === 'settings' ? <Loader2 className="animate-spin" size={14} /> : t('save')}
-								</StudioButton>
-							</div>
-						) : null}
-						<div className="mt-4 rounded-[16px] border border-[#E5E7EB] bg-slate-50 p-3 dark:bg-slate-800/50">
-							<p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('aiPreview')}</p>
-							<pre className="max-h-48 overflow-auto whitespace-pre-wrap text-[12px] leading-relaxed text-slate-700 dark:text-slate-200">
-								{overview.ai.preview || t('aiPreviewEmpty')}
-							</pre>
-						</div>
-						{/* <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-							<UsageStat label={t('emailsToday')} value={overview.usage?.emailsProcessedToday || 0} />
-							<UsageStat label={t('aiToday')} value={overview.usage?.aiRequestsToday || 0} />
-							<UsageStat label={t('waToday')} value={overview.usage?.whatsappSentToday || 0} />
-						</div> */}
-					</CollapsibleCard>
-					</div>
-				</section>
-
-				<section className={`relative ${card}`} style={cardShadow}>
+				{section === 'senders' ? (<section className={`relative ${card}`} style={cardShadow}>
 					<button
 						type="button"
 						aria-expanded={sendersListOpen}
@@ -1681,9 +1659,9 @@ export default function EmailMemoWorkspace() {
 						</div>
 					)
 					) : null}
-				</section>
+				</section>) : null}
 
-				<section className={card} style={cardShadow}>
+				{section === 'activity' ? (<section className={card} style={cardShadow}>
 					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
 						<div>
 							<h2 className="text-lg font-bold text-[#111827] dark:text-white">{t('activity')}</h2>
@@ -1903,7 +1881,7 @@ export default function EmailMemoWorkspace() {
 							</table>
 						</div>
 					)}
-				</section>
+				</section>) : null}
 			</div>
 
 			{gmailGateOpen && typeof document !== 'undefined'
@@ -2192,38 +2170,10 @@ export default function EmailMemoWorkspace() {
 	);
 }
 
-function CollapsibleCard({ open, onToggle, collapsed, children, expandLabel = 'Expand', collapseLabel = 'Collapse' }) {
-	return (
-		<article
-			className={`relative overflow-visible rounded-[20px] border border-[#E5E7EB] bg-white/95 p-5 dark:border-slate-800 dark:bg-slate-900/95 ${open ? 'pb-12' : 'pb-10'}`}
-			style={{ boxShadow: PORTAL_SHADOW }}
-		>
-			{open ? children : collapsed}
-			<button
-				type="button"
-				aria-expanded={open}
-				aria-label={open ? collapseLabel : expandLabel}
-				onClick={onToggle}
-				className="absolute bottom-0 left-1/2 z-10 flex h-8 w-11 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-[#6366F1] hover:bg-slate-50"
-				style={{ boxShadow: STUDIO.shadow3d }}
-			>
-				{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-			</button>
-		</article>
-	);
-}
-
-function FlowArrow({ isRtl, className = '' }) {
-	return (
-		<div className={`flex shrink-0 items-center justify-center py-0 lg:self-center ${className}`} aria-hidden>
-			<span
-				className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-[#6366F1]"
-				style={{ boxShadow: STUDIO.shadow3d }}
-			>
-				<ArrowDown size={16} className={isRtl ? 'lg:rotate-90' : 'lg:-rotate-90'} />
-			</span>
-		</div>
-	);
+/** A configuration panel (one tab). Kept the old name/props so the call sites stay as they were. */
+// eslint-disable-next-line no-unused-vars
+function CollapsibleCard({ open, onToggle, collapsed, children }) {
+	return <article className="wem-card">{children}</article>;
 }
 
 function UsageStat({ label, value }) {

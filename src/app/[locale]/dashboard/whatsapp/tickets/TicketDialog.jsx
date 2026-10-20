@@ -2,9 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, CheckCheck, ListChecks, Minus, NotebookPen, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { Check, CheckCheck, History, ListChecks, Minus, NotebookPen, Plus, Repeat, RotateCcw, Trash2, X } from 'lucide-react';
 import { MAX_ITEM_TEXT, MAX_NOTES, MAX_STEPS, MAX_TITLE, itemId } from './use-daily-tickets';
-import { StepBar, StepRing } from './tickets-ui';
+import { StepBar, StepRing, dailyHistory, dailyStreak } from './tickets-ui';
 import './ticket-dialog.css';
 
 /*
@@ -157,6 +157,47 @@ export default function TicketDialog({ ticket, ar, c, actions, focus, onClose })
 							</button>
 						</div>
 					</div>
+				</section>
+
+				<section className="tkd__section">
+					<label className="tkd__repeat">
+						<span className="tkd__repeat-icon" aria-hidden="true">
+							<Repeat size={16} />
+						</span>
+						<span className="tkd__repeat-text">
+							<strong>{c.repeatDaily}</strong>
+							<span>{c.dailyHint}</span>
+						</span>
+						<input
+							type="checkbox"
+							role="switch"
+							className="tkd__switch"
+							checked={ticket.repeat === 'daily'}
+							onChange={event => actions.setRepeat?.(ticket.id, event.target.checked ? 'daily' : 'none')}
+						/>
+					</label>
+					{ticket.repeat === 'daily' ? (
+						(() => {
+							const days = dailyHistory(ticket, 14);
+							const doneCount = days.filter(day => day.state === 'done').length;
+							const streak = dailyStreak(ticket);
+							return (
+								<div className="tkd__history">
+									<div className="tkd__label">
+										<History size={15} aria-hidden />
+										{c.history}
+										<span className="tkd__label-n">{streak > 0 ? c.streak(streak) : c.doneDays(doneCount, days.length)}</span>
+									</div>
+									<ol className="tkd__days" aria-label={c.doneDays(doneCount, days.length)}>
+										{days.map(day => (
+											<li key={day.day} className={`is-${day.state}`} title={`${day.day} · ${day.state}`} />
+										))}
+									</ol>
+									{!(ticket.history || []).length ? <p className="tkd__hint">{c.historyEmpty}</p> : null}
+								</div>
+							);
+						})()
+					) : null}
 				</section>
 
 				<section className="tkd__section">

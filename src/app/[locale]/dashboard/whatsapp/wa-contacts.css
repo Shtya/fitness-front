@@ -808,3 +808,187 @@ html.dark .wct-empty__art {
 	border-color: var(--ct-accent) !important;
 	background: var(--ct-surface) !important;
 }
+
+/* ─── profile photo: zoom badge on the avatar, full-size preview ─── */
+.wct-avatar {
+	position: relative;
+	display: grid;
+	flex: none;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	cursor: zoom-in;
+	transition: transform 0.15s ease;
+}
+
+.wct-avatar > span:first-child {
+	transition:
+		box-shadow 0.15s ease,
+		filter 0.15s ease;
+}
+
+.wct-avatar:hover > span:first-child {
+	filter: brightness(0.9);
+	box-shadow: 0 0 0 3px var(--ct-accent-soft);
+}
+
+.wct-avatar:active {
+	transform: scale(0.96);
+}
+
+.wct-avatar:focus-visible {
+	outline: 2px solid var(--ct-accent);
+	outline-offset: 2px;
+}
+
+.wct-avatar__zoom {
+	position: absolute;
+	inset-inline-end: -2px;
+	bottom: -2px;
+	display: grid;
+	width: 24px;
+	height: 24px;
+	place-items: center;
+	border: 2px solid var(--ct-surface);
+	border-radius: 999px;
+	color: #fff;
+	background: var(--ct-accent);
+	box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.35);
+	transition: transform 0.18s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+.wct-avatar__zoom.is-small {
+	width: 19px;
+	height: 19px;
+	opacity: 0;
+	transform: scale(0.6);
+}
+
+/* list rows: the badge appears when you reach for the photo */
+.wct-row:hover .wct-avatar__zoom.is-small,
+.wct-avatar:focus-visible .wct-avatar__zoom.is-small {
+	opacity: 1;
+	transform: none;
+}
+
+.wct-avatar:hover .wct-avatar__zoom:not(.is-small) {
+	transform: scale(1.12);
+}
+
+html.dark .wct-avatar__zoom {
+	color: #0f1a14;
+}
+
+.wct-photo {
+	position: fixed;
+	inset: 0;
+	z-index: 400;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	background: rgba(8, 12, 14, 0.82);
+	-webkit-backdrop-filter: blur(6px);
+	backdrop-filter: blur(6px);
+	cursor: zoom-out;
+	animation: wct-photo-fade 0.18s ease;
+}
+
+.wct-photo__frame {
+	display: flex;
+	max-width: min(560px, 100%);
+	flex-direction: column;
+	margin: 0;
+	overflow: hidden;
+	border-radius: 18px;
+	background: #111b21;
+	box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+	cursor: default;
+	animation: wct-photo-in 0.24s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.wct-photo__img {
+	display: block;
+	width: min(560px, calc(100vw - 48px));
+	max-height: calc(100dvh - 140px);
+	aspect-ratio: 1;
+	object-fit: cover;
+	background: #0b1114;
+}
+
+.wct-photo__bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 10px 10px 16px;
+	color: #e9edef;
+}
+
+[dir='rtl'] .wct-photo__bar {
+	padding: 10px 16px 10px 10px;
+}
+
+.wct-photo__who {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.wct-photo__name {
+	overflow: hidden;
+	font-size: 15px;
+	font-weight: 700;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wct-photo__phone {
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+	color: #8696a0;
+	text-align: start;
+}
+
+.wct-photo__btn {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	flex: none;
+	place-items: center;
+	border-radius: 10px;
+	color: #d1d7db;
+	cursor: pointer;
+}
+
+.wct-photo__btn:hover {
+	color: #fff;
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.wct-photo__btn:focus-visible {
+	outline: 2px solid #21c063;
+	outline-offset: 1px;
+}
+
+@keyframes wct-photo-fade {
+	from {
+		opacity: 0;
+	}
+}
+
+@keyframes wct-photo-in {
+	from {
+		opacity: 0;
+		transform: scale(0.94);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wct-photo,
+	.wct-photo__frame {
+		animation: none;
+	}
+}

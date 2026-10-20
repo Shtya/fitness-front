@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
@@ -14,6 +15,7 @@ import {
 	CircleSlash,
 	Clock,
 	CloudOff,
+	ExternalLink,
 	HelpCircle,
 	Info,
 	Loader2,
@@ -27,6 +29,7 @@ import {
 	User,
 	UserPlus,
 	X,
+	ZoomIn,
 } from 'lucide-react';
 import api from '@/utils/axios';
 import './wa-contacts.css';
@@ -51,6 +54,9 @@ const COPY = {
 		title: 'Contacts',
 		subtitle: 'Look up a number, save it, and start a WhatsApp chat.',
 		findTitle: 'Find someone on WhatsApp',
+		viewPhoto: 'View profile photo',
+		openOriginal: 'Open original',
+		closePhoto: 'Close photo',
 		offlineLine: 'WhatsApp is offline, so numbers can’t be verified right now.',
 		findPlaceholder: 'Phone number with country code',
 		findHint: 'Type the number with its country code, or pick the country first.',
@@ -157,6 +163,9 @@ const COPY = {
 		title: 'جهات الاتصال',
 		subtitle: 'ابحث عن رقم، احفظه، وابدأ شات واتساب.',
 		findTitle: 'دوّر على حد في واتساب',
+		viewPhoto: 'عرض صورة البروفايل',
+		openOriginal: 'فتح الأصل',
+		closePhoto: 'إغلاق الصورة',
 		offlineLine: 'واتساب مش متصل، فمش هنقدر نتحقق من الأرقام دلوقتي.',
 		findPlaceholder: 'رقم الموبايل بكود الدولة',
 		findHint: 'اكتب الرقم بكود الدولة، أو اختار الدولة الأول.',
@@ -292,11 +301,12 @@ const flagOf = code =>
 
 const contactsKey = accountId => ['whatsapp', 'contacts', accountId];
 
-function Avatar({ url, name, size = 44 }) {
+function Avatar({ url, name, size = 44, onPreview, previewLabel }) {
 	const [failed, setFailed] = useState(false);
 	useEffect(() => setFailed(false), [url]);
 	const initials = contactInitials(name, '');
-	return (
+	const canPreview = Boolean(url && !failed && onPreview);
+	const face = (
 		<span
 			className="relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-emerald-100 text-sm font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
 			style={{ width: size, height: size }}
@@ -314,6 +324,69 @@ function Avatar({ url, name, size = 44 }) {
 				/>
 			) : null}
 		</span>
+	);
+	if (!canPreview) return face;
+	return (
+		<button
+			type="button"
+			className="wct-avatar"
+			style={{ width: size, height: size }}
+			onClick={() => onPreview(url)}
+			aria-label={previewLabel}
+			title={previewLabel}
+		>
+			{face}
+			<span className={`wct-avatar__zoom ${size < 52 ? 'is-small' : ''}`} aria-hidden="true">
+				<ZoomIn size={size < 52 ? 11 : 13} strokeWidth={2.6} />
+			</span>
+		</button>
+	);
+}
+
+/** Full-size profile photo over everything; Esc, the close button or a click outside closes it. */
+function PhotoPreview({ photo, copy, onClose }) {
+	const closeRef = useRef(null);
+	useEffect(() => {
+		const back = document.activeElement;
+		closeRef.current?.focus();
+		const onKey = event => {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				event.stopPropagation();
+				onClose();
+			}
+		};
+		// capture: the dialog underneath must not also close on this Esc
+		window.addEventListener('keydown', onKey, true);
+		return () => {
+			window.removeEventListener('keydown', onKey, true);
+			if (back?.isConnected) back.focus?.();
+		};
+	}, [onClose]);
+	return createPortal(
+		<div className="wct-photo" role="dialog" aria-modal="true" aria-label={photo.name || copy.viewPhoto} onClick={onClose}>
+			<figure className="wct-photo__frame" onClick={event => event.stopPropagation()}>
+				{/* eslint-disable-next-line @next/next/no-img-element */}
+				<img src={photo.url} alt={photo.name || ''} referrerPolicy="no-referrer" className="wct-photo__img" />
+				<figcaption className="wct-photo__bar">
+					<span className="wct-photo__who">
+						{photo.name ? <bdi className="wct-photo__name">{photo.name}</bdi> : null}
+						{photo.phone ? (
+							<span className="wct-photo__phone" dir="ltr">
+								{photo.phone}
+							</span>
+						) : null}
+					</span>
+					<a className="wct-photo__btn" href={photo.url} target="_blank" rel="noopener noreferrer" title={copy.openOriginal} aria-label={copy.openOriginal}>
+						<ExternalLink size={16} />
+					</a>
+					<button ref={closeRef} type="button" className="wct-photo__btn" onClick={onClose} title={copy.closePhoto} aria-label={copy.closePhoto}>
+						<X size={17} />
+					</button>
+				</figcaption>
+			</figure>
+		</div>,
+		document.body,
 	);
 }
 
@@ -518,7 +591,7 @@ function CountrySelect({ copy, countries, value, onChange }) {
 	);
 }
 
-function LookupCard({ copy, lookup, canUse, onSave, onUpdate, onStartChat, starting, saving, saveError, onClose }) {
+function LookupCard({ copy, lookup, canUse, onSave, onUpdate, onStartChat, starting, saving, saveError, onClose, onPreview }) {
 	const [mode, setMode] = useState(null);
 	const contact = lookup.contact;
 	const profile = lookup.profile;
@@ -534,7 +607,19 @@ function LookupCard({ copy, lookup, canUse, onSave, onUpdate, onStartChat, start
 	return (
 		<section aria-live="polite" className="wct-card wct-result">
 			<div className="flex items-start gap-3">
-				<Avatar url={pictureUrl} name={title || ''} size={64} />
+				<Avatar
+					url={pictureUrl}
+					name={title || ''}
+					size={64}
+					previewLabel={copy.viewPhoto}
+					onPreview={url =>
+						onPreview?.({
+							url,
+							name: title || profile?.pushName || '',
+							phone: lookup.phone?.international || lookup.phone?.e164 || '',
+						})
+					}
+				/>
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-wrap items-center gap-2">
 						<h3 className="min-w-0 truncate text-base font-black text-slate-900 dark:text-white">
@@ -665,7 +750,7 @@ function LookupCard({ copy, lookup, canUse, onSave, onUpdate, onStartChat, start
 	);
 }
 
-function ContactRow({ copy, contact, canUse, onStartChat, startingId, onUpdate, onRemove, onSync, busy }) {
+function ContactRow({ copy, contact, canUse, onStartChat, startingId, onUpdate, onRemove, onSync, busy, onPreview }) {
 	const [mode, setMode] = useState(null);
 	const [alsoWhatsApp, setAlsoWhatsApp] = useState(contact.sync.status === 'synced');
 	const name = contact.displayName;
@@ -675,7 +760,15 @@ function ContactRow({ copy, contact, canUse, onStartChat, startingId, onUpdate, 
 	return (
 		<li className={`wct-row ${mode ? 'is-open' : ''} [contain-intrinsic-size:auto_76px] [content-visibility:auto]`}>
 			<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-				<Avatar url={contact.avatarUrl} name={name || ''} size={44} />
+				<Avatar
+					url={contact.avatarUrl}
+					name={name || ''}
+					size={44}
+					previewLabel={copy.viewPhoto}
+					onPreview={url =>
+						onPreview?.({ url, name: name || '', phone: contact.phone?.international || contact.phone?.e164 || '' })
+					}
+				/>
 				<div className="min-w-0 flex-1 basis-[11rem]">
 					<p className="truncate text-sm font-bold text-slate-900 dark:text-white">
 						{name ? <bdi>{name}</bdi> : <PhoneText phone={contact.phone} />}
@@ -844,6 +937,7 @@ export default function ContactsPanel({
 	const [scope, setScope] = useState('saved');
 	const [startingId, setStartingId] = useState(null);
 	const lookupInput = useRef(null);
+	const [photo, setPhoto] = useState(null);
 
 	useEffect(() => {
 		const timer = window.setTimeout(() => setSearch(filter.trim()), 300);
@@ -1163,6 +1257,7 @@ export default function ContactsPanel({
 					saveError={formError}
 					starting={startingId === 'lookup'}
 					onClose={() => setLookup(null)}
+					onPreview={setPhoto}
 					onStartChat={payload => startChat(payload, 'lookup')}
 					onSave={values =>
 						createMutation.mutate({
@@ -1329,6 +1424,7 @@ export default function ContactsPanel({
 								startingId={startingId}
 								onStartChat={startChat}
 								onSync={item => syncMutation.mutate(item.id)}
+								onPreview={setPhoto}
 								onUpdate={(item, values, done) =>
 									updateMutation.mutate({ id: item.id, ...values }, { onSuccess: () => done?.() })
 								}
@@ -1354,6 +1450,7 @@ export default function ContactsPanel({
 					</button>
 				) : null}
 			</section>
+			{photo ? <PhotoPreview photo={photo} copy={copy} onClose={() => setPhoto(null)} /> : null}
 		</div>
 	);
 }

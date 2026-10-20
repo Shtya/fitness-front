@@ -583,3 +583,23 @@ html.dark .tk-composer__steps.is-split {
 		animation: none !important;
 	}
 }
+
+/* "Daily" marker on a repeating ticket */
+.tkx-repeat {
+	display: inline-flex;
+	height: 20px;
+	align-items: center;
+	gap: 3px;
+	padding: 0 6px;
+	border-radius: 999px;
+	font-size: 10.5px;
+	font-weight: 700;
+	white-space: nowrap;
+	color: #0f766e;
+	background: rgba(15, 118, 110, 0.1);
+}
+
+html.dark .tkx-repeat {
+	color: #5eead4;
+	background: rgba(94, 234, 212, 0.12);
+}

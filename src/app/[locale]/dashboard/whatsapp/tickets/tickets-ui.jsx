@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Check, CheckCheck, Circle, Flag, ListChecks, Maximize2, Minus, MoreHorizontal, NotebookPen, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, CheckCheck, Circle, Flag, ListChecks, Maximize2, Minus, MoreHorizontal, NotebookPen, Pencil, Pin, PinOff, Play, Plus, Repeat, RotateCcw, Trash2, Undo2 } from 'lucide-react';
 import { MAX_STEPS } from './use-daily-tickets';
 import './tickets-ui.css';
 
@@ -250,6 +250,51 @@ export function StepBar({ ticket, c }) {
 	);
 }
 
+/** "Daily" marker for a ticket that comes back every day. */
+export function RepeatBadge({ ticket, c, compact = false }) {
+	if (ticket.repeat !== 'daily') return null;
+	return (
+		<span className="tkx-repeat" title={`${c.repeatDaily} · ${c.dailyHint}`}>
+			<Repeat size={11} strokeWidth={2.6} aria-hidden />
+			{compact ? <span className="tkx-sr">{c.daily}</span> : c.daily}
+		</span>
+	);
+}
+
+/**
+ * The last `days` days of a daily ticket, oldest first, including today:
+ * { day, state: 'done' | 'partial' | 'missed' | 'today' | 'none' }.
+ */
+export function dailyHistory(ticket, days = 14, today = new Date()) {
+	const byDay = new Map((ticket.history || []).map(entry => [entry.day, entry]));
+	const key = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	const out = [];
+	for (let i = days - 1; i >= 0; i -= 1) {
+		const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+		const day = key(d);
+		if (i === 0) {
+			out.push({ day, state: ticket.done ? 'done' : ticket.progress > 0 ? 'partial' : 'today' });
+			continue;
+		}
+		const entry = byDay.get(day);
+		out.push({ day, state: !entry ? 'none' : entry.done ? 'done' : entry.progress > 0 ? 'partial' : 'missed' });
+	}
+	return out;
+}
+
+/** Days in a row the ticket was finished, counting today only once it is done. */
+export function dailyStreak(ticket, today = new Date()) {
+	const done = new Set((ticket.history || []).filter(entry => entry.done).map(entry => entry.day));
+	const key = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	let streak = ticket.done ? 1 : 0;
+	for (let i = 1; i < 400; i += 1) {
+		const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+		if (!done.has(key(d))) break;
+		streak += 1;
+	}
+	return streak;
+}
+
 /** Small hints that a card has notes or a checklist inside. */
 export function DetailsHint({ ticket, c }) {
 	const items = ticket.items || [];
@@ -316,7 +361,7 @@ export function PushPin({ color, size = 30, gold }) {
 
 /* ─── Ticket actions ─────────────────────────────────────────────── */
 export function ticketMenuItems(ticket, c, actions) {
-	const { setStatus, toggle, setSteps, togglePinned, startEdit, open, move, remove, canMove } = actions;
+	const { setStatus, toggle, setSteps, setRepeat, togglePinned, startEdit, open, move, remove, canMove } = actions;
 	const split = ticket.steps > 1;
 	const items = [
 		{ id: 'open', label: c.open, icon: <Maximize2 size={15} />, onSelect: () => open(ticket.id), hint: 'O' },
@@ -334,6 +379,13 @@ export function ticketMenuItems(ticket, c, actions) {
 			? { id: 'todo', label: c.backToTodo, icon: <Circle size={15} />, onSelect: () => setStatus(ticket.id, 'todo'), hint: 'S' }
 			: { id: 'start', label: c.start, icon: <Play size={15} />, onSelect: () => setStatus(ticket.id, 'doing'), hint: 'S', disabled: ticket.done },
 		{ id: 'pin', label: ticket.pinned ? c.unpin : c.pin, icon: ticket.pinned ? <PinOff size={15} /> : <Pin size={15} />, onSelect: () => togglePinned(ticket.id), hint: 'P' },
+		{
+			id: 'repeat',
+			label: c.repeatDaily,
+			icon: <Repeat size={15} />,
+			checked: ticket.repeat === 'daily',
+			onSelect: () => setRepeat?.(ticket.id, ticket.repeat === 'daily' ? 'none' : 'daily'),
+		},
 		{ id: 'edit', label: c.edit, icon: <Pencil size={15} />, onSelect: () => startEdit(), hint: 'Enter' },
 		{ divider: true },
 		{ heading: split ? `${c.steps} · ${ticket.progress}/${ticket.steps}` : c.steps },

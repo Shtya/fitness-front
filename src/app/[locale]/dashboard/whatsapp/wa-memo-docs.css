@@ -1,0 +1,88 @@
+/*
+ * AI Memo Emails chat: a Chat / Settings switch in its header, and the Email Memo settings
+ * covering the thread while "Settings" is on. Plus the Documents tab (smart document editor).
+ */
+
+.wa-memo-switch {
+	display: inline-flex;
+	flex: none;
+	gap: 2px;
+	margin-inline-start: auto;
+	margin-inline-end: 8px;
+	padding: 3px;
+	border-radius: 12px;
+	background: color-mix(in srgb, currentColor 6%, transparent);
+	color: var(--wa-ui-text, #111b21);
+}
+
+.wa-memo-switch button {
+	display: inline-flex;
+	height: 32px;
+	align-items: center;
+	gap: 6px;
+	padding: 0 12px;
+	border-radius: 9px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--wa-ui-text-3, #667781);
+	cursor: pointer;
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.wa-memo-switch button:hover {
+	color: var(--wa-ui-text, #111b21);
+}
+
+.wa-memo-switch button.is-on {
+	color: var(--wa-ui-accent-strong, #1b8755);
+	background: var(--wa-ui-surface, #fff);
+	box-shadow: 0 1px 2px rgba(11, 20, 26, 0.12);
+}
+
+.wa-memo-switch button:focus-visible {
+	outline: 2px solid var(--wa-ui-accent, #1daa61);
+	outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+	.wa-memo-switch button span {
+		display: none;
+	}
+
+	.wa-memo-switch button {
+		width: 36px;
+		justify-content: center;
+		padding: 0;
+	}
+}
+
+/* covers the thread (and its loader) while the settings are open */
+.wa-memo-settings-pane {
+	position: absolute;
+	inset: 0;
+	z-index: 40;
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+}
+
+/* Documents tab */
+.wa-documents-pane {
+	display: flex;
+	min-height: 0;
+	flex-direction: column;
+}
+
+.wa-documents-editor {
+	min-height: 100%;
+	padding: 10px 12px;
+}
+
+@media (max-width: 768px) {
+	.wa-documents-editor {
+		padding: 6px;
+	}
+}

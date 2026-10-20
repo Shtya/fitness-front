@@ -74,6 +74,8 @@ export function DemoModeProvider({ children }) {
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState('');
 	const activeProfileIdRef = useRef(null);
+	/** Profile whose data is loaded (null: not loaded yet). */
+	const dataLoadedForRef = useRef(null);
 	const completedEventIdsRef = useRef(new Set());
 	const scheduledProfileRef = useRef(null);
 	const mediaObjectUrlsRef = useRef(new Set());
@@ -87,6 +89,7 @@ export function DemoModeProvider({ children }) {
 		if (!profileId) {
 			revokeMediaObjectUrls();
 			setData(EMPTY_DATA);
+			dataLoadedForRef.current = null;
 			return EMPTY_DATA;
 		}
 		const [contactsPayload, conversationsPayload, eventsPayload] = await Promise.all([
@@ -130,9 +133,24 @@ export function DemoModeProvider({ children }) {
 			events,
 			messagesByConversation: Object.fromEntries(messageEntries),
 		};
-		if (activeProfileIdRef.current === String(profileId)) setData(next);
+		if (activeProfileIdRef.current === String(profileId)) {
+			setData(next);
+			dataLoadedForRef.current = String(profileId);
+		}
 		return next;
 	}, [revokeMediaObjectUrls]);
+
+	/**
+	 * The profile's contacts, photos, conversations, events and every message are only
+	 * needed while demo mode is on or the demo studio is open. Loading them on every visit
+	 * cost one request per demo conversation plus one per contact photo; this loads them
+	 * once per profile, when first needed.
+	 */
+	const ensureProfileData = useCallback(async () => {
+		const profileId = activeProfileIdRef.current;
+		if (!profileId || dataLoadedForRef.current === profileId) return;
+		await loadProfileData(profileId);
+	}, [loadProfileData]);
 
 	useEffect(() => revokeMediaObjectUrls, [revokeMediaObjectUrls]);
 
@@ -158,7 +176,8 @@ export function DemoModeProvider({ children }) {
 				activeProfileId,
 				randomSeed: activeProfile?.randomSeed || nextSettings.randomSeed,
 			});
-			await loadProfileData(activeProfileId);
+			// Off: nothing on screen reads the demo data, so it waits for ensureProfileData.
+			if (nextSettings.enabled || dataLoadedForRef.current) await loadProfileData(activeProfileId);
 		} catch (requestError) {
 			setError(
 				requestError?.response?.data?.message ||
@@ -173,6 +192,11 @@ export function DemoModeProvider({ children }) {
 	useEffect(() => {
 		void refresh();
 	}, [refresh]);
+
+	// Turning demo mode on (or switching profile while on) needs the data on screen.
+	useEffect(() => {
+		if (settings.enabled && !loading) void ensureProfileData();
+	}, [settings.enabled, settings.activeProfileId, loading, ensureProfileData]);
 
 	const updateSettings = useCallback(async patch => {
 		setSaving(true);
@@ -903,6 +927,7 @@ export function DemoModeProvider({ children }) {
 			error,
 			refresh,
 			refreshActiveProfile,
+			ensureProfileData,
 			updateSettings,
 			setEnabled,
 			setFeatureFlag,
@@ -948,6 +973,7 @@ export function DemoModeProvider({ children }) {
 			profiles,
 			refresh,
 			refreshActiveProfile,
+			ensureProfileData,
 			runtime,
 			saving,
 			setEnabled,

@@ -1314,3 +1314,31 @@ html.dark .tk {
 .tk.is-doing .tk__check.has-steps svg {
 	display: block;
 }
+
+/* composer: "Daily" switch */
+.tk-board > .tk-composer .tk-composer__daily,
+.tk-composer .tk-composer__daily {
+	padding-inline: 12px;
+	cursor: pointer;
+}
+
+.tk-board > .tk-composer .tk-composer__daily::after {
+	display: none;
+}
+
+.tk-composer .tk-composer__daily.is-on {
+	color: #0f766e;
+	background: rgba(15, 118, 110, 0.12) !important;
+	box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.3);
+}
+
+html.dark .tk-composer .tk-composer__daily.is-on {
+	color: #5eead4;
+	background: rgba(94, 234, 212, 0.14) !important;
+}
+
+@media (max-width: 640px) {
+	.tk-composer .tk-composer__daily span {
+		display: none;
+	}
+}

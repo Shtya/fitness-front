@@ -505,6 +505,21 @@
 		font-weight: 600 !important;
 	}
 
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row__unread {
+		display: inline-grid !important;
+		min-width: 20px !important;
+		height: 20px !important;
+		place-items: center !important;
+		padding: 0 6px !important;
+		border-radius: 999px !important;
+		background: var(--c-accent) !important;
+		color: var(--c-badge-text) !important;
+		font-size: 11.5px !important;
+		font-weight: 700 !important;
+		line-height: 1 !important;
+		font-variant-numeric: tabular-nums;
+	}
+
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row__chevron {
 		display: none !important;
 	}
@@ -735,6 +750,20 @@
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-archived-row__count {
 		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-archived-row {
+		position: relative !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-archived-row__unread {
+		position: absolute !important;
+		top: 2px !important;
+		inset-inline-end: 2px !important;
+		min-width: 16px !important;
+		height: 16px !important;
+		padding: 0 4px !important;
+		font-size: 10px !important;
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-conversation-row {

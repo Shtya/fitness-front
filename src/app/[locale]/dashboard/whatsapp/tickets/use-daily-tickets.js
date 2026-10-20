@@ -10,7 +10,10 @@ import api from '@/utils/axios';
  * Each day starts clean: finished tickets from earlier days drop off, unfinished ones carry over.
  *
  * Ticket: { id, no, title, status: 'todo'|'doing'|'done', done, priority: 'high'|'medium'|'low',
- *           pinned, steps, progress, createdAt, doneAt, day, notes, items: [{ id, text, done }] }. A ticket can be split into `steps`;
+ *           pinned, steps, progress, createdAt, doneAt, day, notes, items: [{ id, text, done }],
+ *           repeat: 'none'|'daily', history: [{ day, done, progress, steps, doneAt }] }.
+ * A daily ticket is reset to pending by the server every new day; how each earlier day
+ * ended is kept in `history`. A ticket can be split into `steps`;
  * every check fills one more and the ticket is done when progress reaches steps.
  * The array order is the manual (drag) order.
  */
@@ -53,6 +56,8 @@ export function normalize(t) {
 		progress,
 		notes: typeof t.notes === 'string' ? t.notes : '',
 		items: Array.isArray(t.items) ? t.items.filter(i => i && typeof i.text === 'string').map(i => ({ id: String(i.id), text: i.text, done: Boolean(i.done) })) : [],
+		repeat: t.repeat === 'daily' ? 'daily' : 'none',
+		history: Array.isArray(t.history) ? t.history : [],
 	};
 }
 
@@ -85,6 +90,7 @@ const saved = t => ({
 	doneAt: t.doneAt ?? null,
 	notes: t.notes || '',
 	items: t.items || [],
+	repeat: t.repeat === 'daily' ? 'daily' : 'none',
 });
 
 /** A new id for a checklist line. */
@@ -214,7 +220,7 @@ export function useDailyTickets() {
 	);
 
 	const add = useCallback(
-		(title, { priority = 'medium', steps = 1 } = {}) => {
+		(title, { priority = 'medium', steps = 1, repeat = 'none' } = {}) => {
 			const clean = title.trim().slice(0, MAX_TITLE);
 			if (!clean) return null;
 			const list = ticketsRef.current;
@@ -227,6 +233,7 @@ export function useDailyTickets() {
 				pinned: false,
 				steps: clampSteps(steps),
 				progress: 0,
+				repeat: repeat === 'daily' ? 'daily' : 'none',
 				createdAt: Date.now(),
 				doneAt: null,
 				day: dayKey(),
@@ -278,6 +285,12 @@ export function useDailyTickets() {
 				if (Array.isArray(items)) next.items = items.slice(0, MAX_ITEMS).map(i => ({ id: i.id, text: String(i.text).slice(0, MAX_ITEM_TEXT), done: Boolean(i.done) }));
 				return next.notes === t.notes && JSON.stringify(next.items) === JSON.stringify(t.items) ? t : next;
 			}),
+		[mapOne],
+	);
+
+	/** Daily tickets come back as pending every new day. */
+	const setRepeat = useCallback(
+		(id, repeat) => mapOne(id, t => (t.repeat === repeat ? t : { ...t, repeat: repeat === 'daily' ? 'daily' : 'none' })),
 		[mapOne],
 	);
 
@@ -348,5 +361,5 @@ export function useDailyTickets() {
 	/** Index lookup so undo can put a ticket back in its slot. */
 	const indexOf = useCallback(id => ticketsRef.current.findIndex(t => t.id === id), []);
 
-	return { tickets, ready, saveError, add, rename, toggle, setStatus, setSteps, setDetails, setPriority, togglePinned, setOrder, remove, restore, indexOf };
+	return { tickets, ready, saveError, add, rename, toggle, setStatus, setSteps, setDetails, setRepeat, setPriority, togglePinned, setOrder, remove, restore, indexOf };
 }
