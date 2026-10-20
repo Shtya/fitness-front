@@ -66,20 +66,38 @@
 	pointer-events: none;
 }
 
-/* Documents tab */
+/* Documents tab — editor fills the pane so the command bar stays pinned */
 .wa-documents-pane {
 	display: flex;
 	min-height: 0;
+	height: 100%;
+	flex: 1;
 	flex-direction: column;
+	overflow: hidden;
 }
 
 .wa-documents-editor {
-	min-height: 100%;
-	padding: 10px 12px;
+	display: flex;
+	min-height: 0;
+	flex: 1;
+	flex-direction: column;
+	padding: 0;
+}
+
+.wa-documents-editor .sd-shell--md {
+	flex: 1;
+	min-height: 0;
+	height: 100% !important;
+	border-radius: 0;
+	border: none;
+}
+
+.wa-documents-editor .sd-chrome {
+	flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
 	.wa-documents-editor {
-		padding: 6px;
+		padding: 0;
 	}
 }

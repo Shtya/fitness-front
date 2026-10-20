@@ -184,6 +184,18 @@ export default function SmartDocumentEditor({
 		return t ? t.split(/\s+/).length : 0;
 	}, [countable]);
 	const charCount = countable.replace(/\s+/g, ' ').trim().length;
+	const readMins = wordCount === 0 ? 0 : Math.max(1, Math.round(wordCount / 180));
+	const countFmt = useMemo(
+		() => new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US'),
+		[locale],
+	);
+	const activeDoc = useMemo(
+		() => (activeId ? history.find((h) => h.id === activeId) || null : null),
+		[activeId, history],
+	);
+	const chromeTitle =
+		activeDoc?.title || titleFromSource(text) || labels.untitled || 'Untitled';
+	const uiDir = locale === 'ar' ? 'rtl' : 'ltr';
 
 	const persistDraft = useCallback(
 		(nextText, nextId) => {
@@ -702,81 +714,57 @@ export default function SmartDocumentEditor({
 			</aside>
 
 			<div className="sd-main">
-				<header className="sd-chrome">
+				<header className="sd-chrome sd-chrome--editor" dir={uiDir}>
 					<div className="sd-chrome-lead">
 						<button
 							type="button"
-							className="sd-icon-btn"
+							className={`sd-tool-btn sd-chrome-history${historyOpen ? ' is-open' : ''}`}
 							onClick={() => setHistoryOpen((v) => !v)}
 							title={historyOpen ? labels.hideHistory || 'Hide history' : labels.showHistory || 'Show history'}
+							aria-pressed={historyOpen}
 						>
-							{historyOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+							{historyOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
 						</button>
-						<span className="sd-badge">
-							<CheckSquare size={12} strokeWidth={2.2} />
-							{labels.badge || 'Document'}
-						</span>
+						<div className="sd-chrome-identity">
+							<span className="sd-chrome-kicker">
+								<CheckSquare size={11} strokeWidth={2.4} />
+								{labels.badge || 'Document'}
+								{savedFlash ? <span className="sd-saved">{labels.saved || 'Saved'}</span> : null}
+							</span>
+							{renamingId && renamingId === activeId ? (
+								<input
+									ref={renameRef}
+									className="sd-chrome-title-input"
+									value={renameDraft}
+									onChange={(e) => setRenameDraft(e.target.value)}
+									onBlur={commitRename}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											commitRename();
+										} else if (e.key === 'Escape') {
+											e.preventDefault();
+											cancelRename();
+										}
+									}}
+									aria-label={labels.rename || 'Rename'}
+								/>
+							) : (
+								<button
+									type="button"
+									className="sd-chrome-title"
+									title={activeDoc ? labels.renameHint || 'Click to rename' : chromeTitle}
+									onClick={(e) => {
+										if (activeDoc) startRename(activeDoc, e);
+									}}
+								>
+									{chromeTitle}
+								</button>
+							)}
+						</div>
 					</div>
 
-					<div className="sd-chrome-actions">
-						<button
-							type="button"
-							className="sd-icon-btn sd-export-btn"
-							title={labels.export || 'Export as Word document'}
-							disabled={exporting}
-							onClick={() => void exportActiveDocument()}
-						>
-							{exporting ? (
-								<Loader2 size={15} className="animate-spin" />
-							) : (
-								<FileDown size={15} />
-							)}
-							<span className="sd-export-label">{labels.exportShort || labels.export || 'Export'}</span>
-						</button>
-						<button
-							type="button"
-							className={`sd-icon-btn sd-share-btn${activeShareToken ? ' is-live' : ''}${shareCopied ? ' is-copied' : ''}`}
-							title={
-								activeShareToken
-									? labels.shareAgain || 'Copy share link (updates the live doc)'
-									: labels.share || 'Share document'
-							}
-							disabled={sharing}
-							onClick={() => void shareActiveDocument()}
-							onContextMenu={(e) => {
-								e.preventDefault();
-								void copyExistingShareLink();
-							}}
-						>
-							{sharing ? (
-								<Loader2 size={15} className="animate-spin" />
-							) : shareCopied ? (
-								<Check size={15} />
-							) : activeShareToken ? (
-								<Link2 size={15} />
-							) : (
-								<Share2 size={15} />
-							)}
-						</button>
-						{activeShareToken ? (
-							<button
-								type="button"
-								className={`sd-icon-btn${visitsOpen ? ' is-open' : ''}`}
-								title={labels.shareVisitors || 'Who opened this link'}
-								onClick={() => void loadVisits()}
-							>
-								<Users size={15} />
-							</button>
-						) : null}
-						<button
-							type="button"
-							className={`sd-icon-btn sd-lookup-launch${shelfOpen ? ' is-open' : ''}`}
-							title={labels.shelfButton || 'Review words'}
-							onClick={() => setShelfOpen((v) => !v)}
-						>
-							<Bookmark size={15} />
-						</button>
-						<TypographyPanel settings={typography} onChange={updateTypography} labels={labels} />
+					<div className="sd-chrome-meter">
 						<div className="sd-seg" role="tablist" aria-label={labels.modeLabel || 'Mode'}>
 							<button
 								type="button"
@@ -785,7 +773,7 @@ export default function SmartDocumentEditor({
 								className={mode === 'edit' ? 'is-active' : ''}
 								onClick={() => setMode('edit')}
 							>
-								<Code2 size={13} />
+								<Code2 size={14} />
 								{labels.edit || 'Edit'}
 							</button>
 							<button
@@ -799,21 +787,100 @@ export default function SmartDocumentEditor({
 									setMode('preview');
 								}}
 							>
-								<Eye size={13} />
+								<Eye size={14} />
 								{labels.preview || 'Preview'}
 							</button>
 						</div>
-
 						<div className="sd-stats" aria-live="polite">
-							{savedFlash ? <span className="sd-saved">{labels.saved || 'Saved'}</span> : null}
-							<span>
-								{wordCount} {labels.words || 'words'}
+							<span className="sd-stat">
+								<b>{countFmt.format(wordCount)}</b>
+								<small>{labels.words || 'words'}</small>
 							</span>
-							<span className="sd-dot" />
-							<span>
-								{charCount} {labels.chars || 'chars'}
+							<span className="sd-stat">
+								<b>{countFmt.format(charCount)}</b>
+								<small>{labels.chars || 'chars'}</small>
+							</span>
+							<span className="sd-stat">
+								<b>{countFmt.format(readMins)}</b>
+								<small>{labels.readMins || 'min'}</small>
 							</span>
 						</div>
+					</div>
+
+					<div className="sd-chrome-actions">
+						<div className="sd-tool-group" role="group" aria-label={labels.typography || 'Typography'}>
+							<TypographyPanel
+								settings={typography}
+								onChange={updateTypography}
+								labels={labels}
+								triggerLabel={labels.typeShort || labels.typography || 'Type'}
+							/>
+							<button
+								type="button"
+								className={`sd-tool-btn sd-lookup-launch${shelfOpen ? ' is-open' : ''}`}
+								title={labels.shelfButton || 'Review words'}
+								onClick={() => setShelfOpen((v) => !v)}
+							>
+								<Bookmark size={15} />
+								<span className="sd-tool-label">{labels.reviewShort || labels.shelfButton || 'Review'}</span>
+							</button>
+						</div>
+						<div className="sd-tool-group" role="group">
+							<button
+								type="button"
+								className={`sd-tool-btn sd-share-btn${activeShareToken ? ' is-live' : ''}${shareCopied ? ' is-copied' : ''}`}
+								title={
+									activeShareToken
+										? labels.shareAgain || 'Copy share link (updates the live doc)'
+										: labels.share || 'Share document'
+								}
+								disabled={sharing}
+								onClick={() => void shareActiveDocument()}
+								onContextMenu={(e) => {
+									e.preventDefault();
+									void copyExistingShareLink();
+								}}
+							>
+								{sharing ? (
+									<Loader2 size={15} className="animate-spin" />
+								) : shareCopied ? (
+									<Check size={15} />
+								) : activeShareToken ? (
+									<Link2 size={15} />
+								) : (
+									<Share2 size={15} />
+								)}
+								<span className="sd-tool-label">
+									{activeShareToken
+										? labels.shareLive || labels.shareShort || 'Live'
+										: labels.shareShort || 'Share'}
+								</span>
+							</button>
+							{activeShareToken ? (
+								<button
+									type="button"
+									className={`sd-tool-btn${visitsOpen ? ' is-open' : ''}`}
+									title={labels.shareVisitors || 'Who opened this link'}
+									onClick={() => void loadVisits()}
+								>
+									<Users size={15} />
+								</button>
+							) : null}
+						</div>
+						<button
+							type="button"
+							className="sd-tool-btn sd-export-btn"
+							title={labels.export || 'Export as Word document'}
+							disabled={exporting}
+							onClick={() => void exportActiveDocument()}
+						>
+							{exporting ? (
+								<Loader2 size={15} className="animate-spin" />
+							) : (
+								<FileDown size={15} />
+							)}
+							<span className="sd-export-label">{labels.exportShort || labels.export || 'Export'}</span>
+						</button>
 					</div>
 				</header>
 

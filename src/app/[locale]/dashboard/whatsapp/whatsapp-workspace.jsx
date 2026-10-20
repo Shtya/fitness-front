@@ -29626,11 +29626,9 @@ function WhatsAppWorkspaceContent() {
 
 				{activeTab === 'documents' && isAdmin && (
 					<div className="wa-dk wa-secondary-pane wa-documents-pane">
-						<div className="min-h-0 flex-1 overflow-y-auto nice-scroll">
-							<Suspense fallback={<WaPaneLoading label={t.loading} />}>
-								<DocumentEditorWorkspace className="wa-documents-editor" />
-							</Suspense>
-						</div>
+						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+							<DocumentEditorWorkspace className="wa-documents-editor" />
+						</Suspense>
 					</div>
 				)}
 

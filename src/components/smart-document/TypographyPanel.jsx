@@ -50,7 +50,7 @@ function FontChoices({ fonts, value, onPick, lang }) {
 	);
 }
 
-export default function TypographyPanel({ settings, onChange, labels = {} }) {
+export default function TypographyPanel({ settings, onChange, labels = {}, triggerLabel }) {
 	const [open, setOpen] = useState(false);
 	const [pos, setPos] = useState(null);
 	const triggerRef = useRef(null);
@@ -112,13 +112,14 @@ export default function TypographyPanel({ settings, onChange, labels = {} }) {
 			<button
 				ref={triggerRef}
 				type="button"
-				className={`sd-icon-btn sd-typo-trigger${open ? ' is-open' : ''}`}
+				className={`sd-tool-btn sd-typo-trigger${open ? ' is-open' : ''}`}
 				aria-expanded={open}
 				aria-haspopup="dialog"
 				title={L.typography}
 				onClick={() => setOpen((v) => !v)}
 			>
 				<Type size={15} />
+				{triggerLabel ? <span className="sd-tool-label">{triggerLabel}</span> : null}
 			</button>
 
 			{open && pos && typeof document !== 'undefined'
