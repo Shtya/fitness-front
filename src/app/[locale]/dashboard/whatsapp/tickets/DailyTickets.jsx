@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Check, CheckCheck, Flag, Pin, Plus, Ticket, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Check, CheckCheck, ListChecks, Pin, Plus, Ticket, Trash2, Undo2, X } from 'lucide-react';
 import { MAX_TITLE, dayKey } from './use-daily-tickets';
 import { COPY, sortTickets } from './tickets-model';
-import { MiniMenu, PriorityBadge, StatusChip, TicketMenu, stepInOrder, ticketKeyHandler, useSortable } from './tickets-ui';
+import { DetailsHint, MiniMenu, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, stepInOrder, ticketKeyHandler, useSortable } from './tickets-ui';
+import TicketDialog from './TicketDialog';
 import TicketsWall from './TicketsWall';
 import './daily-tickets.css';
 
@@ -28,6 +29,8 @@ const T = {
 		views: 'View',
 		viewList: 'Tickets',
 		viewWall: 'Wall',
+		greet: { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening' },
+		count: n => (n === 1 ? '1 task' : `${n} tasks`),
 	},
 	ar: {
 		newTicket: 'تذكرة جديدة',
@@ -48,6 +51,8 @@ const T = {
 		views: 'طريقة العرض',
 		viewList: 'تذاكر',
 		viewWall: 'الحائط',
+		greet: { morning: 'صباح الخير', afternoon: 'نهارك سعيد', evening: 'مساء الخير' },
+		count: n => (n === 1 ? 'مهمة واحدة' : n === 2 ? 'مهمتين' : n >= 3 && n <= 10 ? `${n} مهام` : `${n} مهمة`),
 	},
 };
 
@@ -72,15 +77,22 @@ function carriedLabel(day, ar) {
 	return t.carriedOn(new Intl.DateTimeFormat(locale(ar), { day: 'numeric', month: 'short' }).format(new Date(Y, M - 1, D)));
 }
 
+function greetingFor(date, t) {
+	const h = date.getHours();
+	if (h >= 5 && h < 12) return t.greet.morning;
+	if (h >= 12 && h < 17) return t.greet.afternoon;
+	return t.greet.evening;
+}
+
 const isTyping = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 
-/** The composer: title + priority, Enter adds. Used in the corner popover and on the board. */
+/** The composer: title + steps, Enter adds. Used in the corner popover and on the board. */
 function Composer({ ar, onAdd, autoFocus, compact, inputRef }) {
 	const t = T[ar ? 'ar' : 'en'];
 	const c = COPY[ar ? 'ar' : 'en'];
 	const id = useId();
 	const [value, setValue] = useState('');
-	const [priority, setPriority] = useState('medium');
+	const [steps, setSteps] = useState(1);
 	const ownInput = useRef(null);
 	const input = inputRef || ownInput;
 	useEffect(() => {
@@ -89,8 +101,9 @@ function Composer({ ar, onAdd, autoFocus, compact, inputRef }) {
 	const submit = event => {
 		event.preventDefault();
 		if (!value.trim()) return;
-		onAdd(value, { priority });
+		onAdd(value, { steps });
 		setValue('');
+		setSteps(1);
 		input.current?.focus();
 	};
 	return (
@@ -112,18 +125,20 @@ function Composer({ ar, onAdd, autoFocus, compact, inputRef }) {
 			/>
 			{value.length > MAX_TITLE - 20 ? <span className="tk-composer__count">{MAX_TITLE - value.length}</span> : null}
 			<MiniMenu
-				label={`${t.priority}: ${c.priority[priority]}`}
-				title={t.priority}
-				icon={<Flag size={15} className={`tkx-prio-ico is-${priority}`} aria-hidden />}
-				text={compact ? null : c.priority[priority]}
-				buttonClassName="tkx-chipbtn tk-composer__prio"
-				items={['high', 'medium', 'low'].map(p => ({
-					id: p,
-					label: c.priorityLong[p],
-					icon: <Flag size={15} className={`tkx-prio-ico is-${p}`} />,
-					checked: priority === p,
-					onSelect: () => setPriority(p),
-				}))}
+				label={`${c.steps}: ${steps === 1 ? c.oneStep : c.stepsN(steps)}`}
+				title={c.stepsHint}
+				icon={<ListChecks size={15} aria-hidden />}
+				text={compact ? null : steps === 1 ? c.oneStep : c.stepsN(steps)}
+				buttonClassName={`tkx-chipbtn tk-composer__prio tk-composer__steps ${steps > 1 ? 'is-split' : ''}`}
+				items={[
+					{ heading: c.stepsHint },
+					...[1, 2, 3, 4, 5, 6, 8, 10].map(n => ({
+						id: `s${n}`,
+						label: n === 1 ? c.oneStep : c.stepsN(n),
+						checked: steps === n,
+						onSelect: () => setSteps(n),
+					})),
+				]}
 			/>
 			<button type="submit" className="tk-composer__add" disabled={!value.trim()} aria-label={t.add}>
 				<Plus size={17} aria-hidden />
@@ -141,7 +156,7 @@ export function TicketsLauncher({ ar, onAdd }) {
 	useEffect(() => {
 		if (!open) return undefined;
 		const onDown = event => {
-			// The composer's priority menu is portalled to <body>; picking from it is still "inside".
+			// The composer's steps menu is portalled to <body>; picking from it is still "inside".
 			if (!wrap.current?.contains(event.target) && !event.target.closest?.('.tkx-menu__list')) setOpen(false);
 		};
 		const onKey = event => {
@@ -227,7 +242,7 @@ function TicketCard({ ticket, ar, c, fresh, baseActions, onDelete, canMove, drag
 			ref={self}
 			data-flip={ticket.id}
 			tabIndex={0}
-			aria-label={`${ticket.title}. ${c.status[ticket.status]}. ${c.priorityLong[ticket.priority]}${ticket.pinned ? `. ${c.pinned}` : ''}`}
+			aria-label={`${ticket.title}. ${c.status[ticket.status]}${ticket.pinned ? `. ${c.pinned}` : ''}`}
 			onKeyDown={editing ? undefined : ticketKeyHandler(ticket, actions, ar)}
 			onPointerDown={editing ? undefined : event => onPointerDown(event, ticket.id)}
 			className={[
@@ -240,6 +255,7 @@ function TicketCard({ ticket, ar, c, fresh, baseActions, onDelete, canMove, drag
 				fresh ? 'is-new' : '',
 				leaving ? 'is-leaving' : '',
 				stamped ? 'is-stamped' : '',
+				ticket.steps > 1 ? 'has-steps' : '',
 			].join(' ')}
 		>
 			<div className="tk__clip">
@@ -247,12 +263,19 @@ function TicketCard({ ticket, ar, c, fresh, baseActions, onDelete, canMove, drag
 					<div className="tk__stub">
 						<button
 							type="button"
-							className="tk__check"
+							className={`tk__check ${ticket.steps > 1 && !ticket.done ? 'has-steps' : ''}`}
 							onClick={() => actions.toggle(ticket.id)}
 							aria-pressed={ticket.done}
-							aria-label={`${ticket.done ? c.reopen : c.markDone}: ${ticket.title}`}
+							aria-label={checkLabel(ticket, c)}
+							title={ticket.steps > 1 ? c.stepOf(ticket.progress, ticket.steps) : undefined}
 						>
-							<Check size={18} strokeWidth={3} aria-hidden />
+							{ticket.steps > 1 && !ticket.done ? (
+								<>
+									<StepRing steps={ticket.steps} progress={ticket.progress} size={40} stroke={3.5} />
+								</>
+							) : (
+								<Check size={18} strokeWidth={3} aria-hidden />
+							)}
 						</button>
 						<span className="tk__no" aria-hidden>
 							#{String(ticket.no).padStart(3, '0')}
@@ -287,17 +310,18 @@ function TicketCard({ ticket, ar, c, fresh, baseActions, onDelete, canMove, drag
 								</span>
 							</form>
 						) : (
-							<p className="tk__title" onDoubleClick={actions.startEdit}>
+							<p className="tk__title" onDoubleClick={() => actions.open(ticket.id)}>
 								{ticket.pinned ? <Pin size={14} className="tk__pinned" fill="currentColor" aria-label={c.pinned} /> : null}
 								<span>{ticket.title}</span>
 							</p>
 						)}
 						<div className="tk__meta">
 							{ticket.status !== 'todo' ? <StatusChip status={ticket.status} c={c} /> : null}
-							<PriorityBadge priority={ticket.priority} c={c} />
+							<DetailsHint ticket={ticket} c={c} />
 							<span>{ticket.done ? t.closed(timeOf(ticket.doneAt, ar)) : t.opened(timeOf(ticket.createdAt, ar))}</span>
 							{ticket.day !== today && !ticket.done ? <span className="tk__tag">{carriedLabel(ticket.day, ar)}</span> : null}
 						</div>
+						<StepBar ticket={ticket} c={c} />
 					</div>
 
 					{ticket.done ? (
@@ -324,6 +348,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const [freshId, setFreshId] = useState(null);
 	const [view, setView] = useState('list');
 	const [hideSaveError, setHideSaveError] = useState(false);
+	const [opened, setOpened] = useState(null); // { id, focus }
 	const composerInput = useRef(null);
 	const listRef = useRef(null);
 
@@ -364,11 +389,14 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const baseActions = {
 		toggle: store.toggle,
 		setStatus: store.setStatus,
-		setPriority: store.setPriority,
+		setSteps: store.setSteps,
+		setDetails: store.setDetails,
 		togglePinned: store.togglePinned,
 		rename: store.rename,
 		move: moveVisible,
+		open: (id, focus) => setOpened({ id, focus }),
 	};
+	const openedTicket = opened ? tickets.find(x => x.id === opened.id) : null;
 
 	// "N" jumps to the add field. Ignored while typing or when a ticket has focus.
 	useEffect(() => {
@@ -384,16 +412,24 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 		return () => document.removeEventListener('keydown', onKey);
 	}, []);
 
-	const date = new Intl.DateTimeFormat(locale(ar), { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+	const now = new Date();
+	const date = new Intl.DateTimeFormat(locale(ar), { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+	const total = tickets.length;
 
 	return (
 		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-list'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
 			<header className="tk-board__head">
 				<div className="tk-board__titles">
+					<p className="tk-board__greet">{greetingFor(now, t)}</p>
 					<h2 id="tk-heading" className="tk-board__title">
 						{t.heading}
 					</h2>
-					<p className="tk-board__date">{date}</p>
+					<p className="tk-board__date">
+						<CalendarDays size={15} aria-hidden />
+						<span>{date}</span>
+						<span className="tk-board__dot" aria-hidden />
+						<span>{t.count(total)}</span>
+					</p>
 				</div>
 				<div className="tk-view" role="group" aria-label={t.views}>
 					<button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} onClick={() => chooseView('list')}>
@@ -461,6 +497,8 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 					</ul>
 				)}
 			</div>
+
+			{openedTicket ? <TicketDialog key={openedTicket.id} ticket={openedTicket} ar={ar} c={c} actions={baseActions} focus={opened.focus} onClose={() => setOpened(null)} /> : null}
 		</section>
 	);
 }

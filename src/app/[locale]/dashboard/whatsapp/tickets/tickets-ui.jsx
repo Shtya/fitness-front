@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Check, Circle, CircleDot, Flag, MoreHorizontal, Pencil, Pin, PinOff, Play, RotateCcw, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, CheckCheck, Circle, Flag, ListChecks, Maximize2, Minus, MoreHorizontal, NotebookPen, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Trash2, Undo2 } from 'lucide-react';
+import { MAX_STEPS } from './use-daily-tickets';
 import './tickets-ui.css';
 
 /* ─── Menu ───────────────────────────────────────────────────────── */
@@ -196,6 +197,89 @@ export function StatusChip({ status, c }) {
 	);
 }
 
+/* ─── Steps ──────────────────────────────────────────────────────── */
+/** Segmented ring for the check button: one arc per step, the finished ones filled. */
+export function StepRing({ steps, progress, size = 30, stroke = 3 }) {
+	const r = (size - stroke) / 2;
+	const len = 2 * Math.PI * r;
+	const gap = Math.min(4, len / steps / 3);
+	const seg = len / steps - gap;
+	const filled = [];
+	for (let i = 0; i < progress; i += 1) filled.push(seg, gap);
+	filled.push(0, len);
+	const c = size / 2;
+	return (
+		<span className="tkx-stepc" style={{ width: size, height: size }} aria-hidden>
+			<svg className="tkx-steps-ring" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+				<circle className="tkx-steps-ring__track" cx={c} cy={c} r={r} strokeWidth={stroke} strokeDasharray={`${seg} ${gap}`} />
+				<circle className="tkx-steps-ring__fill" cx={c} cy={c} r={r} strokeWidth={stroke} strokeDasharray={filled.join(' ')} />
+			</svg>
+			<span className="tkx-stepc__n">
+				{progress}/{steps}
+			</span>
+		</span>
+	);
+}
+
+/**
+ * Segmented progress for a ticket split into steps: one segment per step, the latest one pops in,
+ * the next one breathes as a hint, and the bar shines once when every step is done.
+ */
+export function StepBar({ ticket, c }) {
+	if (ticket.steps < 2) return null;
+	const pct = Math.round((ticket.progress / ticket.steps) * 100);
+	return (
+		<div
+			className={`tkx-bar ${ticket.done ? 'is-done' : ''} ${ticket.steps > 10 ? 'is-dense' : ''}`}
+			role="progressbar"
+			aria-valuemin={0}
+			aria-valuemax={ticket.steps}
+			aria-valuenow={ticket.progress}
+			aria-label={c.stepOf(ticket.progress, ticket.steps)}
+		>
+			<div className="tkx-bar__head" aria-hidden>
+				<span className="tkx-bar__label">{c.stepsN(ticket.steps)}</span>
+				<span className="tkx-bar__pct">{pct}%</span>
+			</div>
+			<div className="tkx-bar__track" aria-hidden>
+				{Array.from({ length: ticket.steps }, (_, i) => (
+					<span key={i} className={i < ticket.progress ? (i === ticket.progress - 1 ? 'is-on is-last' : 'is-on') : i === ticket.progress ? 'is-next' : ''} />
+				))}
+			</div>
+		</div>
+	);
+}
+
+/** Small hints that a card has notes or a checklist inside. */
+export function DetailsHint({ ticket, c }) {
+	const items = ticket.items || [];
+	const done = items.filter(i => i.done).length;
+	if (!ticket.notes && !items.length) return null;
+	return (
+		<span className="tkx-details">
+			{ticket.notes ? (
+				<span title={c.hasNotes}>
+					<NotebookPen size={13} aria-hidden />
+					<span className="tkx-sr">{c.hasNotes}</span>
+				</span>
+			) : null}
+			{items.length ? (
+				<span title={c.itemsDone(done, items.length)}>
+					<ListChecks size={13} aria-hidden />
+					{done}/{items.length}
+				</span>
+			) : null}
+		</span>
+	);
+}
+
+/** What the check button does right now, for its label. */
+export function checkLabel(ticket, c) {
+	if (ticket.done) return `${c.reopen}: ${ticket.title}`;
+	if (ticket.steps > 1) return `${c.nextStep} (${ticket.progress + 1}/${ticket.steps}): ${ticket.title}`;
+	return `${c.markDone}: ${ticket.title}`;
+}
+
 /* ─── 3D push pin ────────────────────────────────────────────────── */
 let pinSeq = 0;
 export function PushPin({ color, size = 30, gold }) {
@@ -232,26 +316,32 @@ export function PushPin({ color, size = 30, gold }) {
 
 /* ─── Ticket actions ─────────────────────────────────────────────── */
 export function ticketMenuItems(ticket, c, actions) {
-	const { setStatus, toggle, setPriority, togglePinned, startEdit, move, remove, canMove } = actions;
+	const { setStatus, toggle, setSteps, togglePinned, startEdit, open, move, remove, canMove } = actions;
+	const split = ticket.steps > 1;
 	const items = [
-		ticket.done
-			? { id: 'reopen', label: c.reopen, icon: <RotateCcw size={15} />, onSelect: () => toggle(ticket.id), hint: 'Space' }
-			: { id: 'done', label: c.markDone, icon: <Check size={15} />, onSelect: () => toggle(ticket.id), hint: 'Space' },
+		{ id: 'open', label: c.open, icon: <Maximize2 size={15} />, onSelect: () => open(ticket.id), hint: 'O' },
+		{ id: 'details', label: c.addDetails, icon: <NotebookPen size={15} />, onSelect: () => open(ticket.id, 'details') },
+		{ divider: true },
+		...(ticket.done
+			? [{ id: 'reopen', label: c.reopen, icon: <RotateCcw size={15} />, onSelect: () => toggle(ticket.id), hint: 'Space' }]
+			: split
+				? [
+						{ id: 'step', label: c.nextStep, icon: <Check size={15} />, onSelect: () => toggle(ticket.id), hint: 'Space' },
+						{ id: 'done', label: c.markDone, icon: <CheckCheck size={15} />, onSelect: () => setStatus(ticket.id, 'done') },
+					]
+				: [{ id: 'done', label: c.markDone, icon: <Check size={15} />, onSelect: () => toggle(ticket.id), hint: 'Space' }]),
 		ticket.status === 'doing'
 			? { id: 'todo', label: c.backToTodo, icon: <Circle size={15} />, onSelect: () => setStatus(ticket.id, 'todo'), hint: 'S' }
 			: { id: 'start', label: c.start, icon: <Play size={15} />, onSelect: () => setStatus(ticket.id, 'doing'), hint: 'S', disabled: ticket.done },
 		{ id: 'pin', label: ticket.pinned ? c.unpin : c.pin, icon: ticket.pinned ? <PinOff size={15} /> : <Pin size={15} />, onSelect: () => togglePinned(ticket.id), hint: 'P' },
 		{ id: 'edit', label: c.edit, icon: <Pencil size={15} />, onSelect: () => startEdit(), hint: 'Enter' },
 		{ divider: true },
-		{ heading: c.filterPriority },
-		...['high', 'medium', 'low'].map((p, i) => ({
-			id: `p-${p}`,
-			label: c.priority[p],
-			icon: <CircleDot size={15} className={`tkx-prio-ico is-${p}`} />,
-			checked: ticket.priority === p,
-			onSelect: () => setPriority(ticket.id, p),
-			hint: String(i + 1),
-		})),
+		{ heading: split ? `${c.steps} · ${ticket.progress}/${ticket.steps}` : c.steps },
+		{ id: 'step-add', label: c.addStep, icon: <Plus size={15} />, onSelect: () => setSteps(ticket.id, ticket.steps + 1), hint: '+', disabled: ticket.steps >= MAX_STEPS },
+		{ id: 'step-remove', label: c.removeStep, icon: <Minus size={15} />, onSelect: () => setSteps(ticket.id, ticket.steps - 1), hint: '−', disabled: ticket.steps <= 1 },
+		...(split
+			? [{ id: 'step-reset', label: c.resetSteps, icon: <RotateCcw size={15} />, onSelect: () => setStatus(ticket.id, 'todo'), disabled: ticket.progress === 0 && !ticket.done }]
+			: []),
 	];
 	if (canMove) {
 		items.push(
@@ -280,14 +370,16 @@ export function TicketMenu({ ticket, c, actions }) {
 export function ticketKeyHandler(ticket, actions, rtl) {
 	return event => {
 		if (event.target !== event.currentTarget) return;
-		const { setStatus, toggle, setPriority, togglePinned, startEdit, move, remove, canMove } = actions;
+		const { setStatus, toggle, setSteps, togglePinned, startEdit, open, move, remove, canMove } = actions;
 		const k = event.key;
 		let handled = true;
 		if (k === 'Enter') startEdit();
 		else if (k === ' ') toggle(ticket.id);
 		else if (k === 's' || k === 'S') setStatus(ticket.id, ticket.status === 'doing' ? 'todo' : 'doing');
 		else if (k === 'p' || k === 'P') togglePinned(ticket.id);
-		else if (k === '1' || k === '2' || k === '3') setPriority(ticket.id, ['high', 'medium', 'low'][Number(k) - 1]);
+		else if (k === '+' || k === '=') setSteps(ticket.id, ticket.steps + 1);
+		else if (k === '-') setSteps(ticket.id, ticket.steps - 1);
+		else if (k === 'o' || k === 'O') open(ticket.id);
 		else if (k === 'Delete' || k === 'Backspace') remove(ticket);
 		else if (event.altKey && canMove && (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'ArrowDown')) {
 			const earlier = k === 'ArrowUp' || (rtl ? k === 'ArrowRight' : k === 'ArrowLeft');
@@ -363,12 +455,18 @@ export function stepInOrder(ids, id, delta, isPinned) {
 	return next;
 }
 
+/**
+ * Carries the board's colour tokens onto a node outside it (portal, drag clone). All reads come
+ * before any write: writing in between makes every read force a full-page style recalculation.
+ */
 function copyCustomProps(from, to) {
 	const cs = getComputedStyle(from);
-	for (let i = 0; i < cs.length; i += 1) {
+	const props = [];
+	for (let i = 0, n = cs.length; i < n; i += 1) {
 		const name = cs[i];
-		if (name.startsWith('--')) to.style.setProperty(name, cs.getPropertyValue(name));
+		if (name.startsWith('--')) props.push([name, cs.getPropertyValue(name)]);
 	}
+	for (const [name, value] of props) to.style.setProperty(name, value);
 }
 
 /**

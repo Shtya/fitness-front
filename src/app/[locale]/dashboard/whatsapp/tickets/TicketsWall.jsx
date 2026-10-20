@@ -1,24 +1,20 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Check, CheckCheck, GripVertical, Pin, Plus } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarDays, Check, CheckCheck, Pin, Plus } from 'lucide-react';
 import { MAX_TITLE, dayKey } from './use-daily-tickets';
-import { PriorityBadge, PushPin, StatusChip, TicketMenu, ticketKeyHandler, useSortable } from './tickets-ui';
+import { DetailsHint, PushPin, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
 import './tickets-wall.css';
 
 /*
- * Wall view: paper notes hanging on twine inside a slim oak frame, each held by a push pin.
- * Notes are laid out in rows (no overlap); the twine sags and every note hangs where the string
- * actually is. Mouse/pen can drag notes to reorder; keyboard and the note menu can move them too.
+ * Wall view: pastel sticky notes pinned to a corkboard in a thin wooden frame. Mouse/pen drag
+ * reorders; keyboard and each note's menu can move notes too. Double-click a note to open it.
  */
 
 const FONT_ID = 'tw-hand-fonts';
 const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Caveat:wght@500;700&display=swap';
-const PINS = ['#e5484d', '#3b82f6', '#22a861', '#a855f7', '#f97316', '#0ea5a4', '#db2777'];
-
-// Twine path: M0 4 Q50 32 100 4 in a 100×20 box stretched to STRING_H px → y(t) = 4 + 56·t·(1−t).
-const STRING_H = 22;
-const sagAt = t => (4 + 56 * t * (1 - t)) * (STRING_H / 20);
+const PINS = ['#e5484d', '#3b82f6', '#22a861', '#a855f7', '#f5b400', '#0ea5a4', '#db2777'];
+const TONES = ['yellow', 'blue', 'pink', 'green'];
 
 function hash(str) {
 	let h = 0;
@@ -37,30 +33,21 @@ function useHandFonts() {
 	}, []);
 }
 
-/** Columns from the wall's own width: one column turns the wall into a stacked list. */
-function useColumns(ref) {
-	const [cols, setCols] = useState(3);
-	useLayoutEffect(() => {
-		const el = ref.current;
-		if (!el) return undefined;
-		const measure = () => {
-			const w = el.clientWidth;
-			setCols(w < 400 ? 1 : Math.max(2, Math.min(5, Math.floor(w / 178))));
-		};
-		measure();
-		const ro = new ResizeObserver(measure);
-		ro.observe(el);
-		return () => ro.disconnect();
-	}, [ref]);
-	return cols;
+const timeOf = (ms, ar) => new Intl.DateTimeFormat(ar ? 'ar-EG-u-nu-latn' : 'en-US', { hour: 'numeric', minute: '2-digit' }).format(ms);
+
+function whenLabel(ticket, c, ar) {
+	if (ticket.done && ticket.doneAt) return c.doneAt(timeOf(ticket.doneAt, ar));
+	if (ticket.day !== dayKey()) return c.fromYesterday;
+	return c.today(timeOf(ticket.createdAt, ar));
 }
 
-function NotePaper({ ticket, c, ar, editing, draft, setDraft, finishEdit, field, actions, onToggleDone }) {
-	const carried = ticket.day !== dayKey() && !ticket.done;
+function NotePaper({ ticket, c, ar, tone, editing, draft, setDraft, finishEdit, field, actions, onToggleDone }) {
 	return (
-		<div className={`tw-paper is-${ticket.priority} ${ticket.pinned ? 'is-pinned' : ''}`}>
+		<div
+			className={`tw-paper is-${tone} ${ticket.pinned ? 'is-pinned' : ''} ${ticket.steps > 1 ? 'has-steps' : ''}`}
+		>
 			<div className="tw-top">
-				<PriorityBadge priority={ticket.priority} c={c} />
+				{ticket.status !== 'todo' ? <StatusChip status={ticket.status} c={c} /> : null}
 				{ticket.pinned ? (
 					<span className="tw-pinned" title={c.pinned}>
 						<Pin size={12} fill="currentColor" aria-hidden />
@@ -93,23 +80,28 @@ function NotePaper({ ticket, c, ar, editing, draft, setDraft, finishEdit, field,
 					aria-label={c.edit}
 				/>
 			) : (
-				<p className="tw-text" dir="auto" onDoubleClick={actions.startEdit}>
+				<p className="tw-text" dir="auto" onDoubleClick={() => actions.open(ticket.id)}>
 					<span>{ticket.title}</span>
 				</p>
 			)}
 
+			
+
 			<div className="tw-bottom">
-				{ticket.status !== 'todo' ? <StatusChip status={ticket.status} c={c} /> : null}
-				{carried ? <span className="tw-carried">{ar ? 'من امبارح' : 'From yesterday'}</span> : null}
+				<span className={`tw-when ${ticket.day !== dayKey() && !ticket.done ? 'is-carried' : ''}`}>
+					<CalendarDays size={14} aria-hidden />
+					{whenLabel(ticket, c, ar)}
+				</span>
+				<DetailsHint ticket={ticket} c={c} />
 				<button
 					type="button"
-					className="tw-check"
+					className={`tw-check ${ticket.steps > 1 && !ticket.done ? 'has-steps' : ''}`}
 					onClick={onToggleDone}
 					aria-pressed={ticket.done}
-					aria-label={`${ticket.done ? c.reopen : c.markDone}: ${ticket.title}`}
-					title={ticket.done ? c.reopen : c.markDone}
+					aria-label={checkLabel(ticket, c)}
+					title={ticket.done ? c.reopen : ticket.steps > 1 ? c.nextStep : c.markDone}
 				>
-					<Check size={15} strokeWidth={3} aria-hidden />
+					{ticket.steps > 1 && !ticket.done ? <StepRing steps={ticket.steps} progress={ticket.progress} size={36} stroke={3} /> : <Check size={15} strokeWidth={3} aria-hidden />}
 				</button>
 			</div>
 
@@ -123,7 +115,7 @@ function NotePaper({ ticket, c, ar, editing, draft, setDraft, finishEdit, field,
 	);
 }
 
-function WallNote({ ticket, c, ar, y, fresh, baseActions, onDelete, canMove, dragging, onPointerDown }) {
+function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, dragging, onPointerDown }) {
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(ticket.title);
 	const [leaving, setLeaving] = useState(false);
@@ -132,7 +124,8 @@ function WallNote({ ticket, c, ar, y, fresh, baseActions, onDelete, canMove, dra
 	const self = useRef(null);
 	const closing = useRef(false);
 	const h = hash(ticket.id);
-	const tilt = ((h % 7) - 3) * 0.9;
+	const tilt = ((h % 7) - 3) * 0.7;
+	const tone = TONES[h % TONES.length];
 
 	useEffect(() => {
 		if (!editing) return;
@@ -174,7 +167,7 @@ function WallNote({ ticket, c, ar, y, fresh, baseActions, onDelete, canMove, dra
 			data-note-id={ticket.id}
 			tabIndex={0}
 			title={canMove ? c.dragHint : undefined}
-			aria-label={`${ticket.title}. ${c.status[ticket.status]}. ${c.priorityLong[ticket.priority]}${ticket.pinned ? `. ${c.pinned}` : ''}`}
+			aria-label={`${ticket.title}. ${c.status[ticket.status]}${ticket.pinned ? `. ${c.pinned}` : ''}`}
 			className={[
 				'tw-note',
 				ticket.done ? 'is-done' : '',
@@ -185,7 +178,7 @@ function WallNote({ ticket, c, ar, y, fresh, baseActions, onDelete, canMove, dra
 				editing ? 'is-editing' : '',
 				dragging ? 'is-dragging' : '',
 			].join(' ')}
-			style={{ '--y': `${y}px`, '--tilt': `${tilt}deg` }}
+			style={{ '--tilt': `${tilt}deg` }}
 			onKeyDown={editing ? undefined : ticketKeyHandler(ticket, actions, ar)}
 			onPointerDown={editing ? undefined : event => onPointerDown(event, ticket.id)}
 		>
@@ -196,6 +189,7 @@ function WallNote({ ticket, c, ar, y, fresh, baseActions, onDelete, canMove, dra
 				ticket={ticket}
 				c={c}
 				ar={ar}
+				tone={tone}
 				editing={editing}
 				draft={draft}
 				setDraft={setDraft}
@@ -211,8 +205,6 @@ function WallNote({ ticket, c, ar, y, fresh, baseActions, onDelete, canMove, dra
 export default function TicketsWall({ ar, c, items, freshId, baseActions, onDelete, canDrag, onReorder, onAddRequest, showAdd }) {
 	useHandFonts();
 	const wallRef = useRef(null);
-	const cols = useColumns(wallRef);
-	const stacked = cols === 1;
 	const ids = useMemo(() => items.map(t => t.id), [items]);
 	const byId = useMemo(() => new Map(items.map(t => [t.id, t])), [items]);
 	const { dragId, order, onPointerDown } = useSortable({
@@ -226,65 +218,40 @@ export default function TicketsWall({ ar, c, items, freshId, baseActions, onDele
 		floatClass: 'tw-float',
 		pickSource: li => li.querySelector('.tw-paper'),
 	});
-
-	// While dragging, the note already sits where it would land.
 	const ordered = order.map(id => byId.get(id)).filter(Boolean);
 
-	const slots = [...ordered.map(ticket => ({ ticket })), ...(showAdd ? [{ add: true }] : [])];
-	const rows = [];
-	for (let i = 0; i < slots.length; i += cols) rows.push(slots.slice(i, i + cols));
-
 	return (
-		<div className={`tw-frame ${stacked ? 'is-stacked' : ''} ${canDrag ? 'can-drag' : ''}`}>
-			<div className="tw-wall tk-scroll" ref={wallRef}>
-				{rows.map((row, r) => (
-					<div className="tw-row" key={r}>
-						{stacked ? null : (
-							<svg className="tw-string" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden>
-								<path d="M0 4 Q50 32 100 4" />
-							</svg>
-						)}
-						<ul className="tw-row__notes" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-							{row.map((slot, i) => {
-								const y = stacked ? 0 : sagAt((i + 0.5) / cols);
-								if (slot.add) {
-									return (
-										<li key="add" className="tw-note tw-note--add" data-flip="__add" style={{ '--y': `${y}px`, '--tilt': '0deg' }}>
-											<button type="button" className="tw-paper tw-paper--add" onClick={onAddRequest}>
-												<Plus size={20} aria-hidden />
-												<span>{ar ? 'علّق مهمة جديدة' : 'Pin a new task'}</span>
-												<kbd className="tkx-kbd">N</kbd>
-											</button>
-										</li>
-									);
-								}
-								return (
-									<WallNote
-										key={slot.ticket.id}
-										ticket={slot.ticket}
-										c={c}
-										ar={ar}
-										y={y}
-										fresh={slot.ticket.id === freshId}
-										baseActions={baseActions}
-										onDelete={onDelete}
-										canMove={canDrag}
-										dragging={dragId === slot.ticket.id}
-										onPointerDown={onPointerDown}
-									/>
-								);
-							})}
-						</ul>
-					</div>
-				))}
+		<div className={`tw-frame ${canDrag ? 'can-drag' : ''}`}>
+			<div className="tw-board">
+				<div className="tw-wall tk-scroll" ref={wallRef}>
+					<ul className="tw-grid">
+						{ordered.map(ticket => (
+							<WallNote
+								key={ticket.id}
+								ticket={ticket}
+								c={c}
+								ar={ar}
+								fresh={ticket.id === freshId}
+								baseActions={baseActions}
+								onDelete={onDelete}
+								canMove={canDrag}
+								dragging={dragId === ticket.id}
+								onPointerDown={onPointerDown}
+							/>
+						))}
+						{showAdd ? (
+							<li className="tw-note tw-note--add" data-flip="__add">
+								<button type="button" className="tw-paper tw-paper--add" onClick={onAddRequest}>
+									<span className="tw-add__icon" aria-hidden>
+										<Plus size={20} />
+									</span>
+									<span className="tw-add__label">{ar ? 'علّق مهمة جديدة' : 'Pin a new task'}</span>
+								</button>
+							</li>
+						) : null}
+					</ul>
+				</div>
 			</div>
-
-			{canDrag && items.length > 1 && !stacked ? (
-				<p className="tw-hint">
-					<GripVertical size={13} aria-hidden />
-					{c.dragHint}
-				</p>
-			) : null}
 		</div>
 	);
 }

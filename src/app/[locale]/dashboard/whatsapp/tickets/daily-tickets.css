@@ -1131,3 +1131,186 @@ html.dark .tk {
 		inset 0 0 0 1px var(--idle-edge),
 		0 0 0 2px var(--idle-accent);
 }
+
+/* ================================================================== */
+/* v5: greeting header, stat cards, roomier composer                   */
+/* ================================================================== */
+
+.tk-board__head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: end;
+	gap: 16px 24px;
+}
+
+.tk-board__greet {
+	margin: 0 0 4px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--idle-accent);
+}
+
+.tk-board__head .tk-board__title {
+	font-size: 30px;
+	font-weight: 800;
+	letter-spacing: -0.025em;
+}
+
+.tk-board__head .tk-board__date {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	margin-top: 6px;
+	font-size: 13.5px;
+}
+
+.tk-board__date svg {
+	flex: none;
+	opacity: 0.8;
+}
+
+.tk-board__dot {
+	width: 4px;
+	height: 4px;
+	border-radius: 999px;
+	background: currentColor;
+	opacity: 0.5;
+}
+
+/* composer: a raised field with a clear priority chip and a solid add button */
+.tk-board > .tk-composer {
+	height: 62px;
+	padding: 0 8px 0 18px;
+	border-radius: 18px;
+	box-shadow:
+		inset 0 0 0 1px var(--idle-edge),
+		0 10px 24px -18px rgba(11, 20, 26, 0.4);
+}
+
+[dir='rtl'] .tk-board > .tk-composer {
+	padding: 0 18px 0 8px;
+}
+
+.tk-board > .tk-composer:focus-within {
+	box-shadow:
+		inset 0 0 0 1.5px color-mix(in srgb, var(--idle-accent) 70%, transparent),
+		0 0 0 4px var(--idle-glow);
+}
+
+.tk-board > .tk-composer .tk-composer__prio {
+	height: 40px;
+	padding-inline: 12px 30px;
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--idle-text) 6%, transparent);
+}
+
+.tk-board > .tk-composer .tk-composer__prio::after {
+	content: '';
+	position: absolute;
+	inset-inline-end: 11px;
+	top: 50%;
+	width: 7px;
+	height: 7px;
+	border-right: 1.8px solid currentColor;
+	border-bottom: 1.8px solid currentColor;
+	opacity: 0.6;
+	transform: translateY(-70%) rotate(45deg);
+}
+
+.tk-board > .tk-composer .tk-composer__prio {
+	position: relative;
+}
+
+.tk-board > .tk-composer .tk-composer__add {
+	height: 46px;
+	padding: 0 20px;
+	border-radius: 14px;
+	font-size: 14.5px;
+	box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--idle-accent) 80%, transparent);
+}
+
+@media (max-width: 1100px) {
+	.tk-board > .tk-composer .tk-composer__add {
+		width: 46px;
+		padding: 0;
+	}
+
+	.tk-board__head .tk-board__title {
+		font-size: 25px;
+	}
+}
+
+@media (max-width: 640px) {
+	.tk-board__head {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.tk-board > .tk-composer .tk-composer__prio {
+		padding-inline: 10px;
+	}
+
+	.tk-board > .tk-composer .tk-composer__prio::after,
+	.tk-board > .tk-composer .tk-composer__prio span {
+		display: none;
+	}
+}
+
+/* ================================================================== */
+/* v6: steps — each check fills one part of the ticket                 */
+/* ================================================================== */
+
+.tk__check.has-steps {
+	position: relative;
+	color: var(--idle-accent);
+	box-shadow: none;
+}
+
+.tk__check.has-steps .tkx-steps-ring {
+	position: absolute;
+	inset: 0;
+}
+
+.tk__check.has-steps:hover {
+	color: var(--idle-accent);
+	background: color-mix(in srgb, var(--idle-accent) 10%, transparent);
+}
+
+.tk__check.has-steps .tkx-stepc__n {
+	font-size: 11px;
+	color: var(--idle-text);
+}
+
+.tk__meta .tkx-details {
+	color: var(--idle-text-2);
+}
+
+/* room for the composer's focus ring: the board clips its overflow for the inner scroll */
+.tk-board {
+	width: calc(100% + 12px);
+	margin: -6px;
+	padding: 6px;
+}
+
+/* ─── progress on a list card ─── */
+.tk__body .tkx-bar {
+	--bar-off: color-mix(in srgb, var(--idle-text) 10%, transparent);
+	--bar-on: var(--idle-accent);
+	--bar-on-2: color-mix(in srgb, var(--idle-accent) 70%, #fff);
+	max-width: 360px;
+	margin-top: 8px;
+	color: var(--idle-text-2);
+}
+
+/* a ticket split into steps keeps its step circle while in progress */
+.tk.is-doing .tk__check.has-steps {
+	box-shadow: none;
+}
+
+.tk.is-doing .tk__check.has-steps::after {
+	display: none;
+}
+
+.tk.is-doing .tk__check.has-steps svg {
+	display: block;
+}

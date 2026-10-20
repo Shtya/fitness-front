@@ -1,0 +1,781 @@
+/*
+ * Desktop chats: the navigation rail and the chat list, following WhatsApp Web.
+ *
+ * Flat rows with a hairline under the text, a grey highlight for the open chat, green time
+ * and count for unread chats, a dropdown chevron that appears on hover, an "Archived" row
+ * that reads like a chat, and a collapsed (avatars only) list that lines up in its column.
+ *
+ * Desktop only (min-width: 769px); the phone layer (wa-mobile.css) is never touched.
+ * Prefix: one more .wa-web-desktop than wa-desktop.css, and this file loads after it.
+ */
+
+@media (min-width: 769px) {
+	html .wa-web-desktop {
+		--c-panel: #ffffff;
+		--c-rail: #f7f5f3;
+		--c-hover: #f5f6f6;
+		--c-active: #f0f2f5;
+		--c-rail-active: #e9e8e6;
+		--c-text: #111b21;
+		--c-text-2: #667781;
+		--c-icon: #54656f;
+		--c-sep: #e9edef;
+		--c-field: #f6f5f4;
+		--c-chip-border: #e9edef;
+		--c-chip-on: #d9fdd3;
+		--c-chip-on-text: #15603e;
+		--c-accent: #1daa61;
+		--c-accent-ink: #1b8755;
+		--c-badge-text: #ffffff;
+	}
+
+	html.dark .wa-web-desktop,
+	html[data-theme-mode='dark'] .wa-web-desktop {
+		--c-panel: #161717;
+		--c-rail: #1d1f1f;
+		--c-hover: #242626;
+		--c-active: #2e2f2f;
+		--c-rail-active: #2e2f2f;
+		--c-text: #fafafa;
+		--c-text-2: #a5a5a5;
+		--c-icon: #a5a5a5;
+		--c-sep: #222424;
+		--c-field: #242626;
+		--c-chip-border: #2e2f2f;
+		--c-chip-on: #103529;
+		--c-chip-on-text: #d9fdd3;
+		--c-accent: #21c063;
+		--c-accent-ink: #21c063;
+		--c-badge-text: #161717;
+	}
+
+	/* ─────────────────────────────────────────────────────────────── */
+	/* Navigation rail                                                  */
+	/* ─────────────────────────────────────────────────────────────── */
+	html .wa-web-desktop {
+		--r-bg: linear-gradient(180deg, #f8f8f6 0%, #f3f4f2 100%);
+		--r-solid: #f5f6f4;
+		--r-edge: rgba(11, 20, 26, 0.07);
+		--r-icon: #5b6b74;
+		--r-icon-hover: #111b21;
+		--r-hover: #ffffff;
+		--r-hover-shadow: 0 1px 2px rgba(11, 20, 26, 0.07), 0 4px 10px -6px rgba(11, 20, 26, 0.18);
+		--r-active: #dff5e7;
+		--r-active-ink: #128048;
+		--r-active-ring: rgba(29, 170, 97, 0.22);
+		--r-accent: #1daa61;
+	}
+
+	html.dark .wa-web-desktop,
+	html[data-theme-mode='dark'] .wa-web-desktop {
+		--r-bg: linear-gradient(180deg, #1c1e1e 0%, #191b1b 100%);
+		--r-solid: #1b1d1d;
+		--r-edge: rgba(255, 255, 255, 0.06);
+		--r-icon: #9aa3a7;
+		--r-icon-hover: #f5f6f6;
+		--r-hover: #262828;
+		--r-hover-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+		--r-active: rgba(33, 192, 99, 0.16);
+		--r-active-ink: #3ddc84;
+		--r-active-ring: rgba(33, 192, 99, 0.28);
+		--r-accent: #21c063;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail {
+		padding-bottom: 4px;
+		border-inline-end: 1px solid var(--r-edge) !important;
+		background: var(--r-bg) !important;
+		scrollbar-width: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail::-webkit-scrollbar,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__items::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* the dock and the profile always stay in view; only the tabs scroll if space runs out */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail {
+		overflow: hidden !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__items {
+		min-height: 0;
+		flex: 0 1 auto;
+		overflow-x: visible;
+		overflow-y: auto;
+		padding-bottom: 6px !important;
+		scrollbar-width: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__logo {
+		flex: none !important;
+	}
+
+	/* logo: the brand tile at the top */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__logo {
+		height: 58px !important;
+		flex: none;
+		color: #fff !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__logo svg {
+		box-sizing: content-box;
+		width: 21px !important;
+		height: 21px !important;
+		padding: 8.5px;
+		border-radius: 13px;
+		background: linear-gradient(160deg, #2bd673 0%, #1aa35b 100%);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.35),
+			0 8px 16px -8px rgba(29, 170, 97, 0.85);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__items {
+		gap: 3px !important;
+		padding-top: 4px !important;
+	}
+
+	/* tabs: rounded squares that lift on hover */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item {
+		position: relative;
+		width: 42px !important;
+		height: 42px !important;
+		margin: 0 auto !important;
+		border-radius: 13px !important;
+		background: transparent !important;
+		color: var(--r-icon) !important;
+		box-shadow: none !important;
+		transition:
+			background-color 0.16s ease,
+			color 0.16s ease,
+			box-shadow 0.16s ease,
+			transform 0.12s ease !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item svg {
+		width: 21px !important;
+		height: 21px !important;
+		stroke-width: 1.85 !important;
+		transition: transform 0.22s cubic-bezier(0.34, 1.5, 0.64, 1);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item:hover {
+		background: var(--r-hover) !important;
+		color: var(--r-icon-hover) !important;
+		box-shadow: var(--r-hover-shadow) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item:hover svg {
+		transform: scale(1.08);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item:active {
+		transform: scale(0.92);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item:focus-visible {
+		outline: 2px solid var(--r-accent) !important;
+		outline-offset: 2px;
+	}
+
+	/* the open tab: green tint, green icon, and a bar on the rail's edge */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item.is-active {
+		background: var(--r-active) !important;
+		color: var(--r-active-ink) !important;
+		box-shadow: inset 0 0 0 1px var(--r-active-ring) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item.is-active svg {
+		stroke-width: 2.1 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item.is-active::before {
+		content: '' !important;
+		position: absolute !important;
+		inset-inline-start: -11px !important;
+		top: 50% !important;
+		display: block !important;
+		width: 4px !important;
+		height: 20px !important;
+		margin-top: -10px;
+		border-radius: 0 4px 4px 0 !important;
+		background: var(--r-accent) !important;
+		opacity: 1 !important;
+		transform: none !important;
+		animation: wa-rail-bar 0.3s cubic-bezier(0.34, 1.5, 0.64, 1);
+	}
+
+	[dir='rtl'] .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item.is-active::before {
+		border-radius: 4px 0 0 4px !important;
+	}
+
+	@media (max-width: 1050px) {
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item.is-active::before {
+			inset-inline-start: -8px !important;
+		}
+	}
+
+	@keyframes wa-rail-bar {
+		from {
+			scale: 1 0.2;
+			opacity: 0;
+		}
+	}
+
+	/* unread count: a compact pill on the icon's corner, ringed in the tile's colour */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__badge {
+		position: absolute !important;
+		top: -7px !important;
+		inset-inline-start: 11px !important;
+		inset-inline-end: auto !important;
+		display: inline-grid !important;
+		min-width: 19px !important;
+		height: 18px !important;
+		min-height: 18px !important;
+		max-height: none !important;
+		place-items: center !important;
+		padding: 0 5px !important;
+		border: 2px solid var(--r-solid) !important;
+		border-radius: 999px !important;
+		background: var(--r-accent) !important;
+		color: #fff !important;
+		font-size: 10px !important;
+		font-weight: 800 !important;
+		line-height: 1 !important;
+		letter-spacing: -0.01em;
+		box-shadow: 0 3px 8px -3px rgba(29, 170, 97, 0.8) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item:hover .wa-desktop-rail__badge {
+		border-color: var(--r-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item.is-active .wa-desktop-rail__badge {
+		border-color: var(--r-active) !important;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__badge {
+		color: #0f1a14 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__divider {
+		width: 22px !important;
+		height: 2px !important;
+		margin: 7px auto !important;
+		border-radius: 2px;
+		background: var(--r-edge) !important;
+	}
+
+	/* short windows: tighter tabs so the dock and the profile stay in view */
+	@media (max-height: 960px) {
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__logo {
+			height: 52px !important;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__items {
+			gap: 1px !important;
+			padding-top: 0 !important;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__item {
+			height: 38px !important;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__divider {
+			margin: 4px auto !important;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
+			gap: 8px;
+			padding-bottom: 10px;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn {
+			height: 32px;
+		}
+	}
+
+	/* bottom dock: same tile language as the tabs */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
+		--dock-rail: var(--r-solid);
+		gap: 12px;
+		padding-bottom: 14px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf {
+		width: 46px;
+		gap: 3px;
+		padding: 4px;
+		border-radius: 16px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn {
+		width: 36px;
+		height: 36px;
+		border-radius: 11px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active::after,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-theme.is-dark::after {
+		display: none;
+	}
+
+	/* profile: green ring while the WhatsApp account is connected */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar.is-online .wa-ui-rail-avatar__img {
+		box-shadow:
+			0 0 0 2px var(--r-solid),
+			0 0 0 4px rgba(29, 170, 97, 0.55);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar.is-active .wa-ui-rail-avatar__img {
+		box-shadow:
+			0 0 0 2px var(--r-solid),
+			0 0 0 4px var(--r-accent);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-fallback {
+		color: var(--r-active-ink);
+		background: var(--r-active);
+	}
+
+	/* ─────────────────────────────────────────────────────────────── */
+	/* Chat list header                                                  */
+	/* ─────────────────────────────────────────────────────────────── */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list {
+		container-type: inline-size;
+		container-name: wa-chats;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list-header,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list-scroll,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-list {
+		background-color: var(--c-panel) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-chat-list-title-wrap {
+		display: flex !important;
+		align-items: center !important;
+		gap: 8px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-chat-list-title {
+		color: var(--c-text) !important;
+		font-size: 22px !important;
+		font-weight: 700 !important;
+		letter-spacing: -0.01em !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-chat-list-title-wrap .wa-unread-total {
+		display: inline-grid !important;
+		min-width: 22px !important;
+		height: 20px !important;
+		place-items: center !important;
+		padding: 0 7px !important;
+		border-radius: 999px !important;
+		background: var(--c-accent) !important;
+		color: var(--c-badge-text) !important;
+		font-size: 11.5px !important;
+		font-weight: 700 !important;
+		line-height: 1 !important;
+		box-shadow: none !important;
+	}
+
+	/* search: Ctrl K hint only where the field has room for it */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-search-kbd {
+		display: inline-flex;
+		height: 22px;
+		flex: none;
+		align-items: center;
+		padding: 0 7px;
+		border-radius: 6px;
+		color: var(--c-text-2);
+		box-shadow: inset 0 0 0 1px var(--c-sep);
+		font-family: inherit;
+		font-size: 11px;
+		font-weight: 600;
+		line-height: 1;
+		white-space: nowrap;
+		pointer-events: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-search-inline:focus-within .wa-search-kbd {
+		display: none;
+	}
+
+	@container wa-chats (max-width: 420px) {
+		.wa-search-kbd {
+			display: none !important;
+		}
+	}
+
+	/* filter pills: WhatsApp chips, counts centred on one line */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-filter-pills {
+		gap: 8px !important;
+		scrollbar-width: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-filter-pills::-webkit-scrollbar {
+		display: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill {
+		display: inline-flex !important;
+		flex: none;
+		align-items: center !important;
+		gap: 6px !important;
+		line-height: 1 !important;
+		white-space: nowrap;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill__icon {
+		flex: none;
+		color: var(--c-icon);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill.is-active .wa-filter-pill__icon {
+		color: currentColor;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill__count {
+		display: inline-flex;
+		min-width: 18px;
+		height: 18px;
+		align-items: center;
+		justify-content: center;
+		padding: 0 5px;
+		border-radius: 999px;
+		background: var(--c-accent);
+		color: var(--c-badge-text);
+		font-size: 11px;
+		font-weight: 700;
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* ─────────────────────────────────────────────────────────────── */
+	/* Archived + rows                                                   */
+	/* ─────────────────────────────────────────────────────────────── */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-list {
+		padding: 0 8px 8px !important;
+	}
+
+	/* "Archived" reads like a chat row: icon in the avatar column, count on the right */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row {
+		display: flex !important;
+		width: 100% !important;
+		height: 50px !important;
+		align-items: center !important;
+		gap: 15px !important;
+		margin: 0 !important;
+		padding: 0 14px 0 13px !important;
+		border: 0 !important;
+		border-radius: 10px !important;
+		background: transparent !important;
+		color: var(--c-text) !important;
+		box-shadow: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row:hover {
+		background: var(--c-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row__icon {
+		display: grid !important;
+		width: 49px !important;
+		height: 24px !important;
+		flex: none;
+		place-items: center !important;
+		background: transparent !important;
+		color: var(--c-accent) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row__title {
+		flex: 1;
+		color: var(--c-text) !important;
+		font-size: 16px !important;
+		font-weight: 500 !important;
+		text-align: start;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row__count {
+		color: var(--c-accent-ink) !important;
+		font-size: 12px !important;
+		font-weight: 600 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row__chevron {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-archived-row__back {
+		color: var(--c-accent) !important;
+	}
+
+	/* rows */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row {
+		align-items: center !important;
+		gap: 15px !important;
+		min-height: 72px;
+		padding: 0 14px 0 13px !important;
+		border-radius: 10px !important;
+		background: transparent !important;
+		box-shadow: none !important;
+		transition: background-color 0.12s ease !important;
+	}
+
+	/* hairline under the text, not under the avatar */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row::after {
+		content: '';
+		position: absolute;
+		inset-inline: 77px 0;
+		bottom: 0;
+		height: 1px;
+		background: var(--c-sep);
+		pointer-events: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:hover::after,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-active::after,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:has(+ .wa-conversation-row:hover)::after,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:has(+ .wa-conversation-row.is-active)::after {
+		opacity: 0;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:hover {
+		background: var(--c-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-active {
+		background: var(--c-active) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:focus-visible {
+		outline: 2px solid var(--c-accent) !important;
+		outline-offset: -2px;
+	}
+
+	/* avatar */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-avatar {
+		width: 49px !important;
+		height: 49px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-avatar > :first-child:not(.wa-story-avatar):not(svg) {
+		width: 49px !important;
+		height: 49px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-avatar-online-dot {
+		right: 0 !important;
+		bottom: 0 !important;
+		width: 13px !important;
+		height: 13px !important;
+		border: 2px solid var(--c-panel) !important;
+		background: var(--c-accent) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:hover .wa-avatar-online-dot {
+		border-color: var(--c-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-active .wa-avatar-online-dot {
+		border-color: var(--c-active) !important;
+	}
+
+	/* in the full list the count sits on the right, so the avatar needs no second badge */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list:not(.is-collapsed) .wa-unread-avatar-badge {
+		display: none !important;
+	}
+
+	/* text */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .title-chat {
+		color: var(--c-text) !important;
+		font-size: 16px !important;
+		font-weight: 400 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-unread .title-chat {
+		font-weight: 500 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .desc-chat {
+		margin-top: 2px;
+		color: var(--c-text-2) !important;
+		font-size: 14px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .desc-chat.is-typing {
+		color: var(--c-accent-ink) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .time-chat {
+		color: var(--c-text-2) !important;
+		font-size: 12px !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row.is-unread .time-chat {
+		color: var(--c-accent-ink) !important;
+		font-weight: 500 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row .wa-row-unread {
+		display: inline-flex !important;
+		min-width: 20px !important;
+		height: 20px !important;
+		align-items: center;
+		justify-content: center;
+		padding: 0 6px !important;
+		background: var(--c-accent) !important;
+		color: var(--c-badge-text) !important;
+		font-size: 12px !important;
+		font-weight: 600 !important;
+		line-height: 1 !important;
+	}
+
+	/* the dropdown chevron shows on hover, at the end of the preview line */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-row-more {
+		position: absolute;
+		inset-inline-end: 10px;
+		bottom: 14px;
+		display: grid;
+		width: 24px;
+		height: 24px;
+		place-items: center;
+		border-radius: 999px;
+		color: var(--c-icon);
+		opacity: 0;
+		pointer-events: none;
+		transform: translateX(6px);
+		transition:
+			opacity 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	[dir='rtl'] .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-row-more {
+		transform: translateX(-6px);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:hover .wa-row-more,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:focus-within .wa-row-more,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-row-more[aria-expanded='true'] {
+		opacity: 1;
+		pointer-events: auto;
+		transform: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-row-more:hover {
+		color: var(--c-text);
+	}
+
+	/* room for the chevron: the preview line's end (count, pin) slides over */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row > .min-w-0 > :last-child {
+		transition: padding 0.15s ease;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:hover > .min-w-0 > :last-child,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-conversation-row:focus-within > .min-w-0 > :last-child {
+		padding-inline-end: 26px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-row-more:focus-visible {
+		outline: 2px solid var(--c-accent);
+		outline-offset: 1px;
+	}
+
+	/* ─────────────────────────────────────────────────────────────── */
+	/* Collapsed list: one centred column of avatars                     */
+	/* ─────────────────────────────────────────────────────────────── */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-chat-list-collapse-float {
+		top: 14px;
+		inset-inline-end: 50%;
+		margin-inline-end: -18px;
+		width: 36px;
+		height: 36px;
+		border: 0;
+		background: var(--c-hover);
+		color: var(--c-icon);
+		box-shadow: none;
+	}
+
+	[dir='rtl'] .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-chat-list-collapse-float {
+		inset-inline-end: auto;
+		left: 50%;
+		margin-inline-end: 0;
+		margin-left: -18px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-chat-list-collapse-float:hover {
+		background: var(--c-active);
+		color: var(--c-text);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-conversation-list {
+		padding: 62px 6px 8px !important;
+		scrollbar-width: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-conversation-list::-webkit-scrollbar {
+		display: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-archived-row {
+		height: 44px !important;
+		justify-content: center !important;
+		gap: 0 !important;
+		margin-bottom: 4px !important;
+		padding: 0 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-archived-row__icon {
+		width: 100% !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-archived-row__count {
+		display: none !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-conversation-row {
+		min-height: 60px;
+		justify-content: center !important;
+		gap: 0 !important;
+		margin-bottom: 2px !important;
+		padding: 0 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-conversation-row::after {
+		display: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-conversation-avatar,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-conversation-avatar > :first-child:not(.wa-story-avatar):not(svg) {
+		width: 46px !important;
+		height: 46px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-chat-list.is-collapsed .wa-unread-avatar-badge {
+		top: -4px !important;
+		inset-inline-end: -6px !important;
+		min-width: 20px !important;
+		height: 18px !important;
+		max-height: none !important;
+		padding: 0 5px !important;
+		border: 2px solid var(--c-panel) !important;
+		border-radius: 999px !important;
+		background: var(--c-accent) !important;
+		color: var(--c-badge-text) !important;
+		font-size: 10.5px !important;
+		font-weight: 700 !important;
+		line-height: 14px !important;
+	}
+}
+
+/* the phone layout has its own long-press menu */
+@media (max-width: 768px) {
+	.wa-row-more,
+	.wa-search-kbd {
+		display: none !important;
+	}
+}

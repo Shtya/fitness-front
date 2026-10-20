@@ -1,0 +1,810 @@
+/*
+ * Contacts panel: one search field with the country inside it, a quiet offline notice,
+ * a flat WhatsApp-style list with a toolbar, and an empty state that offers the next step.
+ */
+
+.wct {
+	--ct-surface: #ffffff;
+	--ct-sub: #f6f7f7;
+	--ct-field: #f3f4f4;
+	--ct-edge: rgba(11, 20, 26, 0.1);
+	--ct-sep: #eef0f0;
+	--ct-text: #111b21;
+	--ct-text-2: #667781;
+	--ct-icon: #54656f;
+	--ct-accent: #1daa61;
+	--ct-accent-strong: #178f51;
+	--ct-accent-soft: #e7f8ee;
+	--ct-warn-bg: #fff8e6;
+	--ct-warn-edge: #f6dfa0;
+	--ct-warn-text: #7a5a06;
+	--ct-error-bg: #fff1f2;
+	--ct-error-text: #be123c;
+	color: var(--ct-text);
+}
+
+html.dark .wct,
+html[data-theme-mode='dark'] .wct,
+.dark .wct {
+	--ct-surface: #1d1f1f;
+	--ct-sub: #222424;
+	--ct-field: #242626;
+	--ct-edge: rgba(255, 255, 255, 0.09);
+	--ct-sep: #2a2c2c;
+	--ct-text: #f2f4f3;
+	--ct-text-2: #9aa3a7;
+	--ct-icon: #a9b1b4;
+	--ct-accent: #21c063;
+	--ct-accent-strong: #1daa61;
+	--ct-accent-soft: rgba(33, 192, 99, 0.14);
+	--ct-warn-bg: rgba(245, 166, 35, 0.1);
+	--ct-warn-edge: rgba(245, 166, 35, 0.28);
+	--ct-warn-text: #f5c66a;
+	--ct-error-bg: rgba(225, 29, 72, 0.12);
+	--ct-error-text: #fda4af;
+}
+
+/* ─── notices ─── */
+.wct-notice {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 0;
+	padding: 10px 12px;
+	border-radius: 12px;
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--ct-text-2);
+	background: var(--ct-sub);
+}
+
+.wct-notice.is-warn {
+	color: var(--ct-warn-text);
+	background: var(--ct-warn-bg);
+	box-shadow: inset 0 0 0 1px var(--ct-warn-edge);
+}
+
+.wct-notice.is-error {
+	align-items: center;
+	color: var(--ct-error-text);
+	background: var(--ct-error-bg);
+}
+
+.wct-notice strong {
+	font-weight: 700;
+}
+
+.wct-notice__icon {
+	display: grid;
+	width: 26px;
+	height: 26px;
+	flex: none;
+	place-items: center;
+	margin-top: -3px;
+	border-radius: 8px;
+	background: rgba(245, 166, 35, 0.16);
+}
+
+/* ─── find a number ─── */
+.wct-find {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.wct-find__head {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.wct-find__title {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--ct-text);
+}
+
+.wct-find__hint {
+	margin: 0;
+	font-size: 12.5px;
+	color: var(--ct-text-2);
+}
+
+.wct-search {
+	display: flex;
+	height: 54px;
+	align-items: center;
+	gap: 6px;
+	padding: 6px;
+	border-radius: 16px;
+	background: var(--ct-field);
+	box-shadow: inset 0 0 0 1px transparent;
+	transition:
+		box-shadow 0.15s ease,
+		background-color 0.15s ease;
+}
+
+.wct-search:hover {
+	box-shadow: inset 0 0 0 1px var(--ct-edge);
+}
+
+.wct-search:focus-within {
+	background: var(--ct-surface);
+	box-shadow:
+		inset 0 0 0 1.5px var(--ct-accent),
+		0 0 0 4px var(--ct-accent-soft);
+}
+
+.wct-search.is-invalid {
+	box-shadow: inset 0 0 0 1.5px #e11d48;
+}
+
+.wct-search.is-disabled {
+	opacity: 0.6;
+}
+
+/* country chip: a real <select> stretched invisibly over it */
+.wct-country {
+	position: relative;
+	display: inline-flex;
+	height: 42px;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+	padding: 0 10px;
+	border-radius: 11px;
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--ct-text);
+	background: var(--ct-surface);
+	box-shadow:
+		inset 0 0 0 1px var(--ct-edge),
+		0 1px 2px rgba(11, 20, 26, 0.05);
+}
+
+.wct-country:hover {
+	box-shadow:
+		inset 0 0 0 1px var(--ct-accent),
+		0 1px 2px rgba(11, 20, 26, 0.05);
+}
+
+.wct-country:focus-within {
+	box-shadow: 0 0 0 2px var(--ct-accent);
+}
+
+.wct-country__flag {
+	font-size: 17px;
+	line-height: 1;
+}
+
+.wct-country__chev {
+	color: var(--ct-icon);
+}
+
+.wct .wct-country select {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.wct .wct-search__input {
+	min-width: 0;
+	height: 100%;
+	flex: 1;
+	padding: 0 8px;
+	border: 0;
+	outline: none;
+	font: inherit;
+	font-size: 16px;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	color: var(--ct-text);
+	background: transparent;
+	box-shadow: none;
+}
+
+.wct .wct-search__input::placeholder {
+	letter-spacing: 0;
+	color: color-mix(in srgb, var(--ct-text-2) 75%, transparent);
+}
+
+.wct-search__go {
+	display: inline-flex;
+	height: 42px;
+	flex: none;
+	align-items: center;
+	gap: 7px;
+	padding: 0 18px;
+	border-radius: 11px;
+	font-size: 14px;
+	font-weight: 700;
+	color: #fff;
+	background: var(--ct-accent);
+	box-shadow: 0 6px 14px -8px rgba(29, 170, 97, 0.9);
+	cursor: pointer;
+	transition:
+		background-color 0.15s ease,
+		transform 0.1s ease,
+		opacity 0.15s ease;
+}
+
+.wct-search__go:hover:not(:disabled) {
+	background: var(--ct-accent-strong);
+}
+
+.wct-search__go:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+.wct-search__go:disabled {
+	opacity: 0.45;
+	box-shadow: none;
+	cursor: default;
+}
+
+html.dark .wct-search__go {
+	color: #0f1a14;
+}
+
+/* ─── small shared controls ─── */
+.wct-iconbtn {
+	display: grid;
+	width: 32px;
+	height: 32px;
+	flex: none;
+	place-items: center;
+	border-radius: 9px;
+	color: var(--ct-icon);
+	cursor: pointer;
+}
+
+.wct-iconbtn:hover {
+	color: var(--ct-text);
+	background: var(--ct-sub);
+}
+
+.wct-btn {
+	display: inline-flex;
+	height: 38px;
+	align-items: center;
+	gap: 7px;
+	padding: 0 14px;
+	border-radius: 11px;
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--ct-text);
+	background: var(--ct-surface);
+	box-shadow: inset 0 0 0 1px var(--ct-edge);
+	cursor: pointer;
+}
+
+.wct-btn:hover:not(:disabled) {
+	box-shadow: inset 0 0 0 1px var(--ct-accent);
+}
+
+.wct-btn.is-primary {
+	color: #fff;
+	background: var(--ct-accent);
+	box-shadow: none;
+}
+
+.wct-btn.is-primary:hover:not(:disabled) {
+	background: var(--ct-accent-strong);
+}
+
+html.dark .wct-btn.is-primary {
+	color: #0f1a14;
+}
+
+.wct-btn:disabled,
+.wct-new:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+/* ─── cards (lookup result, add form) ─── */
+.wct-card {
+	padding: 16px;
+	border-radius: 16px;
+	background: var(--ct-surface);
+	box-shadow:
+		inset 0 0 0 1px var(--ct-edge),
+		0 8px 24px -18px rgba(11, 20, 26, 0.35);
+}
+
+.wct-card__head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 14px;
+}
+
+.wct-card__head h3 {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.wct-card__icon {
+	display: grid;
+	width: 32px;
+	height: 32px;
+	place-items: center;
+	border-radius: 10px;
+	color: var(--ct-accent-strong);
+	background: var(--ct-accent-soft);
+}
+
+.wct-result {
+	animation: wct-in 0.22s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+/* ─── list ─── */
+.wct-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.wct-list__bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	padding-top: 4px;
+	border-top: 1px solid var(--ct-sep);
+	padding-block-start: 16px;
+}
+
+.wct-list__title {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 auto 0 0;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--ct-text);
+}
+
+[dir='rtl'] .wct-list__title {
+	margin: 0 0 0 auto;
+}
+
+.wct-count {
+	display: inline-flex;
+	min-width: 22px;
+	height: 20px;
+	align-items: center;
+	justify-content: center;
+	padding: 0 7px;
+	border-radius: 999px;
+	font-size: 11.5px;
+	font-weight: 700;
+	line-height: 1;
+	color: var(--ct-text-2);
+	background: var(--ct-sub);
+}
+
+.wct-seg {
+	display: inline-flex;
+	padding: 3px;
+	border-radius: 11px;
+	background: var(--ct-sub);
+}
+
+.wct-seg button {
+	height: 30px;
+	padding: 0 12px;
+	border-radius: 8px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ct-text-2);
+	cursor: pointer;
+}
+
+.wct-seg button.is-on {
+	color: var(--ct-text);
+	background: var(--ct-surface);
+	box-shadow: 0 1px 2px rgba(11, 20, 26, 0.1);
+}
+
+.wct-new {
+	display: inline-flex;
+	height: 36px;
+	align-items: center;
+	gap: 6px;
+	padding: 0 12px;
+	border-radius: 10px;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--ct-accent-strong);
+	background: var(--ct-accent-soft);
+	cursor: pointer;
+	transition: filter 0.15s ease;
+}
+
+.wct-new:hover:not(:disabled) {
+	filter: brightness(0.97);
+}
+
+html.dark .wct-new {
+	color: var(--ct-accent);
+}
+
+.wct-filter {
+	display: flex;
+	height: 40px;
+	align-items: center;
+	gap: 8px;
+	padding: 0 12px;
+	border-radius: 12px;
+	color: var(--ct-icon);
+	background: var(--ct-field);
+}
+
+.wct-filter:focus-within {
+	box-shadow: inset 0 0 0 1.5px var(--ct-accent);
+}
+
+.wct .wct-filter input {
+	min-width: 0;
+	height: 100%;
+	flex: 1;
+	padding: 0;
+	border: 0;
+	outline: none;
+	font: inherit;
+	font-size: 14px;
+	color: var(--ct-text);
+	background: transparent;
+	box-shadow: none;
+}
+
+.wct-rows {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* rows: flat, with a hairline from the text; actions come forward on hover */
+.wct-row {
+	position: relative;
+	padding: 10px 8px;
+	border-radius: 12px;
+	transition: background-color 0.12s ease;
+}
+
+.wct-row::after {
+	content: '';
+	position: absolute;
+	inset-inline: 64px 8px;
+	bottom: 0;
+	height: 1px;
+	background: var(--ct-sep);
+}
+
+.wct-row:last-child::after,
+.wct-row:hover::after,
+.wct-row:has(+ .wct-row:hover)::after,
+.wct-row.is-open::after {
+	opacity: 0;
+}
+
+.wct-row:hover,
+.wct-row.is-open {
+	background: var(--ct-sub);
+}
+
+.wct-row__actions {
+	opacity: 0.55;
+	transition: opacity 0.15s ease;
+}
+
+.wct-row:hover .wct-row__actions,
+.wct-row:focus-within .wct-row__actions,
+.wct-row.is-open .wct-row__actions {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.wct-row__actions {
+		opacity: 1;
+	}
+}
+
+/* empty state */
+.wct-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 34px 20px 30px;
+	border-radius: 18px;
+	text-align: center;
+	background: radial-gradient(120% 90% at 50% 0%, var(--ct-accent-soft), transparent 70%), var(--ct-sub);
+}
+
+.wct-empty__art {
+	display: grid;
+	width: 60px;
+	height: 60px;
+	place-items: center;
+	margin-bottom: 6px;
+	border-radius: 20px;
+	color: var(--ct-accent-strong);
+	background: var(--ct-surface);
+	box-shadow:
+		inset 0 0 0 1px var(--ct-edge),
+		0 10px 22px -14px rgba(29, 170, 97, 0.7);
+}
+
+html.dark .wct-empty__art {
+	color: var(--ct-accent);
+}
+
+.wct-empty__title {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--ct-text);
+}
+
+.wct-empty__hint {
+	max-width: 340px;
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--ct-text-2);
+}
+
+.wct-empty__actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.wct-iconbtn:focus-visible,
+.wct-btn:focus-visible,
+.wct-new:focus-visible,
+.wct-seg button:focus-visible,
+.wct-search__go:focus-visible {
+	outline: 2px solid var(--ct-accent);
+	outline-offset: 2px;
+}
+
+@keyframes wct-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+
+/* narrow dialogs / phones */
+@media (max-width: 520px) {
+	.wct-search {
+		height: auto;
+		flex-wrap: wrap;
+	}
+
+	.wct .wct-search__input {
+		height: 42px;
+		flex: 1 1 140px;
+	}
+
+	.wct-search__go {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.wct-new span {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wct-result {
+		animation: none;
+	}
+}
+
+/* ================================================================== */
+/* compact layout + field colours that hold in every theme             */
+/* ================================================================== */
+
+.wct.wct {
+	gap: 14px !important;
+}
+
+/* the typed number always uses the panel's ink, also when the browser autofills it */
+.wct .wct-search__input.wct-search__input {
+	color: var(--ct-text) !important;
+	-webkit-text-fill-color: var(--ct-text) !important;
+	caret-color: var(--ct-accent);
+}
+
+.wct .wct-filter input {
+	color: var(--ct-text) !important;
+	-webkit-text-fill-color: var(--ct-text) !important;
+}
+
+.wct .wct-search__input:-webkit-autofill,
+.wct .wct-search__input:-webkit-autofill:hover,
+.wct .wct-search__input:-webkit-autofill:focus {
+	-webkit-text-fill-color: var(--ct-text) !important;
+	box-shadow: 0 0 0 100px var(--ct-field) inset !important;
+	transition: background-color 9999s ease-out 0s;
+}
+
+/* the dialog's generic focus ring must not draw a box inside the search pill */
+.wa-ui-modal .wct .wct-search input:not([type='range']):not([type='checkbox']):not([type='radio']):focus,
+.wa-ui-modal .wct .wct-filter input:not([type='range']):not([type='checkbox']):not([type='radio']):focus {
+	border-color: transparent !important;
+	box-shadow: none !important;
+}
+
+/* notice: one slim line, the long explanation on hover */
+.wct-notice {
+	align-items: center;
+	padding: 8px 12px;
+	font-size: 12.5px;
+	line-height: 1.35;
+}
+
+.wct-notice__more {
+	flex: none;
+	margin-inline-start: auto;
+	opacity: 0.6;
+}
+
+/* search pill */
+.wct-search {
+	height: 48px;
+	padding: 5px;
+	border-radius: 14px;
+}
+
+.wct-country {
+	height: 38px;
+	padding: 0 9px;
+	border-radius: 10px;
+	font-size: 13px;
+}
+
+.wct .wct-search__input {
+	font-size: 15px;
+}
+
+.wct-search__go {
+	height: 38px;
+	padding: 0 16px;
+	border-radius: 10px;
+	font-size: 13.5px;
+}
+
+/* list toolbar */
+.wct-list {
+	gap: 8px;
+}
+
+.wct-list__bar {
+	padding-top: 2px;
+	padding-block-start: 2px;
+	border-top: 0;
+}
+
+.wct-list__title {
+	font-size: 14px;
+}
+
+.wct-seg button {
+	height: 28px;
+	padding: 0 10px;
+	font-size: 12px;
+}
+
+.wct-new {
+	height: 32px;
+	padding: 0 10px;
+	font-size: 12.5px;
+}
+
+.wct-filter {
+	height: 38px;
+}
+
+/* empty state: one compact row */
+.wct-empty {
+	flex-direction: row;
+	align-items: center;
+	gap: 12px;
+	padding: 14px;
+	border-radius: 14px;
+	text-align: start;
+	background: var(--ct-sub);
+}
+
+.wct-empty__art {
+	width: 40px;
+	height: 40px;
+	flex: none;
+	margin: 0;
+	border-radius: 12px;
+	box-shadow: inset 0 0 0 1px var(--ct-edge);
+}
+
+.wct-empty__text {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.wct-empty__title {
+	font-size: 13.5px;
+}
+
+.wct-empty__hint {
+	max-width: none;
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.wct-empty__actions {
+	flex: none;
+	margin-top: 0;
+}
+
+.wct-empty .wct-btn {
+	height: 34px;
+	padding: 0 12px;
+	font-size: 12.5px;
+}
+
+.wct-card {
+	padding: 14px;
+	border-radius: 14px;
+}
+
+@media (max-width: 520px) {
+	.wct-empty {
+		flex-wrap: wrap;
+	}
+
+	.wct-empty__actions {
+		width: 100%;
+	}
+
+	.wct-empty .wct-btn {
+		width: 100%;
+		justify-content: center;
+	}
+}
+
+/* form fields inside the cards (add / edit / lookup result) use the panel's field colour */
+.wct .wct-card :is(input:not([type='checkbox']):not([type='radio']), textarea, select),
+.wct .wct-row :is(input:not([type='checkbox']):not([type='radio']), textarea, select) {
+	border-color: var(--ct-edge) !important;
+	color: var(--ct-text) !important;
+	-webkit-text-fill-color: var(--ct-text);
+	background: var(--ct-field) !important;
+}
+
+.wct .wct-card :is(input, textarea)::placeholder,
+.wct .wct-row :is(input, textarea)::placeholder {
+	color: var(--ct-text-2);
+	-webkit-text-fill-color: var(--ct-text-2);
+}
+
+.wct .wct-card :is(input:not([type='checkbox']):not([type='radio']), textarea, select):focus,
+.wct .wct-row :is(input:not([type='checkbox']):not([type='radio']), textarea, select):focus {
+	border-color: var(--ct-accent) !important;
+	background: var(--ct-surface) !important;
+}

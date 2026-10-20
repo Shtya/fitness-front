@@ -1,41 +1,55 @@
 /*
- * Wall view of the daily tickets. A slim oak frame around a linen wall, twine strung in rows,
- * paper notes (colour = priority) held by 3D push pins. Calm by default; motion only answers
- * an action (new note swings in, done gets stamped, removed note falls, reorder slides).
+ * Wall view of the daily tickets: pastel sticky notes pinned to a warm corkboard inside a thin
+ * wooden frame. Calm by default; motion only answers an action (a new note swings in, done gets
+ * stamped, a removed note falls, a reorder slides).
  */
 
 .tw-frame,
 .tw-float {
-	--tw-oak: #d9bb8c;
-	--tw-oak-2: #c49f6a;
-	--tw-wall: #f5f2eb;
-	--tw-wall-2: #ece7dc;
-	--tw-twine: #b39470;
+	--tw-wood: #ebd2aa;
+	--tw-wood-2: #d4ad78;
+	--tw-cork: #d7a66b;
+	--tw-cork-2: #c8915a;
+	--tw-speck-dark: rgba(96, 58, 22, 0.32);
+	--tw-speck-light: rgba(255, 238, 205, 0.4);
+	--tw-head-ink: #3a2814;
+	--tw-head-ink-2: rgba(58, 40, 20, 0.72);
+	--tw-tool-bg: rgba(255, 255, 255, 0.82);
+	--tw-tool-ink: #3b3a36;
 	--tw-ink: #2b2219;
 	--tw-ink-2: rgba(43, 34, 25, 0.62);
-	--tw-high-a: #fbd7cb;
-	--tw-high-b: #f6c3b2;
-	--tw-medium-a: #fbe9b7;
-	--tw-medium-b: #f5dc96;
-	--tw-low-a: #dcebd2;
-	--tw-low-b: #c9e0bc;
+	--tw-yellow-a: #fff2b8;
+	--tw-yellow-b: #fde38a;
+	--tw-blue-a: #e3e9ff;
+	--tw-blue-b: #cdd9ff;
+	--tw-pink-a: #ffdde6;
+	--tw-pink-b: #ffc7d5;
+	--tw-green-a: #ddf6d8;
+	--tw-green-b: #c4edc1;
 	--tw-done: #1f8a50;
 	--tw-hand: 'Caveat', 'Aref Ruqaa', 'Segoe Print', 'Comic Sans MS', cursive;
 }
 
 html.dark .tw-frame,
 html.dark .tw-float {
-	--tw-oak: #6f5838;
-	--tw-oak-2: #5a462b;
-	--tw-wall: #1f1e1c;
-	--tw-wall-2: #1a1918;
-	--tw-twine: #7d6748;
-	--tw-high-a: #e8b9aa;
-	--tw-high-b: #dca693;
-	--tw-medium-a: #ead39a;
-	--tw-medium-b: #ddc27c;
-	--tw-low-a: #c4d8b8;
-	--tw-low-b: #b1caa3;
+	--tw-wood: #6f5536;
+	--tw-wood-2: #56412a;
+	--tw-cork: #7b5a37;
+	--tw-cork-2: #634829;
+	--tw-speck-dark: rgba(20, 10, 2, 0.4);
+	--tw-speck-light: rgba(255, 225, 180, 0.1);
+	--tw-head-ink: #f6ead6;
+	--tw-head-ink-2: rgba(246, 234, 214, 0.7);
+	--tw-tool-bg: rgba(20, 14, 8, 0.45);
+	--tw-tool-ink: #f1e6d4;
+	--tw-yellow-a: #f2df9c;
+	--tw-yellow-b: #e7cf76;
+	--tw-blue-a: #d2dbf6;
+	--tw-blue-b: #bccaf0;
+	--tw-pink-a: #f2c9d4;
+	--tw-pink-b: #e8b3c3;
+	--tw-green-a: #cbe8c5;
+	--tw-green-b: #b5dcb1;
 }
 
 /* the handwriting must beat the WhatsApp shell's forced UI font */
@@ -46,90 +60,77 @@ html.dark .tw-float {
 	font-family: var(--tw-hand) !important;
 }
 
+/* ─── frame and corkboard ─── */
 .tw-frame {
 	position: relative;
 	display: flex;
 	min-height: 0;
 	flex-direction: column;
-	padding: 9px;
-	border-radius: 18px;
+	padding: 10px;
+	border-radius: 22px;
 	background:
-		repeating-linear-gradient(90deg, rgba(120, 80, 35, 0.07) 0 1px, transparent 1px 9px),
-		linear-gradient(180deg, var(--tw-oak), var(--tw-oak-2));
+		repeating-linear-gradient(90deg, rgba(120, 80, 35, 0.06) 0 1px, transparent 1px 11px),
+		linear-gradient(180deg, var(--tw-wood), var(--tw-wood-2));
 	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.35),
-		0 1px 2px rgba(0, 0, 0, 0.08),
-		0 24px 48px -30px rgba(40, 25, 10, 0.55);
+		inset 0 1px 0 rgba(255, 255, 255, 0.45),
+		0 1px 2px rgba(40, 25, 10, 0.08),
+		0 26px 50px -30px rgba(40, 25, 10, 0.55);
+	animation: tw-board-in 0.4s cubic-bezier(0.2, 0.9, 0.25, 1);
 }
 
 html.dark .tw-frame {
 	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.08),
-		0 24px 48px -26px rgba(0, 0, 0, 0.8);
+		0 26px 50px -26px rgba(0, 0, 0, 0.8);
 }
 
-.tw-wall {
-	min-height: 200px;
-	overflow-y: auto;
-	padding: 26px 18px 10px;
-	border-radius: 11px;
+.tw-board {
+	display: flex;
+	min-height: 0;
+	flex: 1 1 auto;
+	flex-direction: column;
+	overflow: hidden;
+	border-radius: 14px;
 	background:
-		repeating-linear-gradient(0deg, rgba(120, 100, 70, 0.035) 0 1px, transparent 1px 3px),
-		repeating-linear-gradient(90deg, rgba(120, 100, 70, 0.03) 0 1px, transparent 1px 3px),
-		linear-gradient(180deg, var(--tw-wall), var(--tw-wall-2));
-	box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.12);
+		radial-gradient(var(--tw-speck-dark) 0.9px, transparent 1.4px) 0 0 / 7px 7px,
+		radial-gradient(var(--tw-speck-light) 0.9px, transparent 1.5px) 3px 4px / 11px 11px,
+		radial-gradient(var(--tw-speck-dark) 1.3px, transparent 2px) 6px 2px / 19px 19px,
+		radial-gradient(130% 90% at 30% 0%, rgba(255, 240, 210, 0.22), transparent 60%),
+		linear-gradient(170deg, var(--tw-cork), var(--tw-cork-2));
+	box-shadow:
+		inset 0 2px 10px rgba(60, 35, 10, 0.28),
+		inset 0 0 0 1px rgba(60, 35, 10, 0.18);
+}
+
+/* ─── header inside the board ─── */
+
+/* ─── the notes ─── */
+.tw-wall {
+	min-height: 0;
+	flex: 1 1 auto;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding: 8px 22px 24px;
 	scrollbar-width: thin;
 }
 
-html.dark .tw-wall {
-	background:
-		repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px),
-		linear-gradient(180deg, var(--tw-wall), var(--tw-wall-2));
-	box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
-}
-
-.tw-row {
-	position: relative;
-	margin-bottom: 26px;
-}
-
-.tw-string {
-	position: absolute;
-	top: 0;
-	left: -18px;
-	width: calc(100% + 36px);
-	height: 22px;
-	overflow: visible;
-	pointer-events: none;
-}
-
-.tw-row__notes {
+.tw-grid {
 	display: grid;
-	gap: 18px;
+	grid-template-columns: repeat(auto-fill, minmax(206px, 1fr));
+	gap: 34px 26px;
 	margin: 0;
-	padding: 0;
+	padding: 20px 0 6px;
 	list-style: none;
 }
 
-.tw-string path {
-	fill: none;
-	stroke: var(--tw-twine);
-	stroke-width: 1.6;
-	stroke-linecap: round;
-	vector-effect: non-scaling-stroke;
-	filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.14));
-}
-
-/* ─── note ─── */
 .tw-note {
 	position: relative;
 	display: flex;
 	justify-content: center;
-	padding-top: calc(var(--y) + 6px);
 	outline: none;
 }
 
-/* an open menu or a focused note sits above its neighbours */
+/* a hovered or focused note (and its open menu) sits above its neighbours */
 .tw-note:focus-within,
 .tw-note:hover {
 	z-index: 20;
@@ -137,10 +138,10 @@ html.dark .tw-wall {
 
 .tw-pin {
 	position: absolute;
-	top: calc(var(--y) - 17px);
+	top: -18px;
 	left: 50%;
 	z-index: 3;
-	transform: translateX(-50%) rotate(14deg);
+	transform: translateX(-50%) rotate(12deg);
 	pointer-events: none;
 	transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
@@ -148,26 +149,29 @@ html.dark .tw-wall {
 .tkx-pushpin {
 	display: block;
 	overflow: visible;
-	filter: drop-shadow(1px 3px 2px rgba(0, 0, 0, 0.28));
+	filter: drop-shadow(1px 3px 2px rgba(0, 0, 0, 0.3));
 }
 
 .tw-paper {
+	--a: var(--tw-yellow-a);
+	--b: var(--tw-yellow-b);
 	position: relative;
 	display: flex;
 	width: 100%;
-	max-width: 210px;
-	min-height: 158px;
+	max-width: 270px;
+	min-height: 182px;
 	flex-direction: column;
-	gap: 6px;
-	padding: 18px 12px 10px;
-	border-radius: 3px 3px 10px 3px;
+	gap: 8px;
+	padding: 16px 14px 12px 16px;
+	border-radius: 6px;
 	color: var(--tw-ink);
 	background:
-		radial-gradient(130% 80% at 20% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
-		linear-gradient(176deg, var(--a), var(--b));
+		radial-gradient(120% 70% at 25% 0%, rgba(255, 255, 255, 0.45), transparent 60%),
+		linear-gradient(172deg, var(--a), var(--b));
 	box-shadow:
-		0 1px 1px rgba(0, 0, 0, 0.1),
-		0 14px 18px -14px rgba(60, 40, 15, 0.55);
+		0 1px 1px rgba(40, 25, 10, 0.1),
+		0 12px 18px -12px rgba(60, 35, 10, 0.55),
+		0 24px 30px -26px rgba(60, 35, 10, 0.45);
 	transform: rotate(var(--tilt));
 	transform-origin: 50% 0;
 	transition:
@@ -175,18 +179,25 @@ html.dark .tw-wall {
 		box-shadow 0.25s ease,
 		filter 0.3s ease,
 		opacity 0.3s ease;
-	--a: var(--tw-medium-a);
-	--b: var(--tw-medium-b);
 }
 
-.tw-paper.is-high {
-	--a: var(--tw-high-a);
-	--b: var(--tw-high-b);
+[dir='rtl'] .tw-paper {
+	padding: 16px 16px 12px 14px;
 }
 
-.tw-paper.is-low {
-	--a: var(--tw-low-a);
-	--b: var(--tw-low-b);
+.tw-paper.is-blue {
+	--a: var(--tw-blue-a);
+	--b: var(--tw-blue-b);
+}
+
+.tw-paper.is-pink {
+	--a: var(--tw-pink-a);
+	--b: var(--tw-pink-b);
+}
+
+.tw-paper.is-green {
+	--a: var(--tw-green-a);
+	--b: var(--tw-green-b);
 }
 
 /* a soft lifted corner */
@@ -195,37 +206,36 @@ html.dark .tw-wall {
 	position: absolute;
 	right: 0;
 	bottom: 0;
-	width: 22px;
-	height: 22px;
-	border-radius: 0 0 10px 0;
-	background: linear-gradient(315deg, rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.25) 45%, transparent 50%);
+	width: 24px;
+	height: 24px;
+	border-radius: 0 0 6px 0;
+	background: linear-gradient(315deg, rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.3) 45%, transparent 50%);
 	pointer-events: none;
 }
 
 html.dark .tw-paper {
 	box-shadow:
 		0 1px 1px rgba(0, 0, 0, 0.4),
-		0 16px 20px -14px rgba(0, 0, 0, 0.9);
+		0 16px 22px -14px rgba(0, 0, 0, 0.75);
 }
 
 .tw-paper.is-pinned {
 	box-shadow:
-		0 0 0 1.5px rgba(242, 181, 29, 0.75),
-		0 1px 1px rgba(0, 0, 0, 0.1),
-		0 16px 22px -14px rgba(120, 80, 10, 0.55);
+		0 0 0 1.5px rgba(242, 181, 29, 0.8),
+		0 12px 18px -12px rgba(120, 80, 10, 0.55),
+		0 24px 30px -26px rgba(60, 35, 10, 0.45);
 }
 
 .tw-note:hover .tw-paper,
-.tw-note:focus-visible .tw-paper,
 .tw-note:focus-within .tw-paper {
-	transform: rotate(0deg) translateY(-2px);
+	transform: rotate(0deg) translateY(-3px);
 	box-shadow:
-		0 1px 1px rgba(0, 0, 0, 0.1),
-		0 22px 26px -16px rgba(60, 40, 15, 0.55);
+		0 2px 3px rgba(40, 25, 10, 0.1),
+		0 22px 28px -16px rgba(60, 35, 10, 0.55);
 }
 
 .tw-note:hover .tw-pin {
-	transform: translateX(-50%) rotate(4deg);
+	transform: translateX(-50%) rotate(2deg);
 }
 
 .tw-note:focus-visible .tw-paper {
@@ -237,36 +247,55 @@ html.dark .tw-paper {
 	cursor: grab;
 }
 
-/* top row: priority, pinned, number, menu */
+/* top row */
 .tw-top {
 	display: flex;
-	min-height: 26px;
+	min-height: 28px;
 	align-items: center;
-	gap: 5px;
+	gap: 6px;
 }
 
 .tw-paper .tkx-prio {
-	--c: #8a5a00;
-	font-size: 10.5px;
-	background: rgba(255, 255, 255, 0.42);
+	--c: #b45309;
+	padding: 3px 9px 3px 7px;
+	font-size: 11.5px;
+	background: rgba(255, 255, 255, 0.75);
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
 .tw-paper .tkx-prio.is-high {
-	--c: #b42318;
+	--c: #d1343a;
 }
 
 .tw-paper .tkx-prio.is-low {
-	--c: #20683f;
+	--c: #15803d;
+}
+
+.tw-paper .tkx-status {
+	padding: 3px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	color: var(--tw-ink);
+	background: rgba(255, 255, 255, 0.55);
+}
+
+.tw-paper .tkx-status.is-doing {
+	--c: #1d63c4;
+}
+
+.tw-paper .tkx-status.is-done {
+	--c: var(--tw-done);
 }
 
 .tw-pinned {
 	display: grid;
-	width: 20px;
-	height: 20px;
+	width: 22px;
+	height: 22px;
+	flex: none;
 	place-items: center;
 	border-radius: 999px;
 	color: #a06c00;
-	background: rgba(255, 255, 255, 0.5);
+	background: rgba(255, 255, 255, 0.6);
 }
 
 .tw-no {
@@ -282,30 +311,16 @@ html.dark .tw-paper {
 }
 
 .tw-paper .tkx-iconbtn--ticket {
-	width: 28px;
-	height: 28px;
-	border-radius: 8px;
+	width: 30px;
+	height: 30px;
+	border-radius: 9px;
 	color: var(--tw-ink-2);
-	opacity: 0;
-	transition: opacity 0.15s ease, background-color 0.15s ease;
-}
-
-.tw-note:hover .tkx-iconbtn--ticket,
-.tw-note:focus-within .tkx-iconbtn--ticket,
-.tw-paper .tkx-iconbtn--ticket.is-open {
-	opacity: 1;
 }
 
 .tw-paper .tkx-iconbtn--ticket:hover,
 .tw-paper .tkx-iconbtn--ticket.is-open {
 	color: var(--tw-ink);
-	background: rgba(255, 255, 255, 0.45);
-}
-
-@media (hover: none) {
-	.tw-paper .tkx-iconbtn--ticket {
-		opacity: 1;
-	}
+	background: rgba(255, 255, 255, 0.55);
 }
 
 /* the title, handwritten */
@@ -315,15 +330,14 @@ html.dark .tw-paper {
 	flex: 0 1 auto;
 	margin: auto 0;
 	overflow: hidden;
-	font-size: 22px;
+	font-size: 27px;
 	font-weight: 600;
 	line-height: 1.12;
 	text-align: center;
 	overflow-wrap: anywhere;
 	color: var(--tw-ink);
-	-webkit-line-clamp: 4;
+	-webkit-line-clamp: 3;
 	-webkit-box-orient: vertical;
-	align-content: center;
 }
 
 .tw-text:not(.tw-text--edit) span {
@@ -341,46 +355,44 @@ html.dark .tw-paper {
 .wa-chat-idle .tw-text--edit.tw-text--edit {
 	display: block;
 	width: 100%;
-	min-height: 84px;
+	min-height: 86px;
 	padding: 6px 8px;
 	border: 1.5px dashed rgba(43, 34, 25, 0.4);
 	border-radius: 6px;
 	outline: none;
 	resize: none;
 	color: var(--tw-ink);
-	background: rgba(255, 255, 255, 0.35);
+	background: rgba(255, 255, 255, 0.4);
 	box-shadow: none;
 }
 
-/* bottom row: status + done button */
+/* bottom row */
 .tw-bottom {
 	display: flex;
+	min-height: 30px;
+	align-items: center;
+	gap: 8px;
+}
+
+.tw-when {
+	display: inline-flex;
+	min-width: 0;
 	align-items: center;
 	gap: 6px;
-	min-height: 30px;
-}
-
-.tw-paper .tkx-status {
+	overflow: hidden;
+	font-size: 12px;
+	font-weight: 500;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	color: var(--tw-ink-2);
-	font-size: 11.5px;
 }
 
-.tw-paper .tkx-status.is-todo {
-	--c: #8a7a66;
+.tw-when svg {
+	flex: none;
 }
 
-.tw-paper .tkx-status.is-doing {
-	--c: #1d63c4;
-}
-
-.tw-paper .tkx-status.is-done {
-	--c: var(--tw-done);
-}
-
-.tw-carried {
-	font-size: 11px;
-	font-weight: 700;
-	color: #93400e;
+.tw-when.is-carried {
+	color: #8a3b12;
 }
 
 .tw-check {
@@ -392,14 +404,13 @@ html.dark .tw-paper {
 	margin-inline-start: auto;
 	border-radius: 999px;
 	color: transparent;
-	background: rgba(255, 255, 255, 0.4);
-	box-shadow: inset 0 0 0 1.5px rgba(43, 34, 25, 0.35);
+	background: rgba(255, 255, 255, 0.5);
+	box-shadow: inset 0 0 0 1.5px rgba(43, 34, 25, 0.32);
 	cursor: pointer;
-	transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
 }
 
 .tw-check:hover {
-	color: rgba(31, 138, 80, 0.7);
+	color: rgba(31, 138, 80, 0.75);
 	box-shadow: inset 0 0 0 1.5px var(--tw-done);
 }
 
@@ -418,10 +429,38 @@ html.dark .tw-paper {
 	outline-offset: 2px;
 }
 
+/* quiet notes: the number and the check circle show up when you reach for the note */
+.tw-paper .tw-no,
+.tw-paper .tw-check {
+	opacity: 0;
+	transition:
+		opacity 0.18s ease,
+		background-color 0.2s ease,
+		color 0.2s ease,
+		box-shadow 0.2s ease,
+		transform 0.12s ease;
+}
+
+.tw-note:hover .tw-no,
+.tw-note:hover .tw-check,
+.tw-note:focus-within .tw-no,
+.tw-note:focus-within .tw-check,
+.tw-note.is-editing .tw-no,
+.tw-note.is-editing .tw-check {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.tw-paper .tw-no,
+	.tw-paper .tw-check {
+		opacity: 1;
+	}
+}
+
 /* done */
 .tw-note.is-done .tw-paper {
-	filter: saturate(0.45);
-	opacity: 0.86;
+	filter: saturate(0.55);
+	opacity: 0.88;
 }
 
 .tw-note.is-done .tw-text {
@@ -432,50 +471,115 @@ html.dark .tw-paper {
 	background-size: 100% 2px;
 }
 
+/* the stamp lands when you mark a note done, then lifts; the chip and strikethrough stay */
 .tw-stamp {
 	position: absolute;
-	bottom: 13px;
-	left: 50%;
-	display: inline-flex;
+	top: 50%;
+	display: none !important;
+	inset-inline-end: 50%;
 	align-items: center;
-	gap: 3px;
-	padding: 1px 7px 1px 5px;
+	gap: 4px;
+	margin-inline-end: -42px;
+	padding: 3px 10px 3px 8px;
 	border: 2px solid var(--tw-done);
 	border-radius: 7px;
 	font-size: 12px;
 	font-weight: 800;
 	color: var(--tw-done);
-	background: rgba(255, 255, 255, 0.3);
-	transform: translateX(-50%) rotate(-8deg);
+	background: rgba(255, 255, 255, 0.35);
+	transform: rotate(-10deg);
 	mix-blend-mode: multiply;
 	opacity: 0.85;
 	pointer-events: none;
 }
 
 .tw-note.is-stamped .tw-stamp {
-	animation: tw-stamp 0.45s cubic-bezier(0.3, 1.4, 0.5, 1);
+	display: inline-flex !important;
+	animation: tw-stamp 1.8s cubic-bezier(0.3, 1.4, 0.5, 1) forwards;
 }
 
-/* in progress: a quiet blue tape line at the top */
-.tw-note.is-doing .tw-paper::before {
-	content: '';
-	position: absolute;
-	top: 0;
-	inset-inline: 18%;
-	height: 3px;
-	border-radius: 0 0 3px 3px;
-	background: #2f7fe0;
-	opacity: 0.75;
+/* the "pin a new task" slot */
+.tw-paper--add {
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	border: 2px dashed rgba(255, 255, 255, 0.75);
+	border-radius: 10px;
+	color: var(--tw-head-ink);
+	background: rgba(255, 255, 255, 0.24);
+	box-shadow: none;
+	cursor: pointer;
+	transform: none;
+	-webkit-backdrop-filter: blur(2px);
+	backdrop-filter: blur(2px);
+	transition:
+		background-color 0.2s ease,
+		border-color 0.2s ease,
+		transform 0.28s cubic-bezier(0.3, 1.4, 0.5, 1),
+		box-shadow 0.25s ease;
 }
 
-/* the empty paper at the end */
+.tw-paper--add::after {
+	display: none;
+}
+
+.tw-add__icon {
+	display: grid;
+	width: 46px;
+	height: 46px;
+	place-items: center;
+	border-radius: 999px;
+	color: var(--tw-ink);
+	background: rgba(255, 255, 255, 0.85);
+	box-shadow: 0 2px 6px rgba(40, 25, 10, 0.15);
+	transition: transform 0.3s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.tw-add__label {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.tw-note--add:hover .tw-paper--add,
+.tw-paper--add:focus-visible {
+	border-color: #fff;
+	background: rgba(255, 255, 255, 0.42);
+	box-shadow: 0 16px 24px -18px rgba(60, 35, 10, 0.55);
+	transform: translateY(-3px);
+}
+
+.tw-note--add:hover .tw-add__icon {
+	transform: rotate(90deg) scale(1.06);
+}
+
+.tw-paper--add:focus-visible {
+	outline: 2.5px solid #21c063;
+	outline-offset: 4px;
+}
+
+html.dark .tw-paper--add {
+	border-color: rgba(255, 235, 205, 0.3);
+	background: rgba(0, 0, 0, 0.16);
+}
+
+html.dark .tw-add__icon {
+	color: #f6ead6;
+	background: rgba(255, 255, 255, 0.12);
+}
+
+html.dark .tw-note--add:hover .tw-paper--add {
+	border-color: rgba(255, 235, 205, 0.55);
+	background: rgba(0, 0, 0, 0.24);
+}
+
+/* nothing matches the search / filter */
 
 /* drag */
 .tw-note.is-dragging .tw-paper {
-	opacity: 0.32;
-	filter: grayscale(0.4);
+	opacity: 0.35;
+	filter: grayscale(0.3);
 	box-shadow: none;
-	outline: 2px dashed color-mix(in srgb, var(--tw-twine) 80%, transparent);
+	outline: 2px dashed rgba(255, 255, 255, 0.8);
 	outline-offset: 2px;
 }
 
@@ -496,36 +600,35 @@ html.dark .tw-paper {
 	transform: rotate(3deg) scale(1.04);
 	box-shadow:
 		0 2px 4px rgba(0, 0, 0, 0.12),
-		0 30px 40px -18px rgba(40, 25, 10, 0.55);
+		0 30px 40px -18px rgba(40, 25, 10, 0.6);
 }
 
-/* ─── stacked: one column on narrow panes ─── */
-
-.tw-frame.is-stacked .tw-note {
-	padding-top: 6px;
+.tw-float .tw-no,
+.tw-float .tw-check {
+	opacity: 0;
 }
 
-.tw-frame.is-stacked .tw-pin {
-	top: -8px;
-	left: 26px;
-	transform: rotate(14deg);
+/* narrow boards */
+@media (max-width: 900px) {
+
+	.tw-wall {
+		padding: 6px 14px 18px;
+	}
 }
 
-[dir='rtl'] .tw-frame.is-stacked .tw-pin {
-	right: 26px;
-	left: auto;
-}
+@media (max-width: 520px) {
+	.tw-grid {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		gap: 30px 16px;
+	}
 
-.tw-frame.is-stacked .tw-paper {
-	max-width: none;
-	min-height: 0;
-	transform: none;
-}
+	.tw-paper {
+		min-height: 158px;
+	}
 
-.tw-frame.is-stacked .tw-text {
-	font-size: 21px;
-	text-align: start;
-	-webkit-line-clamp: 3;
+	.tw-text {
+		font-size: 23px;
+	}
 }
 
 /* ─── motion ─── */
@@ -543,6 +646,13 @@ html.dark .tw-paper {
 
 .tw-note.is-leaving .tw-pin {
 	animation: tw-pin-out 0.22s ease-in forwards;
+}
+
+@keyframes tw-board-in {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
 }
 
 @keyframes tw-swing {
@@ -568,7 +678,7 @@ html.dark .tw-paper {
 @keyframes tw-pin-in {
 	from {
 		opacity: 0;
-		transform: translate(-50%, -18px) rotate(14deg) scale(1.4);
+		transform: translate(-50%, -18px) rotate(12deg) scale(1.4);
 	}
 }
 
@@ -587,13 +697,23 @@ html.dark .tw-paper {
 }
 
 @keyframes tw-stamp {
-	from {
+	0% {
 		opacity: 0;
-		transform: translateX(-50%) rotate(-20deg) scale(1.9);
+		transform: translateY(-50%) rotate(-24deg) scale(1.9);
+	}
+	22%,
+	70% {
+		opacity: 0.9;
+		transform: translateY(-50%) rotate(-10deg) scale(1.15);
+	}
+	100% {
+		opacity: 0;
+		transform: translateY(-50%) rotate(-10deg) scale(1.15);
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
+	.tw-frame,
 	.tw-paper,
 	.tw-pin,
 	.tw-stamp,
@@ -603,104 +723,220 @@ html.dark .tw-paper {
 	}
 }
 
-/* on a finished note the stamp says it; the status line would repeat it */
-.tw-note.is-done .tw-bottom .tkx-status {
-	visibility: hidden;
+/* ─── steps: the note fills from the bottom, one band per check ─── */
+
+.tw-check.has-steps {
+	color: var(--tw-done);
+	box-shadow: none;
 }
 
-/* the empty paper at the end */
-.tw-paper--add {
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	min-height: 158px;
+.tw-check.has-steps:hover {
+	color: var(--tw-done);
+	background: rgba(255, 255, 255, 0.8);
+}
+
+/* a split note keeps its check in view: it shows how far along you are */
+
+/* no header inside the board any more: the notes start right under the frame */
+.tw-wall {
+	padding-top: 14px;
+}
+
+.tw-check.has-steps {
+	width: 36px;
+	height: 36px;
+	background: rgba(255, 255, 255, 0.55);
+}
+
+.tw-check.has-steps .tkx-stepc__n {
+	font-size: 10px;
+	color: var(--tw-ink);
+}
+
+.tw-paper .tkx-details {
+	margin-inline-start: auto;
 	color: var(--tw-ink-2);
-	background: transparent;
-	border: 1.5px dashed color-mix(in srgb, var(--tw-twine) 70%, transparent);
-	box-shadow: none;
-	cursor: pointer;
-	transform: none;
-	opacity: 0.85;
-	transition:
-		opacity 0.2s ease,
-		background-color 0.2s ease,
-		transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
 
-.tw-paper--add::after {
-	display: none;
+.tw-paper .tkx-details + .tw-check {
+	margin-inline-start: 0;
 }
 
-.tw-paper--add span {
-	font-size: 13px;
-	font-weight: 600;
+/* ================================================================== */
+/* paper v3: real sticky-note paper                                    */
+/* ================================================================== */
+
+/* the note casts its shadow from its real outline (folded corner included) */
+.tw-note:not(.tw-note--add) {
+	filter: drop-shadow(0 1px 1px rgba(40, 25, 10, 0.16)) drop-shadow(0 10px 10px rgba(60, 35, 10, 0.24));
+	transition: filter 0.3s ease;
 }
 
-html.dark .tw-paper--add {
-	color: #bba98c;
+.tw-note:not(.tw-note--add):hover,
+.tw-note:not(.tw-note--add):focus-within {
+	filter: drop-shadow(0 2px 2px rgba(40, 25, 10, 0.16)) drop-shadow(0 18px 16px rgba(60, 35, 10, 0.3));
 }
 
-.tw-note--add:hover .tw-paper--add {
-	opacity: 1;
-	transform: translateY(-2px);
-	background: color-mix(in srgb, var(--tw-twine) 12%, transparent);
-	box-shadow: none;
+html.dark .tw-note:not(.tw-note--add) {
+	filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)) drop-shadow(0 12px 12px rgba(0, 0, 0, 0.45));
 }
 
-.tw-paper--add:focus-visible {
+.tw-note.is-dragging {
+	filter: none !important;
+}
+
+.tw-paper:not(.tw-paper--add) {
+	isolation: isolate;
+	gap: 10px;
+	padding: 18px 16px 14px;
+	border-radius: 2px 2px 3px 3px;
+	background:
+		linear-gradient(to bottom, rgba(70, 45, 15, 0.07), rgba(70, 45, 15, 0) 22px),
+		radial-gradient(120% 80% at 18% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
+		radial-gradient(90% 60% at 100% 100%, rgba(120, 80, 30, 0.08), transparent 70%),
+		linear-gradient(178deg, var(--a), var(--b));
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+	/* bottom-right corner folded up */
+	-webkit-mask: linear-gradient(315deg, transparent 14px, #000 14.5px);
+	mask: linear-gradient(315deg, transparent 14px, #000 14.5px);
+}
+
+.tw-note:hover .tw-paper:not(.tw-paper--add),
+.tw-note:focus-within .tw-paper:not(.tw-paper--add),
+html.dark .tw-paper:not(.tw-paper--add),
+.tw-paper.is-pinned:not(.tw-paper--add) {
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* paper fibre */
+.tw-paper:not(.tw-paper--add)::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	border-radius: inherit;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.27 0 0 0 0 0.16 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	background-size: 180px 180px;
+	opacity: 0.32;
+	mix-blend-mode: multiply;
+	pointer-events: none;
+}
+
+/* the folded flap: the paper's paler back side */
+.tw-paper:not(.tw-paper--add)::after {
+	right: 0;
+	bottom: 0;
+	width: 21px;
+	height: 21px;
+	border-radius: 0;
+	background: linear-gradient(315deg, transparent 50%, color-mix(in srgb, var(--a) 55%, #fff) 50%, color-mix(in srgb, var(--b) 75%, #fff) 100%);
+	filter: drop-shadow(-1px -1px 1.5px rgba(60, 35, 10, 0.22));
+}
+
+/* pinned: a thin gold edge along the top */
+.tw-paper.is-pinned:not(.tw-paper--add) {
+	background:
+		linear-gradient(to bottom, #f2b51d 0 3px, transparent 3px),
+		linear-gradient(to bottom, rgba(70, 45, 15, 0.07), rgba(70, 45, 15, 0) 22px),
+		radial-gradient(120% 80% at 18% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
+		linear-gradient(178deg, var(--a), var(--b));
+}
+
+/* the focus ring lives on the note (the paper is masked) */
+.tw-note:focus-visible {
 	outline: 2.5px solid #21c063;
-	outline-offset: 4px;
+	outline-offset: 6px;
+	border-radius: 6px;
 }
 
-.tw-hint {
-	display: inline-flex;
-	align-items: center;
-	align-self: center;
-	gap: 5px;
-	margin: 8px 0 0;
-	font-size: 11.5px;
-	font-weight: 600;
-	color: color-mix(in srgb, var(--tw-ink) 70%, transparent);
-	opacity: 0.8;
+.tw-note:focus-visible .tw-paper {
+	outline: none;
 }
 
-html.dark .tw-hint {
-	color: #d8c6a8;
+.tw-text {
+	font-size: 28px;
+	letter-spacing: 0.005em;
+	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-.tw-frame.is-stacked .tw-wall {
-	padding: 16px 12px 4px;
+.tw-top {
+	min-height: 26px;
 }
 
-.tw-frame.is-stacked .tw-row {
-	margin-bottom: 14px;
+.tw-bottom {
+	padding-top: 8px;
+	border-top: 1px dashed rgba(43, 34, 25, 0.16);
 }
 
-/* quiet notes: the number and the check circle show up when you reach for the note */
-.tw-paper .tw-no,
-.tw-paper .tw-check {
-	opacity: 0;
+/* the drag clone keeps a shadow of its own */
+.tw-float {
+	filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15)) drop-shadow(0 26px 22px rgba(40, 25, 10, 0.4));
+}
+
+.tw-float .tw-paper {
+	box-shadow: none;
+}
+
+/* ─── progress on a note ─── */
+.tw-paper .tkx-bar {
+	--bar-off: rgba(43, 34, 25, 0.13);
+	padding: 8px 10px 9px;
+	border-radius: 10px;
+	color: var(--tw-ink);
+	background: rgba(255, 255, 255, 0.45);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.tw-check.has-steps {
+	width: 40px;
+	height: 40px;
+	color: #1f9d57;
+	background: rgba(255, 255, 255, 0.7);
+	box-shadow: 0 1px 2px rgba(40, 25, 10, 0.12);
 	transition:
-		opacity 0.18s ease,
-		background-color 0.2s ease,
-		color 0.2s ease,
-		box-shadow 0.2s ease,
-		transform 0.12s ease;
+		transform 0.15s ease,
+		background-color 0.2s ease;
 }
 
-.tw-note:hover .tw-no,
-.tw-note:hover .tw-check,
-.tw-note:focus-within .tw-no,
-.tw-note:focus-within .tw-check,
-.tw-note.is-editing .tw-no,
-.tw-note.is-editing .tw-check {
+.tw-check.has-steps:hover {
+	background: #fff;
+	transform: scale(1.06);
+}
+
+.tw-check.has-steps:active {
+	transform: scale(0.92);
+}
+
+.tw-paper .tw-check.has-steps {
 	opacity: 1;
 }
 
-/* touch screens have no hover: keep them visible there */
-@media (hover: none) {
-	.tw-paper .tw-no,
-	.tw-paper .tw-check {
-		opacity: 1;
+.tw-check.has-steps .tkx-stepc__n {
+	font-size: 10.5px;
+	color: var(--tw-ink);
+}
+
+/* finishing the last step: the check lands with a ring burst */
+.tw-note.is-stamped.is-done .tw-check {
+	animation: tw-check-burst 0.6s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+@keyframes tw-check-burst {
+	0% {
+		transform: scale(0.6);
+		box-shadow: 0 0 0 0 rgba(31, 157, 87, 0.55);
 	}
+	60% {
+		transform: scale(1.12);
+		box-shadow: 0 0 0 10px rgba(31, 157, 87, 0);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+/* a finished note: muted, its bar full and green */
+.tw-note.is-done .tw-paper {
+	filter: saturate(0.6) brightness(0.98);
+	opacity: 0.92;
 }

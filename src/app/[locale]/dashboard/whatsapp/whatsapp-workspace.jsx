@@ -113,6 +113,8 @@ import {
 	WifiOff,
 	X,
 	Zap,
+	Flag,
+	Radio,
 } from 'lucide-react';
 import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
@@ -263,6 +265,7 @@ import './wa-ui.css';
 import './wa-mobile.css';
 import './wa-desktop-palette.css';
 import './wa-desktop.css';
+import './wa-desktop-chats.css';
 import './wa-popups.css';
 import { useMenuKeyboard } from './wa-ui-menu';
 import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
@@ -11329,7 +11332,10 @@ function Toggle({ checked, onChange, label, size = 'md', disabled = false }) {
 	);
 }
 
-function ConversationFilterDropdown({ value, onChange, labels, variant = 'dropdown' }) {
+/** Icons for the desktop filter pills ("All" and "Unread" carry a count instead). */
+const FILTER_PILL_ICONS = { favorites: Star, channels: Radio, important: Flag };
+
+function ConversationFilterDropdown({ value, onChange, labels, variant = 'dropdown', counts = {} }) {
 	const [open, setOpen] = useState(false);
 	const [position, setPosition] = useState(null);
 	const rootRef = useRef(null);
@@ -11395,11 +11401,18 @@ function ConversationFilterDropdown({ value, onChange, labels, variant = 'dropdo
 							role="option"
 							aria-selected={active}
 							onClick={() => onChange(option.value)}
-							className={`wa-filter-pill rounded-[18px] border-0 px-3 py-1.5 text-[10px] font-semibold transition-colors ${
+							className={`wa-filter-pill is-${option.value} rounded-[18px] border-0 px-3 py-1.5 text-[10px] font-semibold transition-colors ${
 								active ? 'is-active' : ''
 							}`}
 						>
-							{option.label}
+							{FILTER_PILL_ICONS[option.value] ? (() => {
+								const PillIcon = FILTER_PILL_ICONS[option.value];
+								return <PillIcon size={14} strokeWidth={2.2} className="wa-filter-pill__icon" aria-hidden="true" />;
+							})() : null}
+							<span>{option.label}</span>
+							{counts[option.value] > 0 ? (
+								<span className="wa-filter-pill__count">{counts[option.value] > 99 ? '99+' : counts[option.value]}</span>
+							) : null}
 						</button>
 					);
 				})}
@@ -11999,6 +12012,23 @@ const WaConversationRow = memo(function WaConversationRow({
 					)}
 				</div>
 			</div>
+			{actions.openMenu && !collapsed ? (
+				<button
+					type="button"
+					className="wa-row-more"
+					aria-label={locale === 'ar' ? `خيارات ${title}` : `${title} options`}
+					title={locale === 'ar' ? 'خيارات' : 'Options'}
+					aria-haspopup="menu"
+					onPointerDown={event => event.stopPropagation()}
+					onClick={event => {
+						event.stopPropagation();
+						actions.openMenu(event, conversation);
+					}}
+					onKeyDown={event => event.stopPropagation()}
+				>
+					<ChevronDown size={20} strokeWidth={2.2} />
+				</button>
+			) : null}
 		</div>
 	);
 });
@@ -12511,6 +12541,19 @@ function WhatsAppWorkspaceContent() {
 	const [collapsedChatTip, setCollapsedChatTip] = useState(null);
 	const [searchOpen, setSearchOpen] = useState(false);
 	const searchInputRef = useRef(null);
+	useEffect(() => {
+		const onKey = event => {
+			if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+			if (event.key !== 'k' && event.key !== 'K') return;
+			const input = searchInputRef.current;
+			if (!input || !input.offsetParent) return;
+			event.preventDefault();
+			input.focus();
+			input.select();
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, []);
 	const [privacyBlur, setPrivacyBlur] = useState(() => readWhatsAppPrivacyBlur());
 	const [conversationFilter, setConversationFilter] = useState(defaultWhatsAppConversationFilter);
 	const [contactsPopupOpen, setContactsPopupOpen] = useState(false);
@@ -15960,6 +16003,18 @@ function WhatsAppWorkspaceContent() {
 				right: event.clientX,
 				width: 0,
 				height: 0,
+			});
+			setConversationActionTarget(conversation);
+		},
+		openMenu: (event, conversation) => {
+			const rect = event.currentTarget.getBoundingClientRect();
+			setConversationActionAnchor({
+				top: rect.top,
+				bottom: rect.bottom,
+				left: rect.left,
+				right: rect.right,
+				width: rect.width,
+				height: rect.height,
 			});
 			setConversationActionTarget(conversation);
 		},
@@ -25324,6 +25379,11 @@ function WhatsAppWorkspaceContent() {
 										{searchingConversations ? (
 											<Loader2 size={13} className="wa-desktop-search-inline__spin" />
 										) : null}
+										{!chatSearch && !searchingConversations ? (
+											<kbd className="wa-search-kbd" aria-hidden="true">
+												{typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ K' : 'Ctrl K'}
+											</kbd>
+										) : null}
 										{chatSearch ? (
 											<button
 												type="button"
@@ -25350,6 +25410,11 @@ function WhatsAppWorkspaceContent() {
 											variant="pills"
 											value={conversationFilter}
 											onChange={setConversationFilter}
+											counts={{
+												all: unreadConversationCount,
+												unread: unreadConversationCount,
+												channels: unreadChannelCount,
+											}}
 											labels={{
 												all: t.allChats,
 												unread: t.unreadChats,
@@ -29125,14 +29190,13 @@ function WhatsAppWorkspaceContent() {
 						title={t.contacts}
 						subtitle={locale === 'ar' ? 'ابحث عن رقم، اعرض بياناته، وابدأ شات.' : 'Look up a number, see their profile, and start a chat.'}
 						icon={<BookUser size={18} />}
-						width={760}
-						height={780}
+						width={540}
 						zIndex={140}
 						onClose={() => setContactsPopupOpen(false)}
 						closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
 						className="wa-contacts-dialog"
 					>
-						<div className="min-h-0 flex-1 overflow-y-auto nice-scroll px-1 pb-3">
+						<div className="min-h-0 flex-1 overflow-y-auto nice-scroll px-1 pb-2">
 							<Suspense fallback={<WaPaneLoading label={t.loading} />}>
 								<ContactsPanel
 									accountId={accountId}

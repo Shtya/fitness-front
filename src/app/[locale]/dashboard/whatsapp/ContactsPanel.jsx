@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
@@ -10,6 +10,7 @@ import {
 	BookUser,
 	Briefcase,
 	CheckCircle2,
+	ChevronDown,
 	CircleSlash,
 	Clock,
 	CloudOff,
@@ -28,6 +29,7 @@ import {
 	X,
 } from 'lucide-react';
 import api from '@/utils/axios';
+import './wa-contacts.css';
 import {
 	apiErrorCode,
 	apiErrorMessage,
@@ -48,6 +50,14 @@ const COPY = {
 	en: {
 		title: 'Contacts',
 		subtitle: 'Look up a number, save it, and start a WhatsApp chat.',
+		findTitle: 'Find someone on WhatsApp',
+		offlineLine: 'WhatsApp is offline, so numbers can’t be verified right now.',
+		findPlaceholder: 'Phone number with country code',
+		findHint: 'Type the number with its country code, or pick the country first.',
+		countryShort: 'Auto',
+		newContact: 'New contact',
+		emptyTitle: 'No saved contacts yet',
+		emptyHint: 'Check a number above to see their WhatsApp profile, or add a contact by hand.',
 		lookupLabel: 'Phone number',
 		lookupPlaceholder: '+20 100 123 4567',
 		lookup: 'Check',
@@ -146,6 +156,14 @@ const COPY = {
 	ar: {
 		title: 'جهات الاتصال',
 		subtitle: 'ابحث عن رقم، احفظه، وابدأ شات واتساب.',
+		findTitle: 'دوّر على حد في واتساب',
+		offlineLine: 'واتساب مش متصل، فمش هنقدر نتحقق من الأرقام دلوقتي.',
+		findPlaceholder: 'رقم الموبايل بكود الدولة',
+		findHint: 'اكتب الرقم بكود الدولة، أو اختار الدولة الأول.',
+		countryShort: 'تلقائي',
+		newContact: 'جهة اتصال جديدة',
+		emptyTitle: 'لسه مفيش جهات اتصال محفوظة',
+		emptyHint: 'افحص رقم من فوق عشان تشوف بروفايله على واتساب، أو ضيف جهة اتصال يدويًا.',
 		lookupLabel: 'رقم الموبايل',
 		lookupPlaceholder: '+20 100 123 4567',
 		lookup: 'تحقق',
@@ -268,6 +286,9 @@ const secondaryButton =
 	'inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:text-emerald-300';
 const iconButton =
 	'grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white';
+
+const flagOf = code =>
+	code && code.length === 2 ? String.fromCodePoint(...[...code.toUpperCase()].map(ch => 127397 + ch.charCodeAt(0))) : '';
 
 const contactsKey = accountId => ['whatsapp', 'contacts', accountId];
 
@@ -511,10 +532,7 @@ function LookupCard({ copy, lookup, canUse, onSave, onUpdate, onStartChat, start
 	useEffect(() => setMode(null), [lookup]);
 
 	return (
-		<section
-			aria-live="polite"
-			className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60"
-		>
+		<section aria-live="polite" className="wct-card wct-result">
 			<div className="flex items-start gap-3">
 				<Avatar url={pictureUrl} name={title || ''} size={64} />
 				<div className="min-w-0 flex-1">
@@ -655,7 +673,7 @@ function ContactRow({ copy, contact, canUse, onStartChat, startingId, onUpdate, 
 	const canSyncNow = syncStatus === 'not_requested' || canRetrySync(contact);
 
 	return (
-		<li className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 [contain-intrinsic-size:auto_76px] [content-visibility:auto] dark:border-slate-800 dark:bg-slate-900/60">
+		<li className={`wct-row ${mode ? 'is-open' : ''} [contain-intrinsic-size:auto_76px] [content-visibility:auto]`}>
 			<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
 				<Avatar url={contact.avatarUrl} name={name || ''} size={44} />
 				<div className="min-w-0 flex-1 basis-[11rem]">
@@ -671,7 +689,7 @@ function ContactRow({ copy, contact, canUse, onStartChat, startingId, onUpdate, 
 						<span className="text-[11px] text-slate-400">{sourceLabel(contact.source, copy)}</span>
 					</div>
 				</div>
-				<div className="ms-auto flex shrink-0 items-center gap-0.5">
+				<div className="wct-row__actions ms-auto flex shrink-0 items-center gap-0.5">
 					<button
 						type="button"
 						className={iconButton}
@@ -793,7 +811,7 @@ function ContactRow({ copy, contact, canUse, onStartChat, startingId, onUpdate, 
 
 function RowSkeleton() {
 	return (
-		<li className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-800" aria-hidden="true">
+		<li className="wct-row flex items-center gap-3" aria-hidden="true">
 			<span className="h-11 w-11 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
 			<span className="flex flex-1 flex-col gap-2">
 				<span className="h-3 w-2/5 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
@@ -825,6 +843,7 @@ export default function ContactsPanel({
 	const [search, setSearch] = useState('');
 	const [scope, setScope] = useState('saved');
 	const [startingId, setStartingId] = useState(null);
+	const lookupInput = useRef(null);
 
 	useEffect(() => {
 		const timer = window.setTimeout(() => setSearch(filter.trim()), 300);
@@ -1020,123 +1039,113 @@ export default function ContactsPanel({
 		<div
 			className={
 				embedded
-					? 'flex w-full flex-col gap-4 p-1'
-					: 'wa-dk mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6'
+					? 'wct flex w-full flex-col gap-5 p-1'
+					: 'wct wa-dk mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6'
 			}
 			dir={ar ? 'rtl' : 'ltr'}
 		>
-			<header className={`flex items-start gap-3 ${embedded ? 'px-1' : ''}`}>
-				{embedded ? null : (
+			{embedded ? null : (
+				<header className="flex items-start gap-3">
 					<span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1DAB61] text-white max-[768px]:hidden">
 						<BookUser size={20} />
 					</span>
-				)}
-				<div className="min-w-0 flex-1">
-					{embedded ? null : (
+					<div className="min-w-0 flex-1">
 						<h2 className="text-lg font-black text-slate-900 dark:text-white max-[768px]:sr-only">{copy.title}</h2>
-					)}
-					<p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
-				</div>
-				<button
-					type="button"
-					onClick={() => {
-						setAdding(current => !current);
-						setFormError('');
-					}}
-					disabled={!canUse}
-					className={`${primaryButton} shrink-0`}
-					aria-expanded={adding}
-				>
-					{adding ? <X size={16} /> : <Plus size={16} />}
-					<span className="max-[420px]:sr-only">{copy.addContact}</span>
-				</button>
-			</header>
+						<p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
+					</div>
+				</header>
+			)}
 
 			{!canUse ? (
-				<p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+				<p className="wct-notice">
 					<Info size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-					{copy.noUse}
+					<span>{copy.noUse}</span>
 				</p>
 			) : null}
 			{offline ? (
-				<p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-					<CloudOff size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-					{copy.notConnected}
+				<p className="wct-notice is-warn" role="status" title={copy.notConnected}>
+					<CloudOff size={15} className="shrink-0" aria-hidden="true" />
+					<span>{copy.offlineLine}</span>
+					<Info size={14} className="wct-notice__more" aria-hidden="true" />
 				</p>
 			) : null}
 
-			{adding ? (
-				<section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-					<h3 className="mb-3 text-sm font-black text-slate-800 dark:text-slate-100">{copy.addContact}</h3>
-					<ContactForm
-						copy={copy}
-						showPhone
-						countries={countries}
-						defaultCountry={country}
-						pending={createMutation.isPending}
-						error={formError}
-						submitLabel={copy.saveChanges}
-						onCancel={() => setAdding(false)}
-						onSubmit={values => createMutation.mutate({ ...values, source: 'manual' })}
-					/>
-				</section>
-			) : null}
 
-			<form
-				onSubmit={submitLookup}
-				className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60"
-				noValidate
-			>
-				<label htmlFor="wa-contact-lookup" className="mb-1.5 block text-xs font-bold text-slate-500 dark:text-slate-400">
-					{copy.lookupLabel}
+			<form onSubmit={submitLookup} className="wct-find" noValidate>
+				<label htmlFor="wa-contact-lookup" className="sr-only">
+					{copy.findTitle}
 				</label>
-				<div className="flex flex-col gap-2 sm:flex-row">
-					<div className="relative min-w-0 flex-1">
-						<Search size={16} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-						<input
-							id="wa-contact-lookup"
-							type="tel"
-							inputMode="tel"
-							autoComplete="tel"
-							dir="ltr"
-							value={phone}
+				<div className={`wct-search ${lookupError ? 'is-invalid' : ''} ${!canUse ? 'is-disabled' : ''}`}>
+					<span className="wct-country" title={copy.countryAuto}>
+						<span className="wct-country__flag" aria-hidden="true">
+							{country ? flagOf(country) : '🌐'}
+						</span>
+						<span className="wct-country__dial" dir="ltr">
+							{country ? countries.find(item => item.code === country)?.dial : copy.countryShort}
+						</span>
+						<ChevronDown size={14} className="wct-country__chev" aria-hidden="true" />
+						<select
+							value={country}
 							onChange={event => {
-								setPhone(event.target.value);
-								if (lookupError) setLookupError('');
+								setCountry(event.target.value);
+								lookupInput.current?.focus();
 							}}
-							placeholder={copy.lookupPlaceholder}
 							disabled={!canUse}
-							className={`${inputClass} h-12 ps-9 text-base`}
-							aria-invalid={Boolean(lookupError)}
-							aria-describedby={lookupError ? 'wa-contact-lookup-error' : undefined}
-						/>
-					</div>
-					<select
-						value={country}
-						onChange={event => setCountry(event.target.value)}
+							aria-label={copy.countryAuto}
+						>
+							<option value="">{copy.countryAuto}</option>
+							{countries.map(item => (
+								<option key={item.code} value={item.code}>
+									{flagOf(item.code)} {item.name} ({item.dial})
+								</option>
+							))}
+						</select>
+					</span>
+					<input
+						ref={lookupInput}
+						id="wa-contact-lookup"
+						type="tel"
+						inputMode="tel"
+						autoComplete="off"
+						dir="ltr"
+						value={phone}
+						onChange={event => {
+							setPhone(event.target.value);
+							if (lookupError) setLookupError('');
+						}}
+						placeholder={copy.findPlaceholder}
+						title={copy.findHint}
 						disabled={!canUse}
-						className={`${inputClass} h-12 sm:w-56`}
-						aria-label={copy.countryAuto}
-					>
-						<option value="">{copy.countryAuto}</option>
-						{countries.map(item => (
-							<option key={item.code} value={item.code}>
-								{item.name} ({item.dial})
-							</option>
-						))}
-					</select>
-					<button type="submit" disabled={!canUse || lookupMutation.isPending} className={`${primaryButton} h-12 px-5`}>
+						className="wct-search__input"
+						aria-invalid={Boolean(lookupError)}
+						aria-describedby={lookupError ? 'wa-contact-lookup-error' : undefined}
+					/>
+					{phone ? (
+						<button
+							type="button"
+							className="wct-iconbtn wct-search__clear"
+							onClick={() => {
+								setPhone('');
+								setLookupError('');
+								lookupInput.current?.focus();
+							}}
+							aria-label={copy.cancel}
+						>
+							<X size={15} />
+						</button>
+					) : null}
+					<button type="submit" disabled={!canUse || lookupMutation.isPending || !phone.trim()} className="wct-search__go">
 						{lookupMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-						{copy.lookup}
+						<span>{copy.lookup}</span>
 					</button>
 				</div>
-				<div id="wa-contact-lookup-error" className="mt-2">
+				<div id="wa-contact-lookup-error">
 					<FieldError>{lookupError}</FieldError>
 				</div>
 			</form>
 
 			{lookupMutation.isPending && !lookup ? (
-				<div className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800" aria-busy="true">
+				<div className="wct-card flex items-center gap-3" aria-busy="true">
 					<span className="h-16 w-16 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
 					<span className="flex flex-1 flex-col gap-2">
 						<span className="h-4 w-1/3 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
@@ -1202,68 +1211,114 @@ export default function ContactsPanel({
 				</section>
 			) : null}
 
-			<section className="flex flex-col gap-3">
-				<div className="flex flex-wrap items-center gap-2">
-					<h3 className="me-auto text-sm font-black text-slate-700 dark:text-slate-200">
+			<section className="wct-list">
+				<div className="wct-list__bar">
+					<h3 className="wct-list__title">
 						{scope === 'all' ? copy.listAll : copy.listTitle}
-						{list.data ? <span className="ms-1 font-semibold text-slate-400">({total})</span> : null}
+						{list.data ? <span className="wct-count">{total}</span> : null}
 					</h3>
 					{canListAll ? (
-						<div className="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800" role="tablist">
+						<div className="wct-seg" role="tablist">
 							{[
 								['saved', copy.listSaved],
 								['all', copy.listAll],
 							].map(([key, label]) => (
-								<button
-									key={key}
-									type="button"
-									role="tab"
-									aria-selected={scope === key}
-									onClick={() => setScope(key)}
-									className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-										scope === key
-											? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white'
-											: 'text-slate-500'
-									}`}
-								>
+								<button key={key} type="button" role="tab" aria-selected={scope === key} onClick={() => setScope(key)} className={scope === key ? 'is-on' : ''}>
 									{label}
 								</button>
 							))}
 						</div>
 					) : null}
+					<button
+						type="button"
+						onClick={() => {
+							setAdding(current => !current);
+							setFormError('');
+						}}
+						disabled={!canUse}
+						className="wct-new"
+						aria-expanded={adding}
+					>
+						{adding ? <X size={15} /> : <Plus size={15} />}
+						<span>{copy.newContact}</span>
+					</button>
 				</div>
-				<div className="relative">
-					<Search size={15} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-					<input
-						type="search"
-						value={filter}
-						onChange={event => setFilter(event.target.value)}
-						placeholder={copy.filter}
-						className={`${inputClass} ps-9`}
-						aria-label={copy.filter}
-					/>
-				</div>
+				{adding ? (
+					<section className="wct-card wct-add">
+						<div className="wct-card__head">
+							<span className="wct-card__icon" aria-hidden="true">
+								<UserPlus size={17} />
+							</span>
+							<h3>{copy.addContact}</h3>
+							<button type="button" onClick={() => setAdding(false)} className="wct-iconbtn ms-auto" aria-label={copy.cancel}>
+								<X size={16} />
+							</button>
+						</div>
+						<ContactForm
+							copy={copy}
+							showPhone
+							countries={countries}
+							defaultCountry={country}
+							pending={createMutation.isPending}
+							error={formError}
+							submitLabel={copy.saveChanges}
+							onCancel={() => setAdding(false)}
+							onSubmit={values => createMutation.mutate({ ...values, source: 'manual' })}
+						/>
+					</section>
+				) : null}
+				{contacts.length || search || filter ? (
+					<label className="wct-filter">
+						<Search size={15} aria-hidden="true" />
+						<input type="search" value={filter} onChange={event => setFilter(event.target.value)} placeholder={copy.filter} aria-label={copy.filter} />
+					</label>
+				) : null}
 
 				{list.isLoading ? (
-					<ul className="flex flex-col gap-2" aria-busy="true">
+					<ul className="wct-rows" aria-busy="true">
 						{[0, 1, 2, 3].map(item => (
 							<RowSkeleton key={item} />
 						))}
 					</ul>
 				) : list.isError ? (
-					<div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+					<div className="wct-notice is-error justify-between">
 						<span>{apiErrorMessage(list.error, copy.loadFailed)}</span>
 						<button type="button" onClick={() => list.refetch()} className="font-bold underline">
 							{copy.retry}
 						</button>
 					</div>
-				) : !contacts.length ? (
-					<div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-400 dark:border-slate-700">
-						<BookUser size={28} aria-hidden="true" />
-						{search ? copy.emptySearch : copy.empty}
+				) : !contacts.length && adding ? null : !contacts.length ? (
+					<div className="wct-empty">
+						<span className="wct-empty__art" aria-hidden="true">
+							<BookUser size={20} />
+						</span>
+						{search ? (
+							<span className="wct-empty__title">{copy.emptySearch}</span>
+						) : (
+							<>
+								<span className="wct-empty__text">
+									<span className="wct-empty__title">{copy.emptyTitle}</span>
+									<span className="wct-empty__hint">{copy.emptyHint}</span>
+								</span>
+								<div className="wct-empty__actions">
+									<button
+										type="button"
+										className="wct-btn is-primary"
+										disabled={!canUse}
+										onClick={() => {
+											setAdding(true);
+											setFormError('');
+										}}
+									>
+										<UserPlus size={15} />
+										{copy.addContact}
+									</button>
+								</div>
+							</>
+						)}
 					</div>
 				) : (
-					<ul className="flex flex-col gap-2">
+					<ul className="wct-rows">
 						{contacts.map(contact => (
 							<ContactRow
 								key={contact.id}

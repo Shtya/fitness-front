@@ -13539,6 +13539,7 @@ button.wa-view-once:focus-visible {
 	outline-offset: 2px;
 }
 
+/* sized to its content: compact when empty, grows (then scrolls) as results and forms open */
 .wa-contacts-dialog {
-	min-height: min(780px, calc(100dvh - 24px));
+	min-height: 0;
 }
