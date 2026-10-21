@@ -3,14 +3,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	Activity,
+	AlertTriangle,
 	BookOpen,
 	Bot,
+	Check,
 	Cpu,
 	FlaskConical,
+	Info,
+	KeyRound,
 	Loader2,
 	Pencil,
+	Plug,
 	Plus,
 	RefreshCw,
+	RotateCcw,
 	Save,
 	Search,
 	Send,
@@ -18,6 +24,7 @@ import {
 	Sparkles,
 	Trash2,
 	X,
+	Zap,
 } from 'lucide-react';
 import { WaCustomSelect } from '../WaCustomSelect';
 import { apiErrorMessage, whatsappAiAgentApi } from './whatsapp-ai-api';
@@ -97,31 +104,37 @@ function Switch({ checked, onChange, label, disabled }) {
 	);
 }
 
+/** A setting row: what it does on one side, its switch on the other. */
 function Toggle({ label, hint, checked, onChange }) {
 	return (
 		<div className="wa-ag-toggle">
-			<div>
-				<p className="text-[12.5px] font-bold leading-4">{label}</p>
-				{hint ? <p className="wa-ag-hint mt-0.5">{hint}</p> : null}
+			<div className="wa-ag-toggle-text">
+				<p className="wa-ag-toggle-label">{label}</p>
+				{hint ? <p className="wa-ag-hint">{hint}</p> : null}
 			</div>
 			<Switch label={label} checked={Boolean(checked)} onChange={onChange} />
 		</div>
 	);
 }
 
-function Field({ label, hint, wide, num, children }) {
+function Field({ label, hint, wide, num, aside, children }) {
 	return (
 		<div className={`wa-ag-field${wide ? ' is-wide' : ''}${num ? ' is-num' : ''}`}>
-			{label ? <span className="wa-ag-label">{label}</span> : null}
+			{label || aside ? (
+				<span className="wa-ag-label-row">
+					{label ? <span className="wa-ag-label">{label}</span> : null}
+					{aside ? <span className="wa-ag-aside">{aside}</span> : null}
+				</span>
+			) : null}
 			{children}
 			{hint ? <span className="wa-ag-hint">{hint}</span> : null}
 		</div>
 	);
 }
 
-function Chips({ label, value, onChange, options, ariaLabel }) {
+function Chips({ label, value, onChange, options, ariaLabel, wide = true }) {
 	return (
-		<div className="wa-ag-field is-wide">
+		<div className={`wa-ag-field${wide ? ' is-wide' : ''}`}>
 			{label ? <span className="wa-ag-label">{label}</span> : null}
 			<div className="wa-ag-chips" role="listbox" aria-label={ariaLabel || label}>
 				{options.map(option => (
@@ -133,6 +146,7 @@ function Chips({ label, value, onChange, options, ariaLabel }) {
 						onClick={() => onChange(option.value)}
 						className={`wa-ag-chip${value === option.value ? ' is-on' : ''}`}
 					>
+						{value === option.value ? <Check size={13} strokeWidth={2.6} aria-hidden /> : null}
 						{option.label}
 					</button>
 				))}
@@ -156,6 +170,61 @@ function Segmented({ value, onChange, options, ariaLabel }) {
 					{option.label}
 				</button>
 			))}
+		</div>
+	);
+}
+
+/** Settings group: title and a one-line explanation beside (or above) its controls. */
+function Group({ title, hint, children }) {
+	return (
+		<section className="wa-ag-group">
+			<header className="wa-ag-group-head">
+				<h3>{title}</h3>
+				{hint ? <p>{hint}</p> : null}
+			</header>
+			<div className="wa-ag-group-body">{children}</div>
+		</section>
+	);
+}
+
+/** Comma lists read back as chips, so a typo or a missing comma is visible at once. */
+function ListPreview({ value, tone }) {
+	const items = splitList(value);
+	if (!items.length) return null;
+	return (
+		<span className="wa-ag-preview">
+			{items.slice(0, 12).map(item => (
+				<span key={item} className={`wa-ag-tag${tone ? ` is-${tone}` : ''}`} dir="auto">
+					{item}
+				</span>
+			))}
+			{items.length > 12 ? <span className="wa-ag-tag">+{items.length - 12}</span> : null}
+		</span>
+	);
+}
+
+function NumberInput({ value, onChange, min, max, unit }) {
+	return (
+		<span className="wa-ag-num">
+			<input type="number" min={min} max={max} value={value} onChange={event => onChange(event.target.value)} className="wa-ag-input" />
+			{unit ? <span className="wa-ag-unit">{unit}</span> : null}
+		</span>
+	);
+}
+
+function Callout({ tone = 'info', icon: Icon = Info, children, role }) {
+	return (
+		<div className={`wa-ag-callout is-${tone}`} role={role}>
+			<Icon size={16} aria-hidden />
+			<div>{children}</div>
+		</div>
+	);
+}
+
+function Loading() {
+	return (
+		<div className="wa-ag-loading" role="status" aria-live="polite">
+			<Loader2 size={20} className="animate-spin" aria-hidden />
 		</div>
 	);
 }
@@ -226,27 +295,31 @@ function formatClock(date, locale) {
 	}).format(date);
 }
 
+const counter = (text, value, max) => fillTemplate(text.chars, { count: String(value || '').length, max });
+
 /* ------------------------------------------------------------------ setup */
 
-function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSubmit, onApplyRecommended }) {
+function SetupSection({ text, lang, draft, setDraft, saving, saved, dirty, error, onSubmit, onApplyRecommended, onOpenModels }) {
 	const update = (key, value) => setDraft(current => ({ ...current, [key]: value }));
 	const updatePermission = (key, value) =>
 		setDraft(current => ({ ...current, permissions: { ...current.permissions, [key]: value } }));
+	const confidence = Math.round(Number(draft.minConfidence ?? 0.55) * 100);
 
 	return (
-		<form onSubmit={onSubmit} className="wa-ag-desk">
-			<aside className="wa-ag-rail">
-				<div className="wa-ag-rail-span">
-					<h3>{text.enabled}</h3>
-					<p className="wa-ag-hint">{text.enabledHint}</p>
-					<div className="flex items-center justify-between gap-3">
-						<span className="text-[13px] font-bold">
-							{draft.enabled ? (draft.defaultMode === 'auto' ? text.chip.auto : text.chip.suggest) : text.chip.off}
-						</span>
+		<form onSubmit={onSubmit} className="wa-ag-setup">
+			<section className={`wa-ag-status${draft.enabled ? ' is-on' : ''}`} aria-label={text.statusTitle}>
+				<div className="wa-ag-status-cell is-power">
+					<div className="wa-ag-status-power">
+						<div className="min-w-0">
+							<p className="wa-ag-status-title">{text.enabled}</p>
+							<p className="wa-ag-hint">
+								{draft.enabled ? (draft.defaultMode === 'auto' ? text.chip.auto : text.chip.suggest) : text.enabledHint}
+							</p>
+						</div>
 						<Switch label={text.enabled} checked={Boolean(draft.enabled)} onChange={value => update('enabled', value)} />
 					</div>
 				</div>
-				<div>
+				<div className="wa-ag-status-cell">
 					<span className="wa-ag-label">{text.scope}</span>
 					<Segmented
 						ariaLabel={text.scope}
@@ -258,7 +331,7 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 						]}
 					/>
 				</div>
-				<div>
+				<div className="wa-ag-status-cell">
 					<span className="wa-ag-label">{text.defaultMode}</span>
 					<Segmented
 						ariaLabel={text.defaultMode}
@@ -270,102 +343,108 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 						]}
 					/>
 				</div>
-				<div className="wa-ag-rail-span wa-ag-model">
+				<div className="wa-ag-status-cell">
 					<span className="wa-ag-label">{text.provider}</span>
-					<b dir="auto">{providerLabel(draft, text)}</b>
-					<span dir="ltr">{text.model}: {draft.model || 'auto'}</span>
-				</div>
-				<button type="submit" disabled={saving} className="wa-ag-save wa-ag-rail-span">
-					{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-					{text.save}
-				</button>
-				{draft.recommended ? (
-					<div className="wa-ag-rail-span">
-						<button type="button" className="wa-ag-ghost w-full justify-center" onClick={onApplyRecommended} disabled={saving}>
-							<Sparkles size={14} />
-							{text.applyRecommended}
+					<div className="wa-ag-model">
+						<span className="wa-ag-model-icon" aria-hidden>
+							<Cpu size={16} />
+						</span>
+						<span className="min-w-0 flex-1">
+							<b dir="auto">{providerLabel(draft, text)}</b>
+							<span dir="ltr">{text.model}: {draft.model || 'auto'}</span>
+						</span>
+						<button type="button" className="wa-ag-link" onClick={onOpenModels}>
+							{text.changeModel}
 						</button>
-						<p className="wa-ag-hint mt-1.5">{text.applyRecommendedHint}</p>
 					</div>
-				) : null}
-				{saved && !error ? <p className="wa-ag-note is-ok wa-ag-rail-span">{text.saved}</p> : null}
-				{error ? <p className="wa-ag-note is-bad wa-ag-rail-span">{error}</p> : null}
-			</aside>
+				</div>
+			</section>
 
-			<div className="wa-ag-mods">
-				<section className="wa-ag-mod">
-					<h3>{text.sectionIdentity}</h3>
-					<div className="wa-ag-fields">
+			{!draft.actorConfigured ? <Callout tone="warn" icon={AlertTriangle}>{text.actorMissing}</Callout> : null}
+			{draft.lastError ? (
+				<Callout tone="bad" icon={AlertTriangle}>
+					{text.lastError}: {draft.lastError}
+				</Callout>
+			) : null}
+
+			<div className="wa-ag-groups">
+				<Group title={text.sectionIdentity} hint={text.identityHint}>
+					<div className="wa-ag-grid">
 						<Field label={text.agentName}>
 							<input value={draft.agentName || ''} onChange={event => update('agentName', event.target.value)} maxLength={80} dir="auto" className="wa-ag-input" />
 						</Field>
 						<Field label={text.businessName}>
 							<input value={draft.businessName || ''} onChange={event => update('businessName', event.target.value)} maxLength={120} dir="auto" className="wa-ag-input" />
 						</Field>
-						<Field label={text.persona} wide>
-							<textarea value={draft.persona || ''} onChange={event => update('persona', event.target.value)} rows={3} maxLength={2000} dir="auto" className="wa-ag-area" />
+						<Field label={text.persona} wide aside={counter(text, draft.persona, 2000)}>
+							<textarea value={draft.persona || ''} onChange={event => update('persona', event.target.value)} rows={4} maxLength={2000} dir="auto" className="wa-ag-area" />
 						</Field>
 						<Chips label={text.dialect} value={draft.dialect} onChange={value => update('dialect', value)} options={DIALECTS[lang]} />
 						<Chips label={text.tone} value={draft.tone} onChange={value => update('tone', value)} options={TONES[lang]} />
-						<Chips label={text.replyLength} value={draft.replyLength} onChange={value => update('replyLength', value)} options={LENGTHS[lang]} />
+						<Field label={text.replyLength} wide>
+							<Segmented ariaLabel={text.replyLength} value={draft.replyLength} onChange={value => update('replyLength', value)} options={LENGTHS[lang]} />
+						</Field>
 					</div>
-				</section>
+				</Group>
 
-				<section className="wa-ag-mod">
-					<h3>{text.sectionRules}</h3>
-					<div className="wa-ag-fields">
-						<Field label={text.rules} wide>
-							<textarea value={draft.rules || ''} onChange={event => update('rules', event.target.value)} rows={4} maxLength={4000} dir="auto" className="wa-ag-area" />
+				<Group title={text.sectionRules} hint={text.rulesHint}>
+					<div className="wa-ag-grid">
+						<Field label={text.rules} wide aside={counter(text, draft.rules, 4000)}>
+							<textarea value={draft.rules || ''} onChange={event => update('rules', event.target.value)} rows={7} maxLength={4000} dir="auto" className="wa-ag-area" />
 						</Field>
 						<Field label={text.allowedTopics}>
 							<input value={draft.allowedTopicsText} onChange={event => update('allowedTopicsText', event.target.value)} dir="auto" className="wa-ag-input" />
+							<ListPreview value={draft.allowedTopicsText} tone="ok" />
 						</Field>
 						<Field label={text.forbiddenTopics}>
 							<input value={draft.forbiddenTopicsText} onChange={event => update('forbiddenTopicsText', event.target.value)} dir="auto" className="wa-ag-input" />
+							<ListPreview value={draft.forbiddenTopicsText} tone="bad" />
 						</Field>
 					</div>
-				</section>
+				</Group>
 
-				<section className="wa-ag-mod">
-					<h3>{text.sectionPermissions}</h3>
-					<p className="wa-ag-hint">{text.permissionsHint}</p>
-					<Toggle label={text.permQuote} checked={draft.permissions?.quotePrices} onChange={value => updatePermission('quotePrices', value)} />
-					<Toggle label={text.permCommit} checked={draft.permissions?.makeCommitments} onChange={value => updatePermission('makeCommitments', value)} />
-					<Toggle label={text.permDiscount} checked={draft.permissions?.offerDiscounts} onChange={value => updatePermission('offerDiscounts', value)} />
-					<Toggle label={text.permLinks} checked={draft.permissions?.shareLinks} onChange={value => updatePermission('shareLinks', value)} />
-				</section>
+				<Group title={text.sectionPermissions} hint={text.permissionsHint}>
+					<div className="wa-ag-toggles">
+						<Toggle label={text.permQuote} checked={draft.permissions?.quotePrices} onChange={value => updatePermission('quotePrices', value)} />
+						<Toggle label={text.permCommit} checked={draft.permissions?.makeCommitments} onChange={value => updatePermission('makeCommitments', value)} />
+						<Toggle label={text.permDiscount} checked={draft.permissions?.offerDiscounts} onChange={value => updatePermission('offerDiscounts', value)} />
+						<Toggle label={text.permLinks} checked={draft.permissions?.shareLinks} onChange={value => updatePermission('shareLinks', value)} />
+					</div>
+				</Group>
 
-				<section className="wa-ag-mod">
-					<h3>{text.sectionContext}</h3>
-					<Toggle label={text.useKnowledgeBase} checked={draft.useKnowledgeBase} onChange={value => update('useKnowledgeBase', value)} />
-					<Toggle label={text.knowledgeOnly} hint={text.knowledgeOnlyHint} checked={draft.knowledgeOnly} onChange={value => update('knowledgeOnly', value)} />
-					<Toggle label={text.useContactMemory} checked={draft.useContactMemory} onChange={value => update('useContactMemory', value)} />
-					<div className="mt-3 wa-ag-fields">
+				<Group title={text.sectionContext} hint={text.contextHint}>
+					<div className="wa-ag-toggles">
+						<Toggle label={text.useKnowledgeBase} checked={draft.useKnowledgeBase} onChange={value => update('useKnowledgeBase', value)} />
+						<Toggle label={text.knowledgeOnly} hint={text.knowledgeOnlyHint} checked={draft.knowledgeOnly} onChange={value => update('knowledgeOnly', value)} />
+						<Toggle label={text.useContactMemory} checked={draft.useContactMemory} onChange={value => update('useContactMemory', value)} />
+					</div>
+					<div className="wa-ag-grid mt-4">
 						<Field label={text.contextLimit} num>
-							<input type="number" min="4" max="40" value={draft.contextMessageLimit ?? 12} onChange={event => update('contextMessageLimit', event.target.value)} className="wa-ag-input" />
+							<NumberInput min="4" max="40" value={draft.contextMessageLimit ?? 12} onChange={value => update('contextMessageLimit', value)} />
 						</Field>
 					</div>
-				</section>
+				</Group>
 
-				<section className="wa-ag-mod">
-					<h3>{text.sectionDisclosure}</h3>
-					<Toggle label={text.discloseAi} checked={draft.discloseAi} onChange={value => update('discloseAi', value)} />
+				<Group title={text.sectionDisclosure} hint={text.disclosureHint}>
+					<div className="wa-ag-toggles">
+						<Toggle label={text.discloseAi} checked={draft.discloseAi} onChange={value => update('discloseAi', value)} />
+					</div>
 					{draft.discloseAi ? (
-						<div className="mt-3">
-							<Field label={text.disclosureText} wide>
+						<div className="wa-ag-grid mt-4">
+							<Field label={text.disclosureText} wide aside={counter(text, draft.disclosureText, 300)}>
 								<input value={draft.disclosureText || ''} onChange={event => update('disclosureText', event.target.value)} maxLength={300} dir="auto" className="wa-ag-input" />
 							</Field>
 						</div>
 					) : null}
-				</section>
+				</Group>
 
-				<section className="wa-ag-mod">
-					<h3>{text.sectionHandoff}</h3>
-					<div className="wa-ag-fields">
+				<Group title={text.sectionHandoff} hint={text.handoffHint}>
+					<div className="wa-ag-grid">
 						<Field label={text.handoffKeywords} hint={text.handoffKeywordsHint}>
 							<input value={draft.handoffKeywordsText} onChange={event => update('handoffKeywordsText', event.target.value)} dir="auto" className="wa-ag-input" />
+							<ListPreview value={draft.handoffKeywordsText} />
 						</Field>
-						<Field label={text.handoffMessage} wide>
+						<Field label={text.handoffMessage}>
 							<input value={draft.handoffMessage || ''} onChange={event => update('handoffMessage', event.target.value)} maxLength={500} dir="auto" className="wa-ag-input" />
 						</Field>
 						<Chips
@@ -378,16 +457,24 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 								{ value: 'ignore', label: text.mediaIgnore },
 							]}
 						/>
+					</div>
+					<div className="wa-ag-toggles mt-3">
+						<Toggle label={text.allowGroups} checked={draft.allowGroups} onChange={value => update('allowGroups', value)} />
+					</div>
+				</Group>
+
+				<Group title={text.sectionTiming} hint={text.timingHint}>
+					<div className="wa-ag-grid is-3">
 						<Field label={text.debounce} num>
-							<input type="number" min="2" max="120" value={draft.debounceSeconds ?? 8} onChange={event => update('debounceSeconds', event.target.value)} className="wa-ag-input" />
+							<NumberInput min="2" max="120" value={draft.debounceSeconds ?? 8} onChange={value => update('debounceSeconds', value)} unit={text.unitSeconds} />
 						</Field>
 						<Field label={text.humanPause} num>
-							<input type="number" min="1" max="1440" value={draft.humanPauseMinutes ?? 30} onChange={event => update('humanPauseMinutes', event.target.value)} className="wa-ag-input" />
+							<NumberInput min="1" max="1440" value={draft.humanPauseMinutes ?? 30} onChange={value => update('humanPauseMinutes', value)} unit={text.unitMinutes} />
 						</Field>
 						<Field label={text.maxPerHour} num>
-							<input type="number" min="1" max="120" value={draft.maxRepliesPerHour ?? 12} onChange={event => update('maxRepliesPerHour', event.target.value)} className="wa-ag-input" />
+							<NumberInput min="1" max="120" value={draft.maxRepliesPerHour ?? 12} onChange={value => update('maxRepliesPerHour', value)} unit={text.unitPerHour} />
 						</Field>
-						<Field label={`${text.minConfidence}: ${Math.round(Number(draft.minConfidence ?? 0.55) * 100)}%`} wide>
+						<Field label={text.minConfidence} wide aside={<span dir="ltr">{confidence}%</span>}>
 							<input
 								type="range"
 								min="0"
@@ -395,23 +482,48 @@ function SetupSection({ text, lang, draft, setDraft, saving, saved, error, onSub
 								step="0.05"
 								value={draft.minConfidence ?? 0.55}
 								onChange={event => update('minConfidence', Number(event.target.value))}
-								className="max-w-xs accent-[#1dab61]"
+								className="wa-ag-range"
+								style={{ '--ag-range': `${confidence}%` }}
+								aria-valuetext={`${confidence}%`}
 							/>
 						</Field>
 					</div>
-					<div className="mt-3">
-						<Toggle label={text.allowGroups} checked={draft.allowGroups} onChange={value => update('allowGroups', value)} />
-					</div>
-				</section>
+				</Group>
 
-				<p className={`wa-ag-note${draft.actorConfigured ? '' : ' is-warn'}`}>
-					{draft.actorConfigured ? text.actorNote : text.actorMissing}
+				{draft.actorConfigured ? <p className="wa-ag-footnote">{text.actorNote}</p> : null}
+			</div>
+
+			<div className={`wa-ag-savebar${dirty ? ' is-dirty' : ''}`}>
+				<p className="wa-ag-savebar-state" role="status" aria-live="polite">
+					{error ? (
+						<span className="is-bad">
+							<AlertTriangle size={14} aria-hidden />
+							{error}
+						</span>
+					) : dirty ? (
+						<span className="is-dirty">
+							<i aria-hidden />
+							{text.unsaved}
+						</span>
+					) : saved ? (
+						<span className="is-ok">
+							<Check size={14} strokeWidth={2.6} aria-hidden />
+							{text.saved}
+						</span>
+					) : (
+						<span>{text.allSaved}</span>
+					)}
 				</p>
-				{draft.lastError ? (
-					<p className="wa-ag-note is-bad">
-						{text.lastError}: {draft.lastError}
-					</p>
+				{draft.recommended ? (
+					<button type="button" className="wa-ag-ghost" onClick={onApplyRecommended} disabled={saving} title={text.applyRecommendedHint}>
+						<Sparkles size={14} />
+						<span className="wa-ag-hide-sm">{text.applyRecommended}</span>
+					</button>
 				) : null}
+				<button type="submit" disabled={saving} className="wa-ag-save">
+					{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+					{text.save}
+				</button>
 			</div>
 		</form>
 	);
@@ -524,67 +636,98 @@ function ModelsSection({ text, accountId, draft, setDraft, onSaved, alerts = [] 
 	const externalAlert = (alerts || []).find(item => item.provider === 'external');
 
 	return (
-		<div className="wa-ag-mods">
-			<section className="wa-ag-mod">
-				<p className="wa-ag-note mb-3" role="note">{text.apiKeyPlaceHint}</p>
-				<h3>{text.builtInModels}</h3>
-				<p className="wa-ag-hint">{text.builtInModelsHint}</p>
-				{!providers.length ? (
-					<div className="grid min-h-16 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
+		<div className="wa-ag-stack">
+			<div className="wa-ag-current">
+				<span className="wa-ag-model-icon" aria-hidden>
+					<Cpu size={18} />
+				</span>
+				<span className="min-w-0 flex-1">
+					<span className="wa-ag-label">{text.currentModel}</span>
+					<b dir="auto">
+						{providerLabel(draft, text)}
+						<span className="wa-ag-current-model" dir="ltr"> · {draft.model || 'auto'}</span>
+					</b>
+				</span>
+			</div>
+			<Callout tone="info" icon={KeyRound} role="note">{text.apiKeyPlaceHint}</Callout>
+			{error ? <Callout tone="bad" icon={AlertTriangle} role="alert">{error}</Callout> : null}
+
+			<section className="wa-ag-panel">
+				<header className="wa-ag-panel-head">
+					<div>
+						<h3>{text.builtInModels}</h3>
+						<p>{text.builtInModelsHint}</p>
+					</div>
+				</header>
+				{!providers.length && !error ? (
+					<Loading />
 				) : (
-					<div className="wa-ag-cards is-split">
+					<div className="wa-ag-providers">
 						{providers.map(provider => {
 							const alert = (alerts || []).find(item => item.provider === provider.name);
+							const providerActive = draft.provider === provider.name;
 							return (
-							<article key={provider.name} className="wa-ag-card">
-								<h4>{provider.label}</h4>
-								<p className="wa-ag-hint mt-1">{provider.description}</p>
-								<div className="wa-ag-chips mt-3">
-									{(provider.models || [{ id: 'auto', label: 'Auto' }]).map(item => {
-										const active = draft.provider === provider.name && (draft.model || 'auto') === item.id;
-										return (
-											<button
-												key={item.id}
-												type="button"
-												disabled={Boolean(busy)}
-												onClick={() => void activate(provider.name, item.id, null)}
-												className={`wa-ag-chip${active ? ' is-on' : ''}`}
-											>
-												{item.label}
-												{active ? ` · ${text.inUse}` : ''}
-											</button>
-										);
-									})}
-								</div>
-								{alert ? (
-									<p className="wa-ag-note is-warn mt-2" role="status">
-										{fillTemplate(text.modelFailedThisTurn, { model: provider.label, reason: alert.error })}
-										{alert.recoveredBy
-											? ` ${fillTemplate(text.modelSwitchedTo, { model: labelForProvider(alert.recoveredBy, text) })}`
-											: ''}
-									</p>
-								) : null}
-							</article>
+								<article key={provider.name} className={`wa-ag-provider${providerActive ? ' is-active' : ''}`}>
+									<div className="wa-ag-provider-head">
+										<h4>{provider.label}</h4>
+										{providerActive ? (
+											<span className="wa-ag-badge is-ok">
+												<Check size={12} strokeWidth={2.8} aria-hidden />
+												{text.inUse}
+											</span>
+										) : null}
+									</div>
+									{provider.description ? <p className="wa-ag-hint">{provider.description}</p> : null}
+									<div className="wa-ag-chips">
+										{(provider.models || [{ id: 'auto', label: 'Auto' }]).map(item => {
+											const active = providerActive && (draft.model || 'auto') === item.id;
+											const loading = busy === `${provider.name}:${item.id}`;
+											return (
+												<button
+													key={item.id}
+													type="button"
+													disabled={Boolean(busy)}
+													aria-pressed={active}
+													onClick={() => void activate(provider.name, item.id, null)}
+													className={`wa-ag-chip${active ? ' is-on' : ''}`}
+												>
+													{loading ? <Loader2 size={13} className="animate-spin" aria-hidden /> : active ? <Check size={13} strokeWidth={2.6} aria-hidden /> : null}
+													<span dir="ltr">{item.label}</span>
+												</button>
+											);
+										})}
+									</div>
+									{alert ? (
+										<Callout tone="warn" icon={AlertTriangle} role="status">
+											{fillTemplate(text.modelFailedThisTurn, { model: provider.label, reason: alert.error })}
+											{alert.recoveredBy
+												? ` ${fillTemplate(text.modelSwitchedTo, { model: labelForProvider(alert.recoveredBy, text) })}`
+												: ''}
+										</Callout>
+									) : null}
+								</article>
 							);
 						})}
 					</div>
 				)}
 			</section>
 
-			<section className="wa-ag-mod">
-				<div className="mb-2 flex items-center justify-between gap-2">
+			<section className="wa-ag-panel">
+				<header className="wa-ag-panel-head">
 					<div>
-						<h3 className="!mb-0">{text.externalModels}</h3>
-						<p className="wa-ag-hint mt-1">{text.externalModelsHint}</p>
+						<h3>{text.externalModels}</h3>
+						<p>{text.externalModelsHint}</p>
 					</div>
-					<button type="button" className="wa-ag-ghost" onClick={() => setForm({ preset: 'openai', label: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: '', isActive: true })}>
-						<Plus size={14} />
-						{text.addExternal}
-					</button>
-				</div>
+					{!form ? (
+						<button type="button" className="wa-ag-ghost" onClick={() => setForm({ preset: 'openai', label: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: '', isActive: true })}>
+							<Plus size={14} />
+							{text.addExternal}
+						</button>
+					) : null}
+				</header>
 				{form ? (
-					<form onSubmit={saveExternal} className="mb-3 rounded-2xl bg-[var(--ag-fill)] p-3">
-						<div className="wa-ag-fields">
+					<form onSubmit={saveExternal} className="wa-ag-editor">
+						<div className="wa-ag-grid">
 							<Field label={text.extPreset}>
 								<div className="wa-ag-select">
 									<WaCustomSelect
@@ -607,16 +750,16 @@ function ModelsSection({ text, accountId, draft, setDraft, onSaved, alerts = [] 
 								<input required value={form.label} onChange={event => setForm(current => ({ ...current, label: event.target.value }))} maxLength={80} dir="auto" className="wa-ag-input" />
 							</Field>
 							<Field label={text.extBaseUrl}>
-								<input required={form.preset === 'custom'} value={form.baseUrl} onChange={event => setForm(current => ({ ...current, baseUrl: event.target.value }))} dir="ltr" className="wa-ag-input" />
+								<input required={form.preset === 'custom'} value={form.baseUrl} onChange={event => setForm(current => ({ ...current, baseUrl: event.target.value }))} dir="ltr" className="wa-ag-input is-mono" />
 							</Field>
 							<Field label={text.extModel}>
-								<input required value={form.model} onChange={event => setForm(current => ({ ...current, model: event.target.value }))} dir="ltr" className="wa-ag-input" />
+								<input required value={form.model} onChange={event => setForm(current => ({ ...current, model: event.target.value }))} dir="ltr" className="wa-ag-input is-mono" />
 							</Field>
-							<Field label={text.extApiKey} hint={form.id ? text.extApiKeyKeep : undefined}>
+							<Field label={text.extApiKey} hint={form.id ? text.extApiKeyKeep : undefined} wide>
 								<input type="password" autoComplete="off" value={form.apiKey} onChange={event => setForm(current => ({ ...current, apiKey: event.target.value }))} className="wa-ag-input" />
 							</Field>
 						</div>
-						<div className="mt-3 flex flex-wrap justify-end gap-2">
+						<div className="wa-ag-editor-foot">
 							<button type="button" className="wa-ag-ghost" onClick={() => setForm(null)}>{text.kbCancel}</button>
 							<button type="submit" disabled={busy === 'form'} className="wa-ag-save">
 								{busy === 'form' ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
@@ -626,45 +769,65 @@ function ModelsSection({ text, accountId, draft, setDraft, onSaved, alerts = [] 
 					</form>
 				) : null}
 				{externals.length === 0 && !form ? (
-					<p className="wa-ag-empty">{text.extEmpty}</p>
-				) : (
-					<ul className="wa-ag-cards">
+					<div className="wa-ag-empty">
+						<span className="wa-ag-empty-icon" aria-hidden>
+							<Plug size={20} />
+						</span>
+						<p>{text.extEmpty}</p>
+					</div>
+				) : externals.length ? (
+					<ul className="wa-ag-rows">
 						{externals.map(item => {
 							const active = draft.provider === 'external' && draft.externalModelId === item.id;
+							const testing = busy === `test:${item.id}`;
 							return (
-								<li key={item.id} className="wa-ag-card">
-									<div className="flex flex-wrap items-start gap-2">
-										<div className="min-w-0 flex-1">
-											<h4 dir="auto">{item.label}</h4>
-											<p className="wa-ag-hint mt-1 font-mono" dir="ltr">{item.model} · {item.baseUrl}</p>
-											{item.keyLast4 ? <p className="wa-ag-hint">••••{item.keyLast4}</p> : null}
-											{item.lastTestOk === false && item.lastTestMessage ? <p className="wa-ag-note is-bad">{item.lastTestMessage}</p> : null}
-											{item.lastTestOk === true ? <p className="wa-ag-note is-ok">{text.extTestOk}</p> : null}
-											{active && externalAlert ? (
-												<p className="wa-ag-note is-warn">
-													{fillTemplate(text.modelFailedThisTurn, { model: item.label, reason: externalAlert.error })}
-													{externalAlert.recoveredBy
-														? ` ${fillTemplate(text.modelSwitchedTo, { model: labelForProvider(externalAlert.recoveredBy, text) })}`
-														: ''}
-												</p>
-											) : null}
-										</div>
-										<div className="flex flex-wrap gap-1">
-											<button type="button" className={`wa-ag-chip${active ? ' is-on' : ''}`} disabled={Boolean(busy)} onClick={() => void activate('external', item.model, item.id)}>
-												{active ? text.inUse : text.useThisModel}
+								<li key={item.id} className={`wa-ag-ext${active ? ' is-active' : ''}`}>
+									<span className="wa-ag-model-icon" aria-hidden>
+										<Plug size={16} />
+									</span>
+									<div className="min-w-0 flex-1">
+										<p className="wa-ag-ext-name">
+											<span dir="auto">{item.label}</span>
+											{active ? <span className="wa-ag-badge is-ok">{text.inUse}</span> : null}
+											{item.lastTestOk === true ? <span className="wa-ag-badge is-ok">{text.extTestOk}</span> : null}
+										</p>
+										<p className="wa-ag-ext-meta" dir="ltr">
+											{item.model} · {item.baseUrl}
+											{item.keyLast4 ? ` · ••••${item.keyLast4}` : ''}
+										</p>
+										{item.lastTestOk === false && item.lastTestMessage ? <p className="wa-ag-note is-bad">{item.lastTestMessage}</p> : null}
+										{active && externalAlert ? (
+											<p className="wa-ag-note is-warn">
+												{fillTemplate(text.modelFailedThisTurn, { model: item.label, reason: externalAlert.error })}
+												{externalAlert.recoveredBy
+													? ` ${fillTemplate(text.modelSwitchedTo, { model: labelForProvider(externalAlert.recoveredBy, text) })}`
+													: ''}
+											</p>
+										) : null}
+									</div>
+									<div className="wa-ag-ext-actions">
+										{active ? null : (
+											<button type="button" className="wa-ag-ghost is-accent" disabled={Boolean(busy)} onClick={() => void activate('external', item.model, item.id)}>
+												{text.useThisModel}
 											</button>
-											<button type="button" className="wa-ag-ghost" disabled={Boolean(busy)} onClick={() => void testExternal(item)}>{text.extTest}</button>
-											<button type="button" className="wa-ag-ghost" onClick={() => setForm({ ...item, apiKey: '' })}>{text.kbEdit}</button>
-											<button type="button" className="wa-ag-ghost" onClick={() => void removeExternal(item)}>{text.kbDelete}</button>
-										</div>
+										)}
+										<button type="button" className="wa-ag-ghost" disabled={Boolean(busy)} onClick={() => void testExternal(item)}>
+											{testing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+											<span className="wa-ag-hide-sm">{text.extTest}</span>
+										</button>
+										<button type="button" className="wa-ag-icon" title={text.kbEdit} aria-label={text.kbEdit} onClick={() => setForm({ ...item, apiKey: '' })}>
+											<Pencil size={14} />
+										</button>
+										<button type="button" className="wa-ag-icon is-danger" title={text.kbDelete} aria-label={text.kbDelete} onClick={() => void removeExternal(item)}>
+											<Trash2 size={14} />
+										</button>
 									</div>
 								</li>
 							);
 						})}
 					</ul>
-				)}
+				) : null}
 			</section>
-			{error ? <p className="wa-ag-note is-bad">{error}</p> : null}
 		</div>
 	);
 }
@@ -781,138 +944,176 @@ function KnowledgeSection({ text, accountId }) {
 		}
 	};
 
+	const counts = useMemo(() => {
+		const out = { all: (entries || []).length };
+		for (const entry of entries || []) out[entry.category] = (out[entry.category] || 0) + 1;
+		return out;
+	}, [entries]);
+
 	const categoryOptions = [
 		{ value: 'all', label: text.kbAll },
 		...CATEGORY_IDS.map(id => ({ value: id, label: text.categories[id] })),
 	];
 
 	return (
-		<div className="wa-ag-mods">
-			<section className="wa-ag-mod">
-				<div className="mb-3 flex flex-wrap items-end gap-2">
-					<Field label={text.kbSearch}>
-						<div className="relative">
-							<Search size={14} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[#8696a0]" />
-							<input
-								value={query}
-								onChange={event => setQuery(event.target.value)}
-								placeholder={text.kbSearch}
-								aria-label={text.kbSearch}
-								dir="auto"
-								className="wa-ag-input ps-8"
-							/>
-						</div>
-					</Field>
-					<Chips
-						ariaLabel={text.kbCategory}
-						value={category}
-						onChange={setCategory}
-						options={categoryOptions}
+		<div className="wa-ag-stack">
+			<div className="wa-ag-toolbar">
+				<label className="wa-ag-search">
+					<Search size={15} aria-hidden />
+					<input
+						value={query}
+						onChange={event => setQuery(event.target.value)}
+						placeholder={text.kbSearch}
+						aria-label={text.kbSearch}
+						dir="auto"
 					/>
-					<button type="button" className="wa-ag-ghost" onClick={() => setEditing({ ...EMPTY_ENTRY })}>
-						<Plus size={14} />
-						{text.kbAdd}
-					</button>
-					<button type="button" className="wa-ag-ghost" onClick={() => void addStarter()} disabled={busy}>
-						{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+					{query ? (
+						<button type="button" onClick={() => setQuery('')} aria-label={text.kbCancel}>
+							<X size={14} />
+						</button>
+					) : null}
+				</label>
+				<button type="button" className="wa-ag-ghost" onClick={() => void addStarter()} disabled={busy}>
+					{busy && !editing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+					<span className="wa-ag-hide-sm">{text.kbStarter}</span>
+				</button>
+				<button type="button" className="wa-ag-save" onClick={() => setEditing({ ...EMPTY_ENTRY })}>
+					<Plus size={15} />
+					{text.kbAdd}
+				</button>
+			</div>
+
+			{entries?.length ? (
+				<div className="wa-ag-filter" role="tablist" aria-label={text.kbCategory}>
+					{categoryOptions.map(option => (
+						<button
+							key={option.value}
+							type="button"
+							role="tab"
+							aria-selected={category === option.value}
+							onClick={() => setCategory(option.value)}
+							className={`wa-ag-filter-btn${category === option.value ? ' is-on' : ''}`}
+						>
+							{option.label}
+							<span>{counts[option.value] || 0}</span>
+						</button>
+					))}
+				</div>
+			) : null}
+
+			{editing ? (
+				<form onSubmit={save} className="wa-ag-panel wa-ag-editor is-raised">
+					<header className="wa-ag-panel-head">
+						<div>
+							<h3>{editing.id ? text.kbEditTitle : text.kbNewTitle}</h3>
+						</div>
+						<button type="button" className="wa-ag-icon" onClick={() => setEditing(null)} aria-label={text.kbCancel} title={text.kbCancel}>
+							<X size={16} />
+						</button>
+					</header>
+					<div className="wa-ag-grid">
+						<Field label={text.kbTitle}>
+							<input
+								required
+								value={editing.title}
+								onChange={event => setEditing(current => ({ ...current, title: event.target.value }))}
+								maxLength={200}
+								dir="auto"
+								className="wa-ag-input"
+							/>
+						</Field>
+						<Field label={text.kbTags}>
+							<input
+								value={editing.tagsText}
+								onChange={event => setEditing(current => ({ ...current, tagsText: event.target.value }))}
+								dir="auto"
+								className="wa-ag-input"
+							/>
+							<ListPreview value={editing.tagsText} />
+						</Field>
+						<Chips
+							label={text.kbCategory}
+							value={editing.category}
+							onChange={value => setEditing(current => ({ ...current, category: value }))}
+							options={CATEGORY_IDS.map(id => ({ value: id, label: text.categories[id] }))}
+						/>
+						<Field label={text.kbContent} wide aside={counter(text, editing.content, 8000)}>
+							<textarea
+								required
+								value={editing.content}
+								onChange={event => setEditing(current => ({ ...current, content: event.target.value }))}
+								rows={7}
+								maxLength={8000}
+								dir="auto"
+								className="wa-ag-area"
+							/>
+						</Field>
+					</div>
+					<div className="wa-ag-editor-foot">
+						<label className="wa-ag-inline-switch">
+							<Switch label={editing.isActive ? text.kbActive : text.kbInactive} checked={Boolean(editing.isActive)} onChange={value => setEditing(current => ({ ...current, isActive: value }))} />
+							<span>{editing.isActive ? text.kbActive : text.kbInactive}</span>
+						</label>
+						<button type="button" className="wa-ag-ghost ms-auto" onClick={() => setEditing(null)}>{text.kbCancel}</button>
+						<button type="submit" disabled={busy} className="wa-ag-save">
+							{busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+							{text.kbSave}
+						</button>
+					</div>
+				</form>
+			) : null}
+
+			{error ? <Callout tone="bad" icon={AlertTriangle} role="alert">{error}</Callout> : null}
+			{entries == null ? (
+				<Loading />
+			) : entries.length === 0 ? (
+				<div className="wa-ag-empty is-large">
+					<span className="wa-ag-empty-icon" aria-hidden>
+						<BookOpen size={22} />
+					</span>
+					<p>{text.kbEmpty}</p>
+					<button type="button" className="wa-ag-save" onClick={() => void addStarter()} disabled={busy}>
+						{busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
 						{text.kbStarter}
 					</button>
+					<p className="wa-ag-hint">{text.kbStarterHint}</p>
 				</div>
-
-				{editing ? (
-					<form onSubmit={save} className="mb-3 rounded-2xl bg-[var(--ag-fill)] p-3">
-						<div className="wa-ag-fields">
-							<Field label={text.kbTitle}>
-								<input
-									required
-									value={editing.title}
-									onChange={event => setEditing(current => ({ ...current, title: event.target.value }))}
-									maxLength={200}
-									dir="auto"
-									className="wa-ag-input"
-								/>
-							</Field>
-							<Chips
-								label={text.kbCategory}
-								value={editing.category}
-								onChange={value => setEditing(current => ({ ...current, category: value }))}
-								options={CATEGORY_IDS.map(id => ({ value: id, label: text.categories[id] }))}
-							/>
-							<Field label={text.kbContent} wide>
-								<textarea
-									required
-									value={editing.content}
-									onChange={event => setEditing(current => ({ ...current, content: event.target.value }))}
-									rows={5}
-									maxLength={8000}
-									dir="auto"
-									className="wa-ag-area"
-								/>
-							</Field>
-							<Field label={text.kbTags}>
-								<input
-									value={editing.tagsText}
-									onChange={event => setEditing(current => ({ ...current, tagsText: event.target.value }))}
-									dir="auto"
-									className="wa-ag-input"
-								/>
-							</Field>
-						</div>
-						<div className="mt-3 flex flex-wrap items-center gap-2">
-							<Toggle label={editing.isActive ? text.kbActive : text.kbInactive} checked={Boolean(editing.isActive)} onChange={value => setEditing(current => ({ ...current, isActive: value }))} />
-							<button type="button" className="wa-ag-ghost ms-auto" onClick={() => setEditing(null)}>{text.kbCancel}</button>
-							<button type="submit" disabled={busy} className="wa-ag-save">
-								{busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-								{text.kbSave}
-							</button>
-						</div>
-					</form>
-				) : null}
-
-				{error ? <p className="wa-ag-note is-bad">{error}</p> : null}
-				{entries == null ? (
-					<div className="grid min-h-24 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
-				) : entries.length === 0 ? (
-					<div className="wa-ag-empty">
-						<p>{text.kbEmpty}</p>
-						<button type="button" className="wa-ag-save mt-3" onClick={() => void addStarter()} disabled={busy}>
-							{busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-							{text.kbStarter}
-						</button>
-						<p className="wa-ag-hint mt-2">{text.kbStarterHint}</p>
-					</div>
-				) : filtered.length === 0 ? (
-					<p className="wa-ag-empty">{text.kbNoMatch}</p>
-				) : (
-					<ul className="wa-ag-cards is-split">
-						{filtered.map(entry => (
-							<li key={entry.id} className={`wa-ag-card ${entry.isActive ? '' : 'opacity-60'}`}>
-								<div className="mb-1 flex items-start gap-2">
-									<span className="wa-ag-chip is-on !h-6 text-[10px]">{text.categories[entry.category] || entry.category}</span>
-									<p className="min-w-0 flex-1 truncate text-[13.5px] font-bold" dir="auto">{entry.title}</p>
-									<Switch label={entry.isActive ? text.kbActive : text.kbInactive} checked={entry.isActive} onChange={() => void toggleActive(entry)} />
-								</div>
-								<p className="line-clamp-3 text-xs leading-5 text-[var(--ag-muted)]" dir="auto">{entry.content}</p>
-								{entry.tags?.length ? (
-									<p className="mt-2 flex flex-wrap gap-1">
-										{entry.tags.map(tag => (
-											<span key={tag} className="wa-ag-chip !h-6 text-[10px]" dir="auto">#{tag}</span>
-										))}
-									</p>
-								) : null}
-								<div className="mt-2 flex justify-end gap-1">
-									<button type="button" title={text.kbEdit} aria-label={text.kbEdit} onClick={() => setEditing({ ...entry, tagsText: (entry.tags || []).join(', ') })} className="wa-ag-ghost !h-8 !w-8 !px-0">
+			) : filtered.length === 0 ? (
+				<div className="wa-ag-empty">
+					<span className="wa-ag-empty-icon" aria-hidden>
+						<Search size={20} />
+					</span>
+					<p>{text.kbNoMatch}</p>
+				</div>
+			) : (
+				<ul className="wa-ag-entries">
+					{filtered.map(entry => (
+						<li key={entry.id} className={`wa-ag-entry${entry.isActive ? '' : ' is-off'}${editing?.id === entry.id ? ' is-editing' : ''}`}>
+							<div className="wa-ag-entry-head">
+								<span className={`wa-ag-cat is-${entry.category}`}>{text.categories[entry.category] || entry.category}</span>
+								<Switch label={entry.isActive ? text.kbActive : text.kbInactive} checked={entry.isActive} onChange={() => void toggleActive(entry)} />
+							</div>
+							<p className="wa-ag-entry-title" dir="auto">{entry.title}</p>
+							<p className="wa-ag-entry-body" dir="auto">{entry.content}</p>
+							<div className="wa-ag-entry-foot">
+								<span className="wa-ag-preview">
+									{(entry.tags || []).slice(0, 4).map(tag => (
+										<span key={tag} className="wa-ag-tag" dir="auto">#{tag}</span>
+									))}
+								</span>
+								<span className="wa-ag-entry-actions">
+									<button type="button" title={text.kbEdit} aria-label={`${text.kbEdit}: ${entry.title}`} onClick={() => setEditing({ ...entry, tagsText: (entry.tags || []).join(', ') })} className="wa-ag-icon">
 										<Pencil size={14} />
 									</button>
-									<button type="button" title={text.kbDelete} aria-label={text.kbDelete} onClick={() => void remove(entry)} className="wa-ag-ghost !h-8 !w-8 !px-0 text-rose-500">
+									<button type="button" title={text.kbDelete} aria-label={`${text.kbDelete}: ${entry.title}`} onClick={() => void remove(entry)} className="wa-ag-icon is-danger">
 										<Trash2 size={14} />
 									</button>
-								</div>
-							</li>
-						))}
-					</ul>
-				)}
-			</section>
+								</span>
+							</div>
+						</li>
+					))}
+				</ul>
+			)}
 		</div>
 	);
 }
@@ -996,17 +1197,22 @@ function TestSection({ text, accountId, draft, locale, onAlerts }) {
 				</span>
 				<div className="min-w-0 flex-1">
 					<p className="wa-ag-chat-name" dir="auto">{agentName}</p>
-					<p className="wa-ag-chat-status">{pending ? text.testThinking : text.testOnline}</p>
+					<p className="wa-ag-chat-status">
+						{pending ? text.testThinking : `${providerLabel(draft, text)} · ${text.testOnline}`}
+					</p>
 				</div>
-				<button type="button" className="wa-ag-ghost" onClick={reset} disabled={!messages.length && !pending && !error}>
-					<Trash2 size={14} />
-					{text.testReset}
+				<button type="button" className="wa-ag-chat-clear" onClick={reset} disabled={!messages.length && !pending && !error}>
+					<RotateCcw size={14} />
+					<span className="wa-ag-hide-sm">{text.testReset}</span>
 				</button>
 			</header>
 			<div ref={scrollRef} className="wa-ag-thread nice-scroll">
 				<div className="wa-ag-day">{text.testToday}</div>
 				{!messages.length && !pending ? (
 					<div className="wa-ag-chat-empty">
+						<span className="wa-ag-empty-icon" aria-hidden>
+							<FlaskConical size={20} />
+						</span>
 						<p className="wa-ag-chat-empty-title">{text.testEmptyTitle}</p>
 						<p>{text.testEmpty}</p>
 						{draft.useKnowledgeBase ? <p className="wa-ag-chat-empty-kb">{text.testKbHint}</p> : null}
@@ -1031,7 +1237,7 @@ function TestSection({ text, accountId, draft, locale, onAlerts }) {
 								{message.content ? (
 									<p dir="auto">{message.content}</p>
 								) : (
-									<p className="italic text-[var(--ag-faint)]">{text.testNoReply}</p>
+									<p className="wa-ag-bubble-empty">{text.testNoReply}</p>
 								)}
 								{!outbound ? <TestResultMeta text={text} result={message.result} /> : null}
 								<span className="wa-ag-time">{time}</span>
@@ -1047,7 +1253,7 @@ function TestSection({ text, accountId, draft, locale, onAlerts }) {
 					</div>
 				) : null}
 			</div>
-			{error ? <p className="wa-ag-note is-bad wa-ag-chat-error" role="alert">{error}</p> : null}
+			{error ? <p className="wa-ag-chat-error" role="alert"><AlertTriangle size={14} aria-hidden />{error}</p> : null}
 			<form onSubmit={send} className="wa-ag-composer">
 				<input
 					ref={inputRef}
@@ -1060,7 +1266,7 @@ function TestSection({ text, accountId, draft, locale, onAlerts }) {
 					className="wa-ag-chat-input"
 				/>
 				<button type="submit" disabled={pending || !input.trim()} className="wa-ag-send" aria-label={text.testSend}>
-					<Send size={16} className="rtl:-scale-x-100" />
+					{pending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="rtl:-scale-x-100" />}
 				</button>
 			</form>
 		</div>
@@ -1090,7 +1296,7 @@ function TestResultMeta({ text, result }) {
 	return (
 		<div className="wa-ag-meta">
 			<p>
-				<span>{text.delivery[result.delivery] || result.delivery}</span>
+				<span className={`wa-ag-delivery is-${String(result.delivery || '').replace('would_', '')}`}>{text.delivery[result.delivery] || result.delivery}</span>
 				<span dir="ltr"> · {labelForProvider(result.provider, text)}</span>
 				{result.model ? <span dir="ltr"> · {result.model}</span> : null}
 			</p>
@@ -1109,6 +1315,15 @@ function TestResultMeta({ text, result }) {
 }
 
 /* --------------------------------------------------------------- activity */
+
+const OUTCOME_TONE = {
+	sent: 'ok',
+	approved: 'ok',
+	suggested: 'draft',
+	handoff: 'handoff',
+	error: 'bad',
+	running: 'info',
+};
 
 function ActivitySection({ text, accountId, locale }) {
 	const [runs, setRuns] = useState(null);
@@ -1143,63 +1358,95 @@ function ActivitySection({ text, accountId, locale }) {
 		if (!runs?.length) return 0;
 		return runs.reduce((sum, run) => sum + (Number(run.estimatedCostUsd) || 0), 0);
 	}, [runs]);
+	const summary = useMemo(() => {
+		const list = runs || [];
+		return {
+			total: list.length,
+			sent: list.filter(run => run.outcome === 'sent' || run.outcome === 'approved').length,
+			drafts: list.filter(run => run.outcome === 'suggested' || run.outcome === 'handoff').length,
+			errors: list.filter(run => run.outcome === 'error').length,
+		};
+	}, [runs]);
+
 	return (
-		<section className="wa-ag-mod">
-			<p className="wa-ag-hint mb-2">{text.activityCostHint}</p>
-			<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-				{runs?.length ? (
-					<p className="text-xs font-semibold text-[var(--ag-muted)]" dir="ltr">
-						{text.activityTotalCost}: {formatUsd(totalCost)}
-					</p>
-				) : (
-					<span />
-				)}
-				<button type="button" className="wa-ag-ghost" onClick={() => void load()} disabled={loading}>
-					<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-					{text.refresh}
-				</button>
+		<div className="wa-ag-stack">
+			<div className="wa-ag-stats">
+				<div className="wa-ag-stat">
+					<span>{text.activityRequests}</span>
+					<b>{runs ? summary.total : '—'}</b>
+				</div>
+				<div className="wa-ag-stat is-ok">
+					<span>{text.activitySent}</span>
+					<b>{runs ? summary.sent : '—'}</b>
+				</div>
+				<div className="wa-ag-stat is-draft">
+					<span>{text.activityDrafts}</span>
+					<b>{runs ? summary.drafts : '—'}</b>
+				</div>
+				<div className="wa-ag-stat">
+					<span>{text.activityTotalCost}</span>
+					<b dir="ltr">{runs ? formatUsd(totalCost) : '—'}</b>
+				</div>
 			</div>
-			{error ? <p className="wa-ag-note is-bad">{error}</p> : null}
-			{runs == null ? (
-				<div className="grid min-h-24 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
-			) : runs.length === 0 ? (
-				<p className="wa-ag-empty">{text.activityEmpty}</p>
-			) : (
-				<ul className="divide-y divide-[var(--ag-line)]">
-					{runs.map(run => {
-						const cost = formatUsd(run.estimatedCostUsd);
-						return (
-							<li key={run.id} className="space-y-1 py-2.5 text-xs">
-								<div className="flex flex-wrap items-center gap-2">
-									<span className="wa-ag-chip is-on !h-6 text-[10px]">{text.outcomes[run.outcome] || run.outcome}</span>
-									<span className="text-[var(--ag-faint)]">{run.createdAt ? formatter.format(new Date(run.createdAt)) : ''}</span>
-									{run.latencyMs != null ? <span className="text-[var(--ag-faint)]" dir="ltr">{Math.round(run.latencyMs / 100) / 10}s</span> : null}
-									{cost != null ? (
-										<span className="font-semibold text-[#1dab61]" dir="ltr">
-											{text.requestCost}: {cost}
-											{run.costSource ? ` · ${costLabel(text, run.costSource)}` : ''}
-										</span>
+
+			<section className="wa-ag-panel">
+				<header className="wa-ag-panel-head">
+					<div>
+						<h3>{text.tabs.activity}</h3>
+						<p>{text.activityCostHint}</p>
+					</div>
+					<button type="button" className="wa-ag-ghost" onClick={() => void load()} disabled={loading}>
+						<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+						<span className="wa-ag-hide-sm">{text.refresh}</span>
+					</button>
+				</header>
+				{error ? <Callout tone="bad" icon={AlertTriangle} role="alert">{error}</Callout> : null}
+				{runs == null ? (
+					<Loading />
+				) : runs.length === 0 ? (
+					<div className="wa-ag-empty">
+						<span className="wa-ag-empty-icon" aria-hidden>
+							<Activity size={20} />
+						</span>
+						<p>{text.activityEmpty}</p>
+					</div>
+				) : (
+					<ul className="wa-ag-runs">
+						{runs.map(run => {
+							const cost = formatUsd(run.estimatedCostUsd);
+							return (
+								<li key={run.id} className="wa-ag-run">
+									<div className="wa-ag-run-head">
+										<span className={`wa-ag-badge is-${OUTCOME_TONE[run.outcome] || 'muted'}`}>{text.outcomes[run.outcome] || run.outcome}</span>
+										{run.provider || run.model ? (
+											<span className="wa-ag-run-model" dir="ltr">
+												{labelForProvider(run.provider, text)}
+												{run.model ? ` · ${run.model}` : ''}
+											</span>
+										) : null}
+										<span className="wa-ag-run-time">{run.createdAt ? formatter.format(new Date(run.createdAt)) : ''}</span>
+									</div>
+									{run.reply ? <p className="wa-ag-run-reply" dir="auto">{run.reply}</p> : null}
+									{run.error ? <p className="wa-ag-note is-bad">{run.error}</p> : null}
+									{run.latencyMs != null || cost != null || run.totalTokens != null ? (
+										<p className="wa-ag-run-meta" dir="ltr">
+											{run.latencyMs != null ? <span>{Math.round(run.latencyMs / 100) / 10}s</span> : null}
+											{run.totalTokens != null ? <span>{fillTemplate(text.requestTokens, { total: run.totalTokens })}</span> : null}
+											{cost != null ? (
+												<span className="is-cost">
+													{text.requestCost}: {cost}
+													{run.costSource ? ` · ${costLabel(text, run.costSource)}` : ''}
+												</span>
+											) : null}
+										</p>
 									) : null}
-									{run.totalTokens != null ? (
-										<span className="text-[var(--ag-faint)]" dir="ltr">
-											{fillTemplate(text.requestTokens, { total: run.totalTokens })}
-										</span>
-									) : null}
-								</div>
-								{run.provider || run.model ? (
-									<p className="text-[var(--ag-faint)]" dir="ltr">
-										{labelForProvider(run.provider, text)}
-										{run.model ? ` · ${run.model}` : ''}
-									</p>
-								) : null}
-								{run.reply ? <p className="line-clamp-2 text-[var(--ag-muted)]" dir="auto">{run.reply}</p> : null}
-								{run.error ? <p className="wa-ag-note is-bad">{run.error}</p> : null}
-							</li>
-						);
-					})}
-				</ul>
-			)}
-		</section>
+								</li>
+							);
+						})}
+					</ul>
+				)}
+			</section>
+		</div>
 	);
 }
 
@@ -1213,6 +1460,7 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 	const [loadError, setLoadError] = useState('');
 	const [saving, setSaving] = useState(false);
 	const [saved, setSaved] = useState(false);
+	const [dirty, setDirty] = useState(false);
 	const [saveError, setSaveError] = useState('');
 
 	useEffect(() => {
@@ -1220,6 +1468,7 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 		const controller = new AbortController();
 		setDraft(null);
 		setLoadError('');
+		setDirty(false);
 		whatsappAiAgentApi
 			.getSettings(accountId, controller.signal)
 			.then(settings => setDraft(settingsToDraft(settings)))
@@ -1231,6 +1480,7 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 
 	const setDraftDirty = useCallback(updater => {
 		setSaved(false);
+		setDirty(true);
 		setDraft(updater);
 	}, []);
 
@@ -1243,6 +1493,7 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 			const next = await whatsappAiAgentApi.updateSettings(accountId, draftToPayload(draft));
 			setDraft(settingsToDraft(next));
 			setSaved(true);
+			setDirty(false);
 		} catch (error) {
 			setSaveError(apiErrorMessage(error, 'Failed to save'));
 		} finally {
@@ -1267,86 +1518,93 @@ export default function WhatsAppAiAgentPanel({ locale = 'en', accountId }) {
 		: null;
 
 	return (
-		<section data-wa-ai-agent-panel className={`wa-ag${section === 'test' ? ' is-test' : ''}`}>
-			<div className="wa-ag-head">
-				<div className="wa-ag-mark">
-					<Bot size={20} />
+		<section data-wa-ai-agent-panel className={`wa-ag${section === 'test' ? ' is-test' : ''}`} dir={lang === 'ar' ? 'rtl' : undefined}>
+			<div className="wa-ag-top">
+				<div className="wa-ag-head">
+					<div className="wa-ag-mark">
+						<Bot size={20} />
+					</div>
+					<div className="wa-ag-copy">
+						<h2>{text.title}</h2>
+						<p title={text.description}>{text.description}</p>
+					</div>
+					{live ? (
+						<span className={`wa-ag-live${draft.enabled ? ' is-on' : ''}`}>
+							<i />
+							{live}
+						</span>
+					) : null}
 				</div>
-				<div className="wa-ag-copy">
-					<h2>{text.title}</h2>
-					<p>{text.description}</p>
-				</div>
-				{live ? (
-					<span className={`wa-ag-live${draft.enabled ? ' is-on' : ''}`}>
-						<i />
-						{live}
-					</span>
-				) : null}
-			</div>
 
-			<div role="tablist" aria-label={text.title} className="wa-ag-tabs">
-				{tabs.map(tab => {
-					const Icon = tab.icon;
-					const selected = section === tab.id;
-					return (
-						<button
-							key={tab.id}
-							type="button"
-							role="tab"
-							aria-selected={selected}
-							onClick={() => setSection(tab.id)}
-							className={`wa-ag-tab${selected ? ' is-on' : ''}`}
-						>
-							<Icon size={14} />
-							<span>{tab.label}</span>
-						</button>
-					);
-				})}
+				<div role="tablist" aria-label={text.title} className="wa-ag-tabs">
+					{tabs.map(tab => {
+						const Icon = tab.icon;
+						const selected = section === tab.id;
+						return (
+							<button
+								key={tab.id}
+								type="button"
+								role="tab"
+								aria-selected={selected}
+								onClick={() => setSection(tab.id)}
+								className={`wa-ag-tab${selected ? ' is-on' : ''}`}
+								title={tab.label}
+							>
+								<Icon size={15} />
+								<span>{tab.label}</span>
+								{tab.id === 'setup' && dirty ? <i className="wa-ag-tab-dot" aria-label={text.unsaved} /> : null}
+							</button>
+						);
+					})}
+				</div>
 			</div>
 
 			<div className="wa-ag-body nice-scroll">
-			{loadError ? (
-				<p className="wa-ag-note is-bad flex items-center gap-2"><X size={14} />{loadError}</p>
-			) : !draft ? (
-				<div className="grid min-h-32 place-items-center"><Loader2 className="animate-spin text-[#1dab61]" /></div>
-			) : section === 'setup' ? (
-				<>
-					{draft.prefilled?.length > 0 && !saved ? (
-						<div className="wa-ag-prefill" role="status">
-							<p>{text.prefilledNote}</p>
-							<button type="button" className="wa-ag-ghost" onClick={submit} disabled={saving}>
-								{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-								{text.save}
-							</button>
-						</div>
-					) : null}
-					<SetupSection
+				{loadError ? (
+					<Callout tone="bad" icon={AlertTriangle} role="alert">{loadError}</Callout>
+				) : !draft ? (
+					<Loading />
+				) : section === 'setup' ? (
+					<>
+						{draft.prefilled?.length > 0 && !saved ? (
+							<div className="wa-ag-prefill" role="status">
+								<Sparkles size={16} aria-hidden />
+								<p>{text.prefilledNote}</p>
+								<button type="button" className="wa-ag-ghost" onClick={submit} disabled={saving}>
+									{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+									{text.save}
+								</button>
+							</div>
+						) : null}
+						<SetupSection
+							text={text}
+							lang={lang}
+							draft={draft}
+							setDraft={setDraftDirty}
+							saving={saving}
+							saved={saved}
+							dirty={dirty}
+							error={saveError}
+							onSubmit={submit}
+							onApplyRecommended={() => setDraftDirty(current => applyRecommended(current))}
+							onOpenModels={() => setSection('models')}
+						/>
+					</>
+				) : section === 'models' ? (
+					<ModelsSection text={text} accountId={accountId} draft={draft} setDraft={setDraftDirty} onSaved={() => { setSaved(true); setDirty(false); }} alerts={draft.providerAlerts || []} />
+				) : section === 'knowledge' ? (
+					<KnowledgeSection text={text} accountId={accountId} />
+				) : section === 'test' ? (
+					<TestSection
 						text={text}
-						lang={lang}
+						accountId={accountId}
 						draft={draft}
-						setDraft={setDraftDirty}
-						saving={saving}
-						saved={saved}
-						error={saveError}
-						onSubmit={submit}
-						onApplyRecommended={() => setDraftDirty(current => applyRecommended(current))}
+						locale={locale}
+						onAlerts={alerts => setDraft(current => ({ ...current, providerAlerts: alerts }))}
 					/>
-				</>
-			) : section === 'models' ? (
-				<ModelsSection text={text} accountId={accountId} draft={draft} setDraft={setDraftDirty} onSaved={() => setSaved(true)} alerts={draft.providerAlerts || []} />
-			) : section === 'knowledge' ? (
-				<KnowledgeSection text={text} accountId={accountId} />
-			) : section === 'test' ? (
-				<TestSection
-					text={text}
-					accountId={accountId}
-					draft={draft}
-					locale={locale}
-					onAlerts={alerts => setDraft(current => ({ ...current, providerAlerts: alerts }))}
-				/>
-			) : (
-				<ActivitySection text={text} accountId={accountId} locale={locale} />
-			)}
+				) : (
+					<ActivitySection text={text} accountId={accountId} locale={locale} />
+				)}
 			</div>
 		</section>
 	);

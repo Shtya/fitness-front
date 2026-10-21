@@ -84,6 +84,7 @@ import {
 	Phone,
 	RefreshCw,
 	Repeat,
+	Repeat2,
 	Reply,
 	Search,
 	Send,
@@ -268,6 +269,7 @@ import './wa-desktop.css';
 import './wa-desktop-chats.css';
 import './wa-memo-docs.css';
 import './wa-popups.css';
+import './wa-settings.css';
 import { useMenuKeyboard } from './wa-ui-menu';
 import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
 import { installMobileViewport } from './mobile-viewport';
@@ -496,7 +498,6 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'reports',
 	'board',
 	'fakeChat',
-	'autoForward',
 	'wallet',
 	'adhkar',
 	'documents',
@@ -1051,6 +1052,16 @@ const translations = {
 		storySentAsMedia: 'Story sent as media',
 		storySendUnavailable: 'Cannot send this story',
 		storySendNoMedia: 'This story has no media to send',
+		repostStory: 'Repost to my story',
+		repostStoryHint: 'Post this on your own status. You can change the text first.',
+		repostTextLabel: 'Story text',
+		repostCaptionLabel: 'Caption',
+		repostCaptionPlaceholder: 'Add a caption (optional)',
+		repostTextPlaceholder: 'Write the story text',
+		repostMediaNote: 'Text drawn inside the photo or video stays as it is — only the caption changes.',
+		repostPublish: 'Post to my story',
+		repostDone: 'Reposted to your story',
+		repostFailed: 'Could not repost this story',
 		loopStory: 'Loop',
 		loopStoryOn: 'Loop on — will replay after finish',
 		loopStoryOff: 'Loop off',
@@ -1585,6 +1596,16 @@ const translations = {
 		storySentAsMedia: 'تم إرسال الحالة كوسائط',
 		storySendUnavailable: 'تعذر إرسال هذه الحالة',
 		storySendNoMedia: 'هذه الحالة لا تحتوي على وسائط للإرسال',
+		repostStory: 'إعادة النشر على حالتي',
+		repostStoryHint: 'انشرها على حالتك، وتقدر تغيّر النص الأول.',
+		repostTextLabel: 'نص الحالة',
+		repostCaptionLabel: 'التعليق',
+		repostCaptionPlaceholder: 'أضف تعليقًا (اختياري)',
+		repostTextPlaceholder: 'اكتب نص الحالة',
+		repostMediaNote: 'الكلام المكتوب جوه الصورة أو الفيديو هيفضل زي ما هو — اللي بيتغيّر هو التعليق بس.',
+		repostPublish: 'انشر على حالتي',
+		repostDone: 'اتنشرت على حالتك',
+		repostFailed: 'تعذّر إعادة نشر الحالة',
 		loopStory: 'تكرار',
 		loopStoryOn: 'التكرار مفعّل — سيعاد التشغيل بعد الانتهاء',
 		loopStoryOff: 'التكرار متوقف',
@@ -1843,7 +1864,6 @@ const tabs = [
 	['reports', BarChart3],
 	['board', LayoutGrid],
 	['fakeChat', Sparkles],
-	['autoForward', Forward],
 	['wallet', Wallet],
 	['adhkar', BookOpen],
 	['documents', FileText],
@@ -12294,6 +12314,12 @@ function WhatsAppWorkspaceContent() {
 	const [storyShareOpen, setStoryShareOpen] = useState(false);
 	const [storyShareSearch, setStoryShareSearch] = useState('');
 	const [sendingStoryShareId, setSendingStoryShareId] = useState(null);
+	const [storyRepostOpen, setStoryRepostOpen] = useState(false);
+	const [storyRepostText, setStoryRepostText] = useState('');
+	const [repostingStory, setRepostingStory] = useState(false);
+	const [autoForwardOpen, setAutoForwardOpen] = useState(false);
+	const storyDialogOpenRef = useRef(false);
+	storyDialogOpenRef.current = storyRepostOpen || storyShareOpen;
 	const [storyViewerEmbed, setStoryViewerEmbed] = useState(null);
 	const [storyViewersOpen, setStoryViewersOpen] = useState(false);
 	const [storyViewers, setStoryViewers] = useState({
@@ -13258,7 +13284,6 @@ function WhatsAppWorkspaceContent() {
 				if (key === 'reports') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'board') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'fakeChat') return fakeChatAllowed;
-				if (key === 'autoForward') return canUseWhatsApp || canManageWhatsApp || isAdmin;
 				if (key === 'documents') return isAdmin;
 				return true;
 			}),
@@ -23043,6 +23068,11 @@ function WhatsAppWorkspaceContent() {
 			setActiveTab('chats');
 			return;
 		}
+		if (tab === 'autoForward') {
+			setAutoForwardOpen(true);
+			if (!isConversationWorkspaceTab(activeTab)) setActiveTab('chats');
+			return;
+		}
 		if (tab === 'contacts') {
 			setContactsPopupOpen(true);
 			if (!isConversationWorkspaceTab(activeTab)) setActiveTab('chats');
@@ -23077,7 +23107,6 @@ function WhatsAppWorkspaceContent() {
 		if (
 			tab === 'board' ||
 			tab === 'fakeChat' ||
-			tab === 'autoForward' ||
 			tab === 'wallet' ||
 			tab === 'adhkar' ||
 			tab === 'agent'
@@ -23756,6 +23785,8 @@ function WhatsAppWorkspaceContent() {
 		setStoryShareOpen(false);
 		setStoryShareSearch('');
 		setSendingStoryShareId(null);
+		setStoryRepostOpen(false);
+		setStoryRepostText('');
 		setStoryViewerEmbed(null);
 		setStoryMediaError('');
 		setStoryPaused(false);
@@ -23914,6 +23945,59 @@ function WhatsAppWorkspaceContent() {
 		setStoryPaused(true);
 		setStoryShareSearch('');
 		setStoryShareOpen(true);
+	};
+
+	const openStoryRepost = () => {
+		if (!selectedStatus || !accountId || !canUseWhatsApp || demo.settings.enabled) {
+			toast.error(t.storySendUnavailable);
+			return;
+		}
+		if (loadingStory) {
+			toast.error(t.loading);
+			return;
+		}
+		setStoryPaused(true);
+		setStoryRepostText(String(selectedStatus.caption || ''));
+		setStoryRepostOpen(true);
+	};
+
+	const closeStoryRepost = () => {
+		if (repostingStory) return;
+		setStoryRepostOpen(false);
+		setStoryPaused(false);
+	};
+
+	const submitStoryRepost = async event => {
+		event?.preventDefault?.();
+		if (!selectedStatus || !accountId || repostingStory) return;
+		const statusType = String(selectedStatus.type || '').toLowerCase();
+		const isTextStory = statusType === 'text' || statusType === 'chat';
+		const text = storyRepostText.trim();
+		if (isTextStory && !text) {
+			toast.error(t.repostTextPlaceholder);
+			return;
+		}
+		const targetAccountId = accountId;
+		setRepostingStory(true);
+		try {
+			const { data } = await api.post(
+				`/whatsapp/accounts/${targetAccountId}/statuses/${encodeURIComponent(selectedStatus.id)}/repost`,
+				{ text },
+			);
+			if (Array.isArray(data?.items)) {
+				applyStatuses(targetAccountId, data);
+			} else {
+				void loadStatuses(targetAccountId, { force: true, silent: true });
+			}
+			setStoryRepostOpen(false);
+			setStoryRepostText('');
+			setStoryPaused(false);
+			toast.success(t.repostDone);
+		} catch (error) {
+			toast.error(error?.response?.data?.message || t.repostFailed);
+		} finally {
+			setRepostingStory(false);
+		}
 	};
 
 	const sendStoryAsMediaToChat = async targetConversation => {
@@ -24088,6 +24172,7 @@ function WhatsAppWorkspaceContent() {
 		if (!selectedStatus) return undefined;
 		const onKeyDown = event => {
 			if (event.key !== 'Escape') return;
+			if (storyDialogOpenRef.current) return;
 			if (storyViewersOpenRef.current) {
 				closeStoryViewers();
 				return;
@@ -25689,6 +25774,17 @@ function WhatsAppWorkspaceContent() {
 													blurPersistHint: t.blurPersistHint,
 												}}
 											/>
+											{!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin) ? (
+												<button
+													type="button"
+													onClick={() => setAutoForwardOpen(true)}
+													aria-label={t.autoForward}
+													title={t.autoForward}
+													className="wa-header-icon-btn"
+												>
+													<Forward size={18} strokeWidth={2.1} className="rtl:-scale-x-100" />
+												</button>
+											) : null}
 											<button
 												type="button"
 												onClick={() => {
@@ -29571,17 +29667,6 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				)}
 
-				{activeTab === 'autoForward' && (
-					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
-						<AutoForwardPanel
-							accountId={accountId}
-							locale={locale}
-							conversations={effectiveConversations}
-							canUse={canUseWhatsApp || canManageWhatsApp || isAdmin}
-						/>
-					</Suspense>
-				)}
-
 				{activeTab === 'wallet' && (
 					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
 						{/* Phone: immersive wallet — no WA header/nav; back lives inside the tab. */}
@@ -29787,30 +29872,24 @@ function WhatsAppWorkspaceContent() {
 								</Suspense>
 							)}
 							{settingsSection === 'notifications' && (
-								<Card className="p-4">
-									<CardHeader icon={Bell} title={t.settingsNotifications} />
-									<div className="max-w-xl">
-										<div className="flex h-full flex-col justify-between gap-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-											<div>
-												<div className="mb-2 flex items-center gap-2.5">
-													<div className="rounded-lg bg-[var(--color-primary-50)] p-1.5 dark:bg-[var(--color-primary-950)]/40">
-														<Bell size={14} className="text-[var(--color-primary-500)]" />
-													</div>
-													<p className="text-sm font-black">{t.whatsappNotifications}</p>
-												</div>
-												<p className="text-xs text-slate-500">{t.whatsappNotificationsHint}</p>
+								<section className="wst-section">
+									<header className="wst-head">
+										<span className="wst-icon" aria-hidden="true">
+											<Bell size={18} />
+										</span>
+										<div className="wst-head-text">
+											<h3>{t.settingsNotifications}</h3>
+										</div>
+									</header>
+									<div className="wst-rows">
+										<div className="wst-row">
+											<div className="wst-row-text">
+												<p className="wst-row-title">{t.whatsappNotifications}</p>
+												<p className="wst-row-hint">{t.whatsappNotificationsHint}</p>
 											</div>
-											<div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-												<span
-													className={`text-xs font-bold ${
-														notificationSettings.notificationsEnabled
-															? 'text-emerald-600'
-															: 'text-slate-400'
-													}`}
-												>
-													{notificationSettings.notificationsEnabled
-														? t.privacyOn
-														: t.privacyOff}
+											<div className="wst-row-control">
+												<span className={`wst-state${notificationSettings.notificationsEnabled ? ' is-on' : ''}`}>
+													{notificationSettings.notificationsEnabled ? t.privacyOn : t.privacyOff}
 												</span>
 												<Toggle
 													label={t.whatsappNotifications}
@@ -29821,86 +29900,80 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										</div>
 									</div>
-								</Card>
+								</section>
 							)}
 							{settingsSection === 'privacy' && (
-								<Card className="p-4">
-								<CardHeader
-									icon={ShieldCheck}
-									title={t.privacySettings}
-									right={
-										<button
-											type="button"
-											onClick={savePrivacySettings}
-											className="wa-primary-btn"
-										>
+								<section className="wst-section">
+									<header className="wst-head">
+										<span className="wst-icon" aria-hidden="true">
+											<ShieldCheck size={18} />
+										</span>
+										<div className="wst-head-text">
+											<h3>{t.privacySettings}</h3>
+										</div>
+										<button type="button" onClick={savePrivacySettings} className="wst-btn is-primary">
 											{t.savePrivacy}
 										</button>
-									}
-								/>
-								<div className="grid gap-3 md:grid-cols-2">
-									<div className="flex h-full flex-col justify-between gap-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-										<div>
-											<div className="mb-2 flex items-center gap-2.5">
-												<div className="rounded-lg bg-[var(--color-primary-50)] p-1.5 dark:bg-[var(--color-primary-950)]/40">
-													<EyeOff size={14} className="text-[var(--color-primary-500)]" />
-												</div>
-												<p className="text-sm font-black">{t.hideStatusViews}</p>
-											</div>
-											<p className="text-xs text-slate-500">{t.hideStatusViewsHint}</p>
-											<div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 dark:border-amber-900 dark:bg-amber-950/20">
-												<AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-500" />
-												<p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
-													{t.hideStatusViewsWarning}
+									</header>
+									<div className="wst-rows">
+										<div className="wst-row">
+											<div className="wst-row-text">
+												<p className="wst-row-title">
+													<EyeOff size={15} aria-hidden="true" />
+													{t.hideStatusViews}
+												</p>
+												<p className="wst-row-hint">{t.hideStatusViewsHint}</p>
+												<p className="wst-callout is-warn">
+													<AlertTriangle size={14} aria-hidden="true" />
+													<span>{t.hideStatusViewsWarning}</span>
 												</p>
 											</div>
-										</div>
-										<div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-											<span className={`text-xs font-bold ${privacySettings.hideStatusViewReceipts ? 'text-emerald-600' : 'text-slate-400'}`}>
-												{privacySettings.hideStatusViewReceipts ? t.privacyOn : t.privacyOff}
-											</span>
-											<Toggle
-												label={t.hideStatusViews}
-												checked={Boolean(privacySettings.hideStatusViewReceipts)}
-												onChange={value =>
-													setPrivacySettings(current => ({
-														...current,
-														hideStatusViewReceipts: value,
-													}))
-												}
-											/>
-										</div>
-									</div>
-									<div className="flex h-full flex-col justify-between gap-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-										<div>
-											<div className="mb-2 flex items-center gap-2.5">
-												<div className="rounded-lg bg-[var(--color-secondary-50)] p-1.5 dark:bg-[var(--color-secondary-950)]/40">
-													<CheckCheck size={14} className="text-[var(--color-secondary-500)]" />
-												</div>
-												<p className="text-sm font-black">{t.readReceiptMode}</p>
+											<div className="wst-row-control">
+												<span className={`wst-state${privacySettings.hideStatusViewReceipts ? ' is-on' : ''}`}>
+													{privacySettings.hideStatusViewReceipts ? t.privacyOn : t.privacyOff}
+												</span>
+												<Toggle
+													label={t.hideStatusViews}
+													checked={Boolean(privacySettings.hideStatusViewReceipts)}
+													onChange={value =>
+														setPrivacySettings(current => ({
+															...current,
+															hideStatusViewReceipts: value,
+														}))
+													}
+												/>
 											</div>
-											<p className="text-xs text-slate-500">{t.readReceiptModeHint}</p>
 										</div>
-										<WaCustomSelect
-											ariaLabel={t.readReceiptMode}
-											value={privacySettings.readReceiptMode}
-											onChange={value =>
-												setPrivacySettings(current => ({
-													...current,
-													readReceiptMode: value,
-												}))
-											}
-											buttonClassName="h-11 text-sm"
-											options={[
-												{ value: 'on_open', label: t.readOnOpen },
-												{ value: 'on_reply', label: t.readOnReply },
-												{ value: 'manual', label: t.readManual },
-												{ value: 'never', label: t.readNever },
-											]}
-										/>
+										<div className="wst-row">
+											<div className="wst-row-text">
+												<p className="wst-row-title">
+													<CheckCheck size={15} aria-hidden="true" />
+													{t.readReceiptMode}
+												</p>
+												<p className="wst-row-hint">{t.readReceiptModeHint}</p>
+											</div>
+											<div className="wst-row-control is-select">
+												<WaCustomSelect
+													ariaLabel={t.readReceiptMode}
+													value={privacySettings.readReceiptMode}
+													onChange={value =>
+														setPrivacySettings(current => ({
+															...current,
+															readReceiptMode: value,
+														}))
+													}
+													buttonClassName="h-10 text-sm"
+													options={[
+														{ value: 'on_open', label: t.readOnOpen },
+														{ value: 'on_reply', label: t.readOnReply },
+														{ value: 'manual', label: t.readManual },
+														{ value: 'never', label: t.readNever },
+													]}
+												/>
+											</div>
+										</div>
 									</div>
-								</div>
-								</Card>
+								</section>
 							)}
 						</div>
 					)
@@ -31409,6 +31482,24 @@ function WhatsAppWorkspaceContent() {
 								onClick={event => {
 									event.preventDefault();
 									event.stopPropagation();
+									openStoryRepost();
+								}}
+								disabled={repostingStory || loadingStory || !canUseWhatsApp || demo.settings.enabled}
+								title={t.repostStory}
+								className="wa-story-ctl pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-40"
+								aria-label={t.repostStory}
+							>
+								{repostingStory ? (
+									<Loader2 size={17} className="animate-spin" />
+								) : (
+									<Repeat2 size={18} />
+								)}
+							</button>
+							<button
+								type="button"
+								onClick={event => {
+									event.preventDefault();
+									event.stopPropagation();
 									openStorySharePicker();
 								}}
 								disabled={
@@ -31894,6 +31985,127 @@ function WhatsAppWorkspaceContent() {
 					/>
 				</WaDialog>
 			) : null}
+			{autoForwardOpen ? (
+				<WaDialog
+					zIndex={110}
+					width={680}
+					height={640}
+					icon={<Forward size={17} strokeWidth={2.1} className="rtl:-scale-x-100" />}
+					title={locale === 'ar' ? 'تحويل تلقائي للرسايل' : 'Auto-forward messages'}
+					subtitle={
+						locale === 'ar'
+							? 'أي رسالة توصلك من الشات الأول تتبعت على طول للشات التاني.'
+							: 'Every message you receive from the first chat is sent straight to the second chat.'
+					}
+					closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+					onClose={() => setAutoForwardOpen(false)}
+				>
+					<div className="nice-scroll min-h-0 flex-1 overflow-y-auto">
+						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+							<AutoForwardPanel
+								embedded
+								accountId={accountId}
+								locale={locale}
+								conversations={effectiveConversations}
+								canUse={canUseWhatsApp || canManageWhatsApp || isAdmin}
+							/>
+						</Suspense>
+					</div>
+				</WaDialog>
+			) : null}
+			{storyRepostOpen && selectedStatus
+				? (() => {
+						const repostType = String(selectedStatus.type || '').toLowerCase();
+						const repostIsText = repostType === 'text' || repostType === 'chat';
+						const canSubmit = !repostingStory && (!repostIsText || storyRepostText.trim());
+						return (
+							<WaDialog
+								zIndex={120}
+								width={460}
+								icon={<Repeat2 size={17} strokeWidth={2.1} />}
+								title={t.repostStory}
+								subtitle={t.repostStoryHint}
+								closeDisabled={repostingStory}
+								closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+								onClose={closeStoryRepost}
+								footer={
+									<>
+										<span className="wa-ui-modal__footer-note">
+											<kbd className="wa-dx__kbd">Ctrl</kbd>+<kbd className="wa-dx__kbd">Enter</kbd>
+											{locale === 'ar' ? 'للنشر' : 'to post'}
+										</span>
+										<button
+											type="button"
+											className="wa-ui-btn wa-ui-btn--ghost"
+											disabled={repostingStory}
+											onClick={closeStoryRepost}
+										>
+											{locale === 'ar' ? 'إلغاء' : 'Cancel'}
+										</button>
+										<button
+											type="button"
+											className="wa-ui-btn wa-ui-btn--primary"
+											disabled={!canSubmit}
+											onClick={() => void submitStoryRepost()}
+										>
+											{repostingStory ? (
+												<Loader2 size={16} className="animate-spin" />
+											) : (
+												<Repeat2 size={16} strokeWidth={2.4} />
+											)}
+											{t.repostPublish}
+										</button>
+									</>
+								}
+							>
+								<div className="wa-dx__body">
+									{!repostIsText && statusMediaUrl ? (
+										repostType.includes('video') ? (
+											<video
+												src={statusMediaUrl}
+												muted
+												playsInline
+												className="mx-auto max-h-56 w-auto rounded-xl bg-black object-contain"
+											/>
+										) : (
+											<img
+												src={statusMediaUrl}
+												alt=""
+												className="mx-auto max-h-56 w-auto rounded-xl bg-black object-contain"
+											/>
+										)
+									) : null}
+									<label className="flex flex-col gap-1.5 text-[13px] font-semibold">
+										{repostIsText ? t.repostTextLabel : t.repostCaptionLabel}
+										<textarea
+											value={storyRepostText}
+											autoFocus
+											dir="auto"
+											maxLength={700}
+											placeholder={repostIsText ? t.repostTextPlaceholder : t.repostCaptionPlaceholder}
+											onChange={event => setStoryRepostText(event.target.value)}
+											onKeyDown={event => {
+												if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+													event.preventDefault();
+													if (canSubmit) void submitStoryRepost();
+												}
+											}}
+											onFocus={event => {
+												const length = event.currentTarget.value.length;
+												event.currentTarget.setSelectionRange(length, length);
+											}}
+											rows={repostIsText ? 5 : 3}
+											className="wa-ui-input wa-dx__textarea"
+										/>
+									</label>
+									<p className="text-[12px] opacity-70" dir="auto">
+										{repostIsText ? `${storyRepostText.length}/700` : t.repostMediaNote}
+									</p>
+								</div>
+							</WaDialog>
+						);
+					})()
+				: null}
 			<ChatImageViewer
 				images={chatImages}
 				activeId={activeChatImageId}

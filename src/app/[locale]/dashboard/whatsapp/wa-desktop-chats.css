@@ -296,24 +296,89 @@
 		}
 	}
 
-	/* bottom dock: same tile language as the tabs */
+	/*
+	 * Bottom dock: part of the rail, not a card floating on it. A hairline closes the tab
+	 * list, the three preferences sit in one recessed well of the rail's own colour, and
+	 * every button uses the tab language (white tile on hover, green tint when on).
+	 */
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
 		--dock-rail: var(--r-solid);
-		gap: 12px;
-		padding-bottom: 14px;
+		--dock-well: color-mix(in srgb, var(--r-solid) 92%, #0b141a);
+		position: relative;
+		gap: 10px;
+		width: 100%;
+		padding: 12px 0 14px;
+	}
+
+	html.dark .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot,
+	html[data-theme-mode='dark'] .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
+		--dock-well: color-mix(in srgb, var(--r-solid) 88%, #000);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 50%;
+		width: 22px;
+		height: 2px;
+		margin-left: -11px;
+		border-radius: 2px;
+		background: var(--r-edge);
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf {
-		width: 46px;
-		gap: 3px;
+		width: 44px;
+		gap: 2px;
 		padding: 4px;
-		border-radius: 16px;
+		border: 0;
+		border-radius: 15px;
+		background: var(--dock-well);
+		box-shadow: inset 0 0 0 1px var(--r-edge), inset 0 1px 2px rgba(11, 20, 26, 0.05);
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn {
 		width: 36px;
 		height: 36px;
 		border-radius: 11px;
+		color: var(--r-icon);
+		transition:
+			background-color 0.16s ease,
+			color 0.16s ease,
+			box-shadow 0.16s ease,
+			transform 0.12s ease;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn svg {
+		width: 19px;
+		height: 19px;
+		stroke-width: 1.85;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:hover {
+		color: var(--r-icon-hover);
+		background: var(--r-hover);
+		box-shadow: var(--r-hover-shadow);
+		transform: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:active {
+		transform: scale(0.92);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:focus-visible,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar:focus-visible {
+		outline: 2px solid var(--r-accent);
+		outline-offset: 2px;
+		box-shadow: none;
+	}
+
+	/* settings open / dark mode on: the same tint as the open tab */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-theme.is-dark {
+		color: var(--r-active-ink);
+		background: var(--r-active);
+		box-shadow: inset 0 0 0 1px var(--r-active-ring);
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active::after,
@@ -321,11 +386,49 @@
 		display: none;
 	}
 
-	/* profile: green ring while the WhatsApp account is connected */
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar.is-online .wa-ui-rail-avatar__img {
+	/* language: a letter drawn with the icons' stroke weight, in the icons' 19px box */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__glyph {
+		width: 19px;
+		height: 19px;
+		border-width: 1.6px;
+		border-radius: 5.5px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__glyph.is-arabic {
+		font-size: 11.5px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__glyph.is-latin {
+		font-size: 8.5px;
+		font-weight: 800;
+	}
+
+	/* profile: the avatar in a thin ring, status as a dot on its corner */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar .wa-ui-rail-avatar__img {
+		width: 36px !important;
+		height: 36px !important;
+		background: var(--r-hover) !important;
 		box-shadow:
 			0 0 0 2px var(--r-solid),
-			0 0 0 4px rgba(29, 170, 97, 0.55);
+			0 0 0 3px var(--r-edge);
+		transition: box-shadow 0.18s ease, transform 0.18s ease;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar:hover .wa-ui-rail-avatar__img {
+		box-shadow:
+			0 0 0 2px var(--r-solid),
+			0 0 0 3.5px color-mix(in srgb, var(--r-accent) 45%, var(--r-edge)),
+			var(--r-hover-shadow);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar:hover {
+		transform: none;
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar.is-active .wa-ui-rail-avatar__img {
@@ -337,6 +440,16 @@
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-fallback {
 		color: var(--r-active-ink);
 		background: var(--r-active);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar .wa-desktop-rail__online-dot {
+		inset-inline-end: 0;
+		bottom: 0;
+		width: 12px;
+		height: 12px;
+		border: 2.5px solid var(--r-solid);
+		background: var(--r-accent);
+		box-shadow: none;
 	}
 
 	/* ─────────────────────────────────────────────────────────────── */

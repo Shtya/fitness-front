@@ -1,0 +1,795 @@
+/*
+ * WhatsApp settings page.
+ * Desktop: a compact category list beside one readable content column.
+ * Every category is built from the same parts: a section (one surface), a header,
+ * rows divided by hairlines (text on one side, control on the other), and a footer.
+ * Colours come from the --st-* tokens below; dark mode only redefines tokens.
+ */
+.wa-settings-pane {
+	--st-surface: #ffffff;
+	--st-fill: #f6f7f7;
+	--st-hover: #f2f4f5;
+	--st-line: #e9edef;
+	--st-line-strong: #d5dce0;
+	--st-ink: #111b21;
+	--st-ink-2: #3b4a54;
+	--st-muted: #667781;
+	--st-faint: #8696a0;
+	--st-accent: #1daa61;
+	--st-accent-strong: #168d50;
+	--st-accent-ink: #0d7a43;
+	--st-accent-soft: #e7f8ee;
+	--st-ring: rgba(29, 170, 97, 0.22);
+	--st-warn: #a35a06;
+	--st-warn-soft: #fff7e8;
+	--st-warn-line: #f5dfb0;
+	--st-bad: #c0263b;
+	--st-shadow: 0 1px 2px rgba(17, 27, 33, 0.04);
+}
+
+html.dark .wa-settings-pane,
+html[data-theme-mode='dark'] .wa-settings-pane {
+	--st-surface: #1d1f1f;
+	--st-fill: #232525;
+	--st-hover: #262828;
+	--st-line: #2c2e2e;
+	--st-line-strong: #3a3d3d;
+	--st-ink: #f2f3f3;
+	--st-ink-2: #d2d6d8;
+	--st-muted: #a0a6a9;
+	--st-faint: #7d8487;
+	--st-accent: #21c063;
+	--st-accent-strong: #1daa61;
+	--st-accent-ink: #5fe39a;
+	--st-accent-soft: rgba(33, 192, 99, 0.13);
+	--st-ring: rgba(33, 192, 99, 0.3);
+	--st-warn: #f2c26b;
+	--st-warn-soft: rgba(242, 194, 107, 0.08);
+	--st-warn-line: rgba(242, 194, 107, 0.22);
+	--st-bad: #ff8a99;
+	--st-shadow: none;
+}
+
+/* ─── desktop layout: category list + content column ─── */
+@media (min-width: 769px) {
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-pane {
+		grid-template-columns: 220px minmax(0, 920px);
+		justify-content: start;
+		column-gap: 28px;
+		row-gap: 16px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-pane > .wa-settings-tablist {
+		top: 8px;
+		gap: 2px !important;
+		padding: 0 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-tab {
+		position: relative;
+		min-height: 40px;
+		gap: 11px !important;
+		padding: 0 12px !important;
+		border-radius: 9px !important;
+		color: var(--st-ink-2) !important;
+		font-size: 14px !important;
+		font-weight: 500 !important;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-tab svg {
+		width: 18px !important;
+		height: 18px !important;
+		color: var(--st-faint) !important;
+		transition: color 0.15s ease;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-tab:hover {
+		color: var(--st-ink) !important;
+		background: var(--st-hover) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-tab.is-active {
+		color: var(--st-ink) !important;
+		background: var(--st-fill) !important;
+		font-weight: 600 !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-tab.is-active svg {
+		color: var(--st-accent) !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-tab.is-active::before {
+		content: '';
+		position: absolute;
+		top: 10px;
+		bottom: 10px;
+		inset-inline-start: 0;
+		width: 3px;
+		border-start-end-radius: 3px;
+		border-end-end-radius: 3px;
+		background: var(--st-accent);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-tab:focus-visible {
+		outline: 2px solid var(--st-accent);
+		outline-offset: 1px;
+	}
+}
+
+/* ─── section ─── */
+.wa-settings-pane .wst-section {
+	display: block;
+	margin: 0;
+	border-radius: 14px;
+	color: var(--st-ink);
+	background: var(--st-surface);
+	box-shadow: inset 0 0 0 1px var(--st-line), var(--st-shadow);
+}
+
+.wa-settings-pane .wst-head {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 18px 20px 16px;
+}
+
+.wa-settings-pane .wst-icon {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	flex: none;
+	place-items: center;
+	border-radius: 10px;
+	color: var(--st-accent);
+	background: var(--st-accent-soft);
+}
+
+.wa-settings-pane .wst-head-text {
+	min-width: 0;
+	flex: 1;
+	padding-top: 1px;
+}
+
+.wa-settings-pane .wst-head h3 {
+	margin: 0;
+	color: var(--st-ink);
+	font-size: 15.5px;
+	font-weight: 650;
+	letter-spacing: -0.01em;
+	line-height: 1.35;
+}
+
+.wa-settings-pane .wst-head p {
+	max-width: 40rem;
+	margin: 3px 0 0;
+	color: var(--st-muted);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.wa-settings-pane .wst-head > .wst-btn {
+	flex: none;
+	align-self: center;
+}
+
+/* price legend: one quiet band, read once */
+.wa-settings-pane .wst-legend {
+	display: grid;
+	gap: 8px 20px;
+	margin: 0;
+	padding: 10px 20px;
+	list-style: none;
+	border-top: 1px solid var(--st-line);
+	background: var(--st-fill);
+}
+
+@media (min-width: 900px) {
+	.wa-settings-pane .wst-legend {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+.wa-settings-pane .wst-legend li {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 8px;
+	color: var(--st-muted);
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.wa-settings-pane .wst-legend li > span:first-child {
+	flex: none;
+}
+
+/* rows */
+.wa-settings-pane .wst-rows {
+	border-top: 1px solid var(--st-line);
+}
+
+.wa-settings-pane .wst-row {
+	display: flex;
+	align-items: center;
+	gap: 12px 20px;
+	padding: 15px 20px;
+	transition: background-color 0.15s ease;
+}
+
+.wa-settings-pane .wst-row + .wst-row {
+	border-top: 1px solid var(--st-line);
+}
+
+.wa-settings-pane .wst-row.is-stack {
+	display: block;
+}
+
+.wa-settings-pane .wst-row.wst-power.is-on {
+	background: linear-gradient(90deg, var(--st-accent-soft), transparent 70%);
+}
+
+[dir='rtl'] .wa-settings-pane .wst-row.wst-power.is-on {
+	background: linear-gradient(270deg, var(--st-accent-soft), transparent 70%);
+}
+
+.wa-settings-pane .wst-row-text {
+	min-width: 0;
+	flex: 1;
+}
+
+.wa-settings-pane .wst-row-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	margin: 0;
+	color: var(--st-ink);
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.wa-settings-pane .wst-row-title > svg {
+	flex: none;
+	color: var(--st-faint);
+}
+
+.wa-settings-pane .wst-row-hint {
+	margin: 3px 0 0;
+	color: var(--st-muted);
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.wa-settings-pane .wst-row-control {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 10px;
+}
+
+.wa-settings-pane .wst-row-control.is-select {
+	width: min(100%, 360px);
+}
+
+.wa-settings-pane .wst-row-control.is-select > :first-child {
+	min-width: 0;
+	flex: 1;
+}
+
+.wa-settings-pane .wst-select {
+	position: relative;
+	min-width: 0;
+	flex: 1;
+}
+
+.wa-settings-pane .wst-select-spin {
+	position: absolute;
+	top: 50%;
+	inset-inline-end: 34px;
+	margin-top: -7px;
+	color: var(--st-accent);
+	pointer-events: none;
+}
+
+/* model rows: the key button gets its own column, so every model menu lines up */
+.wa-settings-pane .wst-feature .wst-row-control.is-select {
+	display: grid;
+	width: min(100%, 400px);
+	grid-template-columns: minmax(0, 1fr) 118px;
+}
+
+.wa-settings-pane .wst-feature .wst-btn.is-sm {
+	width: 100%;
+}
+
+.wa-settings-pane .wst-key-spacer {
+	display: block;
+}
+
+.wa-settings-pane .wst-chip {
+	display: inline-flex;
+	height: 20px;
+	align-items: center;
+	padding: 0 7px;
+	border-radius: 6px;
+	color: var(--st-muted);
+	background: var(--st-fill);
+	box-shadow: inset 0 0 0 1px var(--st-line);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
+
+.wa-settings-pane .wst-inline-warn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	margin: 6px 0 0;
+	color: var(--st-warn);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.wa-settings-pane .wst-state {
+	min-width: 2.2rem;
+	color: var(--st-faint);
+	font-size: 12.5px;
+	font-weight: 600;
+	text-align: end;
+}
+
+.wa-settings-pane .wst-state.is-on {
+	color: var(--st-accent-ink);
+}
+
+.wa-settings-pane .wst-callout {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 10px 0 0;
+	padding: 9px 12px;
+	border-radius: 10px;
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.wa-settings-pane .wst-callout > svg {
+	flex: none;
+	margin-top: 2px;
+}
+
+.wa-settings-pane .wst-callout.is-warn {
+	color: var(--st-warn);
+	background: var(--st-warn-soft);
+	box-shadow: inset 0 0 0 1px var(--st-warn-line);
+}
+
+/* switch */
+.wa-settings-pane .wst-switch {
+	position: relative;
+	width: 42px;
+	height: 24px;
+	flex: none;
+	border: 0;
+	border-radius: 999px;
+	background: var(--st-line-strong);
+	cursor: pointer;
+	transition: background-color 0.18s ease;
+}
+
+.wa-settings-pane .wst-switch.is-on {
+	background: var(--st-accent);
+}
+
+.wa-settings-pane .wst-switch span {
+	position: absolute;
+	top: 3px;
+	inset-inline-start: 3px;
+	width: 18px;
+	height: 18px;
+	border-radius: 999px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(17, 27, 33, 0.25);
+	transition: inset-inline-start 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.wa-settings-pane .wst-switch.is-on span {
+	inset-inline-start: 21px;
+}
+
+.wa-settings-pane .wst-switch:focus-visible {
+	outline: 2px solid var(--st-accent);
+	outline-offset: 2px;
+}
+
+/* fields */
+.wa-settings-pane .wst-fields {
+	display: grid;
+	gap: 14px 16px;
+}
+
+@media (min-width: 640px) {
+	.wa-settings-pane .wst-fields {
+		grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+	}
+}
+
+.wa-settings-pane .wst-field {
+	display: grid;
+	min-width: 0;
+	align-content: start;
+	gap: 7px;
+}
+
+.wa-settings-pane .wst-label {
+	color: var(--st-ink-2);
+	font-size: 12.5px;
+	font-weight: 600;
+}
+
+.wa-settings-pane .wst-input {
+	width: 100%;
+	height: 40px;
+	padding: 0 12px;
+	border: 1px solid var(--st-line-strong);
+	border-radius: 10px;
+	background: var(--st-surface);
+	color: var(--st-ink);
+	font: inherit;
+	font-size: 14px;
+	outline: none;
+	transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.wa-settings-pane input.wst-input[type='number'] {
+	font-variant-numeric: tabular-nums;
+}
+
+.wa-settings-pane .wst-input:hover {
+	border-color: color-mix(in srgb, var(--st-line-strong) 55%, var(--st-muted));
+}
+
+.wa-settings-pane .wst-input:focus {
+	border-color: var(--st-accent);
+	box-shadow: 0 0 0 3px var(--st-ring);
+}
+
+.wa-settings-pane .wst-input::placeholder {
+	color: var(--st-faint);
+}
+
+.wa-settings-pane .wst-area {
+	height: auto;
+	min-height: 110px;
+	padding: 10px 12px;
+	line-height: 1.55;
+	resize: vertical;
+}
+
+/* custom selects inside the page share the field look */
+html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-pane .wst-section .wa-custom-select-trigger {
+	border-color: var(--st-line-strong) !important;
+	border-radius: 10px !important;
+	background: var(--st-surface) !important;
+	color: var(--st-ink) !important;
+}
+
+/* saved prompts */
+.wa-settings-pane .wst-sub-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 10px 16px;
+	margin-bottom: 14px;
+}
+
+.wa-settings-pane .wst-sub-head > div {
+	min-width: 0;
+	flex: 1 1 18rem;
+}
+
+.wa-settings-pane .wst-prompts {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+}
+
+.wa-settings-pane .wst-prompt {
+	display: grid;
+	gap: 8px;
+	padding: 12px;
+	border-radius: 12px;
+	background: var(--st-surface);
+	box-shadow: inset 0 0 0 1px var(--st-line-strong);
+	transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.wa-settings-pane .wst-prompt.is-default {
+	background: color-mix(in srgb, var(--st-accent-soft) 55%, var(--st-surface));
+	box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--st-accent) 55%, transparent);
+}
+
+.wa-settings-pane .wst-prompt-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.wa-settings-pane .wst-default {
+	position: relative;
+	display: inline-flex;
+	height: 28px;
+	align-items: center;
+	gap: 5px;
+	padding: 0 10px;
+	border-radius: 999px;
+	color: var(--st-muted);
+	box-shadow: inset 0 0 0 1px var(--st-line-strong);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.wa-settings-pane .wst-default input {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.wa-settings-pane .wst-default:hover {
+	color: var(--st-ink);
+	background: var(--st-hover);
+}
+
+.wa-settings-pane .wst-default.is-on {
+	color: var(--st-accent-ink);
+	background: var(--st-accent-soft);
+	box-shadow: none;
+}
+
+.wa-settings-pane .wst-default:focus-within {
+	outline: 2px solid var(--st-accent);
+	outline-offset: 2px;
+}
+
+/* empty + loading */
+.wa-settings-pane .wst-empty {
+	display: grid;
+	justify-items: center;
+	gap: 8px;
+	margin: 0;
+	padding: 24px 16px;
+	border-radius: 12px;
+	color: var(--st-muted);
+	background: var(--st-fill);
+	font-size: 13px;
+	line-height: 1.5;
+	text-align: center;
+}
+
+.wa-settings-pane .wst-empty p {
+	max-width: 30rem;
+	margin: 0;
+}
+
+.wa-settings-pane .wst-empty-icon {
+	display: grid;
+	width: 38px;
+	height: 38px;
+	place-items: center;
+	border-radius: 10px;
+	color: var(--st-accent);
+	background: var(--st-surface);
+	box-shadow: inset 0 0 0 1px var(--st-line);
+}
+
+.wa-settings-pane .wst-loading {
+	display: grid;
+	min-height: 120px;
+	place-items: center;
+	color: var(--st-accent);
+}
+
+/* footer: save state + action, kept in view while the section scrolls by */
+.wa-settings-pane .wst-foot {
+	position: sticky;
+	bottom: 0;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 20px;
+	border-top: 1px solid var(--st-line);
+	border-radius: 0 0 14px 14px;
+	background: color-mix(in srgb, var(--st-surface) 94%, transparent);
+	backdrop-filter: blur(8px);
+}
+
+.wa-settings-pane .wst-foot.is-dirty {
+	box-shadow: inset 0 2px 0 -1px color-mix(in srgb, #f59e0b 55%, transparent);
+}
+
+.wa-settings-pane .wst-foot-state {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	margin: 0;
+	color: var(--st-muted);
+	font-size: 13px;
+}
+
+.wa-settings-pane .wst-foot-state > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	font-weight: 600;
+}
+
+.wa-settings-pane .wst-foot-state .is-dirty {
+	color: var(--st-warn);
+}
+
+.wa-settings-pane .wst-foot-state .is-dirty i {
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	background: #f59e0b;
+}
+
+.wa-settings-pane .wst-foot-state .is-ok {
+	color: var(--st-accent-ink);
+}
+
+.wa-settings-pane .wst-foot-state .is-bad {
+	color: var(--st-bad);
+}
+
+/* buttons */
+.wa-settings-pane .wst-btn {
+	display: inline-flex;
+	height: 38px;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	padding: 0 15px;
+	border: 0;
+	border-radius: 10px;
+	font-size: 13.5px;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background-color 0.14s ease, color 0.14s ease, box-shadow 0.14s ease, transform 0.1s ease;
+}
+
+.wa-settings-pane .wst-btn:active:not(:disabled) {
+	transform: scale(0.98);
+}
+
+.wa-settings-pane .wst-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.wa-settings-pane .wst-btn:focus-visible,
+.wa-settings-pane .wst-icon-btn:focus-visible {
+	outline: 2px solid var(--st-accent);
+	outline-offset: 2px;
+}
+
+.wa-settings-pane .wst-btn.is-primary {
+	color: #fff;
+	background: var(--st-accent);
+	box-shadow: 0 1px 2px rgba(17, 27, 33, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.wa-settings-pane .wst-btn.is-primary:hover:not(:disabled) {
+	background: var(--st-accent-strong);
+}
+
+html.dark .wa-settings-pane .wst-btn.is-primary,
+html[data-theme-mode='dark'] .wa-settings-pane .wst-btn.is-primary {
+	color: #06210f;
+}
+
+.wa-settings-pane .wst-btn.is-ghost {
+	color: var(--st-ink-2);
+	background: var(--st-surface);
+	box-shadow: inset 0 0 0 1px var(--st-line-strong);
+}
+
+.wa-settings-pane .wst-btn.is-ghost:hover:not(:disabled) {
+	color: var(--st-ink);
+	background: var(--st-hover);
+}
+
+.wa-settings-pane .wst-btn.is-sm {
+	height: 40px;
+	padding: 0 12px;
+	font-size: 12.5px;
+}
+
+.wa-settings-pane .wst-icon-btn {
+	display: grid;
+	width: 30px;
+	height: 30px;
+	place-items: center;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--st-faint);
+	cursor: pointer;
+	transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.wa-settings-pane .wst-icon-btn.is-danger:hover {
+	color: var(--st-bad);
+	background: color-mix(in srgb, var(--st-bad) 10%, transparent);
+}
+
+/* ─── demo mode: same frame as the other sections ─── */
+html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-pane section.rounded-2xl {
+	border-color: var(--st-line) !important;
+	border-radius: 14px !important;
+	background: var(--st-surface) !important;
+	box-shadow: var(--st-shadow) !important;
+}
+
+html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-st) .wa-settings-pane section.rounded-2xl > .border-b:first-child {
+	border-color: var(--st-line) !important;
+	background: none !important;
+}
+
+/* ─── narrow screens ─── */
+@media (max-width: 640px) {
+	.wa-settings-pane .wst-head,
+	.wa-settings-pane .wst-row,
+	.wa-settings-pane .wst-foot {
+		padding-inline: 16px;
+	}
+
+	.wa-settings-pane .wst-row:not(.wst-power):not(.is-stack) {
+		flex-wrap: wrap;
+	}
+
+	.wa-settings-pane .wst-row-control.is-select,
+	.wa-settings-pane .wst-feature .wst-row-control.is-select {
+		width: 100%;
+	}
+
+	.wa-settings-pane .wst-feature .wst-row-control.is-select {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+
+	.wa-settings-pane .wst-key-spacer {
+		display: none;
+	}
+
+	.wa-settings-pane .wst-legend {
+		padding-inline: 16px;
+	}
+
+	.wa-settings-pane .wst-hide-sm {
+		display: none;
+	}
+
+	.wa-settings-pane .wst-head {
+		flex-wrap: wrap;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-settings-pane .wst-switch,
+	.wa-settings-pane .wst-switch span,
+	.wa-settings-pane .wst-btn {
+		transition: none;
+	}
+}

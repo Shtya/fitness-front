@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	Bookmark,
 	Check,
-	CheckSquare,
 	Clock3,
 	Code2,
 	Copy,
@@ -16,6 +15,9 @@ import {
 	Loader2,
 	PanelLeftClose,
 	PanelLeftOpen,
+	PanelRightClose,
+	PanelRightOpen,
+	Pencil,
 	Share2,
 	Trash2,
 	Users,
@@ -34,6 +36,12 @@ import { FONT_VARIABLE_CLASSES, TYPOGRAPHY_DEFAULTS, normalizeTypography, typogr
 import './smart-document.css';
 
 const HISTORY_CAP = 40;
+// Below this width the history list floats over the document instead of taking a column.
+const NARROW_QUERY = '(max-width: 900px)';
+
+function isNarrow() {
+	return typeof window !== 'undefined' && Boolean(window.matchMedia?.(NARROW_QUERY).matches);
+}
 const AUTOSAVE_MS = 900;
 const SNAPSHOT_IDLE_MS = 4500;
 
@@ -280,6 +288,7 @@ export default function SmartDocumentEditor({
 		setDocDir(detectDominantDir(initial));
 		setTypography(normalizeTypography(readJson(typographyKey, null)));
 		setShareTokens(readJson(sharesKey, {}) || {});
+		if (isNarrow()) setHistoryOpen(false);
 		setReady(true);
 	}, [draftKey, historyKey, activeIdKey, typographyKey, sharesKey]);
 
@@ -474,6 +483,7 @@ export default function SmartDocumentEditor({
 		setDocDir(detectDominantDir(item.content));
 		persistDraft(item.content, item.id);
 		setDocVersion((v) => v + 1);
+		if (isNarrow()) setHistoryOpen(false);
 		if (mode === 'edit') requestAnimationFrame(() => taRef.current?.focus());
 	};
 
@@ -627,33 +637,46 @@ export default function SmartDocumentEditor({
 	return (
 		<div
 			className={`sd-shell sd-shell--md is-ready ${FONT_VARIABLE_CLASSES} ${historyOpen ? 'has-history' : ''}`}
-			dir={docDir}
+			dir={uiDir}
 			style={shellStyle}
 		>
 			<aside className={`sd-history ${historyOpen ? 'is-open' : ''}`} aria-label={labels.history || 'History'}>
 				<div className="sd-history-head">
 					<span className="sd-history-title">
-						<History size={14} strokeWidth={2.2} />
+						<History size={15} strokeWidth={2} aria-hidden />
 						{labels.history || 'History'}
+						{history.length ? <span className="sd-history-count">{countFmt.format(history.length)}</span> : null}
 					</span>
-					<button type="button" className="sd-icon-btn" onClick={newDocument} title={labels.newDoc || 'New document'}>
-						<FilePlus2 size={14} />
+					<button type="button" className="sd-icon-btn" onClick={newDocument} title={labels.newDoc || 'New document'} aria-label={labels.newDoc || 'New document'}>
+						<FilePlus2 size={16} />
+					</button>
+					<button
+						type="button"
+						className="sd-icon-btn sd-history-close"
+						onClick={() => setHistoryOpen(false)}
+						title={labels.hideHistory || 'Hide history'}
+						aria-label={labels.hideHistory || 'Hide history'}
+					>
+						<X size={16} />
 					</button>
 				</div>
 				<ul className="sd-history-list">
 					{!history.length && (
 						<li className="sd-history-empty">{labels.historyEmpty || 'Autosaved drafts appear here.'}</li>
 					)}
-					{history.map((item) => (
-						<li key={item.id}>
-							<div className={`sd-history-item ${item.id === activeId ? 'is-active' : ''}`}>
-								<div className="sd-history-item-main">
+					{history.map((item) => {
+						const itemTitle = item.title || labels.untitled || 'Untitled';
+						const when = formatWhen(item.updatedAt, labels);
+						return (
+							<li key={item.id}>
+								<div className={`sd-history-item ${item.id === activeId ? 'is-active' : ''}`}>
 									{renamingId === item.id ? (
 										<input
 											ref={renameRef}
 											className="sd-history-rename"
 											value={renameDraft}
 											maxLength={72}
+											dir="auto"
 											aria-label={labels.rename || 'Rename'}
 											onChange={(e) => setRenameDraft(e.target.value)}
 											onClick={(e) => e.stopPropagation()}
@@ -669,47 +692,58 @@ export default function SmartDocumentEditor({
 											}}
 										/>
 									) : (
-										<button
-											type="button"
-											className="sd-history-item-title"
-											title={labels.renameHint || 'Click to rename'}
-											onClick={(e) => startRename(item, e)}
-										>
-											{item.title || labels.untitled || 'Untitled'}
-										</button>
+										<>
+											<button
+												type="button"
+												className="sd-history-item-open"
+												title={`${itemTitle}\n${when}`}
+												aria-current={item.id === activeId ? 'true' : undefined}
+												onClick={() => openHistoryItem(item)}
+												onDoubleClick={(e) => startRename(item, e)}
+											>
+												<span className="sd-history-item-title" dir="auto">
+													{itemTitle}
+												</span>
+												<span className="sd-history-item-meta">
+													<Clock3 size={11} aria-hidden />
+													{when}
+												</span>
+											</button>
+											<div className="sd-history-actions">
+												<button
+													type="button"
+													className="sd-history-act"
+													title={labels.rename || 'Rename'}
+													aria-label={`${labels.rename || 'Rename'}: ${itemTitle}`}
+													onClick={(e) => startRename(item, e)}
+												>
+													<Pencil size={13} />
+												</button>
+												<button
+													type="button"
+													className="sd-history-act sd-history-copy"
+													title={labels.copy || 'Copy text'}
+													aria-label={`${labels.copy || 'Copy text'}: ${itemTitle}`}
+													onClick={(e) => copyHistoryItem(item, e)}
+												>
+													{copiedId === item.id ? <Check size={13} /> : <Copy size={13} />}
+												</button>
+												<button
+													type="button"
+													className="sd-history-act sd-history-del"
+													title={labels.delete || 'Delete'}
+													aria-label={`${labels.delete || 'Delete'}: ${itemTitle}`}
+													onClick={(e) => deleteHistoryItem(item.id, e)}
+												>
+													<Trash2 size={13} />
+												</button>
+											</div>
+										</>
 									)}
-									<button
-										type="button"
-										className="sd-history-item-open"
-										onClick={() => openHistoryItem(item)}
-									>
-										<span className="sd-history-item-meta">
-											<Clock3 size={11} />
-											{formatWhen(item.updatedAt, labels)}
-										</span>
-									</button>
 								</div>
-								<div className="sd-history-actions">
-									<button
-										type="button"
-										className="sd-history-del"
-										title={labels.delete || 'Delete'}
-										onClick={(e) => deleteHistoryItem(item.id, e)}
-									>
-										<Trash2 size={12} />
-									</button>
-									<button
-										type="button"
-										className="sd-history-copy"
-										title={labels.copy || 'Copy text'}
-										onClick={(e) => copyHistoryItem(item, e)}
-									>
-										{copiedId === item.id ? <Check size={12} /> : <Copy size={12} />}
-									</button>
-								</div>
-							</div>
-						</li>
-					))}
+							</li>
+						);
+					})}
 				</ul>
 			</aside>
 
@@ -722,15 +756,17 @@ export default function SmartDocumentEditor({
 							onClick={() => setHistoryOpen((v) => !v)}
 							title={historyOpen ? labels.hideHistory || 'Hide history' : labels.showHistory || 'Show history'}
 							aria-pressed={historyOpen}
+							aria-label={historyOpen ? labels.hideHistory || 'Hide history' : labels.showHistory || 'Show history'}
 						>
-							{historyOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+							{uiDir === 'rtl' ? (
+								historyOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />
+							) : historyOpen ? (
+								<PanelLeftClose size={18} />
+							) : (
+								<PanelLeftOpen size={18} />
+							)}
 						</button>
 						<div className="sd-chrome-identity">
-							<span className="sd-chrome-kicker">
-								<CheckSquare size={11} strokeWidth={2.4} />
-								{labels.badge || 'Document'}
-								{savedFlash ? <span className="sd-saved">{labels.saved || 'Saved'}</span> : null}
-							</span>
 							{renamingId && renamingId === activeId ? (
 								<input
 									ref={renameRef}
@@ -758,13 +794,30 @@ export default function SmartDocumentEditor({
 										if (activeDoc) startRename(activeDoc, e);
 									}}
 								>
-									{chromeTitle}
+									<span dir="auto">{chromeTitle}</span>
 								</button>
 							)}
+							<span className="sd-chrome-sub" aria-live="polite">
+								<span className="sd-chrome-kind">{labels.badge || 'Document'}</span>
+								{savedFlash ? (
+									<span className="sd-saved">
+										<Check size={12} strokeWidth={2.6} aria-hidden />
+										{labels.saved || 'Saved'}
+									</span>
+								) : null}
+								<span className="sd-chrome-count">
+									{countFmt.format(wordCount)} {labels.words || 'words'}
+								</span>
+								<span className="sd-chrome-count is-chars">
+									{countFmt.format(charCount)} {labels.chars || 'chars'}
+								</span>
+								<span className="sd-chrome-count is-mins">
+									{countFmt.format(readMins)} {labels.readMins || 'min'}
+								</span>
+							</span>
 						</div>
 					</div>
 
-					<div className="sd-chrome-meter">
 						<div className="sd-seg" role="tablist" aria-label={labels.modeLabel || 'Mode'}>
 							<button
 								type="button"
@@ -773,8 +826,8 @@ export default function SmartDocumentEditor({
 								className={mode === 'edit' ? 'is-active' : ''}
 								onClick={() => setMode('edit')}
 							>
-								<Code2 size={14} />
-								{labels.edit || 'Edit'}
+								<Code2 size={15} aria-hidden />
+								<span className="sd-seg-label">{labels.edit || 'Edit'}</span>
 							</button>
 							<button
 								type="button"
@@ -787,25 +840,10 @@ export default function SmartDocumentEditor({
 									setMode('preview');
 								}}
 							>
-								<Eye size={14} />
-								{labels.preview || 'Preview'}
+								<Eye size={15} aria-hidden />
+								<span className="sd-seg-label">{labels.preview || 'Preview'}</span>
 							</button>
 						</div>
-						<div className="sd-stats" aria-live="polite">
-							<span className="sd-stat">
-								<b>{countFmt.format(wordCount)}</b>
-								<small>{labels.words || 'words'}</small>
-							</span>
-							<span className="sd-stat">
-								<b>{countFmt.format(charCount)}</b>
-								<small>{labels.chars || 'chars'}</small>
-							</span>
-							<span className="sd-stat">
-								<b>{countFmt.format(readMins)}</b>
-								<small>{labels.readMins || 'min'}</small>
-							</span>
-						</div>
-					</div>
 
 					<div className="sd-chrome-actions">
 						<div className="sd-tool-group" role="group" aria-label={labels.typography || 'Typography'}>
@@ -861,6 +899,7 @@ export default function SmartDocumentEditor({
 									type="button"
 									className={`sd-tool-btn${visitsOpen ? ' is-open' : ''}`}
 									title={labels.shareVisitors || 'Who opened this link'}
+								aria-label={labels.shareVisitors || 'Who opened this link'}
 									onClick={() => void loadVisits()}
 								>
 									<Users size={15} />

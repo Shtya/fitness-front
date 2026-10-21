@@ -109,7 +109,10 @@ function ChatPicker({ label, conversations, value, onChange, excludeId, ar }) {
 							value={query}
 							onChange={event => setQuery(event.target.value)}
 							onKeyDown={event => {
-								if (event.key === 'Escape') setOpen(false);
+								if (event.key === 'Escape') {
+									event.preventDefault();
+									setOpen(false);
+								}
 							}}
 							placeholder={ar ? 'ابحث بالاسم أو الرقم' : 'Search name or number'}
 							className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white"
@@ -149,7 +152,13 @@ function ChatPicker({ label, conversations, value, onChange, excludeId, ar }) {
 	);
 }
 
-export default function AutoForwardPanel({ accountId, locale = 'en', conversations = [], canUse = true }) {
+export default function AutoForwardPanel({
+	accountId,
+	locale = 'en',
+	conversations = [],
+	canUse = true,
+	embedded = false,
+}) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const queryClient = useQueryClient();
 	const [sourceId, setSourceId] = useState('');
@@ -206,8 +215,11 @@ export default function AutoForwardPanel({ accountId, locale = 'en', conversatio
 		(chatById.get(id) && conversationTitle(chatById.get(id))) || fallback || (ar ? 'شات' : 'Chat');
 
 	return (
-		<div className="wa-dk mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6" dir={ar ? 'rtl' : 'ltr'}>
-			<header className="flex items-start gap-3">
+		<div
+			className={`wa-dk flex w-full flex-col gap-5 ${embedded ? 'p-4' : 'mx-auto max-w-3xl p-4 md:p-6'}`}
+			dir={ar ? 'rtl' : 'ltr'}
+		>
+			<header className={embedded ? 'hidden' : 'flex items-start gap-3'}>
 				<span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1DAB61] text-white">
 					<Forward size={20} />
 				</span>

@@ -32,10 +32,11 @@ export const inter = Inter({
   display: 'swap',
 });
 
+// Variable font on purpose: fixed weights make Google return /l/font?kit=…&skey= URLs
+// that Turbopack's next/font loader cannot resolve (500 on every page).
 const dmSans = DM_Sans({
   variable: '--font-dm-sans',
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
   display: 'swap',
 });
 

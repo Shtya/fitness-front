@@ -439,6 +439,11 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 				? ar ? 'مساء الخير' : 'Good evening'
 				: ar ? 'تصبح على خير' : 'Good night';
 	const NextIcon2 = nextUp ? SECTION_ICONS[nextUp] : Check;
+	const dayTotal = DAY_ORDER.reduce((sum, id) => sum + sectionStats[id].total, 0);
+	const dayDone = DAY_ORDER.reduce((sum, id) => sum + sectionStats[id].done, 0);
+	const dayPct = dayTotal ? dayDone / dayTotal : 0;
+	const RING_R = 42;
+	const RING_C = 2 * Math.PI * RING_R;
 	const nextStats = nextUp ? sectionStats[nextUp] : null;
 	const nextStarted = nextStats ? nextStats.done > 0 : false;
 	const PrevIcon = ar ? ChevronRight : ChevronLeft;
@@ -667,187 +672,239 @@ export default function WhatsAppAdhkarTab({ locale = 'ar', onExit }) {
 	return (
 		<div className="adk wa-dk" dir={ar ? 'rtl' : 'ltr'}>
 			<div className="adk__home">
-				<section className="adk-today" aria-label={ar ? 'اليوم' : 'Today'}>
-					<div className="adk-top">
-						<span className="adk-date">
-							{suggested === 'morning' ? <Sunrise size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
-							{hijri}
-						</span>
-						{onExit ? (
-							<button type="button" className="adk-icon-btn adk-top__back" onClick={onExit} aria-label={ar ? 'رجوع إلى المحادثات' : 'Back to chats'}>
-								<ArrowRight size={21} className={ar ? '' : 'rotate-180'} aria-hidden />
-							</button>
-						) : null}
-					</div>
-					<h1 className={`adk-hello ${ar ? 'adk-serif' : 'is-latin'}`}>{greeting}</h1>
-
-					{nextUp ? (
-						<button type="button" className="adk-start" onClick={() => openSection(nextUp)}>
-							<span className="adk-start__icon">
-								<NextIcon2 size={24} aria-hidden />
-							</span>
-							<span className="adk-start__text">
-								<span className="adk-start__title">
-									{nextStarted
-										? ar ? `أكمل ${sectionName(nextUp)}` : `Continue ${sectionName(nextUp)}`
-										: ar ? `ابدأ ${sectionName(nextUp)}` : `Start ${sectionName(nextUp)}`}
+				<div className="adk-layout">
+					<div className="adk-main">
+						<section className="adk-today" aria-label={ar ? 'اليوم' : 'Today'}>
+							<div className="adk-top">
+								<span className="adk-date">
+									{suggested === 'morning' ? <Sunrise size={15} aria-hidden /> : <Moon size={15} aria-hidden />}
+									{hijri}
 								</span>
-								<span className="adk-start__sub">
-									{nextStarted
-										? ar
-											? `بقي ${adhkarWord(nextStats.total - nextStats.done, ar, fmt)}`
-											: `${nextStats.total - nextStats.done} left`
-										: nextUp === suggested
-											? ar ? `هذا وقتها · ${adhkarWord(nextStats.total, ar, fmt)}` : `It's their time · ${nextStats.total} adhkar`
-											: ar ? `التالي في يومك · ${adhkarWord(nextStats.total, ar, fmt)}` : `Next in your day · ${nextStats.total} adhkar`}
-								</span>
-							</span>
-							{ar ? <ChevronLeft size={22} aria-hidden /> : <ChevronRight size={22} aria-hidden />}
-						</button>
-					) : (
-						<div className="adk-alldone">
-							<span className="adk-alldone__mark">
-								<Check size={20} strokeWidth={3} aria-hidden />
-							</span>
-							<span>{ar ? 'أتممت أذكار اليوم، تقبّل الله منك.' : "You completed today's adhkar. May Allah accept it."}</span>
-						</div>
-					)}
+								{onExit ? (
+									<button type="button" className="adk-icon-btn adk-top__back" onClick={onExit} aria-label={ar ? 'رجوع إلى المحادثات' : 'Back to chats'}>
+										<ArrowRight size={21} className={ar ? '' : 'rotate-180'} aria-hidden />
+									</button>
+								) : null}
+							</div>
 
-					<div className="adk-day" role="list" aria-label={ar ? 'يومك' : 'Your day'}>
-						{DAY_ORDER.map(id => {
-							const st = sectionStats[id];
-							const complete = isComplete(id);
-							const Icon = SECTION_ICONS[id];
-							const label = ar ? ADHKAR_SECTIONS.find(x => x.id === id)?.labelAr : ADHKAR_SECTIONS.find(x => x.id === id)?.labelEn;
-							return (
-								<button
-									key={id}
-									type="button"
-									role="listitem"
-									onClick={() => openSection(id)}
-									className={`adk-day__item ${complete ? 'is-done' : ''} ${id === nextUp ? 'is-next' : ''}`}
-								>
-									<span className="adk-day__icon">{complete ? <Check size={15} strokeWidth={3} aria-hidden /> : <Icon size={15} aria-hidden />}</span>
-									<span className="adk-day__label">{label}</span>
-									<span className="adk-day__count">{`${fmt(st.done)}/${fmt(st.total)}`}</span>
-								</button>
-							);
-						})}
-					</div>
-				</section>
-
-				<h2 className="adk-h2">
-					{ar ? 'الأذكار' : 'Adhkar'}
-					<span className="adk-h2__aside">{ar ? 'اختر قسمًا لتقرأه ذكرًا ذكرًا' : 'Pick one to read, one dhikr at a time'}</span>
-				</h2>
-				<div className="adk-list">
-					{ADHKAR_SECTIONS.map(section => {
-						const Icon = SECTION_ICONS[section.id] || BookOpen;
-						const st = sectionStats[section.id];
-						const complete = isComplete(section.id);
-						const pct = st.total ? st.done / st.total : 0;
-						const r = 15;
-						const circ = 2 * Math.PI * r;
-						return (
-							<button
-								key={section.id}
-								type="button"
-								onClick={() => openSection(section.id)}
-								className={`adk-row ${complete ? 'is-done' : ''}`}
-							>
-								<span className="adk-row__icon">
-									<Icon size={22} aria-hidden />
-								</span>
-								<span className="adk-row__text">
-									<span className="adk-row__name">{sectionName(section.id)}</span>
-									<span className="adk-row__meta">
-										{section.id === 'custom' && !st.total
-											? ar ? 'أدعيتك وما حفظته أثناء القراءة' : 'Your duas and bookmarks'
-											: complete
-												? ar ? `تمّت · ${adhkarWord(st.total, ar, fmt)}` : `Done · ${st.total} adhkar`
-												: st.done
-													? ar ? `أتممت ${fmt(st.done)} من ${fmt(st.total)}` : `${st.done} of ${st.total} done`
-													: adhkarWord(st.total, ar, fmt)}
-									</span>
-								</span>
-								{st.total ? (
-									<span className="adk-mini" aria-hidden>
-										<svg viewBox="0 0 36 36" className="adk-mini__ring">
-											<circle className="adk-mini__track" cx="18" cy="18" r={r} />
-											<circle className="adk-mini__fill" cx="18" cy="18" r={r} strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)} />
-										</svg>
-										{complete ? <Check size={14} strokeWidth={3} /> : null}
-									</span>
-								) : (
-									<span className="adk-row__add" aria-hidden>
-										<Plus size={18} />
-									</span>
-								)}
-								{ar ? <ChevronLeft size={18} className="adk-row__chev" aria-hidden /> : <ChevronRight size={18} className="adk-row__chev" aria-hidden />}
-							</button>
-						);
-					})}
-				</div>
-
-				<h2 className="adk-h2">
-					{ar ? 'إحصائياتك' : 'Your stats'}
-					<span className="adk-h2__aside">{ar ? 'على هذا الجهاز' : 'On this device'}</span>
-				</h2>
-				<div className="adk-stats">
-					<div className="adk-nums">
-						<div className="adk-num">
-							<span className="adk-num__label">
-								<CalendarCheck size={15} aria-hidden />
-								{ar ? 'اليوم' : 'Today'}
-							</span>
-							<span className="adk-num__value">
-								{fmt(todayDone)}
-								<span className="adk-num__unit">{ar ? 'ذكر' : 'done'}</span>
-							</span>
-						</div>
-						<div className="adk-num">
-							<span className="adk-num__label">
-								<Flame size={15} aria-hidden />
-								{ar ? 'أيام متتالية' : 'Day streak'}
-							</span>
-							<span className="adk-num__value">
-								{fmt(streak)}
-								<span className="adk-num__unit">{ar ? 'يوم' : streak === 1 ? 'day' : 'days'}</span>
-							</span>
-						</div>
-						<div className="adk-num">
-							<span className="adk-num__label">
-								<BarChart3 size={15} aria-hidden />
-								{ar ? 'آخر 7 أيام' : 'Last 7 days'}
-							</span>
-							<span className="adk-num__value">
-								{fmt(weekDone)}
-								<span className="adk-num__unit">{ar ? 'ذكر' : 'done'}</span>
-							</span>
-						</div>
-					</div>
-
-					<div className="adk-week">
-						<p className="adk-week__title">{ar ? 'الأذكار التي أتممتها كل يوم' : 'Adhkar completed each day'}</p>
-						<div className="adk-week__bars" role="img" aria-label={week.map(d => `${dayFmt.format(new Date(`${d.day}T12:00:00Z`))}: ${d.done}`).join('، ')}>
-							{week.map(d => (
-								<div key={d.day} className="adk-week__col">
-									<span className="adk-week__val">{d.done ? fmt(d.done) : ''}</span>
-									<span
-										className={`adk-week__bar ${d.today ? 'is-today' : d.done ? 'is-on' : ''}`}
-										style={{ height: `${Math.max(4, (d.done / weekMax) * 92)}px` }}
-									/>
-									<span className={`adk-week__day ${d.today ? 'is-today' : ''}`}>{d.today ? (ar ? 'اليوم' : 'Today') : dayFmt.format(new Date(`${d.day}T12:00:00Z`))}</span>
+							<div className="adk-today__main">
+								<div className="adk-today__copy">
+									<h1 className={`adk-hello ${ar ? 'adk-serif' : 'is-latin'}`}>{greeting}</h1>
+									{nextUp ? (
+										<>
+											<p className="adk-today__lead">
+												{nextStarted
+													? ar
+														? `بقي ${adhkarWord(nextStats.total - nextStats.done, ar, fmt)}`
+														: `${nextStats.total - nextStats.done} left`
+													: nextUp === suggested
+														? ar ? `هذا وقتها · ${adhkarWord(nextStats.total, ar, fmt)}` : `It's their time · ${nextStats.total} adhkar`
+														: ar ? `التالي في يومك · ${adhkarWord(nextStats.total, ar, fmt)}` : `Next in your day · ${nextStats.total} adhkar`}
+											</p>
+											<button type="button" className="adk-start" onClick={() => openSection(nextUp)}>
+												<span className="adk-start__icon">
+													<NextIcon2 size={18} aria-hidden />
+												</span>
+												<span className="adk-start__title">
+													{nextStarted
+														? ar ? `أكمل ${sectionName(nextUp)}` : `Continue ${sectionName(nextUp)}`
+														: ar ? `ابدأ ${sectionName(nextUp)}` : `Start ${sectionName(nextUp)}`}
+												</span>
+												{ar ? <ChevronLeft size={18} className="adk-start__chev" aria-hidden /> : <ChevronRight size={18} className="adk-start__chev" aria-hidden />}
+											</button>
+										</>
+									) : (
+										<div className="adk-alldone">
+											<span className="adk-alldone__mark">
+												<Check size={18} strokeWidth={3} aria-hidden />
+											</span>
+											<span>{ar ? 'أتممت أذكار اليوم، تقبّل الله منك.' : "You completed today's adhkar. May Allah accept it."}</span>
+										</div>
+									)}
 								</div>
-							))}
+
+								<div
+									className="adk-today__ring"
+									role="img"
+									aria-label={ar ? `أذكار اليوم: ${fmt(dayDone)} من ${fmt(dayTotal)}` : `Today's adhkar: ${dayDone} of ${dayTotal}`}
+								>
+									<svg viewBox="0 0 100 100" aria-hidden>
+										<circle className="adk-today__ring-track" cx="50" cy="50" r={RING_R} />
+										<circle
+											className="adk-today__ring-fill"
+											cx="50"
+											cy="50"
+											r={RING_R}
+											strokeDasharray={RING_C}
+											strokeDashoffset={RING_C * (1 - dayPct)}
+										/>
+									</svg>
+									<span className="adk-today__ring-num">
+										<b>{fmt(Math.round(dayPct * 100))}%</b>
+										<small dir="ltr">{`${fmt(dayDone)}/${fmt(dayTotal)}`}</small>
+									</span>
+								</div>
+							</div>
+
+							<div className="adk-day" role="list" aria-label={ar ? 'يومك' : 'Your day'}>
+								{DAY_ORDER.map(id => {
+									const st = sectionStats[id];
+									const complete = isComplete(id);
+									const Icon = SECTION_ICONS[id];
+									const label = ar ? ADHKAR_SECTIONS.find(x => x.id === id)?.labelAr : ADHKAR_SECTIONS.find(x => x.id === id)?.labelEn;
+									return (
+										<button
+											key={id}
+											type="button"
+											role="listitem"
+											onClick={() => openSection(id)}
+											className={`adk-day__item ${complete ? 'is-done' : ''} ${id === nextUp ? 'is-next' : ''}`}
+										>
+											<span className="adk-day__head">
+												<span className="adk-day__icon">{complete ? <Check size={14} strokeWidth={3} aria-hidden /> : <Icon size={14} aria-hidden />}</span>
+												<span className="adk-day__label">{label}</span>
+												<span className="adk-day__count" dir="ltr">{`${fmt(st.done)}/${fmt(st.total)}`}</span>
+											</span>
+											<span className="adk-day__bar" aria-hidden>
+												<span style={{ width: `${st.total ? (st.done / st.total) * 100 : 0}%` }} />
+											</span>
+										</button>
+									);
+								})}
+							</div>
+						</section>
+
+						<h2 className="adk-h2">
+							{ar ? 'الأذكار' : 'Adhkar'}
+							<span className="adk-h2__aside">{ar ? 'اختر قسمًا لتقرأه ذكرًا ذكرًا' : 'Pick one to read, one dhikr at a time'}</span>
+						</h2>
+						<div className="adk-list">
+							{ADHKAR_SECTIONS.map(section => {
+								const Icon = SECTION_ICONS[section.id] || BookOpen;
+								const st = sectionStats[section.id];
+								const complete = isComplete(section.id);
+								const pct = st.total ? st.done / st.total : 0;
+								return (
+									<button
+										key={section.id}
+										type="button"
+										onClick={() => openSection(section.id)}
+										className={`adk-row adk-row--${section.id} ${complete ? 'is-done' : ''} ${section.id === nextUp ? 'is-next' : ''}`}
+									>
+										<span className="adk-row__icon">
+											<Icon size={20} aria-hidden />
+										</span>
+										<span className="adk-row__text">
+											<span className="adk-row__name">
+												{sectionName(section.id)}
+												{section.id === nextUp ? <span className="adk-row__badge">{ar ? 'وقتها الآن' : 'Now'}</span> : null}
+											</span>
+											<span className="adk-row__meta">
+												{section.id === 'custom' && !st.total
+													? ar ? 'أدعيتك وما حفظته أثناء القراءة' : 'Your duas and bookmarks'
+													: complete
+														? ar ? `تمّت · ${adhkarWord(st.total, ar, fmt)}` : `Done · ${st.total} adhkar`
+														: st.done
+															? ar ? `أتممت ${fmt(st.done)} من ${fmt(st.total)}` : `${st.done} of ${st.total} done`
+															: adhkarWord(st.total, ar, fmt)}
+											</span>
+											{st.total ? (
+												<span className="adk-row__bar" aria-hidden>
+													<span style={{ width: `${pct * 100}%` }} />
+												</span>
+											) : null}
+										</span>
+										{st.total ? (
+											complete ? (
+												<span className="adk-row__state is-done" aria-hidden>
+													<Check size={14} strokeWidth={3} />
+												</span>
+											) : (
+												<span className="adk-row__state" dir="ltr" aria-hidden>
+													{`${fmt(st.done)}/${fmt(st.total)}`}
+												</span>
+											)
+										) : (
+											<span className="adk-row__add" aria-hidden>
+												<Plus size={16} />
+											</span>
+										)}
+										{ar ? <ChevronLeft size={18} className="adk-row__chev" aria-hidden /> : <ChevronRight size={18} className="adk-row__chev" aria-hidden />}
+									</button>
+								);
+							})}
 						</div>
 					</div>
+
+					<aside className="adk-side" aria-label={ar ? 'إحصائياتك' : 'Your stats'}>
+						<section className="adk-panel">
+							<h2 className="adk-panel__title">
+								{ar ? 'إحصائياتك' : 'Your stats'}
+								<span className="adk-h2__aside">{ar ? 'على هذا الجهاز' : 'On this device'}</span>
+							</h2>
+							<div className="adk-nums">
+								<div className="adk-num">
+									<span className="adk-num__label">
+										<CalendarCheck size={14} aria-hidden />
+										{ar ? 'اليوم' : 'Today'}
+									</span>
+									<span className="adk-num__value">
+										{fmt(todayDone)}
+										<span className="adk-num__unit">{ar ? 'ذكر' : 'done'}</span>
+									</span>
+								</div>
+								<div className={`adk-num ${streak ? 'is-streak' : ''}`}>
+									<span className="adk-num__label">
+										<Flame size={14} aria-hidden />
+										{ar ? 'أيام متتالية' : 'Day streak'}
+									</span>
+									<span className="adk-num__value">
+										{fmt(streak)}
+										<span className="adk-num__unit">{ar ? 'يوم' : streak === 1 ? 'day' : 'days'}</span>
+									</span>
+								</div>
+								<div className="adk-num">
+									<span className="adk-num__label">
+										<BarChart3 size={14} aria-hidden />
+										{ar ? 'آخر 7 أيام' : 'Last 7 days'}
+									</span>
+									<span className="adk-num__value">
+										{fmt(weekDone)}
+										<span className="adk-num__unit">{ar ? 'ذكر' : 'done'}</span>
+									</span>
+								</div>
+							</div>
+
+							<div className="adk-week">
+								<p className="adk-week__title">{ar ? 'الأذكار التي أتممتها كل يوم' : 'Adhkar completed each day'}</p>
+								<div className="adk-week__chart">
+									<div className="adk-week__bars" role="img" aria-label={week.map(d => `${dayFmt.format(new Date(`${d.day}T12:00:00Z`))}: ${d.done}`).join('، ')}>
+										{week.map(d => (
+											<div key={d.day} className="adk-week__col">
+												<span className="adk-week__val">{d.done ? fmt(d.done) : ''}</span>
+												<span
+													className={`adk-week__bar ${d.today ? 'is-today' : d.done ? 'is-on' : ''}`}
+													style={{ height: `${d.done ? Math.max(8, (d.done / weekMax) * 100) : 0}%` }}
+												/>
+												<span className={`adk-week__day ${d.today ? 'is-today' : ''}`}>{d.today ? (ar ? 'اليوم' : 'Today') : dayFmt.format(new Date(`${d.day}T12:00:00Z`))}</span>
+											</div>
+										))}
+									</div>
+									{!weekDone ? (
+										<p className="adk-week__empty">
+											{ar ? 'لم تُتمّ أذكارًا هذا الأسبوع بعد — ابدأ اليوم.' : 'Nothing completed this week yet — start today.'}
+										</p>
+									) : null}
+								</div>
+							</div>
+							<p className="adk-hint">
+								{ar
+									? 'اليوم الذي تُتمّ فيه أذكار الصباح أو المساء كاملة يُحسب في الأيام المتتالية.'
+									: 'A day counts toward your streak when you finish all the morning or evening adhkar.'}
+							</p>
+						</section>
+					</aside>
 				</div>
-				<p className="adk-hint">
-					{ar
-						? 'اليوم الذي تُتمّ فيه أذكار الصباح أو المساء كاملة يُحسب في الأيام المتتالية.'
-						: 'A day counts toward your streak when you finish all the morning or evening adhkar.'}
-				</p>
 			</div>
 
 			{mounted && reader ? createPortal(reader, document.body) : null}

@@ -4,7 +4,6 @@ import { FileText,
 	BarChart3,
 	BookOpen,
 	Bot,
-	Forward,
 	LayoutGrid,
 	MessageCircle,
 	Moon,
@@ -135,7 +134,6 @@ export default function WhatsAppDesktopRail({
 	showReports = true,
 	showBoard = true,
 	showFakeChat = true,
-	showAutoForward = true,
 	showWallet = false,
 	showAdhkar = false,
 	showDocuments = false,
@@ -205,13 +203,6 @@ export default function WhatsAppDesktopRail({
 					id: 'fakeChat',
 					label: labels.fakeChat || (ar ? 'شات وهمي' : 'Fake chat'),
 					icon: Sparkles,
-				}
-			: null,
-		showAutoForward
-			? {
-					id: 'autoForward',
-					label: labels.autoForward || (ar ? 'تحويل تلقائي' : 'Auto-forward'),
-					icon: Forward,
 				}
 			: null,
 		showWallet

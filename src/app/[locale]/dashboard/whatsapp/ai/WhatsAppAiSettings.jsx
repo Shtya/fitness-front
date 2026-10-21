@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bot, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import { AlertTriangle, Bot, Check, FileText, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { WaCustomSelect } from '../WaCustomSelect';
 
 const COPY = {
@@ -18,7 +18,11 @@ const COPY = {
 		promptName: 'Prompt name',
 		promptContent: 'Prompt instructions',
 		addPrompt: 'Add prompt',
-		emptyPrompts: 'No saved prompts yet. Use Add prompt next to Save.',
+		emptyPrompts: 'No saved prompts yet. Add one to guide how suggestions are written.',
+		unsaved: 'Unsaved changes',
+		suggestionsOn: 'On',
+		suggestionsOff: 'Off',
+		promptCount: '{count} / 20',
 		defaultPrompt: 'Use by default',
 		deletePrompt: 'Delete prompt',
 		tone: 'Tone',
@@ -41,7 +45,11 @@ const COPY = {
 		promptName: 'اسم التعليمات',
 		promptContent: 'نص التعليمات',
 		addPrompt: 'إضافة تعليمات',
-		emptyPrompts: 'لا توجد تعليمات محفوظة. استخدم إضافة تعليمات بجانب الحفظ.',
+		emptyPrompts: 'لا توجد تعليمات محفوظة. أضف تعليمات لتوجيه طريقة كتابة الاقتراحات.',
+		unsaved: 'تغييرات غير محفوظة',
+		suggestionsOn: 'مفعّل',
+		suggestionsOff: 'متوقف',
+		promptCount: '{count} / 20',
 		defaultPrompt: 'استخدام افتراضي',
 		deletePrompt: 'حذف التعليمات',
 		tone: 'أسلوب الرد',
@@ -63,11 +71,6 @@ const TONE_OPTIONS = [
 	{ value: 'concise', label: 'Concise' },
 ];
 
-const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
-const GLOW = '0 10px 24px -10px var(--color-primary-400)';
-
-const fieldClass =
-	'wa-input-3d w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-900';
 
 function promptId() {
 	if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -86,15 +89,9 @@ function Switch({ checked, onChange, label }) {
 			aria-checked={checked}
 			aria-label={label}
 			onClick={() => onChange(!checked)}
-			className={`relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors ${
-				checked ? 'bg-[var(--color-primary-500)]' : 'bg-slate-200 dark:bg-slate-700'
-			}`}
+			className={`wst-switch${checked ? ' is-on' : ''}`}
 		>
-			<span
-				className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200 ${
-					checked ? 'start-[22px]' : 'start-0.5'
-				}`}
-			/>
+			<span />
 		</button>
 	);
 }
@@ -110,20 +107,27 @@ export default function WhatsAppAiSettings({
 	const text = COPY[String(locale).toLowerCase().startsWith('ar') ? 'ar' : 'en'];
 	const [draft, setDraft] = useState(settings);
 	const [saved, setSaved] = useState(false);
+	const [dirty, setDirty] = useState(false);
 
-	useEffect(() => setDraft(settings), [settings]);
+	useEffect(() => {
+		setDraft(settings);
+		setDirty(false);
+	}, [settings]);
 
 	if (loading && !draft) {
 		return (
-			<div className="grid min-h-32 place-items-center rounded-2xl border border-slate-200 dark:border-slate-700">
-				<Loader2 className="animate-spin text-[var(--color-primary-500)]" />
-			</div>
+			<section className="wst-section">
+				<div className="wst-loading" role="status">
+					<Loader2 size={20} className="animate-spin" aria-hidden="true" />
+				</div>
+			</section>
 		);
 	}
 	if (!draft) return null;
 
 	const update = (key, value) => {
 		setSaved(false);
+		setDirty(true);
 		setDraft(current => ({ ...current, [key]: value }));
 	};
 
@@ -140,6 +144,7 @@ export default function WhatsAppAiSettings({
 		if ((draft.promptPresets || []).length >= 20) return;
 		const id = promptId();
 		setSaved(false);
+		setDirty(true);
 		setDraft(current => {
 			const promptPresets = [
 				...(current.promptPresets || []),
@@ -155,6 +160,7 @@ export default function WhatsAppAiSettings({
 
 	const removePrompt = id => {
 		setSaved(false);
+		setDirty(true);
 		setDraft(current => {
 			const promptPresets = (current.promptPresets || []).filter(
 				preset => preset.id !== id,
@@ -179,6 +185,7 @@ export default function WhatsAppAiSettings({
 				persona: '',
 			});
 			setSaved(true);
+			setDirty(false);
 		} catch {
 			setSaved(false);
 		}
@@ -187,161 +194,184 @@ export default function WhatsAppAiSettings({
 	const prompts = draft.promptPresets || [];
 
 	return (
-		<form
-			onSubmit={submit}
-			className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-900"
-		>
-			<div className="mb-4 flex items-start gap-3">
-				<div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--color-primary-50)] text-[var(--color-primary-500)] dark:bg-[var(--color-primary-950)]/40">
-					<Bot size={20} />
+		<form onSubmit={submit} className="wst-section">
+			<header className="wst-head">
+				<span className="wst-icon" aria-hidden="true">
+					<Bot size={18} />
+				</span>
+				<div className="wst-head-text">
+					<h3>{text.title}</h3>
+					<p>{text.description}</p>
 				</div>
-				<div>
-					<h3 className="font-black text-slate-900 dark:text-white">{text.title}</h3>
-					<p className="mt-1 text-xs leading-5 text-slate-500">{text.description}</p>
-				</div>
-			</div>
+			</header>
 
-			<div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 p-3.5 dark:border-slate-700">
-				<div>
-					<p className="text-sm font-bold text-slate-800 dark:text-slate-100">{text.enabled}</p>
-					<p className="mt-0.5 text-xs text-slate-400">{text.enabledHint}</p>
-				</div>
-				<Switch
-					label={text.enabled}
-					checked={Boolean(draft.enabled)}
-					onChange={value => update('enabled', value)}
-				/>
-			</div>
-
-			<div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-				<label className="space-y-1 text-xs font-bold">
-					<span>{text.tone}</span>
-					<WaCustomSelect
-						ariaLabel={text.tone}
-						value={draft.tone || 'professional'}
-						onChange={value => update('tone', value)}
-						options={TONE_OPTIONS}
-					/>
-				</label>
-				<label className="space-y-1 text-xs font-bold">
-					<span>{text.count}</span>
-					<input
-						type="number"
-						min="1"
-						max="5"
-						value={draft.suggestionCount ?? 3}
-						onChange={event => update('suggestionCount', Number(event.target.value))}
-						className={fieldClass}
-					/>
-				</label>
-				<label className="space-y-1 text-xs font-bold">
-					<span>{text.context}</span>
-					<input
-						type="number"
-						min="5"
-						max="50"
-						value={draft.contextMessageLimit ?? 20}
-						onChange={event => update('contextMessageLimit', Number(event.target.value))}
-						className={fieldClass}
-					/>
-				</label>
-			</div>
-
-			<div className="mt-4 rounded-2xl border border-[var(--color-secondary-200)] bg-[var(--color-secondary-50)]/40 p-3 dark:border-[var(--color-secondary-900)] dark:bg-[var(--color-secondary-950)]/20">
-				<div className="mb-3">
-					<p className="text-sm font-black text-[var(--color-secondary-900)] dark:text-[var(--color-secondary-200)]">
-						{text.promptLibrary}
-					</p>
-					<p className="mt-0.5 text-xs leading-5 text-slate-500">
-						{text.promptLibraryHint}
-					</p>
-				</div>
-
-				{prompts.length === 0 ? (
-					<p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-xs text-slate-500 dark:border-slate-600">
-						{text.emptyPrompts}
-					</p>
-				) : (
-					<div className="grid gap-3 md:grid-cols-3">
-						{prompts.map((preset, index) => (
-							<div
-								key={preset.id}
-								className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"
-							>
-								<div className="mb-2 flex items-center gap-2">
-									<label className="flex min-w-0 flex-1 items-center gap-2 text-xs font-bold">
-										<input
-											type="radio"
-											name="active-ai-prompt"
-											checked={draft.activePromptId === preset.id}
-											onChange={() => update('activePromptId', preset.id)}
-											className="accent-[var(--color-primary-600)]"
-										/>
-										<span>{text.defaultPrompt}</span>
-									</label>
-									<button
-										type="button"
-										onClick={() => removePrompt(preset.id)}
-										aria-label={text.deletePrompt}
-										title={text.deletePrompt}
-										className="grid h-8 w-8 place-items-center rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-									>
-										<Trash2 size={15} />
-									</button>
-								</div>
-								<div className="grid gap-2">
-									<input
-										required
-										value={preset.name}
-										onChange={event =>
-											updatePrompt(preset.id, 'name', event.target.value)
-										}
-										maxLength={80}
-										placeholder={`${text.promptName} ${index + 1}`}
-										aria-label={text.promptName}
-										className={fieldClass}
-									/>
-									<textarea
-										required
-										value={preset.prompt}
-										onChange={event =>
-											updatePrompt(preset.id, 'prompt', event.target.value)
-										}
-										rows={4}
-										maxLength={4000}
-										placeholder={text.promptContent}
-										aria-label={text.promptContent}
-										className={`${fieldClass} resize-y`}
-									/>
-								</div>
-							</div>
-						))}
+			<div className="wst-rows">
+				<div className={`wst-row wst-power${draft.enabled ? ' is-on' : ''}`}>
+					<div className="wst-row-text">
+						<p className="wst-row-title">{text.enabled}</p>
+						<p className="wst-row-hint">{text.enabledHint}</p>
 					</div>
-				)}
+					<div className="wst-row-control">
+						<span className={`wst-state${draft.enabled ? ' is-on' : ''}`}>
+							{draft.enabled ? text.suggestionsOn : text.suggestionsOff}
+						</span>
+						<Switch
+							label={text.enabled}
+							checked={Boolean(draft.enabled)}
+							onChange={value => update('enabled', value)}
+						/>
+					</div>
+				</div>
+
+				<div className="wst-row is-stack">
+					<div className="wst-fields">
+						<label className="wst-field">
+							<span className="wst-label">{text.tone}</span>
+							<WaCustomSelect
+								ariaLabel={text.tone}
+								value={draft.tone || 'professional'}
+								onChange={value => update('tone', value)}
+								options={TONE_OPTIONS}
+								buttonClassName="h-10 text-sm"
+							/>
+						</label>
+						<label className="wst-field">
+							<span className="wst-label">{text.count}</span>
+							<input
+								type="number"
+								min="1"
+								max="5"
+								value={draft.suggestionCount ?? 3}
+								onChange={event => update('suggestionCount', Number(event.target.value))}
+								className="wst-input"
+							/>
+						</label>
+						<label className="wst-field">
+							<span className="wst-label">{text.context}</span>
+							<input
+								type="number"
+								min="5"
+								max="50"
+								value={draft.contextMessageLimit ?? 20}
+								onChange={event => update('contextMessageLimit', Number(event.target.value))}
+								className="wst-input"
+							/>
+						</label>
+					</div>
+				</div>
+
+				<div className="wst-row is-stack">
+					<div className="wst-sub-head">
+						<div>
+							<p className="wst-row-title">
+								<FileText size={15} aria-hidden="true" />
+								{text.promptLibrary}
+								<span className="wst-chip">{text.promptCount.replace('{count}', String(prompts.length))}</span>
+							</p>
+							<p className="wst-row-hint">{text.promptLibraryHint}</p>
+						</div>
+						<button
+							type="button"
+							onClick={addPrompt}
+							disabled={prompts.length >= 20}
+							className="wst-btn is-ghost"
+						>
+							<Plus size={15} aria-hidden="true" />
+							{text.addPrompt}
+						</button>
+					</div>
+
+					{prompts.length === 0 ? (
+						<div className="wst-empty">
+							<span className="wst-empty-icon" aria-hidden="true">
+								<FileText size={18} />
+							</span>
+							<p>{text.emptyPrompts}</p>
+						</div>
+					) : (
+						<div className="wst-prompts">
+							{prompts.map((preset, index) => {
+								const isDefault = draft.activePromptId === preset.id;
+								return (
+									<div key={preset.id} className={`wst-prompt${isDefault ? ' is-default' : ''}`}>
+										<div className="wst-prompt-head">
+											<label className={`wst-default${isDefault ? ' is-on' : ''}`}>
+												<input
+													type="radio"
+													name="active-ai-prompt"
+													checked={isDefault}
+													onChange={() => update('activePromptId', preset.id)}
+												/>
+												{isDefault ? <Check size={13} strokeWidth={2.6} aria-hidden="true" /> : null}
+												<span>{text.defaultPrompt}</span>
+											</label>
+											<button
+												type="button"
+												onClick={() => removePrompt(preset.id)}
+												aria-label={text.deletePrompt}
+												title={text.deletePrompt}
+												className="wst-icon-btn is-danger"
+											>
+												<Trash2 size={15} />
+											</button>
+										</div>
+										<input
+											required
+											value={preset.name}
+											onChange={event =>
+												updatePrompt(preset.id, 'name', event.target.value)
+											}
+											maxLength={80}
+											placeholder={`${text.promptName} ${index + 1}`}
+											aria-label={text.promptName}
+											className="wst-input"
+											dir="auto"
+										/>
+										<textarea
+											required
+											value={preset.prompt}
+											onChange={event =>
+												updatePrompt(preset.id, 'prompt', event.target.value)
+											}
+											rows={5}
+											maxLength={4000}
+											placeholder={text.promptContent}
+											aria-label={text.promptContent}
+											className="wst-input wst-area"
+											dir="auto"
+										/>
+									</div>
+								);
+							})}
+						</div>
+					)}
+				</div>
 			</div>
 
-			{error && <p className="mt-3 text-xs font-semibold text-rose-600">{error}</p>}
-			{saved && !error && <p className="mt-3 text-xs font-semibold text-emerald-600">{text.saved}</p>}
-			<div className="mt-4 flex flex-wrap items-center gap-2">
-				<button
-					type="submit"
-					disabled={saving}
-					style={{ background: GRADIENT, boxShadow: GLOW }}
-					className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white transition disabled:cursor-wait disabled:opacity-60"
-				>
-					{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+			<footer className={`wst-foot${dirty ? ' is-dirty' : ''}`}>
+				<p className="wst-foot-state" role="status" aria-live="polite">
+					{error ? (
+						<span className="is-bad">
+							<AlertTriangle size={14} aria-hidden="true" />
+							{error}
+						</span>
+					) : dirty ? (
+						<span className="is-dirty">
+							<i aria-hidden="true" />
+							{text.unsaved}
+						</span>
+					) : saved ? (
+						<span className="is-ok">
+							<Check size={14} strokeWidth={2.6} aria-hidden="true" />
+							{text.saved}
+						</span>
+					) : null}
+				</p>
+				<button type="submit" disabled={saving} className="wst-btn is-primary">
+					{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
 					{text.save}
 				</button>
-				<button
-					type="button"
-					onClick={addPrompt}
-					disabled={prompts.length >= 20}
-					className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-				>
-					<Plus size={16} />
-					{text.addPrompt}
-				</button>
-			</div>
+			</footer>
 		</form>
 	);
 }
