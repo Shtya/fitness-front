@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FileText, Image as ImageIcon, Link2, Rows3, Loader2, Mic, Pin, PinOff, Sticker, Video, X } from 'lucide-react';
+import PinnedMessagesSidebar from './PinnedMessagesSidebar';
 import './chat-bars.css';
 
 const copy = {
@@ -83,39 +84,22 @@ function Rail({ count, index }) {
 	);
 }
 
-export default function PinnedMessagesPanel({ ar = false, open = true, messages = [], loading = false, busyId = '', onHide, onJump, onUnpin }) {
+export default function PinnedMessagesPanel({ ar = false, open = true, messages = [], loading = false, busyId = '', senderName, onHide, onJump, onUnpin }) {
 	const t = ar ? copy.ar : copy.en;
 	const list = Array.isArray(messages) ? messages.filter(item => item?.isPinned !== false) : [];
 	const [index, setIndex] = useState(0);
 	const [listOpen, setListOpen] = useState(false);
-	const wrap = useRef(null);
 	const count = list.length;
 	const current = list[Math.min(index, Math.max(0, count - 1))];
 
 	// Keep the pointer valid when pins are added or removed.
 	useEffect(() => {
 		if (index > count - 1) setIndex(Math.max(0, count - 1));
-		if (count < 2) setListOpen(false);
+		if (!count) setListOpen(false);
 	}, [count, index]);
 
-	useEffect(() => {
-		if (!listOpen) return undefined;
-		const onDown = event => {
-			if (!wrap.current?.contains(event.target)) setListOpen(false);
-		};
-		const onKey = event => {
-			if (event.key === 'Escape') {
-				event.stopPropagation();
-				setListOpen(false);
-			}
-		};
-		document.addEventListener('pointerdown', onDown);
-		document.addEventListener('keydown', onKey, true);
-		return () => {
-			document.removeEventListener('pointerdown', onDown);
-			document.removeEventListener('keydown', onKey, true);
-		};
-	}, [listOpen]);
+	const describeItem = useCallback(message => describe(message, t), [t]);
+	const closeList = useCallback(() => setListOpen(false), []);
 
 	if (!open) return null;
 
@@ -155,7 +139,7 @@ export default function PinnedMessagesPanel({ ar = false, open = true, messages 
 	};
 
 	return (
-		<div className="wa-pinbar-wrap" ref={wrap}>
+		<div className="wa-pinbar-wrap">
 			<div className="wa-pinbar">
 				<button type="button" className="wa-pinbar__main" onClick={jumpAndAdvance} title={t.jump}>
 					<Rail count={count} index={index} />
@@ -176,7 +160,7 @@ export default function PinnedMessagesPanel({ ar = false, open = true, messages 
 							className={`wa-pinbar__btn wa-pinbar__all ${listOpen ? 'is-on' : ''}`}
 							onClick={() => setListOpen(v => !v)}
 							aria-expanded={listOpen}
-							aria-haspopup="true"
+							aria-haspopup="dialog"
 							title={t.all}
 						>
 							<Rows3 size={16} />
@@ -196,49 +180,24 @@ export default function PinnedMessagesPanel({ ar = false, open = true, messages 
 				</div>
 			</div>
 
-			{listOpen ? (
-				<div className="wa-pinbar__menu" role="dialog" aria-label={t.allTitle(count)}>
-					<p className="wa-pinbar__menu-title">
-						<Pin size={14} aria-hidden />
-						{t.allTitle(count)}
-					</p>
-					<ul>
-						{list.map((item, i) => {
-							const d = describe(item, t);
-							const when = formatWhen(item.providerTimestamp || item.createdAt, ar);
-							const itemBusy = busyId === item.id;
-							return (
-								<li key={item.id} className={i === index ? 'is-current' : ''}>
-									<button
-										type="button"
-										className="wa-pinbar__item"
-										onClick={() => {
-											setIndex(i);
-											setListOpen(false);
-											onJump?.(item);
-										}}
-									>
-										<span className={`wa-pinbar__tile is-${d.kind}`} aria-hidden>
-											<d.Icon size={16} />
-										</span>
-										<span className="wa-pinbar__item-text">
-											<span className="wa-pinbar__item-preview" dir="auto">
-												{d.label}
-											</span>
-											{when ? <span className="wa-pinbar__item-when">{when}</span> : null}
-										</span>
-									</button>
-									{typeof onUnpin === 'function' ? (
-										<button type="button" className="wa-pinbar__btn wa-pinbar__unpin" disabled={itemBusy} onClick={() => onUnpin(item)} title={t.unpin} aria-label={`${t.unpin}: ${d.label}`}>
-											{itemBusy ? <Loader2 size={15} className="animate-spin" /> : <PinOff size={15} />}
-										</button>
-									) : null}
-								</li>
-							);
-						})}
-					</ul>
-				</div>
-			) : null}
+			<PinnedMessagesSidebar
+				ar={ar}
+				open={listOpen}
+				messages={list}
+				currentId={current?.id || ''}
+				busyId={busyId}
+				describe={describeItem}
+				senderName={senderName}
+				onClose={closeList}
+				onJump={item => {
+					const at = list.findIndex(entry => entry.id === item.id);
+					if (at >= 0) setIndex(at);
+					// Small screens: the panel covers the chat, so close it to show the message.
+					if (typeof window !== 'undefined' && window.innerWidth < 768) setListOpen(false);
+					onJump?.(item);
+				}}
+				onUnpin={onUnpin}
+			/>
 		</div>
 	);
 }

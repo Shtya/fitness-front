@@ -14,19 +14,25 @@ test('sortMessagesByTime orders chronologically', () => {
 	assert.deepEqual(sorted.map(item => item.id), ['a', 'b']);
 });
 
-test('buildSelectedMessagesCopyText puts time above body', () => {
+test('buildSelectedMessagesCopyText writes date - time - sender: text', () => {
 	const text = buildSelectedMessagesCopyText(
 		[
-			{
-				id: '1',
-				type: 'text',
-				providerTimestamp: '2026-01-01T14:30:00.000Z',
-				text: 'Hello',
-			},
+			{ id: '2', type: 'text', providerTimestamp: '2026-01-01T14:31:00.000Z', text: 'Hi', direction: 'outbound' },
+			{ id: '1', type: 'text', providerTimestamp: '2026-01-01T14:30:00.000Z', text: 'Hello' },
 		],
-		{ locale: 'en' },
+		{ locale: 'en', senderName: message => (message.direction === 'outbound' ? 'Ahmed' : 'Amira') },
 	);
-	assert.match(text, /^[\d:]+\s*(AM|PM)?\nHello$/);
+	const lines = text.split('\n');
+	assert.equal(lines.length, 2);
+	assert.match(lines[0], /^\d{2}\/\d{2}\/2026 - [\d:]+\s*(AM|PM)? - Amira: Hello$/i);
+	assert.match(lines[1], / - Ahmed: Hi$/);
+});
+
+test('buildSelectedMessagesCopyText skips messages without text', () => {
+	const text = buildSelectedMessagesCopyText([
+		{ id: '1', type: 'image', providerTimestamp: '2026-01-01T14:30:00.000Z', text: '' },
+	]);
+	assert.equal(text, '');
 });
 
 test('messageNeedsTranscription is false when transcript exists', () => {

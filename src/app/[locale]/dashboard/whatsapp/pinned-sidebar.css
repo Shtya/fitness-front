@@ -1,0 +1,347 @@
+/*
+ * All pinned messages of a chat, in a panel on the side of the screen (WhatsApp Web's
+ * starred-messages layout). Kit tokens (--wa-ui-*) give light and dark.
+ */
+.wa-pinside {
+	--pin-mine: #d9fdd3;
+	--pin-mine-text: #111b21;
+	position: fixed;
+	inset-block: 0;
+	inset-inline-end: 0;
+	z-index: 60;
+	display: flex;
+	width: min(410px, 100vw);
+	flex-direction: column;
+	background: var(--wa-ui-surface-2);
+	color: var(--wa-ui-text);
+	box-shadow: var(--wa-ui-shadow-modal);
+	border-inline-start: 1px solid var(--wa-ui-border);
+	outline: none;
+	animation: wa-pinside-in 0.22s var(--wa-ui-ease-out, cubic-bezier(0.2, 0.9, 0.25, 1));
+}
+
+html.dark .wa-pinside,
+html[data-theme-mode='dark'] .wa-pinside {
+	--pin-mine: #005c4b;
+	--pin-mine-text: #e9edef;
+}
+
+@keyframes wa-pinside-in {
+	from {
+		opacity: 0;
+		transform: translateX(24px);
+	}
+}
+
+[dir='rtl'].wa-pinside {
+	animation-name: wa-pinside-in-rtl;
+}
+
+@keyframes wa-pinside-in-rtl {
+	from {
+		opacity: 0;
+		transform: translateX(-24px);
+	}
+}
+
+/* ─── header ─── */
+.wa-pinside__head {
+	display: flex;
+	height: 60px;
+	flex: none;
+	align-items: center;
+	gap: 14px;
+	padding-inline: 14px 18px;
+	background: var(--wa-ui-surface);
+	border-bottom: 1px solid var(--wa-ui-border);
+}
+
+.wa-pinside__icon {
+	display: inline-flex;
+	height: 38px;
+	width: 38px;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	color: var(--wa-ui-icon);
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.wa-pinside__icon:hover {
+	color: var(--wa-ui-text);
+	background: var(--wa-ui-hover);
+}
+
+.wa-pinside__title {
+	flex: 1;
+	min-width: 0;
+	margin: 0;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.wa-pinside__count {
+	min-width: 26px;
+	padding: 3px 8px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
+	text-align: center;
+	color: var(--wa-ui-accent-strong);
+	background: var(--wa-ui-accent-soft);
+}
+
+/* ─── search ─── */
+.wa-pinside__search {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 10px;
+	margin: 10px 12px 2px;
+	padding-inline: 14px 8px;
+	height: 38px;
+	border-radius: 10px;
+	color: var(--wa-ui-text-3);
+	background: var(--wa-ui-surface);
+	box-shadow: inset 0 0 0 1px var(--wa-ui-border);
+	transition: box-shadow 0.15s ease;
+}
+
+.wa-pinside__search:focus-within {
+	box-shadow: inset 0 0 0 2px var(--wa-ui-accent);
+}
+
+.wa-pinside__search input {
+	flex: 1;
+	min-width: 0;
+	border: 0;
+	background: transparent;
+	font-size: 14px;
+	color: var(--wa-ui-text);
+	-webkit-text-fill-color: var(--wa-ui-text);
+	outline: none;
+}
+
+.wa-pinside__search input::placeholder {
+	color: var(--wa-ui-text-3);
+	-webkit-text-fill-color: var(--wa-ui-text-3);
+}
+
+.wa-pinside__search input::-webkit-search-cancel-button {
+	display: none;
+}
+
+.wa-pinside__clear {
+	display: inline-flex;
+	height: 24px;
+	width: 24px;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	color: var(--wa-ui-icon);
+}
+
+.wa-pinside__clear:hover {
+	background: var(--wa-ui-hover);
+}
+
+/* ─── list ─── */
+.wa-pinside__list {
+	flex: 1;
+	min-height: 0;
+	margin: 0;
+	padding: 8px 0 24px;
+	list-style: none;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.wa-pinside__item {
+	position: relative;
+	padding: 12px 18px 10px;
+	border-bottom: 1px solid var(--wa-ui-border);
+	transition: background-color 0.15s ease;
+}
+
+.wa-pinside__item:hover,
+.wa-pinside__item:focus-within {
+	background: var(--wa-ui-hover);
+}
+
+.wa-pinside__item.is-current::before {
+	content: '';
+	position: absolute;
+	inset-block: 12px;
+	inset-inline-start: 0;
+	width: 3px;
+	border-radius: 0 3px 3px 0;
+	background: var(--wa-ui-accent);
+}
+
+.wa-pinside__meta {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 6px;
+	font-size: 13px;
+}
+
+.wa-pinside__who {
+	min-width: 0;
+	overflow: hidden;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--wa-ui-accent-strong);
+}
+
+.wa-pinside__meta time {
+	flex: none;
+	font-size: 12px;
+	color: var(--wa-ui-text-3);
+}
+
+/* the message, drawn as a chat bubble */
+.wa-pinside__bubble {
+	display: flex;
+	width: fit-content;
+	max-width: 100%;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 6px 10px;
+	padding: 7px 9px 6px;
+	border-radius: 8px;
+	text-align: start;
+	color: var(--wa-ui-text);
+	background: var(--wa-ui-surface);
+	box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+	cursor: pointer;
+	transition: transform 0.15s ease;
+}
+
+.wa-pinside__bubble.is-mine {
+	margin-inline-start: auto;
+	color: var(--pin-mine-text);
+	background: var(--pin-mine);
+}
+
+.wa-pinside__bubble:active {
+	transform: scale(0.99);
+}
+
+.wa-pinside__bubble:focus-visible,
+.wa-pinside__action:focus-visible,
+.wa-pinside__icon:focus-visible {
+	outline: 2px solid var(--wa-ui-accent);
+	outline-offset: 2px;
+}
+
+.wa-pinside__thumb {
+	display: block;
+	width: 100%;
+	max-height: 180px;
+	border-radius: 6px;
+	object-fit: cover;
+}
+
+.wa-pinside__kind {
+	display: inline-flex;
+	height: 34px;
+	width: 34px;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	border-radius: 10px;
+	color: var(--wa-ui-accent-strong);
+	background: var(--wa-ui-accent-soft);
+}
+
+.wa-pinside__text {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: -webkit-box;
+	overflow: hidden;
+	font-size: 14.2px;
+	line-height: 1.45;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 6;
+}
+
+.wa-pinside__time {
+	margin-inline-start: auto;
+	font-size: 11px;
+	line-height: 1;
+	opacity: 0.6;
+}
+
+/* actions show on hover / keyboard focus; always on touch screens */
+.wa-pinside__actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 8px;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.wa-pinside__item:hover .wa-pinside__actions,
+.wa-pinside__item:focus-within .wa-pinside__actions,
+.wa-pinside__item.is-current .wa-pinside__actions {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.wa-pinside__actions {
+		opacity: 1;
+	}
+}
+
+.wa-pinside__action {
+	display: inline-flex;
+	height: 30px;
+	align-items: center;
+	gap: 6px;
+	padding-inline: 10px;
+	border-radius: 999px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--wa-ui-text-2);
+	background: var(--wa-ui-surface);
+	box-shadow: inset 0 0 0 1px var(--wa-ui-border);
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.wa-pinside__action:hover:not(:disabled) {
+	color: var(--wa-ui-accent-strong);
+	background: var(--wa-ui-accent-soft);
+}
+
+.wa-pinside__action.is-danger:hover:not(:disabled) {
+	color: var(--wa-ui-danger);
+	background: var(--wa-ui-danger-soft);
+}
+
+.wa-pinside__action:disabled {
+	opacity: 0.5;
+}
+
+.wa-pinside__empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 48px 24px;
+	font-size: 13.5px;
+	text-align: center;
+	color: var(--wa-ui-text-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-pinside {
+		animation: none;
+	}
+}

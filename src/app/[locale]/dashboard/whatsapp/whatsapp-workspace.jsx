@@ -12126,7 +12126,6 @@ function sameThreadRowDeps(a, b) {
 }
 
 function WhatsAppWorkspaceContent() {
-	/* __QA_PROBE_START */ const __qaT0 = typeof performance !== 'undefined' ? performance.now() : 0; if (typeof window !== 'undefined') window.__waRenders = (window.__waRenders || 0) + 1; useLayoutEffect(() => { if (typeof window !== 'undefined') (window.__waRenderMs = window.__waRenderMs || []).push(performance.now() - __qaT0); }); /* __QA_PROBE_END */
 	const locale = useLocale();
 	const t = translations[locale] || translations.en;
 	const pathname = usePathname();
@@ -20255,12 +20254,34 @@ function WhatsAppWorkspaceContent() {
 		);
 	}, [effectiveMessages, selectedMessageIds]);
 
+	// Who sent a message, for copied text: your own name for outgoing messages, the
+	// group member in groups, and the chat's name in one-to-one chats.
+	const copySenderName = useCallback(
+		message => {
+			if (message?.direction === 'outbound') {
+				let own = '';
+				try {
+					const user = JSON.parse(window.localStorage.getItem('user') || 'null');
+					own = String(user?.name || user?.fullName || user?.username || '').trim();
+				} catch {
+					own = '';
+				}
+				return String(message?.senderUser?.name || '').trim() || own || (locale === 'ar' ? 'أنا' : 'You');
+			}
+			const fromMessage = groupSenderIdentity(message).name;
+			if (selectedIsGroupChat) return fromMessage;
+			return conversationTitle(selectedConversation) || fromMessage;
+		},
+		[locale, selectedConversation, selectedIsGroupChat],
+	);
+
 	const finishCopySelectedMessages = useCallback(
 		async (messages, textOverrideById = {}) => {
 			const copyText = buildSelectedMessagesCopyText(messages, {
 				locale,
 				transcriptMap: messageTranscripts,
 				textOverrideById,
+				senderName: copySenderName,
 			});
 			if (!copyText.trim()) {
 				toast.error(t.nothingToCopy);
@@ -20277,7 +20298,7 @@ function WhatsAppWorkspaceContent() {
 				return false;
 			}
 		},
-		[locale, messageTranscripts, t],
+		[copySenderName, locale, messageTranscripts, t],
 	);
 
 	const copySelectedMessages = useCallback(() => {
@@ -20604,7 +20625,11 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (action === 'copy') {
-			const text = String(message.text || '').trim();
+			const text = buildSelectedMessagesCopyText([message], {
+				locale,
+				transcriptMap: messageTranscripts,
+				senderName: copySenderName,
+			});
 			if (!text) {
 				toast.error(locale === 'ar' ? 'لا يوجد نص للنسخ' : 'Nothing to copy');
 				return false;
@@ -26626,6 +26651,7 @@ function WhatsAppWorkspaceContent() {
 												pinnedMessages.some(item => item.id === id),
 											) || ''
 										}
+										senderName={copySenderName}
 										onHide={() => setPinsPanelOpen(false)}
 										onJump={message => void jumpToPinnedMessage(message)}
 										onUnpin={message => void handleMessageAction(message, 'pin')}

@@ -74,21 +74,37 @@ export function formatMessageCopyTimestamp(value, locale = 'en') {
 	});
 }
 
+export function formatMessageCopyDate(value, locale = 'en') {
+	const ms = timestampMs(value);
+	if (!ms) return '';
+	return new Date(ms).toLocaleDateString(locale === 'ar' ? 'ar-QA' : 'en-GB', {
+		day: '2-digit',
+		month: '2-digit',
+		year: 'numeric',
+	});
+}
+
+/**
+ * One message per entry, like WhatsApp's chat export: "date - time - sender: text".
+ * `senderName(message)` names who sent it; without it the sender part is left out.
+ */
 export function buildSelectedMessagesCopyText(
 	messages = [],
-	{ locale = 'en', transcriptMap = {}, textOverrideById = {} } = {},
+	{ locale = 'en', transcriptMap = {}, textOverrideById = {}, senderName } = {},
 ) {
 	return sortMessagesByTime(messages)
 		.map(message => {
-			const time = formatMessageCopyTimestamp(messageTimestampValue(message), locale);
 			const body = messageCopyBody(message, transcriptMap, textOverrideById);
-			if (!time && !body) return '';
-			if (!body) return time;
-			if (!time) return body;
-			return `${time}\n${body}`;
+			if (!body) return '';
+			const when = messageTimestampValue(message);
+			const name = String((typeof senderName === 'function' && senderName(message)) || '').trim();
+			const head = [formatMessageCopyDate(when, locale), formatMessageCopyTimestamp(when, locale), name]
+				.filter(Boolean)
+				.join(' - ');
+			return head ? `${head}: ${body}` : body;
 		})
 		.filter(Boolean)
-		.join('\n\n');
+		.join('\n');
 }
 
 export function transcriptTextByIdFromTimeline(timeline = []) {
