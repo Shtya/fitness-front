@@ -599,6 +599,92 @@
 		}
 	}
 
+	/*
+	 * Compact dock: the same size and language as the tabs above it. Icons only (their names
+	 * are in the tooltips), transparent tiles that turn white on hover, a narrow soft well.
+	 */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
+		width: 44px;
+		margin: 0 auto 12px;
+		padding: 5px 0;
+		border-radius: 14px;
+		background: color-mix(in srgb, var(--rf-card) 70%, transparent);
+		box-shadow: inset 0 0 0 1px var(--r-edge);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf-card__handle,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__label {
+		display: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf {
+		gap: 2px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn {
+		gap: 0;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__tile {
+		width: 34px;
+		height: 34px;
+		border-radius: 10px;
+		color: var(--r-icon);
+		background: transparent;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__tile > svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:hover .wa-rf__tile {
+		color: var(--r-icon-hover);
+		background: var(--r-hover);
+		box-shadow: var(--r-hover-shadow);
+		transform: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active .wa-rf__tile,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-theme.is-dark .wa-rf__tile {
+		color: var(--r-active-ink);
+		background: var(--r-active);
+		box-shadow: inset 0 0 0 1px var(--r-active-ring);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer .wa-ui-rail-foot__divider {
+		width: 18px;
+		margin: 6px auto;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar .wa-ui-rail-avatar__img {
+		width: 34px !important;
+		height: 34px !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar .wa-ui-rail-avatar__img {
+		box-shadow: inset 0 0 0 1px var(--rf-on-ring);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-fallback svg {
+		width: 17px;
+		height: 17px;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar .wa-desktop-rail__online-dot {
+		width: 11px;
+		height: 11px;
+		border-width: 2px !important;
+	}
+
+	@media (max-height: 860px) {
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__tile {
+			width: 32px;
+			height: 32px;
+		}
+	}
+
 	/* ─────────────────────────────────────────────────────────────── */
 	/* Chat list header                                                  */
 	/* ─────────────────────────────────────────────────────────────── */

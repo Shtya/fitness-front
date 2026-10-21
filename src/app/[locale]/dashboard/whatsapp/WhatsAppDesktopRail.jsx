@@ -375,6 +375,7 @@ export default function WhatsAppDesktopRail({
 							onClick={() => (onOpenSettings ? onOpenSettings() : onSelect('settings'))}
 							aria-label={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 							aria-current={activeTab === 'settings' ? 'page' : undefined}
+							data-tip={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 						>
 							<span className="wa-rf__tile">
 								<Settings size={19} strokeWidth={1.9} aria-hidden="true" />

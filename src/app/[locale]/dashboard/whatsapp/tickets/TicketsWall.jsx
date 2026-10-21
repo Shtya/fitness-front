@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Clock3, Pin, Plus, Repeat } from 'lucide-react';
 import { MAX_TITLE } from './use-daily-tickets';
-import { DetailsHint, PushPin, StatusChip, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
+import { DetailsHint, PushPin, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
 import { NoteArt, markNumbers, noteTheme } from './wall-art';
 import './tickets-wall.css';
 
@@ -26,12 +26,11 @@ function useHandFonts() {
 	}, []);
 }
 
-function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, field, actions, onToggleDone }) {
+function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, field, actions }) {
 	const split = ticket.steps > 1;
 	const daily = ticket.repeat === 'daily';
 	// a counted daily habit shows the repeat mark; everything else its category icon
 	const Icon = daily && split ? Repeat : theme.Icon;
-	const pct = split ? Math.round((ticket.progress / ticket.steps) * 100) : 0;
 	return (
 		<div className={`tw-paper is-${theme.tone} is-${theme.category} ${ticket.pinned ? 'is-pinned' : ''} ${split ? 'has-steps' : ''}`}>
 			<NoteArt art={theme.art} />
@@ -46,11 +45,10 @@ function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, fie
 					</span>
 				) : Icon ? (
 					<span className={`tw-icon${daily ? ' is-daily' : ''}`} title={daily ? `${c.repeatDaily} · ${c.dailyHint}` : undefined}>
-						<Icon size={18} strokeWidth={2.1} aria-hidden />
+						<Icon size={daily && split ? 14 : 18} strokeWidth={2.1} aria-hidden />
 						{daily ? <span className="tkx-sr">{c.daily}</span> : null}
 					</span>
 				) : null}
-				{ticket.status === 'doing' ? <StatusChip status={ticket.status} c={c} /> : null}
 				{ticket.pinned ? (
 					<span className="tw-pinned" title={c.pinned}>
 						<Pin size={12} fill="currentColor" aria-hidden />
@@ -89,40 +87,40 @@ function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, fie
 			)}
 
 			<div className="tw-bottom">
-				{split && !ticket.done ? (
-					<span
-						className="tw-progress"
-						role="progressbar"
-						aria-valuemin={0}
-						aria-valuemax={ticket.steps}
-						aria-valuenow={ticket.progress}
-						aria-label={c.stepOf(ticket.progress, ticket.steps)}
-					>
-						<span style={{ width: `${pct}%` }} />
-					</span>
-				) : null}
 				<DetailsHint ticket={ticket} c={c} />
-				<button
-					type="button"
-					className={`tw-check${split && !ticket.done ? ' has-steps' : ''}${daily && !split && !ticket.done ? ' is-scheduled' : ''}`}
-					onClick={onToggleDone}
-					aria-pressed={ticket.done}
-					aria-label={checkLabel(ticket, c)}
-					title={ticket.done ? c.reopen : split ? c.nextStep : c.markDone}
-				>
-					{split && !ticket.done ? (
-						<StepRing steps={ticket.steps} progress={ticket.progress} size={42} stroke={3} />
-					) : daily && !ticket.done ? (
-						<>
-							<Clock3 size={18} strokeWidth={2.2} className="tw-check__clock" aria-hidden />
-							<Check size={17} strokeWidth={3} className="tw-check__tick" aria-hidden />
-						</>
-					) : (
-						<Check size={17} strokeWidth={3} aria-hidden />
-					)}
-				</button>
 			</div>
 		</div>
+	);
+}
+
+/**
+ * The done / next-step control, drawn on the note (not the paper) so it can sit over the folded
+ * corner: the paper is clipped along the fold, which would cut it off.
+ */
+function CornerCheck({ ticket, c, onToggleDone }) {
+	const split = ticket.steps > 1;
+	const daily = ticket.repeat === 'daily';
+	return (
+		<button
+			type="button"
+			className={`tw-check${split && !ticket.done ? ' has-steps' : ''}${daily && !split && !ticket.done ? ' is-scheduled' : ''}`}
+			onClick={onToggleDone}
+			onPointerDown={event => event.stopPropagation()}
+			aria-pressed={ticket.done}
+			aria-label={checkLabel(ticket, c)}
+			title={ticket.done ? c.reopen : split ? c.nextStep : c.markDone}
+		>
+			{split && !ticket.done ? (
+				<StepRing steps={ticket.steps} progress={ticket.progress} size={40} stroke={3} />
+			) : daily && !ticket.done ? (
+				<>
+					<Clock3 size={17} strokeWidth={2.2} className="tw-check__clock" aria-hidden />
+					<Check size={16} strokeWidth={3} className="tw-check__tick" aria-hidden />
+				</>
+			) : (
+				<Check size={16} strokeWidth={3} aria-hidden />
+			)}
+		</button>
 	);
 }
 
@@ -204,8 +202,8 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 				finishEdit={finishEdit}
 				field={field}
 				actions={actions}
-				onToggleDone={() => actions.toggle(ticket.id)}
 			/>
+			{editing ? null : <CornerCheck ticket={ticket} c={c} onToggleDone={() => actions.toggle(ticket.id)} />}
 		</li>
 	);
 }

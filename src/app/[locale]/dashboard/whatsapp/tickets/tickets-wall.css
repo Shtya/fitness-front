@@ -16,7 +16,7 @@
 	--tw-chip: rgba(255, 255, 255, 0.82);
 	--tw-hand: 'Kalam', 'Aref Ruqaa', 'Segoe Print', 'Comic Sans MS', cursive;
 	--tw-radius: 7px;
-	--tw-fold: 24px;
+	--tw-fold: 30px;
 	--tw-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
 	/* paper tones: top, bottom, accent (icons, progress), illustration, folded back */
@@ -163,7 +163,11 @@ html[data-theme-mode='dark'] .tw-float {
 	filter: none;
 }
 
-/* folded corner: the paper's paler back, outside the paper's clip so it keeps its shadow */
+/*
+ * Folded corner. The paper is cut along the crease (clip-path on .tw-paper); the flap is the cut
+ * piece turned over onto the paper: its back is paler, darker toward the crease, and it throws a
+ * soft shadow up-left onto the paper underneath (::before).
+ */
 .tw-note:not(.tw-note--add)::after {
 	content: '';
 	position: absolute;
@@ -172,9 +176,29 @@ html[data-theme-mode='dark'] .tw-float {
 	z-index: 2;
 	width: var(--tw-fold);
 	height: var(--tw-fold);
-	border-top-left-radius: 4px;
-	background: linear-gradient(135deg, var(--tw-back, #fffbec) 0%, var(--tw-back, #fffbec) 48%, color-mix(in srgb, var(--tw-back, #fffbec) 80%, #000) 100%);
+	border-top-left-radius: 3px;
+	/* the flap only covers the top-left half of this box, so the gradient stops at 50% */
+	background: linear-gradient(
+		135deg,
+		color-mix(in srgb, var(--tw-back, #fffbec) 100%, #fff) 0%,
+		var(--tw-back, #fffbec) 26%,
+		color-mix(in srgb, var(--tw-back, #fffbec) 86%, #6b5a3c) 50%
+	);
 	clip-path: polygon(0 0, 100% 0, 0 100%);
+	pointer-events: none;
+}
+
+.tw-note:not(.tw-note--add)::before {
+	content: '';
+	position: absolute;
+	right: 2px;
+	bottom: 2px;
+	z-index: 1;
+	width: calc(var(--tw-fold) + 4px);
+	height: calc(var(--tw-fold) + 4px);
+	background: linear-gradient(135deg, rgba(60, 35, 10, 0.2) 0%, rgba(60, 35, 10, 0) 55%);
+	clip-path: polygon(0 0, 100% 0, 0 100%);
+	filter: blur(2px);
 	pointer-events: none;
 }
 
@@ -260,14 +284,14 @@ html[data-theme-mode='dark'] .tw-float {
 	left: 0;
 	width: 100%;
 	height: 58%;
-	opacity: 0.32;
+	opacity: 0.16;
 }
 
 .tw-art {
 	position: absolute;
 	bottom: 4px;
 	height: 50px;
-	opacity: 0.55;
+	opacity: 0.28;
 }
 
 .tw-art.is-start {
@@ -278,13 +302,13 @@ html[data-theme-mode='dark'] .tw-float {
 	inset-inline-end: 34px;
 }
 
-.tw-art-layer.is-leaves .tw-art { height: 62px; bottom: 0; opacity: 0.6; }
-.tw-art-layer.is-mosque .tw-art { height: 64px; bottom: 0; opacity: 0.45; }
-.tw-art-layer.is-dumbbell .tw-art { height: 42px; bottom: 8px; opacity: 0.7; }
-.tw-art-layer.is-laptop .tw-art { height: 62px; bottom: 2px; opacity: 0.5; }
-.tw-art-layer.is-chart .tw-art { height: 44px; bottom: 10px; opacity: 0.65; }
-.tw-art-layer.is-docs .tw-art { height: 54px; bottom: 6px; opacity: 0.5; }
-.tw-art-layer.is-wave .tw-hill { height: 70%; opacity: 0.45; }
+.tw-art-layer.is-leaves .tw-art { height: 62px; bottom: 0; opacity: 0.3; }
+.tw-art-layer.is-mosque .tw-art { height: 64px; bottom: 0; opacity: 0.22; }
+.tw-art-layer.is-dumbbell .tw-art { height: 42px; bottom: 8px; opacity: 0.32; }
+.tw-art-layer.is-laptop .tw-art { height: 62px; bottom: 2px; opacity: 0.25; }
+.tw-art-layer.is-chart .tw-art { height: 44px; bottom: 10px; opacity: 0.3; }
+.tw-art-layer.is-docs .tw-art { height: 54px; bottom: 6px; opacity: 0.25; }
+.tw-art-layer.is-wave .tw-hill { height: 70%; opacity: 0.22; }
 
 /* ─── top row: category icon (or Done), menu ─── */
 .tw-top {
@@ -306,6 +330,13 @@ html[data-theme-mode='dark'] .tw-float {
 	color: var(--tw-accent);
 	background: var(--tw-chip);
 	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.08);
+}
+
+.tw-icon.is-daily {
+	width: 28px;
+	height: 28px;
+	margin-top: -6px;
+	margin-inline-start: -3px;
 }
 
 .tw-done-chip {
@@ -448,7 +479,7 @@ html[data-theme-mode='dark'] .tw-float {
 	position: relative;
 	z-index: 2;
 	display: flex;
-	min-height: 42px;
+	min-height: 34px;
 	align-items: center;
 	justify-content: flex-end;
 	gap: 10px;
@@ -487,10 +518,13 @@ html[data-theme-mode='dark'] .tw-float {
 }
 
 .tw-check {
-	position: relative;
+	position: absolute;
+	right: calc(var(--tw-fold) - 14px);
+	bottom: calc(var(--tw-fold) - 14px);
+	z-index: 5;
 	display: grid;
-	width: 42px;
-	height: 42px;
+	width: 40px;
+	height: 40px;
 	flex: none;
 	place-items: center;
 	border: 0;
@@ -509,6 +543,11 @@ html[data-theme-mode='dark'] .tw-float {
 
 .tw-check:active {
 	transform: scale(0.92);
+}
+
+.tw-note.is-dragging .tw-check,
+.tw-note.is-leaving .tw-check {
+	opacity: 0 !important;
 }
 
 .tw-check:focus-visible {
@@ -739,6 +778,8 @@ html[data-theme-mode='dark'] .tw-paper--add {
 	.tw-check {
 		width: 36px;
 		height: 36px;
+		right: calc(var(--tw-fold) - 16px);
+		bottom: calc(var(--tw-fold) - 16px);
 	}
 
 	.tw-art {
