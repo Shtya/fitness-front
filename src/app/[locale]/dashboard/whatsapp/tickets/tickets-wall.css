@@ -140,7 +140,9 @@ html[data-theme-mode='dark'] .tw-float {
 	filter:
 		drop-shadow(0 1px 1px rgba(60, 35, 10, 0.16))
 		drop-shadow(0 8px 10px rgba(60, 35, 10, 0.14));
-	transition: transform 0.22s var(--tw-ease), filter 0.22s ease;
+	/* only transform animates (cheap, smooth); the shadow stays put */
+	transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+	will-change: transform;
 }
 
 .tw-note:hover,
@@ -149,10 +151,7 @@ html[data-theme-mode='dark'] .tw-float {
 }
 
 .tw-note:not(.tw-note--add):hover {
-	transform: translateY(-3px);
-	filter:
-		drop-shadow(0 2px 2px rgba(60, 35, 10, 0.16))
-		drop-shadow(0 14px 16px rgba(60, 35, 10, 0.18));
+	transform: translateY(-2px);
 }
 
 .tw-frame.can-drag .tw-note:not(.tw-note--add) .tw-paper {
@@ -165,8 +164,9 @@ html[data-theme-mode='dark'] .tw-float {
 
 /*
  * Folded corner. The paper is cut along the crease (clip-path on .tw-paper); the flap is the cut
- * piece turned over onto the paper: its back is paler, darker toward the crease, and it throws a
- * soft shadow up-left onto the paper underneath (::before).
+ * piece turned over onto the paper. One element: the diagonal gradient draws the triangle (paper
+ * back, a touch darker at the crease, transparent past it), and drop-shadow follows that exact
+ * shape, so the flap's shadow sits right against its two edges with no separate layer.
  */
 .tw-note:not(.tw-note--add)::after {
 	content: '';
@@ -176,29 +176,15 @@ html[data-theme-mode='dark'] .tw-float {
 	z-index: 2;
 	width: var(--tw-fold);
 	height: var(--tw-fold);
-	border-top-left-radius: 3px;
-	/* the flap only covers the top-left half of this box, so the gradient stops at 50% */
+	border-top-left-radius: 4px;
 	background: linear-gradient(
-		135deg,
-		color-mix(in srgb, var(--tw-back, #fffbec) 100%, #fff) 0%,
-		var(--tw-back, #fffbec) 26%,
-		color-mix(in srgb, var(--tw-back, #fffbec) 86%, #6b5a3c) 50%
+		to bottom right,
+		color-mix(in srgb, var(--tw-back, #fffbec) 70%, #fff) 0%,
+		var(--tw-back, #fffbec) 30%,
+		color-mix(in srgb, var(--tw-back, #fffbec) 90%, #6b5a3c) 49.5%,
+		transparent 50%
 	);
-	clip-path: polygon(0 0, 100% 0, 0 100%);
-	pointer-events: none;
-}
-
-.tw-note:not(.tw-note--add)::before {
-	content: '';
-	position: absolute;
-	right: 2px;
-	bottom: 2px;
-	z-index: 1;
-	width: calc(var(--tw-fold) + 4px);
-	height: calc(var(--tw-fold) + 4px);
-	background: linear-gradient(135deg, rgba(60, 35, 10, 0.2) 0%, rgba(60, 35, 10, 0) 55%);
-	clip-path: polygon(0 0, 100% 0, 0 100%);
-	filter: blur(2px);
+	filter: drop-shadow(-1px -1px 1.5px rgba(60, 35, 10, 0.16));
 	pointer-events: none;
 }
 
@@ -215,7 +201,7 @@ html[data-theme-mode='dark'] .tw-float {
 	z-index: 4;
 	transform: translateX(-50%);
 	pointer-events: none;
-	transition: transform 0.22s var(--tw-ease);
+	transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .tw-pin .tkx-pushpin {
@@ -224,7 +210,7 @@ html[data-theme-mode='dark'] .tw-float {
 }
 
 .tw-note:hover .tw-pin {
-	transform: translateX(-50%) translateY(-1px);
+	transform: translateX(-50%);
 }
 
 .tw-paper {
@@ -394,7 +380,7 @@ html[data-theme-mode='dark'] .tw-float {
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 	opacity: 0;
-	transition: opacity 0.18s ease;
+	transition: opacity 0.3s ease;
 }
 
 .tw-note:hover .tw-no,
@@ -533,7 +519,7 @@ html[data-theme-mode='dark'] .tw-float {
 	background: rgba(255, 255, 255, 0.9);
 	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.12), 0 4px 10px -4px rgba(60, 35, 10, 0.25);
 	cursor: pointer;
-	transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.18s ease, color 0.15s ease;
+	transition: transform 0.2s ease, background-color 0.2s ease, opacity 0.3s ease, color 0.2s ease;
 }
 
 .tw-check:hover {

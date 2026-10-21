@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Clock3, Pin, Plus, Repeat } from 'lucide-react';
+import { Check, Clock3, Plus, Repeat } from 'lucide-react';
 import { MAX_TITLE } from './use-daily-tickets';
 import { DetailsHint, PushPin, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
 import { NoteArt, markNumbers, noteTheme } from './wall-art';
@@ -29,8 +29,8 @@ function useHandFonts() {
 function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, field, actions }) {
 	const split = ticket.steps > 1;
 	const daily = ticket.repeat === 'daily';
-	// a counted daily habit shows the repeat mark; everything else its category icon
-	const Icon = daily && split ? Repeat : theme.Icon;
+	// the only mark on a note: the repeat icon on daily tickets
+	const Icon = daily ? Repeat : null;
 	return (
 		<div className={`tw-paper is-${theme.tone} is-${theme.category} ${ticket.pinned ? 'is-pinned' : ''} ${split ? 'has-steps' : ''}`}>
 			<NoteArt art={theme.art} />
@@ -45,14 +45,8 @@ function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, fie
 					</span>
 				) : Icon ? (
 					<span className={`tw-icon${daily ? ' is-daily' : ''}`} title={daily ? `${c.repeatDaily} · ${c.dailyHint}` : undefined}>
-						<Icon size={daily && split ? 14 : 18} strokeWidth={2.1} aria-hidden />
+						<Icon size={14} strokeWidth={2.2} aria-hidden />
 						{daily ? <span className="tkx-sr">{c.daily}</span> : null}
-					</span>
-				) : null}
-				{ticket.pinned ? (
-					<span className="tw-pinned" title={c.pinned}>
-						<Pin size={12} fill="currentColor" aria-hidden />
-						<span className="tkx-sr">{c.pinned}</span>
 					</span>
 				) : null}
 				<span className="tw-no">#{String(ticket.no).padStart(3, '0')}</span>
