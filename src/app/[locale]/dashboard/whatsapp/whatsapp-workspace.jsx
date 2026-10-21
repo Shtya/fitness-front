@@ -5863,7 +5863,7 @@ function WaReactionSummary({ reactions, mine, locale, resolve, disabled = false,
 			const rect = pillRef.current?.getBoundingClientRect();
 			if (!rect) return;
 			const width = Math.min(300, window.innerWidth - 16);
-			const wanted = Math.min(360, 60 + people.length * 54);
+			const wanted = Math.min(380, 60 + people.length * 62);
 			const below = window.innerHeight - rect.bottom - 12;
 			const above = rect.top - 12;
 			let left = mine ? rect.right - width : rect.left;
@@ -5977,6 +5977,7 @@ function WaReactionSummary({ reactions, mine, locale, resolve, disabled = false,
 							<ul className="wa-rx-pop__list wa-ui-scroll nice-scroll">
 								{visiblePeople.map(item => {
 									const isMe = item.actorKey === 'me';
+									const reactedLabel = formatStoryViewTime(item.reactedAt, locale);
 									const row = (
 										<>
 											<Avatar label={item.person.name} size={9} src={item.person.avatar || ''} />
@@ -5991,6 +5992,15 @@ function WaReactionSummary({ reactions, mine, locale, resolve, disabled = false,
 															: 'Tap to remove'
 														: item.person.sub || ''}
 												</span>
+												{reactedLabel ? (
+													<time
+														className="wa-rx-pop__time"
+														dateTime={new Date(item.reactedAt).toISOString()}
+														title={new Date(item.reactedAt).toLocaleString(ar ? 'ar-EG' : 'en-GB')}
+													>
+														{ar ? `تفاعل ${reactedLabel}` : `Reacted ${reactedLabel}`}
+													</time>
+												) : null}
 											</span>
 											<span className="wa-rx-pop__emoji" aria-hidden="true">
 												{item.emoji}

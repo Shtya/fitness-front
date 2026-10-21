@@ -147,6 +147,71 @@ function Docs() {
 
 const ARTS = { leaves: Leaves, mosque: Mosque, dumbbell: DumbbellArt, laptop: LaptopArt, chart: ChartArt, docs: Docs };
 
+/* ─── progress on a note ─── */
+
+/** A hand-drawn zigzag down one strip of the note; jittered per strip so no two look alike. */
+function scribblePath(seed) {
+	let s = seed * 9301 + 49297;
+	const rand = () => {
+		s = (s * 9301 + 49297) % 233280;
+		return s / 233280;
+	};
+	let d = `M ${4 + rand() * 4} ${3 + rand() * 4}`;
+	let y = 4;
+	let right = true;
+	while (y < 96) {
+		y += 6 + rand() * 4;
+		d += ` L ${right ? 34 + rand() * 5 : 2 + rand() * 5} ${Math.min(97, y)}`;
+		right = !right;
+	}
+	return d;
+}
+
+/**
+ * The note split into one strip per step; every finished step gets pen scribbled over its strip,
+ * behind the title. A newly finished strip draws itself in.
+ */
+export function StepScribbles({ steps, progress }) {
+	if (steps < 2 || progress < 1) return null;
+	return (
+		<span className="tw-scribbles" aria-hidden>
+			{Array.from({ length: steps }, (_, i) => (
+				<span key={i} className="tw-scribbles__cell">
+					{i < progress ? (
+						<svg viewBox="0 0 40 100" preserveAspectRatio="none">
+							<path d={scribblePath(i + 1)} pathLength="1" vectorEffect="non-scaling-stroke" />
+						</svg>
+					) : null}
+				</span>
+			))}
+		</span>
+	);
+}
+
+/** Step counter: one ring segment per step, the count in the middle ("1" bold, "/4" small). */
+export function ProgressRing({ steps, progress, size = 46, stroke = 4 }) {
+	const r = (size - stroke) / 2;
+	const len = 2 * Math.PI * r;
+	const gap = steps > 1 ? Math.min(5, len / steps / 3) : 0;
+	const seg = len / steps - gap;
+	const filled = [];
+	for (let i = 0; i < progress; i += 1) filled.push(seg, gap);
+	filled.push(0, len);
+	const c = size / 2;
+	return (
+		<span className="tw-ring" style={{ width: size, height: size }} aria-hidden>
+			<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+				<circle className="tw-ring__track" cx={c} cy={c} r={r} strokeWidth={stroke} strokeDasharray={`${seg} ${gap}`} />
+				<circle className="tw-ring__fill" cx={c} cy={c} r={r} strokeWidth={stroke} strokeDasharray={filled.join(' ')} />
+			</svg>
+			<span className="tw-ring__n" key={progress}>
+				<b>{progress}</b>
+				<small>/{steps}</small>
+			</span>
+		</span>
+	);
+}
+
 /** The illustration plus a soft hill/wave of the paper's own colour along the bottom. */
 export function NoteArt({ art }) {
 	const Art = ARTS[art];

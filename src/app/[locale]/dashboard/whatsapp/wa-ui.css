@@ -12694,6 +12694,17 @@ html.dark .wa-rx__total {
 	color: #008069;
 }
 
+.wa-rx-pop__time {
+	overflow: hidden;
+	color: var(--wa-ui-text-3);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+	text-align: start;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	opacity: 0.85;
+}
+
 html.dark .wa-rx-pop__row.is-me .wa-rx-pop__sub {
 	color: #21c063;
 }

@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Clock3, Plus, Repeat } from 'lucide-react';
 import { MAX_TITLE } from './use-daily-tickets';
-import { DetailsHint, PushPin, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
-import { NoteArt, markNumbers, noteTheme } from './wall-art';
+import { DetailsHint, PushPin, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
+import { NoteArt, ProgressRing, StepScribbles, markNumbers, noteTheme } from './wall-art';
 import './tickets-wall.css';
 
 /*
@@ -34,6 +34,7 @@ function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, fie
 	return (
 		<div className={`tw-paper is-${theme.tone} is-${theme.category} ${ticket.pinned ? 'is-pinned' : ''} ${split ? 'has-steps' : ''}`}>
 			<NoteArt art={theme.art} />
+			{split && !ticket.done ? <StepScribbles steps={ticket.steps} progress={ticket.progress} /> : null}
 
 			<div className="tw-top">
 				{ticket.done ? (
@@ -105,7 +106,7 @@ function CornerCheck({ ticket, c, onToggleDone }) {
 			title={ticket.done ? c.reopen : split ? c.nextStep : c.markDone}
 		>
 			{split && !ticket.done ? (
-				<StepRing steps={ticket.steps} progress={ticket.progress} size={40} stroke={3} />
+				<ProgressRing steps={ticket.steps} progress={ticket.progress} />
 			) : daily && !ticket.done ? (
 				<>
 					<Clock3 size={17} strokeWidth={2.2} className="tw-check__clock" aria-hidden />

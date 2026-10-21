@@ -176,23 +176,24 @@ html[data-theme-mode='dark'] .tw-float {
 	z-index: 2;
 	width: var(--tw-fold);
 	height: var(--tw-fold);
-	border-top-left-radius: 4px;
+	border-top-left-radius: 5px;
 	background: linear-gradient(
 		to bottom right,
-		color-mix(in srgb, var(--tw-back, #fffbec) 70%, #fff) 0%,
-		var(--tw-back, #fffbec) 30%,
-		color-mix(in srgb, var(--tw-back, #fffbec) 90%, #6b5a3c) 49.5%,
+		color-mix(in srgb, var(--tw-flap, #fdebb6) 55%, #fff) 0%,
+		color-mix(in srgb, var(--tw-flap, #fdebb6) 85%, #fff) 22%,
+		var(--tw-flap, #fdebb6) 38%,
+		color-mix(in srgb, var(--tw-flap, #fdebb6) 82%, #5a4426) 49.6%,
 		transparent 50%
 	);
-	filter: drop-shadow(-1px -1px 1.5px rgba(60, 35, 10, 0.16));
+	filter: drop-shadow(-1.5px -1.5px 1.5px rgba(60, 35, 10, 0.2));
 	pointer-events: none;
 }
 
-.tw-tone-green { --tw-back: var(--tw-green-back); }
-.tw-tone-yellow { --tw-back: var(--tw-yellow-back); }
-.tw-tone-pink { --tw-back: var(--tw-pink-back); }
-.tw-tone-blue { --tw-back: var(--tw-blue-back); }
-.tw-tone-lavender { --tw-back: var(--tw-lavender-back); }
+.tw-tone-green { --tw-back: var(--tw-green-back); --tw-flap: var(--tw-green-b); --tw-accent: var(--tw-green-ink); }
+.tw-tone-yellow { --tw-back: var(--tw-yellow-back); --tw-flap: var(--tw-yellow-b); --tw-accent: var(--tw-yellow-ink); }
+.tw-tone-pink { --tw-back: var(--tw-pink-back); --tw-flap: var(--tw-pink-b); --tw-accent: var(--tw-pink-ink); }
+.tw-tone-blue { --tw-back: var(--tw-blue-back); --tw-flap: var(--tw-blue-b); --tw-accent: var(--tw-blue-ink); }
+.tw-tone-lavender { --tw-back: var(--tw-lavender-back); --tw-flap: var(--tw-lavender-b); --tw-accent: var(--tw-lavender-ink); }
 
 .tw-pin {
 	position: absolute;
@@ -505,8 +506,8 @@ html[data-theme-mode='dark'] .tw-float {
 
 .tw-check {
 	position: absolute;
-	right: calc(var(--tw-fold) - 14px);
-	bottom: calc(var(--tw-fold) - 14px);
+	right: calc(var(--tw-fold) - 6px);
+	bottom: calc(var(--tw-fold) - 6px);
 	z-index: 5;
 	display: grid;
 	width: 40px;
@@ -561,36 +562,112 @@ html[data-theme-mode='dark'] .tw-float {
 	visibility: hidden;
 }
 
-/* steps: a ring counter */
-.tw-check.has-steps .tkx-stepc {
+/* steps: a segmented ring, one arc per step, with the count in the middle */
+.tw-check.has-steps {
+	width: 50px;
+	height: 50px;
+	padding: 2px;
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.12), 0 6px 14px -6px rgba(60, 35, 10, 0.35);
+}
+
+.tw-check.has-steps:hover {
+	transform: translateY(-1px);
+}
+
+.tw-ring {
 	position: relative;
 	display: grid;
 	place-items: center;
 }
 
-.tw-check.has-steps .tkx-steps-ring {
+.tw-ring svg {
 	position: absolute;
 	inset: 0;
 	transform: rotate(-90deg);
+	overflow: visible;
 }
 
-.tw-check.has-steps .tkx-steps-ring__track {
+.tw-ring__track {
 	fill: none;
-	stroke: color-mix(in srgb, var(--tw-accent) 18%, transparent);
-}
-
-.tw-check.has-steps .tkx-steps-ring__fill {
-	fill: none;
-	stroke: var(--tw-accent);
+	stroke: color-mix(in srgb, var(--tw-accent) 16%, transparent);
 	stroke-linecap: round;
 }
 
-.tw-check.has-steps .tkx-stepc__n {
+.tw-ring__fill {
+	fill: none;
+	stroke: var(--tw-accent);
+	stroke-linecap: round;
+	filter: drop-shadow(0 0 2px color-mix(in srgb, var(--tw-accent) 35%, transparent));
+	transition: stroke-dasharray 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tw-ring__n {
 	position: relative;
+	display: inline-flex;
+	align-items: baseline;
 	color: var(--tw-ink);
-	font-size: 12.5px;
-	font-weight: 700;
+	line-height: 1;
 	font-variant-numeric: tabular-nums;
+	animation: tw-ring-pop 0.4s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.tw-ring__n b {
+	font-size: 15px;
+	font-weight: 800;
+}
+
+.tw-ring__n small {
+	font-size: 10.5px;
+	font-weight: 600;
+	color: var(--tw-ink-2);
+}
+
+@keyframes tw-ring-pop {
+	from {
+		transform: scale(0.6);
+		opacity: 0.4;
+	}
+}
+
+/* finished steps: pen scribbled over their part of the note, behind the title */
+.tw-scribbles {
+	position: absolute;
+	inset: 46px 10px 10px;
+	z-index: 1;
+	display: flex;
+	gap: 2px;
+	pointer-events: none;
+}
+
+.tw-scribbles__cell {
+	min-width: 0;
+	flex: 1 1 0;
+}
+
+.tw-scribbles svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+.tw-scribbles path {
+	fill: none;
+	stroke: var(--tw-accent);
+	stroke-width: 2.2px;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	opacity: 0.22;
+	stroke-dasharray: 1;
+	stroke-dashoffset: 0;
+	animation: tw-scribble 0.75s cubic-bezier(0.45, 0, 0.3, 1) both;
+}
+
+@keyframes tw-scribble {
+	from {
+		stroke-dashoffset: 1;
+	}
 }
 
 /* scheduled (daily) notes: a clock that turns into a check when you reach for it */
@@ -764,8 +841,8 @@ html[data-theme-mode='dark'] .tw-paper--add {
 	.tw-check {
 		width: 36px;
 		height: 36px;
-		right: calc(var(--tw-fold) - 16px);
-		bottom: calc(var(--tw-fold) - 16px);
+		right: calc(var(--tw-fold) - 8px);
+		bottom: calc(var(--tw-fold) - 8px);
 	}
 
 	.tw-art {
@@ -849,7 +926,9 @@ html[data-theme-mode='dark'] .tw-paper--add {
 	.tw-pin,
 	.tw-check,
 	.tw-done-chip,
-	.tw-add__icon {
+	.tw-add__icon,
+	.tw-ring__n,
+	.tw-scribbles path {
 		animation: none !important;
 		transition: none !important;
 	}
