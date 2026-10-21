@@ -1,55 +1,71 @@
 /*
- * Wall view of the daily tickets: pastel sticky notes pinned to a warm corkboard inside a thin
- * wooden frame. Calm by default; motion only answers an action (a new note swings in, done gets
- * stamped, a removed note falls, a reorder slides).
+ * Wall view of the daily tickets: pastel sticky notes pinned to a cork board in a light wooden
+ * frame. Each note's colour, pin, icon and faint illustration come from what the ticket is about
+ * (wall-art.jsx). Calm by default; motion only answers an action (a new note swings in, a done
+ * note settles, a removed note falls, a reorder slides).
  */
 
 .tw-frame,
 .tw-float {
-	--tw-wood: #ebd2aa;
-	--tw-wood-2: #d4ad78;
-	--tw-cork: #d7a66b;
-	--tw-cork-2: #c8915a;
-	--tw-speck-dark: rgba(96, 58, 22, 0.32);
-	--tw-speck-light: rgba(255, 238, 205, 0.4);
-	--tw-head-ink: #3a2814;
-	--tw-head-ink-2: rgba(58, 40, 20, 0.72);
-	--tw-tool-bg: rgba(255, 255, 255, 0.82);
-	--tw-tool-ink: #3b3a36;
-	--tw-ink: #2b2219;
-	--tw-ink-2: rgba(43, 34, 25, 0.62);
-	--tw-yellow-a: #fff2b8;
-	--tw-yellow-b: #fde38a;
-	--tw-blue-a: #e3e9ff;
-	--tw-blue-b: #cdd9ff;
-	--tw-pink-a: #ffdde6;
-	--tw-pink-b: #ffc7d5;
-	--tw-green-a: #ddf6d8;
-	--tw-green-b: #c4edc1;
-	--tw-done: #1f8a50;
-	--tw-hand: 'Caveat', 'Aref Ruqaa', 'Segoe Print', 'Comic Sans MS', cursive;
+	--tw-wood-a: #ecc995;
+	--tw-wood-b: #d6a467;
+	--tw-wood-c: #e6bb82;
+	--tw-cork: #c89a63;
+	--tw-ink: #25211d;
+	--tw-ink-2: rgba(37, 33, 29, 0.6);
+	--tw-chip: rgba(255, 255, 255, 0.82);
+	--tw-hand: 'Kalam', 'Aref Ruqaa', 'Segoe Print', 'Comic Sans MS', cursive;
+	--tw-radius: 7px;
+	--tw-fold: 24px;
+	--tw-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+	/* paper tones: top, bottom, accent (icons, progress), illustration, folded back */
+	--tw-green-a: #ebf7e4;
+	--tw-green-b: #d5eecb;
+	--tw-green-ink: #2f8a4c;
+	--tw-green-art: #8fc97c;
+	--tw-green-back: #f3faef;
+	--tw-yellow-a: #fff7dc;
+	--tw-yellow-b: #fdebb6;
+	--tw-yellow-ink: #e08a1c;
+	--tw-yellow-art: #f0c56a;
+	--tw-yellow-back: #fffbec;
+	--tw-pink-a: #ffe9f0;
+	--tw-pink-b: #fcd4e1;
+	--tw-pink-ink: #d23a77;
+	--tw-pink-art: #f2a1bf;
+	--tw-pink-back: #fff4f8;
+	--tw-blue-a: #e9f1ff;
+	--tw-blue-b: #d4e4fc;
+	--tw-blue-ink: #2f68d8;
+	--tw-blue-art: #95b8ef;
+	--tw-blue-back: #f4f8ff;
+	--tw-lavender-a: #efe9fc;
+	--tw-lavender-b: #ded4f7;
+	--tw-lavender-ink: #6a47c6;
+	--tw-lavender-art: #b6a3ea;
+	--tw-lavender-back: #f7f3fe;
 }
 
 html.dark .tw-frame,
-html.dark .tw-float {
-	--tw-wood: #6f5536;
-	--tw-wood-2: #56412a;
-	--tw-cork: #7b5a37;
-	--tw-cork-2: #634829;
-	--tw-speck-dark: rgba(20, 10, 2, 0.4);
-	--tw-speck-light: rgba(255, 225, 180, 0.1);
-	--tw-head-ink: #f6ead6;
-	--tw-head-ink-2: rgba(246, 234, 214, 0.7);
-	--tw-tool-bg: rgba(20, 14, 8, 0.45);
-	--tw-tool-ink: #f1e6d4;
-	--tw-yellow-a: #f2df9c;
-	--tw-yellow-b: #e7cf76;
-	--tw-blue-a: #d2dbf6;
-	--tw-blue-b: #bccaf0;
-	--tw-pink-a: #f2c9d4;
-	--tw-pink-b: #e8b3c3;
-	--tw-green-a: #cbe8c5;
-	--tw-green-b: #b5dcb1;
+html.dark .tw-float,
+html[data-theme-mode='dark'] .tw-frame,
+html[data-theme-mode='dark'] .tw-float {
+	--tw-wood-a: #7a5c39;
+	--tw-wood-b: #5c4329;
+	--tw-wood-c: #6d5133;
+	--tw-cork: #6f5234;
+	--tw-chip: rgba(255, 255, 255, 0.7);
+	--tw-green-a: #d9ecd2;
+	--tw-green-b: #c4e2b8;
+	--tw-yellow-a: #f6e9c2;
+	--tw-yellow-b: #ecd99c;
+	--tw-pink-a: #f4d8e2;
+	--tw-pink-b: #e9c2d1;
+	--tw-blue-a: #d9e5f8;
+	--tw-blue-b: #c4d6f2;
+	--tw-lavender-a: #e1d9f5;
+	--tw-lavender-b: #cfc3ee;
 }
 
 /* the handwriting must beat the WhatsApp shell's forced UI font */
@@ -60,254 +76,303 @@ html.dark .tw-float {
 	font-family: var(--tw-hand) !important;
 }
 
-/* ─── frame and corkboard ─── */
+/* ─── frame and cork ─── */
 .tw-frame {
-	position: relative;
 	display: flex;
 	min-height: 0;
 	flex-direction: column;
-	padding: 10px;
-	border-radius: 22px;
-	background:
-		repeating-linear-gradient(90deg, rgba(120, 80, 35, 0.06) 0 1px, transparent 1px 11px),
-		linear-gradient(180deg, var(--tw-wood), var(--tw-wood-2));
+	padding: 11px;
+	border-radius: 24px;
+	background: linear-gradient(150deg, var(--tw-wood-a) 0%, var(--tw-wood-b) 48%, var(--tw-wood-c) 100%);
 	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.45),
-		0 1px 2px rgba(40, 25, 10, 0.08),
-		0 26px 50px -30px rgba(40, 25, 10, 0.55);
-	animation: tw-board-in 0.4s cubic-bezier(0.2, 0.9, 0.25, 1);
-}
-
-html.dark .tw-frame {
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.08),
-		0 26px 50px -26px rgba(0, 0, 0, 0.8);
+		inset 0 1px 0 rgba(255, 255, 255, 0.55),
+		inset 0 -1px 0 rgba(90, 55, 20, 0.18),
+		0 2px 6px rgba(90, 55, 20, 0.1),
+		0 22px 44px -26px rgba(90, 55, 20, 0.45);
+	animation: tw-board-in 0.4s var(--tw-ease);
 }
 
 .tw-board {
+	position: relative;
 	display: flex;
 	min-height: 0;
 	flex: 1 1 auto;
 	flex-direction: column;
 	overflow: hidden;
-	border-radius: 14px;
-	background:
-		radial-gradient(var(--tw-speck-dark) 0.9px, transparent 1.4px) 0 0 / 7px 7px,
-		radial-gradient(var(--tw-speck-light) 0.9px, transparent 1.5px) 3px 4px / 11px 11px,
-		radial-gradient(var(--tw-speck-dark) 1.3px, transparent 2px) 6px 2px / 19px 19px,
-		radial-gradient(130% 90% at 30% 0%, rgba(255, 240, 210, 0.22), transparent 60%),
-		linear-gradient(170deg, var(--tw-cork), var(--tw-cork-2));
+	border-radius: 15px;
+	background-color: var(--tw-cork);
+	/* cork: fine grain + a few lighter and darker flecks, all very low contrast */
+	background-image:
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.32 0 0 0 0 0.19 0 0 0 0 0.07 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E"),
+		radial-gradient(circle at 20% 30%, rgba(255, 236, 200, 0.22) 0 1px, transparent 1.5px),
+		radial-gradient(circle at 70% 60%, rgba(80, 45, 15, 0.22) 0 1px, transparent 1.6px),
+		radial-gradient(120% 90% at 30% 0%, rgba(255, 230, 190, 0.22), transparent 60%);
+	background-size: 180px 180px, 23px 23px, 31px 31px, 100% 100%;
 	box-shadow:
-		inset 0 2px 10px rgba(60, 35, 10, 0.28),
-		inset 0 0 0 1px rgba(60, 35, 10, 0.18);
+		inset 0 2px 6px rgba(70, 40, 10, 0.32),
+		inset 0 0 0 1px rgba(80, 45, 15, 0.22);
 }
 
-/* ─── header inside the board ─── */
-
-/* ─── the notes ─── */
 .tw-wall {
 	min-height: 0;
 	flex: 1 1 auto;
+	padding: 34px 28px 30px;
 	overflow-x: hidden;
 	overflow-y: auto;
-	padding: 8px 22px 24px;
 	scrollbar-width: thin;
+	scrollbar-color: rgba(90, 55, 20, 0.35) transparent;
 }
 
 .tw-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(206px, 1fr));
-	gap: 34px 26px;
+	gap: 36px 26px;
 	margin: 0;
-	padding: 20px 0 6px;
+	padding: 0;
 	list-style: none;
+	grid-template-columns: repeat(auto-fill, minmax(188px, 1fr));
 }
 
+/* ─── a note ─── */
 .tw-note {
 	position: relative;
-	display: flex;
-	justify-content: center;
 	outline: none;
+	/* the shadow follows the paper's real outline, folded corner included */
+	filter:
+		drop-shadow(0 1px 1px rgba(60, 35, 10, 0.16))
+		drop-shadow(0 8px 10px rgba(60, 35, 10, 0.14));
+	transition: transform 0.22s var(--tw-ease), filter 0.22s ease;
 }
 
-/* a hovered or focused note (and its open menu) sits above its neighbours */
-.tw-note:focus-within,
-.tw-note:hover {
-	z-index: 20;
-}
-
-.tw-pin {
-	position: absolute;
-	top: -18px;
-	left: 50%;
+.tw-note:hover,
+.tw-note:focus-within {
 	z-index: 3;
-	transform: translateX(-50%) rotate(12deg);
-	pointer-events: none;
-	transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
 
-.tkx-pushpin {
-	display: block;
-	overflow: visible;
-	filter: drop-shadow(1px 3px 2px rgba(0, 0, 0, 0.3));
-}
-
-.tw-paper {
-	--a: var(--tw-yellow-a);
-	--b: var(--tw-yellow-b);
-	position: relative;
-	display: flex;
-	width: 100%;
-	max-width: 270px;
-	min-height: 182px;
-	flex-direction: column;
-	gap: 8px;
-	padding: 16px 14px 12px 16px;
-	border-radius: 6px;
-	color: var(--tw-ink);
-	background:
-		radial-gradient(120% 70% at 25% 0%, rgba(255, 255, 255, 0.45), transparent 60%),
-		linear-gradient(172deg, var(--a), var(--b));
-	box-shadow:
-		0 1px 1px rgba(40, 25, 10, 0.1),
-		0 12px 18px -12px rgba(60, 35, 10, 0.55),
-		0 24px 30px -26px rgba(60, 35, 10, 0.45);
-	transform: rotate(var(--tilt));
-	transform-origin: 50% 0;
-	transition:
-		transform 0.42s cubic-bezier(0.3, 1.4, 0.5, 1),
-		box-shadow 0.25s ease,
-		filter 0.3s ease,
-		opacity 0.3s ease;
-}
-
-[dir='rtl'] .tw-paper {
-	padding: 16px 16px 12px 14px;
-}
-
-.tw-paper.is-blue {
-	--a: var(--tw-blue-a);
-	--b: var(--tw-blue-b);
-}
-
-.tw-paper.is-pink {
-	--a: var(--tw-pink-a);
-	--b: var(--tw-pink-b);
-}
-
-.tw-paper.is-green {
-	--a: var(--tw-green-a);
-	--b: var(--tw-green-b);
-}
-
-/* a soft lifted corner */
-.tw-paper::after {
-	content: '';
-	position: absolute;
-	right: 0;
-	bottom: 0;
-	width: 24px;
-	height: 24px;
-	border-radius: 0 0 6px 0;
-	background: linear-gradient(315deg, rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.3) 45%, transparent 50%);
-	pointer-events: none;
-}
-
-html.dark .tw-paper {
-	box-shadow:
-		0 1px 1px rgba(0, 0, 0, 0.4),
-		0 16px 22px -14px rgba(0, 0, 0, 0.75);
-}
-
-.tw-paper.is-pinned {
-	box-shadow:
-		0 0 0 1.5px rgba(242, 181, 29, 0.8),
-		0 12px 18px -12px rgba(120, 80, 10, 0.55),
-		0 24px 30px -26px rgba(60, 35, 10, 0.45);
-}
-
-.tw-note:hover .tw-paper,
-.tw-note:focus-within .tw-paper {
-	transform: rotate(0deg) translateY(-3px);
-	box-shadow:
-		0 2px 3px rgba(40, 25, 10, 0.1),
-		0 22px 28px -16px rgba(60, 35, 10, 0.55);
-}
-
-.tw-note:hover .tw-pin {
-	transform: translateX(-50%) rotate(2deg);
-}
-
-.tw-note:focus-visible .tw-paper {
-	outline: 2.5px solid #21c063;
-	outline-offset: 4px;
+.tw-note:not(.tw-note--add):hover {
+	transform: translateY(-3px);
+	filter:
+		drop-shadow(0 2px 2px rgba(60, 35, 10, 0.16))
+		drop-shadow(0 14px 16px rgba(60, 35, 10, 0.18));
 }
 
 .tw-frame.can-drag .tw-note:not(.tw-note--add) .tw-paper {
 	cursor: grab;
 }
 
-/* top row */
-.tw-top {
+.tw-note--add {
+	filter: none;
+}
+
+/* folded corner: the paper's paler back, outside the paper's clip so it keeps its shadow */
+.tw-note:not(.tw-note--add)::after {
+	content: '';
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	z-index: 2;
+	width: var(--tw-fold);
+	height: var(--tw-fold);
+	border-top-left-radius: 4px;
+	background: linear-gradient(135deg, var(--tw-back, #fffbec) 0%, var(--tw-back, #fffbec) 48%, color-mix(in srgb, var(--tw-back, #fffbec) 80%, #000) 100%);
+	clip-path: polygon(0 0, 100% 0, 0 100%);
+	pointer-events: none;
+}
+
+.tw-tone-green { --tw-back: var(--tw-green-back); }
+.tw-tone-yellow { --tw-back: var(--tw-yellow-back); }
+.tw-tone-pink { --tw-back: var(--tw-pink-back); }
+.tw-tone-blue { --tw-back: var(--tw-blue-back); }
+.tw-tone-lavender { --tw-back: var(--tw-lavender-back); }
+
+.tw-pin {
+	position: absolute;
+	top: -21px;
+	left: 50%;
+	z-index: 4;
+	transform: translateX(-50%);
+	pointer-events: none;
+	transition: transform 0.22s var(--tw-ease);
+}
+
+.tw-pin .tkx-pushpin {
+	display: block;
+	filter: drop-shadow(1px 2px 1.5px rgba(40, 20, 5, 0.35));
+}
+
+.tw-note:hover .tw-pin {
+	transform: translateX(-50%) translateY(-1px);
+}
+
+.tw-paper {
+	--tw-a: var(--tw-yellow-a);
+	--tw-b: var(--tw-yellow-b);
+	--tw-accent: var(--tw-yellow-ink);
+	--tw-art: var(--tw-yellow-art);
+	position: relative;
 	display: flex;
-	min-height: 28px;
+	min-height: 168px;
+	aspect-ratio: 1.28 / 1;
+	flex-direction: column;
+	padding: 14px 14px 12px;
+	overflow: hidden;
+	border-radius: var(--tw-radius);
+	color: var(--tw-ink);
+	background: linear-gradient(172deg, var(--tw-a) 0%, var(--tw-b) 100%);
+	clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--tw-fold)), calc(100% - var(--tw-fold)) 100%, 0 100%);
+}
+
+/* a very light paper sheen across the top */
+.tw-paper:not(.tw-paper--add)::before {
+	content: '';
+	position: absolute;
+	inset: 0 0 55% 0;
+	z-index: 0;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent);
+	pointer-events: none;
+}
+
+.tw-paper.is-green { --tw-a: var(--tw-green-a); --tw-b: var(--tw-green-b); --tw-accent: var(--tw-green-ink); --tw-art: var(--tw-green-art); }
+.tw-paper.is-pink { --tw-a: var(--tw-pink-a); --tw-b: var(--tw-pink-b); --tw-accent: var(--tw-pink-ink); --tw-art: var(--tw-pink-art); }
+.tw-paper.is-blue { --tw-a: var(--tw-blue-a); --tw-b: var(--tw-blue-b); --tw-accent: var(--tw-blue-ink); --tw-art: var(--tw-blue-art); }
+.tw-paper.is-lavender { --tw-a: var(--tw-lavender-a); --tw-b: var(--tw-lavender-b); --tw-accent: var(--tw-lavender-ink); --tw-art: var(--tw-lavender-art); }
+
+.tw-note:focus-visible {
+	outline: none;
+}
+
+.tw-note:focus-visible .tw-paper {
+	box-shadow: inset 0 0 0 2px var(--tw-accent);
+}
+
+/* ─── faint illustration along the bottom ─── */
+.tw-art-layer {
+	position: absolute;
+	inset: auto 0 0 0;
+	z-index: 0;
+	height: 52%;
+	color: var(--tw-art);
+	pointer-events: none;
+}
+
+.tw-hill {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 58%;
+	opacity: 0.32;
+}
+
+.tw-art {
+	position: absolute;
+	bottom: 4px;
+	height: 50px;
+	opacity: 0.55;
+}
+
+.tw-art.is-start {
+	inset-inline-start: 6px;
+}
+
+.tw-art.is-end {
+	inset-inline-end: 34px;
+}
+
+.tw-art-layer.is-leaves .tw-art { height: 62px; bottom: 0; opacity: 0.6; }
+.tw-art-layer.is-mosque .tw-art { height: 64px; bottom: 0; opacity: 0.45; }
+.tw-art-layer.is-dumbbell .tw-art { height: 42px; bottom: 8px; opacity: 0.7; }
+.tw-art-layer.is-laptop .tw-art { height: 62px; bottom: 2px; opacity: 0.5; }
+.tw-art-layer.is-chart .tw-art { height: 44px; bottom: 10px; opacity: 0.65; }
+.tw-art-layer.is-docs .tw-art { height: 54px; bottom: 6px; opacity: 0.5; }
+.tw-art-layer.is-wave .tw-hill { height: 70%; opacity: 0.45; }
+
+/* ─── top row: category icon (or Done), menu ─── */
+.tw-top {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	min-height: 36px;
 	align-items: center;
 	gap: 6px;
 }
 
-.tw-paper .tkx-prio {
-	--c: #b45309;
-	padding: 3px 9px 3px 7px;
-	font-size: 11.5px;
-	background: rgba(255, 255, 255, 0.75);
-	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-}
-
-.tw-paper .tkx-prio.is-high {
-	--c: #d1343a;
-}
-
-.tw-paper .tkx-prio.is-low {
-	--c: #15803d;
-}
-
-.tw-paper .tkx-status {
-	padding: 3px 8px;
+.tw-icon {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	flex: none;
+	place-items: center;
 	border-radius: 999px;
-	font-size: 11px;
+	color: var(--tw-accent);
+	background: var(--tw-chip);
+	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.08);
+}
+
+.tw-done-chip {
+	display: inline-flex;
+	height: 30px;
+	align-items: center;
+	gap: 7px;
+	padding: 0 12px 0 5px;
+	border-radius: 999px;
 	color: var(--tw-ink);
-	background: rgba(255, 255, 255, 0.55);
+	background: var(--tw-chip);
+	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.08);
+	font-size: 13.5px;
+	font-weight: 600;
 }
 
-.tw-paper .tkx-status.is-doing {
-	--c: #1d63c4;
+[dir='rtl'] .tw-done-chip {
+	padding: 0 5px 0 12px;
 }
 
-.tw-paper .tkx-status.is-done {
-	--c: var(--tw-done);
+.tw-done-chip__tick {
+	display: grid;
+	width: 21px;
+	height: 21px;
+	place-items: center;
+	border-radius: 999px;
+	color: #fff;
+	background: #2b3036;
 }
 
 .tw-pinned {
 	display: grid;
-	width: 22px;
-	height: 22px;
-	flex: none;
+	width: 24px;
+	height: 24px;
 	place-items: center;
 	border-radius: 999px;
-	color: #a06c00;
-	background: rgba(255, 255, 255, 0.6);
+	color: #b7860b;
+	background: var(--tw-chip);
+}
+
+.tw-paper .tkx-status {
+	height: 24px;
+	padding: 0 9px;
+	border-radius: 999px;
+	color: var(--tw-accent);
+	background: var(--tw-chip);
+	font-size: 11.5px;
+	font-weight: 600;
 }
 
 .tw-no {
 	margin-inline-start: auto;
-	font-size: 10.5px;
-	font-weight: 700;
-	font-variant-numeric: tabular-nums;
 	color: var(--tw-ink-2);
+	font-size: 12px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	opacity: 0;
+	transition: opacity 0.18s ease;
+}
+
+.tw-note:hover .tw-no,
+.tw-note:focus-within .tw-no {
+	opacity: 1;
 }
 
 .tw-paper .tkx-menu {
-	margin-inline-end: -6px;
+	flex: none;
 }
 
 .tw-paper .tkx-iconbtn--ticket {
@@ -315,275 +380,294 @@ html.dark .tw-paper {
 	height: 30px;
 	border-radius: 9px;
 	color: var(--tw-ink-2);
+	background: transparent;
+	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .tw-paper .tkx-iconbtn--ticket:hover,
 .tw-paper .tkx-iconbtn--ticket.is-open {
 	color: var(--tw-ink);
-	background: rgba(255, 255, 255, 0.55);
+	background: var(--tw-chip);
 }
 
-/* the title, handwritten */
+.tw-paper .tkx-iconbtn--ticket:focus-visible {
+	outline: 2px solid var(--tw-accent);
+	outline-offset: 1px;
+}
+
+/* ─── title ─── */
 .tw-text {
-	display: -webkit-box;
+	position: relative;
+	z-index: 2;
+	display: grid;
 	min-height: 0;
-	flex: 0 1 auto;
-	margin: auto 0;
-	overflow: hidden;
-	font-size: 27px;
-	font-weight: 600;
-	line-height: 1.12;
+	flex: 1;
+	place-items: center;
+	margin: 2px 6px 4px;
+	color: var(--tw-ink);
+	font-size: 23px;
+	font-weight: 400;
+	line-height: 1.32;
 	text-align: center;
 	overflow-wrap: anywhere;
-	color: var(--tw-ink);
-	-webkit-line-clamp: 3;
-	-webkit-box-orient: vertical;
+	/* a pen line a touch firmer than the regular cut, still lighter than bold */
+	-webkit-text-stroke: 0.25px currentColor;
 }
 
 .tw-text:not(.tw-text--edit) span {
-	background-image: linear-gradient(var(--tw-ink), var(--tw-ink));
-	background-repeat: no-repeat;
-	background-position: 0 60%;
-	background-size: 0% 2px;
-	transition: background-size 0.5s cubic-bezier(0.2, 0.9, 0.25, 1);
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
 }
 
-[dir='rtl'] .tw-text:not(.tw-text--edit) span {
-	background-position: 100% 60%;
+.tw-text mark {
+	padding: 0 6px;
+	border-radius: 8px;
+	color: inherit;
+	background: color-mix(in srgb, var(--tw-art) 70%, #fff);
+	-webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
 }
 
 .wa-chat-idle .tw-text--edit.tw-text--edit {
-	display: block;
 	width: 100%;
-	min-height: 86px;
+	place-items: initial;
 	padding: 6px 8px;
-	border: 1.5px dashed rgba(43, 34, 25, 0.4);
-	border-radius: 6px;
+	border: 0;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.7);
+	box-shadow: inset 0 0 0 1.5px var(--tw-accent);
+	color: var(--tw-ink);
 	outline: none;
 	resize: none;
-	color: var(--tw-ink);
-	background: rgba(255, 255, 255, 0.4);
-	box-shadow: none;
 }
 
-/* bottom row */
+/* ─── bottom row: progress, details, check ─── */
 .tw-bottom {
+	position: relative;
+	z-index: 2;
 	display: flex;
-	min-height: 30px;
+	min-height: 42px;
 	align-items: center;
-	gap: 8px;
+	justify-content: flex-end;
+	gap: 10px;
 }
 
-.tw-when {
-	display: inline-flex;
-	min-width: 0;
-	align-items: center;
-	gap: 6px;
+.tw-progress {
+	display: block;
+	width: min(92px, 42%);
+	height: 5px;
+	margin-inline-start: auto;
 	overflow: hidden;
-	font-size: 12px;
-	font-weight: 500;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.75);
+}
+
+.tw-progress > span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--tw-accent);
+	transition: width 0.45s var(--tw-ease);
+}
+
+.tw-paper .tkx-details {
+	display: inline-flex;
+	gap: 8px;
+	margin-inline-end: auto;
 	color: var(--tw-ink-2);
+	font-size: 12px;
 }
 
-.tw-when svg {
-	flex: none;
-}
-
-.tw-when.is-carried {
-	color: #8a3b12;
+.tw-paper .tkx-details > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
 }
 
 .tw-check {
+	position: relative;
 	display: grid;
-	width: 30px;
-	height: 30px;
+	width: 42px;
+	height: 42px;
 	flex: none;
 	place-items: center;
-	margin-inline-start: auto;
+	border: 0;
 	border-radius: 999px;
-	color: transparent;
-	background: rgba(255, 255, 255, 0.5);
-	box-shadow: inset 0 0 0 1.5px rgba(43, 34, 25, 0.32);
+	color: var(--tw-ink);
+	background: rgba(255, 255, 255, 0.9);
+	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.12), 0 4px 10px -4px rgba(60, 35, 10, 0.25);
 	cursor: pointer;
+	transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.18s ease, color 0.15s ease;
 }
 
 .tw-check:hover {
-	color: rgba(31, 138, 80, 0.75);
-	box-shadow: inset 0 0 0 1.5px var(--tw-done);
+	color: var(--tw-accent);
+	background: #fff;
 }
 
 .tw-check:active {
-	transform: scale(0.88);
-}
-
-.tw-check[aria-pressed='true'] {
-	color: #fff;
-	background: var(--tw-done);
-	box-shadow: none;
+	transform: scale(0.92);
 }
 
 .tw-check:focus-visible {
-	outline: 2px solid #21c063;
+	outline: 2px solid var(--tw-accent);
 	outline-offset: 2px;
 }
 
-/* quiet notes: the number and the check circle show up when you reach for the note */
-.tw-paper .tw-no,
-.tw-paper .tw-check {
+/* plain notes keep the check out of sight until you reach for the note */
+.tw-check:not(.has-steps):not(.is-scheduled) {
 	opacity: 0;
-	transition:
-		opacity 0.18s ease,
-		background-color 0.2s ease,
-		color 0.2s ease,
-		box-shadow 0.2s ease,
-		transform 0.12s ease;
 }
 
-.tw-note:hover .tw-no,
 .tw-note:hover .tw-check,
-.tw-note:focus-within .tw-no,
-.tw-note:focus-within .tw-check,
-.tw-note.is-editing .tw-no,
-.tw-note.is-editing .tw-check {
+.tw-note:focus-within .tw-check {
 	opacity: 1;
 }
 
 @media (hover: none) {
-	.tw-paper .tw-no,
-	.tw-paper .tw-check {
+	.tw-check:not(.has-steps):not(.is-scheduled) {
 		opacity: 1;
 	}
 }
 
-/* done */
-.tw-note.is-done .tw-paper {
-	filter: saturate(0.55);
-	opacity: 0.88;
+.tw-note.is-editing .tw-check {
+	visibility: hidden;
 }
 
+/* steps: a ring counter */
+.tw-check.has-steps .tkx-stepc {
+	position: relative;
+	display: grid;
+	place-items: center;
+}
+
+.tw-check.has-steps .tkx-steps-ring {
+	position: absolute;
+	inset: 0;
+	transform: rotate(-90deg);
+}
+
+.tw-check.has-steps .tkx-steps-ring__track {
+	fill: none;
+	stroke: color-mix(in srgb, var(--tw-accent) 18%, transparent);
+}
+
+.tw-check.has-steps .tkx-steps-ring__fill {
+	fill: none;
+	stroke: var(--tw-accent);
+	stroke-linecap: round;
+}
+
+.tw-check.has-steps .tkx-stepc__n {
+	position: relative;
+	color: var(--tw-ink);
+	font-size: 12.5px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+/* scheduled (daily) notes: a clock that turns into a check when you reach for it */
+.tw-check.is-scheduled .tw-check__tick {
+	display: none;
+}
+
+.tw-check.is-scheduled:hover .tw-check__clock,
+.tw-check.is-scheduled:focus-visible .tw-check__clock {
+	display: none;
+}
+
+.tw-check.is-scheduled:hover .tw-check__tick,
+.tw-check.is-scheduled:focus-visible .tw-check__tick {
+	display: block;
+}
+
+.tw-check[aria-pressed='true'] {
+	color: #fff;
+	background: #2b3036;
+}
+
+/* ─── done ─── */
 .tw-note.is-done .tw-text {
-	color: var(--tw-ink-2);
+	color: color-mix(in srgb, var(--tw-ink) 72%, transparent);
 }
 
 .tw-note.is-done .tw-text span {
-	background-size: 100% 2px;
+	text-decoration: line-through;
+	text-decoration-thickness: 2px;
+	text-decoration-color: color-mix(in srgb, var(--tw-ink) 70%, transparent);
 }
 
-/* the stamp lands when you mark a note done, then lifts; the chip and strikethrough stay */
-.tw-stamp {
-	position: absolute;
-	top: 50%;
-	display: none !important;
-	inset-inline-end: 50%;
-	align-items: center;
-	gap: 4px;
-	margin-inline-end: -42px;
-	padding: 3px 10px 3px 8px;
-	border: 2px solid var(--tw-done);
-	border-radius: 7px;
-	font-size: 12px;
-	font-weight: 800;
-	color: var(--tw-done);
-	background: rgba(255, 255, 255, 0.35);
-	transform: rotate(-10deg);
-	mix-blend-mode: multiply;
-	opacity: 0.85;
-	pointer-events: none;
+.tw-note.is-stamped.is-done .tw-done-chip {
+	animation: tw-chip-in 0.45s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
 
-.tw-note.is-stamped .tw-stamp {
-	display: inline-flex !important;
-	animation: tw-stamp 1.8s cubic-bezier(0.3, 1.4, 0.5, 1) forwards;
-}
-
-/* the "pin a new task" slot */
+/* ─── "pin a new task" ─── */
 .tw-paper--add {
-	align-items: center;
-	justify-content: center;
-	gap: 10px;
-	border: 2px dashed rgba(255, 255, 255, 0.75);
+	display: grid;
+	width: 100%;
+	place-content: center;
+	justify-items: center;
+	gap: 14px;
+	border: 2px dashed rgba(255, 246, 232, 0.8);
 	border-radius: 10px;
-	color: var(--tw-head-ink);
-	background: rgba(255, 255, 255, 0.24);
-	box-shadow: none;
+	color: rgba(58, 38, 18, 0.85);
+	background: rgba(255, 246, 232, 0.08);
+	clip-path: none;
 	cursor: pointer;
-	transform: none;
-	-webkit-backdrop-filter: blur(2px);
-	backdrop-filter: blur(2px);
-	transition:
-		background-color 0.2s ease,
-		border-color 0.2s ease,
-		transform 0.28s cubic-bezier(0.3, 1.4, 0.5, 1),
-		box-shadow 0.25s ease;
-}
-
-.tw-paper--add::after {
-	display: none;
+	transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .tw-add__icon {
 	display: grid;
-	width: 46px;
-	height: 46px;
+	width: 58px;
+	height: 58px;
 	place-items: center;
 	border-radius: 999px;
-	color: var(--tw-ink);
-	background: rgba(255, 255, 255, 0.85);
-	box-shadow: 0 2px 6px rgba(40, 25, 10, 0.15);
-	transition: transform 0.3s cubic-bezier(0.3, 1.4, 0.5, 1);
+	color: #2b2a28;
+	background: #fffdf9;
+	box-shadow: 0 2px 4px rgba(60, 35, 10, 0.12), 0 10px 18px -8px rgba(60, 35, 10, 0.35);
+	transition: transform 0.2s var(--tw-ease);
+}
+
+.tw-add__icon svg {
+	width: 26px;
+	height: 26px;
+	stroke-width: 1.8;
 }
 
 .tw-add__label {
-	font-size: 14px;
-	font-weight: 600;
+	font-size: 15px;
+	font-weight: 500;
 }
 
-.tw-note--add:hover .tw-paper--add,
-.tw-paper--add:focus-visible {
+.tw-note--add:hover .tw-paper--add {
 	border-color: #fff;
-	background: rgba(255, 255, 255, 0.42);
-	box-shadow: 0 16px 24px -18px rgba(60, 35, 10, 0.55);
-	transform: translateY(-3px);
+	background: rgba(255, 246, 232, 0.18);
 }
 
 .tw-note--add:hover .tw-add__icon {
-	transform: rotate(90deg) scale(1.06);
+	transform: scale(1.06);
 }
 
 .tw-paper--add:focus-visible {
-	outline: 2.5px solid #21c063;
-	outline-offset: 4px;
+	outline: 2px solid #fff;
+	outline-offset: 3px;
 }
 
-html.dark .tw-paper--add {
-	border-color: rgba(255, 235, 205, 0.3);
-	background: rgba(0, 0, 0, 0.16);
+html.dark .tw-paper--add,
+html[data-theme-mode='dark'] .tw-paper--add {
+	color: rgba(255, 240, 220, 0.85);
 }
 
-html.dark .tw-add__icon {
-	color: #f6ead6;
-	background: rgba(255, 255, 255, 0.12);
-}
-
-html.dark .tw-note--add:hover .tw-paper--add {
-	border-color: rgba(255, 235, 205, 0.55);
-	background: rgba(0, 0, 0, 0.24);
-}
-
-/* nothing matches the search / filter */
-
-/* drag */
+/* ─── drag ─── */
 .tw-note.is-dragging .tw-paper {
 	opacity: 0.35;
-	filter: grayscale(0.3);
-	box-shadow: none;
-	outline: 2px dashed rgba(255, 255, 255, 0.8);
-	outline-offset: 2px;
 }
 
-.tw-note.is-dragging .tw-pin {
+.tw-note.is-dragging .tw-pin,
+.tw-note.is-dragging::after {
 	opacity: 0;
 }
 
@@ -597,37 +681,68 @@ html.dark .tw-note--add:hover .tw-paper--add {
 
 .tw-float .tw-paper {
 	max-width: none;
-	transform: rotate(3deg) scale(1.04);
-	box-shadow:
-		0 2px 4px rgba(0, 0, 0, 0.12),
-		0 30px 40px -18px rgba(40, 25, 10, 0.6);
+	transform: rotate(2.5deg) scale(1.04);
+	filter: drop-shadow(0 26px 22px rgba(40, 25, 10, 0.4));
 }
 
 .tw-float .tw-no,
-.tw-float .tw-check {
+.tw-float .tw-check:not(.has-steps) {
 	opacity: 0;
 }
 
-/* narrow boards */
+/* ─── narrow boards ─── */
 @media (max-width: 900px) {
-
 	.tw-wall {
-		padding: 6px 14px 18px;
+		padding: 30px 18px 22px;
+	}
+
+	.tw-grid {
+		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+		gap: 32px 18px;
 	}
 }
 
 @media (max-width: 520px) {
+	.tw-frame {
+		padding: 8px;
+		border-radius: 18px;
+	}
+
+	.tw-board {
+		border-radius: 12px;
+	}
+
+	.tw-wall {
+		padding: 26px 12px 18px;
+	}
+
 	.tw-grid {
-		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-		gap: 30px 16px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 30px 12px;
 	}
 
 	.tw-paper {
-		min-height: 158px;
+		min-height: 150px;
+		aspect-ratio: auto;
+		padding: 11px 10px 10px;
 	}
 
 	.tw-text {
-		font-size: 23px;
+		font-size: 18px;
+	}
+
+	.tw-icon {
+		width: 30px;
+		height: 30px;
+	}
+
+	.tw-check {
+		width: 36px;
+		height: 36px;
+	}
+
+	.tw-art {
+		height: 38px !important;
 	}
 }
 
@@ -644,400 +759,75 @@ html.dark .tw-note--add:hover .tw-paper--add {
 	animation: tw-fall 0.38s cubic-bezier(0.5, 0, 0.9, 0.5) forwards;
 }
 
-.tw-note.is-leaving .tw-pin {
+.tw-note.is-leaving .tw-pin,
+.tw-note.is-leaving::after {
 	animation: tw-pin-out 0.22s ease-in forwards;
 }
 
 @keyframes tw-board-in {
 	from {
 		opacity: 0;
-		transform: translateY(10px);
+		transform: translateY(8px);
 	}
 }
 
 @keyframes tw-swing {
 	0% {
 		opacity: 0;
-		transform: translateY(-22px) rotate(-12deg);
+		transform: translateY(-20px) rotate(-8deg);
 	}
-	35% {
+	40% {
 		opacity: 1;
-		transform: rotate(7deg);
+		transform: rotate(4deg);
 	}
-	60% {
-		transform: rotate(-3.5deg);
-	}
-	82% {
-		transform: rotate(1.5deg);
+	70% {
+		transform: rotate(-1.5deg);
 	}
 	100% {
-		transform: rotate(var(--tilt));
+		transform: none;
 	}
 }
 
 @keyframes tw-pin-in {
 	from {
 		opacity: 0;
-		transform: translate(-50%, -18px) rotate(12deg) scale(1.4);
+		transform: translate(-50%, -16px) scale(1.3);
 	}
 }
 
 @keyframes tw-fall {
 	to {
 		opacity: 0;
-		transform: translateY(80px) rotate(22deg);
+		transform: translateY(70px) rotate(14deg);
 	}
 }
 
 @keyframes tw-pin-out {
 	to {
 		opacity: 0;
-		transform: translate(-50%, -26px) rotate(40deg);
 	}
 }
 
-@keyframes tw-stamp {
-	0% {
+@keyframes tw-chip-in {
+	from {
 		opacity: 0;
-		transform: translateY(-50%) rotate(-24deg) scale(1.9);
-	}
-	22%,
-	70% {
-		opacity: 0.9;
-		transform: translateY(-50%) rotate(-10deg) scale(1.15);
-	}
-	100% {
-		opacity: 0;
-		transform: translateY(-50%) rotate(-10deg) scale(1.15);
+		transform: scale(0.6);
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.tw-frame,
+	.tw-note,
 	.tw-paper,
 	.tw-pin,
-	.tw-stamp,
-	.tw-text span {
+	.tw-check,
+	.tw-done-chip,
+	.tw-add__icon {
 		animation: none !important;
 		transition: none !important;
 	}
-}
 
-/* ─── steps: the note fills from the bottom, one band per check ─── */
-
-.tw-check.has-steps {
-	color: var(--tw-done);
-	box-shadow: none;
-}
-
-.tw-check.has-steps:hover {
-	color: var(--tw-done);
-	background: rgba(255, 255, 255, 0.8);
-}
-
-/* a split note keeps its check in view: it shows how far along you are */
-
-/* no header inside the board any more: the notes start right under the frame */
-.tw-wall {
-	padding-top: 14px;
-}
-
-.tw-check.has-steps {
-	width: 36px;
-	height: 36px;
-	background: rgba(255, 255, 255, 0.55);
-}
-
-.tw-check.has-steps .tkx-stepc__n {
-	font-size: 10px;
-	color: var(--tw-ink);
-}
-
-.tw-paper .tkx-details {
-	margin-inline-start: auto;
-	color: var(--tw-ink-2);
-}
-
-.tw-paper .tkx-details + .tw-check {
-	margin-inline-start: 0;
-}
-
-/* ================================================================== */
-/* paper v3: real sticky-note paper                                    */
-/* ================================================================== */
-
-/* the note casts its shadow from its real outline (folded corner included) */
-.tw-note:not(.tw-note--add) {
-	filter: drop-shadow(0 1px 1px rgba(40, 25, 10, 0.16)) drop-shadow(0 10px 10px rgba(60, 35, 10, 0.24));
-	transition: filter 0.3s ease;
-}
-
-.tw-note:not(.tw-note--add):hover,
-.tw-note:not(.tw-note--add):focus-within {
-	filter: drop-shadow(0 2px 2px rgba(40, 25, 10, 0.16)) drop-shadow(0 18px 16px rgba(60, 35, 10, 0.3));
-}
-
-html.dark .tw-note:not(.tw-note--add) {
-	filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)) drop-shadow(0 12px 12px rgba(0, 0, 0, 0.45));
-}
-
-.tw-note.is-dragging {
-	filter: none !important;
-}
-
-.tw-paper:not(.tw-paper--add) {
-	isolation: isolate;
-	gap: 10px;
-	padding: 18px 16px 14px;
-	border-radius: 2px 2px 3px 3px;
-	background:
-		linear-gradient(to bottom, rgba(70, 45, 15, 0.07), rgba(70, 45, 15, 0) 22px),
-		radial-gradient(120% 80% at 18% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
-		radial-gradient(90% 60% at 100% 100%, rgba(120, 80, 30, 0.08), transparent 70%),
-		linear-gradient(178deg, var(--a), var(--b));
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
-	/* bottom-right corner folded up */
-	-webkit-mask: linear-gradient(315deg, transparent 14px, #000 14.5px);
-	mask: linear-gradient(315deg, transparent 14px, #000 14.5px);
-}
-
-.tw-note:hover .tw-paper:not(.tw-paper--add),
-.tw-note:focus-within .tw-paper:not(.tw-paper--add),
-html.dark .tw-paper:not(.tw-paper--add),
-.tw-paper.is-pinned:not(.tw-paper--add) {
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
-}
-
-/* paper fibre */
-.tw-paper:not(.tw-paper--add)::before {
-	content: '';
-	position: absolute;
-	inset: 0;
-	z-index: -1;
-	border-radius: inherit;
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.27 0 0 0 0 0.16 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-	background-size: 180px 180px;
-	opacity: 0.32;
-	mix-blend-mode: multiply;
-	pointer-events: none;
-}
-
-/* the folded flap: the paper's paler back side */
-.tw-paper:not(.tw-paper--add)::after {
-	right: 0;
-	bottom: 0;
-	width: 21px;
-	height: 21px;
-	border-radius: 0;
-	background: linear-gradient(315deg, transparent 50%, color-mix(in srgb, var(--a) 55%, #fff) 50%, color-mix(in srgb, var(--b) 75%, #fff) 100%);
-	filter: drop-shadow(-1px -1px 1.5px rgba(60, 35, 10, 0.22));
-}
-
-/* pinned: a thin gold edge along the top */
-.tw-paper.is-pinned:not(.tw-paper--add) {
-	background:
-		linear-gradient(to bottom, #f2b51d 0 3px, transparent 3px),
-		linear-gradient(to bottom, rgba(70, 45, 15, 0.07), rgba(70, 45, 15, 0) 22px),
-		radial-gradient(120% 80% at 18% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
-		linear-gradient(178deg, var(--a), var(--b));
-}
-
-/* the focus ring lives on the note (the paper is masked) */
-.tw-note:focus-visible {
-	outline: 2.5px solid #21c063;
-	outline-offset: 6px;
-	border-radius: 6px;
-}
-
-.tw-note:focus-visible .tw-paper {
-	outline: none;
-}
-
-.tw-text {
-	font-size: 28px;
-	letter-spacing: 0.005em;
-	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-
-.tw-top {
-	min-height: 26px;
-}
-
-.tw-bottom {
-	padding-top: 8px;
-	border-top: 1px dashed rgba(43, 34, 25, 0.16);
-}
-
-/* the drag clone keeps a shadow of its own */
-.tw-float {
-	filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15)) drop-shadow(0 26px 22px rgba(40, 25, 10, 0.4));
-}
-
-.tw-float .tw-paper {
-	box-shadow: none;
-}
-
-/* ─── progress on a note ─── */
-.tw-paper .tkx-bar {
-	--bar-off: rgba(43, 34, 25, 0.13);
-	padding: 8px 10px 9px;
-	border-radius: 10px;
-	color: var(--tw-ink);
-	background: rgba(255, 255, 255, 0.45);
-	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-}
-
-.tw-check.has-steps {
-	width: 40px;
-	height: 40px;
-	color: #1f9d57;
-	background: rgba(255, 255, 255, 0.7);
-	box-shadow: 0 1px 2px rgba(40, 25, 10, 0.12);
-	transition:
-		transform 0.15s ease,
-		background-color 0.2s ease;
-}
-
-.tw-check.has-steps:hover {
-	background: #fff;
-	transform: scale(1.06);
-}
-
-.tw-check.has-steps:active {
-	transform: scale(0.92);
-}
-
-.tw-paper .tw-check.has-steps {
-	opacity: 1;
-}
-
-.tw-check.has-steps .tkx-stepc__n {
-	font-size: 10.5px;
-	color: var(--tw-ink);
-}
-
-/* finishing the last step: the check lands with a ring burst */
-.tw-note.is-stamped.is-done .tw-check {
-	animation: tw-check-burst 0.6s cubic-bezier(0.3, 1.5, 0.5, 1);
-}
-
-@keyframes tw-check-burst {
-	0% {
-		transform: scale(0.6);
-		box-shadow: 0 0 0 0 rgba(31, 157, 87, 0.55);
-	}
-	60% {
-		transform: scale(1.12);
-		box-shadow: 0 0 0 10px rgba(31, 157, 87, 0);
-	}
-	100% {
-		transform: scale(1);
-	}
-}
-
-/* a finished note: muted, its bar full and green */
-.tw-note.is-done .tw-paper {
-	filter: saturate(0.6) brightness(0.98);
-	opacity: 0.92;
-}
-
-/* ================================================================== */
-/* compact wall: smaller notes, more of them on screen                  */
-/* ================================================================== */
-.tw-grid {
-	grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
-	gap: 28px 18px;
-	padding-top: 16px;
-}
-
-.tw-wall {
-	padding-inline: 18px;
-}
-
-.tw-paper:not(.tw-paper--add) {
-	max-width: 210px;
-	min-height: 138px;
-	gap: 6px;
-	padding: 13px 12px 10px;
-}
-
-.tw-paper--add {
-	max-width: 210px;
-	min-height: 138px;
-}
-
-.tw-pin {
-	top: -14px;
-}
-
-.tw-top {
-	min-height: 22px;
-	gap: 4px;
-}
-
-.tw-paper .tkx-iconbtn--ticket {
-	width: 26px;
-	height: 26px;
-}
-
-.tw-text {
-	font-size: 22px;
-	line-height: 1.08;
-}
-
-.tw-bottom {
-	min-height: 26px;
-	padding-top: 6px;
-	justify-content: flex-end;
-}
-
-.tw-bottom:not(:has(.tkx-details, .tw-check.has-steps)) {
-	border-top-color: transparent;
-}
-
-.tw-check {
-	width: 26px;
-	height: 26px;
-}
-
-.tw-check.has-steps {
-	width: 34px;
-	height: 34px;
-}
-
-.tw-add__icon {
-	width: 38px;
-	height: 38px;
-}
-
-.tw-add__label {
-	font-size: 12.5px;
-	text-align: center;
-}
-
-.tw-paper .tkx-repeat {
-	color: #0f766e;
-	background: rgba(255, 255, 255, 0.6);
-}
-
-@media (min-width: 1500px) {
-	.tw-grid {
-		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-	}
-}
-
-@media (max-width: 520px) {
-	.tw-grid {
-		grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-		gap: 24px 12px;
-	}
-
-	.tw-paper:not(.tw-paper--add),
-	.tw-paper--add {
-		min-height: 120px;
-	}
-
-	.tw-text {
-		font-size: 19px;
+	.tw-note:not(.tw-note--add):hover {
+		transform: none;
 	}
 }

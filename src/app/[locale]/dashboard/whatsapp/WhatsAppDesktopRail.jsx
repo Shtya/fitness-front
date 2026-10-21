@@ -4,6 +4,7 @@ import { FileText,
 	BarChart3,
 	BookOpen,
 	Bot,
+	Languages,
 	LayoutGrid,
 	MessageCircle,
 	Moon,
@@ -320,7 +321,8 @@ export default function WhatsAppDesktopRail({
 
 			<div className="wa-desktop-rail__footer wa-ui-rail-foot" {...dockTip.handlers}>
 				{dockTip.node}
-				{/* One matching set: theme, language and settings share the same square button. */}
+				{/* One card: theme, language and settings as labelled tiles, then the profile. */}
+				<span className="wa-rf-card__handle" aria-hidden="true" />
 				<div className="wa-rf" role="group" aria-label={ar ? 'تفضيلات' : 'Preferences'}>
 					{typeof onToggleDarkMode === 'function' ? (
 						<button
@@ -337,8 +339,13 @@ export default function WhatsAppDesktopRail({
 									: labels.darkMode || (ar ? 'التبديل إلى الوضع الداكن' : 'Switch to dark mode')
 							}
 						>
-							<Sun size={19} strokeWidth={1.9} className="wa-rf__theme-icon is-sun" aria-hidden="true" />
-							<Moon size={18} strokeWidth={1.9} className="wa-rf__theme-icon is-moon" aria-hidden="true" />
+							<span className="wa-rf__tile">
+								<Sun size={19} strokeWidth={1.9} className="wa-rf__theme-icon is-sun" aria-hidden="true" />
+								<Moon size={19} strokeWidth={1.9} className="wa-rf__theme-icon is-moon" aria-hidden="true" />
+							</span>
+							<span className="wa-rf__label" aria-hidden="true">
+								{darkMode ? (ar ? 'فاتح' : 'Light Mode') : ar ? 'داكن' : 'Dark Mode'}
+							</span>
 						</button>
 					) : null}
 					{typeof onSwitchLocale === 'function' ? (
@@ -353,8 +360,11 @@ export default function WhatsAppDesktopRail({
 							}
 							data-tip={ar ? labels.switchToEnglish || 'English' : labels.switchToArabic || 'العربية'}
 						>
-							<span className={`wa-rf__glyph${ar ? ' is-latin' : ' is-arabic'}`} aria-hidden="true">
-								{ar ? 'EN' : 'ع'}
+							<span className="wa-rf__tile">
+								<Languages size={19} strokeWidth={1.9} aria-hidden="true" />
+							</span>
+							<span className="wa-rf__label" aria-hidden="true">
+								{ar ? 'اللغة' : 'Language'}
 							</span>
 						</button>
 					) : null}
@@ -365,9 +375,13 @@ export default function WhatsAppDesktopRail({
 							onClick={() => (onOpenSettings ? onOpenSettings() : onSelect('settings'))}
 							aria-label={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 							aria-current={activeTab === 'settings' ? 'page' : undefined}
-							data-tip={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 						>
-							<Settings size={19} strokeWidth={1.9} aria-hidden="true" />
+							<span className="wa-rf__tile">
+								<Settings size={19} strokeWidth={1.9} aria-hidden="true" />
+							</span>
+							<span className="wa-rf__label" aria-hidden="true">
+								{labels.settings || (ar ? 'الإعدادات' : 'Settings')}
+							</span>
 						</button>
 					) : null}
 				</div>
@@ -396,7 +410,7 @@ export default function WhatsAppDesktopRail({
 							<img src={avatarUrl} alt="" className="size-full object-cover" />
 						) : (
 							<span className="wa-desktop-rail__avatar-fallback grid size-full place-items-center">
-								<User size={18} strokeWidth={1.9} aria-hidden="true" />
+								<User size={20} strokeWidth={2} aria-hidden="true" />
 							</span>
 						)}
 					</span>

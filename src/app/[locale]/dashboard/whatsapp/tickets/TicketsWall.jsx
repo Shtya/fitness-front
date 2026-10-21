@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, CheckCheck, Pin, Plus } from 'lucide-react';
+import { Check, Clock3, Pin, Plus, Repeat } from 'lucide-react';
 import { MAX_TITLE } from './use-daily-tickets';
-import { DetailsHint, PushPin, RepeatBadge, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
+import { DetailsHint, PushPin, StatusChip, StepRing, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
+import { NoteArt, markNumbers, noteTheme } from './wall-art';
 import './tickets-wall.css';
 
 /*
@@ -12,15 +13,7 @@ import './tickets-wall.css';
  */
 
 const FONT_ID = 'tw-hand-fonts';
-const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Caveat:wght@500;700&display=swap';
-const PINS = ['#e5484d', '#3b82f6', '#22a861', '#a855f7', '#f5b400', '#0ea5a4', '#db2777'];
-const TONES = ['yellow', 'blue', 'pink', 'green'];
-
-function hash(str) {
-	let h = 0;
-	for (let i = 0; i < str.length; i += 1) h = (h * 31 + str.charCodeAt(i)) | 0;
-	return Math.abs(h);
-}
+const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Kalam:wght@400;700&display=swap';
 
 function useHandFonts() {
 	useEffect(() => {
@@ -33,14 +26,31 @@ function useHandFonts() {
 	}, []);
 }
 
-function NotePaper({ ticket, c, ar, tone, editing, draft, setDraft, finishEdit, field, actions, onToggleDone }) {
+function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, field, actions, onToggleDone }) {
+	const split = ticket.steps > 1;
+	const daily = ticket.repeat === 'daily';
+	// a counted daily habit shows the repeat mark; everything else its category icon
+	const Icon = daily && split ? Repeat : theme.Icon;
+	const pct = split ? Math.round((ticket.progress / ticket.steps) * 100) : 0;
 	return (
-		<div
-			className={`tw-paper is-${tone} ${ticket.pinned ? 'is-pinned' : ''} ${ticket.steps > 1 ? 'has-steps' : ''}`}
-		>
+		<div className={`tw-paper is-${theme.tone} is-${theme.category} ${ticket.pinned ? 'is-pinned' : ''} ${split ? 'has-steps' : ''}`}>
+			<NoteArt art={theme.art} />
+
 			<div className="tw-top">
-				{ticket.status !== 'todo' ? <StatusChip status={ticket.status} c={c} /> : null}
-				<RepeatBadge ticket={ticket} c={c} compact />
+				{ticket.done ? (
+					<span className="tw-done-chip">
+						<span className="tw-done-chip__tick" aria-hidden>
+							<Check size={12} strokeWidth={3.2} />
+						</span>
+						{c.status.done}
+					</span>
+				) : Icon ? (
+					<span className={`tw-icon${daily ? ' is-daily' : ''}`} title={daily ? `${c.repeatDaily} · ${c.dailyHint}` : undefined}>
+						<Icon size={18} strokeWidth={2.1} aria-hidden />
+						{daily ? <span className="tkx-sr">{c.daily}</span> : null}
+					</span>
+				) : null}
+				{ticket.status === 'doing' ? <StatusChip status={ticket.status} c={c} /> : null}
 				{ticket.pinned ? (
 					<span className="tw-pinned" title={c.pinned}>
 						<Pin size={12} fill="currentColor" aria-hidden />
@@ -74,32 +84,44 @@ function NotePaper({ ticket, c, ar, tone, editing, draft, setDraft, finishEdit, 
 				/>
 			) : (
 				<p className="tw-text" dir="auto" onDoubleClick={() => actions.open(ticket.id)}>
-					<span>{ticket.title}</span>
+					<span>{markNumbers(ticket.title)}</span>
 				</p>
 			)}
 
-			
-
 			<div className="tw-bottom">
+				{split && !ticket.done ? (
+					<span
+						className="tw-progress"
+						role="progressbar"
+						aria-valuemin={0}
+						aria-valuemax={ticket.steps}
+						aria-valuenow={ticket.progress}
+						aria-label={c.stepOf(ticket.progress, ticket.steps)}
+					>
+						<span style={{ width: `${pct}%` }} />
+					</span>
+				) : null}
 				<DetailsHint ticket={ticket} c={c} />
 				<button
 					type="button"
-					className={`tw-check ${ticket.steps > 1 && !ticket.done ? 'has-steps' : ''}`}
+					className={`tw-check${split && !ticket.done ? ' has-steps' : ''}${daily && !split && !ticket.done ? ' is-scheduled' : ''}`}
 					onClick={onToggleDone}
 					aria-pressed={ticket.done}
 					aria-label={checkLabel(ticket, c)}
-					title={ticket.done ? c.reopen : ticket.steps > 1 ? c.nextStep : c.markDone}
+					title={ticket.done ? c.reopen : split ? c.nextStep : c.markDone}
 				>
-					{ticket.steps > 1 && !ticket.done ? <StepRing steps={ticket.steps} progress={ticket.progress} size={36} stroke={3} /> : <Check size={15} strokeWidth={3} aria-hidden />}
+					{split && !ticket.done ? (
+						<StepRing steps={ticket.steps} progress={ticket.progress} size={42} stroke={3} />
+					) : daily && !ticket.done ? (
+						<>
+							<Clock3 size={18} strokeWidth={2.2} className="tw-check__clock" aria-hidden />
+							<Check size={17} strokeWidth={3} className="tw-check__tick" aria-hidden />
+						</>
+					) : (
+						<Check size={17} strokeWidth={3} aria-hidden />
+					)}
 				</button>
 			</div>
-
-			{ticket.done ? (
-				<span className="tw-stamp" aria-hidden>
-					<CheckCheck size={13} strokeWidth={2.8} />
-					{c.status.done}
-				</span>
-			) : null}
 		</div>
 	);
 }
@@ -112,9 +134,7 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 	const field = useRef(null);
 	const self = useRef(null);
 	const closing = useRef(false);
-	const h = hash(ticket.id);
-	const tilt = ((h % 7) - 3) * 0.7;
-	const tone = TONES[h % TONES.length];
+	const theme = noteTheme(ticket);
 
 	useEffect(() => {
 		if (!editing) return;
@@ -159,6 +179,7 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 			aria-label={`${ticket.title}. ${c.status[ticket.status]}${ticket.pinned ? `. ${c.pinned}` : ''}`}
 			className={[
 				'tw-note',
+				`tw-tone-${theme.tone}`,
 				ticket.done ? 'is-done' : '',
 				`is-${ticket.status}`,
 				fresh ? 'is-new' : '',
@@ -167,18 +188,16 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 				editing ? 'is-editing' : '',
 				dragging ? 'is-dragging' : '',
 			].join(' ')}
-			style={{ '--tilt': `${tilt}deg` }}
 			onKeyDown={editing ? undefined : ticketKeyHandler(ticket, actions, ar)}
 			onPointerDown={editing ? undefined : event => onPointerDown(event, ticket.id)}
 		>
 			<span className="tw-pin">
-				<PushPin color={PINS[h % PINS.length]} gold={ticket.pinned} size={ticket.pinned ? 28 : 24} />
+				<PushPin color={theme.pin} gold={ticket.pinned} size={38} />
 			</span>
 			<NotePaper
 				ticket={ticket}
 				c={c}
-				ar={ar}
-				tone={tone}
+				theme={theme}
 				editing={editing}
 				draft={draft}
 				setDraft={setDraft}

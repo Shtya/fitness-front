@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CalendarDays, Check, CheckCheck, ListChecks, Pin, Plus, Repeat, Ticket, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Check, CheckCheck, List, ListChecks, Moon, Pin, Plus, Repeat, Sun, Ticket, Trash2, Undo2, X } from 'lucide-react';
 import { MAX_TITLE, dayKey } from './use-daily-tickets';
 import { COPY, sortTickets } from './tickets-model';
 import { DetailsHint, MiniMenu, RepeatBadge, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, stepInOrder, ticketKeyHandler, useSortable } from './tickets-ui';
@@ -112,7 +112,7 @@ function Composer({ ar, onAdd, autoFocus, compact, inputRef }) {
 			<label htmlFor={id} className="tk-sr">
 				{t.fieldLabel}
 			</label>
-			<Ticket className="tk-composer__icon" size={18} aria-hidden />
+			<List className="tk-composer__icon" size={20} aria-hidden />
 			<input
 				ref={input}
 				id={id}
@@ -434,7 +434,10 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-list'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
 			<header className="tk-board__head">
 				<div className="tk-board__titles">
-					<p className="tk-board__greet">{greetingFor(now, t)}</p>
+					<p className="tk-board__greet">
+						{greetingFor(now, t)}
+						{now.getHours() >= 5 && now.getHours() < 17 ? <Sun size={17} aria-hidden /> : <Moon size={16} aria-hidden />}
+					</p>
 					<h2 id="tk-heading" className="tk-board__title">
 						{t.heading}
 					</h2>

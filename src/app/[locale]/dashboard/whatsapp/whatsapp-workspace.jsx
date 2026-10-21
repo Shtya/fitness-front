@@ -2383,6 +2383,24 @@ function statusMeta(status, t, account) {
 	return { dot: 'bg-slate-400', text: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-800', label: t.offline };
 }
 
+/** "5 minutes ago" / "منذ ٥ دقائق" for a past date; the full date stays in a tooltip. */
+function relativeTimeFrom(date, locale) {
+	const diff = (date.getTime() - Date.now()) / 1000;
+	const steps = [
+		['year', 31536000],
+		['month', 2592000],
+		['week', 604800],
+		['day', 86400],
+		['hour', 3600],
+		['minute', 60],
+	];
+	const rtf = new Intl.RelativeTimeFormat(locale === 'ar' ? 'ar-EG' : 'en', { numeric: 'auto' });
+	for (const [unit, seconds] of steps) {
+		if (Math.abs(diff) >= seconds) return rtf.format(Math.round(diff / seconds), unit);
+	}
+	return rtf.format(0, 'minute');
+}
+
 function statusGradient(status) {
 	if (status === 'connected') return 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
 	if (['connecting', 'qr_pending'].includes(status)) return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
@@ -12261,6 +12279,7 @@ function WhatsAppWorkspaceContent() {
 	const [tabReady, setTabReady] = useState(false);
 	const restoredTabRef = useRef(false);
 	const [settingsSection, setSettingsSection] = useState('ai');
+	const [profileCopied, setProfileCopied] = useState(false);
 	const [accounts, setAccounts] = useState([]);
 	const [accountId, setAccountId] = useState(null);
 	const [onlineContacts, setOnlineContacts] = useState([]);
@@ -29503,104 +29522,139 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'profile' && (
-					<Card className="wa-whatsapp-profile wa-secondary-pane mx-auto max-w-xl overflow-hidden border-0 shadow-none">
+					<div className="wa-secondary-pane wa-pf">
 						{selectedAccount ? (
-							<div>
-								<div className="flex flex-col items-center gap-3 bg-[#f0f2f5] px-5 py-8 dark:bg-slate-800">
-									<Avatar
-										label={selectedAccount.label}
-										size={24}
-										className="ring-4 ring-white dark:ring-slate-900"
-									/>
-									<div className="text-center">
-										<p className="text-lg font-bold text-slate-900 dark:text-white">
-											{selectedAccount.label}
-										</p>
-										{selectedAccount.phoneNumber ? (
-											<p className="mt-1 text-sm text-slate-500" dir="ltr">
-												{selectedAccount.phoneNumber}
-											</p>
-										) : null}
-									</div>
-									{accStatus ? (
-										<span className={`rounded-full px-3 py-1 text-xs font-semibold ${accStatus.bg} ${accStatus.text}`}>
-											{accStatus.label}
-										</span>
-									) : null}
-								</div>
-								<div className="divide-y divide-slate-100 dark:divide-slate-800">
-									<div className="flex items-start gap-3 px-5 py-4">
-										<User size={18} className="mt-0.5 text-[#00a884]" />
-										<div className="min-w-0">
-											<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-												{t.profileName}
-											</p>
-											<p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-white">
-												{selectedAccount.label}
-											</p>
-										</div>
-									</div>
-									{selectedAccount.phoneNumber ? (
-										<div className="flex items-start gap-3 px-5 py-4">
-											<Phone size={18} className="mt-0.5 text-[#00a884]" />
-											<div className="min-w-0">
-												<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-													{t.profilePhone}
-												</p>
-												<p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-white" dir="ltr">
-													{selectedAccount.phoneNumber}
-												</p>
+							(() => {
+								const ar = locale === 'ar';
+								const phone = formatWhatsAppPhone(selectedAccount.phoneNumber) || selectedAccount.phoneNumber || '';
+								const lastConnected = selectedAccount.lastConnectedAt ? new Date(selectedAccount.lastConnectedAt) : null;
+								const status = selectedAccount.status || 'disconnected';
+								const copyNumber = async () => {
+									try {
+										await navigator.clipboard.writeText(selectedAccount.phoneNumber || phone);
+										setProfileCopied(true);
+										window.setTimeout(() => setProfileCopied(false), 1600);
+									} catch {
+										toast.error(ar ? 'تعذر النسخ' : 'Could not copy');
+									}
+								};
+								return (
+									<div className="wa-pf__inner">
+										<section className="wa-pf__card wa-pf__hero">
+											<div className="wa-pf__banner" aria-hidden="true" />
+											<div className="wa-pf__identity">
+												<span className={`wa-pf__avatar is-${status}`}>
+													<Avatar label={selectedAccount.label || 'W'} size={22} src={railAvatarUrl || ''} />
+													<i aria-hidden="true" />
+												</span>
+												<h2 dir="auto">{selectedAccount.label}</h2>
+												{phone ? (
+													<p className="wa-pf__phone" dir="ltr">
+														{phone}
+													</p>
+												) : null}
+												{accStatus ? (
+													<span className={`wa-pf__status is-${status}`}>
+														<i aria-hidden="true" />
+														{accStatus.label}
+													</span>
+												) : null}
+												{accStatus?.hint ? <p className="wa-pf__hint">{accStatus.hint}</p> : null}
 											</div>
-										</div>
-									) : null}
-									<div className="flex items-start gap-3 px-5 py-4">
-										<ShieldCheck size={18} className="mt-0.5 text-[#00a884]" />
-										<div className="min-w-0">
-											<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-												{t.profileStatus}
-											</p>
-											<p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-white">
-												{accStatus?.label || selectedAccount.status}
-											</p>
-										</div>
-									</div>
-									{selectedAccount.lastConnectedAt ? (
-										<div className="flex items-start gap-3 px-5 py-4">
-											<Clock size={18} className="mt-0.5 text-[#00a884]" />
-											<div className="min-w-0">
-												<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-													{t.lastConnected}
-												</p>
-												<p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-white">
-													{new Date(selectedAccount.lastConnectedAt).toLocaleString()}
-												</p>
+											<div className="wa-pf__actions">
+												<button type="button" className="wa-pf__btn is-primary" onClick={() => void loadTabData('accounts')}>
+													<Settings size={16} aria-hidden="true" />
+													{t.manageWhatsAppAccount}
+												</button>
+												{phone ? (
+													<button type="button" className="wa-pf__btn" onClick={() => void copyNumber()}>
+														{profileCopied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+														{profileCopied ? (ar ? 'تم النسخ' : 'Copied') : ar ? 'نسخ الرقم' : 'Copy number'}
+													</button>
+												) : null}
 											</div>
-										</div>
-									) : null}
-								</div>
-								<div className="border-t border-slate-100 px-5 py-4 dark:border-slate-800">
-									<button
-										type="button"
-										onClick={() => void loadTabData('accounts')}
-										className="text-sm font-semibold text-[#00a884] hover:underline"
-									>
+										</section>
+
+										<section className="wa-pf__card">
+											<h3 className="wa-pf__title">{ar ? 'تفاصيل الحساب' : 'Account details'}</h3>
+											<dl className="wa-pf__rows">
+												<div className="wa-pf__row">
+													<span className="wa-pf__row-icon" aria-hidden="true">
+														<User size={17} />
+													</span>
+													<dt>{t.profileName}</dt>
+													<dd>
+														<span dir="auto">{selectedAccount.label}</span>
+													</dd>
+												</div>
+												{phone ? (
+													<div className="wa-pf__row">
+														<span className="wa-pf__row-icon" aria-hidden="true">
+															<Phone size={17} />
+														</span>
+														<dt>{t.profilePhone}</dt>
+														<dd>
+															<span dir="ltr">{phone}</span>
+														</dd>
+														<button
+															type="button"
+															className="wa-pf__icon-btn"
+															onClick={() => void copyNumber()}
+															aria-label={ar ? 'نسخ الرقم' : 'Copy number'}
+															title={ar ? 'نسخ الرقم' : 'Copy number'}
+														>
+															{profileCopied ? <Check size={15} /> : <Copy size={15} />}
+														</button>
+													</div>
+												) : null}
+												<div className="wa-pf__row">
+													<span className="wa-pf__row-icon" aria-hidden="true">
+														<ShieldCheck size={17} />
+													</span>
+													<dt>{t.profileStatus}</dt>
+													<dd>
+														<span className={`wa-pf__status is-sm is-${status}`}>
+															<i aria-hidden="true" />
+															{accStatus?.label || selectedAccount.status}
+														</span>
+													</dd>
+												</div>
+												{lastConnected ? (
+													<div className="wa-pf__row">
+														<span className="wa-pf__row-icon" aria-hidden="true">
+															<Clock size={17} />
+														</span>
+														<dt>{t.lastConnected}</dt>
+														<dd title={lastConnected.toLocaleString(ar ? 'ar-EG' : undefined)}>
+															{relativeTimeFrom(lastConnected, locale)}
+															<small>
+																{lastConnected.toLocaleString(ar ? 'ar-EG' : undefined, {
+																	dateStyle: 'medium',
+																	timeStyle: 'short',
+																})}
+															</small>
+														</dd>
+													</div>
+												) : null}
+											</dl>
+										</section>
+									</div>
+								);
+							})()
+						) : (
+							<div className="wa-pf__inner">
+								<section className="wa-pf__card wa-pf__empty">
+									<span className="wa-pf__empty-icon" aria-hidden="true">
+										<Smartphone size={24} />
+									</span>
+									<p>{t.noWhatsAppProfile}</p>
+									<button type="button" className="wa-pf__btn is-primary" onClick={() => void loadTabData('accounts')}>
 										{t.manageWhatsAppAccount}
 									</button>
-								</div>
-							</div>
-						) : (
-							<div className="px-5 py-10 text-center text-sm text-slate-500">
-								<p>{t.noWhatsAppProfile}</p>
-								<button
-									type="button"
-									onClick={() => void loadTabData('accounts')}
-									className="mt-3 text-sm font-semibold text-[#00a884] hover:underline"
-								>
-									{t.manageWhatsAppAccount}
-								</button>
+								</section>
 							</div>
 						)}
-					</Card>
+					</div>
 				)}
 
 				{activeTab === 'notifications' && (

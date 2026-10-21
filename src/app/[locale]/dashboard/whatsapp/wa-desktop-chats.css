@@ -285,100 +285,191 @@
 		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__divider {
 			margin: 4px auto !important;
 		}
-
-		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
-			gap: 8px;
-			padding-bottom: 10px;
-		}
-
-		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn {
-			height: 32px;
-		}
 	}
 
 	/*
-	 * Bottom dock: part of the rail, not a card floating on it. A hairline closes the tab
-	 * list, the three preferences sit in one recessed well of the rail's own colour, and
-	 * every button uses the tab language (white tile on hover, green tint when on).
+	 * Bottom dock: one white card at the foot of the rail. A small handle on top, theme /
+	 * language / settings as soft square tiles with their names under them, a hairline, then
+	 * the profile. The open (or switched-on) tile is green and glows a little; nothing else does.
 	 */
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
-		--dock-rail: var(--r-solid);
-		--dock-well: color-mix(in srgb, var(--r-solid) 92%, #0b141a);
+		--dock-rail: var(--rf-card);
+		--rf-card: #ffffff;
+		--rf-tile: #f2f3f3;
+		--rf-tile-hover: #e9ecec;
+		--rf-icon: #33414a;
+		--rf-label: #6b7780;
+		--rf-label-on: #1f2c33;
+		--rf-line: #e6e9eb;
+		--rf-on-a: #e2f7ea;
+		--rf-on-b: #c9eed7;
+		--rf-on-ink: #128048;
+		--rf-on-ring: rgba(29, 170, 97, 0.28);
+		--rf-on-glow: rgba(29, 170, 97, 0.38);
+		--rf-avatar: #e3f6ea;
+		--rf-shadow: 0 1px 2px rgba(11, 20, 26, 0.05), 0 14px 30px -16px rgba(11, 20, 26, 0.28);
 		position: relative;
-		gap: 10px;
-		width: 100%;
-		padding: 12px 0 14px;
+		width: calc(100% - 8px);
+		margin: 0 4px 10px;
+		gap: 0;
+		padding: 8px 0 12px;
+		border-radius: 20px;
+		background: var(--rf-card);
+		box-shadow: inset 0 0 0 1px rgba(11, 20, 26, 0.05), var(--rf-shadow);
 	}
 
 	html.dark .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot,
 	html[data-theme-mode='dark'] .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
-		--dock-well: color-mix(in srgb, var(--r-solid) 88%, #000);
+		--rf-card: #232525;
+		--rf-tile: #2d3030;
+		--rf-tile-hover: #363939;
+		--rf-icon: #d5dadc;
+		--rf-label: #959ea3;
+		--rf-label-on: #f2f4f4;
+		--rf-line: #343737;
+		--rf-on-a: rgba(33, 192, 99, 0.22);
+		--rf-on-b: rgba(33, 192, 99, 0.12);
+		--rf-on-ink: #3ddc84;
+		--rf-on-ring: rgba(33, 192, 99, 0.35);
+		--rf-on-glow: rgba(33, 192, 99, 0.3);
+		--rf-avatar: rgba(33, 192, 99, 0.16);
+		--rf-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 28px -16px rgba(0, 0, 0, 0.7);
+		box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), var(--rf-shadow);
 	}
 
+	/* the old hairline above the dock is not needed on a card */
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 50%;
-		width: 22px;
-		height: 2px;
-		margin-left: -11px;
-		border-radius: 2px;
-		background: var(--r-edge);
+		content: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf-card__handle {
+		display: block;
+		width: 18px;
+		height: 3px;
+		margin: 0 auto 10px;
+		border-radius: 999px;
+		background: var(--rf-line);
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf {
-		width: 44px;
-		gap: 2px;
-		padding: 4px;
+		width: 100%;
+		gap: 10px;
+		padding: 0;
 		border: 0;
-		border-radius: 15px;
-		background: var(--dock-well);
-		box-shadow: inset 0 0 0 1px var(--r-edge), inset 0 1px 2px rgba(11, 20, 26, 0.05);
+		border-radius: 0;
+		background: transparent;
+		box-shadow: none;
 	}
 
+	/* a button is its tile plus its name */
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn {
-		width: 36px;
-		height: 36px;
-		border-radius: 11px;
-		color: var(--r-icon);
+		display: flex;
+		width: 100%;
+		height: auto;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		padding: 0;
+		border-radius: 12px;
+		background: transparent;
+		color: var(--rf-icon);
+		box-shadow: none;
+		transform: none;
+		animation: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__tile {
+		display: grid;
+		width: 40px;
+		height: 40px;
+		place-items: center;
+		border-radius: 12px;
+		background: var(--rf-tile);
 		transition:
 			background-color 0.16s ease,
-			color 0.16s ease,
-			box-shadow 0.16s ease,
+			box-shadow 0.18s ease,
 			transform 0.12s ease;
 	}
 
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn svg {
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__tile > svg {
+		grid-area: 1 / 1;
 		width: 19px;
 		height: 19px;
 		stroke-width: 1.85;
 	}
 
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__label {
+		max-width: 100%;
+		overflow: hidden;
+		color: var(--rf-label);
+		font-size: 10px;
+		font-weight: 500;
+		line-height: 1.2;
+		letter-spacing: -0.005em;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		transition: color 0.16s ease;
+	}
+
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:hover {
-		color: var(--r-icon-hover);
-		background: var(--r-hover);
-		box-shadow: var(--r-hover-shadow);
+		background: transparent;
 		transform: none;
 	}
 
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:active {
-		transform: scale(0.92);
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:hover .wa-rf__tile {
+		background: var(--rf-tile-hover);
+		transform: translateY(-1px);
 	}
 
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:focus-visible,
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar:focus-visible {
-		outline: 2px solid var(--r-accent);
-		outline-offset: 2px;
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:hover .wa-rf__label {
+		color: var(--rf-label-on);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:active .wa-rf__tile {
+		transform: scale(0.94);
+	}
+
+	/* keyboard focus sits on the tile, not around the whole button */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:focus-visible {
+		outline: none;
 		box-shadow: none;
 	}
 
-	/* settings open / dark mode on: the same tint as the open tab */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn:focus-visible .wa-rf__tile {
+		box-shadow: 0 0 0 2px var(--rf-card), 0 0 0 4px var(--r-accent);
+	}
+
+	/* settings open / dark mode on: green tile, soft glow, darker name */
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active,
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-theme.is-dark {
-		color: var(--r-active-ink);
-		background: var(--r-active);
-		box-shadow: inset 0 0 0 1px var(--r-active-ring);
+		color: var(--rf-on-ink);
+		background: transparent;
+		box-shadow: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active .wa-rf__tile,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-theme.is-dark .wa-rf__tile {
+		background: linear-gradient(180deg, var(--rf-on-a) 0%, var(--rf-on-b) 100%);
+		box-shadow:
+			inset 0 0 0 1px var(--rf-on-ring),
+			inset 0 1px 0 rgba(255, 255, 255, 0.6),
+			0 6px 16px -6px var(--rf-on-glow);
+	}
+
+	/* dark: no paper highlight, just the green tint and its glow */
+	html.dark .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active .wa-rf__tile,
+	html.dark .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-theme.is-dark .wa-rf__tile,
+	html[data-theme-mode='dark'] .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active .wa-rf__tile,
+	html[data-theme-mode='dark'] .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-theme.is-dark .wa-rf__tile {
+		box-shadow:
+			inset 0 0 0 1px var(--rf-on-ring),
+			0 6px 16px -6px var(--rf-on-glow);
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active .wa-rf__label,
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-theme.is-dark .wa-rf__label {
+		color: var(--rf-label-on);
+		font-weight: 600;
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__btn.is-active::after,
@@ -386,70 +477,126 @@
 		display: none;
 	}
 
-	/* language: a letter drawn with the icons' stroke weight, in the icons' 19px box */
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__glyph {
-		width: 19px;
-		height: 19px;
-		border-width: 1.6px;
-		border-radius: 5.5px;
+	/* hairline between the preferences and the profile */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer .wa-ui-rail-foot__divider {
+		display: block;
+		width: 24px;
+		height: 2px;
+		margin: 12px auto;
+		border-radius: 2px;
+		background: var(--rf-line);
 	}
 
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__glyph.is-arabic {
-		font-size: 11.5px;
-	}
-
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__glyph.is-latin {
-		font-size: 8.5px;
-		font-weight: 800;
-	}
-
-	/* profile: the avatar in a thin ring, status as a dot on its corner */
+	/* profile: a soft green circle, the photo when there is one, status dot on the corner */
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar {
-		width: 40px;
-		height: 40px;
+		width: 44px;
+		height: 44px;
+		margin: 0 auto;
 		border-radius: 50%;
+		animation: none;
+		transition: transform 0.15s ease;
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar .wa-ui-rail-avatar__img {
-		width: 36px !important;
-		height: 36px !important;
-		background: var(--r-hover) !important;
+		width: 44px !important;
+		height: 44px !important;
+		background: var(--rf-avatar) !important;
 		box-shadow:
-			0 0 0 2px var(--r-solid),
-			0 0 0 3px var(--r-edge);
-		transition: box-shadow 0.18s ease, transform 0.18s ease;
+			inset 0 0 0 1px var(--rf-on-ring),
+			0 4px 12px -6px var(--rf-on-glow);
+		transition: box-shadow 0.18s ease;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-fallback {
+		color: var(--rf-on-ink);
+		background: transparent;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar:hover {
+		transform: translateY(-1px);
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar:hover .wa-ui-rail-avatar__img {
 		box-shadow:
-			0 0 0 2px var(--r-solid),
-			0 0 0 3.5px color-mix(in srgb, var(--r-accent) 45%, var(--r-edge)),
-			var(--r-hover-shadow);
-	}
-
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar:hover {
-		transform: none;
+			inset 0 0 0 1px var(--rf-on-ring),
+			0 0 0 3px color-mix(in srgb, var(--r-accent) 18%, transparent),
+			0 6px 14px -6px var(--rf-on-glow);
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar.is-active .wa-ui-rail-avatar__img {
 		box-shadow:
-			0 0 0 2px var(--r-solid),
-			0 0 0 4px var(--r-accent);
+			0 0 0 2px var(--rf-card),
+			0 0 0 4px var(--r-accent),
+			0 6px 14px -6px var(--rf-on-glow);
 	}
 
-	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-fallback {
-		color: var(--r-active-ink);
-		background: var(--r-active);
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar:focus-visible {
+		outline: none;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar:focus-visible .wa-ui-rail-avatar__img {
+		box-shadow: 0 0 0 2px var(--rf-card), 0 0 0 4px var(--r-accent);
 	}
 
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar .wa-desktop-rail__online-dot {
-		inset-inline-end: 0;
-		bottom: 0;
-		width: 12px;
-		height: 12px;
-		border: 2.5px solid var(--r-solid);
-		background: var(--r-accent);
-		box-shadow: none;
+		inset-inline-end: -1px;
+		bottom: -1px;
+		width: 14px;
+		height: 14px;
+		border: 3px solid var(--rf-card) !important;
+		background: #10b05a;
+		box-shadow: 0 1px 3px rgba(11, 20, 26, 0.18);
+	}
+
+	/* narrow rail (58px): slightly smaller names */
+	@media (max-width: 1050px) {
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__label {
+			font-size: 9px;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__tile {
+			width: 38px;
+			height: 38px;
+		}
+	}
+
+	/* short windows: tiles only, so the tabs above keep their room */
+	@media (max-height: 860px) {
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf-card__handle,
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__label {
+			display: none;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer.wa-ui-rail-foot {
+			padding: 8px 0 10px;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf {
+			gap: 4px;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__tile {
+			width: 36px;
+			height: 36px;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__footer .wa-ui-rail-foot__divider {
+			margin: 8px auto;
+		}
+
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar,
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-ui-rail-avatar .wa-ui-rail-avatar__img {
+			width: 38px !important;
+			height: 38px !important;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-rf__tile,
+		html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-rail__avatar-btn.wa-ui-rail-avatar {
+			transition: none;
+			transform: none !important;
+		}
 	}
 
 	/* ─────────────────────────────────────────────────────────────── */
