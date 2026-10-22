@@ -12480,6 +12480,38 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	user-select: auto;
 }
 
+/* "Only selected chats": blur stays only inside [data-privacy-chat] (rows, open thread, split pane, tip). */
+html.wa-privacy-on.wa-privacy-selected
+	:is(
+		.wa-privacy-sensitive,
+		.title-chat,
+		.desc-chat,
+		.wa-avatar-3d,
+		.wa-conversation-avatar,
+		.wa-collapsed-chat-tip-title,
+		.wa-collapsed-chat-tip-preview,
+		.wa-chat-avatar-ring,
+		.wa-chat-contact h3,
+		.wa-privacy-identity,
+		.wa-message-text,
+		.wa-message-bubble > p,
+		.wa-message-bubble a.block,
+		.wa-media-gallery,
+		.wa-photo-tile,
+		.wa-file-card,
+		.wa-voice-message,
+		.wa-message-bubble video,
+		.wa-split-pane h3
+	):not([data-privacy-chat] *),
+html.wa-privacy-on.wa-privacy-selected:not(.wa-privacy-open-chat) .wa-chat-image-viewer img {
+	filter: none !important;
+	user-select: auto;
+}
+
+html.wa-privacy-on.wa-privacy-selected .wa-file-card:not([data-privacy-chat] *) {
+	clip-path: none;
+}
+
 .transcript-voice-player {
 	display: flex;
 	align-items: center;

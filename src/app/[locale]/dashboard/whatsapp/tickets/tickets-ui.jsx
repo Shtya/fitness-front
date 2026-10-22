@@ -27,7 +27,13 @@ export function MiniMenu({ label, icon, text, items, align = 'end', className = 
 	const close = (refocus = true) => {
 		setOpen(false);
 		setPos(null);
-		if (refocus) window.setTimeout(() => btn.current?.focus(), 0);
+		if (!refocus) return;
+		window.setTimeout(() => {
+			// An item may have moved focus on purpose (Edit focuses the note's textarea); don't steal it back.
+			const active = document.activeElement;
+			if (active && active !== document.body && active.isConnected) return;
+			btn.current?.focus();
+		}, 0);
 	};
 
 	// Measure the list, then place it next to the trigger inside the viewport.

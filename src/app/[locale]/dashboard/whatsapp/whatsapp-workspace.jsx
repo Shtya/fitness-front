@@ -453,6 +453,7 @@ import { isEmailMemoMessageText } from './email-memo-message';
 import MarkdownMessage from '../ai-free/MarkdownMessage';
 import {
 	applyWhatsAppPrivacyBlurClasses,
+	isWhatsAppChatPrivacyBlurred,
 	markPrivacyBlurRevealed,
 	readWhatsAppPrivacyBlur,
 	writeWhatsAppPrivacyBlur,
@@ -11871,6 +11872,7 @@ const WaConversationRow = memo(function WaConversationRow({
 	t,
 	actions,
 	agentBadge = null,
+	privacyBlurred = false,
 }) {
 	const title = conversationTitle(conversation);
 	const titlePresentation = messageTextPresentation(title);
@@ -11910,6 +11912,7 @@ const WaConversationRow = memo(function WaConversationRow({
 							: 'typing…'
 						: previewText,
 					unread: unreadCount,
+					privacyBlurred,
 					top: rect.top + rect.height / 2,
 					left: isRtl ? rect.left - 8 : rect.right + 8,
 					align: isRtl ? 'end' : 'start',
@@ -11941,6 +11944,7 @@ const WaConversationRow = memo(function WaConversationRow({
 			aria-current={active && !isSplitSecondary ? 'true' : undefined}
 			data-selected={active ? 'true' : undefined}
 			data-conversation-id={conversation.id}
+			data-privacy-chat={privacyBlurred ? 'on' : undefined}
 		>
 			<div className="wa-conversation-avatar relative grid h-11 w-11 shrink-0 place-items-center">
 				{story ? (
@@ -13106,6 +13110,28 @@ function WhatsAppWorkspaceContent() {
 		() => effectiveConversations.find(item => item.id === conversationId) || null,
 		[effectiveConversations, conversationId],
 	);
+	const privacyBlurChatIds = useMemo(
+		() =>
+			privacyBlur.enabled && privacyBlur.selectedOnly
+				? new Set(privacyBlur.chatIds)
+				: null,
+		[privacyBlur.enabled, privacyBlur.selectedOnly, privacyBlur.chatIds],
+	);
+	const privacyBlurPickerChats = useMemo(
+		() =>
+			privacyBlur.selectedOnly
+				? effectiveConversations.map(item => ({
+						id: item.id,
+						title: conversationTitle(item),
+						subtitle:
+							item.type === 'group'
+								? ''
+								: String(item.contact?.phoneNumber || '').trim(),
+					}))
+				: [],
+		[effectiveConversations, privacyBlur.selectedOnly],
+	);
+	const selectedChatPrivacyBlurred = isWhatsAppChatPrivacyBlurred(privacyBlur, conversationId);
 	const selectedChatTitle = selectedConversation
 		? conversationTitle(selectedConversation)
 		: '';
@@ -14001,6 +14027,15 @@ function WhatsAppWorkspaceContent() {
 		writeWhatsAppPrivacyBlur(privacyBlur);
 		applyWhatsAppPrivacyBlurClasses(privacyBlur);
 	}, [privacyBlur]);
+
+	// The image viewer is portaled outside the thread, so it follows the open chat via a root class.
+	useEffect(() => {
+		const open =
+			selectedChatPrivacyBlurred ||
+			isWhatsAppChatPrivacyBlurred(privacyBlur, secondaryConversationId);
+		document.documentElement.classList.toggle('wa-privacy-open-chat', open);
+		return () => document.documentElement.classList.remove('wa-privacy-open-chat');
+	}, [privacyBlur, selectedChatPrivacyBlurred, secondaryConversationId]);
 
 	useEffect(() => {
 		if (!searchOpen) return undefined;
@@ -25798,6 +25833,7 @@ function WhatsAppWorkspaceContent() {
 											<WhatsAppPrivacyBlurControl
 												value={privacyBlur}
 												onChange={setPrivacyBlur}
+												chats={privacyBlurPickerChats}
 												labels={{
 													blurToggle: t.blurToggle,
 													blurToggleHint: t.blurToggleHint,
@@ -26301,6 +26337,7 @@ function WhatsAppWorkspaceContent() {
 													t={t}
 													actions={conversationRowActions}
 													agentBadge={agentRowBadge(agentRowStates.get(conversation.id))}
+													privacyBlurred={Boolean(privacyBlurChatIds?.has(conversation.id))}
 												/>
 												</WaSwipeRow>
 											))}
@@ -26329,6 +26366,7 @@ function WhatsAppWorkspaceContent() {
 								createPortal(
 									<div
 										className={`wa-collapsed-chat-tip ${collapsedChatTip.align === 'end' ? 'is-end' : ''}`}
+										data-privacy-chat={collapsedChatTip.privacyBlurred ? 'on' : undefined}
 										style={{
 											top: collapsedChatTip.top,
 											left: collapsedChatTip.left,
@@ -26350,7 +26388,10 @@ function WhatsAppWorkspaceContent() {
 								)}
 						</aside>
 						<WaErrorBoundary locale={locale}>
-						<section className={`wa-chat-thread-pane relative ${!conversationId ? 'hidden min-[769px]:flex' : 'flex'} h-full min-h-0 min-w-0 flex-col overflow-hidden`}>
+						<section
+							className={`wa-chat-thread-pane relative ${!conversationId ? 'hidden min-[769px]:flex' : 'flex'} h-full min-h-0 min-w-0 flex-col overflow-hidden`}
+							data-privacy-chat={selectedChatPrivacyBlurred ? 'on' : undefined}
+						>
 							{!selectedConversation ? (
 								// Mobile hides this pane, so skip mounting its animated scene there.
 								!isDesktopLayout ? null : <ChatIdlePane
@@ -28851,6 +28892,12 @@ function WhatsAppWorkspaceContent() {
 						</WaErrorBoundary>
 						{selectedSecondaryConversation ? (
 							<WaErrorBoundary locale={locale}>
+							<div
+								className="contents"
+								data-privacy-chat={
+									privacyBlurChatIds?.has(selectedSecondaryConversation.id) ? 'on' : undefined
+								}
+							>
 							<WhatsAppSplitPane
 								conversation={selectedSecondaryConversation}
 								accountId={accountId}
@@ -28864,6 +28911,7 @@ function WhatsAppWorkspaceContent() {
 									setSplitLiveMessage(null);
 								}}
 							/>
+							</div>
 							</WaErrorBoundary>
 						) : null}
 					</Card>
