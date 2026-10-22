@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -13,6 +13,8 @@ import {
 	Calculator,
 	Calendar,
 	Check,
+	ChevronDown,
+	Equal,
 	ChevronLeft,
 	ChevronRight,
 	Coins,
@@ -317,20 +319,54 @@ function RecurringMonthlyToggle({ ar, checked, onChange, kind = 'money' }) {
 			: ar
 				? 'زي المرتب — هيتضاف تاني الشهر الجاي في التوقّع'
 				: 'Like a salary — counted again next month in the forecast';
+	return <ToggleCard checked={checked} onChange={onChange} icon={Repeat} title={title} hint={hint} />;
+}
+
+/** Selectable card with a real (visually hidden) checkbox, so keyboard + screen readers still work. */
+function ToggleCard({ checked, onChange, icon: Icon, title, hint }) {
 	return (
-		<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-slate-600">
+		<label
+			className={`group relative flex cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-3 transition [touch-action:manipulation] active:scale-[0.99] ${
+				checked
+					? 'border-[#1DAB61]/60 bg-[#1DAB61]/[0.07] shadow-[0_6px_18px_-12px_rgba(29,171,97,0.9)] dark:border-[#1DAB61]/50 dark:bg-[#1DAB61]/10'
+					: 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70 dark:border-slate-700/80 dark:bg-slate-900/40 dark:hover:border-slate-600'
+			}`}
+		>
 			<input
 				type="checkbox"
 				checked={checked}
 				onChange={event => onChange(event.target.checked)}
-				className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#1DAB61] focus:ring-[#1DAB61]/30 dark:border-slate-600 dark:bg-slate-950"
+				className="peer sr-only"
 			/>
+			<span
+				aria-hidden="true"
+				className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition ${
+					checked
+						? 'bg-[#1DAB61]/15 text-[#128c4f] dark:text-[#4ade80]'
+						: 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+				}`}
+			>
+				<Icon size={16} strokeWidth={2.2} />
+			</span>
 			<span className="min-w-0 flex-1">
-				<span className="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-100">
-					<Repeat size={14} className="shrink-0 text-[#1DAB61]" aria-hidden="true" />
+				<span
+					className={`block text-[13.5px] font-bold transition-colors ${
+						checked ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200'
+					}`}
+				>
 					{title}
 				</span>
-				<span className="mt-0.5 block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{hint}</span>
+				<span className="mt-0.5 block text-[11.5px] font-medium leading-snug text-slate-500 dark:text-slate-400">{hint}</span>
+			</span>
+			<span
+				aria-hidden="true"
+				className={`grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[7px] border-2 transition-all peer-focus-visible:ring-4 peer-focus-visible:ring-[#1DAB61]/25 ${
+					checked
+						? 'scale-100 border-[#1DAB61] bg-[#1DAB61] text-white'
+						: 'border-slate-300 bg-white text-transparent group-hover:border-slate-400 dark:border-slate-600 dark:bg-slate-950'
+				}`}
+			>
+				<Check size={14} strokeWidth={3.5} />
 			</span>
 		</label>
 	);
@@ -347,20 +383,7 @@ function AffectsBalanceToggle({ ar, checked, onChange, kind = 'expense' }) {
 			: ar
 				? 'لو دي فلوس كانت معاك برة الرصيد المتتبع، شيل العلامة'
 				: 'Uncheck if this spend was not from your tracked balance';
-	return (
-		<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-slate-600">
-			<input
-				type="checkbox"
-				checked={checked}
-				onChange={event => onChange(event.target.checked)}
-				className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#1DAB61] focus:ring-[#1DAB61]/30 dark:border-slate-600 dark:bg-slate-950"
-			/>
-			<span className="min-w-0">
-				<span className="block text-[13px] font-bold text-slate-800 dark:text-slate-100">{title}</span>
-				<span className="mt-0.5 block text-[11.5px] font-medium leading-snug text-slate-500 dark:text-slate-400">{hint}</span>
-			</span>
-		</label>
-	);
+	return <ToggleCard checked={checked} onChange={onChange} icon={Wallet} title={title} hint={hint} />;
 }
 
 const fieldClass =
@@ -690,11 +713,14 @@ function EditItemSheet({ item, ar, money, usdToEgp, onClose, ...props }) {
 	);
 }
 
-function UsdFxBadge({ ar, money, amount, rate }) {
+function UsdFxBadge({ ar, money, amount, rate, inline = false }) {
 	if (!(amount > 0)) return null;
+	const place = inline
+		? 'inline-block max-w-full'
+		: 'pointer-events-none absolute end-2 top-1/2 max-w-[46%] -translate-y-1/2';
 	if (!(rate > 0)) {
 		return (
-			<span className="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
+			<span className={`${place} rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-950/50 dark:text-sky-300`}>
 				USD
 			</span>
 		);
@@ -703,12 +729,15 @@ function UsdFxBadge({ ar, money, amount, rate }) {
 	return (
 		<span
 			title={formatFxRate(rate, ar)}
-			className="pointer-events-none absolute end-2 top-1/2 max-w-[46%] -translate-y-1/2 truncate rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
+			className={`${place} truncate rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-sky-700 dark:bg-sky-950/50 dark:text-sky-300`}
 		>
 			≈ {money(egp)}
 		</span>
 	);
 }
+
+const nameAmountRow = 'grid grid-cols-[minmax(0,4fr)_minmax(4.5rem,1fr)] items-start gap-3';
+const compactAmountClass = `${fieldClass} px-2.5! text-center font-bold tabular-nums`;
 
 function EditItemForm({ item, ar, money, usdToEgp, pending, onSubmit }) {
 	const [name, setName] = useState(item.name);
@@ -784,37 +813,42 @@ function AddItemForm({ ar, money, usdToEgp, pending, onSubmit }) {
 				if (valid) onSubmit({ name: name.trim(), amount: value, currency, date, received, recurring });
 			}}
 		>
-			<div className="grid grid-cols-[minmax(0,1fr)_5.75rem] gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(5.75rem,7.5rem)_9.5rem]">
-				<Field label={ar ? 'الاسم' : 'Name'} className="col-span-2 sm:col-span-1">
-					<input
-						value={name}
-						onChange={event => setName(event.target.value)}
-						maxLength={180}
-						placeholder={ar ? 'مثلاً: مرتب، شغل حر…' : 'e.g. Salary, freelance…'}
-						className={fieldClass}
-					/>
-				</Field>
-				<Field
-					label={ar ? 'المبلغ' : 'Amount'}
-					hint={ar ? '$ للدولار' : '$ for USD'}
-					error={amountInvalid ? (ar ? 'اكتب مبلغ صحيح' : 'Enter a valid amount') : null}
-				>
-					<div className="relative">
+			<div className="flex flex-col gap-1.5">
+				<div className={nameAmountRow}>
+					<Field label={ar ? 'الاسم' : 'Name'}>
+						<input
+							value={name}
+							onChange={event => setName(event.target.value)}
+							maxLength={180}
+							placeholder={ar ? 'مثلاً: مرتب، شغل حر…' : 'e.g. Salary, freelance…'}
+							className={fieldClass}
+						/>
+					</Field>
+					<Field label={ar ? 'المبلغ' : 'Amount'}>
 						<input
 							inputMode="text"
 							value={amount}
 							onChange={event => setAmount(event.target.value)}
 							aria-invalid={amountInvalid || undefined}
-							placeholder={ar ? '400 أو $400' : '400 or $400'}
-							className={`${fieldClass} pe-19 font-bold tabular-nums`}
+							aria-label={ar ? 'المبلغ ($ للدولار)' : 'Amount ($ for USD)'}
+							placeholder="0"
+							className={compactAmountClass}
 						/>
-						{currency === 'USD' ? <UsdFxBadge ar={ar} money={money} amount={value} rate={usdToEgp} /> : null}
-					</div>
-				</Field>
-				<Field label={ar ? 'التاريخ' : 'Date'} className="col-span-2 sm:col-span-1">
-					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
-				</Field>
+					</Field>
+				</div>
+				<p className="flex min-h-5 items-center justify-end gap-2 text-[11px] font-semibold text-slate-400">
+					{amountInvalid ? (
+						<span className="text-rose-500">{ar ? 'اكتب مبلغ صحيح' : 'Enter a valid amount'}</span>
+					) : currency === 'USD' ? (
+						<UsdFxBadge ar={ar} money={money} amount={value} rate={usdToEgp} inline />
+					) : (
+						<span>{ar ? 'اكتب $ قبل المبلغ للدولار' : 'Type $ before the amount for USD'}</span>
+					)}
+				</p>
 			</div>
+			<Field label={ar ? 'التاريخ' : 'Date'}>
+				<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
+			</Field>
 			<RecurringMonthlyToggle ar={ar} checked={recurring} onChange={setRecurring} kind="money" />
 			<div className="flex flex-wrap items-center gap-3">
 				<button
@@ -939,31 +973,31 @@ function AddGoldForm({ ar, money, gold, pending, onSubmit }) {
 				onSubmit({ grams: value, karat, name: name.trim() || (ar ? `دهب عيار ${karat}` : `Gold ${karat}K`) });
 			}}
 		>
-			<div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_11rem]">
-				<Field label={ar ? 'الاسم' : 'Name'} hint={ar ? 'اختياري' : 'Optional'}>
-					<input
-						value={name}
-						onChange={event => setName(event.target.value)}
-						maxLength={120}
-						placeholder={ar ? `دهب عيار ${karat}` : `Gold ${karat}K`}
-						className={fieldClass}
-					/>
-				</Field>
-				<Field label={ar ? 'الوزن' : 'Weight'} error={gramsInvalid ? (ar ? 'اكتب وزن صحيح' : 'Enter a valid weight') : null}>
-					<div className="relative">
+			<div className="flex flex-col gap-1.5">
+				<div className={nameAmountRow}>
+					<Field label={ar ? 'الاسم' : 'Name'} hint={ar ? 'اختياري' : 'Optional'}>
+						<input
+							value={name}
+							onChange={event => setName(event.target.value)}
+							maxLength={120}
+							placeholder={ar ? `دهب عيار ${karat}` : `Gold ${karat}K`}
+							className={fieldClass}
+						/>
+					</Field>
+					<Field label={ar ? 'الوزن (جم)' : 'Weight (g)'}>
 						<input
 							inputMode="decimal"
 							value={grams}
 							onChange={event => setGrams(event.target.value)}
 							aria-invalid={gramsInvalid || undefined}
 							placeholder="0"
-							className={`${fieldClass} pe-12 font-bold tabular-nums`}
+							className={compactAmountClass}
 						/>
-						<span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-							{ar ? 'جرام' : 'g'}
-						</span>
-					</div>
-				</Field>
+					</Field>
+				</div>
+				{gramsInvalid ? (
+					<p className="text-end text-[11px] font-semibold text-rose-500">{ar ? 'اكتب وزن صحيح' : 'Enter a valid weight'}</p>
+				) : null}
 			</div>
 
 			<div className="flex flex-col gap-1.5">
@@ -1030,30 +1064,35 @@ function AddLentForm({ ar, pending, onSubmit, available }) {
 				if (valid) onSubmit({ person: person.trim(), amount: value, date, affectsBalance });
 			}}
 		>
-			<div className="grid grid-cols-[minmax(0,1fr)_5.75rem] gap-3 sm:grid-cols-[minmax(0,1.5fr)_5.75rem_9.5rem]">
-				<Field label={ar ? 'مع مين؟' : 'Who has it?'} className="col-span-2 sm:col-span-1">
-					<input
-						value={person}
-						onChange={event => setPerson(event.target.value)}
-						maxLength={120}
-						placeholder={ar ? 'اسم الشخص' : 'Person name'}
-						className={fieldClass}
-					/>
-				</Field>
-				<Field label={ar ? 'المبلغ' : 'Amount'} error={amountInvalid ? (ar ? 'مبلغ غير صحيح' : 'Invalid amount') : null}>
-					<input
-						inputMode="decimal"
-						value={amount}
-						onChange={event => setAmount(event.target.value)}
-						aria-invalid={amountInvalid || undefined}
-						placeholder="0"
-						className={`${fieldClass} font-bold tabular-nums`}
-					/>
-				</Field>
-				<Field label={ar ? 'تاريخ السلفة' : 'Lent on'} className="col-span-2 sm:col-span-1">
-					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
-				</Field>
+			<div className="flex flex-col gap-1.5">
+				<div className={nameAmountRow}>
+					<Field label={ar ? 'مع مين؟' : 'Who has it?'}>
+						<input
+							value={person}
+							onChange={event => setPerson(event.target.value)}
+							maxLength={120}
+							placeholder={ar ? 'اسم الشخص' : 'Person name'}
+							className={fieldClass}
+						/>
+					</Field>
+					<Field label={ar ? 'المبلغ' : 'Amount'}>
+						<input
+							inputMode="decimal"
+							value={amount}
+							onChange={event => setAmount(event.target.value)}
+							aria-invalid={amountInvalid || undefined}
+							placeholder="0"
+							className={compactAmountClass}
+						/>
+					</Field>
+				</div>
+				{amountInvalid ? (
+					<p className="text-end text-[11px] font-semibold text-rose-500">{ar ? 'مبلغ غير صحيح' : 'Invalid amount'}</p>
+				) : null}
 			</div>
+			<Field label={ar ? 'تاريخ السلفة' : 'Lent on'}>
+				<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
+			</Field>
 			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="lent" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} w-full sm:w-auto sm:self-end`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
@@ -1096,30 +1135,35 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance, recurring });
 			}}
 		>
-			<div className="grid grid-cols-[minmax(0,1fr)_5.75rem] gap-3 sm:grid-cols-[minmax(0,1.5fr)_5.75rem_9.5rem]">
-				<Field label={ar ? 'صرفت في إيه؟' : 'Spent on'} className="col-span-2 sm:col-span-1">
-					<input
-						value={name}
-						onChange={event => setName(event.target.value)}
-						maxLength={180}
-						placeholder={ar ? 'مثلاً: أكل، مواصلات…' : 'e.g. Food, transport…'}
-						className={fieldClass}
-					/>
-				</Field>
-				<Field label={ar ? 'المبلغ' : 'Amount'} error={amountInvalid ? (ar ? 'مبلغ غير صحيح' : 'Invalid amount') : null}>
-					<input
-						inputMode="decimal"
-						value={amount}
-						onChange={event => setAmount(event.target.value)}
-						aria-invalid={amountInvalid || undefined}
-						placeholder="0"
-						className={`${fieldClass} font-bold tabular-nums`}
-					/>
-				</Field>
-				<Field label={ar ? 'تاريخ الصرف' : 'Date'} className="col-span-2 sm:col-span-1">
-					<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
-				</Field>
+			<div className="flex flex-col gap-1.5">
+				<div className={nameAmountRow}>
+					<Field label={ar ? 'صرفت في إيه؟' : 'Spent on'}>
+						<input
+							value={name}
+							onChange={event => setName(event.target.value)}
+							maxLength={180}
+							placeholder={ar ? 'مثلاً: أكل، مواصلات…' : 'e.g. Food, transport…'}
+							className={fieldClass}
+						/>
+					</Field>
+					<Field label={ar ? 'المبلغ' : 'Amount'}>
+						<input
+							inputMode="decimal"
+							value={amount}
+							onChange={event => setAmount(event.target.value)}
+							aria-invalid={amountInvalid || undefined}
+							placeholder="0"
+							className={compactAmountClass}
+						/>
+					</Field>
+				</div>
+				{amountInvalid ? (
+					<p className="text-end text-[11px] font-semibold text-rose-500">{ar ? 'مبلغ غير صحيح' : 'Invalid amount'}</p>
+				) : null}
 			</div>
+			<Field label={ar ? 'تاريخ الصرف' : 'Date'}>
+				<DateInput ar={ar} value={date} onChange={event => setDate(event.target.value)} />
+			</Field>
 			{affectsBalance && date > todayYmd() ? (
 				<p className="rounded-xl bg-violet-50 px-3.5 py-2.5 text-[12px] font-semibold leading-snug text-violet-800 dark:bg-violet-950/40 dark:text-violet-200">
 					{ar
@@ -1806,13 +1850,29 @@ function LedgerFilterSheet({
 	);
 }
 
-function SpendDailyChart({ open, ar, money, series, today, onClose }) {
+function SpendDailyChart({ open, ar, money, series, entries = [], today, onClose }) {
 	const thisMonth = String(today || todayYmd()).slice(0, 7);
 	const [month, setMonth] = useState(thisMonth);
+	const [openDay, setOpenDay] = useState(null);
 
 	useEffect(() => {
 		if (open) setMonth(thisMonth);
 	}, [open, thisMonth]);
+
+	useEffect(() => {
+		setOpenDay(null);
+	}, [month, open]);
+
+	const entriesByDay = useMemo(() => {
+		const map = new Map();
+		for (const row of entries) {
+			if (!row.date) continue;
+			if (!map.has(row.date)) map.set(row.date, []);
+			map.get(row.date).push(row);
+		}
+		for (const list of map.values()) list.sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
+		return map;
+	}, [entries]);
 
 	const monthSeries = useMemo(
 		() => series.filter(([date]) => String(date).startsWith(month)),
@@ -1877,23 +1937,89 @@ function SpendDailyChart({ open, ar, money, series, today, onClose }) {
 						{monthSeries.map(([date, amount]) => {
 							const ratio = amount / max;
 							const barColor = spendBarColor(ratio);
+							const items = entriesByDay.get(date) || [];
+							const expanded = openDay === date;
 							return (
-								<li key={date} className="flex flex-col gap-1">
-									<div className="flex items-baseline justify-between gap-2 text-[11px]">
-										<span className="font-bold tabular-nums text-slate-500">{formatWeekdayDay(date, ar)}</span>
-										<span className="font-black tabular-nums" style={{ color: barColor }}>
-											{money(amount)}
+								<li
+									key={date}
+									className={`rounded-2xl transition-colors ${expanded ? 'bg-slate-50 dark:bg-slate-800/50' : ''}`}
+								>
+									<button
+										type="button"
+										aria-expanded={expanded}
+										onClick={() => setOpenDay(current => (current === date ? null : date))}
+										className="flex w-full flex-col gap-1 rounded-2xl px-2 py-1.5 text-start transition [touch-action:manipulation] hover:bg-slate-50 active:scale-[0.99] dark:hover:bg-slate-800/40"
+									>
+										<span className="flex items-center justify-between gap-2 text-[11px]">
+											<span className="inline-flex items-center gap-1.5 font-bold tabular-nums text-slate-500">
+												<ChevronDown
+													size={13}
+													className={`shrink-0 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+													aria-hidden="true"
+												/>
+												{formatWeekdayDay(date, ar)}
+												{items.length ? (
+													<span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+														{items.length}
+													</span>
+												) : null}
+											</span>
+											<span className="font-black tabular-nums" style={{ color: barColor }}>
+												{money(amount)}
+											</span>
 										</span>
-									</div>
-									<div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-										<div
-											className="h-full rounded-full transition-[width]"
-											style={{
-												width: `${Math.max(8, ratio * 100)}%`,
-												backgroundColor: barColor,
-											}}
-										/>
-									</div>
+										<span className="block h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+											<span
+												className="block h-full rounded-full transition-[width]"
+												style={{
+													width: `${Math.max(8, ratio * 100)}%`,
+													backgroundColor: barColor,
+												}}
+											/>
+										</span>
+									</button>
+									{expanded ? (
+										<ul className="mx-2 mb-2 mt-1 divide-y divide-slate-200/70 rounded-xl border border-slate-200/70 bg-white dark:divide-slate-700/60 dark:border-slate-700/60 dark:bg-slate-900/60">
+											{items.length ? (
+												items.map(item => {
+													const share = amount > 0 ? Math.round(((Number(item.amount) || 0) / amount) * 100) : 0;
+													const offBalance = item.source?.affectsBalance === false;
+													return (
+														<li key={item.key} className="flex items-center gap-3 px-3 py-2.5">
+															<span className="min-w-0 flex-1">
+																<span className="block truncate text-[13px] font-bold text-slate-800 dark:text-slate-100" dir="auto">
+																	{item.name}
+																</span>
+																<span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10.5px] font-semibold text-slate-400">
+																	<span className="tabular-nums">
+																		{ar ? `${share}% من اليوم` : `${share}% of the day`}
+																	</span>
+																	{item.source?.recurring ? (
+																		<span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+																			<Repeat size={10} aria-hidden="true" />
+																			{ar ? 'كل شهر' : 'Monthly'}
+																		</span>
+																	) : null}
+																	{offBalance ? (
+																		<span className="text-amber-600 dark:text-amber-400">
+																			{ar ? 'مش من الرصيد' : 'Off balance'}
+																		</span>
+																	) : null}
+																</span>
+															</span>
+															<span className="shrink-0 text-[13px] font-black tabular-nums text-rose-600 dark:text-rose-400">
+																− {money(item.amount)}
+															</span>
+														</li>
+													);
+												})
+											) : (
+												<li className="px-3 py-3 text-center text-[12px] text-slate-400">
+													{ar ? 'مفيش تفاصيل لليوم ده' : 'No details for this day'}
+												</li>
+											)}
+										</ul>
+									) : null}
 								</li>
 							);
 						})}
@@ -2005,10 +2131,8 @@ function LedgerTable({
 		return list;
 	}, [allRows, type, moneyFilter, moneyRecurring, expenseMin, expenseDays, expenseRecurring]);
 
-	const spendSeries = useMemo(
-		() => dailySpendSeries(allRows.filter(row => row.type === 'expense')),
-		[allRows],
-	);
+	const spendEntries = useMemo(() => allRows.filter(row => row.type === 'expense'), [allRows]);
+	const spendSeries = useMemo(() => dailySpendSeries(spendEntries), [spendEntries]);
 
 	const total = useMemo(() => {
 		if (type === 'gold') return gold?.totalValue != null ? money(gold.totalValue) : null;
@@ -2047,11 +2171,7 @@ function LedgerTable({
 					<div className="min-w-0 flex-1">
 						<h3 className="text-sm font-black text-slate-900 dark:text-white">{ar ? 'كل الحركات' : 'All entries'}</h3>
 						<p className="text-[11px] text-slate-400">
-							{type === 'expense' && expenses?.month
-								? ar
-									? null 
-									: null
-								: type === 'gold' && gold?.holdings?.length
+							{type === 'gold' && gold?.holdings?.length
 									? formatGrams(gold.totalGrams, ar)
 									: ar
 										? `${rows.length} عنصر`
@@ -2077,7 +2197,7 @@ function LedgerTable({
 								onClick={() => setFiltersOpen(true)}
 								aria-label={ar ? 'فلاتر' : 'Filters'}
 								title={ar ? 'فلاتر' : 'Filters'}
-								className={`relative grid h-11 w-11 place-items-center rounded-xl border transition sm:h-9 sm:w-9 ${
+								className={`relative grid h-[35px] w-[35px] shrink-0 place-items-center rounded-xl border transition ${
 									filtersActive
 										? 'border-[#1DAB61] bg-[#1DAB61]/10 text-[#128c4f] dark:text-[#4ade80]'
 										: 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
@@ -2095,7 +2215,7 @@ function LedgerTable({
 								onClick={() => setChartOpen(true)}
 								aria-label={ar ? 'رسم الاستهلاك' : 'Spending chart'}
 								title={ar ? 'استهلاك كل يوم' : 'Daily spending'}
-								className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 text-rose-500 transition hover:bg-rose-50 sm:h-9 sm:w-9 dark:border-slate-700 dark:hover:bg-rose-950/30"
+								className="grid h-[35px] w-[35px] shrink-0 place-items-center rounded-xl border border-slate-200 text-rose-500 transition hover:bg-rose-50 dark:border-slate-700 dark:hover:bg-rose-950/30"
 							>
 								<BarChart3 size={15} />
 							</button>
@@ -2193,6 +2313,7 @@ function LedgerTable({
 					ar={ar}
 					money={money}
 					series={spendSeries}
+					entries={spendEntries}
 					today={today}
 					onClose={() => setChartOpen(false)}
 				/>
@@ -2235,7 +2356,6 @@ function LedgerTable({
 									>
 										<td className={td}>
 											<div className="flex min-w-0 items-center gap-3">
-												<LedgerIcon type={row.type} />
 												<div className="min-w-0">
 													<p
 														className={`max-w-[16rem] truncate font-bold ${
@@ -2293,44 +2413,63 @@ function LedgerTable({
 						{rows.map(row => {
 							const locked = lockedIds.has(row.id);
 							const muted = row.type === 'money' && row.source.kind === 'received';
+							const details = [
+								showType ? (
+									<span key="type" className="font-bold text-slate-500 dark:text-slate-300">
+										{ledgerTypeLabel(row.type, ar)}
+									</span>
+								) : null,
+								row.date ? (
+									<span key="date" className="tabular-nums">
+										{formatDay(row.date, ar)}
+									</span>
+								) : null,
+								row.source?.recurring ? (
+									<span key="monthly" className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+										<Repeat size={11} aria-hidden="true" />
+										{ar ? 'كل شهر' : 'Monthly'}
+									</span>
+								) : null,
+								row.type === 'gold' || (row.type === 'money' && row.source?.currency === 'USD' && row.source?.fxRate) ? (
+									<LedgerMeta key="meta" row={row} ar={ar} />
+								) : null,
+							].filter(Boolean);
 							return (
 								<li key={row.key}>
 									<button
 										type="button"
 										onClick={() => onOpenRow(row)}
 										aria-busy={locked || undefined}
-										className={`flex w-full items-center gap-3 px-4 py-3.5 text-start transition-colors [touch-action:manipulation] active:bg-slate-100 dark:active:bg-slate-800/70 ${
+										className={`flex w-full items-center gap-2 px-4 py-3 text-start transition-colors [touch-action:manipulation] active:bg-slate-100 dark:active:bg-slate-800/70 ${
 											locked ? 'opacity-60' : ''
 										}`}
 									>
-										<LedgerIcon type={row.type} />
-										<span className="flex min-w-0 flex-1 flex-col gap-1">
-											<span className="flex items-baseline justify-between gap-3">
-												<span
-													className={`min-w-0 truncate text-[15px] font-bold ${muted ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`}
-												>
-													{row.name}
-												</span>
-												<span className="shrink-0 text-[15px]">
-													<LedgerAmount row={row} money={money} />
-												</span>
+										<span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5">
+											<span
+												className={`min-w-0 truncate text-[15px] font-bold leading-tight ${muted ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`}
+												dir="auto"
+											>
+												{row.name}
 											</span>
-											<span className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+											<span className="text-end text-[15px] leading-tight">
+												<LedgerAmount row={row} money={money} />
+											</span>
+											<span className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[11.5px] font-medium text-slate-400">
+												{details.map((part, index) => (
+													<Fragment key={part.key}>
+														{index > 0 ? <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span> : null}
+														{part}
+													</Fragment>
+												))}
+											</span>
+											<span className="justify-self-end">
 												<LedgerStatus row={row} ar={ar} today={today} interactive={false} compact />
-												{row.date ? <span className="tabular-nums">{formatDay(row.date, ar)}</span> : null}
-												{row.source?.recurring ? (
-													<span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-														<Repeat size={11} aria-hidden="true" />
-														{ar ? 'كل شهر' : 'Monthly'}
-													</span>
-												) : null}
-												<LedgerMeta row={row} ar={ar} />
 											</span>
 										</span>
 										{locked ? (
-											<Loader2 size={16} className="shrink-0 animate-spin text-slate-400" />
+											<Loader2 size={15} className="shrink-0 animate-spin text-slate-400" />
 										) : (
-											<ChevronLeft size={18} className={`shrink-0 text-slate-300 dark:text-slate-600 ${ar ? '' : 'rotate-180'}`} aria-hidden="true" />
+											<ChevronLeft size={16} className={`shrink-0 text-slate-300 dark:text-slate-600 ${ar ? '' : 'rotate-180'}`} aria-hidden="true" />
 										)}
 									</button>
 								</li>
@@ -2805,12 +2944,11 @@ const GUILLOCHE = guillochePaths();
  * (cash, gold, lent out, on the way). Monthly coming-in / going-out / forecast live in the
  * same footer language as "spent this month" so the top stays one composition.
  */
-function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, spentThisMonth, onEditBalance, onJump, onCalc }) {
+function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, onEditBalance, onJump, onCalc }) {
 	const balance = Number(summary?.balance) || 0;
 	const pending = Number(summary?.pendingTotal) || 0;
 	const nextIn = Number(forecast?.nextMonthIn) || 0;
 	const nextOut = Number(forecast?.nextMonthOut) || 0;
-	const projected = Number(forecast?.projectedBalance) || 0;
 	const showForecast = nextIn > 0 || nextOut > 0;
 	const parts = [
 		{ key: 'cash', label: ar ? 'كاش' : 'Cash', value: Math.max(0, balance), swatch: 'bg-white' },
@@ -2844,6 +2982,18 @@ function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, spentThis
 			prefix: '− ',
 		},
 	];
+
+	const nextNet = round2(nextIn - nextOut);
+	flowCells.push({
+		key: 'net',
+		label: ar ? 'الشهر الجاي' : 'Next month',
+		value: nextNet,
+		Icon: Equal,
+		tone: nextNet < 0 ? 'text-rose-200' : 'text-white/85',
+		amount: nextNet < 0 ? 'text-rose-100' : 'text-white',
+		prefix: nextNet < 0 ? flowCells[1].prefix : nextNet > 0 ? flowCells[0].prefix : '',
+		net: true,
+	});
 
 	return (
 		<section className="relative isolate overflow-hidden rounded-[30px] bg-[#0c4430] text-white shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_24px_48px_-28px_rgba(6,40,27,0.95)] dark:bg-[#0a3a29]">
@@ -2954,43 +3104,16 @@ function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, spentThis
 					className="border-t border-white/[0.08] bg-black/[0.14]"
 					aria-label={ar ? 'هيبقى معايا الشهر الجاي' : 'What you’ll have next month'}
 				>
-					<div className="px-5 pt-3.5 sm:px-7">
-						<div className="flex items-center gap-1.5">
-							<Repeat size={12} className="text-emerald-200/80" aria-hidden="true" />
-							<p className="text-[11px] font-bold tracking-wide text-emerald-100/65">
-								{ar ? 'توقّع الشهر الجاي' : 'Next month expectation'}
-								{forecast?.nextMonth ? (
-									<span className="ms-1.5 font-semibold tabular-nums text-emerald-100/40">{forecast.nextMonth}</span>
-								) : null}
-							</p>
-						</div>
-						<p className="mt-2 text-[12px] font-semibold text-emerald-100/70">
-							{ar ? 'هيبقى معايا تقريباً' : 'You’ll roughly have'}
-						</p>
-						<p className={`mt-0.5 truncate text-[26px] font-black leading-none tracking-[-0.02em] sm:text-[30px] ${projected < 0 ? 'text-rose-200' : 'text-white'}`}>
-							<MoneyFigure
-								value={projected}
-								ar={ar}
-								className="inline"
-								unitClassName="ms-1.5 text-sm font-bold tracking-normal text-emerald-100/55"
-							/>
-						</p>
-						<p className="mt-2 text-[10.5px] font-medium leading-snug text-emerald-100/45">
-							{ar ? 'رصيدك الحالي' : 'Your balance'}{' '}
-							<MoneyFigure value={balance} ar={ar} className="tabular-nums text-emerald-100/75" unitClassName="text-[9px] text-emerald-100/40" />
-							<span className="mx-1 text-emerald-100/35">+</span>
-							{ar ? 'وارد' : 'in'}{' '}
-							<MoneyFigure value={nextIn} ar={ar} className="tabular-nums text-emerald-200/85" unitClassName="text-[9px] text-emerald-100/40" />
-							<span className="mx-1 text-emerald-100/35">−</span>
-							{ar ? 'خارج' : 'out'}{' '}
-							<MoneyFigure value={nextOut} ar={ar} className="tabular-nums text-rose-200/85" unitClassName="text-[9px] text-emerald-100/40" />
-						</p>
-					</div>
-					<div className="mt-3 grid grid-cols-2 gap-1 border-t border-white/[0.06] px-3 py-2.5 sm:px-5">
+					<div className="grid grid-cols-3 gap-1 px-3 py-2.5 sm:px-5">
 						{flowCells.map(cell => {
 							const Icon = cell.Icon;
 							return (
-								<div key={cell.key} className="flex min-w-0 flex-col justify-center rounded-2xl px-2.5 py-2 sm:px-3">
+								<div
+									key={cell.key}
+									className={`flex min-w-0 flex-col justify-center rounded-2xl px-2.5 py-2 sm:px-3 ${
+										cell.net ? 'bg-white/[0.07] ring-1 ring-white/10' : ''
+									}`}
+								>
 									<span className={`inline-flex items-center gap-1 text-[10.5px] font-bold ${cell.tone}`}>
 										<Icon size={11} aria-hidden="true" />
 										<span className="truncate">{cell.label}</span>
@@ -3010,21 +3133,6 @@ function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, spentThis
 					</div>
 				</div>
 			) : null}
-
-			<button
-				type="button"
-				onClick={() => onJump('expense')}
-				className="flex w-full items-center gap-3 border-t border-white/[0.08] bg-black/[0.18] px-5 py-3.5 text-start transition [touch-action:manipulation] hover:bg-black/25 sm:px-7"
-			>
-				<span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 text-rose-200">
-					<Receipt size={15} aria-hidden="true" />
-				</span>
-				<span className="min-w-0 flex-1 truncate text-[13px] text-emerald-100/80">
-					{ar ? 'صرفت الشهر ده' : 'Spent this month'}
-				</span>
-				<MoneyFigure value={spentThisMonth} ar={ar} className="shrink-0 text-sm font-bold text-white" unitClassName="text-[10px] text-emerald-100/55" />
-				<ChevronLeft size={16} className={`shrink-0 text-emerald-100/50 ${ar ? '' : 'rotate-180'}`} aria-hidden="true" />
-			</button>
 		</section>
 	);
 }
@@ -3195,7 +3303,6 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 	const expenses = data?.expenses;
 	const goldValueNow = Number(gold?.totalValue) || 0;
 	const lentTotal = Number(lent?.total) || 0;
-	const spentThisMonth = Number(expenses?.spentThisMonth) || 0;
 	const ledgerRows = useMemo(() => buildLedgerRows(data), [data]);
 	// Looked up by type + id (not key): toggling a money item changes its kind but it's the same entry.
 	const openRow = openEntry ? ledgerRows.find(row => row.type === openEntry.type && row.id === openEntry.id) || null : null;
@@ -3294,7 +3401,6 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 						forecast={data?.forecast}
 						goldValueNow={goldValueNow}
 						lentTotal={lentTotal}
-						spentThisMonth={spentThisMonth}
 						onEditBalance={() => setBalanceOpen(true)}
 						onJump={jumpToLedger}
 						onCalc={() => setCalcOpen(true)}

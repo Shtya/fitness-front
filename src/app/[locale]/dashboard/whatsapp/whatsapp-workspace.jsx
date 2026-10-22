@@ -23763,6 +23763,17 @@ function WhatsAppWorkspaceContent() {
 		goStoryPerson(delta > 0 ? 1 : -1);
 	};
 
+	const goStoryTo = target => {
+		const queue = storyQueueRef.current.length ? storyQueueRef.current : storyQueue;
+		const index = storyQueueRef.current.length ? storyIndexRef.current : storyIndex;
+		if (!queue[target]) return;
+		if (target === index) {
+			replayCurrentStory();
+			return;
+		}
+		openStory(queue[target], queue, target);
+	};
+
 	const replayCurrentStory = useCallback(() => {
 		storyElapsedRef.current = 0;
 		storySegmentDoneRef.current = false;
@@ -29148,18 +29159,16 @@ function WhatsAppWorkspaceContent() {
 								</div>
 							</div>
 							<div className="wa-stx-head__tools">
-								{storyPanelMode === 'active' ? (
-									<label className="wa-dx__search wa-stx-search">
-										<Search size={16} strokeWidth={2.2} aria-hidden="true" />
-										<input
-											type="search"
-											value={storySearch}
-											onChange={event => setStorySearch(event.target.value)}
-											placeholder={locale === 'ar' ? 'ابحث باسم' : 'Search people'}
-											aria-label={locale === 'ar' ? 'ابحث باسم' : 'Search people'}
-										/>
-									</label>
-								) : null}
+								<label className="wa-dx__search wa-stx-search">
+									<Search size={16} strokeWidth={2.2} aria-hidden="true" />
+									<input
+										type="search"
+										value={storySearch}
+										onChange={event => setStorySearch(event.target.value)}
+										placeholder={locale === 'ar' ? 'ابحث باسم أو رقم' : 'Search name or number'}
+										aria-label={locale === 'ar' ? 'ابحث باسم أو رقم' : 'Search name or number'}
+									/>
+								</label>
 								<div className="wa-story-seg" role="tablist" aria-label={t.statuses}>
 									<button
 										type="button"
@@ -29452,29 +29461,54 @@ function WhatsAppWorkspaceContent() {
 								<TabLoading label={t.loading} />
 							) : groupedStatusHistory.length === 0 ? (
 								<Empty icon={Zap} title={t.storyHistoryEmpty} />
-							) : (
+							) : (() => {
+								const historyName = story => {
+									const rawName =
+										story.latest.contactName ||
+										(story.latest.isOwn ? selectedAccount?.label || t.accounts : '');
+									const digits = String(rawName || story.senderWaId || '')
+										.replace(/@.*$/, '')
+										.replace(/\D/g, '');
+									return (
+										rawName ||
+										formatWhatsAppPhone(digits) ||
+										String(story.senderWaId || '').replace(/@.*$/, '')
+									);
+								};
+								const term = foldWhatsAppSearchText(storySearch);
+								const termDigits = storySearch.replace(/\D/g, '');
+								const visibleHistory = term
+									? groupedStatusHistory.filter(story => {
+											if (foldWhatsAppSearchText(historyName(story)).includes(term)) return true;
+											if (termDigits.length < 3) return false;
+											return String(story.senderWaId || '')
+												.replace(/@.*$/, '')
+												.replace(/\D/g, '')
+												.includes(termDigits);
+										})
+									: groupedStatusHistory;
+								return (
 								<div className="wa-story-history">
 									<p className="wa-story-history__hint">
-										{locale === 'ar'
-											? `${groupedStatusHistory.length} جهة مؤرشفة`
-											: `${groupedStatusHistory.length} archived ${
-													groupedStatusHistory.length === 1 ? 'person' : 'people'
-												}`}
+										{term
+											? locale === 'ar'
+												? `${visibleHistory.length} من ${groupedStatusHistory.length} جهة مؤرشفة`
+												: `${visibleHistory.length} of ${groupedStatusHistory.length} archived people`
+											: locale === 'ar'
+												? `${groupedStatusHistory.length} جهة مؤرشفة`
+												: `${groupedStatusHistory.length} archived ${
+														groupedStatusHistory.length === 1 ? 'person' : 'people'
+													}`}
 									</p>
+									{!visibleHistory.length ? (
+										<div className="wa-dx__empty">
+											<Search size={22} strokeWidth={1.8} aria-hidden="true" />
+											<p>{locale === 'ar' ? 'مفيش حد بالاسم ده في السجل' : 'No one in history matches this search'}</p>
+										</div>
+									) : null}
 									<ul className="wa-story-history__list">
-										{groupedStatusHistory.map((story, storyIndex) => {
-											const rawName =
-												story.latest.contactName ||
-												(story.latest.isOwn
-													? selectedAccount?.label || t.accounts
-													: '');
-											const digits = String(rawName || story.senderWaId || '')
-												.replace(/@.*$/, '')
-												.replace(/\D/g, '');
-											const name =
-												rawName ||
-												formatWhatsAppPhone(digits) ||
-												String(story.senderWaId || '').replace(/@.*$/, '');
+										{visibleHistory.map((story, storyIndex) => {
+											const name = historyName(story);
 											const archivedCount =
 												story.historyCount || story.items.length || 0;
 											const thumb = storyThumbs[story.latest.id];
@@ -29526,7 +29560,8 @@ function WhatsAppWorkspaceContent() {
 										})}
 									</ul>
 								</div>
-							)}
+								);
+							})()}
 						</div>
 					</div>
 				)}
@@ -31490,26 +31525,42 @@ function WhatsAppWorkspaceContent() {
 											}}
 										>
 						<div className="wa-story-viewer__scrim wa-story-viewer__scrim--top" aria-hidden="true" />
-						<div className="wa-story-viewer__progress absolute inset-x-3 top-3 z-10 flex gap-1">
+						<div className="wa-story-viewer__progress absolute inset-x-3 top-1.5 z-50 flex gap-1">
 							{queue.map((item, index) => (
-								<div
+								<button
 									key={item.id || index}
-									className="h-1 flex-1 overflow-hidden rounded-full bg-white/30"
+									type="button"
+									onPointerDown={event => event.stopPropagation()}
+									onClick={event => {
+										event.preventDefault();
+										event.stopPropagation();
+										goStoryTo(index);
+									}}
+									aria-label={
+										locale === 'ar'
+											? `الستوري ${index + 1} من ${queue.length}`
+											: `Story ${index + 1} of ${queue.length}`
+									}
+									aria-current={index === storyIndex ? 'step' : undefined}
+									title={formatStoryViewTime(item.publishedAt, locale) || undefined}
+									className="group flex-1 cursor-pointer py-1.5 outline-none"
 								>
-									<div
-										ref={index === storyIndex ? storyProgressBarRef : undefined}
-										className="h-full rounded-full bg-white"
-										style={{
-											width:
-												index < storyIndex
-													? '100%'
-													: index > storyIndex
-														? '0%'
-														: `${storyProgressRef.current}%`,
-											transition: 'none',
-										}}
-									/>
-								</div>
+									<span className="block h-1 overflow-hidden rounded-full bg-white/30 transition-[height,background-color] group-hover:h-1.5 group-hover:bg-white/50 group-focus-visible:ring-2 group-focus-visible:ring-white/80">
+										<span
+											ref={index === storyIndex ? storyProgressBarRef : undefined}
+											className="block h-full rounded-full bg-white"
+											style={{
+												width:
+													index < storyIndex
+														? '100%'
+														: index > storyIndex
+															? '0%'
+															: `${storyProgressRef.current}%`,
+												transition: 'none',
+											}}
+										/>
+									</span>
+								</button>
 							))}
 						</div>
 						<div className="wa-story-viewer__header absolute inset-x-0 top-5 z-40 flex items-center gap-1.5 px-3 py-2 pointer-events-none sm:gap-2 sm:px-4 sm:py-3">
