@@ -321,6 +321,12 @@ const FakeChatStudio = lazy(() => import('./fake-chat/FakeChatStudio'));
 const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
+const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
+const TypingHistoryPanel = lazy(() =>
+	import('./WhatsAppTypingLog').then(mod => ({ default: mod.TypingHistoryPanel })),
+);
+/** Safety net only; WhatsApp sends `paused` when the customer stops typing. */
+const TYPING_INDICATOR_TTL_MS = 25_000;
 const ContactsPanel = lazy(() => import('./ContactsPanel'));
 const DemoModeSettings = lazy(() => import('./demo/components/DemoModeSettings'));
 const WhatsAppAiSettings = lazy(() => import('./ai/WhatsAppAiSettings'));
@@ -452,10 +458,12 @@ import {
 	pageLockCopy,
 	useWhatsAppPageLock,
 } from './WhatsAppPageLock';
-import { LockKeyhole as PageLockIcon } from 'lucide-react';
+import { LockKeyhole as PageLockIcon, Keyboard as TypingLogIcon } from 'lucide-react';
 import ExpandableMessageText from './ExpandableMessageText';
 import EmailMemoMessageCard from './EmailMemoMessageCard';
 import DeletedMessageNotice from './DeletedMessageNotice';
+import EditedMessageNotice from './EditedMessageNotice';
+import { applyGroupTyperPresence, groupTypersLabel } from './whatsapp-group-typing';
 import { isEmailMemoMessageText } from './email-memo-message';
 import MarkdownMessage from '../ai-free/MarkdownMessage';
 import {
@@ -504,6 +512,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'statuses',
 	'emails',
 	'reports',
+	'typing',
 	'board',
 	'fakeChat',
 	'wallet',
@@ -797,6 +806,8 @@ const translations = {
 		fakeChat: 'Fake chat',
 		autoForward: 'Auto-forward',
 		wallet: 'Wallet',
+		typing: 'Typing log',
+		typingHistory: 'Typing history',
 		adhkar: 'My Adhkar',
 		documents: 'Documents',
 		contacts: 'Contacts',
@@ -1341,6 +1352,8 @@ const translations = {
 		fakeChat: 'شات وهمي',
 		autoForward: 'تحويل تلقائي',
 		wallet: 'محفظتي',
+		typing: 'محاولات الكتابة',
+		typingHistory: 'سجل الكتابة',
 		adhkar: 'أذكاري',
 		documents: 'المستندات',
 		contacts: 'جهات الاتصال',
@@ -1870,6 +1883,7 @@ const tabs = [
 	['groups', Users],
 	['agent', Bot],
 	['reports', BarChart3],
+	['typing', TypingLogIcon],
 	['board', LayoutGrid],
 	['fakeChat', Sparkles],
 	['wallet', Wallet],
@@ -11337,10 +11351,11 @@ function formatLastSeen(ts, locale = 'en') {
 		: `last seen: ${dateStr} at ${timeStr}`;
 }
 
-function TypingIndicator({ locale = 'en', recording = false, senderName = '', className = '' }) {
+function TypingIndicator({ locale = 'en', recording = false, senderName = '', count = 1, className = '' }) {
+	const many = count > 1;
 	const action = recording
-		? locale === 'ar' ? 'يسجل صوت الآن' : 'recording'
-		: locale === 'ar' ? 'يكتب الآن' : 'typing';
+		? locale === 'ar' ? (many ? 'بيسجلوا صوت الآن' : 'يسجل صوت الآن') : (many ? 'are recording' : 'recording')
+		: locale === 'ar' ? (many ? 'بيكتبوا الآن' : 'يكتب الآن') : (many ? 'are typing' : 'typing');
 	const label = senderName ? `${senderName} ${action}` : action;
 	return (
 		<span className={`wa-typing-indicator ${className}`.trim()} aria-live="polite">
@@ -11891,14 +11906,17 @@ const WaConversationRow = memo(function WaConversationRow({
 		conversation.typing ||
 		conversation.presence?.typing,
 	);
-	const previewPresentation = messageTextPresentation(
-		typing
-			? locale === 'ar'
-				? 'يكتب الآن…'
-				: 'typing…'
-			: previewText,
-	);
 	const isGroup = conversation.type === 'group';
+	const typingName = isGroup ? String(conversation.presence?.senderName || '').trim() : '';
+	const typingMany = (conversation.presence?.typers?.length || 0) > 1;
+	const typingText = typingName
+		? locale === 'ar'
+			? `${typingName} ${typingMany ? 'بيكتبوا' : 'يكتب'}…`
+			: `${typingName} ${typingMany ? 'are' : 'is'} typing…`
+		: locale === 'ar'
+			? 'يكتب الآن…'
+			: 'typing…';
+	const previewPresentation = messageTextPresentation(typing ? typingText : previewText);
 	const unreadCount = conversationUnreadCount(conversation);
 	const unread = unreadCount > 0;
 	return (
@@ -11913,11 +11931,7 @@ const WaConversationRow = memo(function WaConversationRow({
 				const isRtl = locale === 'ar';
 				actions.showTip({
 					title,
-					preview: typing
-						? locale === 'ar'
-							? 'يكتب الآن…'
-							: 'typing…'
-						: previewText,
+					preview: typing ? typingText : previewText,
 					unread: unreadCount,
 					privacyBlurred,
 					top: rect.top + rect.height / 2,
@@ -12081,6 +12095,7 @@ const WaConversationRow = memo(function WaConversationRow({
 								locale={locale}
 								recording={Boolean(conversation.presence?.recording)}
 								senderName={conversation.presence?.senderName || ''}
+								count={conversation.presence?.typers?.length || 1}
 							/>
 						) : (
 							<>
@@ -12533,6 +12548,8 @@ function WhatsAppWorkspaceContent() {
 	const [messageSchedulesLoading, setMessageSchedulesLoading] = useState(false);
 	const [messageScheduleBusyId, setMessageScheduleBusyId] = useState('');
 	const [pinsPanelOpen, setPinsPanelOpen] = useState(false);
+	const [typingHistoryOpen, setTypingHistoryOpen] = useState(false);
+	const [typingAttemptEvent, setTypingAttemptEvent] = useState(null);
 	const [pinnedMessages, setPinnedMessages] = useState([]);
 	const [pinnedMessagesLoading, setPinnedMessagesLoading] = useState(false);
 	const liveMessageSchedules = useMemo(
@@ -17710,7 +17727,11 @@ function WhatsAppWorkspaceContent() {
 					}
 				}
 			}
-			if (event.event === 'message_updated' && eventConversationId && event.payload?.changes?.deletedMode) {
+			if (
+				event.event === 'message_updated' &&
+				eventConversationId &&
+				(event.payload?.changes?.deletedMode || event.payload?.changes?.editHistory)
+			) {
 				const { messageId, changes } = event.payload;
 				if (eventConversationId !== activeConversationId) {
 					updateCachedMessage(eventConversationId, messageId, message => ({ ...message, ...changes }));
@@ -17817,19 +17838,41 @@ function WhatsAppWorkspaceContent() {
 			if (event.event === 'presence') {
 				const targetId = eventConversationId || null;
 				if (!targetId) return;
-				const typing = Boolean(
+				const eventTyping = Boolean(
 					event.payload?.typing ||
 						event.payload?.state === 'composing' ||
 						event.payload?.state === 'recording',
 				);
-				const recording = Boolean(
+				const eventRecording = Boolean(
 					event.payload?.recording || event.payload?.state === 'recording',
 				);
 				const isOnline = Boolean(event.payload?.isOnline);
-				const senderName = String(event.payload?.senderName || '');
 				const lastSeen = Number(event.payload?.lastSeen || 0);
 				const state = String(event.payload?.state || 'unavailable');
 				const existing = conversationsRef.current.find(item => item.id === targetId);
+				// Groups: each event is one member; keep everyone currently typing.
+				const groupTypers =
+					event.payload?.isGroup && event.payload?.participantJid
+						? applyGroupTyperPresence(
+								existing?.presence?.typers,
+								{
+									participantJid: event.payload.participantJid,
+									participantPhone: event.payload.participantPhone,
+									senderName: event.payload.senderName,
+									typing: eventTyping,
+									recording: eventRecording,
+								},
+								Date.now(),
+								TYPING_INDICATOR_TTL_MS,
+							)
+						: null;
+				const typing = groupTypers ? groupTypers.length > 0 : eventTyping;
+				const recording = groupTypers
+					? groupTypers.length > 0 && groupTypers.every(item => item.recording)
+					: eventRecording;
+				const senderName = groupTypers
+					? groupTypersLabel(groupTypers, locale)
+					: String(event.payload?.senderName || '');
 				const resolvedLastSeen = resolvePresenceLastSeen(existing?.presence, {
 					online: isOnline,
 					typing,
@@ -17844,6 +17887,7 @@ function WhatsAppWorkspaceContent() {
 					state,
 					t: event.payload?.t || Date.now(),
 					senderName: typing ? senderName : '',
+					...(groupTypers ? { typers: groupTypers } : {}),
 					lastSeen: resolvedLastSeen || undefined,
 					confirmedOffline: state === 'unavailable' && !isOnline,
 					lastSeenRestricted: Boolean(event.payload?.lastSeenRestricted),
@@ -17893,7 +17937,8 @@ function WhatsAppWorkspaceContent() {
 					next[idx] = { ...next[idx], ...patch };
 					return next;
 				});
-				// Clear stuck "typing…" after a few seconds (WA Web clears quickly).
+				// Safety net only: WhatsApp sends `paused` when the customer stops. Composing
+				// is not re-sent every few seconds, so a short TTL hid live typing.
 				if (typing) {
 					const clearKey = `presence-ttl:${targetId}`;
 					if (presenceTtlTimersRef.current[clearKey]) {
@@ -17915,6 +17960,8 @@ function WhatsAppWorkspaceContent() {
 										...(item.presence || {}),
 										typing: false,
 										recording: false,
+										typers: [],
+										senderName: '',
 										online: Boolean(item.presence?.online),
 										state: item.presence?.online ? 'available' : 'unavailable',
 										t: Date.now(),
@@ -17922,8 +17969,11 @@ function WhatsAppWorkspaceContent() {
 								};
 							}),
 						);
-					}, 8000);
+					}, TYPING_INDICATOR_TTL_MS);
 				}
+			}
+			if (event.event === 'typing_attempt' && event.payload?.attempt) {
+				setTypingAttemptEvent({ ...event.payload, receivedAt: Date.now() });
 			}
 			if (event.event === 'statuses_updated' && accountIdRef.current) {
 				void refreshStatusesFromProviderRef.current?.(accountIdRef.current, {
@@ -22676,6 +22726,19 @@ function WhatsAppWorkspaceContent() {
 				onClick: event => togglePinsPanel(event),
 			},
 			{
+				id: 'typing-history',
+				label: t.typingHistory,
+				description:
+					locale === 'ar'
+						? 'متى كتب العميل وهل أرسل رسالة بعدها'
+						: 'When the customer typed and whether a message followed',
+				icon: TypingLogIcon,
+				iconTone: 'green',
+				active: typingHistoryOpen,
+				disabled: demoBlocked || demoChat || !conversationId || selectedConversation.type === 'group',
+				onClick: () => setTypingHistoryOpen(current => !current),
+			},
+			{
 				id: 'search',
 				label: locale === 'ar' ? 'بحث في الشات' : 'Search in chat',
 				description: locale === 'ar' ? 'ابحث عن رسائل داخل هذه المحادثة' : 'Find messages in this chat',
@@ -22807,6 +22870,7 @@ function WhatsAppWorkspaceContent() {
 		pendingPreferenceActions,
 		pinnedMessages.length,
 		pinsPanelOpen,
+		typingHistoryOpen,
 		secondaryConversationId,
 		selectedConversation,
 		selectedMessageIds,
@@ -23181,6 +23245,7 @@ function WhatsAppWorkspaceContent() {
 			tab === 'board' ||
 			tab === 'fakeChat' ||
 			tab === 'wallet' ||
+			tab === 'typing' ||
 			tab === 'adhkar' ||
 			tab === 'agent'
 		)
@@ -25211,6 +25276,7 @@ function WhatsAppWorkspaceContent() {
 					showSettings={canManageWhatsApp || isAdmin}
 					showAccounts={!showcaseOnly}
 					showReports={!showcaseOnly}
+					showTyping={!showcaseOnly}
 					showBoard={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
 					showFakeChat={!showcaseOnly && fakeChatAllowed}
 					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
@@ -26503,6 +26569,7 @@ function WhatsAppWorkspaceContent() {
 																			selectedConversation.presence?.recording,
 																		)}
 																		senderName={selectedConversation.presence?.senderName || ''}
+																		count={selectedConversation.presence?.typers?.length || 1}
 																	/>
 																)
 																: (() => {
@@ -26557,6 +26624,7 @@ function WhatsAppWorkspaceContent() {
 																		selectedConversation.presence?.recording,
 																	)}
 																	senderName={selectedConversation.presence?.senderName || ''}
+																	count={selectedConversation.presence?.typers?.length || 1}
 																/>
 															)
 															: conversationPresenceSubtitle(
@@ -26853,6 +26921,17 @@ function WhatsAppWorkspaceContent() {
 										onJump={message => void jumpToPinnedMessage(message)}
 										onUnpin={message => void handleMessageAction(message, 'pin')}
 									/>
+									{typingHistoryOpen && conversationId && !isDemoId(conversationId) ? (
+										<Suspense fallback={null}>
+											<TypingHistoryPanel
+												locale={locale}
+												open
+												conversationId={conversationId}
+												liveEvent={typingAttemptEvent}
+												onHide={() => setTypingHistoryOpen(false)}
+											/>
+										</Suspense>
+									) : null}
 									{(conversationFilter === 'important' || conversationFilter === 'starred') && conversationId && !activeMessageGroup ? (
 										<div className="flex shrink-0 items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2 text-[12px] font-semibold text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
 											<Star size={14} fill="currentColor" />
@@ -27896,6 +27975,9 @@ function WhatsAppWorkspaceContent() {
 																	)}
 																	{keepsDeletedContent ? (
 																		<DeletedMessageNotice locale={locale} kept />
+																	) : null}
+																	{message.editHistory?.length ? (
+																		<EditedMessageNotice message={message} locale={locale} />
 																	) : null}
 																	{message.replyTo && quotedPreview ? (
 																		<button
@@ -29834,6 +29916,21 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				)}
 
+				{activeTab === 'typing' && !showcaseOnly && (
+					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+						<WhatsAppTypingLogTab
+							locale={locale}
+							accountId={accountId}
+							liveEvent={typingAttemptEvent}
+							onOpenConversation={id => {
+								const meta = (conversationsRef.current || []).find(item => item.id === id);
+								setActiveTab('chats');
+								openConversation(id, meta);
+							}}
+						/>
+					</Suspense>
+				)}
+
 				{activeTab === 'wallet' && (
 					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
 						{/* Phone: immersive wallet — no WA header/nav; back lives inside the tab. */}
@@ -30413,8 +30510,18 @@ function WhatsAppWorkspaceContent() {
 					liveInfoConversation.type === 'group'
 						? null
 						: conversationPresenceSubtitle(mergedPresence, locale, formatLastSeen);
+				const typingWho =
+					liveInfoConversation.type === 'group'
+						? String(liveInfoConversation.presence?.senderName || '').trim()
+						: '';
 				const presenceValue =
-					mergedPresence.typing || mergedPresence.recording
+					(mergedPresence.typing || mergedPresence.recording) && typingWho
+						? `${typingWho} · ${
+								mergedPresence.recording
+									? locale === 'ar' ? 'يسجل صوت الآن' : 'recording…'
+									: locale === 'ar' ? 'يكتب الآن' : 'typing…'
+							}`
+						: mergedPresence.typing || mergedPresence.recording
 						? mergedPresence.recording
 							? locale === 'ar'
 								? 'يسجل صوت الآن'

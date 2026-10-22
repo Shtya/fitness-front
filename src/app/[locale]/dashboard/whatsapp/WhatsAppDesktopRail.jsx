@@ -4,6 +4,7 @@ import { FileText,
 	BarChart3,
 	BookOpen,
 	Bot,
+	Keyboard,
 	Languages,
 	LayoutGrid,
 	MessageCircle,
@@ -136,6 +137,7 @@ export default function WhatsAppDesktopRail({
 	showBoard = true,
 	showFakeChat = true,
 	showWallet = false,
+	showTyping = false,
 	showAdhkar = false,
 	showDocuments = false,
 	showAgent = false,
@@ -190,6 +192,13 @@ export default function WhatsAppDesktopRail({
 					id: 'reports',
 					label: labels.reports || (ar ? 'تقارير' : 'Reports'),
 					icon: BarChart3,
+				}
+			: null,
+		showTyping
+			? {
+					id: 'typing',
+					label: labels.typing || (ar ? 'محاولات الكتابة' : 'Typing log'),
+					icon: Keyboard,
 				}
 			: null,
 		showBoard
