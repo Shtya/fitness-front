@@ -446,6 +446,13 @@ import ComposerWritingAssist from './ai/ComposerWritingAssist';
 import WhatsAppWorkspaceAiParts from './ai/WhatsAppWorkspaceAiParts';
 import { useWhatsAppAi } from './ai/use-whatsapp-ai';
 import WhatsAppPrivacyBlurControl from './WhatsAppPrivacyBlurControl';
+import {
+	WhatsAppPageLockScreen,
+	WhatsAppPageLockSettings,
+	pageLockCopy,
+	useWhatsAppPageLock,
+} from './WhatsAppPageLock';
+import { LockKeyhole as PageLockIcon } from 'lucide-react';
 import ExpandableMessageText from './ExpandableMessageText';
 import EmailMemoMessageCard from './EmailMemoMessageCard';
 import DeletedMessageNotice from './DeletedMessageNotice';
@@ -13075,6 +13082,8 @@ function WhatsAppWorkspaceContent() {
 	const showcaseOnly = Boolean(
 		demo.settings.enabled && demo.settings.featureFlags?.showcaseOnly === true,
 	);
+	const pageLock = useWhatsAppPageLock({ active: !showcaseOnly });
+	const pageLockText = pageLockCopy(locale);
 	const railAvatarUrl = useMemo(() => {
 		if (showcaseOnly) return '';
 		const fromAccount = String(selectedAccount?.avatarUrl || '').trim();
@@ -25861,6 +25870,17 @@ function WhatsAppWorkspaceContent() {
 													<Forward size={18} strokeWidth={2.1} className="rtl:-scale-x-100" />
 												</button>
 											) : null}
+											{pageLock.status.enabled && !showcaseOnly ? (
+												<button
+													type="button"
+													onClick={() => pageLock.lockNow()}
+													aria-label={pageLockText.lockNow}
+													title={`${pageLockText.lockNow} (Ctrl + Alt + L)`}
+													className="wa-header-icon-btn"
+												>
+													<PageLockIcon size={18} strokeWidth={2.1} />
+												</button>
+											) : null}
 											<button
 												type="button"
 												onClick={() => {
@@ -29971,6 +29991,7 @@ function WhatsAppWorkspaceContent() {
 									{ id: 'demo', label: t.settingsDemo, icon: Zap },
 									{ id: 'notifications', label: t.settingsNotifications, icon: Bell },
 									{ id: 'privacy', label: t.settingsPrivacy, icon: ShieldCheck },
+									...(showcaseOnly ? [] : [{ id: 'lock', label: pageLockText.tab, icon: PageLockIcon }]),
 								].map(item => {
 									const Icon = item.icon;
 									const selected = settingsSection === item.id;
@@ -30048,6 +30069,9 @@ function WhatsAppWorkspaceContent() {
 										</div>
 									</div>
 								</section>
+							)}
+							{settingsSection === 'lock' && !showcaseOnly && (
+								<WhatsAppPageLockSettings lock={pageLock} locale={locale} />
 							)}
 							{settingsSection === 'privacy' && (
 								<section className="wst-section">
@@ -32148,6 +32172,11 @@ function WhatsAppWorkspaceContent() {
 					/>
 				</WaDialog>
 			) : null}
+			<WhatsAppPageLockScreen
+				lock={pageLock}
+				locale={locale}
+				onLeave={() => router.push('/dashboard')}
+			/>
 			{autoForwardOpen ? (
 				<WaDialog
 					zIndex={110}

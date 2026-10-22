@@ -1,0 +1,391 @@
+/* WhatsApp page lock: full-screen lock (portalled to <body>) and its Settings forms. */
+
+.wpl-screen,
+.wa-settings-pane {
+	--wpl-surface: var(--st-surface, #ffffff);
+	--wpl-fill: var(--st-fill, #f6f7f7);
+	--wpl-line: var(--st-line, #e9edef);
+	--wpl-line-strong: var(--st-line-strong, #d5dce0);
+	--wpl-ink: var(--st-ink, #111b21);
+	--wpl-muted: var(--st-muted, #667781);
+	--wpl-accent: var(--st-accent, #1daa61);
+	--wpl-accent-strong: var(--st-accent-strong, #168d50);
+	--wpl-accent-ink: var(--st-accent-ink, #0d7a43);
+	--wpl-accent-soft: var(--st-accent-soft, #e7f8ee);
+	--wpl-ring: var(--st-ring, rgba(29, 170, 97, 0.22));
+	--wpl-bad: var(--st-bad, #c0263b);
+}
+
+.wpl-screen {
+	--wpl-backdrop: #eef2f1;
+	position: fixed;
+	inset: 0;
+	z-index: 9000;
+	display: grid;
+	place-items: center;
+	overflow-y: auto;
+	padding: 24px 16px;
+	background:
+		radial-gradient(1200px 600px at 50% -10%, rgba(29, 170, 97, 0.14), transparent 60%),
+		var(--wpl-backdrop);
+	color: var(--wpl-ink);
+	animation: wpl-fade 160ms ease-out;
+}
+
+html.dark .wpl-screen,
+html[data-theme-mode='dark'] .wpl-screen {
+	--wpl-backdrop: #111414;
+	--st-surface: #1d1f1f;
+	--st-fill: #232525;
+	--st-line: #2c2e2e;
+	--st-line-strong: #3a3d3d;
+	--st-ink: #f2f3f3;
+	--st-muted: #a0a6a9;
+	--st-accent: #21c063;
+	--st-accent-strong: #1daa61;
+	--st-accent-ink: #5fe39a;
+	--st-accent-soft: rgba(33, 192, 99, 0.13);
+	--st-ring: rgba(33, 192, 99, 0.3);
+	--st-bad: #ff8a99;
+}
+
+/* While locked the page behind must not scroll or show through. */
+html.wa-page-locked body {
+	overflow: hidden;
+}
+
+.wpl-card {
+	box-sizing: border-box;
+	width: min(400px, 100%);
+	padding: 32px 28px 24px;
+	border: 1px solid var(--wpl-line);
+	border-radius: 20px;
+	background: var(--wpl-surface);
+	box-shadow: 0 24px 60px rgba(17, 27, 33, 0.12);
+	text-align: center;
+}
+
+.wpl-glyph {
+	display: inline-grid;
+	width: 60px;
+	height: 60px;
+	place-items: center;
+	margin-bottom: 14px;
+	border-radius: 999px;
+	background: var(--wpl-accent-soft);
+	color: var(--wpl-accent-ink);
+}
+
+.wpl-title {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 650;
+	line-height: 28px;
+}
+
+.wpl-sub {
+	margin: 4px 0 20px;
+	color: var(--wpl-muted);
+	font-size: 14px;
+	line-height: 20px;
+}
+
+.wpl-form,
+.wpl-forgot {
+	display: grid;
+	gap: 12px;
+	text-align: start;
+}
+
+.wpl-field {
+	display: grid;
+	min-width: 0;
+	gap: 6px;
+}
+
+.wpl-label {
+	color: var(--wpl-muted);
+	font-size: 12.5px;
+	font-weight: 500;
+}
+
+.wpl-input-wrap {
+	position: relative;
+	display: block;
+}
+
+.wpl-input {
+	box-sizing: border-box;
+	width: 100%;
+	height: 42px;
+	padding: 0 40px 0 12px;
+	border: 1px solid var(--wpl-line-strong);
+	border-radius: 10px;
+	background: var(--wpl-surface);
+	color: var(--wpl-ink);
+	font-size: 14px;
+	outline: none;
+	transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.wpl-field > .wpl-input {
+	padding: 0 12px;
+}
+
+.wpl-input:focus {
+	border-color: var(--wpl-accent);
+	box-shadow: 0 0 0 3px var(--wpl-ring);
+}
+
+.wpl-input:disabled {
+	opacity: 0.6;
+}
+
+.wpl-input-wrap.is-large .wpl-input {
+	height: 48px;
+	padding: 0 14px;
+	font-size: 18px;
+	letter-spacing: 0.08em;
+	text-align: center;
+}
+
+.wpl-input.is-code {
+	font-size: 20px;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.4em;
+	text-align: center;
+}
+
+.wpl-eye {
+	position: absolute;
+	top: 50%;
+	right: 6px;
+	display: grid;
+	width: 30px;
+	height: 30px;
+	place-items: center;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--wpl-muted);
+	cursor: pointer;
+	transform: translateY(-50%);
+}
+
+.wpl-eye:hover {
+	background: var(--wpl-fill);
+	color: var(--wpl-ink);
+}
+
+.wpl-btn {
+	display: inline-flex;
+	height: 40px;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 0 16px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.wpl-btn.is-block {
+	width: 100%;
+	height: 44px;
+}
+
+.wpl-btn.is-primary {
+	background: var(--wpl-accent-strong);
+	color: #ffffff;
+}
+
+.wpl-btn.is-primary:hover:not(:disabled) {
+	background: var(--wpl-accent);
+}
+
+.wpl-btn.is-ghost {
+	border-color: var(--wpl-line-strong);
+	background: transparent;
+	color: var(--wpl-ink);
+}
+
+.wpl-btn:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.wpl-row-links {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.wpl-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 0;
+	border: 0;
+	background: transparent;
+	color: var(--wpl-accent-ink);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.wpl-link:hover:not(:disabled) {
+	text-decoration: underline;
+}
+
+.wpl-link:disabled {
+	color: var(--wpl-muted);
+	cursor: default;
+}
+
+.wpl-link.is-muted {
+	color: var(--wpl-muted);
+	font-weight: 500;
+}
+
+.wpl-msg {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	margin: 0;
+	font-size: 13px;
+	line-height: 18px;
+	text-align: start;
+}
+
+.wpl-msg svg {
+	flex: 0 0 auto;
+	margin-top: 2px;
+}
+
+.wpl-msg.is-error {
+	color: var(--wpl-bad);
+}
+
+.wpl-msg.is-ok {
+	color: var(--wpl-accent-ink);
+}
+
+.wpl-note {
+	margin: -6px 0 0;
+	color: var(--wpl-muted);
+	font-size: 12px;
+}
+
+.wpl-segment {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 4px;
+	padding: 4px;
+	border-radius: 12px;
+	background: var(--wpl-fill);
+}
+
+.wpl-segment button {
+	display: inline-flex;
+	min-width: 0;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 8px 6px;
+	border: 0;
+	border-radius: 9px;
+	background: transparent;
+	color: var(--wpl-muted);
+	font-size: 12.5px;
+	font-weight: 600;
+	line-height: 16px;
+	cursor: pointer;
+}
+
+.wpl-segment button.is-active {
+	background: var(--wpl-surface);
+	color: var(--wpl-ink);
+	box-shadow: 0 1px 3px rgba(17, 27, 33, 0.1);
+}
+
+.wpl-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+.wpl-card .wpl-actions {
+	justify-content: space-between;
+}
+
+/* Settings forms */
+.wpl-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+	gap: 12px;
+}
+
+.wpl-panel {
+	display: grid;
+	gap: 12px;
+	margin: 0 16px 12px;
+	padding: 14px;
+	border: 1px solid var(--wpl-line);
+	border-radius: 12px;
+	background: var(--wpl-fill);
+}
+
+.wpl-panel .wpl-forgot {
+	gap: 12px;
+}
+
+.wpl-panel-title {
+	margin: 0;
+	color: var(--wpl-ink);
+	font-size: 13.5px;
+	font-weight: 600;
+}
+
+.wst-btn.wpl-danger {
+	border-color: var(--wpl-bad);
+	background: var(--wpl-bad);
+	color: #ffffff;
+}
+
+.wst-btn.wpl-danger-text {
+	color: var(--wpl-bad);
+}
+
+@keyframes wpl-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wpl-screen {
+		animation: none;
+	}
+}
+
+[dir='rtl'] .wpl-eye {
+	right: auto;
+	left: 6px;
+}
+
+[dir='rtl'] .wpl-input-wrap .wpl-input {
+	padding: 0 12px 0 40px;
+}
+
+[dir='rtl'] .wpl-input-wrap.is-large .wpl-input {
+	padding: 0 14px;
+}
