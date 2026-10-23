@@ -1119,6 +1119,11 @@ const translations = {
 		readOnReply: 'Only when you reply',
 		readManual: 'Only when I click Mark as read',
 		readNever: 'Never',
+		holdDelivery: 'Keep one tick until I reply',
+		holdDeliveryHint:
+			'This system is always online, so contacts normally see two grey ticks the moment a message arrives. When on, they see one tick until you reply from here (or until your phone connects).',
+		holdDeliveryWarning:
+			'Works only while your phone is offline: when the phone is connected it delivers the message itself. Test it with a second number first.',
 		privacyOn: 'On',
 		privacyOff: 'Off',
 		markRead: 'Mark as read',
@@ -1666,6 +1671,11 @@ const translations = {
 		readOnReply: 'عند الرد فقط',
 		readManual: 'فقط عند الضغط على تمّت القراءة',
 		readNever: 'عدم الإرسال نهائياً',
+		holdDelivery: 'علامة صح واحدة لحد ما أرد',
+		holdDeliveryHint:
+			'السيستم شغّال طول الوقت، فاللي بيبعتلك بيشوف علامتين صح رمادي أول ما الرسالة توصل. لما تشغّلها، هيفضل يشوف علامة واحدة لحد ما ترد من هنا (أو لحد ما موبايلك يتصل بالنت).',
+		holdDeliveryWarning:
+			'بتشتغل بس وموبايلك مقفول النت: لو الموبايل متصل هو نفسه بيأكد الاستلام. جرّبها برقم تاني الأول.',
 		privacyOn: 'مفعّل',
 		privacyOff: 'غير مفعّل',
 		markRead: 'تمّت القراءة',
@@ -12451,6 +12461,7 @@ function WhatsAppWorkspaceContent() {
 	const [privacySettings, setPrivacySettings] = useState({
 		hideStatusViewReceipts: true,
 		readReceiptMode: 'on_reply',
+		holdDeliveryReceipts: false,
 	});
 	const [notificationSettings, setNotificationSettings] = useState({
 		notificationsEnabled: true,
@@ -16487,6 +16498,7 @@ function WhatsAppWorkspaceContent() {
 			setPrivacySettings({
 				hideStatusViewReceipts: true,
 				readReceiptMode: 'on_reply',
+				holdDeliveryReceipts: false,
 			});
 			setTabLoading(false);
 			setTabError('');
@@ -23535,6 +23547,7 @@ function WhatsAppWorkspaceContent() {
 						privacyRes.data || {
 							hideStatusViewReceipts: true,
 							readReceiptMode: 'on_reply',
+							holdDeliveryReceipts: false,
 						},
 					);
 					setNotificationSettings(
@@ -30485,6 +30498,34 @@ function WhatsAppWorkspaceContent() {
 														{ value: 'manual', label: t.readManual },
 														{ value: 'never', label: t.readNever },
 													]}
+												/>
+											</div>
+										</div>
+										<div className="wst-row">
+											<div className="wst-row-text">
+												<p className="wst-row-title">
+													<Check size={15} aria-hidden="true" />
+													{t.holdDelivery}
+												</p>
+												<p className="wst-row-hint">{t.holdDeliveryHint}</p>
+												<p className="wst-callout is-warn">
+													<AlertTriangle size={14} aria-hidden="true" />
+													<span>{t.holdDeliveryWarning}</span>
+												</p>
+											</div>
+											<div className="wst-row-control">
+												<span className={`wst-state${privacySettings.holdDeliveryReceipts ? ' is-on' : ''}`}>
+													{privacySettings.holdDeliveryReceipts ? t.privacyOn : t.privacyOff}
+												</span>
+												<Toggle
+													label={t.holdDelivery}
+													checked={Boolean(privacySettings.holdDeliveryReceipts)}
+													onChange={value =>
+														setPrivacySettings(current => ({
+															...current,
+															holdDeliveryReceipts: value,
+														}))
+													}
 												/>
 											</div>
 										</div>
