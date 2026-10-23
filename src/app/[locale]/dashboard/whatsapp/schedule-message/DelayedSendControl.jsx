@@ -95,7 +95,6 @@ export function formatSendWhen(ms, ar, now = Date.now()) {
 }
 
 const CUSTOM_PRESETS = [15, 30, 60, 120, 240];
-const ADJUST_PRESETS = [-30, -15, 0, 15, 30, 60];
 
 function popoverStyle(anchor) {
 	const margin = 10;
@@ -133,9 +132,6 @@ function MiniNumber({ value, min, max, step = 1, suffix, label, onChange }) {
 		</span>
 	);
 }
-
-const signedDuration = (minutes, ar) =>
-	minutes === 0 ? '±0' : `${minutes > 0 ? '+' : '−'}${formatDelayDuration(Math.abs(minutes) * 60_000, ar)}`;
 
 export function DelayedSendButton({ ar, enabled, disabled, onClick, buttonRef, className = '' }) {
 	const t = ar ? copy.ar : copy.en;
@@ -375,19 +371,6 @@ export default function DelayedSendPopover({
 								step={5}
 								onChange={minutes => update({ adjustMinutes: minutes })}
 							/>
-						</div>
-						<div className="wa-dsend__chips">
-							{ADJUST_PRESETS.map(minutes => (
-								<button
-									key={minutes}
-									type="button"
-									className="wa-ui-chip"
-									aria-pressed={p.adjustMinutes === minutes}
-									onClick={() => update({ adjustMinutes: minutes })}
-								>
-									{signedDuration(minutes, ar)}
-								</button>
-							))}
 						</div>
 					</>
 				)}

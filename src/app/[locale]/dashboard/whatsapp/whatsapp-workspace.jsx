@@ -136,13 +136,16 @@ import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import SocialVideoActions from './social-download/SocialVideoActions';
 import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
 import { createNotifyStateCache, shouldNotifyForConversation } from './whatsapp-mute';
-import DelayedSendPopover, { DelayedSendBanner, DelayedSendButton, formatSendWhen } from './schedule-message/DelayedSendControl';
+import DelayedSendPopover, { DelayedSendBanner, DelayedSendButton } from './schedule-message/DelayedSendControl';
+import WaitingMessagesQueue, { waitingOnceSchedules } from './schedule-message/WaitingMessagesQueue';
 import {
 	DEFAULT_DELAYED_SEND_PREFS,
 	browserTimeZone,
 	computeDelayedSend,
 	delayedSendTitle,
+	isDelayedSendOnForChat,
 	readDelayedSendPrefs,
+	writeDelayedSendForChat,
 	writeDelayedSendPrefs,
 } from './schedule-message/delayed-send';
 import PinnedMessagesPanel from './PinnedMessagesPanel';
@@ -12592,6 +12595,7 @@ function WhatsAppWorkspaceContent() {
 			}),
 		[messageSchedules],
 	);
+	const waitingSchedules = useMemo(() => waitingOnceSchedules(liveMessageSchedules), [liveMessageSchedules]);
 	const [composerImages, setComposerImages] = useState([]);
 	const composerImagesRef = useRef([]);
 	const setComposerImagesState = useCallback(next => {
@@ -17029,6 +17033,45 @@ function WhatsAppWorkspaceContent() {
 		}
 	}, [conversationId, loadMessageSchedules, locale, messageSchedules]);
 
+	const sendMessageScheduleNow = useCallback(async schedule => {
+		if (!schedule?.id) return;
+		setMessageScheduleBusyId(schedule.id);
+		setMessageSchedules(current =>
+			current.map(item => (item.id === schedule.id ? { ...item, status: 'processing' } : item)),
+		);
+		try {
+			await api.post(`/whatsapp/message-schedules/${schedule.id}/send-now`);
+		} catch (error) {
+			toast.error(
+				error?.response?.data?.message ||
+					(locale === 'ar' ? 'ماقدرناش نبعتها دلوقتي' : 'Could not send it now'),
+			);
+		} finally {
+			setMessageScheduleBusyId('');
+			if (conversationId) void loadMessageSchedules(conversationId);
+		}
+	}, [conversationId, loadMessageSchedules, locale]);
+
+	const saveMessageScheduleText = useCallback(async (schedule, text) => {
+		if (!schedule?.id) return false;
+		setMessageScheduleBusyId(schedule.id);
+		try {
+			const { data } = await api.patch(`/whatsapp/message-schedules/${schedule.id}`, { text });
+			setMessageSchedules(current =>
+				current.map(item => (item.id === schedule.id ? { ...item, ...(data || {}), text } : item)),
+			);
+			return true;
+		} catch (error) {
+			toast.error(
+				error?.response?.data?.message ||
+					(locale === 'ar' ? 'ماقدرناش نعدّل الرسالة' : 'Could not edit the message'),
+			);
+			return false;
+		} finally {
+			setMessageScheduleBusyId('');
+		}
+	}, [locale]);
+
 	const loadMessageSchedulesRef = useRef(loadMessageSchedules);
 	loadMessageSchedulesRef.current = loadMessageSchedules;
 
@@ -17036,11 +17079,19 @@ function WhatsAppWorkspaceContent() {
 		setDelayedSendPrefsState(readDelayedSendPrefs());
 	}, []);
 
-	// The delay is a per-chat choice: opening another chat always starts with normal sending.
+	// The delay is a per-chat choice, remembered for each chat.
 	useEffect(() => {
-		setDelayedSendOn(false);
+		setDelayedSendOn(isDelayedSendOnForChat(conversationId));
 		setDelayedSendOpen(false);
 	}, [conversationId]);
+
+	const changeDelayedSendOn = useCallback(
+		on => {
+			setDelayedSendOn(on);
+			writeDelayedSendForChat(conversationId, on);
+		},
+		[conversationId],
+	);
 
 	const latestThreadMessageKey = useMemo(() => {
 		const last = effectiveMessages[effectiveMessages.length - 1];
@@ -18867,7 +18918,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			setSending(true);
 			try {
-				await api.post(`/whatsapp/accounts/${accountId}/message-schedules`, {
+				const { data: createdSchedule } = await api.post(`/whatsapp/accounts/${accountId}/message-schedules`, {
 					type: 'text',
 					text,
 					conversationIds: [targetConversationId],
@@ -18882,15 +18933,15 @@ function WhatsAppWorkspaceContent() {
 				if (conversationIdRef.current === targetConversationId) {
 					setDraft('');
 					setReplyingTo(null);
+					// Shows in the waiting queue right away; the reload below confirms it.
+					if (createdSchedule?.id) {
+						setMessageSchedules(current => [
+							...current.filter(item => item.id !== createdSchedule.id),
+							createdSchedule,
+						]);
+					}
 				}
-				toast.success(
-					ar
-						? `اتجدولت · تتبعت ${formatSendWhen(plan.sendAt, true)}`
-						: `Scheduled · sends ${formatSendWhen(plan.sendAt, false)}`,
-				);
 				void loadMessageSchedules(targetConversationId);
-				setPinsPanelOpen(false);
-				setSchedulesPanelOpen(true);
 			} catch (error) {
 				toast.error(
 					error?.response?.data?.message ||
@@ -28815,6 +28866,18 @@ function WhatsAppWorkspaceContent() {
 											}}
 											className={`wa-composer flex gap-2 border-0 border-t border-[#e9edef] p-2 ${composerDragOver ? 'ring-2 ring-[#00A884]/40' : ''} ${isVoiceRecordingMode ? 'is-recording flex-nowrap items-center' : 'flex-wrap items-end'}`}
 										>
+											{waitingSchedules.length > 0 && !isVoiceRecordingMode ? (
+												<div className="basis-full">
+													<WaitingMessagesQueue
+														ar={locale === 'ar'}
+														items={waitingSchedules}
+														busyId={messageScheduleBusyId}
+														onSendNow={sendMessageScheduleNow}
+														onSaveText={saveMessageScheduleText}
+														onCancel={cancelMessageSchedule}
+													/>
+												</div>
+											) : null}
 											{delayedSendOn && !isVoiceRecordingMode ? (
 												<div className="basis-full">
 													<DelayedSendBanner
@@ -28824,7 +28887,7 @@ function WhatsAppWorkspaceContent() {
 														prefs={delayedSendPrefs}
 														now={delayedSendNow}
 														onEdit={() => setDelayedSendOpen(true)}
-														onTurnOff={() => setDelayedSendOn(false)}
+														onTurnOff={() => changeDelayedSendOn(false)}
 														canSendNow={composerHasText && !sending}
 														onSendNow={() => sendMessage(null, { skipDelay: true })}
 													/>
@@ -31557,7 +31620,7 @@ function WhatsAppWorkspaceContent() {
 				anchorEl={delayedSendButtonRef.current}
 				ar={locale === 'ar'}
 				enabled={delayedSendOn}
-				onEnabledChange={setDelayedSendOn}
+				onEnabledChange={changeDelayedSendOn}
 				prefs={delayedSendPrefs}
 				onPrefsChange={setDelayedSendPrefs}
 				gapState={replyGapState.conversationId === conversationId ? replyGapState : null}

@@ -4,8 +4,45 @@ import {
 	computeDelayedSend,
 	delayedSendTitle,
 	formatDelayDuration,
+	isDelayedSendOnForChat,
 	normalizeDelayedSendPrefs,
+	waitingOnceSchedules,
+	writeDelayedSendForChat,
 } from './delayed-send.js';
+
+test('waiting queue keeps unsent one-time messages, soonest first', () => {
+	const rows = waitingOnceSchedules([
+		{ id: 'late', scheduleKind: 'once', status: 'active', nextRunAt: '2026-10-23T15:00:00Z' },
+		{ id: 'daily', scheduleKind: 'recurring', status: 'active', nextRunAt: '2026-10-23T10:00:00Z' },
+		{ id: 'done', scheduleKind: 'once', status: 'completed', nextRunAt: null },
+		{ id: 'soon', scheduleKind: 'once', status: 'ACTIVE', nextRunAt: '2026-10-23T13:00:00Z' },
+		{ id: 'failed', scheduleKind: 'once', status: 'failed', scheduledAt: '2026-10-23T14:00:00Z' },
+	]);
+	assert.deepEqual(rows.map(row => row.id), ['soon', 'failed', 'late']);
+	assert.deepEqual(waitingOnceSchedules(null), []);
+});
+
+test('delay on/off is remembered per chat', () => {
+	const store = new Map();
+	globalThis.window = {
+		localStorage: {
+			getItem: key => (store.has(key) ? store.get(key) : null),
+			setItem: (key, value) => store.set(key, String(value)),
+		},
+	};
+	try {
+		writeDelayedSendForChat('chat-a', true);
+		assert.equal(isDelayedSendOnForChat('chat-a'), true);
+		assert.equal(isDelayedSendOnForChat('chat-b'), false);
+		writeDelayedSendForChat('chat-a', true);
+		assert.equal(JSON.parse(store.get('wa-delayed-send-chats')).length, 1);
+		writeDelayedSendForChat('chat-a', false);
+		assert.equal(isDelayedSendOnForChat('chat-a'), false);
+		assert.equal(isDelayedSendOnForChat(''), false);
+	} finally {
+		delete globalThis.window;
+	}
+});
 
 const MIN = 60_000;
 const NOW = Date.parse('2026-10-23T12:00:00.000Z');

@@ -47,6 +47,36 @@ export function writeDelayedSendPrefs(prefs) {
 	}
 }
 
+export const DELAYED_SEND_CHATS_KEY = 'wa-delayed-send-chats';
+const DELAYED_SEND_CHATS_LIMIT = 300;
+
+function readDelayedSendChats() {
+	try {
+		const raw = typeof window === 'undefined' ? null : window.localStorage.getItem(DELAYED_SEND_CHATS_KEY);
+		const list = raw ? JSON.parse(raw) : [];
+		return Array.isArray(list) ? list.filter(id => typeof id === 'string' && id) : [];
+	} catch {
+		return [];
+	}
+}
+
+/** Whether the delay was left on in this chat, so it survives switching chats and reloads. */
+export function isDelayedSendOnForChat(conversationId) {
+	return Boolean(conversationId) && readDelayedSendChats().includes(String(conversationId));
+}
+
+export function writeDelayedSendForChat(conversationId, on) {
+	if (!conversationId) return;
+	const id = String(conversationId);
+	const rest = readDelayedSendChats().filter(item => item !== id);
+	const next = on ? [...rest, id].slice(-DELAYED_SEND_CHATS_LIMIT) : rest;
+	try {
+		window.localStorage.setItem(DELAYED_SEND_CHATS_KEY, JSON.stringify(next));
+	} catch {
+		// Not remembered: the chat opens with normal sending next time.
+	}
+}
+
 /**
  * @param prefs  normalized prefs
  * @param gap    server reply gap ({ ok, gapMs, theirLastAt, ... }) for the "reply" method
@@ -110,6 +140,16 @@ export function delayedSendTitle(prefs, plan, gap, ar = false) {
 		return `${ar ? 'رد مؤجّل · فرق الرد' : 'Delayed reply · reply gap'} ${formatDelayDuration(gap?.gapMs || 0, ar)}${adjust}${extra}`;
 	}
 	return `${ar ? 'رد مؤجّل' : 'Delayed reply'} · ${formatDelayDuration(p.customMinutes * 60_000, ar)}${extra}`;
+}
+
+const WAITING_STATUSES = new Set(['active', 'paused', 'processing', 'failed']);
+
+/** One-time messages of a chat that have not gone out yet, soonest first (the queue above the composer). */
+export function waitingOnceSchedules(schedules) {
+	const at = item => new Date(item.nextRunAt || item.scheduledAt || 0).getTime() || 0;
+	return (Array.isArray(schedules) ? schedules : [])
+		.filter(item => item?.scheduleKind === 'once' && WAITING_STATUSES.has(String(item.status || '').toLowerCase()))
+		.sort((a, b) => at(a) - at(b));
 }
 
 export const browserTimeZone = () => {
