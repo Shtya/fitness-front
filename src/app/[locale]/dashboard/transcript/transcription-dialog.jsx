@@ -5,7 +5,8 @@ import { useLocale } from 'next-intl';
 import {
 	AudioLines,
 	Check,
-	Clipboard,
+	ChevronDown,
+	Copy,
 	FileAudio,
 	Loader2,
 	ListChecks,
@@ -16,7 +17,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
-import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -45,6 +45,7 @@ import {
 	transcriptionErrorMessage,
 } from './transcription-client';
 import { WaCustomSelect } from '../whatsapp/WaCustomSelect';
+import './transcription-dialog.css';
 
 /** Prepare audio → 0–15%. Chunk uploads/process → 15–96%. */
 function prepareBarPercent(percent) {
@@ -90,6 +91,7 @@ const labels = {
 		result: 'Transcript',
 		copy: 'Copy',
 		copied: 'Transcript copied',
+		words: 'words',
 		save: 'Save changes',
 		saved: 'Changes saved',
 		enhance: 'Enhance with AI',
@@ -140,6 +142,7 @@ const labels = {
 		result: 'النص',
 		copy: 'نسخ',
 		copied: 'تم نسخ النص',
+		words: 'كلمة',
 		save: 'حفظ التعديلات',
 		saved: 'تم حفظ التعديلات',
 		enhance: 'تحسين بالذكاء الاصطناعي',
@@ -240,6 +243,13 @@ export default function TranscriptionDialog({
 	const [saving, setSaving] = useState(false);
 	const [aiBusy, setAiBusy] = useState({ enhancing: false, summarizing: false });
 	const aiPanelRef = useRef(null);
+	const [copiedAt, setCopiedAt] = useState(0);
+	const copiedRecently = Boolean(copiedAt);
+	useEffect(() => {
+		if (!copiedAt) return undefined;
+		const timer = window.setTimeout(() => setCopiedAt(0), 1600);
+		return () => window.clearTimeout(timer);
+	}, [copiedAt]);
 	const autoStartKeyRef = useRef('');
 	const onAiBusyChange = useCallback(next => {
 		setAiBusy({
@@ -600,6 +610,24 @@ export default function TranscriptionDialog({
 		label: locale === 'ar' ? item.labelAr : item.labelEn,
 	}));
 
+	const progressLabel =
+		chunkProgress.total > 1
+			? t.chunkProgress
+					.replace('{current}', String(chunkProgress.current || 1))
+					.replace('{total}', String(chunkProgress.total))
+			: isBundle && voiceSources.length
+				? t.batchProgress
+						.replace('{current}', String(batchIndex || 1))
+						.replace('{total}', String(voiceSources.length))
+				: status === 'preparing'
+					? t.preparing
+					: status === 'uploading'
+						? t.uploading
+						: t.processing;
+	const waitingOnServer = status === 'processing' && progress >= 96;
+	const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+	const fileExtension = String(file?.name || '').split('.').pop();
+
 	return (
 		<Dialog
 			open={open}
@@ -610,8 +638,8 @@ export default function TranscriptionDialog({
 		>
 			<DialogContent
 				dir={locale === 'ar' ? 'rtl' : 'ltr'}
-				className={`wa-dk wa-pop !flex max-h-[min(92dvh,calc(100dvh-1.25rem))] min-h-0 w-full flex-col gap-0 overflow-hidden rounded-2xl p-0 ${
-					isBundle ? 'sm:max-w-xl' : 'sm:max-w-lg'
+				className={`wa-dk wa-pop wtx !flex max-h-[min(92dvh,calc(100dvh-1.25rem))] min-h-0 w-full flex-col gap-0 overflow-hidden rounded-2xl p-0 ${
+					isBundle ? 'sm:max-w-xl' : 'sm:max-w-[34rem]'
 				}`}
 				onEscapeKeyDown={event => {
 					if (busy) event.preventDefault();
@@ -635,314 +663,295 @@ export default function TranscriptionDialog({
 					}
 				}}
 			>
-				<DialogHeader className="shrink-0 px-4 pb-2 pe-14 pt-4 text-start">
-					<DialogTitle className="flex items-center gap-2 text-[16px] font-semibold text-slate-900">
-						<span className="grid size-8 place-items-center rounded-full bg-[#d9fdd3] text-[#128c7e]">
-							<AudioLines className="size-4" />
+				<DialogHeader className="wtx-head">
+					<DialogTitle className="wtx-title">
+						<span className="wtx-title-icon" aria-hidden="true">
+							<AudioLines />
 						</span>
 						{isCopyIntent ? t.copyTitle : isBundle ? t.bundleTitle : t.title}
 					</DialogTitle>
-					<DialogDescription className="text-[12px] leading-5 text-slate-500">
+					<DialogDescription className="wtx-sub">
 						{isCopyIntent ? t.copyDescription : isBundle ? t.bundleDescription : t.description}
 					</DialogDescription>
 				</DialogHeader>
 
-				<div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pb-3">
-				{status === 'loading' ? (
-					<div className="grid min-h-24 place-items-center text-sm text-slate-500">
-						<span className="flex items-center gap-2">
-							<Loader2 className="size-4 animate-spin" />
+				<div className="wtx-body">
+					{status === 'loading' ? (
+						<div className="wtx-state">
+							<Loader2 className="animate-spin" aria-hidden="true" />
 							{t.loadingFile}
-						</span>
-					</div>
-				) : fileError ? (
-					<div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700">
-						{fileError}
-					</div>
-				) : sources.length ? (
-					<>
-						{singleVoice && file ? (
-							<div className="overflow-hidden rounded-xl border border-black/6 bg-[#f7f8fa] p-2.5">
-								<div className="mb-2 flex items-center gap-2 px-0.5">
-									<span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-[#128c7e] shadow-sm">
-										<FileAudio className="size-4" />
-									</span>
-									<span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-slate-800">
-										{displayFileName(file.name, t.voiceFile)}
-									</span>
-									<span className="shrink-0 text-[11px] font-medium tabular-nums text-slate-500">
-										{formatFileSize(file.size)}
-									</span>
-								</div>
-								{audioUrl ? <TranscriptVoicePlayer src={audioUrl} seed={file.name} /> : null}
-							</div>
-						) : null}
-
-						{isBundle ? (
-							<div className="max-h-44 overflow-y-auto rounded-xl border border-black/6 bg-[#f7f8fa] p-2">
-								<p className="mb-1.5 px-1 text-[11px] font-semibold text-slate-500">
-									{t.selectedCount.replace('{count}', String(sources.length))}
-									{voiceSources.length
-										? ` · ${t.voiceCount.replace('{count}', String(voiceSources.length))}`
-										: ''}
-									{ticketCount
-										? ` · ${t.ticketCount.replace('{count}', String(ticketCount))}`
-										: ''}
-								</p>
-								<div className="space-y-1">
-									{sources.map(item => (
-										<div
-											key={`${item.kind}-${item.id}`}
-											className="flex items-start gap-2 rounded-lg bg-white px-2 py-1.5"
-										>
-											<span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md bg-[#d9fdd3] text-[#128c7e]">
-												{item.kind === 'video' ? (
-													<Video className="size-3.5" />
-												) : isMediaTranscriptKind(item.kind) ? (
-													<FileAudio className="size-3.5" />
-												) : (
-													<MessageSquareText className="size-3.5" />
-												)}
-											</span>
-											<div className="min-w-0 flex-1">
-												<p className="truncate text-[12px] font-semibold text-slate-800">
-													{isMediaTranscriptKind(item.kind)
-														? audioDisplayName(item, (item.audioIndex || 1) - 1, t.audioLabel)
-														: t.messageLabel}
-												</p>
-												<p className="truncate text-[11px] text-slate-500">
-													{formatTimestampWithMs(item.timestamp) || '—'}
-													{item.kind === 'text' && item.text ? ` · ${item.text}` : ''}
-												</p>
-											</div>
-										</div>
-									))}
-								</div>
-							</div>
-						) : null}
-
-						<div className={`wa-transcribe-controls grid grid-cols-[minmax(0,1fr)_minmax(6.75rem,8.25rem)_auto] items-end gap-2 ${isCopyIntent ? 'hidden' : ''}`}>
-							<label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-700">
-								<span className="truncate">{t.method}</span>
-								<TranscriptionProviderSelect
-									value={provider}
-									onChange={selectProvider}
-									disabled={busy}
-									ariaLabel={t.method}
-									className="min-w-0"
-								/>
-							</label>
-
-							<label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-700">
-								<span className="truncate">{t.chunkLength}</span>
-								<WaCustomSelect
-									value={chunkSeconds}
-									onChange={selectChunkSeconds}
-									disabled={busy}
-									ariaLabel={t.chunkLength}
-									options={chunkOptions}
-									className="min-w-0"
-								/>
-							</label>
-
-							<Button
-								onClick={transcribe}
-								disabled={busy || (singleVoice && !file)}
-								className="h-10 shrink-0 rounded-xl px-3 sm:min-w-[7.25rem]"
-							>
-								{busy ? <Loader2 className="animate-spin" /> : <AudioLines />}
-								<span className="truncate">{t.transcribe}</span>
-							</Button>
 						</div>
-
-						{['preparing', 'uploading', 'processing'].includes(status) && (
-							<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-								<div className="flex items-center justify-between text-[13px] font-semibold text-slate-700">
-									<span className="flex min-w-0 items-center gap-2">
-										<Loader2 className="size-4 shrink-0 animate-spin text-[var(--color-primary-600)]" />
-										<span className="truncate">
-											{chunkProgress.total > 1
-												? t.chunkProgress
-													.replace('{current}', String(chunkProgress.current || 1))
-													.replace('{total}', String(chunkProgress.total))
-												: isBundle && voiceSources.length
-													? t.batchProgress
-														.replace('{current}', String(batchIndex || 1))
-														.replace('{total}', String(voiceSources.length))
-													: status === 'preparing'
-														? t.preparing
-														: status === 'uploading'
-															? t.uploading
-															: t.processing}
+					) : fileError ? (
+						<div className="wtx-error" role="alert">
+							{fileError}
+						</div>
+					) : sources.length ? (
+						<>
+							{singleVoice && file ? (
+								<section className="wtx-media" aria-label={t.voiceFile}>
+									<div className="wtx-media-head">
+										<span className="wtx-media-icon" aria-hidden="true">
+											<FileAudio />
 										</span>
-									</span>
-									<span className="shrink-0 tabular-nums text-slate-500">
-										{status === 'processing' && progress >= 96
-											? `${elapsed}s`
-											: `${Math.min(99, Math.max(0, progress))}%`}
-									</span>
-								</div>
-								<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-									<div
-										className={`h-full rounded-full bg-[var(--color-primary-600)] transition-[width] duration-300 ease-out ${
-											status === 'processing' && progress >= 96 ? 'animate-pulse' : ''
-										}`}
-										style={{ width: `${Math.min(100, Math.max(2, progress))}%` }}
-									/>
-								</div>
-							</div>
-						)}
+										<span className="wtx-media-name" title={file.name}>
+											{displayFileName(file.name, t.voiceFile)}
+										</span>
+										<span className="wtx-media-meta">
+											{fileExtension && fileExtension !== file.name ? (
+												<span className="wtx-tag">{fileExtension}</span>
+											) : null}
+											{formatFileSize(file.size)}
+										</span>
+									</div>
+									{audioUrl ? <TranscriptVoicePlayer src={audioUrl} seed={file.name} /> : null}
+								</section>
+							) : null}
 
-						{result && (
-							<div className="space-y-2">
-								{originalTranscript ? (
-									<div className="overflow-hidden rounded-xl border border-slate-200 bg-[#f7f8fa]">
-										<button
-											type="button"
-											onClick={() => setOriginalExpanded(open => !open)}
-											className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-start"
-											aria-expanded={originalExpanded}
-										>
-											<span className="text-[12px] font-semibold text-slate-600">
-												{t.originalTranscript}
-											</span>
-											<span className="text-[11px] font-medium text-slate-500">
-												{originalExpanded ? t.hideOriginal : t.showOriginal}
-											</span>
-										</button>
-										{originalExpanded ? (
-											<pre
-												dir="auto"
-												className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words border-t border-slate-200 px-2.5 py-2 font-sans text-[12px] leading-5 text-slate-600"
+							{isBundle ? (
+								<section className="wtx-list">
+									<p className="wtx-list-head">
+										{t.selectedCount.replace('{count}', String(sources.length))}
+										{voiceSources.length
+											? ` · ${t.voiceCount.replace('{count}', String(voiceSources.length))}`
+											: ''}
+										{ticketCount
+											? ` · ${t.ticketCount.replace('{count}', String(ticketCount))}`
+											: ''}
+									</p>
+									<ul className="wtx-list-items">
+										{sources.map(item => (
+											<li key={`${item.kind}-${item.id}`} className="wtx-list-item">
+												<span className="wtx-list-icon" aria-hidden="true">
+													{item.kind === 'video' ? (
+														<Video />
+													) : isMediaTranscriptKind(item.kind) ? (
+														<FileAudio />
+													) : (
+														<MessageSquareText />
+													)}
+												</span>
+												<span className="min-w-0 flex-1">
+													<span className="wtx-list-name">
+														{isMediaTranscriptKind(item.kind)
+															? audioDisplayName(item, (item.audioIndex || 1) - 1, t.audioLabel)
+															: t.messageLabel}
+													</span>
+													<span className="wtx-list-meta" dir="auto">
+														{formatTimestampWithMs(item.timestamp) || '—'}
+														{item.kind === 'text' && item.text ? ` · ${item.text}` : ''}
+													</span>
+												</span>
+											</li>
+										))}
+									</ul>
+								</section>
+							) : null}
+
+							<section className={`wtx-controls ${isCopyIntent ? 'hidden' : ''}`}>
+								<label className="wtx-field">
+									<span className="wtx-label">{t.method}</span>
+									<TranscriptionProviderSelect
+										value={provider}
+										onChange={selectProvider}
+										disabled={busy}
+										ariaLabel={t.method}
+										className="min-w-0"
+									/>
+								</label>
+								<label className="wtx-field" title={t.chunkLengthHint}>
+									<span className="wtx-label">{t.chunkLength}</span>
+									<WaCustomSelect
+										value={chunkSeconds}
+										onChange={selectChunkSeconds}
+										disabled={busy}
+										ariaLabel={t.chunkLength}
+										options={chunkOptions}
+										className="min-w-0"
+									/>
+								</label>
+								<button
+									type="button"
+									onClick={transcribe}
+									disabled={busy || (singleVoice && !file)}
+									className="wtx-btn is-primary wtx-transcribe"
+								>
+									{busy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <AudioLines aria-hidden="true" />}
+									<span className="truncate">{t.transcribe}</span>
+								</button>
+							</section>
+
+							{['preparing', 'uploading', 'processing'].includes(status) && (
+								<div className="wtx-progress" role="status" aria-live="polite">
+									<div className="wtx-progress-row">
+										<span className="wtx-progress-label">
+											<Loader2 className="animate-spin" aria-hidden="true" />
+											<span className="truncate">{progressLabel}</span>
+										</span>
+										<span className="wtx-progress-value">
+											{waitingOnServer ? `${elapsed}s` : `${Math.min(99, Math.max(0, progress))}%`}
+										</span>
+									</div>
+									<div className="wtx-progress-track">
+										<div
+											className={`wtx-progress-fill ${waitingOnServer ? 'is-waiting' : ''}`}
+											style={{ width: `${Math.min(100, Math.max(2, progress))}%` }}
+										/>
+									</div>
+								</div>
+							)}
+
+							{result && (
+								<section className="wtx-result">
+									{originalTranscript ? (
+										<div className="wtx-original">
+											<button
+												type="button"
+												onClick={() => setOriginalExpanded(open => !open)}
+												className="wtx-original-toggle"
+												aria-expanded={originalExpanded}
 											>
-												{originalTranscript}
-											</pre>
-										) : null}
-									</div>
-								) : null}
-
-								<div className="relative rounded-xl border border-slate-200 bg-white p-2.5">
-									<div className="mb-2 flex items-center justify-between gap-2">
-										<h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-800">
-											<Check className="size-4 text-emerald-600" />
-											{originalTranscript ? t.correctedTranscript : t.result}
-										</h3>
-										<Button
-											size="sm"
-											variant="outline"
-											disabled={aiBusy.enhancing}
-											onClick={async () => {
-												await navigator.clipboard.writeText(text);
-												toast.success(t.copied);
-											}}
-										>
-											<Clipboard />
-											{t.copy}
-										</Button>
-									</div>
-									<textarea
-										dir="auto"
-										value={text}
-										disabled={aiBusy.enhancing}
-										onChange={event => setText(event.target.value)}
-										className={`min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-[#f7f8fa] p-2.5 text-[12px] leading-5 outline-none focus:border-[var(--color-primary-400)] disabled:opacity-70 ${
-											originalTranscript
-												? 'border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/35'
-												: ''
-										}`}
-									/>
-									{aiBusy.enhancing ? (
-										<div className="pointer-events-none absolute inset-x-2.5 bottom-2.5 top-12 flex items-center justify-center rounded-xl bg-white/55 backdrop-blur-[1px]">
-											<div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm">
-												<Loader2 className="size-4 animate-spin text-[var(--color-primary-600)]" />
-												{t.enhancing}
-											</div>
+												<span>{t.originalTranscript}</span>
+												<span className="wtx-original-action">
+													{originalExpanded ? t.hideOriginal : t.showOriginal}
+													<ChevronDown
+														className={originalExpanded ? 'rotate-180' : ''}
+														aria-hidden="true"
+													/>
+												</span>
+											</button>
+											{originalExpanded ? (
+												<pre dir="auto" className="wtx-original-text">
+													{originalTranscript}
+												</pre>
+											) : null}
 										</div>
 									) : null}
-									<TranscriptionAiPanel
-										ref={aiPanelRef}
-										key={result.id}
-										variant="compact"
-										locale={locale}
-										transcriptionId={result.id}
-										transcriptText={text}
-										onApplyText={nextText => {
-											const next = String(nextText || '');
-											setText(next);
-											if (
-												originalTranscript &&
-												next.trim() === String(originalTranscript).trim()
-											) {
-												setOriginalTranscript('');
-												setOriginalExpanded(false);
+
+									<div className="wtx-editor">
+										<div className="wtx-editor-head">
+											<span className={`wtx-chip ${originalTranscript ? 'is-ai' : ''}`}>
+												{originalTranscript ? <Wand2 aria-hidden="true" /> : <Check aria-hidden="true" />}
+												{originalTranscript ? t.correctedTranscript : t.result}
+											</span>
+											<span className="wtx-editor-meta">{wordCount ? `${wordCount} ${t.words}` : ''}</span>
+											<button
+												type="button"
+												className="wtx-btn is-ghost is-sm"
+												disabled={aiBusy.enhancing}
+												onClick={async () => {
+													await navigator.clipboard.writeText(text);
+													toast.success(t.copied);
+													setCopiedAt(Date.now());
+												}}
+											>
+												{copiedRecently ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+												{t.copy}
+											</button>
+										</div>
+										<div className="wtx-textarea-wrap">
+											<textarea
+												dir="auto"
+												value={text}
+												disabled={aiBusy.enhancing}
+												aria-label={originalTranscript ? t.correctedTranscript : t.result}
+												onChange={event => setText(event.target.value)}
+												className={`wtx-textarea ${originalTranscript ? 'is-ai' : ''}`}
+											/>
+											{aiBusy.enhancing ? (
+												<div className="wtx-textarea-busy">
+													<span>
+														<Loader2 className="animate-spin" aria-hidden="true" />
+														{t.enhancing}
+													</span>
+												</div>
+											) : null}
+										</div>
+										<TranscriptionAiPanel
+											ref={aiPanelRef}
+											key={result.id}
+											variant="compact"
+											locale={locale}
+											transcriptionId={result.id}
+											transcriptText={text}
+											onApplyText={nextText => {
+												const next = String(nextText || '');
+												setText(next);
+												if (
+													originalTranscript &&
+													next.trim() === String(originalTranscript).trim()
+												) {
+													setOriginalTranscript('');
+													setOriginalExpanded(false);
+												}
+											}}
+											onEnhanced={payload => {
+												const original = String(payload?.originalText || '').trim();
+												const enhanced = String(payload?.enhancedText || '').trim();
+												if (original) {
+													setOriginalTranscript(original);
+													setOriginalExpanded(false);
+												}
+												if (enhanced) {
+													setText(enhanced);
+													onCompleted?.(enhanced, result);
+												}
+											}}
+											onBusyChange={onAiBusyChange}
+											onResultUpdated={updated => {
+												if (!updated) return;
+												setResult(updated);
+												if (typeof updated.text === 'string') setText(updated.text);
+											}}
+											initialCompare={
+												result.originalText && result.enhancedText
+													? {
+															originalText: result.originalText,
+															enhancedText: result.enhancedText,
+															changesSummary: result.enhancementMeta?.changesSummary || [],
+														}
+													: null
 											}
-										}}
-										onEnhanced={payload => {
-											const original = String(payload?.originalText || '').trim();
-											const enhanced = String(payload?.enhancedText || '').trim();
-											if (original) {
-												setOriginalTranscript(original);
-												setOriginalExpanded(false);
-											}
-											if (enhanced) {
-												setText(enhanced);
-												onCompleted?.(enhanced, result);
-											}
-										}}
-										onBusyChange={onAiBusyChange}
-										onResultUpdated={updated => {
-											if (!updated) return;
-											setResult(updated);
-											if (typeof updated.text === 'string') setText(updated.text);
-										}}
-										initialCompare={
-											result.originalText && result.enhancedText
-												? {
-														originalText: result.originalText,
-														enhancedText: result.enhancedText,
-														changesSummary: result.enhancementMeta?.changesSummary || [],
-													}
-												: null
-										}
-										initialSummary={result.summaryPayload || null}
-									/>
-								</div>
-							</div>
-						)}
-					</>
-				) : null}
+											initialSummary={result.summaryPayload || null}
+										/>
+									</div>
+								</section>
+							)}
+						</>
+					) : null}
 				</div>
 
 				{result ? (
-					<div className="shrink-0 border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-10px_24px_rgba(15,23,42,0.08)] backdrop-blur">
-						<div className="grid grid-cols-3 gap-2">
-							<Button
-								onClick={save}
-								disabled={saving || text === result.text}
-								className="h-12 min-w-0 rounded-xl px-2 text-[11px] font-semibold sm:text-[13px]"
-							>
-								{saving ? <Loader2 className="animate-spin" /> : <Save />}
-								<span className="truncate">{t.save}</span>
-							</Button>
-							<Button
-								onClick={() => aiPanelRef.current?.enhance?.()}
-								disabled={aiBusy.enhancing || !result.id || !text.trim()}
-								className="h-12 min-w-0 rounded-xl px-2 text-[11px] font-semibold sm:text-[13px]"
-							>
-								{aiBusy.enhancing ? <Loader2 className="animate-spin" /> : <Wand2 />}
-								<span className="truncate">{aiBusy.enhancing ? t.enhancing : t.enhance}</span>
-							</Button>
-							<Button
-								variant="outline"
+					<footer className="wtx-foot">
+						<div className="wtx-foot-secondary">
+							<button
+								type="button"
 								onClick={() => aiPanelRef.current?.summarize?.()}
 								disabled={aiBusy.summarizing || !result.id || !text.trim()}
-								className="h-12 min-w-0 rounded-xl px-2 text-[11px] font-semibold sm:text-[13px]"
+								className="wtx-btn is-ghost"
 							>
-								{aiBusy.summarizing ? <Loader2 className="animate-spin" /> : <ListChecks />}
+								{aiBusy.summarizing ? <Loader2 className="animate-spin" aria-hidden="true" /> : <ListChecks aria-hidden="true" />}
 								<span className="truncate">{aiBusy.summarizing ? t.summarizing : t.summarize}</span>
-							</Button>
+							</button>
+							<button
+								type="button"
+								onClick={() => aiPanelRef.current?.enhance?.()}
+								disabled={aiBusy.enhancing || !result.id || !text.trim()}
+								className="wtx-btn is-soft"
+							>
+								{aiBusy.enhancing ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Wand2 aria-hidden="true" />}
+								<span className="truncate">{aiBusy.enhancing ? t.enhancing : t.enhance}</span>
+							</button>
 						</div>
-					</div>
+						<button
+							type="button"
+							onClick={save}
+							disabled={saving || text === result.text}
+							className="wtx-btn is-primary wtx-save"
+						>
+							{saving ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Save aria-hidden="true" />}
+							<span className="truncate">{t.save}</span>
+						</button>
+					</footer>
 				) : null}
 			</DialogContent>
 		</Dialog>

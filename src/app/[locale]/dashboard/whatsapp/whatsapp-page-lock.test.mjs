@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
 	formatPageLockCountdown,
+	isPageLockAwayExpired,
 	isPageLockIdleExpired,
+	isPageLockPin,
 	normalizePageLockStatus,
 	pageLockErrorDetails,
 	pageLockPasscodeError,
+	pageLockPinError,
 	shouldStartPageLocked,
 } from './whatsapp-page-lock.js';
 
@@ -48,4 +51,34 @@ test('password rules and error parsing', () => {
 	assert.equal(details.attemptsLeft, 2);
 	assert.equal(pageLockErrorDetails(new Error('x'), 'fallback').message, 'fallback');
 	assert.equal(formatPageLockCountdown(125_000), '2:05');
+});
+
+test('ask-on-open only counts on a fresh page load', () => {
+	const now = 1_000_000_000;
+	const status = { enabled: true, autoLockMinutes: 5, lockOnOpen: true };
+	const session = { unlockedAt: now - 1000, lastActivity: now - 1000 };
+	assert.equal(shouldStartPageLocked(status, session, now, { freshLoad: true }), true);
+	assert.equal(shouldStartPageLocked(status, session, now, { freshLoad: false }), false);
+	assert.equal(shouldStartPageLocked(status, { unlockedAt: 1, lastActivity: 1 }, now, { freshLoad: false }), true);
+});
+
+test('switching tabs only locks after being away long enough', () => {
+	const now = 1_000_000_000;
+	const on = { lockOnHide: true, autoLockMinutes: 5 };
+	assert.equal(isPageLockAwayExpired(on, now - 30_000, now), false);
+	assert.equal(isPageLockAwayExpired(on, now - 5 * 60_000, now), true);
+	assert.equal(isPageLockAwayExpired({ ...on, autoLockMinutes: 0 }, now - 4 * 60_000, now), false);
+	assert.equal(isPageLockAwayExpired({ ...on, autoLockMinutes: 0 }, now - 5 * 60_000, now), true);
+	assert.equal(isPageLockAwayExpired({ ...on, lockOnHide: false }, now - 60 * 60_000, now), false);
+	assert.equal(isPageLockAwayExpired(on, null, now), false);
+});
+
+test('a new PIN is exactly 4 digits typed twice', () => {
+	const pinCopy = { pinDigits: 'digits', pinMismatch: 'mismatch' };
+	assert.equal(isPageLockPin('1234'), true);
+	assert.equal(isPageLockPin('123'), false);
+	assert.equal(isPageLockPin('12a4'), false);
+	assert.equal(pageLockPinError('12345', '12345', pinCopy), 'digits');
+	assert.equal(pageLockPinError('1234', '1243', pinCopy), 'mismatch');
+	assert.equal(pageLockPinError('1234', '1234', pinCopy), '');
 });

@@ -420,6 +420,20 @@ export function useWaVirtualRows({
 				);
 			}
 		},
+		/**
+		 * scrollToIndex / scrollToOffset keep re-applying their target every frame for up to
+		 * 5s. Their "end" is the list's total size, which is short of the real bottom when
+		 * content follows the list, so a native pin-to-bottom and that loop pulled the thread
+		 * back and forth and the loop often won, leaving the chat above the latest message.
+		 * Bottom pinning stops the loop and scrolls the box natively instead.
+		 */
+		cancelScrollReconcile: () => {
+			virtualizer.scrollState = null;
+			if (virtualizer.rafId != null) {
+				virtualizer.targetWindow?.cancelAnimationFrame?.(virtualizer.rafId);
+				virtualizer.rafId = null;
+			}
+		},
 		getScrollOffset: () => virtualizer.scrollOffset,
 		measureElement: virtualizer.measureElement,
 	};

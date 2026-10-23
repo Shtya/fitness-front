@@ -11,6 +11,7 @@ import {
 	Play,
 	Plus,
 	Repeat,
+	RotateCcw,
 	Trash2,
 	Users,
 	X,
@@ -31,6 +32,8 @@ const copy = {
 		following: 'Next',
 		paused: 'Paused',
 		sending: 'Sending',
+		failed: 'Not sent',
+		retry: 'Try again now',
 		daily: 'Every day',
 		weekdays: 'Weekdays',
 		once: 'Once',
@@ -51,6 +54,8 @@ const copy = {
 		following: 'التالي',
 		paused: 'متوقفة',
 		sending: 'جارٍ الإرسال',
+		failed: 'لم تُرسل',
+		retry: 'أعد المحاولة الآن',
 		daily: 'كل يوم',
 		weekdays: 'أيام العمل',
 		once: 'مرة واحدة',
@@ -79,7 +84,8 @@ function weekdayName(index, ar) {
 }
 
 function describeSchedule(item, t, ar) {
-	if (item.scheduleKind === 'once') return t.once;
+	// One-time messages from the composer keep how the delay was worked out in their title.
+	if (item.scheduleKind === 'once') return item.title || t.once;
 	const days = (Array.isArray(item.daysOfWeek) ? item.daysOfWeek : [])
 		.map(Number)
 		.filter(day => day >= 0 && day <= 6)
@@ -94,7 +100,7 @@ function describeSchedule(item, t, ar) {
 
 function isLiveSchedule(item) {
 	const status = String(item?.status || '').toLowerCase();
-	return status === 'active' || status === 'paused' || status === 'processing';
+	return status === 'active' || status === 'paused' || status === 'processing' || status === 'failed';
 }
 
 export default function ScheduledMessagesPanel({
@@ -214,7 +220,7 @@ export default function ScheduledMessagesPanel({
 					const busy = busyId === item.id;
 					const status = String(item.status || '').toLowerCase();
 					const title = item.text || item.title || t.title;
-					const canEdit = status === 'active' || status === 'paused';
+					const canEdit = status === 'active' || status === 'paused' || status === 'failed';
 					const recipients = item.recipients?.length || 0;
 					const when = formatWhen(item.nextRunAt || item.scheduledAt, ar);
 					const recurring = item.scheduleKind !== 'once';
@@ -238,6 +244,10 @@ export default function ScheduledMessagesPanel({
 							<div className="wa-ui-sched__foot">
 								{status === 'paused' ? (
 									<span className="wa-ui-badge wa-ui-badge--warning">{t.paused}</span>
+								) : status === 'failed' ? (
+									<span className="wa-ui-badge wa-ui-badge--danger" title={item.lastError || undefined}>
+										{t.failed}
+									</span>
 								) : status === 'processing' ? (
 									<span className="wa-ui-badge">{t.sending}</span>
 								) : when ? (
@@ -271,6 +281,18 @@ export default function ScheduledMessagesPanel({
 											aria-label={t.pause}
 										>
 											{busy ? <Loader2 size={14} className="animate-spin" /> : <Pause size={14} strokeWidth={2} />}
+										</button>
+									) : null}
+									{status === 'failed' ? (
+										<button
+											type="button"
+											className="wa-ui-icon-btn wa-ui-icon-btn--sm"
+											disabled={busy}
+											onClick={() => onResume?.(item)}
+											title={t.retry}
+											aria-label={t.retry}
+										>
+											{busy ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} strokeWidth={2} />}
 										</button>
 									) : null}
 									{status === 'paused' ? (

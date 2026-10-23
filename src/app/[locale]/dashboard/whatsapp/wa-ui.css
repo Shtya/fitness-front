@@ -13766,3 +13766,54 @@ button.wa-view-once:focus-visible {
 		white-space: nowrap;
 	}
 }
+
+/* "N unread messages ↑": chats open at the latest message; this jumps to the first unread. */
+.wa-jump-unread {
+	position: absolute;
+	z-index: 12;
+	top: 12px;
+	left: 50%;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: calc(100% - 32px);
+	height: 32px;
+	padding: 0 14px 0 10px;
+	border: 0;
+	border-radius: 999px;
+	color: #008069;
+	background: #ffffff;
+	box-shadow:
+		0 1px 3px rgba(11, 20, 26, 0.16),
+		0 4px 12px rgba(11, 20, 26, 0.1);
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+	touch-action: manipulation;
+	transform: translateX(-50%);
+	animation: wa-jump-unread-in 180ms ease-out;
+}
+
+.wa-jump-unread:hover {
+	background: #f0f2f5;
+}
+
+.dark .wa-jump-unread {
+	color: #21c063;
+	background: #233138;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes wa-jump-unread-in {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -6px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-jump-unread {
+		animation: none;
+	}
+}

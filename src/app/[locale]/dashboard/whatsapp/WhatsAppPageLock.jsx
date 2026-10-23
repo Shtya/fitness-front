@@ -11,7 +11,9 @@ import {
 	KeyRound,
 	Loader2,
 	Lock,
+	Delete,
 	LockKeyhole,
+	LockKeyholeOpen,
 	LogOut,
 	Mail,
 	MonitorOff,
@@ -25,15 +27,20 @@ import { WaCustomSelect } from './WaCustomSelect';
 import {
 	PAGE_LOCK_AUTO_MINUTES,
 	PAGE_LOCK_MAX_LENGTH,
+	PAGE_LOCK_PIN_LENGTH,
 	formatPageLockCountdown,
+	isPageLockAwayExpired,
 	isPageLockIdleExpired,
+	isPageLockPin,
 	normalizePageLockStatus,
 	pageLockErrorDetails,
-	pageLockPasscodeError,
+	pageLockPinError,
 	readPageLockHint,
+	readPageLockMode,
 	readPageLockSession,
 	shouldStartPageLocked,
 	writePageLockHint,
+	writePageLockMode,
 	writePageLockSession,
 } from './whatsapp-page-lock';
 import './wa-page-lock.css';
@@ -63,8 +70,8 @@ const COPY = {
 		onlySpaces: 'The password cannot be only spaces.',
 		mismatch: 'The two passwords do not match.',
 		failed: 'Something went wrong. Try again.',
-		setupTitle: 'Set a page lock password',
-		setupHint: 'Pick a password or PIN only you know. You will need it to open WhatsApp here.',
+		setupTitle: 'Set a 4-digit PIN',
+		setupHint: 'Pick a PIN only you know. You will type it to open WhatsApp here.',
 		turnOn: 'Turn on page lock',
 		enabled: 'Page lock',
 		enabledHint: 'Show the lock screen before the WhatsApp page.',
@@ -73,18 +80,33 @@ const COPY = {
 		autoLock: 'Lock automatically after',
 		autoLockHint: 'Locks the page when nobody uses it for this long.',
 		minutes: { 0: 'Never (no idle timer)', 1: '1 minute', 5: '5 minutes', 15: '15 minutes', 30: '30 minutes', 60: '1 hour', 240: '4 hours' },
-		lockOnHide: 'Lock when I leave the tab',
-		lockOnHideHint: 'Locks as soon as you switch tabs or minimize the browser.',
+		lockOnHide: 'Lock when I stay away from the tab',
+		lockOnHideHint: 'Quick tab switches never lock. If you are away for the auto-lock time (5 minutes when it is off), it locks when you come back.',
 		lockOnOpen: 'Ask every time I open WhatsApp',
-		lockOnOpenHint: 'Also locks after a page reload, even if you were active.',
+		lockOnOpenHint: 'Asks again after a page reload or in a new browser tab. Moving between pages inside the app does not lock it.',
+		pinTitle: 'Enter your PIN',
+		pinHint: 'Type your 4-digit PIN to open WhatsApp.',
+		passwordHint: 'Type your page lock password to open WhatsApp.',
+		newPin: 'New 4-digit PIN',
+		confirmPin: 'Type the PIN again',
+		currentPin: 'Current PIN or password',
+		pinDigits: 'The PIN must be exactly 4 digits.',
+		pinMismatch: 'The two PINs do not match.',
+		wrongPin: 'Wrong PIN. Try again.',
+		checking: 'Checking…',
+		unlocked: 'Unlocked',
+		usePassword: 'Use password instead',
+		usePin: 'Use 4-digit PIN',
+		deleteDigit: 'Delete last digit',
+		digit: 'Digit {n}',
 		lockNow: 'Lock now',
 		lockNowHint: 'Shortcut: Ctrl + Alt + L',
-		change: 'Change password',
-		changeHint: 'Enter your current password, then the new one.',
-		saveNew: 'Save new password',
-		changed: 'Password changed.',
+		change: 'Change PIN',
+		changeHint: 'Enter your current PIN or password, then the new 4-digit PIN.',
+		saveNew: 'Save new PIN',
+		changed: 'PIN changed.',
 		forgotTitle: 'Reset your page lock password',
-		forgotHint: 'Prove it is you, then pick a new password.',
+		forgotHint: 'Prove it is you, then pick a new 4-digit PIN.',
 		byEmail: 'Email me a code',
 		byAccount: 'Use my account password',
 		sendCode: 'Send code to {email}',
@@ -131,8 +153,8 @@ const COPY = {
 		onlySpaces: 'لا يمكن أن تكون كلمة السر مسافات فقط.',
 		mismatch: 'كلمتا السر غير متطابقتين.',
 		failed: 'حدث خطأ. حاول مرة أخرى.',
-		setupTitle: 'عيّن كلمة سر لقفل الصفحة',
-		setupHint: 'اختر كلمة سر أو رقمًا سريًا تعرفه أنت فقط. ستحتاجه لفتح واتساب هنا.',
+		setupTitle: 'عيّن رقمًا سريًا من 4 أرقام',
+		setupHint: 'اختر رقمًا سريًا تعرفه أنت فقط. ستكتبه لفتح واتساب هنا.',
 		turnOn: 'تفعيل قفل الصفحة',
 		enabled: 'قفل الصفحة',
 		enabledHint: 'إظهار شاشة القفل قبل صفحة واتساب.',
@@ -141,18 +163,33 @@ const COPY = {
 		autoLock: 'القفل تلقائيًا بعد',
 		autoLockHint: 'تُقفل الصفحة إذا لم يستخدمها أحد طوال هذه المدة.',
 		minutes: { 0: 'أبدًا (بدون مؤقت)', 1: 'دقيقة', 5: '5 دقائق', 15: '15 دقيقة', 30: '30 دقيقة', 60: 'ساعة', 240: '4 ساعات' },
-		lockOnHide: 'القفل عند مغادرة التبويب',
-		lockOnHideHint: 'تُقفل فور التبديل لتبويب آخر أو تصغير المتصفح.',
+		lockOnHide: 'القفل لو غبت عن التبويب',
+		lockOnHideHint: 'التنقل السريع بين التبويبات لا يقفل. لو غبت مدة القفل التلقائي (5 دقائق لو متوقف) تُقفل عند رجوعك.',
 		lockOnOpen: 'اطلب كلمة السر كل مرة أفتح واتساب',
-		lockOnOpenHint: 'تُقفل أيضًا بعد إعادة تحميل الصفحة حتى لو كنت نشطًا.',
+		lockOnOpenHint: 'تطلبها بعد إعادة تحميل الصفحة أو في تبويب متصفح جديد. التنقل بين صفحات التطبيق لا يقفل.',
+		pinTitle: 'اكتب الرقم السري',
+		pinHint: 'اكتب الرقم السري المكوّن من 4 أرقام لفتح واتساب.',
+		passwordHint: 'اكتب كلمة سر قفل الصفحة لفتح واتساب.',
+		newPin: 'رقم سري جديد (4 أرقام)',
+		confirmPin: 'اكتب الرقم السري مرة أخرى',
+		currentPin: 'الرقم السري أو كلمة السر الحالية',
+		pinDigits: 'الرقم السري لازم يكون 4 أرقام بالضبط.',
+		pinMismatch: 'الرقمان السريان غير متطابقين.',
+		wrongPin: 'رقم سري غير صحيح. حاول مرة أخرى.',
+		checking: 'جارٍ التحقق…',
+		unlocked: 'تم الفتح',
+		usePassword: 'استخدم كلمة سر بدلًا من ذلك',
+		usePin: 'استخدم الرقم السري (4 أرقام)',
+		deleteDigit: 'حذف آخر رقم',
+		digit: 'الرقم {n}',
 		lockNow: 'اقفل الآن',
 		lockNowHint: 'الاختصار: Ctrl + Alt + L',
-		change: 'تغيير كلمة السر',
-		changeHint: 'اكتب كلمة السر الحالية ثم الجديدة.',
-		saveNew: 'حفظ كلمة السر الجديدة',
-		changed: 'تم تغيير كلمة السر.',
+		change: 'تغيير الرقم السري',
+		changeHint: 'اكتب الرقم السري أو كلمة السر الحالية ثم الرقم السري الجديد.',
+		saveNew: 'حفظ الرقم السري الجديد',
+		changed: 'تم تغيير الرقم السري.',
 		forgotTitle: 'إعادة تعيين كلمة سر القفل',
-		forgotHint: 'أثبت أنك صاحب الحساب ثم اختر كلمة سر جديدة.',
+		forgotHint: 'أثبت أنك صاحب الحساب ثم اختر رقمًا سريًا جديدًا من 4 أرقام.',
 		byEmail: 'أرسل لي رمزًا على البريد',
 		byAccount: 'استخدم كلمة سر حسابي',
 		sendCode: 'أرسل الرمز إلى {email}',
@@ -186,20 +223,30 @@ const ACTIVITY_WRITE_MS = 5_000;
 const IDLE_CHECK_MS = 10_000;
 
 /**
+ * Set once this page load has been unlocked. Leaving WhatsApp for another dashboard page and coming
+ * back remounts the workspace; that is not "opening" it again, so "ask every time" waits for a reload.
+ */
+let unlockedThisPageLoad = false;
+const startLocked = status =>
+	shouldStartPageLocked(status, readPageLockSession(), Date.now(), { freshLoad: !unlockedThisPageLoad });
+
+/**
  * Page lock state for the WhatsApp workspace. The server owns the password and wrong-try limits;
- * this tab remembers that it was unlocked (sessionStorage) and re-locks on idle / tab switch / open.
+ * this tab remembers that it was unlocked (sessionStorage) and re-locks after the idle time, after being
+ * away from the tab that long, or on a fresh page load. A quick tab switch never locks.
  */
 export function useWhatsAppPageLock({ active = true } = {}) {
 	const [status, setStatus] = useState(() => readPageLockHint() || normalizePageLockStatus(null));
 	const [loaded, setLoaded] = useState(false);
 	const [locked, setLocked] = useState(() =>
-		active ? shouldStartPageLocked(readPageLockHint(), readPageLockSession(), Date.now()) : false,
+		active ? startLocked(readPageLockHint()) : false,
 	);
 	const statusRef = useRef(status);
 	const lockedRef = useRef(locked);
 	const lastActivity = useRef(readPageLockSession()?.lastActivity || Date.now());
 	const lastWrite = useRef(0);
 	const unlockedHere = useRef(false);
+	const hiddenAt = useRef(null);
 	statusRef.current = status;
 	lockedRef.current = locked;
 
@@ -214,6 +261,8 @@ export function useWhatsAppPageLock({ active = true } = {}) {
 	const markUnlocked = useCallback(() => {
 		const now = Date.now();
 		unlockedHere.current = true;
+		unlockedThisPageLoad = true;
+		hiddenAt.current = null;
 		lastActivity.current = now;
 		lastWrite.current = now;
 		writePageLockSession({ unlockedAt: now, lastActivity: now });
@@ -243,7 +292,7 @@ export function useWhatsAppPageLock({ active = true } = {}) {
 			.then(({ data }) => {
 				if (!alive) return;
 				const next = applyStatus(data);
-				if (!unlockedHere.current) setLocked(shouldStartPageLocked(next, readPageLockSession(), Date.now()));
+				if (!unlockedHere.current) setLocked(startLocked(next));
 			})
 			.catch(() => {
 				// Keep the cached decision; a network error must not open a locked page.
@@ -273,10 +322,13 @@ export function useWhatsAppPageLock({ active = true } = {}) {
 		};
 		const onVisibility = () => {
 			if (document.visibilityState === 'hidden') {
-				if (statusRef.current.lockOnHide) lockNow();
-			} else {
-				checkIdle();
+				hiddenAt.current = Date.now();
+				return;
 			}
+			const awaySince = hiddenAt.current;
+			hiddenAt.current = null;
+			if (isPageLockAwayExpired(statusRef.current, awaySince, Date.now())) lockNow();
+			else checkIdle();
 		};
 		ACTIVITY_EVENTS.forEach(name => window.addEventListener(name, touch, { passive: true, capture: true }));
 		document.addEventListener('visibilitychange', onVisibility);
@@ -300,13 +352,21 @@ export function useWhatsAppPageLock({ active = true } = {}) {
 		return () => window.removeEventListener('keydown', onKey);
 	}, [enabled, lockNow]);
 
-	const unlock = useCallback(
+	/** Checks the passcode on the server without opening the page yet (the lock screen animates first). */
+	const checkPasscode = useCallback(
 		async passcode => {
 			const { data } = await api.post('/whatsapp/page-lock/verify', { passcode });
 			applyStatus(data);
+		},
+		[applyStatus],
+	);
+
+	const unlock = useCallback(
+		async passcode => {
+			await checkPasscode(passcode);
 			markUnlocked();
 		},
-		[applyStatus, markUnlocked],
+		[checkPasscode, markUnlocked],
 	);
 
 	const actions = useMemo(
@@ -356,6 +416,8 @@ export function useWhatsAppPageLock({ active = true } = {}) {
 		locked: enabled && locked,
 		lockNow,
 		unlock,
+		checkPasscode,
+		finishUnlock: markUnlocked,
 		refresh,
 		...actions,
 	};
@@ -418,9 +480,55 @@ function Message({ tone = 'error', children }) {
 	);
 }
 
-function newPasswordProblem(next, confirm, copy) {
-	return pageLockPasscodeError(next, copy) || (next !== confirm ? copy.mismatch : '');
+const PIN_SLOTS = Array.from({ length: PAGE_LOCK_PIN_LENGTH }, (_, index) => index);
+const onlyDigits = value => String(value ?? '').replace(/\D/g, '').slice(0, PAGE_LOCK_PIN_LENGTH);
+
+/** Four boxes that fill with a dot per digit; the active box glows. */
+function PinSlots({ value, focused, phase = 'idle', size }) {
+	return (
+		<span className={`wpl-pin-slots${size ? ` is-${size}` : ''} is-${phase}`} aria-hidden="true">
+			{PIN_SLOTS.map(index => (
+				<span
+					key={index}
+					className={`wpl-pin-slot${index < value.length ? ' is-filled' : ''}${focused && index === value.length ? ' is-active' : ''}`}
+					style={{ '--wpl-i': index }}
+				>
+					<i />
+				</span>
+			))}
+		</span>
+	);
 }
+
+/** A 4-digit PIN entry for Settings and the reset form. A transparent input sits over the boxes. */
+function PinField({ id, label, value, onChange, autoFocus, invalid }) {
+	const [focused, setFocused] = useState(false);
+	return (
+		<label className={`wpl-field wpl-pin-field${invalid ? ' is-invalid' : ''}`} htmlFor={id}>
+			<span className="wpl-label">{label}</span>
+			<span className="wpl-pin-box">
+				<PinSlots value={value} focused={focused} size="sm" />
+				<input
+					id={id}
+					value={value}
+					onChange={event => onChange(onlyDigits(event.target.value))}
+					onFocus={() => setFocused(true)}
+					onBlur={() => setFocused(false)}
+					autoFocus={autoFocus}
+					inputMode="numeric"
+					pattern="[0-9]*"
+					autoComplete="off"
+					maxLength={PAGE_LOCK_PIN_LENGTH}
+					spellCheck={false}
+					dir="ltr"
+					className="wpl-pin-input"
+				/>
+			</span>
+		</label>
+	);
+}
+
+const newPinProblem = (next, confirm, copy) => pageLockPinError(next, confirm, copy);
 
 /** Reset via an emailed code or the account login password. Used on the lock screen and in Settings. */
 function ForgotPasswordForm({ lock, copy, onDone, onCancel }) {
@@ -454,13 +562,14 @@ function ForgotPasswordForm({ lock, copy, onDone, onCancel }) {
 
 	const submit = async event => {
 		event.preventDefault();
-		const problem = newPasswordProblem(next, confirm, copy);
+		const problem = newPinProblem(next, confirm, copy);
 		if (problem) return setError(problem);
 		setBusy(true);
 		setError('');
 		try {
 			if (method === 'email') await lock.resetWithCode(code.trim(), next);
 			else await lock.resetWithAccountPassword(accountPassword, next);
+			writePageLockMode('pin');
 			onDone?.(copy.resetDone);
 		} catch (err) {
 			setError(pageLockErrorDetails(err, copy.failed).message);
@@ -520,8 +629,8 @@ function ForgotPasswordForm({ lock, copy, onDone, onCancel }) {
 
 			{method === 'account' || sent ? (
 				<>
-					<PasswordField id="wpl-reset-new" label={copy.newPassword} value={next} onChange={setNext} copy={copy} autoComplete="new-password" />
-					<PasswordField id="wpl-reset-confirm" label={copy.confirmPassword} value={confirm} onChange={setConfirm} copy={copy} autoComplete="new-password" />
+					<PinField id="wpl-reset-new" label={copy.newPin} value={next} onChange={setNext} />
+					<PinField id="wpl-reset-confirm" label={copy.confirmPin} value={confirm} onChange={setConfirm} invalid={confirm.length === PAGE_LOCK_PIN_LENGTH && confirm !== next} />
 				</>
 			) : null}
 
@@ -538,7 +647,7 @@ function ForgotPasswordForm({ lock, copy, onDone, onCancel }) {
 					<button
 						type="submit"
 						className="wpl-btn is-primary"
-						disabled={busy || !next || !confirm || (method === 'email' ? code.length !== 6 : !accountPassword)}
+						disabled={busy || !isPageLockPin(next) || !isPageLockPin(confirm) || (method === 'email' ? code.length !== 6 : !accountPassword)}
 					>
 						{busy ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <KeyRound size={15} aria-hidden="true" />}
 						{copy.reset}
@@ -551,16 +660,44 @@ function ForgotPasswordForm({ lock, copy, onDone, onCancel }) {
 
 /* ─── Lock screen ────────────────────────────────────────────────── */
 
+const KEYPAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'mode', '0', 'back'];
+/** Long enough for the shake / unlock animations to read; skipped with reduced motion. */
+const WRONG_RESET_MS = 520;
+const OPEN_MS = 560;
+
+const prefersReducedMotion = () =>
+	typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+
+function useClock(running) {
+	const [now, setNow] = useState(() => new Date());
+	useEffect(() => {
+		if (!running) return undefined;
+		setNow(new Date());
+		const timer = window.setInterval(() => setNow(new Date()), 15_000);
+		return () => window.clearInterval(timer);
+	}, [running]);
+	return now;
+}
+
 export function WhatsAppPageLockScreen({ lock, locale, onLeave }) {
 	const copy = pageLockCopy(locale);
+	const isArabic = copy === COPY.ar;
 	const [view, setView] = useState('unlock');
+	const [mode, setMode] = useState(readPageLockMode);
+	const [pin, setPin] = useState('');
 	const [passcode, setPasscode] = useState('');
-	const [busy, setBusy] = useState(false);
+	const [phase, setPhase] = useState('idle');
+	const [focused, setFocused] = useState(false);
 	const [error, setError] = useState('');
 	const [attemptsLeft, setAttemptsLeft] = useState(null);
 	const [blockedUntil, setBlockedUntil] = useState(lock.status.lockedUntil);
 	const blockedLeft = useCountdown(blockedUntil);
-	const inputRef = useRef(null);
+	const blocked = blockedLeft > 0;
+	const pinRef = useRef(null);
+	const passwordRef = useRef(null);
+	const busyRef = useRef(false);
+	const keyRef = useRef(null);
+	const now = useClock(lock.locked);
 
 	useEffect(() => {
 		setBlockedUntil(lock.status.lockedUntil);
@@ -573,91 +710,250 @@ export function WhatsAppPageLockScreen({ lock, locale, onLeave }) {
 		return () => root.classList.remove('wa-page-locked');
 	}, [lock.locked]);
 
-	if (!lock.locked || typeof document === 'undefined') return null;
+	const focusEntry = useCallback(() => {
+		window.setTimeout(() => (mode === 'pin' ? pinRef.current : passwordRef.current)?.focus({ preventScroll: true }), 0);
+	}, [mode]);
 
-	const submit = async event => {
-		event.preventDefault();
-		if (!passcode || busy || blockedLeft > 0) return;
-		setBusy(true);
+	useEffect(() => {
+		if (lock.locked && view === 'unlock') focusEntry();
+	}, [lock.locked, view, focusEntry]);
+
+	const verify = async value => {
+		if (busyRef.current || blocked || !value) return;
+		busyRef.current = true;
+		setPhase('checking');
 		setError('');
+		const quick = prefersReducedMotion();
 		try {
-			await lock.unlock(passcode);
-			setPasscode('');
+			await lock.checkPasscode(value);
+			writePageLockMode(isPageLockPin(value) ? 'pin' : 'password');
 			setAttemptsLeft(null);
+			setPhase('open');
+			window.setTimeout(() => {
+				lock.finishUnlock();
+				setPin('');
+				setPasscode('');
+				setPhase('idle');
+				busyRef.current = false;
+			}, quick ? 0 : OPEN_MS);
 		} catch (err) {
 			const details = pageLockErrorDetails(err, copy.failed);
-			setPasscode('');
 			if (details.lockedUntil) {
 				setBlockedUntil(details.lockedUntil);
-				setError('');
 			} else {
-				setError(details.status === 400 && details.attemptsLeft != null ? copy.wrong : details.message);
+				const wrong = details.status === 400 && details.attemptsLeft != null;
+				setError(wrong ? (mode === 'pin' ? copy.wrongPin : copy.wrong) : details.message);
 				setAttemptsLeft(details.attemptsLeft);
 			}
-			window.setTimeout(() => inputRef.current?.focus(), 0);
-		} finally {
-			setBusy(false);
+			setPhase('wrong');
+			window.setTimeout(() => {
+				setPin('');
+				setPasscode('');
+				setPhase('idle');
+				busyRef.current = false;
+				focusEntry();
+			}, quick ? 0 : WRONG_RESET_MS);
 		}
 	};
 
+	/** Every way of typing ends here; the 4th digit checks the PIN right away, no Enter needed. */
+	const typePin = next => {
+		if (busyRef.current || blocked) return;
+		const digits = onlyDigits(next);
+		setPin(digits);
+		if (error && digits.length) setError('');
+		if (digits.length === PAGE_LOCK_PIN_LENGTH) void verify(digits);
+	};
+
+	const switchMode = () => {
+		const next = mode === 'pin' ? 'password' : 'pin';
+		setMode(next);
+		writePageLockMode(next);
+		setPin('');
+		setPasscode('');
+		setError('');
+	};
+
+	// Digits typed while focus is elsewhere on the screen (e.g. after clicking the backdrop).
+	keyRef.current = { pin, typePin };
+	useEffect(() => {
+		if (!lock.locked || view !== 'unlock' || mode !== 'pin') return undefined;
+		const onKey = event => {
+			if (event.ctrlKey || event.metaKey || event.altKey) return;
+			const target = event.target;
+			if (target === pinRef.current) return;
+			if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"]')) return;
+			const { pin: current, typePin: type } = keyRef.current;
+			if (/^\d$/.test(event.key)) {
+				event.preventDefault();
+				type(current + event.key);
+				pinRef.current?.focus({ preventScroll: true });
+			} else if (event.key === 'Backspace') {
+				event.preventDefault();
+				type(current.slice(0, -1));
+			}
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [lock.locked, view, mode]);
+
+	if (!lock.locked || typeof document === 'undefined') return null;
+
+	const submitPassword = event => {
+		event.preventDefault();
+		void verify(passcode);
+	};
+
+	const pressKey = key => {
+		if (key === 'back') typePin(pin.slice(0, -1));
+		else typePin(pin + key);
+		pinRef.current?.focus({ preventScroll: true });
+	};
+
+	const timeText = now.toLocaleTimeString(isArabic ? 'ar-EG' : 'en-US', { hour: 'numeric', minute: '2-digit' });
+	const dateText = now.toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+	const opening = phase === 'open';
+	const status = blocked
+		? copy.blocked.replace('{time}', formatPageLockCountdown(blockedLeft))
+		: phase === 'checking'
+			? copy.checking
+			: opening
+				? copy.unlocked
+				: error;
+	const tone = blocked || (error && !opening && phase !== 'checking') ? 'error' : opening ? 'ok' : 'info';
+	const title = view !== 'unlock' ? copy.forgotTitle : mode === 'pin' ? copy.pinTitle : copy.lockedTitle;
+	const hint = view !== 'unlock' ? copy.forgotHint : mode === 'pin' ? copy.pinHint : copy.passwordHint;
+
 	return createPortal(
-		<div className="wpl-screen" role="dialog" aria-modal="true" aria-labelledby="wpl-title" dir={copy === COPY.ar ? 'rtl' : 'ltr'}>
+		<div
+			className={`wpl-screen is-${phase}${view !== 'unlock' ? ' is-forgot' : ''}`}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="wpl-title"
+			dir={isArabic ? 'rtl' : 'ltr'}
+			onPointerDown={event => {
+				if (view === 'unlock' && event.target === event.currentTarget) focusEntry();
+			}}
+		>
+			<span className="wpl-aura" aria-hidden="true" />
 			<div className="wpl-card">
+				{view === 'unlock' ? (
+					<div className="wpl-clock" aria-hidden="true">
+						<span className="wpl-time">{timeText}</span>
+						<span className="wpl-date">{dateText}</span>
+					</div>
+				) : null}
+
 				<span className="wpl-glyph" aria-hidden="true">
-					<LockKeyhole size={26} strokeWidth={1.9} />
+					<span className="wpl-glyph-ring" />
+					{opening ? <LockKeyholeOpen size={26} strokeWidth={1.9} /> : <LockKeyhole size={26} strokeWidth={1.9} />}
 				</span>
 				<h2 id="wpl-title" className="wpl-title">
-					{view === 'unlock' ? copy.lockedTitle : copy.forgotTitle}
+					{title}
 				</h2>
-				<p className="wpl-sub">{view === 'unlock' ? copy.lockedHint : copy.forgotHint}</p>
+				<p className="wpl-sub">{hint}</p>
 
-				{view === 'unlock' ? (
-					<form className="wpl-form" onSubmit={submit}>
-						<span className="wpl-input-wrap is-large">
+				{view !== 'unlock' ? (
+					<ForgotPasswordForm lock={lock} copy={copy} onCancel={() => setView('unlock')} onDone={() => setView('unlock')} />
+				) : mode === 'pin' ? (
+					<div className="wpl-pin-lock">
+						<div className="wpl-pin-box is-lock">
+							<PinSlots value={pin} focused={focused && phase === 'idle' && !blocked} phase={blocked ? 'blocked' : phase} />
 							<input
-								ref={inputRef}
+								ref={pinRef}
+								value={pin}
+								onChange={event => typePin(event.target.value)}
+								onFocus={() => setFocused(true)}
+								onBlur={() => setFocused(false)}
+								aria-label={copy.pinTitle}
+								inputMode="numeric"
+								pattern="[0-9]*"
+								autoComplete="off"
+								maxLength={PAGE_LOCK_PIN_LENGTH}
+								spellCheck={false}
+								dir="ltr"
+								disabled={blocked}
+								readOnly={phase !== 'idle'}
+								className="wpl-pin-input"
+							/>
+						</div>
+						<p className={`wpl-status is-${tone}`} role={tone === 'error' ? 'alert' : 'status'} aria-live="polite">
+							{phase === 'checking' ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : null}
+							<span>{status}</span>
+						</p>
+						{error && !blocked && attemptsLeft != null && attemptsLeft > 0 ? (
+							<p className="wpl-note">{copy.attemptsLeft.replace('{count}', String(attemptsLeft))}</p>
+						) : null}
+
+						<div className="wpl-keypad" dir="ltr">
+							{KEYPAD.map(key =>
+								key === 'mode' ? (
+									<span key={key} aria-hidden="true" />
+								) : (
+									<button
+										key={key}
+										type="button"
+										className={`wpl-key${key === 'back' ? ' is-back' : ''}`}
+										onPointerDown={event => event.preventDefault()}
+										onClick={() => pressKey(key)}
+										disabled={blocked || phase !== 'idle' || (key === 'back' && !pin)}
+										aria-label={key === 'back' ? copy.deleteDigit : key}
+									>
+										{key === 'back' ? <Delete size={20} strokeWidth={1.8} aria-hidden="true" /> : key}
+									</button>
+								),
+							)}
+						</div>
+					</div>
+				) : (
+					<form className="wpl-form" onSubmit={submitPassword}>
+						<span className={`wpl-input-wrap is-large${phase === 'wrong' ? ' is-shake' : ''}`}>
+							<input
+								ref={passwordRef}
 								type="password"
 								value={passcode}
-								onChange={event => setPasscode(event.target.value)}
+								onChange={event => {
+									setPasscode(event.target.value);
+									if (error) setError('');
+								}}
 								placeholder={copy.password}
 								aria-label={copy.password}
 								autoComplete="off"
-								autoFocus
 								dir="ltr"
 								maxLength={PAGE_LOCK_MAX_LENGTH}
-								disabled={blockedLeft > 0}
+								disabled={blocked}
+								readOnly={phase !== 'idle'}
 								className="wpl-input"
 							/>
 						</span>
-						{blockedLeft > 0 ? (
-							<Message>{copy.blocked.replace('{time}', formatPageLockCountdown(blockedLeft))}</Message>
-						) : (
-							<>
-								<Message>{error}</Message>
-								{error && attemptsLeft != null && attemptsLeft > 0 ? (
-									<p className="wpl-note">{copy.attemptsLeft.replace('{count}', String(attemptsLeft))}</p>
-								) : null}
-							</>
-						)}
-						<button type="submit" className="wpl-btn is-primary is-block" disabled={busy || !passcode || blockedLeft > 0}>
-							{busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}
+						{status ? <Message tone={tone === 'error' ? 'error' : 'ok'}>{status}</Message> : null}
+						{error && !blocked && attemptsLeft != null && attemptsLeft > 0 ? (
+							<p className="wpl-note">{copy.attemptsLeft.replace('{count}', String(attemptsLeft))}</p>
+						) : null}
+						<button type="submit" className="wpl-btn is-primary is-block" disabled={phase !== 'idle' || !passcode || blocked}>
+							{phase === 'checking' ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}
 							{copy.unlock}
 						</button>
-						<div className="wpl-row-links">
-							<button type="button" className="wpl-link" onClick={() => setView('forgot')}>
-								{copy.forgot}
-							</button>
-							{onLeave ? (
-								<button type="button" className="wpl-link is-muted" onClick={onLeave}>
-									<LogOut size={13} className="rtl:rotate-180" aria-hidden="true" />
-									{copy.leave}
-								</button>
-							) : null}
-						</div>
 					</form>
-				) : (
-					<ForgotPasswordForm lock={lock} copy={copy} onCancel={() => setView('unlock')} onDone={() => setView('unlock')} />
 				)}
+
+				{view === 'unlock' ? (
+					<div className="wpl-row-links">
+						<button type="button" className="wpl-link" onClick={switchMode}>
+							<KeyRound size={13} aria-hidden="true" />
+							{mode === 'pin' ? copy.usePassword : copy.usePin}
+						</button>
+						<button type="button" className="wpl-link" onClick={() => setView('forgot')}>
+							{copy.forgot}
+						</button>
+						{onLeave ? (
+							<button type="button" className="wpl-link is-muted" onClick={onLeave}>
+								<LogOut size={13} className="rtl:rotate-180" aria-hidden="true" />
+								{copy.leave}
+							</button>
+						) : null}
+					</div>
+				) : null}
 			</div>
 		</div>,
 		document.body,
@@ -692,12 +988,13 @@ function SetupForm({ lock, copy, onNotice }) {
 
 	const submit = async event => {
 		event.preventDefault();
-		const problem = newPasswordProblem(next, confirm, copy);
+		const problem = newPinProblem(next, confirm, copy);
 		if (problem) return setError(problem);
 		setBusy(true);
 		setError('');
 		try {
 			await lock.setup(next, minutes);
+			writePageLockMode('pin');
 			setNext('');
 			setConfirm('');
 			onNotice(copy.saved);
@@ -718,8 +1015,8 @@ function SetupForm({ lock, copy, onNotice }) {
 				<p className="wst-row-hint">{copy.setupHint}</p>
 			</div>
 			<div className="wpl-grid">
-				<PasswordField id="wpl-setup-new" label={copy.newPassword} value={next} onChange={setNext} copy={copy} autoComplete="new-password" />
-				<PasswordField id="wpl-setup-confirm" label={copy.confirmPassword} value={confirm} onChange={setConfirm} copy={copy} autoComplete="new-password" />
+				<PinField id="wpl-setup-new" label={copy.newPin} value={next} onChange={setNext} />
+				<PinField id="wpl-setup-confirm" label={copy.confirmPin} value={confirm} onChange={setConfirm} invalid={confirm.length === PAGE_LOCK_PIN_LENGTH && confirm !== next} />
 				<label className="wpl-field">
 					<span className="wpl-label">{copy.autoLock}</span>
 					<WaCustomSelect
@@ -733,7 +1030,7 @@ function SetupForm({ lock, copy, onNotice }) {
 			</div>
 			<Message>{error}</Message>
 			<div className="wpl-actions">
-				<button type="submit" className="wst-btn is-primary" disabled={busy || !next || !confirm}>
+				<button type="submit" className="wst-btn is-primary" disabled={busy || !isPageLockPin(next) || !isPageLockPin(confirm)}>
 					{busy ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <Lock size={15} aria-hidden="true" />}
 					{copy.turnOn}
 				</button>
@@ -751,12 +1048,13 @@ function ChangeForm({ lock, copy, onNotice, onClose }) {
 
 	const submit = async event => {
 		event.preventDefault();
-		const problem = newPasswordProblem(next, confirm, copy);
+		const problem = newPinProblem(next, confirm, copy);
 		if (problem) return setError(problem);
 		setBusy(true);
 		setError('');
 		try {
 			await lock.change(current, next);
+			writePageLockMode('pin');
 			onNotice(copy.changed);
 			onClose();
 		} catch (err) {
@@ -769,16 +1067,16 @@ function ChangeForm({ lock, copy, onNotice, onClose }) {
 	return (
 		<form className="wpl-panel" onSubmit={submit}>
 			<div className="wpl-grid">
-				<PasswordField id="wpl-change-current" label={copy.currentPassword} value={current} onChange={setCurrent} copy={copy} autoFocus />
-				<PasswordField id="wpl-change-new" label={copy.newPassword} value={next} onChange={setNext} copy={copy} autoComplete="new-password" />
-				<PasswordField id="wpl-change-confirm" label={copy.confirmPassword} value={confirm} onChange={setConfirm} copy={copy} autoComplete="new-password" />
+				<PasswordField id="wpl-change-current" label={copy.currentPin} value={current} onChange={setCurrent} copy={copy} autoFocus />
+				<PinField id="wpl-change-new" label={copy.newPin} value={next} onChange={setNext} />
+				<PinField id="wpl-change-confirm" label={copy.confirmPin} value={confirm} onChange={setConfirm} invalid={confirm.length === PAGE_LOCK_PIN_LENGTH && confirm !== next} />
 			</div>
 			<Message>{error}</Message>
 			<div className="wpl-actions">
 				<button type="button" className="wst-btn is-ghost" onClick={onClose}>
 					{copy.cancel}
 				</button>
-				<button type="submit" className="wst-btn is-primary" disabled={busy || !current || !next || !confirm}>
+				<button type="submit" className="wst-btn is-primary" disabled={busy || !current || !isPageLockPin(next) || !isPageLockPin(confirm)}>
 					{busy ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <KeyRound size={15} aria-hidden="true" />}
 					{copy.saveNew}
 				</button>

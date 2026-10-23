@@ -345,6 +345,10 @@ export default function ScheduleMessageDialog({
 						return;
 					}
 					payload.scheduledAt = scheduled.toISOString();
+					// A delayed reply's title says how its time was worked out; a hand-picked
+					// time makes that untrue, so drop it.
+					const previous = new Date(editingSchedule.scheduledAt || editingSchedule.nextRunAt || 0).getTime();
+					if (editingSchedule.title && Math.abs(previous - scheduled.getTime()) >= 60_000) payload.title = '';
 				} else {
 					payload.timeOfDay = timeOfDay;
 					payload.daysOfWeek = mode === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : daysOfWeek;

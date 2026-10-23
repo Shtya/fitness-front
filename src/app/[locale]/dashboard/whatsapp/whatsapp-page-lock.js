@@ -2,6 +2,11 @@
 export const PAGE_LOCK_SESSION_KEY = 'wa-page-lock-session';
 /** Non-secret copy of the settings so a locked page never flashes its content before the status loads. */
 export const PAGE_LOCK_HINT_KEY = 'wa-page-lock-hint';
+/** Which keypad the lock screen shows: 'pin' (4 digits) or 'password' (an older free-text password). */
+export const PAGE_LOCK_MODE_KEY = 'wa-page-lock-mode';
+export const PAGE_LOCK_PIN_LENGTH = 4;
+/** Away from the tab for this long locks on return when "lock when away" is on and the idle timer is off. */
+export const PAGE_LOCK_AWAY_DEFAULT_MINUTES = 5;
 export const PAGE_LOCK_MIN_LENGTH = 4;
 export const PAGE_LOCK_MAX_LENGTH = 64;
 export const PAGE_LOCK_AUTO_MINUTES = [0, 1, 5, 15, 30, 60, 240];
@@ -28,12 +33,35 @@ export function isPageLockIdleExpired(status, lastActivity, now = Date.now()) {
 	return now - Number(lastActivity) >= minutes * 60_000;
 }
 
-/** Whether the page should show the lock screen when it opens. */
-export function shouldStartPageLocked(status, session, now = Date.now()) {
+/**
+ * Whether the page should show the lock screen when it opens. "Ask every time I open WhatsApp"
+ * only applies to a fresh page load (reload / new browser tab); moving between pages inside the
+ * app and coming back is not "opening" it again, so only the idle timer counts then.
+ */
+export function shouldStartPageLocked(status, session, now = Date.now(), { freshLoad = true } = {}) {
 	if (!status?.enabled) return false;
-	if (status.lockOnOpen) return true;
+	if (status.lockOnOpen && freshLoad) return true;
 	if (!session?.unlockedAt) return true;
 	return isPageLockIdleExpired(status, session.lastActivity ?? session.unlockedAt, now);
+}
+
+/**
+ * After coming back to the tab: locked only if you were away at least the auto-lock time
+ * (or 5 minutes when the idle timer is off). Switching tabs on its own never locks.
+ */
+export function isPageLockAwayExpired(status, hiddenAt, now = Date.now()) {
+	if (!status?.lockOnHide || hiddenAt == null || !Number.isFinite(Number(hiddenAt))) return false;
+	const minutes = Number(status.autoLockMinutes) || PAGE_LOCK_AWAY_DEFAULT_MINUTES;
+	return now - Number(hiddenAt) >= minutes * 60_000;
+}
+
+export const isPageLockPin = value => new RegExp(`^\\d{${PAGE_LOCK_PIN_LENGTH}}$`).test(String(value ?? ''));
+
+/** A new PIN: exactly 4 digits, typed the same twice. */
+export function pageLockPinError(pin, confirm, copy) {
+	if (!isPageLockPin(pin)) return copy.pinDigits;
+	if (confirm != null && pin !== confirm) return copy.pinMismatch;
+	return '';
 }
 
 export function pageLockPasscodeError(value, copy) {
@@ -64,6 +92,21 @@ function writeJson(storage, key, value) {
 
 const sessionStore = () => (typeof window === 'undefined' ? null : window.sessionStorage);
 const localStore = () => (typeof window === 'undefined' ? null : window.localStorage);
+
+export const readPageLockMode = () => {
+	try {
+		return localStore()?.getItem(PAGE_LOCK_MODE_KEY) === 'password' ? 'password' : 'pin';
+	} catch {
+		return 'pin';
+	}
+};
+export const writePageLockMode = mode => {
+	try {
+		localStore()?.setItem(PAGE_LOCK_MODE_KEY, mode === 'password' ? 'password' : 'pin');
+	} catch {
+		// Not remembered: the lock screen opens on the PIN pad next time.
+	}
+};
 
 export const readPageLockSession = () => readJson(sessionStore(), PAGE_LOCK_SESSION_KEY);
 export const writePageLockSession = value => writeJson(sessionStore(), PAGE_LOCK_SESSION_KEY, value);

@@ -17,24 +17,42 @@
 }
 
 .wpl-screen {
-	--wpl-backdrop: #eef2f1;
+	--wpl-backdrop: #e9f0ed;
+	--wpl-glass: rgba(255, 255, 255, 0.78);
+	--wpl-glass-line: rgba(255, 255, 255, 0.9);
+	--wpl-key: rgba(17, 27, 33, 0.045);
+	--wpl-key-hover: rgba(17, 27, 33, 0.085);
+	--wpl-blob-a: rgba(37, 211, 102, 0.28);
+	--wpl-blob-b: rgba(0, 168, 132, 0.2);
 	position: fixed;
 	inset: 0;
 	z-index: 9000;
-	display: grid;
-	place-items: center;
+	display: flex;
+	flex-direction: column;
+	overflow-x: hidden;
 	overflow-y: auto;
 	padding: 24px 16px;
 	background:
-		radial-gradient(1200px 600px at 50% -10%, rgba(29, 170, 97, 0.14), transparent 60%),
+		radial-gradient(900px 520px at 12% 8%, var(--wpl-blob-a), transparent 62%),
+		radial-gradient(760px 520px at 92% 96%, var(--wpl-blob-b), transparent 60%),
 		var(--wpl-backdrop);
 	color: var(--wpl-ink);
-	animation: wpl-fade 160ms ease-out;
+	animation: wpl-fade 220ms ease-out;
+}
+
+/* Soft dotted texture, like the WhatsApp wallpaper, faded towards the edges. */
+.wpl-aura {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background-image: radial-gradient(currentColor 1px, transparent 1.4px);
+	background-size: 22px 22px;
+	color: rgba(17, 27, 33, 0.07);
+	mask-image: radial-gradient(closest-side at 50% 50%, #000 30%, transparent 100%);
 }
 
 html.dark .wpl-screen,
 html[data-theme-mode='dark'] .wpl-screen {
-	--wpl-backdrop: #111414;
 	--st-surface: #1d1f1f;
 	--st-fill: #232525;
 	--st-line: #2c2e2e;
@@ -47,6 +65,18 @@ html[data-theme-mode='dark'] .wpl-screen {
 	--st-accent-soft: rgba(33, 192, 99, 0.13);
 	--st-ring: rgba(33, 192, 99, 0.3);
 	--st-bad: #ff8a99;
+	--wpl-backdrop: #0b1412;
+	--wpl-glass: rgba(29, 33, 33, 0.72);
+	--wpl-glass-line: rgba(255, 255, 255, 0.07);
+	--wpl-key: rgba(255, 255, 255, 0.06);
+	--wpl-key-hover: rgba(255, 255, 255, 0.11);
+	--wpl-blob-a: rgba(33, 192, 99, 0.2);
+	--wpl-blob-b: rgba(0, 120, 100, 0.22);
+}
+
+html.dark .wpl-aura,
+html[data-theme-mode='dark'] .wpl-aura {
+	color: rgba(255, 255, 255, 0.05);
 }
 
 /* While locked the page behind must not scroll or show through. */
@@ -55,39 +85,511 @@ html.wa-page-locked body {
 }
 
 .wpl-card {
+	position: relative;
 	box-sizing: border-box;
-	width: min(400px, 100%);
-	padding: 32px 28px 24px;
-	border: 1px solid var(--wpl-line);
-	border-radius: 20px;
-	background: var(--wpl-surface);
-	box-shadow: 0 24px 60px rgba(17, 27, 33, 0.12);
+	width: min(380px, 100%);
+	padding: 24px 28px 16px;
+	border: 1px solid var(--wpl-glass-line, var(--wpl-line));
+	border-radius: 28px;
+	background: var(--wpl-glass, var(--wpl-surface));
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.4) inset,
+		0 30px 80px -20px rgba(11, 20, 26, 0.28);
+	-webkit-backdrop-filter: blur(22px) saturate(1.3);
+	backdrop-filter: blur(22px) saturate(1.3);
+	margin: auto;
 	text-align: center;
+	animation: wpl-rise 420ms cubic-bezier(0.2, 0.9, 0.25, 1.05);
+}
+
+.wpl-screen.is-forgot .wpl-card {
+	width: min(420px, 100%);
+}
+
+.wpl-screen.is-open .wpl-card {
+	animation: wpl-leave 560ms cubic-bezier(0.55, 0, 0.3, 1) forwards;
+}
+
+.wpl-screen.is-open {
+	animation: wpl-fade-out 560ms ease-in forwards;
+}
+
+.wpl-clock {
+	display: grid;
+	gap: 2px;
+	margin-bottom: 14px;
+}
+
+.wpl-time {
+	font-size: 44px;
+	font-weight: 300;
+	line-height: 1;
+	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums;
+}
+
+.wpl-date {
+	color: var(--wpl-muted);
+	font-size: 13px;
+	font-weight: 500;
 }
 
 .wpl-glyph {
+	position: relative;
 	display: inline-grid;
-	width: 60px;
-	height: 60px;
+	width: 48px;
+	height: 48px;
 	place-items: center;
-	margin-bottom: 14px;
+	margin-bottom: 10px;
 	border-radius: 999px;
 	background: var(--wpl-accent-soft);
 	color: var(--wpl-accent-ink);
+	transition: background-color 240ms ease, color 240ms ease;
+}
+
+.wpl-glyph-ring {
+	position: absolute;
+	inset: -6px;
+	border: 1.5px solid var(--wpl-accent);
+	border-radius: inherit;
+	opacity: 0;
+	animation: wpl-ring 2.6s ease-out infinite;
+}
+
+.wpl-screen.is-wrong .wpl-glyph {
+	background: color-mix(in srgb, var(--wpl-bad) 14%, transparent);
+	color: var(--wpl-bad);
+	animation: wpl-wiggle 420ms ease;
+}
+
+.wpl-screen.is-wrong .wpl-glyph-ring {
+	animation: none;
+}
+
+.wpl-screen.is-open .wpl-glyph {
+	background: var(--wpl-accent);
+	color: #fff;
+	animation: wpl-pop 420ms cubic-bezier(0.3, 1.6, 0.5, 1);
 }
 
 .wpl-title {
 	margin: 0;
-	font-size: 20px;
+	font-size: 19px;
 	font-weight: 650;
-	line-height: 28px;
+	line-height: 26px;
 }
 
 .wpl-sub {
-	margin: 4px 0 20px;
+	margin: 2px auto 18px;
+	max-width: 28rem;
 	color: var(--wpl-muted);
-	font-size: 14px;
+	font-size: 13.5px;
 	line-height: 20px;
+}
+
+/* ─── PIN boxes ─── */
+
+.wpl-pin-lock {
+	display: grid;
+	justify-items: center;
+}
+
+.wpl-pin-box {
+	position: relative;
+	display: inline-block;
+}
+
+.wpl-pin-input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: transparent;
+	caret-color: transparent;
+	font-size: 16px;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.wpl-pin-input:disabled {
+	cursor: not-allowed;
+}
+
+.wpl-pin-slots {
+	display: flex;
+	gap: 12px;
+	direction: ltr;
+}
+
+.wpl-pin-slot {
+	--wpl-slot-line: var(--wpl-line-strong);
+	position: relative;
+	display: grid;
+	width: 54px;
+	height: 62px;
+	place-items: center;
+	border: 1.5px solid var(--wpl-slot-line);
+	border-radius: 16px;
+	background: var(--wpl-surface);
+	box-shadow: 0 1px 2px rgba(11, 20, 26, 0.05);
+	transition:
+		border-color 160ms ease,
+		box-shadow 160ms ease,
+		background-color 200ms ease,
+		transform 200ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.wpl-pin-slot i {
+	width: 13px;
+	height: 13px;
+	border-radius: 999px;
+	background: var(--wpl-ink);
+	transform: scale(0);
+	transition: transform 200ms cubic-bezier(0.3, 1.7, 0.5, 1), background-color 200ms ease;
+}
+
+.wpl-pin-slot.is-filled {
+	--wpl-slot-line: color-mix(in srgb, var(--wpl-accent) 55%, var(--wpl-line-strong));
+	transform: translateY(-2px);
+}
+
+.wpl-pin-slot.is-filled i {
+	transform: scale(1);
+}
+
+/* The box the next digit goes into: a glowing border and a blinking caret. */
+.wpl-pin-slot.is-active {
+	--wpl-slot-line: var(--wpl-accent);
+	box-shadow: 0 0 0 4px var(--wpl-ring);
+}
+
+.wpl-pin-slot.is-active::after {
+	content: '';
+	position: absolute;
+	width: 2px;
+	height: 22px;
+	border-radius: 2px;
+	background: var(--wpl-accent);
+	animation: wpl-caret 1s steps(2, jump-none) infinite;
+}
+
+.wpl-pin-slots.is-checking .wpl-pin-slot i {
+	animation: wpl-wave 700ms ease-in-out infinite;
+	animation-delay: calc(var(--wpl-i) * 90ms);
+}
+
+.wpl-pin-slots.is-wrong {
+	animation: wpl-shake 440ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.wpl-pin-slots.is-wrong .wpl-pin-slot {
+	--wpl-slot-line: var(--wpl-bad);
+	background: color-mix(in srgb, var(--wpl-bad) 8%, var(--wpl-surface));
+}
+
+.wpl-pin-slots.is-wrong .wpl-pin-slot i {
+	background: var(--wpl-bad);
+}
+
+.wpl-pin-slots.is-open .wpl-pin-slot {
+	--wpl-slot-line: var(--wpl-accent);
+	background: var(--wpl-accent);
+	transform: translateY(-2px);
+	transition-delay: calc(var(--wpl-i) * 60ms);
+}
+
+.wpl-pin-slots.is-open .wpl-pin-slot i {
+	background: #fff;
+	transition-delay: calc(var(--wpl-i) * 60ms);
+}
+
+.wpl-pin-slots.is-blocked .wpl-pin-slot {
+	opacity: 0.5;
+}
+
+/* Smaller boxes inside Settings / reset forms. */
+.wpl-pin-slots.is-sm {
+	gap: 8px;
+}
+
+.wpl-pin-slots.is-sm .wpl-pin-slot {
+	width: 44px;
+	height: 48px;
+	border-radius: 12px;
+}
+
+.wpl-pin-slots.is-sm .wpl-pin-slot i {
+	width: 10px;
+	height: 10px;
+}
+
+.wpl-pin-slots.is-sm .wpl-pin-slot.is-active::after {
+	height: 18px;
+}
+
+.wpl-pin-field.is-invalid .wpl-pin-slot {
+	--wpl-slot-line: var(--wpl-bad);
+}
+
+.wpl-pin-field .wpl-pin-box {
+	justify-self: start;
+}
+
+.wpl-status {
+	display: flex;
+	min-height: 20px;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: 14px 0 0;
+	color: var(--wpl-muted);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.wpl-status.is-error {
+	color: var(--wpl-bad);
+}
+
+.wpl-status.is-ok {
+	color: var(--wpl-accent-ink);
+}
+
+.wpl-pin-lock .wpl-note {
+	margin: 2px 0 0;
+}
+
+/* ─── Keypad ─── */
+
+.wpl-keypad {
+	display: grid;
+	grid-template-columns: repeat(3, 62px);
+	gap: 8px 22px;
+	justify-content: center;
+	margin: 12px 0 4px;
+}
+
+.wpl-key {
+	display: grid;
+	width: 62px;
+	height: 62px;
+	place-items: center;
+	border: 0;
+	border-radius: 999px;
+	background: var(--wpl-key);
+	color: var(--wpl-ink);
+	font-size: 25px;
+	font-weight: 400;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+	transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.wpl-key:hover:not(:disabled) {
+	background: var(--wpl-key-hover);
+}
+
+.wpl-key:active:not(:disabled) {
+	transform: scale(0.9);
+	background: var(--wpl-accent-soft);
+}
+
+.wpl-key:focus-visible {
+	outline: 2px solid var(--wpl-accent);
+	outline-offset: 2px;
+}
+
+.wpl-key.is-back {
+	background: transparent;
+	color: var(--wpl-muted);
+}
+
+.wpl-key:disabled {
+	cursor: default;
+	opacity: 0.45;
+}
+
+.wpl-key.is-back:disabled {
+	opacity: 0;
+}
+
+.wpl-card > .wpl-row-links {
+	gap: 0 18px;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid var(--wpl-line);
+	justify-content: center;
+}
+
+.wpl-card > .wpl-form + .wpl-row-links {
+	margin-top: 14px;
+}
+
+.wpl-input-wrap.is-shake {
+	animation: wpl-shake 440ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes wpl-rise {
+	from {
+		opacity: 0;
+		transform: translateY(14px) scale(0.97);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes wpl-leave {
+	30% {
+		transform: scale(1.02);
+		opacity: 1;
+	}
+	to {
+		transform: translateY(-24px) scale(0.94);
+		opacity: 0;
+	}
+}
+
+@keyframes wpl-fade-out {
+	60% {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes wpl-ring {
+	0% {
+		opacity: 0.55;
+		transform: scale(0.92);
+	}
+	70%,
+	100% {
+		opacity: 0;
+		transform: scale(1.35);
+	}
+}
+
+@keyframes wpl-pop {
+	0% {
+		transform: scale(0.85);
+	}
+	60% {
+		transform: scale(1.12);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+@keyframes wpl-wiggle {
+	20%,
+	60% {
+		transform: rotate(-12deg);
+	}
+	40%,
+	80% {
+		transform: rotate(12deg);
+	}
+}
+
+@keyframes wpl-shake {
+	10%,
+	90% {
+		transform: translateX(-2px);
+	}
+	20%,
+	80% {
+		transform: translateX(5px);
+	}
+	30%,
+	50%,
+	70% {
+		transform: translateX(-9px);
+	}
+	40%,
+	60% {
+		transform: translateX(9px);
+	}
+}
+
+@keyframes wpl-wave {
+	0%,
+	100% {
+		transform: translateY(0) scale(1);
+	}
+	50% {
+		transform: translateY(-6px) scale(0.85);
+	}
+}
+
+@keyframes wpl-caret {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+@media (max-width: 420px) {
+	.wpl-card {
+		padding: 24px 18px 16px;
+		border-radius: 24px;
+	}
+
+	.wpl-time {
+		font-size: 38px;
+	}
+
+	.wpl-pin-slots:not(.is-sm) {
+		gap: 10px;
+	}
+
+	.wpl-pin-slots:not(.is-sm) .wpl-pin-slot {
+		width: 50px;
+		height: 58px;
+	}
+
+	.wpl-keypad {
+		grid-template-columns: repeat(3, 60px);
+		gap: 8px 18px;
+	}
+
+	.wpl-key {
+		width: 60px;
+		height: 60px;
+	}
+}
+
+@media (max-height: 760px) {
+	.wpl-time {
+		font-size: 34px;
+	}
+
+	.wpl-keypad {
+		grid-template-columns: repeat(3, 56px);
+		gap: 6px 20px;
+	}
+
+	.wpl-key {
+		width: 56px;
+		height: 56px;
+		font-size: 23px;
+	}
+}
+
+@media (max-height: 640px) {
+	.wpl-clock {
+		display: none;
+	}
 }
 
 .wpl-form,
@@ -372,8 +874,16 @@ html.wa-page-locked body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.wpl-screen {
-		animation: none;
+	.wpl-screen,
+	.wpl-card,
+	.wpl-glyph,
+	.wpl-glyph-ring,
+	.wpl-pin-slots,
+	.wpl-pin-slot,
+	.wpl-pin-slot i,
+	.wpl-input-wrap.is-shake {
+		animation: none !important;
+		transition: none !important;
 	}
 }
 

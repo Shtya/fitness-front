@@ -1,0 +1,808 @@
+/*
+ * Transcribe voice / video popup. Quiet SaaS layout: one surface, hairline borders,
+ * green only on the primary action and live state. Colours come from the wa-ui tokens,
+ * so light and dark follow the WhatsApp kit.
+ */
+
+.wtx {
+	--wtx-surface: var(--wa-ui-surface, #ffffff);
+	--wtx-sunken: var(--wa-ui-surface-2, #f7f8fa);
+	--wtx-border: var(--wa-ui-border, #e6e9eb);
+	--wtx-border-strong: var(--wa-ui-border-strong, #d1d7db);
+	--wtx-hover: var(--wa-ui-hover, #f2f4f5);
+	--wtx-text: var(--wa-ui-text, #111b21);
+	--wtx-text-2: var(--wa-ui-text-2, #3b4a54);
+	--wtx-text-3: var(--wa-ui-text-3, #667781);
+	--wtx-accent: #1daa61;
+	--wtx-accent-strong: #138a52;
+	--wtx-accent-soft: var(--wa-ui-accent-soft, #e7f8f3);
+	--wtx-on-accent: #ffffff;
+	--wtx-ring: rgba(29, 170, 97, 0.28);
+	--wtx-danger: var(--wa-ui-danger, #d92d20);
+	--wtx-danger-soft: var(--wa-ui-danger-soft, #fef3f2);
+	--wtx-radius: 12px;
+	--wtx-pad: 20px;
+	font-size: 13px;
+}
+
+html.dark .wtx,
+html[data-theme-mode='dark'] .wtx {
+	--wtx-accent: #21c063;
+	--wtx-accent-strong: #21c063;
+	--wtx-on-accent: #07170e;
+	--wtx-ring: rgba(33, 192, 99, 0.32);
+}
+
+/* ─── Header ─── */
+
+.wa-pop.wtx [data-slot='dialog-header'].wtx-head {
+	display: grid;
+	gap: 2px;
+	padding: 18px 56px 14px var(--wtx-pad) !important;
+	border-bottom: 1px solid var(--wtx-border);
+	text-align: start;
+}
+
+[dir='rtl'].wa-pop.wtx [data-slot='dialog-header'].wtx-head {
+	padding: 18px var(--wtx-pad) 14px 56px !important;
+}
+
+.wa-pop.wtx [data-slot='dialog-title'].wtx-title {
+	display: flex;
+	align-items: center;
+	gap: 12px !important;
+	font-size: 15px !important;
+	font-weight: 650 !important;
+	letter-spacing: -0.01em;
+}
+
+.wa-pop.wtx [data-slot='dialog-title'] > .wtx-title-icon {
+	display: grid;
+	width: 36px !important;
+	height: 36px !important;
+	flex: none;
+	place-items: center;
+	border: 1px solid color-mix(in srgb, var(--wtx-accent) 22%, transparent);
+	border-radius: 10px !important;
+	background: var(--wtx-accent-soft) !important;
+	color: var(--wtx-accent-strong) !important;
+}
+
+.wa-pop.wtx [data-slot='dialog-title'] > .wtx-title-icon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.wa-pop.wtx [data-slot='dialog-description'].wtx-sub {
+	padding: 0 !important;
+	padding-inline-start: 48px !important;
+	color: var(--wtx-text-3) !important;
+	font-size: 12.5px !important;
+	line-height: 1.45 !important;
+}
+
+.wa-pop.wtx > [data-slot='dialog-close'] {
+	top: 16px !important;
+	width: 32px !important;
+	height: 32px !important;
+	border-radius: 9px !important;
+}
+
+.wa-pop.wtx > [data-slot='dialog-close'] svg {
+	width: 18px !important;
+	height: 18px !important;
+}
+
+/* ─── Body ─── */
+
+/* Flex column, not grid: grid rows let overflow-hidden cards shrink below their content
+   when the dialog is short, which clipped the player instead of scrolling the body. */
+.wtx-body {
+	display: flex;
+	min-height: 0;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 14px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 16px var(--wtx-pad) 18px;
+}
+
+.wtx-body > * {
+	flex: none;
+}
+
+.wtx-state {
+	display: flex;
+	min-height: 96px;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	color: var(--wtx-text-3);
+}
+
+.wtx-state svg {
+	width: 16px;
+	height: 16px;
+}
+
+.wtx-error {
+	padding: 10px 12px;
+	border: 1px solid color-mix(in srgb, var(--wtx-danger) 30%, transparent);
+	border-radius: var(--wtx-radius);
+	background: var(--wtx-danger-soft);
+	color: var(--wtx-danger);
+	font-weight: 550;
+}
+
+/* Media: name row + player in one quiet card. */
+.wtx-media {
+	overflow: hidden;
+	border: 1px solid var(--wtx-border);
+	border-radius: var(--wtx-radius);
+	background: var(--wtx-surface);
+}
+
+.wtx-media-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--wtx-border);
+}
+
+.wtx-media-icon {
+	display: grid;
+	width: 28px;
+	height: 28px;
+	flex: none;
+	place-items: center;
+	border-radius: 8px;
+	background: var(--wtx-sunken);
+	color: var(--wtx-text-2);
+}
+
+.wtx-media-icon svg {
+	width: 15px;
+	height: 15px;
+}
+
+.wtx-media-name {
+	min-width: 0;
+	flex: 1 1 auto;
+	overflow: hidden;
+	color: var(--wtx-text);
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wtx-media-meta {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+	color: var(--wtx-text-3);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+.wtx-tag {
+	padding: 1px 6px;
+	border: 1px solid var(--wtx-border);
+	border-radius: 6px;
+	color: var(--wtx-text-3);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+/* The shared player is a green WhatsApp bubble elsewhere; here it sits flat in the card. */
+.wtx-media .transcript-voice-player {
+	min-height: 52px;
+	padding: 8px 12px;
+	border: 0;
+	border-radius: 0;
+	background: var(--wtx-sunken);
+}
+
+.wtx-media .transcript-voice-player .wa-voice-play {
+	width: 34px;
+	height: 34px;
+	background: var(--wtx-accent);
+	color: var(--wtx-on-accent);
+	box-shadow: 0 1px 2px rgba(17, 27, 33, 0.16);
+}
+
+/* Bars: the shared rules colour them for chat bubbles (with !important). */
+.wtx-media .wa-voice-waveform-bars > .wa-voice-bar.is-unplayed {
+	background: color-mix(in srgb, var(--wtx-text-3) 45%, transparent) !important;
+}
+
+.wtx-media .wa-voice-waveform-bars > .wa-voice-bar.is-played-incoming {
+	background: var(--wtx-accent) !important;
+}
+
+.wtx-media .wa-voice-thumb {
+	background: var(--wtx-accent) !important;
+}
+
+.wtx-media .transcript-voice-player .wa-voice-waveform {
+	height: 32px;
+}
+
+.wtx-media .transcript-voice-player .wa-voice-duration {
+	color: var(--wtx-text-3);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Bundle list */
+.wtx-list {
+	border: 1px solid var(--wtx-border);
+	border-radius: var(--wtx-radius);
+	background: var(--wtx-surface);
+}
+
+.wtx-list-head {
+	margin: 0;
+	padding: 9px 12px;
+	border-bottom: 1px solid var(--wtx-border);
+	color: var(--wtx-text-3);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.wtx-list-items {
+	max-height: 176px;
+	margin: 0;
+	padding: 4px;
+	overflow-y: auto;
+	list-style: none;
+}
+
+.wtx-list-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 8px;
+	border-radius: 8px;
+}
+
+.wtx-list-item:hover {
+	background: var(--wtx-hover);
+}
+
+.wtx-list-icon {
+	display: grid;
+	width: 26px;
+	height: 26px;
+	flex: none;
+	place-items: center;
+	border-radius: 7px;
+	background: var(--wtx-sunken);
+	color: var(--wtx-text-2);
+}
+
+.wtx-list-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.wtx-list-name,
+.wtx-list-meta {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wtx-list-name {
+	color: var(--wtx-text);
+	font-size: 12.5px;
+	font-weight: 600;
+}
+
+.wtx-list-meta {
+	color: var(--wtx-text-3);
+	font-size: 11.5px;
+}
+
+/* Settings: method, chunk length, then the action on the same baseline. */
+.wtx-controls {
+	display: grid;
+	grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) auto;
+	align-items: end;
+	gap: 10px;
+}
+
+.wtx-field {
+	display: grid;
+	min-width: 0;
+	gap: 6px;
+}
+
+.wtx-label {
+	overflow: hidden;
+	color: var(--wtx-text-3);
+	font-size: 12px;
+	font-weight: 550;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Shared selects: Tailwind utilities (incl. dark:bg-slate-900) win without !important here,
+   because the dialog is portalled outside the WhatsApp layout that normally restyles them. */
+.wtx .wtx-field .wa-custom-select-trigger {
+	height: 38px !important;
+	min-height: 38px !important;
+	padding-inline: 10px 6px !important;
+	border-color: var(--wtx-border-strong) !important;
+	border-radius: 10px !important;
+	background: var(--wtx-surface) !important;
+	box-shadow: none !important;
+	color: var(--wtx-text) !important;
+	font-size: 13px !important;
+	font-weight: 550 !important;
+}
+
+.wtx .wtx-field .wa-custom-select-trigger:hover:not(:disabled) {
+	border-color: var(--wtx-text-3) !important;
+	background: var(--wtx-hover) !important;
+}
+
+.wtx .wtx-field .wa-custom-select-trigger:focus-visible {
+	border-color: var(--wtx-accent) !important;
+	box-shadow: 0 0 0 3px var(--wtx-ring) !important;
+}
+
+.wtx .wtx-field .wa-custom-select-trigger > span:last-child {
+	background: var(--wtx-sunken) !important;
+	color: var(--wtx-text-3) !important;
+}
+
+/* Progress */
+.wtx-progress {
+	padding: 10px 12px;
+	border: 1px solid var(--wtx-border);
+	border-radius: var(--wtx-radius);
+	background: var(--wtx-sunken);
+}
+
+.wtx-progress-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	color: var(--wtx-text-2);
+	font-weight: 550;
+}
+
+.wtx-progress-label {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 8px;
+}
+
+.wtx-progress-label svg {
+	width: 14px;
+	height: 14px;
+	flex: none;
+	color: var(--wtx-accent);
+}
+
+.wtx-progress-value {
+	flex: none;
+	color: var(--wtx-text-3);
+	font-variant-numeric: tabular-nums;
+}
+
+.wtx-progress-track {
+	height: 4px;
+	margin-top: 8px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: var(--wtx-border);
+}
+
+.wtx-progress-fill {
+	height: 100%;
+	border-radius: inherit;
+	background: var(--wtx-accent);
+	transition: width 300ms ease-out;
+}
+
+.wtx-progress-fill.is-waiting {
+	animation: wtx-pulse 1.4s ease-in-out infinite;
+}
+
+/* Result */
+.wtx-result {
+	display: grid;
+	gap: 10px;
+}
+
+.wtx-original {
+	overflow: hidden;
+	border: 1px solid var(--wtx-border);
+	border-radius: var(--wtx-radius);
+}
+
+.wtx-original-toggle {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 9px 12px;
+	border: 0;
+	background: transparent;
+	color: var(--wtx-text-2);
+	font: inherit;
+	font-weight: 600;
+	text-align: start;
+	cursor: pointer;
+}
+
+.wtx-original-toggle:hover {
+	background: var(--wtx-hover);
+}
+
+.wtx-original-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--wtx-text-3);
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.wtx-original-action svg {
+	width: 14px;
+	height: 14px;
+	transition: transform 160ms ease;
+}
+
+.wtx-original-text {
+	max-height: 144px;
+	margin: 0;
+	padding: 10px 12px;
+	overflow-y: auto;
+	border-top: 1px solid var(--wtx-border);
+	background: var(--wtx-sunken);
+	color: var(--wtx-text-3);
+	font-family: inherit;
+	font-size: 13px;
+	line-height: 1.7;
+	white-space: pre-wrap;
+	word-break: break-word;
+	unicode-bidi: plaintext;
+}
+
+.wtx-editor {
+	border: 1px solid var(--wtx-border);
+	border-radius: var(--wtx-radius);
+	background: var(--wtx-surface);
+}
+
+.wtx-editor-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 8px 8px 12px;
+	border-bottom: 1px solid var(--wtx-border);
+}
+
+[dir='rtl'] .wtx-editor-head {
+	padding: 8px 12px 8px 8px;
+}
+
+.wtx-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--wtx-text);
+	font-weight: 600;
+}
+
+.wtx-chip svg {
+	width: 15px;
+	height: 15px;
+	color: var(--wtx-accent);
+}
+
+.wtx-editor-meta {
+	flex: 1 1 auto;
+	color: var(--wtx-text-3);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+.wtx-textarea-wrap {
+	position: relative;
+	padding: 4px;
+}
+
+/* Arabic-first editor: dir="auto" per text, plaintext bidi per line, roomy line height. */
+.wtx-textarea {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 148px;
+	max-height: 42dvh;
+	padding: 10px 10px 12px;
+	border: 1px solid transparent;
+	border-radius: 9px;
+	background: transparent;
+	color: var(--wtx-text);
+	font: inherit;
+	font-size: 14px;
+	line-height: 1.85;
+	text-align: start;
+	unicode-bidi: plaintext;
+	resize: vertical;
+	outline: none;
+	scrollbar-color: var(--wtx-border-strong) transparent;
+	scrollbar-width: thin;
+	transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.wtx-textarea:hover:not(:disabled) {
+	background: var(--wtx-sunken);
+}
+
+.wtx-textarea:focus {
+	border-color: var(--wtx-accent);
+	background: var(--wtx-surface);
+	box-shadow: 0 0 0 3px var(--wtx-ring);
+}
+
+.wtx-textarea.is-ai {
+	background: color-mix(in srgb, var(--wtx-accent-soft) 45%, transparent);
+}
+
+.wtx-textarea:disabled {
+	opacity: 0.7;
+}
+
+.wtx-textarea-busy {
+	position: absolute;
+	inset: 4px;
+	display: grid;
+	place-items: center;
+	border-radius: 9px;
+	background: color-mix(in srgb, var(--wtx-surface) 60%, transparent);
+	-webkit-backdrop-filter: blur(1px);
+	backdrop-filter: blur(1px);
+	pointer-events: none;
+}
+
+.wtx-textarea-busy > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	border: 1px solid var(--wtx-border);
+	border-radius: 999px;
+	background: var(--wtx-surface);
+	box-shadow: 0 4px 14px rgba(17, 27, 33, 0.08);
+	color: var(--wtx-text-2);
+	font-weight: 600;
+}
+
+.wtx-textarea-busy svg {
+	width: 14px;
+	height: 14px;
+	color: var(--wtx-accent);
+}
+
+.wtx-textarea::-webkit-scrollbar {
+	width: 8px;
+}
+
+.wtx-textarea::-webkit-scrollbar-thumb {
+	border: 2px solid transparent;
+	border-radius: 999px;
+	background: var(--wtx-border-strong);
+	background-clip: padding-box;
+}
+
+.wtx-textarea::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+/* AI compare / summary renders under the editor. */
+.wtx-editor > section {
+	margin: 0 !important;
+	padding: 0 12px 12px;
+}
+
+/* ─── Buttons ─── */
+
+.wtx-btn {
+	display: inline-flex;
+	min-width: 0;
+	height: 38px;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	padding: 0 14px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--wtx-text);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 100ms ease;
+}
+
+.wtx-btn svg {
+	width: 16px;
+	height: 16px;
+	flex: none;
+}
+
+.wtx-btn:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px var(--wtx-ring);
+}
+
+.wtx-btn:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.wtx-btn:disabled {
+	cursor: not-allowed;
+	opacity: 0.45;
+}
+
+.wtx-btn.is-primary {
+	background: var(--wtx-accent);
+	color: var(--wtx-on-accent);
+	box-shadow: 0 1px 2px rgba(17, 27, 33, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.wtx-btn.is-primary:hover:not(:disabled) {
+	background: var(--wtx-accent-strong);
+}
+
+html.dark .wtx-btn.is-primary:hover:not(:disabled),
+html[data-theme-mode='dark'] .wtx-btn.is-primary:hover:not(:disabled) {
+	background: #3fd27f;
+}
+
+.wtx-btn.is-soft {
+	border-color: var(--wtx-border-strong);
+	background: var(--wtx-surface);
+	color: var(--wtx-text);
+}
+
+.wtx-btn.is-soft svg {
+	color: var(--wtx-accent);
+}
+
+.wtx-btn.is-soft:hover:not(:disabled) {
+	border-color: var(--wtx-text-3);
+	background: var(--wtx-hover);
+}
+
+.wtx-btn.is-ghost {
+	color: var(--wtx-text-2);
+}
+
+.wtx-btn.is-ghost:hover:not(:disabled) {
+	background: var(--wtx-hover);
+	color: var(--wtx-text);
+}
+
+.wtx-btn.is-sm {
+	height: 30px;
+	padding: 0 10px;
+	border-radius: 8px;
+	font-size: 12.5px;
+}
+
+.wtx-btn.is-sm svg {
+	width: 14px;
+	height: 14px;
+}
+
+.wtx-transcribe {
+	min-width: 7rem;
+}
+
+/* The provider badge ("Key added") is useful but should not squeeze the name. */
+.wtx .wtx-field .wa-custom-select-trigger > span:first-child {
+	min-width: 0;
+}
+
+/* ─── Footer: secondary actions at the start, the one primary action at the end. ─── */
+
+.wa-pop.wtx > .wtx-foot {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 12px var(--wtx-pad);
+	border-top: 1px solid var(--wtx-border);
+	background: var(--wtx-sunken);
+}
+
+.wtx-foot-secondary {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 6px;
+}
+
+.wtx-save {
+	min-width: 8.5rem;
+}
+
+@keyframes wtx-pulse {
+	50% {
+		opacity: 0.55;
+	}
+}
+
+/* ─── Narrow windows ─── */
+
+@media (max-width: 520px) {
+	.wtx {
+		--wtx-pad: 16px;
+	}
+
+	/* Method gets its own row (its name + key badge need the width); length + action share the next. */
+	.wtx-controls {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+
+	.wtx-controls > .wtx-field:first-child {
+		grid-column: 1 / -1;
+	}
+
+	.wtx-transcribe {
+		min-width: 0;
+	}
+
+	.wtx-foot-secondary > .wtx-btn {
+		gap: 6px;
+		padding: 0 8px;
+	}
+
+	.wa-pop.wtx > .wtx-foot {
+		flex-wrap: wrap;
+	}
+
+	.wtx-foot-secondary {
+		width: 100%;
+	}
+
+	.wtx-foot-secondary > .wtx-btn {
+		flex: 1 1 0;
+	}
+
+	.wtx-save {
+		width: 100%;
+		height: 40px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wtx-btn,
+	.wtx-textarea,
+	.wtx-progress-fill,
+	.wtx-original-action svg {
+		transition: none;
+	}
+
+	.wtx-progress-fill.is-waiting {
+		animation: none;
+	}
+}

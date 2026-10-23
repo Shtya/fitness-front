@@ -135,6 +135,16 @@ import {
 import WhatsAppChatIdlePane from './WhatsAppChatIdlePane';
 import SocialVideoActions from './social-download/SocialVideoActions';
 import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
+import { createNotifyStateCache, shouldNotifyForConversation } from './whatsapp-mute';
+import DelayedSendPopover, { DelayedSendBanner, DelayedSendButton, formatSendWhen } from './schedule-message/DelayedSendControl';
+import {
+	DEFAULT_DELAYED_SEND_PREFS,
+	browserTimeZone,
+	computeDelayedSend,
+	delayedSendTitle,
+	readDelayedSendPrefs,
+	writeDelayedSendPrefs,
+} from './schedule-message/delayed-send';
 import PinnedMessagesPanel from './PinnedMessagesPanel';
 import ChatSearchBar from './ChatSearchBar';
 import {
@@ -1209,6 +1219,7 @@ const translations = {
 		muteChat: 'Mute notifications',
 		unmuteChat: 'Unmute notifications',
 		muteUpdated: 'Notification mute updated',
+		muteNotSynced: 'Saved here. WhatsApp on your phone is not connected right now, so it was not muted there.',
 		messagePreviewFallback: 'Message',
 		online: 'Online',
 		offline: 'Offline',
@@ -1755,6 +1766,7 @@ const translations = {
 		muteChat: 'كتم الإشعارات',
 		unmuteChat: 'إلغاء كتم الإشعارات',
 		muteUpdated: 'تم تحديث كتم الإشعارات',
+		muteNotSynced: 'اتحفظ هنا. واتساب على الموبايل مش متصل دلوقتي، فماتكتمش هناك.',
 		messagePreviewFallback: 'رسالة',
 		online: 'متصل',
 		offline: 'غير متصل',
@@ -12482,6 +12494,8 @@ function WhatsAppWorkspaceContent() {
 	const hasMoreMessagesRef = useRef(true);
 	hasMoreMessagesRef.current = hasMoreMessages;
 	const [loadingMessages, setLoadingMessages] = useState(false);
+	/** Chat whose first stored page has been painted (the inbox preview row alone does not count). */
+	const threadPageLandedRef = useRef(null);
 	/** Conversation whose cached thread is painted while a provider catch-up runs. */
 	const [threadSyncingId, setThreadSyncingId] = useState(null);
 	/** Soft catch-up when inbox shows unread/new preview the warm thread does not have yet. */
@@ -12547,6 +12561,24 @@ function WhatsAppWorkspaceContent() {
 	const [messageSchedules, setMessageSchedules] = useState([]);
 	const [messageSchedulesLoading, setMessageSchedulesLoading] = useState(false);
 	const [messageScheduleBusyId, setMessageScheduleBusyId] = useState('');
+	// Delayed reply: while on, Enter in this chat schedules the text instead of sending it.
+	const [delayedSendOn, setDelayedSendOn] = useState(false);
+	const [delayedSendOpen, setDelayedSendOpen] = useState(false);
+	const [delayedSendPrefs, setDelayedSendPrefsState] = useState(DEFAULT_DELAYED_SEND_PREFS);
+	const [replyGapState, setReplyGapState] = useState({ conversationId: '', loading: false, data: null, error: false });
+	const [delayedSendNow, setDelayedSendNow] = useState(() => Date.now());
+	const delayedSendButtonRef = useRef(null);
+	// Mute state of chats that are not in the loaded list, for in-page notifications.
+	const notifyStateCacheRef = useRef(null);
+	if (!notifyStateCacheRef.current) {
+		notifyStateCacheRef.current = createNotifyStateCache(id =>
+			api.get(`/whatsapp/conversations/${id}/notify-state`).then(response => response.data),
+		);
+	}
+	const setDelayedSendPrefs = useCallback(next => {
+		setDelayedSendPrefsState(next);
+		writeDelayedSendPrefs(next);
+	}, []);
 	const [pinsPanelOpen, setPinsPanelOpen] = useState(false);
 	const [typingHistoryOpen, setTypingHistoryOpen] = useState(false);
 	const [typingAttemptEvent, setTypingAttemptEvent] = useState(null);
@@ -12556,7 +12588,7 @@ function WhatsAppWorkspaceContent() {
 		() =>
 			(Array.isArray(messageSchedules) ? messageSchedules : []).filter(item => {
 				const status = String(item?.status || '').toLowerCase();
-				return status === 'active' || status === 'paused' || status === 'processing';
+				return status === 'active' || status === 'paused' || status === 'processing' || status === 'failed';
 			}),
 		[messageSchedules],
 	);
@@ -13007,18 +13039,8 @@ function WhatsAppWorkspaceContent() {
 				return false;
 			}
 			if (forceScroll) pinThreadToBottomRef.current = true;
-			const rows = messageRowsRef.current;
-			const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
-			if (useVirtual) {
-				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
-					align: 'end',
-					behavior: behavior === 'smooth' ? 'smooth' : 'auto',
-				});
-				const total = Number(messageVirtualRef.current?.totalSize) || 0;
-				if (total > 0 && behavior !== 'smooth') {
-					messageVirtualRef.current?.scrollToOffset?.(total, { align: 'end' });
-				}
-			}
+			// Native scroll only: the virtualizer renders the rows it scrolls to.
+			messageVirtualRef.current?.cancelScrollReconcile?.();
 			const target = Math.max(
 				Number(box.scrollHeight) || 0,
 				Number(messageVirtualRef.current?.totalSize) || 0,
@@ -13631,20 +13653,8 @@ function WhatsAppWorkspaceContent() {
 		const applyJump = (behavior = 'auto') => {
 			const el = messageBoxRef.current;
 			if (!el) return false;
-			const rows = messageRowsRef.current;
-			const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
 			const smooth = behavior === 'smooth';
-			if (useVirtual) {
-				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
-					align: 'end',
-					behavior: smooth ? 'smooth' : 'auto',
-				});
-				const total = Number(messageVirtualRef.current?.totalSize) || 0;
-				// Instant offset snap fights smooth scrolling — only use it for corrections.
-				if (total > 0 && !smooth) {
-					messageVirtualRef.current?.scrollToOffset?.(total, { align: 'end' });
-				}
-			}
+			messageVirtualRef.current?.cancelScrollReconcile?.();
 			const target = Math.max(
 				Number(el.scrollHeight) || 0,
 				Number(messageVirtualRef.current?.totalSize) || 0,
@@ -15814,6 +15824,7 @@ function WhatsAppWorkspaceContent() {
 				lastProviderSyncAt: seededLastSync,
 				lastSyncReason: currentCache?.lastSyncReason || cached?.lastSyncReason || null,
 			});
+			threadPageLandedRef.current = id;
 			writeConversationMessages(id, () => items);
 			if (!items.length && isCurrentRequest() && !starredOnly) {
 				const preview = conversationsRef.current.find(item => item.id === id)?.lastMessage;
@@ -16528,6 +16539,8 @@ function WhatsAppWorkspaceContent() {
 		const cacheKey = conversationId ? messagesCacheKey(conversationId, starredOnly) : '';
 		if (switchedConversation) {
 			const warmCache = cacheKey ? messagesCacheRef.current.get(cacheKey) : null;
+			threadPageLandedRef.current =
+				warmCache && isMessageThreadCacheComplete(warmCache) ? conversationId : null;
 			if (warmCache && isMessageThreadCacheComplete(warmCache)) {
 				const sorted = mergeMessages([], warmCache.items, conversationId);
 				writeConversationMessages(conversationId, () => sorted);
@@ -16676,6 +16689,9 @@ function WhatsAppWorkspaceContent() {
 	// pin to the latest messages (never leave the thread stuck at the top).
 	useEffect(() => {
 		if (!messageCatchUp || messageCatchUp.conversationId !== conversationId) return;
+		// The inbox tip is painted on open as a single row. Treating that as "caught up"
+		// dropped the loader and showed one lonely message until the page arrived.
+		if (threadPageLandedRef.current !== conversationId) return;
 		const tipPlan = openChatCatchUpPlan({
 			cacheItems: effectiveMessages,
 			unreadCount: messageCatchUp.expected,
@@ -16707,43 +16723,56 @@ function WhatsAppWorkspaceContent() {
 		if (threadSettled) threadVirtualLatchRef.current.opening = false;
 	}, [threadSettled]);
 
-	// After the open settles at the bottom, bring the unread divider into view when the
-	// unread run is taller than the viewport (WhatsApp opens at the first unread).
+	// Chats open at the latest message. Jumping up to the first unread on its own landed
+	// people deep in old messages (virtual rows are placed from estimated heights, and the
+	// app's unread count can include messages already read on the phone). When the unread
+	// run is taller than the screen, a chip offers the jump instead.
 	const unreadRevealDoneRef = useRef(null);
-	useEffect(() => {
-		if (!threadSettled || !conversationId || !unreadDividerMessageId) return undefined;
-		if (unreadRevealDoneRef.current === conversationId) return undefined;
-		unreadRevealDoneRef.current = conversationId;
+	const [unreadJump, setUnreadJump] = useState(null);
+	const revealUnreadDivider = useCallback(() => {
 		const box = messageBoxRef.current;
-		if (!box) return undefined;
-		let frame = 0;
-		const reveal = () => {
+		const dividerId = unreadDividerIdRef.current;
+		if (!box || !dividerId) return;
+		const place = () => {
 			const divider = box.querySelector('[data-wa-unread-divider]');
 			if (!divider) return false;
 			const boxRect = box.getBoundingClientRect();
 			const rect = divider.getBoundingClientRect();
-			if (rect.top >= boxRect.top + 4 && rect.bottom <= boxRect.bottom - 4) return true;
 			pinThreadToBottomRef.current = false;
 			box.scrollTop += rect.top - boxRect.top - 12;
 			setShowJumpToBottom(true);
-			return true;
+			return Math.abs(divider.getBoundingClientRect().top - boxRect.top - 12) < 4;
 		};
-		if (reveal()) return undefined;
+		if (place()) return;
 		const index = messageRowsRef.current.findIndex(row =>
 			row?.kind === 'image-gallery'
-				? row.messages?.some(item => item?.id === unreadDividerMessageId)
-				: row?.message?.id === unreadDividerMessageId,
+				? row.messages?.some(item => item?.id === dividerId)
+				: row?.message?.id === dividerId,
 		);
-		if (index < 0) return undefined;
+		if (index < 0) return;
 		pinThreadToBottomRef.current = false;
 		messageVirtualRef.current?.scrollToIndex?.(index, { align: 'start' });
-		frame = requestAnimationFrame(() => {
-			frame = requestAnimationFrame(() => {
-				reveal();
-			});
-		});
-		return () => cancelAnimationFrame(frame);
-	}, [threadSettled, conversationId, unreadDividerMessageId]);
+		// Rows above get measured as they render; keep correcting until the divider sits still.
+		let tries = 0;
+		const settle = () => {
+			if (place() || (tries += 1) > 12) return;
+			requestAnimationFrame(settle);
+		};
+		requestAnimationFrame(settle);
+	}, []);
+	useEffect(() => {
+		setUnreadJump(null);
+	}, [conversationId]);
+	useEffect(() => {
+		if (!threadSettled || !conversationId || !unreadDividerMessageId) return;
+		if (unreadRevealDoneRef.current === conversationId) return;
+		unreadRevealDoneRef.current = conversationId;
+		const box = messageBoxRef.current;
+		if (!box) return;
+		const divider = box.querySelector('[data-wa-unread-divider]');
+		if (divider && divider.getBoundingClientRect().top >= box.getBoundingClientRect().top + 4) return;
+		setUnreadJump({ conversationId, count: unreadAtOpen?.count || 0 });
+	}, [threadSettled, conversationId, unreadDividerMessageId, unreadAtOpen]);
 	useEffect(() => {
 		if (unreadRevealDoneRef.current !== conversationId) unreadRevealDoneRef.current = null;
 	}, [conversationId]);
@@ -16779,18 +16808,7 @@ function WhatsAppWorkspaceContent() {
 		const pinBottom = () => {
 			const box = messageBoxRef.current;
 			if (!box || !pinThreadToBottomRef.current) return false;
-			const rows = messageRowsRef.current;
-			const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
-			if (useVirtual) {
-				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
-					align: 'end',
-					behavior: 'auto',
-				});
-				const total = Number(messageVirtualRef.current?.totalSize) || 0;
-				if (total > 0) {
-					messageVirtualRef.current?.scrollToOffset?.(total, { align: 'end' });
-				}
-			}
+			messageVirtualRef.current?.cancelScrollReconcile?.();
 			const target = Math.max(
 				Number(box.scrollHeight) || 0,
 				Number(messageVirtualRef.current?.totalSize) || 0,
@@ -16894,7 +16912,7 @@ function WhatsAppWorkspaceContent() {
 			);
 			const rows = (Array.isArray(data) ? data : []).filter(item => {
 				const status = String(item?.status || '').toLowerCase();
-				return status === 'active' || status === 'paused' || status === 'processing';
+				return status === 'active' || status === 'paused' || status === 'processing' || status === 'failed';
 			});
 			setMessageSchedules(rows);
 		} catch {
@@ -16932,17 +16950,37 @@ function WhatsAppWorkspaceContent() {
 		}
 	}, []);
 
+	const secondaryThreadLoadRef = useRef(null);
 	useEffect(() => {
 		if (!conversationId || demo.settings.enabled) {
+			secondaryThreadLoadRef.current = null;
 			setMessageSchedules([]);
 			setSchedulesPanelOpen(false);
 			setPinnedMessages([]);
 			setPinsPanelOpen(false);
-			return;
+			return undefined;
 		}
-		void loadMessageSchedules(conversationId);
-		void loadPinnedMessages(conversationId);
-	}, [conversationId, demo.settings.enabled, loadMessageSchedules, loadPinnedMessages]);
+		if (secondaryThreadLoadRef.current === conversationId) return undefined;
+		// Pins and schedules are extra requests on every open; on a phone they slowed the
+		// first page. They load once the thread is painted (or after 2.5s at the latest).
+		const run = () => {
+			if (secondaryThreadLoadRef.current === conversationId) return;
+			secondaryThreadLoadRef.current = conversationId;
+			void loadMessageSchedules(conversationId);
+			void loadPinnedMessages(conversationId);
+		};
+		if (!loadingMessages) {
+			run();
+			return undefined;
+		}
+		const timer = window.setTimeout(run, 2500);
+		return () => window.clearTimeout(timer);
+	}, [conversationId, demo.settings.enabled, loadingMessages, loadMessageSchedules, loadPinnedMessages]);
+	useEffect(() => {
+		// Never show the previous chat's pins / schedules while the new ones wait.
+		setMessageSchedules([]);
+		setPinnedMessages([]);
+	}, [conversationId]);
 
 	useEffect(() => {
 		if (!liveMessageSchedules.length) setSchedulesPanelOpen(false);
@@ -16994,6 +17032,62 @@ function WhatsAppWorkspaceContent() {
 	const loadMessageSchedulesRef = useRef(loadMessageSchedules);
 	loadMessageSchedulesRef.current = loadMessageSchedules;
 
+	useEffect(() => {
+		setDelayedSendPrefsState(readDelayedSendPrefs());
+	}, []);
+
+	// The delay is a per-chat choice: opening another chat always starts with normal sending.
+	useEffect(() => {
+		setDelayedSendOn(false);
+		setDelayedSendOpen(false);
+	}, [conversationId]);
+
+	const latestThreadMessageKey = useMemo(() => {
+		const last = effectiveMessages[effectiveMessages.length - 1];
+		return last ? `${last.id}:${last.status || ''}` : '';
+	}, [effectiveMessages]);
+
+	const loadReplyGap = useCallback(async targetConversationId => {
+		if (!targetConversationId || isDemoId(targetConversationId)) return;
+		setReplyGapState(current => ({
+			conversationId: targetConversationId,
+			loading: true,
+			data: current.conversationId === targetConversationId ? current.data : null,
+			error: false,
+		}));
+		try {
+			const { data } = await api.get(`/whatsapp/conversations/${targetConversationId}/reply-gap`);
+			setReplyGapState(current =>
+				current.conversationId === targetConversationId
+					? { conversationId: targetConversationId, loading: false, data, error: false }
+					: current,
+			);
+		} catch {
+			setReplyGapState(current =>
+				current.conversationId === targetConversationId ? { ...current, loading: false, error: true } : current,
+			);
+		}
+	}, []);
+
+	const replyGapNeeded = (delayedSendOn || delayedSendOpen) && delayedSendPrefs.method === 'reply';
+	useEffect(() => {
+		// Re-measured when a message arrives or one of mine is confirmed, so the gap stays current.
+		if (replyGapNeeded && conversationId) void loadReplyGap(conversationId);
+	}, [replyGapNeeded, conversationId, latestThreadMessageKey, loadReplyGap]);
+
+	useEffect(() => {
+		if (!delayedSendOn && !delayedSendOpen) return undefined;
+		setDelayedSendNow(Date.now());
+		const timer = window.setInterval(() => setDelayedSendNow(Date.now()), 20_000);
+		return () => window.clearInterval(timer);
+	}, [delayedSendOn, delayedSendOpen]);
+
+	const replyGapForChat = replyGapState.conversationId === conversationId ? replyGapState.data : null;
+	const delayedSendPlan = useMemo(
+		() => computeDelayedSend(delayedSendPrefs, replyGapForChat, delayedSendNow),
+		[delayedSendPrefs, replyGapForChat, delayedSendNow],
+	);
+
 	useLayoutEffect(() => {
 		if (!conversationId || loadingOlderRef.current || pendingOlderRestore()) return;
 		if (!pinThreadToBottomRef.current || threadSettledRef.current) return;
@@ -17041,14 +17135,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		lastAutoScrolledMessageRef.current = latest.id;
-		if (virtualizeMessages && messageRows.length > 0) {
-			waScrollMark('autoScrollLayoutEffect', 'virtualizer.scrollToIndex:last', {
-				latestId: latest.id,
-			});
-			messageVirtualRef.current?.scrollToIndex?.(messageRows.length - 1, {
-				align: 'end',
-			});
-		}
+		if (virtualizeMessages) messageVirtualRef.current?.cancelScrollReconcile?.();
 		if (box) {
 			const target = Math.max(
 				Number(box.scrollHeight) || 0,
@@ -17179,14 +17266,7 @@ function WhatsAppWorkspaceContent() {
 				pinThreadToBottomRef.current = false;
 				return;
 			}
-			const rows = messageRowsRef.current;
-			const useVirtual = threadVirtualLatchRef.current.enabled && rows.length > 0;
-			if (useVirtual) {
-				messageVirtualRef.current?.scrollToIndex?.(rows.length - 1, {
-					align: 'end',
-					behavior: 'auto',
-				});
-			}
+			messageVirtualRef.current?.cancelScrollReconcile?.();
 			waScrollApply(
 				box,
 				Math.max(
@@ -17505,35 +17585,38 @@ function WhatsAppWorkspaceContent() {
 					const peer = conversationsRef.current.find(
 						item => item.id === targetConversationId,
 					);
-					if (!peer?.isMuted && (tabLeaderRef.current?.isLeader !== false)) {
-						if (!whatsappNotificationsEnabledRef.current) return;
-						const activeLocale = localeRef.current;
-						const isArabic = activeLocale === 'ar';
-						const title =
-							conversationTitle(peer) ||
-							event.payload?.contactName ||
-							(isArabic ? 'رسالة واتساب' : 'WhatsApp');
-						const body = isViewOnceMessage(event.payload)
-							? viewOnceMessageLabel(event.payload, activeLocale)
-							: String(event.payload?.text || '').trim() ||
-							(event.payload?.type === 'image'
-								? isArabic
-									? 'صورة'
-									: 'Photo'
-								: event.payload?.type === 'ptt' || event.payload?.type === 'audio'
+					if (tabLeaderRef.current?.isLeader !== false && whatsappNotificationsEnabledRef.current) {
+						// A chat missing from the loaded list used to count as "not muted".
+						void shouldNotifyForConversation(peer, targetConversationId, notifyStateCacheRef.current).then(allowed => {
+							if (!allowed || !whatsappNotificationsEnabledRef.current) return;
+							const activeLocale = localeRef.current;
+							const isArabic = activeLocale === 'ar';
+							const title =
+								conversationTitle(peer) ||
+								event.payload?.contactName ||
+								(isArabic ? 'رسالة واتساب' : 'WhatsApp');
+							const body = isViewOnceMessage(event.payload)
+								? viewOnceMessageLabel(event.payload, activeLocale)
+								: String(event.payload?.text || '').trim() ||
+								(event.payload?.type === 'image'
 									? isArabic
-										? 'رسالة صوتية'
-										: 'Voice message'
-									: isArabic
-										? 'رسالة جديدة'
-										: 'New message');
-						showWhatsAppDesktopNotification({
-							title,
-							body,
-							conversationId: targetConversationId,
-							accountId: accountIdRef.current,
-							locale: activeLocale,
-							enabled: whatsappNotificationsEnabledRef.current,
+										? 'صورة'
+										: 'Photo'
+									: event.payload?.type === 'ptt' || event.payload?.type === 'audio'
+										? isArabic
+											? 'رسالة صوتية'
+											: 'Voice message'
+										: isArabic
+											? 'رسالة جديدة'
+											: 'New message');
+							showWhatsAppDesktopNotification({
+								title,
+								body,
+								conversationId: targetConversationId,
+								accountId: accountIdRef.current,
+								locale: activeLocale,
+								enabled: whatsappNotificationsEnabledRef.current,
+							});
 						});
 					}
 				}
@@ -18762,6 +18845,62 @@ function WhatsAppWorkspaceContent() {
 			? encodeComposerMentions(getDraft().trim(), composerApiRef.current?.getMentions?.() || [])
 			: { text: getDraft().trim(), mentions: [] };
 		const replySnapshot = replyingTo;
+		if (delayedSendOn && !demo.settings.enabled && !mentions.length) {
+			const ar = locale === 'ar';
+			const gapForTarget =
+				replyGapState.conversationId === targetConversationId ? replyGapState.data : null;
+			const plan = computeDelayedSend(delayedSendPrefs, gapForTarget, Date.now());
+			if (!plan.ok) {
+				toast.error(
+					plan.reason === 'loading'
+						? ar ? 'لسه بنحسب وقت الرد، استنى ثانية.' : 'Still measuring the reply time, try again in a moment.'
+						: plan.reason === 'no_my_message'
+							? ar ? 'مفيش رسالة منك قبل ردّه نحسب منها.' : 'No message of yours before their reply to measure from.'
+							: ar ? 'لسه مارد، فمفيش وقت رد نحسب منه.' : 'They have not replied yet, so there is no reply time.',
+				);
+				setDelayedSendOpen(true);
+				return;
+			}
+			if (!accountId) {
+				toast.error(ar ? 'اربط حساب واتساب الأول' : 'Link a WhatsApp account first');
+				return;
+			}
+			setSending(true);
+			try {
+				await api.post(`/whatsapp/accounts/${accountId}/message-schedules`, {
+					type: 'text',
+					text,
+					conversationIds: [targetConversationId],
+					scheduleKind: 'once',
+					scheduledAt: new Date(plan.sendAt).toISOString(),
+					timezone: browserTimeZone(),
+					title: delayedSendTitle(delayedSendPrefs, plan, gapForTarget, ar).slice(0, 160),
+					quotedProviderMessageId: replySnapshot?.providerMessageId || undefined,
+					// One id per typed message: a double Enter or a retried request saves it once.
+					clientMessageId: `delayed:${newClientMessageId()}`,
+				});
+				if (conversationIdRef.current === targetConversationId) {
+					setDraft('');
+					setReplyingTo(null);
+				}
+				toast.success(
+					ar
+						? `اتجدولت · تتبعت ${formatSendWhen(plan.sendAt, true)}`
+						: `Scheduled · sends ${formatSendWhen(plan.sendAt, false)}`,
+				);
+				void loadMessageSchedules(targetConversationId);
+				setPinsPanelOpen(false);
+				setSchedulesPanelOpen(true);
+			} catch (error) {
+				toast.error(
+					error?.response?.data?.message ||
+						(ar ? 'ماقدرناش نجدول الرسالة. الرسالة لسه في الخانة.' : 'Could not schedule the message. It is still in the box.'),
+				);
+			} finally {
+				setSending(false);
+			}
+			return;
+		}
 		if (demo.settings.enabled) {
 			setSending(true);
 			try {
@@ -22397,12 +22536,14 @@ function WhatsAppWorkspaceContent() {
 		setMuteDurationOpen(false);
 		setMuteTargetConversation(null);
 		try {
-			await api.put(`/whatsapp/conversations/${conversation.id}/mute`, {
+			const { data } = await api.put(`/whatsapp/conversations/${conversation.id}/mute`, {
 				isMuted: true,
 				durationMinutes: durationMinutes ?? undefined,
 				mutedUntil: mutedUntil || undefined,
 			});
+			notifyStateCacheRef.current?.clear();
 			toast.success(t.muteUpdated);
+			if (data?.syncedToWhatsApp === false) toast(t.muteNotSynced, { icon: 'ℹ️' });
 		} catch (error) {
 			setConversations(current =>
 				current.map(item =>
@@ -22437,10 +22578,12 @@ function WhatsAppWorkspaceContent() {
 				),
 			);
 			try {
-				await api.put(`/whatsapp/conversations/${conversation.id}/mute`, {
+				const { data } = await api.put(`/whatsapp/conversations/${conversation.id}/mute`, {
 					isMuted: false,
 				});
+				notifyStateCacheRef.current?.clear();
 				toast.success(t.muteUpdated);
+				if (data?.syncedToWhatsApp === false) toast(t.muteNotSynced, { icon: 'ℹ️' });
 			} catch (error) {
 				setConversations(current =>
 					current.map(item =>
@@ -28570,6 +28713,21 @@ function WhatsAppWorkspaceContent() {
 										)}
 									</div>
 									{/* Unread catch-up uses the full-pane wa-thread-loader above. */}
+									{unreadJump && unreadJump.conversationId === conversationId && unreadJump.count > 0 ? (
+										<button
+											type="button"
+											className="wa-jump-unread"
+											onClick={event => {
+												event.preventDefault();
+												event.stopPropagation();
+												setUnreadJump(null);
+												revealUnreadDivider();
+											}}
+										>
+											<ChevronUp size={16} strokeWidth={2.4} aria-hidden="true" />
+											{t.unreadMessagesDividerCount.replace('{count}', String(unreadJump.count))}
+										</button>
+									) : null}
 									{showJumpToBottom && conversationId ? (
 										<button
 											type="button"
@@ -28657,6 +28815,19 @@ function WhatsAppWorkspaceContent() {
 											}}
 											className={`wa-composer flex gap-2 border-0 border-t border-[#e9edef] p-2 ${composerDragOver ? 'ring-2 ring-[#00A884]/40' : ''} ${isVoiceRecordingMode ? 'is-recording flex-nowrap items-center' : 'flex-wrap items-end'}`}
 										>
+											{delayedSendOn && !isVoiceRecordingMode ? (
+												<div className="basis-full">
+													<DelayedSendBanner
+														ar={locale === 'ar'}
+														plan={delayedSendPlan}
+														gapState={replyGapState.conversationId === conversationId ? replyGapState : null}
+														prefs={delayedSendPrefs}
+														now={delayedSendNow}
+														onEdit={() => setDelayedSendOpen(true)}
+														onTurnOff={() => setDelayedSendOn(false)}
+													/>
+												</div>
+											) : null}
 											<input
 												ref={fileRef}
 												type="file"
@@ -28898,6 +29069,15 @@ function WhatsAppWorkspaceContent() {
 													>
 														<Camera size={20} strokeWidth={2} />
 													</button>
+													{!demo.settings.enabled ? (
+														<DelayedSendButton
+															ar={locale === 'ar'}
+															enabled={delayedSendOn}
+															disabled={sending}
+															buttonRef={delayedSendButtonRef}
+															onClick={() => setDelayedSendOpen(current => !current)}
+														/>
+													) : null}
 													{composerHasText || composerImages.length ? (
 														<>
 															<button
@@ -28912,13 +29092,16 @@ function WhatsAppWorkspaceContent() {
 															</button>
 															<button
 																type="submit"
-																aria-label={t.send}
+																aria-label={delayedSendOn && !composerImages.length ? t.scheduleMessage : t.send}
+																title={delayedSendOn && !composerImages.length ? t.scheduleMessage : undefined}
 																disabled={sending}
 																className="wa-send-button"
 																style={{ background: GRADIENT }}
 															>
 																{sending ? (
 																	<Loader2 size={17} className="animate-spin" />
+																) : delayedSendOn && !composerImages.length ? (
+																	<Clock size={17} strokeWidth={2.1} />
 																) : (
 																	<Send size={17} strokeWidth={2.1} />
 																)}
@@ -31367,6 +31550,20 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				</WaDialog>
 			)}
+			<DelayedSendPopover
+				open={delayedSendOpen}
+				anchorEl={delayedSendButtonRef.current}
+				ar={locale === 'ar'}
+				enabled={delayedSendOn}
+				onEnabledChange={setDelayedSendOn}
+				prefs={delayedSendPrefs}
+				onPrefsChange={setDelayedSendPrefs}
+				gapState={replyGapState.conversationId === conversationId ? replyGapState : null}
+				onRetryGap={() => conversationId && void loadReplyGap(conversationId)}
+				plan={delayedSendPlan}
+				now={delayedSendNow}
+				onClose={() => setDelayedSendOpen(false)}
+			/>
 			<MountWhenOpened open={scheduleDialogOpen}>
 				<ScheduleMessageDialog
 					open={scheduleDialogOpen}

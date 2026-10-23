@@ -227,6 +227,9 @@ export default function TranscriptVoicePlayer({
 							peaks.length <= 1
 								? progress > 0
 								: index / lastIndex <= Math.max(0, Math.min(1, progress)) + 1e-6;
+						// The shared bar rule sizes bars from --wa-bar-h (with !important), so a
+						// plain height alone left every bar at the 8px default.
+						const barHeight = `${Math.round(8 + height * 22)}px`;
 						return (
 							<span
 								key={index}
@@ -234,7 +237,8 @@ export default function TranscriptVoicePlayer({
 									playing ? 'is-shake' : ''
 								}`}
 								style={{
-									height: `${Math.round(8 + height * 22)}px`,
+									height: barHeight,
+									'--wa-bar-h': barHeight,
 									animationDelay: `${(index % 8) * 70}ms`,
 								}}
 							/>
