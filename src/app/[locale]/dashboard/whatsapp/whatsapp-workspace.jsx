@@ -18736,8 +18736,8 @@ function WhatsAppWorkspaceContent() {
 		return () => clearTimeout(timer);
 	}, [syncingInbox, syncPhoneClosed]);
 
-	const sendMessage = async event => {
-		event.preventDefault();
+	const sendMessage = async (event, options = {}) => {
+		event?.preventDefault?.();
 		if (recordingVoice) {
 			pinThreadToBottomRef.current = true;
 			stopVoiceRecording(true);
@@ -18845,7 +18845,7 @@ function WhatsAppWorkspaceContent() {
 			? encodeComposerMentions(getDraft().trim(), composerApiRef.current?.getMentions?.() || [])
 			: { text: getDraft().trim(), mentions: [] };
 		const replySnapshot = replyingTo;
-		if (delayedSendOn && !demo.settings.enabled && !mentions.length) {
+		if (delayedSendOn && !options.skipDelay && !demo.settings.enabled && !mentions.length) {
 			const ar = locale === 'ar';
 			const gapForTarget =
 				replyGapState.conversationId === targetConversationId ? replyGapState.data : null;
@@ -28825,6 +28825,8 @@ function WhatsAppWorkspaceContent() {
 														now={delayedSendNow}
 														onEdit={() => setDelayedSendOpen(true)}
 														onTurnOff={() => setDelayedSendOn(false)}
+														canSendNow={composerHasText && !sending}
+														onSendNow={() => sendMessage(null, { skipDelay: true })}
 													/>
 												</div>
 											) : null}
