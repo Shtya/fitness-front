@@ -38,6 +38,7 @@ const copy = {
 		weekdays: 'Weekdays',
 		once: 'Once',
 		recurring: 'Recurring',
+		active: 'Scheduled',
 		loading: 'Loading scheduled messages',
 	},
 	ar: {
@@ -60,6 +61,7 @@ const copy = {
 		weekdays: 'أيام العمل',
 		once: 'مرة واحدة',
 		recurring: 'متكررة',
+		active: 'مجدولة',
 		loading: 'جارٍ تحميل الرسائل المجدولة',
 	},
 };
@@ -244,6 +246,11 @@ export default function ScheduledMessagesPanel({
 							<div className="wa-ui-sched__foot">
 								{status === 'paused' ? (
 									<span className="wa-ui-badge wa-ui-badge--warning">{t.paused}</span>
+								) : status === 'active' ? (
+									<>
+										<span className="wa-ui-badge wa-ui-badge--accent">{t.active}</span>
+										{when ? <span className="wa-ui-sched__when">{when}</span> : null}
+									</>
 								) : status === 'failed' ? (
 									<span className="wa-ui-badge wa-ui-badge--danger" title={item.lastError || undefined}>
 										{t.failed}

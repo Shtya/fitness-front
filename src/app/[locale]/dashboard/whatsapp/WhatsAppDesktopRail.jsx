@@ -158,6 +158,11 @@ export default function WhatsAppDesktopRail({
 			badge: unreadCount,
 		},
 		{
+			id: 'reading',
+			label: labels.reading || (ar ? 'القراءة' : 'Reading'),
+			icon: BookOpen,
+		},
+		{
 			id: 'statuses',
 			label: labels.updates || (ar ? 'تحديثات' : 'Updates'),
 			icon: Zap,
@@ -176,7 +181,7 @@ export default function WhatsAppDesktopRail({
 			: null,
 	].filter(Boolean);
 	const primaryItems = showcaseOnly
-		? allPrimaryItems.filter(item => item.id === 'chats')
+		? allPrimaryItems.filter(item => item.id === 'chats' || item.id === 'reading')
 		: allPrimaryItems;
 
 	const utilityItems = [

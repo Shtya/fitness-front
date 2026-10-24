@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, Loader2, Minus, Plus, RefreshCw, Send, SlidersHorizontal, Timer, X } from 'lucide-react';
+import { AlertCircle, Check, Loader2, RefreshCw, Send, Timer, X } from 'lucide-react';
 import { DELAYED_SEND_MAX_MINUTES, formatDelayDuration, normalizeDelayedSendPrefs } from './delayed-send';
 import './delayed-send.css';
 
@@ -10,68 +10,70 @@ const copy = {
 	en: {
 		button: 'Delay sending',
 		buttonOn: 'Delay is on: Enter schedules the message',
-		title: 'Delayed reply',
-		toggle: 'Delay my messages in this chat',
-		custom: 'Fixed time',
-		reply: 'Like their reply',
-		other: 'Other',
+		title: 'Send later',
+		none: 'Send right away',
+		noneHint: 'No delay',
+		after: 'After a set time',
+		custom: 'Wait',
 		hoursShort: 'h',
 		minutesShort: 'm',
-		repliedAfter: 'They replied after',
+		reply: 'Same as their reply time',
+		replyHint: 'How fast they answer',
+		repliedAfter: 'They replied after {time}',
 		adjust: 'Adjust',
 		minutes: 'minutes',
 		extraOn: 'Extra +{time}',
 		remove: 'Remove',
-		noReply: 'They have not replied yet, so there is no reply time to copy.',
-		noMine: 'There is no message from you before their reply to measure from.',
-		loadingGap: 'Measuring the reply time…',
-		gapFailed: 'Could not measure the reply time.',
-		retry: 'Try again',
-		willSend: 'Sends at {when}',
+		noReply: 'They have not replied yet.',
+		noMine: 'No message of yours before their reply.',
+		loadingGap: 'Measuring…',
+		gapFailed: 'Could not measure.',
+		retry: 'Retry',
+		willSend: 'Sends {when}',
 		inTime: 'in {time}',
 		fromNow: 'counted from now',
 		raised: 'shortest delay is 1 minute',
-		off: 'Off: messages send right away.',
-		note: 'Enter schedules text messages. Photos and @mentions send right away.',
+		off: 'Messages send right away.',
+		note: 'Press Enter to schedule. Photos and @mentions send right away.',
 		close: 'Close',
 		turnOff: 'Turn delay off',
 		edit: 'Change delay',
 		sendNow: 'Send now',
 		sendNowHint: 'Send this message now without the delay',
-		delayOn: 'Delay on',
 	},
 	ar: {
 		button: 'تأجيل الإرسال',
 		buttonOn: 'التأجيل شغّال: Enter بيجدول الرسالة',
-		title: 'رد مؤجّل',
-		toggle: 'أجّل رسايلي في الشات ده',
-		custom: 'مدة ثابتة',
-		reply: 'زي وقت ردّه',
-		other: 'مدة تانية',
+		title: 'إرسال مؤجّل',
+		none: 'ابعت على طول',
+		noneHint: 'من غير تأجيل',
+		after: 'بعد مدة',
+		custom: 'استنى',
 		hoursShort: 'س',
 		minutesShort: 'د',
-		repliedAfter: 'ردّ عليك بعد',
+		reply: 'زي وقت ردّه',
+		replyHint: 'حسب سرعة ردّه',
+		repliedAfter: 'ردّ عليك بعد {time}',
 		adjust: 'زوّد / قلّل',
 		minutes: 'دقيقة',
 		extraOn: 'وقت إضافي +{time}',
 		remove: 'شيله',
-		noReply: 'لسه مارد، فمفيش وقت رد نحسب منه.',
-		noMine: 'مفيش رسالة منك قبل ردّه نحسب منها.',
-		loadingGap: 'بنحسب وقت الرد…',
-		gapFailed: 'ماقدرناش نحسب وقت الرد.',
+		noReply: 'لسه مارد عليك.',
+		noMine: 'مفيش رسالة منك قبل ردّه.',
+		loadingGap: 'بنحسب…',
+		gapFailed: 'ماقدرناش نحسبها.',
 		retry: 'حاول تاني',
 		willSend: 'هتتبعت {when}',
 		inTime: 'بعد {time}',
 		fromNow: 'محسوبة من دلوقتي',
 		raised: 'أقل مدة دقيقة',
-		off: 'مقفول: الرسايل بتتبعت على طول.',
-		note: 'Enter بيجدول الرسايل النصية. الصور والمنشن بيتبعتوا فورًا.',
+		off: 'الرسايل بتتبعت على طول.',
+		note: 'اكتب واضغط Enter وهتتجدول. الصور والمنشن بيتبعتوا فورًا.',
 		close: 'إغلاق',
 		turnOff: 'إيقاف التأجيل',
-		edit: 'تعديل التأجيل',
+		edit: 'تغيير التأجيل',
 		sendNow: 'ابعت دلوقتي',
 		sendNowHint: 'ابعت الرسالة دي حالًا من غير تأجيل',
-		delayOn: 'التأجيل شغّال',
 	},
 };
 
@@ -94,13 +96,11 @@ export function formatSendWhen(ms, ar, now = Date.now()) {
 			});
 }
 
-const CUSTOM_PRESETS = [15, 30, 60, 120, 240];
-
 function popoverStyle(anchor) {
 	const margin = 10;
 	const vw = window.innerWidth || 1024;
 	const vh = window.innerHeight || 768;
-	const width = Math.min(320, vw - margin * 2);
+	const width = Math.min(300, vw - margin * 2);
 	const rect = anchor?.getBoundingClientRect?.();
 	if (!rect || vw <= 768) return { left: margin, right: margin, bottom: margin, maxHeight: vh - margin * 2 };
 	const left = Math.min(Math.max(margin, rect.right - width), vw - width - margin);
@@ -108,28 +108,66 @@ function popoverStyle(anchor) {
 	return { left, width, bottom, maxHeight: Math.max(240, rect.top - 8 - margin) };
 }
 
-/** Small number box with −/+; `suffix` sits inside the box (س / د). */
-function MiniNumber({ value, min, max, step = 1, suffix, label, onChange }) {
-	const set = next => onChange(Math.min(max, Math.max(min, Math.round(Number(next) || 0))));
+const ARABIC_DIGITS = /[٠-٩]/g;
+
+/**
+ * A number you type (no −/+): the box keeps what you are typing until it is a valid number,
+ * Arabic digits count too, and leaving it shows the value actually in use.
+ */
+function TimeInput({ value, min, max, suffix, label, onChange }) {
+	const [draft, setDraft] = useState(String(value));
+	const [focused, setFocused] = useState(false);
+	useEffect(() => {
+		if (!focused) setDraft(String(value));
+	}, [value, focused]);
+	const typed = raw => {
+		const clean = String(raw)
+			.replace(ARABIC_DIGITS, d => String(d.charCodeAt(0) - 0x0660))
+			.replace(min < 0 ? /[^\d-]/g : /\D/g, '')
+			.slice(0, 5);
+		setDraft(clean);
+		if (clean === '' || clean === '-') return;
+		const n = Math.round(Number(clean));
+		if (Number.isFinite(n)) onChange(Math.min(max, Math.max(min, n)));
+	};
 	return (
-		<span className="wa-dsend__num" aria-label={label}>
-			<button type="button" aria-label={`${label} −`} onClick={() => set(value - step)} disabled={value <= min}>
-				<Minus size={12} strokeWidth={2.4} />
-			</button>
+		<label className="wa-dsend__num">
 			<input
-				type="number"
+				type="text"
 				inputMode="numeric"
-				value={value}
-				min={min}
-				max={max}
+				dir="ltr"
+				value={draft}
 				aria-label={label}
-				onChange={event => set(event.target.value)}
+				onFocus={event => {
+					setFocused(true);
+					event.target.select();
+				}}
+				onBlur={() => {
+					setFocused(false);
+					setDraft(String(value));
+				}}
+				onChange={event => typed(event.target.value)}
 			/>
 			{suffix ? <span className="wa-dsend__num-suffix">{suffix}</span> : null}
-			<button type="button" aria-label={`${label} +`} onClick={() => set(value + step)} disabled={value >= max}>
-				<Plus size={12} strokeWidth={2.4} />
+		</label>
+	);
+}
+
+/** One choice in the list: a radio row; its extra controls show only while it is picked. */
+function Choice({ checked, title, hint, onPick, children }) {
+	return (
+		<div className={`wa-dsend__choice${checked ? ' is-checked' : ''}`}>
+			<button type="button" role="radio" aria-checked={checked} className="wa-dsend__choice-head" onClick={onPick}>
+				<span className="wa-dsend__radio" aria-hidden="true">
+					{checked ? <Check size={11} strokeWidth={3.2} /> : null}
+				</span>
+				<span className="wa-dsend__choice-text">
+					<span className="wa-dsend__choice-title">{title}</span>
+					{hint ? <span className="wa-dsend__choice-hint">{hint}</span> : null}
+				</span>
 			</button>
-		</span>
+			{checked && children ? <div className="wa-dsend__choice-body">{children}</div> : null}
+		</div>
 	);
 }
 
@@ -151,7 +189,10 @@ export function DelayedSendButton({ ar, enabled, disabled, onClick, buttonRef, c
 	);
 }
 
-/** Strip above the composer while the delay is on: when the next message goes out, plus "send now". */
+/**
+ * Small pill above the composer while the delay is on: when the next message goes out.
+ * Tap it to change the delay; "Send now" skips the delay for the message being typed.
+ */
 export function DelayedSendBanner({ ar, plan, gapState, now, onEdit, onTurnOff, onSendNow, canSendNow }) {
 	const t = ar ? copy.ar : copy.en;
 	const reason = plan?.ok ? '' : plan?.reason;
@@ -165,21 +206,23 @@ export function DelayedSendBanner({ ar, plan, gapState, now, onEdit, onTurnOff, 
 					? t.noMine
 					: t.noReply;
 	return (
-		<div className={`wa-dsend__banner${plan?.ok ? '' : ' is-warning'}`} role="status" dir={ar ? 'rtl' : 'ltr'}>
-			<span className="wa-dsend__banner-glyph" aria-hidden="true">
-				{plan?.ok ? <Timer size={14} strokeWidth={2.2} /> : <AlertCircle size={14} strokeWidth={2.2} />}
-			</span>
-			<button type="button" className="wa-dsend__banner-text" onClick={onEdit} title={t.edit}>
-				{plan?.ok ? (
-					<>
-						<span className="wa-dsend__banner-label">{t.delayOn}</span>
-						<b>{fill(t.willSend, { when: formatSendWhen(plan.sendAt, ar, now) })}</b>
-						<span className="wa-dsend__banner-sub">{fill(t.inTime, { time: formatDelayDuration(plan.sendAt - now, ar) })}</span>
-					</>
-				) : (
-					<span>{problem}</span>
-				)}
-			</button>
+		<div className="wa-dsend__bar" dir={ar ? 'rtl' : 'ltr'}>
+			<div className={`wa-dsend__pill${plan?.ok ? '' : ' is-warning'}`} role="status">
+				<button type="button" className="wa-dsend__pill-main" onClick={onEdit} title={t.edit}>
+					{plan?.ok ? <Timer size={14} strokeWidth={2.2} aria-hidden="true" /> : <AlertCircle size={14} strokeWidth={2.2} aria-hidden="true" />}
+					{plan?.ok ? (
+						<>
+							<b>{fill(t.willSend, { when: formatSendWhen(plan.sendAt, ar, now) })}</b>
+							<span className="wa-dsend__pill-sub">{fill(t.inTime, { time: formatDelayDuration(plan.sendAt - now, ar) })}</span>
+						</>
+					) : (
+						<span>{problem}</span>
+					)}
+				</button>
+				<button type="button" className="wa-dsend__pill-x" onClick={onTurnOff} title={t.turnOff} aria-label={t.turnOff}>
+					<X size={13} strokeWidth={2.4} />
+				</button>
+			</div>
 			{onSendNow ? (
 				<button
 					type="button"
@@ -193,12 +236,6 @@ export function DelayedSendBanner({ ar, plan, gapState, now, onEdit, onTurnOff, 
 					<span>{t.sendNow}</span>
 				</button>
 			) : null}
-			<button type="button" className="wa-dsend__banner-icon" onClick={onEdit} title={t.edit} aria-label={t.edit}>
-				<SlidersHorizontal size={14} strokeWidth={2.2} />
-			</button>
-			<button type="button" className="wa-dsend__banner-icon" onClick={onTurnOff} title={t.turnOff} aria-label={t.turnOff}>
-				<X size={15} strokeWidth={2.2} />
-			</button>
 		</div>
 	);
 }
@@ -221,7 +258,6 @@ export default function DelayedSendPopover({
 	const panelRef = useRef(null);
 	const [style, setStyle] = useState(null);
 	const p = normalizeDelayedSendPrefs(prefs);
-	const update = patch => onPrefsChange({ ...p, ...patch });
 
 	useEffect(() => {
 		if (!open) return undefined;
@@ -247,143 +283,102 @@ export default function DelayedSendPopover({
 
 	if (!open || !style || typeof document === 'undefined') return null;
 
+	// Picking a delay is what turns it on; "Send right away" turns it off. No separate switch.
+	const choose = patch => {
+		onPrefsChange({ ...p, ...patch });
+		if (!enabled) onEnabledChange(true);
+	};
+	const picked = !enabled ? 'none' : p.method;
 	const gap = gapState?.data;
 	const customHours = Math.floor(p.customMinutes / 60);
 	const customRest = p.customMinutes % 60;
 
+	let replyHint = t.replyHint;
+	if (picked === 'reply') {
+		if (gapState?.loading && !gap) replyHint = t.loadingGap;
+		else if (gap?.ok) replyHint = fill(t.repliedAfter, { time: formatDelayDuration(gap.gapMs, ar) });
+	}
+
 	return createPortal(
 		<div ref={panelRef} role="dialog" aria-labelledby="wa-dsend-title" dir={ar ? 'rtl' : 'ltr'} className="wa-dsend" style={style}>
 			<div className="wa-dsend__head">
-				<span className="wa-dsend__glyph" aria-hidden="true">
-					<Timer size={15} strokeWidth={2.2} />
-				</span>
+				<Timer size={15} strokeWidth={2.2} className="wa-dsend__head-icon" aria-hidden="true" />
 				<h3 id="wa-dsend-title">{t.title}</h3>
-				<button
-					type="button"
-					role="switch"
-					aria-checked={enabled}
-					aria-label={t.toggle}
-					title={t.toggle}
-					className={`wa-dsend__switch${enabled ? ' is-on' : ''}`}
-					onClick={() => onEnabledChange(!enabled)}
-				>
-					<span />
-				</button>
 				<button type="button" className="wa-ui-icon-btn wa-ui-icon-btn--sm" onClick={onClose} aria-label={t.close} title={t.close}>
 					<X size={16} strokeWidth={2} />
 				</button>
 			</div>
 
-			<fieldset className="wa-dsend__body" disabled={!enabled}>
-				<div className="wa-ui-segment" role="radiogroup" aria-label={t.title}>
-					{[
-						['custom', t.custom],
-						['reply', t.reply],
-					].map(([value, label]) => (
-						<button
-							key={value}
-							type="button"
-							role="radio"
-							aria-checked={p.method === value}
-							className="wa-ui-segment__item"
-							onClick={() => update({ method: value })}
-						>
-							{label}
-						</button>
-					))}
-				</div>
+			<div className="wa-dsend__body" role="radiogroup" aria-labelledby="wa-dsend-title">
+				<Choice checked={picked === 'none'} title={t.none} hint={t.noneHint} onPick={() => onEnabledChange(false)} />
 
-				{p.method === 'custom' ? (
-					<>
-						<div className="wa-dsend__chips">
-							{CUSTOM_PRESETS.map(minutes => (
-								<button
-									key={minutes}
-									type="button"
-									className="wa-ui-chip"
-									aria-pressed={p.customMinutes === minutes}
-									onClick={() => update({ customMinutes: minutes })}
-								>
-									{formatDelayDuration(minutes * 60_000, ar)}
-								</button>
-							))}
-						</div>
-						<div className="wa-dsend__row">
-							<span className="wa-dsend__label">{t.other}</span>
-							<MiniNumber
-								label={t.hoursShort}
-								suffix={t.hoursShort}
-								value={customHours}
-								min={0}
-								max={Math.floor(DELAYED_SEND_MAX_MINUTES / 60)}
-								onChange={hours => update({ customMinutes: hours * 60 + customRest })}
-							/>
-							<MiniNumber
-								label={t.minutesShort}
-								suffix={t.minutesShort}
-								value={customRest}
-								min={0}
-								max={59}
-								step={5}
-								onChange={minutes => update({ customMinutes: customHours * 60 + minutes })}
-							/>
-						</div>
-					</>
-				) : (
-					<>
-						<div className="wa-dsend__gap">
-							{gapState?.loading && !gap ? (
-								<p className="wa-dsend__muted">
-									<Loader2 size={13} className="animate-spin" aria-hidden="true" /> {t.loadingGap}
-								</p>
-							) : gapState?.error ? (
-								<p className="wa-dsend__warn">
-									<AlertCircle size={13} aria-hidden="true" /> {t.gapFailed}
-									<button type="button" className="wa-dsend__link" onClick={onRetryGap}>
-										<RefreshCw size={12} aria-hidden="true" /> {t.retry}
-									</button>
-								</p>
-							) : gap && !gap.ok ? (
-								<p className="wa-dsend__warn">
-									<AlertCircle size={13} aria-hidden="true" /> {gap.reason === 'no_my_message' ? t.noMine : t.noReply}
-								</p>
-							) : gap?.ok ? (
-								<>
-									<p className="wa-dsend__gap-value">
-										{t.repliedAfter} <b>{formatDelayDuration(gap.gapMs, ar)}</b>
-									</p>
-									<p className="wa-dsend__muted">
-										{formatSendWhen(new Date(gap.myMessageAt).getTime(), ar, now)}
-										<span aria-hidden="true">{ar ? '←' : '→'}</span>
-										{formatSendWhen(new Date(gap.theirReplyAt).getTime(), ar, now)}
-									</p>
-								</>
-							) : null}
-						</div>
+				<Choice
+					checked={picked === 'custom'}
+					title={t.after}
+					hint={picked === 'custom' ? null : formatDelayDuration(p.customMinutes * 60_000, ar)}
+					onPick={() => choose({ method: 'custom' })}
+				>
+					<div className="wa-dsend__row">
+						<span className="wa-dsend__label">{t.custom}</span>
+						<TimeInput
+							label={t.hoursShort}
+							suffix={t.hoursShort}
+							value={customHours}
+							min={0}
+							max={Math.floor(DELAYED_SEND_MAX_MINUTES / 60)}
+							onChange={hours => choose({ method: 'custom', customMinutes: hours * 60 + customRest })}
+						/>
+						<TimeInput
+							label={t.minutesShort}
+							suffix={t.minutesShort}
+							value={customRest}
+							min={0}
+							max={59}
+							onChange={minutes => choose({ method: 'custom', customMinutes: customHours * 60 + minutes })}
+						/>
+					</div>
+				</Choice>
+
+				<Choice checked={picked === 'reply'} title={t.reply} hint={replyHint} onPick={() => choose({ method: 'reply' })}>
+					{gapState?.error ? (
+						<p className="wa-dsend__warn">
+							<AlertCircle size={13} aria-hidden="true" /> {t.gapFailed}
+							<button type="button" className="wa-dsend__link" onClick={onRetryGap}>
+								<RefreshCw size={12} aria-hidden="true" /> {t.retry}
+							</button>
+						</p>
+					) : gap && !gap.ok ? (
+						<p className="wa-dsend__warn">
+							<AlertCircle size={13} aria-hidden="true" /> {gap.reason === 'no_my_message' ? t.noMine : t.noReply}
+						</p>
+					) : gapState?.loading && !gap ? (
+						<p className="wa-dsend__muted">
+							<Loader2 size={13} className="animate-spin" aria-hidden="true" /> {t.loadingGap}
+						</p>
+					) : (
 						<div className="wa-dsend__row">
 							<span className="wa-dsend__label">{t.adjust}</span>
-							<MiniNumber
+							<TimeInput
 								label={t.minutes}
 								suffix={t.minutesShort}
 								value={p.adjustMinutes}
 								min={-DELAYED_SEND_MAX_MINUTES}
 								max={DELAYED_SEND_MAX_MINUTES}
-								step={5}
-								onChange={minutes => update({ adjustMinutes: minutes })}
+								onChange={minutes => choose({ method: 'reply', adjustMinutes: minutes })}
 							/>
 						</div>
-					</>
-				)}
+					)}
+				</Choice>
 
-				{p.extraMinutes ? (
+				{enabled && p.extraMinutes ? (
 					<p className="wa-dsend__extra">
 						{fill(t.extraOn, { time: formatDelayDuration(p.extraMinutes * 60_000, ar) })}
-						<button type="button" className="wa-dsend__link" onClick={() => update({ extraMinutes: 0 })}>
+						<button type="button" className="wa-dsend__link" onClick={() => onPrefsChange({ ...p, extraMinutes: 0 })}>
 							{t.remove}
 						</button>
 					</p>
 				) : null}
-			</fieldset>
+			</div>
 
 			<div className="wa-dsend__foot" aria-live="polite">
 				{!enabled ? (
@@ -398,7 +393,7 @@ export default function DelayedSendPopover({
 						</span>
 					</p>
 				) : null}
-				<p className="wa-dsend__note">{t.note}</p>
+				{enabled ? <p className="wa-dsend__note">{t.note}</p> : null}
 			</div>
 		</div>,
 		document.body,

@@ -15,8 +15,9 @@
 	--tw-ink-2: rgba(37, 33, 29, 0.6);
 	--tw-chip: rgba(255, 255, 255, 0.82);
 	--tw-hand: 'Kalam', 'Aref Ruqaa', 'Segoe Print', 'Comic Sans MS', cursive;
-	--tw-radius: 7px;
-	--tw-fold: 30px;
+	--tw-radius: 18px;
+	--tw-fold: 36px;
+	--tw-gold: #c9a24f;
 	--tw-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
 	/* paper tones: top, bottom, accent (icons, progress), illustration, folded back */
@@ -114,6 +115,7 @@ html[data-theme-mode='dark'] .tw-float {
 }
 
 .tw-wall {
+	container-type: inline-size;
 	min-height: 0;
 	flex: 1 1 auto;
 	padding: 34px 28px 30px;
@@ -125,16 +127,20 @@ html[data-theme-mode='dark'] .tw-float {
 
 .tw-grid {
 	display: grid;
-	gap: 36px 26px;
+	gap: 34px 20px;
 	margin: 0;
 	padding: 0;
 	list-style: none;
-	grid-template-columns: repeat(auto-fill, minmax(188px, 1fr));
+	/* as many cards per row as fit: 4–5 on a wide board (5 from ~1.1k px) */
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
 }
 
 /* ─── a note ─── */
 .tw-note {
 	position: relative;
+	min-width: 0;
+	/* the title scales with the card width (cqi) */
+	container-type: inline-size;
 	outline: none;
 	/* the shadow follows the paper's real outline, folded corner included */
 	filter:
@@ -163,30 +169,31 @@ html[data-theme-mode='dark'] .tw-float {
 }
 
 /*
- * Folded corner. The paper is cut along the crease (clip-path on .tw-paper); the flap is the cut
- * piece turned over onto the paper. One element: the diagonal gradient draws the triangle (paper
- * back, a touch darker at the crease, transparent past it), and drop-shadow follows that exact
- * shape, so the flap's shadow sits right against its two edges with no separate layer.
+ * Curled corner. The paper is cut along the crease (clip-path on .tw-paper); .tw-curl draws the
+ * piece turned up over the note, its free edge curving back, with a soft shadow under it.
  */
-.tw-note:not(.tw-note--add)::after {
-	content: '';
+.tw-curl {
 	position: absolute;
 	right: 0;
 	bottom: 0;
 	z-index: 2;
 	width: var(--tw-fold);
 	height: var(--tw-fold);
-	border-top-left-radius: 5px;
-	background: linear-gradient(
-		to bottom right,
-		color-mix(in srgb, var(--tw-flap, #fdebb6) 55%, #fff) 0%,
-		color-mix(in srgb, var(--tw-flap, #fdebb6) 85%, #fff) 22%,
-		var(--tw-flap, #fdebb6) 38%,
-		color-mix(in srgb, var(--tw-flap, #fdebb6) 82%, #5a4426) 49.6%,
-		transparent 50%
-	);
-	filter: drop-shadow(-1.5px -1.5px 1.5px rgba(60, 35, 10, 0.2));
+	overflow: visible;
+	filter: drop-shadow(-2px -2px 2.5px rgba(60, 35, 10, 0.22));
 	pointer-events: none;
+}
+
+.tw-curl__crease {
+	fill: none;
+	stroke: rgba(90, 68, 38, 0.18);
+	stroke-width: 1;
+	vector-effect: non-scaling-stroke;
+}
+
+.tw-note.is-dragging .tw-curl,
+.tw-note.is-leaving .tw-curl {
+	opacity: 0;
 }
 
 .tw-tone-green { --tw-back: var(--tw-green-back); --tw-flap: var(--tw-green-b); --tw-accent: var(--tw-green-ink); }
@@ -194,6 +201,19 @@ html[data-theme-mode='dark'] .tw-float {
 .tw-tone-pink { --tw-back: var(--tw-pink-back); --tw-flap: var(--tw-pink-b); --tw-accent: var(--tw-pink-ink); }
 .tw-tone-blue { --tw-back: var(--tw-blue-back); --tw-flap: var(--tw-blue-b); --tw-accent: var(--tw-blue-ink); }
 .tw-tone-lavender { --tw-back: var(--tw-lavender-back); --tw-flap: var(--tw-lavender-b); --tw-accent: var(--tw-lavender-ink); }
+
+.tw-slot {
+	position: absolute;
+	top: 12px;
+	left: 50%;
+	z-index: 1;
+	width: 18px;
+	height: 4px;
+	border-radius: 999px;
+	background: rgba(60, 35, 10, 0.12);
+	box-shadow: inset 0 1px 1px rgba(60, 35, 10, 0.15);
+	transform: translateX(-50%);
+}
 
 .tw-pin {
 	position: absolute;
@@ -221,14 +241,18 @@ html[data-theme-mode='dark'] .tw-float {
 	--tw-art: var(--tw-yellow-art);
 	position: relative;
 	display: flex;
-	min-height: 168px;
-	aspect-ratio: 1.28 / 1;
+	min-width: 0;
+	/* no fixed min-height: with aspect-ratio it would force a 310px minimum width */
+	aspect-ratio: 1.32 / 1;
 	flex-direction: column;
-	padding: 14px 14px 12px;
+	padding: 12px 12px 8px;
 	overflow: hidden;
 	border-radius: var(--tw-radius);
 	color: var(--tw-ink);
-	background: linear-gradient(172deg, var(--tw-a) 0%, var(--tw-b) 100%);
+	background:
+		radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
+		linear-gradient(172deg, var(--tw-a) 0%, var(--tw-b) 100%);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
 	clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--tw-fold)), calc(100% - var(--tw-fold)) 100%, 0 100%);
 }
 
@@ -271,7 +295,72 @@ html[data-theme-mode='dark'] .tw-float {
 	left: 0;
 	width: 100%;
 	height: 58%;
-	opacity: 0.16;
+}
+
+.tw-hill.is-back {
+	height: 70%;
+	opacity: 0.12;
+}
+
+.tw-hill.is-front > path:first-child {
+	opacity: 0.22;
+}
+
+.tw-hill__line {
+	fill: none;
+	stroke: var(--tw-gold);
+	stroke-width: 1.2;
+	opacity: 0.55;
+}
+
+.tw-art-mirror {
+	position: absolute;
+	inset: 0;
+	transform: scaleX(-1) scale(0.78);
+	transform-origin: bottom center;
+	opacity: 0.8;
+}
+
+.tw-spark {
+	position: absolute;
+	width: 10px;
+	height: 10px;
+	color: var(--tw-gold);
+	opacity: 0.55;
+}
+
+.tw-spark.is-a {
+	bottom: 62%;
+	inset-inline-start: 18%;
+}
+
+.tw-spark.is-b {
+	bottom: 30%;
+	inset-inline-end: 22%;
+	width: 7px;
+	height: 7px;
+}
+
+.tw-leaf {
+	position: absolute;
+	width: 14px;
+	height: 8px;
+	color: var(--tw-art);
+	opacity: 0.55;
+}
+
+.tw-leaf.is-a {
+	bottom: 70%;
+	inset-inline-end: 12%;
+	transform: rotate(-28deg);
+}
+
+.tw-leaf.is-b {
+	bottom: 40%;
+	inset-inline-start: 34%;
+	transform: rotate(18deg);
+	width: 11px;
+	height: 6px;
 }
 
 .tw-art {
@@ -295,35 +384,33 @@ html[data-theme-mode='dark'] .tw-float {
 .tw-art-layer.is-laptop .tw-art { height: 62px; bottom: 2px; opacity: 0.25; }
 .tw-art-layer.is-chart .tw-art { height: 44px; bottom: 10px; opacity: 0.3; }
 .tw-art-layer.is-docs .tw-art { height: 54px; bottom: 6px; opacity: 0.25; }
-.tw-art-layer.is-wave .tw-hill { height: 70%; opacity: 0.22; }
+.tw-art-layer.is-wave .tw-hill.is-front { height: 70%; }
 
 /* ─── top row: category icon (or Done), menu ─── */
 .tw-top {
 	position: relative;
 	z-index: 2;
 	display: flex;
-	min-height: 36px;
+	min-height: 42px;
 	align-items: center;
 	gap: 6px;
 }
 
 .tw-icon {
 	display: grid;
-	width: 36px;
-	height: 36px;
+	width: 32px;
+	height: 32px;
 	flex: none;
 	place-items: center;
 	border-radius: 999px;
 	color: var(--tw-accent);
-	background: var(--tw-chip);
-	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.08);
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.1), 0 4px 10px -4px rgba(60, 35, 10, 0.25);
 }
 
-.tw-icon.is-daily {
-	width: 28px;
-	height: 28px;
-	margin-top: -6px;
-	margin-inline-start: -3px;
+.tw-icon svg {
+	width: 15px;
+	height: 15px;
 }
 
 .tw-done-chip {
@@ -421,9 +508,9 @@ html[data-theme-mode='dark'] .tw-float {
 	min-height: 0;
 	flex: 1;
 	place-items: center;
-	margin: 2px 6px 4px;
+	margin: 2px 6px 0;
 	color: var(--tw-ink);
-	font-size: 23px;
+	font-size: clamp(17px, 8.4cqi, 25px);
 	font-weight: 400;
 	line-height: 1.32;
 	text-align: center;
@@ -437,6 +524,24 @@ html[data-theme-mode='dark'] .tw-float {
 	overflow: hidden;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 3;
+}
+
+.tw-text:not(.tw-text--edit) {
+	align-content: center;
+	gap: 2px;
+}
+
+.tw-brush {
+	justify-self: center;
+	width: min(78%, 220px);
+	height: 12px;
+	color: var(--tw-accent);
+	opacity: 0.32;
+	transform: rotate(-1.5deg);
+}
+
+.tw-note.is-done .tw-brush {
+	opacity: 0.15;
 }
 
 .tw-text mark {
@@ -466,10 +571,11 @@ html[data-theme-mode='dark'] .tw-float {
 	position: relative;
 	z-index: 2;
 	display: flex;
-	min-height: 34px;
+	min-height: 14px;
 	align-items: center;
-	justify-content: flex-end;
+	justify-content: flex-start;
 	gap: 10px;
+	padding-inline-end: calc(var(--tw-fold) - 8px);
 }
 
 .tw-progress {
@@ -505,22 +611,20 @@ html[data-theme-mode='dark'] .tw-float {
 }
 
 .tw-check {
-	position: absolute;
-	right: calc(var(--tw-fold) - 6px);
-	bottom: calc(var(--tw-fold) - 6px);
-	z-index: 5;
+	position: relative;
+	z-index: 3;
 	display: grid;
-	width: 40px;
-	height: 40px;
+	width: 34px;
+	height: 34px;
 	flex: none;
 	place-items: center;
 	border: 0;
 	border-radius: 999px;
-	color: var(--tw-ink);
-	background: rgba(255, 255, 255, 0.9);
-	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.12), 0 4px 10px -4px rgba(60, 35, 10, 0.25);
+	color: var(--tw-ink-2);
+	background: rgba(255, 255, 255, 0.85);
+	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.1), inset 0 0 0 1.5px color-mix(in srgb, var(--tw-accent) 30%, transparent);
 	cursor: pointer;
-	transition: transform 0.2s ease, background-color 0.2s ease, opacity 0.3s ease, color 0.2s ease;
+	transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .tw-check:hover {
@@ -542,30 +646,14 @@ html[data-theme-mode='dark'] .tw-float {
 	outline-offset: 2px;
 }
 
-/* plain notes keep the check out of sight until you reach for the note */
-.tw-check:not(.has-steps):not(.is-scheduled) {
-	opacity: 0;
-}
-
-.tw-note:hover .tw-check,
-.tw-note:focus-within .tw-check {
-	opacity: 1;
-}
-
-@media (hover: none) {
-	.tw-check:not(.has-steps):not(.is-scheduled) {
-		opacity: 1;
-	}
-}
-
 .tw-note.is-editing .tw-check {
 	visibility: hidden;
 }
 
 /* steps: a segmented ring, one arc per step, with the count in the middle */
 .tw-check.has-steps {
-	width: 50px;
-	height: 50px;
+	width: 42px;
+	height: 42px;
 	padding: 2px;
 	background: #fff;
 	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.12), 0 6px 14px -6px rgba(60, 35, 10, 0.35);
@@ -605,6 +693,8 @@ html[data-theme-mode='dark'] .tw-float {
 .tw-ring__n {
 	position: relative;
 	display: inline-flex;
+	/* "2/4" reads left to right in Arabic too */
+	direction: ltr;
 	align-items: baseline;
 	color: var(--tw-ink);
 	line-height: 1;
@@ -613,12 +703,12 @@ html[data-theme-mode='dark'] .tw-float {
 }
 
 .tw-ring__n b {
-	font-size: 15px;
+	font-size: 13px;
 	font-weight: 800;
 }
 
 .tw-ring__n small {
-	font-size: 10.5px;
+	font-size: 9.5px;
 	font-weight: 600;
 	color: var(--tw-ink-2);
 }
@@ -630,43 +720,95 @@ html[data-theme-mode='dark'] .tw-float {
 	}
 }
 
-/* finished steps: pen scribbled over their part of the note, behind the title */
-.tw-scribbles {
-	position: absolute;
-	inset: 46px 10px 10px;
+/* steps as a path across the note: done part glows, the rest is a dashed trail */
+.tw-steps {
+	position: relative;
 	z-index: 1;
-	display: flex;
-	gap: 2px;
+	display: block;
+	height: 34px;
+	margin: 4px 6px 2px;
 	pointer-events: none;
 }
 
-.tw-scribbles__cell {
-	min-width: 0;
-	flex: 1 1 0;
-}
-
-.tw-scribbles svg {
-	display: block;
+.tw-steps svg {
+	position: absolute;
+	inset: 0;
 	width: 100%;
 	height: 100%;
 	overflow: visible;
 }
 
-.tw-scribbles path {
+.tw-steps path {
 	fill: none;
-	stroke: var(--tw-accent);
-	stroke-width: 2.2px;
 	stroke-linecap: round;
 	stroke-linejoin: round;
-	opacity: 0.22;
-	stroke-dasharray: 1;
-	stroke-dashoffset: 0;
-	animation: tw-scribble 0.75s cubic-bezier(0.45, 0, 0.3, 1) both;
 }
 
-@keyframes tw-scribble {
+.tw-steps__trail {
+	stroke: color-mix(in srgb, var(--tw-accent) 40%, transparent);
+	stroke-width: 1.5px;
+	stroke-dasharray: 4 5;
+}
+
+.tw-steps__glow {
+	stroke: color-mix(in srgb, var(--tw-accent) 18%, transparent);
+	stroke-width: 9px;
+}
+
+.tw-steps__done {
+	stroke: var(--tw-accent);
+	stroke-width: 3.5px;
+	stroke-dasharray: 1;
+	stroke-dashoffset: 0;
+	animation: tw-path-draw 0.7s cubic-bezier(0.45, 0, 0.3, 1) both;
+}
+
+.tw-steps__dot {
+	position: absolute;
+	display: grid;
+	width: 14px;
+	height: 14px;
+	place-items: center;
+	border: 2px solid color-mix(in srgb, var(--tw-accent) 35%, #fff);
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.85);
+	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.12);
+	transform: translate(-50%, -50%);
+}
+
+.tw-steps__dot.is-done {
+	width: 20px;
+	height: 20px;
+	border: 2px solid #fff;
+	background: var(--tw-accent);
+	box-shadow: 0 1px 3px rgba(60, 35, 10, 0.25);
+	animation: tw-dot-pop 0.4s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.tw-steps__dot.is-next {
+	border-color: var(--tw-accent);
+}
+
+.tw-steps__dot svg {
+	width: 12px;
+	height: 12px;
+}
+
+.tw-steps__dot path {
+	fill: none;
+	stroke: #fff;
+	stroke-width: 2.4px;
+}
+
+@keyframes tw-path-draw {
 	from {
 		stroke-dashoffset: 1;
+	}
+}
+
+@keyframes tw-dot-pop {
+	from {
+		transform: translate(-50%, -50%) scale(0.5);
 	}
 }
 
@@ -768,8 +910,7 @@ html[data-theme-mode='dark'] .tw-paper--add {
 	opacity: 0.35;
 }
 
-.tw-note.is-dragging .tw-pin,
-.tw-note.is-dragging::after {
+.tw-note.is-dragging .tw-pin {
 	opacity: 0;
 }
 
@@ -799,8 +940,8 @@ html[data-theme-mode='dark'] .tw-paper--add {
 	}
 
 	.tw-grid {
-		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-		gap: 32px 18px;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+		gap: 36px 18px;
 	}
 }
 
@@ -819,18 +960,16 @@ html[data-theme-mode='dark'] .tw-paper--add {
 	}
 
 	.tw-grid {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 30px 12px;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 34px;
 	}
 
 	.tw-paper {
-		min-height: 150px;
-		aspect-ratio: auto;
-		padding: 11px 10px 10px;
+		padding: 13px 12px 10px;
 	}
 
 	.tw-text {
-		font-size: 18px;
+		font-size: 22px;
 	}
 
 	.tw-icon {
@@ -838,15 +977,26 @@ html[data-theme-mode='dark'] .tw-paper--add {
 		height: 30px;
 	}
 
-	.tw-check {
-		width: 36px;
-		height: 36px;
-		right: calc(var(--tw-fold) - 8px);
-		bottom: calc(var(--tw-fold) - 8px);
+	.tw-check.has-steps {
+		width: 40px;
+		height: 40px;
 	}
 
 	.tw-art {
 		height: 38px !important;
+	}
+}
+
+/* a narrow board: cards take their content height instead of the landscape ratio */
+@container (max-width: 340px) {
+	.tw-paper {
+		min-height: 190px;
+		aspect-ratio: auto;
+		padding: 13px 12px 10px;
+	}
+
+	.tw-text {
+		font-size: 21px;
 	}
 }
 
@@ -863,8 +1013,7 @@ html[data-theme-mode='dark'] .tw-paper--add {
 	animation: tw-fall 0.38s cubic-bezier(0.5, 0, 0.9, 0.5) forwards;
 }
 
-.tw-note.is-leaving .tw-pin,
-.tw-note.is-leaving::after {
+.tw-note.is-leaving .tw-pin {
 	animation: tw-pin-out 0.22s ease-in forwards;
 }
 
@@ -928,7 +1077,8 @@ html[data-theme-mode='dark'] .tw-paper--add {
 	.tw-done-chip,
 	.tw-add__icon,
 	.tw-ring__n,
-	.tw-scribbles path {
+	.tw-steps__done,
+	.tw-steps__dot {
 		animation: none !important;
 		transition: none !important;
 	}

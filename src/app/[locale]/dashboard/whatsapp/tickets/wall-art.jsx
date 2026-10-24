@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { BookOpen, Dumbbell, Gamepad2, GraduationCap, Laptop, NotebookPen, Settings, Sparkles } from 'lucide-react';
 
 /*
@@ -149,37 +150,63 @@ const ARTS = { leaves: Leaves, mosque: Mosque, dumbbell: DumbbellArt, laptop: La
 
 /* ─── progress on a note ─── */
 
-/** A hand-drawn zigzag down one strip of the note; jittered per strip so no two look alike. */
-function scribblePath(seed) {
-	let s = seed * 9301 + 49297;
-	const rand = () => {
-		s = (s * 9301 + 49297) % 233280;
-		return s / 233280;
-	};
-	let d = `M ${4 + rand() * 4} ${3 + rand() * 4}`;
-	let y = 4;
-	let right = true;
-	while (y < 96) {
-		y += 6 + rand() * 4;
-		d += ` L ${right ? 34 + rand() * 5 : 2 + rand() * 5} ${Math.min(97, y)}`;
-		right = !right;
+/** Points of the step path: evenly spread, riding a gentle wave (0–100 box, x mirrored in RTL). */
+function stepPoints(steps, rtl) {
+	return Array.from({ length: steps }, (_, i) => {
+		const t = steps > 1 ? i / (steps - 1) : 0.5;
+		const x = 8 + t * 84;
+		const y = 50 + 18 * Math.sin(t * Math.PI * 1.25 + 0.4);
+		return [rtl ? 100 - x : x, y];
+	});
+}
+
+/** Smooth curve through the points (Catmull-Rom as cubic Béziers). */
+function curveThrough(points) {
+	if (!points.length) return '';
+	const all = points;
+	let d = `M ${all[0][0]} ${all[0][1]}`;
+	for (let i = 0; i < all.length - 1; i += 1) {
+		const p0 = all[Math.max(0, i - 1)];
+		const p1 = all[i];
+		const p2 = all[i + 1];
+		const p3 = all[Math.min(all.length - 1, i + 2)];
+		const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+		const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+		d += ` C ${c1[0].toFixed(2)} ${c1[1].toFixed(2)}, ${c2[0].toFixed(2)} ${c2[1].toFixed(2)}, ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
 	}
 	return d;
 }
 
 /**
- * The note split into one strip per step; every finished step gets pen scribbled over its strip,
- * behind the title. A newly finished strip draws itself in.
+ * The steps as a path across the note: the finished part is a glowing brush stroke ending on its
+ * last checked step, the rest is a faint dashed trail with an empty dot per step to come.
  */
-export function StepScribbles({ steps, progress }) {
-	if (steps < 2 || progress < 1) return null;
+export function StepPath({ steps, progress, rtl = false }) {
+	if (steps < 2) return null;
+	const points = stepPoints(steps, rtl);
+	const done = Math.max(0, Math.min(steps, progress));
+	const full = curveThrough(points);
+	const finished = done > 1 ? curveThrough(points.slice(0, done)) : '';
 	return (
-		<span className="tw-scribbles" aria-hidden>
-			{Array.from({ length: steps }, (_, i) => (
-				<span key={i} className="tw-scribbles__cell">
-					{i < progress ? (
-						<svg viewBox="0 0 40 100" preserveAspectRatio="none">
-							<path d={scribblePath(i + 1)} pathLength="1" vectorEffect="non-scaling-stroke" />
+		<span className="tw-steps" aria-hidden>
+			<svg viewBox="0 0 100 100" preserveAspectRatio="none">
+				<path className="tw-steps__trail" d={full} vectorEffect="non-scaling-stroke" />
+				{finished ? (
+					<>
+						<path className="tw-steps__glow" d={finished} vectorEffect="non-scaling-stroke" />
+						<path className="tw-steps__done" d={finished} vectorEffect="non-scaling-stroke" key={done} pathLength="1" />
+					</>
+				) : null}
+			</svg>
+			{points.map(([x, y], i) => (
+				<span
+					key={i}
+					className={`tw-steps__dot${i < done ? ' is-done' : ''}${i === done ? ' is-next' : ''}`}
+					style={{ left: `${x}%`, top: `${y}%` }}
+				>
+					{i < done ? (
+						<svg viewBox="0 0 16 16">
+							<path d="M4 8.4 L6.9 11.2 L12 5.4" />
 						</svg>
 					) : null}
 				</span>
@@ -212,15 +239,79 @@ export function ProgressRing({ steps, progress, size = 46, stroke = 4 }) {
 	);
 }
 
-/** The illustration plus a soft hill/wave of the paper's own colour along the bottom. */
+/** Four-point sparkle, drawn in the note's gold. */
+function Sparkle({ className }) {
+	return (
+		<svg viewBox="0 0 20 20" className={`tw-spark ${className}`}>
+			<path d="M10 1 C10.8 7 13 9.2 19 10 C13 10.8 10.8 13 10 19 C9.2 13 7 10.8 1 10 C7 9.2 9.2 7 10 1 Z" fill="currentColor" />
+		</svg>
+	);
+}
+
+/** A single leaf drifting on the paper. */
+function Leaf({ className }) {
+	return (
+		<svg viewBox="0 0 24 14" className={`tw-leaf ${className}`}>
+			<path d="M1 7 C6 0 16 0 23 7 C16 14 6 14 1 7 Z" fill="currentColor" />
+		</svg>
+	);
+}
+
+/**
+ * The illustration, two soft hills of the paper's own colour with a thin gold line along the
+ * front one, a few sparkles and drifting leaves. All faint: the title stays the subject.
+ */
 export function NoteArt({ art }) {
 	const Art = ARTS[art];
 	return (
 		<span className={`tw-art-layer is-${art}`} aria-hidden>
-			<svg className="tw-hill" viewBox="0 0 200 60" preserveAspectRatio="none">
-				<path d="M0 44 C40 30 70 54 110 42 C150 30 172 22 200 30 V60 H0 Z" fill="currentColor" />
+			<svg className="tw-hill is-back" viewBox="0 0 200 60" preserveAspectRatio="none">
+				<path d="M0 30 C36 18 64 40 104 30 C144 20 170 12 200 20 V60 H0 Z" fill="currentColor" />
+			</svg>
+			<svg className="tw-hill is-front" viewBox="0 0 200 60" preserveAspectRatio="none">
+				<path d="M0 46 C40 32 74 54 112 42 C150 30 174 30 200 36 V60 H0 Z" fill="currentColor" />
+				<path className="tw-hill__line" d="M0 46 C40 32 74 54 112 42 C150 30 174 30 200 36" vectorEffect="non-scaling-stroke" />
 			</svg>
 			{Art ? <Art /> : null}
+			{art === 'leaves' ? (
+				<span className="tw-art-mirror">
+					<Art />
+				</span>
+			) : null}
+			<Sparkle className="is-a" />
+			<Sparkle className="is-b" />
+			<Leaf className="is-a" />
+			<Leaf className="is-b" />
 		</span>
+	);
+}
+
+/** Hand-drawn brush stroke under the title. */
+export function BrushLine() {
+	return (
+		<svg className="tw-brush" viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden>
+			<path d="M3 11 C42 6 96 3 197 5 C150 8 92 10 46 13 C30 14 14 14 3 11 Z" fill="currentColor" />
+		</svg>
+	);
+}
+
+/**
+ * The bottom corner curling up off the board: a flap whose crease follows the paper's cut and
+ * whose free edge curves back over the note, lighter (the paper's back) toward its tip.
+ */
+export function PageCurl() {
+	const id = `twcurl${useId().replace(/:/g, '')}`;
+	return (
+		<svg className="tw-curl" viewBox="0 0 100 100" aria-hidden>
+			<defs>
+				<linearGradient id={id} x1="1" y1="1" x2="0.25" y2="0.25">
+					<stop offset="0" stopColor="var(--tw-flap)" />
+					<stop offset="0.55" stopColor="var(--tw-back)" />
+					<stop offset="1" stopColor="#ffffff" />
+				</linearGradient>
+			</defs>
+			<path d="M0 100 L100 0 C78 20 56 30 30 34 C24 58 14 80 0 100 Z" fill={`url(#${id})`} />
+			<path d="M0 100 L100 0" className="tw-curl__crease" />
+		</svg>
 	);
 }

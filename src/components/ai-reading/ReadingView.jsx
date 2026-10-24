@@ -257,7 +257,7 @@ function PinLineMarker({ pin, theme, isRTL, label }) {
 	);
 }
 
-export default function ReadingView({ book: initialBook }) {
+export default function ReadingView({ book: initialBook, onBack }) {
 	const t = useTranslations('aiReading');
 	const locale = useLocale();
 	const [book, setBook] = useState(initialBook);
@@ -1704,14 +1704,26 @@ export default function ReadingView({ book: initialBook }) {
 				{alignedRow(
 				<div className="flex items-center justify-between gap-1.5 py-2 sm:gap-3 sm:py-3">
 					<div className="flex min-w-0 items-center gap-1 sm:gap-2">
-						<Link
-							href="/ai-studio/library"
-							className="inline-flex shrink-0 items-center gap-1 rounded-full p-2 text-xs font-semibold opacity-70 ring-1 ring-black/5 hover:opacity-100 sm:bg-white/50 sm:px-2.5 sm:py-1.5"
-							style={{ color: theme.ink }}
-							aria-label={t('reading.back')}
-						>
-							<ChevPrev size={16} /> <span className="hidden sm:inline">{t('reading.back')}</span>
-						</Link>
+						{typeof onBack === 'function' ? (
+							<button
+								type="button"
+								onClick={onBack}
+								className="inline-flex shrink-0 items-center gap-1 rounded-full p-2 text-xs font-semibold opacity-70 ring-1 ring-black/5 hover:opacity-100 sm:bg-white/50 sm:px-2.5 sm:py-1.5"
+								style={{ color: theme.ink }}
+								aria-label={t('reading.back')}
+							>
+								<ChevPrev size={16} /> <span className="hidden sm:inline">{t('reading.back')}</span>
+							</button>
+						) : (
+							<Link
+								href="/ai-studio/library"
+								className="inline-flex shrink-0 items-center gap-1 rounded-full p-2 text-xs font-semibold opacity-70 ring-1 ring-black/5 hover:opacity-100 sm:bg-white/50 sm:px-2.5 sm:py-1.5"
+								style={{ color: theme.ink }}
+								aria-label={t('reading.back')}
+							>
+								<ChevPrev size={16} /> <span className="hidden sm:inline">{t('reading.back')}</span>
+							</Link>
+						)}
 
 						{/* Reading timer */}
 						<div className="relative shrink-0">

@@ -26,12 +26,16 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 10px 10px 8px 12px;
-	border-bottom: 1px solid var(--wa-ui-border);
+	padding: 10px 8px 6px 14px;
 }
 
 [dir='rtl'] .wa-dsend__head {
-	padding: 10px 12px 8px 10px;
+	padding: 10px 14px 6px 8px;
+}
+
+.wa-dsend__head-icon {
+	flex: none;
+	color: var(--wa-ui-accent-strong);
 }
 
 .wa-dsend__head h3 {
@@ -43,74 +47,109 @@
 	line-height: 20px;
 }
 
-.wa-dsend__glyph {
-	display: grid;
-	width: 26px;
-	height: 26px;
-	flex: none;
-	place-items: center;
-	border-radius: 999px;
-	background: var(--wa-ui-accent-soft);
-	color: var(--wa-ui-accent-strong);
-}
-
-.wa-dsend__switch {
-	position: relative;
-	width: 36px;
-	height: 20px;
-	flex: none;
-	padding: 0;
-	border: 0;
-	border-radius: 999px;
-	background: var(--wa-ui-border-strong);
-	cursor: pointer;
-	transition: background-color 160ms ease;
-}
-
-.wa-dsend__switch span {
-	position: absolute;
-	top: 3px;
-	left: 3px;
-	width: 14px;
-	height: 14px;
-	border-radius: 999px;
-	background: #fff;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-	transition: transform 160ms var(--wa-ui-ease-out);
-}
-
-.wa-dsend__switch.is-on {
-	background: var(--wa-ui-accent);
-}
-
-.wa-dsend__switch.is-on span {
-	transform: translateX(16px);
-}
-
-[dir='rtl'] .wa-dsend__switch span {
-	right: 3px;
-	left: auto;
-}
-
-[dir='rtl'] .wa-dsend__switch.is-on span {
-	transform: translateX(-16px);
-}
-
+/* Three choices, one tap each. Picking a delay turns it on; "send right away" turns it off. */
 .wa-dsend__body {
 	display: grid;
+	/* one column that never grows past the popup (long hints used to push it wider) */
+	grid-template-columns: minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
 	flex: 1 1 auto;
-	gap: 10px;
-	margin: 0;
+	gap: 4px;
+	overflow-x: hidden;
 	overflow-y: auto;
-	padding: 10px 12px 12px;
-	border: 0;
-	transition: opacity 160ms ease;
+	padding: 2px 8px 10px;
 }
 
-.wa-dsend__body:disabled {
-	opacity: 0.45;
+.wa-dsend__choice {
+	min-width: 0;
+	border: 1px solid transparent;
+	border-radius: 12px;
+	transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.wa-dsend__choice.is-checked {
+	border-color: color-mix(in srgb, var(--wa-ui-accent) 40%, transparent);
+	background: color-mix(in srgb, var(--wa-ui-accent-soft) 70%, transparent);
+}
+
+.wa-dsend__choice-head {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: 12px;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.wa-dsend__choice:not(.is-checked) .wa-dsend__choice-head:hover {
+	background: var(--wa-ui-hover);
+}
+
+.wa-dsend__choice-head:focus-visible {
+	outline: none;
+	box-shadow: var(--wa-ui-ring);
+}
+
+.wa-dsend__radio {
+	display: grid;
+	width: 18px;
+	height: 18px;
+	flex: none;
+	place-items: center;
+	border: 1.5px solid var(--wa-ui-border-strong);
+	border-radius: 999px;
+	color: #fff;
+	transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.wa-dsend__choice.is-checked .wa-dsend__radio {
+	border-color: var(--wa-ui-accent);
+	background: var(--wa-ui-accent);
+}
+
+.wa-dsend__choice-text {
+	display: flex;
+	min-width: 0;
+	flex: 1 1 auto;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.wa-dsend__choice-title {
+	flex: none;
+	font-size: 13.5px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.wa-dsend__choice-hint {
+	min-width: 0;
+	flex: 0 1 auto;
+	overflow: hidden;
+	color: var(--wa-ui-text-3, #667781);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-dsend__choice.is-checked .wa-dsend__choice-hint {
+	color: var(--wa-ui-accent-strong);
+	font-weight: 600;
+}
+
+.wa-dsend__choice-body {
+	display: grid;
+	gap: 8px;
+	padding: 0 10px 10px;
 }
 
 .wa-dsend__label {
@@ -119,21 +158,9 @@
 	font-weight: 600;
 }
 
-.wa-dsend__chips {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 5px;
-}
-
-.wa-dsend__chips .wa-ui-chip {
-	min-height: 26px;
-	padding: 0 9px;
-	font-size: 12px;
-	font-variant-numeric: tabular-nums;
-}
-
 .wa-dsend__row {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 6px;
 }
@@ -143,68 +170,52 @@
 	min-width: 0;
 }
 
-/* Compact number box: [−][ 12 س ][+] */
+.wa-dsend__row.is-active .wa-dsend__label {
+	color: var(--wa-ui-accent-strong);
+}
+
+/* Typed number box: [ 30 د ] */
 .wa-dsend__num {
 	display: inline-flex;
 	align-items: center;
-	height: 28px;
+	gap: 4px;
+	height: 32px;
 	flex: none;
-	overflow: hidden;
+	padding: 0 10px;
 	border: 1px solid var(--wa-ui-border-strong);
 	border-radius: var(--wa-ui-radius-sm);
 	background: var(--wa-ui-surface);
+	cursor: text;
+	transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.wa-dsend__num:hover {
+	border-color: var(--wa-ui-text-3, #667781);
 }
 
 .wa-dsend__num:focus-within {
 	border-color: var(--wa-ui-accent);
-	box-shadow: 0 0 0 2px var(--wa-ui-accent-soft);
-}
-
-.wa-dsend__num button {
-	display: grid;
-	width: 24px;
-	height: 100%;
-	place-items: center;
-	padding: 0;
-	border: 0;
-	background: none;
-	color: var(--wa-ui-icon);
-	cursor: pointer;
-}
-
-.wa-dsend__num button:hover:not(:disabled) {
-	background: var(--wa-ui-hover);
-}
-
-.wa-dsend__num button:disabled {
-	opacity: 0.35;
-	cursor: default;
+	box-shadow: 0 0 0 3px var(--wa-ui-accent-soft);
 }
 
 .wa-dsend__num input {
-	width: 38px;
+	width: 34px;
 	height: 100%;
 	padding: 0;
 	border: 0;
 	background: none;
 	color: inherit;
 	font: inherit;
+	font-size: 14px;
+	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 	text-align: center;
 	outline: none;
-	-moz-appearance: textfield;
-}
-
-.wa-dsend__num input::-webkit-inner-spin-button,
-.wa-dsend__num input::-webkit-outer-spin-button {
-	-webkit-appearance: none;
-	margin: 0;
 }
 
 .wa-dsend__num-suffix {
-	padding-inline-end: 4px;
 	color: var(--wa-ui-text-3, #667781);
-	font-size: 11.5px;
+	font-size: 12px;
 }
 
 .wa-dsend__gap {
@@ -302,85 +313,91 @@
 	line-height: 15px;
 }
 
-/* Strip above the composer. */
-.wa-dsend__banner {
+/* Above the composer: a small pill (when it goes out) and a quiet "send now". */
+.wa-dsend__bar {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	min-width: 0;
 	margin: 0 8px 6px;
-	padding: 3px 4px 3px 4px;
-	border: 1px solid rgba(0, 128, 105, 0.22);
-	border-radius: 12px;
-	background: var(--wa-ui-surface);
-	box-shadow: 0 1px 2px rgba(11, 20, 26, 0.06);
-	color: var(--wa-ui-text);
+}
+
+.wa-dsend__pill {
+	display: inline-flex;
+	min-width: 0;
+	align-items: center;
+	border: 1px solid color-mix(in srgb, var(--wa-ui-accent) 35%, transparent);
+	border-radius: 999px;
+	background: var(--wa-ui-accent-soft);
+	color: var(--wa-ui-accent-strong);
 	font-size: 12.5px;
 	animation: wa-ui-pop 140ms var(--wa-ui-ease-out);
 }
 
-.wa-dsend__banner-glyph {
+.wa-dsend__pill.is-warning {
+	border-color: color-mix(in srgb, var(--wa-ui-warning) 35%, transparent);
+	background: var(--wa-ui-warning-soft);
+	color: var(--wa-ui-warning);
+}
+
+.wa-dsend__pill-main {
+	display: inline-flex;
+	min-width: 0;
+	align-items: center;
+	gap: 6px;
+	height: 28px;
+	padding: 0 4px 0 10px;
+	border: 0;
+	border-radius: 999px;
+	background: none;
+	color: inherit;
+	font: inherit;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+[dir='rtl'] .wa-dsend__pill-main {
+	padding: 0 10px 0 4px;
+}
+
+.wa-dsend__pill-main svg {
+	flex: none;
+}
+
+.wa-dsend__pill-main b {
+	font-weight: 650;
+	font-variant-numeric: tabular-nums;
+}
+
+.wa-dsend__pill-main > span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.wa-dsend__pill-sub {
+	opacity: 0.75;
+	font-size: 11.5px;
+}
+
+.wa-dsend__pill-x {
 	display: grid;
 	width: 24px;
 	height: 24px;
 	flex: none;
 	place-items: center;
-	border-radius: 999px;
-	background: var(--wa-ui-accent-soft);
-	color: var(--wa-ui-accent-strong);
-}
-
-.wa-dsend__banner.is-warning {
-	border-color: rgba(181, 71, 8, 0.3);
-}
-
-.wa-dsend__banner.is-warning .wa-dsend__banner-glyph {
-	background: var(--wa-ui-warning-soft);
-	color: var(--wa-ui-warning);
-}
-
-.wa-dsend__banner-text {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-	min-width: 0;
-	flex: 1 1 auto;
-	overflow: hidden;
-	padding: 4px 2px;
+	margin-inline-end: 2px;
+	padding: 0;
 	border: 0;
+	border-radius: 999px;
 	background: none;
 	color: inherit;
-	font: inherit;
-	text-align: start;
-	white-space: nowrap;
+	opacity: 0.7;
 	cursor: pointer;
 }
 
-.wa-dsend__banner-text > * {
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.wa-dsend__banner.is-warning .wa-dsend__banner-text {
-	color: var(--wa-ui-warning);
-}
-
-.wa-dsend__banner-label {
-	flex: none;
-	color: var(--wa-ui-text-3, #667781);
-	font-size: 11.5px;
-}
-
-.wa-dsend__banner-text b {
-	flex: none;
-	color: var(--wa-ui-accent-strong);
-	font-weight: 650;
-	font-variant-numeric: tabular-nums;
-}
-
-.wa-dsend__banner-sub {
-	color: var(--wa-ui-text-3, #667781);
-	font-size: 11.5px;
+.wa-dsend__pill-x:hover {
+	background: color-mix(in srgb, currentColor 12%, transparent);
+	opacity: 1;
 }
 
 .wa-dsend__send-now {
@@ -389,50 +406,31 @@
 	gap: 5px;
 	height: 28px;
 	flex: none;
-	padding: 0 11px;
-	border: 0;
+	padding: 0 10px;
+	border: 1px solid var(--wa-ui-border-strong);
 	border-radius: 999px;
-	background: var(--wa-ui-accent);
-	color: #fff;
+	background: var(--wa-ui-surface);
+	color: var(--wa-ui-text-2, #3b4a54);
 	font: inherit;
 	font-size: 12px;
 	font-weight: 600;
 	white-space: nowrap;
 	cursor: pointer;
-	transition:
-		background-color 140ms ease,
-		opacity 140ms ease;
+	transition: border-color 140ms ease, color 140ms ease, opacity 140ms ease;
 }
 
 .wa-dsend__send-now:hover:not(:disabled) {
-	background: var(--wa-ui-accent-strong);
+	border-color: var(--wa-ui-accent);
+	color: var(--wa-ui-accent-strong);
 }
 
 .wa-dsend__send-now:disabled {
-	opacity: 0.4;
+	opacity: 0.45;
 	cursor: default;
 }
 
 [dir='rtl'] .wa-dsend__send-now-icon {
 	transform: scaleX(-1);
-}
-
-.wa-dsend__banner-icon {
-	display: grid;
-	width: 28px;
-	height: 28px;
-	flex: none;
-	place-items: center;
-	padding: 0;
-	border: 0;
-	border-radius: 999px;
-	background: none;
-	color: var(--wa-ui-icon);
-	cursor: pointer;
-}
-
-.wa-dsend__banner-icon:hover {
-	background: var(--wa-ui-hover);
 }
 
 /* Queue of messages waiting for their send time, above the composer. */
@@ -645,8 +643,7 @@
 }
 
 @media (max-width: 520px) {
-	.wa-dsend__banner-label,
-	.wa-dsend__banner-sub {
+	.wa-dsend__pill-sub {
 		display: none;
 	}
 }
@@ -659,11 +656,11 @@
 
 @media (prefers-reduced-motion: reduce) {
 	.wa-dsend,
-	.wa-dsend__banner,
+	.wa-dsend__pill,
+	.wa-dsend__choice,
+	.wa-dsend__radio,
 	.wa-queue,
-	.wa-queue__chevron,
-	.wa-dsend__switch,
-	.wa-dsend__switch span {
+	.wa-queue__chevron {
 		animation: none;
 		transition: none;
 	}

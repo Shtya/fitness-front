@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Clock3, Plus, Repeat } from 'lucide-react';
 import { MAX_TITLE } from './use-daily-tickets';
 import { DetailsHint, PushPin, TicketMenu, checkLabel, ticketKeyHandler, useSortable } from './tickets-ui';
-import { NoteArt, ProgressRing, StepScribbles, markNumbers, noteTheme } from './wall-art';
+import { BrushLine, NoteArt, PageCurl, ProgressRing, StepPath, markNumbers, noteTheme } from './wall-art';
 import './tickets-wall.css';
 
 /*
@@ -26,7 +26,7 @@ function useHandFonts() {
 	}, []);
 }
 
-function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, field, actions }) {
+function NotePaper({ ticket, c, ar, theme, editing, draft, setDraft, finishEdit, field, actions }) {
 	const split = ticket.steps > 1;
 	const daily = ticket.repeat === 'daily';
 	// the only mark on a note: the repeat icon on daily tickets
@@ -34,7 +34,7 @@ function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, fie
 	return (
 		<div className={`tw-paper is-${theme.tone} is-${theme.category} ${ticket.pinned ? 'is-pinned' : ''} ${split ? 'has-steps' : ''}`}>
 			<NoteArt art={theme.art} />
-			{split && !ticket.done ? <StepScribbles steps={ticket.steps} progress={ticket.progress} /> : null}
+			<span className="tw-slot" aria-hidden />
 
 			<div className="tw-top">
 				{ticket.done ? (
@@ -51,6 +51,7 @@ function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, fie
 					</span>
 				) : null}
 				<span className="tw-no">#{String(ticket.no).padStart(3, '0')}</span>
+				{editing ? null : <CornerCheck ticket={ticket} c={c} onToggleDone={() => actions.toggle(ticket.id)} />}
 				<TicketMenu ticket={ticket} c={c} actions={actions} />
 			</div>
 
@@ -78,8 +79,11 @@ function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, fie
 			) : (
 				<p className="tw-text" dir="auto" onDoubleClick={() => actions.open(ticket.id)}>
 					<span>{markNumbers(ticket.title)}</span>
+					<BrushLine />
 				</p>
 			)}
+
+			{split ? <StepPath steps={ticket.steps} progress={ticket.done ? ticket.steps : ticket.progress} rtl={ar} /> : null}
 
 			<div className="tw-bottom">
 				<DetailsHint ticket={ticket} c={c} />
@@ -88,10 +92,7 @@ function NotePaper({ ticket, c, theme, editing, draft, setDraft, finishEdit, fie
 	);
 }
 
-/**
- * The done / next-step control, drawn on the note (not the paper) so it can sit over the folded
- * corner: the paper is clipped along the fold, which would cut it off.
- */
+/** The done / next-step control at the top of the note: the step ring, or a check. */
 function CornerCheck({ ticket, c, onToggleDone }) {
 	const split = ticket.steps > 1;
 	const daily = ticket.repeat === 'daily';
@@ -106,7 +107,7 @@ function CornerCheck({ ticket, c, onToggleDone }) {
 			title={ticket.done ? c.reopen : split ? c.nextStep : c.markDone}
 		>
 			{split && !ticket.done ? (
-				<ProgressRing steps={ticket.steps} progress={ticket.progress} />
+				<ProgressRing steps={ticket.steps} progress={ticket.progress} size={38} stroke={3.5} />
 			) : daily && !ticket.done ? (
 				<>
 					<Clock3 size={17} strokeWidth={2.2} className="tw-check__clock" aria-hidden />
@@ -190,6 +191,7 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 			<NotePaper
 				ticket={ticket}
 				c={c}
+				ar={ar}
 				theme={theme}
 				editing={editing}
 				draft={draft}
@@ -198,7 +200,7 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 				field={field}
 				actions={actions}
 			/>
-			{editing ? null : <CornerCheck ticket={ticket} c={c} onToggleDone={() => actions.toggle(ticket.id)} />}
+			<PageCurl />
 		</li>
 	);
 }
