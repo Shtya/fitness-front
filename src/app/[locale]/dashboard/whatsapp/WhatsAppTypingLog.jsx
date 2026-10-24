@@ -1,13 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Keyboard, Loader2, MessageCircle, Mic, RefreshCw, Search, X } from 'lucide-react';
+import { Check, Keyboard, Loader2, MessageCircle, Mic, RefreshCw, Search, Timer, X } from 'lucide-react';
 import api from '@/utils/axios';
 import {
 	TYPING_LOG_FILTERS,
 	TYPING_LOG_RANGES,
+	TYPING_WINDOW_DEFAULT,
+	TYPING_WINDOW_MAX,
+	TYPING_WINDOW_MIN,
 	formatTypingDuration,
 	formatTypingTime,
+	parseTypingWindow,
+	typingAttemptWindow,
 	typingElapsedMs,
 	typingLogCopy,
 	typingNow,
@@ -73,7 +78,7 @@ function DurationCell({ attempt, copy, nowMs }) {
 	}
 	const elapsed = typingElapsedMs(attempt, nowMs);
 	if (elapsed == null) return <span className="wa-tl-muted">—</span>;
-	const checkpoint = attempt.status === 'no_message' ? 30 : attempt.checkpointMinutes;
+	const checkpoint = attempt.status === 'no_message' ? typingAttemptWindow(attempt) : attempt.checkpointMinutes;
 	return (
 		<span className="wa-tl-stack">
 			<span>{copy.sinceTyping(formatTypingDuration(elapsed, copy.ar))}</span>
@@ -82,9 +87,83 @@ function DurationCell({ attempt, copy, nowMs }) {
 	);
 }
 
+/** Account setting: minutes without a message before an attempt counts as "no message". */
+function NoMessageWindowControl({ accountId, value, copy, onSaved }) {
+	const [draft, setDraft] = useState(String(value));
+	const [state, setState] = useState('idle');
+	useEffect(() => {
+		setDraft(String(value));
+		setState('idle');
+	}, [value, accountId]);
+
+	const parsed = parseTypingWindow(draft);
+	const dirty = parsed !== null && parsed !== value;
+	const invalid = draft.trim() !== '' && parsed === null;
+
+	const save = async event => {
+		event.preventDefault();
+		if (!dirty || state === 'saving') return;
+		setState('saving');
+		try {
+			const { data } = await api.put('/whatsapp/typing-attempts/settings', {
+				accountId,
+				noMessageWindowMinutes: parsed,
+			});
+			onSaved(Number(data?.windowMinutes) || parsed);
+			setState('saved');
+		} catch {
+			setState('error');
+		}
+	};
+
+	const note = invalid
+		? copy.windowInvalid
+		: state === 'error'
+			? copy.windowError
+			: state === 'saved'
+				? copy.windowSaved
+				: '';
+
+	return (
+		<form className="wa-tl-window" onSubmit={save} title={copy.windowHint}>
+			<Timer size={15} aria-hidden />
+			<label htmlFor="wa-tl-window-input">{copy.windowLabel}</label>
+			<input
+				id="wa-tl-window-input"
+				type="number"
+				inputMode="numeric"
+				min={TYPING_WINDOW_MIN}
+				max={TYPING_WINDOW_MAX}
+				step={1}
+				value={draft}
+				aria-invalid={invalid || undefined}
+				onChange={event => {
+					setDraft(event.target.value);
+					setState('idle');
+				}}
+			/>
+			<span className="wa-tl-window__unit">{copy.windowUnit}</span>
+			{dirty ? (
+				<button type="submit" disabled={state === 'saving'}>
+					{state === 'saving' ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+					{copy.windowSave}
+				</button>
+			) : null}
+			{note ? (
+				<span className={`wa-tl-window__note ${state === 'saved' && !invalid ? 'is-ok' : 'is-bad'}`} role="status">
+					{note}
+				</span>
+			) : null}
+		</form>
+	);
+}
+
 /** Full-width typing log for the WhatsApp workspace (scoped server-side like the inbox). */
 export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onOpenConversation }) {
-	const copy = useMemo(() => typingLogCopy(locale), [locale]);
+	const [windowMinutes, setWindowMinutes] = useState(TYPING_WINDOW_DEFAULT);
+	const copy = useMemo(() => typingLogCopy(locale, windowMinutes), [locale, windowMinutes]);
+	const [chatId, setChatId] = useState('');
+	const [chats, setChats] = useState([]);
 	const [filter, setFilter] = useState('all');
 	const [range, setRange] = useState('today');
 	const [custom, setCustom] = useState({ from: '', to: '' });
@@ -107,11 +186,39 @@ export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onO
 		return () => window.clearTimeout(id);
 	}, [query]);
 
+	useEffect(() => {
+		setChatId('');
+		setWindowMinutes(TYPING_WINDOW_DEFAULT);
+	}, [accountId]);
+
+	const loadChats = useCallback(async () => {
+		if (!accountId) return;
+		try {
+			const { data } = await api.get('/whatsapp/typing-attempts/chats', {
+				params: { accountId, ...rangeParams },
+			});
+			setChats(Array.isArray(data?.items) ? data.items : []);
+		} catch {
+			setChats([]);
+		}
+	}, [accountId, rangeParams]);
+
+	useEffect(() => {
+		void loadChats();
+	}, [loadChats]);
+
+	const chatOptions = useMemo(() => {
+		if (!chatId || chats.some(chat => chat.conversationId === chatId)) return chats;
+		const row = items.find(item => item.conversationId === chatId);
+		return [{ conversationId: chatId, name: row?.name || null, phone: row?.phone || null, attempts: null }, ...chats];
+	}, [chats, chatId, items]);
+
 	const fetchPage = useCallback(
 		async ({ offset = 0, limit = PAGE_SIZE } = {}) => {
 			const { data } = await api.get('/whatsapp/typing-attempts', {
 				params: {
 					accountId,
+					conversationId: chatId || undefined,
 					filter,
 					q: debouncedQuery || undefined,
 					limit,
@@ -121,7 +228,7 @@ export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onO
 			});
 			return data || {};
 		},
-		[accountId, filter, debouncedQuery, rangeParams],
+		[accountId, chatId, filter, debouncedQuery, rangeParams],
 	);
 
 	const reload = useCallback(async () => {
@@ -135,6 +242,7 @@ export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onO
 			setItems(Array.isArray(data.items) ? data.items : []);
 			setCounts(data.counts || null);
 			setHasMore(Boolean(data.hasMore));
+			if (Number(data.windowMinutes) > 0) setWindowMinutes(Number(data.windowMinutes));
 			if (data.now) setSkew(new Date(data.now).getTime() - Date.now());
 		} catch {
 			if (requestId === requestRef.current) setError(copy.error);
@@ -170,7 +278,12 @@ export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onO
 		const attempt = liveEvent?.attempt;
 		if (!attempt || (accountId && attempt.accountId !== accountId)) return;
 		setItems(current =>
-			upsertTypingAttempt(current, attempt, { filter, range: rangeParams, query: debouncedQuery }),
+			upsertTypingAttempt(current, attempt, {
+				filter,
+				range: rangeParams,
+				query: debouncedQuery,
+				conversationId: chatId,
+			}),
 		);
 		if (countsTimerRef.current) window.clearTimeout(countsTimerRef.current);
 		countsTimerRef.current = window.setTimeout(async () => {
@@ -181,7 +294,7 @@ export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onO
 				/* counts stay as they were */
 			}
 		}, 2_000);
-	}, [liveEvent, accountId, filter, rangeParams, debouncedQuery, fetchPage]);
+	}, [liveEvent, accountId, chatId, filter, rangeParams, debouncedQuery, fetchPage]);
 
 	useEffect(
 		() => () => {
@@ -214,16 +327,30 @@ export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onO
 						<p>{copy.subtitle}</p>
 					</div>
 				</div>
-				<button
-					type="button"
-					className="wa-tl-iconbtn"
-					onClick={() => void reload()}
-					disabled={loading}
-					aria-label={copy.retry}
-					title={copy.retry}
-				>
-					<RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-				</button>
+				<div className="wa-tl-head__actions">
+					<NoMessageWindowControl
+						accountId={accountId}
+						value={windowMinutes}
+						copy={copy}
+						onSaved={minutes => {
+							setWindowMinutes(minutes);
+							window.setTimeout(() => void reload(), 1_500);
+						}}
+					/>
+					<button
+						type="button"
+						className="wa-tl-iconbtn"
+						onClick={() => {
+							void reload();
+							void loadChats();
+						}}
+						disabled={loading}
+						aria-label={copy.retry}
+						title={copy.retry}
+					>
+						<RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+					</button>
+				</div>
 			</header>
 
 			<div className="wa-tl-chips" role="tablist" aria-label={copy.cols.status}>
@@ -254,6 +381,28 @@ export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onO
 					/>
 					{query ? (
 						<button type="button" onClick={() => setQuery('')} aria-label="Clear">
+							<X size={14} />
+						</button>
+					) : null}
+				</label>
+				<label className={`wa-tl-chat ${chatId ? 'is-on' : ''}`}>
+					<MessageCircle size={15} aria-hidden />
+					<select
+						value={chatId}
+						onChange={event => setChatId(event.target.value)}
+						aria-label={copy.chatFilter}
+					>
+						<option value="">{copy.allChats}</option>
+						{chatOptions.map(chat => (
+							<option key={chat.conversationId} value={chat.conversationId}>
+								{[chat.name || copy.unknown, chat.phone ? `+${chat.phone}` : '', chat.attempts ? `(${chat.attempts})` : '']
+									.filter(Boolean)
+									.join(' ')}
+							</option>
+						))}
+					</select>
+					{chatId ? (
+						<button type="button" onClick={() => setChatId('')} aria-label={copy.clearChat} title={copy.clearChat}>
 							<X size={14} />
 						</button>
 					) : null}
@@ -324,9 +473,16 @@ export default function WhatsAppTypingLogTab({ locale, accountId, liveEvent, onO
 						{items.map(attempt => (
 							<div key={attempt.id} className={`wa-tl-row is-${attempt.status}`} role="row">
 								<span className="wa-tl-cell wa-tl-customer" role="cell">
-									<b className="wa-privacy-sensitive" dir="auto">
+									<button
+										type="button"
+										className="wa-tl-customer__name wa-privacy-sensitive"
+										dir="auto"
+										onClick={() => setChatId(attempt.conversationId)}
+										title={copy.onlyThisChat}
+										disabled={chatId === attempt.conversationId}
+									>
 										{attempt.name || attempt.phone || copy.unknown}
-									</b>
+									</button>
 									{attempt.phone ? (
 										<span className="wa-tl-muted wa-privacy-sensitive" dir="ltr">
 											+{attempt.phone}

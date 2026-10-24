@@ -5,6 +5,29 @@
 
 export const TYPING_LOG_FILTERS = ['all', 'typing', 'waiting', 'sent', 'no_message'];
 export const TYPING_LOG_RANGES = ['today', '7d', 'all', 'custom'];
+export const TYPING_WINDOW_DEFAULT = 30;
+export const TYPING_WINDOW_MIN = 1;
+export const TYPING_WINDOW_MAX = 24 * 60;
+export const TYPING_WINDOW_PRESETS = [10, 15, 30, 60, 120];
+
+/** Whole minutes in [1, 1440], or null when the input is not a usable number. */
+export function parseTypingWindow(value) {
+	const n = Number(String(value ?? '').trim());
+	if (!Number.isFinite(n) || !Number.isInteger(n)) return null;
+	if (n < TYPING_WINDOW_MIN || n > TYPING_WINDOW_MAX) return null;
+	return n;
+}
+
+/** "30 min", "1h 30m", "2h" (Arabic: "30 د", "1س 30د"). */
+export function formatTypingWindow(minutes, ar = false) {
+	const value = Math.max(0, Math.round(Number(minutes) || 0));
+	if (value < 60) return ar ? `${value} د` : `${value} min`;
+	const hours = Math.floor(value / 60);
+	const rest = value % 60;
+	if (ar) return rest ? `${hours}س ${rest}د` : `${hours} س`;
+	return rest ? `${hours}h ${rest}m` : `${hours}h`;
+}
+
 function localMidnight(date) {
 	const d = new Date(date.getTime());
 	d.setHours(0, 0, 0, 0);
@@ -79,9 +102,17 @@ export function typingNow(clockSkewMs = 0) {
 /** Time since the last typing for open attempts; null once a message closed it. */
 export function typingElapsedMs(attempt, nowMs = Date.now()) {
 	if (!attempt || attempt.messageAt) return null;
-	if (attempt.status === 'no_message') return 30 * 60_000;
+	if (attempt.status === 'no_message') return typingAttemptWindow(attempt) * 60_000;
 	const ref = new Date(attempt.lastTypingAt || attempt.startedAt || 0).getTime();
 	return Number.isFinite(ref) && ref > 0 ? Math.max(0, nowMs - ref) : null;
+}
+
+/** Minutes the attempt waited before closing (no_message) or the account window. */
+export function typingAttemptWindow(attempt) {
+	if (attempt?.status === 'no_message' && Number(attempt.checkpointMinutes) > 0) {
+		return Number(attempt.checkpointMinutes);
+	}
+	return Number(attempt?.windowMinutes) > 0 ? Number(attempt.windowMinutes) : TYPING_WINDOW_DEFAULT;
 }
 
 export function typingAttemptMatchesFilter(attempt, filter) {
@@ -113,7 +144,11 @@ export function typingAttemptInRange(attempt, params = {}) {
  * longer match, so the row does not vanish under the user's cursor); new rows are
  * added only when they match the active filter, range, and search.
  */
-export function upsertTypingAttempt(list, attempt, { filter = 'all', range = {}, query = '' } = {}) {
+export function upsertTypingAttempt(
+	list,
+	attempt,
+	{ filter = 'all', range = {}, query = '', conversationId = '' } = {},
+) {
 	const items = Array.isArray(list) ? list : [];
 	if (!attempt?.id) return items;
 	const index = items.findIndex(item => item.id === attempt.id);
@@ -122,6 +157,7 @@ export function upsertTypingAttempt(list, attempt, { filter = 'all', range = {},
 		next[index] = { ...items[index], ...attempt };
 		return next;
 	}
+	if (conversationId && attempt.conversationId !== conversationId) return items;
 	if (!typingAttemptMatchesFilter(attempt, filter)) return items;
 	if (!typingAttemptInRange(attempt, range)) return items;
 	const q = String(query || '').trim().toLowerCase();
@@ -136,11 +172,26 @@ export function upsertTypingAttempt(list, attempt, { filter = 'all', range = {},
 	);
 }
 
-export function typingLogCopy(locale) {
+export function typingLogCopy(locale, windowMinutes = TYPING_WINDOW_DEFAULT) {
 	const ar = locale === 'ar';
+	const win = formatTypingWindow(windowMinutes, ar);
 	return ar
 		? {
 				ar,
+				windowMinutes,
+				noMessageWithin: n => `لم يرسل خلال ${formatTypingWindow(n, true)}`,
+				allChats: 'كل المحادثات',
+				chatFilter: 'محادثة واحدة',
+				onlyThisChat: 'عرض محاولات هذه المحادثة فقط',
+				clearChat: 'إلغاء فلتر المحادثة',
+				attemptsCount: n => `${n} محاولة`,
+				windowLabel: 'يُعتبر "لا رسالة" بعد',
+				windowUnit: 'دقيقة',
+				windowSave: 'حفظ',
+				windowSaved: 'اتحفظ',
+				windowInvalid: 'من 1 لـ 1440 دقيقة',
+				windowError: 'تعذر الحفظ',
+				windowHint: 'المحاولات المفتوحة بتتقفل على المدة الجديدة خلال 30 ثانية.',
 				tab: 'محاولات الكتابة',
 				title: 'محاولات الكتابة',
 				subtitle: 'من أحداث الكتابة الحقيقية في واتساب فقط. نص المسودة لا يصلنا ولا يُحفظ.',
@@ -152,7 +203,7 @@ export function typingLogCopy(locale) {
 					typing: 'يكتب الآن',
 					waiting: 'لم يرسل بعد',
 					sent: 'أرسل بعد الكتابة',
-					no_message: 'لا رسالة خلال 30 د',
+					no_message: `لا رسالة خلال ${win}`,
 				},
 				ranges: { today: 'اليوم', '7d': 'آخر 7 أيام', all: 'كل الوقت', custom: 'مخصص' },
 				from: 'من',
@@ -162,7 +213,7 @@ export function typingLogCopy(locale) {
 					recording: 'يسجل صوتًا الآن',
 					stopped: 'توقف — لم يرسل بعد',
 					sent: 'أرسل رسالة',
-					no_message: 'لم يرسل خلال 30 دقيقة',
+					no_message: `لم يرسل خلال ${win}`,
 				},
 				cols: {
 					customer: 'العميل',
@@ -194,6 +245,20 @@ export function typingLogCopy(locale) {
 			}
 		: {
 				ar,
+				windowMinutes,
+				noMessageWithin: n => `No message within ${formatTypingWindow(n)}`,
+				allChats: 'All chats',
+				chatFilter: 'One chat',
+				onlyThisChat: 'Show only this chat',
+				clearChat: 'Clear chat filter',
+				attemptsCount: n => `${n} attempts`,
+				windowLabel: '"No message" after',
+				windowUnit: 'min',
+				windowSave: 'Save',
+				windowSaved: 'Saved',
+				windowInvalid: '1 to 1440 minutes',
+				windowError: 'Could not save',
+				windowHint: 'Open attempts follow the new time within 30 seconds.',
 				tab: 'Typing log',
 				title: 'Typing attempts',
 				subtitle: 'Built only from real WhatsApp typing events. Draft text never reaches us and is never stored.',
@@ -205,7 +270,7 @@ export function typingLogCopy(locale) {
 					typing: 'Typing now',
 					waiting: 'Not sent yet',
 					sent: 'Sent after typing',
-					no_message: 'No message in 30 min',
+					no_message: `No message in ${win}`,
 				},
 				ranges: { today: 'Today', '7d': 'Last 7 days', all: 'All time', custom: 'Custom' },
 				from: 'From',
@@ -215,7 +280,7 @@ export function typingLogCopy(locale) {
 					recording: 'Recording audio',
 					stopped: 'Stopped · no message yet',
 					sent: 'Sent a message',
-					no_message: 'No message within 30 min',
+					no_message: `No message within ${win}`,
 				},
 				cols: {
 					customer: 'Customer',
@@ -250,5 +315,8 @@ export function typingLogCopy(locale) {
 export function typingStatusLabel(attempt, copy) {
 	if (!attempt) return '';
 	if (attempt.status === 'typing' && attempt.kind === 'recording') return copy.status.recording;
+	if (attempt.status === 'no_message' && copy.noMessageWithin) {
+		return copy.noMessageWithin(typingAttemptWindow(attempt));
+	}
 	return copy.status[attempt.status] || attempt.status;
 }
