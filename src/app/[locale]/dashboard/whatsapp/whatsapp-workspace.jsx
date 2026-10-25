@@ -9494,10 +9494,14 @@ function MessageActionMenu({
 		String(message.type || 'text').toLowerCase() === 'text' &&
 		String(message.direction || '').toLowerCase() !== 'inbound' &&
 		!message.optimistic;
+	// WhatsApp only applies an edit within 15 minutes of sending; after that it is dropped silently.
+	const sentAtMs = new Date(message.providerTimestamp || message.created_at || 0).getTime();
+	const canEditText =
+		isOutboundText && Number.isFinite(sentAtMs) && Date.now() - sentAtMs <= 15 * 60_000;
 	const actions = [
 		{ id: 'reply', label: ar ? 'رد' : 'Reply', icon: Reply, group: 'core' },
 		hasCopyableText && { id: 'copy', label: ar ? 'نسخ النص' : 'Copy text', icon: Copy, group: 'core' },
-		isOutboundText && { id: 'edit', label: ar ? 'تعديل' : 'Edit', icon: Pencil, group: 'core' },
+		canEditText && { id: 'edit', label: ar ? 'تعديل' : 'Edit', icon: Pencil, group: 'core' },
 		{ id: 'forward', label: ar ? 'إرسال إلى…' : 'Send to…', icon: Forward, group: 'core' },
 		{
 			id: 'pin',
@@ -22955,8 +22959,15 @@ function WhatsAppWorkspaceContent() {
 			setEditingMessage(null);
 			setEditDraft('');
 			toast.success(locale === 'ar' ? 'تم التعديل' : 'Message edited');
-		} catch {
-			toast.error(locale === 'ar' ? 'تعذر تعديل الرسالة' : 'Could not edit message');
+		} catch (error) {
+			const tooLate = /within \d+ minutes/i.test(String(error?.response?.data?.message || ''));
+			toast.error(
+				tooLate
+					? locale === 'ar'
+						? 'واتساب بيسمح بتعديل الرسالة خلال 15 دقيقة بس من إرسالها.'
+						: 'WhatsApp only lets you edit a message within 15 minutes of sending it.'
+					: error?.response?.data?.message || (locale === 'ar' ? 'تعذر تعديل الرسالة' : 'Could not edit message'),
+			);
 		}
 	};
 

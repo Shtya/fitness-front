@@ -205,37 +205,40 @@ export function DelayedSendBanner({ ar, plan, gapState, now, onEdit, onTurnOff, 
 				: reason === 'no_my_message'
 					? t.noMine
 					: t.noReply;
+	// One capsule on the sending side: when the next message goes out, send now, turn off.
 	return (
 		<div className="wa-dsend__bar" dir={ar ? 'rtl' : 'ltr'}>
-			<div className={`wa-dsend__pill${plan?.ok ? '' : ' is-warning'}`} role="status">
-				<button type="button" className="wa-dsend__pill-main" onClick={onEdit} title={t.edit}>
-					{plan?.ok ? <Timer size={14} strokeWidth={2.2} aria-hidden="true" /> : <AlertCircle size={14} strokeWidth={2.2} aria-hidden="true" />}
+			<div className={`wa-dsend__capsule${plan?.ok ? '' : ' is-warning'}`} role="status">
+				<button type="button" className="wa-dsend__cap-main" onClick={onEdit} title={t.edit}>
+					<span className="wa-dsend__cap-icon" aria-hidden="true">
+						{plan?.ok ? <Timer size={13} strokeWidth={2.4} /> : <AlertCircle size={13} strokeWidth={2.4} />}
+					</span>
 					{plan?.ok ? (
 						<>
 							<b>{fill(t.willSend, { when: formatSendWhen(plan.sendAt, ar, now) })}</b>
-							<span className="wa-dsend__pill-sub">{fill(t.inTime, { time: formatDelayDuration(plan.sendAt - now, ar) })}</span>
+							<span className="wa-dsend__cap-sub">{fill(t.inTime, { time: formatDelayDuration(plan.sendAt - now, ar) })}</span>
 						</>
 					) : (
 						<span>{problem}</span>
 					)}
 				</button>
-				<button type="button" className="wa-dsend__pill-x" onClick={onTurnOff} title={t.turnOff} aria-label={t.turnOff}>
-					<X size={13} strokeWidth={2.4} />
+				{onSendNow ? (
+					<button
+						type="button"
+						className="wa-dsend__cap-btn is-send"
+						onClick={onSendNow}
+						disabled={!canSendNow}
+						title={t.sendNowHint}
+						aria-label={t.sendNowHint}
+					>
+						<Send size={13} strokeWidth={2.2} className="wa-dsend__send-now-icon" aria-hidden="true" />
+						<span>{t.sendNow}</span>
+					</button>
+				) : null}
+				<button type="button" className="wa-dsend__cap-btn is-x" onClick={onTurnOff} title={t.turnOff} aria-label={t.turnOff}>
+					<X size={14} strokeWidth={2.4} />
 				</button>
 			</div>
-			{onSendNow ? (
-				<button
-					type="button"
-					className="wa-dsend__send-now"
-					onClick={onSendNow}
-					disabled={!canSendNow}
-					title={t.sendNowHint}
-					aria-label={t.sendNowHint}
-				>
-					<Send size={13} strokeWidth={2.2} className="wa-dsend__send-now-icon" aria-hidden="true" />
-					<span>{t.sendNow}</span>
-				</button>
-			) : null}
 		</div>
 	);
 }
