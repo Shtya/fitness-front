@@ -181,6 +181,11 @@ export default function WhatsAppOnlineTab({
 			const reason = diag.device.availabilityError ? ` (${diag.device.availabilityError})` : '';
 			return { tone: 'warn', text: L(`الجهاز المربوط مش معلَن "متاح"، وواتساب مش بيبعت حالة الناس لجهاز مش متاح${reason}.`, `The linked device is not marked available, and WhatsApp does not share contacts' presence with an unavailable device${reason}.`) };
 		}
+		const ev = diag.presence?.eventsByState || {};
+		const liveEvents = (ev.available || 0) + (ev.composing || 0) + (ev.recording || 0);
+		if (ownerHere && (ev.unavailable || 0) >= 20 && !liveEvents) {
+			return { tone: 'warn', text: L('واتساب رد على كل الاشتراكات بـ"غير متصل" ومن غير آخر ظهور — ده بيحصل لما الجهاز المربوط مش "متاح" عند واتساب. شوف التشخيص تحت.', 'WhatsApp answered every subscription with "unavailable" and no last-seen — that happens when the linked device is not "available" to WhatsApp. See diagnostics below.') };
+		}
 		if (ownerElsewhere) {
 			return { tone: 'info', text: L('الجلسة شغالة على سيرفر تاني؛ الحالة بتتقري منه لحظيًا كل ثواني.', 'The session runs on another server; presence is read from it every few seconds.') };
 		}
@@ -321,11 +326,39 @@ export default function WhatsAppOnlineTab({
 						<ul>{recent.map(r => <Row key={`r-${r.conversationId}`} r={r} />)}</ul>
 					</Section>
 				)}
+				{diag ? (
+					<details className="mx-4 mt-6 rounded-lg border border-[#e9edef] text-[12px] text-[#54656f] dark:border-[#222d34] dark:text-[#8696a0]">
+						<summary className="cursor-pointer select-none px-3 py-2 font-medium">{L('تفاصيل التشخيص', 'Diagnostics')}</summary>
+						<dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5 px-3 pb-3 tabular-nums">
+							{[
+								[L('حالة الحساب', 'Account status'), diag.accountStatus],
+								[L('مين ماسك الجلسة', 'Session owner'), diag.presence?.sessionOwner],
+								[L('حالة المزوّد', 'Provider'), diag.device?.providerState],
+								[L('الجهاز "متاح"', 'Device available'), String(diag.device?.deviceAvailable)],
+								[L('اسم الحساب (push name)', 'Push name'), diag.device?.hasPushName === undefined ? '—' : String(diag.device.hasPushName)],
+								[L('سبب عدم الإتاحة', 'Availability error'), diag.device?.availabilityError || '—'],
+								[L('جهات عندها رمز خصوصية صالح', 'Contacts with a valid privacy token'), diag.presence?.contactsWithPrivacyToken ?? '—'],
+								[L('تحققات معلّقة', 'Pending re-checks'), diag.presence?.pendingVerifications ?? 0],
+								[L('الوضع / المشاهدين', 'Mode / viewers'), `${diag.mode} / ${diag.crmViewers}`],
+								[L('آخر اشتراك', 'Last subscribe'), diag.presence?.lastSubscribe ? `${diag.presence.lastSubscribe.result} · ${diag.presence.lastSubscribe.ok}/${diag.presence.lastSubscribe.requested} · ${diag.presence.lastSubscribe.at || ''}` : '—'],
+								[L('الأحداث حسب الحالة', 'Events by state'), JSON.stringify(diag.presence?.eventsByState || {})],
+								[L('آخر حدث / آخر متصل', 'Last event / last live'), `${diag.presence?.lastEventAt || '—'} / ${diag.presence?.lastLiveAt || '—'}`],
+								[L('المتتبعين', 'Tracked'), JSON.stringify(diag.presence?.tracked || {})],
+								[L('أحداث اتسابت', 'Dropped events'), JSON.stringify(diag.presence?.droppedEvents || {})],
+							].map(([k, v]) => (
+								<div key={k} className="contents">
+									<dt className="text-[#8696a0]">{k}</dt>
+									<dd className="break-all text-[#111b21] dark:text-[#e9edef]" dir="ltr">{String(v ?? '—')}</dd>
+								</div>
+							))}
+						</dl>
+					</details>
+				) : null}
 				<p className="mx-4 mt-6 flex gap-2 rounded-lg bg-[#f0f2f5] p-3 text-[12px] leading-relaxed text-[#667781] dark:bg-[#202c33] dark:text-[#8696a0]">
 					<ShieldQuestion size={16} className="mt-0.5 shrink-0" />
 					{L(
-						'الحالة بتيجي من واتساب نفسه على الجهاز المربوط. اللي مخبّي "آخر ظهور والاتصال" في الخصوصية مش هيظهر متصل هنا، ومش بنخمّن حالة محدش.',
-						'Status comes from WhatsApp on the linked device. People who hide "Last seen & online" in their privacy settings will not show here — nothing is guessed.',
+						'الحالة بتيجي من واتساب نفسه على الجهاز المربوط. واتساب بيبعت حالة الاتصال للجهاز المربوط بس للناس اللي اتراسلت معاهم في آخر ~4 أسابيع (رمز الخصوصية)، واللي مخبّي "آخر ظهور والاتصال" مش هيظهر. اللي حالته مش مؤكدة بتتعرض "غير معروف"، ومش بنخمّن حالة حد.',
+						'Status comes from WhatsApp on the linked device. WhatsApp only shares presence with a linked device for people you messaged with in roughly the last 4 weeks (privacy token), and never for people who hide "Last seen & online". Unconfirmed status shows as unknown — nothing is guessed.',
 					)}
 				</p>
 			</div>
