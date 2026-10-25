@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Bell, BellOff, BellRing, Loader2, Mic, PenLine, Search, ShieldQuestion } from 'lucide-react';
+import { Bell, BellOff, BellRing, Loader2, Mic, PenLine, Radio, Search, ShieldQuestion, WifiOff } from 'lucide-react';
 import api from '@/utils/axios';
 
 const RECENT_WINDOW_MS = 30 * 60_000;
@@ -51,6 +51,33 @@ export default function WhatsAppOnlineTab({
 	const [watched, setWatched] = useState(() => new Set());
 	const [watchLoaded, setWatchLoaded] = useState(false);
 	const [busyId, setBusyId] = useState(null);
+	const [diag, setDiag] = useState(null);
+
+	/* Why the list looks the way it does — account link, who holds the session, device availability. */
+	useEffect(() => {
+		if (!accountId) return undefined;
+		let alive = true;
+		const load = () =>
+			api
+				.get('/whatsapp/presence/diagnostics', { params: { accountId } })
+				.then(({ data }) => alive && setDiag(data))
+				.catch(() => alive && setDiag(null));
+		load();
+		const id = window.setInterval(load, 30_000);
+		return () => {
+			alive = false;
+			window.clearInterval(id);
+		};
+	}, [accountId]);
+
+	/* Online status changes fast; refresh this view more often than the inbox does. */
+	useEffect(() => {
+		if (!onRefresh) return undefined;
+		const id = window.setInterval(() => {
+			if (document.visibilityState === 'visible') void onRefresh();
+		}, 10_000);
+		return () => window.clearInterval(id);
+	}, [onRefresh]);
 	/* When each person was first seen live in this session — the "online for" clock. */
 	const liveSince = useRef(new Map());
 
@@ -136,6 +163,29 @@ export default function WhatsAppOnlineTab({
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- L is a pure label picker
 		[accountId, watched, pushPermission, onEnablePush, ar],
 	);
+
+	/* One honest sentence about the data source, from the backend diagnostics. */
+	const sourceNote = (() => {
+		if (!diag) return null;
+		const owner = String(diag.presence?.sessionOwner || '');
+		const ownerHere = owner === 'this server';
+		const ownerElsewhere = owner.startsWith('another server');
+		const status = String(diag.accountStatus || '');
+		if (!ownerHere && !ownerElsewhere) {
+			if (status === 'qr_pending' || status === 'connecting') {
+				return { tone: 'warn', text: L('الحساب ده لسه مش مربوط بواتساب (مستني مسح QR) — مفيش مصدر لحالة الاتصال لحد ما يترِبط.', 'This account is not linked to WhatsApp yet (waiting for a QR scan) — there is no presence source until it is linked.') };
+			}
+			return { tone: 'warn', text: L('مفيش جهاز واتساب مربوط شغال للحساب ده دلوقتي، فمفيش حالة اتصال تتعرض. اربط الحساب من "الحسابات".', 'No linked WhatsApp device is running for this account right now, so there is no presence to show. Link it from Accounts.') };
+		}
+		if (ownerHere && diag.device && diag.device.deviceAvailable === false) {
+			const reason = diag.device.availabilityError ? ` (${diag.device.availabilityError})` : '';
+			return { tone: 'warn', text: L(`الجهاز المربوط مش معلَن "متاح"، وواتساب مش بيبعت حالة الناس لجهاز مش متاح${reason}.`, `The linked device is not marked available, and WhatsApp does not share contacts' presence with an unavailable device${reason}.`) };
+		}
+		if (ownerElsewhere) {
+			return { tone: 'info', text: L('الجلسة شغالة على سيرفر تاني؛ الحالة بتتقري منه لحظيًا كل ثواني.', 'The session runs on another server; presence is read from it every few seconds.') };
+		}
+		return null;
+	})();
 
 	const statusLine = r => {
 		if (r.recording) return { tone: 'live', icon: Mic, text: L('بيسجّل صوت…', 'recording audio…') };
@@ -238,6 +288,20 @@ export default function WhatsAppOnlineTab({
 					</button>
 				) : null}
 			</div>
+
+			{sourceNote ? (
+				<div
+					className={`mx-4 mt-3 flex gap-2 rounded-lg px-3 py-2.5 text-[12.5px] leading-relaxed ${
+						sourceNote.tone === 'warn'
+							? 'bg-[#fff8e1] text-[#7a5b00] dark:bg-[#3b3000]/60 dark:text-[#ffd666]'
+							: 'bg-[#e7f6f1] text-[#0b6b55] dark:bg-[#0b3b31]/60 dark:text-[#7fe0c3]'
+					}`}
+					role="status"
+				>
+					{sourceNote.tone === 'warn' ? <WifiOff size={15} className="mt-0.5 shrink-0" /> : <Radio size={15} className="mt-0.5 shrink-0" />}
+					<span>{sourceNote.text}</span>
+				</div>
+			) : null}
 
 			<div className="min-h-0 flex-1 overflow-y-auto pb-6">
 				{following.length > 0 && (
