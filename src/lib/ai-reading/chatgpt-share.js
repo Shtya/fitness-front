@@ -45,13 +45,31 @@ function decodeRemixHeap(heap) {
 
 import vm from 'node:vm';
 
-function extractStreamPayload(html) {
-	const match = String(html || '').match(
-		/window\.__reactRouterContext\.streamController\.enqueue\(([\s\S]*?)\);/,
-	);
-	if (!match) return null;
+const ENQUEUE = 'window.__reactRouterContext.streamController.enqueue(';
+
+/**
+ * The string argument of every enqueue(...) call. Each call is the whole body of its own
+ * <script>, so the argument runs to that script's end. Matching up to the first ");" broke on
+ * real shares: the conversation text itself contains ");", which cut the JSON short.
+ */
+function enqueueArguments(html) {
+	const source = String(html || '');
+	const args = [];
+	let from = 0;
+	for (;;) {
+		const start = source.indexOf(ENQUEUE, from);
+		if (start < 0) break;
+		const bodyStart = start + ENQUEUE.length;
+		const scriptEnd = source.indexOf('</script>', bodyStart);
+		const chunk = source.slice(bodyStart, scriptEnd < 0 ? undefined : scriptEnd).trim();
+		args.push(chunk.replace(/\)\s*;?\s*$/, '').trim());
+		from = scriptEnd < 0 ? source.length : scriptEnd;
+	}
+	return args;
+}
+
+function parseEnqueueArgument(arg) {
 	try {
-		const arg = match[1].trim();
 		let jsonStr;
 		try {
 			jsonStr = JSON.parse(arg);
@@ -64,6 +82,16 @@ function extractStreamPayload(html) {
 	} catch {
 		return null;
 	}
+}
+
+/** The streamed loader payload: the chunk that carries loaderData (later chunks are promise parts). */
+function extractStreamPayload(html) {
+	for (const arg of enqueueArguments(html)) {
+		if (!arg.includes('loaderData')) continue;
+		const heap = parseEnqueueArgument(arg);
+		if (Array.isArray(heap)) return heap;
+	}
+	return null;
 }
 
 function partsToText(parts) {

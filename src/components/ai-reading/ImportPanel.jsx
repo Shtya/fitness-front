@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from '@/i18n/navigation';
+import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { motion } from 'framer-motion';
 import { Bot, BookOpen, CheckSquare, FileUp, Import, Link2, Loader2, Square, User } from 'lucide-react';
 import { aiReadingApi } from '@/lib/ai-reading/client-api';
@@ -39,7 +39,7 @@ function looksLikeUrl(value) {
 
 export default function ImportPanel() {
 	const t = useTranslations('aiReading');
-	const router = useRouter();
+	const { openBook } = useReadingNav();
 	const fileRef = useRef(null);
 	const [mode, setMode] = useState('paste'); // paste | link | file
 	const [raw, setRaw] = useState('');
@@ -122,7 +122,7 @@ export default function ImportPanel() {
 		});
 		upsertBook(imported.book);
 		await flushAiReadingStore();
-		router.push(`/ai-studio/read/${imported.book.id}`);
+		openBook(imported.book.id);
 	};
 
 	const importSelected = async () => {
@@ -140,7 +140,7 @@ export default function ImportPanel() {
 		});
 		upsertBook(data.book);
 		await flushAiReadingStore();
-		router.push(`/ai-studio/read/${data.book.id}`);
+		openBook(data.book.id);
 	};
 
 	const submit = async e => {
@@ -165,7 +165,7 @@ export default function ImportPanel() {
 				);
 				upsertBook(data.book);
 				await flushAiReadingStore();
-				router.push(`/ai-studio/read/${data.book.id}`);
+				openBook(data.book.id);
 			}
 		} catch (err) {
 			if (err?.name === 'AbortError') {

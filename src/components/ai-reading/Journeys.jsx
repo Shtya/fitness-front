@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Link, useRouter } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
+import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { motion } from 'framer-motion';
 import { Loader2, Plus, Sparkles } from 'lucide-react';
 import { aiReadingApi } from '@/lib/ai-reading/client-api';
@@ -94,7 +95,7 @@ export function JourneysList() {
 export function JourneyDetail({ journeyId }) {
 	const t = useTranslations('aiReading');
 	const locale = useLocale();
-	const router = useRouter();
+	const { openBook } = useReadingNav();
 	const [journey, setJourney] = useState(null);
 	const [busyId, setBusyId] = useState(null);
 
@@ -127,7 +128,7 @@ export function JourneyDetail({ journeyId }) {
 			);
 			const next = upsertJourney({ ...journey, items });
 			setJourney(next);
-			router.push(`/ai-studio/read/${saved.id}`);
+			openBook(saved.id);
 		} finally {
 			setBusyId(null);
 		}

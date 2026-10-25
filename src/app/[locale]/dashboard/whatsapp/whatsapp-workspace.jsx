@@ -10413,6 +10413,7 @@ function MobileWhatsAppHeader({
 	onSearch,
 	onCamera,
 	onMore,
+	onReading,
 	locale = 'en',
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
@@ -10431,6 +10432,16 @@ function MobileWhatsAppHeader({
 					</svg>
 				</button>
 				<div className="flex items-center gap-2">
+					{onReading ? (
+						<button
+							type="button"
+							onClick={onReading}
+							aria-label={ar ? 'القراءة' : 'Reading'}
+							className="grid h-7 w-7 place-items-center rounded-full bg-[#F0F2F5] text-[#0A0A0A]"
+						>
+							<BookOpen size={15} strokeWidth={2.1} aria-hidden="true" />
+						</button>
+					) : null}
 					<button
 						type="button"
 						onClick={onCamera}
@@ -10508,11 +10519,6 @@ function MobileWhatsAppNav({
 				</defs>
 			</svg>
 			, label: labels.chats, badge: unreadCount
-		},
-		{
-			id: 'reading',
-			icon: <BookOpen size={22} strokeWidth={2} aria-hidden="true" />,
-			label: labels.reading || (String(locale).toLowerCase().startsWith('ar') ? 'القراءة' : 'Reading'),
 		},
 		...(showAgent
 			? [{
@@ -25314,7 +25320,8 @@ function WhatsAppWorkspaceContent() {
 			{/* Wallet scrolls the header away with the page; other tabs keep it pinned. */}
 			{!(isConversationWorkspaceTab(activeTab) && conversationId) &&
 				activeTab !== 'wallet' &&
-				activeTab !== 'adhkar' && (
+				activeTab !== 'adhkar' &&
+				activeTab !== 'reading' && (
 				<MobileWhatsAppHeader
 					locale={locale}
 					title={
@@ -25336,6 +25343,7 @@ function WhatsAppWorkspaceContent() {
 					}}
 					onCamera={() => void loadTabData('statuses')}
 					onMore={() => setMobileMenuOpen(current => !current)}
+					onReading={() => void loadTabData('reading')}
 					showTitle={!isConversationWorkspaceTab(activeTab)}
 					scrolled={isConversationWorkspaceTab(activeTab) && mobileHeaderScrolled}
 				/>
@@ -29422,7 +29430,7 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'reading' && (
-					<div className="wa-secondary-pane min-h-0 overflow-y-auto bg-[#f7f8fa] dark:bg-[#0b141a]">
+					<div className="wa-secondary-pane wa-reading-pane min-h-0 overflow-hidden bg-[#f7f8fa] dark:bg-[#0b141a]">
 						<Suspense fallback={<div className="grid min-h-[60vh] place-items-center"><Loader2 size={20} className="animate-spin" /></div>}>
 							<WhatsAppReadingTab />
 						</Suspense>

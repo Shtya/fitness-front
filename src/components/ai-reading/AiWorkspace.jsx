@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from '@/i18n/navigation';
+import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
 	BookOpen,
@@ -34,7 +34,7 @@ import { enqueueReviewItems } from '@/lib/ai-reading/spaced-review';
 export default function AiWorkspace({ embedded = false }) {
 	const t = useTranslations('aiReading');
 	const locale = useLocale();
-	const router = useRouter();
+	const { openBook, openJourney } = useReadingNav();
 	const [prompts, setPrompts] = useState([]);
 	const [topics, setTopics] = useState([]);
 	const [session, setSession] = useState(null);
@@ -161,7 +161,7 @@ export default function AiWorkspace({ embedded = false }) {
 		if (!draftBook) return;
 		const book = enqueueReviewItems({ ...draftBook });
 		upsertBook(book);
-		router.push(`/ai-studio/read/${book.id}`);
+		openBook(book.id);
 	};
 
 	const saveRoadmapAsJourney = () => {
@@ -177,7 +177,7 @@ export default function AiWorkspace({ embedded = false }) {
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 		});
-		router.push(`/ai-studio/journeys/${journey.id}`);
+		openJourney(journey.id);
 	};
 
 	const runImport = async () => {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from '@/i18n/navigation';
+import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { motion } from 'framer-motion';
 import { Loader2, Mic2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { DEPTHS, READING_TIMES, STYLES } from '@/lib/ai-reading/schemas';
@@ -16,7 +16,7 @@ const emptyTranscript = () => ({ id: Math.random().toString(36).slice(2, 9), tit
 export default function GenerateForm() {
 	const t = useTranslations('aiReading');
 	const locale = useLocale();
-	const router = useRouter();
+	const { openBook } = useReadingNav();
 	const [mode, setMode] = useState('topic'); // topic | transcripts
 	const [topic, setTopic] = useState('');
 	const [style, setStyle] = useState('narrative');
@@ -96,7 +96,7 @@ export default function GenerateForm() {
 			const data = await aiReadingApi.generate(payload);
 			if (data.ai) setAiStatus(data.ai);
 			upsertBook(data.book);
-			router.push(`/ai-studio/read/${data.book.id}`);
+			openBook(data.book.id);
 		} catch (err) {
 			setError(err.message || t('errors.generate'));
 		} finally {

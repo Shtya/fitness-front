@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Link, useRouter } from '@/i18n/navigation';
+import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { motion } from 'framer-motion';
 import { Flame, Import, MessageSquare, Sparkles, Clock, Highlighter } from 'lucide-react';
 import { BookShelf } from '@/components/ai-reading/BookShelf';
@@ -22,7 +22,7 @@ import { enqueueReviewItems } from '@/lib/ai-reading/spaced-review';
 export default function ReadingHub({ compact = false, onNavigate }) {
 	const t = useTranslations('aiReading');
 	const locale = useLocale();
-	const router = useRouter();
+	const { openBook } = useReadingNav();
 	const [books, setBooks] = useState([]);
 	const [stats, setStats] = useState(getStats);
 	const [kStats, setKStats] = useState({ highlights: 0, notes: 0, actions: 0 });
@@ -102,13 +102,14 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 							</p>
 							<div className="mt-3 flex flex-wrap gap-2">
 								{nextItem?.bookId || today ? (
-									<Link
-										href={`/ai-studio/read/${nextItem?.bookId || today.id}`}
+									<button
+										type="button"
+										onClick={() => openBook(nextItem?.bookId || today.id)}
 										className="rounded-full px-4 py-2 text-sm font-bold text-white shadow-sm"
 										style={{ background: 'linear-gradient(135deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))' }}
 									>
 										{t('hub.startReading')}
-									</Link>
+									</button>
 								) : (
 									<button
 										type="button"
@@ -153,10 +154,10 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 
 			<section className="grid gap-3 sm:grid-cols-3">
 				{continueBook && (
-					<Link href={`/ai-studio/read/${continueBook.id}`} className="rounded-2xl bg-white/70 p-5 ring-1 ring-[color:var(--ar-ring)]/10">
+					<button type="button" onClick={() => openBook(continueBook.id)} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[color:var(--ar-ring)]/10">
 						<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ar-accent)]">{t('hub.continue')}</p>
 						<p className="mt-1 font-bold text-[var(--ar-heading)]">{continueBook.title}</p>
-					</Link>
+					</button>
 				)}
 				<button type="button" onClick={() => go('import')} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[color:var(--ar-ring)]/10">
 					<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-secondary-600,#b45309)]">{t('hub.import')}</p>
@@ -199,7 +200,8 @@ export default function ReadingHub({ compact = false, onNavigate }) {
 				<BookShelf
 					books={books.slice(0, 6)}
 					emptyLabel={t('hub.empty')}
-					onOpen={id => router.push(`/ai-studio/read/${id}`)}
+					onOpen={openBook}
+					onImport={() => go('import')}
 				/>
 			</section>
 		</div>

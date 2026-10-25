@@ -40,6 +40,8 @@ import {
 	NotebookPen,
 	PanelRightClose,
 	PanelRightOpen,
+	Headphones,
+	Focus,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { HIGHLIGHT_TYPES, flattenPages, computeProgressPercent } from '@/lib/ai-reading/schemas';
@@ -85,7 +87,6 @@ import { enqueueFlashcardReviews, pagePlainText, bionicNodes } from '@/lib/ai-re
 import {
 	SmartResumeBanner,
 	GlossaryStrip,
-	ReadingToolsRail,
 	FocusModeOverlay,
 	ListenBar,
 	InlineAskModal,
@@ -303,6 +304,22 @@ export default function ReadingView({ book: initialBook, onBack }) {
 	/* { passage, question, busy, result } */
 	const [showResume, setShowResume] = useState(true);
 	const [headerMoreOpen, setHeaderMoreOpen] = useState(false);
+	const headerMenuRef = useRef(null);
+	useEffect(() => {
+		if (!headerMoreOpen) return undefined;
+		const onDown = e => {
+			if (!headerMenuRef.current?.contains(e.target)) setHeaderMoreOpen(false);
+		};
+		const onKey = e => {
+			if (e.key === 'Escape') setHeaderMoreOpen(false);
+		};
+		document.addEventListener('pointerdown', onDown);
+		document.addEventListener('keydown', onKey);
+		return () => {
+			document.removeEventListener('pointerdown', onDown);
+			document.removeEventListener('keydown', onKey);
+		};
+	}, [headerMoreOpen]);
 	const [editMode, setEditMode] = useState(false);
 	const [pinPlaceMode, setPinPlaceMode] = useState(false);
 	const [pinFlash, setPinFlash] = useState(false);
@@ -397,6 +414,20 @@ export default function ReadingView({ book: initialBook, onBack }) {
 
 	const aiRailOpen = globalPrefs.aiRailHidden !== true;
 	const toggleAiRail = () => setGlobalPrefs(savePrefs({ aiRailHidden: aiRailOpen }));
+	const openPanel = id => {
+		setMobileAiOpen(false);
+		setPanel(p => (p === id ? null : id));
+	};
+	const toggleListen = () => {
+		if (listenOn) {
+			window.speechSynthesis?.cancel();
+			setListenOn(false);
+			setListenPlaying(false);
+			setListenSentence(-1);
+		} else {
+			setListenOn(true);
+		}
+	};
 
 	const saveReadingAsGlobalDefault = () => {
 		const appearance = pickPrefs(prefs, READING_APPEARANCE_KEYS);
@@ -1686,389 +1717,280 @@ export default function ReadingView({ book: initialBook, onBack }) {
 			dir={isContentRTL ? 'rtl' : 'ltr'}
 			style={{ background: theme.bg, color: theme.ink }}
 		>
-			<div className="pointer-events-none absolute inset-x-0 top-0 z-50 h-[3px] bg-black/10 lg:hidden">
-				<div
-					className="h-full transition-all duration-500"
-					style={{
-						width: `${progress}%`,
-						background: theme.accent,
-						marginInlineStart: isContentRTL ? 'auto' : undefined,
-					}}
-				/>
-			</div>
-
 			<div
 				className="relative z-40 shrink-0 border-b backdrop-blur-md"
-				style={{ borderColor: `color-mix(in srgb, ${theme.ink} 8%, transparent)`, background: `color-mix(in srgb, ${theme.bg} 93%, transparent)` }}
+				style={{ borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, background: `color-mix(in srgb, ${theme.bg} 94%, transparent)` }}
 			>
 				{alignedRow(
-				<div className="flex items-center justify-between gap-1.5 py-2 sm:gap-3 sm:py-3">
-					<div className="flex min-w-0 items-center gap-1 sm:gap-2">
-						{typeof onBack === 'function' ? (
-							<button
-								type="button"
-								onClick={onBack}
-								className="inline-flex shrink-0 items-center gap-1 rounded-full p-2 text-xs font-semibold opacity-70 ring-1 ring-black/5 hover:opacity-100 sm:bg-white/50 sm:px-2.5 sm:py-1.5"
-								style={{ color: theme.ink }}
-								aria-label={t('reading.back')}
-							>
-								<ChevPrev size={16} /> <span className="hidden sm:inline">{t('reading.back')}</span>
-							</button>
-						) : (
-							<Link
-								href="/ai-studio/library"
-								className="inline-flex shrink-0 items-center gap-1 rounded-full p-2 text-xs font-semibold opacity-70 ring-1 ring-black/5 hover:opacity-100 sm:bg-white/50 sm:px-2.5 sm:py-1.5"
-								style={{ color: theme.ink }}
-								aria-label={t('reading.back')}
-							>
-								<ChevPrev size={16} /> <span className="hidden sm:inline">{t('reading.back')}</span>
-							</Link>
-						)}
+				<div className="flex items-center gap-2 py-2 sm:gap-3 sm:py-2.5">
+					{typeof onBack === 'function' ? (
+						<button
+							type="button"
+							onClick={onBack}
+							className="inline-flex size-9 shrink-0 items-center justify-center rounded-full transition hover:bg-black/5"
+							style={{ color: theme.ink }}
+							aria-label={t('reading.back')}
+							title={t('reading.back')}
+						>
+							<ChevPrev size={19} />
+						</button>
+					) : (
+						<Link
+							href="/ai-studio/library"
+							className="inline-flex size-9 shrink-0 items-center justify-center rounded-full transition hover:bg-black/5"
+							style={{ color: theme.ink }}
+							aria-label={t('reading.back')}
+							title={t('reading.back')}
+						>
+							<ChevPrev size={19} />
+						</Link>
+					)}
 
-						{/* Reading timer */}
-						<div className="relative shrink-0">
-							<button
-								type="button"
-								onClick={() => {
-									if (timerDone) {
-										setTimerOpen(true);
-										return;
-									}
-									if (timerRemaining != null) {
-										setTimerOpen(o => !o);
-										return;
-									}
-									setTimerOpen(o => !o);
-								}}
-								className="group relative inline-flex items-center gap-1 overflow-hidden rounded-full p-2 text-xs font-semibold ring-1 transition hover:shadow-md sm:gap-2 sm:rounded-2xl sm:px-3 sm:py-1.5 sm:shadow-sm"
-								style={{
-									background: timerDone
-										? 'linear-gradient(135deg, #fecaca88, #fda4af55)'
-										: timerRunning
-											? `linear-gradient(135deg, color-mix(in srgb, ${theme.accent} 16%, transparent), color-mix(in srgb, ${theme.accent} 7%, transparent))`
-											: `linear-gradient(135deg, ${theme.paper}, ${theme.bg})`,
-									color: timerDone ? '#9f1239' : theme.ink,
-									borderColor: `color-mix(in srgb, ${theme.ink} 6%, transparent)`,
-								}}
-								title={t('reading.timerHint')}
-							>
-								{timerRemaining != null && timerRemaining > 0 && (
-									<span
-										className="pointer-events-none absolute inset-y-0 start-0 opacity-25"
-										style={{
-											width: `${Math.min(100, (timerRemaining / (timerPick * 60)) * 100)}%`,
-											background: theme.accent,
-										}}
-									/>
-								)}
-								<span className="relative z-[1] flex items-center gap-1.5">
-									{timerRunning ? <Pause size={13} strokeWidth={2.25} /> : <Timer size={13} strokeWidth={2.25} />}
-									{timerRemaining != null ? (
-										<span className="tabular-nums tracking-wide">{formatTimer(timerRemaining)}</span>
-									) : (
-										<span className="hidden tabular-nums tracking-wide sm:inline">{t('reading.timer')}</span>
-									)}
-								</span>
-							</button>
-							<AnimatePresence>
-								{timerOpen && (
-									<motion.div
-										initial={{ opacity: 0, y: 8, scale: 0.98 }}
-										animate={{ opacity: 1, y: 0, scale: 1 }}
-										exit={{ opacity: 0, y: 4, scale: 0.98 }}
-										transition={{ duration: 0.18 }}
-										className="absolute start-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border shadow-2xl"
-										style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
-									>
-										<div className="border-b px-3.5 py-2.5" style={{ borderColor: `color-mix(in srgb, ${theme.ink} 6%, transparent)` }}>
-											<p className="text-[11px] font-bold tracking-wide" style={{ color: theme.heading || theme.ink }}>
-												{t('reading.timerSet')}
-											</p>
-											<p className="mt-0.5 text-[10px] opacity-50">{t('reading.timerHint')}</p>
-										</div>
-										<div className="space-y-3 p-3.5">
-											{timerRemaining != null && !timerDone && (
-												<div className="flex gap-1.5">
-													<button
-														type="button"
-														onClick={() => {
-															toggleTimerPause();
-															setTimerOpen(false);
-														}}
-														className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-[11px] font-bold text-white"
-														style={{ background: theme.accent }}
-													>
-														{timerRunning ? <Pause size={12} /> : <Play size={12} />}
-														{timerRunning ? t('reading.timerPause') : t('reading.timerResume')}
-													</button>
-													<button
-														type="button"
-														onClick={restartTimer}
-														className="inline-flex items-center justify-center gap-1 rounded-xl px-2.5 py-2 text-[11px] font-semibold"
-														style={{ background: `color-mix(in srgb, ${theme.ink} 5%, transparent)` }}
-														title={t('reading.timerRestart')}
-													>
-														<RotateCcw size={12} />
-													</button>
-													<button
-														type="button"
-														onClick={cancelTimer}
-														className="inline-flex items-center justify-center gap-1 rounded-xl px-2.5 py-2 text-[11px] font-semibold text-rose-600"
-														style={{ background: '#fda4af22' }}
-														title={t('reading.timerCancel')}
-													>
-														<X size={13} />
-													</button>
-												</div>
-											)}
-
-											<div className="flex flex-wrap gap-1.5">
-												{TIMER_PRESETS.map(m => (
-													<button
-														key={m}
-														type="button"
-														onClick={() => {
-															setTimerPick(m);
-															setTimerCustom(String(m));
-															setTimerShowCustom(false);
-														}}
-														className="rounded-xl px-2.5 py-1.5 text-[11px] font-semibold transition"
-														style={{
-															background: !timerShowCustom && timerPick === m ? theme.accent : `color-mix(in srgb, ${theme.ink} 5%, transparent)`,
-															color: !timerShowCustom && timerPick === m ? '#fff' : theme.ink,
-														}}
-													>
-														{m} {t('reading.timerMin')}
-													</button>
-												))}
-											</div>
-
-											<button
-												type="button"
-												onClick={() => setTimerShowCustom(v => !v)}
-												className="w-full rounded-xl px-2.5 py-1.5 text-start text-[11px] font-semibold underline-offset-2 hover:underline"
-												style={{ color: theme.muted }}
-											>
-												{t('reading.timerCustomize')}
-											</button>
-
-											{timerShowCustom && (
-												<div className="flex items-center gap-2">
-													<input
-														type="number"
-														min={1}
-														max={180}
-														value={timerCustom}
-														onChange={e => setTimerCustom(e.target.value)}
-														className="w-full rounded-xl border px-3 py-2 text-sm tabular-nums outline-none"
-														style={{
-															borderColor: `color-mix(in srgb, ${theme.ink} 9%, transparent)`,
-															background: `${theme.bg}`,
-															color: theme.ink,
-														}}
-														placeholder={t('reading.timerCustomPlaceholder')}
-													/>
-													<span className="shrink-0 text-[11px] opacity-50">{t('reading.timerMin')}</span>
-												</div>
-											)}
-
-											<button
-												type="button"
-												onClick={() => startTimer(timerShowCustom ? clampTimerMins(timerCustom) : timerPick)}
-												className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-bold text-white shadow-sm"
-												style={{ background: theme.accent }}
-											>
-												<Play size={13} /> {t('reading.timerStart')}
-											</button>
-										</div>
-									</motion.div>
-								)}
-							</AnimatePresence>
-						</div>
-					</div>
-
-					<div className="min-w-0 flex-1 px-1 text-center">
-						<p className="truncate text-[13px] font-semibold tracking-wide sm:text-xs sm:font-bold" style={{ color: theme.heading || theme.ink }}>
+					<div className="min-w-0 flex-1">
+						<p className="truncate text-[14px] font-bold leading-tight sm:text-[15px]" style={{ color: theme.heading || theme.ink }}>
 							{book.title}
 						</p>
-						<p className="truncate text-[10px] opacity-40">
-							{pageMode === 'scroll'
-								? `${pages.length} ${t('reading.pages')}`
-								: `${current?.chapter.title} · ${pageIndex + 1}/${pages.length}`}
+						<p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] leading-tight" style={{ color: theme.muted || theme.ink, opacity: theme.muted ? 1 : 0.55 }}>
+							<span className="truncate">
+								{pageMode === 'scroll' ? `${pages.length} ${t('reading.pages')}` : `${current?.chapter.title} · ${pageIndex + 1}/${pages.length}`}
+							</span>
+							<span aria-hidden className="shrink-0 opacity-50">·</span>
+							<span className="shrink-0 tabular-nums">{Math.round(progress)}%</span>
 						</p>
 					</div>
-					<div className="relative flex shrink-0 items-center gap-0.5">
-						{/* Desktop: full panel icons */}
-						<div className="hidden items-center gap-0.5 sm:flex">
-							{headerIconBtn({
-								id: 'notebook',
-								Icon: NotebookPen,
-								label: t('reading.notebook'),
-								desc: t('reading.tips.notebook'),
-								active: notebookOpen,
-								onClick: () => setNotebookOpen(o => !o),
-							})}
-							{[
-								['toc', Bookmark, t('reading.toc'), t('reading.tips.toc')],
-								['knowledge', Highlighter, t('reading.knowledge'), t('reading.tips.knowledge')],
-								['ask', MessageSquare, t('reading.askAi'), t('reading.tips.ask')],
-								['settings', Settings2, t('reading.settings'), t('reading.tips.settings')],
-							].map(([id, Icon, label, desc]) =>
-								headerIconBtn({
-									id,
-									Icon,
-									label,
-									desc,
-									active: panel === id,
-									onClick: () => {
-										setMobileAiOpen(false);
-										setPanel(panel === id ? null : id);
-									},
-								}),
+
+					{/* Reading timer — only on the bar while it runs; started from the menu */}
+					<div className="relative shrink-0">
+						{timerRemaining != null && (
+							<button
+								type="button"
+								onClick={() => setTimerOpen(o => !o)}
+								className="inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold tabular-nums"
+								style={{
+									background: timerDone ? '#fda4af44' : `color-mix(in srgb, ${theme.accent} 13%, transparent)`,
+									color: timerDone ? '#9f1239' : theme.accent,
+								}}
+								title={t('reading.timerSet')}
+							>
+								{timerRunning ? <Pause size={12} strokeWidth={2.5} /> : <Timer size={12} strokeWidth={2.5} />}
+								{formatTimer(timerRemaining)}
+							</button>
+						)}
+						<AnimatePresence>
+							{timerOpen && (
+								<motion.div
+									initial={{ opacity: 0, y: 8, scale: 0.98 }}
+									animate={{ opacity: 1, y: 0, scale: 1 }}
+									exit={{ opacity: 0, y: 4, scale: 0.98 }}
+									transition={{ duration: 0.18 }}
+									className="absolute end-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border shadow-2xl"
+									style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
+								>
+									<div className="flex items-start justify-between gap-2 border-b px-3.5 py-2.5" style={{ borderColor: `color-mix(in srgb, ${theme.ink} 6%, transparent)` }}>
+										<div>
+											<p className="text-[12px] font-bold" style={{ color: theme.heading || theme.ink }}>{t('reading.timerSet')}</p>
+											<p className="mt-0.5 text-[10.5px] opacity-55">{t('reading.timerHint')}</p>
+										</div>
+										<button type="button" onClick={() => setTimerOpen(false)} className="rounded-full p-1 opacity-60 hover:bg-black/5 hover:opacity-100" aria-label="Close">
+											<X size={14} />
+										</button>
+									</div>
+									<div className="space-y-3 p-3.5">
+										{timerRemaining != null && !timerDone && (
+											<div className="flex gap-1.5">
+												<button
+													type="button"
+													onClick={() => {
+														toggleTimerPause();
+														setTimerOpen(false);
+													}}
+													className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-[11px] font-bold text-white"
+													style={{ background: theme.accent }}
+												>
+													{timerRunning ? <Pause size={12} /> : <Play size={12} />}
+													{timerRunning ? t('reading.timerPause') : t('reading.timerResume')}
+												</button>
+												<button
+													type="button"
+													onClick={restartTimer}
+													className="inline-flex items-center justify-center rounded-xl px-2.5 py-2"
+													style={{ background: `color-mix(in srgb, ${theme.ink} 5%, transparent)` }}
+													title={t('reading.timerRestart')}
+													aria-label={t('reading.timerRestart')}
+												>
+													<RotateCcw size={12} />
+												</button>
+												<button
+													type="button"
+													onClick={cancelTimer}
+													className="inline-flex items-center justify-center rounded-xl px-2.5 py-2 text-rose-600"
+													style={{ background: '#fda4af22' }}
+													title={t('reading.timerCancel')}
+													aria-label={t('reading.timerCancel')}
+												>
+													<X size={13} />
+												</button>
+											</div>
+										)}
+										<div className="grid grid-cols-4 gap-1.5">
+											{TIMER_PRESETS.map(m => (
+												<button
+													key={m}
+													type="button"
+													onClick={() => {
+														setTimerPick(m);
+														setTimerCustom(String(m));
+													}}
+													className="rounded-xl px-1 py-2 text-[11px] font-semibold tabular-nums transition"
+													style={{
+														background: timerPick === m ? theme.accent : `color-mix(in srgb, ${theme.ink} 5%, transparent)`,
+														color: timerPick === m ? '#fff' : theme.ink,
+													}}
+												>
+													{m} {t('reading.timerMin')}
+												</button>
+											))}
+										</div>
+										<label className="flex items-center gap-2">
+											<input
+												type="number"
+												min={1}
+												max={180}
+												value={timerCustom}
+												onChange={e => {
+													setTimerCustom(e.target.value);
+													setTimerPick(clampTimerMins(e.target.value));
+												}}
+												className="w-full rounded-xl border px-3 py-2 text-sm tabular-nums outline-none"
+												style={{ borderColor: `color-mix(in srgb, ${theme.ink} 9%, transparent)`, background: theme.bg, color: theme.ink }}
+												placeholder={t('reading.timerCustomPlaceholder')}
+											/>
+											<span className="shrink-0 text-[11px] opacity-55">{t('reading.timerMin')}</span>
+										</label>
+										<button
+											type="button"
+											onClick={() => startTimer(clampTimerMins(timerCustom || timerPick))}
+											className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-bold text-white shadow-sm"
+											style={{ background: theme.accent }}
+										>
+											<Play size={13} /> {t('reading.timerStart')}
+										</button>
+									</div>
+								</motion.div>
 							)}
-							{headerIconBtn({
-								id: 'ai-rail',
-								Icon: aiRailOpen ? PanelRightClose : PanelRightOpen,
-								label: aiRailOpen ? t('reading.aiRailHide') : t('reading.aiRailShow'),
-								desc: t('reading.tips.aiRail'),
-								active: aiRailOpen,
-								onClick: toggleAiRail,
-								className: 'hidden lg:inline-flex',
-							})}
-						</div>
-						{/* Mobile: overflow only — AI assist stays on the FAB */}
+						</AnimatePresence>
+					</div>
+
+					<div ref={headerMenuRef} className="relative flex shrink-0 items-center gap-0.5">
+						{headerIconBtn({
+							id: 'listen',
+							Icon: Headphones,
+							label: t('reading.listen'),
+							desc: t('reading.listenHint'),
+							active: listenOn,
+							onClick: toggleListen,
+						})}
+						{headerIconBtn({
+							id: 'ask',
+							Icon: MessageSquare,
+							label: t('reading.askAi'),
+							desc: t('reading.tips.ask'),
+							active: panel === 'ask',
+							onClick: () => openPanel('ask'),
+							className: 'hidden sm:inline-flex',
+						})}
+						{headerIconBtn({
+							id: 'settings',
+							Icon: Settings2,
+							label: t('reading.settings'),
+							desc: t('reading.tips.settings'),
+							active: panel === 'settings',
+							onClick: () => openPanel('settings'),
+						})}
 						<button
 							type="button"
 							onClick={() => setHeaderMoreOpen(o => !o)}
-							className="rounded-full p-2 transition hover:bg-black/5 sm:hidden"
-							style={{ background: headerMoreOpen || panel ? `color-mix(in srgb, ${theme.accent} 9%, transparent)` : 'transparent' }}
+							className="inline-flex size-9 items-center justify-center rounded-full transition hover:bg-black/5"
+							style={{ background: headerMoreOpen ? `color-mix(in srgb, ${theme.accent} 12%, transparent)` : 'transparent' }}
 							aria-label={t('reading.more')}
+							aria-expanded={headerMoreOpen}
 						>
 							<MoreHorizontal size={18} />
 						</button>
 						<AnimatePresence>
 							{headerMoreOpen && (
-								<motion.div
-									initial={{ opacity: 0, y: 6 }}
-									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: 4 }}
-									className="absolute end-0 top-full z-50 mt-1.5 w-44 overflow-hidden rounded-2xl border py-1 shadow-xl sm:hidden"
-									style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
-								>
-									{[
-										['toc', Bookmark, t('reading.toc')],
-										['knowledge', Highlighter, t('reading.knowledge')],
-										['ask', MessageSquare, t('reading.askAi')],
-										['settings', Settings2, t('reading.settings')],
-									].map(([id, Icon, label]) => (
-										<button
-											key={id}
-											type="button"
-											onClick={() => {
-												setHeaderMoreOpen(false);
-												setMobileAiOpen(false);
-												setPanel(panel === id ? null : id);
-											}}
-											className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-start text-sm font-medium hover:bg-black/5"
-										>
-											<Icon size={15} style={{ color: theme.accent }} />
-											{label}
-										</button>
-									))}
-									<button
-										type="button"
-										onClick={() => {
-											setHeaderMoreOpen(false);
-											setBionicOn(v => !v);
-										}}
-										className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-start text-sm font-medium hover:bg-black/5"
+																	<motion.div
+										initial={{ opacity: 0, y: 6, scale: 0.98 }}
+										animate={{ opacity: 1, y: 0, scale: 1 }}
+										exit={{ opacity: 0, y: 4, scale: 0.98 }}
+										transition={{ duration: 0.15 }}
+										className="absolute end-0 top-full z-50 mt-2 max-h-[min(70dvh,32rem)] w-[min(17rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border p-1.5 shadow-2xl"
+										style={{ background: theme.paper, borderColor: `color-mix(in srgb, ${theme.ink} 7%, transparent)`, color: theme.ink }}
 									>
-										<Sparkles size={15} style={{ color: bionicOn ? theme.accent : theme.ink, opacity: bionicOn ? 1 : 0.7 }} />
-										{t('reading.bionic')}
-									</button>
-									<button
-										type="button"
-										onClick={() => {
-											setHeaderMoreOpen(false);
-											persist(enqueueFlashcardReviews(book));
-											setFlashcardsOpen(true);
-										}}
-										className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-start text-sm font-medium hover:bg-black/5"
-									>
-										<Layers size={15} style={{ color: theme.accent }} />
-										{t('reading.flashcards')}
-									</button>
-									<button
-										type="button"
-										onClick={() => {
-											setHeaderMoreOpen(false);
-											setCoachData(null);
-											setCoachOpen(true);
-										}}
-										className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-start text-sm font-medium hover:bg-black/5"
-									>
-										<Brain size={15} style={{ color: theme.accent }} />
-										{t('reading.coach')}
-									</button>
-									<button
-										type="button"
-										onClick={() => {
-											setHeaderMoreOpen(false);
-											setNotebookOpen(true);
-										}}
-										className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-start text-sm font-medium hover:bg-black/5"
-									>
-										<NotebookPen size={15} style={{ color: theme.accent }} />
-										{t('reading.notebook')}
-									</button>
-								</motion.div>
+										<p className="px-2.5 pb-1.5 pt-1 text-[10.5px] font-bold opacity-55">{t('reading.diffHint').split(/[—-]/)[0].trim()}</p>
+										<div className="mx-1 mb-1.5 grid grid-cols-3 gap-1 rounded-xl p-1" style={{ background: `color-mix(in srgb, ${theme.ink} 4%, transparent)` }}>
+											{[
+												['original', t('reading.diffOriginal')],
+												['simplify', t('reading.diffSimplify')],
+												['eli5', t('reading.diffEli5')],
+											].map(([id, label]) => (
+												<button
+													key={id}
+													type="button"
+													disabled={diffBusy}
+													onClick={() => applyDifficulty(id)}
+													className="truncate rounded-lg px-1.5 py-1.5 text-[11px] font-semibold transition disabled:opacity-50"
+													style={{ background: difficulty === id ? theme.accent : 'transparent', color: difficulty === id ? '#fff' : theme.ink }}
+												>
+													{label}
+												</button>
+											))}
+										</div>
+										{diffBusy && <p className="px-2.5 pb-1 text-[10.5px] opacity-50">{t('common.working')}</p>}
+										<div className="my-1 h-px" style={{ background: `color-mix(in srgb, ${theme.ink} 7%, transparent)` }} />
+										{[
+											{ id: 'toc', Icon: Bookmark, label: t('reading.toc'), active: panel === 'toc', run: () => openPanel('toc') },
+											{ id: 'knowledge', Icon: Highlighter, label: t('reading.knowledge'), active: panel === 'knowledge', run: () => openPanel('knowledge') },
+											{ id: 'ask', Icon: MessageSquare, label: t('reading.askAi'), active: panel === 'ask', run: () => openPanel('ask'), className: 'sm:hidden' },
+											{ id: 'notebook', Icon: NotebookPen, label: t('reading.notebook'), active: notebookOpen, run: () => setNotebookOpen(true) },
+											{ id: 'timer', Icon: Timer, label: t('reading.timer'), active: timerRemaining != null, run: () => setTimerOpen(true) },
+											{ id: 'focus', Icon: Focus, label: t('reading.focus'), active: focusMode, run: () => { setFocusIndex(0); setFocusMode(true); } },
+											{ id: 'bionic', Icon: Sparkles, label: t('reading.bionic'), active: bionicOn, run: () => setBionicOn(v => !v), toggle: true },
+											{ id: 'flashcards', Icon: Layers, label: t('reading.flashcards'), run: () => { persist(enqueueFlashcardReviews(book)); setFlashcardsOpen(true); } },
+											{ id: 'coach', Icon: Brain, label: t('reading.coach'), run: () => { setCoachData(null); setCoachOpen(true); } },
+											{ id: 'ai-rail', Icon: aiRailOpen ? PanelRightClose : PanelRightOpen, label: aiRailOpen ? t('reading.aiRailHide') : t('reading.aiRailShow'), active: aiRailOpen, run: toggleAiRail, className: 'hidden lg:flex' },
+										].map(item => (
+											<button
+												key={item.id}
+												type="button"
+												onClick={() => {
+													setHeaderMoreOpen(false);
+													item.run();
+												}}
+												className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-start text-[13px] font-medium transition hover:bg-black/5 ${item.className || ''}`}
+											>
+												<span
+													className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg"
+													style={{ background: `color-mix(in srgb, ${theme.accent} ${item.active ? 16 : 8}%, transparent)`, color: theme.accent }}
+												>
+													<item.Icon size={14} />
+												</span>
+												<span className="min-w-0 flex-1 truncate">{item.label}</span>
+												{item.active && <Check size={14} style={{ color: theme.accent }} />}
+											</button>
+										))}
+									</motion.div>
 							)}
 						</AnimatePresence>
 					</div>
 				</div>,
 				)}
-				{!focusMode && (
-					<div className="border-t" style={{ borderColor: `color-mix(in srgb, ${theme.ink} 4%, transparent)` }}>
-						{alignedRow(
-						<div className="py-1.5 sm:py-2">
-						<ReadingToolsRail
-							theme={theme}
-							t={t}
-							compact
-							focusOn={focusMode}
-							listenOn={listenOn}
-							bionicOn={bionicOn}
-							difficulty={difficulty}
-							onToggleFocus={() => {
-								setFocusIndex(0);
-								setFocusMode(true);
-							}}
-							onToggleListen={() => {
-								if (listenOn) {
-									window.speechSynthesis?.cancel();
-									setListenOn(false);
-									setListenPlaying(false);
-									setListenSentence(-1);
-								} else {
-									setListenOn(true);
-								}
-							}}
-							onToggleBionic={() => setBionicOn(v => !v)}
-							onDifficulty={applyDifficulty}
-							onOpenFlashcards={() => {
-								persist(enqueueFlashcardReviews(book));
-								setFlashcardsOpen(true);
-							}}
-							onOpenCoach={() => {
-								setCoachData(null);
-								setCoachOpen(true);
-							}}
-						/>
-						{diffBusy && <p className="mt-1 text-center text-[10px] opacity-40">{t('common.working')}</p>}
-						</div>,
-						)}
-					</div>
-				)}
+				<div aria-hidden className="h-[2px] w-full" style={{ background: `color-mix(in srgb, ${theme.ink} 6%, transparent)` }}>
+					<div
+						className="h-full transition-all duration-500"
+						style={{ width: `${progress}%`, background: theme.accent, marginInlineStart: isContentRTL ? 'auto' : undefined }}
+					/>
+				</div>
 				{timerDone && (
 					<div
 						className="flex items-center justify-center gap-3 border-t px-4 py-2.5 text-xs font-semibold"
@@ -2289,7 +2211,7 @@ export default function ReadingView({ book: initialBook, onBack }) {
 			{!mobileAiOpen && !focusMode && (
 				<>
 					<div
-						className="fixed z-[45] flex flex-col gap-2"
+						className="absolute z-[45] flex flex-col gap-2"
 						style={{
 							bottom: pageMode === 'pages'
 								? 'max(5.5rem, calc(env(safe-area-inset-bottom) + 4.5rem))'
@@ -2336,7 +2258,7 @@ export default function ReadingView({ book: initialBook, onBack }) {
 					<button
 						type="button"
 						onClick={() => setMobileAiOpen(true)}
-						className="fixed z-[45] inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-xl ring-1 ring-white/20 lg:hidden"
+						className="absolute z-[45] inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-xl ring-1 ring-white/20 lg:hidden"
 						style={{
 							background: `linear-gradient(145deg, ${theme.accent}, ${theme.heading || theme.accent})`,
 							bottom: pageMode === 'pages'

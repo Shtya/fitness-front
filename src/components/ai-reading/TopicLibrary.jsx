@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from '@/i18n/navigation';
+import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarDays, Loader2, Plus, Sparkles, Star, Trash2, X } from 'lucide-react';
 import { createTopic, uid } from '@/lib/ai-reading/schemas';
@@ -31,7 +31,7 @@ function formatTopicDate(dateStr, locale) {
 export default function TopicLibrary() {
 	const t = useTranslations('aiReading');
 	const locale = useLocale();
-	const router = useRouter();
+	const { openBook } = useReadingNav();
 	const [topics, setTopics] = useState([]);
 	const [adding, setAdding] = useState(false);
 	const [draftTitle, setDraftTitle] = useState('');
@@ -118,7 +118,7 @@ export default function TopicLibrary() {
 			const { enqueueReviewItems } = await import('@/lib/ai-reading/spaced-review');
 			const saved = upsertBook(enqueueReviewItems(book));
 			upsertTopic({ ...topic, bookId: saved.id, status: 'reading' });
-			router.push(`/ai-studio/read/${saved.id}`);
+			openBook(saved.id);
 		} finally {
 			setGenBusy(null);
 		}

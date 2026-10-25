@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from '@/i18n/navigation';
+import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { BookShelf } from '@/components/ai-reading/BookShelf';
 import { deleteBook, listBooks, upsertBook } from '@/lib/ai-reading/storage';
 
 export default function LibraryPanel() {
 	const t = useTranslations('aiReading');
-	const router = useRouter();
+	const { openBook, goTab } = useReadingNav();
 	const [books, setBooks] = useState([]);
 
 	const refresh = () => setBooks(listBooks().filter(b => !b.indexOnly));
@@ -41,7 +41,8 @@ export default function LibraryPanel() {
 					upsertBook({ ...book, title: title.trim() });
 					refresh();
 				}}
-				onOpen={id => router.push(`/ai-studio/read/${id}`)}
+				onOpen={openBook}
+				onImport={goTab ? () => goTab('import') : undefined}
 			/>
 		</div>
 	);

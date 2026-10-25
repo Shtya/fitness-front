@@ -27,8 +27,10 @@ import ImportPanel from '@/components/ai-reading/ImportPanel';
 import DailyReview from '@/components/ai-reading/DailyReview';
 import LibraryPanel from '@/components/ai-reading/LibraryPanel';
 import GenerateForm from '@/components/ai-reading/GenerateForm';
+import ReadingView from '@/components/ai-reading/ReadingView';
+import { ReadingNavProvider } from '@/lib/ai-reading/reading-nav';
 import { uiFontFamily } from '@/lib/ai-reading/fonts';
-import { hydrateAiReadingStore } from '@/lib/ai-reading/storage';
+import { getBook, hydrateAiReadingStore } from '@/lib/ai-reading/storage';
 import '@/components/pages/dashboard/users/roster/roster.css';
 import '@/lib/ai-reading/ai-reading-theme.css';
 
@@ -50,7 +52,11 @@ const STUDIO_SUB = [
 	{ id: 'generate', key: 'studioSub.generate', icon: Sparkles },
 ];
 
-export default function StudioApp({ initialTab = 'home' }) {
+/**
+ * The whole reading room. `embedded` runs it inside another page (the WhatsApp Reading tab):
+ * tabs live in local state instead of the URL, and books open in place instead of navigating.
+ */
+export default function StudioApp({ initialTab = 'home', embedded = false }) {
 	const t = useTranslations('aiReading');
 	const locale = useLocale();
 	const router = useRouter();
@@ -59,11 +65,13 @@ export default function StudioApp({ initialTab = 'home' }) {
 	const [studioSub, setStudioSub] = useState('chat');
 	const [ready, setReady] = useState(false);
 	const [notebookOpen, setNotebookOpen] = useState(false);
+	const [openBook, setOpenBook] = useState(null);
 
 	useEffect(() => {
+		if (embedded) return undefined;
 		document.documentElement.dataset.gmUsers = '1';
 		return () => { delete document.documentElement.dataset.gmUsers; };
-	}, []);
+	}, [embedded]);
 
 	useEffect(() => {
 		let alive = true;
@@ -80,6 +88,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 	}, []);
 
 	useEffect(() => {
+		if (embedded) return;
 		const q = searchParams?.get('tab');
 		if (q && TABS.some(x => x.id === q)) setTab(q);
 		const sub = searchParams?.get('sub');
@@ -90,7 +99,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 			setTab('studio');
 			setStudioSub(sub);
 		}
-	}, [searchParams]);
+	}, [embedded, searchParams]);
 
 	const goTab = useCallback(
 		(id, sub) => {
@@ -100,15 +109,31 @@ export default function StudioApp({ initialTab = 'home' }) {
 			const params = new URLSearchParams();
 			if (id !== 'home') params.set('tab', id);
 			if (id === 'studio' && nextSub && nextSub !== 'chat') params.set('sub', nextSub);
+			if (embedded) return;
 			const qs = params.toString();
 			router.replace(qs ? `/ai-studio?${qs}` : '/ai-studio', { scroll: false });
 		},
-		[router, studioSub],
+		[embedded, router, studioSub],
 	);
 
-	return (
+	const openBookInPlace = useCallback(id => {
+		const book = getBook(id);
+		if (book) setOpenBook(book);
+	}, []);
+
+	if (embedded && openBook) {
+		return (
+			<div className="ai-reading-root flex h-full min-h-0 flex-1 flex-col" style={{ fontFamily: uiFontFamily(locale === 'ar' ? 'ar' : 'en') }}>
+				<ReadingView key={openBook.id} book={openBook} onBack={() => setOpenBook(null)} />
+			</div>
+		);
+	}
+
+	const room = (
+
 		<div
-			className={`ai-reading-root gm-surface rs-scope flex h-full min-h-0 flex-col ${locale === 'ar' ? 'rtl' : 'ltr'}`}
+			className={`ai-reading-root gm-surface rs-scope flex h-full min-h-0 flex-1 flex-col ${locale === 'ar' ? 'rtl' : 'ltr'}`}
+			dir={embedded ? (locale === 'ar' ? 'rtl' : 'ltr') : undefined}
 			style={{ fontFamily: uiFontFamily(locale === 'ar' ? 'ar' : 'en') }}
 		>
 			<header className="z-40 shrink-0 border-b bg-(--gm-paper) backdrop-blur-md" style={{ borderColor: 'var(--ar-border)' }}>
@@ -138,7 +163,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 							<NotebookPen size={13} />
 							<span className="hidden sm:inline">{t('notebook.open')}</span>
 						</button>
-						<Link
+						{!embedded && <Link
 							href="/ai-studio/fitness"
 							className="rs-btn shrink-0"
 							aria-label={t('nav.fitness')}
@@ -146,7 +171,7 @@ export default function StudioApp({ initialTab = 'home' }) {
 						>
 							<Dumbbell size={13} />
 							<span className="hidden sm:inline">{t('nav.fitness')}</span>
-						</Link>
+						</Link>}
 					</div>
 				</div>
 
@@ -244,5 +269,12 @@ export default function StudioApp({ initialTab = 'home' }) {
 				fontFamily={uiFontFamily(locale === 'ar' ? 'ar' : 'en')}
 			/>
 		</div>
+	);
+
+	if (!embedded) return room;
+	return (
+		<ReadingNavProvider openBook={openBookInPlace} goTab={goTab}>
+			{room}
+		</ReadingNavProvider>
 	);
 }

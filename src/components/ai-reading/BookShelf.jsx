@@ -1,7 +1,8 @@
 ﻿'use client';
 
 import { motion } from 'framer-motion';
-import { Pencil, Trash2 } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { Import, Pencil, Trash2 } from 'lucide-react';
 import { COVER_PALETTES } from '@/lib/ai-reading/schemas';
 
 const LEGACY_COVER_RE = /^#(?:1a2e28|3d5a4c|14201a|1b2a22|1f2a1a|4a6b3a|2a1f3d|5b4a7a|1a2332|2d4a6f|1e293b|3b1f1a|8b5a3c)/i;
@@ -96,11 +97,46 @@ export function BookCover({ book, onOpen, onEdit, onDelete, className = '' }) {
 	);
 }
 
-export function BookShelf({ books, emptyLabel, onOpen, onEdit, onDelete }) {
+/** Last card on the shelf: bring in a new book (paste, link or file). */
+function ImportCard({ onImport, ar }) {
+	return (
+		<button
+			type="button"
+			onClick={onImport}
+			className="group flex aspect-[2/3] w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-3 text-center transition hover:-translate-y-0.5 sm:rounded-2xl"
+			style={{ borderColor: 'color-mix(in srgb, var(--color-primary-500) 35%, transparent)', color: 'var(--ar-heading)', background: 'color-mix(in srgb, var(--color-primary-50, #f0fdf4) 60%, transparent)' }}
+		>
+			<span
+				className="grid size-10 place-items-center rounded-full text-white shadow-sm transition group-hover:scale-105 sm:size-12"
+				style={{ background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600))' }}
+			>
+				<Import size={18} aria-hidden="true" />
+			</span>
+			<span className="text-[11px] font-bold sm:text-[13px]">{ar ? 'استيراد كتاب' : 'Import a book'}</span>
+			<span className="hidden text-[10px] leading-4 sm:block" style={{ color: 'var(--ar-muted)' }}>
+				{ar ? 'نص أو لينك أو PDF' : 'Text, link or PDF'}
+			</span>
+		</button>
+	);
+}
+
+export function BookShelf({ books, emptyLabel, onOpen, onEdit, onDelete, onImport }) {
+	const ar = String(useLocale() || '').startsWith('ar');
 	if (!books?.length) {
 		return (
 			<div className="rounded-2xl border border-dashed border-[color:var(--ar-border)]/20 bg-white/40 px-4 py-12 text-center text-sm text-[var(--ar-muted)] sm:rounded-3xl sm:px-6 sm:py-16">
-				{emptyLabel}
+				<p>{emptyLabel}</p>
+				{onImport ? (
+					<button
+						type="button"
+						onClick={onImport}
+						className="mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-white shadow-sm"
+						style={{ background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600))' }}
+					>
+						<Import size={15} aria-hidden="true" />
+						{ar ? 'استيراد كتاب' : 'Import a book'}
+					</button>
+				) : null}
 			</div>
 		);
 	}
@@ -110,6 +146,7 @@ export function BookShelf({ books, emptyLabel, onOpen, onEdit, onDelete }) {
 			{books.map(book => (
 				<BookCover key={book.id} book={book} onOpen={onOpen} onEdit={onEdit} onDelete={onDelete} />
 			))}
+			{onImport ? <ImportCard onImport={onImport} ar={ar} /> : null}
 		</div>
 	);
 }
