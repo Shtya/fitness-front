@@ -1,218 +1,144 @@
 ﻿'use client';
 
 import { useEffect, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
-import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { motion } from 'framer-motion';
-import { Flame, Import, MessageSquare, Sparkles, Clock, Highlighter } from 'lucide-react';
-import { BookShelf } from '@/components/ai-reading/BookShelf';
-import {
-	getActiveJourney,
-	getContinueBook,
-	getStats,
-	getTodayPick,
-	knowledgeStats,
-	listBooks,
-	upsertBook,
-} from '@/lib/ai-reading/storage';
-import { journeyProgress, monthLabel } from '@/lib/ai-reading/schemas';
-import { generateFallbackBook } from '@/lib/ai-reading/transform';
-import { enqueueReviewItems } from '@/lib/ai-reading/spaced-review';
+import { BookOpen, Layers, Plus } from 'lucide-react';
+import { useReadingNav } from '@/lib/ai-reading/reading-nav';
+import { getContinueBook, listBooks } from '@/lib/ai-reading/storage';
+import { collectAllDue } from '@/lib/ai-reading/spaced-review';
+import { AddBookTile, BookCover, BookSize, BookTile, DirArrow, EmptyState, arCards, bookPercent, bookTiming, useReadingSpeed, useRoomLang } from '@/components/ai-reading/room/RoomUI';
+import { formatMinutes } from '@/lib/ai-reading/book-stats';
 
-export default function ReadingHub({ compact = false, onNavigate }) {
-	const t = useTranslations('aiReading');
-	const locale = useLocale();
-	const { openBook } = useReadingNav();
-	const [books, setBooks] = useState([]);
-	const [stats, setStats] = useState(getStats);
-	const [kStats, setKStats] = useState({ highlights: 0, notes: 0, actions: 0 });
-	const [continueBook, setContinueBook] = useState(null);
-	const [today, setToday] = useState(null);
-	const [journey, setJourney] = useState(null);
+const recent = (a, b) => String(b.lastOpenedAt || b.updatedAt || '').localeCompare(String(a.lastOpenedAt || a.updatedAt || ''));
 
-	useEffect(() => {
-		let list = listBooks().filter(b => !b.indexOnly);
-		if (!list.length) {
-			const sample = enqueueReviewItems(
-				generateFallbackBook({
-					topic: 'Why motivation is not enough',
-					style: 'philosophical',
-					depth: 'standard',
-					language: locale === 'ar' ? 'ar' : 'en',
-					readingTimeMinutes: 8,
-				}),
-			);
-			upsertBook(sample);
-			list = [sample];
-		}
-		setBooks(list);
-		setStats(getStats());
-		setKStats(knowledgeStats());
-		setContinueBook(getContinueBook());
-		setToday(getTodayPick());
-		setJourney(getActiveJourney());
-	}, [locale]);
-
-	const journeyPct = journey ? journeyProgress(journey) : 0;
-	const nextItem = journey?.items?.find(i => !i.bookId) || journey?.items?.[0];
-	const nextMinutes = nextItem?.readingTimeMinutes || today?.readingTimeMinutes || 8;
-	const go = (tab, sub) => (onNavigate ? onNavigate(tab, sub) : null);
-
-	return (
-		<div className={compact ? 'space-y-8' : 'space-y-10'}>
-			<section className="relative overflow-hidden rounded-2xl border border-[color:var(--ar-border)] bg-white/90 px-5 py-7 shadow-sm sm:rounded-3xl sm:px-8 sm:py-9">
-				<div
-					className="absolute inset-x-0 top-0 h-1"
-					style={{ background: 'linear-gradient(90deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))' }}
-				/>
-				<div
-					className="pointer-events-none absolute -end-16 -top-20 h-56 w-56 rounded-full opacity-30 blur-3xl"
-					style={{ background: 'var(--color-primary-200, #c7d2fe)' }}
-				/>
-				<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative">
-					<p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--ar-accent)]">
-						{journey ? monthLabel(journey.monthKey, locale) : t('hub.eyebrow')}
-					</p>
-					<h1 className="mt-3 max-w-xl font-[family-name:var(--font-space-grotesk)] text-3xl font-bold leading-tight text-[var(--ar-heading)] sm:text-4xl">
-						{journey ? `${t('hub.focus')}: ${journey.theme || journey.title}` : t('brand')}
-					</h1>
-					{journey && (
-						<div className="mt-4 max-w-sm">
-							<div className="flex justify-between text-xs text-[var(--ar-muted)]">
-								<span>{t('hub.journeyProgress')}</span>
-								<span className="font-bold text-[var(--ar-accent)]">{journeyPct}%</span>
-							</div>
-							<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[color:var(--ar-ring)]">
-								<div
-									className="h-full rounded-full"
-									style={{
-										width: `${journeyPct}%`,
-										background: 'linear-gradient(90deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))',
-									}}
-								/>
-							</div>
-						</div>
-					)}
-					{(nextItem || today) && (
-						<div className="mt-6 max-w-lg rounded-2xl border border-[color:var(--ar-border)] bg-[color:var(--color-primary-50,#f8fafc)]/80 p-4">
-							<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ar-accent)]">{t('hub.next')}</p>
-							<p className="mt-1 text-lg font-bold text-[var(--ar-heading)]">
-								{nextItem?.title || today?.title}
-								<span className="ms-2 text-sm font-normal text-[var(--ar-muted)]">— {nextMinutes} min</span>
-							</p>
-							<div className="mt-3 flex flex-wrap gap-2">
-								{nextItem?.bookId || today ? (
-									<button
-										type="button"
-										onClick={() => openBook(nextItem?.bookId || today.id)}
-										className="rounded-full px-4 py-2 text-sm font-bold text-white shadow-sm"
-										style={{ background: 'linear-gradient(135deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))' }}
-									>
-										{t('hub.startReading')}
-									</button>
-								) : (
-									<button
-										type="button"
-										onClick={() => go('studio', 'topics')}
-										className="rounded-full px-4 py-2 text-sm font-bold text-white shadow-sm"
-										style={{ background: 'linear-gradient(135deg, var(--color-gradient-from, var(--color-primary-600)), var(--color-gradient-to, var(--color-primary-500)))' }}
-									>
-										{t('hub.startReading')}
-									</button>
-								)}
-								<button
-									type="button"
-									onClick={() => go('studio', 'chat')}
-									className="rounded-full border border-[color:var(--ar-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--ar-heading)]"
-								>
-									{t('hub.openWorkspace')}
-								</button>
-							</div>
-						</div>
-					)}
-				</motion.div>
-			</section>
-
-			<section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				{[
-					{ icon: Flame, label: t('hub.streak'), value: `${stats.streak || 0}` },
-					{ icon: Clock, label: t('hub.minutes'), value: `${stats.totalMinutes || 0}` },
-					{ icon: Highlighter, label: t('hub.highlights'), value: `${kStats.highlights || 0}` },
-					{ icon: BookOpenStat, label: t('hub.books'), value: `${books.length}` },
-				].map(({ icon: Icon, label, value }) => (
-					<div key={label} className="rounded-2xl bg-white/65 px-4 py-3 ring-1 ring-[color:var(--ar-ring)]/10">
-						<div className="flex items-center gap-2">
-							<Icon size={15} className="text-[var(--ar-heading)]" />
-							<div>
-								<p className="text-xl font-bold text-[var(--ar-heading)]">{value}</p>
-								<p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--ar-muted)]">{label}</p>
-							</div>
-						</div>
-					</div>
-				))}
-			</section>
-
-			<section className="grid gap-3 sm:grid-cols-3">
-				{continueBook && (
-					<button type="button" onClick={() => openBook(continueBook.id)} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[color:var(--ar-ring)]/10">
-						<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ar-accent)]">{t('hub.continue')}</p>
-						<p className="mt-1 font-bold text-[var(--ar-heading)]">{continueBook.title}</p>
-					</button>
-				)}
-				<button type="button" onClick={() => go('import')} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[color:var(--ar-ring)]/10">
-					<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-secondary-600,#b45309)]">{t('hub.import')}</p>
-					<p className="mt-1 text-sm text-[var(--ar-muted)]">{t('import.linkHintShort')}</p>
-				</button>
-				<button type="button" onClick={() => go('review')} className="rounded-2xl bg-white/70 p-5 text-start ring-1 ring-[color:var(--ar-ring)]/10">
-					<p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-primary-500)]">{t('hub.dailyReview')}</p>
-					<p className="mt-1 text-sm text-[var(--ar-muted)]">{t('hub.reviewSub')}</p>
-				</button>
-			</section>
-
-			<section className="flex flex-wrap gap-2">
-				{[
-					{ tab: 'studio', sub: 'chat', icon: MessageSquare, label: t('hub.openWorkspace') },
-					{ tab: 'studio', sub: 'generate', icon: Sparkles, label: t('hub.generate') },
-					{ tab: 'import', icon: Import, label: t('hub.import') },
-					{ tab: 'library', icon: Flame, label: t('nav.library') },
-				].map(item => (
-					<button
-						key={item.label}
-						type="button"
-						onClick={() => go(item.tab, item.sub)}
-						className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-[var(--ar-heading)] ring-1 ring-[color:var(--ar-ring)]/10"
-					>
-						<item.icon size={14} /> {item.label}
-					</button>
-				))}
-			</section>
-
-			<section>
-				<div className="mb-4 flex items-end justify-between">
-					<div>
-						<h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-[var(--ar-heading)]">{t('hub.shelf')}</h2>
-						<p className="text-sm text-[var(--ar-muted)]">{t('hub.shelfSub')}</p>
-					</div>
-					<button type="button" onClick={() => go('library')} className="text-xs font-bold text-[var(--ar-accent)]">
-						{t('hub.seeAll')} →
-					</button>
-				</div>
-				<BookShelf
-					books={books.slice(0, 6)}
-					emptyLabel={t('hub.empty')}
-					onOpen={openBook}
-					onImport={() => go('import')}
-				/>
-			</section>
-		</div>
-	);
+function greeting(L) {
+	const h = new Date().getHours();
+	if (h < 12) return L('صباح الخير', 'Good morning');
+	if (h < 18) return L('نهارك سعيد', 'Good afternoon');
+	return L('مساء الخير', 'Good evening');
 }
 
-function BookOpenStat(props) {
+/** Home: the book you're in the middle of, anything due for review, and your shelf. */
+export default function ReadingHub({ onNavigate }) {
+	const { L } = useRoomLang();
+	const { openBook } = useReadingNav();
+	const { wpm } = useReadingSpeed();
+	const [books, setBooks] = useState(() => listBooks().filter(b => !b.indexOnly).sort(recent));
+	const [hero, setHero] = useState(() => getContinueBook() || listBooks().filter(b => !b.indexOnly).sort(recent)[0] || null);
+	const [due, setDue] = useState(0);
+
+	useEffect(() => {
+		const read = () => {
+			const list = listBooks().filter(b => !b.indexOnly).sort(recent);
+			setBooks(list);
+			setHero(getContinueBook() || list[0] || null);
+			setDue(collectAllDue(list).length);
+		};
+		read();
+		window.addEventListener('ai-reading:changed', read);
+		return () => window.removeEventListener('ai-reading:changed', read);
+	}, []);
+
+	const go = tab => onNavigate?.(tab);
+	if (!books) return null;
+
+	if (!books.length) {
+		return (
+			<div className="rr-card">
+				<EmptyState
+					icon={BookOpen}
+					title={L('رفّك لسه فاضي', 'Your shelf is empty')}
+					body={L('ابدأ بأول كتاب: الصق نص، أو حط لينك مقال أو محادثة ChatGPT، أو ارفع PDF.', 'Start with your first book — paste text, drop in an article or ChatGPT link, or upload a PDF.')}
+					action={
+						<button type="button" className="rr-btn rr-btn-primary rr-btn-lg" onClick={() => go('import')}>
+							<Plus size={18} /> {L('أضف أول كتاب', 'Add your first book')}
+						</button>
+					}
+				/>
+			</div>
+		);
+	}
+
+	const pct = hero ? bookPercent(hero) : 0;
+	const left = hero ? bookTiming(hero, wpm).left : 0;
+	const shelf = books.filter(b => b.id !== hero?.id).slice(0, 11);
+
 	return (
-		<svg width={props.size || 15} height={props.size || 15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={props.className}>
-			<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-			<path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-		</svg>
+		<div className="space-y-10 sm:space-y-14">
+			<header>
+				<p className="rr-eyebrow mb-2">{greeting(L)}</p>
+				<h1 className="rr-display">{L('نكمّل من حيث وقفت؟', 'Pick up where you left off')}</h1>
+			</header>
+
+			{hero && (
+				<motion.section
+					initial={{ opacity: 0, y: 10 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}
+					className="rr-card relative overflow-hidden p-5 sm:p-8"
+				>
+					<div
+						aria-hidden
+						className="pointer-events-none absolute -top-24 end-[-6rem] size-72 rounded-full opacity-60 blur-3xl"
+						style={{ background: 'var(--rr-accent-soft)' }}
+					/>
+					<div className="relative flex gap-5 sm:gap-8">
+						<button type="button" onClick={() => openBook(hero.id)} className="rr-book w-[96px] shrink-0 sm:w-[150px]" aria-label={hero.title}>
+							<BookCover book={hero} />
+						</button>
+						<div className="flex min-w-0 flex-1 flex-col">
+							<p className="rr-eyebrow">{pct > 0 ? L('بتقرأ دلوقتي', 'Currently reading') : L('جاهز تبدأ', 'Ready to start')}</p>
+							<h2 className="rr-serif mt-2 line-clamp-3 text-[20px] font-medium leading-snug sm:text-[30px] sm:leading-tight" dir="auto">
+								{hero.title}
+							</h2>
+							<BookSize book={hero} className="mt-2 text-[12.5px]" />
+							<div className="mt-auto pt-5">
+								<div className="flex items-center gap-3">
+									<div className="rr-progress flex-1" aria-hidden><span style={{ width: `${pct}%` }} /></div>
+									<span className="shrink-0 text-[13px] font-semibold tabular-nums">{pct}%</span>
+								</div>
+								<div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+									<button type="button" className="rr-btn rr-btn-primary" onClick={() => openBook(hero.id)}>
+										{pct > 0 ? L('كمّل القراءة', 'Continue reading') : L('ابدأ القراءة', 'Start reading')}
+										<DirArrow size={16} />
+									</button>
+									{left ? <span className="text-[13px] rr-faint">{L(`فاضل ${formatMinutes(left, true)}`, `${formatMinutes(left, false)} left`)}</span> : null}
+								</div>
+							</div>
+						</div>
+					</div>
+				</motion.section>
+			)}
+
+			{due > 0 && (
+				<button type="button" onClick={() => go('review')} className="rr-card group flex w-full items-center gap-4 p-4 text-start transition hover:shadow-[var(--rr-shadow)] sm:px-6">
+					<span className="grid size-11 shrink-0 place-items-center rounded-full" style={{ background: 'var(--rr-accent-soft)', color: 'var(--rr-accent)' }}>
+						<Layers size={19} />
+					</span>
+					<span className="min-w-0 flex-1">
+						<span className="block text-[15px] font-semibold">
+							{L(`${arCards(due)} مستنية مراجعة`, `${due} card${due === 1 ? '' : 's'} ready to review`)}
+						</span>
+						<span className="mt-0.5 block text-[13px] rr-faint">{L('دقيقتين يثبّتوا اللي قريته', 'Two minutes to make your reading stick')}</span>
+					</span>
+					<DirArrow size={18} className="shrink-0 rr-faint" />
+				</button>
+			)}
+
+			<section>
+				<div className="mb-5 flex items-end justify-between gap-4">
+					<h2 className="rr-serif text-[24px] font-medium sm:text-[28px]">{L('رفّك', 'Your shelf')}</h2>
+					<button type="button" className="rr-btn rr-btn-ghost rr-btn-sm -me-3" onClick={() => go('library')}>
+						{L(`كل الكتب (${books.length})`, `All books (${books.length})`)} <DirArrow size={14} />
+					</button>
+				</div>
+				<div className="rr-shelf-row">
+					{shelf.map(book => (
+						<BookTile key={book.id} book={book} onOpen={openBook} />
+					))}
+					<AddBookTile onClick={() => go('import')} />
+				</div>
+			</section>
+		</div>
 	);
 }

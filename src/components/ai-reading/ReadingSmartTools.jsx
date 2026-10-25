@@ -22,7 +22,6 @@ import {
 import {
 	bionicNodes,
 	buildFlashcardsFromBook,
-	estimateMinutesLeft,
 	findLastHighlight,
 	findPageIndexForHighlight,
 	focusBlocksFromPage,
@@ -38,16 +37,15 @@ export function SmartResumeBanner({ book, pages, pageIndex, theme, t, onResume, 
 		if (!pin?.pageId || !pages?.length) return -1;
 		return pages.findIndex(p => p.page.id === pin.pageId);
 	}, [pin, pages]);
-	const mins = estimateMinutesLeft(pages, pageIndex);
 	const hasPin = Boolean(pin && pinIdx >= 0);
 	const hasHighlight = Boolean(last && targetIdx >= 0);
+	/* Time left now lives in the reader's bottom bar (real word counts); this only offers a jump back. */
+	if (!hasPin && !hasHighlight) return null;
 
 	return (
-		<div className="mb-5 flex flex-wrap items-center gap-2 text-[11px]" style={{ color: theme.muted }}>
-			<span className="tabular-nums opacity-80">{t('reading.minsLeft', { minutes: mins })}</span>
+		<div className="mb-6 flex flex-wrap items-center gap-2 text-[12px]" style={{ color: theme.muted }}>
 			{hasPin && (
 				<>
-					<span className="opacity-30">·</span>
 					<button
 						type="button"
 						onClick={() => onResumePin?.(pin)}
@@ -61,7 +59,6 @@ export function SmartResumeBanner({ book, pages, pageIndex, theme, t, onResume, 
 			)}
 			{!hasPin && hasHighlight && (
 				<>
-					<span className="opacity-30">·</span>
 					<button
 						type="button"
 						onClick={() => onResume(targetIdx, last)}

@@ -10535,7 +10535,7 @@ function MobileWhatsAppNav({
 		},
 	];
 	return (
-		<nav className={`wa-mobile-nav relative hidden shrink-0 ${showAgent ? 'grid-cols-7' : 'grid-cols-6'} border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]`}>
+		<nav style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }} className={`wa-mobile-nav relative hidden shrink-0 border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]`}>
 			{items.map(({ id, icon: Icon, label, badge, avatar }) => {
 				const active = activeTab === id;
 				const iconNode = isValidElement(Icon)
@@ -12359,6 +12359,8 @@ function WhatsAppWorkspaceContent() {
 	const prefetchInFlightRef = useRef(0);
 	const listScrollPrefetchBlockedUntilRef = useRef(0);
 	const [activeTab, setActiveTab] = useState(null);
+	/* Where the Reading room's back button returns to (it hides the mobile tab bar). */
+	const readingReturnTabRef = useRef('chats');
 	const [tabReady, setTabReady] = useState(false);
 	const restoredTabRef = useRef(false);
 	const [settingsSection, setSettingsSection] = useState('ai');
@@ -23522,6 +23524,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (tab === 'reading') {
+			if (activeTab && activeTab !== 'reading') readingReturnTabRef.current = activeTab;
 			setActiveTab('reading');
 			setTabError('');
 			return;
@@ -29432,7 +29435,7 @@ function WhatsAppWorkspaceContent() {
 				{activeTab === 'reading' && (
 					<div className="wa-secondary-pane wa-reading-pane min-h-0 overflow-hidden bg-[#f7f8fa] dark:bg-[#0b141a]">
 						<Suspense fallback={<div className="grid min-h-[60vh] place-items-center"><Loader2 size={20} className="animate-spin" /></div>}>
-							<WhatsAppReadingTab />
+							<WhatsAppReadingTab onExit={() => void loadTabData(readingReturnTabRef.current || 'chats')} />
 						</Suspense>
 					</div>
 				)}
@@ -30689,10 +30692,11 @@ function WhatsAppWorkspaceContent() {
 				)}
 			</div>
 			</div>
-			{/* Adhkar / Wallet are focused spaces: no bottom tab bar (each has its own way back). */}
+			{/* Adhkar / Wallet / Reading are focused spaces: no bottom tab bar (each has its own way back). */}
 			{!(isConversationWorkspaceTab(activeTab) && conversationId) &&
 				activeTab !== 'adhkar' &&
-				activeTab !== 'wallet' && (
+				activeTab !== 'wallet' &&
+				activeTab !== 'reading' && (
 				<MobileWhatsAppNav
 					activeTab={activeTab}
 					onSelect={tab => void loadTabData(tab)}

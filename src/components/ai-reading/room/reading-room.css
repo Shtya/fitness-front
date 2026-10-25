@@ -1,0 +1,737 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Noto+Naskh+Arabic:wght@500;600;700&display=swap');
+
+@layer components {
+
+	/*
+	 * Reading Room — one quiet surface for Home, Library, Import and Review.
+	 * Warm paper, ink text, a single deep-green accent; serif for titles, the app's sans for UI.
+	 * Every colour is a token so dark mode (.dark on <html>) is a token swap, nothing else.
+	 */
+	.rr {
+		--rr-bg: #f7f5f0;
+		--rr-surface: #ffffff;
+		--rr-sunken: #efebe3;
+		--rr-ink: #1d1c1a;
+		--rr-ink-2: #57534c;
+		--rr-ink-3: #8c877e;
+		--rr-line: rgba(29, 28, 26, 0.09);
+		--rr-line-strong: rgba(29, 28, 26, 0.16);
+		--rr-accent: #1f6f5c;
+		--rr-accent-hover: #185a4a;
+		--rr-accent-ink: #ffffff;
+		--rr-accent-soft: rgba(31, 111, 92, 0.09);
+		--rr-danger: #b42318;
+		--rr-danger-soft: rgba(180, 35, 24, 0.08);
+		--rr-shadow-sm: 0 1px 2px rgba(29, 28, 26, 0.05);
+		--rr-shadow: 0 1px 2px rgba(29, 28, 26, 0.04), 0 8px 24px -12px rgba(29, 28, 26, 0.16);
+		--rr-shadow-book: 0 1px 1px rgba(0, 0, 0, 0.08), 0 10px 22px -10px rgba(29, 28, 26, 0.45);
+		--rr-radius: 16px;
+		--rr-serif: 'Newsreader', 'Noto Naskh Arabic', Georgia, 'Times New Roman', serif;
+		--rr-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+		background: var(--rr-bg);
+		color: var(--rr-ink);
+		-webkit-font-smoothing: antialiased;
+	}
+
+	.dark .rr {
+		--rr-bg: #121210;
+		--rr-surface: #1b1a18;
+		--rr-sunken: #23221f;
+		--rr-ink: #eeeae3;
+		--rr-ink-2: #b3ada3;
+		--rr-ink-3: #827c72;
+		--rr-line: rgba(238, 234, 227, 0.08);
+		--rr-line-strong: rgba(238, 234, 227, 0.15);
+		--rr-accent: #5ec3a6;
+		--rr-accent-hover: #79d1b7;
+		--rr-accent-ink: #0d1f1a;
+		--rr-accent-soft: rgba(94, 195, 166, 0.12);
+		--rr-danger: #f97066;
+		--rr-danger-soft: rgba(249, 112, 102, 0.12);
+		--rr-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 26px -14px rgba(0, 0, 0, 0.7);
+		--rr-shadow-book: 0 1px 1px rgba(0, 0, 0, 0.3), 0 12px 24px -12px rgba(0, 0, 0, 0.8);
+	}
+
+	.rr ::selection {
+		background: var(--rr-accent-soft);
+	}
+
+	/* ---------- Type ---------- */
+	.rr-serif {
+		font-family: var(--rr-serif);
+		font-optical-sizing: auto;
+		letter-spacing: -0.01em;
+	}
+	.rr[dir='rtl'] .rr-serif {
+		letter-spacing: 0;
+	}
+	.rr-display {
+		font-family: var(--rr-serif);
+		font-weight: 500;
+		font-size: clamp(28px, 4.6vw, 40px);
+		line-height: 1.1;
+		letter-spacing: -0.02em;
+		color: var(--rr-ink);
+	}
+	.rr[dir='rtl'] .rr-display {
+		font-weight: 600;
+		letter-spacing: 0;
+		line-height: 1.35;
+	}
+	.rr-eyebrow {
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--rr-ink-3);
+	}
+	.rr[dir='rtl'] .rr-eyebrow {
+		letter-spacing: 0;
+		font-size: 12px;
+	}
+	.rr-muted {
+		color: var(--rr-ink-2);
+	}
+	.rr-faint {
+		color: var(--rr-ink-3);
+	}
+
+	/* ---------- Surfaces ---------- */
+	.rr-card {
+		background: var(--rr-surface);
+		border: 1px solid var(--rr-line);
+		border-radius: var(--rr-radius);
+		box-shadow: var(--rr-shadow-sm);
+	}
+	.rr-divider {
+		height: 1px;
+		background: var(--rr-line);
+	}
+
+	/* ---------- Buttons ---------- */
+	.rr-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		height: 40px;
+		padding: 0 16px;
+		border-radius: 999px;
+		font-size: 14px;
+		font-weight: 600;
+		white-space: nowrap;
+		transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s var(--rr-ease), opacity 0.15s;
+		-webkit-tap-highlight-color: transparent;
+	}
+	.rr-btn:active:not(:disabled) {
+		transform: scale(0.97);
+	}
+	.rr-btn:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+	.rr-btn:focus-visible,
+	.rr-icon-btn:focus-visible,
+	.rr-tab:focus-visible,
+	.rr-book:focus-visible {
+		outline: 2px solid var(--rr-accent);
+		outline-offset: 2px;
+	}
+	.rr-btn-primary {
+		background: var(--rr-accent);
+		color: var(--rr-accent-ink);
+	}
+	.rr-btn-primary:hover:not(:disabled) {
+		background: var(--rr-accent-hover);
+	}
+	.rr-btn-quiet {
+		background: var(--rr-surface);
+		color: var(--rr-ink);
+		box-shadow: inset 0 0 0 1px var(--rr-line-strong);
+	}
+	.rr-btn-quiet:hover:not(:disabled) {
+		background: var(--rr-sunken);
+	}
+	.rr-btn-ghost {
+		color: var(--rr-ink-2);
+	}
+	.rr-btn-ghost:hover:not(:disabled) {
+		background: var(--rr-sunken);
+		color: var(--rr-ink);
+	}
+	.rr-btn-danger {
+		background: var(--rr-danger);
+		color: #fff;
+	}
+	.rr-btn-lg {
+		height: 48px;
+		padding: 0 22px;
+		font-size: 15px;
+	}
+	.rr-btn-sm {
+		height: 32px;
+		padding: 0 12px;
+		font-size: 13px;
+	}
+	.rr-icon-btn {
+		display: inline-grid;
+		place-items: center;
+		width: 38px;
+		height: 38px;
+		border-radius: 999px;
+		color: var(--rr-ink-2);
+		transition: background-color 0.15s, color 0.15s;
+	}
+	.rr-icon-btn:hover {
+		background: var(--rr-sunken);
+		color: var(--rr-ink);
+	}
+
+	/* ---------- Navigation ---------- */
+	.rr-tabs {
+		display: inline-flex;
+		gap: 2px;
+		padding: 3px;
+		border-radius: 999px;
+		background: var(--rr-sunken);
+	}
+	.rr-tab {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		height: 34px;
+		padding: 0 14px;
+		border-radius: 999px;
+		font-size: 13.5px;
+		font-weight: 600;
+		color: var(--rr-ink-2);
+		white-space: nowrap;
+		transition: color 0.15s;
+	}
+	.rr-tab:hover {
+		color: var(--rr-ink);
+	}
+	.rr-tab[aria-current='page'] {
+		color: var(--rr-ink);
+	}
+	.rr-tab-pill {
+		position: absolute;
+		inset: 0;
+		border-radius: 999px;
+		background: var(--rr-surface);
+		box-shadow: 0 1px 2px rgba(29, 28, 26, 0.08), 0 0 0 1px var(--rr-line);
+	}
+	.rr-tab > :not(.rr-tab-pill) {
+		position: relative;
+	}
+	.rr-tab-badge {
+		min-width: 18px;
+		height: 18px;
+		padding: 0 5px;
+		border-radius: 999px;
+		background: var(--rr-accent);
+		color: var(--rr-accent-ink);
+		font-size: 10.5px;
+		font-weight: 700;
+		line-height: 18px;
+		text-align: center;
+	}
+
+	/* ---------- Form controls ---------- */
+	.rr-field {
+		width: 100%;
+		border-radius: 12px;
+		border: 1px solid var(--rr-line-strong);
+		background: var(--rr-surface);
+		color: var(--rr-ink);
+		font-size: 15px;
+		padding: 11px 14px;
+		outline: none;
+		transition: border-color 0.15s, box-shadow 0.15s;
+	}
+	.rr-field::placeholder {
+		color: var(--rr-ink-3);
+	}
+	.rr-field:focus {
+		border-color: var(--rr-accent);
+		box-shadow: 0 0 0 3px var(--rr-accent-soft);
+	}
+	.rr-label {
+		display: block;
+		margin-bottom: 6px;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--rr-ink-2);
+	}
+	.rr-switch {
+		position: relative;
+		flex-shrink: 0;
+		width: 38px;
+		height: 22px;
+		border-radius: 999px;
+		background: var(--rr-line-strong);
+		transition: background-color 0.2s;
+	}
+	.rr-switch::after {
+		content: '';
+		position: absolute;
+		top: 3px;
+		inset-inline-start: 3px;
+		width: 16px;
+		height: 16px;
+		border-radius: 999px;
+		background: #fff;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+		transition: transform 0.2s var(--rr-ease);
+	}
+	.rr-switch[aria-checked='true'] {
+		background: var(--rr-accent);
+	}
+	.rr-switch[aria-checked='true']::after {
+		transform: translateX(16px);
+	}
+	.rr[dir='rtl'] .rr-switch[aria-checked='true']::after {
+		transform: translateX(-16px);
+	}
+
+	/* ---------- Progress ---------- */
+	.rr-progress {
+		height: 4px;
+		border-radius: 999px;
+		background: var(--rr-sunken);
+		overflow: hidden;
+	}
+	.rr-progress > span {
+		display: block;
+		height: 100%;
+		border-radius: inherit;
+		background: var(--rr-accent);
+		transition: width 0.5s var(--rr-ease);
+	}
+
+	/* ---------- Books ---------- */
+	.rr-book {
+		display: block;
+		width: 100%;
+		text-align: start;
+		border-radius: 6px 10px 10px 6px;
+		-webkit-tap-highlight-color: transparent;
+	}
+	.rr-cover {
+		position: relative;
+		aspect-ratio: 2 / 3;
+		width: 100%;
+		overflow: hidden;
+		border-radius: 4px 9px 9px 4px;
+		box-shadow: var(--rr-shadow-book);
+		color: #fff;
+		transition: transform 0.35s var(--rr-ease), box-shadow 0.35s var(--rr-ease);
+	}
+	.rr[dir='rtl'] .rr-cover,
+	.rr[dir='rtl'] .rr-book {
+		border-radius: 9px 4px 4px 9px;
+	}
+	/* Spine: a soft fold near the binding edge. */
+	.rr-cover::before {
+		content: '';
+		position: absolute;
+		inset-block: 0;
+		inset-inline-start: 0;
+		width: 9%;
+		background: linear-gradient(90deg, rgba(0, 0, 0, 0.22), rgba(255, 255, 255, 0.07) 55%, rgba(0, 0, 0, 0));
+		pointer-events: none;
+	}
+	.rr[dir='rtl'] .rr-cover::before {
+		background: linear-gradient(270deg, rgba(0, 0, 0, 0.22), rgba(255, 255, 255, 0.07) 55%, rgba(0, 0, 0, 0));
+	}
+	/* Paper grain + top light. */
+	.rr-cover::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background:
+			radial-gradient(120% 60% at 70% 0%, rgba(255, 255, 255, 0.16), transparent 60%),
+			linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.18));
+		pointer-events: none;
+	}
+	@media (hover: hover) {
+		.rr-book:hover .rr-cover {
+			transform: translateY(-4px);
+			box-shadow: 0 2px 2px rgba(0, 0, 0, 0.08), 0 18px 30px -14px rgba(29, 28, 26, 0.5);
+		}
+	}
+	.rr-cover-inner {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		padding: 12% 11% 10% 15%;
+	}
+	.rr[dir='rtl'] .rr-cover-inner {
+		padding: 12% 15% 10% 11%;
+	}
+	.rr-cover-rule {
+		width: 22%;
+		height: 1px;
+		background: rgba(255, 255, 255, 0.55);
+	}
+	.rr-cover-title {
+		margin-top: 10%;
+		font-family: var(--rr-serif);
+		font-weight: 500;
+		line-height: 1.18;
+		overflow-wrap: anywhere;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 5;
+		overflow: hidden;
+		container-type: normal;
+	}
+	.rr[dir='rtl'] .rr-cover-title {
+		font-weight: 600;
+		line-height: 1.5;
+	}
+	.rr-cover-foot {
+		margin-top: auto;
+		font-size: 0.62em;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.7);
+	}
+	.rr[dir='rtl'] .rr-cover-foot {
+		letter-spacing: 0;
+	}
+	.rr-cover-wrap {
+		container-type: inline-size;
+	}
+	.rr-cover-wrap .rr-cover {
+		font-size: clamp(10px, 9.5cqi, 22px);
+	}
+
+	.rr-book-meta-title {
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.35;
+		color: var(--rr-ink);
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
+	}
+
+	/* Add-a-book tile: same footprint as a cover. */
+	.rr-add-tile {
+		display: flex;
+		aspect-ratio: 2 / 3;
+		width: 100%;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		border-radius: 10px;
+		border: 1.5px dashed var(--rr-line-strong);
+		color: var(--rr-ink-2);
+		text-align: center;
+		padding: 12px;
+		transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+	}
+	.rr-add-tile:hover {
+		border-color: var(--rr-accent);
+		background: var(--rr-accent-soft);
+		color: var(--rr-accent);
+	}
+	.rr-add-tile .rr-add-icon {
+		display: grid;
+		place-items: center;
+		width: 44px;
+		height: 44px;
+		border-radius: 999px;
+		background: var(--rr-surface);
+		box-shadow: var(--rr-shadow);
+		color: var(--rr-accent);
+		transition: transform 0.25s var(--rr-ease);
+	}
+	.rr-add-tile:hover .rr-add-icon {
+		transform: scale(1.06);
+	}
+
+	/* Horizontal shelf on phones, grid on larger screens. */
+	.rr-shelf-row {
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: 34%;
+		gap: 16px;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none;
+		padding-bottom: 6px;
+		margin-inline: -16px;
+		padding-inline: 16px;
+		scroll-padding-inline: 16px;
+	}
+	.rr-shelf-row::-webkit-scrollbar {
+		display: none;
+	}
+	.rr-shelf-row > * {
+		scroll-snap-align: start;
+	}
+	@media (min-width: 640px) {
+		.rr-shelf-row {
+			grid-auto-columns: 22%;
+		}
+	}
+	@media (min-width: 1024px) {
+		.rr-shelf-row {
+			grid-auto-flow: row;
+			grid-template-columns: repeat(6, minmax(0, 1fr));
+			overflow: visible;
+			margin-inline: 0;
+			padding-inline: 0;
+			gap: 28px 22px;
+		}
+	}
+	.rr-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(46%, 138px), 1fr));
+		gap: 28px 16px;
+	}
+	@media (min-width: 640px) {
+		.rr-grid {
+			grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+			gap: 34px 24px;
+		}
+	}
+
+	/* ---------- Menus & dialogs ---------- */
+	.rr.rr-portal {
+		background: transparent;
+	}
+	.rr-menu {
+		min-width: 180px;
+		padding: 6px;
+		border-radius: 14px;
+		background: var(--rr-surface);
+		border: 1px solid var(--rr-line);
+		box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.3);
+	}
+	.rr-menu-item {
+		display: flex;
+		width: 100%;
+		align-items: center;
+		gap: 10px;
+		padding: 9px 10px;
+		border-radius: 9px;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--rr-ink);
+		text-align: start;
+	}
+	.rr-menu-item:hover {
+		background: var(--rr-sunken);
+	}
+	.rr-menu-item.is-danger {
+		color: var(--rr-danger);
+	}
+	.rr-menu-item.is-danger:hover {
+		background: var(--rr-danger-soft);
+	}
+	.rr-scrim {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		padding: 12px;
+		background: rgba(18, 18, 16, 0.42);
+		backdrop-filter: blur(2px);
+	}
+	@media (min-width: 640px) {
+		.rr-scrim {
+			align-items: center;
+		}
+	}
+	.rr-dialog {
+		width: 100%;
+		max-width: 420px;
+		padding: 22px;
+		border-radius: 20px;
+		background: var(--rr-surface);
+		color: var(--rr-ink);
+		box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.45);
+	}
+
+	/* ---------- Choice tiles (import source) ---------- */
+	.rr-choice {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 10px;
+		padding: 14px;
+		border-radius: 14px;
+		border: 1px solid var(--rr-line-strong);
+		background: var(--rr-surface);
+		text-align: start;
+		transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+	}
+	.rr-choice:hover {
+		border-color: color-mix(in srgb, var(--rr-accent) 45%, var(--rr-line-strong));
+	}
+	.rr-choice[aria-checked='true'] {
+		border-color: var(--rr-accent);
+		box-shadow: 0 0 0 3px var(--rr-accent-soft);
+	}
+	.rr-choice-icon {
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border-radius: 10px;
+		background: var(--rr-sunken);
+		color: var(--rr-ink-2);
+		transition: background-color 0.15s, color 0.15s;
+	}
+	.rr-choice[aria-checked='true'] .rr-choice-icon {
+		background: var(--rr-accent);
+		color: var(--rr-accent-ink);
+	}
+
+	.rr-dropzone {
+		display: flex;
+		width: 100%;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		padding: 36px 20px;
+		border-radius: 16px;
+		border: 1.5px dashed var(--rr-line-strong);
+		background: var(--rr-bg);
+		text-align: center;
+		transition: border-color 0.2s, background-color 0.2s;
+	}
+	.rr-dropzone:hover,
+	.rr-dropzone.is-over {
+		border-color: var(--rr-accent);
+		background: var(--rr-accent-soft);
+	}
+
+	/* ---------- Review card ---------- */
+	.rr-flash {
+		perspective: 1400px;
+	}
+	/* Faces share one grid cell, so the card grows with the longer side instead of clipping it. */
+	.rr-flash-inner {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		transform-style: preserve-3d;
+		transition: transform 0.55s var(--rr-ease);
+	}
+	.rr-flash-inner.is-flipped {
+		transform: rotateY(180deg);
+	}
+	.rr-flash-face {
+		grid-area: 1 / 1;
+		min-width: 0;
+		min-height: 260px;
+		display: flex;
+		flex-direction: column;
+		padding: 28px;
+		border-radius: 22px;
+		background: var(--rr-surface);
+		border: 1px solid var(--rr-line);
+		box-shadow: var(--rr-shadow);
+		backface-visibility: hidden;
+		-webkit-backface-visibility: hidden;
+	}
+	.rr-flash-face.is-back {
+		transform: rotateY(180deg);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.rr *,
+		.rr *::before,
+		.rr *::after {
+			transition-duration: 0.01ms !important;
+			animation-duration: 0.01ms !important;
+		}
+	}
+
+	.rr-scroll-none {
+		scrollbar-width: none;
+	}
+	.rr-scroll-none::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* Tab change: a short rise-and-fade done in CSS, so content never waits on a JS animation frame. */
+	.rr-enter {
+		animation: rr-enter 0.32s var(--rr-ease) both;
+	}
+	@keyframes rr-enter {
+		from {
+			opacity: 0;
+			transform: translateY(8px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+}
+
+/*
+ * Outside the layer on purpose: the older .ai-reading-root theme (unlayered) sets colour and the
+ * --ar-* tokens the notebook drawer reads; two classes here outrank it and point it at the room palette.
+ */
+.ai-reading-root.rr {
+	--ar-ink: var(--rr-ink);
+	--ar-heading: var(--rr-ink);
+	--ar-muted: var(--rr-ink-2);
+	--ar-paper: var(--rr-surface);
+	--ar-accent: var(--rr-accent);
+	--ar-border: var(--rr-line);
+	--gm-paper: var(--rr-surface);
+	color: var(--rr-ink);
+	background: var(--rr-bg);
+}
+
+/*
+ * The WhatsApp mobile shell forces its UI font on every node with an unlayered !important.
+ * A layered !important outranks any unlayered one, so titles keep the serif.
+ */
+@layer components {
+	.rr .rr-serif,
+	.rr .rr-display,
+	.rr .rr-cover-title {
+		font-family: var(--rr-serif) !important;
+	}
+}
+
+/* The room's own scroller: thin and neutral (the WhatsApp page paints scrollbars green). */
+.rr-main {
+	scrollbar-width: thin;
+	scrollbar-color: var(--rr-line-strong) transparent;
+}
+.rr-main::-webkit-scrollbar {
+	width: 8px;
+}
+.rr-main::-webkit-scrollbar-thumb {
+	border-radius: 8px;
+	background: var(--rr-line-strong);
+}
+.rr-main::-webkit-scrollbar-track {
+	background: transparent;
+}
+@media (max-width: 639px) {
+	.rr-main {
+		scrollbar-width: none;
+	}
+	.rr-main::-webkit-scrollbar {
+		display: none;
+	}
+}

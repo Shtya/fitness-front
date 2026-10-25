@@ -1,71 +1,43 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { Link, useRouter } from '@/i18n/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
-import {
-	BookOpen,
-	Dumbbell,
-	Flame,
-	Import,
-	Library,
-	Lightbulb,
-	MessageSquare,
-	MessageSquareQuote,
-	Home,
-	NotebookPen,
-	Sparkles,
-} from 'lucide-react';
+import { useRouter } from '@/i18n/navigation';
+import { motion } from 'framer-motion';
+import { BookOpen, ChevronLeft, Home, Layers, Library, NotebookPen, Plus } from 'lucide-react';
 import NotebookDrawer from '@/components/ai-reading/NotebookDrawer';
 import ReadingHub from '@/components/ai-reading/ReadingHub';
-import AiWorkspace from '@/components/ai-reading/AiWorkspace';
-import TopicLibrary from '@/components/ai-reading/TopicLibrary';
-import PromptLibrary from '@/components/ai-reading/PromptLibrary';
 import ImportPanel from '@/components/ai-reading/ImportPanel';
 import DailyReview from '@/components/ai-reading/DailyReview';
 import LibraryPanel from '@/components/ai-reading/LibraryPanel';
-import GenerateForm from '@/components/ai-reading/GenerateForm';
 import ReadingView from '@/components/ai-reading/ReadingView';
 import { ReadingNavProvider } from '@/lib/ai-reading/reading-nav';
 import { uiFontFamily } from '@/lib/ai-reading/fonts';
-import { getBook, hydrateAiReadingStore } from '@/lib/ai-reading/storage';
-import '@/components/pages/dashboard/users/roster/roster.css';
+import { getBook, hydrateAiReadingStore, listBooks } from '@/lib/ai-reading/storage';
+import { collectAllDue } from '@/lib/ai-reading/spaced-review';
 import '@/lib/ai-reading/ai-reading-theme.css';
+import '@/components/ai-reading/room/reading-room.css';
 
-/** One shell width for every tab — no layout jump. */
-const SHELL = 'mx-auto w-full max-w-6xl px-3 sm:px-4';
-
-const TABS = [
-	{ id: 'home', icon: Home, key: 'nav.home' },
-	{ id: 'studio', icon: MessageSquare, key: 'nav.studio', hasMenu: true },
-	{ id: 'library', icon: Library, key: 'nav.library' },
-	{ id: 'import', icon: Import, key: 'nav.import' },
-	{ id: 'review', icon: Flame, key: 'nav.review' },
-];
-
-const STUDIO_SUB = [
-	{ id: 'chat', key: 'studioSub.chat', icon: MessageSquare },
-	{ id: 'topics', key: 'studioSub.topics', icon: Lightbulb },
-	{ id: 'prompts', key: 'studioSub.prompts', icon: MessageSquareQuote },
-	{ id: 'generate', key: 'studioSub.generate', icon: Sparkles },
-];
+const TAB_IDS = ['home', 'library', 'import', 'review'];
+const SHELL = 'mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8';
 
 /**
- * The whole reading room. `embedded` runs it inside another page (the WhatsApp Reading tab):
- * tabs live in local state instead of the URL, and books open in place instead of navigating.
+ * The reading room: Home · Library · Import · Review.
+ * `embedded` runs it inside another page (the WhatsApp Reading tab): tabs live in local state
+ * instead of the URL, and books open in place instead of navigating away.
  */
-export default function StudioApp({ initialTab = 'home', embedded = false }) {
-	const t = useTranslations('aiReading');
+export default function StudioApp({ initialTab = 'home', embedded = false, onExit }) {
 	const locale = useLocale();
+	const ar = locale === 'ar';
+	const L = (a, e) => (ar ? a : e);
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const [tab, setTab] = useState(initialTab);
-	const [studioSub, setStudioSub] = useState('chat');
+	const [tab, setTab] = useState(TAB_IDS.includes(initialTab) ? initialTab : 'home');
 	const [ready, setReady] = useState(false);
 	const [notebookOpen, setNotebookOpen] = useState(false);
 	const [openBook, setOpenBook] = useState(null);
+	const [due, setDue] = useState(0);
 
 	useEffect(() => {
 		if (embedded) return undefined;
@@ -75,45 +47,36 @@ export default function StudioApp({ initialTab = 'home', embedded = false }) {
 
 	useEffect(() => {
 		let alive = true;
-		hydrateAiReadingStore()
-			.then(() => {
-				if (alive) setReady(true);
-			})
-			.catch(() => {
-				if (alive) setReady(true);
-			});
+		const finish = () => alive && setReady(true);
+		hydrateAiReadingStore().then(finish, finish);
 		return () => {
 			alive = false;
 		};
 	}, []);
 
 	useEffect(() => {
+		if (!ready) return undefined;
+		const count = () => setDue(collectAllDue(listBooks()).length);
+		count();
+		window.addEventListener('ai-reading:changed', count);
+		return () => window.removeEventListener('ai-reading:changed', count);
+	}, [ready, tab]);
+
+	useEffect(() => {
 		if (embedded) return;
 		const q = searchParams?.get('tab');
-		if (q && TABS.some(x => x.id === q)) setTab(q);
-		const sub = searchParams?.get('sub');
-		if (sub === 'journey') {
-			setTab('studio');
-			setStudioSub('topics');
-		} else if (sub && STUDIO_SUB.some(x => x.id === sub)) {
-			setTab('studio');
-			setStudioSub(sub);
-		}
+		// Old links (?tab=studio&sub=…) land on Home now that Studio is gone.
+		if (q) setTab(TAB_IDS.includes(q) ? q : 'home');
 	}, [embedded, searchParams]);
 
 	const goTab = useCallback(
-		(id, sub) => {
-			setTab(id);
-			const nextSub = id === 'studio' ? sub || studioSub || 'chat' : undefined;
-			if (nextSub) setStudioSub(nextSub);
-			const params = new URLSearchParams();
-			if (id !== 'home') params.set('tab', id);
-			if (id === 'studio' && nextSub && nextSub !== 'chat') params.set('sub', nextSub);
+		id => {
+			const next = TAB_IDS.includes(id) ? id : 'home';
+			setTab(next);
 			if (embedded) return;
-			const qs = params.toString();
-			router.replace(qs ? `/ai-studio?${qs}` : '/ai-studio', { scroll: false });
+			router.replace(next === 'home' ? '/ai-studio' : `/ai-studio?tab=${next}`, { scroll: false });
 		},
-		[embedded, router, studioSub],
+		[embedded, router],
 	);
 
 	const openBookInPlace = useCallback(id => {
@@ -121,159 +84,94 @@ export default function StudioApp({ initialTab = 'home', embedded = false }) {
 		if (book) setOpenBook(book);
 	}, []);
 
+	const font = uiFontFamily(ar ? 'ar' : 'en');
+
 	if (embedded && openBook) {
 		return (
-			<div className="ai-reading-root flex h-full min-h-0 flex-1 flex-col" style={{ fontFamily: uiFontFamily(locale === 'ar' ? 'ar' : 'en') }}>
+			<div className="ai-reading-root flex h-full min-h-0 flex-1 flex-col" style={{ fontFamily: font }}>
 				<ReadingView key={openBook.id} book={openBook} onBack={() => setOpenBook(null)} />
 			</div>
 		);
 	}
 
+	const NAV = [
+		{ id: 'home', Icon: Home, label: L('الرئيسية', 'Home') },
+		{ id: 'library', Icon: Library, label: L('مكتبتي', 'Library') },
+		{ id: 'import', Icon: Plus, label: L('إضافة', 'Add') },
+		{ id: 'review', Icon: Layers, label: L('مراجعة', 'Review'), badge: due },
+	];
+
 	const room = (
-
 		<div
-			className={`ai-reading-root gm-surface rs-scope flex h-full min-h-0 flex-1 flex-col ${locale === 'ar' ? 'rtl' : 'ltr'}`}
-			dir={embedded ? (locale === 'ar' ? 'rtl' : 'ltr') : undefined}
-			style={{ fontFamily: uiFontFamily(locale === 'ar' ? 'ar' : 'en') }}
+			className="ai-reading-root rr flex h-full min-h-0 flex-1 flex-col"
+			dir={ar ? 'rtl' : 'ltr'}
+			style={{ fontFamily: font, minHeight: embedded ? undefined : '100dvh' }}
 		>
-			<header className="z-40 shrink-0 border-b bg-(--gm-paper) backdrop-blur-md" style={{ borderColor: 'var(--ar-border)' }}>
-				<div className={`${SHELL} flex items-center justify-between gap-2 py-2 sm:gap-3 sm:py-3`}>
-					<div className="flex min-w-0 items-center gap-2 sm:gap-3">
-						<span
-							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white sm:h-10 sm:w-10 sm:rounded-2xl"
-							style={{ background: 'linear-gradient(180deg, var(--color-primary-500), var(--color-primary-600))', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.22)' }}
-						>
-							<BookOpen size={16} />
-						</span>
-						<div className="min-w-0">
-							<p className="truncate font-[family-name:var(--font-space-grotesk)] text-[13px] font-bold sm:text-sm" style={{ color: 'var(--ar-heading)' }}>
-								{t('brand')}
-							</p>
-							<p className="hidden truncate text-[11px] sm:block" style={{ color: 'var(--ar-muted)' }}>{t('brandSub')}</p>
-						</div>
-					</div>
-					<div className="flex shrink-0 items-center gap-1.5">
-						<button
-							type="button"
-							onClick={() => setNotebookOpen(true)}
-							className="rs-btn shrink-0"
-							aria-label={t('notebook.open')}
-							title={t('reading.tips.notebook')}
-						>
-							<NotebookPen size={13} />
-							<span className="hidden sm:inline">{t('notebook.open')}</span>
-						</button>
-						{!embedded && <Link
-							href="/ai-studio/fitness"
-							className="rs-btn shrink-0"
-							aria-label={t('nav.fitness')}
-							title={t('nav.fitness')}
-						>
-							<Dumbbell size={13} />
-							<span className="hidden sm:inline">{t('nav.fitness')}</span>
-						</Link>}
-					</div>
-				</div>
-
-				<nav
-					className={`${SHELL} flex gap-0.5 overflow-x-auto overscroll-x-contain pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-1`}
-				>
-					{TABS.map(item => {
-						const Icon = item.icon;
-						const active = tab === item.id;
-						const onClick = item.hasMenu ? () => goTab('studio', studioSub) : () => goTab(item.id);
-						return (
-							<button
-								key={item.id}
-								type="button"
-								onClick={onClick}
-								className="relative shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition sm:px-3.5 sm:py-2 sm:text-xs"
-								style={{ color: active ? 'var(--ar-heading)' : 'var(--ar-muted)' }}
-							>
-								{active && (
-									<motion.span
-										layoutId="studio-main-tab"
-										className="absolute inset-0 rounded-full"
-										style={{ background: 'var(--gm-paper)', boxShadow: 'inset 0 0 0 1px var(--gm-line)' }}
-										transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-									/>
-								)}
-								<span className="relative z-10 inline-flex items-center gap-1 sm:gap-1.5">
-									<Icon size={12} />
-									{t(item.key)}
-								</span>
+			<header className="z-30 shrink-0 border-b backdrop-blur-md" style={{ borderColor: 'var(--rr-line)', background: 'color-mix(in srgb, var(--rr-bg) 88%, transparent)' }}>
+				<div className={`${SHELL} flex flex-wrap items-center gap-x-6 gap-y-3 pb-3 pt-[max(12px,env(safe-area-inset-top))] sm:flex-nowrap sm:py-3.5`}>
+					<div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
+						{onExit ? (
+							/* Phones only: the WhatsApp tab bar is hidden in the room, this is the way out. */
+							<button type="button" onClick={onExit} className="rr-icon-btn -ms-2 shrink-0 min-[769px]:hidden" aria-label={L('رجوع', 'Back')}>
+								<ChevronLeft size={22} style={ar ? { transform: 'scaleX(-1)' } : undefined} />
 							</button>
-						);
-					})}
-				</nav>
-
-				{tab === 'studio' && (
-					<div
-						className={`${SHELL} flex gap-1 overflow-x-auto overscroll-x-contain pb-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:pb-3`}
-					>
-						{STUDIO_SUB.map(s => {
-							const SubIcon = s.icon;
-							const subActive = studioSub === s.id;
-							return (
-								<button
-									key={s.id}
-									type="button"
-									onClick={() => goTab('studio', s.id)}
-									className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold transition sm:px-3 sm:py-1.5 sm:text-[11px] ${
-										subActive ? 'ar-chip-active' : 'ar-chip-idle'
-									}`}
-								>
-									<SubIcon size={11} />
-									{t(s.key)}
-								</button>
-							);
-						})}
+						) : null}
+						<span className="grid size-9 shrink-0 place-items-center rounded-xl" style={{ background: 'var(--rr-ink)', color: 'var(--rr-bg)' }}>
+							<BookOpen size={17} strokeWidth={2} />
+						</span>
+						<span className="rr-serif truncate text-[18px] font-medium">{L('غرفة القراءة', 'Reading Room')}</span>
 					</div>
-				)}
+					<div className="order-last w-full sm:order-none sm:flex sm:w-auto sm:flex-1 sm:justify-center">
+						<nav className="rr-tabs flex w-full sm:inline-flex sm:w-auto" aria-label={L('أقسام غرفة القراءة', 'Reading room sections')}>
+							{NAV.map(({ id, Icon, label, badge }) => {
+								const active = tab === id;
+								return (
+									<button
+										key={id}
+										type="button"
+										onClick={() => goTab(id)}
+										aria-current={active ? 'page' : undefined}
+										className="rr-tab flex-1 justify-center px-2.5 sm:flex-none sm:px-4"
+									>
+										{active && <motion.span layoutId={embedded ? 'rr-pill-embedded' : 'rr-pill'} className="rr-tab-pill" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+										<Icon size={15} strokeWidth={2} className="hidden min-[400px]:block" />
+										<span>{label}</span>
+										{badge ? <span className="rr-tab-badge">{badge > 99 ? '99+' : badge}</span> : null}
+									</button>
+								);
+							})}
+						</nav>
+					</div>
+					<button type="button" onClick={() => setNotebookOpen(true)} className="rr-btn rr-btn-ghost rr-btn-sm shrink-0" aria-label={L('النوت بوك', 'Notebook')}>
+						<NotebookPen size={16} />
+						<span className="hidden md:inline">{L('النوت بوك', 'Notebook')}</span>
+					</button>
+				</div>
 			</header>
 
-			<main className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-				<div className={`${SHELL} py-4 sm:py-6`}>
+			<main className="rr-main min-h-0 flex-1 overflow-y-auto overscroll-contain">
+				<div className={`${SHELL} pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.5rem))] pt-8 sm:pb-12 sm:pt-12`}>
 					{!ready ? (
-						<p className="py-16 text-center text-sm" style={{ color: 'var(--ar-muted)' }}>{t('common.loading')}</p>
+						<div className="space-y-6" aria-busy="true" aria-label={L('جاري التحميل', 'Loading')}>
+							<div className="h-10 w-2/3 max-w-sm animate-pulse rounded-xl" style={{ background: 'var(--rr-sunken)' }} />
+							<div className="h-48 animate-pulse rounded-2xl" style={{ background: 'var(--rr-sunken)' }} />
+						</div>
 					) : (
-					<AnimatePresence mode="wait">
-						<motion.div
-							key={`${tab}-${studioSub}`}
-							initial={{ opacity: 0, y: 8 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -4 }}
-							transition={{ duration: 0.2 }}
-						>
-							{tab === 'home' && <ReadingHub compact onNavigate={goTab} />}
-							{tab === 'studio' && (
-								<div>
-									{studioSub === 'chat' && <AiWorkspace embedded />}
-									{studioSub === 'topics' && <TopicLibrary />}
-									{studioSub === 'prompts' && <PromptLibrary />}
-									{studioSub === 'generate' && <GenerateForm />}
-								</div>
-							)}
+						<div key={tab} className="rr-enter">
+							{tab === 'home' && <ReadingHub onNavigate={goTab} />}
 							{tab === 'library' && <LibraryPanel />}
 							{tab === 'import' && <ImportPanel />}
 							{tab === 'review' && <DailyReview />}
-						</motion.div>
-					</AnimatePresence>
+						</div>
 					)}
 				</div>
 			</main>
-			<NotebookDrawer
-				open={notebookOpen}
-				onClose={() => setNotebookOpen(false)}
-				isRTL={locale === 'ar'}
-				fontFamily={uiFontFamily(locale === 'ar' ? 'ar' : 'en')}
-			/>
+			<NotebookDrawer open={notebookOpen} onClose={() => setNotebookOpen(false)} isRTL={ar} fontFamily={font} />
 		</div>
 	);
 
-	if (!embedded) return room;
 	return (
-		<ReadingNavProvider openBook={openBookInPlace} goTab={goTab}>
+		<ReadingNavProvider openBook={embedded ? openBookInPlace : undefined} goTab={goTab}>
 			{room}
 		</ReadingNavProvider>
 	);

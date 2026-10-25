@@ -7981,9 +7981,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		background: #ffffff;
 	}
 
-	.wa-web-desktop .wa-web-main:not(.wa-chat-workspace-scroll):not(.wa-board-workspace) {
+	/* .wa-web-desktop .wa-web-main:not(.wa-chat-workspace-scroll):not(.wa-board-workspace) {
 		padding: 16px 18px 20px;
-	}
+	} */
 
 	.wa-web-desktop .wa-web-main.wa-board-workspace {
 		display: flex !important;

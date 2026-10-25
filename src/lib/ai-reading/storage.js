@@ -32,8 +32,8 @@ const LEGACY_KEYS = [
 ];
 
 const DEFAULT_PREFS = {
-	fontSize: 18,
-	lineHeight: 1.75,
+	fontSize: 19,
+	lineHeight: 1.8,
 	maxWidth: 680,
 	theme: 'light',
 	fontWeight: 400,
@@ -63,6 +63,8 @@ const cache = {
 	notebook: [],
 	notebookLoaded: false,
 	ready: false,
+	/* True only after the server copy was read; until then nothing may overwrite the server. */
+	loadedFromServer: false,
 	hydrating: null,
 };
 
@@ -72,6 +74,25 @@ let notebookQueue = Promise.resolve();
 
 let flushTimer = null;
 let flushPromise = null;
+/* Per-book saves still in flight; a re-hydrate waits for them so it never reads an older copy. */
+const pendingBookWrites = new Set();
+
+function trackWrite(promise) {
+	pendingBookWrites.add(promise);
+	promise.finally(() => pendingBookWrites.delete(promise));
+	return promise;
+}
+
+/** Push anything written locally but not yet on the server (debounced flush + per-book saves). */
+async function settleLocalWrites() {
+	if (flushTimer) {
+		clearTimeout(flushTimer);
+		flushTimer = null;
+		await flushNow();
+	}
+	if (flushPromise) await flushPromise;
+	if (pendingBookWrites.size) await Promise.allSettled([...pendingBookWrites]);
+}
 
 function emit() {
 	if (typeof window === 'undefined') return;
@@ -116,6 +137,16 @@ async function flushNow() {
 	if (typeof window === 'undefined') return;
 	const token = localStorage.getItem('accessToken');
 	if (!token) return;
+	/*
+	 * The PUT replaces every collection on the server. Until this tab has loaded the server copy
+	 * (cache.loadedFromServer), its snapshot is empty or partial — sending it would wipe the
+	 * reader's library. That happened when a module reload reset the cache and a default prompt
+	 * was saved before hydration. Local edits made before loading stay queued, not sent.
+	 */
+	if (!cache.loadedFromServer) {
+		console.warn('[ai-reading] skipped cloud save: library not loaded from the server yet');
+		return;
+	}
 	const body = snapshot();
 	try {
 		const { data } = await api.put('/ai-reading/state', body, { timeout: 120000 });
@@ -133,6 +164,7 @@ function scheduleFlush() {
 	if (!localStorage.getItem('accessToken')) return;
 	clearTimeout(flushTimer);
 	flushTimer = setTimeout(() => {
+		flushTimer = null;
 		flushPromise = flushNow().finally(() => {
 			flushPromise = null;
 		});
@@ -182,6 +214,8 @@ export async function hydrateAiReadingStore() {
 	if (cache.hydrating) return cache.hydrating;
 
 	cache.hydrating = (async () => {
+		/* Re-hydrating replaces the local copy; send local edits first so a fresh read can't undo them. */
+		if (cache.loadedFromServer) await settleLocalWrites();
 		const token = localStorage.getItem('accessToken');
 		if (!token) {
 			cache.ready = true;
@@ -223,12 +257,14 @@ export async function hydrateAiReadingStore() {
 					};
 					const { data: saved } = await api.put('/ai-reading/state', migrated, { timeout: 120000 });
 					applyServerState(saved || migrated);
+					cache.loadedFromServer = true;
 					clearLegacyLocalStorage();
 					return cache;
 				}
 			}
 
 			applyServerState(data || emptyStateLocal());
+			cache.loadedFromServer = Boolean(data && typeof data === 'object');
 			clearLegacyLocalStorage();
 		} catch (err) {
 			console.warn('[ai-reading] hydrate failed', err?.message || err);
@@ -405,7 +441,7 @@ export function upsertBook(book) {
 	scheduleFlush();
 	/* Also push single book for faster durability on import */
 	if (typeof window !== 'undefined' && localStorage.getItem('accessToken')) {
-		api.post('/ai-reading/books', { book: next }, { timeout: 120000 }).catch(() => {});
+		trackWrite(api.post('/ai-reading/books', { book: next }, { timeout: 120000 }).catch(() => {}));
 	}
 	return next;
 }

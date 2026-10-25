@@ -1,90 +1,37 @@
 /** Reading ambience themes + typography prefs.
- *  Default (`light`) follows the live tenant/system palette via CSS variables.
- *  Dark themes stay primary-tinted (no custom forest/cream chrome).
+ *  Every theme is a fixed, hand-tuned palette (paper, ink, a quiet accent) so a page reads the
+ *  same whatever the dashboard's brand colour is. Inks stay below pure black/white to ease glare.
+ *  `rule` is the hairline colour for dividers; `mark` tints highlights and the progress fill.
  */
 
 export const THEME_STYLES = {
-	light: {
-		bg: 'var(--ar-bg, color-mix(in srgb, var(--color-primary-50) 70%, #ffffff))',
-		ink: 'var(--ar-ink, var(--color-primary-950, #0f172a))',
-		muted: 'var(--ar-muted, color-mix(in srgb, var(--color-primary-700) 42%, #64748b))',
-		paper: 'var(--ar-paper, #ffffff)',
-		accent: 'var(--ar-accent, var(--color-primary-600))',
-		heading: 'var(--ar-heading, var(--color-primary-800))',
-	},
-	dark: {
-		bg: 'color-mix(in srgb, var(--color-primary-950, #0f172a) 88%, #020617)',
-		ink: '#f1f5f9',
-		muted: 'color-mix(in srgb, var(--color-primary-200, #e2e8f0) 55%, #94a3b8)',
-		paper: 'color-mix(in srgb, var(--color-primary-900, #1e293b) 70%, #0f172a)',
-		accent: 'var(--color-primary-400, #818cf8)',
-		heading: 'var(--color-primary-100, #e0e7ff)',
-	},
-	sepia: {
-		bg: 'color-mix(in srgb, var(--color-primary-50, #f8fafc) 35%, #f5e6c8)',
-		ink: '#3b2a1a',
-		muted: '#7a6348',
-		paper: '#fbf3e3',
-		accent: 'var(--color-primary-700, #4338ca)',
-		heading: 'var(--color-primary-900, #1e1b4b)',
-	},
-	paper: {
-		bg: 'color-mix(in srgb, var(--color-primary-50, #f8fafc) 40%, #f7f2e8)',
-		ink: '#2c2416',
-		muted: '#7a6f5d',
-		paper: '#fff9ef',
-		accent: 'var(--color-primary-600, #4f46e5)',
-		heading: 'var(--color-primary-800, #1e293b)',
-	},
-	ivory: {
-		bg: 'color-mix(in srgb, var(--color-primary-50, #f8fafc) 55%, #f4f0e6)',
-		ink: 'var(--color-primary-950, #0f172a)',
-		muted: '#6b7280',
-		paper: '#fbf8f1',
-		accent: 'var(--color-primary-600, #4f46e5)',
-		heading: 'var(--color-primary-800, #1e293b)',
-	},
-	sand: {
-		bg: 'color-mix(in srgb, var(--color-primary-50, #f8fafc) 30%, #ebe4d4)',
-		ink: '#3a2f24',
-		muted: '#8a7a66',
-		paper: '#f5efe3',
-		accent: 'var(--color-primary-600, #4f46e5)',
-		heading: 'var(--color-primary-800, #1e293b)',
-	},
-	/** Legacy id — now mirrors system dark (no green forest chrome). */
-	forest: {
-		bg: 'color-mix(in srgb, var(--color-primary-950, #0f172a) 88%, #020617)',
-		ink: '#f1f5f9',
-		muted: 'color-mix(in srgb, var(--color-primary-200, #e2e8f0) 55%, #94a3b8)',
-		paper: 'color-mix(in srgb, var(--color-primary-900, #1e293b) 70%, #0f172a)',
-		accent: 'var(--color-primary-400, #818cf8)',
-		heading: 'var(--color-primary-100, #e0e7ff)',
-	},
-	midnight: {
-		bg: 'color-mix(in srgb, var(--color-primary-950, #0f172a) 92%, #020617)',
-		ink: '#e8eef8',
-		muted: 'color-mix(in srgb, var(--color-primary-200, #e2e8f0) 50%, #94a3b8)',
-		paper: 'color-mix(in srgb, var(--color-primary-900, #1e293b) 75%, #0b1220)',
-		accent: 'var(--color-primary-400, #818cf8)',
-		heading: 'var(--color-primary-100, #e0e7ff)',
-	},
-	dusk: {
-		bg: 'color-mix(in srgb, var(--color-primary-950, #0f172a) 80%, #1a1524)',
-		ink: '#f0e9f7',
-		muted: 'color-mix(in srgb, var(--color-primary-200, #e2e8f0) 45%, #b3a4c7)',
-		paper: 'color-mix(in srgb, var(--color-primary-900, #1e293b) 60%, #231c31)',
-		accent: 'var(--color-primary-400, #818cf8)',
-		heading: 'var(--color-primary-100, #e0e7ff)',
-	},
-	slate: {
-		bg: 'color-mix(in srgb, var(--color-primary-950, #0f172a) 70%, #1c1f24)',
-		ink: '#e8eaed',
-		muted: '#9aa0a6',
-		paper: 'color-mix(in srgb, var(--color-primary-900, #1e293b) 55%, #25292f)',
-		accent: 'var(--color-primary-400, #818cf8)',
-		heading: 'var(--color-primary-100, #e0e7ff)',
-	},
+	light: { bg: '#fbfaf7', paper: '#ffffff', ink: '#26241f', muted: '#8a857c', accent: '#1f6f5c', heading: '#1b1a17', rule: 'rgba(38,36,31,.09)' },
+	paper: { bg: '#f7f1e5', paper: '#fffaf0', ink: '#2f2a21', muted: '#8a8070', accent: '#8a5a2b', heading: '#241f17', rule: 'rgba(47,42,33,.10)' },
+	sepia: { bg: '#f1e5cc', paper: '#f8eedb', ink: '#433421', muted: '#8b7656', accent: '#8c5a2e', heading: '#33271a', rule: 'rgba(67,52,33,.12)' },
+	ivory: { bg: '#f2f1ed', paper: '#fafaf8', ink: '#2a2a2c', muted: '#86868b', accent: '#3f5f8a', heading: '#1d1d1f', rule: 'rgba(42,42,44,.09)' },
+	sand: { bg: '#e8e1d2', paper: '#f2ecdf', ink: '#3a3025', muted: '#857664', accent: '#7a5c34', heading: '#2c241b', rule: 'rgba(58,48,37,.12)' },
+	dark: { bg: '#18191b', paper: '#202124', ink: '#d9d6d0', muted: '#8f8b84', accent: '#7cc4ae', heading: '#ece9e3', rule: 'rgba(217,214,208,.10)' },
+	midnight: { bg: '#0e1116', paper: '#161b22', ink: '#c9d1d9', muted: '#7d8590', accent: '#79b8ff', heading: '#e6edf3', rule: 'rgba(201,209,217,.10)' },
+	dusk: { bg: '#1c1a21', paper: '#24212b', ink: '#ddd6e3', muted: '#948ba0', accent: '#c3a6e8', heading: '#efe9f4', rule: 'rgba(221,214,227,.10)' },
+	slate: { bg: '#202326', paper: '#272b2f', ink: '#d6d9dc', muted: '#8e959b', accent: '#8ab4c9', heading: '#eceff1', rule: 'rgba(214,217,220,.10)' },
+	/** Legacy id kept for saved prefs: a deep, low-glare green night. */
+	forest: { bg: '#121c18', paper: '#18241f', ink: '#d3ddd6', muted: '#82938a', accent: '#8fcfb2', heading: '#e8f0ea', rule: 'rgba(211,221,214,.10)' },
+};
+
+/** The themes offered in the quick "Aa" sheet, light to dark. */
+export const QUICK_THEMES = ['light', 'paper', 'sepia', 'sand', 'dark', 'midnight'];
+
+export const THEME_LABELS = {
+	light: ['أبيض', 'White'],
+	paper: ['كريمي', 'Cream'],
+	sepia: ['سيبيا', 'Sepia'],
+	ivory: ['عاجي', 'Ivory'],
+	sand: ['رملي', 'Sand'],
+	dark: ['ليلي', 'Night'],
+	midnight: ['منتصف الليل', 'Midnight'],
+	dusk: ['غسق', 'Dusk'],
+	slate: ['رمادي', 'Slate'],
+	forest: ['غابة', 'Forest'],
 };
 
 export const READING_THEME_IDS = Object.keys(THEME_STYLES);
@@ -104,8 +51,8 @@ export function isArabicFontPreset(preset) {
 }
 
 export const DEFAULT_READING_PREFS = {
-	fontSize: 18,
-	lineHeight: 1.75,
+	fontSize: 19,
+	lineHeight: 1.8,
 	maxWidth: 680,
 	theme: 'light',
 	fontWeight: 400,
@@ -119,7 +66,7 @@ export const DEFAULT_READING_PREFS = {
 export function resolveContentFont(lang, preset = 'auto') {
 	const isAr = lang === 'ar';
 
-	if (preset === 'arabic' || (preset === 'auto' && isAr)) {
+	if (preset === 'arabic') {
 		return 'var(--font-arabic), Tajawal, "Noto Sans Arabic", "Segoe UI", sans-serif';
 	}
 	if (preset === 'cairo') {
@@ -163,7 +110,7 @@ export function resolveContentFont(lang, preset = 'auto') {
 	}
 	// auto (en) or unknown
 	if (isAr) {
-		return 'var(--font-arabic), Tajawal, Cairo, "Noto Naskh Arabic", sans-serif';
+		return '"Noto Naskh Arabic", Amiri, var(--font-arabic), serif';
 	}
-	return 'var(--font-space-grotesk), "DM Sans", Georgia, serif';
+	return 'Literata, Newsreader, Georgia, "Iowan Old Style", serif';
 }
