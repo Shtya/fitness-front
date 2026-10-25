@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useLocale } from 'next-intl';
 import { uiFontFamily } from '@/lib/ai-reading/fonts';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Check, Clock3, Gauge, MoreHorizontal, PenLine, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Clock3, Gauge, MoreHorizontal, PenLine, Plus, Trash2 } from 'lucide-react';
 import { getPrefs, savePrefs } from '@/lib/ai-reading/storage';
 import { DEFAULT_WPM, WPM_MAX, WPM_MIN, clampWpm, formatCount, formatMinutes, getBookMeasure, minutesFor, wordsLeft, wpmFor } from '@/lib/ai-reading/book-stats';
 
@@ -59,22 +59,46 @@ export function bookPercent(book) {
 	return Math.max(0, Math.min(100, Math.round(book?.progress?.percent || 0)));
 }
 
-export function bookSourceLabel(book, L) {
-	if (book?.source === 'imported') return L('مستورد', 'Imported');
-	if (book?.source === 'generated') return L('بالذكاء الاصطناعي', 'AI written');
-	return L('كتاب', 'Book');
-}
-
-export function BookCover({ book, className = '' }) {
-	const { L } = useRoomLang();
+/**
+ * A book cover. `detailed` puts everything a shelf needs on the cover itself — size, reading time
+ * and progress — so nothing has to repeat underneath.
+ */
+export function BookCover({ book, detailed = false, className = '' }) {
+	const { ar, L } = useRoomLang();
+	const { wpm } = useReadingSpeed();
 	const [c1, c2] = coverColors(book);
+	const pct = bookPercent(book);
+	const timing = detailed ? bookTiming(book, wpm) : null;
+	const compact = n => new Intl.NumberFormat(ar ? 'ar-EG-u-nu-latn' : 'en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 	return (
 		<div className={`rr-cover-wrap ${className}`}>
-			<div className="rr-cover" style={{ background: `linear-gradient(155deg, ${c1}, ${c2})` }}>
+			<div className={`rr-cover ${detailed ? 'is-detailed' : ''}`} style={{ background: `linear-gradient(155deg, ${c1}, ${c2})` }}>
 				<div className="rr-cover-inner">
 					<span className="rr-cover-rule" />
 					<p className="rr-cover-title" dir="auto">{book.title}</p>
-					<p className="rr-cover-foot truncate">{bookSourceLabel(book, L)}</p>
+					{timing ? (
+						<div className="rr-cover-meta">
+							{timing.measure.words ? (
+								<p className="tabular-nums">
+									{compact(timing.measure.words)} {L('كلمة', 'words')} · {compact(timing.measure.letters)} {L('حرف', 'letters')}
+								</p>
+							) : null}
+							{timing.total ? (
+								<p className="flex items-center gap-1 tabular-nums">
+									<Clock3 className="rr-cover-icon" aria-hidden />
+									{pct > 0 && pct < 100 ? L(`فاضل ${formatMinutes(timing.left, true)}`, `${formatMinutes(timing.left, false)} left`) : formatMinutes(timing.total, ar)}
+								</p>
+							) : null}
+							<div className="rr-cover-progress">
+								<span className="rr-cover-track" aria-hidden>
+									<span style={{ width: `${pct}%` }} />
+								</span>
+								<span className="shrink-0 tabular-nums">
+									{pct >= 100 ? <Check className="rr-cover-icon" strokeWidth={3} aria-label={L('انتهيت', 'Finished')} /> : `${pct}%`}
+								</span>
+							</div>
+						</div>
+					) : null}
 				</div>
 			</div>
 		</div>
@@ -99,7 +123,7 @@ function useOutside(ref, open, onClose) {
 	}, [ref, open, onClose]);
 }
 
-/** A book on a shelf: cover, then title / author / progress underneath. */
+/** A book on a shelf: one cover carrying its title, size, time and progress. */
 export function BookTile({ book, onOpen, onRename, onDelete }) {
 	const { L } = useRoomLang();
 	const [menu, setMenu] = useState(false);
@@ -110,8 +134,8 @@ export function BookTile({ book, onOpen, onRename, onDelete }) {
 
 	return (
 		<div className="group relative min-w-0">
-			<button type="button" className="rr-book" onClick={() => onOpen?.(book.id)} aria-label={book.title}>
-				<BookCover book={book} />
+			<button type="button" className="rr-book" onClick={() => onOpen?.(book.id)} aria-label={`${book.title} — ${pct}%`}>
+				<BookCover book={book} detailed />
 			</button>
 			{hasMenu && (
 				<div ref={menuRef} className="pointer-events-none absolute inset-x-1.5 top-1.5 z-10 flex justify-end">
@@ -150,24 +174,6 @@ export function BookTile({ book, onOpen, onRename, onDelete }) {
 					</AnimatePresence>
 				</div>
 			)}
-			<button type="button" onClick={() => onOpen?.(book.id)} className="mt-3 block w-full text-start" tabIndex={-1}>
-				<p className="rr-book-meta-title" dir="auto">{book.title}</p>
-				<BookSize book={book} />
-				<div className="mt-2 flex items-center gap-2 text-[12px] rr-faint">
-					{pct >= 100 ? (
-						<span className="inline-flex items-center gap-1" style={{ color: 'var(--rr-accent)' }}>
-							<Check size={13} strokeWidth={2.5} /> {L('انتهيت منه', 'Finished')}
-						</span>
-					) : pct > 0 ? (
-						<>
-							<div className="rr-progress flex-1" aria-hidden><span style={{ width: `${pct}%` }} /></div>
-							<span className="tabular-nums">{pct}%</span>
-						</>
-					) : (
-						<span className="truncate">{L('لم تبدأ بعد', 'Not started')}</span>
-					)}
-				</div>
-			</button>
 		</div>
 	);
 }
@@ -435,6 +441,104 @@ export function ReadingSpeedControl() {
 							{L(`رجّع الافتراضي (${DEFAULT_WPM.ar} / ${DEFAULT_WPM.en})`, `Reset to default (${DEFAULT_WPM.ar} / ${DEFAULT_WPM.en})`)}
 						</button>
 					</motion.div>
+				)}
+			</AnimatePresence>
+		</div>
+	);
+}
+
+/**
+ * The room's dropdown: a pill that shows the current choice and opens a small list under it.
+ * Keyboard: Enter/Space/↓ opens, ↑/↓ move, Enter picks, Esc closes.
+ */
+export function Dropdown({ value, options, onChange, label, icon: Icon, className = '' }) {
+	const [open, setOpen] = useState(false);
+	const [active, setActive] = useState(0);
+	const ref = useRef(null);
+	const listRef = useRef(null);
+	useOutside(ref, open, () => setOpen(false));
+	const current = options.find(o => o.value === value) || options[0];
+
+	useEffect(() => {
+		if (!open) return;
+		setActive(Math.max(0, options.findIndex(o => o.value === value)));
+		requestAnimationFrame(() => listRef.current?.focus());
+	}, [open, options, value]);
+
+	const pick = opt => {
+		onChange(opt.value);
+		setOpen(false);
+	};
+	const onListKey = e => {
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			setActive(i => (i + 1) % options.length);
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			setActive(i => (i - 1 + options.length) % options.length);
+		} else if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			pick(options[active]);
+		} else if (e.key === 'Tab') {
+			setOpen(false);
+		}
+	};
+
+	return (
+		<div ref={ref} className={`relative ${className}`}>
+			<button
+				type="button"
+				onClick={() => setOpen(v => !v)}
+				onKeyDown={e => {
+					if (e.key === 'ArrowDown') {
+						e.preventDefault();
+						setOpen(true);
+					}
+				}}
+				className="rr-dropdown-btn"
+				aria-haspopup="listbox"
+				aria-expanded={open}
+				aria-label={label ? `${label}: ${current?.label}` : undefined}
+			>
+				{Icon ? <Icon size={15} className="shrink-0 rr-faint" aria-hidden /> : null}
+				<span className="min-w-0 truncate">{current?.label}</span>
+				<ChevronDown size={15} className="shrink-0 rr-faint transition-transform" style={open ? { transform: 'rotate(180deg)' } : undefined} aria-hidden />
+			</button>
+			<AnimatePresence>
+				{open && (
+					<motion.ul
+						ref={listRef}
+						tabIndex={-1}
+						role="listbox"
+						aria-label={label}
+						aria-activedescendant={`rr-opt-${options[active]?.value}`}
+						onKeyDown={onListKey}
+						initial={{ opacity: 0, y: -4, scale: 0.98 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: -4, scale: 0.98 }}
+						transition={{ duration: 0.14 }}
+						className="rr-menu absolute end-0 top-full z-30 mt-2 w-max min-w-full max-w-[min(18rem,calc(100vw-2rem))] outline-none"
+					>
+						{label ? <li className="px-2.5 pb-1 pt-1.5 text-[11.5px] font-semibold rr-faint" role="presentation">{label}</li> : null}
+						{options.map((opt, i) => {
+							const selected = opt.value === value;
+							return (
+								<li
+									key={opt.value}
+									id={`rr-opt-${opt.value}`}
+									role="option"
+									aria-selected={selected}
+									onPointerEnter={() => setActive(i)}
+									onClick={() => pick(opt)}
+									className="rr-menu-item cursor-pointer"
+									style={i === active ? { background: 'var(--rr-sunken)' } : undefined}
+								>
+									<span className="min-w-0 flex-1 truncate" style={selected ? { fontWeight: 600 } : undefined}>{opt.label}</span>
+									{selected ? <Check size={15} style={{ color: 'var(--rr-accent)' }} aria-hidden /> : <span className="w-[15px]" aria-hidden />}
+								</li>
+							);
+						})}
+					</motion.ul>
 				)}
 			</AnimatePresence>
 		</div>

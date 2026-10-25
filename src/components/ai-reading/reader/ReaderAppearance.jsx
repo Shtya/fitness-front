@@ -147,15 +147,13 @@ export default function ReaderAppearance({ prefs, updatePrefs, theme, uiAr, cont
 				))}
 			</div>
 
-			<div className="grid grid-cols-2 gap-3">
-				<div>
-					{label(L('المسافات', 'Spacing'))}
-					{seg(SPACING, spacing.v, v => updatePrefs({ lineHeight: v }))}
-				</div>
-				<div>
-					{label(L('عرض السطر', 'Line width'))}
-					{seg(WIDTHS, width.v, v => updatePrefs({ maxWidth: v }))}
-				</div>
+			<div>
+				{label(L('المسافة بين السطور', 'Line spacing'))}
+				{seg(SPACING, spacing.v, v => updatePrefs({ lineHeight: v }))}
+			</div>
+			<div>
+				{label(L('عرض السطر', 'Line width'))}
+				{seg(WIDTHS, width.v, v => updatePrefs({ maxWidth: v }))}
 			</div>
 
 			<div>

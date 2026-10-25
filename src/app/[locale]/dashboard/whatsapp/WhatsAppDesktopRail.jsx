@@ -18,8 +18,7 @@ import { FileText,
 	User,
 	Users,
 	Wallet,
-	Zap,
-} from 'lucide-react';
+	Zap, Radio } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaWhatsapp } from 'react-icons/fa';
@@ -161,6 +160,11 @@ export default function WhatsAppDesktopRail({
 			id: 'reading',
 			label: labels.reading || (ar ? 'القراءة' : 'Reading'),
 			icon: BookOpen,
+		},
+		{
+			id: 'online',
+			label: labels.onlineTab || (ar ? 'المتصلون' : 'Online'),
+			icon: Radio,
 		},
 		{
 			id: 'statuses',

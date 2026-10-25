@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, CloudOff, Loader2, NotebookPen, Plus, RotateCcw, Trash2, X } from 'lucide-react';
@@ -190,40 +191,51 @@ export default function NotebookDrawer({ open, onClose, theme: themeProp, isRTL 
 	};
 
 	const softBorder = `color-mix(in srgb, ${theme.ink} 9%, transparent)`;
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
+	if (!mounted) return null;
 
-	return (
+	/*
+	 * A notepad card in the middle of the screen (a bottom sheet on phones) rather than a side bar.
+	 * Rendered on <body>: inside the WhatsApp pane an ancestor traps position:fixed.
+	 */
+	return createPortal(
 		<AnimatePresence>
 			{open && (
-				<>
-					<motion.button
-						key="notebook-backdrop"
+				<motion.div
+					key="notebook-layer"
+					className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6"
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{ opacity: 0 }}
+				>
+					<button
 						type="button"
 						aria-label={t('notebook.close')}
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						className="fixed inset-0 z-[58] bg-black/30 backdrop-blur-[1px]"
+						className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
 						onClick={onClose}
 					/>
-					<motion.aside
+					<motion.section
 						key="notebook-panel"
 						role="dialog"
+						aria-modal="true"
 						aria-label={t('notebook.title')}
 						dir={isRTL ? 'rtl' : 'ltr'}
-						initial={{ opacity: 0, x: isRTL ? -28 : 28 }}
-						animate={{ opacity: 1, x: 0 }}
-						exit={{ opacity: 0, x: isRTL ? -28 : 28 }}
+						initial={{ opacity: 0, y: 28, scale: 0.98 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: 20, scale: 0.98 }}
 						transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-						className="fixed inset-y-0 z-[60] flex w-full max-w-[min(100vw,26rem)] flex-col shadow-2xl"
+						className="relative flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:max-h-[min(80dvh,46rem)] sm:max-w-[34rem] sm:rounded-3xl"
 						style={{
-							[isRTL ? 'left' : 'right']: 0,
 							background: theme.paper,
 							color: theme.ink,
-							borderInlineStart: `1px solid ${softBorder}`,
+							border: `1px solid ${softBorder}`,
 							fontFamily,
+							paddingBottom: 'env(safe-area-inset-bottom)',
 						}}
 					>
-						<header className="flex items-start justify-between gap-3 px-5 pb-3 pt-5">
+						<span aria-hidden className="mx-auto mt-2.5 block h-1 w-10 rounded-full sm:hidden" style={{ background: `color-mix(in srgb, ${theme.ink} 16%, transparent)` }} />
+						<header className="flex items-start justify-between gap-3 px-5 pb-3 pt-4 sm:px-6 sm:pt-6">
 							<div className="min-w-0">
 								<div className="flex items-center gap-2">
 									<span
@@ -235,7 +247,7 @@ export default function NotebookDrawer({ open, onClose, theme: themeProp, isRTL 
 									>
 										<NotebookPen size={16} />
 									</span>
-									<h2 className="text-base font-bold">{t('notebook.title')}</h2>
+									<h2 className="text-[19px] font-semibold" style={{ fontFamily: 'Newsreader, "Noto Naskh Arabic", Georgia, serif', color: theme.heading || theme.ink }}>{t('notebook.title')}</h2>
 									{openCount > 0 && (
 										<span
 											className="rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
@@ -376,9 +388,10 @@ export default function NotebookDrawer({ open, onClose, theme: themeProp, isRTL 
 								</ul>
 							)}
 						</div>
-					</motion.aside>
-				</>
+					</motion.section>
+				</motion.div>
 			)}
-		</AnimatePresence>
+		</AnimatePresence>,
+		document.body,
 	);
 }

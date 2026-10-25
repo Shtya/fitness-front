@@ -1828,6 +1828,8 @@ export default function ReadingView({ book: initialBook, onBack }) {
 		/>
 	);
 
+	/* Physical side, not `end`: the menus carry the UI language's dir, which can differ from the page's. */
+	const popSide = isContentRTL ? { left: 0 } : { right: 0 };
 	const chromeVisible =
 		!chromeHidden || headerMoreOpen || timerOpen || appearanceOpen || Boolean(panel) || editMode || pinPlaceMode || Boolean(selectionMenu);
 
@@ -1946,8 +1948,8 @@ export default function ReadingView({ book: initialBook, onBack }) {
 										animate={{ opacity: 1, y: 0, scale: 1 }}
 										exit={{ opacity: 0, y: 4, scale: 0.98 }}
 										transition={{ duration: 0.18 }}
-										className="absolute end-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border shadow-2xl"
-										style={{ background: theme.paper, borderColor: theme.rule, color: theme.ink }}
+										className="absolute top-full z-50 mt-2 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border shadow-2xl"
+										style={{ ...popSide, background: theme.paper, borderColor: theme.rule, color: theme.ink }}
 									>
 										<div className="flex items-start justify-between gap-2 border-b px-3.5 py-2.5" style={{ borderColor: theme.rule }}>
 											<div>
@@ -2073,8 +2075,8 @@ export default function ReadingView({ book: initialBook, onBack }) {
 										animate={{ opacity: 1, y: 0, scale: 1 }}
 										exit={{ opacity: 0, y: 4, scale: 0.98 }}
 										transition={{ duration: 0.15 }}
-										className="absolute end-0 top-full z-50 mt-2 max-h-[min(72dvh,34rem)] w-[min(17.5rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border p-1.5 shadow-2xl"
-										style={{ background: theme.paper, borderColor: theme.rule, color: theme.ink }}
+										className="absolute top-full z-50 mt-2 max-h-[min(72dvh,34rem)] w-[min(17.5rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border p-1.5 shadow-2xl"
+										style={{ ...popSide, background: theme.paper, borderColor: theme.rule, color: theme.ink }}
 										dir={uiAr ? 'rtl' : 'ltr'}
 									>
 										<p className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold" style={{ color: theme.muted }}>{uiAr ? 'مستوى الصعوبة' : 'Reading level'}</p>
@@ -2174,7 +2176,7 @@ export default function ReadingView({ book: initialBook, onBack }) {
 							animate={{ opacity: 1, y: 0 }}
 							exit={{ opacity: 0, y: 16 }}
 							transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-							className="absolute inset-x-0 bottom-0 z-[47] max-h-[85%] overflow-y-auto rounded-t-3xl border-t px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl sm:inset-x-auto sm:bottom-auto sm:end-3 sm:top-[calc(3.75rem+env(safe-area-inset-top))] sm:w-[23rem] sm:rounded-3xl sm:border sm:p-5"
+							className={`absolute bottom-0 left-0 right-0 z-[47] max-h-[85%] overflow-y-auto rounded-t-3xl border-t px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl sm:bottom-auto sm:top-[calc(3.75rem+env(safe-area-inset-top))] sm:max-h-[calc(100%-5rem)] sm:w-[24rem] sm:rounded-3xl sm:border sm:p-5 ${isContentRTL ? 'sm:right-auto sm:left-3' : 'sm:left-auto sm:right-3'}`}
 							style={{ background: theme.paper, borderColor: theme.rule, color: theme.ink, fontFamily: toolsFont }}
 						>
 							<span className="mx-auto mb-4 block h-1 w-10 rounded-full sm:hidden" style={{ background: `color-mix(in srgb, ${theme.ink} 18%, transparent)` }} aria-hidden />

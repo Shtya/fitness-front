@@ -1,13 +1,14 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, SearchX, X } from 'lucide-react';
+import { ArrowDownUp, Plus, Search, SearchX, X } from 'lucide-react';
 import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { deleteBook, listBooks, upsertBook } from '@/lib/ai-reading/storage';
 import {
 	AddBookTile,
 	BookTile,
 	ConfirmDeleteDialog,
+	Dropdown,
 	EmptyState,
 	PageHeader,
 	RenameDialog,
@@ -130,18 +131,20 @@ export default function LibraryPanel() {
 								</button>
 							)}
 						</label>
-						<select
+						<Dropdown
 							value={sort}
-							onChange={e => setSort(e.target.value)}
-							className="rr-field h-10 w-auto shrink-0 rounded-full py-0 ps-3 pe-8 text-[13px] font-semibold md:order-last md:ms-auto"
-							aria-label={L('ترتيب', 'Sort')}
-						>
-							<option value="recent">{L('آخر ما قرأت', 'Recently read')}</option>
-							<option value="added">{L('أحدث إضافة', 'Recently added')}</option>
-							<option value="title">{L('الاسم', 'Title')}</option>
-							<option value="short">{L('الأقصر أولًا', 'Shortest first')}</option>
-							<option value="long">{L('الأطول أولًا', 'Longest first')}</option>
-						</select>
+							onChange={setSort}
+							label={L('ترتيب الكتب', 'Sort books')}
+							icon={ArrowDownUp}
+							className="w-auto shrink-0 md:order-last md:ms-auto"
+							options={[
+								{ value: 'recent', label: L('آخر ما قرأت', 'Recently read') },
+								{ value: 'added', label: L('أحدث إضافة', 'Recently added') },
+								{ value: 'title', label: L('الاسم', 'Title') },
+								{ value: 'short', label: L('الأقصر أولًا', 'Shortest first') },
+								{ value: 'long', label: L('الأطول أولًا', 'Longest first') },
+							]}
+						/>
 					</div>
 					<div className="rr-tabs flex w-full md:inline-flex md:w-auto" role="tablist" aria-label={L('فلترة', 'Filter')}>
 						{FILTERS.map(([id, label]) => (

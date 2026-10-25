@@ -394,16 +394,6 @@
 		font-weight: 600;
 		line-height: 1.5;
 	}
-	.rr-cover-foot {
-		margin-top: auto;
-		font-size: 0.62em;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: rgba(255, 255, 255, 0.7);
-	}
-	.rr[dir='rtl'] .rr-cover-foot {
-		letter-spacing: 0;
-	}
 	.rr-cover-wrap {
 		container-type: inline-size;
 	}
@@ -411,15 +401,61 @@
 		font-size: clamp(10px, 9.5cqi, 22px);
 	}
 
-	.rr-book-meta-title {
-		font-size: 14px;
-		font-weight: 600;
+	/* Shelf covers carry their own facts at the foot: size, time, progress. */
+	.rr-cover.is-detailed::after {
+		background:
+			radial-gradient(120% 60% at 70% 0%, rgba(255, 255, 255, 0.16), transparent 60%),
+			linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.38));
+	}
+	.rr-cover.is-detailed .rr-cover-title {
+		-webkit-line-clamp: 4;
+	}
+	/* Room for the options button in the top corner, whichever way the title runs. */
+	.rr-cover.is-detailed .rr-cover-inner {
+		padding-top: max(12%, 2.6rem);
+	}
+	.rr-cover-meta {
+		margin-top: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35em;
+		padding-top: 0.6em;
+		font-size: clamp(9.5px, 6.6cqi, 12.5px);
+		font-weight: 500;
 		line-height: 1.35;
-		color: var(--rr-ink);
+		color: rgba(255, 255, 255, 0.86);
+	}
+	/* Arabic compact numbers ("7.5 ألف") run long: let the size line take two lines, never clip. */
+	.rr-cover-meta p {
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
 		overflow: hidden;
+	}
+	.rr-cover-icon {
+		width: 1.05em;
+		height: 1.05em;
+		flex-shrink: 0;
+	}
+	.rr-cover-progress {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		margin-top: 0.15em;
+	}
+	.rr-cover-track {
+		position: relative;
+		flex: 1;
+		height: 3px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.24);
+		overflow: hidden;
+	}
+	.rr-cover-track > span {
+		display: block;
+		height: 100%;
+		border-radius: inherit;
+		background: #fff;
 	}
 
 	/* Add-a-book tile: same footprint as a cover. */
@@ -497,12 +533,12 @@
 	.rr-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(min(46%, 138px), 1fr));
-		gap: 28px 16px;
+		gap: 20px 14px;
 	}
 	@media (min-width: 640px) {
 		.rr-grid {
 			grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-			gap: 34px 24px;
+			gap: 26px 22px;
 		}
 	}
 
@@ -733,5 +769,32 @@
 	}
 	.rr-main::-webkit-scrollbar {
 		display: none;
+	}
+}
+
+@layer components {
+	.rr-dropdown-btn {
+		display: inline-flex;
+		width: 100%;
+		align-items: center;
+		gap: 8px;
+		height: 40px;
+		padding-inline: 14px 12px;
+		border-radius: 999px;
+		background: var(--rr-surface);
+		box-shadow: inset 0 0 0 1px var(--rr-line-strong);
+		color: var(--rr-ink);
+		font-size: 13.5px;
+		font-weight: 600;
+		white-space: nowrap;
+		transition: box-shadow 0.15s, background-color 0.15s;
+	}
+	.rr-dropdown-btn:hover {
+		background: var(--rr-sunken);
+	}
+	.rr-dropdown-btn[aria-expanded='true'],
+	.rr-dropdown-btn:focus-visible {
+		outline: none;
+		box-shadow: inset 0 0 0 1px var(--rr-accent), 0 0 0 3px var(--rr-accent-soft);
 	}
 }

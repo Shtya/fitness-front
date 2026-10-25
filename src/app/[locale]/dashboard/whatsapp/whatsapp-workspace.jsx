@@ -336,6 +336,7 @@ const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
 const WhatsAppReadingTab = lazy(() => import('./WhatsAppReadingTab'));
+const WhatsAppOnlineTab = lazy(() => import('./WhatsAppOnlineTab'));
 const TypingHistoryPanel = lazy(() =>
 	import('./WhatsAppTypingLog').then(mod => ({ default: mod.TypingHistoryPanel })),
 );
@@ -520,6 +521,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'accounts',
 	'chats',
 	'reading',
+	'online',
 	'channels',
 	'calls',
 	'groups',
@@ -804,6 +806,7 @@ const translations = {
 		accounts: 'Accounts',
 		chats: 'Chats',
 		reading: 'Reading',
+		onlineTab: 'Online',
 		channels: 'Channels',
 		emails: 'Emails',
 		emailsHint: 'Email Memo — Gmail, AI summaries, and WhatsApp delivery',
@@ -1357,6 +1360,7 @@ const translations = {
 		accounts: 'الحسابات',
 		chats: 'المحادثات',
 		reading: 'القراءة',
+		onlineTab: 'المتصلون',
 		channels: 'القنوات',
 		emails: 'إيميلات',
 		emailsHint: 'مذكرة الإيميل — Gmail وملخصات AI وإرسال واتساب',
@@ -1909,6 +1913,7 @@ const tabs = [
 	['accounts', Smartphone],
 	['chats', MessageCircle],
 	['reading', BookOpen],
+	['online', Radio],
 	['statuses', Zap],
 	['groups', Users],
 	['agent', Bot],
@@ -10414,6 +10419,7 @@ function MobileWhatsAppHeader({
 	onCamera,
 	onMore,
 	onReading,
+	onOnline,
 	locale = 'en',
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
@@ -10432,6 +10438,17 @@ function MobileWhatsAppHeader({
 					</svg>
 				</button>
 				<div className="flex items-center gap-2">
+					{onOnline ? (
+						<button
+							type="button"
+							onClick={onOnline}
+							aria-label={ar ? 'المتصلون' : 'Online'}
+							className="relative grid h-7 w-7 place-items-center rounded-full bg-[#F0F2F5] text-[#0A0A0A]"
+						>
+							<Radio size={15} strokeWidth={2.1} aria-hidden="true" />
+							<span className="absolute -end-0.5 -top-0.5 size-2 rounded-full border border-white bg-[#25d366]" aria-hidden />
+						</button>
+					) : null}
 					{onReading ? (
 						<button
 							type="button"
@@ -12361,6 +12378,8 @@ function WhatsAppWorkspaceContent() {
 	const [activeTab, setActiveTab] = useState(null);
 	/* Where the Reading room's back button returns to (it hides the mobile tab bar). */
 	const readingReturnTabRef = useRef('chats');
+	/* Handler for "followed contact came online" socket alerts (set after openConversationFromReport). */
+	const presenceWatchAlertRef = useRef(null);
 	const [tabReady, setTabReady] = useState(false);
 	const restoredTabRef = useRef(false);
 	const [settingsSection, setSettingsSection] = useState('ai');
@@ -14651,8 +14670,11 @@ function WhatsAppWorkspaceContent() {
 							item.phoneNumber === next.phoneNumber &&
 							item.avatarUrl === next.avatarUrl &&
 							item.state === next.state &&
+							item.status === next.status &&
 							item.online === next.online &&
-							item.typing === next.typing
+							item.typing === next.typing &&
+							item.recording === next.recording &&
+							item.lastSeen === next.lastSeen
 						);
 					})
 				) {
@@ -14769,14 +14791,8 @@ function WhatsAppWorkspaceContent() {
 				return;
 			}
 			const items = Array.isArray(data?.items) ? data.items : [];
-			// Keep the Online bar on live contacts only — never dump offline rows into it.
-			const liveOnly = {
-				...data,
-				items: items.filter(
-					item => item?.online || item?.typing || item?.recording,
-				),
-			};
-			applyOnlineContactsSnapshot(liveOnly);
+			// Same shape as the socket snapshot (live + recently offline); the bar filters to live.
+			applyOnlineContactsSnapshot(data);
 
 			const hit = items.find(item => String(item.conversationId) === id);
 			if (!hit) return;
@@ -14823,6 +14839,26 @@ function WhatsAppWorkspaceContent() {
 		[currentUserId],
 	);
 
+	const refreshOnlineContactsFull = useCallback(
+		() => refreshOnlineContacts({ includeOffline: true }),
+		[refreshOnlineContacts],
+	);
+	const enablePushFromOnlineTab = useCallback(
+		() => subscribeToWhatsAppPush(true),
+		[subscribeToWhatsAppPush],
+	);
+
+	/* Name / avatar for a presence row from the inbox copy of the chat (fresher than the snapshot). */
+	const resolveOnlineIdentity = useCallback(id => {
+		const conv = conversationsRef.current.find(item => item.id === id);
+		if (!conv) return null;
+		return {
+			name: conversationTitle(conv) || '',
+			avatarUrl: conversationAvatarUrl(conv) || conv.contact?.avatarUrl || null,
+			phoneNumber: conv.contact?.phoneNumber || null,
+		};
+	}, []);
+
 	const togglePinnedOnlineContact = useCallback(
 		targetConversationId => {
 			if (!targetConversationId) return;
@@ -14840,14 +14876,14 @@ function WhatsAppWorkspaceContent() {
 	);
 
 	useEffect(() => {
-		if (!isConversationWorkspaceTab(activeTab) || !accountId) return undefined;
+		if ((!isConversationWorkspaceTab(activeTab) && activeTab !== 'online') || !accountId) return undefined;
 		let cancelled = false;
 		const tick = () => {
 			if (cancelled) return;
 			if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
 				return;
 			}
-			void refreshOnlineContacts();
+			void refreshOnlineContacts({ includeOffline: true });
 		};
 		tick();
 		// Event-driven via Socket.IO; light reconcile only (not 1s × contacts).
@@ -17637,6 +17673,10 @@ function WhatsAppWorkspaceContent() {
 				loadAccounts().catch(() => { });
 			}, 800);
 		};
+		socket.on('whatsapp:presence-watch', payload => {
+			if (payload?.accountId && accountIdRef.current && payload.accountId !== accountIdRef.current) return;
+			presenceWatchAlertRef.current?.(payload);
+		});
 		socket.on('whatsapp:event', event => {
 			// Defense in depth: conversation events now carry accountId too.
 			const watchedAccountId = accountIdRef.current;
@@ -23523,6 +23563,12 @@ function WhatsAppWorkspaceContent() {
 			setActiveTab('chats');
 			return;
 		}
+		if (tab === 'online') {
+			setActiveTab('online');
+			setTabError('');
+			void refreshOnlineContacts({ includeOffline: true });
+			return;
+		}
 		if (tab === 'reading') {
 			if (activeTab && activeTab !== 'reading') readingReturnTabRef.current = activeTab;
 			setActiveTab('reading');
@@ -23713,6 +23759,38 @@ function WhatsAppWorkspaceContent() {
 		if (!conversationId) return;
 		openConversation(conversationId);
 		void loadTabData('chats');
+	};
+
+	presenceWatchAlertRef.current = payload => {
+		const id = String(payload?.conversationId || '');
+		if (!id) return;
+		const name = String(payload?.name || '').trim() || (locale === 'ar' ? 'جهة اتصال' : 'A contact');
+		toast(
+			toastItem => (
+				<button
+					type="button"
+					className="flex items-center gap-2 text-start"
+					onClick={() => {
+						toast.dismiss(toastItem.id);
+						openConversationFromReport(id);
+					}}
+				>
+					<span className="size-2.5 shrink-0 rounded-full bg-[#25d366]" aria-hidden />
+					<span>
+						<b>{name}</b> {locale === 'ar' ? 'متصل الآن على واتساب' : 'is online on WhatsApp'}
+					</span>
+				</button>
+			),
+			{ id: `presence-${id}`, duration: 8000 },
+		);
+		// Background tab without a service worker (dev): the page itself raises the OS alert.
+		showWhatsAppDesktopNotification({
+			title: name,
+			body: locale === 'ar' ? 'متصل الآن على واتساب' : 'Online now on WhatsApp',
+			conversationId: id,
+			accountId: payload?.accountId,
+			locale,
+		});
 	};
 
 	const openConversationFromContact = (conversationId, conversation) => {
@@ -25332,6 +25410,8 @@ function WhatsAppWorkspaceContent() {
 							? t.updates
 							: activeTab === 'reading'
 								? t.reading
+							: activeTab === 'online'
+								? t.onlineTab
 							: activeTab === 'groups'
 								? t.groups
 								: t[activeTab] || t.title
@@ -25347,6 +25427,7 @@ function WhatsAppWorkspaceContent() {
 					onCamera={() => void loadTabData('statuses')}
 					onMore={() => setMobileMenuOpen(current => !current)}
 					onReading={() => void loadTabData('reading')}
+					onOnline={() => void loadTabData('online')}
 					showTitle={!isConversationWorkspaceTab(activeTab)}
 					scrolled={isConversationWorkspaceTab(activeTab) && mobileHeaderScrolled}
 				/>
@@ -29430,6 +29511,23 @@ function WhatsAppWorkspaceContent() {
 
 				{activeTab === 'calls' && (
 					<MobileCallsView logs={logs} labels={t} locale={locale} loading={tabLoading} />
+				)}
+
+				{activeTab === 'online' && (
+					<div className="wa-secondary-pane min-h-0 overflow-hidden">
+						<Suspense fallback={<div className="grid min-h-[60vh] place-items-center"><Loader2 size={20} className="animate-spin" /></div>}>
+							<WhatsAppOnlineTab
+								accountId={accountId}
+								contacts={onlineContacts}
+								resolveIdentity={resolveOnlineIdentity}
+								onOpenChat={openConversationFromReport}
+								onRefresh={refreshOnlineContactsFull}
+								locale={locale}
+								pushPermission={pushPermission}
+								onEnablePush={enablePushFromOnlineTab}
+							/>
+						</Suspense>
+					</div>
 				)}
 
 				{activeTab === 'reading' && (
