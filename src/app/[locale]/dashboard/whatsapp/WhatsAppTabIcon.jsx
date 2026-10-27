@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { refreshFaviconBadge } from '@/lib/app-badge';
 
 const WHATSAPP_ICON = '/icons/whatsapp.svg';
 
@@ -29,6 +30,10 @@ export default function WhatsAppTabIcon() {
 		link.setAttribute('href', WHATSAPP_ICON);
 		link.setAttribute('type', 'image/svg+xml');
 		link.removeAttribute('sizes');
+		// Unread count bubble is drawn over this icon from now on.
+		link.dataset.badgeBase = WHATSAPP_ICON;
+		link.dataset.badgeBaseType = 'image/svg+xml';
+		refreshFaviconBadge();
 
 		existing.slice(1).forEach(extra => {
 			extra.setAttribute('data-wa-favicon-hidden', '1');
@@ -48,6 +53,13 @@ export default function WhatsAppTabIcon() {
 			if (!snapshot.length && head.contains(link)) {
 				link.remove();
 			}
+			for (const { el, href, type } of snapshot) {
+				if (href != null) el.dataset.badgeBase = href;
+				else delete el.dataset.badgeBase;
+				if (type != null) el.dataset.badgeBaseType = type;
+				else delete el.dataset.badgeBaseType;
+			}
+			refreshFaviconBadge();
 		};
 	}, []);
 

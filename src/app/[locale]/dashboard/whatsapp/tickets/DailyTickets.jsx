@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CalendarDays, Check, CheckCheck, List, ListChecks, Moon, Pin, Plus, Repeat, Sun, Ticket, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Check, CheckCheck, Eye, EyeOff, List, ListChecks, Moon, Pin, Plus, Repeat, Sun, Ticket, Trash2, Undo2, X } from 'lucide-react';
 import { MAX_TITLE, dayKey } from './use-daily-tickets';
-import { COPY, sortTickets } from './tickets-model';
+import { COPY, mergeSubsetOrder, sortTickets } from './tickets-model';
 import { DetailsHint, MiniMenu, RepeatBadge, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, stepInOrder, ticketKeyHandler, useSortable } from './tickets-ui';
 import TicketDialog from './TicketDialog';
 import TicketsWall from './TicketsWall';
@@ -21,7 +21,7 @@ const T = {
 		closed: time => `Done ${time}`,
 		carried: 'From yesterday',
 		carriedOn: date => `From ${date}`,
-		stamp: 'Done',
+		stamp: 'Completed',
 		deleted: title => `Deleted “${title}”`,
 		undo: 'Undo',
 		dismiss: 'Dismiss',
@@ -31,6 +31,10 @@ const T = {
 		viewWall: 'Wall',
 		greet: { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening' },
 		count: n => (n === 1 ? '1 task' : `${n} tasks`),
+		doneCount: n => `${n} done`,
+		hideDone: 'Hide completed',
+		showDone: 'Show completed',
+		allDoneHidden: n => (n === 1 ? '1 completed task is hidden' : `${n} completed tasks are hidden`),
 	},
 	ar: {
 		newTicket: 'تذكرة جديدة',
@@ -43,7 +47,7 @@ const T = {
 		closed: time => `اتقفلت ${time}`,
 		carried: 'من امبارح',
 		carriedOn: date => `من ${date}`,
-		stamp: 'تم',
+		stamp: 'مكتملة',
 		deleted: title => `اتحذفت «${title}»`,
 		undo: 'تراجع',
 		dismiss: 'إغلاق',
@@ -53,6 +57,10 @@ const T = {
 		viewWall: 'الحائط',
 		greet: { morning: 'صباح الخير', afternoon: 'نهارك سعيد', evening: 'مساء الخير' },
 		count: n => (n === 1 ? 'مهمة واحدة' : n === 2 ? 'مهمتين' : n >= 3 && n <= 10 ? `${n} مهام` : `${n} مهمة`),
+		doneCount: n => `${n} مكتملة`,
+		hideDone: 'إخفاء المكتملة',
+		showDone: 'إظهار المكتملة',
+		allDoneHidden: n => (n === 1 ? 'في مهمة مكتملة مخفية' : `في ${n} مهام مكتملة مخفية`),
 	},
 };
 
@@ -64,6 +72,18 @@ function readView() {
 		return 'list';
 	}
 }
+
+const HIDE_DONE_KEY = 'wa-daily-tickets:hide-done';
+function readHideDone() {
+	try {
+		return window.localStorage.getItem(HIDE_DONE_KEY) === '1';
+	} catch {
+		return false;
+	}
+}
+
+/* A ticket completed while "hide completed" is on stays long enough to see it close. */
+const DONE_LINGER_MS = 1600;
 
 const locale = ar => (ar ? 'ar-EG-u-nu-latn' : 'en-GB');
 const timeOf = (ms, ar) => new Intl.DateTimeFormat(ar ? 'ar-EG-u-nu-latn' : 'en-US', { hour: 'numeric', minute: '2-digit' }).format(ms);
@@ -204,7 +224,7 @@ export function TicketsLauncher({ ar, onAdd }) {
 	);
 }
 
-function TicketCard({ ticket, ar, c, fresh, baseActions, onDelete, canMove, dragging, onPointerDown }) {
+function TicketCard({ ticket, ar, c, fresh, fadingOut, baseActions, onDelete, canMove, dragging, onPointerDown }) {
 	const t = T[ar ? 'ar' : 'en'];
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(ticket.title);
@@ -265,6 +285,7 @@ function TicketCard({ ticket, ar, c, fresh, baseActions, onDelete, canMove, drag
 				`is-${ticket.priority}`,
 				ticket.pinned ? 'is-pinned' : '',
 				fresh ? 'is-new' : '',
+				fadingOut ? 'is-closing' : '',
 				leaving ? 'is-leaving' : '',
 				stamped ? 'is-stamped' : '',
 				ticket.steps > 1 ? 'has-steps' : '',
@@ -365,7 +386,14 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const composerInput = useRef(null);
 	const listRef = useRef(null);
 
-	useEffect(() => setView(readView()), []);
+	const [hideDone, setHideDone] = useState(false);
+	const [lingering, setLingering] = useState(() => new Set());
+	const doneBefore = useRef(null);
+
+	useEffect(() => {
+		setView(readView());
+		setHideDone(readHideDone());
+	}, []);
 	const chooseView = next => {
 		setView(next);
 		try {
@@ -374,24 +402,60 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 			/* not saved: the choice still applies to this visit */
 		}
 	};
+	const toggleHideDone = () => {
+		const next = !hideDone;
+		setHideDone(next);
+		setLingering(new Set());
+		try {
+			window.localStorage.setItem(HIDE_DONE_KEY, next ? '1' : '0');
+		} catch {
+			/* not saved: the choice still applies to this visit */
+		}
+	};
+
+	// Whatever closed a ticket (check, menu, dialog), it fades out only after its done state shows.
+	useEffect(() => {
+		const done = new Set(tickets.filter(x => x.done).map(x => x.id));
+		const prev = doneBefore.current;
+		doneBefore.current = done;
+		if (!prev || !hideDone) return undefined;
+		const closed = [...done].filter(id => !prev.has(id));
+		if (!closed.length) return undefined;
+		setLingering(cur => new Set([...cur, ...closed]));
+		const timer = window.setTimeout(() => {
+			setLingering(cur => {
+				const next = new Set(cur);
+				closed.forEach(id => next.delete(id));
+				return next;
+			});
+		}, DONE_LINGER_MS);
+		return () => window.clearTimeout(timer);
+	}, [tickets, hideDone]);
 
 	// Your own order, pinned tickets first.
-	const visible = useMemo(() => sortTickets(tickets), [tickets]);
+	const sorted = useMemo(() => sortTickets(tickets), [tickets]);
+	const sortedIds = useMemo(() => sorted.map(t => t.id), [sorted]);
+	const visible = useMemo(() => (hideDone ? sorted.filter(t => !t.done || lingering.has(t.id)) : sorted), [sorted, hideDone, lingering]);
 	const visibleIds = useMemo(() => visible.map(t => t.id), [visible]);
 	const byId = useMemo(() => new Map(visible.map(t => [t.id, t])), [visible]);
 	const isPinned = id => Boolean(byId.get(id)?.pinned);
+	const doneCount = useMemo(() => tickets.filter(t => t.done).length, [tickets]);
+	const hiddenCount = tickets.length - visible.length;
+
+	// Reorders only see the shown tickets; hidden ones keep their slots.
+	const commitOrder = ids => store.setOrder(visibleIds.length === sortedIds.length ? ids : mergeSubsetOrder(sortedIds, ids));
 
 	// Keyboard / menu alternative to dragging: one step within the ticket's own group.
 	const moveVisible = (id, delta) => {
 		const next = stepInOrder(visibleIds, id, delta, isPinned);
-		if (next) store.setOrder(next);
+		if (next) commitOrder(next);
 	};
 
 	const list = useSortable({
 		containerRef: listRef,
 		ids: visibleIds,
 		isPinned,
-		onCommit: store.setOrder,
+		onCommit: commitOrder,
 		axis: 'y',
 		rtl: ar,
 		enabled: view === 'list',
@@ -446,19 +510,41 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 						<span>{date}</span>
 						<span className="tk-board__dot" aria-hidden />
 						<span>{t.count(total)}</span>
+						{doneCount ? (
+							<>
+								<span className="tk-board__dot" aria-hidden />
+								<span className="tk-board__done">
+									<CheckCheck size={15} aria-hidden />
+									{t.doneCount(doneCount)}
+								</span>
+							</>
+						) : null}
 					</p>
 				</div>
-				<div className="tk-view" role="group" aria-label={t.views}>
-					<button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} onClick={() => chooseView('list')}>
-						<Ticket size={16} aria-hidden />
-						<span>{t.viewList}</span>
+				<div className="tk-board__tools">
+					<button
+						type="button"
+						className={`tk-hide-done${hideDone ? ' is-on' : ''}`}
+						aria-pressed={hideDone}
+						onClick={toggleHideDone}
+						title={hideDone ? t.showDone : t.hideDone}
+					>
+						{hideDone ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+						<span className="tk-hide-done__label">{t.hideDone}</span>
+						{hideDone && hiddenCount ? <span className="tk-hide-done__n">{hiddenCount}</span> : null}
 					</button>
-					<button type="button" className={view === 'wall' ? 'is-on' : ''} aria-pressed={view === 'wall'} onClick={() => chooseView('wall')}>
-						<Pin size={16} aria-hidden />
-						<span>{t.viewWall}</span>
-					</button>
+					<div className="tk-view" role="group" aria-label={t.views}>
+						<button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} onClick={() => chooseView('list')}>
+							<Ticket size={16} aria-hidden />
+							<span>{t.viewList}</span>
+						</button>
+						<button type="button" className={view === 'wall' ? 'is-on' : ''} aria-pressed={view === 'wall'} onClick={() => chooseView('wall')}>
+							<Pin size={16} aria-hidden />
+							<span>{t.viewWall}</span>
+						</button>
+					</div>
 				</div>
-			</header>
+				</header>
 
 			{store.saveError && !hideSaveError ? (
 				<div className="tkx-alert" role="alert">
@@ -481,6 +567,16 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 				}}
 			/>
 
+			{hideDone && hiddenCount && !visible.length ? (
+				<div className="tk-hidden-note" role="status">
+					<CheckCheck size={18} aria-hidden />
+					<span>{t.allDoneHidden(hiddenCount)}</span>
+					<button type="button" onClick={toggleHideDone}>
+						{t.showDone}
+					</button>
+				</div>
+			) : null}
+
 			<div className="tk-content" key={view}>
 				{view === 'wall' ? (
 					<TicketsWall
@@ -488,10 +584,11 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 						c={c}
 						items={visible}
 						freshId={freshId}
+						fadingIds={hideDone ? lingering : null}
 						baseActions={baseActions}
 						onDelete={onDelete}
 						canDrag
-						onReorder={store.setOrder}
+						onReorder={commitOrder}
 						onAddRequest={() => composerInput.current?.focus()}
 						showAdd
 					/>
@@ -504,6 +601,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 								ar={ar}
 								c={c}
 								fresh={ticket.id === freshId}
+								fadingOut={hideDone && lingering.has(ticket.id)}
 								baseActions={baseActions}
 								onDelete={onDelete}
 								canMove

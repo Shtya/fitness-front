@@ -663,7 +663,7 @@ export function useUnreadWhatsApp(pollMs = 120000) {
   }, []);
   useVisibleBadgePoll(load, pollMs, WHATSAPP_UNREAD_EVENT);
   useEffect(() => {
-    syncAppBadge(total);
+    syncAppBadge(total, 'sidebar');
   }, [total]);
   return { unreadWhatsApp: total, reloadUnreadWhatsApp: load };
 }

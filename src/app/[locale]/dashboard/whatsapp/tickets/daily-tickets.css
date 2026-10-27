@@ -1627,3 +1627,236 @@ html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board > .tk-composer .tk-compos
 		height: 46px;
 	}
 }
+
+/* ================================================================== */
+/* v8: completed tickets — a clear finished state, and a way to hide them */
+/* ================================================================== */
+
+.tk-board {
+	--tk8-green: var(--tk7-green, #1f8a4c);
+	--tk8-green-ink: var(--tk7-green-ink, #1f6b3e);
+	--tk8-green-soft: var(--tk7-green-soft, #e3f3e7);
+}
+
+/* header: done count + "Hide completed" next to the view switch */
+.tk-board__tools {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
+.tk-board__done {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	color: var(--tk8-green-ink);
+	font-weight: 600;
+}
+
+.tk-hide-done {
+	display: inline-flex;
+	height: 50px;
+	align-items: center;
+	gap: 8px;
+	padding: 0 16px;
+	border-radius: 14px;
+	color: var(--tk7-muted, var(--idle-text-2));
+	background: rgba(255, 255, 255, 0.75);
+	box-shadow: inset 0 0 0 1px var(--tk7-edge, var(--idle-edge)), 0 6px 16px -12px rgba(60, 40, 20, 0.3);
+	font-size: 15px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+html.dark .tk-hide-done,
+html[data-theme-mode='dark'] .tk-hide-done {
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.tk-hide-done:hover {
+	color: var(--tk7-ink, var(--idle-text));
+}
+
+.tk-hide-done.is-on {
+	color: var(--tk8-green-ink);
+	background: var(--tk8-green-soft);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tk8-green) 35%, transparent);
+	font-weight: 600;
+}
+
+.tk-hide-done:focus-visible {
+	outline: 2px solid var(--tk8-green);
+	outline-offset: 2px;
+}
+
+.tk-hide-done__n {
+	display: inline-grid;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 6px;
+	place-items: center;
+	border-radius: 999px;
+	color: #fff;
+	background: var(--tk8-green);
+	font-size: 12px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.tk-hidden-note {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	padding: 14px 18px;
+	border-radius: 16px;
+	color: var(--tk8-green-ink);
+	background: var(--tk8-green-soft);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tk8-green) 22%, transparent);
+	font-size: 14.5px;
+	font-weight: 500;
+}
+
+.tk-hidden-note button {
+	margin-inline-start: auto;
+	padding: 6px 12px;
+	border-radius: 10px;
+	color: var(--tk8-green-ink);
+	background: rgba(255, 255, 255, 0.7);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+html.dark .tk-hidden-note button,
+html[data-theme-mode='dark'] .tk-hidden-note button {
+	background: rgba(255, 255, 255, 0.08);
+}
+
+/* the completed card: calm green frame, solid check, struck title, one clean badge */
+.tk.is-done .tk__shape {
+	background: color-mix(in srgb, var(--tk8-green) 4%, var(--idle-surface));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tk8-green) 26%, transparent);
+}
+
+.tk.is-done .tk__stub {
+	background: color-mix(in srgb, var(--tk8-green) 13%, var(--idle-surface));
+}
+
+.tk.is-done .tk__stub::after {
+	border-color: color-mix(in srgb, var(--tk8-green) 30%, transparent);
+}
+
+.tk.is-done .tk__check {
+	color: #fff;
+	background: var(--tk8-green);
+	box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--tk8-green) 80%, transparent);
+}
+
+.tk.is-done .tk__check:hover {
+	color: #fff;
+	background: color-mix(in srgb, var(--tk8-green) 85%, #000);
+}
+
+.tk.is-done .tk__no {
+	color: var(--tk8-green-ink);
+}
+
+.tk.is-done .tk__title {
+	color: color-mix(in srgb, var(--idle-text) 55%, transparent);
+}
+
+.tk.is-done .tk__title span {
+	background-image: linear-gradient(color-mix(in srgb, var(--idle-text) 45%, transparent), color-mix(in srgb, var(--idle-text) 45%, transparent));
+}
+
+.tk.is-done .tk__meta {
+	color: color-mix(in srgb, var(--idle-text-2) 85%, transparent);
+}
+
+.tk.is-done .tk__body {
+	padding-inline-end: 118px;
+}
+
+.tk__stamp {
+	top: 50%;
+	bottom: auto;
+	inset-inline-end: 56px;
+	gap: 5px;
+	padding: 4px 11px 4px 8px;
+	border: 0;
+	border-radius: 999px;
+	color: var(--tk8-green-ink);
+	background: var(--tk8-green-soft);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tk8-green) 28%, transparent);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0;
+	transform: translateY(-50%);
+	opacity: 1;
+}
+
+[dir='rtl'] .tk__stamp {
+	padding: 4px 8px 4px 11px;
+}
+
+.tk.is-stamped .tk__stamp {
+	animation: tk-done-badge 0.38s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+@keyframes tk-done-badge {
+	from {
+		opacity: 0;
+		transform: translateY(-50%) scale(0.7);
+	}
+}
+
+/* completed while "Hide completed" is on: shows its done state, then slips away */
+.tk.is-closing {
+	animation: tk-closing 0.35s ease-in 1.25s forwards;
+}
+
+@keyframes tk-closing {
+	to {
+		opacity: 0;
+		transform: translateY(-6px) scale(0.98);
+	}
+}
+
+@media (max-width: 640px) {
+	.tk-board__tools {
+		justify-content: space-between;
+	}
+
+	.tk-hide-done {
+		height: 46px;
+		padding: 0 12px;
+		font-size: 14px;
+	}
+
+	/* on a phone the badge is just the check, so the title keeps its width */
+	.tk.is-done .tk__body {
+		padding-inline-end: 52px;
+	}
+
+	.tk__stamp {
+		inset-inline-end: 46px;
+		padding: 5px;
+		font-size: 0;
+		gap: 0;
+	}
+
+	[dir='rtl'] .tk__stamp {
+		padding: 5px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tk.is-closing,
+	.tk.is-stamped .tk__stamp {
+		animation-duration: 0.01s !important;
+	}
+}

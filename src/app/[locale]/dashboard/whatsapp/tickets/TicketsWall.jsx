@@ -26,6 +26,8 @@ function useHandFonts() {
 	}, []);
 }
 
+const doneTime = (ms, ar) => new Intl.DateTimeFormat(ar ? 'ar-EG-u-nu-latn' : 'en-US', { hour: 'numeric', minute: '2-digit' }).format(ms);
+
 function NotePaper({ ticket, c, ar, theme, editing, draft, setDraft, finishEdit, field, actions }) {
 	const split = ticket.steps > 1;
 	const daily = ticket.repeat === 'daily';
@@ -87,6 +89,12 @@ function NotePaper({ ticket, c, ar, theme, editing, draft, setDraft, finishEdit,
 
 			<div className="tw-bottom">
 				<DetailsHint ticket={ticket} c={c} />
+				{ticket.done && ticket.doneAt ? (
+					<span className="tw-done-at">
+						<Clock3 size={12} strokeWidth={2.4} aria-hidden />
+						{doneTime(ticket.doneAt, ar)}
+					</span>
+				) : null}
 			</div>
 		</div>
 	);
@@ -120,7 +128,7 @@ function CornerCheck({ ticket, c, onToggleDone }) {
 	);
 }
 
-function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, dragging, onPointerDown }) {
+function WallNote({ ticket, c, ar, fresh, fadingOut, baseActions, onDelete, canMove, dragging, onPointerDown }) {
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(ticket.title);
 	const [leaving, setLeaving] = useState(false);
@@ -177,6 +185,7 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 				ticket.done ? 'is-done' : '',
 				`is-${ticket.status}`,
 				fresh ? 'is-new' : '',
+				fadingOut ? 'is-closing' : '',
 				leaving ? 'is-leaving' : '',
 				stamped ? 'is-stamped' : '',
 				editing ? 'is-editing' : '',
@@ -205,7 +214,7 @@ function WallNote({ ticket, c, ar, fresh, baseActions, onDelete, canMove, draggi
 	);
 }
 
-export default function TicketsWall({ ar, c, items, freshId, baseActions, onDelete, canDrag, onReorder, onAddRequest, showAdd }) {
+export default function TicketsWall({ ar, c, items, freshId, fadingIds, baseActions, onDelete, canDrag, onReorder, onAddRequest, showAdd }) {
 	useHandFonts();
 	const wallRef = useRef(null);
 	const ids = useMemo(() => items.map(t => t.id), [items]);
@@ -235,6 +244,7 @@ export default function TicketsWall({ ar, c, items, freshId, baseActions, onDele
 								c={c}
 								ar={ar}
 								fresh={ticket.id === freshId}
+								fadingOut={Boolean(fadingIds?.has(ticket.id))}
 								baseActions={baseActions}
 								onDelete={onDelete}
 								canMove={canDrag}

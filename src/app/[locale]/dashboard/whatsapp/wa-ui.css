@@ -4963,33 +4963,53 @@ html.dark .wa-message-wallpaper .wa-voice-message .wa-voice-duration {
 
 /* ---------------------------- Reply preview (composer) ---------------------------- */
 
+/* A quote card docked on the composer: tinted in the quoted person's colour, a rounded bar
+   on the leading edge, who you are replying to on top and up to two lines of their message. */
 .wa-composer .wa-ui-reply.wa-ui-reply {
+	--wa-reply-c: var(--wa-ui-reply-edge, #027eb5);
 	gap: 10px;
 	margin: 0 0 8px;
-	padding: 8px 8px 8px 14px;
-	border: 1px solid color-mix(in srgb, var(--wa-ui-reply-edge, #027eb5) 22%, var(--wa-ui-border));
-	border-inline-start: 4px solid var(--wa-ui-reply-edge, #027eb5);
+	padding: 9px 8px 9px 18px;
+	border: 0;
 	border-radius: 14px;
-	background:
-		linear-gradient(90deg, color-mix(in srgb, var(--wa-ui-reply-edge, #027eb5) 9%, transparent), transparent 70%),
-		var(--wa-ui-surface);
-	box-shadow: 0 6px 18px -12px rgba(11, 20, 26, 0.45);
-	animation: wa-ui-sheet 160ms var(--wa-ui-ease-out);
+	background: color-mix(in srgb, var(--wa-reply-c) 8%, var(--wa-ui-surface));
+	box-shadow:
+		inset 0 0 0 1px color-mix(in srgb, var(--wa-reply-c) 18%, transparent),
+		0 6px 16px -12px rgba(11, 20, 26, 0.45);
+	overflow: hidden;
+	animation: wa-reply-in 180ms var(--wa-ui-ease-out);
 }
 
 [dir='rtl'] .wa-composer .wa-ui-reply.wa-ui-reply {
-	padding: 8px 14px 8px 8px;
-	background:
-		linear-gradient(270deg, color-mix(in srgb, var(--wa-ui-reply-edge, #027eb5) 9%, transparent), transparent 70%),
-		var(--wa-ui-surface);
+	padding: 9px 18px 9px 8px;
+}
+
+.wa-composer .wa-ui-reply.wa-ui-reply::before {
+	content: '';
+	position: absolute;
+	inset-block: 8px;
+	inset-inline-start: 8px;
+	width: 4px;
+	border-radius: 999px;
+	background: var(--wa-reply-c);
+}
+
+.wa-composer .wa-ui-reply.is-mine {
+	--wa-reply-c: var(--wa-ui-accent);
 }
 
 .wa-composer .wa-ui-reply .wa-ui-reply__author {
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	color: var(--wa-reply-c);
 	font-size: 13px;
 	font-weight: 700;
+	line-height: 18px;
+}
+
+.wa-composer .wa-ui-reply.is-mine .wa-ui-reply__author {
+	color: var(--wa-ui-accent-strong, var(--wa-reply-c));
 }
 
 .wa-composer .wa-ui-reply .wa-ui-reply__author::before {
@@ -5007,24 +5027,65 @@ html.dark .wa-message-wallpaper .wa-voice-message .wa-voice-duration {
 }
 
 .wa-composer .wa-ui-reply .wa-ui-reply__snippet {
+	align-items: flex-start;
 	margin-top: 2px;
 	color: var(--wa-ui-text-2);
-	font-size: 13px;
+	font-size: 13.5px;
+	line-height: 19px;
+}
+
+/* two lines of the quoted message, like WhatsApp, instead of one cut-off line */
+.wa-composer .wa-ui-reply .wa-ui-reply__snippet > span {
+	display: -webkit-box;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 }
 
 .wa-composer .wa-ui-reply .wa-ui-reply__snippet > svg {
-	color: var(--wa-ui-reply-edge, #027eb5);
+	margin-top: 2px;
+	color: var(--wa-reply-c);
 }
 
 .wa-composer .wa-ui-reply .wa-ui-icon-btn {
-	width: 30px;
-	height: 30px;
-	background: var(--wa-ui-hover);
+	align-self: center;
+	width: 32px;
+	height: 32px;
+	flex: 0 0 auto;
+	border-radius: 999px;
+	color: var(--wa-ui-text-2);
+	background: color-mix(in srgb, var(--wa-ui-surface) 70%, transparent);
+	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .wa-composer .wa-ui-reply .wa-ui-icon-btn:hover:not(:disabled) {
 	background: var(--wa-ui-danger-soft);
 	color: var(--wa-ui-danger);
+}
+
+.wa-composer .wa-ui-reply .wa-ui-icon-btn:focus-visible {
+	outline: 2px solid var(--wa-reply-c);
+	outline-offset: 1px;
+}
+
+@keyframes wa-reply-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+
+@media (max-width: 767px) {
+	.wa-composer .wa-ui-reply.wa-ui-reply {
+		margin-bottom: 6px;
+		border-radius: 12px;
+	}
+
+	.wa-composer .wa-ui-reply .wa-ui-reply__snippet {
+		font-size: 13px;
+		line-height: 18px;
+	}
 }
 
 /* ---------------------------- Voice recording bar ---------------------------- */

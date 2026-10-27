@@ -119,6 +119,7 @@ import {
 } from 'lucide-react';
 import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
+import { clearAppBadgeSource, syncAppBadge } from '@/lib/app-badge';
 import { createVisiblePoller } from '@/lib/visible-poll';
 import MessageSavedTranscript from './MessageSavedTranscript';
 import {
@@ -2081,7 +2082,13 @@ function IsolatedComposerTextarea({
 		apiRef.current = {
 			getDraft: () => String(draftRef.current || ''),
 			setDraft: apply,
-			focus: () => textareaRef.current?.focus(),
+			focus: () => {
+				const node = textareaRef.current;
+				if (!node || node.disabled) return;
+				node.focus({ preventScroll: true });
+				const end = node.value.length;
+				node.setSelectionRange(end, end);
+			},
 			getMentions: () => [...pickedMentionsRef.current],
 		};
 		return () => {
@@ -12547,6 +12554,12 @@ function WhatsAppWorkspaceContent() {
 	const [qrExpired, setQrExpired] = useState(false);
 	const [sending, setSending] = useState(false);
 	const sendingRef = useRef(false);
+	/*
+	 * Text messages go out in the background, one conversation queue at a time: the composer is
+	 * free immediately and the next message can be typed and sent, while the server still
+	 * receives them in the order they were written (parallel POSTs could reach WhatsApp swapped).
+	 */
+	const outboundTextQueueRef = useRef(new Map());
 	const [loadingOlder, setLoadingOlder] = useState(false);
 	const [hasMoreMessages, setHasMoreMessages] = useState(true);
 	const hasMoreMessagesRef = useRef(true);
@@ -12733,6 +12746,20 @@ function WhatsAppWorkspaceContent() {
 		}
 	}, []);
 	const [replyingTo, setReplyingTo] = useState(null);
+	const focusComposerForReplyRef = useRef(false);
+	useEffect(() => {
+		if (!replyingTo || !focusComposerForReplyRef.current) return undefined;
+		focusComposerForReplyRef.current = false;
+		// Two frames: the message menu returns focus to its trigger as it closes.
+		let second = 0;
+		const first = requestAnimationFrame(() => {
+			second = requestAnimationFrame(() => composerApiRef.current?.focus());
+		});
+		return () => {
+			cancelAnimationFrame(first);
+			cancelAnimationFrame(second);
+		};
+	}, [replyingTo]);
 	const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
 	const [reactionPickerAnchor, setReactionPickerAnchor] = useState(null);
 	const reactionPickerMessageRef = useRef(null);
@@ -13480,6 +13507,11 @@ function WhatsAppWorkspaceContent() {
 			}, 0),
 		[effectiveConversations],
 	);
+	/* Tab title + favicon bubble follow the live inbox count (socket-driven), not a 2-min poll. */
+	useEffect(() => {
+		syncAppBadge(unreadConversationCount, 'whatsapp-workspace');
+	}, [unreadConversationCount]);
+	useEffect(() => () => clearAppBadgeSource('whatsapp-workspace'), []);
 	const unreadChannelCount = useMemo(
 		() =>
 			effectiveConversations.reduce((total, conversation) => {
@@ -14538,15 +14570,25 @@ function WhatsAppWorkspaceContent() {
 			filteredConversations.slice(chatListWindow.start, chatListWindow.end),
 		[filteredConversations, chatListWindow.start, chatListWindow.end],
 	);
+	/*
+	 * Restore the inbox scroll only when the list (re)appears or its scope changes (filter,
+	 * search, account). It used to re-run on every list update: each incoming message moved the
+	 * anchor chat to the top and the list jumped after it while the user was scrolling.
+	 */
+	const filteredConversationsRef = useRef(filteredConversations);
+	filteredConversationsRef.current = filteredConversations;
+	const chatListRestoreKey =
+		chatListVisible && (isDesktopLayout || !conversationId) ? chatListScrollScope : null;
 	useLayoutEffect(() => {
-		if (!chatListVisible || (!isDesktopLayout && conversationId)) return undefined;
-		const snapshot = chatListScrollPositionsRef.current.get(chatListScrollScope);
+		if (!chatListRestoreKey) return undefined;
+		const snapshot = chatListScrollPositionsRef.current.get(chatListRestoreKey);
 		if (!snapshot) return undefined;
 		const frame = requestAnimationFrame(() => {
 			const node = chatListScrollRef.current;
 			if (!node) return;
+			const list = filteredConversationsRef.current;
 			const nextIndex = snapshot.anchorId
-				? filteredConversations.findIndex(item => String(item.id) === snapshot.anchorId)
+				? list.findIndex(item => String(item.id) === snapshot.anchorId)
 				: -1;
 			const nextScrollTop =
 				nextIndex >= 0
@@ -14558,14 +14600,7 @@ function WhatsAppWorkspaceContent() {
 			}
 		});
 		return () => cancelAnimationFrame(frame);
-	}, [
-		chatListVisible,
-		isDesktopLayout,
-		conversationId,
-		chatListScrollScope,
-		filteredConversations,
-		chatListWindow.onScroll,
-	]);
+	}, [chatListRestoreKey, chatListWindow.onScroll]);
 
 	const archivedChatsCount = useMemo(() => {
 		const local = effectiveConversations.filter(conversation => {
@@ -14636,6 +14671,81 @@ function WhatsAppWorkspaceContent() {
 		}
 		return list;
 	}, [currentUserId]);
+
+	/** Ends a contact's typing / recording everywhere it shows (chat row, header, Online tab). */
+	const clearConversationTyping = useCallback(targetId => {
+		const clearKey = `presence-ttl:${targetId}`;
+		if (presenceTtlTimersRef.current[clearKey]) {
+			window.clearTimeout(presenceTtlTimersRef.current[clearKey]);
+			delete presenceTtlTimersRef.current[clearKey];
+		}
+		setConversations(current => {
+			let changed = false;
+			const next = current.map(item => {
+				if (item.id !== targetId) return item;
+				if (!item.isTyping && !item.typing && !item.presence?.typing && !item.presence?.recording) {
+					return item;
+				}
+				changed = true;
+				return {
+					...item,
+					isTyping: false,
+					typing: false,
+					presence: {
+						...(item.presence || {}),
+						typing: false,
+						recording: false,
+						typers: [],
+						senderName: '',
+						online: Boolean(item.presence?.online),
+						state: item.presence?.online ? 'available' : 'unavailable',
+						t: Date.now(),
+					},
+				};
+			});
+			return changed ? next : current;
+		});
+		setOnlineContacts(current => {
+			const idx = current.findIndex(item => item.conversationId === targetId);
+			if (idx < 0 || !(current[idx].typing || current[idx].recording)) return current;
+			const next = [...current];
+			next[idx] = {
+				...next[idx],
+				typing: false,
+				recording: false,
+				status: next[idx].online ? 'online' : 'offline',
+				state: next[idx].online ? 'available' : 'unavailable',
+			};
+			return next;
+		});
+	}, []);
+
+	/**
+	 * Safety net only: WhatsApp sends `paused` when the customer stops. Composing is not re-sent
+	 * every few seconds, so a short TTL hid live typing. Armed for every source of a typing state
+	 * (socket event or snapshot), otherwise a missed `paused` left it on for good.
+	 */
+	const armTypingTtl = useCallback(
+		targetId => {
+			const clearKey = `presence-ttl:${targetId}`;
+			if (presenceTtlTimersRef.current[clearKey]) {
+				window.clearTimeout(presenceTtlTimersRef.current[clearKey]);
+			}
+			presenceTtlTimersRef.current[clearKey] = window.setTimeout(() => {
+				delete presenceTtlTimersRef.current[clearKey];
+				clearConversationTyping(targetId);
+			}, TYPING_INDICATOR_TTL_MS);
+		},
+		[clearConversationTyping],
+	);
+
+	useEffect(
+		() => () => {
+			for (const timer of Object.values(presenceTtlTimersRef.current)) window.clearTimeout(timer);
+			presenceTtlTimersRef.current = {};
+		},
+		[],
+	);
 
 	const applyOnlineContactsSnapshot = useCallback(
 		payload => {
@@ -14742,6 +14852,9 @@ function WhatsAppWorkspaceContent() {
 				});
 				return changed ? next : current;
 			});
+			for (const item of normalized) {
+				if (item.typing || item.recording) armTypingTtl(item.conversationId);
+			}
 			const pinnedStoredId = readStoredPinnedOnlineContactId(currentUserId);
 			if (pinnedStoredId) {
 				setPinnedOnlineContactId(current =>
@@ -14749,7 +14862,7 @@ function WhatsAppWorkspaceContent() {
 				);
 			}
 		},
-		[currentUserId],
+		[currentUserId, armTypingTtl],
 	);
 
 	const refreshOnlineContacts = useCallback(
@@ -14825,8 +14938,9 @@ function WhatsAppWorkspaceContent() {
 						: item,
 				);
 			});
+			if (hit.typing || hit.recording) armTypingTtl(id);
 		},
-		[accountId, applyOnlineContactsSnapshot],
+		[accountId, applyOnlineContactsSnapshot, armTypingTtl],
 	);
 
 	const selectWhatsAppAccount = useCallback(
@@ -15293,15 +15407,12 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (collapsedChatTip) setCollapsedChatTip(null);
 		const node = event.currentTarget;
-		const viewportTop = node.getBoundingClientRect().top;
-		const visibleRow = [...node.querySelectorAll('[data-conversation-id]')].find(row =>
-			row.getBoundingClientRect().bottom > viewportTop,
-		);
-		const anchorId = visibleRow?.getAttribute('data-conversation-id') || '';
-		const anchorIndex = anchorId
-			? filteredConversations.findIndex(item => String(item.id) === anchorId)
-			: -1;
-		const rowOffset = visibleRow ? visibleRow.getBoundingClientRect().top - viewportTop : 0;
+		// Rows are a fixed 88px (the window hook relies on it too), so the top row comes from
+		// scrollTop alone. Measuring every row on each scroll event forced a layout per frame —
+		// the main source of inbox scroll jank on phones.
+		const anchorIndex = Math.max(0, Math.floor((Number(node.scrollTop) || 0) / 88));
+		const anchorId = String(filteredConversations[anchorIndex]?.id || '');
+		const rowOffset = anchorIndex * 88 - (Number(node.scrollTop) || 0);
 		chatListScrollPositionsRef.current.set(chatListScrollScope, {
 			scrollTop: node.scrollTop,
 			anchorId,
@@ -17753,6 +17864,14 @@ function WhatsAppWorkspaceContent() {
 				const inbound =
 					event.payload?.direction === 'inbound' ||
 					event.payload?.fromMe === false;
+				if (inbound && !alreadyKnown) {
+					// Their message is in, so they stopped typing (WhatsApp does not always send `paused`).
+					// Groups keep their other members' typing; the TTL covers the sender there.
+					const row = conversationsRef.current.find(item => item.id === targetConversationId);
+					if (row && row.type !== 'group' && !String(row.providerChatId || '').endsWith('@g.us')) {
+						clearConversationTyping(targetConversationId);
+					}
+				}
 				if (inbound && !alreadyKnown && !viewingLiveThread) {
 					const peer = conversationsRef.current.find(
 						item => item.id === targetConversationId,
@@ -18192,39 +18311,12 @@ function WhatsAppWorkspaceContent() {
 					next[idx] = { ...next[idx], ...patch };
 					return next;
 				});
-				// Safety net only: WhatsApp sends `paused` when the customer stops. Composing
-				// is not re-sent every few seconds, so a short TTL hid live typing.
 				if (typing) {
+					armTypingTtl(targetId);
+				} else {
 					const clearKey = `presence-ttl:${targetId}`;
-					if (presenceTtlTimersRef.current[clearKey]) {
-						window.clearTimeout(presenceTtlTimersRef.current[clearKey]);
-					}
-					presenceTtlTimersRef.current[clearKey] = window.setTimeout(() => {
-						delete presenceTtlTimersRef.current[clearKey];
-						setConversations(current =>
-							current.map(item => {
-								if (item.id !== targetId) return item;
-								if (!item.isTyping && !item.typing && !item.presence?.typing) {
-									return item;
-								}
-								return {
-									...item,
-									isTyping: false,
-									typing: false,
-									presence: {
-										...(item.presence || {}),
-										typing: false,
-										recording: false,
-										typers: [],
-										senderName: '',
-										online: Boolean(item.presence?.online),
-										state: item.presence?.online ? 'available' : 'unavailable',
-										t: Date.now(),
-									},
-								};
-							}),
-						);
-					}, TYPING_INDICATOR_TTL_MS);
+					window.clearTimeout(presenceTtlTimersRef.current[clearKey]);
+					delete presenceTtlTimersRef.current[clearKey];
 				}
 			}
 			if (event.event === 'typing_attempt' && event.payload?.attempt) {
@@ -18910,7 +19002,6 @@ function WhatsAppWorkspaceContent() {
 
 	const sendMessage = async (event, options = {}) => {
 		event?.preventDefault?.();
-		if (sendingRef.current) return;
 		if (recordingVoice) {
 			pinThreadToBottomRef.current = true;
 			stopVoiceRecording(true);
@@ -18920,7 +19011,7 @@ function WhatsAppWorkspaceContent() {
 			item => item?.file && !item.uploading,
 		);
 		if (stagedComposerImages.length) {
-			if (!conversationId || sending) return;
+			if (!conversationId || sending || sendingRef.current) return;
 			if (!accountId) {
 				toast.error(
 					locale === 'ar'
@@ -19017,7 +19108,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			return;
 		}
-		if (!conversationId || !getDraft().trim() || sending) return;
+		if (!conversationId || !getDraft().trim()) return;
 		pinThreadToBottomRef.current = true;
 		const targetConversationId = conversationId;
 		const { text, mentions } = composerMentionCandidates
@@ -19044,6 +19135,7 @@ function WhatsAppWorkspaceContent() {
 				toast.error(ar ? 'اربط حساب واتساب الأول' : 'Link a WhatsApp account first');
 				return;
 			}
+			if (sendingRef.current) return;
 			sendingRef.current = true;
 			setSending(true);
 			try {
@@ -19083,6 +19175,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (demo.settings.enabled) {
+			if (sendingRef.current) return;
 			sendingRef.current = true;
 			setSending(true);
 			try {
@@ -19134,8 +19227,6 @@ function WhatsAppWorkspaceContent() {
 		};
 		setDraft('');
 		setReplyingTo(null);
-		sendingRef.current = true;
-		setSending(true);
 		const previous = messagesCacheRef.current.get(targetConversationId);
 		messagesCacheRef.current.set(targetConversationId, {
 			items: mergeMessages(previous?.items || [], [optimisticMessage]),
@@ -19147,6 +19238,16 @@ function WhatsAppWorkspaceContent() {
 				mergeMessages(current, [optimisticMessage], targetConversationId),
 			);
 		}
+		const queue = outboundTextQueueRef.current;
+		const previousSend = queue.get(targetConversationId) || Promise.resolve();
+		const thisSend = previousSend.catch(() => undefined).then(() => deliverQueuedText());
+		queue.set(targetConversationId, thisSend);
+		void thisSend.finally(() => {
+			if (queue.get(targetConversationId) === thisSend) queue.delete(targetConversationId);
+		});
+		return;
+
+		async function deliverQueuedText() {
 		try {
 			const { data } = await api.post(`/whatsapp/conversations/${targetConversationId}/messages`, {
 				type: 'text',
@@ -19200,9 +19301,7 @@ function WhatsAppWorkspaceContent() {
 			if (!scheduleOutboundAutoRetry(failedMessage, error, 0)) {
 				toast.error(error.response?.data?.message || 'Message failed');
 			}
-		} finally {
-			sendingRef.current = false;
-			setSending(false);
+		}
 		}
 	};
 
@@ -21060,6 +21159,8 @@ function WhatsAppWorkspaceContent() {
 				return;
 			}
 			setReplyingTo(snapshot);
+			// Like WhatsApp: Reply puts you straight in the message field (after the menu closes).
+			focusComposerForReplyRef.current = true;
 			return;
 		}
 		if (action === 'edit') {

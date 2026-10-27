@@ -10,6 +10,16 @@ export function sortTickets(tickets) {
 		.map(([t]) => t);
 }
 
+/**
+ * A reorder made while some tickets are hidden only lists the shown ones: put them back into
+ * the slots they held in the full order, so the hidden tickets keep their places.
+ */
+export function mergeSubsetOrder(allIds, subsetIds) {
+	const inSubset = new Set(subsetIds);
+	let next = 0;
+	return allIds.map(id => (inSubset.has(id) ? subsetIds[next++] : id));
+}
+
 export const COPY = {
 	en: {
 		status: { todo: 'To do', doing: 'In progress', done: 'Done' },
