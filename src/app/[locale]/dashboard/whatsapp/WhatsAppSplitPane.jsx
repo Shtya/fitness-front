@@ -248,7 +248,6 @@ export default function WhatsAppSplitPane({
 	const [loadingOlder, setLoadingOlder] = useState(false);
 	const [hasMore, setHasMore] = useState(true);
 	const [draft, setDraft] = useState('');
-	const [sending, setSending] = useState(false);
 	const [recordingVoice, setRecordingVoice] = useState(false);
 	const [recordingStarting, setRecordingStarting] = useState(false);
 	const [recordingPaused, setRecordingPaused] = useState(false);
@@ -490,7 +489,8 @@ export default function WhatsAppSplitPane({
 			stopVoiceRecording(true);
 			return;
 		}
-		if (!conversationId || !draft.trim() || sending) return;
+		if (!conversationId || !draft.trim()) return;
+		const targetConversationId = conversationId;
 		const text = draft.trim();
 		const clientMessageId = newClientMessageId();
 		const optimistic = {
@@ -505,27 +505,26 @@ export default function WhatsAppSplitPane({
 			optimistic: true,
 		};
 		setDraft('');
-		setSending(true);
 		stickToBottomRef.current = true;
-		setMessages(current => mergeMessages(current, [optimistic], conversationId));
-		try {
-			const { data } = await api.post(`/whatsapp/conversations/${conversationId}/messages`, {
-				type: 'text',
-				text,
-				clientMessageId,
-			});
-			setMessages(current =>
-				mergeMessages(current, [{ ...data.message, clientMessageId }], conversationId),
-			);
-		} catch (error) {
-			setMessages(current => current.filter(item => item.id !== optimistic.id));
-			setDraft(text);
-			toast.error(
-				error.response?.data?.message || (ar ? 'تعذر إرسال الرسالة' : 'Could not send message'),
-			);
-		} finally {
-			setSending(false);
-		}
+		setMessages(current => mergeMessages(current, [optimistic], targetConversationId));
+		void (async () => {
+			try {
+				const { data } = await api.post(`/whatsapp/conversations/${targetConversationId}/messages`, {
+					type: 'text',
+					text,
+					clientMessageId,
+				});
+				setMessages(current =>
+					mergeMessages(current, [{ ...data.message, clientMessageId }], targetConversationId),
+				);
+			} catch (error) {
+				setMessages(current => current.filter(item => item.id !== optimistic.id));
+				setDraft(current => (current ? current : text));
+				toast.error(
+					error.response?.data?.message || (ar ? 'تعذر إرسال الرسالة' : 'Could not send message'),
+				);
+			}
+		})();
 	};
 
 	const clearPendingVoiceDraft = useCallback(() => {
@@ -561,7 +560,7 @@ export default function WhatsAppSplitPane({
 
 	const sendVoiceFile = async (file, meta = {}) => {
 		const durationSec = Math.max(1, Number(meta.seconds) || 1);
-		if (!file || !conversationId || !accountId || sending) {
+		if (!file || !conversationId || !accountId) {
 			if (file) restorePendingVoiceDraft(file, durationSec);
 			return false;
 		}
@@ -570,47 +569,52 @@ export default function WhatsAppSplitPane({
 			restorePendingVoiceDraft(file, durationSec);
 			return false;
 		}
+		const targetConversationId = conversationId;
+		const uploadAccountId = accountId;
 		const clientMessageId = newClientMessageId();
 		const previewUrl = URL.createObjectURL(file);
 		const optimistic = buildOptimisticMediaMessage({
-			conversationId,
+			conversationId: targetConversationId,
 			clientMessageId,
 			type: 'voice',
 			file,
 			previewUrl,
 		});
 		stickToBottomRef.current = true;
-		setMessages(current => mergeMessages(current, [optimistic], conversationId));
-		setSending(true);
-		try {
-			const form = new FormData();
-			form.append('file', file);
-			const { data: uploaded } = await api.post(`/whatsapp/accounts/${accountId}/media`, form, {
-				maxBodyLength: Infinity,
-				maxContentLength: Infinity,
-			});
-			const { data } = await api.post(`/whatsapp/conversations/${conversationId}/messages`, {
-				type: 'voice',
-				fileId: uploaded.fileId,
-				clientMessageId,
-			});
-			setMessages(current =>
-				mergeMessages(current, [{ ...data.message, clientMessageId }], conversationId),
-			);
-			clearPendingVoiceDraft();
-			return true;
-		} catch (error) {
-			setMessages(current => current.filter(item => item.id !== optimistic.id));
-			restorePendingVoiceDraft(file, durationSec);
-			toast.error(
-				mediaUploadFailedMessage(error, locale) ||
-					(ar ? 'تعذر إرسال الرسالة الصوتية' : 'Could not send voice message'),
-			);
-			return false;
-		} finally {
-			window.setTimeout(() => URL.revokeObjectURL(previewUrl), 8000);
-			setSending(false);
-		}
+		setMessages(current => mergeMessages(current, [optimistic], targetConversationId));
+		clearPendingVoiceDraft();
+		void (async () => {
+			try {
+				const form = new FormData();
+				form.append('file', file);
+				const { data: uploaded } = await api.post(
+					`/whatsapp/accounts/${uploadAccountId}/media`,
+					form,
+					{
+						maxBodyLength: Infinity,
+						maxContentLength: Infinity,
+					},
+				);
+				const { data } = await api.post(`/whatsapp/conversations/${targetConversationId}/messages`, {
+					type: 'voice',
+					fileId: uploaded.fileId,
+					clientMessageId,
+				});
+				setMessages(current =>
+					mergeMessages(current, [{ ...data.message, clientMessageId }], targetConversationId),
+				);
+			} catch (error) {
+				setMessages(current => current.filter(item => item.id !== optimistic.id));
+				restorePendingVoiceDraft(file, durationSec);
+				toast.error(
+					mediaUploadFailedMessage(error, locale) ||
+						(ar ? 'تعذر إرسال الرسالة الصوتية' : 'Could not send voice message'),
+				);
+			} finally {
+				window.setTimeout(() => URL.revokeObjectURL(previewUrl), 8000);
+			}
+		})();
+		return true;
 	};
 
 	const pauseVoiceRecording = () => {
@@ -645,7 +649,7 @@ export default function WhatsAppSplitPane({
 	}, [conversationId, clearPendingVoiceDraft]);
 
 	const startVoiceRecording = async () => {
-		if (!conversationId || sending || recordingVoice || recordingStarting) return;
+		if (!conversationId || recordingVoice || recordingStarting) return;
 		if (
 			typeof navigator === 'undefined' ||
 			!navigator.mediaDevices?.getUserMedia ||
@@ -905,7 +909,7 @@ export default function WhatsAppSplitPane({
 						<div dir="ltr" className="wa-input-pill wa-recording-pill is-ready flex min-h-10 min-w-0 flex-1 items-center rounded-full px-1 py-1">
 							<VoiceRecordingBar
 								ready
-								sending={sending}
+								sending={false}
 								seconds={pendingVoiceDraft.seconds}
 								labels={{
 									...labels,
@@ -917,7 +921,7 @@ export default function WhatsAppSplitPane({
 								onCancel={clearPendingVoiceDraft}
 								onSend={() => {
 									const draftVoice = pendingVoiceDraft;
-									if (!draftVoice?.file || sending) return;
+									if (!draftVoice?.file) return;
 									void sendVoiceFile(draftVoice.file, { seconds: draftVoice.seconds });
 								}}
 							/>
@@ -941,16 +945,15 @@ export default function WhatsAppSplitPane({
 							{draft.trim() ? (
 								<button
 									type="submit"
-									disabled={sending}
-									className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#16B96B] text-white disabled:opacity-50"
+									className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#16B96B] text-white"
 									aria-label={ar ? 'إرسال' : 'Send'}
 								>
-									{sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+									<Send size={16} />
 								</button>
 							) : (
 								<button
 									type="button"
-									disabled={sending || recordingStarting}
+									disabled={recordingStarting}
 									onClick={() => void startVoiceRecording()}
 									className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#16B96B] text-white disabled:opacity-50 wa-mic-button ${
 										recordingStarting ? 'is-active is-armed' : ''

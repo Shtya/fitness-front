@@ -1131,6 +1131,9 @@ const translations = {
 			'This system is always online, so contacts normally see two grey ticks the moment a message arrives. When on, they see one tick until you reply from here (or until your phone connects).',
 		holdDeliveryWarning:
 			'Works only while your phone is offline: when the phone is connected it delivers the message itself. Test it with a second number first.',
+		hideTyping: 'Hide typing indicator',
+		hideTypingHint:
+			'When on, contacts do not see “typing…” while you write in this dashboard.',
 		privacyOn: 'On',
 		privacyOff: 'Off',
 		markRead: 'Mark as read',
@@ -1685,6 +1688,9 @@ const translations = {
 			'السيستم شغّال طول الوقت، فاللي بيبعتلك بيشوف علامتين صح رمادي أول ما الرسالة توصل. لما تشغّلها، هيفضل يشوف علامة واحدة لحد ما ترد من هنا (أو لحد ما موبايلك يتصل بالنت).',
 		holdDeliveryWarning:
 			'بتشتغل بس وموبايلك مقفول النت: لو الموبايل متصل هو نفسه بيأكد الاستلام. جرّبها برقم تاني الأول.',
+		hideTyping: 'إخفاء حالة الكتابة',
+		hideTypingHint:
+			'لما تتشغّل، الطرف التاني مش هيشوف إنك بتكتب وهو شغال من الداشبورد دي.',
 		privacyOn: 'مفعّل',
 		privacyOff: 'غير مفعّل',
 		markRead: 'تمّت القراءة',
@@ -12512,6 +12518,7 @@ function WhatsAppWorkspaceContent() {
 		hideStatusViewReceipts: true,
 		readReceiptMode: 'on_reply',
 		holdDeliveryReceipts: false,
+		hideTypingIndicator: false,
 	});
 	const [notificationSettings, setNotificationSettings] = useState({
 		notificationsEnabled: true,
@@ -12896,6 +12903,7 @@ function WhatsAppWorkspaceContent() {
 
 	const notifyPeerTyping = useCallback(() => {
 		if (!conversationId || demo.settings.enabled || isDemoId(conversationId)) return;
+		if (privacySettings.hideTypingIndicator) return;
 		if (presenceTypingTimerRef.current) return;
 		presenceTypingTimerRef.current = window.setTimeout(() => {
 			presenceTypingTimerRef.current = null;
@@ -12909,7 +12917,7 @@ function WhatsAppWorkspaceContent() {
 				.post(`/whatsapp/conversations/${conversationId}/presence`, { state: 'paused' })
 				.catch(() => {});
 		}, 3000);
-	}, [conversationId, demo.settings.enabled]);
+	}, [conversationId, demo.settings.enabled, privacySettings.hideTypingIndicator]);
 
 	useEffect(
 		() => () => {
@@ -13203,6 +13211,25 @@ function WhatsAppWorkspaceContent() {
 		() => accounts.find(item => item.id === accountId) || null,
 		[accounts, accountId],
 	);
+	useEffect(() => {
+		const fromAccount = selectedAccount?.privacySettings;
+		if (!fromAccount || typeof fromAccount !== 'object') return;
+		setPrivacySettings(current => ({
+			hideStatusViewReceipts:
+				typeof fromAccount.hideStatusViewReceipts === 'boolean'
+					? fromAccount.hideStatusViewReceipts
+					: current.hideStatusViewReceipts,
+			readReceiptMode: fromAccount.readReceiptMode || current.readReceiptMode,
+			holdDeliveryReceipts:
+				typeof fromAccount.holdDeliveryReceipts === 'boolean'
+					? fromAccount.holdDeliveryReceipts
+					: current.holdDeliveryReceipts,
+			hideTypingIndicator:
+				typeof fromAccount.hideTypingIndicator === 'boolean'
+					? fromAccount.hideTypingIndicator
+					: current.hideTypingIndicator,
+		}));
+	}, [selectedAccount?.id, selectedAccount?.privacySettings]);
 	const isAccountConnected = selectedAccount?.status === 'connected';
 	// Presentation mode: only the generated sample profile may reach the screen.
 	const showcaseOnly = Boolean(
@@ -16715,6 +16742,7 @@ function WhatsAppWorkspaceContent() {
 				hideStatusViewReceipts: true,
 				readReceiptMode: 'on_reply',
 				holdDeliveryReceipts: false,
+				hideTypingIndicator: false,
 			});
 			setTabLoading(false);
 			setTabError('');
@@ -19011,7 +19039,7 @@ function WhatsAppWorkspaceContent() {
 			item => item?.file && !item.uploading,
 		);
 		if (stagedComposerImages.length) {
-			if (!conversationId || sending || sendingRef.current) return;
+			if (!conversationId) return;
 			if (!accountId) {
 				toast.error(
 					locale === 'ar'
@@ -19022,21 +19050,37 @@ function WhatsAppWorkspaceContent() {
 			}
 			pinThreadToBottomRef.current = true;
 			const targetConversationId = conversationId;
+			const uploadAccountId = accountId;
 			const caption = getDraft().trim();
 			const replySnapshot = replyingTo;
-			// Keep the staged queue intact until each corresponding message is confirmed.
-			sendingRef.current = true;
-			setSending(true);
+			const batch = stagedComposerImages.map(item => ({
+				id: item.id,
+				file: item.file,
+				previewUrl: item.previewUrl,
+			}));
+			// Free the composer immediately; uploads continue in the background.
+			setComposerImagesState([]);
+			if (conversationIdRef.current === targetConversationId) {
+				if (caption) setDraft('');
+				setReplyingTo(null);
+			}
 			setUploadProgress(null);
 
-			try {
-				for (let index = 0; index < stagedComposerImages.length; index += 1) {
-					const item = stagedComposerImages[index];
+			void (async () => {
+				for (let index = 0; index < batch.length; index += 1) {
+					const item = batch[index];
 					const imageCaption = index === 0 ? caption : '';
 					const imageReply = index === 0 ? replySnapshot : null;
-
 					const clientMessageId = newClientMessageId();
+					// Separate blob URL for the bubble so clearing the stage strip is safe.
 					const optimisticPreviewUrl = URL.createObjectURL(item.file);
+					if (item.previewUrl) {
+						try {
+							URL.revokeObjectURL(item.previewUrl);
+						} catch {
+							/* ignore */
+						}
+					}
 					const optimisticMessage = buildOptimisticMediaMessage({
 						conversationId: targetConversationId,
 						clientMessageId,
@@ -19055,12 +19099,11 @@ function WhatsAppWorkspaceContent() {
 						sent = await withAsyncTimeout(
 							sendFile(item.file, 'image', {
 								conversationId: targetConversationId,
-								accountId,
+								accountId: uploadAccountId,
 								clientMessageId,
 								caption: imageCaption,
 								replySnapshot: imageReply,
 								optimisticMessage,
-								skipSendingState: true,
 								clearUploadProgress: true,
 								removeOnFailure: true,
 							}),
@@ -19079,7 +19122,7 @@ function WhatsAppWorkspaceContent() {
 									: 'Image send timed out. Check your connection and try again.'
 								: mediaUploadFailedMessage(error, locale),
 						);
-						return;
+						continue;
 					}
 
 					if (!sent) {
@@ -19087,25 +19130,9 @@ function WhatsAppWorkspaceContent() {
 						persistConversationMessages(targetConversationId, current =>
 							current.filter(message => message.id !== optimisticMessage.id),
 						);
-						if (conversationIdRef.current === targetConversationId) {
-							setReplyingTo(current => current || imageReply);
-						}
-						return;
-					}
-					setComposerImagesState(current => {
-						const sentItem = current.find(entry => entry.id === item.id);
-						if (sentItem?.previewUrl) URL.revokeObjectURL(sentItem.previewUrl);
-						return current.filter(entry => entry.id !== item.id);
-					});
-					if (index === 0 && conversationIdRef.current === targetConversationId) {
-						setReplyingTo(null);
 					}
 				}
-			} finally {
-				sendingRef.current = false;
-				setSending(false);
-				setUploadProgress(null);
-			}
+			})();
 			return;
 		}
 		if (!conversationId || !getDraft().trim()) return;
@@ -19520,7 +19547,8 @@ function WhatsAppWorkspaceContent() {
 			abortOptimistic();
 			return false;
 		}
-		const ownsSendingLock = !options.skipSendingState;
+		// Media uploads must not lock the composer — text already sends in the background.
+		const ownsSendingLock = options.useSendingLock === true;
 		if (ownsSendingLock) {
 			if (sendingRef.current || sending) {
 				abortOptimistic();
@@ -19689,7 +19717,7 @@ function WhatsAppWorkspaceContent() {
 	sendFileRef.current = sendFile;
 
 	const handleComposerFileInput = files => {
-		if (sendingRef.current || sending) return;
+		if (recordingVoice || recordingStarting) return;
 		const selected = Array.from(files || []).filter(Boolean);
 		if (!selected.length) return;
 		const normalized = selected.map(file => normalizeComposerImageFile(file) || file);
@@ -19701,24 +19729,16 @@ function WhatsAppWorkspaceContent() {
 			void sendFile(normalized[0]);
 			return;
 		}
-		if (sendingRef.current || sending) return;
-		sendingRef.current = true;
-		setSending(true);
 		void (async () => {
-			try {
-				for (const file of normalized) {
-					const sent = await sendFile(file, undefined, { skipSendingState: true });
-					if (!sent) break;
-				}
-			} finally {
-				sendingRef.current = false;
-				setSending(false);
+			for (const file of normalized) {
+				const sent = await sendFile(file);
+				if (!sent) break;
 			}
 		})();
 	};
 
 	const queueComposerImages = files => {
-		if (sendingRef.current || sending) return;
+		if (recordingVoice || recordingStarting) return;
 		const current = composerImagesRef.current;
 		const next = [...current];
 		for (const rawFile of files) {
@@ -19752,7 +19772,7 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const handleComposerPaste = event => {
-		if (event.defaultPrevented || !conversationId || sending || recordingVoice || !accountId) {
+		if (event.defaultPrevented || !conversationId || recordingVoice || !accountId) {
 			return;
 		}
 		const files = clipboardImageFiles(event);
@@ -20007,6 +20027,7 @@ function WhatsAppWorkspaceContent() {
 			return false;
 		}
 		const targetConversationId = conversationId;
+		const uploadAccountId = accountId;
 		const replySnapshot = replyingTo;
 		const clientMessageId = newClientMessageId();
 		let optimisticMessage = buildOptimisticMediaMessage({
@@ -20020,6 +20041,8 @@ function WhatsAppWorkspaceContent() {
 		persistConversationMessages(targetConversationId, current =>
 			mergeMessages(current, [optimisticMessage], targetConversationId),
 		);
+		// Free the composer right away — upload (and optional voice change) runs in the background.
+		clearPendingVoiceDraft();
 		if (conversationIdRef.current === targetConversationId) {
 			setReplyingTo(null);
 		}
@@ -20035,73 +20058,69 @@ function WhatsAppWorkspaceContent() {
 			restorePendingVoiceDraft(file, durationSec);
 		};
 
-		const settings = voiceChangerSettingsRef.current;
-		const provider = String(settings?.provider || 'off');
-		const useChanger = Boolean(settings?.enabled) && provider !== 'off';
-		const catalogItem = settings?.catalog?.find(item => item.id === provider);
-		if (useChanger && catalogItem?.needsKey && !settings?.credentials?.[provider]?.configured) {
-			restoreDraftAndBubble();
-			toast.error(
-				locale === 'ar'
-					? 'احفظ مفتاح الـ API أولاً من إعدادات تغيير الصوت.'
-					: 'Save an API key first from voice changer settings.',
-			);
-			return false;
-		}
-		let outgoing = file;
-		if (useChanger) {
-			setVoiceChanging(true);
-			toast.loading(t.voiceChanging, { id: 'whatsapp-voice-changer' });
-			try {
-				outgoing = await transformVoiceNote(file, {
-					provider: settings.provider,
-					preset: settings.preset,
-					pitchSemitones: settings.pitchSemitones,
-					voiceId: settings.voiceId,
-				});
-				toast.dismiss('whatsapp-voice-changer');
-				// The bubble kept the raw recording's blob; play the changed voice instead.
-				// New attachment id so VoiceMessage drops any prefetched copy of the raw take.
-				const changed = {
-					...optimisticMessage,
-					attachments: buildOptimisticMediaMessage({
-						clientMessageId: `${clientMessageId}-changed`,
-						type: 'voice',
-						file: outgoing,
-						previewUrl: URL.createObjectURL(outgoing),
-					}).attachments,
-				};
-				releaseOptimisticMediaPreview(optimisticMessage);
-				optimisticMessage = changed;
-				persistConversationMessages(targetConversationId, current =>
-					current.map(message => (message.id === changed.id ? changed : message)),
-				);
-			} catch (error) {
+		void (async () => {
+			const settings = voiceChangerSettingsRef.current;
+			const provider = String(settings?.provider || 'off');
+			const useChanger = Boolean(settings?.enabled) && provider !== 'off';
+			const catalogItem = settings?.catalog?.find(item => item.id === provider);
+			if (useChanger && catalogItem?.needsKey && !settings?.credentials?.[provider]?.configured) {
 				restoreDraftAndBubble();
-				toast.error((await readVoiceChangerError(error, locale)) || t.voiceChanging, {
-					id: 'whatsapp-voice-changer',
-				});
-				return false;
-			} finally {
-				setVoiceChanging(false);
+				toast.error(
+					locale === 'ar'
+						? 'احفظ مفتاح الـ API أولاً من إعدادات تغيير الصوت.'
+						: 'Save an API key first from voice changer settings.',
+				);
+				return;
 			}
-		}
+			let outgoing = file;
+			if (useChanger) {
+				setVoiceChanging(true);
+				toast.loading(t.voiceChanging, { id: 'whatsapp-voice-changer' });
+				try {
+					outgoing = await transformVoiceNote(file, {
+						provider: settings.provider,
+						preset: settings.preset,
+						pitchSemitones: settings.pitchSemitones,
+						voiceId: settings.voiceId,
+					});
+					toast.dismiss('whatsapp-voice-changer');
+					const changed = {
+						...optimisticMessage,
+						attachments: buildOptimisticMediaMessage({
+							clientMessageId: `${clientMessageId}-changed`,
+							type: 'voice',
+							file: outgoing,
+							previewUrl: URL.createObjectURL(outgoing),
+						}).attachments,
+					};
+					releaseOptimisticMediaPreview(optimisticMessage);
+					optimisticMessage = changed;
+					persistConversationMessages(targetConversationId, current =>
+						current.map(message => (message.id === changed.id ? changed : message)),
+					);
+				} catch (error) {
+					restoreDraftAndBubble();
+					toast.error((await readVoiceChangerError(error, locale)) || t.voiceChanging, {
+						id: 'whatsapp-voice-changer',
+					});
+					return;
+				} finally {
+					setVoiceChanging(false);
+				}
+			}
 
-		const ok = await sendFile(outgoing, 'voice', {
-			clientMessageId,
-			optimisticMessage,
-			conversationId: targetConversationId,
-			replySnapshot,
-			caption: '',
-			// Drop the optimistic bubble on failure — the recording returns to the composer.
-			removeOnFailure: true,
-		});
-		if (ok) {
-			clearPendingVoiceDraft();
-		} else {
-			restorePendingVoiceDraft(file, durationSec);
-		}
-		return ok;
+			const ok = await sendFile(outgoing, 'voice', {
+				clientMessageId,
+				optimisticMessage,
+				conversationId: targetConversationId,
+				accountId: uploadAccountId,
+				replySnapshot,
+				caption: '',
+				removeOnFailure: true,
+			});
+			if (!ok) restorePendingVoiceDraft(file, durationSec);
+		})();
+		return true;
 	};
 
 	const collectDownloadableAttachments = useCallback((messageList = []) => {
@@ -22143,7 +22162,7 @@ function WhatsAppWorkspaceContent() {
 		recordingVoice || recordingStarting || Boolean(pendingVoiceDraft?.file);
 
 	const startVoiceRecording = async () => {
-		if (!conversationId || sending || sendingRef.current || recordingVoice || recordingStarting || voiceChanging) return;
+		if (!conversationId || recordingVoice || recordingStarting) return;
 		if (pendingVoiceDraft?.file) clearPendingVoiceDraft();
 		setAttachmentSheetOpen(false);
 		setStickerPanelOpen(false);
@@ -23818,6 +23837,7 @@ function WhatsAppWorkspaceContent() {
 							hideStatusViewReceipts: true,
 							readReceiptMode: 'on_reply',
 							holdDeliveryReceipts: false,
+							hideTypingIndicator: false,
 						},
 					);
 					setNotificationSettings(
@@ -25622,7 +25642,7 @@ function WhatsAppWorkspaceContent() {
 					accountId={accountId}
 					locale={locale}
 					anchorRef={aiImageButtonRef}
-					disabled={!canComposeInConversation || sending}
+					disabled={!canComposeInConversation}
 				/>
 			</MountWhenOpened>
 			<PhoneSyncGate
@@ -29322,7 +29342,7 @@ function WhatsAppWorkspaceContent() {
 															<button
 																type="button"
 																onClick={() => removeComposerImage(item.id)}
-																disabled={item.uploading || sending}
+																disabled={item.uploading}
 																aria-label={locale === 'ar' ? 'إزالة الصورة' : 'Remove image'}
 																className="absolute end-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/65 text-white hover:bg-black/80 disabled:opacity-40"
 															>
@@ -29332,11 +29352,10 @@ function WhatsAppWorkspaceContent() {
 													))}
 													<button
 														type="button"
-														disabled={sending}
 														onClick={() => openComposerFilePicker({ accept: 'image/*' })}
 														aria-label={locale === 'ar' ? 'إضافة صور' : 'Add images'}
 														title={locale === 'ar' ? 'إضافة صور' : 'Add images'}
-														className="grid h-16 w-16 shrink-0 place-items-center rounded-xl border border-dashed border-[#aebac1] text-[#54656f] hover:bg-black/5 disabled:opacity-50"
+														className="grid h-16 w-16 shrink-0 place-items-center rounded-xl border border-dashed border-[#aebac1] text-[#54656f] hover:bg-black/5"
 													>
 														<Plus size={20} aria-hidden="true" />
 													</button>
@@ -29366,25 +29385,18 @@ function WhatsAppWorkspaceContent() {
 												<div dir="ltr" className="wa-input-pill wa-recording-pill is-ready flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1">
 													<VoiceRecordingBar
 														ready
-														sending={sending || voiceChanging}
+														sending={false}
 														seconds={pendingVoiceDraft.seconds}
 														labels={t}
 														onCancel={clearPendingVoiceDraft}
 														onSend={() => {
 															const draft = pendingVoiceDraft;
-															if (!draft?.file || sending || voiceChanging) return;
+															if (!draft?.file) return;
 															void sendRecordedVoice(draft.file, {
 																seconds: draft.seconds,
 															});
 														}}
 													/>
-												</div>
-											) : voiceChanging ? (
-												<div className="flex min-h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
-													<Loader2 size={16} className="animate-spin text-emerald-600" />
-													<span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
-														{t.voiceChanging}
-													</span>
 												</div>
 											) : (
 												<div dir="ltr" className="wa-input-pill flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-[24px] px-1.5 py-1">
@@ -29392,7 +29404,6 @@ function WhatsAppWorkspaceContent() {
 														ref={attachButtonRef}
 														type="button"
 														aria-label={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
-														disabled={sending}
 														onClick={() => {
 															setStickerPanelOpen(false);
 															setAiImagePanelOpen(false);
@@ -29440,7 +29451,7 @@ function WhatsAppWorkspaceContent() {
 															locale={locale}
 															conversationId={conversationId}
 															getDraft={getDraft}
-															disabled={sending || !conversationId}
+															disabled={!conversationId}
 															onApply={text => setDraft(text)}
 														/>
 													) : null}
@@ -29452,12 +29463,9 @@ function WhatsAppWorkspaceContent() {
 														ariaLabel={t.message}
 														onTyping={notifyPeerTyping}
 														onEnterSubmit={sendMessage}
-															disabled={sending}
 														onPaste={handleComposerPaste}
 														mentionCandidates={composerMentionCandidates}
 														mentionLoading={mentionMembersLoading}
-															disabled={sending}
-																disabled={sending}
 														onMentionOpen={handleComposerMentionOpen}
 														locale={locale}
 													/>
@@ -29480,7 +29488,7 @@ function WhatsAppWorkspaceContent() {
 														<DelayedSendButton
 															ar={locale === 'ar'}
 															enabled={delayedSendOn}
-															disabled={sending}
+															disabled={false}
 															buttonRef={delayedSendButtonRef}
 															onClick={() => setDelayedSendOpen(current => !current)}
 														/>
@@ -29489,7 +29497,7 @@ function WhatsAppWorkspaceContent() {
 														<>
 															<button
 																type="button"
-																disabled={sending || demo.settings.enabled}
+																disabled={demo.settings.enabled}
 																title={t.scheduleMessage}
 																aria-label={t.scheduleMessage}
 																onClick={openSchedulePopover}
@@ -29501,13 +29509,10 @@ function WhatsAppWorkspaceContent() {
 																type="submit"
 																aria-label={delayedSendOn && !composerImages.length ? t.scheduleMessage : t.send}
 																title={delayedSendOn && !composerImages.length ? t.scheduleMessage : undefined}
-																disabled={sending}
 																className="wa-send-button"
 																style={{ background: GRADIENT }}
 															>
-																{sending ? (
-																	<Loader2 size={17} className="animate-spin" />
-																) : delayedSendOn && !composerImages.length ? (
+																{delayedSendOn && !composerImages.length ? (
 																	<Clock size={17} strokeWidth={2.1} />
 																) : (
 																	<Send size={17} strokeWidth={2.1} />
@@ -29518,7 +29523,7 @@ function WhatsAppWorkspaceContent() {
 														<div className="wa-composer-end-actions flex shrink-0 items-center gap-0.5">
 															<button
 																type="button"
-																disabled={sending || demo.settings.enabled}
+																disabled={demo.settings.enabled}
 																title={t.scheduleMessage}
 																aria-label={t.scheduleMessage}
 																onClick={openSchedulePopover}
@@ -29538,7 +29543,6 @@ function WhatsAppWorkspaceContent() {
 															</button>
 															<button
 																type="button"
-																disabled={sending}
 																title={voiceChangerSettings?.enabled ? t.voiceChangerOn : t.voiceChanger}
 																aria-label={voiceChangerSettings?.enabled ? t.voiceChangerOn : t.voiceChanger}
 																aria-pressed={Boolean(voiceChangerSettings?.enabled)}
@@ -29551,7 +29555,7 @@ function WhatsAppWorkspaceContent() {
 															</button>
 															<button
 																type="button"
-																disabled={sending || recordingStarting}
+																disabled={recordingStarting}
 																title={t.recordVoice}
 																aria-label={t.recordVoice}
 																onClick={startVoiceRecording}
@@ -30878,6 +30882,30 @@ function WhatsAppWorkspaceContent() {
 														setPrivacySettings(current => ({
 															...current,
 															holdDeliveryReceipts: value,
+														}))
+													}
+												/>
+											</div>
+										</div>
+										<div className="wst-row">
+											<div className="wst-row-text">
+												<p className="wst-row-title">
+													<TypingLogIcon size={15} aria-hidden="true" />
+													{t.hideTyping}
+												</p>
+												<p className="wst-row-hint">{t.hideTypingHint}</p>
+											</div>
+											<div className="wst-row-control">
+												<span className={`wst-state${privacySettings.hideTypingIndicator ? ' is-on' : ''}`}>
+													{privacySettings.hideTypingIndicator ? t.privacyOn : t.privacyOff}
+												</span>
+												<Toggle
+													label={t.hideTyping}
+													checked={Boolean(privacySettings.hideTypingIndicator)}
+													onChange={value =>
+														setPrivacySettings(current => ({
+															...current,
+															hideTypingIndicator: value,
 														}))
 													}
 												/>
