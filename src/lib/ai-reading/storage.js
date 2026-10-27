@@ -74,6 +74,10 @@ let notebookQueue = Promise.resolve();
 
 let flushTimer = null;
 let flushPromise = null;
+let flushChain = Promise.resolve();
+let promptQueue = Promise.resolve();
+/* Bumped on every local edit; lets a save reply tell whether it is already stale. */
+let localRevision = 0;
 /* Per-book saves still in flight; a re-hydrate waits for them so it never reads an older copy. */
 const pendingBookWrites = new Set();
 
@@ -88,7 +92,7 @@ async function settleLocalWrites() {
 	if (flushTimer) {
 		clearTimeout(flushTimer);
 		flushTimer = null;
-		await flushNow();
+		await queueFlush();
 	}
 	if (flushPromise) await flushPromise;
 	if (pendingBookWrites.size) await Promise.allSettled([...pendingBookWrites]);
@@ -121,10 +125,10 @@ function clearLegacyLocalStorage() {
 	}
 }
 
+/* Prompts are saved through their own channel (savePrompts), never with the full state. */
 function snapshot() {
 	return {
 		books: cache.books,
-		prompts: Array.isArray(cache.prompts) ? cache.prompts : [],
 		topics: cache.topics,
 		journeys: Array.isArray(cache.journeys) ? cache.journeys : [],
 		prefs: cache.prefs,
@@ -148,27 +152,64 @@ async function flushNow() {
 		return;
 	}
 	const body = snapshot();
+	const revision = localRevision;
 	try {
 		const { data } = await api.put('/ai-reading/state', body, { timeout: 120000 });
-		if (data && typeof data === 'object') {
-			applyServerState(data, { emitChange: false });
+		/* A reply to an older snapshot must not overwrite edits made while it was in flight. */
+		if (data && typeof data === 'object' && revision === localRevision) {
+			const { prompts: _prompts, ...rest } = data;
+			applyServerState(rest, { emitChange: false });
 		}
 	} catch (err) {
 		console.warn('[ai-reading] cloud flush failed', err?.message || err);
 	}
 }
 
+/** Full-state PUTs run one at a time so an older body can never land after a newer one. */
+function queueFlush() {
+	const run = flushChain.then(flushNow);
+	flushChain = run.catch(() => {});
+	return run;
+}
+
 function scheduleFlush() {
+	localRevision += 1;
 	emit();
 	if (typeof window === 'undefined') return;
 	if (!localStorage.getItem('accessToken')) return;
 	clearTimeout(flushTimer);
 	flushTimer = setTimeout(() => {
 		flushTimer = null;
-		flushPromise = flushNow().finally(() => {
-			flushPromise = null;
+		const run = queueFlush().finally(() => {
+			if (flushPromise === run) flushPromise = null;
 		});
+		flushPromise = run;
 	}, 450);
+}
+
+async function putPromptsNow() {
+	const prompts = Array.isArray(cache.prompts) ? cache.prompts : [];
+	try {
+		await api.put('/ai-reading/prompts', { prompts }, { timeout: 30000 });
+	} catch (err) {
+		if (err?.response?.status !== 404) throw err;
+		await api.put('/ai-reading/state', { prompts }, { timeout: 30000 });
+	}
+}
+
+/** Save prompts right away, in order, always sending the latest list. */
+function savePrompts() {
+	localRevision += 1;
+	emit();
+	if (typeof window === 'undefined' || !localStorage.getItem('accessToken')) return;
+	if (!cache.loadedFromServer) {
+		console.warn('[ai-reading] skipped prompts save: library not loaded from the server yet');
+		return;
+	}
+	promptQueue = promptQueue
+		.then(putPromptsNow)
+		.catch(err => console.warn('[ai-reading] prompts save failed', err?.message || err));
+	trackWrite(promptQueue);
 }
 
 function applyServerState(data, { emitChange = true } = {}) {
@@ -296,8 +337,8 @@ export function isAiReadingReady() {
 
 export async function flushAiReadingStore() {
 	clearTimeout(flushTimer);
-	if (flushPromise) await flushPromise;
-	await flushNow();
+	flushTimer = null;
+	await Promise.all([queueFlush(), promptQueue]);
 }
 
 function emitNotebook() {
@@ -471,7 +512,7 @@ export function updateProgress(id, progress) {
 export function listPrompts() {
 	if (!Array.isArray(cache.prompts)) {
 		cache.prompts = [buildDefaultPolishPrompt(), buildDefaultMemorizePrompt()];
-		scheduleFlush();
+		savePrompts();
 	}
 	return cache.prompts;
 }
@@ -480,7 +521,7 @@ export function ensureDefaultMemorizePrompt() {
 	const prompts = listPrompts();
 	if (prompts.some(p => p.id === DEFAULT_MEMORIZE_PROMPT_ID)) return prompts;
 	cache.prompts = [buildDefaultMemorizePrompt(), ...prompts];
-	scheduleFlush();
+	savePrompts();
 	return cache.prompts;
 }
 
@@ -488,7 +529,7 @@ export function ensureDefaultPolishPrompt() {
 	const prompts = listPrompts();
 	if (prompts.some(p => p.id === DEFAULT_POLISH_PROMPT_ID)) return prompts;
 	cache.prompts = [buildDefaultPolishPrompt(), ...prompts];
-	scheduleFlush();
+	savePrompts();
 	return cache.prompts;
 }
 
@@ -504,13 +545,13 @@ export function upsertPrompt(prompt) {
 	if (idx >= 0) prompts[idx] = next;
 	else prompts.unshift(next);
 	cache.prompts = prompts;
-	scheduleFlush();
+	savePrompts();
 	return next;
 }
 
 export function deletePrompt(id) {
 	cache.prompts = listPrompts().filter(p => p.id !== id);
-	scheduleFlush();
+	savePrompts();
 }
 
 export function listTopics() {

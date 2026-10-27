@@ -140,13 +140,18 @@ export default function ImportPanel() {
 			setTitle('');
 		}
 		if (!looksLikeUrl(link)) throw new Error(t('import.invalidUrl'));
-		const claudeId = claudeShareId(link);
-		if (claudeId) {
-			setClaudeDataUrl(claudeSnapshotUrl(claudeId));
-			return;
-		}
 		setPhase(t('import.workingFetch'));
-		const data = await aiReadingApi.importUrl({ url: link, action: 'preview' });
+		let data;
+		try {
+			data = await aiReadingApi.importUrl({ url: link, action: 'preview' });
+		} catch (err) {
+			const claudeId = claudeShareId(link);
+			if (claudeId && err?.data?.code === 'CLAUDE_SHARE_BLOCKED') {
+				setClaudeDataUrl(claudeSnapshotUrl(claudeId));
+				return;
+			}
+			throw err;
+		}
 		if (data.kind === 'chat-share') {
 			const selected = new Set((data.messages || []).filter(m => m.selectedDefault !== false).map(m => m.id));
 			setPreview({ kind: 'chat-share', provider: data.provider, title: data.title, messages: data.messages || [], selected });
@@ -300,7 +305,7 @@ export default function ImportPanel() {
 									{claudeDataUrl && !preview && (
 										<div className="space-y-4 rounded-[14px] border p-4" style={{ borderColor: 'var(--rr-line-strong)', background: 'var(--rr-bg)' }}>
 											<p className="text-[13px] leading-relaxed rr-muted">
-												{L('Claude بيقفل المحادثة على حسابك، فهنقراها من متصفحك وانت مسجل دخول — خطوتين بس:', 'Claude keeps shares behind your login, so we read it from your signed-in browser — two quick steps:')}
+												{L('المشاركة دي خاصة ومش هتتفتح غير بحسابك، فهنقراها من متصفحك وانت مسجل دخول — خطوتين بس:', 'This Claude share is private, so we read it from your signed-in browser — two quick steps:')}
 											</p>
 											<div className="flex items-start gap-3">
 												<span className="grid size-6 shrink-0 place-items-center rounded-full text-[12px] font-bold" style={{ background: 'var(--rr-accent-soft)', color: 'var(--rr-accent)' }}>1</span>
