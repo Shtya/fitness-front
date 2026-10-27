@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { claudeShareId, claudeSnapshotUrl, extractClaudeSnapshot } from './claude-share.js';
+import { messagesToMarkdown } from './chat-markdown.js';
 
 const ID = '62bcafed-d307-44dc-8cfc-9d63badc2668';
 
@@ -38,6 +39,17 @@ test('extractClaudeSnapshot maps human/assistant text and skips tools', () => {
 		['b', 'assistant', '# Plan\n\nDay 1'],
 		['c', 'assistant', 'Legacy text field'],
 	]);
+});
+
+test('messagesToMarkdown labels Claude turns', () => {
+	const md = messagesToMarkdown(
+		[
+			{ role: 'user', text: 'Q' },
+			{ role: 'assistant', text: 'A' },
+		],
+		{ assistantLabel: 'Claude' },
+	);
+	assert.equal(md, '## You\n\nQ\n\n---\n\n## Claude\n\nA');
 });
 
 test('extractClaudeSnapshot returns null when there is nothing readable', () => {

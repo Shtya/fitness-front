@@ -3,11 +3,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, Bot, Check, FileText, FileUp, Link2, Loader2, Type, User, X } from 'lucide-react';
+import { AlertCircle, Bot, Check, ExternalLink, FileText, FileUp, Link2, Loader2, Type, User, X } from 'lucide-react';
 import { useReadingNav } from '@/lib/ai-reading/reading-nav';
 import { aiReadingApi } from '@/lib/ai-reading/client-api';
 import { upsertBook, flushAiReadingStore } from '@/lib/ai-reading/storage';
 import { extractBookFile } from '@/lib/ai-reading/extract-book-file';
+import { claudeShareId, claudeSnapshotUrl, extractClaudeSnapshot } from '@/lib/ai-reading/claude-share';
+import { messagesToMarkdown } from '@/lib/ai-reading/chat-markdown';
 import { DirArrow, PageHeader, Switch, useRoomLang } from '@/components/ai-reading/room/RoomUI';
 
 const SAMPLE = `# The Psychology of Money
@@ -56,10 +58,44 @@ export default function ImportPanel() {
 	const [error, setError] = useState('');
 	const [preview, setPreview] = useState(null);
 	const [includeRoles, setIncludeRoles] = useState(true);
+	const [claudeDataUrl, setClaudeDataUrl] = useState('');
+	const [claudeData, setClaudeData] = useState('');
 
 	const selectedCount = useMemo(() => (preview?.selected ? preview.selected.size : 0), [preview]);
 
-	const resetPreview = () => setPreview(null);
+	const resetPreview = () => {
+		setPreview(null);
+		setClaudeDataUrl('');
+		setClaudeData('');
+	};
+
+	const readClaudeData = value => {
+		setClaudeData(value);
+		setPreview(null);
+		if (!value.trim()) {
+			setError('');
+			return;
+		}
+		let json = null;
+		try {
+			json = JSON.parse(value);
+		} catch {
+			setError(L('ده مش بيانات المحادثة. انسخ كل الصفحة اللي اتفتحت (Ctrl+A ثم Ctrl+C) والصقها هنا.', 'That is not the conversation data. Copy the whole page that opened (Ctrl+A, Ctrl+C) and paste it here.'));
+			return;
+		}
+		if (json?.error) {
+			setError(L('Claude طلب تسجيل دخول. سجّل دخول على claude.ai بنفس المتصفح وافتح الرابط تاني.', 'Claude asked you to sign in. Log in to claude.ai in this browser, then open the link again.'));
+			return;
+		}
+		const share = extractClaudeSnapshot(json);
+		if (!share) {
+			setError(L('مفيش رسائل مقروءة في البيانات دي.', 'No readable messages in that data.'));
+			return;
+		}
+		setError('');
+		setPreview({ kind: 'chat-share', provider: 'claude', local: true, title: share.title, messages: share.messages, selected: new Set(share.messages.map(m => m.id)) });
+		if (!title.trim()) setTitle(share.title);
+	};
 
 	const clearFile = () => {
 		setFileName('');
@@ -104,6 +140,11 @@ export default function ImportPanel() {
 			setTitle('');
 		}
 		if (!looksLikeUrl(link)) throw new Error(t('import.invalidUrl'));
+		const claudeId = claudeShareId(link);
+		if (claudeId) {
+			setClaudeDataUrl(claudeSnapshotUrl(claudeId));
+			return;
+		}
 		setPhase(t('import.workingFetch'));
 		const data = await aiReadingApi.importUrl({ url: link, action: 'preview' });
 		if (data.kind === 'chat-share') {
@@ -124,6 +165,15 @@ export default function ImportPanel() {
 		const ids = [...preview.selected];
 		if (!ids.length) throw new Error(t('import.selectOne'));
 		setPhase(t('import.working'));
+		if (preview.local) {
+			const picked = preview.messages.filter(m => preview.selected.has(m.id));
+			const raw = messagesToMarkdown(picked, { includeRoles, assistantLabel: 'Claude' });
+			const local = await aiReadingApi.import({ raw, title: title || preview.title || undefined, enhance });
+			upsertBook(local.book);
+			await flushAiReadingStore();
+			openBook(local.book.id);
+			return;
+		}
 		const data = await aiReadingApi.importUrl({
 			url: url.trim(),
 			title: title || preview.title || undefined,
@@ -186,6 +236,7 @@ export default function ImportPanel() {
 		(mode === 'paste' && !raw.trim()) ||
 		(mode === 'file' && !raw.trim()) ||
 		(mode === 'link' && !url.trim()) ||
+		(mode === 'link' && claudeDataUrl && !preview) ||
 		(preview?.kind === 'chat-share' && selectedCount === 0);
 
 	const SOURCES = [
@@ -245,6 +296,38 @@ export default function ImportPanel() {
 										</span>
 										<span className="mt-2 block text-[12.5px] leading-relaxed rr-faint">{t('import.linkHintChat')}</span>
 									</label>
+
+									{claudeDataUrl && !preview && (
+										<div className="space-y-4 rounded-[14px] border p-4" style={{ borderColor: 'var(--rr-line-strong)', background: 'var(--rr-bg)' }}>
+											<p className="text-[13px] leading-relaxed rr-muted">
+												{L('Claude بيقفل المحادثة على حسابك، فهنقراها من متصفحك وانت مسجل دخول — خطوتين بس:', 'Claude keeps shares behind your login, so we read it from your signed-in browser — two quick steps:')}
+											</p>
+											<div className="flex items-start gap-3">
+												<span className="grid size-6 shrink-0 place-items-center rounded-full text-[12px] font-bold" style={{ background: 'var(--rr-accent-soft)', color: 'var(--rr-accent)' }}>1</span>
+												<div className="min-w-0 flex-1 space-y-2">
+													<p className="text-[13.5px] font-semibold">{L('افتح بيانات المحادثة، وبعدين Ctrl+A ثم Ctrl+C', 'Open the conversation data, then Ctrl+A and Ctrl+C')}</p>
+													<a href={claudeDataUrl} target="_blank" rel="noopener noreferrer" className="rr-btn rr-btn-ghost rr-btn-sm">
+														<ExternalLink size={14} /> {L('افتح بيانات المحادثة', 'Open conversation data')}
+													</a>
+												</div>
+											</div>
+											<div className="flex items-start gap-3">
+												<span className="grid size-6 shrink-0 place-items-center rounded-full text-[12px] font-bold" style={{ background: 'var(--rr-accent-soft)', color: 'var(--rr-accent)' }}>2</span>
+												<label className="min-w-0 flex-1 space-y-2">
+													<span className="block text-[13.5px] font-semibold">{L('الصق هنا، وهتظهر لك الرسائل تختار منها', 'Paste it here and pick the messages you want')}</span>
+													<textarea
+														value={claudeData}
+														onChange={e => readClaudeData(e.target.value)}
+														rows={4}
+														dir="ltr"
+														spellCheck={false}
+														placeholder='{"chat_messages": [ … ] }'
+														className="rr-field font-mono text-[12px]"
+													/>
+												</label>
+											</div>
+										</div>
+									)}
 
 									{preview?.kind === 'chat-share' && (
 										<div className="overflow-hidden rounded-[14px] border" style={{ borderColor: 'var(--rr-line-strong)' }}>
