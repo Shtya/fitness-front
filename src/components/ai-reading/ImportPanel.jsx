@@ -95,25 +95,32 @@ export default function ImportPanel() {
 	};
 
 	const fetchShare = async () => {
-		const link = url.trim();
+		let link = url.trim();
+		let bookTitle = title;
+		if (!looksLikeUrl(link) && looksLikeUrl(title)) {
+			link = title.trim();
+			bookTitle = '';
+			setUrl(link);
+			setTitle('');
+		}
 		if (!looksLikeUrl(link)) throw new Error(t('import.invalidUrl'));
 		setPhase(t('import.workingFetch'));
 		const data = await aiReadingApi.importUrl({ url: link, action: 'preview' });
-		if (data.kind === 'chatgpt-share') {
+		if (data.kind === 'chat-share') {
 			const selected = new Set((data.messages || []).filter(m => m.selectedDefault !== false).map(m => m.id));
-			setPreview({ kind: 'chatgpt-share', title: data.title, messages: data.messages || [], selected });
-			if (!title.trim() && data.title) setTitle(data.title);
+			setPreview({ kind: 'chat-share', provider: data.provider, title: data.title, messages: data.messages || [], selected });
+			if (!bookTitle.trim() && data.title) setTitle(data.title);
 			return;
 		}
 		setPhase(t('import.working'));
-		const imported = await aiReadingApi.importUrl({ url: link, title: title || data.title || undefined, enhance, action: 'import' });
+		const imported = await aiReadingApi.importUrl({ url: link, title: bookTitle || data.title || undefined, enhance, action: 'import' });
 		upsertBook(imported.book);
 		await flushAiReadingStore();
 		openBook(imported.book.id);
 	};
 
 	const importSelected = async () => {
-		if (!preview || preview.kind !== 'chatgpt-share') return;
+		if (!preview || preview.kind !== 'chat-share') return;
 		const ids = [...preview.selected];
 		if (!ids.length) throw new Error(t('import.selectOne'));
 		setPhase(t('import.working'));
@@ -138,7 +145,7 @@ export default function ImportPanel() {
 		const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
 		try {
 			if (mode === 'link') {
-				if (preview?.kind === 'chatgpt-share') await importSelected();
+				if (preview?.kind === 'chat-share') await importSelected();
 				else await fetchShare();
 			} else {
 				if (!raw.trim()) throw new Error(t('errors.import'));
@@ -168,7 +175,7 @@ export default function ImportPanel() {
 
 	const ctaLabel = () => {
 		if (busy) return phase || t('import.working');
-		if (mode === 'link' && preview?.kind === 'chatgpt-share') return t('import.importSelected', { count: selectedCount });
+		if (mode === 'link' && preview?.kind === 'chat-share') return t('import.importSelected', { count: selectedCount });
 		if (mode === 'link') return t('import.fetchMessages');
 		if (mode === 'file') return t('import.ctaFile');
 		return t('import.cta');
@@ -179,11 +186,11 @@ export default function ImportPanel() {
 		(mode === 'paste' && !raw.trim()) ||
 		(mode === 'file' && !raw.trim()) ||
 		(mode === 'link' && !url.trim()) ||
-		(preview?.kind === 'chatgpt-share' && selectedCount === 0);
+		(preview?.kind === 'chat-share' && selectedCount === 0);
 
 	const SOURCES = [
 		{ id: 'paste', Icon: Type, label: L('نص', 'Text'), hint: L('الصق مقال أو محادثة', 'Paste an article or chat') },
-		{ id: 'link', Icon: Link2, label: L('لينك', 'Link'), hint: L('مقال أو مشاركة ChatGPT', 'Article or ChatGPT share') },
+		{ id: 'link', Icon: Link2, label: L('لينك', 'Link'), hint: L('مقال أو مشاركة ChatGPT / Claude', 'Article, ChatGPT or Claude share') },
 		{ id: 'file', Icon: FileUp, label: L('ملف', 'File'), hint: L('PDF أو Word', 'PDF or Word') },
 	];
 
@@ -232,14 +239,14 @@ export default function ImportPanel() {
 												required
 												inputMode="url"
 												dir="ltr"
-												placeholder="https://chatgpt.com/share/…"
+												placeholder="https://chatgpt.com/share/… · https://claude.ai/share/…"
 												className="rr-field ps-10"
 											/>
 										</span>
 										<span className="mt-2 block text-[12.5px] leading-relaxed rr-faint">{t('import.linkHintChat')}</span>
 									</label>
 
-									{preview?.kind === 'chatgpt-share' && (
+									{preview?.kind === 'chat-share' && (
 										<div className="overflow-hidden rounded-[14px] border" style={{ borderColor: 'var(--rr-line-strong)' }}>
 											<div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ background: 'var(--rr-bg)' }}>
 												<div className="min-w-0">
@@ -277,7 +284,7 @@ export default function ImportPanel() {
 																<span className="min-w-0 flex-1">
 																	<span className="flex items-center gap-1.5 text-[12px] font-semibold rr-muted">
 																		{isUser ? <User size={13} /> : <Bot size={13} />}
-																		{isUser ? t('import.roleUser') : t('import.roleAssistant')}
+																		{isUser ? t('import.roleUser') : preview.provider === 'claude' ? 'Claude' : t('import.roleAssistant')}
 																	</span>
 																	<span className="mt-1 block text-[14px] leading-relaxed line-clamp-3" dir="auto">{m.preview}</span>
 																</span>

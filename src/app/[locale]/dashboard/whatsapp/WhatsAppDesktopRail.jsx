@@ -1,24 +1,28 @@
 'use client';
 
-import { FileText,
-	BarChart3,
-	BookOpen,
-	Bot,
-	Keyboard,
+import {
+	BookMarked,
+	BrainCircuit,
+	ChartColumnIncreasing,
+	CircleDot,
+	FileStack,
+	Kanban,
 	Languages,
-	LayoutGrid,
-	MessageCircle,
+	MessagesSquare,
 	Moon,
+	MoonStar,
+	NotebookPen,
 	PanelLeftClose,
 	PanelLeftOpen,
 	Settings,
 	Smartphone,
-	Sparkles,
 	Sun,
+	TextCursorInput,
 	User,
-	Users,
-	Wallet,
-	Zap, Radio } from 'lucide-react';
+	UsersRound,
+	WalletCards,
+	WandSparkles,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaWhatsapp } from 'react-icons/fa';
@@ -149,38 +153,39 @@ export default function WhatsAppDesktopRail({
 	const { focusMode, setFocusMode, hideEdgeDock } = useSidebarChrome();
 	const dockTip = useDockTooltip(ar);
 
+	// Core workflow first, then ops tools. Stronger lucide glyphs (filled-friendly outlines).
 	const allPrimaryItems = [
 		{
 			id: 'chats',
 			label: labels.chats || (ar ? 'محادثات' : 'Chats'),
-			icon: MessageCircle,
+			icon: MessagesSquare,
 			badge: unreadCount,
-		},
-		{
-			id: 'reading',
-			label: labels.reading || (ar ? 'القراءة' : 'Reading'),
-			icon: BookOpen,
 		},
 		{
 			id: 'online',
 			label: labels.onlineTab || (ar ? 'المتصلون' : 'Online'),
-			icon: Radio,
+			icon: CircleDot,
 		},
 		{
 			id: 'statuses',
 			label: labels.updates || (ar ? 'تحديثات' : 'Updates'),
-			icon: Zap,
+			icon: NotebookPen,
+		},
+		{
+			id: 'reading',
+			label: labels.reading || (ar ? 'القراءة' : 'Reading'),
+			icon: BookMarked,
 		},
 		{
 			id: 'groups',
 			label: labels.groups || labels.communities || (ar ? 'مجموعات' : 'Groups'),
-			icon: Users,
+			icon: UsersRound,
 		},
 		showAgent
 			? {
 					id: 'agent',
 					label: labels.agent || (ar ? 'الذكاء الاصطناعي' : 'AI'),
-					icon: Bot,
+					icon: BrainCircuit,
 				}
 			: null,
 	].filter(Boolean);
@@ -189,6 +194,41 @@ export default function WhatsAppDesktopRail({
 		: allPrimaryItems;
 
 	const utilityItems = [
+		showTyping
+			? {
+					id: 'typing',
+					label: labels.typing || (ar ? 'محاولات الكتابة' : 'Typing log'),
+					icon: TextCursorInput,
+				}
+			: null,
+		showBoard
+			? {
+					id: 'board',
+					label: ar ? 'مهام' : 'Tasks',
+					icon: Kanban,
+				}
+			: null,
+		showDocuments
+			? {
+					id: 'documents',
+					label: labels.documents || (ar ? 'المستندات' : 'Documents'),
+					icon: FileStack,
+				}
+			: null,
+		showWallet
+			? {
+					id: 'wallet',
+					label: labels.wallet || (ar ? 'محفظتي' : 'Wallet'),
+					icon: WalletCards,
+				}
+			: null,
+		showAdhkar
+			? {
+					id: 'adhkar',
+					label: labels.adhkar || (ar ? 'أذكاري' : 'My Adhkar'),
+					icon: MoonStar,
+				}
+			: null,
 		showAccounts
 			? {
 					id: 'accounts',
@@ -200,49 +240,14 @@ export default function WhatsAppDesktopRail({
 			? {
 					id: 'reports',
 					label: labels.reports || (ar ? 'تقارير' : 'Reports'),
-					icon: BarChart3,
-				}
-			: null,
-		showTyping
-			? {
-					id: 'typing',
-					label: labels.typing || (ar ? 'محاولات الكتابة' : 'Typing log'),
-					icon: Keyboard,
-				}
-			: null,
-		showBoard
-			? {
-					id: 'board',
-					label: ar ? 'مهام' : 'Tasks',
-					icon: LayoutGrid,
+					icon: ChartColumnIncreasing,
 				}
 			: null,
 		showFakeChat
 			? {
 					id: 'fakeChat',
 					label: labels.fakeChat || (ar ? 'شات وهمي' : 'Fake chat'),
-					icon: Sparkles,
-				}
-			: null,
-		showWallet
-			? {
-					id: 'wallet',
-					label: labels.wallet || (ar ? 'محفظتي' : 'Wallet'),
-					icon: Wallet,
-				}
-			: null,
-		showAdhkar
-			? {
-					id: 'adhkar',
-					label: labels.adhkar || (ar ? 'أذكاري' : 'My Adhkar'),
-					icon: BookOpen,
-				}
-			: null,
-		showDocuments
-			? {
-					id: 'documents',
-					label: labels.documents || (ar ? 'المستندات' : 'Documents'),
-					icon: FileText,
+					icon: WandSparkles,
 				}
 			: null,
 	].filter(Boolean);
@@ -276,7 +281,7 @@ export default function WhatsAppDesktopRail({
 			>
 				<span className="wa-desktop-rail__icon-wrap">
 					<span className="wa-desktop-rail__icon" aria-hidden="true">
-						<Icon size={20} strokeWidth={1.75} />
+						<Icon size={21} strokeWidth={2} absoluteStrokeWidth />
 					</span>
 					{badge ? (
 						<span className="wa-desktop-rail__badge" aria-label={`${badge} unread`}>
@@ -301,7 +306,7 @@ export default function WhatsAppDesktopRail({
 				title="WhatsApp"
 				aria-hidden="true"
 			>
-				<FaWhatsapp size={22} />
+				<FaWhatsapp size={24} />
 			</div>
 
 			<nav className="wa-desktop-rail__items flex w-full flex-col items-center gap-0.5 px-1">
@@ -317,9 +322,9 @@ export default function WhatsAppDesktopRail({
 						<span className="wa-desktop-rail__icon-wrap relative inline-flex">
 							<span className="wa-desktop-rail__icon grid place-items-center">
 								{focusMode ? (
-									<PanelLeftOpen size={20} strokeWidth={1.75} className="rtl:scale-x-[-1]" />
+									<PanelLeftOpen size={21} strokeWidth={2} absoluteStrokeWidth className="rtl:scale-x-[-1]" />
 								) : (
-									<PanelLeftClose size={20} strokeWidth={1.75} className="rtl:scale-x-[-1]" />
+									<PanelLeftClose size={21} strokeWidth={2} absoluteStrokeWidth className="rtl:scale-x-[-1]" />
 								)}
 							</span>
 						</span>
@@ -358,8 +363,8 @@ export default function WhatsAppDesktopRail({
 							}
 						>
 							<span className="wa-rf__tile">
-								<Sun size={19} strokeWidth={1.9} className="wa-rf__theme-icon is-sun" aria-hidden="true" />
-								<Moon size={19} strokeWidth={1.9} className="wa-rf__theme-icon is-moon" aria-hidden="true" />
+								<Sun size={19} strokeWidth={2} className="wa-rf__theme-icon is-sun" aria-hidden="true" />
+								<Moon size={19} strokeWidth={2} className="wa-rf__theme-icon is-moon" aria-hidden="true" />
 							</span>
 							<span className="wa-rf__label" aria-hidden="true">
 								{darkMode ? (ar ? 'فاتح' : 'Light Mode') : ar ? 'داكن' : 'Dark Mode'}
@@ -379,7 +384,7 @@ export default function WhatsAppDesktopRail({
 							data-tip={ar ? labels.switchToEnglish || 'English' : labels.switchToArabic || 'العربية'}
 						>
 							<span className="wa-rf__tile">
-								<Languages size={19} strokeWidth={1.9} aria-hidden="true" />
+								<Languages size={19} strokeWidth={2} aria-hidden="true" />
 							</span>
 							<span className="wa-rf__label" aria-hidden="true">
 								{ar ? 'اللغة' : 'Language'}
@@ -396,7 +401,7 @@ export default function WhatsAppDesktopRail({
 							data-tip={labels.settings || (ar ? 'الإعدادات' : 'Settings')}
 						>
 							<span className="wa-rf__tile">
-								<Settings size={19} strokeWidth={1.9} aria-hidden="true" />
+								<Settings size={19} strokeWidth={2} aria-hidden="true" />
 							</span>
 							<span className="wa-rf__label" aria-hidden="true">
 								{labels.settings || (ar ? 'الإعدادات' : 'Settings')}

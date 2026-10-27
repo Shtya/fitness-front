@@ -170,10 +170,10 @@ export function isChatGptShareUrl(url) {
 }
 
 /** Build markdown from selected messages, preserving headings already in text. */
-export function messagesToMarkdown(messages, { includeRoles = true } = {}) {
+export function messagesToMarkdown(messages, { includeRoles = true, assistantLabel = 'ChatGPT' } = {}) {
 	const blocks = [];
 	for (const m of messages) {
-		const roleLabel = m.role === 'user' ? 'You' : m.role === 'assistant' ? 'ChatGPT' : m.role;
+		const roleLabel = m.role === 'user' ? 'You' : m.role === 'assistant' ? assistantLabel : m.role;
 		if (includeRoles) {
 			blocks.push(`## ${roleLabel}\n\n${m.text}`);
 		} else {

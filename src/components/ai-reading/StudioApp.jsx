@@ -5,12 +5,13 @@ import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
-import { BookOpen, ChevronLeft, Home, Layers, Library, NotebookPen, Plus } from 'lucide-react';
+import { BookOpen, ChevronLeft, Home, Layers, Library, NotebookPen, Plus, Sparkles } from 'lucide-react';
 import NotebookDrawer from '@/components/ai-reading/NotebookDrawer';
 import ReadingHub from '@/components/ai-reading/ReadingHub';
 import ImportPanel from '@/components/ai-reading/ImportPanel';
 import DailyReview from '@/components/ai-reading/DailyReview';
 import LibraryPanel from '@/components/ai-reading/LibraryPanel';
+import PromptsPanel from '@/components/ai-reading/PromptsPanel';
 import ReadingView from '@/components/ai-reading/ReadingView';
 import { ReadingNavProvider } from '@/lib/ai-reading/reading-nav';
 import { uiFontFamily } from '@/lib/ai-reading/fonts';
@@ -19,11 +20,11 @@ import { collectAllDue } from '@/lib/ai-reading/spaced-review';
 import '@/lib/ai-reading/ai-reading-theme.css';
 import '@/components/ai-reading/room/reading-room.css';
 
-const TAB_IDS = ['home', 'library', 'import', 'review'];
+const TAB_IDS = ['home', 'library', 'import', 'review', 'prompts'];
 const SHELL = 'mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8';
 
 /**
- * The reading room: Home · Library · Import · Review.
+ * The reading room: Home · Library · Import · Review · Prompts.
  * `embedded` runs it inside another page (the WhatsApp Reading tab): tabs live in local state
  * instead of the URL, and books open in place instead of navigating away.
  */
@@ -99,6 +100,7 @@ export default function StudioApp({ initialTab = 'home', embedded = false, onExi
 		{ id: 'library', Icon: Library, label: L('مكتبتي', 'Library') },
 		{ id: 'import', Icon: Plus, label: L('إضافة', 'Add') },
 		{ id: 'review', Icon: Layers, label: L('مراجعة', 'Review'), badge: due },
+		{ id: 'prompts', Icon: Sparkles, label: L('Prompts', 'Prompts') },
 	];
 
 	const room = (
@@ -162,6 +164,7 @@ export default function StudioApp({ initialTab = 'home', embedded = false, onExi
 							{tab === 'library' && <LibraryPanel />}
 							{tab === 'import' && <ImportPanel />}
 							{tab === 'review' && <DailyReview />}
+							{tab === 'prompts' && <PromptsPanel />}
 						</div>
 					)}
 				</div>

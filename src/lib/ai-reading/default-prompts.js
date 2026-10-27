@@ -8,6 +8,7 @@ export function buildDefaultMemorizePrompt() {
 	return createPrompt({
 		id: DEFAULT_MEMORIZE_PROMPT_ID,
 		title: 'Memorize — clear recall note',
+		description: 'Turns a passage into a short recall note you can review later.',
 		category: 'custom',
 		favorite: true,
 		body: `حول المقطع التالي إلى مذكرة حفظ واضحة أقدر أرجع لها بعدين.
@@ -30,6 +31,7 @@ export function buildDefaultPolishPrompt() {
 	return createPrompt({
 		id: DEFAULT_POLISH_PROMPT_ID,
 		title: 'Polish — audit & strengthen page',
+		description: 'Edits a page for clarity and strength without shrinking it into a summary.',
 		category: 'custom',
 		favorite: true,
 		body: `أنت محرر ومدقق قوي. اقرأ الصفحة التالية بتركيز، ثم حسّنها كمحرر محترف — مش تلخيص.

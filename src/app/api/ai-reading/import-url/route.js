@@ -8,6 +8,7 @@ import {
 	isChatGptShareUrl,
 	messagesToMarkdown,
 } from '@/lib/ai-reading/chatgpt-share';
+import { claudeShareId, claudeSnapshotUrl, extractClaudeSnapshot } from '@/lib/ai-reading/claude-share';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -130,6 +131,35 @@ export async function POST(request) {
 			return NextResponse.json({ error: 'Valid http(s) URL required' }, { status: 400 });
 		}
 
+		const claudeId = claudeShareId(url);
+		if (claudeId) {
+			const snap = await fetchText(claudeSnapshotUrl(claudeId), {
+				timeoutMs: 20000,
+				accept: 'application/json',
+				headers: { Referer: url },
+			});
+			if (snap.status === 401 || snap.status === 403 || snap.status === 404) {
+				return NextResponse.json(
+					{
+						error:
+							'Claude did not allow reading this share from the server (it may be private or require sign-in). Open the link, copy the conversation and use Text instead.',
+						code: 'CLAUDE_SHARE_BLOCKED',
+					},
+					{ status: 422 },
+				);
+			}
+			if (!snap.ok) {
+				return NextResponse.json({ error: `Could not fetch Claude share (${snap.status})` }, { status: 400 });
+			}
+			let snapshot = null;
+			try {
+				snapshot = JSON.parse(snap.text);
+			} catch {
+				snapshot = null;
+			}
+			return respondWithChatShare(extractClaudeSnapshot(snapshot), { provider: 'claude', action, body, ai });
+		}
+
 		const res = await fetchText(url, { timeoutMs: 20000 });
 		if (!res.ok) {
 			return NextResponse.json({ error: `Could not fetch link (${res.status})` }, { status: 400 });
@@ -137,58 +167,8 @@ export async function POST(request) {
 
 		const html = res.text;
 
-		/* ── ChatGPT public share: extract full conversation ── */
 		if (isChatGptShareUrl(url)) {
-			const share = extractChatGptShare(html);
-			if (!share?.messages?.length) {
-				return NextResponse.json(
-					{
-						error:
-							'Could not read messages from this ChatGPT share. Make sure the link is public, then try again — or paste the text.',
-						code: 'CHATGPT_PARSE_EMPTY',
-					},
-					{ status: 422 },
-				);
-			}
-
-			if (action === 'preview') {
-				return NextResponse.json({
-					kind: 'chatgpt-share',
-					title: share.title,
-					via: share.via,
-					messages: share.messages.map(m => ({
-						id: m.id,
-						role: m.role,
-						preview: m.preview,
-						chars: m.text.length,
-						selectedDefault: m.role === 'assistant' || m.role === 'user',
-					})),
-					// Keep full texts server-side keyed... actually client needs texts to re-send OR we re-fetch on import.
-					// Re-fetch on import is safer (no huge payload). Client sends selectedIds only.
-				});
-			}
-
-			// import with selected message ids
-			const selectedIds = new Set((body.messageIds || []).map(String));
-			const picked = share.messages.filter(m => selectedIds.size === 0 || selectedIds.has(m.id));
-			if (!picked.length) {
-				return NextResponse.json({ error: 'Select at least one message' }, { status: 400 });
-			}
-
-			const includeRoles = body.includeRoles !== false;
-			const markdown = messagesToMarkdown(picked, { includeRoles });
-			const { book, provider } = await buildBookFromMarkdown(markdown, {
-				title: body.title || share.title,
-				language: body.language,
-				enhance: body.enhance,
-				ai,
-			});
-			return NextResponse.json({
-				book,
-				provider,
-				extractedTitle: share.title,
-				importedCount: picked.length,
-			});
+			return respondWithChatShare(extractChatGptShare(html), { provider: 'chatgpt', action, body, ai });
 		}
 
 		/* ── Generic URL / other AI shares ── */
@@ -228,4 +208,56 @@ export async function POST(request) {
 			{ status: aborted ? 504 : 500 },
 		);
 	}
+}
+
+const CHAT_SHARE_LABELS = { chatgpt: 'ChatGPT', claude: 'Claude' };
+
+/** Preview lists the messages; import re-fetches and keeps only the selected ids (no huge client payload). */
+async function respondWithChatShare(share, { provider, action, body, ai }) {
+	const label = CHAT_SHARE_LABELS[provider];
+	if (!share?.messages?.length) {
+		return NextResponse.json(
+			{
+				error: `Could not read messages from this ${label} share. Make sure the link is public, then try again — or paste the text.`,
+				code: 'CHAT_SHARE_PARSE_EMPTY',
+			},
+			{ status: 422 },
+		);
+	}
+
+	if (action === 'preview') {
+		return NextResponse.json({
+			kind: 'chat-share',
+			provider,
+			title: share.title,
+			via: share.via,
+			messages: share.messages.map(m => ({
+				id: m.id,
+				role: m.role,
+				preview: m.preview,
+				chars: m.text.length,
+				selectedDefault: m.role === 'assistant' || m.role === 'user',
+			})),
+		});
+	}
+
+	const selectedIds = new Set((body.messageIds || []).map(String));
+	const picked = share.messages.filter(m => selectedIds.size === 0 || selectedIds.has(m.id));
+	if (!picked.length) {
+		return NextResponse.json({ error: 'Select at least one message' }, { status: 400 });
+	}
+
+	const markdown = messagesToMarkdown(picked, { includeRoles: body.includeRoles !== false, assistantLabel: label });
+	const { book, provider: bookProvider } = await buildBookFromMarkdown(markdown, {
+		title: body.title || share.title,
+		language: body.language,
+		enhance: body.enhance,
+		ai,
+	});
+	return NextResponse.json({
+		book,
+		provider: bookProvider,
+		extractedTitle: share.title,
+		importedCount: picked.length,
+	});
 }

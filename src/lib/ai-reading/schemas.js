@@ -104,6 +104,8 @@ export function createPrompt(partial = {}) {
 	return {
 		id: uid('prompt'),
 		title: 'Untitled prompt',
+		/** Short note: what this prompt is for / when to use it. */
+		description: '',
 		body: '',
 		category: 'custom',
 		favorite: false,
