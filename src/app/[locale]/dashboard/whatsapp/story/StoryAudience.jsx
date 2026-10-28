@@ -20,7 +20,7 @@ import {
 import api from '@/utils/axios';
 import './wa-story-audience.css';
 
-const LIST_LIMIT = 300;
+const LIST_LIMIT = 2500;
 
 const COPY = {
 	en: {
@@ -32,11 +32,15 @@ const COPY = {
 			only: ['Only share with…', 'Just the people you pick'],
 		},
 		search: 'Search name or number',
+		book: { all: 'All', saved: 'Saved', numbers: 'Numbers' },
 		filters: { all: 'All', seeing: 'Can see', hidden: 'Hidden' },
 		seeing: count => `${count.toLocaleString()} ${count === 1 ? 'person' : 'people'} will see your stories`,
+		savedGroup: count => `${count.toLocaleString()} saved on your phone`,
+		numbersGroup: count => `${count.toLocaleString()} unsaved numbers`,
 		selectAll: 'Select all',
 		clear: 'Clear',
 		hiddenBadge: 'Hidden',
+		numberBadge: 'Number',
 		more: count => `Showing the first ${LIST_LIMIT}. Search to find the other ${count.toLocaleString()}.`,
 		empty: 'No one matches this search.',
 		loadError: 'Could not load your contacts.',
@@ -56,11 +60,15 @@ const COPY = {
 			only: ['المشاركة مع…', 'بس الناس اللي تختارهم'],
 		},
 		search: 'ابحث باسم أو رقم',
+		book: { all: 'الكل', saved: 'المحفوظين', numbers: 'الأرقام' },
 		filters: { all: 'الكل', seeing: 'هيشوفوها', hidden: 'مخفيين' },
 		seeing: count => `${count.toLocaleString('ar-EG')} شخص هيشوف الستوري بتاعتك`,
+		savedGroup: count => `${count.toLocaleString('ar-EG')} محفوظين على الموبايل`,
+		numbersGroup: count => `${count.toLocaleString('ar-EG')} رقم مش محفوظ`,
 		selectAll: 'تحديد الكل',
 		clear: 'إلغاء التحديد',
 		hiddenBadge: 'مخفي',
+		numberBadge: 'رقم',
 		more: count => `معروض أول ${LIST_LIMIT}. ابحث عشان توصل لباقي ${count.toLocaleString('ar-EG')}.`,
 		empty: 'مفيش حد بالبحث ده.',
 		loadError: 'مقدرناش نحمّل جهات الاتصال.',
@@ -82,6 +90,11 @@ function personLabel(person) {
 function initials(label) {
 	const clean = String(label || '').replace(/^\+/, '').trim();
 	return (clean.charAt(0) || '?').toUpperCase();
+}
+
+function isSavedPerson(person) {
+	if (typeof person?.saved === 'boolean') return person.saved;
+	return Boolean(String(person?.name || '').trim());
 }
 
 /** Mode + count from the saved account settings, for the summary chip (no network). */
@@ -111,6 +124,7 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 	const [exceptIds, setExceptIds] = useState(() => new Set());
 	const [onlyIds, setOnlyIds] = useState(() => new Set());
 	const [search, setSearch] = useState('');
+	const [book, setBook] = useState('all');
 	const [filter, setFilter] = useState('all');
 	const [saving, setSaving] = useState(false);
 	const [reloadKey, setReloadKey] = useState(0);
@@ -142,6 +156,7 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 	useEffect(() => {
 		if (!open) return;
 		setSearch('');
+		setBook('all');
 		setFilter('all');
 	}, [open]);
 
@@ -166,6 +181,8 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 		const term = search.trim().toLowerCase();
 		const digits = search.replace(/\D/g, '');
 		return state.people.filter(person => {
+			if (book === 'saved' && !isSavedPerson(person)) return false;
+			if (book === 'numbers' && isSavedPerson(person)) return false;
 			if (filter === 'seeing' && !sees(person.waId)) return false;
 			if (filter === 'hidden' && sees(person.waId)) return false;
 			if (!term) return true;
@@ -173,7 +190,17 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 			return digits.length >= 3 && person.phone.includes(digits);
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [state.people, search, filter, mode, exceptIds, onlyIds]);
+	}, [state.people, search, book, filter, mode, exceptIds, onlyIds]);
+
+	const bookCounts = useMemo(() => {
+		let saved = 0;
+		let numbers = 0;
+		for (const person of state.people) {
+			if (isSavedPerson(person)) saved += 1;
+			else numbers += 1;
+		}
+		return { saved, numbers };
+	}, [state.people]);
 
 	const toggle = waId => {
 		if (mode === 'only') {
@@ -239,6 +266,49 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 	if (!open || typeof document === 'undefined') return null;
 
 	const shown = matches.slice(0, LIST_LIMIT);
+	const savedShown = shown.filter(isSavedPerson);
+	const numberShown = shown.filter(person => !isSavedPerson(person));
+
+	const renderPerson = person => {
+		const on = sees(person.waId);
+		const label = personLabel(person);
+		const saved = isSavedPerson(person);
+		return (
+			<li key={person.waId}>
+				<button
+					type="button"
+					role="checkbox"
+					aria-checked={on}
+					className={`wa-sa__person${on ? '' : ' is-hidden'}${saved ? '' : ' is-number'}`}
+					onClick={() => toggle(person.waId)}
+				>
+					<span className="wa-sa__avatar" aria-hidden="true">
+						{person.avatarUrl ? (
+							// eslint-disable-next-line @next/next/no-img-element
+							<img src={person.avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
+						) : (
+							initials(label)
+						)}
+					</span>
+					<span className="wa-sa__person-meta">
+						<span className="wa-sa__person-name wa-privacy-identity" dir="auto">{label}</span>
+						{person.name ? <span className="wa-sa__person-phone" dir="ltr">+{person.phone}</span> : null}
+					</span>
+					{!on ? (
+						<span className="wa-sa__badge">
+							<EyeOff size={12} strokeWidth={2.4} aria-hidden="true" />
+							{t.hiddenBadge}
+						</span>
+					) : saved ? null : (
+						<span className="wa-sa__badge is-number">{t.numberBadge}</span>
+					)}
+					<span className={`wa-sa__check${on ? ' is-on' : ''}`} aria-hidden="true">
+						{on ? <Check size={13} strokeWidth={3} /> : null}
+					</span>
+				</button>
+			</li>
+		);
+	};
 
 	return createPortal(
 		<div className="wa-sa" role="presentation" onMouseDown={event => event.target === event.currentTarget && !saving && onClose?.()}>
@@ -292,25 +362,43 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 						<Search size={15} strokeWidth={2.2} aria-hidden="true" />
 						<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder={t.search} aria-label={t.search} />
 					</label>
-					<div className="wa-sa__filters" role="tablist">
-						{Object.entries(t.filters).map(([id, label]) => (
+					<div className="wa-sa__filters is-book" role="tablist" aria-label={t.book.all}>
+						{Object.entries(t.book).map(([id, label]) => (
 							<button
 								key={id}
 								type="button"
 								role="tab"
-								aria-selected={filter === id}
-								className={`wa-sa__filter${filter === id ? ' is-active' : ''}`}
-								onClick={() => setFilter(id)}
+								aria-selected={book === id}
+								className={`wa-sa__filter${book === id ? ' is-active' : ''}`}
+								onClick={() => setBook(id)}
 							>
 								{label}
+								{id === 'saved' ? <em>{bookCounts.saved}</em> : null}
+								{id === 'numbers' ? <em>{bookCounts.numbers}</em> : null}
+								{id === 'all' ? <em>{state.people.length}</em> : null}
 							</button>
 						))}
 					</div>
-				</div>
-
-				<div className="wa-sa__bulk">
-					<button type="button" onClick={() => setAllVisible(true)} disabled={!matches.length}>{t.selectAll}</button>
-					<button type="button" onClick={() => setAllVisible(false)} disabled={!matches.length}>{t.clear}</button>
+					<div className="wa-sa__tools-row">
+						<div className="wa-sa__filters" role="tablist">
+							{Object.entries(t.filters).map(([id, label]) => (
+								<button
+									key={id}
+									type="button"
+									role="tab"
+									aria-selected={filter === id}
+									className={`wa-sa__filter${filter === id ? ' is-active' : ''}`}
+									onClick={() => setFilter(id)}
+								>
+									{label}
+								</button>
+							))}
+						</div>
+						<div className="wa-sa__bulk">
+							<button type="button" onClick={() => setAllVisible(true)} disabled={!matches.length}>{t.selectAll}</button>
+							<button type="button" onClick={() => setAllVisible(false)} disabled={!matches.length}>{t.clear}</button>
+						</div>
+					</div>
 				</div>
 
 				<div className="wa-sa__list" aria-busy={state.loading}>
@@ -323,46 +411,15 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 						</div>
 					) : !shown.length ? (
 						<div className="wa-sa__state"><p>{t.empty}</p></div>
+					) : book === 'all' && savedShown.length && numberShown.length ? (
+						<>
+							<p className="wa-sa__group">{t.savedGroup(savedShown.length)}</p>
+							<ul>{savedShown.map(renderPerson)}</ul>
+							<p className="wa-sa__group">{t.numbersGroup(numberShown.length)}</p>
+							<ul>{numberShown.map(renderPerson)}</ul>
+						</>
 					) : (
-						<ul>
-							{shown.map(person => {
-								const on = sees(person.waId);
-								const label = personLabel(person);
-								return (
-									<li key={person.waId}>
-										<button
-											type="button"
-											role="checkbox"
-											aria-checked={on}
-											className={`wa-sa__person${on ? '' : ' is-hidden'}`}
-											onClick={() => toggle(person.waId)}
-										>
-											<span className="wa-sa__avatar" aria-hidden="true">
-												{person.avatarUrl ? (
-													// eslint-disable-next-line @next/next/no-img-element
-													<img src={person.avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
-												) : (
-													initials(label)
-												)}
-											</span>
-											<span className="wa-sa__person-meta">
-												<span className="wa-sa__person-name wa-privacy-identity" dir="auto">{label}</span>
-												{person.name ? <span className="wa-sa__person-phone" dir="ltr">+{person.phone}</span> : null}
-											</span>
-											{!on ? (
-												<span className="wa-sa__badge">
-													<EyeOff size={12} strokeWidth={2.4} aria-hidden="true" />
-													{t.hiddenBadge}
-												</span>
-											) : null}
-											<span className={`wa-sa__check${on ? ' is-on' : ''}`} aria-hidden="true">
-												{on ? <Check size={13} strokeWidth={3} /> : null}
-											</span>
-										</button>
-									</li>
-								);
-							})}
-						</ul>
+						<ul>{shown.map(renderPerson)}</ul>
 					)}
 					{matches.length > LIST_LIMIT ? <p className="wa-sa__more">{t.more(matches.length - LIST_LIMIT)}</p> : null}
 				</div>

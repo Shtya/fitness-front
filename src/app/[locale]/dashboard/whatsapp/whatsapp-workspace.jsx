@@ -4705,6 +4705,89 @@ async function fetchStatusMediaBlob(accountId, statusId, { history = false, bypa
 	return typed;
 }
 
+function isBlobStoryUrl(url) {
+	return typeof url === 'string' && url.startsWith('blob:');
+}
+
+function revokeStoryUrl(url) {
+	if (!isBlobStoryUrl(url)) return;
+	try {
+		URL.revokeObjectURL(url);
+	} catch {
+		/* ignore */
+	}
+}
+
+function isVideoStoryType(type) {
+	return String(type || '').toLowerCase().includes('video');
+}
+
+function storyMediaIds(statusRef) {
+	const ids = [
+		...new Set(
+			[statusRef?.id, statusRef?.providerStatusId]
+				.map(value => String(value || '').trim())
+				.filter(Boolean),
+		),
+	];
+	ids.sort((a, b) => Number(isWhatsAppUuid(b)) - Number(isWhatsAppUuid(a)));
+	return ids;
+}
+
+/**
+ * Signed URL a `<video>` can stream with Range. Axios cannot do that — it pulls
+ * the whole file, and a 19MB story is what Chrome was aborting.
+ */
+async function fetchStatusStreamUrl(accountId, statusId, { history = false } = {}) {
+	const { data } = await api.get(
+		`/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(statusId)}/stream-url`,
+		{
+			params: history ? { history: true } : undefined,
+			timeout: 45_000,
+		},
+	);
+	const url = absoluteApiUrl(data?.url);
+	if (!url) throw new Error('Media unavailable');
+	return {
+		url,
+		type: String(data?.mimeType || 'video/mp4'),
+		streamed: true,
+	};
+}
+
+async function fetchStatusPlayback(accountId, statusRef, { history = false } = {}) {
+	const ids = storyMediaIds(statusRef);
+	if (isVideoStoryType(statusRef?.type)) {
+		let lastError = null;
+		for (const mediaId of ids) {
+			try {
+				return await fetchStatusStreamUrl(accountId, mediaId, { history });
+			} catch (error) {
+				lastError = error;
+				const status = Number(error?.response?.status || 0);
+				if (status && status !== 404) throw error;
+			}
+		}
+		if (lastError && Number(lastError?.response?.status || 0) !== 404) throw lastError;
+	}
+	let lastError = null;
+	for (const mediaId of ids) {
+		try {
+			return await fetchStatusMediaBlob(accountId, mediaId, { history });
+		} catch (error) {
+			lastError = error;
+			const message = typeof error?.message === 'string' ? error.message : String(error || '');
+			if (
+				!/whatsapp status not found/i.test(message) &&
+				!isRecoverableStoryMediaError(message)
+			) {
+				throw error;
+			}
+		}
+	}
+	throw lastError || new Error('Media unavailable');
+}
+
 function isPlayableStoryItem(item) {
 	if (!item) return false;
 	const type = String(item.type || '').toLowerCase();
@@ -14502,10 +14585,21 @@ function WhatsAppWorkspaceContent() {
 		void mapPool(targets, 6, async item => {
 			if (cancelled || accountIdRef.current !== accountId) return;
 			try {
-				const blob = await fetchStatusMediaBlob(accountId, item.id);
-				if (cancelled || accountIdRef.current !== accountId) return;
-				const url = URL.createObjectURL(blob);
-				const type = String(blob.type || '').startsWith('video/') ? 'video' : 'image';
+				let url;
+				let type;
+				if (isVideoStoryType(item.type)) {
+					const streamed = await fetchStatusStreamUrl(accountId, item.id);
+					url = streamed.url;
+					type = 'video';
+				} else {
+					const blob = await fetchStatusMediaBlob(accountId, item.id);
+					url = URL.createObjectURL(blob);
+					type = String(blob.type || '').startsWith('video/') ? 'video' : 'image';
+				}
+				if (cancelled || accountIdRef.current !== accountId) {
+					revokeStoryUrl(url);
+					return;
+				}
 				storyThumbCacheRef.current.set(item.id, { url, type });
 				setStoryThumbs(prev =>
 					prev[item.id]?.url === url ? prev : { ...prev, [item.id]: { url, type } },
@@ -14525,7 +14619,7 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		return () => {
 			storyThumbCacheRef.current.forEach(entry => {
-				if (entry?.url) URL.revokeObjectURL(entry.url);
+				revokeStoryUrl(entry?.url);
 			});
 			storyThumbCacheRef.current.clear();
 			setStoryThumbs({});
@@ -16796,7 +16890,7 @@ function WhatsAppWorkspaceContent() {
 			setSessionProbeDone(false);
 			setQrExpired(false);
 			if (statusMediaUrlRef.current) {
-				URL.revokeObjectURL(statusMediaUrlRef.current);
+				revokeStoryUrl(statusMediaUrlRef.current);
 				statusMediaUrlRef.current = null;
 			}
 			setStatusMediaUrl(null);
@@ -16823,7 +16917,7 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(
 		() => () => {
-			if (statusMediaUrlRef.current) URL.revokeObjectURL(statusMediaUrlRef.current);
+			if (statusMediaUrlRef.current) revokeStoryUrl(statusMediaUrlRef.current);
 		},
 		[],
 	);
@@ -18891,7 +18985,7 @@ function WhatsAppWorkspaceContent() {
 			statusesCacheRef.current.delete(targetAccountId);
 			messagesCacheRef.current.clear();
 			if (statusMediaUrlRef.current) {
-				URL.revokeObjectURL(statusMediaUrlRef.current);
+				revokeStoryUrl(statusMediaUrlRef.current);
 				statusMediaUrlRef.current = null;
 			}
 			accountIdRef.current = null;
@@ -24082,13 +24176,7 @@ function WhatsAppWorkspaceContent() {
 				next[id] = entry;
 				return;
 			}
-			if (entry?.url) {
-				try {
-					URL.revokeObjectURL(entry.url);
-				} catch {
-					/* ignore */
-				}
-			}
+			revokeStoryUrl(entry?.url);
 		});
 		storyPeekMediaRef.current = next;
 		setStoryPeekMedia(next);
@@ -24124,7 +24212,7 @@ function WhatsAppWorkspaceContent() {
 		);
 		revokeStoryPeekMedia(peekKeep);
 		if (statusMediaUrlRef.current) {
-			URL.revokeObjectURL(statusMediaUrlRef.current);
+			revokeStoryUrl(statusMediaUrlRef.current);
 			statusMediaUrlRef.current = null;
 		}
 		setStatusMediaUrl(null);
@@ -24143,43 +24231,20 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		const loadMedia = async statusRef => {
-			// The grid preview is the same file; reuse it instead of downloading it twice.
-			const previewUrl = storyThumbCacheRef.current.get(statusRef?.id)?.url;
-			if (previewUrl) {
+			const history = storyViewerHistoryRef.current;
+			const preview = storyThumbCacheRef.current.get(statusRef?.id);
+			if (preview?.url && (preview.type === 'video' || !isBlobStoryUrl(preview.url))) {
+				return { url: preview.url, type: preview.type || 'video', streamed: true };
+			}
+			if (preview?.url && isBlobStoryUrl(preview.url)) {
 				try {
-					const cached = await (await fetch(previewUrl)).blob();
+					const cached = await (await fetch(preview.url)).blob();
 					if (cached?.size) return cached;
 				} catch {
 					/* preview revoked — download below */
 				}
 			}
-			const ids = [
-				...new Set(
-					[statusRef?.id, statusRef?.providerStatusId]
-						.map(value => String(value || '').trim())
-						.filter(Boolean),
-				),
-			];
-			// Prefer DB uuid first; provider ids are looked up safely on the server now.
-			ids.sort((a, b) => Number(isWhatsAppUuid(b)) - Number(isWhatsAppUuid(a)));
-			const history = storyViewerHistoryRef.current;
-			let lastError = null;
-			for (const mediaId of ids) {
-				try {
-					return await fetchStatusMediaBlob(targetAccountId, mediaId, { history });
-				} catch (error) {
-					lastError = error;
-					const message =
-						typeof error?.message === 'string' ? error.message : String(error || '');
-					if (
-						!/whatsapp status not found/i.test(message) &&
-						!isRecoverableStoryMediaError(message)
-					) {
-						throw error;
-					}
-				}
-			}
-			throw lastError || new Error(t.mediaUnavailable);
+			return fetchStatusPlayback(targetAccountId, statusRef, { history });
 		};
 		try {
 			let data;
@@ -24233,15 +24298,17 @@ function WhatsAppWorkspaceContent() {
 			) {
 				return;
 			}
-			const objectUrl = URL.createObjectURL(data);
-			statusMediaUrlRef.current = objectUrl;
-			setStatusMediaUrl(objectUrl);
+			const playbackUrl = data?.streamed
+				? data.url
+				: URL.createObjectURL(data);
+			statusMediaUrlRef.current = playbackUrl;
+			setStatusMediaUrl(playbackUrl);
 			setStoryMediaError('');
-			if (String(data.type || '').includes('video')) {
+			if (data?.streamed || String(data.type || '').includes('video')) {
 				setSelectedStatus(current =>
 					current?.id === status.id ||
 					current?.providerStatusId === status.providerStatusId
-						? { ...current, type: 'video' }
+						? { ...current, type: data?.streamed ? 'video' : current.type || 'video' }
 						: current,
 				);
 			}
@@ -24269,29 +24336,25 @@ function WhatsAppWorkspaceContent() {
 				const neighborId = String(neighbor.id || '');
 				if (!neighborId) continue;
 				if (storyPeekMediaRef.current[neighborId]?.url) continue;
-				void fetchStatusMediaBlob(targetAccountId, neighbor.id, {
+				void fetchStatusPlayback(targetAccountId, neighbor, {
 					history: storyViewerHistoryRef.current,
 				})
-					.then(blob => {
+					.then(data => {
 						if (
 							requestId !== storyRequestId.current ||
 							accountIdRef.current !== targetAccountId ||
-							!blob
+							!data
 						) {
 							return;
 						}
-						const peekUrl = URL.createObjectURL(blob);
+						const peekUrl = data.streamed ? data.url : URL.createObjectURL(data);
 						const entry = {
 							url: peekUrl,
-							type: String(blob.type || neighbor.type || ''),
+							type: String(data.type || neighbor.type || ''),
 						};
 						const prevEntry = storyPeekMediaRef.current[neighborId];
 						if (prevEntry?.url && prevEntry.url !== peekUrl) {
-							try {
-								URL.revokeObjectURL(prevEntry.url);
-							} catch {
-								/* ignore */
-							}
+							revokeStoryUrl(prevEntry.url);
 						}
 						storyPeekMediaRef.current = {
 							...storyPeekMediaRef.current,
@@ -24531,7 +24594,7 @@ function WhatsAppWorkspaceContent() {
 		resetStoryViewers();
 		revokeStoryPeekMedia();
 		if (statusMediaUrlRef.current) {
-			URL.revokeObjectURL(statusMediaUrlRef.current);
+			revokeStoryUrl(statusMediaUrlRef.current);
 			statusMediaUrlRef.current = null;
 		}
 	};
@@ -24782,7 +24845,7 @@ function WhatsAppWorkspaceContent() {
 				});
 			} else {
 				let blob = null;
-				if (statusMediaUrl) {
+				if (isBlobStoryUrl(statusMediaUrl)) {
 					try {
 						const response = await fetch(statusMediaUrl);
 						if (response.ok) blob = await response.blob();

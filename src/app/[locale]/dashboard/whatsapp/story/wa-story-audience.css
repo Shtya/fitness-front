@@ -6,23 +6,24 @@
 	z-index: 700;
 	display: grid;
 	place-items: center;
-	padding: 16px;
-	background: rgba(11, 20, 26, 0.55);
-	backdrop-filter: blur(4px);
+	padding: 8px;
+	background: rgba(11, 20, 26, 0.58);
+	backdrop-filter: blur(8px);
 	animation: wa-sa-fade 140ms ease-out;
 }
 
 .wa-sa__panel {
 	display: flex;
-	width: min(560px, 100%);
-	max-height: min(760px, calc(100dvh - 32px));
+	width: min(680px, 100%);
+	height: min(920px, calc(100dvh - 16px));
+	max-height: calc(100dvh - 16px);
 	flex-direction: column;
 	overflow: hidden;
 	border: 1px solid var(--wa-ui-border, #e9edef);
-	border-radius: 20px;
+	border-radius: 24px;
 	background: var(--wa-ui-surface, #fff);
 	color: var(--wa-ui-text, #111b21);
-	box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.55);
+	box-shadow: 0 36px 90px -28px rgba(0, 0, 0, 0.58);
 	animation: wa-sa-rise 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -30,7 +31,7 @@
 	display: flex;
 	align-items: flex-start;
 	gap: 12px;
-	padding: 18px 18px 12px;
+	padding: 14px 16px 8px;
 }
 
 .wa-sa__head-icon {
@@ -74,15 +75,15 @@
 
 .wa-sa__modes {
 	display: grid;
-	gap: 8px;
-	padding: 0 18px;
+	gap: 6px;
+	padding: 0 16px;
 }
 
 .wa-sa__mode {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 10px 12px;
+	gap: 10px;
+	padding: 8px 10px;
 	border: 1.5px solid var(--wa-ui-border, #e9edef);
 	border-radius: 14px;
 	background: transparent;
@@ -104,8 +105,8 @@
 
 .wa-sa__mode-icon {
 	display: grid;
-	width: 34px;
-	height: 34px;
+	width: 32px;
+	height: 32px;
 	flex: none;
 	place-items: center;
 	border-radius: 10px;
@@ -151,7 +152,7 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	margin: 14px 18px 0;
+	margin: 10px 16px 0;
 	padding: 9px 12px;
 	border-radius: 12px;
 	background: rgba(0, 168, 132, 0.1);
@@ -162,9 +163,18 @@
 
 .wa-sa__tools {
 	display: flex;
-	flex-wrap: wrap;
+	flex-direction: column;
 	gap: 8px;
-	padding: 12px 18px 0;
+	padding: 10px 16px 8px;
+	flex: none;
+}
+
+.wa-sa__tools-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
 }
 
 .wa-sa__search {
@@ -198,13 +208,27 @@
 
 .wa-sa__filters {
 	display: inline-flex;
+	flex-wrap: wrap;
 	padding: 3px;
 	border-radius: 999px;
 	background: var(--wa-ui-surface-2, #f0f2f5);
 }
 
+.wa-sa__filters.is-book {
+	display: flex;
+	width: 100%;
+}
+
+.wa-sa__filters.is-book .wa-sa__filter {
+	flex: 1;
+	justify-content: center;
+}
+
 .wa-sa__filter {
-	height: 32px;
+	display: inline-flex;
+	height: 34px;
+	align-items: center;
+	gap: 6px;
 	padding: 0 12px;
 	border: 0;
 	border-radius: 999px;
@@ -214,6 +238,22 @@
 	font-size: 12.5px;
 	font-weight: 650;
 	cursor: pointer;
+}
+
+.wa-sa__filter em {
+	font-style: normal;
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.06);
+	color: inherit;
+	font-size: 11px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.wa-sa__filter.is-active em {
+	background: rgba(0, 168, 132, 0.16);
+	color: #008069;
 }
 
 .wa-sa__filter.is-active {
@@ -226,7 +266,8 @@
 	display: flex;
 	justify-content: flex-end;
 	gap: 4px;
-	padding: 6px 18px 4px;
+	margin-inline-start: auto;
+	padding: 0;
 }
 
 .wa-sa__bulk button {
@@ -251,26 +292,42 @@
 }
 
 .wa-sa__list {
-	min-height: 180px;
+	min-height: 0;
 	flex: 1 1 auto;
 	overflow-y: auto;
+	overscroll-behavior: contain;
 	border-top: 1px solid var(--wa-ui-border, #e9edef);
 }
 
 .wa-sa__list ul {
 	margin: 0;
-	padding: 4px 8px;
+	padding: 4px 8px 10px;
 	list-style: none;
+}
+
+.wa-sa__group {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	margin: 0;
+	padding: 10px 18px 8px;
+	background: color-mix(in srgb, var(--wa-ui-surface, #fff) 92%, transparent);
+	backdrop-filter: blur(8px);
+	color: #008069;
+	font-size: 12px;
+	font-weight: 750;
+	letter-spacing: 0.01em;
 }
 
 .wa-sa__person {
 	display: flex;
 	width: 100%;
+	min-height: 56px;
 	align-items: center;
 	gap: 12px;
-	padding: 8px 10px;
+	padding: 10px 12px;
 	border: 0;
-	border-radius: 12px;
+	border-radius: 14px;
 	background: transparent;
 	color: inherit;
 	font: inherit;
@@ -289,8 +346,8 @@
 
 .wa-sa__avatar {
 	display: grid;
-	width: 38px;
-	height: 38px;
+	width: 44px;
+	height: 44px;
 	flex: none;
 	overflow: hidden;
 	place-items: center;
@@ -338,6 +395,11 @@
 	color: #d93025;
 	font-size: 11px;
 	font-weight: 700;
+}
+
+.wa-sa__badge.is-number {
+	background: rgba(84, 101, 111, 0.12);
+	color: #54656f;
 }
 
 .wa-sa__check {
@@ -552,7 +614,17 @@
 
 html.dark .wa-sa__summary,
 html.dark .wa-sa__bulk button,
+html.dark .wa-sa__group,
 html.dark .wa-msb__chip {
+	color: #25d366;
+}
+
+html.dark .wa-sa__badge.is-number {
+	background: rgba(255, 255, 255, 0.08);
+	color: #8696a0;
+}
+
+html.dark .wa-sa__filter.is-active em {
 	color: #25d366;
 }
 
