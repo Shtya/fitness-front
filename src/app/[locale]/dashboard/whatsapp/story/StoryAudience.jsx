@@ -22,6 +22,7 @@ import api from '@/utils/axios';
 import './wa-story-audience.css';
 
 const LIST_LIMIT = 2500;
+const PEEK_SIZE = 240;
 
 const COPY = {
 	en: {
@@ -51,6 +52,7 @@ const COPY = {
 		addInvalid: 'Enter the full number with the country code',
 		addDone: 'Added. Save to keep it.',
 		addExists: 'Already in your list',
+		viewPhoto: 'View photo',
 		more: count => `Showing the first ${LIST_LIMIT}. Search to find the other ${count.toLocaleString()}.`,
 		empty: 'No one matches this search.',
 		loadError: 'Could not load your contacts.',
@@ -88,6 +90,7 @@ const COPY = {
 		addInvalid: 'اكتب الرقم كامل بكود الدولة',
 		addDone: 'اتضاف. دوس حفظ عشان يتثبت.',
 		addExists: 'موجود بالفعل في القايمة',
+		viewPhoto: 'عرض الصورة',
 		more: count => `معروض أول ${LIST_LIMIT}. ابحث عشان توصل لباقي ${count.toLocaleString('ar-EG')}.`,
 		empty: 'مفيش حد بالبحث ده.',
 		loadError: 'مقدرناش نحمّل جهات الاتصال.',
@@ -107,8 +110,144 @@ function personLabel(person) {
 }
 
 function initials(label) {
-	const clean = String(label || '').replace(/^\+/, '').trim();
-	return (clean.charAt(0) || '?').toUpperCase();
+	// First real letter or digit: charAt(0) would split an emoji or a styled
+	// Unicode letter in half and show "�".
+	const first = Array.from(String(label || '')).find(char => /[\p{L}\p{N}]/u.test(char));
+	return (first || '?').toUpperCase();
+}
+
+/*
+ * Profile pictures. Stored URLs are WhatsApp CDN links that expire, and many people
+ * have none stored, so rows that come on screen without a working image ask the backend
+ * for the current one. Results (including "no photo") are cached for the page's lifetime,
+ * and only a few requests run at once so a fast scroll does not flood WhatsApp.
+ */
+const avatarCache = new Map();
+const avatarInFlight = new Map();
+const avatarQueue = [];
+let avatarActive = 0;
+const AVATAR_CONCURRENCY = 3;
+
+function pumpAvatarQueue() {
+	while (avatarActive < AVATAR_CONCURRENCY && avatarQueue.length) {
+		const job = avatarQueue.shift();
+		avatarActive += 1;
+		api
+			.post(`/whatsapp/accounts/${job.accountId}/statuses/audience/avatar`, { waId: job.waId, quality: job.quality })
+			.then(({ data }) => data?.avatarUrl || null)
+			.catch(() => null)
+			.then(url => {
+				avatarActive -= 1;
+				job.resolve(url);
+				pumpAvatarQueue();
+			});
+	}
+}
+
+function fetchAvatar(accountId, waId, quality = 'preview') {
+	const key = `${quality}:${accountId}:${waId}`;
+	if (avatarCache.has(key)) return Promise.resolve(avatarCache.get(key));
+	if (!avatarInFlight.has(key)) {
+		const promise = new Promise(resolve => {
+			avatarQueue.push({ accountId, waId, quality, resolve });
+			pumpAvatarQueue();
+		}).then(url => {
+			avatarCache.set(key, url);
+			avatarInFlight.delete(key);
+			return url;
+		});
+		avatarInFlight.set(key, promise);
+	}
+	return avatarInFlight.get(key);
+}
+
+let avatarObserver = null;
+const avatarWatchers = new Map();
+
+function watchVisible(element, onVisible) {
+	if (typeof IntersectionObserver === 'undefined') {
+		onVisible();
+		return () => {};
+	}
+	if (!avatarObserver) {
+		// Ancestors' scroll clipping counts, so this fires only for rows actually in the list's view.
+		avatarObserver = new IntersectionObserver(
+			entries => {
+				for (const entry of entries) {
+					if (!entry.isIntersecting) continue;
+					avatarWatchers.get(entry.target)?.();
+				}
+			},
+			{ rootMargin: '200px 0px' },
+		);
+	}
+	avatarWatchers.set(element, onVisible);
+	avatarObserver.observe(element);
+	return () => {
+		avatarWatchers.delete(element);
+		avatarObserver?.unobserve(element);
+	};
+}
+
+/**
+ * Photo laid over a row's initials slot. Shows nothing until a real image has loaded,
+ * so a dead link or a hidden photo leaves the initials instead of a broken-image icon.
+ */
+function AudienceAvatar({ accountId, person, dim, label, viewLabel, onPeek, onUnpeek, onOpen }) {
+	const cacheKey = `preview:${accountId}:${person.waId}`;
+	const [url, setUrl] = useState(() => (avatarCache.has(cacheKey) ? avatarCache.get(cacheKey) : person.avatarUrl || null));
+	const [loaded, setLoaded] = useState(false);
+	const [asked, setAsked] = useState(() => avatarCache.has(cacheKey));
+	const sentinelRef = useRef(null);
+
+	// No usable link yet (none stored, or the stored one failed): ask once, when on screen.
+	useEffect(() => {
+		if (asked || url) return undefined;
+		const element = sentinelRef.current;
+		if (!element) return undefined;
+		let alive = true;
+		const stop = watchVisible(element, () => {
+			stop();
+			setAsked(true);
+			fetchAvatar(accountId, person.waId).then(fresh => {
+				if (!alive) return;
+				setLoaded(false);
+				setUrl(fresh);
+			});
+		});
+		return () => {
+			alive = false;
+			stop();
+		};
+	}, [accountId, person.waId, url, asked]);
+
+	// A dead link clears the url, which sends the effect above for a fresh one, once.
+	const failed = () => {
+		setLoaded(false);
+		setUrl(null);
+	};
+
+	return (
+		<>
+			<span ref={sentinelRef} className="wa-sa__avatar-sentinel" aria-hidden="true" />
+			{url ? (
+				<button
+					type="button"
+					className={`wa-sa__avatar is-photo${loaded ? ' is-loaded' : ''}${dim ? ' is-dim' : ''}`}
+					tabIndex={loaded ? 0 : -1}
+					onMouseEnter={event => loaded && onPeek(url, event.currentTarget)}
+					onMouseLeave={onUnpeek}
+					onFocus={event => loaded && onPeek(url, event.currentTarget)}
+					onBlur={onUnpeek}
+					onClick={() => loaded && onOpen(url)}
+					aria-label={`${viewLabel}: ${label}`}
+				>
+					{/* eslint-disable-next-line @next/next/no-img-element */}
+					<img src={url} alt="" loading="lazy" referrerPolicy="no-referrer" onLoad={() => setLoaded(true)} onError={failed} />
+				</button>
+			) : null}
+		</>
+	);
 }
 
 /** saved = in the phonebook, profile = only their own WhatsApp name, number = no name at all. */
@@ -153,6 +292,9 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 	const [extraIds, setExtraIds] = useState(() => new Set());
 	const [adding, setAdding] = useState(false);
 	const [addValue, setAddValue] = useState('');
+	const [peek, setPeek] = useState(null);
+	const [viewer, setViewer] = useState(null);
+	const peekTimer = useRef(0);
 	const [search, setSearch] = useState('');
 	const [book, setBook] = useState('all');
 	const [filter, setFilter] = useState('all');
@@ -191,16 +333,51 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 		setFilter('all');
 		setAdding(false);
 		setAddValue('');
+		setViewer(null);
+		setPeek(null);
 	}, [open]);
 
 	useEffect(() => {
 		if (!open) return undefined;
 		const onKey = event => {
-			if (event.key === 'Escape' && !saving) onClose?.();
+			if (event.key !== 'Escape') return;
+			// Escape closes the photo first, then the dialog.
+			if (viewer) setViewer(null);
+			else if (!saving) onClose?.();
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
-	}, [open, onClose, saving]);
+	}, [open, onClose, saving, viewer]);
+
+	useEffect(() => () => clearTimeout(peekTimer.current), []);
+
+	// Large preview beside the avatar, after a short hover so skimming the list stays quiet.
+	const showPeek = (url, element) => {
+		clearTimeout(peekTimer.current);
+		peekTimer.current = setTimeout(() => {
+			const rect = element.getBoundingClientRect();
+			const size = PEEK_SIZE;
+			const gap = 12;
+			const fitsAfter = ar ? rect.left - gap - size >= 8 : rect.right + gap + size <= window.innerWidth - 8;
+			const left = ar === fitsAfter ? rect.left - gap - size : rect.right + gap;
+			const top = Math.min(Math.max(8, rect.top + rect.height / 2 - size / 2), window.innerHeight - size - 8);
+			setPeek({ url, left: Math.max(8, left), top });
+		}, 220);
+	};
+
+	const hidePeek = () => {
+		clearTimeout(peekTimer.current);
+		setPeek(null);
+	};
+
+	// Opens on the thumb right away, then swaps in the full-resolution photo when it arrives.
+	const openViewer = (person, url) => {
+		hidePeek();
+		setViewer({ ...person, avatarUrl: url });
+		fetchAvatar(accountId, person.waId, 'full').then(full => {
+			if (full) setViewer(current => (current?.waId === person.waId ? { ...current, avatarUrl: full } : current));
+		});
+	};
 
 	const sees = waId => (mode === 'only' ? onlyIds.has(waId) : mode === 'except' ? !exceptIds.has(waId) : true);
 
@@ -346,7 +523,7 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 		const label = personLabel(person);
 		const kind = personKind(person);
 		return (
-			<li key={person.waId}>
+			<li key={person.waId} className="wa-sa__row">
 				<button
 					type="button"
 					role="checkbox"
@@ -354,19 +531,16 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 					className={`wa-sa__person${on ? '' : ' is-hidden'} is-${kind}`}
 					onClick={() => toggle(person.waId)}
 				>
+					{/* Initials always sit here; a loaded photo is laid over them as its own button. */}
 					<span className="wa-sa__avatar" aria-hidden="true">
-						{person.avatarUrl ? (
-							// eslint-disable-next-line @next/next/no-img-element
-							<img src={person.avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
-						) : (
-							initials(label)
-						)}
+						{initials(label)}
 					</span>
 					<span className="wa-sa__person-meta">
-						<span className="wa-sa__person-name wa-privacy-identity" dir="auto">
+						{/* bdi keeps an Arabic name on the row's start edge instead of flipping to the far side. */}
+						<span className="wa-sa__person-name wa-privacy-identity">
 							{/* WhatsApp marks a name the person picked for themselves with a tilde. */}
 							{kind === 'profile' ? <span className="wa-sa__tilde" aria-hidden="true">~</span> : null}
-							{label}
+							<bdi>{label}</bdi>
 						</span>
 						{person.name ? <span className="wa-sa__person-phone" dir="ltr">+{person.phone}</span> : null}
 					</span>
@@ -388,9 +562,21 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 						{on ? <Check size={13} strokeWidth={3} /> : null}
 					</span>
 				</button>
+				<AudienceAvatar
+					accountId={accountId}
+					person={person}
+					dim={!on}
+					label={label}
+					viewLabel={t.viewPhoto}
+					onPeek={showPeek}
+					onUnpeek={hidePeek}
+					onOpen={url => openViewer(person, url)}
+				/>
 			</li>
 		);
 	};
+
+	const viewerLabel = viewer ? personLabel(viewer) : '';
 
 	return createPortal(
 		<div className="wa-sa" role="presentation" onMouseDown={event => event.target === event.currentTarget && !saving && onClose?.()}>
@@ -562,6 +748,49 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 					</button>
 				</footer>
 			</div>
+
+			{peek ? (
+				<div className="wa-sa__peek" style={{ left: peek.left, top: peek.top }} aria-hidden="true">
+					{/* eslint-disable-next-line @next/next/no-img-element */}
+					<img src={peek.url} alt="" referrerPolicy="no-referrer" />
+				</div>
+			) : null}
+
+			{viewer ? (
+				<div
+					className="wa-sa__viewer"
+					role="dialog"
+					aria-modal="true"
+					aria-label={viewerLabel}
+					dir={ar ? 'rtl' : 'ltr'}
+					onMouseDown={event => {
+						event.stopPropagation();
+						if (event.target === event.currentTarget) setViewer(null);
+					}}
+				>
+					<div className="wa-sa__viewer-bar">
+						<span className="wa-sa__viewer-who">
+							<b className="wa-privacy-identity"><bdi>{viewerLabel}</bdi></b>
+							{viewer.name ? <small dir="ltr">+{viewer.phone}</small> : null}
+						</span>
+						<button type="button" className="wa-sa__viewer-close" onClick={() => setViewer(null)} aria-label={t.cancel}>
+							<X size={20} />
+						</button>
+					</div>
+					{viewer.avatarUrl ? (
+						// eslint-disable-next-line @next/next/no-img-element
+						<img
+							className="wa-sa__viewer-img"
+							src={viewer.avatarUrl}
+							alt={viewerLabel}
+							referrerPolicy="no-referrer"
+							onError={() => setViewer(current => (current ? { ...current, avatarUrl: null } : current))}
+						/>
+					) : (
+						<span className="wa-sa__viewer-empty" aria-hidden="true">{initials(viewerLabel)}</span>
+					)}
+				</div>
+			) : null}
 		</div>,
 		document.body,
 	);
