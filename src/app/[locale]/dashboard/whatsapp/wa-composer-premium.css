@@ -1,0 +1,669 @@
+/*
+ * Composer, voice recorder, reply card and inline completion.
+ *
+ * Loaded after every other WhatsApp stylesheet. Older layers style the composer with
+ * `:not(#id)` boosts and !important, so rules here carry two id-level :not()s
+ * (`.wa-composer:not(#_c1):not(#_c2)`) to win without touching those files.
+ * Colours come from the desktop palette (--d-*) when present, else the wa-ui tokens.
+ */
+
+.wa-composer {
+	--cp-surface: var(--d-composer, var(--wa-ui-surface, #fff));
+	--cp-border: var(--wa-ui-border, #e6e9eb);
+	--cp-text: var(--d-text, var(--wa-ui-text, #111b21));
+	--cp-text-2: var(--d-text-2, var(--wa-ui-text-3, #667781));
+	--cp-icon: var(--d-icon, var(--wa-ui-icon, #54656f));
+	--cp-hover: var(--d-selected, var(--wa-ui-hover, #f2f4f5));
+	--cp-accent: var(--d-accent, var(--wa-ui-accent, #00a884));
+	--cp-accent-strong: var(--wa-ui-accent-strong, #008069);
+	--cp-danger: #f15c6d;
+	--cp-shadow: 0 1px 1px rgba(11, 20, 26, 0.05), 0 14px 34px -22px rgba(11, 20, 26, 0.55);
+	--cp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html.dark .wa-composer {
+	--cp-border: rgba(233, 237, 239, 0.07);
+	--cp-shadow: 0 14px 34px -20px rgba(0, 0, 0, 0.9);
+	--cp-danger: #ff6b7d;
+}
+
+/* ================================================================== */
+/* Composer pill (desktop; phones keep their own WhatsApp-app layout)   */
+/* ================================================================== */
+
+@media (min-width: 769px) {
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill {
+		min-height: 54px !important;
+		padding: 6px 7px !important;
+		border: 1px solid var(--cp-border) !important;
+		border-radius: 28px !important;
+		background: var(--cp-surface) !important;
+		box-shadow: var(--cp-shadow) !important;
+		transition: border-color 180ms ease, box-shadow 180ms ease !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill:focus-within {
+		border-color: color-mix(in srgb, var(--cp-accent) 45%, var(--cp-border)) !important;
+		box-shadow:
+			0 0 0 4px color-mix(in srgb, var(--cp-accent) 12%, transparent),
+			var(--cp-shadow) !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-input-action {
+		width: 38px !important;
+		min-width: 38px !important;
+		height: 38px !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		color: var(--cp-icon) !important;
+		transition: background-color 140ms ease, color 140ms ease, transform 140ms var(--cp-ease) !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-input-action:hover:not(:disabled),
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-input-action:focus-visible {
+		background: var(--cp-hover) !important;
+		color: var(--cp-text) !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-input-action:active:not(:disabled) {
+		transform: scale(0.9) !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-input-action.is-active {
+		background: color-mix(in srgb, var(--cp-accent) 14%, transparent) !important;
+		color: var(--cp-accent) !important;
+	}
+
+	/* Right-hand tools: their own group behind a hairline */
+	.wa-composer:not(#_c1):not(#_c2) .wa-composer-end-actions {
+		gap: 2px !important;
+		margin-inline-start: 4px;
+		padding-inline-start: 8px;
+		border-inline-start: 1px solid var(--cp-border);
+	}
+
+	/* Mic: the main action while the field is empty — an accent disc */
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-mic-button.wa-input-action {
+		width: 42px !important;
+		min-width: 42px !important;
+		height: 42px !important;
+		margin-inline-start: 4px !important;
+		background: color-mix(in srgb, var(--cp-accent) 13%, transparent) !important;
+		color: var(--cp-accent) !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-mic-button.wa-input-action:hover:not(:disabled),
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-mic-button.wa-input-action:focus-visible {
+		background: linear-gradient(145deg, #00c79f, var(--cp-accent-strong)) !important;
+		color: #fff !important;
+		box-shadow: 0 8px 18px -8px rgba(0, 128, 105, 0.8) !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-mic-button.wa-input-action:hover:not(:disabled) .wa-composer-mic-icon {
+		color: #fff !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-send-button {
+		width: 42px !important;
+		min-width: 42px !important;
+		height: 42px !important;
+		margin-inline-start: 4px !important;
+		border: 0 !important;
+		border-radius: 999px !important;
+		background: linear-gradient(145deg, #00c79f, var(--cp-accent-strong)) !important;
+		color: #fff !important;
+		box-shadow: 0 8px 18px -8px rgba(0, 128, 105, 0.85) !important;
+		transition: transform 160ms var(--cp-ease), box-shadow 160ms ease !important;
+		animation: cp-pop 200ms var(--cp-ease);
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-send-button:hover:not(:disabled) {
+		transform: translateY(-1px) !important;
+		box-shadow: 0 10px 22px -8px rgba(0, 128, 105, 0.95) !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-send-button:active:not(:disabled) {
+		transform: scale(0.94) !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-composer-input {
+		color: var(--cp-text) !important;
+		font-size: 15px !important;
+		line-height: 22px !important;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-composer-input::placeholder {
+		color: var(--cp-text-2) !important;
+	}
+}
+
+/* ================================================================== */
+/* Inline completion (ghost text)                                       */
+/* ================================================================== */
+
+.wa-ghost-wrap {
+	position: relative;
+	display: flex;
+	min-width: 0;
+	flex: 1 1 auto;
+	align-items: center;
+}
+
+.wa-ghost-wrap > .wa-composer-input {
+	position: relative;
+	z-index: 1;
+}
+
+/* The completion is drawn behind the field, so the field itself must be see-through. */
+.wa-composer:not(#_c1):not(#_c2) .wa-ghost-wrap.has-ghost > .wa-composer-input {
+	background: transparent !important;
+}
+
+/* Same box and type as the textarea (copied at runtime); typed text is invisible, so
+   only the grey completion shows, exactly where the next letter would go. */
+.wa-ghost {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	overflow: hidden;
+	border: 0 solid transparent;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+	word-break: break-word;
+	pointer-events: none;
+}
+
+.wa-ghost__typed {
+	color: transparent;
+}
+
+.wa-ghost__hint {
+	color: var(--cp-text-2, #8696a0);
+	opacity: 0.75;
+}
+
+.wa-ghost__key {
+	display: inline-block;
+	margin-inline-start: 8px;
+	padding: 0 6px;
+	border: 1px solid var(--cp-border, #e6e9eb);
+	border-bottom-width: 2px;
+	border-radius: 6px;
+	background: var(--cp-surface, #fff);
+	color: var(--cp-text-2, #8696a0);
+	font: 600 10.5px/16px ui-sans-serif, system-ui, sans-serif;
+	letter-spacing: 0.02em;
+	vertical-align: 2px;
+	animation: cp-fade 220ms ease;
+}
+
+/* ================================================================== */
+/* Reply card                                                           */
+/* ================================================================== */
+
+.wa-composer .wa-rp {
+	--rp-c: #027eb5;
+	position: relative;
+	display: flex;
+	flex-basis: 100%;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+	margin: 0 0 8px;
+	padding: 10px 10px 10px 14px;
+	overflow: hidden;
+	border: 1px solid color-mix(in srgb, var(--rp-c) 16%, var(--cp-border));
+	border-radius: 18px;
+	background:
+		linear-gradient(90deg, color-mix(in srgb, var(--rp-c) 9%, transparent), transparent 70%),
+		var(--cp-surface);
+	box-shadow: var(--cp-shadow);
+	animation: cp-rise 200ms var(--cp-ease);
+}
+
+.wa-composer .wa-rp[dir='rtl'] {
+	padding: 10px 14px 10px 10px;
+	background:
+		linear-gradient(270deg, color-mix(in srgb, var(--rp-c) 9%, transparent), transparent 70%),
+		var(--cp-surface);
+}
+
+.wa-composer .wa-rp.is-mine {
+	--rp-c: var(--cp-accent);
+}
+
+html.dark .wa-composer .wa-rp.is-theirs {
+	--rp-c: #53bdeb;
+}
+
+/* the quote bar on the leading edge */
+.wa-composer .wa-rp::before {
+	content: '';
+	position: absolute;
+	inset-block: 0;
+	inset-inline-start: 0;
+	width: 4px;
+	background: var(--rp-c);
+}
+
+.wa-composer .wa-rp__icon {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	flex: none;
+	place-items: center;
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--rp-c) 14%, transparent);
+	color: var(--rp-c);
+}
+
+.wa-composer .wa-rp__body {
+	min-width: 0;
+	flex: 1;
+}
+
+.wa-composer .wa-rp__label {
+	display: flex;
+	min-width: 0;
+	align-items: baseline;
+	gap: 5px;
+	margin: 0;
+	color: var(--cp-text-2);
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 17px;
+}
+
+.wa-composer .wa-rp__label b {
+	overflow: hidden;
+	color: var(--rp-c);
+	font-size: 13px;
+	font-weight: 700;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-composer .wa-rp__snippet {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	margin: 2px 0 0;
+	color: var(--cp-text);
+	font-size: 13.5px;
+	line-height: 19px;
+	opacity: 0.85;
+	text-align: start;
+}
+
+.wa-composer .wa-rp__snippet > span {
+	display: -webkit-box;
+	min-width: 0;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+	white-space: normal;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.wa-composer .wa-rp__snippet > svg {
+	flex: none;
+	margin-top: 2px;
+	color: var(--rp-c);
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-rp__close {
+	display: grid;
+	width: 32px;
+	height: 32px;
+	flex: none;
+	place-items: center;
+	border: 0;
+	border-radius: 999px;
+	background: var(--cp-hover);
+	color: var(--cp-icon) !important;
+	cursor: pointer;
+	transition: background-color 140ms ease, color 140ms ease, transform 140ms var(--cp-ease);
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-rp__close:hover {
+	background: color-mix(in srgb, var(--cp-danger) 14%, transparent);
+	color: var(--cp-danger) !important;
+	transform: rotate(90deg);
+}
+
+/* ================================================================== */
+/* Voice recorder                                                       */
+/* ================================================================== */
+
+.wa-composer .wa-vr-shell {
+	position: relative;
+	display: flex;
+	min-width: 0;
+	flex: 1 1 auto;
+	align-items: center;
+	min-height: 56px;
+	padding: 6px;
+	border: 1px solid var(--cp-border);
+	border-radius: 30px;
+	background: var(--cp-surface);
+	box-shadow: var(--cp-shadow);
+	animation: cp-rise 200ms var(--cp-ease);
+}
+
+/* live: a soft red halo that breathes with the recording */
+.wa-composer .wa-vr-shell.is-live:has(.wa-vr.is-live) {
+	border-color: color-mix(in srgb, var(--cp-danger) 35%, var(--cp-border));
+	box-shadow:
+		0 0 0 4px color-mix(in srgb, var(--cp-danger) 9%, transparent),
+		var(--cp-shadow);
+}
+
+.wa-vr {
+	display: flex;
+	width: 100%;
+	min-width: 0;
+	align-items: center;
+	gap: 6px;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn {
+	display: grid;
+	width: 40px;
+	height: 40px;
+	flex: none;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--cp-icon) !important;
+	cursor: pointer;
+	transition: background-color 140ms ease, color 140ms ease, transform 140ms var(--cp-ease);
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn:hover:not(:disabled) {
+	background: var(--cp-hover);
+	color: var(--cp-text) !important;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn:active:not(:disabled) {
+	transform: scale(0.9);
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn:disabled {
+	cursor: default;
+	opacity: 0.45;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn.is-discard:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--cp-danger) 12%, transparent);
+	color: var(--cp-danger) !important;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn.is-on {
+	background: color-mix(in srgb, var(--cp-accent) 14%, transparent);
+	color: var(--cp-accent) !important;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn.is-pause {
+	box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--cp-danger) 45%, transparent);
+	color: var(--cp-danger) !important;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn.is-pause:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--cp-danger) 10%, transparent);
+	color: var(--cp-danger) !important;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn.is-pause.is-resume {
+	background: var(--cp-danger);
+	box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--cp-danger) 80%, transparent);
+	color: #fff !important;
+}
+
+/* time + state, in a chip */
+.wa-vr__status {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 8px;
+	height: 32px;
+	padding: 0 12px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--cp-danger) 10%, transparent);
+	color: var(--cp-danger);
+}
+
+.wa-vr__dot {
+	width: 9px;
+	height: 9px;
+	flex: none;
+	border-radius: 999px;
+	background: currentColor;
+	animation: cp-rec 1.4s ease-out infinite;
+}
+
+.wa-vr__time {
+	min-width: 34px;
+	font-size: 14px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.01em;
+}
+
+.wa-vr__label {
+	font-size: 12px;
+	font-weight: 600;
+	opacity: 0.85;
+}
+
+.wa-vr.is-paused .wa-vr__status,
+.wa-vr.is-preview .wa-vr__status,
+.wa-vr.is-ready .wa-vr__status {
+	background: var(--cp-hover);
+	color: var(--cp-text-2);
+}
+
+.wa-vr.is-paused .wa-vr__dot,
+.wa-vr.is-preview .wa-vr__dot {
+	animation: none;
+	opacity: 0.6;
+}
+
+.wa-vr.is-ready .wa-vr__status {
+	background: color-mix(in srgb, var(--cp-accent) 12%, transparent);
+	color: var(--cp-accent);
+}
+
+.wa-vr.is-ready .wa-vr__dot {
+	animation: none;
+}
+
+/* waveform area */
+.wa-vr__stage {
+	position: relative;
+	display: flex;
+	min-width: 0;
+	height: 40px;
+	flex: 1 1 auto;
+	align-items: center;
+	padding: 0 6px;
+}
+
+.wa-vr__bars {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	align-items: center;
+	gap: 2px;
+	overflow: hidden;
+}
+
+/* live: newest bar on the right, older ones slide off the left edge */
+.wa-vr__bars.is-live {
+	justify-content: flex-end;
+	-webkit-mask-image: linear-gradient(90deg, transparent, #000 18%);
+	mask-image: linear-gradient(90deg, transparent, #000 18%);
+}
+
+/* Bars share the width (2–4px each), so the wave spans the whole stage at any size. */
+.wa-vr__bars > span {
+	min-width: 2px;
+	max-width: 4px;
+	height: calc(4px + var(--h, 0.1) * 30px);
+	flex: 1 1 0;
+	border-radius: 999px;
+	background: linear-gradient(180deg, #ff8a7a, var(--cp-danger));
+	transition: height 90ms linear;
+}
+
+.wa-vr__bars.is-take {
+	justify-content: space-between;
+}
+
+.wa-vr__bars.is-take > span {
+	background: color-mix(in srgb, var(--cp-text-2) 45%, transparent);
+	transition: background-color 120ms ease;
+}
+
+.wa-vr__bars.is-take > span.is-played {
+	background: linear-gradient(180deg, #00c79f, var(--cp-accent-strong));
+}
+
+.wa-vr.is-paused .wa-vr__bars.is-take > span.is-played {
+	background: color-mix(in srgb, var(--cp-danger) 70%, transparent);
+}
+
+.wa-vr__take {
+	position: relative;
+	display: flex;
+	width: 100%;
+	height: 100%;
+	align-items: center;
+}
+
+.wa-vr__playhead {
+	position: absolute;
+	top: 4px;
+	bottom: 4px;
+	width: 2px;
+	margin-inline-start: -1px;
+	border-radius: 2px;
+	background: var(--cp-accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-accent) 20%, transparent);
+	pointer-events: none;
+}
+
+.wa-vr__range {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+/* send: the big, unmistakable action */
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__send {
+	display: grid;
+	width: 46px;
+	height: 46px;
+	flex: none;
+	place-items: center;
+	margin-inline-start: 2px;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: linear-gradient(145deg, #00c79f, var(--cp-accent-strong));
+	color: #fff !important;
+	box-shadow: 0 10px 22px -10px rgba(0, 128, 105, 0.95);
+	cursor: pointer;
+	transition: transform 160ms var(--cp-ease), box-shadow 160ms ease;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__send:hover:not(:disabled) {
+	transform: translateY(-1px) scale(1.03);
+	box-shadow: 0 12px 26px -10px rgba(0, 128, 105, 1);
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__send:active:not(:disabled) {
+	transform: scale(0.93);
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-vr__send:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.wa-composer .wa-vr :focus-visible {
+	outline: 2px solid var(--cp-accent);
+	outline-offset: 2px;
+}
+
+/* narrow screens: drop the state word, keep the time */
+@media (max-width: 560px) {
+	.wa-vr__label {
+		display: none;
+	}
+
+	.wa-vr__status {
+		padding: 0 10px;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-vr__btn {
+		width: 36px;
+		height: 36px;
+	}
+
+	.wa-composer:not(#_c1):not(#_c2) .wa-vr__send {
+		width: 42px;
+		height: 42px;
+	}
+}
+
+/* ================================================================== */
+
+@keyframes cp-rise {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+
+@keyframes cp-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.7);
+	}
+}
+
+@keyframes cp-fade {
+	from {
+		opacity: 0;
+	}
+}
+
+@keyframes cp-rec {
+	0% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent);
+	}
+	80%,
+	100% {
+		box-shadow: 0 0 0 7px transparent;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-composer .wa-rp,
+	.wa-composer .wa-vr-shell,
+	.wa-vr__dot,
+	.wa-ghost__key,
+	.wa-composer:not(#_c1):not(#_c2) .wa-send-button {
+		animation: none !important;
+	}
+
+	.wa-vr__bars > span {
+		transition: none;
+	}
+}

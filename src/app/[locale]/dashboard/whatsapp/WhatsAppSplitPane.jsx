@@ -19,6 +19,7 @@ import { VoiceRecordingBar } from './VoiceRecordingBar';
 import { useVoiceRecordingPreview } from './use-voice-recording-preview';
 import {
 	VOICE_NOTE_MAX_SECONDS,
+	VOICE_TICK_SECONDS,
 	buildVoiceNoteFile,
 	createVoiceMediaRecorder,
 	getVoiceMediaStream,
@@ -683,7 +684,7 @@ export default function WhatsAppSplitPane({
 				recordingStreamRef.current?.getTracks().forEach(track => track.stop());
 				recordingStreamRef.current = null;
 				mediaRecorderRef.current = null;
-				const durationSec = Math.max(1, recordingSecondsRef.current || 1);
+				const durationSec = Math.max(1, Math.round(recordingSecondsRef.current || 1));
 				setRecordingVoice(false);
 				setRecordingPaused(false);
 				setRecordingSeconds(0);
@@ -697,15 +698,17 @@ export default function WhatsAppSplitPane({
 				void sendVoiceFile(file, { seconds: durationSec });
 			};
 			recorder.start();
+			// Quarter-second ticks so pause/resume does not skew the length (see the main composer).
 			recordingTimerRef.current = setInterval(() => {
 				if (mediaRecorderRef.current?.state !== 'recording') return;
-				recordingSecondsRef.current += 1;
-				setRecordingSeconds(recordingSecondsRef.current);
-				if (recordingSecondsRef.current >= VOICE_NOTE_MAX_SECONDS && recorder.state !== 'inactive') {
+				recordingSecondsRef.current += VOICE_TICK_SECONDS;
+				const next = Math.floor(recordingSecondsRef.current);
+				setRecordingSeconds(next);
+				if (next >= VOICE_NOTE_MAX_SECONDS && recorder.state !== 'inactive') {
 					discardRecordingRef.current = false;
 					recorder.stop();
 				}
-			}, 1000);
+			}, VOICE_TICK_SECONDS * 1000);
 		} catch {
 			stream?.getTracks().forEach(track => track.stop());
 			setRecordingStarting(false);
@@ -887,8 +890,9 @@ export default function WhatsAppSplitPane({
 					className={`flex shrink-0 items-center gap-2 border-0 border-t-0 p-2.5 wa-composer ${isVoiceRecordingMode ? 'is-recording' : ''}`}
 				>
 					{recordingVoice ? (
-						<div dir="ltr" className="wa-input-pill wa-recording-pill is-live flex min-h-10 min-w-0 flex-1 items-center rounded-full px-1 py-1">
+						<div dir="ltr" className="wa-vr-shell is-live">
 							<VoiceRecordingBar
+								stream={recordingStreamRef.current}
 								seconds={recordingSeconds}
 								paused={recordingPaused}
 								labels={labels}
@@ -906,7 +910,7 @@ export default function WhatsAppSplitPane({
 							/>
 						</div>
 					) : pendingVoiceDraft?.file ? (
-						<div dir="ltr" className="wa-input-pill wa-recording-pill is-ready flex min-h-10 min-w-0 flex-1 items-center rounded-full px-1 py-1">
+						<div dir="ltr" className="wa-vr-shell is-ready">
 							<VoiceRecordingBar
 								ready
 								sending={false}

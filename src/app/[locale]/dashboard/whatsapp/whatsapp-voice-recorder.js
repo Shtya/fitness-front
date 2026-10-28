@@ -1,4 +1,6 @@
 export const VOICE_NOTE_MAX_SECONDS = 299;
+/** Recording clock resolution; fine enough that pausing does not skew the length. */
+export const VOICE_TICK_SECONDS = 0.25;
 export const VOICE_NOTE_BITRATE = 16_000;
 
 const VOICE_RECORDER_MIME_TYPES = [

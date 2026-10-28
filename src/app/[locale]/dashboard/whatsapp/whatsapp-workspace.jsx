@@ -284,6 +284,8 @@ import './wa-desktop-chats.css';
 import './wa-memo-docs.css';
 import './wa-popups.css';
 import './wa-settings.css';
+import './wa-composer-premium.css';
+import { buildCompletionModel, rememberSentText, suggestCompletion } from './wa-autocomplete';
 import { useMenuKeyboard } from './wa-ui-menu';
 import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
 import { installMobileViewport } from './mobile-viewport';
@@ -303,6 +305,7 @@ import { VoiceRecordingBar } from './VoiceRecordingBar';
 import { useVoiceRecordingPreview } from './use-voice-recording-preview';
 import {
 	VOICE_NOTE_MAX_SECONDS,
+	VOICE_TICK_SECONDS,
 	buildVoiceNoteFile,
 	createVoiceMediaRecorder,
 	getVoiceMediaStream,
@@ -2045,9 +2048,24 @@ function IsolatedComposerTextarea({
 	onMentionOpen,
 	locale = 'en',
 	disabled = false,
+	completionMessages = null,
 }) {
 	const [draft, setDraft] = useState('');
 	const textareaRef = useRef(null);
+	const ghostRef = useRef(null);
+	const [ghost, setGhost] = useState('');
+	// Word model for inline completion: this chat (your own lines weigh more) plus
+	// what you have sent before, kept in this browser.
+	const completionModel = useMemo(
+		() =>
+			buildCompletionModel(
+				(Array.isArray(completionMessages) ? completionMessages.slice(-300) : []).map(message => ({
+					text: typeof message?.text === 'string' ? message.text : '',
+					weight: message?.direction === 'outbound' ? 2 : 0.7,
+				})),
+			),
+		[completionMessages],
+	);
 	const pickedMentionsRef = useRef([]);
 	const mentionQueryRef = useRef(null);
 	const [mentionQuery, setMentionQueryState] = useState(null);
@@ -2088,7 +2106,13 @@ function IsolatedComposerTextarea({
 	useLayoutEffect(() => {
 		apiRef.current = {
 			getDraft: () => String(draftRef.current || ''),
-			setDraft: apply,
+			// The workspace clears the field after a send: learn what was just sent.
+			setDraft: next => {
+				const previous = String(draftRef.current || '');
+				apply(next);
+				setGhost('');
+				if (previous.trim() && !String(draftRef.current || '').trim()) rememberSentText(previous);
+			},
 			focus: () => {
 				const node = textareaRef.current;
 				if (!node || node.disabled) return;
@@ -2098,10 +2122,72 @@ function IsolatedComposerTextarea({
 			},
 			getMentions: () => [...pickedMentionsRef.current],
 		};
+		const api = apiRef.current;
 		return () => {
-			if (apiRef.current?.setDraft === apply) apiRef.current = null;
+			if (apiRef.current === api) apiRef.current = null;
 		};
 	}, [apiRef, apply, draftRef]);
+
+	// Ghost text only when the caret sits at the very end with nothing selected.
+	const refreshGhost = useCallback(
+		node => {
+			if (!node || node.disabled) {
+				setGhost('');
+				return;
+			}
+			const value = node.value;
+			const atEnd = node.selectionStart === value.length && node.selectionEnd === value.length;
+			setGhost(atEnd && !mentionQueryRef.current ? suggestCompletion(completionModel, value) : '');
+		},
+		[completionModel],
+	);
+
+	const acceptGhost = () => {
+		if (!ghost) return false;
+		const node = textareaRef.current;
+		const next = `${String(draftRef.current || '')}${ghost}`;
+		apply(next);
+		setGhost('');
+		requestAnimationFrame(() => {
+			if (!node) return;
+			node.setSelectionRange(next.length, next.length);
+			refreshGhost(node);
+		});
+		onTyping?.();
+		return true;
+	};
+
+	// The mirror behind the textarea has to match its box and type exactly, or the
+	// grey text drifts off the end of the line.
+	useLayoutEffect(() => {
+		const node = textareaRef.current;
+		const mirror = ghostRef.current;
+		if (!ghost || !node || !mirror) return;
+		const style = window.getComputedStyle(node);
+		for (const prop of [
+			'fontFamily',
+			'fontSize',
+			'fontWeight',
+			'fontStyle',
+			'letterSpacing',
+			'wordSpacing',
+			'lineHeight',
+			'textAlign',
+			'direction',
+			'textIndent',
+			'paddingTop',
+			'paddingRight',
+			'paddingBottom',
+			'paddingLeft',
+			'borderTopWidth',
+			'borderRightWidth',
+			'borderBottomWidth',
+			'borderLeftWidth',
+		]) {
+			mirror.style[prop] = style[prop];
+		}
+		mirror.scrollTop = node.scrollTop;
+	}, [ghost, draft]);
 
 	const mentionMatches = useMemo(
 		() =>
@@ -2159,23 +2245,57 @@ function IsolatedComposerTextarea({
 	const ar = locale === 'ar';
 
 	return (
-		<>
+		<span className={`wa-ghost-wrap${ghost ? ' has-ghost' : ''}`}>
+			{ghost ? (
+				<div ref={ghostRef} className="wa-ghost" aria-hidden="true" dir={presentation.dir}>
+					<span className="wa-ghost__typed">{draft}</span>
+					<span className="wa-ghost__hint">{ghost}</span>
+					<kbd className="wa-ghost__key">Tab</kbd>
+				</div>
+			) : null}
 			<textarea
 				ref={textareaRef}
 				disabled={disabled}
 				aria-label={ariaLabel}
-				aria-autocomplete={mentionsEnabled ? 'list' : undefined}
+				aria-autocomplete={mentionsEnabled ? 'list' : 'inline'}
 				aria-expanded={mentionsEnabled ? mentionOpen : undefined}
 				value={draft}
 				onChange={event => {
 					apply(event.target.value);
 					syncMentionQuery(event.target);
+					refreshGhost(event.target);
 					onTyping?.();
 				}}
-				onClick={event => syncMentionQuery(event.currentTarget)}
-				onBlur={() => window.setTimeout(() => setMentionQuery(null), 150)}
+				onClick={event => {
+					syncMentionQuery(event.currentTarget);
+					refreshGhost(event.currentTarget);
+				}}
+				onScroll={event => {
+					if (ghostRef.current) ghostRef.current.scrollTop = event.currentTarget.scrollTop;
+				}}
+				onBlur={() => {
+					setGhost('');
+					window.setTimeout(() => setMentionQuery(null), 150);
+				}}
+				onFocus={event => refreshGhost(event.currentTarget)}
 				onPaste={onPaste}
 				onKeyDown={event => {
+					if (ghost && !mentionOpen && !event.nativeEvent.isComposing) {
+						const ltr = window.getComputedStyle(event.currentTarget).direction !== 'rtl';
+						if (
+							(event.key === 'Tab' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) ||
+							(event.key === (ltr ? 'ArrowRight' : 'ArrowLeft') && !event.shiftKey)
+						) {
+							event.preventDefault();
+							acceptGhost();
+							return;
+						}
+						if (event.key === 'Escape') {
+							event.preventDefault();
+							setGhost('');
+							return;
+						}
+					}
 					if (mentionOpen && !event.nativeEvent.isComposing) {
 						if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
 							event.preventDefault();
@@ -2201,8 +2321,9 @@ function IsolatedComposerTextarea({
 					}
 				}}
 				onKeyUp={event => {
-					if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+					if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
 						syncMentionQuery(event.currentTarget);
+						refreshGhost(event.currentTarget);
 					}
 				}}
 				rows={1}
@@ -2268,7 +2389,7 @@ function IsolatedComposerTextarea({
 						document.body,
 					)
 				: null}
-		</>
+		</span>
 	);
 }
 
@@ -22357,7 +22478,7 @@ function WhatsAppWorkspaceContent() {
 				recordingStreamRef.current?.getTracks().forEach(track => track.stop());
 				recordingStreamRef.current = null;
 				mediaRecorderRef.current = null;
-				const durationSec = Math.max(1, recordingSecondsRef.current || 1);
+				const durationSec = Math.max(1, Math.round(recordingSecondsRef.current || 1));
 				setRecordingVoice(false);
 				setRecordingPaused(false);
 				setRecordingSeconds(0);
@@ -22376,16 +22497,18 @@ function WhatsAppWorkspaceContent() {
 			// One complete blob on stop. A 250ms timeslice splits the WebM header
 			// across chunks, and phones then refuse to play the converted note.
 			recorder.start();
+			// Quarter-second ticks: a whole-second interval kept running through pauses
+			// and could gain or lose up to a second on every pause/resume.
 			recordingTimerRef.current = setInterval(() => {
 				if (mediaRecorderRef.current?.state !== 'recording') return;
-				recordingSecondsRef.current += 1;
-				const next = recordingSecondsRef.current;
+				recordingSecondsRef.current += VOICE_TICK_SECONDS;
+				const next = Math.floor(recordingSecondsRef.current);
 				setRecordingSeconds(next);
 				if (next >= VOICE_NOTE_MAX_SECONDS && recorder.state !== 'inactive') {
 					discardRecordingRef.current = false;
 					recorder.stop();
 				}
-			}, 1000);
+			}, VOICE_TICK_SECONDS * 1000);
 		} catch (error) {
 			stream?.getTracks().forEach(track => track.stop());
 			recordingStreamRef.current?.getTracks().forEach(track => track.stop());
@@ -29435,29 +29558,36 @@ function WhatsAppWorkspaceContent() {
 													: preview?.isMediaOnly
 														? ImageIcon
 														: null;
+												// A quote card docked on top of the composer: who you are answering
+												// on top, their words below, tinted in that person's colour.
 												return (
 												<div
-													className={`wa-reply-preview wa-ui-reply ${
-														replyingTo.direction === 'outbound' ? 'is-mine' : 'is-theirs'
-													}`}
+													className={`wa-rp ${replyingTo.direction === 'outbound' ? 'is-mine' : 'is-theirs'}`}
 													role="status"
 													aria-label={
 														locale === 'ar'
 															? `الرد على ${replyAuthor}`
 															: `Replying to ${replyAuthor}`
 													}
+													dir={locale === 'ar' ? 'rtl' : 'ltr'}
 												>
-													<div className="wa-ui-reply__copy">
-														<p className="wa-ui-reply__author" dir="auto">
-															{replyAuthor}
+													<span className="wa-rp__icon" aria-hidden="true">
+														<Reply size={16} strokeWidth={2.3} className="rtl:-scale-x-100" />
+													</span>
+													<div className="wa-rp__body">
+														<p className="wa-rp__label">
+															<span>{locale === 'ar' ? 'رد على' : 'Replying to'}</span>
+															<b className="wa-privacy-identity">
+																<bdi>{replyAuthor}</bdi>
+															</b>
 														</p>
 														<p
-															className={`wa-ui-reply__snippet ${snippetPresentation.className || ''}`}
+															className={`wa-rp__snippet ${snippetPresentation.className || ''}`}
 															dir={snippetPresentation.dir}
 															lang={snippetPresentation.lang}
 														>
 															{ReplyKindIcon ? (
-																<ReplyKindIcon size={14} strokeWidth={2} aria-hidden="true" />
+																<ReplyKindIcon size={14} strokeWidth={2.2} aria-hidden="true" />
 															) : null}
 															<span>
 																{preview?.isVoice
@@ -29471,9 +29601,9 @@ function WhatsAppWorkspaceContent() {
 														onClick={() => setReplyingTo(null)}
 														aria-label={locale === 'ar' ? 'إلغاء الرد' : 'Cancel reply'}
 														title={locale === 'ar' ? 'إلغاء الرد' : 'Cancel reply'}
-														className="wa-ui-icon-btn wa-ui-icon-btn--sm"
+														className="wa-rp__close"
 													>
-														<X size={16} strokeWidth={2} />
+														<X size={16} strokeWidth={2.2} />
 													</button>
 												</div>
 												);
@@ -29518,7 +29648,7 @@ function WhatsAppWorkspaceContent() {
 												</div>
 											)}
 											{recordingVoice ? (
-												<div dir="ltr" className="wa-input-pill wa-recording-pill is-live flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1">
+												<div dir="ltr" className="wa-vr-shell is-live">
 													<VoiceRecordingBar
 														stream={recordingStreamRef.current}
 														seconds={recordingSeconds}
@@ -29538,7 +29668,7 @@ function WhatsAppWorkspaceContent() {
 													/>
 												</div>
 											) : pendingVoiceDraft?.file ? (
-												<div dir="ltr" className="wa-input-pill wa-recording-pill is-ready flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1">
+												<div dir="ltr" className="wa-vr-shell is-ready">
 													<VoiceRecordingBar
 														ready
 														sending={false}
@@ -29624,6 +29754,7 @@ function WhatsAppWorkspaceContent() {
 														mentionLoading={mentionMembersLoading}
 														onMentionOpen={handleComposerMentionOpen}
 														locale={locale}
+														completionMessages={effectiveMessages}
 													/>
 													</div>
 													<button
