@@ -1,17 +1,13 @@
 'use client';
 
 import {
-	BookMarked,
 	BrainCircuit,
 	ChartColumnIncreasing,
-	CircleDot,
 	FileStack,
 	Kanban,
 	Languages,
-	MessagesSquare,
 	Moon,
 	MoonStar,
-	NotebookPen,
 	PanelLeftClose,
 	PanelLeftOpen,
 	Settings,
@@ -27,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useSidebarChrome } from '@/components/molecules/SidebarChromeContext';
+import { RailChatsIcon, RailOnlineIcon, RailReadingIcon, RailUpdatesIcon } from './wa-rail-icons';
 
 /**
  * Tooltip for the footer dock. The rail scrolls (overflow: auto), which clips anything
@@ -158,23 +155,27 @@ export default function WhatsAppDesktopRail({
 		{
 			id: 'chats',
 			label: labels.chats || (ar ? 'محادثات' : 'Chats'),
-			icon: MessagesSquare,
+			icon: RailChatsIcon,
+			custom: true,
 			badge: unreadCount,
 		},
 		{
 			id: 'online',
 			label: labels.onlineTab || (ar ? 'المتصلون' : 'Online'),
-			icon: CircleDot,
+			icon: RailOnlineIcon,
+			custom: true,
 		},
 		{
 			id: 'statuses',
 			label: labels.updates || (ar ? 'تحديثات' : 'Updates'),
-			icon: NotebookPen,
+			icon: RailUpdatesIcon,
+			custom: true,
 		},
 		{
 			id: 'reading',
 			label: labels.reading || (ar ? 'القراءة' : 'Reading'),
-			icon: BookMarked,
+			icon: RailReadingIcon,
+			custom: true,
 		},
 		{
 			id: 'groups',
@@ -281,7 +282,11 @@ export default function WhatsAppDesktopRail({
 			>
 				<span className="wa-desktop-rail__icon-wrap">
 					<span className="wa-desktop-rail__icon" aria-hidden="true">
-						<Icon size={21} strokeWidth={2} absoluteStrokeWidth />
+						{item.custom ? (
+							<Icon active={active} size={22} />
+						) : (
+							<Icon size={21} strokeWidth={2} absoluteStrokeWidth />
+						)}
 					</span>
 					{badge ? (
 						<span className="wa-desktop-rail__badge" aria-label={`${badge} unread`}>

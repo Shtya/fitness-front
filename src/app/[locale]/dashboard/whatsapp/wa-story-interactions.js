@@ -26,8 +26,13 @@ export function applyStoryInteractionUpdate(items, payload) {
 			if (Number.isFinite(payload.reactionCount) && payload.reactionCount !== item.reactionCount) {
 				patch.reactionCount = payload.reactionCount;
 			}
-		} else if ('myReaction' in payload && (payload.myReaction || null) !== (item.myReaction || null)) {
-			patch.myReaction = payload.myReaction || null;
+		} else {
+			if ('myReaction' in payload && (payload.myReaction || null) !== (item.myReaction || null)) {
+				patch.myReaction = payload.myReaction || null;
+			}
+			if ('myLiked' in payload && Boolean(payload.myLiked) !== Boolean(item.myLiked)) {
+				patch.myLiked = Boolean(payload.myLiked);
+			}
 		}
 		if (!Object.keys(patch).length) return item;
 		changed = true;

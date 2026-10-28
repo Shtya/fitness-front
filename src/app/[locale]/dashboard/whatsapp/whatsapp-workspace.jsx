@@ -309,6 +309,7 @@ import {
 	mediaUploadFailedMessage,
 } from './whatsapp-voice-recorder';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
+import { MyStoryBar, StoryAudienceDialog, storyAudienceSummary } from './story/StoryAudience';
 import { useSidebarChrome } from '@/components/molecules/SidebarChromeContext';
 import WhatsAppAccountLinkPanel, {
 	WhatsAppRestoreProgress,
@@ -427,7 +428,7 @@ import {
 import { waPerfMark } from './wa-perf';
 import { shouldSaveViaShareSheet, toMediaFile } from './wa-save-file';
 import { saveMediaFiles } from './wa-save-prompt';
-import { StoryReactionBar, StoryViewersSheet, StoryViewsButton } from './WaStoryInteractions';
+import { StoryComposer, StoryViewersSheet, StoryViewsButton } from './WaStoryInteractions';
 import {
 	applyStoryInteractionUpdate,
 	formatStoryViewTime,
@@ -12446,6 +12447,7 @@ function WhatsAppWorkspaceContent() {
 	const [storyLoop, setStoryLoop] = useState(false);
 	const [storyReplayKey, setStoryReplayKey] = useState(0);
 	const [storyReplyDraft, setStoryReplyDraft] = useState('');
+	const [likingStory, setLikingStory] = useState(false);
 	const [sendingStoryReply, setSendingStoryReply] = useState(false);
 	const [storyShareOpen, setStoryShareOpen] = useState(false);
 	const [storyShareSearch, setStoryShareSearch] = useState('');
@@ -12502,6 +12504,27 @@ function WhatsAppWorkspaceContent() {
 		if (bar) bar.style.width = `${clamped}%`;
 	}, []);
 	const storyVideoRef = useRef(null);
+	/*
+	 * The person carousel keeps the outgoing card mounted while it slides out, so two
+	 * story videos briefly share this ref. A plain object ref is nulled when the old one
+	 * unmounts, which left the new video playing with nothing able to pause it.
+	 */
+	const bindStoryVideo = useCallback(node => {
+		if (!node) return undefined;
+		storyVideoRef.current = node;
+		return () => {
+			node.pause();
+			if (storyVideoRef.current === node) storyVideoRef.current = null;
+		};
+	}, []);
+	const silenceOtherStoryVideos = useCallback(() => {
+		if (typeof document === 'undefined') return;
+		for (const node of document.querySelectorAll('.wa-story-viewer__card video')) {
+			if (node === storyVideoRef.current || node.paused) continue;
+			node.muted = true;
+			node.pause();
+		}
+	}, []);
 	const storySegmentDoneRef = useRef(false);
 	const storyPeekMediaRef = useRef({});
 	const [logs, setLogs] = useState([]);
@@ -12822,6 +12845,9 @@ function WhatsAppWorkspaceContent() {
 	const [loadingNotes, setLoadingNotes] = useState(false);
 	const [savingNote, setSavingNote] = useState(false);
 	const [statusDraft, setStatusDraft] = useState('');
+	const [storyAudienceOpen, setStoryAudienceOpen] = useState(false);
+	/* Saved audience per account until the accounts list is refetched. */
+	const [storyAudienceSaved, setStoryAudienceSaved] = useState({});
 	const [publishingStatus, setPublishingStatus] = useState(false);
 	const [syncingStatuses, setSyncingStatuses] = useState(false);
 	const [viewedStatusIds, setViewedStatusIds] = useState(() => new Set());
@@ -24605,6 +24631,31 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
+	const likeCurrentStory = async liked => {
+		if (!accountId || !selectedStatus || selectedStatus.isOwn || likingStory) return false;
+		if (!canUseWhatsApp || demo.settings.enabled) {
+			toast.error(t.storyReactUnavailable);
+			return false;
+		}
+		const status = selectedStatus;
+		const statusMessageId = storyMessageKey(status.providerStatusId);
+		setLikingStory(true);
+		applyStoryInteractionPatch({ statusMessageId, myLiked: liked });
+		try {
+			await api.put(
+				`/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(status.id)}/like`,
+				{ liked },
+			);
+			return true;
+		} catch (error) {
+			applyStoryInteractionPatch({ statusMessageId, myLiked: !liked });
+			toast.error(error?.response?.data?.message || error?.message || t.storyReactUnavailable);
+			return false;
+		} finally {
+			setLikingStory(false);
+		}
+	};
+
 	const openStorySharePicker = () => {
 		if (!selectedStatus || !canUseWhatsApp || demo.settings.enabled) {
 			toast.error(t.storySendUnavailable);
@@ -24949,6 +25000,7 @@ function WhatsAppWorkspaceContent() {
 	}, [selectedStatus?.id, storyIndex, loadingStory, storyReplayKey]);
 
 	useEffect(() => {
+		silenceOtherStoryVideos();
 		const video = storyVideoRef.current;
 		if (!video || !statusMediaUrl) return undefined;
 		if (storyPaused) {
@@ -24980,6 +25032,15 @@ function WhatsAppWorkspaceContent() {
 		if (!video) return;
 		video.muted = storyMuted;
 	}, [storyMuted, selectedStatus?.id, statusMediaUrl]);
+
+	useEffect(() => {
+		if (!selectedStatus) return undefined;
+		const onVisibility = () => {
+			if (document.hidden) setStoryPaused(true);
+		};
+		document.addEventListener('visibilitychange', onVisibility);
+		return () => document.removeEventListener('visibilitychange', onVisibility);
+	}, [selectedStatus?.id]);
 
 	const openGroupDetails = async group => {
 		if (!accountId || !group?.id) return;
@@ -29751,6 +29812,16 @@ function WhatsAppWorkspaceContent() {
 												<header className="wa-m-section__head">
 													<h2>{ar ? 'الحالة' : 'Status'}</h2>
 													<span className="wa-m-section__tools">
+														{canUseWhatsApp ? (
+															<button
+																type="button"
+																className="wa-m-round"
+																aria-label={ar ? 'مين يشوف حالتي' : 'Who can see my status'}
+																onClick={() => setStoryAudienceOpen(true)}
+															>
+																<ShieldCheck size={17} strokeWidth={2.1} />
+															</button>
+														) : null}
 														<button
 															type="button"
 															className="wa-m-round"
@@ -29981,6 +30052,27 @@ function WhatsAppWorkspaceContent() {
 							</div>
 						</header>
 						<div className="wa-statuses-body min-h-0 flex-1 overflow-y-auto nice-scroll">
+							{storyPanelMode === 'active' && canUseWhatsApp && isAccountConnected
+								? (() => {
+										const ownStory = groupedStatuses.find(story => story.isOwn);
+										return (
+											<MyStoryBar
+												locale={locale}
+												avatarUrl={railAvatarUrl || ''}
+												label={selectedAccount?.label || ''}
+												ownCount={ownStory?.items.length || 0}
+												latestLabel={
+													ownStory ? relativeTime(ownStory.latest.publishedAt, relativeTimeNow, locale) : ''
+												}
+												audienceSummary={storyAudienceSummary(selectedAccount, storyAudienceSaved[accountId])}
+												syncing={syncingStatuses}
+												onOpenOwn={() => ownStory && openStoryGroup(ownStory)}
+												onAudience={() => setStoryAudienceOpen(true)}
+												onSync={() => void loadTabData('statuses', true)}
+											/>
+										);
+									})()
+								: null}
 							{storyPanelMode === 'active' && canUseWhatsApp && (
 								selectedAccount?.providerCapabilities?.statusPublish === false ||
 								String(selectedAccount?.providerName || '').toLowerCase() === 'baileys'
@@ -32140,6 +32232,13 @@ function WhatsAppWorkspaceContent() {
 					}}
 				/>
 			</MountWhenOpened>
+			<StoryAudienceDialog
+				open={storyAudienceOpen && Boolean(accountId)}
+				accountId={accountId || ''}
+				locale={locale}
+				onClose={() => setStoryAudienceOpen(false)}
+				onSaved={settings => setStoryAudienceSaved(current => ({ ...current, [accountId]: settings }))}
+			/>
 			<MountWhenOpened open={libraryOpen}>
 				<SavedLibraryPanel
 					open={libraryOpen}
@@ -32699,10 +32798,9 @@ function WhatsAppWorkspaceContent() {
 								</div>
 							) : String(selectedStatus.type).toLowerCase().includes('video') && statusMediaUrl ? (
 								<video
-									ref={storyVideoRef}
+									ref={bindStoryVideo}
 									src={statusMediaUrl}
 									controls={false}
-									autoPlay
 									playsInline
 									muted={storyMuted}
 									onLoadedMetadata={event => {
@@ -32728,13 +32826,15 @@ function WhatsAppWorkspaceContent() {
 										);
 										setStoryProgress(pct);
 									}}
-									onEnded={() => {
+									onEnded={event => {
+										if (event.currentTarget !== storyVideoRef.current) return;
 										finishStorySegmentRef.current();
 									}}
 									onCanPlay={event => {
-										event.currentTarget.muted = storyMuted;
-										if (!storyPaused) {
-											event.currentTarget.play().catch(() => undefined);
+										const node = event.currentTarget;
+										node.muted = storyMuted;
+										if (!storyPaused && node === storyVideoRef.current) {
+											node.play().catch(() => undefined);
 										}
 									}}
 									onError={() => {
@@ -32868,49 +32968,23 @@ function WhatsAppWorkspaceContent() {
 							!selectedStatus.isHistory &&
 							canUseWhatsApp &&
 							!demo.settings.enabled && (
-							<StoryReactionBar
+							<StoryComposer
 								locale={locale}
-								selected={selectedStatus.myReaction || null}
+								liked={Boolean(selectedStatus.myLiked)}
+								liking={likingStory}
+								onToggleLike={likeCurrentStory}
+								reaction={selectedStatus.myReaction || null}
 								sendingEmoji={sendingStoryReaction}
-								disabled={sendingStoryReply}
 								onReact={reactToCurrentStory}
+								draft={storyReplyDraft}
+								onDraftChange={setStoryReplyDraft}
+								sending={sendingStoryReply}
+								onSubmit={() => void replyToCurrentStory()}
+								onFocusChange={active => {
+									if (active) setStoryPaused(true);
+									else if (!storyReplyDraft.trim()) setStoryPaused(false);
+								}}
 							/>
-						)}
-						{!selectedStatus.isOwn &&
-							!selectedStatus.isHistory &&
-							canUseWhatsApp &&
-							!demo.settings.enabled && (
-							<form
-								onSubmit={replyToCurrentStory}
-								className="wa-story-viewer__reply relative z-40 flex shrink-0 items-center gap-2 border-t border-white/10 bg-black/45 px-3 py-3 backdrop-blur-md"
-								onClick={event => event.stopPropagation()}
-							>
-								<Reply size={16} className="shrink-0 text-white/70" />
-								<input
-									type="text"
-									value={storyReplyDraft}
-									onChange={event => setStoryReplyDraft(event.target.value)}
-									onFocus={() => setStoryPaused(true)}
-									placeholder={t.replyToStoryPlaceholder}
-									maxLength={1000}
-									disabled={sendingStoryReply}
-									className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 text-sm text-white outline-none placeholder:text-white/45 focus:border-emerald-400/70"
-								/>
-								<button
-									type="submit"
-									disabled={sendingStoryReply || !storyReplyDraft.trim()}
-									className="inline-flex h-11 items-center gap-1.5 rounded-full bg-emerald-500 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-400 disabled:opacity-45"
-								>
-									{sendingStoryReply ? (
-										<Loader2 size={15} className="animate-spin" />
-									) : (
-										<>
-											<Send size={14} />
-											{t.replyToStory}
-										</>
-									)}
-								</button>
-							</form>
 						)}
 						{selectedStatus.isOwn ? (
 							<StoryViewersSheet

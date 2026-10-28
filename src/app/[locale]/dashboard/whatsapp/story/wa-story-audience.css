@@ -1,0 +1,583 @@
+/* Story audience dialog + "My status" bar. Theme tokens come from wa-ui.css. */
+
+.wa-sa {
+	position: fixed;
+	inset: 0;
+	z-index: 700;
+	display: grid;
+	place-items: center;
+	padding: 16px;
+	background: rgba(11, 20, 26, 0.55);
+	backdrop-filter: blur(4px);
+	animation: wa-sa-fade 140ms ease-out;
+}
+
+.wa-sa__panel {
+	display: flex;
+	width: min(560px, 100%);
+	max-height: min(760px, calc(100dvh - 32px));
+	flex-direction: column;
+	overflow: hidden;
+	border: 1px solid var(--wa-ui-border, #e9edef);
+	border-radius: 20px;
+	background: var(--wa-ui-surface, #fff);
+	color: var(--wa-ui-text, #111b21);
+	box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.55);
+	animation: wa-sa-rise 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.wa-sa__head {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 18px 18px 12px;
+}
+
+.wa-sa__head-icon {
+	display: grid;
+	width: 40px;
+	height: 40px;
+	flex: none;
+	place-items: center;
+	border-radius: 12px;
+	background: linear-gradient(145deg, #25d366, #128c7e);
+	color: #fff;
+}
+
+.wa-sa__title {
+	margin: 0;
+	font-size: 17px;
+	font-weight: 700;
+}
+
+.wa-sa__subtitle {
+	margin: 2px 0 0;
+	color: var(--wa-ui-text-2, #54656f);
+	font-size: 13px;
+}
+
+.wa-sa__close {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	place-items: center;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--wa-ui-text-2, #54656f);
+	cursor: pointer;
+}
+
+.wa-sa__close:hover {
+	background: var(--wa-ui-surface-2, #f0f2f5);
+}
+
+.wa-sa__modes {
+	display: grid;
+	gap: 8px;
+	padding: 0 18px;
+}
+
+.wa-sa__mode {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	border: 1.5px solid var(--wa-ui-border, #e9edef);
+	border-radius: 14px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+	transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.wa-sa__mode:hover {
+	background: var(--wa-ui-surface-2, #f7f8fa);
+}
+
+.wa-sa__mode.is-active {
+	border-color: #00a884;
+	background: rgba(0, 168, 132, 0.08);
+}
+
+.wa-sa__mode-icon {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	flex: none;
+	place-items: center;
+	border-radius: 10px;
+	background: var(--wa-ui-surface-2, #f0f2f5);
+	color: var(--wa-ui-text-2, #54656f);
+}
+
+.wa-sa__mode.is-active .wa-sa__mode-icon {
+	background: #00a884;
+	color: #fff;
+}
+
+.wa-sa__mode-label {
+	display: block;
+	font-size: 14px;
+	font-weight: 650;
+}
+
+.wa-sa__mode-hint {
+	display: block;
+	color: var(--wa-ui-text-2, #54656f);
+	font-size: 12px;
+}
+
+.wa-sa__radio {
+	display: grid;
+	width: 20px;
+	height: 20px;
+	flex: none;
+	margin-inline-start: auto;
+	place-items: center;
+	border: 2px solid var(--wa-ui-border, #d1d7db);
+	border-radius: 999px;
+	color: #fff;
+}
+
+.wa-sa__mode.is-active .wa-sa__radio {
+	border-color: #00a884;
+	background: #00a884;
+}
+
+.wa-sa__summary {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 14px 18px 0;
+	padding: 9px 12px;
+	border-radius: 12px;
+	background: rgba(0, 168, 132, 0.1);
+	color: #008069;
+	font-size: 13px;
+	font-weight: 650;
+}
+
+.wa-sa__tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 12px 18px 0;
+}
+
+.wa-sa__search {
+	display: flex;
+	min-width: 180px;
+	flex: 1 1 200px;
+	align-items: center;
+	gap: 8px;
+	height: 38px;
+	padding: 0 12px;
+	border: 1px solid var(--wa-ui-border, #e9edef);
+	border-radius: 999px;
+	background: var(--wa-ui-surface-2, #f0f2f5);
+	color: var(--wa-ui-text-2, #54656f);
+}
+
+.wa-sa__search:focus-within {
+	border-color: #00a884;
+}
+
+.wa-sa__search input {
+	min-width: 0;
+	flex: 1;
+	border: 0;
+	background: transparent;
+	color: var(--wa-ui-text, #111b21);
+	font: inherit;
+	font-size: 13.5px;
+	outline: none;
+}
+
+.wa-sa__filters {
+	display: inline-flex;
+	padding: 3px;
+	border-radius: 999px;
+	background: var(--wa-ui-surface-2, #f0f2f5);
+}
+
+.wa-sa__filter {
+	height: 32px;
+	padding: 0 12px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--wa-ui-text-2, #54656f);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.wa-sa__filter.is-active {
+	background: var(--wa-ui-surface, #fff);
+	color: var(--wa-ui-text, #111b21);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.wa-sa__bulk {
+	display: flex;
+	justify-content: flex-end;
+	gap: 4px;
+	padding: 6px 18px 4px;
+}
+
+.wa-sa__bulk button {
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: #008069;
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 650;
+	padding: 4px 8px;
+	cursor: pointer;
+}
+
+.wa-sa__bulk button:hover:not(:disabled) {
+	background: rgba(0, 168, 132, 0.1);
+}
+
+.wa-sa__bulk button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.wa-sa__list {
+	min-height: 180px;
+	flex: 1 1 auto;
+	overflow-y: auto;
+	border-top: 1px solid var(--wa-ui-border, #e9edef);
+}
+
+.wa-sa__list ul {
+	margin: 0;
+	padding: 4px 8px;
+	list-style: none;
+}
+
+.wa-sa__person {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: 12px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.wa-sa__person:hover {
+	background: var(--wa-ui-surface-2, #f5f6f6);
+}
+
+.wa-sa__person.is-hidden .wa-sa__avatar,
+.wa-sa__person.is-hidden .wa-sa__person-meta {
+	opacity: 0.5;
+}
+
+.wa-sa__avatar {
+	display: grid;
+	width: 38px;
+	height: 38px;
+	flex: none;
+	overflow: hidden;
+	place-items: center;
+	border-radius: 999px;
+	background: linear-gradient(145deg, #dfe5e7, #c8d1d5);
+	color: #3b4a54;
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.wa-sa__avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wa-sa__person-meta {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	flex-direction: column;
+}
+
+.wa-sa__person-name {
+	overflow: hidden;
+	font-size: 14px;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-sa__person-phone {
+	color: var(--wa-ui-text-2, #667781);
+	font-size: 12px;
+	text-align: start;
+}
+
+.wa-sa__badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: rgba(234, 67, 53, 0.1);
+	color: #d93025;
+	font-size: 11px;
+	font-weight: 700;
+}
+
+.wa-sa__check {
+	display: grid;
+	width: 22px;
+	height: 22px;
+	flex: none;
+	place-items: center;
+	border: 2px solid var(--wa-ui-border, #d1d7db);
+	border-radius: 7px;
+	color: #fff;
+	transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.wa-sa__check.is-on {
+	border-color: #00a884;
+	background: #00a884;
+}
+
+.wa-sa__state {
+	display: grid;
+	min-height: 180px;
+	place-items: center;
+	align-content: center;
+	gap: 10px;
+	color: var(--wa-ui-text-2, #54656f);
+	font-size: 13.5px;
+	text-align: center;
+}
+
+.wa-sa__more {
+	margin: 0;
+	padding: 8px 18px 14px;
+	color: var(--wa-ui-text-2, #667781);
+	font-size: 12px;
+	text-align: center;
+}
+
+.wa-sa__foot {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding: 12px 18px;
+	border-top: 1px solid var(--wa-ui-border, #e9edef);
+}
+
+.wa-sa__btn {
+	display: inline-flex;
+	height: 38px;
+	align-items: center;
+	gap: 6px;
+	padding: 0 16px;
+	border: 1px solid var(--wa-ui-border, #e9edef);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--wa-ui-text, #111b21);
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.wa-sa__btn.is-primary {
+	border-color: transparent;
+	background: #00a884;
+	color: #fff;
+}
+
+.wa-sa__btn:disabled {
+	cursor: default;
+	opacity: 0.55;
+}
+
+.wa-sa :focus-visible {
+	outline: 2px solid #00a884;
+	outline-offset: 2px;
+}
+
+/* ── My status bar ── */
+
+.wa-msb {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 0 0 16px;
+	padding: 12px 14px;
+	border: 1px solid var(--wa-ui-border, #e9edef);
+	border-radius: 18px;
+	background: var(--wa-ui-surface, #fff);
+}
+
+.wa-msb__me {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 12px;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.wa-msb__ring {
+	display: grid;
+	width: 52px;
+	height: 52px;
+	flex: none;
+	place-items: center;
+	border-radius: 999px;
+	background: var(--wa-ui-border, #d1d7db);
+	padding: 2.5px;
+}
+
+.wa-msb__me.has-story .wa-msb__ring {
+	background: conic-gradient(#25d366, #00a884, #128c7e, #25d366);
+}
+
+.wa-msb__avatar {
+	display: grid;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	place-items: center;
+	border: 2.5px solid var(--wa-ui-surface, #fff);
+	border-radius: 999px;
+	background: linear-gradient(145deg, #dfe5e7, #c8d1d5);
+	color: #3b4a54;
+	font-weight: 700;
+}
+
+.wa-msb__avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wa-msb__meta {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+}
+
+.wa-msb__title {
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.wa-msb__sub {
+	color: var(--wa-ui-text-2, #54656f);
+	font-size: 12.5px;
+}
+
+.wa-msb__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.wa-msb__chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 9px;
+	padding: 7px 14px 7px 11px;
+	border: 1px solid var(--wa-ui-border, #e9edef);
+	border-radius: 14px;
+	background: var(--wa-ui-surface-2, #f7f8fa);
+	color: #008069;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+	transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+[dir='rtl'] .wa-msb__chip {
+	padding: 7px 11px 7px 14px;
+}
+
+.wa-msb__chip:hover:not(:disabled) {
+	border-color: #00a884;
+}
+
+.wa-msb__chip:disabled {
+	cursor: default;
+	opacity: 0.7;
+}
+
+.wa-msb__chip.is-sync {
+	color: var(--wa-ui-text-2, #54656f);
+}
+
+.wa-msb__chip-text {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.2;
+}
+
+.wa-msb__chip-text small {
+	color: var(--wa-ui-text-2, #667781);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.wa-msb__chip-text b {
+	color: var(--wa-ui-text, #111b21);
+	font-size: 13px;
+	font-weight: 650;
+}
+
+html.dark .wa-sa__summary,
+html.dark .wa-sa__bulk button,
+html.dark .wa-msb__chip {
+	color: #25d366;
+}
+
+html.dark .wa-sa__avatar,
+html.dark .wa-msb__avatar {
+	background: linear-gradient(145deg, #2a3942, #202c33);
+	color: #d1d7db;
+}
+
+@keyframes wa-sa-fade {
+	from {
+		opacity: 0;
+	}
+}
+
+@keyframes wa-sa-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px) scale(0.98);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-sa,
+	.wa-sa__panel {
+		animation: none;
+	}
+}

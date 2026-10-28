@@ -32,6 +32,10 @@ test('applyStoryInteractionUpdate patches only the matching story', () => {
 	const reacted = applyStoryInteractionUpdate(items, { statusMessageId: 'OTHER', myReaction: '🔥' });
 	assert.equal(reacted[1].myReaction, '🔥');
 	assert.equal(reacted[0], items[0]);
+
+	const liked = applyStoryInteractionUpdate(items, { statusMessageId: 'OTHER', myLiked: true });
+	assert.equal(liked[1].myLiked, true);
+	assert.equal(applyStoryInteractionUpdate(liked, { statusMessageId: 'OTHER', myLiked: true }), liked);
 });
 
 test('applyStoryInteractionUpdate keeps the same array when nothing changes', () => {

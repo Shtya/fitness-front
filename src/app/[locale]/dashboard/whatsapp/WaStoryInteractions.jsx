@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronUp, Eye, Loader2, RefreshCw, X } from 'lucide-react';
+import { ChevronUp, Eye, Heart, Loader2, RefreshCw, SendHorizontal, Smile, X } from 'lucide-react';
 import {
 	STORY_QUICK_REACTIONS,
 	formatStoryViewTime,
 	storyViewCountLabel,
 	storyViewerName,
 } from './wa-story-interactions';
+
+const STORY_LIKE_EMOJIS = new Set(['💚', '❤️', '❤']);
 
 /** Bottom bar on your own story: eye + count, opens the viewer list (WhatsApp's swipe-up). */
 export function StoryViewsButton({ count, locale, onOpen }) {
@@ -165,7 +167,11 @@ export function StoryViewersSheet({ open, locale, loading, error, data, onRetry,
 													title={ar ? 'تفاعل' : 'Reaction'}
 													data-testid="story-viewer-reaction"
 												>
-													{viewer.reaction}
+													{STORY_LIKE_EMOJIS.has(viewer.reaction) ? (
+														<Heart size={18} fill="currentColor" strokeWidth={0} className="text-[#25d366]" />
+													) : (
+														viewer.reaction
+													)}
 												</span>
 											) : null}
 										</li>
@@ -180,64 +186,218 @@ export function StoryViewersSheet({ open, locale, loading, error, data, onRetry,
 	);
 }
 
-/** Quick emoji reactions under someone else's story. `onReact` resolves true when sent. */
-export function StoryReactionBar({ locale, selected, sendingEmoji, disabled, onReact }) {
-	const [burst, setBurst] = useState(null);
+/**
+ * The bar under someone else's story, laid out like the phone: reply field, a heart
+ * that turns into Send while typing, and the emoji reactions in a tray behind the smiley.
+ */
+export function StoryComposer({
+	locale,
+	liked,
+	liking,
+	onToggleLike,
+	reaction,
+	sendingEmoji,
+	onReact,
+	draft,
+	onDraftChange,
+	sending,
+	onSubmit,
+	onFocusChange,
+}) {
+	const ar = locale === 'ar';
+	const [trayOpen, setTrayOpen] = useState(false);
+	const [heartBurst, setHeartBurst] = useState(0);
+	const [emojiBurst, setEmojiBurst] = useState(null);
+	const inputRef = useRef(null);
+	const typing = draft.trim().length > 0;
+
 	useEffect(() => {
-		if (!burst) return undefined;
-		const timer = window.setTimeout(() => setBurst(null), 900);
+		if (!emojiBurst) return undefined;
+		const timer = window.setTimeout(() => setEmojiBurst(null), 900);
 		return () => window.clearTimeout(timer);
-	}, [burst]);
+	}, [emojiBurst]);
+
+	const setTray = open => {
+		setTrayOpen(open);
+		onFocusChange?.(open || document.activeElement === inputRef.current);
+	};
+
+	const toggleLike = async () => {
+		const next = !liked;
+		const ok = await onToggleLike(next);
+		if (ok && next) setHeartBurst(key => key + 1);
+	};
+
 	return (
 		<div
-			className="relative z-40 border-t border-white/10 bg-black/45 px-2 pt-2 backdrop-blur-md"
+			className="wa-story-composer relative z-40 shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
 			onClick={event => event.stopPropagation()}
 		>
 			<AnimatePresence>
-				{burst ? (
+				{emojiBurst ? (
 					<motion.span
-						key={burst.key}
+						key={emojiBurst.key}
 						className="pointer-events-none absolute left-1/2 top-0 z-50 -translate-x-1/2 text-5xl"
 						initial={{ opacity: 0, y: 0, scale: 0.6 }}
-						animate={{ opacity: 1, y: -90, scale: 1.25 }}
-						exit={{ opacity: 0, y: -130 }}
+						animate={{ opacity: 1, y: -110, scale: 1.3 }}
+						exit={{ opacity: 0, y: -150 }}
 						transition={{ duration: 0.7, ease: 'easeOut' }}
 						aria-hidden="true"
 					>
-						{burst.emoji}
+						{emojiBurst.emoji}
+					</motion.span>
+				) : null}
+				{heartBurst ? (
+					<motion.span
+						key={`heart-${heartBurst}`}
+						className="pointer-events-none absolute bottom-16 end-6 z-50 text-[#25d366]"
+						initial={{ opacity: 0, scale: 0.4, y: 0 }}
+						animate={{ opacity: [0, 1, 0], scale: [0.4, 1.5, 1.1], y: -70 }}
+						transition={{ duration: 0.85, ease: 'easeOut' }}
+						aria-hidden="true"
+					>
+						<Heart size={44} fill="currentColor" strokeWidth={0} />
 					</motion.span>
 				) : null}
 			</AnimatePresence>
-			<div
-				role="group"
-				aria-label={locale === 'ar' ? 'تفاعل مع الحالة' : 'React to this story'}
-				className="flex items-center justify-between gap-1 overflow-x-auto"
-				data-testid="story-reaction-bar"
+			<AnimatePresence initial={false}>
+				{trayOpen ? (
+					<motion.div
+						key="tray"
+						role="group"
+						aria-label={ar ? 'تفاعل مع الحالة' : 'React to this story'}
+						data-testid="story-reaction-bar"
+						className="mb-2 flex items-center justify-between gap-1 overflow-x-auto rounded-full bg-black/55 px-2 py-1.5 ring-1 ring-white/10 backdrop-blur-xl"
+						initial={{ opacity: 0, y: 12, scale: 0.96 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: 12, scale: 0.96 }}
+						transition={{ duration: 0.16 }}
+					>
+						{STORY_QUICK_REACTIONS.map(emoji => {
+							const active = reaction === emoji;
+							const busy = sendingEmoji === emoji;
+							return (
+								<button
+									key={emoji}
+									type="button"
+									data-testid="story-reaction"
+									data-emoji={emoji}
+									aria-pressed={active}
+									disabled={sending || Boolean(sendingEmoji)}
+									onClick={async () => {
+										const sent = await onReact(emoji);
+										if (sent) {
+											setEmojiBurst({ emoji, key: Date.now() });
+											setTray(false);
+										}
+									}}
+									className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-[23px] leading-none transition-transform hover:scale-125 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+										active ? 'bg-white/20 ring-2 ring-[#25d366]' : 'hover:bg-white/10'
+									}`}
+								>
+									{busy ? <Loader2 size={18} className="animate-spin text-white" /> : emoji}
+								</button>
+							);
+						})}
+					</motion.div>
+				) : null}
+			</AnimatePresence>
+			<form
+				onSubmit={event => {
+					event.preventDefault();
+					if (typing && !sending) onSubmit();
+				}}
+				className="flex items-center gap-2"
 			>
-				{STORY_QUICK_REACTIONS.map(emoji => {
-					const active = selected === emoji;
-					const busy = sendingEmoji === emoji;
-					return (
-						<button
-							key={emoji}
-							type="button"
-							data-testid="story-reaction"
-							data-emoji={emoji}
-							aria-pressed={active}
-							disabled={disabled || Boolean(sendingEmoji)}
-							onClick={async () => {
-								const sent = await onReact(emoji);
-								if (sent) setBurst({ emoji, key: Date.now() });
-							}}
-							className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-[22px] leading-none transition-transform hover:scale-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
-								active ? 'bg-emerald-500/30 ring-2 ring-emerald-400' : 'hover:bg-white/10'
-							}`}
+				<div className="flex h-12 min-w-0 flex-1 items-center gap-1 rounded-full bg-white/12 ps-1.5 pe-4 ring-1 ring-white/15 backdrop-blur-xl transition-[background-color,box-shadow] focus-within:bg-white/18 focus-within:ring-white/35">
+					<button
+						type="button"
+						onClick={() => setTray(!trayOpen)}
+						aria-expanded={trayOpen}
+						aria-label={ar ? 'تفاعلات سريعة' : 'Quick reactions'}
+						className={`grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
+							trayOpen ? 'bg-white/20 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'
+						}`}
+					>
+						{reaction && !trayOpen ? (
+							<span className="text-lg leading-none">{reaction}</span>
+						) : (
+							<Smile size={20} />
+						)}
+					</button>
+					<input
+						ref={inputRef}
+						type="text"
+						value={draft}
+						onChange={event => onDraftChange(event.target.value)}
+						onFocus={() => onFocusChange?.(true)}
+						onBlur={() => onFocusChange?.(trayOpen)}
+						placeholder={ar ? 'رد…' : 'Reply…'}
+						maxLength={1000}
+						disabled={sending}
+						dir="auto"
+						className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/55"
+					/>
+				</div>
+				<AnimatePresence mode="popLayout" initial={false}>
+					{typing ? (
+						<motion.button
+							key="send"
+							type="submit"
+							disabled={sending}
+							aria-label={ar ? 'إرسال الرد' : 'Send reply'}
+							className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#00a884] text-white shadow-lg shadow-black/30 transition-colors hover:bg-[#06cf9c] disabled:opacity-60"
+							initial={{ scale: 0.6, opacity: 0 }}
+							animate={{ scale: 1, opacity: 1 }}
+							exit={{ scale: 0.6, opacity: 0 }}
+							transition={{ duration: 0.14 }}
 						>
-							{busy ? <Loader2 size={18} className="animate-spin text-white" /> : emoji}
-						</button>
-					);
-				})}
-			</div>
+							{sending ? (
+								<Loader2 size={19} className="animate-spin" />
+							) : (
+								<SendHorizontal size={20} className="rtl:-scale-x-100" />
+							)}
+						</motion.button>
+					) : (
+						<motion.button
+							key="like"
+							type="button"
+							onClick={() => void toggleLike()}
+							disabled={liking}
+							aria-pressed={Boolean(liked)}
+							data-testid="story-like"
+							aria-label={
+								liked ? (ar ? 'إلغاء الإعجاب' : 'Unlike story') : ar ? 'أعجبني' : 'Like story'
+							}
+							title={liked ? (ar ? 'إلغاء الإعجاب' : 'Unlike') : ar ? 'أعجبني' : 'Like'}
+							className={`grid h-12 w-12 shrink-0 place-items-center rounded-full ring-1 backdrop-blur-xl transition-colors disabled:opacity-60 ${
+								liked
+									? 'bg-[#25d366]/20 text-[#25d366] ring-[#25d366]/50'
+									: 'bg-white/12 text-white ring-white/15 hover:bg-white/20'
+							}`}
+							initial={{ scale: 0.6, opacity: 0 }}
+							animate={{ scale: 1, opacity: 1 }}
+							exit={{ scale: 0.6, opacity: 0 }}
+							whileTap={{ scale: 0.85 }}
+							transition={{ duration: 0.14 }}
+						>
+							{liking ? (
+								<Loader2 size={19} className="animate-spin" />
+							) : (
+								<motion.span
+									key={liked ? 'on' : 'off'}
+									initial={{ scale: liked ? 0.5 : 1 }}
+									animate={{ scale: 1 }}
+									transition={{ type: 'spring', stiffness: 520, damping: 14 }}
+									className="grid place-items-center"
+								>
+									<Heart size={22} fill={liked ? 'currentColor' : 'none'} strokeWidth={2.2} />
+								</motion.span>
+							)}
+						</motion.button>
+					)}
+				</AnimatePresence>
+			</form>
 		</div>
 	);
 }
