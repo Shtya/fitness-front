@@ -14,6 +14,7 @@ import {
 	Smartphone,
 	UserCheck,
 	UserMinus,
+	UserPlus,
 	UsersRound,
 	X,
 } from 'lucide-react';
@@ -32,15 +33,24 @@ const COPY = {
 			only: ['Only share with…', 'Just the people you pick'],
 		},
 		search: 'Search name or number',
-		book: { all: 'All', saved: 'Saved', numbers: 'Numbers' },
+		book: { all: 'All', saved: 'Saved', profile: 'Profile name', numbers: 'Numbers' },
 		filters: { all: 'All', seeing: 'Can see', hidden: 'Hidden' },
 		seeing: count => `${count.toLocaleString()} ${count === 1 ? 'person' : 'people'} will see your stories`,
 		savedGroup: count => `${count.toLocaleString()} saved on your phone`,
-		numbersGroup: count => `${count.toLocaleString()} unsaved numbers`,
+		profileGroup: count => `${count.toLocaleString()} not saved · showing their WhatsApp name`,
+		numbersGroup: count => `${count.toLocaleString()} numbers with no name`,
 		selectAll: 'Select all',
 		clear: 'Clear',
 		hiddenBadge: 'Hidden',
 		numberBadge: 'Number',
+		addedBadge: 'Added',
+		addNumber: 'Add number',
+		addPlaceholder: 'Number with country code, e.g. +20 10 1234 5678',
+		addSubmit: 'Add',
+		addSuggest: digits => `Add +${digits} so they can see your stories`,
+		addInvalid: 'Enter the full number with the country code',
+		addDone: 'Added. Save to keep it.',
+		addExists: 'Already in your list',
 		more: count => `Showing the first ${LIST_LIMIT}. Search to find the other ${count.toLocaleString()}.`,
 		empty: 'No one matches this search.',
 		loadError: 'Could not load your contacts.',
@@ -60,15 +70,24 @@ const COPY = {
 			only: ['المشاركة مع…', 'بس الناس اللي تختارهم'],
 		},
 		search: 'ابحث باسم أو رقم',
-		book: { all: 'الكل', saved: 'المحفوظين', numbers: 'الأرقام' },
+		book: { all: 'الكل', saved: 'المحفوظين', profile: 'باسم البروفايل', numbers: 'أرقام بس' },
 		filters: { all: 'الكل', seeing: 'هيشوفوها', hidden: 'مخفيين' },
 		seeing: count => `${count.toLocaleString('ar-EG')} شخص هيشوف الستوري بتاعتك`,
 		savedGroup: count => `${count.toLocaleString('ar-EG')} محفوظين على الموبايل`,
-		numbersGroup: count => `${count.toLocaleString('ar-EG')} رقم مش محفوظ`,
+		profileGroup: count => `${count.toLocaleString('ar-EG')} مش محفوظين · ظاهرين باسم الواتساب بتاعهم`,
+		numbersGroup: count => `${count.toLocaleString('ar-EG')} رقم من غير أي اسم`,
 		selectAll: 'تحديد الكل',
 		clear: 'إلغاء التحديد',
 		hiddenBadge: 'مخفي',
 		numberBadge: 'رقم',
+		addedBadge: 'مضاف',
+		addNumber: 'إضافة رقم',
+		addPlaceholder: 'الرقم بكود الدولة، مثلاً ‎+20 10 1234 5678',
+		addSubmit: 'إضافة',
+		addSuggest: digits => `ضيف ‎+${digits} عشان يشوف الستوري بتاعتك`,
+		addInvalid: 'اكتب الرقم كامل بكود الدولة',
+		addDone: 'اتضاف. دوس حفظ عشان يتثبت.',
+		addExists: 'موجود بالفعل في القايمة',
 		more: count => `معروض أول ${LIST_LIMIT}. ابحث عشان توصل لباقي ${count.toLocaleString('ar-EG')}.`,
 		empty: 'مفيش حد بالبحث ده.',
 		loadError: 'مقدرناش نحمّل جهات الاتصال.',
@@ -92,9 +111,17 @@ function initials(label) {
 	return (clean.charAt(0) || '?').toUpperCase();
 }
 
-function isSavedPerson(person) {
-	if (typeof person?.saved === 'boolean') return person.saved;
-	return Boolean(String(person?.name || '').trim());
+/** saved = in the phonebook, profile = only their own WhatsApp name, number = no name at all. */
+function personKind(person) {
+	if (person?.kind === 'saved' || person?.kind === 'profile' || person?.kind === 'number') return person.kind;
+	if (person?.saved) return 'saved';
+	return String(person?.name || '').trim() ? 'profile' : 'number';
+}
+
+/** Digits of a typed phone number as a WhatsApp JID, or null when it cannot be one. */
+function phoneToWaId(value) {
+	const digits = String(value || '').replace(/\D/g, '').replace(/^00/, '');
+	return digits.length >= 8 && digits.length <= 15 ? `${digits}@s.whatsapp.net` : null;
 }
 
 /** Mode + count from the saved account settings, for the summary chip (no network). */
@@ -123,6 +150,9 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 	const [mode, setMode] = useState('contacts');
 	const [exceptIds, setExceptIds] = useState(() => new Set());
 	const [onlyIds, setOnlyIds] = useState(() => new Set());
+	const [extraIds, setExtraIds] = useState(() => new Set());
+	const [adding, setAdding] = useState(false);
+	const [addValue, setAddValue] = useState('');
 	const [search, setSearch] = useState('');
 	const [book, setBook] = useState('all');
 	const [filter, setFilter] = useState('all');
@@ -142,6 +172,7 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 				setMode(data?.mode || 'contacts');
 				setExceptIds(new Set(data?.mode === 'except' ? saved : []));
 				setOnlyIds(new Set(data?.mode === 'only' ? saved : []));
+				setExtraIds(new Set(Array.isArray(data?.extraWaIds) ? data.extraWaIds : []));
 				setState({ loading: false, error: '', people: Array.isArray(data?.people) ? data.people : [] });
 			})
 			.catch(error => {
@@ -158,6 +189,8 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 		setSearch('');
 		setBook('all');
 		setFilter('all');
+		setAdding(false);
+		setAddValue('');
 	}, [open]);
 
 	useEffect(() => {
@@ -181,26 +214,56 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 		const term = search.trim().toLowerCase();
 		const digits = search.replace(/\D/g, '');
 		return state.people.filter(person => {
-			if (book === 'saved' && !isSavedPerson(person)) return false;
-			if (book === 'numbers' && isSavedPerson(person)) return false;
+			if (book !== 'all' && personKind(person) !== book) return false;
 			if (filter === 'seeing' && !sees(person.waId)) return false;
 			if (filter === 'hidden' && sees(person.waId)) return false;
 			if (!term) return true;
 			if (String(person.name || '').toLowerCase().includes(term)) return true;
+			if (String(person.profileName || '').toLowerCase().includes(term)) return true;
 			return digits.length >= 3 && person.phone.includes(digits);
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.people, search, book, filter, mode, exceptIds, onlyIds]);
 
 	const bookCounts = useMemo(() => {
-		let saved = 0;
-		let numbers = 0;
+		const counts = { all: state.people.length, saved: 0, profile: 0, numbers: 0 };
 		for (const person of state.people) {
-			if (isSavedPerson(person)) saved += 1;
-			else numbers += 1;
+			const kind = personKind(person);
+			counts[kind === 'number' ? 'numbers' : kind] += 1;
 		}
-		return { saved, numbers };
+		return counts;
 	}, [state.people]);
+
+	const addNumber = raw => {
+		const waId = phoneToWaId(raw);
+		if (!waId) {
+			toast.error(t.addInvalid);
+			return;
+		}
+		const phone = waId.replace(/@.*$/, '');
+		const exists = state.people.some(person => person.waId === waId);
+		if (!exists) {
+			setState(current => ({
+				...current,
+				people: [{ waId, phone, name: null, avatarUrl: null, kind: 'number', added: true }, ...current.people],
+			}));
+			setExtraIds(current => new Set(current).add(waId));
+		}
+		// Whatever the mode, the number just added should end up able to see the stories.
+		if (mode === 'only') setOnlyIds(current => new Set(current).add(waId));
+		else
+			setExceptIds(current => {
+				const next = new Set(current);
+				next.delete(waId);
+				return next;
+			});
+		setBook('all');
+		setFilter('all');
+		setSearch(phone);
+		setAddValue('');
+		setAdding(false);
+		toast.success(exists ? t.addExists : t.addDone);
+	};
 
 	const toggle = waId => {
 		if (mode === 'only') {
@@ -252,6 +315,8 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 			const { data } = await api.put(`/whatsapp/accounts/${accountId}/statuses/audience`, {
 				mode: effectiveMode,
 				waIds,
+				// An added number someone then unticks is dropped instead of lingering as hidden.
+				extraWaIds: [...extraIds].filter(sees),
 			});
 			toast.success(t.saved);
 			onSaved?.({ mode: data?.mode || effectiveMode, waIds: data?.waIds || waIds });
@@ -266,20 +331,27 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 	if (!open || typeof document === 'undefined') return null;
 
 	const shown = matches.slice(0, LIST_LIMIT);
-	const savedShown = shown.filter(isSavedPerson);
-	const numberShown = shown.filter(person => !isSavedPerson(person));
+	const groups = [
+		['saved', t.savedGroup],
+		['profile', t.profileGroup],
+		['number', t.numbersGroup],
+	]
+		.map(([kind, title]) => ({ kind, title, people: shown.filter(person => personKind(person) === kind) }))
+		.filter(group => group.people.length);
+	const searchWaId = phoneToWaId(search);
+	const canAddSearch = Boolean(searchWaId) && !state.people.some(person => person.waId === searchWaId);
 
 	const renderPerson = person => {
 		const on = sees(person.waId);
 		const label = personLabel(person);
-		const saved = isSavedPerson(person);
+		const kind = personKind(person);
 		return (
 			<li key={person.waId}>
 				<button
 					type="button"
 					role="checkbox"
 					aria-checked={on}
-					className={`wa-sa__person${on ? '' : ' is-hidden'}${saved ? '' : ' is-number'}`}
+					className={`wa-sa__person${on ? '' : ' is-hidden'} is-${kind}`}
 					onClick={() => toggle(person.waId)}
 				>
 					<span className="wa-sa__avatar" aria-hidden="true">
@@ -291,17 +363,27 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 						)}
 					</span>
 					<span className="wa-sa__person-meta">
-						<span className="wa-sa__person-name wa-privacy-identity" dir="auto">{label}</span>
+						<span className="wa-sa__person-name wa-privacy-identity" dir="auto">
+							{/* WhatsApp marks a name the person picked for themselves with a tilde. */}
+							{kind === 'profile' ? <span className="wa-sa__tilde" aria-hidden="true">~</span> : null}
+							{label}
+						</span>
 						{person.name ? <span className="wa-sa__person-phone" dir="ltr">+{person.phone}</span> : null}
 					</span>
+					{person.added ? (
+						<span className="wa-sa__badge is-added">
+							<UserPlus size={12} strokeWidth={2.4} aria-hidden="true" />
+							{t.addedBadge}
+						</span>
+					) : null}
 					{!on ? (
 						<span className="wa-sa__badge">
 							<EyeOff size={12} strokeWidth={2.4} aria-hidden="true" />
 							{t.hiddenBadge}
 						</span>
-					) : saved ? null : (
+					) : kind === 'number' && !person.added ? (
 						<span className="wa-sa__badge is-number">{t.numberBadge}</span>
-					)}
+					) : null}
 					<span className={`wa-sa__check${on ? ' is-on' : ''}`} aria-hidden="true">
 						{on ? <Check size={13} strokeWidth={3} /> : null}
 					</span>
@@ -354,52 +436,83 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 				</div>
 
 				<div className="wa-sa__tools">
-					<label className="wa-sa__search">
-						<Search size={16} strokeWidth={2.2} aria-hidden="true" />
-						<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder={t.search} aria-label={t.search} />
-						{search ? (
-							<button type="button" className="wa-sa__search-clear" onClick={() => setSearch('')} aria-label={t.clear}>
-								<X size={14} strokeWidth={2.4} />
+					<div className="wa-sa__search-row">
+						<label className="wa-sa__search">
+							<Search size={16} strokeWidth={2.2} aria-hidden="true" />
+							<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder={t.search} aria-label={t.search} />
+							{search ? (
+								<button type="button" className="wa-sa__search-clear" onClick={() => setSearch('')} aria-label={t.clear}>
+									<X size={14} strokeWidth={2.4} />
+								</button>
+							) : null}
+						</label>
+						<button
+							type="button"
+							className={`wa-sa__add-toggle${adding ? ' is-active' : ''}`}
+							onClick={() => setAdding(value => !value)}
+							disabled={state.loading || Boolean(state.error)}
+							aria-expanded={adding}
+						>
+							<UserPlus size={16} strokeWidth={2.2} aria-hidden="true" />
+							<span>{t.addNumber}</span>
+						</button>
+					</div>
+					{adding ? (
+						<form
+							className="wa-sa__add"
+							onSubmit={event => {
+								event.preventDefault();
+								addNumber(addValue);
+							}}
+						>
+							<span className="wa-sa__add-plus" aria-hidden="true">+</span>
+							<input
+								type="tel"
+								inputMode="tel"
+								dir="ltr"
+								autoFocus
+								value={addValue}
+								onChange={event => setAddValue(event.target.value)}
+								placeholder={t.addPlaceholder}
+								aria-label={t.addNumber}
+							/>
+							<button type="submit" className="wa-sa__btn is-primary" disabled={!addValue.trim()}>
+								{t.addSubmit}
 							</button>
-						) : null}
-					</label>
-					<div className="wa-sa__tools-row">
-						<div className="wa-sa__filters is-book" role="tablist" aria-label={t.book.all}>
-							{Object.entries(t.book).map(([id, label]) => (
-								<button
-									key={id}
-									type="button"
-									role="tab"
-									aria-selected={book === id}
-									className={`wa-sa__filter${book === id ? ' is-active' : ''}`}
-									onClick={() => setBook(id)}
-								>
-									{label}
-									<em>{id === 'saved' ? bookCounts.saved : id === 'numbers' ? bookCounts.numbers : state.people.length}</em>
-								</button>
-							))}
-						</div>
-						<div className="wa-sa__filters" role="tablist">
-							{Object.entries(t.filters).map(([id, label]) => (
-								<button
-									key={id}
-									type="button"
-									role="tab"
-									aria-selected={filter === id}
-									className={`wa-sa__filter${filter === id ? ' is-active' : ''}`}
-									onClick={() => setFilter(id)}
-								>
-									{label}
-								</button>
-							))}
-						</div>
+						</form>
+					) : null}
+					<div className="wa-sa__filters is-book" role="tablist" aria-label={t.book.all}>
+						{Object.entries(t.book).map(([id, label]) => (
+							<button
+								key={id}
+								type="button"
+								role="tab"
+								aria-selected={book === id}
+								className={`wa-sa__filter${book === id ? ' is-active' : ''}`}
+								onClick={() => setBook(id)}
+							>
+								<span className="wa-sa__filter-label">{label}</span>
+								<em>{bookCounts[id].toLocaleString(ar ? 'ar-EG' : undefined)}</em>
+							</button>
+						))}
 					</div>
 				</div>
 
 				<div className="wa-sa__listbar">
-					<span className="wa-sa__listbar-count">
-						{state.loading ? '…' : `${matches.length.toLocaleString(ar ? 'ar-EG' : undefined)} / ${state.people.length.toLocaleString(ar ? 'ar-EG' : undefined)}`}
-					</span>
+					<div className="wa-sa__filters is-small" role="tablist">
+						{Object.entries(t.filters).map(([id, label]) => (
+							<button
+								key={id}
+								type="button"
+								role="tab"
+								aria-selected={filter === id}
+								className={`wa-sa__filter${filter === id ? ' is-active' : ''}`}
+								onClick={() => setFilter(id)}
+							>
+								{label}
+							</button>
+						))}
+					</div>
 					<div className="wa-sa__bulk">
 						<button type="button" onClick={() => setAllVisible(true)} disabled={!matches.length}>{t.selectAll}</button>
 						<button type="button" onClick={() => setAllVisible(false)} disabled={!matches.length}>{t.clear}</button>
@@ -415,14 +528,22 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 							<button type="button" className="wa-sa__btn" onClick={() => setReloadKey(key => key + 1)}>{t.retry}</button>
 						</div>
 					) : !shown.length ? (
-						<div className="wa-sa__state"><p>{t.empty}</p></div>
-					) : book === 'all' && savedShown.length && numberShown.length ? (
-						<>
-							<p className="wa-sa__group">{t.savedGroup(savedShown.length)}</p>
-							<ul>{savedShown.map(renderPerson)}</ul>
-							<p className="wa-sa__group">{t.numbersGroup(numberShown.length)}</p>
-							<ul>{numberShown.map(renderPerson)}</ul>
-						</>
+						<div className="wa-sa__state">
+							<p>{t.empty}</p>
+							{canAddSearch ? (
+								<button type="button" className="wa-sa__btn is-primary" onClick={() => addNumber(search)}>
+									<UserPlus size={15} strokeWidth={2.4} aria-hidden="true" />
+									{t.addSuggest(searchWaId.replace(/@.*$/, ''))}
+								</button>
+							) : null}
+						</div>
+					) : groups.length > 1 ? (
+						groups.map(group => (
+							<section key={group.kind}>
+								<p className="wa-sa__group">{group.title(group.people.length)}</p>
+								<ul>{group.people.map(renderPerson)}</ul>
+							</section>
+						))
 					) : (
 						<ul>{shown.map(renderPerson)}</ul>
 					)}

@@ -185,17 +185,17 @@
 	padding: 14px 18px 10px;
 }
 
-.wa-sa__tools-row {
+.wa-sa__search-row {
 	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
+	flex: none;
 	gap: 8px;
 }
 
-/* flex: none matters — inside the column above, a flex-basis becomes the height. */
+/* Inside the row a flex-basis is a width; in the tools column it would become a height. */
 .wa-sa__search {
 	display: flex;
-	flex: none;
+	min-width: 0;
+	flex: 1;
 	align-items: center;
 	gap: 8px;
 	height: 42px;
@@ -246,6 +246,73 @@
 	background: rgba(0, 0, 0, 0.06);
 }
 
+.wa-sa__add-toggle {
+	display: inline-flex;
+	height: 42px;
+	flex: none;
+	align-items: center;
+	gap: 7px;
+	padding: 0 14px;
+	border: 1.5px dashed color-mix(in srgb, #00a884 55%, transparent);
+	border-radius: 12px;
+	background: transparent;
+	color: #008069;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 650;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.wa-sa__add-toggle:hover:not(:disabled),
+.wa-sa__add-toggle.is-active {
+	border-style: solid;
+	border-color: #00a884;
+	background: rgba(0, 168, 132, 0.08);
+}
+
+.wa-sa__add-toggle:disabled {
+	cursor: default;
+	opacity: 0.5;
+}
+
+.wa-sa__add {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 8px;
+	padding: 6px;
+	border: 1.5px solid #00a884;
+	border-radius: 12px;
+	background: rgba(0, 168, 132, 0.05);
+	animation: wa-sa-fade 140ms ease-out;
+}
+
+.wa-sa__add-plus {
+	padding-inline-start: 8px;
+	color: var(--wa-ui-text-2, #54656f);
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.wa-sa__add input {
+	min-width: 0;
+	height: 36px;
+	flex: 1;
+	border: 0;
+	background: transparent;
+	color: var(--wa-ui-text, #111b21);
+	font: inherit;
+	font-size: 14px;
+	font-variant-numeric: tabular-nums;
+	outline: none;
+}
+
+.wa-sa__add .wa-sa__btn {
+	height: 36px;
+}
+
 .wa-sa__filters {
 	display: inline-flex;
 	padding: 3px;
@@ -254,12 +321,37 @@
 }
 
 .wa-sa__filters.is-book {
-	flex: 1 1 280px;
+	display: flex;
+	flex: none;
 }
 
 .wa-sa__filters.is-book .wa-sa__filter {
+	min-width: 0;
 	flex: 1;
 	justify-content: center;
+}
+
+.wa-sa__filter-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.wa-sa__filters.is-small {
+	padding: 2px;
+	border-radius: 9px;
+	background: var(--wa-ui-border, #e9edef);
+}
+
+.wa-sa__filters.is-small .wa-sa__filter {
+	height: 28px;
+	padding: 0 10px;
+	border-radius: 7px;
+	font-size: 12px;
+}
+
+/* Clicks should not leave a ring on tabs; keyboard focus still gets one. */
+.wa-sa__filter:focus-visible {
+	outline-offset: -2px;
 }
 
 .wa-sa__filter {
@@ -315,16 +407,9 @@
 	justify-content: space-between;
 	gap: 8px;
 	padding-block: 6px;
-	padding-inline: 22px 14px;
+	padding-inline: 18px 14px;
 	border-top: 1px solid var(--wa-ui-border, #e9edef);
 	background: var(--wa-ui-surface-2, #f7f8fa);
-}
-
-.wa-sa__listbar-count {
-	color: var(--wa-ui-text-2, #667781);
-	font-size: 12px;
-	font-weight: 600;
-	font-variant-numeric: tabular-nums;
 }
 
 .wa-sa__bulk {
@@ -468,6 +553,21 @@
 .wa-sa__badge.is-number {
 	background: rgba(84, 101, 111, 0.12);
 	color: #54656f;
+}
+
+.wa-sa__badge.is-added {
+	background: rgba(0, 168, 132, 0.12);
+	color: #008069;
+}
+
+.wa-sa__tilde {
+	margin-inline-end: 3px;
+	color: var(--wa-ui-text-2, #8696a0);
+	font-weight: 500;
+}
+
+.wa-sa__state .wa-sa__btn {
+	max-width: calc(100% - 32px);
 }
 
 .wa-sa__check {
@@ -632,15 +732,29 @@
 		padding: 12px 14px 8px;
 	}
 
-	.wa-sa__filters,
-	.wa-sa__filters.is-book {
-		flex: 1 1 100%;
+	.wa-sa__add-toggle span {
+		display: none;
 	}
 
-	.wa-sa__filters .wa-sa__filter {
-		flex: 1;
+	.wa-sa__add-toggle {
+		width: 42px;
 		justify-content: center;
-		padding: 0 8px;
+		padding: 0;
+	}
+
+	.wa-sa__filters.is-book .wa-sa__filter {
+		gap: 4px;
+		padding: 0 6px;
+		font-size: 11.5px;
+	}
+
+	.wa-sa__filters.is-book .wa-sa__filter em {
+		padding: 1px 5px;
+		font-size: 10px;
+	}
+
+	.wa-sa__listbar {
+		padding-inline: 14px 8px;
 	}
 
 	.wa-sa__foot {
@@ -792,7 +906,13 @@
 	font-weight: 650;
 }
 
+html.dark .wa-sa__badge.is-added {
+	background: rgba(37, 211, 102, 0.14);
+	color: #25d366;
+}
+
 html.dark .wa-sa__summary,
+html.dark .wa-sa__add-toggle,
 html.dark .wa-sa__bulk button,
 html.dark .wa-sa__group,
 html.dark .wa-msb__chip {
