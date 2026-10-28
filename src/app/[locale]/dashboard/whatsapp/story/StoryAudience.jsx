@@ -336,50 +336,49 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 								type="button"
 								role="radio"
 								aria-checked={active}
+								title={hint}
 								className={`wa-sa__mode${active ? ' is-active' : ''}`}
 								onClick={() => setMode(id)}
 							>
-								<span className="wa-sa__mode-icon" aria-hidden="true">
-									<Icon size={18} strokeWidth={2.1} />
+								<span className="wa-sa__mode-top">
+									<span className="wa-sa__mode-icon" aria-hidden="true">
+										<Icon size={16} strokeWidth={2.2} />
+									</span>
+									<span className="wa-sa__radio" aria-hidden="true">{active ? <Check size={11} strokeWidth={3.2} /> : null}</span>
 								</span>
-								<span className="min-w-0">
-									<span className="wa-sa__mode-label">{label}</span>
-									<span className="wa-sa__mode-hint">{hint}</span>
-								</span>
-								<span className="wa-sa__radio" aria-hidden="true">{active ? <Check size={12} strokeWidth={3} /> : null}</span>
+								<span className="wa-sa__mode-label">{label}</span>
+								<span className="wa-sa__mode-hint">{hint}</span>
 							</button>
 						);
 					})}
 				</div>
 
-				<div className="wa-sa__summary">
-					<Eye size={15} strokeWidth={2.2} aria-hidden="true" />
-					<span>{state.loading ? '…' : t.seeing(seeingCount)}</span>
-				</div>
-
 				<div className="wa-sa__tools">
 					<label className="wa-sa__search">
-						<Search size={15} strokeWidth={2.2} aria-hidden="true" />
+						<Search size={16} strokeWidth={2.2} aria-hidden="true" />
 						<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder={t.search} aria-label={t.search} />
-					</label>
-					<div className="wa-sa__filters is-book" role="tablist" aria-label={t.book.all}>
-						{Object.entries(t.book).map(([id, label]) => (
-							<button
-								key={id}
-								type="button"
-								role="tab"
-								aria-selected={book === id}
-								className={`wa-sa__filter${book === id ? ' is-active' : ''}`}
-								onClick={() => setBook(id)}
-							>
-								{label}
-								{id === 'saved' ? <em>{bookCounts.saved}</em> : null}
-								{id === 'numbers' ? <em>{bookCounts.numbers}</em> : null}
-								{id === 'all' ? <em>{state.people.length}</em> : null}
+						{search ? (
+							<button type="button" className="wa-sa__search-clear" onClick={() => setSearch('')} aria-label={t.clear}>
+								<X size={14} strokeWidth={2.4} />
 							</button>
-						))}
-					</div>
+						) : null}
+					</label>
 					<div className="wa-sa__tools-row">
+						<div className="wa-sa__filters is-book" role="tablist" aria-label={t.book.all}>
+							{Object.entries(t.book).map(([id, label]) => (
+								<button
+									key={id}
+									type="button"
+									role="tab"
+									aria-selected={book === id}
+									className={`wa-sa__filter${book === id ? ' is-active' : ''}`}
+									onClick={() => setBook(id)}
+								>
+									{label}
+									<em>{id === 'saved' ? bookCounts.saved : id === 'numbers' ? bookCounts.numbers : state.people.length}</em>
+								</button>
+							))}
+						</div>
 						<div className="wa-sa__filters" role="tablist">
 							{Object.entries(t.filters).map(([id, label]) => (
 								<button
@@ -394,10 +393,16 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 								</button>
 							))}
 						</div>
-						<div className="wa-sa__bulk">
-							<button type="button" onClick={() => setAllVisible(true)} disabled={!matches.length}>{t.selectAll}</button>
-							<button type="button" onClick={() => setAllVisible(false)} disabled={!matches.length}>{t.clear}</button>
-						</div>
+					</div>
+				</div>
+
+				<div className="wa-sa__listbar">
+					<span className="wa-sa__listbar-count">
+						{state.loading ? '…' : `${matches.length.toLocaleString(ar ? 'ar-EG' : undefined)} / ${state.people.length.toLocaleString(ar ? 'ar-EG' : undefined)}`}
+					</span>
+					<div className="wa-sa__bulk">
+						<button type="button" onClick={() => setAllVisible(true)} disabled={!matches.length}>{t.selectAll}</button>
+						<button type="button" onClick={() => setAllVisible(false)} disabled={!matches.length}>{t.clear}</button>
 					</div>
 				</div>
 
@@ -425,6 +430,10 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 				</div>
 
 				<footer className="wa-sa__foot">
+					<div className="wa-sa__summary">
+						<Eye size={15} strokeWidth={2.2} aria-hidden="true" />
+						<span>{state.loading ? '…' : t.seeing(seeingCount)}</span>
+					</div>
 					<button type="button" className="wa-sa__btn" onClick={onClose} disabled={saving}>{t.cancel}</button>
 					<button type="button" className="wa-sa__btn is-primary" onClick={save} disabled={saving || state.loading || Boolean(state.error)}>
 						{saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} strokeWidth={2.6} />}
