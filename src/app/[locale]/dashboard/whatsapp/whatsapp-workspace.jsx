@@ -4645,16 +4645,34 @@ async function mapPool(items, concurrency, worker) {
 	await Promise.all(runners);
 }
 
-async function fetchStatusMediaBlob(accountId, statusId, { history = false } = {}) {
+/** XHR "abort"/network failures, as opposed to the server answering with an error. */
+function isStoryTransferFailure(error) {
+	return (
+		error?.code === 'ECONNABORTED' ||
+		error?.code === 'ERR_NETWORK' ||
+		/request aborted|network error/i.test(String(error?.message || ''))
+	);
+}
+
+async function fetchStatusMediaBlob(accountId, statusId, { history = false, bypassCache = false } = {}) {
 	const path = history
 		? `/whatsapp/accounts/${accountId}/statuses/history/${encodeURIComponent(statusId)}/content`
 		: `/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(statusId)}/content`;
-	const response = await api.get(path, {
+	const request = {
 		responseType: 'blob',
 		validateStatus: () => true,
 		// Story grid previews should fail fast and move on instead of blocking the queue.
 		timeout: 45_000,
-	});
+	};
+	let response;
+	try {
+		response = await api.get(path, bypassCache ? { ...request, params: { fresh: Date.now() } } : request);
+	} catch (error) {
+		// A download cut off mid-way leaves a truncated entry in the browser cache; the
+		// next request revalidates to 304 against it and Chrome aborts. A unique URL skips it.
+		if (bypassCache || !isStoryTransferFailure(error)) throw error;
+		response = await api.get(path, { ...request, params: { fresh: Date.now() } });
+	}
 	const blob = response.data;
 	if (!blob || response.status >= 400) {
 		const message =
@@ -24125,6 +24143,16 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		const loadMedia = async statusRef => {
+			// The grid preview is the same file; reuse it instead of downloading it twice.
+			const previewUrl = storyThumbCacheRef.current.get(statusRef?.id)?.url;
+			if (previewUrl) {
+				try {
+					const cached = await (await fetch(previewUrl)).blob();
+					if (cached?.size) return cached;
+				} catch {
+					/* preview revoked — download below */
+				}
+			}
 			const ids = [
 				...new Set(
 					[statusRef?.id, statusRef?.providerStatusId]
@@ -24291,7 +24319,11 @@ function WhatsAppWorkspaceContent() {
 						? locale === 'ar'
 							? 'تعذر تحميل وسائط الحالة. حدّث الحالات وحاول مرة أخرى.'
 							: 'Could not load story media. Refresh stories and try again.'
-						: raw;
+						: isStoryTransferFailure(error)
+							? locale === 'ar'
+								? 'انقطع تحميل الحالة. اضغط تحديث للمحاولة مرة أخرى.'
+								: 'The story download was interrupted. Tap Refresh to try again.'
+							: raw;
 				if (
 					isUnrecoverableStoryMediaError(message) &&
 					Array.isArray(queue) &&
