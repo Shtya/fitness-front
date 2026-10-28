@@ -4388,6 +4388,49 @@ async function readBlobErrorMessage(blob) {
 	}
 }
 
+/**
+ * Large videos play through a signed URL, but Save used to re-download them with
+ * axios XHR — Chrome aborts that mid-transfer the same way it did for stories.
+ * Native fetch against the signed URL (token in the query) is what the player already trusts.
+ */
+async function fetchBlobFromSignedAttachment(attachmentId, hint = null, { timeout = 180_000 } = {}) {
+	const streamUrl = await getAttachmentStreamUrl(attachmentId, hint);
+	const controller = typeof AbortController === 'function' ? new AbortController() : null;
+	const timer =
+		controller && timeout > 0
+			? window.setTimeout(() => controller.abort(), timeout)
+			: 0;
+	try {
+		const response = await fetch(streamUrl, {
+			mode: 'cors',
+			credentials: 'omit',
+			signal: controller?.signal,
+		});
+		if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
+		const blob = await response.blob();
+		if (!blob?.size) throw new Error('Media unavailable');
+		const headerType = String(response.headers.get('content-type') || '')
+			.split(';')[0]
+			.trim()
+			.toLowerCase();
+		const blobType = String(blob.type || '')
+			.split(';')[0]
+			.trim()
+			.toLowerCase();
+		if (
+			(!blobType || blobType === 'application/octet-stream') &&
+			(headerType.startsWith('image/') ||
+				headerType.startsWith('video/') ||
+				headerType.startsWith('audio/'))
+		) {
+			return new Blob([blob], { type: headerType });
+		}
+		return blob;
+	} finally {
+		if (timer) window.clearTimeout(timer);
+	}
+}
+
 async function fetchAttachmentContentBlob(attachmentId, { timeout = 120_000, format = '' } = {}) {
 	const debugMedia =
 		typeof window !== 'undefined' &&
@@ -8244,6 +8287,18 @@ export function MediaAttachment({
 			if (demoAttachment) return demoApi.getMedia(rawDemoId(attachment.id));
 			const kind = String(attachment?.type || '').toLowerCase();
 			const isHeavyMedia = kind === 'video';
+			if (isHeavyMedia) {
+				try {
+					const streamed = await fetchBlobFromSignedAttachment(attachment.id, attachment, {
+						timeout: 180_000,
+					});
+					return assertBlobMatchesKind(streamed, kind, {
+						fileSizeBytes: attachment?.fileSizeBytes,
+					});
+				} catch {
+					/* fall through to the authenticated content path */
+				}
+			}
 			try {
 				const blob = await requestAttachmentBlob(attachment.id, {
 					timeout: isHeavyMedia ? 180_000 : 45_000,
@@ -8258,6 +8313,20 @@ export function MediaAttachment({
 				await new Promise(resolve => window.setTimeout(resolve, 500));
 				try {
 					forgetAttachmentBlob(String(attachment.id || ''));
+					if (isHeavyMedia) {
+						try {
+							const streamed = await fetchBlobFromSignedAttachment(
+								attachment.id,
+								attachment,
+								{ timeout: 180_000 },
+							);
+							return assertBlobMatchesKind(streamed, kind, {
+								fileSizeBytes: attachment?.fileSizeBytes,
+							});
+						} catch {
+							/* keep going to axios retry */
+						}
+					}
 					const blob = await requestAttachmentBlob(attachment.id, {
 						timeout: isHeavyMedia ? 180_000 : 60_000,
 						priority: true,
@@ -8546,9 +8615,21 @@ export function MediaAttachment({
 				window.open(objectUrl, '_blank', 'noopener,noreferrer');
 				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 			}
-		} catch {
+		} catch (error) {
 			if (action === 'download') {
-				toast.error(locale === 'ar' ? 'تعذر حفظ الملف' : 'Could not save the file');
+				const raw = String(error?.message || error?.name || '');
+				const aborted =
+					error?.name === 'AbortError' ||
+					/aborted|timeout|network error|failed to fetch/i.test(raw);
+				toast.error(
+					aborted
+						? locale === 'ar'
+							? 'انقطع تحميل الفيديو. حاول الحفظ مرة تانية.'
+							: 'The video download was interrupted. Tap Save again.'
+						: locale === 'ar'
+							? 'تعذر حفظ الملف'
+							: 'Could not save the file',
+				);
 			} else {
 				setFailed(true);
 			}
