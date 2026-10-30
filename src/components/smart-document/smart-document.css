@@ -61,6 +61,11 @@
 	grid-template-columns: var(--sd-history-w) minmax(0, 1fr);
 }
 
+/* Embedded without the history list (e.g. a Learn lecture): the document takes the whole width. */
+.sd-shell--md.no-history {
+	grid-template-columns: minmax(0, 1fr);
+}
+
 :is(html.dark, html[data-theme-mode='dark']) .sd-shell--md {
 	--sd-bg: #0d1014;
 	--sd-surface: #14181e;

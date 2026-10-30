@@ -116,6 +116,7 @@ import {
 	Zap,
 	Flag,
 	Radio,
+	GraduationCap,
 } from 'lucide-react';
 import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
@@ -339,6 +340,7 @@ const FakeChatStudio = lazy(() => import('./fake-chat/FakeChatStudio'));
 const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
+const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
 const WhatsAppReadingTab = lazy(() => import('./WhatsAppReadingTab'));
 const WhatsAppOnlineTab = lazy(() => import('./WhatsAppOnlineTab'));
@@ -540,6 +542,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'wallet',
 	'adhkar',
 	'documents',
+	'learn',
 	'agent',
 	'settings',
 	'profile',
@@ -833,6 +836,7 @@ const translations = {
 		typing: 'Typing log',
 		typingHistory: 'Typing history',
 		adhkar: 'My Adhkar',
+		learn: 'Learn',
 		documents: 'Documents',
 		contacts: 'Contacts',
 		openSidebar: 'Open sidebar',
@@ -1390,6 +1394,7 @@ const translations = {
 		typing: 'محاولات الكتابة',
 		typingHistory: 'سجل الكتابة',
 		adhkar: 'أذكاري',
+		learn: 'تعلّم',
 		documents: 'المستندات',
 		contacts: 'جهات الاتصال',
 		openSidebar: 'فتح القائمة الجانبية',
@@ -1935,6 +1940,7 @@ const tabs = [
 	['wallet', Wallet],
 	['adhkar', BookOpen],
 	['documents', FileText],
+	['learn', GraduationCap],
 	['settings', Settings],
 ];
 
@@ -24084,6 +24090,7 @@ function WhatsAppWorkspaceContent() {
 			tab === 'wallet' ||
 			tab === 'typing' ||
 			tab === 'adhkar' ||
+			tab === 'learn' ||
 			tab === 'agent'
 		)
 			return;
@@ -25883,6 +25890,7 @@ function WhatsAppWorkspaceContent() {
 			{!(isConversationWorkspaceTab(activeTab) && conversationId) &&
 				activeTab !== 'wallet' &&
 				activeTab !== 'adhkar' &&
+				activeTab !== 'learn' &&
 				activeTab !== 'reading' && (
 				<MobileWhatsAppHeader
 					locale={locale}
@@ -26179,6 +26187,7 @@ function WhatsAppWorkspaceContent() {
 					showWallet={!showcaseOnly}
 					showAdhkar={!showcaseOnly}
 					showDocuments={!showcaseOnly && isAdmin}
+					showLearn={!showcaseOnly}
 					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
@@ -31017,6 +31026,14 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				)}
 
+				{activeTab === 'learn' && (
+					<div className="wa-dk wa-secondary-pane wa-learn-pane">
+						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+							<LearnWorkspace locale={locale} onExit={() => void loadTabData('chats')} />
+						</Suspense>
+					</div>
+				)}
+
 				{activeTab === 'documents' && isAdmin && (
 					<div className="wa-dk wa-secondary-pane wa-documents-pane">
 						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
@@ -31318,9 +31335,10 @@ function WhatsAppWorkspaceContent() {
 				)}
 			</div>
 			</div>
-			{/* Adhkar / Wallet / Reading are focused spaces: no bottom tab bar (each has its own way back). */}
+			{/* Adhkar / Wallet / Reading / Learn are focused spaces: no bottom tab bar (each has its own way back). */}
 			{!(isConversationWorkspaceTab(activeTab) && conversationId) &&
 				activeTab !== 'adhkar' &&
+				activeTab !== 'learn' &&
 				activeTab !== 'wallet' &&
 				activeTab !== 'reading' && (
 				<MobileWhatsAppNav

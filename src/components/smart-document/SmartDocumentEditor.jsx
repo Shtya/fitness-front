@@ -141,12 +141,26 @@ function visitDeviceLine(visit) {
 	return [visit?.platform, visit?.screen, visit?.timezone, visit?.language].filter(Boolean).join(' · ');
 }
 
+/**
+ * `doc` switches the editor to one externally stored document (e.g. a Learn lecture): it opens
+ * `doc.content`, reports edits through `onDocChange(content)` (debounced, flushed on blur /
+ * hide / unmount) and keeps nothing but the typography settings in localStorage.
+ * Without it the editor manages its own local history, as on the Documents tab.
+ */
 export default function SmartDocumentEditor({
 	placeholder = 'Write Markdown…',
 	storageKey = 'so7ba:smart-document',
 	labels = {},
+	doc = null,
+	onDocChange,
+	showHistory = true,
+	showShare = true,
 }) {
 	const locale = useLocale();
+	const controlled = Boolean(doc);
+	const onDocChangeRef = useRef(onDocChange);
+	onDocChangeRef.current = onDocChange;
+	const savedContentRef = useRef(doc ? String(doc.content || '') : '');
 	const draftKey = `${storageKey}:draft`;
 	const historyKey = `${storageKey}:history`;
 	const activeIdKey = `${storageKey}:activeId`;
@@ -201,8 +215,9 @@ export default function SmartDocumentEditor({
 		() => (activeId ? history.find((h) => h.id === activeId) || null : null),
 		[activeId, history],
 	);
-	const chromeTitle =
-		activeDoc?.title || titleFromSource(text) || labels.untitled || 'Untitled';
+	const chromeTitle = controlled
+		? doc.title || labels.untitled || 'Untitled'
+		: activeDoc?.title || titleFromSource(text) || labels.untitled || 'Untitled';
 	const uiDir = locale === 'ar' ? 'rtl' : 'ltr';
 
 	const persistDraft = useCallback(
@@ -258,6 +273,20 @@ export default function SmartDocumentEditor({
 
 	/* Load once */
 	useEffect(() => {
+		if (controlled) {
+			const initial = String(doc.content || '');
+			textRef.current = initial;
+			activeIdRef.current = doc.id || null;
+			savedContentRef.current = initial;
+			setText(initial);
+			setActiveId(doc.id || null);
+			setHistory([]);
+			setDocDir(detectDominantDir(initial));
+			setTypography(normalizeTypography(readJson(typographyKey, null)));
+			setHistoryOpen(false);
+			setReady(true);
+			return;
+		}
 		const draft = readJson(draftKey, null);
 		const hist = readJson(historyKey, []);
 		const savedId = localStorage.getItem(activeIdKey);
@@ -290,6 +319,8 @@ export default function SmartDocumentEditor({
 		setShareTokens(readJson(sharesKey, {}) || {});
 		if (isNarrow()) setHistoryOpen(false);
 		setReady(true);
+		// A controlled editor is remounted (key) for another document; it loads once.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [draftKey, historyKey, activeIdKey, typographyKey, sharesKey]);
 
 	const activeShareToken = activeId ? shareTokens[activeId] || null : null;
@@ -325,8 +356,23 @@ export default function SmartDocumentEditor({
 
 	const shellStyle = useMemo(() => typographyStyle(typography), [typography]);
 
+	/** Controlled: hand the content to the owner if it changed since the last hand-off. */
+	const emitDocChange = useCallback(() => {
+		const current = String(textRef.current || '');
+		if (current === savedContentRef.current) return;
+		savedContentRef.current = current;
+		onDocChangeRef.current?.(current);
+		setSavedFlash(true);
+		window.setTimeout(() => setSavedFlash(false), 1200);
+	}, []);
+
 	const scheduleAutosave = useCallback(
 		(next) => {
+			if (controlled) {
+				if (saveTimer.current) clearTimeout(saveTimer.current);
+				saveTimer.current = setTimeout(emitDocChange, AUTOSAVE_MS);
+				return;
+			}
 			dirtyRef.current = true;
 			if (saveTimer.current) clearTimeout(saveTimer.current);
 			saveTimer.current = setTimeout(() => {
@@ -340,7 +386,7 @@ export default function SmartDocumentEditor({
 				dirtyRef.current = false;
 			}, SNAPSHOT_IDLE_MS);
 		},
-		[persistDraft, upsertHistory],
+		[controlled, emitDocChange, persistDraft, upsertHistory],
 	);
 
 	const applyText = useCallback(
@@ -356,13 +402,18 @@ export default function SmartDocumentEditor({
 	const onChange = (e) => applyText(e.target.value);
 
 	const flushSave = useCallback(() => {
+		if (controlled) {
+			if (saveTimer.current) clearTimeout(saveTimer.current);
+			emitDocChange();
+			return;
+		}
 		const current = textRef.current;
 		persistDraft(current, activeIdRef.current);
 		if (current.trim()) {
 			upsertHistory(current, activeIdRef.current);
 			dirtyRef.current = false;
 		}
-	}, [persistDraft, upsertHistory]);
+	}, [controlled, emitDocChange, persistDraft, upsertHistory]);
 
 	const shareActiveDocument = useCallback(async () => {
 		if (sharing) return;
@@ -508,11 +559,12 @@ export default function SmartDocumentEditor({
 			toast.error(labels.exportEmpty || 'Write something before exporting');
 			return;
 		}
-		const title =
-			history.find((h) => h.id === activeIdRef.current)?.title ||
-			titleFromSource(content) ||
-			labels.untitled ||
-			'Untitled';
+		const title = controlled
+			? chromeTitle
+			: history.find((h) => h.id === activeIdRef.current)?.title ||
+				titleFromSource(content) ||
+				labels.untitled ||
+				'Untitled';
 		setExporting(true);
 		try {
 			// Prefer the live preview DOM when open — keeps tables/formatting as seen.
@@ -540,7 +592,7 @@ export default function SmartDocumentEditor({
 		} finally {
 			setExporting(false);
 		}
-	}, [docDir, flushSave, history, labels, mode, typography]);
+	}, [chromeTitle, controlled, docDir, flushSave, history, labels, mode, typography]);
 
 	const copyHistoryItem = async (item, e) => {
 		e?.preventDefault?.();
@@ -636,10 +688,11 @@ export default function SmartDocumentEditor({
 
 	return (
 		<div
-			className={`sd-shell sd-shell--md is-ready ${FONT_VARIABLE_CLASSES} ${historyOpen ? 'has-history' : ''}`}
+			className={`sd-shell sd-shell--md is-ready ${FONT_VARIABLE_CLASSES} ${showHistory && historyOpen ? 'has-history' : ''}${controlled ? ' is-controlled' : ''}${showHistory ? '' : ' no-history'}`}
 			dir={uiDir}
 			style={shellStyle}
 		>
+			{showHistory ? (
 			<aside className={`sd-history ${historyOpen ? 'is-open' : ''}`} aria-label={labels.history || 'History'}>
 				<div className="sd-history-head">
 					<span className="sd-history-title">
@@ -746,10 +799,12 @@ export default function SmartDocumentEditor({
 					})}
 				</ul>
 			</aside>
+			) : null}
 
 			<div className="sd-main">
 				<header className="sd-chrome sd-chrome--editor" dir={uiDir}>
 					<div className="sd-chrome-lead">
+						{showHistory ? (
 						<button
 							type="button"
 							className={`sd-tool-btn sd-chrome-history${historyOpen ? ' is-open' : ''}`}
@@ -766,6 +821,7 @@ export default function SmartDocumentEditor({
 								<PanelLeftOpen size={18} />
 							)}
 						</button>
+						) : null}
 						<div className="sd-chrome-identity">
 							{renamingId && renamingId === activeId ? (
 								<input
@@ -863,6 +919,7 @@ export default function SmartDocumentEditor({
 								<span className="sd-tool-label">{labels.reviewShort || labels.shelfButton || 'Review'}</span>
 							</button>
 						</div>
+						{showShare ? (
 						<div className="sd-tool-group" role="group">
 							<button
 								type="button"
@@ -906,6 +963,7 @@ export default function SmartDocumentEditor({
 								</button>
 							) : null}
 						</div>
+						) : null}
 						<button
 							type="button"
 							className="sd-tool-btn sd-export-btn"

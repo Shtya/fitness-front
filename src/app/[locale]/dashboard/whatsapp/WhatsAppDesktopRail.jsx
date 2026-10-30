@@ -18,6 +18,7 @@ import {
 	UsersRound,
 	WalletCards,
 	WandSparkles,
+	GraduationCap,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -140,6 +141,7 @@ export default function WhatsAppDesktopRail({
 	showTyping = false,
 	showAdhkar = false,
 	showDocuments = false,
+	showLearn = false,
 	showAgent = false,
 	showcaseOnly = false,
 	darkMode = false,
@@ -214,6 +216,13 @@ export default function WhatsAppDesktopRail({
 					id: 'documents',
 					label: labels.documents || (ar ? 'المستندات' : 'Documents'),
 					icon: FileStack,
+				}
+			: null,
+		showLearn
+			? {
+					id: 'learn',
+					label: labels.learn || (ar ? 'تعلّم' : 'Learn'),
+					icon: GraduationCap,
 				}
 			: null,
 		showWallet
