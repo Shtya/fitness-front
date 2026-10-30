@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
+import { FONT_VARIABLE_CLASSES } from '@/components/smart-document/typography';
 import { useSortable } from '../tickets/tickets-ui';
 import LearnLecture from './LearnLecture';
 import {
@@ -46,6 +47,7 @@ import { useLearnLibrary } from './use-learn-library';
 import './learn.css';
 
 const VIEW_KEY = 'wa-learn:view';
+const FOCUS_KEY = 'wa-learn:focus';
 
 function readStoredView() {
 	try {
@@ -57,31 +59,14 @@ function readStoredView() {
 	}
 }
 
-function ProgressRing({ value, size = 44, stroke = 4 }) {
-	const r = (size - stroke) / 2;
-	const len = 2 * Math.PI * r;
+/**
+ * Progress as a highlighter stroke over a pencil line: the one marked element of the tab.
+ * `size` is 'sm' (rows) or 'lg' (the desk header).
+ */
+function HighlighterBar({ value, size = 'sm' }) {
 	return (
-		<span className="lrn-ring" style={{ width: size, height: size }} aria-hidden>
-			<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-				<circle className="lrn-ring__track" cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} />
-				<circle
-					className="lrn-ring__fill"
-					cx={size / 2}
-					cy={size / 2}
-					r={r}
-					strokeWidth={stroke}
-					strokeDasharray={`${(len * value) / 100} ${len}`}
-				/>
-			</svg>
-			<span className="lrn-ring__n">{value}%</span>
-		</span>
-	);
-}
-
-function ProgressBar({ value }) {
-	return (
-		<span className="lrn-bar" aria-hidden>
-			<span style={{ width: `${value}%` }} />
+		<span className={`lrn-hl is-${size}`} aria-hidden>
+			<span className="lrn-hl__ink" style={{ '--hl-w': `${Math.max(0, Math.min(100, value))}%` }} />
 		</span>
 	);
 }
@@ -342,57 +327,52 @@ function EmptyState({ icon: Icon, title, text, action }) {
 	);
 }
 
-function CourseCard({ course, c, onOpen, onEdit, onDelete, onPin }) {
+/** One course on the shelf: an index-tab edge in the course colour, its title, and how far you got. */
+function CourseRow({ course, c, onOpen, onEdit, onDelete, onPin }) {
 	const progress = progressOf(course);
 	const status = courseStatus(course);
 	return (
-		<li className="lrn-card" data-color={course.color || 'green'}>
-			<button type="button" className="lrn-card__open" onClick={onOpen}>
-				<span className="lrn-card__band" aria-hidden />
-				<span className="lrn-card__top">
-					<span className="lrn-chip">{course.category || c.uncategorized}</span>
-					{course.pinned ? <Pin size={14} className="lrn-card__pin" aria-hidden /> : null}
-				</span>
-				<span className="lrn-card__title" dir="auto">
-					{course.title}
-				</span>
-				{course.description ? (
-					<span className="lrn-card__desc" dir="auto">
-						{course.description}
+		<li className={`lrn-course${status === 'done' ? ' is-complete' : ''}`} data-color={course.color || 'green'}>
+			<button type="button" className="lrn-course__open" onClick={onOpen}>
+				<span className="lrn-course__main">
+					<span className="lrn-course__title" dir="auto">
+						{course.pinned ? <Pin size={14} className="lrn-course__pin" aria-label={c.pin} /> : null}
+						{course.title}
 					</span>
-				) : null}
-				<span className="lrn-card__foot">
-					<span className="lrn-card__stats">
+					{course.description ? (
+						<span className="lrn-course__desc" dir="auto">
+							{course.description}
+						</span>
+					) : null}
+					<span className="lrn-course__meta">
+						<span>{course.category || c.uncategorized}</span>
 						<span>{c.lecturesCount(course.lectures || 0)}</span>
 						{course.revision ? (
-							<span className="lrn-card__rev">
+							<span className="is-revision">
 								<BookmarkCheck size={13} aria-hidden />
-								{course.revision}
+								{c.toRevise(course.revision)}
 							</span>
 						) : null}
 					</span>
-					<span className={`lrn-card__status is-${status}`}>{status === 'empty' ? '' : c.status[status]}</span>
 				</span>
-				<span className="lrn-card__progress">
-					<ProgressBar value={progress} />
-					<span>{progress}%</span>
+				<span className="lrn-course__progress">
+					<span className="lrn-course__pct">{status === 'empty' ? '—' : `${progress}%`}</span>
+					<HighlighterBar value={progress} />
 				</span>
 			</button>
-			<span className="lrn-card__menu">
-				<RowMenu
-					c={c}
-					items={[
-						{ label: course.pinned ? c.unpin : c.pin, icon: course.pinned ? PinOff : Pin, onSelect: onPin },
-						{ label: c.editCourse, icon: Pencil, onSelect: onEdit },
-						{ label: c.deleteCourse, icon: Trash2, danger: true, onSelect: onDelete },
-					]}
-				/>
-			</span>
+			<RowMenu
+				c={c}
+				items={[
+					{ label: course.pinned ? c.unpin : c.pin, icon: course.pinned ? PinOff : Pin, onSelect: onPin },
+					{ label: c.editCourse, icon: Pencil, onSelect: onEdit },
+					{ label: c.deleteCourse, icon: Trash2, danger: true, onSelect: onDelete },
+				]}
+			/>
 		</li>
 	);
 }
 
-function HomeView({ c, library, onOpenCourse, onAddCourse, onEditCourse, onDeleteCourse }) {
+function HomeView({ c, library, onOpenCourse, onOpenRevision, onAddCourse, onEditCourse, onDeleteCourse }) {
 	const [category, setCategory] = useState('');
 	const [status, setStatus] = useState('all');
 	const { courses } = library;
@@ -419,44 +399,30 @@ function HomeView({ c, library, onOpenCourse, onAddCourse, onEditCourse, onDelet
 
 	return (
 		<div className="lrn-home">
-			<section className="lrn-stats" aria-label={c.library}>
-				<div className="lrn-stat">
-					<Library size={18} aria-hidden />
-					<b>{stats.courses}</b>
-					<span>{c.stats.courses}</span>
-				</div>
-				<div className="lrn-stat">
-					<CheckCircle2 size={18} aria-hidden />
-					<b>
-						{stats.done}
-						<small>/{stats.lectures}</small>
-					</b>
-					<span>{c.stats.lectures}</span>
-				</div>
-				<div className="lrn-stat is-progress">
-					<ProgressRing value={stats.progress} size={46} />
-					<span>{c.stats.progress}</span>
-				</div>
-				<div className="lrn-stat is-revision">
-					<BookmarkCheck size={18} aria-hidden />
-					<b>{stats.revision}</b>
-					<span>{c.stats.revision}</span>
-				</div>
+			<section className="lrn-desk" aria-label={c.library}>
+				<h2 className="lrn-desk__line">{c.deskLine(stats.done, stats.lectures)}</h2>
+				<HighlighterBar value={stats.progress} size="lg" />
+				<p className="lrn-desk__meta">
+					<span>{c.libraryLine(stats.courses, stats.completed)}</span>
+					{stats.revision ? (
+						<button type="button" className="lrn-link is-revision" onClick={onOpenRevision}>
+							<BookmarkCheck size={14} aria-hidden />
+							{c.toRevise(stats.revision)}
+						</button>
+					) : null}
+				</p>
 			</section>
 
 			{resume ? (
 				<button type="button" className="lrn-resume" data-color={resume.color || 'green'} onClick={() => onOpenCourse(resume.id)}>
-					<span className="lrn-resume__icon" aria-hidden>
-						<PlayCircle size={22} />
-					</span>
+					<PlayCircle size={22} className="lrn-resume__icon" aria-hidden />
 					<span className="lrn-resume__text">
-						<span className="lrn-resume__kicker">{c.continue}</span>
+						<span className="lrn-resume__label">{c.continue}</span>
 						<span className="lrn-resume__title" dir="auto">
 							{resume.title}
 						</span>
-						<span className="lrn-resume__sub">{c.doneOf(resume.done || 0, resume.lectures || 0)}</span>
 					</span>
-					<ProgressRing value={progressOf(resume)} size={48} />
+					<span className="lrn-resume__sub">{c.doneOf(resume.done || 0, resume.lectures || 0)}</span>
 				</button>
 			) : null}
 
@@ -487,9 +453,9 @@ function HomeView({ c, library, onOpenCourse, onAddCourse, onEditCourse, onDelet
 			</div>
 
 			{shown.length ? (
-				<ul className="lrn-grid">
+				<ul className="lrn-shelf">
 					{shown.map(course => (
-						<CourseCard
+						<CourseRow
 							key={course.id}
 							course={course}
 							c={c}
@@ -526,10 +492,10 @@ function LectureRow({ lecture, index, c, onOpen, onToggleDone, onEdit, onDelete,
 				{lecture.done ? <CheckCircle2 size={22} /> : <Circle size={22} />}
 			</button>
 			<button type="button" className="lrn-row__open" onClick={onOpen}>
-				<span className="lrn-row__no">{String(index + 1).padStart(2, '0')}</span>
+				<span className="lrn-row__no">{index + 1}</span>
 				<span className="lrn-row__text">
 					<span className="lrn-row__title" dir="auto">
-						{lecture.title}
+						<span className="lrn-mark">{lecture.title}</span>
 					</span>
 					{lecture.description ? (
 						<span className="lrn-row__desc" dir="auto">
@@ -615,32 +581,29 @@ function CourseView({ c, ar, course, library, onOpenLecture, onEditCourse, onDel
 	};
 
 	return (
-		<div className="lrn-course" data-color={course.color || 'green'}>
+		<div className="lrn-coursepage" data-color={course.color || 'green'}>
 			<header className="lrn-hero">
-				<div className="lrn-hero__text">
-					<span className="lrn-chip">{course.category || c.uncategorized}</span>
-					<h2 dir="auto">{course.title}</h2>
-					{course.description ? <p dir="auto">{course.description}</p> : null}
-					<div className="lrn-hero__progress">
-						<ProgressBar value={progress} />
-						<span>{c.doneOf(course.done || 0, course.lectures || 0)}</span>
-					</div>
+				<p className="lrn-hero__category">{course.category || c.uncategorized}</p>
+				<h2 dir="auto">{course.title}</h2>
+				{course.description ? <p className="lrn-hero__desc" dir="auto">{course.description}</p> : null}
+				<div className="lrn-hero__progress">
+					<HighlighterBar value={progress} size="lg" />
+					<span>
+						<b>{progress}%</b> {c.doneOf(course.done || 0, course.lectures || 0)}
+					</span>
 				</div>
-				<div className="lrn-hero__side">
-					<ProgressRing value={progress} size={64} stroke={5} />
-					<div className="lrn-hero__actions">
-						<button type="button" className="lrn-btn is-primary" onClick={() => setDialog({ kind: 'add' })}>
-							<Plus size={16} aria-hidden />
-							{c.addLecture}
-						</button>
-						<RowMenu
-							c={c}
-							items={[
-								{ label: c.editCourse, icon: Pencil, onSelect: onEditCourse },
-								{ label: c.deleteCourse, icon: Trash2, danger: true, onSelect: onDeleteCourse },
-							]}
-						/>
-					</div>
+				<div className="lrn-hero__actions">
+					<button type="button" className="lrn-btn is-primary" onClick={() => setDialog({ kind: 'add' })}>
+						<Plus size={16} aria-hidden />
+						{c.addLecture}
+					</button>
+					<RowMenu
+						c={c}
+						items={[
+							{ label: c.editCourse, icon: Pencil, onSelect: onEditCourse },
+							{ label: c.deleteCourse, icon: Trash2, danger: true, onSelect: onDeleteCourse },
+						]}
+					/>
 				</div>
 			</header>
 
@@ -913,9 +876,29 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 	const [view, setViewState] = useState({ name: 'home' });
 	const [query, setQuery] = useState('');
 	const [dialog, setDialog] = useState(null); // { kind: 'course-add' | 'course-edit' | 'course-delete', course }
+	// Focus mode: a lecture alone on the page — no shelf, no top bar.
+	const [focus, setFocus] = useState(false);
 	const searchRef = useRef(null);
 
-	useEffect(() => setViewState(readStoredView()), []);
+	useEffect(() => {
+		setViewState(readStoredView());
+		try {
+			setFocus(window.localStorage.getItem(FOCUS_KEY) === '1');
+		} catch {
+			/* starts without focus mode */
+		}
+	}, []);
+	const toggleFocus = useCallback(() => {
+		setFocus(current => {
+			const next = !current;
+			try {
+				window.localStorage.setItem(FOCUS_KEY, next ? '1' : '0');
+			} catch {
+				/* applies to this visit only */
+			}
+			return next;
+		});
+	}, []);
 	const setView = useCallback(next => {
 		setViewState(next);
 		try {
@@ -1004,6 +987,9 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 				lectures={library.lectures[course.id] || []}
 				initialSection={view.section}
 				onSectionChange={lectureSection}
+				focus={focus}
+				onToggleFocus={toggleFocus}
+				onBack={() => setView({ name: 'course', courseId: course.id })}
 				onOpenLecture={(id, section) => openLecture(course.id, id, section)}
 				onSummary={summary => library.applyLectureSummary(course.id, summary)}
 			/>
@@ -1027,6 +1013,7 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 				c={c}
 				library={library}
 				onOpenCourse={openCourse}
+				onOpenRevision={() => setView({ name: 'revision' })}
 				onAddCourse={() => setDialog({ kind: 'course-add' })}
 				onEditCourse={item => setDialog({ kind: 'course-edit', course: item })}
 				onDeleteCourse={item => setDialog({ kind: 'course-delete', course: item })}
@@ -1046,18 +1033,14 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 	const atRoot = !searching && view.name === 'home';
 
 	return (
-		<div className={`lrn is-view-${searching ? 'search' : view.name}`} dir={ar ? 'rtl' : 'ltr'}>
+		<div
+			className={`lrn ${FONT_VARIABLE_CLASSES} is-view-${searching ? 'search' : view.name}${focus && view.name === 'lecture' && !searching ? ' is-focus' : ''}`}
+			dir={ar ? 'rtl' : 'ltr'}
+		>
 			<aside className="lrn-side" aria-label={c.courses}>
 				<div className="lrn-side__brand">
-					<span className="lrn-logo" aria-hidden>
-						<GraduationCap size={20} />
-					</span>
-					<div>
-						<p className="lrn-side__title">{c.title}</p>
-						<p className="lrn-side__sub">
-							{stats.done}/{stats.lectures} · {stats.progress}%
-						</p>
-					</div>
+					<GraduationCap size={20} className="lrn-side__logo" aria-hidden />
+					<p className="lrn-side__title">{c.title}</p>
 				</div>
 				<nav className="lrn-side__nav">
 					<button type="button" className={`lrn-nav${!searching && view.name === 'home' ? ' is-on' : ''}`} onClick={() => { setQuery(''); setView({ name: 'home' }); }}>
@@ -1085,14 +1068,10 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 								className={`lrn-side__course${!searching && view.courseId === item.id ? ' is-on' : ''}`}
 								onClick={() => openCourse(item.id)}
 							>
-								<span className="lrn-dot" aria-hidden />
-								<span className="lrn-side__course-text">
-									<span className="lrn-side__course-title" dir="auto">
-										{item.title}
-									</span>
-									<ProgressBar value={progressOf(item)} />
+								<span className="lrn-side__course-title" dir="auto">
+									{item.title}
 								</span>
-								<span className="lrn-side__course-n">{progressOf(item)}%</span>
+								<span className="lrn-side__course-n">{item.lectures ? `${progressOf(item)}%` : ''}</span>
 							</button>
 						</li>
 					))}
@@ -1150,13 +1129,6 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 						<button type="button" className="lrn-btn is-primary lrn-top__add" onClick={() => setDialog({ kind: 'course-add' })}>
 							<Plus size={16} aria-hidden />
 							<span>{c.addCourse}</span>
-						</button>
-					) : null}
-					{atRoot ? (
-						<button type="button" className="lrn-btn is-ghost lrn-top__revision" onClick={() => setView({ name: 'revision' })}>
-							<BookmarkCheck size={16} aria-hidden />
-							<span>{c.revision}</span>
-							{stats.revision ? <span className="lrn-count">{stats.revision}</span> : null}
 						</button>
 					) : null}
 				</header>

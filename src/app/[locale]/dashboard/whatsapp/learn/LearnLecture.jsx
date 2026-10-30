@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
 	AlertTriangle,
+	ArrowLeft,
+	Maximize2,
+	Minimize2,
 	BookmarkCheck,
 	CheckCircle2,
 	ChevronLeft,
@@ -223,7 +226,7 @@ function QaSection({ items, c, onChange }) {
  * One lecture: its content in the Documents editor, the study sections, and its done /
  * revision state. Loads the full lecture on open; every edit is saved by itself.
  */
-export default function LearnLecture({ c, lectureId, course, lectures, initialSection = 'content', onOpenLecture, onSummary, onSectionChange }) {
+export default function LearnLecture({ c, lectureId, course, lectures, initialSection = 'content', onOpenLecture, onSummary, onSectionChange, focus = false, onToggleFocus, onBack }) {
 	const tDoc = useTranslations('documentEditor');
 	const editorLabels = useDocumentEditorLabels();
 	const [lecture, setLecture] = useState(null);
@@ -310,8 +313,30 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 		<div className="lrn-lecture" data-color={course?.color || 'green'}>
 			<header className="lrn-lecture__head">
 				<div className="lrn-lecture__meta">
-					<span className="lrn-lecture__pos">{position >= 0 ? c.lectureOf(position + 1, lectures.length) : course?.title}</span>
+					{focus ? (
+						<button type="button" className="lrn-icon-btn lrn-lecture__back" onClick={onBack} title={c.back} aria-label={c.back}>
+							<ArrowLeft size={18} className="lrn-flip-rtl" />
+						</button>
+					) : null}
+					<span className="lrn-lecture__pos">
+						{focus && course ? (
+							<span className="lrn-lecture__course" dir="auto">
+								{course.title}
+							</span>
+						) : null}
+						{position >= 0 ? c.lectureOf(position + 1, lectures.length) : course?.title}
+					</span>
 					<SaveState state={saver.state} c={c} onRetry={saver.retry} />
+					<button
+						type="button"
+						className={`lrn-focus-btn${focus ? ' is-on' : ''}`}
+						aria-pressed={focus}
+						onClick={onToggleFocus}
+						title={focus ? c.exitFocus : c.focus}
+					>
+						{focus ? <Minimize2 size={15} aria-hidden /> : <Maximize2 size={15} aria-hidden />}
+						<span>{focus ? c.exitFocus : c.focus}</span>
+					</button>
 				</div>
 				<input
 					className="lrn-lecture__title"
