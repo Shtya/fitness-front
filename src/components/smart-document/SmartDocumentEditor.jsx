@@ -17,6 +17,9 @@ import {
 	PanelLeftOpen,
 	PanelRightClose,
 	PanelRightOpen,
+	PilcrowLeft,
+	PilcrowRight,
+	Languages,
 	Pencil,
 	Share2,
 	Trash2,
@@ -32,6 +35,7 @@ import TypographyPanel from './TypographyPanel';
 import WordLookup, { captureLookup } from './WordLookup';
 import { downloadWordDocument } from './export-document';
 import { htmlToPlainText, isHtmlSource } from './source-format';
+import { normalizeDirection } from './bidi';
 import { FONT_VARIABLE_CLASSES, TYPOGRAPHY_DEFAULTS, normalizeTypography, typographyStyle } from './typography';
 import './smart-document.css';
 
@@ -155,6 +159,10 @@ export default function SmartDocumentEditor({
 	onDocChange,
 	showHistory = true,
 	showShare = true,
+	initialMode = 'edit',
+	compactChrome = false,
+	toolbarStart = null,
+	onStats,
 }) {
 	const locale = useLocale();
 	const controlled = Boolean(doc);
@@ -166,8 +174,11 @@ export default function SmartDocumentEditor({
 	const activeIdKey = `${storageKey}:activeId`;
 	const typographyKey = `${storageKey}:typography`;
 	const sharesKey = `${storageKey}:shares`;
+	const directionKey = `${storageKey}:direction`;
 
-	const [mode, setMode] = useState('edit'); // edit | preview
+	const [mode, setMode] = useState(initialMode === 'preview' ? 'preview' : 'edit'); // edit | preview
+	// Reading direction of the whole document: auto (each block by its first letter) | rtl | ltr.
+	const [direction, setDirection] = useState('auto');
 	const [text, setText] = useState('');
 	const [activeId, setActiveId] = useState(null);
 	const [history, setHistory] = useState([]);
@@ -322,6 +333,33 @@ export default function SmartDocumentEditor({
 		// A controlled editor is remounted (key) for another document; it loads once.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [draftKey, historyKey, activeIdKey, typographyKey, sharesKey]);
+
+	useEffect(() => {
+		try {
+			setDirection(normalizeDirection(localStorage.getItem(directionKey)));
+		} catch {
+			/* default: auto */
+		}
+	}, [directionKey]);
+
+	const chooseDirection = useCallback(
+		(next) => {
+			const value = normalizeDirection(next);
+			setDirection(value);
+			try {
+				localStorage.setItem(directionKey, value);
+			} catch {
+				/* applies to this visit */
+			}
+		},
+		[directionKey],
+	);
+
+	const onStatsRef = useRef(onStats);
+	onStatsRef.current = onStats;
+	useEffect(() => {
+		onStatsRef.current?.({ words: wordCount, chars: charCount, readMins, saved: savedFlash });
+	}, [wordCount, charCount, readMins, savedFlash]);
 
 	const activeShareToken = activeId ? shareTokens[activeId] || null : null;
 
@@ -802,7 +840,9 @@ export default function SmartDocumentEditor({
 			) : null}
 
 			<div className="sd-main">
-				<header className="sd-chrome sd-chrome--editor" dir={uiDir}>
+				<header className={`sd-chrome sd-chrome--editor${compactChrome ? ' sd-chrome--compact' : ''}`} dir={uiDir}>
+					{compactChrome ? <div className="sd-chrome-start">{toolbarStart}</div> : null}
+					{compactChrome ? null : (
 					<div className="sd-chrome-lead">
 						{showHistory ? (
 						<button
@@ -873,13 +913,16 @@ export default function SmartDocumentEditor({
 							</span>
 						</div>
 					</div>
+					)}
 
-						<div className="sd-seg" role="tablist" aria-label={labels.modeLabel || 'Mode'}>
+						<div className="sd-chrome-center">
+						<div className="sd-seg sd-mode-seg" role="tablist" aria-label={labels.modeLabel || 'Mode'}>
 							<button
 								type="button"
 								role="tab"
 								aria-selected={mode === 'edit'}
 								className={mode === 'edit' ? 'is-active' : ''}
+								title={labels.edit || 'Edit'}
 								onClick={() => setMode('edit')}
 							>
 								<Code2 size={15} aria-hidden />
@@ -890,6 +933,7 @@ export default function SmartDocumentEditor({
 								role="tab"
 								aria-selected={mode === 'preview'}
 								className={mode === 'preview' ? 'is-active' : ''}
+								title={labels.preview || 'Preview'}
 								onClick={() => {
 									flushSave();
 									setDocVersion((v) => v + 1);
@@ -899,6 +943,28 @@ export default function SmartDocumentEditor({
 								<Eye size={15} aria-hidden />
 								<span className="sd-seg-label">{labels.preview || 'Preview'}</span>
 							</button>
+						</div>
+
+						<div className="sd-seg sd-dir-seg" role="radiogroup" aria-label={labels.direction || (locale === 'ar' ? 'اتجاه النص' : 'Text direction')}>
+							{[
+								['auto', Languages, labels.dirAuto || (locale === 'ar' ? 'تلقائي' : 'Auto')],
+								['rtl', PilcrowLeft, labels.dirRtl || 'RTL'],
+								['ltr', PilcrowRight, labels.dirLtr || 'LTR'],
+							].map(([value, Icon, label]) => (
+								<button
+									key={value}
+									type="button"
+									role="radio"
+									aria-checked={direction === value}
+									className={direction === value ? 'is-active' : ''}
+									title={label}
+									onClick={() => chooseDirection(value)}
+								>
+									<Icon size={15} aria-hidden />
+									<span className="sd-seg-label">{label}</span>
+								</button>
+							))}
+						</div>
 						</div>
 
 					<div className="sd-chrome-actions">
@@ -1014,7 +1080,8 @@ export default function SmartDocumentEditor({
 							onBlur={flushSave}
 							placeholder={placeholder}
 							spellCheck
-							dir={docDir}
+							dir={direction === 'auto' ? docDir : direction}
+							data-direction={direction}
 						/>
 					) : (
 						<MarkdownVisualEditor
@@ -1024,6 +1091,7 @@ export default function SmartDocumentEditor({
 							onBlur={flushSave}
 							placeholder={labels.previewEmpty || 'Start writing here…'}
 							dir={docDir}
+							direction={direction}
 							autoFocus={!text.trim()}
 						/>
 					)}

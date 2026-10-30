@@ -8,6 +8,8 @@ import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { TableKit } from '@tiptap/extension-table';
 import { Markdown } from '@tiptap/markdown';
 import 'prosemirror-view/style/prosemirror.css';
+import { BidiDirection, bidiKey } from './bidi-extension';
+import { normalizeDirection } from './bidi';
 import { formatHtmlSource, htmlForEditor, isHtmlSource } from './source-format';
 
 /**
@@ -15,13 +17,19 @@ import { formatHtmlSource, htmlForEditor, isHtmlSource } from './source-format';
  * HTML source is parsed as HTML; everything else is Markdown.
  * Parses on mount only; remount (via `key`) to load a different document.
  * `onChange` fires on user edits only, so an untouched document keeps its exact source.
+ * `direction` ('auto' | 'rtl' | 'ltr') lays the document out without changing its content.
  */
-export default function MarkdownVisualEditor({ markdown, onChange, onBlur, placeholder, dir, autoFocus = false }) {
+export default function MarkdownVisualEditor({ markdown, onChange, onBlur, placeholder, dir, direction = 'auto', autoFocus = false }) {
 	const html = isHtmlSource(markdown);
 	const onChangeRef = useRef(onChange);
 	const onBlurRef = useRef(onBlur);
 	onChangeRef.current = onChange;
 	onBlurRef.current = onBlur;
+	const mode = normalizeDirection(direction);
+	const modeRef = useRef(mode);
+	const rootDirRef = useRef(dir || 'ltr');
+	modeRef.current = mode;
+	rootDirRef.current = dir || 'ltr';
 
 	const editor = useEditor({
 		immediatelyRender: false,
@@ -32,6 +40,7 @@ export default function MarkdownVisualEditor({ markdown, onChange, onBlur, place
 			TableKit.configure({ table: { resizable: false } }),
 			Placeholder.configure({ placeholder }),
 			Markdown,
+			BidiDirection.configure({ getDirection: () => modeRef.current, getRootDir: () => rootDirRef.current }),
 		],
 		content: html ? htmlForEditor(markdown) : markdown || '',
 		contentType: html ? 'html' : 'markdown',
@@ -59,5 +68,11 @@ export default function MarkdownVisualEditor({ markdown, onChange, onBlur, place
 		if (editor && autoFocus) editor.commands.focus('end');
 	}, [editor, autoFocus]);
 
-	return <EditorContent editor={editor} className="sd-markdown-preview" dir={dir} />;
+	// A new direction only re-lays the document out (decorations); the content is untouched.
+	useEffect(() => {
+		if (!editor || editor.isDestroyed) return;
+		editor.view.dispatch(editor.state.tr.setMeta(bidiKey, true).setMeta('addToHistory', false));
+	}, [editor, mode, dir]);
+
+	return <EditorContent editor={editor} className="sd-markdown-preview" dir={mode === 'auto' ? dir : mode} data-direction={mode} />;
 }

@@ -23,7 +23,8 @@
 	--sd-danger-soft: rgba(220, 38, 38, 0.1);
 	--sd-ring: color-mix(in srgb, var(--color-primary-500, #14b8a6) 55%, transparent);
 	--sd-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06), 0 0 0 1px rgba(28, 25, 23, 0.06);
-	--sd-column: 880px;
+	/* ~70-75 characters a line at the chosen size (em resolves where it is used) */
+	--sd-column: min(880px, 42em);
 	--sd-gutter: clamp(20px, 4.5vw, 56px);
 	--sd-history-w: 272px;
 	--sd-bar-h: 60px;
@@ -925,7 +926,7 @@ html.dark .sd-visits-panel {
 	max-width: calc(var(--sd-column) + var(--sd-gutter) * 2);
 	min-height: 100%;
 	margin-inline: auto;
-	padding: 44px var(--sd-gutter) 120px;
+	padding: 40px var(--sd-gutter) 96px;
 	color: var(--sd-ink);
 	-webkit-text-fill-color: currentColor;
 	caret-color: var(--sd-ink);
@@ -957,7 +958,11 @@ html.dark .sd-visits-panel {
 	animation: sd-typo-in 0.16s ease-out;
 }
 
-/* Each block follows its own script: Arabic paragraphs read RTL, English LTR, in one document. */
+/*
+ * Direction comes from the editor's bidi decorations (Auto / RTL / LTR): every block carries its
+ * dir, so alignment, list markers and table columns all follow it. Opposite-script runs and a
+ * leading "11)" are isolated spans, so brackets and punctuation never jump.
+ */
 .sd-md p,
 .sd-md h1,
 .sd-md h2,
@@ -969,8 +974,18 @@ html.dark .sd-visits-panel {
 .sd-md blockquote,
 .sd-md td,
 .sd-md th {
-	unicode-bidi: plaintext;
+	unicode-bidi: isolate;
 	text-align: start;
+}
+
+.sd-md .sd-bidi-run,
+.sd-md .sd-bidi-num {
+	unicode-bidi: isolate;
+}
+
+/* Source pane: Auto lets every line follow its own first letter; RTL / LTR hold the whole text. */
+.sd-markdown-source:not([data-direction='auto']) {
+	unicode-bidi: isolate;
 }
 
 .sd-visual {
@@ -987,6 +1002,19 @@ html.dark .sd-visits-panel {
 	line-height: var(--sd-lh);
 	letter-spacing: var(--sd-ls);
 	word-spacing: var(--sd-ws);
+}
+
+/* The WhatsApp page forces `font-family: var(--wa-font-ui) !important` on every element of its
+   workspace; pointing those variables at the document fonts makes Type → font work there too. */
+.sd-shell .sd-markdown-source,
+.sd-shell .sd-visual {
+	--wa-font-ui: var(--sd-font-doc);
+	--wa-font-ui-ar: var(--sd-font-doc);
+}
+
+.sd-shell .sd-visual :is(code, pre, pre *) {
+	--wa-font-ui: var(--sd-font-code);
+	--wa-font-ui-ar: var(--sd-font-code);
 }
 
 /* globals.css sets `[dir] body * { font-family }` on every element, which out-ranks the
@@ -1203,7 +1231,8 @@ html.dark .sd-visits-panel {
 	font-size: 0.86em;
 	letter-spacing: 0;
 	word-spacing: 0;
-	unicode-bidi: plaintext;
+	direction: ltr;
+	unicode-bidi: isolate;
 	overflow-wrap: anywhere;
 }
 
@@ -1218,6 +1247,7 @@ html.dark .sd-visits-panel {
 	line-height: 1.6;
 	direction: ltr;
 	text-align: left;
+	unicode-bidi: isolate;
 }
 
 .sd-md pre code {
@@ -2233,3 +2263,105 @@ html.dark .sd-voice.is-on .sd-voice-pick { background: #1c1917; color: #fafaf9; 
 html.dark .sd-voice-pick { color: #e7e5e4; }
 html.dark .sd-lookup-reveal { background: rgba(94, 234, 212, 0.12); color: #5eead4; }
 html.dark .sd-lookup-star.is-on { background: rgba(180, 83, 9, 0.2); }
+
+/* ─── Edit / Preview + direction, side by side in the middle of the bar ─── */
+.sd-chrome-center {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.sd-dir-seg button {
+	padding: 0 10px;
+}
+
+@media (max-width: 1100px) {
+	.sd-dir-seg .sd-seg-label {
+		display: none;
+	}
+}
+
+/*
+ * Compact bar for hosts that bring their own header (Learn): the host's controls at the start,
+ * then one row of tools — Edit/Preview as one toggle, direction, and icon buttons of a single
+ * size; Export stays the one filled button.
+ */
+.sd-chrome.sd-chrome--compact {
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	gap: 8px;
+	padding: 0 12px;
+}
+
+.sd-chrome--compact .sd-chrome-start {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	align-items: center;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.sd-chrome--compact .sd-chrome-center,
+.sd-chrome--compact .sd-chrome-actions {
+	flex: none;
+}
+
+.sd-chrome--compact .sd-chrome-actions {
+	gap: 4px;
+}
+
+.sd-chrome--compact :is(.sd-tool-label, .sd-export-label, .sd-dir-seg .sd-seg-label) {
+	display: none;
+}
+
+.sd-chrome--compact .sd-seg {
+	padding: 2px;
+	border-radius: 8px;
+}
+
+.sd-chrome--compact .sd-seg button {
+	height: 28px;
+	padding: 0 10px;
+	border-radius: 6px;
+}
+
+.sd-chrome--compact .sd-dir-seg button {
+	width: 30px;
+	padding: 0;
+	justify-content: center;
+}
+
+.sd-chrome--compact .sd-tool-btn,
+.sd-chrome--compact .sd-tool-btn.sd-export-btn {
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border-radius: 8px;
+}
+
+.sd-chrome--compact .sd-tool-group + .sd-tool-group,
+.sd-chrome--compact .sd-tool-group + .sd-export-btn {
+	margin-inline-start: 4px;
+	padding-inline-start: 4px;
+}
+
+@media (max-width: 640px) {
+	.sd-chrome.sd-chrome--compact {
+		flex-wrap: wrap;
+		padding: 4px 8px;
+	}
+
+	.sd-chrome--compact .sd-chrome-start {
+		flex-basis: 100%;
+	}
+
+	.sd-chrome--compact .sd-chrome-center {
+		flex: 1;
+	}
+
+	.sd-chrome--compact .sd-mode-seg .sd-seg-label {
+		display: none;
+	}
+}

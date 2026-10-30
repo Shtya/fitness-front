@@ -16,6 +16,8 @@ import {
 	EyeOff,
 	FileText,
 	HelpCircle,
+	Info,
+	Search,
 	Lightbulb,
 	ListChecks,
 	Loader2,
@@ -32,6 +34,7 @@ import MarkdownVisualEditor from '@/components/smart-document/MarkdownVisualEdit
 import { useDocumentEditorLabels } from '@/components/smart-document/DocumentEditorWorkspace';
 import { FONT_VARIABLE_CLASSES } from '@/components/smart-document/typography';
 import { detectDominantDir } from '@/lib/smart-document/structure';
+import { normalizeDirection } from '@/components/smart-document/bidi';
 import { SECTIONS, qaId, shuffled } from './learn-model';
 import { useLectureSaver } from './use-learn-library';
 
@@ -71,12 +74,12 @@ function SaveState({ state, c, onRetry }) {
 }
 
 /** Notes / key points / summary: the Documents tab's visual editor on a single field. */
-function SectionEditor({ value, placeholder, onChange, onBlur }) {
+function SectionEditor({ value, placeholder, direction, onChange, onBlur }) {
 	const [dir] = useState(() => detectDominantDir(value || ''));
 	return (
 		<div className={`sd-shell sd-shell--md is-ready lrn-sec-shell ${FONT_VARIABLE_CLASSES}`}>
 			<div className="lrn-sec-paper">
-				<MarkdownVisualEditor markdown={value || ''} onChange={onChange} onBlur={onBlur} placeholder={placeholder} dir={dir} autoFocus={!String(value || '').trim()} />
+				<MarkdownVisualEditor markdown={value || ''} onChange={onChange} onBlur={onBlur} placeholder={placeholder} dir={dir} direction={direction} autoFocus={!String(value || '').trim()} />
 			</div>
 		</div>
 	);
@@ -222,20 +225,93 @@ function QaSection({ items, c, onChange }) {
 	);
 }
 
+function readDirection() {
+	try {
+		return normalizeDirection(window.localStorage.getItem(`${EDITOR_STORAGE_KEY}:direction`));
+	} catch {
+		return 'auto';
+	}
+}
+
+/** Lecture details that don't need a permanent place on screen: course, position, length, description. */
+function LectureInfo({ c, course, position, total, stats, description, onDescription }) {
+	const [open, setOpen] = useState(false);
+	const [draft, setDraft] = useState(description || '');
+	const root = useRef(null);
+	useEffect(() => setDraft(description || ''), [description]);
+	useEffect(() => {
+		if (!open) return undefined;
+		const onDown = event => {
+			if (!root.current?.contains(event.target)) setOpen(false);
+		};
+		const onKey = event => {
+			if (event.key === 'Escape') {
+				event.stopPropagation();
+				setOpen(false);
+			}
+		};
+		document.addEventListener('pointerdown', onDown);
+		document.addEventListener('keydown', onKey, true);
+		return () => {
+			document.removeEventListener('pointerdown', onDown);
+			document.removeEventListener('keydown', onKey, true);
+		};
+	}, [open]);
+	const commit = () => {
+		if (draft.trim() !== (description || '')) onDescription(draft.trim());
+	};
+	return (
+		<span className="lrn-info" ref={root}>
+			<button type="button" className={`lrn-icon-btn${open ? ' is-open' : ''}`} aria-expanded={open} title={c.details} aria-label={c.details} onClick={() => setOpen(v => !v)}>
+				<Info size={16} />
+			</button>
+			{open ? (
+				<span className="lrn-info__panel" role="dialog" aria-label={c.details}>
+					<span className="lrn-info__course" dir="auto">
+						{course?.title}
+					</span>
+					<span className="lrn-info__meta">
+						{position >= 0 ? <span>{c.lectureOf(position + 1, total)}</span> : null}
+						{stats ? <span>{c.readingTime(stats.words, stats.readMins)}</span> : null}
+					</span>
+					<label className="lrn-info__field">
+						<span>{c.fields.description}</span>
+						<textarea
+							rows={3}
+							dir="auto"
+							maxLength={2000}
+							value={draft}
+							placeholder={c.fields.descriptionHint}
+							onChange={event => setDraft(event.target.value)}
+							onBlur={commit}
+						/>
+					</label>
+				</span>
+			) : null}
+		</span>
+	);
+}
+
 /**
- * One lecture: its content in the Documents editor, the study sections, and its done /
- * revision state. Loads the full lecture on open; every edit is saved by itself.
+ * One lecture, laid out for reading: a single slim header (back, title, details, done / revision,
+ * prev / next, search, focus), one row of section tabs that also carries the editor's tools, and
+ * the content taking everything else. Scrolling down tucks the header away; focus mode leaves
+ * only the text and a thin reading-progress line (Esc, the corner button or the top edge bring
+ * the controls back). Loads the full lecture on open; every edit is saved by itself.
  */
-export default function LearnLecture({ c, lectureId, course, lectures, initialSection = 'content', onOpenLecture, onSummary, onSectionChange, focus = false, onToggleFocus, onBack }) {
+export default function LearnLecture({ c, lectureId, course, lectures, initialSection = 'content', onOpenLecture, onSummary, onSectionChange, focus = false, onToggleFocus, onBack, onSearch }) {
 	const tDoc = useTranslations('documentEditor');
 	const editorLabels = useDocumentEditorLabels();
 	const [lecture, setLecture] = useState(null);
 	const [loadState, setLoadState] = useState('loading');
 	const [section, setSection] = useState(SECTIONS.includes(initialSection) ? initialSection : 'content');
 	const [titleDraft, setTitleDraft] = useState('');
-	const [descDraft, setDescDraft] = useState('');
+	const [stats, setStats] = useState(null);
+	const [direction] = useState(readDirection);
 	const onSummaryRef = useRef(onSummary);
 	onSummaryRef.current = onSummary;
+	const rootRef = useRef(null);
+	const lastScroll = useRef(0);
 
 	const saver = useLectureSaver(lectureId, data => onSummaryRef.current?.(data));
 
@@ -245,7 +321,6 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 			const { data } = await api.get(`/learn/lectures/${lectureId}`);
 			setLecture(data);
 			setTitleDraft(data.title || '');
-			setDescDraft(data.description || '');
 			setLoadState('ready');
 		} catch {
 			setLoadState('error');
@@ -259,6 +334,43 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 	useEffect(() => {
 		onSectionChange?.(section);
 	}, [section, onSectionChange]);
+
+	// Focus mode: Esc leaves it; the pointer at the top edge brings the controls back for a moment.
+	useEffect(() => {
+		if (!focus) return undefined;
+		const root = rootRef.current;
+		const onKey = event => {
+			if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('.sd-typo-panel, .lrn-scrim')) onToggleFocus?.();
+		};
+		const onMove = event => {
+			if (!root) return;
+			const top = root.getBoundingClientRect().top;
+			if (event.clientY - top < 14) root.classList.add('is-peek');
+			else if (event.clientY - top > 140) root.classList.remove('is-peek');
+		};
+		document.addEventListener('keydown', onKey);
+		document.addEventListener('mousemove', onMove);
+		return () => {
+			document.removeEventListener('keydown', onKey);
+			document.removeEventListener('mousemove', onMove);
+			root?.classList.remove('is-peek');
+		};
+	}, [focus, onToggleFocus]);
+
+	// Header tuck-away and reading progress, straight on the DOM so scrolling never re-renders the editor.
+	const onBodyScroll = useCallback(event => {
+		const el = event.target;
+		const root = rootRef.current;
+		if (!root || !(el instanceof HTMLElement) || el.scrollHeight <= el.clientHeight) return;
+		const y = el.scrollTop;
+		const max = el.scrollHeight - el.clientHeight;
+		root.style.setProperty('--read', String(max > 0 ? Math.min(1, y / max) : 0));
+		const dy = y - lastScroll.current;
+		lastScroll.current = y;
+		if (y < 48) root.classList.remove('is-head-hidden');
+		else if (dy > 6) root.classList.add('is-head-hidden');
+		else if (dy < -6) root.classList.remove('is-head-hidden');
+	}, []);
 
 	const patchLocal = useCallback(
 		(fields, options) => {
@@ -304,42 +416,46 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 		}
 		if (value !== lecture.title) patchLocal({ title: value }, { immediate: true });
 	};
-	const commitDescription = () => {
-		const value = descDraft.trim();
-		if (value !== (lecture.description || '')) patchLocal({ description: value }, { immediate: true });
-	};
+
+	const tabs = (
+		<nav className="lrn-tabs" role="tablist" aria-label={c.sectionsLabel}>
+			{SECTIONS.map(key => {
+				const Icon = SECTION_ICONS[key];
+				const filled = key === 'qa' ? lecture.qa?.length > 0 : String(lecture[key] || '').trim().length > 0;
+				return (
+					<button
+						key={key}
+						type="button"
+						role="tab"
+						aria-selected={section === key}
+						className={`lrn-tab${section === key ? ' is-on' : ''}`}
+						title={c.sections[key]}
+						onClick={() => setSection(key)}
+					>
+						<Icon size={15} aria-hidden />
+						<span className="lrn-tab__label">{c.sections[key]}</span>
+						{filled ? <span className="lrn-tab__dot" aria-hidden /> : null}
+					</button>
+				);
+			})}
+		</nav>
+	);
 
 	return (
-		<div className="lrn-lecture" data-color={course?.color || 'green'}>
-			<header className="lrn-lecture__head">
-				<div className="lrn-lecture__meta">
-					{focus ? (
-						<button type="button" className="lrn-icon-btn lrn-lecture__back" onClick={onBack} title={c.back} aria-label={c.back}>
-							<ArrowLeft size={18} className="lrn-flip-rtl" />
-						</button>
-					) : null}
-					<span className="lrn-lecture__pos">
-						{focus && course ? (
-							<span className="lrn-lecture__course" dir="auto">
-								{course.title}
-							</span>
-						) : null}
-						{position >= 0 ? c.lectureOf(position + 1, lectures.length) : course?.title}
-					</span>
-					<SaveState state={saver.state} c={c} onRetry={saver.retry} />
-					<button
-						type="button"
-						className={`lrn-focus-btn${focus ? ' is-on' : ''}`}
-						aria-pressed={focus}
-						onClick={onToggleFocus}
-						title={focus ? c.exitFocus : c.focus}
-					>
-						{focus ? <Minimize2 size={15} aria-hidden /> : <Maximize2 size={15} aria-hidden />}
-						<span>{focus ? c.exitFocus : c.focus}</span>
-					</button>
-				</div>
+		<div ref={rootRef} className={`lrn-lecture${focus ? ' is-focus' : ''}`} data-color={course?.color || 'green'}>
+			<span className="lrn-readbar" aria-hidden />
+			{focus ? (
+				<button type="button" className="lrn-focus-exit" onClick={onToggleFocus} title={c.exitFocus} aria-label={c.exitFocus}>
+					<Minimize2 size={16} aria-hidden />
+				</button>
+			) : null}
+
+			<header className="lrn-lhead">
+				<button type="button" className="lrn-icon-btn" onClick={onBack} title={c.back} aria-label={c.back}>
+					<ArrowLeft size={18} className="lrn-flip-rtl" />
+				</button>
 				<input
-					className="lrn-lecture__title"
+					className="lrn-lhead__title"
 					value={titleDraft}
 					dir="auto"
 					maxLength={160}
@@ -349,75 +465,64 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 					onKeyDown={event => {
 						if (event.key === 'Enter') event.currentTarget.blur();
 						if (event.key === 'Escape') {
+							event.preventDefault();
 							setTitleDraft(lecture.title);
 							event.currentTarget.blur();
 						}
 					}}
 				/>
-				<input
-					className="lrn-lecture__desc"
-					value={descDraft}
-					dir="auto"
-					maxLength={2000}
-					placeholder={c.fields.descriptionHint}
-					aria-label={c.fields.description}
-					onChange={event => setDescDraft(event.target.value)}
-					onBlur={commitDescription}
-					onKeyDown={event => {
-						if (event.key === 'Enter') event.currentTarget.blur();
-					}}
+				<LectureInfo
+					c={c}
+					course={course}
+					position={position}
+					total={lectures.length}
+					stats={section === 'content' ? stats : null}
+					description={lecture.description}
+					onDescription={value => patchLocal({ description: value }, { immediate: true })}
 				/>
-				<div className="lrn-lecture__actions">
+				<SaveState state={saver.state} c={c} onRetry={saver.retry} />
+
+				<span className="lrn-lhead__end">
 					<button
 						type="button"
 						className={`lrn-toggle is-done${lecture.done ? ' is-on' : ''}`}
 						aria-pressed={lecture.done}
+						title={lecture.done ? c.markedDone : c.markDone}
 						onClick={() => patchLocal({ done: !lecture.done }, { immediate: true })}
 					>
-						{lecture.done ? <CheckCircle2 size={17} aria-hidden /> : <Circle size={17} aria-hidden />}
-						{lecture.done ? c.markedDone : c.markDone}
+						{lecture.done ? <CheckCircle2 size={16} aria-hidden /> : <Circle size={16} aria-hidden />}
+						<span className="lrn-toggle__label">{lecture.done ? c.markedDone : c.markDone}</span>
 					</button>
 					<button
 						type="button"
-						className={`lrn-toggle is-revision${lecture.needsRevision ? ' is-on' : ''}`}
+						className={`lrn-icon-btn lrn-rev-btn${lecture.needsRevision ? ' is-on' : ''}`}
 						aria-pressed={lecture.needsRevision}
+						title={lecture.needsRevision ? c.needsRevision : c.markRevision}
+						aria-label={lecture.needsRevision ? c.needsRevision : c.markRevision}
 						onClick={() => patchLocal({ needsRevision: !lecture.needsRevision }, { immediate: true })}
 					>
-						<BookmarkCheck size={17} aria-hidden />
-						{lecture.needsRevision ? c.needsRevision : c.markRevision}
+						<BookmarkCheck size={17} />
 					</button>
-					<span className="lrn-lecture__step">
-						<button type="button" className="lrn-icon-btn" disabled={!prev} title={c.prev} aria-label={c.prev} onClick={() => prev && onOpenLecture(prev.id, section)}>
-							<ChevronLeft size={18} className="lrn-flip-rtl" />
-						</button>
-						<button type="button" className="lrn-icon-btn" disabled={!next} title={c.next} aria-label={c.next} onClick={() => next && onOpenLecture(next.id, section)}>
-							<ChevronRight size={18} className="lrn-flip-rtl" />
-						</button>
-					</span>
-				</div>
-				<nav className="lrn-tabs" role="tablist" aria-label={c.sections.content}>
-					{SECTIONS.map(key => {
-						const Icon = SECTION_ICONS[key];
-						const filled = key === 'qa' ? lecture.qa?.length > 0 : String(lecture[key] || '').trim().length > 0;
-						return (
-							<button
-								key={key}
-								type="button"
-								role="tab"
-								aria-selected={section === key}
-								className={`lrn-tab${section === key ? ' is-on' : ''}`}
-								onClick={() => setSection(key)}
-							>
-								<Icon size={15} aria-hidden />
-								<span>{c.sections[key]}</span>
-								{filled ? <span className="lrn-tab__dot" aria-hidden /> : null}
-							</button>
-						);
-					})}
-				</nav>
+					<span className="lrn-lhead__sep" aria-hidden />
+					<button type="button" className="lrn-icon-btn" disabled={!prev} title={c.prev} aria-label={c.prev} onClick={() => prev && onOpenLecture(prev.id, section)}>
+						<ChevronLeft size={18} className="lrn-flip-rtl" />
+					</button>
+					<button type="button" className="lrn-icon-btn" disabled={!next} title={c.next} aria-label={c.next} onClick={() => next && onOpenLecture(next.id, section)}>
+						<ChevronRight size={18} className="lrn-flip-rtl" />
+					</button>
+					<span className="lrn-lhead__sep" aria-hidden />
+					<button type="button" className="lrn-icon-btn" title={c.searchPlaceholder} aria-label={c.searchPlaceholder} onClick={onSearch}>
+						<Search size={17} />
+					</button>
+					<button type="button" className={`lrn-icon-btn${focus ? ' is-open' : ''}`} aria-pressed={focus} title={focus ? c.exitFocus : c.focus} aria-label={focus ? c.exitFocus : c.focus} onClick={onToggleFocus}>
+						{focus ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+					</button>
+				</span>
 			</header>
 
-			<div className={`lrn-lecture__body is-${section}`}>
+			{section === 'content' ? null : <div className="lrn-lbar">{tabs}</div>}
+
+			<div className={`lrn-lecture__body is-${section}`} onScrollCapture={onBodyScroll}>
 				{section === 'content' ? (
 					<div className="lrn-doc">
 						<SmartDocumentEditor
@@ -429,6 +534,11 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 							}}
 							showHistory={false}
 							showShare={false}
+							compactChrome
+							toolbarStart={tabs}
+							onStats={setStats}
+							// Opening a lecture is for reading: formatted view when there is something to read.
+							initialMode={String(lecture.content || '').trim() ? 'preview' : 'edit'}
 							storageKey={EDITOR_STORAGE_KEY}
 							placeholder={tDoc.raw('placeholder')}
 							labels={{ ...editorLabels, badge: course?.title || c.title }}
@@ -443,6 +553,7 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 						<SectionEditor
 							key={`${lecture.id}:${section}`}
 							value={lecture[section]}
+							direction={direction}
 							placeholder={c.sectionHints[section]}
 							onChange={value => patchLocal({ [section]: value })}
 							onBlur={() => void saver.flush().catch(() => undefined)}

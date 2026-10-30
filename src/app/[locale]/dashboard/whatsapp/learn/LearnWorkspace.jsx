@@ -928,6 +928,11 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 		library.touchCourse(courseId);
 		setView({ name: 'lecture', courseId, lectureId, section: section && section !== 'title' && section !== 'description' ? section : 'content' });
 	};
+	// From inside a lecture: back to the library with the search field ready.
+	const openSearch = () => {
+		setView({ name: 'home' });
+		window.requestAnimationFrame(() => searchRef.current?.focus());
+	};
 	const goBack = () => {
 		if (searching) return setQuery('');
 		if (view.name === 'lecture') return setView({ name: 'course', courseId: view.courseId });
@@ -990,6 +995,7 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 				focus={focus}
 				onToggleFocus={toggleFocus}
 				onBack={() => setView({ name: 'course', courseId: course.id })}
+				onSearch={openSearch}
 				onOpenLecture={(id, section) => openLecture(course.id, id, section)}
 				onSummary={summary => library.applyLectureSummary(course.id, summary)}
 			/>
