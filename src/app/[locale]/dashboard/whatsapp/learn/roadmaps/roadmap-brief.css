@@ -1,0 +1,884 @@
+/*
+ * Roadmap → Brief: the whole roadmap as one trip.
+ * A ticket with the journey in numbers, a metro map (each level a coloured line, each course a
+ * station, each topic a pip that lights up when done), the day / months / badges / labs strip,
+ * and a drawer with everything in a station.
+ * Sides are physical and keyed on the roadmap's dir (see roadmaps.css for why).
+ */
+
+.rb {
+	display: grid;
+	min-width: 0;
+	gap: 32px;
+}
+
+.rb > *,
+.rb-map {
+	min-width: 0;
+}
+
+/* line colours */
+.rb .is-c0 { --lc: #2f9e62; }
+.rb .is-c1 { --lc: #3d72d9; }
+.rb .is-c2 { --lc: #d1902a; }
+.rb .is-c3 { --lc: #cf4f72; }
+.rb .is-c4 { --lc: #7a5bd1; }
+.rb .is-c5 { --lc: #1f9590; }
+.rb .is-c6 { --lc: #67748a; }
+
+.rb-label {
+	color: var(--muted);
+	font-size: 12px;
+}
+
+.rb-muted {
+	color: var(--muted);
+}
+
+/* ─── the ticket ─── */
+.rb-ticket {
+	position: relative;
+	display: grid;
+	gap: 20px;
+	padding: 24px 104px 24px 28px;
+	border: 1px solid var(--line);
+	border-radius: 18px;
+	background:
+		radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 55%),
+		var(--sheet);
+	box-shadow: var(--lift);
+	overflow: hidden;
+}
+
+.rm-detail[dir='rtl'] .rb-ticket {
+	padding: 24px 28px 24px 104px;
+	background:
+		radial-gradient(120% 100% at 100% 0%, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 55%),
+		var(--sheet);
+}
+
+/* the stub: a tear line with punched notches, filled as you travel */
+.rb-ticket__stub {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	width: 76px;
+	display: flex;
+	align-items: flex-end;
+	border-left: 2px dashed var(--line-2);
+	background: var(--paper);
+}
+
+.rm-detail[dir='rtl'] .rb-ticket__stub {
+	right: auto;
+	left: 0;
+	border-left: 0;
+	border-right: 2px dashed var(--line-2);
+}
+
+.rb-ticket__stub > span {
+	display: block;
+	width: 100%;
+	background: repeating-linear-gradient(-45deg, var(--hl) 0 10px, color-mix(in srgb, var(--hl) 75%, #fff) 10px 20px);
+	transition: height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.rb-ticket::before,
+.rb-ticket::after {
+	content: '';
+	position: absolute;
+	right: 65px;
+	z-index: 1;
+	width: 22px;
+	height: 22px;
+	border-radius: 999px;
+	background: var(--paper);
+	box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.rb-ticket::before {
+	top: -12px;
+}
+
+.rb-ticket::after {
+	bottom: -12px;
+}
+
+.rm-detail[dir='rtl'] .rb-ticket::before,
+.rm-detail[dir='rtl'] .rb-ticket::after {
+	right: auto;
+	left: 65px;
+}
+
+.rb-ticket__route {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	align-items: end;
+	gap: 16px;
+}
+
+.rb-ticket__end {
+	display: grid;
+	gap: 4px;
+	min-width: 0;
+}
+
+.rb-ticket__end.is-to {
+	text-align: end;
+}
+
+.rb-ticket__place {
+	font-family: var(--font-head);
+	--wa-font-ui: var(--font-head);
+	--wa-font-ui-ar: var(--font-head);
+	font-size: 24px;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.rb-ticket__line {
+	position: relative;
+	display: grid;
+	width: clamp(80px, 18vw, 200px);
+	height: 40px;
+	place-items: center;
+	color: var(--accent-ink);
+}
+
+.rb-ticket__line::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 50%;
+	border-top: 2px dashed var(--line-2);
+}
+
+.rb-ticket__line > svg {
+	position: relative;
+	padding: 6px;
+	box-sizing: content-box;
+	border-radius: 999px;
+	background: var(--sheet);
+	box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.rb-ticket__facts {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+	gap: 16px;
+	margin: 0;
+	padding-top: 16px;
+	border-top: 1px solid var(--line);
+}
+
+.rb-ticket__facts > div {
+	display: grid;
+	gap: 2px;
+}
+
+.rb-ticket__facts dt {
+	color: var(--muted);
+	font-size: 12px;
+}
+
+.rb-ticket__facts dd {
+	margin: 0;
+	font-family: var(--font-head);
+	--wa-font-ui: var(--font-head);
+	--wa-font-ui-ar: var(--font-head);
+	font-size: 22px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.rb-ticket__facts .is-progress dd {
+	align-self: start;
+	justify-self: start;
+	padding: 0 6px;
+	background: linear-gradient(transparent 45%, var(--hl-soft) 45%);
+}
+
+.rb-ticket__dest {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+}
+
+.rb-ticket__roles {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.rb-ticket__roles span {
+	padding: 4px 12px;
+	border-radius: 999px;
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+/* ─── the metro map ─── */
+.rb-hint {
+	margin: 0 0 12px;
+	color: var(--muted);
+	font-size: 13.5px;
+}
+
+.rb-lines {
+	display: flex;
+	gap: 0;
+	margin: 0 -8px;
+	padding: 4px 8px 16px;
+	overflow-x: auto;
+	scroll-snap-type: x proximity;
+	list-style: none;
+	scrollbar-color: var(--line-2) transparent;
+	scrollbar-width: thin;
+}
+
+.rb-line {
+	width: 280px;
+	flex: none;
+	scroll-snap-align: start;
+	padding-right: 24px;
+}
+
+.rm-detail[dir='rtl'] .rb-line {
+	padding-right: 0;
+	padding-left: 24px;
+}
+
+.rb-line__head {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	min-height: 64px;
+	margin-bottom: 8px;
+}
+
+/* the track runs from one line's badge to the next */
+.rb-line:not(:last-child) .rb-line__head::after {
+	content: '';
+	position: absolute;
+	top: 15px;
+	left: 32px;
+	right: -24px;
+	height: 3px;
+	border-radius: 3px;
+	background: linear-gradient(90deg, var(--lc), color-mix(in srgb, var(--lc) 30%, var(--line-2)));
+}
+
+.rm-detail[dir='rtl'] .rb-line:not(:last-child) .rb-line__head::after {
+	left: -24px;
+	right: 32px;
+	background: linear-gradient(270deg, var(--lc), color-mix(in srgb, var(--lc) 30%, var(--line-2)));
+}
+
+.rb-line__badge {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	width: 34px;
+	height: 34px;
+	flex: none;
+	place-items: center;
+	border-radius: 10px;
+	background: var(--lc);
+	color: #fff;
+	font-family: var(--font-head);
+	--wa-font-ui: var(--font-head);
+	--wa-font-ui-ar: var(--font-head);
+	font-weight: 700;
+	box-shadow: 0 6px 14px -8px var(--lc);
+}
+
+.rb-line__titles {
+	display: grid;
+	min-width: 0;
+	gap: 4px;
+	padding-top: 32px;
+}
+
+.rb-line__title {
+	font-family: var(--font-head);
+	--wa-font-ui: var(--font-head);
+	--wa-font-ui-ar: var(--font-head);
+	font-size: 15.5px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.rb-line__meta {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--muted);
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+}
+
+/* stations on a vertical line in the level's colour */
+.rb-stops {
+	position: relative;
+	display: grid;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.rb-stops::before {
+	content: '';
+	position: absolute;
+	top: 18px;
+	bottom: 18px;
+	left: 16px;
+	width: 4px;
+	border-radius: 4px;
+	background: color-mix(in srgb, var(--lc) 75%, transparent);
+}
+
+.rm-detail[dir='rtl'] .rb-stops::before {
+	left: auto;
+	right: 16px;
+}
+
+.rb-stop__btn {
+	display: flex;
+	width: 100%;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 8px 8px 8px 2px;
+	border: 0;
+	border-radius: 12px;
+	background: transparent;
+	color: var(--ink);
+	text-align: start;
+	transition: background-color 0.15s ease;
+}
+
+.rm-detail[dir='rtl'] .rb-stop__btn {
+	padding: 8px 2px 8px 8px;
+}
+
+.rb-stop__btn:hover,
+.rb-stop.is-active .rb-stop__btn {
+	background: var(--sheet);
+	box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.rb-stop__dot {
+	--p: 0;
+	position: relative;
+	z-index: 1;
+	display: grid;
+	width: 32px;
+	height: 32px;
+	flex: none;
+	place-items: center;
+	border-radius: 999px;
+	background:
+		radial-gradient(closest-side, var(--sheet) 72%, transparent 74%),
+		conic-gradient(var(--lc) calc(var(--p) * 1%), color-mix(in srgb, var(--lc) 22%, var(--line-2)) 0);
+	color: var(--ink-2);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.rb-stop.is-complete .rb-stop__dot {
+	background: var(--lc);
+	color: #fff;
+}
+
+.rb-stop__body {
+	display: grid;
+	min-width: 0;
+	flex: 1;
+	gap: 4px;
+	padding-top: 4px;
+}
+
+.rb-stop__title {
+	font-size: 14.5px;
+	font-weight: 600;
+	line-height: 1.35;
+}
+
+.rb-stop__en {
+	color: var(--muted);
+	font-size: 12px;
+	unicode-bidi: isolate;
+}
+
+.rm-detail[dir='rtl'] .rb-stop__en {
+	text-align: right;
+}
+
+.rb-stop__topics {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 3px;
+	padding: 2px 0;
+}
+
+.rb-pip {
+	width: 8px;
+	height: 8px;
+	border-radius: 2px;
+	background: color-mix(in srgb, var(--lc) 18%, var(--line-2));
+}
+
+.rb-pip.is-done {
+	background: var(--hl);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--hl) 60%, #000 0%);
+}
+
+.rb-stop__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 12px;
+	color: var(--muted);
+	font-size: 12px;
+}
+
+/* ─── the strip: day, months, badges, labs, lab ─── */
+.rb-strip {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 16px;
+	align-items: start;
+}
+
+.rb-tile {
+	display: grid;
+	gap: 12px;
+	padding: 20px;
+	border: 1px solid var(--line);
+	border-radius: var(--r-2);
+	background: var(--sheet);
+	box-shadow: var(--lift);
+}
+
+.rb-tile h3 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	font-size: 15.5px;
+}
+
+.rb-tile h3 > svg {
+	color: var(--accent);
+}
+
+.rb-day {
+	display: flex;
+	height: 34px;
+	gap: 3px;
+	overflow: hidden;
+	border-radius: 10px;
+}
+
+.rb-day__part {
+	display: grid;
+	min-width: 28px;
+	place-items: center;
+	background: var(--accent);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.rb-day__part.is-1 {
+	background: var(--hl);
+	color: #2a2108;
+}
+
+.rb-day__part.is-2 {
+	background: #6d8fd6;
+}
+
+.rb-day__part.is-3 {
+	background: var(--pencil);
+}
+
+.rb-day__legend {
+	display: grid;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 13.5px;
+}
+
+.rb-day__legend li {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.rb-day__legend li > span:nth-child(2) {
+	flex: 1;
+}
+
+.rb-months {
+	position: relative;
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 0 0 0 18px;
+	list-style: none;
+}
+
+.rb-months::before {
+	content: '';
+	position: absolute;
+	top: 6px;
+	bottom: 6px;
+	left: 4px;
+	width: 2px;
+	background: var(--line-2);
+}
+
+.rb-months li {
+	position: relative;
+	display: grid;
+	gap: 2px;
+}
+
+.rb-months li::before {
+	content: '';
+	position: absolute;
+	top: 6px;
+	left: -18px;
+	width: 10px;
+	height: 10px;
+	border-radius: 999px;
+	background: var(--sheet);
+	box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.rm-detail[dir='rtl'] .rb-months {
+	padding: 0 18px 0 0;
+}
+
+.rm-detail[dir='rtl'] .rb-months::before {
+	left: auto;
+	right: 4px;
+}
+
+.rm-detail[dir='rtl'] .rb-months li::before {
+	left: auto;
+	right: -18px;
+}
+
+.rb-months__period {
+	color: var(--accent-ink);
+	font-size: 12.5px;
+	font-weight: 600;
+}
+
+.rb-months__focus {
+	font-size: 14px;
+}
+
+.rb-badges {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.rb-badge {
+	display: grid;
+	justify-items: center;
+	gap: 4px;
+	padding: 12px 8px;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	color: var(--ink);
+	text-align: center;
+	text-decoration: none;
+	transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.rb-badge > svg {
+	width: 36px;
+	height: 36px;
+	padding: 8px;
+	border-radius: 999px;
+	background: radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--hl) 80%, #fff), var(--hl));
+	color: #2a2108;
+}
+
+.rb-badge span {
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.rb-badge small {
+	color: var(--muted);
+	font-size: 11.5px;
+}
+
+.rb-badge:hover {
+	border-color: var(--hl);
+	transform: translateY(-1px);
+}
+
+.rb-chips,
+.rb-specs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.rb-chips a {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 12px;
+	border: 1px solid var(--line-2);
+	border-radius: 999px;
+	color: var(--ink);
+	font-size: 13px;
+	text-decoration: none;
+}
+
+.rb-chips a:hover {
+	border-color: var(--accent);
+	color: var(--accent-ink);
+}
+
+.rb-specs li {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 8px 12px;
+	border-radius: 10px;
+	background: var(--paper);
+	font-size: 13px;
+}
+
+.rb-specs b {
+	font-family: var(--font-head);
+	--wa-font-ui: var(--font-head);
+	--wa-font-ui-ar: var(--font-head);
+	font-size: 20px;
+}
+
+.rb-specs svg {
+	align-self: center;
+	color: var(--muted);
+}
+
+/* ─── a station, opened ─── */
+.rb-drawer-scrim {
+	position: fixed;
+	inset: 0;
+	z-index: 150;
+	background: rgba(17, 22, 32, 0.32);
+	animation: lrn-fade 0.15s ease-out;
+}
+
+.rb-drawer {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	display: flex;
+	width: min(560px, 100%);
+	flex-direction: column;
+	background: var(--paper);
+	box-shadow: var(--overlay);
+	animation: rb-in-right 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.rm-detail[dir='rtl'] .rb-drawer {
+	right: auto;
+	left: 0;
+	animation-name: rb-in-left;
+}
+
+@keyframes rb-in-right {
+	from {
+		transform: translateX(32px);
+		opacity: 0;
+	}
+}
+
+@keyframes rb-in-left {
+	from {
+		transform: translateX(-32px);
+		opacity: 0;
+	}
+}
+
+.rb-drawer__head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 16px;
+	border-bottom: 3px solid var(--lc);
+	background: var(--sheet);
+}
+
+.rb-drawer__line {
+	min-width: 0;
+	flex: 1;
+	overflow: hidden;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.rb-drawer__body {
+	min-height: 0;
+	flex: 1;
+	padding: 16px;
+	overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+	.rb-ticket,
+	.rm-detail[dir='rtl'] .rb-ticket {
+		padding: 20px 20px 72px;
+	}
+
+	.rb-ticket__stub,
+	.rm-detail[dir='rtl'] .rb-ticket__stub {
+		top: auto;
+		left: 0;
+		right: 0;
+		width: auto;
+		height: 52px;
+		border: 0;
+		border-top: 2px dashed var(--line-2);
+	}
+
+	.rb-ticket__stub > span {
+		height: 100% !important;
+		width: var(--stub, 0%);
+	}
+
+	.rb-ticket::before,
+	.rb-ticket::after,
+	.rm-detail[dir='rtl'] .rb-ticket::before,
+	.rm-detail[dir='rtl'] .rb-ticket::after {
+		display: none;
+	}
+
+	.rb-ticket__route {
+		grid-template-columns: 1fr;
+		gap: 8px;
+	}
+
+	.rb-ticket__end.is-to {
+		text-align: start;
+	}
+
+	.rb-ticket__line {
+		width: 100%;
+		height: 28px;
+	}
+
+	.rb-ticket__place {
+		font-size: 20px;
+	}
+
+	.rb-line {
+		width: 82vw;
+	}
+
+	.rb-drawer,
+	.rm-detail[dir='rtl'] .rb-drawer {
+		top: auto;
+		left: 0;
+		right: 0;
+		width: 100%;
+		max-height: 88dvh;
+		border-radius: var(--r-2) var(--r-2) 0 0;
+		animation-name: rb-in-up;
+	}
+
+	@keyframes rb-in-up {
+		from {
+			transform: translateY(32px);
+			opacity: 0;
+		}
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.rb-drawer,
+	.rb-drawer-scrim,
+	.rb-ticket__stub > span {
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
+/* Titles line up with the frame's start whatever their script (each still reads in its own direction). */
+.rm-detail[dir='ltr'] :is(.rb-stop__title, .rb-line__title, .rb-ticket__place, .rm-level__title, .rm-level__desc, .rm-course__titles h4, .rm-hero__desc, .rb-months__focus, .rb-day__legend span, .rm-course__notes dd) {
+	text-align: left;
+}
+
+.rm-detail[dir='rtl'] :is(.rb-stop__title, .rb-line__title, .rb-ticket__place, .rm-level__title, .rm-level__desc, .rm-course__titles h4, .rm-hero__desc, .rb-months__focus, .rb-day__legend span, .rm-course__notes dd) {
+	text-align: right;
+}
+
+.rm-detail[dir='ltr'] .rb-ticket__end.is-to .rb-ticket__place {
+	text-align: right;
+}
+
+.rm-detail[dir='rtl'] .rb-ticket__end.is-to .rb-ticket__place {
+	text-align: left;
+}
+
+@media (max-width: 640px) {
+	.rb-ticket__facts {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.rb-ticket__facts dd {
+		font-size: 18px;
+		white-space: nowrap;
+	}
+}
+
+/* courses added by the topics index: a dashed station and a small tag */
+.rb-stop.is-added .rb-stop__dot {
+	background:
+		radial-gradient(closest-side, var(--sheet) 72%, transparent 74%),
+		conic-gradient(var(--lc) calc(var(--p) * 1%), transparent 0);
+	outline: 2px dashed color-mix(in srgb, var(--lc) 70%, transparent);
+	outline-offset: -2px;
+}
+
+.rb-stop.is-added.is-complete .rb-stop__dot {
+	background: var(--lc);
+	outline: 0;
+}
+
+.rb-stop__added {
+	color: var(--accent-ink);
+	font-weight: 600;
+}
+
+.rb-hint__added {
+	display: block;
+	margin-top: 2px;
+}

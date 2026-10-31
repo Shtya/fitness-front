@@ -1,0 +1,479 @@
+{
+  "roadmap_topics_index": {
+    "note_ar": "فهرس تفصيلي (Index) لكل توبك داخل كل كورس في الـroadmap، بما فيهم الكورسات المضافة في الـaudit. تحت كل توبك شرح مختصر لفايدته المستقبلية عشان لو اتفرجت على كورس ومش لاقي التوبكس دي، تعرف إن الكورس ناقص أو مش مناسب.",
+    "levels": [
+
+      {
+        "level_id": "level_01",
+        "courses": [
+          {
+            "course_id": "course_01",
+            "title_ar": "أساسيات الشبكات CCNA",
+            "topics_detailed": [
+              { "topic": "OSI Model", "benefit_ar": "فهم السبع طبقات اللي بتنتقل بيهم البيانات، أساس تحليل أي هجوم شبكي ومعرفة مكان المشكلة أو الثغرة." },
+              { "topic": "TCP/IP", "benefit_ar": "البروتوكول اللي بيشغل الإنترنت كله، لازم تفهمه عشان تقرأ أي حركة بيانات أو تعمل packet crafting لاحقًا." },
+              { "topic": "IP Addressing", "benefit_ar": "تحديد الأجهزة على الشبكة، هتستخدمه في كل عملية Scanning وEnumeration قدامك." },
+              { "topic": "Subnetting", "benefit_ar": "تحديد نطاق الشبكة المستهدفة بدقة قبل أي فحص، يوفر وقت ويمنعك تفحص خارج النطاق المصرح به." },
+              { "topic": "TCP and UDP", "benefit_ar": "أساس فهم الـPorts والخدمات، هتحتاجه في Nmap وMetasploit وأي أداة فحص شبكي." },
+              { "topic": "DNS", "benefit_ar": "مهم جدًا لاحقًا في DNS Enumeration، Subdomain Takeover، وهجمات DNS Spoofing." },
+              { "topic": "DHCP", "benefit_ar": "فهم توزيع الـIP تلقائيًا، أساسي لهجمات زي DHCP Starvation أو Rogue DHCP لاحقًا." },
+              { "topic": "ARP", "benefit_ar": "أساس هجوم ARP Spoofing/Poisoning اللي هتستخدمه في Man-in-the-Middle على الشبكات." },
+              { "topic": "Routing", "benefit_ar": "فهم إزاي البيانات بتتنقل بين شبكات مختلفة، مهم في Pivoting بعد الاختراق." },
+              { "topic": "Switching", "benefit_ar": "فهم VLAN Hopping وهجمات طبقة الـ2 لاحقًا في اختبار الشبكات الداخلية." },
+              { "topic": "VLANs", "benefit_ar": "تقسيم الشبكات، هتحتاجه في اختبار اختراق الشبكات الداخلية للشركات." },
+              { "topic": "Ports and Protocols", "benefit_ar": "حجر الأساس لأي Service Enumeration في أي اختبار اختراق شبكي أو ويب." },
+              { "topic": "Network Troubleshooting", "benefit_ar": "يديك قدرة تفرق بين مشكلة فنية عادية ومشكلة ناتجة عن هجوم أو ثغرة." }
+            ]
+          },
+          {
+            "course_id": "course_02",
+            "title_ar": "إدارة أنظمة Linux",
+            "topics_detailed": [
+              { "topic": "Linux File System", "benefit_ar": "لازم تعرف تتحرك فيه وأنت بتدور على ملفات حساسة بعد أي اختراق (Post-Exploitation)." },
+              { "topic": "Terminal Commands", "benefit_ar": "الأساس اللي هتبني عليه كل تعاملك مع Kali Linux وكل أداة هاكينج." },
+              { "topic": "Users and Groups", "benefit_ar": "فهمها ضروري لهجمات Privilege Escalation لاحقًا." },
+              { "topic": "File Permissions", "benefit_ar": "أشهر نقطة ضعف بيستغلها المهاجمين في Privilege Escalation (SUID/SGID files مثلاً)." },
+              { "topic": "Processes", "benefit_ar": "تساعدك تكتشف Malware أو Backdoor شغال على جهاز مخترق." },
+              { "topic": "Services", "benefit_ar": "فهم الخدمات الشغالة يساعدك تحدد نقاط الدخول المحتملة للهجوم." },
+              { "topic": "SSH", "benefit_ar": "هتستخدمه للوصول الآمن للأجهزة، وفهمه يساعدك في هجمات SSH Brute Force وPivoting." },
+              { "topic": "Bash Basics", "benefit_ar": "أساس كتابة Scripts لأتمتة أدوات الاختراق لاحقًا." },
+              { "topic": "Package Management", "benefit_ar": "هتحتاجه عشان تثبت وتحدّث أدوات الأمن السيبراني باستمرار." },
+              { "topic": "Linux Networking", "benefit_ar": "فهم إعدادات الشبكة في Linux ضروري لإعداد بيئة الاختبار ولفهم هجمات الشبكة." },
+              { "topic": "Redirection", "benefit_ar": "يساعدك تحفظ نتائج الفحوصات (Nmap مثلًا) في ملفات لتحليلها لاحقًا." },
+              { "topic": "Pipes", "benefit_ar": "تربط مخرجات أداة بمدخلات أداة تانية، أساسي في سلاسل أدوات الاستطلاع الآلي." }
+            ]
+          },
+          {
+            "course_id": "course_03",
+            "title_ar": "إدارة أنظمة Windows",
+            "topics_detailed": [
+              { "topic": "Windows Architecture", "benefit_ar": "فهم بنية النظام ضروري لفهم أي هجوم على أجهزة Windows لاحقًا." },
+              { "topic": "CMD", "benefit_ar": "هتستخدمه للتفاعل مع أجهزة Windows مخترقة أثناء Post-Exploitation." },
+              { "topic": "PowerShell", "benefit_ar": "أداة أساسية جدًا في الهجمات الحديثة (PowerShell Empire مثلًا) والأتمتة على Windows." },
+              { "topic": "Users and Groups", "benefit_ar": "فهمها أساسي لهجمات Active Directory وPrivilege Escalation على Windows." },
+              { "topic": "Permissions", "benefit_ar": "إعدادات خاطئة فيها هي أساس كتير من هجمات تصعيد الصلاحيات على Windows." },
+              { "topic": "Services", "benefit_ar": "خدمات معدّة بشكل خاطئ هي من أشهر طرق تصعيد الصلاحيات في Windows." },
+              { "topic": "Processes", "benefit_ar": "تساعدك تكتشف برامج ضارة أو أدوات اختراق شغالة على الجهاز." },
+              { "topic": "Windows Firewall", "benefit_ar": "فهمه يساعدك تتخطاه أو تحلل ليه حركة معينة اتمنعت." },
+              { "topic": "Event Viewer", "benefit_ar": "مصدر أساسي لتحليل آثار أي اختراق (Forensics) ومعرفة هل تم اكتشافك." },
+              { "topic": "Windows Server Basics", "benefit_ar": "أساس فهم بيئات الشركات اللي غالبًا بتشتغل بـWindows Server وActive Directory." }
+            ]
+          },
+          {
+            "course_id": "course_04",
+            "title_ar": "برمجة Python",
+            "topics_detailed": [
+              { "topic": "Variables", "benefit_ar": "الأساس لأي سكريبت هتكتبه، من فحص بورتات لحد أدوات استغلال ثغرات." },
+              { "topic": "Data Types", "benefit_ar": "مهم للتعامل الصحيح مع نتائج الأدوات والبيانات اللي بتجمعها." },
+              { "topic": "Conditions", "benefit_ar": "أساسي لبناء منطق أي أداة (مثلًا: لو البورت مفتوح، نفذ كذا)." },
+              { "topic": "Loops", "benefit_ar": "هتستخدمه في أي عملية Brute Force أو فحص متكرر على نطاق واسع." },
+              { "topic": "Functions", "benefit_ar": "تنظيم الكود وإعادة استخدامه في أدوات استغلال أكبر." },
+              { "topic": "Lists", "benefit_ar": "تخزين قوائم زي Wordlists أو نتائج Scanning والتعامل معاها." },
+              { "topic": "Dictionaries", "benefit_ar": "تخزين بيانات منظمة زي (IP: Open Ports) أثناء كتابة أدواتك." },
+              { "topic": "Object Oriented Programming", "benefit_ar": "يخليك تقرأ وتعدّل كود أدوات اختراق جاهزة (زي Impacket, Scapy) بسهولة." },
+              { "topic": "File Handling", "benefit_ar": "قراءة وكتابة Wordlists وLogs ونتائج الفحوصات." },
+              { "topic": "JSON", "benefit_ar": "أغلب الـAPIs وأدوات الأمن (زي Nmap XML/JSON output) بتتعامل بالصيغة دي." },
+              { "topic": "HTTP Requests", "benefit_ar": "أساس كتابة أدوات اختبار اختراق المواقع والـAPIs بنفسك." },
+              { "topic": "Sockets Basics", "benefit_ar": "أساس بناء أدوات Scanning أو Reverse Shells خاصة بيك." }
+            ]
+          },
+          {
+            "course_id": "course_05",
+            "title_ar": "برمجة Bash وPowerShell",
+            "topics_detailed": [
+              { "topic": "Variables", "benefit_ar": "أساس كتابة سكريبتات Automation بسيطة أثناء الاختبار." },
+              { "topic": "Conditions", "benefit_ar": "بناء منطق اتخاذ قرار داخل السكريبتات (مثلًا فحص وجود ملف معين)." },
+              { "topic": "Loops", "benefit_ar": "تكرار عملية على قائمة IPs أو ملفات تلقائيًا." },
+              { "topic": "Functions", "benefit_ar": "تنظيم سكريبتات الأتمتة الطويلة." },
+              { "topic": "Automation", "benefit_ar": "أتمتة خطوات الاستطلاع المتكررة بدل ما تعملها يدويًا كل مرة." },
+              { "topic": "File Operations", "benefit_ar": "التعامل مع ملفات النتائج والـLogs بسرعة." },
+              { "topic": "Process Management", "benefit_ar": "مراقبة أو إيقاف عمليات أثناء التحليل أو الاختبار." },
+              { "topic": "System Administration", "benefit_ar": "فهم أعمق للنظام يساعدك تكتب سكريبتات تصعيد صلاحيات بسيطة." }
+            ]
+          },
+          {
+            "course_id": "course_05b",
+            "title_ar": "أساسيات Git وGitHub",
+            "topics_detailed": [
+              { "topic": "Version Control Basics", "benefit_ar": "فهم إزاي الأدوات مفتوحة المصدر بتتطور، يساعدك تتابع تحديثات أدوات الاختراق." },
+              { "topic": "Git Commands", "benefit_ar": "هتحتاجها يوميًا عشان تنزل وتحدّث أدوات من GitHub." },
+              { "topic": "Branching", "benefit_ar": "مفيدة لو عايز تعدل أداة مفتوحة المصدر لنفسك من غير ما تبوظ النسخة الأصلية." },
+              { "topic": "Cloning Repositories", "benefit_ar": "أول خطوة هتعملها مع أي أداة هاكينج جديدة من GitHub." },
+              { "topic": "Using Security Tools from GitHub", "benefit_ar": "أغلب أدوات الاختراق الحديثة (exploits, scripts) بتتنزل من GitHub مباشرة." },
+              { "topic": "Contributing to Open Source Tools", "benefit_ar": "يبني سمعتك في مجتمع الأمن السيبراني ويحسّن مهاراتك في قراءة كود الغير." }
+            ]
+          }
+        ]
+      },
+
+      {
+        "level_id": "level_02",
+        "courses": [
+          {
+            "course_id": "course_06",
+            "title_ar": "مقدمة في الأمن السيبراني",
+            "topics_detailed": [
+              { "topic": "CIA Triad", "benefit_ar": "المعيار اللي هتقيّم بيه أي ثغرة تكتشفها (بتأثر على السرية؟ السلامة؟ التوفر؟)." },
+              { "topic": "Threats", "benefit_ar": "تساعدك تبني Threat Model قبل أي اختبار اختراق." },
+              { "topic": "Vulnerabilities", "benefit_ar": "المفهوم الأساسي اللي الـroadmap كله مبني عليه - اكتشاف واستغلال الثغرات." },
+              { "topic": "Malware", "benefit_ar": "أساس تمهيدي هتبني عليه لاحقًا في كورس Malware Analysis المتقدم." },
+              { "topic": "Phishing", "benefit_ar": "أساس هجمات الهندسة الاجتماعية اللي هتتعمق فيها لاحقًا." },
+              { "topic": "Social Engineering", "benefit_ar": "مقدمة بسيطة هتتوسع فيها بالتفصيل في كورس OSINT and Social Engineering." },
+              { "topic": "Authentication", "benefit_ar": "أساس أي هجوم على تسجيل الدخول (Brute Force, Credential Stuffing) لاحقًا." },
+              { "topic": "Authorization", "benefit_ar": "أساس ثغرات زي Broken Access Control وIDOR في أمن الويب." },
+              { "topic": "Encryption", "benefit_ar": "مقدمة لازمة لفهم HTTPS، وأمان البيانات المخزنة في الموبايل والكاميرات لاحقًا." },
+              { "topic": "Risk Management", "benefit_ar": "يساعدك تكتب تقارير احترافية بتقيّم خطورة كل ثغرة تكتشفها." },
+              { "topic": "Incident Response", "benefit_ar": "يفيدك تفهم إزاي الشركة بترد على اختراقك، ويخليك تكتب تقرير يراعي ده." }
+            ]
+          },
+          {
+            "course_id": "course_07",
+            "title_ar": "شهادة Security+",
+            "topics_detailed": [
+              { "topic": "Security Architecture", "benefit_ar": "فهم تصميم أنظمة الحماية يساعدك تكتشف نقاط الضعف في التصميم نفسه." },
+              { "topic": "Threat Intelligence", "benefit_ar": "يعلمك إزاي تتابع التهديدات الجديدة (CVEs) وتستخدمها في اختباراتك." },
+              { "topic": "Network Security", "benefit_ar": "تعميق لمفاهيم الشبكات من منظور الحماية، يساعدك تعرف إزاي تتخطاها." },
+              { "topic": "Cryptography", "benefit_ar": "أساسي لفهم ثغرات التشفير الضعيف اللي هتقابلها في الويب والموبايل." },
+              { "topic": "Identity Management", "benefit_ar": "مهم لفهم هجمات على أنظمة تسجيل الدخول وActive Directory لاحقًا." },
+              { "topic": "Vulnerability Assessment", "benefit_ar": "مقدمة مباشرة لمنهجية اختبار الاختراق اللي هتتعلمها بالتفصيل بعدين." },
+              { "topic": "Malware", "benefit_ar": "فهم أعمق شوية هيبني عليه كورس Malware Analysis المتقدم." },
+              { "topic": "Cloud Security", "benefit_ar": "مقدمة لكورس Cloud Security المتقدم في آخر الـroadmap." },
+              { "topic": "Risk Management", "benefit_ar": "يعزز قدرتك على كتابة تقارير اختراق احترافية مقبولة في سوق العمل." },
+              { "topic": "Incident Response", "benefit_ar": "يفيدك تفهم منظور الطرف المدافع (Blue Team) وإزاي تتجنب كشفك." }
+            ]
+          },
+          {
+            "course_id": "course_07b",
+            "title_ar": "القانون السيبراني وأخلاقيات المهنة",
+            "topics_detailed": [
+              { "topic": "قانون مكافحة جرائم تقنية المعلومات (مصر)", "benefit_ar": "يحميك قانونيًا ويوضحلك الخط الفاصل بين الاختبار المصرح به والجريمة الإلكترونية." },
+              { "topic": "Authorized vs Unauthorized Access", "benefit_ar": "أهم مفهوم قبل ما تلمس أي جهاز أو شبكة مش ملكك." },
+              { "topic": "Scope of Engagement", "benefit_ar": "يعلمك تحدد بالظبط إيه المسموح تختبره وإيه الممنوع في أي مشروع حقيقي." },
+              { "topic": "Rules of Engagement (RoE)", "benefit_ar": "وثيقة لازم تتفق عليها قبل أي اختبار اختراق حقيقي عشان تتغطى قانونيًا." },
+              { "topic": "Non-Disclosure Agreements", "benefit_ar": "فهمها ضروري لو هتشتغل مع شركات أو عملاء حقيقيين." },
+              { "topic": "Responsible Disclosure", "benefit_ar": "إزاي تبلّغ عن ثغرة اكتشفتها بشكل أخلاقي وقانوني من غير ما تتعرض للمساءلة." },
+              { "topic": "Bug Bounty Ethics", "benefit_ar": "لو هتدخل مجال Bug Bounty، الموضوع ده هيحدد سمعتك المهنية." }
+            ]
+          }
+        ]
+      },
+
+      {
+        "level_id": "level_03",
+        "courses": [
+          {
+            "course_id": "course_08",
+            "title_ar": "أساسيات Kali Linux",
+            "topics_detailed": [
+              { "topic": "Kali Linux Installation", "benefit_ar": "أول خطوة عملية لبناء بيئة الاختبار بتاعتك." },
+              { "topic": "VirtualBox", "benefit_ar": "هتستخدمه لعزل كل الـLabs اللي هتتدرب عليها بأمان عن جهازك الأساسي." },
+              { "topic": "Linux Commands", "benefit_ar": "تطبيق عملي على اللي اتعلمته في course_02 لكن بسياق هاكينج مباشر." },
+              { "topic": "Security Tools", "benefit_ar": "تعرّف أولي على الأدوات اللي هتستخدمها طول الـroadmap (Nmap, Metasploit...)." },
+              { "topic": "Testing Environment Setup", "benefit_ar": "بناء معمل كامل (Attacker + Target machines) هتحتاجه في كل كورس بعد كده." },
+              { "topic": "Terminal", "benefit_ar": "الواجهة الأساسية اللي هتشتغل بيها أغلب أدوات الاختراق." },
+              { "topic": "File Management", "benefit_ar": "تنظيم ملفات الاختبارات والتقارير والـwordlists." },
+              { "topic": "Permissions", "benefit_ar": "بعض أدوات الاختراق محتاجة صلاحيات root، لازم تفهم إزاي تديرها بأمان." }
+            ]
+          },
+          {
+            "course_id": "course_09",
+            "title_ar": "الاختراق الأخلاقي واختبار الاختراق",
+            "topics_detailed": [
+              { "topic": "Penetration Testing Methodology", "benefit_ar": "الهيكل اللي هتطبقه في أي اختبار اختراق طول مشوارك (Recon → Exploit → Report)." },
+              { "topic": "Information Gathering", "benefit_ar": "أول خطوة فعلية في أي اختبار، وهتتعمق فيها أكتر في كورس OSINT." },
+              { "topic": "Reconnaissance", "benefit_ar": "تحديد كل الأهداف والأصول المتاحة قبل بدء أي هجوم." },
+              { "topic": "Scanning", "benefit_ar": "تحديد البورتات والخدمات الشغالة عشان تعرف منين تدخل." },
+              { "topic": "Enumeration", "benefit_ar": "استخراج تفاصيل دقيقة عن الخدمات تساعدك تختار الثغرة المناسبة." },
+              { "topic": "Vulnerability Assessment", "benefit_ar": "ربط الخدمات المكتشفة بثغرات معروفة (CVEs) قابلة للاستغلال." },
+              { "topic": "Exploitation Concepts", "benefit_ar": "المرحلة اللي فعليًا بتعمل فيها الاختراق، أساس كل كورسات الاستغلال بعد كده." },
+              { "topic": "Burp Suite", "benefit_ar": "مقدمة هتتوسع فيها بالكامل في كورس Burp Suite المخصص." },
+              { "topic": "Nmap", "benefit_ar": "الأداة الأهم في Scanning، هتستخدمها في كل اختبار اختراق شبكي تعمله." },
+              { "topic": "Metasploit", "benefit_ar": "فريمورك الاستغلال الأساسي اللي هتبني عليه معرفتك في الاستغلال العملي." },
+              { "topic": "Reporting", "benefit_ar": "مهارة أساسية سوق العمل بيقيّمك بيها - توثيق الثغرة وطريقة إصلاحها بشكل احترافي." }
+            ]
+          },
+          {
+            "course_id": "course_09b",
+            "title_ar": "جمع المعلومات مفتوحة المصدر والهندسة الاجتماعية",
+            "topics_detailed": [
+              { "topic": "OSINT Methodology", "benefit_ar": "إطار منظم لجمع أكبر قدر معلومات عن الهدف قبل أي اختبار." },
+              { "topic": "Google Dorking", "benefit_ar": "تقنية بتكشف ملفات وصفحات حساسة منسية على الإنترنت." },
+              { "topic": "Shodan", "benefit_ar": "محرك بحث بيكشفلك أجهزة وكاميرات وIoT مكشوفة على الإنترنت - مرتبط مباشرة بهدفك في اختراق الكاميرات." },
+              { "topic": "theHarvester", "benefit_ar": "أداة بتجمع إيميلات ونطاقات فرعية تلقائيًا، بداية أي اختبار اختراق ويب." },
+              { "topic": "Maltego", "benefit_ar": "بترسملك خريطة علاقات بين الأهداف (أشخاص، نطاقات، سيرفرات) بشكل مرئي." },
+              { "topic": "Social Media Reconnaissance", "benefit_ar": "مصدر غني لمعلومات بتساعد في هجمات الهندسة الاجتماعية." },
+              { "topic": "Phishing Simulation", "benefit_ar": "تطبيق عملي مصرح به لفهم إزاي الهجوم ده بينجح عشان تقيّم وعي الموظفين." },
+              { "topic": "Pretexting Concepts", "benefit_ar": "فهم السيناريوهات النفسية اللي المهاجم بيستخدمها لخداع الضحية." },
+              { "topic": "Human Factor Security", "benefit_ar": "يعلمك إن أضعف نقطة في أي نظام غالبًا بتكون الإنسان مش التقنية." }
+            ]
+          },
+          {
+            "course_id": "course_10",
+            "title_ar": "اختبار اختراق الشبكات",
+            "topics_detailed": [
+              { "topic": "Nmap", "benefit_ar": "تعميق عملي حقيقي بعد المقدمة، هتتقن أوامره المتقدمة (scripts, timing, evasion)." },
+              { "topic": "Wireshark", "benefit_ar": "تحليل حركة الشبكة بالتفصيل، أساسي لفهم أي بروتوكول أو هجوم MITM." },
+              { "topic": "Network Scanning", "benefit_ar": "تطبيق عملي لتحديد كل الأجهزة الحية على الشبكة المستهدفة." },
+              { "topic": "Port Scanning", "benefit_ar": "تحديد نقاط الدخول المحتملة على كل جهاز." },
+              { "topic": "Service Enumeration", "benefit_ar": "معرفة نسخة كل خدمة عشان تدور على ثغرة مطابقة ليها بالظبط." },
+              { "topic": "Vulnerability Scanning", "benefit_ar": "استخدام أدوات آلية (زي Nessus/OpenVAS) لتسريع اكتشاف الثغرات." },
+              { "topic": "Metasploit Fundamentals", "benefit_ar": "تطبيق عملي حقيقي لاستغلال ثغرات مكتشفة على أجهزة الشبكة." },
+              { "topic": "Network Security Assessment", "benefit_ar": "تجميع كل الخطوات دي في تقييم أمني شامل لشبكة كاملة." }
+            ]
+          },
+          {
+            "course_id": "course_10b",
+            "title_ar": "اختبار اختراق الشبكات اللاسلكية (واي فاي)",
+            "topics_detailed": [
+              { "topic": "802.11 Protocol Basics", "benefit_ar": "فهم بروتوكول الواي فاي نفسه قبل ما تحاول تكسره." },
+              { "topic": "WEP/WPA/WPA2/WPA3 Concepts", "benefit_ar": "معرفة نقط ضعف كل نوع تشفير وإزاي تستهدفه بشكل مختلف." },
+              { "topic": "Monitor Mode", "benefit_ar": "الوضع اللازم لكارت الشبكة عشان تقدر تلتقط حزم الواي فاي أصلًا." },
+              { "topic": "Packet Sniffing", "benefit_ar": "التقاط حركة البيانات اللاسلكية لتحليلها أو استخراج بيانات حساسة." },
+              { "topic": "Deauthentication Attacks", "benefit_ar": "تقنية بتفصل جهاز عن الشبكة لإجباره يعمل reconnect وتلتقط الـhandshake." },
+              { "topic": "Handshake Capture", "benefit_ar": "الملف اللي محتاجه عشان تحاول تكسر باسورد الواي فاي WPA/WPA2." },
+              { "topic": "Aircrack-ng Suite", "benefit_ar": "الأداة الأساسية لكل عمليات اختراق الواي فاي من الالتقاط للكسر." },
+              { "topic": "Wifite", "benefit_ar": "أداة بتؤتمت كل خطوات اختراق الواي فاي تلقائيًا، توفر وقت كبير." },
+              { "topic": "Evil Twin Attacks", "benefit_ar": "إنشاء شبكة واي فاي مزيفة لخداع المستخدمين وسرقة بياناتهم." },
+              { "topic": "Rogue Access Points", "benefit_ar": "فهم المخاطر دي يفيدك سواء هجوميًا أو في تقييم أمان شبكة شركة." },
+              { "topic": "Wireless Client Attacks", "benefit_ar": "استهداف الأجهزة المتصلة نفسها مش الراوتر بس." }
+            ]
+          },
+          {
+            "course_id": "course_11",
+            "title_ar": "اختبار أمان Active Directory",
+            "topics_detailed": [
+              { "topic": "Active Directory Architecture", "benefit_ar": "أغلب شبكات الشركات الكبيرة مبنية على AD، فهمها ضروري لاختبار بيئات حقيقية." },
+              { "topic": "Domain Controller", "benefit_ar": "السيرفر اللي لو اخترقته، تكون سيطرت على الشبكة كلها تقريبًا." },
+              { "topic": "LDAP", "benefit_ar": "البروتوكول اللي بيدير بيانات المستخدمين، هتستخدمه في الـEnumeration." },
+              { "topic": "Kerberos", "benefit_ar": "نظام المصادقة اللي عليه هجمات مشهورة زي Kerberoasting وGolden Ticket." },
+              { "topic": "Users and Groups", "benefit_ar": "تحديد المستخدمين ذوي الصلاحيات العالية كأهداف أولوية." },
+              { "topic": "Group Policy", "benefit_ar": "إعدادات خاطئة فيها بتكون طريق مباشر لتصعيد الصلاحيات." },
+              { "topic": "Enumeration", "benefit_ar": "استخراج خريطة كاملة للصلاحيات والعلاقات داخل الدومين." },
+              { "topic": "BloodHound", "benefit_ar": "أداة بترسم مسارات الهجوم المحتملة جوه AD بشكل مرئي واضح." },
+              { "topic": "Impacket", "benefit_ar": "مجموعة أدوات أساسية لاستغلال بروتوكولات Windows/AD المختلفة." },
+              { "topic": "Privilege Escalation Concepts", "benefit_ar": "مقدمة هتتعمق فيها في كورس Privilege Escalation المخصص." }
+            ]
+          },
+          {
+            "course_id": "course_11b",
+            "title_ar": "تصعيد الصلاحيات وما بعد الاختراق",
+            "topics_detailed": [
+              { "topic": "Linux Privilege Escalation", "benefit_ar": "تقنيات عملية (SUID, Cron Jobs, Kernel Exploits) للوصول لصلاحية root." },
+              { "topic": "Windows Privilege Escalation", "benefit_ar": "تقنيات عملية للوصول لصلاحية Administrator/SYSTEM." },
+              { "topic": "Kernel Exploits Concepts", "benefit_ar": "فهم ثغرات النواة واستغلالها لتصعيد الصلاحيات في الحالات الصعبة." },
+              { "topic": "Misconfiguration Abuse", "benefit_ar": "أشهر طريقة لتصعيد الصلاحيات في الواقع - استغلال إعدادات خاطئة بسيطة." },
+              { "topic": "Credential Harvesting", "benefit_ar": "استخراج باسوردات أو tokens محفوظة على الجهاز المخترق للاستخدام لاحقًا." },
+              { "topic": "Pivoting", "benefit_ar": "استخدام جهاز مخترق كنقطة انطلاق لاختراق أجهزة تانية جوه نفس الشبكة." },
+              { "topic": "Lateral Movement", "benefit_ar": "التنقل بين أجهزة الشبكة بعد اختراق جهاز واحد فقط." },
+              { "topic": "Persistence Techniques", "benefit_ar": "الحفاظ على وصولك للجهاز حتى لو اتعمل إعادة تشغيل أو patch جزئي (في نطاق مصرح به فقط)." },
+              { "topic": "Cleanup and Reporting", "benefit_ar": "إزالة أي أثر من الاختبار وتوثيق كل خطوة بشكل احترافي في التقرير النهائي." }
+            ]
+          }
+        ]
+      },
+
+      {
+        "level_id": "level_04",
+        "courses": [
+          {
+            "course_id": "course_12",
+            "title_ar": "أمن تطبيقات الويب",
+            "topics_detailed": [
+              { "topic": "HTTP", "benefit_ar": "البروتوكول الأساسي لكل تطبيقات الويب، أساس كل هجمة هتعملها عليه." },
+              { "topic": "HTTPS", "benefit_ar": "فهم طبقة التشفير ونقاط ضعفها المحتملة (SSL Stripping مثلًا)." },
+              { "topic": "Cookies", "benefit_ar": "أساس هجمات سرقة الجلسات (Session Hijacking)." },
+              { "topic": "Sessions", "benefit_ar": "فهم إدارة الجلسات يساعدك تكتشف ثغرات Session Fixation/Hijacking." },
+              { "topic": "Authentication", "benefit_ar": "أساس هجمات تجاوز تسجيل الدخول والـBrute Force." },
+              { "topic": "Authorization", "benefit_ar": "أساس ثغرة Broken Access Control، من أخطر ثغرات OWASP Top 10." },
+              { "topic": "SQL Injection", "benefit_ar": "من أخطر وأشهر الثغرات، بتسمحلك تتحكم في قاعدة بيانات الموقع كاملة." },
+              { "topic": "XSS", "benefit_ar": "تنفيذ كود داخل متصفح الضحية، تستخدمها في سرقة جلسات أو هجمات تصيّد متقدمة." },
+              { "topic": "CSRF", "benefit_ar": "إجبار المستخدم ينفذ إجراء من غير علمه وهو مسجل دخول." },
+              { "topic": "IDOR", "benefit_ar": "ثغرة شائعة جدًا بتسمحلك توصل لبيانات مستخدمين تانيين." },
+              { "topic": "SSRF", "benefit_ar": "خليك تخلي السيرفر نفسه يعمل طلبات لصالحك، ممكن توصلك لموارد داخلية." },
+              { "topic": "File Upload Vulnerabilities", "benefit_ar": "طريقة شائعة لرفع Shell والسيطرة الكاملة على السيرفر." },
+              { "topic": "Path Traversal", "benefit_ar": "الوصول لملفات خارج النطاق المسموح بيه على السيرفر." },
+              { "topic": "API Security", "benefit_ar": "أغلب التطبيقات الحديثة (موبايل وويب) بتعتمد على APIs، فهم ثغراتها ضروري جدًا." },
+              { "topic": "JWT Security", "benefit_ar": "ثغرات التوكنات الحديثة اللي بتستخدمها تطبيقات الموبايل والـAPIs بكثرة." }
+            ]
+          },
+          {
+            "course_id": "course_13",
+            "title_ar": "أداة Burp Suite",
+            "topics_detailed": [
+              { "topic": "Proxy", "benefit_ar": "القلب اللي بيسمحلك تعترض وتعدّل كل طلب بين متصفحك والسيرفر." },
+              { "topic": "HTTP History", "benefit_ar": "تسجيل كل الطلبات عشان ترجعلها وتحللها وقت ما تحتاج." },
+              { "topic": "Repeater", "benefit_ar": "إعادة إرسال وتعديل الطلبات يدويًا لاختبار الثغرات بدقة." },
+              { "topic": "Intruder", "benefit_ar": "أتمتة هجمات زي Brute Force أو Fuzzing على باراميترات محددة." },
+              { "topic": "Decoder", "benefit_ar": "فك وتشفير البيانات (Base64, URL encoding) اللي بتقابلك كتير في اختبار الويب." },
+              { "topic": "Comparer", "benefit_ar": "مقارنة استجابتين لمعرفة الفرق الدقيق اللي ممكن يكشف ثغرة." },
+              { "topic": "HTTP Requests", "benefit_ar": "فهم دقيق لبنية الطلب يساعدك تكتشف تلاعب ممكن تعمله." },
+              { "topic": "HTTP Responses", "benefit_ar": "قراءة الاستجابة بعناية ممكن تكشفلك معلومات حساسة أو رسائل خطأ مفيدة." },
+              { "topic": "Authentication Testing", "benefit_ar": "تطبيق عملي لاختبار قوة نظام تسجيل الدخول." },
+              { "topic": "Authorization Testing", "benefit_ar": "تطبيق عملي لاكتشاف ثغرات IDOR وBroken Access Control." }
+            ]
+          },
+          {
+            "course_id": "course_14",
+            "title_ar": "أشهر عشرة مخاطر في تطبيقات الويب",
+            "topics_detailed": [
+              { "topic": "Broken Access Control", "benefit_ar": "أكتر ثغرة منتشرة حاليًا، هتقابلها كتير جدًا في اختبارات الويب الحقيقية." },
+              { "topic": "Cryptographic Failures", "benefit_ar": "اكتشاف تخزين أو نقل بيانات حساسة بدون تشفير كافي." },
+              { "topic": "Injection", "benefit_ar": "يجمع SQL Injection وأنواع تانية تحت مظلة واحدة، أساس كتير من الاختراقات الكبرى." },
+              { "topic": "Security Misconfiguration", "benefit_ar": "إعدادات افتراضية أو خاطئة بتسيب الباب مفتوح للمهاجم." },
+              { "topic": "Authentication Failures", "benefit_ar": "ضعف في نظام تسجيل الدخول يسمح بتجاوزه أو تخمينه." },
+              { "topic": "SSRF", "benefit_ar": "تأكيد على خطورتها كونها دخلت الـTop 10 الرسمية." },
+              { "topic": "Vulnerable Components", "benefit_ar": "استخدام مكتبات أو إضافات قديمة فيها ثغرات معروفة وCVEs جاهزة." },
+              { "topic": "Security Logging", "benefit_ar": "غياب التسجيل بيخلي اختراقك ممكن يفوت من غير ما حد يلاحظه." },
+              { "topic": "Security Monitoring", "benefit_ar": "فهمك ليه يفيدك تعرف إمتى المدافعين ممكن يكتشفوك." }
+            ]
+          }
+        ]
+      },
+
+      {
+        "level_id": "level_05",
+        "courses": [
+          {
+            "course_id": "course_15",
+            "title_ar": "اختبار أمان تطبيقات Android",
+            "topics_detailed": [
+              { "topic": "Android Architecture", "benefit_ar": "فهم بنية النظام ضروري قبل ما تحلل أي تطبيق." },
+              { "topic": "APK Structure", "benefit_ar": "تفكيك ملف التطبيق لفهم محتواه وملفاته الداخلية." },
+              { "topic": "Android Permissions", "benefit_ar": "اكتشاف صلاحيات زايدة عن الحاجة ممكن تستغل أو تهدد الخصوصية." },
+              { "topic": "ADB", "benefit_ar": "أداة التحكم الأساسية في أي جهاز Android للتحليل الديناميكي." },
+              { "topic": "JADX", "benefit_ar": "فك ترجمة كود التطبيق (Decompile) لقراءته واكتشاف ثغرات فيه." },
+              { "topic": "APKTool", "benefit_ar": "تفكيك وإعادة تجميع التطبيق، مفيدة لتعديل التطبيق أثناء الاختبار." },
+              { "topic": "MobSF", "benefit_ar": "أداة بتؤتمت تحليل أمان التطبيق بشكل سريع وشامل." },
+              { "topic": "Frida", "benefit_ar": "أداة قوية جدًا للتلاعب بسلوك التطبيق وقت تشغيله (Dynamic Instrumentation)." },
+              { "topic": "Insecure Data Storage", "benefit_ar": "أشهر ثغرة في تطبيقات الموبايل - بيانات حساسة متخزنة بدون حماية." },
+              { "topic": "API Security", "benefit_ar": "تطبيقات الموبايل بتتواصل مع سيرفرات عن طريق APIs، هتربط هنا بكل اللي اتعلمته في أمن الويب." },
+              { "topic": "Static Analysis", "benefit_ar": "تحليل كود التطبيق من غير تشغيله، أول خطوة في أي فحص." },
+              { "topic": "Dynamic Analysis", "benefit_ar": "تحليل سلوك التطبيق وهو شغال فعليًا، بيكشف حاجات الـStatic مش بتكشفها." }
+            ]
+          },
+          {
+            "course_id": "course_16",
+            "title_ar": "أمن تطبيقات iOS",
+            "topics_detailed": [
+              { "topic": "iOS Architecture", "benefit_ar": "فهم بنية النظام المختلفة عن Android ضروري قبل أي تحليل." },
+              { "topic": "IPA Structure", "benefit_ar": "فهم شكل ملف تطبيق iOS الداخلي زي ما فهمت APK في Android." },
+              { "topic": "Keychain", "benefit_ar": "مكان تخزين البيانات الحساسة في iOS، هدف رئيسي للتحليل." },
+              { "topic": "App Sandbox", "benefit_ar": "فهم القيود المفروضة على التطبيق يساعدك تعرف حدود أي هجوم." },
+              { "topic": "Code Signing", "benefit_ar": "فهمه ضروري لو هتحتاج تتعامل مع تطبيقات معدّلة أو jailbreak." },
+              { "topic": "Secure Storage", "benefit_ar": "اكتشاف لو التطبيق بيخزن بيانات حساسة بشكل غير آمن." },
+              { "topic": "Network Security", "benefit_ar": "فحص التواصل بين التطبيق والسيرفر زي ما عملت في Android." },
+              { "topic": "Static Analysis", "benefit_ar": "تحليل الكود الثابت للتطبيق قبل تشغيله." },
+              { "topic": "Dynamic Analysis", "benefit_ar": "تحليل سلوك التطبيق وقت التشغيل الفعلي." }
+            ]
+          },
+          {
+            "course_id": "course_16b",
+            "title_ar": "اختراق البلوتوث والترددات اللاسلكية",
+            "topics_detailed": [
+              { "topic": "Bluetooth Architecture", "benefit_ar": "فهم البروتوكول قبل محاولة استهداف أي جهاز بلوتوث." },
+              { "topic": "BLE Security", "benefit_ar": "أغلب أجهزة IoT والساعات الذكية بتستخدم BLE، فهم ثغراتها مهم جدًا." },
+              { "topic": "Bluetooth Sniffing", "benefit_ar": "التقاط وتحليل حركة بيانات البلوتوث بين جهازين." },
+              { "topic": "RF Basics", "benefit_ar": "أساس فهم أي جهاز بيتواصل لاسلكيًا خارج الواي فاي والبلوتوث." },
+              { "topic": "Software Defined Radio (SDR)", "benefit_ar": "أداة بتخليك تلتقط وتحلل أي إشارة راديو تقريبًا (ريموتات، أجهزة إنذار...)." },
+              { "topic": "Signal Analysis", "benefit_ar": "فهم الإشارة الملتقطة وتحويلها لبيانات مفهومة." },
+              { "topic": "Replay Attacks", "benefit_ar": "إعادة تشغيل إشارة ملتقطة سابقًا لتنفيذ نفس الأمر (زي فتح باب بريموت)." },
+              { "topic": "Hardware Hacking Basics", "benefit_ar": "مقدمة لعالم اختراق الأجهزة الفعلية مش بس البرمجيات." }
+            ]
+          }
+        ]
+      },
+
+      {
+        "level_id": "level_06",
+        "courses": [
+          {
+            "course_id": "course_17",
+            "title_ar": "أمن إنترنت الأشياء",
+            "topics_detailed": [
+              { "topic": "IoT Architecture", "benefit_ar": "فهم مكونات أي جهاز ذكي (Firmware, Cloud, App) قبل اختباره." },
+              { "topic": "MQTT", "benefit_ar": "بروتوكول شائع جدًا في أجهزة IoT، هتقابله كتير في التواصل بين الجهاز والسيرفر." },
+              { "topic": "CoAP", "benefit_ar": "بروتوكول تاني شائع في الأجهزة المحدودة الموارد، مهم تعرف تحلل حركته." },
+              { "topic": "Device Authentication", "benefit_ar": "اكتشاف ضعف في طريقة تأكد الجهاز من هويته ممكن يسمح بانتحال شخصية." },
+              { "topic": "Firmware Security", "benefit_ar": "تحليل الـFirmware بيكشف باسوردات مدمجة (hardcoded) أو ثغرات مباشرة في كود الجهاز." },
+              { "topic": "Device Configuration", "benefit_ar": "إعدادات افتراضية ضعيفة من أشهر نقاط دخول أجهزة IoT." },
+              { "topic": "Network Communication", "benefit_ar": "تحليل البيانات المتبادلة بين الجهاز والسيرفر لاكتشاف تسريب معلومات." },
+              { "topic": "Secure Updates", "benefit_ar": "نظام تحديث ضعيف ممكن يستغل لحقن firmware خبيث على الجهاز." }
+            ]
+          },
+          {
+            "course_id": "course_18",
+            "title_ar": "أمن كاميرات IP",
+            "topics_detailed": [
+              { "topic": "IP Camera Architecture", "benefit_ar": "فهم مكونات الكاميرا (Firmware + Web Interface + Streaming) كتطبيق عملي مباشر لهدفك." },
+              { "topic": "RTSP", "benefit_ar": "البروتوكول المسؤول عن بث الفيديو، نقطة هجوم شائعة جدًا على الكاميرات." },
+              { "topic": "ONVIF", "benefit_ar": "بروتوكول تحكم قياسي في كاميرات المراقبة، معرفته تفتحلك طرق تحكم غير موثقة أحيانًا." },
+              { "topic": "Authentication", "benefit_ar": "أشهر مشكلة في الكاميرات: باسوردات افتراضية أو ضعيفة سهلة الاختراق." },
+              { "topic": "Firmware Analysis", "benefit_ar": "تفكيك firmware الكاميرا لاكتشاف ثغرات مباشرة في الكود الداخلي." },
+              { "topic": "Network Security", "benefit_ar": "تحليل البث والاتصال الشبكي للكاميرا لاكتشاف تسريب أو اعتراض ممكن." },
+              { "topic": "Encryption", "benefit_ar": "اكتشاف لو البث بيتبث من غير تشفير، وده بيسمح باعتراضه بسهولة." },
+              { "topic": "Secure Configuration", "benefit_ar": "مراجعة إعدادات الكاميرا المصرح لك باختبارها واقتراح تحسينات أمنية." }
+            ]
+          }
+        ]
+      },
+
+      {
+        "level_id": "level_07",
+        "courses": [
+          {
+            "course_id": "course_19",
+            "title_ar": "الهندسة العكسية",
+            "topics_detailed": [
+              { "topic": "Assembly Basics", "benefit_ar": "اللغة اللي البرامج بتتحول ليها فعليًا، أساس فهم أي تحليل عكسي." },
+              { "topic": "Binary Analysis", "benefit_ar": "فحص الملف التنفيذي نفسه لفهم بنيته ووظائفه." },
+              { "topic": "Disassembly", "benefit_ar": "تحويل الكود التنفيذي لـAssembly قابل للقراءة والتحليل." },
+              { "topic": "Debugging", "benefit_ar": "تتبع تنفيذ البرنامج خطوة بخطوة لفهم سلوكه بدقة." },
+              { "topic": "Ghidra", "benefit_ar": "أداة مجانية قوية من NSA للهندسة العكسية، هتستخدمها في تحليل Malware وFirmware." },
+              { "topic": "Static Analysis", "benefit_ar": "تحليل البرنامج بدون تشغيله، أول خطوة آمنة في أي تحليل." },
+              { "topic": "Dynamic Analysis", "benefit_ar": "تحليل سلوك البرنامج أثناء تشغيله الفعلي داخل بيئة معزولة." }
+            ]
+          },
+          {
+            "course_id": "course_20",
+            "title_ar": "برمجة C وC++ لأمن الأنظمة",
+            "topics_detailed": [
+              { "topic": "Pointers", "benefit_ar": "أساس فهم إزاي الذاكرة بتتلاعب بيها، ضروري لفهم ثغرات Buffer Overflow." },
+              { "topic": "Memory Management", "benefit_ar": "فهم إدارة الذاكرة يديك أساس قوي لفهم ثغرات الأمان منخفضة المستوى." },
+              { "topic": "Stack", "benefit_ar": "أساس هجمات Stack-based Buffer Overflow الكلاسيكية." },
+              { "topic": "Heap", "benefit_ar": "أساس هجمات Heap-based exploitation الأكثر تعقيدًا." },
+              { "topic": "Data Structures", "benefit_ar": "فهمها يساعدك تقرأ كود معقد أثناء الهندسة العكسية." },
+              { "topic": "Compilation", "benefit_ar": "فهم إزاي الكود بيتحول لملف تنفيذي، أساسي لفهم الـReverse Engineering." },
+              { "topic": "Buffer Overflow Concepts", "benefit_ar": "مقدمة لأحد أهم فئات الثغرات في البرامج والأنظمة المنخفضة المستوى." }
+            ]
+          },
+          {
+            "course_id": "course_21",
+            "title_ar": "تحليل البرمجيات الخبيثة",
+            "topics_detailed": [
+              { "topic": "Malware Types", "benefit_ar": "تصنيف الأنواع (Virus, Worm, Trojan, Ransomware) يساعدك تتوقع سلوك العينة." },
+              { "topic": "Static Analysis", "benefit_ar": "فحص العينة بدون تشغيلها، تطبيق مباشر لمهارات Reverse Engineering." },
+              { "topic": "Dynamic Analysis", "benefit_ar": "تشغيل العينة داخل بيئة معزولة لمراقبة سلوكها الفعلي بأمان." },
+              { "topic": "Behavioral Analysis", "benefit_ar": "فهم الأنماط اللي البرمجية الخبيثة بتتبعها (اتصال بسيرفر، تعديل ريجستري...)." },
+              { "topic": "Sandboxing", "benefit_ar": "البيئة الآمنة اللي لازم تشتغل فيها دايمًا وأنت بتحلل أي عينة خطرة." },
+              { "topic": "Persistence Concepts", "benefit_ar": "فهم إزاي البرمجية الخبيثة بتضمن بقاءها على الجهاز بعد إعادة التشغيل." },
+              { "topic": "REMnux", "benefit_ar": "توزيعة Linux مخصصة لأدوات تحليل الـMalware جاهزة ومجمعة." }
+            ]
+          },
+          {
+            "course_id": "course_22",
+            "title_ar": "أمن الحوسبة السحابية",
+            "topics_detailed": [
+              { "topic": "AWS Security", "benefit_ar": "أشهر منصة سحابية في السوق، فهم ثغراتها مطلوب جدًا في سوق العمل." },
+              { "topic": "Azure Security", "benefit_ar": "منصة منتشرة جدًا في بيئات الشركات اللي بتستخدم Active Directory." },
+              { "topic": "IAM", "benefit_ar": "إدارة الصلاحيات السحابية، إعدادات خاطئة فيها من أشهر أسباب الاختراقات الكبرى." },
+              { "topic": "Cloud Misconfigurations", "benefit_ar": "السبب الأول لمعظم تسريبات البيانات السحابية (S3 Buckets مفتوحة مثلًا)." },
+              { "topic": "Storage Security", "benefit_ar": "اكتشاف تخزين سحابي مكشوف بيانات حساسة بدون حماية." },
+              { "topic": "Secrets Management", "benefit_ar": "اكتشاف مفاتيح API أو باسوردات متسربة في كود أو إعدادات سحابية." },
+              { "topic": "Container Security", "benefit_ar": "أمان Docker/Kubernetes، مهم جدًا مع انتشار الأنظمة الحديثة المبنية عليها." }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

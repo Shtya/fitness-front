@@ -1,0 +1,710 @@
+{
+  "roadmap": {
+    "title": "Cybersecurity & Ethical Hacking Roadmap",
+    "language": "ar",
+    "description": "خارطة طريق عربية لتعلم الأمن السيبراني واختبار الاختراق من الأساسيات إلى المستوى المتقدم.",
+    "target_role": [
+      "Ethical Hacker",
+      "Penetration Tester",
+      "Mobile Security Analyst",
+      "IoT Security Specialist"
+    ],
+    "total_levels": 7,
+    "total_courses": 22,
+    "learning_policy": {
+      "practice_required": true,
+      "authorized_testing_only": true,
+      "lab_environment_recommended": true,
+      "course_completion_requires_practical_project": true
+    },
+    "levels": [
+      {
+        "id": "level_01",
+        "title": "Fundamentals",
+        "title_ar": "الأساسيات التقنية",
+        "description": "بناء أساس قوي في الشبكات وأنظمة التشغيل والبرمجة.",
+        "priority": "critical",
+        "courses": [
+          {
+            "id": "course_01",
+            "title": "Computer Networking - CCNA",
+            "title_ar": "أساسيات الشبكات CCNA",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+CCNA+كامل+بالعربي+أحمد+نبيل",
+            "language": "ar",
+            "level": "beginner",
+            "topics": [
+              "OSI Model",
+              "TCP/IP",
+              "IP Addressing",
+              "Subnetting",
+              "TCP and UDP",
+              "DNS",
+              "DHCP",
+              "ARP",
+              "Routing",
+              "Switching",
+              "VLANs",
+              "Ports and Protocols",
+              "Network Troubleshooting"
+            ],
+            "expected_outcome": "فهم الشبكات وكيفية انتقال البيانات والاتصال بين الأجهزة والسيرفرات.",
+            "practical_result": "إنشاء شبكة تجريبية وفهم عناوين IP وتحليل الاتصالات."
+          },
+          {
+            "id": "course_02",
+            "title": "Linux Administration",
+            "title_ar": "إدارة أنظمة Linux",
+            "youtube_search_url": "https://www.youtube.com/watch?v=JBGnzEtimmg",
+            "language": "ar",
+            "level": "beginner",
+            "topics": [
+              "Linux File System",
+              "Terminal Commands",
+              "Users and Groups",
+              "File Permissions",
+              "Processes",
+              "Services",
+              "SSH",
+              "Bash Basics",
+              "Package Management",
+              "Linux Networking",
+              "Redirection",
+              "Pipes"
+            ],
+            "expected_outcome": "القدرة على استخدام Linux وإدارة النظام من خلال Terminal.",
+            "practical_result": "إدارة ملفات النظام والمستخدمين والصلاحيات وتشغيل الخدمات."
+          },
+          {
+            "id": "course_03",
+            "title": "Windows Administration",
+            "title_ar": "إدارة أنظمة Windows",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+Windows+Server+Administration+بالعربي+كامل",
+            "language": "ar",
+            "level": "beginner",
+            "topics": [
+              "Windows Architecture",
+              "CMD",
+              "PowerShell",
+              "Users and Groups",
+              "Permissions",
+              "Services",
+              "Processes",
+              "Windows Firewall",
+              "Event Viewer",
+              "Windows Server Basics"
+            ],
+            "expected_outcome": "فهم أنظمة Windows وإدارة المستخدمين والخدمات وإعدادات الأمان.",
+            "practical_result": "إدارة جهاز Windows وتحليل سجلات النظام."
+          },
+          {
+            "id": "course_04",
+            "title": "Python Programming",
+            "title_ar": "برمجة Python",
+            "youtube_search_url": "https://www.youtube.com/watch?v=o3paqBstP9Y",
+            "language": "ar",
+            "level": "beginner",
+            "topics": [
+              "Variables",
+              "Data Types",
+              "Conditions",
+              "Loops",
+              "Functions",
+              "Lists",
+              "Dictionaries",
+              "Object Oriented Programming",
+              "File Handling",
+              "JSON",
+              "HTTP Requests",
+              "Sockets Basics"
+            ],
+            "expected_outcome": "القدرة على كتابة Scripts وأدوات مساعدة للأعمال الأمنية.",
+            "practical_result": "إنشاء برنامج لتحليل Logs وأتمتة المهام."
+          },
+          {
+            "id": "course_05",
+            "title": "Bash Scripting and PowerShell",
+            "title_ar": "برمجة Bash وPowerShell",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+Bash+Scripting+بالعربي+وكورس+PowerShell+للمبتدئين",
+            "language": "ar",
+            "level": "beginner",
+            "topics": [
+              "Variables",
+              "Conditions",
+              "Loops",
+              "Functions",
+              "Automation",
+              "File Operations",
+              "Process Management",
+              "System Administration"
+            ],
+            "expected_outcome": "أتمتة المهام الإدارية والأمنية باستخدام Scripts.",
+            "practical_result": "كتابة Scripts لإدارة النظام وتحليل الملفات والعمليات."
+          }
+        ]
+      },
+      {
+        "id": "level_02",
+        "title": "Cybersecurity Fundamentals",
+        "title_ar": "أساسيات الأمن السيبراني",
+        "description": "فهم المفاهيم الأمنية والتهديدات وأساليب الحماية.",
+        "priority": "critical",
+        "courses": [
+          {
+            "id": "course_06",
+            "title": "Introduction to Cybersecurity",
+            "title_ar": "مقدمة في الأمن السيبراني",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+مقدمة+الأمن+السيبراني+بالعربي+كامل",
+            "language": "ar",
+            "level": "beginner",
+            "topics": [
+              "CIA Triad",
+              "Threats",
+              "Vulnerabilities",
+              "Malware",
+              "Phishing",
+              "Social Engineering",
+              "Authentication",
+              "Authorization",
+              "Encryption",
+              "Risk Management",
+              "Incident Response"
+            ],
+            "expected_outcome": "فهم أنواع الهجمات والمخاطر والمفاهيم الأساسية للحماية.",
+            "practical_result": "تحليل سيناريوهات تهديدات أمنية وتحديد وسائل الحماية."
+          },
+          {
+            "id": "course_07",
+            "title": "CompTIA Security+",
+            "title_ar": "شهادة Security+",
+            "youtube_search_url": "https://www.youtube.com/playlist?list=PLLlr6jKKdyK3C22AuU70h5xWe0ePmsbT7",
+            "language": "ar",
+            "level": "beginner_intermediate",
+            "topics": [
+              "Security Architecture",
+              "Threat Intelligence",
+              "Network Security",
+              "Cryptography",
+              "Identity Management",
+              "Vulnerability Assessment",
+              "Malware",
+              "Cloud Security",
+              "Risk Management",
+              "Incident Response"
+            ],
+            "expected_outcome": "بناء قاعدة معرفية قوية في الأمن السيبراني والاستعداد لموضوعات شهادة Security+.",
+            "practical_result": "تقييم المخاطر وفهم آليات الحماية والاستجابة للحوادث."
+          }
+        ]
+      },
+      {
+        "id": "level_03",
+        "title": "Ethical Hacking and Penetration Testing",
+        "title_ar": "الاختراق الأخلاقي واختبار الاختراق",
+        "description": "تعلم منهجية اختبار الاختراق والتعامل مع أدوات التقييم الأمني.",
+        "priority": "high",
+        "courses": [
+          {
+            "id": "course_08",
+            "title": "Kali Linux Fundamentals",
+            "title_ar": "أساسيات Kali Linux",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+Kali+Linux+بالعربي+من+الصفر+للاحتراف",
+            "language": "ar",
+            "level": "beginner",
+            "topics": [
+              "Kali Linux Installation",
+              "VirtualBox",
+              "Linux Commands",
+              "Security Tools",
+              "Testing Environment Setup",
+              "Terminal",
+              "File Management",
+              "Permissions"
+            ],
+            "expected_outcome": "تجهيز بيئة اختبار اختراق واستخدام Kali Linux.",
+            "practical_result": "إنشاء Kali Linux Virtual Machine وتجهيز أدوات الاختبار."
+          },
+          {
+            "id": "course_09",
+            "title": "Ethical Hacking and Penetration Testing",
+            "title_ar": "الاختراق الأخلاقي واختبار الاختراق",
+            "youtube_search_url": "https://www.youtube.com/watch?v=qhR4OD0Y8Rg",
+            "language": "ar",
+            "level": "beginner_intermediate",
+            "topics": [
+              "Penetration Testing Methodology",
+              "Information Gathering",
+              "Reconnaissance",
+              "Scanning",
+              "Enumeration",
+              "Vulnerability Assessment",
+              "Exploitation Concepts",
+              "Burp Suite",
+              "Nmap",
+              "Metasploit",
+              "Reporting"
+            ],
+            "expected_outcome": "فهم دورة اختبار الاختراق من جمع المعلومات إلى كتابة التقرير.",
+            "practical_result": "تنفيذ اختبار اختراق تدريبي داخل Lab مصرح به وإعداد تقرير."
+          },
+          {
+            "id": "course_10",
+            "title": "Network Penetration Testing",
+            "title_ar": "اختبار اختراق الشبكات",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=Network+Penetration+Testing+بالعربي+Nmap+Metasploit+Wireshark",
+            "language": "ar",
+            "level": "intermediate",
+            "topics": [
+              "Nmap",
+              "Wireshark",
+              "Network Scanning",
+              "Port Scanning",
+              "Service Enumeration",
+              "Vulnerability Scanning",
+              "Metasploit Fundamentals",
+              "Network Security Assessment"
+            ],
+            "expected_outcome": "القدرة على تقييم الشبكات واكتشاف الخدمات ونقاط الضعف.",
+            "practical_result": "فحص شبكة افتراضية وتحليل نتائج الفحص."
+          },
+          {
+            "id": "course_11",
+            "title": "Active Directory Penetration Testing",
+            "title_ar": "اختبار أمان Active Directory",
+            "youtube_search_url": "https://www.youtube.com/watch?v=NkcQ84hOJEg",
+            "language": "ar",
+            "level": "intermediate_advanced",
+            "topics": [
+              "Active Directory Architecture",
+              "Domain Controller",
+              "LDAP",
+              "Kerberos",
+              "Users and Groups",
+              "Group Policy",
+              "Enumeration",
+              "BloodHound",
+              "Impacket",
+              "Privilege Escalation Concepts"
+            ],
+            "expected_outcome": "فهم أمان بيئات Windows Domain وتقييم إعداداتها.",
+            "practical_result": "إنشاء Active Directory Lab وتقييم إعداداته الأمنية."
+          }
+        ]
+      },
+      {
+        "id": "level_04",
+        "title": "Web Application Security",
+        "title_ar": "أمن تطبيقات الويب",
+        "description": "تخصص اختبار أمان المواقع والـ APIs.",
+        "priority": "high",
+        "courses": [
+          {
+            "id": "course_12",
+            "title": "Web Application Security",
+            "title_ar": "أمن تطبيقات الويب",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+Web+Penetration+Testing+بالعربي+كامل",
+            "language": "ar",
+            "level": "intermediate",
+            "topics": [
+              "HTTP",
+              "HTTPS",
+              "Cookies",
+              "Sessions",
+              "Authentication",
+              "Authorization",
+              "SQL Injection",
+              "XSS",
+              "CSRF",
+              "IDOR",
+              "SSRF",
+              "File Upload Vulnerabilities",
+              "Path Traversal",
+              "API Security",
+              "JWT Security"
+            ],
+            "expected_outcome": "فهم واختبار ثغرات تطبيقات الويب وواجهات API.",
+            "practical_result": "اختبار تطبيق ويب تدريبي واكتشاف الثغرات وإصلاحها."
+          },
+          {
+            "id": "course_13",
+            "title": "Burp Suite",
+            "title_ar": "أداة Burp Suite",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+Burp+Suite+بالعربي+Proxy+Repeater+Intruder",
+            "language": "ar",
+            "level": "intermediate",
+            "topics": [
+              "Proxy",
+              "HTTP History",
+              "Repeater",
+              "Intruder",
+              "Decoder",
+              "Comparer",
+              "HTTP Requests",
+              "HTTP Responses",
+              "Authentication Testing",
+              "Authorization Testing"
+            ],
+            "expected_outcome": "إتقان تحليل طلبات الويب واختبار أمان التطبيقات.",
+            "practical_result": "تحليل وتعديل طلبات HTTP داخل تطبيق تجريبي."
+          },
+          {
+            "id": "course_14",
+            "title": "OWASP Top 10",
+            "title_ar": "أشهر عشرة مخاطر في تطبيقات الويب",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=شرح+OWASP+Top+10+بالعربي+عملي",
+            "language": "ar",
+            "level": "intermediate",
+            "topics": [
+              "Broken Access Control",
+              "Cryptographic Failures",
+              "Injection",
+              "Security Misconfiguration",
+              "Authentication Failures",
+              "SSRF",
+              "Vulnerable Components",
+              "Security Logging",
+              "Security Monitoring"
+            ],
+            "expected_outcome": "فهم تصنيفات المخاطر الأمنية في تطبيقات الويب.",
+            "practical_result": "تصنيف ثغرات تطبيق تجريبي واقتراح حلول لها."
+          }
+        ]
+      },
+      {
+        "id": "level_05",
+        "title": "Mobile Security",
+        "title_ar": "أمن تطبيقات الهواتف",
+        "description": "تعلم اختبار أمان تطبيقات Android وiOS.",
+        "priority": "specialization",
+        "courses": [
+          {
+            "id": "course_15",
+            "title": "Android Application Security and Pentesting",
+            "title_ar": "اختبار أمان تطبيقات Android",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=Android+Application+Pentesting+بالعربي+Frida+MobSF",
+            "language": "ar",
+            "level": "intermediate_advanced",
+            "topics": [
+              "Android Architecture",
+              "APK Structure",
+              "Android Permissions",
+              "ADB",
+              "JADX",
+              "APKTool",
+              "MobSF",
+              "Frida",
+              "Insecure Data Storage",
+              "API Security",
+              "Static Analysis",
+              "Dynamic Analysis"
+            ],
+            "expected_outcome": "تحليل تطبيقات Android واختبار تخزين البيانات والصلاحيات والاتصالات.",
+            "practical_result": "تحليل APK تجريبي وإعداد تقرير أمني."
+          },
+          {
+            "id": "course_16",
+            "title": "iOS Application Security",
+            "title_ar": "أمن تطبيقات iOS",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=iOS+Application+Security+بالعربي+اختبار+اختراق",
+            "language": "ar",
+            "level": "advanced",
+            "topics": [
+              "iOS Architecture",
+              "IPA Structure",
+              "Keychain",
+              "App Sandbox",
+              "Code Signing",
+              "Secure Storage",
+              "Network Security",
+              "Static Analysis",
+              "Dynamic Analysis"
+            ],
+            "expected_outcome": "فهم بنية أمان تطبيقات iOS وتقييمها.",
+            "practical_result": "تحليل تطبيق iOS تجريبي وتقييم آليات الحماية."
+          }
+        ]
+      },
+      {
+        "id": "level_06",
+        "title": "IoT and Camera Security",
+        "title_ar": "أمن إنترنت الأشياء والكاميرات",
+        "description": "تقييم أمان الأجهزة الذكية والكاميرات وأنظمة الاتصال.",
+        "priority": "specialization",
+        "courses": [
+          {
+            "id": "course_17",
+            "title": "IoT Security",
+            "title_ar": "أمن إنترنت الأشياء",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+IoT+Security+بالعربي+أمن+إنترنت+الأشياء",
+            "language": "ar",
+            "level": "intermediate_advanced",
+            "topics": [
+              "IoT Architecture",
+              "MQTT",
+              "CoAP",
+              "Device Authentication",
+              "Firmware Security",
+              "Device Configuration",
+              "Network Communication",
+              "Secure Updates"
+            ],
+            "expected_outcome": "فهم البنية الأمنية للأجهزة الذكية وتقييم إعداداتها.",
+            "practical_result": "اختبار جهاز IoT تجريبي وتحليل اتصالاته."
+          },
+          {
+            "id": "course_18",
+            "title": "IP Camera Security",
+            "title_ar": "أمن كاميرات IP",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=IP+Camera+Security+بالعربي+RTSP+ONVIF+Firmware",
+            "language": "ar",
+            "level": "advanced",
+            "topics": [
+              "IP Camera Architecture",
+              "RTSP",
+              "ONVIF",
+              "Authentication",
+              "Firmware Analysis",
+              "Network Security",
+              "Encryption",
+              "Secure Configuration"
+            ],
+            "expected_outcome": "فهم آليات أمان الكاميرات وتقييم إعداداتها واتصالاتها.",
+            "practical_result": "تقييم كاميرا تجريبية مملوكة للمستخدم وتحليل إعداداتها الأمنية."
+          }
+        ]
+      },
+      {
+        "id": "level_07",
+        "title": "Advanced Security",
+        "title_ar": "الأمن السيبراني المتقدم",
+        "description": "التعمق في تحليل البرامج والهندسة العكسية والبرمجيات الخبيثة وأمن السحابة.",
+        "priority": "advanced",
+        "courses": [
+          {
+            "id": "course_19",
+            "title": "Reverse Engineering",
+            "title_ar": "الهندسة العكسية",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+Reverse+Engineering+بالعربي+Ghidra+Assembly",
+            "language": "ar",
+            "level": "advanced",
+            "topics": [
+              "Assembly Basics",
+              "Binary Analysis",
+              "Disassembly",
+              "Debugging",
+              "Ghidra",
+              "Static Analysis",
+              "Dynamic Analysis"
+            ],
+            "expected_outcome": "فهم وتحليل البرامج التنفيذية من الداخل.",
+            "practical_result": "تحليل برنامج تجريبي باستخدام Ghidra."
+          },
+          {
+            "id": "course_20",
+            "title": "C and C++ for Low-Level Security",
+            "title_ar": "برمجة C وC++ لأمن الأنظمة",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+C+Programming+بالعربي+Pointers+Memory+Management",
+            "language": "ar",
+            "level": "intermediate_advanced",
+            "topics": [
+              "Pointers",
+              "Memory Management",
+              "Stack",
+              "Heap",
+              "Data Structures",
+              "Compilation",
+              "Buffer Overflow Concepts"
+            ],
+            "expected_outcome": "فهم الذاكرة وكيفية عمل البرامج على مستوى منخفض.",
+            "practical_result": "كتابة برامج C صغيرة وفهم طريقة تخزين البيانات في الذاكرة."
+          },
+          {
+            "id": "course_21",
+            "title": "Malware Analysis",
+            "title_ar": "تحليل البرمجيات الخبيثة",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=كورس+Malware+Analysis+بالعربي+Static+Dynamic+Analysis",
+            "language": "ar",
+            "level": "advanced",
+            "topics": [
+              "Malware Types",
+              "Static Analysis",
+              "Dynamic Analysis",
+              "Behavioral Analysis",
+              "Sandboxing",
+              "Persistence Concepts",
+              "REMnux"
+            ],
+            "expected_outcome": "تحليل سلوك البرمجيات الخبيثة وفهم آليات عملها.",
+            "practical_result": "تحليل عينة تعليمية آمنة داخل بيئة معزولة."
+          },
+          {
+            "id": "course_22",
+            "title": "Cloud Security",
+            "title_ar": "أمن الحوسبة السحابية",
+            "youtube_search_url": "https://www.youtube.com/results?search_query=Cloud+Security+بالعربي+AWS+Azure+IAM",
+            "language": "ar",
+            "level": "intermediate_advanced",
+            "topics": [
+              "AWS Security",
+              "Azure Security",
+              "IAM",
+              "Cloud Misconfigurations",
+              "Storage Security",
+              "Secrets Management",
+              "Container Security"
+            ],
+            "expected_outcome": "فهم وتقييم إعدادات الأمان في البيئات السحابية.",
+            "practical_result": "إنشاء بيئة Cloud تجريبية ومراجعة إعدادات الأمان."
+          }
+        ]
+      }
+    ],
+    "recommended_study_schedule": {
+      "daily_hours": 7,
+      "study_distribution": [
+        {
+          "activity": "Course Learning",
+          "activity_ar": "دراسة الكورس وفهم المفاهيم",
+          "hours": 2
+        },
+        {
+          "activity": "Practical Lab",
+          "activity_ar": "التطبيق العملي داخل المعمل",
+          "hours": 3
+        },
+        {
+          "activity": "Documentation",
+          "activity_ar": "قراءة التوثيق الرسمي",
+          "hours": 1
+        },
+        {
+          "activity": "Challenges and Notes",
+          "activity_ar": "حل التحديات وتدوين الملاحظات",
+          "hours": 1
+        }
+      ]
+    },
+    "recommended_timeline": [
+      {
+        "period": "Month 1",
+        "focus": "Networking, Linux, Windows"
+      },
+      {
+        "period": "Month 2",
+        "focus": "Python, Bash, Security Fundamentals"
+      },
+      {
+        "period": "Month 3",
+        "focus": "Kali Linux, Ethical Hacking"
+      },
+      {
+        "period": "Month 4",
+        "focus": "Web Security, Burp Suite"
+      },
+      {
+        "period": "Month 5",
+        "focus": "Network Pentesting, Active Directory"
+      },
+      {
+        "period": "Month 6",
+        "focus": "Android and Mobile Security"
+      },
+      {
+        "period": "Month 7",
+        "focus": "IoT and Camera Security"
+      },
+      {
+        "period": "Months 8-9",
+        "focus": "Reverse Engineering, Malware Analysis"
+      },
+      {
+        "period": "Months 10-12",
+        "focus": "Advanced Projects and Certifications"
+      }
+    ],
+    "certifications": [
+      {
+        "name": "CompTIA Security+",
+        "level": "beginner_intermediate",
+        "url": "https://www.comptia.org/certifications/security",
+        "purpose": "إثبات المعرفة بأساسيات الأمن السيبراني."
+      },
+      {
+        "name": "eJPT",
+        "level": "beginner_intermediate",
+        "url": "https://security.ine.com/certifications/ejpt-certification/",
+        "purpose": "تقييم المهارات العملية في اختبار الاختراق."
+      },
+      {
+        "name": "OSCP+",
+        "level": "advanced",
+        "url": "https://www.offsec.com/courses/pen-200/",
+        "purpose": "تطوير مهارات اختبار الاختراق المتقدمة."
+      },
+      {
+        "name": "Burp Suite Certified Practitioner",
+        "level": "advanced",
+        "url": "https://portswigger.net/web-security/certification",
+        "purpose": "إثبات مهارات اختبار أمان تطبيقات الويب."
+      }
+    ],
+    "recommended_labs": [
+      {
+        "name": "TryHackMe",
+        "url": "https://tryhackme.com/",
+        "purpose": "التعلم العملي الموجه."
+      },
+      {
+        "name": "Hack The Box Academy",
+        "url": "https://academy.hackthebox.com/",
+        "purpose": "التدريب المتقدم على اختبار الاختراق."
+      },
+      {
+        "name": "PortSwigger Web Security Academy",
+        "url": "https://portswigger.net/web-security",
+        "purpose": "تدريب أمن تطبيقات الويب."
+      },
+      {
+        "name": "OverTheWire",
+        "url": "https://overthewire.org/",
+        "purpose": "تحديات Linux."
+      },
+      {
+        "name": "picoCTF",
+        "url": "https://picoctf.org/",
+        "purpose": "تحديات الأمن السيبراني للمبتدئين."
+      },
+      {
+        "name": "OWASP",
+        "url": "https://owasp.org/",
+        "purpose": "مراجع أمن التطبيقات."
+      }
+    ],
+    "lab_environment": {
+      "recommended_ram_gb": 16,
+      "preferred_ram_gb": 32,
+      "recommended_storage_gb": 500,
+      "software": [
+        {
+          "name": "Kali Linux",
+          "url": "https://www.kali.org/"
+        },
+        {
+          "name": "VirtualBox",
+          "url": "https://www.virtualbox.org/"
+        },
+        {
+          "name": "Metasploitable 2",
+          "url": "https://docs.rapid7.com/metasploit/metasploitable-2/"
+        },
+        {
+          "name": "OWASP Juice Shop",
+          "url": "https://owasp.org/www-project-juice-shop/"
+        },
+        {
+          "name": "Docker",
+          "url": "https://docs.docker.com/"
+        }
+      ]
+    }
+  }
+}
