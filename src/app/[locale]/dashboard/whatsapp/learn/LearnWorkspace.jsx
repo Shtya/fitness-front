@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -71,10 +71,32 @@ function HighlighterBar({ value, size = 'sm' }) {
 	);
 }
 
-/** A small anchored menu of actions (closes on outside click / Escape). */
+/**
+ * A small anchored menu of actions (closes on outside click / Escape / scroll).
+ * Fixed to the viewport from its button: the shelf and lecture lists clip their rows (rounded
+ * frame), so an absolutely placed menu was cut off at the list edge. Opens upward when there is
+ * no room below.
+ */
 function RowMenu({ c, items }) {
 	const [open, setOpen] = useState(false);
+	const [place, setPlace] = useState(null); // { top, left, right, up }
 	const root = useRef(null);
+	const button = useRef(null);
+	const list = useRef(null);
+
+	useLayoutEffect(() => {
+		if (!open || !button.current) return;
+		const b = button.current.getBoundingClientRect();
+		const h = list.current?.offsetHeight || 0;
+		const up = b.bottom + 4 + h > window.innerHeight - 8 && b.top - 4 - h > 8;
+		const rtl = getComputedStyle(button.current).direction === 'rtl';
+		setPlace({
+			top: up ? b.top - 4 - h : b.bottom + 4,
+			// the menu's end edge lines up with the button's end edge
+			...(rtl ? { left: Math.max(8, b.left) } : { right: Math.max(8, window.innerWidth - b.right) }),
+		});
+	}, [open]);
+
 	useEffect(() => {
 		if (!open) return undefined;
 		const onDown = event => {
@@ -83,16 +105,26 @@ function RowMenu({ c, items }) {
 		const onKey = event => {
 			if (event.key === 'Escape') setOpen(false);
 		};
+		const close = () => setOpen(false);
 		document.addEventListener('pointerdown', onDown);
 		document.addEventListener('keydown', onKey);
+		window.addEventListener('scroll', close, true);
+		window.addEventListener('resize', close);
 		return () => {
 			document.removeEventListener('pointerdown', onDown);
 			document.removeEventListener('keydown', onKey);
+			window.removeEventListener('scroll', close, true);
+			window.removeEventListener('resize', close);
 		};
+	}, [open]);
+
+	useEffect(() => {
+		if (!open) setPlace(null);
 	}, [open]);
 	return (
 		<span className="lrn-menu" ref={root}>
 			<button
+				ref={button}
 				type="button"
 				className={`lrn-icon-btn${open ? ' is-open' : ''}`}
 				aria-haspopup="menu"
@@ -107,7 +139,13 @@ function RowMenu({ c, items }) {
 				<MoreVertical size={17} />
 			</button>
 			{open ? (
-				<span className="lrn-menu__list" role="menu">
+				<span
+					ref={list}
+					className="lrn-menu__list"
+					role="menu"
+					// measured first (hidden), then placed
+					style={place ? { top: place.top, left: place.left, right: place.right } : { visibility: 'hidden' }}
+				>
 					{items.filter(Boolean).map(item => (
 						<button
 							key={item.label}

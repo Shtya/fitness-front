@@ -48,11 +48,11 @@ export function buildBidiDecorations(doc, mode, rootDir) {
 			return;
 		}
 		if (CONTAINERS.has(name)) {
-			let own = dir;
-			if (mode === 'auto' && !nested) {
-				own = firstStrongDir(node.textContent) || dir;
-				decorations.push(Decoration.node(pos, pos + node.nodeSize, { dir: own }));
-			}
+			const own = mode === 'auto' && !nested ? firstStrongDir(node.textContent) || dir : dir;
+			// Every list / table / quote carries its dir explicitly (any depth, any mode): the stylesheet
+			// keys list indents, quote bars and cell rules on it, because the build turns logical
+			// properties into :lang() rules that follow the page language, not the text.
+			decorations.push(Decoration.node(pos, pos + node.nodeSize, { dir: own }));
 			node.forEach((child, offset) => visit(child, pos + 1 + offset, own, true));
 			return;
 		}

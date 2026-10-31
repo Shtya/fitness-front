@@ -2365,3 +2365,59 @@ html.dark .sd-lookup-star.is-on { background: rgba(180, 83, 9, 0.2); }
 		display: none;
 	}
 }
+
+/*
+ * Document sides by the block's own dir, not the page language. The build rewrites logical
+ * properties (padding-inline-start, border-inline-start…) into :lang(ar) / :not(:lang(ar)) rules,
+ * which put an Arabic document's list numbers and quote bars on the left of an English page.
+ * The editor marks every list, table and quote with its dir, so these rules use physical sides.
+ */
+.sd-md.sd-md :is(ul, ol)[dir='rtl'] {
+	padding-left: 0;
+	padding-right: 1.5em;
+}
+
+.sd-md.sd-md :is(ul, ol)[dir='ltr'] {
+	padding-left: 1.5em;
+	padding-right: 0;
+}
+
+.sd-md.sd-md ul[data-type='taskList'][dir='rtl'] {
+	padding-right: 0.15em;
+}
+
+.sd-md.sd-md ul[data-type='taskList'][dir='ltr'] {
+	padding-left: 0.15em;
+}
+
+.sd-md.sd-md li {
+	padding-left: 0.2em;
+	padding-right: 0.2em;
+}
+
+.sd-md.sd-md blockquote[dir='rtl'] {
+	border-left: 0;
+	border-right: 3px solid var(--sd-accent);
+	border-radius: 8px 0 0 8px;
+}
+
+.sd-md.sd-md blockquote[dir='ltr'] {
+	border-right: 0;
+	border-left: 3px solid var(--sd-accent);
+	border-radius: 0 8px 8px 0;
+}
+
+.sd-md.sd-md :is(table[dir='rtl'], .tableWrapper[dir='rtl'] > table) :is(th, td) + :is(th, td) {
+	border-left: 0;
+	border-right: 1px solid var(--sd-line);
+}
+
+.sd-md.sd-md :is(table[dir='ltr'], .tableWrapper[dir='ltr'] > table) :is(th, td) + :is(th, td) {
+	border-right: 0;
+	border-left: 1px solid var(--sd-line);
+}
+
+/* comfortable reading for mixed Arabic / English */
+.sd-md.sd-md :is(p, li, td, blockquote) {
+	overflow-wrap: break-word;
+}

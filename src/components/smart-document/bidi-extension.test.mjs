@@ -42,9 +42,9 @@ test('auto: each top-level block takes the direction of its own first letter', (
 	);
 });
 
-test('rtl: no per-block override — everything follows the document; English runs are isolated', () => {
+test('rtl: everything follows the document (containers say so explicitly); English runs are isolated', () => {
 	const out = describe(buildBidiDecorations(doc, 'rtl', 'rtl'));
-	assert.deepEqual(out.filter(d => d.kind === 'node').map(d => `${d.text}:${d.dir}`), ['codeBlock:ltr']);
+	assert.deepEqual(out.filter(d => d.kind === 'node').map(d => `${d.text}:${d.dir}`), ['bulletList:rtl', 'table:rtl', 'codeBlock:ltr']);
 	const runs = out.filter(d => d.kind === 'sd-bidi-run').map(d => d.text);
 	assert.ok(runs.includes('Topologies'));
 	assert.ok(runs.includes('Router'));

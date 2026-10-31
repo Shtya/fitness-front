@@ -924,11 +924,10 @@
 	display: inline-flex;
 }
 
+/* fixed to the viewport (placed by RowMenu) so list frames never clip it */
 .lrn-menu__list {
-	position: absolute;
-	top: calc(100% + 4px);
-	inset-inline-end: 0;
-	z-index: 30;
+	position: fixed;
+	z-index: 120;
 	display: grid;
 	min-width: 196px;
 	padding: 4px;
