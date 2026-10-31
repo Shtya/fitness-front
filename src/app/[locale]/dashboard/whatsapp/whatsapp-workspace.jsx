@@ -4534,6 +4534,49 @@ const attachmentBlobRequests = new Map();
 /** Failed media bubble id → original File + send options, so Retry can re-upload in this session. */
 const failedMediaRetries = new Map();
 const FAILED_MEDIA_RETRY_MAX = 20;
+
+/**
+ * Rebuild a File for Retry when the in-memory Map lost it (reload / earlier bug).
+ * Prefers the live blob: preview still on the bubble, then a durable attachment id.
+ */
+async function recoverOutboundMediaFile(message) {
+	const kind = String(message?.type || '').toLowerCase() || 'document';
+	const attachment = Array.isArray(message?.attachments) ? message.attachments[0] : null;
+	const fileName = attachment?.fileName || (kind === 'voice' || kind === 'ptt' ? 'voice.ogg' : 'file');
+	const mimeType = attachment?.mimeType || '';
+
+	const previewUrl = String(attachment?.url || attachment?.previewDataUrl || '').trim();
+	if (/^(blob:|data:)/i.test(previewUrl)) {
+		try {
+			const response = await fetch(previewUrl);
+			if (response.ok) {
+				const blob = await response.blob();
+				if (blob?.size) {
+					return toMediaFile(blob, { fileName, mimeType: mimeType || blob.type, kind });
+				}
+			}
+		} catch {
+			/* preview revoked */
+		}
+	}
+
+	const attachmentId = String(attachment?.id || '').trim();
+	if (attachmentId && isPersistedAttachmentId(attachmentId)) {
+		try {
+			const blob = await requestAttachmentBlob(attachmentId, {
+				timeout: 120_000,
+				priority: true,
+				kind,
+			});
+			if (blob?.size) {
+				return toMediaFile(blob, { fileName, mimeType: mimeType || blob.type, kind });
+			}
+		} catch {
+			/* still missing */
+		}
+	}
+	return null;
+}
 const attachmentFetchQueue = [];
 let attachmentFetchActive = 0;
 
@@ -19776,8 +19819,29 @@ function WhatsAppWorkspaceContent() {
 			);
 		const isText = String(message.type || 'text').toLowerCase() === 'text';
 		if (!isText) {
-			const mediaRetry = failedMediaRetries.get(message.id);
-			if (!mediaRetry || !sendFileRef.current) {
+			if (!sendFileRef.current) return;
+			let mediaRetry = failedMediaRetries.get(message.id);
+			if (!mediaRetry?.file) {
+				const recovered = await recoverOutboundMediaFile(message);
+				if (recovered) {
+					mediaRetry = {
+						file: recovered,
+						forcedType: String(message.type || '').toLowerCase() || undefined,
+						options: {
+							conversationId: targetConversationId,
+							caption: message.text || '',
+							replySnapshot: message.replyTo || null,
+						},
+					};
+					setBounded(
+						failedMediaRetries,
+						message.id,
+						mediaRetry,
+						FAILED_MEDIA_RETRY_MAX,
+					);
+				}
+			}
+			if (!mediaRetry?.file) {
 				if (String(message.id || '').startsWith('pending:')) {
 					releaseOptimisticMediaPreview(message);
 					persistConversationMessages(targetConversationId, items =>
@@ -19788,16 +19852,22 @@ function WhatsAppWorkspaceContent() {
 					localeRef.current === 'ar'
 						? 'أرفق الملف مرة أخرى لإعادة إرساله'
 						: 'Attach the file again to resend it',
+					{ id: `wa-resend-missing-${message.id}` },
 				);
 				return;
 			}
-			failedMediaRetries.delete(message.id);
 			persistConversationMessages(targetConversationId, apply);
-			await sendFileRef.current(mediaRetry.file, mediaRetry.forcedType, {
+			const sent = await sendFileRef.current(mediaRetry.file, mediaRetry.forcedType, {
 				...mediaRetry.options,
 				clientMessageId,
 				optimisticMessage: pendingMessage,
 			});
+			// Only drop the cached File after a successful send. A failed retry must
+			// still be able to tap Retry again without re-attaching.
+			if (sent) failedMediaRetries.delete(message.id);
+			else if (!failedMediaRetries.has(message.id)) {
+				setBounded(failedMediaRetries, message.id, mediaRetry, FAILED_MEDIA_RETRY_MAX);
+			}
 			return;
 		}
 		persistConversationMessages(targetConversationId, apply);
@@ -20455,16 +20525,16 @@ function WhatsAppWorkspaceContent() {
 				}
 			}
 
-			const ok = await sendFile(outgoing, 'voice', {
+			// Keep the bubble + original File so Retry can resend without re-recording.
+			// removeOnFailure used to wipe both, which left "Attach the file again".
+			await sendFile(outgoing, 'voice', {
 				clientMessageId,
 				optimisticMessage,
 				conversationId: targetConversationId,
 				accountId: uploadAccountId,
 				replySnapshot,
 				caption: '',
-				removeOnFailure: true,
 			});
-			if (!ok) restorePendingVoiceDraft(file, durationSec);
 		})();
 		return true;
 	};
