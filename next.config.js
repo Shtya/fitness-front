@@ -1,32 +1,39 @@
 const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin();
+const crypto = require('crypto');
+const fs = require('fs');
 const defaultPwaCache = require('next-pwa/cache');
 
-// next-pwa precaches every file under public/ by default. That is ~275MB here
-// (225MB of exercise videos alone), all downloaded the moment the installed PWA
-// first activates — which is why the first open crawls. Precache the app shell
-// only; the runtime caches below still keep each asset after it is first used.
-const PRECACHE_EXCLUDES = [
-  '!noprecache/**/*',
-  '!uploads/**/*',
-  '!sounds/**/*',
-  '!screens/**/*',
-  '!transform/**/*',
-  '!sf-pro-display/**/*',
-  '!**/*.{mp4,webm,mov,mp3,wav,ogg}',
-  // Multi-megabyte artwork that is only needed on the marketing/auth screens.
-  '!auth-*.png',
-  '!hero-avatar.png',
-  '!meta.png',
-  '!bg-whatsapp.svg',
+// next-pwa precaches every file under public/ unless told otherwise. Even with the large
+// folders excluded that was ~70MB of artwork (fake-chat avatars, particle assets, a 2MB
+// favicon) on top of the build files: on a phone the worker sat in "installing" for minutes,
+// and any failed request or closed app meant it never activated, so nothing worked offline.
+// Precache only what the offline shell needs from public/; images are still kept by the
+// runtime caches below the first time they are shown.
+const SHELL_PUBLIC_FILES = [
+  'offline.html',
+  'manifest.json',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/icon-512-maskable.png',
+  'icons/apple-touch-icon.png',
+  'icons/favicon-32.png',
+  'icons/favicon-16.png',
+  'icons/icon.svg',
 ];
+
+const shellPrecacheEntries = SHELL_PUBLIC_FILES.filter(file => fs.existsSync(`public/${file}`)).map(file => ({
+  url: `/${file}`,
+  revision: crypto.createHash('md5').update(fs.readFileSync(`public/${file}`)).digest('hex'),
+}));
 
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  publicExcludes: PRECACHE_EXCLUDES,
+  // An explicit list replaces next-pwa's sweep of the whole public/ folder.
+  additionalManifestEntries: shellPrecacheEntries,
   buildExcludes: [
     /app-build-manifest\.json$/,
     /middleware-manifest\.json$/,

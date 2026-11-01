@@ -102,19 +102,28 @@ export default function AddToHomeGuide({ autoShowDelayMs = 1600 }) {
 		setPlatform(detectPlatform());
 	}, []);
 
-	// Capture the install prompt as early as possible; the browser fires it once.
+	// The browser fires the install prompt once, often before hydration: the root layout's
+	// inline script keeps it on window.__so7baInstallPrompt and announces it.
 	useEffect(() => {
+		const adopt = () => {
+			if (window.__so7baInstallPrompt) setDeferredPrompt(window.__so7baInstallPrompt);
+		};
 		const onBeforeInstall = event => {
 			event.preventDefault();
+			window.__so7baInstallPrompt = event;
 			setDeferredPrompt(event);
 		};
 		const onInstalled = () => {
+			window.__so7baInstallPrompt = null;
 			writeState({ ...readState(), installed: true });
 			setOpen(false);
 		};
+		adopt();
+		window.addEventListener('so7ba:installprompt', adopt);
 		window.addEventListener('beforeinstallprompt', onBeforeInstall);
 		window.addEventListener('appinstalled', onInstalled);
 		return () => {
+			window.removeEventListener('so7ba:installprompt', adopt);
 			window.removeEventListener('beforeinstallprompt', onBeforeInstall);
 			window.removeEventListener('appinstalled', onInstalled);
 		};
@@ -156,6 +165,8 @@ export default function AddToHomeGuide({ autoShowDelayMs = 1600 }) {
 		if (deferredPrompt) {
 			deferredPrompt.prompt();
 			const choice = await deferredPrompt.userChoice.catch(() => null);
+			// A prompt can be shown only once.
+			window.__so7baInstallPrompt = null;
 			setDeferredPrompt(null);
 			if (choice?.outcome === 'accepted') {
 				writeState({ ...readState(), installed: true });

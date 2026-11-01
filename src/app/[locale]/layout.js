@@ -116,6 +116,14 @@ export default async function RootLayout({ children, params }) {
         <link rel='manifest' href='/manifest.json' />
         <link rel='icon' href='/icons/favicon-32.png' sizes='32x32' type='image/png' />
         <link rel='apple-touch-icon' href='/icons/apple-touch-icon.png' sizes='180x180' />
+        {/* Chrome fires beforeinstallprompt once, often before React has hydrated; keep it
+            for the install sheet (components/atoms/AddToHomeGuide.jsx) instead of losing it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__so7baInstallPrompt=e;window.dispatchEvent(new Event('so7ba:installprompt'));});",
+          }}
+        />
       </head>
 
       <body className={`bg-[#fff] scroll ${arabicFont.variable} ${dmSans.variable} ${openSans.variable} ${spaceGrotesk.variable} ${robotoMono.variable} ${inter.variable}`}>

@@ -38,12 +38,22 @@ function cacheablePage(response) {
 	return response && response.ok && response.type === 'basic' && !response.redirected && isHtml(response);
 }
 
+const WARM_TIMEOUT_MS = 15000;
+
 async function warmPage(cache, path) {
+	// Bounded: install waits on this, and a worker stuck in "installing" never goes offline-ready.
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), WARM_TIMEOUT_MS);
 	try {
-		const response = await fetch(path, { credentials: 'include', cache: 'no-store' });
+		const response = await fetch(path, { credentials: 'include', cache: 'no-store', signal: controller.signal });
 		if (cacheablePage(response)) await cache.put(pageKey(path), response);
+		// A body nobody reads keeps its connection busy (6 per host), and the precache
+		// downloads queued behind it: signed-out dashboard redirects stalled the install.
+		else await response.body?.cancel();
 	} catch {
 		/* offline during install, or the page needs a sign-in: it is saved on the next visit */
+	} finally {
+		clearTimeout(timer);
 	}
 }
 
@@ -151,7 +161,11 @@ async function handleNavigation(event) {
 	});
 	try {
 		const winner = await Promise.race([network, timeout]);
-		return winner || saved;
+		if (winner) return winner;
+		// The saved copy answered: release the late network response (its clone, if any,
+		// is still being written to the cache) so it does not hold a connection open.
+		network.then(late => late.body?.cancel().catch(() => undefined)).catch(() => undefined);
+		return saved;
 	} catch {
 		return saved;
 	} finally {
