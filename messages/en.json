@@ -1012,6 +1012,10 @@
 				"success": "Locked out. Welcome back."
 			},
 			"readoutLabel": "On the bar"
+		},
+		"remember": {
+			"label": "Remember me",
+			"hint": "Keeps your email here and offers your saved password."
 		}
 	},
 	"myProfile": {
@@ -1808,7 +1812,17 @@
 				"Look in the browser menu for \"Add to Home screen\" or \"Install app\".",
 				"Follow the instructions to add the icon to the home screen."
 			]
-		}
+		},
+		"sheetTitle": "Add {app} to your home screen",
+		"sheetLead": "Opens full screen and keeps working offline.",
+		"install": "Install",
+		"notNow": "Not now",
+		"iosTitle": "Two taps on iPhone",
+		"iosStep1": "Tap Share in Safari’s toolbar",
+		"iosStep2": "Choose “Add to Home Screen”",
+		"iosNotSafari": "Open this page in Safari first; other iPhone browsers can’t install apps.",
+		"manualTitle": "Install from the browser menu",
+		"gotIt": "Got it"
 	},
 	"users": {
 		"admin": {
@@ -9853,5 +9867,14 @@
 			"soups": "Soups",
 			"other": "Other"
 		}
+	},
+	"OfflineSync": {
+		"offline": "Offline",
+		"offlineSaved": "{count, plural, one {Offline · 1 saved} other {Offline · # saved}}",
+		"syncing": "Syncing…",
+		"pending": "{count, plural, one {1 waiting} other {# waiting}}",
+		"failed": "Sync failed · retry",
+		"synced": "Synced",
+		"retry": "Sync now"
 	}
 }

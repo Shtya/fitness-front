@@ -19,6 +19,10 @@ import { useLocale, useTranslations } from 'next-intl';
 import FloatingSelect from '@/components/atoms/FloatingSelect';
 import { useTheme } from '@/app/[locale]/theme';
 import NutritionGuideModal from './Nutritionguidemodal';
+import SyncStatusPill from '@/components/offline/SyncStatusPill';
+import { enqueue as enqueueOutbox, getRecords as getOutboxRecords } from '@/lib/offline/outbox';
+import { cachedRead, currentUserIdFromStorage } from '@/lib/offline/read-cache';
+import { NUTRITION_LOG_KIND } from '@/lib/offline/senders';
 
 /* =========================================================================
 	 SMALL UI PRIMITIVES
@@ -330,21 +334,11 @@ export default function ClientMealPlanPage() {
 
   const [selectedDateISO, setSelectedDateISO] = useState(null);
 
-  const pendingRef = useRef(new Set());
-  const runLocked = useCallback(async (key, fn) => {
-    if (pendingRef.current.has(key)) return;
-    pendingRef.current.add(key);
-    try {
-      await fn();
-    } finally {
-      pendingRef.current.delete(key);
-    }
-  }, []);
-
   const fetchPlan = useCallback(async () => {
-    const planRes = await api
-      .get('/nutrition/my/meal-plan')
-      .then(r => r?.data || null)
+    const planRes = await cachedRead(`nutrition:plan:${currentUserIdFromStorage()}`, () =>
+      api.get('/nutrition/my/meal-plan').then(r => r?.data || null),
+    )
+      .then(r => r.data)
       .catch(() => null);
     setPlan(planRes);
 
@@ -371,12 +365,18 @@ export default function ClientMealPlanPage() {
       }
       try {
         setLoading(true);
-        const logs = await api
-          .get('/nutrition/my/meal-logs', { params: { date: dateISO } })
-          .then(r => r?.data || [])
+        const uid = currentUserIdFromStorage();
+        const logs = await cachedRead(`nutrition:logs:${uid}:${dateISO}`, () =>
+          api.get('/nutrition/my/meal-logs', { params: { date: dateISO } }).then(r => r?.data || []),
+        )
+          .then(r => (Array.isArray(r.data) ? r.data : []))
           .catch(() => []);
         setHistory(logs);
-        const hydrated = deriveTakenMapsFromHistory(planRef || plan, logs);
+        // Ticks saved on this device but not confirmed yet are newer than the server copy.
+        const pendingLogs = getOutboxRecords({ kind: NUTRITION_LOG_KIND, userId: uid })
+          .filter(record => record.payload?.date === dateISO)
+          .map(record => record.payload.body);
+        const hydrated = deriveTakenMapsFromHistory(planRef || plan, [...logs, ...pendingLogs]);
         setTakenMap(hydrated.mealMap);
         setItemTakenMap(hydrated.itemMap);
         setSuppTakenMap(hydrated.suppMap);
@@ -454,118 +454,96 @@ export default function ClientMealPlanPage() {
   }, [tabs, activeDayKey]);
   const headerBtn = 'grid h-11 w-11 place-items-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-b-[rgba(15,48,120,0.35)] border-e-[rgba(15,48,120,0.25)] bg-white/15 text-white shadow-[2px_3px_6px_rgba(15,23,42,0.35)] transition active:scale-95';
 
-  /* taken handlers (unchanged logic) */
-  const setMealTaken = async (dayKey, mealIndex, meal, value) => {
-    const lockKey = `meal:${dayKey}:${mealIndex}`;
-    await runLocked(lockKey, async () => {
-      const mealKey = `${dayKey}:${mealIndex}`;
-      const itemKeys = (meal.items || []).map(i => kItemByName(dayKey, mealIndex, i.name));
-      const prevMealValue = !!takenMap[mealKey];
-      const prevItemValues = {};
-      itemKeys.forEach(k => {
-        prevItemValues[k] = itemTakenMap[k];
-      });
-      setTakenMap(prev => ({ ...prev, [mealKey]: value }));
-      setItemTakenMap(prev => {
-        const next = { ...prev };
-        itemKeys.forEach(k => {
-          next[k] = value;
-        });
-        return next;
-      });
-      try {
-        await api.post('/nutrition/food-logs', {
-          planId: plan?.id,
-          day: dayKey,
-          mealIndex,
-          eatenAt: new Date().toISOString(),
-          adherence: value ? 5 : 3,
-          mealTitle: meal?.title || t('nutrition.meal.defaultTitle', { index: mealIndex + 1 }),
-          items: (meal.items || []).map(i => ({
-            name: i.name,
-            taken: !!value,
-            qty: i.quantity == null ? null : Number(i.quantity),
-            unit: i.unit === 'count' ? 'count' : 'g',
-          })),
-          notifyCoach: false,
-          extraFoods: [],
-          supplementsTaken: [],
-        });
-      } catch (e) {
-        setTakenMap(prev => ({ ...prev, [mealKey]: prevMealValue }));
-        setItemTakenMap(prev => {
-          const next = { ...prev };
-          itemKeys.forEach(k => {
-            next[k] = prevItemValues[k];
-          });
-          return next;
-        });
-        Notification(e?.response?.data?.message || t('nutrition.errors.mealLogFailed'), 'error');
-      }
+  /* taken handlers
+     A tick is applied on screen and saved on the device at once, then sent by the outbox
+     (works offline). The server replaces a meal's items and supplements on every log, so each
+     log carries the whole meal: ticking one item can no longer wipe the others. */
+  const mapsRef = useRef({ itemTakenMap, suppTakenMap });
+  mapsRef.current = { itemTakenMap, suppTakenMap };
+
+  const queueMealLog = (dayKey, mealIndex, itemMap, suppMap) => {
+    const dayObj = (plan?.days || []).find(d => (d.day || '').toLowerCase() === dayKey) || activeDay;
+    const uid = currentUserIdFromStorage();
+    const eatenAt = new Date();
+    const date = formatLocalDateYYYYMMDD(eatenAt);
+    let body;
+    if (mealIndex != null) {
+      const meal = dayObj?.meals?.[mealIndex] || {};
+      const items = (meal.items || []).map(i => ({
+        name: i.name,
+        taken: !!itemMap[kItemByName(dayKey, mealIndex, i.name)],
+        qty: i.quantity == null ? null : Number(i.quantity),
+        unit: i.unit === 'count' ? 'count' : 'g',
+      }));
+      const takenCount = items.filter(i => i.taken).length;
+      body = {
+        planId: plan?.id,
+        day: dayKey,
+        mealIndex,
+        eatenAt: eatenAt.toISOString(),
+        adherence: items.length && takenCount === items.length ? 5 : takenCount ? 4 : 3,
+        mealTitle: meal?.title || t('nutrition.meal.defaultTitle', { index: mealIndex + 1 }),
+        items,
+        notifyCoach: false,
+        extraFoods: [],
+        supplementsTaken: (meal.supplements || []).map(sp => ({ name: sp.name, taken: !!suppMap[kSuppByName(dayKey, 'meal', mealIndex, sp.name)] })),
+      };
+    } else {
+      body = {
+        planId: plan?.id,
+        day: dayKey,
+        mealIndex: null,
+        eatenAt: eatenAt.toISOString(),
+        adherence: 5,
+        mealTitle: t('nutrition.supplements.logTitle'),
+        items: [],
+        notifyCoach: false,
+        extraFoods: [],
+        supplementsTaken: (dayObj?.supplements || []).map(sp => ({ name: sp.name, taken: !!suppMap[kSuppByName(dayKey, 'day', null, sp.name)] })),
+      };
+    }
+    enqueueOutbox({
+      kind: NUTRITION_LOG_KIND,
+      key: `${NUTRITION_LOG_KIND}:${uid}:${date}:${plan?.id ?? 'plan'}:${dayKey}:${mealIndex ?? 'day'}`,
+      userId: uid,
+      payload: { date, body },
     });
   };
 
-  const setItemTaken = async (dayKey, mealIndex, item, value) => {
-    const lockKey = `item:${dayKey}:${mealIndex}:${normName(item.name)}`;
-    await runLocked(lockKey, async () => {
-      const key = kItemByName(dayKey, mealIndex, item.name);
-      const meal = activeDay?.meals?.[mealIndex];
-      const mealKey = `${dayKey}:${mealIndex}`;
-      const prevItemValue = !!itemTakenMap[key];
-      const prevMealValue = !!takenMap[mealKey];
-      setItemTakenMap(prev => {
-        const next = { ...prev, [key]: value };
-        if (meal?.items?.length) {
-          const allTrue = meal.items.every(i => !!next[kItemByName(dayKey, mealIndex, i.name)]);
-          setTakenMap(prevMeals => ({ ...prevMeals, [mealKey]: allTrue }));
-        }
-        return next;
-      });
-      try {
-        await api.post('/nutrition/food-logs', {
-          planId: plan?.id,
-          day: dayKey,
-          mealIndex,
-          eatenAt: new Date().toISOString(),
-          adherence: value ? 4 : 3,
-          mealTitle: meal?.title || t('nutrition.meal.defaultTitle', { index: mealIndex + 1 }),
-          items: [{ name: item.name, taken: !!value, qty: item.quantity == null ? null : Number(item.quantity), unit: item.unit === 'count' ? 'count' : 'g' }],
-          notifyCoach: false,
-          extraFoods: [],
-          supplementsTaken: [],
-        });
-      } catch (e) {
-        setItemTakenMap(prev => ({ ...prev, [key]: prevItemValue }));
-        setTakenMap(prevMeals => ({ ...prevMeals, [mealKey]: prevMealValue }));
-        Notification(e?.response?.data?.message || t('nutrition.errors.itemUpdateFailed'), 'error');
-      }
-    });
+  const commitMaps = (itemMap, suppMap) => {
+    mapsRef.current = { itemTakenMap: itemMap, suppTakenMap: suppMap };
+    setItemTakenMap(itemMap);
+    setSuppTakenMap(suppMap);
   };
 
-  const setSupplementTaken = async (dayKey, scope, idOrIndex, supp, value, mealIndex = null) => {
-    const localKey = kSuppByName(dayKey, scope, mealIndex, supp.name);
-    const lockKey = `supp:${localKey}`;
-    await runLocked(lockKey, async () => {
-      const prevValue = !!suppTakenMap[localKey];
-      setSuppTakenMap(prev => ({ ...prev, [localKey]: value }));
-      try {
-        await api.post('/nutrition/food-logs', {
-          planId: plan?.id,
-          day: dayKey,
-          mealIndex,
-          eatenAt: new Date().toISOString(),
-          adherence: 5,
-          mealTitle: mealIndex != null ? activeDay?.meals?.[mealIndex]?.title || t('nutrition.meal.defaultTitle', { index: Number(mealIndex) + 1 }) : t('nutrition.supplements.logTitle'),
-          items: [],
-          notifyCoach: false,
-          extraFoods: [],
-          supplementsTaken: [{ name: supp.name, taken: !!value }],
-        });
-      } catch (e) {
-        setSuppTakenMap(prev => ({ ...prev, [localKey]: prevValue }));
-        Notification(e?.response?.data?.message || t('nutrition.errors.supplementUpdateFailed'), 'error');
-      }
+  const setMealTaken = (dayKey, mealIndex, meal, value) => {
+    const { itemTakenMap: items0, suppTakenMap: supps } = mapsRef.current;
+    const itemMap = { ...items0 };
+    (meal.items || []).forEach(i => {
+      itemMap[kItemByName(dayKey, mealIndex, i.name)] = value;
     });
+    commitMaps(itemMap, supps);
+    setTakenMap(prev => ({ ...prev, [`${dayKey}:${mealIndex}`]: value }));
+    queueMealLog(dayKey, mealIndex, itemMap, supps);
+  };
+
+  const setItemTaken = (dayKey, mealIndex, item, value) => {
+    const { itemTakenMap: items0, suppTakenMap: supps } = mapsRef.current;
+    const itemMap = { ...items0, [kItemByName(dayKey, mealIndex, item.name)]: value };
+    const meal = (plan?.days || []).find(d => (d.day || '').toLowerCase() === dayKey)?.meals?.[mealIndex] || activeDay?.meals?.[mealIndex];
+    commitMaps(itemMap, supps);
+    if (meal?.items?.length) {
+      const allTrue = meal.items.every(i => !!itemMap[kItemByName(dayKey, mealIndex, i.name)]);
+      setTakenMap(prev => ({ ...prev, [`${dayKey}:${mealIndex}`]: allTrue }));
+    }
+    queueMealLog(dayKey, mealIndex, itemMap, supps);
+  };
+
+  const setSupplementTaken = (dayKey, scope, idOrIndex, supp, value, mealIndex = null) => {
+    const { itemTakenMap: items0, suppTakenMap: supps0 } = mapsRef.current;
+    const suppMap = { ...supps0, [kSuppByName(dayKey, scope, mealIndex, supp.name)]: value };
+    commitMaps(items0, suppMap);
+    queueMealLog(dayKey, scope === 'meal' ? mealIndex : null, items0, suppMap);
   };
 
   const saveInlineMeal = async ({ dayKey, mealIndex, items }) => {
@@ -611,6 +589,7 @@ export default function ClientMealPlanPage() {
                 </p>
               </div>
               <div className='flex shrink-0 items-center gap-2'>
+                <SyncStatusPill kinds={[NUTRITION_LOG_KIND]} tone='onDark' />
                 {hasNotes ? (
                   <button type='button' onClick={() => setNotesOpen(true)} className={headerBtn} aria-label={t('nutrition.header.notes')}>
                     <BookOpen size={18} strokeWidth={2} />

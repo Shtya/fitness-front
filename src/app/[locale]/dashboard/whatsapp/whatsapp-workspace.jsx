@@ -8639,10 +8639,82 @@ export function MediaAttachment({
 		}
 	};
 
+	/** ~50 MB: pulling this through JS memory OOM/aborts; stream from a signed URL instead. */
+	const LARGE_ATTACHMENT_BLOB_BYTES = 48 * 1024 * 1024;
+
+	const attachmentDeclaredBytes = () =>
+		Number(
+			attachment?.fileSizeBytes ?? attachment?.sizeBytes ?? attachment?.size ?? 0,
+		) || 0;
+
+	const shouldStreamAttachmentOffBlob = action => {
+		if (demoAttachment || !isPersistedAttachmentId(String(attachment?.id || ''))) {
+			return false;
+		}
+		const bytes = attachmentDeclaredBytes();
+		if (bytes >= LARGE_ATTACHMENT_BLOB_BYTES) return true;
+		if (!isDocument) return false;
+		// Documents without a known size (FIG/ZIP/…) often hide a huge payload.
+		if (action === 'download') return true;
+		const extension = String(
+			attachmentExtension(attachment.fileName, attachment.mimeType) || '',
+		)
+			.toLowerCase()
+			.replace(/[^a-z0-9]/g, '');
+		// Only small, browser-viewable docs stay on the blob path for the in-app viewer.
+		return !['pdf', 'txt', 'csv', 'json', 'md', 'log'].includes(extension);
+	};
+
+	const ensureAttachmentOnDisk = async () => {
+		const attachmentId = String(attachment?.id || '');
+		const bytes = attachmentDeclaredBytes();
+		const timeout = Math.min(
+			45 * 60_000,
+			Math.max(180_000, Math.ceil(Math.max(bytes, 32 * 1024 * 1024) / (256 * 1024)) * 1000),
+		);
+		await api.post(`/whatsapp/attachments/${attachmentId}/download`, null, { timeout });
+	};
+
+	const openAttachmentViaSignedUrl = async ({ download = false } = {}) => {
+		await ensureAttachmentOnDisk();
+		const streamUrl = await getAttachmentStreamUrl(attachment.id, attachment);
+		if (!streamUrl) throw new Error('Media unavailable');
+		if (download) {
+			const anchor = document.createElement('a');
+			anchor.href = streamUrl;
+			anchor.download = attachment.fileName || 'download';
+			anchor.rel = 'noopener';
+			anchor.style.display = 'none';
+			document.body.appendChild(anchor);
+			anchor.click();
+			anchor.remove();
+			toast.success(
+				labels.downloadStarted || (locale === 'ar' ? 'بدأ التحميل' : 'Download started'),
+			);
+			return;
+		}
+		window.open(streamUrl, '_blank', 'noopener,noreferrer');
+	};
+
+	const formatMediaLimitError = raw => {
+		const text = String(raw || '');
+		const match = text.match(/exceeds limit\s*\((\d+)\s*bytes(?:;\s*max\s*(\d+)\s*bytes)?\)/i);
+		if (!match) return text.slice(0, 160);
+		const sizeMb = Math.max(1, Math.round(Number(match[1]) / (1024 * 1024)));
+		if (locale === 'ar') {
+			return `الملف كبير جدًا (${sizeMb} ميجا). حدّث السيرفر أو حاول التحميل مرة أخرى.`;
+		}
+		return `This file is too large (${sizeMb} MB) for the current media limit.`;
+	};
+
 	const handleFileAction = async action => {
 		if (fileAction) return;
 		setFileAction(action);
 		try {
+			if (shouldStreamAttachmentOffBlob(action)) {
+				await openAttachmentViaSignedUrl({ download: action === 'download' });
+				return;
+			}
 			const blob = await loadAttachmentBlob();
 			if (action === 'download') {
 				await saveAttachmentToDevice(blob);
@@ -8672,14 +8744,19 @@ export function MediaAttachment({
 				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 			}
 		} catch (error) {
-			const raw = String(error?.message || error?.name || '');
+			const raw =
+				error?.response?.data?.message ||
+				(typeof error?.message === 'string' ? error.message : '') ||
+				String(error?.name || '');
 			const aborted =
 				error?.name === 'AbortError' ||
-				/aborted|timeout|network error|failed to fetch/i.test(raw);
-			// The server says why WhatsApp would not hand the file over; a bare "could not" hid it.
+				/aborted|timeout|network error|failed to fetch/i.test(String(raw));
+			const oversized = /exceeds limit/i.test(String(raw));
 			const reason =
 				!aborted && raw && !/^(Media unavailable|Attachment is unavailable)$/i.test(raw)
-					? raw.slice(0, 160)
+					? oversized
+						? formatMediaLimitError(raw)
+						: String(raw).slice(0, 160)
 					: '';
 			if (action === 'download') {
 				const title = aborted

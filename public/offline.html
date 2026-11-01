@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+	<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+	<meta name="theme-color" content="#0b141a" media="(prefers-color-scheme: dark)" />
+	<title>So7baFit</title>
+	<link rel="icon" href="/icons/favicon-32.png" />
+	<style>
+		:root {
+			--bg: #f4f6fa;
+			--card: #ffffff;
+			--ink: #0f172a;
+			--muted: #5b6577;
+			--line: rgba(15, 23, 42, 0.08);
+			--accent: #2563eb;
+			--soft: rgba(37, 99, 235, 0.1);
+			color-scheme: light dark;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--bg: #0b1017;
+				--card: #141a23;
+				--ink: #eef1f6;
+				--muted: #9aa4b4;
+				--line: rgba(255, 255, 255, 0.08);
+				--accent: #60a5fa;
+				--soft: rgba(96, 165, 250, 0.14);
+			}
+		}
+		* { box-sizing: border-box; }
+		html, body { height: 100%; margin: 0; }
+		body {
+			display: grid;
+			min-height: 100dvh;
+			place-items: center;
+			padding: 24px 16px max(24px, env(safe-area-inset-bottom));
+			background: var(--bg);
+			color: var(--ink);
+			font-family: system-ui, -apple-system, "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
+			-webkit-font-smoothing: antialiased;
+		}
+		main {
+			width: 100%;
+			max-width: 380px;
+			padding: 28px 22px 22px;
+			border: 1px solid var(--line);
+			border-radius: 26px;
+			background: var(--card);
+			box-shadow: 0 24px 60px -24px rgba(15, 23, 42, 0.35);
+			text-align: center;
+		}
+		.mark {
+			position: relative;
+			width: 64px;
+			height: 64px;
+			margin: 0 auto 16px;
+		}
+		.mark img { width: 64px; height: 64px; border-radius: 18px; }
+		.mark span {
+			position: absolute;
+			inset-inline-end: -4px;
+			bottom: -4px;
+			display: grid;
+			width: 24px;
+			height: 24px;
+			place-items: center;
+			border: 3px solid var(--card);
+			border-radius: 999px;
+			background: #f59e0b;
+		}
+		h1 { margin: 0; font-size: 1.2rem; font-weight: 800; }
+		p { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; line-height: 1.55; }
+		nav { display: grid; gap: 8px; margin-top: 20px; }
+		nav a {
+			display: flex;
+			min-height: 48px;
+			align-items: center;
+			justify-content: center;
+			border-radius: 14px;
+			background: var(--soft);
+			color: var(--accent);
+			font-weight: 700;
+			text-decoration: none;
+		}
+		button {
+			width: 100%;
+			min-height: 48px;
+			margin-top: 10px;
+			border: 0;
+			border-radius: 14px;
+			background: var(--accent);
+			color: #fff;
+			font: inherit;
+			font-weight: 700;
+		}
+		[hidden] { display: none !important; }
+	</style>
+</head>
+<body>
+	<main>
+		<div class="mark">
+			<img src="/icons/icon-192.png" alt="" />
+			<span aria-hidden="true">
+				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M12 20h.01"/></svg>
+			</span>
+		</div>
+		<h1 id="title">مفيش اتصال بالإنترنت</h1>
+		<p id="lead">الصفحة دي لسه مش محفوظة على الجهاز. صفحات التمارين والتغذية بتشتغل من غير نت، واللي تسجّله بيتبعت أول ما النت يرجع.</p>
+		<nav id="links"></nav>
+		<button type="button" id="retry">حاول تاني</button>
+	</main>
+	<script>
+		(function () {
+			var match = location.pathname.match(/^\/(ar|en)(\/|$)/);
+			var locale = match ? match[1] : (navigator.language || '').toLowerCase().indexOf('ar') === 0 ? 'ar' : 'en';
+			var copy = {
+				ar: {
+					title: 'مفيش اتصال بالإنترنت',
+					lead: 'الصفحة دي لسه مش محفوظة على الجهاز. صفحات التمارين والتغذية بتشتغل من غير نت، واللي تسجّله بيتبعت أول ما النت يرجع.',
+					retry: 'حاول تاني',
+					pages: [['/dashboard/my/workouts', 'تماريني'], ['/dashboard/my/nutrition', 'تغذيتي']]
+				},
+				en: {
+					title: 'You are offline',
+					lead: 'This page is not saved on this device yet. Workouts and Nutrition work offline, and what you log is sent as soon as you are back online.',
+					retry: 'Try again',
+					pages: [['/dashboard/my/workouts', 'My workouts'], ['/dashboard/my/nutrition', 'My nutrition']]
+				}
+			}[locale];
+			document.documentElement.lang = locale;
+			document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
+			document.getElementById('title').textContent = copy.title;
+			document.getElementById('lead').textContent = copy.lead;
+			document.getElementById('retry').textContent = copy.retry;
+			document.getElementById('retry').addEventListener('click', function () { location.reload(); });
+			window.addEventListener('online', function () { location.reload(); });
+
+			// Only offer the pages this device really has saved.
+			var nav = document.getElementById('links');
+			if (!('caches' in window)) return;
+			caches.open('so7ba-shell-v1').then(function (cache) {
+				copy.pages.forEach(function (page) {
+					var href = '/' + locale + page[0];
+					if (href === location.pathname) return;
+					cache.match(location.origin + href).then(function (hit) {
+						if (!hit) return;
+						var a = document.createElement('a');
+						a.href = href;
+						a.textContent = page[1];
+						nav.appendChild(a);
+					});
+				});
+			}).catch(function () {});
+		})();
+	</script>
+</body>
+</html>

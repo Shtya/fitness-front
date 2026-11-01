@@ -133,6 +133,45 @@ const InputField = React.memo(({ id, label, type = "text", placeholder, autoComp
 ));
 InputField.displayName = "InputField";
 
+/*
+ * "Remember me" keeps only the email in localStorage — never the password: anything in
+ * localStorage is readable by any script on the origin (one XSS = stolen password) and sits on
+ * the device in plain text. The password is handed to the browser's own password manager
+ * (Credential Management API on Chrome/Edge/Android; Safari/iOS Keychain via autocomplete),
+ * which stores it encrypted and fills it back here, so the user just presses Sign in.
+ */
+const REMEMBER_KEY = "so7ba.auth.remember.v1";
+
+function readRemembered() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(REMEMBER_KEY) || "null");
+    return saved?.email ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+async function storeBrowserCredential(email, password) {
+  try {
+    if (typeof window === "undefined" || !("PasswordCredential" in window) || !navigator.credentials?.store) return;
+    await navigator.credentials.store(new window.PasswordCredential({ id: email, password, name: email }));
+  } catch {
+    /* the user declined, or the browser has no password manager */
+  }
+}
+
+async function readBrowserCredential(email) {
+  try {
+    if (typeof window === "undefined" || !("PasswordCredential" in window) || !navigator.credentials?.get) return null;
+    const cred = await navigator.credentials.get({ password: true, mediation: "optional" });
+    if (cred?.type !== "password" || !cred.password) return null;
+    if (email && String(cred.id).toLowerCase() !== String(email).toLowerCase()) return null;
+    return cred;
+  } catch {
+    return null;
+  }
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -150,6 +189,7 @@ function LoginCard({ onLoggedIn }) {
   const { setLoading, setError, loading, error, setPlates, setMode, mode } = auth;
   const [showPwd, setShowPwd] = useState(false);
   const [shaking, setShaking] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, setError: setRHError, setValue, watch } = useForm({
     resolver: yupResolver(loginSchema),
@@ -159,6 +199,22 @@ function LoginCard({ onLoggedIn }) {
 
   useEffect(() => {
     if (prefillEmail) setValue("email", prefillEmail);
+  }, [prefillEmail, setValue]);
+
+  // Remembered: fill the email, then ask the browser's password manager for the password.
+  useEffect(() => {
+    const saved = readRemembered();
+    if (!saved) return undefined;
+    setRemember(true);
+    if (!prefillEmail) setValue("email", saved.email, { shouldValidate: true });
+    let cancelled = false;
+    readBrowserCredential(prefillEmail || saved.email).then(cred => {
+      if (cancelled || !cred) return;
+      setValue("password", cred.password, { shouldValidate: true });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [prefillEmail, setValue]);
 
   const email = watch("email");
@@ -202,6 +258,18 @@ function LoginCard({ onLoggedIn }) {
         body: JSON.stringify({ accessToken, refreshToken, user }),
       });
       loginPersist(user);
+      try {
+        const rememberedEmail = String(data.email || "").trim();
+        if (remember) {
+          localStorage.setItem(REMEMBER_KEY, JSON.stringify({ email: rememberedEmail }));
+          await storeBrowserCredential(rememberedEmail, data.password);
+        } else {
+          localStorage.removeItem(REMEMBER_KEY);
+          await navigator.credentials?.preventSilentAccess?.();
+        }
+      } catch {
+        /* remembering is best effort; it never blocks the sign-in */
+      }
       toast.success(t("success.signedIn"));
       setMode("success");
       // Let the lift finish before leaving (skipped for reduced motion).
@@ -222,7 +290,7 @@ function LoginCard({ onLoggedIn }) {
       setMode("error");
       setShaking(true);
     } finally { setLoading(false); }
-  }, [setLoading, setError, setRHError, setMode, onLoggedIn, t]);
+  }, [setLoading, setError, setRHError, setMode, onLoggedIn, t, remember]);
 
   const ArrowIcon = isRtl ? ArrowLeft : ArrowRight;
   const steps = [
@@ -263,7 +331,7 @@ function LoginCard({ onLoggedIn }) {
           type="email"
           inputMode="email"
           placeholder={t("enterEmail")}
-          autoComplete="email"
+          autoComplete="username"
           icon={Mail}
           done={emailOk}
           registration={register("email")}
@@ -290,6 +358,28 @@ function LoginCard({ onLoggedIn }) {
             </button>
           }
         />
+
+        <label className="au-remember">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={event => {
+              setRemember(event.target.checked);
+              // Unticking forgets the saved email right away.
+              if (!event.target.checked) {
+                try {
+                  localStorage.removeItem(REMEMBER_KEY);
+                } catch {
+                  /* ignore */
+                }
+              }
+            }}
+          />
+          <span className="au-remember__box" aria-hidden="true">
+            <Check size={12} strokeWidth={3.2} />
+          </span>
+          <span className="au-remember__text">{t("remember.label")}</span>
+        </label>
 
         {error ? (
           <p role="alert" className="au-alert">

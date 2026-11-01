@@ -916,6 +916,183 @@ html.dark .au {
 	}
 }
 
+/* ---------- Remember me ---------- */
+
+.au-remember {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	align-self: flex-start;
+	min-height: 32px;
+	color: var(--au-ink-2);
+	font-size: 0.875rem;
+	font-weight: 600;
+	cursor: pointer;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.au-remember input {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.au-remember__box {
+	display: grid;
+	width: 20px;
+	height: 20px;
+	place-items: center;
+	border-radius: 6px;
+	background: var(--au-field);
+	box-shadow: inset 0 0 0 1.5px var(--au-line);
+	color: transparent;
+	transition: background-color 160ms var(--au-ease), box-shadow 160ms var(--au-ease), color 160ms var(--au-ease);
+}
+
+.au-remember input:checked + .au-remember__box {
+	background: var(--au-accent);
+	box-shadow: none;
+	color: #ffffff;
+}
+
+.au-remember input:focus-visible + .au-remember__box {
+	outline: 2px solid var(--au-accent);
+	outline-offset: 2px;
+}
+
+/* ---------- Phones: the whole sign-in fits one screen (100dvh), no scrolling ----------
+ * The frame is a fixed-height flex column; the barbell is the only part that gives up space,
+ * and on shorter screens the secondary copy steps aside, tallest-first. */
+@media (max-width: 1023.98px) {
+	.au-frame {
+		height: 100%;
+		min-height: 0;
+		padding: 12px 16px max(14px, env(safe-area-inset-bottom));
+	}
+
+	.au-main {
+		display: flex;
+		min-height: 0;
+		flex: 1 1 auto;
+		flex-direction: column;
+		gap: 12px;
+		padding-top: 10px;
+	}
+
+	.au-scene {
+		min-height: 0;
+		flex: 1 1 auto;
+	}
+
+	.au-rack {
+		display: flex;
+		min-height: 0;
+		flex: 1 1 auto;
+		flex-direction: column;
+		justify-content: center;
+		margin-top: 0;
+	}
+
+	.au-barbell {
+		min-height: 56px;
+		max-height: 170px;
+		flex: 1 1 auto;
+		height: auto;
+	}
+
+	.au-side {
+		flex: none;
+		gap: 6px;
+	}
+
+	.au-card {
+		padding: 22px 18px 18px;
+		border-radius: 24px;
+	}
+
+	.au-card__head {
+		margin-bottom: 16px;
+	}
+
+	.au-form-title {
+		font-size: 2rem;
+	}
+
+	.au[dir="rtl"] .au-form-title {
+		font-size: 1.75rem;
+	}
+
+	.au-form {
+		gap: 12px;
+	}
+
+	.au-input {
+		min-height: 50px;
+	}
+
+	.au-submit {
+		min-height: 52px;
+		margin-top: 2px;
+	}
+
+	.au-org {
+		min-height: 34px;
+	}
+}
+
+@media (max-width: 1023.98px) and (max-height: 820px) {
+	.au-lead,
+	.au-steps {
+		display: none;
+	}
+
+	.au-title {
+		font-size: clamp(2.25rem, 11vw, 3.25rem);
+	}
+
+	.au[dir="rtl"] .au-title {
+		font-size: clamp(1.9rem, 8.5vw, 2.6rem);
+	}
+}
+
+@media (max-width: 1023.98px) and (max-height: 700px) {
+	.au-form-lead,
+	.au-readout__meta {
+		display: none;
+	}
+
+	.au-card__head {
+		margin-bottom: 12px;
+	}
+
+	.au-field {
+		gap: 5px;
+	}
+
+	.au-input {
+		min-height: 46px;
+	}
+
+	.au-submit {
+		min-height: 48px;
+	}
+}
+
+/* Very short (small phones, landscape): the headline and the bar make room for the form. */
+@media (max-width: 1023.98px) and (max-height: 600px) {
+	.au-rack {
+		display: none;
+	}
+
+	.au-title,
+	.au[dir="rtl"] .au-title {
+		font-size: 1.75rem;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.au *,
 	.au *::before,

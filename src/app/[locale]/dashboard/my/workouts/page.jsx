@@ -9,8 +9,6 @@ import {
 	Plus,
 	Video as VideoIcon,
 	Image as ImageIcon,
-	CloudOff,
-	Cloud,
 	Check,
 	Repeat,
 	Timer,
@@ -41,6 +39,10 @@ import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
 import { useCountdown } from '@/hooks/workouts/useCountdown';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import SyncStatusPill from '@/components/offline/SyncStatusPill';
+import { enqueue as enqueueOutbox, flush as flushOutbox, getRecords as getOutboxRecords, onSynced } from '@/lib/offline/outbox';
+import { cachedRead } from '@/lib/offline/read-cache';
+import { WORKOUT_SETS_KIND, workoutSetsKey } from '@/lib/offline/senders';
 
 /* ─────────────────────────────────────────
 	 CONSTANTS
@@ -51,7 +53,6 @@ export const DEFAULT_SOUNDS = [
 	'/sounds/alert5.mp3', '/sounds/alert6.mp3', '/sounds/alert7.mp3', '/sounds/alert8.mp3',
 ];
 const LOCAL_KEY_SELECTED_DAY = 'mw.selected.day';
-const LOCAL_KEY_QUEUE = 'mw.pendingPRs.v1';
 const WEEK_ORDER = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const DAY_INDEX = { SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6 };
 const WEEK_START = 6;
@@ -174,7 +175,10 @@ function trainingKeysFor(days) {
 
 async function fetchActivePlan(userId) {
 	try {
-		const { data } = await api.get('/plans/active', { params: { userId } });
+		// Network first; offline, the last plan this device saw opens instead of an empty page.
+		const { data } = await cachedRead(`workouts:plan:${userId}`, () =>
+			api.get('/plans/active', { params: { userId } }).then(r => r.data),
+		);
 		if (data?.status === 'none' || data?.error) return fallbackPlan();
 		if (data?.program?.days?.length) return data;
 		return fallbackPlan();
@@ -209,7 +213,9 @@ async function fetchLastDayByName(userId, day, onOrBefore) {
 		const dayProgram = normalizeDayProgram(dayProgramRaw);
 		const exerciseNames = (dayProgram.allExercises || []).map(ex => ex.name).filter(Boolean);
 		if (!exerciseNames.length) return { date: null, day, recordsByExercise: {} };
-		const { data } = await api.post('/prs/last-workout-sets', { userId, exercises: exerciseNames });
+		const { data } = await cachedRead(`workouts:last-sets:${userId}:${String(day).toLowerCase()}`, () =>
+			api.post('/prs/last-workout-sets', { userId, exercises: exerciseNames }).then(r => r.data),
+		);
 		const recordsByExercise = {};
 		(data?.exercises || []).forEach(exercise => {
 			if (exercise?.records?.length > 0) {
@@ -226,24 +232,49 @@ async function fetchLastDayByName(userId, day, onOrBefore) {
 	}
 }
 
-async function upsertDailyPR(userId, exerciseName, date, records) {
-	const { data } = await api.post('/prs', { exerciseName, date, records }, { params: { userId } });
-	return data;
+/* ─────────────────────────────────────────
+	 LOCAL QUEUE (offline outbox)
+	 Every edit is saved on the device first and sent in the background
+	 (see src/lib/offline/outbox.js); POST /prs upserts by user + exercise + date.
+───────────────────────────────────────── */
+function loadQueue() {
+	return getOutboxRecords({ kind: WORKOUT_SETS_KIND }).map(record => record.payload);
+}
+function upsertQueueItem(item) {
+	enqueueOutbox({ kind: WORKOUT_SETS_KIND, key: workoutSetsKey(item), userId: item.userId, payload: item });
 }
 
-/* ─────────────────────────────────────────
-	 LOCAL QUEUE
-───────────────────────────────────────── */
-function loadQueue() { try { const arr = JSON.parse(localStorage.getItem(LOCAL_KEY_QUEUE) || '[]'); return Array.isArray(arr) ? arr : []; } catch { return []; } }
-function saveQueue(arr) { try { localStorage.setItem(LOCAL_KEY_QUEUE, JSON.stringify(arr)); } catch { } }
-function queueKey(item) { return `${item.userId}__${item.date}__${item.exerciseName}`.toLowerCase(); }
-function upsertQueueItem(item) {
-	const q = loadQueue(), key = queueKey(item), idx = q.findIndex(x => queueKey(x) === key);
-	if (idx >= 0) q[idx] = { ...q[idx], ...item, createdAt: q[idx].createdAt || item.createdAt || Date.now() };
-	else q.push({ ...item, createdAt: Date.now() });
-	saveQueue(q);
+/** Overlays every unsent local snapshot of today onto a freshly built session. */
+function applyQueuedSnapshots(session, userId) {
+	if (!session?.sets?.length || !userId) return { session, applied: false };
+	const today = todayISO();
+	const byName = new Map(
+		loadQueue()
+			.filter(item => String(item.userId) === String(userId) && item.date === today)
+			.map(item => [item.exerciseName, item]),
+	);
+	if (!byName.size) return { session, applied: false };
+	let applied = false;
+	// Sets added offline do not exist in the plan yet: grow the exercise to the saved count.
+	const grown = [...session.sets];
+	for (const [exName, queued] of byName) {
+		const existing = grown.filter(s => s.exName === exName);
+		const last = existing[existing.length - 1];
+		if (!last) continue;
+		const wanted = Math.max(0, ...(queued.records || []).map(rec => Number(rec.setNumber) || 1));
+		for (let n = existing.length + 1; n <= Math.min(20, wanted); n += 1) {
+			grown.push({ ...last, id: `${last.exId}-set${n}`, set: n, weight: 0, reps: 0, done: false, pr: false, serverId: undefined });
+		}
+	}
+	const nextSets = grown.map(s => {
+		const queued = byName.get(s.exName);
+		if (!queued) return s;
+		const r = (queued.records || []).find(rec => (Number(rec.setNumber) || 1) === (Number(s.set) || 1));
+		applied = true;
+		return { ...s, weight: Number(r?.weight) || 0, reps: Number(r?.reps) || 0, done: !!r?.done };
+	});
+	return { session: applied ? { ...session, sets: nextSets } : session, applied };
 }
-function removeQueueItem(item) { saveQueue(loadQueue().filter(x => queueKey(x) !== queueKey(item))); }
 
 /* ─────────────────────────────────────────
 	 PRIMITIVE COMPONENTS
@@ -663,7 +694,6 @@ function SetsTable({
 	inputBuffer, setInputBuffer,
 	bump, toggleDone, setValue,
 	addSet, removeSet,
-	trySyncQueue, syncing, unsaved, lastSyncStatus,
 }) {
 	const getBuffered = (setId, field, num) => {
 		const key = `${setId}:${field}`;
@@ -677,6 +707,12 @@ function SetsTable({
 		const parts = v.split('.');
 		if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
 		setInputBuffer(prev => ({ ...prev, [key]: v }));
+		// Auto-save while typing: every complete number is saved on the device right away
+		// (the field keeps showing what was typed until blur).
+		if (v !== '' && !v.endsWith('.')) {
+			const num = Number(v);
+			if (Number.isFinite(num)) setValue(setId, field, num);
+		}
 	};
 
 	const handleBlur = (setId, field) => {
@@ -778,16 +814,7 @@ function SetsTable({
 				</button>
 
 				<div className="flex items-center gap-2">
-					{lastSyncStatus === 'ok' && (
-						<span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200">
-							<Cloud size={11} /> {t('sync.synced')}
-						</span>
-					)}
-					{lastSyncStatus === 'error' && (
-						<span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-600 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200">
-							<CloudOff size={11} /> {t('sync.someFailed')}
-						</span>
-					)}
+					<SyncStatusPill kinds={[WORKOUT_SETS_KIND]} />
 					<TooltipProvider delayDuration={200}>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -802,28 +829,6 @@ function SetsTable({
 								</button>
 							</TooltipTrigger>
 							<TooltipContent><p>{t('actions.removeSet')}</p></TooltipContent>
-						</Tooltip>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<button
-									type="button"
-									onClick={() => trySyncQueue(true)}
-									disabled={syncing}
-									aria-label={syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}
-									className="grid h-[34px] w-[34px] place-items-center rounded-full border-[1.2px] border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] shadow-[4px_4px_7px_rgba(100,116,139,0.42)] transition active:scale-95 disabled:opacity-60"
-								>
-									{syncing ? (
-										<span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-primary-300)] border-t-transparent" />
-									) : unsaved ? (
-										<CloudOff size={15} className="text-amber-500" />
-									) : (
-										<Cloud size={15} className="text-muted-foreground" />
-									)}
-								</button>
-							</TooltipTrigger>
-							<TooltipContent>
-								<p>{syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}</p>
-							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
 				</div>
@@ -1274,8 +1279,6 @@ export default function MyWorkoutsPage() {
 	const [hidden, setHidden] = useState(false);
 	const [notesOpen, setNotesOpen] = useState(false);
 	const [unsaved, setUnsaved] = useState(false);
-	const [syncing, setSyncing] = useState(false);
-	const [lastSyncStatus, setLastSyncStatus] = useState('');
 	const [inputBuffer, setInputBuffer] = useState({});
 	const [completedExercises, setCompletedExercises] = useState(new Set());
 	const lastSavedRef = useRef(new Map());
@@ -1345,29 +1348,14 @@ export default function MyWorkoutsPage() {
 
 	const applyLocalQueuedSnapshotIfAny = useCallback(() => {
 		setWorkout(prev => {
-			if (!prev) return prev;
-			const ex = prev.exercises?.find(e => e.id === currentExId);
-			if (!ex || !USER_ID) return prev;
-			const queued = loadQueue().find(i => i.userId === USER_ID && i.exerciseName === ex.name && i.date === todayISO());
-			if (!queued) return prev;
-			const bySet = {};
-			(queued.records || []).forEach(r => (bySet[Number(r.setNumber) || 1] = r));
-			const next = {
-				...prev, sets: prev.sets.map(s =>
-					s.exName !== ex.name ? s : {
-						...s,
-						weight: Number(bySet[s.set]?.weight) || 0,
-						reps: Number(bySet[s.set]?.reps) || 0,
-						done: !!bySet[s.set]?.done,
-					}
-				)
-			};
+			const { session: next, applied } = applyQueuedSnapshots(prev, USER_ID);
+			if (!applied) return prev;
 			lastSavedRef.current.clear();
 			next.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
 			setUnsaved(true);
 			return next;
 		});
-	}, [currentExId, USER_ID]);
+	}, [USER_ID]);
 
 	/* ── Completion ── */
 	const isExerciseCompleted = useCallback(exId => {
@@ -1464,29 +1452,14 @@ export default function MyWorkoutsPage() {
 				const { recordsByExercise } = await fetchLastDayByName(USER_ID, initialDayId, dayISO);
 				if (!mounted) return;
 				session = applyInitialRecordsWithDone(session, recordsByExercise);
-				const firstEx = firstInSection;
-				if (firstEx && USER_ID) {
-					const queued = loadQueue().find(i => i.userId === USER_ID && i.exerciseName === firstEx.name && i.date === todayISO());
-					if (queued) {
-						const bySet = {};
-						(queued.records || []).forEach(r => (bySet[Number(r.setNumber) || 1] = r));
-						session = {
-							...session, sets: session.sets.map(s =>
-								s.exName !== firstEx.name ? s : {
-									...s,
-									weight: Number(bySet[s.set]?.weight) || 0,
-									reps: Number(bySet[s.set]?.reps) || 0,
-									done: !!bySet[s.set]?.done,
-								}
-							)
-						};
-						setUnsaved(true);
-					}
-				}
+				// Unsent edits from this device win over the server copy until they are confirmed.
+				const local = applyQueuedSnapshots(session, USER_ID);
+				session = local.session;
+				if (local.applied) setUnsaved(true);
 				setWorkout(session);
 				lastSavedRef.current.clear();
 				session.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
-				trySyncQueue(false);
+				void flushOutbox();
 			} catch (e) { console.error('Initial load error:', e); }
 			finally { if (mounted) setLoading(false); }
 		})();
@@ -1605,36 +1578,17 @@ export default function MyWorkoutsPage() {
 		});
 	}, [currentExId, USER_ID]);
 
-	/* ── Sync ── */
-	const trySyncQueue = useCallback(async (showStatus = true) => {
-		const qStart = loadQueue();
-		if (!qStart.length) {
-			if (showStatus) { setLastSyncStatus('ok'); setTimeout(() => setLastSyncStatus(''), 1200); }
-			setUnsaved(false);
-			return;
-		}
-		setSyncing(true);
-		let anyError = false;
-		for (const item of qStart) {
-			try {
-				const data = await upsertDailyPR(item.userId, item.exerciseName, item.date, item.records);
-				const mergedRecords = Array.isArray(data?.records) && data.records.length ? data.records : item.records;
-				applyRecordsToWorkout(item.exerciseName, mergedRecords);
-				removeQueueItem(item);
-			} catch (e) { console.error('Sync failed for', item.exerciseName, e); anyError = true; }
-		}
-		setSyncing(false);
-		if (showStatus) { setLastSyncStatus(anyError ? 'error' : 'ok'); setTimeout(() => setLastSyncStatus(''), 1500); }
-		const still = loadQueue();
-		const exName = workout?.exercises?.find(e => e.id === currentExId)?.name;
-		setUnsaved(!!exName && still.some(i => i.userId === USER_ID && i.exerciseName === exName && i.date === todayISO()));
-	}, [USER_ID, workout, currentExId, applyRecordsToWorkout]);
-
-	useEffect(() => {
-		const onFocus = () => trySyncQueue(false);
-		window.addEventListener('focus', onFocus);
-		return () => window.removeEventListener('focus', onFocus);
-	}, [trySyncQueue]);
+	/* ── Sync ──
+	 Sending is owned by the outbox (online event, tab focus, background sync, retries;
+	 "sync now" is the status pill). Here: adopt the server's set ids once confirmed. */
+	useEffect(() => onSynced(({ record, response, current }) => {
+		if (!current || record.kind !== WORKOUT_SETS_KIND) return;
+		const item = record.payload;
+		if (String(item?.userId) !== String(USER_ID) || item?.date !== todayISO()) return;
+		const merged = Array.isArray(response?.records) && response.records.length ? response.records : item.records;
+		applyRecordsToWorkout(item.exerciseName, merged);
+		setUnsaved(false);
+	}), [USER_ID, applyRecordsToWorkout]);
 
 	/* ── Edit plan helpers ── */
 	const enterEditMode = useCallback(() => {
@@ -1994,10 +1948,6 @@ export default function MyWorkoutsPage() {
 								setValue={setValue}
 								addSet={addSetForCurrentExercise}
 								removeSet={removeSetFromCurrentExercise}
-								trySyncQueue={trySyncQueue}
-								syncing={syncing}
-								unsaved={unsaved}
-								lastSyncStatus={lastSyncStatus}
 							/>
 						)}
 					</div>

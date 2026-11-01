@@ -31,8 +31,8 @@ const withPWA = require('next-pwa')({
     /app-build-manifest\.json$/,
     /middleware-manifest\.json$/,
   ],
-  // Prefer a short NetworkFirst for navigations so cold PWA opens feel snappy,
-  // then fall through to the stock next-pwa rules for static assets.
+  // Page navigations are handled by worker/index.js (network first → saved page → /offline.html),
+  // which runs before these rules. Static assets: precache + the stock next-pwa rules.
   runtimeCaching: [
     // Never let Workbox touch API traffic (uploads / multipart especially).
     {
@@ -48,15 +48,6 @@ const withPWA = require('next-pwa')({
         (url.hostname.startsWith('api.') || url.pathname.includes('/api/')),
       handler: 'NetworkOnly',
       method: 'POST',
-    },
-    {
-      urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'so7ba-pages',
-        networkTimeoutSeconds: 8,
-        expiration: { maxEntries: 48, maxAgeSeconds: 60 * 60 * 24 * 7 },
-      },
     },
     ...defaultPwaCache,
   ],
