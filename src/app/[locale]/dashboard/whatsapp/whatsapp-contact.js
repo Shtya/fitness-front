@@ -33,20 +33,47 @@ function decodeVcardValue(value) {
 		.trim();
 }
 
+/** vCard lines, unfolded (RFC 6350 continuation lines start with a space or tab). */
+function vcardLines(vcard) {
+	return String(vcard || '')
+		.replace(/\r\n?/g, '\n')
+		.replace(/\n[ \t]/g, '')
+		.split('\n')
+		.map(line => line.trim());
+}
+
+// iPhone cards group each number with its label: "item1.TEL;waid=…:+20…" + "item1.X-ABLabel:Work".
+const VCARD_TEL_LINE = /^(?:([\w-]+)\.)?TEL(?=[;:])/i;
+
+function vcardGroupLabels(lines) {
+	const labels = new Map();
+	for (const line of lines) {
+		const match = line.match(/^([\w-]+)\.X-ABLabel:(.+)$/i);
+		if (!match) continue;
+		const label = decodeVcardValue(match[2]).replace(/^_\$!<(.+)>!\$_$/, '$1');
+		if (label) labels.set(match[1].toLowerCase(), label);
+	}
+	return labels;
+}
+
 export function parseVcardPhones(vcard) {
-	const text = String(vcard || '').replace(/\r\n/g, '\n');
-	if (!text.trim()) return [];
+	const lines = vcardLines(vcard);
+	if (!lines.some(Boolean)) return [];
+	const groupLabels = vcardGroupLabels(lines);
 	const phones = [];
 	const seen = new Set();
-	for (const line of text.split('\n')) {
-		if (!/^TEL/i.test(line.trim())) continue;
+	for (const line of lines) {
+		const telMatch = line.match(VCARD_TEL_LINE);
+		if (!telMatch) continue;
 		const waidMatch = line.match(/waid=([0-9]+)/i);
 		const waId = waidMatch?.[1] ? `${waidMatch[1]}@c.us` : null;
 		const colonIndex = line.lastIndexOf(':');
 		const afterColon = colonIndex >= 0 ? line.slice(colonIndex + 1).trim() : '';
 		const phone = decodeVcardValue(afterColon);
 		const labelMatch = line.match(/type=([^;:]+)/i);
-		const label = labelMatch?.[1] ? decodeVcardValue(labelMatch[1]) : null;
+		const label =
+			(telMatch[1] && groupLabels.get(telMatch[1].toLowerCase())) ||
+			(labelMatch?.[1] ? decodeVcardValue(labelMatch[1]) : null);
 		const digits = digitsFromWaId(waId || phone);
 		if (!digits && !phone) continue;
 		const key = `${waId || ''}:${digits || phone}`;
@@ -64,7 +91,7 @@ export function parseVcardPhones(vcard) {
 }
 
 function parseVcardName(vcard) {
-	const text = String(vcard || '');
+	const text = vcardLines(vcard).join('\n');
 	const fn = text.match(/^FN[^:]*:(.+)$/im)?.[1];
 	if (fn) return decodeVcardValue(fn);
 	const n = text.match(/^N[^:]*:(.+)$/im)?.[1];
@@ -96,6 +123,23 @@ function phoneFromLooseValue(value) {
 	};
 }
 
+/** Disappearing-message chats keep the card inside ephemeralMessage (view-once inside viewOnceMessage*). */
+function unwrapContactEnvelope(raw) {
+	let message = raw?.message;
+	for (let depth = 0; message && depth < 4; depth += 1) {
+		const inner =
+			message.ephemeralMessage?.message ||
+			message.viewOnceMessage?.message ||
+			message.viewOnceMessageV2?.message ||
+			message.viewOnceMessageV2Extension?.message ||
+			null;
+		if (!inner) break;
+		message = inner;
+	}
+	if (!message || message === raw?.message) return raw;
+	return { ...raw, message };
+}
+
 function hasContactPayload(raw) {
 	if (!raw || typeof raw !== 'object') return false;
 	if (raw.sharedContact?.displayName || raw.sharedContact?.phones?.length) return true;
@@ -122,7 +166,9 @@ function normalizeSharedContact(displayName, phones) {
 export function parseContactFromMessage(message) {
 	if (!message) return null;
 	const typeIsContact = isContactMessage(message);
-	const raw = message?.raw && typeof message.raw === 'object' ? message.raw : {};
+	const raw = unwrapContactEnvelope(
+		message?.raw && typeof message.raw === 'object' ? message.raw : {},
+	);
 	if (!typeIsContact && !hasContactPayload(raw) && !message.sharedContact) return null;
 
 	if (message.sharedContact?.displayName || message.sharedContact?.phones?.length) {
@@ -170,7 +216,11 @@ export function parseContactFromMessage(message) {
 				'',
 		).trim() || '';
 
-	if (!phones.length) return null;
+	if (!phones.length) {
+		// Still a contact: show its name and let Save hand over the original vCard.
+		if (!displayName || looksLikeWhatsAppJid(displayName) || !vcardSources.length) return null;
+		return { displayName, phones: [], waId: null, primaryPhone: null };
+	}
 
 	if (looksLikeWhatsAppJid(displayName)) {
 		const loose = phoneFromLooseValue(displayName);
@@ -187,7 +237,9 @@ export function parseContactFromMessage(message) {
 }
 
 export function extractRawVcardFromMessage(message) {
-	const raw = message?.raw && typeof message.raw === 'object' ? message.raw : {};
+	const raw = unwrapContactEnvelope(
+		message?.raw && typeof message.raw === 'object' ? message.raw : {},
+	);
 	const contactMessage = raw?.message?.contactMessage || raw?.contactMessage || null;
 	const contactsArray =
 		raw?.message?.contactsArrayMessage?.contacts ||

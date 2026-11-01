@@ -3028,8 +3028,15 @@ function ContactMessageCard({
 	const displayName =
 		String(contact?.displayName || '').trim() || (ar ? 'جهة اتصال' : 'Contact');
 	const phones = Array.isArray(contact?.phones) ? contact.phones : [];
+	// Cards for numbers WhatsApp could not match carry no waid; an international number still opens a chat.
+	const fallbackPhone = String(phones[0]?.phone || '').trim();
+	const fallbackDigits = /^(\+|00)/.test(fallbackPhone)
+		? fallbackPhone.replace(/\D/g, '').replace(/^00/, '')
+		: '';
 	const primaryWaId =
-		String(contact?.waId || phones[0]?.waId || '').trim() || null;
+		String(
+			contact?.waId || phones[0]?.waId || (fallbackDigits.length >= 7 ? `${fallbackDigits}@c.us` : ''),
+		).trim() || null;
 	const rawVcard = useMemo(() => extractRawVcardFromMessage(message), [message]);
 
 	const openMessageChat = async event => {
@@ -8665,22 +8672,29 @@ export function MediaAttachment({
 				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 			}
 		} catch (error) {
+			const raw = String(error?.message || error?.name || '');
+			const aborted =
+				error?.name === 'AbortError' ||
+				/aborted|timeout|network error|failed to fetch/i.test(raw);
+			// The server says why WhatsApp would not hand the file over; a bare "could not" hid it.
+			const reason =
+				!aborted && raw && !/^(Media unavailable|Attachment is unavailable)$/i.test(raw)
+					? raw.slice(0, 160)
+					: '';
 			if (action === 'download') {
-				const raw = String(error?.message || error?.name || '');
-				const aborted =
-					error?.name === 'AbortError' ||
-					/aborted|timeout|network error|failed to fetch/i.test(raw);
-				toast.error(
-					aborted
-						? locale === 'ar'
-							? 'انقطع تحميل الفيديو. حاول الحفظ مرة تانية.'
-							: 'The video download was interrupted. Tap Save again.'
-						: locale === 'ar'
-							? 'تعذر حفظ الملف'
-							: 'Could not save the file',
-				);
+				const title = aborted
+					? locale === 'ar'
+						? 'انقطع التحميل. حاول الحفظ مرة تانية.'
+						: 'The download was interrupted. Tap Save again.'
+					: locale === 'ar'
+						? 'تعذر حفظ الملف'
+						: 'Could not save the file';
+				toast.error(reason ? `${title}: ${reason}` : title);
 			} else {
 				setFailed(true);
+				if (reason) {
+					toast.error(`${locale === 'ar' ? 'تعذر فتح الملف' : 'Could not open the file'}: ${reason}`);
+				}
 			}
 		} finally {
 			setFileAction('');
