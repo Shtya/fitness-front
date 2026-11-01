@@ -733,7 +733,7 @@ function SetsTable({
 	};
 
 	return (
-		<div className="rounded-[26px] border border-white/85 bg-[#eef2f9] p-5 text-[#0f172a] shadow-[5px_6px_16px_rgba(100,116,139,0.4)]">
+		<div className="rounded-[16px] border border-white/85 bg-[#eef2f9] p-3 text-[#0f172a] shadow-[5px_6px_16px_rgba(100,116,139,0.4)]">
 			<div className="mb-3 grid grid-cols-[28px_minmax(0,1fr)_minmax(0,1fr)_28px] items-center gap-2.5 px-1 text-[11.5px] font-bold text-[#64748b]">
 				<span className="text-center">{t('table.set')}</span>
 				<span className="text-center">{t('table.weight')}</span>
@@ -746,7 +746,7 @@ function SetsTable({
 					<div
 						key={s.id}
 						className={cx(
-							'grid grid-cols-[28px_minmax(0,1fr)_minmax(0,1fr)_28px] items-center gap-2.5 rounded-2xl border p-2.5',
+							'grid grid-cols-[28px_minmax(0,1fr)_minmax(0,1fr)_28px] items-center gap-1.5 rounded-2xl border p-2.5',
 							s.done
 								? 'border-b-white/90 border-e-white/85 border-t-[rgba(100,116,139,0.25)] border-s-[rgba(100,116,139,0.2)] bg-[var(--color-primary-100)]'
 								: 'border-[rgba(100,116,139,0.18)] bg-[#eef2f9]',
@@ -839,7 +839,7 @@ function SetsTable({
 
 function SetInput({ value, onChange, onBlur, onMinus, onPlus, placeholder, inputMode, aria, unit }) {
 	return (
-		<div className="flex min-w-0 items-center gap-1 rounded-full border-[1.2px] border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] px-1.5 py-[5px] shadow-[3px_3px_6px_rgba(100,116,139,0.28)]">
+		<div className="flex min-w-0 items-center gap-1 rounded-full border-[1.2px] border-t-white/95 border-b-[rgba(100,116,139,0.2)] bg-[#eef2f9] px-[2px] py-[2px] shadow-[3px_3px_6px_rgba(100,116,139,0.28)]">
 			<button
 				type="button"
 				onClick={onMinus}
