@@ -42,7 +42,7 @@ import { useCountdown } from '@/hooks/workouts/useCountdown';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SyncStatusPill from '@/components/offline/SyncStatusPill';
 import { enqueue as enqueueOutbox, flush as flushOutbox, getRecords as getOutboxRecords, onSynced } from '@/lib/offline/outbox';
-import { cachedRead } from '@/lib/offline/read-cache';
+import { cachedRead, readCached, writeCached } from '@/lib/offline/read-cache';
 import { WORKOUT_SETS_KIND, workoutSetsKey } from '@/lib/offline/senders';
 import { onMediaQuotaLow, prefetchMediaGroup, refreshMediaStatus, useMediaGroups, useOnline } from '@/lib/offline/media-cache';
 import { DayMediaBadge, OfflineMediaPlaceholder } from '@/components/offline/MediaOffline';
@@ -210,14 +210,16 @@ function pickInitialSection(dayProgramNorm) {
 	return 'workout';
 }
 
-async function fetchLastDayByName(userId, day, onOrBefore) {
+const lastSetsKey = (userId, day) => `workouts:last-sets:${userId}:${String(day).toLowerCase()}`;
+
+async function fetchLastDayByName(userId, day, onOrBefore, knownPlan) {
 	try {
-		const plan = await fetchActivePlan(userId);
+		const plan = knownPlan || (await fetchActivePlan(userId));
 		const dayProgramRaw = plan?.program?.days?.find(d => dayKeyOf(d) === day.toLowerCase()) || { exercises: [] };
 		const dayProgram = normalizeDayProgram(dayProgramRaw);
 		const exerciseNames = (dayProgram.allExercises || []).map(ex => ex.name).filter(Boolean);
 		if (!exerciseNames.length) return { date: null, day, recordsByExercise: {} };
-		const { data } = await cachedRead(`workouts:last-sets:${userId}:${String(day).toLowerCase()}`, () =>
+		const { data } = await cachedRead(lastSetsKey(userId, day), () =>
 			api.post('/prs/last-workout-sets', { userId, exercises: exerciseNames }).then(r => r.data),
 		);
 		const recordsByExercise = {};
@@ -234,6 +236,20 @@ async function fetchLastDayByName(userId, day, onOrBefore) {
 		console.error('Error fetching last workout sets:', error);
 		return { date: null, day, recordsByExercise: {} };
 	}
+}
+
+/**
+ * The offline copy of "last sets" was only written when the page loaded online, so numbers
+ * logged afterwards (and already sent) were missing from it: offline the page showed the
+ * previous session or zeros. Every edit now updates that copy too.
+ */
+async function rememberDaySets(userId, day, exerciseName, records) {
+	if (!userId || !day || !exerciseName) return;
+	const key = lastSetsKey(userId, day);
+	const cached = await readCached(key);
+	const data = Array.isArray(cached?.data?.exercises) ? cached.data : { exercises: [] };
+	const others = data.exercises.filter(e => e?.exerciseName !== exerciseName);
+	await writeCached(key, { ...data, exercises: [...others, { exerciseName, date: todayISO(), records }] });
 }
 
 /* ─────────────────────────────────────────
@@ -988,6 +1004,8 @@ export default function MyWorkoutsPage() {
 	const [selectedDay, setSelectedDay] = useState(() =>
 		typeof window !== 'undefined' ? localStorage.getItem(LOCAL_KEY_SELECTED_DAY) || 'monday' : 'monday',
 	);
+	const selectedDayRef = useRef(selectedDay);
+	selectedDayRef.current = selectedDay;
 	const [activeSection, setActiveSection] = useState('workout');
 	const [workout, setWorkout] = useState(null);
 	const [currentExId, setCurrentExId] = useState(undefined);
@@ -1068,6 +1086,7 @@ export default function MyWorkoutsPage() {
 			id: s.serverId, weight: Number(s.weight) || 0, reps: Number(s.reps) || 0, done: !!s.done, setNumber: Number(s.set) || 1,
 		}));
 		upsertQueueItem({ userId, date: todayISO(), exerciseName: ex.name, records });
+		void rememberDaySets(userId, selectedDayRef.current, ex.name, records);
 	}
 
 	const applyLocalQueuedSnapshotIfAny = useCallback(() => {
@@ -1137,6 +1156,7 @@ export default function MyWorkoutsPage() {
 
 	/* ── Initial load ── */
 	useEffect(() => {
+		if (!USER_ID) return undefined;
 		let mounted = true;
 		(async () => {
 			try {
@@ -1184,6 +1204,15 @@ export default function MyWorkoutsPage() {
 				lastSavedRef.current.clear();
 				session.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
 				void flushOutbox();
+				if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+					// Background: the page is ready; this only fills the offline copy of the other days.
+					void (async () => {
+						for (const day of dayPool) {
+							if (!mounted) break;
+							if (day !== initialDayId) await fetchLastDayByName(USER_ID, day, isoForThisWeeksDay(day), p);
+						}
+					})();
+				}
 			} catch (e) { console.error('Initial load error:', e); }
 			finally { if (mounted) setLoading(false); }
 		})();
