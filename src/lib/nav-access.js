@@ -437,6 +437,13 @@ export function resolvePostLoginPath(user, intendedPath) {
 	return allowed[0] || fallback;
 }
 
+/** Staff accounts that also train in the app: they get the client "My workouts" page too. */
+export const PERSONAL_WORKOUT_EMAILS = ['admin@gmail.com'];
+
+export function hasPersonalWorkouts(email) {
+	return PERSONAL_WORKOUT_EMAILS.includes(String(email || '').trim().toLowerCase());
+}
+
 /** @deprecated Compact top-nav by page count is disabled — desktop uses sidebar; mobile uses header. */
 export const COMPACT_NAV_PAGE_THRESHOLD = 5;
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hasPersonalWorkouts } from '@/lib/nav-access';
 
 export async function POST(req) {
   try {
@@ -33,6 +34,9 @@ export async function POST(req) {
     }
     if (Array.isArray(verifiedUser.pageAccess?.granted) && verifiedUser.pageAccess.granted.length) {
       cookieUser.granted = verifiedUser.pageAccess.granted;
+    }
+    if (hasPersonalWorkouts(verifiedUser.email) && verifiedUser.role !== 'client') {
+      cookieUser.granted = [...new Set([...(cookieUser.granted || []), 'myWorkouts'])];
     }
     const res = NextResponse.json({ ok: true, user: cookieUser });
     const oneWeek = 60 * 60 * 24 * 7;

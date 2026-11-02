@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, Check, Clock, Dumbbell, ListChecks, PlayCircle, RefreshCw, Search, Tag, X } from 'lucide-react';
+import { AlertCircle, Check, ChevronLeft, ChevronRight, Clock, Dumbbell, ListChecks, PlayCircle, RefreshCw, Search, Tag, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import api from '@/utils/axios';
@@ -13,6 +13,7 @@ import Img from '@/components/atoms/Img';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import { TablePagination } from '@/components/atoms/Datatable';
 import useDebounced from '@/hooks/useDebounced';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { categoryLabel, exerciseVideoSrc } from '@/lib/exercise-categories';
 
 const PER_PAGE_OPTIONS = [12, 20, 40];
@@ -78,10 +79,67 @@ const PickerCard = memo(function PickerCard({ exercise: e, checked, onToggle, on
 	);
 });
 
+/** Phone layout: one slim row per exercise so a screen shows ~10 instead of 4 cards. */
+const PickerRow = memo(function PickerRow({ exercise: e, checked, onToggle, onVideo, locale, t }) {
+	return (
+		<div
+			className='relative flex items-center gap-2.5 rounded-[13px] border p-1.5 pe-2 transition-colors'
+			style={{
+				borderColor: checked ? 'var(--color-primary-500)' : 'var(--gm-line)',
+				background: checked
+					? 'color-mix(in srgb, var(--color-primary-50) 85%, var(--gm-paper))'
+					: 'color-mix(in srgb, var(--gm-paper) 80%, transparent)',
+			}}
+		>
+			<button type='button' onClick={() => onToggle(e)} aria-pressed={checked} className='flex min-w-0 flex-1 items-center gap-2.5 text-start focus-visible:outline-none'>
+				<span className='relative size-12 shrink-0 overflow-hidden rounded-[10px] border border-(--gm-line)' style={{ background: 'color-mix(in srgb, var(--color-primary-50) 70%, var(--gm-paper))' }}>
+					{e.img ? (
+						<Img src={e.img} alt='' showBlur={false} loading='lazy' className='h-full w-full object-cover' />
+					) : (
+						<span className='grid h-full place-items-center text-(--color-primary-300)'><Dumbbell className='size-5' strokeWidth={1.6} /></span>
+					)}
+				</span>
+				<span className='min-w-0 flex-1'>
+					<MultiLangText className='block truncate text-[13px] font-bold leading-tight gm-ink'>{e.name}</MultiLangText>
+					<span className='mt-1 flex items-center gap-2 text-[11px] leading-none gm-muted'>
+						{e.category && (
+							<span className='inline-flex min-w-0 items-center gap-1'>
+								<Tag className='size-3 shrink-0' />
+								<span className='truncate'>{categoryLabel(e.category, locale)}</span>
+							</span>
+						)}
+						<span className='shrink-0 font-en tabular-nums' dir='ltr'>{e.targetSets ?? 3} × {e.targetReps || '—'}</span>
+					</span>
+				</span>
+				<span
+					className={`grid size-6 shrink-0 place-items-center rounded-full border transition-all ${checked ? 'border-transparent text-white' : 'border-(--gm-line) text-transparent'}`}
+					style={checked ? { background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' } : undefined}
+					aria-hidden
+				>
+					<Check className='size-3.5' strokeWidth={2.75} />
+				</span>
+			</button>
+			{e.video && (
+				<button
+					type='button'
+					onClick={() => onVideo(e)}
+					aria-label={t('picker.previewVideo')}
+					title={t('picker.previewVideo')}
+					className='grid size-8 shrink-0 place-items-center rounded-[9px] text-(--color-primary-600) transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-100)_60%,transparent)]'
+				>
+					<PlayCircle className='size-4' />
+				</button>
+			)}
+		</div>
+	);
+});
+
 export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDone, dayId, initialSelected = [] }) {
 	const t = useTranslations('workoutPlans');
 	const locale = useLocale();
 	const closeRef = useRef(null);
+	const isPhone = useIsMobile(640);
+	const Item = isPhone ? PickerRow : PickerCard;
 
 	const [categories, setCategories] = useState([]);
 	const [activeCat, setActiveCat] = useState('all');
@@ -100,6 +158,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 	const reqId = useRef(0);
 	const abortRef = useRef(null);
 	const selectedCount = Object.keys(selected).length;
+	const pageCount = Math.max(1, Math.ceil(total / perPage));
 
 	useEffect(() => {
 		if (!open) return;
@@ -207,19 +266,19 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 					transition={{ duration: 0.2, ease: [0.2, 0.75, 0.25, 1] }}
 				>
 					<header className='border-b border-(--gm-line) backdrop-blur-xl' style={GLASS}>
-						<div className='mx-auto max-w-7xl space-y-3.5 px-4 py-4 sm:px-6'>
-							<div className='flex flex-wrap items-center gap-3'>
-								<span className='gm-plan__icon shrink-0'><ListChecks className='size-5' /></span>
+						<div className='mx-auto max-w-7xl space-y-2.5 px-3 pb-2.5 pt-[max(10px,env(safe-area-inset-top))] sm:space-y-3.5 sm:px-6 sm:py-4'>
+							<div className='flex flex-wrap items-center gap-2 sm:gap-3'>
+								<span className='gm-plan__icon shrink-0 max-sm:hidden!'><ListChecks className='size-5' /></span>
 								<div className='min-w-0 flex-1'>
-									<h2 className='gm-display text-[20px] font-bold leading-tight gm-ink md:text-[24px]'>{t('picker.title')}</h2>
-									<p className='mt-0.5 text-[12.5px] gm-muted'>{t('picker.subtitle')}</p>
+									<h2 className='gm-display text-[17px] font-bold leading-tight gm-ink sm:text-[20px] md:text-[24px]'>{t('picker.title')}</h2>
+									<p className='mt-0.5 hidden text-[12.5px] gm-muted sm:block'>{t('picker.subtitle')}</p>
 								</div>
 								<button
 									ref={closeRef}
 									type='button'
 									onClick={onClose}
 									aria-label={t('actions.close')}
-									className='grid size-10 shrink-0 place-items-center rounded-[11px] border border-(--gm-line) gm-ink-soft transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-50)_80%,transparent)] sm:order-last'
+									className='grid size-9 shrink-0 place-items-center rounded-[11px] border border-(--gm-line) gm-ink-soft transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-50)_80%,transparent)] sm:order-last sm:size-10'
 								>
 									<X className='size-4.5' />
 								</button>
@@ -251,7 +310,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 					</header>
 
 					<main className='flex-1 overflow-y-auto'>
-						<div className='mx-auto max-w-7xl px-4 py-5 sm:px-6'>
+						<div className='mx-auto max-w-7xl px-3 py-2.5 sm:px-6 sm:py-5'>
 							{err ? (
 								<div className='flex flex-wrap items-center gap-2 rounded-[14px] border border-rose-200/60 bg-[color-mix(in_srgb,var(--gm-danger)_8%,var(--gm-paper))] px-3.5 py-3 text-sm text-rose-700'>
 									<AlertCircle className='size-4 shrink-0' />
@@ -260,6 +319,18 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 										<RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
 										{t('actions.retry')}
 									</button>
+								</div>
+							) : loading && isPhone ? (
+								<div className='space-y-1.5'>
+									{Array.from({ length: 8 }).map((_, i) => (
+										<div key={i} className='flex items-center gap-2.5 rounded-[13px] border border-(--gm-line) p-1.5'>
+											<span className='gm-skel size-12 shrink-0 rounded-[10px]' />
+											<span className='flex-1 space-y-2'>
+												<span className='gm-skel block h-3.5 w-3/5' />
+												<span className='gm-skel block h-3 w-2/5' />
+											</span>
+										</div>
+									))}
 								</div>
 							) : loading ? (
 								<div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
@@ -274,9 +345,9 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 									))}
 								</div>
 							) : items.length ? (
-								<div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
+								<div className={isPhone ? 'space-y-1.5' : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}>
 									{items.map(e => (
-										<PickerCard key={e.id} exercise={e} checked={!!selected[e.id]} onToggle={toggle} onVideo={setVideo} locale={locale} t={t} />
+										<Item key={e.id} exercise={e} checked={!!selected[e.id]} onToggle={toggle} onVideo={setVideo} locale={locale} t={t} />
 									))}
 								</div>
 							) : (
@@ -290,6 +361,47 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 					</main>
 
 					<footer className='border-t border-(--gm-line) backdrop-blur-xl' style={GLASS}>
+						{isPhone ? (
+							<div className='flex items-center gap-2 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2'>
+								{pageCount > 1 && !err && (
+									<div className='flex shrink-0 items-center rounded-[11px] border border-(--gm-line)' dir='ltr'>
+										<button
+											type='button'
+											onClick={() => setPage(p => Math.max(1, p - 1))}
+											disabled={page <= 1 || loading}
+											aria-label='Previous page'
+											className='grid size-9 place-items-center gm-ink-soft disabled:opacity-35'
+										>
+											<ChevronLeft className='size-4' />
+										</button>
+										<span className='min-w-9 text-center font-en text-[12px] font-semibold tabular-nums gm-muted'>{page}/{pageCount}</span>
+										<button
+											type='button'
+											onClick={() => setPage(p => Math.min(pageCount, p + 1))}
+											disabled={page >= pageCount || loading}
+											aria-label='Next page'
+											className='grid size-9 place-items-center gm-ink-soft disabled:opacity-35'
+										>
+											<ChevronRight className='size-4' />
+										</button>
+									</div>
+								)}
+								{selectedCount > 0 && (
+									<button type='button' onClick={() => setSelected({})} className='shrink-0 px-1 text-[12px] font-semibold text-(--color-primary-600)'>
+										{t('actions.clear')}
+									</button>
+								)}
+								<button
+									type='button'
+									onClick={handleDone}
+									disabled={!selectedCount}
+									className='gm-btn-primary inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[12px] text-[13px] font-bold disabled:opacity-50'
+								>
+									<Check className='size-4 shrink-0' />
+									<span className='truncate'>{t('picker.addSelected', { count: selectedCount })}</span>
+								</button>
+							</div>
+						) : (
 						<div className='mx-auto flex max-w-7xl flex-col-reverse items-stretch gap-2 px-4 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-6'>
 							<div className='min-w-0 [&>div]:px-0 [&>div]:py-2'>
 								{total > 0 && !err && (
@@ -318,6 +430,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 								/>
 							</div>
 						</div>
+						)}
 					</footer>
 
 					<AnimatePresence>

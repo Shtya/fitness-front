@@ -447,7 +447,8 @@ export default function PlansPage() {
 					)}
 					onCta={() => setCreateOpen(true)}
 				/>
-				<section className='grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4'>
+				{/* Phones go straight to the plans list; the counters only repeat it there. */}
+				<section className='hidden grid-cols-2 gap-3 sm:grid sm:gap-4 xl:grid-cols-4'>
 					{statCards.map((card, index) => (
 						<GmStatCard key={card.key} card={card} index={index} />
 					))}
@@ -530,7 +531,7 @@ export default function PlansPage() {
 			</Modal>
 
 			<Modal
-				cn='gm-modal-root'
+				cn='gm-modal-root gm-modal-root--full'
 				panelClassName={GM_MODAL}
 				scrollRef={scrollRef}
 				open={createOpen}
@@ -542,7 +543,7 @@ export default function PlansPage() {
 			</Modal>
 
 			<Modal
-				cn='gm-modal-root'
+				cn='gm-modal-root gm-modal-root--full'
 				panelClassName={GM_MODAL}
 				scrollRef={scrollRef}
 				open={!!editRow}

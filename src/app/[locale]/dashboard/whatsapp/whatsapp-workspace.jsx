@@ -574,20 +574,32 @@ function readStoredWhatsAppAccountId(userId) {
 	}
 }
 
-function writeWhatsAppAccountToLocation(accountId) {
-	if (typeof window === 'undefined' || !accountId) return;
+// Notification links open `?accountId=…&conversationId=…`. They are used once and dropped from
+// the URL: left there, every list refresh re-selected that account and reopened that chat, and
+// a reopened PWA restored them over the account the user picked last.
+const whatsAppDeepLink = { accountId: null, conversationId: null };
+
+function readWhatsAppDeepLink() {
+	if (typeof window === 'undefined') return whatsAppDeepLink;
 	try {
 		const url = new URL(window.location.href);
-		if (url.searchParams.get('accountId') === String(accountId)) return;
-		url.searchParams.set('accountId', String(accountId));
-		window.history.replaceState(
-			window.history.state,
-			'',
-			`${url.pathname}${url.search}${url.hash}`,
-		);
+		const accountId = url.searchParams.get('accountId');
+		const conversationId = url.searchParams.get('conversationId');
+		if (accountId || conversationId) {
+			whatsAppDeepLink.accountId = accountId || null;
+			whatsAppDeepLink.conversationId = conversationId || null;
+			url.searchParams.delete('accountId');
+			url.searchParams.delete('conversationId');
+			window.history.replaceState(
+				window.history.state,
+				'',
+				`${url.pathname}${url.search}${url.hash}`,
+			);
+		}
 	} catch {
 		// Ignore history failures.
 	}
+	return whatsAppDeepLink;
 }
 
 function writeStoredWhatsAppAccountId(accountId, userId) {
@@ -15214,11 +15226,9 @@ function WhatsAppWorkspaceContent() {
 	const loadAccounts = useCallback(async () => {
 		const { data } = await api.get('/whatsapp/accounts');
 		const list = Array.isArray(data) ? data : [];
-		const requestedAccountId =
-			typeof window !== 'undefined'
-				? new URLSearchParams(window.location.search).get('accountId')
-				: null;
-		const requestedAccount = list.find(item => item.id === requestedAccountId);
+		const deepLink = readWhatsAppDeepLink();
+		const requestedAccount = list.find(item => item.id === deepLink.accountId);
+		deepLink.accountId = null;
 		const storedAccountId = readStoredWhatsAppAccountId(currentUserId);
 		const storedAccount = list.find(item => item.id === storedAccountId);
 		setAccounts(list);
@@ -15240,7 +15250,6 @@ function WhatsAppWorkspaceContent() {
 				if (requestedAccount || !currentStillExists || !storedAccount) {
 					writeStoredWhatsAppAccountId(resolved, currentUserId);
 				}
-				writeWhatsAppAccountToLocation(resolved);
 			}
 			return resolved;
 		});
@@ -15534,7 +15543,6 @@ function WhatsAppWorkspaceContent() {
 			if (!nextAccountId) return;
 			setAccountId(nextAccountId);
 			writeStoredWhatsAppAccountId(nextAccountId, currentUserId);
-			writeWhatsAppAccountToLocation(nextAccountId);
 		},
 		[currentUserId],
 	);
@@ -15736,11 +15744,9 @@ function WhatsAppWorkspaceContent() {
 			accountIdRef.current === id
 		) {
 			setConversations(sortConversationsByActivity(cachedItems));
-			const requestedConversationId =
-				typeof window !== 'undefined'
-					? new URLSearchParams(window.location.search).get('conversationId')
-					: null;
-			if (cachedItems.some(item => item.id === requestedConversationId)) {
+			const requestedConversationId = readWhatsAppDeepLink().conversationId;
+			if (requestedConversationId && cachedItems.some(item => item.id === requestedConversationId)) {
+				whatsAppDeepLink.conversationId = null;
 				const requested = cachedItems.find(item => item.id === requestedConversationId);
 				openConversationRef.current?.(requestedConversationId, requested);
 				// Never steal focus from Task Board / Emails / Reports / Settings.
@@ -15954,11 +15960,10 @@ function WhatsAppWorkspaceContent() {
 		} else {
 			setConversations(nextItems);
 		}
-		const requestedConversationId =
-			typeof window !== 'undefined'
-				? new URLSearchParams(window.location.search).get('conversationId')
-				: null;
-		if (!deltaSince && nextItems.some(item => item.id === requestedConversationId)) {
+		const requestedConversationId = deltaSince ? null : readWhatsAppDeepLink().conversationId;
+		// One try against the fresh list: a chat that is not on it must not pop open later.
+		if (requestedConversationId) whatsAppDeepLink.conversationId = null;
+		if (requestedConversationId && nextItems.some(item => item.id === requestedConversationId)) {
 			const requested = nextItems.find(item => item.id === requestedConversationId);
 			openConversationRef.current?.(requestedConversationId, requested);
 			// Keep the user on Task Board (and other non-chat tabs) when a deep-link
@@ -19438,8 +19443,6 @@ function WhatsAppWorkspaceContent() {
 			accountIdRef.current = null;
 			setAccountId(null);
 			clearStoredWhatsAppAccountId(targetAccountId, currentUserId);
-			clearStoredPinnedWhatsAppAccountId(targetAccountId, currentUserId);
-			setPinnedAccountId(current => (current === targetAccountId ? null : current));
 			setConversationId(null);
 			setConversations([]);
 			clearConversationMessages(null);

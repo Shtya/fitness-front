@@ -24,7 +24,7 @@ import {
 } from '@/lib/outreach-unread';
 import { createVisiblePoller } from '@/lib/visible-poll';
 import { syncAppBadge } from '@/lib/app-badge';
-import { applyPageAccessToSections } from '@/lib/nav-access';
+import { applyPageAccessToSections, hasPersonalWorkouts } from '@/lib/nav-access';
 import { useSidebarChrome } from './SidebarChromeContext';
 import DashboardBackgroundPicker from './DashboardBackgroundPicker';
 import {
@@ -498,6 +498,20 @@ export function getAllNavPages() {
     }
   }
   return [...byId.values()];
+}
+
+/** Staff who also train here: "My workouts" goes first in the section that holds workouts. */
+function withPersonalWorkouts(role, sections, email) {
+  if (role === 'client' || !hasPersonalWorkouts(email)) return sections;
+  const has = sections.some(section => (section.items || []).some(item => item.id === 'myWorkouts'));
+  if (has) return sections;
+  const target = Math.max(
+    0,
+    sections.findIndex(section => (section.items || []).some(item => item.id === 'allExercises' || item.id === 'workoutPlans')),
+  );
+  return sections.map((section, index) =>
+    index === target ? { ...section, items: [{ ...ITEM_META.myWorkouts }, ...(section.items || [])] } : section,
+  );
 }
 
 function withGrantedPages(role, sections, pageAccess) {
@@ -2258,11 +2272,16 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 
   const allowedPages = user?.allowedPages;
   const pageAccess = user?.pageAccess;
+  const userEmail = user?.email;
   const sections = useMemo(() => {
     if (!role) return null;
-    const base = withGrantedPages(role, NAV.filter(s => s.role === role), pageAccess);
+    const base = withPersonalWorkouts(
+      role,
+      withGrantedPages(role, NAV.filter(s => s.role === role), pageAccess),
+      userEmail,
+    );
     return applyPageAccessToSections(base, { role, allowedPages, pageAccess });
-  }, [role, allowedPages, pageAccess]);
+  }, [role, allowedPages, pageAccess, userEmail]);
 
   const onNavigate = () => setOpen && setOpen(false);
   const logoutLabel = t_header('actions.signOut');

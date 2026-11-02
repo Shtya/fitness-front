@@ -9,7 +9,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import {
 	AlertCircle, CalendarDays, Clock, CopyPlus, Dumbbell, Eye, Flame, GripVertical, HeartPulse, Layers, NotebookPen,
-	Plus, Tag, Trash2, X,
+	Plus, StickyNote, Tag, Trash2, X,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -225,6 +225,8 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 	const isCardio = blockId === 'cardio';
 	const set = patch => onSetField(dayId, blockId, ex.exerciseId, patch);
 	const unit = ex.durationUnit ?? 'min';
+	const [noteOpen, setNoteOpen] = useState(false);
+	const showNote = noteOpen || Boolean(String(ex.note ?? '').trim());
 
 	const changeUnit = u => {
 		if (unit === u) return;
@@ -241,7 +243,7 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 				borderColor: isDragging ? 'var(--color-primary-300)' : 'var(--gm-line)',
 				background: 'color-mix(in srgb, var(--gm-paper) 80%, transparent)',
 			}}
-			className={`group/row flex flex-wrap items-center gap-x-2.5 gap-y-2.5 rounded-[14px] border py-2 ps-1.5 pe-2 transition-[box-shadow,border-color] lg:flex-nowrap ${isDragging ? 'opacity-50 shadow-lg' : 'hover:border-[color-mix(in_srgb,var(--color-primary-400)_35%,transparent)] hover:shadow-(--gm-shadow-1)'}`}
+			className={`group/row flex flex-wrap items-center gap-x-2 gap-y-2 rounded-[14px] border py-1.5 ps-1 pe-1.5 transition-[box-shadow,border-color] lg:flex-nowrap lg:gap-x-2.5 lg:py-2 lg:ps-1.5 lg:pe-2 ${isDragging ? 'opacity-50 shadow-lg' : 'hover:border-[color-mix(in_srgb,var(--color-primary-400)_35%,transparent)] hover:shadow-(--gm-shadow-1)'}`}
 		>
 			<button
 				type='button'
@@ -249,7 +251,7 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 				{...listeners}
 				aria-label={t('builder.dragHandle')}
 				title={t('builder.dragHandle')}
-				className='grid h-9 w-6 shrink-0 cursor-grab touch-none place-items-center rounded-xl gm-faint transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-100)_60%,transparent)] hover:text-(--color-primary-600) active:cursor-grabbing'
+				className='grid h-9 w-5 shrink-0 cursor-grab touch-none lg:w-6 place-items-center rounded-xl gm-faint transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary-100)_60%,transparent)] hover:text-(--color-primary-600) active:cursor-grabbing'
 			>
 				<GripVertical className='size-4' />
 			</button>
@@ -258,7 +260,7 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 				type='button'
 				onClick={() => ex.img && onPreviewImg(ex.img)}
 				aria-label={t('actions.preview')}
-				className='group relative size-10 shrink-0 overflow-hidden rounded-[11px] border border-(--gm-line)'
+				className='group relative size-9 shrink-0 overflow-hidden rounded-[10px] border border-(--gm-line) lg:size-10 lg:rounded-[11px]'
 				style={{ background: 'color-mix(in srgb, var(--color-primary-50) 70%, var(--gm-paper))' }}
 			>
 				{ex.img ? (
@@ -279,7 +281,7 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 				</span>
 			</button>
 
-			<div className='min-w-0 flex-1 basis-[calc(100%-8rem)] lg:basis-auto'>
+			<div className='min-w-0 flex-1 basis-[calc(100%-10rem)] lg:basis-auto'>
 				<MultiLangText className='block truncate text-[13px] font-bold leading-tight gm-ink' title={ex.name}>{ex.name}</MultiLangText>
 				{ex.category && (
 					<span className='mt-1 inline-flex max-w-full items-center gap-1 text-[11px] leading-none gm-muted'>
@@ -290,7 +292,7 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 			</div>
 
 			{isCardio ? (
-				<div className='order-last grid w-full grid-cols-[minmax(0,180px)_minmax(0,1fr)] gap-1.5 lg:order-0 lg:flex lg:w-auto'>
+				<div className='order-last grid w-full grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-1.5 lg:order-0 lg:flex lg:w-auto'>
 					<DurationField
 						className='lg:w-44'
 						label={t('builder.duration')}
@@ -305,7 +307,7 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 					<MiniField className='lg:w-[250px] xl:w-[300px]' label={t('builder.cardio.note')} value={ex.note} onChange={v => set({ note: v })} />
 				</div>
 			) : (
-				<div className='order-last grid w-full grid-cols-[repeat(3,minmax(0,1fr))_minmax(6.5rem,1.35fr)] gap-1.5 lg:order-0 lg:flex lg:w-auto'>
+				<div className='order-last grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.35fr)] gap-1.5 lg:order-0 lg:flex lg:w-auto'>
 					<MiniField
 						numeric
 						className='lg:w-[58px]'
@@ -335,7 +337,7 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 					/>
 					<MiniField
 						numeric
-						className='min-w-26 lg:w-[104px]'
+						className='lg:w-[104px]'
 						type='number'
 						inputMode='numeric'
 						label={t('builder.restTime')}
@@ -345,12 +347,26 @@ const SortableExerciseRow = memo(function SortableExerciseRow({ ex, index, dayId
 						suffix={t('builder.secondsShort')}
 					/>
 					<MiniField
-						className='col-span-4 lg:w-[170px] xl:w-[220px]'
+						className={`col-span-4 lg:flex lg:w-[170px] xl:w-[220px] ${showNote ? '' : 'max-lg:hidden'}`}
 						label={t('builder.exerciseNote')}
 						value={ex.note}
 						onChange={v => set({ note: v })}
 					/>
 				</div>
+			)}
+
+			{/* Phones: the note field stays folded until it is needed. */}
+			{!isCardio && (
+				<button
+					type='button'
+					onClick={() => setNoteOpen(open => !open)}
+					aria-expanded={showNote}
+					aria-label={t('builder.exerciseNote')}
+					title={t('builder.exerciseNote')}
+					className={`grid size-8 shrink-0 place-items-center rounded-[9px] transition-colors lg:hidden ${showNote ? 'text-(--color-primary-600) bg-[color-mix(in_srgb,var(--color-primary-100)_60%,transparent)]' : 'gm-faint'}`}
+				>
+					<StickyNote className='size-4' />
+				</button>
 			)}
 
 			<button
@@ -481,7 +497,7 @@ const DayCard = memo(function DayCard({
 				background: 'color-mix(in srgb, var(--gm-paper) 52%, transparent)',
 			}}
 		>
-			<header className='flex flex-wrap items-center gap-2.5 border-b border-(--gm-line) px-3.5 py-3 sm:px-4'>
+			<header className='flex items-center gap-2 border-b border-(--gm-line) px-2.5 py-2.5 sm:flex-wrap sm:gap-2.5 sm:px-4 sm:py-3'>
 				<span
 					className='grid size-8 shrink-0 place-items-center rounded-[10px] font-en text-[12px] font-bold text-white tabular-nums'
 					style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
@@ -489,7 +505,7 @@ const DayCard = memo(function DayCard({
 					{index + 1}
 				</span>
 				<FloatingSelect
-					className='w-[min(100%,190px)]'
+					className='min-w-0 flex-1 sm:w-[190px] sm:flex-none'
 					label={t('builder.dayLabel')}
 					options={dayOptions}
 					value={day.dayOfWeek}
@@ -497,11 +513,11 @@ const DayCard = memo(function DayCard({
 					error={duplicate ? t('builder.validation.duplicateDay') : undefined}
 					icon={<CalendarDays className='size-4' />}
 				/>
-				<span className='gm-plan__chip font-en tabular-nums'>
+				<span className='gm-plan__chip hidden font-en tabular-nums sm:inline-flex'>
 					<Dumbbell className='size-3' />
 					{total}
 				</span>
-				<div className='ms-auto flex items-center gap-1.5'>
+				<div className='flex shrink-0 items-center gap-1.5 sm:ms-auto'>
 					<button
 						type='button'
 						onClick={() => onDuplicateDay(day.id)}
@@ -524,7 +540,7 @@ const DayCard = memo(function DayCard({
 				</div>
 			</header>
 
-			<div className='space-y-5 p-3.5 sm:p-4'>
+			<div className='space-y-4 p-2 sm:space-y-5 sm:p-4'>
 				{filled.map(block => (
 					<ExerciseBlock
 						key={block.id}
@@ -828,13 +844,13 @@ export function PlanBuilder({ scrollRef, initial, onSubmit, onCancel }) {
 				<div
 					role='region'
 					aria-label={t('builder.savePlanBtn')}
-					className='gm-float flex w-full max-w-3xl flex-wrap items-center justify-between gap-3 px-3.5 py-2.5'
+					className='gm-float flex w-full max-w-3xl items-center justify-between gap-2 px-2.5 py-2 sm:flex-wrap sm:gap-3 sm:px-3.5 sm:py-2.5'
 				>
-					<div className='flex min-w-0 flex-wrap items-center gap-1.5'>
+					<div className='hidden min-w-0 flex-wrap items-center gap-1.5 sm:flex'>
 						<span className='gm-plan__chip font-en tabular-nums'><CalendarDays className='size-3' />{days.length} {t('builder.daysShort')}</span>
 						<span className='gm-plan__chip font-en tabular-nums'><Dumbbell className='size-3' />{totalExercises} {t('preview.exercises')}</span>
 					</div>
-					<div className='flex w-full flex-wrap items-center gap-2 sm:w-auto'>
+					<div className='flex w-full items-center gap-2 sm:w-auto'>
 						{onCancel && (
 							<button type='button' onClick={onCancel} disabled={saving} className='gm-btn-ghost gm-btn-compact inline-flex flex-1 items-center justify-center disabled:opacity-60 sm:flex-none'>
 								{t('actions.cancel')}

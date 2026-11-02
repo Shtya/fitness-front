@@ -196,13 +196,15 @@ export function AssignForm({ plan, user, onAssigned, onCancel }) {
 				const res = await api.get(`/auth/coaches/${user.id}/clients`, { params: { limit: 1000 } });
 				list = res.data?.users || [];
 			}
-			setClients(list.map(c => ({ id: c.id, name: c.name || '', email: c.email || '' })));
+			// Staff can put a plan on their own "My workouts" too: they always come first.
+			list = [{ id: user.id, name: user.name || '', email: user.email || '' }, ...list.filter(c => c.id !== user.id)];
+			setClients(list.map(c => ({ id: c.id, name: c.name || '', email: c.email || '', isSelf: c.id === user.id })));
 		} catch (e) {
 			setErr(e?.response ? e.response.data?.message || t('assign.loadFailed') : t('errors.serverUnreachable'));
 		} finally {
 			setLoading(false);
 		}
-	}, [user?.id, user?.role, t]);
+	}, [user?.id, user?.role, user?.email, user?.name, t]);
 
 	useEffect(() => { load(); }, [load]);
 
@@ -280,7 +282,14 @@ export function AssignForm({ plan, user, onAssigned, onCancel }) {
 							>
 								<Avatar name={c.name} />
 								<span className='min-w-0 flex-1'>
-									<span dir='auto' className='block truncate text-[13px] font-semibold gm-ink'>{c.name || '—'}</span>
+									<span className='flex min-w-0 items-center gap-1.5'>
+										<span dir='auto' className='truncate text-[13px] font-semibold gm-ink'>{c.name || '—'}</span>
+										{c.isSelf && (
+											<span className='shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-bold text-(--color-primary-700)' style={{ background: 'color-mix(in srgb, var(--color-primary-100) 80%, transparent)' }}>
+												{t('assign.you')}
+											</span>
+										)}
+									</span>
 									{c.email && <span className='block truncate font-en text-[11.5px] gm-muted' dir='ltr'>{c.email}</span>}
 								</span>
 								<span

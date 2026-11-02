@@ -2644,7 +2644,8 @@
 			"selectedCount": "{count, plural, =0 {No clients selected} one {# client selected} other {# clients selected}}",
 			"noClients": "No clients available to assign.",
 			"noMatches": "No clients match your search.",
-			"loadFailed": "Failed to load clients."
+			"loadFailed": "Failed to load clients.",
+			"you": "You"
 		},
 		"builder": {
 			"namePlaceholder": "Plan name (e.g. Push/Pull/Legs...)",

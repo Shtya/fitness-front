@@ -41,6 +41,23 @@ export function isColdStartEntryPath(pathname) {
 	return path === '/' || path === '/dashboard' || path === '/open';
 }
 
+// Notification deep links (`?accountId=…&conversationId=…`) are one-shot: restoring them
+// reopened the app on that account / chat instead of the one the user picked last.
+const ONE_SHOT_PARAMS = ['accountId', 'conversationId'];
+
+function stripOneShotParams(search) {
+	const q = String(search || '');
+	if (!q) return '';
+	try {
+		const params = new URLSearchParams(q.startsWith('?') ? q.slice(1) : q);
+		for (const key of ONE_SHOT_PARAMS) params.delete(key);
+		const rest = params.toString();
+		return rest ? `?${rest}` : '';
+	} catch {
+		return '';
+	}
+}
+
 export function readLastRoute() {
 	if (typeof window === 'undefined') return null;
 	try {
@@ -51,7 +68,7 @@ export function readLastRoute() {
 		if (!path || !isRestorablePath(path)) return null;
 		return {
 			path,
-			search: typeof parsed?.search === 'string' ? parsed.search : '',
+			search: stripOneShotParams(typeof parsed?.search === 'string' ? parsed.search : ''),
 			locale: parsed.locale === 'en' ? 'en' : 'ar',
 			savedAt: Number(parsed.savedAt) || 0,
 		};
@@ -64,8 +81,7 @@ export function saveLastRoute(pathname, locale = 'ar', search = '') {
 	if (typeof window === 'undefined') return;
 	const path = normalizeAppPath(pathname);
 	if (!isRestorablePath(path)) return;
-	const q = String(search || '');
-	const searchSafe = q.startsWith('?') ? q : q ? `?${q}` : '';
+	const searchSafe = stripOneShotParams(search);
 	try {
 		localStorage.setItem(
 			LAST_ROUTE_KEY,
