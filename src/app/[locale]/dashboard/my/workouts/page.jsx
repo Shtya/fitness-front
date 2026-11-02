@@ -210,6 +210,9 @@ function pickInitialSection(dayProgramNorm) {
 	return 'workout';
 }
 
+const STAFF_ROLES = ['admin', 'super_admin', 'coach'];
+const canEditOwnPlan = u => Boolean(u?.canEditWorkout) || STAFF_ROLES.includes(String(u?.role || '').toLowerCase());
+
 const lastSetsKey = (userId, day) => `workouts:last-sets:${userId}:${String(day).toLowerCase()}`;
 
 async function fetchLastDayByName(userId, day, onOrBefore, knownPlan) {
@@ -1022,7 +1025,11 @@ export default function MyWorkoutsPage() {
 	const lastSavedRef = useRef(new Map());
 
 	/* ── Edit mode ── */
-	const [canEditWorkout, setCanEditWorkout] = useState(!!user?.canEditWorkout);
+	// Staff edit their own workout by default; clients need the coach's permission.
+	const [canEditWorkout, setCanEditWorkout] = useState(() => canEditOwnPlan(user));
+	useEffect(() => {
+		if (user) setCanEditWorkout(prev => prev || canEditOwnPlan(user));
+	}, [user]);
 	const [planEditorOpen, setPlanEditorOpen] = useState(false);
 	const tEditor = useTranslations('myPlanEditor');
 
@@ -1169,7 +1176,7 @@ export default function MyWorkoutsPage() {
 				setPlan(p);
 				if (meRes?.data) {
 					const freshUser = meRes.data;
-					setCanEditWorkout(!!freshUser.canEditWorkout);
+					setCanEditWorkout(canEditOwnPlan(freshUser));
 					try {
 						const stored = JSON.parse(localStorage.getItem('user') || '{}');
 						localStorage.setItem('user', JSON.stringify({ ...stored, canEditWorkout: !!freshUser.canEditWorkout }));
