@@ -27,6 +27,7 @@ import {
 	Search,
 	Info,
 	Youtube,
+	PencilRuler,
 } from 'lucide-react';
 import { Notification } from '@/config/Notification';
 import api, { baseImg } from '@/utils/axios';
@@ -44,7 +45,8 @@ import { enqueue as enqueueOutbox, flush as flushOutbox, getRecords as getOutbox
 import { cachedRead } from '@/lib/offline/read-cache';
 import { WORKOUT_SETS_KIND, workoutSetsKey } from '@/lib/offline/senders';
 import { onMediaQuotaLow, prefetchMediaGroup, refreshMediaStatus, useMediaGroups, useOnline } from '@/lib/offline/media-cache';
-import { DayMediaBadge, DayMediaLine, OfflineMediaPlaceholder } from '@/components/offline/MediaOffline';
+import { DayMediaBadge, OfflineMediaPlaceholder } from '@/components/offline/MediaOffline';
+import MyPlanEditor from '@/components/pages/workouts/MyPlanEditor';
 
 /* ─────────────────────────────────────────
 	 CONSTANTS
@@ -357,7 +359,7 @@ function MediaImage({ src, missingOffline, fallback = null, ...props }) {
 	return <img src={src} onError={() => setFailed(true)} {...props} />;
 }
 
-export function InlineVideo({ src, missingOffline = false }) {
+export function InlineVideo({ src, missingOffline = false, onPlayingChange }) {
 	const url = playableSrc(src);
 	const id = youtubeId(url);
 	const videoRef = useRef(null);
@@ -370,6 +372,11 @@ export function InlineVideo({ src, missingOffline = false }) {
 		setPlaying(false);
 	}, [url]);
 
+	useEffect(() => {
+		onPlayingChange?.(playing);
+	}, [playing, onPlayingChange]);
+	useEffect(() => () => onPlayingChange?.(false), [onPlayingChange]);
+
 	// Back online after a failed offline load: try again.
 	useEffect(() => {
 		if (online) setFailed(false);
@@ -381,7 +388,7 @@ export function InlineVideo({ src, missingOffline = false }) {
 
 	if (!url || failed) {
 		return (
-			<div className="absolute inset-0 z-[1] grid place-items-center bg-black text-white/45">
+			<div className="absolute inset-0 z-[1] grid place-items-center bg-[#eef2f9] text-slate-400 dark:bg-[#0b1220] dark:text-white/40">
 				<VideoIcon size={28} />
 			</div>
 		);
@@ -407,17 +414,20 @@ export function InlineVideo({ src, missingOffline = false }) {
 		else el.pause();
 	};
 
+	// Exercise clips are drawn on white: a light letterbox blends in where black bars did not.
+	// "#t=0.001" makes iOS paint the first frame instead of an empty box before playback.
 	return (
-		<div className="absolute inset-0 z-[1] bg-black">
+		<div className="absolute inset-0 z-[1] bg-white dark:bg-[#0b1220]">
 			<video
 				ref={videoRef}
-				className="h-full w-full bg-black object-contain"
-				src={url}
+				className="h-full w-full object-contain"
+				src={url.includes('#') ? url : `${url}#t=0.001`}
 				controls={playing}
 				playsInline
 				preload="metadata"
 				onPlay={() => setPlaying(true)}
 				onPause={() => setPlaying(false)}
+				onEnded={() => setPlaying(false)}
 				onError={() => setFailed(true)}
 			/>
 			{!playing && (
@@ -425,10 +435,10 @@ export function InlineVideo({ src, missingOffline = false }) {
 					type="button"
 					onClick={toggle}
 					aria-label="Play video"
-					className="absolute inset-0 grid place-items-center"
+					className="group absolute inset-0 grid place-items-center bg-gradient-to-t from-black/10 via-transparent to-transparent"
 				>
-					<span className="grid h-14 w-14 place-items-center rounded-2xl border-2 border-white/40 bg-black/55 text-white">
-						<Play size={22} fill="currentColor" />
+					<span className="grid h-16 w-16 place-items-center rounded-full bg-white/90 text-[var(--color-primary-600)] shadow-[0_10px_30px_-6px_rgba(15,23,42,0.55)] ring-8 ring-white/35 backdrop-blur transition group-active:scale-95">
+						<Play size={26} fill="currentColor" className="translate-x-[2px]" />
 					</span>
 				</button>
 			)}
@@ -966,343 +976,6 @@ function LoadingSkeleton() {
 /* ─────────────────────────────────────────
 	 ADD EXERCISE MODAL
 ───────────────────────────────────────── */
-const PAGE_SIZE = 12;
-
-function AddExerciseModal({ open, section, onClose, onAdd, t }) {
-	const [query, setQuery] = useState('');
-	const [activeCategory, setActiveCategory] = useState('');
-	const [categories, setCategories] = useState([]);
-	const [results, setResults] = useState([]);
-	const [total, setTotal] = useState(0);
-	const [page, setPage] = useState(1);
-	const [loading, setLoading] = useState(false);
-	const [catLoading, setCatLoading] = useState(false);
-	const timerRef = useRef(null);
-	const listRef = useRef(null);
-
-	const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-	/* fetch categories once on open */
-	useEffect(() => {
-		if (!open) {
-			setQuery('');
-			setActiveCategory('');
-			setPage(1);
-			setResults([]);
-			setTotal(0);
-			return;
-		}
-		setCatLoading(true);
-		api.get('/plan-exercises/categories')
-			.then(r => setCategories(Array.isArray(r.data) ? r.data : []))
-			.catch(() => setCategories([]))
-			.finally(() => setCatLoading(false));
-	}, [open]);
-
-	/* fetch exercises whenever page / category / query change */
-	const fetchExercises = useCallback(async (q, cat, pg) => {
-		setLoading(true);
-		try {
-			const res = await api.get('/plan-exercises', {
-				params: { search: q || undefined, category: cat || undefined, page: pg, limit: PAGE_SIZE },
-			});
-			setResults(Array.isArray(res.data?.records) ? res.data.records : []);
-			setTotal(Number(res.data?.total_records) || 0);
-		} catch {
-			setResults([]);
-			setTotal(0);
-		} finally {
-			setLoading(false);
-		}
-	}, []);
-
-	/* run on mount and whenever page/category change (not search — search debounced below) */
-	useEffect(() => {
-		if (!open) return;
-		fetchExercises(query, activeCategory, page);
-		listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-	}, [open, page, activeCategory]); // eslint-disable-line
-
-	/* debounce search */
-	const handleSearch = e => {
-		const q = e.target.value;
-		setQuery(q);
-		setPage(1);
-		clearTimeout(timerRef.current);
-		timerRef.current = setTimeout(() => fetchExercises(q, activeCategory, 1), 400);
-	};
-
-	const handleCategory = cat => {
-		setActiveCategory(cat);
-		setPage(1);
-	};
-
-	if (!open) return null;
-
-	return (
-		<AnimatePresence>
-			<motion.div
-				initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-				className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm"
-				onClick={onClose}
-			/>
-			<motion.div
-				initial={{ y: 40, opacity: 0, scale: 0.96 }}
-				animate={{ y: 0, opacity: 1, scale: 1 }}
-				exit={{ y: 24, opacity: 0, scale: 0.97 }}
-				transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-				className="fixed left-1/2 top-[4%] -translate-x-1/2 z-[205] w-[96%] max-w-2xl rounded-xl bg-white shadow-2xl border border-[var(--color-primary-100)] overflow-hidden flex flex-col"
-				style={{ maxHeight: '90vh' }}
-				onClick={e => e.stopPropagation()}
-			>
-				{/* ── Header ── */}
-				<div className="shrink-0 px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between gap-3">
-					<div>
-						<h3 className="text-sm font-bold text-slate-800">{t('actions.selectExercise')}</h3>
-						{total > 0 && !loading && (
-							<p className="text-xs text-slate-400 mt-0.5">{total} {t('exercises')}</p>
-						)}
-					</div>
-					<button type="button" onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors shrink-0">
-						<X size={16} />
-					</button>
-				</div>
-
-				{/* ── Search ── */}
-				<div className="shrink-0 px-4 py-3 border-b border-slate-100">
-					<div className="relative">
-						<Search size={14} className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-						<input
-							autoFocus
-							value={query}
-							onChange={handleSearch}
-							placeholder={t('actions.searchExercises')}
-							className="w-full ltr:pl-9 rtl:pr-9 ltr:pr-3 rtl:pl-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)] transition-shadow bg-slate-50"
-						/>
-					</div>
-				</div>
-
-				{/* ── Category tabs ── */}
-				{(catLoading || categories.length > 0) && (
-					<div className="shrink-0 px-4 py-2 border-b border-slate-100 overflow-x-auto scrollbar-hide">
-						<div className="flex items-center gap-1.5 w-max">
-							<button
-								type="button"
-								onClick={() => handleCategory('')}
-								className={cx(
-									'px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all',
-									activeCategory === ''
-										? 'text-white shadow-sm'
-										: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-								)}
-								style={activeCategory === '' ? { background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))' } : {}}
-							>
-								{t('actions.allCategories') || 'All'}
-							</button>
-							{catLoading
-								? Array.from({ length: 5 }).map((_, i) => (
-									<div key={i} className="h-6 w-16 rounded-full bg-slate-100 animate-pulse" />
-								))
-								: categories.map(cat => (
-									<button
-										key={cat}
-										type="button"
-										onClick={() => handleCategory(cat)}
-										className={cx(
-											'px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all',
-											activeCategory === cat
-												? 'text-white shadow-sm'
-												: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-										)}
-										style={activeCategory === cat ? { background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))' } : {}}
-									>
-										{cat}
-									</button>
-								))
-							}
-						</div>
-					</div>
-				)}
-
-				{/* ── Exercise list ── */}
-				<div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
-					{loading ? (
-						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-							{Array.from({ length: PAGE_SIZE }).map((_, i) => (
-								<div key={i} className="h-20 rounded-lg bg-slate-100 animate-pulse" />
-							))}
-						</div>
-					) : results.length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-14 text-slate-400 gap-2">
-							<Dumbbell size={28} className="opacity-40" />
-							<span className="text-sm">{t('actions.noExercisesFound')}</span>
-						</div>
-					) : (
-						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-							{results.map(ex => (
-								<button
-									key={ex.id}
-									type="button"
-									onClick={() => onAdd(section, ex)}
-									className="flex flex-col items-center gap-2 p-3 rounded-lg border border-slate-200 hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] transition-all text-center group active:scale-95"
-								>
-									<div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
-										{ex.img
-											? <img src={mediaUrl(ex.img)} alt="" className="h-full w-full object-contain" />
-											: <Dumbbell size={18} className="text-slate-300 group-hover:text-[var(--color-primary-400)] transition-colors" />
-										}
-									</div>
-									<div className="w-full min-w-0">
-										<p className="text-xs font-semibold text-slate-800 line-clamp-2 md: leading-tight">{ex.name}</p>
-										{ex.category && (
-											<p className="text-[10px] text-slate-400 mt-0.5 truncate">{ex.category}</p>
-										)}
-									</div>
-								</button>
-							))}
-						</div>
-					)}
-				</div>
-
-				{/* ── Pagination ── */}
-				{!loading && totalPages > 1 && (
-					<div className="shrink-0 px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-3">
-						<button
-							type="button"
-							disabled={page <= 1}
-							onClick={() => setPage(p => p - 1)}
-							className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-						>
-							<ChevronLeft className='rtl:scale-x-[-1]' size={13} />
-							{t('pagination.prev') || 'Prev'}
-						</button>
-
-						<span className="text-xs text-slate-500 font-medium">
-							{page} / {totalPages}
-						</span>
-
-						<button
-							type="button"
-							disabled={page >= totalPages}
-							onClick={() => setPage(p => p + 1)}
-							className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-						>
-							{t('pagination.next') || 'Next'}
-							<ChevronRight className='rtl:scale-x-[-1]' size={13} />
-						</button>
-					</div>
-				)}
-			</motion.div>
-		</AnimatePresence>
-	);
-}
-
-/* ─────────────────────────────────────────
-	 EDIT PLAN PANEL
-───────────────────────────────────────── */
-function EditPlanPanel({ editDayExercises, onUpdate, onDelete, onAddClick, onSave, onExit, saving, t }) {
-	const sections = [
-		{ key: 'warmupExercises', label: t('sections.warmup') },
-		{ key: 'exercises', label: t('sections.workout') },
-		{ key: 'cardioExercises', label: t('sections.cardio') },
-	];
-
-	return (
-		<motion.div
-			initial={{ opacity: 0, y: 8 }}
-			animate={{ opacity: 1, y: 0 }}
-			exit={{ opacity: 0, y: 8 }}
-			className="rounded-xl border border-[var(--color-primary-200)] bg-white shadow-lg overflow-hidden"
-		>
-			{/* Toolbar */}
-			<div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-[var(--color-primary-50)] to-white border-b border-[var(--color-primary-100)]">
-				<div className="flex items-center gap-2">
-					<PencilLine size={15} className="text-[var(--color-primary-600)]" />
-					<span className="text-sm font-bold text-slate-800">{t('actions.editPlan')}</span>
-				</div>
-				<div className="flex items-center gap-2">
-					<button
-						type="button"
-						onClick={onExit}
-						disabled={saving}
-						className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50"
-					>
-						{t('actions.exitEdit')}
-					</button>
-					<button
-						type="button"
-						onClick={onSave}
-						disabled={saving}
-						className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-50"
-						style={{ background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))' }}
-					>
-						{saving ? <RotateCcw size={12} className="animate-spin" /> : <Save size={12} />}
-						{saving ? t('actions.saving') : t('actions.savePlan')}
-					</button>
-				</div>
-			</div>
-
-			{/* Sections */}
-			<div className="divide-y divide-slate-100">
-				{sections.map(({ key, label }) => {
-					const exercises = editDayExercises[key] || [];
-					return (
-						<div key={key} className="px-4 py-3 space-y-2">
-							<div className="flex items-center justify-between">
-								<span className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
-								<button
-									type="button"
-									onClick={() => onAddClick(key)}
-									className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-[var(--color-primary-700)] bg-[var(--color-primary-50)] hover:bg-[var(--color-primary-100)] transition-colors border border-[var(--color-primary-200)]"
-								>
-									<Plus size={11} /> {t('actions.addExercise')}
-								</button>
-							</div>
-							{exercises.length === 0 && (
-								<p className="text-xs text-slate-400 py-2">{t('noExercises')}</p>
-							)}
-							{exercises.map((ex, idx) => (
-								<div key={`${ex.id}-${idx}`} className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border border-slate-200">
-									<div className="w-8 h-8 rounded-lg bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
-										{ex.img ? <img src={mediaUrl(ex.img)} alt="" className="h-full w-full object-contain" /> : <Dumbbell size={12} className="text-slate-400" />}
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-semibold text-slate-800 truncate">{ex.name}</p>
-										<div className="flex items-center gap-2 mt-1">
-											<label className="text-[10px] text-slate-500">{t('actions.sets')}</label>
-											<input
-												type="number" min="1" max="20"
-												value={ex.targetSets ?? 3}
-												onChange={e => onUpdate(key, ex.id, 'targetSets', Math.max(1, parseInt(e.target.value) || 1))}
-												className="w-12 text-center text-xs border border-slate-200 rounded-md px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-300)]"
-											/>
-											<label className="text-[10px] text-slate-500">{t('actions.reps')}</label>
-											<input
-												type="text"
-												value={ex.targetReps ?? '10'}
-												onChange={e => onUpdate(key, ex.id, 'targetReps', e.target.value)}
-												className="w-16 text-center text-xs border border-slate-200 rounded-md px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-300)]"
-											/>
-										</div>
-									</div>
-									<button
-										type="button"
-										onClick={() => onDelete(key, ex.id)}
-										className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors shrink-0"
-										title={t('actions.deleteExercise')}
-									>
-										<Trash2 size={13} />
-									</button>
-								</div>
-							))}
-						</div>
-					);
-				})}
-			</div>
-		</motion.div>
-	);
-}
-
 export default function MyWorkoutsPage() {
 	const t = useTranslations('MyWorkouts');
 	const tOffline = useTranslations('OfflineMedia');
@@ -1319,6 +992,7 @@ export default function MyWorkoutsPage() {
 	const [workout, setWorkout] = useState(null);
 	const [currentExId, setCurrentExId] = useState(undefined);
 	const [activeMedia, setActiveMedia] = useState('image');
+	const [videoPlaying, setVideoPlaying] = useState(false);
 	const audioRef = useRef(null);
 	const [alerting, setAlerting] = useState(false);
 	const [audioOpen, setAudioOpen] = useState(false);
@@ -1331,10 +1005,8 @@ export default function MyWorkoutsPage() {
 
 	/* ── Edit mode ── */
 	const [canEditWorkout, setCanEditWorkout] = useState(!!user?.canEditWorkout);
-	const [editMode, setEditMode] = useState(false);
-	const [editDayExercises, setEditDayExercises] = useState({ warmupExercises: [], exercises: [], cardioExercises: [] });
-	const [addExModal, setAddExModal] = useState(null);
-	const [savingPlan, setSavingPlan] = useState(false);
+	const [planEditorOpen, setPlanEditorOpen] = useState(false);
+	const tEditor = useTranslations('myPlanEditor');
 
 	useEffect(() => {
 		if (selectedDay) localStorage.setItem(LOCAL_KEY_SELECTED_DAY, selectedDay);
@@ -1642,77 +1314,20 @@ export default function MyWorkoutsPage() {
 		setUnsaved(false);
 	}), [USER_ID, applyRecordsToWorkout]);
 
-	/* ── Edit plan helpers ── */
-	const enterEditMode = useCallback(() => {
-		const dayData = (plan?.program?.days || []).find(d => String(d.dayOfWeek ?? '').toLowerCase() === selectedDay) || {};
-		setEditDayExercises({
-			warmupExercises: [...(dayData.warmupExercises || [])],
-			exercises: [...(dayData.exercises || [])],
-			cardioExercises: [...(dayData.cardioExercises || [])],
-		});
-		setEditMode(true);
-	}, [plan, selectedDay]);
-
-	const exitEditMode = useCallback(() => {
-		setEditMode(false);
-		setEditDayExercises({ warmupExercises: [], exercises: [], cardioExercises: [] });
-		setAddExModal(null);
-	}, []);
-
-	const savePlanChanges = useCallback(async () => {
-		const planId = plan?.id;
-		if (!planId) return;
-		const dayData = (plan?.program?.days || []).find(d => String(d.dayOfWeek ?? '').toLowerCase() === selectedDay);
-		setSavingPlan(true);
+	/* ── My plan editor ── */
+	const onPlanEdited = useCallback(async () => {
 		try {
-			const toRef = arr => arr.map(ex => ({ id: ex.id, targetSets: Number(ex.targetSets) || 3, targetReps: String(ex.targetReps || '10') }));
-			await api.put(`/plans/${planId}`, {
-				program: {
-					days: [{
-						dayOfWeek: selectedDay,
-						name: dayData?.name || selectedDay,
-						warmupExercises: toRef(editDayExercises.warmupExercises),
-						exercises: toRef(editDayExercises.exercises),
-						cardioExercises: toRef(editDayExercises.cardioExercises),
-					}],
-				},
-			});
 			const freshPlan = await fetchActivePlan(USER_ID);
 			setPlan(freshPlan);
-			exitEditMode();
 			const byKey = Object.fromEntries((freshPlan?.program?.days || []).map(d => [dayKeyOf(d), d]).filter(([k]) => k));
-			const dayProgramRaw = byKey[selectedDay] || { exercises: [] };
-			const dayProgramNorm = normalizeDayProgram(dayProgramRaw);
-			const session = createSessionFromDay(dayProgramNorm);
+			const session = createSessionFromDay(normalizeDayProgram(byKey[selectedDay] || { exercises: [] }));
 			setWorkout(session);
 			const firstEx = session.exercises?.[0];
 			setCurrentExId(firstEx?.id != null ? String(firstEx.id) : undefined);
-			Notification(t('editPlan.saved'), 'success');
-		} catch (e) {
-			Notification(e?.response?.data?.message || t('editPlan.saveFailed'), 'error');
-		} finally {
-			setSavingPlan(false);
+		} catch {
+			/* the next visit loads the saved plan */
 		}
-	}, [plan, selectedDay, editDayExercises, exitEditMode, USER_ID, t]);
-
-	const deleteExerciseFromEdit = useCallback((section, exerciseId) => {
-		setEditDayExercises(prev => ({ ...prev, [section]: prev[section].filter(ex => ex.id !== exerciseId) }));
-	}, []);
-
-	const updateExerciseInEdit = useCallback((section, exerciseId, field, value) => {
-		setEditDayExercises(prev => ({
-			...prev,
-			[section]: prev[section].map(ex => ex.id === exerciseId ? { ...ex, [field]: value } : ex),
-		}));
-	}, []);
-
-	const addExerciseToEdit = useCallback((section, exercise) => {
-		setEditDayExercises(prev => ({
-			...prev,
-			[section]: [...prev[section], { id: exercise.id, name: exercise.name, targetSets: exercise.targetSets || 3, targetReps: exercise.targetReps || '10', img: exercise.img || null }],
-		}));
-		setAddExModal(null);
-	}, []);
+	}, [USER_ID, selectedDay]);
 
 	/* ── Derived ── */
 	const exercisesBySection = useMemo(() => (workout?.exercises || []).filter(ex => (ex.group || 'workout') === activeSection), [workout?.exercises, activeSection]);
@@ -1833,17 +1448,17 @@ export default function MyWorkoutsPage() {
 
 	return (
 		<div data-plain-page="1" className="report-phone mx-auto w-full max-w-[440px] space-y-3 bg-white pt-1 dark:bg-[#0b1220]">
-			<audio ref={audioRef} src={DEFAULT_SOUNDS[2]} preload="auto" />
+			<audio ref={audioRef} preload="auto" />
 			<NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} title={plan?.name} notes={plan?.notes || []} t={t} />
 
-			{/* Add exercise modal */}
-			<AddExerciseModal
-				open={!!addExModal}
-				section={addExModal}
-				onClose={() => setAddExModal(null)}
-				onAdd={addExerciseToEdit}
-				t={t}
-			/>
+			{canEditWorkout && (
+				<MyPlanEditor
+					open={planEditorOpen}
+					onClose={() => setPlanEditorOpen(false)}
+					onSaved={onPlanEdited}
+					initialDay={selectedDay}
+				/>
+			)}
 
 			{/* ── HEADER ── */}
 			<WorkoutHeader
@@ -1856,25 +1471,13 @@ export default function MyWorkoutsPage() {
 				onDayChange={changeDay}
 				onAudioClick={() => { !hidden && setAudioOpen(v => !v); setHidden(false); }}
 				onNotesClick={() => setNotesOpen(true)}
+				onEditClick={canEditWorkout ? () => setPlanEditorOpen(true) : undefined}
+				editLabel={tEditor('open')}
 				sectionTabs={sectionTabs}
 				activeSection={activeSection}
 				onSectionChange={changeSection}
 				t={t}
 			/>
-
-			{/* Edit plan panel — shown when editing */}
-			{editMode && (
-				<EditPlanPanel
-					editDayExercises={editDayExercises}
-					onUpdate={updateExerciseInEdit}
-					onDelete={deleteExerciseFromEdit}
-					onAddClick={setAddExModal}
-					onSave={savePlanChanges}
-					onExit={exitEditMode}
-					saving={savingPlan}
-					t={t}
-				/>
-			)}
 
 			{/* Audio hub */}
 			<AudioHubInline
@@ -1906,6 +1509,7 @@ export default function MyWorkoutsPage() {
 											key={`${currentExercise.id}-${activeMedia}`}
 											src={currentExercise[activeMedia]}
 											missingOffline={missingOffline(playableSrc(currentExercise[activeMedia]))}
+											onPlayingChange={setVideoPlaying}
 										/>
 									) : currentExercise?.img ? (
 										<>
@@ -1931,7 +1535,12 @@ export default function MyWorkoutsPage() {
 											<Dumbbell size={52} />
 										</div>
 									)}
-									<div className="absolute inset-x-0 top-0 z-[2] flex items-start justify-between gap-2 p-3.5">
+									<div
+										className={cx(
+											'absolute inset-x-0 top-0 z-[2] flex items-start justify-between gap-2 p-3.5 transition-opacity duration-300',
+											isVideo && videoPlaying && 'pointer-events-none opacity-0',
+										)}
+									>
 										<div className="flex min-w-0 flex-1 flex-wrap gap-[7px] pe-2">
 											{!isCardio && exReps ? (
 												<span className="inline-flex items-center gap-[5px] rounded-full border-[1.3px] border-t-white/40 border-b-[rgba(15,48,120,0.4)] bg-[var(--color-primary-500)] px-[11px] py-[7px] text-xs font-bold text-white shadow-[3px_4px_8px_rgba(15,23,42,0.45)]">
@@ -1969,7 +1578,7 @@ export default function MyWorkoutsPage() {
 																'grid h-8 w-8 place-items-center rounded-full border-[1.3px] text-white shadow-[3px_4px_8px_rgba(15,23,42,0.45)] transition active:scale-95',
 																on
 																	? 'border-t-white/45 border-b-[rgba(15,48,120,0.4)] bg-[var(--color-primary-500)]'
-																	: 'border-t-white/40 border-b-[rgba(15,48,120,0.32)] bg-white/15',
+																	: 'border-white/25 bg-[rgba(15,23,42,0.45)] backdrop-blur-md',
 															)}
 														>
 															<Icon size={14} />
@@ -2010,6 +1619,7 @@ export default function MyWorkoutsPage() {
 								setAlerting={setAlerting}
 								initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise.rest : 90}
 								audioEl={audioRef}
+								exerciseName={currentExercise?.name || ''}
 							/>
 						)}
 						{!isCardio && (
@@ -2205,7 +1815,7 @@ export function TabsPill({
 }
 
 
-export function HeaderActions({ onAudioClick, onNotesClick, listenLabel, notesLabel }) {
+export function HeaderActions({ onAudioClick, onNotesClick, onEditClick, listenLabel, notesLabel, editLabel }) {
 	const btn = 'grid h-11 w-11 place-items-center rounded-2xl border-[1.3px] border-t-white/45 border-s-white/35 border-b-[rgba(15,48,120,0.35)] border-e-[rgba(15,48,120,0.25)] bg-white/15 text-white shadow-[2px_3px_6px_rgba(15,23,42,0.35)] transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40';
 	return (
 		<div className="flex shrink-0 items-center gap-2">
@@ -2215,6 +1825,11 @@ export function HeaderActions({ onAudioClick, onNotesClick, listenLabel, notesLa
 			<button type="button" onClick={onNotesClick} title={notesLabel} aria-label={notesLabel} className={btn}>
 				<StickyNote size={18} strokeWidth={2} />
 			</button>
+			{onEditClick && (
+				<button type="button" onClick={onEditClick} title={editLabel} aria-label={editLabel} className={btn}>
+					<PencilRuler size={18} strokeWidth={2} />
+				</button>
+			)}
 		</div>
 	);
 }
@@ -2229,6 +1844,8 @@ export function WorkoutHeader({
 	onDayChange,
 	onAudioClick,
 	onNotesClick,
+	onEditClick,
+	editLabel,
 	sectionTabs = [],
 	activeSection,
 	onSectionChange,
@@ -2256,8 +1873,10 @@ export function WorkoutHeader({
 						<HeaderActions
 							onAudioClick={onAudioClick}
 							onNotesClick={onNotesClick}
+							onEditClick={onEditClick}
 							listenLabel={t('listen')}
 							notesLabel={t('notes.show')}
+							editLabel={editLabel}
 						/>
 					</div>
 
@@ -2290,8 +1909,6 @@ export function WorkoutHeader({
 							);
 						})}
 					</div>
-
-					<DayMediaLine entry={mediaByDay[selectedDay]} youtubeCount={selectedYoutube} />
 
 					{sectionTabs.length > 1 && (
 						<div className="px-4 pb-3">

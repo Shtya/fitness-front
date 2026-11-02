@@ -5353,8 +5353,19 @@
 			"start": "Start",
 			"pause": "Pause",
 			"resume": "Resume",
-			"reset": "Reset"
-		}
+			"reset": "Reset",
+			"done": "Next set",
+			"stop": "Cancel"
+		},
+		"title": "Rest",
+		"resting": "Resting",
+		"pausedHint": "Paused until you continue",
+		"endsAt": "Ends at {time}",
+		"finished": "Rest is over 💪",
+		"finishedHint": "Time for your next set",
+		"notifyTitle": "Rest is over ⏱️",
+		"notifyBody": "Time for your next set",
+		"notifyBodyExercise": "Next set of {exercise}"
 	},
 	"cardioTimer": {
 		"ariaLabel": "Cardio timer",
@@ -9895,5 +9906,36 @@
 		"failed": "Sync failed · retry",
 		"synced": "Synced",
 		"retry": "Sync now"
+	},
+	"myPlanEditor": {
+		"open": "Edit my plan",
+		"title": "Edit my plan",
+		"personalHint": "Your own version · your coach's plan is unchanged",
+		"coachHint": "Changes save as your own copy · your coach's plan stays as is",
+		"close": "Close",
+		"addDay": "Day",
+		"pickDay": "Choose a day to add",
+		"deleteDay": "Delete day",
+		"lastDay": "Your plan needs at least one day",
+		"emptyBlock": "No exercises here yet",
+		"addExercise": "Add exercises",
+		"dayNeedsExercise": "Every day needs at least one exercise",
+		"confirmReset": "Back to your coach's plan? Your changes will be lost.",
+		"confirmDeleteDay": "Delete {day} and its exercises?",
+		"confirmDiscard": "Discard your unsaved changes?",
+		"cancel": "Cancel",
+		"reset": "Reset",
+		"resetShort": "Coach's plan",
+		"discard": "Discard",
+		"save": "Save changes",
+		"saved": "Your plan is saved",
+		"saveFailed": "Couldn't save your plan",
+		"resetDone": "Back to your coach's plan",
+		"loadFailed": "Couldn't load your plan",
+		"minutes": "min",
+		"setsShort": "sets",
+		"reps": "Reps",
+		"repsShort": "reps",
+		"removeExercise": "Remove exercise"
 	}
 }

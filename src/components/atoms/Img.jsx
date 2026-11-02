@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { baseImg } from '@/utils/axios';
 
 const FALLBACK_DATA_URI =
@@ -15,8 +15,12 @@ const FALLBACK_DATA_URI =
     </svg>`,
   );
 
-export default function Img({ src, altSrc, alt = '', className = 'h-full w-full object-cover', fallback = FALLBACK_DATA_URI, loading = 'lazy', decoding = 'async', draggable = false, showBlur = true, ...rest }) {
+export default function Img({ src, altSrc, alt = '', className = 'h-full w-full object-cover', fallback = FALLBACK_DATA_URI, loading = 'lazy', decoding = 'async', draggable = false, showBlur = true, onLoad, onError, ...rest }) {
   const errorHandledRef = useRef(false);
+  const imgRef = useRef(null);
+  // Until the picture arrives the box showed nothing at all (an empty card in the exercise
+  // picker); a soft shimmer holds its place and the image fades in over it.
+  const [loaded, setLoaded] = useState(false);
 
   const resolved = useMemo(() => {
     try {
@@ -45,7 +49,15 @@ export default function Img({ src, altSrc, alt = '', className = 'h-full w-full 
     }
   }, [src, fallback]);
 
+  useEffect(() => {
+    errorHandledRef.current = false;
+    const el = imgRef.current;
+    // Already in the browser cache: onLoad may have fired before React attached it.
+    setLoaded(Boolean(el?.complete && el.naturalWidth));
+  }, [resolved]);
+
   const handleError = e => {
+    onError?.(e);
     if (errorHandledRef.current) return;
     errorHandledRef.current = true;
     // stop further loops
@@ -55,6 +67,8 @@ export default function Img({ src, altSrc, alt = '', className = 'h-full w-full 
   };
 
   const handleLoad = e => {
+    onLoad?.(e);
+    setLoaded(true);
     if ((altSrc && e.currentTarget.src.includes(altSrc)) || e.currentTarget.src === fallback) {
       e.currentTarget.classList.add('!object-contain');
     } else {
@@ -83,7 +97,19 @@ export default function Img({ src, altSrc, alt = '', className = 'h-full w-full 
         />
       )}
 
-      <img src={resolved} alt={resolved === fallback ? '' : alt} className={`relative ${className}`} onError={handleError} onLoad={handleLoad} loading={loading} decoding={decoding} draggable={draggable} {...rest} />
+      {!loaded && <span aria-hidden className='img-loading absolute inset-0' />}
+      <img
+        ref={imgRef}
+        src={resolved}
+        alt={resolved === fallback ? '' : alt}
+        className={`relative ${className} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        onError={handleError}
+        onLoad={handleLoad}
+        loading={loading}
+        decoding={decoding}
+        draggable={draggable}
+        {...rest}
+      />
     </div>
   );
 }

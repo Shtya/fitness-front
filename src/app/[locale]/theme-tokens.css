@@ -2329,3 +2329,26 @@ html[data-theme-mode="dark"] .gm-stat {
     box-shadow: var(--gm-shadow-2);
   }
 }
+/* Img placeholder while a picture loads (components/atoms/Img.jsx). */
+.img-loading {
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--color-primary-50, #eff6ff) 70%, #e2e8f0) 30%,
+    color-mix(in srgb, var(--color-primary-100, #dbeafe) 55%, #f8fafc) 50%,
+    color-mix(in srgb, var(--color-primary-50, #eff6ff) 70%, #e2e8f0) 70%
+  );
+  background-size: 220% 100%;
+  animation: img-shimmer 1.3s ease-in-out infinite;
+}
+html.dark .img-loading,
+html[data-theme-mode="dark"] .img-loading {
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.05) 30%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.05) 70%);
+  background-size: 220% 100%;
+}
+@keyframes img-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .img-loading { animation: none; }
+}
