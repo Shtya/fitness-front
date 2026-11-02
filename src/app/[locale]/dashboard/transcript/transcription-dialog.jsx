@@ -307,7 +307,10 @@ export default function TranscriptionDialog({
 			})
 			.catch(error => {
 				if (cancelled) return;
-				setFileError(error?.response?.data?.message || t.fileError);
+				// Keep the server's reason (too large, no sound, timed out…) instead of a bare
+				// "could not load".
+				const detail = String(error?.response?.data?.message || error?.message || '').trim();
+				setFileError(detail && !/^media (is )?unavailable$/i.test(detail) ? `${t.fileError} ${detail}` : t.fileError);
 				setStatus('error');
 			});
 		return () => {

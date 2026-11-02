@@ -9868,6 +9868,24 @@
 			"other": "Other"
 		}
 	},
+	"OfflineMedia": {
+		"none": "Not downloaded",
+		"partial": "Partly downloaded",
+		"downloading": "Downloading {percent}%",
+		"ready": "Available offline",
+		"quota": "Not enough space",
+		"lineNone": "This day's media isn't saved for offline use yet",
+		"lineDownloading": "Saving this day's images and videos for offline use · {percent}%",
+		"lineReady": "This day's images and videos work offline",
+		"linePartial": "Saved {cached} of {total} — the rest continues when you are back online",
+		"lineQuota": "Your device is almost out of storage — free some space to keep saving",
+		"youtubeOnline": "YouTube videos always need internet",
+		"needsInternet": "This content needs internet the first time",
+		"needsInternetHint": "Open it once while online and it's saved for offline use",
+		"youtubeNeedsInternet": "YouTube video needs internet",
+		"youtubeHint": "YouTube videos can't be saved on the device",
+		"quotaToast": "Storage is almost full, so not every video can be saved for offline use."
+	},
 	"OfflineSync": {
 		"offline": "Offline",
 		"offlineSaved": "{count, plural, one {Offline · 1 saved} other {Offline · # saved}}",

@@ -22179,16 +22179,36 @@ function WhatsAppWorkspaceContent() {
 		const attachment = source?.attachment;
 		if (!attachment?.id) throw new Error('Media is unavailable');
 		const demoAttachment = Boolean(attachment.demoAttachment || isDemoId(attachment.id));
-		const blob = demoAttachment
-			? await demoApi.getMedia(rawDemoId(attachment.id))
-			: await requestAttachmentBlob(attachment.id, { timeout: 90_000, priority: true });
-		if (!blob || blob.size < 8) throw new Error('Media is unavailable');
-		const forceVideo =
+		const isVideoSource =
 			source?.kind === 'video' ||
 			String(attachment?.type || '').toLowerCase() === 'video' ||
-			String(attachment?.mimeType || blob.type || '')
-				.toLowerCase()
-				.startsWith('video/');
+			String(attachment?.mimeType || '').toLowerCase().startsWith('video/');
+		let blob;
+		if (demoAttachment) {
+			blob = await demoApi.getMedia(rawDemoId(attachment.id));
+		} else if (isVideoSource) {
+			// Only the sound is transcribed: the server sends the video's audio track (~5 MB for
+			// 10 minutes) instead of the whole video, which timed out or ran the browser out of
+			// memory. It may first have to fetch a long video from WhatsApp, hence the long wait.
+			const bytes = Number(attachment.fileSizeBytes ?? attachment.sizeBytes ?? attachment.size ?? 0) || 0;
+			const timeout = Math.min(30 * 60_000, Math.max(5 * 60_000, Math.ceil(bytes / (256 * 1024)) * 1000));
+			blob = await requestAttachmentBlob(attachment.id, { timeout, priority: true, format: 'audio' });
+		} else {
+			blob = await requestAttachmentBlob(attachment.id, { timeout: 90_000, priority: true });
+		}
+		if (!blob || blob.size < 8) throw new Error('Media is unavailable');
+		const blobType = String(blob.type || '').toLowerCase();
+		if (isVideoSource && blobType.startsWith('audio/')) {
+			return createTranscriptionFile(
+				blob,
+				`${String(attachment.fileName || `whatsapp-video-${attachment.id}`).replace(/\.[^.]+$/, '')}.m4a`,
+				attachment.id,
+				blobType,
+				{ kind: 'voice' },
+			);
+		}
+		// Demo media, or a server without the audio-only option (it sends the video itself).
+		const forceVideo = isVideoSource || String(attachment?.mimeType || blobType).toLowerCase().startsWith('video/');
 		return createTranscriptionFile(
 			blob,
 			attachment.fileName,

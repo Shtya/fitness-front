@@ -43,6 +43,8 @@ import SyncStatusPill from '@/components/offline/SyncStatusPill';
 import { enqueue as enqueueOutbox, flush as flushOutbox, getRecords as getOutboxRecords, onSynced } from '@/lib/offline/outbox';
 import { cachedRead } from '@/lib/offline/read-cache';
 import { WORKOUT_SETS_KIND, workoutSetsKey } from '@/lib/offline/senders';
+import { onMediaQuotaLow, prefetchMediaGroup, refreshMediaStatus, useMediaGroups, useOnline } from '@/lib/offline/media-cache';
+import { DayMediaBadge, DayMediaLine, OfflineMediaPlaceholder } from '@/components/offline/MediaOffline';
 
 /* ─────────────────────────────────────────
 	 CONSTANTS
@@ -327,10 +329,39 @@ function playableSrc(src) {
 	return '';
 }
 
-export function InlineVideo({ src }) {
+const mediaGroupOf = dayKey => `workouts:${dayKey}`;
+
+/** Files a day needs offline (images + uploaded videos); YouTube links are counted apart. */
+function dayMediaUrls(exercises) {
+	const urls = new Set();
+	let youtube = 0;
+	for (const ex of exercises || []) {
+		if (ex?.img) urls.add(mediaUrl(ex.img));
+		for (const field of ['video', 'video2']) {
+			const src = playableSrc(ex?.[field]);
+			if (!src) continue;
+			if (youtubeId(src)) youtube += 1;
+			else urls.add(src);
+		}
+	}
+	return { urls: [...urls].filter(Boolean), youtube };
+}
+
+/** <img> that becomes `fallback` (e.g. the "needs internet" tile) when it cannot load offline. */
+function MediaImage({ src, missingOffline, fallback = null, ...props }) {
+	const online = useOnline();
+	const [failed, setFailed] = useState(false);
+	useEffect(() => setFailed(false), [src, online]);
+	if (!online && (missingOffline || failed)) return fallback;
+	if (failed) return null;
+	return <img src={src} onError={() => setFailed(true)} {...props} />;
+}
+
+export function InlineVideo({ src, missingOffline = false }) {
 	const url = playableSrc(src);
 	const id = youtubeId(url);
 	const videoRef = useRef(null);
+	const online = useOnline();
 	const [failed, setFailed] = useState(false);
 	const [playing, setPlaying] = useState(false);
 
@@ -338,6 +369,15 @@ export function InlineVideo({ src }) {
 		setFailed(false);
 		setPlaying(false);
 	}, [url]);
+
+	// Back online after a failed offline load: try again.
+	useEffect(() => {
+		if (online) setFailed(false);
+	}, [online]);
+
+	if (url && !online && (id || missingOffline || failed)) {
+		return <OfflineMediaPlaceholder youtube={!!id} />;
+	}
 
 	if (!url || failed) {
 		return (
@@ -629,9 +669,14 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 								)}>
 									{ex?.img ? (
 										<>
-											<img src={mediaUrl(ex.img)} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-[2px]" />
+											<MediaImage src={mediaUrl(ex.img)} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-[2px]" />
 											<span className={cx('absolute inset-0', isActive ? 'bg-[rgba(15,48,120,0.08)]' : isCompleted ? 'bg-[rgba(5,150,105,0.12)]' : 'bg-[rgba(100,116,139,0.1)]')} />
-											<img src={mediaUrl(ex.img)} alt="" className={cx('absolute inset-0 h-full w-full object-contain', isActive ? 'opacity-100' : 'opacity-80')} />
+											<MediaImage
+												src={mediaUrl(ex.img)}
+												alt=""
+												className={cx('absolute inset-0 h-full w-full object-contain', isActive ? 'opacity-100' : 'opacity-80')}
+												fallback={<span className="absolute inset-0 grid place-items-center"><Dumbbell size={22} className="text-[var(--color-primary-300)]" /></span>}
+											/>
 										</>
 									) : (
 										<span className="grid h-full w-full place-items-center"><Dumbbell size={22} className={isActive ? 'text-[var(--color-primary-500)]' : 'text-[var(--color-primary-300)]'} /></span>
@@ -1260,6 +1305,7 @@ function EditPlanPanel({ editDayExercises, onUpdate, onDelete, onAddClick, onSav
 
 export default function MyWorkoutsPage() {
 	const t = useTranslations('MyWorkouts');
+	const tOffline = useTranslations('OfflineMedia');
 	const user = useUser();
 	const USER_ID = user?.id;
 
@@ -1294,10 +1340,16 @@ export default function MyWorkoutsPage() {
 		if (selectedDay) localStorage.setItem(LOCAL_KEY_SELECTED_DAY, selectedDay);
 	}, [selectedDay]);
 
-	/* ── Media preload ── */
-	const preloadMedia = useCallback(exercises => {
-		exercises?.forEach(ex => { if (ex?.img) { const img = new Image(); img.src = mediaUrl(ex.img); } });
+	/* ── Offline media ──
+	 Opening a day downloads its images and videos into the service worker's media cache
+	 (one day at a time, not the whole plan), so they play later without a network. */
+	const preloadMedia = useCallback((exercises, dayKey) => {
+		if (!dayKey) return;
+		prefetchMediaGroup(mediaGroupOf(dayKey), dayMediaUrls(exercises).urls);
 	}, []);
+	const mediaGroups = useMediaGroups();
+
+	useEffect(() => onMediaQuotaLow(() => Notification(tOffline('quotaToast'), 'warning')), [tOffline]);
 
 	/* ── Record helpers ── */
 	const applyRecordsToWorkout = useCallback((exerciseName, records) => {
@@ -1445,7 +1497,7 @@ export default function MyWorkoutsPage() {
 				const firstInSection = (session.exercises || []).find(x => x.group === initSection) || session.exercises?.[0];
 				setCurrentExId(firstInSection?.id);
 				setWorkout(session);
-				if (session?.exercises?.length) preloadMedia(session.exercises);
+				preloadMedia(session?.exercises, initialDayId);
 				lastSavedRef.current.clear();
 				session?.sets?.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
 				const dayISO = isoForThisWeeksDay(initialDayId);
@@ -1487,7 +1539,7 @@ export default function MyWorkoutsPage() {
 			setWorkout(session);
 			setCurrentExId(firstInSection?.id != null ? String(firstInSection.id) : undefined);
 			setActiveMedia('image');
-			if (session.exercises?.length) preloadMedia(session.exercises);
+			preloadMedia(session.exercises, dayId);
 			lastSavedRef.current.clear();
 			setInputBuffer({});
 			session.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
@@ -1710,6 +1762,22 @@ export default function MyWorkoutsPage() {
 		});
 	}, [plan, t]);
 
+	const dayMedia = useMemo(() => {
+		const out = {};
+		for (const day of plan?.program?.days || []) {
+			const key = dayKeyOf(day);
+			if (key) out[key] = dayMediaUrls(normalizeDayProgram(day).allExercises);
+		}
+		return out;
+	}, [plan]);
+
+	// How much of every day is already stored (no download): drives the tab badges.
+	useEffect(() => {
+		refreshMediaStatus(Object.fromEntries(Object.entries(dayMedia).map(([key, media]) => [mediaGroupOf(key), media.urls])));
+	}, [dayMedia]);
+
+	const mediaByDay = Object.fromEntries(Object.keys(dayMedia).map(key => [key, mediaGroups.get(mediaGroupOf(key)) || null]));
+
 	const fiveDayTabs = useMemo(() => {
 		if (!dayTabs.length) return dayTabs;
 		const idx = dayTabs.findIndex(tb => tb.key === selectedDay);
@@ -1740,6 +1808,8 @@ export default function MyWorkoutsPage() {
 		const first = (workout?.exercises || []).find(e => (e.group || 'workout') === sect);
 		if (first) pickExercise(first);
 	};
+
+	const missingOffline = url => !!url && !!mediaGroups.get(mediaGroupOf(selectedDay))?.missing?.has(url);
 
 	const videoSrc = playableSrc(currentExercise?.video);
 	const video2Src = playableSrc(currentExercise?.video2);
@@ -1780,6 +1850,8 @@ export default function MyWorkoutsPage() {
 				title={t('title')}
 				subtitle={t('subtitle')}
 				dayTabs={fiveDayTabs}
+				mediaByDay={mediaByDay}
+				selectedYoutube={dayMedia[selectedDay]?.youtube || 0}
 				selectedDay={selectedDay}
 				onDayChange={changeDay}
 				onAudioClick={() => { !hidden && setAudioOpen(v => !v); setHidden(false); }}
@@ -1830,18 +1902,25 @@ export default function MyWorkoutsPage() {
 									<div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-[#eef2f9] to-[#e8edf5]" />
 									<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,color-mix(in_srgb,var(--color-primary-800)_33%,transparent),transparent_70%)]" />
 									{isVideo ? (
-										<InlineVideo key={`${currentExercise.id}-${activeMedia}`} src={currentExercise[activeMedia]} />
+										<InlineVideo
+											key={`${currentExercise.id}-${activeMedia}`}
+											src={currentExercise[activeMedia]}
+											missingOffline={missingOffline(playableSrc(currentExercise[activeMedia]))}
+										/>
 									) : currentExercise?.img ? (
 										<>
-											<img
+											<MediaImage
 												key={`${currentExercise?.id || 'ex'}-blur`}
+												missingOffline={missingOffline(mediaUrl(currentExercise.img))}
+												fallback={<OfflineMediaPlaceholder />}
 												src={mediaUrl(currentExercise.img)}
 												alt=""
 												className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl"
 											/>
 											<div className="absolute inset-0 bg-[rgba(4,8,15,0.35)]" />
-											<img
+											<MediaImage
 												key={`${currentExercise?.id || 'ex'}-image`}
+												missingOffline={missingOffline(mediaUrl(currentExercise.img))}
 												src={mediaUrl(currentExercise.img)}
 												alt={currentExercise?.name || ''}
 												className="absolute inset-0 z-[1] h-full w-full object-contain"
@@ -2144,6 +2223,8 @@ export function WorkoutHeader({
 	title,
 	subtitle,
 	dayTabs = [],
+	mediaByDay = {},
+	selectedYoutube = 0,
 	selectedDay,
 	onDayChange,
 	onAudioClick,
@@ -2182,7 +2263,7 @@ export function WorkoutHeader({
 
 					<div className="mx-4 mb-3 h-px bg-white/20" />
 
-					<div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide">
+					<div className="flex gap-2 overflow-x-auto px-4 pb-3 pt-1.5 scrollbar-hide">
 						{dayTabs.map(tab => {
 							const on = tab.key === selectedDay;
 							return (
@@ -2192,7 +2273,7 @@ export function WorkoutHeader({
 									onClick={() => onDayChange(tab.key)}
 									aria-pressed={on}
 									className={cx(
-										'flex h-[58px] min-w-14 shrink-0 flex-col items-center justify-center rounded-2xl px-2 transition active:scale-95',
+										'relative flex h-[58px] min-w-14 shrink-0 flex-col items-center justify-center rounded-2xl px-2 transition active:scale-95',
 										on
 											? 'scale-[1.02] bg-white text-[var(--color-primary-700)] shadow-[4px_5px_10px_color-mix(in_srgb,var(--color-primary-900)_40%,transparent)]'
 											: 'border-[1.3px] border-white/30 bg-white/15 text-white/80',
@@ -2204,10 +2285,13 @@ export function WorkoutHeader({
 									<span className={cx('text-lg font-black tabular-nums leading-[22px] tracking-[-0.5px]', on ? 'text-[var(--color-primary-800)]' : 'text-white')}>
 										{tab.date ?? '—'}
 									</span>
+									<DayMediaBadge entry={mediaByDay[tab.key]} active={on} />
 								</button>
 							);
 						})}
 					</div>
+
+					<DayMediaLine entry={mediaByDay[selectedDay]} youtubeCount={selectedYoutube} />
 
 					{sectionTabs.length > 1 && (
 						<div className="px-4 pb-3">

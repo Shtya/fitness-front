@@ -11,6 +11,12 @@
  * refuse a redirected response for a navigation served by a service worker, so the installed
  * app showed the browser's offline error. No page HTML was precached and there was no fallback.
  */
+import { installMediaCache } from './media';
+
+// Exercise images/videos per workout day (worker/media.js). Registered first: its fetch
+// listener answers only files it stored, before Workbox's rules see them.
+installMediaCache();
+
 const SHELL_CACHE = 'so7ba-shell-v1';
 const OFFLINE_URL = '/offline.html';
 const LOCALES = ['ar', 'en'];
