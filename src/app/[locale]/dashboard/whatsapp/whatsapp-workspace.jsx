@@ -6547,6 +6547,85 @@ function showWhatsAppDesktopNotification({
 	}
 }
 
+/** Corner card for a new message while another WhatsApp tab (Board, Reports, …) is open. */
+function WaIncomingMessageToast({ toastItem, title, body, avatarSrc, isGroup, isArabic, onOpen }) {
+	const close = event => {
+		event.stopPropagation();
+		toast.dismiss(toastItem.id);
+	};
+	return (
+		<div
+			role="button"
+			tabIndex={0}
+			dir={isArabic ? 'rtl' : 'ltr'}
+			data-wa-incoming-toast
+			onClick={onOpen}
+			onKeyDown={event => {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault();
+					onOpen();
+				}
+			}}
+			className={`pointer-events-auto flex w-[min(360px,calc(100vw-32px))] cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-start shadow-xl ring-1 ring-black/5 transition-all duration-200 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 ${toastItem.visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'}`}
+		>
+			<div className="relative shrink-0">
+				<Avatar label={title} size={10} src={avatarSrc} isGroup={isGroup} />
+				<span className="absolute -bottom-0.5 -end-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] text-white ring-2 ring-white dark:ring-slate-900">
+					<MessageCircle className="h-2.5 w-2.5" aria-hidden />
+				</span>
+			</div>
+			<div className="min-w-0 flex-1">
+				<div className="flex items-center gap-2">
+					<span className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100 wa-privacy-identity" dir="auto">
+						{title}
+					</span>
+					<span className="shrink-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+						{isArabic ? 'دلوقتي' : 'now'}
+					</span>
+				</div>
+				<p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-slate-600 dark:text-slate-300 wa-privacy-text" dir="auto">
+					{body}
+				</p>
+			</div>
+			<button
+				type="button"
+				onClick={close}
+				aria-label={isArabic ? 'إغلاق' : 'Close'}
+				className="shrink-0 self-start rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+			>
+				<X className="h-4 w-4" aria-hidden />
+			</button>
+		</div>
+	);
+}
+
+function showWhatsAppIncomingToast({ conversationId, title, body, avatarSrc, isGroup, locale, onOpen }) {
+	if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+	const isArabic = locale === 'ar';
+	toast.custom(
+		toastItem => (
+			<WaIncomingMessageToast
+				toastItem={toastItem}
+				title={String(title || 'WhatsApp').slice(0, 80)}
+				body={String(body || '').slice(0, 200)}
+				avatarSrc={avatarSrc}
+				isGroup={isGroup}
+				isArabic={isArabic}
+				onOpen={() => {
+					toast.dismiss(toastItem.id);
+					onOpen?.();
+				}}
+			/>
+		),
+		{
+			// One card per chat: a second message from the same person replaces the first.
+			id: `wa-incoming-${conversationId}`,
+			duration: 6000,
+			position: isArabic ? 'top-left' : 'top-right',
+		},
+	);
+}
+
 function assertAudioBlob(blob) {
 	if (!blob) throw new Error('Empty audio');
 	const type = String(blob.type || '').toLowerCase();
@@ -18384,10 +18463,14 @@ function WhatsAppWorkspaceContent() {
 					const peer = conversationsRef.current.find(
 						item => item.id === targetConversationId,
 					);
-					if (tabLeaderRef.current?.isLeader !== false && whatsappNotificationsEnabledRef.current) {
+					const desktopAlert =
+						tabLeaderRef.current?.isLeader !== false && whatsappNotificationsEnabledRef.current;
+					// On Board / Reports / Settings … the chat list is hidden, so the message would go unseen.
+					const inAppAlert = !isConversationWorkspaceTab(activeTabRef.current);
+					if (desktopAlert || inAppAlert) {
 						// A chat missing from the loaded list used to count as "not muted".
 						void shouldNotifyForConversation(peer, targetConversationId, notifyStateCacheRef.current).then(allowed => {
-							if (!allowed || !whatsappNotificationsEnabledRef.current) return;
+							if (!allowed) return;
 							const activeLocale = localeRef.current;
 							const isArabic = activeLocale === 'ar';
 							const title =
@@ -18401,21 +18484,43 @@ function WhatsAppWorkspaceContent() {
 									? isArabic
 										? 'صورة'
 										: 'Photo'
-									: event.payload?.type === 'ptt' || event.payload?.type === 'audio'
+									: event.payload?.type === 'video'
 										? isArabic
-											? 'رسالة صوتية'
-											: 'Voice message'
-										: isArabic
-											? 'رسالة جديدة'
-											: 'New message');
-							showWhatsAppDesktopNotification({
-								title,
-								body,
-								conversationId: targetConversationId,
-								accountId: accountIdRef.current,
-								locale: activeLocale,
-								enabled: whatsappNotificationsEnabledRef.current,
-							});
+											? 'فيديو'
+											: 'Video'
+										: event.payload?.type === 'ptt' || event.payload?.type === 'audio'
+											? isArabic
+												? 'رسالة صوتية'
+												: 'Voice message'
+											: isArabic
+												? 'رسالة جديدة'
+												: 'New message');
+							if (inAppAlert && !isConversationWorkspaceTab(activeTabRef.current)) {
+								showWhatsAppIncomingToast({
+									conversationId: targetConversationId,
+									title,
+									body,
+									avatarSrc: peer ? conversationAvatarUrl(peer) : '',
+									isGroup:
+										peer?.type === 'group' ||
+										String(peer?.providerChatId || '').endsWith('@g.us'),
+									locale: activeLocale,
+									onOpen: () => {
+										setActiveTab('chats');
+										openConversationRef.current?.(targetConversationId, peer);
+									},
+								});
+							}
+							if (desktopAlert && whatsappNotificationsEnabledRef.current) {
+								showWhatsAppDesktopNotification({
+									title,
+									body,
+									conversationId: targetConversationId,
+									accountId: accountIdRef.current,
+									locale: activeLocale,
+									enabled: whatsappNotificationsEnabledRef.current,
+								});
+							}
 						});
 					}
 				}
