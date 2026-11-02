@@ -4,7 +4,7 @@
  * This file is imported at the top of the generated sw.js (next-pwa custom worker), so its
  * fetch listener runs before Workbox's routes. Page navigations are handled here only:
  *   network first (with a short timeout when a saved copy exists) → the saved copy of that
- *   page → the offline page. Static assets stay on Workbox's precache (cache first).
+ *   page → the offline page. Build files (/_next/static) are cache first (see ASSET_CACHE).
  *
  * Why it did not open offline before: the manifest start_url (/open?source=pwa) answers with a
  * 307 to /ar/open. Workbox stored that redirected response for the navigation, and browsers
@@ -44,46 +44,151 @@ function cacheablePage(response) {
 	return response && response.ok && response.type === 'basic' && !response.redirected && isHtml(response);
 }
 
+/*
+ * Build files (/_next/static: JS, CSS, fonts). Their names carry a content hash, so a stored
+ * copy never goes stale: cache first, kept in one cache across deploys.
+ *
+ * They used to be precached by Workbox on install: 531 files / 8 MB that all had to arrive
+ * before the worker activated. iOS freezes a worker as soon as the app leaves the screen, so on
+ * iPhones the install rarely finished and the app had no worker at all offline (Safari's own
+ * "not connected to the internet" page). Now install stores only the offline page; build files
+ * are saved as pages use them, from the HTML of every saved page, and from the list the page
+ * sends right after the worker takes over (files it loaded before there was a worker).
+ */
+const ASSET_CACHE = 'so7ba-assets-v1';
+const ASSET_LIMIT = 1500;
+const ASSET_CONCURRENCY = 4;
+
+function isBuildAsset(url) {
+	return url.origin === self.location.origin && url.pathname.startsWith('/_next/static/');
+}
+
+/** Keyed without the query (Next may add ?dpl=…): the hashed path already identifies the file. */
+function assetKey(url) {
+	const parsed = new URL(url, self.location.origin);
+	return `${parsed.origin}${parsed.pathname}`;
+}
+
+async function storeAsset(cache, url) {
+	const key = assetKey(url);
+	if (await cache.match(key)) return;
+	try {
+		const response = await fetch(key, { credentials: 'same-origin' });
+		if (response.ok && response.type === 'basic') await cache.put(key, response);
+		else await response.body?.cancel();
+	} catch {
+		/* offline or gone after a deploy: the next use stores it */
+	}
+}
+
+async function storeAssets(urls) {
+	const queue = [...new Set(urls)]
+		.map(url => {
+			try {
+				return new URL(url, self.location.origin);
+			} catch {
+				return null;
+			}
+		})
+		.filter(url => url && isBuildAsset(url))
+		.map(url => url.href);
+	if (!queue.length) return;
+	const cache = await caches.open(ASSET_CACHE);
+	await Promise.all(
+		Array.from({ length: ASSET_CONCURRENCY }, async () => {
+			while (queue.length) await storeAsset(cache, queue.shift());
+		}),
+	);
+}
+
+/** Script, style and font URLs a page needs: <script>/<link> tags and the RSC payload. */
+function assetUrlsFromHtml(html) {
+	return [...String(html).matchAll(/\/_next\/static\/[^"'\\\s<>)]+/g)].map(match => match[0]);
+}
+
+async function serveAsset(event) {
+	const cache = await caches.open(ASSET_CACHE);
+	const key = assetKey(event.request.url);
+	const hit = await cache.match(key);
+	if (hit) return hit;
+	const response = await fetch(event.request);
+	if (response.ok && response.type === 'basic' && response.status === 200) {
+		const copy = response.clone();
+		event.waitUntil(cache.put(key, copy).catch(() => undefined));
+	}
+	return response;
+}
+
+/** Oldest first: Cache Storage keeps insertion order. */
+async function trimAssets() {
+	const cache = await caches.open(ASSET_CACHE);
+	const keys = await cache.keys();
+	const extra = keys.length - ASSET_LIMIT;
+	for (let i = 0; i < extra; i += 1) await cache.delete(keys[i]);
+}
+
 const WARM_TIMEOUT_MS = 15000;
 
 async function warmPage(cache, path) {
-	// Bounded: install waits on this, and a worker stuck in "installing" never goes offline-ready.
+	// Bounded, so one slow page cannot keep the worker busy.
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), WARM_TIMEOUT_MS);
 	try {
 		const response = await fetch(path, { credentials: 'include', cache: 'no-store', signal: controller.signal });
-		if (cacheablePage(response)) await cache.put(pageKey(path), response);
-		// A body nobody reads keeps its connection busy (6 per host), and the precache
-		// downloads queued behind it: signed-out dashboard redirects stalled the install.
+		if (cacheablePage(response)) {
+			const html = await response.clone().text();
+			await cache.put(pageKey(path), response);
+			await storeAssets(assetUrlsFromHtml(html));
+		}
+		// A body nobody reads keeps its connection busy (6 per host): signed-out dashboard
+		// pages answer with redirects.
 		else await response.body?.cancel();
 	} catch {
-		/* offline during install, or the page needs a sign-in: it is saved on the next visit */
+		/* offline, or the page needs a sign-in: it is saved on the next visit */
 	} finally {
 		clearTimeout(timer);
 	}
 }
 
-self.addEventListener('install', event => {
-	event.waitUntil(
-		(async () => {
+/** Saves the main pages not saved yet. Runs after activation and again on each app start. */
+let warming = null;
+function warmShell() {
+	if (!warming) {
+		warming = (async () => {
 			const cache = await caches.open(SHELL_CACHE);
-			// The offline page must be stored; the rest is best effort.
-			await cache.add(new Request(OFFLINE_URL, { cache: 'reload' }));
-			await Promise.all(shellUrls().map(path => warmPage(cache, path)));
-		})(),
+			const missing = [];
+			for (const path of shellUrls()) {
+				if (!(await cache.match(pageKey(path)))) missing.push(path);
+			}
+			for (const path of missing) await warmPage(cache, path);
+		})().finally(() => {
+			warming = null;
+		});
+	}
+	return warming;
+}
+
+self.addEventListener('install', event => {
+	// Only the offline page: anything slower here can stop the worker from ever activating on iOS.
+	event.waitUntil(
+		caches.open(SHELL_CACHE).then(cache => cache.add(new Request(OFFLINE_URL, { cache: 'reload' }))),
 	);
 });
 
 self.addEventListener('activate', event => {
 	event.waitUntil(
-		caches.keys().then(keys =>
-			Promise.all(
-				keys
-					// Old shells, and the previous navigation cache that held redirected responses.
-					.filter(key => (key.startsWith('so7ba-shell-') && key !== SHELL_CACHE) || key === 'so7ba-pages')
-					.map(key => caches.delete(key)),
-			),
-		),
+		caches
+			.keys()
+			.then(keys =>
+				Promise.all(
+					keys
+						// Old shells, and the previous navigation cache that held redirected responses.
+						.filter(key => (key.startsWith('so7ba-shell-') && key !== SHELL_CACHE) || key === 'so7ba-pages')
+						.map(key => caches.delete(key)),
+				),
+			)
+			.then(trimAssets)
+			.catch(() => undefined),
 	);
 });
 
@@ -137,10 +242,16 @@ async function handleNavigation(event) {
 	const network = fetch(request).then(response => {
 		if (cacheablePage(response)) {
 			const copy = response.clone();
-			const save = caches
-				.open(SHELL_CACHE)
-				.then(cache => cache.put(pageKey(request.url), copy))
-				.then(() => rememberLocale(request.url))
+			const save = copy
+				.clone()
+				.text()
+				.then(html =>
+					caches
+						.open(SHELL_CACHE)
+						.then(cache => cache.put(pageKey(request.url), copy))
+						.then(() => rememberLocale(request.url))
+						.then(() => storeAssets(assetUrlsFromHtml(html))),
+				)
 				.catch(() => undefined);
 			try {
 				event.waitUntil(save);
@@ -182,8 +293,14 @@ async function handleNavigation(event) {
 
 self.addEventListener('fetch', event => {
 	const { request } = event;
-	if (request.mode !== 'navigate' || request.method !== 'GET') return;
+	if (request.method !== 'GET') return;
 	const url = new URL(request.url);
+	if (request.mode !== 'navigate') {
+		if (!isBuildAsset(url) || request.headers.has('range')) return;
+		event.stopImmediatePropagation();
+		event.respondWith(serveAsset(event));
+		return;
+	}
 	if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 	// Workbox's navigation rules must not answer the same request a second time.
 	event.stopImmediatePropagation();
@@ -259,6 +376,11 @@ function applyAppBadge(count) {
 self.addEventListener('message', event => {
 	if (event.data?.type === 'app-badge') {
 		event.waitUntil?.(applyAppBadge(event.data.count));
+	}
+	// From register-sw.js once this worker controls the page: what it loaded, then the main pages.
+	if (event.data?.type === 'offline:warm') {
+		const urls = Array.isArray(event.data.urls) ? event.data.urls.slice(0, 600) : [];
+		event.waitUntil?.(storeAssets(urls).then(warmShell).catch(() => undefined));
 	}
 });
 

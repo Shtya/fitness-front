@@ -7,6 +7,34 @@
  * cached and the installed app cannot open offline. Development keeps no worker on purpose
  * (see components/molecules/Layout.jsx).
  */
+/**
+ * The worker saves build files as they are requested, but the first visit loaded its scripts
+ * before the worker existed. Hand it that list (and ask it to save the main pages) on every
+ * start, so an install cut short by iOS picks up where it stopped.
+ */
+function warmOfflineCopy(registration) {
+	const worker = registration?.active;
+	if (!worker) return;
+	const urls = new Set();
+	try {
+		for (const entry of performance.getEntriesByType('resource')) urls.add(entry.name);
+	} catch {
+		/* Resource Timing unavailable */
+	}
+	for (const el of document.querySelectorAll('script[src], link[href]')) {
+		urls.add(el.src || el.href);
+	}
+	const assets = [...urls].filter(url => {
+		try {
+			const parsed = new URL(url);
+			return parsed.origin === location.origin && parsed.pathname.startsWith('/_next/static/');
+		} catch {
+			return false;
+		}
+	});
+	worker.postMessage({ type: 'offline:warm', urls: assets });
+}
+
 export function registerServiceWorker() {
 	if (
 		typeof window === 'undefined' ||
@@ -20,6 +48,7 @@ export function registerServiceWorker() {
 		navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(error => {
 			console.warn('Service worker registration failed', error);
 		});
+		navigator.serviceWorker.ready.then(warmOfflineCopy).catch(() => {});
 	};
 	// After load, so caching the app shell never competes with the first paint.
 	if (document.readyState === 'complete') register();

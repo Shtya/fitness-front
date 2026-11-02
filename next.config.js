@@ -38,6 +38,11 @@ const withPWA = require('next-pwa')({
     /app-build-manifest\.json$/,
     /middleware-manifest\.json$/,
   ],
+  // No build files in the install-time precache: 531 files / 8 MB had to arrive before the
+  // worker activated, which iOS rarely allows. worker/index.js saves them as pages use them.
+  manifestTransforms: [
+    async entries => ({ manifest: entries.filter(entry => !entry.url.includes('/_next/')), warnings: [] }),
+  ],
   // Page navigations are handled by worker/index.js (network first → saved page → /offline.html),
   // which runs before these rules. Static assets: precache + the stock next-pwa rules.
   runtimeCaching: [
