@@ -1808,6 +1808,9 @@ export function buildOptimisticMediaMessage({
 		attachments: [
 			{
 				id: `pending-att:${clientMessageId}`,
+				// Stays on the attachment after the server confirms it (mergeAttachments keeps old
+				// fields), so the tile keeps its React key and does not remount (the send "flash").
+				clientKey: `att:${clientMessageId}`,
 				type: mediaType,
 				mimeType: file?.type || '',
 				fileName: file?.name || 'voice.webm',

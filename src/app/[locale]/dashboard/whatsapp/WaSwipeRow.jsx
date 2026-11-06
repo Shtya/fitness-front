@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { dragRowOffset, ROW_ACTION_WIDTH, settleRowSwipe } from './wa-message-gestures';
 
 const AXIS_LOCK_PX = 16;
@@ -26,6 +26,8 @@ export default function WaSwipeRow({
 	const offsetRef = useRef(0);
 	const suppressClickRef = useRef(false);
 	const isOpen = openKey === rowKey;
+	// The action buttons are about half of a row's elements and only a swiped row shows them.
+	const [panesMounted, setPanesMounted] = useState(false);
 
 	const apply = (offset, animate) => {
 		const node = contentRef.current;
@@ -33,6 +35,8 @@ export default function WaSwipeRow({
 		offsetRef.current = offset;
 		node.style.transition = animate ? 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none';
 		node.style.transform = offset ? `translateX(${offset}px)` : '';
+		// A layer only while the row is off centre: one per row is costly on a long list.
+		node.style.willChange = offset ? 'transform' : '';
 		node.parentElement?.setAttribute(
 			'data-swipe-side',
 			offset === 0 ? '' : (offset > 0) !== isRtl(node) ? 'start' : 'end',
@@ -48,6 +52,8 @@ export default function WaSwipeRow({
 
 	const onPointerDown = event => {
 		if (event.pointerType !== 'touch') return;
+		// A swipe often ends without a click, so a flag left by the last one must not eat this tap.
+		suppressClickRef.current = false;
 		dragRef.current = {
 			id: event.pointerId,
 			x: event.clientX,
@@ -71,6 +77,7 @@ export default function WaSwipeRow({
 				return;
 			}
 			drag.axis = 'x';
+			setPanesMounted(true);
 		}
 		const rtl = isRtl(contentRef.current);
 		apply(
@@ -156,8 +163,8 @@ export default function WaSwipeRow({
 
 	return (
 		<div className="wa-swipe-row" data-swipe-side="">
-			{renderPane(startActions, 'start')}
-			{renderPane(endActions, 'end')}
+			{panesMounted ? renderPane(startActions, 'start') : null}
+			{panesMounted ? renderPane(endActions, 'end') : null}
 			<div
 				ref={contentRef}
 				className="wa-swipe-row__content"

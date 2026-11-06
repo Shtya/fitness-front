@@ -206,13 +206,6 @@ html[data-ai-reading-active='1'] [data-ai-studio='true'] {
 		padding-inline-start: max(0.75rem, var(--sidebar-offset-pad-inline)) !important;
 		padding-block-start: var(--sidebar-offset-pad-top) !important;
 	}
-
-	[data-sidebar-offset='true'] #body:has(.wa-mobile-shell) {
-		padding-inline-start: max(0.75rem, var(--sidebar-offset-pad-inline)) !important;
-		padding-block-start: var(--sidebar-offset-pad-top) !important;
-		padding-inline-end: 1rem !important;
-		padding-block-end: 1rem !important;
-	}
 }
 
 html[dir='ltr'] .sidebar-shell.sidebar-glass.is-mobile-drawer {

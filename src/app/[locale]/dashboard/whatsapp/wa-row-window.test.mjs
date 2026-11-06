@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { chunkedVirtualRange, computeRowWindow, isSameRowWindow } from './wa-row-window.js';
+import {
+	buildRowOffsets,
+	chunkedVirtualRange,
+	computeMeasuredRowWindow,
+	findRowAtOffset,
+} from './wa-row-window.js';
 
 test('chunkedVirtualRange covers the overscan range and only moves per chunk', () => {
 	const seen = new Set();
@@ -20,51 +25,48 @@ test('chunkedVirtualRange covers the overscan range and only moves per chunk', (
 	assert.deepEqual(chunkedVirtualRange({ startIndex: 0, endIndex: 0, overscan: 0, count: 0 }, 6), []);
 });
 
-test('computeRowWindow mounts only the visible slice plus overscan', () => {
-	const slice = computeRowWindow({
-		scrollTop: 7200,
-		clientHeight: 720,
-		count: 1000,
-		rowHeight: 72,
-		overscan: 12,
-	});
-	assert.equal(slice.start, 88);
-	assert.equal(slice.end, 122);
-	assert.equal(slice.topPad, 88 * 72);
-	assert.equal(slice.bottomPad, (1000 - 122) * 72);
+const makeRows = count => Array.from({ length: count }, (_, index) => ({ id: index }));
+const rowKey = row => row.id;
+
+test('buildRowOffsets uses measured heights and estimates only unseen rows', () => {
+	const heights = new Map([[0, 82], [1, 89.5]]);
+	const offsets = buildRowOffsets(makeRows(4), rowKey, heights, 80);
+	assert.deepEqual([...offsets], [0, 82, 171.5, 251.5, 331.5]);
 });
 
-test('small scroll deltas inside one row keep the same window (no re-render)', () => {
-	const base = { clientHeight: 720, count: 1000, rowHeight: 72, overscan: 12 };
-	const a = computeRowWindow({ ...base, scrollTop: 7200 });
-	const b = computeRowWindow({ ...base, scrollTop: 7250 });
-	const c = computeRowWindow({ ...base, scrollTop: 7300 });
-	assert.equal(isSameRowWindow(a, b), true);
-	assert.equal(isSameRowWindow(a, c), false);
+test('findRowAtOffset finds the row holding a position and clamps', () => {
+	const offsets = buildRowOffsets(makeRows(3), rowKey, new Map([[0, 10], [1, 20], [2, 30]]), 0);
+	assert.equal(findRowAtOffset(offsets, 0), 0);
+	assert.equal(findRowAtOffset(offsets, 9.9), 0);
+	assert.equal(findRowAtOffset(offsets, 10), 1);
+	assert.equal(findRowAtOffset(offsets, 29.9), 1);
+	assert.equal(findRowAtOffset(offsets, 30), 2);
+	assert.equal(findRowAtOffset(offsets, 9999), 2);
+	assert.equal(findRowAtOffset(offsets, -5), 0);
+	assert.equal(findRowAtOffset(new Float64Array(1), 5), 0);
 });
 
-test('step snaps the window to chunks and still covers the viewport', () => {
-	const base = { clientHeight: 844, count: 300, rowHeight: 88, overscan: 22, step: 8 };
-	const windows = [];
-	for (let scrollTop = 0; scrollTop <= 300 * 88 - 844; scrollTop += 11) {
-		const slice = computeRowWindow({ ...base, scrollTop });
-		assert.equal(slice.start % 8, 0);
-		assert.ok(slice.start * 88 <= scrollTop, `top covered at ${scrollTop}`);
-		assert.ok(slice.end * 88 >= Math.min(300 * 88, scrollTop + 844), `bottom covered at ${scrollTop}`);
-		if (!windows.length || !isSameRowWindow(windows[windows.length - 1], slice)) windows.push(slice);
+test('computeMeasuredRowWindow mounts the visible rows plus overscan', () => {
+	const offsets = buildRowOffsets(makeRows(1000), rowKey, new Map(), 72);
+	const slice = computeMeasuredRowWindow({ offsets, scrollTop: 7200, clientHeight: 720, overscan: 10 });
+	assert.equal(slice.start, 90);
+	assert.equal(slice.end, 121);
+	assert.equal(computeMeasuredRowWindow({ offsets, scrollTop: 0, clientHeight: 720, overscan: 10 }).start, 0);
+	assert.equal(computeMeasuredRowWindow({ offsets, scrollTop: 1e9, clientHeight: 720, overscan: 10 }).end, 1000);
+	assert.deepEqual(computeMeasuredRowWindow({ offsets: new Float64Array(1) }), { start: 0, end: 0 });
+});
+
+test('computeMeasuredRowWindow snaps to the step and always covers the viewport', () => {
+	const heights = new Map();
+	for (let index = 0; index < 400; index += 1) heights.set(index, index % 7 === 0 ? 89.5 : 82);
+	const offsets = buildRowOffsets(makeRows(400), rowKey, heights, 82);
+	const seen = new Set();
+	for (let scrollTop = 0; scrollTop < offsets[400]; scrollTop += 13) {
+		const { start, end } = computeMeasuredRowWindow({ offsets, scrollTop, clientHeight: 800, overscan: 22, step: 8 });
+		assert.equal(start % 8, 0);
+		assert.ok(offsets[start] <= scrollTop, 'starts above the viewport');
+		assert.ok(offsets[end] >= Math.min(offsets[400], scrollTop + 800), 'covers viewport');
+		seen.add(start);
 	}
-	const unchunked = new Set();
-	for (let scrollTop = 0; scrollTop <= 300 * 88 - 844; scrollTop += 11)
-		unchunked.add(computeRowWindow({ ...base, step: 1, scrollTop }).start);
-	assert.ok(windows.length * 6 < unchunked.size, `${windows.length} chunked vs ${unchunked.size} per-row windows`);
-});
-
-test('step 1 keeps the per-row window', () => {
-	const base = { scrollTop: 7200, clientHeight: 720, count: 1000, rowHeight: 72, overscan: 12 };
-	assert.deepEqual(computeRowWindow({ ...base, step: 1 }), computeRowWindow(base));
-});
-
-test('isSameRowWindow rejects missing windows', () => {
-	assert.equal(isSameRowWindow(null, computeRowWindow()), false);
-	assert.equal(isSameRowWindow(computeRowWindow(), undefined), false);
+	assert.ok(seen.size <= 400 / 8 + 1, `${seen.size} distinct starts`);
 });

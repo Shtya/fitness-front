@@ -7605,7 +7605,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 @media (min-width: 769px) {
 	/* Dashboard WhatsApp shell: full-bleed WhatsApp Web surface. */
-	#body:has(.wa-mobile-shell) {
+	[data-wa-shell] #body {
 		padding: 0 !important;
 		box-sizing: border-box;
 	}
@@ -9407,7 +9407,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
   .wa-dashboard-header {
     display: none !important;
   }
-  #body:has(.wa-mobile-shell) {
+  [data-wa-shell] #body {
     background: #f0f2f5;
   }
 

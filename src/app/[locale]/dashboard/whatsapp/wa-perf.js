@@ -15,6 +15,15 @@ export function waPerfEnabled() {
 	}
 }
 
+const PERF_ON = waPerfEnabled();
+
+/** Opt-in render counter (same `wa:perf` flag): window.__waRenders[name]. */
+export function waPerfCountRender(name) {
+	if (!PERF_ON) return;
+	const counts = (window.__waRenders = window.__waRenders || {});
+	counts[name] = (counts[name] || 0) + 1;
+}
+
 export function waPerfMark(label) {
 	if (!waPerfEnabled()) return;
 	const startedAt = performance.now();

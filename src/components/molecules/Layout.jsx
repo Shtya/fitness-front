@@ -470,7 +470,7 @@ export default function Layout({ children }) {
 						{children}
 					</div>
 					) : (
-					<div className={`${isAppShell || isPresentationRoute ? 'relative h-dvh overflow-hidden' : 'relative min-h-screen'} ${isAppShell ? 'dashboard-icy' : ''}`}>
+					<div data-wa-shell={isWhatsAppRoute ? '' : undefined} className={`${isAppShell || isPresentationRoute ? 'relative h-dvh overflow-hidden' : 'relative min-h-screen'} ${isAppShell ? 'dashboard-icy' : ''}`}>
 						{isAppShell ? null : (
 							<>
 								<div className="ai-shell-bg fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-slate-50" />

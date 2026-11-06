@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
 	Virtualizer,
@@ -9,9 +9,8 @@ import {
 	observeElementRect,
 } from '@tanstack/react-virtual';
 import { waScrollLog, waScrollMark } from './wa-scroll-debug';
-import { chunkedVirtualRange, computeRowWindow, isSameRowWindow } from './wa-row-window';
-
-export { computeRowWindow, isSameRowWindow };
+import { waPerfCountRender } from './wa-perf';
+import { buildRowOffsets, chunkedVirtualRange, computeMeasuredRowWindow } from './wa-row-window';
 
 /**
  * Scroll metrics for the rows container. When it grows to its full content height
@@ -35,222 +34,6 @@ function readScrollViewport(node) {
 		};
 	}
 	return { scrollTop: node.scrollTop, clientHeight: node.clientHeight };
-}
-
-/** Hook: keep a window in sync with a scroll container. */
-export function useWaScrollWindow({
-	count,
-	rowHeight = 72,
-	overscan = 12,
-	/** Rows per window change; see computeRowWindow. */
-	step = 1,
-	enabled = true,
-	minCountToWindow = 48,
-	/** 'end' = chat thread (latest at bottom). 'start' = inbox list (latest at top). */
-	initialAlign = 'end',
-	/** Optional scroll container — used to read real scrollTop on count changes. */
-	scrollRef = null,
-	/** When false→true, re-read the scroll container (e.g. inbox tab was hidden). */
-	visible = true,
-} = {}) {
-	const shouldWindow = Boolean(enabled) && count >= minCountToWindow;
-	const [windowState, setWindowState] = useState(() =>
-		computeRowWindow({
-			count,
-			rowHeight,
-			overscan,
-			step,
-			clientHeight: 800,
-			scrollTop: initialAlign === 'start' ? 0 : Math.max(0, count * rowHeight - 800),
-		}),
-	);
-	const prevCountRef = useRef(count);
-
-	// Recompute when the list grows from empty / crosses the window threshold.
-	// Without this, start/end stay at 0 and the UI shows spacers with no rows.
-	useEffect(() => {
-		const prevCount = prevCountRef.current;
-		prevCountRef.current = count;
-
-		if (!shouldWindow) {
-			setWindowState({
-				start: 0,
-				end: count,
-				topPad: 0,
-				bottomPad: 0,
-				rowHeight,
-			});
-			return;
-		}
-
-		const viewport = readScrollViewport(scrollRef?.current);
-		const realScrollTop = viewport ? viewport.scrollTop : null;
-		const realClientHeight = viewport?.clientHeight > 0 ? viewport.clientHeight : 800;
-		const prepended = count - prevCount;
-		const h = Math.max(24, Number(rowHeight) || 72);
-
-		setWindowState(current => {
-			// Prepend (load older): shift the mounted window so the same rows stay visible.
-			// Bottom-anchored threads only — for a top-anchored inbox a count jump is a
-			// filter switch or a new chat, and shifting leaves a blank top spacer.
-			if (
-				initialAlign === 'end' &&
-				prepended > 0 &&
-				(realScrollTop == null || realScrollTop < realClientHeight * 2)
-			) {
-				const nextStart = Math.max(0, (current.start || 0) + prepended);
-				const nextEnd = Math.min(
-					count,
-					Math.max(nextStart + 1, (current.end || 0) + prepended),
-				);
-				return {
-					start: nextStart,
-					end: nextEnd,
-					topPad: nextStart * h,
-					bottomPad: Math.max(0, (count - nextEnd) * h),
-					rowHeight: h,
-				};
-			}
-
-			if (realScrollTop != null) {
-				return computeRowWindow({
-					scrollTop: realScrollTop,
-					clientHeight: realClientHeight,
-					count,
-					rowHeight: h,
-					overscan,
-					step,
-				});
-			}
-
-			if (current.end > 0 && current.end <= count) {
-				return computeRowWindow({
-					scrollTop: current.start * (current.rowHeight || h),
-					clientHeight: 800,
-					count,
-					rowHeight: h,
-					overscan,
-					step,
-				});
-			}
-
-			const estimatedBottom = Math.max(0, count * h - 800);
-			return computeRowWindow({
-				scrollTop: initialAlign === 'start' ? 0 : estimatedBottom,
-				clientHeight: 800,
-				count,
-				rowHeight: h,
-				overscan,
-				step,
-			});
-		});
-	}, [shouldWindow, count, rowHeight, overscan, step, initialAlign, scrollRef]);
-
-	// Tab switches unmount the inbox list while the hook state survives. On remount
-	// scrollTop resets to 0 but start/end can still point mid-list — huge topPad, blank UI.
-	useLayoutEffect(() => {
-		if (!visible) return undefined;
-		let frameId = 0;
-		const syncFromScroll = () => {
-			const node = scrollRef?.current;
-			if (!node) {
-				frameId = requestAnimationFrame(syncFromScroll);
-				return;
-			}
-			if (!shouldWindow) {
-				setWindowState({
-					start: 0,
-					end: count,
-					topPad: 0,
-					bottomPad: 0,
-					rowHeight,
-				});
-				return;
-			}
-			const viewport = readScrollViewport(node);
-			const next = computeRowWindow({
-				scrollTop: Number(viewport.scrollTop) || 0,
-				clientHeight: viewport.clientHeight > 0 ? viewport.clientHeight : 800,
-				count,
-				rowHeight,
-				overscan,
-				step,
-			});
-			setWindowState(current => (isSameRowWindow(current, next) ? current : next));
-		};
-		syncFromScroll();
-		return () => {
-			if (frameId) cancelAnimationFrame(frameId);
-		};
-	}, [visible, shouldWindow, count, rowHeight, overscan, step, scrollRef]);
-
-	const scrollFrameRef = useRef(0);
-	const scrollNodeRef = useRef(null);
-	useEffect(
-		() => () => {
-			if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
-			scrollFrameRef.current = 0;
-		},
-		[],
-	);
-
-	// One window update per frame, and none while the mounted slice is unchanged.
-	const onScroll = useCallback(
-		event => {
-			if (!shouldWindow) return;
-			scrollNodeRef.current = scrollRef?.current || event.currentTarget;
-			if (scrollFrameRef.current) return;
-			scrollFrameRef.current = requestAnimationFrame(() => {
-				scrollFrameRef.current = 0;
-				const viewport = readScrollViewport(scrollNodeRef.current);
-				if (!viewport) return;
-				const next = computeRowWindow({
-					scrollTop: viewport.scrollTop,
-					clientHeight: viewport.clientHeight,
-					count,
-					rowHeight,
-					overscan,
-					step,
-				});
-				setWindowState(current => (isSameRowWindow(current, next) ? current : next));
-			});
-		},
-		[shouldWindow, count, rowHeight, overscan, step, scrollRef],
-	);
-
-	const slice = useMemo(() => {
-		if (!shouldWindow) {
-			return {
-				start: 0,
-				end: count,
-				topPad: 0,
-				bottomPad: 0,
-				rowHeight,
-			};
-		}
-		const start = Math.min(Math.max(0, windowState.start || 0), count);
-		const end = Math.max(start, Math.min(count, windowState.end || 0));
-		if (count > 0 && end <= start) {
-			return computeRowWindow({
-				scrollTop: 0,
-				clientHeight: 800,
-				count,
-				rowHeight,
-				overscan,
-				step,
-			});
-		}
-		return {
-			...windowState,
-			start,
-			end,
-			topPad: start * rowHeight,
-			bottomPad: Math.max(0, (count - end) * rowHeight),
-			rowHeight,
-		};
-	}, [shouldWindow, windowState, count, rowHeight, overscan, step]);
-
-	return { shouldWindow, onScroll, ...slice };
 }
 
 /** The range a bottom-pinned viewport will show: last rows filling one viewport height. */
@@ -453,6 +236,206 @@ export function WaVirtualRowsHost({ virtual, children }) {
 		items: enabled ? virtual.virtualizer.getVirtualItems() : [],
 		totalSize: enabled ? virtual.virtualizer.getTotalSize() : 0,
 	});
+}
+
+const defaultRowKey = item => item.id;
+
+/**
+ * Windowed inbox rows. Owns the window state, so a scroll re-renders only this list and not the
+ * whole workspace. Rows are measured rather than assumed: heights differ by device and content
+ * (a one or two line preview, an unread row), and the spacers must equal the rows they replace
+ * or the list jumps wherever scroll anchoring does not hide it (Safari).
+ */
+export function WaWindowedRows({
+	items,
+	renderRow,
+	getRowKey = defaultRowKey,
+	scrollRef,
+	/** First guess only: replaced by real measurements after the first paint. */
+	rowHeight = 82,
+	overscan = 22,
+	step = 8,
+	minCountToWindow = 40,
+	visible = true,
+}) {
+	waPerfCountRender('chatListRows');
+	const count = items.length;
+	const shouldWindow = count >= minCountToWindow;
+	const heightsRef = useRef(new Map());
+	const estimateRef = useRef(rowHeight);
+	const listWidthRef = useRef(0);
+	const topSpacerRef = useRef(null);
+	const bottomSpacerRef = useRef(null);
+	const offsetsCacheRef = useRef({ items: null, offsets: null });
+
+	const readOffsets = () => {
+		const cache = offsetsCacheRef.current;
+		if (cache.items !== items || !cache.offsets) {
+			cache.items = items;
+			cache.offsets = buildRowOffsets(items, getRowKey, heightsRef.current, estimateRef.current);
+		}
+		return cache.offsets;
+	};
+	const readOffsetsRef = useRef(readOffsets);
+	readOffsetsRef.current = readOffsets;
+
+	const [range, setRange] = useState(() =>
+		computeMeasuredRowWindow({
+			offsets: buildRowOffsets(items, getRowKey, heightsRef.current, estimateRef.current),
+			scrollTop: 0,
+			clientHeight: 800,
+			overscan,
+			step,
+		}),
+	);
+	const rangeRef = useRef(range);
+	rangeRef.current = range;
+
+	// The list can shrink before the next scroll event re-reads the window.
+	const end = shouldWindow ? Math.min(range.end, count) : count;
+	const start = shouldWindow ? Math.min(range.start, end) : 0;
+
+	const syncRange = useCallback(
+		schedule => {
+			const node = scrollRef?.current;
+			const viewport = node ? readScrollViewport(node) : null;
+			if (!viewport) return;
+			const next = computeMeasuredRowWindow({
+				offsets: readOffsetsRef.current(),
+				scrollTop: viewport.scrollTop,
+				clientHeight: viewport.clientHeight > 0 ? viewport.clientHeight : 800,
+				overscan,
+				step,
+			});
+			const current = rangeRef.current;
+			if (current.start === next.start && current.end === next.end) return;
+			schedule(() => setRange(next));
+		},
+		[scrollRef, overscan, step],
+	);
+
+	// A new list (filter, search) or a tab coming back: re-read before paint, so no blank rows.
+	useLayoutEffect(() => {
+		if (shouldWindow && visible) syncRange(run => run());
+	}, [items, shouldWindow, visible, syncRange]);
+
+	useEffect(() => {
+		if (!visible || !shouldWindow) return undefined;
+		let frame = 0;
+		// On phones an ancestor (header + rows) is the scroller, not the rows container, so
+		// listen at the document (scroll does not bubble; capture sees it) and react to any
+		// scroll of the container or one of its ancestors.
+		const listener = event => {
+			const node = scrollRef?.current;
+			const target = event.target;
+			if (!node || !target || (target !== node && !(target.contains && target.contains(node)))) return;
+			if (frame) return;
+			frame = requestAnimationFrame(() => {
+				frame = 0;
+				// A transition: React splits the row work across frames instead of blocking the
+				// frame that crossed the boundary (the overscan covers the gap).
+				syncRange(startTransition);
+			});
+		};
+		document.addEventListener('scroll', listener, { capture: true, passive: true });
+		return () => {
+			document.removeEventListener('scroll', listener, { capture: true });
+			if (frame) cancelAnimationFrame(frame);
+		};
+	}, [scrollRef, syncRange, visible, shouldWindow]);
+
+	// Rows use content-visibility, so an off-screen row is only as tall as its declared size. A
+	// mounted row is told its recorded height up front; otherwise rows above the viewport would
+	// change size as they mount. Sizes come from a ResizeObserver: reading any layout value here
+	// (even the list's clientWidth) forces style for the rows just inserted, on every commit.
+	const rowObserverRef = useRef(null);
+	const observedRowsRef = useRef(new Map());
+	const observedListRef = useRef(null);
+	useEffect(
+		() => () => {
+			rowObserverRef.current?.disconnect();
+			rowObserverRef.current = null;
+			observedListRef.current = null;
+			observedRowsRef.current.clear();
+		},
+		[],
+	);
+
+	useLayoutEffect(() => {
+		const top = topSpacerRef.current;
+		const bottom = bottomSpacerRef.current;
+		const list = top?.parentElement;
+		if (!top || !bottom || !list || typeof ResizeObserver === 'undefined') return;
+		const observed = observedRowsRef.current;
+		if (!rowObserverRef.current) {
+			rowObserverRef.current = new ResizeObserver(entries => {
+				const heights = heightsRef.current;
+				let changed = false;
+				for (const entry of entries) {
+					if (entry.target === observedListRef.current) {
+						// Rows re-wrap at a new width, so recorded heights no longer hold.
+						const width = entry.contentRect.width;
+						if (!width) continue; // Hidden tab.
+						if (listWidthRef.current && listWidthRef.current !== width) {
+							heights.clear();
+							changed = true;
+						}
+						listWidthRef.current = width;
+						continue;
+					}
+					const key = observed.get(entry.target);
+					const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+					if (key === undefined || height <= 0 || heights.get(key) === height) continue;
+					heights.set(key, height);
+					changed = true;
+				}
+				if (!changed) return;
+				if (heights.size) {
+					let total = 0;
+					heights.forEach(height => {
+						total += height;
+					});
+					estimateRef.current = total / heights.size;
+				}
+				offsetsCacheRef.current.offsets = null;
+			});
+		}
+		const observer = rowObserverRef.current;
+		if (observedListRef.current !== list) {
+			if (observedListRef.current) observer.unobserve(observedListRef.current);
+			observedListRef.current = list;
+			observer.observe(list);
+		}
+		observed.forEach((_, node) => {
+			if (node.parentElement !== list) {
+				observer.unobserve(node);
+				observed.delete(node);
+			}
+		});
+		const heights = heightsRef.current;
+		let node = top.nextElementSibling;
+		for (let index = start; index < end && node && node !== bottom; index += 1) {
+			const key = getRowKey(items[index]);
+			if (!observed.has(node)) {
+				const known = heights.get(key);
+				if (known !== undefined) node.style.containIntrinsicBlockSize = `auto ${known}px`;
+				observer.observe(node);
+			}
+			observed.set(node, key);
+			node = node.nextElementSibling;
+		}
+	});
+
+	const slice = useMemo(() => items.slice(start, end), [items, start, end]);
+	if (!shouldWindow) return <>{items.map(renderRow)}</>;
+	const offsets = readOffsets();
+	return (
+		<>
+			<div ref={topSpacerRef} aria-hidden="true" style={{ height: offsets[start], flexShrink: 0 }} />
+			{slice.map(renderRow)}
+			<div ref={bottomSpacerRef} aria-hidden="true" style={{ height: offsets[count] - offsets[end], flexShrink: 0 }} />
+		</>
+	);
 }
 
 export function WaVirtualSpacer({ height }) {

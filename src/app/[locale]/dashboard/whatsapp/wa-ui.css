@@ -1562,13 +1562,18 @@ html.dark .wa-swipe-reply-icon {
 .wa-swipe-row {
 	position: relative;
 	overflow: hidden;
+	/* Off-screen rows skip style and layout: about 10x less work while scrolling the list. */
+	content-visibility: auto;
+	contain-intrinsic-block-size: auto 82px;
+}
+.wa-swipe-row .wa-conversation-row {
+	content-visibility: visible;
 }
 .wa-swipe-row__content {
 	position: relative;
 	z-index: 1;
 	background: var(--m-bg, #fff);
 	touch-action: pan-y;
-	will-change: transform;
 }
 .wa-swipe-row__pane {
 	position: absolute;
@@ -7121,7 +7126,8 @@ html.dark .wa-dk.text-rose-700\/70 {
 	color: hsl(345 83% 70%);
 }
 
-html.dark .wa-dk .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+/* No sibling combinator: with one, every row inserted into the chat list restyled the whole list. */
+html.dark .wa-dk .divide-slate-100 > * {
 	border-color: rgba(233, 237, 239, 0.09);
 }
 
@@ -13218,7 +13224,8 @@ html.dark .wa-loc__actions {
 	cursor: pointer;
 }
 
-.wa-loc__actions > * + * {
+/* The link after the View button. A sibling combinator here restyled the chat list on every insert. */
+.wa-loc__actions > a {
 	border-inline-start: 1px solid rgba(11, 20, 26, 0.08);
 }
 
@@ -13226,7 +13233,7 @@ html.dark .wa-loc__actions > * {
 	color: #53bdeb;
 }
 
-html.dark .wa-loc__actions > * + * {
+html.dark .wa-loc__actions > a {
 	border-inline-start-color: rgba(233, 237, 239, 0.08);
 }
 

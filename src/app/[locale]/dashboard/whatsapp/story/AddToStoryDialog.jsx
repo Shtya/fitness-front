@@ -1,23 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
-	AlertCircle,
 	Check,
 	ChevronDown,
 	CircleAlert,
 	Clock,
-	Loader2,
-	RotateCcw,
 	Scissors,
 	Send,
 	Sparkles,
 	X,
 } from 'lucide-react';
 import api from '@/utils/axios';
-import { absoluteApiUrl } from '../whatsapp-media-stream';
 
 const copy = {
 	en: {
@@ -51,6 +47,10 @@ const copy = {
 		prepareFailed: 'Could not prepare this video for a story',
 		publishFailed: 'Could not publish this story',
 		progress: '{done} of {total} published',
+		backgroundPreparing: 'Preparing your story…',
+		backgroundPublishing: 'Publishing your story…',
+		backgroundHint: 'You can keep chatting, we will tell you when it is live.',
+		donePartialCount: '{done} of {total} clips published',
 	},
 	ar: {
 		title: 'إضافة إلى الحالة',
@@ -83,6 +83,10 @@ const copy = {
 		prepareFailed: 'تعذّر تحضير الفيديو كحالة',
 		publishFailed: 'تعذّر نشر الحالة',
 		progress: 'تم نشر {done} من {total}',
+		backgroundPreparing: 'جاري تحضير الحالة…',
+		backgroundPublishing: 'جاري نشر الحالة…',
+		backgroundHint: 'كمّل شغلك عادي، هنقولك أول ما تنزل.',
+		donePartialCount: 'اتنشر {done} من {total} مقاطع',
 	},
 };
 
@@ -117,6 +121,45 @@ function apiMessage(error, fallback) {
 }
 
 /**
+ * Cut + publish without holding the dialog open. It used to be two waits behind two taps
+ * (prepare, then publish) with the dialog locked meanwhile; now one tap closes the dialog and
+ * this runs on its own, reporting through a single toast. A failed run cleans up its draft.
+ */
+async function publishStoryInBackground({ accountId, source, partSeconds, t, onPublished }) {
+	const toastId = toast.loading(`${t.backgroundPreparing}\n${t.backgroundHint}`);
+	let draftId = null;
+	try {
+		const { data: draft } = await api.post(`/whatsapp/accounts/${accountId}/story-drafts`, {
+			...source,
+			maxPartSeconds: partSeconds,
+		});
+		draftId = draft?.id || null;
+		if (!draftId) throw new Error(t.prepareFailed);
+		toast.loading(`${t.backgroundPublishing}\n${t.backgroundHint}`, { id: toastId });
+		const { data } = await api.post(`/whatsapp/story-drafts/${draftId}/publish`);
+		const parts = data?.parts || [];
+		const published = parts.filter(part => part.status === 'published').length;
+		if (data?.status === 'published') {
+			toast.success(t.done, { id: toastId });
+			onPublished?.(data);
+			return;
+		}
+		if (published > 0) {
+			toast.error(
+				t.donePartialCount.replace('{done}', String(published)).replace('{total}', String(parts.length)),
+				{ id: toastId },
+			);
+			onPublished?.(data);
+			return;
+		}
+		throw new Error(data?.errorMessage || t.publishFailed);
+	} catch (error) {
+		toast.error(apiMessage(error, error?.message || t.publishFailed), { id: toastId });
+		if (draftId) void api.delete(`/whatsapp/story-drafts/${draftId}`).catch(() => undefined);
+	}
+}
+
+/**
  * Confirm-then-publish flow for putting a chat video on the account's story.
  *
  * Two stages, matching the two server steps. The first stage shows what is about to
@@ -139,23 +182,12 @@ export default function AddToStoryDialog({
 	const t = copy[locale === 'ar' ? 'ar' : 'en'];
 	const ar = locale === 'ar';
 
-	const [draft, setDraft] = useState(null);
 	const [partSeconds, setPartSeconds] = useState(SAFE_CLIP_SECONDS);
 	const [lengthMenuOpen, setLengthMenuOpen] = useState(false);
 	const lengthMenuRef = useRef(null);
-	const [preparing, setPreparing] = useState(false);
-	const [publishing, setPublishing] = useState(false);
-	const busy = preparing || publishing;
-	// Prevents a stale response from a previous open landing in a fresh dialog.
-	const requestRef = useRef(0);
 
 	useEffect(() => {
-		if (open) return;
-		setDraft(null);
-		setLengthMenuOpen(false);
-		setPreparing(false);
-		setPublishing(false);
-		requestRef.current += 1;
+		if (!open) setLengthMenuOpen(false);
 	}, [open]);
 
 	useEffect(() => {
@@ -171,72 +203,25 @@ export default function AddToStoryDialog({
 	// Matches how the server plans the cut, so the count shown is the count produced.
 	const expectedParts = Math.max(1, Math.ceil((Number(durationSeconds) || 0) / partSeconds));
 
-	const prepare = useCallback(async () => {
+	const start = useCallback(() => {
 		if (!accountId || !(attachmentId || socialDownloadId)) return;
-		const request = requestRef.current;
-		setPreparing(true);
-		try {
-			const { data } = await api.post(`/whatsapp/accounts/${accountId}/story-drafts`, {
-				// One source or the other; the server cuts from whichever file it resolves.
-				...(attachmentId ? { attachmentId } : { socialDownloadId }),
-				maxPartSeconds: partSeconds,
-			});
-			if (requestRef.current !== request) return;
-			setDraft(data);
-		} catch (error) {
-			toast.error(apiMessage(error, t.prepareFailed));
-		} finally {
-			if (requestRef.current === request) setPreparing(false);
-		}
-	}, [accountId, attachmentId, socialDownloadId, partSeconds, t.prepareFailed]);
-
-	const publish = useCallback(async () => {
-		if (!draft?.id) return;
-		const request = requestRef.current;
-		setPublishing(true);
-		try {
-			const { data } = await api.post(`/whatsapp/story-drafts/${draft.id}/publish`);
-			if (requestRef.current !== request) return;
-			setDraft(data);
-			const failed = (data?.parts || []).filter((part) => part.status === 'failed');
-			if (data?.status === 'published') {
-				toast.success(t.done);
-				onPublished?.(data);
-			} else {
-				toast.error(data?.errorMessage || (failed.length ? t.donePartial : t.publishFailed));
-			}
-		} catch (error) {
-			toast.error(apiMessage(error, t.publishFailed));
-		} finally {
-			if (requestRef.current === request) setPublishing(false);
-		}
-	}, [draft?.id, onPublished, t.done, t.donePartial, t.publishFailed]);
-
-	const discard = useCallback(async () => {
-		const id = draft?.id;
-		setDraft(null);
 		onClose?.();
-		// The cut clips are only useful inside this flow, so an abandoned draft is
-		// cleaned up rather than left occupying the media root.
-		if (id) await api.delete(`/whatsapp/story-drafts/${id}`).catch(() => undefined);
-	}, [draft?.id, onClose]);
-
-	const publishedCount = useMemo(
-		() => (draft?.parts || []).filter((part) => part.status === 'published').length,
-		[draft],
-	);
+		void publishStoryInBackground({
+			accountId,
+			// One source or the other; the server cuts from whichever file it resolves.
+			source: attachmentId ? { attachmentId } : { socialDownloadId },
+			partSeconds,
+			t,
+			onPublished,
+		});
+	}, [accountId, attachmentId, socialDownloadId, partSeconds, t, onClose, onPublished]);
 
 	if (!open || typeof document === 'undefined') return null;
-
-	const parts = draft?.parts || [];
-	const finished = draft?.status === 'published';
 
 	return createPortal(
 		<div
 			className="wa-ldlg-scrim fixed inset-0 z-[135] grid place-items-end bg-black/45 p-4 backdrop-blur-sm sm:place-items-center"
-			onClick={() => {
-				if (!busy) void discard();
-			}}
+			onClick={() => onClose?.()}
 		>
 			<div
 				role="dialog"
@@ -252,21 +237,20 @@ export default function AddToStoryDialog({
 							{t.title}
 						</h3>
 						<p className="mt-1 text-xs leading-snug text-slate-500">
-							{draft ? t.partsSubtitle : t.confirmSubtitle}
+							{t.confirmSubtitle}
 						</p>
 					</div>
 					<button
 						type="button"
-						disabled={busy}
-						onClick={() => void discard()}
-						className="rounded-full p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+						onClick={() => onClose?.()}
+						aria-label={t.close}
+						className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
 					>
 						<X size={18} />
 					</button>
 				</div>
 
 				<div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-					{!draft ? (
 						<div className="space-y-3">
 							{previewUrl ? (
 								<video
@@ -276,7 +260,10 @@ export default function AddToStoryDialog({
 									preload="metadata"
 									className="max-h-64 w-full rounded-xl bg-black object-contain"
 								/>
-							) : null}
+							) : (
+								// The dialog opens before the signed preview URL arrives.
+								<div className="h-48 w-full animate-pulse rounded-xl bg-slate-200" aria-hidden="true" />
+							)}
 							<dl className="grid grid-cols-2 gap-2 text-sm">
 								<div className="rounded-lg bg-slate-50 px-3 py-2">
 									<dt className="text-xs font-semibold text-slate-500">{t.duration}</dt>
@@ -380,119 +367,24 @@ export default function AddToStoryDialog({
 								</p>
 							)}
 						</div>
-					) : (
-						<div className="space-y-2">
-							{publishing || finished ? (
-								<p className="text-xs font-semibold text-slate-500">
-									{t.progress
-										.replace('{done}', String(publishedCount))
-										.replace('{total}', String(parts.length))}
-								</p>
-							) : null}
-							{draft.errorMessage ? (
-								<p className="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-snug text-rose-700">
-									<CircleAlert size={14} className="mt-0.5 shrink-0" />
-									<span>{draft.errorMessage}</span>
-								</p>
-							) : null}
-							<ul className="space-y-2">
-								{parts.map((part) => (
-									<li
-										key={part.index}
-										className="flex items-center gap-3 rounded-xl border border-slate-200 p-2"
-									>
-										<video
-											src={absoluteApiUrl(part.url) || ''}
-											controls
-											playsInline
-											preload="metadata"
-											className="h-20 w-28 shrink-0 rounded-lg bg-black object-contain"
-										/>
-										<div className="min-w-0 flex-1">
-											<p className="truncate text-sm font-semibold text-slate-900">
-												{t.storyPart.replace('{n}', String(part.index + 1))}
-											</p>
-											<p className="mt-0.5 text-xs text-slate-500">
-												{formatClock(part.startSeconds)} –{' '}
-												{formatClock(part.startSeconds + part.durationSeconds)} ·{' '}
-												{formatBytes(part.fileSizeBytes)}
-											</p>
-											<p
-												className={`mt-1 flex items-center gap-1.5 text-xs font-semibold ${
-													part.status === 'published'
-														? 'text-emerald-600'
-														: part.status === 'failed'
-															? 'text-rose-600'
-															: part.status === 'publishing'
-																? 'text-sky-600'
-																: 'text-slate-400'
-												}`}
-											>
-												{part.status === 'published' ? (
-													<>
-														<Check size={13} />
-														{t.sent}
-													</>
-												) : part.status === 'failed' ? (
-													<>
-														<AlertCircle size={13} />
-														{part.errorMessage || t.failed}
-													</>
-												) : part.status === 'publishing' ? (
-													<>
-														<Loader2 size={13} className="animate-spin" />
-														{t.uploading}
-													</>
-												) : (
-													t.waiting
-												)}
-											</p>
-										</div>
-									</li>
-								))}
-							</ul>
-						</div>
-					)}
 				</div>
 
 				<div className="flex items-center justify-end gap-2 border-t bg-slate-50 px-5 py-3">
 					<button
 						type="button"
-						disabled={busy}
-						onClick={() => void discard()}
-						className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 disabled:opacity-50"
+						onClick={() => onClose?.()}
+						className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200"
 					>
-						{finished ? t.close : t.cancel}
+						{t.cancel}
 					</button>
-					{finished ? null : (
-						<button
-							type="button"
-							disabled={busy}
-							onClick={() => void (draft ? publish() : prepare())}
-							className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
-						>
-							{busy ? (
-								<Loader2 size={16} className="animate-spin" />
-							) : draft?.status === 'failed' ? (
-								<RotateCcw size={16} />
-							) : draft ? (
-								<Send size={16} />
-							) : (
-								<Sparkles size={16} />
-							)}
-							{preparing
-								? t.preparing
-								: publishing
-									? t.publishing
-									: draft?.status === 'failed'
-										? t.retry
-										: draft
-											? parts.length > 1
-												? t.publish.replace('{count}', String(parts.length))
-												: t.publishOne
-											: t.addToStory}
-						</button>
-					)}
+					<button
+						type="button"
+						onClick={start}
+						className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+					>
+						{willSplit ? <Scissors size={16} /> : <Send size={16} />}
+						{willSplit ? t.publish.replace('{count}', String(expectedParts)) : t.publishOne}
+					</button>
 				</div>
 			</div>
 		</div>,

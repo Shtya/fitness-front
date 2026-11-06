@@ -699,16 +699,21 @@ html[data-theme-mode='dark'] {
   background-repeat: no-repeat;
 }
 
-/* Phone-matched client pages: no shell photo on the page. */
-.dashboard-icy:has([data-plain-page="1"]),
-.dashboard-icy:has(.report-phone) {
+/*
+ * Phone-matched client pages: no shell photo on the page.
+ * :where(:not([data-wa-shell])): Layout marks the WhatsApp route, so these :has() checks never
+ * run there. On a page-level element they were re-evaluated for every inserted row and restyled
+ * the whole page: the main cause of stutter while scrolling the chat list and threads.
+ */
+.dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+.dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) {
   background-image: none !important;
   background-color: #fff !important;
 }
-html.dark .dashboard-icy:has([data-plain-page="1"]),
-html[data-theme-mode="dark"] .dashboard-icy:has([data-plain-page="1"]),
-html.dark .dashboard-icy:has(.report-phone),
-html[data-theme-mode="dark"] .dashboard-icy:has(.report-phone) {
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone),
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) {
   background-image: none !important;
   background-color: #0b1220 !important;
 }
@@ -731,30 +736,30 @@ html[data-theme-mode="dark"] .dashboard-icy:has(.report-phone) {
   font-family: var(--font-inter), var(--font-arabic), "Segoe UI", sans-serif;
 }
 
-html.dark .dashboard-icy:has([data-plain-page="1"]),
-html[data-theme-mode="dark"] .dashboard-icy:has([data-plain-page="1"]),
-html.dark .dashboard-icy:has(.report-phone),
-html[data-theme-mode="dark"] .dashboard-icy:has(.report-phone),
-.dashboard-icy:has([data-plain-page="1"]),
-.dashboard-icy:has(.report-phone) {
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone),
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone),
+.dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+.dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) {
   --gm-bg-image: none;
   background: #fff !important;
 }
-.dashboard-icy:has([data-plain-page="1"]) #body,
-.dashboard-icy:has([data-plain-page="1"]) [data-dashboard-content],
-.dashboard-icy:has(.report-phone) #body,
-.dashboard-icy:has(.report-phone) [data-dashboard-content] {
+.dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]) #body,
+.dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]) [data-dashboard-content],
+.dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) #body,
+.dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) [data-dashboard-content] {
   background-image: none !important;
   background-color: #fff !important;
 }
-html.dark .dashboard-icy:has([data-plain-page="1"]),
-html[data-theme-mode="dark"] .dashboard-icy:has([data-plain-page="1"]),
-html.dark .dashboard-icy:has(.report-phone),
-html[data-theme-mode="dark"] .dashboard-icy:has(.report-phone),
-html.dark .dashboard-icy:has([data-plain-page="1"]) #body,
-html[data-theme-mode="dark"] .dashboard-icy:has([data-plain-page="1"]) #body,
-html.dark .dashboard-icy:has(.report-phone) #body,
-html[data-theme-mode="dark"] .dashboard-icy:has(.report-phone) #body {
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone),
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone),
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]) #body,
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]) #body,
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) #body,
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) #body {
   background-color: #0b1220 !important;
 }
 
@@ -779,18 +784,18 @@ html[data-theme-mode="dark"] .dashboard-icy {
 }
 
 /* Keep this after the dark shell photo so phone pages stay flat. */
-html.dark .dashboard-icy:has(.report-phone),
-html[data-theme-mode="dark"] .dashboard-icy:has(.report-phone),
-html.dark .dashboard-icy:has([data-plain-page="1"]),
-html[data-theme-mode="dark"] .dashboard-icy:has([data-plain-page="1"]),
-html.dark .dashboard-icy:has(.report-phone) #body,
-html[data-theme-mode="dark"] .dashboard-icy:has(.report-phone) #body,
-html.dark .dashboard-icy:has(.report-phone) [data-dashboard-content],
-html[data-theme-mode="dark"] .dashboard-icy:has(.report-phone) [data-dashboard-content],
-html.dark .dashboard-icy:has([data-plain-page="1"]) #body,
-html[data-theme-mode="dark"] .dashboard-icy:has([data-plain-page="1"]) #body,
-html.dark .dashboard-icy:has([data-plain-page="1"]) [data-dashboard-content],
-html[data-theme-mode="dark"] .dashboard-icy:has([data-plain-page="1"]) [data-dashboard-content] {
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone),
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone),
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]),
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) #body,
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) #body,
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) [data-dashboard-content],
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has(.report-phone) [data-dashboard-content],
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]) #body,
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]) #body,
+html.dark .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]) [data-dashboard-content],
+html[data-theme-mode="dark"] .dashboard-icy:where(:not([data-wa-shell])):has([data-plain-page="1"]) [data-dashboard-content] {
   --gm-bg-image: none;
   background-image: none !important;
   background-color: #0b1220 !important;

@@ -654,7 +654,7 @@
 	}
 
 	/* The chat narrows instead of being covered, like WhatsApp Web. */
-	html .wa-web-desktop:not(#wa-d):has(.wa-gi-overlay) .wa-web-main {
+	html .wa-web-desktop:not(#wa-d)[data-gi-open] .wa-web-main {
 		margin-inline-end: var(--d-info-w);
 	}
 

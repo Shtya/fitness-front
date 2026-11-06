@@ -430,7 +430,7 @@ import {
 	readCachedMessagePage,
 	writeCachedMessagePage,
 } from './whatsapp-idb-cache';
-import { waPerfMark } from './wa-perf';
+import { waPerfCountRender, waPerfMark } from './wa-perf';
 import { shouldSaveViaShareSheet, toMediaFile } from './wa-save-file';
 import { saveMediaFiles } from './wa-save-prompt';
 import { StoryComposer, StoryViewersSheet, StoryViewsButton } from './WaStoryInteractions';
@@ -439,7 +439,7 @@ import {
 	formatStoryViewTime,
 	storyMessageKey,
 } from './wa-story-interactions';
-import { useWaScrollWindow, useWaVirtualRows, WaVirtualRowsHost, WaVirtualSpacer } from './wa-virtual-list';
+import { useWaVirtualRows, WaVirtualRowsHost, WaWindowedRows } from './wa-virtual-list';
 import { createByteBoundedCache, setBounded } from './wa-bounded-cache';
 import {
 	autoRetryDelayMs,
@@ -4689,7 +4689,10 @@ function getCachedAttachmentBlob(attachmentId, format = '') {
 	return attachmentBlobCache.get(attachmentBlobKey(id, format)) || null;
 }
 
-/** Defers media requests until the bubble is close to the viewport. */
+/**
+ * Defers media requests until the bubble is close to the viewport. Only an IntersectionObserver:
+ * reading a rect here forced style and layout for every media row mounted during a scroll.
+ */
 function useNearViewport(elementRef, { rootMargin = '600px' } = {}) {
 	const [isNear, setIsNear] = useState(false);
 	useEffect(() => {
@@ -4697,19 +4700,11 @@ function useNearViewport(elementRef, { rootMargin = '600px' } = {}) {
 		let cancelled = false;
 		let observer = null;
 		let raf = 0;
+		let settleTimer = 0;
 		let tries = 0;
-		const marginPx = Number.parseInt(String(rootMargin), 10);
-		const pad = Number.isFinite(marginPx) ? Math.abs(marginPx) : 600;
 
 		const markNear = () => {
 			if (!cancelled) setIsNear(true);
-		};
-
-		const isAlreadyNear = node => {
-			const rect = node.getBoundingClientRect();
-			if (!(rect.width > 0 || rect.height > 0)) return false;
-			const vh = typeof window === 'undefined' ? 0 : window.innerHeight || 0;
-			return rect.top < vh + pad && rect.bottom > -pad;
 		};
 
 		const attach = () => {
@@ -4725,22 +4720,20 @@ function useNearViewport(elementRef, { rootMargin = '600px' } = {}) {
 				markNear();
 				return;
 			}
-			const rect = node.getBoundingClientRect();
-			// Zero-size tiles never intersect — load anyway after a short settle.
-			if (!(rect.width > 0 || rect.height > 0)) {
-				if (tries++ < 45) raf = window.requestAnimationFrame(attach);
-				else markNear();
-				return;
-			}
-			if (isAlreadyNear(node)) {
-				markNear();
-				return;
-			}
 			observer = new IntersectionObserver(
 				entries => {
-					if (entries.some(entry => entry.isIntersecting)) markNear();
+					if (entries.some(entry => entry.isIntersecting)) {
+						markNear();
+						return;
+					}
+					// Zero-size tiles never intersect — load anyway after a short settle.
+					const rect = entries[entries.length - 1]?.boundingClientRect;
+					if (rect && !(rect.width > 0 || rect.height > 0) && !settleTimer) {
+						settleTimer = window.setTimeout(markNear, 750);
+					}
 				},
-				{ rootMargin },
+				// The thread is the root: a margin on the viewport would be clipped by the scroller.
+				{ root: node.closest('.wa-message-wallpaper'), rootMargin },
 			);
 			observer.observe(node);
 		};
@@ -4749,6 +4742,7 @@ function useNearViewport(elementRef, { rootMargin = '600px' } = {}) {
 		return () => {
 			cancelled = true;
 			if (raf) window.cancelAnimationFrame(raf);
+			if (settleTimer) window.clearTimeout(settleTimer);
 			observer?.disconnect();
 		};
 	}, [elementRef, isNear, rootMargin]);
@@ -4886,7 +4880,25 @@ function isStoryTransferFailure(error) {
 	);
 }
 
-async function fetchStatusMediaBlob(accountId, statusId, { history = false, bypassCache = false } = {}) {
+// Closing the story viewer revokes its object URL, so re-opening the same story (or going
+// back to a person) downloaded the whole image again. Keep recent story blobs in memory.
+const storyMediaBlobCache = createByteBoundedCache({
+	maxEntries: 60,
+	maxBytes: 80 * 1024 * 1024,
+});
+
+async function fetchStatusMediaBlob(accountId, statusId, options = {}) {
+	const key = `${options.history ? 'h' : 'l'}:${accountId}:${statusId}`;
+	if (!options.bypassCache) {
+		const cached = storyMediaBlobCache.get(key);
+		if (cached) return cached;
+	}
+	const blob = await downloadStatusMediaBlob(accountId, statusId, options);
+	storyMediaBlobCache.set(key, blob);
+	return blob;
+}
+
+async function downloadStatusMediaBlob(accountId, statusId, { history = false, bypassCache = false } = {}) {
 	const path = history
 		? `/whatsapp/accounts/${accountId}/statuses/history/${encodeURIComponent(statusId)}/content`
 		: `/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(statusId)}/content`;
@@ -6021,6 +6033,16 @@ function WaGroupsBrowser({
 		},
 		[conversations],
 	);
+
+	// The tab header steps aside for a pushed group page (wa-mobile.css). An attribute rather
+	// than :has() on the shell, which was re-evaluated for every row inserted anywhere under it.
+	const groupSelected = Boolean(selectedGroup);
+	useEffect(() => {
+		const shell = document.querySelector('.wa-mobile-shell');
+		if (!shell || !groupSelected) return undefined;
+		shell.setAttribute('data-grp-selected', '');
+		return () => shell.removeAttribute('data-grp-selected');
+	}, [groupSelected]);
 
 	return (
 		<div className={`wa-grp${selectedGroup ? ' has-selection' : ''}`}>
@@ -8594,11 +8616,14 @@ export function MediaAttachment({
 			}
 			return undefined;
 		}
-		// Keep showing the local optimistic preview while the durable copy loads.
+		// Our own sent media: the local file is already on screen and is the same picture the
+		// server stores. Re-reading it (new object URL) or swapping to the server copy changed
+		// the <img> src after the send was confirmed, which is what flashed the bubble.
 		if (localUrl) {
-			setUrl(localUrl);
+			setUrl(current => (current === localUrl ? current : localUrl));
 			setFailed(false);
 			setLoading(false);
+			if (['image', 'sticker', 'video'].includes(type)) return undefined;
 		}
 		// Cached media streams offline; pending media needs a linked WhatsApp session.
 		if (!sessionReady && !canFetchWithoutSession && !localUrl) {
@@ -9480,7 +9505,7 @@ function MessageAttachments({
 			{images.length > 0 && (
 				<div className={`wa-media-gallery ${mine ? 'wa-media-gallery-mine' : 'wa-media-gallery-other'} ${visibleImages.length === 1 ? 'wa-media-gallery-single' : ''} ${galleryCountClass} grid overflow-hidden rounded-none ${gridClass} gap-[2px]`}>
 					{visibleImages.map((attachment, index) => (
-						<div key={attachment.id} className={`wa-photo-tile relative min-h-0 min-w-0 overflow-hidden ${tileClass(index)}`}>
+						<div key={attachment.clientKey || attachment.id} className={`wa-photo-tile relative min-h-0 min-w-0 overflow-hidden ${tileClass(index)}`}>
 							<MediaAttachment
 								attachment={attachment}
 								mine={mine}
@@ -9501,7 +9526,7 @@ function MessageAttachments({
 						</div>
 					))}
 					{images.slice(4).map(attachment => (
-						<div key={attachment.id} className="hidden">
+						<div key={attachment.clientKey || attachment.id} className="hidden">
 							<MediaAttachment
 								attachment={attachment}
 								mine={mine}
@@ -9518,7 +9543,7 @@ function MessageAttachments({
 			)}
 			{otherAttachments.map(attachment => (
 				<MediaAttachment
-					key={attachment.id}
+					key={attachment.clientKey || attachment.id}
 					attachment={attachment}
 					mine={mine}
 					labels={labels}
@@ -11157,6 +11182,15 @@ function MobileOverflowMenu({
 }) {
 	const { openSidebar } = useSidebarChrome();
 	const ar = String(locale).toLowerCase().startsWith('ar');
+	// Escape closes it like the other menus (it used to stay open under the next popup).
+	useEffect(() => {
+		if (!open) return undefined;
+		const onKey = event => {
+			if (event.key === 'Escape') onClose?.();
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [open, onClose]);
 	if (!open) return null;
 	return (
 		<>
@@ -11237,6 +11271,16 @@ function MobileAttachmentSheet({
 	mobileToolActions = [],
 }) {
 	const [placement, setPlacement] = useState(null);
+
+	// Escape closes it (it used to stay open over the next popup, e.g. the message menu).
+	useEffect(() => {
+		if (!open) return undefined;
+		const onKey = event => {
+			if (event.key === 'Escape') onClose?.();
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [open, onClose]);
 
 	useLayoutEffect(() => {
 		if (!open) {
@@ -12567,7 +12611,7 @@ const WaConversationRow = memo(function WaConversationRow({
 					actions.keyActivate(conversation);
 				}
 			}}
-			className={`wa-conversation-row relative flex w-full cursor-pointer items-start gap-3 text-start transition-colors [content-visibility:auto] [contain-intrinsic-size:72px] ${unread ? 'is-unread' : ''} ${
+			className={`wa-conversation-row relative flex w-full cursor-pointer items-start gap-3 text-start transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_72px] ${unread ? 'is-unread' : ''} ${
 				active
 					? isSplitSecondary
 						? 'is-active is-split-secondary'
@@ -12812,6 +12856,7 @@ function sameThreadRowDeps(a, b) {
 }
 
 function WhatsAppWorkspaceContent() {
+	waPerfCountRender('workspace');
 	const locale = useLocale();
 	const t = translations[locale] || translations.en;
 	const pathname = usePathname();
@@ -14011,6 +14056,10 @@ function WhatsAppWorkspaceContent() {
 	const whatsappNotificationsEnabled = currentAccess.notificationsEnabled !== false;
 	whatsappNotificationsEnabledRef.current = whatsappNotificationsEnabled && !showcaseOnly;
 	const canUseWhatsApp = Boolean(currentAccess.canUse);
+	// The chat narrows while the info panel is open (wa-desktop.css), without :has() on the shell.
+	const groupInfoOverlayRef = useCallback(node => {
+		document.querySelector('.wa-web-desktop')?.toggleAttribute('data-gi-open', Boolean(node));
+	}, []);
 	const isDesktopLayout = useDesktopLayout();
 	const canManageWhatsApp = Boolean(currentAccess.canManage);
 	const canAssignWhatsApp = Boolean(currentAccess.canAssign);
@@ -15152,22 +15201,8 @@ function WhatsAppWorkspaceContent() {
 
 	const chatListVisible = isConversationWorkspaceTab(activeTab);
 	const chatListScrollScope = `${accountId || ''}:${conversationFilter}:${chatSearch.trim()}:${assignmentFilter || ''}`;
-	const chatListWindow = useWaScrollWindow({
-		count: filteredConversations.length,
-		rowHeight: 88,
-		overscan: 22,
-		step: 8,
-		minCountToWindow: 40,
-		initialAlign: 'start',
-		scrollRef: chatListScrollRef,
-		// Mobile hides the inbox while a chat is open; re-read scroll when it returns.
-		visible: chatListVisible && (isDesktopLayout || !conversationId),
-	});
-	const visibleConversations = useMemo(
-		() =>
-			filteredConversations.slice(chatListWindow.start, chatListWindow.end),
-		[filteredConversations, chatListWindow.start, chatListWindow.end],
-	);
+	// Mobile hides the inbox while a chat is open; the rows re-read scroll when it returns.
+	const chatListRowsVisible = chatListVisible && (isDesktopLayout || !conversationId);
 	/*
 	 * Restore the inbox scroll only when the list (re)appears or its scope changes (filter,
 	 * search, account). It used to re-run on every list update: each incoming message moved the
@@ -15192,13 +15227,11 @@ function WhatsAppWorkspaceContent() {
 				nextIndex >= 0
 					? Math.max(0, nextIndex * 88 - snapshot.rowOffset)
 					: snapshot.scrollTop;
-			if (Math.abs(node.scrollTop - nextScrollTop) > 1) {
-				node.scrollTop = nextScrollTop;
-				chatListWindow.onScroll({ currentTarget: node });
-			}
+			// The rows listen to the container's scroll event, so setting scrollTop is enough.
+			if (Math.abs(node.scrollTop - nextScrollTop) > 1) node.scrollTop = nextScrollTop;
 		});
 		return () => cancelAnimationFrame(frame);
-	}, [chatListRestoreKey, chatListWindow.onScroll]);
+	}, [chatListRestoreKey]);
 
 	const archivedChatsCount = useMemo(() => {
 		const local = effectiveConversations.filter(conversation => {
@@ -15990,7 +16023,6 @@ function WhatsAppWorkspaceContent() {
 	}, [queryClient, resetConversationsCache]);
 
 	const handleChatListScroll = event => {
-		chatListWindow.onScroll(event);
 		listScrollPrefetchBlockedUntilRef.current = Date.now() + 280;
 		if (hoverPrefetchTimerRef.current) {
 			window.clearTimeout(hoverPrefetchTimerRef.current);
@@ -15998,9 +16030,8 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (collapsedChatTip) setCollapsedChatTip(null);
 		const node = event.currentTarget;
-		// Rows are a fixed 88px (the window hook relies on it too), so the top row comes from
-		// scrollTop alone. Measuring every row on each scroll event forced a layout per frame —
-		// the main source of inbox scroll jank on phones.
+		// A rough row height is enough for this restore anchor, so the top row comes from scrollTop
+		// alone. Measuring every row on each scroll event forced a layout per frame.
 		const anchorIndex = Math.max(0, Math.floor((Number(node.scrollTop) || 0) / 88));
 		const anchorId = String(filteredConversations[anchorIndex]?.id || '');
 		const rowOffset = anchorIndex * 88 - (Number(node.scrollTop) || 0);
@@ -16345,6 +16376,10 @@ function WhatsAppWorkspaceContent() {
 				setStatuses(cached.items);
 				setStatusFetchHint(cached.hint || null);
 			}
+			// A list from under a minute ago is current: the visible poller and the
+			// "story posted" paths refresh it. Re-requesting here on every tab switch,
+			// chat open or effect re-run is what kept re-fetching the Status tab.
+			if (cacheFresh && !force) return;
 			try {
 				const { data } = await api.get(`/whatsapp/accounts/${targetAccountId}/statuses`, {
 					timeout: 15000,
@@ -19591,7 +19626,7 @@ function WhatsAppWorkspaceContent() {
 			load: () =>
 				activeTab === 'statuses'
 					? refreshStatusesFromProviderRef.current?.(accountId, { silent: true })
-					: loadStatuses(accountId, { silent: true, providerRefresh: false }),
+					: loadStatuses(accountId, { silent: true, providerRefresh: false, force: true }),
 		});
 		poller.start();
 		return () => poller.stop();
@@ -19654,33 +19689,68 @@ function WhatsAppWorkspaceContent() {
 			}
 			setUploadProgress(null);
 
-			void (async () => {
-				for (let index = 0; index < batch.length; index += 1) {
-					const item = batch[index];
-					const imageCaption = index === 0 ? caption : '';
-					const imageReply = index === 0 ? replySnapshot : null;
-					const clientMessageId = newClientMessageId();
-					// Separate blob URL for the bubble so clearing the stage strip is safe.
-					const optimisticPreviewUrl = URL.createObjectURL(item.file);
-					if (item.previewUrl) {
-						try {
-							URL.revokeObjectURL(item.previewUrl);
-						} catch {
-							/* ignore */
-						}
+			// Every bubble appears at once (one state update), all uploads start together (3 at a
+			// time), and the messages are still posted in order. Images used to appear and send one
+			// after another, each waiting for the previous upload and send to finish.
+			const prepared = batch.map((item, index) => {
+				const clientMessageId = newClientMessageId();
+				// Separate blob URL for the bubble so clearing the stage strip is safe.
+				const optimisticPreviewUrl = URL.createObjectURL(item.file);
+				if (item.previewUrl) {
+					try {
+						URL.revokeObjectURL(item.previewUrl);
+					} catch {
+						/* ignore */
 					}
-					const optimisticMessage = buildOptimisticMediaMessage({
+				}
+				return {
+					item,
+					index,
+					clientMessageId,
+					optimisticMessage: buildOptimisticMediaMessage({
 						conversationId: targetConversationId,
 						clientMessageId,
 						type: 'image',
 						file: item.file,
 						previewUrl: optimisticPreviewUrl,
-						caption: imageCaption,
-						replySnapshot: imageReply,
-					});
-					persistConversationMessages(targetConversationId, current =>
-						mergeMessages(current, [optimisticMessage], targetConversationId),
-					);
+						caption: index === 0 ? caption : '',
+						replySnapshot: index === 0 ? replySnapshot : null,
+					}),
+				};
+			});
+			persistConversationMessages(targetConversationId, current =>
+				mergeMessages(
+					current,
+					prepared.map(entry => entry.optimisticMessage),
+					targetConversationId,
+				),
+			);
+			const uploadSlots = { active: 0, queue: [] };
+			const runUpload = file =>
+				new Promise((resolve, reject) => {
+					const start = () => {
+						uploadSlots.active += 1;
+						uploadOutgoingMedia(file, 'image', uploadAccountId)
+							.then(resolve, reject)
+							.finally(() => {
+								uploadSlots.active -= 1;
+								uploadSlots.queue.shift()?.();
+							});
+					};
+					if (uploadSlots.active < 3) start();
+					else uploadSlots.queue.push(start);
+				});
+			const uploadTasks = prepared.map(entry => {
+				const task = runUpload(entry.item.file);
+				task.catch(() => {}); // awaited (and reported) in order below
+				return task;
+			});
+
+			void (async () => {
+				for (const entry of prepared) {
+					const { item, index, clientMessageId, optimisticMessage } = entry;
+					const imageCaption = index === 0 ? caption : '';
+					const imageReply = index === 0 ? replySnapshot : null;
 
 					let sent = false;
 					try {
@@ -19694,6 +19764,7 @@ function WhatsAppWorkspaceContent() {
 								optimisticMessage,
 								clearUploadProgress: true,
 								removeOnFailure: true,
+								uploadTask: uploadTasks[index],
 							}),
 							WHATSAPP_MEDIA_SEND_TIMEOUT_MS,
 							locale === 'ar' ? 'إرسال الصورة' : 'Image send',
@@ -20114,6 +20185,39 @@ function WhatsAppWorkspaceContent() {
 		return () => window.removeEventListener('wa-retry-outbound', onRetry);
 	}, [retryOutboundMessage]);
 
+	/** Compress (images) and upload one file; resolves to { uploaded, outgoingFile }. */
+	const uploadOutgoingMedia = async (file, type, targetAccountId) => {
+		let outgoingFile = file;
+		if (type === 'image') {
+			const normalizedFile = normalizeComposerImageFile(file) || file;
+			try {
+				outgoingFile = await withAsyncTimeout(
+					compressImageForWhatsApp(normalizedFile),
+					20_000,
+					locale === 'ar' ? 'تحضير الصورة' : 'Image prepare',
+				);
+			} catch {
+				outgoingFile = normalizedFile;
+			}
+		}
+		const form = new FormData();
+		form.append('file', outgoingFile);
+		// Send the browser's UTF-8 name separately — Multer often mangles Arabic in originalname.
+		if (outgoingFile?.name) {
+			form.append('fileName', String(outgoingFile.name));
+		}
+		const { data: uploaded } = await api.post(
+			`/whatsapp/accounts/${targetAccountId}/media`,
+			form,
+			{
+				timeout: WHATSAPP_MEDIA_SEND_TIMEOUT_MS,
+				maxBodyLength: Infinity,
+				maxContentLength: Infinity,
+			},
+		);
+		return { uploaded, outgoingFile };
+	};
+
 	const sendFile = async (file, forcedType, options = {}) => {
 		const uploadAccountId =
 			options.accountId || selectedConversation?.accountId || accountId;
@@ -20213,34 +20317,11 @@ function WhatsAppWorkspaceContent() {
 			setUploadProgress(null);
 		}
 		try {
-			let outgoingFile = file;
-			if (type === 'image') {
-				const normalizedFile = normalizeComposerImageFile(file) || file;
-				try {
-					outgoingFile = await withAsyncTimeout(
-						compressImageForWhatsApp(normalizedFile),
-						20_000,
-						locale === 'ar' ? 'تحضير الصورة' : 'Image prepare',
-					);
-				} catch {
-					outgoingFile = normalizedFile;
-				}
-			}
-			const form = new FormData();
-			form.append('file', outgoingFile);
-			// Send the browser's UTF-8 name separately — Multer often mangles Arabic in originalname.
-			if (outgoingFile?.name) {
-				form.append('fileName', String(outgoingFile.name));
-			}
-			const { data: uploaded } = await api.post(
-				`/whatsapp/accounts/${targetAccountId}/media`,
-				form,
-				{
-					timeout: WHATSAPP_MEDIA_SEND_TIMEOUT_MS,
-					maxBodyLength: Infinity,
-					maxContentLength: Infinity,
-				},
-			);
+			// A batch starts every upload up front (options.uploadTask); the message itself is
+			// still posted here, in order.
+			const { uploaded, outgoingFile } = options.uploadTask
+				? await options.uploadTask
+				: await uploadOutgoingMedia(file, type, targetAccountId);
 			uploadedFileId = uploaded.fileId;
 			const displayFileName =
 				String(outgoingFile?.name || '').trim() ||
@@ -20344,10 +20425,62 @@ function WhatsAppWorkspaceContent() {
 			void sendFile(normalized[0]);
 			return;
 		}
+		// Several files (videos, documents…): all bubbles at once, uploads in parallel (3 at a
+		// time), messages posted in order — instead of one file after another.
+		const targetConversationId = conversationId;
+		const targetAccountId = selectedConversation?.accountId || accountId;
+		if (!targetConversationId || !targetAccountId) return;
+		const prepared = normalized.map(file => {
+			const clientMessageId = newClientMessageId();
+			const type = outgoingMediaType(file);
+			return {
+				file,
+				clientMessageId,
+				type,
+				optimisticMessage: buildOptimisticMediaMessage({
+					conversationId: targetConversationId,
+					clientMessageId,
+					type,
+					file,
+					previewUrl: URL.createObjectURL(file),
+				}),
+			};
+		});
+		persistConversationMessages(targetConversationId, current =>
+			mergeMessages(current, prepared.map(entry => entry.optimisticMessage), targetConversationId),
+		);
+		let active = 0;
+		const waiting = [];
+		const runUpload = entry =>
+			new Promise((resolve, reject) => {
+				const start = () => {
+					active += 1;
+					uploadOutgoingMedia(entry.file, entry.type, targetAccountId)
+						.then(resolve, reject)
+						.finally(() => {
+							active -= 1;
+							waiting.shift()?.();
+						});
+				};
+				if (active < 3) start();
+				else waiting.push(start);
+			});
+		const uploads = prepared.map(entry => {
+			const task = runUpload(entry);
+			task.catch(() => {}); // reported by sendFile, in order
+			return task;
+		});
 		void (async () => {
-			for (const file of normalized) {
-				const sent = await sendFile(file);
-				if (!sent) break;
+			for (let index = 0; index < prepared.length; index += 1) {
+				const entry = prepared[index];
+				await sendFile(entry.file, entry.type, {
+					conversationId: targetConversationId,
+					accountId: targetAccountId,
+					clientMessageId: entry.clientMessageId,
+					optimisticMessage: entry.optimisticMessage,
+					uploadTask: uploads[index],
+					caption: '',
+				});
 			}
 		})();
 	};
@@ -21899,18 +22032,24 @@ function WhatsAppWorkspaceContent() {
 				openVideoToVoiceEditor(message, { id: attachmentId });
 			} else if (action === 'addToStory') {
 				const attachment = (message.attachments || []).find(item => item?.id === attachmentId);
-				// A signed URL, so the confirmation step can play the video before the
-				// server has cut anything. Its absence is not fatal: the rest still works.
-				const previewUrl = await getAttachmentStreamUrl(attachmentId).catch(() => '');
+				// Open at once; the signed preview URL (so the confirmation can play the video)
+				// fills in when it arrives instead of holding the dialog back for a round trip.
 				setStoryTarget({
 					attachmentId,
 					messageId: message.id,
-					previewUrl,
+					previewUrl: '',
 					durationSeconds: Number(attachment?.durationSeconds) || 0,
 					fileSizeBytes:
 						Number(attachment?.sizeBytes ?? attachment?.size ?? attachment?.fileSizeBytes) ||
 						0,
 				});
+				void getAttachmentStreamUrl(attachmentId)
+					.then(previewUrl =>
+						setStoryTarget(current =>
+							current?.attachmentId === attachmentId ? { ...current, previewUrl } : current,
+						),
+					)
+					.catch(() => {});
 			} else {
 				setLibrarySaveTarget({
 					attachmentId,
@@ -23576,17 +23715,21 @@ function WhatsAppWorkspaceContent() {
 
 	const markConversationUnread = async () => {
 		if (!conversationId || demo.settings.enabled || isDemoId(conversationId)) return;
-		try {
-			const { data } = await api.post(`/whatsapp/conversations/${conversationId}/unread`);
-			const next = Number(data?.unreadCount) || 1;
+		const targetId = conversationId;
+		const previous = conversationsRef.current.find(item => item.id === targetId)?.unreadCount ?? 0;
+		const applyUnread = value =>
 			setConversations(current =>
-				current.map(item =>
-					item.id === conversationId ? { ...item, unreadCount: next } : item,
-				),
+				current.map(item => (item.id === targetId ? { ...item, unreadCount: value } : item)),
 			);
+		// Shown at once; the request runs behind it and undoes this if it fails.
+		applyUnread(Math.max(1, Number(previous) || 0));
+		toast.success(locale === 'ar' ? 'تم تعليم المحادثة كغير مقروءة' : 'Marked as unread');
+		try {
+			const { data } = await api.post(`/whatsapp/conversations/${targetId}/unread`);
+			applyUnread(Number(data?.unreadCount) || 1);
 			notifyWhatsAppUnreadChanged();
-			toast.success(locale === 'ar' ? 'تم تعليم المحادثة كغير مقروءة' : 'Marked as unread');
 		} catch {
+			applyUnread(previous);
 			toast.error(locale === 'ar' ? 'تعذر تعليم كغير مقروء' : 'Could not mark unread');
 		}
 	};
@@ -23594,7 +23737,16 @@ function WhatsAppWorkspaceContent() {
 	/** Inbox swipe action: flip read/unread for any row, not only the open chat. */
 	const toggleConversationReadState = async conversation => {
 		if (!conversation || demo.settings.enabled || isDemoId(conversation.id)) return;
-		const wasUnread = conversationUnreadCount(conversation) > 0;
+		const previous = conversationUnreadCount(conversation);
+		const wasUnread = previous > 0;
+		const applyUnread = value =>
+			setConversations(current =>
+				current.map(item =>
+					item.id === conversation.id ? { ...item, unreadCount: value } : item,
+				),
+			);
+		// Flip the row at once; the request runs behind it and undoes this if it fails.
+		applyUnread(wasUnread ? 0 : 1);
 		try {
 			if (wasUnread) {
 				await api.post(`/whatsapp/conversations/${conversation.id}/read`, null, {
@@ -23603,15 +23755,11 @@ function WhatsAppWorkspaceContent() {
 				setConversationUnreadCount(conversation.id, 0);
 			} else {
 				const { data } = await api.post(`/whatsapp/conversations/${conversation.id}/unread`);
-				const next = Number(data?.unreadCount) || 1;
-				setConversations(current =>
-					current.map(item =>
-						item.id === conversation.id ? { ...item, unreadCount: next } : item,
-					),
-				);
+				applyUnread(Number(data?.unreadCount) || 1);
 			}
 			notifyWhatsAppUnreadChanged();
 		} catch (error) {
+			applyUnread(previous);
 			toast.error(
 				error.response?.data?.message ||
 					(locale === 'ar'
@@ -24062,7 +24210,9 @@ function WhatsAppWorkspaceContent() {
 		[accountId, clearConversationMessages, patchArchivedUnread],
 	);
 
-	const deleteConversationChat = async conversation => {
+	// Asks in an app dialog (was the browser's window.confirm), then removes at once and rolls back on failure.
+	const [deleteChatTarget, setDeleteChatTarget] = useState(null);
+	const deleteConversationChat = conversation => {
 		if (!conversation?.id) return;
 		if (isEmailMemoAiConversation(conversation)) {
 			toast.error(
@@ -24072,11 +24222,12 @@ function WhatsAppWorkspaceContent() {
 			);
 			return;
 		}
-		const title = conversationTitle(conversation) || t.deleteChat;
-		const confirmed = window.confirm(
-			`${t.deleteChatConfirm}\n\n${title}`,
-		);
-		if (!confirmed) return;
+		setDeleteChatTarget(conversation);
+	};
+	const confirmDeleteConversationChat = async () => {
+		const conversation = deleteChatTarget;
+		setDeleteChatTarget(null);
+		if (!conversation?.id) return;
 		const actionKey = `delete:${conversation.id}`;
 		if (pendingPreferenceActions.has(actionKey)) return;
 		const isDemoConversation = demo.settings.enabled || isDemoId(conversation.id);
@@ -27591,8 +27742,11 @@ function WhatsAppWorkspaceContent() {
 										)
 									) : (
 										<>
-											<WaVirtualSpacer height={chatListWindow.topPad} />
-											{visibleConversations.map(conversation => (
+											<WaWindowedRows
+												items={filteredConversations}
+												scrollRef={chatListScrollRef}
+												visible={chatListRowsVisible}
+												renderRow={conversation => (
 												<WaSwipeRow
 													key={conversation.id}
 													rowKey={conversation.id}
@@ -27620,8 +27774,8 @@ function WhatsAppWorkspaceContent() {
 													privacyBlurred={Boolean(privacyBlurChatIds?.has(conversation.id))}
 												/>
 												</WaSwipeRow>
-											))}
-											<WaVirtualSpacer height={chatListWindow.bottomPad} />
+												)}
+											/>
 											{conversations.length < conversationTotal && (
 												<div className="flex items-center justify-center gap-2 py-3 text-[11px] font-semibold text-slate-400">
 													{loadingMoreConversations ? (
@@ -28974,7 +29128,7 @@ function WhatsAppWorkspaceContent() {
 																	? 'wa-message-highlighted'
 																	: virtualizeMessages
 																		? ''
-																		: '[content-visibility:auto] [contain-intrinsic-size:80px]'
+																		: '[content-visibility:auto] [contain-intrinsic-size:auto_80px]'
 															}`}
 															data-wa-row-key={row.key || messageRowKey(row)}
 															data-wa-message-id={message.id || undefined}
@@ -31998,6 +32152,7 @@ function WhatsAppWorkspaceContent() {
 				];
 				return (
 				<div
+					ref={groupInfoOverlayRef}
 					className="wa-gi-overlay fixed inset-0 z-[110] grid place-items-end bg-black/30 p-0 backdrop-blur-sm sm:place-items-center sm:p-4"
 					onClick={closeConversationInfo}
 					role="presentation"
@@ -32827,6 +32982,36 @@ function WhatsAppWorkspaceContent() {
 					onClose={() => setLibrarySaveTarget(null)}
 				/>
 			</MountWhenOpened>
+			{deleteChatTarget ? (
+				<WaDialog
+					zIndex={130}
+					width={400}
+					tone="danger"
+					icon={<Trash2 size={17} strokeWidth={2.1} />}
+					title={t.deleteChat}
+					subtitle={conversationTitle(deleteChatTarget)}
+					closeLabel={locale === 'ar' ? 'إلغاء' : 'Cancel'}
+					onClose={() => setDeleteChatTarget(null)}
+					footer={
+						<>
+							<button type="button" className="wa-ui-btn wa-ui-btn--secondary" onClick={() => setDeleteChatTarget(null)}>
+								{locale === 'ar' ? 'إلغاء' : 'Cancel'}
+							</button>
+							<button
+								type="button"
+								className="wa-ui-btn wa-ui-btn--danger"
+								onClick={() => void confirmDeleteConversationChat()}
+							>
+								{t.deleteChat}
+							</button>
+						</>
+					}
+				>
+					<div className="wa-dx__body">
+						<p dir="auto">{t.deleteChatConfirm}</p>
+					</div>
+				</WaDialog>
+			) : null}
 			<MountWhenOpened open={Boolean(storyTarget)}>
 				<AddToStoryDialog
 					open={Boolean(storyTarget)}
