@@ -1,10 +1,12 @@
 /**
- * The studio renders inside `.wa-mobile-shell`, whose globals.css rule
- * `body .wa-mobile-shell *:not(...)` forces DM Sans with !important (specificity 0,5,3 in RTL).
- * The phone must use its own font (--fc-font, set inline on .fc-phone) so the live preview and
- * the html-to-image PNG measure text identically. Repeated class = higher specificity, unlayered.
+ * The studio renders inside `.wa-mobile-shell`, whose rules force the app's own font with
+ * !important, some of them carrying an id such as `:not(#wa-m)`. The phone must use its own font
+ * (--fc-font, set inline on .fc-phone) so the live preview and the PNG match the real screens.
+ * Repeated `:not(#id)` selectors are unlayered and outrank every class-based rule.
  */
-.fc-phone.fc-phone.fc-phone.fc-phone.fc-phone.fc-phone,
-.fc-phone.fc-phone.fc-phone.fc-phone.fc-phone.fc-phone * {
+.fc-phone:not(#fc-a):not(#fc-b):not(#fc-c),
+.fc-phone:not(#fc-a):not(#fc-b):not(#fc-c) * {
 	font-family: var(--fc-font) !important;
+	/* The shell's `emoji` value draws plain digits with the emoji font: thin next to bold text. */
+	font-variant-emoji: normal !important;
 }

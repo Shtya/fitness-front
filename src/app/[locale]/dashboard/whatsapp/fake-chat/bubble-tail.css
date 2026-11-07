@@ -26,7 +26,7 @@
 /* Outgoing — bottom right (mirrored) */
 .fc-bubble-tail-out::before {
 	right: -8px;
-	background: #dcf8c6;
+	background: #d9fdd3;
 	border-bottom-left-radius: 15px 13px;
 }
 
@@ -40,7 +40,7 @@
 	height: 16px;
 	pointer-events: none;
 	z-index: 1;
-	background: #f4f1ec;
+	background: #f4f1eb;
 }
 
 .fc-bubble-tail-in::after {

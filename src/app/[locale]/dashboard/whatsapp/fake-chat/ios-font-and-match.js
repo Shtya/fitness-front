@@ -1,3 +1,4 @@
+import { Inter } from 'next/font/google';
 import {
 	conversationAvatarUrl,
 	conversationTitle,
@@ -13,8 +14,10 @@ import {
  * system fallbacks (e.g. Windows mapping "Helvetica" → Arial) are not applied inside
  * html-to-image's SVG, so any ambiguity makes the PNG wrap text differently.
  */
+const phoneLatin = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], display: 'swap', adjustFontFallback: false });
+
 export const IOS_WA_FONT =
-	'"FC Arabic", "Helvetica Neue LT", "HelveticaNeueLT", "Helvetica Neue LT Pro", "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+	`${phoneLatin.style.fontFamily.split(",")[0]}, "FC Arabic", -apple-system, "SF Pro Text", "Helvetica Neue LT", "HelveticaNeueLT", "Helvetica Neue LT Pro", "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
 
 const ARABIC_FONT_CSS = `
 @font-face {

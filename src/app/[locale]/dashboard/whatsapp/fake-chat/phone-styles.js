@@ -1,0 +1,120 @@
+/**
+ * Class strings for the phone screens. Sizes come from 739×1600 iPhone screenshots divided by
+ * 1.785 (the 414pt layout), and colours are sampled from the same screenshots.
+ */
+export const ph = {
+	/* Status bar + chat header */
+	header: 'relative z-10 h-[96px] w-full shrink-0 bg-[#f1f0ea]',
+	back: 'absolute start-[8px] top-[53px] flex h-[36px] cursor-pointer items-center gap-[10px] border-0 bg-transparent p-0 text-black',
+	backCount: 'text-[21px] font-medium leading-none tracking-[-0.2px] text-black',
+	person: 'absolute start-[76px] end-[92px] top-[50px] flex h-[42px] min-w-0 cursor-pointer items-center gap-[10px] border-0 bg-transparent p-0 text-start',
+	personAvatar: 'relative shrink-0',
+	personTimer: 'absolute -bottom-[1px] -end-[2px] grid h-[17px] w-[17px] place-items-center rounded-full bg-[#f1f0ea] text-[#54656f]',
+	personName: 'm-0 truncate text-left text-[18px] font-bold leading-[22px] tracking-[-0.2px] text-black',
+	personSub: 'm-0 truncate text-[13.5px] font-normal leading-[17px] text-[#7b7b7b]',
+	headerActions: 'absolute end-[22px] top-[56px] flex items-center gap-[22px] text-black',
+
+	/* Thread */
+	scroll: 'flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-[18.5px] pb-[10px] pt-[6px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+	wallpaper: 'relative flex min-h-0 flex-1 flex-col bg-[#f4f1eb] bg-cover bg-center bg-no-repeat',
+	dayPill: 'mx-auto my-[8px] inline-flex rounded-[9px] bg-white/95 px-[10px] py-[3px] text-[13px] font-medium leading-[17px] text-[#54656f] shadow-[0_1px_0.5px_rgba(11,20,26,0.1)]',
+	row: 'relative flex w-full',
+	rowIn: 'justify-start',
+	rowOut: 'justify-end',
+	gapSame: 'mt-[4px]',
+	gapSwitch: 'mt-[9px]',
+	bubble: 'relative box-border inline-block max-w-[310px] min-w-[64px] rounded-[20px] px-[12px] pb-[6px] pt-[7px] align-top shadow-[0_1px_0.5px_rgba(11,20,26,0.12)]',
+	bubbleIn: 'bg-white',
+	bubbleOut: 'bg-[#d9fdd3]',
+	tailIn: 'rounded-es-[5px]',
+	tailOut: 'rounded-ee-[5px]',
+	text: 'm-0 min-w-0 max-w-full p-0 text-[17.5px] font-medium leading-[24px] break-words whitespace-pre-wrap text-[#111b21] [overflow-wrap:break-word] [unicode-bidi:plaintext]',
+	line: 'flex flex-wrap items-end gap-x-[8px]',
+	lineRtl: 'flex flex-col [direction:ltr]',
+	meta: 'inline-flex items-center gap-[4px] whitespace-nowrap text-[13.5px] font-normal leading-[17px] text-[#7b7b7b]',
+	metaInline: 'ms-auto shrink-0 translate-y-[1px]',
+	metaBelow: 'mt-[2px] self-end',
+
+	/* Quoted message + story quote */
+	quote: 'relative mb-[5px] -mx-[6px] -mt-[1px] flex min-w-[250px] overflow-hidden rounded-[15px] bg-[#f6f6f6]',
+	quoteOut: 'bg-[#d0f3c9]',
+	quoteBar: 'w-[4px] shrink-0',
+	quoteBody: 'flex min-w-0 flex-1 flex-col justify-center gap-[3px] px-[10px] py-[9px]',
+	quoteAuthor: 'truncate text-[15.5px] font-semibold leading-[20px]',
+	quoteText: 'flex min-w-0 items-center gap-[5px] text-[15px] font-normal leading-[20px] text-[#5f6368]',
+	quoteTextInner: 'truncate',
+	quoteThumb: 'block h-auto min-h-[72px] w-[58px] shrink-0 self-stretch object-cover',
+	quoteThumbEmpty: 'block min-h-[72px] w-[58px] shrink-0 self-stretch bg-linear-to-br from-[#7bb48f] to-[#3f6f8c]',
+
+	/* Reaction */
+	reaction: 'absolute -bottom-[14px] start-[10px] z-[2] grid h-[26px] min-w-[36px] place-items-center rounded-full bg-white px-[8px] text-[15px] leading-none shadow-[0_1px_2px_rgba(11,20,26,0.18)]',
+	hasReaction: 'mb-[14px]',
+
+	/* Voice */
+	voice: 'relative box-border w-[300px] max-w-full rounded-[20px] px-[13px] pb-[7px] pt-[14px] shadow-[0_1px_0.5px_rgba(11,20,26,0.12)]',
+	voiceRow: 'flex items-center',
+	voiceAvatar: 'relative h-[50px] w-[50px] shrink-0',
+	voiceMic: 'absolute -bottom-[1px] grid place-items-center',
+	voicePlay: 'grid h-[34px] w-[30px] shrink-0 place-items-center text-[#5f6b66]',
+	voiceWave: 'relative flex h-[34px] min-w-0 flex-1 items-center justify-between',
+	voiceBar: 'block w-[2.4px] shrink-0 rounded-full',
+	voiceDot: 'absolute top-1/2 h-[13px] w-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full',
+	voiceFoot: 'mt-[1px] flex items-end justify-between gap-2',
+	voiceDur: 'text-[13.5px] font-normal leading-[17px] text-[#7b7b7b]',
+	transcribe: 'mt-[6px] text-[15.5px] font-semibold leading-[20px] text-[#1c7c54]',
+
+	/* Photo + video */
+	media: 'relative block w-[299px] max-w-full overflow-hidden rounded-[20px] bg-[#d1d7db] shadow-[0_1px_0.5px_rgba(11,20,26,0.12)]',
+	mediaImg: 'block max-h-[380px] w-full object-cover',
+	mediaEmpty: 'block h-[168px] w-full bg-linear-to-br from-[#cfd8dc] to-[#90a4ae]',
+	mediaShade: 'pointer-events-none absolute inset-x-0 bottom-0 h-[52px] bg-linear-to-t from-black/45 to-transparent',
+	mediaFoot: 'absolute inset-x-[12px] bottom-[8px] flex items-center justify-between text-[14px] font-medium leading-none text-white',
+	mediaHd: 'me-[6px] rounded-[4px] bg-white px-[3px] py-[1px] text-[9.5px] font-extrabold leading-[11px] text-[#333]',
+	mediaPlay: 'absolute start-1/2 top-1/2 grid h-[62px] w-[62px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[#ededed]/85 text-[#3b3b3b]',
+	caption: 'm-0 px-[12px] pb-[6px] pt-[6px] text-[16.5px] font-medium leading-[22px] text-[#111b21]',
+	captioned: 'overflow-hidden rounded-[20px]',
+	forward: 'absolute top-1/2 grid h-[35px] w-[35px] -translate-y-1/2 place-items-center rounded-full bg-[#bfbdbe] text-white',
+
+	/* Jump to latest */
+	jump: 'absolute bottom-[8px] end-[10px] z-[3] grid h-[35px] w-[35px] place-items-center rounded-full bg-white text-black shadow-[0_1px_4px_rgba(11,20,26,0.2)]',
+
+	/* Chats list */
+	listHead: 'relative shrink-0 bg-white',
+	listBar: 'mt-[7px] flex h-[44px] items-center justify-between px-[17px]',
+	listRound: 'grid h-[31px] w-[31px] place-items-center rounded-full border-0 bg-[#f6f5f3] p-0 text-black',
+	listRight: 'flex items-center gap-[17px]',
+	listNew: 'grid h-[31px] w-[31px] place-items-center rounded-full border-0 bg-[#207c55] p-0 text-white',
+	listTitle: 'mx-[18px] mb-[12px] mt-[6px] text-[37px] font-extrabold leading-[40px] tracking-[-0.1px] text-black',
+	search: 'mx-[18px] flex h-[37.5px] items-center gap-[7px] rounded-[12px] bg-[#f6f5f3] px-[9px] text-[17.5px] font-normal text-[#8a8a8d]',
+	chips: 'mt-[26px] flex gap-[9px] overflow-hidden ps-[18px]',
+	chip: 'inline-flex h-[35px] shrink-0 items-center gap-[5px] rounded-full border border-[#d8d8d8] bg-white px-[13px] text-[16px] font-bold text-[#5f6368]',
+	chipOn: 'border-[#b4e4ad] bg-[#dbfbd4] text-[#0f3d21]',
+	archived: 'flex h-[67px] shrink-0 items-stretch pt-[10px]',
+	archivedIcon: 'grid w-[93px] shrink-0 place-items-center text-[#5f6368]',
+	archivedBody: 'flex h-full min-w-0 flex-1 items-center justify-between border-b-[0.5px] border-[#cfcfcf] pe-[23px] text-[17px] font-bold text-[#5f6368]',
+	archivedCount: 'text-[14.5px] font-medium',
+	row2: 'flex w-full cursor-pointer items-stretch border-0 bg-transparent p-0 text-start',
+	row2Avatar: 'relative grid w-[93px] shrink-0 place-items-center',
+	row2Body: 'flex h-[92px] min-w-0 flex-1 flex-col justify-center border-b-[0.5px] border-[#cfcfcf] pe-[17px]',
+	row2Top: 'flex items-baseline gap-[8px]',
+	row2Name: 'min-w-0 flex-1 truncate text-left text-[17.5px] font-bold leading-[24px] text-black',
+	row2Time: 'shrink-0 text-[15.5px] font-normal leading-[20px] text-[#6b6b6b]',
+	row2TimeGreen: 'font-medium text-[#1daa65]',
+	row2Bottom: 'mt-[1px] flex min-w-0 items-start gap-[8px]',
+	row2Preview: 'flex min-h-[44px] min-w-0 flex-1 items-start gap-[4px] text-[15.6px] font-normal leading-[22px] text-[#6b6b6b]',
+	row2PreviewText: 'line-clamp-2 min-w-0 text-left [overflow-wrap:anywhere]',
+	row2Icon: 'mt-[3px] shrink-0',
+	row2Trail: 'mt-[2px] flex shrink-0 items-center gap-[7px] text-[#5f6368]',
+	row2Badge: 'grid h-[21px] min-w-[21px] place-items-center rounded-full bg-[#1daa65] px-[6px] text-[13.5px] font-semibold leading-none text-white',
+	fab: 'pointer-events-none absolute bottom-[18px] end-[18px] z-20 grid h-[50px] w-[50px] place-items-center overflow-hidden rounded-full bg-white shadow-[0_4px_12px_rgba(0,0,0,0.14)]',
+	fabImg: 'h-[70%] w-[70%] object-contain',
+	tabs: 'relative z-30 grid shrink-0 grid-cols-5 border-t-[0.5px] border-[#dcdcdc] bg-[#f4f4f4] px-[6px] pt-[7px]',
+	tab: 'relative flex flex-col items-center gap-[3px] text-[12px] font-medium leading-[15px] text-[#5f6368]',
+	tabOn: 'font-bold text-black',
+	tabIcon: 'relative block h-[27px] w-[27px] object-contain',
+	tabYou: 'block h-[27px] w-[27px] rounded-full object-cover',
+	tabBadge: 'absolute -top-[9px] start-[15px] grid h-[20px] min-w-[20px] place-items-center rounded-full bg-[#1daa65] px-[5px] text-[12.5px] font-semibold leading-none text-white',
+
+	/* Export label */
+	mockup: 'pointer-events-none absolute start-1/2 top-[14px] z-40 -translate-x-1/2 rounded-full bg-black/55 px-[8px] py-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.6px] text-white',
+};

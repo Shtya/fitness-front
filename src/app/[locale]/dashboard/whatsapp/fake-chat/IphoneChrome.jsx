@@ -7,13 +7,32 @@ import { tw } from './styles';
 import { useEffect, useState } from 'react';
 
 /** Crisp black iOS status glyphs — light UI (PNG assets were dark-mode / empty). */
-export function IconCellular({ className = '' }) {
+export function IconCellular({ className = '', level = 4, dualSim = true }) {
+	const bars = [
+		{ x: 0, y: 6, h: 4 },
+		{ x: 4.5, y: 4, h: 6 },
+		{ x: 9, y: 2, h: 8 },
+		{ x: 13.5, y: 0, h: 10 },
+	];
 	return (
-		<svg className={className} width="17" height="11" viewBox="0 0 17 11" aria-hidden="true">
-			<rect x="0" y="7.5" width="3" height="3.5" rx="0.6" fill="currentColor" />
-			<rect x="4.5" y="5.5" width="3" height="5.5" rx="0.6" fill="currentColor" />
-			<rect x="9" y="3" width="3" height="8" rx="0.6" fill="currentColor" />
-			<rect x="13.5" y="0.5" width="3" height="10.5" rx="0.6" fill="currentColor" />
+		<svg className={className} width="17" height="14" viewBox="0 0 17 14" aria-hidden="true">
+			{bars.map((bar, index) => (
+				<rect
+					key={bar.x}
+					x={bar.x}
+					y={bar.y}
+					width="3"
+					height={bar.h}
+					rx="0.6"
+					fill="currentColor"
+					opacity={index < level ? 1 : 0.28}
+				/>
+			))}
+			{dualSim
+				? bars.map(bar => (
+						<rect key={bar.x} x={bar.x} y="11.4" width="3" height="2.2" rx="0.6" fill="currentColor" opacity="0.28" />
+					))
+				: null}
 		</svg>
 	);
 }
@@ -45,7 +64,9 @@ export function IconWifi({ className = '' }) {
 }
 
 export function IconBattery({ className = '', level = 1 }) {
-	const fillW = Math.max(1.5, Math.min(18, 18 * level));
+	// 0..1 or a percentage such as 55.
+	const ratio = Number(level) > 1 ? Number(level) / 100 : Number(level) || 0;
+	const fillW = Math.max(1.5, Math.min(18, 18 * ratio));
 	return (
 		<svg className={className} width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true">
 			<rect
@@ -85,11 +106,11 @@ export function IconBackChevron({ className = '' }) {
 export function IconVideoCall({ className = '' }) {
 	return (
 		<svg className={className} width="28" height="18" viewBox="0 0 28 18" fill="none" aria-hidden="true">
-			<rect x="0.75" y="1.5" width="17.5" height="15" rx="3.2" stroke="currentColor" strokeWidth="1.6" />
+			<rect x="0.75" y="1.5" width="17.5" height="15" rx="3.2" stroke="currentColor" strokeWidth="1.9" />
 			<path
 				d="M20.2 6.2 26.6 3.4v11.2L20.2 11.8V6.2Z"
 				stroke="currentColor"
-				strokeWidth="1.55"
+				strokeWidth="1.9"
 				strokeLinejoin="round"
 			/>
 		</svg>
@@ -102,7 +123,7 @@ export function IconPhoneCall({ className = '' }) {
 			<path
 				d="M15.9 12.7c-.8 0-1.6-.1-2.3-.4l-.7.7a9.7 9.7 0 0 1-4.2-4.2l.7-.7a5.4 5.4 0 0 1-.4-2.3c0-.7-.6-1.3-1.3-1.3H5.3C4.6 4.5 4 5.1 4 5.8 4 12.3 9.2 17.5 15.7 17.5c.7 0 1.3-.6 1.3-1.3v-2.2c0-.7-.6-1.3-1.1-1.3Z"
 				stroke="currentColor"
-				strokeWidth="1.55"
+				strokeWidth="1.9"
 				strokeLinejoin="round"
 			/>
 		</svg>
@@ -131,6 +152,19 @@ export function IconCamera({ className = '' }) {
 	);
 }
 
+export function IconCameraSolid({ className = '', size = 22, lens = '#fff' }) {
+	return (
+		<svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+			<path
+				d="M8.6 3.5h6.8l1.5 2.4H20a2.5 2.5 0 0 1 2.5 2.5v9.6a2.5 2.5 0 0 1-2.5 2.5H4a2.5 2.5 0 0 1-2.5-2.5V8.4A2.5 2.5 0 0 1 4 5.9h3.1l1.5-2.4Z"
+				fill="currentColor"
+			/>
+			<circle cx="12" cy="13" r="4.4" fill={lens} />
+			<circle cx="12" cy="13" r="2.8" fill="currentColor" />
+		</svg>
+	);
+}
+
 export function IconSticker({ className = '' }) {
 	return (
 		<svg className={className} width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
@@ -154,12 +188,12 @@ export function IconMic({ className = '' }) {
 }
 
 /** iOS status bar — light WhatsApp chrome (no notch graphic; real screenshots omit it). */
-export function IosStatusBar({ time = '4:44', wifi = true, battery = 1 }) {
+export function IosStatusBar({ time = '4:44', wifi = true, battery = 1, signal = 4, dualSim = true }) {
 	return (
 		<div className={tw.statusBar} dir="ltr">
 			<span className={tw.statusTime}>{time}</span>
 			<div className={tw.statusIcons} aria-hidden="true">
-				<IconCellular className={tw.iconCell} />
+				<IconCellular className="block h-[14px] w-[17px] shrink-0 text-black" level={signal} dualSim={dualSim} />
 				{wifi ? <IconWifi className={tw.iconWifi} /> : null}
 				<IconBattery className={tw.iconBattery} level={battery} />
 			</div>
@@ -295,7 +329,7 @@ export function AvatarCircle({
 /** WhatsApp iOS ack ticks — thin overlapping strokes (sent / delivered / read). */
 export function ReadTicks({ state = 'read' }) {
 	if (!state || state === 'none') return null;
-	const color = state === 'read' ? '#34b7f1' : '#8696a0';
+	const color = state === 'read' ? '#3b9ae8' : '#5f6368';
 	const double = state !== 'sent';
 	return (
 		<svg

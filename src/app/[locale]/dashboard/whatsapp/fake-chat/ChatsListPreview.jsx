@@ -1,8 +1,10 @@
 'use client';
 
 import {
+	Archive,
 	BellOff,
 	Camera,
+	Check,
 	CheckCheck,
 	Ellipsis,
 	Mic,
@@ -15,10 +17,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { FC_ASSETS, resolveChatAvatarKind, resolveChatAvatarSrc } from './assets';
-import { AvatarCircle, IosHomeIndicator, IosStatusBar, PhoneNotch } from './IphoneChrome';
+import { AvatarCircle, IconBackChevron, IconCameraSolid, IosHomeIndicator, IosStatusBar, PhoneNotch } from './IphoneChrome';
 import { resolveFakeChatMediaUrl } from './media-url';
 import { chatDisplayName } from './ios-font-and-match';
 import { IOS_WA_FONT, tw } from './styles';
+import { ph } from './phone-styles';
 
 function MetaAiAvatar({ className = '' }) {
 	return (
@@ -31,9 +34,9 @@ function MetaAiAvatar({ className = '' }) {
 
 function MetaAiFab() {
 	return (
-		<span className={tw.metaFab} aria-hidden="true">
+		<span className={ph.fab} aria-hidden="true">
 			{/* eslint-disable-next-line @next/next/no-img-element */}
-			<img className={tw.metaFabImg} src={FC_ASSETS.metaAi} alt="" draggable={false} />
+			<img className={ph.fabImg} src={FC_ASSETS.metaAi} alt="" draggable={false} />
 		</span>
 	);
 }
@@ -49,10 +52,10 @@ function WhatsAppAvatar() {
 }
 
 function PreviewIcon({ kind }) {
-	if (kind === 'video') return <Video size={14} strokeWidth={2} className="shrink-0 text-[#8696a0]" />;
-	if (kind === 'camera') return <Camera size={14} strokeWidth={2} className="shrink-0 text-[#8696a0]" />;
-	if (kind === 'mic') return <Mic size={14} strokeWidth={2} className="shrink-0 text-[#1dab61]" />;
-	if (kind === 'phone') return <Phone size={14} strokeWidth={2} className="shrink-0 text-[#8696a0]" />;
+	if (kind === 'video') return <Video size={17} strokeWidth={2} className={ph.row2Icon} />;
+	if (kind === 'camera') return <Camera size={17} strokeWidth={2} className={ph.row2Icon} />;
+	if (kind === 'mic') return <Mic size={17} strokeWidth={2} className={ph.row2Icon} />;
+	if (kind === 'phone') return <Phone size={17} strokeWidth={2} className={ph.row2Icon} />;
 	return null;
 }
 
@@ -63,7 +66,7 @@ function ChatAvatar({ chat }) {
 		<AvatarCircle
 			src={resolveChatAvatarSrc(chat)}
 			label={chat.name}
-			size={52}
+			size={62}
 			fallbackKind={resolveChatAvatarKind(chat)}
 		/>
 	);
@@ -133,71 +136,70 @@ function ChatRow({ chat, active, onOpen, hidePhoneNumbers = false, editing = fal
 			) : null}
 		</span>
 	);
+	const pinFilled = Boolean(chat.pinned);
 	return (
 		<RowTag
-			{...(editing
-				? {}
-				: { type: 'button', tabIndex: -1, onClick: () => onOpen?.(chat.id) })}
-			className={cn(tw.listRow, 'w-full border-0 bg-transparent text-start', active && !editing && 'bg-[#f0f2f5]')}
+			{...(editing ? {} : { type: 'button', tabIndex: -1, onClick: () => onOpen?.(chat.id) })}
+			className={ph.row2}
 		>
-			{editing ? (
-				<label title="Change photo">
-					{avatar}
-					<input
-						className={tw.fileInputHidden}
-						type="file"
-						accept="image/*"
-						onChange={event => onPickAvatar?.(chat.id, event)}
-					/>
-				</label>
-			) : (
-				avatar
-			)}
-			<div className={tw.listRowBody}>
-				<div className={tw.listRowTop}>
+			<span className={ph.row2Avatar}>
+				{editing ? (
+					<label title="Change photo">
+						{avatar}
+						<input
+							className={tw.fileInputHidden}
+							type="file"
+							accept="image/*"
+							onChange={event => onPickAvatar?.(chat.id, event)}
+						/>
+					</label>
+				) : (
+					avatar
+				)}
+			</span>
+			<div className={ph.row2Body}>
+				<div className={ph.row2Top}>
 					<EditableText
 						editing={editing}
-						className={tw.listName}
+						className={ph.row2Name}
 						dir="auto"
 						value={displayName}
 						onCommit={next => onEdit?.(chat.id, { [nameField]: next })}
 					/>
 					<EditableText
 						editing={editing}
-						className={cn(tw.listTime, chat.timeGreen && tw.listTimeGreen)}
+						className={cn(ph.row2Time, (chat.timeGreen || unread > 0) && ph.row2TimeGreen)}
 						value={chat.time}
 						onCommit={next => onEdit?.(chat.id, { time: next })}
 					/>
 				</div>
-				<div className={tw.listRowBottom}>
-					<span className={tw.listPreview}>
+				<div className={ph.row2Bottom}>
+					<span className={ph.row2Preview}>
+						{chat.ticks === 'sent' ? <Check size={17} strokeWidth={2} className={ph.row2Icon} /> : null}
 						{chat.ticks === 'delivered' || chat.ticks === 'read' ? (
 							<CheckCheck
-								size={15}
-								strokeWidth={2.2}
-								className={cn(
-									'shrink-0',
-									chat.ticks === 'read' ? 'text-[#53bdeb]' : 'text-[#8696a0]',
-								)}
+								size={18}
+								strokeWidth={2}
+								className={cn(ph.row2Icon, chat.ticks === 'read' && 'text-[#3f9ae6]')}
 							/>
 						) : null}
 						<PreviewIcon kind={chat.previewIcon} />
 						<EditableText
 							editing={editing}
-							className={tw.listPreviewText}
+							className={ph.row2PreviewText}
 							dir="auto"
 							value={chat.preview}
 							onCommit={next => onEdit?.(chat.id, { preview: next })}
 						/>
 					</span>
-					<span className={tw.listTrailing}>
-						{chat.muted ? <BellOff size={14} strokeWidth={2.2} className={tw.listMute} /> : null}
-						{chat.pinned ? <Pin size={14} strokeWidth={2.2} className={tw.listPin} /> : null}
+					<span className={ph.row2Trail}>
+						{chat.muted ? <BellOff size={18} strokeWidth={2.2} fill="currentColor" /> : null}
+						{pinFilled ? <Pin size={18} strokeWidth={2} fill="currentColor" className="rotate-45" /> : null}
 						{unread > 0 || editing ? (
 							<EditableText
 								editing={editing}
 								numeric
-								className={cn(tw.listBadge, editing && unread === 0 && tw.editableGhost)}
+								className={cn(ph.row2Badge, editing && unread === 0 && tw.editableGhost)}
 								value={unread}
 								display={unread > 99 ? '99+' : unread}
 								onCommit={next => onEdit?.(chat.id, { unread: next, timeGreen: next > 0 })}
@@ -220,11 +222,16 @@ export default function ChatsListPreview({
 	onEditChat,
 	onEditList,
 	onPickChatAvatar,
+	onOpenArchived,
 }) {
 	const showSearch = Boolean(list?.showSearch);
 	const showSuggestions = Boolean(list?.showSuggestions);
 	const hidePhoneNumbers = Boolean(list?.hidePhoneNumbers);
 	const selfAvatar = list?.selfAvatar || '';
+	const allChats = list?.chats || [];
+	const archivedChats = allChats.filter(chat => chat.archived);
+	const visibleChats = allChats.filter(chat => !chat.archived);
+	const archivedShown = archivedChats.length || Number(list?.archivedCount) || 0;
 
 	return (
 		<div className={cn(tw.phone, tw.phoneList, capturing && tw.phoneCapturing)} dir="ltr" style={{ fontFamily: IOS_WA_FONT, '--fc-font': IOS_WA_FONT }}>
@@ -232,41 +239,44 @@ export default function ChatsListPreview({
 			<PhoneNotch hidden />
 			<div className={cn(tw.chromeList, 'shrink-0')}>
 				<IosStatusBar {...status} />
-				<div className={tw.listTop}>
-					<button type="button" className={tw.listMore} tabIndex={-1} aria-hidden="true">
-						<Ellipsis size={18} strokeWidth={2.2} />
+				<div className={ph.listBar}>
+					<button type="button" className={ph.listRound} tabIndex={-1} aria-hidden="true">
+						<Ellipsis size={20} strokeWidth={2.6} />
 					</button>
-					<p className={cn(tw.listTopTitle, editing && 'pointer-events-auto')}>
-						<EditableText
-							editing={editing}
-							value={list.title || 'Chats'}
-							onCommit={next => onEditList?.({ title: next })}
-						/>
-					</p>
-					<div className={tw.listTopRight}>
-						<button type="button" className={tw.listTopBtn} tabIndex={-1} aria-hidden="true">
-							<Camera size={22} strokeWidth={1.9} />
+					<div className={ph.listRight}>
+						<button type="button" className={ph.listRound} tabIndex={-1} aria-hidden="true">
+							<IconCameraSolid size={21} lens="#f6f5f3" />
 						</button>
-						<button type="button" className={cn(tw.listTopBtn, tw.listNew)} tabIndex={-1} aria-hidden="true">
-							<Plus size={18} strokeWidth={2.6} />
+						<button type="button" className={ph.listNew} tabIndex={-1} aria-hidden="true">
+							<Plus size={20} strokeWidth={2.8} />
 						</button>
 					</div>
 				</div>
+				<p className={cn(ph.listTitle, editing && 'pointer-events-auto')}>
+					<EditableText
+						editing={editing}
+						value={list.title || 'Chats'}
+						onCommit={next => onEditList?.({ title: next })}
+					/>
+				</p>
 				{showSearch ? (
 					<>
-						<div className={tw.listSearch}>
-							<Search size={16} strokeWidth={2.2} />
+						<div className={ph.search}>
+							<Search size={21} strokeWidth={2.2} />
 							<span>{list.searchPlaceholder}</span>
 						</div>
-						<div className={tw.listFilters}>
-							{['All', 'Unread', 'Favourites', 'Groups'].map((label, index) => (
-								<span key={label} className={cn(tw.chip, index === 0 && tw.chipActive)}>
-									{label}
+						<div className={ph.chips}>
+							{[
+								{ label: 'All', on: true },
+								{ label: 'Unread', count: list.unreadBadge },
+								{ label: 'Favourites', count: list.favouritesCount },
+								{ label: 'Groups', count: list.groupsCount },
+							].map(chip => (
+								<span key={chip.label} className={cn(ph.chip, chip.on && ph.chipOn)}>
+									{chip.label}
+									{Number(chip.count) > 0 ? <span className="font-medium">{chip.count}</span> : null}
 								</span>
 							))}
-							<span className={cn(tw.chip, tw.chipPlus)}>
-								<Plus size={14} strokeWidth={2.4} />
-							</span>
 						</div>
 					</>
 				) : null}
@@ -274,7 +284,24 @@ export default function ChatsListPreview({
 
 			<div className={tw.listPane}>
 				<div className={tw.listBody}>
-					{(list.chats || []).map(chat => (
+					{archivedShown > 0 || editing ? (
+						<button type="button" tabIndex={-1} className={cn(ph.archived, 'w-full cursor-pointer border-0 bg-transparent p-0 text-start')} onClick={onOpenArchived}>
+							<span className={ph.archivedIcon}>
+								<Archive size={25} strokeWidth={1.8} />
+							</span>
+							<span className={ph.archivedBody}>
+								Archived
+								<EditableText
+									editing={editing}
+									numeric
+									className={ph.archivedCount}
+									value={archivedShown}
+									onCommit={next => onEditList?.({ archivedCount: next })}
+								/>
+							</span>
+						</button>
+					) : null}
+					{visibleChats.map(chat => (
 						<ChatRow
 							key={chat.id}
 							chat={chat}
@@ -317,7 +344,7 @@ export default function ChatsListPreview({
 				<MetaAiFab />
 			</div>
 
-			<nav className={tw.tabbar}>
+			<nav className={ph.tabs}>
 				{[
 					{ key: 'updates', label: 'Updates', icon: FC_ASSETS.tabUpdates },
 					{
@@ -338,21 +365,21 @@ export default function ChatsListPreview({
 					},
 					{ key: 'you', label: 'You', you: true },
 				].map(tab => (
-					<span key={tab.key} className={cn(tw.tabItem, tab.active && tw.tabItemActive)}>
+					<span key={tab.key} className={cn(ph.tab, tab.active && ph.tabOn)}>
 						<span className="relative">
 							{tab.you ? (
 								selfAvatar ? (
 									// eslint-disable-next-line @next/next/no-img-element
-									<img className={tw.tabYouAvatar} src={resolveFakeChatMediaUrl(selfAvatar)} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} />
+									<img className={ph.tabYou} src={resolveFakeChatMediaUrl(selfAvatar)} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} />
 								) : (
-									<span className={cn(tw.tabYouAvatar, 'grid place-items-center bg-[#cfd8dc] text-[10px] font-bold text-white')}>
+									<span className={cn(ph.tabYou, 'grid place-items-center bg-[#cfd8dc] text-[10px] font-bold text-white')}>
 										Me
 									</span>
 								)
 							) : (
 								// eslint-disable-next-line @next/next/no-img-element
 								<img
-									className={cn(tw.tabIconImg, tab.active && tw.tabIconActiveImg)}
+									className={ph.tabIcon}
 									src={tab.icon}
 									alt=""
 								/>
@@ -361,7 +388,7 @@ export default function ChatsListPreview({
 								<EditableText
 									editing={editing && Boolean(tab.badgeField)}
 									numeric
-									className={cn(tw.tabBadge, editing && !tab.badge && tw.editableGhost)}
+									className={cn(ph.tabBadge, editing && !tab.badge && tw.editableGhost)}
 									value={tab.badge}
 									onCommit={next => onEditList?.({ [tab.badgeField]: next })}
 								/>
@@ -372,6 +399,41 @@ export default function ChatsListPreview({
 				))}
 			</nav>
 			<IosHomeIndicator className={tw.homeIndicatorList} />
+		</div>
+	);
+}
+
+/** Pushed from the Archived row: the archived chats, with the same rows as the main list. */
+export function ArchivedChatsPreview({ status, list, capturing = false, activeChatId = '', onOpenChat, onBack }) {
+	const chats = (list?.chats || []).filter(chat => chat.archived);
+	return (
+		<div className={cn(tw.phone, tw.phoneList, capturing && tw.phoneCapturing)} dir="ltr" style={{ fontFamily: IOS_WA_FONT, '--fc-font': IOS_WA_FONT }}>
+			<div className={cn(tw.chromeList, 'shrink-0')}>
+				<IosStatusBar {...status} />
+				<div className="relative flex h-[52px] items-center justify-center">
+					<button type="button" tabIndex={-1} aria-label="Back" onClick={onBack} className="absolute start-[8px] flex h-[36px] cursor-pointer items-center border-0 bg-transparent p-0 text-black">
+						<IconBackChevron className="h-[24px] w-[15px]" />
+					</button>
+					<span className="text-[18px] font-bold text-black">Archived</span>
+				</div>
+			</div>
+			<div className={tw.listPane}>
+				<div className={tw.listBody}>
+					<p className="m-0 border-b-[0.5px] border-[#cfcfcf] px-[18px] pb-[12px] pt-[4px] text-center text-[14px] font-normal leading-[19px] text-[#6b6b6b]">
+						These chats stay archived when new messages are received. To change this setting, go to Settings &gt; Chats.
+					</p>
+					{chats.map(chat => (
+						<ChatRow
+							key={chat.id}
+							chat={chat}
+							active={chat.id === activeChatId}
+							onOpen={onOpenChat}
+							hidePhoneNumbers={Boolean(list.hidePhoneNumbers)}
+						/>
+					))}
+				</div>
+			</div>
+			<IosHomeIndicator className="relative z-30 shrink-0 !bg-white" />
 		</div>
 	);
 }

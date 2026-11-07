@@ -306,7 +306,7 @@ export const tw = {
 		'absolute -end-2.5 -top-1 grid h-[16px] min-w-[16px] place-items-center rounded-full bg-[#1dab61] px-1 text-[10px] font-bold leading-none text-white',
 	tabIcon: 'relative h-[22px] w-7 rounded-md bg-current opacity-[0.18]',
 	tabIconActive: 'rounded-lg bg-[#1c1c1e] opacity-100',
-	homeIndicatorList: 'relative z-30 shrink-0 bg-[#f9f9f9]',
+	homeIndicatorList: 'relative z-30 shrink-0 bg-[#f4f4f4]',
 	grid2: 'grid min-w-0 grid-cols-2 gap-1.5 [&_*]:box-border [&_*]:min-w-0 [&_*]:w-full',
 	stack: 'flex min-w-0 flex-col gap-1.5',
 	full: 'box-border h-8 w-full max-w-full min-w-0 rounded-lg border border-[#d1d7db] bg-[#f0f2f5] px-2 text-xs text-[#111b21] outline-none dark:border-[#2a3942] dark:bg-[#0b141a] dark:text-[#e9edef]',

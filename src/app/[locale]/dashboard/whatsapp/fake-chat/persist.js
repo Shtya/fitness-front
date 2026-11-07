@@ -36,8 +36,8 @@ function safeParse(raw) {
  * Load saved Fake Chat studio (or defaults).
  * @returns {{ state: object, clipboardItems: array[], hydrated: boolean }}
  */
-export function loadFakeChatSnapshot(accountId = '') {
-	const fallback = createDefaultStudioState();
+export function loadFakeChatSnapshot(accountId = '', makeDefault = createDefaultStudioState) {
+	const fallback = makeDefault();
 	if (typeof window === 'undefined') {
 		return { state: fallback, clipboardItems: [], hydrated: false };
 	}

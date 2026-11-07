@@ -2,6 +2,7 @@ import { formatChatBubbleTime, formatIosStatusTime, nextId } from './capture';
 import { FC_ASSETS, LIST_AVATARS, resolveChatAvatarSrc } from './assets';
 import { chatDisplayName } from './ios-font-and-match';
 import { shortMediaPath } from './media-url';
+import { listRowTime, resolveMessageDays } from './chat-dates';
 
 /** Shared Contact Info defaults (once on the chat → list + thread + info). */
 export const DEFAULT_CHAT_INFO = {
@@ -38,15 +39,24 @@ export function listFieldsFromMessages(messages, now = new Date()) {
 	const preview =
 		last.type === 'voice'
 			? `Voice message (${last.duration || '0:03'})`
-			: last.type === 'image' || last.type === 'ticket'
-				? last.caption || 'Photo'
-				: String(last.text || '').trim() || '';
+			: last.type === 'video'
+				? last.caption || 'Video'
+				: last.type === 'image' || last.type === 'ticket'
+					? last.caption || 'Photo'
+					: String(last.text || '').trim() || '';
+	const day = resolveMessageDays(list)[list.length - 1];
 	return {
 		preview,
-		time: resolveBubbleTime(last) || formatChatBubbleTime(now),
+		time: listRowTime(day, resolveBubbleTime(last) || formatChatBubbleTime(now), now),
 		ticks: last.side === 'out' ? last.ticks || 'read' : '',
 		previewIcon:
-			last.type === 'voice' ? 'mic' : last.type === 'image' || last.type === 'ticket' ? 'camera' : '',
+			last.type === 'voice'
+				? 'mic'
+				: last.type === 'video'
+					? 'video'
+					: last.type === 'image' || last.type === 'ticket'
+						? 'camera'
+						: '',
 	};
 }
 
@@ -151,6 +161,11 @@ export function resolveThreadView(state) {
 	return {
 		...thread,
 		messages,
+		disappearing: Boolean(chat?.disappearing),
+		showJumpDown: Boolean(chat?.showJumpDown),
+		storyRing: Boolean(chat?.storyRing),
+		seenAvatar: Boolean(chat?.seenAvatar),
+		verified: Boolean(chat?.verified),
 		/** Dynamic from list tab unread (sidebar) — not a hardcoded back badge. */
 		backBadge: Number(list.unreadBadge) > 0 ? String(list.unreadBadge) : '',
 		contactName: name,
@@ -160,7 +175,7 @@ export function resolveThreadView(state) {
 			? 'tap to add to contacts'
 			: chat?.online || String(chat?.subtitle || '').toLowerCase() === 'online'
 				? chat?.subtitle || 'online'
-				: chat?.subtitle || 'tap for contact info',
+				: chat?.subtitle ?? 'tap for contact info',
 		selfAvatar: list.selfAvatar || '',
 		hidePhoneNumbers: Boolean(list.hidePhoneNumbers),
 		firstContact,
@@ -215,8 +230,12 @@ export function createDefaultStudioState(now = new Date()) {
 			searchPlaceholder: 'Ask Meta AI or Search',
 			unreadBadge: 8,
 			callsBadge: 26,
+			favouritesCount: 1,
+			groupsCount: 3,
+			archivedCount: 10,
 			filter: 'all',
-			showSearch: false,
+			showSearch: true,
+			layoutV2: true,
 			showSuggestions: false,
 			hidePhoneNumbers: false,
 			selfAvatar: LIST_AVATARS.youTab,
@@ -1021,13 +1040,20 @@ export function normalizeMessages(parsed) {
 		const next = {
 			id: item?.id || nextId('m'),
 			side,
-			type: ['text', 'voice', 'image', 'ticket'].includes(item?.type) ? item.type : 'text',
+			type: ['text', 'voice', 'image', 'video', 'ticket'].includes(item?.type) ? item.type : 'text',
 			text: item?.text || '',
 			ticks: normalizeTicks(item?.ticks, side),
 			duration: item?.duration || '0:03',
 			src: item?.src || '',
 			caption: item?.caption || '',
 			reply: item?.reply || null,
+			story: item?.story || null,
+			date: item?.date || '',
+			reaction: item?.reaction || '',
+			played: Boolean(item?.played),
+			transcribe: Boolean(item?.transcribe),
+			hd: Boolean(item?.hd),
+			forward: Boolean(item?.forward),
 			_i: index,
 		};
 		if (userTime) {
@@ -1053,7 +1079,7 @@ export function normalizeListChat(item, index = 0) {
 		avatarKind: item?.avatarKind || '',
 		phone: item?.phone || '',
 		about: item?.about || '',
-		subtitle: item?.subtitle || 'tap for contact info',
+		subtitle: item?.subtitle ?? 'tap for contact info',
 		info: { ...DEFAULT_CHAT_INFO, ...infoRaw },
 		unread: Math.max(0, Number(item?.unread) || 0),
 		storyRing: Boolean(item?.storyRing),
@@ -1064,6 +1090,12 @@ export function normalizeListChat(item, index = 0) {
 		pinned: Boolean(item?.pinned),
 		muted: Boolean(item?.muted),
 		disappearing: Boolean(item?.disappearing),
+		showJumpDown: Boolean(item?.showJumpDown),
+		archived: Boolean(item?.archived),
+		request: Boolean(item?.request),
+		callButton: Boolean(item?.callButton),
+		seenAvatar: Boolean(item?.seenAvatar),
+		verified: Boolean(item?.verified),
 		online: Boolean(item?.online),
 		firstContact: Boolean(item?.firstContact),
 		country: item?.country || '',
@@ -1095,13 +1127,18 @@ export function normalizeListState(parsed, fallbackList) {
 		searchPlaceholder: parsed.searchPlaceholder ?? base.searchPlaceholder,
 		unreadBadge: Number(parsed.unreadBadge ?? base.unreadBadge) || 0,
 		callsBadge: Number(parsed.callsBadge ?? base.callsBadge) || 0,
+		favouritesCount: Number(parsed.favouritesCount ?? base.favouritesCount) || 0,
+		groupsCount: Number(parsed.groupsCount ?? base.groupsCount) || 0,
+		archivedCount: Number(parsed.archivedCount ?? base.archivedCount) || 0,
 		filter: parsed.filter ?? base.filter,
 		showSuggestions:
 			parsed.showSuggestions !== undefined
 				? Boolean(parsed.showSuggestions)
 				: Boolean(base.showSuggestions),
-		showSearch:
-			parsed.showSearch !== undefined ? Boolean(parsed.showSearch) : Boolean(base.showSearch),
+		showSearch: parsed.layoutV2
+			? Boolean(parsed.showSearch)
+			: true,
+		layoutV2: true,
 		hidePhoneNumbers:
 			parsed.hidePhoneNumbers !== undefined
 				? Boolean(parsed.hidePhoneNumbers)
@@ -1137,13 +1174,9 @@ export function normalizeInfoState(parsed, fallback = createDefaultStudioState()
 		...base,
 		activeChatId: parsed.activeChatId || base.activeChatId,
 		screen:
-			parsed.screen === 'list'
-				? 'list'
-				: parsed.screen === 'contact'
-					? 'contact'
-					: parsed.screen === 'thread'
-						? 'thread'
-						: base.screen,
+			['list', 'contact', 'thread', 'archived', 'requests'].includes(parsed.screen)
+				? parsed.screen
+				: base.screen,
 		status: {
 			...base.status,
 			...(parsed.status || {}),
@@ -1156,6 +1189,7 @@ export function normalizeInfoState(parsed, fallback = createDefaultStudioState()
 		},
 		list: {
 			...base.list,
+			...listPatch,
 			title: listPatch.title ?? base.list.title,
 			searchPlaceholder: listPatch.searchPlaceholder ?? base.list.searchPlaceholder,
 			unreadBadge: Number(listPatch.unreadBadge ?? base.list.unreadBadge) || 0,
@@ -1165,10 +1199,9 @@ export function normalizeInfoState(parsed, fallback = createDefaultStudioState()
 				listPatch.showSuggestions !== undefined
 					? Boolean(listPatch.showSuggestions)
 					: base.list.showSuggestions,
-			showSearch:
-				listPatch.showSearch !== undefined
-					? Boolean(listPatch.showSearch)
-					: base.list.showSearch,
+			// Studios saved before the phone-matched list get its search bar and chips once.
+			showSearch: listPatch.layoutV2 ? Boolean(listPatch.showSearch) : true,
+			layoutV2: true,
 			selfAvatar:
 				listPatch.selfAvatar ??
 				parsed.thread?.selfAvatar ??

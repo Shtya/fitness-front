@@ -227,8 +227,8 @@ async function runToPng(toPng, node, width, height, pixelRatio, fontEmbedCSS) {
 		pixelRatio,
 		width,
 		height,
-		canvasWidth: Math.round(width * pixelRatio),
-		canvasHeight: Math.round(height * pixelRatio),
+		canvasWidth: width,
+		canvasHeight: height,
 		/** Cream WA wallpaper base — avoids white frame flash around content. */
 		backgroundColor: '#f4f1ec',
 		imagePlaceholder: TRANSPARENT_PIXEL,

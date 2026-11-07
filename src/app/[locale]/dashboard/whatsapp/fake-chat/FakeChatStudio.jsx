@@ -8,24 +8,22 @@ import {
 	Camera,
 	Check,
 	Download,
-	ImagePlus,
 	PencilLine,
-	LayoutList,
 	Loader2,
-	Mic,
 	Play,
-	Plus,
-	RefreshCw,
 	RotateCcw,
 	Square,
-	Ticket,
-	Trash2,
 	Volume2,
 } from 'lucide-react';
 import api from '@/utils/axios';
 import ChatThreadPreview from './ChatThreadPreview';
-import ChatsListPreview from './ChatsListPreview';
+import ChatsListPreview, { ArchivedChatsPreview } from './ChatsListPreview';
+import { MessengerList, MessengerRequests, MessengerThread } from './MessengerPreview';
+import { createMessengerDefaultState } from './messenger-defaults';
 import ClipboardTray from './ClipboardTray';
+import QuickEditor from './QuickEditor';
+import { CHAT_TEMPLATES, buildTemplateChat } from './quick-templates';
+import { ph } from './phone-styles';
 import ContactInfoPreview from './ContactInfoPreview';
 import ShareScreenshotSheet from './ShareScreenshotSheet';
 import './phone-font.css';
@@ -61,7 +59,7 @@ import {
 	studioMessagesToJson,
 } from './defaults';
 import { cn } from '@/utils/cn';
-import { fileBtn, segBtn, tw } from './styles';
+import { segBtn, tw } from './styles';
 import { LIST_AVATARS } from './assets';
 import {
 	ensureIosWaFonts,
@@ -86,6 +84,8 @@ import {
 	loadFakeChatSnapshot,
 	saveFakeChatSnapshot,
 } from './persist';
+
+const FAKE_CHAT_APP_KEY = 'so7bafit.fake-chat.app';
 
 function clipboardImageFile(clipboardData) {
 	if (!clipboardData) return null;
@@ -112,7 +112,26 @@ export default function FakeChatStudio({
 	const studioRef = useRef(null);
 	const pasteTargetRef = useRef('clipboard');
 	const saveTimerRef = useRef(null);
-	const snapshot = useMemo(() => loadFakeChatSnapshot(accountId), [accountId]);
+	const [app, setApp] = useState(() => {
+		try {
+			return window.localStorage.getItem(FAKE_CHAT_APP_KEY) === 'messenger' ? 'messenger' : 'whatsapp';
+		} catch {
+			return 'whatsapp';
+		}
+	});
+	const messenger = app === 'messenger';
+	// Each app keeps its own saved chats.
+	const storeKey = messenger ? `${accountId || 'local'}:messenger` : accountId;
+	const makeAppDefault = messenger ? createMessengerDefaultState : createDefaultStudioState;
+	const switchApp = next => {
+		setApp(next);
+		try {
+			window.localStorage.setItem(FAKE_CHAT_APP_KEY, next);
+		} catch {
+			/* the choice just will not persist */
+		}
+	};
+	const snapshot = useMemo(() => loadFakeChatSnapshot(storeKey, makeAppDefault), [storeKey, makeAppDefault]);
 	const initial = snapshot.state;
 	const [state, setState] = useState(initial);
 	const [persistReady, setPersistReady] = useState(false);
@@ -142,8 +161,7 @@ export default function FakeChatStudio({
 	const [packCustomStart, setPackCustomStart] = useState('');
 	const [packFirstContact, setPackFirstContact] = useState(false);
 	const [packCountry, setPackCountry] = useState('Egypt');
-	const [draftText, setDraftText] = useState('');
-	const [draftSide, setDraftSide] = useState('in');
+	const draftSide = 'in';
 	const [draftTime, setDraftTime] = useState(() => formatChatBubbleTime());
 	const [shareOpen, setShareOpen] = useState(false);
 	const [sharePreview, setSharePreview] = useState('');
@@ -165,7 +183,7 @@ export default function FakeChatStudio({
 
 	// Reload when WhatsApp account changes (separate saved studios).
 	useEffect(() => {
-		const next = loadFakeChatSnapshot(accountId);
+		const next = loadFakeChatSnapshot(storeKey, makeAppDefault);
 		setPersistReady(false);
 		setState(next.state);
 		setClipboardItems(next.clipboardItems || []);
@@ -176,14 +194,14 @@ export default function FakeChatStudio({
 		didAutoSyncRef.current = false;
 		const t = window.setTimeout(() => setPersistReady(true), 50);
 		return () => window.clearTimeout(t);
-	}, [accountId]);
+	}, [storeKey, makeAppDefault]);
 
 	// Auto-save studio + paste tray (survives refresh).
 	useEffect(() => {
 		if (!persistReady) return undefined;
 		if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
 		saveTimerRef.current = window.setTimeout(() => {
-			const ok = saveFakeChatSnapshot(accountId, { state, clipboardItems });
+			const ok = saveFakeChatSnapshot(storeKey, { state, clipboardItems });
 			if (!ok) {
 				toast.error(
 					ar
@@ -195,13 +213,13 @@ export default function FakeChatStudio({
 		return () => {
 			if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
 		};
-	}, [accountId, ar, clipboardItems, persistReady, state]);
+	}, [storeKey, ar, clipboardItems, persistReady, state]);
 
 	// Flush immediately on tab close / refresh so the last edit is not lost.
 	useEffect(() => {
 		const flush = () => {
 			if (!persistReady) return;
-			saveFakeChatSnapshot(accountId, { state, clipboardItems });
+			saveFakeChatSnapshot(storeKey, { state, clipboardItems });
 		};
 		window.addEventListener('beforeunload', flush);
 		window.addEventListener('pagehide', flush);
@@ -210,7 +228,7 @@ export default function FakeChatStudio({
 			window.removeEventListener('pagehide', flush);
 			flush();
 		};
-	}, [accountId, clipboardItems, persistReady, state]);
+	}, [storeKey, clipboardItems, persistReady, state]);
 
 	useEffect(() => {
 		ensureIosWaFonts();
@@ -282,6 +300,7 @@ export default function FakeChatStudio({
 
 	// Repair broken remote avatars / pixelated stubs left by older sync.
 	useEffect(() => {
+		if (messenger) return;
 		const defaultsById = Object.fromEntries(
 			createDefaultStudioState().list.chats.map(chat => [chat.id, chat.avatar || '']),
 		);
@@ -302,25 +321,26 @@ export default function FakeChatStudio({
 				list: { ...current.list, chats: repaired, selfAvatar: nextSelf },
 			};
 		});
-	}, []);
+	}, [messenger]);
 
 	// Auto-fill only empty avatars once (never overwrite extracts).
 	useEffect(() => {
-		if (didAutoSyncRef.current) return undefined;
+		if (messenger || didAutoSyncRef.current) return undefined;
 		if (!liveChats.length) return undefined;
 		didAutoSyncRef.current = true;
 		void syncAvatarsFromInbox({ silent: true, force: false });
 		return undefined;
-	}, [liveChats.length, syncAvatarsFromInbox]);
+	}, [liveChats.length, messenger, syncAvatarsFromInbox]);
 
 	// Keep status-bar clock live in UI mode only.
 	useEffect(() => {
 		if (editorMode !== 'ui') return undefined;
 		const tick = () => {
-			setState(current => ({
-				...current,
-				status: { ...current.status, time: formatIosStatusTime() },
-			}));
+			setState(current =>
+				current.status.manualTime
+					? current
+					: { ...current, status: { ...current.status, time: formatIosStatusTime() } },
+			);
 		};
 		tick();
 		const timer = window.setInterval(tick, 30_000);
@@ -537,6 +557,74 @@ export default function FakeChatStudio({
 		});
 	}, []);
 
+	/** Edit in place: the chat keeps its position, only its row text follows the last message. */
+	const replaceActiveMessages = useCallback(makeNext => {
+		setState(current => {
+			const active = getActiveChat(current);
+			const messages = makeNext(active?.messages || current.thread.messages || []);
+			if (!active) return { ...current, thread: { ...current.thread, messages } };
+			return {
+				...current,
+				list: {
+					...current.list,
+					chats: current.list.chats.map(chat =>
+						chat.id === active.id ? { ...chat, ...listFieldsFromMessages(messages), messages } : chat,
+					),
+				},
+				thread: { ...current.thread, messages },
+			};
+		});
+	}, []);
+
+	const updateMessage = useCallback(
+		(id, patch) => {
+			replaceActiveMessages(messages => messages.map(item => (item.id === id ? { ...item, ...patch } : item)));
+		},
+		[replaceActiveMessages],
+	);
+
+	const moveMessage = useCallback(
+		(id, delta) => {
+			replaceActiveMessages(messages => {
+				const from = messages.findIndex(item => item.id === id);
+				const to = from + delta;
+				if (from < 0 || to < 0 || to >= messages.length) return messages;
+				const next = [...messages];
+				const [moved] = next.splice(from, 1);
+				next.splice(to, 0, moved);
+				return next;
+			});
+		},
+		[replaceActiveMessages],
+	);
+
+	const createFromTemplate = useCallback(templateId => {
+		const chat = buildTemplateChat(templateId);
+		setState(current => ({
+			...current,
+			screen: 'thread',
+			activeChatId: chat.id,
+			list: { ...current.list, chats: bumpChatToTop(current.list.chats, chat.id, chat) },
+			thread: { ...current.thread, messages: chat.messages },
+		}));
+	}, []);
+
+	const duplicateChat = useCallback(id => {
+		setState(current => {
+			const source = current.list.chats.find(chat => chat.id === id);
+			if (!source) return current;
+			const copyId = nextId('c');
+			const messages = (source.messages || []).map(item => ({ ...item, id: nextId('m') }));
+			const copy = { ...source, id: copyId, name: `${source.name} 2`, messages, liveConversationId: '' };
+			return {
+				...current,
+				activeChatId: copyId,
+				list: { ...current.list, chats: bumpChatToTop(current.list.chats, copyId, copy) },
+				thread: { ...current.thread, messages },
+			};
+		});
+	}, []);
+
 	const updateList = useCallback(patch => {
 		setState(current => ({ ...current, list: { ...current.list, ...patch } }));
 	}, []);
@@ -602,13 +690,14 @@ export default function FakeChatStudio({
 		}));
 	}, []);
 	const removeListChat = useCallback(id => {
-		setState(current => ({
-			...current,
-			list: {
-				...current.list,
-				chats: current.list.chats.filter(chat => chat.id !== id),
-			},
-		}));
+		setState(current => {
+			const chats = current.list.chats.filter(chat => chat.id !== id);
+			return {
+				...current,
+				activeChatId: current.activeChatId === id ? chats[0]?.id || '' : current.activeChatId,
+				list: { ...current.list, chats },
+			};
+		});
 	}, []);
 
 	const applyInfoJson = () => {
@@ -902,54 +991,6 @@ export default function FakeChatStudio({
 		return () => window.removeEventListener('paste', onPaste);
 	}, [applyPastedImage, editorMode]);
 
-	const onAddTicketOrImage = async (type, event) => {
-		const file = event.target.files?.[0];
-		event.target.value = '';
-		if (!file) return;
-		setPasteTarget('message');
-		try {
-			const url = await uploadFakeChatImage(file);
-			const path = shortMediaPath(url) || url;
-			addMessage({
-				side: draftSide,
-				type,
-				src: path,
-				caption: '',
-				time: draftTime || formatChatBubbleTime(),
-				ticks: 'read',
-			});
-			toast.success(ar ? `اترفعت · ${path}` : `Uploaded · ${path}`);
-		} catch (error) {
-			toast.error(error?.message || (ar ? 'تعذر رفع الصورة' : 'Could not upload image'));
-		}
-	};
-
-	const onAddText = () => {
-		const text = draftText.trim();
-		if (!text) {
-			toast.error(ar ? 'اكتب رسالة أولاً' : 'Write a message first');
-			return;
-		}
-		addMessage({
-			side: draftSide,
-			type: 'text',
-			text,
-			time: draftTime || formatChatBubbleTime(),
-			ticks: 'read',
-		});
-		setDraftText('');
-	};
-
-	const onAddVoice = () => {
-		addMessage({
-			side: 'out',
-			type: 'voice',
-			duration: '0:03',
-			time: draftTime || formatChatBubbleTime(),
-			ticks: 'read',
-		});
-	};
-
 	const openShareFromCapture = async ({ download = false } = {}) => {
 		if (!screenRef.current && !phoneRef.current) return;
 		if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -957,7 +998,7 @@ export default function FakeChatStudio({
 		const phoneShell = phoneRef.current;
 		const prevTransform = phoneShell?.style?.transform;
 		try {
-			const stamp = formatIosStatusTime();
+			const stamp = state.status.manualTime ? state.status.time : formatIosStatusTime();
 			setState(current => ({
 				...current,
 				status: { ...current.status, time: stamp },
@@ -972,7 +1013,7 @@ export default function FakeChatStudio({
 			screen.style.borderRadius = '0px';
 			screen.style.overflow = 'hidden';
 			await new Promise(r => window.requestAnimationFrame(() => r()));
-			const fileName = `whatsapp-${state.screen}-${stamp.replace(':', '-')}.png`;
+			const fileName = `chat-mockup-${app}-${state.screen}-${String(stamp).replace(':', '-')}.png`;
 			const dataUrl = await captureNodeAsPng(screen, {
 				width: IPHONE_XR.width,
 				height: IPHONE_XR.height,
@@ -1036,7 +1077,7 @@ export default function FakeChatStudio({
 	};
 
 	const resetStudio = () => {
-		const next = createDefaultStudioState();
+		const next = makeAppDefault();
 		didAutoSyncRef.current = false;
 		toneStopRef.current = true;
 		if (toneTimerRef.current) {
@@ -1054,8 +1095,8 @@ export default function FakeChatStudio({
 		setPackJson(studioChatPackToJson(next));
 		setDraftTime(formatChatBubbleTime());
 		setJsonError('');
-		clearFakeChatSnapshot(accountId);
-		saveFakeChatSnapshot(accountId, { state: next, clipboardItems: [] });
+		clearFakeChatSnapshot(storeKey);
+		saveFakeChatSnapshot(storeKey, { state: next, clipboardItems: [] });
 		toast.success(ar ? 'اتعمل Reset واتمسح الحفظ المحلي' : 'Reset · local save cleared');
 	};
 
@@ -1223,89 +1264,95 @@ export default function FakeChatStudio({
 	return (
 		<div className={tw.studio} ref={studioRef}>
 			<aside className={tw.panel} data-no-capture="true">
-				<div>
-					<h2 className={tw.headTitle}>{t.title}</h2>
-					<p className={tw.headSub}>{ar ? 'iPhone XR · صوّر وشارك' : 'iPhone XR · capture & share'}</p>
+				<div className={tw.seg}>
+					<button type="button" className={segBtn(!messenger)} onClick={() => switchApp('whatsapp')}>
+						WhatsApp
+					</button>
+					<button type="button" className={segBtn(messenger)} onClick={() => switchApp('messenger')}>
+						Messenger
+					</button>
 				</div>
 
-				<div className={tw.seg3}>
-					<button
-						type="button"
-						className={segBtn(state.screen === 'list')}
-						onClick={() => update({ screen: 'list' })}
-					>
+				<div className={messenger ? tw.seg3 : tw.seg4}>
+					<button type="button" className={segBtn(state.screen === 'list')} onClick={() => update({ screen: 'list' })}>
 						{t.list}
 					</button>
-					<button
-						type="button"
-						className={segBtn(state.screen === 'thread')}
-						onClick={() => update({ screen: 'thread' })}
-					>
+					<button type="button" className={segBtn(state.screen === 'thread')} onClick={() => update({ screen: 'thread' })}>
 						{t.thread}
 					</button>
+					{messenger ? (
+						<button type="button" className={segBtn(state.screen === 'requests')} onClick={() => update({ screen: 'requests' })}>
+							{ar ? 'الطلبات' : 'Requests'}
+						</button>
+					) : (
+						<>
+							<button type="button" className={segBtn(state.screen === 'contact')} onClick={() => update({ screen: 'contact' })}>
+								{t.contactScreen}
+							</button>
+							<button type="button" className={segBtn(state.screen === 'archived')} onClick={() => update({ screen: 'archived' })}>
+								{ar ? 'الأرشيف' : 'Archived'}
+							</button>
+						</>
+					)}
+				</div>
+
+				<div className="flex shrink-0 items-center gap-1.5">
+					<select
+						className={tw.full}
+						value=""
+						aria-label={ar ? 'شات جديد من template' : 'New chat from a template'}
+						onChange={event => {
+							if (event.target.value) createFromTemplate(event.target.value);
+						}}
+					>
+						<option value="">{ar ? '+ شات جديد من template…' : '+ New chat from a template…'}</option>
+						{CHAT_TEMPLATES.map(template => (
+							<option key={template.id} value={template.id}>
+								{ar ? template.ar : template.en}
+							</option>
+						))}
+					</select>
 					<button
 						type="button"
-						className={segBtn(state.screen === 'contact')}
-						onClick={() => update({ screen: 'contact' })}
+						className={cn(tw.fileBtn, editorMode !== 'ui' && tw.btnAccent)}
+						onClick={() => setEditorMode(mode => (mode === 'ui' ? 'pack' : 'ui'))}
+						title={ar ? 'JSON والنغمات والصور' : 'JSON, tones and images'}
 					>
-						{t.contactScreen}
+						<Braces size={12} />
+						{editorMode === 'ui' ? (ar ? 'متقدم' : 'Advanced') : ar ? 'سريع' : 'Quick'}
 					</button>
 				</div>
 
-				<div className={tw.seg5}>
-					<button
-						type="button"
-						className={segBtn(editorMode === 'ui')}
-						onClick={() => setEditorMode('ui')}
-					>
-						<LayoutList size={12} />
-						{t.ui}
-					</button>
-					<button
-						type="button"
-						className={segBtn(editorMode === 'pack')}
-						onClick={() => setEditorMode('pack')}
-					>
-						<Braces size={12} />
-						{t.packJson}
-					</button>
-					<button
-						type="button"
-						className={segBtn(editorMode === 'info')}
-						onClick={() => setEditorMode('info')}
-					>
-						<Braces size={12} />
-						{t.infoJson}
-					</button>
-					<button
-						type="button"
-						className={segBtn(editorMode === 'msgs')}
-						onClick={() => setEditorMode('msgs')}
-					>
-						<Braces size={12} />
-						{t.msgsJson}
-					</button>
-					<button
-						type="button"
-						className={segBtn(editorMode === 'sound')}
-						onClick={() => setEditorMode('sound')}
-					>
-						<Bell size={12} />
-						{t.sound}
-					</button>
-				</div>
-
-				<ClipboardTray
-					ar={ar}
-					items={clipboardItems}
-					onChange={setClipboardItems}
-					onUseAs={(dataUrl, kind) => {
-						if (kind === 'contactAvatar') {
-							updateActiveChat({ avatar: dataUrl, metaAi: false, whatsapp: false });
-							toast.success(ar ? 'اتحطت صورة الجهة' : 'Set as contact avatar');
-						}
-					}}
-				/>
+				{editorMode !== 'ui' ? (
+					<>
+						<div className={tw.seg4}>
+							<button type="button" className={segBtn(editorMode === 'pack')} onClick={() => setEditorMode('pack')}>
+								{t.packJson}
+							</button>
+							<button type="button" className={segBtn(editorMode === 'info')} onClick={() => setEditorMode('info')}>
+								{t.infoJson}
+							</button>
+							<button type="button" className={segBtn(editorMode === 'msgs')} onClick={() => setEditorMode('msgs')}>
+								{t.msgsJson}
+							</button>
+							<button type="button" className={segBtn(editorMode === 'sound')} onClick={() => setEditorMode('sound')}>
+								<Bell size={12} />
+								{t.sound}
+							</button>
+						</div>
+						<ClipboardTray
+							ar={ar}
+							items={clipboardItems}
+							onChange={setClipboardItems}
+							onUseAs={(dataUrl, kind) => {
+								if (kind === 'contactAvatar') {
+									updateActiveChat({ avatar: dataUrl, metaAi: false, whatsapp: false });
+									toast.success(ar ? 'اتحطت صورة الجهة' : 'Set as contact avatar');
+								}
+							}}
+						/>
+					</>
+				) : null}
 
 				<div className={tw.panelScroll}>
 					{editorMode === 'pack' ? (
@@ -1660,515 +1707,34 @@ export default function FakeChatStudio({
 					) : null}
 
 					{editorMode === 'ui' ? (
-						<>
-							<section className={tw.card}>
-								<h3 className={tw.cardH3}>{t.status}</h3>
-								<div className={tw.grid2}>
-									<label>
-										<span>{t.time}</span>
-										<input
-											value={state.status.time}
-											onChange={e => updateStatus({ time: e.target.value })}
-										/>
-									</label>
-									<label>
-										<span>{t.battery}</span>
-										<input
-											type="number"
-											min={1}
-											max={100}
-											value={state.status.battery}
-											onChange={e => updateStatus({ battery: Number(e.target.value) || 0 })}
-										/>
-									</label>
-								</div>
-								<label className={tw.check}>
-									<input
-										type="checkbox"
-										checked={Boolean(state.status.charging)}
-										onChange={e => updateStatus({ charging: e.target.checked })}
-									/>
-									<span>{t.charging}</span>
-								</label>
-							</section>
-
-							{state.screen === 'list' ? (
-								<section className={tw.card}>
-									<div className={tw.cardHead}>
-										<h3 className={tw.cardH3}>{t.listChats}</h3>
-										<div className={tw.rowBtns}>
-											<button
-												type="button"
-												className={cn(tw.fileBtn, tw.btnAccent)}
-												disabled={!liveChats.length}
-												onClick={syncListFromInbox}
-												title={
-													ar
-														? 'ياخد نسخة محدّثة من الشات الحي (الرسائل المتظبطة بتفضل زي ما هي)'
-														: 'Copy the live inbox (crafted chat messages are kept)'
-												}
-											>
-												<RefreshCw size={12} />
-												{ar ? 'Sync من الشات' : 'Sync inbox'}
-											</button>
-											<button
-												type="button"
-												className={cn(tw.fileBtn, listEditMode && tw.btnAccent)}
-												onClick={() => setListEditMode(value => !value)}
-											>
-												{listEditMode ? <Check size={12} /> : <PencilLine size={12} />}
-												{listEditMode ? (ar ? 'تم' : 'Done') : ar ? 'تعديل' : 'Edit'}
-											</button>
-											<button
-												type="button"
-												className={cn(tw.fileBtn, tw.btnAccent)}
-												disabled={syncingAvatars || !liveChats.length}
-												onClick={() => void syncAvatarsFromInbox({ force: true })}
-											>
-												{syncingAvatars ? (
-													<Loader2 size={12} className="animate-spin" />
-												) : (
-													<RefreshCw size={12} />
-												)}
-												{t.syncAvatars}
-											</button>
-											<button type="button" className={tw.fileBtn} onClick={addListChat}>
-												<Plus size={12} />
-												{t.addChat}
-											</button>
-										</div>
-									</div>
-									<p className={tw.hint}>
-										{listEditMode
-											? ar
-												? 'وضع التعديل: دوس على الاسم/الرسالة/الوقت/العدّاد جوه الموبايل واكتب، Enter للحفظ. دوس على الصورة عشان تغيّرها.'
-												: 'Edit mode: click a name / message / time / badge inside the phone and type, Enter to save. Click a photo to replace it.'
-											: ar
-												? 'بيطابق الأسامي/الأرقام مع تاب الشاتات ويجيب الصورة الحقيقية.'
-												: 'Matches names/phones with the Chats tab and pulls real profile photos.'}
-									</p>
-									<div className={tw.stack}>
-										<input
-											className={tw.full}
-											value={state.list.title}
-											onChange={e => updateList({ title: e.target.value })}
-											placeholder="Chats"
-										/>
-										<input
-											className={tw.full}
-											value={state.list.searchPlaceholder}
-											onChange={e => updateList({ searchPlaceholder: e.target.value })}
-											placeholder="Ask Meta AI or Search"
-										/>
-										<input
-											className={tw.full}
-											type="number"
-											min={0}
-											value={state.list.unreadBadge}
-											onChange={e => updateList({ unreadBadge: Number(e.target.value) || 0 })}
-											placeholder={t.unreadBadge}
-										/>
-										<input
-											className={tw.full}
-											type="number"
-											min={0}
-											value={state.list.callsBadge || 0}
-											onChange={e => updateList({ callsBadge: Number(e.target.value) || 0 })}
-											placeholder={ar ? 'بادج المكالمات' : 'Calls badge'}
-										/>
-										<label className={tw.check}>
-											<input
-												type="checkbox"
-												checked={Boolean(state.list.showSearch)}
-												onChange={e => updateList({ showSearch: e.target.checked })}
-											/>
-											<span>{ar ? 'شريط البحث' : 'Show search'}</span>
-										</label>
-										<label className={tw.check}>
-											<input
-												type="checkbox"
-												checked={Boolean(state.list.showSuggestions)}
-												onChange={e => updateList({ showSuggestions: e.target.checked })}
-											/>
-											<span>{ar ? 'اقتراحات Start chatting' : 'Show suggestions'}</span>
-										</label>
-										<label className={tw.check}>
-											<input
-												type="checkbox"
-												checked={Boolean(state.list.hidePhoneNumbers)}
-												onChange={e => updateList({ hidePhoneNumbers: e.target.checked })}
-											/>
-											<span>
-												{ar
-													? 'إخفاء الرقم → عرض الـ username (~)'
-													: 'Hide phone → show username (~)'}
-											</span>
-										</label>
-									</div>
-									<p className={tw.hint}>{t.pasteHint}</p>
-									<ul className={tw.listChats}>
-										{state.list.chats.map(chat => (
-											<li
-												key={chat.id}
-												className={cn(
-													tw.listChatItem,
-													state.activeChatId === chat.id && tw.listChatItemPaste,
-													(listPasteChatId === chat.id ||
-														pasteTarget === `listAvatar:${chat.id}`) &&
-														tw.listChatItemPaste,
-												)}
-											>
-												<div className={tw.listChatHead}>
-													<label
-														className={fileBtn(pasteTarget === `listAvatar:${chat.id}`)}
-														onClick={() => {
-															setPasteTarget(`listAvatar:${chat.id}`);
-															setListPasteChatId(chat.id);
-														}}
-													>
-														<input
-															className={tw.fileInputHidden}
-															type="file"
-															accept="image/*"
-															onChange={e => onPickListAvatar(chat.id, e)}
-														/>
-														<ImagePlus size={12} />
-														{ar ? 'صورة' : 'Img'}
-													</label>
-													<button
-														type="button"
-														className={cn(tw.fileBtn, state.activeChatId === chat.id && tw.btnAccent)}
-														onClick={() => openChat(chat.id)}
-													>
-														{t.openThisChat}
-													</button>
-													<button type="button" className={tw.listChatDelete} onClick={() => removeListChat(chat.id)}>
-														<Trash2 size={12} />
-													</button>
-												</div>
-												<input
-													className={tw.full}
-													value={chat.name}
-													onChange={e => updateListChat(chat.id, { name: e.target.value })}
-													placeholder="Name"
-												/>
-												<input
-													className={tw.full}
-													value={chat.phone || ''}
-													onChange={e => updateListChat(chat.id, { phone: e.target.value })}
-													placeholder={t.contactPhone}
-												/>
-												<input
-													className={tw.full}
-													value={chat.about || ''}
-													onChange={e => updateListChat(chat.id, { about: e.target.value })}
-													placeholder={t.contactAbout}
-												/>
-												<input
-													className={tw.full}
-													value={chat.preview}
-													onChange={e => updateListChat(chat.id, { preview: e.target.value })}
-													placeholder="Preview"
-													dir="auto"
-												/>
-												<div className={tw.grid2}>
-													<input
-														className={tw.full}
-														value={chat.time}
-														onChange={e => updateListChat(chat.id, { time: e.target.value })}
-														placeholder="Time"
-													/>
-													<input
-														className={tw.full}
-														type="number"
-														min={0}
-														value={chat.unread}
-														onChange={e =>
-															updateListChat(chat.id, { unread: Number(e.target.value) || 0 })
-														}
-														placeholder="Unread"
-													/>
-												</div>
-												<select
-													className={tw.full}
-													value={chat.ticks || ''}
-													onChange={e => updateListChat(chat.id, { ticks: e.target.value })}
-												>
-													<option value="">No ticks</option>
-													<option value="sent">Sent</option>
-													<option value="delivered">Delivered</option>
-													<option value="read">Read</option>
-												</select>
-												<div className={tw.rowBtns}>
-													<label className={tw.check}>
-														<input
-															type="checkbox"
-															checked={Boolean(chat.pinned)}
-															onChange={e => updateListChat(chat.id, { pinned: e.target.checked })}
-														/>
-														Pin
-													</label>
-													<label className={tw.check}>
-														<input
-															type="checkbox"
-															checked={Boolean(chat.muted)}
-															onChange={e => updateListChat(chat.id, { muted: e.target.checked })}
-														/>
-														Mute
-													</label>
-													<label className={tw.check}>
-														<input
-															type="checkbox"
-															checked={Boolean(chat.timeGreen)}
-															onChange={e => updateListChat(chat.id, { timeGreen: e.target.checked })}
-														/>
-														Green
-													</label>
-												</div>
-											</li>
-										))}
-									</ul>
-								</section>
-							) : null}
-
-							{state.screen === 'thread' || state.screen === 'contact' ? (
-								<>
-									<section className={tw.card}>
-										<h3 className={tw.cardH3}>{t.activeChat}</h3>
-										<p className={tw.hint}>
-											{ar
-												? 'الاسم والصورة والرقم من الليستة — تعديل واحد يكفي للشات وللإنفو.'
-												: 'Name / avatar / phone come from the list chat — edit once for chat + info.'}
-										</p>
-										<div className={tw.stack}>
-											<input
-												className={tw.full}
-												value={activeChat?.name || ''}
-												onChange={e => updateActiveChat({ name: e.target.value })}
-												placeholder={t.contact}
-											/>
-											<input
-												className={tw.full}
-												value={activeChat?.phone || ''}
-												onChange={e => updateActiveChat({ phone: e.target.value })}
-												placeholder={t.contactPhone}
-											/>
-											<input
-												className={tw.full}
-												value={activeChat?.about || ''}
-												onChange={e => updateActiveChat({ about: e.target.value })}
-												placeholder={t.contactAbout}
-											/>
-											<input
-												className={tw.full}
-												value={state.list.unreadBadge || ''}
-												onChange={e => updateList({ unreadBadge: Number(e.target.value) || 0 })}
-												placeholder={t.unreadBadge}
-											/>
-											<input
-												className={tw.full}
-												value={activeChat?.subtitle || ''}
-												onChange={e => updateActiveChat({ subtitle: e.target.value })}
-												placeholder={t.subtitle}
-											/>
-										</div>
-										<div className={tw.rowBtns}>
-											<button
-												type="button"
-												className={cn(tw.fileBtn, tw.btnAccent)}
-												onClick={openContactInfo}
-											>
-												{t.openContact}
-											</button>
-										</div>
-										<div className={tw.rowBtns}>
-											<label
-												className={fileBtn(pasteTarget === 'contactAvatar')}
-												onClick={() => setPasteTarget('contactAvatar')}
-											>
-												<input
-													className={tw.fileInputHidden}
-													type="file"
-													accept="image/*"
-													onChange={e => onPickAvatar('contactAvatar', e)}
-												/>
-												<ImagePlus size={12} />
-												{ar ? 'صورة الجهة' : 'Contact'}
-											</label>
-											<label
-												className={fileBtn(pasteTarget === 'selfAvatar')}
-												onClick={() => setPasteTarget('selfAvatar')}
-											>
-												<input
-													className={tw.fileInputHidden}
-													type="file"
-													accept="image/*"
-													onChange={e => onPickAvatar('selfAvatar', e)}
-												/>
-												<ImagePlus size={12} />
-												{ar ? 'صورتي' : 'Me'}
-											</label>
-											<label
-												className={fileBtn(pasteTarget === 'wallpaper')}
-												onClick={() => setPasteTarget('wallpaper')}
-											>
-												<input
-													className={tw.fileInputHidden}
-													type="file"
-													accept="image/*"
-													onChange={e => onPickAvatar('wallpaper', e)}
-												/>
-												<ImagePlus size={12} />
-												{ar ? 'خلفية' : 'Wallpaper'}
-											</label>
-										</div>
-										<p className={tw.hint}>{t.pasteHint}</p>
-									</section>
-
-									{state.screen === 'contact' ? (
-										<section className={tw.card}>
-											<h3 className={tw.cardH3}>{ar ? 'تفاصيل الصفحة' : 'Info details'}</h3>
-											<div className={tw.grid2}>
-												<input
-													className={tw.full}
-													value={activeChat?.info?.mediaCount || ''}
-													onChange={e => updateContactInfo({ mediaCount: e.target.value })}
-													placeholder="Media count"
-												/>
-												<input
-													className={tw.full}
-													value={activeChat?.info?.storage || ''}
-													onChange={e => updateContactInfo({ storage: e.target.value })}
-													placeholder="Storage"
-												/>
-												<input
-													className={tw.full}
-													value={activeChat?.info?.keptMessages || ''}
-													onChange={e => updateContactInfo({ keptMessages: e.target.value })}
-													placeholder="Kept messages"
-												/>
-												<input
-													className={tw.full}
-													value={activeChat?.info?.disappearing || ''}
-													onChange={e => updateContactInfo({ disappearing: e.target.value })}
-													placeholder="Disappearing"
-												/>
-												<input
-													className={tw.full}
-													value={activeChat?.info?.saveToPhotos || ''}
-													onChange={e => updateContactInfo({ saveToPhotos: e.target.value })}
-													placeholder="Save to Photos"
-												/>
-												<input
-													className={tw.full}
-													value={activeChat?.info?.advancedPrivacy || ''}
-													onChange={e => updateContactInfo({ advancedPrivacy: e.target.value })}
-													placeholder="Advanced privacy"
-												/>
-											</div>
-											<input
-												className={cn(tw.full, 'mt-1.5')}
-												value={activeChat?.info?.transcriptLanguage || ''}
-												onChange={e => updateContactInfo({ transcriptLanguage: e.target.value })}
-												placeholder="Transcript language"
-											/>
-											<label className={cn(tw.check, 'mt-1.5')}>
-												<input
-													type="checkbox"
-													checked={Boolean(activeChat?.info?.lockChat)}
-													onChange={e => updateContactInfo({ lockChat: e.target.checked })}
-												/>
-												Lock chat
-											</label>
-										</section>
-									) : null}
-
-									{state.screen === 'thread' ? (
-									<section className={tw.card}>
-										<h3 className={tw.cardH3}>{t.messages}</h3>
-										<div className={tw.segSm}>
-											<button
-												type="button"
-												className={segBtn(draftSide === "in")}
-												onClick={() => setDraftSide('in')}
-											>
-												{t.incoming}
-											</button>
-											<button
-												type="button"
-												className={segBtn(draftSide === "out")}
-												onClick={() => setDraftSide('out')}
-											>
-												{t.outgoing}
-											</button>
-										</div>
-										<input
-											className={tw.full}
-											value={draftTime}
-											onChange={e => setDraftTime(e.target.value)}
-											placeholder="2:02 pm"
-										/>
-										<textarea
-											rows={2}
-											value={draftText}
-											onChange={e => setDraftText(e.target.value)}
-											placeholder={ar ? 'نص…' : 'Text…'}
-											dir="auto"
-										/>
-										<div className={tw.rowBtns}>
-											<button type="button" className={tw.fileBtn} onClick={onAddText}>
-												<Plus size={12} />
-												Text
-											</button>
-											<button type="button" className={tw.fileBtn} onClick={onAddVoice}>
-												<Mic size={12} />
-											</button>
-											<label
-												className={fileBtn(pasteTarget === "message")}
-												onClick={() => setPasteTarget('message')}
-											>
-												<input
-													className={tw.fileInputHidden}
-													type="file"
-													accept="image/*"
-													onChange={e => onAddTicketOrImage('image', e)}
-												/>
-												<ImagePlus size={12} />
-											</label>
-											<label className={cn(tw.fileBtn, tw.btnAccent)}>
-												<input
-													className={tw.fileInputHidden}
-													type="file"
-													accept="image/*"
-													onChange={e => onAddTicketOrImage('ticket', e)}
-												/>
-												<Ticket size={12} />
-											</label>
-										</div>
-										<ul className={tw.msgList}>
-										{state.thread.messages.map(item => (
-											<li key={item.id} className={tw.msgItem}>
-													<span className={tw.msgItemText} dir="auto">
-														{item.side === 'out' ? '→ ' : '← '}
-														{item.type === 'text'
-															? item.text
-															: item.type === 'voice'
-																? `🎤 ${item.duration}`
-																: item.type === 'ticket'
-																	? '🎫'
-																	: '🖼'}
-													</span>
-													<button type="button" className={tw.msgDelete} onClick={() => removeMessage(item.id)}>
-														<Trash2 size={12} />
-													</button>
-												</li>
-											))}
-										</ul>
-									</section>
-									) : null}
-								</>
-							) : null}
-						</>
+						<QuickEditor
+							ar={ar}
+							app={app}
+							state={state}
+							activeChat={activeChat}
+							messages={threadView.messages}
+							onStatus={updateStatus}
+							onList={updateList}
+							onListChat={updateListChat}
+							onActiveChat={updateActiveChat}
+							onThread={updateThread}
+							onAddMessage={addMessage}
+							onUpdateMessage={updateMessage}
+							onRemoveMessage={removeMessage}
+							onMoveMessage={moveMessage}
+							onOpenChat={openChat}
+							onRemoveChat={removeListChat}
+							onDuplicateChat={duplicateChat}
+							onOpenContact={openContactInfo}
+							onPickAvatar={onPickAvatar}
+							onPickListAvatar={onPickListAvatar}
+							onSyncInbox={syncListFromInbox}
+							onSyncAvatars={() => void syncAvatarsFromInbox({ force: true })}
+							syncingAvatars={syncingAvatars}
+							canSync={liveChats.length > 0}
+							listEditMode={listEditMode}
+							onToggleListEdit={() => setListEditMode(value => !value)}
+						/>
 					) : null}
 				</div>
 
@@ -2200,7 +1766,7 @@ export default function FakeChatStudio({
 			</aside>
 
 			<div className={tw.stage} ref={stageRef}>
-				{state.screen === 'list' ? (
+				{state.screen === 'list' && !messenger ? (
 					<button
 						type="button"
 						className={cn(tw.stageEditToggle, listEditMode && tw.stageEditToggleOn)}
@@ -2211,6 +1777,7 @@ export default function FakeChatStudio({
 					</button>
 				) : null}
 				<div
+					dir="ltr"
 					className={tw.phoneWrap}
 					style={{
 						width: IPHONE_DEVICE.width * phoneScale,
@@ -2219,6 +1786,7 @@ export default function FakeChatStudio({
 				>
 					<div
 						ref={phoneRef}
+						dir="ltr"
 						className={cn(tw.phoneDevice, tw.phoneScale)}
 						style={{
 							width: IPHONE_DEVICE.width,
@@ -2239,7 +1807,26 @@ export default function FakeChatStudio({
 								transformOrigin: 'top left',
 							}}
 						>
-							{state.screen === 'list' ? (
+							{capturing ? <span className={ph.mockup}>Mockup</span> : null}
+							{messenger ? (
+								state.screen === 'requests' ? (
+									<MessengerRequests
+										status={state.status}
+										list={state.list}
+										onBack={() => update({ screen: 'list' })}
+										onOpenChat={openChat}
+									/>
+								) : state.screen === 'thread' ? (
+									<MessengerThread
+										status={state.status}
+										thread={threadView}
+										list={state.list}
+										onBack={() => update({ screen: activeChat?.request ? 'requests' : 'list' })}
+									/>
+								) : (
+									<MessengerList status={state.status} list={state.list} onOpenChat={openChat} />
+								)
+							) : state.screen === 'list' ? (
 								<ChatsListPreview
 									status={state.status}
 									list={state.list}
@@ -2250,6 +1837,16 @@ export default function FakeChatStudio({
 									onEditChat={updateListChat}
 									onEditList={updateList}
 									onPickChatAvatar={onPickListAvatar}
+									onOpenArchived={() => update({ screen: 'archived' })}
+								/>
+							) : state.screen === 'archived' ? (
+								<ArchivedChatsPreview
+									status={state.status}
+									list={state.list}
+									capturing={capturing}
+									activeChatId={state.activeChatId}
+									onOpenChat={openChat}
+									onBack={() => update({ screen: 'list' })}
 								/>
 							) : state.screen === 'contact' ? (
 								<ContactInfoPreview
@@ -2264,7 +1861,7 @@ export default function FakeChatStudio({
 									thread={threadView}
 									capturing={capturing}
 									onOpenContact={openContactInfo}
-									onBackToList={() => update({ screen: 'list' })}
+									onBackToList={() => update({ screen: activeChat?.archived ? 'archived' : 'list' })}
 								/>
 							)}
 						</div>
