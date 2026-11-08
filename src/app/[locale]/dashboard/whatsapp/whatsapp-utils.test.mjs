@@ -46,6 +46,7 @@ import {
 	parseWhatsAppBold,
 	relativeTime,
 	resolveWhatsAppMentionLabel,
+	textWithMentionLabels,
 	buildWhatsAppMentionDirectory,
 	scopeMessagesToConversation,
 	seekRatio,
@@ -763,6 +764,14 @@ test('messageTextPresentation handles Arabic, English and mixed text', () => {
 		).dir,
 		'ltr',
 	);
+	// mostly Arabic but starting in English: Arabic face, direction from the first letter
+	const startsEnglishMostlyArabic = messageTextPresentation('Done ✅ اتبعت للعميل خلاص');
+	assert.equal(startsEnglishMostlyArabic.dir, 'ltr');
+	assert.equal(startsEnglishMostlyArabic.className, 'wa-message-text--ar');
+	assert.equal(startsEnglishMostlyArabic.style.direction, 'ltr');
+	// emoji and numbers first do not decide the direction
+	assert.equal(messageTextPresentation('👍 تمام كده').dir, 'rtl');
+	assert.equal(messageTextPresentation('1234 👍 ok').dir, 'ltr');
 });
 
 test('message links are segmented and normalized for safe previews', () => {
@@ -1031,6 +1040,48 @@ test('parseWhatsAppBold marks bold, italic, strike and code segments', () => {
 		{ ...plain, text: 'gone', strike: true },
 		{ ...plain, text: ' ' },
 		{ ...plain, text: 'npm run dev', code: true },
+	]);
+});
+
+test('a message starting with a mention takes its direction from the name shown', () => {
+	const labels = { '99887766554433': 'Ahmed' };
+	const shown = textWithMentionLabels('@99887766554433 هشوفها', null, labels);
+	assert.equal(shown, '@Ahmed هشوفها');
+	assert.equal(messageTextPresentation(shown).dir, 'ltr');
+	// an Arabic name keeps the line right-to-left
+	assert.equal(messageTextPresentation(textWithMentionLabels('@99887766554433 تمام', null, { '99887766554433': 'يوسف' })).dir, 'rtl');
+	// unknown mentions and plain text are left alone
+	assert.equal(textWithMentionLabels('@201000000000 hi', null, null), '@201000000000 hi');
+	assert.equal(textWithMentionLabels('no mention here', null, labels), 'no mention here');
+});
+
+test('parseWhatsAppBold only formats at word edges, like WhatsApp', () => {
+	const plain = { bold: false, italic: false, strike: false, code: false };
+	// markers inside a word are kept as typed
+	assert.deepEqual(parseWhatsAppBold('شيل read_all_orders و الكومه'), [
+		{ ...plain, text: 'شيل read_all_orders و الكومه' },
+	]);
+	assert.deepEqual(parseWhatsAppBold('2*3*4 and snake_case_name'), [
+		{ ...plain, text: '2*3*4 and snake_case_name' },
+	]);
+	assert.deepEqual(parseWhatsAppBold('a~b~c'), [{ ...plain, text: 'a~b~c' }]);
+	// at word edges, including next to Arabic and punctuation
+	assert.deepEqual(parseWhatsAppBold('ابعتلي الـ *invoice* بتاعة'), [
+		{ ...plain, text: 'ابعتلي الـ ' },
+		{ ...plain, text: 'invoice', bold: true },
+		{ ...plain, text: ' بتاعة' },
+	]);
+	assert.deepEqual(parseWhatsAppBold('(*مهم*), _soft_.'), [
+		{ ...plain, text: '(' },
+		{ ...plain, text: 'مهم', bold: true },
+		{ ...plain, text: '), ' },
+		{ ...plain, text: 'soft', italic: true },
+		{ ...plain, text: '.' },
+	]);
+	// a closing marker inside a word does not end the span; the next edge one does
+	assert.deepEqual(parseWhatsAppBold('_my_file name_ ok'), [
+		{ ...plain, text: 'my_file name', italic: true },
+		{ ...plain, text: ' ok' },
 	]);
 });
 

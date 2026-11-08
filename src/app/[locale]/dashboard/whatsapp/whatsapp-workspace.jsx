@@ -179,6 +179,7 @@ import {
 	filterComposerMentionCandidates,
 	findComposerMentionQuery,
 	resolveWhatsAppMentionLabel,
+	textWithMentionLabels,
 	conversationUnreadCount,
 	conversationMatchesInboxFilter,
 	WHATSAPP_INBOX_CHIP_FILTERS,
@@ -11643,13 +11644,15 @@ function WhatsAppFormattedText({
 						{segment.text}
 					</a>
 				) : segment.type === 'mention' ? (
-					<span key={key} className="wa-message-mention">
+					// Its own direction (from the name), so "@Ahmed" inside an Arabic line keeps
+					// the @ before the name instead of flipping to "Ahmed@".
+					<bdi key={key} dir="auto" className="wa-message-mention">
 						{resolveWhatsAppMentionLabel(
 							segment.text,
 							mentionDirectory,
 							mentionLabels,
 						).replace(/ /g, '\u00A0')}
-					</span>
+					</bdi>
 				) : segment.type === 'emoji' ? (
 					<span key={key} className="wa-message-emoji">
 						{segment.text}
@@ -29003,7 +29006,13 @@ function WhatsAppWorkspaceContent() {
 															? textWithoutFirstLink(visibleText)
 															: visibleText;
 													const captionIsMarkdown = looksLikeMarkdown(captionText);
-													const textPresentation = messageTextPresentation(captionText || visibleText);
+													const textPresentation = messageTextPresentation(
+														textWithMentionLabels(
+															captionText || visibleText,
+															threadLiveRef.current.mentionDirectory,
+															message.mentionLabels,
+														),
+													);
 													const isDeleted = isDeletedWhatsAppMessage(message);
 													const keepsDeletedContent =
 														isDeleted &&

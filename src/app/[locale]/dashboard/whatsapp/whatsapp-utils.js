@@ -958,15 +958,17 @@ export function isMostlyArabicText(text) {
 
 export function messageTextPresentation(text) {
 	const value = String(text || '');
+	// The face follows the script most of the text is in; the direction follows the first
+	// letter, as in WhatsApp, so "Done ✅ اتبعت" starts with "Done" on the left.
 	const isArabic = isMostlyArabicText(value);
-	const dir = isArabic ? 'rtl' : firstStrongTextDirection(value);
+	const dir = firstStrongTextDirection(value);
 	const arabicStyle = {
 		fontFamily: ARABIC_MESSAGE_FONT_FAMILY,
 		fontWeight: 400,
 		fontFeatureSettings: 'normal',
 		letterSpacing: 'normal',
 		lineHeight: '19px',
-		direction: 'rtl',
+		direction: dir,
 		unicodeBidi: 'plaintext',
 		textAlign: 'start',
 		overflowWrap: 'break-word',
@@ -992,7 +994,7 @@ export function messageTextPresentation(text) {
 	};
 	if (isArabic) {
 		return {
-			dir: 'rtl',
+			dir,
 			lang: 'ar',
 			isArabic: true,
 			className: 'wa-message-text--ar',
@@ -1033,12 +1035,13 @@ export function looksLikeMarkdown(text) {
 /**
  * WhatsApp-style inline formatting: *bold* _italic_ ~strike~ `code`
  * (also accepts **bold**). Nested markers are left as plain text.
+ * Like WhatsApp, a marker only counts at a word edge: `read_all_orders` and `2*3*4` stay as typed.
  */
 export function parseWhatsAppBold(text) {
 	const value = String(text || '');
 	if (!value) return [{ text: '', bold: false, italic: false, strike: false, code: false }];
 	const pattern =
-		/`([^`\n]+)`|\*{1,2}(?=\S)([\s\S]*?\S)\*{1,2}|_(?=\S)([\s\S]*?\S)_|~(?=\S)([\s\S]*?\S)~/g;
+		/`([^`\n]+)`|(?<![\p{L}\p{N}*])\*{1,2}(?=\S)([\s\S]*?\S)\*{1,2}(?![\p{L}\p{N}])|(?<![\p{L}\p{N}_])_(?=\S)([\s\S]*?\S)_(?![\p{L}\p{N}])|(?<![\p{L}\p{N}~])~(?=\S)([\s\S]*?\S)~(?![\p{L}\p{N}])/gu;
 	const parts = [];
 	let cursor = 0;
 	let match;
@@ -1358,6 +1361,16 @@ export function encodeComposerMentions(text, picked = []) {
 		if (!mentions.includes(item.waId)) mentions.push(item.waId);
 	}
 	return { text: value, mentions };
+}
+
+/**
+ * The text as it reads on screen, mentions shown as names: what the direction must follow.
+ * "@99887766554433 هشوفها" is drawn as "@Ahmed هشوفها", which starts in English.
+ */
+export function textWithMentionLabels(text, directory, mentionLabels) {
+	const value = String(text || '');
+	if (!value.includes('@')) return value;
+	return value.replace(MESSAGE_MENTION_PATTERN, match => resolveWhatsAppMentionLabel(match, directory, mentionLabels));
 }
 
 export function resolveWhatsAppMentionLabel(mentionText, directory, mentionLabels) {

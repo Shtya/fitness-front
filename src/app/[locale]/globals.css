@@ -1068,12 +1068,21 @@ body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-co
 
 /* Per-message script: Arabic bubbles keep Tajawal; English bubbles use DM Sans. */
 body .wa-mobile-shell .wa-message-text.wa-message-text--ar,
-body .wa-mobile-shell .wa-message-text.wa-message-text--ar *,
+body .wa-mobile-shell .wa-message-text.wa-message-text--ar *:not(.wa-message-emoji),
 body .wa-mobile-shell .wa-composer-input.wa-message-text--ar {
   font-family: var(--wa-font-message-ar) !important;
-  font-weight: 400 !important;
   letter-spacing: normal !important;
   font-feature-settings: normal !important;
+}
+
+/*
+ * Direction and weight on the message element only. The pieces inside (plain runs, *bold*,
+ * _italic_, links, emoji) must stay part of one bidi paragraph: making each of them its own
+ * plaintext isolate reordered mixed Arabic/English lines and dropped bold to 400.
+ */
+body .wa-mobile-shell .wa-message-text.wa-message-text--ar,
+body .wa-mobile-shell .wa-composer-input.wa-message-text--ar {
+  font-weight: 400 !important;
   line-height: 19px !important;
   direction: rtl;
   unicode-bidi: plaintext;
