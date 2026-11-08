@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, CheckCheck, History, ListChecks, Minus, NotebookPen, Plus, Repeat, RotateCcw, Trash2, X } from 'lucide-react';
 import { MAX_ITEM_TEXT, MAX_NOTES, MAX_STEPS, MAX_TITLE, itemId } from './use-daily-tickets';
-import { StepBar, StepRing, dailyHistory, dailyStreak } from './tickets-ui';
+import { StepBar, StepRing, dailyHistory, dailyStreak, langClass, useTicketFonts } from './tickets-ui';
 import './ticket-dialog.css';
 
 /*
@@ -12,6 +12,7 @@ import './ticket-dialog.css';
  * Everything saves as you go (notes when you pause typing or leave the field).
  */
 export default function TicketDialog({ ticket, ar, c, actions, focus, onClose }) {
+	useTicketFonts();
 	const titleId = useId();
 	const [title, setTitle] = useState(ticket.title);
 	const [notes, setNotes] = useState(ticket.notes || '');
@@ -242,7 +243,7 @@ export default function TicketDialog({ ticket, ar, c, actions, focus, onClose })
 									>
 										<Check size={13} strokeWidth={3} aria-hidden />
 									</button>
-									<span className="tkd__item-text" dir="auto">
+									<span className={`tkd__item-text ${langClass(item.text)}`} dir="auto">
 										{item.text}
 									</span>
 									<button type="button" className="tkd__icon tkd__icon--sm" onClick={() => setItems(items.filter(i => i.id !== item.id))} aria-label={`${c.deleteItem}: ${item.text}`} title={c.deleteItem}>

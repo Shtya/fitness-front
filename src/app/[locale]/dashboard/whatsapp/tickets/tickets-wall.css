@@ -69,13 +69,7 @@ html[data-theme-mode='dark'] .tw-float {
 	--tw-lavender-b: #cfc3ee;
 }
 
-/* the handwriting must beat the WhatsApp shell's forced UI font */
-[dir] body .tw-frame .tw-text.tw-text.tw-text.tw-text.tw-text,
-[dir] body .tw-frame .tw-text.tw-text.tw-text.tw-text.tw-text *,
-[dir] body .tw-float .tw-text.tw-text.tw-text.tw-text.tw-text,
-[dir] body .tw-float .tw-text.tw-text.tw-text.tw-text.tw-text * {
-	font-family: var(--tw-hand) !important;
-}
+/* the title's face comes from its language (.tkx-lang-ar / .tkx-lang-en in tickets-ui.css) */
 
 /* ─── frame and cork ─── */
 .tw-frame {
@@ -142,18 +136,23 @@ html[data-theme-mode='dark'] .tw-float {
 	/* the title scales with the card width (cqi) */
 	container-type: inline-size;
 	outline: none;
-	/* the shadow follows the paper's real outline, folded corner included */
+	/* soft, layered: a contact shadow and a wide diffuse one */
 	filter:
-		drop-shadow(0 1px 1px rgba(60, 35, 10, 0.16))
-		drop-shadow(0 8px 10px rgba(60, 35, 10, 0.14));
+		drop-shadow(0 1px 1px rgba(60, 35, 10, 0.12))
+		drop-shadow(0 10px 14px rgba(60, 35, 10, 0.12));
 	/* only transform animates (cheap, smooth); the shadow stays put */
 	transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 	will-change: transform;
 }
 
 .tw-note:hover,
-.tw-note:focus-within {
+.tw-note:focus-within,
+.tw-note.is-peeking {
 	z-index: 3;
+}
+
+.tw-note.is-peeking {
+	z-index: 6;
 }
 
 .tw-note:not(.tw-note--add):hover {
@@ -217,7 +216,7 @@ html[data-theme-mode='dark'] .tw-float {
 
 .tw-pin {
 	position: absolute;
-	top: -21px;
+	top: -15px;
 	left: 50%;
 	z-index: 4;
 	transform: translateX(-50%);
@@ -245,24 +244,25 @@ html[data-theme-mode='dark'] .tw-float {
 	/* no fixed min-height: with aspect-ratio it would force a 310px minimum width */
 	aspect-ratio: 1.32 / 1;
 	flex-direction: column;
-	padding: 12px 12px 8px;
+	padding: 12px 14px 12px;
 	overflow: hidden;
-	border-radius: var(--tw-radius);
+	border-radius: 14px;
 	color: var(--tw-ink);
-	background:
-		radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
-		linear-gradient(172deg, var(--tw-a) 0%, var(--tw-b) 100%);
-	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
-	clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--tw-fold)), calc(100% - var(--tw-fold)) 100%, 0 100%);
+	/* one quiet tone: the paper colour, barely deeper toward the bottom */
+	background: linear-gradient(180deg, color-mix(in srgb, var(--tw-a) 70%, #fff) 0%, var(--tw-a) 55%, color-mix(in srgb, var(--tw-a) 60%, var(--tw-b)) 100%);
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 255, 255, 0.75),
+		inset 0 -1px 0 rgba(60, 35, 10, 0.05);
 }
 
-/* a very light paper sheen across the top */
+/* a whisper of paper grain */
 .tw-paper:not(.tw-paper--add)::before {
 	content: '';
 	position: absolute;
-	inset: 0 0 55% 0;
+	inset: 0;
 	z-index: 0;
-	background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 0 0.1 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+	opacity: 0.07;
 	pointer-events: none;
 }
 
@@ -508,15 +508,14 @@ html[data-theme-mode='dark'] .tw-float {
 	min-height: 0;
 	flex: 1;
 	place-items: center;
-	margin: 2px 6px 0;
+	margin: 0 4px;
 	color: var(--tw-ink);
-	font-size: clamp(17px, 8.4cqi, 25px);
-	font-weight: 400;
-	line-height: 1.32;
+	font-size: clamp(16px, 7.2cqi, 21px);
+	font-weight: 600;
+	line-height: 1.35;
+	letter-spacing: -0.012em;
 	text-align: center;
 	overflow-wrap: anywhere;
-	/* a pen line a touch firmer than the regular cut, still lighter than bold */
-	-webkit-text-stroke: 0.25px currentColor;
 }
 
 .tw-text:not(.tw-text--edit) span {
@@ -571,11 +570,253 @@ html[data-theme-mode='dark'] .tw-float {
 	position: relative;
 	z-index: 2;
 	display: flex;
-	min-height: 14px;
+	min-height: 24px;
 	align-items: center;
 	justify-content: flex-start;
+	gap: 6px;
+}
+
+/* "0/3": the checklist count; hover (or tap) opens the list */
+.tw-items-hint,
+.tw-notes-hint {
+	display: inline-flex;
+	height: 24px;
+	align-items: center;
+	gap: 5px;
+	padding: 0 9px;
+	border: 0;
+	border-radius: 999px;
+	color: var(--tw-ink-2);
+	background: rgba(255, 255, 255, 0.6);
+	box-shadow: inset 0 0 0 1px rgba(60, 35, 10, 0.06);
+	font-size: 11.5px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+}
+
+.tw-notes-hint {
+	width: 24px;
+	padding: 0;
+	justify-content: center;
+}
+
+.tw-items-hint {
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tw-items-hint:hover,
+.tw-items-hint.is-open {
+	color: var(--tw-ink);
+	background: #fff;
+	box-shadow: inset 0 0 0 1px rgba(60, 35, 10, 0.08), 0 2px 6px -2px rgba(60, 35, 10, 0.18);
+}
+
+.tw-items-hint.is-complete {
+	color: #1f7a45;
+}
+
+.tw-items-hint:focus-visible {
+	outline: 2px solid var(--tw-accent);
+	outline-offset: 2px;
+}
+
+/* ─── the checklist panel ─── */
+.tw-items {
+	position: absolute;
+	top: calc(100% - 10px);
+	inset-inline: 8px;
+	z-index: 8;
+	display: flex;
+	max-height: 300px;
+	flex-direction: column;
+	padding: 10px 6px 6px;
+	border-radius: 14px;
+	color: #1f1c19;
+	background: rgba(255, 255, 255, 0.97);
+	box-shadow:
+		0 0 0 1px rgba(40, 25, 10, 0.07),
+		0 2px 4px rgba(40, 25, 10, 0.06),
+		0 18px 36px -12px rgba(40, 25, 10, 0.32);
+	backdrop-filter: blur(10px);
+	transform-origin: top center;
+	animation: tw-items-in 0.18s var(--tw-ease);
+	cursor: default;
+}
+
+.tw-items.is-up {
+	top: auto;
+	bottom: 40px;
+	transform-origin: bottom center;
+}
+
+.tw-items__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 8px 7px;
+	color: rgba(31, 28, 25, 0.55);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.tw-items__count {
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+}
+
+.tw-items__bar {
+	display: block;
+	height: 3px;
+	margin: 0 8px 6px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: rgba(31, 28, 25, 0.07);
+}
+
+.tw-items__bar > span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: #1f8a4c;
+	transition: width 0.3s var(--tw-ease);
+}
+
+.tw-items__list {
+	min-height: 0;
+	margin: 0;
+	padding: 0;
+	overflow-y: auto;
+	list-style: none;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+}
+
+.tw-item {
+	display: flex;
+	width: 100%;
+	align-items: flex-start;
 	gap: 10px;
-	padding-inline-end: calc(var(--tw-fold) - 8px);
+	padding: 7px 8px;
+	border: 0;
+	border-radius: 9px;
+	color: inherit;
+	background: transparent;
+	text-align: start;
+	cursor: pointer;
+	transition: background-color 0.12s ease;
+}
+
+.tw-item:hover {
+	background: rgba(31, 28, 25, 0.045);
+}
+
+.tw-item:focus-visible {
+	outline: 2px solid var(--tw-accent);
+	outline-offset: -2px;
+}
+
+.tw-item__box {
+	display: grid;
+	width: 17px;
+	height: 17px;
+	flex: none;
+	margin-top: 1px;
+	place-items: center;
+	border-radius: 5px;
+	color: transparent;
+	background: #fff;
+	box-shadow: inset 0 0 0 1.5px rgba(31, 28, 25, 0.25);
+	transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.tw-item:hover .tw-item__box {
+	box-shadow: inset 0 0 0 1.5px rgba(31, 28, 25, 0.45);
+}
+
+.tw-item.is-done .tw-item__box {
+	color: #fff;
+	background: #1f8a4c;
+	box-shadow: none;
+	animation: tw-tick 0.22s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.tw-item__text {
+	min-width: 0;
+	flex: 1;
+	font-size: 13.5px;
+	font-weight: 500;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+	transition: color 0.15s ease;
+}
+
+.tw-item.is-done .tw-item__text {
+	color: rgba(31, 28, 25, 0.45);
+	text-decoration: line-through;
+	text-decoration-color: rgba(31, 28, 25, 0.3);
+}
+
+@keyframes tw-items-in {
+	from {
+		opacity: 0;
+		transform: translateY(-4px) scale(0.98);
+	}
+}
+
+.tw-items.is-up {
+	animation-name: tw-items-in-up;
+}
+
+@keyframes tw-items-in-up {
+	from {
+		opacity: 0;
+		transform: translateY(4px) scale(0.98);
+	}
+}
+
+@keyframes tw-tick {
+	from {
+		transform: scale(0.6);
+	}
+}
+
+html.dark .tw-items,
+html[data-theme-mode='dark'] .tw-items {
+	color: #f1ede8;
+	background: rgba(36, 33, 30, 0.97);
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 36px -12px rgba(0, 0, 0, 0.6);
+}
+
+html.dark .tw-items__head,
+html[data-theme-mode='dark'] .tw-items__head {
+	color: rgba(241, 237, 232, 0.55);
+}
+
+html.dark .tw-item:hover,
+html[data-theme-mode='dark'] .tw-item:hover {
+	background: rgba(255, 255, 255, 0.06);
+}
+
+html.dark .tw-item__box,
+html[data-theme-mode='dark'] .tw-item__box {
+	background: transparent;
+	box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.3);
+}
+
+html.dark .tw-item.is-done .tw-item__text,
+html[data-theme-mode='dark'] .tw-item.is-done .tw-item__text {
+	color: rgba(241, 237, 232, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tw-items,
+	.tw-item__box {
+		animation: none !important;
+	}
 }
 
 .tw-progress {
@@ -614,15 +855,15 @@ html[data-theme-mode='dark'] .tw-float {
 	position: relative;
 	z-index: 3;
 	display: grid;
-	width: 34px;
-	height: 34px;
+	width: 30px;
+	height: 30px;
 	flex: none;
 	place-items: center;
 	border: 0;
 	border-radius: 999px;
 	color: var(--tw-ink-2);
-	background: rgba(255, 255, 255, 0.85);
-	box-shadow: 0 1px 2px rgba(60, 35, 10, 0.1), inset 0 0 0 1.5px color-mix(in srgb, var(--tw-accent) 30%, transparent);
+	background: rgba(255, 255, 255, 0.7);
+	box-shadow: inset 0 0 0 1px rgba(60, 35, 10, 0.12);
 	cursor: pointer;
 	transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }

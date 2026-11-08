@@ -6,6 +6,40 @@ import { ArrowDown, ArrowUp, Check, CheckCheck, Circle, Flag, ListChecks, Maximi
 import { MAX_STEPS } from './use-daily-tickets';
 import './tickets-ui.css';
 
+/* ─── Type: an Arabic face for Arabic text, a Latin one for English ── */
+const FONT_LINK_ID = 'tkx-text-fonts';
+const FONT_HREF =
+	'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
+
+/** Loads the two text faces once per page. */
+export function useTicketFonts() {
+	useEffect(() => {
+		if (document.getElementById(FONT_LINK_ID)) return;
+		const link = document.createElement('link');
+		link.id = FONT_LINK_ID;
+		link.rel = 'stylesheet';
+		link.href = FONT_HREF;
+		document.head.appendChild(link);
+	}, []);
+}
+
+const ARABIC_LETTER = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+const LATIN_LETTER = /[A-Za-zÀ-ɏ]/;
+
+/** 'ar' or 'en', by the first letter that belongs to either script (numbers and emoji are skipped). */
+export function textLang(text) {
+	for (const ch of String(text || '')) {
+		if (ARABIC_LETTER.test(ch)) return 'ar';
+		if (LATIN_LETTER.test(ch)) return 'en';
+	}
+	return 'en';
+}
+
+/** Class that sets the face for this text's language. */
+export function langClass(text) {
+	return `tkx-lang-${textLang(text)}`;
+}
+
 /* ─── Menu ───────────────────────────────────────────────────────── */
 const GAP = 6;
 const EDGE = 8;

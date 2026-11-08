@@ -603,3 +603,17 @@ html.dark .tkx-repeat {
 	color: #5eead4;
 	background: rgba(94, 234, 212, 0.12);
 }
+
+/* ─── Text faces by language (see langClass in tickets-ui.jsx) ───
+ * The WhatsApp page forces its UI font on every element; on the Arabic page that rule weighs
+ * (0,6,3), so seven classes here (0,8,1) are what it takes to win. */
+[dir] body .tkx-lang-ar.tkx-lang-ar.tkx-lang-ar.tkx-lang-ar.tkx-lang-ar.tkx-lang-ar.tkx-lang-ar,
+[dir] body .tkx-lang-ar.tkx-lang-ar.tkx-lang-ar.tkx-lang-ar.tkx-lang-ar.tkx-lang-ar.tkx-lang-ar * {
+	font-family: 'IBM Plex Sans Arabic', var(--font-arabic), 'Segoe UI', Tahoma, sans-serif !important;
+	letter-spacing: 0 !important;
+}
+
+[dir] body .tkx-lang-en.tkx-lang-en.tkx-lang-en.tkx-lang-en.tkx-lang-en.tkx-lang-en.tkx-lang-en,
+[dir] body .tkx-lang-en.tkx-lang-en.tkx-lang-en.tkx-lang-en.tkx-lang-en.tkx-lang-en.tkx-lang-en * {
+	font-family: 'Plus Jakarta Sans', var(--font-inter), 'Segoe UI', system-ui, sans-serif !important;
+}
