@@ -19,6 +19,7 @@ import api from '@/utils/axios';
 import ChatThreadPreview from './ChatThreadPreview';
 import ChatsListPreview, { ArchivedChatsPreview } from './ChatsListPreview';
 import { MessengerList, MessengerRequests, MessengerThread } from './MessengerPreview';
+import { ChatPeekOverlay } from './ChatPeek';
 import { createMessengerDefaultState } from './messenger-defaults';
 import ClipboardTray from './ClipboardTray';
 import QuickEditor from './QuickEditor';
@@ -1202,6 +1203,38 @@ export default function FakeChatStudio({
 
 	const activeChat = useMemo(() => getActiveChat(state), [state]);
 	const threadView = useMemo(() => resolveThreadView(state), [state]);
+	// Long-press preview of a list row (kept in state so it appears in the screenshot too).
+	const peekChat = state.peekChatId ? state.list.chats.find(chat => chat.id === state.peekChatId) || null : null;
+	const peekView = useMemo(
+		() => (peekChat ? resolveThreadView({ ...state, activeChatId: peekChat.id }) : null),
+		[peekChat, state],
+	);
+	const showPeek = Boolean(peekChat) && ['list', 'archived', 'requests'].includes(state.screen);
+	const openPeek = useCallback(id => setState(current => ({ ...current, peekChatId: id })), []);
+	const closePeek = useCallback(() => setState(current => ({ ...current, peekChatId: '' })), []);
+	useEffect(() => {
+		if (!showPeek) return undefined;
+		const onKey = event => {
+			if (event.key === 'Escape') closePeek();
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [closePeek, showPeek]);
+	const runPeekAction = action => {
+		const chat = peekChat;
+		if (!chat) return;
+		const patch = {
+			unread: { unread: Number(chat.unread) > 0 ? 0 : 1, timeGreen: !(Number(chat.unread) > 0) },
+			archive: { archived: !chat.archived },
+			mute: { muted: !chat.muted },
+			pin: { pinned: !chat.pinned },
+			favourite: { favourite: !chat.favourite },
+			lock: { info: { ...(chat.info || {}), lockChat: !chat.info?.lockChat } },
+		}[action];
+		if (action === 'delete') removeListChat(chat.id);
+		else if (patch) updateListChat(chat.id, patch);
+		closePeek();
+	};
 
 	useEffect(() => {
 		setPackFirstContact(Boolean(activeChat?.firstContact));
@@ -1734,6 +1767,7 @@ export default function FakeChatStudio({
 							canSync={liveChats.length > 0}
 							listEditMode={listEditMode}
 							onToggleListEdit={() => setListEditMode(value => !value)}
+							onPeekChat={id => setState(current => ({ ...current, screen: current.screen === 'thread' || current.screen === 'contact' ? 'list' : current.screen, peekChatId: id }))}
 						/>
 					) : null}
 				</div>
@@ -1808,6 +1842,8 @@ export default function FakeChatStudio({
 							}}
 						>
 							{capturing ? <span className={ph.mockup}>Mockup</span> : null}
+							<div className="relative h-full w-full">
+							<div className="h-full w-full" style={showPeek ? { filter: 'blur(14px)', transform: 'scale(1.04)' } : undefined}>
 							{messenger ? (
 								state.screen === 'requests' ? (
 									<MessengerRequests
@@ -1815,6 +1851,7 @@ export default function FakeChatStudio({
 										list={state.list}
 										onBack={() => update({ screen: 'list' })}
 										onOpenChat={openChat}
+										onPeek={openPeek}
 									/>
 								) : state.screen === 'thread' ? (
 									<MessengerThread
@@ -1824,7 +1861,7 @@ export default function FakeChatStudio({
 										onBack={() => update({ screen: activeChat?.request ? 'requests' : 'list' })}
 									/>
 								) : (
-									<MessengerList status={state.status} list={state.list} onOpenChat={openChat} />
+									<MessengerList status={state.status} list={state.list} onOpenChat={openChat} onPeek={openPeek} />
 								)
 							) : state.screen === 'list' ? (
 								<ChatsListPreview
@@ -1838,6 +1875,7 @@ export default function FakeChatStudio({
 									onEditList={updateList}
 									onPickChatAvatar={onPickListAvatar}
 									onOpenArchived={() => update({ screen: 'archived' })}
+									onPeek={listEditMode ? undefined : openPeek}
 								/>
 							) : state.screen === 'archived' ? (
 								<ArchivedChatsPreview
@@ -1847,6 +1885,7 @@ export default function FakeChatStudio({
 									activeChatId={state.activeChatId}
 									onOpenChat={openChat}
 									onBack={() => update({ screen: 'list' })}
+									onPeek={openPeek}
 								/>
 							) : state.screen === 'contact' ? (
 								<ContactInfoPreview
@@ -1864,6 +1903,25 @@ export default function FakeChatStudio({
 									onBackToList={() => update({ screen: activeChat?.archived ? 'archived' : 'list' })}
 								/>
 							)}
+							</div>
+							{showPeek ? (
+								<ChatPeekOverlay
+									app={app}
+									status={state.status}
+									chat={peekChat}
+									title={peekView?.contactName}
+									thread={
+										messenger ? (
+											<MessengerThread status={state.status} thread={peekView} list={state.list} peek />
+										) : (
+											<ChatThreadPreview status={state.status} thread={peekView} peek />
+										)
+									}
+									onAction={runPeekAction}
+									onClose={closePeek}
+								/>
+							) : null}
+							</div>
 						</div>
 						</div>
 					</div>

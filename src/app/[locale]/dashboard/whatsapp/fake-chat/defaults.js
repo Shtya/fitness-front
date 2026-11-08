@@ -1092,6 +1092,7 @@ export function normalizeListChat(item, index = 0) {
 		disappearing: Boolean(item?.disappearing),
 		showJumpDown: Boolean(item?.showJumpDown),
 		archived: Boolean(item?.archived),
+		favourite: Boolean(item?.favourite),
 		request: Boolean(item?.request),
 		callButton: Boolean(item?.callButton),
 		seenAvatar: Boolean(item?.seenAvatar),

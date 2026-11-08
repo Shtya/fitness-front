@@ -10,3 +10,21 @@
 	/* The shell's `emoji` value draws plain digits with the emoji font: thin next to bold text. */
 	font-variant-emoji: normal !important;
 }
+
+/*
+ * Default pictures for chats without one, as the phone apps draw them: WhatsApp a white figure on
+ * light grey (groups: green figures on light green), Messenger a grey figure on light grey.
+ */
+.fc-phone .fc-stub-user {
+	background: #dfe5e7;
+	color: #ffffff;
+}
+.fc-phone .fc-stub-group {
+	background: #d9fdd3;
+	color: #1daa61;
+}
+.fc-phone.fc-ms .fc-stub-user,
+.fc-phone.fc-ms .fc-stub-group {
+	background: #e4e6eb;
+	color: #bcc0c4;
+}

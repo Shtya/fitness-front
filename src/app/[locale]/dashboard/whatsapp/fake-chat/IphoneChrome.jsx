@@ -261,7 +261,7 @@ function UserStubIcon({ size }) {
 
 /** Clean WA-style group silhouette (two people). */
 function GroupStubIcon({ size }) {
-	const s = Math.round(size * 0.82);
+	const s = Math.round(size * 0.58);
 	return (
 		<svg
 			className={tw.avatarStubSvg}
@@ -302,7 +302,7 @@ export function AvatarCircle({
 		<span
 			className={cn(
 				tw.avatar,
-				!showPhoto && (isGroup ? tw.avatarStubGroup : tw.avatarStubUser),
+				!showPhoto && (isGroup ? 'fc-stub-group' : 'fc-stub-user'),
 				className,
 			)}
 			style={{ width: size, height: size }}

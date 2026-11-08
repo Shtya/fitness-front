@@ -385,7 +385,7 @@ function UnknownContactCard({ phone, about, country, avatar, avatarKind }) {
 	);
 }
 
-export default function ChatThreadPreview({ status, thread, capturing = false, onOpenContact, onBackToList }) {
+export default function ChatThreadPreview({ status, thread, capturing = false, onOpenContact, onBackToList, peek = false }) {
 	const wallpaperStyle = {
 		backgroundImage: thread.wallpaper
 			? `url("${resolveFakeChatMediaUrl(thread.wallpaper)}")`
@@ -430,7 +430,7 @@ export default function ChatThreadPreview({ status, thread, capturing = false, o
 			/>
 
 			<div className={ph.wallpaper} style={wallpaperStyle}>
-				<div ref={scrollRef} className={ph.scroll}>
+				<div ref={scrollRef} className={cn(ph.scroll, peek && 'justify-end')}>
 					{firstContact || showEncrypt || dateLabel ? (
 						<div className={tw.threadIntro}>
 							{dateLabel ? <span className={tw.datePill}>{dateLabel}</span> : null}

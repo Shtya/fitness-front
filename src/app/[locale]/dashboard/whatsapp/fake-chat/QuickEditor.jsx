@@ -587,7 +587,7 @@ function ContactInfoCard({ ar, chat, onActiveChat }) {
 	);
 }
 
-function ChatListRow({ ar, chat, active, onOpen, onEdit, onRemove, onDuplicate, onPickAvatar }) {
+function ChatListRow({ ar, chat, active, onOpen, onEdit, onRemove, onDuplicate, onPickAvatar, onPeek }) {
 	const [open, setOpen] = useState(false);
 	const avatar = resolveChatAvatarSrc(chat);
 	return (
@@ -648,6 +648,11 @@ function ChatListRow({ ar, chat, active, onOpen, onEdit, onRemove, onDuplicate, 
 						<button type="button" className={pillBtn} onClick={onOpen}>
 							{ar ? 'افتح الشات' : 'Open chat'}
 						</button>
+						{onPeek ? (
+							<button type="button" className={pillBtn} onClick={onPeek}>
+								{ar ? 'الضغطة الطويلة' : 'Long press'}
+							</button>
+						) : null}
 						<button type="button" className={pillBtn} onClick={onDuplicate}>
 							<Copy size={12} />
 							{ar ? 'نسخة' : 'Duplicate'}
@@ -691,6 +696,7 @@ export default function QuickEditor({
 	canSync,
 	listEditMode,
 	onToggleListEdit,
+	onPeekChat,
 }) {
 	const [expandedId, setExpandedId] = useState('');
 	const days = useMemo(() => resolveMessageDays(messages), [messages]);
@@ -903,6 +909,7 @@ export default function QuickEditor({
 									onRemove={() => onRemoveChat(chat.id)}
 									onDuplicate={() => onDuplicateChat(chat.id)}
 									onPickAvatar={onPickListAvatar}
+									onPeek={() => onPeekChat?.(chat.id)}
 								/>
 							))}
 						</ul>

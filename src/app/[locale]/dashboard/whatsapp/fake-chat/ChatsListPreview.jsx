@@ -22,6 +22,7 @@ import { resolveFakeChatMediaUrl } from './media-url';
 import { chatDisplayName } from './ios-font-and-match';
 import { IOS_WA_FONT, tw } from './styles';
 import { ph } from './phone-styles';
+import { useLongPress } from './ChatPeek';
 
 function MetaAiAvatar({ className = '' }) {
 	return (
@@ -115,7 +116,8 @@ function EditableText({ editing, value, onCommit, className, dir, numeric = fals
 	);
 }
 
-function ChatRow({ chat, active, onOpen, hidePhoneNumbers = false, editing = false, onEdit, onPickAvatar }) {
+function ChatRow({ chat, active, onOpen, onPeek, hidePhoneNumbers = false, editing = false, onEdit, onPickAvatar }) {
+	const press = useLongPress(onPeek ? () => onPeek(chat.id) : null, () => onOpen?.(chat.id));
 	const displayName = chatDisplayName(chat, hidePhoneNumbers);
 	const nameField = displayName === chat.name ? 'name' : 'about';
 	const unread = Number(chat.unread) || 0;
@@ -139,7 +141,7 @@ function ChatRow({ chat, active, onOpen, hidePhoneNumbers = false, editing = fal
 	const pinFilled = Boolean(chat.pinned);
 	return (
 		<RowTag
-			{...(editing ? {} : { type: 'button', tabIndex: -1, onClick: () => onOpen?.(chat.id) })}
+			{...(editing ? {} : { type: 'button', tabIndex: -1, ...press })}
 			className={ph.row2}
 		>
 			<span className={ph.row2Avatar}>
@@ -223,6 +225,7 @@ export default function ChatsListPreview({
 	onEditList,
 	onPickChatAvatar,
 	onOpenArchived,
+	onPeek,
 }) {
 	const showSearch = Boolean(list?.showSearch);
 	const showSuggestions = Boolean(list?.showSuggestions);
@@ -307,6 +310,7 @@ export default function ChatsListPreview({
 							chat={chat}
 							active={chat.id === activeChatId}
 							onOpen={onOpenChat}
+							onPeek={onPeek}
 							hidePhoneNumbers={hidePhoneNumbers}
 							editing={editing}
 							onEdit={onEditChat}
@@ -404,7 +408,7 @@ export default function ChatsListPreview({
 }
 
 /** Pushed from the Archived row: the archived chats, with the same rows as the main list. */
-export function ArchivedChatsPreview({ status, list, capturing = false, activeChatId = '', onOpenChat, onBack }) {
+export function ArchivedChatsPreview({ status, list, capturing = false, activeChatId = '', onOpenChat, onBack, onPeek }) {
 	const chats = (list?.chats || []).filter(chat => chat.archived);
 	return (
 		<div className={cn(tw.phone, tw.phoneList, capturing && tw.phoneCapturing)} dir="ltr" style={{ fontFamily: IOS_WA_FONT, '--fc-font': IOS_WA_FONT }}>
@@ -428,6 +432,7 @@ export function ArchivedChatsPreview({ status, list, capturing = false, activeCh
 							chat={chat}
 							active={chat.id === activeChatId}
 							onOpen={onOpenChat}
+							onPeek={onPeek}
 							hidePhoneNumbers={Boolean(list.hidePhoneNumbers)}
 						/>
 					))}

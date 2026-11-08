@@ -25,13 +25,14 @@ import { cn } from '@/utils/cn';
 import { FC_ASSETS, resolveChatAvatarKind, resolveChatAvatarSrc } from './assets';
 import { AvatarCircle, IconCameraSolid, IosHomeIndicator, IosStatusBar } from './IphoneChrome';
 import { IOS_WA_FONT, tw } from './styles';
+import { useLongPress } from './ChatPeek';
 import { resolveFakeChatMediaUrl } from './media-url';
 import { resolveBubbleTime } from './defaults';
 import { messengerRowTime, messengerStamp, messengerGapStarts, resolveMessageDays } from './chat-dates';
 
 /** Sizes from 739×1600 Messenger screenshots ÷ 1.785; colours sampled from them. */
 const ms = {
-	phone: cn(tw.phone, 'bg-white'),
+	phone: cn(tw.phone, 'fc-ms bg-white'),
 	head: 'relative shrink-0 bg-white',
 	row: 'relative flex w-full cursor-pointer items-center border-0 bg-transparent p-0 text-start',
 	rowAvatar: 'relative grid w-[106px] shrink-0 place-items-center',
@@ -131,12 +132,13 @@ function Ticks({ state }) {
 	return null;
 }
 
-function ChatRow({ chat, selfAvatar, onOpen, trailingDate = false }) {
+function ChatRow({ chat, selfAvatar, onOpen, onPeek, trailingDate = false }) {
+	const press = useLongPress(onPeek ? () => onPeek(chat.id) : null, () => onOpen?.(chat.id));
 	const unread = Number(chat.unread) > 0;
 	const kind = resolveChatAvatarKind(chat);
 	const fromMe = chat.messages?.[chat.messages.length - 1]?.side === 'out';
 	return (
-		<button type="button" tabIndex={-1} className={ms.row} onClick={() => onOpen?.(chat.id)}>
+		<button type="button" tabIndex={-1} className={ms.row} {...press}>
 			{unread ? <span className={ms.dot} /> : null}
 			<span className={ms.rowAvatar}>
 				<span className={cn(chat.storyRing && ms.ring)}>
@@ -171,7 +173,7 @@ function ChatRow({ chat, selfAvatar, onOpen, trailingDate = false }) {
 	);
 }
 
-export function MessengerList({ status, list, onOpenChat }) {
+export function MessengerList({ status, list, onOpenChat, onPeek }) {
 	const chats = (list.chats || []).filter(chat => !chat.request && !chat.archived);
 	return (
 		<div className={ms.phone} style={{ fontFamily: IOS_WA_FONT, '--fc-font': IOS_WA_FONT }}>
@@ -225,7 +227,7 @@ export function MessengerList({ status, list, onOpenChat }) {
 						</span>
 					</div>
 					{chats.map(chat => (
-						<ChatRow key={chat.id} chat={chat} selfAvatar={list.selfAvatar} onOpen={onOpenChat} />
+						<ChatRow key={chat.id} chat={chat} selfAvatar={list.selfAvatar} onOpen={onOpenChat} onPeek={onPeek} />
 					))}
 				</div>
 				<Fab />
@@ -235,7 +237,7 @@ export function MessengerList({ status, list, onOpenChat }) {
 	);
 }
 
-export function MessengerRequests({ status, list, onBack, onOpenChat }) {
+export function MessengerRequests({ status, list, onBack, onOpenChat, onPeek }) {
 	const chats = (list.chats || []).filter(chat => chat.request);
 	return (
 		<div className={ms.phone} style={{ fontFamily: IOS_WA_FONT, '--fc-font': IOS_WA_FONT }}>
@@ -260,7 +262,7 @@ export function MessengerRequests({ status, list, onBack, onOpenChat }) {
 			<div className="relative min-h-0 flex-1 overflow-hidden">
 				<div className={tw.listBody}>
 					{chats.map(chat => (
-						<ChatRow key={chat.id} chat={chat} onOpen={onOpenChat} trailingDate />
+						<ChatRow key={chat.id} chat={chat} onOpen={onOpenChat} onPeek={onPeek} trailingDate />
 					))}
 				</div>
 				<Fab />
@@ -355,7 +357,7 @@ function MessageBody({ message, mine, blue, corners }) {
 	);
 }
 
-export function MessengerThread({ status, thread, list, onBack, onOpenContact }) {
+export function MessengerThread({ status, thread, list, onBack, onOpenContact, peek = false }) {
 	const messages = thread.messages || [];
 	const days = resolveMessageDays(messages);
 	const clocks = messages.map(resolveBubbleTime);
@@ -421,7 +423,7 @@ export function MessengerThread({ status, thread, list, onBack, onOpenContact })
 				</span>
 			</header>
 
-			<div ref={scrollRef} onScroll={paintBlues} className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-white ps-[13px] pe-[9px] pb-[6px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+			<div ref={scrollRef} onScroll={paintBlues} className={`${peek ? 'justify-end ' : ''}flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-white ps-[13px] pe-[9px] pb-[6px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
 				{messages.map((message, index) => {
 					const mine = message.side === 'out';
 					const samePrev = index > 0 && messages[index - 1].side === message.side && !starts[index];

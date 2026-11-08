@@ -577,7 +577,7 @@ function readStoredWhatsAppAccountId(userId) {
 // Notification links open `?accountId=…&conversationId=…`. They are used once and dropped from
 // the URL: left there, every list refresh re-selected that account and reopened that chat, and
 // a reopened PWA restored them over the account the user picked last.
-const whatsAppDeepLink = { accountId: null, conversationId: null };
+const whatsAppDeepLink = { accountId: null, conversationId: null, tab: null };
 
 function readWhatsAppDeepLink() {
 	if (typeof window === 'undefined') return whatsAppDeepLink;
@@ -585,11 +585,15 @@ function readWhatsAppDeepLink() {
 		const url = new URL(window.location.href);
 		const accountId = url.searchParams.get('accountId');
 		const conversationId = url.searchParams.get('conversationId');
-		if (accountId || conversationId) {
+		// Connection alerts link to the accounts tab, where the QR is.
+		const tab = url.searchParams.get('tab');
+		if (accountId || conversationId || tab) {
 			whatsAppDeepLink.accountId = accountId || null;
 			whatsAppDeepLink.conversationId = conversationId || null;
+			whatsAppDeepLink.tab = tab === 'accounts' ? 'accounts' : null;
 			url.searchParams.delete('accountId');
 			url.searchParams.delete('conversationId');
+			url.searchParams.delete('tab');
 			window.history.replaceState(
 				window.history.state,
 				'',
@@ -13812,6 +13816,15 @@ function WhatsAppWorkspaceContent() {
 	 *  background instead of swapping the pane for a spinner. */
 	const loadedTabKeysRef = useRef(new Set());
 
+	const selectedAccountForBanner = accounts.find(item => item.id === accountId) || null;
+	// Only for an account that was linked before: a new one waiting for its first scan is normal.
+	const connectionProblem = (() => {
+		const account = selectedAccountForBanner;
+		if (!account || !(account.lastConnectedAt || account.phoneNumber)) return null;
+		if (account.status === 'error' || account.status === 'qr_pending') return 'relink';
+		if (account.status === 'disconnected') return 'offline';
+		return null;
+	})();
 	const selectedAccount = useMemo(
 		() => accounts.find(item => item.id === accountId) || null,
 		[accounts, accountId],
@@ -15262,6 +15275,10 @@ function WhatsAppWorkspaceContent() {
 		const deepLink = readWhatsAppDeepLink();
 		const requestedAccount = list.find(item => item.id === deepLink.accountId);
 		deepLink.accountId = null;
+		if (deepLink.tab === 'accounts') {
+			deepLink.tab = null;
+			setActiveTab('accounts');
+		}
 		const storedAccountId = readStoredWhatsAppAccountId(currentUserId);
 		const storedAccount = list.find(item => item.id === storedAccountId);
 		setAccounts(list);
@@ -18403,6 +18420,29 @@ function WhatsAppWorkspaceContent() {
 				}
 			}, delay);
 		});
+		let reconnectReloadTimer = null;
+		let reconnectReloadThread = false;
+		const scheduleReconnectReload = ({ withThread = false } = {}) => {
+			reconnectReloadThread = reconnectReloadThread || withThread;
+			if (reconnectReloadTimer) clearTimeout(reconnectReloadTimer);
+			reconnectReloadTimer = setTimeout(() => {
+				reconnectReloadTimer = null;
+				const reloadThread = reconnectReloadThread;
+				reconnectReloadThread = false;
+				const activeAccountId = accountIdRef.current;
+				if (!activeAccountId) return;
+				// Merge into what is shown (no wipe), so the list does not jump or empty out.
+				loadConversations(activeAccountId, 1, false, {
+					background: true,
+					updatedSince: takeDeltaSince(),
+				}).catch(() => { });
+				const openId = conversationIdRef.current;
+				if (reloadThread && openId && !isDemoId(openId)) {
+					// DB catch-up only: keeps the warm message cache, no provider pull.
+					loadMessagesRef.current?.(openId, true, { forceProvider: false })?.catch?.(() => { });
+				}
+			}, 1500);
+		};
 		let accountsRefreshTimer;
 		const refreshAccountsSoon = () => {
 			if (accountsRefreshTimer) return;
@@ -19057,16 +19097,10 @@ function WhatsAppWorkspaceContent() {
 				// force reload here cancels that in-flight GET and can leave the
 				// list empty (or toast "no chats") even when sync succeeded.
 				if (accountIdRef.current && !isManualSync && event.event === 'sync_completed') {
-					void loadConversations(accountIdRef.current, 1, false, {
-						force: !backgroundHydrate,
-						background: backgroundHydrate,
-					}).catch(() => { });
-					if (!backgroundHydrate) {
-						const openId = conversationIdRef.current;
-						if (openId && !isDemoId(openId)) {
-							void loadMessagesRef.current?.(openId, false)?.catch?.(() => { });
-						}
-					}
+					// A relink can finish several syncs in a row. Reloading for each one wiped and
+					// reopened the list and the open chat again and again; one quiet merge after the
+					// burst keeps what is on screen and still brings the new rows in.
+					scheduleReconnectReload({ withThread: !backgroundHydrate });
 				}
 				if (event.event === 'sync_failed' && !isManualSync && !phoneClosedFail) {
 					const message = String(event.payload?.message || '');
@@ -19121,23 +19155,13 @@ function WhatsAppWorkspaceContent() {
 				refreshAccountsSoon();
 				if (status !== 'connected') markRealtimeGap();
 				if (status === 'connected' && accountIdRef.current) {
-					// Merge the delta instead of wiping the inbox cache on every reconnect.
-					loadConversations(accountIdRef.current, 1, false, {
-						background: true,
-						updatedSince: takeDeltaSince(),
-					}).catch(() => { });
-					const activeConversationId = conversationIdRef.current;
-					if (activeConversationId && !isDemoId(activeConversationId)) {
-						// Soft reopen: keep warm message cache; DB catch-up only
-						// (forceProvider false). Avoid clearing cache → sync storm.
-						loadMessages(activeConversationId, true, { forceProvider: false }).catch(
-							() => { },
-						);
-					}
+					// Reconnects come in bursts while a device relinks; catch up once after it settles.
+					scheduleReconnectReload({ withThread: true });
 				}
 			}
 		});
 		return () => {
+			if (reconnectReloadTimer) clearTimeout(reconnectReloadTimer);
 			if (accountsRefreshTimer) clearTimeout(accountsRefreshTimer);
 			if (serverDisconnectRetryTimer) clearTimeout(serverDisconnectRetryTimer);
 			if (reloadConversationsTimer.current) clearTimeout(reloadConversationsTimer.current);
@@ -26686,6 +26710,36 @@ function WhatsAppWorkspaceContent() {
 						</button>
 					</div>
 				)}
+				{connectionProblem && activeTab !== 'accounts' ? (
+					<div
+						role="alert"
+						className="mx-2 mb-2 mt-1 flex items-center gap-2.5 rounded-xl border border-[#f5c2c7] bg-[#fde8ea] px-3 py-2 text-[13px] font-semibold text-[#8a1c24] dark:border-[#5c2a2f] dark:bg-[#3a1d21] dark:text-[#f5b5bb]"
+					>
+						<AlertTriangle size={17} strokeWidth={2.2} className="shrink-0" />
+						<span className="min-w-0 flex-1" dir="auto">
+							{connectionProblem === 'relink'
+								? locale === 'ar'
+									? `واتساب (${selectedAccount?.label || selectedAccount?.phoneNumber || ''}) اتفصل ومحتاج لينك جديد. الرسايل الجديدة مش بتوصل.`
+									: `WhatsApp (${selectedAccount?.label || selectedAccount?.phoneNumber || ''}) was unlinked. New messages are not arriving.`
+								: locale === 'ar'
+									? 'واتساب مش متصل دلوقتي، وبيحاول يرجع لوحده. لو فضل كده افتح الاتصال.'
+									: 'WhatsApp is offline and trying to reconnect. If it stays this way, open the connection.'}
+						</span>
+						<button
+							type="button"
+							onClick={() => setActiveTab('accounts')}
+							className="shrink-0 cursor-pointer rounded-lg border-0 bg-[#b42318] px-3 py-1.5 text-[12px] font-bold text-white"
+						>
+							{connectionProblem === 'relink'
+								? locale === 'ar'
+									? 'اعمل لينك'
+									: 'Relink'
+								: locale === 'ar'
+									? 'الاتصال'
+									: 'Connection'}
+						</button>
+					</div>
+				) : null}
 				{activeTab === 'accounts' && bootStatus === 'loading' && (
 					<Card className="p-4">
 						<TabLoading label={t.loading} />
