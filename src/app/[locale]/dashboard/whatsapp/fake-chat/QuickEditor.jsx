@@ -21,6 +21,9 @@ import {
 	Video,
 	BellOff,
 	CircleDashed,
+	Clapperboard,
+	Eye,
+	Phone,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { formatChatBubbleTime, formatIosStatusTime } from './capture';
@@ -41,7 +44,7 @@ const card =
 	'flex min-w-0 shrink-0 flex-col gap-2 rounded-[10px] border border-[#e9edef] bg-white p-2.5 dark:border-[#222d34] dark:bg-[#111b21]';
 const heading = 'm-0 text-[11px] font-extrabold uppercase tracking-wide text-[#667781]';
 
-const TYPE_ICONS = { text: MessageSquare, voice: Mic, image: ImageIcon, video: Video, ticket: ImageIcon };
+const TYPE_ICONS = { text: MessageSquare, voice: Mic, image: ImageIcon, video: Video, ticket: ImageIcon, call: Phone, reel: Clapperboard };
 const QUOTE_COLORS = ['#078d70', '#c0522a', '#7f66ff', '#027eb5', '#d42a66'];
 const REACTIONS = ['', '❤️', '👍', '😂', '😮', '😢', '🙏'];
 
@@ -121,6 +124,13 @@ function DayPicker({ ar, value, onChange }) {
 }
 
 function messageSummary(message, ar) {
+	if (message.type === 'call') {
+		const missed = message.callStatus !== 'answered';
+		return ar
+			? `${message.callKind === 'video' ? 'مكالمة فيديو' : 'مكالمة صوت'}${missed ? ' فائتة' : ` · ${message.callDuration || ''}`}`
+			: `${missed ? 'Missed ' : ''}${message.callKind === 'video' ? 'video' : 'voice'} call`;
+	}
+	if (message.type === 'reel') return `${ar ? 'ريلز' : 'Reel'}${message.reel?.author ? ` · ${message.reel.author}` : ''}`;
 	if (message.type === 'voice') return `${ar ? 'فويس' : 'Voice'} ${message.duration || ''}`;
 	if (message.type === 'video') return message.caption || (ar ? 'فيديو' : 'Video');
 	if (message.type === 'image' || message.type === 'ticket') return message.caption || (ar ? 'صورة' : 'Photo');
@@ -156,6 +166,49 @@ function MessageDetails({ ar, message, day, onUpdate, chatName }) {
 						<option value="read">{ar ? 'صحين أزرق' : 'Read'}</option>
 					</select>
 				</Field>
+			) : null}
+
+			{message.type === 'call' ? (
+				<div className="grid grid-cols-3 gap-1.5">
+					<Field label={ar ? 'النوع' : 'Kind'}>
+						<select className={field} value={message.callKind || 'voice'} onChange={event => onUpdate({ callKind: event.target.value })}>
+							<option value="voice">{ar ? 'صوت' : 'Voice'}</option>
+							<option value="video">{ar ? 'فيديو' : 'Video'}</option>
+						</select>
+					</Field>
+					<Field label={ar ? 'الحالة' : 'Status'}>
+						<select className={field} value={message.callStatus || 'missed'} onChange={event => onUpdate({ callStatus: event.target.value })}>
+							<option value="missed">{ar ? 'فائتة' : 'Missed'}</option>
+							<option value="answered">{ar ? 'اتردّ عليها' : 'Answered'}</option>
+						</select>
+					</Field>
+					<Field label={ar ? 'المدة' : 'Length'}>
+						<input className={field} value={message.callDuration || ''} onChange={event => onUpdate({ callDuration: event.target.value })} placeholder="50 min, 22 secs" />
+					</Field>
+				</div>
+			) : null}
+
+			{message.type === 'reel' ? (
+				<div className="grid grid-cols-2 gap-1.5">
+					<Field label={ar ? 'صاحب الريلز' : 'Posted by'}>
+						<input className={field} dir="auto" value={message.reel?.author || ''} onChange={event => onUpdate({ reel: { ...(message.reel || {}), author: event.target.value } })} />
+					</Field>
+					<Field label={ar ? 'من' : 'From'}>
+						<select className={field} value={message.reel?.platform || 'facebook'} onChange={event => onUpdate({ reel: { ...(message.reel || {}), platform: event.target.value } })}>
+							<option value="facebook">Facebook</option>
+							<option value="instagram">Instagram</option>
+						</select>
+					</Field>
+					<UploadButton ar={ar} onUploaded={src => onUpdate({ src })}>
+						{ar ? 'صورة الريلز' : 'Reel frame'}
+					</UploadButton>
+					<UploadButton ar={ar} onUploaded={avatar => onUpdate({ reel: { ...(message.reel || {}), avatar } })}>
+						{ar ? 'صورة الصفحة' : 'Page photo'}
+					</UploadButton>
+					<Field label={ar ? 'اللينك/التعليق' : 'Link/caption'} className="col-span-2">
+						<input className={field} dir="auto" value={message.caption || ''} onChange={event => onUpdate({ caption: event.target.value })} placeholder="instagram.com/reel/…" />
+					</Field>
+				</div>
 			) : null}
 
 			{message.type === 'voice' ? (
@@ -412,7 +465,14 @@ function Composer({ ar, messages, onAdd, onDayChange }) {
 				/>
 			</div>
 			<DayPicker ar={ar} value={day} onChange={setDayChoice} />
-			<div className="grid grid-cols-4 gap-1">
+			<div className="grid grid-cols-3 gap-1">
+				<button type="button" className={pillBtn} onClick={() => add({ type: 'call', callKind: 'voice', callStatus: 'missed' })}>
+					<Phone size={12} />
+					{ar ? 'مكالمة' : 'Call'}
+				</button>
+				<UploadButton ar={ar} onUploaded={src => add({ type: 'reel', src, forward: true, reel: { author: '', platform: 'facebook' } })}>
+					{ar ? 'ريلز' : 'Reel'}
+				</UploadButton>
 				<button type="button" className={pillBtn} onClick={() => add({ type: 'voice', duration: '0:08' })}>
 					<Mic size={12} />
 					{ar ? 'فويس' : 'Voice'}
@@ -502,6 +562,17 @@ function ChatDetails({ ar, messenger, chat, list, onActiveChat, onList, onThread
 						<Toggle on={Boolean(chat.request)} onChange={request => onActiveChat({ request })}>
 							{ar ? 'في الطلبات' : 'In requests'}
 						</Toggle>
+						<Toggle on={Boolean(chat.marketplace)} onChange={marketplace => onActiveChat({ marketplace })}>
+							Marketplace
+						</Toggle>
+						<UploadButton ar={ar} onUploaded={rowThumb => onActiveChat({ rowThumb })}>
+							{ar ? 'صورة جنب الوقت' : 'Row picture'}
+						</UploadButton>
+						{chat.rowThumb ? (
+							<button type="button" className={pillBtn} onClick={() => onActiveChat({ rowThumb: '' })}>
+								{ar ? 'شيل الصورة' : 'Remove picture'}
+							</button>
+						) : null}
 					</>
 				) : (
 					<Toggle on={Boolean(chat.firstContact)} onChange={firstContact => onActiveChat({ firstContact, showEncryptionNotice: firstContact })}>
@@ -697,18 +768,24 @@ export default function QuickEditor({
 	listEditMode,
 	onToggleListEdit,
 	onPeekChat,
+	onOpenStory,
+	onAddRequest,
 }) {
 	const [expandedId, setExpandedId] = useState('');
 	const days = useMemo(() => resolveMessageDays(messages), [messages]);
 	const list = state.list;
 	const screen = state.screen;
 	const messenger = app === 'messenger';
-	const rowsOnScreen = screen === 'list' || screen === 'archived' || screen === 'requests';
+	const rowsOnScreen = ['list', 'archived', 'requests', 'archive', 'menu'].includes(screen);
 	const archivedChats = list.chats.filter(chat => chat.archived);
 	const rowChats =
 		screen === 'requests'
 			? list.chats.filter(chat => chat.request)
-			: messenger
+			: screen === 'archive'
+				? list.chats.filter(chat => chat.archived && !chat.request)
+				: screen === 'menu'
+					? []
+					: messenger
 				? list.chats.filter(chat => !chat.request)
 				: screen === 'archived'
 					? archivedChats
@@ -816,6 +893,9 @@ export default function QuickEditor({
 										<Toggle on={Boolean(list.peopleDot)} onChange={peopleDot => onList({ peopleDot })}>People ●</Toggle>
 										<Toggle on={Boolean(list.notificationsDot)} onChange={notificationsDot => onList({ notificationsDot })}>Notifications ●</Toggle>
 										<Toggle on={Boolean(list.menuDot)} onChange={menuDot => onList({ menuDot })}>Menu ●</Toggle>
+										<Toggle on={list.showChips !== false} onChange={showChips => onList({ showChips })}>
+											{ar ? 'الفلاتر' : 'Chips'}
+										</Toggle>
 									</div>
 									<label className={pillBtn}>
 										<input className="hidden" type="file" accept="image/*" onChange={event => onPickAvatar('selfAvatar', event)} />
@@ -846,8 +926,11 @@ export default function QuickEditor({
 										))}
 									</div>
 									<div className="flex flex-wrap gap-1">
-										<Toggle on={Boolean(list.showSearch)} onChange={showSearch => onList({ showSearch })}>
-											{ar ? 'البحث والفلاتر' : 'Search and chips'}
+										<Toggle on={Boolean(list.scrolled)} onChange={scrolled => onList({ scrolled })}>
+											{ar ? 'شكل بعد السكرول' : 'Scrolled look'}
+										</Toggle>
+										<Toggle on={Boolean(list.archivedMention)} onChange={archivedMention => onList({ archivedMention })}>
+											{ar ? '@ في الأرشيف' : '@ on Archived'}
 										</Toggle>
 										<Toggle on={Boolean(list.hidePhoneNumbers)} onChange={hidePhoneNumbers => onList({ hidePhoneNumbers })}>
 											{ar ? 'إخفاء الأرقام' : 'Hide numbers'}
@@ -863,34 +946,99 @@ export default function QuickEditor({
 							)}
 						</section>
 					) : null}
-					{messenger && screen === 'list' ? (
+					{screen === 'menu' ? (
+						<section className={card}>
+							<h3 className={heading}>{ar ? 'صفحة المينيو' : 'Menu page'}</h3>
+							<div className="grid grid-cols-[1fr_1fr_56px] gap-1.5">
+								<Field label={ar ? 'اسمك' : 'Your name'}>
+									<input className={field} dir="auto" value={list.profileName || ''} onChange={event => onList({ profileName: event.target.value })} />
+								</Field>
+								<Field label={ar ? 'اليوزر' : 'Username'}>
+									<input className={field} dir="ltr" value={list.profileHandle || ''} onChange={event => onList({ profileHandle: event.target.value })} placeholder="@username" />
+								</Field>
+								<Field label={ar ? 'البادج' : 'Badge'}>
+									<input className={cn(field, 'px-1 text-center')} type="number" min={0} value={list.profileBadge || 0} onChange={event => onList({ profileBadge: Number(event.target.value) || 0 })} />
+								</Field>
+							</div>
+							<label className={pillBtn}>
+								<input className="hidden" type="file" accept="image/*" onChange={event => onPickAvatar('selfAvatar', event)} />
+								{ar ? 'صورتك' : 'Your photo'}
+							</label>
+						</section>
+					) : null}
+					{screen === 'list' ? (
 						<section className={card}>
 							<h3 className={heading}>{ar ? 'الستوريز' : 'Stories'}</h3>
-							<ul className="m-0 flex list-none flex-col gap-1 p-0">
+							<p className="m-0 text-[10.5px] text-[#667781]">
+								{messenger
+									? ar ? 'بتظهر فوق الشاتات، ودوسة عليها تفتحها.' : 'Shown above the chats; tap one to open it.'
+									: ar ? 'اربطها بشات: حلقة خضرا حوالين صورته، ودوسة على الصورة تفتح الستوري.' : 'Link it to a chat: a green ring on its photo, tap the photo to open it.'}
+							</p>
+							<ul className="m-0 flex list-none flex-col gap-1.5 p-0">
 								{(list.stories || []).map(story => {
 									const patchStory = patch =>
 										onList({ stories: list.stories.map(item => (item.id === story.id ? { ...item, ...patch } : item)) });
 									return (
-										<li key={story.id} className="flex min-w-0 items-center gap-1">
-											<UploadButton ar={ar} className="w-[30px] shrink-0 px-0" onUploaded={avatar => patchStory({ avatar })} />
-											<input className={cn(field, 'h-[26px] w-[84px] shrink-0')} dir="auto" value={story.name} onChange={event => patchStory({ name: event.target.value })} aria-label={ar ? 'الاسم' : 'Name'} />
-											<input className={cn(field, 'h-[26px] flex-1')} dir="auto" value={story.note || ''} onChange={event => patchStory({ note: event.target.value })} placeholder={ar ? 'نوتة' : 'Note'} />
-											<button type="button" className={cn(iconBtn, 'text-[#e35d6a] dark:text-[#e35d6a]')} onClick={() => onList({ stories: list.stories.filter(item => item.id !== story.id) })} aria-label={ar ? 'حذف' : 'Delete'}>
-												<Trash2 size={13} />
-											</button>
+										<li key={story.id} className="flex min-w-0 flex-col gap-1 rounded-lg bg-[#f6f7f8] p-1.5 dark:bg-[#0b141a]">
+											<div className="flex min-w-0 items-center gap-1">
+												<UploadButton ar={ar} className="w-[30px] shrink-0 px-0" onUploaded={avatar => patchStory({ avatar })} />
+												<input className={cn(field, 'h-[26px] w-[90px] shrink-0')} dir="auto" value={story.name} onChange={event => patchStory({ name: event.target.value })} aria-label={ar ? 'الاسم' : 'Name'} />
+												<input className={cn(field, 'h-[26px] w-[50px] shrink-0 px-1 text-center')} value={story.time || ''} onChange={event => patchStory({ time: event.target.value })} placeholder="2h" aria-label={ar ? 'من قد إيه' : 'When'} />
+												{messenger ? (
+													<input className={cn(field, 'h-[26px] flex-1')} dir="auto" value={story.note || ''} onChange={event => patchStory({ note: event.target.value })} placeholder={ar ? 'نوتة' : 'Note'} />
+												) : (
+													<select
+														className={cn(field, 'h-[26px] flex-1')}
+														value={story.chatId || ''}
+														onChange={event => {
+															const chatId = event.target.value;
+															onList({
+																stories: list.stories.map(item => (item.id === story.id ? { ...item, chatId } : item)),
+																chats: list.chats.map(chat => (chat.id === chatId ? { ...chat, storyRing: true } : chat)),
+															});
+														}}
+														aria-label={ar ? 'الشات' : 'Chat'}
+													>
+														<option value="">{ar ? 'شات…' : 'Chat…'}</option>
+														{list.chats.map(chat => (
+															<option key={chat.id} value={chat.id}>
+																{chat.name}
+															</option>
+														))}
+													</select>
+												)}
+											</div>
+											<div className="flex min-w-0 items-center gap-1">
+												<UploadButton ar={ar} className="h-[26px] shrink-0" onUploaded={src => patchStory({ src })}>
+													{ar ? 'الصورة' : 'Picture'}
+												</UploadButton>
+												<input className={cn(field, 'h-[26px] flex-1')} dir="auto" value={story.caption || ''} onChange={event => patchStory({ caption: event.target.value })} placeholder={ar ? 'كلام على الستوري' : 'Caption'} />
+												{messenger ? (
+													<button type="button" className={cn(iconBtn, story.noteDark && 'bg-[#3b2f2b] text-white')} onClick={() => patchStory({ noteDark: !story.noteDark })} title={ar ? 'نوتة غامقة' : 'Dark note'}>
+														●
+													</button>
+												) : null}
+												<button type="button" className={iconBtn} onClick={() => onOpenStory?.(story.id)} title={ar ? 'افتحها' : 'Open'}>
+													<Eye size={13} />
+												</button>
+												<button type="button" className={cn(iconBtn, 'text-[#e35d6a] dark:text-[#e35d6a]')} onClick={() => onList({ stories: list.stories.filter(item => item.id !== story.id) })} aria-label={ar ? 'حذف' : 'Delete'}>
+													<Trash2 size={13} />
+												</button>
+											</div>
 										</li>
 									);
 								})}
 							</ul>
-							<button type="button" className={pillBtn} onClick={() => onList({ stories: [...(list.stories || []), { id: `st-${Date.now()}`, name: ar ? 'اسم' : 'Name', avatar: '', note: '' }] })}>
+							<button type="button" className={pillBtn} onClick={() => onList({ stories: [...(list.stories || []), { id: `st-${Date.now()}`, name: ar ? 'اسم' : 'Name', avatar: '', note: '', time: '1h', src: '', caption: '' }] })}>
 								<Plus size={12} />
 								{ar ? 'ستوري' : 'Story'}
 							</button>
 						</section>
 					) : null}
+					{screen === 'menu' ? null : (
 					<section className={card}>
 						<h3 className={heading}>
-							{screen === 'archived' ? (ar ? 'الأرشيف' : 'Archived') : screen === 'requests' ? (ar ? 'الطلبات' : 'Requests') : ar ? 'الشاتات' : 'Chats'} · {rowChats.length}
+							{screen === 'archived' || screen === 'archive' ? (ar ? 'الأرشيف' : 'Archived') : screen === 'requests' ? (ar ? 'الطلبات' : 'Requests') : ar ? 'الشاتات' : 'Chats'} · {rowChats.length}
 						</h3>
 						{screen === 'archived' && !rowChats.length ? (
 							<p className="m-0 text-xs text-[#667781]">
@@ -928,7 +1076,14 @@ export default function QuickEditor({
 								</div>
 							</details>
 						) : null}
+						{screen === 'requests' ? (
+							<button type="button" className={pillBtn} onClick={onAddRequest}>
+								<Plus size={12} />
+								{ar ? 'طلب رسالة جديد' : 'New message request'}
+							</button>
+						) : null}
 					</section>
+					)}
 				</>
 			) : null}
 

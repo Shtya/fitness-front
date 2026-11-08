@@ -101,11 +101,12 @@ export function messengerGapStarts(days, clocks) {
 	});
 }
 
-/** "6:42 PM" today, "6 NOV AT 12:28 PM" earlier, with the year once it differs. */
+/** "6:42 PM" today, "SAT 5:20 PM" this week, "6 NOV AT 12:28 PM" earlier, with the year once it differs. */
 export function messengerStamp(key, clock, now = new Date()) {
 	const time = String(clock || '').toUpperCase();
 	const date = parseKey(key);
 	if (!date || daysBetween(date, now) <= 0) return time;
+	if (daysBetween(date, now) < 7) return `${WEEKDAYS[date.getDay()].slice(0, 3).toUpperCase()} ${time}`;
 	const month = MONTHS[date.getMonth()].toUpperCase();
 	const year = date.getFullYear() === now.getFullYear() ? '' : ` ${date.getFullYear()}`;
 	return `${date.getDate()} ${month}${year} AT ${time}`;

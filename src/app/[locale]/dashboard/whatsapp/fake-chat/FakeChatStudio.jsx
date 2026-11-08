@@ -12,13 +12,17 @@ import {
 	Loader2,
 	Play,
 	RotateCcw,
+	Send,
 	Square,
+	Video,
 	Volume2,
 } from 'lucide-react';
 import api from '@/utils/axios';
 import ChatThreadPreview from './ChatThreadPreview';
 import ChatsListPreview, { ArchivedChatsPreview } from './ChatsListPreview';
-import { MessengerList, MessengerRequests, MessengerThread } from './MessengerPreview';
+import { MessengerList, MessengerMenu, MessengerRequests, MessengerThread } from './MessengerPreview';
+import { StoryViewer } from './StoryViewer';
+import { canRecordScreen, startElementRecording } from './screen-recorder';
 import { ChatPeekOverlay } from './ChatPeek';
 import { createMessengerDefaultState } from './messenger-defaults';
 import ClipboardTray from './ClipboardTray';
@@ -105,6 +109,7 @@ export default function FakeChatStudio({
 	locale = 'en',
 	accountId = '',
 	conversations = [],
+	renderSendToPicker = null,
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const phoneRef = useRef(null);
@@ -992,7 +997,8 @@ export default function FakeChatStudio({
 		return () => window.removeEventListener('paste', onPaste);
 	}, [applyPastedImage, editorMode]);
 
-	const openShareFromCapture = async ({ download = false } = {}) => {
+	const [sendToOpen, setSendToOpen] = useState(false);
+	const openShareFromCapture = async ({ download = false, sendTo = false } = {}) => {
 		if (!screenRef.current && !phoneRef.current) return;
 		if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
 		setCapturing(true);
@@ -1023,7 +1029,8 @@ export default function FakeChatStudio({
 				throw new Error(ar ? 'الصورة طلعت فاضية' : 'Empty screenshot');
 			}
 			setSharePreview(dataUrl);
-			setShareOpen(true);
+			if (sendTo && renderSendToPicker) setSendToOpen(true);
+			else setShareOpen(true);
 			if (download) {
 				const result = await saveMediaFiles([dataUrlToFile(dataUrl, fileName)], {
 					locale: ar ? 'ar' : 'en',
@@ -1070,6 +1077,7 @@ export default function FakeChatStudio({
 			});
 			toast.success(ar ? 'اتبعتت في الشات' : 'Sent to chat');
 			setShareOpen(false);
+			setSendToOpen(false);
 		} catch (error) {
 			toast.error(error?.response?.data?.message || (ar ? 'تعذر الإرسال' : 'Could not send'));
 		} finally {
@@ -1209,7 +1217,88 @@ export default function FakeChatStudio({
 		() => (peekChat ? resolveThreadView({ ...state, activeChatId: peekChat.id }) : null),
 		[peekChat, state],
 	);
-	const showPeek = Boolean(peekChat) && ['list', 'archived', 'requests'].includes(state.screen);
+	const showPeek = Boolean(peekChat) && ['list', 'archived', 'requests', 'archive'].includes(state.screen);
+
+	// Stories: Messenger's rail opens one by id; a WhatsApp chat with a status ring opens its own.
+	const openStory = useCallback(
+		storyIdOrChatId => {
+			setState(current => {
+				const stories = current.list.stories || [];
+				let story = stories.find(item => item.id === storyIdOrChatId) || stories.find(item => item.chatId === storyIdOrChatId);
+				let nextStories = stories;
+				if (!story) {
+					const chat = current.list.chats.find(item => item.id === storyIdOrChatId);
+					if (!chat) return current;
+					story = { id: `st-${Date.now()}`, chatId: chat.id, name: chat.name, avatar: chat.avatar || '', time: '1h', src: '', caption: '' };
+					nextStories = [...stories, story];
+				}
+				return {
+					...current,
+					list: { ...current.list, stories: nextStories },
+					storyId: story.id,
+					storyReturn: current.screen === 'story' ? current.storyReturn : current.screen,
+					screen: 'story',
+					peekChatId: '',
+				};
+			});
+		},
+		[],
+	);
+	const openedStory = state.screen === 'story' ? (state.list.stories || []).find(item => item.id === state.storyId) || null : null;
+	const openedStoryView = useMemo(() => {
+		if (!openedStory) return null;
+		const chat = openedStory.chatId ? state.list.chats.find(item => item.id === openedStory.chatId) : null;
+		return {
+			...openedStory,
+			name: openedStory.name || chat?.name,
+			avatar: openedStory.avatar || chat?.avatar || '',
+		};
+	}, [openedStory, state.list.chats]);
+
+	const addRequest = useCallback(() => {
+		const chat = {
+			...buildTemplateChat('blank'),
+			name: 'New request',
+			request: true,
+		};
+		chat.messages = [{ id: nextId('m'), side: 'in', type: 'text', text: 'السلام عليكم', ticks: 'none', time: formatChatBubbleTime() }];
+		chat.preview = 'السلام عليكم';
+		setState(current => ({ ...current, list: { ...current.list, chats: [...current.list.chats, chat] } }));
+	}, []);
+
+	// Screen recording of the phone, beside the screenshot.
+	const [recording, setRecording] = useState(false);
+	const recorderRef = useRef(null);
+	const toggleRecording = async () => {
+		if (recorderRef.current) {
+			const session = recorderRef.current;
+			recorderRef.current = null;
+			setRecording(false);
+			try {
+				const { blob, ext } = await session.stop();
+				const file = new File([blob], `chat-mockup-${app}-${Date.now()}.${ext}`, { type: blob.type });
+				await saveMediaFiles([file], { locale: ar ? 'ar' : 'en' });
+			} catch (error) {
+				toast.error(error?.message || (ar ? 'تعذر حفظ الفيديو' : 'Could not save the video'));
+			}
+			return;
+		}
+		try {
+			const session = await startElementRecording(screenRef.current);
+			recorderRef.current = session;
+			setRecording(true);
+			session.track.addEventListener('ended', () => {
+				if (recorderRef.current === session) void toggleRecording();
+			});
+			if (!session.cropped) {
+				toast(ar ? 'المتصفح ده بيسجل التاب كلها. Chrome أو Edge بيسجلوا الموبايل بس.' : 'This browser records the whole tab. Chrome or Edge record just the phone.');
+			}
+		} catch (error) {
+			if (error?.name !== 'NotAllowedError') {
+				toast.error(error?.message || (ar ? 'تعذر بدء التسجيل' : 'Could not start recording'));
+			}
+		}
+	};
 	const openPeek = useCallback(id => setState(current => ({ ...current, peekChatId: id })), []);
 	const closePeek = useCallback(() => setState(current => ({ ...current, peekChatId: '' })), []);
 	useEffect(() => {
@@ -1306,7 +1395,7 @@ export default function FakeChatStudio({
 					</button>
 				</div>
 
-				<div className={messenger ? tw.seg3 : tw.seg4}>
+				<div className={tw.seg4}>
 					<button type="button" className={segBtn(state.screen === 'list')} onClick={() => update({ screen: 'list' })}>
 						{t.list}
 					</button>
@@ -1314,9 +1403,14 @@ export default function FakeChatStudio({
 						{t.thread}
 					</button>
 					{messenger ? (
-						<button type="button" className={segBtn(state.screen === 'requests')} onClick={() => update({ screen: 'requests' })}>
-							{ar ? 'الطلبات' : 'Requests'}
-						</button>
+						<>
+							<button type="button" className={segBtn(state.screen === 'requests')} onClick={() => update({ screen: 'requests' })}>
+								{ar ? 'الطلبات' : 'Requests'}
+							</button>
+							<button type="button" className={segBtn(state.screen === 'menu' || state.screen === 'archive')} onClick={() => update({ screen: 'menu' })}>
+								{ar ? 'المينيو' : 'Menu'}
+							</button>
+						</>
 					) : (
 						<>
 							<button type="button" className={segBtn(state.screen === 'contact')} onClick={() => update({ screen: 'contact' })}>
@@ -1767,22 +1861,48 @@ export default function FakeChatStudio({
 							canSync={liveChats.length > 0}
 							listEditMode={listEditMode}
 							onToggleListEdit={() => setListEditMode(value => !value)}
+							onOpenStory={openStory}
+							onAddRequest={addRequest}
 							onPeekChat={id => setState(current => ({ ...current, screen: current.screen === 'thread' || current.screen === 'contact' ? 'list' : current.screen, peekChatId: id }))}
 						/>
 					) : null}
 				</div>
 
 				<div className={tw.actions}>
-					<button
-						type="button"
-						className={tw.shot}
-						disabled={capturing}
-						onClick={() => void openShareFromCapture()}
-					>
-						{capturing ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
-						{t.screenshot}
-					</button>
-					<div className={tw.actionsRow}>
+					<div className={renderSendToPicker ? 'grid grid-cols-[1fr_auto] gap-1.5' : ''}>
+						<button
+							type="button"
+							className={cn(tw.shot, 'w-full')}
+							disabled={capturing}
+							onClick={() => void openShareFromCapture()}
+						>
+							{capturing ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
+							{t.screenshot}
+						</button>
+						{renderSendToPicker ? (
+							<button
+								type="button"
+								className={cn(tw.shot, 'px-3.5')}
+								disabled={capturing || !accountId}
+								onClick={() => void openShareFromCapture({ sendTo: true })}
+								title={ar ? 'صوّر وابعت لشات على طول' : 'Capture and send to a chat'}
+							>
+								<Send size={14} />
+								{ar ? 'إرسال لـ' : 'Send to'}
+							</button>
+						) : null}
+					</div>
+					<div className="grid grid-cols-3 gap-1.5">
+						{canRecordScreen() ? (
+							<button
+								type="button"
+								className={cn(tw.reset, recording && 'border-[#f5c2c7] bg-[#fde8ea] text-[#b42318]')}
+								onClick={() => void toggleRecording()}
+							>
+								{recording ? <Square size={12} /> : <Video size={13} />}
+								{recording ? (ar ? 'إيقاف' : 'Stop') : ar ? 'فيديو' : 'Video'}
+							</button>
+						) : null}
 						<button
 							type="button"
 							className={tw.reset}
@@ -1841,27 +1961,50 @@ export default function FakeChatStudio({
 								transformOrigin: 'top left',
 							}}
 						>
-							{capturing ? <span className={ph.mockup}>Mockup</span> : null}
 							<div className="relative h-full w-full">
 							<div className="h-full w-full" style={showPeek ? { filter: 'blur(14px)', transform: 'scale(1.04)' } : undefined}>
-							{messenger ? (
-								state.screen === 'requests' ? (
+							{openedStoryView ? (
+								<StoryViewer
+									app={app}
+									status={state.status}
+									story={openedStoryView}
+									onClose={() => update({ screen: state.storyReturn || 'list' })}
+								/>
+							) : messenger ? (
+								state.screen === 'menu' ? (
+									<MessengerMenu
+										status={state.status}
+										list={state.list}
+										onTab={key => update({ screen: key === 'menu' ? 'menu' : 'list' })}
+										onOpenRequests={() => update({ screen: 'requests' })}
+										onOpenArchive={() => update({ screen: 'archive' })}
+									/>
+								) : state.screen === 'requests' || state.screen === 'archive' ? (
 									<MessengerRequests
 										status={state.status}
 										list={state.list}
-										onBack={() => update({ screen: 'list' })}
+										mode={state.screen === 'archive' ? 'archive' : 'requests'}
+										onBack={() => update({ screen: 'menu' })}
 										onOpenChat={openChat}
 										onPeek={openPeek}
+										onTab={key => update({ screen: key === 'menu' ? 'menu' : 'list' })}
 									/>
 								) : state.screen === 'thread' ? (
 									<MessengerThread
 										status={state.status}
 										thread={threadView}
 										list={state.list}
-										onBack={() => update({ screen: activeChat?.request ? 'requests' : 'list' })}
+										onBack={() => update({ screen: activeChat?.request ? 'requests' : activeChat?.archived ? 'archive' : 'list' })}
 									/>
 								) : (
-									<MessengerList status={state.status} list={state.list} onOpenChat={openChat} onPeek={openPeek} />
+									<MessengerList
+										status={state.status}
+										list={state.list}
+										onOpenChat={openChat}
+										onPeek={openPeek}
+										onTab={key => update({ screen: key === 'menu' ? 'menu' : 'list' })}
+										onOpenStory={openStory}
+									/>
 								)
 							) : state.screen === 'list' ? (
 								<ChatsListPreview
@@ -1876,6 +2019,7 @@ export default function FakeChatStudio({
 									onPickChatAvatar={onPickListAvatar}
 									onOpenArchived={() => update({ screen: 'archived' })}
 									onPeek={listEditMode ? undefined : openPeek}
+									onOpenStory={openStory}
 								/>
 							) : state.screen === 'archived' ? (
 								<ArchivedChatsPreview
@@ -1928,6 +2072,14 @@ export default function FakeChatStudio({
 				</div>
 			</div>
 
+			{sendToOpen && renderSendToPicker
+				? renderSendToPicker({
+						previewUrl: sharePreview,
+						busyId: shareBusyId,
+						onPick: conversation => void shareToChat(conversation),
+						onClose: () => setSendToOpen(false),
+					})
+				: null}
 			<ShareScreenshotSheet
 				open={shareOpen}
 				ar={ar}

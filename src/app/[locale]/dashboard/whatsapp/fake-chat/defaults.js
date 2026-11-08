@@ -36,8 +36,13 @@ export function listFieldsFromMessages(messages, now = new Date()) {
 			previewIcon: '',
 		};
 	}
+	const callLabel = `${last.callStatus === 'answered' ? '' : 'Missed '}${last.callKind === 'video' ? 'video' : 'voice'} call`;
 	const preview =
-		last.type === 'voice'
+		last.type === 'call'
+			? callLabel.replace(/^./, c => c.toUpperCase())
+			: last.type === 'reel'
+				? last.caption || 'Reel'
+				: last.type === 'voice'
 			? `Voice message (${last.duration || '0:03'})`
 			: last.type === 'video'
 				? last.caption || 'Video'
@@ -50,7 +55,11 @@ export function listFieldsFromMessages(messages, now = new Date()) {
 		time: listRowTime(day, resolveBubbleTime(last) || formatChatBubbleTime(now), now),
 		ticks: last.side === 'out' ? last.ticks || 'read' : '',
 		previewIcon:
-			last.type === 'voice'
+			last.type === 'call'
+				? 'phone'
+				: last.type === 'reel'
+					? 'video'
+					: last.type === 'voice'
 				? 'mic'
 				: last.type === 'video'
 					? 'video'
@@ -1040,7 +1049,7 @@ export function normalizeMessages(parsed) {
 		const next = {
 			id: item?.id || nextId('m'),
 			side,
-			type: ['text', 'voice', 'image', 'video', 'ticket'].includes(item?.type) ? item.type : 'text',
+			type: ['text', 'voice', 'image', 'video', 'ticket', 'call', 'reel'].includes(item?.type) ? item.type : 'text',
 			text: item?.text || '',
 			ticks: normalizeTicks(item?.ticks, side),
 			duration: item?.duration || '0:03',
@@ -1054,6 +1063,10 @@ export function normalizeMessages(parsed) {
 			transcribe: Boolean(item?.transcribe),
 			hd: Boolean(item?.hd),
 			forward: Boolean(item?.forward),
+			callKind: item?.callKind || 'voice',
+			callStatus: item?.callStatus || 'missed',
+			callDuration: item?.callDuration || '',
+			reel: item?.reel || null,
 			_i: index,
 		};
 		if (userTime) {
@@ -1092,6 +1105,8 @@ export function normalizeListChat(item, index = 0) {
 		disappearing: Boolean(item?.disappearing),
 		showJumpDown: Boolean(item?.showJumpDown),
 		archived: Boolean(item?.archived),
+		rowThumb: item?.rowThumb || '',
+		marketplace: Boolean(item?.marketplace),
 		favourite: Boolean(item?.favourite),
 		request: Boolean(item?.request),
 		callButton: Boolean(item?.callButton),
@@ -1175,7 +1190,7 @@ export function normalizeInfoState(parsed, fallback = createDefaultStudioState()
 		...base,
 		activeChatId: parsed.activeChatId || base.activeChatId,
 		screen:
-			['list', 'contact', 'thread', 'archived', 'requests'].includes(parsed.screen)
+			['list', 'contact', 'thread', 'archived', 'requests', 'menu', 'archive', 'story'].includes(parsed.screen)
 				? parsed.screen
 				: base.screen,
 		status: {

@@ -52,7 +52,8 @@ test('addMinutesToClock wraps noon and midnight', () => {
 
 test('messengerStamp shows the day until it is today', () => {
 	assert.equal(messengerStamp('2026-11-07', '6:42 pm', NOW), '6:42 PM');
-	assert.equal(messengerStamp('2026-11-06', '12:28 pm', NOW), '6 NOV AT 12:28 PM');
+	assert.equal(messengerStamp('2026-11-06', '12:28 pm', NOW), 'FRI 12:28 PM');
+	assert.equal(messengerStamp('2026-10-30', '12:28 pm', NOW), '30 OCT AT 12:28 PM');
 	assert.equal(messengerStamp('2025-11-06', '12:28 pm', NOW), '6 NOV 2025 AT 12:28 PM');
 });
 

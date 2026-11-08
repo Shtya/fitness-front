@@ -31435,6 +31435,31 @@ function WhatsAppWorkspaceContent() {
 								locale={locale}
 								accountId={accountId}
 								conversations={effectiveConversations}
+								renderSendToPicker={({ previewUrl, busyId, onPick, onClose }) => (
+									<WaDialog
+										width={440}
+										height={640}
+										zIndex={130}
+										icon={<Forward size={18} strokeWidth={2.1} />}
+										title={locale === 'ar' ? 'إرسال إلى' : 'Send to'}
+										subtitle={locale === 'ar' ? 'صورة الشاشة · تتبعت منك' : 'Screenshot · sent as you'}
+										closeDisabled={Boolean(busyId)}
+										closeLabel={locale === 'ar' ? 'إغلاق' : 'Close'}
+										onClose={onClose}
+									>
+										{previewUrl ? (
+											// eslint-disable-next-line @next/next/no-img-element
+											<img src={previewUrl} alt="" className="mx-auto mb-2 block h-28 w-auto rounded-lg border border-slate-200 object-contain dark:border-slate-700" />
+										) : null}
+										<WaChatPicker
+											autoFocus
+											locale={locale}
+											items={effectiveConversations.filter(item => item.accountId === accountId && !item.isArchived)}
+											busyId={busyId}
+											onPick={onPick}
+										/>
+									</WaDialog>
+								)}
 							/>
 						</Suspense>
 					</div>

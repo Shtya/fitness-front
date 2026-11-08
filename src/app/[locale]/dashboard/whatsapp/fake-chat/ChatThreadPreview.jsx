@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { Ban, ChevronDown, CornerUpRight, Info, Lock, Mic, UserPlus } from 'lucide-react';
+import { Ban, ChevronDown, CornerUpRight, Info, Lock, Mic, Phone, PhoneMissed, UserPlus, Video } from 'lucide-react';
 import { FC_ASSETS } from './assets';
 import { cn } from '@/utils/cn';
 import { IOS_WA_FONT, tw } from './styles';
@@ -245,7 +245,17 @@ function MessageBubble({ message, selfAvatar, contactAvatar, contactName, contac
 	const tailClass = showTail ? (mine ? 'fc-bubble-tail-out' : 'fc-bubble-tail-in') : '';
 	const rtl = RTL_FIRST_STRONG.test(String(message.text || ''));
 	let body;
-	if (message.type === 'voice') {
+	if (message.type === 'call') {
+		body = <CallBubble message={message} mine={mine} tailClass={tailClass} showTail={showTail} />;
+	} else if (message.type === 'reel') {
+		body = (
+			<MediaBubble
+				message={{ ...message, type: 'video', hd: false, duration: '', caption: message.caption || message.reel?.link || '' }}
+				mine={mine}
+				contactName={contactName}
+			/>
+		);
+	} else if (message.type === 'voice') {
 		body = (
 			<VoiceBubble
 				message={message}
@@ -279,6 +289,30 @@ function MessageBubble({ message, selfAvatar, contactAvatar, contactName, contac
 			<span className="relative inline-flex max-w-full">
 				{body}
 				{message.reaction ? <span className={ph.reaction}>{message.reaction}</span> : null}
+			</span>
+		</div>
+	);
+}
+
+/** WhatsApp call row: "Missed voice call · Tap to call back" with the time. */
+function CallBubble({ message, mine, tailClass, showTail }) {
+	const missed = message.callStatus !== 'answered';
+	const video = message.callKind === 'video';
+	const title = `${missed ? 'Missed ' : ''}${video ? 'video' : 'voice'} call`.replace(/^./, c => c.toUpperCase());
+	const sub = missed ? 'Tap to call back' : message.callDuration || '1 min';
+	return (
+		<div className={cn(ph.bubble, '!pb-[7px] !pt-[9px]', mine ? ph.bubbleOut : ph.bubbleIn, showTail && (mine ? ph.tailOut : ph.tailIn), tailClass)}>
+			<span className="flex items-center gap-[11px] pe-[4px]">
+				<span className={cn('grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full', mine ? 'bg-[#c4ecbd]' : 'bg-[#f0f2f5]', missed ? 'text-[#ea0038]' : 'text-[#54656f]')}>
+					{video ? <Video size={21} strokeWidth={0} fill="currentColor" /> : missed ? <PhoneMissed size={20} strokeWidth={2.2} /> : <Phone size={19} strokeWidth={0} fill="currentColor" />}
+				</span>
+				<span className="min-w-0">
+					<span className="block text-[17px] font-semibold leading-[22px] text-[#111b21]">{title}</span>
+					<span className="block text-[14.5px] leading-[19px] text-[#7b7b7b]">{sub}</span>
+				</span>
+				<span className="ms-[10px] self-end">
+					<Meta message={message} mine={mine} />
+				</span>
 			</span>
 		</div>
 	);

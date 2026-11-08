@@ -114,7 +114,4 @@ export const ph = {
 	tabIcon: 'relative block h-[27px] w-[27px] object-contain',
 	tabYou: 'block h-[27px] w-[27px] rounded-full object-cover',
 	tabBadge: 'absolute -top-[9px] start-[15px] grid h-[20px] min-w-[20px] place-items-center rounded-full bg-[#1daa65] px-[5px] text-[12.5px] font-semibold leading-none text-white',
-
-	/* Export label */
-	mockup: 'pointer-events-none absolute start-1/2 top-[14px] z-40 -translate-x-1/2 rounded-full bg-black/55 px-[8px] py-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.6px] text-white',
 };

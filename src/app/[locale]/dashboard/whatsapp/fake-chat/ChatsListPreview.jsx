@@ -1,5 +1,7 @@
 'use client';
 
+import { useLayoutEffect, useRef, useState } from 'react';
+
 import {
 	Archive,
 	BellOff,
@@ -116,14 +118,26 @@ function EditableText({ editing, value, onCommit, className, dir, numeric = fals
 	);
 }
 
-function ChatRow({ chat, active, onOpen, onPeek, hidePhoneNumbers = false, editing = false, onEdit, onPickAvatar }) {
+function ChatRow({ chat, active, onOpen, onPeek, onOpenStory, hidePhoneNumbers = false, editing = false, onEdit, onPickAvatar }) {
 	const press = useLongPress(onPeek ? () => onPeek(chat.id) : null, () => onOpen?.(chat.id));
 	const displayName = chatDisplayName(chat, hidePhoneNumbers);
 	const nameField = displayName === chat.name ? 'name' : 'about';
 	const unread = Number(chat.unread) || 0;
 	const RowTag = editing ? 'div' : 'button';
 	const avatar = (
-		<span className={cn(tw.avatarWrap, chat.storyRing && tw.storyRing, editing && tw.editAvatar)}>
+		<span
+			className={cn(tw.avatarWrap, chat.storyRing && tw.storyRing, editing && tw.editAvatar)}
+			onClick={
+				chat.storyRing && onOpenStory && !editing
+					? event => {
+							// Tapping the photo of a chat with a status opens the status, not the chat.
+							event.stopPropagation();
+							onOpenStory(chat.id);
+						}
+					: undefined
+			}
+			role="presentation"
+		>
 			<ChatAvatar chat={chat} />
 			{chat.disappearing ? (
 				<span className={tw.disappearBadge} aria-hidden="true">
@@ -226,8 +240,10 @@ export default function ChatsListPreview({
 	onPickChatAvatar,
 	onOpenArchived,
 	onPeek,
+	onOpenStory,
 }) {
-	const showSearch = Boolean(list?.showSearch);
+	// The phone always shows search and the filter chips; hiding them made screens look wrong.
+	const showSearch = true;
 	const showSuggestions = Boolean(list?.showSuggestions);
 	const hidePhoneNumbers = Boolean(list?.hidePhoneNumbers);
 	const selfAvatar = list?.selfAvatar || '';
@@ -236,16 +252,46 @@ export default function ChatsListPreview({
 	const visibleChats = allChats.filter(chat => !chat.archived);
 	const archivedShown = archivedChats.length || Number(list?.archivedCount) || 0;
 
+	// iOS large title: scrolling up tucks "Chats", search and chips away and shows a small centred
+	// title in the bar. `list.scrolled` pins that look for screenshots.
+	const scrollRef = useRef(null);
+	const firstRowRef = useRef(null);
+	const [collapsed, setCollapsed] = useState(Boolean(list?.scrolled));
+	useLayoutEffect(() => {
+		const box = scrollRef.current;
+		if (!box) return;
+		if (list?.scrolled) {
+			box.scrollTop = firstRowRef.current ? firstRowRef.current.offsetTop : 0;
+			setCollapsed(true);
+		} else {
+			box.scrollTop = 0;
+			setCollapsed(false);
+		}
+	}, [list?.scrolled]);
+	const onScroll = event => {
+		const next = event.currentTarget.scrollTop > 46;
+		if (next !== collapsed) setCollapsed(next);
+	};
+
 	return (
 		<div className={cn(tw.phone, tw.phoneList, capturing && tw.phoneCapturing)} dir="ltr" style={{ fontFamily: IOS_WA_FONT, '--fc-font': IOS_WA_FONT }}>
 			{/* Real iOS screenshots have no drawn notch graphic. */}
 			<PhoneNotch hidden />
-			<div className={cn(tw.chromeList, 'shrink-0')}>
+			<div className={cn(tw.chromeList, 'relative z-10 shrink-0 pb-[6px]', collapsed && 'border-b-[0.5px] border-[#d6d6d6] bg-white/95')}>
 				<IosStatusBar {...status} />
-				<div className={ph.listBar}>
+				<div className={cn(ph.listBar, 'relative')}>
 					<button type="button" className={ph.listRound} tabIndex={-1} aria-hidden="true">
 						<Ellipsis size={20} strokeWidth={2.6} />
 					</button>
+					<span
+						className={cn(
+							'pointer-events-none absolute start-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[18px] font-bold text-black transition-opacity duration-150',
+							collapsed ? 'opacity-100' : 'opacity-0',
+						)}
+						aria-hidden={!collapsed}
+					>
+						{list.title || 'Chats'}
+					</span>
 					<div className={ph.listRight}>
 						<button type="button" className={ph.listRound} tabIndex={-1} aria-hidden="true">
 							<IconCameraSolid size={21} lens="#f6f5f3" />
@@ -255,39 +301,40 @@ export default function ChatsListPreview({
 						</button>
 					</div>
 				</div>
-				<p className={cn(ph.listTitle, editing && 'pointer-events-auto')}>
-					<EditableText
-						editing={editing}
-						value={list.title || 'Chats'}
-						onCommit={next => onEditList?.({ title: next })}
-					/>
-				</p>
-				{showSearch ? (
-					<>
-						<div className={ph.search}>
-							<Search size={21} strokeWidth={2.2} />
-							<span>{list.searchPlaceholder}</span>
-						</div>
-						<div className={ph.chips}>
-							{[
-								{ label: 'All', on: true },
-								{ label: 'Unread', count: list.unreadBadge },
-								{ label: 'Favourites', count: list.favouritesCount },
-								{ label: 'Groups', count: list.groupsCount },
-							].map(chip => (
-								<span key={chip.label} className={cn(ph.chip, chip.on && ph.chipOn)}>
-									{chip.label}
-									{Number(chip.count) > 0 ? <span className="font-medium">{chip.count}</span> : null}
-								</span>
-							))}
-						</div>
-					</>
-				) : null}
 			</div>
 
 			<div className={tw.listPane}>
-				<div className={tw.listBody}>
-					{archivedShown > 0 || editing ? (
+				<div className={tw.listBody} ref={scrollRef} onScroll={onScroll}>
+					<p className={cn(ph.listTitle, editing && 'pointer-events-auto')}>
+						<EditableText
+							editing={editing}
+							value={list.title || 'Chats'}
+							onCommit={next => onEditList?.({ title: next })}
+						/>
+					</p>
+					{showSearch ? (
+						<>
+							<div className={ph.search}>
+								<Search size={21} strokeWidth={2.2} />
+								<span>{list.searchPlaceholder}</span>
+							</div>
+							<div className={ph.chips}>
+								{[
+									{ label: 'All', on: true },
+									{ label: 'Unread', count: list.unreadBadge },
+									{ label: 'Favourites', count: list.favouritesCount },
+									{ label: 'Groups', count: list.groupsCount },
+								].map(chip => (
+									<span key={chip.label} className={cn(ph.chip, chip.on && ph.chipOn)}>
+										{chip.label}
+										{Number(chip.count) > 0 ? <span className="font-medium">{chip.count}</span> : null}
+									</span>
+								))}
+							</div>
+						</>
+					) : null}
+
+					{archivedShown > 0 || list.archivedMention || editing ? (
 						<button type="button" tabIndex={-1} className={cn(ph.archived, 'w-full cursor-pointer border-0 bg-transparent p-0 text-start')} onClick={onOpenArchived}>
 							<span className={ph.archivedIcon}>
 								<Archive size={25} strokeWidth={1.8} />
@@ -299,11 +346,13 @@ export default function ChatsListPreview({
 									numeric
 									className={ph.archivedCount}
 									value={archivedShown}
+									display={list.archivedMention && !editing ? <span className="text-[24px] font-semibold text-[#1daa61]">@</span> : undefined}
 									onCommit={next => onEditList?.({ archivedCount: next })}
 								/>
 							</span>
 						</button>
 					) : null}
+					<span ref={firstRowRef} aria-hidden="true" />
 					{visibleChats.map(chat => (
 						<ChatRow
 							key={chat.id}
@@ -311,6 +360,7 @@ export default function ChatsListPreview({
 							active={chat.id === activeChatId}
 							onOpen={onOpenChat}
 							onPeek={onPeek}
+							onOpenStory={onOpenStory}
 							hidePhoneNumbers={hidePhoneNumbers}
 							editing={editing}
 							onEdit={onEditChat}

@@ -210,19 +210,28 @@ const CAPTURE_FLUID_CSS = `
 [data-fc-fluid="bubble"]::before, [data-fc-fluid="bubble"]::after { top: auto !important; bottom: 0 !important; }
 `;
 
+/**
+ * Embedding fonts means fetching every font the page's stylesheets declare and inlining it as
+ * base64. That was redone (with cache-busting, so from the network) on every screenshot and took
+ * most of the time. The fonts do not change while the page is open, so it is done once.
+ */
+let fontEmbedCssCache = null;
+
 async function buildFontEmbedCss(getFontEmbedCSS, node) {
-	let fontCss = '';
-	try {
-		fontCss = await getFontEmbedCSS(node, { cacheBust: true });
-	} catch {
-		fontCss = '';
+	if (!fontEmbedCssCache) {
+		fontEmbedCssCache = getFontEmbedCSS(node, { cacheBust: false }).catch(() => {
+			fontEmbedCssCache = null;
+			return '';
+		});
 	}
+	const fontCss = await fontEmbedCssCache;
 	return `${fontCss}\n${CAPTURE_FLUID_CSS}`;
 }
 
 async function runToPng(toPng, node, width, height, pixelRatio, fontEmbedCSS) {
 	return toPng(node, {
-		cacheBust: true,
+		// Images are inlined beforehand; busting the cache only re-downloaded them.
+		cacheBust: false,
 		fontEmbedCSS,
 		pixelRatio,
 		width,
@@ -281,11 +290,11 @@ export async function captureNodeAsPng(
 
 		let dataUrl;
 		try {
-			dataUrl = await runToPng(toPng, node, width, height, 3, fontEmbedCSS);
+			dataUrl = await runToPng(toPng, node, width, height, 2, fontEmbedCSS);
 		} catch (firstError) {
 			patchBrokenImages(node);
 			try {
-				dataUrl = await runToPng(toPng, node, width, height, 2, fontEmbedCSS);
+				dataUrl = await runToPng(toPng, node, width, height, 1.5, fontEmbedCSS);
 			} catch (secondError) {
 				const msg =
 					secondError?.message ||
