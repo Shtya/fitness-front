@@ -25285,6 +25285,22 @@ function WhatsAppWorkspaceContent() {
 		setSendingStoryReaction(null);
 	}
 
+	/** A viewer's full-size profile photo, for the enlarged view in the viewer list. */
+	const fetchStoryViewerPhoto = useCallback(
+		async viewer => {
+			if (!accountId) return null;
+			const phone = String(viewer?.phone || '').replace(/\D/g, '');
+			const waId = phone ? `${phone}@s.whatsapp.net` : String(viewer?.id || '');
+			if (!waId || /@(hosted\.)?lid$/i.test(waId)) return null;
+			const { data } = await api.post(`/whatsapp/accounts/${accountId}/statuses/audience/avatar`, {
+				waId,
+				quality: 'full',
+			});
+			return data?.avatarUrl || null;
+		},
+		[accountId],
+	);
+
 	const loadStoryViewers = async (status, { silent = false } = {}) => {
 		if (!status?.id || !accountId || !status.isOwn) return;
 		const requestId = ++storyViewersRequestRef.current;
@@ -25336,6 +25352,15 @@ function WhatsAppWorkspaceContent() {
 
 	/** Live counts/reaction from the socket (or a fresh viewer list) across every story list. */
 	function applyStoryInteractionPatch(payload) {
+		// The cached list too: going back to Stories repaints from it (and skips the fetch
+		// while it is fresh), so a reaction applied only on screen vanished there.
+		const cachedStatuses = statusesCacheRef.current.get(accountId);
+		if (cachedStatuses?.items) {
+			statusesCacheRef.current.set(accountId, {
+				...cachedStatuses,
+				items: applyStoryInteractionUpdate(cachedStatuses.items, payload),
+			});
+		}
 		setStatuses(current => applyStoryInteractionUpdate(current, payload));
 		setStatusHistory(current => applyStoryInteractionUpdate(current, payload));
 		setStoryQueue(current => applyStoryInteractionUpdate(current, payload));
@@ -33889,6 +33914,14 @@ function WhatsAppWorkspaceContent() {
 										size={10}
 									/>
 								)}
+								fetchFullAvatar={fetchStoryViewerPhoto}
+								onOpenReply={reply => {
+									if (!reply?.conversationId) return;
+									closeStoryViewers();
+									closeStory();
+									setActiveTab('chats');
+									openConversation(reply.conversationId);
+								}}
 							/>
 						) : null}
 								</motion.div>

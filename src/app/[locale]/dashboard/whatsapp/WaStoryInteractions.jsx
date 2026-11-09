@@ -47,12 +47,119 @@ function ViewerSkeleton() {
 	);
 }
 
-/** Who viewed your story, newest first, with the emoji each person reacted with. */
-export function StoryViewersSheet({ open, locale, loading, error, data, onRetry, onClose, renderAvatar }) {
+/** A viewer's photo, large, over the sheet: the stored thumb at once, the full one when it arrives. */
+function ViewerPhoto({ viewer, locale, renderAvatar, fetchFullAvatar, onClose }) {
+	const ar = locale === 'ar';
+	const [fullUrl, setFullUrl] = useState(null);
+	const [loadingFull, setLoadingFull] = useState(Boolean(fetchFullAvatar));
+	useEffect(() => {
+		let alive = true;
+		setFullUrl(null);
+		if (!fetchFullAvatar) return undefined;
+		setLoadingFull(true);
+		Promise.resolve(fetchFullAvatar(viewer))
+			.then(url => alive && url && setFullUrl(url))
+			.catch(() => undefined)
+			.finally(() => alive && setLoadingFull(false));
+		return () => {
+			alive = false;
+		};
+	}, [viewer, fetchFullAvatar]);
+	useEffect(() => {
+		const onKey = event => {
+			if (event.key !== 'Escape') return;
+			event.stopPropagation();
+			onClose();
+		};
+		window.addEventListener('keydown', onKey, true);
+		return () => window.removeEventListener('keydown', onKey, true);
+	}, [onClose]);
+	const src = fullUrl || viewer.avatarUrl || null;
+	return (
+		<motion.div
+			key="viewer-photo"
+			className="absolute inset-0 z-70 flex flex-col items-center justify-center gap-4 bg-black/85 p-6 backdrop-blur-sm"
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			exit={{ opacity: 0 }}
+			transition={{ duration: 0.16 }}
+			onClick={event => {
+				event.stopPropagation();
+				onClose();
+			}}
+			role="dialog"
+			aria-modal="true"
+			aria-label={storyViewerName(viewer, locale)}
+			data-testid="story-viewer-photo"
+		>
+			<motion.div
+				className="relative aspect-square w-full max-w-[min(78vw,420px)] overflow-hidden rounded-3xl bg-white/5 shadow-2xl ring-1 ring-white/10"
+				initial={{ scale: 0.86 }}
+				animate={{ scale: 1 }}
+				transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+				onClick={event => event.stopPropagation()}
+			>
+				{src ? (
+					// eslint-disable-next-line @next/next/no-img-element
+					<img src={src} alt="" className="h-full w-full object-cover" />
+				) : (
+					<div className="grid h-full w-full place-items-center [&>*]:!h-40 [&>*]:!w-40 [&>*]:!text-5xl">
+						{renderAvatar(viewer)}
+					</div>
+				)}
+				{loadingFull ? (
+					<span className="absolute end-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-black/50">
+						<Loader2 size={14} className="animate-spin text-white/80" />
+					</span>
+				) : null}
+			</motion.div>
+			<p className="max-w-full truncate text-base font-black text-white" dir="auto">
+				{storyViewerName(viewer, locale)}
+			</p>
+			<button
+				type="button"
+				onClick={onClose}
+				className="grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
+				aria-label={ar ? 'إغلاق' : 'Close'}
+			>
+				<X size={18} />
+			</button>
+		</motion.div>
+	);
+}
+
+function replyPreview(reply, ar) {
+	const text = String(reply?.text || '').trim();
+	if (text) return text;
+	const labels = ar
+		? { image: '📷 صورة', video: '🎥 فيديو', audio: '🎤 رسالة صوتية', ptt: '🎤 رسالة صوتية', voice: '🎤 رسالة صوتية', sticker: 'ملصق', document: '📄 ملف' }
+		: { image: '📷 Photo', video: '🎥 Video', audio: '🎤 Voice message', ptt: '🎤 Voice message', voice: '🎤 Voice message', sticker: 'Sticker', document: '📄 File' };
+	return labels[String(reply?.type || '').toLowerCase()] || (ar ? 'رد' : 'Reply');
+}
+
+/** Who viewed your story, newest first, with the emoji each person reacted with and what they replied. */
+export function StoryViewersSheet({
+	open,
+	locale,
+	loading,
+	error,
+	data,
+	onRetry,
+	onClose,
+	renderAvatar,
+	fetchFullAvatar,
+	onOpenReply,
+}) {
 	const titleId = useId();
 	const ar = locale === 'ar';
 	const viewers = Array.isArray(data?.viewers) ? data.viewers : [];
 	const count = Number(data?.viewerCount ?? viewers.length) || 0;
+	const reactionCount = Number(data?.reactionCount) || 0;
+	const replyCount = Number(data?.replyCount) || 0;
+	const [zoomed, setZoomed] = useState(null);
+	useEffect(() => {
+		if (!open) setZoomed(null);
+	}, [open]);
 	return (
 		<AnimatePresence>
 			{open ? (
@@ -94,6 +201,20 @@ export function StoryViewersSheet({ open, locale, loading, error, data, onRetry,
 										? `شوهدت بواسطة ${count}`
 										: `Viewed by ${count}`}
 							</h2>
+							{reactionCount || replyCount ? (
+								<span className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-white/70" data-testid="story-viewers-totals">
+									{reactionCount ? (
+										<span className="rounded-full bg-white/10 px-2 py-1" title={ar ? 'تفاعلات' : 'Reactions'}>
+											♥ {reactionCount}
+										</span>
+									) : null}
+									{replyCount ? (
+										<span className="rounded-full bg-white/10 px-2 py-1" title={ar ? 'ردود' : 'Replies'}>
+											💬 {replyCount}
+										</span>
+									) : null}
+								</span>
+							) : null}
 							<button
 								type="button"
 								onClick={onClose}
@@ -150,16 +271,52 @@ export function StoryViewersSheet({ open, locale, loading, error, data, onRetry,
 										<li
 											key={viewer.id}
 											data-testid="story-viewer-row"
-											className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/5"
+											className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-white/5"
 										>
-											{renderAvatar(viewer)}
-											<div className="min-w-0 flex-1">
+											<button
+												type="button"
+												className="shrink-0 rounded-full transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400 active:scale-95"
+												onClick={() => setZoomed(viewer)}
+												aria-label={ar ? `صورة ${storyViewerName(viewer, locale)}` : `${storyViewerName(viewer, locale)}'s photo`}
+												data-testid="story-viewer-avatar"
+											>
+												{renderAvatar(viewer)}
+											</button>
+											<div className="min-w-0 flex-1 pt-0.5">
 												<p className="truncate text-sm font-bold" dir="auto">
 													{storyViewerName(viewer, locale)}
 												</p>
 												<p className="truncate text-xs text-white/55">
-													{formatStoryViewTime(viewer.viewedAt || viewer.reactedAt, locale)}
+													{formatStoryViewTime(
+														viewer.viewedAt || viewer.reactedAt || viewer.replies?.[0]?.at,
+														locale,
+													)}
 												</p>
+												{Array.isArray(viewer.replies) && viewer.replies.length ? (
+													<ul className="mt-1.5 flex flex-col items-start gap-1" data-testid="story-viewer-replies">
+														{viewer.replies.map(reply => (
+															<li key={reply.messageId} className="max-w-full">
+																<button
+																	type="button"
+																	onClick={() => onOpenReply?.(reply, viewer)}
+																	disabled={!onOpenReply}
+																	className="max-w-full rounded-2xl rounded-ss-md bg-white/10 px-3 py-1.5 text-start text-[13px] leading-snug text-white/90 transition-colors hover:bg-white/15 disabled:cursor-default"
+																	title={ar ? 'افتح الشات' : 'Open the chat'}
+																	data-testid="story-viewer-reply"
+																>
+																	<span className="line-clamp-3 whitespace-pre-wrap break-words" dir="auto">
+																		{replyPreview(reply, ar)}
+																	</span>
+																	{reply.at ? (
+																		<span className="mt-0.5 block text-[10.5px] text-white/45">
+																			{formatStoryViewTime(reply.at, locale)}
+																		</span>
+																	) : null}
+																</button>
+															</li>
+														))}
+													</ul>
+												) : null}
 											</div>
 											{viewer.reaction ? (
 												<span
@@ -180,6 +337,17 @@ export function StoryViewersSheet({ open, locale, loading, error, data, onRetry,
 							)}
 						</div>
 					</motion.section>
+					<AnimatePresence>
+						{zoomed ? (
+							<ViewerPhoto
+								viewer={zoomed}
+								locale={locale}
+								renderAvatar={renderAvatar}
+								fetchFullAvatar={fetchFullAvatar}
+								onClose={() => setZoomed(null)}
+							/>
+						) : null}
+					</AnimatePresence>
 				</motion.div>
 			) : null}
 		</AnimatePresence>
