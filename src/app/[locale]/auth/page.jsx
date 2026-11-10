@@ -242,6 +242,7 @@ function LoginCard({ onLoggedIn }) {
       } catch {}
       const res = await axiosInstance.post("/auth/login", {
         ...data,
+        email: String(data.email || "").trim(),
         ...(discoveryToken ? { discoveryToken } : {}),
         ...(tenantId ? { tenantId } : {}),
       });
@@ -283,8 +284,13 @@ function LoginCard({ onLoggedIn }) {
         else if (low.includes("suspended")) msg = t("errors.accountSuspended");
       }
       const lm = String(msg).toLowerCase();
-      if (lm.includes("email")) setRHError("email", { type: "server", message: "invalidEmail" });
-      else if (lm.includes("password")) setRHError("password", { type: "server", message: "passwordRequired" });
+      // "Incorrect email or password" says nothing about which one is wrong: flagging the
+      // email as invalid sent people looking for a typo in a correct address.
+      const wrongCredentials = err?.response?.status === 401 && lm.includes("email") && lm.includes("password");
+      if (!wrongCredentials) {
+        if (lm.includes("email")) setRHError("email", { type: "server", message: "invalidEmail" });
+        else if (lm.includes("password")) setRHError("password", { type: "server", message: "passwordRequired" });
+      }
       // Shown inline above the button (role="alert"), so no duplicate toast.
       setError(msg);
       setMode("error");

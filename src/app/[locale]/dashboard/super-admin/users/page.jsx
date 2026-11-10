@@ -123,6 +123,189 @@ function CopyBtn({ value, label }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Set Password Modal (super admin sets a password of their choice)
+// ─────────────────────────────────────────────────────────────────────────────
+function strongPassword(length = 14) {
+	// No look-alikes (0/O, 1/l/I) so it can be read out or typed from a screenshot.
+	const sets = ['ABCDEFGHJKLMNPQRSTUVWXYZ', 'abcdefghijkmnopqrstuvwxyz', '23456789', '#@%+=!?'];
+	const all = sets.join('');
+	const pick = chars => chars[crypto.getRandomValues(new Uint32Array(1))[0] % chars.length];
+	const out = sets.map(pick);
+	while (out.length < length) out.push(pick(all));
+	for (let i = out.length - 1; i > 0; i -= 1) {
+		const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+		[out[i], out[j]] = [out[j], out[i]];
+	}
+	return out.join('');
+}
+
+function SetPasswordModal({ user, onClose }) {
+	const locale = useLocale();
+	const ar = locale === 'ar';
+	const [password, setPassword] = useState('');
+	const [confirm, setConfirm] = useState('');
+	const [show, setShow] = useState(false);
+	const [saving, setSaving] = useState(false);
+	const [saved, setSaved] = useState(false);
+	const tooShort = password.length > 0 && password.length < 8;
+	const padded = password.length > 0 && password.trim() !== password;
+	const mismatch = confirm.length > 0 && confirm !== password;
+	const canSave = password.length >= 8 && !padded && confirm === password && !saving;
+
+	const submit = async event => {
+		event.preventDefault();
+		if (!canSave) return;
+		setSaving(true);
+		try {
+			await api.put(`/auth/super-admin/users/${user.id}/password`, { newPassword: password });
+			setSaved(true);
+			toast.success(ar ? 'اتغيّرت كلمة المرور' : 'Password updated');
+		} catch (error) {
+			toast.error(error?.response?.data?.message || (ar ? 'تعذّر تغيير كلمة المرور' : 'Could not update the password'));
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	const fieldClass =
+		'w-full h-11 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm font-mono outline-none transition-colors focus:ring-2 focus:ring-[var(--color-primary-500)]/30';
+
+	return (
+		<div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+			<motion.form
+				initial={{ scale: 0.92, opacity: 0, y: 16 }}
+				animate={{ scale: 1, opacity: 1, y: 0 }}
+				exit={{ scale: 0.92, opacity: 0, y: 16 }}
+				className="gm-modal w-full max-w-md"
+				onClick={e => e.stopPropagation()}
+				onSubmit={submit}
+				dir={ar ? 'rtl' : 'ltr'}
+			>
+				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800"
+					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
+				>
+					<div className="flex items-center gap-2 min-w-0">
+						<div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-lg shrink-0"
+							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+						>
+							<KeyRound size={14} />
+						</div>
+						<div className="min-w-0">
+							<h3 className="text-sm font-semibold text-[var(--gm-ink)]">{ar ? 'تغيير كلمة المرور' : 'Set password'}</h3>
+							<p className="text-[11px] text-slate-500 truncate" dir="auto">{user.name} · {user.email}</p>
+						</div>
+					</div>
+					<button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/60 text-slate-400 transition-colors" aria-label={ar ? 'إغلاق' : 'Close'}>
+						<X size={15} />
+					</button>
+				</div>
+
+				{saved ? (
+					<div className="p-5 space-y-3">
+						<div className="flex items-start gap-2 px-3 py-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
+							<CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+							<p className="text-xs text-emerald-800 dark:text-emerald-300">
+								{ar
+									? 'اتحفظت كلمة المرور الجديدة. الحساب يقدر يدخل بيها دلوقتي.'
+									: 'The new password is saved. The account can sign in with it now.'}
+							</p>
+						</div>
+						<div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3">
+							<p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{ar ? 'كلمة المرور' : 'Password'}</p>
+							<div className="flex items-center gap-2">
+								<code className="flex-1 text-sm font-mono font-bold text-[var(--color-primary-600)] truncate" dir="ltr">{password}</code>
+								<CopyBtn value={password} label={ar ? 'نسخ' : 'Copy'} />
+							</div>
+						</div>
+						<button type="button" onClick={onClose}
+							className="w-full h-10 rounded-lg text-white text-sm font-bold shadow-lg"
+							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+						>
+							{ar ? 'تمام' : 'Done'}
+						</button>
+					</div>
+				) : (
+					<div className="p-5 space-y-3">
+						<label className="block">
+							<span className="mb-1 flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
+								{ar ? 'كلمة المرور الجديدة' : 'New password'}
+								<button
+									type="button"
+									onClick={() => {
+										const next = strongPassword();
+										setPassword(next);
+										setConfirm(next);
+										setShow(true);
+									}}
+									className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--color-primary-600)] hover:underline"
+								>
+									<Wand2 size={12} /> {ar ? 'ولّد كلمة قوية' : 'Generate strong'}
+								</button>
+							</span>
+							<div className="relative">
+								<input
+									type={show ? 'text' : 'password'}
+									value={password}
+									onChange={e => setPassword(e.target.value)}
+									autoComplete="new-password"
+									autoFocus
+									dir="ltr"
+									className={`${fieldClass} pe-10 ${tooShort || padded ? 'border-rose-400' : 'border-slate-200 dark:border-slate-700'}`}
+								/>
+								<button
+									type="button"
+									onClick={() => setShow(v => !v)}
+									className="absolute inset-y-0 end-0 grid w-10 place-items-center text-slate-400 hover:text-slate-600"
+									aria-label={show ? (ar ? 'إخفاء' : 'Hide') : (ar ? 'إظهار' : 'Show')}
+								>
+									<Eye size={15} />
+								</button>
+							</div>
+							{tooShort ? (
+								<span className="mt-1 block text-[11px] text-rose-600">{ar ? '8 حروف على الأقل' : 'At least 8 characters'}</span>
+							) : padded ? (
+								<span className="mt-1 block text-[11px] text-rose-600">{ar ? 'من غير مسافات في الأول أو الآخر' : 'No spaces at the start or end'}</span>
+							) : null}
+						</label>
+						<label className="block">
+							<span className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">{ar ? 'تأكيد كلمة المرور' : 'Confirm password'}</span>
+							<input
+								type={show ? 'text' : 'password'}
+								value={confirm}
+								onChange={e => setConfirm(e.target.value)}
+								autoComplete="new-password"
+								dir="ltr"
+								className={`${fieldClass} ${mismatch ? 'border-rose-400' : 'border-slate-200 dark:border-slate-700'}`}
+							/>
+							{mismatch ? (
+								<span className="mt-1 block text-[11px] text-rose-600">{ar ? 'مش زي كلمة المرور' : 'Does not match'}</span>
+							) : null}
+						</label>
+						<div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+							<AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+							<p className="text-[11px] text-amber-700 dark:text-amber-400">
+								{ar
+									? 'كلمة المرور القديمة هتبطل فورًا، وأي رابط استعادة قديم هيتلغي.'
+									: 'The old password stops working at once, and any pending reset link is cancelled.'}
+							</p>
+						</div>
+						<button
+							type="submit"
+							disabled={!canSave}
+							className="w-full h-10 rounded-lg text-white text-sm font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+						>
+							{saving ? <RefreshCw size={14} className="animate-spin" /> : <KeyRound size={14} />}
+							{ar ? 'احفظ كلمة المرور' : 'Save password'}
+						</button>
+					</div>
+				)}
+			</motion.form>
+		</div>
+	);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Credentials Modal
 // ─────────────────────────────────────────────────────────────────────────────
 function CredentialsModal({ user, onClose, t }) {
@@ -385,13 +568,14 @@ function DeleteModal({ user, onClose, onDeleted, t }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Action Buttons Row (compact)
 // ─────────────────────────────────────────────────────────────────────────────
-function ActionBar({ user, onImpersonate, onStatusChange, onEdit, onDelete, onShowCreds, onPages, t }) {
+function ActionBar({ user, onImpersonate, onStatusChange, onEdit, onDelete, onShowCreds, onSetPassword, onPages, t, locale }) {
 	const icon = (Icon) => <Icon className="h-4 w-4" />;
 	const options = [
 		{ key: 'view', group: 'view', icon: icon(Eye), label: t('actions.viewDashboard'), onClick: () => onImpersonate(user) },
 		{ key: 'pages', group: 'view', icon: icon(LayoutGrid), label: t('actions.pageAccess'), onClick: () => onPages?.(user) },
 		{ key: 'edit', group: 'account', icon: icon(Edit), label: t('actions.editData'), onClick: () => onEdit(user) },
 		{ key: 'creds', group: 'account', icon: icon(KeyRound), label: t('actions.copyCredentials'), onClick: () => onShowCreds(user) },
+		onSetPassword && { key: 'set-password', group: 'account', icon: icon(Shield), label: locale === 'ar' ? 'تغيير كلمة المرور' : 'Set password', onClick: () => onSetPassword(user) },
 		user.status !== 'active' && { key: 'activate', group: 'status', icon: icon(CheckCircle2), label: t('actions.activate'), onClick: () => onStatusChange(user.id, 'active') },
 		user.status !== 'suspended' && { key: 'suspend', group: 'status', icon: icon(Ban), label: t('actions.suspend'), onClick: () => onStatusChange(user.id, 'suspended') },
 		{ key: 'delete', group: 'danger', icon: icon(Trash2), label: t('actions.deleteUser'), onClick: () => onDelete(user), danger: true },
@@ -1479,6 +1663,7 @@ export default function SuperAdminUsersPage() {
 	const [editUser, setEditUser] = useState(null);
 	const [deleteUser, setDeleteUser] = useState(null);
 	const [credsUser, setCredsUser] = useState(null);
+	const [passwordUser, setPasswordUser] = useState(null);
 	const [pagesUser, setPagesUser] = useState(null);
 
 	const stats = useMemo(() => ({
@@ -1650,6 +1835,7 @@ export default function SuperAdminUsersPage() {
 		onEdit: (u) => setEditUser(u),
 		onDelete: (u) => setDeleteUser(u),
 		onShowCreds: (u) => setCredsUser(u),
+		onSetPassword: (u) => setPasswordUser(u),
 		onPages: (u) => setPagesUser(u),
 		onAddUnder: (preset) => { setCreatePreset(preset); setCreate(true); },
 		t,
@@ -1841,6 +2027,9 @@ export default function SuperAdminUsersPage() {
 			</AnimatePresence>
 
 			<AnimatePresence>
+				{passwordUser && (
+					<SetPasswordModal key="set-password" user={passwordUser} onClose={() => setPasswordUser(null)} />
+				)}
 				{credsUser && (
 					<CredentialsModal user={credsUser} onClose={() => setCredsUser(null)} t={t} />
 				)}
