@@ -16388,7 +16388,7 @@ function WhatsAppWorkspaceContent() {
 	}, []);
 
 	const refreshStatusesFromProvider = useCallback(
-		async (targetAccountId, { silent = true, force = false } = {}) => {
+		async (targetAccountId, { silent = true, force = false, fromPhone = false } = {}) => {
 			if (!targetAccountId || !seesWholeAccountRef.current) return;
 			const account = accountsRef.current.find(item => item.id === targetAccountId);
 			if (account && account.status !== 'connected') return;
@@ -16400,9 +16400,10 @@ function WhatsAppWorkspaceContent() {
 			statusRefreshInFlightRef.current = targetAccountId;
 			setSyncingStatuses(true);
 			try {
+				// Every refresh lets the server ask the phone (spaced out); "Sync now" insists.
 				const { data: refreshed } = await api.get(
 					`/whatsapp/accounts/${targetAccountId}/statuses`,
-					{ params: { refresh: true, debug: '1' }, timeout: 90_000 },
+					{ params: { refresh: true, debug: '1', ...(fromPhone ? { phone: '1' } : {}) }, timeout: 90_000 },
 				);
 				applyStatuses(targetAccountId, refreshed);
 			} catch (error) {
@@ -16427,7 +16428,7 @@ function WhatsAppWorkspaceContent() {
 	refreshStatusesFromProviderRef.current = refreshStatusesFromProvider;
 
 	const loadStatuses = useCallback(
-		async (targetAccountId, { force = false, silent = true, providerRefresh = true } = {}) => {
+		async (targetAccountId, { force = false, silent = true, providerRefresh = true, fromPhone = false } = {}) => {
 			if (!targetAccountId) return;
 			// Staff limited to their assigned chats have no stories (the server refuses them).
 			if (!seesWholeAccountRef.current) {
@@ -16467,7 +16468,8 @@ function WhatsAppWorkspaceContent() {
 						force || !Array.isArray(data?.items) || data.items.length === 0;
 					void refreshStatusesFromProvider(targetAccountId, {
 						silent: true,
-						force: providerRefreshRequired,
+						force: providerRefreshRequired || fromPhone,
+						fromPhone,
 					});
 				} else if (!liveSession && accountIdRef.current === targetAccountId) {
 					const items = Array.isArray(data?.items) ? data.items : cached?.items || [];
@@ -16484,7 +16486,7 @@ function WhatsAppWorkspaceContent() {
 						setStatusFetchHint('whatsapp_not_connected');
 					}
 				} else if (force && liveSession && providerRefresh) {
-					void refreshStatusesFromProvider(targetAccountId, { silent: false, force: true });
+					void refreshStatusesFromProvider(targetAccountId, { silent: false, force: true, fromPhone });
 				}
 			}
 		},
@@ -24626,7 +24628,8 @@ function WhatsAppWorkspaceContent() {
 			setTabLoading(true);
 			setTabError('');
 			try {
-				await loadStatuses(targetAccountId, { force: true, silent: false });
+				// "Sync now" (and any forced reload of Stories): ask the phone for what it has.
+				await loadStatuses(targetAccountId, { force: true, silent: false, fromPhone: true });
 			} catch (error) {
 				if (isCurrentRequest()) {
 					setTabError(error.response?.data?.message || 'Could not load statuses');
