@@ -6598,84 +6598,151 @@ function showWhatsAppDesktopNotification({
 	}
 }
 
-/** Corner card for a new message while another WhatsApp tab (Board, Reports, …) is open. */
-function WaIncomingMessageToast({ toastItem, title, body, avatarSrc, isGroup, isArabic, onOpen }) {
-	const close = event => {
-		event.stopPropagation();
-		toast.dismiss(toastItem.id);
-	};
+/** How long the new-message popup stays (paused while the pointer is on it). */
+const WA_INCOMING_POPUP_MS = 9000;
+/** Unread messages per chat shown in its popup, so a burst becomes one card with a count. */
+const waIncomingCounts = new Map();
+let waChimeContext = null;
+let waLastChimeAt = 0;
+
+/**
+ * Soft two-note chime for a new message, made with Web Audio (no file to load).
+ * At most one every 1.5 s so a burst of messages does not ring repeatedly.
+ */
+function playIncomingChime() {
+	if (typeof window === 'undefined') return;
+	const now = Date.now();
+	if (now - waLastChimeAt < 1500) return;
+	waLastChimeAt = now;
+	try {
+		const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+		if (!AudioContextClass) return;
+		waChimeContext = waChimeContext || new AudioContextClass();
+		const context = waChimeContext;
+		if (context.state === 'suspended') void context.resume();
+		const start = context.currentTime + 0.02;
+		const master = context.createGain();
+		master.gain.value = 0.14;
+		master.connect(context.destination);
+		[
+			[880, 0],
+			[1318.5, 0.11],
+		].forEach(([frequency, offset]) => {
+			const oscillator = context.createOscillator();
+			const envelope = context.createGain();
+			oscillator.type = 'sine';
+			oscillator.frequency.value = frequency;
+			const at = start + offset;
+			envelope.gain.setValueAtTime(0.0001, at);
+			envelope.gain.exponentialRampToValueAtTime(1, at + 0.012);
+			envelope.gain.exponentialRampToValueAtTime(0.0001, at + 0.5);
+			oscillator.connect(envelope);
+			envelope.connect(master);
+			oscillator.start(at);
+			oscillator.stop(at + 0.55);
+		});
+	} catch {
+		/* no audio (blocked autoplay, old browser): the popup still shows */
+	}
+}
+
+/** Popup for a new message while another WhatsApp tab (Board, Reports, …) is open. */
+function WaIncomingMessageToast({ toastItem, title, body, count, avatarSrc, isGroup, isArabic, onOpen, onDismiss }) {
+	const more = Math.max(0, count - 1);
 	return (
 		<div
-			role="button"
-			tabIndex={0}
 			dir={isArabic ? 'rtl' : 'ltr'}
+			role="alert"
+			aria-live="assertive"
 			data-wa-incoming-toast
-			onClick={onOpen}
-			onKeyDown={event => {
-				if (event.key === 'Enter' || event.key === ' ') {
-					event.preventDefault();
-					onOpen();
-				}
-			}}
-			className={`pointer-events-auto flex w-[min(360px,calc(100vw-32px))] cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-start shadow-xl ring-1 ring-black/5 transition-all duration-200 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 ${toastItem.visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'}`}
+			className={`wa-inm${toastItem.visible ? ' is-in' : ' is-out'}`}
+			style={{ '--wa-inm-ms': `${WA_INCOMING_POPUP_MS}ms` }}
 		>
-			<div className="relative shrink-0">
-				<Avatar label={title} size={10} src={avatarSrc} isGroup={isGroup} />
-				<span className="absolute -bottom-0.5 -end-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] text-white ring-2 ring-white dark:ring-slate-900">
-					<MessageCircle className="h-2.5 w-2.5" aria-hidden />
+			<button type="button" className="wa-inm__main" onClick={onOpen}>
+				<span className="wa-inm__avatar">
+					<Avatar label={title} size={11} src={avatarSrc} isGroup={isGroup} />
+					<span className="wa-inm__badge" aria-hidden="true">
+						<MessageCircle className="h-3 w-3" />
+					</span>
 				</span>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div className="flex items-center gap-2">
-					<span className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100 wa-privacy-identity" dir="auto">
-						{title}
+				<span className="wa-inm__text">
+					<span className="wa-inm__top">
+						<bdi className="wa-inm__name wa-privacy-identity">{title}</bdi>
+						<span className="wa-inm__when">{isArabic ? 'دلوقتي' : 'now'}</span>
 					</span>
-					<span className="shrink-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-						{isArabic ? 'دلوقتي' : 'now'}
+					<span className="wa-inm__body wa-privacy-text" dir="auto">
+						{body}
 					</span>
-				</div>
-				<p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-slate-600 dark:text-slate-300 wa-privacy-text" dir="auto">
-					{body}
-				</p>
+					{more ? (
+						<span className="wa-inm__more">
+							{isArabic ? `+${more} ${more === 1 ? 'رسالة تانية' : 'رسايل تانية'}` : `+${more} more ${more === 1 ? 'message' : 'messages'}`}
+						</span>
+					) : null}
+				</span>
+			</button>
+			<div className="wa-inm__actions">
+				<button type="button" className="wa-inm__btn is-primary" onClick={onOpen}>
+					{isArabic ? 'افتح الشات' : 'Open chat'}
+				</button>
+				<button type="button" className="wa-inm__btn" onClick={onDismiss}>
+					{isArabic ? 'بعدين' : 'Later'}
+				</button>
 			</div>
 			<button
 				type="button"
-				onClick={close}
+				onClick={onDismiss}
 				aria-label={isArabic ? 'إغلاق' : 'Close'}
-				className="shrink-0 self-start rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+				className="wa-inm__close"
 			>
 				<X className="h-4 w-4" aria-hidden />
 			</button>
+			{/* keyed on the count: a new message restarts the timer */}
+			<span key={count} className="wa-inm__timer" aria-hidden="true" />
 		</div>
 	);
 }
 
-function showWhatsAppIncomingToast({ conversationId, title, body, avatarSrc, isGroup, locale, onOpen }) {
+function showWhatsAppIncomingToast({ conversationId, title, body, avatarSrc, isGroup, locale, sound = true, onOpen }) {
 	if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
 	const isArabic = locale === 'ar';
+	const id = `wa-incoming-${conversationId}`;
+	const count = (waIncomingCounts.get(id) || 0) + 1;
+	waIncomingCounts.set(id, count);
+	const dismiss = () => {
+		waIncomingCounts.delete(id);
+		toast.dismiss(id);
+	};
 	toast.custom(
 		toastItem => (
 			<WaIncomingMessageToast
 				toastItem={toastItem}
 				title={String(title || 'WhatsApp').slice(0, 80)}
-				body={String(body || '').slice(0, 200)}
+				body={String(body || '').slice(0, 240)}
+				count={count}
 				avatarSrc={avatarSrc}
 				isGroup={isGroup}
 				isArabic={isArabic}
 				onOpen={() => {
-					toast.dismiss(toastItem.id);
+					dismiss();
 					onOpen?.();
 				}}
+				onDismiss={dismiss}
 			/>
 		),
 		{
-			// One card per chat: a second message from the same person replaces the first.
-			id: `wa-incoming-${conversationId}`,
-			duration: 6000,
+			// One card per chat: the next message from the same chat updates it and restarts the timer.
+			id,
+			duration: WA_INCOMING_POPUP_MS,
 			position: isArabic ? 'top-left' : 'top-right',
 		},
 	);
+	// The card leaves on its own after the timer; forget its count then too.
+	setTimeout(() => {
+		if (waIncomingCounts.get(id) === count) waIncomingCounts.delete(id);
+	}, WA_INCOMING_POPUP_MS + 1500);
+	if (sound) playIncomingChime();
 }
+
 
 function assertAudioBlob(blob) {
 	if (!blob) throw new Error('Empty audio');
@@ -11538,7 +11605,11 @@ function MobileCallsView({ logs, labels, locale, loading }) {
 
 function reportDateRange(days = 7) {
 	const to = new Date();
-	const from = new Date(Date.now() - Number(days || 7) * 24 * 60 * 60 * 1000);
+	// Today means since midnight, not the last 24 hours.
+	const from =
+		Number(days) === 1
+			? new Date(to.getFullYear(), to.getMonth(), to.getDate())
+			: new Date(Date.now() - Number(days || 7) * 24 * 60 * 60 * 1000);
 	return { from: from.toISOString(), to: to.toISOString() };
 }
 
@@ -13136,6 +13207,9 @@ function WhatsAppWorkspaceContent() {
 	const [reportStaffDetailLoading, setReportStaffDetailLoading] = useState(false);
 	const reportPeriodDaysRef = useRef(7);
 	reportPeriodDaysRef.current = reportPeriodDays;
+	// Last report per account and period: switching back shows it at once while it refreshes.
+	const reportCacheRef = useRef(new Map());
+	const [reportRefreshing, setReportRefreshing] = useState(false);
 	const [staff, setStaff] = useState([]);
 	const [assignableStaff, setAssignableStaff] = useState([]);
 	const [assignableStaffLoading, setAssignableStaffLoading] = useState(false);
@@ -18649,6 +18723,8 @@ function WhatsAppWorkspaceContent() {
 										peer?.type === 'group' ||
 										String(peer?.providerChatId || '').endsWith('@g.us'),
 									locale: activeLocale,
+									// The soft chime follows the account's notification switch.
+									sound: whatsappNotificationsEnabledRef.current,
 									onOpen: () => {
 										setActiveTab('chats');
 										openConversationRef.current?.(targetConversationId, peer);
@@ -24719,14 +24795,18 @@ function WhatsAppWorkspaceContent() {
 				if (isCurrentRequest()) setLogs(data || []);
 			}
 			if (tab === 'reports') {
-				const range = reportDateRange(reportPeriodDaysRef.current);
-				const { data } = await api.get(
-					`/whatsapp/accounts/${targetAccountId}/reports/summary`,
-					{ params: range },
-				);
-				if (isCurrentRequest()) {
-					setReport(data);
-					setReportStaffDetail(null);
+				const cacheKey = `${targetAccountId}:${reportPeriodDaysRef.current}`;
+				setReportRefreshing(true);
+				try {
+					const range = reportDateRange(reportPeriodDaysRef.current);
+					const { data } = await api.get(
+						`/whatsapp/accounts/${targetAccountId}/reports/summary`,
+						{ params: range },
+					);
+					reportCacheRef.current.set(cacheKey, data);
+					if (isCurrentRequest()) setReport(data);
+				} finally {
+					setReportRefreshing(false);
 				}
 			}
 			if (tab === 'settings') {
@@ -24762,6 +24842,14 @@ function WhatsAppWorkspaceContent() {
 			if (isCurrentRequest()) setTabLoading(false);
 		}
 	};
+
+	// Quiet refresh (the tab's one-minute timer and the refresh button): keeps data on screen.
+	const loadReportsRef = useRef(null);
+	loadReportsRef.current = () => loadTabData('reports');
+	const refreshReport = useCallback(() => {
+		if (activeTabRef.current !== 'reports') return;
+		void loadReportsRef.current?.();
+	}, []);
 
 	const fetchStaffReportDetail = async userId => {
 		if (!accountId || !userId) return;
@@ -31738,12 +31826,16 @@ function WhatsAppWorkspaceContent() {
 								t={t}
 								report={report}
 								loading={tabLoading}
+								refreshing={reportRefreshing}
 								periodDays={reportPeriodDays}
 								onPeriodChange={days => {
 									setReportPeriodDays(days);
 									reportPeriodDaysRef.current = days;
+									setReportStaffDetail(null);
+									setReport(reportCacheRef.current.get(`${accountId}:${days}`) || null);
 									void loadTabData('reports');
 								}}
+								onRefresh={refreshReport}
 								staffDetail={reportStaffDetail}
 								staffDetailLoading={reportStaffDetailLoading}
 								onOpenStaff={fetchStaffReportDetail}

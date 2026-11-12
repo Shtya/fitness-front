@@ -1,38 +1,19 @@
 'use client';
 
-import { useState } from 'react';
-import {
-	AlertTriangle,
-	ChevronDown,
-	Clock,
-	Inbox,
-	MessageCircle,
-	Timer,
-	TrendingUp,
-	UserRound,
-	Users,
-	Zap,
-} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 
 import { PACE_STYLES, formatDuration, staffAssignHint } from './whatsapp-staff-pace';
 
-function formatClock(value, locale = 'en') {
-	if (!value) return '—';
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) return '—';
-	return new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : 'en', {
-		month: 'short',
-		day: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit',
-	}).format(date);
-}
+const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
 
-/** 'ok' under 5 min, 'warn' under 15 min, 'bad' after that. */
-function waitTone(seconds) {
+/** 'ok' up to 5 min, 'warn' up to 15 min, 'bad' after that. */
+export function delayTone(seconds) {
 	if (seconds == null) return 'none';
-	if (seconds >= 900) return 'bad';
-	if (seconds >= 300) return 'warn';
+	if (seconds > 900) return 'bad';
+	if (seconds > 300) return 'warn';
 	return 'ok';
 }
 
@@ -48,43 +29,369 @@ function initials(name = '') {
 	);
 }
 
-function ReportsHero({ t, periodDays, onPeriodChange }) {
+function clock(value, locale) {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '—';
+	return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en', {
+		hour: 'numeric',
+		minute: '2-digit',
+	}).format(date);
+}
+
+function dayLabel(value, locale, withWeekday = true) {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '—';
+	return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en', {
+		...(withWeekday ? { weekday: 'short' } : {}),
+		day: 'numeric',
+		month: 'short',
+	}).format(date);
+}
+
+/** "3 hours ago", "yesterday" — relative to `now`. */
+export function timeAgo(value, locale, now = Date.now()) {
+	const time = new Date(value).getTime();
+	if (!Number.isFinite(time)) return '';
+	const diff = time - now;
+	const abs = Math.abs(diff);
+	const rtf = new Intl.RelativeTimeFormat(locale === 'ar' ? 'ar-EG' : 'en', { numeric: 'auto' });
+	if (abs < MINUTE) return locale === 'ar' ? 'دلوقتي' : 'just now';
+	if (abs < HOUR) return rtf.format(Math.round(diff / MINUTE), 'minute');
+	if (abs < DAY) return rtf.format(Math.round(diff / HOUR), 'hour');
+	return rtf.format(Math.round(diff / DAY), 'day');
+}
+
+/** Where the shift timeline puts its labels for this period length. */
+export function timelineTicks(fromMs, toMs, locale) {
+	const span = toMs - fromMs;
+	if (!(span > 0)) return [];
+	const ticks = [];
+	const start = new Date(fromMs);
+	if (span <= 1.5 * DAY) {
+		start.setMinutes(0, 0, 0);
+		start.setHours(Math.ceil(start.getHours() / 6) * 6);
+		for (let t = start.getTime(); t <= toMs; t += 6 * HOUR) {
+			if (t >= fromMs) ticks.push({ at: t, label: clock(t, locale) });
+		}
+		return ticks;
+	}
+	const step = span <= 8 * DAY ? 1 : 5;
+	start.setHours(0, 0, 0, 0);
+	start.setDate(start.getDate() + 1);
+	for (let t = start.getTime(); t <= toMs; t += step * DAY) {
+		ticks.push({ at: t, label: dayLabel(t, locale, step === 1) });
+	}
+	return ticks;
+}
+
+function position(at, fromMs, toMs) {
+	return Math.min(100, Math.max(0, ((at - fromMs) / (toMs - fromMs)) * 100));
+}
+
+/** The shift timeline: bands while WhatsApp was open, a tick per reply coloured by delay. */
+function ShiftTrack({ fromMs, toMs, timeline, ticks, locale, label }) {
+	const sessions = timeline?.sessions || [];
+	const replies = timeline?.replies || [];
+	const ar = locale === 'ar';
 	return (
-		<header className="wa-rp-hero">
-			<div className="wa-rp-hero__id">
-				<span className="wa-rp-hero__icon" aria-hidden="true">
-					<TrendingUp size={21} strokeWidth={2.1} />
-				</span>
-				<div className="min-w-0">
-					<h2 className="wa-rp-hero__title">{t.reports}</h2>
-					<p className="wa-rp-hero__hint">{t.reportsHint}</p>
-				</div>
-			</div>
-			<div className="wa-story-seg wa-rp-period" role="tablist" aria-label={t.reports}>
-				{[1, 7, 30].map(days => (
+		<div className="wa-sb-track" role="img" aria-label={label}>
+			{ticks.map(tick => (
+				<span
+					key={tick.at}
+					className="wa-sb-track__grid"
+					style={{ insetInlineStart: `${position(tick.at, fromMs, toMs)}%` }}
+				/>
+			))}
+			{sessions.map(([start, end]) => {
+				const left = position(start, fromMs, toMs);
+				const width = Math.max(0.6, position(end, fromMs, toMs) - left);
+				return (
+					<span
+						key={start}
+						className="wa-sb-track__band"
+						style={{ insetInlineStart: `${left}%`, width: `${width}%` }}
+						title={`${ar ? 'فاتح الواتساب' : 'WhatsApp open'} ${clock(start, locale)} – ${clock(end, locale)}`}
+					/>
+				);
+			})}
+			{replies.map(([at, seconds], index) => (
+				<span
+					key={`${at}-${index}`}
+					className={`wa-sb-track__tick is-${delayTone(seconds)}`}
+					style={{ insetInlineStart: `${position(at, fromMs, toMs)}%` }}
+					title={`${ar ? 'رد' : 'Replied'} ${clock(at, locale)} ${ar ? 'بعد' : 'after'} ${formatDuration(seconds, locale)}`}
+				/>
+			))}
+		</div>
+	);
+}
+
+function Stat({ label, value, tone = 'none', sub }) {
+	return (
+		<div className={`wa-sb-stat is-${tone}`}>
+			<span className="wa-sb-stat__value">{value}</span>
+			<span className="wa-sb-stat__label">{label}</span>
+			{sub ? <span className="wa-sb-stat__sub">{sub}</span> : null}
+		</div>
+	);
+}
+
+function PersonStatus({ person, locale, now }) {
+	const ar = locale === 'ar';
+	if (person.online) {
+		return <span className="wa-sb-status is-online">{ar ? 'فاتح الواتساب دلوقتي' : 'On WhatsApp now'}</span>;
+	}
+	if (!person.lastSeenAt) {
+		return <span className="wa-sb-status">{ar ? 'مدخلش من فترة طويلة' : 'Not seen in 90 days'}</span>;
+	}
+	return (
+		<span className="wa-sb-status" title={`${dayLabel(person.lastSeenAt, locale)} ${clock(person.lastSeenAt, locale)}`}>
+			{ar ? 'آخر ظهور ' : 'Last seen '}
+			{timeAgo(person.lastSeenAt, locale, now)}
+		</span>
+	);
+}
+
+/** One sentence on how the period went, for the open row. */
+function periodSentence(person, ar) {
+	const active = formatDuration(person.activeSeconds || 0, ar ? 'ar' : 'en');
+	const sessions = person.sessions || 0;
+	const opened = person.chatsOpened || 0;
+	const replied = person.repliedChats || 0;
+	const seenOnly = person.seenNoReply || 0;
+	if (!sessions && !person.replies) {
+		return ar ? 'مفيش أي نشاط في الفترة دي.' : 'No activity in this period.';
+	}
+	return ar
+		? `كان فاتح ${active} على ${sessions} مرة. فتح ${opened} شات، ورد في ${replied}${seenOnly ? `، و${seenOnly} شافهم ومردش` : ''}.`
+		: `Active ${active} over ${sessions} ${sessions === 1 ? 'session' : 'sessions'}. Opened ${opened} chats and replied in ${replied}${seenOnly ? `; ${seenOnly} opened without a reply` : ''}.`;
+}
+
+function DetailPanel({ person, detail, loading, locale, onOpen }) {
+	const ar = locale === 'ar';
+	const [view, setView] = useState('replies');
+	const replies = detail?.replies || [];
+	const sessions = detail?.activity?.sessions || [];
+	const chats = detail?.activity?.chats || [];
+	const waiting = detail?.waiting || [];
+	const views = [
+		['replies', ar ? 'ردوده' : 'Replies', replies.length],
+		['waiting', ar ? 'مستنيين رده' : 'Waiting on them', waiting.length],
+		['sessions', ar ? 'دخل إمتى' : 'Sessions', sessions.length],
+		['chats', ar ? 'فتح إيه' : 'Chats opened', chats.length],
+	];
+	return (
+		<div className="wa-sb-detail">
+			<p className="wa-sb-detail__summary">{periodSentence(person, ar)}</p>
+			<div className="wa-sb-tabs" role="tablist">
+				{views.map(([key, label, count]) => (
 					<button
-						key={days}
+						key={key}
 						type="button"
 						role="tab"
-						aria-selected={periodDays === days}
-						onClick={() => onPeriodChange?.(days)}
-						className={`wa-story-seg__btn${periodDays === days ? ' is-active' : ''}`}
+						aria-selected={view === key}
+						className={`wa-sb-tabs__btn${view === key ? ' is-active' : ''}`}
+						onClick={() => setView(key)}
 					>
-						{days === 1 ? t.reportToday : days === 7 ? t.reportWeek : t.reportMonth}
+						{label}
+						{detail ? <span className="wa-sb-tabs__count">{count}</span> : null}
 					</button>
 				))}
 			</div>
-		</header>
+			{loading && !detail ? (
+				<div className="wa-sb-lines" aria-busy="true">
+					<span />
+					<span />
+					<span />
+				</div>
+			) : (
+				<ul className="wa-sb-list nice-scroll">
+					{view === 'replies' &&
+						(replies.length ? (
+							replies.map((reply, index) => (
+								<li key={`${reply.conversationId}-${reply.repliedAt}-${index}`}>
+									<button type="button" className="wa-sb-list__row" onClick={() => onOpen?.(reply.conversationId)}>
+										<span className="wa-sb-list__main">
+											<span className="wa-sb-list__title"><bdi>{reply.title}</bdi></span>
+											<span className="wa-sb-list__sub">
+												{ar
+													? `بعت ${clock(reply.inboundAt, locale)}، رد عليه ${clock(reply.repliedAt, locale)} (${dayLabel(reply.repliedAt, locale)})`
+													: `Wrote ${clock(reply.inboundAt, locale)}, answered ${clock(reply.repliedAt, locale)} (${dayLabel(reply.repliedAt, locale)})`}
+											</span>
+										</span>
+										<span className={`wa-sb-pill is-${delayTone(reply.waitSeconds)}`}>{formatDuration(reply.waitSeconds, locale)}</span>
+									</button>
+								</li>
+							))
+						) : (
+							<li className="wa-sb-empty">{ar ? 'مردش على حد في الفترة دي.' : 'No replies in this period.'}</li>
+						))}
+					{view === 'waiting' &&
+						(waiting.length ? (
+							waiting.map(chat => (
+								<li key={chat.conversationId}>
+									<button type="button" className="wa-sb-list__row" onClick={() => onOpen?.(chat.conversationId)}>
+										<span className="wa-sb-list__main">
+											<span className="wa-sb-list__title"><bdi>{chat.title}</bdi></span>
+											<span className="wa-sb-list__sub">
+												{ar ? `${chat.inboundWaiting} رسالة من غير رد` : `${chat.inboundWaiting} unanswered messages`}
+											</span>
+										</span>
+										<span className={`wa-sb-pill is-${delayTone(chat.waitSeconds)}`}>{formatDuration(chat.waitSeconds, locale)}</span>
+									</button>
+								</li>
+							))
+						) : (
+							<li className="wa-sb-empty">{ar ? 'مفيش حد مستني رده.' : 'Nobody is waiting on them.'}</li>
+						))}
+					{view === 'sessions' &&
+						(sessions.length ? (
+							sessions.map(session => (
+								<li key={session.startedAt} className="wa-sb-list__row is-static">
+									<span className="wa-sb-list__main">
+										<span className="wa-sb-list__title">
+											{dayLabel(session.startedAt, locale)}، {clock(session.startedAt, locale)} – {clock(session.endedAt, locale)}
+										</span>
+										<span className="wa-sb-list__sub">
+											{ar
+												? `فتح ${session.chatsOpened} شات وبعت ${session.messagesSent} رسالة`
+												: `Opened ${session.chatsOpened} chats, sent ${session.messagesSent} messages`}
+										</span>
+									</span>
+									<span className="wa-sb-pill is-none">{formatDuration(session.durationSeconds, locale)}</span>
+								</li>
+							))
+						) : (
+							<li className="wa-sb-empty">{ar ? 'مفيش دخول متسجل في الفترة دي.' : 'No sessions recorded in this period.'}</li>
+						))}
+					{view === 'chats' &&
+						(chats.length ? (
+							chats.map(chat => (
+								<li key={chat.conversationId}>
+									<button type="button" className="wa-sb-list__row" onClick={() => onOpen?.(chat.conversationId)}>
+										<span className="wa-sb-list__main">
+											<span className="wa-sb-list__title"><bdi>{chat.title}</bdi></span>
+											<span className="wa-sb-list__sub">
+												{ar
+													? `فتحه ${chat.timesOpened} مرة، بعت ${chat.messagesSent} رسالة`
+													: `Opened ${chat.timesOpened}×, sent ${chat.messagesSent} messages`}
+											</span>
+										</span>
+										<span className={`wa-sb-pill ${chat.messagesSent ? 'is-ok' : 'is-warn'}`}>
+											{chat.messagesSent ? (ar ? 'رد' : 'Replied') : ar ? 'شاف بس' : 'Seen only'}
+										</span>
+									</button>
+								</li>
+							))
+						) : (
+							<li className="wa-sb-empty">{ar ? 'مفتحش أي شات في الفترة دي.' : 'No chats opened in this period.'}</li>
+						))}
+				</ul>
+			)}
+		</div>
+	);
+}
+
+function PersonRow({ person, open, onToggle, range, ticks, locale, now, detail, detailLoading, onOpen }) {
+	const ar = locale === 'ar';
+	const pace = PACE_STYLES[person.pace] || PACE_STYLES.idle;
+	return (
+		<li className={`wa-sb-person${open ? ' is-open' : ''}${person.online ? ' is-online' : ''}`}>
+			<button type="button" className="wa-sb-person__row" onClick={onToggle} aria-expanded={open}>
+				<span className="wa-sb-who">
+					<span className="wa-sb-avatar" aria-hidden="true">
+						{initials(person.name)}
+						<i className="wa-sb-avatar__dot" />
+					</span>
+					<span className="wa-sb-who__text">
+						<span className="wa-sb-who__top">
+							<span className="wa-sb-who__name">{person.name}</span>
+							<span className={`wa-sb-pace ${pace.className}`}>{ar ? pace.ar : pace.en}</span>
+						</span>
+						<PersonStatus person={person} locale={locale} now={now} />
+						<span className="wa-sb-who__last">
+							{person.lastReplyAt
+								? `${ar ? 'آخر رد ' : 'Last reply '}${timeAgo(person.lastReplyAt, locale, now)}`
+								: ar
+									? 'مردش في الفترة دي'
+									: 'No replies this period'}
+						</span>
+					</span>
+				</span>
+				<ShiftTrack
+					fromMs={range.from}
+					toMs={range.to}
+					timeline={person.timeline}
+					ticks={ticks}
+					locale={locale}
+					label={staffAssignHint(person, locale)}
+				/>
+				<span className="wa-sb-nums">
+					<Stat
+						label={ar ? 'متوسط الرد' : 'Typical reply'}
+						value={formatDuration(person.medianResponseSeconds, locale)}
+						tone={delayTone(person.medianResponseSeconds)}
+					/>
+					<Stat
+						label={ar ? 'رد' : 'Replies'}
+						value={person.replies}
+						sub={person.slowReplies15m ? (ar ? `${person.slowReplies15m} متأخر` : `${person.slowReplies15m} late`) : null}
+						tone={person.slowReplies15m ? 'warn' : 'none'}
+					/>
+					<Stat
+						label={ar ? 'مستنيين' : 'Waiting'}
+						value={person.waitingConversations}
+						sub={person.waitingConversations ? formatDuration(person.oldestWaitSeconds, locale) : null}
+						tone={person.waitingConversations ? delayTone(person.oldestWaitSeconds) : 'none'}
+					/>
+				</span>
+				<ChevronDown size={18} className="wa-sb-person__chev" aria-hidden="true" />
+			</button>
+			{open ? (
+				<DetailPanel
+					key={`${person.userId}:${range.from}`}
+					person={person}
+					detail={detail}
+					loading={detailLoading}
+					locale={locale}
+					onOpen={onOpen}
+				/>
+			) : null}
+		</li>
+	);
+}
+
+function Skeleton({ header }) {
+	return (
+		<div className="wa-sb" aria-busy="true">
+			{header}
+			<div className="wa-sb-pulse is-skeleton">
+				{[0, 1, 2, 3].map(index => (
+					<span key={index} />
+				))}
+			</div>
+			<div className="wa-sb-board">
+				<div className="wa-sb-roster is-skeleton">
+					{[0, 1, 2].map(index => (
+						<span key={index} />
+					))}
+				</div>
+				<div className="wa-sb-side is-skeleton">
+					<span />
+				</div>
+			</div>
+		</div>
 	);
 }
 
 export function WhatsAppReportsTab({
 	locale = 'en',
-	t,
 	report,
 	loading,
+	refreshing = false,
 	periodDays,
 	onPeriodChange,
+	onRefresh,
 	staffDetail,
 	staffDetailLoading,
 	onOpenStaff,
@@ -92,467 +399,235 @@ export function WhatsAppReportsTab({
 }) {
 	const ar = locale === 'ar';
 	const [openId, setOpenId] = useState(null);
-	const staff = report?.staff || [];
-	const waiting = report?.waiting || [];
-	const totals = report?.totals || {};
+	const [now, setNow] = useState(() => Date.now());
 
-	const toggleStaff = userId => {
+	// Online status and "last seen" go stale: refresh quietly every minute while visible.
+	useEffect(() => {
+		const timer = setInterval(() => {
+			setNow(Date.now());
+			if (typeof document !== 'undefined' && document.visibilityState === 'visible') onRefresh?.();
+		}, 60_000);
+		return () => clearInterval(timer);
+	}, [onRefresh]);
+
+	const range = useMemo(() => {
+		const from = Date.parse(report?.period?.from || '') || now - (periodDays || 7) * DAY;
+		const to = Date.parse(report?.period?.to || '') || now;
+		return { from, to: Math.max(to, from + MINUTE) };
+	}, [report?.period?.from, report?.period?.to, periodDays, now]);
+	const ticks = useMemo(() => timelineTicks(range.from, range.to, locale), [range.from, range.to, locale]);
+	// Only as many axis labels as fit (about 64px each); the grid lines in the tracks stay.
+	const axisRef = useRef(null);
+	const [axisWidth, setAxisWidth] = useState(0);
+	useEffect(() => {
+		const node = axisRef.current;
+		if (!node || typeof ResizeObserver === 'undefined') return undefined;
+		const observer = new ResizeObserver(([entry]) => setAxisWidth(entry.contentRect.width));
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, [report]);
+	const axisTicks = useMemo(() => {
+		const fit = Math.max(2, Math.floor((axisWidth || 600) / 64));
+		const step = Math.max(1, Math.ceil(ticks.length / fit));
+		return ticks.filter((_, index) => index % step === 0);
+	}, [ticks, axisWidth]);
+
+	const toggle = userId => {
 		const next = openId === userId ? null : userId;
 		setOpenId(next);
 		if (next) onOpenStaff?.(next);
 	};
 
-	const hero = <ReportsHero t={t} periodDays={periodDays} onPeriodChange={onPeriodChange} />;
-
-	if (loading) {
-		return (
-			<div className="wa-rp">
-				{hero}
-				<div className="wa-rp-kpis" aria-busy="true">
-					{[0, 1, 2, 3].map(index => (
-						<div key={index} className="wa-rp-kpi is-skeleton">
-							<span />
-							<span />
-							<span />
-						</div>
+	const header = (
+		<header className="wa-sb-head">
+			<div className="wa-sb-head__text">
+				<h2>{ar ? 'الفريق على الواتساب' : 'Team on WhatsApp'}</h2>
+				<p>
+					{ar
+						? 'مين فاتح دلوقتي، رد إمتى، واتأخر قد إيه.'
+						: 'Who is on now, when they replied, and how long customers waited.'}
+				</p>
+			</div>
+			<div className="wa-sb-head__actions">
+				<div className="wa-sb-seg" role="tablist" aria-label={ar ? 'الفترة' : 'Period'}>
+					{[1, 7, 30].map(days => (
+						<button
+							key={days}
+							type="button"
+							role="tab"
+							aria-selected={periodDays === days}
+							onClick={() => {
+								setOpenId(null);
+								onPeriodChange?.(days);
+							}}
+							className={`wa-sb-seg__btn${periodDays === days ? ' is-active' : ''}`}
+						>
+							{days === 1 ? (ar ? 'النهارده' : 'Today') : days === 7 ? (ar ? '٧ أيام' : '7 days') : ar ? '٣٠ يوم' : '30 days'}
+						</button>
 					))}
 				</div>
-				<div className="wa-rp-cols">
-					<div className="wa-rp-card is-skeleton" style={{ height: 260 }} />
-					<div className="wa-rp-card is-skeleton" style={{ height: 260 }} />
-				</div>
+				<button
+					type="button"
+					className={`wa-sb-refresh${refreshing ? ' is-spinning' : ''}`}
+					onClick={() => onRefresh?.(true)}
+					aria-label={ar ? 'تحديث' : 'Refresh'}
+					title={
+						report?.generatedAt
+							? `${ar ? 'اتحدث ' : 'Updated '}${timeAgo(report.generatedAt, locale, now)}`
+							: undefined
+					}
+				>
+					<RefreshCw size={16} strokeWidth={2.2} />
+				</button>
 			</div>
-		);
-	}
+		</header>
+	);
 
 	if (!report) {
+		if (loading) return <Skeleton header={header} />;
 		return (
-			<div className="wa-rp">
-				{hero}
-				<div className="wa-rp-empty">
-					<span className="wa-rp-empty__icon" aria-hidden="true">
-						<TrendingUp size={26} strokeWidth={1.9} />
-					</span>
-					<p>{t.noReportData}</p>
-				</div>
+			<div className="wa-sb">
+				{header}
+				<p className="wa-sb-blank">{ar ? 'مقدرناش نجيب التقرير. دوس تحديث.' : 'The report did not load. Press refresh to try again.'}</p>
 			</div>
 		);
 	}
 
+	const staff = report.staff || [];
+	const totals = report.totals || {};
+	const waiting = [...(report.waiting || []), ...(report.unassigned || [])].sort(
+		(a, b) => Number(b.waitSeconds) - Number(a.waitSeconds),
+	);
+	const recent = report.recentReplies || [];
 	const overdue = Number(totals.overdueConversations || 0);
-	const waitingCount = Number(totals.waitingConversations || 0);
-	const best = report.bestToAssign;
-	const bestPace = best ? PACE_STYLES[best.pace] || PACE_STYLES.idle : null;
-	const avgTone = waitTone(report.averageResponseSeconds);
+	const late = Number(totals.lateReplies || 0);
 
 	return (
-		<div className="wa-rp">
-			{hero}
+		<div className={`wa-sb${refreshing ? ' is-refreshing' : ''}`}>
+			{header}
 
-			<div className="wa-rp-kpis">
-				<Kpi
-					tone={avgTone === 'none' ? 'neutral' : avgTone}
-					icon={Clock}
-					label={t.avgFirstReply}
+			<section className="wa-sb-pulse" aria-label={ar ? 'ملخص الفريق' : 'Team summary'}>
+				<Stat
+					label={ar ? 'متوسط أول رد' : 'Typical first reply'}
 					value={formatDuration(report.averageResponseSeconds, locale)}
-					hint={
-						totals.repliesMeasured
-							? `${t.typicalReplyHint} · ${totals.repliesMeasured} ${t.repliesCounted}`
-							: t.typicalReplyHint
-					}
+					tone={delayTone(report.averageResponseSeconds)}
+					sub={ar ? `من ${totals.repliesMeasured || 0} رد` : `from ${totals.repliesMeasured || 0} replies`}
 				/>
-				<Kpi
-					tone={waitingCount ? 'warn' : 'ok'}
-					icon={Inbox}
-					label={t.waitingNow}
-					value={waitingCount}
-					hint={
-						Number(totals.unassignedWaiting || 0)
-							? `${t.waitingNowHint} · ${totals.unassignedWaiting} ${t.unassignedWaiting}`
-							: t.waitingNowHint
-					}
+				<Stat
+					label={ar ? 'عملاء مستنيين رد' : 'Customers waiting'}
+					value={waiting.length}
+					tone={overdue ? 'bad' : waiting.length ? 'warn' : 'ok'}
+					sub={overdue ? (ar ? `${overdue} عدى عليهم ربع ساعة` : `${overdue} over 15 min`) : null}
 				/>
-				<Kpi
-					tone={overdue ? 'bad' : 'ok'}
-					icon={AlertTriangle}
-					label={t.overdueNow}
-					value={overdue}
-					hint={t.overdueHint}
+				<Stat
+					label={ar ? 'ردود متأخرة' : 'Late replies'}
+					value={late}
+					tone={late ? 'warn' : 'ok'}
+					sub={ar ? 'أكتر من ربع ساعة' : 'over 15 min'}
 				/>
-				<div className="wa-rp-kpi is-best">
-					<p className="wa-rp-kpi__label">
-						<span className="wa-rp-kpi__icon">
-							<Users size={16} strokeWidth={2.1} />
-						</span>
-						{t.bestToAssign}
-					</p>
-					{best ? (
-						<div className="wa-rp-best">
-							<span className="wa-rp-avatar is-lg">{initials(best.name)}</span>
-							<div className="min-w-0">
-								<p className="wa-rp-best__name">{best.name}</p>
-								<span className={`wa-rp-pace ${bestPace?.className || ''}`}>{ar ? bestPace?.ar : bestPace?.en}</span>
-							</div>
-						</div>
-					) : (
-						<>
-							<p className="wa-rp-kpi__value">—</p>
-							<p className="wa-rp-kpi__hint">{t.noBestAssignee}</p>
-						</>
-					)}
-				</div>
-			</div>
+				<Stat
+					label={ar ? 'فاتحين دلوقتي' : 'On WhatsApp now'}
+					value={`${totals.onlineNow || 0}/${staff.length}`}
+					tone={totals.onlineNow ? 'ok' : 'none'}
+				/>
+			</section>
 
-			<div className="wa-rp-cols">
-				<section className="wa-rp-section">
-					<header className="wa-rp-section__head">
-						<div>
-							<h3>
-								<Users size={16} strokeWidth={2.2} />
-								{t.teamSla}
-								<span className="wa-rp-count">{staff.length}</span>
-							</h3>
-							<p>{t.teamSlaHint}</p>
-						</div>
-						<div className="wa-rp-legend" aria-hidden="true">
-							<span className="is-ok">{ar ? 'أقل من ٥ د' : '< 5 min'}</span>
-							<span className="is-warn">{ar ? '٥–١٥ د' : '5–15 min'}</span>
-							<span className="is-bad">{ar ? 'أكتر من ١٥ د' : '> 15 min'}</span>
-						</div>
-					</header>
-					<div className="wa-rp-staff">
-						{staff.length ? (
-							staff.map(item => {
-								const pace = PACE_STYLES[item.pace] || PACE_STYLES.idle;
-								const open = openId === item.userId;
-								const detail = staffDetail?.staff?.userId === item.userId ? staffDetail : null;
-								return (
-									<article key={item.userId} className={`wa-rp-card wa-rp-person${open ? ' is-open' : ''}`}>
-										<button
-											type="button"
-											onClick={() => toggleStaff(item.userId)}
-											aria-expanded={open}
-											className="wa-rp-person__head"
-										>
-											<span className={`wa-rp-avatar is-${waitTone(item.medianResponseSeconds)}`}>{initials(item.name)}</span>
-											<span className="wa-rp-person__id">
-												<span className="wa-rp-person__name">{item.name}</span>
-												<span className="wa-rp-person__meta">
-													<span className={`wa-rp-pace ${pace.className}`}>{ar ? pace.ar : pace.en}</span>
-													<span>
-														{item.assignedConversations} {t.assignedChats}
-													</span>
+			<div className="wa-sb-board">
+				<section className="wa-sb-roster" aria-label={ar ? 'الفريق' : 'Team'}>
+					<div className="wa-sb-roster__head" aria-hidden="true">
+						<span>{ar ? 'الشخص' : 'Person'}</span>
+						<span className="wa-sb-axis" ref={axisRef}>
+							{axisTicks.map(tick => (
+								<span
+									key={tick.at}
+									className="wa-sb-axis__tick"
+									style={{ insetInlineStart: `${position(tick.at, range.from, range.to)}%` }}
+								>
+									{tick.label}
+								</span>
+							))}
+						</span>
+						<span className="wa-sb-legend">
+							<i className="is-band" /> {ar ? 'فاتح' : 'Open'}
+							<i className="is-ok" /> {ar ? 'رد سريع' : 'Quick'}
+							<i className="is-warn" /> {ar ? '٥–١٥ د' : '5–15m'}
+							<i className="is-bad" /> {ar ? 'متأخر' : 'Late'}
+						</span>
+					</div>
+					{staff.length ? (
+						<ul className="wa-sb-people">
+							{staff.map(person => (
+								<PersonRow
+									key={person.userId}
+									person={person}
+									open={openId === person.userId}
+									onToggle={() => toggle(person.userId)}
+									range={range}
+									ticks={ticks}
+									locale={locale}
+									now={now}
+									detail={staffDetail?.staff?.userId === person.userId ? staffDetail : null}
+									detailLoading={staffDetailLoading}
+									onOpen={onOpenConversation}
+								/>
+							))}
+						</ul>
+					) : (
+						<p className="wa-sb-blank">
+							{ar
+								? 'لسه مفيش موظفين على الأكاونت ده. ادّي حد صلاحية من الإعدادات وشغله هيظهر هنا.'
+								: 'No staff on this account yet. Give someone access in Settings and their work shows up here.'}
+						</p>
+					)}
+				</section>
+
+				<aside className="wa-sb-side">
+					<section className="wa-sb-panel">
+						<h3>{ar ? 'مستنيين رد' : 'Waiting for a reply'}</h3>
+						{waiting.length ? (
+							<ul className="wa-sb-list nice-scroll">
+								{waiting.slice(0, 30).map(chat => (
+									<li key={chat.conversationId}>
+										<button type="button" className="wa-sb-list__row" onClick={() => onOpenConversation?.(chat.conversationId)}>
+											<span className="wa-sb-list__main">
+												<span className="wa-sb-list__title"><bdi>{chat.title}</bdi></span>
+												<span className="wa-sb-list__sub">
+													{chat.assignedUserName || (ar ? 'مش متوزع على حد' : 'Not assigned')}
 												</span>
 											</span>
-											<ChevronDown size={18} className="wa-rp-person__chev" aria-hidden="true" />
+											<span className={`wa-sb-pill is-${delayTone(chat.waitSeconds)}`}>{formatDuration(chat.waitSeconds, locale)}</span>
 										</button>
-										<div className="wa-rp-metrics">
-											<Metric label={t.medianReply} value={formatDuration(item.medianResponseSeconds, locale)} tone={waitTone(item.medianResponseSeconds)} />
-											<Metric label={t.p90Reply} value={formatDuration(item.p90ResponseSeconds, locale)} tone={waitTone(item.p90ResponseSeconds)} />
-											<Metric
-												label={t.waitingOnThem}
-												value={item.waitingConversations}
-												sub={`${item.waitingInboundMessages} ${t.pendingInbound}`}
-												tone={item.waitingConversations ? 'warn' : 'none'}
-											/>
-											<Metric label={t.oldestWait} value={formatDuration(item.oldestWaitSeconds, locale)} tone={waitTone(item.oldestWaitSeconds)} />
-										</div>
-										<ReplyMix item={item} t={t} ar={ar} />
-										<p className="wa-rp-person__foot">
-											<span>
-												<MessageCircle size={12} /> {t.sentByThem}: <b>{item.sentMessages}</b>
-											</span>
-											<span>
-												{t.repliesCounted}: <b>{item.replies}</b>
-											</span>
-										</p>
-										{open ? (
-											<div className="wa-rp-detail">
-												{staffDetailLoading && !detail ? (
-													<div className="wa-rp-detail__loading">
-														<span className="wa-rp-line is-skeleton" />
-														<span className="wa-rp-line is-skeleton" />
-														<span className="wa-rp-line is-skeleton" />
-													</div>
-												) : (
-													<>
-														<StaffActivity activity={detail?.activity} locale={locale} onOpen={onOpenConversation} />
-														<DetailList
-															title={t.replyDelays}
-															empty={t.noReplyHistory}
-															items={(detail?.replies || []).map((reply, index) => ({
-																key: `${reply.conversationId}-${index}`,
-																conversationId: reply.conversationId,
-																title: reply.title,
-																sub: `${formatClock(reply.inboundAt, locale)} → ${formatClock(reply.repliedAt, locale)}`,
-																seconds: reply.waitSeconds,
-															}))}
-															locale={locale}
-															onOpen={onOpenConversation}
-														/>
-														<DetailList
-															title={t.openWaiting}
-															empty={t.noOpenWaiting}
-															items={(detail?.waiting || []).map(chat => ({
-																key: chat.conversationId,
-																conversationId: chat.conversationId,
-																title: chat.title,
-																sub: `${chat.inboundWaiting} ${t.pendingInbound}`,
-																seconds: chat.waitSeconds,
-															}))}
-															locale={locale}
-															onOpen={onOpenConversation}
-														/>
-													</>
-												)}
-											</div>
-										) : null}
-									</article>
-								);
-							})
+									</li>
+								))}
+							</ul>
 						) : (
-							<p className="wa-rp-note">{t.noAssignedStaff}</p>
+							<p className="wa-sb-empty">{ar ? 'كل العملاء اترد عليهم.' : 'Every customer has been answered.'}</p>
 						)}
-					</div>
-				</section>
-
-				<section className="wa-rp-section wa-rp-waiting">
-					<header className="wa-rp-section__head">
-						<div>
-							<h3>
-								<Inbox size={16} strokeWidth={2.2} />
-								{t.waitingBoard}
-								<span className={`wa-rp-count${overdue ? ' is-bad' : ''}`}>{waiting.length}</span>
-							</h3>
-							<p>{t.waitingBoardHint}</p>
-						</div>
-					</header>
-					<div className="wa-rp-card wa-rp-queue">
-						{waiting.length ? (
-							waiting.map(chat => {
-								const tone = waitTone(chat.waitSeconds);
-								return (
-									<button
-										key={chat.conversationId}
-										type="button"
-										onClick={() => onOpenConversation?.(chat.conversationId)}
-										className={`wa-rp-queue__row is-${tone}`}
-									>
-										<span className="wa-rp-avatar is-sm">{initials(chat.title)}</span>
-										<span className="wa-rp-queue__copy">
-											<span className="wa-rp-queue__title" dir="auto">
-												{chat.title}
+					</section>
+					<section className="wa-sb-panel">
+						<h3>{ar ? 'آخر الردود' : 'Latest replies'}</h3>
+						{recent.length ? (
+							<ul className="wa-sb-list nice-scroll">
+								{recent.map((reply, index) => (
+									<li key={`${reply.conversationId}-${reply.repliedAt}-${index}`}>
+										<button type="button" className="wa-sb-list__row" onClick={() => onOpenConversation?.(reply.conversationId)}>
+											<span className="wa-sb-list__main">
+												<span className="wa-sb-list__title">
+													<bdi>{reply.userName}</bdi> {ar ? 'رد على' : 'answered'} <bdi>{reply.title}</bdi>
+												</span>
+												<span className="wa-sb-list__sub">{timeAgo(reply.repliedAt, locale, now)}</span>
 											</span>
-											<span className="wa-rp-queue__sub">
-												<UserRound size={11} />
-												{chat.assignedUserName || t.unassign}
-												<span className="wa-rp-queue__dot" aria-hidden="true" />
-												{chat.inboundWaiting} {t.pendingInbound}
-											</span>
-										</span>
-										<span className={`wa-rp-wait is-${tone}`}>
-											{tone === 'bad' ? <Timer size={12} /> : null}
-											{formatDuration(chat.waitSeconds, locale)}
-										</span>
-									</button>
-								);
-							})
+											<span className={`wa-sb-pill is-${delayTone(reply.waitSeconds)}`}>{formatDuration(reply.waitSeconds, locale)}</span>
+										</button>
+									</li>
+								))}
+							</ul>
 						) : (
-							<div className="wa-rp-allclear">
-								<span aria-hidden="true">
-									<Zap size={20} strokeWidth={2} />
-								</span>
-								<p>{t.noWaitingBoard}</p>
-							</div>
+							<p className="wa-sb-empty">{ar ? 'مفيش ردود في الفترة دي.' : 'No replies in this period.'}</p>
 						)}
-					</div>
-				</section>
+					</section>
+				</aside>
 			</div>
-		</div>
-	);
-}
-
-function Kpi({ icon: Icon, label, value, hint, tone = 'neutral' }) {
-	return (
-		<div className={`wa-rp-kpi is-${tone}`}>
-			<p className="wa-rp-kpi__label">
-				<span className="wa-rp-kpi__icon">
-					<Icon size={16} strokeWidth={2.1} />
-				</span>
-				{label}
-			</p>
-			<p className="wa-rp-kpi__value">{value}</p>
-			{hint ? <p className="wa-rp-kpi__hint">{hint}</p> : null}
-		</div>
-	);
-}
-
-function Metric({ label, value, sub, tone = 'none' }) {
-	return (
-		<div className={`wa-rp-metric is-${tone}`}>
-			<span className="wa-rp-metric__label">{label}</span>
-			<span className="wa-rp-metric__value">{value}</span>
-			{sub ? <span className="wa-rp-metric__sub">{sub}</span> : null}
-		</div>
-	);
-}
-
-function ReplyMix({ item, t, ar }) {
-	const total = Number(item?.replies || 0);
-	if (!total) return null;
-	const fast = Number(item.fastReplies5m || 0);
-	const late = Number(item.slowReplies15m || 0);
-	const mid = Math.max(0, total - fast - late);
-	const pct = n => `${Math.round((n / total) * 100)}%`;
-	return (
-		<div className="wa-rp-mix">
-			<div className="wa-rp-mix__head">
-				<span>{t.replyMix}</span>
-				<span className="wa-rp-mix__legend">
-					<i className="is-ok" /> {t.fastReplies} {fast}
-					<i className="is-mid" /> {ar ? 'عادي' : 'OK'} {mid}
-					<i className="is-bad" /> {t.lateReplies} {late}
-				</span>
-			</div>
-			<div className="wa-rp-mix__bar" role="img" aria-label={`${pct(fast)} / ${pct(mid)} / ${pct(late)}`}>
-				{fast ? <span className="is-ok" style={{ width: pct(fast) }} /> : null}
-				{mid ? <span className="is-mid" style={{ width: pct(mid) }} /> : null}
-				{late ? <span className="is-bad" style={{ width: pct(late) }} /> : null}
-			</div>
-		</div>
-	);
-}
-
-function formatDay(value, locale = 'en') {
-	if (!value) return '—';
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) return '—';
-	return new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : 'en', {
-		weekday: 'short',
-		month: 'short',
-		day: 'numeric',
-	}).format(date);
-}
-
-function formatTime(value, locale = 'en') {
-	if (!value) return '—';
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) return '—';
-	return new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : 'en', {
-		hour: 'numeric',
-		minute: '2-digit',
-	}).format(date);
-}
-
-/** When the staff member had WhatsApp open, which chats they opened and who they replied to. */
-export function StaffActivity({ activity, locale = 'en', onOpen }) {
-	const ar = locale === 'ar';
-	if (!activity) return null;
-	const sessions = activity.sessions || [];
-	const chats = activity.chats || [];
-	return (
-		<div className="wa-rp-activity" data-testid="staff-activity">
-			<p className="wa-rp-dlist__title">{ar ? 'نشاطه على الواتساب' : 'WhatsApp activity'}</p>
-			<div className="wa-rp-metrics">
-				<Metric
-					label={ar ? 'آخر ظهور' : 'Last seen'}
-					value={activity.lastSeenAt ? formatTime(activity.lastSeenAt, locale) : '—'}
-					sub={activity.lastSeenAt ? formatDay(activity.lastSeenAt, locale) : ar ? 'مدخلش في الفترة دي' : 'Not in this period'}
-				/>
-				<Metric
-					label={ar ? 'وقت النشاط' : 'Active time'}
-					value={formatDuration(activity.totalActiveSeconds || 0, locale)}
-					sub={`${sessions.length} ${ar ? 'مرة دخول' : sessions.length === 1 ? 'session' : 'sessions'}`}
-				/>
-				<Metric label={ar ? 'شاتات فتحها' : 'Chats opened'} value={activity.openedChats || 0} />
-				<Metric label={ar ? 'رد على' : 'Replied to'} value={activity.repliedChats || 0} sub={ar ? 'شات' : 'chats'} />
-			</div>
-
-			<div className="wa-rp-dlist">
-				<p className="wa-rp-dlist__title">{ar ? 'دخل إمتى' : 'Sessions'}</p>
-				{sessions.length ? (
-					<ul className="wa-ui-scroll nice-scroll">
-						{sessions.map(session => (
-							<li key={session.startedAt} className="wa-rp-dlist__row" data-testid="staff-session">
-								<span className="min-w-0">
-									<span className="wa-rp-dlist__name">
-										{formatDay(session.startedAt, locale)} · {formatTime(session.startedAt, locale)} → {formatTime(session.endedAt, locale)}
-									</span>
-									<span className="wa-rp-dlist__sub">
-										{ar
-											? `فتح ${session.chatsOpened} شات · بعت ${session.messagesSent} رسالة لـ ${session.chatsRepliedTo} شات`
-											: `Opened ${session.chatsOpened} chats · sent ${session.messagesSent} messages to ${session.chatsRepliedTo} chats`}
-									</span>
-								</span>
-								<span className="wa-rp-wait is-none">{formatDuration(session.durationSeconds, locale)}</span>
-							</li>
-						))}
-					</ul>
-				) : (
-					<p className="wa-rp-note">{ar ? 'مفيش دخول مسجل في الفترة دي' : 'No sessions recorded in this period'}</p>
-				)}
-			</div>
-
-			<div className="wa-rp-dlist">
-				<p className="wa-rp-dlist__title">{ar ? 'شاف إيه ورد على مين' : 'What they opened and answered'}</p>
-				{chats.length ? (
-					<ul className="wa-ui-scroll nice-scroll">
-						{chats.map(chat => (
-							<li key={chat.conversationId}>
-								<button
-									type="button"
-									onClick={() => onOpen?.(chat.conversationId)}
-									className="wa-rp-dlist__row"
-									data-testid="staff-activity-chat"
-								>
-									<span className="min-w-0">
-										<span className="wa-rp-dlist__name" dir="auto">
-											{chat.title}
-										</span>
-										<span className="wa-rp-dlist__sub">
-											{ar
-												? `فتحه ${chat.timesOpened} مرة · بعت ${chat.messagesSent} رسالة`
-												: `Opened ${chat.timesOpened}× · sent ${chat.messagesSent} messages`}
-										</span>
-									</span>
-									<span className={`wa-rp-wait ${chat.messagesSent ? 'is-ok' : 'is-warn'}`}>
-										{chat.messagesSent ? (ar ? 'رد' : 'Replied') : ar ? 'شاف بس' : 'Seen only'}
-									</span>
-								</button>
-							</li>
-						))}
-					</ul>
-				) : (
-					<p className="wa-rp-note">{ar ? 'مفتحش أي شات في الفترة دي' : 'No chats opened in this period'}</p>
-				)}
-			</div>
-		</div>
-	);
-}
-
-function DetailList({ title, empty, items, locale, onOpen }) {
-	return (
-		<div className="wa-rp-dlist">
-			<p className="wa-rp-dlist__title">{title}</p>
-			{items.length ? (
-				<ul className="wa-ui-scroll nice-scroll">
-					{items.map(item => (
-						<li key={item.key}>
-							<button type="button" onClick={() => onOpen?.(item.conversationId)} className="wa-rp-dlist__row">
-								<span className="min-w-0">
-									<span className="wa-rp-dlist__name" dir="auto">
-										{item.title}
-									</span>
-									<span className="wa-rp-dlist__sub">{item.sub}</span>
-								</span>
-								<span className={`wa-rp-wait is-${waitTone(item.seconds)}`}>{formatDuration(item.seconds, locale)}</span>
-							</button>
-						</li>
-					))}
-				</ul>
-			) : (
-				<p className="wa-rp-note">{empty}</p>
-			)}
 		</div>
 	);
 }
