@@ -118,7 +118,7 @@ import {
 	Radio,
 	GraduationCap,
 } from 'lucide-react';
-import api from '@/utils/axios';
+import api, { whatsappLiveApi, whatsappLiveOrigin } from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import { clearAppBadgeSource, syncAppBadge } from '@/lib/app-badge';
 import { createVisiblePoller } from '@/lib/visible-poll';
@@ -342,6 +342,7 @@ const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
 const WhatsAppReadingTab = lazy(() => import('./WhatsAppReadingTab'));
+const WhatsAppPromptsTab = lazy(() => import('./WhatsAppPromptsTab'));
 const WhatsAppOnlineTab = lazy(() => import('./WhatsAppOnlineTab'));
 const TypingHistoryPanel = lazy(() =>
 	import('./WhatsAppTypingLog').then(mod => ({ default: mod.TypingHistoryPanel })),
@@ -528,6 +529,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'accounts',
 	'chats',
 	'reading',
+	'prompts',
 	'online',
 	'channels',
 	'calls',
@@ -830,6 +832,9 @@ const translations = {
 		accounts: 'Accounts',
 		chats: 'Chats',
 		reading: 'Reading',
+		prompts: 'Prompts',
+		moreChatListTools: 'More tools',
+		hideNames: 'Hide names',
 		onlineTab: 'Online',
 		channels: 'Channels',
 		emails: 'Emails',
@@ -1318,6 +1323,9 @@ const translations = {
 		storiesSyncFailed: 'Could not load stories from WhatsApp. Reconnect the account and try again.',
 		storiesEmptyAfterSync:
 			'WhatsApp returned no stories. Open Status on your phone once, then tap refresh here.',
+		storiesWaitingForLive:
+			'No story anchors yet after linking. Open Status once on your phone, wait a few seconds, then tap Sync now again.',
+		storiesSyncedCount: 'Synced stories from your phone ({count})',
 		groupDetails: 'Group details',
 		openGroupChat: 'Open group chat',
 		groupDescription: 'Description',
@@ -1388,6 +1396,9 @@ const translations = {
 		accounts: 'الحسابات',
 		chats: 'المحادثات',
 		reading: 'القراءة',
+		prompts: 'Prompts',
+		moreChatListTools: 'المزيد',
+		hideNames: 'إخفاء الأسماء',
 		onlineTab: 'المتصلون',
 		channels: 'القنوات',
 		emails: 'إيميلات',
@@ -1875,7 +1886,10 @@ const translations = {
 			'واتساب ما زال يربط الجلسة على الخادم. أعد الربط من الحسابات إذا بقي هذا التنبيه.',
 		storiesSyncFailed: 'تعذر تحميل الحالات من واتساب. أعد ربط الحساب وحاول مرة أخرى.',
 		storiesEmptyAfterSync:
-			'لم يُرجع واتساب أي حالات. افتح الحالات على هاتفك مرة واحدة ثم اضغط تحديث هنا.',
+			'لم يُرجع واتساب أي حالات. افتح الحالات على هاتفك مرة، ثم اضغط تحديث هنا.',
+		storiesWaitingForLive:
+			'لسه مفيش نقطة بداية للستوريز بعد الربط. افتح الحالات على الموبايل ثانية، استنى شوية، واضغط مزامنة الآن تاني.',
+		storiesSyncedCount: 'اتزامنت الستوريز من الموبايل ({count})',
 		groupDetails: 'تفاصيل المجموعة',
 		openGroupChat: 'فتح محادثة المجموعة',
 		groupDescription: 'الوصف',
@@ -1945,6 +1959,7 @@ const tabs = [
 	['accounts', Smartphone],
 	['chats', MessageCircle],
 	['reading', BookOpen],
+	['prompts', Sparkles],
 	['online', Radio],
 	['statuses', Zap],
 	['groups', Users],
@@ -1961,7 +1976,7 @@ const tabs = [
 ];
 
 // The only tabs that render the sample profile instead of the real account.
-const SHOWCASE_TABS = new Set(['chats', 'reading', 'settings']);
+const SHOWCASE_TABS = new Set(['chats', 'reading', 'prompts', 'settings']);
 
 const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 const GLOW = '0 10px 24px -10px var(--color-primary-400)';
@@ -4913,6 +4928,17 @@ async function fetchStatusMediaBlob(accountId, statusId, options = {}) {
 	return blob;
 }
 
+function absoluteWhatsAppLiveUrl(pathOrUrl) {
+	if (!pathOrUrl || typeof pathOrUrl !== 'string') return null;
+	if (/^(https?:|blob:|data:)/i.test(pathOrUrl)) return pathOrUrl;
+	const origin = String(whatsappLiveOrigin || '')
+		.trim()
+		.replace(/\/$/, '');
+	const path = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+	if (!origin) return path;
+	return `${origin}${path}`;
+}
+
 async function downloadStatusMediaBlob(accountId, statusId, { history = false, bypassCache = false } = {}) {
 	const path = history
 		? `/whatsapp/accounts/${accountId}/statuses/history/${encodeURIComponent(statusId)}/content`
@@ -4923,14 +4949,18 @@ async function downloadStatusMediaBlob(accountId, statusId, { history = false, b
 		// Story grid previews should fail fast and move on instead of blocking the queue.
 		timeout: 45_000,
 	};
+	// Live Baileys owns story bytes — local API with sessions disabled cannot open them.
 	let response;
 	try {
-		response = await api.get(path, bypassCache ? { ...request, params: { fresh: Date.now() } } : request);
+		response = await whatsappLiveApi.get(
+			path,
+			bypassCache ? { ...request, params: { fresh: Date.now() } } : request,
+		);
 	} catch (error) {
 		// A download cut off mid-way leaves a truncated entry in the browser cache; the
 		// next request revalidates to 304 against it and Chrome aborts. A unique URL skips it.
 		if (bypassCache || !isStoryTransferFailure(error)) throw error;
-		response = await api.get(path, { ...request, params: { fresh: Date.now() } });
+		response = await whatsappLiveApi.get(path, { ...request, params: { fresh: Date.now() } });
 	}
 	const blob = response.data;
 	if (!blob || response.status >= 400) {
@@ -4998,14 +5028,14 @@ function storyMediaIds(statusRef) {
  * the whole file, and a 19MB story is what Chrome was aborting.
  */
 async function fetchStatusStreamUrl(accountId, statusId, { history = false } = {}) {
-	const { data } = await api.get(
+	const { data } = await whatsappLiveApi.get(
 		`/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(statusId)}/stream-url`,
 		{
 			params: history ? { history: true } : undefined,
 			timeout: 45_000,
 		},
 	);
-	const url = absoluteApiUrl(data?.url);
+	const url = absoluteWhatsAppLiveUrl(data?.url) || absoluteApiUrl(data?.url);
 	if (!url) throw new Error('Media unavailable');
 	return {
 		url,
@@ -13127,6 +13157,7 @@ function WhatsAppWorkspaceContent() {
 	const [storyRepostText, setStoryRepostText] = useState('');
 	const [repostingStory, setRepostingStory] = useState(false);
 	const [autoForwardOpen, setAutoForwardOpen] = useState(false);
+	const [privacyBlurMenuOpen, setPrivacyBlurMenuOpen] = useState(false);
 	const storyDialogOpenRef = useRef(false);
 	storyDialogOpenRef.current = storyRepostOpen || storyShareOpen;
 	const [storyViewerEmbed, setStoryViewerEmbed] = useState(null);
@@ -16476,7 +16507,8 @@ function WhatsAppWorkspaceContent() {
 			setSyncingStatuses(true);
 			try {
 				// Every refresh lets the server ask the phone (spaced out); "Sync now" insists.
-				const { data: refreshed } = await api.get(
+				// Must hit the host that owns the Baileys session (prod), not local sessions=off.
+				const { data: refreshed } = await whatsappLiveApi.get(
 					`/whatsapp/accounts/${targetAccountId}/statuses`,
 					{ params: { refresh: true, debug: '1', ...(fromPhone ? { phone: '1' } : {}) }, timeout: 90_000 },
 				);
@@ -24671,6 +24703,11 @@ function WhatsAppWorkspaceContent() {
 			setTabError('');
 			return;
 		}
+		if (tab === 'prompts') {
+			setActiveTab('prompts');
+			setTabError('');
+			return;
+		}
 		if (tab === 'channels') {
 			setConversationFilter('channels');
 			setActiveTab('chats');
@@ -24735,9 +24772,42 @@ function WhatsAppWorkspaceContent() {
 			}
 			setTabLoading(true);
 			setTabError('');
+			const beforeCount = statusesCacheRef.current.get(targetAccountId)?.items?.length || 0;
 			try {
-				// "Sync now" (and any forced reload of Stories): ask the phone for what it has.
+				// "Sync now": wait for the phone history pages, then refresh the list.
 				await loadStatuses(targetAccountId, { force: true, silent: false, fromPhone: true });
+				if (isCurrentRequest()) {
+					const afterCount = statusesCacheRef.current.get(targetAccountId)?.items?.length || 0;
+					if (afterCount > beforeCount) {
+						toast.success(
+							String(t.storiesSyncedCount || 'Synced stories from your phone ({count})').replace(
+								'{count}',
+								String(afterCount),
+							),
+						);
+					} else {
+						const hint = statusesCacheRef.current.get(targetAccountId)?.hint;
+						const ar = locale === 'ar';
+						if (hint === 'whatsapp_stories_full_sync_requested') {
+							// The phone answers in the background; the list refreshes when stories land.
+							toast(
+								ar
+									? 'طلبنا من التليفون يبعت كل الستوريز اللي شغالة دلوقتي. اللي هيوصل هيظهر هنا لوحده خلال دقيقة أو اتنين.'
+									: 'Asked your phone to send every story that is live now. They show up here on their own within a minute or two.',
+								{ duration: 7000 },
+							);
+						} else if (hint === 'whatsapp_stories_full_sync_wait') {
+							toast(
+								ar
+									? 'طلبنا من التليفون من شوية. استنى دقايق قبل ما تطلب تاني، واللي وصل هيظهر لوحده.'
+									: 'Your phone was asked a few minutes ago. Give it a little time before asking again; what arrives shows up on its own.',
+								{ duration: 6000 },
+							);
+						} else if (hint === 'whatsapp_stories_waiting_for_live') {
+							toast(t.storiesWaitingForLive);
+						}
+					}
+				}
 			} catch (error) {
 				if (isCurrentRequest()) {
 					setTabError(error.response?.data?.message || 'Could not load statuses');
@@ -25071,7 +25141,7 @@ function WhatsAppWorkspaceContent() {
 		const hideStatusViewReceipts =
 			selectedAccount?.privacySettings?.hideStatusViewReceipts ?? true;
 		if (!hideStatusViewReceipts && !storyViewerHistoryRef.current) {
-			api
+			whatsappLiveApi
 				.post(
 					`/whatsapp/accounts/${targetAccountId}/statuses/${encodeURIComponent(status.providerStatusId)}/view`,
 					{ senderWaId: status.senderWaId || undefined },
@@ -25113,7 +25183,7 @@ function WhatsAppWorkspaceContent() {
 				let refreshedItems =
 					statusesCacheRef.current.get(targetAccountId)?.items || [];
 				try {
-					const { data: refreshed } = await api.get(
+					const { data: refreshed } = await whatsappLiveApi.get(
 						`/whatsapp/accounts/${targetAccountId}/statuses`,
 						{ params: { refresh: true }, timeout: 40000 },
 					);
@@ -26557,7 +26627,8 @@ function WhatsAppWorkspaceContent() {
 				activeTab !== 'wallet' &&
 				activeTab !== 'adhkar' &&
 				activeTab !== 'learn' &&
-				activeTab !== 'reading' && (
+				activeTab !== 'reading' &&
+				activeTab !== 'prompts' && (
 				<MobileWhatsAppHeader
 					locale={locale}
 					title={
@@ -26565,6 +26636,8 @@ function WhatsAppWorkspaceContent() {
 							? t.updates
 							: activeTab === 'reading'
 								? t.reading
+							: activeTab === 'prompts'
+								? t.prompts
 							: activeTab === 'online'
 								? t.onlineTab
 							: activeTab === 'groups'
@@ -26843,17 +26916,13 @@ function WhatsAppWorkspaceContent() {
 					avatarUrl={railAvatarUrl}
 					showcaseOnly={showcaseOnly}
 					showSettings={canManageWhatsApp || isAdmin}
-					showAccounts={!showcaseOnly}
-					showReports={!showcaseOnly && seesWholeAccount}
-					showTyping={!showcaseOnly && seesWholeAccount}
 					showBoard={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
 					showFakeChat={!showcaseOnly && fakeChatAllowed}
-					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
 					showWallet={!showcaseOnly}
 					showAdhkar={!showcaseOnly}
 					showDocuments={!showcaseOnly && isAdmin}
 					showLearn={!showcaseOnly}
-					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
+					showPrompts={!showcaseOnly}
 					showUpdates={seesWholeAccount}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
@@ -26870,7 +26939,7 @@ function WhatsAppWorkspaceContent() {
 			}`}>
 				{/* Compact account switcher for desktop utility tabs (replaces PageHeader actions). */}
 				{['accounts', 'reports', 'settings', 'profile'].includes(activeTab) ? (
-					<div className="mb-4 hidden items-center justify-between gap-3 min-[769px]:flex">
+					<div className="p-4 mb-4 hidden items-center justify-between gap-3 min-[769px]:flex">
 						<div>
 							<h2 className="text-lg font-black text-slate-900 dark:text-white">
 								{t[activeTab] || t.title}
@@ -26900,7 +26969,7 @@ function WhatsAppWorkspaceContent() {
 				{tabError && activeTab !== 'accounts' && (
 					<div
 						role="alert"
-						className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
+						className=" !p-4 mb-4 flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50  text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
 					>
 						<span>{tabError}</span>
 						<button
@@ -27047,7 +27116,7 @@ function WhatsAppWorkspaceContent() {
 						if (ok) void disconnectAccount(true);
 					};
 					return (
-					<div className="wa-acc">
+					<div className="wa-acc !p-4">
 						<aside className="wa-acc-side">
 							<header className="wa-acc-side__head">
 								<h2 className="wa-acc-side__title">{ar ? 'أرقام الواتساب' : 'WhatsApp numbers'}</h2>
@@ -27548,7 +27617,11 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										</div>
 										<div className="wa-desktop-chat-list-actions">
+											{/* Anchor only — opened from the ⋯ menu as “Hide names”. */}
 											<WhatsAppPrivacyBlurControl
+												hideTrigger
+												open={privacyBlurMenuOpen}
+												onOpenChange={setPrivacyBlurMenuOpen}
 												value={privacyBlur}
 												onChange={setPrivacyBlur}
 												chats={privacyBlurPickerChats}
@@ -27568,17 +27641,6 @@ function WhatsAppWorkspaceContent() {
 													blurPersistHint: t.blurPersistHint,
 												}}
 											/>
-											{!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin) ? (
-												<button
-													type="button"
-													onClick={() => setAutoForwardOpen(true)}
-													aria-label={t.autoForward}
-													title={t.autoForward}
-													className="wa-header-icon-btn"
-												>
-													<Forward size={18} strokeWidth={2.1} className="rtl:-scale-x-100" />
-												</button>
-											) : null}
 											{pageLock.status.enabled && !showcaseOnly ? (
 												<button
 													type="button"
@@ -27590,6 +27652,67 @@ function WhatsAppWorkspaceContent() {
 													<PageLockIcon size={18} strokeWidth={2.1} />
 												</button>
 											) : null}
+											<WaActionMenu
+												iconOnly
+												ariaLabel={t.moreChatListTools}
+												buttonClassName="wa-header-icon-btn hidden min-[769px]:grid"
+												actions={[
+													{
+														id: 'autoForward',
+														label: t.autoForward,
+														icon: Forward,
+														hidden:
+															showcaseOnly ||
+															!(canUseWhatsApp || canManageWhatsApp || isAdmin),
+														onClick: () => setAutoForwardOpen(true),
+													},
+													{
+														id: 'hideNames',
+														label: t.hideNames,
+														icon: EyeOff,
+														active: Boolean(privacyBlur?.enabled),
+														opensSubmenu: true,
+														onClick: () => setPrivacyBlurMenuOpen(true),
+													},
+													{
+														id: 'typing',
+														label: t.typing,
+														icon: TypingLogIcon,
+														dividerBefore: true,
+														hidden: showcaseOnly || !seesWholeAccount,
+														onClick: () => void loadTabData('typing'),
+													},
+													{
+														id: 'groups',
+														label: t.groups || t.communities,
+														icon: UsersRound,
+														hidden: showcaseOnly,
+														onClick: () => void loadTabData('groups'),
+													},
+													{
+														id: 'agent',
+														label: t.agent || (locale === 'ar' ? 'الذكاء الاصطناعي' : 'AI'),
+														icon: Bot,
+														hidden: showcaseOnly || !(canManageWhatsApp || isAdmin),
+														onClick: () => void loadTabData('agent'),
+													},
+													{
+														id: 'accounts',
+														label: t.accounts,
+														icon: Smartphone,
+														dividerBefore: true,
+														hidden: showcaseOnly,
+														onClick: () => void loadTabData('accounts'),
+													},
+													{
+														id: 'reports',
+														label: t.reports,
+														icon: BarChart3,
+														hidden: showcaseOnly || !seesWholeAccount,
+														onClick: () => void loadTabData('reports'),
+													},
+												]}
+											/>
 											<button
 												type="button"
 												onClick={() => {
@@ -30784,6 +30907,14 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				)}
 
+				{activeTab === 'prompts' && (
+					<div className="wa-secondary-pane wa-prompts-pane min-h-0 overflow-hidden bg-[#f7f8fa] dark:bg-[#0b141a]">
+						<Suspense fallback={<div className="grid min-h-[60vh] place-items-center"><Loader2 size={20} className="animate-spin" /></div>}>
+							<WhatsAppPromptsTab />
+						</Suspense>
+					</div>
+				)}
+
 				{activeTab === 'groups' && (
 					tabLoading ? (
 						<div className="wa-secondary-pane">
@@ -31205,9 +31336,11 @@ function WhatsAppWorkspaceContent() {
 													? t.connectToSeeStories
 													: statusFetchHint === 'whatsapp_stories_sync_failed'
 														? t.storiesSyncFailed
-														: statusFetchHint === 'whatsapp_stories_empty'
-															? t.storiesEmptyAfterSync
-															: t.noStatuses
+														: statusFetchHint === 'whatsapp_stories_waiting_for_live'
+															? t.storiesWaitingForLive
+															: statusFetchHint === 'whatsapp_stories_empty'
+																? t.storiesEmptyAfterSync
+																: t.noStatuses
 									}
 								/>
 							) : storyPanelMode === 'active' ? (

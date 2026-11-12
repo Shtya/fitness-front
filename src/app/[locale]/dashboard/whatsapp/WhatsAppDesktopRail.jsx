@@ -1,8 +1,6 @@
 'use client';
 
 import {
-	BrainCircuit,
-	ChartColumnIncreasing,
 	FileStack,
 	Kanban,
 	Languages,
@@ -11,11 +9,9 @@ import {
 	PanelLeftClose,
 	PanelLeftOpen,
 	Settings,
-	Smartphone,
+	Sparkles,
 	Sun,
-	TextCursorInput,
 	User,
-	UsersRound,
 	WalletCards,
 	WandSparkles,
 	GraduationCap,
@@ -133,16 +129,13 @@ export default function WhatsAppDesktopRail({
 	avatarUrl = '',
 	connected = false,
 	showSettings = true,
-	showAccounts = true,
-	showReports = true,
 	showBoard = true,
 	showFakeChat = true,
 	showWallet = false,
-	showTyping = false,
 	showAdhkar = false,
 	showDocuments = false,
 	showLearn = false,
-	showAgent = false,
+	showPrompts = true,
 	showUpdates = true,
 	showcaseOnly = false,
 	darkMode = false,
@@ -153,7 +146,10 @@ export default function WhatsAppDesktopRail({
 	const { focusMode, setFocusMode, hideEdgeDock } = useSidebarChrome();
 	const dockTip = useDockTooltip(ar);
 
-	// Core workflow first, then ops tools. Stronger lucide glyphs (filled-friendly outlines).
+	/*
+	 * Core workflow on the rail. Typing / Groups / AI / Accounts / Reports live in the
+	 * chat-list ⋯ menu next to collapse — keep the rail short.
+	 */
 	const allPrimaryItems = [
 		{
 			id: 'chats',
@@ -176,31 +172,19 @@ export default function WhatsAppDesktopRail({
 			icon: RailReadingIcon,
 			custom: true,
 		},
-		{
-			id: 'groups',
-			label: labels.groups || labels.communities || (ar ? 'مجموعات' : 'Groups'),
-			icon: UsersRound,
-		},
-		showAgent
+		showPrompts
 			? {
-					id: 'agent',
-					label: labels.agent || (ar ? 'الذكاء الاصطناعي' : 'AI'),
-					icon: BrainCircuit,
+					id: 'prompts',
+					label: labels.prompts || (ar ? 'Prompts' : 'Prompts'),
+					icon: Sparkles,
 				}
 			: null,
 	].filter(Boolean);
 	const primaryItems = showcaseOnly
-		? allPrimaryItems.filter(item => item.id === 'chats' || item.id === 'reading')
+		? allPrimaryItems.filter(item => item.id === 'chats' || item.id === 'reading' || item.id === 'prompts')
 		: allPrimaryItems;
 
 	const utilityItems = [
-		showTyping
-			? {
-					id: 'typing',
-					label: labels.typing || (ar ? 'محاولات الكتابة' : 'Typing log'),
-					icon: TextCursorInput,
-				}
-			: null,
 		showBoard
 			? {
 					id: 'board',
@@ -234,20 +218,6 @@ export default function WhatsAppDesktopRail({
 					id: 'adhkar',
 					label: labels.adhkar || (ar ? 'أذكاري' : 'My Adhkar'),
 					icon: MoonStar,
-				}
-			: null,
-		showAccounts
-			? {
-					id: 'accounts',
-					label: labels.accounts || (ar ? 'حسابات' : 'Accounts'),
-					icon: Smartphone,
-				}
-			: null,
-		showReports
-			? {
-					id: 'reports',
-					label: labels.reports || (ar ? 'تقارير' : 'Reports'),
-					icon: ChartColumnIncreasing,
 				}
 			: null,
 		showFakeChat

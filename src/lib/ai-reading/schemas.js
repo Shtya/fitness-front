@@ -101,7 +101,7 @@ export function createChapter(title, pages = []) {
 
 export function createPrompt(partial = {}) {
 	const now = new Date().toISOString();
-	return {
+	const next = {
 		id: uid('prompt'),
 		title: 'Untitled prompt',
 		/** Short note: what this prompt is for / when to use it. */
@@ -110,10 +110,38 @@ export function createPrompt(partial = {}) {
 		category: 'custom',
 		favorite: false,
 		variables: [],
+		/** null = Global library; otherwise a project folder id from prefs.promptFolders. */
+		folderId: null,
+		sortOrder: 0,
 		createdAt: now,
 		updatedAt: now,
 		...partial,
 	};
+	/* Never let an explicit `id: undefined` wipe the generated id (edit/delete broke that way). */
+	if (!next.id) next.id = uid('prompt');
+	if (next.folderId != null && next.folderId !== '') {
+		next.folderId = String(next.folderId).slice(0, 64);
+	} else {
+		next.folderId = null;
+	}
+	next.sortOrder = Number.isFinite(Number(next.sortOrder)) ? Number(next.sortOrder) : 0;
+	return next;
+}
+
+export function createPromptFolder(partial = {}) {
+	const now = new Date().toISOString();
+	const next = {
+		id: uid('pfolder'),
+		name: '',
+		sortOrder: 0,
+		createdAt: now,
+		updatedAt: now,
+		...partial,
+	};
+	if (!next.id) next.id = uid('pfolder');
+	next.name = String(next.name || '').trim().slice(0, 80);
+	next.sortOrder = Number.isFinite(Number(next.sortOrder)) ? Number(next.sortOrder) : 0;
+	return next;
 }
 
 export function createTopic(partial = {}) {

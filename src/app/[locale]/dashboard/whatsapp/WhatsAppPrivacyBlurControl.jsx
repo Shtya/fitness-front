@@ -210,10 +210,26 @@ function ChatPicker({ chatIds, chats, copy, onToggle, onClear }) {
 	);
 }
 
-export default function WhatsAppPrivacyBlurControl({ value, onChange, labels, chats = [] }) {
+export default function WhatsAppPrivacyBlurControl({
+	value,
+	onChange,
+	labels,
+	chats = [],
+	open: openProp,
+	onOpenChange,
+	hideTrigger = false,
+	className = '',
+}) {
 	const locale = useLocale();
 	const x = extraCopy[String(locale).startsWith('ar') ? 'ar' : 'en'];
-	const [open, setOpen] = useState(false);
+	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+	const controlled = typeof openProp === 'boolean';
+	const open = controlled ? openProp : uncontrolledOpen;
+	const setOpen = next => {
+		const valueNext = typeof next === 'function' ? next(open) : next;
+		if (!controlled) setUncontrolledOpen(valueNext);
+		onOpenChange?.(valueNext);
+	};
 	const [position, setPosition] = useState(null);
 	const rootRef = useRef(null);
 	const buttonRef = useRef(null);
@@ -231,12 +247,20 @@ export default function WhatsAppPrivacyBlurControl({ value, onChange, labels, ch
 		if (!open) return undefined;
 		const updatePosition = () => {
 			const rect = buttonRef.current?.getBoundingClientRect();
-			if (!rect) return;
 			const width = Math.min(320, window.innerWidth - 16);
 			const rtl = document.documentElement.dir === 'rtl';
-			const preferred = rtl ? rect.left : rect.right - width;
+			const usable =
+				rect && rect.width + rect.height > 0
+					? rect
+					: {
+							left: rtl ? 16 : window.innerWidth - width - 16,
+							right: rtl ? width + 16 : window.innerWidth - 16,
+							bottom: 88,
+							top: 72,
+						};
+			const preferred = rtl ? usable.left : usable.right - width;
 			const left = Math.min(Math.max(8, preferred), window.innerWidth - width - 8);
-			const top = rect.bottom + 8;
+			const top = usable.bottom + 8;
 			setPosition({ top, left, width, maxHeight: Math.max(240, window.innerHeight - top - 12) });
 		};
 		updatePosition();
@@ -281,26 +305,30 @@ export default function WhatsAppPrivacyBlurControl({ value, onChange, labels, ch
 					: x.statusNothing;
 
 	return (
-		<div ref={rootRef} className="wa-privacy-blur-control relative shrink-0">
-			<button
-				ref={buttonRef}
-				type="button"
-				aria-pressed={enabled}
-				aria-expanded={open}
-				aria-haspopup="dialog"
-				aria-label={labels.blurOptions}
-				title={labels.blurToggleHint}
-				onClick={() => setOpen(current => !current)}
-				className={`wa-btn-3d wa-privacy-blur-toggle rounded-full text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${
-					enabled ? 'is-active' : ''
-				} ${open ? 'is-open' : ''}`}
-			>
-				{enabled ? (
-					<EyeOff size={18} strokeWidth={2.25} absoluteStrokeWidth />
-				) : (
-					<Eye size={18} strokeWidth={2.25} absoluteStrokeWidth />
-				)}
-			</button>
+		<div ref={rootRef} className={`wa-privacy-blur-control relative shrink-0 ${className}`.trim()}>
+			{hideTrigger ? (
+				<span ref={buttonRef} className="sr-only" aria-hidden="true" />
+			) : (
+				<button
+					ref={buttonRef}
+					type="button"
+					aria-pressed={enabled}
+					aria-expanded={open}
+					aria-haspopup="dialog"
+					aria-label={labels.blurOptions}
+					title={labels.blurToggleHint}
+					onClick={() => setOpen(current => !current)}
+					className={`wa-btn-3d wa-privacy-blur-toggle rounded-full text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${
+						enabled ? 'is-active' : ''
+					} ${open ? 'is-open' : ''}`}
+				>
+					{enabled ? (
+						<EyeOff size={18} strokeWidth={2.25} absoluteStrokeWidth />
+					) : (
+						<Eye size={18} strokeWidth={2.25} absoluteStrokeWidth />
+					)}
+				</button>
+			)}
 			{open &&
 				position &&
 				typeof document !== 'undefined' &&

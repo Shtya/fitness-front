@@ -9392,11 +9392,15 @@ html.dark .wa-st-chip.is-active {
 	gap: 16px;
 }
 
+/*
+ * Featured "Latest" tile: wider, still needs a real height. Content inside the card is
+ * position:absolute, so `aspect-ratio: auto` + `min-height: 100%` collapsed it to a
+ * thin strip whenever Recent updates only had this one card (no sibling row height).
+ */
 .wa-st-card.is-featured {
 	grid-column: span 2;
-	grid-row: span 2;
-	aspect-ratio: auto;
-	min-height: 100%;
+	aspect-ratio: 4 / 5;
+	min-height: 240px;
 }
 
 /* Contact info: story ring around the large avatar, WhatsApp style. */
@@ -9579,8 +9583,8 @@ html .wa-gi-overlay .wa-gi__avatar.has-story:focus-visible {
 @media (max-width: 640px) {
 	.wa-st-card.is-featured {
 		grid-column: 1 / -1;
-		grid-row: auto;
 		aspect-ratio: 4 / 5;
+		min-height: 200px;
 	}
 }
 

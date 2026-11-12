@@ -44,7 +44,26 @@ const DEFAULT_PREFS = {
 	wheelTurnsPage: true,
 	aiModelKey: 'gpt-oss:20b',
 	aiProvider: 'llm7-free',
+	/** Project folders for the prompts library (Global is implicit, folderId = null). */
+	promptFolders: [],
 };
+
+const PROMPT_FOLDERS_MAX = 40;
+
+function sanitizePromptFolders(raw) {
+	const list = Array.isArray(raw) ? raw : [];
+	return list
+		.filter(folder => folder && typeof folder === 'object' && folder.id && String(folder.name || '').trim())
+		.slice(0, PROMPT_FOLDERS_MAX)
+		.map((folder, index) => ({
+			id: String(folder.id).slice(0, 64),
+			name: String(folder.name || '').trim().slice(0, 80),
+			sortOrder: Number.isFinite(Number(folder.sortOrder)) ? Number(folder.sortOrder) : index,
+			createdAt: folder.createdAt ? String(folder.createdAt) : new Date().toISOString(),
+			updatedAt: folder.updatedAt ? String(folder.updatedAt) : new Date().toISOString(),
+		}))
+		.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+}
 
 const cache = {
 	books: [],
@@ -219,7 +238,11 @@ function applyServerState(data, { emitChange = true } = {}) {
 	if (Array.isArray(data.topics)) cache.topics = data.topics;
 	if (Array.isArray(data.journeys)) cache.journeys = data.journeys;
 	if (data.prefs && typeof data.prefs === 'object') {
-		cache.prefs = { ...DEFAULT_PREFS, ...data.prefs };
+		cache.prefs = {
+			...DEFAULT_PREFS,
+			...data.prefs,
+			promptFolders: sanitizePromptFolders(data.prefs.promptFolders ?? DEFAULT_PREFS.promptFolders),
+		};
 		/* One-time: align reader with dashboard light/system chrome. */
 		if (!cache.prefs.dashboardChromeV2) {
 			const offSystem = new Set(['forest', 'dark', 'midnight', 'dusk', 'slate']);
@@ -388,7 +411,11 @@ export function getPrefs() {
 }
 
 export function savePrefs(prefs) {
-	cache.prefs = { ...getPrefs(), ...prefs };
+	const merged = { ...getPrefs(), ...prefs };
+	if ('promptFolders' in (prefs || {})) {
+		merged.promptFolders = sanitizePromptFolders(prefs.promptFolders);
+	}
+	cache.prefs = merged;
 	scheduleFlush();
 	return cache.prefs;
 }
@@ -512,9 +539,85 @@ export function updateProgress(id, progress) {
 export function listPrompts() {
 	if (!Array.isArray(cache.prompts)) {
 		cache.prompts = [buildDefaultPolishPrompt(), buildDefaultMemorizePrompt()];
-		savePrompts();
+		/* Only persist defaults after the server copy is known, so we never race hydration. */
+		if (cache.loadedFromServer) savePrompts();
 	}
 	return cache.prompts;
+}
+
+export function listPromptFolders() {
+	return sanitizePromptFolders(getPrefs().promptFolders);
+}
+
+export function savePromptFolders(folders) {
+	const next = sanitizePromptFolders(folders);
+	savePrefs({ promptFolders: next });
+	return next;
+}
+
+export function upsertPromptFolder(folder) {
+	const folders = [...listPromptFolders()];
+	const next = {
+		...folder,
+		id: folder?.id || `pfolder_${Date.now().toString(36)}`,
+		name: String(folder?.name || '').trim().slice(0, 80),
+		updatedAt: new Date().toISOString(),
+	};
+	if (!next.name) return null;
+	const idx = folders.findIndex(item => item.id === next.id);
+	if (idx >= 0) {
+		folders[idx] = { ...folders[idx], ...next };
+	} else {
+		next.sortOrder = folders.length
+			? Math.max(...folders.map(item => item.sortOrder || 0)) + 1
+			: 0;
+		next.createdAt = next.createdAt || new Date().toISOString();
+		folders.push(next);
+	}
+	return savePromptFolders(folders).find(item => item.id === next.id) || next;
+}
+
+export function deletePromptFolder(id) {
+	if (!id) return;
+	const folders = listPromptFolders().filter(folder => folder.id !== id);
+	savePromptFolders(folders);
+	const prompts = listPrompts().map(prompt =>
+		prompt.folderId === id ? { ...prompt, folderId: null, updatedAt: new Date().toISOString() } : prompt,
+	);
+	cache.prompts = prompts;
+	savePrompts();
+}
+
+export function reorderPromptFolders(orderedIds) {
+	const byId = new Map(listPromptFolders().map(folder => [folder.id, folder]));
+	const next = [];
+	(orderedIds || []).forEach((id, index) => {
+		const folder = byId.get(id);
+		if (!folder) return;
+		next.push({ ...folder, sortOrder: index, updatedAt: new Date().toISOString() });
+		byId.delete(id);
+	});
+	byId.forEach(folder => next.push({ ...folder, sortOrder: next.length }));
+	return savePromptFolders(next);
+}
+
+export function reorderPromptsInFolder(folderId, orderedIds) {
+	const folderKey = folderId || null;
+	const prompts = [...listPrompts()];
+	const orderMap = new Map((orderedIds || []).map((id, index) => [id, index]));
+	const next = prompts.map(prompt => {
+		const key = prompt.folderId || null;
+		if (key !== folderKey) return prompt;
+		if (!orderMap.has(prompt.id)) return prompt;
+		return {
+			...prompt,
+			sortOrder: orderMap.get(prompt.id),
+			updatedAt: new Date().toISOString(),
+		};
+	});
+	cache.prompts = next;
+	savePrompts();
+	return next;
 }
 
 export function ensureDefaultMemorizePrompt() {
@@ -538,18 +641,29 @@ export function upsertPrompt(prompt) {
 	const vars = extractVariables(prompt.body);
 	const next = {
 		...prompt,
+		id: prompt?.id || `prompt_${Date.now().toString(36)}`,
+		folderId: prompt?.folderId ? String(prompt.folderId).slice(0, 64) : null,
+		sortOrder: Number.isFinite(Number(prompt?.sortOrder)) ? Number(prompt.sortOrder) : 0,
 		variables: vars,
 		updatedAt: new Date().toISOString(),
 	};
 	const idx = prompts.findIndex(p => p.id === next.id);
-	if (idx >= 0) prompts[idx] = next;
-	else prompts.unshift(next);
+	if (idx >= 0) {
+		prompts[idx] = { ...prompts[idx], ...next };
+	} else {
+		const siblings = prompts.filter(p => (p.folderId || null) === next.folderId);
+		next.sortOrder = siblings.length
+			? Math.max(...siblings.map(p => Number(p.sortOrder) || 0)) + 1
+			: 0;
+		prompts.unshift(next);
+	}
 	cache.prompts = prompts;
 	savePrompts();
 	return next;
 }
 
 export function deletePrompt(id) {
+	if (!id) return;
 	cache.prompts = listPrompts().filter(p => p.id !== id);
 	savePrompts();
 }
