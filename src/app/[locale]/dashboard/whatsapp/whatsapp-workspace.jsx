@@ -316,9 +316,7 @@ import {
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
 import { MyStoryBar, StoryAudienceDialog, storyAudienceSummary } from './story/StoryAudience';
 import { useSidebarChrome } from '@/components/molecules/SidebarChromeContext';
-import WhatsAppAccountLinkPanel, {
-	WhatsAppRestoreProgress,
-} from './WhatsAppAccountLinkPanel';
+import WhatsAppAccountLinkPanel from './WhatsAppAccountLinkPanel';
 
 const EmailMemoWorkspace = lazy(() => import('../email-memo/EmailMemoWorkspace'));
 const DocumentEditorWorkspace = lazy(() => import('@/components/smart-document/DocumentEditorWorkspace'));
@@ -13528,6 +13526,7 @@ function WhatsAppWorkspaceContent() {
 	const [syncingStatuses, setSyncingStatuses] = useState(false);
 	const [viewedStatusIds, setViewedStatusIds] = useState(() => new Set());
 	const [newAccountName, setNewAccountName] = useState('');
+	const [addingAccount, setAddingAccount] = useState(false);
 	const [chatSearch, setChatSearch] = useState('');
 	const [chatListCollapsed, setChatListCollapsed] = useState(() => {
 		if (typeof window === 'undefined') return false;
@@ -26973,71 +26972,93 @@ function WhatsAppWorkspaceContent() {
 								: status === 'error'
 									? 'err'
 									: 'off';
-					const counts = accounts.reduce(
-						(acc, item) => {
-							acc[accountTone(item.status)] += 1;
-							return acc;
-						},
-						{ ok: 0, wait: 0, err: 0, off: 0 },
-					);
 					const ar = locale === 'ar';
+					const phoneLabel = account =>
+						account?.phoneNumber ? `+${String(account.phoneNumber).replace(/^\+/, '')}` : '';
+					const online = accounts.filter(item => accountTone(item.status) === 'ok').length;
+					const needAttention = accounts.length - online;
+					const summary = !accounts.length
+						? ar
+							? 'لسه مفيش أرقام مربوطة.'
+							: 'No numbers linked yet.'
+						: !needAttention
+							? ar
+								? `${accounts.length === 1 ? 'رقم واحد' : `${accounts.length} أرقام`}، كلهم شغالين.`
+								: `${accounts.length} ${accounts.length === 1 ? 'number' : 'numbers'}, all online.`
+							: ar
+								? `${accounts.length} ${accounts.length === 1 ? 'رقم' : 'أرقام'}، ${needAttention} محتاج تدخل منك.`
+								: `${accounts.length} ${accounts.length === 1 ? 'number' : 'numbers'}, ${needAttention} ${needAttention === 1 ? 'needs' : 'need'} attention.`;
 					const selectedTone = selectedAccount ? accountTone(selectedAccount.status) : 'off';
 					const selectedMeta = selectedAccount ? statusMeta(selectedAccount.status, t, selectedAccount) : null;
-					const lastConnected = selectedAccount?.lastConnectedAt
-						? new Date(selectedAccount.lastConnectedAt)
-						: null;
+					const lastConnected = selectedAccount?.lastConnectedAt ? new Date(selectedAccount.lastConnectedAt) : null;
+					const stats = selectedAccount?.stats || null;
+					// Bringing in chats after linking: only while it really happens, never a stuck 100%.
+					const hydrating = selectedAccount?.status === 'connected' && selectedAccount?.syncPhase === 'hydrating';
+					const hydratePct = Math.max(6, Math.min(99, Number(syncProgress) || 40));
+					const statusSentence = !selectedAccount
+						? ''
+						: hydrating
+							? ar
+								? 'متصل، وبنجيب الشاتات من التليفون دلوقتي.'
+								: 'Connected. Bringing your chats over from the phone.'
+							: selectedTone === 'ok'
+								? ar
+									? 'متصل والرسايل بتوصل.'
+									: 'Connected, messages are coming in.'
+								: selectedTone === 'wait'
+									? ar
+										? 'مستني الربط من التليفون.'
+										: 'Waiting for the phone to finish linking.'
+									: selectedTone === 'err'
+										? ar
+											? 'الاتصال وقع. أعد الاتصال عشان الرسايل توصل تاني.'
+											: 'The connection dropped. Reconnect to start receiving messages again.'
+										: ar
+											? 'مش متصل. الرسايل مش هتوصل لحد ما تربطه.'
+											: 'Not connected. Messages will not arrive until you link it.';
+					// "3 days ago", "2 minutes ago": full phrases read better here than the inbox's "3d".
+					const agoText = value => {
+						const time = new Date(value).getTime();
+						if (!Number.isFinite(time)) return '—';
+						const diff = time - Date.now();
+						const abs = Math.abs(diff);
+						if (abs < 60_000) return ar ? 'دلوقتي' : 'just now';
+						const rtf = new Intl.RelativeTimeFormat(ar ? 'ar-EG' : 'en', { numeric: 'auto' });
+						if (abs < 3_600_000) return rtf.format(Math.round(diff / 60_000), 'minute');
+						if (abs < 86_400_000) return rtf.format(Math.round(diff / 3_600_000), 'hour');
+						return rtf.format(Math.round(diff / 86_400_000), 'day');
+					};
+					const copyPhone = async () => {
+						const value = phoneLabel(selectedAccount);
+						if (!value) return;
+						try {
+							await navigator.clipboard.writeText(value);
+							toast.success(ar ? 'اتنسخ الرقم' : 'Number copied');
+						} catch {
+							toast.error(ar ? 'مقدرناش ننسخ الرقم' : 'Could not copy the number');
+						}
+					};
+					const confirmLogout = () => {
+						const ok = window.confirm(
+							ar
+								? 'هتفك ربط الرقم ده من واتساب، وهتحتاج تمسح QR من جديد عشان ترجعه. تكمل؟'
+								: 'This unlinks the number from WhatsApp, and you will need to scan a QR again to bring it back. Continue?',
+						);
+						if (ok) void disconnectAccount(true);
+					};
 					return (
 					<div className="wa-acc">
 						<aside className="wa-acc-side">
 							<header className="wa-acc-side__head">
-								<div>
-									<h2 className="wa-acc-side__title">{t.accounts}</h2>
-									<p className="wa-acc-side__sub">
-										{ar ? `${accounts.length} حساب مرتبط بالمساحة` : `${accounts.length} linked to this workspace`}
-									</p>
-								</div>
+								<h2 className="wa-acc-side__title">{ar ? 'أرقام الواتساب' : 'WhatsApp numbers'}</h2>
+								<p className="wa-acc-side__sub">{summary}</p>
 							</header>
-							<div className="wa-acc-counts" role="list">
-								<span role="listitem" className="wa-acc-count is-ok">
-									<b>{counts.ok}</b>
-									{ar ? 'متصل' : 'Online'}
-								</span>
-								<span role="listitem" className="wa-acc-count is-wait">
-									<b>{counts.wait}</b>
-									{ar ? 'بانتظار الربط' : 'Linking'}
-								</span>
-								<span role="listitem" className="wa-acc-count is-off">
-									<b>{counts.off + counts.err}</b>
-									{ar ? 'غير متصل' : 'Offline'}
-								</span>
-							</div>
-							{isAdmin && (
-								<form onSubmit={createAccount} className="wa-acc-create">
-									<label className="sr-only" htmlFor="whatsapp-account-name">
-										{t.accountName}
-									</label>
-									<Plus size={16} strokeWidth={2.2} className="wa-acc-create__icon" aria-hidden="true" />
-									<input
-										id="whatsapp-account-name"
-										value={newAccountName}
-										onChange={event => setNewAccountName(event.target.value)}
-										placeholder={ar ? 'اسم حساب جديد…' : 'New account name…'}
-									/>
-									<button
-										type="submit"
-										disabled={accountBusy || !String(newAccountName || '').trim()}
-										className="wa-acc-create__btn"
-									>
-										{accountBusy ? <Loader2 size={15} className="animate-spin" /> : null}
-										{ar ? 'إضافة' : 'Add'}
-									</button>
-								</form>
-							)}
 							<div className="wa-acc-list wa-ui-scroll nice-scroll" role="listbox" aria-label={t.accounts}>
 								{accounts.map(account => {
 									const meta = statusMeta(account.status, t, account);
 									const tone = accountTone(account.status);
 									const active = account.id === accountId;
+									const unread = Number(account.stats?.unread) || 0;
 									return (
 										<button
 											key={account.id}
@@ -27053,17 +27074,65 @@ function WhatsAppWorkspaceContent() {
 											</span>
 											<span className="wa-acc-row__copy">
 												<span className="wa-acc-row__name">{account.label}</span>
-												<span className="wa-acc-row__sub" dir={account.phoneNumber ? 'ltr' : undefined}>
-													{account.phoneNumber ? `+${String(account.phoneNumber).replace(/^\+/, '')}` : account.providerName}
+												<span className="wa-acc-row__sub">
+													{tone === 'ok' ? (
+														<bdi dir="ltr">{phoneLabel(account) || account.providerName}</bdi>
+													) : (
+														<span className={`wa-acc-row__state is-${tone}`}>{meta.label}</span>
+													)}
 												</span>
 											</span>
-											<span className={`wa-acc-pill is-${tone}`} title={meta.hint || meta.label}>
-												{meta.label}
-											</span>
+											{unread ? (
+												<span className="wa-acc-row__unread" title={ar ? 'رسايل مش مقروءة' : 'Unread messages'}>
+													{unread > 99 ? '99+' : unread}
+												</span>
+											) : null}
 										</button>
 									);
 								})}
 							</div>
+							{isAdmin &&
+								(addingAccount ? (
+									<form
+										onSubmit={async event => {
+											await createAccount(event);
+											setAddingAccount(false);
+										}}
+										className="wa-acc-create"
+									>
+										<label className="wa-acc-create__label" htmlFor="whatsapp-account-name">
+											{ar ? 'اسم الرقم الجديد' : 'Name for the new number'}
+										</label>
+										<input
+											id="whatsapp-account-name"
+											autoFocus
+											value={newAccountName}
+											onChange={event => setNewAccountName(event.target.value)}
+											onKeyDown={event => {
+												if (event.key === 'Escape') setAddingAccount(false);
+											}}
+											placeholder={ar ? 'مثلاً: خدمة العملاء' : 'For example: Front desk'}
+										/>
+										<div className="wa-acc-create__actions">
+											<button type="button" className="wa-ui-btn wa-ui-btn--secondary" onClick={() => setAddingAccount(false)}>
+												{ar ? 'إلغاء' : 'Cancel'}
+											</button>
+											<button
+												type="submit"
+												disabled={accountBusy || !String(newAccountName || '').trim()}
+												className="wa-ui-btn wa-ui-btn--primary"
+											>
+												{accountBusy ? <Loader2 size={15} className="animate-spin" /> : null}
+												{ar ? 'أضف الرقم' : 'Add number'}
+											</button>
+										</div>
+									</form>
+								) : (
+									<button type="button" className="wa-acc-add" onClick={() => setAddingAccount(true)}>
+										<Plus size={16} strokeWidth={2.2} aria-hidden="true" />
+										{ar ? 'أضف رقم' : 'Add a number'}
+									</button>
+								))}
 						</aside>
 
 						<section className="wa-acc-main wa-ui-scroll nice-scroll">
@@ -27073,32 +27142,23 @@ function WhatsAppWorkspaceContent() {
 								</div>
 							) : (
 								<>
-									<div className={`wa-acc-hero is-${selectedTone}`}>
-										<div className="wa-acc-hero__id">
-											<span className="wa-acc-hero__avatar">
-												<Avatar label={selectedAccount.label} size={16} />
-												<span className="wa-acc-hero__dot" aria-hidden="true" />
-											</span>
-											<div className="min-w-0">
-												<div className="wa-acc-hero__title-row">
-													<h2 className="wa-acc-hero__name">{selectedAccount.label}</h2>
-													<span className={`wa-acc-pill is-${selectedTone}`}>
-														{selectedTone === 'ok' ? <span className="wa-acc-live" aria-hidden="true" /> : null}
-														{selectedMeta?.label}
-													</span>
-												</div>
-												<p className="wa-acc-hero__meta">
-													{selectedAccount.phoneNumber ? (
-														<span dir="ltr">+{String(selectedAccount.phoneNumber).replace(/^\+/, '')}</span>
-													) : null}
-													<span className="wa-acc-chip">
-														<ShieldCheck size={13} strokeWidth={2.2} />
-														{selectedAccount.providerName}
-													</span>
-												</p>
-											</div>
+									<header className={`wa-acc-head is-${selectedTone}`}>
+										<span className="wa-acc-head__avatar">
+											<Avatar label={selectedAccount.label} size={16} />
+											<span className="wa-acc-head__dot" aria-hidden="true" />
+										</span>
+										<div className="wa-acc-head__id">
+											<h2 className="wa-acc-head__name">{selectedAccount.label}</h2>
+											{phoneLabel(selectedAccount) ? (
+												<button type="button" className="wa-acc-head__phone" onClick={copyPhone} title={ar ? 'انسخ الرقم' : 'Copy number'}>
+													<bdi dir="ltr">{phoneLabel(selectedAccount)}</bdi>
+													<Copy size={13} strokeWidth={2.2} aria-hidden="true" />
+												</button>
+											) : (
+												<p className="wa-acc-head__phone is-empty">{ar ? 'الرقم هيظهر بعد الربط' : 'The number shows after linking'}</p>
+											)}
 										</div>
-										<div className="wa-acc-hero__actions">
+										<div className="wa-acc-head__actions">
 											{selectedAccount.status === 'connected' ? (
 												<>
 													<button type="button" onClick={() => setActiveTab('chats')} className="wa-ui-btn wa-ui-btn--primary">
@@ -27106,20 +27166,14 @@ function WhatsAppWorkspaceContent() {
 														{t.openWhatsAppInbox}
 													</button>
 													{canUseWhatsApp && (
-														<button type="button" onClick={() => syncAccount()} className="wa-ui-btn wa-ui-btn--secondary">
-															<RefreshCw size={15} strokeWidth={2.2} />
-															{t.sync}
-														</button>
-													)}
-													{canManageWhatsApp && (
 														<button
 															type="button"
-															onClick={() => disconnectAccount(false)}
-															className="wa-ui-icon-btn wa-acc-icon-btn"
-															title={t.disconnect}
-															aria-label={t.disconnect}
+															onClick={() => syncAccount()}
+															disabled={syncingInbox}
+															className="wa-ui-btn wa-ui-btn--secondary"
 														>
-															<WifiOff size={17} strokeWidth={2.1} />
+															<RefreshCw size={15} strokeWidth={2.2} className={syncingInbox ? 'animate-spin' : undefined} />
+															{syncingInbox ? (ar ? 'بيتزامن…' : 'Syncing…') : t.sync}
 														</button>
 													)}
 												</>
@@ -27141,18 +27195,30 @@ function WhatsAppWorkspaceContent() {
 												</button>
 											) : null}
 										</div>
-										{selectedAccount.status === 'error' && (
-											<p className="wa-acc-hero__note is-err">
-												<AlertTriangle size={15} strokeWidth={2.2} />
-												{selectedAccount.lastError || t.restartConnectionHint}
-											</p>
-										)}
-										{selectedAccount.status === 'connecting' && !qr && !pairingCode && (
-											<p className="wa-acc-hero__note">
-												<Loader2 size={15} className="animate-spin" />
-												{accStatus?.hint || t.syncingPhone}
-											</p>
-										)}
+									</header>
+
+									<div className={`wa-acc-pulse is-${selectedTone}`} role="status">
+										<span className="wa-acc-pulse__light" aria-hidden="true" />
+										<div className="wa-acc-pulse__text">
+											<p className="wa-acc-pulse__line">{statusSentence}</p>
+											{selectedTone === 'ok' && stats?.lastMessageAt ? (
+												<p className="wa-acc-pulse__sub">
+													{ar ? 'آخر رسالة وصلت ' : 'Last message '}
+													{agoText(stats.lastMessageAt)}
+												</p>
+											) : null}
+											{selectedTone === 'err' && selectedAccount.lastError ? (
+												<p className="wa-acc-pulse__sub">{selectedAccount.lastError}</p>
+											) : null}
+											{selectedAccount.status === 'connecting' && !qr && !pairingCode ? (
+												<p className="wa-acc-pulse__sub">{accStatus?.hint || t.syncingPhone}</p>
+											) : null}
+											{hydrating ? (
+												<div className="wa-acc-pulse__bar" role="progressbar" aria-valuenow={hydratePct} aria-valuemin={0} aria-valuemax={100}>
+													<span style={{ width: `${hydratePct}%` }} />
+												</div>
+											) : null}
+										</div>
 									</div>
 
 									{canManageWhatsApp && selectedAccount.status !== 'connected' && (
@@ -27180,9 +27246,7 @@ function WhatsAppWorkspaceContent() {
 												qr={qr}
 												pairingCode={pairingCode}
 												canManage={canManageWhatsApp}
-												onConnectQr={() =>
-													connectAccount(undefined, { mode: 'qr', force: true })
-												}
+												onConnectQr={() => connectAccount(undefined, { mode: 'qr', force: true })}
 												onConnectPhone={() => {
 													if (!parsedLinkPhone) {
 														toast.error(t.phoneNumberInvalid);
@@ -27196,139 +27260,116 @@ function WhatsAppWorkspaceContent() {
 													setLinkMode('phone');
 												}}
 												syncProgress={syncProgress}
-												conversationCount={conversations.length}
+												conversationCount={stats?.chats ?? conversations.length}
 											/>
 										</div>
 									)}
 
-									{selectedAccount.status === 'connected' && (
-										<>
-											{(selectedAccount.syncPhase === 'hydrating' ||
-												(syncingInbox && conversations.length === 0)) && (
-												<div className="wa-acc-card">
-													<WhatsAppRestoreProgress
-														labels={t}
-														account={selectedAccount}
-														syncProgress={syncProgress}
-														conversationCount={conversations.length}
-													/>
+									<section className="wa-acc-section">
+										<h3 className="wa-acc-section__title">{ar ? 'عن الرقم ده' : 'About this number'}</h3>
+										<dl className="wa-acc-facts">
+											{stats ? (
+												<div>
+													<dt>{ar ? 'المحادثات' : 'Chats'}</dt>
+													<dd>
+														{stats.chats.toLocaleString(ar ? 'ar-EG' : 'en')}
+														{stats.unread ? (
+															<span className="wa-acc-facts__note">
+																{ar
+																	? `${stats.unread.toLocaleString('ar-EG')} رسالة مش مقروءة`
+																	: `${stats.unread.toLocaleString('en')} unread`}
+															</span>
+														) : null}
+													</dd>
 												</div>
-											)}
-											<div className="wa-acc-card">
-												<h3 className="wa-acc-card__title">{ar ? 'تفاصيل الاتصال' : 'Connection details'}</h3>
-												<dl className="wa-acc-details">
-													<div className="wa-acc-detail">
-														<dt>
-															<span className={`wa-acc-detail__icon is-${selectedTone}`}>
-																{selectedTone === 'ok' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-															</span>
-															{t.status}
-														</dt>
-														<dd>{accStatus?.label || selectedMeta?.label}</dd>
-													</div>
-													<div className="wa-acc-detail">
-														<dt>
-															<span className="wa-acc-detail__icon">
-																<Phone size={16} />
-															</span>
-															{ar ? 'الرقم' : 'Phone'}
-														</dt>
-														<dd dir="ltr">
-															{selectedAccount.phoneNumber
-																? `+${String(selectedAccount.phoneNumber).replace(/^\+/, '')}`
-																: '—'}
-														</dd>
-													</div>
-													<div className="wa-acc-detail">
-														<dt>
-															<span className="wa-acc-detail__icon">
-																<Smartphone size={16} />
-															</span>
-															{t.connectionMethodLabel}
-														</dt>
-														<dd>
-															{selectedAccount.connectionMethod === 'pairing_code'
-																? t.connectionMethodPhone
-																: t.connectionMethodQr}
-														</dd>
-													</div>
-													<div className="wa-acc-detail">
-														<dt>
-															<span className="wa-acc-detail__icon">
-																<ShieldCheck size={16} />
-															</span>
-															{t.provider}
-														</dt>
-														<dd>{selectedAccount.providerName || '—'}</dd>
-													</div>
-													<div className="wa-acc-detail">
-														<dt>
-															<span className="wa-acc-detail__icon">
-																<Clock size={16} />
-															</span>
-															{t.lastConnected}
-														</dt>
-														<dd title={lastConnected ? lastConnected.toLocaleString() : undefined}>
-															{lastConnected
-																? relativeTime(lastConnected.toISOString(), Date.now(), locale)
-																: '—'}
-														</dd>
-													</div>
-													<div className="wa-acc-detail">
-														<dt>
-															<span className="wa-acc-detail__icon">
-																<MessageCircle size={16} />
-															</span>
-															{t.chats || (ar ? 'المحادثات' : 'Chats')}
-														</dt>
-														<dd>{conversations.length.toLocaleString()}</dd>
-													</div>
-												</dl>
+											) : null}
+											<div>
+												<dt>{ar ? 'اتوصل' : 'Connected'}</dt>
+												<dd title={lastConnected ? lastConnected.toLocaleString(ar ? 'ar-EG' : 'en') : undefined}>
+													{lastConnected && selectedTone === 'ok'
+														? agoText(lastConnected)
+														: '—'}
+												</dd>
 											</div>
-										</>
-									)}
+											<div>
+												<dt>{t.connectionMethodLabel}</dt>
+												<dd>
+													{selectedAccount.connectionMethod === 'pairing_code'
+														? t.connectionMethodPhone
+														: selectedAccount.connectionMethod === 'qr'
+															? t.connectionMethodQr
+															: '—'}
+												</dd>
+											</div>
+											<div>
+												<dt>{ar ? 'الحالة' : 'Status'}</dt>
+												<dd>{accStatus?.label || selectedMeta?.label}</dd>
+											</div>
+										</dl>
+									</section>
 
-									{canManageWhatsApp && (selectedAccount.status === 'connected' || (isAdmin)) && (
-										<div className="wa-acc-card wa-acc-danger">
-											<h3 className="wa-acc-card__title">{ar ? 'منطقة الخطر' : 'Danger zone'}</h3>
-											{selectedAccount.status === 'connected' && (
-												<div className="wa-acc-danger__row">
-													<div>
-														<p className="wa-acc-danger__label">{t.logout}</p>
-														<p className="wa-acc-danger__hint">
-															{ar
-																? 'يفك ربط الجهاز من واتساب. هتحتاج تمسح QR من جديد.'
-																: 'Unlinks this device from WhatsApp. You’ll need to scan a QR again.'}
-														</p>
-													</div>
-													<button type="button" onClick={() => disconnectAccount(true)} className="wa-ui-btn wa-acc-btn-danger-outline">
-														<LogOut size={15} strokeWidth={2.2} />
-														{t.logout}
-													</button>
-												</div>
-											)}
-											{isAdmin && (
-												<div className="wa-acc-danger__row">
-													<div>
-														<p className="wa-acc-danger__label">{t.deleteAccount}</p>
-														<p className="wa-acc-danger__hint">
-															{ar
-																? 'يحذف الحساب ومحادثاته من المساحة نهائياً.'
-																: 'Removes the account and its chats from this workspace for good.'}
-														</p>
-													</div>
-													<button
-														type="button"
-														onClick={deleteAccount}
-														disabled={accountBusy}
-														className="wa-ui-btn wa-ui-btn--danger"
-													>
-														<Trash2 size={15} strokeWidth={2.2} />
-														{t.deleteAccount}
-													</button>
-												</div>
-											)}
-										</div>
+									{canManageWhatsApp && (selectedAccount.status === 'connected' || isAdmin) && (
+										<section className="wa-acc-section">
+											<h3 className="wa-acc-section__title">
+												{selectedAccount.status === 'connected'
+													? ar
+														? 'الجهاز المربوط'
+														: 'Linked device'
+													: ar
+														? 'إدارة الرقم'
+														: 'Manage number'}
+											</h3>
+											<ul className="wa-acc-actions">
+												{selectedAccount.status === 'connected' && (
+													<li>
+														<div>
+															<p className="wa-acc-actions__label">{ar ? 'وقّف الاتصال مؤقتاً' : 'Pause the connection'}</p>
+															<p className="wa-acc-actions__hint">
+																{ar
+																	? 'الرسايل مش هتوصل هنا لحد ما توصله تاني. الربط بيفضل زي ما هو.'
+																	: 'Messages stop arriving here until you reconnect. The link stays in place.'}
+															</p>
+														</div>
+														<button type="button" onClick={() => disconnectAccount(false)} disabled={accountBusy} className="wa-ui-btn wa-ui-btn--secondary">
+															<WifiOff size={15} strokeWidth={2.2} />
+															{ar ? 'وقّف' : 'Pause'}
+														</button>
+													</li>
+												)}
+												{selectedAccount.status === 'connected' && (
+													<li>
+														<div>
+															<p className="wa-acc-actions__label">{t.logout}</p>
+															<p className="wa-acc-actions__hint">
+																{ar
+																	? 'يفك ربط الجهاز من واتساب. هتحتاج تمسح QR من جديد.'
+																	: 'Unlinks this device from WhatsApp. You will need to scan a QR again.'}
+															</p>
+														</div>
+														<button type="button" onClick={confirmLogout} disabled={accountBusy} className="wa-ui-btn wa-acc-btn-danger-outline">
+															<LogOut size={15} strokeWidth={2.2} />
+															{t.logout}
+														</button>
+													</li>
+												)}
+												{isAdmin && (
+													<li>
+														<div>
+															<p className="wa-acc-actions__label">{t.deleteAccount}</p>
+															<p className="wa-acc-actions__hint">
+																{ar
+																	? 'يحذف الرقم ومحادثاته من المساحة نهائياً.'
+																	: 'Removes the number and its chats from this workspace for good.'}
+															</p>
+														</div>
+														<button type="button" onClick={deleteAccount} disabled={accountBusy} className="wa-ui-btn wa-ui-btn--danger">
+															<Trash2 size={15} strokeWidth={2.2} />
+															{t.deleteAccount}
+														</button>
+													</li>
+												)}
+											</ul>
+										</section>
 									)}
 								</>
 							)}

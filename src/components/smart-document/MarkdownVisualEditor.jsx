@@ -11,6 +11,7 @@ import 'prosemirror-view/style/prosemirror.css';
 import { BidiDirection, bidiKey } from './bidi-extension';
 import { normalizeDirection } from './bidi';
 import { formatHtmlSource, htmlForEditor, isHtmlSource } from './source-format';
+import { useTableTools } from './TableTools';
 
 /**
  * Formatted preview of the Edit-pane source.
@@ -19,8 +20,22 @@ import { formatHtmlSource, htmlForEditor, isHtmlSource } from './source-format';
  * `onChange` fires on user edits only, so an untouched document keeps its exact source.
  * `direction` ('auto' | 'rtl' | 'ltr') lays the document out without changing its content.
  */
-export default function MarkdownVisualEditor({ markdown, onChange, onBlur, placeholder, dir, direction = 'auto', autoFocus = false }) {
+export default function MarkdownVisualEditor({
+	markdown,
+	onChange,
+	onBlur,
+	placeholder,
+	dir,
+	direction = 'auto',
+	autoFocus = false,
+	layoutKey = null,
+	labels = {},
+}) {
 	const html = isHtmlSource(markdown);
+	const hostRef = useRef(null);
+	// Last source handed out; column widths are not part of Markdown, so resizing a column
+	// re-serialises to the same text and must not count as an edit.
+	const lastSourceRef = useRef(null);
 	const onChangeRef = useRef(onChange);
 	const onBlurRef = useRef(onBlur);
 	onChangeRef.current = onChange;
@@ -57,9 +72,14 @@ export default function MarkdownVisualEditor({ markdown, onChange, onBlur, place
 				},
 			},
 		},
+		onCreate: ({ editor: ed }) => {
+			lastSourceRef.current = html ? formatHtmlSource(ed.getHTML()) : ed.getMarkdown();
+		},
 		onUpdate: ({ editor: ed }) => {
-			if (html) onChangeRef.current?.(formatHtmlSource(ed.getHTML()));
-			else onChangeRef.current?.(ed.getMarkdown());
+			const source = html ? formatHtmlSource(ed.getHTML()) : ed.getMarkdown();
+			if (source === lastSourceRef.current) return;
+			lastSourceRef.current = source;
+			onChangeRef.current?.(source);
 		},
 		onBlur: () => onBlurRef.current?.(),
 	});
@@ -74,5 +94,12 @@ export default function MarkdownVisualEditor({ markdown, onChange, onBlur, place
 		editor.view.dispatch(editor.state.tr.setMeta(bidiKey, true).setMeta('addToHistory', false));
 	}, [editor, mode, dir]);
 
-	return <EditorContent editor={editor} className="sd-markdown-preview" dir={mode === 'auto' ? dir : mode} data-direction={mode} />;
+	const tableTools = useTableTools(editor, { hostRef, layoutKey, labels });
+
+	return (
+		<div ref={hostRef} className="sd-preview-host">
+			<EditorContent editor={editor} className="sd-markdown-preview" dir={mode === 'auto' ? dir : mode} data-direction={mode} />
+			{tableTools}
+		</div>
+	);
 }

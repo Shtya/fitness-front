@@ -175,6 +175,8 @@ export default function SmartDocumentEditor({
 	const typographyKey = `${storageKey}:typography`;
 	const sharesKey = `${storageKey}:shares`;
 	const directionKey = `${storageKey}:direction`;
+	const modeKey = `${storageKey}:mode`;
+	const scrollKey = `${storageKey}:scroll`;
 
 	const [mode, setMode] = useState(initialMode === 'preview' ? 'preview' : 'edit'); // edit | preview
 	// Reading direction of the whole document: auto (each block by its first letter) | rtl | ltr.
@@ -210,6 +212,7 @@ export default function SmartDocumentEditor({
 	const saveTimer = useRef(null);
 	const snapTimer = useRef(null);
 	const taRef = useRef(null);
+	const canvasRef = useRef(null);
 
 	const countable = useMemo(() => (isHtmlSource(text) ? htmlToPlainText(text) : text), [text]);
 	const wordCount = useMemo(() => {
@@ -230,6 +233,21 @@ export default function SmartDocumentEditor({
 		? doc.title || labels.untitled || 'Untitled'
 		: activeDoc?.title || titleFromSource(text) || labels.untitled || 'Untitled';
 	const uiDir = locale === 'ar' ? 'rtl' : 'ltr';
+	const tableToolLabels = useMemo(
+		() =>
+			locale === 'ar'
+				? {
+						resizeColumn: 'غيّر عرض العمود',
+						rowActions: 'أوامر الصف',
+						rowUp: 'طلّعه لفوق',
+						rowDown: 'نزّله لتحت',
+						rowInsertBelow: 'صف جديد تحته',
+						rowDuplicate: 'كرّر الصف',
+						rowDelete: 'امسح الصف',
+					}
+				: {},
+		[locale],
+	);
 
 	const persistDraft = useCallback(
 		(nextText, nextId) => {
@@ -341,6 +359,93 @@ export default function SmartDocumentEditor({
 			/* default: auto */
 		}
 	}, [directionKey]);
+
+	/* Edit or Preview: the last one used comes back, instead of always starting in Edit. */
+	useEffect(() => {
+		try {
+			const saved = localStorage.getItem(modeKey);
+			if (saved === 'edit' || saved === 'preview') setMode(saved);
+		} catch {
+			/* default mode */
+		}
+	}, [modeKey]);
+
+	const chooseMode = useCallback(
+		(next) => {
+			setMode(next);
+			try {
+				localStorage.setItem(modeKey, next);
+			} catch {
+				/* applies to this visit */
+			}
+		},
+		[modeKey],
+	);
+
+	/*
+	 * Each document remembers where it was scrolled to, separately for Edit and Preview, so
+	 * leaving and coming back (or opening it again from the history) lands on the same spot.
+	 */
+	const scrollTarget = useCallback(
+		() => (mode === 'edit' ? taRef.current : canvasRef.current),
+		[mode],
+	);
+	useEffect(() => {
+		if (!ready || !activeId) return undefined;
+		const docKey = String(activeId);
+		const saved = readJson(scrollKey, {}) || {};
+		const wanted = Number(saved?.[docKey]?.[mode]) || 0;
+		let userMoved = false;
+		const timers = [];
+		// The Preview lays out after parsing; try a few times until the page is tall enough.
+		const restore = () => {
+			const el = scrollTarget();
+			if (!el || userMoved) return;
+			if (!wanted) {
+				// Not read before: start at the top, not where the last document was left.
+				el.scrollTop = 0;
+				return;
+			}
+			if (el.scrollHeight - el.clientHeight >= wanted - 4) el.scrollTop = wanted;
+		};
+		[0, 60, 180, 420, 900].forEach((delay) => timers.push(window.setTimeout(restore, delay)));
+		let saveTimer = null;
+		const el = scrollTarget();
+		const onScroll = () => {
+			if (saveTimer) return;
+			saveTimer = window.setTimeout(() => {
+				saveTimer = null;
+				const target = scrollTarget();
+				if (!target) return;
+				const all = readJson(scrollKey, {}) || {};
+				all[docKey] = { ...(all[docKey] || {}), [mode]: Math.round(target.scrollTop), at: Date.now() };
+				// Keep the most recent 200 documents.
+				const keys = Object.keys(all);
+				if (keys.length > 200) {
+					keys
+						.sort((a, b) => (all[a]?.at || 0) - (all[b]?.at || 0))
+						.slice(0, keys.length - 200)
+						.forEach((key) => delete all[key]);
+				}
+				writeJson(scrollKey, all);
+			}, 200);
+		};
+		const markUser = () => {
+			userMoved = true;
+		};
+		el?.addEventListener('scroll', onScroll, { passive: true });
+		el?.addEventListener('wheel', markUser, { passive: true });
+		el?.addEventListener('touchstart', markUser, { passive: true });
+		el?.addEventListener('keydown', markUser);
+		return () => {
+			timers.forEach((timer) => window.clearTimeout(timer));
+			if (saveTimer) window.clearTimeout(saveTimer);
+			el?.removeEventListener('scroll', onScroll);
+			el?.removeEventListener('wheel', markUser);
+			el?.removeEventListener('touchstart', markUser);
+			el?.removeEventListener('keydown', markUser);
+		};
+	}, [ready, activeId, mode, docVersion, scrollKey, scrollTarget]);
 
 	const chooseDirection = useCallback(
 		(next) => {
@@ -923,7 +1028,7 @@ export default function SmartDocumentEditor({
 								aria-selected={mode === 'edit'}
 								className={mode === 'edit' ? 'is-active' : ''}
 								title={labels.edit || 'Edit'}
-								onClick={() => setMode('edit')}
+								onClick={() => chooseMode('edit')}
 							>
 								<Code2 size={15} aria-hidden />
 								<span className="sd-seg-label">{labels.edit || 'Edit'}</span>
@@ -937,7 +1042,7 @@ export default function SmartDocumentEditor({
 								onClick={() => {
 									flushSave();
 									setDocVersion((v) => v + 1);
-									setMode('preview');
+									chooseMode('preview');
 								}}
 							>
 								<Eye size={15} aria-hidden />
@@ -1048,6 +1153,7 @@ export default function SmartDocumentEditor({
 				</header>
 
 				<div
+					ref={canvasRef}
 					className={`sd-canvas sd-canvas--bleed ${mode === 'edit' ? 'is-source' : 'is-preview'}`}
 					onMouseUp={(e) => {
 						if (e.detail >= 2) return;
@@ -1093,6 +1199,8 @@ export default function SmartDocumentEditor({
 							dir={docDir}
 							direction={direction}
 							autoFocus={!text.trim()}
+							layoutKey={activeId ? `${storageKey}:columns:${activeId}` : null}
+							labels={tableToolLabels}
 						/>
 					)}
 				</div>
