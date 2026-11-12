@@ -10048,6 +10048,27 @@ html.dark .wa-rp {
 	border-top: 1px solid var(--wa-ui-border);
 }
 
+/* Staff activity: spans the detail grid; its two lists sit side by side. */
+.wa-rp-activity {
+	display: grid;
+	grid-column: 1 / -1;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+	padding-bottom: 14px;
+	border-bottom: 1px solid var(--wa-ui-border);
+}
+
+.wa-rp-activity > .wa-rp-dlist__title,
+.wa-rp-activity > .wa-rp-metrics {
+	grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+	.wa-rp-activity {
+		grid-template-columns: 1fr;
+	}
+}
+
 .wa-rp-detail__loading {
 	display: flex;
 	grid-column: 1 / -1;

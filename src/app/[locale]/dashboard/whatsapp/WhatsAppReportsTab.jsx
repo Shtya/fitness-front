@@ -276,6 +276,7 @@ export function WhatsAppReportsTab({
 													</div>
 												) : (
 													<>
+														<StaffActivity activity={detail?.activity} locale={locale} onOpen={onOpenConversation} />
 														<DetailList
 															title={t.replyDelays}
 															empty={t.noReplyHistory}
@@ -417,6 +418,113 @@ function ReplyMix({ item, t, ar }) {
 				{fast ? <span className="is-ok" style={{ width: pct(fast) }} /> : null}
 				{mid ? <span className="is-mid" style={{ width: pct(mid) }} /> : null}
 				{late ? <span className="is-bad" style={{ width: pct(late) }} /> : null}
+			</div>
+		</div>
+	);
+}
+
+function formatDay(value, locale = 'en') {
+	if (!value) return '—';
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '—';
+	return new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : 'en', {
+		weekday: 'short',
+		month: 'short',
+		day: 'numeric',
+	}).format(date);
+}
+
+function formatTime(value, locale = 'en') {
+	if (!value) return '—';
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '—';
+	return new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : 'en', {
+		hour: 'numeric',
+		minute: '2-digit',
+	}).format(date);
+}
+
+/** When the staff member had WhatsApp open, which chats they opened and who they replied to. */
+export function StaffActivity({ activity, locale = 'en', onOpen }) {
+	const ar = locale === 'ar';
+	if (!activity) return null;
+	const sessions = activity.sessions || [];
+	const chats = activity.chats || [];
+	return (
+		<div className="wa-rp-activity" data-testid="staff-activity">
+			<p className="wa-rp-dlist__title">{ar ? 'نشاطه على الواتساب' : 'WhatsApp activity'}</p>
+			<div className="wa-rp-metrics">
+				<Metric
+					label={ar ? 'آخر ظهور' : 'Last seen'}
+					value={activity.lastSeenAt ? formatTime(activity.lastSeenAt, locale) : '—'}
+					sub={activity.lastSeenAt ? formatDay(activity.lastSeenAt, locale) : ar ? 'مدخلش في الفترة دي' : 'Not in this period'}
+				/>
+				<Metric
+					label={ar ? 'وقت النشاط' : 'Active time'}
+					value={formatDuration(activity.totalActiveSeconds || 0, locale)}
+					sub={`${sessions.length} ${ar ? 'مرة دخول' : sessions.length === 1 ? 'session' : 'sessions'}`}
+				/>
+				<Metric label={ar ? 'شاتات فتحها' : 'Chats opened'} value={activity.openedChats || 0} />
+				<Metric label={ar ? 'رد على' : 'Replied to'} value={activity.repliedChats || 0} sub={ar ? 'شات' : 'chats'} />
+			</div>
+
+			<div className="wa-rp-dlist">
+				<p className="wa-rp-dlist__title">{ar ? 'دخل إمتى' : 'Sessions'}</p>
+				{sessions.length ? (
+					<ul className="wa-ui-scroll nice-scroll">
+						{sessions.map(session => (
+							<li key={session.startedAt} className="wa-rp-dlist__row" data-testid="staff-session">
+								<span className="min-w-0">
+									<span className="wa-rp-dlist__name">
+										{formatDay(session.startedAt, locale)} · {formatTime(session.startedAt, locale)} → {formatTime(session.endedAt, locale)}
+									</span>
+									<span className="wa-rp-dlist__sub">
+										{ar
+											? `فتح ${session.chatsOpened} شات · بعت ${session.messagesSent} رسالة لـ ${session.chatsRepliedTo} شات`
+											: `Opened ${session.chatsOpened} chats · sent ${session.messagesSent} messages to ${session.chatsRepliedTo} chats`}
+									</span>
+								</span>
+								<span className="wa-rp-wait is-none">{formatDuration(session.durationSeconds, locale)}</span>
+							</li>
+						))}
+					</ul>
+				) : (
+					<p className="wa-rp-note">{ar ? 'مفيش دخول مسجل في الفترة دي' : 'No sessions recorded in this period'}</p>
+				)}
+			</div>
+
+			<div className="wa-rp-dlist">
+				<p className="wa-rp-dlist__title">{ar ? 'شاف إيه ورد على مين' : 'What they opened and answered'}</p>
+				{chats.length ? (
+					<ul className="wa-ui-scroll nice-scroll">
+						{chats.map(chat => (
+							<li key={chat.conversationId}>
+								<button
+									type="button"
+									onClick={() => onOpen?.(chat.conversationId)}
+									className="wa-rp-dlist__row"
+									data-testid="staff-activity-chat"
+								>
+									<span className="min-w-0">
+										<span className="wa-rp-dlist__name" dir="auto">
+											{chat.title}
+										</span>
+										<span className="wa-rp-dlist__sub">
+											{ar
+												? `فتحه ${chat.timesOpened} مرة · بعت ${chat.messagesSent} رسالة`
+												: `Opened ${chat.timesOpened}× · sent ${chat.messagesSent} messages`}
+										</span>
+									</span>
+									<span className={`wa-rp-wait ${chat.messagesSent ? 'is-ok' : 'is-warn'}`}>
+										{chat.messagesSent ? (ar ? 'رد' : 'Replied') : ar ? 'شاف بس' : 'Seen only'}
+									</span>
+								</button>
+							</li>
+						))}
+					</ul>
+				) : (
+					<p className="wa-rp-note">{ar ? 'مفتحش أي شات في الفترة دي' : 'No chats opened in this period'}</p>
+				)}
 			</div>
 		</div>
 	);

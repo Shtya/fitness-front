@@ -387,6 +387,7 @@ import {
 	isSameConversationPresence,
 	resolvePresenceLastSeen,
 } from './wa-presence';
+import { readEventClearsViewer, unreadPayloadForViewer } from './wa-unread-scope';
 import { BoardColumnPicker, BoardColumnPickerMenu } from './BoardColumnPicker';
 import { createBoardCardFromMessages } from './whatsapp-board-api';
 import { WaCustomSelect } from './WaCustomSelect';
@@ -14152,6 +14153,7 @@ function WhatsAppWorkspaceContent() {
 				if (showcaseOnly && !SHOWCASE_TABS.has(key)) return false;
 				if (key === 'online') return false;
 				if (key === 'statuses') return seesWholeAccount;
+				if (key === 'typing') return seesWholeAccount;
 				if (key === 'settings') return canManageWhatsApp || isAdmin;
 				if (key === 'agent') return canManageWhatsApp || isAdmin;
 				// The server only serves reports to people who manage or assign the account.
@@ -14170,7 +14172,7 @@ function WhatsAppWorkspaceContent() {
 			setActiveTab('chats');
 			return;
 		}
-		if (activeTab === 'statuses' && selectedAccount?.currentAccess && !seesWholeAccount) {
+		if ((activeTab === 'statuses' || activeTab === 'typing') && selectedAccount?.currentAccess && !seesWholeAccount) {
 			setActiveTab('chats');
 		}
 	}, [activeTab, selectedAccount?.currentAccess, seesWholeAccount]);
@@ -18514,6 +18516,15 @@ function WhatsAppWorkspaceContent() {
 			if (event.accountId && watchedAccountId && event.accountId !== watchedAccountId) return;
 			const activeConversationId = conversationIdRef.current;
 			const eventConversationId = event.conversationId || event.payload?.conversationId;
+			// Staff limited to their chats keep their own unread, apart from the owner's.
+			if (event.event === 'conversation_updated' && event.payload) {
+				event = {
+					...event,
+					payload: unreadPayloadForViewer(event.payload, {
+						seesWholeAccount: seesWholeAccountRef.current,
+					}),
+				};
+			}
 			if (event.event === 'ai_agent.state') {
 				if (eventConversationId) {
 					window.dispatchEvent(new CustomEvent(AI_AGENT_STATE_EVENT, { detail: event.payload }));
@@ -18945,7 +18956,13 @@ function WhatsAppWorkspaceContent() {
 				scheduleReloadConversations(accountIdRef.current);
 				notifyWhatsAppUnreadChanged();
 			}
-			if (event.event === 'conversation_read') {
+			if (
+				event.event === 'conversation_read' &&
+				readEventClearsViewer(event.payload, {
+					seesWholeAccount: seesWholeAccountRef.current,
+					viewerUserId,
+				})
+			) {
 				setConversationUnreadCount(
 					eventConversationId || event.payload?.conversationId,
 					0,
@@ -19069,6 +19086,20 @@ function WhatsAppWorkspaceContent() {
 				setTypingAttemptEvent({ ...event.payload, receivedAt: Date.now() });
 			}
 			if (event.event === 'statuses_updated' && accountIdRef.current) {
+				const deletedId = event.payload?.reason === 'status_deleted'
+					? String(event.payload?.statusMessageId || '')
+					: '';
+				if (deletedId) {
+					// The poster deleted it: drop it from the live list and mark the history copy.
+					const matches = item =>
+						String(item?.providerStatusId || '') === deletedId ||
+						String(item?.providerStatusId || '').includes(`status@broadcast_${deletedId}`);
+					const revokedAt = new Date().toISOString();
+					setStatuses(prev => prev.filter(item => !matches(item)));
+					setStatusHistory(prev =>
+						prev.map(item => (matches(item) ? { ...item, revokedAt: item.revokedAt || revokedAt } : item)),
+					);
+				}
 				void refreshStatusesFromProviderRef.current?.(accountIdRef.current, {
 					silent: true,
 					force: true,
@@ -24208,8 +24239,10 @@ function WhatsAppWorkspaceContent() {
 							onClick: toggleSplitChat,
 						},
 					]),
-		];
+		// Assigned-only staff do not get the typing log.
+		].filter(item => item.id !== 'typing-history' || seesWholeAccount);
 	}, [
+		seesWholeAccount,
 		accountId,
 		activeMessageGroup,
 		conversationId,
@@ -26725,7 +26758,7 @@ function WhatsAppWorkspaceContent() {
 					showSettings={canManageWhatsApp || isAdmin}
 					showAccounts={!showcaseOnly}
 					showReports={!showcaseOnly && seesWholeAccount}
-					showTyping={!showcaseOnly}
+					showTyping={!showcaseOnly && seesWholeAccount}
 					showBoard={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
 					showFakeChat={!showcaseOnly && fakeChatAllowed}
 					showAutoForward={!showcaseOnly && (canUseWhatsApp || canManageWhatsApp || isAdmin)}
@@ -31331,6 +31364,16 @@ function WhatsAppWorkspaceContent() {
 																		locale,
 																	)}
 																</span>
+																{story.items.some(item => item.revokedAt) && (
+																	<span
+																		data-testid="story-history-revoked"
+																		className="ms-1 text-red-500"
+																	>
+																		{locale === 'ar'
+																			? `· ${story.items.filter(item => item.revokedAt).length} ممسوحة`
+																			: `· ${story.items.filter(item => item.revokedAt).length} deleted`}
+																	</span>
+																)}
 															</span>
 														</span>
 													</button>
@@ -33537,6 +33580,15 @@ function WhatsAppWorkspaceContent() {
 										<time dateTime={selectedStatus.publishedAt || undefined}>
 											{formatStoryViewTime(selectedStatus.publishedAt, locale)}
 										</time>
+										{selectedStatus.revokedAt && (
+											<span
+												data-testid="story-revoked-badge"
+												className="ms-2 rounded-full bg-red-500/80 px-2 py-0.5 text-[10px] font-semibold text-white"
+												title={new Date(selectedStatus.revokedAt).toLocaleString(locale)}
+											>
+												{locale === 'ar' ? 'صاحبها مسحها' : 'Deleted by poster'}
+											</span>
+										)}
 									</p>
 								</div>
 							</div>
