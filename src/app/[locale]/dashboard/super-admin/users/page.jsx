@@ -201,7 +201,9 @@ function SetPasswordModal({ user, onClose }) {
 				</div>
 
 				{saved ? (
-					<div className="p-5 space-y-3">
+					// <section>, not <div>: `.gm-modal > div:last-child` treats the last div as a
+					// footer and pulls it to the modal's edges.
+					<section className="p-5 space-y-3">
 						<div className="flex items-start gap-2 px-3 py-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
 							<CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
 							<p className="text-xs text-emerald-800 dark:text-emerald-300">
@@ -223,9 +225,9 @@ function SetPasswordModal({ user, onClose }) {
 						>
 							{ar ? 'تمام' : 'Done'}
 						</button>
-					</div>
+					</section>
 				) : (
-					<div className="p-5 space-y-3">
+					<section className="p-5 space-y-3">
 						<label className="block">
 							<span className="mb-1 flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
 								{ar ? 'كلمة المرور الجديدة' : 'New password'}
@@ -242,7 +244,7 @@ function SetPasswordModal({ user, onClose }) {
 									<Wand2 size={12} /> {ar ? 'ولّد كلمة قوية' : 'Generate strong'}
 								</button>
 							</span>
-							<div className="relative">
+							<div className="relative" dir="ltr">
 								<input
 									type={show ? 'text' : 'password'}
 									value={password}
@@ -298,7 +300,7 @@ function SetPasswordModal({ user, onClose }) {
 							{saving ? <RefreshCw size={14} className="animate-spin" /> : <KeyRound size={14} />}
 							{ar ? 'احفظ كلمة المرور' : 'Save password'}
 						</button>
-					</div>
+					</section>
 				)}
 			</motion.form>
 		</div>

@@ -1974,6 +1974,16 @@ const CONVERSATIONS_CACHE_TTL = WHATSAPP_STALE_TIME;
 const MESSAGES_CACHE_TTL = MESSAGES_CACHE_TTL_MS;
 const STATUSES_CACHE_TTL = 60_000;
 
+/** Why a send failed, as the server said it (or the network error), for the Retry tooltip. */
+function outboundFailureReason(error) {
+	const fromServer = error?.response?.data?.message;
+	const text = Array.isArray(fromServer) ? fromServer.join(', ') : fromServer;
+	if (text) return String(text).slice(0, 240);
+	if (error?.code === 'ECONNABORTED') return 'The request timed out';
+	if (!error?.response) return 'No connection to the server';
+	return error?.message ? String(error.message).slice(0, 240) : null;
+}
+
 function DeliveryTicks({ message, size = 13, className = '', selfChat = false }) {
 	const state = messageDeliveryState(message, { selfChat });
 	if (state === 'hidden') return null;
@@ -1982,11 +1992,12 @@ function DeliveryTicks({ message, size = 13, className = '', selfChat = false })
 	}
 	if (state === 'failed') {
 		const ar = typeof document !== 'undefined' && document.documentElement.lang === 'ar';
+		const reason = message?.sendError ? String(message.sendError) : '';
 		return (
 			<button
 				type="button"
-				aria-label={ar ? 'لم تُرسل الرسالة. إعادة المحاولة' : 'Message not sent. Retry'}
-				title={ar ? 'إعادة المحاولة' : 'Retry'}
+				aria-label={`${ar ? 'لم تُرسل الرسالة. إعادة المحاولة' : 'Message not sent. Retry'}${reason ? ` — ${reason}` : ''}`}
+				title={reason ? `${ar ? 'إعادة المحاولة' : 'Retry'} — ${reason}` : ar ? 'إعادة المحاولة' : 'Retry'}
 				className={`wa-delivery-retry inline-flex items-center ${className}`}
 				onClick={event => {
 					event.preventDefault();
@@ -11037,6 +11048,7 @@ function MobileWhatsAppHeader({
 							<BookOpen size={15} strokeWidth={2.1} aria-hidden="true" />
 						</button>
 					) : null}
+					{onCamera ? (
 					<button
 						type="button"
 						onClick={onCamera}
@@ -11048,6 +11060,7 @@ function MobileWhatsAppHeader({
 							<path fillRule="evenodd" clipRule="evenodd" d="M11.8699 7C11.6312 7 11.4004 7.08539 11.2191 7.24074L9.45833 8.75H7C5.89543 8.75 5 9.64543 5 10.75V19.25C5 20.3546 5.89543 21.25 7 21.25H21C22.1046 21.25 23 20.3546 23 19.25V10.75C23 9.64543 22.1046 8.75 21 8.75H18.5417L16.7809 7.24074C16.5996 7.08539 16.3688 7 16.1301 7H11.8699ZM14 19C16.2091 19 18 17.2091 18 15C18 12.7909 16.2091 11 14 11C11.7909 11 10 12.7909 10 15C10 17.2091 11.7909 19 14 19ZM14 17.75C15.5188 17.75 16.75 16.5188 16.75 15C16.75 13.4812 15.5188 12.25 14 12.25C12.4812 12.25 11.25 13.4812 11.25 15C11.25 16.5188 12.4812 17.75 14 17.75ZM19.5 13.25C20.0523 13.25 20.5 12.8023 20.5 12.25C20.5 11.6977 20.0523 11.25 19.5 11.25C18.9477 11.25 18.5 11.6977 18.5 12.25C18.5 12.8023 18.9477 13.25 19.5 13.25Z" fill="#0A0A0A" />
 						</svg>
 					</button>
+					) : null}
 					<button
 						type="button"
 						onClick={onSearch}
@@ -11074,6 +11087,7 @@ function MobileWhatsAppNav({
 	avatarUrl = '',
 	locale = 'en',
 	showAgent = false,
+	showUpdates = true,
 }) {
 	const youLabel = String(locale).toLowerCase().startsWith('ar') ? 'أنت' : 'You';
 	const items = [
@@ -11129,9 +11143,10 @@ function MobileWhatsAppNav({
 			, label: youLabel, avatar: true
 		},
 	];
+	const visibleItems = showUpdates ? items : items.filter(item => item.id !== 'statuses');
 	return (
-		<nav style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }} className={`wa-mobile-nav relative hidden shrink-0 border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]`}>
-			{items.map(({ id, icon: Icon, label, badge, avatar }) => {
+		<nav style={{ gridTemplateColumns: `repeat(${visibleItems.length}, minmax(0, 1fr))` }} className={`wa-mobile-nav relative hidden shrink-0 border-t border-[#e9edef] bg-[#f0f2f5] pb-[max(16px,calc(env(safe-area-inset-bottom)+4px))] pt-2 min-[769px]:hidden dark:border-[#222d34] dark:bg-[#111b21]`}>
+			{visibleItems.map(({ id, icon: Icon, label, badge, avatar }) => {
 				const active = activeTab === id;
 				const iconNode = isValidElement(Icon)
 					? cloneElement(Icon, {
@@ -14068,6 +14083,16 @@ function WhatsAppWorkspaceContent() {
 		}
 		return lookup;
 	}, [conversations]);
+	const seesWholeAccountRef = useRef(false);
+	// Who is looking: replies a teammate sent are labelled with their name, yours are not.
+	const [viewerUserId] = useState(() => {
+		if (typeof window === 'undefined') return '';
+		try {
+			return String(JSON.parse(window.localStorage.getItem('user') || 'null')?.id || '');
+		} catch {
+			return '';
+		}
+	});
 	const currentAccess = selectedAccount?.currentAccess || {};
 	const whatsappNotificationsEnabled = currentAccess.notificationsEnabled !== false;
 	whatsappNotificationsEnabledRef.current = whatsappNotificationsEnabled && !showcaseOnly;
@@ -14079,6 +14104,10 @@ function WhatsAppWorkspaceContent() {
 	const isDesktopLayout = useDesktopLayout();
 	const canManageWhatsApp = Boolean(currentAccess.canManage);
 	const canAssignWhatsApp = Boolean(currentAccess.canAssign);
+	// Same rule as the server: the owner (full access) and staff who manage or assign see the
+	// whole account; everyone else only their assigned chats, so no stories for them.
+	const seesWholeAccount = canManageWhatsApp || canAssignWhatsApp;
+	seesWholeAccountRef.current = seesWholeAccount;
 	const [agentRowStates, setAgentRowStates] = useState(() => new Map());
 	const agentAccountId = !showcaseOnly && !demo.settings.enabled ? selectedAccount?.id || '' : '';
 	useEffect(() => {
@@ -14121,16 +14150,30 @@ function WhatsAppWorkspaceContent() {
 		() =>
 			tabs.filter(([key]) => {
 				if (showcaseOnly && !SHOWCASE_TABS.has(key)) return false;
+				if (key === 'online') return false;
+				if (key === 'statuses') return seesWholeAccount;
 				if (key === 'settings') return canManageWhatsApp || isAdmin;
 				if (key === 'agent') return canManageWhatsApp || isAdmin;
-				if (key === 'reports') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
+				// The server only serves reports to people who manage or assign the account.
+				if (key === 'reports') return seesWholeAccount;
 				if (key === 'board') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				if (key === 'fakeChat') return fakeChatAllowed;
 				if (key === 'documents') return isAdmin;
 				return true;
 			}),
-		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, fakeChatAllowed, isAdmin, showcaseOnly],
+		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, fakeChatAllowed, isAdmin, showcaseOnly, seesWholeAccount],
 	);
+	// A remembered tab may be the removed Online tab, or Stories for someone who no longer sees
+	// them; wait for the account's access before deciding, so the owner is never bounced.
+	useEffect(() => {
+		if (activeTab === 'online') {
+			setActiveTab('chats');
+			return;
+		}
+		if (activeTab === 'statuses' && selectedAccount?.currentAccess && !seesWholeAccount) {
+			setActiveTab('chats');
+		}
+	}, [activeTab, selectedAccount?.currentAccess, seesWholeAccount]);
 	useEffect(() => {
 		if (!showcaseOnly) return;
 		if (activeTab && !SHOWCASE_TABS.has(activeTab)) setActiveTab('chats');
@@ -16346,7 +16389,7 @@ function WhatsAppWorkspaceContent() {
 
 	const refreshStatusesFromProvider = useCallback(
 		async (targetAccountId, { silent = true, force = false } = {}) => {
-			if (!targetAccountId) return;
+			if (!targetAccountId || !seesWholeAccountRef.current) return;
 			const account = accountsRef.current.find(item => item.id === targetAccountId);
 			if (account && account.status !== 'connected') return;
 			const cached = statusesCacheRef.current.get(targetAccountId);
@@ -16386,6 +16429,11 @@ function WhatsAppWorkspaceContent() {
 	const loadStatuses = useCallback(
 		async (targetAccountId, { force = false, silent = true, providerRefresh = true } = {}) => {
 			if (!targetAccountId) return;
+			// Staff limited to their assigned chats have no stories (the server refuses them).
+			if (!seesWholeAccountRef.current) {
+				if (accountIdRef.current === targetAccountId) setStatuses([]);
+				return;
+			}
 			const account = accountsRef.current.find(item => item.id === targetAccountId);
 			const liveSession = account?.status === 'connected';
 			const cached = statusesCacheRef.current.get(targetAccountId);
@@ -19644,7 +19692,7 @@ function WhatsAppWorkspaceContent() {
 
 	// Story rings: DB-only refresh on Chats (fast); full provider sync on Stories tab.
 	useEffect(() => {
-		if (!['chats', 'statuses'].includes(activeTab) || !accountId || !isAccountConnected) {
+		if (!['chats', 'statuses'].includes(activeTab) || !accountId || !isAccountConnected || !seesWholeAccount) {
 			return undefined;
 		}
 		const poller = createVisiblePoller({
@@ -19657,15 +19705,15 @@ function WhatsAppWorkspaceContent() {
 		});
 		poller.start();
 		return () => poller.stop();
-	}, [activeTab, accountId, isAccountConnected, loadStatuses]);
+	}, [activeTab, accountId, isAccountConnected, loadStatuses, seesWholeAccount]);
 
 	useEffect(() => {
-		if (!['chats', 'statuses'].includes(activeTab) || !accountId) return;
+		if (!['chats', 'statuses'].includes(activeTab) || !accountId || !seesWholeAccount) return;
 		void loadStatuses(accountId, {
 			silent: true,
 			providerRefresh: activeTab === 'statuses',
 		});
-	}, [activeTab, accountId, loadStatuses]);
+	}, [activeTab, accountId, loadStatuses, seesWholeAccount]);
 
 	// Clear a stuck sync bar if backend never finishes.
 	useEffect(() => {
@@ -19992,6 +20040,7 @@ function WhatsAppWorkspaceContent() {
 				conversationId: targetConversationId,
 				status: 'failed',
 				optimistic: false,
+				sendError: outboundFailureReason(error),
 			};
 			const applyFailed = items =>
 				(items || []).map(item =>
@@ -20188,7 +20237,12 @@ function WhatsAppWorkspaceContent() {
 			);
 			forgetFailedOutbound(targetConversationId, clientMessageId);
 		} catch (error) {
-			const failedMessage = { ...pendingMessage, status: 'failed', optimistic: false };
+			const failedMessage = {
+				...pendingMessage,
+				status: 'failed',
+				optimistic: false,
+				sendError: outboundFailureReason(error),
+			};
 			persistConversationMessages(targetConversationId, items =>
 				(items || []).map(item =>
 					item.id === pendingMessage.id || item.clientMessageId === clientMessageId
@@ -24494,14 +24548,11 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const loadTabData = async (tab, force = false) => {
-		if (tab === 'notifications' || (showcaseOnly && !SHOWCASE_TABS.has(tab))) {
+		// The Online tab is gone, and stories are only for people who see the whole account
+		// (a saved tab or an old link can still ask for either).
+		const notAllowed = tab === 'online' || (tab === 'statuses' && !seesWholeAccountRef.current);
+		if (tab === 'notifications' || notAllowed || (showcaseOnly && !SHOWCASE_TABS.has(tab))) {
 			setActiveTab('chats');
-			return;
-		}
-		if (tab === 'online') {
-			setActiveTab('online');
-			setTabError('');
-			void refreshOnlineContacts({ includeOffline: true });
 			return;
 		}
 		if (tab === 'reading') {
@@ -26405,10 +26456,9 @@ function WhatsAppWorkspaceContent() {
 							document.querySelector('.wa-m-search input')?.focus();
 						}, 60);
 					}}
-					onCamera={() => void loadTabData('statuses')}
+					onCamera={seesWholeAccount ? () => void loadTabData('statuses') : undefined}
 					onMore={() => setMobileMenuOpen(current => !current)}
 					onReading={() => void loadTabData('reading')}
-					onOnline={() => void loadTabData('online')}
 					showTitle={!isConversationWorkspaceTab(activeTab)}
 					scrolled={isConversationWorkspaceTab(activeTab) && mobileHeaderScrolled}
 				/>
@@ -26671,7 +26721,7 @@ function WhatsAppWorkspaceContent() {
 					showcaseOnly={showcaseOnly}
 					showSettings={canManageWhatsApp || isAdmin}
 					showAccounts={!showcaseOnly}
-					showReports={!showcaseOnly}
+					showReports={!showcaseOnly && seesWholeAccount}
 					showTyping={!showcaseOnly}
 					showBoard={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
 					showFakeChat={!showcaseOnly && fakeChatAllowed}
@@ -26681,6 +26731,7 @@ function WhatsAppWorkspaceContent() {
 					showDocuments={!showcaseOnly && isAdmin}
 					showLearn={!showcaseOnly}
 					showAgent={!showcaseOnly && (canManageWhatsApp || isAdmin)}
+					showUpdates={seesWholeAccount}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 					darkMode={darkMode}
@@ -29404,6 +29455,23 @@ function WhatsAppWorkspaceContent() {
 																			{sender.name}
 																		</p>
 																	)}
+																	{/* Who on the team sent it, when it was not you: a reply from
+																	    an assigned teammate is marked with their name. */}
+																	{message.direction === 'outbound' &&
+																	message.senderUser?.id &&
+																	message.senderUser.id !== viewerUserId ? (
+																		<p
+																			className="wa-staff-sender mb-0.5 inline-flex max-w-full items-center gap-1 text-[11.5px] font-bold text-[#027eb5] dark:text-[#53bdeb]"
+																			title={locale === 'ar' ? 'اللي ردّ من الفريق' : 'Sent by your teammate'}
+																			data-testid="message-staff-sender"
+																		>
+																			<UserRound size={11} strokeWidth={2.6} aria-hidden="true" />
+																			<span className="truncate" dir="auto">
+																				{String(message.senderUser.name || '').trim() ||
+																					(locale === 'ar' ? 'عضو في الفريق' : 'Teammate')}
+																			</span>
+																		</p>
+																	) : null}
 																	{(message.forwarded || message.isForwarded) && (
 																		<p className="mb-1 text-[10px] italic opacity-60">
 																			{locale === 'ar' ? 'مُعاد توجيهها' : 'Forwarded'}
@@ -31533,7 +31601,7 @@ function WhatsAppWorkspaceContent() {
 									document.querySelector('.wa-m-search input')?.focus();
 								}, 60);
 							}}
-							onCamera={() => void loadTabData('statuses')}
+							onCamera={seesWholeAccount ? () => void loadTabData('statuses') : undefined}
 							onMore={() => setMobileMenuOpen(current => !current)}
 							showTitle={false}
 						/>
@@ -31904,6 +31972,7 @@ function WhatsAppWorkspaceContent() {
 					unreadCount={unreadConversationCount}
 					avatarUrl={railAvatarUrl}
 					locale={locale}
+					showUpdates={seesWholeAccount}
 				/>
 			)}
 			<MessageReactionPicker

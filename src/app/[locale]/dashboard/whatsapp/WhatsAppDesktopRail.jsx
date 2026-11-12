@@ -24,7 +24,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useSidebarChrome } from '@/components/molecules/SidebarChromeContext';
-import { RailChatsIcon, RailOnlineIcon, RailReadingIcon, RailUpdatesIcon } from './wa-rail-icons';
+import { RailChatsIcon, RailReadingIcon, RailUpdatesIcon } from './wa-rail-icons';
 
 /**
  * Tooltip for the footer dock. The rail scrolls (overflow: auto), which clips anything
@@ -143,6 +143,7 @@ export default function WhatsAppDesktopRail({
 	showDocuments = false,
 	showLearn = false,
 	showAgent = false,
+	showUpdates = true,
 	showcaseOnly = false,
 	darkMode = false,
 	onToggleDarkMode,
@@ -161,18 +162,14 @@ export default function WhatsAppDesktopRail({
 			custom: true,
 			badge: unreadCount,
 		},
-		{
-			id: 'online',
-			label: labels.onlineTab || (ar ? 'المتصلون' : 'Online'),
-			icon: RailOnlineIcon,
-			custom: true,
-		},
-		{
-			id: 'statuses',
-			label: labels.updates || (ar ? 'تحديثات' : 'Updates'),
-			icon: RailUpdatesIcon,
-			custom: true,
-		},
+		showUpdates
+			? {
+					id: 'statuses',
+					label: labels.updates || (ar ? 'تحديثات' : 'Updates'),
+					icon: RailUpdatesIcon,
+					custom: true,
+				}
+			: null,
 		{
 			id: 'reading',
 			label: labels.reading || (ar ? 'القراءة' : 'Reading'),
