@@ -9,6 +9,9 @@ import {
 	ArrowDownLeft,
 	ArrowUpRight,
 	ArrowRight,
+	Banknote,
+	Landmark,
+	Smartphone,
 	BarChart3,
 	Calculator,
 	Calendar,
@@ -630,16 +633,32 @@ function Sheet({ open, ar, title, onClose, children }) {
 	);
 }
 
-function BalanceSheet({ open, ar, onClose, ...props }) {
+const POCKETS = [
+	{ key: 'bank', Icon: Landmark, ar: 'البنك', en: 'Bank', arShort: 'البنك', enShort: 'Bank' },
+	{ key: 'wallet', Icon: Smartphone, ar: 'محفظة الموبايل', en: 'Mobile wallet', arShort: 'المحفظة', enShort: 'Wallet' },
+	{ key: 'cash', Icon: Banknote, ar: 'كاش معايا', en: 'Cash on hand', arShort: 'كاش', enShort: 'Cash' },
+];
+
+/** Bank and mobile wallet are stored; cash is the rest of the balance (income and expenses land there). */
+function pocketsFrom(data) {
+	const balance = Number(data?.summary?.balance) || 0;
+	const bank = Number(data?.pockets?.bank) || 0;
+	const wallet = Number(data?.pockets?.wallet) || 0;
+	return { bank, wallet, cash: round2(balance - bank - wallet) };
+}
+
+function BalanceSheet({ open, ar, onClose, pocket, pockets, ...props }) {
+	const meta = POCKETS.find(item => item.key === pocket) || POCKETS[2];
 	return (
-		<Sheet open={open} ar={ar} title={ar ? 'الرصيد' : 'Balance'} onClose={onClose}>
-			<BalanceForm ar={ar} {...props} />
+		<Sheet open={open} ar={ar} title={ar ? meta.ar : meta.en} onClose={onClose}>
+			{/* keyed by pocket so the form restarts from that pocket's amount */}
+			<BalanceForm key={meta.key} ar={ar} balance={pockets?.[meta.key] ?? 0} pocket={meta.key} {...props} />
 		</Sheet>
 	);
 }
 
 /** Mounted only while the sheet is open, so it starts from the balance at that moment. */
-function BalanceForm({ ar, money, balance, pending, onSubmit }) {
+function BalanceForm({ ar, money, balance, pocket, pending, onSubmit }) {
 	const [mode, setMode] = useState('set');
 	const [amount, setAmount] = useState(() => String(balance ?? 0));
 
@@ -657,7 +676,7 @@ function BalanceForm({ ar, money, balance, pending, onSubmit }) {
 			className="flex flex-col gap-4"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ mode, amount: value });
+				if (valid) onSubmit({ mode, amount: value, pocket });
 			}}
 		>
 			<div className="grid grid-cols-3 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
@@ -2944,14 +2963,14 @@ const GUILLOCHE = guillochePaths();
  * (cash, gold, lent out, on the way). Monthly coming-in / going-out / forecast live in the
  * same footer language as "spent this month" so the top stays one composition.
  */
-function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, onEditBalance, onJump, onCalc }) {
+function BalanceHero({ ar, summary, pockets, forecast, goldValueNow, lentTotal, onEditBalance, onJump, onCalc }) {
 	const balance = Number(summary?.balance) || 0;
 	const pending = Number(summary?.pendingTotal) || 0;
 	const nextIn = Number(forecast?.nextMonthIn) || 0;
 	const nextOut = Number(forecast?.nextMonthOut) || 0;
 	const showForecast = nextIn > 0 || nextOut > 0;
 	const parts = [
-		{ key: 'cash', label: ar ? 'كاش' : 'Cash', value: Math.max(0, balance), swatch: 'bg-white' },
+		{ key: 'cash', label: ar ? 'الرصيد' : 'Balance', value: Math.max(0, balance), swatch: 'bg-white' },
 		{ key: 'gold', label: ar ? 'دهب' : 'Gold', value: goldValueNow, swatch: 'bg-[#f2c94c]' },
 		{ key: 'lent', label: ar ? 'عند ناس' : 'Lent out', value: lentTotal, swatch: 'bg-[#8fd3ff]' },
 		{
@@ -3027,7 +3046,7 @@ function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, onEditBal
 						</button>
 						<button
 							type="button"
-							onClick={onEditBalance}
+							onClick={() => onEditBalance('cash')}
 							aria-label={ar ? 'تعديل الرصيد' : 'Edit balance'}
 							title={ar ? 'تعديل الرصيد' : 'Edit balance'}
 							className="grid h-11 w-11 place-items-center rounded-full text-emerald-50/90 transition [touch-action:manipulation] hover:bg-white/10 active:scale-95 active:bg-white/15"
@@ -3045,6 +3064,34 @@ function BalanceHero({ ar, summary, forecast, goldValueNow, lentTotal, onEditBal
 						unitClassName="ms-2 text-lg font-bold tracking-normal text-emerald-100/60 sm:text-xl"
 					/>
 				</p>
+
+				<div className="mt-4 grid grid-cols-3 gap-2">
+					{POCKETS.map(({ key, Icon, ar: arLabel, en, arShort, enShort }) => {
+						const value = Number(pockets?.[key]) || 0;
+						return (
+							<button
+								key={key}
+								type="button"
+								onClick={() => onEditBalance(key)}
+								aria-label={ar ? `تعديل ${arLabel}` : `Edit ${en.toLowerCase()}`}
+								className="group min-w-0 rounded-2xl bg-white/[0.08] px-3 py-2.5 text-start ring-1 ring-white/10 transition [touch-action:manipulation] hover:bg-white/[0.14] active:scale-[0.98]"
+							>
+								<span className="flex items-center gap-1 text-[11.5px] font-semibold text-emerald-100/75 sm:gap-1.5">
+									<Icon size={13} className="shrink-0" aria-hidden />
+									<span className="truncate sm:hidden">{ar ? arShort : enShort}</span>
+									<span className="hidden truncate sm:inline">{ar ? arLabel : en}</span>
+									<Pencil size={11} className="ms-auto hidden shrink-0 opacity-0 transition group-hover:opacity-70 sm:block" aria-hidden />
+								</span>
+								<MoneyFigure
+									value={value}
+									ar={ar}
+									className={`mt-1 block truncate text-[17px] font-black leading-tight tabular-nums sm:text-lg ${value < 0 ? 'text-rose-200' : 'text-white'}`}
+									unitClassName="ms-1 text-[10px] font-bold text-emerald-100/55"
+								/>
+							</button>
+						);
+					})}
+				</div>
 
 				{total > 0 ? (
 					<p className="mt-3 text-[13px] text-emerald-100/70">
@@ -3144,6 +3191,7 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 	const money = useMoneyFormat(ar);
 	const queryClient = useQueryClient();
 	const [balanceOpen, setBalanceOpen] = useState(false);
+	const [balancePocket, setBalancePocket] = useState('cash');
 	const [addOpen, setAddOpen] = useState(false);
 	const [calcOpen, setCalcOpen] = useState(false);
 	const [addType, setAddType] = useState('money');
@@ -3398,10 +3446,14 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 					<BalanceHero
 						ar={ar}
 						summary={summary}
+						pockets={pocketsFrom(data)}
 						forecast={data?.forecast}
 						goldValueNow={goldValueNow}
 						lentTotal={lentTotal}
-						onEditBalance={() => setBalanceOpen(true)}
+						onEditBalance={pocket => {
+							setBalancePocket(pocket || 'cash');
+							setBalanceOpen(true);
+						}}
 						onJump={jumpToLedger}
 						onCalc={() => setCalcOpen(true)}
 					/>
@@ -3440,7 +3492,8 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 				open={balanceOpen}
 				ar={ar}
 				money={money}
-				balance={summary?.balance ?? 0}
+				pocket={balancePocket}
+				pockets={pocketsFrom(data)}
 				pending={balanceMutation.isPending}
 				onClose={() => setBalanceOpen(false)}
 				onSubmit={payload => balanceMutation.mutate(payload)}
@@ -3471,7 +3524,7 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 				ar={ar}
 				onClose={() => setCalcOpen(false)}
 				sources={[
-					{ key: 'cash', label: ar ? 'الكاش' : 'Cash', value: Number(summary?.balance) || 0 },
+					{ key: 'cash', label: ar ? 'الرصيد' : 'Balance', value: Number(summary?.balance) || 0 },
 					{ key: 'gold', label: ar ? 'الدهب' : 'Gold', value: goldValueNow },
 					{ key: 'lent', label: ar ? 'عند ناس' : 'Lent out', value: lentTotal },
 					{ key: 'pending', label: ar ? 'في الطريق' : 'On the way', value: Number(summary?.pendingTotal) || 0 },
