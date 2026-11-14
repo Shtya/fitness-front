@@ -337,6 +337,7 @@ const WhatsAppBoardTab = lazy(() =>
 );
 const FakeChatStudio = lazy(() => import('./fake-chat/FakeChatStudio'));
 const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
+const GroupMemberPanel = lazy(() => import('./GroupMemberPanel'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
@@ -13195,6 +13196,8 @@ function WhatsAppWorkspaceContent() {
 	const [storyRepostText, setStoryRepostText] = useState('');
 	const [repostingStory, setRepostingStory] = useState(false);
 	const [autoForwardOpen, setAutoForwardOpen] = useState(false);
+	/** Group member whose details are open in the side panel ({ waId, name, avatarUrl, color }). */
+	const [personCard, setPersonCard] = useState(null);
 	const [privacyBlurMenuOpen, setPrivacyBlurMenuOpen] = useState(false);
 	const storyDialogOpenRef = useRef(false);
 	storyDialogOpenRef.current = storyRepostOpen || storyShareOpen;
@@ -26740,6 +26743,12 @@ function WhatsAppWorkspaceContent() {
 
 	// Latest workspace values for thread row handlers (see threadRowCache).
 	threadLiveRef.current = {
+		openPersonCard: (sender, avatarUrl) => {
+			const waId = String(sender?.key || '');
+			// Only real WhatsApp ids; a name-only sender has nobody to look up.
+			if (!waId || waId.startsWith('name:') || waId === 'unknown') return;
+			setPersonCard({ waId, name: sender.name || '', avatarUrl: avatarUrl || '', color: sender.color });
+		},
 		applyGroupMessageSelection,
 		applyMediaSelection,
 		applyMessagesSelection,
@@ -29879,12 +29888,20 @@ function WhatsAppWorkspaceContent() {
 																)}
 																{isGroupChat && !mine && (
 																	showGroupSenderMeta ? (
-																		<Avatar
-																			label={sender.name}
-																			src={groupSenderAvatarSrc}
-																			size={7}
-																			className="wa-group-sender-avatar ring-0"
-																		/>
+																		<button
+																			type="button"
+																			className="wa-group-sender-avatar-btn shrink-0 self-start rounded-full transition hover:opacity-85 focus-visible:outline-2 focus-visible:outline-[#00a884]"
+																			onClick={() => threadLiveRef.current.openPersonCard?.(sender, groupSenderAvatarSrc)}
+																			aria-label={locale === 'ar' ? `معلومات ${sender.name}` : `${sender.name} info`}
+																			title={sender.name}
+																		>
+																			<Avatar
+																				label={sender.name}
+																				src={groupSenderAvatarSrc}
+																				size={7}
+																				className="wa-group-sender-avatar ring-0"
+																			/>
+																		</button>
 																	) : (
 																		<span className="wa-group-sender-spacer" aria-hidden="true" />
 																	)
@@ -29996,11 +30013,19 @@ function WhatsAppWorkspaceContent() {
 																		</button>
 																	) : null}
 																	{showGroupSenderMeta && (
-																		<p
-																			className="wa-group-sender-name"
-																			style={{ color: sender.color }}
-																		>
-																			{sender.name}
+																		<p className="wa-group-sender-name" style={{ color: sender.color }}>
+																			<button
+																				type="button"
+																				className="max-w-full cursor-pointer truncate text-start font-[inherit] hover:underline"
+																				onPointerDown={event => event.stopPropagation()}
+																				onClick={event => {
+																					event.stopPropagation();
+																					threadLiveRef.current.openPersonCard?.(sender, groupSenderAvatarSrc);
+																				}}
+																				title={locale === 'ar' ? 'عرض المعلومات' : 'View info'}
+																			>
+																				{sender.name}
+																			</button>
 																		</p>
 																	)}
 																	{/* Who on the team sent it, when it was not you: a reply from
@@ -32951,7 +32976,9 @@ function WhatsAppWorkspaceContent() {
 						aria-labelledby="wa-gi-title"
 						onClick={event => event.stopPropagation()}
 					>
-						<div className="wa-gi__cover" aria-hidden="true">
+						{/* The close button lives in the header bar, which stays pinned while the panel
+						    scrolls; on the panel itself it scrolled away with the content. */}
+						<div className="wa-gi__cover">
 							<span className="wa-gi__cover-label">
 								{isGroupInfo
 									? locale === 'ar'
@@ -32961,15 +32988,15 @@ function WhatsAppWorkspaceContent() {
 										? 'معلومات المحادثة'
 										: 'Contact info'}
 							</span>
+							<button
+								type="button"
+								onClick={closeConversationInfo}
+								className="wa-gi__close"
+								aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
+							>
+								<X size={18} strokeWidth={2.2} />
+							</button>
 						</div>
-						<button
-							type="button"
-							onClick={closeConversationInfo}
-							className="wa-gi__close"
-							aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
-						>
-							<X size={18} strokeWidth={2.2} />
-						</button>
 
 						<div className="wa-gi__identity">
 							{infoStory ? (
@@ -34647,6 +34674,20 @@ function WhatsAppWorkspaceContent() {
 				locale={locale}
 				onLeave={() => router.push('/dashboard')}
 			/>
+			{personCard ? (
+				<Suspense fallback={null}>
+					<GroupMemberPanel
+						person={personCard}
+						accountId={accountId}
+						ar={locale === 'ar'}
+						onClose={() => setPersonCard(null)}
+						onOpenConversation={(id, meta) => {
+							setActiveTab('chats');
+							openConversationRef.current?.(id, meta);
+						}}
+					/>
+				</Suspense>
+			) : null}
 			{quickSwitchOpen ? (
 				<Suspense fallback={null}>
 					<WhatsAppQuickSwitcher
