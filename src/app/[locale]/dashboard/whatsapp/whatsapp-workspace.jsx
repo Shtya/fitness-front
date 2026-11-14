@@ -118,7 +118,6 @@ import {
 	Radio,
 	GraduationCap,
 } from 'lucide-react';
-import { FaFacebook } from 'react-icons/fa';
 import api, { whatsappLiveApi, whatsappLiveOrigin } from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import { clearAppBadgeSource, syncAppBadge } from '@/lib/app-badge';
@@ -346,7 +345,6 @@ const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
 const WhatsAppReadingTab = lazy(() => import('./WhatsAppReadingTab'));
 const WhatsAppPromptsTab = lazy(() => import('./WhatsAppPromptsTab'));
-const WhatsAppFacebookTab = lazy(() => import('./WhatsAppFacebookTab'));
 const WhatsAppOnlineTab = lazy(() => import('./WhatsAppOnlineTab'));
 const TypingHistoryPanel = lazy(() =>
 	import('./WhatsAppTypingLog').then(mod => ({ default: mod.TypingHistoryPanel })),
@@ -487,6 +485,7 @@ import {
 } from './WhatsAppPageLock';
 import { LockKeyhole as PageLockIcon, Keyboard as TypingLogIcon, Command as QuickSwitchIcon, Timer as DelayedSendIcon } from 'lucide-react';
 import WhatsAppQuickSwitcher, { recordQuickSwitchUse } from './WhatsAppQuickSwitcher';
+import TeamPresenceButton from './TeamPresenceButton';
 
 /** Extra words the quick switcher matches on (Franco / English spellings people type). */
 const QUICK_SWITCH_KEYWORDS = {
@@ -2002,6 +2001,9 @@ const tabs = [
 // The only tabs that render the sample profile instead of the real account.
 const SHOWCASE_TABS = new Set(['chats', 'reading', 'prompts', 'settings']);
 
+/** Chat ⋮ menu items that are no longer shown (see chatToolbarActions). */
+const CHAT_MENU_RETIRED_ITEMS = new Set(['media', 'messages', 'groups', 'group-select', 'schedule', 'split']);
+
 const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 const GLOW = '0 10px 24px -10px var(--color-primary-400)';
 const BRAND_GRADIENT = 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-secondary-500) 100%)';
@@ -2562,7 +2564,20 @@ function GroupMessageReceiptsPanel({ receipts, locale, formatTime, resolveMember
 						<ul className="wa-mi__rows">
 							{section.items.map(entry => {
 								const member = resolveMember(entry);
-								const time = formatTime(section.timeOf(entry));
+								// Like WhatsApp: just the time for today, a short date otherwise.
+								const rawTime = section.timeOf(entry);
+								const at = rawTime ? new Date(rawTime) : null;
+								const time =
+									at && !Number.isNaN(at.getTime())
+										? at.toDateString() === new Date().toDateString()
+											? at.toLocaleTimeString(ar ? 'ar-EG' : undefined, { hour: 'numeric', minute: '2-digit' })
+											: at.toLocaleString(ar ? 'ar-EG' : undefined, {
+													month: 'short',
+													day: 'numeric',
+													hour: 'numeric',
+													minute: '2-digit',
+												})
+										: formatTime(rawTime);
 								return (
 									<li key={`${section.id}:${entry.key}`} className="wa-mi__row is-done">
 										<div className="flex min-w-0 items-center gap-3">
@@ -2574,7 +2589,7 @@ function GroupMessageReceiptsPanel({ receipts, locale, formatTime, resolveMember
 													loading="lazy"
 												/>
 											) : (
-												<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#DFE5E7] text-sm font-semibold text-[#54656F]">
+												<span className="wa-mi__avatar flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
 													{String(member.name || '?').replace(/^\+/, '').slice(0, 1).toUpperCase()}
 												</span>
 											)}
@@ -2587,7 +2602,7 @@ function GroupMessageReceiptsPanel({ receipts, locale, formatTime, resolveMember
 												) : null}
 											</div>
 										</div>
-										{time ? <strong className="wa-mi__row-value">{time}</strong> : null}
+										{time ? <span className="wa-mi__row-time">{time}</span> : null}
 									</li>
 								);
 							})}
@@ -10269,12 +10284,7 @@ function MessageActionMenu({
 				submenu: true,
 				group: 'organize',
 			},
-		canUseGroups && {
-			id: 'addToGroup',
-			label: ar ? 'إضافة لمجموعة رسائل' : 'Add to message group',
-			icon: FolderKanban,
-			group: 'organize',
-		},
+		// "Add to message group" is retired (Message groups removed).
 		canSaveToLibrary && {
 			id: 'saveToLibrary',
 			label: ar ? 'حفظ في المكتبة…' : 'Save to library…',
@@ -10713,16 +10723,7 @@ function MultiMessageActionMenu({
 			label: ar ? 'نسخ' : 'Copy',
 			icon: Copy,
 		},
-		canUseGroups && {
-			id: 'addToGroup',
-			label: ar ? 'إضافة لمجموعة رسائل' : 'Add to message group',
-			icon: FolderKanban,
-		},
-		canUseGroups && {
-			id: 'removeFromGroup',
-			label: ar ? 'إزالة من المجموعة' : 'Remove from group',
-			icon: Trash2,
-		},
+		// Message groups are retired: no add / remove here any more.
 		{
 			id: 'shareAsSend',
 			label: ar ? 'إرسال إلى شخص…' : 'Send to chat…',
@@ -13205,6 +13206,8 @@ function WhatsAppWorkspaceContent() {
 	const [personCard, setPersonCard] = useState(null);
 	/** Chat whose "Check connection" dialog is open (conversation id). */
 	const [connectionCheckFor, setConnectionCheckFor] = useState(null);
+	/** Team members with WhatsApp open right now ({ userId, name, role, lastSeenAt }); admins only. */
+	const [staffOnline, setStaffOnline] = useState([]);
 	const [privacyBlurMenuOpen, setPrivacyBlurMenuOpen] = useState(false);
 	const storyDialogOpenRef = useRef(false);
 	storyDialogOpenRef.current = storyRepostOpen || storyShareOpen;
@@ -14343,6 +14346,31 @@ function WhatsAppWorkspaceContent() {
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
 	}, []);
+	// "I have WhatsApp open": ping the server every 10 s while this page is on screen. The server
+	// counts a user online only within 15 s of a ping; nothing pinged before, so the team list
+	// (and the staff session time in Reports) went stale. Admins also re-read who is online,
+	// since the server only pushes the list when someone connects or leaves.
+	useEffect(() => {
+		const tick = () => {
+			const socket = socketRef.current;
+			if (!socket?.connected) return;
+			if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+				socket.emit('whatsapp:presence:ping');
+			}
+			if (isAdmin) {
+				socket.emit('whatsapp:presence:list', null, response => {
+					if (Array.isArray(response?.items)) setStaffOnline(response.items);
+				});
+			}
+		};
+		tick();
+		const timer = window.setInterval(tick, 10_000);
+		document.addEventListener('visibilitychange', tick);
+		return () => {
+			window.clearInterval(timer);
+			document.removeEventListener('visibilitychange', tick);
+		};
+	}, [isAdmin]);
 	// Remember what gets opened from anywhere (rail, menus, switcher) so the switcher lists the
 	// most-used first. Chats is the home screen, so it is not counted as a choice.
 	useEffect(() => {
@@ -18725,6 +18753,11 @@ function WhatsAppWorkspaceContent() {
 			const isReconnect = hasConnectedOnce;
 			hasConnectedOnce = true;
 			if (accountIdRef.current) socket.emit('whatsapp:account:watch', accountIdRef.current);
+			// Team online list right away (admins; others get an empty answer) and say we are here.
+			socket.emit('whatsapp:presence:ping');
+			socket.emit('whatsapp:presence:list', null, response => {
+				if (Array.isArray(response?.items)) setStaffOnline(response.items);
+			});
 			const activeConversationId = conversationIdRef.current;
 			const secondaryId = secondaryConversationIdRef.current;
 			if (activeConversationId && !isDemoId(activeConversationId)) {
@@ -18808,6 +18841,10 @@ function WhatsAppWorkspaceContent() {
 				loadAccounts().catch(() => { });
 			}, 800);
 		};
+		// Team presence (admins only; the server sends nothing to others).
+		socket.on('whatsapp:presence', payload => {
+			if (Array.isArray(payload?.items)) setStaffOnline(payload.items);
+		});
 		socket.on('whatsapp:presence-watch', payload => {
 			if (payload?.accountId && accountIdRef.current && payload.accountId !== accountIdRef.current) return;
 			presenceWatchAlertRef.current?.(payload);
@@ -23817,6 +23854,14 @@ function WhatsAppWorkspaceContent() {
 			}
 			waScrollMark('scrollAndHighlightQuotedMessage', 'scrollIntoView:quoted', { key });
 			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			// Flash the quoted bubble itself, on the element: thread rows are memoized and read the
+			// highlight from a ref, so the class set through React often never reached the row and
+			// the jump happened without any flash (confusing when two messages share a minute).
+			const bubble = el.querySelector('.wa-message-bubble') || el;
+			bubble.classList.remove('wa-quote-flash');
+			void bubble.offsetWidth; // restart the animation when the same message is jumped to again
+			bubble.classList.add('wa-quote-flash');
+			window.setTimeout(() => bubble.classList.remove('wa-quote-flash'), 2400);
 			setHighlightedMessageKey(key);
 			if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
 			highlightTimerRef.current = window.setTimeout(() => {
@@ -24603,7 +24648,11 @@ function WhatsAppWorkspaceContent() {
 						},
 					]),
 		// Assigned-only staff do not get the typing log.
-		].filter(item => item.id !== 'typing-history' || seesWholeAccount);
+		]
+			.filter(item => item.id !== 'typing-history' || seesWholeAccount)
+			// Not in this menu any more: selecting is Ctrl + click (or long-press on phones), the
+			// second chat and scheduling have their own header icons, and Message groups is retired.
+			.filter(item => !CHAT_MENU_RETIRED_ITEMS.has(item.id));
 	}, [
 		seesWholeAccount,
 		accountId,
@@ -24964,8 +25013,9 @@ function WhatsAppWorkspaceContent() {
 			setTabError('');
 			return;
 		}
+		// The Facebook tab was removed; a saved or linked "facebook" tab lands on the chats.
 		if (tab === 'facebook') {
-			setActiveTab('facebook');
+			setActiveTab('chats');
 			setTabError('');
 			return;
 		}
@@ -27208,7 +27258,7 @@ function WhatsAppWorkspaceContent() {
 					showLearn={!showcaseOnly}
 					showPrompts={!showcaseOnly}
 					showUpdates={seesWholeAccount}
-					showFacebook={!showcaseOnly && (canManageWhatsApp || isAdmin)}
+					showFacebook={false}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 					darkMode={darkMode}
@@ -27937,6 +27987,17 @@ function WhatsAppWorkspaceContent() {
 													<PageLockIcon size={18} strokeWidth={2.1} />
 												</button>
 											) : null}
+											{isAdmin && !showcaseOnly ? (
+												<TeamPresenceButton
+													ar={locale === 'ar'}
+													staff={staffOnline.filter(member => member.userId !== currentUserId)}
+													assignedCounts={conversations.reduce((counts, item) => {
+														const owner = item?.assignedUser?.id || item?.assignedUserId;
+														if (owner) counts.set(owner, (counts.get(owner) || 0) + 1);
+														return counts;
+													}, new Map())}
+												/>
+											) : null}
 											<button
 												type="button"
 												onClick={() => setQuickSwitchOpen(true)}
@@ -27982,13 +28043,6 @@ function WhatsAppWorkspaceContent() {
 														icon: UsersRound,
 														hidden: showcaseOnly,
 														onClick: () => void loadTabData('groups'),
-													},
-													{
-														id: 'facebook',
-														label: t.facebook || (locale === 'ar' ? 'فيسبوك' : 'Facebook'),
-														icon: FaFacebook,
-														hidden: showcaseOnly || !(canManageWhatsApp || isAdmin),
-														onClick: () => void loadTabData('facebook'),
 													},
 													{
 														id: 'agent',
@@ -28838,6 +28892,22 @@ function WhatsAppWorkspaceContent() {
 														) : null}
 													</button>
 												) : null}
+												{/* Second chat beside this one, one click away (it was buried in the ⋮ menu).
+												    Wide screens only, like the split itself. */}
+												{!demo.settings.enabled && conversationId ? (
+													<button
+														type="button"
+														title={secondaryConversationId ? t.closeSplitChat : t.openSplitChat}
+														aria-label={secondaryConversationId ? t.closeSplitChat : t.openSplitChat}
+														aria-pressed={Boolean(secondaryConversationId || splitPickMode)}
+														onClick={toggleSplitChat}
+														className={`wa-header-icon-btn relative max-[768px]:!hidden ${
+															secondaryConversationId || splitPickMode ? 'is-active' : ''
+														}`}
+													>
+														<Columns2 size={18} strokeWidth={2.05} />
+													</button>
+												) : null}
 												<WaActionMenu
 													actions={chatToolbarActions}
 													ariaLabel={t.chatActions}
@@ -28873,6 +28943,7 @@ function WhatsAppWorkspaceContent() {
 														locale={locale}
 														unassignLabel={t.unassign}
 														loading={assignableStaffLoading}
+														onlineIds={new Set(staffOnline.map(member => String(member.userId)))}
 														className="wa-chat-assign-select w-auto max-w-[16rem]"
 														buttonClassName="wa-chat-assign-trigger"
 													/>
@@ -30028,22 +30099,7 @@ function WhatsAppWorkspaceContent() {
 																				: 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white'
 																		} ${isChecked ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
 																>
-																	{membership?.groupName ? (
-																		<button
-																			type="button"
-																			onClick={event => {
-																				event.stopPropagation();
-																				void threadLiveRef.current.openMessageGroup({
-																					id: membership.groupId,
-																					name: membership.groupName,
-																				});
-																			}}
-																			className="mb-1 inline-flex max-w-full items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
-																		>
-																			<FolderKanban size={10} />
-																			<span className="truncate">{membership.groupName}</span>
-																		</button>
-																	) : null}
+																	{/* Message groups are retired: no group chip on messages. */}
 																	{showGroupSenderMeta && (
 																		<p className="wa-group-sender-name" style={{ color: sender.color }}>
 																			<button
@@ -31261,14 +31317,6 @@ function WhatsAppWorkspaceContent() {
 					<div className="wa-secondary-pane wa-prompts-pane min-h-0 overflow-hidden bg-[#f7f8fa] dark:bg-[#0b141a]">
 						<Suspense fallback={<div className="grid min-h-[60vh] place-items-center"><Loader2 size={20} className="animate-spin" /></div>}>
 							<WhatsAppPromptsTab />
-						</Suspense>
-					</div>
-				)}
-
-				{activeTab === 'facebook' && (
-					<div className="wa-secondary-pane wa-facebook-pane min-h-0 overflow-hidden">
-						<Suspense fallback={<div className="grid min-h-[60vh] place-items-center"><Loader2 size={20} className="animate-spin text-[#1877F2]" /></div>}>
-							<WhatsAppFacebookTab locale={locale} />
 						</Suspense>
 					</div>
 				)}
@@ -33477,9 +33525,18 @@ function WhatsAppWorkspaceContent() {
 												liveThreadMessage?.mentionLabels || messageInfo.message?.mentionLabels,
 											),
 										) ||
-									(locale === 'ar'
-										? messageInfo.type || 'رسالة'
-										: messageInfo.type || 'Message');
+									// A message without text: say what it is ("ptt" is WhatsApp's name for a voice note).
+									(() => {
+										const kind = String(liveThreadMessage?.type || messageInfo.type || '').toLowerCase();
+										const ar = locale === 'ar';
+										if (/ptt|voice|audio/.test(kind)) return ar ? '🎤 رسالة صوتية' : '🎤 Voice message';
+										if (/image/.test(kind)) return ar ? '📷 صورة' : '📷 Photo';
+										if (/video/.test(kind)) return ar ? '🎥 فيديو' : '🎥 Video';
+										if (/sticker/.test(kind)) return ar ? 'ملصق' : 'Sticker';
+										if (/document|file/.test(kind)) return ar ? '📄 مستند' : '📄 Document';
+										if (/location/.test(kind)) return ar ? '📍 موقع' : '📍 Location';
+										return ar ? 'رسالة' : 'Message';
+									})();
 								const receiptRows = outbound
 									? [
 											{

@@ -64,27 +64,20 @@ function avatarTone(name) {
 	return AVATAR_TONES[hash % AVATAR_TONES.length];
 }
 
-function StaffAvatar({ name, src, size = 'h-10 w-10 text-[12px]' }) {
+function StaffAvatar({ name, src, size = 'h-10 w-10 text-[12px]', online = false }) {
 	const tone = avatarTone(name);
-	if (src) {
-		return (
-			<img
-				src={src}
-				alt=""
-				className={cn('shrink-0 rounded-full object-cover', size)}
-			/>
-		);
-	}
-	return (
-		<span
-			className={cn(
-				'grid shrink-0 place-items-center rounded-full font-bold',
-				size,
-				tone.bg,
-				tone.text,
-			)}
-		>
+	const face = src ? (
+		<img src={src} alt="" className={cn('shrink-0 rounded-full object-cover', size)} />
+	) : (
+		<span className={cn('grid shrink-0 place-items-center rounded-full font-bold', size, tone.bg, tone.text)}>
 			{initials(name)}
+		</span>
+	);
+	if (!online) return face;
+	return (
+		<span className="wa-ui-assign__face">
+			{face}
+			<span className="wa-ui-assign__online-dot" aria-hidden="true" />
 		</span>
 	);
 }
@@ -142,6 +135,8 @@ export function WaAssignMenu({
 	loading = false,
 	className = '',
 	buttonClassName = '',
+	/** Ids of teammates with WhatsApp open right now (green dot, listed first). */
+	onlineIds = null,
 }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const [open, setOpen] = useState(false);
@@ -165,6 +160,17 @@ export function WaAssignMenu({
 			)
 		: staff;
 	const unassigned = !value;
+	const isOnline = person => Boolean(onlineIds?.has?.(String(person?.id)));
+	const [showNeedsAccess, setShowNeedsAccess] = useState(false);
+	// Who you can assign first (online on top), then the rest in one collapsed group: their
+	// yellow "Needs View + Use" lines used to fill the list and bury the people you can pick.
+	const byPresence = (a, b) =>
+		Number(isOnline(b)) - Number(isOnline(a)) ||
+		Number(Boolean(b.isOwner)) - Number(Boolean(a.isOwner)) ||
+		String(a.name || '').localeCompare(String(b.name || ''));
+	const assignableStaff = visibleStaff.filter(person => person.assignable).sort(byPresence);
+	const needsAccessStaff = visibleStaff.filter(person => !person.assignable).sort(byPresence);
+	const needsAccessOpen = showNeedsAccess || Boolean(needle) || !assignableStaff.length;
 
 	useEffect(() => {
 		if (!open) return undefined;
@@ -255,6 +261,79 @@ export function WaAssignMenu({
 	};
 	const assignableCount = staff.filter(person => person.assignable).length;
 
+	const renderPerson = person => {
+		const assigned = String(person.id) === String(value);
+		const expanded = expandedId === person.id;
+		const showChips = canManageAccess && !person.isOwner;
+		const chipsId = `wa-assign-perms-${person.id}`;
+		const online = isOnline(person);
+		return (
+			<div
+				key={person.id}
+				className={cn('wa-ui-assign__person', assigned && 'is-selected', !person.assignable && 'is-locked')}
+			>
+				<div className="wa-ui-assign__person-head">
+					<button
+						type="button"
+						aria-pressed={assigned}
+						aria-disabled={!person.assignable || undefined}
+						onClick={() => {
+							// The server refuses people without View + Use: open their access instead.
+							if (!person.assignable) {
+								if (showChips) setExpandedId(current => (current === person.id ? null : person.id));
+								return;
+							}
+							onAssign?.(person.id);
+							closeMenu();
+						}}
+						className="wa-ui-assign__row"
+					>
+						<StaffAvatar name={person.name} src={person.avatarUrl} size="h-9 w-9 text-[12px]" online={online} />
+						<span className="wa-ui-assign__copy">
+							<span className="wa-ui-assign__name">
+								<span className="truncate">{person.name}</span>
+								{person.isOwner ? (
+									<span className="wa-ui-badge wa-ui-badge--accent">
+										<Crown size={10} strokeWidth={2.2} aria-hidden="true" />
+										{ar ? 'المالك' : 'Owner'}
+									</span>
+								) : null}
+							</span>
+							<span className={cn('wa-ui-assign__sub', online && 'is-online')}>
+								{online
+									? ar
+										? 'فاتح واتساب دلوقتي'
+										: 'Online now'
+									: person.email || (person.assignable ? (ar ? 'قابل للتعيين' : 'Can be assigned') : '')}
+							</span>
+						</span>
+						<span className="wa-ui-assign__check" aria-hidden="true">
+							{assigned ? <Check size={14} strokeWidth={2.8} /> : null}
+						</span>
+					</button>
+					{showChips ? (
+						<button
+							type="button"
+							aria-expanded={expanded}
+							aria-controls={chipsId}
+							aria-label={ar ? `صلاحيات ${person.name}` : `Permissions for ${person.name}`}
+							title={ar ? 'الصلاحيات' : 'Permissions'}
+							onClick={() => setExpandedId(current => (current === person.id ? null : person.id))}
+							className={cn('wa-ui-icon-btn wa-ui-icon-btn--sm', expanded && 'is-on')}
+						>
+							<Settings size={15} strokeWidth={1.9} />
+						</button>
+					) : null}
+				</div>
+				{showChips && expanded ? (
+					<div id={chipsId} className="wa-ui-assign__perms">
+						<StaffPermissionChips person={person} onToggle={onTogglePermission} locale={locale} />
+					</div>
+				) : null}
+			</div>
+		);
+	};
+
 	return (
 		<div ref={rootRef} className={cn('relative', className)}>
 			<button
@@ -275,7 +354,7 @@ export function WaAssignMenu({
 			>
 				<span className="flex min-w-0 items-center gap-1.5">
 					{selected ? (
-						<StaffAvatar name={selected.name} src={selected.avatarUrl} size="h-5 w-5 text-[9px]" />
+						<StaffAvatar name={selected.name} src={selected.avatarUrl} size="h-5 w-5 text-[9px]" online={isOnline(selected)} />
 					) : (
 						<UserCog size={15} strokeWidth={1.9} className="shrink-0 text-[#54656f]" aria-hidden="true" />
 					)}
@@ -333,8 +412,8 @@ export function WaAssignMenu({
 									<p id="wa-assign-subtitle" className="wa-ui-modal__subtitle">
 										{canManageAccess
 											? ar
-												? 'اختر موظفًا، أو عدّل صلاحيات العرض والاستخدام.'
-												: 'Pick a teammate, or adjust their View + Use access.'
+												? 'اختار مين يرد على الشات ده.'
+												: 'Choose who answers this chat.'
 											: ar
 												? 'اختر الموظف المسؤول عن هذه المحادثة.'
 												: 'Choose who handles this conversation.'}
@@ -392,8 +471,8 @@ export function WaAssignMenu({
 									{!loading && staff.length ? (
 										<span className="wa-ui-assign__count">
 											{ar
-												? `${assignableCount} من ${staff.length} قابل للتعيين`
-												: `${assignableCount} of ${staff.length} can be assigned`}
+												? `${assignableCount} متاح`
+												: `${assignableCount} available`}
 										</span>
 									) : null}
 								</p>
@@ -420,90 +499,29 @@ export function WaAssignMenu({
 										</p>
 									</div>
 								) : (
-									visibleStaff.map(person => {
-										const assigned = String(person.id) === String(value);
-										const expanded = expandedId === person.id;
-										const showChips = canManageAccess && !person.isOwner;
-										const chipsId = `wa-assign-perms-${person.id}`;
-										return (
-											<div
-												key={person.id}
-												className={cn('wa-ui-assign__person', assigned && 'is-selected')}
-											>
-												<div className="wa-ui-assign__person-head">
-													<button
-														type="button"
-														aria-pressed={assigned}
-														onClick={() => {
-															onAssign?.(person.id);
-															closeMenu();
-														}}
-														className="wa-ui-assign__row"
-													>
-														<StaffAvatar
-															name={person.name}
-															src={person.avatarUrl}
-															size="h-10 w-10 text-[13px]"
-														/>
-														<span className="wa-ui-assign__copy">
-															<span className="wa-ui-assign__name">
-																<span className="truncate">{person.name}</span>
-																{person.isOwner ? (
-																	<span className="wa-ui-badge wa-ui-badge--accent">
-																		<Crown size={10} strokeWidth={2.2} aria-hidden="true" />
-																		{ar ? 'المالك' : 'Owner'}
-																	</span>
-																) : null}
-															</span>
-															<span
-																className={cn(
-																	'wa-ui-assign__sub',
-																	!person.assignable && 'is-warning',
-																)}
-															>
-																{person.assignable
-																	? person.email || (ar ? 'قابل للتعيين' : 'Can be assigned')
-																	: ar
-																		? 'يحتاج عرض + استخدام للتعيين'
-																		: 'Needs View + Use to be assigned'}
-															</span>
-														</span>
-														<span className="wa-ui-assign__check" aria-hidden="true">
-															{assigned ? <Check size={14} strokeWidth={2.8} /> : null}
-														</span>
-													</button>
-													{showChips ? (
-														<button
-															type="button"
-															aria-expanded={expanded}
-															aria-controls={chipsId}
-															aria-label={
-																ar
-																	? `صلاحيات ${person.name}`
-																	: `Permissions for ${person.name}`
-															}
-															title={ar ? 'الصلاحيات' : 'Permissions'}
-															onClick={() =>
-																setExpandedId(current => (current === person.id ? null : person.id))
-															}
-															className={cn('wa-ui-icon-btn wa-ui-icon-btn--sm', expanded && 'is-on')}
-														>
-															<Settings size={15} strokeWidth={1.9} />
-														</button>
-													) : null}
-												</div>
-												{showChips && expanded ? (
-													<div id={chipsId} className="wa-ui-assign__perms">
-														<StaffPermissionChips
-															person={person}
-															onToggle={onTogglePermission}
-															locale={locale}
-														/>
-													</div>
-												) : null}
-											</div>
-										);
-									})
+									<>
+										{assignableStaff.map(person => renderPerson(person))}
+										{needsAccessStaff.length ? (
+											<>
+												<button
+													type="button"
+													className="wa-ui-assign__group-toggle"
+													aria-expanded={needsAccessOpen}
+													onClick={() => setShowNeedsAccess(current => !current)}
+												>
+													<ChevronDown
+														size={14}
+														strokeWidth={2}
+														aria-hidden="true"
+														className={cn('transition-transform', needsAccessOpen ? '' : ar ? 'rotate-90' : '-rotate-90')}
+													/>
+													<span>{ar ? 'محتاجين صلاحية عرض + استخدام' : 'Need View + Use access'}</span>
+													<span className="wa-ui-assign__count">{needsAccessStaff.length}</span>
+												</button>
+												{needsAccessOpen ? needsAccessStaff.map(person => renderPerson(person)) : null}
+											</>
+										) : null}
+									</>
 								)}
 							</div>
 							<div className="wa-ui-modal__footer">
@@ -512,8 +530,8 @@ export function WaAssignMenu({
 									<span>
 										{canManageAccess
 											? ar
-												? 'تُحفظ الصلاحيات فور تغييرها. العرض والاستخدام مطلوبان للتعيين.'
-												: 'Access changes save instantly. View + Use are required to assign.'
+												? 'تغيير الصلاحيات بيتحفظ على طول.'
+												: 'Access changes save instantly.'
 											: ar
 												? 'العرض والاستخدام مطلوبان للتعيين.'
 												: 'View + Use are required to assign.'}

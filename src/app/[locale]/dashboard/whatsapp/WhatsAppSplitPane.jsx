@@ -739,28 +739,32 @@ export default function WhatsAppSplitPane({
 	if (!conversation) return null;
 
 	return (
-		<section className="wa-split-pane flex min-h-0 min-w-0 flex-col overflow-hidden border-s border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-			<header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-3 py-2.5 dark:border-slate-800">
-				<div className="flex min-w-0 items-center gap-2.5">
-					<span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[var(--color-primary-50)] text-[var(--color-primary-600)]">
-						<Columns2 size={14} />
-					</span>
-					<SplitAvatar label={title} src={conversationAvatarUrl(conversation)} size={36} />
-					<div className="min-w-0">
-						<p className="wa-privacy-identity truncate text-sm font-black text-slate-800 dark:text-slate-100" title={title}>{title}</p>
-						<p className="truncate text-[11px] text-slate-500">
+		// Colours come from the WhatsApp page's own theme variables (wa-desktop.css), like the main
+		// chat, so the pane follows light/dark with it; Tailwind dark: classes did not, which left a
+		// white frame and composer around dark bubbles.
+		<section className="wa-split wa-split-pane flex min-h-0 min-w-0 flex-col overflow-hidden" dir={ar ? 'rtl' : 'ltr'}>
+			<header className="wa-split__head">
+				<SplitAvatar label={title} src={conversationAvatarUrl(conversation)} size={40} />
+				<div className="min-w-0 flex-1">
+					<p className="wa-split__title wa-privacy-identity" title={title} dir="auto">
+						{title}
+					</p>
+					<p className="wa-split__sub">
+						<Columns2 size={12} aria-hidden="true" />
+						<span className="truncate">
 							{ar ? 'شات جانبي' : 'Split chat'}
 							{conversation.assignedUser?.name ? ` · ${conversation.assignedUser.name}` : ''}
-						</p>
-					</div>
+						</span>
+					</p>
 				</div>
 				<button
 					type="button"
 					onClick={onClose}
 					aria-label={ar ? 'إغلاق الشات الجانبي' : 'Close split chat'}
-					className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+					title={ar ? 'إغلاق الشات الجانبي' : 'Close split chat'}
+					className="wa-split__icon-btn"
 				>
-					<X size={16} />
+					<X size={18} />
 				</button>
 			</header>
 
@@ -779,16 +783,16 @@ export default function WhatsAppSplitPane({
 				}}
 			>
 				{loadingOlder ? (
-					<div className="flex justify-center py-2 text-slate-500">
+					<div className="wa-split__muted flex justify-center py-2">
 						<Loader2 size={16} className="animate-spin" />
 					</div>
 				) : null}
 				{loading && messages.length === 0 ? (
-					<div className="flex h-40 items-center justify-center text-slate-500">
+					<div className="wa-split__muted flex h-40 items-center justify-center">
 						<Loader2 size={22} className="animate-spin" />
 					</div>
 				) : messages.length === 0 ? (
-					<p className="py-10 text-center text-sm text-slate-500">
+					<p className="wa-split__muted py-10 text-center text-sm">
 						{ar ? 'لا توجد رسائل بعد' : 'No messages yet'}
 					</p>
 				) : (
@@ -806,7 +810,7 @@ export default function WhatsAppSplitPane({
 								<div
 									className={`wa-message-bubble min-w-0 max-w-[65%] shrink ${mine ? 'wa-message-mine' : 'wa-message-other'} ${
 										attachments.length ? 'wa-message-media' : ''
-									} ${mine ? 'bg-[#d9fdd3] text-slate-900' : 'bg-white text-slate-900'}`}
+									} wa-split__bubble ${mine ? 'is-mine' : 'is-theirs'}`}
 								>
 									{attachments.map(attachment => (
 										<SplitAttachment
@@ -847,7 +851,7 @@ export default function WhatsAppSplitPane({
 													)
 												}
 											/>
-											<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
+											<div className="wa-message-meta wa-split__meta">
 												{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString(timeLocale, {
 													hour: '2-digit',
 													minute: '2-digit',
@@ -862,7 +866,7 @@ export default function WhatsAppSplitPane({
 										</div>
 										</div>
 									) : (
-										<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
+										<div className="wa-message-meta wa-split__meta">
 											{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString(timeLocale, {
 												hour: '2-digit',
 												minute: '2-digit',
@@ -887,7 +891,7 @@ export default function WhatsAppSplitPane({
 			{canCompose ? (
 				<form
 					onSubmit={sendText}
-					className={`flex shrink-0 items-center gap-2 border-0 border-t-0 p-2.5 wa-composer ${isVoiceRecordingMode ? 'is-recording' : ''}`}
+					className={`wa-split__composer flex shrink-0 items-center gap-2 wa-composer ${isVoiceRecordingMode ? 'is-recording' : ''}`}
 				>
 					{recordingVoice ? (
 						<div dir="ltr" className="wa-vr-shell is-live">
@@ -944,12 +948,12 @@ export default function WhatsAppSplitPane({
 								rows={1}
 								dir={messageTextPresentation(draft).dir}
 								placeholder={labels.message || (ar ? 'اكتب رسالة' : 'Write a message')}
-								className="max-h-28 min-h-10 min-w-0 flex-1 resize-none rounded-full border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-900"
+								className="wa-split__input max-h-28 min-h-10 min-w-0 flex-1 resize-none"
 							/>
 							{draft.trim() ? (
 								<button
 									type="submit"
-									className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#16B96B] text-white"
+									className="wa-split__send"
 									aria-label={ar ? 'إرسال' : 'Send'}
 								>
 									<Send size={16} />
@@ -959,7 +963,7 @@ export default function WhatsAppSplitPane({
 									type="button"
 									disabled={recordingStarting}
 									onClick={() => void startVoiceRecording()}
-									className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#16B96B] text-white disabled:opacity-50 wa-mic-button ${
+									className={`wa-split__send disabled:opacity-50 wa-mic-button ${
 										recordingStarting ? 'is-active is-armed' : ''
 									}`}
 									aria-label={ar ? 'تسجيل صوت' : 'Record voice'}
@@ -976,7 +980,7 @@ export default function WhatsAppSplitPane({
 					)}
 				</form>
 			) : (
-				<p className="border-t border-slate-100 p-3 text-center text-xs text-slate-500">
+				<p className="wa-split__muted wa-split__readonly">
 					{ar ? 'لا يمكن الكتابة في هذا الشات' : 'You cannot compose in this chat'}
 				</p>
 			)}

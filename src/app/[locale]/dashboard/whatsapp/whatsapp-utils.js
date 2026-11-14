@@ -1030,8 +1030,11 @@ export function messageTextPresentation(text) {
 
 /**
  * Detect Markdown that WhatsApp native formatting does not cover
- * (headings, fenced code, **bold**, dash lists, etc.).
- * Keep plain WhatsApp *bold* / _italic_ on the WA path.
+ * (headings, fenced code, **bold**, [links](url)\u2026).
+ * Numbered lists ("1. "), bullet lists ("- ", "* ") and quotes ("> ") are WhatsApp's own
+ * formatting: they stay on the WhatsApp path, which shows them as typed (numbers included) in
+ * the line's own direction and reads *x* as bold. Sending them to Markdown dropped the numbers,
+ * turned *x* into italics and laid Arabic list items out left-to-right.
  */
 export function looksLikeMarkdown(text) {
 	const value = String(text || '')
@@ -1042,9 +1045,6 @@ export function looksLikeMarkdown(text) {
 	if (/(^|\n)\s{0,3}#{1,6}\s+\S/.test(value)) return true;
 	if (/(^|\n)\s*```/.test(value)) return true;
 	if (/\*\*[^*\n][\s\S]*?\*\*/.test(value)) return true;
-	if (/(^|\n)\s{0,3}[-+]\s+\S/.test(value)) return true;
-	if (/(^|\n)\s{0,3}\d+\.\s+\S/.test(value)) return true;
-	if (/(^|\n)\s{0,3}>\s+\S/.test(value)) return true;
 	if (/\[[^\]]+\]\([^)\s]+\)/.test(value)) return true;
 	if (/`[^`\n]+`/.test(value) && /\n/.test(value)) return true;
 	return false;

@@ -9398,9 +9398,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		background-color: var(--wa-wall-bg);
 	}
 
+	/* Follows light/dark (was a fixed light #f7f7fc, white in dark mode). */
 	.wa-web-desktop .wa-split-pane header {
-		background: #f7f7fc !important;
+		background: var(--d-header, #f7f7fc) !important;
 		border: 0 !important;
+		border-bottom: 1px solid var(--d-sep, #e9edef) !important;
 	}
 }
 

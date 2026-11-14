@@ -207,11 +207,11 @@ export default function WhatsAppQuickSwitcher({ open, ar, items, accounts, onClo
 				aria-modal="true"
 				aria-label={ar ? 'التنقل السريع' : 'Quick switcher'}
 				onKeyDown={onKeyDown}
-				className="flex max-h-[70vh] w-full max-w-[680px] flex-col overflow-hidden rounded-[10px] border border-black/[0.08] bg-[#fbfbfc]/[0.97] shadow-[0_0_0_1px_rgba(255,255,255,0.6)_inset,0_32px_64px_-12px_rgba(0,0,0,0.22),0_2px_21px_rgba(0,0,0,0.08)] backdrop-blur-xl"
+				className="wa-qs flex max-h-[70vh] w-full max-w-[680px] flex-col overflow-hidden rounded-[10px] border border-black/[0.08] bg-[#fbfbfc]/[0.97] shadow-[0_0_0_1px_rgba(255,255,255,0.6)_inset,0_32px_64px_-12px_rgba(0,0,0,0.22),0_2px_21px_rgba(0,0,0,0.08)] backdrop-blur-xl"
 			>
 				{/* Search */}
 				<div className="flex items-center gap-4 px-6">
-					<Search size={20} strokeWidth={1.8} className="shrink-0 text-[#5d5d5d]" aria-hidden />
+					<Search size={20} strokeWidth={1.8} className="wa-qs__muted shrink-0 text-[#5d5d5d]" aria-hidden />
 					<input
 						ref={inputRef}
 						value={query}
@@ -225,14 +225,14 @@ export default function WhatsAppQuickSwitcher({ open, ar, items, accounts, onClo
 						aria-expanded="true"
 						aria-controls="wa-quick-switcher-list"
 						aria-activedescendant={results[cursor] ? `wa-qs-${results[cursor].id}` : undefined}
-						className="h-[60px] min-w-0 flex-1 bg-transparent text-[17px] text-[#1a1a1a] outline-none placeholder:text-[#8a8a8a]"
+						className="wa-qs__input h-[60px] min-w-0 flex-1 bg-transparent text-[17px] text-[#1a1a1a] outline-none placeholder:text-[#8a8a8a]"
 					/>
 				</div>
 
 				{/* Accounts: one click (or Alt + number) to switch */}
 				{accounts.length > 1 ? (
-					<div className="wa-qs-scroll flex items-center gap-1.5 overflow-x-auto overflow-y-hidden border-t border-black/[0.06] px-5 py-2">
-						<span className="me-1 shrink-0 text-[12px] font-semibold text-[#5d5d5d]">{ar ? 'الحساب' : 'Account'}</span>
+					<div className="wa-qs__sep wa-qs-scroll flex items-center gap-1.5 overflow-x-auto overflow-y-hidden border-t border-black/[0.06] px-5 py-2">
+						<span className="wa-qs__muted me-1 shrink-0 text-[12px] font-semibold text-[#5d5d5d]">{ar ? 'الحساب' : 'Account'}</span>
 						{accounts.map((account, i) => (
 							<button
 								key={account.id}
@@ -240,7 +240,7 @@ export default function WhatsAppQuickSwitcher({ open, ar, items, accounts, onClo
 								onClick={() => switchAccount(account)}
 								aria-current={account.active ? 'true' : undefined}
 								title={i < 9 ? `Alt + ${i + 1}` : undefined}
-								className={`flex h-7 shrink-0 items-center gap-1.5 rounded-[5px] border px-2 text-[12.5px] transition-colors ${
+								className={`wa-qs__chip flex h-7 shrink-0 items-center gap-1.5 rounded-[5px] border px-2 text-[12.5px] transition-colors ${
 									account.active
 										? 'border-[#1DAB61]/40 bg-[#1DAB61]/[0.08] font-semibold text-[#0c6b3b]'
 										: 'border-black/[0.08] bg-white text-[#1a1a1a] hover:bg-black/[0.03]'
@@ -272,13 +272,13 @@ export default function WhatsAppQuickSwitcher({ open, ar, items, accounts, onClo
 					id="wa-quick-switcher-list"
 					ref={listRef}
 					role="listbox"
-					className="wa-qs-scroll min-h-0 flex-1 overflow-y-auto border-t border-black/[0.06] px-2 pb-2"
+					className="wa-qs__sep wa-qs-scroll min-h-0 flex-1 overflow-y-auto border-t border-black/[0.06] px-2 pb-2"
 				>
 					{rows.length ? (
 						rows.map(row => {
 							if (row.type === 'head') {
 								return (
-									<p key={`head-${row.key}`} className="px-4 pb-1.5 pt-3.5 text-[12.5px] font-semibold text-[#1a1a1a]">
+									<p key={`head-${row.key}`} className="wa-qs__head px-4 pb-1.5 pt-3.5 text-[12.5px] font-semibold text-[#1a1a1a]">
 										{row.label}
 									</p>
 								);
@@ -298,7 +298,7 @@ export default function WhatsAppQuickSwitcher({ open, ar, items, accounts, onClo
 									data-index={i}
 									onMouseMove={() => cursor !== i && setCursor(i)}
 									onClick={() => run(item)}
-									className={`relative flex h-[44px] w-full items-center gap-4 rounded-[5px] px-3.5 text-start transition-colors duration-75 ${
+									className={`wa-qs__row relative flex h-[44px] w-full items-center gap-4 rounded-[5px] px-3.5 text-start transition-colors duration-75 ${
 										selected ? 'bg-black/[0.045]' : ''
 									}`}
 								>
@@ -311,11 +311,11 @@ export default function WhatsAppQuickSwitcher({ open, ar, items, accounts, onClo
 									/>
 									<span
 										aria-hidden
-										className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[5px] border border-black/[0.07] bg-white text-[#333] shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+										className="wa-qs__tile grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[5px] border border-black/[0.07] bg-white text-[#333] shadow-[0_1px_0_rgba(0,0,0,0.04)]"
 									>
 										{Icon ? <Icon size={15} strokeWidth={1.9} /> : null}
 									</span>
-									<span className="min-w-0 flex-1 truncate text-[14px] text-[#1a1a1a]">
+									<span className="wa-qs__label min-w-0 flex-1 truncate text-[14px] text-[#1a1a1a]">
 										{item.label}
 										{item.hint ? (
 											<bdi dir="ltr" className="ms-2 text-[12.5px] text-[#8a8a8a]">
@@ -333,7 +333,7 @@ export default function WhatsAppQuickSwitcher({ open, ar, items, accounts, onClo
 							);
 						})
 					) : (
-						<p className="px-4 py-10 text-center text-[13.5px] text-[#5d5d5d]">
+						<p className="wa-qs__muted px-4 py-10 text-center text-[13.5px] text-[#5d5d5d]">
 							{ar ? 'مفيش نتايج. جرّب اسم التابة بالعربي أو الإنجليزي.' : 'No results. Try the tab name in English or Arabic.'}
 						</p>
 					)}

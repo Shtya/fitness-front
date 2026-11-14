@@ -85,9 +85,22 @@ function writePrefs(prefs) {
 function openFacebookWindow(url = FB_HOME) {
 	const href = String(url || FB_HOME).trim() || FB_HOME;
 	const features =
-		'popup=yes,noopener=no,width=1100,height=860,left=80,top=40,menubar=no,toolbar=yes,location=yes,status=yes,resizable=yes,scrollbars=yes';
-	const win = window.open(href, FB_WINDOW_NAME, features);
+		'popup=yes,width=1100,height=860,left=80,top=40,menubar=no,toolbar=yes,location=yes,status=yes,resizable=yes,scrollbars=yes';
+	// Reuse one named window so login/session stays; navigate it to the shortcut/filter URL.
+	let win = window.open('', FB_WINDOW_NAME, features);
+	if (!win) {
+		win = window.open(href, FB_WINDOW_NAME, features);
+	}
 	if (!win) return null;
+	try {
+		win.location.href = href;
+	} catch {
+		try {
+			win = window.open(href, FB_WINDOW_NAME, features) || win;
+		} catch {
+			/* ignore */
+		}
+	}
 	try {
 		win.focus();
 	} catch {
@@ -130,6 +143,11 @@ function Avatar({ src, name }) {
 function friendSearchUrl(name) {
 	const q = encodeURIComponent(String(name || '').trim());
 	return `https://www.facebook.com/search/people/?q=${q}`;
+}
+
+function postsSearchUrl(query) {
+	const q = encodeURIComponent(String(query || '').trim());
+	return `https://www.facebook.com/search/posts/?q=${q}`;
 }
 
 function PagesMode({ locale, ar, copy }) {
@@ -203,11 +221,11 @@ function PagesMode({ locale, ar, copy }) {
 				);
 				void loadAll({ soft: true });
 			} else if (event.data?.type === 'error') {
-				toast.error(event.data.message || copy.login);
+				toast.error(event.data.message || copy.loginPages);
 			}
 		};
 		return () => channel.close();
-	}, [ar, copy.login, loadAll]);
+	}, [ar, copy.loginPages, loadAll]);
 
 	const applyFilters = useCallback(
 		(next = {}) => {
@@ -233,7 +251,7 @@ function PagesMode({ locale, ar, copy }) {
 			}
 		} catch (err) {
 			popup?.close();
-			toast.error(apiErrorMessage(err, copy.login));
+			toast.error(apiErrorMessage(err, copy.loginPages));
 		} finally {
 			setOpening(false);
 		}
@@ -505,8 +523,10 @@ function PersonalMode({ ar, copy }) {
 	const [draftName, setDraftName] = useState('');
 	const [draftUrl, setDraftUrl] = useState('');
 	const [filterText, setFilterText] = useState('');
+	const [postQuery, setPostQuery] = useState('');
 	const [windowOpen, setWindowOpen] = useState(false);
 	const fbWindowRef = useRef(null);
+	const autoOpenedRef = useRef(false);
 
 	useEffect(() => {
 		setPrefs(readPrefs());
@@ -535,6 +555,17 @@ function PersonalMode({ ar, copy }) {
 		fbWindowRef.current = win;
 		setWindowOpen(true);
 	}, [copy.popupBlocked]);
+
+	useEffect(() => {
+		if (!ready || autoOpenedRef.current) return;
+		autoOpenedRef.current = true;
+		// First open of the personal tab: bring up Facebook so login/feed is one click away.
+		const win = openFacebookWindow(FB_HOME);
+		if (win) {
+			fbWindowRef.current = win;
+			setWindowOpen(true);
+		}
+	}, [ready]);
 
 	const filteredPeople = useMemo(() => {
 		const needle = filterText.trim().toLowerCase();
@@ -603,6 +634,30 @@ function PersonalMode({ ar, copy }) {
 						<Filter className="size-3.5" aria-hidden />
 						{copy.customFilters}
 					</p>
+					<div className="flex gap-2">
+						<label className="relative min-w-0 flex-1">
+							<Search className="pointer-events-none absolute start-2 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" aria-hidden />
+							<input
+								value={postQuery}
+								onChange={(event) => setPostQuery(event.target.value)}
+								onKeyDown={(event) => {
+									if (event.key === 'Enter' && postQuery.trim()) {
+										openFb(postsSearchUrl(postQuery));
+									}
+								}}
+								placeholder={copy.searchPosts}
+								className="w-full rounded-lg border border-slate-200 bg-white py-2 ps-7 pe-2 text-xs dark:border-slate-700 dark:bg-slate-950"
+							/>
+						</label>
+						<button
+							type="button"
+							disabled={!postQuery.trim()}
+							onClick={() => openFb(postsSearchUrl(postQuery))}
+							className="rounded-lg bg-[#1877F2] px-2.5 py-2 text-[11px] font-semibold text-white disabled:opacity-50"
+						>
+							{copy.search}
+						</button>
+					</div>
 					<input
 						value={filterText}
 						onChange={(event) => setFilterText(event.target.value)}
@@ -613,6 +668,9 @@ function PersonalMode({ ar, copy }) {
 						<input
 							value={draftName}
 							onChange={(event) => setDraftName(event.target.value)}
+							onKeyDown={(event) => {
+								if (event.key === 'Enter') addPerson();
+							}}
 							placeholder={copy.friendName}
 							className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-950"
 						/>
@@ -794,7 +852,8 @@ export default function WhatsAppFacebookTab({ locale = 'en' }) {
 						tryIframe: 'جرّب iframe (غالبًا فاضي)',
 						popupBlocked: 'المتصفح منع النافذة. اسمح بالـ popups للمنصة.',
 						customFilters: 'فلاتر وتخصيص',
-						filterPeople: 'فلتر الأسماء…',
+						filterPeople: 'فلتر قائمة أصحابك…',
+						searchPosts: 'ابحث في بوستات فيسبوك…',
 						friendName: 'اسم صديق',
 						friendUrlOptional: 'رابط البروفايل (اختياري)',
 						add: 'إضافة',
@@ -812,7 +871,7 @@ export default function WhatsAppFacebookTab({ locale = 'en' }) {
 						people: 'الصفحات',
 						filterPage: 'كل الصفحات',
 						filterAuthor: 'فلتر بالاسم…',
-						search: 'ابحث في النص…',
+						search: 'بحث',
 						apply: 'تطبيق',
 						emptyFeed: 'مفيش منشورات.',
 						emptyStories: 'مفيش ستوريز.',
@@ -840,7 +899,8 @@ export default function WhatsAppFacebookTab({ locale = 'en' }) {
 						tryIframe: 'Try iframe (likely blank)',
 						popupBlocked: 'Popup blocked. Allow popups for this site.',
 						customFilters: 'Filters & customization',
-						filterPeople: 'Filter names…',
+						filterPeople: 'Filter your people list…',
+						searchPosts: 'Search Facebook posts…',
 						friendName: 'Friend name',
 						friendUrlOptional: 'Profile URL (optional)',
 						add: 'Add',
@@ -858,7 +918,7 @@ export default function WhatsAppFacebookTab({ locale = 'en' }) {
 						people: 'Pages',
 						filterPage: 'All pages',
 						filterAuthor: 'Filter by name…',
-						search: 'Search text…',
+						search: 'Search',
 						apply: 'Apply',
 						emptyFeed: 'No posts.',
 						emptyStories: 'No stories.',

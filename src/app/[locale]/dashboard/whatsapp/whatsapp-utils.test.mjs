@@ -1011,15 +1011,31 @@ test('quoted voice labels show duration and time instead of only Voice message',
 	assert.ok(voice?.timeLabel);
 });
 
-test('looksLikeMarkdown detects headings lists fences and double-star bold', () => {
+test('looksLikeMarkdown detects headings, fences, links and double-star bold', () => {
 	assert.equal(looksLikeMarkdown('hello *bold* world'), false);
 	assert.equal(
 		looksLikeMarkdown('### Headings\n**Bold**\n- Lists\n`code`\n```js\ncode\n```'),
 		true,
 	);
-	assert.equal(looksLikeMarkdown('- item one\n- item two'), true);
 	assert.equal(looksLikeMarkdown('Use **ECS-HQ** now'), true);
+	assert.equal(looksLikeMarkdown('see [docs](https://example.com)'), true);
 	assert.equal(looksLikeMarkdown('plain chat line'), false);
+});
+
+test('WhatsApp lists and quotes stay WhatsApp text, not Markdown', () => {
+	// The MADAR message: numbered items with *bold* titles, in Arabic. As Markdown the numbers
+	// vanished, *…* became italics and the items were laid out left-to-right.
+	const madar =
+		'1. *ال Instagram و Messenger:* قدمنا طلب المراجعة، وحاليًا مستنيين رد من شركة Meta بالموافقة.\n' +
+		'2. *إدارة التعليقات:* رفعنا التعليقات كتست.\n' +
+		'3. *شركه J&T:* مستنيينك تسجل على الموقع.\n' +
+		'4. *و Q&P:* محتاجين حساب تجريبي عشان نقدر نبدأ الاختبار.';
+	assert.equal(looksLikeMarkdown(madar), false);
+	assert.equal(looksLikeMarkdown('- item one\n- item two'), false);
+	assert.equal(looksLikeMarkdown('> quoted line'), false);
+	// and its titles come out bold
+	const bold = parseWhatsAppBold(madar).filter(part => part.bold).map(part => part.text);
+	assert.deepEqual(bold, ['ال Instagram و Messenger:', 'إدارة التعليقات:', 'شركه J&T:', 'و Q&P:']);
 });
 
 test('parseWhatsAppBold marks bold, italic, strike and code segments', () => {
