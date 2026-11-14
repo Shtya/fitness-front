@@ -337,7 +337,6 @@ const WhatsAppBoardTab = lazy(() =>
 );
 const FakeChatStudio = lazy(() => import('./fake-chat/FakeChatStudio'));
 const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
-const WhatsAppQuickSwitcher = lazy(() => import('./WhatsAppQuickSwitcher'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
@@ -483,6 +482,7 @@ import {
 	useWhatsAppPageLock,
 } from './WhatsAppPageLock';
 import { LockKeyhole as PageLockIcon, Keyboard as TypingLogIcon, Command as QuickSwitchIcon } from 'lucide-react';
+import WhatsAppQuickSwitcher, { recordQuickSwitchUse } from './WhatsAppQuickSwitcher';
 
 /** Extra words the quick switcher matches on (Franco / English spellings people type). */
 const QUICK_SWITCH_KEYWORDS = {
@@ -14289,16 +14289,33 @@ function WhatsAppWorkspaceContent() {
 	);
 	const [quickSwitchOpen, setQuickSwitchOpen] = useState(false);
 	useEffect(() => {
-		// Ctrl/Cmd + Shift + K (Ctrl + K is the chat search). Physical key, so it works on Arabic layout too.
+		// Ctrl + Space (and Win/Cmd + Space when the system lets it through), or Ctrl + Shift + K.
+		// Physical keys, so they work on the Arabic layout too. Ctrl + K stays the chat search.
 		const onKey = event => {
-			if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey) return;
-			if (event.code !== 'KeyK') return;
+			if (event.altKey || event.repeat) return;
+			const space = event.code === 'Space' && (event.ctrlKey || event.metaKey) && !event.shiftKey;
+			const shiftK = event.code === 'KeyK' && (event.ctrlKey || event.metaKey) && event.shiftKey;
+			if (!space && !shiftK) return;
 			event.preventDefault();
 			setQuickSwitchOpen(open => !open);
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
 	}, []);
+	// Remember what gets opened from anywhere (rail, menus, switcher) so the switcher lists the
+	// most-used first. Chats is the home screen, so it is not counted as a choice.
+	useEffect(() => {
+		if (activeTab && activeTab !== 'chats') recordQuickSwitchUse(activeTab);
+	}, [activeTab]);
+	useEffect(() => {
+		if (autoForwardOpen) recordQuickSwitchUse('autoForward');
+	}, [autoForwardOpen]);
+	useEffect(() => {
+		if (privacyBlurMenuOpen) recordQuickSwitchUse('hideNames');
+	}, [privacyBlurMenuOpen]);
+	useEffect(() => {
+		if (contactsPopupOpen) recordQuickSwitchUse('contacts');
+	}, [contactsPopupOpen]);
 	// A remembered tab may be the removed Online tab, or Stories for someone who no longer sees
 	// them; wait for the account's access before deciding, so the owner is never bounced.
 	useEffect(() => {
@@ -15778,6 +15795,115 @@ function WhatsAppWorkspaceContent() {
 		},
 		[currentUserId],
 	);
+
+	/*
+	 * Messages on the accounts you are NOT looking at. The server already sends every recipient a
+	 * WHATSAPP_MESSAGE notification (muted chats and people with notifications off are skipped),
+	 * tagged with its account. The open account shows its own messages, so only the others get a
+	 * card here: account, sender, preview, a chime; clicking it switches account and opens the chat.
+	 */
+	const otherAccountAlertRef = useRef(null);
+	otherAccountAlertRef.current = notification => {
+		const data = notification?.data || {};
+		const targetAccountId = String(data.accountId || '');
+		const targetConversationId = String(data.conversationId || '');
+		if (!targetAccountId || targetAccountId === accountIdRef.current) return;
+		const account = (accountsRef.current || []).find(item => item.id === targetAccountId);
+		if (!account) return; // not an account this page lists
+		const ar = locale === 'ar';
+		const accountLabel = account.label || account.providerName || account.phoneNumber || 'WhatsApp';
+		setAccounts(current =>
+			current.map(item =>
+				item.id === targetAccountId
+					? { ...item, stats: { ...(item.stats || {}), unread: (Number(item.stats?.unread) || 0) + 1 } }
+					: item,
+			),
+		);
+		try {
+			playIncomingChime();
+		} catch {
+			/* autoplay blocked: the card still shows */
+		}
+		const open = toastId => {
+			toast.dismiss(toastId);
+			if (targetConversationId) whatsAppDeepLink.conversationId = targetConversationId;
+			setActiveTab('chats');
+			selectWhatsAppAccount(targetAccountId);
+		};
+		toast.custom(
+			item => (
+				<div
+					dir={ar ? 'rtl' : 'ltr'}
+					role="button"
+					tabIndex={0}
+					onClick={() => open(item.id)}
+					onKeyDown={event => {
+						if (event.key === 'Enter' || event.key === ' ') open(item.id);
+					}}
+					className={`pointer-events-auto flex w-[360px] max-w-[calc(100vw-24px)] cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_18px_40px_-16px_rgba(15,23,42,0.35)] transition-all duration-200 hover:border-[#1DAB61]/40 dark:border-slate-700 dark:bg-slate-900 ${
+						item.visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
+					}`}
+				>
+					<span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1DAB61] text-white">
+						<MessageCircle size={19} strokeWidth={2.2} />
+					</span>
+					<span className="min-w-0 flex-1">
+						<span className="mb-0.5 inline-flex max-w-full items-center gap-1 rounded-full bg-[#1DAB61]/10 px-2 py-0.5 text-[11px] font-bold text-[#0c6b3b]">
+							<span className="truncate">
+								{ar ? `على ${accountLabel}` : `On ${accountLabel}`}
+							</span>
+						</span>
+						<span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white" dir="auto">
+							{notification.title || (ar ? 'رسالة جديدة' : 'New message')}
+						</span>
+						{notification.message ? (
+							<span className="mt-0.5 line-clamp-2 block text-[13px] leading-snug text-slate-500 dark:text-slate-400" dir="auto">
+								{notification.message}
+							</span>
+						) : null}
+						<span className="mt-1.5 block text-[11.5px] font-semibold text-[#1DAB61]">
+							{ar ? 'اضغط للتحويل للحساب وفتح الشات' : 'Click to switch account and open the chat'}
+						</span>
+					</span>
+					<button
+						type="button"
+						onClick={event => {
+							event.stopPropagation();
+							toast.dismiss(item.id);
+						}}
+						aria-label={ar ? 'إغلاق' : 'Dismiss'}
+						className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+					>
+						<X size={14} />
+					</button>
+				</div>
+			),
+			{
+				// One card per chat: a burst from the same person updates it instead of stacking.
+				id: `other-account-${targetConversationId || targetAccountId}`,
+				duration: 8000,
+				position: ar ? 'top-left' : 'top-right',
+			},
+		);
+	};
+
+	useEffect(() => {
+		const token = localStorage.getItem('accessToken');
+		if (!token) return undefined;
+		// Same server as the WhatsApp socket: that is where the sessions (and their notifications) live.
+		const baseUrl = process.env.NEXT_PUBLIC_WHATSAPP_SOCKET_URL || process.env.NEXT_PUBLIC_BASE_URL;
+		const socket = io(`${baseUrl}/notifications`, {
+			auth: cb => cb({ token: localStorage.getItem('accessToken') || token }),
+			transports: ['websocket', 'polling'],
+		});
+		socket.on('notification', notification => {
+			if (String(notification?.type || '').toUpperCase() !== 'WHATSAPP_MESSAGE') return;
+			otherAccountAlertRef.current?.(notification);
+		});
+		return () => {
+			socket.disconnect();
+		};
+	}, []);
 
 	const refreshOnlineContactsFull = useCallback(
 		() => refreshOnlineContacts({ includeOffline: true }),
@@ -27686,7 +27812,7 @@ function WhatsAppWorkspaceContent() {
 												type="button"
 												onClick={() => setQuickSwitchOpen(true)}
 												aria-label={locale === 'ar' ? 'التنقل السريع' : 'Quick switcher'}
-												title={`${locale === 'ar' ? 'التنقل السريع' : 'Quick switcher'} (Ctrl + Shift + K)`}
+												title={`${locale === 'ar' ? 'التنقل السريع' : 'Quick switcher'} (Ctrl + Space)`}
 												className="wa-header-icon-btn hidden min-[769px]:grid"
 											>
 												<QuickSwitchIcon size={18} strokeWidth={2.1} />
