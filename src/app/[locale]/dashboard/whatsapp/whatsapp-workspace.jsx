@@ -337,6 +337,7 @@ const WhatsAppBoardTab = lazy(() =>
 );
 const FakeChatStudio = lazy(() => import('./fake-chat/FakeChatStudio'));
 const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
+const WhatsAppQuickSwitcher = lazy(() => import('./WhatsAppQuickSwitcher'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
@@ -481,7 +482,24 @@ import {
 	pageLockCopy,
 	useWhatsAppPageLock,
 } from './WhatsAppPageLock';
-import { LockKeyhole as PageLockIcon, Keyboard as TypingLogIcon } from 'lucide-react';
+import { LockKeyhole as PageLockIcon, Keyboard as TypingLogIcon, Command as QuickSwitchIcon } from 'lucide-react';
+
+/** Extra words the quick switcher matches on (Franco / English spellings people type). */
+const QUICK_SWITCH_KEYWORDS = {
+	wallet: 'money mony فلوس موني مصاريف',
+	typing: 'typing تايبينج بيكتب',
+	hideNames: 'hide names blur هايد نيمز تغبيش',
+	autoForward: 'auto forward اوتو فوروورد فوروارد',
+	accounts: 'accounts اكاونت اكاونتس ارقام',
+	reports: 'reports ريبورت ريبورتس',
+	groups: 'groups جروب جروبات',
+	statuses: 'stories status ستوري ستوريز',
+	agent: 'ai agent بوت',
+	settings: 'settings سيتنجز',
+	prompts: 'prompts برومبت',
+	board: 'tasks board تاسكات',
+	contacts: 'contacts كونتاكت',
+};
 import ExpandableMessageText from './ExpandableMessageText';
 import EmailMemoMessageCard from './EmailMemoMessageCard';
 import DeletedMessageNotice from './DeletedMessageNotice';
@@ -14269,6 +14287,18 @@ function WhatsAppWorkspaceContent() {
 			}),
 		[canAssignWhatsApp, canManageWhatsApp, canUseWhatsApp, fakeChatAllowed, isAdmin, showcaseOnly, seesWholeAccount],
 	);
+	const [quickSwitchOpen, setQuickSwitchOpen] = useState(false);
+	useEffect(() => {
+		// Ctrl/Cmd + Shift + K (Ctrl + K is the chat search). Physical key, so it works on Arabic layout too.
+		const onKey = event => {
+			if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey) return;
+			if (event.code !== 'KeyK') return;
+			event.preventDefault();
+			setQuickSwitchOpen(open => !open);
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, []);
 	// A remembered tab may be the removed Online tab, or Stories for someone who no longer sees
 	// them; wait for the account's access before deciding, so the owner is never bounced.
 	useEffect(() => {
@@ -27652,6 +27682,15 @@ function WhatsAppWorkspaceContent() {
 													<PageLockIcon size={18} strokeWidth={2.1} />
 												</button>
 											) : null}
+											<button
+												type="button"
+												onClick={() => setQuickSwitchOpen(true)}
+												aria-label={locale === 'ar' ? 'التنقل السريع' : 'Quick switcher'}
+												title={`${locale === 'ar' ? 'التنقل السريع' : 'Quick switcher'} (Ctrl + Shift + K)`}
+												className="wa-header-icon-btn hidden min-[769px]:grid"
+											>
+												<QuickSwitchIcon size={18} strokeWidth={2.1} />
+											</button>
 											<WaActionMenu
 												iconOnly
 												ariaLabel={t.moreChatListTools}
@@ -34354,6 +34393,80 @@ function WhatsAppWorkspaceContent() {
 				locale={locale}
 				onLeave={() => router.push('/dashboard')}
 			/>
+			{quickSwitchOpen ? (
+				<Suspense fallback={null}>
+					<WhatsAppQuickSwitcher
+						open
+						ar={locale === 'ar'}
+						onClose={() => setQuickSwitchOpen(false)}
+						onSelectAccount={id => {
+							selectWhatsAppAccount(id);
+							const picked = accounts.find(item => item.id === id);
+							if (picked) toast.success(locale === 'ar' ? `اتحولت لـ ${picked.label}` : `Switched to ${picked.label}`);
+						}}
+						accounts={accounts.map(account => ({
+							id: account.id,
+							label: account.label || account.providerName || account.phoneNumber || '—',
+							sub: account.phoneNumber ? `+${String(account.phoneNumber).replace(/^\+/, '')}` : account.providerName || '',
+							tone:
+								account.status === 'connected'
+									? 'ok'
+									: ['connecting', 'qr_pending'].includes(account.status)
+										? 'warn'
+										: 'off',
+							unread: Number(account.stats?.unread) || 0,
+							active: account.id === accountId,
+						}))}
+						items={(() => {
+							const label = key => t[key] || translations.en[key] || key;
+							const words = key =>
+								[translations.en[key], translations.ar?.[key], QUICK_SWITCH_KEYWORDS[key]].filter(Boolean).join(' ');
+							const iconOf = Object.fromEntries(tabs);
+							const tabItems = availableTabs.map(([key]) => ({
+								id: key,
+								label: label(key),
+								keywords: words(key),
+								Icon: iconOf[key],
+								active: activeTab === key,
+								onSelect: () => void loadTabData(key),
+							}));
+							const tools = showcaseOnly
+								? []
+								: [
+										canUseWhatsApp || canManageWhatsApp || isAdmin
+											? {
+													id: 'autoForward',
+													label: t.autoForward,
+													keywords: words('autoForward'),
+													Icon: Forward,
+													onSelect: () => setAutoForwardOpen(true),
+												}
+											: null,
+										{
+											id: 'hideNames',
+											label: t.hideNames,
+											keywords: words('hideNames'),
+											Icon: EyeOff,
+											active: Boolean(privacyBlur?.enabled),
+											activeLabel: locale === 'ar' ? 'شغّال' : 'On',
+											onSelect: () => {
+												if (activeTab !== 'chats') void loadTabData('chats');
+												window.setTimeout(() => setPrivacyBlurMenuOpen(true), 60);
+											},
+										},
+										{
+											id: 'contacts',
+											label: t.contacts,
+											keywords: words('contacts'),
+											Icon: UsersRound,
+											onSelect: () => void loadTabData('contacts'),
+										},
+									].filter(Boolean);
+							return [...tabItems, ...tools];
+						})()}
+					/>
+				</Suspense>
+			) : null}
 			{autoForwardOpen ? (
 				<WaDialog
 					zIndex={110}
