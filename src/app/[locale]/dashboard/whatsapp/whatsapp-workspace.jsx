@@ -345,6 +345,7 @@ const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
 const WhatsAppReadingTab = lazy(() => import('./WhatsAppReadingTab'));
 const WhatsAppPromptsTab = lazy(() => import('./WhatsAppPromptsTab'));
+const ContactSocialFinder = lazy(() => import('./ContactSocialFinder'));
 const WhatsAppOnlineTab = lazy(() => import('./WhatsAppOnlineTab'));
 const TypingHistoryPanel = lazy(() =>
 	import('./WhatsAppTypingLog').then(mod => ({ default: mod.TypingHistoryPanel })),
@@ -33182,6 +33183,23 @@ function WhatsAppWorkspaceContent() {
 									</div>
 								))}
 							</dl>
+
+							{!isGroupInfo ? (
+								<Suspense
+									fallback={
+										<div className="wa-gi__loading">
+											<Loader2 size={18} className="animate-spin" />
+										</div>
+									}
+								>
+									<ContactSocialFinder
+										conversation={liveInfoConversation}
+										displayName={infoTitle}
+										avatarUrl={infoAvatarSrc || ''}
+										locale={locale}
+									/>
+								</Suspense>
+							) : null}
 
 							{isGroupInfo ? (
 								<section className="wa-gi__members" aria-labelledby="wa-gi-members">
