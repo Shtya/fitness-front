@@ -481,7 +481,7 @@ import {
 	pageLockCopy,
 	useWhatsAppPageLock,
 } from './WhatsAppPageLock';
-import { LockKeyhole as PageLockIcon, Keyboard as TypingLogIcon, Command as QuickSwitchIcon } from 'lucide-react';
+import { LockKeyhole as PageLockIcon, Keyboard as TypingLogIcon, Command as QuickSwitchIcon, Timer as DelayedSendIcon } from 'lucide-react';
 import WhatsAppQuickSwitcher, { recordQuickSwitchUse } from './WhatsAppQuickSwitcher';
 
 /** Extra words the quick switcher matches on (Franco / English spellings people type). */
@@ -2380,6 +2380,26 @@ function IsolatedComposerTextarea({
 							setMentionQuery(null);
 							return;
 						}
+					}
+					// Ctrl/Cmd + Enter: a new line at the caret (textareas do not insert one on their own).
+					if (
+						event.key === 'Enter' &&
+						(event.ctrlKey || event.metaKey) &&
+						!event.altKey &&
+						!event.nativeEvent.isComposing
+					) {
+						event.preventDefault();
+						const node = event.currentTarget;
+						const current = String(draftRef.current ?? node.value ?? '');
+						const start = node.selectionStart ?? current.length;
+						const end = node.selectionEnd ?? start;
+						apply(`${current.slice(0, start)}\n${current.slice(end)}`);
+						const caret = start + 1;
+						requestAnimationFrame(() => {
+							node.focus();
+							node.setSelectionRange(caret, caret);
+						});
+						return;
 					}
 					if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
 						event.preventDefault();
@@ -13417,6 +13437,17 @@ function WhatsAppWorkspaceContent() {
 		[messageSchedules],
 	);
 	const waitingSchedules = useMemo(() => waitingOnceSchedules(liveMessageSchedules), [liveMessageSchedules]);
+	/** Documents / videos / audio picked for the open chat, waiting for Send (like WhatsApp). */
+	const [composerFiles, setComposerFiles] = useState([]);
+	const composerFilesRef = useRef([]);
+	const setComposerFilesState = useCallback(next => {
+		setComposerFiles(current => {
+			const resolved = typeof next === 'function' ? next(current) : next;
+			const items = Array.isArray(resolved) ? resolved : [];
+			composerFilesRef.current = items;
+			return items;
+		});
+	}, []);
 	const [composerImages, setComposerImages] = useState([]);
 	const composerImagesRef = useRef([]);
 	const setComposerImagesState = useCallback(next => {
@@ -20029,6 +20060,17 @@ function WhatsAppWorkspaceContent() {
 			stopVoiceRecording(true);
 			return;
 		}
+		// Files picked for this chat go first, then any images and the typed text below.
+		const stagedFiles = composerFilesRef.current;
+		if (stagedFiles.length) {
+			if (!conversationId) return;
+			pinThreadToBottomRef.current = true;
+			setComposerFilesState([]);
+			sendComposerFilesNow(stagedFiles.map(item => item.file));
+			const nothingElse =
+				!composerImagesRef.current.some(item => item?.file && !item.uploading) && !getDraft().trim();
+			if (nothingElse) return;
+		}
 		const stagedComposerImages = composerImagesRef.current.filter(
 			item => item?.file && !item.uploading,
 		);
@@ -20789,15 +20831,40 @@ function WhatsAppWorkspaceContent() {
 	};
 	sendFileRef.current = sendFile;
 
+	// A picked document belongs to the chat it was picked in: never carry it to another chat.
+	useEffect(() => {
+		setComposerFilesState([]);
+	}, [conversationId, setComposerFilesState]);
+
+	/** Picked files wait above the composer; nothing is sent until Send. */
 	const handleComposerFileInput = files => {
 		if (recordingVoice || recordingStarting) return;
 		const selected = Array.from(files || []).filter(Boolean);
 		if (!selected.length) return;
 		const normalized = selected.map(file => normalizeComposerImageFile(file) || file);
-		if (normalized.every(isComposerImageFile)) {
-			queueComposerImages(normalized);
-			return;
+		const images = normalized.filter(isComposerImageFile);
+		const others = normalized.filter(file => !isComposerImageFile(file));
+		if (images.length) queueComposerImages(images);
+		if (others.length) {
+			setComposerFilesState(current => {
+				const next = [...current];
+				for (const file of others) {
+					const fingerprint = `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+					if (next.some(item => item.fingerprint === fingerprint)) continue;
+					if (next.length >= 10) {
+						toast.error(locale === 'ar' ? 'يمكن إرفاق 10 ملفات كحد أقصى' : 'You can attach up to 10 files');
+						break;
+					}
+					next.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, file, fingerprint });
+				}
+				return next;
+			});
 		}
+	};
+
+	/** Send files right away (what the picker used to do; now runs from Send). */
+	const sendComposerFilesNow = normalized => {
+		if (!normalized.length) return;
 		if (normalized.length === 1) {
 			void sendFile(normalized[0]);
 			return;
@@ -23272,6 +23339,15 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (action === 'voiceChanger') {
 			setVoiceChangerOpen(true);
+			return;
+		}
+		if (action === 'emoji') {
+			setAiImagePanelOpen(false);
+			setStickerPanelOpen(true);
+			return;
+		}
+		if (action === 'delayedSend') {
+			setDelayedSendOpen(true);
 		}
 	};
 
@@ -26834,6 +26910,23 @@ function WhatsAppWorkspaceContent() {
 				locale={locale}
 				anchorRef={attachButtonRef}
 				mobileToolActions={[
+					['emoji', Smile, locale === 'ar' ? 'إيموجي وستيكرز' : 'Emoji & stickers', '#EAB308'],
+					...(demo.settings.enabled
+						? []
+						: [
+								[
+									'delayedSend',
+									DelayedSendIcon,
+									delayedSendOn
+										? locale === 'ar'
+											? 'تأجيل الإرسال (شغّال)'
+											: 'Delay sending (on)'
+										: locale === 'ar'
+											? 'تأجيل الإرسال'
+											: 'Delay sending',
+									'#EF4444',
+								],
+							]),
 					['aiImage', Sparkles, locale === 'ar' ? 'توليد صورة بالذكاء الاصطناعي' : 'AI image', '#8B5CF6'],
 					...(demo.settings.enabled
 						? []
@@ -30627,7 +30720,7 @@ function WhatsAppWorkspaceContent() {
 												const files = event.dataTransfer?.files;
 												if (files?.length) handleComposerFileInput(files);
 											}}
-											className={`wa-composer flex gap-2 border-0 border-t border-[#e9edef] p-2 ${composerDragOver ? 'ring-2 ring-[#00A884]/40' : ''} ${isVoiceRecordingMode ? 'is-recording flex-nowrap items-center' : 'flex-wrap items-end'}`}
+											className={`wa-composer flex gap-2 border-0 border-t border-[#e9edef] p-2 ${composerDragOver ? 'ring-2 ring-[#00A884]/40' : ''} ${isVoiceRecordingMode ? 'is-recording flex-wrap items-center' : 'flex-wrap items-end'}`}
 										>
 											{waitingSchedules.length > 0 && !isVoiceRecordingMode ? (
 												<div className="basis-full">
@@ -30700,8 +30793,15 @@ function WhatsAppWorkspaceContent() {
 													: preview?.isMediaOnly
 														? ImageIcon
 														: null;
-												// A quote card docked on top of the composer: who you are answering
-												// on top, their words below, tinted in that person's colour.
+												// Photo / video being answered: WhatsApp shows its thumbnail at the end.
+												const quotedAttachment = (replyingTo.attachments || []).find(item =>
+													/^(image|video|sticker)/i.test(String(item?.type || item?.mimeType || '')),
+												);
+												const quotedThumb = quotedAttachment
+													? String(quotedAttachment.previewDataUrl || quotedAttachment.thumbnailDataUrl || quotedAttachment.url || '').trim()
+													: '';
+												// WhatsApp's reply bar: a tinted quote with a coloured edge (who + what),
+												// a plain ✕ beside it, docked on the composer.
 												return (
 												<div
 													className={`wa-rp ${replyingTo.direction === 'outbound' ? 'is-mine' : 'is-theirs'}`}
@@ -30713,30 +30813,29 @@ function WhatsAppWorkspaceContent() {
 													}
 													dir={locale === 'ar' ? 'rtl' : 'ltr'}
 												>
-													<span className="wa-rp__icon" aria-hidden="true">
-														<Reply size={16} strokeWidth={2.3} className="rtl:-scale-x-100" />
-													</span>
-													<div className="wa-rp__body">
-														<p className="wa-rp__label">
-															<span>{locale === 'ar' ? 'رد على' : 'Replying to'}</span>
-															<b className="wa-privacy-identity">
+													<div className="wa-rp__quote">
+														<div className="wa-rp__body">
+															<p className="wa-rp__name wa-privacy-identity">
 																<bdi>{replyAuthor}</bdi>
-															</b>
-														</p>
-														<p
-															className={`wa-rp__snippet ${snippetPresentation.className || ''}`}
-															dir={snippetPresentation.dir}
-															lang={snippetPresentation.lang}
-														>
-															{ReplyKindIcon ? (
-																<ReplyKindIcon size={14} strokeWidth={2.2} aria-hidden="true" />
-															) : null}
-															<span>
-																{preview?.isVoice
-																	? `${locale === 'ar' ? 'رسالة صوتية' : 'Voice message'}${snippet ? ` · ${snippet}` : ''}`
-																	: snippet}
-															</span>
-														</p>
+															</p>
+															<p
+																className={`wa-rp__snippet ${snippetPresentation.className || ''}`}
+																dir={snippetPresentation.dir}
+																lang={snippetPresentation.lang}
+															>
+																{ReplyKindIcon ? (
+																	<ReplyKindIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+																) : null}
+																<span>
+																	{preview?.isVoice
+																		? `${locale === 'ar' ? 'رسالة صوتية' : 'Voice message'}${snippet ? ` · ${snippet}` : ''}`
+																		: snippet}
+																</span>
+															</p>
+														</div>
+														{quotedThumb ? (
+															<img src={quotedThumb} alt="" className="wa-rp__thumb" draggable={false} />
+														) : null}
 													</div>
 													<button
 														type="button"
@@ -30745,7 +30844,7 @@ function WhatsAppWorkspaceContent() {
 														title={locale === 'ar' ? 'إلغاء الرد' : 'Cancel reply'}
 														className="wa-rp__close"
 													>
-														<X size={16} strokeWidth={2.2} />
+														<X size={20} strokeWidth={2} />
 													</button>
 												</div>
 												);
@@ -30787,6 +30886,46 @@ function WhatsAppWorkspaceContent() {
 													>
 														<Plus size={20} aria-hidden="true" />
 													</button>
+												</div>
+											)}
+											{composerFiles.length > 0 && (
+												<div className="flex min-w-0 basis-full flex-wrap gap-2 pb-1" aria-label={locale === 'ar' ? 'ملفات جاهزة للإرسال' : 'Files ready to send'}>
+													{composerFiles.map(item => {
+														const name = item.file?.name || (locale === 'ar' ? 'ملف' : 'File');
+														const ext = (name.includes('.') ? name.split('.').pop() : '').slice(0, 4).toUpperCase();
+														const bytes = Number(item.file?.size) || 0;
+														const size =
+															bytes >= 1024 * 1024
+																? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+																: `${Math.max(1, Math.round(bytes / 1024))} KB`;
+														return (
+															<div
+																key={item.id}
+																className="flex min-w-0 max-w-[280px] items-center gap-2.5 rounded-xl border border-black/[0.08] bg-white py-2 pe-2 ps-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:border-white/10 dark:bg-slate-900"
+															>
+																<span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#1DAB61]/10 text-[#1DAB61]">
+																	<FileText size={18} strokeWidth={2} aria-hidden="true" />
+																</span>
+																<span className="min-w-0 flex-1">
+																	<span className="block truncate text-[13px] font-semibold text-[#111b21] dark:text-slate-100" dir="auto" title={name}>
+																		{name}
+																	</span>
+																	<span className="block text-[11.5px] text-[#667781]">
+																		{ext ? `${ext} · ` : ''}
+																		{size}
+																	</span>
+																</span>
+																<button
+																	type="button"
+																	onClick={() => setComposerFilesState(current => current.filter(entry => entry.id !== item.id))}
+																	aria-label={locale === 'ar' ? `إزالة ${name}` : `Remove ${name}`}
+																	className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[#667781] hover:bg-black/5 hover:text-[#111b21]"
+																>
+																	<X size={14} strokeWidth={2.4} />
+																</button>
+															</div>
+														);
+													})}
 												</div>
 											)}
 											{recordingVoice ? (
@@ -30856,7 +30995,7 @@ function WhatsAppWorkspaceContent() {
 															setAiImagePanelOpen(false);
 															setStickerPanelOpen(current => !current);
 														}}
-														className="wa-sticker-button wa-input-action"
+														className="wa-sticker-button wa-input-action wa-composer-tool--desktop"
 													>
 														<Smile size={20} strokeWidth={2} />
 													</button>
@@ -30899,20 +31038,6 @@ function WhatsAppWorkspaceContent() {
 														completionMessages={effectiveMessages}
 													/>
 													</div>
-													<button
-														type="button"
-														aria-label="Camera"
-														title="Camera or photo picker"
-														onClick={() =>
-															openComposerFilePicker({
-																accept: 'image/*',
-																capture: 'environment',
-															})
-														}
-														className="wa-camera-button wa-input-action min-[769px]:hidden"
-													>
-														<Camera size={20} strokeWidth={2} />
-													</button>
 													{!demo.settings.enabled ? (
 														<DelayedSendButton
 															ar={locale === 'ar'}
@@ -30920,9 +31045,10 @@ function WhatsAppWorkspaceContent() {
 															disabled={false}
 															buttonRef={delayedSendButtonRef}
 															onClick={() => setDelayedSendOpen(current => !current)}
+															className="wa-composer-tool--desktop"
 														/>
 													) : null}
-													{composerHasText || composerImages.length ? (
+													{composerHasText || composerImages.length || composerFiles.length ? (
 														<>
 															<button
 																type="button"
@@ -30936,12 +31062,12 @@ function WhatsAppWorkspaceContent() {
 															</button>
 															<button
 																type="submit"
-																aria-label={delayedSendOn && !composerImages.length ? t.scheduleMessage : t.send}
-																title={delayedSendOn && !composerImages.length ? t.scheduleMessage : undefined}
+																aria-label={delayedSendOn && !composerImages.length && !composerFiles.length ? t.scheduleMessage : t.send}
+																title={delayedSendOn && !composerImages.length && !composerFiles.length ? t.scheduleMessage : undefined}
 																className="wa-send-button"
 																style={{ background: GRADIENT }}
 															>
-																{delayedSendOn && !composerImages.length ? (
+																{delayedSendOn && !composerImages.length && !composerFiles.length ? (
 																	<Clock size={17} strokeWidth={2.1} />
 																) : (
 																	<Send size={17} strokeWidth={2.1} />

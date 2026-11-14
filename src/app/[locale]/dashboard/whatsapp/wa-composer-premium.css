@@ -201,134 +201,134 @@ html.dark .wa-composer {
 /* Reply card                                                           */
 /* ================================================================== */
 
+/* WhatsApp's reply bar: a grey quote with a coloured leading edge (name in that colour, the
+   message in grey, a thumbnail for photos), and a plain ✕ beside it, sitting on the composer. */
 .wa-composer .wa-rp {
-	--rp-c: #027eb5;
-	position: relative;
+	--rp-c: #06cf9c; /* their message: WhatsApp's teal-green */
 	display: flex;
 	flex-basis: 100%;
 	align-items: center;
-	gap: 12px;
+	gap: 6px;
 	min-width: 0;
-	margin: 0 0 8px;
-	padding: 10px 10px 10px 14px;
-	overflow: hidden;
-	border: 1px solid color-mix(in srgb, var(--rp-c) 16%, var(--cp-border));
-	border-radius: 18px;
-	background:
-		linear-gradient(90deg, color-mix(in srgb, var(--rp-c) 9%, transparent), transparent 70%),
-		var(--cp-surface);
+	margin: 0 0 6px;
+	padding: 6px 6px 6px 6px;
+	border: 1px solid var(--cp-border);
+	border-radius: 14px;
+	background: var(--cp-surface);
 	box-shadow: var(--cp-shadow);
-	animation: cp-rise 200ms var(--cp-ease);
-}
-
-.wa-composer .wa-rp[dir='rtl'] {
-	padding: 10px 14px 10px 10px;
-	background:
-		linear-gradient(270deg, color-mix(in srgb, var(--rp-c) 9%, transparent), transparent 70%),
-		var(--cp-surface);
+	animation: cp-rise 180ms var(--cp-ease);
 }
 
 .wa-composer .wa-rp.is-mine {
-	--rp-c: var(--cp-accent);
+	--rp-c: #53bdeb; /* your own message: WhatsApp's blue */
 }
 
 html.dark .wa-composer .wa-rp.is-theirs {
-	--rp-c: #53bdeb;
+	--rp-c: #06cf9c;
 }
 
-/* the quote bar on the leading edge */
-.wa-composer .wa-rp::before {
+.wa-composer .wa-rp__quote {
+	position: relative;
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	align-items: stretch;
+	overflow: hidden;
+	border-radius: 8px;
+	background: #f0f2f5;
+	min-height: 52px;
+}
+
+html.dark .wa-composer .wa-rp__quote {
+	background: rgba(255, 255, 255, 0.06);
+}
+
+/* the coloured edge */
+.wa-composer .wa-rp__quote::before {
 	content: '';
-	position: absolute;
-	inset-block: 0;
-	inset-inline-start: 0;
+	flex: none;
 	width: 4px;
 	background: var(--rp-c);
 }
 
-.wa-composer .wa-rp__icon {
-	display: grid;
-	width: 34px;
-	height: 34px;
-	flex: none;
-	place-items: center;
-	border-radius: 12px;
-	background: color-mix(in srgb, var(--rp-c) 14%, transparent);
-	color: var(--rp-c);
-}
-
 .wa-composer .wa-rp__body {
-	min-width: 0;
-	flex: 1;
-}
-
-.wa-composer .wa-rp__label {
 	display: flex;
 	min-width: 0;
-	align-items: baseline;
-	gap: 5px;
-	margin: 0;
-	color: var(--cp-text-2);
-	font-size: 12px;
-	font-weight: 500;
-	line-height: 17px;
+	flex: 1;
+	flex-direction: column;
+	justify-content: center;
+	padding: 6px 12px 7px;
 }
 
-.wa-composer .wa-rp__label b {
+.wa-composer .wa-rp__name {
 	overflow: hidden;
+	margin: 0;
 	color: var(--rp-c);
 	font-size: 13px;
-	font-weight: 700;
+	font-weight: 600;
+	line-height: 20px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
 .wa-composer .wa-rp__snippet {
 	display: flex;
-	align-items: flex-start;
-	gap: 6px;
-	margin: 2px 0 0;
-	color: var(--cp-text);
-	font-size: 13.5px;
+	min-width: 0;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	color: #667781;
+	font-size: 13px;
 	line-height: 19px;
-	opacity: 0.85;
 	text-align: start;
 }
 
+html.dark .wa-composer .wa-rp__snippet {
+	color: #8696a0;
+}
+
 .wa-composer .wa-rp__snippet > span {
-	display: -webkit-box;
 	min-width: 0;
 	overflow: hidden;
-	overflow-wrap: anywhere;
-	white-space: normal;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .wa-composer .wa-rp__snippet > svg {
 	flex: none;
-	margin-top: 2px;
-	color: var(--rp-c);
+	color: #8696a0;
+}
+
+.wa-composer .wa-rp__thumb {
+	flex: none;
+	width: 52px;
+	min-height: 52px;
+	object-fit: cover;
+	align-self: stretch;
 }
 
 .wa-composer:not(#_c1):not(#_c2) .wa-rp__close {
 	display: grid;
-	width: 32px;
-	height: 32px;
+	width: 36px;
+	height: 36px;
 	flex: none;
 	place-items: center;
 	border: 0;
 	border-radius: 999px;
-	background: var(--cp-hover);
-	color: var(--cp-icon) !important;
+	background: transparent;
+	color: #8696a0 !important;
 	cursor: pointer;
-	transition: background-color 140ms ease, color 140ms ease, transform 140ms var(--cp-ease);
+	transition: background-color 120ms ease, color 120ms ease;
 }
 
 .wa-composer:not(#_c1):not(#_c2) .wa-rp__close:hover {
-	background: color-mix(in srgb, var(--cp-danger) 14%, transparent);
-	color: var(--cp-danger) !important;
-	transform: rotate(90deg);
+	background: rgba(11, 20, 26, 0.06);
+	color: #54656f !important;
+}
+
+html.dark .wa-composer:not(#_c1):not(#_c2) .wa-rp__close:hover {
+	background: rgba(255, 255, 255, 0.08);
+	color: #d1d7db !important;
 }
 
 /* ================================================================== */
