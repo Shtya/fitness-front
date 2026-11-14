@@ -23297,7 +23297,7 @@ function WhatsAppWorkspaceContent() {
 			accept ||
 				'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/bmp,video/mp4,video/webm,video/quicktime,video/3gpp,audio/mpeg,audio/ogg,audio/mp4,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx,.mov,.heic,.heif',
 		);
-		input.multiple = !capture && (accept === 'image/*,video/*' || accept === 'image/*');
+		input.multiple = !capture && (accept === 'image/*,video/*' || accept === 'image/*' || accept === '*/*');
 		if (capture) input.setAttribute('capture', capture);
 		else input.removeAttribute('capture');
 		input.click();
@@ -23307,7 +23307,9 @@ function WhatsAppWorkspaceContent() {
 		setAttachmentSheetOpen(false);
 		if (action === 'photos') return openComposerFilePicker({ accept: 'image/*,video/*' });
 		if (action === 'camera') return openComposerFilePicker({ accept: 'image/*', capture: 'environment' });
-		if (action === 'document') return openComposerFilePicker({ accept: 'application/pdf,.doc,.docx,.xls,.xlsx,.txt' });
+		// Like WhatsApp: any file can go as a document (zip, rar, apk, txt…); the server refuses
+		// only types a browser would run as a page.
+		if (action === 'document') return openComposerFilePicker({ accept: '*/*' });
 		if (action === 'location') {
 			if (!navigator.geolocation) return toast.error('Location is not available');
 			navigator.geolocation.getCurrentPosition(
