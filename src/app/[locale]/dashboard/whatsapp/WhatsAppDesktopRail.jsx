@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FaWhatsapp } from 'react-icons/fa';
+import { FaFacebook, FaWhatsapp } from 'react-icons/fa';
 import { useSidebarChrome } from '@/components/molecules/SidebarChromeContext';
 import { RailChatsIcon, RailReadingIcon, RailUpdatesIcon } from './wa-rail-icons';
 
@@ -137,6 +137,7 @@ export default function WhatsAppDesktopRail({
 	showLearn = false,
 	showPrompts = true,
 	showUpdates = true,
+	showFacebook = true,
 	showcaseOnly = false,
 	darkMode = false,
 	onToggleDarkMode,
@@ -158,6 +159,13 @@ export default function WhatsAppDesktopRail({
 			custom: true,
 			badge: unreadCount,
 		},
+		showFacebook
+			? {
+					id: 'facebook',
+					label: labels.facebook || (ar ? 'فيسبوك' : 'Facebook'),
+					icon: FaFacebook,
+				}
+			: null,
 		showUpdates
 			? {
 					id: 'statuses',
@@ -181,7 +189,9 @@ export default function WhatsAppDesktopRail({
 			: null,
 	].filter(Boolean);
 	const primaryItems = showcaseOnly
-		? allPrimaryItems.filter(item => item.id === 'chats' || item.id === 'reading' || item.id === 'prompts')
+		? allPrimaryItems.filter(
+				item => item.id === 'chats' || item.id === 'reading' || item.id === 'prompts',
+			)
 		: allPrimaryItems;
 
 	const utilityItems = [

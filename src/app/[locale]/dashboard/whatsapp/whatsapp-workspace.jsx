@@ -118,6 +118,7 @@ import {
 	Radio,
 	GraduationCap,
 } from 'lucide-react';
+import { FaFacebook } from 'react-icons/fa';
 import api, { whatsappLiveApi, whatsappLiveOrigin } from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import { clearAppBadgeSource, syncAppBadge } from '@/lib/app-badge';
@@ -338,12 +339,14 @@ const WhatsAppBoardTab = lazy(() =>
 const FakeChatStudio = lazy(() => import('./fake-chat/FakeChatStudio'));
 const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
 const GroupMemberPanel = lazy(() => import('./GroupMemberPanel'));
+const ConnectionCheckDialog = lazy(() => import('./ConnectionCheckDialog'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
 const WhatsAppReadingTab = lazy(() => import('./WhatsAppReadingTab'));
 const WhatsAppPromptsTab = lazy(() => import('./WhatsAppPromptsTab'));
+const WhatsAppFacebookTab = lazy(() => import('./WhatsAppFacebookTab'));
 const WhatsAppOnlineTab = lazy(() => import('./WhatsAppOnlineTab'));
 const TypingHistoryPanel = lazy(() =>
 	import('./WhatsAppTypingLog').then(mod => ({ default: mod.TypingHistoryPanel })),
@@ -852,6 +855,7 @@ const translations = {
 		chats: 'Chats',
 		reading: 'Reading',
 		prompts: 'Prompts',
+		facebook: 'Facebook',
 		moreChatListTools: 'More tools',
 		hideNames: 'Hide names',
 		onlineTab: 'Online',
@@ -1416,6 +1420,7 @@ const translations = {
 		chats: 'المحادثات',
 		reading: 'القراءة',
 		prompts: 'Prompts',
+		facebook: 'فيسبوك',
 		moreChatListTools: 'المزيد',
 		hideNames: 'إخفاء الأسماء',
 		onlineTab: 'المتصلون',
@@ -13198,6 +13203,8 @@ function WhatsAppWorkspaceContent() {
 	const [autoForwardOpen, setAutoForwardOpen] = useState(false);
 	/** Group member whose details are open in the side panel ({ waId, name, avatarUrl, color }). */
 	const [personCard, setPersonCard] = useState(null);
+	/** Chat whose "Check connection" dialog is open (conversation id). */
+	const [connectionCheckFor, setConnectionCheckFor] = useState(null);
 	const [privacyBlurMenuOpen, setPrivacyBlurMenuOpen] = useState(false);
 	const storyDialogOpenRef = useRef(false);
 	storyDialogOpenRef.current = storyRepostOpen || storyShareOpen;
@@ -24482,6 +24489,18 @@ function WhatsAppWorkspaceContent() {
 				},
 			},
 			{
+				id: 'check-connection',
+				label: locale === 'ar' ? 'اختبار الاتصال' : 'Check connection',
+				description:
+					locale === 'ar'
+						? 'هل هو متصل دلوقتي ورسايلك بتوصله (علامة ولا علامتين)'
+						: 'Is it online now and do your messages reach it (one tick or two)',
+				icon: Wifi,
+				iconTone: 'green',
+				disabled: demoBlocked || demoChat || !conversationId || selectedConversation.type === 'group',
+				onClick: () => setConnectionCheckFor(conversationId),
+			},
+			{
 				id: 'unread',
 				label: locale === 'ar' ? 'تعليم كغير مقروء' : 'Mark as unread',
 				description: locale === 'ar' ? 'تعليم الكل كغير مقروء' : 'Mark all as unread',
@@ -24942,6 +24961,11 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (tab === 'prompts') {
 			setActiveTab('prompts');
+			setTabError('');
+			return;
+		}
+		if (tab === 'facebook') {
+			setActiveTab('facebook');
 			setTabError('');
 			return;
 		}
@@ -27184,6 +27208,7 @@ function WhatsAppWorkspaceContent() {
 					showLearn={!showcaseOnly}
 					showPrompts={!showcaseOnly}
 					showUpdates={seesWholeAccount}
+					showFacebook={!showcaseOnly && (canManageWhatsApp || isAdmin)}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 					darkMode={darkMode}
@@ -27957,6 +27982,13 @@ function WhatsAppWorkspaceContent() {
 														icon: UsersRound,
 														hidden: showcaseOnly,
 														onClick: () => void loadTabData('groups'),
+													},
+													{
+														id: 'facebook',
+														label: t.facebook || (locale === 'ar' ? 'فيسبوك' : 'Facebook'),
+														icon: FaFacebook,
+														hidden: showcaseOnly || !(canManageWhatsApp || isAdmin),
+														onClick: () => void loadTabData('facebook'),
 													},
 													{
 														id: 'agent',
@@ -31233,6 +31265,14 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				)}
 
+				{activeTab === 'facebook' && (
+					<div className="wa-secondary-pane wa-facebook-pane min-h-0 overflow-hidden">
+						<Suspense fallback={<div className="grid min-h-[60vh] place-items-center"><Loader2 size={20} className="animate-spin text-[#1877F2]" /></div>}>
+							<WhatsAppFacebookTab locale={locale} />
+						</Suspense>
+					</div>
+				)}
+
 				{activeTab === 'groups' && (
 					tabLoading ? (
 						<div className="wa-secondary-pane">
@@ -32594,7 +32634,8 @@ function WhatsAppWorkspaceContent() {
 				activeTab !== 'adhkar' &&
 				activeTab !== 'learn' &&
 				activeTab !== 'wallet' &&
-				activeTab !== 'reading' && (
+				activeTab !== 'reading' &&
+				activeTab !== 'facebook' && (
 				<MobileWhatsAppNav
 					activeTab={activeTab}
 					onSelect={tab => void loadTabData(tab)}
@@ -34674,6 +34715,16 @@ function WhatsAppWorkspaceContent() {
 				locale={locale}
 				onLeave={() => router.push('/dashboard')}
 			/>
+			{connectionCheckFor ? (
+				<Suspense fallback={null}>
+					<ConnectionCheckDialog
+						conversationId={connectionCheckFor}
+						title={conversationTitle(conversationsRef.current.find(item => item.id === connectionCheckFor)) || ''}
+						ar={locale === 'ar'}
+						onClose={() => setConnectionCheckFor(null)}
+					/>
+				</Suspense>
+			) : null}
 			{personCard ? (
 				<Suspense fallback={null}>
 					<GroupMemberPanel
@@ -34681,10 +34732,8 @@ function WhatsAppWorkspaceContent() {
 						accountId={accountId}
 						ar={locale === 'ar'}
 						onClose={() => setPersonCard(null)}
-						onOpenConversation={(id, meta) => {
-							setActiveTab('chats');
-							openConversationRef.current?.(id, meta);
-						}}
+						// Adds the chat to the list first when it is not loaded, then opens it.
+						onOpenConversation={(id, meta) => openConversationFromContact(id, meta)}
 					/>
 				</Suspense>
 			) : null}

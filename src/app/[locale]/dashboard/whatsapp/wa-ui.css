@@ -159,6 +159,44 @@ html.dark .wa-web-desktop,
 	height: 0;
 }
 
+/*
+ * One scrollbar across WhatsApp: the chat list's thin, neutral pill. Menus, sheets and dialogs
+ * render on <body>, outside .wa-web-desktop, and fell back to the site's thick green bar
+ * (globals.css `html { scrollbar-color }`, inherited by every element) or the teal one above.
+ * Only while the WhatsApp page is open (:has), and `*` has no specificity (:where), so anything
+ * that hides its scrollbar on purpose keeps it hidden.
+ */
+html:has(.wa-web-desktop) {
+	--sb-size: 6px;
+	--sb-thumb: rgba(11, 20, 26, 0.2);
+	--sb-thumb-hover: rgba(11, 20, 26, 0.34);
+	--wa-sb-thumb: rgba(11, 20, 26, 0.2);
+	--wa-sb-thumb-hover: rgba(11, 20, 26, 0.34);
+	--wa-sb-thumb-active: rgba(11, 20, 26, 0.45);
+}
+
+html.dark:has(.wa-web-desktop),
+html[data-theme-mode='dark']:has(.wa-web-desktop) {
+	--sb-thumb: rgba(255, 255, 255, 0.16);
+	--sb-thumb-hover: rgba(255, 255, 255, 0.3);
+	--wa-sb-thumb: rgba(255, 255, 255, 0.16);
+	--wa-sb-thumb-hover: rgba(255, 255, 255, 0.3);
+	--wa-sb-thumb-active: rgba(255, 255, 255, 0.4);
+}
+
+:where(html:has(.wa-web-desktop)) * {
+	scrollbar-width: thin;
+}
+
+html:has(.wa-web-desktop) :is(.nice-scroll, .scrollbar-custom, .wa-ui-scroll) {
+	scrollbar-width: thin;
+	scrollbar-color: var(--sb-thumb) transparent;
+}
+
+html:has(.wa-web-desktop) :is(.nice-scroll, .scrollbar-custom, .wa-ui-scroll)::-webkit-scrollbar-thumb {
+	background-color: var(--sb-thumb);
+}
+
 .wa-web-desktop .nice-scroll,
 .wa-web-desktop .wa-ui-scroll,
 .wa-web-desktop .wa-conversation-list,

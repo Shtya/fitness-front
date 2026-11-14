@@ -61,17 +61,15 @@ export default function GroupMemberPanel({ person, accountId, ar, onClose, onOpe
 	const initial = String(name).trim().slice(0, 1).toUpperCase() || '?';
 	const canMessage = card ? card.canMessage !== false : true;
 
+	// Always ask the server for the chat itself: an id alone could not be opened when that chat
+	// was not in the loaded list, so the page only closed the group. The existing chat's own id
+	// comes first, so a chat kept under their @lid id is opened, not a second one by number.
 	const message = async () => {
 		if (opening) return;
-		if (card?.conversationId) {
-			onOpenConversation(card.conversationId);
-			onClose();
-			return;
-		}
 		setOpening(true);
 		try {
 			const { data } = await api.post(`/whatsapp/accounts/${accountId}/conversations/open`, {
-				chatId: card?.phone || waId,
+				chatId: card?.conversationChatId || card?.phone || waId,
 				title: card?.name || person.name || null,
 			});
 			if (data?.id) {

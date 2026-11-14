@@ -30,6 +30,14 @@ export const fbEngagementApi = {
 	pagePosts: (accountId, after, signal) =>
 		data(api.get(`${BASE}/accounts/${accountId}/posts`, { params: { after }, signal, timeout: 45000 })),
 
+	/** WhatsApp Facebook Home tab */
+	home: (signal) => data(api.get(`${BASE}/home`, { signal })),
+	homePeople: (signal) => data(api.get(`${BASE}/home/people`, { signal })),
+	homeFeed: (params, signal) =>
+		data(api.get(`${BASE}/home/feed`, { params, signal, timeout: 60000 })),
+	homeStories: (params, signal) =>
+		data(api.get(`${BASE}/home/stories`, { params, signal, timeout: 45000 })),
+
 	resolvePost: (body) => data(api.post(`${BASE}/posts/resolve`, body, { timeout: 60000 })),
 	refreshPost: (id) => data(api.post(`${BASE}/posts/${id}/refresh`, {}, { timeout: 45000 })),
 
