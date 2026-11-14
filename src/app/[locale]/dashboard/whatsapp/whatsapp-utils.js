@@ -350,13 +350,31 @@ export function mergeMessages(current = [], incoming = [], conversationId = null
 		merged.push(rest);
 	}
 
-	return merged.sort((a, b) => {
-		const difference = messageSortTime(a) - messageSortTime(b);
-		if (difference) return difference;
-		return String(a?.id || a?.providerMessageId || '').localeCompare(
-			String(b?.id || b?.providerMessageId || ''),
-		);
-	});
+	return merged.sort(compareThreadMessages);
+}
+
+/** When our server stored the message (ms). 0 when unknown. */
+function messageArrivalTime(message) {
+	const value = message?.created_at ?? message?.createdAt;
+	if (!value) return 0;
+	const ms = value instanceof Date ? value.getTime() : Date.parse(value);
+	return Number.isFinite(ms) ? ms : 0;
+}
+
+/**
+ * Thread order. WhatsApp times are whole seconds, so two messages sent in the same second
+ * tie; they are then ordered by when they reached us (stored to the millisecond), which is
+ * the order they were sent in. The id (random) only breaks what is still tied after that.
+ */
+export function compareThreadMessages(a, b) {
+	const difference = messageSortTime(a) - messageSortTime(b);
+	if (difference) return difference;
+	const arrivedA = messageArrivalTime(a);
+	const arrivedB = messageArrivalTime(b);
+	if (arrivedA && arrivedB && arrivedA !== arrivedB) return arrivedA - arrivedB;
+	return String(a?.id || a?.providerMessageId || '').localeCompare(
+		String(b?.id || b?.providerMessageId || ''),
+	);
 }
 
 /** WhatsApp-style delivery ticks: pending → sent → delivered → read/played. */

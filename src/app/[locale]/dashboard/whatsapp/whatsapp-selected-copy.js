@@ -1,5 +1,5 @@
 import { getMessageTranscript } from './whatsapp-message-transcripts.js';
-import { visibleMessageText } from './whatsapp-utils.js';
+import { compareThreadMessages, visibleMessageText } from './whatsapp-utils.js';
 
 const VOICE_TYPES = new Set(['audio', 'ptt', 'voice']);
 const VIDEO_TYPES = new Set(['video']);
@@ -34,13 +34,9 @@ export function messageTimestampValue(message) {
 	return message?.providerTimestamp || message?.timestamp || message?.created_at;
 }
 
+/** Same order as the chat on screen (same-second messages by arrival time). */
 export function sortMessagesByTime(messages = []) {
-	return [...messages].sort((a, b) => {
-		const delta =
-			timestampMs(messageTimestampValue(a)) - timestampMs(messageTimestampValue(b));
-		if (delta !== 0) return delta;
-		return String(a?.id || '').localeCompare(String(b?.id || ''));
-	});
+	return [...messages].sort(compareThreadMessages);
 }
 
 export function resolveStoredTranscript(message, transcriptMap = {}) {
