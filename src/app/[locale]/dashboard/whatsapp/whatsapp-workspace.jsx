@@ -1112,6 +1112,7 @@ const translations = {
 		send: 'Send',
 		sync: 'Sync',
 		older: 'Load older messages',
+		olderFromPhone: 'Check the phone for older messages',
 		unreadMessagesDivider: 'Unread messages',
 		unreadMessagesDividerCount: '{count} unread messages',
 		syncingMessages: 'Syncing…',
@@ -1677,6 +1678,7 @@ const translations = {
 		send: 'إرسال',
 		sync: 'مزامنة',
 		older: 'تحميل رسائل أقدم',
+		olderFromPhone: 'البحث عن رسائل أقدم على الموبايل',
 		unreadMessagesDivider: 'الرسائل غير المقروءة',
 		unreadMessagesDividerCount: '{count} رسائل غير مقروءة',
 		syncingMessages: 'جارٍ المزامنة…',
@@ -2008,6 +2010,34 @@ const SHOWCASE_TABS = new Set(['chats', 'reading', 'prompts', 'settings']);
  * page does not include it (opened from search contacts, a group member, a notification…), or
  * the open chat vanished on the next reload.
  */
+/**
+ * The presence ping returns a fresh list every 10s even when nobody came or left; keeping the
+ * previous array stops the whole workspace re-rendering on each ping. lastSeenAt is not shown.
+ */
+function keepStaffListIfSame(prev, next) {
+	const list = Array.isArray(next) ? next : [];
+	if (!Array.isArray(prev) || prev.length !== list.length) return list;
+	for (let index = 0; index < list.length; index += 1) {
+		const a = prev[index];
+		const b = list[index];
+		if (a?.userId !== b?.userId || a?.name !== b?.name || a?.role !== b?.role) return list;
+	}
+	return prev;
+}
+
+/** Ids the client makes up for rows the server has not stored (yet). */
+const CLIENT_MESSAGE_ID_PREFIXES = ['pending:', 'pending-', 'inbox-preview-', 'wa-resend-missing-', 'tmp-', 'optimistic'];
+/**
+ * Whether a thread row can be the "before" cursor for the messages API: a stored row or a phone
+ * row ("live:<providerId>", which the server maps back). Rows made up on this device are not.
+ */
+export function isServerMessageCursor(message) {
+	const value = String(message?.id || '');
+	if (!value || value === 'live:') return false;
+	if (message?.optimistic && !message?.providerMessageId) return false;
+	return !CLIENT_MESSAGE_ID_PREFIXES.some(prefix => value.startsWith(prefix));
+}
+
 function keepOpenConversation(nextItems, currentItems, openId) {
 	if (!openId || nextItems.some(item => item.id === openId)) return nextItems;
 	const open = (currentItems || []).find(item => item.id === openId);
@@ -12158,6 +12188,44 @@ function StatTile({ icon: Icon, label, value, color = 'var(--color-primary-500)'
 	);
 }
 
+/**
+ * Chat header line under the name (online / last seen / assignee). Owns its 30s clock so
+ * "last seen 5 min ago" stays current without re-rendering the whole workspace.
+ */
+function ChatHeaderPresenceSubtitle({ presence, locale, assigneeName }) {
+	const [, setTick] = useState(0);
+	useEffect(() => {
+		const timer = window.setInterval(() => setTick(value => value + 1), 30_000);
+		return () => window.clearInterval(timer);
+	}, []);
+	const subtitle = conversationPresenceSubtitle(presence, locale, formatLastSeen);
+	if (subtitle?.kind === 'online') {
+		return (
+			<span className="wa-online-status inline-flex items-center gap-1.5">
+				<span className="wa-online-dot" aria-hidden="true" />
+				{subtitle.text}
+			</span>
+		);
+	}
+	if (subtitle?.kind === 'lastSeen') {
+		return <span className="wa-last-seen text-slate-400">{subtitle.text}</span>;
+	}
+	if (subtitle?.kind === 'offline') {
+		return (
+			<span className="wa-offline-status inline-flex items-center gap-1.5 text-slate-400">
+				<span className="inline-block h-2 w-2 rounded-full bg-slate-400" aria-hidden="true" />
+				{subtitle.text}
+			</span>
+		);
+	}
+	return (
+		<span className="wa-chat-assignee-pill inline-flex max-w-full items-center gap-1.5">
+			<UserRound size={12} strokeWidth={2.3} className="shrink-0 opacity-70" />
+			<span className="truncate">{assigneeName}</span>
+		</span>
+	);
+}
+
 function formatLastSeen(ts, locale = 'en') {
 	if (!ts || ts <= 0) return '';
 	const date = new Date(ts);
@@ -14374,7 +14442,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (isAdmin) {
 				socket.emit('whatsapp:presence:list', null, response => {
-					if (Array.isArray(response?.items)) setStaffOnline(response.items);
+					if (Array.isArray(response?.items)) setStaffOnline(prev => keepStaffListIfSame(prev, response.items));
 				});
 			}
 		};
@@ -17733,14 +17801,16 @@ function WhatsAppWorkspaceContent() {
 	}, [conversations]);
 
 	useEffect(() => {
-		const watchingPresence = Boolean(conversationId || conversationInfoTarget?.id);
+		// The chat header has its own clock (ChatHeaderPresenceSubtitle); this one only keeps the
+		// contact info panel's "last seen" fresh, so it runs only while that panel is open.
+		const watchingPresence = Boolean(conversationInfoTarget?.id);
 		if (!watchingPresence) return undefined;
 		setPresenceClock(Date.now());
 		const timer = window.setInterval(() => {
 			setPresenceClock(Date.now());
 		}, 30_000);
 		return () => window.clearInterval(timer);
-	}, [conversationId, conversationInfoTarget?.id]);
+	}, [conversationInfoTarget?.id]);
 
 	useEffect(() => {
 		if (!conversationId) return undefined;
@@ -18425,7 +18495,9 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		if (!delayedSendOn && !delayedSendOpen) return undefined;
 		setDelayedSendNow(Date.now());
-		const timer = window.setInterval(() => setDelayedSendNow(Date.now()), 20_000);
+		// Every tick re-renders the workspace. The open settings popover shows a live countdown;
+		// with it closed the plan is only read at send time, so a slow tick is enough.
+		const timer = window.setInterval(() => setDelayedSendNow(Date.now()), delayedSendOpen ? 20_000 : 60_000);
 		return () => window.clearInterval(timer);
 	}, [delayedSendOn, delayedSendOpen]);
 
@@ -18795,7 +18867,7 @@ function WhatsAppWorkspaceContent() {
 			// Team online list right away (admins; others get an empty answer) and say we are here.
 			socket.emit('whatsapp:presence:ping');
 			socket.emit('whatsapp:presence:list', null, response => {
-				if (Array.isArray(response?.items)) setStaffOnline(response.items);
+				if (Array.isArray(response?.items)) setStaffOnline(prev => keepStaffListIfSame(prev, response.items));
 			});
 			const activeConversationId = conversationIdRef.current;
 			const secondaryId = secondaryConversationIdRef.current;
@@ -18882,7 +18954,7 @@ function WhatsAppWorkspaceContent() {
 		};
 		// Team presence (admins only; the server sends nothing to others).
 		socket.on('whatsapp:presence', payload => {
-			if (Array.isArray(payload?.items)) setStaffOnline(payload.items);
+			if (Array.isArray(payload?.items)) setStaffOnline(prev => keepStaffListIfSame(prev, payload.items));
 		});
 		socket.on('whatsapp:presence-watch', payload => {
 			if (payload?.accountId && accountIdRef.current && payload.accountId !== accountIdRef.current) return;
@@ -20493,7 +20565,19 @@ function WhatsAppWorkspaceContent() {
 
 	const persistConversationMessages = (targetConversationId, updater) => {
 		const previous = messagesCacheRef.current.get(targetConversationId);
-		const nextItems = updater(previous?.items || []);
+		// Start from what is on screen when this chat is open (plus anything only the cache has).
+		// The cache alone could be gone: it lives in React Query without a subscriber, so it is
+		// dropped after gcTime, and sending a voice note / photo / file then rebuilt the thread
+		// from [] and left only the new message on screen.
+		const onScreen =
+			conversationIdRef.current === targetConversationId &&
+			messagesOwnerRef.current === targetConversationId
+				? conversationMessagesRef.current || []
+				: [];
+		const base = onScreen.length
+			? mergeMessages(previous?.items || [], onScreen, targetConversationId)
+			: previous?.items || [];
+		const nextItems = updater(base);
 		messagesCacheRef.current.set(targetConversationId, {
 			...previous,
 			items: nextItems,
@@ -23649,7 +23733,11 @@ function WhatsAppWorkspaceContent() {
 		const preserveScroll = options.preserveScroll !== false;
 		const ignoreThrottle = Boolean(options.ignoreThrottle);
 		const forceProvider = Boolean(options.forceProvider);
-		const oldest = conversationMessagesRef.current[0];
+		// The first row can be one the client made up (inbox preview, pending send). Page from the
+		// oldest row the server knows: a stored UUID, or a phone row ("live:<providerId>").
+		const oldest =
+			(conversationMessagesRef.current || []).find(item => isServerMessageCursor(item)) ||
+			null;
 		const starredOnly =
 			conversationFilterRef.current === 'important' ||
 			conversationFilterRef.current === 'starred';
@@ -28771,48 +28859,13 @@ function WhatsAppWorkspaceContent() {
 																		count={selectedConversation.presence?.typers?.length || 1}
 																	/>
 																)
-																: (() => {
-																		void presenceClock;
-																		const subtitle = conversationPresenceSubtitle(
-																			selectedConversation.presence,
-																			locale,
-																			formatLastSeen,
-																		);
-																		if (subtitle?.kind === 'online') {
-																			return (
-																				<span className="wa-online-status inline-flex items-center gap-1.5">
-																					<span className="wa-online-dot" aria-hidden="true" />
-																					{subtitle.text}
-																				</span>
-																			);
-																		}
-																		if (subtitle?.kind === 'lastSeen') {
-																			return (
-																				<span className="wa-last-seen text-slate-400">
-																					{subtitle.text}
-																				</span>
-																			);
-																		}
-																		if (subtitle?.kind === 'offline') {
-																			return (
-																				<span className="wa-offline-status inline-flex items-center gap-1.5 text-slate-400">
-																					<span
-																						className="inline-block h-2 w-2 rounded-full bg-slate-400"
-																						aria-hidden="true"
-																					/>
-																					{subtitle.text}
-																				</span>
-																			);
-																		}
-																		return (
-																			<span className="wa-chat-assignee-pill inline-flex max-w-full items-center gap-1.5">
-																				<UserRound size={12} strokeWidth={2.3} className="shrink-0 opacity-70" />
-																				<span className="truncate">
-																					{selectedConversation.assignedUser?.name || t.unassign}
-																				</span>
-																			</span>
-																		);
-																	})()}
+																: (
+																	<ChatHeaderPresenceSubtitle
+																		presence={selectedConversation.presence}
+																		locale={locale}
+																		assigneeName={selectedConversation.assignedUser?.name || t.unassign}
+																	/>
+																)}
 													</p>
 													<p className="wa-chat-contact-hint hidden text-[11px] text-[#667781]">
 														{selectedConversation.isTyping || selectedConversation.typing || selectedConversation.presence?.typing
@@ -29749,6 +29802,22 @@ function WhatsAppWorkspaceContent() {
 															<span>{t.older}</span>
 														</button>
 													)
+												) : !activeMessageGroup &&
+												  canUseWhatsApp &&
+												  !demo.settings.enabled &&
+												  conversationMessages.length > 0 ? (
+													// The server ran out of stored history; the phone may still have more.
+													<button
+														type="button"
+														className="wa-load-older is-phone"
+														onClick={() => {
+															hasMoreMessagesRef.current = true;
+															void loadOlder({ forceProvider: true, ignoreThrottle: true });
+														}}
+													>
+														<ChevronUp size={13} strokeWidth={2.4} />
+														<span>{t.olderFromPhone || t.older}</span>
+													</button>
 												) : null}
 												<WaVirtualRowsHost virtual={messageVirtual}>
 												{({ items: virtualItems, totalSize: virtualTotalSize }) => (

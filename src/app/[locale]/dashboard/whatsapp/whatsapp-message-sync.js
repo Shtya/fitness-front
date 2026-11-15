@@ -21,6 +21,7 @@ export const MESSAGES_CACHE_TTL_MS = 5 * 60_000;
 /** Skip provider sync/latest while hydration watermark is this fresh. */
 export const PROVIDER_SYNC_FRESH_MS = 5 * 60_000;
 export const SPARSE_THREAD_ROWS = 5;
+export const SPARSE_RETRY_MS = 30 * 60_000;
 
 export function hydrationTimestampMs(value) {
 	if (value == null || value === '') return 0;
@@ -204,12 +205,17 @@ export function shouldProviderBackfill({
 		return { needed: false, reason: 'cooldown' };
 	}
 	if (forceProvider) return { needed: true, reason: 'forced' };
+	const lastPullAt = Math.max(
+		hydrationTimestampMs(lastProviderSyncAt),
+		hydrationTimestampMs(providerHydratedAt),
+	);
+	// Mirrors SPARSE_RETRY_MS on the server: ask again for a chat that is still (nearly) empty.
+	const retryDue = lastPullAt > 0 && now - lastPullAt >= SPARSE_RETRY_MS;
 	if (itemCount <= 0) {
-		if (
-			hydrationTimestampMs(lastProviderSyncAt) > 0 ||
-			hydrationTimestampMs(providerHydratedAt) > 0
-		) {
-			return { needed: false, reason: 'hydrated_empty' };
+		if (lastPullAt > 0) {
+			return retryDue
+				? { needed: true, reason: 'empty_retry' }
+				: { needed: false, reason: 'hydrated_empty' };
 		}
 		return { needed: true, reason: 'empty_thread' };
 	}
@@ -221,6 +227,9 @@ export function shouldProviderBackfill({
 		hydrationTimestampMs(providerHydratedAt) <= 0
 	) {
 		return { needed: true, reason: 'sparse_unhydrated' };
+	}
+	if (itemCount < SPARSE_THREAD_ROWS && retryDue) {
+		return { needed: true, reason: 'sparse_retry' };
 	}
 	// Local Postgres rows are the replica. Do not POST sync/latest on open
 	// just because the 5-minute watermark expired or was never stored on the client.

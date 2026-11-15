@@ -115,6 +115,12 @@ export async function fetchMessages(conversationId, params = {}) {
  */
 export function useWhatsAppQueryCache() {
 	const queryClient = useQueryClient();
+	// Threads and inbox pages are written with setQueryData and nothing subscribes to them, so
+	// the app default gcTime (10 min) silently dropped an open chat's messages. Keep them an hour.
+	if (!queryClient.getQueryDefaults(['whatsapp', 'messages'])?.gcTime) {
+		queryClient.setQueryDefaults(['whatsapp', 'messages'], { gcTime: 60 * 60_000 });
+		queryClient.setQueryDefaults(['whatsapp', 'conversations'], { gcTime: 60 * 60_000 });
+	}
 
 	const getConversationsCache = useCallback(
 		(accountId, params = { page: 1 }) => {

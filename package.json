@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "prebuild": "node scripts/patch-next-font-loader.cjs",
     "build": "next build",
     "start": "next start",
+    "postinstall": "node scripts/patch-next-font-loader.cjs",
     "lint": "next lint",
     "test:whatsapp": "node --test \"src/app/*/dashboard/whatsapp/**/*.test.mjs\"",
     "android": "expo start --android",

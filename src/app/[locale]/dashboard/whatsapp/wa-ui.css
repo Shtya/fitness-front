@@ -14656,7 +14656,7 @@ html.dark .wa-message-bubble.wa-quote-flash {
 
 /* The page's generic desktop rules paint every flex <section> #fafafa and blank composer
    textareas with !important; the split pane needs its own theme colours over them. */
-/* Must out-rank `.wa-web-desktop section.flex.min-h-0.min-w-0.flex-col` (also !important). */
+/* Kept above the thread-pane rules in globals.css (also !important). */
 html .wa-web-desktop section.wa-split.wa-split-pane.flex.min-h-0.min-w-0.flex-col {
 	background: var(--d-app, #ffffff) !important;
 }
