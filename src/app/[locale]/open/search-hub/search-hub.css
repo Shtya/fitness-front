@@ -145,3 +145,18 @@
 	.sh__group li { flex-wrap: wrap; }
 	.sh__item { flex-basis: calc(100% - 70px); }
 }
+
+/* Pop-up blocked: steps + one-per-click fallback */
+.sh__notice ol { list-style: decimal; margin: 8px 0 0; padding-inline-start: 18px; font-size: 13px; line-height: 1.6; color: var(--sh-text); }
+.sh__notice .sh__muted { font-size: 12px; color: var(--sh-text-2); }
+.sh__notice code {
+	padding: 1px 6px; border-radius: 6px; background: var(--sh-bg);
+	font-family: var(--font-roboto-mono, ui-monospace, monospace); font-size: 11.5px;
+}
+.sh__next {
+	display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; max-width: 100%;
+	height: 36px; padding: 0 14px; border: 0; border-radius: 10px; cursor: pointer;
+	background: #d97706; color: #fff; font-size: 13px; font-weight: 700;
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sh__next:hover { filter: brightness(1.08); }

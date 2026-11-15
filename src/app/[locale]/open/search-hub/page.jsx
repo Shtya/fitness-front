@@ -35,7 +35,14 @@ const COPY = {
 		tipTitle: 'Every search opens as a tab in this window',
 		tip: 'If this page opened as a tab instead of its own window, drag it out of the tab bar first, then press Open selected.',
 		blocked: (k) => `The browser blocked ${k} tab${k === 1 ? '' : 's'}`,
-		blockedHow: 'Click the blocked pop-up icon at the right of the address bar → “Always allow pop-ups from this site” → press Open selected again.',
+		blockedWhy: 'Browsers allow one new tab per click unless you allow pop-ups for this site. Do this once:',
+		blockedSteps: [
+			'Click the blocked pop-up icon (window with a red ✕) at the right end of the address bar.',
+			'Choose “Always allow pop-ups and redirects from this site”, then Done.',
+			'Press “Open selected in tabs” again — every tab opens at once.',
+		],
+		blockedSettings: 'No icon? Chrome settings:',
+		openNext: (k) => `Open next (${k} left)`,
 		openedCount: (a, b) => `${a} of ${b} opened`,
 		groups: { web: 'Web', social: 'Social', phone: 'Phone lookups', image: 'Photo (reverse image)' },
 		open: 'Open',
@@ -57,7 +64,14 @@ const COPY = {
 		tipTitle: 'كل عمليات البحث بتفتح كتابات في النافذة دي',
 		tip: 'لو الصفحة دي فتحت كتاب مش كنافذة لوحدها، اسحبها لبره شريط التابات الأول، وبعدين دوس افتح المختارين.',
 		blocked: (k) => `المتصفح منع ${k} تبويب`,
-		blockedHow: 'دوس على أيقونة النوافذ المحظورة يمين شريط العنوان ← «السماح دائمًا بالنوافذ المنبثقة» ← دوس افتح المختارين تاني.',
+		blockedWhy: 'المتصفح بيسمح بتاب واحد بس لكل ضغطة، إلا لو سمحت بالنوافذ المنبثقة للموقع. اعملها مرة واحدة:',
+		blockedSteps: [
+			'دوس على أيقونة النوافذ المحظورة (نافذة عليها ✕ أحمر) آخر شريط العنوان.',
+			'اختار «السماح دائمًا بالنوافذ المنبثقة وإعادة التوجيه من هذا الموقع» ثم تم.',
+			'دوس «افتح المختارين في تابات» تاني — كل التابات هتفتح مرة واحدة.',
+		],
+		blockedSettings: 'مفيش أيقونة؟ من إعدادات Chrome:',
+		openNext: (k) => `افتح التالي (باقي ${k})`,
 		openedCount: (a, b) => `اتفتح ${a} من ${b}`,
 		groups: { web: 'ويب', social: 'سوشيال', phone: 'البحث بالرقم', image: 'الصورة (بحث عكسي)' },
 		open: 'افتح',
@@ -75,15 +89,31 @@ export default function SearchHubPage() {
 	const [payload, setPayload] = useState(undefined);
 	const [selected, setSelected] = useState(() => new Set());
 	const [opened, setOpened] = useState(() => new Set());
-	const [blocked, setBlocked] = useState(0);
+	/** Searches the pop-up blocker refused — opened one per click by "Open next". */
+	const [pending, setPending] = useState([]);
+	const blocked = pending.length;
+	const openNext = () => {
+		const [head, ...rest] = pending;
+		if (head && openTab(head.url)) {
+			setOpened((prev) => new Set([...prev, head.id]));
+			setPending(rest);
+		}
+	};
 	const [copied, setCopied] = useState(false);
 
 	useEffect(() => {
-		const id = window.location.hash.replace(/^#/, '');
-		setHubId(id);
-		const data = id ? readHubPayload(id) : null;
-		setPayload(data);
-		if (data?.selectedIds) setSelected(new Set(data.selectedIds));
+		const load = () => {
+			const id = window.location.hash.replace(/^#/, '');
+			const data = id ? readHubPayload(id) : null;
+			setHubId(id);
+			setPayload(data);
+			setSelected(new Set(data?.selectedIds || []));
+			setOpened(new Set());
+			setPending([]);
+		};
+		load();
+		window.addEventListener('hashchange', load);
+		return () => window.removeEventListener('hashchange', load);
 	}, []);
 
 	const city = payload?.cityId ? cityById(payload.cityId) : null;
@@ -113,17 +143,18 @@ export default function SearchHubPage() {
 	/** Opens every selected search as a tab in THIS window. Stops at the first block (the rest would be blocked too). */
 	const openAll = useCallback(() => {
 		const ok = [];
-		let fails = 0;
+		let rest = [];
 		for (let i = 0; i < bulk.length; i += 1) {
 			if (openTab(bulk[i].url)) {
 				ok.push(bulk[i].id);
 			} else {
-				fails = bulk.length - i;
+				rest = bulk.slice(i);
 				break;
 			}
 		}
+		const fails = rest.length;
 		setOpened((prev) => new Set([...prev, ...ok]));
-		setBlocked(fails);
+		setPending(rest);
 		try {
 			if (bulk.length > 1) window.localStorage.setItem(POPUPS_OK_KEY, fails ? '0' : '1');
 		} catch {
@@ -257,7 +288,20 @@ export default function SearchHubPage() {
 						<ShieldAlert size={18} aria-hidden />
 						<div>
 							<strong>{copy.blocked(blocked)}</strong>
-							<p>{copy.blockedHow}</p>
+							<p>{copy.blockedWhy}</p>
+							<ol>
+								{copy.blockedSteps.map((step) => (
+									<li key={step}>{step}</li>
+								))}
+							</ol>
+							<p className="sh__muted">
+								{copy.blockedSettings} <code dir="ltr">chrome://settings/content/popups</code> →{' '}
+								<code dir="ltr">{typeof window !== 'undefined' ? window.location.origin : ''}</code>
+							</p>
+							<button type="button" className="sh__next" onClick={openNext}>
+								<ExternalLink size={14} aria-hidden />
+								{copy.openNext(blocked)} · {ar ? pending[0]?.labelAr : pending[0]?.labelEn}
+							</button>
 						</div>
 					</div>
 				) : (

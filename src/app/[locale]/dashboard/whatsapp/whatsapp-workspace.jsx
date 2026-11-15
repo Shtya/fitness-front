@@ -487,6 +487,7 @@ import {
 import { LockKeyhole as PageLockIcon, Keyboard as TypingLogIcon, Command as QuickSwitchIcon, Timer as DelayedSendIcon } from 'lucide-react';
 import WhatsAppQuickSwitcher, { recordQuickSwitchUse } from './WhatsAppQuickSwitcher';
 import TeamPresenceButton from './TeamPresenceButton';
+import SearchContactsSection from './SearchContactsSection';
 
 /** Extra words the quick switcher matches on (Franco / English spellings people type). */
 const QUICK_SWITCH_KEYWORDS = {
@@ -2001,6 +2002,17 @@ const tabs = [
 
 // The only tabs that render the sample profile instead of the real account.
 const SHOWCASE_TABS = new Set(['chats', 'reading', 'prompts', 'settings']);
+
+/**
+ * A reloaded chat list replaces the old one; keep the chat that is open on screen when the new
+ * page does not include it (opened from search contacts, a group member, a notification…), or
+ * the open chat vanished on the next reload.
+ */
+function keepOpenConversation(nextItems, currentItems, openId) {
+	if (!openId || nextItems.some(item => item.id === openId)) return nextItems;
+	const open = (currentItems || []).find(item => item.id === openId);
+	return open ? [...nextItems, open] : nextItems;
+}
 
 /** Chat ⋮ menu items that are no longer shown (see chatToolbarActions). */
 const CHAT_MENU_RETIRED_ITEMS = new Set(['media', 'messages', 'groups', 'group-select', 'schedule', 'split']);
@@ -13622,6 +13634,8 @@ function WhatsAppWorkspaceContent() {
 	const [newAccountName, setNewAccountName] = useState('');
 	const [addingAccount, setAddingAccount] = useState(false);
 	const [chatSearch, setChatSearch] = useState('');
+	/** The search text the server last answered (its results are then shown as they are). */
+	const [serverSearchQuery, setServerSearchQuery] = useState('');
 	const [chatListCollapsed, setChatListCollapsed] = useState(() => {
 		if (typeof window === 'undefined') return false;
 		try {
@@ -15446,7 +15460,9 @@ function WhatsAppWorkspaceContent() {
 			if (isChannelsInboxFilter(conversationFilter) ? !isChannelConversation(conversation) : isChannelConversation(conversation)) {
 				return false;
 			}
-			if (archivedView ? !conversation.isArchived : conversation.isArchived) {
+			// Searching the whole inbox also shows archived chats, like WhatsApp.
+			const searchingAll = Boolean(chatSearch.trim()) && !archivedView;
+			if (!searchingAll && (archivedView ? !conversation.isArchived : conversation.isArchived)) {
 				return false;
 			}
 			// Chip filters (Unread / Favorites / Important) apply to the loaded All inbox
@@ -15464,22 +15480,42 @@ function WhatsAppWorkspaceContent() {
 		});
 		const sorted = sortConversationsByActivity(scoped);
 		if (!chatSearch.trim()) return sorted;
+		// The server already answered this exact search (it also matches saved/phonebook names
+		// and the same person's other contact): trust it. Re-filtering by the displayed title
+		// dropped chats it found by a name that is not the one shown.
+		if (serverSearchQuery && serverSearchQuery === chatSearch.trim()) return sorted;
 		const q = foldWhatsAppSearchText(chatSearch);
 		if (!q) return sorted;
+		const qDigits = chatSearch.replace(/\D/g, '');
 		return sorted.filter(conversation => {
-			const title = foldWhatsAppSearchText(conversationTitle(conversation));
-			const phone = foldWhatsAppSearchText(
+			const names = foldWhatsAppSearchText(
+				[
+					conversationTitle(conversation),
+					conversation.contact?.name,
+					conversation.contact?.phonebookName,
+					conversation.contact?.localName,
+					conversation.contact?.pushName,
+				]
+					.filter(Boolean)
+					.join(' '),
+			);
+			const phone = String(
 				conversation.phoneNumber ||
 					conversation.contactPhone ||
+					conversation.contact?.phoneNumber ||
 					conversation.providerChatId ||
 					'',
-			);
+			).replace(/\D/g, '');
 			const preview = foldWhatsAppSearchText(
 				conversation.lastMessage?.text || conversation.lastMessagePreview || '',
 			);
-			return title.includes(q) || phone.includes(q) || preview.includes(q);
+			return (
+				names.includes(q) ||
+				(qDigits.length >= 3 && phone.includes(qDigits)) ||
+				preview.includes(q)
+			);
 		});
-	}, [effectiveConversations, chatSearch, conversationFilter]);
+	}, [effectiveConversations, chatSearch, conversationFilter, serverSearchQuery]);
 
 	const chatListVisible = isConversationWorkspaceTab(activeTab);
 	const chatListScrollScope = `${accountId || ''}:${conversationFilter}:${chatSearch.trim()}:${assignmentFilter || ''}`;
@@ -16384,9 +16420,9 @@ function WhatsAppWorkspaceContent() {
 			if (useCache) {
 				conversationsCacheRef.current.set(id, { ...next, items: merged });
 			}
-			setConversations(merged);
+			setConversations(current => keepOpenConversation(merged, current, conversationIdRef.current));
 		} else {
-			setConversations(nextItems);
+			setConversations(current => keepOpenConversation(nextItems, current, conversationIdRef.current));
 		}
 		const requestedConversationId = deltaSince ? null : readWhatsAppDeepLink().conversationId;
 		// One try against the fresh list: a chat that is not on it must not pop open later.
@@ -16574,12 +16610,14 @@ function WhatsAppWorkspaceContent() {
 
 			setSearchingConversations(true);
 			try {
+				const answeredQuery = chatSearchRef.current;
 				await loadConversations(accountId, 1, false, {
 					force: true,
-					search: chatSearchRef.current,
+					search: answeredQuery,
 					filter: conversationFilterRef.current,
 					assignedUserId: assignmentFilterRef.current,
 				});
+				if (stillCurrent()) setServerSearchQuery(answeredQuery);
 			} catch (error) {
 				if (isRequestCancelled(error)) return;
 				if (!stillCurrent()) return;
@@ -25286,6 +25324,24 @@ function WhatsAppWorkspaceContent() {
 		});
 	};
 
+	/** A contact picked under the search: open their chat (or start it) by their exact id. */
+	const openContactFromSearch = async contact => {
+		if (!accountId || !contact) return;
+		try {
+			const { data } = await api.post(`/whatsapp/accounts/${accountId}/conversations/open`, {
+				chatId: contact.waId || contact.phone?.digits,
+				title: contact.displayName || contact.localName || null,
+			});
+			if (!data?.id) return;
+			setChatSearch('');
+			openConversationFromContact(data.id, data);
+		} catch (error) {
+			toast.error(
+				error?.response?.data?.message || (locale === 'ar' ? 'تعذر فتح المحادثة' : 'Could not open the chat'),
+			);
+		}
+	};
+
 	const openConversationFromContact = (conversationId, conversation) => {
 		if (!conversationId) return;
 		if (conversation?.id) {
@@ -28463,57 +28519,66 @@ function WhatsAppWorkspaceContent() {
 											)}
 										</div>
 										) : (
-										<Empty
-											icon={!syncingInbox && chatSearch.trim() ? Search : MessageCircle}
-											hint={
-												!syncingInbox && chatSearch.trim()
-													? locale === 'ar'
-														? 'تحقق من الإملاء أو ابحث برقم الهاتف.'
-														: 'Check the spelling or search by phone number.'
-													: null
-											}
-											action={
-												syncingInbox
-													? null
-													: chatSearch.trim()
-														? {
-																label: locale === 'ar' ? 'مسح البحث' : 'Clear search',
-																onClick: () => setChatSearch(''),
-															}
-														: ['unread', 'favorites', 'channels'].includes(conversationFilter)
-															? {
-																	label: locale === 'ar' ? 'عرض كل المحادثات' : 'Show all chats',
-																	onClick: () => setConversationFilter('all'),
-																}
+										<SearchContactsSection
+											accountId={!syncingInbox && chatSearch.trim() ? accountId : null}
+											query={chatSearch}
+											ar={locale === 'ar'}
+											excludeConversationIds={null}
+											onOpen={openContactFromSearch}
+											fallback={
+												<Empty
+													icon={!syncingInbox && chatSearch.trim() ? Search : MessageCircle}
+													hint={
+														!syncingInbox && chatSearch.trim()
+															? locale === 'ar'
+																? 'تحقق من الإملاء أو ابحث برقم الهاتف.'
+																: 'Check the spelling or search by phone number.'
 															: null
-											}
-											title={
-												syncingInbox
-													? syncStage === 'fetching_chats' ||
-														(syncProgress >= 25 && syncProgress <= 45)
-														? t.syncingChatsFetching
-														: t.syncingChats
-														: chatSearch.trim()
-															? locale === 'ar'
-																? `لا توجد محادثات تطابق «${chatSearch.trim()}»`
-																: `No chats match “${chatSearch.trim()}”`
-														: conversationFilter === 'unread'
-															? locale === 'ar'
-																? 'لا توجد محادثات غير مقروءة'
-																: 'No unread chats'
-														: conversationFilter === 'favorites'
-															? locale === 'ar'
-																? 'لا توجد محادثات في المفضلة'
-																: 'No favourite chats'
-														: conversationFilter === 'channels'
-															? t.noChannels
-														: conversationFilter === 'archived'
-															? t.noArchivedConversations
-															: conversationFilter === 'important'
-																? t.noImportantConversations
-															: conversationScope === 'assigned'
-															? t.noAssignedConversations
-															: t.noConversations
+													}
+													action={
+														syncingInbox
+															? null
+															: chatSearch.trim()
+																? {
+																		label: locale === 'ar' ? 'مسح البحث' : 'Clear search',
+																		onClick: () => setChatSearch(''),
+																	}
+																: ['unread', 'favorites', 'channels'].includes(conversationFilter)
+																	? {
+																			label: locale === 'ar' ? 'عرض كل المحادثات' : 'Show all chats',
+																			onClick: () => setConversationFilter('all'),
+																		}
+																	: null
+													}
+													title={
+														syncingInbox
+															? syncStage === 'fetching_chats' ||
+																(syncProgress >= 25 && syncProgress <= 45)
+																? t.syncingChatsFetching
+																: t.syncingChats
+																: chatSearch.trim()
+																	? locale === 'ar'
+																		? `لا توجد محادثات تطابق «${chatSearch.trim()}»`
+																		: `No chats match “${chatSearch.trim()}”`
+																: conversationFilter === 'unread'
+																	? locale === 'ar'
+																		? 'لا توجد محادثات غير مقروءة'
+																		: 'No unread chats'
+																: conversationFilter === 'favorites'
+																	? locale === 'ar'
+																		? 'لا توجد محادثات في المفضلة'
+																		: 'No favourite chats'
+																: conversationFilter === 'channels'
+																	? t.noChannels
+																: conversationFilter === 'archived'
+																	? t.noArchivedConversations
+																	: conversationFilter === 'important'
+																		? t.noImportantConversations
+																	: conversationScope === 'assigned'
+																	? t.noAssignedConversations
+																	: t.noConversations
+													}
+												/>
 											}
 										/>
 										)
@@ -28567,6 +28632,15 @@ function WhatsAppWorkspaceContent() {
 													)}
 												</div>
 											)}
+											{chatSearch.trim() ? (
+												<SearchContactsSection
+													accountId={accountId}
+													query={chatSearch}
+													ar={locale === 'ar'}
+													excludeConversationIds={new Set(filteredConversations.map(item => item.id))}
+													onOpen={openContactFromSearch}
+												/>
+											) : null}
 										</>
 									)}
 								</div>

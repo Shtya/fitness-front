@@ -14988,3 +14988,91 @@ html.dark .wa-qs .wa-qs__tile {
 	inset-inline-end: auto;
 	z-index: 1300;
 }
+
+/* ---------- Contacts under the chat-list search ---------- */
+.wa-search-contacts {
+	padding: 6px 0 12px;
+}
+
+.wa-search-contacts__head {
+	margin: 0;
+	padding: 14px 18px 6px;
+	color: var(--d-accent-text, #1b8755);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.wa-search-contacts ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.wa-search-contacts__row {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: 12px;
+	padding: 9px 16px;
+	text-align: start;
+	transition: background-color 100ms ease;
+}
+
+.wa-search-contacts__row:hover {
+	background: var(--d-hover, #f5f6f6);
+}
+
+.wa-search-contacts__avatar {
+	display: grid;
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	overflow: hidden;
+	place-items: center;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--d-accent, #1daa61) 14%, transparent);
+	color: var(--d-accent-text, #1b8755);
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.wa-search-contacts__avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wa-search-contacts__name {
+	display: block;
+	overflow: hidden;
+	color: var(--d-text, #111b21);
+	font-size: 15px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-search-contacts__phone {
+	display: block;
+	color: var(--d-meta, #667781);
+	font-size: 12.5px;
+}
+
+.wa-search-contacts__action {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 5px;
+	color: var(--d-accent-text, #1b8755);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.wa-search-contacts__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 28px 16px;
+	color: var(--d-meta, #667781);
+	font-size: 13px;
+}
