@@ -1125,6 +1125,11 @@ export default function WhatsAppWorkspace() {
 }
 
 /** Failed media bubble id → original File + send options, so Retry can re-upload in this session. */
+/** Older-history pages are smaller than the first page: each one renders and lays out in one go
+ *  while the scroll position is restored, so 50 rows keep that step short. */
+const OLDER_PAGE_SIZE = 50;
+
+/** Failed media bubble id → original File + send options, so Retry can re-upload in this session. */
 const failedMediaRetries = new Map();
 const FAILED_MEDIA_RETRY_MAX = 20;
 
@@ -13225,7 +13230,7 @@ function WhatsAppWorkspaceContent() {
 				{
 					params: {
 						before: oldest?.id,
-						limit: MESSAGE_PAGE_SIZE,
+						limit: OLDER_PAGE_SIZE,
 						live: 0,
 						starredOnly: starredOnly ? 1 : undefined,
 					},
@@ -13246,7 +13251,7 @@ function WhatsAppWorkspaceContent() {
 				!starredOnly &&
 				canUseWhatsApp &&
 				!demo.settings.enabled &&
-				(forceProvider || local.length < MESSAGE_PAGE_SIZE);
+				(forceProvider || local.length < OLDER_PAGE_SIZE);
 			if (shouldSyncProvider) {
 				try {
 					const synced = await api.post(
@@ -13254,7 +13259,7 @@ function WhatsAppWorkspaceContent() {
 						null,
 						{
 							params: {
-								limit: MESSAGE_PAGE_SIZE,
+								limit: OLDER_PAGE_SIZE,
 								force: forceProvider ? 1 : undefined,
 							},
 							timeout: 90_000,
@@ -13284,7 +13289,7 @@ function WhatsAppWorkspaceContent() {
 			const previousCount = conversationMessagesRef.current.length;
 			const next = mergeMessages(incoming, previousItems, targetConversationId);
 			const added = Math.max(0, next.length - previousCount);
-			const dbHasMore = local.length >= MESSAGE_PAGE_SIZE;
+			const dbHasMore = local.length >= OLDER_PAGE_SIZE;
 			const hasMore =
 				typeof provider?.hasMore === 'boolean'
 					? provider.hasMore || dbHasMore
@@ -18905,8 +18910,6 @@ function WhatsAppWorkspaceContent() {
 											const prevTop = lastThreadScrollTopRef.current;
 											const scrollingUp = scrollTop < prevTop - 2;
 											lastThreadScrollTopRef.current = scrollTop;
-											const distanceFromBottom = threadDistanceFromBottom(box);
-
 											userScrollingThreadRef.current = true;
 											if (userScrollIdleTimerRef.current) {
 												window.clearTimeout(userScrollIdleTimerRef.current);
@@ -18914,6 +18917,10 @@ function WhatsAppWorkspaceContent() {
 											userScrollIdleTimerRef.current = window.setTimeout(() => {
 												userScrollingThreadRef.current = false;
 											}, 250);
+											// An older-messages restore is moving scrollTop itself; none of the checks below may
+											// act then, and reading scrollHeight here forced a layout of the freshly prepended rows.
+											if (pendingOlderRestore()) return;
+											const distanceFromBottom = threadDistanceFromBottom(box);
 
 											const wasPinned = pinThreadToBottomRef.current;
 											const openingThread =
