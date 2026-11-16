@@ -87,6 +87,10 @@ export async function fetchConversations(accountId, params = {}) {
 			typeof data?.archivedUnreadCount === 'number' && Number.isFinite(data.archivedUnreadCount)
 				? data.archivedUnreadCount
 				: 0,
+		keepInTouchDueCount:
+			typeof data?.keepInTouchDueCount === 'number' && Number.isFinite(data.keepInTouchDueCount)
+				? data.keepInTouchDueCount
+				: undefined,
 		cachedAt: Date.now(),
 	};
 }

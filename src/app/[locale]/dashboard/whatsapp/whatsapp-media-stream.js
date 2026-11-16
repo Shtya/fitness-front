@@ -88,6 +88,26 @@ export async function getAttachmentStreamUrl(attachmentId, hint = null) {
 	return requestStreamUrl(id);
 }
 
+/**
+ * The cached signed URL, synchronously, or null. A media row that mounts again (the virtualised
+ * thread unmounts rows you scroll past) can then render its <img> in the first paint instead of
+ * a loading state followed by the picture.
+ */
+export function peekAttachmentStreamUrl(attachmentId, hint = null) {
+	const id = String(attachmentId || '');
+	if (!id) return null;
+	const now = Date.now();
+	const cached = streamUrlCache.get(id);
+	if (cached?.url && cached.expiresAtMs - 20_000 > now) return cached.url;
+	if (hint?.streamUrl && hint?.streamExpiresAt) {
+		const hintExpiry = Date.parse(String(hint.streamExpiresAt));
+		if (Number.isFinite(hintExpiry) && hintExpiry - 20_000 > now) {
+			return rememberAttachmentStreamUrl(id, hint.streamUrl, hint.streamExpiresAt);
+		}
+	}
+	return null;
+}
+
 export function forgetAttachmentStreamUrl(attachmentId) {
 	const id = String(attachmentId || '');
 	if (id) streamUrlCache.delete(id);

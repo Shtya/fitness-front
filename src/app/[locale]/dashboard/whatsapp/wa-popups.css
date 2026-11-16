@@ -105,7 +105,9 @@ html[data-theme-mode='dark'] .wa-pop .text-white.bg-\[var\(--color-primary-600\)
 	color: var(--wa-ui-accent-strong) !important;
 }
 
-.wa-pop [data-slot='dialog-title'] > span:first-child:has(> svg) svg {
+/* A plain child selector: the :has(> svg) form made every <svg> on the page (each message's
+   icons) restyle whenever an icon was added, i.e. on every scroll step of the chat. */
+.wa-pop [data-slot='dialog-title'] > span:first-child > svg {
 	width: 20px;
 	height: 20px;
 }

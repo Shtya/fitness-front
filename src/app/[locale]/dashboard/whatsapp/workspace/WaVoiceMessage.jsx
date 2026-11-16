@@ -10,6 +10,7 @@ import { getAttachmentStreamUrl, forgetAttachmentStreamUrl, voicePlaybackFormat,
 import { rawDemoId } from '../demo/demo-read-model';
 import { forgetAttachmentBlob, getCachedAttachmentBlob, isPersistedAttachmentId, isUsefulWaveform, prepareVoicePlaybackFromBlob, requestAttachmentBlob } from './wa-attachment-blobs';
 import { Avatar } from './WaAvatar';
+import { getVoiceSpeed, nextVoiceSpeed, setVoiceSpeed, useVoiceSpeed } from './wa-voice-speed';
 
 /**
  * Defers media requests until the bubble is close to the viewport. Only an IntersectionObserver:
@@ -500,7 +501,8 @@ export function VoiceMessage({
 	const [loadFailed, setLoadFailed] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [playbackUrl, setPlaybackUrl] = useState(null);
-	const [playbackRate, setPlaybackRate] = useState(1);
+	// Shared by every voice note: the speed you last picked is the default for the next one.
+	const playbackRate = useVoiceSpeed();
 	const [prefetchNonce, setPrefetchNonce] = useState(0);
 	const fallbackBars = useMemo(() => seededWaveform(seed, 36), [seed]);
 	const [bars, setBars] = useState(fallbackBars);
@@ -989,7 +991,7 @@ export function VoiceMessage({
 						}
 						pendingSeekRef.current = null;
 					}
-					audio.playbackRate = playbackRate;
+					audio.playbackRate = getVoiceSpeed();
 					claimVoicePlayback(playerTokenRef.current);
 					await audio.play();
 				};
@@ -1101,10 +1103,13 @@ export function VoiceMessage({
 	);
 
 	const cyclePlaybackRate = () => {
-		const next = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1;
-		setPlaybackRate(next);
-		if (audioRef.current) audioRef.current.playbackRate = next;
+		setVoiceSpeed(nextVoiceSpeed(playbackRate));
 	};
+
+	// Follow the shared speed, also when it is changed on another voice note.
+	useEffect(() => {
+		if (audioRef.current) audioRef.current.playbackRate = playbackRate;
+	}, [playbackRate]);
 
 	const seekToRatio = ratio => {
 		if (!duration || loadFailed) return;

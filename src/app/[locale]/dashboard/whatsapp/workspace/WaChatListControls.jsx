@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, ChevronRight, ListFilter, Pin, Settings, Star, Flag, Radio } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, HeartHandshake, ListFilter, Pin, Settings, Star, Flag, Radio } from 'lucide-react';
 import { Avatar } from './WaAvatar';
 
 export function statusMeta(status, t, account) {
@@ -31,7 +31,7 @@ export function statusMeta(status, t, account) {
 }
 
 /** Icons for the desktop filter pills ("All" and "Unread" carry a count instead). */
-const FILTER_PILL_ICONS = { favorites: Star, channels: Radio, important: Flag };
+const FILTER_PILL_ICONS = { favorites: Star, keep_in_touch: HeartHandshake, channels: Radio, important: Flag };
 
 export function ConversationFilterDropdown({ value, onChange, labels, variant = 'dropdown', counts = {} }) {
 	const [open, setOpen] = useState(false);
@@ -43,6 +43,7 @@ export function ConversationFilterDropdown({ value, onChange, labels, variant = 
 		{ value: 'all', label: labels.all },
 		{ value: 'unread', label: labels.unread },
 		{ value: 'favorites', label: labels.favorites },
+		...(labels.keepInTouch ? [{ value: 'keep_in_touch', label: labels.keepInTouch }] : []),
 		...(labels.channels ? [{ value: 'channels', label: labels.channels }] : []),
 		{ value: 'important', label: labels.important },
 	];

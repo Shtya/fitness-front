@@ -521,6 +521,7 @@ import {
 } from './whatsapp-privacy-blur';
 import { forgetAttachmentBlob, getCachedAttachmentBlob, isPersistedAttachmentId, isUsefulWaveform, prepareVoicePlaybackFromBlob, readBlobErrorMessage, requestAttachmentBlob } from './workspace/wa-attachment-blobs';
 import { Avatar } from './workspace/WaAvatar';
+import { KEEP_IN_TOUCH_FILTER } from './workspace/wa-keep-in-touch';
 import { MediaOverflowMenu, VoiceMessage, formatClock, pauseAllVoicePlayers, useNearViewport } from './workspace/WaVoiceMessage';
 import { ChatImageViewer, ProfilePhotoViewer } from './workspace/WaImageViewer';
 import { LocationMessage } from './workspace/WaLocation';
@@ -903,6 +904,18 @@ const SHOWCASE_TABS = new Set(['chats', 'reading', 'prompts', 'settings']);
  * The presence ping returns a fresh list every 10s even when nobody came or left; keeping the
  * previous array stops the whole workspace re-rendering on each ping. lastSeenAt is not shown.
  */
+/** Tabs whose list comes from the server as-is instead of filtering the loaded All inbox. */
+function serverListFilter(filter) {
+	if (filter === 'archived' || filter === KEEP_IN_TOUCH_FILTER) return filter;
+	return 'all';
+}
+
+function keepInTouchDueTime(conversation) {
+	const kit = conversation?.keepInTouch;
+	if (!kit?.lastContactAt) return 0;
+	return kit.dueAt ? new Date(kit.dueAt).getTime() : 0;
+}
+
 function keepStaffListIfSame(prev, next) {
 	const list = Array.isArray(next) ? next : [];
 	if (!Array.isArray(prev) || prev.length !== list.length) return list;
@@ -1096,6 +1109,14 @@ function openStreetMapTileUrl(lat, lng, zoom = 15) {
 export default function WhatsAppWorkspace() {
 	// Phones: keyboard-aware app height and safe-area handling (see mobile-viewport.js).
 	useEffect(() => installMobileViewport(), []);
+	// Page-wide WhatsApp styles (thin scrollbars on menus and dialogs rendered on <body>) key
+	// off this class. It replaced html:has(.wa-web-desktop), which re-checked styles for the whole
+	// page on every DOM change and made scrolling the virtualised thread stutter.
+	useEffect(() => {
+		const root = document.documentElement;
+		root.classList.add('wa-page-active');
+		return () => root.classList.remove('wa-page-active');
+	}, []);
 	return (
 		<DemoModeProvider>
 			<WhatsAppWorkspaceContent />
@@ -3131,6 +3152,8 @@ function WhatsAppWorkspaceContent() {
 	const [conversationFilter, setConversationFilter] = useState(defaultWhatsAppConversationFilter);
 	const [contactsPopupOpen, setContactsPopupOpen] = useState(false);
 	const [archivedCount, setArchivedCount] = useState(0);
+	/** People you are due to message (keep-in-touch tab badge). */
+	const [keepInTouchDueCount, setKeepInTouchDueCount] = useState(0);
 	const [archivedUnreadCount, setArchivedUnreadCount] = useState(0);
 	const [pendingPreferenceActions, setPendingPreferenceActions] = useState(() => new Set());
 	const [assignmentFilter, setAssignmentFilter] = useState('');
@@ -4916,6 +4939,12 @@ function WhatsAppWorkspaceContent() {
 	);
 
 	const filteredConversations = useMemo(() => {
+		// Keep in touch: every tracked person (archived too), most overdue first, as the server sent it.
+		if (conversationFilter === KEEP_IN_TOUCH_FILTER && !chatSearch.trim()) {
+			return effectiveConversations
+				.filter(conversation => conversation.keepInTouch)
+				.sort((a, b) => keepInTouchDueTime(a) - keepInTouchDueTime(b));
+		}
 		const archivedView = conversationFilter === 'archived';
 		const chipFilter = WHATSAPP_INBOX_CHIP_FILTERS.has(conversationFilter)
 			? conversationFilter
@@ -5690,6 +5719,9 @@ function WhatsAppWorkspaceContent() {
 			if (typeof cached.archivedCount === 'number') {
 				setArchivedCount(cached.archivedCount);
 			}
+			if (typeof cached.keepInTouchDueCount === 'number') {
+				setKeepInTouchDueCount(cached.keepInTouchDueCount);
+			}
 			if (typeof cached.archivedUnreadCount === 'number') {
 				setArchivedUnreadCount(cached.archivedUnreadCount);
 			}
@@ -5812,6 +5844,8 @@ function WhatsAppWorkspaceContent() {
 				typeof data?.archivedCount === 'number' ? data.archivedCount : undefined,
 			archivedUnreadCount:
 				typeof data?.archivedUnreadCount === 'number' ? data.archivedUnreadCount : undefined,
+			keepInTouchDueCount:
+				typeof data?.keepInTouchDueCount === 'number' ? data.keepInTouchDueCount : undefined,
 			cachedAt: Date.now(),
 			// Socket patches bump cachedAt; fetchedAt only moves on a full first-page server read.
 			fetchedAt:
@@ -5913,6 +5947,9 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (typeof next.archivedUnreadCount === 'number') {
 			setArchivedUnreadCount(next.archivedUnreadCount);
+		}
+		if (typeof next.keepInTouchDueCount === 'number') {
+			setKeepInTouchDueCount(next.keepInTouchDueCount);
 		}
 		return next;
 	}, [queryClient, resetConversationsCache]);
@@ -6043,8 +6080,7 @@ function WhatsAppWorkspaceContent() {
 			if (!needsServerSearch) {
 				if (stillCurrent()) setSearchingConversations(false);
 				try {
-					const baseFilter =
-						conversationFilterRef.current === 'archived' ? 'archived' : 'all';
+					const baseFilter = serverListFilter(conversationFilterRef.current);
 					await loadConversations(accountId, 1, false, {
 						force: false,
 						search: '',
@@ -6862,7 +6898,7 @@ function WhatsAppWorkspaceContent() {
 				loadConversations(activeAccountId, 1, false, {
 					force: true,
 					background: true,
-					filter: conversationFilterRef.current === 'archived' ? 'archived' : 'all',
+					filter: serverListFilter(conversationFilterRef.current),
 				}),
 			);
 		}
@@ -14490,6 +14526,43 @@ function WhatsAppWorkspaceContent() {
 			setConversationAssignTarget(conversation);
 		} else if (action === 'info') {
 			void openConversationInfo(conversation);
+		} else if (String(action).startsWith('keepInTouch:')) {
+			void setConversationKeepInTouch(conversation, Number(String(action).split(':')[1]) || 0);
+		}
+	};
+
+	/** Keep in touch (صلة رحم): remind me to message this person every `days` days; 0 stops it. */
+	const setConversationKeepInTouch = async (conversation, days) => {
+		if (demo.settings.enabled || !conversation?.id || isDemoId(conversation.id)) return;
+		const previous = conversation.keepInTouch || null;
+		const lastOutboundAt =
+			previous?.lastContactAt ||
+			(conversation.lastMessage?.direction === 'outbound' ? conversation.lastMessage?.providerTimestamp : null) ||
+			null;
+		// Shown at once; the reload below brings the server's exact dates and the tab count.
+		const optimistic =
+			days > 0
+				? (() => {
+						const last = lastOutboundAt ? new Date(lastOutboundAt).getTime() : 0;
+						const due = last ? last + days * 86_400_000 : 0;
+						return {
+							days,
+							lastContactAt: last ? new Date(last).toISOString() : null,
+							dueAt: due ? new Date(due).toISOString() : null,
+							overdue: !due || due <= Date.now(),
+						};
+					})()
+				: null;
+		const patch = value => current =>
+			current.map(item => (item.id === conversation.id ? { ...item, keepInTouch: value } : item));
+		setConversations(patch(optimistic));
+		try {
+			await api.put(`/whatsapp/conversations/${conversation.id}/keep-in-touch`, { days: days > 0 ? days : null });
+			toast.success(days > 0 ? t.keepInTouchSaved : t.keepInTouchRemoved);
+			if (accountId) scheduleReloadConversations(accountId);
+		} catch (error) {
+			setConversations(patch(previous));
+			toast.error(error.response?.data?.message || (locale === 'ar' ? 'تعذر الحفظ' : 'Could not save'));
 		}
 	};
 
@@ -17686,11 +17759,13 @@ function WhatsAppWorkspaceContent() {
 												all: unreadConversationCount,
 												unread: unreadConversationCount,
 												channels: unreadChannelCount,
+												keep_in_touch: keepInTouchDueCount,
 											}}
 											labels={{
 												all: t.allChats,
 												unread: t.unreadChats,
 												favorites: t.favoriteChats,
+												keepInTouch: t.keepInTouch,
 												channels: t.channels,
 												important: t.importantChats,
 											}}
@@ -17764,6 +17839,7 @@ function WhatsAppWorkspaceContent() {
 												['all', t.allChats],
 												['unread', t.unreadChats, unreadConversationCount],
 												['favorites', t.favoriteChats],
+												[KEEP_IN_TOUCH_FILTER, t.keepInTouch, keepInTouchDueCount],
 												['channels', t.channels, unreadChannelCount],
 												['important', t.importantChats],
 											].map(([value, label, count]) => (
@@ -18054,6 +18130,8 @@ function WhatsAppWorkspaceContent() {
 																		: 'No favourite chats'
 																: conversationFilter === 'channels'
 																	? t.noChannels
+																: conversationFilter === KEEP_IN_TOUCH_FILTER
+																	? t.noKeepInTouch
 																: conversationFilter === 'archived'
 																	? t.noArchivedConversations
 																	: conversationFilter === 'important'
@@ -18084,6 +18162,7 @@ function WhatsAppWorkspaceContent() {
 												>
 												<WaConversationRow
 													conversation={conversation}
+													keepInTouchView={conversationFilter === KEEP_IN_TOUCH_FILTER}
 													active={conversation.id === conversationId || conversation.id === secondaryConversationId}
 													isSplitSecondary={conversation.id === secondaryConversationId}
 													story={conversation.type !== 'group' ? storyForConversation(conversation) : null}
@@ -19630,6 +19709,12 @@ function WhatsAppWorkspaceContent() {
 																		threadLiveRef.current.openMessageContextMenu(event, message);
 																	}}
 															className={`wa-message-bubble relative min-w-0 max-w-[65%] shrink ${mine ? 'wa-message-mine' : 'wa-message-other'} ${followsSame ? 'wa-follows-same' : ''} ${precedesSame ? 'wa-precedes-same' : ''} ${hasBubbleTail && !isStickerMessage ? 'wa-has-tail' : ''} ${isDeleted ? (keepsDeletedContent ? 'wa-message-deleted-kept' : 'wa-message-deleted') : ''} ${isEmailMemoMsg ? 'wa-message-email' : ''} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVideoTranscriptMessage ? 'wa-message-video' : ''} ${captionText && (isVisualMediaMessage || groupedImages || isDocumentMessage) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${isContactMsg ? 'wa-message-contact' : ''} ${
+																					// Class, not :has(.wa-message-transcript) in CSS: :has() on every bubble restyled each
+																					// message's meta line whenever a row was added while scrolling.
+																					!hideDeletedBody && canTranscribeMedia && String(messageTranscripts[message.id]?.text || '').trim()
+																						? 'wa-has-transcript'
+																						: ''
+																				} ${
 																		hideDeletedBody
 																			? ''
 																			: isEmailMemoMsg
@@ -20680,6 +20765,7 @@ function WhatsAppWorkspaceContent() {
 													<IsolatedComposerTextarea
 														apiRef={composerApiRef}
 														draftRef={draftRef}
+														draftKey={conversationId || ''}
 														onHasTextChange={notifyComposerHasText}
 														placeholder={t.message}
 														ariaLabel={t.message}

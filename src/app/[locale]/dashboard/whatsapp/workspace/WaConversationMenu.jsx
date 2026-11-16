@@ -2,11 +2,12 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Archive, Bell, BellOff, Columns2, Info, Pin, Star, Trash2, UserPlus } from 'lucide-react';
+import { Archive, Bell, BellOff, Check, Columns2, HeartHandshake, Info, Pin, Star, Trash2, UserPlus } from 'lucide-react';
 import { conversationTitle, conversationAvatarUrl, conversationPreview } from '../whatsapp-utils';
 import { useMenuKeyboard } from '../wa-ui-menu';
 import { Avatar } from './WaAvatar';
 import { useFreshPressGuard, useLongPressBackdrop } from './wa-long-press';
+import { KEEP_IN_TOUCH_INTERVALS, intervalLabel } from './wa-keep-in-touch';
 
 function computeBesideMenuPosition(anchorRect, menuSize = { width: 228, height: 280 }) {
 	const gap = 6;
@@ -56,6 +57,9 @@ export function ConversationActionMenu({
 	onLongPressAt,
 }) {
 	const [mounted, setMounted] = useState(false);
+	// The keep-in-touch item opens its interval choices in place instead of acting at once.
+	const [keepInTouchOpen, setKeepInTouchOpen] = useState(false);
+	useEffect(() => setKeepInTouchOpen(false), [conversation?.id]);
 	const backdropHandlers = useLongPressBackdrop({
 		open: conversation,
 		onClose,
@@ -120,6 +124,16 @@ export function ConversationActionMenu({
 			id: 'favorite',
 			label: conversation.isFavorite ? (ar ? 'إزالة من المفضلة' : 'Remove from favorites') : ar ? 'إضافة إلى المفضلة' : 'Add to favorites',
 			icon: Star,
+		},
+		{
+			id: 'keepInTouch',
+			label: conversation.keepInTouch?.days
+				? `${ar ? 'صلة رحم' : 'Keep in touch'} · ${intervalLabel(conversation.keepInTouch.days, locale)}`
+				: ar
+					? 'صلة رحم…'
+					: 'Keep in touch…',
+			icon: HeartHandshake,
+			local: true,
 		},
 		{
 			id: 'archive',
@@ -197,12 +211,45 @@ export function ConversationActionMenu({
 								type="button"
 								role="menuitem"
 								disabled={busy}
-								onClick={() => onAction(action.id)}
+								aria-expanded={action.local ? keepInTouchOpen : undefined}
+								onClick={() => (action.local ? setKeepInTouchOpen(open => !open) : onAction(action.id))}
 								className={`wa-ui-menu__item${action.destructive ? ' is-danger' : ''}`}
 							>
 								<Icon className="wa-ui-menu__icon" strokeWidth={1.8} aria-hidden="true" />
 								<span className="wa-ui-menu__label">{action.label}</span>
 							</button>
+							{action.id === 'keepInTouch' && keepInTouchOpen ? (
+								<div className="wa-kit-picker" role="group" aria-label={ar ? 'كل قد إيه؟' : 'How often?'}>
+									{KEEP_IN_TOUCH_INTERVALS.map(days => {
+										const current = conversation.keepInTouch?.days === days;
+										return (
+											<button
+												key={days}
+												type="button"
+												role="menuitemradio"
+												aria-checked={current}
+												disabled={busy}
+												onClick={() => onAction(`keepInTouch:${days}`)}
+												className={`wa-kit-picker__option${current ? ' is-on' : ''}`}
+											>
+												{current ? <Check size={13} strokeWidth={2.4} aria-hidden="true" /> : null}
+												{intervalLabel(days, locale)}
+											</button>
+										);
+									})}
+									{conversation.keepInTouch?.days ? (
+										<button
+											type="button"
+											role="menuitem"
+											disabled={busy}
+											onClick={() => onAction('keepInTouch:0')}
+											className="wa-kit-picker__option is-stop"
+										>
+											{ar ? 'إيقاف التذكير' : 'Stop reminding me'}
+										</button>
+									) : null}
+								</div>
+							) : null}
 						</Fragment>
 					);
 				})}

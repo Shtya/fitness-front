@@ -1,7 +1,9 @@
 'use client';
 
 import { memo } from 'react';
-import { AlertCircle, BellOff, Bot, Check, CheckCheck, ChevronDown, Clock, MapPin, Pin, Star, Trash2, Video } from 'lucide-react';
+import { AlertCircle, BellOff, Bot, Check, CheckCheck, ChevronDown, Clock, HeartHandshake, MapPin, Pin, Star, Trash2, Video } from 'lucide-react';
+import { useChatDraft } from './wa-chat-drafts';
+import { keepInTouchSummary } from './wa-keep-in-touch';
 import { conversationTitle, conversationAvatarUrl, conversationUnreadCount, messageDeliveryState, messageTextPresentation, conversationPreview, conversationPreviewShowsReaction, isDeletedWhatsAppMessage } from '../whatsapp-utils';
 import { whatsappFileIconSrc } from '../whatsapp-file-icons';
 import { Avatar } from './WaAvatar';
@@ -228,7 +230,14 @@ export const WaConversationRow = memo(function WaConversationRow({
 	actions,
 	agentBadge = null,
 	privacyBlurred = false,
+	/** Keep-in-touch tab: the second line says when you last wrote and when you are due. */
+	keepInTouchView = false,
 }) {
+	const draft = useChatDraft(conversation.id);
+	// Like WhatsApp: a chat you left with unsent text says so; the open chat shows it in the box.
+	const showDraft = Boolean(draft.trim()) && !active;
+	const keepInTouch = conversation.keepInTouch || null;
+	const keepInTouchInfo = keepInTouch ? keepInTouchSummary(keepInTouch, locale) : null;
 	const title = conversationTitle(conversation);
 	const titlePresentation = messageTextPresentation(title);
 	const previewText = conversationPreview(conversation, locale);
@@ -380,6 +389,15 @@ export const WaConversationRow = memo(function WaConversationRow({
 								<BellOff size={13} strokeWidth={2.2} />
 							</span>
 						) : null}
+						{keepInTouchInfo ? (
+							<span
+								className={`wa-kit-mark${keepInTouchInfo.overdue ? ' is-due' : ''}`}
+								title={keepInTouchInfo.text}
+								aria-label={keepInTouchInfo.text}
+							>
+								<HeartHandshake size={13} strokeWidth={2.2} />
+							</span>
+						) : null}
 						<button
 							type="button"
 							disabled={demoEnabled || pinPending}
@@ -430,6 +448,15 @@ export const WaConversationRow = memo(function WaConversationRow({
 								senderName={conversation.presence?.senderName || ''}
 								count={conversation.presence?.typers?.length || 1}
 							/>
+						) : keepInTouchView && keepInTouchInfo ? (
+							<span className={`wa-kit-line truncate${keepInTouchInfo.overdue ? ' is-due' : ''}`}>
+								{keepInTouchInfo.text}
+							</span>
+						) : showDraft ? (
+							<span className="wa-row-draft truncate" dir="auto">
+								<span className="wa-row-draft__label">{locale === 'ar' ? 'مسودة: ' : 'Draft: '}</span>
+								{draft.replace(/\s+/g, ' ').trim()}
+							</span>
 						) : (
 							<>
 								{lastMessageDeleted && (

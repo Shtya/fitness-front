@@ -11,10 +11,11 @@ import { WhatsAppFileTypeIcon } from '../whatsapp-file-icons';
 import { demoApi } from '../demo/demo-api';
 import { toMediaFile } from '../wa-save-file';
 import { saveMediaFiles } from '../wa-save-prompt';
-import { getAttachmentStreamUrl, absoluteApiUrl } from '../whatsapp-media-stream';
+import { getAttachmentStreamUrl, absoluteApiUrl, peekAttachmentStreamUrl } from '../whatsapp-media-stream';
 import { isDemoId, rawDemoId } from '../demo/demo-read-model';
 import { forgetAttachmentBlob, isPersistedAttachmentId, requestAttachmentBlob } from './wa-attachment-blobs';
 import { VoiceMessage, useNearViewport } from './WaVoiceMessage';
+import { retainShownImage, wasImageShown } from './wa-image-memory';
 import { ChatVideoPlayer } from './WaVideoPlayer';
 
 function localAttachmentPreview(attachment) {
@@ -38,16 +39,23 @@ export function ImageMessage({
 	cacheKey = '',
 	onFullError = null,
 }) {
-	const [loaded, setLoaded] = useState(false);
+	// A photo already shown this session is held in memory (wa-image-memory): show it at once.
+	const [loaded, setLoaded] = useState(() => wasImageShown(url));
 	const [broken, setBroken] = useState(false);
 	const [previewReady, setPreviewReady] = useState(false);
+	// True once the picture has finished fading in; until then the skeleton stays underneath so
+	// the fade starts from the skeleton, not from an empty bubble.
+	const [settled, setSettled] = useState(() => wasImageShown(url));
 	const fullImgRef = useRef(null);
 	const previewImgRef = useRef(null);
 
 	const bindFullImg = node => {
 		fullImgRef.current = node;
+		// Already in the browser's cache (seen before): show it at once, no fade, no skeleton.
 		if (node?.complete && node.naturalWidth > 0) {
 			setLoaded(true);
+			setSettled(true);
+			retainShownImage(node.currentSrc || node.src);
 		}
 	};
 
@@ -59,7 +67,10 @@ export function ImageMessage({
 	};
 
 	useEffect(() => {
-		setLoaded(false);
+		const img = fullImgRef.current;
+		const ready = Boolean(img?.complete && img.naturalWidth > 0) || wasImageShown(url);
+		setLoaded(ready);
+		setSettled(ready);
 		setBroken(false);
 	}, [url]);
 
@@ -106,7 +117,9 @@ export function ImageMessage({
 		}
 	};
 	const showFrame = reserveAspect && (isPending || isBroken) && !url && !previewSrc;
-	const showSkeleton = !isBroken && previewSrc && !previewReady && !loaded && !showFrame;
+	// The skeleton holds the exact final box until the decoded picture fades in; the heavier
+	// "Loading media…" overlay only shows when that takes long (slow network, CSS delay).
+	const showSkeleton = !isBroken && !previewReady && !settled && (isPending || loaded || Boolean(previewSrc));
 	const showBlockingLoad = isPending && !previewReady;
 	const showSpinnerOnly = isPending && previewReady;
 	const fitClass = cover
@@ -184,13 +197,30 @@ export function ImageMessage({
 					draggable={false}
 					// Keeps full-resolution decode off the main thread during scroll.
 					decoding="async"
-					loading="lazy"
+					// Eager: rows only exist near the viewport (virtualised thread) and the URL is only set
+					// once near it. loading="lazy" made a photo that was already shown start from
+					// scratch each time its row mounted again (not complete in the first frame), so it
+					// went skeleton → fade on every scroll back.
+					loading="eager"
 					width={knownWidth > 0 ? Math.round(knownWidth) : undefined}
 					height={knownHeight > 0 ? Math.round(knownHeight) : undefined}
 					onLoad={event => {
-						setLoaded(true);
+						const node = event.currentTarget;
+						rememberNaturalSize(node);
 						setBroken(false);
-						rememberNaturalSize(event.currentTarget);
+						// Reveal only once decoded, so the picture appears in one step (never half-drawn
+						// or blank for a frame while decoding="async" finishes).
+						const reveal = () => {
+							if (fullImgRef.current !== node) return;
+							retainShownImage(node.currentSrc || node.src);
+							setLoaded(true);
+							// After the 180ms fade (also when transitions are off: reduced motion).
+							window.setTimeout(() => {
+								if (fullImgRef.current === node) setSettled(true);
+							}, 220);
+						};
+						if (typeof node.decode === 'function') node.decode().then(reveal, reveal);
+						else reveal();
 					}}
 					onError={() => {
 						setBroken(true);
@@ -201,7 +231,7 @@ export function ImageMessage({
 				/>
 			) : null}
 			{showBlockingLoad ? (
-				<div className="wa-photo-state is-loading-state" aria-hidden="true">
+				<div className="wa-photo-state is-loading-state is-delayed" aria-hidden="true">
 					<span className="wa-photo-state__icon wa-photo-state__icon--muted">
 						<ImageIcon size={28} strokeWidth={1.75} />
 					</span>
@@ -469,6 +499,19 @@ function attachmentExtension(fileName, mimeType) {
 	return subtype.slice(0, 4).toUpperCase();
 }
 
+/**
+ * A photo/video URL the browser can show right now: an already signed stream URL from the
+ * session cache. Rows that mount again (virtualised thread, older pages) paint the picture in
+ * their first frame with this, instead of "Loading media…" and then the picture.
+ */
+function cachedMediaUrl(attachment) {
+	const type = String(attachment?.type || '').toLowerCase();
+	if (!['image', 'sticker', 'video'].includes(type)) return null;
+	const id = String(attachment?.id || '');
+	if (!isPersistedAttachmentId(id) || attachment?.demoAttachment || isDemoId(id)) return null;
+	return peekAttachmentStreamUrl(id, attachment);
+}
+
 export function MediaAttachment({
 	attachment,
 	mine,
@@ -498,8 +541,10 @@ export function MediaAttachment({
 }) {
 	const locale = useLocale();
 	const initialLocalPreview = localAttachmentPreview(attachment);
-	const [url, setUrl] = useState(() => initialLocalPreview);
-	const [loading, setLoading] = useState(() => !initialLocalPreview);
+	const [url, setUrl] = useState(() => initialLocalPreview || cachedMediaUrl(attachment));
+	const [loading, setLoading] = useState(() => !(initialLocalPreview || cachedMediaUrl(attachment)));
+	const urlRef = useRef(url);
+	urlRef.current = url;
 	const [failed, setFailed] = useState(false);
 	const [fileAction, setFileAction] = useState('');
 	const [retryNonce, setRetryNonce] = useState(0);
@@ -654,9 +699,10 @@ export function MediaAttachment({
 			setLoading(false);
 			return;
 		}
-		setUrl(null);
+		const cached = cachedMediaUrl(attachment);
+		setUrl(cached);
 		setFailed(false);
-		setLoading(true);
+		setLoading(!cached);
 		// Only reset when the attachment id changes — url/downloadStatus churn from
 		// live sync used to cancel in-flight video fetches and leave "Loading media…".
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- identity only
@@ -729,6 +775,7 @@ export function MediaAttachment({
 		if (!isNearViewport) {
 			if (
 				!localUrl &&
+				!urlRef.current &&
 				sessionReady &&
 				isPersistedAttachmentId(attachmentId) &&
 				(demoAttachment || canFetchWithoutSession || downloadStatus !== 'failed')
@@ -758,7 +805,9 @@ export function MediaAttachment({
 			setFailed(true);
 			return undefined;
 		}
-		if (!localUrl) {
+		// Already showing a URL (cached on mount): refresh it quietly. Flipping to "loading" here
+		// put the loading overlay over a picture that was already on screen.
+		if (!localUrl && !urlRef.current) {
 			setLoading(true);
 			setFailed(false);
 		}
@@ -796,7 +845,8 @@ export function MediaAttachment({
 			? getAttachmentStreamUrl(attachmentId, attachment)
 					.then(streamUrl => {
 						if (cancelled || loadGenRef.current !== loadGen) return;
-						setUrl(streamUrl);
+						// Same URL as on screen: no state change, no re-render, no reload.
+						setUrl(current => (current === streamUrl ? current : streamUrl));
 						setFailed(false);
 					})
 					.catch(() => loadAttachmentBlob().then(finishBlob))

@@ -4,10 +4,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom';
 import { filterComposerMentionCandidates, findComposerMentionQuery, formatWhatsAppPhone, messageTextPresentation } from '../whatsapp-utils';
 import { buildCompletionModel, rememberSentText, suggestCompletion } from '../wa-autocomplete';
+import { getChatDraft, setChatDraft } from './wa-chat-drafts';
 
 export function IsolatedComposerTextarea({
 	apiRef,
 	draftRef,
+	/** The open chat: its unsent text is saved under this key and comes back when you return. */
+	draftKey = '',
 	onHasTextChange,
 	placeholder,
 	ariaLabel,
@@ -51,6 +54,7 @@ export function IsolatedComposerTextarea({
 	}, []);
 	const [mentionAnchor, setMentionAnchor] = useState(null);
 	const mentionsEnabled = Array.isArray(mentionCandidates);
+	const draftKeyRef = useRef(draftKey);
 
 	const apply = useCallback(
 		next => {
@@ -59,6 +63,7 @@ export function IsolatedComposerTextarea({
 			const text = String(value ?? '');
 			draftRef.current = text;
 			setDraft(text);
+			setChatDraft(draftKeyRef.current, text);
 			onHasTextChange?.(Boolean(text.trim()));
 			if (!text) {
 				pickedMentionsRef.current = [];
@@ -73,6 +78,18 @@ export function IsolatedComposerTextarea({
 		},
 		[draftRef, onHasTextChange, setMentionQuery],
 	);
+
+	// Switching chats: the text typed so far already sits under the previous key (saved on every
+	// change), so only load the new chat's draft. Mentions and the grey suggestion belonged to
+	// the old text.
+	useLayoutEffect(() => {
+		if (draftKeyRef.current === draftKey && draftRef.current === getChatDraft(draftKey)) return;
+		draftKeyRef.current = draftKey;
+		pickedMentionsRef.current = [];
+		setMentionQuery(null);
+		setGhost('');
+		apply(getChatDraft(draftKey));
+	}, [draftKey, apply, draftRef, setMentionQuery]);
 
 	useLayoutEffect(() => {
 		apiRef.current = {

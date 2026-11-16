@@ -2654,6 +2654,17 @@ export function shouldAutoLoadOlder({
 	return now - lastUserGestureAt <= gestureWindowMs;
 }
 
+/**
+ * The element inside an anchor row whose position must not move: the message bubble. The row's
+ * own top includes its date separator, which disappears when older messages of the same day are
+ * prepended above it, so anchoring on the row top moved the visible message by the separator's
+ * height (60px) at the end of every "load older".
+ */
+export function threadAnchorTarget(row) {
+	if (!row) return null;
+	return (typeof row.querySelector === 'function' && row.querySelector('.wa-message-bubble')) || row;
+}
+
 export function captureThreadScrollAnchor(box, options = {}) {
 	if (!box) return null;
 	const virtualItems = Array.isArray(options.virtualItems) ? options.virtualItems : [];
@@ -2697,8 +2708,9 @@ export function captureThreadScrollAnchor(box, options = {}) {
 
 	const rowKey = row?.getAttribute?.('data-wa-row-key') || virtualKey || '';
 	const messageId = row?.getAttribute?.('data-wa-message-id') || '';
-	const offsetFromViewport = row?.getBoundingClientRect
-		? row.getBoundingClientRect().top - viewportTop
+	const anchorTarget = threadAnchorTarget(row);
+	const offsetFromViewport = anchorTarget?.getBoundingClientRect
+		? anchorTarget.getBoundingClientRect().top - viewportTop
 		: 0;
 
 	return {
@@ -2738,13 +2750,14 @@ export function applyThreadScrollAnchor(box, pending, options = {}) {
 	const virtualized = Boolean(options.virtualized);
 	const nextSize = virtualized && totalSize ? totalSize : Number(box.scrollHeight) || totalSize;
 	const row = findThreadAnchorRow(box, pending);
-	if (row && typeof row.getBoundingClientRect === 'function') {
+	const anchorTarget = threadAnchorTarget(row);
+	if (anchorTarget && typeof anchorTarget.getBoundingClientRect === 'function') {
 		const viewportTop =
 			typeof box.getBoundingClientRect === 'function'
 				? box.getBoundingClientRect().top
 				: 0;
 		const drift =
-			row.getBoundingClientRect().top - viewportTop - Number(pending.offsetFromViewport || 0);
+			anchorTarget.getBoundingClientRect().top - viewportTop - Number(pending.offsetFromViewport || 0);
 		if (Math.abs(drift) > 0.5) {
 			waScrollApply(
 				box,

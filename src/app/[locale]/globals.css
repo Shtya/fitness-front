@@ -6133,13 +6133,13 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 }
 
 /* Time must sit above the transcript row, never over the Show control. */
-.wa-message-bubble:has(> .wa-message-transcript),
-.wa-message-bubble:has(.wa-message-transcript) {
+.wa-message-bubble.wa-has-transcript,
+.wa-message-bubble.wa-has-transcript {
 	display: flex !important;
 	flex-direction: column !important;
 }
 
-.wa-message-bubble:has(.wa-message-transcript) > .wa-message-transcript {
+.wa-message-bubble.wa-has-transcript > .wa-message-transcript {
 	order: 40;
 	position: relative;
 	z-index: 1;
@@ -6147,9 +6147,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	margin-top: 2px;
 }
 
-.wa-message-bubble:has(.wa-message-transcript) > .wa-message-meta,
-.wa-message-bubble.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
-.wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta {
+.wa-message-bubble.wa-has-transcript > .wa-message-meta,
+.wa-message-bubble.wa-message-voice.wa-has-transcript .wa-message-meta,
+.wa-message-bubble.wa-message-media.wa-has-transcript > .wa-message-meta {
 	order: 30;
 	position: static !important;
 	inset: auto !important;
@@ -6168,8 +6168,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	background: transparent !important;
 }
 
-.wa-message-bubble.wa-message-voice:has(.wa-message-transcript),
-.wa-message-bubble:has(.wa-voice-message):has(.wa-message-transcript) {
+.wa-message-bubble.wa-message-voice.wa-has-transcript,
+.wa-message-bubble:has(.wa-voice-message).wa-has-transcript {
 	padding-bottom: 0 !important;
 }
 
@@ -9076,11 +9076,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		bottom: 5px !important;
 	}
 
-	.wa-web-desktop .wa-message-bubble:has(.wa-message-transcript) > .wa-message-meta,
-	.wa-web-desktop .wa-message-bubble.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
-	.wa-web-desktop .wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta,
-	.wa-web-desktop .wa-message-other.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
-	.wa-web-desktop .wa-message-mine.wa-message-voice:has(.wa-message-transcript) .wa-message-meta {
+	.wa-web-desktop .wa-message-bubble.wa-has-transcript > .wa-message-meta,
+	.wa-web-desktop .wa-message-bubble.wa-message-voice.wa-has-transcript .wa-message-meta,
+	.wa-web-desktop .wa-message-bubble.wa-message-media.wa-has-transcript > .wa-message-meta,
+	.wa-web-desktop .wa-message-other.wa-message-voice.wa-has-transcript .wa-message-meta,
+	.wa-web-desktop .wa-message-mine.wa-message-voice.wa-has-transcript .wa-message-meta {
 		position: static !important;
 		inset: auto !important;
 		top: auto !important;
@@ -9095,12 +9095,12 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		pointer-events: auto !important;
 	}
 
-	html.dark .wa-web-desktop .wa-message-bubble:has(.wa-message-transcript) > .wa-message-meta, html.dark .wa-web-desktop .wa-message-bubble.wa-message-voice:has(.wa-message-transcript) .wa-message-meta, html.dark .wa-web-desktop .wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta, html.dark .wa-web-desktop .wa-message-other.wa-message-voice:has(.wa-message-transcript) .wa-message-meta, html.dark .wa-web-desktop .wa-message-mine.wa-message-voice:has(.wa-message-transcript) .wa-message-meta {
+	html.dark .wa-web-desktop .wa-message-bubble.wa-has-transcript > .wa-message-meta, html.dark .wa-web-desktop .wa-message-bubble.wa-message-voice.wa-has-transcript .wa-message-meta, html.dark .wa-web-desktop .wa-message-bubble.wa-message-media.wa-has-transcript > .wa-message-meta, html.dark .wa-web-desktop .wa-message-other.wa-message-voice.wa-has-transcript .wa-message-meta, html.dark .wa-web-desktop .wa-message-mine.wa-message-voice.wa-has-transcript .wa-message-meta {
 		color: var(--d-meta) !important;
 	}
 
-	.wa-web-desktop .wa-message-bubble.wa-message-voice:has(.wa-message-transcript),
-	.wa-web-desktop .wa-message-bubble:has(.wa-voice-message):has(.wa-message-transcript) {
+	.wa-web-desktop .wa-message-bubble.wa-message-voice.wa-has-transcript,
+	.wa-web-desktop .wa-message-bubble:has(.wa-voice-message).wa-has-transcript {
 		padding-bottom: 0 !important;
 	}
 
@@ -9981,11 +9981,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		bottom: 5px !important;
 	}
 
-	.wa-message-bubble:has(.wa-message-transcript) > .wa-message-meta,
-	.wa-message-bubble.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
-	.wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta,
-	.wa-message-other.wa-message-voice:has(.wa-message-transcript) .wa-message-meta,
-	.wa-message-mine.wa-message-voice:has(.wa-message-transcript) .wa-message-meta {
+	.wa-message-bubble.wa-has-transcript > .wa-message-meta,
+	.wa-message-bubble.wa-message-voice.wa-has-transcript .wa-message-meta,
+	.wa-message-bubble.wa-message-media.wa-has-transcript > .wa-message-meta,
+	.wa-message-other.wa-message-voice.wa-has-transcript .wa-message-meta,
+	.wa-message-mine.wa-message-voice.wa-has-transcript .wa-message-meta {
 		position: static !important;
 		inset: auto !important;
 		top: auto !important;
@@ -10000,8 +10000,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		pointer-events: auto !important;
 	}
 
-	.wa-message-bubble.wa-message-voice:has(.wa-message-transcript),
-	.wa-message-bubble:has(.wa-voice-message):has(.wa-message-transcript) {
+	.wa-message-bubble.wa-message-voice.wa-has-transcript,
+	.wa-message-bubble:has(.wa-voice-message).wa-has-transcript {
 		padding-bottom: 0 !important;
 	}
 
@@ -10444,8 +10444,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		pointer-events: none;
 	}
 
-	.wa-message-media:has(.wa-message-transcript) > .wa-message-meta,
-	.wa-message-bubble.wa-message-media:has(.wa-message-transcript) > .wa-message-meta {
+	.wa-message-media.wa-has-transcript > .wa-message-meta,
+	.wa-message-bubble.wa-message-media.wa-has-transcript > .wa-message-meta {
 		position: static !important;
 		inset: auto !important;
 		float: none !important;
@@ -10804,7 +10804,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		padding: 5px 8px 18px !important;
 	}
 
-	.wa-message-bubble:has(.wa-voice-message):has(.wa-message-transcript) {
+	.wa-message-bubble:has(.wa-voice-message).wa-has-transcript {
 		padding-bottom: 0 !important;
 	}
 
