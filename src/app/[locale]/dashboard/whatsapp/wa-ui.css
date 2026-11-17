@@ -15201,3 +15201,166 @@ html.dark .wa-photo-open .wa-photo-skeleton::after {
 		transition: none;
 	}
 }
+
+/* ================================================================== */
+/* "Now playing" bar: a voice note keeps playing after you leave its    */
+/* chat (WhatsApp does the same).                                       */
+/* ================================================================== */
+
+.wa-voice-dock {
+	position: fixed;
+	top: 10px;
+	left: 50%;
+	z-index: 1003;
+	display: flex;
+	width: min(420px, calc(100vw - 24px));
+	align-items: center;
+	gap: 4px;
+	overflow: hidden;
+	padding: 6px 6px 8px;
+	border: 1px solid var(--wa-ui-border);
+	border-radius: 14px;
+	background: var(--wa-ui-surface);
+	color: var(--wa-ui-text);
+	box-shadow: var(--wa-ui-shadow-pop);
+	transform: translateX(-50%);
+	animation: wa-voice-dock-in 0.18s var(--wa-ui-ease-out);
+}
+
+.wa-voice-dock button {
+	display: grid;
+	flex: none;
+	place-items: center;
+	border: 0;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+}
+
+.wa-voice-dock button:focus-visible {
+	box-shadow: var(--wa-ui-ring);
+	outline: none;
+}
+
+.wa-voice-dock__play {
+	width: 34px;
+	height: 34px;
+	border-radius: 999px;
+	background: var(--wa-ui-accent) !important;
+	color: #fff !important;
+}
+
+.wa-voice-dock__play:hover {
+	background: var(--wa-ui-accent-strong) !important;
+}
+
+.wa-voice-dock button.wa-voice-dock__info {
+	display: grid;
+	min-width: 0;
+	flex: 1;
+	justify-items: start;
+	padding: 2px 6px;
+	border-radius: 8px;
+	text-align: start;
+}
+
+.wa-voice-dock__info:hover {
+	background: var(--wa-ui-hover) !important;
+}
+
+.wa-voice-dock__title {
+	display: flex;
+	max-width: 100%;
+	align-items: center;
+	gap: 5px;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.wa-voice-dock__title svg {
+	flex: none;
+	color: var(--wa-ui-accent);
+}
+
+.wa-voice-dock__title span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wa-voice-dock__time {
+	color: var(--wa-ui-text-3);
+	font-size: 11.5px;
+	font-variant-numeric: tabular-nums;
+}
+
+.wa-voice-dock__speed {
+	min-width: 38px;
+	height: 26px;
+	padding: 0 6px;
+	border-radius: 999px;
+	background: var(--wa-ui-surface-2) !important;
+	color: var(--wa-ui-text-2) !important;
+	font-size: 12px;
+	font-weight: 650;
+}
+
+.wa-voice-dock__close {
+	width: 30px;
+	height: 30px;
+	border-radius: 999px;
+	color: var(--wa-ui-text-3) !important;
+}
+
+.wa-voice-dock__close:hover,
+.wa-voice-dock__speed:hover {
+	background: var(--wa-ui-hover) !important;
+	color: var(--wa-ui-text) !important;
+}
+
+.wa-voice-dock__bar {
+	position: absolute;
+	inset-inline: 0;
+	bottom: 0;
+	height: 4px;
+	background: var(--wa-ui-border);
+	cursor: pointer;
+}
+
+.wa-voice-dock__fill {
+	position: absolute;
+	inset: 0;
+	background: var(--wa-ui-accent);
+	transform-origin: left center;
+	transition: transform 0.25s linear;
+}
+
+.wa-voice-dock[dir='rtl'] .wa-voice-dock__fill {
+	transform-origin: right center;
+}
+
+/* The minimized transcription bar sits under the voice bar. */
+body.wa-has-voice-dock .wtx-mini {
+	top: 66px;
+}
+
+@keyframes wa-voice-dock-in {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -8px);
+	}
+	to {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-voice-dock {
+		animation: none;
+	}
+
+	.wa-voice-dock__fill {
+		transition: none;
+	}
+}

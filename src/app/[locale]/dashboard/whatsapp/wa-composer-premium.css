@@ -27,6 +27,18 @@ html.dark .wa-composer {
 	--cp-danger: #ff6b7d;
 }
 
+/* Long text makes the field tall: the tools stay on the bottom line, next to the caret,
+   the way WhatsApp does it, instead of floating in the middle (globals.css centres each one). */
+.wa-composer:not(#_c1):not(#_c2) .wa-input-pill {
+	align-items: flex-end !important;
+}
+
+.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-input-action,
+.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-send-button,
+.wa-composer:not(#_c1):not(#_c2) .wa-input-pill .wa-composer-end-actions {
+	align-self: flex-end !important;
+}
+
 /* ================================================================== */
 /* Composer pill (desktop; phones keep their own WhatsApp-app layout)   */
 /* ================================================================== */

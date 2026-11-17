@@ -6,6 +6,17 @@ import { filterComposerMentionCandidates, findComposerMentionQuery, formatWhatsA
 import { buildCompletionModel, rememberSentText, suggestCompletion } from '../wa-autocomplete';
 import { getChatDraft, setChatDraft } from './wa-chat-drafts';
 
+
+/** Long text grows the field (like WhatsApp) up to ~40% of the window, then it scrolls. */
+function fitComposerHeight(node) {
+	const max = Math.max(112, Math.min(320, Math.round((window.innerHeight || 800) * 0.4)));
+	node.style.height = 'auto';
+	const next = Math.min(node.scrollHeight, max);
+	node.style.height = `${next}px`;
+	node.style.maxHeight = `${max}px`;
+	node.style.overflowY = node.scrollHeight > max ? 'auto' : 'hidden';
+}
+
 export function IsolatedComposerTextarea({
 	apiRef,
 	draftRef,
@@ -72,8 +83,7 @@ export function IsolatedComposerTextarea({
 			requestAnimationFrame(() => {
 				const node = textareaRef.current;
 				if (!node) return;
-				node.style.height = 'auto';
-				node.style.height = `${Math.min(node.scrollHeight, 112)}px`;
+				fitComposerHeight(node);
 			});
 		},
 		[draftRef, onHasTextChange, setMentionQuery],
@@ -339,7 +349,7 @@ export function IsolatedComposerTextarea({
 				lang={presentation.lang}
 				style={presentation.style}
 				placeholder={placeholder}
-				className={`wa-composer-input max-h-28 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${presentation.className || ''}`}
+				className={`wa-composer-input min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${presentation.className || ''}`}
 			/>
 			{mentionOpen && mentionAnchor && typeof document !== 'undefined'
 				? createPortal(

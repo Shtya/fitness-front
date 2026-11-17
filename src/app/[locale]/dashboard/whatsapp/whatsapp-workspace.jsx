@@ -323,6 +323,8 @@ const DocumentEditorWorkspace = lazy(() => import('@/components/smart-document/D
 // Transient viewers that most sessions never open. The document viewer alone
 // pulls mammoth + xlsx, which dominated the route's first-load JS.
 const TranscriptionDialog = lazy(() => import('../transcript/transcription-dialog'));
+import WaVoiceDock from './workspace/WaVoiceDock';
+import { setVoiceDockContext } from './workspace/wa-voice-dock';
 const ChatDocumentViewer = lazy(() =>
 	import('./document-viewer/chat-document-viewer').then(module => ({
 		default: module.ChatDocumentViewer,
@@ -3584,6 +3586,11 @@ function WhatsAppWorkspaceContent() {
 		() => effectiveConversations.find(item => item.id === conversationId) || null,
 		[effectiveConversations, conversationId],
 	);
+	// The "now playing" bar names the chat a voice note came from.
+	const selectedConversationTitle = selectedConversation ? conversationTitle(selectedConversation) : '';
+	useEffect(() => {
+		setVoiceDockContext({ conversationId, title: selectedConversationTitle });
+	}, [conversationId, selectedConversationTitle]);
 	const privacyBlurChatIds = useMemo(
 		() =>
 			privacyBlur.enabled && privacyBlur.selectedOnly
@@ -13007,6 +13014,8 @@ function WhatsAppWorkspaceContent() {
 
 	const startVoiceRecording = async () => {
 		if (!conversationId || recordingVoice || recordingStarting) return;
+		// Recording needs silence: stop any voice note, video or the "now playing" bar.
+		pauseAllVoicePlayers();
 		if (pendingVoiceDraft?.file) clearPendingVoiceDraft();
 		setAttachmentSheetOpen(false);
 		setStickerPanelOpen(false);
@@ -23617,6 +23626,7 @@ function WhatsAppWorkspaceContent() {
 					onClose={() => setLibraryOpen(false)}
 				/>
 			</MountWhenOpened>
+			<WaVoiceDock locale={locale} onOpenConversation={id => openConversation(id)} />
 			{transcriptionSources?.length ? (
 				<Suspense fallback={null}>
 					<TranscriptionDialog

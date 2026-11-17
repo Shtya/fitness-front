@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AudioLines, BookmarkPlus, Download, Loader2, Mic, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { seekRatio, isLocalMediaUrl } from '../whatsapp-utils';
@@ -11,6 +11,7 @@ import { rawDemoId } from '../demo/demo-read-model';
 import { forgetAttachmentBlob, getCachedAttachmentBlob, isPersistedAttachmentId, isUsefulWaveform, prepareVoicePlaybackFromBlob, requestAttachmentBlob } from './wa-attachment-blobs';
 import { Avatar } from './WaAvatar';
 import { getVoiceSpeed, nextVoiceSpeed, setVoiceSpeed, useVoiceSpeed } from './wa-voice-speed';
+import { closeVoiceDock, dockVoiceAudio, getVoiceDockContext, pauseVoiceDock, takeBackDockedVoice } from './wa-voice-dock';
 
 /**
  * Defers media requests until the bubble is close to the viewport. Only an IntersectionObserver:
@@ -412,6 +413,7 @@ function registerVoicePlayer(token, handlers) {
 }
 
 function claimVoicePlayback(token) {
+	closeVoiceDock();
 	if (activeVoicePlayerToken && activeVoicePlayerToken !== token) {
 		voicePlayers.get(activeVoicePlayerToken)?.pause?.();
 	}
@@ -422,6 +424,12 @@ function claimVoicePlayback(token) {
 }
 
 export function pauseAllVoicePlayers() {
+	pauseVoiceDock();
+	if (typeof document !== 'undefined') {
+		document.querySelectorAll('audio, video').forEach(media => {
+			if (!media.paused) media.pause();
+		});
+	}
 	if (!activeVoicePlayerToken) return;
 	voicePlayers.get(activeVoicePlayerToken)?.pause?.();
 	activeVoicePlayerToken = null;
@@ -489,6 +497,9 @@ export function VoiceMessage({
 	const playerTokenRef = useRef(null);
 	if (!playerTokenRef.current) playerTokenRef.current = nextVoicePlayerToken();
 	const startPlaybackRef = useRef(null);
+	// Which chat this note was playing in, for the "now playing" bar once it leaves the screen.
+	const playContextRef = useRef(null);
+	const dockInfoRef = useRef({});
 	const [playing, setPlaying] = useState(false);
 	// Outgoing: the recipient's real "played" receipt. Incoming: whether this browser
 	// has listened (WhatsApp does not expose that to linked devices).
@@ -928,6 +939,40 @@ export function VoiceMessage({
 		};
 	}, [playbackUrl]);
 
+	dockInfoRef.current = { messageId, attachmentId, duration };
+
+	// Leaving the screen while playing (another chat, or the thread list dropping the bubble):
+	// hand the playing <audio> to the "now playing" bar so it carries on. A layout cleanup runs
+	// before React takes the bubble out of the page, which is what keeps the element playing.
+	useLayoutEffect(
+		() => () => {
+			const audio = audioRef.current;
+			if (!audio || audio.paused || audio.ended || !audio.currentSrc) return;
+			const info = dockInfoRef.current;
+			const docked = dockVoiceAudio({
+				audio,
+				objectUrl: objectUrlRef.current,
+				context: playContextRef.current || getVoiceDockContext(),
+				messageId: info.messageId,
+				attachmentId: info.attachmentId,
+				fallbackDuration: info.duration,
+			});
+			// The bar owns the blob URL now.
+			if (docked) objectUrlRef.current = null;
+		},
+		[],
+	);
+
+	// Back on screen while the bar plays this note: carry on here from the same spot.
+	useEffect(() => {
+		const back = takeBackDockedVoice(messageId, attachmentId);
+		if (!back) return;
+		pendingSeekRef.current = back.currentTime;
+		setCurrentTime(back.currentTime);
+		if (back.playing) void startPlaybackRef.current?.();
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the bubble mounts
+	}, []);
+
 	useEffect(
 		() => () => {
 			if (objectUrlRef.current) {
@@ -992,6 +1037,7 @@ export function VoiceMessage({
 						pendingSeekRef.current = null;
 					}
 					audio.playbackRate = getVoiceSpeed();
+					playContextRef.current = getVoiceDockContext();
 					claimVoicePlayback(playerTokenRef.current);
 					await audio.play();
 				};
