@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocale } from 'next-intl';
 import {
 	AudioLines,
@@ -10,6 +11,9 @@ import {
 	FileAudio,
 	Loader2,
 	ListChecks,
+	Maximize2,
+	Minus,
+	X,
 	MessageSquareText,
 	Save,
 	Video,
@@ -72,6 +76,11 @@ const labels = {
 		bundleDescription:
 			'Voice notes and videos are converted to text. Selected tickets stay as they are. Everything is merged in time order.',
 		loadingFile: 'Loading media…',
+		minimize: 'Minimize — keep working while it runs',
+		restore: 'Show',
+		close: 'Close',
+		minimizedDone: 'Transcript ready — tap to open',
+		minimizedIdle: 'Tap to continue',
 		fileError: 'Could not load this media.',
 		voiceFile: 'Voice or video',
 		method: 'Transcription method',
@@ -123,6 +132,11 @@ const labels = {
 		bundleDescription:
 			'الصوت والفيديو يتحولان لنص. التيكتات المحددة تفضل زي ما هي. كله يترتب حسب الوقت.',
 		loadingFile: 'جارٍ تحميل الملف…',
+		minimize: 'تصغير — كمّل شغلك والتحويل شغال',
+		restore: 'إظهار',
+		close: 'إغلاق',
+		minimizedDone: 'النص جاهز — اضغط لعرضه',
+		minimizedIdle: 'اضغط للمتابعة',
 		fileError: 'تعذر تحميل هذا الملف.',
 		voiceFile: 'صوت أو فيديو',
 		method: 'طريقة التحويل',
@@ -235,6 +249,12 @@ export default function TranscriptionDialog({
 	const [status, setStatus] = useState('idle');
 	const [progress, setProgress] = useState(0);
 	const [elapsed, setElapsed] = useState(0);
+	// Minimized: the popup hides to a small bar at the top so the page stays usable. Nothing is
+	// unmounted, so the upload / transcription / AI work keeps running and its state is kept.
+	const [minimized, setMinimized] = useState(false);
+	useEffect(() => {
+		if (!open) setMinimized(false);
+	}, [open]);
 	const [batchIndex, setBatchIndex] = useState(0);
 	const [result, setResult] = useState(null);
 	const [text, setText] = useState('');
@@ -631,27 +651,107 @@ export default function TranscriptionDialog({
 	const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
 	const fileExtension = String(file?.name || '').split('.').pop();
 
+	const dialogTitle = isCopyIntent ? t.copyTitle : isBundle ? t.bundleTitle : t.title;
+	const minimizedStatus =
+		status === 'loading'
+			? t.loadingFile
+			: busy
+				? progressLabel
+				: result
+					? t.minimizedDone
+					: t.minimizedIdle;
+	const minimizedPercent =
+		busy && status !== 'loading'
+			? waitingOnServer
+				? `${elapsed}s`
+				: `${Math.min(99, Math.max(0, progress))}%`
+			: '';
+	const canPortal = typeof document !== 'undefined';
+
 	return (
+		<>
+			{/* Non-modal root: switching Radix between modal and non-modal remounts the content (and
+			    would drop the transcript / AI panel state), so the backdrop is drawn here instead and
+			    simply goes away while minimized. */}
+			{open && !minimized && canPortal
+				? createPortal(<div className="wtx-backdrop" aria-hidden="true" />, document.body)
+				: null}
+			{open && minimized && canPortal
+				? createPortal(
+						<div
+							className={`wa-dk wtx wtx-mini${busy ? ' is-busy' : ''}${result && !busy ? ' is-done' : ''}`}
+							dir={locale === 'ar' ? 'rtl' : 'ltr'}
+							role="status"
+						>
+							<button
+								type="button"
+								className="wtx-mini-main"
+								onClick={() => setMinimized(false)}
+								title={t.restore}
+							>
+								<span className="wtx-mini-icon" aria-hidden="true">
+									{busy ? <Loader2 className="animate-spin" /> : result ? <Check /> : <AudioLines />}
+								</span>
+								<span className="wtx-mini-text">
+									<span className="wtx-mini-title">{dialogTitle}</span>
+									<span className="wtx-mini-status">{minimizedStatus}</span>
+								</span>
+								{minimizedPercent ? <span className="wtx-mini-pct">{minimizedPercent}</span> : null}
+								<Maximize2 className="wtx-mini-restore" aria-label={t.restore} />
+							</button>
+							{!busy ? (
+								<button
+									type="button"
+									className="wtx-mini-close"
+									onClick={() => onOpenChange(false)}
+									aria-label={t.close}
+									title={t.close}
+								>
+									<X aria-hidden="true" />
+								</button>
+							) : null}
+							{busy && status !== 'loading' ? (
+								<span
+									className="wtx-mini-bar"
+									style={{ '--wtx-mini-progress': `${Math.min(100, Math.max(0, progress))}%` }}
+									aria-hidden="true"
+								/>
+							) : null}
+						</div>,
+						document.body,
+					)
+				: null}
 		<Dialog
 			open={open}
+			modal={false}
 			onOpenChange={nextOpen => {
-				if (!nextOpen && busy) return;
+				if (!nextOpen && (busy || minimized)) return;
 				onOpenChange(nextOpen);
 			}}
 		>
 			<DialogContent
 				dir={locale === 'ar' ? 'rtl' : 'ltr'}
-				className={`wa-dk wa-pop wtx !flex max-h-[min(92dvh,calc(100dvh-1.25rem))] min-h-0 w-full flex-col gap-0 overflow-hidden rounded-2xl p-0 ${
+				aria-hidden={minimized || undefined}
+				className={`wa-dk wa-pop wtx ${minimized ? '!hidden' : '!flex'} max-h-[min(92dvh,calc(100dvh-1.25rem))] min-h-0 w-full flex-col gap-0 overflow-hidden rounded-2xl p-0 ${
 					isBundle ? 'sm:max-w-xl' : 'sm:max-w-[34rem]'
-				}`}
+				}${minimized ? ' is-minimized' : ''}`}
+				onOpenAutoFocus={event => {
+					if (minimized) event.preventDefault();
+				}}
 				onEscapeKeyDown={event => {
-					if (busy) event.preventDefault();
+					if (busy || minimized) event.preventDefault();
+				}}
+				onInteractOutside={event => {
+					// The page behind stays usable while minimized.
+					if (minimized) event.preventDefault();
 				}}
 				onPointerDownOutside={event => {
 					const target = event.target;
 					if (
 						busy ||
-						(target instanceof Element && target.closest('[role="listbox"]'))
+						minimized ||
+						(target instanceof Element &&
+							(target.closest('[role="listbox"]') || target.closest('.wtx-mini')))
 					) {
 						event.preventDefault();
 					}
@@ -660,18 +760,28 @@ export default function TranscriptionDialog({
 					const target = event.target;
 					if (
 						busy ||
+						minimized ||
 						(target instanceof Element && target.closest('[role="listbox"]'))
 					) {
 						event.preventDefault();
 					}
 				}}
 			>
+				<button
+					type="button"
+					className="wtx-minimize"
+					onClick={() => setMinimized(true)}
+					aria-label={t.minimize}
+					title={t.minimize}
+				>
+					<Minus aria-hidden="true" />
+				</button>
 				<DialogHeader className="wtx-head">
 					<DialogTitle className="wtx-title">
 						<span className="wtx-title-icon" aria-hidden="true">
 							<AudioLines />
 						</span>
-						{isCopyIntent ? t.copyTitle : isBundle ? t.bundleTitle : t.title}
+						{dialogTitle}
 					</DialogTitle>
 					<DialogDescription className="wtx-sub">
 						{isCopyIntent ? t.copyDescription : isBundle ? t.bundleDescription : t.description}
@@ -958,5 +1068,6 @@ export default function TranscriptionDialog({
 				) : null}
 			</DialogContent>
 		</Dialog>
+		</>
 	);
 }

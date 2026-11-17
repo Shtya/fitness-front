@@ -3080,6 +3080,8 @@ function WhatsAppWorkspaceContent() {
 	const [viewOnceInfoMessage, setViewOnceInfoMessage] = useState(null);
 	const [transcriptionSources, setTranscriptionSources] = useState(null);
 	const [transcriptionIntent, setTranscriptionIntent] = useState(null);
+	const transcriptionIntentRef = useRef(null);
+	transcriptionIntentRef.current = transcriptionIntent;
 	const pendingCopyMessagesRef = useRef([]);
 	const [messageTranscripts, setMessageTranscripts] = useState(() => ({}));
 	const [conversationActionTarget, setConversationActionTarget] = useState(null);
@@ -4336,7 +4338,13 @@ function WhatsAppWorkspaceContent() {
 		sharingSourceConversationIdRef.current = null;
 		setDeleteMessageTarget(null);
 		setMessageInfo(null);
-		setTranscriptionSources(null);
+		// A running transcription keeps going across chats (it can be minimized to a top bar and
+		// carries its own media). Only "copy selected messages" belongs to this chat's selection.
+		if (transcriptionIntentRef.current === 'copy') {
+			setTranscriptionSources(null);
+			setTranscriptionIntent(null);
+			pendingCopyMessagesRef.current = [];
+		}
 		setMessageTranscripts({});
 	}, [conversationId]);
 
