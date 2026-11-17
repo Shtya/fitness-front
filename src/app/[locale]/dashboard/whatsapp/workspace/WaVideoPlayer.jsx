@@ -251,7 +251,18 @@ export function ChatVideoPlayer({
 		const node = videoRef.current;
 		if (!node) return;
 		if (node.paused) {
-			void node.play().catch(() => {});
+			void node.play().catch(error => {
+				// A metadata seek for the poster frame can leave the element in a bad
+				// readyState; one retry after load usually recovers.
+				const name = String(error?.name || '');
+				if (name === 'AbortError' || name === 'NotAllowedError') {
+					const resume = () => {
+						void node.play().catch(() => {});
+					};
+					if (node.readyState >= 2) resume();
+					else node.addEventListener('canplay', resume, { once: true });
+				}
+			});
 			return;
 		}
 		node.pause();

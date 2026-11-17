@@ -425,8 +425,11 @@ function claimVoicePlayback(token) {
 
 export function pauseAllVoicePlayers() {
 	pauseVoiceDock();
+	// Only pause voice/audio. Including `video` here made ChatVideoPlayer's onPlay
+	// instantly pause itself (play → onPlay → pauseAllVoicePlayers → pause), so the
+	// centre Play button looked broken.
 	if (typeof document !== 'undefined') {
-		document.querySelectorAll('audio, video').forEach(media => {
+		document.querySelectorAll('audio').forEach(media => {
 			if (!media.paused) media.pause();
 		});
 	}
