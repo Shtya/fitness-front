@@ -12,6 +12,29 @@ import { BidiDirection, bidiKey } from './bidi-extension';
 import { normalizeDirection } from './bidi';
 import { formatHtmlSource, htmlForEditor, isHtmlSource } from './source-format';
 import { useTableTools } from './TableTools';
+import { LineBookmarks, useLineBookmarks } from './LineBookmarks';
+import { findHeadingIndex } from './heading-links';
+import { flashElement } from './line-bookmarks';
+
+/** A "#…" link (table of contents) scrolls to its heading; returns true when handled. */
+function followInDocumentLink(view, event) {
+	const link = event.target?.closest?.('a[href]');
+	if (!link || !view.dom.contains(link)) return false;
+	const href = link.getAttribute('href') || '';
+	if (!href.startsWith('#')) return false;
+	event.preventDefault();
+	const headings = [...view.dom.querySelectorAll('h1, h2, h3, h4, h5, h6')];
+	const index = findHeadingIndex(
+		headings.map(heading => heading.textContent),
+		href,
+		link.textContent,
+	);
+	const target = headings[index];
+	if (!target) return true;
+	target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	window.setTimeout(() => flashElement(target, view.dom.closest('.sd-preview-host')), 450);
+	return true;
+}
 
 /**
  * Formatted preview of the Edit-pane source.
@@ -29,10 +52,13 @@ export default function MarkdownVisualEditor({
 	direction = 'auto',
 	autoFocus = false,
 	layoutKey = null,
+	/** Where this document's line bookmarks are saved (null: no bookmarks). */
+	bookmarkKey = null,
 	labels = {},
 }) {
 	const html = isHtmlSource(markdown);
 	const hostRef = useRef(null);
+	const bookmarksRef = useRef([]);
 	// Last source handed out; column widths are not part of Markdown, so resizing a column
 	// re-serialises to the same text and must not count as an edit.
 	const lastSourceRef = useRef(null);
@@ -56,6 +82,7 @@ export default function MarkdownVisualEditor({
 			Placeholder.configure({ placeholder }),
 			Markdown,
 			BidiDirection.configure({ getDirection: () => modeRef.current, getRootDir: () => rootDirRef.current }),
+			LineBookmarks.configure({ getBookmarks: () => bookmarksRef.current }),
 		],
 		content: html ? htmlForEditor(markdown) : markdown || '',
 		contentType: html ? 'html' : 'markdown',
@@ -70,6 +97,9 @@ export default function MarkdownVisualEditor({
 					if (!view.hasFocus()) view.focus();
 					return false;
 				},
+				// Link clicks are off in the editor (so links can be edited); in-document ones
+				// (the contents list) still jump to their heading.
+				click: (view, event) => followInDocumentLink(view, event),
 			},
 		},
 		onCreate: ({ editor: ed }) => {
@@ -95,9 +125,11 @@ export default function MarkdownVisualEditor({
 	}, [editor, mode, dir]);
 
 	const tableTools = useTableTools(editor, { hostRef, layoutKey, labels });
+	const bookmarkTools = useLineBookmarks(editor, { hostRef, bookmarksRef, storageKey: bookmarkKey, labels });
 
 	return (
 		<div ref={hostRef} className="sd-preview-host">
+			{bookmarkKey ? bookmarkTools : null}
 			<EditorContent editor={editor} className="sd-markdown-preview" dir={mode === 'auto' ? dir : mode} data-direction={mode} />
 			{tableTools}
 		</div>

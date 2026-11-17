@@ -244,8 +244,17 @@ export default function SmartDocumentEditor({
 						rowInsertBelow: 'صف جديد تحته',
 						rowDuplicate: 'كرّر الصف',
 						rowDelete: 'امسح الصف',
+						bookmarks: 'العلامات',
+						addBookmark: 'علّم السطر ده',
+						removeBookmark: 'شيل العلامة',
+						bookmarkMissing: 'السطر ده اتغيّر',
 					}
-				: {},
+				: {
+						bookmarks: 'Bookmarks',
+						addBookmark: 'Bookmark this line',
+						removeBookmark: 'Remove bookmark',
+						bookmarkMissing: 'This line was changed',
+					},
 		[locale],
 	);
 
@@ -762,6 +771,11 @@ export default function SmartDocumentEditor({
 			setRenamingId(null);
 			setRenameDraft('');
 		}
+		try {
+			localStorage.removeItem(`${storageKey}:bookmarks:${id}`);
+		} catch {
+			/* storage blocked */
+		}
 		if (activeIdRef.current === id) newDocument();
 	};
 
@@ -897,9 +911,23 @@ export default function SmartDocumentEditor({
 												onClick={() => openHistoryItem(item)}
 												onDoubleClick={(e) => startRename(item, e)}
 											>
-												<span className="sd-history-item-title" dir="auto">
-													{itemTitle}
-												</span>
+												{(() => {
+													// "مرجع مشروع ACG — منصة «وادي»": the name on top, what follows the dash under it.
+													const [main, ...rest] = itemTitle.split(/\s[—–]\s/);
+													const sub = rest.join(' — ').trim();
+													return (
+														<>
+															<span className="sd-history-item-title" dir="auto">
+																{main}
+															</span>
+															{sub ? (
+																<span className="sd-history-item-sub" dir="auto">
+																	{sub}
+																</span>
+															) : null}
+														</>
+													);
+												})()}
 												<span className="sd-history-item-meta">
 													<Clock3 size={11} aria-hidden />
 													{when}
@@ -1200,6 +1228,7 @@ export default function SmartDocumentEditor({
 							direction={direction}
 							autoFocus={!text.trim()}
 							layoutKey={activeId ? `${storageKey}:columns:${activeId}` : null}
+							bookmarkKey={activeId ? `${storageKey}:bookmarks:${activeId}` : null}
 							labels={tableToolLabels}
 						/>
 					)}
