@@ -220,7 +220,10 @@ export function ConversationActionMenu({
 							</button>
 							{action.id === 'keepInTouch' && keepInTouchOpen ? (
 								<div className="wa-kit-picker" role="group" aria-label={ar ? 'كل قد إيه؟' : 'How often?'}>
-									{KEEP_IN_TOUCH_INTERVALS.map(days => {
+									{(conversation.keepInTouch?.days && !KEEP_IN_TOUCH_INTERVALS.includes(conversation.keepInTouch.days)
+										? [...KEEP_IN_TOUCH_INTERVALS, conversation.keepInTouch.days].sort((a, b) => a - b)
+										: KEEP_IN_TOUCH_INTERVALS
+									).map(days => {
 										const current = conversation.keepInTouch?.days === days;
 										return (
 											<button
@@ -237,6 +240,12 @@ export function ConversationActionMenu({
 											</button>
 										);
 									})}
+									<KeepInTouchDaysInput
+										ar={ar}
+										busy={busy}
+										current={conversation.keepInTouch?.days || 0}
+										onSubmit={days => onAction(`keepInTouch:${days}`)}
+									/>
 									{conversation.keepInTouch?.days ? (
 										<button
 											type="button"
@@ -256,5 +265,49 @@ export function ConversationActionMenu({
 			</div>
 		</>,
 		document.body,
+	);
+}
+
+/** "Every [ 10 ] days": any number of days (1–365) besides the preset chips. */
+function KeepInTouchDaysInput({ ar, busy, current, onSubmit }) {
+	const custom = current && !KEEP_IN_TOUCH_INTERVALS.includes(current) ? String(current) : '';
+	// Starts empty (the saved number is the chip above and the placeholder), so typing never
+	// lands in the middle of an old value.
+	const [value, setValue] = useState('');
+	const days = Math.round(Number(value));
+	const valid = Number.isFinite(days) && days >= 1 && days <= 365;
+	const submit = () => {
+		if (valid && !busy) onSubmit(days);
+	};
+	return (
+		<form
+			className="wa-kit-picker__custom"
+			onSubmit={event => {
+				event.preventDefault();
+				submit();
+			}}
+		>
+			<span aria-hidden="true">{ar ? 'كل' : 'Every'}</span>
+			<input
+				type="number"
+				inputMode="numeric"
+				min={1}
+				max={365}
+				step={1}
+				value={value}
+				placeholder={custom || '10'}
+				disabled={busy}
+				aria-label={ar ? 'عدد الأيام' : 'Number of days'}
+				onChange={event => setValue(event.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+				// The menu reads arrow and letter keys for its own navigation.
+				onKeyDown={event => {
+					if (event.key !== 'Escape') event.stopPropagation();
+				}}
+			/>
+			<span aria-hidden="true">{ar ? 'يوم' : 'days'}</span>
+			<button type="submit" disabled={!valid || busy} className="wa-kit-picker__set">
+				{ar ? 'حفظ' : 'Set'}
+			</button>
+		</form>
 	);
 }

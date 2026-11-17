@@ -15149,6 +15149,57 @@ html.dark .wa-kit-picker__option.is-stop {
 	opacity: 0.5;
 	cursor: default;
 }
+.wa-kit-picker__custom {
+	display: inline-flex;
+	flex-basis: 100%;
+	align-items: center;
+	gap: 6px;
+	margin-top: 2px;
+	color: var(--d-text-2, #54656f);
+	font-size: 12.5px;
+}
+.wa-kit-picker__custom input {
+	width: 58px;
+	height: 28px;
+	padding: 0 8px;
+	border: 1px solid var(--d-chip-border, #e9edef);
+	border-radius: 8px;
+	background: transparent;
+	color: var(--d-text, #111b21);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	-moz-appearance: textfield;
+}
+.wa-kit-picker__custom input::-webkit-outer-spin-button,
+.wa-kit-picker__custom input::-webkit-inner-spin-button {
+	margin: 0;
+	-webkit-appearance: none;
+}
+.wa-kit-picker__custom input:focus {
+	border-color: #1daa61;
+	outline: 2px solid rgba(29, 170, 97, 0.25);
+	outline-offset: 0;
+}
+.wa-kit-picker__set {
+	height: 28px;
+	padding: 0 12px;
+	border: 0;
+	border-radius: 999px;
+	background: #1daa61;
+	color: #fff;
+	font-size: 12.5px;
+	font-weight: 600;
+	cursor: pointer;
+}
+html.dark .wa-kit-picker__set {
+	color: #07170e;
+	background: #21c063;
+}
+.wa-kit-picker__set:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
 
 /* ── Chat photos: one-step reveal (skeleton → decoded picture) ────────────────
  * The skeleton fills the reserved box while a photo loads or decodes; the picture fades in

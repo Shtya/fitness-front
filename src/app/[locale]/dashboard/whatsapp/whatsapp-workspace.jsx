@@ -2634,6 +2634,9 @@ function WhatsAppWorkspaceContent() {
 		prefetchMessages,
 	} = useWhatsAppQueryCache();
 	const conversationsCacheRef = useRef(conversationsCacheAdapter);
+	// Last list of each server-side filter (Archived, Keep in touch), painted at once when you
+	// switch back to it while the fresh list loads. Kept apart from the All-inbox cache.
+	const filterListCacheRef = useRef(new Map());
 	const messagesCacheRef = useRef(messagesCacheAdapter);
 	conversationsCacheRef.current = conversationsCacheAdapter;
 	messagesCacheRef.current = messagesCacheAdapter;
@@ -5758,6 +5761,14 @@ function WhatsAppWorkspaceContent() {
 				return cached;
 			}
 		}
+		const serverFilterKey =
+			page === 1 && !append && !search && !assignedUserId && serverListFilter(filter) === filter && filter !== 'all'
+				? `${id}:${filter}`
+				: '';
+		if (serverFilterKey && !options.background && accountIdRef.current === id) {
+			const known = filterListCacheRef.current.get(serverFilterKey);
+			if (known?.length) setConversations(current => keepOpenConversation(known, current, conversationIdRef.current));
+		}
 		if (options.force && !options.background && !chipBackfill) {
 			await resetConversationsCache(id);
 		}
@@ -5940,6 +5951,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			setConversations(current => keepOpenConversation(merged, current, conversationIdRef.current));
 		} else {
+			if (serverFilterKey) filterListCacheRef.current.set(serverFilterKey, nextItems);
 			setConversations(current => keepOpenConversation(nextItems, current, conversationIdRef.current));
 		}
 		const requestedConversationId = deltaSince ? null : readWhatsAppDeepLink().conversationId;
@@ -6164,25 +6176,26 @@ function WhatsAppWorkspaceContent() {
 		if (existing?.isArchived) {
 			patchArchivedUnread(normalizedCount - conversationUnreadCount(existing));
 		}
-		setConversations(current => {
-			const next = current.map(conversation =>
+		const withCount = list =>
+			list.map(conversation =>
 				conversation.id === id
 					? { ...conversation, unreadCount: normalizedCount }
 					: conversation,
 			);
-			const currentAccountId = accountIdRef.current;
-			const cached = currentAccountId
-				? conversationsCacheRef.current.get(currentAccountId)
-				: null;
-			if (currentAccountId && cached) {
-				conversationsCacheRef.current.set(currentAccountId, {
-					...cached,
-					items: next,
-					cachedAt: Date.now(),
-				});
-			}
-			return next;
-		});
+		// Patch the All-inbox cache on its own rows. The list on screen may be a server filter
+		// (Keep in touch, Archived): copying it into the cache left All showing only those chats.
+		const currentAccountId = accountIdRef.current;
+		const cached = currentAccountId
+			? conversationsCacheRef.current.get(currentAccountId)
+			: null;
+		if (currentAccountId && cached && Array.isArray(cached.items)) {
+			conversationsCacheRef.current.set(currentAccountId, {
+				...cached,
+				items: withCount(cached.items),
+				cachedAt: Date.now(),
+			});
+		}
+		setConversations(current => withCount(current));
 	}, [patchArchivedUnread]);
 
 	// Patches a single conversation's preview/unread count in place instead of
@@ -6200,20 +6213,21 @@ function WhatsAppWorkspaceContent() {
 				Math.max(0, Number(nextPayload.unreadCount) || 0) - conversationUnreadCount(existing),
 			);
 		}
-		setConversations(current => {
-			const next = updateConversationPreview(current, nextPayload);
-			if (next === current) return current;
-			const currentAccountId = accountIdRef.current;
-			const cached = currentAccountId ? conversationsCacheRef.current.get(currentAccountId) : null;
-			if (currentAccountId && cached) {
+		// The All-inbox cache gets the preview on its own rows (see setConversationUnreadCount):
+		// the list on screen may be a server filter with only a few chats.
+		const currentAccountId = accountIdRef.current;
+		const cached = currentAccountId ? conversationsCacheRef.current.get(currentAccountId) : null;
+		if (currentAccountId && cached && Array.isArray(cached.items)) {
+			const nextCached = updateConversationPreview(cached.items, nextPayload);
+			if (nextCached !== cached.items) {
 				conversationsCacheRef.current.set(currentAccountId, {
 					...cached,
-					items: next,
+					items: nextCached,
 					cachedAt: Date.now(),
 				});
 			}
-			return next;
-		});
+		}
+		setConversations(current => updateConversationPreview(current, nextPayload));
 	}, [patchArchivedUnread]);
 
 	const updateCachedMessage = useCallback((targetConversationId, messageId, updater) => {
