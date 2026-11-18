@@ -14,6 +14,15 @@ import {
 } from 'lucide-react';
 import api from '@/utils/axios';
 
+/** The timezone "5:10 PM" means for the person scheduling (Africa/Cairo follows Egypt's summer/winter time). */
+function senderTimeZone() {
+	try {
+		return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo';
+	} catch {
+		return 'Africa/Cairo';
+	}
+}
+
 const copy = {
 	en: {
 		title: 'Schedule message',
@@ -359,6 +368,8 @@ export default function ScheduleMessageDialog({
 					}
 					payload.recurrenceEndDate = endDate || null;
 				}
+				// Saving also moves the schedule to this browser's timezone (older ones were saved as Qatar time).
+				payload.timezone = senderTimeZone();
 				await api.patch(`/whatsapp/message-schedules/${editingSchedule.id}`, payload);
 				toast.success(t.updated);
 				onUpdated?.();
@@ -369,7 +380,7 @@ export default function ScheduleMessageDialog({
 					text,
 					conversationIds,
 					scheduleKind: mode === 'once' ? 'once' : 'recurring',
-					timezone: 'Asia/Qatar',
+					timezone: senderTimeZone(),
 					clientMessageId: `schedule:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
 				};
 

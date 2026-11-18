@@ -2366,6 +2366,24 @@ function LedgerTable({
 								<span className="text-amber-600/80 dark:text-amber-300/80">{karat}K</span> {priceNf.format(gold.quote.perGram[karat])}
 							</span>
 						))}
+						{/* Egyptian shop prices come from Daleelak, which asks for a link back. */}
+						{/daleelak/i.test(String(gold.quote.source || '')) ? (
+							<a
+								href="https://getdaleelak.com"
+								target="_blank"
+								rel="noopener noreferrer"
+								title={
+									gold.quote.buyBackPerGram?.[21]
+										? ar
+											? `سعر البيع للمحل (21): ${priceNf.format(gold.quote.buyBackPerGram[21])}`
+											: `Shop buy-back (21K): ${priceNf.format(gold.quote.buyBackPerGram[21])}`
+										: undefined
+								}
+								className="ms-1 font-semibold text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline dark:text-slate-500"
+							>
+								{ar ? 'أسعار الصاغة · دليلك' : 'Egypt shop prices · Daleelak'}
+							</a>
+						) : null}
 					</div>
 				) : null}
 			</div>
