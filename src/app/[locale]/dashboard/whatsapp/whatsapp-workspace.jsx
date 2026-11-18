@@ -2730,6 +2730,8 @@ function WhatsAppWorkspaceContent() {
 	const [sendingStoryReaction, setSendingStoryReaction] = useState(null);
 	const storyViewersOpenRef = useRef(false);
 	const storyViewersRequestRef = useRef(0);
+	// Last viewer list per story: the sheet opens on it at once and refreshes behind it.
+	const storyViewersCacheRef = useRef(new Map());
 	const storyInteractionEventRef = useRef(null);
 	const storyLoopRef = useRef(false);
 	const storyQueueRef = useRef([]);
@@ -15506,19 +15508,40 @@ function WhatsAppWorkspaceContent() {
 		[accountId],
 	);
 
+	/** A viewer's current small photo, for rows whose stored one is missing or expired. */
+	const fetchStoryViewerThumb = useCallback(
+		async viewer => {
+			if (!accountId) return null;
+			const phone = String(viewer?.phone || '').replace(/\D/g, '');
+			if (!phone) return null;
+			const { data } = await api.post(`/whatsapp/accounts/${accountId}/statuses/audience/avatar`, {
+				waId: `${phone}@s.whatsapp.net`,
+				quality: 'preview',
+			});
+			return data?.avatarUrl || null;
+		},
+		[accountId],
+	);
+
 	const loadStoryViewers = async (status, { silent = false } = {}) => {
 		if (!status?.id || !accountId || !status.isOwn) return;
 		const requestId = ++storyViewersRequestRef.current;
+		const cacheKey = `${accountId}:${status.id}`;
+		const cached = storyViewersCacheRef.current.get(cacheKey) || null;
 		setStoryViewers(current => ({
 			statusId: status.id,
 			loading: true,
 			error: '',
-			data: silent && current.statusId === status.id ? current.data : null,
+			data: (silent && current.statusId === status.id ? current.data : null) || cached,
 		}));
 		try {
 			const { data } = await api.get(
 				`/whatsapp/accounts/${accountId}/statuses/${encodeURIComponent(status.id)}/viewers`,
 			);
+			storyViewersCacheRef.current.set(cacheKey, data);
+			if (storyViewersCacheRef.current.size > 60) {
+				storyViewersCacheRef.current.delete(storyViewersCacheRef.current.keys().next().value);
+			}
 			if (requestId !== storyViewersRequestRef.current) return;
 			setStoryViewers({ statusId: status.id, loading: false, error: '', data });
 			const patch = {
@@ -15546,8 +15569,21 @@ function WhatsAppWorkspaceContent() {
 		storyViewersOpenRef.current = true;
 		setStoryViewersOpen(true);
 		setStoryPaused(true);
-		void loadStoryViewers(selectedStatus);
+		// Usually already loaded while the story played (below): show it, refresh quietly.
+		const ready = storyViewers.statusId === selectedStatus.id && storyViewers.data;
+		void loadStoryViewers(selectedStatus, { silent: Boolean(ready) });
 	};
+
+	// Load the viewer list while your own story plays, so swiping up opens it ready.
+	const ownStoryForViewers = selectedStatus?.isOwn ? selectedStatus : null;
+	useEffect(() => {
+		if (!ownStoryForViewers?.id || storyViewersOpenRef.current) return undefined;
+		const timer = window.setTimeout(() => {
+			if (!storyViewersOpenRef.current) void loadStoryViewers(ownStoryForViewers, { silent: true });
+		}, 400);
+		return () => window.clearTimeout(timer);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- once per story shown
+	}, [ownStoryForViewers?.id, accountId]);
 
 	const closeStoryViewers = () => {
 		storyViewersOpenRef.current = false;
@@ -24405,6 +24441,7 @@ function WhatsAppWorkspaceContent() {
 									/>
 								)}
 								fetchFullAvatar={fetchStoryViewerPhoto}
+								fetchAvatar={fetchStoryViewerThumb}
 								onOpenReply={reply => {
 									if (!reply?.conversationId) return;
 									closeStoryViewers();

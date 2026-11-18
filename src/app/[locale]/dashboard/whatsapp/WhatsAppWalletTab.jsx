@@ -647,6 +647,58 @@ function pocketsFrom(data) {
 	return { bank, wallet, cash: round2(balance - bank - wallet) };
 }
 
+/** Cash first: that is where a spend comes from unless you say otherwise. */
+const SPEND_POCKETS = ['cash', 'wallet', 'bank'].map(key => POCKETS.find(item => item.key === key));
+
+/** Which pocket a spend is paid from: cash, mobile wallet or bank, each with what is left in it. */
+function SpendPocketPicker({ ar, money, pockets, value, onChange, amount }) {
+	const chosen = SPEND_POCKETS.find(item => item.key === value) || SPEND_POCKETS[0];
+	const left = Number(pockets?.[chosen.key]);
+	const short = Number.isFinite(amount) && amount > 0 && Number.isFinite(left) && amount > left;
+	return (
+		<div className="flex flex-col gap-1.5" role="radiogroup" aria-label={ar ? 'هتدفع من إيه؟' : 'Paid from'}>
+			<span className="text-[11.5px] font-bold text-slate-600 dark:text-slate-300">
+				{ar ? 'هيتخصم من' : 'Take it from'}
+			</span>
+			<div className="grid grid-cols-3 gap-2">
+				{SPEND_POCKETS.map(({ key, Icon, arShort, enShort }) => {
+					const active = key === chosen.key;
+					const amountLeft = Number(pockets?.[key]);
+					return (
+						<button
+							key={key}
+							type="button"
+							role="radio"
+							aria-checked={active}
+							onClick={() => onChange(key)}
+							className={`flex min-w-0 flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-center transition ${
+								active
+									? 'border-[#1DAB61] bg-[#1DAB61]/8 text-slate-900 ring-2 ring-[#1DAB61]/15 dark:text-white'
+									: 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300'
+							}`}
+						>
+							<Icon size={18} strokeWidth={2.1} className={active ? 'text-[#1DAB61]' : 'text-slate-400'} aria-hidden="true" />
+							<span className="text-[13px] font-bold">{ar ? arShort : enShort}</span>
+							{money && Number.isFinite(amountLeft) ? (
+								<span className={`max-w-full truncate text-[11px] font-semibold tabular-nums ${amountLeft < 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+									{money(amountLeft)}
+								</span>
+							) : null}
+						</button>
+					);
+				})}
+			</div>
+			{short ? (
+				<p className="text-[11.5px] font-semibold text-amber-600 dark:text-amber-400">
+					{ar
+						? `المبلغ أكبر من اللي في ${chosen.arShort} (${money ? money(left) : left}).`
+						: `More than what is in ${chosen.enShort.toLowerCase()} (${money ? money(left) : left}).`}
+				</p>
+			) : null}
+		</div>
+	);
+}
+
 function BalanceSheet({ open, ar, onClose, pocket, pockets, ...props }) {
 	const meta = POCKETS.find(item => item.key === pocket) || POCKETS[2];
 	return (
@@ -755,7 +807,7 @@ function UsdFxBadge({ ar, money, amount, rate, inline = false }) {
 	);
 }
 
-const nameAmountRow = 'grid grid-cols-[minmax(0,4fr)_minmax(4.5rem,1fr)] items-start gap-3';
+const nameAmountRow = 'grid grid-cols-[minmax(0,3fr)_minmax(7.5rem,2fr)] items-start gap-3';
 const compactAmountClass = `${fieldClass} px-2.5! text-center font-bold tabular-nums`;
 
 function EditItemForm({ item, ar, money, usdToEgp, pending, onSubmit }) {
@@ -1121,11 +1173,12 @@ function AddLentForm({ ar, pending, onSubmit, available }) {
 	);
 }
 
-function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
+function AddExpenseForm({ ar, money, pockets, pending, onSubmit, available, onRetry }) {
 	const [name, setName] = useState('');
 	const [amount, setAmount] = useState('');
 	const [date, setDate] = useState(todayYmd);
 	const [affectsBalance, setAffectsBalance] = useState(true);
+	const [pocket, setPocket] = useState('cash');
 	const [recurring, setRecurring] = useState(false);
 	const value = parseAmount(amount);
 	const amountInvalid = amount.trim() !== '' && !(Number.isFinite(value) && value > 0);
@@ -1151,7 +1204,7 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 			className="flex flex-col gap-4"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance, recurring });
+				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance, recurring, pocket });
 			}}
 		>
 			<div className="flex flex-col gap-1.5">
@@ -1191,6 +1244,9 @@ function AddExpenseForm({ ar, pending, onSubmit, available, onRetry }) {
 				</p>
 			) : null}
 			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="expense" />
+			{affectsBalance ? (
+				<SpendPocketPicker ar={ar} money={money} pockets={pockets} value={pocket} onChange={setPocket} amount={value} />
+			) : null}
 			<RecurringMonthlyToggle ar={ar} checked={recurring} onChange={setRecurring} kind="expense" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} w-full sm:w-auto sm:self-end`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
@@ -1228,6 +1284,7 @@ function AddEntrySheet({
 	onAddExpense,
 	onRetryExpenses,
 	resetKey,
+	pockets,
 }) {
 	const [type, setType] = useState('money');
 	useEffect(() => {
@@ -1250,6 +1307,8 @@ function AddEntrySheet({
 			<AddExpenseForm
 				key={`e-${resetKey}`}
 				ar={ar}
+				money={money}
+				pockets={pockets}
 				available={expenses?.available}
 				pending={expensePending}
 				onSubmit={onAddExpense}
@@ -1353,21 +1412,27 @@ function LentEditForm({ loan, ar, pending, onSubmit }) {
 	);
 }
 
-function ExpenseEditForm({ expense, ar, pending, onSubmit }) {
+function ExpenseEditForm({ expense, ar, money, pockets, pending, onSubmit }) {
 	const [name, setName] = useState(expense.name);
 	const [amount, setAmount] = useState(() => String(expense.amount));
 	const [date, setDate] = useState(expense.date);
 	const [affectsBalance, setAffectsBalance] = useState(() => expense.affectsBalance !== false);
 	const [recurring, setRecurring] = useState(() => expense.recurring === true);
+	const [pocket, setPocket] = useState(() => expense.pocket || 'cash');
 	const value = parseAmount(amount);
 	const valid = name.trim() && Number.isFinite(value) && value > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
+	// The pocket still holds this spend's own money back while it is applied.
+	const pocketsForEdit =
+		pockets && expense.balanceApplied === true
+			? { ...pockets, [expense.pocket || 'cash']: (Number(pockets[expense.pocket || 'cash']) || 0) + (Number(expense.amount) || 0) }
+			: pockets;
 
 	return (
 		<form
 			className="flex flex-col gap-3"
 			onSubmit={event => {
 				event.preventDefault();
-				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance, recurring });
+				if (valid) onSubmit({ name: name.trim(), amount: value, date, affectsBalance, recurring, pocket });
 			}}
 		>
 			<label className="flex flex-col gap-1.5">
@@ -1397,6 +1462,9 @@ function ExpenseEditForm({ expense, ar, pending, onSubmit }) {
 				</p>
 			) : null}
 			<AffectsBalanceToggle ar={ar} checked={affectsBalance} onChange={setAffectsBalance} kind="expense" />
+			{affectsBalance ? (
+				<SpendPocketPicker ar={ar} money={money} pockets={pocketsForEdit} value={pocket} onChange={setPocket} amount={value} />
+			) : null}
 			<RecurringMonthlyToggle ar={ar} checked={recurring} onChange={setRecurring} kind="expense" />
 			<button type="submit" disabled={!valid || pending} className={`${primaryButton} mt-2`}>
 				{pending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
@@ -3518,6 +3586,7 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 				onAddLent={payload => createLentMutation.mutate(payload)}
 				onAddExpense={payload => createExpenseMutation.mutate(payload)}
 				onRetryExpenses={() => void queryClient.invalidateQueries({ queryKey: TRACKER_KEY })}
+				pockets={pocketsFrom(data)}
 			/>
 			<CalcSheet
 				open={calcOpen}
@@ -3581,6 +3650,8 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 						key={editingExpense.id}
 						expense={editingExpense}
 						ar={ar}
+						money={money}
+						pockets={pocketsFrom(data)}
 						pending={editExpenseMutation.isPending}
 						onSubmit={payload => editExpenseMutation.mutate({ id: editingExpense.id, payload })}
 					/>

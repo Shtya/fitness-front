@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
+	BookUser,
 	Check,
 	Eye,
 	EyeOff,
@@ -30,6 +31,7 @@ const COPY = {
 		subtitle: 'Applies to every story you publish from here.',
 		modes: {
 			contacts: ['My contacts', 'Everyone in your chats and contacts'],
+			saved: ['Saved contacts only', 'Only numbers saved on your phone now'],
 			except: ['My contacts except…', 'Everyone, minus the people you hide'],
 			only: ['Only share with…', 'Just the people you pick'],
 		},
@@ -68,6 +70,7 @@ const COPY = {
 		subtitle: 'بيتطبق على كل ستوري تنشره من هنا.',
 		modes: {
 			contacts: ['جهات اتصالي', 'كل اللي عندك في الشاتات وجهات الاتصال'],
+			saved: ['المحفوظين بس', 'الأرقام المسجلة على تليفونك دلوقتي بس'],
 			except: ['جهات اتصالي ما عدا…', 'الكل، ما عدا اللي تخفيهم'],
 			only: ['المشاركة مع…', 'بس الناس اللي تختارهم'],
 		},
@@ -103,7 +106,7 @@ const COPY = {
 	},
 };
 
-const MODE_ICONS = { contacts: UsersRound, except: UserMinus, only: UserCheck };
+const MODE_ICONS = { contacts: UsersRound, saved: BookUser, except: UserMinus, only: UserCheck };
 
 function personLabel(person) {
 	return person.name || `+${person.phone}`;
@@ -279,6 +282,9 @@ export function storyAudienceLabel(summary, locale = 'en') {
 	if (summary.mode === 'only') {
 		return ar ? `${summary.count} شخص بس` : `Only ${summary.count} ${summary.count === 1 ? 'person' : 'people'}`;
 	}
+	if (summary.mode === 'saved') {
+		return ar ? 'المحفوظين على التليفون بس' : 'Saved contacts only';
+	}
 	return ar ? 'كل جهات اتصالي' : 'All my contacts';
 }
 
@@ -379,13 +385,32 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 		});
 	};
 
-	const sees = waId => (mode === 'only' ? onlyIds.has(waId) : mode === 'except' ? !exceptIds.has(waId) : true);
+	// "Saved contacts only": everyone saved on the phone now, plus numbers added by hand.
+	const savedIds = useMemo(
+		() =>
+			new Set(
+				state.people
+					.filter(person => personKind(person) === 'saved' || extraIds.has(person.waId))
+					.map(person => person.waId),
+			),
+		[state.people, extraIds],
+	);
+
+	const sees = waId =>
+		mode === 'only'
+			? onlyIds.has(waId)
+			: mode === 'except'
+				? !exceptIds.has(waId)
+				: mode === 'saved'
+					? savedIds.has(waId)
+					: true;
 
 	const seeingCount = useMemo(() => {
 		if (mode === 'only') return onlyIds.size;
 		if (mode === 'except') return state.people.filter(person => !exceptIds.has(person.waId)).length;
+		if (mode === 'saved') return savedIds.size;
 		return state.people.length;
-	}, [mode, onlyIds, exceptIds, state.people]);
+	}, [mode, onlyIds, exceptIds, savedIds, state.people]);
 
 	const matches = useMemo(() => {
 		const term = search.trim().toLowerCase();
@@ -443,6 +468,15 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 	};
 
 	const toggle = waId => {
+		// Changing someone under "saved" turns it into a hand-picked list that starts from the saved people.
+		if (mode === 'saved') {
+			const next = new Set(savedIds);
+			if (next.has(waId)) next.delete(waId);
+			else next.add(waId);
+			setOnlyIds(next);
+			setMode('only');
+			return;
+		}
 		if (mode === 'only') {
 			setOnlyIds(current => {
 				const next = new Set(current);
@@ -464,6 +498,13 @@ export function StoryAudienceDialog({ open, accountId, locale = 'en', onClose, o
 
 	const setAllVisible = visible => {
 		const ids = matches.map(person => person.waId);
+		if (mode === 'saved') {
+			const next = new Set(savedIds);
+			for (const id of ids) visible ? next.add(id) : next.delete(id);
+			setOnlyIds(next);
+			setMode('only');
+			return;
+		}
 		if (mode === 'only') {
 			setOnlyIds(current => {
 				const next = new Set(current);

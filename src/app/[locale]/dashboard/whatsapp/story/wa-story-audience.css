@@ -82,7 +82,7 @@
 .wa-sa__modes {
 	display: grid;
 	flex: none;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 8px;
 	padding: 0 18px;
 }
@@ -854,6 +854,7 @@
 	}
 
 	.wa-sa__modes {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 6px;
 		padding: 0 14px;
 	}

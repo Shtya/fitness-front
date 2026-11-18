@@ -113,8 +113,8 @@ function ViewerPhoto({ viewer, locale, renderAvatar, fetchFullAvatar, onClose })
 					</span>
 				) : null}
 			</motion.div>
-			<p className="max-w-full truncate text-base font-black text-white" dir="auto">
-				{storyViewerName(viewer, locale)}
+			<p className="max-w-full truncate text-base font-black text-white">
+				<bdi>{storyViewerName(viewer, locale)}</bdi>
 			</p>
 			<button
 				type="button"
@@ -137,7 +137,120 @@ function replyPreview(reply, ar) {
 	return labels[String(reply?.type || '').toLowerCase()] || (ar ? 'رد' : 'Reply');
 }
 
-/** Who viewed your story, newest first, with the emoji each person reacted with and what they replied. */
+// Fresh profile photos for viewer rows whose stored one is missing or expired (WhatsApp CDN
+// links are signed and expire). Shared across sheets, a few at a time, each person once.
+const viewerAvatarCache = new Map(); // phone digits -> url | null (no photo) | Promise
+const viewerAvatarQueue = [];
+let viewerAvatarActive = 0;
+
+function runViewerAvatarQueue() {
+	while (viewerAvatarActive < 4 && viewerAvatarQueue.length) {
+		viewerAvatarActive += 1;
+		const job = viewerAvatarQueue.shift();
+		job().finally(() => {
+			viewerAvatarActive -= 1;
+			runViewerAvatarQueue();
+		});
+	}
+}
+
+function fetchViewerAvatarOnce(key, viewer, fetchAvatar) {
+	const known = viewerAvatarCache.get(key);
+	if (known !== undefined) return Promise.resolve(known);
+	const pending = new Promise(resolve => {
+		viewerAvatarQueue.push(() =>
+			Promise.resolve(fetchAvatar(viewer))
+				.then(url => {
+					viewerAvatarCache.set(key, url || null);
+					resolve(url || null);
+				})
+				.catch(() => {
+					// Offline or failed: try again next time instead of remembering "no photo".
+					viewerAvatarCache.delete(key);
+					resolve(null);
+				}),
+		);
+		runViewerAvatarQueue();
+	});
+	viewerAvatarCache.set(key, pending);
+	return pending;
+}
+
+function useViewerAvatar(viewer, fetchAvatar) {
+	const key = String(viewer?.phone || '').replace(/\D/g, '');
+	const stored = viewer?.avatarUrl || null;
+	const [url, setUrl] = useState(() => {
+		const known = key ? viewerAvatarCache.get(key) : undefined;
+		return typeof known === 'string' ? known : stored;
+	});
+	useEffect(() => {
+		let alive = true;
+		const known = key ? viewerAvatarCache.get(key) : undefined;
+		if (typeof known === 'string') {
+			setUrl(known);
+			return undefined;
+		}
+		const fresh = () => {
+			if (!fetchAvatar || !key) {
+				if (alive) setUrl(null);
+				return;
+			}
+			fetchViewerAvatarOnce(key, viewer, fetchAvatar).then(next => alive && setUrl(next));
+		};
+		if (stored) {
+			// Check the stored link first; an expired one is replaced by a fresh one.
+			const probe = new Image();
+			probe.referrerPolicy = 'no-referrer';
+			probe.onload = () => alive && setUrl(stored);
+			probe.onerror = fresh;
+			probe.src = stored;
+		} else {
+			fresh();
+		}
+		return () => {
+			alive = false;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- per person and stored photo
+	}, [key, stored, fetchAvatar]);
+	return url;
+}
+
+function ViewerAvatar({ viewer, renderAvatar, fetchAvatar, liked, locale, onOpen }) {
+	const ar = locale === 'ar';
+	const url = useViewerAvatar(viewer, fetchAvatar);
+	const name = storyViewerName(viewer, locale);
+	return (
+		<button
+			type="button"
+			className="relative shrink-0 rounded-full transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400 active:scale-95"
+			onClick={() => onOpen({ ...viewer, avatarUrl: url })}
+			aria-label={ar ? `صورة ${name}` : `${name}'s photo`}
+			data-testid="story-viewer-avatar"
+		>
+			{/* Keyed by photo: a broken link hides its <img>, and a fresh link must get a new one. */}
+			<span key={url || 'none'} className="block [&>*]:!h-11 [&>*]:!w-11 [&>*]:!ring-0">
+				{renderAvatar({ ...viewer, avatarUrl: url })}
+			</span>
+			{viewer.reaction ? (
+				<span
+					className="absolute -bottom-0.5 -end-1 grid h-[22px] min-w-[22px] place-items-center rounded-full bg-[#0f171c] px-[2px] text-[13px] leading-none"
+					title={ar ? 'تفاعل' : 'Reaction'}
+					data-testid="story-viewer-reaction"
+				>
+					{liked ? (
+						<span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-[#25d366]">
+							<Heart size={11} fill="#fff" strokeWidth={0} />
+						</span>
+					) : (
+						viewer.reaction
+					)}
+				</span>
+			) : null}
+		</button>
+	);
+}
+
+/** Who viewed your story, newest first, with each person's like/reaction and what they replied. */
 export function StoryViewersSheet({
 	open,
 	locale,
@@ -148,18 +261,31 @@ export function StoryViewersSheet({
 	onClose,
 	renderAvatar,
 	fetchFullAvatar,
+	fetchAvatar,
 	onOpenReply,
 }) {
 	const titleId = useId();
 	const ar = locale === 'ar';
 	const viewers = Array.isArray(data?.viewers) ? data.viewers : [];
 	const count = Number(data?.viewerCount ?? viewers.length) || 0;
-	const reactionCount = Number(data?.reactionCount) || 0;
+	const likedViewers = viewers.filter(viewer => viewer.reaction);
+	const repliedViewers = viewers.filter(viewer => Array.isArray(viewer.replies) && viewer.replies.length);
+	const reactionCount = Number(data?.reactionCount) || likedViewers.length;
 	const replyCount = Number(data?.replyCount) || 0;
 	const [zoomed, setZoomed] = useState(null);
+	const [tab, setTab] = useState('all');
 	useEffect(() => {
-		if (!open) setZoomed(null);
+		if (!open) {
+			setZoomed(null);
+			setTab('all');
+		}
 	}, [open]);
+	const shown = tab === 'likes' ? likedViewers : tab === 'replies' ? repliedViewers : viewers;
+	const tabs = [
+		['all', ar ? 'الكل' : 'All', count],
+		['likes', ar ? 'الإعجابات' : 'Likes', reactionCount],
+		['replies', ar ? 'الردود' : 'Replies', replyCount],
+	];
 	return (
 		<AnimatePresence>
 			{open ? (
@@ -181,7 +307,7 @@ export function StoryViewersSheet({
 						aria-modal="true"
 						aria-labelledby={titleId}
 						data-testid="story-viewers-sheet"
-						className="relative flex max-h-[72%] min-h-[40%] flex-col overflow-hidden rounded-t-3xl bg-[#111b21]/95 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur-xl"
+						className="relative flex max-h-[72%] min-h-[40%] flex-col overflow-hidden rounded-t-[28px] bg-[#0f171c] text-white shadow-2xl ring-1 ring-white/10"
 						initial={{ y: '100%' }}
 						animate={{ y: 0 }}
 						exit={{ y: '100%' }}
@@ -189,42 +315,62 @@ export function StoryViewersSheet({
 						onClick={event => event.stopPropagation()}
 						dir={ar ? 'rtl' : 'ltr'}
 					>
-						<div className="mx-auto mt-2 h-1 w-10 rounded-full bg-white/25" aria-hidden="true" />
-						<header className="flex items-center gap-3 px-4 pb-2 pt-3">
-							<Eye size={18} className="text-emerald-400" aria-hidden="true" />
-							<h2 id={titleId} className="min-w-0 flex-1 truncate text-base font-black">
-								{loading && !data
-									? ar
-										? 'جارٍ تحميل المشاهدات…'
-										: 'Loading views…'
-									: ar
-										? `شوهدت بواسطة ${count}`
-										: `Viewed by ${count}`}
-							</h2>
-							{reactionCount || replyCount ? (
-								<span className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-white/70" data-testid="story-viewers-totals">
-									{reactionCount ? (
-										<span className="rounded-full bg-white/10 px-2 py-1" title={ar ? 'تفاعلات' : 'Reactions'}>
-											♥ {reactionCount}
-										</span>
-									) : null}
-									{replyCount ? (
-										<span className="rounded-full bg-white/10 px-2 py-1" title={ar ? 'ردود' : 'Replies'}>
-											💬 {replyCount}
-										</span>
-									) : null}
-								</span>
+						<div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-white/20" aria-hidden="true" />
+						<header className="flex shrink-0 items-center gap-3 px-5 pb-3 pt-3">
+							<span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-400/10 text-emerald-400">
+								<Eye size={18} aria-hidden="true" />
+							</span>
+							<div className="min-w-0 flex-1">
+								<h2 id={titleId} className="truncate text-[15px] font-black leading-tight">
+									{ar ? 'المشاهدات' : 'Views'}
+								</h2>
+								<p className="truncate text-xs text-white/50" aria-live="polite">
+									{loading && !data
+										? ar
+											? 'جارٍ التحميل…'
+											: 'Loading…'
+										: ar
+											? `شافها ${count}`
+											: `Seen by ${count}`}
+								</p>
+							</div>
+							{loading && data ? (
+								<Loader2 size={15} className="shrink-0 animate-spin text-white/35" aria-label={ar ? 'تحديث' : 'Updating'} />
 							) : null}
 							<button
 								type="button"
 								onClick={onClose}
-								className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 transition-colors hover:bg-white/20"
+								className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 transition-colors hover:bg-white/15"
 								aria-label={ar ? 'إغلاق' : 'Close'}
 							>
 								<X size={17} />
 							</button>
 						</header>
-						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]">
+						{data && (reactionCount || replyCount) ? (
+							<div className="flex shrink-0 gap-1.5 px-5 pb-3" role="tablist" data-testid="story-viewers-totals">
+								{tabs.map(([id, label, value]) =>
+									id !== 'all' && !value ? null : (
+										<button
+											key={id}
+											type="button"
+											role="tab"
+											aria-selected={tab === id}
+											onClick={() => setTab(id)}
+											className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-bold transition-colors ${
+												tab === id ? 'bg-white text-[#0f171c]' : 'bg-white/10 text-white/75 hover:bg-white/15'
+											}`}
+										>
+											{id === 'likes' ? (
+												<Heart size={12} fill="currentColor" strokeWidth={0} className={tab === id ? 'text-[#1daa61]' : 'text-[#25d366]'} />
+											) : null}
+											{label}
+											<span className={tab === id ? 'text-[#0f171c]/55' : 'text-white/45'}>{value}</span>
+										</button>
+									),
+								)}
+							</div>
+						) : null}
+						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/5 pb-[max(1rem,env(safe-area-inset-bottom))]">
 							{error && !data ? (
 								<div className="flex flex-col items-center gap-3 px-6 py-10 text-center" role="alert">
 									<p className="text-sm font-bold text-white/90">
@@ -241,12 +387,12 @@ export function StoryViewersSheet({
 									</button>
 								</div>
 							) : loading && !data ? (
-								<ul aria-busy="true">
-									{[0, 1, 2, 3].map(index => (
+								<ul aria-busy="true" className="pt-1">
+									{[0, 1, 2].map(index => (
 										<ViewerSkeleton key={index} />
 									))}
 								</ul>
-							) : !viewers.length ? (
+							) : !shown.length ? (
 								<div className="flex flex-col items-center gap-2 px-6 py-10 text-center" data-testid="story-viewers-empty">
 									<span className="grid h-14 w-14 place-items-center rounded-full bg-white/5">
 										<Eye size={24} className="text-white/40" aria-hidden="true" />
@@ -261,78 +407,79 @@ export function StoryViewersSheet({
 									</p>
 								</div>
 							) : (
-								<ul data-testid="story-viewers-list">
-									{loading ? (
-										<li className="flex justify-center py-1" aria-hidden="true">
-											<Loader2 size={14} className="animate-spin text-white/40" />
-										</li>
-									) : null}
-									{viewers.map(viewer => (
-										<li
-											key={viewer.id}
-											data-testid="story-viewer-row"
-											className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-white/5"
-										>
-											<button
-												type="button"
-												className="shrink-0 rounded-full transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400 active:scale-95"
-												onClick={() => setZoomed(viewer)}
-												aria-label={ar ? `صورة ${storyViewerName(viewer, locale)}` : `${storyViewerName(viewer, locale)}'s photo`}
-												data-testid="story-viewer-avatar"
+								<ul data-testid="story-viewers-list" className="py-1">
+									{shown.map(viewer => {
+										const liked = STORY_LIKE_EMOJIS.has(viewer.reaction);
+										const when = formatStoryViewTime(
+											viewer.viewedAt || viewer.reactedAt || viewer.replies?.[0]?.at,
+											locale,
+										);
+										return (
+											<li
+												key={viewer.id}
+												data-testid="story-viewer-row"
+												className="flex items-start gap-3.5 px-5 py-2.5 transition-colors hover:bg-white/[0.04]"
 											>
-												{renderAvatar(viewer)}
-											</button>
-											<div className="min-w-0 flex-1 pt-0.5">
-												<p className="truncate text-sm font-bold" dir="auto">
-													{storyViewerName(viewer, locale)}
-												</p>
-												<p className="truncate text-xs text-white/55">
-													{formatStoryViewTime(
-														viewer.viewedAt || viewer.reactedAt || viewer.replies?.[0]?.at,
-														locale,
-													)}
-												</p>
-												{Array.isArray(viewer.replies) && viewer.replies.length ? (
-													<ul className="mt-1.5 flex flex-col items-start gap-1" data-testid="story-viewer-replies">
-														{viewer.replies.map(reply => (
-															<li key={reply.messageId} className="max-w-full">
-																<button
-																	type="button"
-																	onClick={() => onOpenReply?.(reply, viewer)}
-																	disabled={!onOpenReply}
-																	className="max-w-full rounded-2xl rounded-ss-md bg-white/10 px-3 py-1.5 text-start text-[13px] leading-snug text-white/90 transition-colors hover:bg-white/15 disabled:cursor-default"
-																	title={ar ? 'افتح الشات' : 'Open the chat'}
-																	data-testid="story-viewer-reply"
-																>
-																	<span className="line-clamp-3 whitespace-pre-wrap break-words" dir="auto">
-																		{replyPreview(reply, ar)}
-																	</span>
-																	{reply.at ? (
-																		<span className="mt-0.5 block text-[10.5px] text-white/45">
-																			{formatStoryViewTime(reply.at, locale)}
+												<ViewerAvatar
+													viewer={viewer}
+													renderAvatar={renderAvatar}
+													fetchAvatar={fetchAvatar}
+													liked={liked}
+													locale={locale}
+													onOpen={setZoomed}
+												/>
+												<div className="min-w-0 flex-1 pt-0.5 text-start">
+													{/* bdi: each name reads in its own script, yet every name lines up on the
+													    sheet's start edge (Arabic and English under each other). */}
+													<p className="truncate text-[14.5px] font-bold leading-snug" data-testid="story-viewer-name">
+														<bdi>{storyViewerName(viewer, locale)}</bdi>
+													</p>
+													<p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-white/50">
+														<span>{when}</span>
+														{viewer.reaction ? (
+															<>
+																<span aria-hidden="true">·</span>
+																<span className={liked ? 'text-[#25d366]' : 'text-white/70'}>
+																	{liked
+																		? ar
+																			? 'عجبته'
+																			: 'Liked'
+																		: ar
+																			? `تفاعل ${viewer.reaction}`
+																			: `Reacted ${viewer.reaction}`}
+																</span>
+															</>
+														) : null}
+													</p>
+													{Array.isArray(viewer.replies) && viewer.replies.length ? (
+														<ul className="mt-1.5 flex flex-col items-start gap-1" data-testid="story-viewer-replies">
+															{viewer.replies.map(reply => (
+																<li key={reply.messageId} className="max-w-full">
+																	<button
+																		type="button"
+																		onClick={() => onOpenReply?.(reply, viewer)}
+																		disabled={!onOpenReply}
+																		className="max-w-full rounded-2xl rounded-ss-md bg-white/10 px-3 py-1.5 text-start text-[13px] leading-snug text-white/90 transition-colors hover:bg-white/15 disabled:cursor-default"
+																		title={ar ? 'افتح الشات' : 'Open the chat'}
+																		data-testid="story-viewer-reply"
+																	>
+																		<span className="line-clamp-3 whitespace-pre-wrap break-words">
+																			<bdi>{replyPreview(reply, ar)}</bdi>
 																		</span>
-																	) : null}
-																</button>
-															</li>
-														))}
-													</ul>
-												) : null}
-											</div>
-											{viewer.reaction ? (
-												<span
-													className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-xl leading-none"
-													title={ar ? 'تفاعل' : 'Reaction'}
-													data-testid="story-viewer-reaction"
-												>
-													{STORY_LIKE_EMOJIS.has(viewer.reaction) ? (
-														<Heart size={18} fill="currentColor" strokeWidth={0} className="text-[#25d366]" />
-													) : (
-														viewer.reaction
-													)}
-												</span>
-											) : null}
-										</li>
-									))}
+																		{reply.at ? (
+																			<span className="mt-0.5 block text-[10.5px] text-white/45">
+																				{formatStoryViewTime(reply.at, locale)}
+																			</span>
+																		) : null}
+																	</button>
+																</li>
+															))}
+														</ul>
+													) : null}
+												</div>
+											</li>
+										);
+									})}
 								</ul>
 							)}
 						</div>
