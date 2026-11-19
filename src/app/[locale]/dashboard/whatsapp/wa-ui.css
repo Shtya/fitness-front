@@ -15465,3 +15465,36 @@ body.wa-has-voice-dock .wtx-mini {
 		transition: none;
 	}
 }
+
+/* ── Chat list: mentions in the last-message preview ──────────────────────── */
+.wa-row-mention {
+	display: inline;
+	padding: 0 4px;
+	border-radius: 5px;
+	background: color-mix(in srgb, #1daa61 13%, transparent);
+	color: #128c4a;
+	font-weight: 600;
+}
+html.dark .wa-row-mention {
+	background: color-mix(in srgb, #21c063 18%, transparent);
+	color: #5fdc93;
+}
+/* An unread message that mentions you: "@" next to the unread count, like WhatsApp. */
+.wa-row-mention-badge {
+	display: grid;
+	flex: none;
+	width: 20px;
+	height: 20px;
+	margin-inline-end: 4px;
+	place-items: center;
+	border-radius: 999px;
+	background: #1daa61;
+	color: #fff;
+	font-size: 12px;
+	font-weight: 800;
+	line-height: 1;
+}
+html.dark .wa-row-mention-badge {
+	background: #21c063;
+	color: #07170e;
+}

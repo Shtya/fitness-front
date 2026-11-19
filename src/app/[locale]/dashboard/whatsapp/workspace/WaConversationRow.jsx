@@ -10,6 +10,26 @@ import { Avatar } from './WaAvatar';
 
 export const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 
+
+/** "@Muhammad تمام" → a mention chip + the rest, so names stand out in the chat list. */
+function withMentionChips(text) {
+	const value = String(text || '');
+	if (!value.includes('@')) return value;
+	const parts = [];
+	let last = 0;
+	for (const match of value.matchAll(/@[^\s@،,.:;!?()]+/gu)) {
+		if (match.index > last) parts.push(value.slice(last, match.index));
+		parts.push(
+			<span key={match.index} className="wa-row-mention">
+				{match[0]}
+			</span>,
+		);
+		last = match.index + match[0].length;
+	}
+	if (last < value.length) parts.push(value.slice(last));
+	return parts;
+}
+
 export function DeliveryTicks({ message, size = 13, className = '', selfChat = false }) {
 	const state = messageDeliveryState(message, { selfChat });
 	if (state === 'hidden') return null;
@@ -485,11 +505,20 @@ export const WaConversationRow = memo(function WaConversationRow({
 									dir={previewPresentation.dir}
 									lang={previewPresentation.lang}
 								>
-									{previewText}
+									{typing ? previewText : withMentionChips(previewText)}
 								</span>
 							</>
 						)}
 					</p>
+					{unread && conversation.lastMessage?.mentionsMe ? (
+						<span
+							className="wa-row-mention-badge"
+							title={locale === 'ar' ? 'حد عمل لك منشن' : 'You were mentioned'}
+							aria-label={locale === 'ar' ? 'حد عمل لك منشن' : 'You were mentioned'}
+						>
+							@
+						</span>
+					) : null}
 					{unread && (
 						<span
 							className="wa-row-unread grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-[10px] font-bold text-white"
