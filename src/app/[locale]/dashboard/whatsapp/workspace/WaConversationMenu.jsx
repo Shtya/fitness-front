@@ -7,7 +7,7 @@ import { conversationTitle, conversationAvatarUrl, conversationPreview } from '.
 import { useMenuKeyboard } from '../wa-ui-menu';
 import { Avatar } from './WaAvatar';
 import { useFreshPressGuard, useLongPressBackdrop } from './wa-long-press';
-import { KEEP_IN_TOUCH_INTERVALS, intervalLabel } from './wa-keep-in-touch';
+import { KEEP_IN_TOUCH_GROUPS, intervalLabel, keepInTouchGroupLabel } from './wa-keep-in-touch';
 
 function computeBesideMenuPosition(anchorRect, menuSize = { width: 228, height: 280 }) {
 	const gap = 6;
@@ -220,31 +220,12 @@ export function ConversationActionMenu({
 							</button>
 							{action.id === 'keepInTouch' && keepInTouchOpen ? (
 								<div className="wa-kit-picker" role="group" aria-label={ar ? 'كل قد إيه؟' : 'How often?'}>
-									{(conversation.keepInTouch?.days && !KEEP_IN_TOUCH_INTERVALS.includes(conversation.keepInTouch.days)
-										? [...KEEP_IN_TOUCH_INTERVALS, conversation.keepInTouch.days].sort((a, b) => a - b)
-										: KEEP_IN_TOUCH_INTERVALS
-									).map(days => {
-										const current = conversation.keepInTouch?.days === days;
-										return (
-											<button
-												key={days}
-												type="button"
-												role="menuitemradio"
-												aria-checked={current}
-												disabled={busy}
-												onClick={() => onAction(`keepInTouch:${days}`)}
-												className={`wa-kit-picker__option${current ? ' is-on' : ''}`}
-											>
-												{current ? <Check size={13} strokeWidth={2.4} aria-hidden="true" /> : null}
-												{intervalLabel(days, locale)}
-											</button>
-										);
-									})}
-									<KeepInTouchDaysInput
+									<KeepInTouchForm
 										ar={ar}
+										locale={locale}
 										busy={busy}
-										current={conversation.keepInTouch?.days || 0}
-										onSubmit={days => onAction(`keepInTouch:${days}`)}
+										current={conversation.keepInTouch}
+										onSubmit={(days, group) => onAction(`keepInTouch:${days}:${group || ''}`)}
 									/>
 									{conversation.keepInTouch?.days ? (
 										<button
@@ -268,25 +249,50 @@ export function ConversationActionMenu({
 	);
 }
 
-/** "Every [ 10 ] days": any number of days (1–365) besides the preset chips. */
-function KeepInTouchDaysInput({ ar, busy, current, onSubmit }) {
-	const custom = current && !KEEP_IN_TOUCH_INTERVALS.includes(current) ? String(current) : '';
-	// Starts empty (the saved number is the chip above and the placeholder), so typing never
-	// lands in the middle of an old value.
+/**
+ * Who they are to you (friends / family / acquaintances / unknown) and "Every [ N ] days".
+ * The field starts empty with the saved number as its placeholder, so typing never lands in
+ * the middle of an old value; left empty, saving keeps the saved number (change only the group).
+ */
+function KeepInTouchForm({ ar, locale, busy, current, onSubmit }) {
+	const savedDays = Number(current?.days) || 0;
+	const [group, setGroup] = useState(current?.group || '');
 	const [value, setValue] = useState('');
-	const days = Math.round(Number(value));
+	const typed = Math.round(Number(value));
+	const days = value ? typed : savedDays;
 	const valid = Number.isFinite(days) && days >= 1 && days <= 365;
+	const changed = days !== savedDays || (group || '') !== (current?.group || '');
 	const submit = () => {
-		if (valid && !busy) onSubmit(days);
+		if (valid && changed && !busy) onSubmit(days, group);
 	};
 	return (
 		<form
-			className="wa-kit-picker__custom"
+			className="wa-kit-picker__form"
 			onSubmit={event => {
 				event.preventDefault();
 				submit();
 			}}
 		>
+			<div className="wa-kit-picker__groups" role="radiogroup" aria-label={ar ? 'التصنيف' : 'Group'}>
+				{KEEP_IN_TOUCH_GROUPS.map(id => {
+					const on = group === id;
+					return (
+						<button
+							key={id}
+							type="button"
+							role="radio"
+							aria-checked={on}
+							disabled={busy}
+							onClick={() => setGroup(on ? '' : id)}
+							className={`wa-kit-picker__option${on ? ' is-on' : ''}`}
+						>
+							{on ? <Check size={13} strokeWidth={2.4} aria-hidden="true" /> : null}
+							{keepInTouchGroupLabel(id, locale)}
+						</button>
+					);
+				})}
+			</div>
+			<div className="wa-kit-picker__custom">
 			<span aria-hidden="true">{ar ? 'كل' : 'Every'}</span>
 			<input
 				type="number"
@@ -295,7 +301,7 @@ function KeepInTouchDaysInput({ ar, busy, current, onSubmit }) {
 				max={365}
 				step={1}
 				value={value}
-				placeholder={custom || '10'}
+				placeholder={savedDays ? String(savedDays) : '7'}
 				disabled={busy}
 				aria-label={ar ? 'عدد الأيام' : 'Number of days'}
 				onChange={event => setValue(event.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
@@ -305,9 +311,10 @@ function KeepInTouchDaysInput({ ar, busy, current, onSubmit }) {
 				}}
 			/>
 			<span aria-hidden="true">{ar ? 'يوم' : 'days'}</span>
-			<button type="submit" disabled={!valid || busy} className="wa-kit-picker__set">
-				{ar ? 'حفظ' : 'Set'}
+			<button type="submit" disabled={!valid || !changed || busy} className="wa-kit-picker__set">
+				{ar ? 'حفظ' : 'Save'}
 			</button>
+			</div>
 		</form>
 	);
 }

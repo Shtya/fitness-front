@@ -15149,6 +15149,56 @@ html.dark .wa-kit-picker__option.is-stop {
 	opacity: 0.5;
 	cursor: default;
 }
+.wa-kit-picker__form {
+	display: flex;
+	flex-basis: 100%;
+	flex-direction: column;
+	gap: 8px;
+}
+.wa-kit-picker__groups {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+/* Keep in touch tab: group chips over the list */
+.wa-kit-groups {
+	display: flex;
+	gap: 6px;
+	overflow-x: auto;
+	padding: 4px 14px 8px;
+	scrollbar-width: none;
+}
+.wa-kit-groups::-webkit-scrollbar {
+	display: none;
+}
+.wa-kit-groups__chip {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+	height: 30px;
+	padding: 0 12px;
+	border: 1px solid var(--d-chip-border, #e9edef);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--d-text-2, #54656f);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.wa-kit-groups__chip:hover {
+	background: var(--d-hover, #f5f6f6);
+}
+.wa-kit-groups__chip.is-on {
+	border-color: transparent;
+	background: var(--d-chip-on, #d9fdd3);
+	color: var(--d-chip-on-text, #15603e);
+}
+.wa-kit-groups__count {
+	font-size: 11.5px;
+	font-weight: 700;
+	opacity: 0.6;
+}
 .wa-kit-picker__custom {
 	display: inline-flex;
 	flex-basis: 100%;

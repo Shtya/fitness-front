@@ -928,6 +928,7 @@ export function MediaAttachment({
 
 	/** ~50 MB: pulling this through JS memory OOM/aborts; stream from a signed URL instead. */
 	const LARGE_ATTACHMENT_BLOB_BYTES = 48 * 1024 * 1024;
+	const IN_APP_OFFICE_MAX_BYTES = 15 * 1024 * 1024;
 
 	const attachmentDeclaredBytes = () =>
 		Number(
@@ -948,8 +949,13 @@ export function MediaAttachment({
 		)
 			.toLowerCase()
 			.replace(/[^a-z0-9]/g, '');
-		// Only small, browser-viewable docs stay on the blob path for the in-app viewer.
-		return !['pdf', 'txt', 'csv', 'json', 'md', 'log'].includes(extension);
+		// Documents the in-app viewer can show stay on the blob path. Excel and Word used to be
+		// left out, so "Open" handed them to the browser, which downloaded them instead.
+		if (['xls', 'xlsx', 'docx'].includes(extension)) {
+			// Spreadsheets and Word files are read in the page; past ~15 MB that gets slow.
+			return bytes > IN_APP_OFFICE_MAX_BYTES;
+		}
+		return !['pdf', 'txt', 'csv', 'json', 'md', 'markdown', 'log'].includes(extension);
 	};
 
 	const ensureAttachmentOnDisk = async () => {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getChatDraft, setChatDraft } from './workspace/wa-chat-drafts.js';
-import { arabicDays, intervalLabel, keepInTouchSummary, sinceLabel } from './workspace/wa-keep-in-touch.js';
+import { KEEP_IN_TOUCH_GROUPS, arabicDays, intervalLabel, keepInTouchGroupLabel, keepInTouchSummary, sinceLabel } from './workspace/wa-keep-in-touch.js';
 
 test('each chat keeps its own draft and a new chat starts empty', () => {
 	setChatDraft('chat-a', 'hello A');
@@ -73,4 +73,25 @@ test('Arabic day counts use the right form', () => {
 	assert.equal(arabicDays(10), '10 أيام');
 	assert.equal(arabicDays(14), '14 يومًا');
 	assert.equal(intervalLabel(3, 'ar'), 'كل 3 أيام');
+});
+
+test('keep in touch groups have Arabic and English names', () => {
+	assert.deepEqual(KEEP_IN_TOUCH_GROUPS, ['friends', 'family', 'acquaintances', 'unknown']);
+	assert.equal(keepInTouchGroupLabel('friends', 'ar'), 'اصحابي');
+	assert.equal(keepInTouchGroupLabel('family', 'ar'), 'قرايبي');
+	assert.equal(keepInTouchGroupLabel('acquaintances', 'ar'), 'معارف');
+	assert.equal(keepInTouchGroupLabel('unknown', 'ar'), 'غير معروفين');
+	assert.equal(keepInTouchGroupLabel('family', 'en'), 'Family');
+	assert.equal(keepInTouchGroupLabel('nope', 'en'), '');
+});
+
+test('the row summary names the group next to the interval', () => {
+	const now = Date.parse('2026-11-19T10:00:00Z');
+	const due = new Date(now + 3 * 86_400_000).toISOString();
+	const last = new Date(now - 7 * 86_400_000).toISOString();
+	const summary = keepInTouchSummary({ days: 10, group: 'family', lastContactAt: last, dueAt: due, overdue: false }, 'ar', now);
+	assert.match(summary.text, /قرايبي/);
+	assert.match(summary.text, /10 أيام/);
+	const ungrouped = keepInTouchSummary({ days: 10, group: null, lastContactAt: last, dueAt: due, overdue: false }, 'en', now);
+	assert.doesNotMatch(ungrouped.text, /·.*·/);
 });

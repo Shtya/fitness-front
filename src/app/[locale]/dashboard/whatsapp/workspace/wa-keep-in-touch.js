@@ -9,6 +9,22 @@ export const KEEP_IN_TOUCH_FILTER = 'keep_in_touch';
 /** Choices offered in the chat menu. */
 export const KEEP_IN_TOUCH_INTERVALS = [1, 3, 7, 14, 30];
 
+/** Who someone is to you, to sort the Keep in touch list. */
+export const KEEP_IN_TOUCH_GROUPS = ['friends', 'family', 'acquaintances', 'unknown'];
+
+const GROUP_LABELS = {
+	friends: ['Friends', 'اصحابي'],
+	family: ['Family', 'قرايبي'],
+	acquaintances: ['Acquaintances', 'معارف'],
+	unknown: ['Unknown', 'غير معروفين'],
+};
+
+export function keepInTouchGroupLabel(group, locale = 'en') {
+	const pair = GROUP_LABELS[group];
+	if (!pair) return '';
+	return locale === 'ar' ? pair[1] : pair[0];
+}
+
 const DAY_MS = 86_400_000;
 
 /** Arabic count of days with the right noun form: يوم، يومين، 3 أيام، 14 يومًا. */
@@ -49,7 +65,8 @@ export function sinceLabel(at, locale = 'en', now = Date.now()) {
 export function keepInTouchSummary(keepInTouch, locale = 'en', now = Date.now()) {
 	if (!keepInTouch) return { text: '', overdue: false };
 	const ar = locale === 'ar';
-	const every = intervalLabel(keepInTouch.days, locale);
+	const groupName = keepInTouchGroupLabel(keepInTouch.group, locale);
+	const every = groupName ? `${intervalLabel(keepInTouch.days, locale)} · ${groupName}` : intervalLabel(keepInTouch.days, locale);
 	if (!keepInTouch.lastContactAt) {
 		return { text: `${ar ? 'لم تراسله بعد' : 'Never messaged'} · ${every}`, overdue: true };
 	}

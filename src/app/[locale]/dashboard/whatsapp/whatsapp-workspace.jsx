@@ -523,7 +523,7 @@ import {
 } from './whatsapp-privacy-blur';
 import { forgetAttachmentBlob, getCachedAttachmentBlob, isPersistedAttachmentId, isUsefulWaveform, prepareVoicePlaybackFromBlob, readBlobErrorMessage, requestAttachmentBlob } from './workspace/wa-attachment-blobs';
 import { Avatar } from './workspace/WaAvatar';
-import { KEEP_IN_TOUCH_FILTER } from './workspace/wa-keep-in-touch';
+import { KEEP_IN_TOUCH_FILTER, KEEP_IN_TOUCH_GROUPS, keepInTouchGroupLabel } from './workspace/wa-keep-in-touch';
 import { MediaOverflowMenu, VoiceMessage, formatClock, pauseAllVoicePlayers, useNearViewport } from './workspace/WaVoiceMessage';
 import { ChatImageViewer, ProfilePhotoViewer } from './workspace/WaImageViewer';
 import { LocationMessage } from './workspace/WaLocation';
@@ -910,6 +910,29 @@ const SHOWCASE_TABS = new Set(['chats', 'reading', 'prompts', 'settings']);
 function serverListFilter(filter) {
 	if (filter === 'archived' || filter === KEEP_IN_TOUCH_FILTER) return filter;
 	return 'all';
+}
+
+/** Group chips above the Keep in touch list, each with how many people are in it. */
+function KeepInTouchGroupChips({ locale, value, onChange, conversations }) {
+	const tracked = conversations.filter(conversation => conversation.keepInTouch);
+	const count = group => (group === 'all' ? tracked.length : tracked.filter(item => item.keepInTouch.group === group).length);
+	return (
+		<div className="wa-kit-groups" role="tablist" aria-label={locale === 'ar' ? 'التصنيف' : 'Groups'}>
+			{['all', ...KEEP_IN_TOUCH_GROUPS].map(group => (
+				<button
+					key={group}
+					type="button"
+					role="tab"
+					aria-selected={value === group}
+					onClick={() => onChange(group)}
+					className={`wa-kit-groups__chip${value === group ? ' is-on' : ''}`}
+				>
+					{group === 'all' ? (locale === 'ar' ? 'الكل' : 'All') : keepInTouchGroupLabel(group, locale)}
+					<span className="wa-kit-groups__count">{count(group)}</span>
+				</button>
+			))}
+		</div>
+	);
 }
 
 function keepInTouchDueTime(conversation) {
@@ -3164,6 +3187,8 @@ function WhatsAppWorkspaceContent() {
 	}, []);
 	const [privacyBlur, setPrivacyBlur] = useState(() => readWhatsAppPrivacyBlur());
 	const [conversationFilter, setConversationFilter] = useState(defaultWhatsAppConversationFilter);
+	// Keep in touch tab: one group at a time (friends / family / acquaintances / unknown) or all.
+	const [keepInTouchGroupFilter, setKeepInTouchGroupFilter] = useState('all');
 	const [contactsPopupOpen, setContactsPopupOpen] = useState(false);
 	const [archivedCount, setArchivedCount] = useState(0);
 	/** People you are due to message (keep-in-touch tab badge). */
@@ -4967,7 +4992,11 @@ function WhatsAppWorkspaceContent() {
 		// Keep in touch: every tracked person (archived too), most overdue first, as the server sent it.
 		if (conversationFilter === KEEP_IN_TOUCH_FILTER && !chatSearch.trim()) {
 			return effectiveConversations
-				.filter(conversation => conversation.keepInTouch)
+				.filter(
+					conversation =>
+						conversation.keepInTouch &&
+						(keepInTouchGroupFilter === 'all' || conversation.keepInTouch.group === keepInTouchGroupFilter),
+				)
 				.sort((a, b) => keepInTouchDueTime(a) - keepInTouchDueTime(b));
 		}
 		const archivedView = conversationFilter === 'archived';
@@ -5033,7 +5062,7 @@ function WhatsAppWorkspaceContent() {
 				preview.includes(q)
 			);
 		});
-	}, [effectiveConversations, chatSearch, conversationFilter, serverSearchQuery]);
+	}, [effectiveConversations, chatSearch, conversationFilter, serverSearchQuery, keepInTouchGroupFilter]);
 
 	const chatListVisible = isConversationWorkspaceTab(activeTab);
 	const chatListScrollScope = `${accountId || ''}:${conversationFilter}:${chatSearch.trim()}:${assignmentFilter || ''}`;
@@ -14565,12 +14594,13 @@ function WhatsAppWorkspaceContent() {
 		} else if (action === 'info') {
 			void openConversationInfo(conversation);
 		} else if (String(action).startsWith('keepInTouch:')) {
-			void setConversationKeepInTouch(conversation, Number(String(action).split(':')[1]) || 0);
+			const [, rawDays, rawGroup] = String(action).split(':');
+			void setConversationKeepInTouch(conversation, Number(rawDays) || 0, rawGroup);
 		}
 	};
 
 	/** Keep in touch (صلة رحم): remind me to message this person every `days` days; 0 stops it. */
-	const setConversationKeepInTouch = async (conversation, days) => {
+	const setConversationKeepInTouch = async (conversation, days, group) => {
 		if (demo.settings.enabled || !conversation?.id || isDemoId(conversation.id)) return;
 		const previous = conversation.keepInTouch || null;
 		const lastOutboundAt =
@@ -14585,6 +14615,7 @@ function WhatsAppWorkspaceContent() {
 						const due = last ? last + days * 86_400_000 : 0;
 						return {
 							days,
+							group: group === undefined ? previous?.group || null : group || null,
 							lastContactAt: last ? new Date(last).toISOString() : null,
 							dueAt: due ? new Date(due).toISOString() : null,
 							overdue: !due || due <= Date.now(),
@@ -14595,7 +14626,10 @@ function WhatsAppWorkspaceContent() {
 			current.map(item => (item.id === conversation.id ? { ...item, keepInTouch: value } : item));
 		setConversations(patch(optimistic));
 		try {
-			await api.put(`/whatsapp/conversations/${conversation.id}/keep-in-touch`, { days: days > 0 ? days : null });
+			await api.put(`/whatsapp/conversations/${conversation.id}/keep-in-touch`, {
+				days: days > 0 ? days : null,
+				...(group === undefined ? {} : { group: group || null }),
+			});
 			toast.success(days > 0 ? t.keepInTouchSaved : t.keepInTouchRemoved);
 			if (accountId) scheduleReloadConversations(accountId);
 		} catch (error) {
@@ -18020,6 +18054,14 @@ function WhatsAppWorkspaceContent() {
 											) : null}
 											<ChevronRight size={18} className="wa-archived-row__chevron" />
 										</button>
+									) : null}
+									{conversationFilter === KEEP_IN_TOUCH_FILTER && !chatSearch.trim() ? (
+										<KeepInTouchGroupChips
+											locale={locale}
+											value={keepInTouchGroupFilter}
+											onChange={setKeepInTouchGroupFilter}
+											conversations={effectiveConversations}
+										/>
 									) : null}
 									{filteredConversations.length === 0 ? (
 										!inboxReady ||
