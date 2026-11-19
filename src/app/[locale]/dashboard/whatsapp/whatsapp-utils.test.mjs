@@ -1864,3 +1864,17 @@ test('chat pickers autofocus only on fine-pointer devices so phones keep the key
 	assert.equal(shouldAutoFocusTextEntry(null), false);
 	assert.equal(shouldAutoFocusTextEntry({}), false);
 });
+
+test('chat list preview names a mention like the thread does', () => {
+	const conversation = {
+		lastMessage: {
+			text: '@188880363991152',
+			type: 'text',
+			direction: 'inbound',
+			mentionLabels: { '188880363991152': 'Muhammad' },
+		},
+	};
+	assert.equal(conversationPreview(conversation, 'en'), '@Muhammad');
+	const unlabeled = { lastMessage: { text: '@188880363991152 تمام', type: 'text', direction: 'inbound' } };
+	assert.equal(conversationPreview(unlabeled, 'en'), '@188880363991152 تمام');
+});

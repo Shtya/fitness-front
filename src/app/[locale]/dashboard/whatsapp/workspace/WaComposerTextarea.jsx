@@ -6,6 +6,12 @@ import { filterComposerMentionCandidates, findComposerMentionQuery, formatWhatsA
 import { buildCompletionModel, rememberSentText, suggestCompletion } from '../wa-autocomplete';
 import { getChatDraft, setChatDraft } from './wa-chat-drafts';
 
+/**
+ * Inline completion (grey suggested words + Tab) is off: it kept finishing words you did not
+ * mean. Set to true to bring it back; nothing else depends on it.
+ */
+const INLINE_COMPLETION_ENABLED = false;
+
 
 /** Long text grows the field (like WhatsApp) up to ~40% of the window, then it scrolls. */
 function fitComposerHeight(node) {
@@ -43,6 +49,7 @@ export function IsolatedComposerTextarea({
 	// what you have sent before, kept in this browser.
 	const completionModel = useMemo(
 		() =>
+			INLINE_COMPLETION_ENABLED &&
 			buildCompletionModel(
 				(Array.isArray(completionMessages) ? completionMessages.slice(-300) : []).map(message => ({
 					text: typeof message?.text === 'string' ? message.text : '',
@@ -109,7 +116,9 @@ export function IsolatedComposerTextarea({
 				const previous = String(draftRef.current || '');
 				apply(next);
 				setGhost('');
-				if (previous.trim() && !String(draftRef.current || '').trim()) rememberSentText(previous);
+				if (INLINE_COMPLETION_ENABLED && previous.trim() && !String(draftRef.current || '').trim()) {
+					rememberSentText(previous);
+				}
 			},
 			focus: () => {
 				const node = textareaRef.current;
@@ -129,7 +138,7 @@ export function IsolatedComposerTextarea({
 	// Ghost text only when the caret sits at the very end with nothing selected.
 	const refreshGhost = useCallback(
 		node => {
-			if (!node || node.disabled) {
+			if (!INLINE_COMPLETION_ENABLED || !node || node.disabled) {
 				setGhost('');
 				return;
 			}

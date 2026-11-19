@@ -836,7 +836,8 @@ export function conversationPreview(conversation, locale = 'en') {
 	const reactionText = conversationReactionPreviewText(message, locale);
 	if (reactionText) return reactionText;
 	const ar = String(locale || 'en').toLowerCase().startsWith('ar');
-	const text = String(message.text || '').trim();
+	// "@188880363991152" shows as "@Muhammad", as in the thread (labels come with the message).
+	const text = textWithMentionLabels(String(message.text || '').trim(), null, message.mentionLabels);
 	const type = String(message.type || '').toLowerCase();
 	const mediaTypes = new Set([
 		'image',
