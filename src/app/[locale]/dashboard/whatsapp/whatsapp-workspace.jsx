@@ -47,6 +47,7 @@ import {
 	FolderKanban,
 	Forward,
 	Wallet,
+	Shirt,
 	Globe2,
 	Image as ImageIcon,
 	ImageOff,
@@ -342,6 +343,7 @@ const AutoForwardPanel = lazy(() => import('./AutoForwardPanel'));
 const GroupMemberPanel = lazy(() => import('./GroupMemberPanel'));
 const ConnectionCheckDialog = lazy(() => import('./ConnectionCheckDialog'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
+const WhatsAppOutfitTab = lazy(() => import('./outfit/WhatsAppOutfitTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
@@ -524,6 +526,14 @@ import {
 import { forgetAttachmentBlob, getCachedAttachmentBlob, isPersistedAttachmentId, isUsefulWaveform, prepareVoicePlaybackFromBlob, readBlobErrorMessage, requestAttachmentBlob } from './workspace/wa-attachment-blobs';
 import { Avatar } from './workspace/WaAvatar';
 import { KEEP_IN_TOUCH_FILTER, KEEP_IN_TOUCH_GROUPS, keepInTouchGroupLabel } from './workspace/wa-keep-in-touch';
+import {
+	DIRECTORY_REFRESH_MS,
+	directoryRowConversation,
+	indexChatDirectory,
+	readStoredDirectory,
+	searchChatDirectory,
+	syncChatDirectory,
+} from './workspace/wa-chat-directory';
 import { MediaOverflowMenu, VoiceMessage, formatClock, pauseAllVoicePlayers, useNearViewport } from './workspace/WaVoiceMessage';
 import { ChatImageViewer, ProfilePhotoViewer } from './workspace/WaImageViewer';
 import { LocationMessage } from './workspace/WaLocation';
@@ -592,6 +602,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'board',
 	'fakeChat',
 	'wallet',
+	'outfit',
 	'adhkar',
 	'documents',
 	'learn',
@@ -888,6 +899,7 @@ const tabs = [
 	['board', LayoutGrid],
 	['fakeChat', Sparkles],
 	['wallet', Wallet],
+	['outfit', Shirt],
 	['adhkar', BookOpen],
 	['documents', FileText],
 	['learn', GraduationCap],
@@ -937,6 +949,8 @@ function KeepInTouchGroupChips({ locale, value, onChange, conversations }) {
 
 function keepInTouchDueTime(conversation) {
 	const kit = conversation?.keepInTouch;
+	// No reminder: after everyone who has one.
+	if (!(Number(kit?.days) > 0)) return Number.MAX_SAFE_INTEGER;
 	if (!kit?.lastContactAt) return 0;
 	return kit.dueAt ? new Date(kit.dueAt).getTime() : 0;
 }
@@ -958,6 +972,10 @@ const CLIENT_MESSAGE_ID_PREFIXES = ['pending:', 'pending-', 'inbox-preview-', 'w
  * Whether a thread row can be the "before" cursor for the messages API: a stored row or a phone
  * row ("live:<providerId>", which the server maps back). Rows made up on this device are not.
  */
+/** A chat with fewer messages than this asks the phone for older ones by itself. */
+const AUTO_OLDER_MIN_ROWS = 40;
+const AUTO_OLDER_MAX_TRIES = 3;
+
 export function isServerMessageCursor(message) {
 	const value = String(message?.id || '');
 	if (!value || value === 'live:') return false;
@@ -3189,6 +3207,11 @@ function WhatsAppWorkspaceContent() {
 	const [conversationFilter, setConversationFilter] = useState(defaultWhatsAppConversationFilter);
 	// Keep in touch tab: one group at a time (friends / family / acquaintances / unknown) or all.
 	const [keepInTouchGroupFilter, setKeepInTouchGroupFilter] = useState('all');
+	// Every chat's name and number, kept on this device: search finds anyone at once, not only
+	// the chats the list has loaded (see wa-chat-directory.js).
+	const [chatDirectory, setChatDirectory] = useState([]);
+	const chatDirectoryIndex = useMemo(() => indexChatDirectory(chatDirectory), [chatDirectory]);
+	const chatDirectorySyncRef = useRef({ accountId: null, at: 0, running: null });
 	const [contactsPopupOpen, setContactsPopupOpen] = useState(false);
 	const [archivedCount, setArchivedCount] = useState(0);
 	/** People you are due to message (keep-in-touch tab badge). */
@@ -5027,14 +5050,22 @@ function WhatsAppWorkspaceContent() {
 		});
 		const sorted = sortConversationsByActivity(scoped);
 		if (!chatSearch.trim()) return sorted;
+		// Chats the list has not loaded yet, from the directory on this device: shown at once,
+		// under the list's own matches, without waiting for the server search.
+		const withDirectory = found => {
+			if (conversationFilter !== 'all' || !chatDirectoryIndex.length) return found;
+			const shown = new Set(found.map(conversation => conversation.id));
+			const extra = searchChatDirectory(chatDirectoryIndex, chatSearch, { excludeIds: shown });
+			return extra.length ? [...found, ...extra.map(directoryRowConversation)] : found;
+		};
 		// The server already answered this exact search (it also matches saved/phonebook names
 		// and the same person's other contact): trust it. Re-filtering by the displayed title
 		// dropped chats it found by a name that is not the one shown.
-		if (serverSearchQuery && serverSearchQuery === chatSearch.trim()) return sorted;
+		if (serverSearchQuery && serverSearchQuery === chatSearch.trim()) return withDirectory(sorted);
 		const q = foldWhatsAppSearchText(chatSearch);
 		if (!q) return sorted;
 		const qDigits = chatSearch.replace(/\D/g, '');
-		return sorted.filter(conversation => {
+		return withDirectory(sorted.filter(conversation => {
 			const names = foldWhatsAppSearchText(
 				[
 					conversationTitle(conversation),
@@ -5061,8 +5092,48 @@ function WhatsAppWorkspaceContent() {
 				(qDigits.length >= 3 && phone.includes(qDigits)) ||
 				preview.includes(q)
 			);
-		});
-	}, [effectiveConversations, chatSearch, conversationFilter, serverSearchQuery, keepInTouchGroupFilter]);
+		}));
+	}, [effectiveConversations, chatSearch, conversationFilter, serverSearchQuery, keepInTouchGroupFilter, chatDirectoryIndex]);
+
+	// Directory: paint what this device already has, then fetch only what changed since.
+	const refreshChatDirectory = useCallback(
+		async (targetAccountId, { minAgeMs = 0 } = {}) => {
+			if (!targetAccountId || isDemoId(targetAccountId)) return;
+			const state = chatDirectorySyncRef.current;
+			if (state.accountId === targetAccountId && state.running) return state.running;
+			if (state.accountId === targetAccountId && Date.now() - state.at < minAgeMs) return;
+			state.accountId = targetAccountId;
+			state.running = syncChatDirectory(targetAccountId, api)
+				.then(next => {
+					state.at = Date.now();
+					if (accountIdRef.current === targetAccountId) setChatDirectory(next.items);
+				})
+				.catch(() => undefined)
+				.finally(() => {
+					state.running = null;
+				});
+			return state.running;
+		},
+		[],
+	);
+
+	useEffect(() => {
+		if (!accountId) {
+			setChatDirectory([]);
+			return undefined;
+		}
+		setChatDirectory(readStoredDirectory(accountId)?.items || []);
+		chatDirectorySyncRef.current = { accountId, at: 0, running: null };
+		void refreshChatDirectory(accountId);
+		const timer = window.setInterval(() => void refreshChatDirectory(accountId), DIRECTORY_REFRESH_MS);
+		return () => window.clearInterval(timer);
+	}, [accountId, refreshChatDirectory]);
+
+	// Starting a search: bring the directory up to date if it is more than half a minute old.
+	const searchingChats = Boolean(chatSearch.trim());
+	useEffect(() => {
+		if (searchingChats && accountId) void refreshChatDirectory(accountId, { minAgeMs: 30_000 });
+	}, [searchingChats, accountId, refreshChatDirectory]);
 
 	const chatListVisible = isConversationWorkspaceTab(activeTab);
 	const chatListScrollScope = `${accountId || ''}:${conversationFilter}:${chatSearch.trim()}:${assignmentFilter || ''}`;
@@ -5862,13 +5933,7 @@ function WhatsAppWorkspaceContent() {
 			: items.map(annotateChipFields);
 
 		// Chip filters: merge missing rows into the All inbox instead of replacing it.
-		if (chipBackfill) {
-			const liveInbox = accountIdRef.current === id ? conversationsRef.current : null;
-			const inboxBase =
-				(deltaSince && liveInbox?.length ? liveInbox : null) ||
-				conversationsCacheRef.current.get(id)?.items ||
-				liveInbox ||
-				[];
+		const mergeRowsInto = inboxBase => {
 			const byId = new Map(inboxBase.map(item => [item.id, item]));
 			items.forEach(item => {
 				const annotated = annotateChipFields(item);
@@ -5894,7 +5959,16 @@ function WhatsAppWorkspaceContent() {
 						annotated.isFavorite == null ? live.isFavorite : annotated.isFavorite,
 				});
 			});
-			nextItems = sortConversationsByActivity([...byId.values()]);
+			return sortConversationsByActivity([...byId.values()]);
+		};
+		if (chipBackfill) {
+			const liveInbox = accountIdRef.current === id ? conversationsRef.current : null;
+			const inboxBase =
+				(deltaSince && liveInbox?.length ? liveInbox : null) ||
+				conversationsCacheRef.current.get(id)?.items ||
+				liveInbox ||
+				[];
+			nextItems = mergeRowsInto(inboxBase);
 		}
 
 		const next = {
@@ -5981,6 +6055,11 @@ function WhatsAppWorkspaceContent() {
 				conversationsCacheRef.current.set(id, { ...next, items: merged });
 			}
 			setConversations(current => keepOpenConversation(merged, current, conversationIdRef.current));
+		} else if (deltaSince) {
+			// Merge into the list as it is now: a page loaded while this request ran must stay.
+			setConversations(current =>
+				keepOpenConversation(mergeRowsInto(current?.length ? current : nextItems), current, conversationIdRef.current),
+			);
 		} else {
 			if (serverFilterKey) filterListCacheRef.current.set(serverFilterKey, nextItems);
 			setConversations(current => keepOpenConversation(nextItems, current, conversationIdRef.current));
@@ -6094,13 +6173,31 @@ function WhatsAppWorkspaceContent() {
 				const filter = conversationFilterRef.current;
 				const chipOnly =
 					WHATSAPP_INBOX_CHIP_FILTERS.has(filter) && !search && !assignment;
+				// The All inbox: merge the chats that changed lately into the list as it is. A forced
+				// page-1 reload replaced the list with its first 50 chats, so with pages 2–3 loaded the
+				// list shrank under the user and the scroll was thrown back up on every message that
+				// arrived in a chat not loaded yet (measured: the list height dropped on each one).
+				const mergeOnly = !search && !assignment && (filter === 'all' || chipOnly);
 				// Always refresh the All inbox first so chip filters stay instant.
-				loadConversations(id, 1, false, {
-					force: true,
-					search,
-					filter: chipOnly ? 'all' : filter,
-					assignedUserId: assignment,
-				})
+				loadConversations(
+					id,
+					1,
+					false,
+					mergeOnly
+						? {
+								background: true,
+								search: '',
+								filter: 'all',
+								assignedUserId: '',
+								updatedSince: new Date(Date.now() - 15 * 60_000).toISOString(),
+							}
+						: {
+								force: true,
+								search,
+								filter: chipOnly ? 'all' : filter,
+								assignedUserId: assignment,
+							},
+				)
 					.then(() => {
 						if (!chipOnly || accountIdRef.current !== id) return;
 						return loadConversations(id, 1, false, {
@@ -13439,6 +13536,33 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
+	/*
+	 * A chat that opens with only a few messages (history WhatsApp never sent at link time) does
+	 * not scroll, so scrolling up — the only thing that asked the phone for older messages —
+	 * never happened and the chat stayed at one message. Ask by itself: from the oldest message
+	 * we have, while each page brings more, a few times per chat per session.
+	 */
+	const autoOlderTriesRef = useRef(new Map());
+	const serverMessageRows = useMemo(
+		() => (conversationMessages || []).filter(isServerMessageCursor).length,
+		[conversationMessages],
+	);
+	useEffect(() => {
+		if (!conversationId || loadingMessages || isDemoId(conversationId)) return undefined;
+		if (!canUseWhatsApp || demo.settings.enabled || activeMessageGroup) return undefined;
+		if (serverMessageRows === 0 || serverMessageRows >= AUTO_OLDER_MIN_ROWS) return undefined;
+		const tries = autoOlderTriesRef.current.get(conversationId) || 0;
+		if (tries >= AUTO_OLDER_MAX_TRIES) return undefined;
+		const timer = window.setTimeout(() => {
+			autoOlderTriesRef.current.set(conversationId, tries + 1);
+			// The server may have run out of stored history; the phone can still have more.
+			hasMoreMessagesRef.current = true;
+			void loadOlder({ forceProvider: true, ignoreThrottle: true, preserveScroll: false });
+		}, 700);
+		return () => window.clearTimeout(timer);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- re-check when the count or chat changes
+	}, [conversationId, loadingMessages, serverMessageRows, canUseWhatsApp, activeMessageGroup]);
+
 	const scrollAndHighlightQuotedMessage = target => {
 		const key = String(target?.id || target?.providerMessageId || '').trim();
 		if (!key) return;
@@ -14607,18 +14731,20 @@ function WhatsAppWorkspaceContent() {
 			previous?.lastContactAt ||
 			(conversation.lastMessage?.direction === 'outbound' ? conversation.lastMessage?.providerTimestamp : null) ||
 			null;
+		const nextGroup = group === undefined ? previous?.group || null : group || null;
 		// Shown at once; the reload below brings the server's exact dates and the tab count.
+		// A group with no days is still listed (classified, no reminder).
 		const optimistic =
-			days > 0
+			days > 0 || nextGroup
 				? (() => {
 						const last = lastOutboundAt ? new Date(lastOutboundAt).getTime() : 0;
-						const due = last ? last + days * 86_400_000 : 0;
+						const due = days > 0 && last ? last + days * 86_400_000 : 0;
 						return {
-							days,
-							group: group === undefined ? previous?.group || null : group || null,
+							days: days > 0 ? days : 0,
+							group: nextGroup,
 							lastContactAt: last ? new Date(last).toISOString() : null,
 							dueAt: due ? new Date(due).toISOString() : null,
-							overdue: !due || due <= Date.now(),
+							overdue: days > 0 && (!due || due <= Date.now()),
 						};
 					})()
 				: null;
@@ -14630,7 +14756,7 @@ function WhatsAppWorkspaceContent() {
 				days: days > 0 ? days : null,
 				...(group === undefined ? {} : { group: group || null }),
 			});
-			toast.success(days > 0 ? t.keepInTouchSaved : t.keepInTouchRemoved);
+			toast.success(days > 0 || nextGroup ? t.keepInTouchSaved : t.keepInTouchRemoved);
 			if (accountId) scheduleReloadConversations(accountId);
 		} catch (error) {
 			setConversations(patch(previous));
@@ -14732,6 +14858,7 @@ function WhatsAppWorkspaceContent() {
 			tab === 'board' ||
 			tab === 'fakeChat' ||
 			tab === 'wallet' ||
+			tab === 'outfit' ||
 			tab === 'typing' ||
 			tab === 'adhkar' ||
 			tab === 'learn' ||
@@ -16662,6 +16789,7 @@ function WhatsAppWorkspaceContent() {
 			{/* Wallet scrolls the header away with the page; other tabs keep it pinned. */}
 			{!(isConversationWorkspaceTab(activeTab) && conversationId) &&
 				activeTab !== 'wallet' &&
+				activeTab !== 'outfit' &&
 				activeTab !== 'adhkar' &&
 				activeTab !== 'learn' &&
 				activeTab !== 'reading' &&
@@ -16973,6 +17101,7 @@ function WhatsAppWorkspaceContent() {
 					showBoard={!showcaseOnly && (canManageWhatsApp || canAssignWhatsApp || isAdmin)}
 					showFakeChat={!showcaseOnly && fakeChatAllowed}
 					showWallet={!showcaseOnly}
+					showOutfit={!showcaseOnly}
 					showAdhkar={!showcaseOnly}
 					showDocuments={!showcaseOnly && isAdmin}
 					showLearn={!showcaseOnly}
@@ -18029,7 +18158,7 @@ function WhatsAppWorkspaceContent() {
 											<ChevronLeft size={20} className="wa-archived-row__back" />
 											<span className="wa-archived-row__title">{t.archived}</span>
 										</button>
-									) : activeTab !== 'channels' ? (
+									) : activeTab !== 'channels' && conversationFilter !== KEEP_IN_TOUCH_FILTER ? (
 										<button
 											type="button"
 											className="wa-archived-row"
@@ -22045,6 +22174,18 @@ function WhatsAppWorkspaceContent() {
 					</Suspense>
 				)}
 
+				{activeTab === 'outfit' && (
+					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+						{/* Phone: focused space like the wallet: no WA header/nav; back lives inside the tab. */}
+						<WhatsAppOutfitTab
+							locale={locale}
+							onExit={() => void loadTabData('chats')}
+							accountId={accountId}
+							accountPhone={selectedAccount?.phoneNumber || selectedAccount?.wid || ''}
+						/>
+					</Suspense>
+				)}
+
 				{activeTab === 'adhkar' && (
 					<>
 						<MobileWhatsAppHeader
@@ -22424,6 +22565,7 @@ function WhatsAppWorkspaceContent() {
 				activeTab !== 'adhkar' &&
 				activeTab !== 'learn' &&
 				activeTab !== 'wallet' &&
+				activeTab !== 'outfit' &&
 				activeTab !== 'reading' &&
 				activeTab !== 'facebook' && (
 				<MobileWhatsAppNav

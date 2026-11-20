@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { AlertCircle, BellOff, Bot, Check, CheckCheck, ChevronDown, Clock, HeartHandshake, MapPin, Pin, Star, Trash2, Video } from 'lucide-react';
 import { useChatDraft } from './wa-chat-drafts';
-import { keepInTouchSummary } from './wa-keep-in-touch';
+import { keepInTouchGroupLabel, keepInTouchSummary } from './wa-keep-in-touch';
 import { conversationTitle, conversationAvatarUrl, conversationUnreadCount, messageDeliveryState, messageTextPresentation, conversationPreview, conversationPreviewShowsReaction, isDeletedWhatsAppMessage } from '../whatsapp-utils';
 import { whatsappFileIconSrc } from '../whatsapp-file-icons';
 import { Avatar } from './WaAvatar';
@@ -469,8 +469,15 @@ export const WaConversationRow = memo(function WaConversationRow({
 								count={conversation.presence?.typers?.length || 1}
 							/>
 						) : keepInTouchView && keepInTouchInfo ? (
-							<span className={`wa-kit-line truncate${keepInTouchInfo.overdue ? ' is-due' : ''}`}>
-								{keepInTouchInfo.text}
+							<span className="wa-kit-line-wrap">
+								{keepInTouch?.group ? (
+									<span className={`wa-kit-tag is-${keepInTouch.group}`}>{keepInTouchGroupLabel(keepInTouch.group, locale)}</span>
+								) : null}
+								<span
+									className={`wa-kit-line truncate${keepInTouchInfo.overdue ? ' is-due' : ''}${keepInTouchInfo.noReminder ? ' is-quiet' : ''}`}
+								>
+									{keepInTouchInfo.text}
+								</span>
 							</span>
 						) : showDraft ? (
 							<span className="wa-row-draft truncate" dir="auto">

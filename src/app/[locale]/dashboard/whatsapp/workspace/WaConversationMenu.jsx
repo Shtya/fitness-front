@@ -129,6 +129,8 @@ export function ConversationActionMenu({
 			id: 'keepInTouch',
 			label: conversation.keepInTouch?.days
 				? `${ar ? 'صلة رحم' : 'Keep in touch'} · ${intervalLabel(conversation.keepInTouch.days, locale)}`
+				: conversation.keepInTouch?.group
+					? `${ar ? 'صلة رحم' : 'Keep in touch'} · ${keepInTouchGroupLabel(conversation.keepInTouch.group, locale)}`
 				: ar
 					? 'صلة رحم…'
 					: 'Keep in touch…',
@@ -227,17 +229,30 @@ export function ConversationActionMenu({
 										current={conversation.keepInTouch}
 										onSubmit={(days, group) => onAction(`keepInTouch:${days}:${group || ''}`)}
 									/>
-									{conversation.keepInTouch?.days ? (
-										<button
-											type="button"
-											role="menuitem"
-											disabled={busy}
-											onClick={() => onAction('keepInTouch:0')}
-											className="wa-kit-picker__option is-stop"
-										>
-											{ar ? 'إيقاف التذكير' : 'Stop reminding me'}
-										</button>
-									) : null}
+									<div className="wa-kit-picker__actions">
+										{conversation.keepInTouch?.days && conversation.keepInTouch?.group ? (
+											<button
+												type="button"
+												role="menuitem"
+												disabled={busy}
+												onClick={() => onAction('keepInTouch:0')}
+												className="wa-kit-picker__option"
+											>
+												{ar ? 'إيقاف التذكير بس' : 'Stop the reminder only'}
+											</button>
+										) : null}
+										{conversation.keepInTouch ? (
+											<button
+												type="button"
+												role="menuitem"
+												disabled={busy}
+												onClick={() => onAction('keepInTouch:0:')}
+												className="wa-kit-picker__option is-stop"
+											>
+												{ar ? 'شيله من صلة الرحم' : 'Remove from Keep in touch'}
+											</button>
+										) : null}
+									</div>
 								</div>
 							) : null}
 						</Fragment>
@@ -260,7 +275,8 @@ function KeepInTouchForm({ ar, locale, busy, current, onSubmit }) {
 	const [value, setValue] = useState('');
 	const typed = Math.round(Number(value));
 	const days = value ? typed : savedDays;
-	const valid = Number.isFinite(days) && days >= 1 && days <= 365;
+	// No days with a group = just classify them (no reminder).
+	const valid = Number.isFinite(days) && ((days >= 1 && days <= 365) || (days === 0 && Boolean(group)));
 	const changed = days !== savedDays || (group || '') !== (current?.group || '');
 	const submit = () => {
 		if (valid && changed && !busy) onSubmit(days, group);
@@ -301,7 +317,7 @@ function KeepInTouchForm({ ar, locale, busy, current, onSubmit }) {
 				max={365}
 				step={1}
 				value={value}
-				placeholder={savedDays ? String(savedDays) : '7'}
+				placeholder={savedDays ? String(savedDays) : '—'}
 				disabled={busy}
 				aria-label={ar ? 'عدد الأيام' : 'Number of days'}
 				onChange={event => setValue(event.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
@@ -315,6 +331,9 @@ function KeepInTouchForm({ ar, locale, busy, current, onSubmit }) {
 				{ar ? 'حفظ' : 'Save'}
 			</button>
 			</div>
+			<p className="wa-kit-picker__hint">
+				{ar ? 'سيب الأيام فاضية لو عايز تصنّفه بس من غير تذكير.' : 'Leave days empty to just classify them, with no reminder.'}
+			</p>
 		</form>
 	);
 }

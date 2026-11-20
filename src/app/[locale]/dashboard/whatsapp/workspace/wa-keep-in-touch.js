@@ -10,11 +10,12 @@ export const KEEP_IN_TOUCH_FILTER = 'keep_in_touch';
 export const KEEP_IN_TOUCH_INTERVALS = [1, 3, 7, 14, 30];
 
 /** Who someone is to you, to sort the Keep in touch list. */
-export const KEEP_IN_TOUCH_GROUPS = ['friends', 'family', 'acquaintances', 'unknown'];
+export const KEEP_IN_TOUCH_GROUPS = ['friends', 'family', 'football', 'acquaintances', 'unknown'];
 
 const GROUP_LABELS = {
 	friends: ['Friends', 'اصحابي'],
 	family: ['Family', 'قرايبي'],
+	football: ['Football', 'لعب كورة'],
 	acquaintances: ['Acquaintances', 'معارف'],
 	unknown: ['Unknown', 'غير معروفين'],
 };
@@ -65,8 +66,19 @@ export function sinceLabel(at, locale = 'en', now = Date.now()) {
 export function keepInTouchSummary(keepInTouch, locale = 'en', now = Date.now()) {
 	if (!keepInTouch) return { text: '', overdue: false };
 	const ar = locale === 'ar';
-	const groupName = keepInTouchGroupLabel(keepInTouch.group, locale);
-	const every = groupName ? `${intervalLabel(keepInTouch.days, locale)} · ${groupName}` : intervalLabel(keepInTouch.days, locale);
+	// In a group with no reminder: when you last wrote to them, nothing is due.
+	if (!(Number(keepInTouch.days) > 0)) {
+		return {
+			text: keepInTouch.lastContactAt
+				? `${ar ? 'آخر رسالة منك' : 'Last message'} ${sinceLabel(keepInTouch.lastContactAt, locale, now)}`
+				: ar
+					? 'لم تراسله بعد'
+					: 'Never messaged',
+			overdue: false,
+			noReminder: true,
+		};
+	}
+	const every = intervalLabel(keepInTouch.days, locale);
 	if (!keepInTouch.lastContactAt) {
 		return { text: `${ar ? 'لم تراسله بعد' : 'Never messaged'} · ${every}`, overdue: true };
 	}

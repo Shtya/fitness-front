@@ -784,20 +784,42 @@
 		color: currentColor;
 	}
 
+	/* The count sits on the chip's top corner, small, so the label keeps the chip to itself. */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill {
+		position: relative !important;
+		overflow: visible !important;
+	}
+
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-desktop-filter-pills {
+		padding-top: 8px !important;
+		padding-inline-end: 6px !important;
+	}
+
+	/* Room for the corner count so it never covers a short label ("All"). */
+	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill.has-count {
+		margin-inline-end: 6px;
+	}
+
 	html .wa-web-desktop.wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-filter-pill__count {
+		position: absolute;
+		top: -7px;
+		inset-inline-end: -7px;
 		display: inline-flex;
-		min-width: 18px;
-		height: 18px;
+		min-width: 14px;
+		height: 14px;
 		align-items: center;
 		justify-content: center;
-		padding: 0 5px;
+		padding: 0 3px;
+		border: 1.5px solid var(--c-panel, #fff);
 		border-radius: 999px;
 		background: var(--c-accent);
 		color: var(--c-badge-text);
-		font-size: 11px;
-		font-weight: 700;
+		font-size: 9px;
+		font-weight: 800;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
+		box-sizing: content-box;
+		pointer-events: none;
 	}
 
 	/* ─────────────────────────────────────────────────────────────── */

@@ -9,6 +9,7 @@ import {
 	PanelLeftClose,
 	PanelLeftOpen,
 	Settings,
+	Shirt,
 	Sparkles,
 	Sun,
 	User,
@@ -132,6 +133,7 @@ export default function WhatsAppDesktopRail({
 	showBoard = true,
 	showFakeChat = true,
 	showWallet = false,
+	showOutfit = false,
 	showAdhkar = false,
 	showDocuments = false,
 	showLearn = false,
@@ -221,6 +223,13 @@ export default function WhatsAppDesktopRail({
 					id: 'wallet',
 					label: labels.wallet || (ar ? 'محفظتي' : 'Wallet'),
 					icon: WalletCards,
+				}
+			: null,
+		showOutfit
+			? {
+					id: 'outfit',
+					label: labels.outfit || (ar ? 'منسّق الملابس' : 'Outfit Matcher'),
+					icon: Shirt,
 				}
 			: null,
 		showAdhkar

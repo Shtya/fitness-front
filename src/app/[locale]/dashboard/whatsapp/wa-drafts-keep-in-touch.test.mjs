@@ -76,7 +76,7 @@ test('Arabic day counts use the right form', () => {
 });
 
 test('keep in touch groups have Arabic and English names', () => {
-	assert.deepEqual(KEEP_IN_TOUCH_GROUPS, ['friends', 'family', 'acquaintances', 'unknown']);
+	assert.deepEqual(KEEP_IN_TOUCH_GROUPS, ['friends', 'family', 'football', 'acquaintances', 'unknown']);
 	assert.equal(keepInTouchGroupLabel('friends', 'ar'), 'اصحابي');
 	assert.equal(keepInTouchGroupLabel('family', 'ar'), 'قرايبي');
 	assert.equal(keepInTouchGroupLabel('acquaintances', 'ar'), 'معارف');
@@ -85,13 +85,25 @@ test('keep in touch groups have Arabic and English names', () => {
 	assert.equal(keepInTouchGroupLabel('nope', 'en'), '');
 });
 
-test('the row summary names the group next to the interval', () => {
+test('the row summary says when they are due; the group is its own tag in the row', () => {
 	const now = Date.parse('2026-11-19T10:00:00Z');
 	const due = new Date(now + 3 * 86_400_000).toISOString();
 	const last = new Date(now - 7 * 86_400_000).toISOString();
 	const summary = keepInTouchSummary({ days: 10, group: 'family', lastContactAt: last, dueAt: due, overdue: false }, 'ar', now);
-	assert.match(summary.text, /قرايبي/);
+	assert.doesNotMatch(summary.text, /قرايبي/);
 	assert.match(summary.text, /10 أيام/);
 	const ungrouped = keepInTouchSummary({ days: 10, group: null, lastContactAt: last, dueAt: due, overdue: false }, 'en', now);
 	assert.doesNotMatch(ungrouped.text, /·.*·/);
+});
+
+test('football is a group, and a group with no days has no reminder', () => {
+	assert.ok(KEEP_IN_TOUCH_GROUPS.includes('football'));
+	assert.equal(keepInTouchGroupLabel('football', 'ar'), 'لعب كورة');
+	const now = Date.parse('2026-11-20T10:00:00Z');
+	const quiet = keepInTouchSummary({ days: 0, group: 'football', lastContactAt: new Date(now - 8 * 86_400_000).toISOString(), dueAt: null, overdue: false }, 'en', now);
+	assert.equal(quiet.overdue, false);
+	assert.equal(quiet.noReminder, true);
+	assert.equal(quiet.text, 'Last message 8 days ago');
+	const never = keepInTouchSummary({ days: 0, group: 'friends', lastContactAt: null, dueAt: null, overdue: false }, 'ar', now);
+	assert.equal(never.overdue, false);
 });
