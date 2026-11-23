@@ -93,7 +93,7 @@ const accountSchema = yup.object({
 		otherwise: s => s.optional().nullable(),
 	}),
 	password: yup.string().trim().required('errors.passwordRequired')
-		.test('pwLen', 'errors.passwordMin', v => v && v.length >= 8),
+		.test('pwLen', 'errors.passwordMin', v => v && v.length >= 6),
 	coachId: yup.string().nullable().when('role', {
 		is: 'Client',
 		then: s => s.required('errors.coachRequired'),
@@ -129,7 +129,7 @@ const editUserSchema = yup.object({
 	}),
 	password: yup.string().trim().notRequired()
 		.transform(v => (v === '' ? undefined : v))
-		.test('pwLen', 'errors.passwordMin', v => v === undefined || (v && v.length >= 8)),
+		.test('pwLen', 'errors.passwordMin', v => v === undefined || (v && v.length >= 6)),
 	subscriptionStart: yup.string().required('errors.startRequired'),
 	subscriptionEnd: yup.string().required('errors.endRequired')
 		.test('end-after-start', 'errors.endAfterStart', function (end) {

@@ -147,10 +147,10 @@ function SetPasswordModal({ user, onClose }) {
 	const [show, setShow] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [saved, setSaved] = useState(false);
-	const tooShort = password.length > 0 && password.length < 8;
+	const tooShort = password.length > 0 && password.length < 6;
 	const padded = password.length > 0 && password.trim() !== password;
 	const mismatch = confirm.length > 0 && confirm !== password;
-	const canSave = password.length >= 8 && !padded && confirm === password && !saving;
+	const canSave = password.length >= 6 && !padded && confirm === password && !saving;
 
 	const submit = async event => {
 		event.preventDefault();
@@ -264,7 +264,7 @@ function SetPasswordModal({ user, onClose }) {
 								</button>
 							</div>
 							{tooShort ? (
-								<span className="mt-1 block text-[11px] text-rose-600">{ar ? '8 حروف على الأقل' : 'At least 8 characters'}</span>
+								<span className="mt-1 block text-[11px] text-rose-600">{ar ? '6 حروف على الأقل' : 'At least 6 characters'}</span>
 							) : padded ? (
 								<span className="mt-1 block text-[11px] text-rose-600">{ar ? 'من غير مسافات في الأول أو الآخر' : 'No spaces at the start or end'}</span>
 							) : null}

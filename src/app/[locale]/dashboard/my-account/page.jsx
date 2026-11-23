@@ -32,7 +32,7 @@ const profileSchema = yup.object({
 
 const passwordSchema = yup.object({
   currentPassword: yup.string().required('errors.currentPasswordRequired'),
-  newPassword:     yup.string().min(8, 'errors.passwordMin').required('errors.newPasswordRequired'),
+  newPassword:     yup.string().min(6, 'errors.passwordMin').required('errors.newPasswordRequired'),
   confirmPassword: yup.string()
     .oneOf([yup.ref('newPassword')], 'errors.passwordsMustMatch')
     .required('errors.confirmPasswordRequired'),
