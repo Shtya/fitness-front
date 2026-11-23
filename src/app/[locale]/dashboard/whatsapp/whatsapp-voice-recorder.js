@@ -14,7 +14,47 @@ export function pickVoiceRecorderMimeType() {
 	return VOICE_RECORDER_MIME_TYPES.find(type => MediaRecorder.isTypeSupported(type));
 }
 
-export function getVoiceMediaStream() {
+/*
+ * Warm microphone reuse. Browsers (iOS especially) ask "Allow microphone?" again whenever
+ * a page requests the mic after it stopped every track. So after a voice note the stream
+ * is kept muted for a short while and handed to the next recording instead of asking again.
+ * It is released as soon as any audio/video starts playing (a live mic routes iOS playback
+ * to the quiet earpiece), when the app goes to the background, or after VOICE_WARM_MS.
+ */
+export const VOICE_WARM_MS = 45_000;
+let warmVoice = null; // { stream, timer }
+let warmListenersReady = false;
+
+function streamIsLive(stream) {
+	return Boolean(stream?.getAudioTracks?.().some(track => track.readyState === 'live'));
+}
+
+export function stopWarmVoiceStream() {
+	if (!warmVoice) return;
+	clearTimeout(warmVoice.timer);
+	warmVoice.stream.getTracks().forEach(track => track.stop());
+	warmVoice = null;
+}
+
+function ensureWarmListeners() {
+	if (warmListenersReady || typeof document === 'undefined') return;
+	warmListenersReady = true;
+	document.addEventListener('play', stopWarmVoiceStream, true);
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'hidden') stopWarmVoiceStream();
+	});
+	window.addEventListener('pagehide', stopWarmVoiceStream);
+}
+
+export async function getVoiceMediaStream() {
+	if (warmVoice && streamIsLive(warmVoice.stream)) {
+		clearTimeout(warmVoice.timer);
+		const { stream } = warmVoice;
+		warmVoice = null;
+		stream.getAudioTracks().forEach(track => (track.enabled = true));
+		return stream;
+	}
+	warmVoice = null;
 	return navigator.mediaDevices.getUserMedia({
 		audio: {
 			channelCount: 1,
@@ -23,6 +63,16 @@ export function getVoiceMediaStream() {
 			autoGainControl: true,
 		},
 	});
+}
+
+/** End of a recording: keep the mic muted and warm for the next one instead of stopping it. */
+export function releaseVoiceMediaStream(stream) {
+	if (!streamIsLive(stream)) return;
+	if (warmVoice && warmVoice.stream !== stream) stopWarmVoiceStream();
+	stream.getAudioTracks().forEach(track => (track.enabled = false));
+	ensureWarmListeners();
+	clearTimeout(warmVoice?.timer);
+	warmVoice = { stream, timer: setTimeout(stopWarmVoiceStream, VOICE_WARM_MS) };
 }
 
 export function createVoiceMediaRecorder(stream) {

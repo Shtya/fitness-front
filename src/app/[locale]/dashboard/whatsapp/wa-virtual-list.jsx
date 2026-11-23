@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { memo, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
 	Virtualizer,
@@ -246,7 +246,7 @@ const defaultRowKey = item => item.id;
  * (a one or two line preview, an unread row), and the spacers must equal the rows they replace
  * or the list jumps wherever scroll anchoring does not hide it (Safari).
  */
-export function WaWindowedRows({
+function WaWindowedRowsImpl({
 	items,
 	renderRow,
 	getRowKey = defaultRowKey,
@@ -443,3 +443,10 @@ export function WaVirtualSpacer({ height }) {
 	if (h <= 0) return null;
 	return <div aria-hidden="true" style={{ height: h, flexShrink: 0 }} />;
 }
+
+/**
+ * While the inbox is hidden (a chat is open on a phone) it skips every re-render of the
+ * workspace; opening a chat used to re-render the hidden list 8-10 times. It catches up
+ * in one render with the latest rows as soon as it becomes visible again.
+ */
+export const WaWindowedRows = memo(WaWindowedRowsImpl, (prev, next) => !prev.visible && !next.visible);

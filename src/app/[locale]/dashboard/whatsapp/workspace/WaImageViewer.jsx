@@ -455,40 +455,134 @@ export function ChatImageViewer({
 		return () => stage.removeEventListener('wheel', onWheel);
 	}, [adjustZoom, image]);
 
+	/*
+	 * Touch gestures: one finger pans (when zoomed) or swipes to the next photo; two fingers
+	 * pinch-zoom around the point between them; a quick double tap zooms in / out. Pointer
+	 * positions are kept relative to the stage centre, where the canvas transform originates.
+	 */
+	const pointersRef = useRef(new Map());
+	const pinchRef = useRef(null);
+	const lastTapRef = useRef({ at: 0, x: 0, y: 0 });
+	const lastPointerTypeRef = useRef('mouse');
+	const zoomRef = useRef(zoom);
+	const panRef = useRef(pan);
+	zoomRef.current = zoom;
+	panRef.current = pan;
+
+	const stagePoint = useCallback(event => {
+		const rect = stageRef.current?.getBoundingClientRect();
+		if (!rect) return { x: 0, y: 0 };
+		return { x: event.clientX - (rect.left + rect.width / 2), y: event.clientY - (rect.top + rect.height / 2) };
+	}, []);
+
+	/** Zoom to `nextZoom` keeping the content under stage point `at` fixed. */
+	const zoomAround = useCallback((nextZoom, at, fromZoom = zoomRef.current, fromPan = panRef.current) => {
+		const z = clampZoom(nextZoom);
+		if (z <= 1.001) {
+			setZoom(1);
+			setPan({ x: 0, y: 0 });
+			return;
+		}
+		const qx = (at.x - fromPan.x) / fromZoom;
+		const qy = (at.y - fromPan.y) / fromZoom;
+		setZoom(z);
+		setPan({ x: at.x - z * qx, y: at.y - z * qy });
+	}, []);
+
+	const startDrag = (event, point) => {
+		dragRef.current = {
+			pointerId: event.pointerId,
+			startX: point.clientX,
+			startY: point.clientY,
+			originPan: { ...panRef.current },
+			zoomAtStart: zoomRef.current,
+			moved: false,
+		};
+	};
+
 	const onStagePointerDown = useCallback(
 		event => {
-			if (event.button !== 0) return;
+			if (event.pointerType === 'mouse' && event.button !== 0) return;
+			lastPointerTypeRef.current = event.pointerType;
 			const stage = stageRef.current;
 			if (!stage) return;
-			stage.setPointerCapture(event.pointerId);
-			dragRef.current = {
-				pointerId: event.pointerId,
-				startX: event.clientX,
-				startY: event.clientY,
-				originPan: { ...pan },
-				zoomAtStart: zoom,
-				moved: false,
-			};
+			stage.setPointerCapture?.(event.pointerId);
+			pointersRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY, ...stagePoint(event) });
+			if (pointersRef.current.size === 2) {
+				const [a, b] = [...pointersRef.current.values()];
+				pinchRef.current = {
+					startDist: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)),
+					startZoom: zoomRef.current,
+					startPan: { ...panRef.current },
+				};
+				dragRef.current = null;
+				return;
+			}
+			if (pointersRef.current.size > 2) return;
+			// Double tap (touch / pen): zoom in at the tap point, or back out.
+			if (event.pointerType !== 'mouse') {
+				const now = Date.now();
+				const point = stagePoint(event);
+				const last = lastTapRef.current;
+				if (now - last.at < 300 && Math.hypot(point.x - last.x, point.y - last.y) < 30) {
+					lastTapRef.current = { at: 0, x: 0, y: 0 };
+					if (zoomRef.current > 1.05) resetTransform();
+					else zoomAround(2.5, point, 1, { x: 0, y: 0 });
+					dragRef.current = null;
+					return;
+				}
+				lastTapRef.current = { at: now, ...point };
+			}
+			startDrag(event, event);
 		},
-		[pan, zoom],
+		[resetTransform, stagePoint, zoomAround],
 	);
 
-	const onStagePointerMove = useCallback(event => {
-		const drag = dragRef.current;
-		if (!drag || drag.pointerId !== event.pointerId) return;
-		const dx = event.clientX - drag.startX;
-		const dy = event.clientY - drag.startY;
-		if (Math.abs(dx) > 4 || Math.abs(dy) > 4) drag.moved = true;
-		if (drag.zoomAtStart > 1.02) {
-			setPan({
-				x: drag.originPan.x + dx,
-				y: drag.originPan.y + dy,
-			});
-		}
-	}, []);
+	const onStagePointerMove = useCallback(
+		event => {
+			if (!pointersRef.current.has(event.pointerId)) return;
+			pointersRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY, ...stagePoint(event) });
+			const pinch = pinchRef.current;
+			if (pinch && pointersRef.current.size >= 2) {
+				const [a, b] = [...pointersRef.current.values()];
+				const dist = Math.max(10, Math.hypot(a.x - b.x, a.y - b.y));
+				const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+				const z = clampZoom(pinch.startZoom * (dist / pinch.startDist));
+				// Keep the content that was under the fingers' midpoint under it while zooming.
+				const qx = (mid.x - pinch.startPan.x) / pinch.startZoom;
+				const qy = (mid.y - pinch.startPan.y) / pinch.startZoom;
+				setZoom(z);
+				setPan(z <= 1.001 ? { x: 0, y: 0 } : { x: mid.x - z * qx, y: mid.y - z * qy });
+				return;
+			}
+			const drag = dragRef.current;
+			if (!drag || drag.pointerId !== event.pointerId) return;
+			const dx = event.clientX - drag.startX;
+			const dy = event.clientY - drag.startY;
+			if (Math.abs(dx) > 4 || Math.abs(dy) > 4) drag.moved = true;
+			if (drag.zoomAtStart > 1.02) {
+				setPan({
+					x: drag.originPan.x + dx,
+					y: drag.originPan.y + dy,
+				});
+			}
+		},
+		[stagePoint],
+	);
 
 	const onStagePointerUp = useCallback(
 		event => {
+			pointersRef.current.delete(event.pointerId);
+			if (pinchRef.current) {
+				if (pointersRef.current.size < 2) {
+					pinchRef.current = null;
+					if (zoomRef.current < 1.02) resetTransform();
+					// The finger still down continues as a pan from where it is now.
+					const [rest] = [...pointersRef.current.entries()];
+					if (rest) startDrag({ pointerId: rest[0] }, rest[1]);
+				}
+				return;
+			}
 			const drag = dragRef.current;
 			if (!drag || drag.pointerId !== event.pointerId) return;
 			const dx = event.clientX - drag.startX;
@@ -498,20 +592,22 @@ export function ChatImageViewer({
 				else next();
 			}
 		},
-		[canNavigate, next, previous],
+		[canNavigate, next, previous, resetTransform],
 	);
 
 	const onStageDoubleClick = useCallback(
 		event => {
 			event.preventDefault();
 			event.stopPropagation();
+			// Touch double taps are handled in pointerdown (with the tap point).
+			if (lastPointerTypeRef.current !== 'mouse') return;
 			if (zoom > 1.05) {
 				resetTransform();
 				return;
 			}
-			setZoom(2.25);
+			zoomAround(2.25, stagePoint(event), 1, { x: 0, y: 0 });
 		},
-		[resetTransform, zoom],
+		[resetTransform, stagePoint, zoom, zoomAround],
 	);
 
 	if (!image) return null;

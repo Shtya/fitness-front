@@ -23,6 +23,8 @@ import {
 	buildVoiceNoteFile,
 	createVoiceMediaRecorder,
 	getVoiceMediaStream,
+	releaseVoiceMediaStream,
+	stopWarmVoiceStream,
 	mediaUploadFailedMessage,
 } from './whatsapp-voice-recorder';
 import {
@@ -473,6 +475,7 @@ export default function WhatsAppSplitPane({
 			clearVoicePreviewRef.current?.();
 			if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
 			recordingStreamRef.current?.getTracks().forEach(track => track.stop());
+			stopWarmVoiceStream();
 			if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
 				try {
 					mediaRecorderRef.current.stop();
@@ -681,7 +684,8 @@ export default function WhatsAppSplitPane({
 			recorder.onstop = () => {
 				if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
 				recordingTimerRef.current = null;
-				recordingStreamRef.current?.getTracks().forEach(track => track.stop());
+				// Keep the mic warm for the next voice note (no new permission prompt).
+				releaseVoiceMediaStream(recordingStreamRef.current);
 				recordingStreamRef.current = null;
 				mediaRecorderRef.current = null;
 				const durationSec = Math.max(1, Math.round(recordingSecondsRef.current || 1));

@@ -167,7 +167,8 @@ test('unread / missing last message forces catch-up and blocks soft-open skip', 
 	});
 	assert.equal(plan.needed, true);
 	assert.equal(plan.expected, 3);
-	assert.equal(plan.showUi, true);
+	// Cached rows exist: open instantly, fetch the new ones quietly (no skeleton).
+	assert.equal(plan.showUi, false);
 	assert.equal(
 		shouldSkipOpenChatNetwork({
 			cacheIsFresh: true,
@@ -219,7 +220,7 @@ test('unread badge with tip already painted skips catch-up UI', () => {
 	assert.equal(plan.showUi, false);
 });
 
-test('missing tip with unread shows catch-up skeleton UI', () => {
+test('missing tip with unread and a cached thread opens instantly, fetching quietly', () => {
 	const plan = openChatCatchUpPlan({
 		cacheItems: [{ id: 'm1' }],
 		unreadCount: 2,
@@ -227,7 +228,18 @@ test('missing tip with unread shows catch-up skeleton UI', () => {
 	});
 	assert.equal(plan.needed, true);
 	assert.equal(plan.expected, 2);
+	assert.equal(plan.showUi, false);
+});
+
+test('unread with nothing real cached (only the inbox preview) still shows the skeleton', () => {
+	const plan = openChatCatchUpPlan({
+		cacheItems: [{ id: 'inbox-preview-c1', text: 'hi' }],
+		unreadCount: 2,
+		lastMessage: { id: 'm-new' },
+	});
+	assert.equal(plan.needed, true);
 	assert.equal(plan.showUi, true);
+	assert.equal(openChatCatchUpPlan({ cacheItems: [], unreadCount: 1, lastMessage: { id: 'x' } }).showUi, true);
 });
 
 test('missing tip with zero unread refetches quietly without skeleton UI', () => {

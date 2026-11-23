@@ -3,14 +3,17 @@
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { Forward, Loader2, Send, Sparkles, X } from 'lucide-react';
+import { Download, Forward, Loader2, Send, Sparkles, X } from 'lucide-react';
 import api from '@/utils/axios';
+import { saveMediaFiles } from '../wa-save-prompt';
 
 const copy = {
 	en: {
 		sendHere: 'Send here',
 		sendTo: 'Send to…',
 		addToStory: 'Add to story',
+		save: 'Save to gallery',
+		saveFailed: 'Could not save this video',
 		pickChat: 'Choose a chat',
 		noChats: 'No chats available',
 		sent: 'Video sent',
@@ -20,6 +23,8 @@ const copy = {
 		sendHere: 'إرسال هنا',
 		sendTo: 'إرسال إلى…',
 		addToStory: 'إضافة إلى الحالة',
+		save: 'حفظ في المعرض',
+		saveFailed: 'تعذّر حفظ الفيديو',
 		pickChat: 'اختر محادثة',
 		noChats: 'مافيش محادثات متاحة',
 		sent: 'تم إرسال الفيديو',
@@ -40,12 +45,41 @@ export default function SocialVideoActions({
 	conversationId = '',
 	conversations = [],
 	onAddToStory,
+	videoUrl = '',
 }) {
 	const t = copy[locale === 'ar' ? 'ar' : 'en'];
 	const ar = locale === 'ar';
 
 	const [sending, setSending] = useState(false);
 	const [pickerOpen, setPickerOpen] = useState(false);
+	const [saving, setSaving] = useState(false);
+
+	/** Save the clip to the phone: iOS opens the share sheet, where "Save Video" puts it in Photos. */
+	const saveToGallery = useCallback(async () => {
+		if (!videoUrl || saving) return;
+		setSaving(true);
+		try {
+			let blob = null;
+			try {
+				const response = await fetch(videoUrl, { credentials: 'include' });
+				if (response.ok) blob = await response.blob();
+			} catch {
+				blob = null;
+			}
+			if (!blob) {
+				const { data } = await api.get(videoUrl, { responseType: 'blob', timeout: 120_000 });
+				blob = data;
+			}
+			const type = blob.type && blob.type.startsWith('video/') ? blob.type : 'video/mp4';
+			const ext = type.includes('webm') ? 'webm' : type.includes('quicktime') ? 'mov' : 'mp4';
+			const file = new File([blob], `video-${downloadId || Date.now()}.${ext}`, { type });
+			await saveMediaFiles([file], { locale });
+		} catch {
+			toast.error(t.saveFailed);
+		} finally {
+			setSaving(false);
+		}
+	}, [downloadId, locale, saving, t.saveFailed, videoUrl]);
 
 	const send = useCallback(
 		async targetConversationId => {
@@ -121,6 +155,21 @@ export default function SocialVideoActions({
 					>
 						<Sparkles size={12} strokeWidth={2.4} />
 						{t.addToStory}
+					</button>
+				) : null}
+				{videoUrl ? (
+					<button
+						type="button"
+						disabled={saving}
+						onPointerDown={event => event.stopPropagation()}
+						onClick={event => {
+							contain(event);
+							void saveToGallery();
+						}}
+						className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.06] px-2.5 py-1 text-[11px] font-semibold transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/10 dark:hover:bg-white/[0.16]"
+					>
+						{saving ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} strokeWidth={2.4} />}
+						{t.save}
 					</button>
 				) : null}
 			</div>

@@ -312,6 +312,8 @@ import {
 	buildVoiceNoteFile,
 	createVoiceMediaRecorder,
 	getVoiceMediaStream,
+	releaseVoiceMediaStream,
+	stopWarmVoiceStream,
 	mediaUploadFailedMessage,
 } from './whatsapp-voice-recorder';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
@@ -1149,6 +1151,13 @@ function openStreetMapTileUrl(lat, lng, zoom = 15) {
 	return `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
 }
 
+/**
+ * The workspace takes no props: memo stops every ancestor re-render (the dashboard layout
+ * reacting to the URL change when a chat opens, providers above it) from re-rendering this
+ * ~14k-line component. It still updates from its own state and the contexts it reads.
+ */
+const WhatsAppWorkspaceContentMemo = memo(WhatsAppWorkspaceContent);
+
 export default function WhatsAppWorkspace() {
 	// Phones: keyboard-aware app height and safe-area handling (see mobile-viewport.js).
 	useEffect(() => installMobileViewport(), []);
@@ -1162,7 +1171,7 @@ export default function WhatsAppWorkspace() {
 	}, []);
 	return (
 		<DemoModeProvider>
-			<WhatsAppWorkspaceContent />
+			<WhatsAppWorkspaceContentMemo />
 		</DemoModeProvider>
 	);
 }
@@ -2287,6 +2296,7 @@ function SocialVideoDownload({
 				conversationId={conversationId}
 				conversations={conversations}
 				onAddToStory={onAddToStory}
+				videoUrl={absoluteApiUrl(state.url)}
 			/>
 		</div>
 	);
@@ -2567,6 +2577,17 @@ function sameThreadRowDeps(a, b) {
 	for (let i = 0; i < a.length; i += 1) if (!Object.is(a[i], b[i])) return false;
 	return true;
 }
+
+/**
+ * State updaters for "reset to empty" that keep the current value when it is already
+ * empty. A fresh [] / {} / Set is a new value to React and forced an extra workspace
+ * render on every chat open even though nothing changed.
+ */
+const toEmptyArray = prev => (Array.isArray(prev) && prev.length === 0 ? prev : []);
+const toEmptyObject = prev =>
+	prev && typeof prev === 'object' && Object.getPrototypeOf(prev) === Object.prototype && Object.keys(prev).length === 0 ? prev : {};
+const toEmptySet = prev => (prev instanceof Set && prev.size === 0 ? prev : new Set());
+const toEmptyMap = prev => (prev instanceof Map && prev.size === 0 ? prev : new Map());
 
 function WhatsAppWorkspaceContent() {
 	waPerfCountRender('workspace');
@@ -3847,7 +3868,7 @@ function WhatsAppWorkspaceContent() {
 	const [agentRowStates, setAgentRowStates] = useState(() => new Map());
 	const agentAccountId = !showcaseOnly && !demo.settings.enabled ? selectedAccount?.id || '' : '';
 	useEffect(() => {
-		setAgentRowStates(new Map());
+		setAgentRowStates(toEmptyMap);
 		if (!agentAccountId) return undefined;
 		const controller = new AbortController();
 		whatsappAiAgentApi
@@ -4183,13 +4204,12 @@ function WhatsAppWorkspaceContent() {
 		// While a chat opens, render the newest rows first instead of the top of the
 		// thread (scrollTop is still 0 until the settle loop pins it to the bottom).
 		anchorToEnd: () => threadVirtualLatchRef.current.opening && pinThreadToBottomRef.current,
-		// Scrolling re-renders only the rows host. The workspace still re-renders on range and
-		// size changes while a chat opens or an older-messages scroll anchor is being restored,
-		// because those effects read totalSize during render.
-		renderOwner: () =>
-			Boolean(olderScrollRestoreRef.current) ||
-			!threadSettledRef.current ||
-			Boolean(threadVirtualLatchRef.current.opening),
+		// Range and size changes re-render only the rows host. The workspace still re-renders
+		// while an older-messages scroll anchor is being restored, because that layout effect
+		// reads totalSize during render. Opening a chat no longer re-renders the whole workspace
+		// per measurement: the settle loop and bottom pin read live sizes through
+		// messageVirtualRef (getters), which cost 3-5 full workspace renders per open.
+		renderOwner: () => Boolean(olderScrollRestoreRef.current),
 	});
 	const messageVirtualRef = useRef(messageVirtual);
 	messageVirtualRef.current = messageVirtual;
@@ -4383,7 +4403,7 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		setActiveChatImageId(null);
-		setRegisteredChatImages({});
+		setRegisteredChatImages(toEmptyObject);
 		setDocumentPreview(null);
 		setReplyingTo(null);
 		setReactionPickerMessageId(null);
@@ -4405,7 +4425,7 @@ function WhatsAppWorkspaceContent() {
 			setTranscriptionIntent(null);
 			pendingCopyMessagesRef.current = [];
 		}
-		setMessageTranscripts({});
+		setMessageTranscripts(toEmptyObject);
 	}, [conversationId]);
 
 	// A chat-list menu belongs to the screen it was opened on.
@@ -4960,7 +4980,7 @@ function WhatsAppWorkspaceContent() {
 				revokeStoryUrl(entry?.url);
 			});
 			storyThumbCacheRef.current.clear();
-			setStoryThumbs({});
+			setStoryThumbs(toEmptyObject);
 		};
 	}, [accountId]);
 
@@ -4977,7 +4997,7 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		if (!accountId || typeof window === 'undefined') {
-			setViewedStatusIds(new Set());
+			setViewedStatusIds(toEmptySet);
 			return;
 		}
 		try {
@@ -4987,7 +5007,7 @@ function WhatsAppWorkspaceContent() {
 			const parsed = raw ? JSON.parse(raw) : [];
 			setViewedStatusIds(new Set(Array.isArray(parsed) ? parsed : []));
 		} catch {
-			setViewedStatusIds(new Set());
+			setViewedStatusIds(toEmptySet);
 		}
 	}, [accountId, currentUserId]);
 
@@ -5119,7 +5139,7 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		if (!accountId) {
-			setChatDirectory([]);
+			setChatDirectory(toEmptyArray);
 			return undefined;
 		}
 		setChatDirectory(readStoredDirectory(accountId)?.items || []);
@@ -5139,6 +5159,23 @@ function WhatsAppWorkspaceContent() {
 	const chatListScrollScope = `${accountId || ''}:${conversationFilter}:${chatSearch.trim()}:${assignmentFilter || ''}`;
 	// Mobile hides the inbox while a chat is open; the rows re-read scroll when it returns.
 	const chatListRowsVisible = chatListVisible && (isDesktopLayout || !conversationId);
+
+	// Phone: while a chat is open, paint the status bar the same colour as the chat header
+	// (it is a lighter grey / near-black than the inbox), so the two read as one bar.
+	const phoneChatOpen = !isDesktopLayout && Boolean(conversationId);
+	useEffect(() => {
+		if (typeof document === 'undefined' || !phoneChatOpen) return undefined;
+		const nodes = Array.from(document.querySelectorAll('meta[name="theme-color"]'));
+		if (!nodes.length) return undefined;
+		const previous = nodes.map(node => node.getAttribute('content'));
+		const headerColor = darkMode ? '#161616' : '#f7f7f7';
+		nodes.forEach(node => node.setAttribute('content', headerColor));
+		return () => {
+			nodes.forEach((node, index) => {
+				if (node.isConnected && previous[index] != null) node.setAttribute('content', previous[index]);
+			});
+		};
+	}, [phoneChatOpen, darkMode]);
 	/*
 	 * Restore the inbox scroll only when the list (re)appears or its scope changes (filter,
 	 * search, account). It used to re-run on every list update: each incoming message moved the
@@ -5436,7 +5473,7 @@ function WhatsAppWorkspaceContent() {
 	const refreshOnlineContacts = useCallback(
 		async (options = {}) => {
 			if (!accountId) {
-				setOnlineContacts([]);
+				setOnlineContacts(toEmptyArray);
 				return;
 			}
 			const includeOffline = Boolean(options.includeOffline);
@@ -5762,7 +5799,7 @@ function WhatsAppWorkspaceContent() {
 			const { data } = await api.get('/whatsapp/accounts/staff');
 			setStaff(Array.isArray(data) ? data : []);
 		} catch {
-			setStaff([]);
+			setStaff(toEmptyArray);
 		}
 	}, []);
 
@@ -6465,7 +6502,7 @@ function WhatsAppWorkspaceContent() {
 			if (!targetAccountId) return;
 			// Staff limited to their assigned chats have no stories (the server refuses them).
 			if (!seesWholeAccountRef.current) {
-				if (accountIdRef.current === targetAccountId) setStatuses([]);
+				if (accountIdRef.current === targetAccountId) setStatuses(toEmptyArray);
 				return;
 			}
 			const account = accountsRef.current.find(item => item.id === targetAccountId);
@@ -7438,10 +7475,10 @@ function WhatsAppWorkspaceContent() {
 			setLoadingMessages(false);
 			setSearchingConversations(false);
 			setSelectedGroup(null);
-			setGroups([]);
-			setLogs([]);
+			setGroups(toEmptyArray);
+			setLogs(toEmptyArray);
 			setReport(null);
-			setAssignableStaff([]);
+			setAssignableStaff(toEmptyArray);
 			setPrivacySettings({
 				hideStatusViewReceipts: true,
 				readReceiptMode: 'on_reply',
@@ -7864,74 +7901,93 @@ function WhatsAppWorkspaceContent() {
 		};
 	}, [threadSettled, conversationId, loadingMessages, effectiveMessages.length]);
 
+	const fetchActiveSchedules = useCallback(async targetConversationId => {
+		const { data } = await api.get(`/whatsapp/conversations/${targetConversationId}/message-schedules`);
+		return (Array.isArray(data) ? data : []).filter(item => {
+			const status = String(item?.status || '').toLowerCase();
+			return status === 'active' || status === 'paused' || status === 'processing' || status === 'failed';
+		});
+	}, []);
+
+	const fetchPinnedRows = useCallback(async targetConversationId => {
+		const items = await fetchMessages(targetConversationId, {
+			limit: 100,
+			pinnedOnly: true,
+			live: 0,
+		});
+		return (Array.isArray(items) ? items : [])
+			.filter(item => item?.isPinned)
+			.sort((a, b) => {
+				const ta = new Date(a.providerTimestamp || a.createdAt || 0).getTime();
+				const tb = new Date(b.providerTimestamp || b.createdAt || 0).getTime();
+				return tb - ta;
+			});
+	}, []);
+
 	const loadMessageSchedules = useCallback(async targetConversationId => {
 		if (!targetConversationId || isDemoId(targetConversationId)) {
-			setMessageSchedules([]);
+			setMessageSchedules(toEmptyArray);
 			return;
 		}
 		setMessageSchedulesLoading(true);
 		try {
-			const { data } = await api.get(
-				`/whatsapp/conversations/${targetConversationId}/message-schedules`,
-			);
-			const rows = (Array.isArray(data) ? data : []).filter(item => {
-				const status = String(item?.status || '').toLowerCase();
-				return status === 'active' || status === 'paused' || status === 'processing' || status === 'failed';
-			});
-			setMessageSchedules(rows);
+			const rows = await fetchActiveSchedules(targetConversationId);
+			setMessageSchedules(rows.length ? rows : toEmptyArray);
 		} catch {
-			setMessageSchedules([]);
+			setMessageSchedules(toEmptyArray);
 		} finally {
 			setMessageSchedulesLoading(false);
 		}
-	}, []);
+	}, [fetchActiveSchedules]);
 
 	const loadPinnedMessages = useCallback(async targetConversationId => {
 		if (!targetConversationId || isDemoId(targetConversationId)) {
-			setPinnedMessages([]);
+			setPinnedMessages(toEmptyArray);
 			return;
 		}
 		setPinnedMessagesLoading(true);
 		try {
-			const items = await fetchMessages(targetConversationId, {
-				limit: 100,
-				pinnedOnly: true,
-				live: 0,
-			});
-			setPinnedMessages(
-				(Array.isArray(items) ? items : [])
-					.filter(item => item?.isPinned)
-					.sort((a, b) => {
-						const ta = new Date(a.providerTimestamp || a.createdAt || 0).getTime();
-						const tb = new Date(b.providerTimestamp || b.createdAt || 0).getTime();
-						return tb - ta;
-					}),
-			);
+			const rows = await fetchPinnedRows(targetConversationId);
+			setPinnedMessages(rows.length ? rows : toEmptyArray);
 		} catch {
-			setPinnedMessages([]);
+			setPinnedMessages(toEmptyArray);
 		} finally {
 			setPinnedMessagesLoading(false);
 		}
-	}, []);
+	}, [fetchPinnedRows]);
 
 	const secondaryThreadLoadRef = useRef(null);
 	useEffect(() => {
 		if (!conversationId || demo.settings.enabled) {
 			secondaryThreadLoadRef.current = null;
-			setMessageSchedules([]);
+			setMessageSchedules(toEmptyArray);
 			setSchedulesPanelOpen(false);
-			setPinnedMessages([]);
+			setPinnedMessages(toEmptyArray);
 			setPinsPanelOpen(false);
 			return undefined;
 		}
 		if (secondaryThreadLoadRef.current === conversationId) return undefined;
 		// Pins and schedules are extra requests on every open; on a phone they slowed the
 		// first page. They load once the thread is painted (or after 2.5s at the latest).
+		// Both requests run in parallel when the browser is idle and land in ONE render, with
+		// no "loading" render first (the flags only matter inside the panels, which refresh
+		// themselves). Previously this cost two extra workspace renders on every chat open.
 		const run = () => {
 			if (secondaryThreadLoadRef.current === conversationId) return;
 			secondaryThreadLoadRef.current = conversationId;
-			void loadMessageSchedules(conversationId);
-			void loadPinnedMessages(conversationId);
+			const id = conversationId;
+			const load = () => {
+				if (conversationIdRef.current !== id) return;
+				void Promise.allSettled([fetchActiveSchedules(id), fetchPinnedRows(id)]).then(([schedules, pins]) => {
+					if (conversationIdRef.current !== id) return;
+					const rows = schedules.status === 'fulfilled' ? schedules.value : [];
+					const pinned = pins.status === 'fulfilled' ? pins.value : [];
+					setMessageSchedules(rows.length ? rows : toEmptyArray);
+					setPinnedMessages(pinned.length ? pinned : toEmptyArray);
+				});
+			};
+			if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(load, { timeout: 1500 });
+			else window.setTimeout(load, 250);
 		};
 		if (!loadingMessages) {
 			run();
@@ -7939,11 +7995,11 @@ function WhatsAppWorkspaceContent() {
 		}
 		const timer = window.setTimeout(run, 2500);
 		return () => window.clearTimeout(timer);
-	}, [conversationId, demo.settings.enabled, loadingMessages, loadMessageSchedules, loadPinnedMessages]);
+	}, [conversationId, demo.settings.enabled, loadingMessages, fetchActiveSchedules, fetchPinnedRows]);
 	useEffect(() => {
 		// Never show the previous chat's pins / schedules while the new ones wait.
-		setMessageSchedules([]);
-		setPinnedMessages([]);
+		setMessageSchedules(toEmptyArray);
+		setPinnedMessages(toEmptyArray);
 	}, [conversationId]);
 
 	useEffect(() => {
@@ -8322,7 +8378,7 @@ function WhatsAppWorkspaceContent() {
 			if (conversationIdRef.current !== id) return;
 			setNotes(Array.isArray(data) ? data : []);
 		} catch {
-			if (conversationIdRef.current === id) setNotes([]);
+			if (conversationIdRef.current === id) setNotes(toEmptyArray);
 		} finally {
 			if (conversationIdRef.current === id) setLoadingNotes(false);
 		}
@@ -9633,9 +9689,9 @@ function WhatsAppWorkspaceContent() {
 			setAccountId(null);
 			clearStoredWhatsAppAccountId(targetAccountId, currentUserId);
 			setConversationId(null);
-			setConversations([]);
+			setConversations(toEmptyArray);
 			clearConversationMessages(null);
-			setStatuses([]);
+			setStatuses(toEmptyArray);
 			setSelectedStatus(null);
 			setStatusMediaUrl(null);
 			setQr(null);
@@ -9817,7 +9873,7 @@ function WhatsAppWorkspaceContent() {
 		if (stagedFiles.length) {
 			if (!conversationId) return;
 			pinThreadToBottomRef.current = true;
-			setComposerFilesState([]);
+			setComposerFilesState(toEmptyArray);
 			sendComposerFilesNow(stagedFiles.map(item => item.file));
 			const nothingElse =
 				!composerImagesRef.current.some(item => item?.file && !item.uploading) && !getDraft().trim();
@@ -9847,7 +9903,7 @@ function WhatsAppWorkspaceContent() {
 				previewUrl: item.previewUrl,
 			}));
 			// Free the composer immediately; uploads continue in the background.
-			setComposerImagesState([]);
+			setComposerImagesState(toEmptyArray);
 			if (conversationIdRef.current === targetConversationId) {
 				if (caption) setDraft('');
 				setReplyingTo(null);
@@ -10597,7 +10653,7 @@ function WhatsAppWorkspaceContent() {
 
 	// A picked document belongs to the chat it was picked in: never carry it to another chat.
 	useEffect(() => {
-		setComposerFilesState([]);
+		setComposerFilesState(toEmptyArray);
 	}, [conversationId, setComposerFilesState]);
 
 	/** Picked files wait above the composer; nothing is sent until Send. */
@@ -10894,7 +10950,7 @@ function WhatsAppWorkspaceContent() {
 
 	// Switching conversations must not leave pollers running against the old thread.
 	useEffect(() => {
-		setSocialDownloads({});
+		setSocialDownloads(toEmptyObject);
 		const timers = socialPollTimersRef.current;
 		return () => {
 			timers.forEach(timer => window.clearTimeout(timer));
@@ -11393,10 +11449,10 @@ function WhatsAppWorkspaceContent() {
 				if (fromSelectedMessages) {
 					setTicketSelectMode(false);
 					setGroupSelectMode(false);
-					setSelectedMessageIds(new Set());
+					setSelectedMessageIds(toEmptySet);
 				} else {
 					setMediaSelectMode(false);
-					setSelectedMediaIds(new Set());
+					setSelectedMediaIds(toEmptySet);
 				}
 			};
 
@@ -11485,10 +11541,10 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		setMediaSelectMode(false);
-		setSelectedMediaIds(new Set());
+		setSelectedMediaIds(toEmptySet);
 		setDownloadingSelectedMedia(false);
 		setTicketSelectMode(false);
-		setSelectedMessageIds(new Set());
+		setSelectedMessageIds(toEmptySet);
 		setComposerImagesState(current => {
 			for (const item of current) {
 				if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
@@ -11505,7 +11561,7 @@ function WhatsAppWorkspaceContent() {
 	const toggleTicketSelectMode = () => {
 		if (ticketSelectMode) {
 			setTicketSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			return;
 		}
 		if (!selectableTranscriptMessages.length) {
@@ -11513,7 +11569,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		setMediaSelectMode(false);
-		setSelectedMediaIds(new Set());
+		setSelectedMediaIds(toEmptySet);
 		setGroupSelectMode(false);
 		setGroupPickerOpen(false);
 		setTicketSelectMode(true);
@@ -11521,8 +11577,8 @@ function WhatsAppWorkspaceContent() {
 
 	const refreshMessageGroups = useCallback(async (id = conversationId) => {
 		if (!id || isDemoId(id) || demo.settings.enabled) {
-			setMessageGroups([]);
-			setMessageGroupMembership({});
+			setMessageGroups(toEmptyArray);
+			setMessageGroupMembership(toEmptyObject);
 			return;
 		}
 		try {
@@ -11535,23 +11591,23 @@ function WhatsAppWorkspaceContent() {
 			setMessageGroupMembership(membership);
 		} catch {
 			if (conversationIdRef.current === id) {
-				setMessageGroups([]);
-				setMessageGroupMembership({});
+				setMessageGroups(toEmptyArray);
+				setMessageGroupMembership(toEmptyObject);
 			}
 		}
 	}, [conversationId, demo.settings.enabled]);
 
 	useEffect(() => {
 		setGroupSelectMode(false);
-		setSelectedMessageIds(new Set());
+		setSelectedMessageIds(toEmptySet);
 		setMessageGroupsOpen(false);
 		setGroupPickerOpen(false);
 		setNewGroupName('');
 		setActiveMessageGroup(null);
 		setGroupViewMessages(null);
 		if (!conversationId || isDemoId(conversationId) || demo.settings.enabled) {
-			setMessageGroups([]);
-			setMessageGroupMembership({});
+			setMessageGroups(toEmptyArray);
+			setMessageGroupMembership(toEmptyObject);
 			return;
 		}
 		void refreshMessageGroups(conversationId);
@@ -11579,7 +11635,7 @@ function WhatsAppWorkspaceContent() {
 			setHasMoreMessages(false);
 			setMessageGroupsOpen(false);
 			setGroupSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			pinThreadToBottomRef.current = true;
 			scrollMessagesToBottom();
 		} catch (error) {
@@ -11592,12 +11648,12 @@ function WhatsAppWorkspaceContent() {
 	const toggleGroupSelectMode = () => {
 		if (groupSelectMode) {
 			setGroupSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			setGroupPickerOpen(false);
 			return;
 		}
 		setMediaSelectMode(false);
-		setSelectedMediaIds(new Set());
+		setSelectedMediaIds(toEmptySet);
 		setTicketSelectMode(false);
 		setGroupSelectMode(true);
 		setMessageGroupsOpen(false);
@@ -11612,11 +11668,11 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (mediaSelectMode) {
 			setMediaSelectMode(false);
-			setSelectedMediaIds(new Set());
+			setSelectedMediaIds(toEmptySet);
 			return;
 		}
 		setTicketSelectMode(false);
-		setSelectedMessageIds(new Set());
+		setSelectedMessageIds(toEmptySet);
 		setMediaSelectMode(true);
 	}, [effectiveMessages, mediaSelectMode, t]);
 
@@ -11639,7 +11695,7 @@ function WhatsAppWorkspaceContent() {
 	const applyGroupMessageSelection = (message, { toggle = true } = {}) => {
 		if (!message?.id || message.optimistic) return false;
 		setMediaSelectMode(false);
-		setSelectedMediaIds(new Set());
+		setSelectedMediaIds(toEmptySet);
 		setTicketSelectMode(false);
 		setGroupSelectMode(true);
 		setActionMessageId(null);
@@ -11676,7 +11732,7 @@ function WhatsAppWorkspaceContent() {
 			setNewGroupName('');
 			setGroupPickerOpen(false);
 			setGroupSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			await refreshMessageGroups(conversationId);
 			toast.success(t.messagesAddedToGroup);
 		} catch (error) {
@@ -11697,7 +11753,7 @@ function WhatsAppWorkspaceContent() {
 			await addMessagesToChatGroup(conversationId, groupId, ids);
 			setGroupPickerOpen(false);
 			setGroupSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			await refreshMessageGroups(conversationId);
 			if (activeMessageGroup) {
 				await openMessageGroup(activeMessageGroup);
@@ -11724,7 +11780,7 @@ function WhatsAppWorkspaceContent() {
 			});
 			setTicketSelectMode(false);
 			setGroupSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			toast.success(t.sentToBoard);
 		} catch (error) {
 			toast.error(
@@ -11760,7 +11816,7 @@ function WhatsAppWorkspaceContent() {
 				await removeMessagesFromChatGroup(conversationId, groupId, messageIds);
 			}
 			setGroupSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			await refreshMessageGroups(conversationId);
 			if (activeMessageGroup) {
 				await openMessageGroup(activeMessageGroup);
@@ -11793,9 +11849,9 @@ function WhatsAppWorkspaceContent() {
 		const onKeyDown = event => {
 			if (event.key !== 'Escape' || event.defaultPrevented) return;
 			setTicketSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			setMediaSelectMode(false);
-			setSelectedMediaIds(new Set());
+			setSelectedMediaIds(toEmptySet);
 			setGroupSelectMode(false);
 			setGroupPickerOpen(false);
 		};
@@ -12017,7 +12073,7 @@ function WhatsAppWorkspaceContent() {
 		);
 		if (!list.length) return false;
 		setMediaSelectMode(false);
-		setSelectedMediaIds(new Set());
+		setSelectedMediaIds(toEmptySet);
 		setTicketSelectMode(true);
 		setActionMessageId(null);
 		setActionMessageAnchor(null);
@@ -12053,7 +12109,7 @@ function WhatsAppWorkspaceContent() {
 	const applyMediaSelection = downloadableAttachments => {
 		if (!downloadableAttachments?.length) return false;
 		setTicketSelectMode(false);
-		setSelectedMessageIds(new Set());
+		setSelectedMessageIds(toEmptySet);
 		setMediaSelectMode(true);
 		setActionMessageId(null);
 		setActionMessageAnchor(null);
@@ -12463,7 +12519,7 @@ function WhatsAppWorkspaceContent() {
 			setTicketSelectMode(false);
 			setGroupSelectMode(false);
 			setGroupPickerOpen(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 		}
 	};
 
@@ -12566,7 +12622,7 @@ function WhatsAppWorkspaceContent() {
 			sharingSourceConversationIdRef.current = null;
 			setTicketSelectMode(false);
 			setGroupSelectMode(false);
-			setSelectedMessageIds(new Set());
+			setSelectedMessageIds(toEmptySet);
 			if (failed > 0 && sent > 0) {
 				toast.success(
 					locale === 'ar'
@@ -13211,7 +13267,8 @@ function WhatsAppWorkspaceContent() {
 			recorder.onstop = () => {
 				if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
 				recordingTimerRef.current = null;
-				recordingStreamRef.current?.getTracks().forEach(track => track.stop());
+				// Keep the mic warm for the next voice note (no new permission prompt).
+				releaseVoiceMediaStream(recordingStreamRef.current);
 				recordingStreamRef.current = null;
 				mediaRecorderRef.current = null;
 				const durationSec = Math.max(1, Math.round(recordingSecondsRef.current || 1));
@@ -13311,6 +13368,7 @@ function WhatsAppWorkspaceContent() {
 			if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
 			if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
 			recordingStreamRef.current?.getTracks().forEach(track => track.stop());
+			stopWarmVoiceStream();
 		};
 	}, []);
 
@@ -14071,7 +14129,7 @@ function WhatsAppWorkspaceContent() {
 		const reqId = ++inChatSearchReqRef.current;
 		window.clearTimeout(inChatSearchTimerRef.current);
 		if (!conversationId || !q) {
-			setInChatSearchHits([]);
+			setInChatSearchHits(toEmptyArray);
 			setInChatSearchActiveIndex(-1);
 			setInChatSearchBusy(false);
 			return;
@@ -14278,7 +14336,7 @@ function WhatsAppWorkspaceContent() {
 					setInChatSearchOpen(current => !current);
 					if (inChatSearchOpen) {
 						setInChatSearchQuery('');
-						setInChatSearchHits([]);
+						setInChatSearchHits(toEmptyArray);
 						setInChatSearchActiveIndex(-1);
 					}
 				},
@@ -14450,7 +14508,7 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		setInChatSearchOpen(false);
 		setInChatSearchQuery('');
-		setInChatSearchHits([]);
+		setInChatSearchHits(toEmptyArray);
 		setInChatSearchActiveIndex(-1);
 		inChatSearchReqRef.current += 1;
 		clearPendingVoiceDraft();
@@ -15113,7 +15171,7 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		if (!accountId || (!canManageWhatsApp && !canAssignWhatsApp)) {
-			setAssignableStaff([]);
+			setAssignableStaff(toEmptyArray);
 			setAssignableStaffLoading(false);
 			return undefined;
 		}
@@ -15619,9 +15677,9 @@ function WhatsAppWorkspaceContent() {
 			storyPersonAnimUnlockTimerRef.current = null;
 		}
 		setSelectedStatus(null);
-		setStoryQueue([]);
+		setStoryQueue(toEmptyArray);
 		setStoryIndex(0);
-		setStoryPeopleQueue([]);
+		setStoryPeopleQueue(toEmptyArray);
 		setStoryPeopleIndex(0);
 		storyPeopleQueueRef.current = [];
 		storyPeopleIndexRef.current = 0;
@@ -18941,7 +18999,7 @@ function WhatsAppWorkspaceContent() {
 												window.clearTimeout(inChatSearchTimerRef.current);
 												setInChatSearchOpen(false);
 												setInChatSearchQuery('');
-												setInChatSearchHits([]);
+												setInChatSearchHits(toEmptyArray);
 												setInChatSearchActiveIndex(-1);
 												setInChatSearchBusy(false);
 											}}
@@ -19161,8 +19219,20 @@ function WhatsAppWorkspaceContent() {
 											const distanceFromBottom = threadDistanceFromBottom(box);
 
 											const wasPinned = pinThreadToBottomRef.current;
+											// A real finger / wheel / scrollbar gesture wins over the
+											// open-chat auto-pin. Without this the settle loop and the
+											// resize pin kept dragging the view back to the bottom while
+											// the user scrolled up (the "back and forth" jitter on phones),
+											// and the jump button never appeared until settling finished.
+											const userGesture =
+												Date.now() - (lastThreadGestureAtRef.current || 0) < 700;
+											if (userGesture && scrollingUp && !threadSettledRef.current) {
+												threadSettledRef.current = true;
+												setThreadSettled(true);
+											}
 											const openingThread =
-												!threadSettledRef.current || loadingMessagesRef.current;
+												(!threadSettledRef.current || loadingMessagesRef.current) &&
+												!(userGesture && scrollingUp);
 											if (
 												!openingThread &&
 												!jumpToBottomInFlightRef.current &&
@@ -19310,7 +19380,7 @@ function WhatsAppWorkspaceContent() {
 															type="button"
 															onClick={() => {
 																setMediaSelectMode(false);
-																setSelectedMediaIds(new Set());
+																setSelectedMediaIds(toEmptySet);
 															}}
 															className="rounded-full px-2 py-0.5 hover:bg-slate-100 dark:hover:bg-slate-700"
 														>
@@ -19330,7 +19400,7 @@ function WhatsAppWorkspaceContent() {
 															onSuccess={() => {
 																setTicketSelectMode(false);
 																setGroupSelectMode(false);
-																setSelectedMessageIds(new Set());
+																setSelectedMessageIds(toEmptySet);
 																toast.success(t.sentToBoard);
 															}}
 														/>
@@ -19381,7 +19451,7 @@ function WhatsAppWorkspaceContent() {
 															type="button"
 															onClick={() => {
 																setTicketSelectMode(false);
-																setSelectedMessageIds(new Set());
+																setSelectedMessageIds(toEmptySet);
 															}}
 															className="wa-select-toolbar__cancel"
 														>
@@ -19423,7 +19493,7 @@ function WhatsAppWorkspaceContent() {
 																triggerLabel={t.addToBoard}
 																onSuccess={() => {
 																	setGroupSelectMode(false);
-																	setSelectedMessageIds(new Set());
+																	setSelectedMessageIds(toEmptySet);
 																	setGroupPickerOpen(false);
 																	toast.success(t.sentToBoard);
 																}}
@@ -19449,7 +19519,7 @@ function WhatsAppWorkspaceContent() {
 																type="button"
 																onClick={() => {
 																	setGroupSelectMode(false);
-																	setSelectedMessageIds(new Set());
+																	setSelectedMessageIds(toEmptySet);
 																	setGroupPickerOpen(false);
 																}}
 																className="rounded-full px-2 py-0.5 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -19814,7 +19884,7 @@ function WhatsAppWorkspaceContent() {
 																	</span>
 																</div>
 															) : null}
-																	<div className={`wa-message-line flex min-w-0 w-full max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}>
+																	<div className={`wa-message-line flex min-w-0 w-full max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}${normalizeWhatsAppReactions(message.reactions).length > 0 ? ' has-reactions' : ''}`}>
 																<div className={`wa-message-cluster group flex min-w-0 w-full max-w-full ${mine ? 'flex-row-reverse items-start' : 'items-start'} gap-1.5`}>
 																{showSelectCheck && (
 																	<button
@@ -22627,7 +22697,7 @@ function WhatsAppWorkspaceContent() {
 				onBoardSuccess={() => {
 					setTicketSelectMode(false);
 					setGroupSelectMode(false);
-					setSelectedMessageIds(new Set());
+					setSelectedMessageIds(toEmptySet);
 					setGroupPickerOpen(false);
 					toast.success(t.sentToBoard);
 				}}

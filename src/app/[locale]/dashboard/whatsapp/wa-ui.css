@@ -15549,3 +15549,13 @@ html.dark .wa-kit-tag.is-acquaintances { background: #3a2508; color: #ffc77a; }
 	flex-wrap: wrap;
 	gap: 6px;
 }
+
+/*
+ * A reaction badge hangs 19px below its bubble. Rows that carry one reserve that room, so a
+ * following bubble (tight same-sender voice notes, images) can no longer cover the emoji.
+ * Padding, not margin: the virtualised thread positions rows by their measured height, and a
+ * margin can collapse outside the measured box. Class-based on purpose: no :has() here.
+ */
+.wa-message-line.has-reactions {
+	padding-bottom: 18px;
+}

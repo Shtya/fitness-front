@@ -99,7 +99,9 @@ export function shouldReloadOpenChatMessages({
  *
  * - `needed` → hit Postgres (may be a quiet tip repair with no unread badge).
  * - `showUi` → full-pane thread skeleton until the tip page lands. Only when
- *   unread > 0 AND the warm/painted tip is still missing.
+ *   unread > 0, the tip is missing AND there is nothing real to show yet. With a
+ *   cached thread the chat opens instantly (like WhatsApp) and the new rows are
+ *   fetched quietly and appended at the bottom.
  */
 export function openChatCatchUpPlan({
 	cacheItems = [],
@@ -130,7 +132,8 @@ export function openChatCatchUpPlan({
 		return { needed: false, expected: 0, showUi: false };
 	}
 	if (unread > 0) {
-		return { needed: true, expected: unread, showUi: true };
+		const hasRealRows = items.some(item => item && !String(item.id || '').startsWith('inbox-preview-'));
+		return { needed: true, expected: unread, showUi: !hasRealRows };
 	}
 	// No unread badge but inbox tip is ahead of cache (reaction / preview drift).
 	if (hasInboxTip) {
