@@ -1020,15 +1020,15 @@ input[type='number'] {
     rgba(255, 255, 255, 0.9) 0px -1px 0px 0px inset !important;
 }
 
-/* Remove browser autofill background */
+/* Autofill: keep theme text visible (white-on-white broke light forms like Sign in). */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.05) inset !important;
-  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.05) inset !important;
-  -webkit-text-fill-color: white !important;
-  caret-color: white;
+  -webkit-box-shadow: 0 0 0 1000px var(--background, #ffffff) inset !important;
+  box-shadow: 0 0 0 1000px var(--background, #ffffff) inset !important;
+  -webkit-text-fill-color: var(--foreground, #12151b) !important;
+  caret-color: var(--foreground, #12151b);
   transition: background-color 9999s ease-in-out 0s;
 }
 
@@ -1046,16 +1046,17 @@ div[data-rht-toaster] {
   }
 }
 
-/* WhatsApp workspace design tokens shared by phone and web chat surfaces. */
+/* WhatsApp workspace design tokens shared by phone and web chat surfaces.
+ * Quran text (.wa-quran-face, .qr-mushaf) keeps its mushaf face. */
 body .wa-mobile-shell,
-body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path) {
+body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *) {
   font-variant-emoji: emoji;
   font-family: var(--wa-font-ui) !important;
 }
 
 /* Arabic locale: prefer a proper Arabic UI font instead of DM Sans. */
 [dir='rtl'] body .wa-mobile-shell,
-[dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path) {
+[dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *) {
   font-family: var(--wa-font-ui-ar) !important;
 }
 

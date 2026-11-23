@@ -60,6 +60,7 @@ import {
 	reclaimIfStale as reclaimQuranBg,
 } from '@/lib/quran-bg-player';
 import YoutubeResumePlayer from './YoutubeResumePlayer';
+import { playableAyahUrl, prefetchAyahAudio } from './ayah-audio-cache';
 import TajweedText from './TajweedText';
 import TajweedGuideModal from './TajweedGuideModal';
 import QrSlideSwitch from './QrSlideSwitch';
@@ -79,6 +80,7 @@ const LS_HISTORY = 'so7ba:quran-revision:history:v1';
 const LS_WORD_ERRORS = 'so7ba:quran-revision:word-errors:v1';
 const LS_SESSION = 'so7ba:quran-revision:active-session:v1';
 const EMPTY_WORD_MARKS = Object.freeze({});
+const WORD_MARK_TYPES = new Set(['tashkeel', 'forgot', 'swap', 'added']);
 
 function wordErrorKey(surahId, ayahNumber, wordIdx) {
 	return `${surahId}:${ayahNumber}:${wordIdx}`;
@@ -88,7 +90,7 @@ function normalizeWordErrors(raw) {
 	if (!raw || typeof raw !== 'object') return {};
 	const out = {};
 	Object.entries(raw).forEach(([key, type]) => {
-		if (type !== 'tashkeel' && type !== 'forgot') return;
+		if (!WORD_MARK_TYPES.has(type)) return;
 		const parts = String(key).split(':');
 		if (parts.length !== 3) return;
 		const surahId = Number(parts[0]);
@@ -298,7 +300,9 @@ const COPY = {
 		errorModeHint: 'فعّل المود، وبعدين اسحب أو اضغط على الكلمة/الكلمات اللي غلطت فيها',
 		errorPickTitle: 'نوع الخطأ؟',
 		errorTashkeel: 'تشكيل غلط',
-		errorForgot: 'مش فاكرها',
+		errorForgot: 'نسيتها / وقفت',
+		errorSwap: 'قلت كلمة بدلها',
+		errorAdded: 'زوّدت كلمة هنا',
 		errorRemove: 'إزالة العلامة',
 		errorCancel: 'إلغاء',
 		errorCountOne: 'غلطة',
@@ -436,7 +440,9 @@ const COPY = {
 		errorModeHint: 'Turn on, then click or drag across the word(s) you missed',
 		errorPickTitle: 'What kind of mistake?',
 		errorTashkeel: 'Wrong tashkeel',
-		errorForgot: "Don't remember",
+		errorForgot: "Forgot / stuck",
+		errorSwap: 'Said another word',
+		errorAdded: 'Added a word here',
 		errorRemove: 'Remove mark',
 		errorCancel: 'Cancel',
 		errorCountOne: 'mistake',
@@ -646,6 +652,8 @@ function ytThumb(videoId) {
 
 export default function QuranRevisionStudio({
 	quranFontFamily = 'var(--font-qr-uthmani), var(--font-qr-amiri), serif',
+	/** Rendered inside the WhatsApp Quran tab: no page hero, the tab supplies the header. */
+	embedded = false,
 } = {}) {
 	const locale = useLocale();
 	const isAr = locale === 'ar';
@@ -684,6 +692,15 @@ export default function QuranRevisionStudio({
 	const [favsOpen, setFavsOpen] = useState(false);
 	const [portalReady, setPortalReady] = useState(false);
 	const [sessionSettingsOpen, setSessionSettingsOpen] = useState(true);
+	// Embedded (WhatsApp tab): session settings live in a sheet; Escape closes it.
+	useEffect(() => {
+		if (!embedded || !sessionSettingsOpen) return undefined;
+		const onKey = e => {
+			if (e.key === 'Escape') setSessionSettingsOpen(false);
+		};
+		document.addEventListener('keydown', onKey);
+		return () => document.removeEventListener('keydown', onKey);
+	}, [embedded, sessionSettingsOpen]);
 	const [unitsOpen, setUnitsOpen] = useState(false);
 
 	const [followAlong, setFollowAlong] = useState(true);
@@ -1288,7 +1305,12 @@ export default function QuranRevisionStudio({
 
 		setAudioError('');
 		el.pause();
-		el.src = url;
+		// Local copy when it is already downloaded: no network wait between ayat.
+		el.src = playableAyahUrl(url);
+		// Keep this ayah (repeats) and the next two ready ahead of time.
+		[ayah, vs[verseIndex + 1], vs[verseIndex + 2] || (scope === 'selection' ? vs[0] : null)]
+			.filter(Boolean)
+			.forEach(v => void prefetchAyahAudio(ayahAudioUrl(rec.folder, sid, v.n)));
 		applyOutputLevel();
 		el.load();
 		// Some browsers reset HTMLAudioElement.volume after load()/src change.
@@ -1795,7 +1817,14 @@ export default function QuranRevisionStudio({
 		forgot: t.errorForgot,
 		remove: t.errorRemove,
 		cancel: t.errorCancel,
-	}), [t.errorPickTitle, t.errorTashkeel, t.errorForgot, t.errorRemove, t.errorCancel]);
+		// Where in the ayah comes from the word itself (start / middle / end) in the mistakes log.
+		options: [
+			['forgot', t.errorForgot],
+			['swap', t.errorSwap],
+			['added', t.errorAdded],
+			['tashkeel', t.errorTashkeel],
+		],
+	}), [t.errorPickTitle, t.errorTashkeel, t.errorForgot, t.errorSwap, t.errorAdded, t.errorRemove, t.errorCancel]);
 
 	const marksByAyahNumber = useMemo(() => {
 		const map = {};
@@ -3028,22 +3057,38 @@ export default function QuranRevisionStudio({
 		<div
 			className={cx(
 				'qr-studio gm-surface rs-scope mx-auto w-full max-w-[920px]',
+				embedded && 'is-embedded',
 				sessionPhase === 'active' ? 'is-session-active' : 'space-y-3 pb-8',
 			)}
 			dir={isAr ? 'rtl' : 'ltr'}
 		>
 			<audio ref={audioRef} preload="none" />
 
-			<div className={cx('qr-studio-head', sessionPhase === 'active' && 'is-compact')}>
-				<IntakeHero
-					icon={BookMarked}
-					title={t.title}
-					subtitle={sessionPhase === 'active' ? undefined : t.desc}
-					extra={headerActions}
-					ctaLabel={sessionPhase !== 'setup' ? t.newSession : null}
-					onCta={sessionPhase !== 'setup' ? resetSetup : undefined}
-				/>
-			</div>
+			{embedded ? (
+				/* Inside WhatsApp the tab header carries the title; keep only the tools, in one slim row. */
+				sessionPhase === 'active' ? null : (
+					<div className="qr-embed-tools">
+						{headerActions}
+						{sessionPhase !== 'setup' ? (
+							<button type="button" className="qr-head-btn qr-head-btn--wide" onClick={resetSetup}>
+								<RotateCcw size={15} />
+								<span className="text-[12px] font-bold whitespace-nowrap">{t.newSession}</span>
+							</button>
+						) : null}
+					</div>
+				)
+			) : (
+				<div className={cx('qr-studio-head', sessionPhase === 'active' && 'is-compact')}>
+					<IntakeHero
+						icon={BookMarked}
+						title={t.title}
+						subtitle={sessionPhase === 'active' ? undefined : t.desc}
+						extra={headerActions}
+						ctaLabel={sessionPhase !== 'setup' ? t.newSession : null}
+						onCta={sessionPhase !== 'setup' ? resetSetup : undefined}
+					/>
+				</div>
+			)}
 
 			{drawers}
 
@@ -3070,6 +3115,47 @@ export default function QuranRevisionStudio({
 
 			{sessionPhase === 'active' ? (
 				<div className="qr-active has-dock">
+					{embedded ? (
+						<div className="qr-x-bar">
+							<div className="qr-x-meta">
+								<p className="qr-x-title">
+									<span>{surahName}</span>
+									{currentVerse ? <span className="qr-x-ayah">{t.ayah} {d(currentVerse.n)}</span> : null}
+								</p>
+								<p className="qr-x-sub">
+									{t.readingFrom} {d(ayahFrom)} {t.readingTo} {d(ayahTo)}
+									{errorCountInView > 0 ? (
+										<span className="qr-x-errs">
+											{' · '}{d(errorCountInView)} {errorCountInView === 1 ? t.errorCountOne : t.errorCountMany}
+										</span>
+									) : null}
+								</p>
+							</div>
+							<div className="qr-x-actions">
+								<button
+									type="button"
+									className={cx('qr-x-icon', 'is-primary', settingsPendingApply && 'has-dot')}
+									onClick={() => setSessionSettingsOpen(true)}
+									aria-label={t.sessionSettings}
+									title={t.sessionSettings}
+								>
+									<Settings2 size={18} />
+								</button>
+								<button type="button" className="qr-x-icon" onClick={openHistory} aria-label={t.history} title={t.history}>
+									<History size={18} />
+								</button>
+								<button type="button" className="qr-x-icon" onClick={openFavs} aria-label={t.favorites} title={t.favorites}>
+									<Youtube size={18} />
+								</button>
+								<button type="button" className="qr-x-icon" onClick={() => setTajweedLegendOpen(true)} aria-label={t.tajweedLegend} title={t.tajweedLegend}>
+									<Info size={18} />
+								</button>
+								<button type="button" className="qr-x-icon" onClick={resetSetup} aria-label={t.newSession} title={t.newSession}>
+									<RotateCcw size={17} />
+								</button>
+							</div>
+						</div>
+					) : (
 					<section className="qr-panel qr-live-settings">
 						<div className="qr-live-settings-row">
 							<button
@@ -3139,6 +3225,7 @@ export default function QuranRevisionStudio({
 							</div>
 						</div>
 					</section>
+					)}
 
 					{usingYoutube && selectedFav ? (
 						<section className="qr-panel space-y-2">
@@ -3182,6 +3269,55 @@ export default function QuranRevisionStudio({
 							)}
 							onAnimationEnd={onMushafExpandAnimEnd}
 						>
+							{embedded ? (
+								<div className="qr-x-chips" role="toolbar" aria-label={t.title}>
+									{[
+										[showTajweed, () => setShowTajweed(v => !v), BookOpenText, t.tajweed, t.tajweedHint],
+										[showTafsir, () => toggleTafsirMode(), Lightbulb, t.tafsir, t.tafsirHint],
+										[followAlong, () => setFollowAlong(v => !v), Eye, t.follow, undefined],
+										[errorMode, () => setErrorMode(v => !v), CircleAlert, t.errorMode, t.errorModeHint],
+										[isMemorizationMode, () => setIsMemorizationMode(v => !v), EyeOff, t.memo, undefined],
+									].map(([on, toggle, Icon, label, hint]) => (
+										<button
+											key={label}
+											type="button"
+											className={cx('qr-x-chip', on && 'is-on')}
+											aria-pressed={on}
+											onClick={toggle}
+											title={hint}
+										>
+											<Icon size={15} strokeWidth={2.2} />
+											<span>{label}</span>
+										</button>
+									))}
+									{isMemorizationMode
+										? [
+											{ id: 'start', label: t.hideStart },
+											{ id: 'middle', label: t.hideMiddle },
+											{ id: 'end', label: t.hideEnd },
+										].map(opt => (
+											<button
+												key={opt.id}
+												type="button"
+												className={cx('qr-x-chip', 'is-sub', hideParts.includes(opt.id) && 'is-on')}
+												aria-pressed={hideParts.includes(opt.id)}
+												onClick={() => toggleHidePart(opt.id)}
+											>
+												{opt.label}
+											</button>
+										))
+										: null}
+									<button
+										type="button"
+										className={cx('qr-x-chip', 'is-icon', mushafExpanded && !mushafCollapsing && 'is-on')}
+										onClick={toggleMushafExpanded}
+										aria-label={mushafExpanded && !mushafCollapsing ? t.collapseMushaf : t.expandMushaf}
+										title={mushafExpanded && !mushafCollapsing ? t.collapseMushaf : t.expandMushaf}
+									>
+										{mushafExpanded && !mushafCollapsing ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+									</button>
+								</div>
+							) : (
 							<div className="qr-preview-tools">
 								<div className="qr-tools-meta min-w-0">
 									<p className="qr-tools-title">{surahName}</p>
@@ -3280,6 +3416,7 @@ export default function QuranRevisionStudio({
 								</div>
 								</div>
 							</div>
+							)}
 
 							{favFlash ? <p className="text-[10px] font-bold text-emerald-600">{favFlash}</p> : null}
 
@@ -3361,6 +3498,46 @@ export default function QuranRevisionStudio({
 				</div>
 			) : null}
 
+			{embedded && portalReady && sessionPhase === 'active' && sessionSettingsOpen
+				? createPortal(
+					/* Settings in a sheet: nothing inside gets clipped, and the mushaf keeps its room. */
+					<div className="qr-x-sheet-wrap" dir={isAr ? 'rtl' : 'ltr'}>
+						<button type="button" className="qr-x-scrim" aria-label={isAr ? 'إغلاق' : 'Close'} onClick={() => setSessionSettingsOpen(false)} />
+						<section className="qr-x-sheet qr-studio is-embedded" role="dialog" aria-modal="true" aria-label={t.sessionSettings} dir={isAr ? 'rtl' : 'ltr'}>
+							<header className="qr-x-sheet-head">
+								<span className="qr-x-grabber" aria-hidden="true" />
+								<h2>{t.sessionSettings}</h2>
+								<button type="button" className="qr-x-icon" onClick={() => setSessionSettingsOpen(false)} aria-label={isAr ? 'إغلاق' : 'Close'}>
+									<X size={18} />
+								</button>
+							</header>
+							<div className="qr-x-sheet-body">
+								<p className="qr-x-hint">{t.changeWhilePlaying}</p>
+								{topSelects(true)}
+								<div className="qr-x-units">{unitsPicker}</div>
+							</div>
+							{settingsPendingApply ? (
+								<footer className="qr-x-sheet-foot">
+									<button
+										type="button"
+										className="qr-cta"
+										disabled={!canStart || ayahLoading}
+										onClick={() => {
+											applyLiveSettings();
+											setSessionSettingsOpen(false);
+										}}
+									>
+										<Play size={15} />
+										{t.applySettings}
+									</button>
+								</footer>
+							) : null}
+						</section>
+					</div>,
+					document.body,
+				)
+				: null}
+
 			{portalReady && sessionPhase === 'active'
 				? createPortal(
 					<div
@@ -3392,7 +3569,9 @@ export default function QuranRevisionStudio({
 											onChange={changeReciterLive}
 											searchable={false}
 											clearable={false}
-											cnInputParent="!h-8 !min-h-8 !rounded-lg !text-[10px] !font-bold !bg-white/90 !border-slate-200 !px-2"
+											cnInputParent={embedded
+												? '!h-9 !min-h-9 !rounded-xl !text-[11px] !font-bold !bg-[var(--qr-c-soft,#f8fafc)] !border-[var(--qr-c-line,#e2e8f0)] !px-2.5'
+												: '!h-8 !min-h-8 !rounded-lg !text-[10px] !font-bold !bg-white/90 !border-slate-200 !px-2'}
 										/>
 									</div>
 								) : (

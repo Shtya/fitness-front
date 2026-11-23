@@ -10,6 +10,7 @@ import {
 	PanelLeftOpen,
 	Settings,
 	Shirt,
+	BookMarked,
 	Sparkles,
 	Sun,
 	User,
@@ -134,6 +135,7 @@ export default function WhatsAppDesktopRail({
 	showFakeChat = true,
 	showWallet = false,
 	showOutfit = false,
+	showQuran = false,
 	showAdhkar = false,
 	showDocuments = false,
 	showLearn = false,
@@ -230,6 +232,13 @@ export default function WhatsAppDesktopRail({
 					id: 'outfit',
 					label: labels.outfit || (ar ? 'منسّق الملابس' : 'Outfit Matcher'),
 					icon: Shirt,
+				}
+			: null,
+		showQuran
+			? {
+					id: 'quran',
+					label: labels.quran || (ar ? 'أخطاء الحفظ' : 'Hifz mistakes'),
+					icon: BookMarked,
 				}
 			: null,
 		showAdhkar

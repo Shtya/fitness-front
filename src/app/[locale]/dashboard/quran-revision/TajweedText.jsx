@@ -88,21 +88,17 @@ function ErrorMenu({
 			onMouseDown={(e) => e.stopPropagation()}
 		>
 			<p className="qr-err-menu-title">{labels.title}</p>
-			<div className="qr-err-menu-actions">
-				<button
-					type="button"
-					className="qr-err-opt is-tashkeel"
-					onClick={() => onPick('tashkeel')}
-				>
-					{labels.tashkeel}
-				</button>
-				<button
-					type="button"
-					className="qr-err-opt is-forgot"
-					onClick={() => onPick('forgot')}
-				>
-					{labels.forgot}
-				</button>
+			<div className={`qr-err-menu-actions${labels.options?.length > 2 ? ' is-grid' : ''}`}>
+				{(labels.options || [['tashkeel', labels.tashkeel], ['forgot', labels.forgot]]).map(([type, label]) => (
+					<button
+						key={type}
+						type="button"
+						className={`qr-err-opt is-${type}`}
+						onClick={() => onPick(type)}
+					>
+						{label}
+					</button>
+				))}
 			</div>
 			<div className="qr-err-menu-foot">
 				{hasExisting ? (
@@ -412,6 +408,8 @@ export default function TajweedText({
 										className={`qr-tw-mark qr-tw-${TAJWEED_RULES[p.code]?.id || p.code}`}
 										style={{
 											color: p.color,
+											// Exposed so a dark host (WhatsApp Quran tab) can lighten the rule colour.
+											'--tw-c': p.color,
 											fontFamily: 'var(--font-qr-uthmani), var(--font-qr-amiri), serif',
 										}}
 									>

@@ -21,6 +21,7 @@ import {
 	Bookmark,
 	BookmarkPlus,
 	BookOpen,
+	BookMarked,
 	BookUser,
 	Bot,
 	Copy,
@@ -346,6 +347,7 @@ const GroupMemberPanel = lazy(() => import('./GroupMemberPanel'));
 const ConnectionCheckDialog = lazy(() => import('./ConnectionCheckDialog'));
 const WhatsAppWalletTab = lazy(() => import('./WhatsAppWalletTab'));
 const WhatsAppOutfitTab = lazy(() => import('./outfit/WhatsAppOutfitTab'));
+const WhatsAppQuranTab = lazy(() => import('./quran/WhatsAppQuranTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
@@ -605,6 +607,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'fakeChat',
 	'wallet',
 	'outfit',
+	'quran',
 	'adhkar',
 	'documents',
 	'learn',
@@ -902,6 +905,7 @@ const tabs = [
 	['fakeChat', Sparkles],
 	['wallet', Wallet],
 	['outfit', Shirt],
+	['quran', BookMarked],
 	['adhkar', BookOpen],
 	['documents', FileText],
 	['learn', GraduationCap],
@@ -14917,6 +14921,7 @@ function WhatsAppWorkspaceContent() {
 			tab === 'fakeChat' ||
 			tab === 'wallet' ||
 			tab === 'outfit' ||
+			tab === 'quran' ||
 			tab === 'typing' ||
 			tab === 'adhkar' ||
 			tab === 'learn' ||
@@ -16848,6 +16853,7 @@ function WhatsAppWorkspaceContent() {
 			{!(isConversationWorkspaceTab(activeTab) && conversationId) &&
 				activeTab !== 'wallet' &&
 				activeTab !== 'outfit' &&
+				activeTab !== 'quran' &&
 				activeTab !== 'adhkar' &&
 				activeTab !== 'learn' &&
 				activeTab !== 'reading' &&
@@ -17160,6 +17166,7 @@ function WhatsAppWorkspaceContent() {
 					showFakeChat={!showcaseOnly && fakeChatAllowed}
 					showWallet={!showcaseOnly}
 					showOutfit={!showcaseOnly}
+					showQuran={!showcaseOnly}
 					showAdhkar={!showcaseOnly}
 					showDocuments={!showcaseOnly && isAdmin}
 					showLearn={!showcaseOnly}
@@ -22256,6 +22263,13 @@ function WhatsAppWorkspaceContent() {
 					</Suspense>
 				)}
 
+				{activeTab === 'quran' && (
+					<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+						{/* Phone: focused space like the wallet: no WA header/nav; back lives inside the tab. */}
+						<WhatsAppQuranTab locale={locale} onExit={() => void loadTabData('chats')} />
+					</Suspense>
+				)}
+
 				{activeTab === 'adhkar' && (
 					<>
 						<MobileWhatsAppHeader
@@ -22636,6 +22650,7 @@ function WhatsAppWorkspaceContent() {
 				activeTab !== 'learn' &&
 				activeTab !== 'wallet' &&
 				activeTab !== 'outfit' &&
+				activeTab !== 'quran' &&
 				activeTab !== 'reading' &&
 				activeTab !== 'facebook' && (
 				<MobileWhatsAppNav

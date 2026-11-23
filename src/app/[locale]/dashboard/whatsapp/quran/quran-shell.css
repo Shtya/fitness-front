@@ -1,0 +1,1005 @@
+/*
+ * WhatsApp → Quran tab: shell (revision page + mistakes log) and its own design.
+ * Calm and neutral: warm whites, ink for actions, a soft gold for the ayah you are on,
+ * and an off-white "mushaf paper" page. Dark mode follows html.dark.
+ */
+
+@font-face {
+	font-family: 'WaAmiriQuran';
+	src: url('../../quran-revision/fonts/AmiriQuran.ttf') format('truetype');
+	font-display: swap;
+	font-weight: 400;
+}
+
+/* ───────────── tokens ───────────── */
+
+.wa-qr,
+body:has(.wa-qr) {
+	--qx-bg: #f6efdf;
+	--qx-surface: #fbf6ea;
+	--qx-paper: #fbf6ea;
+	--qx-line: #e2d2a8;
+	--qx-line-2: #d3bd86;
+	--qx-ink: #2a2017;
+	--qx-ink-2: #5d4e3a;
+	--qx-ink-3: #8c7b60;
+	--qx-hover: #f0e5c9;
+	--qx-accent: #1f4d36;
+	--qx-on-accent: #ffffff;
+	--qx-gold: #a3802f;
+	--qx-gold-soft: rgb(196 158 80 / 0.17);
+	--qx-gold-line: rgb(176 138 62 / 0.55);
+	--qx-shadow: 0 1px 2px rgb(84 60 20 / 0.06), 0 10px 26px -16px rgb(84 60 20 / 0.35);
+	--qx-shadow-pop: 0 18px 48px -12px rgb(28 25 20 / 0.32);
+	--qx-radius: 20px;
+	--qx-ease: cubic-bezier(0.2, 0.85, 0.25, 1);
+
+	/* The tab's own pieces (log, header) read the --wa-ui tokens: point them here, no green. */
+	--wa-ui-surface: var(--qx-surface);
+	--wa-ui-surface-2: var(--qx-bg);
+	--wa-ui-border: var(--qx-line);
+	--wa-ui-border-strong: var(--qx-line-2);
+	--wa-ui-text: var(--qx-ink);
+	--wa-ui-text-2: var(--qx-ink-2);
+	--wa-ui-text-3: var(--qx-ink-3);
+	--wa-ui-icon: var(--qx-ink-2);
+	--wa-ui-hover: var(--qx-hover);
+	--wa-ui-pressed: color-mix(in srgb, var(--qx-ink) 9%, transparent);
+	--wa-ui-accent: var(--qx-accent);
+	--wa-ui-accent-strong: var(--qx-ink);
+	--wa-ui-accent-soft: color-mix(in srgb, var(--qx-ink) 7%, transparent);
+	--wa-ui-ring: color-mix(in srgb, var(--qx-ink) 40%, transparent);
+
+	/* The revision page's own colour hooks. */
+	--gm-paper: var(--qx-surface);
+	--gm-line: var(--qx-line);
+	--gm-ink: var(--qx-ink);
+	--gm-ink-soft: var(--qx-ink-2);
+	--gm-muted: var(--qx-ink-3);
+	--gm-faint: var(--qx-ink-3);
+	--qr-c-paper: var(--qx-surface);
+	--qr-c-soft: var(--qx-bg);
+	--qr-c-soft2: var(--qx-hover);
+	--qr-c-tint: var(--qx-gold-soft);
+	--qr-c-tint2: var(--qx-gold-soft);
+	--qr-c-line: var(--qx-line);
+	--qr-c-line2: var(--qx-line-2);
+	--qr-c-ink: var(--qx-ink);
+	--qr-c-ink2: var(--qx-ink-2);
+	--qr-c-ink3: var(--qx-ink-3);
+	--qr-c-ink4: var(--qx-ink-3);
+	--qr-ink: var(--qx-ink);
+	--qr-muted: var(--qx-ink-3);
+	--qr-line: var(--qx-line);
+
+	/* "Primary" on the page = a quiet gold (highlights, numbers, progress); actions stay ink. */
+	--color-primary-50: #fbf7ee;
+	--color-primary-100: #f4ead3;
+	--color-primary-200: #e9d5a8;
+	--color-primary-300: #d9b878;
+	--color-primary-400: #c49a52;
+	--color-primary-500: #a9803a;
+	--color-primary-600: #8c682d;
+	--color-primary-700: #6f5225;
+	--color-primary-800: #574120;
+	--color-primary-900: #43331b;
+	--color-gradient-from: var(--qx-ink);
+	--color-gradient-via: var(--qx-ink);
+	--color-gradient-to: var(--qx-ink);
+}
+
+html.dark .wa-qr,
+html.dark body:has(.wa-qr) {
+	--qx-bg: #13140e;
+	--qx-surface: #1c1e16;
+	--qx-paper: #1a1c14;
+	--qx-line: #3b3726;
+	--qx-line-2: #5a4f33;
+	--qx-ink: #ebe2cc;
+	--qx-ink-2: #c4b89c;
+	--qx-ink-3: #8f866f;
+	--qx-hover: #26281d;
+	--qx-accent: #2f6b4a;
+	--qx-on-accent: #ffffff;
+	--qx-gold: #d4b06a;
+	--qx-gold-soft: rgb(217 178 106 / 0.14);
+	--qx-gold-line: rgb(217 178 106 / 0.45);
+	--qx-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -18px rgb(0 0 0 / 0.7);
+	--qx-shadow-pop: 0 18px 48px -12px rgb(0 0 0 / 0.75);
+	--color-primary-50: rgb(217 178 106 / 0.07);
+	--color-primary-100: rgb(217 178 106 / 0.14);
+	--color-primary-200: rgb(217 178 106 / 0.26);
+	--color-primary-300: #8f7442;
+	--color-primary-400: #b8945a;
+	--color-primary-500: #d1ab6a;
+	--color-primary-600: #dcb97c;
+	--color-primary-700: #e6c995;
+	--color-primary-800: #eed8b0;
+	--color-primary-900: #f5e7cb;
+}
+
+/* ───────────── shell ───────────── */
+
+.wa-qr {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-block-size: 100%;
+	inline-size: 100%;
+	color: var(--qx-ink);
+	background: var(--qx-bg);
+	-webkit-tap-highlight-color: transparent;
+}
+.wa-qr > .wa-qn {
+	flex: 1;
+	background: var(--qx-bg);
+}
+.wa-qr-head {
+	gap: 8px;
+	background: color-mix(in srgb, var(--qx-bg) 88%, transparent) !important;
+	border-block-end-color: transparent !important;
+}
+.wa-qr-title {
+	flex: 1;
+	min-inline-size: 0;
+	margin: 0;
+	font-size: 20px;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.wa-qr-seg {
+	display: inline-flex;
+	flex: none;
+	padding: 3px;
+	border-radius: 999px;
+	background: var(--qx-hover);
+	border: 1px solid var(--qx-line);
+}
+.wa-qr-seg-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-block-size: 36px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--qx-ink-3);
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background-color 0.2s var(--qx-ease), color 0.2s, box-shadow 0.2s;
+	touch-action: manipulation;
+}
+.wa-qr-seg-btn.is-on {
+	background: var(--qx-surface);
+	color: var(--qx-ink);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 2px 8px -4px rgb(0 0 0 / 0.18);
+}
+.wa-qr-badge {
+	display: inline-grid;
+	place-items: center;
+	min-inline-size: 19px;
+	block-size: 19px;
+	padding: 0 5px;
+	border-radius: 999px;
+	background: var(--qx-gold);
+	color: #fff;
+	font-size: 11px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+html.dark .wa-qr-badge {
+	color: #151513;
+}
+.wa-qr-revise[hidden] {
+	display: none !important;
+}
+.wa-qr-revise {
+	padding: 4px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+	animation: wa-qn-in 0.22s var(--qx-ease);
+}
+.wa-qn-skeleton.is-card {
+	padding: 18px;
+	border: 1px solid var(--qx-line);
+	border-radius: 22px;
+	background: var(--qx-surface);
+}
+body[data-wa-qr-notes] .qr-dock {
+	display: none !important;
+}
+
+/* During a session the page is a full-height column (mushaf scrolls, player pinned). */
+.wa-qr:has(.qr-studio.is-session-active) {
+	block-size: 100dvh;
+	overflow: hidden;
+}
+.wa-qr-revise:has(.qr-studio.is-session-active) {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 0;
+	min-block-size: 0;
+	padding-block-end: 0;
+}
+@media (min-width: 769px) {
+	.wa-qr:has(.qr-studio.is-session-active) {
+		block-size: 100%;
+		min-block-size: 0;
+	}
+}
+
+/* ───────────── revision page: base ───────────── */
+
+.wa-qr .qr-studio {
+	max-inline-size: 780px;
+	color: var(--qx-ink);
+}
+.wa-qr .qr-studio.is-embedded.space-y-3 > * + * {
+	margin-block-start: 12px;
+}
+.wa-qr .qr-studio.is-session-active {
+	--qr-dock-clearance: calc(96px + env(safe-area-inset-bottom, 0px));
+	gap: 10px;
+}
+.wa-qr .qr-studio .qr-active.has-dock {
+	gap: 10px;
+}
+
+/* Cards: one flat surface style everywhere. */
+.wa-qr .qr-panel,
+.wa-qr .qr-bar,
+.wa-qr .qr-done {
+	border: 1px solid var(--qx-line) !important;
+	background: var(--qx-surface) !important;
+	box-shadow: var(--qx-shadow) !important;
+	border-radius: var(--qx-radius) !important;
+	backdrop-filter: none !important;
+	padding: 16px !important;
+}
+.wa-qr .qr-divider {
+	background: var(--qx-line) !important;
+	opacity: 1;
+}
+.wa-qr .qr-lbl,
+.wa-qr .qr-repeat-heading {
+	color: var(--qx-ink-3) !important;
+	font-size: 12px !important;
+	font-weight: 700 !important;
+	letter-spacing: 0.01em;
+}
+
+/* Setup tools row (history / YouTube / guide). */
+.wa-qr .qr-embed-tools {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.wa-qr .qr-embed-tools::-webkit-scrollbar {
+	display: none;
+}
+.wa-qr .qr-head-btn {
+	min-block-size: 40px !important;
+	border: 1px solid var(--qx-line) !important;
+	border-radius: 999px !important;
+	background: var(--qx-surface) !important;
+	color: var(--qx-ink-2) !important;
+	box-shadow: none !important;
+}
+.wa-qr .qr-head-count {
+	background: var(--qx-gold) !important;
+	color: #fff !important;
+}
+
+/* Fields (the shared Select + the repeat trigger): calm, roomy, clear focus. */
+.wa-qr .qr-field > div > button,
+.wa-qr .qr-field [role='combobox'],
+body:has(.wa-qr) .qr-x-sheet .qr-field > div > button,
+.wa-qr .qr-repeat-trigger,
+body:has(.wa-qr) .qr-x-sheet .qr-repeat-trigger {
+	min-block-size: 48px !important;
+	border-radius: 14px !important;
+	border: 1px solid var(--qx-line) !important;
+	background: var(--qx-bg) !important;
+	box-shadow: none !important;
+	color: var(--qx-ink) !important;
+	font-size: 14.5px !important;
+	font-weight: 600 !important;
+}
+.wa-qr .qr-field [class*='rounded-md'][class*='-translate-y-1/2'],
+body:has(.wa-qr) .qr-x-sheet .qr-field [class*='rounded-md'][class*='-translate-y-1/2'] {
+	background: var(--qx-surface) !important;
+	color: var(--qx-ink-3) !important;
+}
+
+/* Repeat menu flows inside its card instead of floating (never clipped). */
+.wa-qr .qr-repeat-menu,
+body:has(.wa-qr) .qr-x-sheet .qr-repeat-menu {
+	position: static !important;
+	margin-block-start: 8px;
+	border: 1px solid var(--qx-line) !important;
+	border-radius: 16px !important;
+	background: var(--qx-surface) !important;
+	box-shadow: var(--qx-shadow) !important;
+}
+.wa-qr .qr-repeat-opt.is-on,
+.wa-qr .qr-repeat-count.is-on,
+body:has(.wa-qr) .qr-x-sheet .qr-repeat-opt.is-on,
+body:has(.wa-qr) .qr-x-sheet .qr-repeat-count.is-on {
+	background: var(--qx-accent) !important;
+	color: var(--qx-on-accent) !important;
+	border-color: var(--qx-accent) !important;
+}
+
+/* Quarter / page list. */
+.wa-qr .qr-unit,
+body:has(.wa-qr) .qr-x-sheet .qr-unit {
+	min-block-size: 46px;
+	border-radius: 14px !important;
+	border-color: var(--qx-line) !important;
+	background: var(--qx-surface) !important;
+}
+.wa-qr .qr-unit.is-on,
+body:has(.wa-qr) .qr-x-sheet .qr-unit.is-on {
+	border-color: var(--qx-gold-line) !important;
+	background: var(--qx-gold-soft) !important;
+}
+.wa-qr .qr-unit-ord,
+body:has(.wa-qr) .qr-x-sheet .qr-unit-ord {
+	background: var(--qx-gold) !important;
+	color: #fff !important;
+}
+.wa-qr .qr-units-collapsed,
+.wa-qr .qr-units-toggle,
+body:has(.wa-qr) .qr-x-sheet .qr-units-collapsed,
+body:has(.wa-qr) .qr-x-sheet .qr-units-toggle {
+	border-radius: 14px !important;
+	border-color: var(--qx-line-2) !important;
+	background: var(--qx-bg) !important;
+	color: var(--qx-ink-2) !important;
+}
+
+/* Main action. */
+.wa-qr .qr-cta,
+body:has(.wa-qr) .qr-x-sheet .qr-cta {
+	min-block-size: 52px;
+	inline-size: 100%;
+	justify-content: center;
+	border: 0 !important;
+	border-radius: 16px !important;
+	background: var(--qx-accent) !important;
+	color: var(--qx-on-accent) !important;
+	box-shadow: 0 10px 24px -14px rgb(0 0 0 / 0.55) !important;
+	font-size: 15.5px !important;
+	font-weight: 800 !important;
+	transition: transform 0.12s, opacity 0.15s;
+}
+.wa-qr .qr-cta:active {
+	transform: scale(0.985);
+}
+.wa-qr .qr-cta:disabled {
+	opacity: 0.45;
+}
+.wa-qr .qr-bar {
+	display: grid !important;
+	gap: 12px;
+}
+.wa-qr .qr-sum {
+	color: var(--qx-ink-2) !important;
+	font-size: 13px !important;
+	line-height: 1.6;
+}
+.wa-qr .qr-btn {
+	min-block-size: 44px;
+	border-radius: 14px !important;
+	border: 1px solid var(--qx-line) !important;
+	background: var(--qx-surface) !important;
+	color: var(--qx-ink) !important;
+	box-shadow: none !important;
+}
+
+/* ───────────── session: top bar + chips ───────────── */
+
+.wa-qr .qr-x-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+	padding: 2px 2px 0;
+}
+.wa-qr .qr-x-meta {
+	flex: 1;
+	min-inline-size: 0;
+}
+.wa-qr .qr-x-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	font-size: 18px;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+	white-space: nowrap;
+}
+.wa-qr .qr-x-title > span:first-child {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.wa-qr .qr-x-ayah {
+	flex: none;
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: var(--qx-gold-soft);
+	color: var(--qx-gold);
+	font-size: 12px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+.wa-qr .qr-x-sub {
+	margin: 2px 0 0;
+	color: var(--qx-ink-3);
+	font-size: 12.5px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.wa-qr .qr-x-errs {
+	color: #c2410c;
+	font-weight: 700;
+}
+.wa-qr .qr-x-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	flex: none;
+}
+.wa-qr .qr-x-icon,
+body:has(.wa-qr) .qr-x-icon {
+	position: relative;
+	display: inline-grid;
+	place-items: center;
+	inline-size: 40px;
+	block-size: 40px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--qx-ink-2);
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+.wa-qr .qr-x-icon:hover,
+body:has(.wa-qr) .qr-x-icon:hover {
+	background: var(--qx-hover);
+}
+.wa-qr .qr-x-icon:active,
+body:has(.wa-qr) .qr-x-icon:active {
+	background: color-mix(in srgb, var(--qx-ink) 10%, transparent);
+}
+.wa-qr .qr-x-icon.is-primary {
+	background: var(--qx-surface);
+	border: 1px solid var(--qx-line);
+	color: var(--qx-ink);
+}
+.wa-qr .qr-x-icon.has-dot::after {
+	content: '';
+	position: absolute;
+	inset-block-start: 7px;
+	inset-inline-end: 7px;
+	inline-size: 8px;
+	block-size: 8px;
+	border-radius: 999px;
+	background: var(--qx-gold);
+	box-shadow: 0 0 0 2px var(--qx-surface);
+}
+@media (max-width: 520px) {
+	/* Phone: YouTube and the tajweed guide stay on the setup screen; the bar keeps the essentials. */
+	.wa-qr .qr-x-actions .qr-x-icon:nth-child(3),
+	.wa-qr .qr-x-actions .qr-x-icon:nth-child(4) {
+		display: none;
+	}
+}
+
+.wa-qr .qr-x-chips {
+	display: flex;
+	gap: 6px;
+	flex-shrink: 0;
+	overflow-x: auto;
+	scrollbar-width: none;
+	margin-inline: -12px;
+	padding: 2px 12px 10px;
+}
+.wa-qr .qr-x-chips::-webkit-scrollbar {
+	display: none;
+}
+.wa-qr .qr-x-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex: none;
+	min-block-size: 36px;
+	padding: 0 13px;
+	border: 1px solid var(--qx-line);
+	border-radius: 999px;
+	background: var(--qx-surface);
+	color: var(--qx-ink-2);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background-color 0.18s var(--qx-ease), color 0.18s, border-color 0.18s;
+	touch-action: manipulation;
+}
+.wa-qr .qr-x-chip.is-on {
+	border-color: var(--qx-accent);
+	background: var(--qx-accent);
+	color: var(--qx-on-accent);
+}
+.wa-qr .qr-x-chip.is-sub {
+	min-block-size: 32px;
+	padding: 0 11px;
+	font-size: 12px;
+	border-style: dashed;
+}
+.wa-qr .qr-x-chip.is-sub.is-on {
+	border-style: solid;
+	border-color: var(--qx-gold-line);
+	background: var(--qx-gold-soft);
+	color: var(--qx-gold);
+}
+.wa-qr .qr-x-chip.is-icon {
+	inline-size: 36px;
+	padding: 0;
+	justify-content: center;
+}
+
+/* ───────────── session: the mushaf page ───────────── */
+
+.wa-qr .qr-preview-mushaf {
+	border: 1px solid var(--qx-line) !important;
+	border-radius: 22px !important;
+	background: var(--qx-paper) !important;
+	box-shadow: var(--qx-shadow) !important;
+	padding: 6px 4px 0 !important;
+	overflow: hidden;
+}
+.wa-qr .qr-mushaf-scroll {
+	background: transparent !important;
+	padding-inline: 14px;
+}
+.wa-qr .qr-mushaf {
+	background: transparent !important;
+	color: var(--qx-ink) !important;
+	font-size: clamp(1.55rem, 5.6vw, 1.95rem) !important;
+	line-height: 2.45 !important;
+	padding-block: 12px 28px !important;
+}
+@media (min-width: 769px) {
+	.wa-qr .qr-mushaf {
+		font-size: 1.95rem !important;
+	}
+}
+/* Follow-along: neighbours stay readable; only the far past fades. */
+.wa-qr .qr-studio .qr-ayah {
+	opacity: 0.62;
+	border-radius: 0.45em;
+}
+.wa-qr .qr-studio .qr-ayah.is-past {
+	opacity: 0.46;
+}
+.wa-qr .qr-studio .qr-ayah.is-next {
+	opacity: 0.85;
+}
+.wa-qr .qr-studio .qr-ayah.is-on {
+	opacity: 1;
+	background: var(--qx-gold-soft) !important;
+	box-shadow: 0 0 0 0.16em var(--qx-gold-soft) !important;
+}
+/* Ayah number: a fine gold ring, no ornaments. */
+.wa-qr .qr-studio .qr-ayah-num {
+	--qr-num-size: 1.55rem;
+}
+.wa-qr .qr-studio .qr-ayah-num-ring {
+	background: transparent !important;
+	border: 1.25px solid var(--qx-gold-line) !important;
+	box-shadow: none !important;
+}
+.wa-qr .qr-studio .qr-ayah-num-ring::before,
+.wa-qr .qr-studio .qr-ayah-num-ring::after {
+	display: none;
+}
+.wa-qr .qr-studio .qr-ayah-num-val {
+	color: var(--qx-gold) !important;
+	font-size: 0.62rem !important;
+}
+.wa-qr .qr-studio .qr-ayah.is-on .qr-ayah-num-ring {
+	border-color: var(--qx-gold) !important;
+	background: var(--qx-surface) !important;
+	box-shadow: none !important;
+}
+.wa-qr .qr-preview-mushaf.is-expanded {
+	background: var(--qx-paper) !important;
+}
+
+/* ───────────── player ───────────── */
+
+body:has(.wa-qr) .qr-dock {
+	border: 1px solid var(--qx-line) !important;
+	border-radius: 22px !important;
+	background: color-mix(in srgb, var(--qx-surface) 92%, transparent) !important;
+	backdrop-filter: saturate(1.3) blur(18px) !important;
+	-webkit-backdrop-filter: saturate(1.3) blur(18px) !important;
+	box-shadow: var(--qx-shadow-pop) !important;
+	color: var(--qx-ink);
+}
+body:has(.wa-qr) .qr-dock-btn {
+	border: 0 !important;
+	background: transparent !important;
+	color: var(--qx-ink-2) !important;
+	box-shadow: none !important;
+}
+body:has(.wa-qr) .qr-dock-btn:hover {
+	background: var(--qx-hover) !important;
+}
+body:has(.wa-qr) .qr-dock-btn.is-main {
+	background: var(--qx-accent) !important;
+	color: var(--qx-on-accent) !important;
+	box-shadow: 0 8px 18px -10px rgb(0 0 0 / 0.6) !important;
+}
+body:has(.wa-qr) .qr-dock-speed {
+	background: var(--qx-hover) !important;
+	border-color: var(--qx-line) !important;
+}
+body:has(.wa-qr) .qr-dock-speed-btn {
+	color: var(--qx-ink-3) !important;
+}
+body:has(.wa-qr) .qr-dock-speed-btn.is-on {
+	background: var(--qx-surface) !important;
+	color: var(--qx-ink) !important;
+}
+body:has(.wa-qr) .qr-dock-range {
+	background: linear-gradient(to right, var(--qx-gold) var(--qr-fill), var(--qx-line) var(--qr-fill)) !important;
+}
+body:has(.wa-qr) .qr-dock-reciter [class*='bg-white'] {
+	background: var(--qx-bg) !important;
+	border-color: var(--qx-line) !important;
+}
+body:has(.wa-qr) .qr-dock-reciter [class*='text-'] {
+	color: var(--qx-ink) !important;
+}
+
+/* ───────────── pop-ups the page portals out ───────────── */
+
+body:has(.wa-qr) .qr-dock-vol-pop,
+body:has(.wa-qr) .qr-err-menu,
+body:has(.wa-qr) .qr-tw-tip,
+body:has(.wa-qr) .qr-tafsir-pop,
+body:has(.wa-qr) .qr-drawer {
+	border-color: var(--qx-line) !important;
+	background: var(--qx-surface) !important;
+	color: var(--qx-ink);
+	box-shadow: var(--qx-shadow-pop) !important;
+}
+body:has(.wa-qr) .qr-err-menu {
+	border-radius: 20px !important;
+	padding: 12px !important;
+}
+body:has(.wa-qr) .qr-err-opt {
+	min-block-size: 46px;
+	border-radius: 14px !important;
+	color: var(--qx-ink) !important;
+}
+html.dark body:has(.wa-qr) .qr-err-opt {
+	background: color-mix(in srgb, currentColor 5%, var(--qx-bg)) !important;
+}
+body:has(.wa-qr) .qr-drawer .text-slate-900 {
+	color: var(--qx-ink) !important;
+}
+body:has(.wa-qr) .qr-drawer .text-slate-500 {
+	color: var(--qx-ink-2) !important;
+}
+body:has(.wa-qr) .qr-drawer .text-slate-400 {
+	color: var(--qx-ink-3) !important;
+}
+
+/* Tailwind greys baked into the page markup. */
+.wa-qr .text-slate-900 {
+	color: var(--qx-ink) !important;
+}
+.wa-qr .text-slate-600,
+.wa-qr .text-slate-500 {
+	color: var(--qx-ink-2) !important;
+}
+.wa-qr .text-slate-400 {
+	color: var(--qx-ink-3) !important;
+}
+.wa-qr .border-slate-200 {
+	border-color: var(--qx-line) !important;
+}
+.wa-qr .bg-white {
+	background: var(--qx-surface) !important;
+}
+.wa-qr .text-emerald-600 {
+	color: var(--qx-gold) !important;
+}
+
+/* ───────────── settings sheet (session) ───────────── */
+
+body:has(.wa-qr) .qr-x-sheet-wrap {
+	position: fixed;
+	inset: 0;
+	z-index: 210000;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+}
+body:has(.wa-qr) .qr-x-scrim {
+	position: absolute;
+	inset: 0;
+	border: 0;
+	background: rgb(20 18 14 / 0.42);
+	animation: wa-qx-fade 0.2s ease-out;
+}
+@keyframes wa-qx-fade {
+	from {
+		opacity: 0;
+	}
+}
+body:has(.wa-qr) .qr-x-sheet {
+	position: relative;
+	display: flex !important;
+	flex-direction: column;
+	inline-size: 100%;
+	max-inline-size: 640px !important;
+	max-block-size: calc(100dvh - 24px - env(safe-area-inset-top, 0px));
+	margin: 0 !important;
+	border-radius: 24px 24px 0 0;
+	background: var(--qx-surface);
+	color: var(--qx-ink);
+	box-shadow: var(--qx-shadow-pop);
+	animation: wa-qx-up 0.28s var(--qx-ease);
+}
+@keyframes wa-qx-up {
+	from {
+		transform: translateY(36%);
+		opacity: 0.5;
+	}
+}
+@media (min-width: 769px) {
+	body:has(.wa-qr) .qr-x-sheet-wrap {
+		align-items: center;
+	}
+	body:has(.wa-qr) .qr-x-sheet {
+		border-radius: 24px;
+		max-block-size: min(86vh, 820px);
+	}
+}
+body:has(.wa-qr) .qr-x-sheet-head {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 16px 12px 6px 18px;
+}
+body:has(.wa-qr) .qr-x-sheet-head h2 {
+	flex: 1;
+	margin: 0;
+	font-size: 17px;
+	font-weight: 800;
+}
+body:has(.wa-qr) .qr-x-grabber {
+	position: absolute;
+	inset-block-start: 7px;
+	inset-inline-start: 50%;
+	inline-size: 38px;
+	block-size: 4px;
+	margin-inline-start: -19px;
+	border-radius: 4px;
+	background: var(--qx-line-2);
+}
+body:has(.wa-qr) .qr-x-sheet-body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding: 4px 18px 18px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+body:has(.wa-qr) .qr-x-sheet-body > * {
+	flex-shrink: 0;
+}
+body:has(.wa-qr) .qr-x-hint {
+	margin: 0;
+	color: var(--qx-ink-3);
+	font-size: 12.5px;
+}
+body:has(.wa-qr) .qr-x-sheet-foot {
+	padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+	border-block-start: 1px solid var(--qx-line);
+}
+/* The page's field grid → surah and reciter full width on phones. */
+@media (max-width: 560px) {
+	.wa-qr .qr-row,
+	body:has(.wa-qr) .qr-x-sheet .qr-row {
+		display: grid !important;
+		grid-template-columns: 1fr 1fr !important;
+		gap: 12px !important;
+	}
+	.wa-qr .qr-row .qr-field-surah,
+	.wa-qr .qr-row .qr-field-reciter,
+	body:has(.wa-qr) .qr-x-sheet .qr-row .qr-field-surah,
+	body:has(.wa-qr) .qr-x-sheet .qr-row .qr-field-reciter {
+		grid-column: 1 / -1;
+	}
+}
+
+/* ───────────── fixes from the phone pass ───────────── */
+
+/* The page bleeds the mushaf 12px past both edges on phones; inside the tab it stays in its card. */
+.wa-qr .qr-preview-mushaf {
+	margin-inline: 0 !important;
+	inline-size: auto !important;
+	padding: 0 !important;
+}
+.wa-qr .qr-mushaf-scroll {
+	padding-inline: 18px !important;
+}
+/* Chips sit at the top of the paper card, under a hairline. */
+.wa-qr .qr-preview-mushaf > .qr-x-chips {
+	margin: 0;
+	padding: 10px 12px;
+	border-block-end: 1px solid var(--qx-line);
+	background: color-mix(in srgb, var(--qx-surface) 70%, var(--qx-paper));
+}
+/* An open repeat menu takes the full row so the field beside it is not squeezed. */
+.wa-qr .qr-field-repeat:has(.qr-repeat-menu),
+body:has(.wa-qr) .qr-x-sheet .qr-field-repeat:has(.qr-repeat-menu) {
+	grid-column: 1 / -1;
+}
+/* "Repeat" label floats on the border like the other fields. */
+.wa-qr .qr-field-repeat,
+body:has(.wa-qr) .qr-x-sheet .qr-field-repeat {
+	position: relative;
+}
+.wa-qr .qr-field-repeat > .qr-lbl,
+body:has(.wa-qr) .qr-x-sheet .qr-field-repeat > .qr-lbl {
+	position: absolute;
+	inset-block-start: -8px;
+	inset-inline-start: 12px;
+	z-index: 2;
+	margin: 0 !important;
+	padding: 0 4px;
+	background: var(--qx-surface);
+	font-size: 11px !important;
+	line-height: 16px;
+}
+/* The summary + start button live inside the setup card: no card-in-card. */
+.wa-qr .qr-panel .qr-bar {
+	border: 0 !important;
+	box-shadow: none !important;
+	padding: 4px 0 0 !important;
+	background: transparent !important;
+}
+
+/* Dark mode: tajweed rule colours are tuned for white paper; lift them so they read on dark. */
+html.dark .wa-qr .qr-mushaf .qr-tw-mark {
+	color: color-mix(in oklab, var(--tw-c, currentColor) 58%, #fff) !important;
+}
+
+/* Mushaf section: the reader owns the whole screen (its controls float over the page). */
+.wa-qr[data-section='mushaf'] {
+	block-size: 100dvh;
+	overflow: hidden;
+}
+.wa-qr[data-section='mushaf'] > .mr {
+	flex: 1;
+	min-block-size: 0;
+}
+@media (min-width: 769px) {
+	.wa-qr[data-section='mushaf'] {
+		block-size: 100%;
+		min-block-size: 0;
+	}
+}
+.wa-qr-mushaf {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-block-size: 0;
+}
+.wa-qr-mushaf[hidden] {
+	display: none !important;
+}
+.wa-qr-mushaf > .mr {
+	flex: 1;
+	min-block-size: 0;
+}
+
+/* ───────────── parchment look shared with the mushaf (revision page + log) ───────────── */
+
+.wa-qr:not([data-section='mushaf']) {
+	background:
+		radial-gradient(120% 50% at 50% 0%, rgb(255 252 240 / 0.6), transparent 60%),
+		var(--qx-bg);
+}
+/* Tab header = the same framed cartouche as the mushaf's top bar. */
+.wa-qr-head {
+	position: sticky !important;
+	margin: calc(10px + env(safe-area-inset-top, 0px)) 12px 6px;
+	padding: 8px 10px !important;
+	border: 1.5px solid var(--qx-line-2) !important;
+	border-radius: 28px;
+	background: var(--qx-surface) !important;
+	box-shadow: inset 0 0 0 3px var(--qx-surface), inset 0 0 0 4px color-mix(in srgb, var(--qx-line-2) 55%, transparent), var(--qx-shadow);
+	backdrop-filter: none !important;
+}
+.wa-qr-head .wa-qr-title {
+	color: var(--qx-accent);
+}
+html.dark .wa-qr-head .wa-qr-title {
+	color: #9bc7a6;
+}
+.wa-qr-head .wa-qn-icon {
+	color: var(--qx-accent);
+}
+html.dark .wa-qr-head .wa-qn-icon {
+	color: #9bc7a6;
+}
+.wa-qr-seg {
+	border-color: var(--qx-line-2);
+	background: color-mix(in srgb, var(--qx-bg) 70%, var(--qx-surface));
+}
+.wa-qr-seg-btn.is-on {
+	background: var(--qx-accent);
+	color: var(--qx-on-accent);
+}
+.wa-qr-badge {
+	background: #b8322a;
+	color: #fff !important;
+}
+/* Cards across the revision page and the log: cream with a gold double hairline. */
+.wa-qr .qr-panel,
+.wa-qr .qr-done,
+.wa-qr .wa-qn-hero,
+.wa-qr .wa-qn-surahs,
+.wa-qr .wa-qn-card,
+.wa-qr .wa-qn-empty,
+.wa-qr .wa-qn-stage,
+.wa-qr .qr-preview-mushaf {
+	border: 1.5px solid var(--qx-line-2) !important;
+	box-shadow: inset 0 0 0 3px var(--qx-surface), inset 0 0 0 4px color-mix(in srgb, var(--qx-line-2) 45%, transparent), var(--qx-shadow) !important;
+}
+.wa-qr .wa-qn-hero.is-due {
+	background:
+		radial-gradient(120% 140% at 100% 0%, var(--qx-gold-soft), transparent 60%),
+		var(--qx-surface);
+}
+.wa-qr .wa-qn-fab {
+	box-shadow: 0 0 0 3px var(--qx-bg), 0 0 0 5px var(--qx-gold), 0 10px 22px -10px rgb(20 50 30 / 0.6);
+}
+.wa-qr .qr-x-chip.is-on,
+.wa-qr .qr-cta,
+body:has(.wa-qr) .qr-x-sheet .qr-cta {
+	background: var(--qx-accent) !important;
+	border-color: var(--qx-accent) !important;
+	color: var(--qx-on-accent) !important;
+}
+.wa-qr .qr-x-title {
+	color: var(--qx-accent);
+}
+html.dark .wa-qr .qr-x-title {
+	color: #9bc7a6;
+}
+.wa-qr .wa-qn-surah-no,
+.wa-qr .wa-qn-ayah-no {
+	border: 0 !important;
+	background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='%23fbf3dc' stroke='%23b08a3e' stroke-width='1.7'%3E%3Crect x='8.5' y='8.5' width='23' height='23' rx='3'/%3E%3Crect x='8.5' y='8.5' width='23' height='23' rx='3' transform='rotate(45 20 20)'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='10.2' fill='%23fdf8e8' stroke='%23b08a3e' stroke-width='1.1'/%3E%3C/svg%3E") center / contain no-repeat !important;
+	color: #7d5f22 !important;
+	inline-size: 38px;
+	block-size: 38px;
+}

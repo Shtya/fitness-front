@@ -33,6 +33,7 @@ function normalizeCloudState(raw) {
 			raw.wordErrors && typeof raw.wordErrors === 'object' && !Array.isArray(raw.wordErrors)
 				? raw.wordErrors
 				: {},
+		mistakes: Array.isArray(raw.mistakes) ? raw.mistakes : [],
 		activeSession:
 			raw.activeSession && typeof raw.activeSession === 'object'
 				? raw.activeSession

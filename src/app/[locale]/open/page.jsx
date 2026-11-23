@@ -40,11 +40,16 @@ export default function OpenAppPage() {
 					: 'Opening the app…',
 		);
 
-		const timer = window.setTimeout(() => {
-			router.replace(target);
-		}, 380);
+		// Go straight away (no splash delay). On weak mobile data the in-app navigation can hang
+		// on its network request; if we are still here after a few seconds, load the page fully
+		// instead, which the service worker can answer from its saved copy.
+		router.prefetch?.(target);
+		router.replace(target);
+		const fallbackTimer = window.setTimeout(() => {
+			if (window.location.pathname.replace(/\/+$/, '').endsWith('/open')) window.location.replace(target);
+		}, 4000);
 
-		return () => window.clearTimeout(timer);
+		return () => window.clearTimeout(fallbackTimer);
 	}, [fallback, isAr, locale, router]);
 
 	return (

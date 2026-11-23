@@ -654,18 +654,26 @@ html.dark .au {
 	outline: none;
 	background: transparent;
 	color: var(--au-ink);
+	-webkit-text-fill-color: var(--au-ink);
+	caret-color: var(--au-ink);
 	font: inherit;
 	font-size: 1rem;
 }
 
 .au-input input::placeholder {
 	color: var(--au-muted);
+	-webkit-text-fill-color: var(--au-muted);
 	opacity: 0.7;
 }
 
-.au-input input:-webkit-autofill {
-	-webkit-box-shadow: 0 0 0 40px var(--au-field) inset;
-	-webkit-text-fill-color: var(--au-ink);
+.au .au-input input:-webkit-autofill,
+.au .au-input input:-webkit-autofill:hover,
+.au .au-input input:-webkit-autofill:focus,
+.au .au-input input:-webkit-autofill:active {
+	-webkit-box-shadow: 0 0 0 1000px var(--au-field) inset !important;
+	box-shadow: 0 0 0 1000px var(--au-field) inset !important;
+	-webkit-text-fill-color: var(--au-ink) !important;
+	caret-color: var(--au-ink) !important;
 }
 
 /* Confirmation tick on a field that is good to go. */

@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { whatsappAiApi } from './whatsapp-ai-api';
 
+/** Reset to empty without a new array when already empty (avoids a workspace re-render). */
+const keepEmpty = prev => (Array.isArray(prev) && prev.length === 0 ? prev : []);
+
 const DEFAULT_SETTINGS = {
 	enabled: false,
 	provider: 'ai-free',
@@ -130,7 +133,7 @@ export function useWhatsAppAi({
 			setSettingsError('');
 			if (!optimistic.enabled) {
 				suggestionAbortRef.current?.abort();
-				setSuggestions([]);
+				setSuggestions(keepEmpty);
 				setSuggestionsError('');
 			}
 			try {
@@ -142,7 +145,7 @@ export function useWhatsAppAi({
 				setSettings(normalized);
 				if (!normalized.enabled) {
 					suggestionAbortRef.current?.abort();
-					setSuggestions([]);
+					setSuggestions(keepEmpty);
 					setSuggestionsError('');
 				}
 				return normalized;
@@ -152,7 +155,7 @@ export function useWhatsAppAi({
 					// Keep prior suggestions when rollback restores enabled=true.
 				} else {
 					suggestionAbortRef.current?.abort();
-					setSuggestions([]);
+					setSuggestions(keepEmpty);
 				}
 				setSettingsError(errorMessage(error, 'Could not save AI settings.'));
 				throw error;
@@ -167,7 +170,7 @@ export function useWhatsAppAi({
 		const requestId = ++suggestionRequestRef.current;
 		suggestionAbortRef.current?.abort();
 		if (!conversationId || !allowSuggestions || !settings.enabled || !messagesReady) {
-			setSuggestions([]);
+			setSuggestions(keepEmpty);
 			setSuggestionsError('');
 			setSuggestionsLoading(false);
 			return null;
@@ -188,13 +191,13 @@ export function useWhatsAppAi({
 			const items = Array.isArray(result?.suggestions)
 				? result.suggestions.filter(item => typeof item === 'string' && item.trim())
 				: [];
-			setSuggestions(items);
+			setSuggestions(items.length ? items : keepEmpty);
 			if (!items.length) setSuggestionsError('AI returned no reply suggestions.');
 			return result;
 		} catch (error) {
 			if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') return null;
 			if (suggestionRequestRef.current === requestId) {
-				setSuggestions([]);
+				setSuggestions(keepEmpty);
 				setSuggestionsError(errorMessage(error, 'Could not generate reply suggestions.'));
 			}
 			return null;
@@ -213,7 +216,7 @@ export function useWhatsAppAi({
 	useEffect(() => {
 		if (!messagesReady) {
 			suggestionAbortRef.current?.abort();
-			setSuggestions([]);
+			setSuggestions(keepEmpty);
 			setSuggestionsError('');
 			setSuggestionsLoading(false);
 			return undefined;

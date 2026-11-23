@@ -21,8 +21,11 @@ const SHELL_CACHE = 'so7ba-shell-v1';
 const OFFLINE_URL = '/offline.html';
 const LOCALES = ['ar', 'en'];
 // Warmed on install so the installed app opens offline before these were ever visited.
-const SHELL_PATHS = ['/open', '/auth', '/dashboard', '/dashboard/my/workouts', '/dashboard/my/nutrition'];
-const NAV_TIMEOUT_MS = 4000;
+// /dashboard/whatsapp: the page the installed app reopens most (the Quran tab lives there).
+const SHELL_PATHS = ['/open', '/auth', '/dashboard', '/dashboard/whatsapp', '/dashboard/my/workouts', '/dashboard/my/nutrition'];
+// With a saved copy, wait this long for the network before opening from the copy: short enough
+// that weak mobile data does not feel like a hang; the fresh page is still saved for next time.
+const NAV_TIMEOUT_MS = 2500;
 const LOCALE_KEY = '/__so7ba/last-locale';
 
 function shellUrls() {
