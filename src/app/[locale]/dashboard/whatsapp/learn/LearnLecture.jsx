@@ -301,6 +301,8 @@ function LectureInfo({ c, course, position, total, stats, description, onDescrip
  * the controls back). Loads the full lecture on open; every edit is saved by itself.
  */
 export default function LearnLecture({ c, lectureId, course, lectures, initialSection = 'content', onOpenLecture, onSummary, onSectionChange, focus = false, onToggleFocus, onBack, onSearch }) {
+	// where an English day puts its tabs (in the header)
+	const [tabsHost, setTabsHost] = useState(null);
 	const tDoc = useTranslations('documentEditor');
 	const editorLabels = useDocumentEditorLabels();
 	const [lecture, setLecture] = useState(null);
@@ -442,6 +444,7 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 		</nav>
 	);
 
+	const english = course?.kind === 'english';
 	return (
 		<div ref={rootRef} className={`lrn-lecture${focus ? ' is-focus' : ''}`} data-color={course?.color || 'green'}>
 			<span className="lrn-readbar" aria-hidden />
@@ -451,7 +454,7 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 				</button>
 			) : null}
 
-			<header className="lrn-lhead">
+			<header className={`lrn-lhead${english ? ' is-en' : ''}`}>
 				<button type="button" className="lrn-icon-btn" onClick={onBack} title={c.back} aria-label={c.back}>
 					<ArrowLeft size={18} className="lrn-flip-rtl" />
 				</button>
@@ -472,6 +475,9 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 						}
 					}}
 				/>
+				{/* an English day: its tabs sit here instead of the lecture details, done, prev / next and search */}
+				{english ? <span className="lrn-lhead__tabs" ref={setTabsHost} /> : null}
+				{english ? null : (
 				<LectureInfo
 					c={c}
 					course={course}
@@ -481,9 +487,12 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 					description={lecture.description}
 					onDescription={value => patchLocal({ description: value }, { immediate: true })}
 				/>
-				<SaveState state={saver.state} c={c} onRetry={saver.retry} />
+				)}
+				{/* saving is automatic: an English day only shows it when a save fails */}
+				{!english || saver.state === 'error' ? <SaveState state={saver.state} c={c} onRetry={saver.retry} /> : null}
 
 				<span className="lrn-lhead__end">
+					{english ? null : (
 					<button
 						type="button"
 						className={`lrn-toggle is-done${lecture.done ? ' is-on' : ''}`}
@@ -494,6 +503,7 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 						{lecture.done ? <CheckCircle2 size={16} aria-hidden /> : <Circle size={16} aria-hidden />}
 						<span className="lrn-toggle__label">{lecture.done ? c.markedDone : c.markDone}</span>
 					</button>
+					)}
 					<button
 						type="button"
 						className={`lrn-icon-btn lrn-rev-btn${lecture.needsRevision ? ' is-on' : ''}`}
@@ -504,6 +514,8 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 					>
 						<BookmarkCheck size={17} />
 					</button>
+					{english ? null : (
+					<>
 					<span className="lrn-lhead__sep" aria-hidden />
 					<button type="button" className="lrn-icon-btn" disabled={!prev} title={c.prev} aria-label={c.prev} onClick={() => prev && onOpenLecture(prev.id, section)}>
 						<ChevronLeft size={18} className="lrn-flip-rtl" />
@@ -515,6 +527,8 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 					<button type="button" className="lrn-icon-btn" title={c.searchPlaceholder} aria-label={c.searchPlaceholder} onClick={onSearch}>
 						<Search size={17} />
 					</button>
+					</>
+					)}
 					<button type="button" className={`lrn-icon-btn${focus ? ' is-open' : ''}`} aria-pressed={focus} title={focus ? c.exitFocus : c.focus} aria-label={focus ? c.exitFocus : c.focus} onClick={onToggleFocus}>
 						{focus ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
 					</button>
@@ -524,6 +538,7 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 			{course?.kind === 'english' ? (
 				<EnglishDay
 					c={c}
+					tabsHost={tabsHost}
 					lecture={lecture}
 					course={course}
 					onChange={(english, immediate) => patchLocal({ english }, immediate ? { immediate: true } : undefined)}

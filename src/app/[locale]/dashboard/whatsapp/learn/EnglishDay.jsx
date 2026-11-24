@@ -39,6 +39,7 @@ import {
 	Volume2,
 	Wand2,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import { Modal } from './learn-ui';
@@ -199,6 +200,35 @@ function LineTr({ c, text }) {
 			) : null}
 		</>
 	);
+}
+
+/** "**التركيب:** `…`" / "**Structure:** …" — a grammar pattern line. */
+const isFormula = b => b?.type === 'p' && /^\*\*\s*(التركيب|الصيغة|Structure|Form|Pattern)\s*:?\s*:?\*\*/i.test(b.text.trim());
+
+/**
+ * The lesson's ## sections: "⏱ الجزء 1 (0:00 – 5:00)" becomes a part with its time;
+ * the rest keep their title. Emoji at the start are dropped from the label.
+ */
+function lessonOutline(blocks) {
+	const out = [];
+	blocks.forEach((b, i) => {
+		if (b.type !== 'h2') return;
+		const plain = parseInline(b.text)
+			.map(r => r.text)
+			.join('')
+			.replace(/^[^\p{L}\p{N}]+/u, '')
+			.trim();
+		const time = plain.match(/\(([^)]*\d+:\d\d[^)]*)\)\s*$/);
+		const isPart = /^(الجزء|جزء|part|section)\s*\d+/i.test(plain);
+		out.push({
+			i,
+			id: `md-sec-${i}`,
+			part: isPart,
+			label: (time ? plain.slice(0, time.index) : plain).trim(),
+			time: time ? time[1].replace(/\s*[–-]\s*/, ' – ') : '',
+		});
+	});
+	return out;
 }
 
 /* ───────── word popover (hover / tap a coloured word) ───────── */
@@ -490,9 +520,9 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 	// tables: Arabic hidden until you hover (or tap) it — remembered on this device
 	const [hideAr, setHideAr] = useState(() => {
 		try {
-			return window.localStorage.getItem('wa-learn:hide-ar') === '1';
+			return window.localStorage.getItem('wa-learn:hide-ar') !== '0'; // hidden unless you chose to show it
 		} catch {
-			return false;
+			return true;
 		}
 	});
 	const toggleHideAr = () =>
@@ -541,6 +571,40 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 
 	const all = useMemo(() => [...day.words.map(w => ({ ...w, mine: true })), ...others.filter(o => !day.words.some(w => w.text.toLowerCase() === o.text.toLowerCase()))], [day.words, others]);
 	const blocks = useMemo(() => parseMarkdown(day.transcript), [day.transcript]);
+	// the lesson's sections (## headings): a bar to jump between them
+	const outline = useMemo(() => lessonOutline(blocks), [blocks]);
+	const [here, setHere] = useState(null);
+	useEffect(() => {
+		if (outline.length < 3) return undefined;
+		const scroller = box.current?.closest('.lrn-sec-scroll');
+		if (!scroller) return undefined;
+		const spy = () => {
+			const top = scroller.getBoundingClientRect().top + 90;
+			let cur = outline[0].id;
+			for (const o of outline) {
+				const el = document.getElementById(o.id);
+				if (el && el.getBoundingClientRect().top <= top) cur = o.id;
+			}
+			// at the very bottom the last sections can't reach the top: the last one you can see wins
+			if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4) {
+				const bottom = scroller.getBoundingClientRect().bottom;
+				for (const o of outline) {
+					const el = document.getElementById(o.id);
+					if (el && el.getBoundingClientRect().top < bottom - 40) cur = o.id;
+				}
+			}
+			setHere(cur);
+		};
+		spy();
+		scroller.addEventListener('scroll', spy, { passive: true });
+		return () => scroller.removeEventListener('scroll', spy);
+	}, [outline]);
+	const jump = id => {
+		const el = document.getElementById(id);
+		const scroller = box.current?.closest('.lrn-sec-scroll');
+		if (!el || !scroller) return;
+		scroller.scrollTo({ top: scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 64, behavior: 'smooth' });
+	};
 
 	// select a word or phrase → "add word" button next to it
 	const onSelect = () => {
@@ -602,7 +666,12 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 		);
 	const renderInline = (src, key) =>
 		parseInline(src).map((run, k) => {
-			if (run.code) return <code key={`${key}-${k}`}>{run.text}</code>;
+			if (run.code)
+				return (
+					<code key={`${key}-${k}`} dir="auto">
+						{run.text}
+					</code>
+				);
 			let node = renderText(run.text, `${key}-${k}`);
 			if (run.i) node = <em key={`${key}-${k}i`}>{node}</em>;
 			if (run.b) node = <strong key={`${key}-${k}b`}>{node}</strong>;
@@ -715,8 +784,10 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 		}
 		if (b.type === 'ul' || b.type === 'ol') {
 			const List = b.type;
+			// examples right after a "Structure:" line read as example sentences
+			const examples = isFormula(blocks[i - 1]);
 			return (
-				<List key={i} dir="auto">
+				<List key={i} dir="auto" className={examples ? 'en-md-examples' : undefined}>
 					{b.items.map((it, j) => (
 						<li key={j} dir="auto">
 							{renderInline(it, `${i}.${j}`)}
@@ -731,10 +802,24 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 					{renderInline(b.text, i)}
 				</blockquote>
 			);
+		if (isFormula(b))
+			return (
+				<p key={i} dir="auto" className="en-md-formula">
+					{renderInline(b.text, i)}
+				</p>
+			);
 		const Tag = b.type === 'p' ? 'p' : b.type;
+		const sec = b.type === 'h2' ? outline.find(o => o.i === i) : null;
 		return (
-			<Tag key={i} dir="auto">
-				{renderInline(b.text, i)}
+			<Tag key={i} dir="auto" id={sec ? sec.id : undefined} className={sec?.part ? 'is-part' : undefined}>
+				{sec?.part ? (
+					<>
+						<span className="en-md-part__n">{sec.label}</span>
+						{sec.time ? <span className="en-md-part__t">{sec.time}</span> : null}
+					</>
+				) : (
+					renderInline(b.text, i)
+				)}
 			</Tag>
 		);
 	};
@@ -804,6 +889,30 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 				</button>
 			</div>
 			<div className="en-tr__text" ref={box} dir="ltr" lang="en" onMouseUp={onSelect} onTouchEnd={onSelect} onKeyUp={onSelect}>
+				{outline.length >= 3 ? (
+					<nav className="en-md-toc" aria-label={c.en.sections}>
+						{outline.map((o, k) => {
+							// parts are small numbered circles (their time in the tooltip); other sections keep their title
+							const n = o.part ? (o.label.match(/\d+/) || [k + 1])[0] : null;
+							const firstPart = o.part && !outline.slice(0, k).some(x => x.part);
+							return (
+								<span key={o.id} className="en-md-toc__item">
+									{firstPart ? <span className="en-md-toc__label">{c.en.parts}</span> : null}
+									<button
+										type="button"
+										className={`${o.part ? 'is-part' : ''}${here === o.id ? ' is-here' : ''}`}
+										onClick={() => jump(o.id)}
+										dir="auto"
+										title={o.time ? `${o.label} · ${o.time}` : o.label}
+										aria-label={o.time ? `${o.label} · ${o.time}` : o.label}
+									>
+										{o.part ? n : o.label}
+									</button>
+								</span>
+							);
+						})}
+					</nav>
+				) : null}
 				{blocks.map((block, i) => renderBlock(block, i))}
 			</div>
 			{pick ? (
@@ -1808,7 +1917,7 @@ function SpeakTab({ c, day, topic, prompt, onPrompt, onSession, onDeleteSession,
 
 /* ───────── the day ───────── */
 
-export default function EnglishDay({ c, lecture, course, onChange, renderNotes }) {
+export default function EnglishDay({ c, lecture, course, onChange, renderNotes, tabsHost = null }) {
 	const day = useMemo(() => normalizeDay(lecture.english), [lecture.english]);
 	const [tab, setTab] = useState(readTab);
 	const [dialog, setDialog] = useState(null); // word being added / edited
@@ -1853,7 +1962,8 @@ export default function EnglishDay({ c, lecture, course, onChange, renderNotes }
 
 	return (
 		<>
-			<div className="lrn-lbar">
+			{(() => {
+				const nav = (
 				<nav className="lrn-tabs" role="tablist" aria-label={c.sectionsLabel}>
 					{TABS.map(([id, Icon]) => {
 						const count = id === 'words' ? day.words.length : id === 'questions' ? day.questions.length : id === 'speak' ? day.speaking.length : 0;
@@ -1866,7 +1976,10 @@ export default function EnglishDay({ c, lecture, course, onChange, renderNotes }
 						);
 					})}
 				</nav>
-			</div>
+				);
+				// in the lecture header when there is room for it, else in its own bar
+				return tabsHost ? createPortal(nav, tabsHost) : <div className="lrn-lbar">{nav}</div>;
+			})()}
 			<div className={`lrn-lecture__body is-en-${tab}`}>
 				{/* The scroller spans the whole width (scrollbar at the page edge); the content is centred inside. */}
 				<div className="lrn-sec-scroll en-scroll">

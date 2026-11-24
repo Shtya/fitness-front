@@ -412,3 +412,321 @@
 	text-shadow: none;
 	user-select: text;
 }
+
+/* ═══ a lesson file: parts, sub-sections, grammar ═══ */
+.en-tr__text p {
+	white-space: pre-line; /* Arabic lines written one under the other */
+}
+.en-tr__text code {
+	unicode-bidi: isolate;
+	padding: 1px 6px;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--accent) 10%, var(--sheet-2, var(--sheet)));
+	color: var(--accent-ink);
+	font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+	font-size: 0.86em;
+	font-weight: 600;
+}
+.en-tr__text :is(p, li, h1, h2, h3, h4, h5):dir(rtl) {
+	line-height: 1.95;
+}
+
+/* the sections bar: stays on top while you read the transcript, highlights where you are */
+.en-md-toc {
+	position: sticky;
+	top: 0;
+	z-index: 6;
+	display: flex;
+	gap: 6px;
+	margin: -20px -22px 18px;
+	padding: 10px 22px;
+	overflow-x: auto;
+	border-bottom: 1px solid var(--line);
+	border-radius: var(--r-2) var(--r-2) 0 0;
+	background: color-mix(in srgb, var(--sheet) 92%, transparent);
+	backdrop-filter: blur(8px);
+	scrollbar-width: none;
+}
+.en-md-toc::-webkit-scrollbar {
+	display: none;
+}
+.en-md-toc button {
+	display: inline-flex;
+	flex: none;
+	align-items: baseline;
+	gap: 6px;
+	padding: 5px 12px;
+	border: 1px solid var(--line-2);
+	border-radius: 99px !important;
+	background: var(--sheet);
+	color: var(--ink-2, var(--ink)) !important;
+	font-family: 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+	font-size: 12.5px;
+	font-weight: 600;
+	white-space: nowrap;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.en-md-toc button small {
+	color: var(--muted);
+	font-family: inherit;
+	font-size: 10.5px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 500;
+}
+.en-md-toc button:hover {
+	border-color: var(--accent);
+}
+.en-md-toc button.is-here {
+	border-color: var(--accent);
+	background: var(--accent);
+	color: var(--on-accent, #fff) !important;
+}
+.en-md-toc button.is-here small {
+	color: inherit;
+	opacity: 0.8;
+}
+
+/* "## ⏱ الجزء 1 (0:00 – 5:00)": a part banner */
+.en-tr__text h2.is-part {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 2.2em 0 0.9em;
+	padding: 12px 16px;
+	border: 0;
+	border-radius: 14px;
+	background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--sheet)), color-mix(in srgb, var(--accent) 6%, var(--sheet)));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+	scroll-margin-top: 70px;
+}
+.en-md-part__n {
+	color: var(--accent-ink);
+	font-family: 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+	font-size: 1.05em;
+	font-weight: 800;
+}
+.en-md-part__t {
+	margin-inline-start: auto;
+	padding: 3px 10px;
+	border-radius: 99px;
+	background: var(--sheet);
+	color: var(--muted);
+	font-size: 0.62em;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	direction: ltr;
+}
+.en-tr__text h2 {
+	scroll-margin-top: 70px;
+}
+.en-tr__text hr {
+	margin: 2em 0;
+	border: 0;
+	border-top: 1px dashed var(--line-2);
+}
+
+/* "### أ. النص المعدّل (Transcript)": a small section label */
+.en-tr__text h3 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 1.8em 0 0.8em;
+	color: var(--accent-ink);
+	font-size: 0.95em;
+	font-weight: 800;
+}
+.en-tr__text h3::after {
+	content: '';
+	flex: 1;
+	block-size: 1px;
+	background: linear-gradient(to var(--h3-fade, right), color-mix(in srgb, var(--accent) 35%, transparent), transparent);
+}
+.en-tr__text h3:dir(rtl) {
+	--h3-fade: left;
+}
+
+/* "#### The Accident" / grammar point titles */
+.en-tr__text h4 {
+	margin: 1.5em 0 0.45em;
+	color: var(--ink);
+	font-size: 1.02em;
+	font-weight: 750;
+	line-height: 1.4;
+}
+.en-tr__text h4 + p:not(.en-md-formula) {
+	margin-top: 0;
+}
+.en-tr__text h5 {
+	margin: 1.2em 0 0.4em;
+	color: var(--ink-2, var(--ink));
+	font-size: 0.95em;
+	font-weight: 700;
+}
+
+/* "**التركيب:** `If + present simple, will + verb`" */
+.en-tr__text p.en-md-formula {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	margin: 0.4em 0 0.6em;
+	padding: 10px 14px;
+	border-inline-start: 3px solid var(--accent);
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--accent) 7%, var(--sheet-2, var(--sheet)));
+	font-size: 0.95em;
+}
+.en-tr__text p.en-md-formula > strong:first-child {
+	color: var(--muted);
+	font-size: 0.85em;
+	font-weight: 700;
+}
+.en-tr__text p.en-md-formula code {
+	padding: 3px 9px;
+	background: var(--sheet);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+	font-size: 0.9em;
+}
+
+/* the examples under a structure */
+.en-tr__text ul.en-md-examples {
+	display: grid;
+	gap: 6px;
+	margin: 0 0 1.2em;
+	padding: 0;
+	list-style: none;
+}
+.en-tr__text ul.en-md-examples li {
+	position: relative;
+	padding: 6px 12px 6px 30px;
+	border-radius: 10px;
+	background: var(--sheet-2, var(--sheet));
+	font-style: italic;
+}
+.en-tr__text ul.en-md-examples li::before {
+	content: '“';
+	position: absolute;
+	inset-inline-start: 10px;
+	top: 0;
+	color: var(--accent);
+	font-family: Georgia, serif;
+	font-size: 1.7em;
+	font-style: normal;
+	line-height: 1.2;
+}
+.en-tr__text ul.en-md-examples li strong {
+	color: var(--accent-ink);
+	font-style: normal;
+}
+@media (max-width: 560px) {
+	.en-md-toc {
+		margin: -14px -14px 14px;
+		padding: 8px 14px;
+	}
+}
+
+/* the sections bar sticks to the very top: move the scroller's top padding inside the content */
+.en-scroll.lrn-sec-scroll {
+	padding-top: 0;
+}
+.en-scroll .en-day {
+	padding-top: 32px;
+}
+@media (max-width: 720px) {
+	.en-scroll .en-day {
+		padding-top: 16px;
+	}
+}
+
+/* ═══ never wider than the screen: grid / flex children may shrink ═══ */
+.en-scroll .en-day {
+	grid-template-columns: minmax(0, 1fr);
+}
+.en-scroll .en-day > *,
+.en-tr,
+.en-tr__text,
+.en-tbl,
+.en-tr__table {
+	min-width: 0;
+	max-inline-size: 100%;
+}
+
+/* ═══ the sections bar, compact: section names + numbered parts ═══ */
+.en-md-toc {
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	padding-block: 9px;
+	overflow: visible;
+}
+.en-md-toc__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+.en-md-toc__label {
+	margin-inline-start: 8px;
+	padding-inline-start: 12px;
+	border-inline-start: 1px solid var(--line);
+	color: var(--muted);
+	font-family: 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+	font-size: 11.5px;
+	font-weight: 700;
+}
+.en-md-toc button {
+	block-size: 28px;
+	padding: 0 11px;
+	align-items: center;
+	font-size: 12px;
+}
+.en-md-toc button.is-part {
+	display: inline-grid;
+	place-items: center;
+	inline-size: 28px;
+	padding: 0;
+	border-radius: 50% !important;
+	font-family: 'Segoe UI', system-ui, sans-serif;
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+}
+
+/* ═══ English day: the tabs live in the lecture header ═══ */
+.lrn .lrn-lhead.is-en .lrn-lhead__title {
+	flex: 0 1 300px;
+}
+.lrn-lhead__tabs {
+	display: flex;
+	flex: 1;
+	min-width: 0;
+	align-self: stretch;
+	align-items: stretch;
+	margin-inline-start: 8px;
+}
+.lrn-lhead__tabs .lrn-tabs {
+	align-items: stretch;
+}
+.lrn-lhead__tabs .lrn-tab {
+	height: auto;
+}
+@media (max-width: 720px) {
+	.lrn .lrn-lhead.is-en {
+		flex-wrap: wrap;
+		height: auto;
+		min-height: var(--lhead-h);
+		padding-bottom: 0;
+	}
+	.lrn .lrn-lhead.is-en .lrn-lhead__title {
+		flex: 1 1 0;
+	}
+	.lrn-lhead.is-en .lrn-lhead__tabs {
+		order: 10;
+		flex-basis: 100%;
+		margin: 0 -12px;
+		padding: 0 8px;
+		border-top: 1px solid var(--line);
+	}
+	.lrn-lhead__tabs .lrn-tab {
+		height: 44px;
+	}
+}

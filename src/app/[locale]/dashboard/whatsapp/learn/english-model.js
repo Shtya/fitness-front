@@ -280,7 +280,7 @@ export function parseMarkdown(src) {
 		if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
 			endPara();
 			endList();
-			blocks.push({ type: `h${Math.min(3, m[1].length)}`, text: m[2].replace(/\s+#+\s*$/, '') });
+			blocks.push({ type: `h${Math.min(5, m[1].length)}`, text: m[2].replace(/\s+#+\s*$/, '') });
 			continue;
 		}
 		if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.replace(/\s/g, ''))) {
@@ -311,7 +311,7 @@ export function parseMarkdown(src) {
 		endList();
 		// a new speaker line ("**Name:**" or "Name:") starts its own paragraph
 		const speaker = /^(\*\*|__)?[\p{L}][\p{L} .'-]{0,30}:(\*\*|__)?\s/u.test(line) || /^\*\*[^*]{1,30}:\*\*/.test(line);
-		if (para && para.type === 'p' && !speaker) para.text += ` ${line}`;
+		if (para && para.type === 'p' && !speaker) para.text += /[\u0600-\u06ff]/.test(line) && /[\u0600-\u06ff]/.test(para.text) ? `\n${line}` : ` ${line}`;
 		else {
 			endPara();
 			para = { type: 'p', text: line };
