@@ -140,3 +140,24 @@ test('new mushaf mark types map to log kinds, and removed marks drop unreviewed 
 	assert.equal(after.find(m => m.kind === 'swap').deletedAt, null);
 	assert.equal(dropUnmarked(made, marks, NOW), made);
 });
+
+test('mastered / reopen and the surah view filters', async () => {
+	const { markMastered, reopenMistake, surahView, isMastered } = await import('./quran-mistakes.js');
+	const a = { ...createMistake({ id: 'a', surahId: 7, ayah: 10, kind: 'swap' }, NOW), lapses: 3 };
+	const b = createMistake({ id: 'b', surahId: 7, ayah: 190, kind: 'forgot' }, NOW);
+	const c = { ...createMistake({ id: 'c', surahId: 7, ayah: 100, kind: 'forgot' }, NOW), dueAt: NOW + DAY };
+	const done = markMastered(createMistake({ id: 'd', surahId: 7, ayah: 50 }, NOW), NOW);
+	assert.equal(isMastered(done), true);
+	assert.equal(isMastered(reopenMistake(done, NOW)), false);
+	const list = [a, b, c, done, createMistake({ id: 'other', surahId: 6, ayah: 1 }, NOW)];
+	const v = surahView(list, 7, 206, {}, NOW);
+	assert.deepEqual(v.active.map(m => m.id), ['a', 'c', 'b']);
+	assert.deepEqual(v.mastered.map(m => m.id), ['d']);
+	assert.equal(v.total, 4);
+	assert.equal(v.due, 2);
+	assert.deepEqual(surahView(list, 7, 206, { status: 'due' }, NOW).active.map(m => m.id), ['a', 'b']);
+	assert.deepEqual(surahView(list, 7, 206, { status: 'weak' }, NOW).active.map(m => m.id), ['a']);
+	assert.deepEqual(surahView(list, 7, 206, { place: 'end' }, NOW).active.map(m => m.id), ['b']);
+	assert.deepEqual(surahView(list, 7, 206, { kind: 'forgot', sort: 'due' }, NOW).active.map(m => m.id), ['b', 'c']);
+	assert.deepEqual(surahView(list, 7, 206, { sort: 'missed' }, NOW).active.map(m => m.id)[0], 'a');
+});

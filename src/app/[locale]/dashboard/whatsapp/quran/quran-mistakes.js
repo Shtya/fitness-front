@@ -315,3 +315,49 @@ export function dropUnmarked(list, wordErrors, now = Date.now()) {
 	});
 	return changed ? next : list;
 }
+
+/** "I know it now": straight to the last box (comes back for a check in ~2½ months). */
+export function markMastered(mistake, now = Date.now()) {
+	return {
+		...mistake,
+		box: MAX_BOX,
+		dueAt: now + BOX_DAYS[MAX_BOX] * DAY_MS,
+		reviews: mistake.reviews + 1,
+		lastResult: 'good',
+		lastReviewAt: now,
+		updatedAt: now,
+	};
+}
+
+/** Back into review from the start (a mastered one that slipped again). */
+export function reopenMistake(mistake, now = Date.now()) {
+	return { ...mistake, box: 0, dueAt: now, updatedAt: now };
+}
+
+export const SURAH_SORTS = ['mushaf', 'missed', 'due'];
+export const SURAH_STATUSES = ['all', 'due', 'weak'];
+
+/**
+ * One surah's mistakes for its page: filtered (place in the surah, kind, status) and sorted,
+ * with the mastered ones apart. `weak` = missed at least twice.
+ */
+export function surahView(list, surahId, versesCount, opts = {}, now = Date.now()) {
+	const { place = 'all', kind = 'all', status = 'all', sort = 'mushaf' } = opts;
+	const all = list.filter(m => isActive(m) && m.surahId === surahId);
+	const mastered = all.filter(isMastered).sort((a, b) => a.ayah - b.ayah);
+	let active = all.filter(m => !isMastered(m));
+	if (place !== 'all') active = active.filter(m => surahPlace(m.ayah, versesCount) === place);
+	if (kind !== 'all') active = active.filter(m => m.kind === kind);
+	if (status === 'due') active = active.filter(m => m.dueAt <= now);
+	else if (status === 'weak') active = active.filter(m => m.lapses >= 2);
+	const byMushaf = (a, b) => a.ayah - b.ayah || (a.wordStart ?? 0) - (b.wordStart ?? 0);
+	if (sort === 'missed') active.sort((a, b) => b.lapses - a.lapses || byMushaf(a, b));
+	else if (sort === 'due') active.sort((a, b) => a.dueAt - b.dueAt || byMushaf(a, b));
+	else active.sort(byMushaf);
+	return {
+		active,
+		mastered,
+		total: all.length,
+		due: all.filter(m => !isMastered(m) && m.dueAt <= now).length,
+	};
+}

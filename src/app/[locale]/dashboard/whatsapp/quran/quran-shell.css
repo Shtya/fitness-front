@@ -1003,3 +1003,15 @@ html.dark .wa-qr .qr-x-title {
 	inline-size: 38px;
 	block-size: 38px;
 }
+
+/* Revise = the same full-screen page reader as the mushaf. */
+.wa-qr[data-section='revise'] {
+	block-size: 100dvh;
+	overflow: hidden;
+}
+@media (min-width: 769px) {
+	.wa-qr[data-section='revise'] {
+		block-size: 100%;
+		min-block-size: 0;
+	}
+}

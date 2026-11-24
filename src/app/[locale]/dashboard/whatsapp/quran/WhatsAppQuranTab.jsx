@@ -8,18 +8,22 @@
  * Local-first: localStorage paints instantly, the cloud copy (quran-revision state) syncs behind.
  */
 
-import { Suspense, lazy, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
 	ArrowRight,
 	BookOpenText,
 	Check,
+	ChevronDown,
 	ChevronLeft,
 	Eye,
+	EyeOff,
 	Flame,
 	Minus,
+	MoreHorizontal,
 	Pause,
 	Pencil,
 	Plus,
+	RotateCcw,
 	Trash2,
 	Volume2,
 	X,
@@ -35,7 +39,12 @@ import {
 	gradeMistake,
 	hiddenRange,
 	isActive,
+	markMastered,
 	mergeMistakes,
+	reopenMistake,
+	SURAH_SORTS,
+	SURAH_STATUSES,
+	surahView,
 	mistakesFromWordMarks,
 	nextDueAt,
 	normalizeMistakes,
@@ -49,10 +58,10 @@ import { ayahWords, cachedSurah, loadSurahText } from './quran-text';
 import { quranFontCss } from '../../quran-revision/quran-font-css';
 import './quran-tab.css';
 import './quran-shell.css';
+import './quran-practice.css';
 import MushafReader from './MushafReader';
 import { NOTEBOOK_EVENT } from './quran-notebook-store';
 
-const QuranRevisionStudio = lazy(() => import('../../quran-revision/QuranRevisionStudio'));
 const LS_SECTION = 'so7ba:quran-revision:wa-section:v1';
 const SECTIONS = ['mushaf', 'revise', 'notes'];
 /** Self-hosted mushaf faces from quran-tab.css (the page's next/font variables do not exist here). */
@@ -117,6 +126,29 @@ const L = {
 		all: 'الكل',
 		reveal: 'اكشف',
 		recallHint: 'سمّع من الذاكرة، وبعدين اكشف',
+		forgotAyah: 'نسيت الآية',
+		dueShort: 'مستحقة',
+		hideAnswer: 'إخفاء',
+		tapReveal: 'سمّعها من الذاكرة، وبعدين اضغط تكشف',
+		missedAgain: 'غلطت تاني',
+		gotIt: 'حفظتها',
+		masteredTitle: 'ثبتت',
+		backToReview: 'رجّعها للمراجعة',
+		masteredOf: (a, b, n) => `ثبتت ${n(a)} من ${n(b)}`,
+		filters: 'فلترة وترتيب',
+		clearFilters: 'مسح الفلاتر',
+		doneBtn: 'تم',
+		statusLabel: 'الحالة',
+		placeLabel: 'المكان في السورة',
+		kindLabel: 'نوع الغلطة',
+		sortLabel: 'الترتيب',
+		statuses: { all: 'الكل', due: 'المستحقة دلوقتي', weak: 'المتكررة (غلطت فيها مرتين أو أكتر)' },
+		sorts: { mushaf: 'بترتيب المصحف', missed: 'الأكتر غلطًا الأول', due: 'الأقرب موعدًا الأول' },
+		answersHidden: 'الإجابات مخفية',
+		answersShown: 'الإجابات ظاهرة',
+		noMatch: 'مفيش أخطاء بالفلتر ده',
+		allMastered: 'ما شاء الله، كل أخطاء السورة دي ثبتت',
+		startFromPrev: 'ابدأ من الآية اللي قبلها، وكمّل الآية اللي نسيتها',
 		again: 'غلطت',
 		hard: 'بصعوبة',
 		good: 'تمام',
@@ -209,6 +241,29 @@ const L = {
 		all: 'All',
 		reveal: 'Reveal',
 		recallHint: 'Recite from memory, then reveal',
+		forgotAyah: 'Forgot the ayah',
+		dueShort: 'due',
+		hideAnswer: 'Hide',
+		tapReveal: 'Recite it from memory, then tap to reveal',
+		missedAgain: 'Missed again',
+		gotIt: 'I know it',
+		masteredTitle: 'Mastered',
+		backToReview: 'Back to review',
+		masteredOf: (a, b, n) => `${n(a)} of ${n(b)} mastered`,
+		filters: 'Filter & sort',
+		clearFilters: 'Clear',
+		doneBtn: 'Done',
+		statusLabel: 'Status',
+		placeLabel: 'Place in the surah',
+		kindLabel: 'Mistake type',
+		sortLabel: 'Order',
+		statuses: { all: 'All', due: 'Due now', weak: 'Repeated (missed twice or more)' },
+		sorts: { mushaf: 'Mushaf order', missed: 'Most missed first', due: 'Due soonest first' },
+		answersHidden: 'Answers hidden',
+		answersShown: 'Answers shown',
+		noMatch: 'No mistakes match this filter',
+		allMastered: 'All mistakes in this surah are mastered',
+		startFromPrev: 'Start from the ayah before, then carry on into the one you forgot',
 		again: 'Missed',
 		hard: 'Hard',
 		good: 'Got it',
@@ -370,6 +425,8 @@ function useNotebook() {
 			remove: id => commit(prev => prev.map(m => (m.id === id ? { ...m, deletedAt: Date.now(), updatedAt: Date.now() } : m))),
 			restore: id => commit(prev => prev.map(m => (m.id === id ? { ...m, deletedAt: null, updatedAt: Date.now() } : m))),
 			grade: (id, result) => commit(prev => prev.map(m => (m.id === id ? gradeMistake(m, result) : m))),
+			master: id => commit(prev => prev.map(m => (m.id === id ? markMastered(m) : m))),
+			reopen: id => commit(prev => prev.map(m => (m.id === id ? reopenMistake(m) : m))),
 		}),
 		[commit],
 	);
@@ -776,20 +833,36 @@ function Logger({ t, ar, fmt, initial, editing, onSave, onClose }) {
 	);
 }
 
-/* ───────────────────────── mistake card (surah view) ───────────────────────── */
+/* ───────────────────────── practice card (surah view) ───────────────────────── */
 
-const MistakeCard = memo(function MistakeCard({ m, t, ar, fmt, ayahs, onEdit, onDelete }) {
+const MistakeCard = memo(function MistakeCard({ m, t, ar, fmt, ayahs, hideAnswer, onEdit, onDelete, onGrade, onMaster }) {
 	const words = useMemo(() => (ayahs?.[m.ayah - 1] ? ayahWords(ayahs[m.ayah - 1], m.surahId, m.ayah) : null), [ayahs, m.ayah, m.surahId]);
-	const [open, setOpen] = useState(false);
+	const nextWords = useMemo(() => (m.spot === 'link' && ayahs?.[m.ayah] ? ayahWords(ayahs[m.ayah], m.surahId, m.ayah + 1) : null), [ayahs, m.spot, m.ayah, m.surahId]);
+	const wholeAyah = m.spot === 'whole' && m.wordStart == null;
+	const prevTail = useMemo(() => {
+		if (!wholeAyah || !ayahs || m.ayah < 2) return null;
+		return ayahWords(ayahs[m.ayah - 2], m.surahId, m.ayah - 1)
+			.filter(x => !x.hidden)
+			.slice(-6);
+	}, [wholeAyah, ayahs, m.ayah, m.surahId]);
+	// Practice: the part you got wrong stays hidden until you have recited it yourself.
+	const [revealed, setRevealed] = useState(!hideAnswer);
+	useEffect(() => setRevealed(!hideAnswer), [hideAnswer]);
+	const [playing, toggleAudio] = useAyahAudio();
 	const spot = shownSpot(m, words);
-	const hi = m.wordStart != null ? { from: m.wordStart, to: m.wordEnd ?? m.wordStart } : null;
+	const isLink = Boolean(m.spot === 'link' && nextWords);
+	const hideMain = words && !isLink ? maskFor(m, words) : null;
+	const hideNext = isLink ? maskFor(m, nextWords) : null;
+	const hi = m.wordStart != null ? { from: m.wordStart, to: m.wordEnd ?? m.wordStart } : hideMain;
+	const due = m.dueAt <= Date.now();
 	return (
-		<article className={cx('wa-qn-card', m.lapses > 1 && 'is-weak')}>
+		<article className={cx('wa-qn-card', m.lapses > 1 && 'is-weak', !revealed && 'is-hidden')}>
 			<header className="wa-qn-card-head">
 				<span className="wa-qn-ayah-no">{fmt.n(m.ayah)}</span>
 				<span className="wa-qn-card-tags">
-					<span className={cx('wa-qn-pill', `kind-${m.kind}`)}>{t.kinds[m.kind]}</span>
-					<span className="wa-qn-pill is-muted">{t.spots[spot]}</span>
+					<span className={cx('wa-qn-pill', `kind-${m.kind}`)}>{wholeAyah && m.kind === 'forgot' ? t.forgotAyah : t.kinds[m.kind]}</span>
+					{!wholeAyah ? <span className="wa-qn-pill is-muted">{t.spots[spot]}</span> : null}
+					{due ? <span className="wa-qn-pill is-due">{t.dueShort}</span> : null}
 				</span>
 				<span className="wa-qn-card-actions">
 					<button type="button" className="wa-qn-icon is-sm" onClick={() => onEdit(m)} aria-label={t.edit}>
@@ -800,12 +873,28 @@ const MistakeCard = memo(function MistakeCard({ m, t, ar, fmt, ayahs, onEdit, on
 					</button>
 				</span>
 			</header>
+			{prevTail?.length ? <p className="wa-qn-quran wa-quran-face is-cue is-sm" dir="rtl">… {prevTail.map(w => w.w).join(' ')}</p> : null}
 			{words ? (
-				<button type="button" className={cx('wa-qn-card-text', open && 'is-open')} onClick={() => setOpen(v => !v)}>
-					<AyahText words={words} highlight={hi} revealed size="sm" />
+				<button
+					type="button"
+					className="wa-qn-card-text is-open"
+					onClick={() => setRevealed(v => !v)}
+					aria-label={revealed ? t.hideAnswer : t.reveal}
+				>
+					<AyahText words={words} hide={hideMain} highlight={hi} revealed={revealed} size="sm" />
+					{isLink ? (
+						<>
+							<span className="wa-qn-next-label">{t.nextAyah}</span>
+							<AyahText words={nextWords.slice(0, Math.max(6, (hideNext?.to ?? 0) + 3))} hide={hideNext} highlight={hideNext} revealed={revealed} size="sm" />
+						</>
+					) : null}
 				</button>
-			) : null}
-			{m.said || m.mixRef || m.note ? (
+			) : (
+				<div className="wa-qn-skeleton">
+					<span />
+				</div>
+			)}
+			{m.said || m.mixRef || (revealed && m.note) ? (
 				<p className="wa-qn-card-note">
 					{m.said ? (
 						<span>
@@ -817,9 +906,33 @@ const MistakeCard = memo(function MistakeCard({ m, t, ar, fmt, ayahs, onEdit, on
 							{t.mixedWith}: <b>{m.mixRef}</b>
 						</span>
 					) : null}
-					{m.note ? <span>{m.note}</span> : null}
+					{revealed && m.note ? <span>{m.note}</span> : null}
 				</p>
 			) : null}
+			{revealed ? (
+				<div className="wa-qn-card-acts">
+					<button type="button" className="wa-qn-act is-icon" onClick={() => toggleAudio(m.surahId, isLink ? m.ayah + 1 : m.ayah)} aria-label={t.listen}>
+						{playing ? <Pause size={17} /> : <Volume2 size={17} />}
+					</button>
+					<button
+						type="button"
+						className="wa-qn-act is-again"
+						onClick={() => {
+							onGrade(m.id, 'again');
+							if (hideAnswer) setRevealed(false);
+						}}
+					>
+						<RotateCcw size={16} /> {t.missedAgain}
+					</button>
+					<button type="button" className="wa-qn-act is-good" onClick={() => onMaster(m.id)}>
+						<Check size={17} /> {t.gotIt}
+					</button>
+				</div>
+			) : (
+				<button type="button" className="wa-qn-tap" onClick={() => setRevealed(true)}>
+					<Eye size={16} /> {t.tapReveal}
+				</button>
+			)}
 			<footer className="wa-qn-card-foot">
 				<span className="wa-qn-meter" aria-label={t.box(m.box)}>
 					{[1, 2, 3, 4, 5, 6].map(b => (
@@ -846,11 +959,13 @@ function Review({ t, ar, fmt, session, mistakes, onGrade, onExit }) {
 	const { ayahs, error, retry } = useSurahText(m?.surahId);
 	const words = useMemo(() => (m && ayahs?.[m.ayah - 1] ? ayahWords(ayahs[m.ayah - 1], m.surahId, m.ayah) : null), [ayahs, m]);
 	const nextWords = useMemo(() => (m && m.spot === 'link' && ayahs?.[m.ayah] ? ayahWords(ayahs[m.ayah], m.surahId, m.ayah + 1) : null), [ayahs, m]);
+	// A whole ayah forgotten: you start from the ayah before it, so show all of it.
+	const wholeAyah = Boolean(m && m.spot === 'whole' && m.wordStart == null);
 	const prevTail = useMemo(() => {
 		if (!m || !ayahs || m.ayah < 2) return null;
 		const w = ayahWords(ayahs[m.ayah - 2], m.surahId, m.ayah - 1).filter(x => !x.hidden);
-		return w.slice(-7);
-	}, [ayahs, m]);
+		return wholeAyah ? w : w.slice(-7);
+	}, [ayahs, m, wholeAyah]);
 
 	useEffect(() => {
 		const onKey = e => {
@@ -932,7 +1047,17 @@ function Review({ t, ar, fmt, session, mistakes, onGrade, onExit }) {
 			</div>
 
 			<div className="wa-qn-stage" key={m.id}>
-				{prevTail?.length ? <p className="wa-qn-quran wa-quran-face is-cue" dir="rtl">… {prevTail.map(w => w.w).join(' ')}</p> : null}
+				{wholeAyah && prevTail?.length ? (
+					<p className="wa-qn-prev-label">
+						{t.startFromPrev} ({fmt.n(m.ayah - 1)})
+					</p>
+				) : null}
+				{prevTail?.length ? (
+					<p className={cx('wa-qn-quran wa-quran-face', wholeAyah ? 'is-prev' : 'is-cue')} dir="rtl">
+						{wholeAyah ? '' : '… '}
+						{prevTail.map(w => w.w).join(' ')}
+					</p>
+				) : null}
 				{words ? (
 					<AyahText words={words} hide={hideMain} highlight={hi} revealed={revealed} size="lg" />
 				) : error ? (
@@ -1008,39 +1133,154 @@ function maskFor(m, words) {
 
 /* ───────────────────────── surah view ───────────────────────── */
 
-function SurahView({ t, ar, fmt, surahId, mistakes, onEdit, onDelete, onWarmup, onLog }) {
-	const [place, setPlace] = useState('all');
-	const { ayahs } = useSurahText(surahId);
-	const items = useMemo(() => surahWarmup(mistakes, surahId), [mistakes, surahId]);
-	const total = versesCountOf(surahId);
-	const shown = place === 'all' ? items : items.filter(m => surahPlace(m.ayah, total) === place);
-	return (
-		<div className="wa-qn-page">
-			<button type="button" className="wa-qn-hero is-warm" onClick={onWarmup} disabled={!items.length}>
-				<Flame size={22} />
-				<span>
-					<b>{t.warmup}</b>
-					<small>
-						{t.warmupHint} · {t.mistakesCount(items.length, fmt.n)}
-					</small>
-				</span>
-				<ChevronLeft size={20} className={ar ? '' : 'wa-qn-flip'} />
-			</button>
-			<div className="wa-qn-chips is-scroll">
-				{['all', 'start', 'middle', 'end'].map(p => (
-					<button key={p} type="button" className={cx('wa-qn-chip', place === p && 'is-on')} onClick={() => setPlace(p)}>
-						{p === 'all' ? t.all : t.places[p]}
+const LS_SURAH_VIEW = 'so7ba:quran-revision:surah-view:v1';
+const DEFAULT_VIEW = { place: 'all', kind: 'all', status: 'all', sort: 'mushaf', hide: true };
+
+function FilterSheet({ t, value, onChange, onClose }) {
+	const group = (label, key, options) => (
+		<div className="wa-qn-field">
+			<span className="wa-qn-label">{label}</span>
+			<div className="wa-qn-chips">
+				{options.map(([id, text]) => (
+					<button key={id} type="button" className={cx('wa-qn-chip', value[key] === id && 'is-on')} onClick={() => onChange({ ...value, [key]: id })}>
+						{text}
 					</button>
 				))}
 			</div>
-			<div className="wa-qn-list">
-				{shown.map(m => (
-					<MistakeCard key={m.id} m={m} t={t} ar={ar} fmt={fmt} ayahs={ayahs} onEdit={onEdit} onDelete={onDelete} />
-				))}
+		</div>
+	);
+	return (
+		<Sheet
+			t={t}
+			title={t.filters}
+			onClose={onClose}
+			footer={
+				<>
+					<button type="button" className="wa-qn-btn is-soft" onClick={() => onChange({ ...DEFAULT_VIEW, hide: value.hide })}>
+						{t.clearFilters}
+					</button>
+					<button type="button" className="wa-qn-btn is-primary is-grow" onClick={onClose}>
+						{t.doneBtn}
+					</button>
+				</>
+			}
+		>
+			{group(t.statusLabel, 'status', SURAH_STATUSES.map(s => [s, t.statuses[s]]))}
+			{group(t.placeLabel, 'place', [['all', t.all], ...['start', 'middle', 'end'].map(p => [p, t.places[p]])])}
+			{group(t.kindLabel, 'kind', [['all', t.all], ...MISTAKE_KINDS.map(k => [k, t.kinds[k]])])}
+			{group(t.sortLabel, 'sort', SURAH_SORTS.map(s => [s, t.sorts[s]]))}
+		</Sheet>
+	);
+}
+
+function SurahView({ t, ar, fmt, surahId, mistakes, onEdit, onDelete, onWarmup, onLog, onGrade, onMaster, onReopen }) {
+	const [opts, setOpts] = useState(() => {
+		const saved = typeof window !== 'undefined' ? readJson(LS_SURAH_VIEW, null) : null;
+		return saved && typeof saved === 'object' ? { ...DEFAULT_VIEW, ...saved } : DEFAULT_VIEW;
+	});
+	useEffect(() => writeJson(LS_SURAH_VIEW, opts), [opts]);
+	const [filterOpen, setFilterOpen] = useState(false);
+	const [masteredOpen, setMasteredOpen] = useState(false);
+	const { ayahs } = useSurahText(surahId);
+	const total = versesCountOf(surahId);
+	const view = useMemo(() => surahView(mistakes, surahId, total, opts), [mistakes, surahId, total, opts]);
+	const activeFilters = ['place', 'kind', 'status'].filter(k => opts[k] !== 'all').length + (opts.sort !== 'mushaf' ? 1 : 0);
+	const pct = view.total ? Math.round((view.mastered.length / view.total) * 100) : 0;
+	return (
+		<div className="wa-qn-page">
+			<section className="wa-qn-progress-card">
+				<div className="wa-qn-progress-top">
+					<b>{t.masteredOf(view.mastered.length, view.total, fmt.n)}</b>
+					{view.due ? <span className="wa-qn-pill is-due">{t.dueCount(view.due, fmt.n)}</span> : null}
+				</div>
+				<div className="wa-qn-progress-bar" aria-hidden="true">
+					<i style={{ inlineSize: `${pct}%` }} />
+				</div>
+			</section>
+
+			<div className="wa-qn-warm-row">
+				<button type="button" className="wa-qn-hero is-warm" onClick={onWarmup} disabled={!view.active.length}>
+					<Flame size={22} />
+					<span>
+						<b>{t.warmup}</b>
+						<small>
+							{t.warmupHint} · {t.mistakesCount(view.active.length, fmt.n)}
+						</small>
+					</span>
+					<ChevronLeft size={20} className={ar ? '' : 'wa-qn-flip'} />
+				</button>
+				<button type="button" className="wa-qn-more" onClick={() => setFilterOpen(true)} aria-label={t.filters} title={t.filters}>
+					<MoreHorizontal size={22} />
+					{activeFilters ? <span className="wa-qn-more-badge">{fmt.n(activeFilters)}</span> : null}
+				</button>
 			</div>
+
+			<div className="wa-qn-list-bar">
+				<span className="wa-qn-muted">
+					{opts.sort !== 'mushaf' ? t.sorts[opts.sort] : t.sorts.mushaf}
+					{opts.status !== 'all' ? ` · ${t.statuses[opts.status]}` : ''}
+				</span>
+				<button type="button" className={cx('wa-qn-toggle', opts.hide && 'is-on')} onClick={() => setOpts(o => ({ ...o, hide: !o.hide }))} aria-pressed={opts.hide}>
+					{opts.hide ? <EyeOff size={16} /> : <Eye size={16} />}
+					{opts.hide ? t.answersHidden : t.answersShown}
+				</button>
+			</div>
+
+			<div className="wa-qn-list">
+				{view.active.map(m => (
+					<MistakeCard
+						key={m.id}
+						m={m}
+						t={t}
+						ar={ar}
+						fmt={fmt}
+						ayahs={ayahs}
+						hideAnswer={opts.hide}
+						onEdit={onEdit}
+						onDelete={onDelete}
+						onGrade={onGrade}
+						onMaster={onMaster}
+					/>
+				))}
+				{!view.active.length ? (
+					<p className="wa-qn-empty-line">{view.total && view.mastered.length === view.total ? t.allMastered : t.noMatch}</p>
+				) : null}
+			</div>
+
+			{view.mastered.length ? (
+				<section className={cx('wa-qn-mastered', masteredOpen && 'is-open')}>
+					<button type="button" className="wa-qn-mastered-head" onClick={() => setMasteredOpen(v => !v)} aria-expanded={masteredOpen}>
+						<Check size={18} />
+						<b>
+							{t.masteredTitle} ({fmt.n(view.mastered.length)})
+						</b>
+						<ChevronDown size={18} className="wa-qn-chev-down" />
+					</button>
+					{masteredOpen ? (
+						<ul>
+							{view.mastered.map(m => {
+								const w = ayahs?.[m.ayah - 1] ? ayahWords(ayahs[m.ayah - 1], m.surahId, m.ayah).filter(x => !x.hidden).slice(0, 6) : [];
+								return (
+									<li key={m.id}>
+										<span className="wa-qn-ayah-no">{fmt.n(m.ayah)}</span>
+										<span className="wa-qn-quran wa-quran-face is-line" dir="rtl">
+											{w.map(x => x.w).join(' ')}…
+										</span>
+										<button type="button" className="wa-qn-link" onClick={() => onReopen(m.id)}>
+											{t.backToReview}
+										</button>
+									</li>
+								);
+							})}
+						</ul>
+					) : null}
+				</section>
+			) : null}
+
 			<button type="button" className="wa-qn-btn is-soft is-wide" onClick={onLog}>
 				<Plus size={18} /> {t.addHere}
 			</button>
+			{filterOpen ? <FilterSheet t={t} value={opts} onChange={setOpts} onClose={() => setFilterOpen(false)} /> : null}
 		</div>
 	);
 }
@@ -1267,6 +1507,9 @@ function MistakesNotebook({ locale = 'ar', onExit, embedded = false, onInnerChan
 					onDelete={onDelete}
 					onWarmup={() => startWarmup(view.surahId)}
 					onLog={() => openLogger(view.surahId)}
+					onGrade={api.grade}
+					onMaster={api.master}
+					onReopen={api.reopen}
 				/>
 			) : (
 				<Home t={t} ar={ar} fmt={fmt} mistakes={mistakes} onReview={startReview} onOpenSurah={id => go({ name: 'surah', surahId: id })} />
@@ -1313,17 +1556,6 @@ function MistakesNotebook({ locale = 'ar', onExit, embedded = false, onInnerChan
 
 /* ───────────────────────── tab shell ───────────────────────── */
 
-function StudioSkeleton() {
-	return (
-		<div className="wa-qn-page" aria-busy="true">
-			<div className="wa-qn-skeleton is-card">
-				<span />
-				<span />
-				<span />
-			</div>
-		</div>
-	);
-}
 
 /**
  * Three sections: the mushaf (page reader, the default — it brings its own controls), the
@@ -1338,18 +1570,14 @@ export default function WhatsAppQuranTab({ locale = 'ar', onExit }) {
 		const saved = typeof window !== 'undefined' ? readJson(LS_SECTION, 'mushaf') : 'mushaf';
 		return SECTIONS.includes(saved) ? saved : 'mushaf';
 	});
-	const [studioOpened, setStudioOpened] = useState(section === 'revise');
-	const [mushafOpened, setMushafOpened] = useState(section === 'mushaf');
+	const [mushafOpened, setMushafOpened] = useState(section !== 'notes');
 	const [notesInner, setNotesInner] = useState(false);
 	const [due, setDue] = useState(0);
 
 	useEffect(() => {
 		writeJson(LS_SECTION, section);
-		if (section === 'revise') setStudioOpened(true);
-		if (section === 'mushaf') setMushafOpened(true);
+		if (section !== 'notes') setMushafOpened(true);
 		else setNotesInner(false);
-		// The revision page's player dock is portalled to <body>; hide it on the other sections.
-		document.body.toggleAttribute('data-wa-qr-notes', section !== 'revise');
 		window.scrollTo(0, 0);
 		// Count marks made in the mushaf too, before the log has turned them into entries.
 		const recount = () => setDue(overallStats(syncWithMarks(normalizeMistakes(readJson(LS_MISTAKES, [])), readJson(LS_STUDIO_MARKS, null))).due);
@@ -1361,9 +1589,8 @@ export default function WhatsAppQuranTab({ locale = 'ar', onExit }) {
 			window.removeEventListener(NOTEBOOK_EVENT, recount);
 		};
 	}, [section]);
-	useEffect(() => () => document.body.removeAttribute('data-wa-qr-notes'), []);
 
-	const showHeader = section === 'revise' || (section === 'notes' && !notesInner);
+	const showHeader = section === 'notes' && !notesInner;
 
 	return (
 		<div className="wa-qr" dir={ar ? 'rtl' : 'ltr'} data-section={section}>
@@ -1397,17 +1624,21 @@ export default function WhatsAppQuranTab({ locale = 'ar', onExit }) {
 					</div>
 				</header>
 			) : null}
-			<div className="wa-qr-revise" hidden={section !== 'revise'}>
-				{studioOpened ? (
-					<Suspense fallback={<StudioSkeleton />}>
-						<QuranRevisionStudio embedded quranFontFamily={QURAN_FONT_STACK} />
-					</Suspense>
-				) : null}
-			</div>
-			{/* Kept mounted once opened: back from the log, the page is exactly where you left it. */}
+			{/*
+			 * Mushaf and Revise are the same page reader (revise = repeats, rounds, hide-to-memorise).
+			 * Kept mounted once opened: back from the log, the page is exactly where you left it.
+			 */}
 			{mushafOpened ? (
-				<div className="wa-qr-mushaf" hidden={section !== 'mushaf'}>
-					<MushafReader locale={locale} onExit={onExit} onOpen={setSection} due={due} active={section === 'mushaf'} />
+				<div className="wa-qr-mushaf" hidden={section === 'notes'}>
+					<MushafReader
+						locale={locale}
+						onExit={onExit}
+						onOpen={setSection}
+						onMode={m => setSection(m === 'revise' ? 'revise' : 'mushaf')}
+						mode={section === 'revise' ? 'revise' : 'read'}
+						due={due}
+						active={section !== 'notes'}
+					/>
 				</div>
 			) : null}
 			{section === 'notes' ? <MistakesNotebook locale={locale} onExit={() => setSection('mushaf')} embedded onInnerChange={setNotesInner} /> : null}

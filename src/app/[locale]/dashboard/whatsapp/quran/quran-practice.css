@@ -1,0 +1,254 @@
+/* Surah view in "My mistakes": practice cards (answer hidden), progress, filter, mastered. */
+
+.wa-qn-progress-card {
+	display: grid;
+	gap: 10px;
+	padding: 14px 16px;
+	border: 1.5px solid var(--qx-line-2, var(--wa-ui-border));
+	border-radius: 20px;
+	background: var(--wa-ui-surface);
+	box-shadow: inset 0 0 0 3px var(--wa-ui-surface), inset 0 0 0 4px color-mix(in srgb, var(--qx-line-2, #d3bd86) 45%, transparent);
+}
+.wa-qn-progress-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+.wa-qn-progress-top b {
+	font-size: 15px;
+	color: var(--qx-accent, var(--wa-ui-text));
+}
+html.dark .wa-qn-progress-top b {
+	color: #9bc7a6;
+}
+.wa-qn-progress-bar {
+	block-size: 8px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--wa-ui-text) 9%, transparent);
+	overflow: hidden;
+}
+.wa-qn-progress-bar i {
+	display: block;
+	block-size: 100%;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--qx-gold, #a3802f), #c9a24f);
+	transition: inline-size 0.4s ease;
+}
+
+.wa-qn-warm-row {
+	display: flex;
+	gap: 8px;
+	align-items: stretch;
+}
+.wa-qn-warm-row .wa-qn-hero {
+	flex: 1;
+	min-inline-size: 0;
+}
+.wa-qn-more {
+	position: relative;
+	display: grid;
+	place-items: center;
+	flex: none;
+	inline-size: 56px;
+	border: 1.5px solid var(--qx-line-2, var(--wa-ui-border));
+	border-radius: 18px;
+	background: var(--wa-ui-surface);
+	color: var(--qx-accent, var(--wa-ui-text));
+	cursor: pointer;
+}
+html.dark .wa-qn-more {
+	color: #9bc7a6;
+}
+.wa-qn-more-badge {
+	position: absolute;
+	inset-block-start: 6px;
+	inset-inline-end: 6px;
+	display: grid;
+	place-items: center;
+	min-inline-size: 18px;
+	block-size: 18px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: var(--qx-gold, #a3802f);
+	color: #fff;
+	font-size: 10.5px;
+	font-weight: 800;
+}
+
+.wa-qn-list-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-block: -2px -4px;
+}
+.wa-qn-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-block-size: 34px;
+	padding: 0 12px;
+	border: 1px solid var(--qx-line-2, var(--wa-ui-border));
+	border-radius: 999px;
+	background: var(--wa-ui-surface);
+	color: var(--wa-ui-text-2);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.wa-qn-toggle.is-on {
+	background: var(--qx-accent, #1f4d36);
+	border-color: var(--qx-accent, #1f4d36);
+	color: #fff;
+}
+
+.wa-qn-card.is-hidden .wa-qn-card-text {
+	cursor: pointer;
+}
+.wa-qn-quran.is-cue.is-sm {
+	font-size: 17px;
+	line-height: 1.8;
+	color: var(--wa-ui-text-3);
+}
+.wa-qn-card .wa-qn-next-label {
+	display: block;
+	margin: 4px 0 0;
+	font-size: 11.5px;
+	font-weight: 700;
+	color: var(--wa-ui-text-3);
+	text-align: start;
+}
+.wa-qn-tap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-block-size: 40px;
+	border: 1px dashed var(--qx-line-2, var(--wa-ui-border));
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--qx-gold, #a3802f) 6%, transparent);
+	color: var(--wa-ui-text-2);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.wa-qn-card-acts {
+	display: grid;
+	grid-template-columns: auto 1fr 1fr;
+	gap: 8px;
+}
+.wa-qn-act {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-block-size: 42px;
+	padding: 0 12px;
+	border: 1px solid var(--qx-line-2, var(--wa-ui-border));
+	border-radius: 12px;
+	background: var(--wa-ui-surface);
+	color: var(--wa-ui-text);
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 800;
+	cursor: pointer;
+	transition: transform 0.1s;
+}
+.wa-qn-act:active {
+	transform: scale(0.97);
+}
+.wa-qn-act.is-icon {
+	inline-size: 44px;
+	padding: 0;
+	color: var(--qx-accent, var(--wa-ui-text));
+}
+.wa-qn-act.is-again {
+	border-color: color-mix(in srgb, #c8463a 45%, transparent);
+	color: #b8322a;
+}
+html.dark .wa-qn-act.is-again {
+	color: #f08a74;
+}
+.wa-qn-act.is-good {
+	border-color: transparent;
+	background: var(--qx-accent, #1f4d36);
+	color: #fff;
+}
+
+.wa-qn-empty-line {
+	margin: 4px 0;
+	padding: 18px;
+	border: 1px dashed var(--qx-line-2, var(--wa-ui-border));
+	border-radius: 16px;
+	color: var(--wa-ui-text-2);
+	text-align: center;
+	font-size: 13.5px;
+}
+
+.wa-qn-mastered {
+	border: 1px solid var(--qx-line-2, var(--wa-ui-border));
+	border-radius: 18px;
+	background: color-mix(in srgb, var(--wa-ui-surface) 70%, transparent);
+	overflow: hidden;
+}
+.wa-qn-mastered-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	inline-size: 100%;
+	min-block-size: 50px;
+	padding: 0 14px;
+	border: 0;
+	background: transparent;
+	color: var(--qx-accent, var(--wa-ui-text));
+	font: inherit;
+	font-size: 14.5px;
+	cursor: pointer;
+}
+html.dark .wa-qn-mastered-head {
+	color: #9bc7a6;
+}
+.wa-qn-mastered-head b {
+	flex: 1;
+	text-align: start;
+}
+.wa-qn-chev-down {
+	transition: transform 0.2s;
+}
+.wa-qn-mastered.is-open .wa-qn-chev-down {
+	transform: rotate(180deg);
+}
+.wa-qn-mastered ul {
+	display: grid;
+	gap: 6px;
+	margin: 0;
+	padding: 0 10px 10px;
+	list-style: none;
+}
+.wa-qn-mastered li {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 8px;
+	border-radius: 12px;
+	background: var(--wa-ui-surface);
+}
+.wa-qn-quran.is-line {
+	font-size: 17px;
+	line-height: 1.7;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: var(--wa-ui-text-2);
+}
+
+/* Selected filter chips: solid, unmistakable. */
+.wa-qr .wa-qn-sheet .wa-qn-chip.is-on {
+	border-color: var(--qx-accent, #1f4d36);
+	background: var(--qx-accent, #1f4d36);
+	color: #fff;
+}

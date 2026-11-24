@@ -1,0 +1,169 @@
+/* Revision mode of the mushaf reader: hidden words, mode button, ayah/repeat counter, settings sheet. */
+
+/* Hidden while memorising: the word keeps its place, drawn as a soft dotted line. Tap reveals the ayah. */
+.mr-w.is-veiled {
+	color: transparent !important;
+	cursor: pointer;
+	background:
+		radial-gradient(circle, color-mix(in srgb, var(--mr-gold) 70%, transparent) 1.2px, transparent 1.6px) 0 72% / 7px 7px repeat-x,
+		color-mix(in srgb, var(--mr-gold) 7%, transparent);
+	border-radius: 0.3em;
+}
+.mr-w.is-veiled.is-playing {
+	background:
+		radial-gradient(circle, var(--mr-gold) 1.4px, transparent 1.8px) 0 72% / 7px 7px repeat-x,
+		var(--mr-gold-soft);
+}
+
+/* Top bar: the repeat button shows when revision mode is on. */
+.mr-ic.is-on {
+	background: var(--mr-green);
+	color: #fff;
+}
+html.dark .mr-ic.is-on {
+	background: #2f6b4a;
+}
+
+/* Bottom bar: ayah number with the repeat count under it. */
+.mr-pageno.rv-pos {
+	display: grid;
+	justify-items: center;
+	gap: 0;
+	line-height: 1.05;
+}
+.mr-pageno.rv-pos b {
+	font-size: 17px;
+}
+.mr-pageno.rv-pos small {
+	font-size: 10.5px;
+	font-weight: 700;
+	color: var(--mr-ink-3);
+	white-space: nowrap;
+}
+.mr-pill.is-rv {
+	color: var(--mr-green);
+}
+
+/* Settings sheet */
+.rv-sheet {
+	block-size: auto;
+	max-block-size: min(90dvh, 860px);
+}
+.rv-body {
+	display: grid;
+	gap: 18px;
+	padding: 4px 16px 8px;
+}
+.rv-group {
+	display: grid;
+	gap: 10px;
+}
+.rv-label {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+.rv-label b {
+	font-size: 14px;
+	font-weight: 800;
+	color: var(--mr-green);
+}
+.rv-label span {
+	font-size: 12px;
+	color: var(--mr-ink-3);
+}
+.rv-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.rv-chip {
+	min-block-size: 40px;
+	padding: 0 14px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--mr-paper) 70%, var(--mr-card));
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background-color 0.15s, color 0.15s;
+}
+.rv-chip.is-on {
+	border-color: var(--mr-green);
+	background: var(--mr-green);
+	color: #fff;
+}
+html.dark .rv-chip.is-on {
+	border-color: #2f6b4a;
+	background: #2f6b4a;
+}
+.rv-custom {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}
+.rv-custom .rv-surah {
+	grid-column: 1 / -1;
+}
+.rv-input,
+.rv-num input {
+	box-sizing: border-box;
+	inline-size: 100%;
+	min-block-size: 46px;
+	padding: 0 12px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--mr-paper) 70%, var(--mr-card));
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 16px;
+}
+.rv-num {
+	display: grid;
+	gap: 4px;
+}
+.rv-num span,
+.rv-field > span {
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--mr-ink-3);
+}
+.rv-num input {
+	text-align: center;
+	font-weight: 800;
+	font-size: 18px;
+}
+.rv-row {
+	grid-template-columns: 1fr;
+}
+.rv-field {
+	display: grid;
+	gap: 6px;
+}
+.rv-foot {
+	padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+	border-block-start: 1px solid var(--mr-card-line);
+}
+.rv-start {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	inline-size: 100%;
+	min-block-size: 52px;
+	border: 0;
+	border-radius: 16px;
+	background: var(--mr-green);
+	color: #fff;
+	font: inherit;
+	font-size: 15.5px;
+	font-weight: 800;
+	box-shadow: 0 0 0 2px var(--mr-card), 0 0 0 3.5px var(--mr-gold-2);
+	cursor: pointer;
+}
+html.dark .rv-start {
+	background: #2f6b4a;
+}
