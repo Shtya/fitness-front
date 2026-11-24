@@ -88,6 +88,7 @@ const L = {
 		back: 'رجوع',
 		studio: 'المصحف والمراجعة',
 		due: 'مستحقة للمراجعة',
+		backToMushaf: 'رجوع للمصحف',
 		dueNone: 'مفيش مراجعة دلوقتي',
 		nextIn: 'المراجعة الجاية',
 		startReview: 'ابدأ المراجعة',
@@ -203,6 +204,7 @@ const L = {
 		back: 'Back',
 		studio: 'Mushaf & revision',
 		due: 'due for review',
+		backToMushaf: 'Back to the mushaf',
 		dueNone: 'Nothing due right now',
 		nextIn: 'Next review',
 		startReview: 'Start review',
@@ -1288,16 +1290,24 @@ function SurahView({ t, ar, fmt, surahId, mistakes, onEdit, onDelete, onWarmup, 
 
 /* ───────────────────────── home ───────────────────────── */
 
-function Home({ t, ar, fmt, mistakes, onReview, onOpenSurah }) {
+function Home({ t, ar, fmt, mistakes, onReview, onOpenSurah, onBack }) {
 	const now = Date.now();
 	const stats = useMemo(() => overallStats(mistakes, now), [mistakes]); // eslint-disable-line react-hooks/exhaustive-deps
 	const summaries = useMemo(() => surahSummaries(mistakes, versesCountOf, now), [mistakes]); // eslint-disable-line react-hooks/exhaustive-deps
 	const next = stats.due ? null : nextDueAt(mistakes, now);
 
+	// Back to the mushaf: a small floating arrow in the card's corner (no header bar).
+	const back = onBack ? (
+		<button type="button" className="wa-qn-float-back" onClick={onBack} aria-label={t.backToMushaf}>
+			<ArrowRight size={19} strokeWidth={2.3} className={ar ? '' : 'wa-qn-flip'} />
+		</button>
+	) : null;
+
 	if (!stats.total) {
 		return (
 			<div className="wa-qn-page">
 				<div className="wa-qn-empty">
+					{back}
 					<BookOpenText size={36} />
 					<h2>{t.emptyTitle}</h2>
 					<ol>
@@ -1316,6 +1326,7 @@ function Home({ t, ar, fmt, mistakes, onReview, onOpenSurah }) {
 	return (
 		<div className="wa-qn-page">
 			<section className={cx('wa-qn-hero', stats.due && 'is-due')}>
+				{back}
 				<div className="wa-qn-hero-num">
 					<b>{fmt.n(stats.due)}</b>
 					<span>{stats.due ? t.due : t.dueNone}</span>
@@ -1513,7 +1524,7 @@ function MistakesNotebook({ locale = 'ar', onExit, embedded = false, onInnerChan
 					onReopen={api.reopen}
 				/>
 			) : (
-				<Home t={t} ar={ar} fmt={fmt} mistakes={mistakes} onReview={startReview} onOpenSurah={id => go({ name: 'surah', surahId: id })} />
+				<Home t={t} ar={ar} fmt={fmt} mistakes={mistakes} onReview={startReview} onOpenSurah={id => go({ name: 'surah', surahId: id })} onBack={embedded ? onExit : undefined} />
 			)}
 
 			{view.name !== 'review' && list != null ? (
@@ -1594,43 +1605,9 @@ export default function WhatsAppQuranTab({ onExit }) {
 		};
 	}, [section]);
 
-	const showHeader = section === 'notes' && !notesInner;
-
 	return (
 		<div className={`wa-qr ${quranUiFont.variable}`} dir={ar ? 'rtl' : 'ltr'} lang={ar ? 'ar' : 'en'} data-section={section}>
 			<style>{QURAN_FONT_CSS}</style>
-			{showHeader ? (
-				<header className="wa-qn-header wa-qr-head">
-					{onExit ? (
-						<button type="button" className="wa-qn-icon" onClick={onExit} aria-label={t.back}>
-							<ArrowRight size={22} className={ar ? '' : 'wa-qn-flip'} />
-						</button>
-					) : null}
-					<h1 className="wa-qr-title">{t.tabTitle}</h1>
-					<div className="wa-qr-seg" role="tablist" aria-label={t.tabTitle}>
-						{[
-							['mushaf', t.tabMushaf],
-							['revise', t.tabRevise],
-							['notes', t.tabMistakes],
-						].map(([id, label]) => (
-							<button
-								key={id}
-								type="button"
-								role="tab"
-								aria-selected={section === id}
-								className={cx('wa-qr-seg-btn', section === id && 'is-on')}
-								onClick={() => setSection(id)}
-							>
-								{label}
-								{id === 'notes' && due ? <span className="wa-qr-badge">{fmt.n(due)}</span> : null}
-							</button>
-						))}
-					</div>
-					<button type="button" className="wa-qr-lang" onClick={toggleLang} aria-label={ar ? 'English' : 'العربية'}>
-						{ar ? 'EN' : 'ع'}
-					</button>
-				</header>
-			) : null}
 			{/*
 			 * Mushaf and Revise are the same page reader (revise = repeats, rounds, hide-to-memorise).
 			 * Kept mounted once opened: back from the log, the page is exactly where you left it.

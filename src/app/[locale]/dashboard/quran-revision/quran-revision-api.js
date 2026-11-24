@@ -34,6 +34,11 @@ function normalizeCloudState(raw) {
 				? raw.wordErrors
 				: {},
 		mistakes: Array.isArray(raw.mistakes) ? raw.mistakes : [],
+		bookmarks: Array.isArray(raw.bookmarks) ? raw.bookmarks : [],
+		readingTime:
+			raw.readingTime && typeof raw.readingTime === 'object' && !Array.isArray(raw.readingTime)
+				? raw.readingTime
+				: {},
 		activeSession:
 			raw.activeSession && typeof raw.activeSession === 'object'
 				? raw.activeSession

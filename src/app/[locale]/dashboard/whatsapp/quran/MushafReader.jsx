@@ -10,12 +10,11 @@
  */
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Bookmark, BookOpenText, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, List, Pause, Play, Repeat, RotateCcw, RotateCw, Search, Settings2, SkipBack, SkipForward, TextSelect, Trash2, X } from 'lucide-react';
+import { ArrowRight, Bookmark, BookmarkPlus, BookOpenText, Clock3, Flame, MapPin, Plus, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, List, Pause, Play, Repeat, RotateCcw, RotateCw, Search, Settings2, SkipBack, SkipForward, TextSelect, Trash2, X } from 'lucide-react';
 import { playableAyahUrl, prefetchAyahAudio } from '../../quran-revision/ayah-audio-cache';
 import { SURAHS, BUILTIN_RECITERS, ayahAudioUrl } from '../../quran-revision/quran-data';
 import {
 	BASMALA,
-	JUZ_START_PAGES,
 	PAGE_COUNT,
 	SURAH_START_PAGES,
 	cachedPage,
@@ -31,10 +30,15 @@ import { loadSurahText, logIndexForPosition, positionForLogIndex } from './quran
 import { RUB_STARTS } from './rub-starts';
 import { DEFAULT_REVISE, ayahList, inSpan, isVeiled, nextStep, pageRange, quarterRange, surahRange, upcomingKeys } from './revise-engine';
 import ReviseSheet from './ReviseSheet';
+import { BOOKMARKS_EVENT, addBookmark, bookmarksOnPage, isFixedBookmark, readBookmarks, removeBookmark, setBookmarkPage, syncBookmarksFromCloud, visibleBookmarks, writeBookmarks } from './quran-bookmarks';
+import { IDLE_MS, READING_EVENT, lastDays, logReading, pushReading, readAllReading, splitDuration, streak, syncReadingFromCloud } from './reading-time';
+import { fetchQuranRevisionState } from '../../quran-revision/quran-revision-api';
 import './mushaf.css';
 import './mushaf-range.css';
 import './mushaf-revise.css';
 import './mushaf-player.css';
+import './mushaf-progress.css';
+import './mushaf-bookmarks.css';
 
 /** Quarters (rub' al-hizb) that begin inside each surah: { n (1…240), a, page, words }. */
 const RUBS_BY_SURAH = new Map();
@@ -80,6 +84,36 @@ const L = {
 		selectRange: 'حدّد من كلمة لكلمة',
 		reviseThis: 'راجع الجزء ده بالتكرار',
 		reviseShort: 'كرّره',
+		bookmarks: 'علاماتي',
+		bmNames: { review: 'المراجعة', new: 'الحفظ الجديد', old: 'الحفظ القديم' },
+		bmUnset: 'لم تُحدد بعد',
+		bmSetHere: 'ضع العلامة في هذه الصفحة',
+		bmHere: 'هنا',
+		bmAdd: 'علامة',
+		bmNamePh: 'اسم العلامة…',
+		bmClear: 'إزالة من الصفحة',
+		bmDelete: 'حذف العلامة',
+		pageShort: 'ص',
+		readingTime: 'وقت القراءة',
+		today: 'اليوم',
+		thisWeek: 'هذا الأسبوع',
+		dailyAvg: 'متوسط اليوم',
+		lessMin: 'أقل من دقيقة',
+		minShort: 'د',
+		hourShort: 'س',
+		streakDays: (n, f) => `${f(n)} أيام متتالية`,
+		weekdays: ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'],
+		timeNote: 'يُحسب الوقت وأنت على صفحات المصحف، ويتوقف بعد ٤ دقائق بدون أي لمس أو تلاوة.',
+		quarterEnds: p => `ينتهي ص ${p}`,
+		quarterEndsHere: 'ينتهي هنا',
+		surahLeft: (n, f) => (n === 1 ? 'باقي صفحة' : n === 2 ? 'باقي صفحتين' : `باقي ${f(n)} ${n <= 10 ? 'صفحات' : 'صفحة'}`),
+		surahLastPage: 'آخر صفحة',
+		noMistakes: 'لسه مفيش أخطاء متسجلة',
+		mistakesN: (n, f) => (n === 1 ? 'غلطة واحدة' : n === 2 ? 'غلطتين' : `${f(n)} ${n <= 10 ? 'أخطاء' : 'غلطة'}`),
+		missedN: (n, f) => (n === 1 ? 'غلطت فيها مرة' : n === 2 ? 'غلطت فيها مرتين' : `غلطت فيها ${f(n)} ${n <= 10 ? 'مرات' : 'مرة'}`),
+		forgotWhole: 'نسيت الآية كلها',
+		dueNow: 'مستحقة',
+		mkKinds: { forgot: 'وقفت / نسيت كلمة', swap: 'قلت كلمة بدلها', add: 'زوّدت كلمة', tashkeel: 'تشكيل غلط', mix: 'دخلت في متشابه', skip: 'أسقطت', order: 'قدّمت وأخّرت' },
 		reviseBtn: 'مراجعة بالتكرار',
 		playShort: 'تشغيل',
 		selectShort: 'تحديد',
@@ -160,6 +194,36 @@ const L = {
 		selectRange: 'Select from word to word',
 		reviseThis: 'Revise this part with repeats',
 		reviseShort: 'Repeat it',
+		bookmarks: 'Bookmarks',
+		bmNames: { review: 'Revision', new: 'New memorising', old: 'Old memorising' },
+		bmUnset: 'Not set yet',
+		bmSetHere: 'Put the bookmark on this page',
+		bmHere: 'here',
+		bmAdd: 'Bookmark',
+		bmNamePh: 'Bookmark name…',
+		bmClear: 'Remove from page',
+		bmDelete: 'Delete bookmark',
+		pageShort: 'p.',
+		readingTime: 'Reading time',
+		today: 'Today',
+		thisWeek: 'This week',
+		dailyAvg: 'Daily average',
+		lessMin: '< 1 min',
+		minShort: 'min',
+		hourShort: 'h',
+		streakDays: (n, f) => `${f(n)}-day streak`,
+		weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+		timeNote: 'Counted while you are on the mushaf pages; stops after 4 minutes with no touch or recitation.',
+		quarterEnds: p => `ends p. ${p}`,
+		quarterEndsHere: 'ends here',
+		surahLeft: (n, f) => `${f(n)} ${n === 1 ? 'page' : 'pages'} left`,
+		surahLastPage: 'last page',
+		noMistakes: 'No mistakes logged yet',
+		mistakesN: (n, f) => `${f(n)} ${n === 1 ? 'mistake' : 'mistakes'}`,
+		missedN: (n, f) => `missed ${f(n)}×`,
+		forgotWhole: 'Forgot the whole ayah',
+		dueNow: 'due',
+		mkKinds: { forgot: 'Stuck / forgot a word', swap: 'Said another word', add: 'Added a word', tashkeel: 'Wrong harakat', mix: 'Mixed with similar', skip: 'Skipped', order: 'Wrong order' },
 		reviseBtn: 'Revise with repeats',
 		playShort: 'Play',
 		selectShort: 'Select',
@@ -275,24 +339,34 @@ const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt
 			const availEm = (root.querySelector('.mr-lines')?.clientWidth || 1) / fs;
 			const short = [];
 			const squeeze = {};
+			const stretch = {};
 			const full = [];
 			root.querySelectorAll('.mr-line.is-text').forEach(line => {
 				const lineFs = parseFloat(getComputedStyle(line).fontSize) || fs;
 				let w = 0;
+				// offsetWidth: the layout width, unaffected by the stretch transform set below.
 				line.querySelectorAll(':scope > span').forEach(sp => {
-					w += sp.getBoundingClientRect().width;
+					w += sp.offsetWidth;
 				});
-				const em = w / lineFs + (line.children.length - 1) * 0.1;
-				if (em < availEm * 0.72) short.push(line.dataset.n);
+				// Centred lines (opening pages) keep a fixed 0.28em gap; justified ones need ~0.1em.
+				const em = w / lineFs + (line.children.length - 1) * (data.compact ? 0.28 : 0.1);
+				const ratio = em / availEm;
+				// Only a truly short line (a surah's closing words) is centred.
+				if (ratio < 0.5) short.push(line.dataset.n);
 				else full.push(em);
-				if (em > availEm * 0.995) squeeze[line.dataset.n] = Number(((availEm * 0.99) / em).toFixed(4));
+				if (ratio > 0.995) squeeze[line.dataset.n] = Number((0.99 / ratio).toFixed(4));
+				// A printed mushaf fills a line by stretching letters (kashida), not by opening wide
+				// gaps: widen a narrow line a little and let only the remainder go into the spaces.
+				else if (!data.compact && ratio >= 0.5 && ratio < 0.94) stretch[line.dataset.n] = Number(Math.min(1.12, 0.96 / ratio).toFixed(4));
 			});
 			if (!data.compact && full.length >= 4) {
 				full.sort((a, b) => a - b);
 				onMeasure?.(full[Math.floor(full.length * 0.8)]);
 			}
-			const next = { short: short.join(','), squeeze };
-			setFit(prev => (prev && prev.short === next.short && JSON.stringify(prev.squeeze) === JSON.stringify(squeeze) ? prev : next));
+			const next = { short: short.join(','), squeeze, stretch };
+			setFit(prev =>
+				prev && prev.short === next.short && JSON.stringify(prev.squeeze) === JSON.stringify(squeeze) && JSON.stringify(prev.stretch) === JSON.stringify(stretch) ? prev : next,
+			);
 		};
 		// Measure with the mushaf face itself, not the fallback shown while it downloads.
 		const fontPx = parseFloat(getComputedStyle(ref.current).fontSize) || 20;
@@ -328,6 +402,7 @@ const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt
 
 	const shortSet = new Set((fit?.short || '').split(',').filter(Boolean));
 	const squeeze = fit?.squeeze || {};
+	const stretch = fit?.stretch || {};
 
 	return (
 		<div ref={ref} className={cx('mr-page', 'wa-quran-face', data.compact && 'is-compact')} lang="ar" dir="rtl">
@@ -355,7 +430,13 @@ const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt
 							key={line.n}
 							data-n={line.n}
 							className={cx('mr-line', 'is-text', shortSet.has(String(line.n)) && 'is-short')}
-							style={squeeze[line.n] ? { fontSize: `${squeeze[line.n]}em` } : undefined}
+							style={
+								squeeze[line.n] || stretch[line.n]
+									? // Same letter height on every line: a long line is laid out wider and narrowed
+										// by k (<1), a short one laid out narrower and widened by k (>1).
+										(k => ({ inlineSize: `${100 / k}%`, transform: `scaleX(${k})`, justifySelf: 'center' }))(squeeze[line.n] || stretch[line.n])
+									: undefined
+							}
 						>
 							{line.words.map(w => {
 								const key = `${w.s}:${w.a}`;
@@ -692,6 +773,101 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 			pager.removeEventListener('touchstart', onStart);
 		};
 	}, []);
+	/* ── bookmarks: several named page marks (review / new / old / your own) ── */
+	const [bookmarks, setBookmarks] = useState(() => (typeof window === 'undefined' ? [] : readBookmarks()));
+	useEffect(() => {
+		const sync = () => setBookmarks(readBookmarks());
+		window.addEventListener(BOOKMARKS_EVENT, sync);
+		window.addEventListener('storage', sync);
+		return () => {
+			window.removeEventListener(BOOKMARKS_EVENT, sync);
+			window.removeEventListener('storage', sync);
+		};
+	}, []);
+	// Bookmarks and reading time from the account (other phone / laptop), once per open.
+	useEffect(() => {
+		let live = true;
+		fetchQuranRevisionState()
+			.then(st => {
+				if (!live) return;
+				setBookmarks(syncBookmarksFromCloud(st.bookmarks));
+				syncReadingFromCloud(st.readingTime);
+			})
+			.catch(() => {});
+		return () => {
+			live = false;
+		};
+	}, []);
+	const changeBookmarks = useCallback(fn => {
+		const next = fn(readBookmarks());
+		writeBookmarks(next);
+		setBookmarks(next);
+	}, []);
+
+	/*
+	 * Reading clock: counts while the mushaf is on screen and you are with it (a touch, a page
+	 * turn or recitation within the last few minutes). Saved per day.
+	 */
+	const lastAct = useRef(Date.now());
+	const playingRef = useRef(false);
+	const flushRef = useRef(null);
+	useEffect(() => {
+		if (!active) return undefined;
+		let from = Date.now();
+		lastAct.current = from;
+		const flush = () => {
+			const now = Date.now();
+			if (document.hidden) {
+				from = now;
+				return;
+			}
+			const until = playingRef.current ? now : Math.min(now, lastAct.current + IDLE_MS);
+			if (until > from) logReading(from, until);
+			from = now;
+		};
+		flushRef.current = flush;
+		const onVis = () => {
+			if (document.hidden) {
+				// count up to the moment it was hidden
+				const now = Date.now();
+				const until = playingRef.current ? now : Math.min(now, lastAct.current + IDLE_MS);
+				if (until > from) logReading(from, until);
+				from = now;
+				pushReading();
+			} else {
+				from = Date.now();
+				lastAct.current = from;
+			}
+		};
+		const act = () => {
+			// coming back after a pause: the idle gap is not counted
+			if (Date.now() - lastAct.current > IDLE_MS) flush();
+			lastAct.current = Date.now();
+		};
+		const id = window.setInterval(flush, 15000);
+		document.addEventListener('visibilitychange', onVis);
+		window.addEventListener('pointerdown', act, { passive: true });
+		window.addEventListener('keydown', act);
+		window.addEventListener('pagehide', flush);
+		return () => {
+			flush();
+			pushReading();
+			flushRef.current = null;
+			window.clearInterval(id);
+			document.removeEventListener('visibilitychange', onVis);
+			window.removeEventListener('pointerdown', act);
+			window.removeEventListener('keydown', act);
+			window.removeEventListener('pagehide', flush);
+		};
+	}, [active]);
+	useEffect(() => {
+		lastAct.current = Date.now();
+	}, [page]);
+	const openIndex = () => {
+		flushRef.current?.();
+		setIndexOpen(true);
+	};
+
 	const goTo = useCallback(
 		(p, smooth = false) => {
 			const n = clampPage(p);
@@ -763,6 +939,61 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		const k = pr?.from || { s: surahAtPage(page), a: 1 };
 		return { page: pr, quarter: quarterRange(k.s, k.a, RUB_STARTS, versesOf), surah: surahRange(k.s, versesOf) };
 	}, [data, page, versesOf]);
+	/*
+	 * Where you are: share of the surah read up to the end of this page, the quarters of the
+	 * surah as marks, the quarter you are in, and how many pages are left (quarter / surah).
+	 */
+	// Bumped once the page where the quarter / surah ends is loaded (to tell "starts at the top").
+	const [edgeTick, setEdgeTick] = useState(0);
+	const edgeTried = useRef(new Set());
+	const prog = useMemo(() => {
+		if (!data?.chapters?.length) return null;
+		const sid = data.chapters[data.chapters.length - 1];
+		const total = versesOf(sid);
+		let lastA = 0;
+		data.keys.forEach(k => {
+			const [ks, ka] = k.split(':').map(Number);
+			if (ks === sid) lastA = Math.max(lastA, ka);
+		});
+		if (!lastA) return null;
+		const ticks = (RUBS_BY_SURAH.get(sid) || []).map(q => (q.a - 1) / total).filter(x => x > 0.001);
+		const cur = quarterRange(sid, lastA, RUB_STARTS, versesOf);
+		const segFrom = cur.from.s === sid ? (cur.from.a - 1) / total : 0;
+		const segTo = cur.to.s === sid ? cur.to.a / total : 1;
+		// A part ends on the page where the next one starts, unless the next starts at the very top.
+		const need = [];
+		const endPage = (nextPage, nextKey) => {
+			const d = cachedPage(nextPage);
+			if (!d) need.push(nextPage);
+			return d?.keys[0] === nextKey ? nextPage - 1 : nextPage;
+		};
+		const nextQ = RUB_STARTS[cur.quarter];
+		const qEndPage = data.keys.includes(`${cur.to.s}:${cur.to.a}`) ? page : nextQ ? endPage(nextQ[2], `${nextQ[0]}:${nextQ[1]}`) : PAGE_COUNT;
+		const surahEnd = lastA >= total ? page : sid < 114 ? endPage(SURAH_START_PAGES[sid], `${sid + 1}:1`) : PAGE_COUNT;
+		return {
+			sid,
+			pct: Math.min(1, lastA / total),
+			ticks,
+			segFrom,
+			segTo,
+			quarter: cur.quarter,
+			qEndPage: Math.max(page, qEndPage),
+			surahLeft: Math.max(0, surahEnd - page),
+			need,
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [data, page, versesOf, edgeTick]);
+	useEffect(() => {
+		const todo = (prog?.need || []).filter(p => !edgeTried.current.has(p));
+		if (!todo.length) return undefined;
+		todo.forEach(p => edgeTried.current.add(p));
+		let live = true;
+		Promise.all(todo.map(p => loadPage(p).catch(() => null))).then(() => live && setEdgeTick(x => x + 1));
+		return () => {
+			live = false;
+		};
+	}, [prog]);
+
 	const ayahCounts = useMemo(() => {
 		const m = new Map();
 		Object.values(pages).forEach(d =>
@@ -786,6 +1017,7 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 	/* recitation: the next ayat are downloaded while one plays, so there is no pause between them */
 	const audioRef = useRef(null);
 	const [playing, setPlaying] = useState(null);
+	playingRef.current = Boolean(playing);
 	const [paused, setPaused] = useState(false);
 	const [time, setTime] = useState({ cur: 0, dur: 0 });
 	const [reciterOpen, setReciterOpen] = useState(false);
@@ -998,35 +1230,57 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 
 	/* taps: toggle the controls · long-press (or Mark mode + tap) a word → ayah actions */
 	const press = useRef(null);
+	// The pressed word is highlighted straight in the DOM: opening the popover never re-renders
+	// the page (that re-render was most of the delay on phones).
+	const pickedEl = useRef(null);
+	const clearPicked = () => {
+		pickedEl.current?.classList.remove('is-picked', 'is-pressing');
+		pickedEl.current = null;
+	};
+	useEffect(() => {
+		if (!menu) clearPicked();
+	}, [menu]);
 	const openMenuFor = el => {
 		const r = el.getBoundingClientRect();
 		const s = Number(el.dataset.s);
 		const a = Number(el.dataset.a);
 		const p = el.dataset.end ? null : Number(el.dataset.p);
+		clearPicked();
+		el.classList.remove('is-pressing');
+		el.classList.add('is-picked');
+		pickedEl.current = el;
 		setMenu({ s, a, p, rect: { top: r.top, bottom: r.bottom, left: r.left, width: r.width } });
-		navigator.vibrate?.(12);
+		navigator.vibrate?.(10);
 	};
+	const HOLD_MS = 320;
 	const onPointerDown = e => {
 		const word = e.target.closest?.('.mr-w, .mr-end');
-		press.current = { x: e.clientX, y: e.clientY, long: false, timer: 0 };
-		if (word && !markMode && !range?.picking) {
+		press.current = { x: e.clientX, y: e.clientY, long: false, timer: 0, el: null };
+		if (word && !markMode && !range?.picking && !word.classList.contains('is-veiled')) {
+			// Instant feedback: a soft gold fill grows on the word while you hold.
+			word.classList.add('is-pressing');
+			press.current.el = word;
 			press.current.timer = window.setTimeout(() => {
 				if (!press.current || press.current.moved) return;
 				press.current.long = true;
 				openMenuFor(word);
-			}, 420);
+			}, HOLD_MS);
 		}
+	};
+	const endPress = () => {
+		const p = press.current;
+		if (!p) return;
+		window.clearTimeout(p.timer);
+		if (!p.long) p.el?.classList.remove('is-pressing');
 	};
 	const onPointerMove = e => {
 		const p = press.current;
 		if (p && !p.moved && (Math.abs(e.clientX - p.x) > 10 || Math.abs(e.clientY - p.y) > 10)) {
-			window.clearTimeout(p.timer);
 			p.moved = true;
+			endPress();
 		}
 	};
-	const onPointerUp = () => {
-		if (press.current) window.clearTimeout(press.current.timer);
-	};
+	const onPointerUp = () => endPress();
 	const onClick = e => {
 		const p = press.current;
 		press.current = null;
@@ -1144,7 +1398,7 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 	const chapters = data?.chapters?.length ? data.chapters : [surahAtPage(page)];
 	const title = chapters.map(id => surahName(id, ar)).join(ar ? '، ' : ', ');
 	const shownPage = scrub ?? page;
-	const selectedKey = menu && menu.p ? `${menu.s}:${menu.a}:${menu.p}` : null;
+	const selectedKey = null;
 
 	return (
 		<div
@@ -1183,6 +1437,30 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 				/>
 			</div>
 
+			{/* Ribbons for the bookmarks on this page (tap: index). */}
+			{bookmarksOnPage(bookmarks, page).length ? (
+				<button type="button" className="mr-ribbons" onClick={openIndex} aria-label={t.bookmarks}>
+					{bookmarksOnPage(bookmarks, page).map(b => (
+						<i key={b.id} className={`mr-ribbon c-${b.color}`} title={bmName(b, t)} />
+					))}
+				</button>
+			) : null}
+
+			{/* Hairline progress: always there, takes no room from the page. */}
+			{prog ? (
+				<div
+					className="mr-prog"
+					aria-hidden="true"
+					style={{ '--pct': `${prog.pct * 100}%`, '--q-from': `${prog.segFrom * 100}%`, '--q-w': `${(prog.segTo - prog.segFrom) * 100}%` }}
+				>
+					<i className="mr-prog-q" />
+					<i className="mr-prog-fill" />
+					{prog.ticks.map(x => (
+						<i key={x} className="mr-prog-tick" style={{ '--x': `${x * 100}%` }} />
+					))}
+				</div>
+			) : null}
+
 			{/* top controls */}
 			<header className="mr-top" aria-hidden={!chrome}>
 				<div className="mr-top-row">
@@ -1191,11 +1469,11 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 							<ArrowRight size={24} strokeWidth={2} className="mr-flip" />
 						</button>
 					) : null}
-					<button type="button" className="mr-ic" onClick={() => setIndexOpen(true)} aria-label={t.index} tabIndex={chrome ? 0 : -1}>
+					<button type="button" className="mr-ic" onClick={openIndex} aria-label={t.index} tabIndex={chrome ? 0 : -1}>
 						<List size={24} strokeWidth={2} />
 					</button>
 					<span className="mr-div" aria-hidden="true" />
-					<button type="button" className="mr-title" onClick={() => setIndexOpen(true)} tabIndex={chrome ? 0 : -1}>
+					<button type="button" className="mr-title" onClick={openIndex} tabIndex={chrome ? 0 : -1}>
 						<b>{title}</b>
 						{revising && cfg.from ? (
 							<span>
@@ -1217,6 +1495,16 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 						{due ? <span className="mr-badge">{fmt(due)}</span> : null}
 					</button>
 				</div>
+				{prog ? (
+					<div className="mr-prog-info">
+						<span className="mr-prog-q-name">{quarterLabel(prog.quarter, t, fmt).split(" · ")[0]}</span>
+						<i aria-hidden="true" />
+						<span>{prog.qEndPage > page ? t.quarterEnds(fmt(prog.qEndPage)) : t.quarterEndsHere}</span>
+						<i aria-hidden="true" />
+						<span>{prog.surahLeft ? t.surahLeft(prog.surahLeft, fmt) : t.surahLastPage}</span>
+						<b>{fmt(Math.round(prog.pct * 100))}٪</b>
+					</div>
+				) : null}
 			</header>
 
 			{markMode && !range ? <p className="mr-mark-hint">{t.markOn}</p> : null}
@@ -1486,6 +1774,8 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 			{indexOpen ? (
 				<IndexSheet
 					onToggleLang={onToggleLang}
+					bookmarks={bookmarks}
+					onBookmarks={changeBookmarks}
 					t={t}
 					ar={ar}
 					fmt={fmt}
@@ -1506,35 +1796,26 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 /* ───────── popover (anchored to the pressed word) ───────── */
 
 function Popover({ rect, ar, label, onClose, children }) {
-	const ref = useRef(null);
-	const [pos, setPos] = useState(null);
-	useIsoLayoutEffect(() => {
-		const el = ref.current;
-		if (!el || !rect) return;
-		const vw = window.innerWidth;
-		const vh = window.innerHeight;
-		const w = Math.min(330, vw - 20);
-		const h = el.offsetHeight;
-		const cx0 = rect.left + rect.width / 2;
-		const left = Math.max(10, Math.min(cx0 - w / 2, vw - w - 10));
-		const below = vh - rect.bottom - 14 >= h || rect.top < h + 14;
-		let top = below ? rect.bottom + 12 : rect.top - h - 12;
-		top = Math.max(10, Math.min(top, vh - h - 10));
-		setPos({ left, top, width: w, arrow: Math.max(18, Math.min(w - 18, cx0 - left)), below });
-	}, [rect]);
+	// Placed from the word's position alone, so it is in place on the first frame:
+	// below the word when there is room, otherwise above (anchored by its bottom edge).
+	const vw = typeof window !== 'undefined' ? window.innerWidth : 390;
+	const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+	const w = Math.min(330, vw - 20);
+	const cx0 = rect.left + rect.width / 2;
+	const left = Math.max(10, Math.min(cx0 - w / 2, vw - w - 10));
+	const roomBelow = vh - rect.bottom - 22;
+	const roomAbove = rect.top - 22;
+	const below = roomBelow >= 330 || roomBelow >= roomAbove;
+	const arrow = Math.max(20, Math.min(w - 20, cx0 - left));
+	const style = below
+		? { left, width: w, top: rect.bottom + 12, maxHeight: Math.max(220, roomBelow), '--arrow': `${arrow}px`, transformOrigin: `${arrow}px 0` }
+		: { left, width: w, bottom: vh - rect.top + 12, maxHeight: Math.max(220, roomAbove), '--arrow': `${arrow}px`, transformOrigin: `${arrow}px 100%` };
 	return (
 		<>
 			<button type="button" className="mr-pop-scrim" aria-label="close" onClick={onClose} />
-			<div
-				ref={ref}
-				className={cx('mr-pop', pos && (pos.below ? 'is-below' : 'is-above'))}
-				role="dialog"
-				aria-label={label}
-				dir={ar ? 'rtl' : 'ltr'}
-				style={pos ? { left: pos.left, top: pos.top, width: pos.width, '--arrow': `${pos.arrow}px` } : { visibility: 'hidden', width: Math.min(330, typeof window !== 'undefined' ? window.innerWidth - 20 : 330) }}
-			>
+			<div className={cx('mr-pop', below ? 'is-below' : 'is-above')} role="dialog" aria-label={label} dir={ar ? 'rtl' : 'ltr'} style={style}>
 				<i className="mr-pop-arrow" aria-hidden="true" />
-				{children}
+				<div className="mr-pop-body">{children}</div>
 			</div>
 		</>
 	);
@@ -1628,10 +1909,147 @@ function RangeSheet({ range, words, t, ar, fmt, onPick, onPlay, onRepick, onRevi
 	);
 }
 
+/* ───────── bookmarks + reading time ───────── */
+
+const bmName = (b, t) => b.name || t.bmNames[b.id] || '';
+
+function useReadingLog() {
+	const [log, setLog] = useState(() => (typeof window === 'undefined' ? {} : readAllReading()));
+	useEffect(() => {
+		const sync = () => setLog(readAllReading());
+		window.addEventListener(READING_EVENT, sync);
+		return () => window.removeEventListener(READING_EVENT, sync);
+	}, []);
+	return log;
+}
+
+function durText(sec, t, fmt) {
+	if (sec > 0 && sec < 60) return t.lessMin;
+	const { h, m } = splitDuration(sec);
+	if (!h) return `${fmt(m)} ${t.minShort}`;
+	return m ? `${fmt(h)} ${t.hourShort} ${fmt(m)} ${t.minShort}` : `${fmt(h)} ${t.hourShort}`;
+}
+
+function ReadingPanel({ t, ar, fmt, log }) {
+	const days = lastDays(log, 7);
+	const week = days.reduce((n, d) => n + d.sec, 0);
+	const active = days.filter(d => d.sec >= 60).length;
+	const max = Math.max(600, ...days.map(d => d.sec));
+	const run = streak(log);
+	return (
+		<section className="mr-time" aria-label={t.readingTime}>
+			<div className="mr-time-stats">
+				<span>
+					<small>{t.today}</small>
+					<b>{durText(days[6].sec, t, fmt)}</b>
+				</span>
+				<span>
+					<small>{t.thisWeek}</small>
+					<b>{durText(week, t, fmt)}</b>
+				</span>
+				<span>
+					<small>{t.dailyAvg}</small>
+					<b>{durText(active ? week / active : 0, t, fmt)}</b>
+				</span>
+				{run > 1 ? (
+					<span className="is-streak">
+						<Flame size={15} />
+						<b>{t.streakDays(run, fmt)}</b>
+					</span>
+				) : null}
+			</div>
+			<ol className="mr-time-bars" dir={ar ? 'rtl' : 'ltr'}>
+				{days.map((d, i) => (
+					<li key={d.key} className={cx(i === 6 && 'is-today')}>
+						<span className="mr-time-val">{d.sec >= 60 ? fmt(Math.round(d.sec / 60)) : ''}</span>
+						<span className="mr-time-bar">
+							<i style={{ blockSize: `${Math.max(d.sec ? 6 : 0, (d.sec / max) * 100)}%` }} />
+						</span>
+						<small>{i === 6 ? t.today : t.weekdays[d.date.getDay()]}</small>
+					</li>
+				))}
+			</ol>
+			<p className="mr-time-note">{t.timeNote}</p>
+		</section>
+	);
+}
+
+function BookmarkRow({ t, fmt, ar, page, bookmarks, onChange, onGo }) {
+	const [adding, setAdding] = useState(false);
+	const [name, setName] = useState('');
+	const [flash, setFlash] = useState(null);
+	const set = id => {
+		onChange(list => setBookmarkPage(list, id, page));
+		setFlash(id);
+		window.setTimeout(() => setFlash(f => (f === id ? null : f)), 1200);
+		navigator.vibrate?.(8);
+	};
+	const add = () => {
+		if (name.trim()) onChange(list => addBookmark(list, name, page));
+		setName('');
+		setAdding(false);
+	};
+	return (
+		<div className="mr-bms" role="list" aria-label={t.bookmarks}>
+			{visibleBookmarks(bookmarks).map(b => {
+				const here = b.page === page;
+				return (
+					<div key={b.id} role="listitem" className={cx('mr-bm', `c-${b.color}`, !b.page && 'is-empty', here && 'is-here', flash === b.id && 'is-flash')}>
+						<button type="button" className="mr-bm-go" disabled={!b.page} onClick={() => b.page && onGo(b.page)}>
+							<Bookmark size={18} strokeWidth={2.2} className="mr-bm-ic" />
+							<span className="mr-bm-txt">
+								<b>{bmName(b, t)}</b>
+								<small>{b.page ? `${surahName(surahAtPage(b.page), ar)} · ${t.pageShort} ${fmt(b.page)}` : t.bmUnset}</small>
+							</span>
+						</button>
+						{here ? (
+							<span className="mr-bm-here">
+								<MapPin size={13} /> {t.bmHere}
+							</span>
+						) : (
+							<button type="button" className="mr-bm-set" onClick={() => set(b.id)} aria-label={t.bmSetHere} title={t.bmSetHere}>
+								<BookmarkPlus size={16} />
+							</button>
+						)}
+						{!isFixedBookmark(b.id) || b.page ? (
+							<button
+								type="button"
+								className="mr-bm-x"
+								onClick={() => onChange(list => removeBookmark(list, b.id))}
+								aria-label={isFixedBookmark(b.id) ? t.bmClear : t.bmDelete}
+								title={isFixedBookmark(b.id) ? t.bmClear : t.bmDelete}
+							>
+								<X size={11} strokeWidth={2.6} />
+							</button>
+						) : null}
+					</div>
+				);
+			})}
+			{adding ? (
+				<form
+					className="mr-bm mr-bm-new"
+					onSubmit={e => {
+						e.preventDefault();
+						add();
+					}}
+				>
+					<input autoFocus value={name} maxLength={40} onChange={e => setName(e.target.value)} onBlur={add} placeholder={t.bmNamePh} aria-label={t.bmNamePh} />
+				</form>
+			) : (
+				<button type="button" className="mr-bm mr-bm-add" onClick={() => setAdding(true)}>
+					<Plus size={16} /> {t.bmAdd}
+				</button>
+			)}
+		</div>
+	);
+}
+
 /* ───────── index ───────── */
 
-function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang }) {
-	const [tab, setTab] = useState('surahs');
+function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang, bookmarks = [], onBookmarks }) {
+	const [timeOpen, setTimeOpen] = useState(false);
+	const reading = useReadingLog();
+	const today = lastDays(reading, 1)[0].sec;
 	const [q, setQ] = useState('');
 	const [goVal, setGoVal] = useState('');
 	// The surah you are reading opens with its quarters listed.
@@ -1648,7 +2066,7 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang }) {
 	useEffect(() => {
 		const el = listRef.current?.querySelector('.mr-quarter.is-here') || listRef.current?.querySelector('.is-current');
 		el?.scrollIntoView({ block: 'center' });
-	}, [tab]);
+	}, []);
 	const go = () => {
 		const n = Number(String(goVal).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
 		if (n >= 1 && n <= PAGE_COUNT) onGo(n);
@@ -1657,18 +2075,18 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang }) {
 		<div className="mr-sheet-wrap" dir={ar ? 'rtl' : 'ltr'}>
 			<button type="button" className="mr-sheet-scrim" aria-label="close" onClick={onClose} />
 			<section className="mr-sheet" role="dialog" aria-modal="true" aria-label={t.index}>
-				<header className="mr-sheet-head">
+				<header className="mr-sheet-head mr-idx-head">
 					<span className="mr-grabber" aria-hidden="true" />
-					<div className="mr-seg" role="tablist">
-						{[
-							['surahs', t.surahs],
-							['juzs', t.juzs],
-						].map(([id, label]) => (
-							<button key={id} type="button" role="tab" aria-selected={tab === id} className={cx('mr-seg-btn', tab === id && 'is-on')} onClick={() => setTab(id)}>
-								{label}
-							</button>
-						))}
+					<div className="mr-idx-title">
+						<b>{t.index}</b>
+						<small>
+							{surahName(current, ar)} · {t.juz} {fmt(currentJuz)} · {t.pageShort} {fmt(page)}
+						</small>
 					</div>
+					<button type="button" className={cx('mr-time-pill', timeOpen && 'is-on')} onClick={() => setTimeOpen(v => !v)} aria-expanded={timeOpen} aria-label={t.readingTime}>
+						<Clock3 size={15} strokeWidth={2.3} />
+						<span>{durText(today, t, fmt)}</span>
+					</button>
 					{onToggleLang ? (
 						<button type="button" className="mr-lang" onClick={onToggleLang} aria-label={ar ? 'English' : 'العربية'}>
 							{ar ? 'EN' : 'ع'}
@@ -1678,13 +2096,13 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang }) {
 						<X size={20} />
 					</button>
 				</header>
+				{timeOpen ? <ReadingPanel t={t} ar={ar} fmt={fmt} log={reading} /> : null}
+				<BookmarkRow t={t} fmt={fmt} ar={ar} page={page} bookmarks={bookmarks} onChange={onBookmarks} onGo={onGo} />
 				<div className="mr-sheet-tools">
-					{tab === 'surahs' ? (
-						<label className="mr-search">
-							<Search size={17} />
-							<input value={q} onChange={e => setQ(e.target.value)} placeholder={t.search} />
-						</label>
-					) : null}
+					<label className="mr-search">
+						<Search size={17} />
+						<input value={q} onChange={e => setQ(e.target.value)} placeholder={t.search} />
+					</label>
 					<form
 						className="mr-go"
 						onSubmit={e => {
@@ -1693,12 +2111,13 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang }) {
 						}}
 					>
 						<input inputMode="numeric" value={goVal} onChange={e => setGoVal(e.target.value)} placeholder={t.goPage} aria-label={t.goPage} />
-						<button type="submit">{t.go}</button>
+						<button type="submit" aria-label={t.go} title={t.go}>
+							<ArrowRight size={18} strokeWidth={2.4} className={ar ? 'mr-flip' : undefined} />
+						</button>
 					</form>
 				</div>
 				<div className="mr-sheet-list" ref={listRef}>
-					{tab === 'surahs' ? (
-						shown.map(s => {
+					{shown.map(s => {
 							const quarters = RUBS_BY_SURAH.get(s.id) || [];
 							const open = openSurah === s.id;
 							return (
@@ -1754,22 +2173,7 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang }) {
 									) : null}
 								</div>
 							);
-						})
-					) : (
-						<div className="mr-juz-grid">
-							{JUZ_START_PAGES.map((p, i) => (
-								<button key={p} type="button" className={cx('mr-juz', i + 1 === currentJuz && 'is-current')} onClick={() => onGo(p)}>
-									<b>
-										{t.juz} {fmt(i + 1)}
-									</b>
-									<small>{surahName(surahAtPage(p), ar)}</small>
-									<span>
-										{t.page} {fmt(p)}
-									</span>
-								</button>
-							))}
-						</div>
-					)}
+					})}
 				</div>
 			</section>
 		</div>

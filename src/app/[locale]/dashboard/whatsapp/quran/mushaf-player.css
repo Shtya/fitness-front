@@ -440,3 +440,49 @@ html.dark .mr-pl-avatar {
 	font-weight: 700;
 	cursor: pointer;
 }
+
+/* ───── long-press: instant feedback, quick spring-in ───── */
+.mr-w.is-pressing,
+.mr-end.is-pressing {
+	background-color: color-mix(in srgb, var(--mr-gold) 30%, transparent);
+	transition: background-color 0.32s ease-out;
+}
+.mr-w.is-picked {
+	background-color: color-mix(in srgb, var(--mr-gold) 32%, transparent);
+	box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--mr-gold) 75%, transparent);
+}
+.mr-end.is-picked {
+	filter: drop-shadow(0 0 3px color-mix(in srgb, var(--mr-gold) 80%, transparent));
+}
+.mr-pop {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	will-change: transform, opacity;
+	animation: mr-pop-zoom 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+@keyframes mr-pop-zoom {
+	from {
+		opacity: 0;
+		transform: scale(0.9);
+	}
+}
+.mr-pop-body {
+	display: grid;
+	gap: 10px;
+	min-block-size: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: none;
+}
+.mr-pop-body::-webkit-scrollbar {
+	display: none;
+}
+.mr-pop-scrim {
+	animation: mr-fade 0.15s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+	.mr-pop {
+		animation: none;
+	}
+}
