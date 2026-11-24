@@ -720,7 +720,16 @@
 			"feedback": "Feedback & Reviews",
 			"siteInspector": "Website Inspector",
 			"pageAccess": "Page Access",
-			"documentEditor": "Document Editor"
+			"documentEditor": "Document Editor",
+			"projectMind": "ProjectMind",
+			"pmProjects": "Projects",
+			"pmExplorer": "Code Explorer",
+			"pmDocs": "Documentation",
+			"pmChat": "AI Chat",
+			"pmMeetings": "Meeting Copilot",
+			"pmSimulator": "Simulator",
+			"pmGaps": "Knowledge Gaps",
+			"pmSettings": "Settings"
 		},
 		"descriptions": {
 			"aiStudio": "AI-powered tools and smart automation to accelerate your workflow",
@@ -774,7 +783,16 @@
 			"profile_client": "Your profile and account settings",
 			"branding": "Customize app name, logos and brand colors",
 			"siteInspector": "Reverse-engineer any public website: stack, design system, components and extractable code",
-			"documentEditor_super": "Smart full-screen workspace for reading and editing structured documents"
+			"documentEditor_super": "Smart full-screen workspace for reading and editing structured documents",
+			"projectMind": "Ask questions about any codebase and get answers with real file and line references",
+			"pmProjects": "Import and manage codebases",
+			"pmExplorer": "Browse indexed files with highlighted references",
+			"pmDocs": "Documentation generated from the code",
+			"pmChat": "Grounded answers with verified and inferred statements",
+			"pmMeetings": "Prepare for meetings and get fast answers",
+			"pmSimulator": "Rehearse hard questions with scored feedback",
+			"pmGaps": "Track what is not yet understood or documented",
+			"pmSettings": "Integrations and privacy"
 		},
 		"groups": {
 			"ai": "AI Tools",
@@ -10732,6 +10750,472 @@
 			},
 			"shareFailed": "Couldn't share. The image was downloaded instead.",
 			"storageFull": "Storage is full. Delete some photos or pieces."
+		}
+	},
+	"projectmind": {
+		"nav": {
+			"project": "Project",
+			"dashboard": "Dashboard",
+			"projects": "Projects",
+			"explorer": "Code Explorer",
+			"docs": "Documentation",
+			"chat": "AI Chat",
+			"meetings": "Meeting Copilot",
+			"simulator": "Simulator",
+			"gaps": "Knowledge Gaps",
+			"settings": "Settings"
+		},
+		"common": {
+			"errorTitle": "Something went wrong",
+			"retry": "Try again",
+			"noProjectTitle": "No project yet",
+			"noProjectBody": "Import a codebase from a ZIP file or a GitHub repository to start asking questions about it.",
+			"createProject": "Create a project",
+			"openProjects": "Open projects",
+			"notReady": {
+				"draft": "Waiting for a ZIP upload",
+				"importing": "Importing your project…",
+				"analyzing": "Analyzing your code…",
+				"ready": "Ready",
+				"failed": "The import failed"
+			},
+			"notReadyBody": "This page unlocks when the project has been imported and analyzed.",
+			"copy": "Copy",
+			"copied": "Copied",
+			"copyFailed": "Could not copy to the clipboard",
+			"cancel": "Cancel",
+			"confirm": "Confirm",
+			"delete": "Delete",
+			"save": "Save",
+			"noKeyTitle": "No AI provider key is configured",
+			"noKeyBody": "Code search, documentation, the explorer and knowledge gaps work without it. Answers, meeting prep and the simulator need an AI provider key in your workspace AI settings. Nothing is simulated."
+		},
+		"status": {
+			"draft": "Draft",
+			"importing": "Importing",
+			"analyzing": "Analyzing",
+			"ready": "Ready",
+			"failed": "Failed"
+		},
+		"labels": {
+			"verified": "Verified",
+			"inferred": "Inferred",
+			"missing": "Missing",
+			"recommended": "Recommended",
+			"unverified": "Unverified"
+		},
+		"projects": {
+			"title": "Projects",
+			"subtitle": "Import a codebase once; ProjectMind indexes it and answers questions with references to real files and lines.",
+			"created": "Project created. Import started.",
+			"resyncStarted": "Import started",
+			"deleted": "Project deleted",
+			"newProject": "New project",
+			"name": "Project name",
+			"description": "Description (optional)",
+			"source": "Source",
+			"source_zip": "ZIP upload",
+			"source_github": "GitHub",
+			"zipFile": "ZIP file",
+			"zipHint": "Secret files (.env, keys, credentials) are never indexed. node_modules, build output and binaries are skipped.",
+			"repoUrl": "Repository URL",
+			"branch": "Branch (optional)",
+			"token": "Access token for private repositories (optional)",
+			"tokenHint": "Used once for this download and never stored.",
+			"createAndImport": "Create and import",
+			"yourProjects": "Your projects",
+			"count": "{n, plural, one {# project} other {# projects}}",
+			"emptyTitle": "No projects yet",
+			"emptyBody": "Create your first project above.",
+			"active": "Active",
+			"files": "{n, plural, one {# file} other {# files}}",
+			"open": "Open",
+			"resync": "Re-sync",
+			"uploadNewZip": "Upload new ZIP",
+			"deleteTitle": "Delete \"{name}\"?",
+			"deleteBody": "The project and its index, conversations, notes and gaps will be removed from your workspace."
+		},
+		"dashboard": {
+			"notAvailable": "n/a",
+			"howComputed": "How is this computed?",
+			"onboardingTitle": "Getting started",
+			"step": {
+				"create": {
+					"title": "Create a project",
+					"body": "Name it and choose a source."
+				},
+				"import": {
+					"title": "Import the repo",
+					"body": "ZIP or GitHub URL."
+				},
+				"analysis": {
+					"title": "Wait for analysis",
+					"body": "Files are indexed and documented."
+				},
+				"ask": {
+					"title": "Ask a question",
+					"body": "Get answers with code references."
+				}
+			},
+			"whatNext": "What to do next",
+			"next": {
+				"upload_zip": "Upload a ZIP",
+				"fix_import": "Fix the import",
+				"wait_analysis": "View progress",
+				"ask_first_question": "Ask your first question",
+				"review_gaps": "Review knowledge gaps"
+			},
+			"nextBody": {
+				"upload_zip": "This project has no code yet. Upload a ZIP to start the analysis.",
+				"fix_import": "The last import failed. Check the message and try again.",
+				"wait_analysis": "Your project is being analyzed. This page updates automatically.",
+				"ask_first_question": "The project is ready. Ask a question to see answers grounded in your code.",
+				"review_gaps": "Review open knowledge gaps and prepare for your next meeting."
+			},
+			"analyzedAt": "Analyzed {date}",
+			"docsStale": "The documentation was generated from an older commit than the current index. Regenerate the sections you care about.",
+			"stats": {
+				"files": "Indexed files",
+				"routes": "API routes",
+				"entities": "Entities and tables",
+				"questions": "Questions asked",
+				"openGaps": "Open gaps",
+				"chunks": "Code chunks"
+			},
+			"coverage": "Coverage",
+			"docCoverage": "Documentation coverage",
+			"knowledgeCoverage": "Knowledge coverage",
+			"heuristicNote": "Coverage numbers are heuristics from static analysis, not measurements of quality.",
+			"topGaps": "Top knowledge gaps",
+			"viewAll": "View all",
+			"noGaps": "No open gaps",
+			"recentQuestions": "Recent questions",
+			"askNow": "Ask now",
+			"noQuestions": "No questions yet",
+			"upcomingMeetings": "Upcoming meetings",
+			"noMeetings": "No meetings planned",
+			"sync": "Sync status",
+			"syncSource": "Source",
+			"syncLast": "Last analyzed",
+			"languages": "Languages",
+			"simTrend": "Simulator scores",
+			"practice": "Practice",
+			"noSims": "No completed simulations yet."
+		},
+		"explorer": {
+			"title": "Code Explorer",
+			"subtitle": "Browse the indexed files. Links from answers open here at the exact lines.",
+			"tab_tree": "Files",
+			"tab_file": "Viewer",
+			"filterFiles": "Filter files…",
+			"language": "Language",
+			"allLanguages": "All languages",
+			"showExcluded": "Show excluded",
+			"noMatches": "No files match.",
+			"resize": "Resize panels",
+			"searchCode": "Search the code (full text)…",
+			"clearSearch": "Clear search",
+			"noCodeHits": "No code matched that search.",
+			"pickFile": "Pick a file",
+			"pickFileBody": "Choose a file from the tree, or search the code above.",
+			"fileNotFound": "This file is not part of the current index. The project may have been re-imported.",
+			"plain": "text",
+			"lines": "{n} lines",
+			"copyPath": "Copy path",
+			"outline": "Outline",
+			"imports": "Imports",
+			"importedBy": "Imported by",
+			"none": "None",
+			"excluded": {
+				"secret": {
+					"title": "Secret file — not indexed",
+					"body": "Files that commonly hold credentials are listed but their content is never stored or sent to an AI provider."
+				},
+				"binary": {
+					"title": "Binary file",
+					"body": "Binary files are listed but cannot be shown as text."
+				},
+				"too_large": {
+					"title": "File too large",
+					"body": "Files over 512 KB are listed but not indexed."
+				},
+				"ignored_dir": {
+					"title": "Ignored folder",
+					"body": "Dependencies and build output are not indexed."
+				},
+				"lockfile": {
+					"title": "Lockfile",
+					"body": "Lockfiles are excluded because they are large and generated."
+				},
+				"generated": {
+					"title": "Generated file",
+					"body": "Minified and source-map files are excluded."
+				},
+				"empty": {
+					"title": "Empty file",
+					"body": "This file has no content."
+				}
+			}
+		},
+		"docs": {
+			"title": "Documentation",
+			"subtitle": "Sections generated from your code. Each shows how it was produced and which commit it was analyzed from.",
+			"emptyTitle": "No documentation yet",
+			"emptyBody": "Documentation is generated when a project finishes its analysis.",
+			"sections": "Sections",
+			"aiSections": "AI-written sections",
+			"stale": "Generated from an older commit",
+			"staleWarning": "This section was generated from an older commit than the current index.",
+			"origin": {
+				"generated": "Generated from code analysis",
+				"ai": "Written by AI from retrieved code",
+				"edited": "Edited by a person"
+			},
+			"verifyNote": {
+				"inferred": "Some statements in this section are inferred and should be checked against the cited code.",
+				"unverified": "This content has not been verified against the code."
+			},
+			"noCommit": "no commit",
+			"edit": "Edit",
+			"editor": "Markdown",
+			"preview": "Preview",
+			"save": "Save",
+			"cancel": "Cancel",
+			"saved": "Saved",
+			"regenerate": "Regenerate",
+			"regenerated": "Section regenerated",
+			"noKey": "An AI provider key is required to write this section.",
+			"exportMd": "Download Markdown",
+			"exportPdf": "Print / Save as PDF",
+			"onThisPage": "On this page"
+		},
+		"chat": {
+			"title": "AI Chat",
+			"subtitle": "Ask about the code. Every answer separates what is verified from what is inferred and cites real files and lines.",
+			"history": "Conversation history",
+			"newChat": "New conversation",
+			"noHistory": "No conversations yet.",
+			"emptyTitle": "Ask your first question",
+			"emptyBody": "If the code does not contain the answer, ProjectMind says so instead of guessing.",
+			"suggest": {
+				"q1": "How does authentication work?",
+				"q2": "List the API endpoints",
+				"q3": "Which database tables exist?",
+				"q4": "How are errors handled?"
+			},
+			"thinking": "Searching the code and writing an answer…",
+			"stopped": "Stopped",
+			"answerStyle": "Answer style",
+			"style": {
+				"technical": "Technical",
+				"business": "Business",
+				"client": "Client-facing"
+			},
+			"provider": "Provider",
+			"providerNone": "not configured",
+			"placeholder": "Ask a question about this codebase…",
+			"stop": "Stop",
+			"regenerate": "Ask again",
+			"send": "Send",
+			"shortcutHint": "Enter to send · Shift+Enter for a new line",
+			"deleteTitle": "Delete this conversation?",
+			"insufficientHelp": "Try naming a file, function or feature, or check the Knowledge Gaps page for known blind spots.",
+			"retrievedOnly": "Code retrieved for your question:",
+			"downgraded": "no supporting source, shown as inferred",
+			"sources": "{n, plural, one {# source} other {# sources}}",
+			"copyAnswer": "Copy answer",
+			"followUp1": "Where is that implemented?",
+			"followUp2": "What could go wrong there?",
+			"confidence": "Confidence: {level}",
+			"heuristic": "heuristic estimate, not a probability",
+			"level": {
+				"high": "high",
+				"medium": "medium",
+				"low": "low"
+			}
+		},
+		"meetings": {
+			"title": "Meeting Copilot",
+			"subtitle": "Prepare for a meeting, get fast answers during it, and keep structured notes.",
+			"newMeeting": "New meeting",
+			"titlePlaceholder": "Meeting title",
+			"when": "Date and time",
+			"create": "Create meeting",
+			"none": "No meetings yet.",
+			"pickTitle": "Select or create a meeting",
+			"pickBody": "Meetings keep your prep, quick answers and notes together.",
+			"status": {
+				"planned": "Planned",
+				"live": "In progress",
+				"done": "Done"
+			},
+			"markAs": {
+				"planned": "Mark planned",
+				"live": "Mark in progress",
+				"done": "Mark done"
+			},
+			"deleteTitle": "Delete this meeting?",
+			"deleteBody": "Its notes and preparation will be removed.",
+			"capture": {
+				"off": "Live transcription is OFF",
+				"on": "Live transcription is ON",
+				"notRecording": "Nothing is being recorded or transcribed.",
+				"start": "Start transcription",
+				"disabledReason": "No speech-to-text source is configured, so live transcription is unavailable. Type notes manually.",
+				"consent": "If you ever enable recording or transcription, tell every participant first."
+			},
+			"prep": {
+				"title": "Preparation",
+				"generate": "Generate prep",
+				"empty": "Generate prep to get likely questions, difficult questions, decisions to seek and known limitations.",
+				"likely": "Likely questions",
+				"difficult": "Difficult questions",
+				"decisions": "Decisions to seek",
+				"limitations": "Known limitations (open high-priority gaps)",
+				"openGaps": "{n, plural, one {# open knowledge gap} other {# open knowledge gaps}}"
+			},
+			"quick": {
+				"title": "Quick answer",
+				"placeholder": "Type the question you were just asked…",
+				"ask": "Get answer",
+				"details": "Details and references",
+				"copy": "Copy answer",
+				"saveQ": "Save question",
+				"saveA": "Save answer"
+			},
+			"notes": {
+				"title": "Notes",
+				"kind": "Note type",
+				"placeholder": "Add a note…",
+				"add": "Add",
+				"empty": "No notes yet.",
+				"kinds": {
+					"question": "Questions",
+					"answer": "Answers",
+					"decision": "Decisions",
+					"follow_up": "Follow-ups",
+					"unresolved": "Unresolved"
+				}
+			}
+		},
+		"simulator": {
+			"title": "Meeting Simulator",
+			"subtitle": "Rehearse hard questions about your project and get scored feedback grounded in your code.",
+			"setup": "New session",
+			"scenarioLabel": "Who is asking?",
+			"difficultyLabel": "Difficulty",
+			"scenario": {
+				"client": "Client",
+				"technical_lead": "Technical lead",
+				"manager": "Project manager",
+				"new_developer": "New developer"
+			},
+			"scenarioDesc": {
+				"client": "Progress, risk, cost and what the system does",
+				"technical_lead": "Architecture, data model, security, trade-offs",
+				"manager": "Status, dependencies, testing, delivery risk",
+				"new_developer": "How to run, extend and debug it"
+			},
+			"level": {
+				"easy": "Easy",
+				"medium": "Medium",
+				"hard": "Hard"
+			},
+			"start": "Start session",
+			"startHint": "Questions are generated by your AI provider from facts in the analysis. Answers are graded against retrieved code.",
+			"noKey": "An AI provider key is required for the simulator.",
+			"history": "History",
+			"emptyTitle": "No sessions yet",
+			"emptyBody": "Start a session to practice. Your scores will appear here.",
+			"trend": "Score trend across sessions",
+			"inProgress": "In progress",
+			"back": "Back",
+			"complete": "Session complete",
+			"totalScore": "Total score {n} out of 100",
+			"strengths": "Strengths",
+			"weaknesses": "Weak areas",
+			"studyTopics": "Topics to study",
+			"question": "Question {n} of {total}",
+			"locked": "Question {n} unlocks after you answer the previous one.",
+			"answerPlaceholder": "Type your answer…",
+			"submit": "Submit answer",
+			"voice": "Voice answer",
+			"voiceDisabled": "Voice input needs a speech-to-text provider, which is not configured.",
+			"feedback": "Feedback",
+			"ideal": "Ideal answer",
+			"followUp": "Likely follow-up",
+			"dim": {
+				"accuracy": "Accuracy",
+				"clarity": "Clarity",
+				"completeness": "Completeness",
+				"evidence": "Evidence",
+				"confidence": "Confidence"
+			}
+		},
+		"gaps": {
+			"title": "Knowledge Gaps",
+			"subtitle": "Areas where understanding or documentation is missing. Detected from the code and editable by you.",
+			"add": "Add gap",
+			"rescan": "Re-scan",
+			"checklist": "Pre-meeting checklist",
+			"filters": "Filters",
+			"created": "Gap added",
+			"rescanned": "Gaps re-scanned",
+			"status": {
+				"not_started": "Not started",
+				"investigating": "Investigating",
+				"understood": "Understood",
+				"documented": "Documented",
+				"resolved": "Resolved"
+			},
+			"priority": {
+				"critical": "Critical",
+				"high": "High",
+				"medium": "Medium",
+				"low": "Low"
+			},
+			"priorityFilter": "Priority",
+			"allPriorities": "All priorities",
+			"sortBy": "Sorted by {by}. Click to change.",
+			"sort": {
+				"priority": "Priority",
+				"status": "Status",
+				"title": "Title"
+			},
+			"noMatch": "No gaps match these filters.",
+			"emptyTitle": "No gaps recorded",
+			"emptyBody": "Gaps are detected automatically after analysis. You can also add your own.",
+			"statusLabel": "Status",
+			"auto": "detected",
+			"fieldTitle": "Title",
+			"fieldDescription": "Description",
+			"fieldPriority": "Priority"
+		},
+		"settings": {
+			"title": "Settings and integrations",
+			"subtitle": "What is operational, what needs credentials, and what is not available.",
+			"ai": "AI provider",
+			"aiProvider": "Text generation",
+			"aiOk": "Configured: {names}",
+			"aiMissing": "No key configured. Answers, AI-written docs, meeting prep and the simulator are unavailable.",
+			"aiHow": "Add a provider key in the workspace AI settings.",
+			"openSettings": "Open settings",
+			"integrations": "Integrations",
+			"zip": "ZIP import",
+			"zipDetail": "Operational. Maximum {size}; path traversal and zip-bombs are rejected.",
+			"github": "GitHub import",
+			"githubDetail": "Operational for public repositories; private repositories need a token supplied per import.",
+			"stt": "Speech-to-text and live transcription",
+			"meetingApps": "Zoom, Google Meet and Teams",
+			"meetingAppsDetail": "Not connected. No meeting platform integration exists yet.",
+			"vector": "Semantic (embedding) search",
+			"vectorDetail": "Not enabled. Search uses full-text matching with path and symbol boosts.",
+			"privacy": "Privacy and safety",
+			"p1": "Secret files (.env, keys, credentials) are never indexed.",
+			"p2": "Secret-looking values in source are redacted before storage and before any AI call.",
+			"p3": "Repository content is treated as untrusted data; instructions inside it are not followed.",
+			"p4": "Questions that try to extract secrets are refused without calling the AI.",
+			"retention": "Project data stays in your workspace until you delete the project."
 		}
 	}
 }

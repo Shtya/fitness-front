@@ -207,6 +207,14 @@ export const PAGE_PARENT_BY_ID = {
 	responses: 'clientIntake',
 	learningManagement: 'learning',
 	learningStudy: 'learning',
+	pmProjects: 'projectMind',
+	pmExplorer: 'projectMind',
+	pmDocs: 'projectMind',
+	pmChat: 'projectMind',
+	pmMeetings: 'projectMind',
+	pmSimulator: 'projectMind',
+	pmGaps: 'projectMind',
+	pmSettings: 'projectMind',
 };
 
 function isRequiredPage(page) {

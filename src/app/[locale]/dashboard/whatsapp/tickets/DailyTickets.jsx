@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, CalendarDays, Check, CheckCheck, Eye, EyeOff, List, ListChecks, Moon, Pin, Plus, Repeat, Sun, Ticket, Trash2, Undo2, X } from 'lucide-react';
 import { MAX_TITLE, dayKey } from './use-daily-tickets';
 import { COPY, mergeSubsetOrder, sortTickets } from './tickets-model';
 import { DetailsHint, MiniMenu, RepeatBadge, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, stepInOrder, ticketKeyHandler, useSortable } from './tickets-ui';
 import TicketDialog from './TicketDialog';
 import TicketsWall from './TicketsWall';
+import HabitsTracker from './HabitsTracker';
 import './daily-tickets.css';
 
 const T = {
@@ -27,7 +29,8 @@ const T = {
 		dismiss: 'Dismiss',
 		editHint: 'Enter to save, Esc to cancel',
 		views: 'View',
-		viewList: 'Tickets',
+		viewList: 'Habits',
+		habitsHeading: 'Habits',
 		viewWall: 'Wall',
 		greet: { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening' },
 		count: n => (n === 1 ? '1 task' : `${n} tasks`),
@@ -53,7 +56,8 @@ const T = {
 		dismiss: 'إغلاق',
 		editHint: 'Enter للحفظ، Esc للإلغاء',
 		views: 'طريقة العرض',
-		viewList: 'تذاكر',
+		viewList: 'عاداتي',
+		habitsHeading: 'عاداتي',
 		viewWall: 'الحائط',
 		greet: { morning: 'صباح الخير', afternoon: 'نهارك سعيد', evening: 'مساء الخير' },
 		count: n => (n === 1 ? 'مهمة واحدة' : n === 2 ? 'مهمتين' : n >= 3 && n <= 10 ? `${n} مهام` : `${n} مهمة`),
@@ -67,9 +71,9 @@ const T = {
 const VIEW_KEY = 'wa-daily-tickets:view';
 function readView() {
 	try {
-		return window.localStorage.getItem(VIEW_KEY) === 'wall' ? 'wall' : 'list';
+		return window.localStorage.getItem(VIEW_KEY) === 'wall' ? 'wall' : 'habits';
 	} catch {
-		return 'list';
+		return 'habits';
 	}
 }
 
@@ -380,7 +384,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const c = COPY[ar ? 'ar' : 'en'];
 	const { tickets } = store;
 	const [freshId, setFreshId] = useState(null);
-	const [view, setView] = useState('list');
+	const [view, setView] = useState('habits');
 	const [hideSaveError, setHideSaveError] = useState(false);
 	const [opened, setOpened] = useState(null); // { id, focus }
 	const composerInput = useRef(null);
@@ -490,27 +494,48 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 		return () => document.removeEventListener('keydown', onKey);
 	}, []);
 
+	// Habits / Wall switch: up in the corner next to "Games" when that corner exists (the empty
+	// chat pane); in the header otherwise (the stand-alone tab).
+	const [switchSlot, setSwitchSlot] = useState(null);
+	useEffect(() => {
+		setSwitchSlot(document.getElementById('wa-idle-view-slot'));
+	}, []);
+	const switcher = (
+		<div className="tk-switch" role="group" aria-label={t.views} style={{ '--i': view === 'wall' ? 1 : 0 }}>
+			<span className="tk-switch__thumb" aria-hidden />
+			<button type="button" className={view === 'habits' ? 'is-on' : ''} aria-pressed={view === 'habits'} onClick={() => chooseView('habits')}>
+				<ListChecks size={16} aria-hidden />
+				<span>{t.viewList}</span>
+			</button>
+			<button type="button" className={view === 'wall' ? 'is-on' : ''} aria-pressed={view === 'wall'} onClick={() => chooseView('wall')}>
+				<Pin size={16} aria-hidden />
+				<span>{t.viewWall}</span>
+			</button>
+		</div>
+	);
+
 	const now = new Date();
 	const date = new Intl.DateTimeFormat(locale(ar), { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
 	const total = tickets.length;
 
 	return (
-		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-list'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
+		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-habits'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
 			<header className="tk-board__head">
 				<div className="tk-board__titles">
-					<p className="tk-board__greet">
-						{greetingFor(now, t)}
-						{now.getHours() >= 5 && now.getHours() < 17 ? <Sun size={17} aria-hidden /> : <Moon size={16} aria-hidden />}
-					</p>
+					 
 					<h2 id="tk-heading" className="tk-board__title">
-						{t.heading}
+						{view === 'habits' ? t.habitsHeading : t.heading}
 					</h2>
 					<p className="tk-board__date">
 						<CalendarDays size={15} aria-hidden />
 						<span>{date}</span>
+						{view === 'wall' ? (
+							<>
 						<span className="tk-board__dot" aria-hidden />
 						<span>{t.count(total)}</span>
-						{doneCount ? (
+							</>
+						) : null}
+						{view === 'wall' && doneCount ? (
 							<>
 								<span className="tk-board__dot" aria-hidden />
 								<span className="tk-board__done">
@@ -522,7 +547,8 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 					</p>
 				</div>
 				<div className="tk-board__tools">
-					<button
+					{view === 'wall' ? (
+<button
 						type="button"
 						className={`tk-hide-done${hideDone ? ' is-on' : ''}`}
 						aria-pressed={hideDone}
@@ -533,16 +559,16 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 						<span className="tk-hide-done__label">{t.hideDone}</span>
 						{hideDone && hiddenCount ? <span className="tk-hide-done__n">{hiddenCount}</span> : null}
 					</button>
-					<div className="tk-view" role="group" aria-label={t.views}>
-						<button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} onClick={() => chooseView('list')}>
-							<Ticket size={16} aria-hidden />
-							<span>{t.viewList}</span>
-						</button>
-						<button type="button" className={view === 'wall' ? 'is-on' : ''} aria-pressed={view === 'wall'} onClick={() => chooseView('wall')}>
-							<Pin size={16} aria-hidden />
-							<span>{t.viewWall}</span>
-						</button>
-					</div>
+) : null}
+					{switchSlot ? (
+						createPortal(switcher, switchSlot)
+					) : (
+						<>
+							{/* stand-alone tab: Habits puts its calendar / new-habit buttons here, beside the switch */}
+							{view === 'habits' ? <div id="wa-idle-tools-slot" className="wa-idle-slot" /> : null}
+							{switcher}
+						</>
+					)}
 				</div>
 				</header>
 
@@ -556,6 +582,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 				</div>
 			) : null}
 
+			{view === 'wall' ? (
 			<Composer
 				ar={ar}
 				inputRef={composerInput}
@@ -566,8 +593,9 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 					setFreshId(created.id);
 				}}
 			/>
+			) : null}
 
-			{hideDone && hiddenCount && !visible.length ? (
+			{view === 'wall' && hideDone && hiddenCount && !visible.length ? (
 				<div className="tk-hidden-note" role="status">
 					<CheckCheck size={18} aria-hidden />
 					<span>{t.allDoneHidden(hiddenCount)}</span>
@@ -593,23 +621,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 						showAdd
 					/>
 				) : (
-					<ul className="tk-list tk-scroll can-drag" ref={listRef}>
-						{listItems.map(ticket => (
-							<TicketCard
-								key={ticket.id}
-								ticket={ticket}
-								ar={ar}
-								c={c}
-								fresh={ticket.id === freshId}
-								fadingOut={hideDone && lingering.has(ticket.id)}
-								baseActions={baseActions}
-								onDelete={onDelete}
-								canMove
-								dragging={list.dragId === ticket.id}
-								onPointerDown={list.onPointerDown}
-							/>
-						))}
-					</ul>
+					<HabitsTracker ar={ar} tickets={tickets} />
 				)}
 			</div>
 

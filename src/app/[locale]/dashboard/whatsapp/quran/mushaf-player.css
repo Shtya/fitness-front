@@ -102,7 +102,8 @@
 	background: var(--mr-green);
 	color: #fff;
 }
-html.dark .mr-pop-actions button:first-child {
+html.dark .mr-pop-actions button:first-child,
+.mr[data-eye-dark] .mr-pop-actions button:first-child {
 	background: #2f6b4a;
 }
 .mr-pop-actions button:active,
@@ -253,7 +254,8 @@ html.dark .mr-pop-actions button:first-child {
 	font-weight: 800;
 	box-shadow: 0 0 0 2px var(--mr-card), 0 0 0 3px var(--mr-gold-2);
 }
-html.dark .mr-pl-avatar {
+html.dark .mr-pl-avatar,
+.mr[data-eye-dark] .mr-pl-avatar {
 	background: linear-gradient(145deg, #3d8560, #245a3d);
 }
 .mr-pl-avatar.is-sm {

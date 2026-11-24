@@ -1,0 +1,479 @@
+/*
+ * Eye comfort (راحة العين): reading themes, warmth and dim layers, clearer strokes,
+ * the 20-minute rest card and the settings panel in the index.
+ * Loaded after the other mushaf styles so the theme tokens win.
+ */
+
+/* ───── themes ───── */
+
+/* Warm paper: deeper cream, softer brown ink (less glare than white + black). */
+.mr[data-eye='warm'] {
+	--mr-paper: #efe1c1;
+	--mr-ink: #3a2c1c;
+	--mr-ink-2: #65523a;
+	--mr-ink-3: #8b7555;
+	--mr-green: #2b5a3e;
+	--mr-gold: #a4803a;
+	--mr-gold-3: #73561d;
+	--mr-gold-soft: rgb(170 128 60 / 0.16);
+	--mr-card: #f4e8cc;
+	--mr-card-line: #cfb27b;
+	background:
+		radial-gradient(120% 70% at 50% 0%, rgb(250 238 205 / 0.6), transparent 60%),
+		radial-gradient(90% 60% at 50% 110%, rgb(205 175 120 / 0.3), transparent 70%),
+		var(--mr-paper);
+}
+
+/* Warm night: brown-black paper and beige ink, never pure white. */
+.mr[data-eye='night'] {
+	--mr-paper: #1b1611;
+	--mr-ink: #d8c7a6;
+	--mr-ink-2: #b4a181;
+	--mr-ink-3: #86775d;
+	--mr-green: #a6c69c;
+	--mr-green-2: #3a654a;
+	--mr-gold: #c39d5c;
+	--mr-gold-2: #866c42;
+	--mr-gold-3: #d6b983;
+	--mr-gold-soft: rgb(195 157 92 / 0.14);
+	--mr-card: #231d16;
+	--mr-card-line: #4a3e2d;
+	--mr-mark: #e38d78;
+	--mr-mark-bg: rgb(227 141 120 / 0.13);
+	background:
+		radial-gradient(120% 70% at 50% 0%, rgb(70 52 30 / 0.28), transparent 60%),
+		var(--mr-paper);
+}
+
+/* Pure black (dark room, OLED): the screen barely lights up; dimmed warm-grey ink. */
+.mr[data-eye='black'] {
+	--mr-paper: #000;
+	--mr-ink: #ad9f86;
+	--mr-ink-2: #8a7f6b;
+	--mr-ink-3: #675e4f;
+	--mr-green: #8eab86;
+	--mr-green-2: #2e4f39;
+	--mr-gold: #a2854f;
+	--mr-gold-2: #5f4f33;
+	--mr-gold-3: #bba06b;
+	--mr-gold-soft: rgb(162 133 79 / 0.13);
+	--mr-card: #0d0c0a;
+	--mr-card-line: #30291f;
+	--mr-mark: #c9806d;
+	--mr-mark-bg: rgb(201 128 109 / 0.12);
+	--mr-shadow: 0 8px 26px -12px rgb(0 0 0 / 0.9);
+	background: #000;
+}
+
+/* Clearer strokes: a hair of outline makes thin letters easier to follow. */
+.mr.is-bold .mr-page .mr-line.is-text {
+	-webkit-text-stroke: 0.018em currentColor;
+}
+
+/* Theme changes fade instead of flashing. */
+.mr,
+.mr-sheet,
+.mr-top-row,
+.mr-bar {
+	transition:
+		background-color 0.35s ease,
+		color 0.35s ease;
+}
+
+/* ───── warmth + dim layers (never catch taps) ───── */
+.mr-eye-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 200;
+	pointer-events: none;
+	transition: opacity 0.25s ease;
+}
+.mr-eye-warm {
+	background: rgb(255 150 40);
+	mix-blend-mode: multiply;
+}
+.mr-eye-dim {
+	background: #000;
+}
+
+/* ───── 20-20-20 rest card ───── */
+.mr-rest {
+	position: absolute;
+	inset-inline: 0;
+	top: calc(18px + env(safe-area-inset-top, 0px));
+	z-index: 70;
+	display: flex;
+	justify-content: center;
+	padding-inline: 14px;
+	pointer-events: none;
+	animation: mr-rest-in 0.45s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+@keyframes mr-rest-in {
+	from {
+		opacity: 0;
+		transform: translateY(-16px);
+	}
+}
+.mr-rest-card {
+	pointer-events: auto;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	inline-size: min(100%, 420px);
+	box-sizing: border-box;
+	padding: 12px 12px 12px 14px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 22px;
+	background: var(--mr-card);
+	box-shadow: 0 14px 40px -14px rgb(40 25 5 / 0.45);
+	color: var(--mr-ink);
+}
+.mr-rest-ring {
+	position: relative;
+	flex: none;
+	display: grid;
+	place-items: center;
+	inline-size: 50px;
+	block-size: 50px;
+}
+.mr-rest-ring svg {
+	position: absolute;
+	inset: 0;
+	transform: rotate(-90deg);
+}
+.mr-rest-ring circle {
+	fill: none;
+	stroke-width: 4;
+}
+.mr-rest-ring .bg {
+	stroke: var(--mr-gold-soft);
+}
+.mr-rest-ring .fg {
+	stroke: var(--mr-green-2, #2c6a4a);
+	stroke-linecap: round;
+	transition: stroke-dashoffset 1s linear;
+}
+.mr-rest-ring b {
+	font-size: 15px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+.mr-rest-txt {
+	flex: 1;
+	display: grid;
+	gap: 2px;
+	min-inline-size: 0;
+}
+.mr-rest-txt b {
+	font-size: 14px;
+	font-weight: 800;
+}
+.mr-rest-txt small {
+	color: var(--mr-ink-2);
+	font-size: 12px;
+	line-height: 1.45;
+}
+.mr-rest-btn {
+	flex: none;
+	min-block-size: 36px;
+	padding: 0 12px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--mr-ink-2);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 800;
+	cursor: pointer;
+}
+.mr-rest-btn.is-primary {
+	border-color: transparent;
+	background: var(--mr-green-2, #2c6a4a);
+	color: #fff;
+}
+
+/* ───── panel in the index ───── */
+.mr-eye-btn {
+	display: grid;
+	place-items: center;
+	flex: none;
+	inline-size: 34px;
+	block-size: 34px;
+	padding: 0;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 50%;
+	background: var(--mr-card);
+	color: var(--mr-gold-3);
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease;
+}
+.mr-eye-btn.is-on {
+	border-color: var(--mr-green-2, #2c6a4a);
+	background: var(--mr-green-2, #2c6a4a);
+	color: #fff;
+}
+.mr-eye-btn.is-active:not(.is-on) {
+	box-shadow: 0 0 0 2px var(--mr-gold-soft);
+	color: var(--mr-green);
+}
+.mr-eye {
+	margin: 0 14px 8px;
+	padding: 12px;
+	max-block-size: 52dvh;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 18px;
+	background: color-mix(in srgb, var(--mr-gold-soft) 55%, var(--mr-card));
+	animation: mr-time-in 0.25s ease;
+}
+.mr-eye-sec + .mr-eye-sec {
+	margin-block-start: 14px;
+}
+.mr-eye-label {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-block-end: 8px;
+	color: var(--mr-ink-2);
+	font-size: 12.5px;
+	font-weight: 800;
+}
+.mr-eye-label small {
+	color: var(--mr-ink-3);
+	font-size: 11px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+/* theme swatches: a tiny page preview each */
+.mr-eye-themes {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 6px;
+}
+.mr-eye-theme {
+	display: grid;
+	justify-items: center;
+	gap: 5px;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--mr-ink-2);
+	font: inherit;
+	font-size: 11px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.mr-eye-swatch {
+	position: relative;
+	display: grid;
+	place-items: center;
+	inline-size: 100%;
+	aspect-ratio: 0.78;
+	border: 1.5px solid var(--mr-card-line);
+	border-radius: 12px;
+	background: var(--sw-bg);
+	color: var(--sw-ink);
+	font-family: 'WaQuranHafs', serif;
+	font-size: 17px;
+	line-height: 1;
+	overflow: hidden;
+	transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.mr-eye-theme.is-on .mr-eye-swatch {
+	border-color: var(--mr-green-2, #2c6a4a);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--mr-green-2, #2c6a4a) 35%, transparent);
+}
+.mr-eye-theme.is-on {
+	color: var(--mr-ink);
+	font-weight: 800;
+}
+.mr-eye-theme:active .mr-eye-swatch {
+	transform: scale(0.95);
+}
+.mr-eye-swatch.is-auto {
+	background: linear-gradient(135deg, #efe1c1 50%, #1b1611 50%);
+}
+.mr-eye-swatch.is-auto span {
+	padding: 1px 5px;
+	border-radius: 6px;
+	background: rgb(0 0 0 / 0.45);
+	color: #f2e6cc;
+	font-family: inherit;
+	font-size: 10px;
+	font-weight: 800;
+}
+.mr-eye-swatch-line {
+	position: absolute;
+	inset-inline: 18%;
+	block-size: 2px;
+	border-radius: 2px;
+	background: currentColor;
+	opacity: 0.35;
+}
+.mr-eye-note {
+	margin: 6px 2px 0;
+	color: var(--mr-ink-3);
+	font-size: 11px;
+	line-height: 1.5;
+}
+
+/* sliders */
+.mr-eye-range {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	color: var(--mr-ink-3);
+}
+.mr-eye-range input {
+	flex: 1;
+	min-inline-size: 0;
+	block-size: 26px;
+	margin: 0;
+	background: transparent;
+	accent-color: var(--mr-gold);
+	-webkit-appearance: none;
+	appearance: none;
+	cursor: pointer;
+}
+.mr-eye-range input::-webkit-slider-runnable-track {
+	block-size: 6px;
+	border-radius: 6px;
+	background: linear-gradient(90deg, var(--track-a), var(--track-b));
+}
+.mr-eye-range input::-moz-range-track {
+	block-size: 6px;
+	border-radius: 6px;
+	background: linear-gradient(90deg, var(--track-a), var(--track-b));
+}
+.mr-eye-range input::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	inline-size: 22px;
+	block-size: 22px;
+	margin-block-start: -8px;
+	border: 2px solid #fff;
+	border-radius: 50%;
+	background: var(--mr-gold);
+	box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+}
+.mr-eye-range input::-moz-range-thumb {
+	inline-size: 18px;
+	block-size: 18px;
+	border: 2px solid #fff;
+	border-radius: 50%;
+	background: var(--mr-gold);
+}
+.mr-eye-range.is-warm {
+	--track-a: color-mix(in srgb, var(--mr-card-line) 60%, transparent);
+	--track-b: #f0a040;
+}
+.mr-eye-range.is-dim {
+	--track-a: color-mix(in srgb, var(--mr-card-line) 60%, transparent);
+	--track-b: #2a241c;
+}
+
+/* size segmented + toggles */
+.mr-eye-sizes {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 4px;
+	padding: 4px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 999px;
+	background: var(--mr-card);
+}
+.mr-eye-sizes button {
+	min-block-size: 34px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--mr-ink-2);
+	font: inherit;
+	font-weight: 800;
+	cursor: pointer;
+}
+.mr-eye-sizes button.is-on {
+	background: var(--mr-green-2, #2c6a4a);
+	color: #fff;
+}
+.mr-eye-toggle {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	inline-size: 100%;
+	padding: 8px 2px;
+	border: 0;
+	background: none;
+	color: var(--mr-ink);
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+.mr-eye-toggle + .mr-eye-toggle {
+	border-block-start: 1px dashed var(--mr-card-line);
+}
+.mr-eye-toggle > span:first-of-type {
+	flex: 1;
+	display: grid;
+	gap: 1px;
+	min-inline-size: 0;
+}
+.mr-eye-toggle b {
+	font-size: 13.5px;
+	font-weight: 800;
+}
+.mr-eye-toggle small {
+	color: var(--mr-ink-3);
+	font-size: 11.5px;
+	line-height: 1.4;
+}
+.mr-switch {
+	position: relative;
+	flex: none;
+	inline-size: 42px;
+	block-size: 24px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--mr-card-line) 70%, transparent);
+	transition: background 0.2s ease;
+}
+.mr-switch::after {
+	content: '';
+	position: absolute;
+	top: 3px;
+	inset-inline-start: 3px;
+	inline-size: 18px;
+	block-size: 18px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+	transition: inset-inline-start 0.2s ease;
+}
+.mr-switch.is-on {
+	background: var(--mr-green-2, #2c6a4a);
+}
+.mr-switch.is-on::after {
+	inset-inline-start: 21px;
+}
+.mr-eye-reset {
+	display: block;
+	margin: 12px auto 0;
+	padding: 4px 10px;
+	border: 0;
+	background: none;
+	color: var(--mr-ink-3);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 800;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+
+/* the language button follows the reading theme */
+.mr[data-eye] .mr-lang {
+	border-color: var(--mr-card-line);
+	background: var(--mr-card);
+	color: var(--mr-green);
+}

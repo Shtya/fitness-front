@@ -350,6 +350,7 @@ const WhatsAppOutfitTab = lazy(() => import('./outfit/WhatsAppOutfitTab'));
 const WhatsAppQuranTab = lazy(() => import('./quran/WhatsAppQuranTab'));
 const WhatsAppAdhkarTab = lazy(() => import('./WhatsAppAdhkarTab'));
 const LearnWorkspace = lazy(() => import('./learn/LearnWorkspace'));
+const TicketsTab = lazy(() => import('./tickets/TicketsTab'));
 const WhatsAppTypingLogTab = lazy(() => import('./WhatsAppTypingLog'));
 const WhatsAppReadingTab = lazy(() => import('./WhatsAppReadingTab'));
 const WhatsAppPromptsTab = lazy(() => import('./WhatsAppPromptsTab'));
@@ -499,6 +500,7 @@ import SearchContactsSection from './SearchContactsSection';
 
 /** Extra words the quick switcher matches on (Franco / English spellings people type). */
 const QUICK_SWITCH_KEYWORDS = {
+	habits: 'habits tickets tasks tracker streak عادات عاداتي تذاكر مهام',
 	wallet: 'money mony فلوس موني مصاريف',
 	typing: 'typing تايبينج بيكتب',
 	hideNames: 'hide names blur هايد نيمز تغبيش',
@@ -611,6 +613,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'adhkar',
 	'documents',
 	'learn',
+	'habits',
 	'agent',
 	'settings',
 	'profile',
@@ -909,6 +912,7 @@ const tabs = [
 	['adhkar', BookOpen],
 	['documents', FileText],
 	['learn', GraduationCap],
+	['habits', ListChecks],
 	['settings', Settings],
 ];
 
@@ -14925,6 +14929,7 @@ function WhatsAppWorkspaceContent() {
 			tab === 'typing' ||
 			tab === 'adhkar' ||
 			tab === 'learn' ||
+			tab === 'habits' ||
 			tab === 'agent'
 		)
 			return;
@@ -22328,6 +22333,14 @@ function WhatsAppWorkspaceContent() {
 								{t.accounts}
 							</p>
 						)}
+					</div>
+				)}
+
+				{activeTab === 'habits' && (
+					<div className="wa-dk wa-secondary-pane wa-habits-pane">
+						<Suspense fallback={<WaPaneLoading label={t.loading} />}>
+							<TicketsTab locale={locale} />
+						</Suspense>
 					</div>
 				)}
 

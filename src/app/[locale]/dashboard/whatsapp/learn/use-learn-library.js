@@ -134,13 +134,17 @@ export function useLearnLibrary() {
 	};
 }
 
-const SUMMARY_KEYS = ['id', 'courseId', 'title', 'description', 'done', 'doneAt', 'needsRevision', 'qaCount', 'hasContent', 'updatedAt'];
+const SUMMARY_KEYS = ['id', 'courseId', 'title', 'description', 'done', 'doneAt', 'needsRevision', 'qaCount', 'hasContent', 'wordCount', 'updatedAt'];
 
 function pickSummary(lecture) {
 	const out = {};
 	for (const key of SUMMARY_KEYS) if (lecture[key] !== undefined) out[key] = lecture[key];
 	if (Array.isArray(lecture.qa)) out.qaCount = lecture.qa.length;
 	if (typeof lecture.content === 'string') out.hasContent = Boolean(lecture.content.trim());
+	if (lecture.english && typeof lecture.english === 'object') {
+		out.wordCount = Array.isArray(lecture.english.words) ? lecture.english.words.length : 0;
+		if (String(lecture.english.transcript || '').trim()) out.hasContent = true;
+	}
 	return out;
 }
 
