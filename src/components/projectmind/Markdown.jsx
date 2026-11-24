@@ -63,7 +63,7 @@ const components = {
 /** Markdown with copyable code blocks and heading anchors. Raw HTML is NOT rendered (react-markdown default), so repo content cannot inject script. */
 export const Markdown = memo(function Markdown({ children, className }) {
 	return (
-		<div className={cn('pm-md', className)}>
+		<div dir="auto" className={cn('pm-md', className)}>
 			<ReactMarkdown remarkPlugins={[remarkGfm]} components={components} skipHtml>
 				{String(children || '')}
 			</ReactMarkdown>

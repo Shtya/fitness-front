@@ -6,7 +6,7 @@ import api from '@/utils/axios';
 import { clearClientSession } from '@/lib/session-cleanup';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, ChevronRight, BrainCircuit, GanttChart, FileText, FilePenLine, Inbox, Layers, Layers3, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Sliders, AudioLines, ShieldAlert, Radar, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, Maximize2, ScanLine, Library, ScanSearch, Moon, Sun, Image as ImageIcon, Database } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, ChevronRight, BrainCircuit, GanttChart, FileText, FilePenLine, Inbox, Layers, Layers3, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Sliders, AudioLines, ShieldAlert, Radar, GraduationCap, Brain, PanelLeftClose, PanelLeftOpen, Maximize2, ScanLine, Library, ScanSearch, Moon, Sun, Image as ImageIcon, Database, GitBranch } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -258,6 +258,15 @@ export const ITEM_META = {
   quranRevision: { id: 'quranRevision', nameKey: 'quranRevision', href: '/dashboard/quran-revision', icon: BookMarked, descKey: 'descriptions.quranRevision', group: 'tools', defaultVisible: true, required: false },
   webTranslator: { id: 'webTranslator', nameKey: 'webTranslator', href: '/dashboard/web-translator', icon: Languages, descKey: 'descriptions.webTranslator', group: 'tools', defaultVisible: true, required: false, defaultLocked: true },
   siteInspector: { id: 'siteInspector', nameKey: 'siteInspector', href: '/dashboard/site-inspector', icon: ScanSearch, descKey: 'descriptions.siteInspector', group: 'tools', defaultVisible: true, required: false, defaultLocked: true },
+  projectMind: { id: 'projectMind', nameKey: 'projectMind', href: '/dashboard/projectmind', icon: GitBranch, descKey: 'descriptions.projectMind', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
+  pmProjects: { id: 'pmProjects', nameKey: 'pmProjects', href: '/dashboard/projectmind/projects', icon: Layers, descKey: 'descriptions.pmProjects', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
+  pmExplorer: { id: 'pmExplorer', nameKey: 'pmExplorer', href: '/dashboard/projectmind/explorer', icon: FileText, descKey: 'descriptions.pmExplorer', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
+  pmDocs: { id: 'pmDocs', nameKey: 'pmDocs', href: '/dashboard/projectmind/docs', icon: BookOpen, descKey: 'descriptions.pmDocs', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
+  pmChat: { id: 'pmChat', nameKey: 'pmChat', href: '/dashboard/projectmind/chat', icon: BrainCircuit, descKey: 'descriptions.pmChat', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
+  pmMeetings: { id: 'pmMeetings', nameKey: 'pmMeetings', href: '/dashboard/projectmind/meetings', icon: CalendarDays, descKey: 'descriptions.pmMeetings', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
+  pmSimulator: { id: 'pmSimulator', nameKey: 'pmSimulator', href: '/dashboard/projectmind/simulator', icon: Target, descKey: 'descriptions.pmSimulator', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
+  pmGaps: { id: 'pmGaps', nameKey: 'pmGaps', href: '/dashboard/projectmind/gaps', icon: ShieldAlert, descKey: 'descriptions.pmGaps', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
+  pmSettings: { id: 'pmSettings', nameKey: 'pmSettings', href: '/dashboard/projectmind/settings', icon: Sliders, descKey: 'descriptions.pmSettings', group: 'tools', defaultVisible: true, required: false, skipDefaultLock: true },
   phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'outreach', defaultVisible: true, required: false, defaultLocked: true },
   fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'outreach', defaultVisible: true, required: false, defaultLocked: true },
   metaWhatsApp: { id: 'metaWhatsApp', nameKey: 'metaWhatsApp', href: '/dashboard/meta-whatsapp', icon: MessageCircle, descKey: 'descriptions.metaWhatsApp', group: 'outreach', defaultVisible: true, required: false, defaultLocked: true },
@@ -313,6 +322,7 @@ export const NAV = [
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
       { ...ITEM_META.siteInspector },
+      { ...ITEM_META.projectMind, expand: false, children: [{ ...ITEM_META.pmProjects }, { ...ITEM_META.pmExplorer }, { ...ITEM_META.pmDocs }, { ...ITEM_META.pmChat }, { ...ITEM_META.pmMeetings }, { ...ITEM_META.pmSimulator }, { ...ITEM_META.pmGaps }, { ...ITEM_META.pmSettings }] },
     ],
   },
   {
@@ -394,6 +404,7 @@ export const NAV = [
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
       { ...ITEM_META.siteInspector },
+      { ...ITEM_META.projectMind, expand: false, children: [{ ...ITEM_META.pmProjects }, { ...ITEM_META.pmExplorer }, { ...ITEM_META.pmDocs }, { ...ITEM_META.pmChat }, { ...ITEM_META.pmMeetings }, { ...ITEM_META.pmSimulator }, { ...ITEM_META.pmGaps }, { ...ITEM_META.pmSettings }] },
     ],
   },
   {
@@ -435,6 +446,7 @@ export const NAV = [
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.webTranslator },
       { ...ITEM_META.siteInspector },
+      { ...ITEM_META.projectMind, expand: false, children: [{ ...ITEM_META.pmProjects }, { ...ITEM_META.pmExplorer }, { ...ITEM_META.pmDocs }, { ...ITEM_META.pmChat }, { ...ITEM_META.pmMeetings }, { ...ITEM_META.pmSimulator }, { ...ITEM_META.pmGaps }, { ...ITEM_META.pmSettings }] },
     ],
   },
   {
