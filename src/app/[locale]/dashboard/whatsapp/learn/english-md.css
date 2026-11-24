@@ -1,0 +1,414 @@
+/* Transcript Markdown: tables, and Arabic blocks reading right-to-left. */
+
+/* each block aligns to its own direction (dir="auto": Arabic → right, English → left) */
+.en-tr__text {
+	text-align: start;
+}
+.en-tr__text [dir='rtl'],
+.en-tr__text :is(p, h1, h2, h3, li, blockquote):dir(rtl) {
+	font-family: 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+}
+.en-tr__text :is(ul, ol):dir(rtl) {
+	padding-inline-start: 1.4em;
+}
+/* the editor: every line takes the direction of its own text */
+.en-tr__edit {
+	unicode-bidi: plaintext;
+	text-align: start;
+}
+
+.en-tr__table {
+	margin: 0.4em 0 1.1em;
+	overflow-x: auto;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+}
+.en-tr__table table {
+	inline-size: 100%;
+	border-collapse: collapse;
+	font-size: 0.9em;
+	line-height: 1.55;
+}
+.en-tr__table th,
+.en-tr__table td {
+	padding: 8px 14px;
+	border-bottom: 1px solid var(--line);
+	text-align: start;
+	vertical-align: top;
+}
+.en-tr__table th {
+	position: sticky;
+	top: 0;
+	background: var(--sheet-2, var(--sheet));
+	color: var(--muted);
+	font-size: 0.85em;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+}
+.en-tr__table tbody tr:last-child td {
+	border-bottom: 0;
+}
+.en-tr__table tbody tr:nth-child(even) td {
+	background: color-mix(in srgb, var(--sheet-2, var(--line)) 55%, transparent);
+}
+.en-tr__table tbody tr:hover td {
+	background: var(--accent-soft);
+}
+/* the English word column stands out */
+.en-tr__table td:first-child {
+	font-weight: 600;
+	white-space: nowrap;
+}
+.en-tr__table td + td {
+	color: var(--ink-2, var(--ink));
+}
+@media (max-width: 560px) {
+	.en-tr__table td:first-child {
+		white-space: normal;
+	}
+	.en-tr__table th,
+	.en-tr__table td {
+		padding: 7px 10px;
+	}
+}
+
+/* "ع": the Arabic of one English sentence, under it */
+.en-add__ex li,
+.en-pop__ex {
+	flex-wrap: wrap;
+}
+.en-ltr-btn,
+.en-add__ex .en-ltr-btn {
+	display: inline-grid;
+	flex: none;
+	place-items: center;
+	align-self: flex-start;
+	justify-self: start;
+	inline-size: 22px;
+	block-size: 20px;
+	margin-inline-start: 4px;
+	padding: 0;
+	border: 1px solid var(--line-2);
+	border-radius: 6px;
+	background: transparent;
+	color: var(--muted);
+	font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+	font-size: 11.5px;
+	font-weight: 700;
+	line-height: 1;
+	vertical-align: 1px;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.en-ltr-btn:hover,
+.en-ltr-btn.is-on {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+}
+.en-ltr {
+	display: block;
+	flex: 1 1 100%;
+	margin-top: 4px;
+	padding: 5px 9px;
+	border-inline-start: 3px solid var(--accent);
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+	color: var(--ink);
+	font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+	font-size: 13px;
+	font-style: normal;
+	line-height: 1.6;
+	text-align: right;
+	animation: en-ltr-in 0.18s ease-out;
+}
+.en-ltr.is-err {
+	border-color: var(--pencil, #c8323b);
+	color: var(--muted);
+}
+@keyframes en-ltr-in {
+	from {
+		opacity: 0;
+		transform: translateY(-3px);
+	}
+}
+
+/* popovers: never let a sentence or its translation widen the box */
+.en-add,
+.en-pop {
+	grid-template-columns: minmax(0, 1fr);
+}
+.en-add > *,
+.en-pop > *,
+.en-add__ex li > *,
+.en-pop__ex > * {
+	min-width: 0;
+}
+.en-add__ex li > .en-ltr,
+.en-pop__ex > .en-ltr {
+	inline-size: 100%;
+	box-sizing: border-box;
+}
+
+/* ─── the day's tabs use the whole width ─── */
+.en-scroll .en-day {
+	max-width: none;
+}
+.en-scroll .en-day .lrn-sec-shell.sd-shell--md,
+.en-scroll .en-day .lrn-qa,
+.en-scroll .en-day .lrn-sec-shell {
+	max-width: none;
+}
+/* the video stays a comfortable height on wide screens */
+.en-scroll .en-video__frame {
+	inline-size: min(100%, calc(72vh * 16 / 9));
+	margin-inline: auto;
+}
+.en-scroll .en-live {
+	inline-size: 100%;
+}
+
+/* table: the English word with a sound button */
+.en-tr__table td .en-cell-say {
+	display: inline-grid;
+	place-items: center;
+	inline-size: 24px;
+	block-size: 24px;
+	margin-inline-end: 6px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+	vertical-align: -6px;
+	cursor: pointer;
+	transition: transform 0.12s ease, background-color 0.15s ease;
+}
+.en-tr__table td .en-cell-say:hover {
+	background: var(--accent);
+	color: var(--on-accent, #fff);
+}
+.en-tr__table td .en-cell-say:active {
+	transform: scale(0.9);
+}
+
+.en-tr__table th.is-en {
+	text-align: left;
+}
+
+/* ─── vocabulary table: learned ticks, delete, counter ─── */
+.en-tbl {
+	margin: 0.5em 0 1.3em;
+}
+.en-tbl .en-tr__table {
+	margin: 0;
+	border-radius: 14px;
+	box-shadow: 0 1px 2px rgba(15, 20, 30, 0.04), 0 8px 24px -18px rgba(15, 20, 30, 0.25);
+}
+.en-tbl__bar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 8px;
+	font-size: 12.5px;
+}
+.en-tbl__count {
+	color: var(--muted);
+	white-space: nowrap;
+}
+.en-tbl__count b {
+	color: var(--accent-ink);
+	font-size: 14px;
+	font-variant-numeric: tabular-nums;
+}
+.en-tbl__meter {
+	flex: 1;
+	max-inline-size: 220px;
+	block-size: 5px;
+	overflow: hidden;
+	border-radius: 99px;
+	background: var(--line);
+}
+.en-tbl__meter > i {
+	display: block;
+	block-size: 100%;
+	border-radius: inherit;
+	background: var(--accent);
+	transition: width 0.3s ease;
+}
+.en-tbl__hide {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	margin-inline-start: auto;
+	padding: 4px 10px;
+	border: 1px solid var(--line-2);
+	border-radius: 99px !important;
+	background: transparent;
+	color: var(--muted) !important;
+	font-size: 12px;
+	white-space: nowrap;
+}
+.en-tbl__hide:hover,
+.en-tbl__hide.is-on {
+	border-color: var(--accent);
+	color: var(--accent-ink) !important;
+}
+
+.en-tbl .en-tr__table th {
+	padding-block: 10px;
+	text-transform: none;
+}
+.en-tbl .en-tr__table td {
+	padding-block: 11px;
+	vertical-align: middle;
+}
+.en-tbl .en-tr__table tbody tr {
+	transition: background-color 0.15s ease;
+}
+.en-tbl .en-tr__table tbody tr:nth-child(even) td {
+	background: transparent;
+}
+.en-tbl .en-tr__table tbody tr:hover td {
+	background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+}
+
+/* the tick column */
+.en-tr__table .en-tbl__chk {
+	inline-size: 44px;
+	padding-inline: 12px 4px !important;
+	color: var(--muted);
+	text-align: center !important;
+}
+.en-tbl__box {
+	display: grid;
+	place-items: center;
+	inline-size: 22px;
+	block-size: 22px;
+	padding: 0;
+	border: 2px solid var(--line-2);
+	border-radius: 7px !important;
+	background: var(--sheet);
+	color: #fff !important;
+	cursor: pointer;
+	transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.en-tbl__box:hover {
+	border-color: var(--accent);
+}
+.en-tbl__box:active {
+	transform: scale(0.88);
+}
+.en-tbl__box[aria-checked='true'] {
+	border-color: var(--accent);
+	background: var(--accent);
+	animation: en-tbl-pop 0.25s ease-out;
+}
+@keyframes en-tbl-pop {
+	50% {
+		transform: scale(1.18);
+	}
+}
+/* a learned row: quieter, the word struck through softly */
+.en-tbl tr.is-learned td:not(.en-tbl__chk):not(.en-tbl__del) {
+	opacity: 0.55;
+}
+.en-tbl tr.is-learned td:nth-child(2) strong,
+.en-tbl tr.is-learned td:nth-child(2) {
+	text-decoration: line-through;
+	text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent);
+	text-decoration-thickness: 2px;
+}
+
+/* the delete column: shows on hover (always on touch screens) */
+.en-tr__table .en-tbl__del {
+	inline-size: 40px;
+	padding-inline: 4px 10px !important;
+}
+.en-tbl__x {
+	display: grid;
+	place-items: center;
+	inline-size: 30px;
+	block-size: 30px;
+	padding: 0;
+	border: 0;
+	border-radius: 9px !important;
+	background: transparent;
+	color: var(--muted) !important;
+	opacity: 0;
+	cursor: pointer;
+	transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.en-tbl tr:hover .en-tbl__x,
+.en-tbl__x:focus-visible {
+	opacity: 1;
+}
+.en-tbl__x:hover {
+	background: color-mix(in srgb, #e0464f 12%, transparent);
+	color: #c8323b !important;
+}
+@media (hover: none) {
+	.en-tbl__x {
+		opacity: 0.7;
+	}
+}
+.en-tbl__all {
+	padding: 18px !important;
+	color: var(--accent-ink);
+	font-weight: 600;
+	text-align: center !important;
+}
+.en-undo {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+}
+.en-undo button {
+	padding: 3px 10px;
+	border: 0;
+	border-radius: 8px;
+	background: var(--accent-soft, rgba(29, 171, 97, 0.12));
+	color: var(--accent-ink, #157a45);
+	font-weight: 700;
+	cursor: pointer;
+}
+.en-tbl .en-tr__table td:first-child {
+	font-weight: 400;
+}
+.en-tbl .en-tr__table td:nth-child(2) {
+	color: var(--ink);
+	font-weight: 600;
+	white-space: nowrap;
+}
+@media (max-width: 560px) {
+	.en-tbl .en-tr__table td:nth-child(2) {
+		white-space: normal;
+	}
+}
+
+/* "Hide Arabic": the meaning stays blurred until you hover it (or tap it) */
+.en-tbl__bar .en-tbl__hide:first-of-type {
+	margin-inline-start: auto;
+}
+.en-tbl__bar .en-tbl__hide + .en-tbl__hide {
+	margin-inline-start: 0;
+}
+.en-tbl.is-hide-ar td.is-ar {
+	cursor: pointer;
+}
+.en-tbl.is-hide-ar td.is-ar *,
+.en-tbl.is-hide-ar td.is-ar {
+	color: transparent !important;
+	text-shadow: 0 0 9px color-mix(in srgb, var(--ink) 55%, transparent);
+	transition: color 0.2s ease, text-shadow 0.2s ease;
+	user-select: none;
+}
+.en-tbl.is-hide-ar td.is-ar:hover,
+.en-tbl.is-hide-ar td.is-ar:hover *,
+.en-tbl.is-hide-ar td.is-ar.is-open,
+.en-tbl.is-hide-ar td.is-ar.is-open * {
+	color: var(--ink) !important;
+	text-shadow: none;
+	user-select: text;
+}

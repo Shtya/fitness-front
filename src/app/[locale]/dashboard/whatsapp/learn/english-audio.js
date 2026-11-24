@@ -46,16 +46,121 @@ export function recorderMime() {
 	return '';
 }
 
-/** Reads text aloud with an English voice (the browser's own speech, offline on most phones). */
-export function speak(text, rate = 0.95) {
-	if (typeof window === 'undefined' || !window.speechSynthesis || !text) return;
+/*
+ * Reading English aloud with an American accent, as natural as this device allows:
+ *   1. a single word → a real person saying it (dictionaryapi.dev recordings, US first)
+ *   2. a natural American voice the browser has (Edge "Online (Natural)", Chrome "Google US English", Apple "Samantha"…)
+ *   3. else Google's voice (translate_tts) for short sentences
+ *   4. else whatever English voice the browser has
+ */
+
+let player = null;
+const wordAudio = new Map(); // word → recording url | ''
+
+function stopAll() {
+	try {
+		window.speechSynthesis?.cancel();
+	} catch {
+		/* none */
+	}
+	if (player) {
+		player.pause();
+		player = null;
+	}
+}
+
+/** The most natural American voice on this device, or null when only robotic ones exist. */
+export function naturalVoice() {
+	if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+	const us = window.speechSynthesis.getVoices().filter(v => /^en[-_]US/i.test(v.lang));
+	return (
+		us.find(v => /natural|neural/i.test(v.name)) ||
+		us.find(v => /online/i.test(v.name)) ||
+		us.find(v => /google/i.test(v.name)) ||
+		us.find(v => /samantha|ava|allison|evan|nathan|zoe|siri/i.test(v.name)) ||
+		null
+	);
+}
+
+async function recordingOf(word) {
+	const w = String(word).trim().toLowerCase();
+	if (!/^[a-z][a-z'-]{0,30}$/.test(w)) return '';
+	if (wordAudio.has(w)) return wordAudio.get(w);
+	let url = '';
+	try {
+		const ctl = new AbortController();
+		const t = setTimeout(() => ctl.abort(), 3500);
+		const r = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(w)}`, { signal: ctl.signal });
+		clearTimeout(t);
+		if (r.ok) {
+			const list = (await r.json()).flatMap(e => e?.phonetics || []).map(p => String(p?.audio || '')).filter(Boolean);
+			url = list.find(a => /-us(-\d+)?\.mp3$/i.test(a)) || list.find(a => !/-(uk|au)(-\d+)?\.mp3$/i.test(a)) || '';
+			if (url.startsWith('//')) url = `https:${url}`;
+		}
+	} catch {
+		/* offline / not found */
+	}
+	wordAudio.set(w, url);
+	return url;
+}
+
+function playUrl(url, rate = 1) {
+	stopAll();
+	const a = new Audio(url);
+	a.playbackRate = rate;
+	player = a;
+	return a.play();
+}
+
+function browserVoice(text, rate, voice) {
 	const synth = window.speechSynthesis;
-	synth.cancel();
+	if (!synth) return;
 	const u = new SpeechSynthesisUtterance(String(text));
 	u.lang = 'en-US';
 	u.rate = rate;
-	const voices = synth.getVoices();
-	const voice = voices.find(v => /^en[-_]US/i.test(v.lang) && /natural|google|samantha|aria|jenny/i.test(v.name)) || voices.find(v => /^en/i.test(v.lang));
-	if (voice) u.voice = voice;
+	const v = voice || synth.getVoices().find(x => /^en[-_]US/i.test(x.lang)) || synth.getVoices().find(x => /^en/i.test(x.lang));
+	if (v) u.voice = v;
 	synth.speak(u);
+}
+
+// voices arrive late in Chrome / Edge
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+	try {
+		window.speechSynthesis.getVoices();
+		window.speechSynthesis.addEventListener?.('voiceschanged', () => window.speechSynthesis.getVoices());
+	} catch {
+		/* ignore */
+	}
+}
+
+/** Reads text aloud in an American accent. */
+export async function speak(text, rate = 0.95) {
+	if (typeof window === 'undefined') return;
+	const t = String(text || '').trim();
+	if (!t) return;
+	stopAll();
+	const rec = await recordingOf(t);
+	if (rec) {
+		try {
+			await playUrl(rec);
+			return;
+		} catch {
+			/* fall through */
+		}
+	}
+	const voice = naturalVoice();
+	if (voice) {
+		browserVoice(t, rate, voice);
+		return;
+	}
+	if (t.length <= 200) {
+		try {
+			await playUrl(`https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=${encodeURIComponent(t)}`, rate < 1 ? 0.95 : 1);
+			return;
+		} catch {
+			/* fall through */
+		}
+	}
+	stopAll();
+	browserVoice(t, rate, null);
 }

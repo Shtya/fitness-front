@@ -10,7 +10,7 @@
  */
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Bookmark, BookmarkPlus, BookOpenText, Clock3, Eye, Flame, Moon, Sun, MapPin, Plus, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, List, Pause, Play, Repeat, RotateCcw, RotateCw, Search, Settings2, SkipBack, SkipForward, TextSelect, Trash2, X } from 'lucide-react';
+import { ArrowRight, Bookmark, Brain, Check, BookmarkPlus, BookOpenText, Clock3, Eye, Flame, Moon, Sun, MapPin, Plus, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, List, Pause, Play, Repeat, RotateCcw, RotateCw, Search, Settings2, SkipBack, SkipForward, TextSelect, Trash2, X } from 'lucide-react';
 import { playableAyahUrl, prefetchAyahAudio } from '../../quran-revision/ayah-audio-cache';
 import { SURAHS, BUILTIN_RECITERS, ayahAudioUrl } from '../../quran-revision/quran-data';
 import {
@@ -41,6 +41,7 @@ import './mushaf-player.css';
 import './mushaf-progress.css';
 import './mushaf-bookmarks.css';
 import './mushaf-eye.css';
+import './mushaf-recall.css';
 
 /** Quarters (rub' al-hizb) that begin inside each surah: { n (1…240), a, page, words }. */
 const RUBS_BY_SURAH = new Map();
@@ -159,6 +160,17 @@ const L = {
 		round: 'الدورة',
 		nextAyahBtn: 'الآية اللي بعدها',
 		prevAyahBtn: 'الآية اللي قبلها',
+		recallTitle: a => `حاول تفتكر الآية ${a}`,
+		recallHint: p => `اسمع الآية ${p} وكمّل من بعدها من حفظك`,
+		recallFirst: 'دي أول آية — حاول تفتكرها من البداية',
+		recallShown: (s, a) => `${s} · الآية ${a}`,
+		recallShownHint: 'راجعها وسمّعها تاني، واتسجّلت في أخطائي',
+		recallPrev: 'اسمع الآية اللي قبلها تاني',
+		recallPrevShort: 'اللي قبلها',
+		recallShow: 'اظهر الآية',
+		recallPlay: 'شغّل الآية',
+		recallPlayShort: 'شغّلها',
+		recallDone: 'تمام',
 		reviseDone: 'خلصت المراجعة، ما شاء الله',
 		again: 'تاني',
 		pickEnd: 'اضغط على آخر كلمة · تقدر تقلب الصفحة',
@@ -197,12 +209,12 @@ const L = {
 		prev: 'الصفحة السابقة',
 		next: 'الصفحة التالية',
 		kinds: [
-			{ id: 'ayah', label: 'نسيت الآية كلها', hint: 'في المراجعة تبدأ من الآية اللي قبلها، وتسمّع دي' },
+			{ id: 'ayah', label: 'نسيت الآية كلها', hint: 'تتخفي، وتشتغل الآية اللي قبلها عشان تفتكرها' },
+			{ id: 'link', label: 'نسيت الربط بالآية الجاية', hint: 'أول الآية اللي بعدها' },
 			{ id: 'forgot', label: 'وقفت عند الكلمة دي', hint: 'نسيت الكلمة أو اللي بعدها', wordOnly: true },
 			{ id: 'swap', label: 'قلت كلمة بدلها', wordOnly: true },
 			{ id: 'add', label: 'زوّدت كلمة هنا', wordOnly: true },
 			{ id: 'tashkeel', label: 'تشكيل غلط', wordOnly: true },
-			{ id: 'link', label: 'نسيت الربط بالآية الجاية', hint: 'أول الآية اللي بعدها' },
 		],
 	},
 	en: {
@@ -297,6 +309,17 @@ const L = {
 		round: 'round',
 		nextAyahBtn: 'Next ayah',
 		prevAyahBtn: 'Previous ayah',
+		recallTitle: a => `Try to recall ayah ${a}`,
+		recallHint: p => `Listen to ayah ${p}, then carry on from memory`,
+		recallFirst: 'It is the first ayah — try it from the start',
+		recallShown: (s, a) => `${s} · ayah ${a}`,
+		recallShownHint: 'Go over it and recite it again — it is saved in your mistakes',
+		recallPrev: 'Hear the ayah before it again',
+		recallPrevShort: 'Before it',
+		recallShow: 'Show the ayah',
+		recallPlay: 'Play the ayah',
+		recallPlayShort: 'Play it',
+		recallDone: 'Done',
 		reviseDone: 'Revision finished',
 		again: 'Again',
 		pickEnd: 'Tap the last word · you can turn the page',
@@ -335,12 +358,12 @@ const L = {
 		prev: 'Previous page',
 		next: 'Next page',
 		kinds: [
-			{ id: 'ayah', label: 'Forgot the whole ayah', hint: 'Review starts from the ayah before it' },
+			{ id: 'ayah', label: 'Forgot the whole ayah', hint: 'It hides, and the ayah before it plays to help you recall' },
+			{ id: 'link', label: 'Lost the link to the next ayah', hint: 'Start of the next ayah' },
 			{ id: 'forgot', label: 'Got stuck at this word', hint: 'Forgot it or what follows', wordOnly: true },
 			{ id: 'swap', label: 'Said another word', wordOnly: true },
 			{ id: 'add', label: 'Added a word here', wordOnly: true },
 			{ id: 'tashkeel', label: 'Wrong harakat', wordOnly: true },
-			{ id: 'link', label: 'Lost the link to the next ayah', hint: 'Start of the next ayah' },
 		],
 	},
 };
@@ -710,6 +733,8 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		writeJson(LS_STUDIO_PREFS, { ...(readJson(LS_STUDIO_PREFS, {}) || {}), selectedReciterId: id });
 	};
 	const [menu, setMenu] = useState(null);
+	// "I forgot this ayah": { s, a, prev: [s, a] | null, shown }
+	const [recall, setRecall] = useState(null);
 	const [toast, setToast] = useState(null);
 	const [scrub, setScrub] = useState(null);
 	const [box, setBox] = useState({ w: 0, h: 0 });
@@ -1109,10 +1134,10 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		);
 		return m;
 	}, [pages]);
-	const veil = useMemo(
-		() => (revising && cfg.hide !== 'none' && cfg.from ? { hide: cfg.hide, from: cfg.from, to: cfg.to, revealed, counts: ayahCounts } : null),
-		[revising, cfg.hide, cfg.from, cfg.to, revealed, ayahCounts],
-	);
+	const veil = useMemo(() => {
+		if (recall && !recall.shown) return { hide: 'all', from: { s: recall.s, a: recall.a }, to: { s: recall.s, a: recall.a }, revealed: new Set(), counts: ayahCounts };
+		return revising && cfg.hide !== 'none' && cfg.from ? { hide: cfg.hide, from: cfg.from, to: cfg.to, revealed, counts: ayahCounts } : null;
+	}, [recall, revising, cfg.hide, cfg.from, cfg.to, revealed, ayahCounts]);
 	// First time in revision mode: start from this page and open the settings.
 	useEffect(() => {
 		if (!revising || !active) return;
@@ -1149,7 +1174,7 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		if (a < count) return [s, a + 1];
 		return s < 114 ? [s + 1, 1] : null;
 	};
-	const playAyah = useCallback((s, a, inRevise = false) => {
+	const playAyah = useCallback((s, a, inRevise = false, once = false) => {
 		if (!audioRef.current) {
 			audioRef.current = new Audio();
 			audioRef.current.preload = 'auto';
@@ -1178,6 +1203,11 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 			}
 		}
 		el.onended = () => {
+			// recall: stop after this one, never run on into the ayah you are trying to remember
+			if (once) {
+				setPlaying(null);
+				return;
+			}
 			if (inRevise) {
 				const next = nextStep(posRef.current, cfgRef.current, listRef.current.length);
 				if (!next) {
@@ -1489,6 +1519,19 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		}
 		const saved = saveNewMistake(fields);
 		if (saved) setToast({ ids: [saved.id], at: Date.now() });
+		if (kind === 'ayah') startRecall(m.s, m.a);
+	};
+
+	/** Hide the forgotten ayah and recite the one before it, once, so you can carry on from memory. */
+	const startRecall = (s, a) => {
+		const prev = a > 1 ? [s, a - 1] : s > 1 ? [s - 1, versesOf(s - 1)] : null;
+		setRecall({ s, a, prev, shown: false });
+		if (prev) playAyah(prev[0], prev[1], false, true);
+	};
+	const endRecall = () => {
+		audioRef.current?.pause();
+		setPlaying(null);
+		setRecall(null);
 	};
 	const markedHere = menu ? mistakes.filter(x => x.surahId === menu.s && x.ayah === menu.a) : [];
 	// The pressed ayah's words on this page, for the preview in the action sheet.
@@ -1789,6 +1832,40 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 					</div>
 				)}
 			</footer>
+
+			{recall ? (
+				<div className={`mr-recall${recall.shown ? ' is-shown' : ''}`} role="status" aria-live="polite">
+					<span className="mr-recall__icon" aria-hidden="true">
+						{recall.shown ? <Eye size={20} /> : <Brain size={20} />}
+					</span>
+					<div className="mr-recall__txt">
+						<b>{recall.shown ? t.recallShown(surahName(recall.s, ar), fmt(recall.a)) : t.recallTitle(fmt(recall.a))}</b>
+						<small>{recall.shown ? t.recallShownHint : recall.prev ? t.recallHint(fmt(recall.prev[1])) : t.recallFirst}</small>
+					</div>
+					<div className="mr-recall__acts">
+						{recall.prev ? (
+							<button type="button" className="mr-recall__btn" onClick={() => playAyah(recall.prev[0], recall.prev[1], false, true)} title={t.recallPrev} aria-label={t.recallPrev}>
+								<RotateCcw size={16} />
+								<span>{t.recallPrevShort}</span>
+							</button>
+						) : null}
+						{recall.shown ? (
+							<button type="button" className="mr-recall__btn" onClick={() => playAyah(recall.s, recall.a, false, true)} title={t.recallPlay} aria-label={t.recallPlay}>
+								<Play size={16} />
+								<span>{t.recallPlayShort}</span>
+							</button>
+						) : (
+							<button type="button" className="mr-recall__btn is-primary" onClick={() => setRecall(r => ({ ...r, shown: true }))}>
+								<Eye size={16} />
+								<span>{t.recallShow}</span>
+							</button>
+						)}
+						<button type="button" className="mr-recall__x" onClick={endRecall} aria-label={t.recallDone} title={t.recallDone}>
+							{recall.shown ? <Check size={17} /> : <X size={17} />}
+						</button>
+					</div>
+				</div>
+			) : null}
 
 			{menu ? (
 				<WordMenu

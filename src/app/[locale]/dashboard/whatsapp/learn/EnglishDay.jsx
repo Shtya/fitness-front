@@ -24,12 +24,15 @@ import {
 	Loader2,
 	Mic,
 	NotebookPen,
+	Pause,
+	Play,
 	Pencil,
 	Plus,
 	RotateCcw,
 	Shuffle,
 	Sparkles,
 	Square,
+	Star,
 	Trash2,
 	Upload,
 	Video,
@@ -39,10 +42,16 @@ import {
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import { Modal } from './learn-ui';
-import { SPEAK_MINUTES, clock, enId, isLink, isWordSelection, markWords, markdownText, normalizeDay, parseInline, parseMarkdown, sentenceAround, totalSpokenSeconds, youtubeId, youtubeStart } from './english-model';
+import { SPEAK_MINUTES, clock, dropLine, rowKey, enId, isLink, isWordSelection, markWords, markdownText, normalizeDay, parseInline, parseMarkdown, sentenceAround, totalSpokenSeconds, youtubeId, youtubeStart } from './english-model';
 import { deleteClip, getClip, putClip, recorderMime, speak } from './english-audio';
 import { shuffled } from './learn-model';
+import VideoLoop from './VideoLoop';
+import { lookupWord, translateLine } from './word-lookup';
+import { transcribeClip } from './speech-transcribe';
 import './english.css';
+import './speak-rec.css';
+import './english-md.css';
+import './words-table.css';
 
 const TABS = [
 	['read', BookOpenText],
@@ -81,7 +90,7 @@ function WordDialog({ c, initial, onClose, onSave, onDelete }) {
 		if (!text.trim() || busy) return;
 		setBusy(true);
 		try {
-			const { data } = await api.post('/learn/english/ai', { task: 'word', word: text.trim(), context: context.slice(0, 600) });
+			const data = await lookupWord(text.trim(), context);
 			if (data.meaning) setMeaning(data.meaning);
 			if (data.translation) setTranslation(data.translation);
 			// the sentence from the transcript stays the example; AI's only fills an empty one
@@ -161,6 +170,37 @@ function WordDialog({ c, initial, onClose, onSave, onDelete }) {
 	);
 }
 
+/** A small "ع" button at the end of an English sentence: shows its Arabic under it, tap again to hide. */
+function LineTr({ c, text }) {
+	const [state, setState] = useState(null); // null | 'loading' | { ar } | 'error'
+	const [open, setOpen] = useState(false);
+	const toggle = async e => {
+		e.stopPropagation();
+		if (open) return setOpen(false);
+		setOpen(true);
+		if (state && state !== 'error') return undefined;
+		setState('loading');
+		try {
+			setState({ ar: await translateLine(text) });
+		} catch {
+			setState('error');
+		}
+		return undefined;
+	};
+	return (
+		<>
+			<button type="button" className={`en-ltr-btn${open ? ' is-on' : ''}`} onClick={toggle} title={open ? c.en.hideArabic : c.en.showArabic} aria-label={open ? c.en.hideArabic : c.en.showArabic} aria-expanded={open}>
+				{state === 'loading' && open ? <Loader2 size={11} className="animate-spin" /> : 'ع'}
+			</button>
+			{open && state && state !== 'loading' ? (
+				<span className={`en-ltr${state === 'error' ? ' is-err' : ''}`} dir="rtl" lang="ar">
+					{state === 'error' ? c.en.lineFailed : state.ar}
+				</span>
+			) : null}
+		</>
+	);
+}
+
 /* ───────── word popover (hover / tap a coloured word) ───────── */
 
 function WordPop({ c, pop, onEdit, onEnter, onLeave }) {
@@ -188,6 +228,7 @@ function WordPop({ c, pop, onEdit, onEnter, onLeave }) {
 			{word.meaning ? (
 				<p className="en-pop__meaning" dir="ltr" lang="en">
 					{word.meaning}
+					<LineTr c={c} text={word.meaning} />
 				</p>
 			) : (
 				<p className="en-pop__empty">{c.en.noMeaning}</p>
@@ -203,12 +244,14 @@ function WordPop({ c, pop, onEdit, onEnter, onLeave }) {
 						<Volume2 size={13} />
 					</button>
 					{word.example}
+					<LineTr c={c} text={word.example} />
 				</p>
 			) : null}
 			{word.context && word.context !== word.example ? (
 				<p className="en-pop__ctx" dir="ltr" lang="en">
 					<small>{c.en.fromVideo}</small>
 					{word.context}
+					<LineTr c={c} text={word.context} />
 				</p>
 			) : null}
 		</div>
@@ -247,9 +290,8 @@ function AddWordPop({ c, pick, existing, onSave, onClose }) {
 		let live = true;
 		setState('loading');
 		const t = window.setTimeout(() => {
-			api
-				.post('/learn/english/ai', { task: 'word', word, context: context.slice(0, 600) })
-				.then(({ data }) => {
+			lookupWord(word, context)
+				.then(data => {
 					wordCache.set(key, data);
 					if (live) {
 						setRes(data);
@@ -327,6 +369,7 @@ function AddWordPop({ c, pick, existing, onSave, onClose }) {
 					{data.meaning ? (
 						<p className="en-add__meaning" dir="ltr" lang="en">
 							{data.meaning}
+							<LineTr c={c} text={data.meaning} />
 						</p>
 					) : null}
 					{examples.length ? (
@@ -337,6 +380,7 @@ function AddWordPop({ c, pick, existing, onSave, onClose }) {
 										<Volume2 size={12} />
 									</button>
 									{ex}
+									<LineTr c={c} text={ex} />
 								</li>
 							))}
 						</ul>
@@ -347,6 +391,7 @@ function AddWordPop({ c, pick, existing, onSave, onClose }) {
 				<p className="en-add__ctx" dir="ltr" lang="en">
 					<small>{c.en.fromVideo}</small>
 					{context}
+					<LineTr c={c} text={context} />
 				</p>
 			) : null}
 			<div className="en-add__foot">
@@ -376,6 +421,7 @@ function VideoBlock({ c, url, onUrl }) {
 	const [editing, setEditing] = useState(!url);
 	useEffect(() => setDraft(url), [url]);
 	const id = youtubeId(url);
+	const frame = useRef(null);
 	const commit = () => {
 		const v = draft.trim();
 		if (v !== url) onUrl(v);
@@ -386,7 +432,8 @@ function VideoBlock({ c, url, onUrl }) {
 			{id && !editing ? (
 				<div className="en-video__frame">
 					<iframe
-						src={`https://www.youtube-nocookie.com/embed/${id}?rel=0&start=${youtubeStart(url)}`}
+						ref={frame}
+						src={`https://www.youtube-nocookie.com/embed/${id}?rel=0&enablejsapi=1&start=${youtubeStart(url)}`}
 						title="YouTube video"
 						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
 						allowFullScreen
@@ -415,16 +462,19 @@ function VideoBlock({ c, url, onUrl }) {
 					</button>
 				</form>
 			) : (
-				<button type="button" className="en-link-btn" onClick={() => setEditing(true)}>
-					<Pencil size={13} aria-hidden />
-					{c.en.changeVideo}
-				</button>
+				<div className="en-video__bar">
+					<button type="button" className="en-link-btn" onClick={() => setEditing(true)}>
+						<Pencil size={13} aria-hidden />
+						{c.en.changeVideo}
+					</button>
+					{id ? <VideoLoop key={id} c={c} iframeRef={frame} videoId={id} /> : null}
+				</div>
 			)}
 		</section>
 	);
 }
 
-function Transcript({ c, day, others, onTranscript, onSaveWord, onEditWord }) {
+function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditWord }) {
 	const [mode, setMode] = useState(day.transcript.trim() ? 'read' : 'edit');
 	// Pasting the first transcript: the button says "Start reading"; later edits say "Done".
 	const firstTime = useRef(!day.transcript.trim());
@@ -432,6 +482,54 @@ function Transcript({ c, day, others, onTranscript, onSaveWord, onEditWord }) {
 		if (mode === 'read') firstTime.current = false;
 	}, [mode]);
 	const [draft, setDraft] = useState(day.transcript);
+	// keep the editor in step with changes made while reading (a deleted table row)
+	useEffect(() => {
+		if (mode === 'read') setDraft(day.transcript);
+	}, [day.transcript, mode]);
+	const [hideLearned, setHideLearned] = useState(false);
+	// tables: Arabic hidden until you hover (or tap) it — remembered on this device
+	const [hideAr, setHideAr] = useState(() => {
+		try {
+			return window.localStorage.getItem('wa-learn:hide-ar') === '1';
+		} catch {
+			return false;
+		}
+	});
+	const toggleHideAr = () =>
+		setHideAr(v => {
+			try {
+				window.localStorage.setItem('wa-learn:hide-ar', v ? '0' : '1');
+			} catch {
+				/* private mode */
+			}
+			return !v;
+		});
+	const learnedSet = useMemo(() => new Set(day.learned || []), [day.learned]);
+	const toggleLearned = key => {
+		const next = learnedSet.has(key) ? (day.learned || []).filter(x => x !== key) : [...(day.learned || []), key];
+		onPatch({ learned: next });
+	};
+	const deleteRow = (line, key) => {
+		const before = { transcript: day.transcript, learned: day.learned || [] };
+		onPatch({ transcript: dropLine(day.transcript, line), learned: before.learned.filter(x => x !== key) });
+		toast(
+			tt => (
+				<span className="en-undo">
+					{c.en.rowDeleted(key)}
+					<button
+						type="button"
+						onClick={() => {
+							onPatch(before);
+							toast.dismiss(tt.id);
+						}}
+					>
+						{c.en.undo}
+					</button>
+				</span>
+			),
+			{ duration: 6000 },
+		);
+	};
 	const [pick, setPick] = useState(null); // { text, context, rect }
 	const closePick = useCallback(() => setPick(null), []);
 	const [pop, setPop] = useState(null); // { word, rect, pinned }
@@ -513,19 +611,132 @@ function Transcript({ c, day, others, onTranscript, onSaveWord, onEditWord }) {
 	const renderBlock = (b, i) => {
 		if (b.type === 'hr') return <hr key={i} />;
 		if (b.type === 'code') return <pre key={i}>{b.text}</pre>;
+		if (b.type === 'table') {
+			const cols = Math.max(b.head?.length || 0, ...b.rows.map(r => r.length));
+			// the English part of a cell ("disclaimer (ديسكليمَر)" → "disclaimer"), when it starts in English
+			const englishOf = src => {
+				const plain = parseInline(src || '').map(r => r.text).join('');
+				if (!/^[\s"'“(]*[a-z]/i.test(plain)) return '';
+				return plain.replace(/\([^)]*[؀-ۿ][^)]*\)/g, '').replace(/[؀-ۿ]+/g, '').replace(/\s+/g, ' ').trim();
+			};
+			const cells = (row, Cell, key) =>
+				Array.from({ length: cols }, (_, k) => {
+					const say = Cell === 'td' ? englishOf(row[k]) : '';
+					// a cell that is mostly Arabic (the meaning) — the one that hides
+					const txt = row[k] || '';
+					const isAr = Cell === 'td' && (txt.match(/[\u0600-\u06ff]/g) || []).length > (txt.match(/[a-z]/gi) || []).length;
+					return (
+						<Cell
+							key={k}
+							dir="auto"
+							className={Cell === 'th' ? (englishOf(b.rows[0]?.[k]) ? 'is-en' : undefined) : isAr ? 'is-ar' : undefined}
+							onClick={isAr ? e => e.currentTarget.classList.toggle('is-open') : undefined}
+							title={isAr && hideAr ? c.en.showArabicCell : undefined}
+						>
+							{say ? (
+								<button type="button" className="en-cell-say" onClick={() => speak(say)} title={`${c.en.listen}: ${say}`} aria-label={`${c.en.listen}: ${say}`}>
+									<Volume2 size={13} />
+								</button>
+							) : null}
+							{renderInline(row[k] || '', `${key}.${k}`)}
+						</Cell>
+					);
+				});
+			const rows = b.rows.map((row, j) => ({ row, j, key: rowKey(row), line: b.lines?.[j] }));
+			const done = rows.filter(r => learnedSet.has(r.key)).length;
+			const shown = hideLearned ? rows.filter(r => !learnedSet.has(r.key)) : rows;
+			// English on the left, Arabic on the right (each cell aligns to its own language)
+			return (
+				<div key={i} className={`en-tbl${hideAr ? ' is-hide-ar' : ''}`} dir="ltr">
+					<div className="en-tbl__bar">
+						<span className="en-tbl__count">
+							<b>{done}</b> / {rows.length} {c.en.learnedOf}
+						</span>
+						<i className="en-tbl__meter" aria-hidden>
+							<i style={{ width: `${rows.length ? (done / rows.length) * 100 : 0}%` }} />
+						</i>
+						<button type="button" className={`en-tbl__hide${hideAr ? ' is-on' : ''}`} onClick={toggleHideAr} aria-pressed={hideAr}>
+							{hideAr ? <Eye size={13} aria-hidden /> : <EyeOff size={13} aria-hidden />}
+							{hideAr ? c.en.showArabicAll : c.en.hideArabicAll}
+						</button>
+						{done ? (
+							<button type="button" className={`en-tbl__hide${hideLearned ? ' is-on' : ''}`} onClick={() => setHideLearned(v => !v)} aria-pressed={hideLearned}>
+								{hideLearned ? <Eye size={13} aria-hidden /> : <EyeOff size={13} aria-hidden />}
+								{hideLearned ? c.en.showLearned : c.en.hideLearned}
+							</button>
+						) : null}
+					</div>
+					<div className="en-tr__table">
+						<table>
+							{b.head ? (
+								<thead>
+									<tr>
+										<th className="en-tbl__chk" aria-label={c.en.learned} title={c.en.learned}>
+											<Check size={13} aria-hidden />
+										</th>
+										{cells(b.head, 'th', `${i}h`)}
+										<th className="en-tbl__del" aria-hidden />
+									</tr>
+								</thead>
+							) : null}
+							<tbody>
+								{shown.map(({ row, j, key, line }) => {
+									const on = learnedSet.has(key);
+									return (
+										<tr key={`${j}-${key}`} className={on ? 'is-learned' : undefined}>
+											<td className="en-tbl__chk">
+												<button type="button" role="checkbox" aria-checked={on} className="en-tbl__box" onClick={() => key && toggleLearned(key)} title={on ? c.en.notLearned : c.en.markLearned} aria-label={`${on ? c.en.notLearned : c.en.markLearned}: ${key}`}>
+													{on ? <Check size={13} strokeWidth={3} /> : null}
+												</button>
+											</td>
+											{cells(row, 'td', `${i}.${j}`)}
+											<td className="en-tbl__del">
+												{line != null ? (
+													<button type="button" className="en-tbl__x" onClick={() => deleteRow(line, key)} title={c.en.deleteRow} aria-label={`${c.en.deleteRow}: ${key}`}>
+														<Trash2 size={14} />
+													</button>
+												) : null}
+											</td>
+										</tr>
+									);
+								})}
+								{!shown.length ? (
+									<tr>
+										<td className="en-tbl__all" colSpan={cols + 2}>
+											{c.en.allLearned}
+										</td>
+									</tr>
+								) : null}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			);
+		}
 		if (b.type === 'ul' || b.type === 'ol') {
 			const List = b.type;
 			return (
-				<List key={i}>
+				<List key={i} dir="auto">
 					{b.items.map((it, j) => (
-						<li key={j}>{renderInline(it, `${i}.${j}`)}</li>
+						<li key={j} dir="auto">
+							{renderInline(it, `${i}.${j}`)}
+						</li>
 					))}
 				</List>
 			);
 		}
-		if (b.type === 'quote') return <blockquote key={i}>{renderInline(b.text, i)}</blockquote>;
+		if (b.type === 'quote')
+			return (
+				<blockquote key={i} dir="auto">
+					{renderInline(b.text, i)}
+				</blockquote>
+			);
 		const Tag = b.type === 'p' ? 'p' : b.type;
-		return <Tag key={i}>{renderInline(b.text, i)}</Tag>;
+		return (
+			<Tag key={i} dir="auto">
+				{renderInline(b.text, i)}
+			</Tag>
+		);
 	};
 
 	// A .md / .txt file instead of pasting.
@@ -630,9 +841,12 @@ function Transcript({ c, day, others, onTranscript, onSaveWord, onEditWord }) {
 
 /* ───────── words ───────── */
 
-function WordsTab({ c, day, others, onAdd, onEdit }) {
+function WordsTab({ c, day, others, onAdd, onEdit, onFav }) {
 	const [practice, setPractice] = useState(null); // { deck, i, open }
+	const [view, setView] = useState('day'); // day | fav
 	const [showOld, setShowOld] = useState(false);
+	const [showAr, setShowAr] = useState(false); // all Arabic visible
+	const [seen, setSeen] = useState(() => new Set()); // Arabic revealed by a tap
 	if (practice) {
 		const w = practice.deck[practice.i];
 		return (
@@ -657,8 +871,16 @@ function WordsTab({ c, day, others, onAdd, onEdit }) {
 					{practice.open ? (
 						<div className="en-card__back">
 							{w.meaning ? <p dir="ltr">{w.meaning}</p> : null}
-							{w.translation ? <p dir="rtl" className="en-card__tr">{w.translation}</p> : null}
-							{w.example ? <p dir="ltr" className="en-card__ex">{w.example}</p> : null}
+							{w.translation ? (
+								<p dir="rtl" className="en-card__tr">
+									{w.translation}
+								</p>
+							) : null}
+							{w.example ? (
+								<p dir="ltr" className="en-card__ex">
+									{w.example}
+								</p>
+							) : null}
 						</div>
 					) : (
 						<p className="en-card__ask">{c.en.sayMeaning}</p>
@@ -681,49 +903,121 @@ function WordsTab({ c, day, others, onAdd, onEdit }) {
 			</section>
 		);
 	}
-	const list = (words, mine) => (
-		<ul className="en-words">
-			{words.map(w => (
-				<li key={`${w.lectureId || 'day'}:${w.id}`} className={`en-wcard${mine ? '' : ' is-old'}`}>
-					<div className="en-wcard__head">
-						<b dir="ltr" lang="en">
-							{w.text}
-						</b>
-						<button type="button" className="lrn-icon-btn" onClick={() => speak(w.text)} aria-label={c.en.listen} title={c.en.listen}>
-							<Volume2 size={15} />
-						</button>
-						{w.translation ? (
-							<span className="en-wcard__tr" dir="rtl" lang="ar">
-								{w.translation}
-							</span>
-						) : null}
-						{mine ? (
-							<button type="button" className="lrn-icon-btn en-wcard__edit" onClick={() => onEdit(w)} aria-label={c.en.editWord} title={c.en.editWord}>
-								<Pencil size={14} />
-							</button>
-						) : (
-							<span className="en-pop__day">{c.en.fromDay(w.day)}</span>
-						)}
-					</div>
-					{w.meaning ? (
-						<p dir="ltr" lang="en">
-							{w.meaning}
-						</p>
-					) : null}
-					{w.example ? (
-						<p className="en-wcard__ex" dir="ltr" lang="en">
-							“{w.example}”
-						</p>
-					) : null}
-				</li>
-			))}
-		</ul>
+
+	const favs = [...day.words.filter(w => w.fav), ...others.filter(w => w.fav)];
+	const rows = view === 'fav' ? favs : day.words;
+	const reveal = key =>
+		setSeen(s => {
+			const n = new Set(s);
+			if (n.has(key)) n.delete(key);
+			else n.add(key);
+			return n;
+		});
+
+	const table = (words, mine) => (
+		<div className="en-wt">
+			<table>
+				<thead>
+					<tr>
+						<th className="en-wt__star" aria-label={c.en.favorites}>
+							<Star size={13} aria-hidden />
+						</th>
+						<th>{c.en.colWord}</th>
+						<th className="en-wt__arh">{c.en.colArabic}</th>
+						<th>{c.en.colSentences}</th>
+						<th className="en-wt__act" aria-hidden />
+					</tr>
+				</thead>
+				<tbody>
+					{words.map(w => {
+						const own = mine || w.lectureId == null;
+						const key = `${w.lectureId || 'day'}:${w.id}`;
+						const open = showAr || seen.has(key);
+						const sentences = [w.example, w.context && w.context !== w.example ? w.context : ''].filter(Boolean);
+						return (
+							<tr key={key} className={w.fav ? 'is-fav' : undefined}>
+								<td className="en-wt__star">
+									{own ? (
+										<button type="button" className={`en-wt__fav${w.fav ? ' is-on' : ''}`} onClick={() => onFav(w.id)} aria-pressed={Boolean(w.fav)} title={w.fav ? c.en.unfav : c.en.fav} aria-label={`${w.fav ? c.en.unfav : c.en.fav}: ${w.text}`}>
+											<Star size={16} fill={w.fav ? 'currentColor' : 'none'} />
+										</button>
+									) : (
+										<span className="en-wt__fav is-on is-ro" title={c.en.fromDay(w.day)}>
+											<Star size={16} fill="currentColor" />
+										</span>
+									)}
+								</td>
+								<td className="en-wt__word">
+									<div>
+										<b dir="ltr" lang="en">
+											{w.text}
+										</b>
+										<button type="button" className="en-cell-say" onClick={() => speak(w.text)} aria-label={`${c.en.listen}: ${w.text}`} title={c.en.listen}>
+											<Volume2 size={13} />
+										</button>
+									</div>
+									{!own ? <span className="en-pop__day">{c.en.fromDay(w.day)}</span> : null}
+								</td>
+								<td className="en-wt__ar">
+									{w.translation ? (
+										<button type="button" className={`en-wt__reveal${open ? ' is-open' : ''}`} dir="rtl" lang="ar" onClick={() => reveal(key)} title={open ? c.en.hideArabicCell : c.en.showArabicCell}>
+											{w.translation}
+										</button>
+									) : (
+										<span className="en-wt__none">—</span>
+									)}
+								</td>
+								<td className="en-wt__sent" dir="ltr" lang="en">
+									{w.meaning ? <p className="en-wt__meaning">{w.meaning}</p> : null}
+									{sentences.map((x, i) => (
+										<p key={i} className={`en-wt__ex${i ? ' is-ctx' : ''}`}>
+											<button type="button" className="en-wt__say" onClick={() => speak(x)} aria-label={c.en.listen}>
+												<Volume2 size={12} />
+											</button>
+											<span>
+												{i ? <small>{c.en.fromVideo}</small> : null}
+												{highlight(x, w.text)}
+											</span>
+											<LineTr c={c} text={x} />
+										</p>
+									))}
+									{!w.meaning && !sentences.length ? <span className="en-wt__none">—</span> : null}
+								</td>
+								<td className="en-wt__act">
+									{own ? (
+										<button type="button" className="lrn-icon-btn" onClick={() => onEdit(w)} aria-label={c.en.editWord} title={c.en.editWord}>
+											<Pencil size={14} />
+										</button>
+									) : null}
+								</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
+		</div>
 	);
-	const deck = [...day.words, ...(showOld ? others : [])];
+
+	const deck = view === 'fav' ? favs : [...day.words, ...(showOld ? others : [])];
 	return (
 		<section className="en-words-tab">
-			<div className="lrn-qa__bar">
-				<span className="lrn-qa__count">{c.en.wordsCount(day.words.length)}</span>
+			<div className="en-wt__bar">
+				<div className="en-wt__views" role="tablist">
+					<button type="button" role="tab" aria-selected={view === 'day'} className={view === 'day' ? 'is-on' : ''} onClick={() => setView('day')}>
+						{c.en.todayWords}
+						<em>{day.words.length}</em>
+					</button>
+					<button type="button" role="tab" aria-selected={view === 'fav'} className={view === 'fav' ? 'is-on' : ''} onClick={() => setView('fav')}>
+						<Star size={13} fill={view === 'fav' ? 'currentColor' : 'none'} aria-hidden />
+						{c.en.favorites}
+						<em>{favs.length}</em>
+					</button>
+				</div>
+				<button type="button" className={`en-wt__toggle${showAr ? ' is-on' : ''}`} onClick={() => setShowAr(v => !v)} aria-pressed={showAr}>
+					{showAr ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
+					{showAr ? c.en.hideArabicAll : c.en.showArabicAll}
+				</button>
+				<span className="en-grow" />
 				<button type="button" className="lrn-btn is-ghost" disabled={!deck.length} onClick={() => setPractice({ deck: shuffled(deck), i: 0, open: false })}>
 					<RotateCcw size={15} aria-hidden />
 					{c.qa.practice}
@@ -733,17 +1027,32 @@ function WordsTab({ c, day, others, onAdd, onEdit }) {
 					{c.en.addWord}
 				</button>
 			</div>
-			{day.words.length ? list(day.words, true) : <p className="lrn-qa__empty">{c.en.noWords}</p>}
-			{others.length ? (
+			{rows.length ? table(rows, view === 'day') : <p className="lrn-qa__empty">{view === 'fav' ? c.en.noFavs : c.en.noWords}</p>}
+			{view === 'day' && others.length ? (
 				<>
 					<button type="button" className="en-link-btn en-old-toggle" onClick={() => setShowOld(v => !v)} aria-expanded={showOld}>
 						{showOld ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
 						{c.en.oldWords(others.length)}
 					</button>
-					{showOld ? list(others, false) : null}
+					{showOld ? table(others, false) : null}
 				</>
 			) : null}
 		</section>
+	);
+}
+
+/** The word inside its sentence, in bold. */
+function highlight(sentence, word) {
+	const w = String(word || '').trim();
+	if (!w) return sentence;
+	const at = sentence.toLowerCase().indexOf(w.toLowerCase());
+	if (at < 0) return sentence;
+	return (
+		<>
+			{sentence.slice(0, at)}
+			<b>{sentence.slice(at, at + w.length)}</b>
+			{sentence.slice(at + w.length)}
+		</>
 	);
 }
 
@@ -856,20 +1165,43 @@ function markFixes(text, fixes) {
 	return out;
 }
 
-function SpokenText({ c, s, topic, onUpdate }) {
+/**
+ * What you said in one recording, and later tries at it. The original stays as it was;
+ * "New version" adds another try. Each one can be analysed by the AI: the mistakes with their
+ * grammar point and rule, a corrected text, an overall look, your level and tips.
+ */
+function SpokenText({ c, s, topic, writing, onTranscribe, onUpdate }) {
+	const versions = useMemo(
+		() => [
+			{ id: 'orig', text: s.text || '', corrected: s.corrected || '', fixes: s.fixes || [], analysis: s.analysis || null, original: true },
+			...(s.versions || []).map(v => ({ ...v, fixes: v.fixes || [], analysis: v.analysis || null })),
+		],
+		[s.text, s.corrected, s.fixes, s.analysis, s.versions],
+	);
+	const [active, setActive] = useState('orig');
+	const cur = versions.find(v => v.id === active) || versions[0];
 	const [editing, setEditing] = useState(!s.text);
-	const [draft, setDraft] = useState(s.text || '');
+	const [draft, setDraft] = useState(cur.text);
+	const [adding, setAdding] = useState(null); // new version text, while writing it
 	const [busy, setBusy] = useState(false);
 	const [showCorrected, setShowCorrected] = useState(false);
-	useEffect(() => setDraft(s.text || ''), [s.text]);
-	const fixes = s.fixes || [];
-	const check = async () => {
-		const text = (editing ? draft : s.text || '').trim();
+	useEffect(() => {
+		setDraft(cur.text);
+		// text written out after recording: show it ready to read
+		if (cur.text) setEditing(false);
+	}, [cur.text, cur.id]);
+
+	const patchVersion = (vid, patch) => {
+		if (vid === 'orig') onUpdate(patch);
+		else onUpdate({ versions: (s.versions || []).map(v => (v.id === vid ? { ...v, ...patch } : v)) });
+	};
+	const analyse = async () => {
+		const text = (editing ? draft : cur.text).trim();
 		if (!text) return;
 		setBusy(true);
 		try {
 			const { data } = await api.post('/learn/english/ai', { task: 'correct', text: text.slice(0, 8000), topic: (s.prompt || topic).slice(0, 200) });
-			onUpdate({ text, corrected: data.corrected || '', fixes: (data.fixes || []).map((f, i) => ({ id: `f${i}`, ...f, done: false })) });
+			patchVersion(cur.id, { text, corrected: data.corrected || '', fixes: (data.fixes || []).map((f, i) => ({ id: `f${i}`, ...f, done: false })), analysis: data.analysis || null });
 			setEditing(false);
 			if (!data.fixes?.length) toast.success(c.en.noFixes);
 		} catch (error) {
@@ -878,99 +1210,208 @@ function SpokenText({ c, s, topic, onUpdate }) {
 			setBusy(false);
 		}
 	};
+	const saveNew = () => {
+		const text = (adding || '').trim();
+		if (!text) return setAdding(null);
+		const v = { id: enId('v'), at: Date.now(), text, corrected: '', fixes: [], analysis: null };
+		onUpdate({ versions: [...(s.versions || []), v] });
+		setAdding(null);
+		setActive(v.id);
+		return undefined;
+	};
+	const removeVersion = vid => {
+		onUpdate({ versions: (s.versions || []).filter(v => v.id !== vid) });
+		setActive('orig');
+	};
+	const fixes = cur.fixes;
+	const a = cur.analysis;
+	const label = (v, i) => (v.original ? c.en.original : c.en.versionN(i + 1));
+
 	return (
 		<div className="en-said">
 			<div className="en-said__bar">
 				<b>{c.en.whatYouSaid}</b>
-				{!editing ? (
+				{versions.length > 1 || adding != null ? (
+					<div className="en-vtabs" role="tablist">
+						{versions.map((v, i) => (
+							<span key={v.id} className={`en-vtab${v.id === cur.id && adding == null ? ' is-on' : ''}`}>
+								<button type="button" role="tab" aria-selected={v.id === cur.id} onClick={() => (setAdding(null), setActive(v.id))}>
+									{label(v, i)}
+									{v.analysis?.level ? <em>{v.analysis.level}</em> : null}
+								</button>
+								{!v.original ? (
+									<button type="button" className="en-vtab__x" onClick={() => removeVersion(v.id)} aria-label={c.en.deleteVersion} title={c.en.deleteVersion}>
+										×
+									</button>
+								) : null}
+							</span>
+						))}
+						{adding != null ? <span className="en-vtab is-on is-new">{c.en.versionN(versions.length + 1)}</span> : null}
+					</div>
+				) : null}
+				{!editing && adding == null && cur.original ? (
 					<button type="button" className="lrn-icon-btn" onClick={() => setEditing(true)} aria-label={c.en.editText} title={c.en.editText}>
 						<Pencil size={14} />
 					</button>
 				) : null}
 			</div>
-			{editing ? (
-				<textarea
-					className="en-said__edit"
-					dir="ltr"
-					lang="en"
-					rows={4}
-					maxLength={20000}
-					value={draft}
-					placeholder={c.en.saidHint}
-					onChange={e => setDraft(e.target.value)}
-					onBlur={() => {
-						if (draft !== (s.text || '')) onUpdate({ text: draft, corrected: '', fixes: [] });
-						if (draft.trim()) setEditing(false);
-					}}
-				/>
-			) : (
-				<p className="en-said__text" dir="ltr" lang="en">
-					{markFixes(s.text, fixes).map((part, i) =>
-						part.fix ? (
-							<mark key={i} className={`en-said__bad${part.fix.done ? ' is-done' : ''}`} title={`→ ${part.fix.right}`}>
-								{part.text}
-							</mark>
-						) : (
-							<span key={i}>{part.text}</span>
-						),
-					)}
-				</p>
-			)}
-			<div className="en-said__tools">
-				<button type="button" className="lrn-btn en-ai-btn" onClick={check} disabled={busy || !(editing ? draft : s.text || '').trim()}>
-					{busy ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Sparkles size={15} aria-hidden />}
-					{fixes.length || s.corrected ? c.en.checkAgain : c.en.checkEnglish}
-				</button>
-				{s.corrected ? (
-					<button type="button" className="en-link-btn" onClick={() => setShowCorrected(v => !v)} aria-expanded={showCorrected}>
-						{showCorrected ? <EyeOff size={13} aria-hidden /> : <Eye size={13} aria-hidden />}
-						{c.en.correctedVersion}
-					</button>
-				) : null}
-			</div>
-			{showCorrected && s.corrected ? (
-				<p className="en-said__corrected" dir="ltr" lang="en">
-					<button type="button" onClick={() => speak(s.corrected)} aria-label={c.en.listen}>
-						<Volume2 size={13} />
-					</button>
-					{s.corrected}
-				</p>
-			) : null}
-			{fixes.length ? (
-				<ul className="en-fixes">
-					{fixes.map(f => (
-						<li key={f.id} className={f.done ? 'is-done' : ''}>
-							<button
-								type="button"
-								className="en-fix__check"
-								role="checkbox"
-								aria-checked={f.done}
-								aria-label={c.en.gotIt}
-								title={c.en.gotIt}
-								onClick={() => onUpdate({ fixes: fixes.map(x => (x.id === f.id ? { ...x, done: !x.done } : x)) })}
-							>
-								{f.done ? <Check size={13} /> : null}
+
+			{adding != null ? (
+				<div className="en-said__new">
+					<textarea className="en-said__edit" dir="ltr" lang="en" rows={4} maxLength={20000} value={adding} placeholder={c.en.newVersionHint} onChange={e => setAdding(e.target.value)} autoFocus />
+					<div className="en-said__tools">
+						<button type="button" className="lrn-btn is-primary" onClick={saveNew} disabled={!adding.trim()}>
+							<Check size={15} aria-hidden />
+							{c.en.saveVersion}
+						</button>
+						{cur.corrected ? (
+							<button type="button" className="en-link-btn" onClick={() => setAdding(cur.corrected)}>
+								<Wand2 size={13} aria-hidden />
+								{c.en.startFromCorrected}
 							</button>
-							<div className="en-fix__main" dir="ltr" lang="en">
-								<span className="en-fix__wrong">{f.wrong}</span>
-								<span className="en-fix__arrow" aria-hidden>
-									→
-								</span>
-								<span className="en-fix__right">{f.right}</span>
-								<button type="button" className="en-fix__say" onClick={() => speak(f.right)} aria-label={c.en.listen}>
-									<Volume2 size={12} />
-								</button>
-								{f.why ? <small>{f.why}</small> : null}
+						) : null}
+						<button type="button" className="lrn-btn is-ghost" onClick={() => setAdding(null)}>
+							{c.cancel || c.close}
+						</button>
+					</div>
+				</div>
+			) : (
+				<>
+					{writing && cur.original ? (
+						<p className="en-said__writing" aria-live="polite">
+							<Loader2 size={15} className="animate-spin" aria-hidden />
+							{c.en.writingText}
+						</p>
+					) : editing && cur.original ? (
+						<textarea
+							className="en-said__edit"
+							dir="ltr"
+							lang="en"
+							rows={4}
+							maxLength={20000}
+							value={draft}
+							placeholder={c.en.saidHint}
+							onChange={e => setDraft(e.target.value)}
+							onBlur={() => {
+								if (draft !== (s.text || '')) onUpdate({ text: draft, corrected: '', fixes: [], analysis: null });
+								if (draft.trim()) setEditing(false);
+							}}
+						/>
+					) : (
+						<p className="en-said__text" dir="ltr" lang="en">
+							{markFixes(cur.text, fixes).map((part, i) =>
+								part.fix ? (
+									<mark key={i} className={`en-said__bad${part.fix.done ? ' is-done' : ''}`} title={`→ ${part.fix.right}`}>
+										{part.text}
+									</mark>
+								) : (
+									<span key={i}>{part.text}</span>
+								),
+							)}
+						</p>
+					)}
+					<div className="en-said__tools">
+						{!writing && onTranscribe && cur.original && !(editing ? draft : cur.text || '').trim() ? (
+							<button type="button" className="lrn-btn en-write-btn" onClick={onTranscribe}>
+								<Wand2 size={15} aria-hidden />
+								{c.en.writeForMe}
+							</button>
+						) : null}
+						<button type="button" className="lrn-btn en-ai-btn" onClick={analyse} disabled={writing || busy || !(editing ? draft : cur.text || '').trim()}>
+							{busy ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Sparkles size={15} aria-hidden />}
+							{busy ? c.en.analysing : fixes.length || cur.corrected || a ? c.en.analyseAgain : c.en.analyse}
+						</button>
+						<button type="button" className="lrn-btn is-ghost en-new-btn" onClick={() => setAdding('')} disabled={!versions.some(v => v.text.trim())}>
+							<Plus size={15} aria-hidden />
+							{c.en.newVersion}
+						</button>
+					</div>
+
+					{a ? (
+						<div className="en-ana">
+							<div className="en-ana__head">
+								<Sparkles size={15} aria-hidden />
+								<b>{c.en.aiLook}</b>
+								{a.level ? (
+									<span className="en-ana__level" title={c.en.levelHint}>
+										{c.en.level} <em>{a.level}</em>
+									</span>
+								) : null}
+								<span className="en-ana__count">{c.en.mistakes(fixes.length)}</span>
 							</div>
-						</li>
-					))}
-				</ul>
-			) : null}
+							{a.summary ? (
+								<p className="en-ana__sum" dir="ltr" lang="en">
+									{a.summary}
+									<LineTr c={c} text={a.summary} />
+								</p>
+							) : null}
+							{a.tips?.length ? (
+								<ul className="en-ana__tips" dir="ltr" lang="en">
+									{a.tips.map(t => (
+										<li key={t}>{t}</li>
+									))}
+								</ul>
+							) : null}
+						</div>
+					) : null}
+
+					{cur.corrected ? (
+						<button type="button" className="en-link-btn" onClick={() => setShowCorrected(v => !v)} aria-expanded={showCorrected}>
+							{showCorrected ? <EyeOff size={13} aria-hidden /> : <Eye size={13} aria-hidden />}
+							{c.en.correctedVersion}
+						</button>
+					) : null}
+					{showCorrected && cur.corrected ? (
+						<p className="en-said__corrected" dir="ltr" lang="en">
+							<button type="button" onClick={() => speak(cur.corrected)} aria-label={c.en.listen}>
+								<Volume2 size={13} />
+							</button>
+							{cur.corrected}
+						</p>
+					) : null}
+					{fixes.length ? (
+						<ul className="en-fixes">
+							{fixes.map(f => (
+								<li key={f.id} className={f.done ? 'is-done' : ''}>
+									<button
+										type="button"
+										className="en-fix__check"
+										role="checkbox"
+										aria-checked={f.done}
+										aria-label={c.en.gotIt}
+										title={c.en.gotIt}
+										onClick={() => patchVersion(cur.id, { fixes: fixes.map(x => (x.id === f.id ? { ...x, done: !x.done } : x)) })}
+									>
+										{f.done ? <Check size={13} /> : null}
+									</button>
+									<div className="en-fix__main" dir="ltr" lang="en">
+										{f.kind ? <span className="en-fix__kind">{f.kind}</span> : null}
+										<span className="en-fix__wrong">{f.wrong}</span>
+										<span className="en-fix__arrow" aria-hidden>
+											→
+										</span>
+										<span className="en-fix__right">{f.right}</span>
+										<button type="button" className="en-fix__say" onClick={() => speak(f.right)} aria-label={c.en.listen}>
+											<Volume2 size={12} />
+										</button>
+										{f.why ? (
+											<small>
+												{f.why}
+												<LineTr c={c} text={f.why} />
+											</small>
+										) : null}
+									</div>
+								</li>
+							))}
+						</ul>
+					) : null}
+				</>
+			)}
 		</div>
 	);
 }
 
-function Clip({ c, s, topic, onDelete, onUpdate }) {
+function Clip({ c, s, topic, writing, onTranscribe, onDelete, onUpdate }) {
 	const [url, setUrl] = useState(null);
 	const [missing, setMissing] = useState(false);
 	useEffect(() => {
@@ -1003,36 +1444,121 @@ function Clip({ c, s, topic, onDelete, onUpdate }) {
 				</p>
 			) : null}
 			{url ? <audio controls preload="metadata" src={url} /> : missing ? <p className="en-clip__missing">{c.en.otherDevice}</p> : null}
-			<SpokenText c={c} s={s} topic={topic} onUpdate={onUpdate} />
+			<SpokenText c={c} s={s} topic={topic} writing={writing} onTranscribe={missing ? null : onTranscribe} onUpdate={onUpdate} />
 		</li>
 	);
 }
 
+/** Brave exposes the speech API but never returns words (no Google speech service). */
+const liveTextWorks = () => Boolean(SpeechRec) && !(typeof navigator !== 'undefined' && navigator.brave);
+const WAVE_BARS = 36;
+
 function SpeakTab({ c, day, topic, prompt, onPrompt, onSession, onDeleteSession, onUpdateSession }) {
 	const [minutes, setMinutes] = useState(5);
-	const [rec, setRec] = useState(null); // { started, elapsed }
+	const [rec, setRec] = useState(null); // { elapsed, paused }
 	const [live, setLive] = useState(''); // speech-to-text while recording
+	const [liveOn, setLiveOn] = useState(true); // false: the text is written after you finish
+	const [writing, setWriting] = useState(() => new Set()); // session ids being transcribed
 	const [used, setUsed] = useState(() => new Set());
 	const r = useRef({});
 	const level = useRef(null);
+	const wave = useRef(null);
+	useEffect(() => setLiveOn(liveTextWorks()), []);
 
-	const stop = useCallback(() => {
+	const elapsedNow = () => {
 		const x = r.current;
-		x.listening = false;
+		return (x.acc || 0) + (x.runFrom ? (Date.now() - x.runFrom) / 1000 : 0);
+	};
+	const stopListening = () => {
+		r.current.listening = false;
 		try {
-			x.sr?.stop();
+			r.current.sr?.stop();
 		} catch {
 			/* already stopped */
 		}
-		if (x.recorder && x.recorder.state !== 'inactive') x.recorder.stop();
+	};
+	/** End the recording: saved (Done, or time's up) or thrown away. */
+	const finish = useCallback((discard = false) => {
+		const x = r.current;
+		if (!x.recorder || x.recorder.state === 'inactive') return;
+		x.discard = discard;
+		x.acc = elapsedNow();
+		x.runFrom = 0;
+		stopListening();
+		x.recorder.stop();
 		window.clearInterval(x.timer);
 		window.cancelAnimationFrame(x.raf);
 	}, []);
-	useEffect(() => () => {
-		stop();
-		r.current.stream?.getTracks().forEach(t => t.stop());
-		closeCtx(r.current);
-	}, [stop]);
+	useEffect(
+		() => () => {
+			finish(false);
+			r.current.stream?.getTracks().forEach(t => t.stop());
+			closeCtx(r.current);
+		},
+		[finish],
+	);
+
+	const transcribe = useCallback(
+		async (id, blob) => {
+			setWriting(s => new Set(s).add(id));
+			try {
+				const audio = blob || (await getClip(id));
+				const text = audio ? await transcribeClip(audio) : '';
+				if (text) onUpdateSession(id, { text, corrected: '', fixes: [] });
+				else toast(c.en.heardNothing);
+			} catch {
+				toast.error(c.en.transcribeFailed);
+			} finally {
+				setWriting(s => {
+					const n = new Set(s);
+					n.delete(id);
+					return n;
+				});
+			}
+		},
+		[c, onUpdateSession],
+	);
+
+	const listen = () => {
+		const x = r.current;
+		if (!liveTextWorks() || x.srDead) return;
+		x.listening = true;
+		const sr = new SpeechRec();
+		sr.lang = 'en-US';
+		sr.continuous = true;
+		sr.interimResults = true;
+		sr.onresult = e => {
+			let interim = '';
+			for (let i = e.resultIndex; i < e.results.length; i += 1) {
+				const t = e.results[i][0]?.transcript || '';
+				if (e.results[i].isFinal) x.finalText = `${x.finalText} ${t}`.trim();
+				else interim += t;
+			}
+			x.interim = interim;
+			setLive(`${x.finalText} ${interim}`.trim());
+		};
+		sr.onerror = ev => {
+			// no speech service here (Brave, offline, blocked): write the text after recording instead
+			if (['network', 'not-allowed', 'service-not-allowed', 'language-not-supported', 'audio-capture'].includes(ev.error)) {
+				x.srDead = true;
+				x.listening = false;
+				setLiveOn(false);
+			}
+		};
+		sr.onend = () => {
+			if (x.interim) x.finalText = `${x.finalText} ${x.interim}`.trim();
+			x.interim = '';
+			// Chrome ends recognition after a pause: start it again while still recording
+			if (x.listening) window.setTimeout(() => x.listening && listen(), 150);
+		};
+		x.sr = sr;
+		try {
+			sr.start();
+		} catch {
+			x.srDead = true;
+			setLiveOn(false);
+		}
+	};
 
 	const start = async () => {
 		if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
@@ -1050,40 +1576,58 @@ function SpeakTab({ c, day, topic, prompt, onPrompt, onSession, onDeleteSession,
 		const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
 		const chunks = [];
 		const id = enId('s');
-		const started = Date.now();
+		const startedAt = Date.now();
 		const limit = minutes * 60;
 		const saidPrompt = prompt || topic;
 		recorder.ondataavailable = e => e.data?.size && chunks.push(e.data);
 		recorder.onstop = async () => {
 			stream.getTracks().forEach(t => t.stop());
 			closeCtx(r.current);
-			const seconds = Math.min(limit, Math.round((Date.now() - started) / 1000));
+			const x = r.current;
+			const seconds = Math.min(limit, Math.round(x.acc || 0));
 			setRec(null);
+			if (x.discard) {
+				setLive('');
+				toast(c.en.recDiscarded);
+				return;
+			}
 			// give the recogniser a moment to deliver its last words
 			await new Promise(res => window.setTimeout(res, 600));
-			const text = `${r.current.finalText || ''} ${r.current.interim || ''}`.replace(/\s+/g, ' ').trim();
+			const text = `${x.finalText || ''} ${x.interim || ''}`.replace(/\s+/g, ' ').trim();
 			setLive('');
 			if (seconds < 2 || !chunks.length) return;
+			const blob = new Blob(chunks, { type: recorder.mimeType || mime || 'audio/webm' });
 			try {
-				await putClip(id, new Blob(chunks, { type: recorder.mimeType || mime || 'audio/webm' }));
+				await putClip(id, blob);
 			} catch {
 				/* the session still counts even if the audio could not be kept */
 			}
-			onSession({ id, at: started, seconds, prompt: saidPrompt.slice(0, 600), text: text.slice(0, 20000), corrected: '', fixes: [] });
+			onSession({ id, at: startedAt, seconds, prompt: saidPrompt.slice(0, 600), text: text.slice(0, 20000), corrected: '', fixes: [] });
 			toast.success(c.en.saved(clock(seconds)));
+			if (!text) void transcribe(id, blob);
 		};
-		// live level meter
+		// live level: the glow and the waveform
 		try {
 			const ctx = new (window.AudioContext || window.webkitAudioContext)();
 			const an = ctx.createAnalyser();
 			an.fftSize = 256;
 			ctx.createMediaStreamSource(stream).connect(an);
 			const buf = new Uint8Array(an.frequencyBinCount);
+			const hist = new Array(WAVE_BARS).fill(0);
+			let frame = 0;
 			const loop = () => {
 				an.getByteTimeDomainData(buf);
 				let peak = 0;
 				for (const v of buf) peak = Math.max(peak, Math.abs(v - 128));
-				level.current?.style.setProperty('--lvl', String(Math.min(1, peak / 64)));
+				const lvl = r.current.recorder?.state === 'paused' ? 0 : Math.min(1, peak / 56);
+				level.current?.style.setProperty('--lvl', String(lvl));
+				frame += 1;
+				if (frame % 4 === 0 && wave.current) {
+					hist.shift();
+					hist.push(lvl);
+					const bars = wave.current.children;
+					for (let i = 0; i < bars.length; i += 1) bars[i].style.transform = `scaleY(${Math.max(0.08, hist[i] || 0)})`;
+				}
 				r.current.raf = window.requestAnimationFrame(loop);
 			};
 			r.current.ctx = ctx;
@@ -1092,52 +1636,38 @@ function SpeakTab({ c, day, topic, prompt, onPrompt, onSession, onDeleteSession,
 			/* meter is optional */
 		}
 		recorder.start(1000);
-		r.current = { ...r.current, recorder, stream, timer: 0, finalText: '', interim: '', listening: true, sr: null };
-		// live speech-to-text (Chrome stops it after a pause: restart it while still recording)
-		if (SpeechRec) {
-			const listen = () => {
-				const sr = new SpeechRec();
-				sr.lang = 'en-US';
-				sr.continuous = true;
-				sr.interimResults = true;
-				sr.onresult = e => {
-					let interim = '';
-					for (let i = e.resultIndex; i < e.results.length; i += 1) {
-						const t = e.results[i][0]?.transcript || '';
-						if (e.results[i].isFinal) r.current.finalText = `${r.current.finalText} ${t}`.trim();
-						else interim += t;
-					}
-					r.current.interim = interim;
-					setLive(`${r.current.finalText} ${interim}`.trim());
-				};
-				sr.onerror = ev => {
-					if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') r.current.listening = false;
-				};
-				sr.onend = () => {
-					if (r.current.interim) r.current.finalText = `${r.current.finalText} ${r.current.interim}`.trim();
-					r.current.interim = '';
-					if (r.current.listening) window.setTimeout(() => r.current.listening && listen(), 150);
-				};
-				r.current.sr = sr;
-				try {
-					sr.start();
-				} catch {
-					/* no speech service */
-				}
-			};
-			listen();
-		}
-		setRec({ started, elapsed: 0 });
+		r.current = { ...r.current, recorder, stream, timer: 0, finalText: '', interim: '', listening: false, sr: null, srDead: false, discard: false, acc: 0, runFrom: Date.now() };
+		setLiveOn(liveTextWorks());
+		listen();
+		setRec({ elapsed: 0, paused: false });
 		r.current.timer = window.setInterval(() => {
-			const elapsed = (Date.now() - started) / 1000;
-			setRec(x => (x ? { ...x, elapsed } : x));
-			if (elapsed >= limit) stop();
+			const elapsed = elapsedNow();
+			setRec(v => (v ? { ...v, elapsed } : v));
+			if (elapsed >= limit) finish(false);
 		}, 250);
+	};
+
+	const pause = () => {
+		const x = r.current;
+		if (x.recorder?.state !== 'recording') return;
+		x.recorder.pause();
+		x.acc = elapsedNow();
+		x.runFrom = 0;
+		stopListening();
+		setRec(v => (v ? { ...v, paused: true, elapsed: x.acc } : v));
+	};
+	const resume = () => {
+		const x = r.current;
+		if (x.recorder?.state !== 'paused') return;
+		x.recorder.resume();
+		x.runFrom = Date.now();
+		listen();
+		setRec(v => (v ? { ...v, paused: false } : v));
 	};
 
 	const spoken = totalSpokenSeconds(day);
 	const limit = minutes * 60;
-	const left = rec ? Math.max(0, limit - rec.elapsed) : limit;
+	const elapsed = rec ? rec.elapsed : 0;
 	const pickPrompt = () => {
 		const qs = day.questions.map(q => q.q).filter(Boolean);
 		if (!qs.length) return;
@@ -1190,27 +1720,62 @@ function SpeakTab({ c, day, topic, prompt, onPrompt, onSession, onDeleteSession,
 				) : null}
 			</div>
 
-			<div className={`en-rec${rec ? ' is-on' : ''}`} ref={level}>
-				<div className="en-rec__mins" role="radiogroup" aria-label={c.en.minutes}>
-					{SPEAK_MINUTES.map(m => (
-						<button key={m} type="button" role="radio" aria-checked={minutes === m} className={minutes === m ? 'is-on' : ''} disabled={Boolean(rec)} onClick={() => setMinutes(m)}>
-							{c.en.min(m)}
+			<div className={`en-rc${rec ? ' is-on' : ''}${rec?.paused ? ' is-paused' : ''}`} ref={level}>
+				{!rec ? (
+					<>
+						<div className="en-rc__mins" role="radiogroup" aria-label={c.en.minutes}>
+							{SPEAK_MINUTES.map(m => (
+								<button key={m} type="button" role="radio" aria-checked={minutes === m} className={minutes === m ? 'is-on' : ''} onClick={() => setMinutes(m)}>
+									{c.en.min(m)}
+								</button>
+							))}
+						</div>
+						<button type="button" className="en-rc__mic" onClick={start} aria-label={c.en.start}>
+							<span className="en-rc__halo" aria-hidden />
+							<Mic size={30} strokeWidth={2.2} />
 						</button>
-					))}
-				</div>
-				<button type="button" className="en-rec__btn" onClick={rec ? stop : start} aria-label={rec ? c.en.stop : c.en.start}>
-					<span className="en-rec__ring" style={{ '--p': rec ? Math.min(1, rec.elapsed / limit) : 0 }} aria-hidden />
-					{rec ? <Square size={26} fill="currentColor" /> : <Mic size={30} />}
-				</button>
-				<b className="en-rec__time">{clock(left)}</b>
-				<span className="en-rec__hint">{rec ? c.en.recording : c.en.tapToStart}</span>
-				{rec ? (
-					<p className={`en-live${live ? '' : ' is-empty'}`} dir="ltr" lang="en" aria-live="polite">
-						{live || (SpeechRec ? c.en.listening : c.en.noSpeechApi)}
-					</p>
-				) : !SpeechRec ? (
-					<p className="en-live is-empty">{c.en.noSpeechApi}</p>
-				) : null}
+						<span className="en-rc__hint">{c.en.tapToStart}</span>
+						{!liveOn ? <p className="en-rc__note">{c.en.liveLater}</p> : null}
+					</>
+				) : (
+					<>
+						<div className="en-rc__status">
+							<span className="en-rc__dot" aria-hidden />
+							<b>{rec.paused ? c.en.recPaused : c.en.recNow}</b>
+							<span className="en-rc__left" dir="ltr">
+								{c.en.recLeft(clock(Math.max(0, limit - elapsed)))}
+							</span>
+						</div>
+						<b className="en-rc__time" dir="ltr">
+							{clock(elapsed)}
+						</b>
+						<div className="en-rc__wave" ref={wave} aria-hidden>
+							{Array.from({ length: WAVE_BARS }, (_, i) => (
+								<i key={i} />
+							))}
+						</div>
+						<i className="en-rc__progress" aria-hidden>
+							<i style={{ width: `${Math.min(100, (elapsed / limit) * 100)}%` }} />
+						</i>
+						<div className="en-rc__ctrls">
+							<button type="button" className="en-rc__ctl is-ghost" onClick={() => finish(true)} title={c.en.recDiscard}>
+								<Trash2 size={17} aria-hidden />
+								<span>{c.en.recDiscard}</span>
+							</button>
+							<button type="button" className="en-rc__ctl is-pause" onClick={rec.paused ? resume : pause}>
+								{rec.paused ? <Play size={18} fill="currentColor" aria-hidden /> : <Pause size={18} fill="currentColor" aria-hidden />}
+								<span>{rec.paused ? c.en.recResume : c.en.recPause}</span>
+							</button>
+							<button type="button" className="en-rc__ctl is-done" onClick={() => finish(false)}>
+								<Check size={18} strokeWidth={2.6} aria-hidden />
+								<span>{c.en.recDone}</span>
+							</button>
+						</div>
+						<p className={`en-live${live ? '' : ' is-empty'}`} dir={live ? 'ltr' : undefined} lang={live ? 'en' : undefined} aria-live="polite">
+							{live || (rec.paused ? c.en.recPausedHint : liveOn ? c.en.listening : c.en.liveLater)}
+						</p>
+					</>
+				)}
 			</div>
 
 			<div className="en-speak__sum">
@@ -1224,6 +1789,8 @@ function SpeakTab({ c, day, topic, prompt, onPrompt, onSession, onDeleteSession,
 							c={c}
 							s={s}
 							topic={topic}
+							writing={writing.has(s.id)}
+							onTranscribe={() => transcribe(s.id)}
 							onUpdate={patch => onUpdateSession(s.id, patch)}
 							onDelete={() => {
 								void deleteClip(s.id);
@@ -1307,10 +1874,10 @@ export default function EnglishDay({ c, lecture, course, onChange, renderNotes }
 					{tab === 'read' ? (
 						<>
 							<VideoBlock c={c} url={day.videoUrl} onUrl={videoUrl => change({ videoUrl }, true)} />
-							<Transcript c={c} day={day} others={others} onTranscript={(transcript, now) => change({ transcript }, now)} onSaveWord={saveWord} onEditWord={w => setDialog(w)} />
+							<Transcript c={c} day={day} others={others} onTranscript={(transcript, now) => change({ transcript }, now)} onPatch={patch => change(patch, true)} onSaveWord={saveWord} onEditWord={w => setDialog(w)} />
 						</>
 					) : tab === 'words' ? (
-						<WordsTab c={c} day={day} others={others} onAdd={addWord} onEdit={w => setDialog(w)} />
+						<WordsTab c={c} day={day} others={others} onAdd={addWord} onEdit={w => setDialog(w)} onFav={id => change({ words: dayRef.current.words.map(x => (x.id === id ? { ...x, fav: !x.fav } : x)) }, true)} />
 					) : tab === 'questions' ? (
 						<QuestionsTab
 							c={c}

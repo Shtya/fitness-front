@@ -231,6 +231,14 @@ html.dark .wa-composer {
 	animation: cp-rise 180ms var(--cp-ease);
 }
 
+/* Replying while recording a voice note: the reply card keeps its own row above the recorder
+   (the recording layout forces one row with `flex-wrap: nowrap !important`; this is more specific). */
+.wa-composer.is-recording:has(> .wa-rp),
+.wa-composer.wa-composer:has(.wa-recording-panel):has(> .wa-rp) {
+	flex-wrap: wrap !important;
+	row-gap: 0 !important;
+}
+
 .wa-composer .wa-rp.is-mine {
 	--rp-c: #53bdeb; /* your own message: WhatsApp's blue */
 }

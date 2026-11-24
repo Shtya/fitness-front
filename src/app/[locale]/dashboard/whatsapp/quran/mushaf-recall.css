@@ -1,0 +1,120 @@
+/* "I forgot this ayah": a floating card while you try to recall it (the ayah itself is veiled). */
+
+.mr-recall {
+	position: absolute;
+	inset-inline: 12px;
+	bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+	z-index: 45;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	max-inline-size: 560px;
+	margin-inline: auto;
+	padding: 10px 10px 10px 12px;
+	border: 1.5px solid var(--mr-card-line);
+	border-radius: 20px;
+	background: var(--mr-card);
+	color: var(--mr-ink);
+	box-shadow: inset 0 0 0 3px var(--mr-card), inset 0 0 0 4px color-mix(in srgb, var(--mr-card-line) 55%, transparent), 0 18px 40px -20px rgba(40, 25, 5, 0.55);
+	animation: mr-recall-in 0.32s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+@keyframes mr-recall-in {
+	from {
+		opacity: 0;
+		transform: translateY(14px) scale(0.98);
+	}
+}
+.mr-recall__icon {
+	flex: none;
+	display: grid;
+	place-items: center;
+	inline-size: 40px;
+	block-size: 40px;
+	border-radius: 14px;
+	background: var(--mr-gold-soft);
+	color: var(--mr-gold-3);
+	animation: mr-recall-think 2.4s ease-in-out infinite;
+}
+.mr-recall.is-shown .mr-recall__icon {
+	background: color-mix(in srgb, var(--mr-green) 14%, transparent);
+	color: var(--mr-green);
+	animation: none;
+}
+@keyframes mr-recall-think {
+	50% {
+		box-shadow: 0 0 0 6px color-mix(in srgb, var(--mr-gold) 16%, transparent);
+	}
+}
+.mr-recall__txt {
+	flex: 1;
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+.mr-recall__txt b {
+	font-size: 14.5px;
+	font-weight: 800;
+}
+.mr-recall__txt small {
+	color: var(--mr-ink-2);
+	font-size: 12px;
+	line-height: 1.4;
+}
+.mr-recall__acts {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: none;
+}
+.mr-recall__btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	block-size: 36px;
+	padding: 0 11px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 12px;
+	background: var(--mr-card);
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 700;
+	white-space: nowrap;
+	cursor: pointer;
+}
+.mr-recall__btn.is-primary {
+	border-color: transparent;
+	background: var(--mr-green);
+	color: #fff;
+}
+html.dark .mr-recall__btn.is-primary,
+.mr[data-eye-dark] .mr-recall__btn.is-primary {
+	background: #2f6b4a;
+}
+.mr-recall__x {
+	display: grid;
+	place-items: center;
+	inline-size: 34px;
+	block-size: 34px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--mr-ink-3);
+	cursor: pointer;
+}
+.mr-recall__x:hover {
+	background: var(--mr-gold-soft);
+	color: var(--mr-ink);
+}
+
+@media (max-width: 480px) {
+	.mr-recall {
+		flex-wrap: wrap;
+		inset-inline: 8px;
+	}
+	.mr-recall__acts {
+		inline-size: 100%;
+		justify-content: flex-end;
+	}
+}

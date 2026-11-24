@@ -92,5 +92,5 @@ test('sentence around a word, selections, misc', () => {
 	assert.ok(!isWordSelection('one two three four five six seven'));
 	assert.ok(!isWordSelection('123'));
 	assert.equal(clock(305), '5:05');
-	assert.deepEqual(normalizeDay(null), { videoUrl: '', transcript: '', words: [], questions: [], speaking: [] });
+	assert.deepEqual(normalizeDay(null), { videoUrl: '', transcript: '', words: [], questions: [], speaking: [], learned: [] });
 });

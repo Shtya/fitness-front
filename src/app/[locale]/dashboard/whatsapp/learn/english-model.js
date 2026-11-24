@@ -21,6 +21,7 @@ export function normalizeDay(raw) {
 		words: Array.isArray(v.words) ? v.words.filter(w => w && w.id && w.text) : [],
 		questions: Array.isArray(v.questions) ? v.questions.filter(q => q && q.id) : [],
 		speaking: Array.isArray(v.speaking) ? v.speaking.filter(s => s && s.id) : [],
+		learned: Array.isArray(v.learned) ? [...new Set(v.learned.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim().toLowerCase()))] : [],
 	};
 }
 
@@ -219,11 +220,15 @@ export function parseMarkdown(src) {
 		if (para) blocks.push(para);
 		para = null;
 	};
+	let table = null;
 	const endList = () => {
 		if (list) blocks.push(list);
 		list = null;
+		if (table) blocks.push(table);
+		table = null;
 	};
-	for (const raw of lines) {
+	for (let at = 0; at < lines.length; at += 1) {
+		const raw = lines[at];
 		if (code) {
 			if (/^\s*```/.test(raw)) {
 				blocks.push(code);
@@ -244,6 +249,34 @@ export function parseMarkdown(src) {
 			continue;
 		}
 		let m;
+		// table row: "| a | b |" (the "|---|---|" line under the first row makes it the header)
+		if (/^\|.*\|$/.test(line) || (table && line.includes('|'))) {
+			endPara();
+			if (list) {
+				blocks.push(list);
+				list = null;
+			}
+			const cells = line
+				.replace(/^\|/, '')
+				.replace(/\|$/, '')
+				.split(/(?<!\\)\|/)
+				.map(cell => cell.trim().replace(/\\\|/g, '|'));
+			if (!table) table = { type: 'table', head: null, rows: [], lines: [] };
+			if (cells.every(cell => /^:?-{2,}:?$/.test(cell))) {
+				if (!table.head && table.rows.length === 1) {
+					table.head = table.rows.shift();
+					table.lines.shift();
+				}
+			} else {
+				table.rows.push(cells);
+				table.lines.push(at); // source line, so a row can be deleted
+			}
+			continue;
+		}
+		if (table) {
+			blocks.push(table);
+			table = null;
+		}
 		if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
 			endPara();
 			endList();
@@ -293,7 +326,7 @@ export function parseMarkdown(src) {
 /** Plain text of a Markdown transcript (for the AI and for example sentences). */
 export const markdownText = src =>
 	parseMarkdown(src)
-		.map(b => (b.items ? b.items.map(it => parseInline(it).map(r => r.text).join('')).join('\n') : b.text != null ? (b.type === 'code' ? b.text : parseInline(b.text).map(r => r.text).join('')) : ''))
+		.map(b => (b.type === 'table' ? [b.head, ...b.rows].filter(Boolean).map(r => r.map(cell => parseInline(cell).map(x => x.text).join('')).join(' — ')).join('\n') : b.items ? b.items.map(it => parseInline(it).map(r => r.text).join('')).join('\n') : b.text != null ? (b.type === 'code' ? b.text : parseInline(b.text).map(r => r.text).join('')) : ''))
 		.filter(Boolean)
 		.join('\n');
 
@@ -309,4 +342,27 @@ export const totalSpokenSeconds = day => (day?.speaking || []).reduce((n, s) => 
 export function clock(sec) {
 	const s = Math.max(0, Math.round(sec || 0));
 	return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** The transcript without one source line (deleting a table row). */
+export function dropLine(src, at) {
+	const lines = String(src || '')
+		.replace(/\r\n?/g, '\n')
+		.split('\n');
+	if (at < 0 || at >= lines.length) return src;
+	lines.splice(at, 1);
+	return lines.join('\n');
+}
+
+/** A table row's key for "learned": its English word, else its first cell, in lower case. */
+export function rowKey(cells) {
+	const plain = (cells || []).map(c => parseInline(c || '').map(r => r.text).join('').trim());
+	const en = plain.find(p => /^[\s"'“(]*[a-z]/i.test(p));
+	const pick = (en || plain[0] || '')
+		.replace(/\([^)]*[؀-ۿ][^)]*\)/g, '')
+		.replace(/[؀-ۿ]+/g, '')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.toLowerCase();
+	return pick || (plain[0] || '').trim().toLowerCase();
 }
