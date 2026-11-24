@@ -338,3 +338,31 @@ html.dark .wa-qn-mastered-head {
 		text-overflow: ellipsis;
 	}
 }
+
+/* Back to the mushaf: a small round arrow floating in the top corner of the first card. */
+.wa-qn-hero,
+.wa-qn-empty {
+	position: relative;
+}
+.wa-qn-float-back {
+	position: absolute;
+	top: 12px;
+	/* the far corner: the big due number sits at the start */
+	inset-inline-end: 12px;
+	z-index: 2;
+	display: grid;
+	place-items: center;
+	inline-size: 34px;
+	block-size: 34px;
+	padding: 0;
+	border: 1px solid var(--wa-ui-border, #d9c28c);
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--wa-ui-surface, #fbf6ea) 88%, transparent);
+	color: var(--wa-ui-text, #2a2017);
+	box-shadow: 0 2px 8px rgb(60 40 10 / 0.14);
+	cursor: pointer;
+	transition: transform 0.15s ease;
+}
+.wa-qn-float-back:active {
+	transform: scale(0.92);
+}

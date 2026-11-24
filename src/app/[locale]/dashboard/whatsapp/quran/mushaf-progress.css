@@ -1,0 +1,273 @@
+/* ───── where you are: surah progress hairline + quarter marks ───── */
+
+/* Always visible, 3px, on the very top edge: takes nothing from the page.
+   Fills from the right like the reading direction. */
+.mr-prog {
+	position: absolute;
+	inset-inline: 0;
+	top: env(safe-area-inset-top, 0px);
+	z-index: 21;
+	block-size: 3px;
+	direction: ltr;
+	background: color-mix(in srgb, var(--mr-card-line) 32%, transparent);
+	pointer-events: none;
+	transition: block-size 0.25s ease;
+}
+.mr.is-chrome .mr-prog {
+	block-size: 4px;
+}
+.mr-prog > i {
+	position: absolute;
+	inset-block: 0;
+}
+/* the quarter you are in: a soft band behind the fill */
+.mr-prog-q {
+	right: var(--q-from);
+	inline-size: var(--q-w);
+	background: color-mix(in srgb, var(--mr-gold) 38%, transparent);
+	transition: right 0.35s ease, inline-size 0.35s ease;
+}
+.mr-prog-fill {
+	right: 0;
+	inline-size: var(--pct);
+	border-radius: 3px 0 0 3px;
+	background: linear-gradient(270deg, var(--mr-gold-2), var(--mr-gold));
+	box-shadow: 0 0 6px color-mix(in srgb, var(--mr-gold) 55%, transparent);
+	transition: inline-size 0.35s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+/* quarter starts: tiny paper-coloured notches */
+.mr-prog-tick {
+	right: var(--x);
+	inline-size: 2px;
+	margin-right: -1px;
+	background: var(--mr-paper);
+}
+
+/* Info chip under the top bar (only with the controls shown). */
+.mr-prog-info {
+	pointer-events: auto;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	max-inline-size: 100%;
+	box-sizing: border-box;
+	margin-block-start: 6px;
+	padding: 3px 4px 3px 10px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--mr-card) 94%, transparent);
+	box-shadow: var(--mr-shadow);
+	color: var(--mr-ink-2);
+	font-size: 10.5px;
+	font-weight: 700;
+	line-height: 1.25;
+	white-space: nowrap;
+	overflow: hidden;
+}
+.mr-prog-info > span {
+	flex: none;
+}
+.mr-prog-q-name {
+	color: var(--mr-gold-3);
+	font-weight: 800;
+}
+.mr-prog-info > i {
+	flex: none;
+	inline-size: 3px;
+	block-size: 3px;
+	border-radius: 50%;
+	background: var(--mr-gold);
+}
+.mr-prog-info > b {
+	flex: none;
+	min-inline-size: 30px;
+	padding: 2px 7px;
+	border-radius: 999px;
+	background: var(--mr-gold-soft);
+	color: var(--mr-gold-3);
+	font-size: 10px;
+	font-weight: 800;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+@media (max-width: 360px) {
+	.mr-prog-info {
+		font-size: 9.5px;
+		gap: 4px;
+	}
+}
+
+/* ───── index sheet: title + location, tabs under it ───── */
+
+.mr-idx-head {
+	padding-block: 22px 6px;
+}
+.mr-idx-title {
+	flex: 1;
+	min-inline-size: 0;
+	display: grid;
+	gap: 2px;
+	padding-inline-start: 4px;
+}
+.mr-idx-title b {
+	font-size: 18px;
+	font-weight: 800;
+	color: var(--mr-green);
+}
+.mr-idx-title small {
+	color: var(--mr-ink-3);
+	font-size: 12px;
+	font-weight: 700;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.mr-seg.mr-idx-tabs {
+	flex: none;
+	margin: 6px 14px 10px;
+}
+.mr-idx-tabs .mr-seg-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-block-size: 36px;
+	font-size: 13.5px;
+	transition: background 0.2s ease, color 0.2s ease;
+}
+.mr-seg-count {
+	min-inline-size: 18px;
+	padding: 1px 5px;
+	border-radius: 999px;
+	background: var(--mr-mark);
+	color: #fff;
+	font-size: 10.5px;
+	line-height: 16px;
+}
+.mr-seg-btn.is-on .mr-seg-count {
+	background: #fff;
+	color: var(--mr-mark);
+}
+.mr-sheet-tools {
+	padding-block-start: 0;
+}
+
+/* mistakes tab */
+.mr-mist-empty {
+	margin: 40px 20px;
+	color: var(--mr-ink-3);
+	font-size: 14px;
+	text-align: center;
+}
+.mr-mist-group {
+	margin-block-end: 6px;
+}
+.mr-mist-group h4 {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	margin: 0;
+	padding: 10px 12px 6px;
+	background: var(--mr-card);
+	color: var(--mr-green);
+	font-size: 15px;
+	font-weight: 800;
+}
+.mr-mist-group h4 small {
+	color: var(--mr-ink-3);
+	font-size: 11.5px;
+	font-weight: 700;
+}
+.mr-mist {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	inline-size: 100%;
+	min-block-size: 54px;
+	padding: 4px 10px;
+	border: 0;
+	border-radius: 16px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+.mr-mist:active {
+	background: var(--mr-gold-soft);
+}
+.mr-mist-main {
+	flex: 1;
+	min-inline-size: 0;
+	display: grid;
+	gap: 1px;
+	padding-inline-start: 10px;
+	border-inline-start: 3px solid var(--k, var(--mr-gold));
+}
+.mr-mist-main b {
+	font-size: 14px;
+	font-weight: 800;
+	color: var(--mr-ink);
+}
+.mr-mist-main small {
+	color: var(--mr-ink-3);
+	font-size: 11.5px;
+	font-weight: 700;
+}
+.mr-mist.k-ayah,
+.mr-mist.k-forgot {
+	--k: var(--mr-mark);
+}
+.mr-mist.k-swap,
+.mr-mist.k-mix {
+	--k: #c07a1c;
+}
+.mr-mist.k-add,
+.mr-mist.k-skip,
+.mr-mist.k-order {
+	--k: #3b6fa8;
+}
+.mr-mist.k-tashkeel {
+	--k: var(--mr-green-2);
+}
+.mr-mist-due {
+	flex: none;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: var(--mr-mark-bg);
+	color: var(--mr-mark);
+	font-size: 11px;
+	font-weight: 800;
+}
+.mr-mist-chev {
+	flex: none;
+	color: var(--mr-ink-3);
+}
+
+/* go to page: wide input, round icon button */
+.mr-sheet-tools {
+	grid-template-columns: minmax(0, 1fr) 150px;
+}
+.mr-go {
+	padding-inline: 10px 4px;
+}
+.mr-go input {
+	font-size: 15px;
+}
+.mr-go button {
+	display: grid;
+	place-items: center;
+	flex: none;
+	inline-size: 36px;
+	min-block-size: 36px;
+	block-size: 36px;
+	padding: 0;
+	border-radius: 50%;
+}
+.mr-go button svg {
+	inline-size: 18px;
+	block-size: 18px;
+}
