@@ -43,10 +43,13 @@ export function ProjectMindProvider({ children }) {
 		}
 	}, []);
 
-	// Fall back to the first project when the stored one no longer exists.
+	// Stored project if it still exists; otherwise the most recently analyzed READY project (never a failed one by default).
 	const current = useMemo(() => {
 		if (!hydrated || projectsQ.isLoading) return null;
-		return projects.find((p) => p.id === projectId) || projects[0] || null;
+		const stored = projects.find((p) => p.id === projectId);
+		if (stored) return stored;
+		const ready = projects.filter((p) => p.status === 'ready').sort((a, b) => new Date(b.analyzedAt || 0) - new Date(a.analyzedAt || 0));
+		return ready[0] || projects[0] || null;
 	}, [hydrated, projectsQ.isLoading, projects, projectId]);
 
 	const value = useMemo(

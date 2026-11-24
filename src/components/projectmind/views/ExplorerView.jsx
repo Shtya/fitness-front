@@ -152,7 +152,7 @@ function Inner() {
 	const f = fileQ.data;
 
 	return (
-		<div className="flex h-[calc(100dvh-9rem)] min-h-[480px] flex-col gap-3">
+		<div className="flex h-[calc(100dvh-8.5rem)] min-h-[480px] flex-col gap-3">
 			<PageHeader title={t('title')} subtitle={t('subtitle')} />
 			<div className="flex gap-2 md:hidden" role="tablist" aria-label={t('title')}>
 				{['tree', 'file'].map((k) => (

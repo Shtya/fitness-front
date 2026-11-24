@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Copy, MessageSquarePlus, RefreshCw, Send, ShieldQuestion, Square, Trash2 } from 'lucide-react';
@@ -11,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { errorMessage, pmApi } from '../api';
 import { Markdown } from '../Markdown';
 import { useProjectMind } from '../ProjectMindContext';
-import { AiKeyBanner, ConfidenceBadge, ConfirmDialog, CopyButton, EmptyState, ErrorState, InlineWarning, LabelBadge, PageHeader, RequireProject, SkeletonRows, SourceChip, Spinner } from '../ui';
+import { AiKeyBanner, ConfidenceBadge, ConfirmDialog, CopyButton, EmptyState, ErrorState, InlineWarning, LabelBadge, RequireProject, SkeletonRows, SourceChip, Spinner } from '../ui';
 
 export const STYLES = ['technical', 'business', 'client'];
 const SUGGESTIONS = ['q1', 'q2', 'q3', 'q4'];
@@ -46,8 +47,15 @@ function Answer({ m, t, onFollowUp }) {
 				</div>
 				{meta.retrievedOnly?.length ? (
 					<div>
-						<p className="mb-1 text-xs font-medium text-slate-500">{t('retrievedOnly')}</p>
-						<div className="flex flex-wrap gap-1.5">{meta.retrievedOnly.map((s) => <SourceChip key={s.n} {...s} />)}</div>
+						<p className="mb-2 text-xs font-medium text-slate-500">{t('retrievedOnly')}</p>
+						<ul className="grid gap-2 md:grid-cols-2">
+							{meta.retrievedOnly.map((s) => (
+								<li key={s.n} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+									<div className="border-b border-slate-100 bg-slate-50 px-2 py-1.5 dark:border-slate-800 dark:bg-slate-800/60"><SourceChip {...s} /></div>
+									<pre dir="ltr" className="max-h-28 overflow-hidden p-2 text-[11.5px] leading-[1.45] text-slate-700 dark:text-slate-200">{String(s.snippet || '').split(String.fromCharCode(10)).slice(0, 7).join(String.fromCharCode(10))}</pre>
+								</li>
+							))}
+						</ul>
 					</div>
 				) : null}
 			</div>
@@ -131,7 +139,10 @@ function Inner() {
 	const [toDelete, setToDelete] = useState(null);
 	const abortRef = useRef(null);
 	const endRef = useRef(null);
+	const scrollRef = useRef(null);
 	const lastQuestion = useRef('');
+	const params = useSearchParams();
+	const autoSent = useRef(false);
 
 	const aiQ = useQuery({ queryKey: ['pm', 'ai-status'], queryFn: pmApi.aiStatus, staleTime: 60_000 });
 	const convsQ = useQuery({ queryKey: ['pm', 'convs', projectId], queryFn: () => pmApi.conversations(projectId) });
@@ -139,7 +150,9 @@ function Inner() {
 	const messages = msgsQ.data?.messages || [];
 
 	useEffect(() => {
-		endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+		// Scroll only the message list; scrollIntoView would also move the whole page under the sticky header.
+		const el = scrollRef.current;
+		if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
 	}, [messages.length, pending]);
 
 	const ask = useMutation({
@@ -176,6 +189,18 @@ function Inner() {
 		[ask, input],
 	);
 
+	// Deep link from the dashboard / recent questions: ?q=… asks once on arrival.
+	useEffect(() => {
+		const pre = params.get('q');
+		if (pre && !autoSent.current) {
+			autoSent.current = true;
+			send(pre);
+		}
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// One row per distinct title (repeated questions otherwise flood the list).
+	const convs = useMemo(() => [...new Map((convsQ.data || []).map((c) => [c.title, c])).values()], [convsQ.data]);
+
 	const delConv = useMutation({
 		mutationFn: (id) => pmApi.deleteConversation(projectId, id),
 		onSuccess: (_r, id) => {
@@ -187,21 +212,23 @@ function Inner() {
 	});
 
 	return (
-		<div className="space-y-4">
-			<PageHeader title={t('title')} subtitle={t('subtitle')} />
-			<AiKeyBanner status={aiQ.data} />
-			<div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-				<aside className="space-y-2" aria-label={t('history')}>
+		<div className="flex h-[calc(100dvh-8rem)] min-h-[520px] flex-col gap-3">
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
+				<AiKeyBanner status={aiQ.data} compact />
+			</div>
+			<div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
+				<aside className="flex min-h-0 flex-col gap-2" aria-label={t('history')}>
 					<Button variant="outline" className="w-full" onClick={() => setCid(null)}>
 						<MessageSquarePlus /> {t('newChat')}
 					</Button>
 					{convsQ.isLoading ? (
 						<SkeletonRows rows={3} />
-					) : (convsQ.data || []).length === 0 ? (
+					) : convs.length === 0 ? (
 						<p className="px-1 text-xs text-slate-500">{t('noHistory')}</p>
 					) : (
-						<ul className="max-h-72 space-y-1 overflow-auto lg:max-h-[60vh]">
-							{convsQ.data.map((c) => (
+						<ul className="hidden min-h-0 flex-1 space-y-0.5 overflow-auto lg:block">
+							{convs.map((c) => (
 								<li key={c.id} className="group flex items-center gap-1">
 									<button onClick={() => setCid(c.id)} className={cn('min-w-0 flex-1 truncate rounded-lg px-2.5 py-1.5 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-800', c.id === cid && 'bg-[var(--color-primary-50)] font-medium dark:bg-slate-800')}>
 										{c.title}
@@ -215,8 +242,8 @@ function Inner() {
 					)}
 				</aside>
 
-				<div className="flex min-h-[60vh] flex-col rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-					<div className="flex-1 space-y-5 overflow-auto p-4" aria-live="polite" aria-busy={ask.isPending}>
+				<div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+					<div ref={scrollRef} className="min-h-0 flex-1 space-y-5 overflow-auto p-4" aria-live="polite" aria-busy={ask.isPending}>
 						{!cid && !pending ? (
 							<EmptyState icon={ShieldQuestion} title={t('emptyTitle')} body={t('emptyBody')} action={
 								<div className="flex flex-wrap justify-center gap-2">

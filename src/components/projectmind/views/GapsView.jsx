@@ -136,14 +136,14 @@ function Inner() {
 							<Panel as="div" className="p-3">
 								<div className="flex flex-wrap items-start gap-3">
 									<PriorityBadge priority={g.priority} />
-									<div className="min-w-0 flex-1">
+									<div className="min-w-0 flex-1 basis-56">
 										<p dir="auto" className="font-medium text-slate-900 dark:text-slate-50">{g.title}</p>
 										{g.description ? <p dir="auto" className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">{g.description}</p> : null}
 										{g.relatedFiles?.length ? (
 											<div className="mt-2 flex flex-wrap gap-1.5">{g.relatedFiles.slice(0, 6).map((p) => <SourceChip key={p} path={p} />)}</div>
 										) : null}
 									</div>
-									<div className="flex items-center gap-2">
+									<div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
 										<label className="sr-only" htmlFor={`st-${g.id}`}>{t('statusLabel')}</label>
 										<select id={`st-${g.id}`} value={g.status} onChange={(e) => update.mutate({ id: g.id, patch: { status: e.target.value } })} className="h-8 rounded-md border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700">
 											{STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}

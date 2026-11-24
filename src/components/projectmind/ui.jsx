@@ -263,9 +263,17 @@ export function ConfirmDialog({ open, onOpenChange, title, body, confirmLabel, o
 }
 
 /** Banner shown when the workspace has no AI provider key: features degrade honestly, nothing is faked. */
-export function AiKeyBanner({ status }) {
+export function AiKeyBanner({ status, compact = false }) {
 	const t = useTranslations('projectmind.common');
 	if (!status || status.configured) return null;
+	if (compact) {
+		return (
+			<p role="status" title={t('noKeyBody')} className="inline-flex max-w-full items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+				<KeyRound className="size-3.5 shrink-0" aria-hidden />
+				<span className="truncate">{t('noKeyTitle')}</span>
+			</p>
+		);
+	}
 	return (
 		<div role="status" className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
 			<KeyRound className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -300,4 +308,27 @@ export function formatDate(value, locale) {
 	} catch {
 		return String(value);
 	}
+}
+
+/** Small status indicator dot for compact UI (project switcher). */
+const DOT = { ready: 'bg-emerald-500', failed: 'bg-red-500', importing: 'bg-sky-500 animate-pulse', analyzing: 'bg-violet-500 animate-pulse', draft: 'bg-slate-400' };
+export function StatusDot({ status }) {
+	const t = useTranslations('projectmind.status');
+	return <span className={cn('size-2 shrink-0 rounded-full motion-reduce:animate-none', DOT[status] || DOT.draft)} role="img" aria-label={status ? t(status) : ''} />;
+}
+
+/** Circular gauge. `value` 0-100 or null (renders an empty track and "n/a"). Pure SVG, themed by currentColor. */
+export function Ring({ value, size = 76, stroke = 8, label, className }) {
+	const r = (size - stroke) / 2;
+	const c = 2 * Math.PI * r;
+	const v = value === null || value === undefined ? 0 : Math.max(0, Math.min(100, value));
+	return (
+		<div className={cn('relative grid place-items-center', className)} style={{ width: size, height: size }} role="img" aria-label={`${label}: ${value ?? 'n/a'}${value === null || value === undefined ? '' : '%'}`}>
+			<svg width={size} height={size} className="-rotate-90" aria-hidden>
+				<circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-slate-200 dark:stroke-slate-700" />
+				<circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - v / 100)} className="stroke-[var(--color-primary-600)] transition-[stroke-dashoffset] duration-700 motion-reduce:transition-none dark:stroke-[var(--color-primary-400)]" />
+			</svg>
+			<span className="absolute text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-50">{value === null || value === undefined ? '—' : `${Math.round(v)}%`}</span>
+		</div>
+	);
 }

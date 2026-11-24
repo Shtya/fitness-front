@@ -45,3 +45,14 @@
 	.pm-print { position: absolute; inset: 0; width: 100%; padding: 0 1cm; color: #000 !important; background: #fff !important; }
 	.pm-no-print { display: none !important; }
 }
+
+/* Horizontal scrollers without visible scrollbars (nav strip on small screens). */
+.pm-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.pm-scroll::-webkit-scrollbar { display: none; }
+
+/* Entrance: subtle, skipped by prefers-reduced-motion (handled globally above). */
+@keyframes pm-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.pm-rise { animation: pm-rise .35s ease-out both; }
+
+/* Dot-grid backdrop used by hero cards. */
+.pm-grid { background-image: radial-gradient(rgba(148,163,184,.28) 1px, transparent 1px); background-size: 18px 18px; }

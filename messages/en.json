@@ -10900,7 +10900,11 @@
 			"languages": "Languages",
 			"simTrend": "Simulator scores",
 			"practice": "Practice",
-			"noSims": "No completed simulations yet."
+			"noSims": "No completed simulations yet.",
+			"askTitle": "Ask anything about this codebase. Answers cite real files and lines, or say they cannot verify.",
+			"askPlaceholder": "e.g. How does login verify the password?",
+			"askButton": "Ask",
+			"askDisabled": "Available once the project is ready"
 		},
 		"explorer": {
 			"title": "Code Explorer",
