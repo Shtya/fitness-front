@@ -10833,7 +10833,10 @@
 			"resync": "Re-sync",
 			"uploadNewZip": "Upload new ZIP",
 			"deleteTitle": "Delete \"{name}\"?",
-			"deleteBody": "The project and its index, conversations, notes and gaps will be removed from your workspace."
+			"deleteBody": "The project and its index, conversations, notes and gaps will be removed from your workspace.",
+			"tokenSaved": "Using your saved GitHub token (ends in {last4}).",
+			"tokenMissing": "No GitHub token saved: private repositories will fail.",
+			"tokenManage": "Manage token"
 		},
 		"dashboard": {
 			"notAvailable": "n/a",
@@ -11208,7 +11211,7 @@
 			"zip": "ZIP import",
 			"zipDetail": "Operational. Maximum {size}; path traversal and zip-bombs are rejected.",
 			"github": "GitHub import",
-			"githubDetail": "Operational for public repositories; private repositories need a token supplied per import.",
+			"githubDetail": "Operational for public repositories. Private repositories use the access token saved above.",
 			"stt": "Speech-to-text and live transcription",
 			"meetingApps": "Zoom, Google Meet and Teams",
 			"meetingAppsDetail": "Not connected. No meeting platform integration exists yet.",
@@ -11219,7 +11222,17 @@
 			"p2": "Secret-looking values in source are redacted before storage and before any AI call.",
 			"p3": "Repository content is treated as untrusted data; instructions inside it are not followed.",
 			"p4": "Questions that try to extract secrets are refused without calling the AI.",
-			"retention": "Project data stays in your workspace until you delete the project."
+			"retention": "Project data stays in your workspace until you delete the project.",
+			"ghTitle": "GitHub access token",
+			"ghOn": "A token is saved (ends in {last4}). Every GitHub import uses it automatically.",
+			"ghOff": "No token saved. Public repositories work without one; private repositories need it.",
+			"ghLabel": "Personal access token",
+			"ghReplace": "Replace token",
+			"ghSave": "Save token",
+			"ghRemove": "Remove",
+			"ghSaved": "Token saved",
+			"ghRemoved": "Token removed",
+			"ghHint": "Stored encrypted on the server and never shown again. Use a token with read access to repository contents."
 		}
 	}
 }

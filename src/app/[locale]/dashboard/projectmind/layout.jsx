@@ -24,12 +24,12 @@ function NavLink({ seg, Icon, k, pathname, t }) {
 			aria-current={active ? 'page' : undefined}
 			title={t(k)}
 			className={cn(
-				'group relative inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-2.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)] 2xl:px-3',
+				'group relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)] 2xl:px-3',
 				active ? 'bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900' : 'text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white',
 			)}
 		>
 			<Icon className="size-4 shrink-0" aria-hidden />
-			<span className={cn(active ? 'inline' : 'hidden 2xl:inline')}>{t(k)}</span>
+			<span className="whitespace-nowrap">{t(k)}</span>
 		</Link>
 	);
 }

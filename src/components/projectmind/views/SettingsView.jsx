@@ -1,10 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useQuery } from '@tanstack/react-query';
-import { CheckCircle2, KeyRound, MicOff, ShieldCheck, XCircle } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
+import { CheckCircle2, Github, KeyRound, MicOff, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { errorMessage, pmApi } from '../api';
 import { ErrorState, formatBytes, PageHeader, Panel, PanelTitle, SkeletonRows } from '../ui';
 
@@ -14,6 +18,44 @@ function Row({ ok, label, detail }) {
 			{ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-label="ok" /> : <XCircle className="mt-0.5 size-4 shrink-0 text-red-500" aria-label="not available" />}
 			<div><p className="font-medium">{label}</p><p className="text-xs text-slate-500 dark:text-slate-400">{detail}</p></div>
 		</li>
+	);
+}
+
+/** Saved once, encrypted on the server, used automatically by every GitHub import. The token is never shown again. */
+function GithubTokenCard() {
+	const t = useTranslations('projectmind.settings');
+	const qc = useQueryClient();
+	const [token, setToken] = useState('');
+	const q = useQuery({ queryKey: ['pm', 'github-token'], queryFn: pmApi.githubTokenStatus });
+	const done = () => qc.invalidateQueries({ queryKey: ['pm', 'github-token'] });
+	const save = useMutation({
+		mutationFn: () => pmApi.saveGithubToken(token),
+		onSuccess: () => {
+			toast.success(t('ghSaved'));
+			setToken('');
+			done();
+		},
+		onError: (e) => toast.error(errorMessage(e)),
+	});
+	const remove = useMutation({ mutationFn: pmApi.removeGithubToken, onSuccess: () => { toast.success(t('ghRemoved')); done(); }, onError: (e) => toast.error(errorMessage(e)) });
+	const on = q.data?.configured;
+	return (
+		<Panel>
+			<PanelTitle>{t('ghTitle')}</PanelTitle>
+			<p className="mb-3 flex items-center gap-2 text-sm">
+				<Github className="size-4" aria-hidden />
+				{q.isLoading ? '…' : on ? t('ghOn', { last4: q.data.last4 || '' }) : t('ghOff')}
+			</p>
+			<form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); if (token.trim()) save.mutate(); }}>
+				<div className="min-w-64 flex-1 space-y-1.5">
+					<Label htmlFor="pm-gh-token">{on ? t('ghReplace') : t('ghLabel')}</Label>
+					<Input id="pm-gh-token" dir="ltr" type="password" autoComplete="off" placeholder="ghp_…  /  github_pat_…" value={token} onChange={(e) => setToken(e.target.value)} />
+				</div>
+				<Button type="submit" disabled={token.trim().length < 20 || save.isPending}><KeyRound /> {t('ghSave')}</Button>
+				{on ? <Button type="button" variant="outline" disabled={remove.isPending} onClick={() => remove.mutate()}><Trash2 /> {t('ghRemove')}</Button> : null}
+			</form>
+			<p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t('ghHint')}</p>
+		</Panel>
 	);
 }
 
@@ -30,6 +72,7 @@ export default function SettingsView() {
 	return (
 		<div className="space-y-4">
 			<PageHeader title={t('title')} subtitle={t('subtitle')} />
+			<GithubTokenCard />
 			<Panel>
 				<PanelTitle>{t('ai')}</PanelTitle>
 				<ul className="divide-y divide-slate-100 dark:divide-slate-800">

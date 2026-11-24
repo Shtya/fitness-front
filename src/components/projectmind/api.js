@@ -9,6 +9,10 @@ export const pmApi = {
 	meta: () => api.get(`${base}/meta`).then(d),
 	aiStatus: () => api.get(`${base}/ai-status`).then(d),
 
+	githubTokenStatus: () => api.get(`${base}/settings/github-token`).then(d),
+	saveGithubToken: (token) => api.put(`${base}/settings/github-token`, { token }).then(d),
+	removeGithubToken: () => api.delete(`${base}/settings/github-token`).then(d),
+
 	listProjects: () => api.get(`${base}/projects`).then(d),
 	getProject: (id) => api.get(p(id)).then(d),
 	createProject: (body) => api.post(`${base}/projects`, body).then(d),
