@@ -32,6 +32,7 @@ const L = {
 		hideHint: 'اضغط على الآية المخفية عشان تكشفها',
 		hides: { none: 'بدون', first: 'أول كلمة بس', middle: 'نص الآية', end: 'آخر الآية', all: 'الآية كلها' },
 		start: 'ابدأ المراجعة',
+		exit: 'رجوع للمصحف (بدون تكرار)',
 		summary: (n, f) => `${f(n)} ${n === 1 ? 'آية' : n === 2 ? 'آيتين' : n <= 10 ? 'آيات' : 'آية'}`,
 		quarterN: (n, f) => `الربع ${f(n)}`,
 		times: (n, f) => `×${f(n)}`,
@@ -54,6 +55,7 @@ const L = {
 		hideHint: 'Tap a hidden ayah to reveal it',
 		hides: { none: 'Nothing', first: 'All but first word', middle: 'Middle', end: 'End', all: 'Whole ayah' },
 		start: 'Start revising',
+		exit: 'Back to the mushaf (no repeats)',
 		summary: (n, f) => `${f(n)} ${n === 1 ? 'ayah' : 'ayat'}`,
 		quarterN: (n, f) => `Quarter ${f(n)}`,
 		times: (n, f) => `×${f(n)}`,
@@ -64,7 +66,7 @@ export function reviseLabels(ar) {
 	return ar ? L.ar : L.en;
 }
 
-export default function ReviseSheet({ ar, fmt, cfg, spans, count, reciterId, onReciter, onChange, onStart, onClose }) {
+export default function ReviseSheet({ ar, fmt, cfg, spans, count, reciterId, onReciter, onChange, onStart, onExitRevise, onClose }) {
 	const t = ar ? L.ar : L.en;
 	const same = (x, y) => x && y && x.from?.s === y.from?.s && x.from?.a === y.from?.a && x.to?.s === y.to?.s && x.to?.a === y.to?.a;
 	const current = { from: cfg.from, to: cfg.to };
@@ -188,6 +190,11 @@ export default function ReviseSheet({ ar, fmt, cfg, spans, count, reciterId, onR
 						<Play size={19} />
 						{t.start}
 					</button>
+					{onExitRevise ? (
+						<button type="button" className="rv-exit" onClick={onExitRevise}>
+							{t.exit}
+						</button>
+					) : null}
 				</footer>
 			</section>
 		</div>

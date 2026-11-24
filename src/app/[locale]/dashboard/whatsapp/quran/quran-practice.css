@@ -252,3 +252,89 @@ html.dark .wa-qn-mastered-head {
 	background: var(--qx-accent, #1f4d36);
 	color: #fff;
 }
+
+/* ───── phone fit ───── */
+.wa-qn-act {
+	white-space: nowrap;
+}
+@media (max-width: 560px) {
+	.wa-qr .wa-qn-page {
+		gap: 10px;
+		padding: 10px 10px calc(82px + env(safe-area-inset-bottom, 0px));
+	}
+	.wa-qn-progress-card {
+		padding: 11px 13px;
+		gap: 8px;
+	}
+	.wa-qn-progress-top b {
+		font-size: 14px;
+	}
+	.wa-qn-warm-row .wa-qn-hero.is-warm {
+		padding: 11px 13px;
+	}
+	.wa-qn-warm-row .wa-qn-hero.is-warm b {
+		font-size: 14px;
+	}
+	.wa-qn-warm-row .wa-qn-hero.is-warm small {
+		font-size: 11.5px;
+	}
+	.wa-qn-more {
+		inline-size: 48px;
+		border-radius: 16px;
+	}
+	.wa-qn-toggle {
+		min-block-size: 30px;
+		padding: 0 10px;
+		font-size: 12px;
+	}
+	.wa-qr .wa-qn-card {
+		gap: 8px;
+		padding: 11px 12px;
+	}
+	.wa-qn-card-acts {
+		gap: 6px;
+	}
+	.wa-qn-act {
+		min-block-size: 38px;
+		padding: 0 8px;
+		gap: 5px;
+		border-radius: 11px;
+		font-size: 12.5px;
+	}
+	.wa-qn-act svg {
+		width: 15px;
+		height: 15px;
+	}
+	.wa-qn-act.is-icon {
+		inline-size: 38px;
+	}
+	.wa-qn-tap {
+		min-block-size: 36px;
+		font-size: 12px;
+	}
+	/* "Log a mistake": a compact pill, not a banner. */
+	.wa-qr .wa-qn-fab-bar {
+		padding: 8px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+	}
+	.wa-qr .wa-qn-fab {
+		min-block-size: 44px;
+		padding: 0 18px;
+		gap: 6px;
+		font-size: 14px;
+		box-shadow: 0 0 0 2px var(--qx-bg), 0 0 0 3.5px var(--qx-gold, #a3802f), 0 8px 18px -10px rgb(20 50 30 / 0.6);
+	}
+	.wa-qr .wa-qn-fab svg {
+		width: 18px;
+		height: 18px;
+	}
+}
+@media (max-width: 560px) {
+	.wa-qn-warm-row .wa-qn-hero.is-warm span {
+		min-inline-size: 0;
+	}
+	.wa-qn-warm-row .wa-qn-hero.is-warm small {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+}

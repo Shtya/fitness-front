@@ -1,0 +1,442 @@
+/* Mushaf reader: ayah popover, the full player while reciting, the small idle bar. */
+
+/* ───── popover ───── */
+.mr-pop-scrim {
+	position: fixed;
+	inset: 0;
+	z-index: 58;
+	border: 0;
+	background: rgb(30 22 8 / 0.08);
+}
+.mr-pop {
+	position: fixed;
+	z-index: 59;
+	box-sizing: border-box;
+	display: grid;
+	gap: 10px;
+	padding: 12px;
+	border: 1.5px solid var(--mr-card-line);
+	border-radius: 22px;
+	background: var(--mr-card);
+	color: var(--mr-ink);
+	box-shadow: inset 0 0 0 3px var(--mr-card), inset 0 0 0 4px color-mix(in srgb, var(--mr-card-line) 45%, transparent), 0 22px 50px -16px rgb(50 32 6 / 0.45);
+	animation: mr-pop-in 0.16s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+@keyframes mr-pop-in {
+	from {
+		opacity: 0;
+		transform: translateY(var(--pop-from, 6px)) scale(0.97);
+	}
+}
+.mr-pop.is-above {
+	--pop-from: 6px;
+}
+.mr-pop.is-below {
+	--pop-from: -6px;
+}
+.mr-pop-arrow {
+	position: absolute;
+	left: calc(var(--arrow, 50%) - 8px);
+	inline-size: 14px;
+	block-size: 14px;
+	background: var(--mr-card);
+	border: 1.5px solid var(--mr-card-line);
+	transform: rotate(45deg);
+}
+.mr-pop.is-below .mr-pop-arrow {
+	top: -8.5px;
+	border-inline-end: 0;
+	border-block-end: 0;
+}
+.mr-pop.is-above .mr-pop-arrow {
+	bottom: -8.5px;
+	border-inline-start: 0;
+	border-block-start: 0;
+}
+[dir='rtl'] .mr-pop.is-below .mr-pop-arrow {
+	border-inline-start: 0;
+	border-inline-end: 1.5px solid var(--mr-card-line);
+}
+[dir='rtl'] .mr-pop.is-above .mr-pop-arrow {
+	border-inline-end: 0;
+	border-inline-start: 1.5px solid var(--mr-card-line);
+}
+.mr-pop-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.mr-pop-head b {
+	font-size: 14.5px;
+	font-weight: 800;
+	color: var(--mr-green);
+}
+.mr-act-no.is-sm {
+	inline-size: 32px;
+	block-size: 32px;
+	font-size: 11.5px;
+}
+.mr-pop-actions {
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: 1fr;
+	gap: 6px;
+}
+.mr-pop-actions button {
+	display: grid;
+	justify-items: center;
+	gap: 4px;
+	padding: 9px 4px 8px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--mr-paper) 60%, var(--mr-card));
+	color: var(--mr-green);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 800;
+	cursor: pointer;
+	transition: transform 0.1s, background-color 0.15s;
+}
+.mr-pop-actions button:first-child {
+	border-color: transparent;
+	background: var(--mr-green);
+	color: #fff;
+}
+html.dark .mr-pop-actions button:first-child {
+	background: #2f6b4a;
+}
+.mr-pop-actions button:active,
+.mr-pop-row:active {
+	transform: scale(0.97);
+}
+.mr-pop-label {
+	margin: 2px 2px -4px;
+	font-size: 11.5px;
+	font-weight: 800;
+	color: var(--mr-ink-3);
+}
+.mr-pop-list {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px;
+}
+.mr-pop-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-block-size: 40px;
+	padding: 6px 10px;
+	border: 1px solid color-mix(in srgb, var(--mr-card-line) 70%, transparent);
+	border-radius: 12px;
+	background: var(--mr-card);
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 700;
+	line-height: 1.3;
+	text-align: start;
+	cursor: pointer;
+}
+.mr-pop-row i {
+	flex: none;
+	inline-size: 9px;
+	block-size: 9px;
+	border-radius: 999px;
+	background: var(--mr-gold);
+}
+.mr-pop-row.k-ayah {
+	grid-column: 1 / -1;
+	color: var(--mr-mark);
+	border-color: color-mix(in srgb, var(--mr-mark) 35%, transparent);
+}
+.mr-pop-row.k-link {
+	grid-column: 1 / -1;
+	border-style: dashed;
+}
+.mr-pop-row.k-ayah i,
+.mr-pop-row.k-forgot i {
+	background: #c8463a;
+}
+.mr-pop-row.k-swap i {
+	background: #8b5cf6;
+}
+.mr-pop-row.k-add i {
+	background: #0ea5e9;
+}
+.mr-pop-row.k-tashkeel i {
+	background: #e08a1e;
+}
+.mr-pop-row.k-link i {
+	background: transparent;
+	border: 2px dashed var(--mr-gold);
+}
+
+/* ───── idle bar (not reciting) ───── */
+.mr-bar.is-idle {
+	min-block-size: 58px;
+	padding: 5px 6px 5px 10px;
+}
+.mr-idle-mid {
+	display: grid;
+	justify-items: center;
+	flex: 1;
+	line-height: 1.15;
+	direction: rtl;
+}
+.mr-idle-mid b {
+	font-size: 16px;
+	font-weight: 800;
+	color: var(--mr-green);
+	font-variant-numeric: tabular-nums;
+}
+.mr-idle-mid small {
+	font-size: 11px;
+	color: var(--mr-ink-3);
+}
+
+/* ───── full player (while reciting) ───── */
+.mr-player {
+	position: relative;
+	pointer-events: auto;
+	box-sizing: border-box;
+	display: grid;
+	gap: 8px;
+	inline-size: min(100%, 520px);
+	padding: 12px 14px 12px;
+	border: 1.5px solid var(--mr-card-line);
+	border-radius: 28px;
+	background: var(--mr-card);
+	box-shadow: inset 0 0 0 3px var(--mr-card), inset 0 0 0 4px color-mix(in srgb, var(--mr-card-line) 55%, transparent), var(--mr-shadow);
+}
+.mr-player::before {
+	content: '';
+	position: absolute;
+	top: -10px;
+	left: 50%;
+	inline-size: 34px;
+	block-size: 12px;
+	margin-left: -17px;
+	background: var(--mr-finial) center / contain no-repeat;
+}
+.mr:not(.is-chrome) .mr-player {
+	pointer-events: none;
+}
+.mr-pl-top {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.mr-pl-reciter {
+	flex: 1;
+	min-inline-size: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 2px;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+.mr-pl-avatar {
+	display: grid;
+	place-items: center;
+	flex: none;
+	inline-size: 42px;
+	block-size: 42px;
+	border-radius: 14px;
+	background: linear-gradient(145deg, var(--mr-green-2), var(--mr-green));
+	color: #f6e7bd;
+	font-size: 14px;
+	font-weight: 800;
+	box-shadow: 0 0 0 2px var(--mr-card), 0 0 0 3px var(--mr-gold-2);
+}
+html.dark .mr-pl-avatar {
+	background: linear-gradient(145deg, #3d8560, #245a3d);
+}
+.mr-pl-avatar.is-sm {
+	inline-size: 30px;
+	block-size: 30px;
+	border-radius: 10px;
+	font-size: 11px;
+	box-shadow: none;
+}
+.mr-pl-meta {
+	display: grid;
+	min-inline-size: 0;
+}
+.mr-pl-meta b {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 15px;
+	font-weight: 800;
+	color: var(--mr-green);
+	white-space: nowrap;
+}
+.mr-pl-meta small {
+	font-size: 12px;
+	color: var(--mr-ink-2);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.mr-pl-speed {
+	flex: none;
+	min-block-size: 32px;
+	padding: 0 10px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--mr-paper) 60%, var(--mr-card));
+	color: var(--mr-green);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 800;
+	cursor: pointer;
+}
+.mr-pl-close {
+	inline-size: 34px !important;
+	block-size: 34px !important;
+	color: var(--mr-ink-3) !important;
+}
+.mr-pl-progress {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 8px;
+	font-size: 11.5px;
+	font-weight: 700;
+	color: var(--mr-ink-3);
+	font-variant-numeric: tabular-nums;
+}
+.mr-pl-progress input {
+	--fill: 0%;
+	appearance: none;
+	-webkit-appearance: none;
+	inline-size: 100%;
+	block-size: 16px;
+	margin: 0;
+	background: transparent;
+	cursor: pointer;
+}
+.mr-pl-progress input::-webkit-slider-runnable-track {
+	block-size: 4px;
+	border-radius: 999px;
+	background: linear-gradient(to right, var(--mr-gold) var(--fill), color-mix(in srgb, var(--mr-ink) 13%, var(--mr-paper)) var(--fill));
+}
+.mr-pl-progress input::-moz-range-track {
+	block-size: 4px;
+	border-radius: 999px;
+	background: linear-gradient(to right, var(--mr-gold) var(--fill), color-mix(in srgb, var(--mr-ink) 13%, var(--mr-paper)) var(--fill));
+}
+.mr-pl-progress input::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	inline-size: 14px;
+	block-size: 14px;
+	margin-block-start: -5px;
+	border-radius: 999px;
+	background: radial-gradient(circle at 35% 30%, #f3dc9c, var(--mr-gold) 60%, var(--mr-gold-3));
+	box-shadow: 0 1px 4px rgb(80 55 10 / 0.4);
+}
+.mr-pl-progress input::-moz-range-thumb {
+	inline-size: 14px;
+	block-size: 14px;
+	border: 0;
+	border-radius: 999px;
+	background: var(--mr-gold);
+}
+.mr-pl-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	padding-inline: 4px;
+}
+.mr-pl-btn {
+	position: relative;
+	display: grid;
+	place-items: center;
+	inline-size: 46px;
+	block-size: 46px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--mr-green);
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+.mr-pl-btn:active {
+	background: var(--mr-gold-soft);
+}
+.mr-pl-btn small {
+	position: absolute;
+	font-size: 8.5px;
+	font-weight: 900;
+	line-height: 1;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -38%);
+}
+.mr-player .mr-play {
+	inline-size: 58px;
+	block-size: 58px;
+}
+.mr-pl-reciters {
+	position: absolute;
+	inset-inline: 10px;
+	bottom: calc(100% + 10px);
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 4px;
+	max-block-size: min(46dvh, 360px);
+	margin: 0;
+	padding: 8px;
+	overflow-y: auto;
+	list-style: none;
+	border: 1.5px solid var(--mr-card-line);
+	border-radius: 20px;
+	background: var(--mr-card);
+	box-shadow: var(--mr-shadow);
+	animation: mr-pop-in 0.16s ease-out;
+}
+.mr-pl-reciters button {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	inline-size: 100%;
+	min-block-size: 42px;
+	padding: 4px 8px;
+	border: 0;
+	border-radius: 12px;
+	background: transparent;
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	text-align: start;
+	cursor: pointer;
+}
+.mr-pl-reciters button.is-on {
+	background: var(--mr-gold-soft);
+	color: var(--mr-green);
+}
+.mr-bottom.has-player {
+	gap: 0;
+}
+
+/* Revise settings: the way back to the plain mushaf. */
+.rv-exit {
+	display: block;
+	inline-size: 100%;
+	margin-block-start: 8px;
+	min-block-size: 40px;
+	border: 0;
+	background: transparent;
+	color: var(--mr-ink-2);
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 700;
+	cursor: pointer;
+}

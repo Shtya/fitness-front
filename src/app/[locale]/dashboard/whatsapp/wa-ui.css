@@ -15559,3 +15559,69 @@ html.dark .wa-kit-tag.is-acquaintances { background: #3a2508; color: #ffc77a; }
 .wa-message-line.has-reactions {
 	padding-bottom: 18px;
 }
+
+/* Phone: a compact notification card (tap = open chat, ✕ = later). */
+@media (max-width: 768px) {
+	.wa-inm {
+		width: calc(100vw - 16px);
+		max-width: 420px;
+		border: 1px solid color-mix(in srgb, var(--wa-ui-border) 80%, transparent);
+		border-radius: 18px;
+		background: color-mix(in srgb, var(--wa-ui-surface) 94%, transparent);
+		backdrop-filter: saturate(1.4) blur(14px);
+		-webkit-backdrop-filter: saturate(1.4) blur(14px);
+		box-shadow: 0 10px 28px -12px rgb(0 0 0 / 0.35), 0 2px 6px rgb(0 0 0 / 0.08);
+	}
+	.wa-inm__main,
+	[dir='rtl'].wa-inm .wa-inm__main {
+		align-items: center;
+		gap: 10px;
+		padding: 9px 40px 9px 10px;
+	}
+	[dir='rtl'].wa-inm .wa-inm__main {
+		padding: 9px 10px 9px 40px;
+	}
+	.wa-inm__avatar > :first-child {
+		width: 38px !important;
+		height: 38px !important;
+		min-width: 38px !important;
+	}
+	.wa-inm__badge {
+		width: 16px;
+		height: 16px;
+		border-width: 1.5px;
+	}
+	.wa-inm__badge svg {
+		width: 9px;
+		height: 9px;
+	}
+	.wa-inm__text {
+		gap: 1px;
+	}
+	.wa-inm__name {
+		font-size: 14px;
+	}
+	.wa-inm__when {
+		font-size: 11px;
+	}
+	.wa-inm__body {
+		font-size: 13px;
+		line-height: 1.35;
+		-webkit-line-clamp: 1;
+	}
+	.wa-inm__more {
+		font-size: 11px;
+	}
+	.wa-inm__actions {
+		display: none;
+	}
+	.wa-inm__close {
+		top: 50%;
+		width: 30px;
+		height: 30px;
+		transform: translateY(-50%);
+	}
+	.wa-inm__timer {
+		height: 2px;
+	}
+}

@@ -59,6 +59,7 @@ import { quranFontCss } from '../../quran-revision/quran-font-css';
 import './quran-tab.css';
 import './quran-shell.css';
 import './quran-practice.css';
+import { quranUiFont } from './quran-ui-font';
 import MushafReader from './MushafReader';
 import { NOTEBOOK_EVENT } from './quran-notebook-store';
 
@@ -1562,8 +1563,11 @@ function MistakesNotebook({ locale = 'ar', onExit, embedded = false, onInnerChan
  * repeat-revision page (reciters, repeats, word marks) and the mistakes log. The revision
  * page stays mounted once opened so its recitation keeps playing while you check the log.
  */
-export default function WhatsAppQuranTab({ locale = 'ar', onExit }) {
-	const ar = String(locale).toLowerCase().startsWith('ar');
+export default function WhatsAppQuranTab({ onExit }) {
+	// Arabic every time the tab opens, whatever the site language; English only for this visit.
+	const [locale, setLocale] = useState('ar');
+	const toggleLang = useCallback(() => setLocale(l => (l === 'ar' ? 'en' : 'ar')), []);
+	const ar = locale === 'ar';
 	const t = ar ? L.ar : L.en;
 	const fmt = useFormat(ar);
 	const [section, setSection] = useState(() => {
@@ -1593,7 +1597,7 @@ export default function WhatsAppQuranTab({ locale = 'ar', onExit }) {
 	const showHeader = section === 'notes' && !notesInner;
 
 	return (
-		<div className="wa-qr" dir={ar ? 'rtl' : 'ltr'} data-section={section}>
+		<div className={`wa-qr ${quranUiFont.variable}`} dir={ar ? 'rtl' : 'ltr'} lang={ar ? 'ar' : 'en'} data-section={section}>
 			<style>{QURAN_FONT_CSS}</style>
 			{showHeader ? (
 				<header className="wa-qn-header wa-qr-head">
@@ -1622,6 +1626,9 @@ export default function WhatsAppQuranTab({ locale = 'ar', onExit }) {
 							</button>
 						))}
 					</div>
+					<button type="button" className="wa-qr-lang" onClick={toggleLang} aria-label={ar ? 'English' : 'العربية'}>
+						{ar ? 'EN' : 'ع'}
+					</button>
 				</header>
 			) : null}
 			{/*
@@ -1638,6 +1645,7 @@ export default function WhatsAppQuranTab({ locale = 'ar', onExit }) {
 						mode={section === 'revise' ? 'revise' : 'read'}
 						due={due}
 						active={section !== 'notes'}
+						onToggleLang={toggleLang}
 					/>
 				</div>
 			) : null}

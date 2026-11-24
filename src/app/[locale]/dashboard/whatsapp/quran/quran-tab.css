@@ -562,7 +562,9 @@ button.wa-qn-word:active {
 }
 .wa-qn-word.is-masked {
 	display: inline-block;
-	inline-size: calc(var(--len, 3) * 1ch);
+	/* em, not ch: the mushaf face draws "0" as a tiny ayah ornament, so ch shrank the box to a sliver. */
+	inline-size: calc(var(--len, 3) * 0.62em);
+	min-inline-size: 1.6em;
 	block-size: 0.9em;
 	margin: 0 3px;
 	vertical-align: middle;

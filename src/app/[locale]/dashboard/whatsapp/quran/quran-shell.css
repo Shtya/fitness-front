@@ -1015,3 +1015,57 @@ html.dark .wa-qr .qr-x-title {
 		min-block-size: 0;
 	}
 }
+
+/* ───── UI typeface for the whole tab (the Quran text keeps its mushaf face) ─────
+ * The WhatsApp shell forces its UI font through these two variables; pointing them here
+ * swaps the font for everything inside the tab, in Arabic and English alike. */
+.wa-qr {
+	--qr-ui-font: var(--font-qr-ui), 'Almarai', 'Segoe UI', Tahoma, system-ui, sans-serif;
+	--wa-font-ui: var(--qr-ui-font);
+	--wa-font-ui-ar: var(--qr-ui-font);
+	font-family: var(--qr-ui-font);
+	font-feature-settings: "ss01" 0;
+}
+.wa-qr button,
+.wa-qr input,
+.wa-qr select,
+.wa-qr textarea {
+	font-family: inherit;
+}
+
+/* Language switch (Arabic by default each visit). */
+.wa-qr-lang,
+.mr-lang {
+	flex: none;
+	display: inline-grid;
+	place-items: center;
+	min-inline-size: 36px;
+	block-size: 36px;
+	padding: 0 8px;
+	border: 1px solid var(--qx-line-2, #d3bd86);
+	border-radius: 999px;
+	background: var(--qx-surface, #fbf6ea);
+	color: var(--qx-accent, #1f4d36);
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+html.dark .wa-qr-lang,
+html.dark .mr-lang {
+	color: #9bc7a6;
+}
+/* Narrow phones: three tabs + back + language fit without the title. */
+@media (max-width: 420px) {
+	.wa-qr-head .wa-qr-title {
+		display: none;
+	}
+	.wa-qr-head .wa-qr-seg {
+		flex: 1;
+		min-inline-size: 0;
+	}
+	.wa-qr-head .wa-qr-seg-btn {
+		flex: 1;
+		justify-content: center;
+		padding: 0 8px;
+	}
+}

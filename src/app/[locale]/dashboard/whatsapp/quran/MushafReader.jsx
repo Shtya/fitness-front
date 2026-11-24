@@ -10,7 +10,7 @@
  */
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Bookmark, BookOpenText, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, List, Pause, Play, Repeat, Search, Settings2, TextSelect, Trash2, X } from 'lucide-react';
+import { ArrowRight, Bookmark, BookOpenText, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, List, Pause, Play, Repeat, RotateCcw, RotateCw, Search, Settings2, SkipBack, SkipForward, TextSelect, Trash2, X } from 'lucide-react';
 import { playableAyahUrl, prefetchAyahAudio } from '../../quran-revision/ayah-audio-cache';
 import { SURAHS, BUILTIN_RECITERS, ayahAudioUrl } from '../../quran-revision/quran-data';
 import {
@@ -34,6 +34,7 @@ import ReviseSheet from './ReviseSheet';
 import './mushaf.css';
 import './mushaf-range.css';
 import './mushaf-revise.css';
+import './mushaf-player.css';
 
 /** Quarters (rub' al-hizb) that begin inside each surah: { n (1…240), a, page, words }. */
 const RUBS_BY_SURAH = new Map();
@@ -78,6 +79,15 @@ const L = {
 		markOn: 'اضغط على الكلمة اللي غلطت فيها',
 		selectRange: 'حدّد من كلمة لكلمة',
 		reviseThis: 'راجع الجزء ده بالتكرار',
+		reviseShort: 'كرّره',
+		reviseBtn: 'مراجعة بالتكرار',
+		playShort: 'تشغيل',
+		selectShort: 'تحديد',
+		back5: 'رجوع ٥ ثواني',
+		fwd5: 'قدّام ٥ ثواني',
+		stop: 'إيقاف',
+		speed: 'السرعة',
+		changeReciter: 'غيّر القارئ',
 		revising: 'مراجعة',
 		backToMushaf: 'رجوع للمصحف',
 		ayahSpan: (a, b) => `آية ${a} – ${b}`,
@@ -149,6 +159,15 @@ const L = {
 		markOn: 'Tap the word you got wrong',
 		selectRange: 'Select from word to word',
 		reviseThis: 'Revise this part with repeats',
+		reviseShort: 'Repeat it',
+		reviseBtn: 'Revise with repeats',
+		playShort: 'Play',
+		selectShort: 'Select',
+		back5: 'Back 5 seconds',
+		fwd5: 'Forward 5 seconds',
+		stop: 'Stop',
+		speed: 'Speed',
+		changeReciter: 'Change reciter',
 		revising: 'Revising',
 		backToMushaf: 'Back to the mushaf',
 		ayahSpan: (a, b) => `ayah ${a} – ${b}`,
@@ -515,7 +534,7 @@ function TafsirSheet({ s, a, t, ar, fmt, onClose, onPlay }) {
 
 /* ───────── reader ───────── */
 
-export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, active = true, mode = 'read', onMode }) {
+export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, active = true, mode = 'read', onMode, onToggleLang }) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const t = ar ? L.ar : L.en;
 	const nf = useMemo(() => new Intl.NumberFormat(ar ? 'ar-EG' : 'en-US'), [ar]);
@@ -767,9 +786,19 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 	/* recitation: the next ayat are downloaded while one plays, so there is no pause between them */
 	const audioRef = useRef(null);
 	const [playing, setPlaying] = useState(null);
+	const [paused, setPaused] = useState(false);
+	const [time, setTime] = useState({ cur: 0, dur: 0 });
+	const [reciterOpen, setReciterOpen] = useState(false);
+	// Pause keeps the player (and the ayah) on screen; stop closes it.
 	const audioPause = () => {
 		audioRef.current?.pause();
+		setPaused(true);
+	};
+	const audioStop = () => {
+		audioRef.current?.pause();
 		setPlaying(null);
+		setPaused(false);
+		setReciterOpen(false);
 	};
 	const reciterFolder = () => {
 		const prefs = readJson(LS_STUDIO_PREFS, {});
@@ -829,8 +858,17 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 			else setPlaying(null);
 		};
 		el.onerror = () => setPlaying(null);
+		let lastTick = 0;
+		el.onloadedmetadata = () => setTime({ cur: 0, dur: el.duration || 0 });
+		el.ontimeupdate = () => {
+			const now = performance.now();
+			if (now - lastTick < 250) return;
+			lastTick = now;
+			setTime({ cur: el.currentTime, dur: el.duration || 0 });
+		};
 		void el.play().catch(() => setPlaying(null));
 		setPlaying(`${s}:${a}`);
+		setPaused(false);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 	useEffect(() => () => audioRef.current?.pause(), []);
@@ -882,8 +920,13 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		playStep({ i: 0, rep: 1, round: 1 });
 	};
 	const togglePlay = () => {
-		if (playing) {
+		if (playing && !paused) {
 			audioPause();
+			return;
+		}
+		if (playing && paused) {
+			void audioRef.current?.play().catch(() => {});
+			setPaused(false);
 			return;
 		}
 		if (revising) {
@@ -900,6 +943,58 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		const [s, a] = first.split(':').map(Number);
 		playAyah(s, a);
 	};
+
+	/* player controls */
+	const seekBy = sec => {
+		const el = audioRef.current;
+		if (!el) return;
+		el.currentTime = Math.max(0, Math.min((el.duration || 0) - 0.05, el.currentTime + sec));
+		setTime({ cur: el.currentTime, dur: el.duration || 0 });
+	};
+	const seekTo = v => {
+		const el = audioRef.current;
+		if (!el) return;
+		el.currentTime = Number(v) || 0;
+		setTime({ cur: el.currentTime, dur: el.duration || 0 });
+	};
+	const playNeighbour = delta => {
+		if (revising) {
+			stepAyah(delta);
+			return;
+		}
+		if (!playing) return;
+		const [ps, pa] = playing.split(':').map(Number);
+		if (delta > 0) {
+			const n = nextAyah(ps, pa);
+			if (n) playAyah(n[0], n[1]);
+		} else if (pa > 1) playAyah(ps, pa - 1);
+		else if (ps > 1) playAyah(ps - 1, versesOf(ps - 1));
+	};
+	const cycleSpeed = () => {
+		const list = [0.75, 1, 1.25, 1.5];
+		const next = list[(list.indexOf(cfg.speed || 1) + 1) % list.length];
+		setCfg(c => ({ ...c, speed: next }));
+		const el = audioRef.current;
+		if (el) {
+			el.defaultPlaybackRate = next;
+			el.playbackRate = next;
+		}
+	};
+	const pickReciter = id => {
+		changeReciter(id);
+		setReciterOpen(false);
+		if (playing) {
+			const [ps, pa] = playing.split(':').map(Number);
+			playAyah(ps, pa, revising);
+		}
+	};
+	const clock = sec => {
+		const v = Math.max(0, Math.floor(sec || 0));
+		const mm = Math.floor(v / 60);
+		const ss = String(v % 60).padStart(2, '0');
+		return ar ? `${fmt(mm)}:${ss.replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d])}` : `${mm}:${ss}`;
+	};
+	const reciter = BUILTIN_RECITERS.find(r => r.id === reciterId) || BUILTIN_RECITERS[0];
 
 	/* taps: toggle the controls · long-press (or Mark mode + tap) a word → ayah actions */
 	const press = useRef(null);
@@ -954,7 +1049,8 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 				return;
 			}
 			const [start, end] = cmpRef(ref, range.start) < 0 ? [ref, range.start] : [range.start, ref];
-			setRange({ start, end, picking: false });
+			const r = word.getBoundingClientRect();
+			setRange({ start, end, picking: false, rect: { top: r.top, bottom: r.bottom, left: r.left, width: r.width } });
 			setRangeMsg('');
 			navigator.vibrate?.(12);
 			return;
@@ -1116,17 +1212,6 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 						)}
 					</button>
 					<span className="mr-div" aria-hidden="true" />
-					<button
-						type="button"
-						className={cx('mr-ic', revising && 'is-on')}
-						onClick={() => (onMode ? onMode(revising ? 'read' : 'revise') : onOpen?.('revise'))}
-						aria-label={revising ? t.backToMushaf : t.studio}
-						title={revising ? t.backToMushaf : t.studio}
-						aria-pressed={revising}
-						tabIndex={chrome ? 0 : -1}
-					>
-						<Repeat size={23} strokeWidth={2} />
-					</button>
 					<button type="button" className="mr-ic" onClick={() => onOpen?.('notes')} aria-label={t.notes} title={t.notes} tabIndex={chrome ? 0 : -1}>
 						<Bookmark size={23} strokeWidth={2} />
 						{due ? <span className="mr-badge">{fmt(due)}</span> : null}
@@ -1168,86 +1253,143 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 				/>
 			) : null}
 
-			{/* bottom controls */}
-			<footer className="mr-bottom" aria-hidden={!chrome}>
-				<div className="mr-scrub">
-					<input
-						type="range"
-						min={1}
-						max={PAGE_COUNT}
-						value={shownPage}
-						dir="rtl"
-						style={{ '--fill': `${((shownPage - 1) / (PAGE_COUNT - 1)) * 100}%` }}
-						aria-label={t.goPage}
-						tabIndex={chrome ? 0 : -1}
-						onChange={e => setScrub(Number(e.target.value))}
-						onPointerUp={() => {
-							if (scrub != null) goTo(scrub);
-							setScrub(null);
-						}}
-						onKeyUp={() => {
-							if (scrub != null) goTo(scrub);
-							setScrub(null);
-						}}
-					/>
-					{scrub != null ? (
-						<span className="mr-scrub-bubble">
-							{fmt(scrub)} · {surahName(surahAtPage(scrub), ar)}
-						</span>
-					) : null}
-				</div>
-				<div className="mr-bar">
-					{revising ? (
-						<button type="button" className="mr-pill is-rv" onClick={() => setReviseOpen(true)} tabIndex={chrome ? 0 : -1}>
-							<Settings2 size={20} strokeWidth={2} />
-							<span>{t.repeatShort(cfg.perAyah, fmt)}</span>
-						</button>
-					) : (
-						<button
-							type="button"
-							className={cx('mr-pill', markMode && 'is-on')}
-							onClick={() => setMarkMode(v => !v)}
-							aria-pressed={markMode}
+			{/* bottom controls: page slider + a small bar, or the full player while reciting */}
+			<footer className={cx('mr-bottom', playing && 'has-player')} aria-hidden={!chrome}>
+				{!playing ? (
+					<div className="mr-scrub">
+						<input
+							type="range"
+							min={1}
+							max={PAGE_COUNT}
+							value={shownPage}
+							dir="rtl"
+							style={{ '--fill': `${((shownPage - 1) / (PAGE_COUNT - 1)) * 100}%` }}
+							aria-label={t.goPage}
 							tabIndex={chrome ? 0 : -1}
-						>
-							<CircleAlert size={22} strokeWidth={2} />
-							<span>{t.mark}</span>
-						</button>
-					)}
-					<span className="mr-div" aria-hidden="true" />
-					{revising && reviseList.length ? (
-						<div className="mr-nav">
-							<button type="button" className="mr-ic" onClick={() => stepAyah(1)} aria-label={t.nextAyahBtn} disabled={pos.i >= reviseList.length - 1} tabIndex={chrome ? 0 : -1}>
-								<ChevronLeft size={20} strokeWidth={2.2} />
-							</button>
-							<span className="mr-pageno rv-pos">
-								<b>{fmt(reviseList[Math.min(pos.i, reviseList.length - 1)].a)}</b>
-								<small>
-									{fmt(pos.rep)}/{fmt(cfg.perAyah)}
-									{cfg.rounds !== 1 ? ` · ${t.round} ${fmt(pos.round)}` : ''}
-								</small>
+							onChange={e => setScrub(Number(e.target.value))}
+							onPointerUp={() => {
+								if (scrub != null) goTo(scrub);
+								setScrub(null);
+							}}
+							onKeyUp={() => {
+								if (scrub != null) goTo(scrub);
+								setScrub(null);
+							}}
+						/>
+						{scrub != null ? (
+							<span className="mr-scrub-bubble">
+								{fmt(scrub)} · {surahName(surahAtPage(scrub), ar)}
 							</span>
-							<button type="button" className="mr-ic" onClick={() => stepAyah(-1)} aria-label={t.prevAyahBtn} disabled={pos.i <= 0} tabIndex={chrome ? 0 : -1}>
-								<ChevronRight size={20} strokeWidth={2.2} />
+						) : null}
+					</div>
+				) : null}
+				{playing ? (
+					<div className="mr-player" dir={ar ? 'rtl' : 'ltr'}>
+						<div className="mr-pl-top">
+							<button type="button" className="mr-pl-reciter" onClick={() => setReciterOpen(v => !v)} aria-expanded={reciterOpen} tabIndex={chrome ? 0 : -1}>
+								<span className="mr-pl-avatar">{ar ? reciter.initials : reciter.nameEn.slice(0, 2)}</span>
+								<span className="mr-pl-meta">
+									<b>
+										{ar ? reciter.nameAr : reciter.nameEn}
+										<ChevronDown size={15} />
+									</b>
+									<small>
+										{surahName(Number(playing.split(':')[0]), ar)} · {t.ayah} {fmt(Number(playing.split(':')[1]))}
+										{revising ? ` · ${fmt(pos.rep)}/${fmt(cfg.perAyah)}` : ''}
+										{revising && cfg.rounds !== 1 ? ` · ${t.round} ${fmt(pos.round)}` : ''}
+									</small>
+								</span>
+							</button>
+							<button type="button" className="mr-pl-speed" onClick={cycleSpeed} aria-label={t.speed} tabIndex={chrome ? 0 : -1}>
+								{cfg.speed || 1}×
+							</button>
+							<button type="button" className="mr-ic mr-pl-close" onClick={audioStop} aria-label={t.stop} tabIndex={chrome ? 0 : -1}>
+								<X size={19} />
 							</button>
 						</div>
-					) : (
-					/* Left arrow = next page (the mushaf reads right to left). */
-					<div className="mr-nav">
-						<button type="button" className="mr-ic" onClick={() => goTo(page + 1, true)} aria-label={t.next} disabled={page >= PAGE_COUNT} tabIndex={chrome ? 0 : -1}>
-							<ChevronLeft size={20} strokeWidth={2.2} />
+						<div className="mr-pl-progress" dir="ltr">
+							<span>{clock(time.cur)}</span>
+							<input
+								type="range"
+								min={0}
+								max={time.dur || 1}
+								step={0.1}
+								value={Math.min(time.cur, time.dur || 1)}
+								style={{ '--fill': `${time.dur ? (time.cur / time.dur) * 100 : 0}%` }}
+								onChange={e => seekTo(e.target.value)}
+								aria-label={t.ayah}
+								tabIndex={chrome ? 0 : -1}
+							/>
+							<span>{clock(time.dur)}</span>
+						</div>
+						<div className="mr-pl-controls" dir="ltr">
+							<button type="button" className="mr-pl-btn" onClick={() => seekBy(-5)} aria-label={t.back5} tabIndex={chrome ? 0 : -1}>
+								<RotateCcw size={21} />
+								<small>5</small>
+							</button>
+							<button type="button" className="mr-pl-btn" onClick={() => playNeighbour(ar ? 1 : -1)} aria-label={ar ? t.nextAyahBtn : t.prevAyahBtn} tabIndex={chrome ? 0 : -1}>
+								<SkipBack size={22} />
+							</button>
+							<button type="button" className={cx('mr-play', !paused && 'is-on')} onClick={togglePlay} aria-label={paused ? t.play : t.pause} tabIndex={chrome ? 0 : -1}>
+								{paused ? <Play size={26} style={{ marginInlineStart: 3 }} /> : <Pause size={26} />}
+							</button>
+							<button type="button" className="mr-pl-btn" onClick={() => playNeighbour(ar ? -1 : 1)} aria-label={ar ? t.prevAyahBtn : t.nextAyahBtn} tabIndex={chrome ? 0 : -1}>
+								<SkipForward size={22} />
+							</button>
+							<button type="button" className="mr-pl-btn" onClick={() => seekBy(5)} aria-label={t.fwd5} tabIndex={chrome ? 0 : -1}>
+								<RotateCw size={21} />
+								<small>5</small>
+							</button>
+						</div>
+						{reciterOpen ? (
+							<ul className="mr-pl-reciters" role="listbox" aria-label={t.changeReciter}>
+								{BUILTIN_RECITERS.map(r => (
+									<li key={r.id}>
+										<button type="button" className={cx(r.id === reciterId && 'is-on')} onClick={() => pickReciter(r.id)} role="option" aria-selected={r.id === reciterId}>
+											<span className="mr-pl-avatar is-sm">{ar ? r.initials : r.nameEn.slice(0, 2)}</span>
+											{ar ? r.nameAr : r.nameEn}
+										</button>
+									</li>
+								))}
+							</ul>
+						) : null}
+					</div>
+				) : (
+					<div className="mr-bar is-idle">
+						<button
+							type="button"
+							className="mr-pill is-rv"
+							onClick={() => {
+								if (!revising) onMode?.('revise');
+								setReviseOpen(true);
+							}}
+							tabIndex={chrome ? 0 : -1}
+						>
+							{revising ? <Settings2 size={20} strokeWidth={2} /> : <Repeat size={20} strokeWidth={2} />}
+							<span>{revising ? t.repeatShort(cfg.perAyah, fmt) : t.reviseBtn}</span>
 						</button>
-						<span className="mr-pageno">{fmt(page)}</span>
-						<button type="button" className="mr-ic" onClick={() => goTo(page - 1, true)} aria-label={t.prev} disabled={page <= 1} tabIndex={chrome ? 0 : -1}>
-							<ChevronRight size={20} strokeWidth={2.2} />
+						<span className="mr-idle-mid">
+							{revising && reviseList.length ? (
+								<>
+									<b>
+										{t.ayah} {fmt(reviseList[Math.min(pos.i, reviseList.length - 1)].a)}
+									</b>
+									<small>
+										{fmt(Math.min(pos.i, reviseList.length - 1) + 1)}/{fmt(reviseList.length)}
+									</small>
+								</>
+							) : (
+								<>
+									<b>{fmt(page)}</b>
+									<small>{t.pageWord}</small>
+								</>
+							)}
+						</span>
+						<button type="button" className="mr-play" onClick={togglePlay} aria-label={t.play} tabIndex={chrome ? 0 : -1}>
+							<Play size={26} style={{ marginInlineStart: 3 }} />
 						</button>
 					</div>
-					)}
-					<span className="mr-div" aria-hidden="true" />
-					<button type="button" className={cx('mr-play', playing && 'is-on')} onClick={togglePlay} aria-label={playing ? t.pause : t.play} tabIndex={chrome ? 0 : -1}>
-						{playing ? <Pause size={26} /> : <Play size={26} style={{ marginInlineStart: 3 }} />}
-					</button>
-				</div>
+				)}
 			</footer>
 
 			{menu ? (
@@ -1332,12 +1474,18 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 						setPos(posRef.current);
 					}}
 					onStart={startRevise}
+					onExitRevise={() => {
+						setReviseOpen(false);
+						audioStop();
+						onMode?.('read');
+					}}
 					onClose={() => setReviseOpen(false)}
 				/>
 			) : null}
 
 			{indexOpen ? (
 				<IndexSheet
+					onToggleLang={onToggleLang}
 					t={t}
 					ar={ar}
 					fmt={fmt}
@@ -1355,143 +1503,134 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 
 /* ───────── ayah actions (long-press) ───────── */
 
-function WordMenu({ menu, t, ar, fmt, marked, ayahWords, onPick, onPlay, onTafsir, onRange, onRemove, onClose }) {
-	// A word was pressed (not the ayah-end rosette): word-level mistakes point at that word.
-	const onWord = Boolean(menu.p);
+/* ───────── popover (anchored to the pressed word) ───────── */
+
+function Popover({ rect, ar, label, onClose, children }) {
+	const ref = useRef(null);
+	const [pos, setPos] = useState(null);
+	useIsoLayoutEffect(() => {
+		const el = ref.current;
+		if (!el || !rect) return;
+		const vw = window.innerWidth;
+		const vh = window.innerHeight;
+		const w = Math.min(330, vw - 20);
+		const h = el.offsetHeight;
+		const cx0 = rect.left + rect.width / 2;
+		const left = Math.max(10, Math.min(cx0 - w / 2, vw - w - 10));
+		const below = vh - rect.bottom - 14 >= h || rect.top < h + 14;
+		let top = below ? rect.bottom + 12 : rect.top - h - 12;
+		top = Math.max(10, Math.min(top, vh - h - 10));
+		setPos({ left, top, width: w, arrow: Math.max(18, Math.min(w - 18, cx0 - left)), below });
+	}, [rect]);
 	return (
-		<div className="mr-act-wrap" dir={ar ? 'rtl' : 'ltr'}>
-			<button type="button" className="mr-act-scrim" aria-label="close" onClick={onClose} />
-			<section className="mr-act" role="dialog" aria-modal="true" aria-label={`${surahName(menu.s, ar)} ${menu.a}`}>
-				<span className="mr-grabber" aria-hidden="true" />
-				<header className="mr-act-head">
-					<span className="mr-act-no">{fmt(menu.a)}</span>
-					<span className="mr-act-name">
-						<b>{surahName(menu.s, ar)}</b>
-						<small>
-							{t.ayah} {fmt(menu.a)}
-						</small>
-					</span>
-					<button type="button" className="mr-ic" onClick={onClose} aria-label="close">
-						<X size={20} />
-					</button>
-				</header>
-				{ayahWords?.length ? (
-					<p className="mr-act-ayah wa-quran-face" lang="ar" dir="rtl">
-						{ayahWords.map(w => (
-							<span key={w.p} className={w.p === menu.p ? 'is-picked' : undefined}>
-								{w.t}{' '}
-							</span>
-						))}
-					</p>
-				) : null}
-				<div className="mr-act-quick">
-					<button type="button" onClick={onPlay}>
-						<Play size={18} />
-						<span>{t.playFrom}</span>
-					</button>
-					<button type="button" onClick={onTafsir}>
-						<BookOpenText size={18} />
-						<span>{t.tafsir}</span>
-					</button>
-					<button type="button" className="is-wide" onClick={onRange}>
-						<TextSelect size={18} />
-						<span>{t.selectRange}</span>
-					</button>
-				</div>
-				<p className="mr-act-label">{t.logAs}</p>
-				<ul className="mr-act-list">
-					{t.kinds
-						.filter(k => onWord || !k.wordOnly)
-						.map(k => (
-							<li key={k.id}>
-								<button type="button" className={`mr-act-row k-${k.id}`} onClick={() => onPick(k.id)}>
-									<i aria-hidden="true" />
-									<span>
-										<b>{k.label}</b>
-										{k.hint ? <small>{k.hint}</small> : null}
-									</span>
-								</button>
-							</li>
-						))}
-				</ul>
-				{marked.length ? (
-					<button type="button" className="mr-act-remove" onClick={() => onRemove(marked[marked.length - 1].id)}>
-						<Trash2 size={16} />
-						{t.removeMark}
-					</button>
-				) : null}
-			</section>
-		</div>
+		<>
+			<button type="button" className="mr-pop-scrim" aria-label="close" onClick={onClose} />
+			<div
+				ref={ref}
+				className={cx('mr-pop', pos && (pos.below ? 'is-below' : 'is-above'))}
+				role="dialog"
+				aria-label={label}
+				dir={ar ? 'rtl' : 'ltr'}
+				style={pos ? { left: pos.left, top: pos.top, width: pos.width, '--arrow': `${pos.arrow}px` } : { visibility: 'hidden', width: Math.min(330, typeof window !== 'undefined' ? window.innerWidth - 20 : 330) }}
+			>
+				<i className="mr-pop-arrow" aria-hidden="true" />
+				{children}
+			</div>
+		</>
 	);
 }
 
-/* ───────── range sheet ───────── */
+function WordMenu({ menu, t, ar, fmt, marked, onPick, onPlay, onTafsir, onRange, onRemove, onClose }) {
+	const onWord = Boolean(menu.p);
+	return (
+		<Popover rect={menu.rect} ar={ar} label={`${surahName(menu.s, ar)} ${menu.a}`} onClose={onClose}>
+			<header className="mr-pop-head">
+				<span className="mr-act-no is-sm">{fmt(menu.a)}</span>
+				<b>
+					{surahName(menu.s, ar)} · {t.ayah} {fmt(menu.a)}
+				</b>
+			</header>
+			<div className="mr-pop-actions">
+				<button type="button" onClick={onPlay}>
+					<Play size={19} />
+					<span>{t.playShort}</span>
+				</button>
+				<button type="button" onClick={onTafsir}>
+					<BookOpenText size={19} />
+					<span>{t.tafsir}</span>
+				</button>
+				<button type="button" onClick={onRange}>
+					<TextSelect size={19} />
+					<span>{t.selectShort}</span>
+				</button>
+			</div>
+			<p className="mr-pop-label">{t.logAs}</p>
+			<div className="mr-pop-list">
+				{t.kinds
+					.filter(k => onWord || !k.wordOnly)
+					.map(k => (
+						<button key={k.id} type="button" className={`mr-pop-row k-${k.id}`} onClick={() => onPick(k.id)}>
+							<i aria-hidden="true" />
+							<span>{k.label}</span>
+						</button>
+					))}
+			</div>
+			{marked.length ? (
+				<button type="button" className="mr-act-remove" onClick={() => onRemove(marked[marked.length - 1].id)}>
+					<Trash2 size={15} />
+					{t.removeMark}
+				</button>
+			) : null}
+		</Popover>
+	);
+}
+
+/* ───────── range popover ───────── */
 
 function RangeSheet({ range, words, t, ar, fmt, onPick, onPlay, onRepick, onRevise, onClose }) {
 	const { start, end } = range;
 	const sameAyah = start.a === end.a;
-	const ayahCount = end.a - start.a + 1;
 	const count = words?.length || 0;
 	return (
-		<div className="mr-act-wrap" dir={ar ? 'rtl' : 'ltr'}>
-			<button type="button" className="mr-act-scrim is-light" aria-label="close" onClick={onClose} />
-			<section className="mr-act" role="dialog" aria-modal="true" aria-label={t.rangeTitle}>
-				<span className="mr-grabber" aria-hidden="true" />
-				<header className="mr-act-head">
-					<span className="mr-act-no is-range">{fmt(count)}</span>
-					<span className="mr-act-name">
-						<b>{surahName(start.s, ar)}</b>
-						<small>
-							{sameAyah ? `${t.ayah} ${fmt(start.a)}` : t.fromTo(fmt(start.a), fmt(end.a))} · {t.wordsCount(count, fmt)}
-						</small>
-					</span>
-					<button type="button" className="mr-ic" onClick={onClose} aria-label="close">
-						<X size={20} />
+		<Popover rect={range.rect} ar={ar} label={t.rangeTitle} onClose={onClose}>
+			<header className="mr-pop-head">
+				<span className="mr-act-no is-sm">{fmt(count)}</span>
+				<b>
+					{surahName(start.s, ar)} · {sameAyah ? `${t.ayah} ${fmt(start.a)}` : t.fromTo(fmt(start.a), fmt(end.a))}
+				</b>
+			</header>
+			<div className="mr-pop-actions">
+				<button type="button" onClick={onPlay}>
+					<Play size={19} />
+					<span>{t.playShort}</span>
+				</button>
+				<button type="button" onClick={onRepick}>
+					<TextSelect size={19} />
+					<span>{t.repick}</span>
+				</button>
+				{onRevise ? (
+					<button type="button" onClick={onRevise}>
+						<Repeat size={19} />
+						<span>{t.reviseShort}</span>
 					</button>
-				</header>
-				{count ? (
-					<p className="mr-act-ayah is-range wa-quran-face" lang="ar" dir="rtl">
-						{words.map(w => w.t).join(' ')}
-					</p>
 				) : null}
-				<div className="mr-act-quick">
-					<button type="button" onClick={onPlay}>
-						<Play size={18} />
-						<span>{t.playFrom}</span>
+			</div>
+			<p className="mr-pop-label">{end.a - start.a + 1 > 1 ? t.rangeSplit(end.a - start.a + 1, fmt) : t.logAs}</p>
+			<div className="mr-pop-list">
+				{t.rangeKinds.map(k => (
+					<button key={k.id} type="button" className={`mr-pop-row k-${k.id}`} onClick={() => onPick(k.id)}>
+						<i aria-hidden="true" />
+						<span>{k.label}</span>
 					</button>
-					<button type="button" onClick={onRepick}>
-						<TextSelect size={18} />
-						<span>{t.repick}</span>
-					</button>
-					{onRevise ? (
-						<button type="button" className="is-wide" onClick={onRevise}>
-							<Repeat size={18} />
-							<span>{t.reviseThis}</span>
-						</button>
-					) : null}
-				</div>
-				<p className="mr-act-label">{ayahCount > 1 ? t.rangeSplit(ayahCount, fmt) : t.logAs}</p>
-				<ul className="mr-act-list">
-					{t.rangeKinds.map(k => (
-						<li key={k.id}>
-							<button type="button" className={`mr-act-row k-${k.id}`} onClick={() => onPick(k.id)}>
-								<i aria-hidden="true" />
-								<span>
-									<b>{k.label}</b>
-									{k.hint ? <small>{k.hint}</small> : null}
-								</span>
-							</button>
-						</li>
-					))}
-				</ul>
-			</section>
-		</div>
+				))}
+			</div>
+		</Popover>
 	);
 }
 
 /* ───────── index ───────── */
 
-function IndexSheet({ t, ar, fmt, page, onClose, onGo }) {
+function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang }) {
 	const [tab, setTab] = useState('surahs');
 	const [q, setQ] = useState('');
 	const [goVal, setGoVal] = useState('');
@@ -1530,6 +1669,11 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo }) {
 							</button>
 						))}
 					</div>
+					{onToggleLang ? (
+						<button type="button" className="mr-lang" onClick={onToggleLang} aria-label={ar ? 'English' : 'العربية'}>
+							{ar ? 'EN' : 'ع'}
+						</button>
+					) : null}
 					<button type="button" className="mr-ic" onClick={onClose} aria-label="close">
 						<X size={20} />
 					</button>
