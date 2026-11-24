@@ -10,7 +10,7 @@
  */
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Bookmark, BookmarkPlus, BookOpenText, Clock3, Flame, MapPin, Plus, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, List, Pause, Play, Repeat, RotateCcw, RotateCw, Search, Settings2, SkipBack, SkipForward, TextSelect, Trash2, X } from 'lucide-react';
+import { ArrowRight, Bookmark, BookmarkPlus, BookOpenText, Clock3, Eye, Flame, Moon, Sun, MapPin, Plus, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, List, Pause, Play, Repeat, RotateCcw, RotateCw, Search, Settings2, SkipBack, SkipForward, TextSelect, Trash2, X } from 'lucide-react';
 import { playableAyahUrl, prefetchAyahAudio } from '../../quran-revision/ayah-audio-cache';
 import { SURAHS, BUILTIN_RECITERS, ayahAudioUrl } from '../../quran-revision/quran-data';
 import {
@@ -33,12 +33,14 @@ import ReviseSheet from './ReviseSheet';
 import { BOOKMARKS_EVENT, addBookmark, bookmarksOnPage, isFixedBookmark, readBookmarks, removeBookmark, setBookmarkPage, syncBookmarksFromCloud, visibleBookmarks, writeBookmarks } from './quran-bookmarks';
 import { IDLE_MS, READING_EVENT, lastDays, logReading, pushReading, readAllReading, splitDuration, streak, syncReadingFromCloud } from './reading-time';
 import { fetchQuranRevisionState } from '../../quran-revision/quran-revision-api';
+import { DARK_THEMES, DEFAULT_EYE, EYE_EVENT, REST_EVERY_MS, REST_SECONDS, TEXT_SIZES, dimOpacity, isDefaultEye, readEye, resolveTheme, warmOpacity, writeEye } from './eye-comfort';
 import './mushaf.css';
 import './mushaf-range.css';
 import './mushaf-revise.css';
 import './mushaf-player.css';
 import './mushaf-progress.css';
 import './mushaf-bookmarks.css';
+import './mushaf-eye.css';
 
 /** Quarters (rub' al-hizb) that begin inside each surah: { n (1…240), a, page, words }. */
 const RUBS_BY_SURAH = new Map();
@@ -85,6 +87,34 @@ const L = {
 		reviseThis: 'راجع الجزء ده بالتكرار',
 		reviseShort: 'كرّره',
 		bookmarks: 'علاماتي',
+		eyeTitle: 'راحة العين',
+		eyeColors: 'ألوان القراءة',
+		eyeThemes: { auto: 'تلقائي', paper: 'ورقي', warm: 'دافئ', night: 'ليلي', black: 'أسود' },
+		eyeAutoShort: 'تلقائي',
+		eyeNow: name => `الآن: ${name}`,
+		eyeThemeNotes: {
+			auto: 'دافئ بالنهار، وليلي دافئ لوحده من ٦ المغرب لـ٦ الصبح.',
+			paper: 'ألوان المصحف الأصلية.',
+			warm: 'ورق أغمق وحبر بني أهدى: لمعة أقل وتباين ألطف بالنهار.',
+			night: 'خلفية بني غامق وخط بيج، مش أبيض: أريح وضع بالليل.',
+			black: 'للضلمة خالص: الشاشة تكاد ما تنورش والخط رمادي هادي.',
+		},
+		eyeWarmth: 'دفء الألوان (أزرق أقل)',
+		eyeDim: 'تعتيم الصفحة',
+		eyeOff: 'مقفول',
+		eyeSize: 'حجم الخط',
+		eyeSizes: ['صغير', 'عادي', 'كبير'],
+		eyeBold: 'خط أوضح',
+		eyeBoldSub: 'يقوّي الحروف الرفيعة شوية فتتقري بمجهود أقل.',
+		eyeRemind: 'تذكير راحة كل ٢٠ دقيقة',
+		eyeRemindSub: 'بعد ٢٠ دقيقة قراءة متواصلة: بص لحاجة بعيدة ٢٠ ثانية.',
+		eyeReset: 'رجوع للإعدادات الأصلية',
+		restTitle: 'وقت راحة لعينك',
+		restSub: 'بص لحاجة بعيدة عنك (حوالي ٦ متر) لمدة ٢٠ ثانية، وارمش كام مرة.',
+		restDone: 'أحسنت، عينك ارتاحت',
+		restDoneSub: 'كمّل قراءتك.',
+		restSkip: 'تخطي',
+		restOk: 'تمام',
 		bmNames: { review: 'المراجعة', new: 'الحفظ الجديد', old: 'الحفظ القديم' },
 		bmUnset: 'لم تُحدد بعد',
 		bmSetHere: 'ضع العلامة في هذه الصفحة',
@@ -195,6 +225,34 @@ const L = {
 		reviseThis: 'Revise this part with repeats',
 		reviseShort: 'Repeat it',
 		bookmarks: 'Bookmarks',
+		eyeTitle: 'Eye comfort',
+		eyeColors: 'Reading colours',
+		eyeThemes: { auto: 'Auto', paper: 'Paper', warm: 'Warm', night: 'Night', black: 'Black' },
+		eyeAutoShort: 'Auto',
+		eyeNow: name => `now: ${name}`,
+		eyeThemeNotes: {
+			auto: 'Warm by day; warm night on its own from 6 pm to 6 am.',
+			paper: 'The original mushaf colours.',
+			warm: 'Deeper paper and softer brown ink: less glare, gentler contrast by day.',
+			night: 'Dark brown page and beige text, never white: easiest at night.',
+			black: 'For a dark room: the screen barely lights up, soft grey text.',
+		},
+		eyeWarmth: 'Warmth (less blue)',
+		eyeDim: 'Dim the page',
+		eyeOff: 'off',
+		eyeSize: 'Text size',
+		eyeSizes: ['Small', 'Normal', 'Large'],
+		eyeBold: 'Clearer letters',
+		eyeBoldSub: 'Slightly thicker strokes, easier to follow.',
+		eyeRemind: 'Rest reminder every 20 min',
+		eyeRemindSub: 'After 20 minutes of reading: look far away for 20 seconds.',
+		eyeReset: 'Back to the original settings',
+		restTitle: 'Time to rest your eyes',
+		restSub: 'Look at something far away (about 6 m) for 20 seconds, and blink a few times.',
+		restDone: 'Well done',
+		restDoneSub: 'Carry on reading.',
+		restSkip: 'Skip',
+		restOk: 'OK',
 		bmNames: { review: 'Revision', new: 'New memorising', old: 'Old memorising' },
 		bmUnset: 'Not set yet',
 		bmSetHere: 'Put the bookmark on this page',
@@ -679,6 +737,28 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		ro.observe(el);
 		return () => ro.disconnect();
 	}, []);
+	/* ── eye comfort: theme / warmth / dim / size / strokes / rest reminder ── */
+	const [eye, setEyeState] = useState(() => (typeof window === 'undefined' ? DEFAULT_EYE : readEye()));
+	useEffect(() => {
+		const sync = () => setEyeState(readEye());
+		window.addEventListener(EYE_EVENT, sync);
+		return () => window.removeEventListener(EYE_EVENT, sync);
+	}, []);
+	const setEye = useCallback(patch => setEyeState(prev => writeEye({ ...prev, ...patch })), []);
+	// 'auto' switches at 6 am / 6 pm: look at the clock once a minute.
+	const [hour, setHour] = useState(() => new Date().getHours());
+	useEffect(() => {
+		if (eye.theme !== 'auto') return undefined;
+		const id = window.setInterval(() => setHour(new Date().getHours()), 60000);
+		return () => window.clearInterval(id);
+	}, [eye.theme]);
+	const eyeTheme = resolveTheme(eye.theme, hour);
+	const eyeRef = useRef(eye);
+	eyeRef.current = eye;
+	// Rest card (20-20-20): seconds left while it is up, 0 = done, null = hidden.
+	const [rest, setRest] = useState(null);
+	const sinceBreak = useRef(0);
+
 	const sizing = useMemo(() => {
 		const { w, h } = box;
 		if (!w || !h) return null;
@@ -687,8 +767,8 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		const lineH = Math.max(18, (h - padTop - padBottom) / 15.2);
 		const pageW = Math.min(w - 20, Math.max(280, (h - padTop - padBottom) * 0.7));
 		const fs = Math.min(lineH * 0.6, (pageW - 4) / ratio);
-		return { lineH, pageW, fs };
-	}, [box, ratio]);
+		return { lineH, pageW, fs: fs * eye.size };
+	}, [box, ratio, eye.size]);
 	// The first measured page sets the text size for the session (steady while reading; long
 	// lines on other pages are scaled one by one).
 	const measured = useRef(false);
@@ -814,7 +894,16 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 	useEffect(() => {
 		if (!active) return undefined;
 		let from = Date.now();
+		let hiddenAt = 0;
 		lastAct.current = from;
+		// Reading without a break: after 20 minutes, the rest card (if turned on).
+		const countRest = ms => {
+			sinceBreak.current += ms;
+			if (sinceBreak.current >= REST_EVERY_MS && eyeRef.current.remind) {
+				sinceBreak.current = 0;
+				setRest(r => (r == null ? REST_SECONDS : r));
+			}
+		};
 		const flush = () => {
 			const now = Date.now();
 			if (document.hidden) {
@@ -822,7 +911,10 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 				return;
 			}
 			const until = playingRef.current ? now : Math.min(now, lastAct.current + IDLE_MS);
-			if (until > from) logReading(from, until);
+			if (until > from) {
+				logReading(from, until);
+				countRest(until - from);
+			}
 			from = now;
 		};
 		flushRef.current = flush;
@@ -831,17 +923,26 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 				// count up to the moment it was hidden
 				const now = Date.now();
 				const until = playingRef.current ? now : Math.min(now, lastAct.current + IDLE_MS);
-				if (until > from) logReading(from, until);
+				if (until > from) {
+				logReading(from, until);
+				countRest(until - from);
+			}
 				from = now;
+				hiddenAt = now;
 				pushReading();
 			} else {
 				from = Date.now();
+				// a minute or more away from the screen counts as a break
+				if (hiddenAt && from - hiddenAt > 60000) sinceBreak.current = 0;
 				lastAct.current = from;
 			}
 		};
 		const act = () => {
 			// coming back after a pause: the idle gap is not counted
-			if (Date.now() - lastAct.current > IDLE_MS) flush();
+			if (Date.now() - lastAct.current > IDLE_MS) {
+				flush();
+				sinceBreak.current = 0;
+			}
 			lastAct.current = Date.now();
 		};
 		const id = window.setInterval(flush, 15000);
@@ -863,6 +964,13 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 	useEffect(() => {
 		lastAct.current = Date.now();
 	}, [page]);
+	// Rest countdown: one tick a second while the card is up; it closes itself after "done".
+	useEffect(() => {
+		if (rest == null) return undefined;
+		const id = window.setTimeout(() => setRest(r => (r == null ? null : r > 0 ? r - 1 : null)), rest > 0 ? 1000 : 2600);
+		return () => window.clearTimeout(id);
+	}, [rest]);
+
 	const openIndex = () => {
 		flushRef.current?.();
 		setIndexOpen(true);
@@ -1402,7 +1510,9 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 
 	return (
 		<div
-			className={cx('mr', chrome && 'is-chrome', markMode && 'is-marking')}
+			className={cx('mr', chrome && 'is-chrome', markMode && 'is-marking', eye.bold && 'is-bold')}
+			data-eye={eyeTheme !== 'paper' ? eyeTheme : undefined}
+			data-eye-dark={DARK_THEMES.has(eyeTheme) ? '' : undefined}
 			ref={rootRef}
 			dir={ar ? 'rtl' : 'ltr'}
 			style={sizing ? { '--mr-fs': `${sizing.fs}px`, '--mr-lh': `${sizing.lineH}px`, '--mr-pw': `${sizing.pageW}px` } : undefined}
@@ -1774,6 +1884,9 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 			{indexOpen ? (
 				<IndexSheet
 					onToggleLang={onToggleLang}
+					eye={eye}
+					eyeTheme={eyeTheme}
+					onEye={setEye}
 					bookmarks={bookmarks}
 					onBookmarks={changeBookmarks}
 					t={t}
@@ -1787,6 +1900,12 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 					}}
 				/>
 			) : null}
+
+			{rest != null ? <RestCard t={t} fmt={fmt} left={rest} onClose={() => setRest(null)} /> : null}
+
+			{/* Eye comfort layers: warmer (less blue) and dimmer than the phone allows. */}
+			{eye.warmth ? <i className="mr-eye-layer mr-eye-warm" style={{ opacity: warmOpacity(eye.warmth) }} aria-hidden="true" /> : null}
+			{eye.dim ? <i className="mr-eye-layer mr-eye-dim" style={{ opacity: dimOpacity(eye.dim) }} aria-hidden="true" /> : null}
 		</div>
 	);
 }
@@ -1906,6 +2025,133 @@ function RangeSheet({ range, words, t, ar, fmt, onPick, onPlay, onRepick, onRevi
 				))}
 			</div>
 		</Popover>
+	);
+}
+
+/* ───────── eye comfort ───────── */
+
+const EYE_SWATCHES = {
+	paper: ['#f7f0df', '#2a2017'],
+	warm: ['#efe1c1', '#3a2c1c'],
+	night: ['#1b1611', '#d8c7a6'],
+	black: ['#000000', '#ad9f86'],
+};
+
+function EyePanel({ t, fmt, eye, eyeTheme, onEye }) {
+	return (
+		<section className="mr-eye" aria-label={t.eyeTitle}>
+			<div className="mr-eye-sec">
+				<div className="mr-eye-label">
+					<span>{t.eyeColors}</span>
+					{eye.theme === 'auto' ? <small>{t.eyeNow(t.eyeThemes[eyeTheme])}</small> : null}
+				</div>
+				<div className="mr-eye-themes" role="radiogroup" aria-label={t.eyeColors}>
+					{['auto', 'paper', 'warm', 'night', 'black'].map(id => (
+						<button key={id} type="button" role="radio" aria-checked={eye.theme === id} className={cx('mr-eye-theme', eye.theme === id && 'is-on')} onClick={() => onEye({ theme: id })}>
+							{id === 'auto' ? (
+								<span className="mr-eye-swatch is-auto">
+									<span>{t.eyeAutoShort}</span>
+								</span>
+							) : (
+								<span className="mr-eye-swatch" style={{ '--sw-bg': EYE_SWATCHES[id][0], '--sw-ink': EYE_SWATCHES[id][1] }}>
+									بسم
+									<i className="mr-eye-swatch-line" style={{ bottom: '24%' }} />
+									<i className="mr-eye-swatch-line" style={{ bottom: '14%', insetInline: '26%' }} />
+								</span>
+							)}
+							{t.eyeThemes[id]}
+						</button>
+					))}
+				</div>
+				<p className="mr-eye-note">{t.eyeThemeNotes[eye.theme]}</p>
+			</div>
+
+			<div className="mr-eye-sec">
+				<div className="mr-eye-label">
+					<span>{t.eyeWarmth}</span>
+					<small>{eye.warmth ? `${fmt(eye.warmth)}٪` : t.eyeOff}</small>
+				</div>
+				<label className="mr-eye-range is-warm" dir="ltr">
+					<Sun size={16} />
+					<input type="range" min="0" max="100" step="5" value={eye.warmth} onChange={e => onEye({ warmth: Number(e.target.value) })} aria-label={t.eyeWarmth} dir="ltr" />
+					<Moon size={16} />
+				</label>
+			</div>
+
+			<div className="mr-eye-sec">
+				<div className="mr-eye-label">
+					<span>{t.eyeDim}</span>
+					<small>{eye.dim ? `${fmt(eye.dim)}٪` : t.eyeOff}</small>
+				</div>
+				<label className="mr-eye-range is-dim" dir="ltr">
+					<Sun size={16} />
+					<input type="range" min="0" max="70" step="5" value={eye.dim} onChange={e => onEye({ dim: Number(e.target.value) })} aria-label={t.eyeDim} dir="ltr" />
+					<Moon size={16} />
+				</label>
+			</div>
+
+			<div className="mr-eye-sec">
+				<div className="mr-eye-label">
+					<span>{t.eyeSize}</span>
+				</div>
+				<div className="mr-eye-sizes" role="radiogroup" aria-label={t.eyeSize}>
+					{TEXT_SIZES.map((v, i) => (
+						<button key={v} type="button" role="radio" aria-checked={eye.size === v} className={cx(eye.size === v && 'is-on')} onClick={() => onEye({ size: v })} style={{ fontSize: `${12 + i * 2}px` }}>
+							{t.eyeSizes[i]}
+						</button>
+					))}
+				</div>
+			</div>
+
+			<div className="mr-eye-sec">
+				<button type="button" className="mr-eye-toggle" role="switch" aria-checked={eye.bold} onClick={() => onEye({ bold: !eye.bold })}>
+					<span>
+						<b>{t.eyeBold}</b>
+						<small>{t.eyeBoldSub}</small>
+					</span>
+					<span className={cx('mr-switch', eye.bold && 'is-on')} aria-hidden="true" />
+				</button>
+				<button type="button" className="mr-eye-toggle" role="switch" aria-checked={eye.remind} onClick={() => onEye({ remind: !eye.remind })}>
+					<span>
+						<b>{t.eyeRemind}</b>
+						<small>{t.eyeRemindSub}</small>
+					</span>
+					<span className={cx('mr-switch', eye.remind && 'is-on')} aria-hidden="true" />
+				</button>
+			</div>
+
+			{!isDefaultEye(eye) ? (
+				<button type="button" className="mr-eye-reset" onClick={() => onEye(DEFAULT_EYE)}>
+					{t.eyeReset}
+				</button>
+			) : null}
+		</section>
+	);
+}
+
+function RestCard({ t, fmt, left, onClose }) {
+	const r = 21;
+	const c = 2 * Math.PI * r;
+	const done = left === 0;
+	return (
+		<div className="mr-rest" role="status" aria-live="polite">
+			<div className="mr-rest-card">
+				<span className="mr-rest-ring" aria-hidden="true">
+					<svg viewBox="0 0 50 50">
+						<circle className="bg" cx="25" cy="25" r={r} />
+						<circle className="fg" cx="25" cy="25" r={r} strokeDasharray={c} strokeDashoffset={c * (left / REST_SECONDS)} />
+					</svg>
+					{done ? <Eye size={18} /> : <b>{fmt(left)}</b>}
+				</span>
+				<span className="mr-rest-txt">
+					<b>{done ? t.restDone : t.restTitle}</b>
+					<small>{done ? t.restDoneSub : t.restSub}</small>
+				</span>
+				<button type="button" className={cx('mr-rest-btn', done && 'is-primary')} onClick={onClose}>
+					{done ? t.restOk : t.restSkip}
+				</button>
+			</div>
+		</div>
 	);
 }
 
@@ -2046,8 +2292,10 @@ function BookmarkRow({ t, fmt, ar, page, bookmarks, onChange, onGo }) {
 
 /* ───────── index ───────── */
 
-function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang, bookmarks = [], onBookmarks }) {
-	const [timeOpen, setTimeOpen] = useState(false);
+function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang, bookmarks = [], onBookmarks, eye, eyeTheme, onEye }) {
+	const [panel, setPanel] = useState(null); // 'time' | 'eye'
+	const timeOpen = panel === 'time';
+	const togglePanel = id => setPanel(p => (p === id ? null : id));
 	const reading = useReadingLog();
 	const today = lastDays(reading, 1)[0].sec;
 	const [q, setQ] = useState('');
@@ -2056,7 +2304,6 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang, bookmarks =
 	const [openSurah, setOpenSurah] = useState(() => surahAtPage(page));
 	const listRef = useRef(null);
 	const current = surahAtPage(page);
-	const currentJuz = juzOfPage(page);
 	const norm = s => String(s).toLowerCase().replace(/[ً-ٰٟۖ-ۭ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
 	const shown = useMemo(() => {
 		const k = norm(q.trim());
@@ -2080,13 +2327,25 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang, bookmarks =
 					<div className="mr-idx-title">
 						<b>{t.index}</b>
 						<small>
-							{surahName(current, ar)} · {t.juz} {fmt(currentJuz)} · {t.pageShort} {fmt(page)}
+							{surahName(current, ar)} · {t.pageShort} {fmt(page)}
 						</small>
 					</div>
-					<button type="button" className={cx('mr-time-pill', timeOpen && 'is-on')} onClick={() => setTimeOpen(v => !v)} aria-expanded={timeOpen} aria-label={t.readingTime}>
+					<button type="button" className={cx('mr-time-pill', timeOpen && 'is-on')} onClick={() => togglePanel('time')} aria-expanded={timeOpen} aria-label={t.readingTime}>
 						<Clock3 size={15} strokeWidth={2.3} />
 						<span>{durText(today, t, fmt)}</span>
 					</button>
+					{eye ? (
+						<button
+							type="button"
+							className={cx('mr-eye-btn', panel === 'eye' && 'is-on', !isDefaultEye(eye) && 'is-active')}
+							onClick={() => togglePanel('eye')}
+							aria-expanded={panel === 'eye'}
+							aria-label={t.eyeTitle}
+							title={t.eyeTitle}
+						>
+							<Eye size={17} strokeWidth={2.2} />
+						</button>
+					) : null}
 					{onToggleLang ? (
 						<button type="button" className="mr-lang" onClick={onToggleLang} aria-label={ar ? 'English' : 'العربية'}>
 							{ar ? 'EN' : 'ع'}
@@ -2097,6 +2356,7 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onToggleLang, bookmarks =
 					</button>
 				</header>
 				{timeOpen ? <ReadingPanel t={t} ar={ar} fmt={fmt} log={reading} /> : null}
+				{panel === 'eye' && eye ? <EyePanel t={t} fmt={fmt} eye={eye} eyeTheme={eyeTheme} onEye={onEye} /> : null}
 				<BookmarkRow t={t} fmt={fmt} ar={ar} page={page} bookmarks={bookmarks} onChange={onBookmarks} onGo={onGo} />
 				<div className="mr-sheet-tools">
 					<label className="mr-search">

@@ -6,6 +6,7 @@ import {
 	ArrowLeft,
 	BookmarkCheck,
 	BookOpen,
+	Languages,
 	CheckCircle2,
 	ChevronRight,
 	Circle,
@@ -67,13 +68,14 @@ function CourseDialog({ c, initial, categories, onClose, onSubmit }) {
 	const [description, setDescription] = useState(initial?.description || '');
 	const [category, setCategory] = useState(initial?.category || '');
 	const [color, setColor] = useState(initial?.color || 'green');
+	const [kind, setKind] = useState(initial?.kind === 'english' ? 'english' : 'general');
 	const [busy, setBusy] = useState(false);
 	const submit = async event => {
 		event?.preventDefault?.();
 		if (!title.trim() || busy) return;
 		setBusy(true);
 		try {
-			await onSubmit({ title: title.trim(), description: description.trim(), category: category.trim(), color });
+			await onSubmit({ title: title.trim(), description: description.trim(), category: category.trim(), color, kind });
 			onClose();
 		} catch {
 			toast.error(c.actionFailed);
@@ -116,6 +118,20 @@ function CourseDialog({ c, initial, categories, onClose, onSubmit }) {
 					</datalist>
 				</label>
 				<fieldset className="lrn-field">
+					<legend>{c.courseKind}</legend>
+					<div className="en-kinds" role="radiogroup" aria-label={c.courseKind}>
+						{['general', 'english'].map(k => (
+							<button key={k} type="button" role="radio" aria-checked={kind === k} className={`en-kind${kind === k ? ' is-on' : ''}`} onClick={() => setKind(k)}>
+								<b>
+									{k === 'english' ? <Languages size={15} aria-hidden /> : <BookOpen size={15} aria-hidden />}
+									{c.kinds[k][0]}
+								</b>
+								<small>{c.kinds[k][1]}</small>
+							</button>
+						))}
+					</div>
+				</fieldset>
+				<fieldset className="lrn-field">
 					<legend>{c.fields.color}</legend>
 					<div className="lrn-swatches">
 						{COURSE_COLORS.map(name => (
@@ -136,7 +152,7 @@ function CourseDialog({ c, initial, categories, onClose, onSubmit }) {
 	);
 }
 
-function LectureDialog({ c, initial, onClose, onSubmit }) {
+function LectureDialog({ c, initial, onClose, onSubmit, english = false }) {
 	const [title, setTitle] = useState(initial?.title || '');
 	const [description, setDescription] = useState(initial?.description || '');
 	const [busy, setBusy] = useState(false);
@@ -172,7 +188,7 @@ function LectureDialog({ c, initial, onClose, onSubmit }) {
 			<form id="lrn-lecture-form" className="lrn-form" onSubmit={submit}>
 				<label className="lrn-field">
 					<span>{c.fields.title}</span>
-					<input autoFocus dir="auto" maxLength={160} value={title} placeholder={c.fields.lectureTitleHint} onChange={event => setTitle(event.target.value)} />
+					<input autoFocus dir="auto" maxLength={160} value={title} placeholder={english ? c.dayTitleHint : c.fields.lectureTitleHint} onChange={event => setTitle(event.target.value)} />
 				</label>
 				<label className="lrn-field">
 					<span>{c.fields.description}</span>
@@ -202,6 +218,12 @@ function CourseRow({ course, c, onOpen, onEdit, onDelete, onPin }) {
 					) : null}
 					<span className="lrn-course__meta">
 						<span>{course.category || c.uncategorized}</span>
+						{course.kind === 'english' ? (
+							<span className="en-badge">
+								<Languages size={12} aria-hidden />
+								{c.englishBadge}
+							</span>
+						) : null}
 						<span>{c.lecturesCount(course.lectures || 0)}</span>
 						{course.revision ? (
 							<span className="is-revision">
@@ -371,6 +393,12 @@ function LectureRow({ lecture, index, c, onOpen, onToggleDone, onEdit, onDelete,
 								{c.qaCount(lecture.qaCount)}
 							</span>
 						) : null}
+						{lecture.wordCount ? (
+							<span className="lrn-tag">
+								<Languages size={12} aria-hidden />
+								{c.wordsCount(lecture.wordCount)}
+							</span>
+						) : null}
 						{lecture.needsRevision ? (
 							<span className="lrn-tag is-revision">
 								<BookmarkCheck size={12} aria-hidden />
@@ -525,6 +553,7 @@ function CourseView({ c, ar, course, library, onOpenLecture, onEditCourse, onDel
 
 			{dialog?.kind === 'add' ? (
 				<LectureDialog
+					english={course.kind === 'english'}
 					c={c}
 					onClose={() => setDialog(null)}
 					onSubmit={async fields => {
@@ -535,6 +564,7 @@ function CourseView({ c, ar, course, library, onOpenLecture, onEditCourse, onDel
 			) : null}
 			{dialog?.kind === 'edit' ? (
 				<LectureDialog
+					english={course.kind === 'english'}
 					c={c}
 					initial={dialog.lecture}
 					onClose={() => setDialog(null)}

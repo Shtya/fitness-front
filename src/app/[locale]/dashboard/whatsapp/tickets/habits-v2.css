@@ -1,0 +1,484 @@
+/*
+ * Habits v2: the Habits / Wall switch next to "Games", full-width motivation cards,
+ * and a grid worth opening every day (lit today lane, chains of done days, a burst on check,
+ * a progress bar per habit and a daily strip). Loaded after habits.css.
+ */
+
+/* ─── Habits / Wall switch (same height and feel as "Games") ─── */
+.wa-idle-slot:empty {
+	display: none;
+}
+.tk-switch {
+	--i: 0;
+	position: relative;
+	display: inline-grid;
+	grid-template-columns: 1fr 1fr;
+	align-items: center;
+	block-size: 40px;
+	padding: 4px;
+	box-sizing: border-box;
+	border-radius: 999px;
+	background: var(--idle-surface);
+	box-shadow: 0 0 0 1px var(--idle-edge), 0 8px 22px -14px rgba(11, 20, 26, 0.45);
+	isolation: isolate;
+}
+.tk-switch__thumb {
+	position: absolute;
+	inset-block: 4px;
+	inset-inline-start: 4px;
+	inline-size: calc(50% - 4px);
+	z-index: -1;
+	border-radius: 999px;
+	background: linear-gradient(180deg, color-mix(in srgb, var(--idle-accent) 82%, #fff), var(--idle-accent));
+	box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--idle-accent) 90%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+	transform: translateX(calc(var(--i) * 100%));
+	transition: transform 0.38s cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+[dir='rtl'] .tk-switch__thumb,
+.tk-switch:is([dir='rtl'] *) .tk-switch__thumb {
+	transform: translateX(calc(var(--i) * -100%));
+}
+.tk-switch button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	block-size: 32px;
+	min-inline-size: 92px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--idle-text-2);
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: color 0.25s ease;
+}
+.tk-switch button.is-on {
+	color: #fff;
+}
+.tk-switch button:not(.is-on):hover {
+	color: var(--idle-text);
+}
+.tk-switch button:focus-visible {
+	outline: 2px solid var(--idle-accent);
+	outline-offset: 2px;
+}
+
+/* ─── cards: the whole width, with room for the hover lift and its shadow ─── */
+.hb-top {
+	grid-template-columns: minmax(0, 1fr);
+}
+.hb-cards {
+	padding: 14px 4px 24px;
+	margin: -14px -4px -16px;
+	scroll-snap-type: none;
+}
+.hb-card {
+	inline-size: clamp(220px, 24%, 300px);
+}
+.hb-card:hover {
+	transform: rotate(0) translateY(-4px) scale(1.015);
+	box-shadow: 0 18px 32px -18px rgba(11, 20, 26, 0.45);
+}
+
+/* ─── grid shell ─── */
+.hb-gridwrap {
+	border-radius: 26px;
+	background:
+		radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--hb-accent) 5%, transparent), transparent 60%),
+		var(--hb-card);
+	box-shadow: 0 24px 50px -34px rgba(11, 20, 26, 0.5);
+}
+.hb-grid thead th {
+	block-size: 72px;
+}
+
+/* corner: today's progress instead of a side panel */
+.hb-corner__in {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	text-transform: none;
+	letter-spacing: 0;
+}
+.hb-grid .hb-corner .hb-ring {
+	inline-size: 46px;
+	block-size: 46px;
+}
+.hb-grid .hb-corner .hb-ring > span {
+	inline-size: 36px;
+	block-size: 36px;
+	color: var(--hb-ink);
+	font-size: 11.5px;
+	font-weight: 800;
+}
+.hb-ring.is-full {
+	background: var(--hb-accent);
+	animation: hb-glow 2.4s ease-in-out infinite;
+}
+.hb-grid .hb-corner .hb-ring.is-full > span {
+	background: var(--hb-accent);
+	color: #fff;
+}
+@keyframes hb-glow {
+	50% {
+		box-shadow: 0 0 0 6px color-mix(in srgb, var(--hb-accent) 18%, transparent);
+	}
+}
+.hb-corner__txt {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+.hb-corner__txt b {
+	color: var(--hb-ink);
+	font-size: 14px;
+	font-weight: 800;
+	white-space: nowrap;
+}
+.hb-corner__txt small {
+	color: var(--hb-ink-2);
+	font-size: 11.5px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+/* today: a lit lane from the header down to the daily strip */
+.hb-grid thead .hb-th.is-today {
+	background: linear-gradient(180deg, var(--hb-accent), color-mix(in srgb, var(--hb-accent) 78%, #0b3d24));
+	color: #fff;
+	box-shadow: none;
+	border-radius: 18px 18px 0 0;
+}
+.hb-grid .hb-th.is-today b {
+	color: #fff;
+	font-size: 18px;
+}
+.hb-today-pill {
+	background: rgba(255, 255, 255, 0.22);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.hb-grid .hb-td.is-today,
+.hb-grid tbody tr:last-child .hb-td.is-today {
+	background: linear-gradient(180deg, color-mix(in srgb, var(--hb-accent) 13%, transparent), color-mix(in srgb, var(--hb-accent) 8%, transparent));
+	box-shadow: inset 2px 0 0 color-mix(in srgb, var(--hb-accent) 45%, transparent), inset -2px 0 0 color-mix(in srgb, var(--hb-accent) 45%, transparent);
+}
+.hb-td.is-today .hb-box:not(.is-done) {
+	inline-size: min(38px, calc(var(--hb-cell) - 6px));
+	block-size: min(38px, calc(var(--hb-cell) - 6px));
+	background: var(--hb-card);
+}
+
+/* rows */
+.hb-grid tbody tr:hover > .hb-td:not(.is-today) {
+	background-color: color-mix(in srgb, var(--c-soft) 45%, transparent);
+}
+.hb-grid tbody tr:hover .hb-name {
+	background: color-mix(in srgb, var(--c-soft) 60%, var(--hb-card));
+}
+.hb-grid tbody tr.is-done-today .hb-name {
+	box-shadow: inset 3px 0 0 var(--c), 1px 0 0 var(--hb-line);
+}
+[dir='rtl'] .hb-grid tbody tr.is-done-today .hb-name {
+	box-shadow: inset -3px 0 0 var(--c), -1px 0 0 var(--hb-line);
+}
+.hb-icon {
+	background: linear-gradient(145deg, var(--c-soft), color-mix(in srgb, var(--c) 22%, var(--c-soft)));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent);
+}
+.hb-icon {
+	position: relative;
+}
+.hb-icon__done {
+	position: absolute;
+	top: -5px;
+	inset-inline-end: -5px;
+	display: grid;
+	place-items: center;
+	inline-size: 17px;
+	block-size: 17px;
+	z-index: 1;
+	border: 2px solid var(--hb-card);
+	border-radius: 50%;
+	background: var(--c);
+	color: #fff;
+	animation: hb-pop 0.4s var(--hb-ease);
+}
+
+/* a 14-day progress bar under each habit */
+.hb-prog {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.hb-prog i {
+	--w: 0;
+	position: relative;
+	flex: 1;
+	block-size: 5px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--c) 14%, transparent);
+	overflow: hidden;
+}
+.hb-prog i::after {
+	content: '';
+	position: absolute;
+	inset-block: 0;
+	inset-inline-start: 0;
+	inline-size: calc(var(--w) * 100%);
+	border-radius: inherit;
+	background: linear-gradient(90deg, color-mix(in srgb, var(--c) 60%, #fff), var(--c));
+	transition: inline-size 0.6s var(--hb-ease);
+}
+.hb-prog small {
+	color: var(--hb-ink-2);
+	font-size: 10.5px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+.hb-meta .hb-kept {
+	padding: 0 6px;
+	border-radius: 999px;
+}
+.hb-meta .hb-kept.is-high {
+	background: rgba(47, 158, 98, 0.13);
+	color: #1f7a48;
+}
+.hb-meta .hb-kept.is-mid {
+	background: rgba(212, 138, 27, 0.14);
+	color: #9a5f0a;
+}
+.hb-meta .hb-kept.is-low {
+	background: rgba(208, 70, 110, 0.12);
+	color: #b03358;
+}
+html.dark .hb-meta .hb-kept.is-high {
+	color: #6fd39b;
+}
+html.dark .hb-meta .hb-kept.is-mid {
+	color: #f0b860;
+}
+html.dark .hb-meta .hb-kept.is-low {
+	color: #ff8fae;
+}
+
+/* done days: solid, and joined into a chain */
+.hb-td {
+	position: relative;
+}
+.hb-box {
+	z-index: 1;
+}
+.hb-box.is-done {
+	background: linear-gradient(145deg, color-mix(in srgb, var(--c) 72%, #fff), var(--c) 70%);
+	box-shadow: 0 8px 16px -9px var(--c), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.hb-td.is-linked::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	inset-inline-start: -50%;
+	inline-size: 100%;
+	block-size: 10px;
+	transform: translateY(-50%);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--c) 32%, transparent);
+}
+
+/* the check: a pop, the tick drawing itself and a little burst */
+.hb-burst {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	z-index: 2;
+	pointer-events: none;
+}
+.hb-burst i {
+	position: absolute;
+	inline-size: 5px;
+	block-size: 5px;
+	margin: -2.5px;
+	border-radius: 50%;
+	background: var(--c);
+	transform: rotate(var(--a)) translateY(0);
+	animation: hb-burst 0.6s ease-out forwards;
+}
+.hb-burst i:nth-child(2n) {
+	background: #f5b93a;
+	inline-size: 4px;
+	block-size: 4px;
+}
+@keyframes hb-burst {
+	0% {
+		opacity: 1;
+		transform: rotate(var(--a)) translateY(-8px) scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: rotate(var(--a)) translateY(-26px) scale(0.4);
+	}
+}
+
+/* ─── daily strip under the grid ─── */
+.hb-grid tfoot td,
+.hb-grid tfoot th {
+	position: sticky;
+	bottom: 0;
+	z-index: 2;
+	block-size: 58px;
+	border-top: 1px solid var(--hb-line);
+	background: color-mix(in srgb, var(--hb-soft) 70%, var(--hb-card));
+}
+.hb-grid tfoot .hb-name {
+	z-index: 3;
+}
+.hb-foot-label {
+	padding-inline: 18px !important;
+	color: var(--hb-ink-2);
+	font-size: 12px;
+	font-weight: 700;
+}
+.hb-foot {
+	text-align: center;
+	vertical-align: middle;
+}
+.hb-foot__bar {
+	--p: 0;
+	position: relative;
+	display: block;
+	inline-size: 10px;
+	block-size: 26px;
+	margin: 0 auto 2px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--hb-ink) 8%, transparent);
+	overflow: hidden;
+}
+.hb-foot__bar i {
+	position: absolute;
+	inset-inline: 0;
+	bottom: 0;
+	block-size: calc(var(--p) * 100%);
+	border-radius: inherit;
+	background: linear-gradient(0deg, var(--hb-accent), color-mix(in srgb, var(--hb-accent) 55%, #fff));
+	transition: block-size 0.5s var(--hb-ease);
+}
+.hb-foot small {
+	color: var(--hb-ink-2);
+	font-size: 10px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+.hb-foot.is-future .hb-foot__bar {
+	opacity: 0.4;
+}
+.hb-grid tfoot .hb-foot.is-today {
+	background: linear-gradient(0deg, color-mix(in srgb, var(--hb-accent) 22%, var(--hb-card)), color-mix(in srgb, var(--hb-accent) 12%, var(--hb-card)));
+	border-radius: 0 0 18px 18px;
+}
+.hb-foot.is-today small {
+	color: var(--hb-accent);
+}
+
+/* ─── empty state ─── */
+.hb-empty {
+	gap: 14px;
+	padding: 40px 20px 44px;
+	border: 0;
+	border-radius: 26px;
+	background:
+		radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--hb-accent) 9%, transparent), transparent 70%),
+		var(--hb-card);
+	box-shadow: 0 24px 50px -34px rgba(11, 20, 26, 0.5);
+}
+.hb-empty .hb-empty__art {
+	display: grid;
+	gap: 8px;
+	inline-size: auto;
+	block-size: auto;
+	padding: 14px 16px;
+	border-radius: 20px;
+	background: var(--hb-card);
+	color: inherit;
+	box-shadow: 0 0 0 1px var(--hb-line), 0 14px 30px -22px rgba(11, 20, 26, 0.5);
+}
+.hb-empty__row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.hb-empty__box {
+	inline-size: 22px;
+	block-size: 22px;
+	box-sizing: border-box;
+	border: 2px solid color-mix(in srgb, var(--c) 40%, transparent);
+	border-radius: 7px;
+}
+.hb-empty__box[data-on='1'] {
+	animation: hb-fill 0.4s var(--d) var(--hb-ease) both;
+}
+@keyframes hb-fill {
+	from {
+		transform: scale(0.6);
+		background: transparent;
+	}
+	to {
+		transform: scale(1);
+		border-color: var(--c);
+		background: var(--c);
+	}
+}
+.hb-empty__title {
+	margin: 6px 0 0;
+	font-size: 22px;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+}
+.hb-empty__points {
+	display: grid;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 14px;
+	font-weight: 600;
+}
+.hb-empty__points li {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.hb-empty__points svg {
+	color: var(--hb-accent);
+}
+
+@container hb (max-width: 720px) {
+	.hb-card {
+		inline-size: 220px;
+	}
+	.hb-corner__txt small {
+		display: none;
+	}
+	.hb-grid .hb-corner .hb-ring {
+		inline-size: 38px;
+		block-size: 38px;
+	}
+	.hb-grid .hb-corner .hb-ring > span {
+		inline-size: 30px;
+		block-size: 30px;
+		font-size: 10px;
+	}
+	.hb-corner__txt b {
+		font-size: 12px;
+	}
+}
+
+/* phone tab: the page header already says "Habits & tickets" */
+@media (max-width: 768px) {
+	html .wa-chat-idle.has-tickets.wa-tickets-tab:not(#wa-idle) .tk-board__greet,
+	html .wa-chat-idle.has-tickets.wa-tickets-tab:not(#wa-idle) .tk-board__title {
+		display: none;
+	}
+}

@@ -37,6 +37,7 @@ import { detectDominantDir } from '@/lib/smart-document/structure';
 import { normalizeDirection } from '@/components/smart-document/bidi';
 import { SECTIONS, qaId, shuffled } from './learn-model';
 import { useLectureSaver } from './use-learn-library';
+import EnglishDay from './EnglishDay';
 
 const SECTION_ICONS = { content: FileText, notes: NotebookPen, keyPoints: Lightbulb, summary: ListChecks, qa: HelpCircle };
 /** Same storage key as the Documents tab: Learn shares its typography settings. */
@@ -377,7 +378,7 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 			setLecture(current => (current ? { ...current, ...fields } : current));
 			saver.save(fields, options);
 			// The list row follows at once (done, revision, title…), not after the round trip.
-			if ('done' in fields || 'needsRevision' in fields || 'title' in fields || 'description' in fields) {
+			if ('done' in fields || 'needsRevision' in fields || 'title' in fields || 'description' in fields || 'english' in fields) {
 				onSummaryRef.current?.({ id: lectureId, ...fields });
 			}
 		},
@@ -520,8 +521,27 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 				</span>
 			</header>
 
-			{section === 'content' ? null : <div className="lrn-lbar">{tabs}</div>}
+			{course?.kind === 'english' ? (
+				<EnglishDay
+					c={c}
+					lecture={lecture}
+					course={course}
+					onChange={(english, immediate) => patchLocal({ english }, immediate ? { immediate: true } : undefined)}
+					renderNotes={() => (
+						<SectionEditor
+							key={`${lecture.id}:notes`}
+							value={lecture.notes}
+							direction={direction}
+							placeholder={c.sectionHints.notes}
+							onChange={value => patchLocal({ notes: value })}
+							onBlur={() => void saver.flush().catch(() => undefined)}
+						/>
+					)}
+				/>
+			) : null}
+			{course?.kind === 'english' || section === 'content' ? null : <div className="lrn-lbar">{tabs}</div>}
 
+			{course?.kind === 'english' ? null : (
 			<div className={`lrn-lecture__body is-${section}`} onScrollCapture={onBodyScroll}>
 				{section === 'content' ? (
 					<div className="lrn-doc">
@@ -561,6 +581,7 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 					</div>
 				)}
 			</div>
+			)}
 		</div>
 	);
 }

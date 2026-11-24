@@ -20,7 +20,8 @@
 	background: var(--mr-green);
 	color: #fff;
 }
-html.dark .mr-ic.is-on {
+html.dark .mr-ic.is-on,
+.mr[data-eye-dark] .mr-ic.is-on {
 	background: #2f6b4a;
 }
 
@@ -96,7 +97,8 @@ html.dark .mr-ic.is-on {
 	background: var(--mr-green);
 	color: #fff;
 }
-html.dark .rv-chip.is-on {
+html.dark .rv-chip.is-on,
+.mr[data-eye-dark] .rv-chip.is-on {
 	border-color: #2f6b4a;
 	background: #2f6b4a;
 }
@@ -164,6 +166,7 @@ html.dark .rv-chip.is-on {
 	box-shadow: 0 0 0 2px var(--mr-card), 0 0 0 3.5px var(--mr-gold-2);
 	cursor: pointer;
 }
-html.dark .rv-start {
+html.dark .rv-start,
+.mr[data-eye-dark] .rv-start {
 	background: #2f6b4a;
 }

@@ -36,7 +36,8 @@
 	-webkit-user-select: none;
 	-webkit-touch-callout: none;
 }
-html.dark .mr {
+html.dark .mr,
+.mr[data-eye-dark] {
 	--mr-paper: #15160f;
 	--mr-ink: #ebe2cc;
 	--mr-ink-2: #c4b89c;
@@ -593,7 +594,8 @@ html.dark .mr {
 	cursor: pointer;
 	transition: transform 0.12s;
 }
-html.dark .mr-play {
+html.dark .mr-play,
+.mr[data-eye-dark] .mr-play {
 	background: radial-gradient(circle at 40% 30%, #3d8560, #245a3d 70%);
 }
 .mr-play:active {
@@ -681,7 +683,8 @@ html.dark .mr-play {
 	cursor: pointer;
 	transition: transform 0.1s;
 }
-html.dark .mr-menu-act {
+html.dark .mr-menu-act,
+.mr[data-eye-dark] .mr-menu-act {
 	background: #2f6b4a;
 }
 .mr-menu-act + .mr-menu-act {
@@ -759,7 +762,8 @@ html.dark .mr-menu-act {
 	box-shadow: 0 12px 30px -12px rgb(0 0 0 / 0.5);
 	animation: mr-pop 0.18s ease-out;
 }
-html.dark .mr-toast {
+html.dark .mr-toast,
+.mr[data-eye-dark] .mr-toast {
 	background: #24412f;
 }
 .mr-toast span {
@@ -885,7 +889,8 @@ html.dark .mr-toast {
 	color: #fff;
 	box-shadow: 0 2px 6px rgb(20 50 30 / 0.3);
 }
-html.dark .mr-seg-btn.is-on {
+html.dark .mr-seg-btn.is-on,
+.mr[data-eye-dark] .mr-seg-btn.is-on {
 	background: #2f6b4a;
 }
 .mr-sheet-tools {
@@ -939,7 +944,8 @@ html.dark .mr-seg-btn.is-on {
 	font-weight: 800;
 	cursor: pointer;
 }
-html.dark .mr-go button {
+html.dark .mr-go button,
+.mr[data-eye-dark] .mr-go button {
 	background: #2f6b4a;
 }
 .mr-sheet-list {
@@ -1432,7 +1438,8 @@ html.dark .mr-go button {
 	background: var(--mr-green);
 	color: #fff;
 }
-html.dark .mr-act-quick button:first-child {
+html.dark .mr-act-quick button:first-child,
+.mr[data-eye-dark] .mr-act-quick button:first-child {
 	background: #2f6b4a;
 }
 .mr-act-quick button:active,

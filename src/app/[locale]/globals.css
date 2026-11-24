@@ -1047,16 +1047,18 @@ div[data-rht-toaster] {
 }
 
 /* WhatsApp workspace design tokens shared by phone and web chat surfaces.
- * Quran text (.wa-quran-face, .qr-mushaf) keeps its mushaf face. */
+ * Quran text (.wa-quran-face, .qr-mushaf) keeps its mushaf face; the Habits motivation cards
+ * (.hb-card__text) keep their calligraphy faces, and task text tagged by language
+ * (.tkx-lang-ar / .tkx-lang-en, Today's tickets and Habits) keeps its Arabic / Latin face. */
 body .wa-mobile-shell,
-body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *) {
+body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *):not(.hb-card__text):not(.tkx-lang-ar):not(.tkx-lang-ar *):not(.tkx-lang-en):not(.tkx-lang-en *) {
   font-variant-emoji: emoji;
   font-family: var(--wa-font-ui) !important;
 }
 
 /* Arabic locale: prefer a proper Arabic UI font instead of DM Sans. */
 [dir='rtl'] body .wa-mobile-shell,
-[dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *) {
+[dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *):not(.hb-card__text):not(.tkx-lang-ar):not(.tkx-lang-ar *):not(.tkx-lang-en):not(.tkx-lang-en *) {
   font-family: var(--wa-font-ui-ar) !important;
 }
 

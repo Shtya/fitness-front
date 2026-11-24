@@ -1,0 +1,134 @@
+/*
+ * Habits v4: the grid is as tall as its rows (no empty space under it), and the four
+ * motivation cards share the full width with centred, calligraphic text.
+ */
+
+/* ─── grid height: fit the rows, scroll only when they don't fit ─── */
+.hb-gridwrap {
+	flex: 0 1 auto;
+	min-height: 0;
+	max-height: 100%;
+}
+.hb-gridscroll {
+	max-height: 100%;
+}
+
+/* ─── four cards, one row, the whole width ─── */
+.hb-cards {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 14px;
+	margin: 0;
+	padding: 10px 0 6px;
+	overflow: visible;
+	-webkit-mask-image: none;
+	mask-image: none;
+}
+.hb-cards > :last-child {
+	margin-inline-end: 0;
+}
+.hb-card,
+.hb-card:nth-child(2n) {
+	--tilt: 0deg;
+	inline-size: auto;
+	min-block-size: 124px;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 20px 18px 18px;
+	text-align: center;
+	transform: none;
+}
+.hb-card:hover {
+	transform: translateY(-4px);
+}
+.hb-card__q {
+	opacity: 0.28;
+}
+.hb-card .hb-card__tag {
+	inset-inline-start: 50%;
+	transform: translateX(-50%);
+	white-space: nowrap;
+}
+[dir='rtl'] .hb-card .hb-card__tag {
+	transform: translateX(50%);
+}
+
+/* the text itself: calligraphy for Arabic, an elegant italic serif for English */
+.hb-card .hb-card__text {
+	margin: 0;
+	text-align: center;
+	text-wrap: balance;
+	overflow-wrap: anywhere;
+}
+.hb-card .hb-card__text.is-ar {
+	font-family: var(--font-hb-card-ar), 'Aref Ruqaa', 'Amiri', serif;
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.75;
+	letter-spacing: 0;
+}
+.hb-card .hb-card__text.is-en {
+	font-family: var(--font-hb-card-en), 'Playfair Display', Georgia, serif;
+	font-size: 17.5px;
+	font-style: italic;
+	font-weight: 600;
+	line-height: 1.45;
+	letter-spacing: 0.005em;
+}
+.hb-card textarea.hb-card__text {
+	inline-size: 100%;
+	min-block-size: 64px;
+	field-sizing: content;
+}
+.hb-card--add {
+	min-block-size: 124px;
+}
+
+@container hb (max-width: 900px) {
+	.hb-cards {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+@container hb (max-width: 520px) {
+	.hb-cards {
+		gap: 10px;
+	}
+	.hb-card,
+	.hb-card:nth-child(2n) {
+		min-block-size: 104px;
+		padding: 18px 12px 14px;
+	}
+	.hb-card .hb-card__text.is-ar {
+		font-size: 18px;
+	}
+	.hb-card .hb-card__text.is-en {
+		font-size: 15px;
+	}
+}
+
+/* ─── card shadows: soft and short, and drawn over the table edge (never cut off by it) ─── */
+.hb-top {
+	position: relative;
+	z-index: 2;
+	padding-bottom: 4px;
+}
+.hb-card,
+.hb-card:nth-child(2n) {
+	box-shadow: 0 1px 2px rgba(11, 20, 26, 0.04), 0 8px 18px -14px rgba(11, 20, 26, 0.28);
+	transition: transform 0.25s var(--hb-ease), box-shadow 0.25s ease;
+}
+.hb-card:hover {
+	box-shadow: 0 2px 4px rgba(11, 20, 26, 0.05), 0 16px 26px -18px rgba(11, 20, 26, 0.35);
+}
+.hb-card.is-daily {
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--hb-accent) 45%, transparent), 0 8px 18px -14px rgba(11, 20, 26, 0.28);
+}
+.hb-card--add {
+	box-shadow: none;
+}
+.hb-gridwrap {
+	position: relative;
+	z-index: 1;
+	box-shadow: 0 1px 2px rgba(11, 20, 26, 0.04), 0 18px 40px -30px rgba(11, 20, 26, 0.35);
+}
