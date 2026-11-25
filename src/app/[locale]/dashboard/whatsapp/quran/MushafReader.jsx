@@ -152,7 +152,7 @@ const L = {
 		hourShort: 'س',
 		streakDays: (n, f) => `${f(n)} أيام متتالية`,
 		weekdays: ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'],
-		timeNote: 'يُحسب الوقت وأنت على صفحات المصحف، ويتوقف بعد ٤ دقائق بدون أي لمس أو تلاوة.',
+		timeNote: 'يُحسب الوقت وأنت بتقرأ بس: المصحف مفتوح من غير الشريط اللي فوق واللي تحت (لمسة على الصفحة بتظهرهم وبتوقف العدّ). وبيقف لوحده بعد ٤ دقائق من غير أي لمس أو تلاوة.',
 		quarterEnds: p => `ينتهي ص ${p}`,
 		quarterEndsHere: 'ينتهي هنا',
 		surahLeft: (n, f) => (n === 1 ? 'باقي صفحة' : n === 2 ? 'باقي صفحتين' : `باقي ${f(n)} ${n <= 10 ? 'صفحات' : 'صفحة'}`),
@@ -316,7 +316,7 @@ const L = {
 		hourShort: 'h',
 		streakDays: (n, f) => `${f(n)}-day streak`,
 		weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-		timeNote: 'Counted while you are on the mushaf pages; stops after 4 minutes with no touch or recitation.',
+		timeNote: 'Counted only while you read: the mushaf open with the top and bottom bars hidden (a tap shows them and pauses the count). It also stops after 4 minutes with no touch or recitation.',
 		quarterEnds: p => `ends p. ${p}`,
 		quarterEndsHere: 'ends here',
 		surahLeft: (n, f) => `${f(n)} ${n === 1 ? 'page' : 'pages'} left`,
@@ -1039,10 +1039,12 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 	);
 
 	/*
-	 * Reading clock: counts while the mushaf is on screen and you are with it (a touch, a page
-	 * turn or recitation within the last few minutes). Saved per day.
+	 * Reading clock: counts only while you are reading — the mushaf on screen with no bars or sheets
+	 * over it (tapping the page brings the bars back and pauses it) — and you are with it (a touch, a
+	 * page turn or recitation within the last few minutes). Saved per day.
 	 */
 	const lastAct = useRef(Date.now());
+	const readingRef = useRef(false);
 	const playingRef = useRef(false);
 	const flushRef = useRef(null);
 	useEffect(() => {
@@ -1060,7 +1062,8 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 		};
 		const flush = () => {
 			const now = Date.now();
-			if (document.hidden) {
+			// bars / a sheet were showing (or the app was away) since the last count: not reading time
+			if (document.hidden || !readingRef.current) {
 				from = now;
 				return;
 			}
@@ -1077,7 +1080,7 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 				// count up to the moment it was hidden
 				const now = Date.now();
 				const until = playingRef.current ? now : Math.min(now, lastAct.current + IDLE_MS);
-				if (until > from) {
+				if (readingRef.current && until > from) {
 				logReading(from, until);
 				countRest(until - from);
 			}
@@ -1118,6 +1121,13 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 	useEffect(() => {
 		lastAct.current = Date.now();
 	}, [page]);
+	// Reading mode on / off: count what came before, then start (or stop) counting from now.
+	const readingNow = active && !chrome && !indexOpen && !reviseOpen;
+	useEffect(() => {
+		flushRef.current?.();
+		readingRef.current = readingNow;
+		if (readingNow) lastAct.current = Date.now();
+	}, [readingNow]);
 	// Rest countdown: one tick a second while the card is up; it closes itself after "done".
 	useEffect(() => {
 		if (rest == null) return undefined;
@@ -1847,9 +1857,8 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 
 			{/* Read today (double-tap): a small badge on the page, a check and a note when you mark it. */}
 			{isRead(readLog, dayKey(Date.now()), page) ? (
-				<span className="mr-read-badge" aria-label={t.readBadge}>
-					<Check size={12} strokeWidth={3} />
-					{t.readBadge}
+				<span className="mr-read-badge" role="img" aria-label={t.readBadge} title={t.readBadge}>
+					<Check size={11} strokeWidth={3.4} />
 				</span>
 			) : null}
 			{readFx ? (

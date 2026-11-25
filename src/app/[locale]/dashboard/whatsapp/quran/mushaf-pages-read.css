@@ -253,3 +253,34 @@ html.dark .mr-read-note:not(.is-off),
 	gap: 2px;
 	padding-inline-end: 5px;
 }
+
+/* read today: just a small check circle beside the page number at the bottom */
+.mr-read-badge {
+	inset-inline-start: auto;
+	left: calc(50% + 24px);
+	bottom: calc(7px + env(safe-area-inset-bottom, 0px));
+	display: grid;
+	place-items: center;
+	inline-size: 17px;
+	block-size: 17px;
+	padding: 0;
+	border-radius: 50%;
+	background: var(--mr-green);
+	color: #fff;
+	font-size: 0;
+	box-shadow: 0 0 0 2px var(--mr-card, #fbf6e9);
+}
+html.dark .mr-read-badge,
+.mr[data-eye-dark] .mr-read-badge {
+	background: #2f6b4a;
+}
+@keyframes mr-read-badge-in {
+	from {
+		opacity: 0;
+		transform: scale(0.4);
+	}
+}
+.mr-read-badge {
+	left: calc(50% + 17px);
+	bottom: calc(9px + env(safe-area-inset-bottom, 0px));
+}
