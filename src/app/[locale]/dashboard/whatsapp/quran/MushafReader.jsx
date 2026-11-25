@@ -421,16 +421,31 @@ const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt
 	const [fit, setFit] = useState(null); // { short: 'n,n', squeeze: { n: scale } }
 	// The page's own mushaf font: words become single glyphs with the printed letter stretching.
 	const hasGlyphs = Boolean(data?.lines?.some(l => l.words?.some(w => w.g)));
-	const [glyph, setGlyph] = useState(() => hasGlyphs && qcfReady(page));
+	const [glyphLoaded, setGlyph] = useState(() => hasGlyphs && qcfReady(page));
+	// ready already (loaded for a neighbour, or earlier): use it from the very first paint
+	const glyph = hasGlyphs && (glyphLoaded || qcfReady(page));
+	// While the page font downloads the page waits (skeleton) instead of flashing the plain face;
+	// after 3 s (slow network) or a failed load it shows the plain face rather than nothing.
+	const [fontLate, setFontLate] = useState(false);
 	useEffect(() => {
 		if (!hasGlyphs) return undefined;
 		let alive = true;
-		if (qcfReady(page)) setGlyph(true);
-		else void loadQcf(page).then(ok => alive && ok && setGlyph(true));
+		if (qcfReady(page)) {
+			setGlyph(true);
+			return undefined;
+		}
+		const late = window.setTimeout(() => alive && setFontLate(true), 3000);
+		void loadQcf(page).then(ok => {
+			if (!alive) return;
+			if (ok) setGlyph(true);
+			else setFontLate(true);
+		});
 		return () => {
 			alive = false;
+			window.clearTimeout(late);
 		};
 	}, [page, hasGlyphs]);
+	const fontWait = hasGlyphs && !glyph && !fontLate;
 
 	/*
 	 * Fit each line like a printed page: text is sized for a typical full line, the odd
@@ -506,10 +521,10 @@ const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt
 		};
 	}, [data, onMeasure, fsKey, glyph, page]);
 
-	if (!data) {
+	if (!data || fontWait) {
 		return (
 			<div className="mr-page wa-quran-face is-empty" aria-busy={!error}>
-				{error ? (
+				{error && !data ? (
 					<p className="mr-page-msg">
 						{t.offline}{' '}
 						<button type="button" className="mr-link" onClick={() => onRetry(page)}>
@@ -535,7 +550,7 @@ const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt
 	return (
 		<div
 			ref={ref}
-			className={cx('mr-page', 'wa-quran-face', data.compact && 'is-compact', glyph && 'is-glyph')}
+			className={cx('mr-page', 'wa-quran-face', data.compact && 'is-compact', glyph && 'is-glyph', glyph && !fit?.qk && 'is-fitting')}
 			lang="ar"
 			dir="rtl"
 			style={glyph ? { '--qcf': `'${qcfFamily(page)}'`, '--qcf-k': fit?.qk || 1 } : undefined}
@@ -875,7 +890,9 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 	useEffect(() => {
 		for (let d = -RENDER_SPAN; d <= RENDER_SPAN; d += 1) ensure(page + d);
 		prefetchAround(page, RENDER_SPAN + 2);
-		prefetchQcf(page, 1);
+		// the page fonts too, so turning a page never waits for (or flashes) its font
+		void loadQcf(page);
+		prefetchQcf(page, 2);
 		const id = window.setTimeout(() => writeJson(LS_PAGE, page), 300);
 		// Far pages leave React state; they stay in the memory / IndexedDB caches.
 		setPages(prev => {

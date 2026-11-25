@@ -15,3 +15,8 @@
 .mr-page.is-glyph .mr-line.is-text .mr-end {
 	font-size: calc(1em / var(--qcf-k, 1));
 }
+
+/* the page-font lines stay invisible for the one frame before they are fitted (no size jump) */
+.mr-page.is-fitting .mr-lines {
+	visibility: hidden;
+}
