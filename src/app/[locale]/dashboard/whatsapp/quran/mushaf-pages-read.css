@@ -1,0 +1,255 @@
+/* Pages read today (double-tap a page): badge on the page, a check when you mark it, the log in the index. */
+
+/* a double-tap must not zoom the page */
+.mr-pager,
+.mr-pager * {
+	touch-action: manipulation;
+}
+
+.mr-read-badge {
+	position: absolute;
+	inset-inline-start: 14px;
+	bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+	z-index: 12;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 9px 3px 7px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--mr-green) 14%, var(--mr-card));
+	color: var(--mr-green);
+	font-size: 11px;
+	font-weight: 800;
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--mr-green) 30%, transparent);
+	pointer-events: none;
+	animation: mr-read-badge-in 0.3s ease-out;
+}
+@keyframes mr-read-badge-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+
+/* the check that pops in the middle of the page */
+.mr-read-burst {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	z-index: 40;
+	display: grid;
+	place-items: center;
+	inline-size: 96px;
+	block-size: 96px;
+	border-radius: 50%;
+	background: var(--mr-green);
+	color: #fff;
+	box-shadow: 0 0 0 10px color-mix(in srgb, var(--mr-green) 18%, transparent), 0 20px 40px -18px rgba(20, 50, 30, 0.6);
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+	animation: mr-read-burst 1.1s cubic-bezier(0.2, 0.9, 0.25, 1) forwards;
+}
+.mr-read-burst.is-off {
+	background: var(--mr-ink-3);
+	box-shadow: 0 0 0 10px color-mix(in srgb, var(--mr-ink-3) 18%, transparent);
+}
+@keyframes mr-read-burst {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.4);
+	}
+	22% {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1.08);
+	}
+	34% {
+		transform: translate(-50%, -50%) scale(1);
+	}
+	72% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.92);
+	}
+}
+
+/* the note under the top bar */
+.mr-read-note {
+	position: absolute;
+	top: calc(86px + env(safe-area-inset-top, 0px));
+	left: 50%;
+	z-index: 41;
+	max-inline-size: calc(100% - 32px);
+	padding: 9px 16px;
+	border-radius: 999px;
+	background: var(--mr-green);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 800;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	box-shadow: 0 14px 30px -14px rgba(20, 50, 30, 0.6);
+	transform: translateX(-50%);
+	pointer-events: none;
+	animation: mr-read-note 2.6s ease forwards;
+}
+.mr-read-note.is-off {
+	background: var(--mr-ink-2);
+}
+@keyframes mr-read-note {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, -8px);
+	}
+	10%,
+	85% {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, -6px);
+	}
+}
+html.dark .mr-read-burst:not(.is-off),
+html.dark .mr-read-note:not(.is-off),
+.mr[data-eye-dark] .mr-read-burst:not(.is-off),
+.mr[data-eye-dark] .mr-read-note:not(.is-off) {
+	background: #2f6b4a;
+}
+
+/* index: pages count in the clock pill */
+.mr-pill-pages {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	margin-inline-end: 4px;
+	padding-inline-end: 6px;
+	border-inline-end: 1px solid var(--mr-card-line);
+	color: var(--mr-green);
+}
+
+/* index: today's pages + the week */
+.mr-pr {
+	display: grid;
+	gap: 10px;
+	margin: 0 14px 8px;
+	padding: 12px;
+	border: 1px solid color-mix(in srgb, var(--mr-green) 25%, var(--mr-card-line));
+	border-radius: 18px;
+	background: color-mix(in srgb, var(--mr-green) 5%, var(--mr-card));
+	animation: mr-time-in 0.25s ease;
+}
+.mr-pr-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+.mr-pr-head b {
+	color: var(--mr-green);
+	font-size: 13.5px;
+	font-weight: 800;
+}
+.mr-pr-streak {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	color: #c06a14;
+	font-size: 12px;
+	font-weight: 800;
+}
+.mr-pr-pages {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.mr-pr-page {
+	display: grid;
+	justify-items: center;
+	min-inline-size: 54px;
+	padding: 5px 9px;
+	border: 1px solid color-mix(in srgb, var(--mr-green) 30%, var(--mr-card-line));
+	border-radius: 12px;
+	background: var(--mr-card);
+	color: var(--mr-ink);
+	font: inherit;
+	cursor: pointer;
+	transition: border-color 0.15s, background-color 0.15s;
+}
+.mr-pr-page b {
+	color: var(--mr-green);
+	font-size: 15px;
+	font-weight: 800;
+	line-height: 1.2;
+}
+.mr-pr-page small {
+	color: var(--mr-ink-3);
+	font-size: 10.5px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+.mr-pr-page:hover,
+.mr-pr-page.is-here {
+	border-color: var(--mr-green);
+	background: color-mix(in srgb, var(--mr-green) 10%, var(--mr-card));
+}
+.mr-pr-none {
+	margin: 0;
+	color: var(--mr-ink-3);
+	font-size: 12.5px;
+}
+.mr-pr-week {
+	display: flex;
+	align-items: flex-end;
+	gap: 12px;
+}
+.mr-pr-week > span {
+	flex: none;
+	color: var(--mr-ink-2);
+	font-size: 12px;
+	font-weight: 700;
+}
+.mr-pr-week ol {
+	display: flex;
+	flex: 1;
+	align-items: flex-end;
+	gap: 5px;
+	block-size: 42px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.mr-pr-week li {
+	display: grid;
+	flex: 1;
+	grid-template-rows: 1fr auto;
+	justify-items: center;
+	block-size: 100%;
+}
+.mr-pr-week li i {
+	align-self: end;
+	inline-size: 100%;
+	max-inline-size: 18px;
+	border-radius: 5px 5px 2px 2px;
+	background: color-mix(in srgb, var(--mr-green) 45%, transparent);
+}
+.mr-pr-week li.is-today i {
+	background: var(--mr-green);
+}
+.mr-pr-week li small {
+	color: var(--mr-ink-3);
+	font-size: 9.5px;
+	font-weight: 700;
+	line-height: 1.4;
+}
+.mr-time-pill.is-on .mr-pill-pages {
+	border-color: rgba(255, 255, 255, 0.35);
+	color: inherit;
+}
+.mr-pill-pages {
+	gap: 2px;
+	padding-inline-end: 5px;
+}

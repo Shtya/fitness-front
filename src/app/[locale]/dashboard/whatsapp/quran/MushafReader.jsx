@@ -34,6 +34,8 @@ import { loadQcf, prefetchQcf, qcfFamily, qcfReady } from './qcf-fonts';
 import { BOOKMARKS_EVENT, addBookmark, bookmarksOnPage, isAutoBookmark, isFixedBookmark, pushBookmarks, readBookmarks, removeBookmark, setBookmarkPage, setListenMark, syncBookmarksFromCloud, visibleBookmarks, writeBookmarks } from './quran-bookmarks';
 import { IDLE_MS, READING_EVENT, lastDays, logReading, pushReading, readAllReading, splitDuration, streak, syncReadingFromCloud } from './reading-time';
 import { fetchQuranRevisionState } from '../../quran-revision/quran-revision-api';
+import { PAGES_READ_EVENT, isRead, pageStreak, pagesOn, readPagesRead, recentDays, syncPagesReadFromCloud, togglePageRead } from './pages-read';
+import { dayKey } from './reading-time';
 import { DARK_THEMES, DEFAULT_EYE, EYE_EVENT, REST_EVERY_MS, REST_SECONDS, TEXT_SIZES, dimOpacity, isDefaultEye, readEye, resolveTheme, warmOpacity, writeEye } from './eye-comfort';
 import './mushaf.css';
 import './mushaf-range.css';
@@ -45,6 +47,7 @@ import './mushaf-eye.css';
 import './mushaf-recall.css';
 import './mushaf-repeat.css';
 import './mushaf-qcf.css';
+import './mushaf-pages-read.css';
 
 /** Quarters (rub' al-hizb) that begin inside each surah: { n (1…240), a, page, words }. */
 const RUBS_BY_SURAH = new Map();
@@ -120,6 +123,15 @@ const L = {
 		restSkip: 'تخطي',
 		restOk: 'تمام',
 		bmNames: { review: 'المراجعة', new: 'الحفظ الجديد', listen: 'ورد الاستماع' },
+		readMarked: (p, n, f) => `اتسجّلت صفحة ${f(p)} — النهارده ${n === 1 ? 'صفحة واحدة' : n === 2 ? 'صفحتين' : `${f(n)} صفحات`}`,
+		readUnmarked: (p, f) => `اتشالت صفحة ${f(p)} من قراية النهارده`,
+		readBadge: 'قريتها النهارده',
+		readHint: 'دوس مرتين على الصفحة عشان تسجّلها إنك قريتها النهارده',
+		pagesToday: 'الصفحات اللي قريتها النهارده',
+		pagesNone: 'لسه ما سجّلتش صفحات النهارده — دوس مرتين على أي صفحة.',
+		pagesWeek: (n, f) => `الأسبوع ده: ${f(n)} صفحة`,
+		pagesStreak: (n, f) => `${f(n)} أيام ورا بعض`,
+		pagesPill: (n, f) => f(n),
 		bmShort: { review: 'مراجعة', new: 'حفظ جديد', listen: 'استماع' },
 		bmListenEmpty: 'شغّل التلاوة',
 		bmListenPlay: 'كمّل الاستماع من هنا',
@@ -275,6 +287,15 @@ const L = {
 		restSkip: 'Skip',
 		restOk: 'OK',
 		bmNames: { review: 'Revision', new: 'New memorising', listen: 'Listening' },
+		readMarked: (p, n, f) => `Page ${f(p)} logged — ${f(n)} ${n === 1 ? 'page' : 'pages'} today`,
+		readUnmarked: (p, f) => `Page ${f(p)} taken off today's log`,
+		readBadge: 'Read today',
+		readHint: 'Double-tap a page to log it as read today',
+		pagesToday: 'Pages you read today',
+		pagesNone: 'No pages logged today yet — double-tap any page.',
+		pagesWeek: (n, f) => `This week: ${f(n)} pages`,
+		pagesStreak: (n, f) => `${f(n)} days in a row`,
+		pagesPill: (n, f) => f(n),
 		bmShort: { review: 'Revision', new: 'New', listen: 'Listening' },
 		bmListenEmpty: 'Play a recitation',
 		bmListenPlay: 'Carry on listening from here',
@@ -960,6 +981,25 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 			window.removeEventListener('storage', sync);
 		};
 	}, []);
+	// Pages marked as read (double-tap a page), per day.
+	const [readLog, setReadLog] = useState(() => (typeof window === 'undefined' ? {} : readPagesRead()));
+	useEffect(() => {
+		const sync = () => setReadLog(readPagesRead());
+		window.addEventListener(PAGES_READ_EVENT, sync);
+		return () => window.removeEventListener(PAGES_READ_EVENT, sync);
+	}, []);
+	const [readFx, setReadFx] = useState(null); // { on, page, n, at } — the check + note after a double-tap
+	useEffect(() => {
+		if (!readFx) return undefined;
+		const id = window.setTimeout(() => setReadFx(null), 2600);
+		return () => window.clearTimeout(id);
+	}, [readFx]);
+	const markPageRead = p => {
+		const { on, today } = togglePageRead(p);
+		setReadLog(readPagesRead());
+		setReadFx({ on, page: p, n: today.length, at: Date.now() });
+		navigator.vibrate?.(on ? [12, 40, 12] : 8);
+	};
 	// Bookmarks and reading time from the account (other phone / laptop), once per open.
 	useEffect(() => {
 		let live = true;
@@ -968,6 +1008,7 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 				if (!live) return;
 				setBookmarks(syncBookmarksFromCloud(st.bookmarks));
 				syncReadingFromCloud(st.readingTime);
+				setReadLog(syncPagesReadFromCloud(st.pagesRead));
 			})
 			.catch(() => {});
 		return () => {
@@ -1572,6 +1613,7 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 
 	/* taps: toggle the controls · long-press (or Mark mode + tap) a word → ayah actions */
 	const press = useRef(null);
+	const lastTap = useRef(null);
 	// The pressed word is highlighted straight in the DOM: opening the popover never re-renders
 	// the page (that re-render was most of the delay on phones).
 	const pickedEl = useRef(null);
@@ -1655,6 +1697,15 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 			openMenuFor(word);
 			return;
 		}
+		const now = Date.now();
+		const last = lastTap.current;
+		if (last && now - last.t < 340 && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 44) {
+			lastTap.current = null;
+			setChrome(v => !v);
+			markPageRead(pageRef.current);
+			return;
+		}
+		lastTap.current = { t: now, x: e.clientX, y: e.clientY };
 		setChrome(v => !v);
 	};
 	const startRange = () => {
@@ -1793,6 +1844,24 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 					veil={veil}
 				/>
 			</div>
+
+			{/* Read today (double-tap): a small badge on the page, a check and a note when you mark it. */}
+			{isRead(readLog, dayKey(Date.now()), page) ? (
+				<span className="mr-read-badge" aria-label={t.readBadge}>
+					<Check size={12} strokeWidth={3} />
+					{t.readBadge}
+				</span>
+			) : null}
+			{readFx ? (
+				<>
+					<span key={`b${readFx.at}`} className={cx('mr-read-burst', !readFx.on && 'is-off')} aria-hidden="true">
+						{readFx.on ? <Check size={44} strokeWidth={3} /> : <X size={40} strokeWidth={3} />}
+					</span>
+					<div key={`n${readFx.at}`} className={cx('mr-read-note', !readFx.on && 'is-off')} role="status">
+						{readFx.on ? t.readMarked(readFx.page, readFx.n, fmt) : t.readUnmarked(readFx.page, fmt)}
+					</div>
+				</>
+			) : null}
 
 			{/* Ribbons for the bookmarks on this page (tap: index). */}
 			{bookmarksOnPage(bookmarks, page).length ? (
@@ -2189,6 +2258,7 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 					ar={ar}
 					fmt={fmt}
 					page={page}
+					readLog={readLog}
 					onClose={() => setIndexOpen(false)}
 					onGo={p => {
 						goTo(p);
@@ -2477,6 +2547,51 @@ function durText(sec, t, fmt) {
 	return m ? `${fmt(h)} ${t.hourShort} ${fmt(m)} ${t.minShort}` : `${fmt(h)} ${t.hourShort}`;
 }
 
+/** Today's pages (tap one to go there), and how many pages each of the last 7 days. */
+function PagesReadLog({ t, ar, fmt, log, onGo, page }) {
+	const days = recentDays(log, 7);
+	const today = days[6].pages;
+	const week = days.reduce((n, d) => n + d.pages.length, 0);
+	const max = Math.max(4, ...days.map(d => d.pages.length));
+	const run = pageStreak(log);
+	return (
+		<section className="mr-pr" aria-label={t.pagesToday}>
+			<div className="mr-pr-head">
+				<b>{t.pagesToday}</b>
+				{run > 1 ? (
+					<span className="mr-pr-streak">
+						<Flame size={13} />
+						{t.pagesStreak(run, fmt)}
+					</span>
+				) : null}
+			</div>
+			{today.length ? (
+				<div className="mr-pr-pages">
+					{today.map(x => (
+						<button key={x.page} type="button" className={cx('mr-pr-page', x.page === page && 'is-here')} onClick={() => onGo(x.page)} title={`${surahName(surahAtPage(x.page), ar)} · ${new Date(x.at).toLocaleTimeString(ar ? 'ar-EG' : 'en', { hour: 'numeric', minute: '2-digit' })}`}>
+							<b>{fmt(x.page)}</b>
+							<small>{surahName(surahAtPage(x.page), ar)}</small>
+						</button>
+					))}
+				</div>
+			) : (
+				<p className="mr-pr-none">{t.pagesNone}</p>
+			)}
+			<div className="mr-pr-week">
+				<span>{t.pagesWeek(week, fmt)}</span>
+				<ol dir={ar ? 'rtl' : 'ltr'}>
+					{days.map((d, i) => (
+						<li key={d.key} className={cx(i === 6 && 'is-today')} title={d.pages.map(x => fmt(x.page)).join('، ')}>
+							<i style={{ blockSize: `${Math.max(d.pages.length ? 12 : 0, (d.pages.length / max) * 100)}%` }} />
+							<small>{d.pages.length ? fmt(d.pages.length) : '·'}</small>
+						</li>
+					))}
+				</ol>
+			</div>
+		</section>
+	);
+}
+
 function ReadingPanel({ t, ar, fmt, log }) {
 	const days = lastDays(log, 7);
 	const week = days.reduce((n, d) => n + d.sec, 0);
@@ -2605,7 +2720,7 @@ function BookmarkRow({ t, fmt, ar, page, bookmarks, onChange, onGo, onListen }) 
 
 /* ───────── index ───────── */
 
-function IndexSheet({ t, ar, fmt, page, onClose, onGo, onListen, onToggleLang, bookmarks = [], onBookmarks, eye, eyeTheme, onEye }) {
+function IndexSheet({ t, ar, fmt, page, onClose, onGo, onListen, onToggleLang, bookmarks = [], onBookmarks, eye, eyeTheme, onEye, readLog = {} }) {
 	const [panel, setPanel] = useState(null); // 'time' | 'eye'
 	const timeOpen = panel === 'time';
 	const togglePanel = id => setPanel(p => (p === id ? null : id));
@@ -2644,6 +2759,12 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onListen, onToggleLang, b
 						</small>
 					</div>
 					<button type="button" className={cx('mr-time-pill', timeOpen && 'is-on')} onClick={() => togglePanel('time')} aria-expanded={timeOpen} aria-label={t.readingTime}>
+						{pagesOn(readLog, dayKey(Date.now())).length ? (
+							<span className="mr-pill-pages">
+								<BookOpenText size={13} strokeWidth={2.3} />
+								{t.pagesPill(pagesOn(readLog, dayKey(Date.now())).length, fmt)}
+							</span>
+						) : null}
 						<Clock3 size={15} strokeWidth={2.3} />
 						<span>{durText(today, t, fmt)}</span>
 					</button>
@@ -2668,7 +2789,12 @@ function IndexSheet({ t, ar, fmt, page, onClose, onGo, onListen, onToggleLang, b
 						<X size={20} />
 					</button>
 				</header>
-				{timeOpen ? <ReadingPanel t={t} ar={ar} fmt={fmt} log={reading} /> : null}
+				{timeOpen ? (
+					<>
+						<PagesReadLog t={t} ar={ar} fmt={fmt} log={readLog} onGo={onGo} page={page} />
+						<ReadingPanel t={t} ar={ar} fmt={fmt} log={reading} />
+					</>
+				) : null}
 				{panel === 'eye' && eye ? <EyePanel t={t} fmt={fmt} eye={eye} eyeTheme={eyeTheme} onEye={onEye} /> : null}
 				<BookmarkRow t={t} fmt={fmt} ar={ar} page={page} bookmarks={bookmarks} onChange={onBookmarks} onGo={onGo} onListen={onListen} />
 				<div className="mr-sheet-tools">
