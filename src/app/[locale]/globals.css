@@ -1051,14 +1051,14 @@ div[data-rht-toaster] {
  * (.hb-card__text) keep their calligraphy faces, and task text tagged by language
  * (.tkx-lang-ar / .tkx-lang-en, Today's tickets and Habits) keeps its Arabic / Latin face. */
 body .wa-mobile-shell,
-body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *):not(.hb-card__text):not(.tkx-lang-ar):not(.tkx-lang-ar *):not(.tkx-lang-en):not(.tkx-lang-en *) {
+body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *):not(.hb-card__text):not(.tkx-lang-ar):not(.tkx-lang-ar *):not(.tkx-lang-en):not(.tkx-lang-en *):not(.tk-board__title):not(.tk-board__date):not(.tk-board__date *):not(.hb-card__q) {
   font-variant-emoji: emoji;
   font-family: var(--wa-font-ui) !important;
 }
 
 /* Arabic locale: prefer a proper Arabic UI font instead of DM Sans. */
 [dir='rtl'] body .wa-mobile-shell,
-[dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *):not(.hb-card__text):not(.tkx-lang-ar):not(.tkx-lang-ar *):not(.tkx-lang-en):not(.tkx-lang-en *) {
+[dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path):not(.wa-quran-face):not(.wa-quran-face *):not(.qr-mushaf):not(.qr-mushaf *):not(.hb-card__text):not(.tkx-lang-ar):not(.tkx-lang-ar *):not(.tkx-lang-en):not(.tkx-lang-en *):not(.tk-board__title):not(.tk-board__date):not(.tk-board__date *):not(.hb-card__q) {
   font-family: var(--wa-font-ui-ar) !important;
 }
 

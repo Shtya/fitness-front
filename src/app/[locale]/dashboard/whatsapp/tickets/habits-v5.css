@@ -1,0 +1,1373 @@
+/*
+ * Habits v5 — the "paper" look: warm off-white page, a big serif title with a hairline to the
+ * tools, calm neutral cards (today's in green), and a 14-day grid with one green band for today.
+ * Day boxes share one calm palette (done = deep green, missed = soft red); a habit's own colour
+ * stays on its icon tile. Light / dark, LTR / RTL, desktop → phone.
+ */
+
+/* ─── palette (on the whole pane, so the tools in its corner share it) ─── */
+.wa-chat-idle:has(.tk-board.is-habits),
+.tk-board.is-habits,
+.wa-idle-seg {
+	--hv-page: #f3f1ec;
+	--hv-paper: #fbfaf7;
+	--hv-card: #fdfcf9;
+	--hv-line: #e3dfd5;
+	--hv-line-2: #d6d1c4;
+	--hv-ink: #191a18;
+	--hv-ink-2: #5d5f5a;
+	--hv-ink-3: #8b8c86;
+	--hv-green: #1d6b40;
+	--hv-green-2: #2b8a55;
+	--hv-green-soft: #e6f2e8;
+	--hv-green-line: #9ccaa9;
+	--hv-box: #9fc9ab;
+	--hv-red: #e2878f;
+	--hv-red-soft: #fdeff0;
+	--hv-gold: #8a7650;
+	--hv-flame: #f08a24;
+}
+html.dark .wa-chat-idle:has(.tk-board.is-habits),
+html.dark .tk-board.is-habits,
+html.dark .wa-idle-seg {
+	--hv-page: #141614;
+	--hv-paper: #1b1d1b;
+	--hv-card: #1f2220;
+	--hv-line: #2e322f;
+	--hv-line-2: #3a3f3b;
+	--hv-ink: #eceee9;
+	--hv-ink-2: #b3b8b0;
+	--hv-ink-3: #868b84;
+	--hv-green: #3cae6e;
+	--hv-green-2: #47bf7b;
+	--hv-green-soft: #1d2e23;
+	--hv-green-line: #2f6a46;
+	--hv-box: #3d6b4d;
+	--hv-red: #c76770;
+	--hv-red-soft: #2c1d20;
+	--hv-gold: #c3ab7c;
+}
+
+/* the page behind it */
+html .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-habits) {
+	background: var(--hv-page, #f3f1ec);
+}
+html.dark .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-habits) {
+	background: #141614;
+}
+.tk-board.is-habits .hb {
+	--hb-ink: var(--hv-ink);
+	--hb-ink-2: var(--hv-ink-2);
+	--hb-card: var(--hv-paper);
+	--hb-line: var(--hv-line);
+	--hb-soft: color-mix(in srgb, var(--hv-ink) 4%, var(--hv-paper));
+	--hb-accent: var(--hv-green);
+	gap: 22px;
+}
+
+/* ─── header: big serif title, a hairline to the tools, the date underneath ─── */
+.tk-board.is-habits .tk-board__head {
+	align-items: flex-start;
+	gap: 18px;
+}
+.tk-board.is-habits .tk-board__titles {
+	flex: 1;
+	min-width: 0;
+}
+.tk-board.is-habits .tk-board__title {
+	display: flex;
+	align-items: center;
+	gap: 28px;
+	margin: 0;
+	color: var(--hv-ink);
+	font-family: var(--font-hb-title), 'Playfair Display', Georgia, 'Times New Roman', serif;
+	font-size: clamp(40px, 4.6vw, 64px);
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: -0.02em;
+}
+[dir='rtl'] .tk-board.is-habits .tk-board__title,
+.tk-board.is-habits .tk-board__title:lang(ar) {
+	font-family: var(--font-hb-card-ar), 'Aref Ruqaa', 'Amiri', serif;
+	font-weight: 700;
+	letter-spacing: 0;
+}
+.tk-board.is-habits .tk-board__title::after {
+	content: '';
+	flex: 1;
+	min-inline-size: 24px;
+	block-size: 1px;
+	margin-top: 0.12em;
+	background: var(--hv-line-2);
+}
+.tk-board.is-habits .tk-board__date {
+	margin-top: 12px;
+	color: var(--hv-ink);
+	font-family: var(--font-hb-title), 'Playfair Display', Georgia, serif;
+	font-size: clamp(16px, 1.4vw, 20px);
+	font-weight: 400;
+}
+[dir='rtl'] .tk-board.is-habits .tk-board__date {
+	font-family: inherit;
+}
+.tk-board.is-habits .tk-board__date svg {
+	inline-size: 22px;
+	block-size: 22px;
+	color: var(--hv-ink-2);
+}
+.tk-board.is-habits .tk-board__tools {
+	align-items: center;
+	gap: 12px;
+	padding-top: 4px;
+}
+
+/* tools: square calendar / timer buttons, a green "New habit" */
+.tk-board.is-habits .hb-tools,
+.wa-idle-corner .hb-tools {
+	gap: 12px;
+}
+.hb-tools .hb-toolbtn:not(.is-primary),
+.wa-idle-corner .hb-toolbtn:not(.is-primary) {
+	inline-size: 48px;
+	block-size: 48px;
+	min-inline-size: 48px;
+	padding: 0;
+	border: 1px solid var(--hv-line-2, #d6d1c4);
+	border-radius: 13px;
+	background: var(--hv-card, #fdfcf9);
+	color: var(--hv-ink, #191a18);
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05);
+}
+.hb-tools .hb-toolbtn:not(.is-primary) svg {
+	inline-size: 21px;
+	block-size: 21px;
+}
+.hb-tools .hb-toolbtn:not(.is-primary):hover,
+.hb-tools .hb-toolbtn.is-on:not(.is-primary) {
+	border-color: var(--hv-green, #1d6b40);
+	color: var(--hv-green, #1d6b40);
+}
+.hb-tools .hb-toolbtn.is-primary,
+.wa-idle-corner .hb-toolbtn.is-primary {
+	block-size: 48px;
+	padding: 0 22px;
+	border: 0;
+	border-radius: 13px;
+	background: var(--hv-green, #1d6b40);
+	color: #fff;
+	font-size: 16px;
+	font-weight: 700;
+	box-shadow: 0 8px 18px -12px rgba(29, 107, 64, 0.9);
+}
+.hb-tools .hb-toolbtn.is-primary:hover {
+	background: var(--hv-green-2, #2b8a55);
+}
+
+/* Habits | Wall (| Games): one bordered group, the current one in green */
+.tk-board.is-habits .tk-switch,
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg {
+	block-size: 52px;
+	padding: 5px;
+	border: 1px solid var(--hv-line-2);
+	border-radius: 15px;
+	background: var(--hv-card);
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05);
+}
+.tk-board.is-habits .tk-switch__thumb,
+.wa-chat-idle:has(.tk-board.is-habits) .tk-switch__thumb {
+	border-radius: 11px;
+	background: var(--hv-green);
+	box-shadow: 0 6px 14px -10px rgba(29, 107, 64, 0.9);
+}
+.tk-board.is-habits .tk-switch button,
+.wa-chat-idle:has(.tk-board.is-habits) .tk-switch button {
+	block-size: 40px;
+	min-inline-size: 104px;
+	border-radius: 11px;
+	color: var(--hv-ink);
+	font-size: 16px;
+	font-weight: 600;
+}
+.tk-board.is-habits .tk-switch button.is-on,
+.wa-chat-idle:has(.tk-board.is-habits) .tk-switch button.is-on {
+	color: #fff;
+}
+/* the group in the empty chat pane: the switch and Games side by side, divided by a hairline */
+.wa-idle-seg {
+	display: contents;
+}
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg {
+	display: inline-flex;
+	align-items: center;
+	gap: 0;
+	box-sizing: border-box;
+}
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg .tk-switch {
+	block-size: 40px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+}
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg .wg-launch {
+	padding-inline-start: 6px;
+	border-inline-start: 1px solid var(--hv-line);
+	margin-inline-start: 6px;
+}
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg .wg-launch__btn {
+	block-size: 40px;
+	border-radius: 11px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--hv-ink);
+	font-size: 16px;
+}
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg .wg-launch__btn:hover {
+	background: var(--hv-green-soft);
+}
+
+/* ─── motivation cards: calm paper, the quote mark in the corner, today's in green ─── */
+.tk-board.is-habits .hb-cards {
+	gap: 18px;
+	padding-top: 14px;
+}
+.tk-board.is-habits .hb-card,
+.tk-board.is-habits .hb-card:nth-child(2n) {
+	min-block-size: 132px;
+	padding: 26px 26px 22px;
+	border: 1px solid var(--hv-line-2);
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--tone, transparent) 10%, var(--hv-card));
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.04);
+	color: var(--hv-ink);
+}
+.tk-board.is-habits .hb-card:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 14px 26px -20px rgba(20, 20, 10, 0.45);
+}
+.tk-board.is-habits .hb-card.is-daily {
+	border: 1.5px solid var(--hv-green-line);
+	background: var(--hv-green-soft);
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.04);
+}
+.tk-board.is-habits .hb-card__q {
+	position: absolute;
+	top: 14px;
+	inset-inline-end: 18px;
+	inline-size: 22px;
+	block-size: 22px;
+	color: var(--hv-gold);
+	opacity: 0.7;
+}
+.tk-board.is-habits .hb-card .hb-card__tag {
+	top: -13px;
+	inset-inline-start: 18px;
+	padding: 5px 11px;
+	border-radius: 8px;
+	background: var(--hv-green);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 700;
+	transform: none;
+}
+[dir='rtl'] .tk-board.is-habits .hb-card .hb-card__tag {
+	transform: none;
+}
+.tk-board.is-habits .hb-card .hb-card__text {
+	color: var(--hv-ink);
+}
+.tk-board.is-habits .hb-card .hb-card__text.is-ar {
+	font-size: 23px;
+	line-height: 1.7;
+}
+
+/* ─── the grid: a paper card ─── */
+.tk-board.is-habits .hb-gridwrap {
+	border: 1px solid var(--hv-line-2);
+	border-radius: 16px;
+	background: var(--hv-paper);
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.04), 0 22px 40px -34px rgba(20, 20, 10, 0.4);
+}
+.tk-board.is-habits .hb-grid {
+	/* the name column as wide as the reference; the 14 days share the rest */
+	--hb-name-w: clamp(200px, 27cqw, 410px);
+	--hb-cell: clamp(42px, calc((100cqw - var(--hb-name-w)) / var(--cols, 14)), 80px);
+	color: var(--hv-ink);
+}
+.tk-board.is-habits .hb-grid th,
+.tk-board.is-habits .hb-grid td {
+	border-color: var(--hv-line);
+}
+.tk-board.is-habits .hb-grid tbody tr > * {
+	border-top: 1px solid var(--hv-line);
+}
+.tk-board.is-habits .hb-grid thead th {
+	block-size: 96px;
+	background: var(--hv-paper);
+}
+/* the corner: ring + "1 of 7 today" */
+.tk-board.is-habits .hb-corner .hb-ring {
+	inline-size: 66px;
+	block-size: 66px;
+}
+.tk-board.is-habits .hb-corner__txt b {
+	color: var(--hv-ink);
+	font-size: 22px;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+.tk-board.is-habits .hb-corner__txt small {
+	color: var(--hv-ink-2);
+	font-size: 15.5px;
+	font-weight: 500;
+}
+/* day headers */
+.tk-board.is-habits .hb-th {
+	color: var(--hv-ink-2);
+	font-size: 14.5px;
+	font-weight: 500;
+}
+.tk-board.is-habits .hb-th b {
+	color: var(--hv-ink);
+	font-size: 20px;
+	font-weight: 700;
+}
+.tk-board.is-habits .hb-th.is-past,
+.tk-board.is-habits .hb-th.is-past b,
+.tk-board.is-habits .hb-th.is-past small {
+	opacity: 1;
+}
+
+/* today: one green band from the header to the daily strip */
+.tk-board.is-habits .hb-grid thead .hb-th.is-today {
+	border-radius: 12px 12px 0 0;
+	background: var(--hv-green);
+	color: #fff;
+	box-shadow: none;
+}
+.tk-board.is-habits .hb-grid .hb-th.is-today b {
+	color: #fff;
+	font-size: 25px;
+	font-weight: 800;
+}
+.tk-board.is-habits .hb-today-pill {
+	padding: 0;
+	background: none;
+	box-shadow: none;
+	color: #fff;
+	font-size: 17px;
+	font-weight: 700;
+	letter-spacing: 0;
+	text-transform: none;
+}
+.tk-board.is-habits .hb-grid .hb-td.is-today,
+.tk-board.is-habits .hb-grid tbody tr:last-child .hb-td.is-today,
+.tk-board.is-habits .hb-grid tfoot .hb-td.is-today,
+.tk-board.is-habits .hb-grid .hb-foot.is-today {
+	background: color-mix(in srgb, var(--hv-green) 7%, var(--hv-paper));
+	box-shadow: inset 2px 0 0 var(--hv-green), inset -2px 0 0 var(--hv-green);
+}
+
+/* rows: name, link and "…" on one line; streak and "% kept" under it */
+.tk-board.is-habits .hb-grid tbody tr:hover > .hb-td:not(.is-today),
+.tk-board.is-habits .hb-grid tbody tr:hover .hb-name {
+	background: color-mix(in srgb, var(--hv-ink) 2.5%, var(--hv-paper));
+}
+.tk-board.is-habits .hb-grid tbody tr.is-done-today .hb-name,
+[dir='rtl'] .tk-board.is-habits .hb-grid tbody tr.is-done-today .hb-name {
+	box-shadow: none;
+}
+.tk-board.is-habits .hb-icon {
+	inline-size: 44px;
+	block-size: 44px;
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--c-soft) 35%, color-mix(in srgb, var(--hv-ink) 5%, var(--hv-paper)));
+	box-shadow: none;
+	font-size: 24px;
+}
+.tk-board.is-habits .hb-icon__done {
+	display: none;
+}
+.tk-board.is-habits .hb-title {
+	color: var(--hv-ink);
+	font-size: 18px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-link {
+	color: var(--hv-green);
+}
+.tk-board.is-habits .hb-grip {
+	color: var(--hv-ink-3);
+}
+.tk-board.is-habits .hb-streak,
+.tk-board.is-habits .hb-streak.is-on {
+	color: var(--hv-flame);
+	font-weight: 700;
+}
+.tk-board.is-habits .hb-streak svg {
+	fill: currentColor;
+}
+.tk-board.is-habits .hb-kept {
+	padding: 2px 9px;
+	border-radius: 7px;
+	font-size: 13px;
+	font-weight: 700;
+}
+.tk-board.is-habits .hb-kept.is-high {
+	background: var(--hv-green-soft);
+	color: var(--hv-green);
+}
+.tk-board.is-habits .hb-kept.is-mid {
+	background: color-mix(in srgb, var(--hv-red) 16%, var(--hv-paper));
+	color: color-mix(in srgb, var(--hv-red) 80%, var(--hv-ink));
+}
+.tk-board.is-habits .hb-kept.is-low {
+	background: var(--hv-red-soft);
+	color: color-mix(in srgb, var(--hv-red) 85%, var(--hv-ink));
+}
+
+/* day boxes: one calm palette for every habit */
+.tk-board.is-habits .hb-grid tbody .hb-td {
+	--c: var(--hv-green);
+	--c-soft: var(--hv-green-soft);
+}
+.tk-board.is-habits .hb-box {
+	inline-size: min(40px, calc(var(--hb-cell) - 10px));
+	block-size: min(40px, calc(var(--hb-cell) - 10px));
+	border: 1.6px solid var(--hv-box);
+	border-radius: 11px;
+	background: var(--hv-paper);
+	color: var(--hv-green);
+}
+.tk-board.is-habits .hb-box:hover {
+	border-color: var(--hv-green);
+	background: var(--hv-green-soft);
+}
+.tk-board.is-habits .hb-box.is-done,
+.tk-board.is-habits .hb-box.is-done:hover {
+	border-color: var(--hv-green);
+	background: var(--hv-green);
+	color: #fff;
+	box-shadow: 0 6px 12px -8px rgba(29, 107, 64, 0.9);
+}
+.tk-board.is-habits .hb-box.is-missed {
+	border-color: var(--hv-red);
+	background: var(--hv-red-soft);
+}
+.tk-board.is-habits .hb-box.is-partial {
+	border-color: var(--hv-green);
+	background: var(--hv-green-soft);
+}
+.tk-board.is-habits .hb-box.is-off {
+	border-color: transparent;
+	background: transparent;
+}
+.tk-board.is-habits .hb-td.is-today .hb-box:not(.is-done) {
+	inline-size: min(44px, calc(var(--hb-cell) - 6px));
+	block-size: min(44px, calc(var(--hb-cell) - 6px));
+	border: 2px solid var(--hv-green);
+	background: var(--hv-card);
+	box-shadow: 0 2px 6px -3px rgba(20, 40, 25, 0.35);
+	animation: none;
+}
+.tk-board.is-habits .hb-td.is-today .hb-box.is-done {
+	inline-size: min(44px, calc(var(--hb-cell) - 6px));
+	block-size: min(44px, calc(var(--hb-cell) - 6px));
+}
+/* no chain between days: each day stands on its own */
+.tk-board.is-habits .hb-td.is-linked::before {
+	display: none;
+}
+
+/* daily strip */
+.tk-board.is-habits .hb-foot-label {
+	color: var(--hv-ink);
+	font-size: 17px;
+	font-weight: 500;
+}
+.tk-board.is-habits .hb-foot {
+	color: var(--hv-ink-2);
+	font-size: 14px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-foot.is-today {
+	color: var(--hv-green);
+	font-weight: 700;
+}
+.tk-board.is-habits .hb-foot__bar {
+	background: var(--hv-line);
+}
+
+/* ─── tablet ─── */
+@container hb (max-width: 1100px) {
+	.tk-board.is-habits .hb-corner__txt b {
+		font-size: 18px;
+	}
+	.tk-board.is-habits .hb-corner__txt small {
+		font-size: 13.5px;
+	}
+	.tk-board.is-habits .hb-title {
+		font-size: 16px;
+	}
+}
+/* ─── phone ─── */
+@container hb (max-width: 640px) {
+	.tk-board.is-habits .hb-grid {
+		--hb-name-w: 150px;
+		--hb-cell: 46px;
+	}
+	.tk-board.is-habits .hb-icon {
+		inline-size: 38px;
+		block-size: 38px;
+		font-size: 19px;
+	}
+	.tk-board.is-habits .hb-title {
+		font-size: 15px;
+	}
+	.tk-board.is-habits .hb-corner .hb-ring {
+		inline-size: 50px;
+		block-size: 50px;
+	}
+	.tk-board.is-habits .hb-th b {
+		font-size: 17px;
+	}
+	.tk-board.is-habits .hb-grid .hb-th.is-today b {
+		font-size: 20px;
+	}
+	.tk-board.is-habits .hb-today-pill {
+		font-size: 14px;
+	}
+	.tk-board.is-habits .hb-box {
+		inline-size: 34px;
+		block-size: 34px;
+		border-radius: 10px;
+	}
+	.tk-board.is-habits .hb-td.is-today .hb-box:not(.is-done),
+	.tk-board.is-habits .hb-td.is-today .hb-box.is-done {
+		inline-size: 38px;
+		block-size: 38px;
+	}
+	.tk-board.is-habits .hb-card,
+	.tk-board.is-habits .hb-card:nth-child(2n) {
+		min-block-size: 112px;
+		padding: 22px 16px 16px;
+	}
+	.tk-board.is-habits .hb-card .hb-card__text.is-ar {
+		font-size: 18px;
+	}
+}
+@media (max-width: 760px) {
+	.tk-board.is-habits .tk-board__head {
+		flex-wrap: wrap;
+	}
+	.tk-board.is-habits .tk-board__title {
+		font-size: 40px;
+		gap: 16px;
+	}
+	.tk-board.is-habits .tk-board__tools {
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.hb-tools .hb-toolbtn:not(.is-primary) {
+		inline-size: 42px;
+		block-size: 42px;
+		min-inline-size: 42px;
+		border-radius: 12px;
+	}
+	.hb-tools .hb-toolbtn.is-primary {
+		block-size: 42px;
+		padding: 0 14px;
+		font-size: 14.5px;
+	}
+	.tk-board.is-habits .tk-switch {
+		block-size: 46px;
+	}
+	.tk-board.is-habits .tk-switch button {
+		block-size: 36px;
+		min-inline-size: 84px;
+		font-size: 14.5px;
+	}
+}
+
+/* a long name wraps to a second line instead of being cut off */
+.tk-board.is-habits .hb-title {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	white-space: normal;
+	overflow: hidden;
+	line-height: 1.25;
+	overflow-wrap: anywhere;
+}
+.tk-board.is-habits .hb-title .hb-pin {
+	display: inline;
+	margin-inline-end: 4px;
+	vertical-align: -1px;
+}
+
+/* Arabic UI: the app forces its Arabic face on everything (.font-ar … !important) —
+   the title and the motivation cards keep their own faces */
+.font-ar .tk-board.is-habits .tk-board__title,
+[dir='rtl'] .tk-board.is-habits h2.tk-board__title {
+	font-family: var(--font-hb-card-ar), 'Aref Ruqaa', 'Amiri', serif !important;
+}
+.font-ar .tk-board.is-habits .hb-card .hb-card__text.is-ar,
+.font-ar .hb .hb-card .hb-card__text.is-ar {
+	font-family: var(--font-hb-card-ar), 'Aref Ruqaa', 'Amiri', serif !important;
+}
+.font-ar .tk-board.is-habits .hb-card .hb-card__text.is-en,
+.font-ar .hb .hb-card .hb-card__text.is-en {
+	font-family: var(--font-hb-card-en), 'Playfair Display', Georgia, serif !important;
+}
+
+/* ─── medium widths: the title block keeps its line, the tools wrap under it if needed ─── */
+.tk-board.is-habits .tk-board__head {
+	flex-wrap: wrap;
+}
+.tk-board.is-habits .tk-board__titles {
+	min-inline-size: min(100%, 340px);
+}
+.tk-board.is-habits .tk-board__date {
+	flex-wrap: nowrap;
+	white-space: nowrap;
+}
+@container hb (max-width: 1100px) {
+	.tk-board.is-habits .hb-corner .hb-ring {
+		inline-size: 52px;
+		block-size: 52px;
+	}
+	.tk-board.is-habits .hb-today-pill {
+		font-size: 13px;
+	}
+	.tk-board.is-habits .hb-grid .hb-th.is-today b {
+		font-size: 21px;
+	}
+	.tk-board.is-habits .hb-icon {
+		inline-size: 38px;
+		block-size: 38px;
+		font-size: 20px;
+	}
+}
+
+/* medium screens: the tools take their own row under the title */
+.tk-board.is-habits .tk-board__head {
+	display: flex;
+}
+@media (max-width: 1180px) {
+	.tk-board.is-habits .tk-board__titles {
+		flex: 1 1 100%;
+	}
+	.tk-board.is-habits .tk-board__tools {
+		padding-top: 0;
+	}
+}
+/* phone: a narrower name column — the streak stays, the "% kept" pill steps aside */
+@container hb (max-width: 640px) {
+	.tk-board.is-habits .hb-grid {
+		--hb-name-w: 164px;
+	}
+	.tk-board.is-habits .hb-kept {
+		display: none;
+	}
+	.tk-board.is-habits .hb-icon {
+		inline-size: 32px;
+		block-size: 32px;
+		font-size: 17px;
+	}
+	.tk-board.is-habits .hb-corner__txt b {
+		font-size: 15px;
+	}
+}
+/* phone: scrolling to today stops just after the sticky names, with yesterday still in view */
+.tk-board.is-habits .hb-gridscroll {
+	scroll-padding-inline-start: calc(clamp(200px, 27cqw, 410px) + 8px);
+}
+@container hb (max-width: 640px) {
+	.tk-board.is-habits .hb-gridscroll {
+		scroll-padding-inline-start: 214px;
+	}
+}
+
+/* ═════════════ pixel pass: measured against the reference ═════════════ */
+.wa-chat-idle:has(.tk-board.is-habits),
+.tk-board.is-habits {
+	--hv-page: #f2efe9;
+	--hv-paper: #f8f7f3;
+	--hv-card: #f6f4ef;
+	--hv-line: #e1ddd3;
+	--hv-line-2: #d3cec3;
+	--hv-ink: #1b1b19;
+	--hv-ink-2: #55554f;
+	--hv-green: #2b6b43;
+	--hv-green-soft: #e9f1e7;
+}
+html.dark .wa-chat-idle:has(.tk-board.is-habits),
+html.dark .tk-board.is-habits {
+	--hv-page: #141614;
+	--hv-paper: #1b1d1b;
+	--hv-card: #1f2220;
+	--hv-line: #2e322f;
+	--hv-line-2: #3a3f3b;
+	--hv-ink: #eceee9;
+	--hv-ink-2: #b3b8b0;
+	--hv-green: #3cae6e;
+	--hv-green-soft: #1d2e23;
+}
+/* the table speaks Inter */
+.tk-board.is-habits {
+	--wa-font-ui: var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* header */
+.tk-board.is-habits .tk-board__title {
+	font-size: clamp(44px, 4.2vw, 66px);
+	font-weight: 800;
+	gap: 34px;
+}
+.tk-board.is-habits .tk-board__title::after {
+	background: #c9c4b8;
+}
+html.dark .tk-board.is-habits .tk-board__title::after {
+	background: var(--hv-line-2);
+}
+.tk-board.is-habits.has-corner .tk-board__title::after {
+	margin-inline-end: calc(var(--hb-corner-w, 0px) + 32px);
+}
+.tk-board.is-habits .tk-board__date {
+	gap: 16px;
+	margin-top: 10px;
+	color: var(--hv-ink);
+	font-size: clamp(17px, 1.5vw, 22px);
+}
+.tk-board.is-habits .tk-board__date span {
+	font-family: inherit;
+}
+.tk-board.is-habits .tk-board__date svg {
+	inline-size: 26px;
+	block-size: 26px;
+	color: var(--hv-ink);
+	stroke-width: 1.6;
+}
+.hb-tools .hb-toolbtn:not(.is-primary),
+.wa-idle-corner .hb-toolbtn:not(.is-primary) {
+	inline-size: 54px;
+	block-size: 54px;
+	min-inline-size: 54px;
+	border-color: var(--hv-line-2, #d3cec3);
+	border-radius: 12px;
+	background: var(--hv-card, #f6f4ef);
+	box-shadow: none;
+}
+.hb-tools .hb-toolbtn:not(.is-primary) svg {
+	inline-size: 24px;
+	block-size: 24px;
+	stroke-width: 1.7;
+}
+.hb-tools .hb-toolbtn.is-primary,
+.wa-idle-corner .hb-toolbtn.is-primary {
+	block-size: 50px;
+	padding: 0 22px;
+	gap: 10px;
+	border-radius: 10px;
+	background: var(--hv-green, #2b6b43);
+	font-size: 18px;
+	font-weight: 600;
+	box-shadow: none;
+}
+.hb-tools .hb-toolbtn.is-primary svg {
+	inline-size: 20px;
+	block-size: 20px;
+}
+.tk-board.is-habits .tk-switch,
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg {
+	block-size: 54px;
+	padding: 6px;
+	border-color: var(--hv-line-2);
+	border-radius: 14px;
+	background: var(--hv-card);
+	box-shadow: none;
+}
+.tk-board.is-habits .tk-switch__thumb,
+.wa-chat-idle:has(.tk-board.is-habits) .tk-switch__thumb {
+	border-radius: 10px;
+	box-shadow: none;
+}
+.tk-board.is-habits .tk-switch button,
+.wa-chat-idle:has(.tk-board.is-habits) .tk-switch button,
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg .wg-launch__btn {
+	block-size: 42px;
+	min-inline-size: 0;
+	padding: 0 18px;
+	gap: 10px;
+	border-radius: 10px;
+	font-size: 18px;
+	font-weight: 500;
+}
+.tk-board.is-habits .tk-switch button.is-on,
+.wa-chat-idle:has(.tk-board.is-habits) .tk-switch button.is-on {
+	font-weight: 600;
+}
+.tk-board.is-habits .tk-switch button svg,
+.wa-chat-idle:has(.tk-board.is-habits) .tk-switch button svg,
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg .wg-launch__btn svg {
+	inline-size: 20px;
+	block-size: 20px;
+}
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg .wg-launch {
+	position: relative;
+	margin-inline-start: 4px;
+	padding-inline-start: 4px;
+	border-inline-start: 0;
+}
+.wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg .wg-launch::before {
+	content: "";
+	position: absolute;
+	inset-inline-start: 0;
+	top: 50%;
+	inline-size: 1px;
+	block-size: 28px;
+	background: var(--hv-line-2);
+	transform: translateY(-50%);
+}
+
+/* cards */
+.tk-board.is-habits .hb-cards {
+	gap: 16px;
+	padding: 14px 0 0;
+}
+.tk-board.is-habits .hb-card,
+.tk-board.is-habits .hb-card:nth-child(2n) {
+	min-block-size: 134px;
+	padding: 24px 40px 22px;
+	border: 1px solid #cdc8bd;
+	border-radius: 12px;
+	background: var(--hv-card);
+	box-shadow: none;
+}
+html.dark .tk-board.is-habits .hb-card,
+html.dark .tk-board.is-habits .hb-card:nth-child(2n) {
+	border-color: var(--hv-line-2);
+}
+.tk-board.is-habits .hb-card:hover {
+	transform: none;
+	box-shadow: 0 10px 22px -18px rgba(20, 20, 10, 0.45);
+}
+.tk-board.is-habits .hb-card.is-daily {
+	border: 1.5px solid #8fb897;
+	background: #e5efe3;
+}
+html.dark .tk-board.is-habits .hb-card.is-daily {
+	border-color: #2f6a46;
+	background: #1d2e23;
+}
+.tk-board.is-habits .hb-card .hb-card__tag {
+	top: -9px;
+	inset-inline-start: 20px;
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	block-size: 28px;
+	padding: 0 11px;
+	border-radius: 7px;
+	background: var(--hv-green);
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1;
+}
+.tk-board.is-habits .hb-card__q {
+	top: 12px;
+	inset-inline-end: 20px;
+	inline-size: auto;
+	block-size: auto;
+	color: #47473f;
+	font-family: Georgia, "Times New Roman", serif !important;
+	font-size: 46px;
+	font-weight: 700;
+	line-height: 1;
+	opacity: 1;
+}
+html.dark .tk-board.is-habits .hb-card__q {
+	color: var(--hv-ink-2);
+}
+.tk-board.is-habits .hb-card .hb-card__text {
+	color: #222220;
+}
+html.dark .tk-board.is-habits .hb-card .hb-card__text {
+	color: var(--hv-ink);
+}
+.tk-board.is-habits .hb-card .hb-card__text.is-ar {
+	font-size: 25px;
+	font-weight: 400;
+	line-height: 1.55;
+}
+
+/* the grid card */
+.tk-board.is-habits .hb-gridwrap {
+	border: 1px solid var(--hv-line-2);
+	border-radius: 14px;
+	background: var(--hv-paper);
+	box-shadow: none;
+}
+.tk-board.is-habits .hb-grid thead th {
+	block-size: 95px;
+	border-bottom: 1px solid var(--hv-line);
+	background: var(--hv-paper);
+}
+/* the column of names: a short divider in the header and the footer only */
+.tk-board.is-habits .hb-name,
+[dir="rtl"] .tk-board.is-habits .hb-name {
+	box-shadow: none;
+	background: var(--hv-paper);
+}
+.tk-board.is-habits .hb-corner::after,
+.tk-board.is-habits .hb-foot-label::after {
+	content: "";
+	position: absolute;
+	inset-inline-end: 0;
+	top: 25%;
+	bottom: 25%;
+	inline-size: 1px;
+	background: var(--hv-line-2);
+}
+.tk-board.is-habits .hb-corner {
+	padding-inline-start: 28px;
+}
+.tk-board.is-habits .hb-corner__in {
+	gap: 22px;
+}
+/* the ring: a thin arc around the % */
+.tk-board.is-habits .hb-corner .hb-ring {
+	inline-size: 68px;
+	block-size: 68px;
+	background: conic-gradient(var(--hv-green) calc(var(--p) * 360deg), #e6e3dc 0);
+}
+html.dark .tk-board.is-habits .hb-corner .hb-ring {
+	background: conic-gradient(var(--hv-green) calc(var(--p) * 360deg), var(--hv-line) 0);
+}
+.tk-board.is-habits .hb-corner .hb-ring > span {
+	inline-size: calc(100% - 12px);
+	block-size: calc(100% - 12px);
+	background: var(--hv-paper);
+	color: var(--hv-ink);
+	font-size: 17px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-corner__txt {
+	gap: 6px;
+}
+.tk-board.is-habits .hb-corner__txt b {
+	font-size: 23px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-corner__txt small {
+	color: var(--hv-ink-2);
+	font-size: 17px;
+	font-weight: 400;
+}
+/* day headers */
+.tk-board.is-habits .hb-th {
+	gap: 6px;
+}
+.tk-board.is-habits .hb-th small {
+	color: var(--hv-ink-2);
+	font-size: 15px;
+	font-weight: 400;
+}
+.tk-board.is-habits .hb-th b {
+	font-size: 21px;
+	font-weight: 600;
+}
+/* today's header: a green tab that starts a little below the top edge */
+.tk-board.is-habits .hb-grid thead .hb-th.is-today {
+	position: relative;
+	padding-top: 12px;
+	border-radius: 0;
+	background: transparent;
+	isolation: isolate;
+}
+.tk-board.is-habits .hb-grid thead .hb-th.is-today::before {
+	content: "";
+	position: absolute;
+	inset: 12px 0 0;
+	z-index: -1;
+	border-radius: 10px 10px 0 0;
+	background: var(--hv-green);
+}
+.tk-board.is-habits .hb-today-pill {
+	font-size: 18px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-grid .hb-th.is-today b {
+	font-size: 25px;
+	font-weight: 700;
+}
+/* today's band: pale green, a green line on each side, rounded at the foot */
+.tk-board.is-habits .hb-grid .hb-td.is-today,
+.tk-board.is-habits .hb-grid tbody tr:last-child .hb-td.is-today {
+	background: #e9f1e7;
+	box-shadow: inset 1.5px 0 0 var(--hv-green), inset -1.5px 0 0 var(--hv-green);
+}
+.tk-board.is-habits .hb-grid tfoot .hb-td.is-today,
+.tk-board.is-habits .hb-grid .hb-foot.is-today {
+	border-radius: 0 0 10px 10px;
+	background: #e9f1e7;
+	box-shadow: inset 1.5px 0 0 var(--hv-green), inset -1.5px 0 0 var(--hv-green), inset 0 -1.5px 0 var(--hv-green);
+}
+html.dark .tk-board.is-habits .hb-grid .hb-td.is-today,
+html.dark .tk-board.is-habits .hb-grid tbody tr:last-child .hb-td.is-today,
+html.dark .tk-board.is-habits .hb-grid .hb-foot.is-today {
+	background: #1d2e23;
+}
+
+/* rows */
+.tk-board.is-habits .hb-grid tbody tr > * {
+	block-size: 65px;
+	border-top: 0;
+	border-bottom: 1px solid var(--hv-line);
+}
+.tk-board.is-habits .hb-grip {
+	color: #9a9a92;
+}
+.tk-board.is-habits .hb-icon {
+	inline-size: 48px;
+	block-size: 48px;
+	border-radius: 11px;
+	background: #ebe9e3;
+	font-size: 26px;
+}
+html.dark .tk-board.is-habits .hb-icon {
+	background: #2a2d2a;
+}
+.tk-board.is-habits .hb-title {
+	font-size: 19px;
+	font-weight: 600;
+	letter-spacing: -0.005em;
+}
+.tk-board.is-habits .hb-meta {
+	gap: 8px;
+	margin-top: 4px;
+}
+.tk-board.is-habits .hb-streak,
+.tk-board.is-habits .hb-streak.is-on {
+	gap: 7px;
+	color: #e8741c;
+	font-size: 15px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-streak svg {
+	inline-size: 15px;
+	block-size: 15px;
+	fill: #f08a24;
+	stroke: #e8741c;
+}
+.tk-board.is-habits .hb-kept {
+	padding: 1px 8px;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-kept.is-high {
+	background: #dcecd9;
+	color: #2b6b43;
+}
+.tk-board.is-habits .hb-kept.is-mid,
+.tk-board.is-habits .hb-kept.is-low {
+	background: #fbe1e1;
+	color: #b8323a;
+}
+html.dark .tk-board.is-habits .hb-kept.is-high {
+	background: #1d2e23;
+	color: #6fcf97;
+}
+html.dark .tk-board.is-habits .hb-kept.is-mid,
+html.dark .tk-board.is-habits .hb-kept.is-low {
+	background: #2c1d20;
+	color: #f19aa1;
+}
+.tk-board.is-habits .hb-link svg {
+	inline-size: 19px;
+	block-size: 19px;
+}
+
+/* boxes: each habit keeps its own colour (green ones green, a blue one blue) */
+.tk-board.is-habits .hb-grid tbody tr[data-color] .hb-td {
+	--bx: #5f9c70;
+	--bxd: #2b6b43;
+}
+.tk-board.is-habits .hb-grid tbody tr[data-color="blue"] .hb-td { --bx: #4f7fce; --bxd: #2f5fae; }
+.tk-board.is-habits .hb-grid tbody tr[data-color="teal"] .hb-td { --bx: #4c9b97; --bxd: #1f6f6b; }
+.tk-board.is-habits .hb-grid tbody tr[data-color="violet"] .hb-td { --bx: #8a72cf; --bxd: #5b43a8; }
+.tk-board.is-habits .hb-grid tbody tr[data-color="rose"] .hb-td { --bx: #d07390; --bxd: #a8385b; }
+.tk-board.is-habits .hb-grid tbody tr[data-color="amber"] .hb-td { --bx: #cf9a4c; --bxd: #a76a12; }
+.tk-board.is-habits .hb-grid tbody tr[data-color="slate"] .hb-td { --bx: #7d8899; --bxd: #4d596b; }
+.tk-board.is-habits .hb-grid tbody tr[data-color] .hb-td {
+	--c: var(--bxd);
+	--c-soft: color-mix(in srgb, var(--bx) 14%, var(--hv-paper));
+}
+.tk-board.is-habits .hb-box {
+	inline-size: 40px;
+	block-size: 40px;
+	border: 1.5px solid var(--bx, #5f9c70);
+	border-radius: 9px;
+	background: transparent;
+}
+.tk-board.is-habits .hb-box:hover {
+	border-color: var(--bxd);
+	background: var(--c-soft);
+}
+.tk-board.is-habits .hb-box.is-done,
+.tk-board.is-habits .hb-box.is-done:hover {
+	border-color: var(--bxd);
+	background: var(--bxd);
+	box-shadow: none;
+}
+.tk-board.is-habits .hb-box .hb-tick {
+	inline-size: 22px;
+	block-size: 22px;
+	stroke-width: 2.6;
+}
+.tk-board.is-habits .hb-box.is-missed {
+	border-color: #e7959b;
+	background: #fbeeee;
+}
+html.dark .tk-board.is-habits .hb-box.is-missed {
+	border-color: #c76770;
+	background: #2c1d20;
+}
+/* not planned that day (every-N-days habits): a plain green box, as in the reference */
+.tk-board.is-habits .hb-box.is-off {
+	border: 1.5px solid #5f9c70;
+	background: transparent;
+}
+.tk-board.is-habits .hb-box.is-off::after {
+	display: none;
+}
+.tk-board.is-habits .hb-td.is-today .hb-box:not(.is-done) {
+	inline-size: 44px;
+	block-size: 44px;
+	border: 2px solid var(--bxd);
+	border-radius: 10px;
+	background: #fcfbf8;
+	box-shadow: 0 1px 3px rgba(20, 30, 20, 0.18);
+}
+html.dark .tk-board.is-habits .hb-td.is-today .hb-box:not(.is-done) {
+	background: var(--hv-card);
+}
+.tk-board.is-habits .hb-td.is-today .hb-box.is-done {
+	inline-size: 44px;
+	block-size: 44px;
+	border-radius: 10px;
+}
+
+/* the daily strip */
+.tk-board.is-habits .hb-grid tfoot th,
+.tk-board.is-habits .hb-grid tfoot td {
+	block-size: 72px;
+	background: var(--hv-paper);
+}
+.tk-board.is-habits .hb-foot-label {
+	padding-inline-start: 28px;
+	font-size: 19px;
+	font-weight: 400;
+}
+.tk-board.is-habits .hb-foot {
+	color: var(--hv-ink-2);
+	font-size: 15px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-foot.is-today {
+	color: var(--hv-green);
+}
+
+/* ─── the older board header rules carry an id (:not(#wa-idle)); outrank them here ─── */
+html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__head {
+	align-items: flex-start;
+	padding-inline-start: 26px;
+}
+html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__head .tk-board__title {
+	margin: 0;
+	color: var(--hv-ink);
+	font-size: clamp(44px, 4.2vw, 66px);
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1;
+}
+html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__head .tk-board__date {
+	gap: 16px;
+	margin-top: 12px;
+	color: var(--hv-ink);
+	font-size: clamp(17px, 1.5vw, 22px);
+	font-weight: 400;
+}
+html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__date svg {
+	inline-size: 26px;
+	block-size: 26px;
+	opacity: 1;
+}
+@media (max-width: 1100px) {
+	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__head .tk-board__title {
+		font-size: 44px;
+	}
+}
+@media (max-width: 640px) {
+	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__head {
+		padding-inline-start: 0;
+	}
+	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__head .tk-board__title {
+		font-size: 34px;
+	}
+}
+/* page: the board starts near the top, as in the reference */
+html .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-habits) {
+	padding-top: 14px;
+}
+/* the cards sit a little inside the table's edges */
+.tk-board.is-habits .hb-cards {
+	margin-inline: 8px;
+}
+/* rows 65px tall (64 + the 1px line) */
+.tk-board.is-habits .hb-grid tbody th.hb-name {
+	padding-block: 0;
+}
+.tk-board.is-habits .hb-grid tbody .hb-name__in {
+	min-block-size: 64px;
+	padding-block: 0;
+}
+.tk-board.is-habits .hb-grid tbody tr > * {
+	block-size: 64px;
+}
+
+/* top of the page as in the reference: the title starts ~12px from the top */
+html .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-habits) {
+	padding-top: 6px;
+}
+html .wa-chat-idle.has-tickets:not(#wa-idle) .wa-chat-idle__stage:has(.tk-board.is-habits) {
+	padding-top: 0;
+}
+/* cards → table: 34px */
+.tk-board.is-habits .hb {
+	gap: 26px;
+}
+
+/* the daily strip, as in the reference: short pills, the % under them in 15px */
+.tk-board.is-habits .hb-foot__bar {
+	inline-size: 10px;
+	block-size: 20px;
+	margin-bottom: 8px;
+	background: #dcd9d1;
+}
+html.dark .tk-board.is-habits .hb-foot__bar {
+	background: var(--hv-line);
+}
+.tk-board.is-habits .hb-foot__bar i {
+	background: var(--hv-green);
+}
+.tk-board.is-habits .hb-foot.is-future .hb-foot__bar {
+	opacity: 1;
+	background: #e4e1da;
+}
+.tk-board.is-habits .hb-foot small {
+	color: var(--hv-ink-2);
+	font-size: 15px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-foot.is-today small {
+	color: var(--hv-green);
+}
+/* a brand-new habit has no streak or % yet: just its name, as in the reference */
+.tk-board.is-habits .hb-meta:has(> .hb-kept.is-new):not(:has(> .hb-tag)) {
+	display: none;
+}
+html.dark .tk-board.is-habits .hb-foot.is-future .hb-foot__bar {
+	background: var(--hv-line);
+}
+
+/* ─── name on one line (full name in a tooltip), smaller boxes, table to the screen's bottom ─── */
+.tk-board.is-habits .hb-name__text {
+	min-inline-size: 0;
+}
+.tk-board.is-habits .hb-title {
+	display: block;
+	-webkit-line-clamp: unset;
+	line-clamp: unset;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	overflow-wrap: normal;
+}
+.tk-board.is-habits .hb-box {
+	inline-size: 34px;
+	block-size: 34px;
+	border-radius: 8px;
+}
+.tk-board.is-habits .hb-box .hb-tick {
+	inline-size: 18px;
+	block-size: 18px;
+}
+.tk-board.is-habits .hb-td.is-today .hb-box:not(.is-done),
+.tk-board.is-habits .hb-td.is-today .hb-box.is-done {
+	inline-size: 38px;
+	block-size: 38px;
+	border-radius: 9px;
+}
+@container hb (max-width: 640px) {
+	.tk-board.is-habits .hb-box {
+		inline-size: 30px;
+		block-size: 30px;
+		border-radius: 7px;
+	}
+	.tk-board.is-habits .hb-box .hb-tick {
+		inline-size: 16px;
+		block-size: 16px;
+	}
+	.tk-board.is-habits .hb-td.is-today .hb-box:not(.is-done),
+	.tk-board.is-habits .hb-td.is-today .hb-box.is-done {
+		inline-size: 34px;
+		block-size: 34px;
+		border-radius: 8px;
+	}
+}
+html .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-habits) {
+	padding-bottom: 8px;
+}
+html .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-habits) .wa-chat-idle__stage {
+	padding-bottom: 0;
+}
+html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits {
+	padding-bottom: 0;
+	margin-bottom: 0;
+}
+.tk-board.is-habits .hb-gridwrap {
+	padding-bottom: 0;
+}
+/* phone: one-line names need a little more room */
+@container hb (max-width: 640px) {
+	.tk-board.is-habits .hb-grid {
+		--hb-name-w: 190px;
+		--hb-cell: 48px;
+	}
+	.tk-board.is-habits .hb-icon {
+		inline-size: 32px;
+		block-size: 32px;
+		font-size: 18px;
+		border-radius: 9px;
+	}
+	.tk-board.is-habits .hb-title {
+		font-size: 16px;
+	}
+}
+@container hb (max-width: 640px) {
+	.tk-board.is-habits .hb-corner__in {
+		min-inline-size: 0;
+		gap: 10px;
+	}
+	.tk-board.is-habits .hb-corner__txt {
+		min-inline-size: 0;
+	}
+	.tk-board.is-habits .hb-corner__txt b {
+		font-size: 15px;
+		white-space: normal;
+		line-height: 1.2;
+	}
+}

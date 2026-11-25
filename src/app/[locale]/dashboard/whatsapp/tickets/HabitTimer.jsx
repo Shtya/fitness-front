@@ -347,20 +347,6 @@ export default function HabitTimer({ ar, habits = [], onMarkDone }) {
 								</button>
 								<span>{t.minutes}</span>
 							</div>
-							{habits.length ? (
-								<label className="ht-habit">
-									<span>{t.forHabit}</span>
-									<select value={habitId} onChange={e => setHabitId(e.target.value)}>
-										<option value="">{t.none}</option>
-										{habits.map(h => (
-											<option key={h.id} value={h.id}>
-												{h.icon ? `${h.icon} ` : ''}
-												{h.title}
-											</option>
-										))}
-									</select>
-								</label>
-							) : null}
 							<button type="button" className="ht-start" onClick={() => start()}>
 								<Play size={17} aria-hidden />
 								{t.start} · {minutes} {t.minutes}

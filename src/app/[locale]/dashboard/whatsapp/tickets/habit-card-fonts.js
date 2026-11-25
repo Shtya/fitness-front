@@ -13,6 +13,16 @@ export const cardArabicFont = Aref_Ruqaa({
 	variable: '--font-hb-card-ar',
 });
 
+/** The Habits page title and date: a bold upright serif (Arabic falls back to Aref Ruqaa). */
+export const boardTitleFont = Playfair_Display({
+	subsets: ['latin'],
+	weight: ['400', '500', '800'],
+	style: ['normal'],
+	display: 'swap',
+	preload: false,
+	variable: '--font-hb-title',
+});
+
 export const cardLatinFont = Playfair_Display({
 	subsets: ['latin'],
 	weight: ['500', '600'],

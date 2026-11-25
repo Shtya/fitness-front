@@ -27,7 +27,7 @@ import {
 	PinOff,
 	Play,
 	Plus,
-	Quote,
+	Target,
 	SkipForward,
 	Sparkles,
 	Trash2,
@@ -478,11 +478,13 @@ function Cards({ t, cards, today, onSave, onRemove }) {
 				<article key={card.id} className={`hb-card tone-${card.tone}${i === daily ? ' is-daily' : ''}`}>
 					{i === daily ? (
 						<span className="hb-card__tag">
-							<Sparkles size={11} aria-hidden />
+							<Target size={13} strokeWidth={2.4} aria-hidden />
 							{t.cardOfDay}
 						</span>
 					) : null}
-					<Quote size={16} className="hb-card__q" aria-hidden />
+					<span className="hb-card__q" aria-hidden>
+						”
+					</span>
 					{editing === card.id ? (
 						<textarea
 							autoFocus
@@ -643,10 +645,10 @@ export default function HabitsTracker({ ar, tickets = [] }) {
 	}, [list, days, today]);
 	const dailyTickets = useMemo(() => tickets.filter(x => x.repeat === 'daily'), [tickets]);
 
-	// keep today's column in view on phones
+	// keep today's column in view on phones: just after the sticky names (the grid's scroll-padding keeps yesterday beside it)
 	useEffect(() => {
 		const el = bodyRef.current?.querySelector('.hb-th.is-today');
-		el?.scrollIntoView({ block: 'nearest', inline: 'center' });
+		el?.scrollIntoView({ block: 'nearest', inline: 'start' });
 	}, [days, store.ready]);
 
 	const toggle = (id, day) => {
@@ -863,7 +865,7 @@ export default function HabitsTracker({ ar, tickets = [] }) {
 													) : null}
 												</span>
 												<span className="hb-name__text">
-													<span className={`hb-title ${langClass(h.title)}`} dir="auto">
+													<span className={`hb-title ${langClass(h.title)}`} dir="auto" onMouseEnter={e => { const t = e.currentTarget; t.title = t.scrollWidth > t.clientWidth + 1 ? h.title : ''; }}>
 														{h.pinned ? <Pin size={12} className="hb-pin" aria-hidden /> : null}
 														{h.title}
 													</span>

@@ -484,8 +484,10 @@ function WhatsAppChatIdlePane({ title, hint, unreadLabel, steps }) {
 				{!hasTickets && view === 'relay' ? <TicketsLauncher ar={ar} onAdd={addFromCorner} /> : null}
 				{/* the board's Habits / Wall switch is rendered here, next to Games */}
 				<div id="wa-idle-tools-slot" className="wa-idle-slot" />
-				<div id="wa-idle-view-slot" className="wa-idle-slot" />
-				<GamesLauncher ar={ar} onPick={setGame} />
+				<div className="wa-idle-seg">
+					<div id="wa-idle-view-slot" className="wa-idle-slot" />
+					<GamesLauncher ar={ar} onPick={setGame} />
+				</div>
 			</div>
 			<div className="wa-chat-idle__stage">
 				{view === 'board' ? (

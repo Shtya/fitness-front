@@ -9,6 +9,8 @@ import { DetailsHint, MiniMenu, RepeatBadge, StatusChip, StepBar, StepRing, Tick
 import TicketDialog from './TicketDialog';
 import TicketsWall from './TicketsWall';
 import HabitsTracker from './HabitsTracker';
+import { boardTitleFont, cardArabicFont } from './habit-card-fonts';
+import './habits-v5.css';
 import './daily-tickets.css';
 
 const T = {
@@ -500,6 +502,15 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	useEffect(() => {
 		setSwitchSlot(document.getElementById('wa-idle-view-slot'));
 	}, []);
+	// The tools sit in that corner (outside this header): the title's hairline stops where they start.
+	const [cornerW, setCornerW] = useState(0);
+	useEffect(() => {
+		const corner = switchSlot?.closest('.wa-idle-corner');
+		if (!corner || typeof ResizeObserver === 'undefined') return undefined;
+		const ro = new ResizeObserver(() => setCornerW(Math.round(corner.getBoundingClientRect().width)));
+		ro.observe(corner);
+		return () => ro.disconnect();
+	}, [switchSlot]);
 	const switcher = (
 		<div className="tk-switch" role="group" aria-label={t.views} style={{ '--i': view === 'wall' ? 1 : 0 }}>
 			<span className="tk-switch__thumb" aria-hidden />
@@ -519,7 +530,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const total = tickets.length;
 
 	return (
-		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-habits'} ${leaving ? 'is-leaving' : ''}`} aria-labelledby="tk-heading">
+		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-habits'} ${leaving ? 'is-leaving' : ''} ${boardTitleFont.variable} ${cardArabicFont.variable}${cornerW ? ' has-corner' : ''}`} style={cornerW ? { '--hb-corner-w': `${cornerW}px` } : undefined} aria-labelledby="tk-heading">
 			<header className="tk-board__head">
 				<div className="tk-board__titles">
 					 
