@@ -284,3 +284,34 @@ html.dark .mr-read-badge,
 	left: calc(50% + 17px);
 	bottom: calc(9px + env(safe-area-inset-bottom, 0px));
 }
+
+/* read today: the check sits inside the page number, just after it (the number stays centred) */
+.mr-pno {
+	white-space: nowrap;
+}
+.mr-pno-check {
+	position: absolute;
+	top: 50%;
+	left: calc(100% + 6px);
+	display: grid;
+	place-items: center;
+	inline-size: 16px;
+	block-size: 16px;
+	border-radius: 50%;
+	background: var(--mr-green);
+	color: #fff;
+	font-style: normal;
+	box-shadow: 0 0 0 2px var(--mr-card, #fbf6e9);
+	transform: translateY(-50%);
+	animation: mr-pno-check-in 0.3s ease-out;
+}
+html.dark .mr-pno-check,
+.mr[data-eye-dark] .mr-pno-check {
+	background: #2f6b4a;
+}
+@keyframes mr-pno-check-in {
+	from {
+		opacity: 0;
+		transform: translateY(-50%) scale(0.4);
+	}
+}

@@ -34,7 +34,7 @@ import { loadQcf, prefetchQcf, qcfFamily, qcfReady } from './qcf-fonts';
 import { BOOKMARKS_EVENT, addBookmark, bookmarksOnPage, isAutoBookmark, isFixedBookmark, pushBookmarks, readBookmarks, removeBookmark, setBookmarkPage, setListenMark, syncBookmarksFromCloud, visibleBookmarks, writeBookmarks } from './quran-bookmarks';
 import { IDLE_MS, READING_EVENT, lastDays, logReading, pushReading, readAllReading, splitDuration, streak, syncReadingFromCloud } from './reading-time';
 import { fetchQuranRevisionState } from '../../quran-revision/quran-revision-api';
-import { PAGES_READ_EVENT, isRead, pageStreak, pagesOn, readPagesRead, recentDays, syncPagesReadFromCloud, togglePageRead } from './pages-read';
+import { PAGES_READ_EVENT, pageStreak, pagesOn, readPagesRead, recentDays, syncPagesReadFromCloud, togglePageRead } from './pages-read';
 import { dayKey } from './reading-time';
 import { DARK_THEMES, DEFAULT_EYE, EYE_EVENT, REST_EVERY_MS, REST_SECONDS, TEXT_SIZES, dimOpacity, isDefaultEye, readEye, resolveTheme, warmOpacity, writeEye } from './eye-comfort';
 import './mushaf.css';
@@ -437,7 +437,7 @@ function inRange(w, range) {
 
 /* ───────── one page ───────── */
 
-const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt, ar, playingKey, marks, selectedKey, onMeasure, labelNumber, fsKey, range, veil }) {
+const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt, ar, playingKey, marks, selectedKey, onMeasure, labelNumber, fsKey, range, veil, readToday = false }) {
 	const ref = useRef(null);
 	const [fit, setFit] = useState(null); // { short: 'n,n', squeeze: { n: scale } }
 	// The page's own mushaf font: words become single glyphs with the printed letter stretching.
@@ -649,7 +649,15 @@ const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt
 					);
 				})}
 			</div>
-			<span className="mr-pno">{labelNumber}</span>
+			<span className="mr-pno">
+				{labelNumber}
+				{/* read today (double-tap): a small check right beside the page number */}
+				{readToday ? (
+					<i className="mr-pno-check" role="img" aria-label={t.readBadge} title={t.readBadge}>
+						<Check size={10} strokeWidth={3.6} />
+					</i>
+				) : null}
+			</span>
 		</div>
 	);
 });
@@ -658,7 +666,8 @@ const MushafPage = memo(function MushafPage({ page, data, error, onRetry, t, fmt
 
 const RENDER_SPAN = 2;
 
-const PageStrip = memo(function PageStrip({ page, pages, errors, ready, t, fmt, ar, playing, marks, selectedKey, onMeasure, onRetry, fsKey, range, veil }) {
+const PageStrip = memo(function PageStrip({ page, pages, errors, ready, t, fmt, ar, playing, marks, selectedKey, onMeasure, onRetry, fsKey, range, veil, readPages = '' }) {
+	const read = new Set(readPages.split(',').filter(Boolean).map(Number));
 	const slots = [];
 	for (let i = 1; i <= PAGE_COUNT; i += 1) {
 		const live = ready && Math.abs(i - page) <= RENDER_SPAN;
@@ -682,6 +691,7 @@ const PageStrip = memo(function PageStrip({ page, pages, errors, ready, t, fmt, 
 						fsKey={fsKey}
 						range={range}
 						veil={veil}
+						readToday={read.has(i)}
 					/>
 				) : null}
 			</section>,
@@ -1852,15 +1862,11 @@ export default function MushafReader({ locale = 'ar', onExit, onOpen, due = 0, a
 					fsKey={sizing?.fs}
 					range={range}
 					veil={veil}
+					readPages={pagesOn(readLog, dayKey(Date.now())).map(x => x.page).join(',')}
 				/>
 			</div>
 
 			{/* Read today (double-tap): a small badge on the page, a check and a note when you mark it. */}
-			{isRead(readLog, dayKey(Date.now()), page) ? (
-				<span className="mr-read-badge" role="img" aria-label={t.readBadge} title={t.readBadge}>
-					<Check size={11} strokeWidth={3.4} />
-				</span>
-			) : null}
 			{readFx ? (
 				<>
 					<span key={`b${readFx.at}`} className={cx('mr-read-burst', !readFx.on && 'is-off')} aria-hidden="true">
