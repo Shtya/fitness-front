@@ -310,7 +310,8 @@ html.dark .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-habits) {
 	inline-size: 66px;
 	block-size: 66px;
 }
-.tk-board.is-habits .hb-corner__txt b {
+.tk-board.is-habits .hb-corner__txt b,
+.tk-board.is-habits .hb-corner__txt small {
 	color: var(--hv-ink);
 	font-size: 22px;
 	font-weight: 700;
@@ -1369,5 +1370,46 @@ html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits {
 		font-size: 15px;
 		white-space: normal;
 		line-height: 1.2;
+	}
+}
+
+/* ─── slim name column: grip · icon · title · link · menu (no streak / kept line) ─── */
+.tk-board.is-habits .hb-grid {
+	--hb-name-w: clamp(220px, 20cqw, 290px);
+}
+.tk-board.is-habits .hb-meta {
+	display: none;
+}
+.tk-board.is-habits .hb-name__in {
+	align-items: center;
+	gap: 8px;
+}
+.tk-board.is-habits .hb-icon {
+	inline-size: 36px;
+	block-size: 36px;
+	border-radius: 9px;
+	font-size: 19px;
+}
+.tk-board.is-habits .hb-title {
+	font-size: 16px;
+	font-weight: 600;
+}
+.tk-board.is-habits .hb-corner__txt b,
+.tk-board.is-habits .hb-corner__txt small {
+	white-space: normal;
+	line-height: 1.2;
+}
+@container hb (max-width: 640px) {
+	.tk-board.is-habits .hb-grid {
+		--hb-name-w: 185px;
+	}
+	.tk-board.is-habits .hb-icon {
+		inline-size: 30px;
+		block-size: 30px;
+		font-size: 16px;
+		border-radius: 8px;
+	}
+	.tk-board.is-habits .hb-title {
+		font-size: 14.5px;
 	}
 }
