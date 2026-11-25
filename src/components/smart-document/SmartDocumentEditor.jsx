@@ -1194,16 +1194,6 @@ export default function SmartDocumentEditor({
 							keepEditorFocus(host, prior);
 						}, 0);
 					}}
-					onDoubleClick={(e) => {
-						if (e.target.closest('button, a, input, label')) return;
-						const host = e.currentTarget;
-						const point = { x: e.clientX, y: e.clientY };
-						const prior = document.activeElement;
-						window.setTimeout(() => {
-							takeSelection(host, point, true);
-							keepEditorFocus(host, prior);
-						}, 30);
-					}}
 				>
 					{mode === 'edit' ? (
 						<textarea
