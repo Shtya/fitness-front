@@ -5,7 +5,7 @@ import { addStretch, dayKey, lastDays, splitDuration, streak } from './reading-t
 
 test('bookmarks: fixed three always present, custom kept after them', () => {
 	const l = normalizeBookmarks([{ id: 'x', name: 'Fajr', color: 'red', page: 50, createdAt: 2 }, { id: 'new', page: 9 }, { id: 'junk' }]);
-	assert.deepEqual(l.map(b => b.id), ['review', 'new', 'old', 'x']);
+	assert.deepEqual(l.map(b => b.id), ['review', 'new', 'listen', 'x']);
 	assert.equal(l[1].page, 9);
 	assert.equal(l[1].color, 'green');
 });
@@ -26,7 +26,7 @@ test('bookmarks: set, add, remove', () => {
 	l = removeBookmark(l, l[3].id);
 	assert.ok(l[3].deletedAt, 'kept as a tombstone for sync');
 	assert.equal(visibleBookmarks(l).length, 3);
-	assert.equal(setBookmarkPage(l, 'old', 999)[2].page, null);
+	assert.equal(setBookmarkPage(l, 'listen', 999)[2].page, null);
 });
 
 test('reading time: stretch split at midnight', () => {
@@ -61,11 +61,22 @@ test('sync: bookmarks newest edit wins, tombstones hidden', async () => {
 	const m = mergeBookmarks(phone, laptop);
 	assert.equal(m.find(b => b.id === 'review').page, 40);
 	assert.ok(m.find(b => b.id === 'x').deletedAt);
-	assert.deepEqual(visibleBookmarks(m).map(b => b.id), ['review', 'new', 'old']);
+	assert.deepEqual(visibleBookmarks(m).map(b => b.id), ['review', 'new', 'listen']);
 });
 
 test('sync: reading time adds devices, keeps the larger count per device', async () => {
 	const { sumLogs, maxLogs } = await import('./reading-time.js');
 	assert.deepEqual(sumLogs([{ '2026-11-24': 600 }, { '2026-11-24': 300, '2026-11-23': 60 }]), { '2026-11-24': 900, '2026-11-23': 60 });
 	assert.deepEqual(maxLogs({ '2026-11-24': 600 }, { '2026-11-24': 420, '2026-11-22': 30 }), { '2026-11-24': 600, '2026-11-22': 30 });
+});
+
+test('listening wird follows the recitation', async () => {
+	const { setListenMark, isAutoBookmark } = await import('./quran-bookmarks.js');
+	const l = setListenMark(normalizeBookmarks([]), 160, '7:76', 5);
+	const b = l.find(x => x.id === 'listen');
+	assert.equal(b.page, 160);
+	assert.equal(b.ayah, '7:76');
+	assert.equal(b.updatedAt, 5);
+	assert.equal(isAutoBookmark('listen'), true);
+	assert.equal(normalizeBookmarks([{ id: 'listen', page: 3, ayah: 'bad' }])[2].ayah, '');
 });

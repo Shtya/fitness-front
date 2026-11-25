@@ -1,0 +1,17 @@
+/* Page-font glyphs (qcf-fonts.js): each word is one glyph drawn with the printed mushaf's own
+   letter stretching, so lines fill the page without wide gaps between words. */
+.wa-qr .mr .mr-page.is-glyph .mr-w,
+.mr-page.is-glyph .mr-w {
+	font-family: var(--qcf), 'WaQuranHafs', serif !important;
+	font-feature-settings: normal;
+	letter-spacing: 0;
+	word-spacing: 0;
+}
+/* one type size for the page so its full lines just fill the width */
+.mr-page.is-glyph .mr-line.is-text {
+	font-size: calc(var(--qcf-k, 1) * 1em);
+}
+/* the ayah-end rosette keeps its size, whatever the page scale */
+.mr-page.is-glyph .mr-line.is-text .mr-end {
+	font-size: calc(1em / var(--qcf-k, 1));
+}

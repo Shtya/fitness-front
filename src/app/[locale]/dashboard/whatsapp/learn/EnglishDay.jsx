@@ -10,7 +10,7 @@
  *   Notes       · free notes (same editor as the other courses).
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	BookA,
 	BookOpenText,
@@ -24,6 +24,7 @@ import {
 	Loader2,
 	Mic,
 	NotebookPen,
+	PenLine,
 	Pause,
 	Play,
 	Pencil,
@@ -229,6 +230,92 @@ function lessonOutline(blocks) {
 		});
 	});
 	return out;
+}
+
+/**
+ * Your own sentence with a word, an expression or a grammar point. Saved when you leave the box;
+ * the ✨ button asks the AI whether it is right and shows the fix.
+ */
+function MySentence({ c, value, onSave, word = '', big = false }) {
+	const [draft, setDraft] = useState(value);
+	const [check, setCheck] = useState(null); // null | 'busy' | { ok, corrected, why }
+	const ref = useRef(null);
+	useEffect(() => setDraft(value), [value]);
+	const grow = () => {
+		const el = ref.current;
+		if (!el) return;
+		el.style.height = 'auto';
+		el.style.height = `${el.scrollHeight}px`;
+	};
+	useEffect(grow, [draft]);
+	const used = word && draft.trim() ? draft.toLowerCase().includes(word.toLowerCase()) : true;
+	const ask = async () => {
+		const text = draft.trim();
+		if (!text) return;
+		if (text !== value) onSave(text);
+		setCheck('busy');
+		try {
+			const { data } = await api.post('/learn/english/ai', { task: 'correct', text: text.slice(0, 1000), topic: word ? `A sentence using "${word}"` : 'A practice sentence' });
+			const fixes = data.fixes || [];
+			setCheck({ ok: !fixes.length, corrected: data.corrected || '', why: fixes.map(f => f.why).filter(Boolean)[0] || '' });
+		} catch (error) {
+			setCheck(null);
+			toast.error(aiError(error, c));
+		}
+	};
+	return (
+		<div className={`en-mine${big ? ' is-big' : ''}`}>
+			<div className="en-mine__row">
+				<textarea
+					ref={ref}
+					rows={1}
+					dir="ltr"
+					lang="en"
+					value={draft}
+					maxLength={800}
+					placeholder={word ? c.en.mySentenceHint(word) : c.en.myGrammarHint}
+					onChange={e => {
+						setDraft(e.target.value);
+						setCheck(null);
+					}}
+					onBlur={() => draft.trim() !== value && onSave(draft)}
+					onKeyDown={e => {
+						if (e.key === 'Enter' && !e.shiftKey) {
+							e.preventDefault();
+							e.currentTarget.blur();
+						}
+					}}
+				/>
+				{draft.trim() ? (
+					<span className="en-mine__tools">
+						<button type="button" onClick={() => speak(draft)} aria-label={c.en.listen} title={c.en.listen}>
+							<Volume2 size={13} />
+						</button>
+						<button type="button" className="is-ai" onClick={ask} disabled={check === 'busy' || draft.trim().split(/\s+/).length < 3} aria-label={c.en.checkSentence} title={c.en.checkSentence}>
+							{check === 'busy' ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+						</button>
+					</span>
+				) : null}
+			</div>
+			{!used ? <small className="en-mine__warn">{c.en.useTheWord(word)}</small> : null}
+			{check && check !== 'busy' ? (
+				check.ok ? (
+					<small className="en-mine__ok">
+						<Check size={12} aria-hidden />
+						{c.en.sentenceOk}
+					</small>
+				) : (
+					<small className="en-mine__fix" dir="ltr" lang="en">
+						<b>{check.corrected}</b>
+						{check.why ? <span>{check.why}</span> : null}
+						<button type="button" onClick={() => (setDraft(check.corrected), onSave(check.corrected), setCheck(null))}>
+							{c.en.useFix}
+						</button>
+					</small>
+				)
+			) : null}
+		</div>
+	);
 }
 
 /* ───────── word popover (hover / tap a coloured word) ───────── */
@@ -535,6 +622,13 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 			return !v;
 		});
 	const learnedSet = useMemo(() => new Set(day.learned || []), [day.learned]);
+	const mine = day.mine || {};
+	const saveMine = (key, text) => {
+		const next = { ...mine };
+		if (text.trim()) next[key] = text.trim();
+		else delete next[key];
+		onPatch({ mine: next });
+	};
 	const toggleLearned = key => {
 		const next = learnedSet.has(key) ? (day.learned || []).filter(x => x !== key) : [...(day.learned || []), key];
 		onPatch({ learned: next });
@@ -677,6 +771,26 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 			if (run.b) node = <strong key={`${key}-${k}b`}>{node}</strong>;
 			return node;
 		});
+	// "Your sentence" under a grammar point (keyed by its #### title)
+	const grammarBox = i => {
+		let title = '';
+		for (let k = i; k >= 0; k -= 1) {
+			if (/^h[2-5]$/.test(blocks[k].type)) {
+				title = parseInline(blocks[k].text).map(r => r.text).join('').trim();
+				break;
+			}
+		}
+		const key = `g:${title.toLowerCase().slice(0, 180) || i}`;
+		return (
+			<div className="en-md-mine">
+				<span className="en-md-mine__label">
+					<PenLine size={14} aria-hidden />
+					{c.en.myGrammarSentence}
+				</span>
+				<MySentence c={c} value={mine[key] || ''} onSave={text => saveMine(key, text)} big />
+			</div>
+		);
+	};
 	const renderBlock = (b, i) => {
 		if (b.type === 'hr') return <hr key={i} />;
 		if (b.type === 'code') return <pre key={i}>{b.text}</pre>;
@@ -744,6 +858,7 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 											<Check size={13} aria-hidden />
 										</th>
 										{cells(b.head, 'th', `${i}h`)}
+										<th className="en-tbl__mine">{c.en.mySentence}</th>
 										<th className="en-tbl__del" aria-hidden />
 									</tr>
 								</thead>
@@ -759,6 +874,9 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 												</button>
 											</td>
 											{cells(row, 'td', `${i}.${j}`)}
+											<td className="en-tbl__mine">
+												{key ? <MySentence c={c} value={mine[`w:${key}`] || ''} word={key} onSave={text => saveMine(`w:${key}`, text)} /> : null}
+											</td>
 											<td className="en-tbl__del">
 												{line != null ? (
 													<button type="button" className="en-tbl__x" onClick={() => deleteRow(line, key)} title={c.en.deleteRow} aria-label={`${c.en.deleteRow}: ${key}`}>
@@ -771,7 +889,7 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 								})}
 								{!shown.length ? (
 									<tr>
-										<td className="en-tbl__all" colSpan={cols + 2}>
+										<td className="en-tbl__all" colSpan={cols + 3}>
 											{c.en.allLearned}
 										</td>
 									</tr>
@@ -786,8 +904,21 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 			const List = b.type;
 			// examples right after a "Structure:" line read as example sentences
 			const examples = isFormula(blocks[i - 1]);
+			if (examples)
+				return (
+					<Fragment key={i}>
+						<List dir="auto" className="en-md-examples">
+							{b.items.map((it, j) => (
+								<li key={j} dir="auto">
+									{renderInline(it, `${i}.${j}`)}
+								</li>
+							))}
+						</List>
+						{grammarBox(i)}
+					</Fragment>
+				);
 			return (
-				<List key={i} dir="auto" className={examples ? 'en-md-examples' : undefined}>
+				<List key={i} dir="auto">
 					{b.items.map((it, j) => (
 						<li key={j} dir="auto">
 							{renderInline(it, `${i}.${j}`)}
@@ -802,12 +933,17 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 					{renderInline(b.text, i)}
 				</blockquote>
 			);
-		if (isFormula(b))
+		if (isFormula(b)) {
+			const hasExamples = (blocks[i + 1]?.type === 'ul' || blocks[i + 1]?.type === 'ol');
 			return (
-				<p key={i} dir="auto" className="en-md-formula">
-					{renderInline(b.text, i)}
-				</p>
+				<Fragment key={i}>
+					<p dir="auto" className="en-md-formula">
+						{renderInline(b.text, i)}
+					</p>
+					{hasExamples ? null : grammarBox(i)}
+				</Fragment>
 			);
+		}
 		const Tag = b.type === 'p' ? 'p' : b.type;
 		const sec = b.type === 'h2' ? outline.find(o => o.i === i) : null;
 		return (

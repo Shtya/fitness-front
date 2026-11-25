@@ -57,6 +57,8 @@ export function buildPageLines(verses, page) {
 			if (!byLine.has(n)) byLine.set(n, []);
 			byLine.get(n).push({
 				t: w.text_qpc_hafs || w.text_uthmani || '',
+				// the word's glyph in this page's own mushaf font (qcf-fonts.js)
+				g: w.code_v1 || '',
 				end: w.char_type_name === 'end',
 				s,
 				a,
@@ -107,7 +109,7 @@ export function buildPageLines(verses, page) {
 
 const DB_NAME = 'wa-quran-mushaf';
 const STORE = 'pages';
-const VERSION_KEY = 'v1';
+const VERSION_KEY = 'v2'; // v2: words carry their page-font glyph
 const memory = new Map();
 const inflight = new Map();
 
@@ -165,7 +167,7 @@ export function loadPage(pageIn) {
 			memory.set(page, stored);
 			return stored;
 		}
-		const url = `https://api.quran.com/api/v4/verses/by_page/${page}?words=true&word_fields=text_qpc_hafs,line_number&per_page=300&mushaf=2`;
+		const url = `https://api.quran.com/api/v4/verses/by_page/${page}?words=true&word_fields=text_qpc_hafs,code_v1,line_number&per_page=300&mushaf=2`;
 		const res = await fetch(url);
 		if (!res.ok) throw new Error(`page ${page}: ${res.status}`);
 		const json = await res.json();

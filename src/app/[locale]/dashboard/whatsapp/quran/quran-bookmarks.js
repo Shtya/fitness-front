@@ -1,6 +1,7 @@
 /**
- * Page bookmarks for the mushaf: a few fixed ones (review / new / old memorisation) plus any
- * you add. Each points at one page and can be moved to the page you are on.
+ * Page bookmarks for the mushaf: a few fixed ones (review / new memorisation / listening wird)
+ * plus any you add. Each points at one page and can be moved to the page you are on; the
+ * listening one follows the recitation by itself (the last ayah you listened to).
  * Pure helpers + a small localStorage store, synced to the account (newest edit of each wins).
  */
 // Loaded on first use, so the pure helpers stay importable on their own (tests).
@@ -12,7 +13,8 @@ export const BOOKMARK_COLORS = ['gold', 'green', 'blue', 'red', 'purple', 'teal'
 export const DEFAULT_BOOKMARKS = [
 	{ id: 'review', color: 'gold' },
 	{ id: 'new', color: 'green' },
-	{ id: 'old', color: 'blue' },
+	// where you stopped listening (set by the recitation, not by hand)
+	{ id: 'listen', color: 'blue' },
 ];
 const FIXED = new Set(DEFAULT_BOOKMARKS.map(b => b.id));
 export const isFixedBookmark = id => FIXED.has(id);
@@ -30,12 +32,13 @@ export function normalizeBookmarks(raw) {
 			name: typeof b.name === 'string' ? b.name.trim().slice(0, 40) : '',
 			color: BOOKMARK_COLORS.includes(b.color) ? b.color : 'gold',
 			page: validPage(Number(b.page)),
+			ayah: typeof b.ayah === 'string' && /^\d{1,3}:\d{1,3}$/.test(b.ayah) ? b.ayah : '',
 			createdAt: Number(b.createdAt) || 0,
 			updatedAt: Number(b.updatedAt) || 0,
 			...(b.deletedAt && !FIXED.has(b.id) ? { deletedAt: Number(b.deletedAt) || 1 } : {}),
 		});
 	});
-	const fixed = DEFAULT_BOOKMARKS.map(d => ({ ...{ name: '', page: null, createdAt: 0, updatedAt: 0 }, ...byId.get(d.id), id: d.id, color: d.color }));
+	const fixed = DEFAULT_BOOKMARKS.map(d => ({ ...{ name: '', page: null, ayah: '', createdAt: 0, updatedAt: 0 }, ...byId.get(d.id), id: d.id, color: d.color }));
 	const custom = [...byId.values()].filter(b => !FIXED.has(b.id) && b.name).sort((a, b) => a.createdAt - b.createdAt);
 	return [...fixed, ...custom];
 }
@@ -44,6 +47,14 @@ export function setBookmarkPage(list, id, page, now = Date.now()) {
 	const p = validPage(page);
 	return list.map(b => (b.id === id ? { ...b, page: p, updatedAt: now } : b));
 }
+
+/** The listening wird: the page and ayah the recitation reached. */
+export function setListenMark(list, page, ayahKey, now = Date.now()) {
+	const p = validPage(page);
+	return list.map(b => (b.id === 'listen' ? { ...b, page: p ?? b.page, ayah: ayahKey || b.ayah, updatedAt: now } : b));
+}
+
+export const isAutoBookmark = id => id === 'listen';
 
 export function addBookmark(list, name, page, now = Date.now()) {
 	const clean = String(name || '').trim().slice(0, 40);
@@ -96,6 +107,13 @@ export function writeBookmarks(list, { push = true } = {}) {
 	const old = new Map(before.map(b => [b.id, b.updatedAt]));
 	const changed = list.filter(b => old.get(b.id) !== b.updatedAt);
 	if (changed.length) void putQuranRevisionState({ bookmarks: changed }).catch(() => {});
+}
+
+/** Send some bookmarks to the account now (the listening wird is saved locally on every ayah, sent now and then). */
+export function pushBookmarks(list, ids) {
+	const want = new Set(ids);
+	const out = list.filter(b => want.has(b.id));
+	if (out.length) void putQuranRevisionState({ bookmarks: out }).catch(() => {});
 }
 
 /** Pull: merge the account's bookmarks into this device, then send back anything newer here. */

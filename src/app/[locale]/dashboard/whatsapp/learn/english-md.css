@@ -730,3 +730,154 @@
 		height: 44px;
 	}
 }
+
+/* ═══ "My sentence": your own sentence with a word, an expression or a grammar rule ═══ */
+.en-tr__table .en-tbl__mine {
+	min-inline-size: 240px;
+	inline-size: 26%;
+	text-align: left !important;
+	vertical-align: middle;
+}
+.en-tr__table th.en-tbl__mine {
+	color: var(--accent-ink);
+}
+.en-mine {
+	display: grid;
+	gap: 4px;
+	direction: ltr;
+	text-align: left;
+}
+.en-mine__row {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+}
+.en-mine textarea {
+	flex: 1;
+	min-width: 0;
+	min-block-size: 34px;
+	padding: 7px 10px;
+	border: 1px dashed var(--line-2);
+	border-radius: 9px;
+	background: transparent;
+	color: var(--ink);
+	font: inherit;
+	font-size: 13.5px;
+	font-style: normal;
+	line-height: 1.45;
+	resize: none;
+	overflow: hidden;
+	outline: none;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.en-mine textarea::placeholder {
+	color: color-mix(in srgb, var(--muted) 75%, transparent);
+	font-size: 12.5px;
+}
+.en-mine textarea:hover {
+	border-color: var(--accent);
+}
+.en-mine textarea:focus {
+	border-style: solid;
+	border-color: var(--accent);
+	background: var(--sheet);
+	box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.en-mine textarea:not(:placeholder-shown) {
+	border-style: solid;
+	border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+	background: color-mix(in srgb, var(--accent) 5%, var(--sheet));
+	padding-inline-end: 58px;
+}
+.en-mine__tools {
+	position: absolute;
+	inset-inline-end: 5px;
+	top: 5px;
+	display: flex;
+	gap: 2px;
+}
+.en-mine__tools button {
+	display: grid;
+	place-items: center;
+	inline-size: 24px;
+	block-size: 24px;
+	padding: 0;
+	border: 0;
+	border-radius: 7px !important;
+	background: transparent;
+	color: var(--muted) !important;
+	cursor: pointer;
+}
+.en-mine__tools button:hover:not(:disabled) {
+	background: var(--accent-soft);
+	color: var(--accent-ink) !important;
+}
+.en-mine__tools button.is-ai:hover:not(:disabled) {
+	background: color-mix(in srgb, #7c5cff 12%, transparent);
+	color: #6a4be0 !important;
+}
+.en-mine__tools button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+.en-mine small {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	font-size: 11.5px;
+	line-height: 1.45;
+}
+.en-mine__warn {
+	color: #b8740f;
+}
+.en-mine__ok {
+	color: var(--accent-ink);
+	font-weight: 700;
+}
+.en-mine__fix {
+	padding: 6px 8px;
+	border-radius: 8px;
+	background: color-mix(in srgb, #7c5cff 7%, var(--sheet));
+	color: var(--ink-2, var(--ink));
+}
+.en-mine__fix b {
+	flex-basis: 100%;
+	color: #6a4be0;
+	font-weight: 700;
+}
+.en-mine__fix button {
+	margin-inline-start: auto;
+	padding: 2px 8px;
+	border: 0;
+	border-radius: 6px;
+	background: #6a4be0;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+/* under a grammar rule */
+.en-md-mine {
+	display: grid;
+	gap: 6px;
+	margin: -0.4em 0 1.4em;
+	padding: 10px 12px;
+	border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+	border-radius: 12px;
+	background: var(--sheet);
+}
+.en-md-mine__label {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--accent-ink);
+	font-family: 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+	font-size: 12.5px;
+	font-weight: 700;
+}
+.en-mine.is-big textarea {
+	min-block-size: 40px;
+	font-size: 14.5px;
+}

@@ -1,0 +1,640 @@
+/* The repeat button at the top, and the extras of the repeat sheet (ranges, own counts, plan). */
+
+.mr-ic.is-on {
+	background: color-mix(in srgb, var(--mr-green) 14%, transparent);
+	color: var(--mr-green);
+}
+.mr-badge.is-rv {
+	background: var(--mr-green);
+}
+html.dark .mr-badge.is-rv,
+.mr[data-eye-dark] .mr-badge.is-rv {
+	background: #2f6b4a;
+}
+
+/* your own number next to the preset chips */
+.rv-chip-num {
+	display: inline-flex;
+	align-items: center;
+	padding: 0 6px;
+	cursor: text;
+}
+.rv-chip-num input {
+	inline-size: 64px;
+	min-block-size: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 700;
+	text-align: center;
+	outline: none;
+}
+.rv-chip-num input::placeholder {
+	color: var(--mr-ink-3);
+	font-weight: 600;
+}
+.rv-chip-num.is-on input::placeholder {
+	color: rgba(255, 255, 255, 0.8);
+}
+
+/* from (surah + ayah) → to (surah + ayah) */
+.rv-ends {
+	display: grid;
+	gap: 10px;
+}
+.rv-end {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) 92px;
+	align-items: end;
+	gap: 8px;
+}
+.rv-end-label {
+	align-self: center;
+	min-inline-size: 34px;
+	color: var(--mr-green);
+	font-size: 13px;
+	font-weight: 800;
+}
+.rv-end .rv-input {
+	min-inline-size: 0;
+}
+
+/* the plan, in words */
+.rv-plan {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 12px;
+	border: 1px dashed color-mix(in srgb, var(--mr-green) 45%, var(--mr-card-line));
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--mr-green) 6%, var(--mr-card));
+	color: var(--mr-green);
+}
+.rv-plan > svg {
+	flex: none;
+	margin-top: 2px;
+}
+.rv-plan > span {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+	color: var(--mr-ink);
+	font-size: 13px;
+}
+.rv-plan b {
+	font-size: 14px;
+	font-weight: 800;
+}
+.rv-plan small {
+	color: var(--mr-ink-2);
+	font-size: 12px;
+	line-height: 1.5;
+}
+.rv-spin {
+	display: inline-block;
+	vertical-align: -2px;
+	animation: rv-spin 0.9s linear infinite;
+}
+@keyframes rv-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+.rv-start:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+
+/* ─── one line of counts ─── */
+.rv-chips.is-line {
+	flex-wrap: nowrap;
+	gap: 6px;
+}
+.rv-chips.is-line .rv-chip {
+	flex: 1 1 0;
+	min-inline-size: 0;
+	padding: 0 4px;
+}
+.rv-chips.is-line .rv-chip-num {
+	flex: 1.6 1 0;
+}
+.rv-chips.is-line .rv-chip-num input {
+	inline-size: 100%;
+}
+.rv-hint {
+	margin: -2px 0 0;
+	color: var(--mr-ink-3);
+	font-size: 12px;
+}
+
+/* ─── quarters: every quarter by juz, scroll and pick a start and an end ─── */
+.rv-quarters {
+	max-block-size: 260px;
+	overflow-y: auto;
+	padding: 4px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 16px;
+	background: color-mix(in srgb, var(--mr-paper) 55%, var(--mr-card));
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+}
+.rv-q-juz {
+	position: sticky;
+	top: -4px;
+	z-index: 1;
+	margin: 0;
+	padding: 8px 10px 4px;
+	background: color-mix(in srgb, var(--mr-paper) 55%, var(--mr-card));
+	color: var(--mr-gold-3);
+	font-size: 11.5px;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+}
+.rv-q {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	inline-size: 100%;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: 12px;
+	background: transparent;
+	color: var(--mr-ink);
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+.rv-q:hover {
+	background: color-mix(in srgb, var(--mr-green) 6%, transparent);
+}
+.rv-q-n {
+	display: grid;
+	flex: none;
+	place-items: center;
+	inline-size: 30px;
+	block-size: 30px;
+	border-radius: 50%;
+	background: var(--mr-gold-soft);
+	color: var(--mr-gold-3);
+	font-size: 12.5px;
+	font-weight: 800;
+}
+.rv-q-text {
+	display: grid;
+	flex: 1;
+	min-inline-size: 0;
+}
+.rv-q-text b {
+	overflow: hidden;
+	font-family: 'WaQuranHafs', 'UthmanicHafs', serif;
+	font-size: 15px;
+	font-weight: 400;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.rv-q-text small {
+	color: var(--mr-ink-3);
+	font-size: 11.5px;
+}
+.rv-q.is-on {
+	border-radius: 0;
+	background: color-mix(in srgb, var(--mr-green) 12%, transparent);
+}
+.rv-q.is-edge {
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--mr-green) 18%, transparent);
+}
+.rv-q.is-on .rv-q-n {
+	background: var(--mr-green);
+	color: #fff;
+}
+.rv-q-check {
+	flex: none;
+	color: var(--mr-green);
+}
+
+/* ─── dropdown in the sheet's style ─── */
+.rv-dd {
+	position: relative;
+	min-inline-size: 0;
+}
+.rv-dd-btn {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	inline-size: 100%;
+	min-block-size: 46px;
+	padding: 0 12px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--mr-paper) 70%, var(--mr-card));
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 700;
+	text-align: start;
+	cursor: pointer;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+.rv-dd.is-open .rv-dd-btn,
+.rv-dd-btn:hover {
+	border-color: var(--mr-green);
+}
+.rv-dd.is-open .rv-dd-btn {
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--mr-green) 14%, transparent);
+}
+.rv-dd-val {
+	flex: 1;
+	min-inline-size: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.rv-dd-chev {
+	flex: none;
+	color: var(--mr-ink-3);
+	transition: transform 0.2s;
+}
+.rv-dd.is-open .rv-dd-chev {
+	transform: rotate(180deg);
+}
+.rv-dd-badge {
+	display: grid;
+	flex: none;
+	place-items: center;
+	min-inline-size: 26px;
+	block-size: 26px;
+	padding: 0 4px;
+	border-radius: 8px;
+	background: var(--mr-gold-soft);
+	color: var(--mr-gold-3);
+	font-size: 12px;
+	font-weight: 800;
+}
+.rv-dd-pop {
+	margin-top: 6px;
+	overflow: hidden;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 16px;
+	background: var(--mr-card);
+	box-shadow: 0 14px 30px -18px rgba(40, 25, 5, 0.55);
+	animation: rv-dd-in 0.16s ease-out;
+}
+@keyframes rv-dd-in {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
+.rv-dd-search {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--mr-card-line);
+	color: var(--mr-ink-3);
+}
+.rv-dd-search input {
+	flex: 1;
+	min-inline-size: 0;
+	border: 0;
+	background: transparent;
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 15px;
+	outline: none;
+}
+.rv-dd-list {
+	max-block-size: 240px;
+	margin: 0;
+	padding: 4px;
+	overflow-y: auto;
+	list-style: none;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+}
+.rv-dd-list button {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	inline-size: 100%;
+	padding: 9px 10px;
+	border: 0;
+	border-radius: 11px;
+	background: transparent;
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 14.5px;
+	font-weight: 600;
+	text-align: start;
+	cursor: pointer;
+}
+.rv-dd-list button:hover {
+	background: color-mix(in srgb, var(--mr-green) 7%, transparent);
+}
+.rv-dd-list button.is-on {
+	background: color-mix(in srgb, var(--mr-green) 13%, transparent);
+	color: var(--mr-green);
+}
+.rv-dd-text {
+	display: grid;
+	flex: 1;
+	min-inline-size: 0;
+}
+.rv-dd-text small {
+	color: var(--mr-ink-3);
+	font-size: 11.5px;
+	font-weight: 500;
+}
+.rv-end {
+	grid-template-columns: auto minmax(0, 1fr) 84px;
+	align-items: start;
+}
+.rv-end .rv-num {
+	margin-top: -20px;
+}
+.rv-end-label {
+	padding-top: 13px;
+}
+
+/* ─── header: "stop repeating" beside ✕; a calmer start button ─── */
+.rv-clear {
+	flex: none;
+	padding: 6px 12px;
+	border: 1px solid var(--mr-card-line);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--mr-ink-2);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.rv-clear:hover {
+	border-color: var(--mr-mark, #b33);
+	color: var(--mr-mark, #b33);
+}
+.rv-foot {
+	display: flex;
+	justify-content: center;
+	padding-block: 10px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.rv-sheet .rv-start {
+	inline-size: auto;
+	min-inline-size: 200px;
+	min-block-size: 44px;
+	padding: 0 28px;
+	border-radius: 999px;
+	font-size: 14.5px;
+	box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--mr-green) 80%, transparent);
+}
+
+/* the dropdown's list floats over the sheet (fixed, placed from the field) */
+.rv-dd-pop {
+	position: fixed;
+	z-index: 80;
+	display: flex;
+	flex-direction: column;
+	max-block-size: var(--dd-max, 320px);
+	margin: 0;
+	box-shadow: 0 18px 40px -14px rgba(40, 25, 5, 0.45), 0 0 0 1px var(--mr-card-line);
+}
+.rv-dd-pop .rv-dd-list {
+	flex: 1;
+	min-block-size: 0;
+	max-block-size: none;
+}
+
+/* ─── bookmarks as small chips: all of them in view, one icon each ─── */
+.mr-bms.is-compact {
+	flex-wrap: wrap;
+	gap: 6px;
+	overflow: visible;
+	padding: 2px 14px 10px;
+}
+/* gold is the default colour: it has no c-gold rule of its own (low specificity, so dark mode still wins) */
+.mr-chip:where(.c-gold, :not([class*='c-'])) {
+	--bm: #b08a3e;
+}
+.mr-chip {
+	display: inline-flex;
+	align-items: center;
+	block-size: 32px;
+	max-inline-size: 100%;
+	box-sizing: border-box;
+	border: 1px solid color-mix(in srgb, var(--bm) 45%, var(--mr-card-line));
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--bm) 8%, var(--mr-card));
+	color: var(--mr-ink);
+	transition: background-color 0.15s, border-color 0.15s, transform 0.12s;
+}
+.mr-chip.is-here {
+	border-color: var(--bm);
+	background: color-mix(in srgb, var(--bm) 18%, var(--mr-card));
+}
+.mr-chip.is-empty {
+	border-style: dashed;
+	background: transparent;
+}
+.mr-chip.is-flash {
+	animation: mr-chip-flash 0.6s ease-out;
+}
+@keyframes mr-chip-flash {
+	40% {
+		transform: scale(1.06);
+		background: color-mix(in srgb, var(--bm) 30%, var(--mr-card));
+	}
+}
+.mr-chip-go {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 5px;
+	min-inline-size: 0;
+	block-size: 100%;
+	padding: 0 4px 0 10px;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	white-space: nowrap;
+}
+[dir='rtl'] .mr-chip-go {
+	padding: 0 10px 0 4px;
+}
+.mr-chip-go:disabled {
+	cursor: default;
+}
+.mr-chip-dot {
+	flex: none;
+	align-self: center;
+	inline-size: 7px;
+	block-size: 7px;
+	border-radius: 50%;
+	background: var(--bm);
+}
+.mr-chip-go b {
+	font-size: 12.5px;
+	font-weight: 800;
+}
+.mr-chip-go small {
+	overflow: hidden;
+	max-inline-size: 110px;
+	color: var(--mr-ink-3);
+	font-size: 11px;
+	font-weight: 600;
+	text-overflow: ellipsis;
+}
+.mr-chip-act {
+	display: grid;
+	flex: none;
+	place-items: center;
+	inline-size: 26px;
+	block-size: 26px;
+	margin-inline-end: 3px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--bm) 14%, transparent);
+	color: var(--bm);
+	cursor: pointer;
+}
+.mr-chip-act:hover {
+	background: var(--bm);
+	color: #fff;
+}
+.mr-chip-act.is-x {
+	background: transparent;
+	color: var(--mr-ink-3);
+}
+.mr-chip-add {
+	justify-content: center;
+	inline-size: 32px;
+	padding: 0;
+	border-style: dashed;
+	background: transparent;
+	color: var(--mr-ink-3);
+	cursor: pointer;
+}
+.mr-chip-new {
+	padding: 0 10px;
+}
+.mr-chip-new input {
+	inline-size: 120px;
+	border: 0;
+	background: transparent;
+	color: var(--mr-ink);
+	font: inherit;
+	font-size: 13px;
+	outline: none;
+}
+
+/* ─── bookmark chips v2: one row (scrolls sideways if needed), text on one line ─── */
+.mr-bms.is-compact {
+	flex-wrap: nowrap;
+	gap: 6px;
+	overflow-x: auto;
+	overflow-y: visible;
+	padding: 4px 14px 10px;
+	scrollbar-width: none;
+}
+.mr-bms.is-compact::-webkit-scrollbar {
+	display: none;
+}
+.mr-chip {
+	flex: none;
+	block-size: 30px;
+}
+.mr-chip-go {
+	align-items: center;
+	gap: 6px;
+	line-height: 1;
+}
+.mr-chip-go b {
+	font-size: 12.5px;
+	line-height: 1;
+}
+.mr-chip-go small {
+	padding-inline-start: 6px;
+	border-inline-start: 1px solid color-mix(in srgb, var(--bm) 30%, var(--mr-card-line));
+	font-size: 11px;
+	line-height: 1;
+}
+.mr-chip-act {
+	inline-size: 24px;
+	block-size: 24px;
+	margin-inline: -2px 3px;
+}
+.mr-chip.is-empty .mr-chip-go {
+	padding-inline: 10px;
+	color: var(--mr-ink-2);
+}
+.mr-chip.is-empty .mr-chip-go b {
+	font-weight: 700;
+}
+/* no heavy focus ring: a soft one in the bookmark's colour */
+.mr-chip button:focus,
+.mr-chip button:focus-visible {
+	outline: none;
+}
+.mr-chip:has(button:focus-visible) {
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--bm) 45%, transparent);
+}
+.mr-chip-add {
+	inline-size: 30px;
+	block-size: 30px;
+}
+
+/* ─── scrollbars in the mushaf and its sheets: thin, soft gold, kept inside rounded boxes ─── */
+.mr,
+.mr *,
+.mr-sheet-wrap,
+.mr-sheet-wrap * {
+	scrollbar-color: auto;
+}
+.mr-sheet-wrap .mr-sheet-list,
+.mr-sheet-wrap .rv-body,
+.mr-sheet-wrap .rv-quarters,
+.mr-sheet-wrap .rv-dd-list {
+	scrollbar-width: auto;
+}
+.mr ::-webkit-scrollbar,
+.mr-sheet-wrap ::-webkit-scrollbar {
+	inline-size: 10px;
+	block-size: 10px;
+	background: transparent;
+}
+.mr ::-webkit-scrollbar-track,
+.mr-sheet-wrap ::-webkit-scrollbar-track {
+	margin-block: 18px; /* clear of the rounded corners */
+	background: transparent;
+}
+.mr ::-webkit-scrollbar-thumb,
+.mr-sheet-wrap ::-webkit-scrollbar-thumb {
+	min-block-size: 36px;
+	border: 3px solid transparent;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--mr-gold, #b08a3e) 42%, transparent);
+	background-clip: padding-box;
+}
+.mr ::-webkit-scrollbar-thumb:hover,
+.mr-sheet-wrap ::-webkit-scrollbar-thumb:hover {
+	background-color: color-mix(in srgb, var(--mr-gold, #b08a3e) 70%, transparent);
+}
+.mr ::-webkit-scrollbar-button,
+.mr-sheet-wrap ::-webkit-scrollbar-button,
+.mr ::-webkit-scrollbar-corner,
+.mr-sheet-wrap ::-webkit-scrollbar-corner {
+	display: none;
+	block-size: 0;
+	background: transparent;
+}
+/* small boxes: a little less room */
+.mr-sheet-wrap .rv-quarters::-webkit-scrollbar-track,
+.mr-sheet-wrap .rv-dd-list::-webkit-scrollbar-track {
+	margin-block: 12px;
+}

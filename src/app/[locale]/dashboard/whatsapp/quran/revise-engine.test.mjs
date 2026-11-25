@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ayahList, nextStep, upcomingKeys, quarterRange, pageRange, surahRange, isVeiled, inSpan } from './revise-engine.js';
+import { ayahList, nextStep, upcomingKeys, quarterRange, pageRange, surahRange, isVeiled, inSpan, groupRange, totalPlays } from './revise-engine.js';
 import { RUB_STARTS } from './rub-starts.js';
 
 const counts = { 1: 7, 2: 286, 6: 165, 7: 206, 113: 5, 114: 6 };
@@ -47,4 +47,22 @@ test('isVeiled hides the chosen part of each ayah', () => {
 	assert.equal(isVeiled('first', 2, 9), true);
 	assert.deepEqual([1, 4, 7].map(p => isVeiled('middle', p, 9)), [false, true, false]);
 	assert.deepEqual([1, 4, 7].map(p => isVeiled('end', p, 9)), [false, false, true]);
+});
+
+test('spans: hizb and juz', () => {
+	const juz1 = groupRange(2, 100, RUB_STARTS, vc, 8);
+	assert.equal(juz1.n, 1);
+	assert.deepEqual(juz1.from, { s: 1, a: 1 });
+	assert.deepEqual(juz1.to, { s: 2, a: 141 });
+	const juz2 = groupRange(2, 142, RUB_STARTS, vc, 8);
+	assert.equal(juz2.n, 2);
+	assert.deepEqual(juz2.from, { s: 2, a: 142 });
+	const hizb2 = groupRange(2, 80, RUB_STARTS, vc, 4);
+	assert.equal(hizb2.n, 2);
+	assert.deepEqual(hizb2.from, { s: 2, a: 75 });
+	const juz30 = groupRange(114, 1, RUB_STARTS, vc, 8);
+	assert.equal(juz30.n, 30);
+	assert.deepEqual(juz30.to, { s: 114, a: 6 });
+	assert.equal(totalPlays(10, 3, 2), 60);
+	assert.equal(totalPlays(10, 3, 0), Infinity);
 });

@@ -76,6 +76,32 @@ export function quarterRange(s, a, rubStarts, versesCountOf) {
 }
 
 /** First and last ayah on a page (its "s:a" keys in order). */
+/**
+ * The hizb (size 4) or juz (size 8) of quarters around an ayah: { from, to, n } where n is the
+ * hizb / juz number (1-based). Quarters come from RUB_STARTS ([surah, ayah, page, …], 240 of them).
+ */
+export function groupRange(s, a, rubStarts, versesCountOf, size) {
+	let idx = 0;
+	for (let i = 0; i < rubStarts.length; i += 1) {
+		const [rs, ra] = rubStarts[i];
+		if (rs < s || (rs === s && ra <= a)) idx = i;
+		else break;
+	}
+	const first = Math.floor(idx / size) * size;
+	const [fs, fa] = rubStarts[first];
+	const next = rubStarts[first + size];
+	let to;
+	if (!next) to = { s: 114, a: versesCountOf(114) };
+	else if (next[1] > 1) to = { s: next[0], a: next[1] - 1 };
+	else to = { s: next[0] - 1, a: versesCountOf(next[0] - 1) };
+	return { from: { s: fs, a: fa }, to, n: first / size + 1 };
+}
+
+/** How many times you will hear ayat in a session: ayat × repeats × rounds (rounds 0 = endless). */
+export function totalPlays(count, perAyah, rounds) {
+	return rounds ? count * perAyah * rounds : Infinity;
+}
+
 export function pageRange(keys) {
 	if (!keys?.length) return null;
 	const [fs, fa] = keys[0].split(':').map(Number);

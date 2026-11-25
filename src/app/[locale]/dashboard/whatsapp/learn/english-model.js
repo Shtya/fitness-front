@@ -22,6 +22,7 @@ export function normalizeDay(raw) {
 		questions: Array.isArray(v.questions) ? v.questions.filter(q => q && q.id) : [],
 		speaking: Array.isArray(v.speaking) ? v.speaking.filter(s => s && s.id) : [],
 		learned: Array.isArray(v.learned) ? [...new Set(v.learned.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim().toLowerCase()))] : [],
+		mine: v.mine && typeof v.mine === 'object' && !Array.isArray(v.mine) ? Object.fromEntries(Object.entries(v.mine).filter(([, x]) => typeof x === 'string' && x.trim())) : {},
 	};
 }
 
