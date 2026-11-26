@@ -1,14 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
 	Check,
 	CheckCheck,
 	Clock,
 	Columns2,
-	FileText,
-	Image as ImageIcon,
 	Loader2,
 	Mic,
 	Send,
@@ -36,12 +34,21 @@ import {
 	isSelfChatConversation,
 	looksLikeMarkdown,
 	messageTextPresentation,
+	messagesFormBubbleCluster,
+	quotedMessagePreview,
+	quotedPreviewFromMessage,
+	resolveQuotedReplySource,
+	buildChatViewerImages,
+	normalizeWhatsAppReactions,
 } from './whatsapp-utils';
 import {
 	MESSAGE_PAGE_SIZE,
 	shouldProviderBackfill,
 } from './whatsapp-message-sync';
 import ExpandableMessageText from './ExpandableMessageText';
+import { MessageAttachments } from './workspace/WaMessageAttachments';
+import { ChatImageViewer } from './workspace/WaImageViewer';
+import { WaReactionSummary } from './workspace/WaReactionSummary';
 import MarkdownMessage from '../ai-free/MarkdownMessage';
 
 function newClientMessageId() {
@@ -89,150 +96,6 @@ function SplitAvatar({ label = '?', src = '', size = 36 }) {
 	);
 }
 
-function SplitAttachment({ attachment, labels, ar }) {
-	const type = String(attachment?.type || '').toLowerCase();
-	const [url, setUrl] = useState(null);
-	const [loading, setLoading] = useState(false);
-	const audioRef = useRef(null);
-	const [playing, setPlaying] = useState(false);
-	const blobUrlsRef = useRef([]);
-
-	const revokeTrackedBlobs = useCallback(() => {
-		for (const blobUrl of blobUrlsRef.current) {
-			try {
-				URL.revokeObjectURL(blobUrl);
-			} catch {
-				/* ignore */
-			}
-		}
-		blobUrlsRef.current = [];
-	}, []);
-
-	const load = useCallback(async () => {
-		if (attachment?.url) {
-			setUrl(attachment.url);
-			return attachment.url;
-		}
-		if (
-			!attachment?.id ||
-			String(attachment.id).startsWith('live') ||
-			String(attachment.id).startsWith('pending-att:')
-		) {
-			return null;
-		}
-		setLoading(true);
-		try {
-			const { data } = await api.get(`/whatsapp/attachments/${attachment.id}/content`, {
-				responseType: 'blob',
-				timeout: 20000,
-			});
-			const objectUrl = URL.createObjectURL(data);
-			blobUrlsRef.current.push(objectUrl);
-			setUrl(prev => {
-				if (prev && prev !== attachment?.url && !blobUrlsRef.current.includes(prev)) {
-					try {
-						URL.revokeObjectURL(prev);
-					} catch {
-						/* ignore */
-					}
-				}
-				return objectUrl;
-			});
-			return objectUrl;
-		} catch {
-			toast.error(ar ? 'تعذر تحميل المرفق' : 'Could not load attachment');
-			return null;
-		} finally {
-			setLoading(false);
-		}
-	}, [ar, attachment?.id, attachment?.url]);
-
-	useEffect(() => {
-		if (attachment?.url) setUrl(attachment.url);
-	}, [attachment?.url]);
-
-	useEffect(
-		() => () => {
-			revokeTrackedBlobs();
-		},
-		[revokeTrackedBlobs],
-	);
-
-	if (['audio', 'ptt', 'voice'].includes(type)) {
-		return (
-			<div className="mb-1 flex min-w-[200px] items-center gap-2 rounded-xl bg-black/5 px-2 py-2">
-				<audio
-					ref={audioRef}
-					src={url || undefined}
-					className="hidden"
-					onEnded={() => setPlaying(false)}
-				/>
-				<button
-					type="button"
-					disabled={loading}
-					onClick={async () => {
-						let ready = url;
-						if (!ready) ready = await load();
-						const audio = audioRef.current;
-						if (!audio || !ready) return;
-						if (playing) {
-							audio.pause();
-							setPlaying(false);
-							return;
-						}
-						if (audio.src !== ready) audio.src = ready;
-						await audio.play();
-						setPlaying(true);
-					}}
-					className="grid h-9 w-9 place-items-center rounded-full bg-[#00a884] text-white"
-					aria-label={playing ? 'Pause' : 'Play'}
-				>
-					{loading ? (
-						<Loader2 size={14} className="animate-spin" />
-					) : playing ? (
-						<svg width="12" height="12" viewBox="0 0 24 24">
-							<path fill="currentColor" d="M7 5h3v14H7zm7 0h3v14h-3z" />
-						</svg>
-					) : (
-						<svg width="12" height="12" viewBox="0 0 24 24">
-							<path fill="currentColor" d="M8 5v14l11-7z" />
-						</svg>
-					)}
-				</button>
-				<div className="min-w-0 flex-1">
-					<p className="text-xs font-bold">{labels.ptt || (ar ? 'رسالة صوتية' : 'Voice message')}</p>
-					<p className="text-[10px] text-slate-500">{attachment.fileName || type}</p>
-				</div>
-				<Mic size={14} className="text-[#00a884]" />
-			</div>
-		);
-	}
-
-	if (type === 'image' || type === 'sticker') {
-		return (
-			<button
-				type="button"
-				disabled={loading}
-				onClick={async () => {
-					const ready = url || (await load());
-					if (ready) window.open(ready, '_blank', 'noopener,noreferrer');
-				}}
-				className="mb-1 flex items-center gap-2 rounded-xl bg-black/5 px-2 py-2 text-xs font-bold"
-			>
-				{loading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
-				{ar ? 'صورة' : 'Photo'}
-			</button>
-		);
-	}
-
-	return (
-		<div className="mb-1 flex items-center gap-2 rounded-xl bg-black/5 px-2 py-2 text-xs font-bold">
-			<FileText size={14} />
-			<span className="truncate">{attachment.fileName || type || (ar ? 'مرفق' : 'Attachment')}</span>
-		</div>
-	);
-}
-
 export default function WhatsAppSplitPane({
 	conversation,
 	accountId,
@@ -257,6 +120,35 @@ export default function WhatsAppSplitPane({
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [pendingVoiceDraft, setPendingVoiceDraft] = useState(null);
 	const scrollRef = useRef(null);
+	// Images in this chat, for the same full-screen viewer the main chat opens.
+	const [registeredImages, setRegisteredImages] = useState({});
+	const [activeImageId, setActiveImageId] = useState(null);
+	const chatImages = useMemo(() => buildChatViewerImages(messages, registeredImages), [messages, registeredImages]);
+	const registerImage = useCallback((id, image) => {
+		setRegisteredImages(current => {
+			if (!image) {
+				if (!current[id]) return current;
+				const next = { ...current };
+				delete next[id];
+				return next;
+			}
+			if (current[id]?.url === image.url && current[id]?.previewUrl === image.previewUrl) return current;
+			return { ...current, [id]: image };
+		});
+	}, []);
+	const isGroupChat =
+		conversation?.type === 'group' || String(conversation?.providerChatId || '').endsWith('@g.us');
+	const resolveReactor = useCallback(
+		reaction => {
+			const key = typeof reaction === 'string' ? reaction : reaction?.actorKey;
+			if (key === 'me') return { name: ar ? 'إنت' : 'You', sub: '', avatar: '' };
+			const name =
+				(typeof reaction === 'object' && reaction?.actorName) ||
+				(isGroupChat ? String(key || '').split('@')[0] : title);
+			return { name, sub: '', avatar: '' };
+		},
+		[ar, isGroupChat, title],
+	);
 	const loadingOlderRef = useRef(false);
 	const messagesRef = useRef([]);
 	const mediaRecorderRef = useRef(null);
@@ -746,7 +638,7 @@ export default function WhatsAppSplitPane({
 		// Colours come from the WhatsApp page's own theme variables (wa-desktop.css), like the main
 		// chat, so the pane follows light/dark with it; Tailwind dark: classes did not, which left a
 		// white frame and composer around dark bubbles.
-		<section className="wa-split wa-split-pane flex min-h-0 min-w-0 flex-col overflow-hidden" dir={ar ? 'rtl' : 'ltr'}>
+		<section className="wa-split wa-split-pane wa-chat-thread-pane flex min-h-0 min-w-0 flex-col overflow-hidden" dir={ar ? 'rtl' : 'ltr'}>
 			<header className="wa-split__head">
 				<SplitAvatar label={title} src={conversationAvatarUrl(conversation)} size={40} />
 				<div className="min-w-0 flex-1">
@@ -801,29 +693,76 @@ export default function WhatsAppSplitPane({
 					</p>
 				) : (
 					<div className="wa-message-thread">
-					{messages.map(message => {
+					{messages.map((message, index) => {
 						const mine = message.direction === 'outbound';
+						const followsSame = messagesFormBubbleCluster(messages[index - 1], message, { isGroupChat });
+						const precedesSame = messagesFormBubbleCluster(message, messages[index + 1], { isGroupChat });
+						const kinds = (message.attachments || []).map(item => String(item?.type || '').toLowerCase());
+						const isVoice = kinds.some(kind => ['audio', 'ptt', 'voice'].includes(kind));
+						const isVisual = kinds.some(kind => ['image', 'sticker', 'video'].includes(kind));
+						const reactions = normalizeWhatsAppReactions(message.reactions);
+						const quoteThumb = message.replyTo ? quotedPreviewFromMessage(message) : null;
+						const quotedSource = message.replyTo ? resolveQuotedReplySource(message.replyTo, messages) : null;
+						const quoted = message.replyTo
+							? quotedMessagePreview(quotedSource || message.replyTo, locale, { isGroupChat })
+							: null;
+						const quotedMine = (quotedSource || message.replyTo)?.direction === 'outbound';
+						const quotedAuthor =
+							quoted?.senderName || (quotedMine ? (ar ? 'أنت' : 'You') : !isGroupChat ? title : null);
+						const quotedBody = quoted && !quoted.isVoice ? messageTextPresentation(quoted.body) : null;
 						const presentation = messageTextPresentation(message.text);
 						const attachments = message.attachments || [];
 						const textIsMarkdown = looksLikeMarkdown(message.text);
 						return (
 							<div
 								key={message.id}
-								className={`wa-message-line flex min-w-0 max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}
+								className={`wa-message-line flex min-w-0 max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''} ${reactions.length ? 'has-reactions' : ''}`}
 							>
 								<div
-									className={`wa-message-bubble min-w-0 max-w-[65%] shrink ${mine ? 'wa-message-mine' : 'wa-message-other'} ${
-										attachments.length ? 'wa-message-media' : ''
-									} wa-split__bubble ${mine ? 'is-mine' : 'is-theirs'}`}
+									className={`wa-message-bubble relative min-w-0 max-w-[65%] shrink ${mine ? 'wa-message-mine' : 'wa-message-other'} ${
+										followsSame ? 'wa-follows-same' : 'wa-has-tail'
+									} ${precedesSame ? 'wa-precedes-same' : ''} ${isVisual ? 'wa-message-media' : ''} ${
+										isVoice ? 'wa-message-voice' : ''
+									} ${isVisual && message.text ? 'wa-message-has-caption' : ''} wa-split__bubble ${mine ? 'is-mine' : 'is-theirs'}`}
 								>
-									{attachments.map(attachment => (
-										<SplitAttachment
-											key={attachment.id || attachment.providerMediaId || attachment.fileName}
-											attachment={attachment}
+									{message.replyTo && quoted ? (
+										<div className={`wa-reply-quote mb-2 ${quotedMine ? 'is-mine' : 'is-theirs'}`}>
+											<div className="wa-reply-quote__content">
+												{quotedAuthor ? (
+													<p className="wa-reply-quote__sender" dir="auto">
+														{quotedAuthor}
+													</p>
+												) : null}
+												<p
+													className={`wa-reply-quote__body ${quoted.isDeleted ? 'wa-reply-quote__body--deleted' : ''} ${quotedBody?.className || ''}`}
+													dir={quotedBody?.dir}
+													lang={quotedBody?.lang}
+													style={quotedBody?.style}
+												>
+													{quoted.isVoice ? (
+														<Mic size={12} className="wa-reply-quote__voice-icon shrink-0" aria-hidden="true" />
+													) : null}
+													<span className="min-w-0">{quoted.body}</span>
+												</p>
+											</div>
+											{quoteThumb ? (
+												<img src={quoteThumb} alt="" loading="lazy" className="wa-reply-quote-thumb" />
+											) : null}
+										</div>
+									) : null}
+									{attachments.length ? (
+										<MessageAttachments
+											attachments={attachments}
+											mine={mine}
 											labels={labels}
-											ar={ar}
+											onImageReady={registerImage}
+											onOpenImage={setActiveImageId}
+											messageRaw={message.raw}
+											message={message}
+											avatarLabel={mine ? (ar ? 'أنا' : 'Me') : title || '?'}
+											avatarSrc={mine ? '' : conversationAvatarUrl(conversation)}
 										/>
-									))}
+									) : null}
 									{message.text ? (
 										<div
 											className="wa-message-copy"
@@ -883,6 +822,9 @@ export default function WhatsAppSplitPane({
 											) : null}
 										</div>
 									)}
+									{reactions.length ? (
+										<WaReactionSummary reactions={reactions} mine={mine} locale={locale} resolve={resolveReactor} disabled />
+									) : null}
 								</div>
 							</div>
 						);
@@ -988,6 +930,14 @@ export default function WhatsAppSplitPane({
 					{ar ? 'لا يمكن الكتابة في هذا الشات' : 'You cannot compose in this chat'}
 				</p>
 			)}
+			{activeImageId ? (
+				<ChatImageViewer
+					images={chatImages}
+					activeId={activeImageId}
+					onClose={() => setActiveImageId(null)}
+					onChange={setActiveImageId}
+				/>
+			) : null}
 		</section>
 	);
 }

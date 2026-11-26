@@ -14660,12 +14660,38 @@ html.dark .wa-message-bubble.wa-quote-flash {
 /* The page's generic desktop rules paint every flex <section> #fafafa and blank composer
    textareas with !important; the split pane needs its own theme colours over them. */
 /* Kept above the thread-pane rules in globals.css (also !important). */
-html .wa-web-desktop section.wa-split.wa-split-pane.flex.min-h-0.min-w-0.flex-col {
-	background: var(--d-app, #ffffff) !important;
+/* The split chat sits on the same wallpaper as the main chat (it carries .wa-chat-thread-pane),
+   with the same floating message box at the bottom. */
+html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-split .wa-split__composer.wa-composer {
+	margin: 0 16px 14px;
+	padding: 5px 6px 5px 4px;
+	border-radius: 28px;
+	background: var(--d-composer, #ffffff) !important;
+	box-shadow: 0 2px 10px rgba(11, 20, 26, 0.1), 0 1px 1px rgba(11, 20, 26, 0.06) !important;
+}
+html .wa-web-desktop.wa-web-desktop:not(#wa-d) .wa-split .wa-split__composer.wa-composer.is-recording {
+	box-shadow: none !important;
+	background: transparent !important;
+}
+html .wa-web-desktop .wa-split .wa-composer .wa-split__pill.wa-input-pill {
+	min-height: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+.wa-web-desktop .wa-split .wa-composer textarea.wa-split__input,
+.wa-web-desktop .wa-split .wa-composer textarea.wa-split__input:focus {
+	border-color: transparent;
+	background: transparent !important;
+	box-shadow: none;
+}
+.wa-split .wa-split__send {
+	width: 40px;
+	height: 40px;
 }
 
 .wa-web-desktop .wa-split .wa-composer textarea.wa-split__input {
-	background: var(--d-composer, #ffffff) !important;
+	background: transparent !important;
 	color: var(--d-text, #111b21) !important;
 }
 
