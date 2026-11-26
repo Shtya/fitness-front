@@ -162,6 +162,7 @@ export default function SmartDocumentEditor({
 	initialMode = 'edit',
 	compactChrome = false,
 	toolbarStart = null,
+	toolbarEnd = null,
 	onStats,
 }) {
 	const locale = useLocale();
@@ -1101,6 +1102,7 @@ export default function SmartDocumentEditor({
 						</div>
 
 					<div className="sd-chrome-actions">
+						{toolbarEnd}
 						<div className="sd-tool-group" role="group" aria-label={labels.typography || 'Typography'}>
 							<TypographyPanel
 								settings={typography}

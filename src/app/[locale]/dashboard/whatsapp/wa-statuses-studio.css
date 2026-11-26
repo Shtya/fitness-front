@@ -1,0 +1,510 @@
+/*
+ * Statuses tab — "Studio" layer (same language as the Chats tab: wa-chats-studio.css).
+ *
+ * The tab is one calm sheet on the tinted canvas: a compact header with the counts as
+ * tabular chips, "My status" as a quiet hero strip, filters as outlined segments, and the
+ * stories as an even wall of 9:16 cards where unseen ones carry an accent ring around the
+ * card (like WhatsApp's story ring) instead of a faint inner glow. The viewer gets one glass
+ * control pill, rounded progress segments and a glass reply bar.
+ *
+ * Presentation only. Page parts are scoped to data-wa-tab="statuses" on the WhatsApp root;
+ * the story viewer (also opened from chats) is scoped to the WhatsApp root only.
+ */
+
+.wa-web-desktop[data-wa-tab='statuses'] {
+	--ss-canvas: color-mix(in srgb, var(--d-wall, #f5f1eb) 62%, #e4ded4);
+	--ss-sheet: var(--d-app, #ffffff);
+	--ss-line: color-mix(in srgb, var(--d-text, #111b21) 8%, transparent);
+	--ss-line-strong: color-mix(in srgb, var(--d-text, #111b21) 13%, transparent);
+	--ss-ink: var(--d-text, #111b21);
+	--ss-ink-2: var(--d-text-2, #667781);
+	--ss-field: var(--d-field, #f6f5f4);
+	--ss-hover: color-mix(in srgb, var(--d-text, #111b21) 4.5%, transparent);
+	--ss-accent: var(--d-accent, #1daa61);
+	--ss-accent-ink: var(--d-accent-text, #1b8755);
+	--ss-accent-soft: color-mix(in srgb, var(--d-accent, #1daa61) 11%, transparent);
+	--ss-accent-line: color-mix(in srgb, var(--d-accent, #1daa61) 38%, transparent);
+	--ss-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--ss-shadow: 0 1px 2px rgba(17, 27, 33, 0.05), 0 12px 32px -18px rgba(17, 27, 33, 0.28);
+}
+
+html.dark .wa-web-desktop[data-wa-tab='statuses'],
+html[data-theme-mode='dark'] .wa-web-desktop[data-wa-tab='statuses'] {
+	--ss-canvas: #0d0e0e;
+	--ss-line: rgba(255, 255, 255, 0.06);
+	--ss-line-strong: rgba(255, 255, 255, 0.1);
+	--ss-hover: rgba(255, 255, 255, 0.045);
+	--ss-accent-soft: color-mix(in srgb, var(--d-accent, #21c063) 14%, transparent);
+	--ss-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 14px 34px -18px rgba(0, 0, 0, 0.7);
+}
+
+@media (min-width: 769px) {
+	/* ── canvas + one sheet ── */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-web-workspace,
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-desktop-rail {
+		border: 0 !important;
+		background: var(--ss-canvas) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-statuses-pane {
+		margin: 10px 10px 10px 0 !important;
+		height: calc(100% - 20px) !important;
+		overflow: hidden !important;
+		border: 1px solid var(--ss-line) !important;
+		border-radius: 20px !important;
+		background: var(--ss-sheet) !important;
+		background-clip: padding-box !important;
+		box-shadow: var(--ss-shadow) !important;
+		animation: wa-ss-in 280ms var(--ss-ease) both;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-statuses-pane {
+		margin: 10px 0 10px 10px !important;
+	}
+
+	/* ── header ── */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-head {
+		min-height: 76px !important;
+		padding-inline: 24px 18px !important;
+		border: 0 !important;
+		background: var(--ss-sheet) !important;
+		box-shadow: 0 1px 0 var(--ss-line) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-head::before,
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-head::after {
+		display: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-head__icon {
+		width: 44px !important;
+		height: 44px !important;
+		border-radius: 14px !important;
+		background: linear-gradient(160deg, color-mix(in srgb, var(--ss-accent) 88%, #ffffff), var(--ss-accent-ink)) !important;
+		box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--ss-accent) 80%, transparent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-head__title {
+		color: var(--ss-ink) !important;
+		font-size: 24px !important;
+		font-weight: 800 !important;
+		letter-spacing: -0.025em !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-head__stats > * {
+		border-radius: 7px !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-head__tools {
+		gap: 8px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-search {
+		height: 40px !important;
+		border: 1px solid transparent !important;
+		border-radius: 12px !important;
+		background: var(--ss-field) !important;
+		box-shadow: none !important;
+		transition: border-color 160ms ease, box-shadow 200ms ease, background-color 160ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-search:focus-within {
+		border-color: var(--ss-accent-line) !important;
+		background: var(--ss-sheet) !important;
+		box-shadow: 0 0 0 4px var(--ss-accent-soft) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-search input,
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-stx-search input:focus {
+		border: 0 !important;
+		outline: none !important;
+		box-shadow: none !important;
+		background: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-seg {
+		height: 40px !important;
+		padding: 3px !important;
+		border: 0 !important;
+		border-radius: 12px !important;
+		background: var(--ss-field) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-seg__btn {
+		height: 34px !important;
+		border-radius: 9px !important;
+		color: var(--ss-ink-2) !important;
+		font-weight: 600 !important;
+		transition: background-color 150ms ease, color 150ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-seg__btn[aria-pressed='true'],
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-seg__btn[aria-selected='true'],
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-seg__btn.is-active {
+		background: var(--ss-sheet) !important;
+		color: var(--ss-ink) !important;
+		box-shadow: 0 1px 2px rgba(17, 27, 33, 0.12) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-grp-refresh {
+		width: 40px !important;
+		height: 40px !important;
+		border: 0 !important;
+		border-radius: 12px !important;
+		background: var(--ss-field) !important;
+		transition: background-color 150ms ease, color 150ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-grp-refresh:hover {
+		background: var(--ss-accent-soft) !important;
+		color: var(--ss-accent-ink) !important;
+	}
+
+	/* ── body ── */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-statuses-body {
+		background: var(--ss-sheet) !important;
+		padding: 20px 24px 28px !important;
+	}
+
+	/* My status: a quiet hero strip */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-msb {
+		margin: 0 0 18px !important;
+		padding: 12px 14px !important;
+		border: 1px solid var(--ss-line) !important;
+		border-radius: 18px !important;
+		background:
+			radial-gradient(120% 140% at 0% 0%, var(--ss-accent-soft), transparent 60%),
+			var(--ss-sheet) !important;
+		box-shadow: none !important;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-msb {
+		background:
+			radial-gradient(120% 140% at 100% 0%, var(--ss-accent-soft), transparent 60%),
+			var(--ss-sheet) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-msb__me {
+		padding: 4px 12px 4px 4px !important;
+		border-radius: 16px !important;
+		transition: background-color 150ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-msb__me:hover {
+		background: var(--ss-hover) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-msb__title {
+		font-size: 16px !important;
+		font-weight: 700 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-msb__sub {
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-msb__chip {
+		border: 1px solid var(--ss-line) !important;
+		border-radius: 13px !important;
+		background: var(--ss-sheet) !important;
+		box-shadow: none !important;
+		transition: border-color 150ms ease, background-color 150ms ease, transform 150ms var(--ss-ease) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-msb__chip:hover {
+		border-color: var(--ss-accent-line) !important;
+		background: var(--ss-accent-soft) !important;
+		transform: translateY(-1px);
+	}
+
+	/* filters: outlined segments, same as the Chats tab */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-chips {
+		gap: 6px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-chip {
+		height: 34px !important;
+		padding: 0 12px !important;
+		border: 1px solid var(--ss-line-strong) !important;
+		border-radius: 10px !important;
+		background: transparent !important;
+		color: var(--ss-ink-2) !important;
+		font-size: 13px !important;
+		font-weight: 600 !important;
+		box-shadow: none !important;
+		transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-chip:hover {
+		background: var(--ss-hover) !important;
+		color: var(--ss-ink) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-chip.is-active,
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-chip[aria-pressed='true'] {
+		border-color: var(--ss-accent-line) !important;
+		background: var(--ss-accent-soft) !important;
+		color: var(--ss-accent-ink) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-chip > span:last-child {
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-chip:focus-visible {
+		outline: 2px solid var(--ss-accent) !important;
+		outline-offset: 2px;
+	}
+
+	/* section labels */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st__title {
+		color: var(--ss-ink-2) !important;
+		font-size: 12px !important;
+		font-weight: 700 !important;
+		letter-spacing: 0.06em !important;
+		text-transform: uppercase;
+	}
+
+	/* ── the story wall: an even grid of 9:16 cards ── */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st__grid {
+		grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important;
+		gap: 18px !important;
+		padding: 6px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card {
+		aspect-ratio: 9 / 16 !important;
+		min-height: 0 !important;
+		height: auto !important;
+		border-radius: 20px !important;
+		transition: transform 200ms var(--ss-ease), box-shadow 200ms ease !important;
+		animation: wa-ss-card 320ms var(--ss-ease) both;
+	}
+
+	/* the "Latest" card keeps its double width but the row's height, so the wall stays even
+	   (it was 4:5 and twice as tall, leaving a hole beside it) */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card.is-featured {
+		/* two 9:16 columns wide, one 9:16 card tall */
+		aspect-ratio: 9 / 8 !important;
+		height: auto !important;
+		min-height: 0 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card:nth-child(2) { animation-delay: 40ms; }
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card:nth-child(3) { animation-delay: 80ms; }
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card:nth-child(4) { animation-delay: 120ms; }
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card:nth-child(5) { animation-delay: 160ms; }
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card:nth-child(n + 6) { animation-delay: 200ms; }
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card:hover {
+		transform: translateY(-3px);
+	}
+
+	/* unseen: the WhatsApp story ring, drawn around the card */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card.is-unseen {
+		box-shadow:
+			0 0 0 2.5px var(--ss-sheet),
+			0 0 0 5px var(--ss-accent),
+			0 14px 28px -16px color-mix(in srgb, var(--ss-accent) 70%, transparent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card.is-unseen::after {
+		display: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card.is-viewed {
+		box-shadow:
+			0 0 0 2.5px var(--ss-sheet),
+			0 0 0 4px var(--ss-line-strong),
+			0 8px 20px -16px rgba(17, 27, 33, 0.4) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card:focus-visible {
+		outline: 3px solid var(--ss-accent) !important;
+		outline-offset: 6px;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card__media,
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card__shade {
+		border-radius: inherit !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card__bars {
+		top: 10px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card__avatar {
+		border-radius: 999px !important;
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 6px 14px -6px rgba(0, 0, 0, 0.45) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card__foot b {
+		font-size: 14px !important;
+		font-weight: 700 !important;
+		text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card__foot {
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card__new {
+		border: 2px solid rgba(255, 255, 255, 0.85) !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-st-card__flag {
+		border-radius: 8px !important;
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+	}
+
+	/* ── empty states (no stories / no history yet) ── */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-statuses-body .wa-dx__empty {
+		max-width: 420px;
+		margin: 48px auto !important;
+		padding: 32px 28px !important;
+		border: 1px dashed var(--ss-line-strong) !important;
+		border-radius: 20px !important;
+		background: color-mix(in srgb, var(--ss-field) 60%, transparent) !important;
+		animation: wa-ss-in 260ms var(--ss-ease) both;
+	}
+
+	/* history rows */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-history__row {
+		border-radius: 14px !important;
+		transition: background-color 140ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-history__row:hover {
+		background: var(--ss-hover) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-history__meta,
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-ss):not(#wa-ss2) .wa-story-history__badge {
+		font-variant-numeric: tabular-nums;
+	}
+}
+
+/* ═════════════════════ story viewer (WhatsApp page) ═════════════════════ */
+@media (min-width: 769px) {
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-viewer {
+		background: rgba(8, 12, 14, 0.86) !important;
+		backdrop-filter: blur(18px) saturate(1.2);
+		-webkit-backdrop-filter: blur(18px) saturate(1.2);
+		animation: wa-ss-fade 200ms ease both;
+	}
+
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-viewer__card {
+		overflow: hidden !important;
+		border-radius: 26px !important;
+		box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+		animation: wa-ss-pop 240ms var(--ss-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
+	}
+
+	/* progress: rounded segments */
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-viewer__progress {
+		top: 12px !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-viewer__progress > button > * {
+		height: 3.5px !important;
+		border-radius: 999px !important;
+	}
+
+	/* controls: one glass pill */
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-ctl {
+		width: 36px !important;
+		height: 36px !important;
+		border: 0 !important;
+		border-radius: 11px !important;
+		background: rgba(255, 255, 255, 0.12) !important;
+		color: #ffffff !important;
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		box-shadow: none !important;
+		transition: background-color 150ms ease, transform 150ms ease !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-ctl:hover {
+		background: rgba(255, 255, 255, 0.24) !important;
+		transform: translateY(-1px);
+	}
+
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-ctl:focus-visible {
+		outline: 2px solid #ffffff !important;
+		outline-offset: 2px;
+	}
+
+	/* reply bar */
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-composer {
+		background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.45)) !important;
+	}
+
+	/* the neighbours peeking at the sides */
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-peek__frame {
+		overflow: hidden !important;
+		border-radius: 20px !important;
+		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+		transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 220ms ease !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-peek:hover .wa-story-peek__frame {
+		transform: scale(1.03);
+	}
+}
+
+@keyframes wa-ss-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes wa-ss-card {
+	from {
+		opacity: 0;
+		transform: translateY(10px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes wa-ss-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes wa-ss-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.97);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-statuses-pane,
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-st-card,
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-viewer,
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-story-viewer__card,
+	html body .wa-web-desktop:not(#wa-ss):not(#wa-ss2) .wa-statuses-body .wa-dx__empty {
+		animation: none !important;
+	}
+}

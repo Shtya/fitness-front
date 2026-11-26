@@ -37,6 +37,8 @@ import {
 	X,
 } from 'lucide-react';
 import api from '@/utils/axios';
+import { waFontClasses } from './wa-fonts';
+import './wa-wallet-studio.css';
 
 const TRACKER_KEY = ['money', 'tracker'];
 const CONFIRM_DELETE_MS = 3000;
@@ -551,7 +553,7 @@ function Sheet({ open, ar, title, onClose, children }) {
 			{open ? (
 				<div
 					key="sheet"
-					className={`fixed inset-0 z-400 flex justify-center ${phone ? 'items-end' : 'items-center p-4'}`}
+					className={`${waFontClasses} wl-sheet fixed inset-0 z-400 flex justify-center ${phone ? 'items-end' : 'items-center p-4'}`}
 					role="dialog"
 					aria-modal="true"
 					aria-label={title}
@@ -2252,11 +2254,13 @@ function LedgerTable({
 	const td = 'border-t border-slate-100 px-3 py-3 align-middle first:ps-4 last:pe-4 dark:border-slate-800';
 
 	return (
-		<section ref={anchorRef} className={`${surfaceCard} scroll-mt-3 overflow-hidden`}>
-			<div className="flex flex-col gap-3 p-3 sm:p-4">
+		<section ref={anchorRef} className={`${surfaceCard} wl-ledger scroll-mt-3`}>
+			<div className="wl-ledger-head flex flex-col gap-3 p-3 sm:p-4">
 				<div className="flex items-end gap-3">
 					<div className="min-w-0 flex-1">
-						<h3 className="text-sm font-black text-slate-900 dark:text-white">{ar ? 'كل الحركات' : 'All entries'}</h3>
+						<h3 className="text-[15px] font-black text-slate-900 dark:text-white">
+							{type === 'all' ? (ar ? 'كل الحركات' : 'All entries') : ledgerTypeLabel(type, ar)}
+						</h3>
 						<p className="text-[11px] text-slate-400">
 							{type === 'gold' && gold?.holdings?.length
 									? formatGrams(gold.totalGrams, ar)
@@ -2313,7 +2317,7 @@ function LedgerTable({
 				<div
 					role="tablist"
 					aria-label={ar ? 'نوع الحركة' : 'Entry type'}
-					className="grid grid-cols-5 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800"
+					className="wl-tabs grid grid-cols-5 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800"
 				>
 					<div className="contents">
 						{tabs.map(([key, label, Icon, count]) => {
@@ -3056,7 +3060,8 @@ function BalanceHero({ ar, summary, pockets, forecast, goldValueNow, lentTotal, 
 	const nextOut = Number(forecast?.nextMonthOut) || 0;
 	const showForecast = nextIn > 0 || nextOut > 0;
 	const parts = [
-		{ key: 'cash', label: ar ? 'الرصيد' : 'Balance', value: Math.max(0, balance), swatch: 'bg-white' },
+		// Explicit white: the dark palette remaps `.wa-dk .bg-white` to a dark surface, which hid this slice.
+		{ key: 'cash', label: ar ? 'الرصيد' : 'Balance', value: Math.max(0, balance), swatch: 'bg-[#ffffff]' },
 		{ key: 'gold', label: ar ? 'دهب' : 'Gold', value: goldValueNow, swatch: 'bg-[#f2c94c]' },
 		{ key: 'lent', label: ar ? 'عند ناس' : 'Lent out', value: lentTotal, swatch: 'bg-[#8fd3ff]' },
 		{
@@ -3164,8 +3169,8 @@ function BalanceHero({ ar, summary, pockets, forecast, goldValueNow, lentTotal, 
 							>
 								<span className="flex items-center gap-1 text-[11.5px] font-semibold text-emerald-100/75 sm:gap-1.5">
 									<Icon size={13} className="shrink-0" aria-hidden />
-									<span className="truncate sm:hidden">{ar ? arShort : enShort}</span>
-									<span className="hidden truncate sm:inline">{ar ? arLabel : en}</span>
+									<span className="wl-pocket-short truncate sm:hidden">{ar ? arShort : enShort}</span>
+									<span className="wl-pocket-long hidden truncate sm:inline">{ar ? arLabel : en}</span>
 									<Pencil size={11} className="ms-auto hidden shrink-0 opacity-0 transition group-hover:opacity-70 sm:block" aria-hidden />
 								</span>
 								<MoneyFigure
@@ -3206,7 +3211,7 @@ function BalanceHero({ ar, summary, pockets, forecast, goldValueNow, lentTotal, 
 				</div>
 			) : null}
 
-			<div className="grid grid-cols-2 gap-x-2 px-3 pt-3 pb-2 sm:grid-cols-4 sm:px-5">
+			<div className="wl-parts grid grid-cols-2 gap-x-2 px-3 pt-3 pb-2 sm:grid-cols-4 sm:px-5">
 				{parts.map(part => {
 					const share = total > 0 ? Math.round((part.value / total) * 100) : 0;
 					return (
@@ -3495,11 +3500,46 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 
 	return (
 		<div
-			className={`wa-dk mx-auto flex w-full max-w-4xl flex-col gap-4 p-3 sm:gap-5 sm:p-4 md:p-6 ${
+			className={`wa-dk wl-root mx-auto flex w-full max-w-4xl flex-col gap-4 p-3 sm:gap-5 sm:p-4 md:p-6 lg:max-w-[1320px] ${
 				phone && onExit ? 'min-h-full pb-[max(24px,env(safe-area-inset-bottom))] pt-0' : 'pb-6'
 			}`}
 			dir={ar ? 'rtl' : 'ltr'}
 		>
+			{!phone ? (
+				<header className="wl-head flex flex-wrap items-center gap-x-4 gap-y-2">
+					<span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#0c4430] text-emerald-100 shadow-[0_10px_22px_-12px_rgba(6,40,27,0.9)] ring-1 ring-white/10 dark:bg-[#0a3a29]">
+						<Wallet size={20} aria-hidden="true" />
+					</span>
+					<div className="min-w-0 flex-1">
+						<h1 className="truncate text-[20px] font-black leading-tight tracking-[-0.01em] text-slate-900 dark:text-white">{ar ? 'محفظتي' : 'Wallet'}</h1>
+						<p className="truncate text-[12.5px] font-medium text-slate-500 dark:text-slate-400">
+							{new Date(`${today}T00:00:00`).toLocaleDateString(ar ? 'ar-EG' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+						</p>
+					</div>
+					{usdToEgp || gold?.quote?.perGram?.[21] ? (
+						<div className="flex flex-wrap items-center gap-2" aria-label={ar ? 'أسعار النهارده' : 'Today’s rates'}>
+							{usdToEgp ? (
+								<span className="wl-chip inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-3 text-[12.5px] font-bold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+									<Banknote size={14} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+									<span className="text-slate-400" dir="ltr">
+										$1 =
+									</span>
+									<span className="tabular-nums">{money(usdToEgp)}</span>
+									{data?.fx?.stale ? <span className="h-1.5 w-1.5 rounded-full bg-amber-400" title={ar ? 'سعر قديم' : 'Stale rate'} aria-hidden="true" /> : null}
+								</span>
+							) : null}
+							{gold?.quote?.perGram?.[21] ? (
+								<span className="wl-chip inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-3 text-[12.5px] font-bold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+									<Coins size={14} className="text-amber-500" aria-hidden="true" />
+									<span className="text-amber-600/80 dark:text-amber-300/80">21K</span>
+									<span className="tabular-nums">{money(gold.quote.perGram[21])}</span>
+									<span className="text-[11px] font-semibold text-slate-400">/{ar ? 'جم' : 'g'}</span>
+								</span>
+							) : null}
+						</div>
+					) : null}
+				</header>
+			) : null}
 			{phone && onExit ? (
 				<header className="sticky top-0 z-20 -mx-3 mb-1 flex items-center gap-2 border-b border-slate-200/80 bg-white/95 px-2 py-1.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90 sm:mx-0">
 					<button
@@ -3516,19 +3556,62 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 				</header>
 			) : null}
 			{trackerQuery.isLoading ? (
-				<div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
-					<Loader2 size={16} className="animate-spin" />
-					{ar ? 'جاري التحميل…' : 'Loading…'}
+				<div className="wl-desk" role="status" aria-busy="true" aria-label={ar ? 'جاري التحميل…' : 'Loading…'}>
+					<div className="wl-side flex flex-col gap-4 sm:gap-5">
+						<div className="relative h-[300px] overflow-hidden rounded-[30px] bg-[#0c4430]/90 dark:bg-[#0a3a29]">
+							<span className="wl-shimmer absolute inset-0" aria-hidden="true" />
+							<div className="space-y-3 p-6">
+								<span className="block h-3 w-28 rounded-full bg-white/15" />
+								<span className="block h-11 w-56 rounded-xl bg-white/20" />
+								<div className="grid grid-cols-3 gap-2 pt-2">
+									{[0, 1, 2].map(i => (
+										<span key={i} className="block h-14 rounded-2xl bg-white/10" />
+									))}
+								</div>
+							</div>
+						</div>
+						<div className={`${surfaceCard} grid grid-cols-4 gap-2 p-3`}>
+							{[0, 1, 2, 3].map(i => (
+								<span key={i} className="mx-auto block h-16 w-16 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
+							))}
+						</div>
+					</div>
+					<div className={`${surfaceCard} wl-main space-y-3 p-4`}>
+						<span className="block h-4 w-32 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+						<span className="block h-10 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+						{[0, 1, 2, 3, 4, 5].map(i => (
+							<div key={i} className="flex items-center gap-3 py-1.5">
+								<span className="h-9 w-9 shrink-0 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+								<span className="h-3.5 flex-1 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+								<span className="h-3.5 w-20 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+							</div>
+						))}
+					</div>
+					<span className="sr-only">{ar ? 'جاري التحميل…' : 'Loading…'}</span>
 				</div>
 			) : trackerQuery.isError ? (
-				<div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
-					<span>{apiError(trackerQuery.error, ar ? 'تعذر تحميل المحفظة' : 'Could not load your wallet')}</span>
-					<button type="button" onClick={() => trackerQuery.refetch()} className="font-bold underline">
+				<div
+					role="alert"
+					className={`${surfaceCard} mx-auto flex w-full max-w-lg flex-col items-center gap-3 px-6 py-10 text-center`}
+				>
+					<span className="grid h-14 w-14 place-items-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300">
+						<Wallet size={24} aria-hidden="true" />
+					</span>
+					<p className="text-[15px] font-black text-slate-900 dark:text-white">{ar ? 'تعذر تحميل المحفظة' : 'Could not load your wallet'}</p>
+					<p className="text-sm text-slate-500 dark:text-slate-400">{apiError(trackerQuery.error, ar ? 'تعذر تحميل المحفظة' : 'Could not load your wallet')}</p>
+					<button
+						type="button"
+						onClick={() => trackerQuery.refetch()}
+						disabled={trackerQuery.isFetching}
+						className="mt-1 inline-flex h-11 items-center gap-2 rounded-full bg-[#1DAB61] px-5 text-sm font-bold text-white shadow-[0_10px_20px_-12px_#1DAB61] transition hover:bg-[#189a57] active:scale-[0.98] disabled:opacity-60"
+					>
+						{trackerQuery.isFetching ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
 						{ar ? 'إعادة المحاولة' : 'Retry'}
 					</button>
 				</div>
 			) : (
-				<>
+				<div className="wl-desk">
+					<div className="wl-side flex flex-col gap-4 sm:gap-5">
 					<BalanceHero
 						ar={ar}
 						summary={summary}
@@ -3551,7 +3634,9 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 							setAddOpen(true);
 						}}
 					/>
+					</div>
 
+					<div className="wl-main min-w-0">
 					<LedgerTable
 						ar={ar}
 						money={money}
@@ -3571,7 +3656,8 @@ export default function WhatsAppWalletTab({ locale = 'en', onExit }) {
 						onMoneyRecurringChange={setMoneyRecurring}
 						onOpenRow={row => setOpenEntry({ type: row.type, id: row.id })}
 					/>
-				</>
+					</div>
+				</div>
 			)}
 
 			<BalanceSheet

@@ -1413,3 +1413,24 @@ html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits {
 		font-size: 14.5px;
 	}
 }
+
+/* the summary in the names column stays on one line now that the column is narrower */
+.tk-board.is-habits .hb-corner__txt b {
+	font-size: 17px !important;
+	white-space: nowrap !important;
+	line-height: 1.2;
+}
+.tk-board.is-habits .hb-corner__txt small {
+	font-size: 13.5px !important;
+	white-space: nowrap !important;
+}
+@container hb (max-width: 640px) {
+	.tk-board.is-habits .hb-corner__txt b {
+		font-size: 14px !important;
+		white-space: normal !important;
+	}
+	.tk-board.is-habits .hb-corner__txt small {
+		font-size: 12px !important;
+		white-space: normal !important;
+	}
+}

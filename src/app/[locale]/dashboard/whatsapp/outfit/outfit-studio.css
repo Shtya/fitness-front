@@ -1,0 +1,595 @@
+/*
+ * Outfit Matcher — "Atelier" layer, the Studio language of the other WhatsApp tabs.
+ *
+ * The tab sits on the tinted canvas; the header is a floating glass bar with a brand chip and a
+ * raised segmented switcher; every section is built from floating sheets with one depth and
+ * radius. Match reads as a lit fitting room (spotlight floor, glass piece rail, numbered steps
+ * in the accent), Closet as a gallery, Stylist as ranked looks, Plan as a 7-day strip.
+ * Popups (sheets, menus) share the same surface, header and footer rhythm.
+ *
+ * Presentation only. Loaded by WhatsAppOutfitTab after outfit.css, so it only ever applies on
+ * this tab. Only the --wa-ui-* tokens are used; garment colours stay data (inline --swatch).
+ */
+
+.wa-of {
+	--of-canvas: color-mix(in srgb, var(--d-wall, #f5f1eb) 62%, #e4ded4);
+	--of-sheet-shadow: 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 5%, transparent), 0 14px 34px -20px color-mix(in srgb, var(--wa-ui-text) 30%, transparent);
+	--of-lift: 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 6%, transparent), 0 18px 36px -18px color-mix(in srgb, var(--wa-ui-text) 34%, transparent);
+	--of-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--of-radius: 20px;
+	--of-radius-lg: 24px;
+	--of-accent-ring: 0 0 0 3px color-mix(in srgb, var(--wa-ui-accent) 24%, transparent);
+	background: var(--of-canvas);
+}
+html.dark .wa-of,
+html[data-theme-mode='dark'] .wa-of {
+	--of-canvas: #0d0e0e;
+	--of-sheet-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 16px 36px -20px rgba(0, 0, 0, 0.75);
+	--of-lift: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 36px -18px rgba(0, 0, 0, 0.8);
+}
+/* the WhatsApp main pane behind the tab takes the canvas too (no white seam while scrolling) */
+.wa-web-desktop[data-wa-tab='outfit'] .wa-web-main {
+	background: var(--of-canvas, color-mix(in srgb, var(--d-wall, #f5f1eb) 62%, #e4ded4));
+}
+html.dark .wa-web-desktop[data-wa-tab='outfit'] .wa-web-main {
+	background: #0d0e0e;
+}
+
+/* ═════════════════ header: floating glass bar ═════════════════ */
+.wa-of .wa-of-header {
+	margin: 12px 12px 0;
+	padding: 10px 12px 10px 14px;
+	padding-inline: 14px 10px;
+	border: 1px solid var(--wa-ui-border);
+	border-radius: 20px;
+	background: color-mix(in srgb, var(--wa-ui-surface) 84%, transparent);
+	box-shadow: var(--of-sheet-shadow);
+	-webkit-backdrop-filter: saturate(1.5) blur(16px);
+	backdrop-filter: saturate(1.5) blur(16px);
+	inset-block-start: 12px;
+}
+.wa-of .wa-of-brand {
+	display: grid;
+	place-items: center;
+	flex: none;
+	inline-size: 40px;
+	block-size: 40px;
+	border-radius: 13px;
+	color: #fff;
+	background: linear-gradient(145deg, color-mix(in srgb, var(--wa-ui-accent) 80%, #ffffff), var(--wa-ui-accent-strong, var(--wa-ui-accent)));
+	box-shadow: 0 8px 18px -10px var(--wa-ui-accent), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+html.dark .wa-of .wa-of-brand {
+	color: #0b141a;
+}
+.wa-of .wa-of-header-title h1 {
+	font-size: 17px;
+	font-weight: 800;
+	letter-spacing: -0.015em;
+	line-height: 1.2;
+}
+.wa-of .wa-of-header-title p {
+	font-size: 12.5px;
+	margin-block-start: 1px;
+}
+
+/* segmented switcher */
+.wa-of .wa-of-topnav {
+	padding: 4px;
+	gap: 2px;
+	background: color-mix(in srgb, var(--wa-ui-surface-2) 80%, transparent);
+	border-color: var(--wa-ui-border);
+	box-shadow: inset 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 5%, transparent);
+}
+.wa-of .wa-of-topnav .wa-of-navbtn {
+	min-block-size: 36px;
+	padding-inline: 14px;
+	transition: background-color 0.2s var(--of-ease), color 0.2s, box-shadow 0.2s;
+}
+.wa-of .wa-of-topnav .wa-of-navbtn[data-active] {
+	color: var(--wa-ui-accent-strong);
+	background: var(--wa-ui-surface);
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 10%, transparent), 0 6px 14px -8px color-mix(in srgb, var(--wa-ui-text) 30%, transparent);
+}
+/* the laundry dot sat on top of the Plan icon on desktop: pin it to the icon's corner */
+.wa-of .wa-of-topnav .wa-of-navicon {
+	position: relative;
+}
+.wa-of .wa-of-topnav .wa-of-dot {
+	inset-block-start: -3px;
+	inset-inline-end: -4px;
+	inline-size: 7px;
+	block-size: 7px;
+}
+
+/* settings popover */
+.wa-of .wa-of-menu {
+	border-radius: 18px;
+	padding: 6px;
+	box-shadow: var(--of-lift), 0 0 0 1px var(--wa-ui-border);
+	border: 0;
+	transform-origin: top right;
+	animation: wa-of-pop 0.18s var(--of-ease);
+}
+.wa-of[dir='rtl'] .wa-of-menu {
+	transform-origin: top left;
+}
+.wa-of .wa-of-menu-wide {
+	padding: 8px;
+	gap: 2px;
+}
+.wa-of .wa-of-menu .wa-of-toggle {
+	padding: 10px;
+	border-radius: 12px;
+	transition: background-color 0.15s;
+}
+.wa-of .wa-of-menu .wa-of-toggle:hover {
+	background: var(--wa-ui-hover);
+}
+.wa-of .wa-of-menu .wa-of-privacy {
+	margin: 4px 2px 2px;
+	border-radius: 12px;
+}
+
+/* ═════════════════ shared surfaces ═════════════════ */
+.wa-of .wa-of-main {
+	padding: 16px 12px 24px;
+}
+@media (min-width: 768px) {
+	.wa-of .wa-of-main {
+		padding: 14px 12px 24px;
+	}
+}
+/* section entrance: plays when you switch sections, not when data refreshes */
+.wa-of .wa-of-main > * {
+	animation: wa-of-enter 0.26s var(--of-ease) backwards;
+}
+
+.wa-of .wa-of-card,
+.wa-of .wa-of-disclosure,
+.wa-of .wa-of-day,
+.wa-of .wa-of-ocard {
+	border-radius: var(--of-radius);
+	border-color: var(--wa-ui-border);
+	box-shadow: var(--of-sheet-shadow);
+}
+.wa-of .wa-of-card {
+	padding: 18px;
+	gap: 14px;
+}
+.wa-of .wa-of-card-tight {
+	padding: 16px;
+}
+.wa-of .wa-of-card-title {
+	font-size: 15px;
+	letter-spacing: -0.01em;
+}
+/* numbered steps: solid accent badges */
+.wa-of .wa-of-step {
+	inline-size: 26px;
+	block-size: 26px;
+	background: var(--wa-ui-accent);
+	color: #fff;
+	box-shadow: 0 0 0 4px var(--wa-ui-accent-soft);
+	font-variant-numeric: tabular-nums;
+}
+html.dark .wa-of .wa-of-step {
+	color: #0b141a;
+}
+.wa-of .wa-of-empty {
+	border-radius: var(--of-radius);
+	padding: 48px 20px;
+	background:
+		radial-gradient(60% 80% at 50% 0%, var(--wa-ui-accent-soft), transparent 70%),
+		var(--wa-ui-surface);
+	box-shadow: var(--of-sheet-shadow);
+}
+
+/* buttons, chips, segments */
+.wa-of .wa-of-btn-primary {
+	background: linear-gradient(180deg, color-mix(in srgb, var(--wa-ui-accent) 88%, #ffffff), var(--wa-ui-accent));
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 10px 20px -12px var(--wa-ui-accent);
+}
+.wa-of .wa-of-btn-primary:hover:not(:disabled) {
+	background: linear-gradient(180deg, var(--wa-ui-accent), var(--wa-ui-accent-strong, var(--wa-ui-accent)));
+	transform: translateY(-1px);
+}
+.wa-of .wa-of-btn:not(.wa-of-btn-primary):not(.wa-of-btn-ghost):not(.wa-of-btn-danger) {
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 6%, transparent);
+}
+.wa-of .wa-of-chip[data-active] {
+	background: var(--wa-ui-accent-soft);
+	border-color: color-mix(in srgb, var(--wa-ui-accent) 45%, transparent);
+	color: var(--wa-ui-accent-strong);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wa-ui-accent) 25%, transparent);
+}
+.wa-of .wa-of-segment {
+	padding: 4px;
+	background: color-mix(in srgb, var(--wa-ui-surface) 70%, transparent);
+	box-shadow: var(--of-sheet-shadow);
+}
+.wa-of .wa-of-segment-btn {
+	transition: background-color 0.2s var(--of-ease), color 0.2s, box-shadow 0.2s;
+}
+.wa-of .wa-of-segment-btn[data-active] {
+	background: var(--wa-ui-surface);
+	color: var(--wa-ui-accent-strong);
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 10%, transparent), 0 6px 14px -8px color-mix(in srgb, var(--wa-ui-text) 30%, transparent), inset 0 0 0 1px var(--wa-ui-border);
+}
+.wa-of .wa-of-search {
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 5%, transparent);
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wa-of .wa-of-search:focus-within {
+	border-color: color-mix(in srgb, var(--wa-ui-accent) 55%, transparent);
+	box-shadow: var(--of-accent-ring);
+}
+.wa-of .wa-of-input:focus,
+.wa-of .wa-of-textarea:focus {
+	border-color: color-mix(in srgb, var(--wa-ui-accent) 55%, transparent);
+	box-shadow: var(--of-accent-ring);
+}
+.wa-of .wa-of-tile {
+	border-radius: 18px;
+	background: var(--wa-ui-surface);
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 5%, transparent);
+	transition: transform 0.18s var(--of-ease), box-shadow 0.18s, border-color 0.18s, background-color 0.18s;
+}
+.wa-of .wa-of-tile:hover:not(:disabled) {
+	transform: translateY(-2px);
+	border-color: color-mix(in srgb, var(--wa-ui-accent) 40%, transparent);
+	box-shadow: var(--of-lift);
+}
+.wa-of .wa-of-tile svg {
+	color: var(--wa-ui-accent-strong);
+}
+.wa-of .wa-of-tile:disabled svg {
+	color: inherit;
+}
+
+/* ═════════════════ Match: the fitting room ═════════════════ */
+.wa-of .wa-of-stage3d {
+	border-radius: var(--of-radius-lg);
+	border-color: var(--wa-ui-border);
+	box-shadow: var(--of-sheet-shadow);
+	background:
+		radial-gradient(46% 34% at 50% 88%, color-mix(in srgb, var(--wa-ui-text) 7%, transparent), transparent 70%),
+		radial-gradient(70% 60% at 50% 22%, var(--wa-ui-surface) 0%, transparent 70%),
+		linear-gradient(180deg, color-mix(in srgb, var(--wa-ui-surface) 92%, var(--wa-ui-accent)) 0%, var(--wa-ui-surface-2) 100%);
+}
+html.dark .wa-of .wa-of-stage3d {
+	background:
+		radial-gradient(46% 34% at 50% 88%, rgba(0, 0, 0, 0.35), transparent 70%),
+		radial-gradient(70% 60% at 50% 22%, color-mix(in srgb, var(--wa-ui-surface) 90%, #ffffff), transparent 70%),
+		linear-gradient(180deg, var(--wa-ui-surface) 0%, color-mix(in srgb, var(--wa-ui-surface-2) 80%, #000) 100%);
+}
+@media (min-width: 1024px) {
+	.wa-of .wa-of-studio-stage {
+		inset-block-start: 90px;
+	}
+	.wa-of .wa-of-stage3d {
+		block-size: calc(100dvh - 128px);
+	}
+}
+.wa-of .wa-of-piece-rail {
+	border-radius: 22px;
+	padding: 6px;
+	box-shadow: var(--of-lift);
+	background: color-mix(in srgb, var(--wa-ui-surface) 78%, transparent);
+	-webkit-backdrop-filter: saturate(1.5) blur(14px);
+	backdrop-filter: saturate(1.5) blur(14px);
+}
+.wa-of .wa-of-piece-btn {
+	transition: background-color 0.15s, transform 0.15s var(--of-ease);
+}
+.wa-of .wa-of-piece-btn:hover {
+	background: var(--wa-ui-hover);
+}
+.wa-of .wa-of-piece-btn[data-active],
+.wa-of .wa-of-piece-btn[aria-pressed='true'] {
+	background: var(--wa-ui-accent-soft);
+}
+.wa-of .wa-of-studio-panel .wa-of-card {
+	position: relative;
+}
+.wa-of .wa-of-pill-select {
+	transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+.wa-of .wa-of-pill-select:has(select:focus-visible) {
+	box-shadow: var(--of-accent-ring);
+}
+
+/* ═════════════════ Closet: a gallery ═════════════════ */
+.wa-of .wa-of-cat-row {
+	inset-block-start: 84px;
+	margin-inline: -12px;
+	padding-inline: 12px;
+	background: linear-gradient(var(--of-canvas) 78%, transparent);
+}
+.wa-of .wa-of-cat {
+	transition: background-color 0.18s var(--of-ease), color 0.18s, border-color 0.18s, box-shadow 0.18s;
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--wa-ui-text) 5%, transparent);
+}
+.wa-of .wa-of-cat:hover:not([data-active]) {
+	color: var(--wa-ui-text);
+	border-color: var(--wa-ui-border-strong);
+}
+.wa-of .wa-of-cat[data-active] {
+	background: var(--wa-ui-accent);
+	border-color: transparent;
+	color: #fff;
+	box-shadow: 0 8px 16px -10px var(--wa-ui-accent);
+}
+html.dark .wa-of .wa-of-cat[data-active] {
+	color: #0b141a;
+}
+.wa-of .wa-of-cat-count {
+	font-variant-numeric: tabular-nums;
+}
+/* edge-to-edge strips bleed by exactly the page padding (no sideways scroll) */
+.wa-of .wa-of-scroll-x {
+	margin-inline: -12px;
+	padding-inline: 12px;
+}
+@media (max-width: 767px) {
+	.wa-of .wa-of-scroll-x {
+		margin-inline: -10px;
+		padding-inline: 10px;
+	}
+}
+.wa-of .wa-of-grid {
+	gap: 14px;
+}
+.wa-of .wa-of-card-item {
+	border-radius: 18px;
+	box-shadow: var(--of-sheet-shadow);
+	transition: transform 0.22s var(--of-ease), box-shadow 0.22s;
+}
+.wa-of .wa-of-card-item:hover {
+	transform: translateY(-3px);
+	box-shadow: var(--of-lift);
+}
+.wa-of .wa-of-card-item .wa-of-itemimg {
+	position: relative;
+}
+/* a soft fold of light over colour-only tiles and photos */
+.wa-of .wa-of-card-item .wa-of-itemimg::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), transparent 40%, rgba(0, 0, 0, 0.06));
+}
+.wa-of .wa-of-card-item-text {
+	padding: 10px 12px 12px;
+}
+.wa-of .wa-of-status-badge {
+	backdrop-filter: blur(8px);
+	background: color-mix(in srgb, var(--wa-ui-surface) 88%, transparent);
+}
+.wa-of .wa-of-grid > li {
+	animation: wa-of-enter 0.28s var(--of-ease) backwards;
+}
+.wa-of .wa-of-grid > li:nth-child(2) { animation-delay: 20ms; }
+.wa-of .wa-of-grid > li:nth-child(3) { animation-delay: 40ms; }
+.wa-of .wa-of-grid > li:nth-child(4) { animation-delay: 60ms; }
+.wa-of .wa-of-grid > li:nth-child(5) { animation-delay: 80ms; }
+.wa-of .wa-of-grid > li:nth-child(6) { animation-delay: 100ms; }
+.wa-of .wa-of-grid > li:nth-child(7) { animation-delay: 120ms; }
+.wa-of .wa-of-grid > li:nth-child(n + 8) { animation-delay: 140ms; }
+
+/* item drawer & stats */
+.wa-of .wa-of-kpi {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ═════════════════ Stylist: ranked looks ═════════════════ */
+.wa-of .wa-of-cards {
+	gap: 16px;
+}
+.wa-of .wa-of-ocard {
+	border-radius: var(--of-radius-lg);
+	transition: transform 0.22s var(--of-ease), box-shadow 0.22s;
+}
+.wa-of .wa-of-ocard:hover {
+	box-shadow: var(--of-lift);
+}
+.wa-of .wa-of-ocard-collage {
+	gap: 6px;
+	padding: 6px;
+	background:
+		radial-gradient(80% 60% at 50% 0%, var(--wa-ui-surface), transparent 70%),
+		var(--wa-ui-surface-2);
+}
+.wa-of .wa-of-ocard-piece .wa-of-itemimg {
+	border-radius: 16px;
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wa-ui-text) 6%, transparent);
+}
+.wa-of .wa-of-ocard-piece figcaption {
+	inset-inline: 8px auto;
+	max-inline-size: calc(100% - 16px);
+	inset-block-end: 8px;
+	padding: 4px 10px;
+	box-shadow: 0 2px 8px -4px color-mix(in srgb, var(--wa-ui-text) 40%, transparent);
+}
+.wa-of .wa-of-ocard-body {
+	padding: 16px 18px 12px;
+}
+.wa-of .wa-of-ocard-title {
+	letter-spacing: -0.01em;
+	line-height: 1.35;
+}
+.wa-of .wa-of-ocard-actions {
+	border-block-start: 1px solid var(--wa-ui-border);
+}
+.wa-of .wa-of-score {
+	font-variant-numeric: tabular-nums;
+}
+.wa-of .wa-of-cards > li,
+.wa-of .wa-of-cards > article {
+	animation: wa-of-enter 0.3s var(--of-ease) backwards;
+}
+.wa-of .wa-of-cards > :nth-child(2) { animation-delay: 50ms; }
+.wa-of .wa-of-cards > :nth-child(3) { animation-delay: 100ms; }
+.wa-of .wa-of-cards > :nth-child(n + 4) { animation-delay: 140ms; }
+
+/* chat */
+.wa-of .wa-of-bubble {
+	border-radius: 18px;
+}
+.wa-of .wa-of-bubble-me {
+	box-shadow: 0 6px 14px -10px var(--wa-ui-accent);
+}
+.wa-of .wa-of-chat-input {
+	border-radius: 999px;
+	box-shadow: var(--of-sheet-shadow);
+}
+
+/* ═════════════════ Plan: a 7-day strip ═════════════════ */
+@media (min-width: 1280px) {
+	.wa-of .wa-of-week {
+		grid-template-columns: repeat(7, minmax(0, 1fr));
+	}
+}
+.wa-of .wa-of-week {
+	gap: 12px;
+}
+.wa-of .wa-of-day {
+	padding: 12px;
+	transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s var(--of-ease);
+}
+.wa-of .wa-of-week > .wa-of-day:first-child {
+	border-color: color-mix(in srgb, var(--wa-ui-accent) 45%, transparent);
+	box-shadow: var(--of-sheet-shadow), inset 0 3px 0 var(--wa-ui-accent);
+}
+.wa-of .wa-of-week > .wa-of-day:first-child .wa-of-day-name {
+	color: var(--wa-ui-accent-strong);
+}
+.wa-of .wa-of-day[data-drop] {
+	transform: translateY(-2px);
+	box-shadow: var(--of-lift), var(--of-accent-ring);
+}
+.wa-of .wa-of-day-empty {
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--wa-ui-surface-2) 70%, transparent);
+	transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+}
+.wa-of .wa-of-day-empty:hover {
+	border-color: color-mix(in srgb, var(--wa-ui-accent) 55%, transparent);
+	color: var(--wa-ui-accent-strong);
+	background: var(--wa-ui-accent-soft);
+}
+
+/* ═════════════════ sheets (all popups) ═════════════════ */
+.wa-of-sheet-wrap {
+	-webkit-backdrop-filter: blur(3px);
+	backdrop-filter: blur(3px);
+}
+.wa-of-sheet {
+	box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--wa-ui-border);
+}
+@media (min-width: 768px) {
+	.wa-of-sheet {
+		border-radius: 24px;
+		animation: wa-of-pop 0.22s var(--of-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+	}
+}
+.wa-of-sheet .wa-of-sheet-head {
+	padding-block: 16px 12px;
+}
+.wa-of-sheet .wa-of-sheet-title {
+	font-size: 16.5px;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+}
+.wa-of-sheet .wa-of-sheet-foot {
+	background: color-mix(in srgb, var(--wa-ui-surface) 94%, transparent);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+}
+
+/* ═════════════════ phone ═════════════════ */
+@media (max-width: 767px) {
+	.wa-of .wa-of-header {
+		margin: 8px 8px 0;
+		inset-block-start: 8px;
+		padding-block: 8px;
+		border-radius: 18px;
+	}
+	.wa-of .wa-of-brand {
+		inline-size: 34px;
+		block-size: 34px;
+		border-radius: 11px;
+	}
+	.wa-of .wa-of-main {
+		padding: 12px 10px 20px;
+	}
+	.wa-of .wa-of-cat-row {
+		inset-block-start: 66px;
+		margin-inline: -10px;
+		padding-inline: 10px;
+	}
+	/* floating tab bar */
+	.wa-of[data-phone] {
+		padding-block-end: calc(var(--of-nav-h) + 20px + env(safe-area-inset-bottom));
+	}
+	.wa-of .wa-of-bottomnav {
+		inset-inline: 10px;
+		inset-block-end: calc(10px + env(safe-area-inset-bottom));
+		block-size: var(--of-nav-h);
+		padding: 0 4px;
+		border: 1px solid var(--wa-ui-border);
+		border-radius: 22px;
+		background: color-mix(in srgb, var(--wa-ui-surface) 86%, transparent);
+		box-shadow: var(--of-lift);
+	}
+	.wa-of .wa-of-bottomnav .wa-of-navicon {
+		transition: background-color 0.2s var(--of-ease), transform 0.2s var(--of-ease);
+	}
+	.wa-of .wa-of-bottomnav .wa-of-navbtn[data-active] .wa-of-navicon {
+		transform: translateY(-1px);
+	}
+	.wa-of .wa-of-card {
+		padding: 16px;
+	}
+	/* the add button clears the floating tab bar */
+	.wa-of .wa-of-fab-add {
+		inset-block-end: calc(var(--of-nav-h) + 26px + env(safe-area-inset-bottom));
+		border-radius: 18px;
+	}
+}
+
+@keyframes wa-of-enter {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes wa-of-pop {
+	from {
+		opacity: 0;
+		transform: translateY(4px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-of .wa-of-main > *,
+	.wa-of .wa-of-grid > li,
+	.wa-of .wa-of-cards > *,
+	.wa-of .wa-of-menu,
+	.wa-of-sheet {
+		animation: none !important;
+	}
+	.wa-of :is(.wa-of-card-item, .wa-of-tile, .wa-of-btn-primary, .wa-of-day, .wa-of-ocard):hover,
+	.wa-of .wa-of-day[data-drop] {
+		transform: none !important;
+	}
+}

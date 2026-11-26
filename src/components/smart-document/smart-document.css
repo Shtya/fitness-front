@@ -548,6 +548,49 @@
 	gap: 4px;
 }
 
+/* Same focus timer as Habits, sized to this bar. */
+.sd-chrome-timer {
+	display: inline-flex;
+	align-items: center;
+	margin-inline-end: 4px;
+}
+.sd-chrome-timer .ht {
+	--ht-accent: var(--sd-accent, #1d6b40);
+	--ht-ink: var(--sd-ink, #191a18);
+	--ht-ink-2: var(--sd-muted, #667781);
+	--ht-card: var(--sd-surface, #fff);
+	--ht-line: var(--sd-line, rgba(11, 20, 26, 0.08));
+}
+.sd-chrome-timer .hb-toolbtn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	height: 34px;
+	min-inline-size: 34px;
+	padding: 0 10px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--sd-ink-2);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 650;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+}
+.sd-chrome-timer .hb-toolbtn:hover,
+.sd-chrome-timer .hb-toolbtn.is-on,
+.sd-chrome-timer .hb-toolbtn.is-active {
+	color: var(--sd-ink);
+	background: var(--sd-hover);
+}
+.sd-chrome-timer .hb-toolbtn.is-done {
+	background: linear-gradient(180deg, #ffb547, #f08c1a);
+	color: #fff;
+}
+
 .sd-tool-group {
 	display: inline-flex;
 	align-items: center;

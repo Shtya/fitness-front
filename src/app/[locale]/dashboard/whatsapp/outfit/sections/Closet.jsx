@@ -40,6 +40,22 @@ export default function Closet() {
 	const [limit, setLimit] = useState(PAGE);
 	const sentinel = useRef(null);
 	const importRef = useRef(null);
+	const menuRef = useRef(null);
+
+	// The more menu closes on an outside tap or Escape, like the settings menu in the header.
+	useEffect(() => {
+		if (!menuOpen) return undefined;
+		const close = event => {
+			if (!menuRef.current?.contains(event.target)) setMenuOpen(false);
+		};
+		const esc = event => event.key === 'Escape' && setMenuOpen(false);
+		document.addEventListener('pointerdown', close);
+		document.addEventListener('keydown', esc);
+		return () => {
+			document.removeEventListener('pointerdown', close);
+			document.removeEventListener('keydown', esc);
+		};
+	}, [menuOpen]);
 
 	const activeFilterCount = Object.entries(filters).reduce((n, [, v]) => n + (Array.isArray(v) ? v.length : v ? 1 : 0), 0);
 	const visible = useMemo(() => {
@@ -128,7 +144,7 @@ export default function Closet() {
 					<BarChart3 size={17} aria-hidden="true" />
 					<span className="wa-of-hide-sm">{t('closet.insights')}</span>
 				</button>
-				<div className="wa-of-menu-wrap">
+				<div className="wa-of-menu-wrap" ref={menuRef}>
 					<button type="button" className="wa-of-icon-btn" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(v => !v)} aria-label={t('closet.more')}>
 						<MoreHorizontal size={19} aria-hidden="true" />
 					</button>

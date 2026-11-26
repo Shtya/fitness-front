@@ -776,18 +776,30 @@ export default function ReadingView({ book: initialBook, onBack }) {
 		};
 	}, [selectionMenu]);
 
+	// Seeding the default prompts saves them, which notifies the reading store's listeners
+	// (ReadingHub re-reads its books). Doing that inside render made React warn "Cannot update a
+	// component while rendering a different component", so seed after render and keep the list here.
+	const [memorizePromptList, setMemorizePromptList] = useState([]);
+	const [polishPromptList, setPolishPromptList] = useState([]);
+	useEffect(() => {
+		setMemorizePromptList(ensureDefaultMemorizePrompt());
+	}, [memorize?.promptId, book.id]);
+	useEffect(() => {
+		setPolishPromptList(ensureDefaultPolishPrompt());
+	}, [polish?.promptId, book.id]);
+
 	const favoritePrompts = useMemo(() => {
-		const all = ensureDefaultMemorizePrompt();
+		const all = memorizePromptList;
 		const favs = all.filter(p => p.favorite);
 		const pool = favs.length ? favs : all;
 		return pool;
-	}, [memorize?.promptId, book.id]);
+	}, [memorizePromptList]);
 
 	const polishPrompts = useMemo(() => {
-		const all = ensureDefaultPolishPrompt();
+		const all = polishPromptList;
 		const favs = all.filter(p => p.favorite);
 		return favs.length ? favs : all;
-	}, [polish?.promptId, book.id]);
+	}, [polishPromptList]);
 
 	const openMemorize = (text = selectionMenu?.text) => {
 		if (!text || text.trim().length < 20) return;

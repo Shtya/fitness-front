@@ -1,0 +1,219 @@
+/*
+ * Reading Room inside WhatsApp — the "Studio" language of the other WhatsApp tabs.
+ *
+ * The room (Home · Library · Add · Review) and the reader float as one sheet on the tinted
+ * canvas. The header becomes a glass bar with an accent brand chip, the section switcher a
+ * raised segmented control, and cards/buttons/fields get one consistent depth, radius and
+ * focus ring. The reader keeps its own paper theme (the reader's Appearance settings own
+ * those colours); only its frame and chrome are touched.
+ *
+ * Presentation only. Scoped to data-wa-tab='reading' on the WhatsApp root, so the /ai-studio
+ * routes that share these components are untouched. Colours are the room's own tokens.
+ */
+
+.wa-web-desktop[data-wa-tab='reading'] {
+	--rd-canvas: color-mix(in srgb, var(--d-wall, #f5f1eb) 62%, #e4ded4);
+	--rd-ring: 0 0 0 3px color-mix(in srgb, var(--rr-accent, #1f6f5c) 22%, transparent);
+	--rd-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--rd-sheet-shadow: 0 1px 2px rgba(29, 28, 26, 0.05), 0 18px 40px -22px rgba(29, 28, 26, 0.32);
+	--rd-lift: 0 1px 2px rgba(29, 28, 26, 0.05), 0 14px 30px -16px rgba(29, 28, 26, 0.3);
+}
+
+html.dark .wa-web-desktop[data-wa-tab='reading'],
+html[data-theme-mode='dark'] .wa-web-desktop[data-wa-tab='reading'] {
+	--rd-canvas: #0d0e0e;
+	--rd-sheet-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 16px 38px -20px rgba(0, 0, 0, 0.75);
+	--rd-lift: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 16px 32px -18px rgba(0, 0, 0, 0.8);
+}
+
+/* ═════════════════ room: shared polish (all widths) ═════════════════ */
+
+/* header: glass bar */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr > header {
+	background: color-mix(in srgb, var(--rr-bg) 78%, transparent) !important;
+	border-color: var(--rr-line) !important;
+	-webkit-backdrop-filter: saturate(1.4) blur(14px);
+	backdrop-filter: saturate(1.4) blur(14px);
+}
+
+/* brand chip: the room's accent instead of a black tile */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr > header span.grid.size-9 {
+	background: linear-gradient(145deg, color-mix(in srgb, var(--rr-accent) 82%, #ffffff), var(--rr-accent)) !important;
+	color: var(--rr-accent-ink) !important;
+	box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--rr-accent) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+/* section switcher: raised segmented control */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-tabs {
+	padding: 4px;
+	gap: 2px;
+	background: color-mix(in srgb, var(--rr-sunken) 85%, transparent);
+	box-shadow: inset 0 0 0 1px var(--rr-line);
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-tab {
+	height: 34px;
+	font-weight: 600;
+	transition: color 0.18s var(--rd-ease);
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-tab[aria-current='page'] {
+	color: var(--rr-accent);
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-tab-pill {
+	background: var(--rr-surface);
+	box-shadow: 0 1px 2px rgba(29, 28, 26, 0.08), 0 4px 12px -6px rgba(29, 28, 26, 0.22), 0 0 0 1px var(--rr-line);
+}
+
+/* notebook: a quiet outlined pill */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr > header .rr-btn-ghost {
+	border: 1px solid var(--rr-line-strong);
+	background: var(--rr-surface);
+	box-shadow: var(--rr-shadow-sm);
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr > header .rr-btn-ghost:hover {
+	border-color: color-mix(in srgb, var(--rr-accent) 40%, transparent);
+	color: var(--rr-accent);
+}
+
+/* cards: one depth, one radius */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-card {
+	border-radius: 20px;
+	border-color: var(--rr-line);
+	box-shadow: var(--rd-lift);
+}
+
+/* buttons */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-btn-primary {
+	background: linear-gradient(180deg, color-mix(in srgb, var(--rr-accent) 88%, #ffffff), var(--rr-accent));
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 18px -10px color-mix(in srgb, var(--rr-accent) 85%, transparent);
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-btn-primary:hover:not(:disabled) {
+	transform: translateY(-1px);
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 12px 22px -10px color-mix(in srgb, var(--rr-accent) 90%, transparent);
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr :is(.rr-btn, .rr-icon-btn, .rr-tab, .rr-field, .rr-choice, .rr-book):focus-visible {
+	outline: none;
+	box-shadow: var(--rd-ring) !important;
+}
+
+/* fields */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-field {
+	border-radius: 14px;
+	transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-field:focus,
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-field:focus-within {
+	border-color: color-mix(in srgb, var(--rr-accent) 55%, transparent);
+	box-shadow: var(--rd-ring);
+}
+
+/* Add: source choices read as selectable tiles */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-choice {
+	border-radius: 16px;
+	transition: border-color 0.15s, box-shadow 0.18s var(--rd-ease), transform 0.18s var(--rd-ease), background-color 0.15s;
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-choice:hover {
+	transform: translateY(-1px);
+	box-shadow: var(--rd-lift);
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-choice[aria-pressed='true'],
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-choice[aria-checked='true'] {
+	background: color-mix(in srgb, var(--rr-accent) 6%, var(--rr-surface));
+	box-shadow: 0 0 0 1px var(--rr-accent), 0 10px 24px -16px color-mix(in srgb, var(--rr-accent) 70%, transparent);
+}
+
+/* shelf/library books: a touch more lift on hover */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-book {
+	border-radius: 14px;
+	transition: transform 0.25s var(--rd-ease), filter 0.25s;
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-book:hover {
+	transform: translateY(-3px);
+}
+
+/* main scroller: thin accent scrollbar inset from the corners */
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-main {
+	scrollbar-width: thin;
+	scrollbar-color: color-mix(in srgb, var(--rr-accent) 40%, transparent) transparent;
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-main::-webkit-scrollbar {
+	width: 10px;
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-main::-webkit-scrollbar-track {
+	background: transparent;
+	margin-block: 14px;
+}
+html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-main::-webkit-scrollbar-thumb {
+	border: 3px solid transparent;
+	border-radius: 999px;
+	background: linear-gradient(180deg, color-mix(in srgb, var(--rr-accent) 55%, transparent), color-mix(in srgb, var(--rr-accent) 30%, transparent)) padding-box;
+}
+
+/* ═════════════════ desktop: sheet on canvas ═════════════════ */
+@media (min-width: 769px) {
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .wa-web-workspace,
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .wa-web-main,
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .wa-desktop-rail {
+		border: 0 !important;
+		background: var(--rd-canvas) !important;
+		box-shadow: none !important;
+	}
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .wa-reading-pane {
+		padding: 12px;
+		padding-inline-start: 2px;
+		background: var(--rd-canvas) !important;
+	}
+	/* the sheet: the room, or the reader when a book is open */
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .wa-reading-pane > .ai-reading-root {
+		position: relative;
+		overflow: hidden;
+		border: 1px solid var(--rr-line, rgba(29, 28, 26, 0.09));
+		border-radius: 22px;
+		background: var(--rr-bg, #f7f5f0);
+		box-shadow: var(--rd-sheet-shadow);
+		isolation: isolate;
+	}
+	/* the reader paints its own paper; let it fill the sheet's rounded corners */
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .wa-reading-pane > .ai-reading-root > .ai-reading-root {
+		border-radius: inherit;
+	}
+	/* reader chrome: the top bar reads as glass over the paper */
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .wa-reading-pane > .ai-reading-root > .ai-reading-root > .absolute.inset-x-0.top-0 > div {
+		-webkit-backdrop-filter: saturate(1.3) blur(12px);
+		backdrop-filter: saturate(1.3) blur(12px);
+	}
+
+	/* header and content breathe a little more inside the sheet */
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr > header {
+		border-bottom-width: 1px;
+	}
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr > header > div {
+		padding-top: 14px !important;
+		padding-bottom: 14px !important;
+	}
+}
+
+/* ═════════════════ phone ═════════════════ */
+@media (max-width: 768px) {
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-tabs {
+		border-radius: 14px;
+	}
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-tab,
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-tab-pill {
+		border-radius: 11px;
+	}
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr-tab {
+		min-height: 40px;
+	}
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) .rr .rr-card {
+		border-radius: 18px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) :is(.rr-btn, .rr-choice, .rr-book, .rr-tab, .rr-field) {
+		transition: none !important;
+	}
+	html body .wa-web-desktop[data-wa-tab='reading']:not(#wa-rd):not(#wa-rd2) :is(.rr-btn-primary, .rr-choice, .rr-book):hover {
+		transform: none !important;
+	}
+}

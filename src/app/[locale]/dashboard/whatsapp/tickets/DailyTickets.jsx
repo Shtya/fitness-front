@@ -390,6 +390,12 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const [hideSaveError, setHideSaveError] = useState(false);
 	const [opened, setOpened] = useState(null); // { id, focus }
 	const composerInput = useRef(null);
+	// Wall: the composer stays tucked away behind the header "Add ticket" button until asked for.
+	const [composerOpen, setComposerOpen] = useState(Boolean(focusComposer));
+	const openComposer = () => {
+		setComposerOpen(true);
+		window.setTimeout(() => composerInput.current?.focus(), 0);
+	};
 	const listRef = useRef(null);
 
 	const [hideDone, setHideDone] = useState(false);
@@ -559,6 +565,17 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 				</div>
 				<div className="tk-board__tools">
 					{view === 'wall' ? (
+						<button
+							type="button"
+							className={`tk-add-open hb-toolbtn is-primary${composerOpen ? ' is-on' : ''}`}
+							aria-expanded={composerOpen}
+							onClick={() => (composerOpen ? setComposerOpen(false) : openComposer())}
+						>
+							{composerOpen ? <X size={18} aria-hidden /> : <Plus size={18} aria-hidden />}
+							<span>{t.add}</span>
+						</button>
+					) : null}
+					{view === 'wall' ? (
 <button
 						type="button"
 						className={`tk-hide-done${hideDone ? ' is-on' : ''}`}
@@ -593,7 +610,8 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 				</div>
 			) : null}
 
-			{view === 'wall' ? (
+			{view === 'wall' && composerOpen ? (
+			<div className="tk-composer-drawer" onKeyDown={event => { if (event.key === 'Escape') setComposerOpen(false); }}>
 			<Composer
 				ar={ar}
 				inputRef={composerInput}
@@ -604,6 +622,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 					setFreshId(created.id);
 				}}
 			/>
+			</div>
 			) : null}
 
 			{view === 'wall' && hideDone && hiddenCount && !visible.length ? (
@@ -628,7 +647,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 						onDelete={onDelete}
 						canDrag
 						onReorder={commitOrder}
-						onAddRequest={() => composerInput.current?.focus()}
+						onAddRequest={openComposer}
 						showAdd
 					/>
 				) : (

@@ -1,0 +1,881 @@
+/*
+ * Typing log, Groups and Accounts — the "Studio" language of the Chats and Statuses tabs.
+ *
+ * Each tab sits on the same tinted canvas as one (or two) floating sheets. Typing log turns
+ * its filter chips into a status strip (a coloured dot per meaning, the count in tabular
+ * figures), and its table into calm rows whose status reads by colour at a glance. Groups is
+ * a list sheet beside a detail sheet, like the Chats tab. Accounts is a numbers sheet beside a
+ * detail sheet whose connection banner takes the account's status colour.
+ *
+ * Presentation only; scoped to data-wa-tab on the WhatsApp root (desktop, ≥769px).
+ */
+
+.wa-web-desktop:is([data-wa-tab='typing'], [data-wa-tab='groups'], [data-wa-tab='accounts']) {
+	--op-canvas: color-mix(in srgb, var(--d-wall, #f5f1eb) 62%, #e4ded4);
+	--op-sheet: var(--d-app, #ffffff);
+	--op-line: color-mix(in srgb, var(--d-text, #111b21) 8%, transparent);
+	--op-line-strong: color-mix(in srgb, var(--d-text, #111b21) 13%, transparent);
+	--op-ink: var(--d-text, #111b21);
+	--op-ink-2: var(--d-text-2, #667781);
+	--op-field: var(--d-field, #f6f5f4);
+	--op-hover: color-mix(in srgb, var(--d-text, #111b21) 4%, transparent);
+	--op-accent: var(--d-accent, #1daa61);
+	--op-accent-ink: var(--d-accent-text, #1b8755);
+	--op-accent-soft: color-mix(in srgb, var(--d-accent, #1daa61) 11%, transparent);
+	--op-accent-line: color-mix(in srgb, var(--d-accent, #1daa61) 38%, transparent);
+	--op-shadow: 0 1px 2px rgba(17, 27, 33, 0.05), 0 12px 32px -18px rgba(17, 27, 33, 0.28);
+	--op-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+	/* status meanings (unchanged hues: live green, waiting amber, sent blue, none red) */
+	--op-live: #1daa61;
+	--op-wait: #d98a14;
+	--op-sent: #2f6fd6;
+	--op-none: #d1343a;
+}
+
+html.dark .wa-web-desktop:is([data-wa-tab='typing'], [data-wa-tab='groups'], [data-wa-tab='accounts']),
+html[data-theme-mode='dark'] .wa-web-desktop:is([data-wa-tab='typing'], [data-wa-tab='groups'], [data-wa-tab='accounts']) {
+	--op-canvas: #0d0e0e;
+	--op-line: rgba(255, 255, 255, 0.06);
+	--op-line-strong: rgba(255, 255, 255, 0.1);
+	--op-hover: rgba(255, 255, 255, 0.04);
+	--op-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 14px 34px -18px rgba(0, 0, 0, 0.7);
+	--op-wait: #f0a93a;
+	--op-sent: #6ea0f2;
+	--op-none: #ff7b80;
+}
+
+@media (min-width: 769px) {
+	/* ═════════════════ canvas ═════════════════ */
+	html body .wa-web-desktop:is([data-wa-tab='typing'], [data-wa-tab='groups'], [data-wa-tab='accounts']):not(#wa-op):not(#wa-op2) .wa-web-workspace,
+	html body .wa-web-desktop:is([data-wa-tab='typing'], [data-wa-tab='groups'], [data-wa-tab='accounts']):not(#wa-op):not(#wa-op2) .wa-web-main,
+	html body .wa-web-desktop:is([data-wa-tab='typing'], [data-wa-tab='groups'], [data-wa-tab='accounts']):not(#wa-op):not(#wa-op2) .wa-desktop-rail {
+		border: 0 !important;
+		background: var(--op-canvas) !important;
+		box-shadow: none !important;
+	}
+
+	/* the shared sheet look */
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl:not(.wa-tl-panel),
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-side,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main,
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-side,
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-main {
+		overflow: hidden !important;
+		border: 1px solid var(--op-line) !important;
+		border-radius: 20px !important;
+		background: var(--op-sheet) !important;
+		background-clip: padding-box !important;
+		box-shadow: var(--op-shadow) !important;
+		animation: wa-op-in 280ms var(--op-ease) both;
+	}
+
+	/* ═════════════════ TYPING LOG ═════════════════ */
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl:not(.wa-tl-panel) {
+		margin: 10px !important;
+		height: calc(100% - 20px) !important;
+		overflow-y: auto !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-head {
+		padding: 20px 24px 6px !important;
+		border: 0 !important;
+		background: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-head__icon {
+		width: 44px !important;
+		height: 44px !important;
+		border-radius: 14px !important;
+		background: linear-gradient(160deg, color-mix(in srgb, var(--op-accent) 88%, #ffffff), var(--op-accent-ink)) !important;
+		color: #ffffff !important;
+		box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--op-accent) 80%, transparent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-head__title h2,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-head__title h1 {
+		color: var(--op-ink) !important;
+		font-size: 24px !important;
+		font-weight: 800 !important;
+		letter-spacing: -0.025em !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-head__title p {
+		color: var(--op-ink-2) !important;
+		font-size: 13px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-window {
+		height: 40px !important;
+		border: 1px solid var(--op-line) !important;
+		border-radius: 12px !important;
+		background: var(--op-field) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-window input {
+		border-radius: 9px !important;
+		background: var(--op-sheet) !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-iconbtn {
+		width: 40px !important;
+		height: 40px !important;
+		border: 0 !important;
+		border-radius: 12px !important;
+		background: var(--op-field) !important;
+		transition: background-color 150ms ease, color 150ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-iconbtn:hover {
+		background: var(--op-accent-soft) !important;
+		color: var(--op-accent-ink) !important;
+	}
+
+	/* status strip: each filter is a tile with its meaning's dot and a big count */
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chips {
+		display: grid !important;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		gap: 10px !important;
+		padding: 14px 24px 10px !important;
+		border: 0 !important;
+		background: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip {
+		--dot: var(--op-ink-2);
+		position: relative;
+		display: flex !important;
+		height: auto !important;
+		min-height: 64px;
+		flex-direction: row-reverse !important;
+		align-items: center !important;
+		justify-content: space-between !important;
+		gap: 10px !important;
+		padding: 12px 14px 12px 30px !important;
+		border: 1px solid var(--op-line) !important;
+		border-radius: 16px !important;
+		background: var(--op-sheet) !important;
+		color: var(--op-ink-2) !important;
+		font-size: 13px !important;
+		font-weight: 600 !important;
+		text-align: start;
+		box-shadow: none !important;
+		transition: border-color 160ms ease, background-color 160ms ease, transform 160ms var(--op-ease), box-shadow 160ms ease !important;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip {
+		padding: 12px 30px 12px 14px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip::before {
+		content: '';
+		position: absolute;
+		inset-inline-start: 14px;
+		top: 50%;
+		width: 8px;
+		height: 8px;
+		margin-top: -4px;
+		border-radius: 999px;
+		background: var(--dot);
+		box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot) 16%, transparent);
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip.is-all { --dot: var(--op-accent); }
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip.is-typing { --dot: var(--op-live); }
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip.is-waiting { --dot: var(--op-wait); }
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip.is-sent { --dot: var(--op-sent); }
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip.is-no_message { --dot: var(--op-none); }
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip > span:last-child,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip > b,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip > small {
+		min-width: 0 !important;
+		height: auto !important;
+		padding: 0 !important;
+		border: 0 !important;
+		background: transparent !important;
+		color: var(--op-ink) !important;
+		font-size: 22px !important;
+		font-weight: 800 !important;
+		line-height: 1 !important;
+		letter-spacing: -0.02em;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip:hover {
+		border-color: color-mix(in srgb, var(--dot) 40%, transparent) !important;
+		transform: translateY(-1px);
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip.is-on {
+		border-color: color-mix(in srgb, var(--dot) 55%, transparent) !important;
+		background: color-mix(in srgb, var(--dot) 8%, var(--op-sheet)) !important;
+		color: var(--op-ink) !important;
+		box-shadow: 0 10px 22px -16px color-mix(in srgb, var(--dot) 80%, transparent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip:focus-visible {
+		outline: 2px solid var(--dot) !important;
+		outline-offset: 2px;
+	}
+
+	/* toolbar */
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-toolbar {
+		gap: 10px !important;
+		padding: 4px 24px 14px !important;
+		border: 0 !important;
+		background: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-search,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chat {
+		height: 42px !important;
+		border: 1px solid transparent !important;
+		border-radius: 12px !important;
+		background: var(--op-field) !important;
+		box-shadow: none !important;
+		transition: border-color 160ms ease, box-shadow 200ms ease, background-color 160ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-search:focus-within,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chat:focus-within {
+		border-color: var(--op-accent-line) !important;
+		background: var(--op-sheet) !important;
+		box-shadow: 0 0 0 4px var(--op-accent-soft) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-search input,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chat select {
+		border: 0 !important;
+		outline: none !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-seg {
+		height: 42px !important;
+		padding: 3px !important;
+		border: 0 !important;
+		border-radius: 12px !important;
+		background: var(--op-field) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-seg button {
+		height: 36px !important;
+		border: 0 !important;
+		border-radius: 9px !important;
+		color: var(--op-ink-2) !important;
+		font-weight: 600 !important;
+		transition: background-color 150ms ease, color 150ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-seg button:is(.is-on, [aria-pressed='true'], [aria-selected='true']) {
+		background: var(--op-sheet) !important;
+		color: var(--op-ink) !important;
+		box-shadow: 0 1px 2px rgba(17, 27, 33, 0.12) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-dates {
+		border-radius: 12px !important;
+	}
+
+	/* the table */
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-body {
+		padding: 0 24px 24px !important;
+		background: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-table {
+		overflow: hidden;
+		border: 1px solid var(--op-line) !important;
+		border-radius: 16px !important;
+		background: var(--op-sheet) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row.is-head {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: color-mix(in srgb, var(--op-field) 85%, var(--op-sheet)) !important;
+		color: var(--op-ink-2) !important;
+		font-size: 11px !important;
+		letter-spacing: 0.06em;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row:not(.is-head) {
+		position: relative;
+		border-color: var(--op-line) !important;
+		background: transparent !important;
+		transition: background-color 140ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row:not(.is-head):hover {
+		background: var(--op-hover) !important;
+	}
+
+	/* a status rail at the row's start: the row's meaning without reading the badge */
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row:not(.is-head)::before {
+		content: '';
+		position: absolute;
+		inset-inline-start: 0;
+		top: 10px;
+		bottom: 10px;
+		width: 3px;
+		border-radius: 0 3px 3px 0;
+		background: var(--rail, transparent);
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row.is-typing { --rail: var(--op-live); background: color-mix(in srgb, var(--op-live) 5%, transparent) !important; }
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row.is-stopped { --rail: var(--op-wait); }
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row.is-sent { --rail: var(--op-sent); }
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row.is-no_message { --rail: var(--op-none); }
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-customer__name {
+		color: var(--op-ink) !important;
+		font-weight: 700 !important;
+	}
+
+	/* names keep the column's alignment even when they are Arabic (dir=auto) */
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-customer:dir(ltr) > * {
+		text-align: left !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-customer:dir(rtl) > * {
+		text-align: right !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-cell {
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-badge {
+		gap: 6px !important;
+		padding: 3px 10px !important;
+		border: 0 !important;
+		border-radius: 999px !important;
+		font-size: 12px !important;
+		font-weight: 700 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-actions button,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row .wa-tl-iconbtn {
+		width: 34px !important;
+		height: 34px !important;
+		border-radius: 10px !important;
+		background: transparent !important;
+		transition: background-color 140ms ease, color 140ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-actions button:hover,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row .wa-tl-iconbtn:hover {
+		background: var(--op-accent-soft) !important;
+		color: var(--op-accent-ink) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-empty,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-error {
+		margin: 20px auto !important;
+		max-width: 440px;
+		padding: 28px !important;
+		border: 1px dashed var(--op-line-strong) !important;
+		border-radius: 18px !important;
+		background: color-mix(in srgb, var(--op-field) 60%, transparent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-more {
+		border-radius: 12px !important;
+	}
+
+	/* ═════════════════ GROUPS ═════════════════ */
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp {
+		gap: 10px !important;
+		padding: 10px 10px 10px 0 !important;
+		background: transparent !important;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp {
+		padding: 10px 0 10px 10px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-side__head {
+		padding: 18px 18px 8px !important;
+		border: 0 !important;
+		background: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-side__title {
+		color: var(--op-ink) !important;
+		font-size: 24px !important;
+		font-weight: 800 !important;
+		letter-spacing: -0.025em !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-side__sub {
+		color: var(--op-ink-2) !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-refresh {
+		width: 38px !important;
+		height: 38px !important;
+		border: 0 !important;
+		border-radius: 12px !important;
+		background: var(--op-field) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-refresh:hover {
+		background: var(--op-accent-soft) !important;
+		color: var(--op-accent-ink) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-search-wrap {
+		padding: 6px 14px 10px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-side .wa-dx__search,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main .wa-dx__search {
+		height: 42px !important;
+		border: 1px solid transparent !important;
+		border-radius: 12px !important;
+		background: var(--op-field) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-dx__search:focus-within {
+		border-color: var(--op-accent-line) !important;
+		background: var(--op-sheet) !important;
+		box-shadow: 0 0 0 4px var(--op-accent-soft) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-dx__search input {
+		border: 0 !important;
+		outline: none !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-list {
+		padding: 2px 8px 12px !important;
+	}
+
+	/* rows as rounded tiles, the open one with an accent rail */
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row {
+		border-radius: 14px !important;
+		transition: background-color 140ms ease, box-shadow 140ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row::after,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__copy {
+		border-bottom-color: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row:hover {
+		background: var(--op-hover) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row.is-active {
+		background: var(--op-accent-soft) !important;
+		box-shadow: inset 3px 0 0 var(--op-accent) !important;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row.is-active {
+		box-shadow: inset -3px 0 0 var(--op-accent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__name {
+		font-weight: 600 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__copy:dir(ltr) > * {
+		text-align: left !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__copy:dir(rtl) > * {
+		text-align: right !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__sub {
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__tag {
+		border-radius: 7px !important;
+		background: var(--op-field) !important;
+		color: var(--op-ink-2) !important;
+	}
+
+	/* detail sheet */
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main {
+		padding: 0 !important;
+		overflow-y: auto !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-hero {
+		margin: 0 !important;
+		padding: 22px 24px !important;
+		border: 0 !important;
+		border-bottom: 1px solid var(--op-line) !important;
+		border-radius: 0 !important;
+		background:
+			radial-gradient(60% 160% at 0% 50%, var(--op-accent-soft), transparent 70%),
+			var(--op-sheet) !important;
+		box-shadow: none !important;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-hero {
+		background:
+			radial-gradient(60% 160% at 100% 50%, var(--op-accent-soft), transparent 70%),
+			var(--op-sheet) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-hero__name {
+		font-size: 22px !important;
+		font-weight: 800 !important;
+		letter-spacing: -0.02em;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-hero .wa-ui-btn--primary {
+		height: 42px !important;
+		border-radius: 13px !important;
+		background: linear-gradient(160deg, color-mix(in srgb, var(--op-accent) 88%, #ffffff), var(--op-accent-ink)) !important;
+		box-shadow: 0 10px 20px -12px color-mix(in srgb, var(--op-accent) 80%, transparent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-stats {
+		gap: 10px !important;
+		margin: 0 !important;
+		padding: 18px 24px 4px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main .wa-acc-card,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-stats > * {
+		border: 1px solid var(--op-line) !important;
+		border-radius: 16px !important;
+		background: var(--op-sheet) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-stats > * {
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main > .wa-acc-card,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main > section,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main > div:not(.wa-grp-hero):not(.wa-grp-stats):not(.wa-grp-empty):not(.wa-grp-back-bar) {
+		margin: 14px 24px 0 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main > :last-child {
+		margin-bottom: 24px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-gi__chip,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-gi__count {
+		border-radius: 8px !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* members: Arabic names keep the row's alignment */
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main:dir(ltr) [dir='auto'] {
+		text-align: left !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main:dir(rtl) [dir='auto'] {
+		text-align: right !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-empty {
+		border: 0 !important;
+		background: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-empty__icon {
+		border-radius: 18px !important;
+		background: var(--op-accent-soft) !important;
+		color: var(--op-accent-ink) !important;
+	}
+
+	/* ═════════════════ ACCOUNTS ═════════════════ */
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc {
+		gap: 10px !important;
+		padding: 0 10px 10px 0 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-side__head {
+		padding: 20px 20px 10px !important;
+		border: 0 !important;
+		background: transparent !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-side__title {
+		font-size: 20px !important;
+		font-weight: 800 !important;
+		letter-spacing: -0.02em;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-list {
+		padding: 4px 8px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-row {
+		border: 0 !important;
+		border-radius: 14px !important;
+		background: transparent !important;
+		box-shadow: none !important;
+		transition: background-color 140ms ease, box-shadow 140ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-row:hover {
+		background: var(--op-hover) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-row.is-active {
+		background: var(--op-accent-soft) !important;
+		box-shadow: inset 3px 0 0 var(--op-accent) !important;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-row.is-active {
+		box-shadow: inset -3px 0 0 var(--op-accent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-row__unread {
+		border-radius: 7px !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-add {
+		margin: 6px 8px 12px !important;
+		height: 44px !important;
+		border: 1.5px dashed var(--op-line-strong) !important;
+		border-radius: 14px !important;
+		background: transparent !important;
+		color: var(--op-accent-ink) !important;
+		font-weight: 700 !important;
+		transition: border-color 150ms ease, background-color 150ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-add:hover {
+		border-color: var(--op-accent-line) !important;
+		background: var(--op-accent-soft) !important;
+	}
+
+	/* detail sheet: a hero head, the status banner, then the sections as calm groups */
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-main {
+		padding: 0 0 22px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-head {
+		padding: 22px 24px !important;
+		border: 0 !important;
+		border-bottom: 1px solid var(--op-line) !important;
+		border-radius: 0 !important;
+		background:
+			radial-gradient(60% 160% at 0% 50%, var(--op-accent-soft), transparent 70%),
+			var(--op-sheet) !important;
+		box-shadow: none !important;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-head {
+		background:
+			radial-gradient(60% 160% at 100% 50%, var(--op-accent-soft), transparent 70%),
+			var(--op-sheet) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-head__name {
+		font-size: 24px !important;
+		font-weight: 800 !important;
+		letter-spacing: -0.02em;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-head__phone {
+		border-radius: 8px !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-head__actions .wa-ui-btn {
+		height: 42px !important;
+		border-radius: 13px !important;
+		font-weight: 700 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-head__actions .wa-ui-btn--primary {
+		background: linear-gradient(160deg, color-mix(in srgb, var(--op-accent) 88%, #ffffff), var(--op-accent-ink)) !important;
+		box-shadow: 0 10px 20px -12px color-mix(in srgb, var(--op-accent) 80%, transparent) !important;
+	}
+
+	/* the status banner takes the account's colour */
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-pulse {
+		--tone: var(--op-ink-2);
+		margin: 18px 24px 0 !important;
+		padding: 16px 18px !important;
+		border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent) !important;
+		border-inline-start-width: 1px !important;
+		border-radius: 16px !important;
+		background: color-mix(in srgb, var(--tone) 8%, var(--op-sheet)) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-pulse.is-ok { --tone: var(--op-live); }
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-pulse.is-wait { --tone: var(--op-wait); }
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-pulse.is-err { --tone: var(--op-none); }
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-pulse__light {
+		background: var(--tone) !important;
+		box-shadow: 0 0 0 5px color-mix(in srgb, var(--tone) 18%, transparent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-pulse__line {
+		font-weight: 700 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-section {
+		margin: 14px 24px 0 !important;
+		padding: 18px 20px !important;
+		border: 1px solid var(--op-line) !important;
+		border-radius: 16px !important;
+		background: var(--op-sheet) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-section__title {
+		color: var(--op-ink-2) !important;
+		font-size: 12px !important;
+		font-weight: 700 !important;
+		letter-spacing: 0.06em !important;
+		text-transform: uppercase;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-facts {
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-facts dd {
+		font-size: 18px;
+		font-weight: 800;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-actions .wa-ui-btn {
+		height: 38px !important;
+		border-radius: 12px !important;
+		font-weight: 700 !important;
+	}
+
+	/* the destructive row sits on a faint red ground, so it reads as a danger zone */
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-actions > li:has(.wa-ui-btn--danger) {
+		margin: 6px -10px -6px !important;
+		padding-inline: 10px !important;
+		border-radius: 12px !important;
+		background: color-mix(in srgb, var(--op-none) 6%, transparent) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-asw__trigger {
+		border-radius: 14px !important;
+		box-shadow: var(--op-shadow) !important;
+	}
+}
+
+@keyframes wa-op-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html body .wa-web-desktop:not(#wa-op):not(#wa-op2) :is(.wa-tl, .wa-grp-side, .wa-grp-main, .wa-acc-side, .wa-acc-main) {
+		animation: none !important;
+	}
+}
+
+@media (min-width: 769px) {
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-row:not(.is-head)::before {
+		border-radius: 3px 0 0 3px;
+	}
+}
+
+/* the "Connect WhatsApp" card lines up with the sections below it */
+@media (min-width: 769px) {
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-main > .wa-acc-card {
+		margin: 14px 24px 0 !important;
+		padding: 20px !important;
+		border: 1px solid var(--op-line) !important;
+		border-radius: 16px !important;
+		background:
+			radial-gradient(70% 120% at 50% 0%, var(--op-accent-soft), transparent 70%),
+			var(--op-sheet) !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-main > .wa-acc-card button {
+		border-radius: 14px !important;
+		transition: border-color 150ms ease, transform 150ms var(--op-ease), box-shadow 150ms ease !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='accounts']:not(#wa-op):not(#wa-op2) .wa-acc-main > .wa-acc-card button:hover:not(:disabled) {
+		border-color: var(--op-accent-line) !important;
+		transform: translateY(-1px);
+		box-shadow: 0 10px 22px -16px rgba(17, 27, 33, 0.4) !important;
+	}
+}
+
+/* phone: the typing log header stacks (it squeezed the title into a narrow column) */
+@media (max-width: 768px) {
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-head {
+		flex-wrap: wrap !important;
+		gap: 12px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-head__title {
+		flex: 1 1 100% !important;
+		min-width: 0 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-head__actions {
+		flex: 1 1 100% !important;
+		justify-content: space-between !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chips {
+		scrollbar-width: none;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip {
+		flex-shrink: 0;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-chip.is-on {
+		border-color: color-mix(in srgb, var(--d-accent, #1daa61) 45%, transparent) !important;
+		background: color-mix(in srgb, var(--d-accent, #1daa61) 10%, transparent) !important;
+	}
+}
+
+/* names keep the column's alignment on every width (Arabic names are dir=auto) */
+@media (max-width: 768px) {
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__copy:dir(ltr) > *,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-customer:dir(ltr) > *,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main:dir(ltr) [dir='auto'] {
+		text-align: left !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__copy:dir(rtl) > *,
+	html body .wa-web-desktop[data-wa-tab='typing']:not(#wa-op):not(#wa-op2) .wa-tl-customer:dir(rtl) > *,
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-main:dir(rtl) [dir='auto'] {
+		text-align: right !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__copy {
+		min-width: 0;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='groups']:not(#wa-op):not(#wa-op2) .wa-grp-row__name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+}

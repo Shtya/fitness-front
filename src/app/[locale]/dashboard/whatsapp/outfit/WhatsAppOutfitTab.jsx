@@ -9,6 +9,7 @@ import Closet from './sections/Closet.jsx';
 import Stylist from './sections/Stylist.jsx';
 import Plan from './sections/Plan.jsx';
 import './outfit.css';
+import './outfit-studio.css';
 
 const PHONE_QUERY = '(max-width: 767px)';
 function usePhone() {
@@ -82,6 +83,9 @@ function OutfitShell({ onExit }) {
 						<ArrowRight size={22} className={ar ? '' : 'wa-of-flip'} aria-hidden="true" />
 					</button>
 				) : null}
+				<span className="wa-of-brand" aria-hidden="true">
+					<Shirt size={phone ? 18 : 20} />
+				</span>
 				<div className="wa-of-header-title">
 					<h1>{t('title')}</h1>
 					<p className="wa-of-muted wa-of-hide-sm">{t(`nav.${section}Hint`)}</p>

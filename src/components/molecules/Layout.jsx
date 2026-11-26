@@ -60,6 +60,8 @@ function useImpersonationCollapsed() {
 
 function ImpersonationBar({ onExit, collapsed, onCollapsedChange: toggleCollapsed }) {
 	const [user, setUser] = useState(null);
+	// Who started the session: an admin "viewing as" their coach returns to their own account.
+	const [returnLabel, setReturnLabel] = useState('Return to Super Admin');
 
 	useEffect(() => {
 		const read = () => {
@@ -67,6 +69,13 @@ function ImpersonationBar({ onExit, collapsed, onCollapsedChange: toggleCollapse
 				setUser(JSON.parse(localStorage.getItem('impersonated_user') || 'null'));
 			} catch {
 				setUser(null);
+			}
+			try {
+				const prev = JSON.parse(localStorage.getItem('super_admin_prev_session') || 'null');
+				const prevRole = String(JSON.parse(prev?.user || 'null')?.role || '').toLowerCase();
+				setReturnLabel(prevRole === 'admin' ? 'Return to my account' : 'Return to Super Admin');
+			} catch {
+				setReturnLabel('Return to Super Admin');
 			}
 		};
 		read();
@@ -135,7 +144,7 @@ function ImpersonationBar({ onExit, collapsed, onCollapsedChange: toggleCollapse
 							className="ms-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 shadow-sm transition-colors hover:bg-white/95"
 						>
 							<LogOut size={12} />
-							<span className="hidden sm:inline">Return to Super Admin</span>
+							<span className="hidden sm:inline">{returnLabel}</span>
 							<span className="sm:hidden">Exit</span>
 						</button>
 						<button
@@ -209,6 +218,13 @@ export default function Layout({ children }) {
 
 			toast.success('Returned to super admin');
 			setIsImpersonating(false);
+			// A session opened from another page (e.g. WhatsApp "View as") goes back there; the Users
+			// page stays the default for sessions started from it.
+			const returnTo = typeof prev.returnTo === 'string' && prev.returnTo.startsWith('/') && !prev.returnTo.startsWith('//') ? prev.returnTo : null;
+			if (returnTo) {
+				window.location.assign(returnTo);
+				return;
+			}
 			router.push(`/${locale}/dashboard/super-admin/users`);
 			router.refresh?.();
 		} catch {

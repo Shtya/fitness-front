@@ -1,0 +1,1737 @@
+/*
+ * WhatsApp page — polish pass (loads after the Studio layers).
+ * Type pair, the selection bar, the conversation skeleton, the info panel's scroll, the
+ * Habits / Wall tools, the Wall palette and the "My status" strip. Presentation only.
+ */
+
+/* ═══════════════ type: Inter + IBM Plex Sans Arabic ═══════════════ */
+.wa-mobile-shell.wa-font-pair {
+	--wa-font-ui: var(--font-wa-en), var(--font-wa-ar), 'Segoe UI', system-ui, -apple-system, sans-serif;
+	--wa-font-ui-ar: var(--font-wa-ar), var(--font-wa-en), 'Segoe UI', system-ui, sans-serif;
+	--wa-font-message-en: var(--font-wa-en), var(--font-wa-ar), 'Segoe UI', system-ui, sans-serif;
+	--wa-font-message-ar: var(--font-wa-ar), var(--font-wa-en), 'Segoe UI', system-ui, sans-serif;
+	font-feature-settings: 'cv11', 'ss01';
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* ═══════════════ selection bar: one glass bar, one button style ═══════════════
+ * It mixed teal, green, blue and dark-teal pills; now every action is the same calm
+ * button with a green icon, so the labels do the talking.
+ */
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar {
+	gap: 6px !important;
+	padding: 6px !important;
+	border: 1px solid color-mix(in srgb, var(--d-text, #111b21) 8%, transparent) !important;
+	border-radius: 16px !important;
+	background: color-mix(in srgb, var(--d-app, #ffffff) 88%, transparent) !important;
+	box-shadow: 0 14px 34px -18px rgba(17, 27, 33, 0.45) !important;
+	backdrop-filter: blur(14px) saturate(1.3);
+	-webkit-backdrop-filter: blur(14px) saturate(1.3);
+	animation: wa-pl-rise 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__btn {
+	height: 38px !important;
+	gap: 8px !important;
+	padding: 0 14px !important;
+	border: 1px solid transparent !important;
+	border-radius: 11px !important;
+	background: color-mix(in srgb, var(--d-text, #111b21) 5%, transparent) !important;
+	color: var(--d-text, #111b21) !important;
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	box-shadow: none !important;
+	transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__btn svg {
+	color: var(--d-accent-text, #1b8755) !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__btn:hover:not(:disabled) {
+	border-color: color-mix(in srgb, var(--d-accent, #1daa61) 40%, transparent) !important;
+	background: color-mix(in srgb, var(--d-accent, #1daa61) 11%, transparent) !important;
+	color: var(--d-accent-text, #1b8755) !important;
+	transform: translateY(-1px);
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__btn:focus-visible {
+	outline: 2px solid var(--d-accent, #1daa61) !important;
+	outline-offset: 2px;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__divider {
+	width: 1px !important;
+	height: 22px !important;
+	margin-inline: 2px !important;
+	background: color-mix(in srgb, var(--d-text, #111b21) 12%, transparent) !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__cancel {
+	height: 38px !important;
+	padding: 0 14px !important;
+	border: 0 !important;
+	border-radius: 11px !important;
+	background: transparent !important;
+	color: var(--d-text-2, #667781) !important;
+	font-weight: 600 !important;
+	transition: background-color 140ms ease, color 140ms ease !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__cancel:hover {
+	background: color-mix(in srgb, var(--d-text, #111b21) 6%, transparent) !important;
+	color: var(--d-text, #111b21) !important;
+}
+
+/* ═══════════════ contact / group info: the body scrolls inside the sheet ═══════════════ */
+@media (min-width: 769px) {
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-gi-overlay > .wa-gi {
+		display: flex !important;
+		box-sizing: border-box !important;
+		height: 100% !important;
+		max-height: 100% !important;
+		flex-direction: column !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-gi-overlay > .wa-gi > .wa-gi__cover {
+		flex: 0 0 auto !important;
+	}
+
+	/* the photo block scrolls away with the details, like WhatsApp */
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-gi-overlay > .wa-gi {
+		overflow-y: auto !important;
+		overscroll-behavior: contain;
+		scrollbar-width: none;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-gi-overlay > .wa-gi::-webkit-scrollbar {
+		width: 5px;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-gi-overlay > .wa-gi::-webkit-scrollbar-track {
+		margin-block: 18px;
+		background: transparent;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-gi-overlay > .wa-gi::-webkit-scrollbar-thumb {
+		border-radius: 999px;
+		background: linear-gradient(180deg, color-mix(in srgb, var(--d-accent, #1daa61) 45%, transparent), color-mix(in srgb, var(--d-accent, #1daa61) 75%, transparent));
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-gi-overlay > .wa-gi > .wa-gi__cover {
+		position: sticky !important;
+		top: 0;
+		z-index: 3;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-gi-overlay > .wa-gi > .wa-gi__body {
+		flex: 0 0 auto !important;
+		height: auto !important;
+		max-height: none !important;
+		overflow: visible !important;
+	}
+}
+
+/* ═══════════════ conversation skeleton: a chat drawing itself ═══════════════
+ * Bubbles sit in the real message column, each with faint text lines and a time stub,
+ * fading up one after another under a soft sweep; a glass chip at the top says what is
+ * happening. Same tokens as the real bubbles, so light / dark match the thread.
+ */
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader {
+	justify-content: flex-end !important;
+	padding: 0 clamp(24px, 6%, 72px) 26px !important;
+	background: linear-gradient(to top, color-mix(in srgb, var(--d-wall, #efeae2) 70%, transparent), transparent 70%) !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__stack {
+	width: 100% !important;
+	max-width: none !important;
+	gap: 6px !important;
+}
+
+/* a "Today" chip above the first bubble */
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__stack::before {
+	content: '';
+	align-self: center;
+	width: 72px;
+	height: 22px;
+	margin-bottom: 10px;
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--d-app, #ffffff) 80%, transparent);
+	box-shadow: 0 1px 2px rgba(17, 27, 33, 0.08);
+	animation: wa-pl-up 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble {
+	--sk-base: var(--d-in, #ffffff);
+	--sk-line: color-mix(in srgb, var(--d-text, #111b21) 9%, transparent);
+	position: relative;
+	overflow: hidden;
+	height: 58px !important;
+	max-width: 100% !important;
+	border-radius: 16px !important;
+	background:
+		linear-gradient(var(--sk-line), var(--sk-line)) 12px 13px / 78% 8px no-repeat,
+		linear-gradient(var(--sk-line), var(--sk-line)) 12px 29px / 52% 8px no-repeat,
+		var(--sk-base) !important;
+	box-shadow: 0 1px 1px rgba(17, 27, 33, 0.06), 0 2px 6px -4px rgba(17, 27, 33, 0.16) !important;
+	animation: wa-pl-up 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both !important;
+}
+
+/* round corners on the bubble's own run side, tight corner toward the speaker */
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble--in {
+	width: min(46%, 380px) !important;
+	border-start-start-radius: 6px !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble--out {
+	--sk-base: var(--d-out, #d9fdd3);
+	--sk-line: color-mix(in srgb, var(--d-accent-text, #1b8755) 16%, transparent);
+	width: min(38%, 320px) !important;
+	border-start-end-radius: 6px !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble--short {
+	height: 40px !important;
+	width: min(28%, 230px) !important;
+	background:
+		linear-gradient(var(--sk-line), var(--sk-line)) 12px 16px / 62% 8px no-repeat,
+		var(--sk-base) !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble--mid {
+	height: 76px !important;
+	width: min(52%, 420px) !important;
+	background:
+		linear-gradient(var(--sk-line), var(--sk-line)) 12px 13px / 84% 8px no-repeat,
+		linear-gradient(var(--sk-line), var(--sk-line)) 12px 29px / 70% 8px no-repeat,
+		linear-gradient(var(--sk-line), var(--sk-line)) 12px 45px / 38% 8px no-repeat,
+		var(--sk-base) !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble--out.wa-thread-loader__bubble--mid {
+	width: min(36%, 300px) !important;
+}
+
+/* time stub + the sweep */
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble::before {
+	content: '';
+	position: absolute;
+	inset-inline-end: 10px;
+	bottom: 8px;
+	width: 34px;
+	height: 6px;
+	border-radius: 3px;
+	background: var(--sk-line);
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+	transform: translateX(-100%);
+	animation: wa-pl-sweep 1.6s ease-in-out infinite;
+}
+
+html.dark body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble::after {
+	background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.07) 50%, transparent 70%);
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble:nth-child(2),
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble:nth-child(2)::after { animation-delay: 70ms; }
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble:nth-child(3),
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble:nth-child(3)::after { animation-delay: 140ms; }
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble:nth-child(4),
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble:nth-child(4)::after { animation-delay: 210ms; }
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble:nth-child(5),
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble:nth-child(5)::after { animation-delay: 280ms; }
+
+/* the status chip floats at the top of the thread */
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__pill {
+	position: absolute !important;
+	top: 18px;
+	left: 50%;
+	flex-direction: row !important;
+	gap: 10px !important;
+	padding: 7px 14px 7px 8px !important;
+	border: 1px solid color-mix(in srgb, var(--d-text, #111b21) 7%, transparent);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--d-app, #ffffff) 86%, transparent);
+	box-shadow: 0 10px 26px -14px rgba(17, 27, 33, 0.4);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	transform: translateX(-50%);
+	animation: wa-pl-chip 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__mark {
+	width: 26px !important;
+	height: 26px !important;
+	border-radius: 999px !important;
+	background: color-mix(in srgb, var(--d-accent, #1daa61) 12%, transparent) !important;
+	box-shadow: none !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__ring {
+	width: 16px !important;
+	height: 16px !important;
+	border-width: 2px !important;
+	border-color: color-mix(in srgb, var(--d-accent, #1daa61) 25%, transparent) !important;
+	border-top-color: var(--d-accent, #1daa61) !important;
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__label {
+	padding: 0 !important;
+	color: var(--d-text, #111b21) !important;
+	font-size: 12.5px !important;
+	font-weight: 600 !important;
+	text-shadow: none !important;
+}
+
+/* ═══════════════ Habits & Wall tools: one height, one family ═══════════════ */
+.wa-chat-idle:has(.tk-board.is-habits) .hb-tools .hb-toolbtn:not(.is-primary),
+.tk-board.is-habits .hb-tools .hb-toolbtn:not(.is-primary),
+.wa-idle-corner .hb-toolbtn:not(.is-primary) {
+	inline-size: 44px !important;
+	block-size: 44px !important;
+	min-inline-size: 44px !important;
+	border-radius: 13px !important;
+	transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease, transform 150ms ease !important;
+}
+
+.hb-tools .hb-toolbtn:not(.is-primary) svg {
+	inline-size: 19px !important;
+	block-size: 19px !important;
+}
+
+.hb-tools .hb-toolbtn:not(.is-primary):hover {
+	background: var(--hv-green-soft, #e6f2e8) !important;
+	transform: translateY(-1px);
+}
+
+.wa-chat-idle:has(.tk-board.is-habits) .hb-tools .hb-toolbtn.is-primary,
+.tk-board.is-habits .hb-tools .hb-toolbtn.is-primary,
+.wa-idle-corner .hb-toolbtn.is-primary {
+	block-size: 44px !important;
+	gap: 8px !important;
+	padding: 0 18px 0 14px !important;
+	border-radius: 13px !important;
+	background: linear-gradient(160deg, var(--hv-green-2, #2b8a55), var(--hv-green, #1d6b40)) !important;
+	font-size: 15px !important;
+	font-weight: 700 !important;
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 18px -12px rgba(29, 107, 64, 0.9) !important;
+	transition: transform 150ms ease, box-shadow 150ms ease !important;
+}
+
+.hb-tools .hb-toolbtn.is-primary:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 12px 22px -12px rgba(29, 107, 64, 0.95) !important;
+}
+
+/* Habits | Wall | Games: the same 44px band as the buttons beside it */
+html .wa-chat-idle:has(.tk-board.is-habits) .wa-idle-seg,
+html .wa-chat-idle:has(.tk-board.is-wall) .wa-idle-seg,
+.tk-board.is-habits .tk-switch {
+	block-size: 44px !important;
+	padding: 3px !important;
+	border-radius: 13px !important;
+}
+
+html .wa-chat-idle:has(.tk-board) .tk-switch button,
+.tk-board.is-habits .tk-switch button {
+	block-size: 36px !important;
+	min-inline-size: 92px !important;
+	border-radius: 10px !important;
+	font-size: 14.5px !important;
+	font-weight: 600 !important;
+}
+
+html .wa-chat-idle:has(.tk-board) .tk-switch__thumb,
+.tk-board.is-habits .tk-switch__thumb {
+	border-radius: 10px !important;
+}
+
+html .wa-chat-idle:has(.tk-board) .wa-idle-seg .gl-launch,
+html .wa-chat-idle:has(.tk-board) .wa-idle-seg > button:not(.tk-switch button) {
+	block-size: 36px !important;
+	border-radius: 10px !important;
+}
+
+/* ═══════════════ Wall: the Habits paper palette ═══════════════
+ * Same warm page, serif title, paper composer and deep-green action as Habits; the board
+ * becomes linen paper with a soft dot grid instead of orange cork, so both views of the
+ * same tickets feel like one notebook. The notes keep their own pastel colours.
+ */
+.wa-chat-idle:has(.tk-board.is-wall),
+.tk-board.is-wall {
+	--hv-page: #f3f1ec;
+	--hv-paper: #fbfaf7;
+	--hv-card: #fdfcf9;
+	--hv-line: #e3dfd5;
+	--hv-line-2: #d6d1c4;
+	--hv-ink: #191a18;
+	--hv-ink-2: #5d5f5a;
+	--hv-green: #1d6b40;
+	--hv-green-2: #2b8a55;
+	--hv-green-soft: #e6f2e8;
+}
+
+html.dark .wa-chat-idle:has(.tk-board.is-wall),
+html.dark .tk-board.is-wall {
+	--hv-page: #141614;
+	--hv-paper: #1b1d1b;
+	--hv-card: #1f2220;
+	--hv-line: #2e322f;
+	--hv-line-2: #3a3f3b;
+	--hv-ink: #eceee9;
+	--hv-ink-2: #b3b8b0;
+	--hv-green: #3cae6e;
+	--hv-green-2: #47bf7b;
+	--hv-green-soft: #1d2e23;
+}
+
+html .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-wall) {
+	background: var(--hv-page) !important;
+}
+
+/* the board sits near the top, like Habits, instead of floating mid-page */
+html .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-wall) {
+	align-items: flex-start !important;
+	padding-top: 16px !important;
+}
+
+html .wa-chat-idle.has-tickets:not(#wa-idle):has(.tk-board.is-wall) .wa-chat-idle__stage {
+	margin-block: 0 !important;
+}
+
+/* the corner switch uses the same deep green and paper as Habits */
+html .wa-chat-idle:has(.tk-board.is-wall) .wa-idle-seg {
+	display: inline-flex !important;
+	align-items: center;
+	gap: 4px;
+	border: 1px solid var(--hv-line-2) !important;
+	background: var(--hv-card) !important;
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05) !important;
+}
+
+html .wa-chat-idle:has(.tk-board.is-wall) .tk-switch {
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+html .wa-chat-idle:has(.tk-board.is-wall) .tk-switch__thumb {
+	background: var(--hv-green) !important;
+	box-shadow: 0 6px 14px -10px rgba(29, 107, 64, 0.9) !important;
+}
+
+html .wa-chat-idle:has(.tk-board.is-wall) .tk-switch button {
+	color: var(--hv-ink) !important;
+}
+
+html .wa-chat-idle:has(.tk-board.is-wall) .tk-switch button.is-on {
+	color: #ffffff !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__title {
+	color: var(--hv-ink) !important;
+	font-family: var(--font-hb-title), 'Playfair Display', Georgia, serif !important;
+	font-size: clamp(36px, 3.8vw, 54px) !important;
+	font-weight: 800 !important;
+	letter-spacing: -0.02em !important;
+}
+
+[dir='rtl'] body .tk-board.is-wall:not(#wa-pl) .tk-board__title {
+	font-family: var(--font-hb-card-ar), 'Aref Ruqaa', serif !important;
+	letter-spacing: 0 !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__date {
+	color: var(--hv-ink-2) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-composer {
+	border: 1px solid var(--hv-line-2) !important;
+	border-radius: 16px !important;
+	background: var(--hv-card) !important;
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-composer:focus-within {
+	border-color: var(--hv-green) !important;
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--hv-green) 14%, transparent) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-composer .tkx-chipbtn {
+	border: 1px solid var(--hv-line) !important;
+	border-radius: 12px !important;
+	background: var(--hv-paper) !important;
+	color: var(--hv-ink) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-composer__add {
+	border-radius: 13px !important;
+	background: linear-gradient(160deg, var(--hv-green-2), var(--hv-green)) !important;
+	color: #ffffff !important;
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 18px -12px rgba(29, 107, 64, 0.9) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-hide-done {
+	border: 1px solid var(--hv-line-2) !important;
+	border-radius: 13px !important;
+	background: var(--hv-card) !important;
+	color: var(--hv-ink) !important;
+	box-shadow: none !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tw-frame {
+	padding: 8px !important;
+	border: 1px solid var(--hv-line-2);
+	border-radius: 22px !important;
+	background: var(--hv-card) !important;
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05), 0 18px 40px -28px rgba(20, 20, 10, 0.35) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tw-board {
+	border-radius: 16px !important;
+	background-color: var(--hv-paper) !important;
+	background-image: radial-gradient(circle, color-mix(in srgb, var(--hv-ink) 13%, transparent) 1px, transparent 1.4px) !important;
+	background-size: 22px 22px !important;
+	box-shadow: inset 0 0 0 1px var(--hv-line) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tw-wall {
+	scrollbar-color: color-mix(in srgb, var(--hv-green) 40%, transparent) transparent;
+}
+
+/* the empty "pin a new task" slot reads as paper, not cork */
+html body .tk-board.is-wall:not(#wa-pl) .tw-note--add {
+	border: 1.5px dashed var(--hv-line-2) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tw-note--add {
+	border-color: var(--hv-line-2) !important;
+	background: color-mix(in srgb, var(--hv-green-soft) 55%, transparent) !important;
+	color: var(--hv-ink-2) !important;
+}
+
+/* ═══════════════ My status: a richer hero strip ═══════════════ */
+@media (min-width: 769px) {
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb {
+		position: relative;
+		overflow: hidden;
+		padding: 16px 18px !important;
+		border-radius: 20px !important;
+		background:
+			radial-gradient(60% 160% at 0% 50%, color-mix(in srgb, var(--d-accent, #1daa61) 16%, transparent), transparent 70%),
+			radial-gradient(40% 120% at 100% 0%, color-mix(in srgb, var(--d-accent, #1daa61) 8%, transparent), transparent 70%),
+			var(--d-app, #ffffff) !important;
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb {
+		background:
+			radial-gradient(60% 160% at 100% 50%, color-mix(in srgb, var(--d-accent, #1daa61) 16%, transparent), transparent 70%),
+			radial-gradient(40% 120% at 0% 0%, color-mix(in srgb, var(--d-accent, #1daa61) 8%, transparent), transparent 70%),
+			var(--d-app, #ffffff) !important;
+	}
+
+	/* the avatar sits in a dashed accent ring that turns solid once a story is up */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__ring {
+		width: 60px !important;
+		height: 60px !important;
+		padding: 3px !important;
+		border: 2px dashed color-mix(in srgb, var(--d-accent, #1daa61) 60%, transparent) !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__me.has-story .wa-msb__ring {
+		border-style: solid !important;
+		border-color: var(--d-accent, #1daa61) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__avatar {
+		width: 100% !important;
+		height: 100% !important;
+		box-shadow: 0 6px 14px -8px rgba(17, 27, 33, 0.45) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__title {
+		font-size: 17px !important;
+		font-weight: 800 !important;
+		letter-spacing: -0.01em;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__sub {
+		color: var(--d-text-2, #667781) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__actions {
+		gap: 10px !important;
+	}
+
+	/* settings as two glass cards with an icon tile */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__chip {
+		height: 50px !important;
+		gap: 10px !important;
+		padding: 0 14px 0 6px !important;
+		border: 1px solid color-mix(in srgb, var(--d-text, #111b21) 8%, transparent) !important;
+		border-radius: 15px !important;
+		background: color-mix(in srgb, var(--d-app, #ffffff) 80%, transparent) !important;
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+	}
+
+	html[dir='rtl'] body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__chip {
+		padding: 0 6px 0 14px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-msb__chip > svg:first-child {
+		box-sizing: content-box;
+		width: 16px;
+		height: 16px;
+		padding: 9px;
+		border-radius: 11px;
+		background: color-mix(in srgb, var(--d-accent, #1daa61) 12%, transparent);
+		color: var(--d-accent-text, #1b8755);
+	}
+
+	/* the sheet sits closer to the rail (the gap read as a stray stripe) */
+	html body .wa-web-desktop[data-wa-tab='statuses']:not(#wa-pl):not(#wa-pl2) .wa-statuses-pane {
+		margin-inline-start: -4px !important;
+	}
+}
+
+/* ═══════════════ motion ═══════════════ */
+@keyframes wa-pl-rise {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes wa-pl-up {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes wa-pl-chip {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -6px);
+	}
+	to {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+}
+
+@keyframes wa-pl-sweep {
+	to {
+		transform: translateX(100%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble,
+	html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__bubble::after,
+	html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__pill,
+	html body .wa-web-desktop:not(#wa-pl) .wa-thread-loader__stack::before,
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar {
+		animation: none !important;
+	}
+}
+
+/* the empty pane's unread pill stays on one line in either language */
+html body .wa-web-desktop:not(#wa-pl) .wa-chat-idle__unread {
+	white-space: nowrap !important;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════ "Find this person": one calm grouped card ═══════════════
+ * It stacked a card in a card in a card, with three button styles and mixed type sizes.
+ * Now: a plain section under a divider band, the details as one grouped list (rows split
+ * by hairlines, no box per field), one primary action, one secondary, two equal quiet ones,
+ * and the Sources / Queries panels as tidy disclosure rows. Same handlers and order.
+ */
+html body .wa-sf:not(#wa-pl) {
+	--sf-accent: var(--d-accent, #1daa61);
+	--sf-ink-accent: var(--d-accent-text, #1b8755);
+	--sf-line: color-mix(in srgb, var(--d-text, #111b21) 8%, transparent);
+	margin-top: 0 !important;
+	padding: 20px 18px 22px !important;
+	border: 0 !important;
+	border-top: 8px solid color-mix(in srgb, var(--d-text, #111b21) 4%, transparent) !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__head {
+	gap: 12px !important;
+	margin-bottom: 14px !important;
+	align-items: flex-start !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__head-icon {
+	width: 38px !important;
+	height: 38px !important;
+	flex: none;
+	border-radius: 12px !important;
+	background: linear-gradient(160deg, color-mix(in srgb, var(--sf-accent) 22%, transparent), color-mix(in srgb, var(--sf-accent) 10%, transparent)) !important;
+	color: var(--sf-ink-accent) !important;
+}
+
+html body .wa-sf:not(#wa-pl) #wa-sf-title {
+	font-size: 15.5px !important;
+	font-weight: 700 !important;
+	letter-spacing: -0.01em;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__head-text p {
+	margin-top: 2px !important;
+	color: var(--d-text-2, #667781) !important;
+	font-size: 12.5px !important;
+	line-height: 1.45 !important;
+}
+
+/* the details: one grouped list */
+html body .wa-sf:not(#wa-pl) .wa-sf__form {
+	gap: 0 !important;
+	padding: 0 !important;
+	overflow: visible;
+	border: 1px solid var(--sf-line) !important;
+	border-radius: 16px !important;
+	background: var(--d-app, #ffffff) !important;
+	box-shadow: 0 1px 2px rgba(17, 27, 33, 0.04) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__form > * + * {
+	border-top: 1px solid var(--sf-line);
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__row {
+	gap: 0 !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__field {
+	height: 46px !important;
+	padding: 0 14px !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	transition: background-color 140ms ease !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__form > :first-child .wa-sf__field {
+	border-radius: 15px 15px 0 0 !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__form > :last-child.wa-sf__field,
+html body .wa-sf:not(#wa-pl) .wa-sf__form > :last-child .wa-sf__field {
+	border-radius: 0 0 15px 15px !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__field:hover {
+	background: color-mix(in srgb, var(--d-text, #111b21) 3%, transparent) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__field:focus-within {
+	background: color-mix(in srgb, var(--sf-accent) 7%, transparent) !important;
+	box-shadow: inset 3px 0 0 var(--sf-accent) !important;
+}
+
+[dir="rtl"] body .wa-sf:not(#wa-pl) .wa-sf__field:focus-within {
+	box-shadow: inset -3px 0 0 var(--sf-accent) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__field input {
+	font-size: 14px !important;
+	font-weight: 500 !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__field-tag {
+	min-width: 52px !important;
+	color: var(--d-text-2, #667781) !important;
+	font-size: 10.5px !important;
+	letter-spacing: 0.06em !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__field-badge {
+	border-radius: 6px !important;
+	font-variant-numeric: tabular-nums;
+}
+
+/* number formats: a quiet strip of copyable chips under the phone row */
+html body .wa-sf:not(#wa-pl) .wa-sf__mini-chips {
+	gap: 6px !important;
+	padding: 2px 14px 12px !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__mini-chips > * {
+	height: 24px !important;
+	padding: 0 9px !important;
+	border: 0 !important;
+	border-radius: 8px !important;
+	background: color-mix(in srgb, var(--d-text, #111b21) 5%, transparent) !important;
+	color: var(--d-text-2, #667781) !important;
+	font-size: 11.5px !important;
+	font-variant-numeric: tabular-nums;
+	transition: background-color 140ms ease, color 140ms ease !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__mini-chips > *:hover {
+	background: color-mix(in srgb, var(--sf-accent) 12%, transparent) !important;
+	color: var(--sf-ink-accent) !important;
+}
+
+/* actions: primary, secondary, two quiet ones — one height scale, one type size */
+html body .wa-sf:not(#wa-pl) .wa-sf__cta {
+	gap: 8px !important;
+	margin-top: 14px !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__primary {
+	height: 48px !important;
+	border: 0 !important;
+	border-radius: 14px !important;
+	background: linear-gradient(160deg, color-mix(in srgb, var(--sf-accent) 88%, #ffffff), var(--sf-ink-accent)) !important;
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 10px 22px -12px color-mix(in srgb, var(--sf-accent) 85%, transparent) !important;
+	transition: transform 150ms ease, box-shadow 150ms ease !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__primary:hover:not(:disabled) {
+	transform: translateY(-1px);
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__window {
+	height: 44px !important;
+	border: 1px solid var(--sf-line) !important;
+	border-radius: 14px !important;
+	background: var(--d-app, #ffffff) !important;
+	color: var(--d-text, #111b21) !important;
+	box-shadow: none !important;
+	transition: border-color 150ms ease, background-color 150ms ease !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__window:hover:not(:disabled) {
+	border-color: color-mix(in srgb, var(--sf-accent) 45%, transparent) !important;
+	background: color-mix(in srgb, var(--sf-accent) 6%, transparent) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__window svg {
+	color: var(--sf-ink-accent) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__window .wa-sf__primary-label,
+html body .wa-sf:not(#wa-pl) .wa-sf__window .wa-sf__primary-label * {
+	color: var(--d-text, #111b21) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__primary-label b,
+html body .wa-sf:not(#wa-pl) .wa-sf__primary-label strong {
+	font-size: 14px !important;
+	font-weight: 700 !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__primary-label small {
+	font-size: 11px !important;
+	opacity: 0.8;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__secondary {
+	gap: 8px !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__ghost {
+	height: 38px !important;
+	flex: 1 1 0 !important;
+	gap: 7px !important;
+	border: 0 !important;
+	border-radius: 12px !important;
+	background: color-mix(in srgb, var(--d-text, #111b21) 5%, transparent) !important;
+	color: var(--d-text, #111b21) !important;
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	transition: background-color 140ms ease, color 140ms ease !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__ghost:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--sf-accent) 11%, transparent) !important;
+	color: var(--sf-ink-accent) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__ghost svg {
+	width: 15px !important;
+	height: 15px !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__hint {
+	margin-top: 2px !important;
+	color: var(--d-text-2, #667781) !important;
+	font-size: 11.5px !important;
+	text-align: center;
+}
+
+/* Sources / Exact queries: disclosure rows */
+html body .wa-sf:not(#wa-pl) .wa-sf__panel {
+	margin-top: 10px !important;
+	padding: 0 !important;
+	border: 1px solid var(--sf-line) !important;
+	border-radius: 14px !important;
+	background: var(--d-app, #ffffff) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__panel-head {
+	min-height: 46px;
+	padding: 0 8px 0 12px !important;
+	align-items: center !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__collapse {
+	gap: 8px !important;
+	color: var(--d-text, #111b21) !important;
+	font-size: 14px !important;
+	font-weight: 600 !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__count {
+	border-radius: 7px !important;
+	background: color-mix(in srgb, var(--sf-accent) 12%, transparent) !important;
+	color: var(--sf-ink-accent) !important;
+	font-variant-numeric: tabular-nums;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__presets {
+	padding: 3px !important;
+	border: 0 !important;
+	border-radius: 10px !important;
+	background: color-mix(in srgb, var(--d-text, #111b21) 5%, transparent) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__presets button {
+	height: 26px !important;
+	padding: 0 10px !important;
+	border: 0 !important;
+	border-radius: 8px !important;
+	font-size: 12px !important;
+	font-weight: 600 !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__presets button:hover {
+	background: var(--d-app, #ffffff) !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__grid,
+html body .wa-sf:not(#wa-pl) .wa-sf__queries {
+	padding: 4px 10px 12px !important;
+}
+
+html body .wa-sf:not(#wa-pl) .wa-sf__chip,
+html body .wa-sf:not(#wa-pl) .wa-sf__check {
+	border-radius: 10px !important;
+}
+
+/* Statuses: a clear 10px gutter between the rail and the sheet, as at its other edges */
+@media (min-width: 769px) {
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl):not(#wa-pl2):not(#wa-pl3) .wa-statuses-pane {
+		margin-inline-start: 10px !important;
+		width: auto !important;
+	}
+}
+
+/* ═══════════════ Story history: a wall of person tiles ═══════════════
+ * Each archived person is a soft tile: a large avatar in a story ring, the count as a
+ * green pill on the ring, the name, and the age. A person with deleted stories gets a
+ * red arc on the ring and a red "deleted" pill, so it reads at a glance.
+ */
+@media (min-width: 769px) {
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__hint {
+		color: var(--d-text-2, #667781) !important;
+		font-size: 12px !important;
+		font-weight: 700 !important;
+		letter-spacing: 0.06em !important;
+		text-transform: uppercase;
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__list {
+		display: grid !important;
+		grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)) !important;
+		gap: 12px !important;
+		padding: 4px 0 !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__row {
+		display: flex !important;
+		width: 100% !important;
+		flex-direction: column !important;
+		align-items: center !important;
+		gap: 10px !important;
+		padding: 16px 10px 14px !important;
+		border: 1px solid color-mix(in srgb, var(--d-text, #111b21) 7%, transparent) !important;
+		border-radius: 18px !important;
+		background: var(--d-app, #ffffff) !important;
+		box-shadow: 0 1px 2px rgba(17, 27, 33, 0.04) !important;
+		transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease, border-color 180ms ease !important;
+		animation: wa-pl-up 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__row:hover {
+		border-color: color-mix(in srgb, var(--d-accent, #1daa61) 35%, transparent) !important;
+		box-shadow: 0 14px 28px -18px rgba(17, 27, 33, 0.4) !important;
+		transform: translateY(-3px);
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__row:focus-visible {
+		outline: 2px solid var(--d-accent, #1daa61) !important;
+		outline-offset: 2px;
+	}
+
+	/* the story ring around the avatar */
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__avatar-wrap {
+		position: relative;
+		width: 74px !important;
+		height: 74px !important;
+		padding: 3px !important;
+		border-radius: 999px !important;
+		background: conic-gradient(var(--d-accent, #1daa61) 0 100%) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__row:has([data-testid="story-history-revoked"]) .wa-story-history__avatar-wrap {
+		background: conic-gradient(#e5484d 0 30%, var(--d-accent, #1daa61) 30% 100%) !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__avatar {
+		display: block;
+		width: 100% !important;
+		height: 100% !important;
+		overflow: hidden;
+		border: 3px solid var(--d-app, #ffffff) !important;
+		border-radius: 999px !important;
+		background: var(--d-app, #ffffff);
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__badge {
+		position: absolute !important;
+		inset-inline-end: -4px !important;
+		bottom: -2px !important;
+		top: auto !important;
+		min-width: 24px !important;
+		height: 22px !important;
+		padding: 0 6px !important;
+		border: 2.5px solid var(--d-app, #ffffff) !important;
+		border-radius: 999px !important;
+		background: var(--d-accent, #1daa61) !important;
+		color: #ffffff !important;
+		font-size: 11px !important;
+		font-weight: 800 !important;
+		line-height: 17px !important;
+		text-align: center;
+		font-variant-numeric: tabular-nums;
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__meta {
+		display: flex !important;
+		width: 100%;
+		min-width: 0;
+		flex-direction: column !important;
+		align-items: center !important;
+		gap: 4px !important;
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__name {
+		max-width: 100%;
+		overflow: hidden;
+		color: var(--d-text, #111b21) !important;
+		font-size: 13.5px !important;
+		font-weight: 700 !important;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) .wa-story-history__sub {
+		display: flex !important;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 4px !important;
+		color: var(--d-text-2, #667781) !important;
+		font-size: 11.5px !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* "· 2 deleted" becomes a small red pill */
+	html body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) [data-testid="story-history-revoked"] {
+		margin: 0 !important;
+		padding: 1px 7px !important;
+		border-radius: 999px !important;
+		background: color-mix(in srgb, #e5484d 12%, transparent) !important;
+		color: #d1343a !important;
+		font-weight: 700 !important;
+	}
+
+	html.dark body .wa-web-desktop[data-wa-tab="statuses"]:not(#wa-pl) [data-testid="story-history-revoked"] {
+		color: #ff8a8e !important;
+	}
+}
+
+/* ═══════════════ story viewer: a clean header and a deleted marker ═══════════════ */
+@media (min-width: 769px) {
+	/* the header: identity on the left, every control in one glass pill on the right */
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header {
+		gap: 0 !important;
+		padding: 10px 14px !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header > div:first-child {
+		gap: 10px !important;
+		margin-inline-end: 12px;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header > div:first-child > :first-child {
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 4px 12px -4px rgba(0, 0, 0, 0.5);
+		border-radius: 999px;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header p:first-child {
+		font-size: 14.5px !important;
+		font-weight: 700 !important;
+		text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header time {
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* group the round controls into one pill */
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header > .wa-story-ctl {
+		width: 34px !important;
+		height: 34px !important;
+		margin-inline: 0 !important;
+		border-radius: 0 !important;
+		background: rgba(18, 22, 26, 0.42) !important;
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header > .wa-story-ctl:hover {
+		background: rgba(18, 22, 26, 0.62) !important;
+		transform: none !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header > div:first-child + .wa-story-ctl {
+		margin-inline-start: 0 !important;
+		border-start-start-radius: 12px !important;
+		border-end-start-radius: 12px !important;
+		padding-inline-start: 4px;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header > .wa-story-ctl:nth-last-child(2) {
+		border-start-end-radius: 12px !important;
+		border-end-end-radius: 12px !important;
+		padding-inline-end: 4px;
+	}
+
+	/* close stands apart, as its own round button */
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header > .wa-story-ctl[aria-label*="Close"],
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__header > .wa-story-ctl[aria-label*="إغلاق"] {
+		margin-inline-start: 8px !important;
+		border-radius: 999px !important;
+		padding: 0;
+	}
+
+	/* the "Deleted by poster" badge: a clear red pill with room to breathe */
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) [data-testid="story-revoked-badge"] {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		margin-inline-start: 8px !important;
+		padding: 2px 9px !important;
+		border-radius: 999px !important;
+		background: #e5484d !important;
+		box-shadow: 0 4px 12px -4px rgba(229, 72, 77, 0.8);
+		color: #ffffff !important;
+		font-size: 10.5px !important;
+		font-weight: 700 !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) [data-testid="story-revoked-badge"]::before {
+		content: '';
+		width: 6px;
+		height: 6px;
+		border-radius: 999px;
+		background: #ffffff;
+	}
+
+	/* a deleted story: a red line framing the card, and its progress segment in red */
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__card[data-revoked="true"] {
+		box-shadow: 0 0 0 3px #e5484d, 0 30px 80px -30px rgba(0, 0, 0, 0.9) !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__card[data-revoked="true"]::after {
+		content: '';
+		position: absolute;
+		inset-inline: 0;
+		top: 0;
+		z-index: 60;
+		height: 4px;
+		background: linear-gradient(90deg, #e5484d, #ff7a7e, #e5484d);
+		pointer-events: none;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__progress > button[data-revoked="true"] > span {
+		background: rgba(229, 72, 77, 0.45) !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl):not(#wa-pl2) .wa-story-viewer__progress > button[data-revoked="true"] > span > span {
+		background: #ff5b60 !important;
+	}
+}
+
+/* ═══════════════ photo viewer: a calm dark gallery ═══════════════
+ * A deep blurred backdrop tinted by the photo, one glass top bar (who / when / counter on
+ * one side, zoom + download + close on the other), the photo with soft rounded corners and
+ * a real shadow, large glass arrows at the edges, and a floating film strip whose current
+ * frame lifts with a green ring.
+ */
+html body .wa-iv.wa-chat-image-viewer:not(#wa-pl) {
+	background: #07090b !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__backdrop {
+	background: radial-gradient(120% 90% at 50% 40%, rgba(16, 22, 26, 0.55), rgba(5, 7, 9, 0.96)) !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-iv__ambient {
+	opacity: 0.42 !important;
+	filter: blur(60px) saturate(1.4) !important;
+	transform: scale(1.25);
+}
+
+/* top bar */
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__toolbar {
+	top: 14px !important;
+	inset-inline: 16px !important;
+	padding: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-iv__meta,
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__actions {
+	gap: 10px !important;
+	padding: 6px !important;
+	border: 1px solid rgba(255, 255, 255, 0.08) !important;
+	border-radius: 16px !important;
+	background: rgba(20, 24, 28, 0.62) !important;
+	box-shadow: 0 14px 32px -18px rgba(0, 0, 0, 0.8) !important;
+	backdrop-filter: blur(16px) saturate(1.3);
+	-webkit-backdrop-filter: blur(16px) saturate(1.3);
+}
+
+html body .wa-iv:not(#wa-pl) .wa-iv__meta {
+	padding-inline-end: 12px !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-iv__avatar {
+	width: 34px !important;
+	height: 34px !important;
+	border-radius: 11px !important;
+	background: linear-gradient(160deg, #25d366, #128c4b) !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-iv__who > :first-child {
+	color: #ffffff !important;
+	font-size: 14px !important;
+	font-weight: 700 !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-iv__who > :last-child {
+	color: rgba(255, 255, 255, 0.62) !important;
+	font-size: 12px !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-iv__counter {
+	padding: 3px 9px !important;
+	border: 0 !important;
+	border-radius: 8px !important;
+	background: rgba(255, 255, 255, 0.1) !important;
+	color: #ffffff !important;
+	font-size: 12px !important;
+	font-weight: 700 !important;
+	font-variant-numeric: tabular-nums;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-iv__zoom {
+	gap: 2px !important;
+	padding: 0 !important;
+	border: 0 !important;
+	background: transparent !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__icon-btn {
+	width: 36px !important;
+	height: 36px !important;
+	border: 0 !important;
+	border-radius: 11px !important;
+	background: transparent !important;
+	color: rgba(255, 255, 255, 0.86) !important;
+	transition: background-color 140ms ease, color 140ms ease !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__icon-btn:hover:not(:disabled) {
+	background: rgba(255, 255, 255, 0.12) !important;
+	color: #ffffff !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__icon-btn:disabled {
+	opacity: 0.35 !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__icon-btn.is-close {
+	background: rgba(255, 255, 255, 0.1) !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__icon-btn.is-close:hover {
+	background: rgba(229, 72, 77, 0.85) !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__zoom-label {
+	min-width: 52px !important;
+	height: 30px !important;
+	border: 0 !important;
+	border-radius: 9px !important;
+	background: rgba(255, 255, 255, 0.1) !important;
+	color: #ffffff !important;
+	font-size: 12px !important;
+	font-weight: 700 !important;
+	font-variant-numeric: tabular-nums;
+}
+
+/* the photo */
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__image {
+	border-radius: 16px !important;
+	box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+	animation: wa-pl-iv-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* arrows */
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__nav {
+	width: 52px !important;
+	height: 52px !important;
+	border: 1px solid rgba(255, 255, 255, 0.1) !important;
+	border-radius: 999px !important;
+	background: rgba(20, 24, 28, 0.55) !important;
+	color: #ffffff !important;
+	box-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.85) !important;
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	transition: background-color 150ms ease, transform 150ms ease !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__nav:hover {
+	background: rgba(37, 211, 102, 0.85) !important;
+	transform: scale(1.06);
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__nav.is-prev:hover {
+	transform: scale(1.06) translateX(-2px);
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__nav.is-next:hover {
+	transform: scale(1.06) translateX(2px);
+}
+
+/* film strip */
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__thumbs-wrap {
+	inset-inline: auto !important;
+	left: 50% !important;
+	right: auto !important;
+	width: max-content !important;
+	max-width: calc(100% - 48px) !important;
+	bottom: 18px !important;
+	transform: translateX(-50%);
+	padding: 8px !important;
+	border: 1px solid rgba(255, 255, 255, 0.08) !important;
+	border-radius: 18px !important;
+	background: rgba(20, 24, 28, 0.6) !important;
+	box-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.9) !important;
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__thumbs-fade {
+	display: none !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__thumbs {
+	gap: 6px !important;
+	padding: 4px !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__thumb {
+	width: 52px !important;
+	height: 52px !important;
+	border: 0 !important;
+	border-radius: 12px !important;
+	opacity: 0.55;
+	box-shadow: none !important;
+	transition: opacity 160ms ease, transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease !important;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__thumb:hover {
+	opacity: 0.9;
+}
+
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__thumb[aria-current="true"],
+html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__thumb.is-active {
+	opacity: 1;
+	box-shadow: 0 0 0 2px #0b0e11, 0 0 0 4px #25d366 !important;
+	transform: translateY(-3px) scale(1.06);
+}
+
+@keyframes wa-pl-iv-in {
+	from {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html body .wa-iv:not(#wa-pl) .wa-chat-image-viewer__image {
+		animation: none !important;
+	}
+}
+
+/* ═══════════════ Wall header: the Habits header, detail for detail ═══════════════
+ * Big serif title with a hairline running to the tools, the date (and count) under it,
+ * and on the right the same 44px tool row: a green "Add ticket" button that opens the
+ * composer below, and "Hide completed" as a paper button.
+ */
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__head {
+	align-items: flex-start !important;
+	gap: 18px !important;
+	transform: none !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__titles {
+	flex: 1;
+	min-width: 0;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__title {
+	display: flex !important;
+	align-items: center;
+	gap: 28px;
+	margin: 0 !important;
+	font-size: clamp(40px, 4.6vw, 64px) !important;
+	line-height: 1 !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__title::after {
+	content: '';
+	flex: 1;
+	min-inline-size: 24px;
+	block-size: 1px;
+	margin-top: 0.12em;
+	background: var(--hv-line-2);
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__date {
+	gap: 10px !important;
+	margin-top: 12px !important;
+	color: var(--hv-ink) !important;
+	font-family: var(--font-hb-title), 'Playfair Display', Georgia, serif !important;
+	font-size: clamp(16px, 1.4vw, 20px) !important;
+	font-weight: 400 !important;
+}
+
+[dir="rtl"] body .tk-board.is-wall:not(#wa-pl) .tk-board__date {
+	font-family: inherit !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__date svg {
+	inline-size: 22px;
+	block-size: 22px;
+	color: var(--hv-ink-2);
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__tools {
+	align-items: center !important;
+	gap: 12px !important;
+	padding-top: 4px !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-add-open {
+	display: inline-flex !important;
+	align-items: center;
+	block-size: 44px !important;
+	gap: 8px !important;
+	padding: 0 18px 0 14px !important;
+	border: 0 !important;
+	border-radius: 13px !important;
+	background: linear-gradient(160deg, var(--hv-green-2), var(--hv-green)) !important;
+	color: #ffffff !important;
+	font-size: 15px !important;
+	font-weight: 700 !important;
+	white-space: nowrap;
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 18px -12px rgba(29, 107, 64, 0.9) !important;
+	transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-add-open:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 12px 22px -12px rgba(29, 107, 64, 0.95) !important;
+}
+
+/* open: it turns into a quiet "close" so the composer's own green button leads */
+html body .tk-board.is-wall:not(#wa-pl) .tk-add-open.is-on {
+	border: 1px solid var(--hv-line-2) !important;
+	background: var(--hv-card) !important;
+	color: var(--hv-ink) !important;
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-add-open:focus-visible,
+html body .tk-board.is-wall:not(#wa-pl) .tk-hide-done:focus-visible {
+	outline: 2px solid var(--hv-green) !important;
+	outline-offset: 2px;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-hide-done {
+	block-size: 44px !important;
+	padding: 0 14px !important;
+	border-radius: 13px !important;
+	font-size: 14.5px !important;
+	font-weight: 600 !important;
+	transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-hide-done:hover,
+html body .tk-board.is-wall:not(#wa-pl) .tk-hide-done.is-on {
+	border-color: var(--hv-green) !important;
+	color: var(--hv-green) !important;
+}
+
+/* the composer slides down under the header when opened */
+html body .tk-board.is-wall:not(#wa-pl) .tk-composer-drawer {
+	animation: wa-pl-drawer 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes wa-pl-drawer {
+	from {
+		opacity: 0;
+		transform: translateY(-8px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* phone: title and tools stack, like Habits */
+@media (max-width: 640px) {
+	html body .tk-board.is-wall:not(#wa-pl) .tk-board__head {
+		flex-wrap: wrap;
+	}
+
+	html body .tk-board.is-wall:not(#wa-pl) .tk-board__title {
+		font-size: 34px !important;
+	}
+
+	html body .tk-board.is-wall:not(#wa-pl) .tk-hide-done__label {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html body .tk-board.is-wall:not(#wa-pl) .tk-composer-drawer {
+		animation: none !important;
+	}
+}
+
+/* the Wall tools end before the Habits | Wall | Games switch in the pane's corner */
+html body .tk-board.is-wall.has-corner:not(#wa-pl) .tk-board__tools {
+	margin-inline-end: calc(var(--hb-corner-w, 0px) + 16px) !important;
+}
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__title {
+	font-size: clamp(34px, 3.6vw, 56px) !important;
+	white-space: nowrap !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-board__date {
+	flex-wrap: nowrap !important;
+	white-space: nowrap !important;
+}
+
+/* beside the corner switch (chats pane), the tools sit on the date row, end-aligned, so the
+   title keeps its full line and its hairline runs up to the switch — as Habits does */
+html body .tk-board.is-wall.has-corner:not(#wa-pl) .tk-board__head {
+	position: relative;
+}
+
+html body .tk-board.is-wall.has-corner:not(#wa-pl) .tk-board__tools {
+	position: absolute;
+	inset-inline-end: 0;
+	bottom: -6px;
+	margin-inline-end: 0 !important;
+}
+
+html body .tk-board.is-wall.has-corner:not(#wa-pl) .tk-board__title::after {
+	margin-inline-end: calc(var(--hb-corner-w, 0px) + 24px);
+}
+
+/* the stand-alone tab: Habits | Wall as one framed group, like on Habits */
+html body .tk-board.is-wall:not(#wa-pl) .tk-switch {
+	block-size: 44px !important;
+	padding: 3px !important;
+	border: 1px solid var(--hv-line-2) !important;
+	border-radius: 13px !important;
+	background: var(--hv-card) !important;
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05) !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-switch button {
+	block-size: 36px !important;
+	min-inline-size: 92px !important;
+	border-radius: 10px !important;
+	font-size: 14.5px !important;
+	font-weight: 600 !important;
+}
+
+html body .tk-board.is-wall:not(#wa-pl) .tk-switch__thumb {
+	border-radius: 10px !important;
+	background: var(--hv-green) !important;
+}
+
+/* ═══════════════ unread pill vs. the selection bar ═══════════════
+ * Both sat at the top of the thread, one on the other. While messages are being selected the
+ * "N unread messages" pill drops below the bar (its own height + a gap), and slides back after.
+ */
+html body .wa-web-desktop:not(#wa-pl) .wa-jump-unread {
+	transition: top 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html body .wa-web-desktop:not(#wa-pl) .wa-chat-thread-pane:has(.wa-select-toolbar) .wa-jump-unread {
+	top: 84px !important;
+}
+
+@media (max-width: 768px) {
+	html body .wa-web-desktop:not(#wa-pl) .wa-chat-thread-pane:has(.wa-select-toolbar) .wa-jump-unread {
+		top: 120px !important;
+	}
+}
+
+/* ═══════════════ team popover: "View as" ═══════════════ */
+html body .wa-team__panel .wa-team__view-as {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 5px;
+	height: 28px;
+	padding: 0 10px;
+	border: 1px solid color-mix(in srgb, var(--d-accent, #1daa61) 35%, transparent);
+	border-radius: 9px;
+	background: color-mix(in srgb, var(--d-accent, #1daa61) 9%, transparent);
+	color: var(--d-accent-text, #1b8755);
+	font-size: 12px;
+	font-weight: 700;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+html body .wa-team__panel .wa-team__view-as:hover {
+	background: var(--d-accent, #1daa61);
+	color: #ffffff;
+	transform: translateY(-1px);
+}
+
+html body .wa-team__panel .wa-team__view-as:focus-visible {
+	outline: 2px solid var(--d-accent, #1daa61);
+	outline-offset: 2px;
+}
+
+/* the selection bar's Cancel: its icon shows only where the labels are hidden (phone) */
+html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__cancel-icon {
+	display: none;
+}
+
+/* ═══════════════ phone: the selection bar as one row of icons ═══════════════
+ * Five labelled pills wrapped onto three lines and covered the thread. On a phone each
+ * action is a 40px icon button (its name stays in the title and the accessibility tree),
+ * all on one line, with Cancel as an ✕ at the end.
+ */
+@media (max-width: 768px) {
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar {
+		flex-wrap: nowrap !important;
+		gap: 4px !important;
+		width: max-content !important;
+		max-width: calc(100% - 16px) !important;
+		padding: 5px !important;
+		border-radius: 16px !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__label {
+		position: absolute !important;
+		width: 1px !important;
+		height: 1px !important;
+		overflow: hidden !important;
+		clip: rect(0 0 0 0) !important;
+		white-space: nowrap !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__btn,
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__cancel {
+		width: 40px !important;
+		min-width: 40px !important;
+		height: 40px !important;
+		justify-content: center !important;
+		padding: 0 !important;
+		gap: 0 !important;
+		border-radius: 12px !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__btn svg,
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__cancel svg {
+		width: 18px !important;
+		height: 18px !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__cancel-icon {
+		display: block;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__cancel {
+		display: inline-grid !important;
+		place-items: center;
+		background: color-mix(in srgb, var(--d-text, #111b21) 6%, transparent) !important;
+	}
+
+	html body .wa-web-desktop:not(#wa-pl) .wa-select-toolbar__divider {
+		height: 22px !important;
+		margin-inline: 2px !important;
+	}
+
+	/* the unread pill: just below the one-line bar */
+	html body .wa-web-desktop:not(#wa-pl) .wa-chat-thread-pane:has(.wa-select-toolbar) .wa-jump-unread {
+		top: 72px !important;
+	}
+}

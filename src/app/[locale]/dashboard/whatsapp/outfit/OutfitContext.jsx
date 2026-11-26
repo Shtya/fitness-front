@@ -57,6 +57,17 @@ export function ownedToPreview(outfit) {
 	return { slots, topSlot, fit, shoeType, pantsType, topLoose, score: outfit.score, owned: true };
 }
 
+/**
+ * The tab scrolls inside the WhatsApp pane, not the window, so window.scrollTo did nothing:
+ * scroll the nearest scrolling ancestor of the tab (falls back to the window).
+ */
+function scrollOutfitToTop() {
+	let node = document.querySelector('.wa-of')?.parentElement || null;
+	while (node && !(node.scrollHeight > node.clientHeight && /auto|scroll/.test(getComputedStyle(node).overflowY))) node = node.parentElement;
+	const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+	(node || window).scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+}
+
 export function OutfitProvider({ locale, accountId, accountPhone, children }) {
 	const t = useTranslations('outfitMatcher');
 	const ar = isArabic(locale);
@@ -76,7 +87,7 @@ export function OutfitProvider({ locale, accountId, accountPhone, children }) {
 	const previewOutfit = useCallback(outfit => {
 		setPreview(ownedToPreview(outfit));
 		setSection('match');
-		if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+		if (typeof window !== 'undefined') scrollOutfitToTop();
 	}, []);
 
 	const wear = useCallback(

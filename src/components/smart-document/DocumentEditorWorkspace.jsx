@@ -1,8 +1,61 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { useEffect, useMemo, useState } from 'react';
+import HabitTimer from '@/app/[locale]/dashboard/whatsapp/tickets/HabitTimer';
+import { dayKey, normalizeHabit, toggleDay } from '@/app/[locale]/dashboard/whatsapp/tickets/habits-model';
 import SmartDocumentEditor from './SmartDocumentEditor';
+
+const HABITS_LS = 'wa-habits:v1';
+
+function readHabitList() {
+	try {
+		const raw = JSON.parse(window.localStorage.getItem(HABITS_LS) || 'null');
+		const today = dayKey();
+		return (raw?.habits || []).filter(h => h && !h.deletedAt).map(h => normalizeHabit(h, today));
+	} catch {
+		return [];
+	}
+}
+
+/** Mark today's habit done in the same local copy Habits reads, without opening that screen. */
+function markHabitDoneToday(id) {
+	try {
+		const raw = JSON.parse(window.localStorage.getItem(HABITS_LS) || 'null');
+		if (!raw || !Array.isArray(raw.habits)) return;
+		const today = dayKey();
+		const habits = raw.habits.map(h => {
+			if (h?.id !== id) return h;
+			const cur = normalizeHabit(h, today);
+			if (cur.log?.[today]?.s === 'done') return h;
+			return { ...toggleDay(cur, today), updatedAt: Date.now() };
+		});
+		window.localStorage.setItem(HABITS_LS, JSON.stringify({ ...raw, habits }));
+	} catch {
+		/* ignore a blocked or broken store */
+	}
+}
+
+function DocsTimer() {
+	const locale = useLocale();
+	const ar = locale === 'ar';
+	const [habits, setHabits] = useState([]);
+	useEffect(() => {
+		const sync = () => setHabits(readHabitList());
+		sync();
+		window.addEventListener('storage', sync);
+		window.addEventListener('focus', sync);
+		return () => {
+			window.removeEventListener('storage', sync);
+			window.removeEventListener('focus', sync);
+		};
+	}, []);
+	return (
+		<div className="sd-chrome-timer">
+			<HabitTimer ar={ar} habits={habits} onMarkDone={markHabitDoneToday} />
+		</div>
+	);
+}
 
 /** The editor's translated labels, shared by every place that embeds the Documents editor. */
 export function useDocumentEditorLabels() {
@@ -135,6 +188,7 @@ export default function DocumentEditorWorkspace({ className = 'min-h-[calc(100vh
 				placeholder={t.raw('placeholder')}
 				storageKey="so7ba:smart-document:super-admin"
 				labels={labels}
+				toolbarEnd={<DocsTimer />}
 			/>
 		</div>
 	);

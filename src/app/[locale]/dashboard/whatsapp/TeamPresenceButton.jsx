@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Users } from 'lucide-react';
+import { Eye, Users } from 'lucide-react';
 
 function initials(name) {
 	const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
@@ -20,7 +20,7 @@ const ROLE_LABELS = {
  * Who on the team has WhatsApp open right now (admins only). A small pill in the chat list
  * header: the number online; hover or click lists them with how many open chats they own.
  */
-export default function TeamPresenceButton({ staff, ar, assignedCounts }) {
+export default function TeamPresenceButton({ staff, ar, assignedCounts, onViewAs = null, canViewAs = member => String(member?.role || '').toLowerCase() !== 'super_admin' }) {
 	const [open, setOpen] = useState(false);
 	const [place, setPlace] = useState(null);
 	const rootRef = useRef(null);
@@ -124,7 +124,22 @@ export default function TeamPresenceButton({ staff, ar, assignedCounts }) {
 												{owned ? ` · ${ar ? `${owned} شات متسند ليه` : `${owned} assigned chat${owned > 1 ? 's' : ''}`}` : ''}
 											</span>
 										</span>
-										<span className="wa-team__live">{ar ? 'متصل' : 'Online'}</span>
+										{onViewAs && canViewAs(member) ? (
+											<button
+												type="button"
+												className="wa-team__view-as"
+												onClick={() => {
+													setOpen(false);
+													onViewAs(member);
+												}}
+												title={ar ? `ادخل بحساب ${member.name} وشوف اللي بيشوفه` : `Sign in as ${member.name} and see what they see`}
+											>
+												<Eye size={13} strokeWidth={2.2} aria-hidden="true" />
+												{ar ? 'ادخل كـ' : 'View as'}
+											</button>
+										) : (
+											<span className="wa-team__live">{ar ? 'متصل' : 'Online'}</span>
+										)}
 									</li>
 								);
 							})}

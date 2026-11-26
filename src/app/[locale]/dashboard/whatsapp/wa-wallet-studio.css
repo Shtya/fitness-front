@@ -1,0 +1,198 @@
+/*
+ * Wallet — "money desk", the Studio language of the other WhatsApp tabs.
+ *
+ * Desktop turns the single long column into a desk: the balance card and the four add actions
+ * stay pinned on the start side while the ledger scrolls beside them, under a header that
+ * carries today's date and the live USD / 21K gold rates. The ledger's tabs + totals stick to
+ * the top while you scroll its rows. Phones keep the one-column flow.
+ * Popups are portaled to <body>, so they get the page's font pair through .wl-sheet.
+ *
+ * Presentation only. Loaded by WhatsAppWalletTab, scoped to its own wl-* hooks.
+ */
+
+html body .wa-web-desktop[data-wa-tab='wallet']:not(#wa-wl):not(#wa-wl2) .wa-web-main,
+html body .wa-web-desktop[data-wa-tab='wallet']:not(#wa-wl):not(#wa-wl2) .wa-web-workspace {
+	background: color-mix(in srgb, var(--d-wall, #f5f1eb) 62%, #e4ded4) !important;
+}
+html.dark body .wa-web-desktop[data-wa-tab='wallet']:not(#wa-wl):not(#wa-wl2) .wa-web-main,
+html.dark body .wa-web-desktop[data-wa-tab='wallet']:not(#wa-wl):not(#wa-wl2) .wa-web-workspace,
+html[data-theme-mode='dark'] body .wa-web-desktop[data-wa-tab='wallet']:not(#wa-wl):not(#wa-wl2) .wa-web-main {
+	background: #0d0e0e !important;
+}
+
+.wl-root {
+	--wl-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ═════════════════ the desk ═════════════════ */
+.wl-desk {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+@media (min-width: 640px) {
+	.wl-desk {
+		gap: 20px;
+	}
+}
+@media (min-width: 1024px) {
+	.wl-desk {
+		display: grid;
+		grid-template-columns: minmax(380px, 440px) minmax(0, 1fr);
+		align-items: start;
+		gap: 20px;
+	}
+	/* the balance card has a narrow column here: its four-part breakdown goes 2 × 2 */
+	.wl-side .wl-parts {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	/* pocket tiles are ~120px wide here: the short names fit, the long ones truncated */
+	.wl-side .wl-pocket-short {
+		display: inline;
+	}
+	.wl-side .wl-pocket-long {
+		display: none;
+	}
+}
+@media (min-width: 1024px) and (min-height: 700px) {
+	.wl-side {
+		position: sticky;
+		top: 16px;
+	}
+}
+
+/* entrance: once per mount (not on data refresh); no transform is left behind */
+.wl-head,
+.wl-side,
+.wl-main {
+	animation: wl-enter 0.28s var(--wl-ease) backwards;
+}
+.wl-side {
+	animation-delay: 40ms;
+}
+.wl-main {
+	animation-delay: 90ms;
+}
+
+/* header rate chips */
+.wl-chip {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ═════════════════ ledger ═════════════════ */
+.wl-ledger {
+	overflow: clip; /* rounded corners without breaking the sticky header */
+}
+@media (min-width: 768px) {
+	.wl-ledger-head {
+		position: sticky;
+		top: 0;
+		z-index: 6;
+		background: color-mix(in srgb, #ffffff 92%, transparent);
+		-webkit-backdrop-filter: saturate(1.4) blur(12px);
+		backdrop-filter: saturate(1.4) blur(12px);
+		border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+		border-start-start-radius: 24px;
+		border-start-end-radius: 24px;
+	}
+	html.dark .wl-ledger-head {
+		background: color-mix(in srgb, #151717 92%, transparent);
+		border-bottom-color: rgba(255, 255, 255, 0.06);
+	}
+}
+.wl-tabs [role='tab'] {
+	transition: background-color 0.18s var(--wl-ease), color 0.18s, box-shadow 0.18s;
+}
+.wl-tabs [role='tab'][aria-selected='true'] {
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 6px 14px -8px rgba(15, 23, 42, 0.3);
+}
+.wl-ledger tbody tr {
+	transition: background-color 0.15s;
+}
+.wl-ledger tbody tr:hover {
+	background: rgba(15, 23, 42, 0.025);
+}
+html.dark .wl-ledger tbody tr:hover {
+	background: rgba(255, 255, 255, 0.03);
+}
+.wl-ledger :is(button, [role='tab']):focus-visible,
+.wl-side button:focus-visible,
+.wl-head :focus-visible {
+	outline: 2px solid #1dab61;
+	outline-offset: 2px;
+}
+
+/* quick actions: the icon lifts a little under the pointer */
+.wl-side nav button > span:first-child {
+	transition: transform 0.2s var(--wl-ease), box-shadow 0.2s;
+}
+@media (hover: hover) {
+	.wl-side nav button:hover > span:first-child {
+		transform: translateY(-2px);
+		box-shadow: 0 10px 18px -12px rgba(15, 23, 42, 0.45);
+	}
+}
+
+/* ═════════════════ loading ═════════════════ */
+.wl-shimmer {
+	background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.08) 45%, transparent 70%);
+	background-size: 200% 100%;
+	animation: wl-shimmer 1.4s linear infinite;
+}
+
+/* ═════════════════ popups (portaled) ═════════════════ */
+/* the site-wide `.font-en *` / `.font-ar *` rules reach every element, so set the pair on all of them */
+html body .wl-sheet,
+html body .wl-sheet * {
+	font-family: var(--font-wa-en), var(--font-wa-ar), 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+html body .wl-sheet[dir='rtl'],
+html body .wl-sheet[dir='rtl'] * {
+	font-family: var(--font-wa-ar), var(--font-wa-en), 'Segoe UI', system-ui, sans-serif;
+}
+.wl-sheet {
+	font-feature-settings: 'cv11', 'ss01';
+	-webkit-font-smoothing: antialiased;
+}
+.wl-sheet > div[tabindex='-1'] {
+	box-shadow: 0 30px 70px -24px rgba(2, 6, 23, 0.5), 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+html.dark .wl-sheet > div[tabindex='-1'] {
+	box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.wl-sheet :is(input, select, textarea):focus-visible {
+	outline: none;
+	border-color: #1dab61;
+	box-shadow: 0 0 0 3px rgba(29, 171, 97, 0.2);
+}
+
+@keyframes wl-enter {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes wl-shimmer {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wl-head,
+	.wl-side,
+	.wl-main,
+	.wl-shimmer {
+		animation: none !important;
+	}
+	.wl-side nav button:hover > span:first-child {
+		transform: none !important;
+	}
+}

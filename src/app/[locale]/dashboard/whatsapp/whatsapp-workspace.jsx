@@ -289,6 +289,14 @@ import './wa-memo-docs.css';
 import './wa-popups.css';
 import './wa-settings.css';
 import './wa-composer-premium.css';
+import './wa-chats-studio.css';
+import './wa-statuses-studio.css';
+import './wa-polish.css';
+import './wa-ops-studio.css';
+import './wa-reading-studio.css';
+import './wa-docs-studio.css';
+import { waFontClasses } from './wa-fonts';
+import { startViewAs } from './wa-view-as';
 import { buildCompletionModel, rememberSentText, suggestCompletion } from './wa-autocomplete';
 import { useMenuKeyboard } from './wa-ui-menu';
 import { markVoicePlayed, useVoicePlayed } from './voice-played-store';
@@ -664,7 +672,7 @@ function readWhatsAppDeepLink() {
 			whatsAppDeepLink.tab = tab === 'accounts' ? 'accounts' : null;
 			url.searchParams.delete('accountId');
 			url.searchParams.delete('conversationId');
-			url.searchParams.delete('tab');
+			// ?tab= stays: it always shows the open tab (see writeWhatsAppTabToUrl).
 			window.history.replaceState(
 				window.history.state,
 				'',
@@ -862,8 +870,36 @@ function readPersistedWhatsAppTab() {
 	return readStoredWhatsAppActiveTab(userId) || readStoredWhatsAppActiveTab(null);
 }
 
+/** The tab named in the address bar (?tab=reading), when it is one this page has. */
+function readWhatsAppTabFromUrl() {
+	if (typeof window === 'undefined') return null;
+	try {
+		const tab = new URL(window.location.href).searchParams.get('tab');
+		if (!tab || !WHATSAPP_PERSISTED_TABS.has(tab)) return null;
+		if (tab === 'fakeChat' && !canShowFakeChat(resolveStoredWhatsAppUserEmail())) return null;
+		return tab;
+	} catch {
+		return null;
+	}
+}
+
+/** Keeps ?tab= in the address bar in step with the open tab (replaced, not a new history entry). */
+function writeWhatsAppTabToUrl(tab) {
+	if (typeof window === 'undefined' || !tab) return;
+	try {
+		const url = new URL(window.location.href);
+		if (url.searchParams.get('tab') === tab) return;
+		url.searchParams.set('tab', tab);
+		window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+	} catch {
+		// Ignore history failures.
+	}
+}
+
 function defaultWhatsAppActiveTab() {
 	if (typeof window === 'undefined') return null;
+	const fromUrl = readWhatsAppTabFromUrl();
+	if (fromUrl) return fromUrl;
 	const stored = readPersistedWhatsAppTab();
 	if (stored === 'notifications' || stored === 'channels' || stored === 'contacts') return 'chats';
 	if (stored === 'fakeChat' && !canShowFakeChat(resolveStoredWhatsAppUserEmail())) return 'chats';
@@ -2909,6 +2945,8 @@ function WhatsAppWorkspaceContent() {
 	const [bootStatus, setBootStatus] = useState('loading');
 	const [bootError, setBootError] = useState('');
 	const [isAdmin, setIsAdmin] = useState(false);
+	// "View as" a teammate is the super-admin impersonation session (the API allows only that role).
+	const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 	const [currentUserId, setCurrentUserId] = useState(
 		() => resolveStoredWhatsAppUserId() || 'anonymous',
 	);
@@ -4559,6 +4597,7 @@ function WhatsAppWorkspaceContent() {
 				.filter(Boolean)
 				.map(role => String(role).toUpperCase());
 			setIsAdmin(roles.includes('ADMIN') || roles.includes('SUPER_ADMIN'));
+			setIsSuperAdmin(roles.includes('SUPER_ADMIN'));
 			setCurrentUserId(String(user?.id || 'anonymous'));
 		} catch {
 			setIsAdmin(false);
@@ -4590,7 +4629,8 @@ function WhatsAppWorkspaceContent() {
 		if (!currentUserId || currentUserId === 'anonymous') return;
 		if (!restoredTabRef.current) {
 			restoredTabRef.current = true;
-			const stored = readStoredWhatsAppActiveTab(currentUserId);
+			// A tab named in the address bar wins over the one remembered from last time.
+			const stored = readWhatsAppTabFromUrl() ? null : readStoredWhatsAppActiveTab(currentUserId);
 			if (
 				stored &&
 				stored !== 'notifications' &&
@@ -4603,6 +4643,12 @@ function WhatsAppWorkspaceContent() {
 		}
 		writeStoredWhatsAppActiveTab(activeTab, currentUserId);
 	}, [activeTab, currentUserId, tabReady]);
+
+	// The open tab is always in the address bar: /dashboard/whatsapp?tab=reading
+	useEffect(() => {
+		if (!tabReady || !activeTab) return;
+		writeWhatsAppTabToUrl(activeTab);
+	}, [activeTab, tabReady]);
 
 	useEffect(() => {
 		try {
@@ -8331,15 +8377,23 @@ function WhatsAppWorkspaceContent() {
 			if (isThreadScrollLocked()) return;
 			if (jumpToBottomInFlightRef.current) return;
 			if (!pinThreadToBottomRef.current) return;
+			// Only a real wheel / touch / pointer gesture means the user is scrolling.
+			// userScrollingThreadRef is also set by programmatic scrolls (e.g. the
+			// virtualizer's clamped scrollTo when an image row grows), and treating those
+			// as intent skipped the re-pin, so a chat opened with media stopped short of
+			// its latest messages.
+			const userGesture =
+				userScrollingThreadRef.current &&
+				Date.now() - (lastThreadGestureAtRef.current || 0) < 700;
 			// While opening, programmatic layout growth must not look like a user scroll-away.
-			if (userScrollingThreadRef.current && threadSettledRef.current) return;
+			if (userGesture && threadSettledRef.current) return;
 			const distance = threadDistanceFromBottom(box);
 			const opening = !threadSettledRef.current;
 			// A resize is layout, not intent. Dropping the pin here meant a single row
 			// measuring taller than its estimate permanently unpinned the thread, so the
 			// view stayed wherever the growth left it. Only a real user gesture (handled
 			// in onScroll) may unpin; here we re-assert the bottom instead.
-			if (!opening && distance > THREAD_PIN_THRESHOLD_PX && userScrollingThreadRef.current) {
+			if (!opening && distance > THREAD_PIN_THRESHOLD_PX && userGesture) {
 				pinThreadToBottomRef.current = false;
 				return;
 			}
@@ -8356,24 +8410,56 @@ function WhatsAppWorkspaceContent() {
 			);
 			setShowJumpToBottom(shouldShowJumpToBottom(box));
 		};
+		// A loaded image grows its row only after the virtualizer re-measures it (a frame or
+		// two later), so the bottom is re-asserted again once that growth has landed.
+		const frames = new Set();
+		const keepBottomAfterLayout = () => {
+			const first = requestAnimationFrame(() => {
+				frames.delete(first);
+				const second = requestAnimationFrame(() => {
+					frames.delete(second);
+					keepBottom();
+				});
+				frames.add(second);
+			});
+			frames.add(first);
+		};
 		const onMediaLoad = event => {
 			if (event?.target?.tagName === 'IMG' || event?.target?.tagName === 'VIDEO') {
 				keepBottom();
+				keepBottomAfterLayout();
 			}
 		};
 		box.addEventListener('load', onMediaLoad, true);
 		let observer = null;
+		let threadWatcher = null;
 		if (typeof ResizeObserver !== 'undefined') {
 			observer = new ResizeObserver(() => {
 				keepBottom();
 			});
 			observer.observe(box);
-			const thread = box.querySelector('.wa-message-thread');
-			if (thread) observer.observe(thread);
+			// The thread mounts after this effect when messages arrive later, so it is
+			// observed as soon as it appears (it used to be skipped: media growth then
+			// left the open chat short of its latest messages).
+			let observedThread = null;
+			const observeThread = () => {
+				const thread = box.querySelector('.wa-message-thread');
+				if (!thread || thread === observedThread) return;
+				if (observedThread) observer.unobserve(observedThread);
+				observedThread = thread;
+				observer.observe(thread);
+			};
+			observeThread();
+			if (typeof MutationObserver !== 'undefined') {
+				threadWatcher = new MutationObserver(observeThread);
+				threadWatcher.observe(box, { childList: true });
+			}
 		}
 		keepBottom();
 		return () => {
 			box.removeEventListener('load', onMediaLoad, true);
+			frames.forEach(id => cancelAnimationFrame(id));
+			threadWatcher?.disconnect();
 			observer?.disconnect();
 		};
 	}, [conversationId]);
@@ -13633,6 +13719,9 @@ function WhatsAppWorkspaceContent() {
 		const key = String(target?.id || target?.providerMessageId || '').trim();
 		if (!key) return;
 		setHighlightedMessageKey(null);
+		// Moving to an older message is leaving the bottom on purpose: say so up front, so
+		// the bottom pin (which now ignores gesture-less scrolls) does not pull the view back.
+		pinThreadToBottomRef.current = false;
 		let tries = 0;
 		const apply = () => {
 			const box = messageBoxRef.current;
@@ -16714,7 +16803,7 @@ function WhatsAppWorkspaceContent() {
 	if (!tabReady || !activeTab) {
 		return (
 			<div
-				className={`wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-white text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:bg-transparent dark:bg-slate-950 dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
+				className={`${waFontClasses} wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-white text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:bg-transparent dark:bg-slate-950 dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
 				lang={locale}
 				dir={locale === 'ar' ? 'rtl' : 'ltr'}
 			>
@@ -16817,9 +16906,10 @@ function WhatsAppWorkspaceContent() {
 
 	return (
 		<div
-			className={`wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-white text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:gap-0 min-[769px]:overflow-hidden min-[769px]:bg-transparent dark:bg-[#0b141a] dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
+			className={`${waFontClasses} wa-mobile-shell wa-web-desktop relative mx-auto flex h-dvh w-full max-w-none flex-col overflow-hidden bg-white text-slate-900 min-[769px]:h-[calc(100vh-25px)] min-[769px]:gap-0 min-[769px]:overflow-hidden min-[769px]:bg-transparent dark:bg-[#0b141a] dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
 			lang={locale}
 			dir={locale === 'ar' ? 'rtl' : 'ltr'}
+			data-wa-tab={activeTab || undefined}
 			style={{
 				// Scope this page to WhatsApp's real brand palette — every
 				// var(--color-primary-*) / var(--color-secondary-*) /
@@ -17910,6 +18000,14 @@ function WhatsAppWorkspaceContent() {
 												<TeamPresenceButton
 													ar={locale === 'ar'}
 													staff={staffOnline.filter(member => member.userId !== currentUserId)}
+													onViewAs={member => void startViewAs(member, { locale, ar: locale === 'ar' })}
+													// Super admin: anyone but another super admin. Admin: only their own coaches
+													// (the backend enforces the same rule).
+													canViewAs={member =>
+														isSuperAdmin
+															? String(member?.role || '').toLowerCase() !== 'super_admin'
+															: String(member?.role || '').toLowerCase() === 'coach' && String(member?.adminId || '') === String(currentUserId)
+													}
 													assignedCounts={conversations.reduce((counts, item) => {
 														const owner = item?.assignedUser?.id || item?.assignedUserId;
 														if (owner) counts.set(owner, (counts.get(owner) || 0) + 1);
@@ -19245,8 +19343,16 @@ function WhatsAppWorkspaceContent() {
 											const openingThread =
 												(!threadSettledRef.current || loadingMessagesRef.current) &&
 												!(userGesture && scrollingUp);
+											// A scroll with no gesture behind it while pinned is layout
+											// compensation (the virtualizer shifts scrollTop when a row above
+											// re-measures, e.g. an image settling). Unpinning on it left a chat
+											// opened with media short of its latest messages, with no way back
+											// but the jump button. Code that scrolls away on purpose (unread
+											// divider, quoted/search jump) drops the pin itself first.
+											const layoutShiftWhilePinned = wasPinned && !userGesture;
 											if (
 												!openingThread &&
+												!layoutShiftWhilePinned &&
 												!jumpToBottomInFlightRef.current &&
 												(scrollingUp ||
 												distanceFromBottom > THREAD_PIN_THRESHOLD_PX)
@@ -19421,27 +19527,30 @@ function WhatsAppWorkspaceContent() {
 															disabled={!selectedMessageIds.size || demo.settings.enabled || isDemoId(conversationId)}
 															onClick={() => openShareMessagesModal([...selectedMessageIds])}
 															className="wa-select-toolbar__btn wa-select-toolbar__btn--send disabled:opacity-40"
+															title={locale === 'ar' ? 'إرسال إلى…' : 'Send to…'}
 														>
 															<Send size={13} strokeWidth={2.25} />
-															{locale === 'ar' ? 'إرسال إلى…' : 'Send to…'}
+															<span className="wa-select-toolbar__label">{locale === 'ar' ? 'إرسال إلى…' : 'Send to…'}</span>
 														</button>
 														<button
 															type="button"
 															disabled={!selectedMessageIds.size}
 															onClick={copySelectedMessages}
 															className="wa-select-toolbar__btn wa-select-toolbar__btn--copy disabled:opacity-40"
+															title={t.copySelected}
 														>
 															<Copy size={13} strokeWidth={2.25} />
-															{t.copySelected}
+															<span className="wa-select-toolbar__label">{t.copySelected}</span>
 														</button>
 														<button
 															type="button"
 															disabled={!selectedMessageIds.size}
 															onClick={openSelectedTranscriptBundle}
 															className="wa-select-toolbar__btn wa-select-toolbar__btn--transcribe disabled:opacity-40"
+															title={t.transcribeSelected}
 														>
 															<AudioLines size={13} strokeWidth={2.25} />
-															{t.transcribeSelected}
+															<span className="wa-select-toolbar__label">{t.transcribeSelected}</span>
 														</button>
 														<button
 															type="button"
@@ -19450,13 +19559,14 @@ function WhatsAppWorkspaceContent() {
 																void downloadSelectedMedia({ fromSelectedMessages: true })
 															}
 															className="wa-select-toolbar__btn wa-select-toolbar__btn--download disabled:opacity-40"
+															title={t.downloadSelectedMedia}
 														>
 															{downloadingSelectedMedia ? (
 																<Loader2 size={13} strokeWidth={2.25} className="animate-spin" />
 															) : (
 																<Download size={13} strokeWidth={2.25} />
 															)}
-															{t.downloadSelectedMedia}
+															<span className="wa-select-toolbar__label">{t.downloadSelectedMedia}</span>
 														</button>
 														<span className="wa-select-toolbar__divider" aria-hidden="true" />
 														<button
@@ -19466,8 +19576,10 @@ function WhatsAppWorkspaceContent() {
 																setSelectedMessageIds(toEmptySet);
 															}}
 															className="wa-select-toolbar__cancel"
+															title={t.cancelSelectMessages}
 														>
-															{t.cancelSelectMessages}
+															<X size={14} strokeWidth={2.4} className="wa-select-toolbar__cancel-icon" aria-hidden="true" />
+															<span className="wa-select-toolbar__label">{t.cancelSelectMessages}</span>
 														</button>
 													</div>
 												)}
@@ -24187,6 +24299,7 @@ function WhatsAppWorkspaceContent() {
 											exit="exit"
 											transition={STORY_PERSON_SLIDE_TRANSITION}
 											className="wa-story-viewer__card relative flex h-full w-full cursor-default flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl"
+											data-revoked={selectedStatus?.revokedAt ? 'true' : undefined}
 											onAnimationComplete={definition => {
 												if (definition === 'center') {
 													storyPersonAnimatingRef.current = false;
@@ -24217,6 +24330,7 @@ function WhatsAppWorkspaceContent() {
 											: `Story ${index + 1} of ${queue.length}`
 									}
 									aria-current={index === storyIndex ? 'step' : undefined}
+									data-revoked={item.revokedAt ? 'true' : undefined}
 									title={formatStoryViewTime(item.publishedAt, locale) || undefined}
 									className="group flex-1 cursor-pointer py-1.5 outline-none"
 								>
