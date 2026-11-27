@@ -189,6 +189,8 @@ export default function DocumentEditorWorkspace({ className = 'min-h-[calc(100vh
 				storageKey="so7ba:smart-document:super-admin"
 				labels={labels}
 				toolbarEnd={<DocsTimer />}
+				// Documents live in the user's account; the browser keeps a cache for instant opens.
+				remoteSync
 			/>
 		</div>
 	);

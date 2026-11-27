@@ -47,17 +47,55 @@ export function recorderMime() {
 }
 
 /*
- * Reading English aloud with an American accent, as natural as this device allows:
- *   1. a single word → a real person saying it (dictionaryapi.dev recordings, US first)
- *   2. a natural American voice the browser has (Edge "Online (Natural)", Chrome "Google US English", Apple "Samantha"…)
- *   3. else Google's voice (translate_tts) for short sentences
- *   4. else whatever English voice the browser has
+ * Reading English aloud, as naturally as this device allows. Listening settings (voice, speed,
+ * accent, word recordings) are saved on this device and apply everywhere in Learn.
+ *
+ * "Auto" picks, in order:
+ *   1. a single word → a real person saying it (dictionaryapi.dev recordings, your accent first)
+ *   2. a natural voice the browser has (Edge "Online (Natural)", Chrome "Google US English", Apple "Samantha"…)
+ *   3. Google's online voice, sentence by sentence (any length — long text no longer drops to a robot)
+ *   4. whatever English voice the browser has, sentence by sentence
+ * Long text is always read one sentence at a time: Chrome cuts long utterances off, and short
+ * chunks with a tiny pause sound far less mechanical.
  */
 
+const SETTINGS_KEY = 'learn:tts:v1';
+export const TTS_EVENT = 'learn-tts-changed';
+export const TTS_DEFAULTS = { voice: 'auto', rate: 0.95, accent: 'US', recordings: true };
+export const GOOGLE_ONLINE = 'google-online';
+
+export function getTtsSettings() {
+	try {
+		const raw = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) || 'null');
+		const rate = Number(raw?.rate);
+		return {
+			voice: typeof raw?.voice === 'string' && raw.voice ? raw.voice : TTS_DEFAULTS.voice,
+			rate: Number.isFinite(rate) ? Math.min(1.4, Math.max(0.6, rate)) : TTS_DEFAULTS.rate,
+			accent: raw?.accent === 'GB' ? 'GB' : 'US',
+			recordings: raw?.recordings !== false,
+		};
+	} catch {
+		return { ...TTS_DEFAULTS };
+	}
+}
+
+export function setTtsSettings(patch) {
+	const next = { ...getTtsSettings(), ...(patch || {}) };
+	try {
+		window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+	} catch {
+		/* storage blocked: the setting applies until the page closes */
+	}
+	window.dispatchEvent(new CustomEvent(TTS_EVENT, { detail: next }));
+	return next;
+}
+
 let player = null;
-const wordAudio = new Map(); // word → recording url | ''
+let session = 0; // a new speak() cancels the sentences still queued from the last one
+const wordAudio = new Map(); // accent:word → recording url | ''
 
 function stopAll() {
+	session += 1;
 	try {
 		window.speechSynthesis?.cancel();
 	} catch {
@@ -69,23 +107,43 @@ function stopAll() {
 	}
 }
 
-/** The most natural American voice on this device, or null when only robotic ones exist. */
-export function naturalVoice() {
+/** Stop whatever is being read. */
+export function stopSpeaking() {
+	if (typeof window !== 'undefined') stopAll();
+}
+
+const accentRe = accent => (accent === 'GB' ? /^en[-_]GB/i : /^en[-_]US/i);
+const isNatural = v => /natural|neural|online|premium|enhanced|google/i.test(v.name) || /samantha|ava|allison|evan|nathan|zoe|siri|daniel|serena|kate/i.test(v.name);
+
+/** English voices this browser has, the natural-sounding ones first. */
+export function englishVoices() {
+	if (typeof window === 'undefined' || !window.speechSynthesis) return [];
+	return window.speechSynthesis
+		.getVoices()
+		.filter(v => /^en([-_]|$)/i.test(v.lang))
+		.map(v => ({ name: v.name, lang: v.lang, natural: isNatural(v), local: v.localService }))
+		.sort((a, b) => Number(b.natural) - Number(a.natural) || a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
+}
+
+/** The most natural voice for the accent on this device, or null when only robotic ones exist. */
+export function naturalVoice(accent = getTtsSettings().accent) {
 	if (typeof window === 'undefined' || !window.speechSynthesis) return null;
-	const us = window.speechSynthesis.getVoices().filter(v => /^en[-_]US/i.test(v.lang));
+	const list = window.speechSynthesis.getVoices().filter(v => accentRe(accent).test(v.lang));
 	return (
-		us.find(v => /natural|neural/i.test(v.name)) ||
-		us.find(v => /online/i.test(v.name)) ||
-		us.find(v => /google/i.test(v.name)) ||
-		us.find(v => /samantha|ava|allison|evan|nathan|zoe|siri/i.test(v.name)) ||
+		list.find(v => /natural|neural/i.test(v.name)) ||
+		list.find(v => /online/i.test(v.name)) ||
+		list.find(v => /google/i.test(v.name)) ||
+		list.find(v => /premium|enhanced/i.test(v.name)) ||
+		list.find(v => /samantha|ava|allison|evan|nathan|zoe|siri|daniel|serena|kate/i.test(v.name)) ||
 		null
 	);
 }
 
-async function recordingOf(word) {
+async function recordingOf(word, accent) {
 	const w = String(word).trim().toLowerCase();
 	if (!/^[a-z][a-z'-]{0,30}$/.test(w)) return '';
-	if (wordAudio.has(w)) return wordAudio.get(w);
+	const key = `${accent}:${w}`;
+	if (wordAudio.has(key)) return wordAudio.get(key);
 	let url = '';
 	try {
 		const ctl = new AbortController();
@@ -94,34 +152,71 @@ async function recordingOf(word) {
 		clearTimeout(t);
 		if (r.ok) {
 			const list = (await r.json()).flatMap(e => e?.phonetics || []).map(p => String(p?.audio || '')).filter(Boolean);
-			url = list.find(a => /-us(-\d+)?\.mp3$/i.test(a)) || list.find(a => !/-(uk|au)(-\d+)?\.mp3$/i.test(a)) || '';
+			const mine = accent === 'GB' ? /-uk(-\d+)?\.mp3$/i : /-us(-\d+)?\.mp3$/i;
+			url = list.find(a => mine.test(a)) || list.find(a => !/-(au)(-\d+)?\.mp3$/i.test(a)) || '';
 			if (url.startsWith('//')) url = `https:${url}`;
 		}
 	} catch {
 		/* offline / not found */
 	}
-	wordAudio.set(w, url);
+	wordAudio.set(key, url);
 	return url;
 }
 
-function playUrl(url, rate = 1) {
-	stopAll();
-	const a = new Audio(url);
-	a.playbackRate = rate;
-	player = a;
-	return a.play();
+/** Sentences (and, inside a very long one, clauses) of at most `max` characters. */
+export function chunkText(text, max = 180) {
+	const clean = String(text || '').replace(/\s+/g, ' ').trim();
+	if (!clean) return [];
+	const sentences = clean.match(/[^.!?;:]+[.!?;:]+["')\]]*|[^.!?;:]+$/g) || [clean];
+	const out = [];
+	for (const s of sentences.map(x => x.trim()).filter(Boolean)) {
+		if (s.length <= max) {
+			out.push(s);
+			continue;
+		}
+		let rest = s;
+		while (rest.length > max) {
+			const cut = Math.max(rest.lastIndexOf(', ', max), rest.lastIndexOf(' — ', max), rest.lastIndexOf(' ', max));
+			const at = cut > max * 0.4 ? cut + 1 : max;
+			out.push(rest.slice(0, at).trim());
+			rest = rest.slice(at).trim();
+		}
+		if (rest) out.push(rest);
+	}
+	return out;
 }
 
-function browserVoice(text, rate, voice) {
-	const synth = window.speechSynthesis;
-	if (!synth) return;
-	const u = new SpeechSynthesisUtterance(String(text));
-	u.lang = 'en-US';
-	u.rate = rate;
-	const v = voice || synth.getVoices().find(x => /^en[-_]US/i.test(x.lang)) || synth.getVoices().find(x => /^en/i.test(x.lang));
-	if (v) u.voice = v;
-	synth.speak(u);
+function playUrl(url, rate, id) {
+	return new Promise((resolve, reject) => {
+		if (id !== session) return resolve();
+		const a = new Audio(url);
+		a.playbackRate = rate;
+		a.preservesPitch = true;
+		player = a;
+		a.onended = () => resolve();
+		a.onerror = () => reject(new Error('audio'));
+		a.play().catch(reject);
+	});
 }
+
+function sayWithVoice(text, rate, voice, accent, id) {
+	return new Promise(resolve => {
+		const synth = window.speechSynthesis;
+		if (!synth || id !== session) return resolve();
+		const u = new SpeechSynthesisUtterance(String(text));
+		u.lang = accent === 'GB' ? 'en-GB' : 'en-US';
+		u.rate = rate;
+		u.pitch = 1;
+		const v = voice || synth.getVoices().find(x => accentRe(accent).test(x.lang)) || synth.getVoices().find(x => /^en/i.test(x.lang));
+		if (v) u.voice = v;
+		u.onend = () => resolve();
+		u.onerror = () => resolve();
+		synth.speak(u);
+	});
+}
+
+const pause = ms => new Promise(r => setTimeout(r, ms));
+const googleUrl = (t, accent) => `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${accent === 'GB' ? 'en-GB' : 'en-US'}&q=${encodeURIComponent(t)}`;
 
 // voices arrive late in Chrome / Edge
 if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -133,34 +228,61 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
 	}
 }
 
-/** Reads text aloud in an American accent. */
-export async function speak(text, rate = 0.95) {
+/** Reads text aloud with the listening settings (voice, speed, accent). */
+export async function speak(text, rateOverride) {
 	if (typeof window === 'undefined') return;
 	const t = String(text || '').trim();
 	if (!t) return;
 	stopAll();
-	const rec = await recordingOf(t);
-	if (rec) {
-		try {
-			await playUrl(rec);
-			return;
-		} catch {
-			/* fall through */
+	const id = session;
+	const s = getTtsSettings();
+	const rate = Number.isFinite(rateOverride) ? rateOverride : s.rate;
+
+	// 1. a real person saying the word
+	if (s.recordings && s.voice === 'auto') {
+		const rec = await recordingOf(t, s.accent);
+		if (id !== session) return;
+		if (rec) {
+			try {
+				await playUrl(rec, Math.min(1.15, Math.max(0.8, rate / 0.95)), id);
+				return;
+			} catch {
+				/* fall through */
+			}
 		}
 	}
-	const voice = naturalVoice();
+
+	const chunks = chunkText(t);
+	const chosen = s.voice !== 'auto' && s.voice !== GOOGLE_ONLINE ? window.speechSynthesis?.getVoices().find(v => v.name === s.voice) || null : null;
+	const voice = chosen || (s.voice === 'auto' ? naturalVoice(s.accent) : null);
+
+	// 2. a natural (or the chosen) browser voice, one sentence at a time
 	if (voice) {
-		browserVoice(t, rate, voice);
+		for (const part of chunks) {
+			if (id !== session) return;
+			await sayWithVoice(part, rate, voice, s.accent, id);
+		}
 		return;
 	}
-	if (t.length <= 200) {
+
+	// 3. Google's online voice, one sentence at a time
+	if (s.voice === 'auto' || s.voice === GOOGLE_ONLINE) {
 		try {
-			await playUrl(`https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=${encodeURIComponent(t)}`, rate < 1 ? 0.95 : 1);
+			for (const part of chunks) {
+				if (id !== session) return;
+				await playUrl(googleUrl(part, s.accent), Math.min(1.25, Math.max(0.75, rate / 0.95)), id);
+				await pause(90);
+			}
 			return;
 		} catch {
-			/* fall through */
+			if (id !== session) return;
+			/* blocked / offline: fall through */
 		}
 	}
-	stopAll();
-	browserVoice(t, rate, null);
+
+	// 4. any English voice on the device
+	for (const part of chunks) {
+		if (id !== session) return;
+		await sayWithVoice(part, rate, null, s.accent, id);
+	}
 }

@@ -397,7 +397,13 @@
 /* lead | mode switch | actions */
 .sd-chrome--editor {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	/*
+	 * The actions column never shrinks below its content: with `minmax(0, 1fr)` the tools (timer,
+	 * Type, Review, Share, Export) spilled backwards over the RTL / LTR switch whenever they were
+	 * wider than their share. The mode switch stays centred while there is room; when there is
+	 * not, the title column gives way instead.
+	 */
+	grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
 	min-height: var(--sd-bar-h);
 	padding: 0 12px;
 	gap: 12px;
@@ -499,6 +505,16 @@
 .sd-saved {
 	color: var(--sd-accent);
 	font-weight: 600;
+}
+
+/* account sync could not be reached: the work is safe locally and goes up on the next open */
+.sd-sync-off {
+	color: #b45309;
+	font-weight: 600;
+}
+
+:is(html.dark, html[data-theme-mode='dark']) .sd-sync-off {
+	color: #fbbf24;
 }
 
 /* Edit / Preview */
@@ -1718,6 +1734,50 @@ html.dark .sd-typo-trigger.is-open {
 		grid-area: actions;
 	}
 
+	/*
+	 * The second row holds Edit/Preview + Auto/RTL/LTR *and* the tools. The switches live in
+	 * .sd-chrome-center (the grid item; the .sd-seg rule above never reached them), and with their
+	 * labels the row was wider than the screen, so the tools sat on top of the direction switch.
+	 * The switches go icon-only here (their title stays the accessible name) and the tools keep
+	 * the rest of the row, aligned to the end. The compact (Learn) bar is a flex row: untouched.
+	 */
+	.sd-chrome--editor:not(.sd-chrome--compact) {
+		grid-template-columns: max-content minmax(0, 1fr);
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-center {
+		display: flex;
+		min-width: 0;
+		gap: 6px;
+		grid-area: seg;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions {
+		min-width: 0;
+		justify-content: flex-end;
+		gap: 2px;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-seg-label {
+		display: none;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-seg button {
+		width: 32px;
+		padding: 0;
+		justify-content: center;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions :is(.sd-tool-btn, .sd-chrome-timer .hb-toolbtn) {
+		width: 32px;
+		min-inline-size: 32px;
+		padding: 0;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions .sd-tool-group {
+		gap: 0;
+	}
+
 	.sd-markdown-source {
 		padding-top: 24px;
 	}
@@ -1751,6 +1811,174 @@ html.dark .sd-typo-trigger.is-open {
 
 	.sd-seg button {
 		padding: 0 10px;
+	}
+
+	/* very narrow phones: a little tighter so both switches and all tools still fit one row */
+	.sd-chrome--editor:not(.sd-chrome--compact) {
+		column-gap: 4px;
+		padding-inline: 8px;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-center {
+		gap: 4px;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-seg button {
+		width: 24px;
+		padding: 0;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions :is(.sd-tool-btn, .sd-chrome-timer .hb-toolbtn) {
+		width: 26px;
+		min-inline-size: 26px;
+		padding: 0;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-timer {
+		margin-inline-end: 0;
+	}
+}
+
+/*
+ * The bar's own width decides how much text fits, not the window: the editor sits beside the
+ * dashboard sidebar and its history, so a 1440px window can leave it ~800px. Labels give way in
+ * order of how often they are needed (tool words, then direction + Export, then counts), and the
+ * Edit / Preview words go last. Every button keeps its icon and title.
+ *
+ * The container is .sd-main (not the bar: a container cannot restyle itself). Only above 520px —
+ * a size container is also the containing block for fixed children, and below 521px the timer
+ * popover is `position: fixed` to the bottom of the screen. Narrow windows use the media rules.
+ */
+@media (min-width: 521px) {
+	.sd-shell--md .sd-main {
+		container: sd-bar / inline-size;
+	}
+}
+
+/* an editor narrower than a phone inside a wide window (e.g. beside the dashboard sidebar) */
+@container sd-bar (max-width: 600px) {
+	.sd-chrome--editor:not(.sd-chrome--compact) {
+		grid-template-columns: max-content minmax(0, 1fr);
+		grid-template-areas:
+			'lead lead'
+			'seg actions';
+		gap: 6px 8px;
+		padding: 8px 10px;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-lead {
+		grid-area: lead;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-center {
+		display: flex;
+		min-width: 0;
+		gap: 6px;
+		grid-area: seg;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions {
+		grid-area: actions;
+		min-width: 0;
+		justify-content: flex-end;
+		gap: 2px;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) :is(.sd-seg-label, .sd-tool-label, .sd-export-label, .sd-chrome-count.is-chars) {
+		display: none;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-seg button {
+		width: 32px;
+		padding: 0;
+		justify-content: center;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions :is(.sd-tool-btn, .sd-chrome-timer .hb-toolbtn) {
+		width: 32px;
+		min-inline-size: 32px;
+		padding: 0;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions .sd-tool-group {
+		gap: 0;
+	}
+}
+
+@container sd-bar (max-width: 1100px) {
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions .sd-tool-label {
+		display: none;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions .sd-tool-group .sd-tool-btn {
+		width: 34px;
+		padding: 0;
+	}
+}
+
+@container sd-bar (min-width: 601px) and (max-width: 940px) {
+	.sd-chrome--editor:not(.sd-chrome--compact) :is(.sd-dir-seg .sd-seg-label, .sd-export-label, .sd-chrome-count.is-chars) {
+		display: none;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-tool-btn.sd-export-btn {
+		width: 36px;
+		padding: 0;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-dir-seg button {
+		width: 32px;
+		padding: 0;
+		justify-content: center;
+	}
+}
+
+@container sd-bar (min-width: 601px) and (max-width: 720px) {
+	.sd-chrome--editor:not(.sd-chrome--compact) :is(.sd-mode-seg .sd-seg-label, .sd-chrome-count.is-mins) {
+		display: none;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-mode-seg button {
+		width: 34px;
+		padding: 0;
+		justify-content: center;
+	}
+}
+
+/* phones: one notch tighter, so the row also fits inside a padded host (e.g. the dashboard page) */
+@media (max-width: 380px) {
+	.sd-shell--md .sd-chrome--editor:not(.sd-chrome--compact) .sd-seg button {
+		width: 24px;
+	}
+
+	.sd-shell--md .sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions :is(.sd-tool-btn, .sd-chrome-timer .hb-toolbtn) {
+		width: 26px;
+		min-inline-size: 26px;
+	}
+}
+
+@media (max-width: 440px) {
+	.sd-chrome--editor:not(.sd-chrome--compact) {
+		column-gap: 4px;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-center {
+		gap: 3px;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-seg button {
+		width: 26px;
+		padding: 0;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-actions :is(.sd-tool-btn, .sd-chrome-timer .hb-toolbtn) {
+		width: 28px;
+		min-inline-size: 28px;
+		padding: 0;
+	}
+
+	.sd-chrome--editor:not(.sd-chrome--compact) .sd-chrome-timer {
+		margin-inline-end: 0;
 	}
 }
 

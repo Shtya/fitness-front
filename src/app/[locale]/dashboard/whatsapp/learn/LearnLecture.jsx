@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import {
 	AlertTriangle,
@@ -300,9 +301,11 @@ function LectureInfo({ c, course, position, total, stats, description, onDescrip
  * only the text and a thin reading-progress line (Esc, the corner button or the top edge bring
  * the controls back). Loads the full lecture on open; every edit is saved by itself.
  */
-export default function LearnLecture({ c, lectureId, course, lectures, initialSection = 'content', onOpenLecture, onSummary, onSectionChange, focus = false, onToggleFocus, onBack, onSearch }) {
-	// where an English day puts its tabs (in the header)
+export default function LearnLecture({ c, lectureId, course, lectures, initialSection = 'content', onOpenLecture, onSummary, onSectionChange, focus = false, onToggleFocus, onBack, onSearch, sideHost = null }) {
+	// where an English day puts its tabs (in the header, or in the sidebar's lesson panel)
 	const [tabsHost, setTabsHost] = useState(null);
+	// where the transcript puts its sections and marks when the lesson lives in the sidebar
+	const [sideExtraHost, setSideExtraHost] = useState(null);
 	const tDoc = useTranslations('documentEditor');
 	const editorLabels = useDocumentEditorLabels();
 	const [lecture, setLecture] = useState(null);
@@ -454,6 +457,55 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 				</button>
 			) : null}
 
+			{english && sideHost
+				? createPortal(
+						<div className="lrn-lesson">
+							<div className="lrn-lesson__top">
+								<button type="button" className="lrn-icon-btn" onClick={onBack} title={c.back} aria-label={c.back}>
+									<ArrowLeft size={18} className="lrn-flip-rtl" />
+								</button>
+								<span className="lrn-lesson__course" dir="auto">
+									{course?.title}
+								</span>
+								<button
+									type="button"
+									className={`lrn-icon-btn lrn-rev-btn${lecture.needsRevision ? ' is-on' : ''}`}
+									aria-pressed={lecture.needsRevision}
+									title={lecture.needsRevision ? c.needsRevision : c.markRevision}
+									aria-label={lecture.needsRevision ? c.needsRevision : c.markRevision}
+									onClick={() => patchLocal({ needsRevision: !lecture.needsRevision }, { immediate: true })}
+								>
+									<BookmarkCheck size={16} />
+								</button>
+								<button type="button" className="lrn-icon-btn" onClick={onToggleFocus} title={c.focus} aria-label={c.focus}>
+									<Maximize2 size={16} />
+								</button>
+							</div>
+							<input
+								className="lrn-lesson__title"
+								value={titleDraft}
+								dir="auto"
+								maxLength={160}
+								aria-label={c.fields.title}
+								onChange={event => setTitleDraft(event.target.value)}
+								onBlur={commitTitle}
+								onKeyDown={event => {
+									if (event.key === 'Enter') event.currentTarget.blur();
+									if (event.key === 'Escape') {
+										event.preventDefault();
+										setTitleDraft(lecture.title);
+										event.currentTarget.blur();
+									}
+								}}
+							/>
+							{saver.state === 'error' ? <SaveState state={saver.state} c={c} onRetry={saver.retry} /> : null}
+							<div className="lrn-lesson__tabs" ref={setTabsHost} />
+							<div className="lrn-lesson__extra" ref={setSideExtraHost} />
+						</div>,
+						sideHost,
+					)
+				: null}
+			{english && sideHost ? null : (
 			<header className={`lrn-lhead${english ? ' is-en' : ''}`}>
 				<button type="button" className="lrn-icon-btn" onClick={onBack} title={c.back} aria-label={c.back}>
 					<ArrowLeft size={18} className="lrn-flip-rtl" />
@@ -534,11 +586,13 @@ export default function LearnLecture({ c, lectureId, course, lectures, initialSe
 					</button>
 				</span>
 			</header>
+			)}
 
 			{course?.kind === 'english' ? (
 				<EnglishDay
 					c={c}
 					tabsHost={tabsHost}
+					sideHost={english && sideHost ? sideExtraHost : null}
 					lecture={lecture}
 					course={course}
 					onChange={(english, immediate) => patchLocal({ english }, immediate ? { immediate: true } : undefined)}

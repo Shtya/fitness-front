@@ -881,3 +881,896 @@
 	min-block-size: 40px;
 	font-size: 14.5px;
 }
+
+/* ═══ vocabulary tables, compact: more of each sentence on one line, calmer chrome ═══ */
+.en-tbl .en-tr__table {
+	border-color: var(--line);
+	border-radius: 16px;
+	background: var(--sheet);
+	scrollbar-width: thin;
+}
+.en-tbl .en-tr__table table {
+	font-size: 13px;
+	line-height: 1.5;
+}
+.en-tbl .en-tr__table th {
+	padding: 9px 12px;
+	background: color-mix(in srgb, var(--accent-soft) 45%, var(--sheet-2, var(--sheet)));
+	color: var(--ink-2, var(--muted));
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0;
+	border-bottom: 1px solid var(--line-2, var(--line));
+}
+.en-tbl .en-tr__table td {
+	padding: 7px 12px;
+	vertical-align: top;
+}
+/* the tick and delete columns line up with the first line of text */
+.en-tbl .en-tr__table td.en-tbl__chk,
+.en-tbl .en-tr__table td.en-tbl__del {
+	vertical-align: top;
+	padding-block: 6px;
+}
+.en-tbl .en-tr__table tbody tr + tr td {
+	border-top: 0;
+}
+.en-tbl .en-tr__table tbody tr:hover td {
+	background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+}
+/* column widths follow the content: labels stay on one line, sentences get room */
+.en-tbl .en-tr__table :is(th, td).is-tiny {
+	inline-size: 1%;
+	white-space: nowrap;
+	text-align: center;
+}
+.en-tbl .en-tr__table :is(th, td).is-short {
+	min-inline-size: 8.5rem;
+}
+.en-tbl .en-tr__table :is(th, td).is-mid {
+	min-inline-size: 12rem;
+}
+.en-tbl .en-tr__table :is(th, td).is-long {
+	min-inline-size: 17rem;
+}
+/* the first text column (the word / expression) */
+.en-tbl .en-tr__table td:nth-child(2) {
+	font-size: 13.5px;
+	white-space: normal;
+}
+.en-tbl .en-tr__table td.is-en {
+	color: var(--ink);
+}
+.en-tbl .en-tr__table td.is-ar {
+	color: var(--ink-2, var(--ink));
+	line-height: 1.65;
+}
+
+/* level badge (A1–C2): a label, not a word to listen to */
+.en-lvl {
+	display: inline-block;
+	min-inline-size: 30px;
+	padding: 1px 7px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+	background: color-mix(in srgb, #64748b 14%, transparent);
+	color: #475569;
+}
+.en-lvl[data-lvl='A'] {
+	background: color-mix(in srgb, #0ea5e9 14%, transparent);
+	color: #0369a1;
+}
+.en-lvl[data-lvl='B'] {
+	background: color-mix(in srgb, #16a34a 14%, transparent);
+	color: #15803d;
+}
+.en-lvl[data-lvl='C'] {
+	background: color-mix(in srgb, #d97706 16%, transparent);
+	color: #b45309;
+}
+:is(html.dark, html[data-theme-mode='dark']) .en-lvl[data-lvl='A'] {
+	color: #7dd3fc;
+}
+:is(html.dark, html[data-theme-mode='dark']) .en-lvl[data-lvl='B'] {
+	color: #86efac;
+}
+:is(html.dark, html[data-theme-mode='dark']) .en-lvl[data-lvl='C'] {
+	color: #fcd34d;
+}
+
+/* listen: after the text, quiet until the row is hovered (always visible on touch) */
+.en-tbl .en-tr__table td .en-cell-say {
+	inline-size: 20px;
+	block-size: 20px;
+	margin-inline: 5px 0;
+	vertical-align: -4px;
+	background: transparent;
+	color: var(--muted);
+	opacity: 0.55;
+	transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+.en-tbl .en-tr__table tr:hover .en-cell-say,
+.en-tbl .en-tr__table .en-cell-say:focus-visible {
+	opacity: 1;
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+}
+.en-tbl .en-tr__table td .en-cell-say:hover {
+	background: var(--accent);
+	color: var(--on-accent, #fff);
+}
+@media (hover: none) {
+	.en-tbl .en-tr__table td .en-cell-say {
+		opacity: 0.85;
+	}
+}
+
+@media (max-width: 560px) {
+	.en-tbl .en-tr__table table {
+		font-size: 12.5px;
+	}
+	.en-tbl .en-tr__table :is(th, td).is-long {
+		min-inline-size: 14rem;
+	}
+	.en-tbl .en-tr__table :is(th, td).is-mid {
+		min-inline-size: 10rem;
+	}
+}
+
+/* ═══ the sections bar: one row that scrolls sideways and follows where you read ═══ */
+.en-md-toc {
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	overflow-y: hidden;
+	overscroll-behavior-x: contain;
+	scroll-padding-inline: 24px;
+	/* soft edges show there is more to either side */
+	-webkit-mask-image: linear-gradient(to right, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+	mask-image: linear-gradient(to right, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+}
+.en-md-toc__item {
+	flex: none;
+}
+.en-md-toc button.is-here {
+	box-shadow: 0 4px 12px -6px var(--accent);
+}
+
+/* '<a id="s2"></a>' lines: jump targets only, never shown; land below the sticky sections bar */
+.en-anchor {
+	display: block;
+	block-size: 0;
+	scroll-margin-top: 72px;
+}
+
+/* links inside a lesson ("Contents" → its section, web addresses) */
+.en-tr__text a.en-link {
+	color: var(--accent-ink);
+	font-weight: 600;
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+	text-decoration-thickness: 1.5px;
+	text-underline-offset: 3px;
+	transition: text-decoration-color 0.15s ease;
+}
+.en-tr__text a.en-link:hover {
+	text-decoration-color: currentColor;
+}
+
+/* ═══ listening settings (voice, accent, speed, word recordings) ═══ */
+.en-tts {
+	position: relative;
+}
+.en-tts .lrn-icon-btn.is-on {
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+}
+.en-tts__pop {
+	position: absolute;
+	inset-block-start: calc(100% + 8px);
+	inset-inline-end: 0;
+	z-index: 30;
+	display: grid;
+	gap: 14px;
+	inline-size: min(340px, calc(100vw - 32px));
+	padding: 14px 16px 16px;
+	border: 1px solid var(--line);
+	border-radius: 18px;
+	background: var(--sheet);
+	box-shadow: 0 24px 54px -24px rgba(15, 20, 30, 0.45), 0 0 0 1px rgba(15, 20, 30, 0.03);
+	color: var(--ink);
+	font-size: 13px;
+	animation: en-tts-in 0.16s ease-out;
+}
+@keyframes en-tts-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px) scale(0.98);
+	}
+}
+.en-tts__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.en-tts__head b {
+	font-size: 14px;
+}
+.en-tts__x {
+	display: grid;
+	place-items: center;
+	inline-size: 28px;
+	block-size: 28px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+}
+.en-tts__x:hover {
+	background: var(--line);
+	color: var(--ink);
+}
+.en-tts__field {
+	display: grid;
+	gap: 6px;
+}
+.en-tts__field > span {
+	color: var(--muted);
+	font-size: 12px;
+	font-weight: 700;
+}
+.en-tts__val {
+	margin-inline-start: 4px;
+	color: var(--accent-ink);
+	font-variant-numeric: tabular-nums;
+}
+.en-tts__field select {
+	inline-size: 100%;
+	block-size: 38px;
+	padding-inline: 10px;
+	border: 1px solid var(--line-2, var(--line));
+	border-radius: 10px;
+	background: var(--sheet);
+	color: var(--ink);
+	font: inherit;
+}
+.en-tts__field select:focus-visible,
+.en-tts__field input[type='range']:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+.en-tts__field input[type='range'] {
+	inline-size: 100%;
+	accent-color: var(--accent);
+}
+.en-tts__scale {
+	display: flex;
+	justify-content: space-between;
+	color: var(--muted);
+	font-size: 11px;
+}
+.en-tts__seg {
+	display: inline-flex;
+	gap: 2px;
+	padding: 3px;
+	border-radius: 11px;
+	background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.en-tts__seg button {
+	flex: 1;
+	block-size: 32px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--muted);
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+.en-tts__seg button.is-on {
+	background: var(--sheet);
+	color: var(--accent-ink);
+	box-shadow: 0 1px 2px rgba(15, 20, 30, 0.1), 0 4px 10px -6px rgba(15, 20, 30, 0.35);
+}
+.en-tts__check {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	cursor: pointer;
+}
+.en-tts__check input {
+	margin-top: 2px;
+	accent-color: var(--accent);
+	inline-size: 16px;
+	block-size: 16px;
+}
+.en-tts__check span {
+	display: grid;
+	gap: 2px;
+}
+.en-tts__check small {
+	color: var(--muted);
+	font-size: 11.5px;
+}
+.en-tts__note {
+	margin: -6px 0 0;
+	padding: 8px 10px;
+	border-radius: 10px;
+	background: color-mix(in srgb, #d97706 10%, transparent);
+	color: var(--ink-2, var(--ink));
+	font-size: 11.5px;
+	line-height: 1.5;
+}
+.en-tts__foot {
+	display: flex;
+	gap: 8px;
+}
+.en-tts__foot .lrn-btn.is-primary {
+	flex: 1;
+	justify-content: center;
+}
+@media (prefers-reduced-motion: reduce) {
+	.en-tts__pop {
+		animation: none;
+	}
+}
+
+/* ═══ an English lesson in the sidebar: back · title · tabs · actions · sections · my marks ═══ */
+.lrn-side.is-lesson {
+	padding-block: 16px 12px;
+}
+.lrn-side.is-lesson .lrn-side__brand {
+	padding-bottom: 8px;
+}
+.lrn-side.is-lesson .lrn-side__head,
+.lrn-side.is-lesson .lrn-side__list {
+	display: none;
+}
+.lrn-side__lesson {
+	display: flex;
+	min-height: 0;
+	flex: 1;
+	flex-direction: column;
+	margin-top: 10px;
+	padding-top: 12px;
+	border-top: 1px solid var(--line);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+}
+.lrn-lesson {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.lrn-lesson__top {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+}
+.lrn-lesson__course {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--muted);
+	font-size: 12.5px;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.lrn .lrn-lesson__title {
+	inline-size: 100%;
+	padding: 6px 8px;
+	border: 1px solid transparent;
+	border-radius: var(--r-1);
+	background: transparent;
+	color: var(--ink);
+	font-family: var(--font-head);
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1.3;
+}
+.lrn .lrn-lesson__title:hover {
+	background: var(--hover);
+}
+.lrn .lrn-lesson__title:focus {
+	border-color: var(--accent);
+	background: var(--sheet);
+	outline: none;
+}
+/* the day's tabs, one under the other */
+.lrn-lesson__tabs .lrn-tabs {
+	display: grid;
+	gap: 2px;
+	overflow: visible;
+}
+.lrn-lesson__tabs .lrn-tab {
+	height: 36px;
+	padding: 0 10px;
+	border-radius: var(--r-1);
+	color: var(--ink-2);
+}
+.lrn-lesson__tabs .lrn-tab::after {
+	display: none;
+}
+.lrn-lesson__tabs .lrn-tab:hover {
+	background: var(--hover);
+}
+.lrn-lesson__tabs .lrn-tab.is-on {
+	background: var(--accent-soft, var(--hover));
+	color: var(--accent-ink, var(--ink));
+	font-weight: 600;
+}
+.lrn-lesson__tabs .en-tab-count {
+	margin-inline-start: auto;
+}
+.lrn-lesson__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding-bottom: 4px;
+}
+.lrn-lesson__act {
+	display: inline-flex;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	block-size: 32px;
+	padding: 0 10px;
+	border: 1px solid var(--line);
+	border-radius: 99px;
+	background: var(--sheet);
+	color: var(--ink-2);
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+}
+.lrn-lesson__act:hover {
+	border-color: var(--accent);
+	color: var(--ink);
+}
+.lrn-lesson__act.is-on {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+}
+.lrn-lesson__extra {
+	display: grid;
+	gap: 14px;
+}
+
+/* a block in the side panel: a small title + its list */
+.en-side-block {
+	display: grid;
+	gap: 6px;
+}
+.en-side-block__title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+	padding: 8px 8px 2px;
+	border-top: 1px solid var(--line);
+	color: var(--muted);
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+.en-side-block__title .lrn-count {
+	margin-inline-start: auto;
+}
+.en-side-secs,
+.en-marks {
+	display: grid;
+	gap: 1px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.en-side-secs button {
+	display: flex;
+	inline-size: 100%;
+	align-items: baseline;
+	gap: 6px;
+	padding: 6px 8px 6px 10px;
+	border: 0;
+	border-inline-start: 2px solid transparent;
+	border-start-start-radius: 0;
+	border-end-start-radius: 0;
+	border-start-end-radius: var(--r-1);
+	border-end-end-radius: var(--r-1);
+	background: transparent;
+	color: var(--ink-2);
+	font-size: 12.5px;
+	line-height: 1.4;
+	text-align: start;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.en-side-secs button span {
+	display: -webkit-box;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+.en-side-secs button small {
+	color: var(--muted);
+	font-size: 10.5px;
+	font-variant-numeric: tabular-nums;
+}
+.en-side-secs button:hover {
+	background: var(--hover);
+	color: var(--ink);
+}
+.en-side-secs button.is-here {
+	border-inline-start-color: var(--accent);
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+	font-weight: 600;
+}
+
+/* my marks */
+.en-marks li {
+	display: flex;
+	align-items: flex-start;
+	gap: 2px;
+	border-radius: var(--r-1);
+}
+.en-marks li:hover {
+	background: var(--hover);
+}
+.en-marks__go {
+	display: grid;
+	flex: 1;
+	min-width: 0;
+	gap: 1px;
+	padding: 6px 8px;
+	border: 0;
+	background: transparent;
+	color: var(--ink);
+	font-size: 12.5px;
+	line-height: 1.4;
+	text-align: start;
+	cursor: pointer;
+}
+.en-marks__go > span {
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+.en-marks__go small {
+	overflow: hidden;
+	color: var(--muted);
+	font-size: 10.5px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.en-marks li.is-missing .en-marks__go {
+	color: var(--muted);
+}
+.en-marks li.is-missing .en-marks__go small {
+	color: #b45309;
+}
+.en-marks__x {
+	display: grid;
+	flex: none;
+	place-items: center;
+	inline-size: 26px;
+	block-size: 26px;
+	margin-top: 4px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--muted);
+	opacity: 0;
+	cursor: pointer;
+	transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.en-marks li:hover .en-marks__x,
+.en-marks__x:focus-visible {
+	opacity: 1;
+}
+.en-marks__x:hover {
+	background: color-mix(in srgb, #e0464f 12%, transparent);
+	color: #c8323b;
+}
+@media (hover: none) {
+	.en-marks__x {
+		opacity: 0.7;
+	}
+}
+.en-marks__empty {
+	margin: 0;
+	padding: 2px 8px 6px;
+	color: var(--muted);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+/* the mark button in the text's left gutter, next to the line under the pointer */
+.en-tr__text {
+	position: relative;
+}
+.en-mark-btn {
+	position: absolute;
+	inset-inline-start: -15px;
+	z-index: 4;
+	display: grid;
+	place-items: center;
+	inline-size: 28px;
+	block-size: 28px;
+	padding: 0;
+	border: 1px solid var(--line-2, var(--line));
+	border-radius: 50%;
+	background: var(--sheet);
+	color: var(--muted);
+	box-shadow: 0 4px 12px -6px rgba(15, 20, 30, 0.35);
+	cursor: pointer;
+	transition: top 0.12s ease, color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.en-mark-btn:hover,
+.en-mark-btn:focus-visible {
+	border-color: var(--accent);
+	color: var(--accent-ink);
+}
+.en-mark-btn.is-on {
+	border-color: var(--accent);
+	background: var(--accent);
+	color: var(--on-accent, #fff);
+}
+/* a marked line: an accent bar in the gutter and a soft wash */
+.en-tr__text [data-marked] {
+	position: relative;
+	background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+	box-shadow: -14px 0 0 color-mix(in srgb, var(--accent-soft) 70%, transparent);
+}
+.en-tr__text [data-marked]::before {
+	content: '';
+	position: absolute;
+	inset-block: 2px;
+	inset-inline-start: -21px;
+	inline-size: 3px;
+	border-radius: 3px;
+	background: var(--accent);
+}
+.en-tr__text tr[data-marked] {
+	box-shadow: none;
+}
+.en-tr__text tr[data-marked] td {
+	background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+}
+.en-tr__text tr[data-marked]::before {
+	display: none;
+}
+.en-tr__text tr[data-marked] td:first-child {
+	box-shadow: inset 3px 0 0 var(--accent);
+}
+/* arriving at a mark */
+.en-tr__text [data-flash] {
+	animation: en-mark-flash 1.6s ease-out;
+}
+@keyframes en-mark-flash {
+	0%,
+	30% {
+		background: color-mix(in srgb, var(--accent) 28%, transparent);
+	}
+}
+
+/* phones / focus mode: my marks behind a bookmark button in the transcript bar */
+.en-marks-menu {
+	position: relative;
+}
+.en-marks-menu .lrn-icon-btn.is-on {
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+}
+.en-marks-menu__n {
+	position: absolute;
+	inset-block-start: 2px;
+	inset-inline-end: 2px;
+	min-inline-size: 15px;
+	block-size: 15px;
+	padding: 0 3px;
+	border-radius: 99px;
+	background: var(--accent);
+	color: var(--on-accent, #fff);
+	font-size: 9.5px;
+	font-weight: 800;
+	line-height: 15px;
+	text-align: center;
+}
+.en-marks-pop {
+	position: absolute;
+	inset-block-start: calc(100% + 8px);
+	inset-inline-end: 0;
+	z-index: 30;
+	inline-size: min(320px, calc(100vw - 32px));
+	max-block-size: min(60vh, 420px);
+	overflow-y: auto;
+	padding: 4px 8px 8px;
+	border: 1px solid var(--line);
+	border-radius: 16px;
+	background: var(--sheet);
+	box-shadow: 0 24px 54px -24px rgba(15, 20, 30, 0.45);
+}
+.en-marks-pop .en-side-block__title {
+	border-top: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+	.en-tr__text [data-flash] {
+		animation: none;
+	}
+	.en-mark-btn {
+		transition: none;
+	}
+}
+
+/* ═══ lesson sidebar v2: only the lesson (no Learn / Library / Roadmaps / Revision), calm layout ═══ */
+.lrn-side.is-lesson {
+	gap: 0;
+	padding: 14px 10px 0;
+}
+.lrn-side.is-lesson .lrn-side__brand,
+.lrn-side.is-lesson .lrn-side__nav {
+	display: none;
+}
+.lrn-side.is-lesson .lrn-side__lesson {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+}
+.lrn-side.is-lesson .lrn-lesson {
+	flex: 1;
+	min-height: 0;
+	gap: 12px;
+}
+.lrn-lesson__top {
+	gap: 2px;
+	padding-bottom: 2px;
+}
+.lrn-lesson__course {
+	flex: 1;
+	padding-inline: 2px;
+}
+.lrn-lesson__top .lrn-icon-btn {
+	flex: none;
+	inline-size: 32px;
+	block-size: 32px;
+}
+.lrn-lesson__top .lrn-rev-btn.is-on {
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+}
+.lrn .lrn-lesson__title {
+	margin-top: -4px;
+	font-size: 17px;
+}
+.lrn-lesson__tabs {
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--line);
+}
+.lrn-lesson__tabs .lrn-tab {
+	block-size: 34px;
+	font-size: 13px;
+}
+
+/* marks on top (short, always in sight), sections below take the rest and scroll */
+.lrn-lesson__extra {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	flex-direction: column;
+	gap: 10px;
+	padding-bottom: 10px;
+}
+.lrn-lesson__extra > .en-side-block {
+	display: flex;
+	min-height: 0;
+	flex-direction: column;
+	gap: 4px;
+}
+.lrn-lesson__extra > .en-side-block:first-child {
+	flex: 0 1 auto;
+	max-block-size: 38%;
+}
+.lrn-lesson__extra > .en-side-block + .en-side-block {
+	flex: 1 1 auto;
+}
+.lrn-lesson__extra .en-side-block__title {
+	flex: none;
+	padding: 2px 8px 4px;
+	border-top: 0;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	font-size: 10.5px;
+}
+.lrn-lesson__extra > .en-side-block + .en-side-block .en-side-block__title {
+	padding-top: 10px;
+	border-top: 1px solid var(--line);
+}
+.lrn-lesson__extra :is(.en-side-secs, .en-marks) {
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding-inline-end: 2px;
+}
+.lrn-lesson__extra .en-marks__empty {
+	padding: 8px 10px;
+	border: 1px dashed var(--line-2, var(--line));
+	border-radius: 12px;
+	font-size: 11.5px;
+}
+
+/* quiet scrollbars: hairline thumb, only while you are over the list */
+.lrn-lesson__extra :is(.en-side-secs, .en-marks) {
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+	transition: scrollbar-color 0.2s ease;
+}
+.lrn-lesson__extra :is(.en-side-secs, .en-marks):hover {
+	scrollbar-color: color-mix(in srgb, var(--ink) 18%, transparent) transparent;
+}
+.lrn-lesson__extra :is(.en-side-secs, .en-marks)::-webkit-scrollbar {
+	inline-size: 6px;
+}
+.lrn-lesson__extra :is(.en-side-secs, .en-marks)::-webkit-scrollbar-track {
+	background: transparent;
+}
+.lrn-lesson__extra :is(.en-side-secs, .en-marks)::-webkit-scrollbar-thumb {
+	border-radius: 99px;
+	background: transparent;
+}
+.lrn-lesson__extra :is(.en-side-secs, .en-marks):hover::-webkit-scrollbar-thumb {
+	background: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+/* the mark button: always in the text's gutter, gliding to the line you are on */
+.en-mark-btn {
+	top: 0;
+	transform: translateY(var(--mk-y, 0px));
+	transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, opacity 0.2s ease;
+}
+.en-mark-btn.is-idle {
+	opacity: 0.6;
+}
+@media (prefers-reduced-motion: reduce) {
+	.en-mark-btn {
+		transition: none;
+	}
+}
+
+/* side lists: one calm size for marks and sections */
+.lrn .lrn-lesson__extra :is(.en-side-secs button, .en-marks__go) {
+	font-size: 13px;
+	line-height: 1.45;
+}
+.lrn .lrn-lesson__extra .en-side-secs button {
+	padding-block: 5px;
+}
+.lrn .lrn-lesson__extra :is(.en-side-secs button small, .en-marks__go small) {
+	font-size: 10.5px;
+}
+.en-side-count {
+	margin-inline-start: auto;
+	min-inline-size: 18px;
+	padding: 0 6px;
+	border-radius: 99px;
+	background: var(--accent-soft);
+	color: var(--accent-ink);
+	font-size: 10.5px;
+	font-weight: 800;
+	line-height: 18px;
+	text-align: center;
+	letter-spacing: 0;
+}

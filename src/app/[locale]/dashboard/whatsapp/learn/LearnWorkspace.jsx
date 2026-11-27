@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -52,6 +52,20 @@ import './learn.css';
 
 const VIEW_KEY = 'wa-learn:view';
 const FOCUS_KEY = 'wa-learn:focus';
+
+/** True while the Learn sidebar is on screen (it hides at 900px and below). */
+const SIDE_QUERY = '(min-width: 901px)';
+function useSideVisible() {
+	return useSyncExternalStore(
+		listen => {
+			const mq = window.matchMedia(SIDE_QUERY);
+			mq.addEventListener('change', listen);
+			return () => mq.removeEventListener('change', listen);
+		},
+		() => window.matchMedia(SIDE_QUERY).matches,
+		() => false,
+	);
+}
 
 function readStoredView() {
 	try {
@@ -800,6 +814,11 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 	const categories = useMemo(() => categoriesOf(library.courses), [library.courses]);
 	const stats = useMemo(() => libraryStats(library.courses), [library.courses]);
 	const searching = query.trim().length > 0;
+	// An English lesson on a wide screen: its tabs, actions, sections and marks move into the
+	// sidebar so the whole page above the text is for reading.
+	const sideVisible = useSideVisible();
+	const [lessonHost, setLessonHost] = useState(null);
+	const lessonMode = sideVisible && !searching && !focus && view.name === 'lecture' && course?.kind === 'english';
 
 	// A course that was deleted (or never loaded) cannot stay open.
 	useEffect(() => {
@@ -885,6 +904,7 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 				initialSection={view.section}
 				onSectionChange={lectureSection}
 				focus={focus}
+				sideHost={lessonMode ? lessonHost : null}
 				onToggleFocus={toggleFocus}
 				onBack={() => setView({ name: 'course', courseId: course.id })}
 				onSearch={openSearch}
@@ -935,7 +955,7 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 			className={`lrn ${FONT_VARIABLE_CLASSES} is-view-${searching ? 'search' : view.name}${focus && view.name === 'lecture' && !searching ? ' is-focus' : ''}`}
 			dir={ar ? 'rtl' : 'ltr'}
 		>
-			<aside className="lrn-side" aria-label={c.courses}>
+			<aside className={`lrn-side${lessonMode ? ' is-lesson' : ''}`} aria-label={c.courses}>
 				<div className="lrn-side__brand">
 					<GraduationCap size={20} className="lrn-side__logo" aria-hidden />
 					<p className="lrn-side__title">{c.title}</p>
@@ -955,6 +975,7 @@ export default function LearnWorkspace({ locale = 'en', onExit }) {
 						{stats.revision ? <span className="lrn-count">{stats.revision}</span> : null}
 					</button>
 				</nav>
+				{lessonMode ? <div className="lrn-side__lesson" ref={setLessonHost} /> : null}
 				<div className="lrn-side__head">
 					<span>{c.courses}</span>
 					<button type="button" className="lrn-icon-btn" title={c.addCourse} aria-label={c.addCourse} onClick={() => setDialog({ kind: 'course-add' })}>

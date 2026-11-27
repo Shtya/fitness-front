@@ -58,21 +58,18 @@
 }
 
 /* ═════════════════ command bar ═════════════════ */
-.wa-documents-editor .sd-chrome--editor {
-	background: color-mix(in srgb, var(--sd-surface) 86%, transparent);
-	-webkit-backdrop-filter: saturate(1.4) blur(14px);
-	backdrop-filter: saturate(1.4) blur(14px);
-}
-@media (min-width: 601px) {
-	/*
-	 * The shared bar is `1fr | auto | 1fr`: when the actions (timer, Type, Review, Share, Export)
-	 * are wider than their 1fr share they spill backwards over the RTL / LTR switch. Here the
-	 * actions take the width they need and the title column gives way instead.
-	 */
+/*
+ * Glass only above 520px: a backdrop-filter makes the bar the containing block for fixed children,
+ * and below 521px the timer popover is `position: fixed` to the bottom of the screen.
+ */
+@media (min-width: 521px) {
 	.wa-documents-editor .sd-chrome--editor {
-		grid-template-columns: minmax(0, 1fr) auto auto;
+		background: color-mix(in srgb, var(--sd-surface) 86%, transparent);
+		-webkit-backdrop-filter: saturate(1.4) blur(14px);
+		backdrop-filter: saturate(1.4) blur(14px);
 	}
 }
+/* (the toolbar overlap fix itself now lives in the shared smart-document.css) */
 /* the pane is narrower than the window: go icon-only a little earlier than the shared 1280px */
 @media (max-width: 1500px) {
 	.wa-documents-editor .sd-chrome-actions .sd-tool-label {
@@ -199,64 +196,7 @@ body:has(.wa-web-desktop[data-wa-tab='documents']) :is(.sd-typo-panel, .sd-shelf
 		border-bottom-color: var(--sd-line);
 	}
 }
-/*
- * Phones (shared rule: two rows, identity on top). The second row held the Edit/Preview and
- * Auto/RTL/LTR switches *and* the tools; together they were ~70px wider than the screen, so the
- * tools sat on top of the direction switch. Here the switches go icon-only (their title stays the
- * accessible name) and the tools keep the rest of the row, aligned to the end.
- */
-@media (max-width: 600px) {
-	.wa-documents-editor .sd-chrome--editor {
-		grid-template-columns: max-content minmax(0, 1fr);
-	}
-	.wa-documents-editor .sd-chrome--editor .sd-chrome-center {
-		grid-column: 1;
-		display: flex;
-		gap: 6px;
-		min-width: 0;
-	}
-	.wa-documents-editor .sd-chrome--editor .sd-chrome-actions {
-		grid-column: 2;
-		justify-content: flex-end;
-		min-width: 0;
-		gap: 2px;
-	}
-	.wa-documents-editor .sd-seg-label {
-		display: none;
-	}
-	.wa-documents-editor .sd-seg button {
-		width: 32px;
-		padding: 0;
-		justify-content: center;
-	}
-	.wa-documents-editor .sd-chrome-actions :is(.sd-tool-btn, .sd-chrome-timer .hb-toolbtn) {
-		width: 32px;
-		min-inline-size: 32px;
-		padding: 0;
-	}
-	.wa-documents-editor .sd-chrome-actions .sd-tool-group {
-		gap: 0;
-	}
-}
-@media (max-width: 380px) {
-	.wa-documents-editor .sd-chrome--editor {
-		column-gap: 4px;
-		padding-inline: 8px;
-	}
-	.wa-documents-editor .sd-chrome--editor .sd-chrome-center {
-		gap: 4px;
-	}
-	.wa-documents-editor .sd-seg button {
-		width: 28px;
-	}
-	.wa-documents-editor .sd-chrome-actions :is(.sd-tool-btn, .sd-chrome-timer .hb-toolbtn) {
-		width: 30px;
-		min-inline-size: 30px;
-	}
-	.wa-documents-editor .sd-chrome-timer {
-		margin-inline-end: 0;
-	}
-}
+/* (the phone toolbar fix lives in the shared smart-document.css too) */
 
 @keyframes wa-dc-pop {
 	from {

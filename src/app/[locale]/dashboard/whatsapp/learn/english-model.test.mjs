@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clock, isWordSelection, markWords, markdownText, normalizeDay, parseInline, parseMarkdown, sentenceAround, youtubeId, youtubeStart } from './english-model.js';
+import { clock, isWordSelection, lineKey, markWords, markdownText, normalizeDay, parseInline, parseMarkdown, sentenceAround, youtubeId, youtubeStart } from './english-model.js';
 
 test('youtube links', () => {
 	assert.equal(youtubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30'), 'dQw4w9WgXcQ');
@@ -76,7 +76,14 @@ test('markdown transcript: inline', () => {
 		{ text: 'there', i: true },
 		{ text: ' ' },
 		{ text: 'x', code: true },
-		{ text: ' link' },
+		{ text: ' ' },
+		// a link keeps where it goes (Contents → "#s2", or a web address)
+		{ text: 'link', href: 'http://a.b' },
+	]);
+	assert.deepEqual(parseInline('1. [Miqyas in one **minute**](#s1)'), [
+		{ text: '1. ' },
+		{ text: 'Miqyas in one ', href: '#s1' },
+		{ text: 'minute', b: true, href: '#s1' },
 	]);
 	// unclosed markers and snake_case stay text
 	assert.deepEqual(parseInline('5 * 3 and drive_thru and **open'), [{ text: '5 * 3 and drive_thru and **open' }]);
@@ -92,5 +99,18 @@ test('sentence around a word, selections, misc', () => {
 	assert.ok(!isWordSelection('one two three four five six seven'));
 	assert.ok(!isWordSelection('123'));
 	assert.equal(clock(305), '5:05');
-	assert.deepEqual(normalizeDay(null), { videoUrl: '', transcript: '', words: [], questions: [], speaking: [], learned: [], mine: {} });
+	assert.deepEqual(normalizeDay(null), { videoUrl: '', transcript: '', words: [], questions: [], speaking: [], learned: [], mine: {}, marks: [] });
+	// line marks keep their id + key; broken ones are dropped
+	assert.deepEqual(normalizeDay({ marks: [{ id: 'm1', key: 'p:x:3', text: 'abc' }, { id: 'm2' }, null] }).marks, [{ id: 'm1', key: 'p:x:3', text: 'abc' }]);
+	// a line's fingerprint ignores spacing and case, and changes when the text does
+	assert.equal(lineKey('p', ' Every  number '), lineKey('p', 'every number'));
+	assert.notEqual(lineKey('p', 'Every number'), lineKey('p', 'Every numbers'));
+	assert.notEqual(lineKey('p', 'Every number'), lineKey('li', 'Every number'));
+});
+
+test('markdown transcript: <a id> lines are jump targets, not text', () => {
+	const blocks = parseMarkdown('## Contents\n1. [Who it is for](#s2)\n\n<a id="s2"></a>\n## 2) Who it is for\nText');
+	assert.deepEqual(blocks.map(b => b.type), ['h2', 'ol', 'anchor', 'h2', 'p']);
+	assert.equal(blocks[2].id, 's2');
+	assert.equal(markdownText('<a id="s2"></a>\nHello'), 'Hello');
 });

@@ -40,6 +40,9 @@ import { FONT_VARIABLE_CLASSES, TYPOGRAPHY_DEFAULTS, normalizeTypography, typogr
 import './smart-document.css';
 
 const HISTORY_CAP = 40;
+/** With remoteSync the database keeps every document; the local list is only a cache of it. */
+const REMOTE_HISTORY_CAP = 300;
+const REMOTE_PUSH_MS = 700;
 // Below this width the history list floats over the document instead of taking a column.
 const NARROW_QUERY = '(max-width: 900px)';
 
@@ -164,9 +167,13 @@ export default function SmartDocumentEditor({
 	toolbarStart = null,
 	toolbarEnd = null,
 	onStats,
+	// Keep the history in the signed-in user's account (database); the browser copy is a cache.
+	remoteSync = false,
 }) {
 	const locale = useLocale();
 	const controlled = Boolean(doc);
+	const synced = remoteSync && !controlled;
+	const historyCap = synced ? REMOTE_HISTORY_CAP : HISTORY_CAP;
 	const onDocChangeRef = useRef(onDocChange);
 	onDocChangeRef.current = onDocChange;
 	const savedContentRef = useRef(doc ? String(doc.content || '') : '');
@@ -212,7 +219,58 @@ export default function SmartDocumentEditor({
 	const lastSnapHashRef = useRef('');
 	const saveTimer = useRef(null);
 	const snapTimer = useRef(null);
+	const pushTimers = useRef(new Map());
 	const taRef = useRef(null);
+
+	/** Send one history entry to the account (debounced per document; the next open retries a failure). */
+	const pushDoc = useCallback(
+		(entry) => {
+			if (!synced || !entry?.id || !String(entry.content || '').trim()) return;
+			const timers = pushTimers.current;
+			if (timers.has(entry.id)) clearTimeout(timers.get(entry.id).timer);
+			const send = () => {
+				timers.delete(entry.id);
+				api
+					.put(`/smart-documents/docs/${encodeURIComponent(entry.id)}`, {
+						title: entry.title,
+						titleLocked: Boolean(entry.titleLocked),
+						content: entry.content,
+						updatedAt: entry.updatedAt || Date.now(),
+					})
+					.catch(() => {
+						/* offline: the local copy is kept and the next open syncs it */
+					});
+			};
+			timers.set(entry.id, { timer: setTimeout(send, REMOTE_PUSH_MS), send });
+		},
+		[synced],
+	);
+
+	// Leaving the editor (another tab, closing the pane) sends what is still waiting.
+	useEffect(() => {
+		const timers = pushTimers.current;
+		return () => {
+			for (const { timer, send } of [...timers.values()]) {
+				clearTimeout(timer);
+				send();
+			}
+		};
+	}, []);
+
+	const removeRemoteDoc = useCallback(
+		(id) => {
+			if (!synced || !id) return;
+			const timers = pushTimers.current;
+			if (timers.has(id)) {
+				clearTimeout(timers.get(id).timer);
+				timers.delete(id);
+			}
+			api.delete(`/smart-documents/docs/${encodeURIComponent(id)}`).catch(() => {
+				toast.error(locale === 'ar' ? 'ماتمسحش من حسابك، جرّب تاني' : 'Could not delete it from your account — try again');
+			});
+		},
+		[synced, locale],
+	);
 	const canvasRef = useRef(null);
 
 	const countable = useMemo(() => (isHtmlSource(text) ? htmlToPlainText(text) : text), [text]);
@@ -292,8 +350,9 @@ export default function SmartDocumentEditor({
 				};
 				const without = list.filter((h) => h.id !== nextId);
 				without.unshift(entry);
-				const capped = without.slice(0, HISTORY_CAP);
+				const capped = without.slice(0, historyCap);
 				writeJson(historyKey, capped);
+				pushDoc(entry);
 				return capped;
 			});
 
@@ -307,7 +366,7 @@ export default function SmartDocumentEditor({
 			window.setTimeout(() => setSavedFlash(false), 1200);
 			return nextId;
 		},
-		[historyKey, activeIdKey, persistDraft],
+		[historyKey, activeIdKey, persistDraft, historyCap, pushDoc],
 	);
 
 	/* Load once */
@@ -361,6 +420,65 @@ export default function SmartDocumentEditor({
 		// A controlled editor is remounted (key) for another document; it loads once.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [draftKey, historyKey, activeIdKey, typographyKey, sharesKey]);
+
+	/*
+	 * Account sync, once per open: the browser's copies go up (the newer copy of each wins on the
+	 * server, which also brings back documents that were only ever shared), the merged list comes
+	 * back and becomes the history. The local list opened instantly; this only refines it.
+	 */
+	const [remoteState, setRemoteState] = useState('idle');
+	useEffect(() => {
+		if (!synced || !ready) return undefined;
+		let cancelled = false;
+		const local = readJson(historyKey, []);
+		const outgoing = Array.isArray(local) ? local.filter((h) => h && h.id && String(h.content || '').trim()) : [];
+		// Typing that never reached a history snapshot lives only in the draft.
+		const draft = readJson(draftKey, null);
+		if (draft?.id && String(draft.content || '').trim()) {
+			const entry = outgoing.find((h) => h.id === draft.id);
+			if (!entry) {
+				outgoing.unshift({ id: draft.id, title: titleFromSource(draft.content), content: draft.content, updatedAt: draft.updatedAt || Date.now() });
+			} else if (entry.content !== draft.content && (draft.updatedAt || 0) > (entry.updatedAt || 0)) {
+				Object.assign(entry, { content: draft.content, updatedAt: draft.updatedAt });
+				if (!entry.titleLocked) entry.title = titleFromSource(draft.content);
+			}
+		}
+		setRemoteState('syncing');
+		api
+			.post('/smart-documents/docs/sync', { docs: outgoing })
+			.then(({ data }) => {
+				if (cancelled || !Array.isArray(data)) return;
+				const merged = data.slice(0, historyCap);
+				setHistory(merged);
+				writeJson(historyKey, merged);
+				setRemoteState('synced');
+				if (dirtyRef.current) return; // the user is typing: never swap the page under them
+				const current = String(textRef.current || '');
+				const activeId = activeIdRef.current;
+				const fromServer = activeId ? merged.find((h) => h.id === activeId) : null;
+				const sent = activeId ? outgoing.find((h) => h.id === activeId) : null;
+				let show = null;
+				if (!current.trim() && merged[0]) show = merged[0];
+				else if (fromServer && fromServer.content !== current && (fromServer.updatedAt || 0) > (sent?.updatedAt || 0)) show = fromServer;
+				if (!show) return;
+				textRef.current = show.content;
+				activeIdRef.current = show.id;
+				lastSnapHashRef.current = show.content;
+				setText(show.content);
+				setActiveId(show.id);
+				setDocDir(detectDominantDir(show.content));
+				persistDraft(show.content, show.id);
+				setDocVersion((v) => v + 1);
+			})
+			.catch(() => {
+				if (!cancelled) setRemoteState('offline');
+			});
+		return () => {
+			cancelled = true;
+		};
+		// Once per open (ready flips once).
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [synced, ready]);
 
 	useEffect(() => {
 		try {
@@ -768,6 +886,7 @@ export default function SmartDocumentEditor({
 			writeJson(historyKey, next);
 			return next;
 		});
+		removeRemoteDoc(id);
 		if (renamingId === id) {
 			setRenamingId(null);
 			setRenameDraft('');
@@ -803,6 +922,7 @@ export default function SmartDocumentEditor({
 				h.id === id ? { ...h, title: nextTitle, titleLocked: true, updatedAt: Date.now() } : h,
 			);
 			writeJson(historyKey, next);
+			pushDoc(next.find((h) => h.id === id));
 			return next;
 		});
 	};
@@ -873,7 +993,13 @@ export default function SmartDocumentEditor({
 				</div>
 				<ul className="sd-history-list">
 					{!history.length && (
-						<li className="sd-history-empty">{labels.historyEmpty || 'Autosaved drafts appear here.'}</li>
+						<li className="sd-history-empty">
+							{synced && remoteState === 'syncing'
+								? locale === 'ar'
+									? 'بنجيب مستنداتك…'
+									: 'Loading your documents…'
+								: labels.historyEmpty || 'Autosaved drafts appear here.'}
+						</li>
 					)}
 					{history.map((item) => {
 						const itemTitle = item.title || labels.untitled || 'Untitled';
@@ -1029,6 +1155,11 @@ export default function SmartDocumentEditor({
 							)}
 							<span className="sd-chrome-sub" aria-live="polite">
 								<span className="sd-chrome-kind">{labels.badge || 'Document'}</span>
+								{synced && remoteState === 'offline' ? (
+									<span className="sd-sync-off" title={locale === 'ar' ? 'هيتحفظ في حسابك أول ما النت يرجع' : 'It will reach your account when you are back online'}>
+										{locale === 'ar' ? 'محفوظ على الجهاز بس' : 'Saved on this device only'}
+									</span>
+								) : null}
 								{savedFlash ? (
 									<span className="sd-saved">
 										<Check size={12} strokeWidth={2.6} aria-hidden />

@@ -23,7 +23,19 @@ export function normalizeDay(raw) {
 		speaking: Array.isArray(v.speaking) ? v.speaking.filter(s => s && s.id) : [],
 		learned: Array.isArray(v.learned) ? [...new Set(v.learned.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim().toLowerCase()))] : [],
 		mine: v.mine && typeof v.mine === 'object' && !Array.isArray(v.mine) ? Object.fromEntries(Object.entries(v.mine).filter(([, x]) => typeof x === 'string' && x.trim())) : {},
+		marks: Array.isArray(v.marks) ? v.marks.filter(m => m && m.id && typeof m.key === 'string' && m.key) : [],
 	};
+}
+
+/**
+ * A line's fingerprint for a mark ("where I stopped"): its kind + a hash of its text, so the
+ * mark finds the same line after a reload, and quietly stops matching if the line is edited.
+ */
+export function lineKey(kind, text) {
+	const t = String(text || '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 400);
+	let h = 5381;
+	for (let i = 0; i < t.length; i += 1) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+	return `${kind}:${(h >>> 0).toString(36)}:${t.length}`;
 }
 
 /** YouTube video id from any common link form (watch, youtu.be, shorts, embed, live); else null. */
@@ -142,7 +154,7 @@ export function parseInline(src) {
 	const push = (text, f = {}) => {
 		if (!text) return;
 		const last = out[out.length - 1];
-		if (last && Boolean(last.b) === Boolean(f.b) && Boolean(last.i) === Boolean(f.i) && Boolean(last.code) === Boolean(f.code)) last.text += text;
+		if (last && Boolean(last.b) === Boolean(f.b) && Boolean(last.i) === Boolean(f.i) && Boolean(last.code) === Boolean(f.code) && (last.href || '') === (f.href || '')) last.text += text;
 		else out.push({ text, ...f });
 	};
 	const walk = (str, f) => {
@@ -168,7 +180,10 @@ export function parseInline(src) {
 			if (ch === '[') {
 				const m = str.slice(i).match(/^\[([^\]]+)\]\(([^)\s]+)\)/);
 				if (m) {
-					buf += m[1];
+					// a link keeps where it goes: "#s2" jumps inside the lesson, a web address opens it
+					push(buf, f);
+					buf = '';
+					walk(m[1], { ...f, href: m[2] });
 					i += m[0].length;
 					continue;
 				}
@@ -277,6 +292,13 @@ export function parseMarkdown(src) {
 		if (table) {
 			blocks.push(table);
 			table = null;
+		}
+		// an HTML anchor line ('<a id="s2"></a>') is a jump target for "#s2" links, never text
+		if ((m = line.match(/^<a\s+(?:id|name)\s*=\s*["']([\w:.-]{1,80})["']\s*>\s*<\/a>$/i))) {
+			endPara();
+			endList();
+			blocks.push({ type: 'anchor', id: m[1] });
+			continue;
 		}
 		if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
 			endPara();

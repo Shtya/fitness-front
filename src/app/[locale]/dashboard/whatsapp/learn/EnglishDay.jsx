@@ -13,6 +13,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	BookA,
+	Bookmark,
 	BookOpenText,
 	Check,
 	ChevronLeft,
@@ -21,6 +22,7 @@ import {
 	Eye,
 	EyeOff,
 	HelpCircle,
+	ListTree,
 	Loader2,
 	Mic,
 	NotebookPen,
@@ -39,15 +41,17 @@ import {
 	Video,
 	Volume2,
 	Wand2,
+	X,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import { Modal } from './learn-ui';
-import { SPEAK_MINUTES, clock, dropLine, rowKey, enId, isLink, isWordSelection, markWords, markdownText, normalizeDay, parseInline, parseMarkdown, sentenceAround, totalSpokenSeconds, youtubeId, youtubeStart } from './english-model';
+import { SPEAK_MINUTES, clock, dropLine, lineKey, rowKey, enId, isLink, isWordSelection, markWords, markdownText, normalizeDay, parseInline, parseMarkdown, sentenceAround, totalSpokenSeconds, youtubeId, youtubeStart } from './english-model';
 import { deleteClip, getClip, putClip, recorderMime, speak } from './english-audio';
 import { shuffled } from './learn-model';
 import VideoLoop from './VideoLoop';
+import ListenSettings from './ListenSettings';
 import { lookupWord, translateLine } from './word-lookup';
 import { transcribeClip } from './speech-transcribe';
 import './english.css';
@@ -591,7 +595,7 @@ function VideoBlock({ c, url, onUrl }) {
 	);
 }
 
-function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditWord }) {
+function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditWord, sideHost = null }) {
 	const [mode, setMode] = useState(day.transcript.trim() ? 'read' : 'edit');
 	// Pasting the first transcript: the button says "Start reading"; later edits say "Done".
 	const firstTime = useRef(!day.transcript.trim());
@@ -669,7 +673,7 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 	const outline = useMemo(() => lessonOutline(blocks), [blocks]);
 	const [here, setHere] = useState(null);
 	useEffect(() => {
-		if (outline.length < 3) return undefined;
+		if (outline.length < 2) return undefined;
 		const scroller = box.current?.closest('.lrn-sec-scroll');
 		if (!scroller) return undefined;
 		const spy = () => {
@@ -693,12 +697,187 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 		scroller.addEventListener('scroll', spy, { passive: true });
 		return () => scroller.removeEventListener('scroll', spy);
 	}, [outline]);
+	// The sections bar is one row that scrolls sideways: the section you are reading slides into view.
+	const tocRef = useRef(null);
+	useEffect(() => {
+		const nav = tocRef.current;
+		const chip = nav?.querySelector('button.is-here');
+		if (!nav || !chip) return;
+		const left = chip.offsetLeft - (nav.clientWidth - chip.offsetWidth) / 2;
+		const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+		nav.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' });
+	}, [here]);
 	const jump = id => {
 		const el = document.getElementById(id);
 		const scroller = box.current?.closest('.lrn-sec-scroll');
 		if (!el || !scroller) return;
 		scroller.scrollTo({ top: scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 64, behavior: 'smooth' });
 	};
+
+	/*
+	 * Line marks ("I stopped here" / "come back to this"): any paragraph, heading, list item,
+	 * quote or table row can be marked, as many as you like. Each line gets a fingerprint of
+	 * its text (data-mk) after render; a mark stores that fingerprint plus a short label.
+	 * The attributes are set on the DOM directly (React does not manage them), so re-renders
+	 * keep them.
+	 */
+	const marks = useMemo(() => day.marks || [], [day.marks]);
+	const markedKeys = useMemo(() => new Set(marks.map(m => m.key)), [marks]);
+	const [lineInfo, setLineInfo] = useState({}); // key → { n, section, text } in reading order
+	const lineSig = useRef('');
+	const [hoverLine, setHoverLine] = useState(null); // { key, top } — the line under the pointer
+	const [marksOpen, setMarksOpen] = useState(false);
+	useEffect(() => {
+		const root = box.current;
+		if (!root) return;
+		const info = {};
+		let section = '';
+		let n = 0;
+		for (const el of root.querySelectorAll('p, h1, h2, h3, h4, h5, li, blockquote, pre, tbody tr')) {
+			if (el.closest('.en-md-toc, .en-md-mine, .en-mark-btn, .en-marks-pop')) continue;
+			const kind = el.tagName.toLowerCase();
+			const text = String(el.textContent || '').replace(/\s+/g, ' ').trim();
+			if (!text) continue;
+			const heading = /^h[1-3]$/.test(kind);
+			if (heading) section = text;
+			const key = lineKey(kind === 'tr' ? 'row' : kind, text);
+			el.dataset.mk = key;
+			if (markedKeys.has(key)) el.dataset.marked = '1';
+			else delete el.dataset.marked;
+			if (!(key in info)) info[key] = { n: n++, section: heading ? '' : section, text };
+		}
+		const sig = Object.keys(info).join('|');
+		if (sig !== lineSig.current) {
+			lineSig.current = sig;
+			setLineInfo(info);
+		}
+	});
+	// The mark button always sits in the gutter and glides to the line you are on: the line under
+	// the pointer, or (pointer elsewhere) the first line in view — also while you scroll.
+	const lastPt = useRef(null);
+	const overText = useRef(false);
+	const placeOn = (el, idle) => {
+		const root = box.current;
+		if (!root || !el || !root.contains(el)) return;
+		const r = el.getBoundingClientRect();
+		const top = Math.round(r.top - root.getBoundingClientRect().top + Math.min(r.height, 48) / 2 - 14);
+		setHoverLine(cur => (cur && cur.key === el.dataset.mk && cur.top === top && cur.idle === idle ? cur : { key: el.dataset.mk, top, idle }));
+	};
+	const firstLineInView = () => {
+		const scroller = box.current?.closest('.lrn-sec-scroll');
+		if (!scroller || !box.current) return null;
+		const top = scroller.getBoundingClientRect().top + 70;
+		return [...box.current.querySelectorAll('[data-mk]')].find(x => x.getBoundingClientRect().bottom > top) || null;
+	};
+	const onLineHover = e => {
+		const root = box.current;
+		if (!root || e.target.closest?.('.en-mark-btn')) return;
+		lastPt.current = { x: e.clientX, y: e.clientY };
+		overText.current = true;
+		const el = e.target.closest?.('[data-mk]');
+		if (el && root.contains(el)) placeOn(el, false);
+	};
+	useEffect(() => {
+		const scroller = box.current?.closest('.lrn-sec-scroll');
+		if (!scroller) return undefined;
+		let frame = 0;
+		const follow = () => {
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(() => {
+				const pt = lastPt.current;
+				const under = overText.current && pt ? document.elementFromPoint(pt.x, pt.y)?.closest?.('[data-mk]') : null;
+				if (under) placeOn(under, false);
+				else placeOn(firstLineInView(), true);
+			});
+		};
+		follow();
+		scroller.addEventListener('scroll', follow, { passive: true });
+		window.addEventListener('resize', follow);
+		return () => {
+			cancelAnimationFrame(frame);
+			scroller.removeEventListener('scroll', follow);
+			window.removeEventListener('resize', follow);
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [lineInfo]);
+	const toggleMark = key => {
+		if (marks.some(m => m.key === key)) {
+			onPatch({ marks: marks.filter(m => m.key !== key) });
+			return;
+		}
+		const info = lineInfo[key] || {};
+		const el = box.current?.querySelector(`[data-mk="${CSS.escape(key)}"]`);
+		// a table row reads "cell · cell · cell" (its raw text runs the cells together)
+		const rowText = el?.tagName === 'TR' ? [...el.cells].map(td => td.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' · ') : '';
+		const text = rowText || info.text || String(el?.textContent || '').replace(/\s+/g, ' ').trim();
+		onPatch({ marks: [...marks, { id: enId('m'), key, text: text.slice(0, 140), section: String(info.section || '').slice(0, 120), at: Date.now() }] });
+		toast.success(c.en.markAdded);
+	};
+	const goMark = m => {
+		const el = box.current?.querySelector(`[data-mk="${CSS.escape(m.key)}"]`);
+		const scroller = box.current?.closest('.lrn-sec-scroll');
+		if (!el || !scroller) {
+			toast.error(c.en.markMissing);
+			return;
+		}
+		const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+		scroller.scrollTo({ top: scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 90, behavior: reduce ? 'auto' : 'smooth' });
+		el.dataset.flash = '1';
+		window.setTimeout(() => delete el.dataset.flash, 1800);
+		setMarksOpen(false);
+	};
+	const orderedMarks = useMemo(
+		() => [...marks].sort((a, b) => (lineInfo[a.key]?.n ?? 1e9) - (lineInfo[b.key]?.n ?? 1e9) || (a.at || 0) - (b.at || 0)),
+		[marks, lineInfo],
+	);
+	const marksList = (
+		<div className="en-side-block">
+			<p className="en-side-block__title">
+				<Bookmark size={13} aria-hidden />
+				<span>{c.en.marks}</span>
+				{marks.length ? <span className="en-side-count">{marks.length}</span> : null}
+			</p>
+			{orderedMarks.length ? (
+				<ul className="en-marks">
+					{orderedMarks.map(m => {
+						const missing = !lineInfo[m.key];
+						return (
+							<li key={m.id} className={missing ? 'is-missing' : undefined}>
+								<button type="button" className="en-marks__go" onClick={() => goMark(m)} title={missing ? c.en.markMissing : m.text}>
+									<span dir="auto">{m.text || '…'}</span>
+									{missing ? <small>{c.en.markMissing}</small> : m.section ? <small dir="auto">{m.section}</small> : null}
+								</button>
+								<button type="button" className="en-marks__x" onClick={() => onPatch({ marks: marks.filter(x => x.id !== m.id) })} title={c.en.unmarkLine} aria-label={`${c.en.unmarkLine}: ${m.text}`}>
+									<X size={13} />
+								</button>
+							</li>
+						);
+					})}
+				</ul>
+			) : (
+				<p className="en-marks__empty">{c.en.marksEmpty}</p>
+			)}
+		</div>
+	);
+	const sectionsList =
+		outline.length >= 2 ? (
+			<div className="en-side-block">
+				<p className="en-side-block__title">
+					<ListTree size={13} aria-hidden />
+					<span>{c.en.sections}</span>
+				</p>
+				<ul className="en-side-secs">
+					{outline.map(o => (
+						<li key={o.id}>
+							<button type="button" className={here === o.id ? 'is-here' : undefined} aria-current={here === o.id ? 'location' : undefined} onClick={() => jump(o.id)} dir="auto" title={o.time ? `${o.label} · ${o.time}` : o.label}>
+								<span>{o.label}</span>
+								{o.time ? <small>{o.time}</small> : null}
+							</button>
+						</li>
+					))}
+				</ul>
+			</div>
+		) : null;
 
 	// select a word or phrase → "add word" button next to it
 	const onSelect = () => {
@@ -769,6 +948,32 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 			let node = renderText(run.text, `${key}-${k}`);
 			if (run.i) node = <em key={`${key}-${k}i`}>{node}</em>;
 			if (run.b) node = <strong key={`${key}-${k}b`}>{node}</strong>;
+			if (run.href) {
+				const href = String(run.href);
+				if (href.startsWith('#')) {
+					// "#s2" → the lesson's <a id="s2"> (or a section with that id), scrolled under the sections bar
+					const target = href.slice(1);
+					node = (
+						<a
+							key={`${key}-${k}a`}
+							className="en-link"
+							href={href}
+							onClick={e => {
+								e.preventDefault();
+								jump(document.getElementById(`en-a-${target}`) ? `en-a-${target}` : target);
+							}}
+						>
+							{node}
+						</a>
+					);
+				} else if (/^(https?:|mailto:)/i.test(href)) {
+					node = (
+						<a key={`${key}-${k}a`} className="en-link" href={href} target="_blank" rel="noreferrer noopener">
+							{node}
+						</a>
+					);
+				}
+			}
 			return node;
 		});
 	// "Your sentence" under a grammar point (keyed by its #### title)
@@ -792,36 +997,67 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 		);
 	};
 	const renderBlock = (b, i) => {
+		// '<a id="s2"></a>' in the lesson: an invisible jump target for "#s2" links
+		if (b.type === 'anchor') return <span key={i} id={`en-a-${b.id}`} className="en-anchor" aria-hidden />;
 		if (b.type === 'hr') return <hr key={i} />;
 		if (b.type === 'code') return <pre key={i}>{b.text}</pre>;
 		if (b.type === 'table') {
 			const cols = Math.max(b.head?.length || 0, ...b.rows.map(r => r.length));
+			const plainOf = src => parseInline(src || '').map(r => r.text).join('').trim();
 			// the English part of a cell ("disclaimer (ديسكليمَر)" → "disclaimer"), when it starts in English
 			const englishOf = src => {
 				const plain = parseInline(src || '').map(r => r.text).join('');
 				if (!/^[\s"'“(]*[a-z]/i.test(plain)) return '';
 				return plain.replace(/\([^)]*[؀-ۿ][^)]*\)/g, '').replace(/[؀-ۿ]+/g, '').replace(/\s+/g, ' ').trim();
 			};
+			// A level like "B2" is a label, not something to listen to: it gets a badge instead.
+			const LEVEL = /^(?:pre-?)?[abc][12]\+?$/i;
+			// A pasted "my sentence" column left empty in every row only takes room: it is not shown
+			// (the text itself is untouched). The app's own per-row "My sentence" column is gone too.
+			const isMineHead = k => /^(?:جملتي(?:\s*أنا)?|my\s+sentences?|your\s+sentences?)$/i.test(plainOf(b.head?.[k]));
+			const visibleCols = Array.from({ length: cols }, (_, k) => k).filter(
+				k => !(b.head && isMineHead(k) && b.rows.every(r => !String(r[k] || '').trim())),
+			);
+			// Column shape from its content: short labels stay on one line, long sentences get room.
+			const colShape = Object.fromEntries(
+				visibleCols.map(k => {
+					const lengths = b.rows.map(r => plainOf(r[k]).length).filter(Boolean);
+					const avg = lengths.length ? lengths.reduce((s, n) => s + n, 0) / lengths.length : 0;
+					const max = lengths.length ? Math.max(...lengths) : 0;
+					return [k, max <= 6 ? 'is-tiny' : avg >= 70 ? 'is-long' : avg >= 28 ? 'is-mid' : 'is-short'];
+				}),
+			);
 			const cells = (row, Cell, key) =>
-				Array.from({ length: cols }, (_, k) => {
-					const say = Cell === 'td' ? englishOf(row[k]) : '';
-					// a cell that is mostly Arabic (the meaning) — the one that hides
+				visibleCols.map(k => {
 					const txt = row[k] || '';
-					const isAr = Cell === 'td' && (txt.match(/[\u0600-\u06ff]/g) || []).length > (txt.match(/[a-z]/gi) || []).length;
+					const plain = plainOf(txt);
+					const level = Cell === 'td' && LEVEL.test(plain);
+					const say = Cell === 'td' && !level ? englishOf(txt) : '';
+					// a cell that is mostly Arabic (the meaning) — the one that hides
+					const isAr = Cell === 'td' && (txt.match(/[؀-ۿ]/g) || []).length > (txt.match(/[a-z]/gi) || []).length;
+					const cls = [colShape[k], Cell === 'th' ? (englishOf(b.rows[0]?.[k]) ? 'is-en' : '') : isAr ? 'is-ar' : say ? 'is-en' : '']
+						.filter(Boolean)
+						.join(' ');
 					return (
 						<Cell
 							key={k}
 							dir="auto"
-							className={Cell === 'th' ? (englishOf(b.rows[0]?.[k]) ? 'is-en' : undefined) : isAr ? 'is-ar' : undefined}
+							className={cls || undefined}
 							onClick={isAr ? e => e.currentTarget.classList.toggle('is-open') : undefined}
 							title={isAr && hideAr ? c.en.showArabicCell : undefined}
 						>
+							{level ? (
+								<span className="en-lvl" data-lvl={plain.replace(/^pre-?/i, '').charAt(0).toUpperCase()}>
+									{plain.toUpperCase()}
+								</span>
+							) : (
+								renderInline(txt, `${key}.${k}`)
+							)}
 							{say ? (
 								<button type="button" className="en-cell-say" onClick={() => speak(say)} title={`${c.en.listen}: ${say}`} aria-label={`${c.en.listen}: ${say}`}>
-									<Volume2 size={13} />
+									<Volume2 size={12} />
 								</button>
 							) : null}
-							{renderInline(row[k] || '', `${key}.${k}`)}
 						</Cell>
 					);
 				});
@@ -858,7 +1094,6 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 											<Check size={13} aria-hidden />
 										</th>
 										{cells(b.head, 'th', `${i}h`)}
-										<th className="en-tbl__mine">{c.en.mySentence}</th>
 										<th className="en-tbl__del" aria-hidden />
 									</tr>
 								</thead>
@@ -874,9 +1109,6 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 												</button>
 											</td>
 											{cells(row, 'td', `${i}.${j}`)}
-											<td className="en-tbl__mine">
-												{key ? <MySentence c={c} value={mine[`w:${key}`] || ''} word={key} onSave={text => saveMine(`w:${key}`, text)} /> : null}
-											</td>
 											<td className="en-tbl__del">
 												{line != null ? (
 													<button type="button" className="en-tbl__x" onClick={() => deleteRow(line, key)} title={c.en.deleteRow} aria-label={`${c.en.deleteRow}: ${key}`}>
@@ -889,7 +1121,7 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 								})}
 								{!shown.length ? (
 									<tr>
-										<td className="en-tbl__all" colSpan={cols + 3}>
+										<td className="en-tbl__all" colSpan={visibleCols.length + 2}>
 											{c.en.allLearned}
 										</td>
 									</tr>
@@ -1017,16 +1249,47 @@ function Transcript({ c, day, others, onTranscript, onPatch, onSaveWord, onEditW
 
 	return (
 		<section className="en-tr">
+			{sideHost
+				? createPortal(
+						<>
+							{marksList}
+							{sectionsList}
+						</>,
+						sideHost,
+					)
+				: null}
 			<div className="en-tr__bar">
 				<h3>{c.en.transcript}</h3>
 				<span className="en-tr__hint">{c.en.selectHint}</span>
+				{sideHost ? null : (
+					<div className="en-marks-menu">
+						<button type="button" className={`lrn-icon-btn${marksOpen ? ' is-on' : ''}`} onClick={() => setMarksOpen(v => !v)} aria-expanded={marksOpen} title={c.en.marks} aria-label={c.en.marks}>
+							<Bookmark size={16} fill={marks.length ? 'currentColor' : 'none'} />
+							{marks.length ? <span className="en-marks-menu__n">{marks.length}</span> : null}
+						</button>
+						{marksOpen ? <div className="en-marks-pop">{marksList}</div> : null}
+					</div>
+				)}
+				<ListenSettings c={c} />
 				<button type="button" className="lrn-icon-btn" onClick={() => setMode('edit')} title={c.en.editTranscript} aria-label={c.en.editTranscript}>
 					<Pencil size={16} />
 				</button>
 			</div>
-			<div className="en-tr__text" ref={box} dir="ltr" lang="en" onMouseUp={onSelect} onTouchEnd={onSelect} onKeyUp={onSelect}>
-				{outline.length >= 3 ? (
-					<nav className="en-md-toc" aria-label={c.en.sections}>
+			<div className="en-tr__text" ref={box} dir="ltr" lang="en" onMouseUp={onSelect} onTouchEnd={onSelect} onKeyUp={onSelect} onMouseMove={onLineHover} onClick={onLineHover} onMouseLeave={() => { overText.current = false; }}>
+				{hoverLine ? (
+					<button
+						type="button"
+						className={`en-mark-btn${markedKeys.has(hoverLine.key) ? ' is-on' : ''}${hoverLine.idle ? ' is-idle' : ''}`}
+						style={{ '--mk-y': `${hoverLine.top}px` }}
+						onClick={() => toggleMark(hoverLine.key)}
+						title={markedKeys.has(hoverLine.key) ? c.en.unmarkLine : c.en.markLine}
+						aria-label={markedKeys.has(hoverLine.key) ? c.en.unmarkLine : c.en.markLine}
+					>
+						<Bookmark size={14} fill={markedKeys.has(hoverLine.key) ? 'currentColor' : 'none'} />
+					</button>
+				) : null}
+				{outline.length >= 3 && !sideHost ? (
+					<nav className="en-md-toc" aria-label={c.en.sections} ref={tocRef}>
 						{outline.map((o, k) => {
 							// parts are small numbered circles (their time in the tooltip); other sections keep their title
 							const n = o.part ? (o.label.match(/\d+/) || [k + 1])[0] : null;
@@ -2053,7 +2316,7 @@ function SpeakTab({ c, day, topic, prompt, onPrompt, onSession, onDeleteSession,
 
 /* ───────── the day ───────── */
 
-export default function EnglishDay({ c, lecture, course, onChange, renderNotes, tabsHost = null }) {
+export default function EnglishDay({ c, lecture, course, onChange, renderNotes, tabsHost = null, sideHost = null }) {
 	const day = useMemo(() => normalizeDay(lecture.english), [lecture.english]);
 	const [tab, setTab] = useState(readTab);
 	const [dialog, setDialog] = useState(null); // word being added / edited
@@ -2123,7 +2386,7 @@ export default function EnglishDay({ c, lecture, course, onChange, renderNotes, 
 					{tab === 'read' ? (
 						<>
 							<VideoBlock c={c} url={day.videoUrl} onUrl={videoUrl => change({ videoUrl }, true)} />
-							<Transcript c={c} day={day} others={others} onTranscript={(transcript, now) => change({ transcript }, now)} onPatch={patch => change(patch, true)} onSaveWord={saveWord} onEditWord={w => setDialog(w)} />
+							<Transcript c={c} day={day} others={others} onTranscript={(transcript, now) => change({ transcript }, now)} onPatch={patch => change(patch, true)} onSaveWord={saveWord} onEditWord={w => setDialog(w)} sideHost={sideHost} />
 						</>
 					) : tab === 'words' ? (
 						<WordsTab c={c} day={day} others={others} onAdd={addWord} onEdit={w => setDialog(w)} onFav={id => change({ words: dayRef.current.words.map(x => (x.id === id ? { ...x, fav: !x.fav } : x)) }, true)} />
