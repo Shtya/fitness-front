@@ -336,6 +336,7 @@ const DocumentEditorWorkspace = lazy(() => import('@/components/smart-document/D
 // pulls mammoth + xlsx, which dominated the route's first-load JS.
 const TranscriptionDialog = lazy(() => import('../transcript/transcription-dialog'));
 import WaVoiceDock from './workspace/WaVoiceDock';
+import HabitTimerDock from './tickets/HabitTimerDock';
 import { setVoiceDockContext } from './workspace/wa-voice-dock';
 const ChatDocumentViewer = lazy(() =>
 	import('./document-viewer/chat-document-viewer').then(module => ({
@@ -24071,6 +24072,8 @@ function WhatsAppWorkspaceContent() {
 				/>
 			</MountWhenOpened>
 			<WaVoiceDock locale={locale} onOpenConversation={id => openConversation(id)} />
+			{/* the focus timer keeps running (and rings) on every tab */}
+			<HabitTimerDock ar={locale === 'ar'} />
 			{transcriptionSources?.length ? (
 				<Suspense fallback={null}>
 					<TranscriptionDialog

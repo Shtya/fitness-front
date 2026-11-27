@@ -1,0 +1,516 @@
+/* Team log (TeamHistoryDialog): portaled to <body>, so it carries its own tokens and font. */
+.wa-th {
+	--th-bg: #ffffff;
+	--th-bg-2: #f6f5f3;
+	--th-ink: #111b21;
+	--th-ink-2: #54656f;
+	--th-muted: #8696a0;
+	--th-line: rgba(17, 27, 33, 0.08);
+	--th-accent: #1daa61;
+	--th-accent-ink: #128c4f;
+	--th-accent-soft: rgba(29, 170, 97, 0.12);
+	position: fixed;
+	inset: 0;
+	z-index: 400;
+	display: grid;
+	place-items: center;
+	padding: 16px;
+	background: rgba(11, 20, 26, 0.45);
+	-webkit-backdrop-filter: blur(3px);
+	backdrop-filter: blur(3px);
+	animation: wa-th-fade 0.16s ease-out;
+}
+html.dark .wa-th,
+html[data-theme-mode='dark'] .wa-th {
+	--th-bg: #161717;
+	--th-bg-2: #1f2121;
+	--th-ink: #e9edef;
+	--th-ink-2: #aebac1;
+	--th-muted: #8696a0;
+	--th-line: rgba(255, 255, 255, 0.08);
+	--th-accent-ink: #4ade80;
+	--th-accent-soft: rgba(29, 170, 97, 0.18);
+}
+html body .wa-th,
+html body .wa-th * {
+	font-family: var(--font-wa-en, Inter), var(--font-wa-ar, 'IBM Plex Sans Arabic'), 'Segoe UI', system-ui, sans-serif;
+}
+html body .wa-th [dir='rtl'],
+html body .wa-th [dir='rtl'] * {
+	font-family: var(--font-wa-ar, 'IBM Plex Sans Arabic'), var(--font-wa-en, Inter), 'Segoe UI', system-ui, sans-serif;
+}
+
+.wa-th__panel {
+	display: flex;
+	flex-direction: column;
+	inline-size: min(880px, 100%);
+	max-block-size: min(720px, calc(100dvh - 32px));
+	overflow: hidden;
+	border-radius: 22px;
+	background: var(--th-bg);
+	color: var(--th-ink);
+	box-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--th-line);
+	outline: none;
+	animation: wa-th-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* header */
+.wa-th__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 12px;
+	padding: 16px 16px 14px 20px;
+	padding-inline: 20px 14px;
+	border-bottom: 1px solid var(--th-line);
+}
+.wa-th__icon {
+	display: grid;
+	place-items: center;
+	inline-size: 38px;
+	block-size: 38px;
+	border-radius: 12px;
+	background: var(--th-accent-soft);
+	color: var(--th-accent-ink);
+}
+.wa-th__titles {
+	flex: 1;
+	min-width: 180px;
+}
+.wa-th__titles h2 {
+	margin: 0;
+	font-size: 16.5px;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+}
+.wa-th__titles p {
+	margin: 1px 0 0;
+	color: var(--th-ink-2);
+	font-size: 12.5px;
+}
+.wa-th__range {
+	display: inline-flex;
+	gap: 2px;
+	padding: 3px;
+	border-radius: 12px;
+	background: var(--th-bg-2);
+}
+.wa-th__range button {
+	block-size: 30px;
+	padding: 0 12px;
+	border: 0;
+	border-radius: 9px;
+	background: transparent;
+	color: var(--th-ink-2);
+	font-size: 12.5px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.wa-th__range button.is-on {
+	background: var(--th-bg);
+	color: var(--th-accent-ink);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 10px -6px rgba(0, 0, 0, 0.3);
+}
+.wa-th__x {
+	display: grid;
+	place-items: center;
+	inline-size: 36px;
+	block-size: 36px;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--th-muted);
+	cursor: pointer;
+}
+.wa-th__x:hover {
+	background: var(--th-bg-2);
+	color: var(--th-ink);
+}
+.wa-th :is(button):focus-visible {
+	outline: 2px solid var(--th-accent);
+	outline-offset: 2px;
+}
+
+/* body: people | their log */
+.wa-th__body {
+	display: grid;
+	grid-template-columns: minmax(230px, 290px) minmax(0, 1fr);
+	min-height: 0;
+	flex: 1;
+	transition: opacity 0.15s ease;
+}
+.wa-th__body.is-refreshing {
+	opacity: 0.6;
+}
+.wa-th__people {
+	display: grid;
+	align-content: start;
+	gap: 2px;
+	margin: 0;
+	padding: 10px;
+	overflow-y: auto;
+	border-inline-end: 1px solid var(--th-line);
+	list-style: none;
+	scrollbar-width: thin;
+}
+.wa-th__person {
+	display: flex;
+	inline-size: 100%;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: 12px;
+	background: transparent;
+	color: inherit;
+	text-align: start;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+.wa-th__person:hover {
+	background: var(--th-bg-2);
+}
+.wa-th__person.is-on {
+	background: var(--th-accent-soft);
+}
+.wa-th__avatar {
+	position: relative;
+	display: grid;
+	place-items: center;
+	flex: none;
+	inline-size: 36px;
+	block-size: 36px;
+	border-radius: 50%;
+	background: var(--th-bg-2);
+	color: var(--th-ink-2);
+	font-size: 12.5px;
+	font-weight: 800;
+}
+.wa-th__person.is-on .wa-th__avatar {
+	background: var(--th-bg);
+	color: var(--th-accent-ink);
+}
+.wa-th__live-dot {
+	position: absolute;
+	inset-block-end: 0;
+	inset-inline-end: 0;
+	inline-size: 10px;
+	block-size: 10px;
+	border: 2px solid var(--th-bg);
+	border-radius: 50%;
+	background: var(--th-accent);
+}
+.wa-th__who {
+	display: grid;
+	flex: 1;
+	min-width: 0;
+}
+.wa-th__name {
+	overflow: hidden;
+	font-size: 13.5px;
+	font-weight: 700;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.wa-th__seen {
+	overflow: hidden;
+	color: var(--th-muted);
+	font-size: 11.5px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.wa-th__seen.is-online {
+	color: var(--th-accent-ink);
+	font-weight: 700;
+}
+.wa-th__total {
+	flex: none;
+	color: var(--th-ink-2);
+	font-size: 12px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+/* the log: days → opened · bar · closed · duration */
+.wa-th__log {
+	min-height: 0;
+	padding: 14px 18px 18px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+.wa-th__log-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+.wa-th__log-head b {
+	font-size: 15px;
+}
+.wa-th__log-head span {
+	color: var(--th-muted);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+.wa-th__day {
+	margin-top: 10px;
+	animation: wa-th-in 0.22s ease-out backwards;
+}
+.wa-th__day h3 {
+	position: sticky;
+	top: -14px;
+	z-index: 1;
+	display: flex;
+	justify-content: space-between;
+	margin: 0 0 4px;
+	padding: 6px 2px;
+	background: var(--th-bg);
+	color: var(--th-ink-2);
+	font-size: 12px;
+	font-weight: 800;
+}
+.wa-th__day-total {
+	color: var(--th-muted);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+.wa-th__day ol {
+	display: grid;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.wa-th__row {
+	display: grid;
+	grid-template-columns: auto minmax(24px, 1fr) auto auto;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px;
+	border: 1px solid var(--th-line);
+	border-radius: 12px;
+	background: var(--th-bg);
+	font-size: 13px;
+}
+.wa-th__row.is-live {
+	border-color: color-mix(in srgb, var(--th-accent) 45%, transparent);
+	background: var(--th-accent-soft);
+}
+.wa-th__t {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--th-ink-2);
+}
+.wa-th__t svg {
+	color: var(--th-muted);
+}
+.wa-th__clock {
+	color: var(--th-ink);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+.wa-th__bar {
+	block-size: 2px;
+	border-radius: 2px;
+	background: linear-gradient(to right, var(--th-accent), color-mix(in srgb, var(--th-accent) 30%, transparent));
+}
+[dir='rtl'] .wa-th__bar {
+	background: linear-gradient(to left, var(--th-accent), color-mix(in srgb, var(--th-accent) 30%, transparent));
+}
+.wa-th__now {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--th-accent-ink);
+	font-weight: 800;
+}
+.wa-th__now::before {
+	content: '';
+	inline-size: 8px;
+	block-size: 8px;
+	border-radius: 50%;
+	background: var(--th-accent);
+	box-shadow: 0 0 0 0 var(--th-accent);
+	animation: wa-th-pulse 1.6s ease-out infinite;
+}
+.wa-th__dur {
+	min-inline-size: 64px;
+	padding: 2px 8px;
+	border-radius: 99px;
+	background: var(--th-bg-2);
+	color: var(--th-ink-2);
+	font-size: 11.5px;
+	font-weight: 800;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+.wa-th__none {
+	margin: 18px 0;
+	color: var(--th-muted);
+	font-size: 13px;
+}
+
+/* states */
+.wa-th__state {
+	display: grid;
+	justify-items: center;
+	gap: 6px;
+	padding: 48px 20px;
+	color: var(--th-ink-2);
+	text-align: center;
+}
+.wa-th__state p {
+	margin: 0;
+	color: var(--th-ink);
+	font-weight: 700;
+}
+.wa-th__retry {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 6px;
+	block-size: 36px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: 99px;
+	background: var(--th-accent);
+	color: #fff;
+	font-weight: 700;
+	cursor: pointer;
+}
+.wa-th__skel {
+	block-size: 52px;
+	border-radius: 12px;
+	background: linear-gradient(90deg, var(--th-bg-2), color-mix(in srgb, var(--th-bg-2) 40%, var(--th-bg)), var(--th-bg-2));
+	background-size: 200% 100%;
+	animation: wa-th-shimmer 1.3s linear infinite;
+}
+.wa-th__skel.is-row {
+	block-size: 40px;
+	margin-bottom: 6px;
+}
+.wa-th__foot {
+	margin: 0;
+	padding: 10px 20px 12px;
+	border-top: 1px solid var(--th-line);
+	color: var(--th-muted);
+	font-size: 11.5px;
+	line-height: 1.5;
+}
+
+/* phones: people as a scrolling row, the log below */
+@media (max-width: 640px) {
+	.wa-th {
+		align-items: end;
+		padding: 0;
+	}
+	.wa-th__panel {
+		max-block-size: 92dvh;
+		border-end-start-radius: 0;
+		border-end-end-radius: 0;
+	}
+	.wa-th__body {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto minmax(0, 1fr);
+	}
+	.wa-th__people {
+		display: flex;
+		gap: 6px;
+		overflow-x: auto;
+		overflow-y: hidden;
+		border-inline-end: 0;
+		border-bottom: 1px solid var(--th-line);
+	}
+	.wa-th__people li {
+		flex: none;
+	}
+	.wa-th__person {
+		inline-size: auto;
+		max-inline-size: 220px;
+	}
+	.wa-th__total {
+		display: none;
+	}
+	.wa-th__row {
+		gap: 8px;
+		padding: 8px 10px;
+	}
+}
+
+@keyframes wa-th-fade {
+	from {
+		opacity: 0;
+	}
+}
+@keyframes wa-th-pop {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.98);
+	}
+}
+@keyframes wa-th-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}
+@keyframes wa-th-pulse {
+	70% {
+		box-shadow: 0 0 0 7px transparent;
+	}
+	100% {
+		box-shadow: 0 0 0 0 transparent;
+	}
+}
+@keyframes wa-th-shimmer {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.wa-th,
+	.wa-th__panel,
+	.wa-th__day,
+	.wa-th__now::before,
+	.wa-th__skel {
+		animation: none;
+	}
+}
+
+/* the entry point at the bottom of the "Have WhatsApp open now" popover */
+html body .wa-team__panel .wa-team__history {
+	display: flex;
+	inline-size: calc(100% - 16px);
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: 0 8px 8px;
+	block-size: 34px;
+	border: 1px solid rgba(29, 170, 97, 0.35);
+	border-radius: 10px;
+	background: rgba(29, 170, 97, 0.08);
+	color: #128c4f;
+	font-size: 12.5px;
+	font-weight: 700;
+	cursor: pointer;
+}
+html body .wa-team__panel .wa-team__history:hover {
+	background: rgba(29, 170, 97, 0.14);
+}
+html.dark body .wa-team__panel .wa-team__history {
+	color: #4ade80;
+}
+
+/* names follow the page's side, whatever their own language */
+.wa-th__panel[dir='ltr'] :is(.wa-th__name, .wa-th__log-head b) {
+	text-align: left;
+}
+.wa-th__panel[dir='rtl'] :is(.wa-th__name, .wa-th__log-head b) {
+	text-align: right;
+}

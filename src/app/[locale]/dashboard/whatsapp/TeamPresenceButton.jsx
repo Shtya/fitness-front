@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Eye, Users } from 'lucide-react';
+import { Eye, History, Users } from 'lucide-react';
+import TeamHistoryDialog from './TeamHistoryDialog';
 
 function initials(name) {
 	const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
@@ -22,6 +23,7 @@ const ROLE_LABELS = {
  */
 export default function TeamPresenceButton({ staff, ar, assignedCounts, onViewAs = null, canViewAs = member => String(member?.role || '').toLowerCase() !== 'super_admin' }) {
 	const [open, setOpen] = useState(false);
+	const [historyOpen, setHistoryOpen] = useState(false);
 	const [place, setPlace] = useState(null);
 	const rootRef = useRef(null);
 	const panelRef = useRef(null);
@@ -74,7 +76,10 @@ export default function TeamPresenceButton({ staff, ar, assignedCounts, onViewAs
 		hoverTimer.current = window.setTimeout(() => setOpen(false), 220);
 	};
 
+	// The log dialog sits outside the hover area: events from a portal still bubble through React,
+	// so inside it, moving over the dialog would reopen the popover behind it.
 	return (
+		<>
 		<div ref={rootRef} className="wa-team relative" onMouseEnter={openSoon} onMouseLeave={closeSoon}>
 			<button
 				type="button"
@@ -149,6 +154,17 @@ export default function TeamPresenceButton({ staff, ar, assignedCounts, onViewAs
 							{ar ? 'محدش من الفريق فاتح واتساب دلوقتي.' : 'Nobody on the team has WhatsApp open right now.'}
 						</p>
 					)}
+					<button
+						type="button"
+						className="wa-team__history"
+						onClick={() => {
+							setOpen(false);
+							setHistoryOpen(true);
+						}}
+					>
+						<History size={14} aria-hidden="true" />
+						{ar ? 'سجل الدخول والخروج' : 'Login history'}
+					</button>
 					<p className="wa-team__foot">
 						{ar
 							? 'متصل = الصفحة مفتوحة قدامه دلوقتي (بتتحدث كل ١٠ ثواني).'
@@ -158,5 +174,7 @@ export default function TeamPresenceButton({ staff, ar, assignedCounts, onViewAs
 				document.body,
 			) : null}
 		</div>
+		<TeamHistoryDialog open={historyOpen} ar={ar} onClose={() => setHistoryOpen(false)} />
+		</>
 	);
 }

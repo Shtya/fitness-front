@@ -364,3 +364,123 @@
 		animation: none !important;
 	}
 }
+
+/* ═══ the timer on every WhatsApp tab: a floating pill (hidden while a timer button shows) ═══ */
+.ht-dock {
+	--ht-accent: #1daa61;
+	--ht-ink: #111b21;
+	position: fixed;
+	inset-block-end: 18px;
+	inset-inline-end: 18px;
+	z-index: 380;
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 8px 7px 12px;
+	padding-inline: 12px 8px;
+	border: 1px solid rgba(17, 27, 33, 0.08);
+	border-radius: 999px;
+	background: color-mix(in srgb, #ffffff 92%, transparent);
+	color: var(--ht-ink);
+	box-shadow: 0 16px 40px -18px rgba(11, 20, 26, 0.45), 0 2px 6px -3px rgba(11, 20, 26, 0.2);
+	-webkit-backdrop-filter: blur(12px);
+	backdrop-filter: blur(12px);
+	animation: ht-dock-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+	font-family: var(--font-wa-en, Inter), var(--font-wa-ar, 'IBM Plex Sans Arabic'), 'Segoe UI', system-ui, sans-serif;
+}
+html.dark .ht-dock,
+html[data-theme-mode='dark'] .ht-dock {
+	--ht-ink: #e9edef;
+	border-color: rgba(255, 255, 255, 0.08);
+	background: color-mix(in srgb, #1f2121 92%, transparent);
+}
+.ht-dock__ring {
+	inline-size: 26px;
+	block-size: 26px;
+	-webkit-mask: radial-gradient(circle, transparent 8px, #000 8.5px);
+	mask: radial-gradient(circle, transparent 8px, #000 8.5px);
+}
+.ht-dock__ring.is-paused {
+	opacity: 0.55;
+}
+.ht-dock__text {
+	display: grid;
+	min-inline-size: 0;
+	max-inline-size: 220px;
+	line-height: 1.2;
+}
+.ht-dock__text b {
+	overflow: hidden;
+	font-size: 14px;
+	font-weight: 800;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ht-dock__time {
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.01em;
+}
+.ht-dock__text small {
+	overflow: hidden;
+	color: color-mix(in srgb, var(--ht-ink) 55%, transparent);
+	font-size: 11px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ht-dock__btn {
+	display: grid;
+	place-items: center;
+	inline-size: 32px;
+	block-size: 32px;
+	border: 0;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--ht-ink) 6%, transparent);
+	color: inherit;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+.ht-dock__btn:hover {
+	background: color-mix(in srgb, var(--ht-ink) 12%, transparent);
+}
+.ht-dock__btn:focus-visible {
+	outline: 2px solid var(--ht-accent);
+	outline-offset: 2px;
+}
+.ht-dock.is-done {
+	border-color: transparent;
+	background: linear-gradient(180deg, #ffb547, #f08c1a);
+	color: #fff;
+	animation: ht-dock-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), ht-ring 1.1s ease-in-out 0.3s infinite;
+}
+.ht-dock.is-done .ht-dock__text small {
+	color: rgba(255, 255, 255, 0.85);
+}
+.ht-dock.is-done .ht-dock__btn {
+	background: rgba(255, 255, 255, 0.2);
+}
+.ht-dock__bell {
+	display: grid;
+	place-items: center;
+	inline-size: 30px;
+	block-size: 30px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.22);
+}
+@keyframes ht-dock-in {
+	from {
+		opacity: 0;
+		transform: translateY(10px) scale(0.96);
+	}
+}
+@media (max-width: 768px) {
+	.ht-dock {
+		inset-block-end: calc(78px + env(safe-area-inset-bottom));
+		inset-inline-end: 12px;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.ht-dock,
+	.ht-dock.is-done {
+		animation: none;
+	}
+}

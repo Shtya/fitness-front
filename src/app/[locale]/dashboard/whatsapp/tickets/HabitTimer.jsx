@@ -1,27 +1,26 @@
 'use client';
 
 /*
- * Focus timer next to the calendar on the Habits tab. Pick a preset or your own time, optionally
- * for one habit; the button counts down while you work, and a soft chime plays when it ends
- * (with "mark the habit done" if you picked one). The end time is kept in localStorage, so a
- * reload or another tab does not lose it.
+ * Focus timer button (Habits, Wall, Docs). Pick a preset or your own time; the button counts
+ * down while you work and a soft chime plays when it ends. The timer itself lives in
+ * habit-timer-store.js, so every button, the floating dock on other WhatsApp tabs, a reload
+ * and other browser tabs all show the same timer — and it rings (with a browser notification)
+ * wherever you are.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BellRing, Check, Minus, Pause, Play, Plus, RotateCcw, Square, Timer, X } from 'lucide-react';
 import { langClass } from './tickets-ui';
+import { addMinute, clearTimer, clock, finishIfDue, hasDock, isRunning, pauseTimer, resumeTimer, startTimer, timeLeft, useTimer } from './habit-timer-store';
 import './habits-timer.css';
 
-const LS = 'wa-habit-timer:v1';
 const PRESETS = [5, 10, 15, 25, 45, 60];
 
-const T = {
+export const TIMER_COPY = {
 	en: {
 		timer: 'Timer',
 		setTimer: 'Set a timer',
 		minutes: 'min',
-		forHabit: 'For a habit (optional)',
-		none: 'Just a timer',
 		start: 'Start',
 		pause: 'Pause',
 		resume: 'Resume',
@@ -42,8 +41,6 @@ const T = {
 		timer: 'مؤقت',
 		setTimer: 'اضبط مؤقت',
 		minutes: 'د',
-		forHabit: 'لعادة معيّنة (اختياري)',
-		none: 'مؤقت عادي',
 		start: 'ابدأ',
 		pause: 'إيقاف مؤقت',
 		resume: 'كمّل',
@@ -62,112 +59,46 @@ const T = {
 	},
 };
 
-const clock = ms => {
-	const s = Math.max(0, Math.ceil(ms / 1000));
-	const h = Math.floor(s / 3600);
-	const m = Math.floor((s % 3600) / 60);
-	const sec = String(s % 60).padStart(2, '0');
-	return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
-};
-
-function readSaved() {
-	try {
-		const v = JSON.parse(window.localStorage.getItem(LS) || 'null');
-		return v && typeof v === 'object' && v.total > 0 ? v : null;
-	} catch {
-		return null;
-	}
-}
-function save(v) {
-	try {
-		if (v) window.localStorage.setItem(LS, JSON.stringify(v));
-		else window.localStorage.removeItem(LS);
-	} catch {
-		/* private mode: the timer still runs in this tab */
-	}
-}
-
-/* ─── the chime: three soft bell notes, three times (made with Web Audio, no file) ─── */
-function chime(ctx) {
-	if (!ctx) return;
-	const notes = [1046.5, 1318.5, 1568]; // C6 E6 G6
-	const now = ctx.currentTime + 0.05;
-	for (let round = 0; round < 3; round += 1) {
-		notes.forEach((freq, i) => {
-			const t0 = now + round * 1.3 + i * 0.18;
-			[1, 2.01].forEach((mult, k) => {
-				const osc = ctx.createOscillator();
-				const gain = ctx.createGain();
-				osc.type = 'sine';
-				osc.frequency.value = freq * mult;
-				gain.gain.setValueAtTime(0.0001, t0);
-				gain.gain.exponentialRampToValueAtTime(k ? 0.05 : 0.22, t0 + 0.02);
-				gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.1);
-				osc.connect(gain).connect(ctx.destination);
-				osc.start(t0);
-				osc.stop(t0 + 1.15);
-			});
-		});
-	}
-}
+/** What the browser notification says when the time is up. */
+export const notifyCopy = t => ({ title: t.timeUp, body: t.wellDone, bodyFor: label => t.timeUpFor(label) });
 
 export default function HabitTimer({ ar, habits = [], onMarkDone }) {
-	const t = T[ar ? 'ar' : 'en'];
-	const [timer, setTimer] = useState(null); // { total, endAt?, left?, habitId?, label?, done? }
+	const t = TIMER_COPY[ar ? 'ar' : 'en'];
+	const timer = useTimer();
 	const [open, setOpen] = useState(false);
 	const [now, setNow] = useState(() => Date.now());
 	const [minutes, setMinutes] = useState(25);
-	const [habitId, setHabitId] = useState('');
 	const [marked, setMarked] = useState(false);
 	const wrap = useRef(null);
-	const audio = useRef(null);
 	const baseTitle = useRef('');
+	const wasDone = useRef(Boolean(timer?.done));
 
-	// Coming back to the page: pick the timer up where it is (or show it finished).
-	useEffect(() => {
-		const saved = readSaved();
-		if (saved) setTimer(saved.endAt && saved.endAt <= Date.now() && !saved.left ? { ...saved, done: true } : saved);
-	}, []);
+	const running = isRunning(timer);
+	const left = timeLeft(timer, now);
 
-	const update = useCallback(next => {
-		setTimer(next);
-		save(next && !next.done ? next : null);
-	}, []);
-
-	const ensureAudio = () => {
-		try {
-			const AC = window.AudioContext || window.webkitAudioContext;
-			if (!audio.current && AC) audio.current = new AC();
-			void audio.current?.resume?.();
-		} catch {
-			/* no sound on this browser */
-		}
-	};
-
-	const running = Boolean(timer && timer.endAt && !timer.done);
-	const left = timer ? (timer.done ? 0 : timer.endAt ? timer.endAt - now : timer.left) : 0;
-
-	// tick while running; ring the bell at zero
+	// tick while running; at zero the store rings once (whichever button / dock gets there first)
 	useEffect(() => {
 		if (!running) return undefined;
 		const id = window.setInterval(() => {
-			const n = Date.now();
-			setNow(n);
-			if (timer.endAt - n <= 0) {
-				window.clearInterval(id);
-				ensureAudio();
-				chime(audio.current);
-				navigator.vibrate?.([200, 120, 200, 120, 400]);
-				setMarked(false);
-				update({ ...timer, done: true });
-				setOpen(true);
-			}
+			setNow(Date.now());
+			finishIfDue(notifyCopy(t));
 		}, 250);
 		return () => window.clearInterval(id);
-	}, [running, timer, update]);
+	}, [running, t]);
 
-	// time left in the tab title while running; a flashing title when it is over
+	// it just finished (here, in the dock or in another tab): show "time's up" on this button
 	useEffect(() => {
+		const done = Boolean(timer?.done);
+		if (done && !wasDone.current) {
+			setMarked(false);
+			setOpen(true);
+		}
+		wasDone.current = done;
+	}, [timer?.done]);
+
+	// time left in the tab title while running (the dock does this on the WhatsApp page)
+	useEffect(() => {
+		if (hasDock()) return undefined;
 		if (!baseTitle.current) baseTitle.current = document.title;
 		if (running) {
 			document.title = `⏱ ${clock(left)} · ${baseTitle.current}`;
@@ -201,23 +132,12 @@ export default function HabitTimer({ ar, habits = [], onMarkDone }) {
 	}, [open]);
 
 	const start = (mins = minutes) => {
-		ensureAudio(); // unlocks sound now, while there is a click
-		const total = Math.round(mins * 60_000);
-		const h = habits.find(x => x.id === habitId);
 		setNow(Date.now());
-		update({ total, endAt: Date.now() + total, habitId: h?.id || '', label: h?.title || '' });
+		startTimer(mins);
 		setMarked(false);
 	};
-	const pause = () => update({ ...timer, left: Math.max(0, timer.endAt - Date.now()), endAt: 0 });
-	const resume = () => {
-		ensureAudio();
-		setNow(Date.now());
-		update({ ...timer, endAt: Date.now() + timer.left, left: 0 });
-	};
-	const addMinute = () =>
-		update(timer.endAt ? { ...timer, total: timer.total + 60_000, endAt: timer.endAt + 60_000 } : { ...timer, total: timer.total + 60_000, left: timer.left + 60_000 });
 	const stop = () => {
-		update(null);
+		clearTimer();
 		setOpen(true);
 	};
 
@@ -239,7 +159,7 @@ export default function HabitTimer({ ar, habits = [], onMarkDone }) {
 						{timer.done ? <BellRing size={13} /> : null}
 					</span>
 				) : (
-					<Timer size={18} />
+					<Timer size={17} />
 				)}
 				{timer && !timer.done ? <span className="ht-btn__time">{clock(left)}</span> : null}
 			</button>
@@ -276,7 +196,7 @@ export default function HabitTimer({ ar, habits = [], onMarkDone }) {
 									type="button"
 									className="ht-act is-ghost"
 									onClick={() => {
-										update(null);
+										clearTimer();
 										setOpen(false);
 									}}
 								>
@@ -294,12 +214,19 @@ export default function HabitTimer({ ar, habits = [], onMarkDone }) {
 							</div>
 							<div className="ht-acts">
 								{running ? (
-									<button type="button" className="ht-act is-primary" onClick={pause}>
+									<button type="button" className="ht-act is-primary" onClick={pauseTimer}>
 										<Pause size={16} aria-hidden />
 										{t.pause}
 									</button>
 								) : (
-									<button type="button" className="ht-act is-primary" onClick={resume}>
+									<button
+										type="button"
+										className="ht-act is-primary"
+										onClick={() => {
+											setNow(Date.now());
+											resumeTimer();
+										}}
+									>
 										<Play size={16} aria-hidden />
 										{t.resume}
 									</button>

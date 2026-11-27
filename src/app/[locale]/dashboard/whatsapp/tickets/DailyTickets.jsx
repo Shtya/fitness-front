@@ -8,6 +8,7 @@ import { COPY, mergeSubsetOrder, sortTickets } from './tickets-model';
 import { DetailsHint, MiniMenu, RepeatBadge, StatusChip, StepBar, StepRing, TicketMenu, checkLabel, stepInOrder, ticketKeyHandler, useSortable } from './tickets-ui';
 import TicketDialog from './TicketDialog';
 import TicketsWall from './TicketsWall';
+import HabitTimer from './HabitTimer';
 import HabitsTracker from './HabitsTracker';
 import { boardTitleFont, cardArabicFont } from './habit-card-fonts';
 import './habits-v5.css';
@@ -517,6 +518,18 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 		ro.observe(corner);
 		return () => ro.disconnect();
 	}, [switchSlot]);
+	// …and when they leave too little room beside them (the Wall's longer toolbar, a narrower
+	// pane), the title steps down under them instead of being squeezed.
+	const headRef = useRef(null);
+	const [headW, setHeadW] = useState(0);
+	useEffect(() => {
+		const head = headRef.current;
+		if (!head || !cornerW || typeof ResizeObserver === 'undefined') return undefined;
+		const ro = new ResizeObserver(() => setHeadW(Math.round(head.getBoundingClientRect().width)));
+		ro.observe(head);
+		return () => ro.disconnect();
+	}, [cornerW]);
+	const cornerTight = Boolean(cornerW && headW && headW - cornerW < 380);
 	const switcher = (
 		<div className="tk-switch" role="group" aria-label={t.views} style={{ '--i': view === 'wall' ? 1 : 0 }}>
 			<span className="tk-switch__thumb" aria-hidden />
@@ -531,13 +544,45 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 		</div>
 	);
 
+	// The Wall's tools sit where Habits puts its own (the corner next to Habits / Wall / Games in
+	// the chat pane; the header in the stand-alone tab), with the same timer.
+	const [toolsSlot, setToolsSlot] = useState(null);
+	useEffect(() => {
+		setToolsSlot(switchSlot ? document.getElementById('wa-idle-tools-slot') : null);
+	}, [switchSlot]);
+	const wallTools = (
+		<div className="hb-tools tk-wall-tools">
+			<button
+				type="button"
+				className={`tk-add-open hb-toolbtn is-primary${composerOpen ? ' is-on' : ''}`}
+				aria-expanded={composerOpen}
+				onClick={() => (composerOpen ? setComposerOpen(false) : openComposer())}
+			>
+				{composerOpen ? <X size={17} aria-hidden /> : <Plus size={17} strokeWidth={2.4} aria-hidden />}
+				<span>{t.add}</span>
+			</button>
+			<button
+				type="button"
+				className={`tk-hide-done hb-toolbtn${hideDone ? ' is-on' : ''}`}
+				aria-pressed={hideDone}
+				onClick={toggleHideDone}
+				title={hideDone ? t.showDone : t.hideDone}
+			>
+				{hideDone ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+				<span className="tk-hide-done__label">{t.hideDone}</span>
+				{hideDone && hiddenCount ? <span className="tk-hide-done__n">{hiddenCount}</span> : null}
+			</button>
+			<HabitTimer ar={ar} habits={[]} />
+		</div>
+	);
+
 	const now = new Date();
 	const date = new Intl.DateTimeFormat(locale(ar), { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
 	const total = tickets.length;
 
 	return (
-		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-habits'} ${leaving ? 'is-leaving' : ''} ${boardTitleFont.variable} ${cardArabicFont.variable}${cornerW ? ' has-corner' : ''}`} style={cornerW ? { '--hb-corner-w': `${cornerW}px` } : undefined} aria-labelledby="tk-heading">
-			<header className="tk-board__head">
+		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-habits'} ${leaving ? 'is-leaving' : ''} ${boardTitleFont.variable} ${cardArabicFont.variable}${cornerW ? ' has-corner' : ''}${cornerTight ? ' is-corner-tight' : ''}`} style={cornerW ? { '--hb-corner-w': `${cornerW}px` } : undefined} aria-labelledby="tk-heading">
+			<header className="tk-board__head" ref={headRef}>
 				<div className="tk-board__titles">
 					 
 					<h2 id="tk-heading" className="tk-board__title">
@@ -564,30 +609,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 					</p>
 				</div>
 				<div className="tk-board__tools">
-					{view === 'wall' ? (
-						<button
-							type="button"
-							className={`tk-add-open hb-toolbtn is-primary${composerOpen ? ' is-on' : ''}`}
-							aria-expanded={composerOpen}
-							onClick={() => (composerOpen ? setComposerOpen(false) : openComposer())}
-						>
-							{composerOpen ? <X size={18} aria-hidden /> : <Plus size={18} aria-hidden />}
-							<span>{t.add}</span>
-						</button>
-					) : null}
-					{view === 'wall' ? (
-<button
-						type="button"
-						className={`tk-hide-done${hideDone ? ' is-on' : ''}`}
-						aria-pressed={hideDone}
-						onClick={toggleHideDone}
-						title={hideDone ? t.showDone : t.hideDone}
-					>
-						{hideDone ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-						<span className="tk-hide-done__label">{t.hideDone}</span>
-						{hideDone && hiddenCount ? <span className="tk-hide-done__n">{hiddenCount}</span> : null}
-					</button>
-) : null}
+					{view === 'wall' && !toolsSlot ? wallTools : null}
 					{switchSlot ? (
 						createPortal(switcher, switchSlot)
 					) : (
@@ -599,6 +621,8 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 					)}
 				</div>
 				</header>
+
+			{view === 'wall' && toolsSlot ? createPortal(wallTools, toolsSlot) : null}
 
 			{store.saveError && !hideSaveError ? (
 				<div className="tkx-alert" role="alert">
