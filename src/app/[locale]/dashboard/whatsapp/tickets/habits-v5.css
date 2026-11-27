@@ -1633,18 +1633,68 @@ html body .tk-board.is-wall .tw-paper--add:not(#hb-a) {
 	}
 }
 
-/* Board header next to the pane's corner tools: when they leave too little room beside them
-   (the Wall's longer toolbar, a narrower pane) the title steps down under them */
+/* Board header next to the pane's corner tools: the title stays on their line, scaled down to the
+   room they leave (--tk-title-zoom, set by DailyTickets); only when even a much smaller title would
+   not fit (is-corner-tight) does it step down under them */
+html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.has-corner .tk-board__head .tk-board__title {
+	zoom: var(--tk-title-zoom, 1);
+}
+html body .wa-chat-idle .tk-board.has-corner:not(#wa-pl):not(#hb-a) .tk-board__title::after {
+	min-inline-size: 0;
+	margin-inline-end: calc((var(--hb-corner-w, 0px) + 24px) / var(--tk-title-zoom, 1)) !important;
+}
 @media (min-width: 641px) {
 	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-corner-tight .tk-board__head {
 		padding-top: 44px;
 	}
-	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-corner-tight .tk-board__title::after {
+	html body .wa-chat-idle .tk-board.is-corner-tight:not(#wa-pl):not(#hb-a) .tk-board__title::after {
 		margin-inline-end: 0 !important;
 	}
 	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-wall .tk-board__head .tk-board__title {
 		font-size: clamp(40px, 3.8vw, 58px);
 	}
+}
+
+/* Wall: the cards sit in the middle of the height left under the header */
+@media (min-width: 769px) {
+	html .wa-chat-idle.has-tickets:not(#wa-idle) .wa-chat-idle__stage:has(.tk-board.is-wall) {
+		align-self: stretch;
+	}
+	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-wall {
+		flex: 1 1 auto;
+		block-size: 100%;
+	}
+	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-wall > .tk-content {
+		justify-content: center;
+		min-height: 0;
+	}
+	html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-wall > .tk-content > .tw-frame {
+		flex: 0 1 auto;
+	}
+}
+
+/* No frame around the tickets or the habits table: the cards and rows sit on the page itself */
+html body .tk-board.is-wall .tw-frame:not(#wa-pl):not(#hb-a) {
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	animation: none;
+}
+html body .tk-board.is-wall .tw-board:not(#wa-pl):not(#hb-a) {
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+html body .tk-board.is-habits .hb-gridwrap:not(#hb-a) {
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+html body .tk-board.is-habits .hb-grid thead th:not(#hb-a) {
+	background: transparent;
 }
 
 /* ═══════════════ Day columns give way first ═══════════════
@@ -1680,5 +1730,393 @@ html body .tk-board.is-wall .tw-paper--add:not(#hb-a) {
 	.tk-board.is-habits .hb-grid:not(#hb-a) {
 		--hb-name-w: clamp(196px, 34cqw, 250px);
 		--hb-cell: clamp(28px, calc((100cqw - var(--hb-name-w) - 16px) / var(--cols, 14)), 48px);
+	}
+}
+/* a narrow card (two a row on a phone) takes its content's height; it never outgrows its slot */
+html body .tk-board.is-wall .tw-paper:not(#hb-a) {
+	inline-size: 100%;
+	box-sizing: border-box;
+}
+@container (max-width: 340px) {
+	html body .tk-board.is-wall .tw-paper:not(#hb-a) {
+		min-height: 168px;
+		aspect-ratio: auto;
+	}
+}
+/* Arabic day names are longer: a step smaller, and never spilling into the next column */
+.tk-board.is-habits .hb-th small:not(#hb-a) {
+	max-inline-size: 100%;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: clip;
+}
+:is([dir='rtl'], .font-ar) .tk-board.is-habits .hb-th small:not(#hb-a) {
+	font-size: clamp(8.5px, calc(var(--hb-cell) * 0.25), 13px);
+	letter-spacing: -0.02em;
+}
+/* a narrow card: the Done chip keeps only its tick, so the top row fits */
+@container (max-width: 200px) {
+	html body .tk-board.is-wall .tw-done-chip:not(#hb-a) {
+		gap: 0;
+		padding: 0 4px;
+		font-size: 0;
+	}
+}
+/* cards in one row share its height, and the "pin a new task" slot fills it too */
+html body .tk-board.is-wall .tw-grid > .tw-note:not(#hb-a) {
+	display: flex;
+	flex-direction: column;
+}
+html body .tk-board.is-wall .tw-grid > .tw-note > .tw-paper:not(#hb-a) {
+	flex: 1 1 auto;
+}
+
+/* ═══════════════ Habits table: scrollbar on the edge, quiet off days ═══════════════ */
+/* the scrollbar runs along the table's edge, not inset by the wrapper's padding */
+html body .tk-board.is-habits .hb-gridwrap:not(#hb-a) {
+	padding: 8px 0 0;
+	padding-inline-start: 8px;
+}
+html body .tk-board.is-habits .hb-gridscroll:not(#hb-a) {
+	border-radius: 0;
+	scrollbar-gutter: auto;
+}
+/* a day the habit is not planned for (its schedule, before it started): a small dot, no box */
+html body .tk-board.is-habits .hb-box.is-off:not(#hb-a),
+html body .tk-board.is-habits .hb-td.is-today .hb-box.is-off:not(#hb-a) {
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+html body .tk-board.is-habits .hb-box.is-off:not(#hb-a)::after {
+	content: '';
+	display: block;
+	inline-size: 5px;
+	block-size: 5px;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--hv-ink, #191a18) 22%, transparent);
+}
+html body .tk-board.is-habits .hb-box.is-off:not(#hb-a):hover::after {
+	background: var(--hv-green, #1d6b40);
+}
+
+/* ═══════════════ Motivation cards: a line or a line and a half, tools that don't collide ═══════════════ */
+html body .tk-board.is-habits .hb-card .hb-card__text:not(#hb-a) {
+	padding-inline: 18px;
+	text-wrap: pretty;
+}
+html body .tk-board.is-habits .hb-card .hb-card__text.is-en:not(#hb-a) {
+	font-size: clamp(14.5px, 1.15vw, 16.5px);
+	line-height: 1.45;
+}
+html body .tk-board.is-habits .hb-card .hb-card__text.is-ar:not(#hb-a) {
+	font-size: clamp(17px, 1.35vw, 20px);
+	line-height: 1.6;
+}
+/* on hover the edit / delete tools take the quote mark's place (it fades out) */
+html body .tk-board.is-habits .hb-card .hb-card__q:not(#hb-a) {
+	transition: opacity 0.15s ease;
+}
+html body .tk-board.is-habits .hb-card:is(:hover, :focus-within) .hb-card__q:not(#hb-a) {
+	opacity: 0;
+}
+html body .tk-board.is-habits .hb-card .hb-card__tools:not(#hb-a) {
+	top: 10px;
+	inset-inline-end: 12px;
+	gap: 4px;
+}
+html body .tk-board.is-habits .hb-card .hb-card__tools .hb-iconbtn:not(#hb-a) {
+	inline-size: 28px;
+	block-size: 28px;
+	border: 1px solid var(--hv-line-2, #d6d1c4);
+	border-radius: 8px;
+	background: var(--hv-card, #fdfcf9);
+	color: var(--hv-ink-2, #5d625f);
+	box-shadow: 0 1px 2px rgba(20, 20, 10, 0.06);
+}
+html body .tk-board.is-habits .hb-card .hb-card__tools .hb-iconbtn:hover:not(#hb-a) {
+	border-color: var(--hv-green, #1d6b40);
+	color: var(--hv-green, #1d6b40);
+}
+html body .tk-board.is-habits .hb-card .hb-card__tools .hb-iconbtn:last-child:hover:not(#hb-a) {
+	border-color: #c4454d;
+	color: #c4454d;
+}
+/* phone: the cards become one swipeable row, so each keeps its width and its text stays short */
+@container hb (max-width: 520px) {
+	html body .tk-board.is-habits .hb-cards:not(#hb-a) {
+		display: flex;
+		gap: 10px;
+		margin-inline: -4px;
+		padding: 12px 4px 6px;
+		overflow-x: auto;
+		/* no snapping: cards load in front of the "add" card and a snap would follow it to the end */
+		scroll-snap-type: none;
+		scrollbar-width: none;
+	}
+	html body .tk-board.is-habits .hb-cards:not(#hb-a) > .hb-card {
+		flex: 0 0 84%;
+		min-block-size: 92px;
+		scroll-snap-align: start;
+	}
+	html body .tk-board.is-habits .hb-card .hb-card__text.is-en:not(#hb-a) {
+		font-size: 15px;
+	}
+	html body .tk-board.is-habits .hb-card .hb-card__text.is-ar:not(#hb-a) {
+		font-size: 18px;
+	}
+}
+
+/* ═══════════════ Habits & Wall sit on the page itself: no framed pane ═══════════════ */
+@media (min-width: 769px) {
+	html body .wa-web-desktop .wa-chat-thread-pane:has(.wa-chat-idle.has-tickets):not(#hb-a):not(#hb-b):not(#hb-c) {
+		border-color: transparent !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+	html body .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a) {
+		background: transparent !important;
+		background-image: none !important;
+	}
+	/* the Wall's header starts as high as Habits', so its title lines up with the tools */
+	html .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a):has(.tk-board.is-wall) {
+		padding-top: 6px;
+	}
+	html .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a) .wa-chat-idle__stage:has(.tk-board.is-wall) {
+		padding-top: 0;
+	}
+}
+
+/* ═══════════════ Ticket cards: editorial paper, not sticky notes ═══════════════
+   An ivory card with a coloured spine and a faint wash of the ticket's colour, the number in
+   small caps, the title in the board's display serif (Arabic in the UI face), no pins or art. */
+html body .tk-board.is-wall .tw-pin:not(#hb-a),
+html body .tk-board.is-wall .tw-slot:not(#hb-a),
+html body .tk-board.is-wall .tw-curl:not(#hb-a),
+html body .tk-board.is-wall .tw-art-layer:not(#hb-a),
+html body .tk-board.is-wall .tw-paper:not(.tw-paper--add):not(#hb-a)::before {
+	display: none !important;
+}
+html body .tk-board.is-wall .tw-note:not(.tw-note--add):not(#hb-a) {
+	filter: none;
+}
+html body .tk-board.is-wall .tw-paper:not(.tw-paper--add):not(#hb-a) {
+	--tkc-card: #fffdf8;
+	--tkc-line: rgba(40, 33, 20, 0.09);
+	--tkc-ink: #1d1c19;
+	--tkc-ink-2: #77716a;
+	aspect-ratio: auto;
+	min-height: 168px;
+	padding: 14px 16px 14px 20px;
+	padding-inline: 20px 16px;
+	clip-path: none !important;
+	border: 1px solid var(--tkc-line);
+	border-radius: 20px;
+	background:
+		radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tw-a) 70%, transparent), transparent 62%),
+		var(--tkc-card);
+	color: var(--tkc-ink);
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.9) inset,
+		0 1px 2px rgba(40, 33, 20, 0.05),
+		0 14px 28px -22px rgba(40, 33, 20, 0.45);
+	transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+[dir='rtl'] .tk-board.is-wall .tw-paper:not(.tw-paper--add):not(#hb-a) {
+	background:
+		radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--tw-a) 70%, transparent), transparent 62%),
+		var(--tkc-card);
+}
+/* the spine: the ticket's colour down the inline-start edge */
+html body .tk-board.is-wall .tw-paper:not(.tw-paper--add):not(#hb-a)::after {
+	content: '';
+	position: absolute;
+	inset-block: 16px;
+	inset-inline-start: 0;
+	inline-size: 4px;
+	border-start-end-radius: 4px;
+	border-end-end-radius: 4px;
+	background: color-mix(in srgb, var(--tw-accent) 78%, transparent);
+}
+[dir='rtl'] .tk-board.is-wall .tw-paper:not(.tw-paper--add):not(#hb-a)::after {
+	border-radius: 4px 0 0 4px;
+}
+html body .tk-board.is-wall .tw-note:not(.tw-note--add):hover .tw-paper:not(#hb-a) {
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.9) inset,
+		0 2px 4px rgba(40, 33, 20, 0.06),
+		0 22px 36px -24px rgba(40, 33, 20, 0.55);
+}
+html.dark body .tk-board.is-wall .tw-paper:not(.tw-paper--add):not(#hb-a) {
+	--tkc-card: #1b1e1c;
+	--tkc-line: rgba(255, 255, 255, 0.07);
+	--tkc-ink: #eceee9;
+	--tkc-ink-2: #9aa29c;
+	background:
+		radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tw-accent) 16%, transparent), transparent 62%),
+		var(--tkc-card);
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 16px 30px -22px rgba(0, 0, 0, 0.8);
+}
+/* top row: number on the start side, check + menu on the end */
+html body .tk-board.is-wall .tw-top:not(#hb-a) {
+	min-height: 30px;
+}
+html body .tk-board.is-wall .tw-no:not(#hb-a) {
+	order: -1;
+	margin-inline-end: auto;
+	color: var(--tkc-ink-2);
+	font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	opacity: 1 !important;
+}
+/* the title: start-aligned, in the board's serif */
+html body .tk-board.is-wall .tw-text:not(.tw-text--edit):not(#hb-a) {
+	place-items: center start;
+	margin: 10px 0 8px;
+	color: var(--tkc-ink);
+	font-family: var(--font-hb-title), 'Playfair Display', Georgia, serif;
+	font-size: clamp(18px, 9cqi, 22px);
+	font-weight: 700;
+	line-height: 1.25;
+	letter-spacing: -0.01em;
+	text-align: start;
+}
+html body .tk-board.is-wall .tw-text.tkx-lang-ar:not(.tw-text--edit):not(#hb-a) {
+	font-family: inherit;
+	font-size: clamp(17px, 8.4cqi, 20px);
+	line-height: 1.5;
+	letter-spacing: 0;
+}
+html body .tk-board.is-wall .tw-note.is-done .tw-text:not(#hb-a) {
+	color: var(--tkc-ink-2);
+}
+html body .tk-board.is-wall .tw-note.is-done .tw-paper:not(#hb-a)::after {
+	background: color-mix(in srgb, var(--tkc-ink-2) 45%, transparent);
+}
+html body .tk-board.is-wall .tw-bottom:not(#hb-a) {
+	color: var(--tkc-ink-2);
+}
+/* the empty slot: the same card shape, a quiet dashed outline */
+html body .tk-board.is-wall .tw-note--add:not(#hb-a):not(#hb-b) {
+	border: 1.5px dashed color-mix(in srgb, var(--hv-ink, #191a18) 16%, transparent) !important;
+	border-radius: 20px !important;
+	background: transparent !important;
+}
+html body .tk-board.is-wall .tw-paper--add:not(#hb-a) {
+	aspect-ratio: auto;
+	min-height: 168px;
+	border-radius: 20px;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+	html body .tk-board.is-wall .tw-paper:not(.tw-paper--add):not(#hb-a) {
+		transition: none;
+	}
+}
+
+/* the English title in the board's serif (tickets-ui.css pins every .tkx-lang-en to the UI face) */
+html body .tk-board.is-wall .tw-text.tkx-lang-en:not(.tw-text--edit):not(#hb-a),
+html body .tk-board.is-wall .tw-text.tkx-lang-en:not(.tw-text--edit):not(#hb-a) * {
+	font-family: var(--font-hb-title), 'Playfair Display', Georgia, serif !important;
+}
+html.dark body .tk-board.is-wall .tw-note--add:not(#hb-a):not(#hb-b) {
+	border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* ═══════════════ Habits: a quieter date, a table on its own paper, smaller boxes ═══════════════ */
+/* the date under the title: small, one quiet line */
+html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__head .tk-board__date:not(#hb-a),
+html body .tk-board.is-habits .tk-board__date:not(#hb-a) {
+	gap: 8px;
+	margin-top: 8px;
+	color: var(--hv-ink-2, #5d625f);
+	font-size: 15px;
+	font-weight: 500;
+	letter-spacing: 0;
+}
+html .wa-chat-idle.has-tickets:not(#wa-idle) .tk-board.is-habits .tk-board__date svg:not(#hb-a),
+html body .tk-board.is-habits .tk-board__date svg:not(#hb-a) {
+	inline-size: 16px;
+	block-size: 16px;
+	opacity: 0.8;
+}
+
+/* the table: one paper surface (header, names, days, totals), no outline */
+html body .tk-board.is-habits .hb-gridwrap:not(#hb-a):not(#hb-b) {
+	border: 0 !important;
+	border-radius: 18px !important;
+	background: var(--hv-paper, #fbfaf7) !important;
+	box-shadow:
+		0 1px 2px rgba(20, 20, 10, 0.04),
+		0 20px 44px -34px rgba(20, 20, 10, 0.4) !important;
+	overflow: hidden;
+}
+html.dark body .tk-board.is-habits .hb-gridwrap:not(#hb-a):not(#hb-b) {
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 20px 44px -30px rgba(0, 0, 0, 0.8) !important;
+}
+html body .tk-board.is-habits .hb-grid thead th:not(.is-today):not(#hb-a),
+html body .tk-board.is-habits .hb-grid tfoot :is(th, td):not(.is-today):not(#hb-a),
+html body .tk-board.is-habits .hb-grid tbody th.hb-name:not(#hb-a) {
+	background: var(--hv-paper, #fbfaf7);
+}
+
+/* day boxes: a size smaller (today's a touch larger than the rest) */
+html body .tk-board.is-habits .hb-box:not(#hb-a) {
+	inline-size: min(30px, calc(var(--hb-cell) - 8px)) !important;
+	block-size: min(30px, calc(var(--hb-cell) - 8px)) !important;
+	border-radius: clamp(6px, calc(var(--hb-cell) * 0.18), 9px);
+}
+html body .tk-board.is-habits .hb-td.is-today .hb-box:not(#hb-a) {
+	inline-size: min(34px, calc(var(--hb-cell) - 10px)) !important;
+	block-size: min(34px, calc(var(--hb-cell) - 10px)) !important;
+}
+html body .tk-board.is-habits .hb-box:not(#hb-a) svg {
+	inline-size: 15px;
+	block-size: 15px;
+}
+
+/* ═══════════════ One container for Habits and Wall ═══════════════
+   Title, motivation cards, table and wall all share one column: 44px in from the chat-list
+   side, and ending exactly where the corner tools (… Habits | Wall | Games) end, 16px from the
+   other side. The inner layers add no side padding of their own. */
+@media (min-width: 769px) {
+	html body .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a):not(#hb-b) {
+		padding-inline: 44px 16px;
+	}
+	html body .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a):not(#hb-b) .wa-chat-idle__stage {
+		max-width: none;
+		margin-inline: 0;
+		padding-inline: 0;
+	}
+	html body .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a):not(#hb-b) .tk-board {
+		margin-inline: 0;
+		padding-inline: 0;
+	}
+	html body .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a):not(#hb-b) .tk-board .tk-board__head {
+		padding-inline: 0;
+	}
+	html body .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a):not(#hb-b) .tk-board.is-habits .hb-cards {
+		margin-inline: 0;
+	}
+	html body .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a):not(#hb-b) .tk-board.is-habits .hb {
+		padding-inline: 0;
+		margin-inline: 0;
+	}
+}
+@media (min-width: 769px) {
+	/* the older "bleed 6px past the stage" rule would push the board out of the shared column */
+	html body .wa-chat-idle.has-tickets:not(#wa-idle):not(#hb-a):not(#hb-b) .wa-chat-idle__stage > .tk-board {
+		width: 100%;
+		margin-inline: 0;
+	}
+}
+/* four motivation cards a row only when each still gets a comfortable width */
+@container hb (max-width: 1120px) {
+	html body .tk-board.is-habits .hb-cards:not(#hb-a) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }

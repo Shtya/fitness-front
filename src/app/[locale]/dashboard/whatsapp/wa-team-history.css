@@ -514,3 +514,133 @@ html.dark body .wa-team__panel .wa-team__history {
 .wa-th__panel[dir='rtl'] :is(.wa-th__name, .wa-th__log-head b) {
 	text-align: right;
 }
+
+/* ─── people: the active ones, then "No activity (n)" folded away; View as beside each ─── */
+.wa-th__item {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.wa-th__item .wa-th__person {
+	flex: 1;
+	min-width: 0;
+}
+.wa-th__item.is-quiet .wa-th__person {
+	opacity: 0.72;
+}
+.wa-th__item.is-quiet .wa-th__person:is(:hover, .is-on) {
+	opacity: 1;
+}
+.wa-th__viewas {
+	display: inline-grid;
+	flex: none;
+	place-items: center;
+	inline-size: 32px;
+	block-size: 32px;
+	border: 1px solid var(--th-line);
+	border-radius: 10px;
+	background: var(--th-bg);
+	color: var(--th-ink-2);
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.wa-th__viewas:hover,
+.wa-th__viewas:focus-visible {
+	border-color: var(--th-accent);
+	background: var(--th-accent-soft);
+	color: var(--th-accent-ink);
+	outline: none;
+}
+.wa-th__viewas.is-wide {
+	display: inline-flex;
+	inline-size: auto;
+	block-size: 28px;
+	gap: 6px;
+	padding: 0 10px;
+	font-size: 12px;
+	font-weight: 700;
+}
+.wa-th__log-head {
+	align-items: center;
+}
+.wa-th__log-head .wa-th__viewas.is-wide {
+	margin-inline-end: auto;
+}
+.wa-th__log-head .wa-th__viewas.is-wide span {
+	color: inherit;
+	font-size: inherit;
+}
+.wa-th__quiet {
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px dashed var(--th-line);
+}
+.wa-th__quiet-toggle {
+	display: flex;
+	inline-size: 100%;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--th-muted);
+	font-size: 12.5px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.wa-th__quiet-toggle:hover:not(:disabled) {
+	background: var(--th-bg-2);
+	color: var(--th-ink-2);
+}
+.wa-th__quiet-toggle:disabled {
+	cursor: default;
+}
+.wa-th__quiet-toggle svg {
+	transition: transform 0.2s ease;
+}
+.wa-th__quiet-toggle[aria-expanded='false'] svg {
+	transform: rotate(-90deg);
+}
+[dir='rtl'] .wa-th__quiet-toggle[aria-expanded='false'] svg {
+	transform: rotate(90deg);
+}
+.wa-th__quiet-toggle b {
+	display: inline-grid;
+	min-inline-size: 20px;
+	block-size: 20px;
+	margin-inline-start: auto;
+	padding: 0 6px;
+	place-items: center;
+	border-radius: 999px;
+	background: var(--th-bg-2);
+	color: var(--th-ink-2);
+	font-size: 11px;
+}
+.wa-th__empty-note {
+	padding: 10px;
+	color: var(--th-muted);
+	font-size: 12.5px;
+}
+@media (max-width: 640px) {
+	.wa-th__item {
+		flex: none;
+	}
+	.wa-th__quiet {
+		margin: 0;
+		padding: 0;
+		border-top: 0;
+		border-inline-start: 1px dashed var(--th-line);
+		padding-inline-start: 6px;
+	}
+	.wa-th__quiet-toggle {
+		inline-size: auto;
+		white-space: nowrap;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.wa-th__quiet-toggle svg {
+		transition: none;
+	}
+}

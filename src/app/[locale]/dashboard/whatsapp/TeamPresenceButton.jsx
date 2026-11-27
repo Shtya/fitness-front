@@ -21,7 +21,7 @@ const ROLE_LABELS = {
  * Who on the team has WhatsApp open right now (admins only). A small pill in the chat list
  * header: the number online; hover or click lists them with how many open chats they own.
  */
-export default function TeamPresenceButton({ staff, ar, assignedCounts, onViewAs = null, canViewAs = member => String(member?.role || '').toLowerCase() !== 'super_admin' }) {
+export default function TeamPresenceButton({ staff, ar, assignedCounts, onViewAs = null, canViewAs = member => String(member?.role || '').toLowerCase() !== 'super_admin', canViewAsTeammate = canViewAs }) {
 	const [open, setOpen] = useState(false);
 	const [historyOpen, setHistoryOpen] = useState(false);
 	const [place, setPlace] = useState(null);
@@ -174,7 +174,7 @@ export default function TeamPresenceButton({ staff, ar, assignedCounts, onViewAs
 				document.body,
 			) : null}
 		</div>
-		<TeamHistoryDialog open={historyOpen} ar={ar} onClose={() => setHistoryOpen(false)} />
+		<TeamHistoryDialog open={historyOpen} ar={ar} onClose={() => setHistoryOpen(false)} onViewAs={onViewAs} canViewAs={canViewAsTeammate} />
 		</>
 	);
 }

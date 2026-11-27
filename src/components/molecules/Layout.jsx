@@ -89,12 +89,9 @@ function ImpersonationBar({ onExit, collapsed, onCollapsedChange: toggleCollapse
 
 	if (!user) return null;
 
-	const gradient =
-		'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-via, var(--color-gradient-from)), var(--color-gradient-to))';
-
 	return (
 		<div
-			className="pointer-events-none fixed inset-x-0 top-0 z-[200000] flex justify-center"
+			className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] start-[76px] z-[200000] flex max-[768px]:inset-x-0 max-[768px]:bottom-[calc(76px+env(safe-area-inset-bottom))] max-[768px]:justify-center"
 			role="status"
 			aria-live="polite"
 		>
@@ -104,57 +101,57 @@ function ImpersonationBar({ onExit, collapsed, onCollapsedChange: toggleCollapse
 						key="tab"
 						type="button"
 						onClick={() => toggleCollapsed(false)}
-						initial={{ y: -24, opacity: 0 }}
+						initial={{ y: 24, opacity: 0 }}
 						animate={{ y: 0, opacity: 1 }}
-						exit={{ y: -24, opacity: 0 }}
+						exit={{ y: 24, opacity: 0 }}
 						transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-						className="pointer-events-auto inline-flex items-center gap-1.5 rounded-b-xl px-3 pb-1 pt-[max(0.25rem,env(safe-area-inset-top))] text-white opacity-80 shadow-md transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-						style={{ background: gradient }}
+						className="pointer-events-auto inline-flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/85 px-3 text-amber-300 opacity-85 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.7)] backdrop-blur-md transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
 						title={`Viewing as ${user.name}`}
 						aria-label={`Viewing as ${user.name}. Show impersonation bar`}
 					>
 						<Shield size={12} />
-						<ChevronDown size={14} />
+						<ChevronUp size={14} />
 					</motion.button>
 				) : (
 					<motion.div
 						key="pill"
-						initial={{ y: -40, opacity: 0 }}
-						animate={{ y: 0, opacity: 1 }}
-						exit={{ y: -40, opacity: 0 }}
-						transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-						className="pointer-events-auto mx-2 mt-[max(0.5rem,env(safe-area-inset-top))] flex max-w-[calc(100vw-1rem)] items-center gap-2 rounded-2xl py-1.5 pe-1.5 ps-2 text-white shadow-lg ring-1 ring-white/20"
-						style={{ background: gradient }}
+						initial={{ y: 28, opacity: 0, scale: 0.96 }}
+						animate={{ y: 0, opacity: 1, scale: 1 }}
+						exit={{ y: 28, opacity: 0, scale: 0.96 }}
+						transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+						className="pointer-events-auto mx-2 flex max-w-[calc(100vw-1rem)] items-center gap-2.5 rounded-full border border-white/10 bg-slate-950/85 py-1 pe-1 ps-1 text-white shadow-[0_12px_32px_-12px_rgba(2,6,23,0.7),0_0_0_1px_rgba(2,6,23,0.25)] backdrop-blur-md"
+						title={user.email ? `${user.name} · ${user.email}` : user.name}
 					>
-						<div className="shrink-0 rounded-lg bg-white/20 p-1.5">
-							<Shield size={13} />
-						</div>
-						<div className="min-w-0">
-							<p className="mb-0.5 text-[9px] font-bold uppercase leading-none tracking-widest opacity-80">
+						<span className="relative grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-[11px] font-black text-slate-950 ring-2 ring-amber-300/30">
+							{String(user.name || user.email || '?').trim().split(/s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
+							<span className="absolute -bottom-0.5 -end-0.5 grid size-3.5 place-items-center rounded-full bg-slate-950 ring-2 ring-slate-950">
+								<Shield size={8} className="text-amber-300" />
+							</span>
+						</span>
+						<span className="min-w-0 leading-tight">
+							<span className="flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-amber-200/90">
+								<span className="size-1.5 animate-pulse rounded-full bg-amber-300 motion-reduce:animate-none" aria-hidden />
 								Viewing as
-							</p>
-							<p className="max-w-[40vw] truncate text-xs font-black leading-tight sm:max-w-88">
-								{user.name}
-								<span className="ms-1.5 hidden font-normal opacity-75 md:inline">({user.email})</span>
-							</p>
-						</div>
+							</span>
+							<span className="block max-w-[38vw] truncate text-[13px] font-bold sm:max-w-64">{user.name}</span>
+						</span>
 						<button
 							type="button"
 							onClick={onExit}
-							className="ms-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 shadow-sm transition-colors hover:bg-white/95"
+							className="ms-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-white px-3 text-xs font-bold text-slate-900 transition-colors hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
 						>
-							<LogOut size={12} />
+							<LogOut size={13} />
 							<span className="hidden sm:inline">{returnLabel}</span>
 							<span className="sm:hidden">Exit</span>
 						</button>
 						<button
 							type="button"
 							onClick={() => toggleCollapsed(true)}
-							className="grid size-7 shrink-0 place-items-center rounded-lg bg-white/15 transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+							className="grid size-8 shrink-0 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
 							title="Hide"
 							aria-label="Hide impersonation bar"
 						>
-							<ChevronUp size={15} />
+							<ChevronDown size={15} />
 						</button>
 					</motion.div>
 				)}
@@ -528,9 +525,6 @@ export default function Layout({ children }) {
 								data-sidebar-offset={focusMode && !isWhatsAppRoute && !isAuthRoute ? 'true' : undefined}
 								data-ai-studio={isAiStudioRoute ? 'true' : undefined}
 							>
-								{isImpersonating && !impersonationCollapsed ? (
-									<div aria-hidden className="h-[max(3.5rem,calc(env(safe-area-inset-top)+3rem))] shrink-0" />
-								) : null}
 								{showStaffChrome && (
 									<div
 										className={[

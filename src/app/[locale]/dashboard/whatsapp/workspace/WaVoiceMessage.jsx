@@ -11,6 +11,7 @@ import { rawDemoId } from '../demo/demo-read-model';
 import { forgetAttachmentBlob, getCachedAttachmentBlob, isPersistedAttachmentId, isUsefulWaveform, prepareVoicePlaybackFromBlob, requestAttachmentBlob } from './wa-attachment-blobs';
 import { Avatar } from './WaAvatar';
 import { getVoiceSpeed, nextVoiceSpeed, setVoiceSpeed, useVoiceSpeed } from './wa-voice-speed';
+import './wa-voice-premium.css';
 import { closeVoiceDock, dockVoiceAudio, getVoiceDockContext, pauseVoiceDock, takeBackDockedVoice } from './wa-voice-dock';
 
 /**
@@ -360,7 +361,7 @@ function VoicePlaybackRate({ value, onChange }) {
 			}}
 			className="wa-voice-rate shrink-0"
 		>
-			{value}x
+			{value}×
 		</button>
 	);
 }

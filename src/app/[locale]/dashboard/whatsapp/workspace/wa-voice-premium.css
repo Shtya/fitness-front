@@ -1,0 +1,354 @@
+/*
+ * Voice note, So7baFit edition. Same pattern as before (play · waveform · speed · avatar), drawn
+ * with the brand's green: a solid play disc that rings with progress while it plays, rounded
+ * bars with a ringed thumb, a monospace clock, an outlined speed chip and a ringed avatar with a
+ * mic seal. Loaded last and scoped with an id-weight :not() so the older layers in wa-ui.css
+ * (several of them !important) don't leak through.
+ */
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) {
+	/* incoming (light): green on paper */
+	--vx-accent: #1f8a4c;
+	--vx-accent-2: #2aa85f;
+	--vx-on-accent: #ffffff;
+	--vx-rest: color-mix(in srgb, #1d201f 22%, transparent);
+	--vx-meta: #667069;
+	--vx-chip-line: color-mix(in srgb, #1f8a4c 32%, transparent);
+	--vx-chip-bg: color-mix(in srgb, #1f8a4c 7%, transparent);
+	--vx-ring-bg: #ffffff;
+	min-width: min(300px, 72vw);
+}
+
+/* outgoing (light): the bubble is already green, so the accent goes deeper */
+html body .wa-message-wallpaper .wa-voice-message.is-outgoing:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) {
+	--vx-accent: #17693a;
+	--vx-accent-2: #1f8a4c;
+	--vx-rest: color-mix(in srgb, #0f3d23 24%, transparent);
+	--vx-meta: #3f6b50;
+	--vx-chip-line: color-mix(in srgb, #17693a 35%, transparent);
+	--vx-chip-bg: color-mix(in srgb, #ffffff 40%, transparent);
+	--vx-ring-bg: #e7f6e3;
+}
+
+html.dark body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) {
+	--vx-accent: #21c063;
+	--vx-accent-2: #3bd67b;
+	--vx-on-accent: #06210f;
+	--vx-rest: color-mix(in srgb, #e9edef 24%, transparent);
+	--vx-meta: #94a39a;
+	--vx-chip-line: color-mix(in srgb, #21c063 38%, transparent);
+	--vx-chip-bg: color-mix(in srgb, #21c063 9%, transparent);
+	--vx-ring-bg: #1b2520;
+}
+
+html.dark body .wa-message-wallpaper .wa-voice-message.is-outgoing:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) {
+	--vx-accent: #8fe3b0;
+	--vx-accent-2: #b5f0cb;
+	--vx-on-accent: #0a3a24;
+	--vx-rest: color-mix(in srgb, #e9edef 26%, transparent);
+	--vx-meta: #a8cdb9;
+	--vx-chip-line: color-mix(in srgb, #8fe3b0 36%, transparent);
+	--vx-chip-bg: color-mix(in srgb, #8fe3b0 8%, transparent);
+	--vx-ring-bg: #0b4a3c;
+}
+
+/* ─── layout ─── */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-layout {
+	align-items: center;
+	gap: 12px;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-track-row {
+	align-items: center;
+	gap: 11px;
+}
+
+/* ─── play: a solid disc; a thin ring traces progress while it plays ─── */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp {
+	position: relative;
+	inline-size: 42px !important;
+	block-size: 42px !important;
+	margin: 0 !important;
+	border-radius: 999px;
+	background: linear-gradient(150deg, var(--vx-accent-2), var(--vx-accent)) !important;
+	color: var(--vx-on-accent) !important;
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.22) inset,
+		0 8px 16px -10px color-mix(in srgb, var(--vx-accent) 90%, transparent) !important;
+	transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp:hover {
+	transform: scale(1.05) !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp:active {
+	transform: scale(0.95) !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp::after {
+	content: '';
+	position: absolute;
+	inset: -4px;
+	border: 1.5px solid color-mix(in srgb, var(--vx-accent) 45%, transparent);
+	border-radius: inherit;
+	opacity: 0;
+	transform: scale(0.9);
+	transition: opacity 200ms ease, transform 200ms ease;
+	pointer-events: none;
+}
+
+html body .wa-message-wallpaper .wa-voice-message.is-playing:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp::after {
+	opacity: 1;
+	transform: none;
+	animation: wa-vx-breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes wa-vx-breathe {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--vx-accent) 30%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 0 4px color-mix(in srgb, var(--vx-accent) 0%, transparent);
+	}
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play .wa-voice-play-icon.is-play {
+	inline-size: 20px !important;
+	block-size: 20px !important;
+	margin-inline-start: 1px;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play .wa-voice-play-icon.is-pause {
+	inline-size: 18px !important;
+	block-size: 18px !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message.is-failed:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp {
+	background: color-mix(in srgb, #e5484d 14%, transparent) !important;
+	color: #e5484d !important;
+	box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #e5484d 45%, transparent) !important;
+}
+
+/* ─── waveform: rounded bars, the heard part in the accent, a ringed thumb ─── */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-waveform {
+	block-size: 30px;
+}
+
+html body .wa-message-wallpaper .wa-voice-message.wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-waveform-bars {
+	gap: 2px !important;
+	padding-inline: 7px !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message.wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar {
+	max-width: 3px !important;
+	min-width: 2px !important;
+	border-radius: 999px !important;
+	transition: background-color 180ms ease;
+}
+
+html body .wa-message-wallpaper .wa-voice-message.wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar.is-unplayed {
+	background: var(--vx-rest) !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message.wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar:is(.is-played-incoming, .is-played-outgoing) {
+	background: var(--vx-accent) !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-thumb.wa-voice-thumb {
+	inline-size: 13px;
+	block-size: 13px;
+	border: 2.5px solid var(--vx-accent);
+	background: var(--vx-ring-bg) !important;
+	box-shadow: 0 1px 3px rgba(11, 20, 26, 0.28) !important;
+}
+
+/* ─── meta: a monospace clock, an outlined speed chip ─── */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-track-meta {
+	margin-top: 1px;
+	padding-inline: 7px 0;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-duration {
+	color: var(--vx-meta) !important;
+	font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+	font-size: 11.5px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+}
+
+html body .wa-message-wallpaper .wa-voice-message.is-unplayed.is-incoming:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-duration {
+	color: var(--vx-accent) !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-duration.is-failed {
+	color: #e5484d !important;
+	font-family: inherit;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-rate {
+	min-inline-size: 36px;
+	block-size: 22px;
+	padding: 0 8px;
+	border: 1px solid var(--vx-chip-line) !important;
+	border-radius: 999px;
+	background: var(--vx-chip-bg) !important;
+	color: var(--vx-accent) !important;
+	font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	line-height: 20px;
+	transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-rate:hover {
+	border-color: var(--vx-accent) !important;
+	background: color-mix(in srgb, var(--vx-accent) 14%, transparent) !important;
+}
+
+/* ─── avatar: a ring in the accent and a mic seal ─── */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-avatar-wrap {
+	position: relative;
+	inline-size: 44px;
+	block-size: 44px;
+	padding: 2px;
+	border-radius: 999px;
+	background: conic-gradient(from 210deg, var(--vx-accent), var(--vx-accent-2), var(--vx-accent));
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-avatar-wrap .wa-voice-avatar {
+	inline-size: 40px !important;
+	block-size: 40px !important;
+	border: 2px solid var(--vx-ring-bg);
+	border-radius: 999px;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-mic-badge.wa-voice-mic-badge {
+	inline-size: 18px;
+	block-size: 18px;
+	inset-inline-end: -3px;
+	bottom: -3px;
+	display: grid;
+	place-items: center;
+	border: 2px solid var(--vx-ring-bg);
+	border-radius: 999px;
+	background: var(--vx-accent) !important;
+	color: var(--vx-on-accent) !important;
+	box-shadow: none !important;
+}
+
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-mic-badge svg {
+	inline-size: 10px;
+	block-size: 10px;
+	filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html body .wa-message-wallpaper .wa-voice-message.is-playing:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp::after {
+		animation: none;
+	}
+	html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp {
+		transition: none !important;
+	}
+}
+
+/* the ring and the photo share one box */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-avatar-wrap,
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-avatar-wrap .wa-voice-avatar {
+	box-sizing: border-box;
+	flex-shrink: 0;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-avatar-wrap .wa-voice-avatar {
+	position: relative;
+	inset: auto;
+	margin: 0;
+}
+
+/* the glyph takes the disc's ink (another layer forces white on every play svg) */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play svg {
+	color: var(--vx-on-accent) !important;
+}
+
+/* All the bars always fit the width, however many the waveform has. Before, a long waveform
+   (more bars than room at a fixed minimum width + gap) had its tail clipped, so the bars that
+   turned green ran ahead of the thumb. Now each bar may shrink to nothing and the gap is drawn
+   inside the bar (clip-path), so bar i sits exactly at i/(n-1) like the thumb. */
+html body .wa-message-wallpaper .wa-voice-message.wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-waveform-bars {
+	gap: 0 !important;
+	padding-inline: 6px !important;
+	justify-content: space-between !important;
+}
+html body .wa-message-wallpaper .wa-voice-message.wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-waveform-bars > .wa-voice-bar.wa-voice-bar {
+	flex: 1 1 0 !important;
+	box-sizing: border-box;
+	min-width: 0 !important;
+	max-width: 4px !important;
+	border: 0 !important;
+	/* the gap between bars, drawn without taking layout room */
+	clip-path: inset(0 18% round 999px);
+}
+
+/* a bigger play / pause glyph in a slightly larger disc */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp {
+	inline-size: 46px !important;
+	block-size: 46px !important;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play .wa-voice-play-icon.is-play {
+	inline-size: 26px !important;
+	block-size: 26px !important;
+	margin-inline-start: 2px;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play .wa-voice-play-icon.is-pause {
+	inline-size: 24px !important;
+	block-size: 24px !important;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play .wa-voice-play-icon.wa-voice-play-spin {
+	inline-size: 22px !important;
+	block-size: 22px !important;
+}
+
+/* ─── play, refined: a smaller soft disc in the accent tint, the glyph in the accent; it fills
+   in only while playing (or on hover), so the bubble reads calm at rest ─── */
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp {
+	inline-size: 38px !important;
+	block-size: 38px !important;
+	background: color-mix(in srgb, var(--vx-accent) 13%, transparent) !important;
+	color: var(--vx-accent) !important;
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vx-accent) 22%, transparent) !important;
+	transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 160ms ease !important;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp svg {
+	color: inherit !important;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp:hover,
+html body .wa-message-wallpaper .wa-voice-message.is-playing:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp {
+	background: var(--vx-accent) !important;
+	color: var(--vx-on-accent) !important;
+	box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--vx-accent) 90%, transparent) !important;
+	transform: none !important;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp:active {
+	transform: scale(0.94) !important;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play .wa-voice-play-icon.is-play {
+	inline-size: 20px !important;
+	block-size: 20px !important;
+	margin-inline-start: 2px;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play .wa-voice-play-icon.is-pause {
+	inline-size: 18px !important;
+	block-size: 18px !important;
+}
+html body .wa-message-wallpaper .wa-voice-message:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play .wa-voice-play-icon.wa-voice-play-spin {
+	inline-size: 18px !important;
+	block-size: 18px !important;
+}
+/* while playing, a thin ring rather than the breathing halo */
+html body .wa-message-wallpaper .wa-voice-message.is-playing:not(#wa-vx):not(#wa-vx2):not(#wa-vx3) .wa-voice-play.wa-vp::after {
+	inset: -3px;
+	border-width: 1px;
+	animation: none;
+}

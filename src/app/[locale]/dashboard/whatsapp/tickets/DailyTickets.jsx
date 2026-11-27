@@ -518,18 +518,42 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 		ro.observe(corner);
 		return () => ro.disconnect();
 	}, [switchSlot]);
-	// …and when they leave too little room beside them (the Wall's longer toolbar, a narrower
-	// pane), the title steps down under them instead of being squeezed.
+	// …and the title stays on their line: it scales down to the room left beside them (the Wall's
+	// longer toolbar, a narrower pane). Only when even a much smaller title would not fit does it
+	// step down under them.
 	const headRef = useRef(null);
-	const [headW, setHeadW] = useState(0);
+	const [titleFit, setTitleFit] = useState({ zoom: 1, tight: false });
 	useEffect(() => {
 		const head = headRef.current;
-		if (!head || !cornerW || typeof ResizeObserver === 'undefined') return undefined;
-		const ro = new ResizeObserver(() => setHeadW(Math.round(head.getBoundingClientRect().width)));
+		const corner = switchSlot?.closest('.wa-idle-corner');
+		if (!head || !corner || !cornerW || typeof ResizeObserver === 'undefined') {
+			setTitleFit(f => (f.zoom === 1 && !f.tight ? f : { zoom: 1, tight: false }));
+			return undefined;
+		}
+		const fit = () => {
+			const title = head.querySelector('.tk-board__title');
+			if (!title) return;
+			const zoomNow = Number(getComputedStyle(title).zoom) || 1;
+			const range = document.createRange();
+			range.selectNodeContents(title);
+			const text = range.getBoundingClientRect();
+			const natural = text.width / zoomNow;
+			const c = corner.getBoundingClientRect();
+			const rtl = getComputedStyle(head).direction === 'rtl';
+			const room = (rtl ? text.right - c.right : c.left - text.left) - 28;
+			if (!natural) return;
+			const zoom = Math.min(1, room / natural);
+			const next = zoom >= 0.55 ? { zoom: Math.round(zoom * 100) / 100, tight: false } : { zoom: 1, tight: true };
+			setTitleFit(f => (f.zoom === next.zoom && f.tight === next.tight ? f : next));
+		};
+		fit();
+		const ro = new ResizeObserver(fit);
 		ro.observe(head);
+		ro.observe(corner);
+		document.fonts?.ready?.then(fit).catch(() => {});
 		return () => ro.disconnect();
-	}, [cornerW]);
-	const cornerTight = Boolean(cornerW && headW && headW - cornerW < 380);
+	}, [switchSlot, cornerW, view, ar]);
+	const cornerTight = titleFit.tight;
 	const switcher = (
 		<div className="tk-switch" role="group" aria-label={t.views} style={{ '--i': view === 'wall' ? 1 : 0 }}>
 			<span className="tk-switch__thumb" aria-hidden />
@@ -581,7 +605,7 @@ export function TicketsBoard({ ar, store, onDelete, leaving, focusComposer }) {
 	const total = tickets.length;
 
 	return (
-		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-habits'} ${leaving ? 'is-leaving' : ''} ${boardTitleFont.variable} ${cardArabicFont.variable}${cornerW ? ' has-corner' : ''}${cornerTight ? ' is-corner-tight' : ''}`} style={cornerW ? { '--hb-corner-w': `${cornerW}px` } : undefined} aria-labelledby="tk-heading">
+		<section className={`tk-board ${view === 'wall' ? 'is-wall' : 'is-habits'} ${leaving ? 'is-leaving' : ''} ${boardTitleFont.variable} ${cardArabicFont.variable}${cornerW ? ' has-corner' : ''}${cornerTight ? ' is-corner-tight' : ''}`} style={cornerW ? { '--hb-corner-w': `${cornerW}px`, '--tk-title-zoom': titleFit.zoom } : undefined} aria-labelledby="tk-heading">
 			<header className="tk-board__head" ref={headRef}>
 				<div className="tk-board__titles">
 					 

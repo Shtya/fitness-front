@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { History, LogIn, LogOut, RotateCcw, X } from 'lucide-react';
+import { ChevronDown, Eye, History, LogIn, LogOut, RotateCcw, X } from 'lucide-react';
 import api from '@/utils/axios';
 import './wa-team-history.css';
 
@@ -53,8 +53,16 @@ function ago(iso, ar) {
 	return ar ? `آخر ظهور: ${dayLabel(iso, true)}` : `Last seen ${dayLabel(iso, false)}`;
 }
 
-export default function TeamHistoryDialog({ open, ar, onClose }) {
+/** Someone who opened WhatsApp in the range (or has it open now). */
+const hasActivity = p => Boolean(p.online || p.sessions?.length);
+
+/**
+ * onViewAs(person) opens their account (the same "View as" as the presence popover);
+ * canViewAs(person) says who it is offered for.
+ */
+export default function TeamHistoryDialog({ open, ar, onClose, onViewAs = null, canViewAs = () => false }) {
 	const [days, setDays] = useState(7);
+	const [showQuiet, setShowQuiet] = useState(false);
 	const [state, setState] = useState({ status: 'idle', people: [] });
 	const [pick, setPick] = useState(null);
 	const panelRef = useRef(null);
@@ -65,7 +73,7 @@ export default function TeamHistoryDialog({ open, ar, onClose }) {
 			const { data } = await api.get('/whatsapp/presence/staff-history', { params: { days } });
 			const people = Array.isArray(data?.people) ? data.people : [];
 			setState({ status: 'ready', people });
-			setPick(cur => (cur && people.some(p => p.userId === cur) ? cur : people[0]?.userId || null));
+			setPick(cur => (cur && people.some(p => p.userId === cur) ? cur : (people.find(hasActivity) || people[0])?.userId || null));
 		} catch (error) {
 			setState(cur => ({ ...cur, status: 'error', message: error?.response?.data?.message || error?.message || '' }));
 		}
@@ -102,6 +110,48 @@ export default function TeamHistoryDialog({ open, ar, onClose }) {
 		}
 		return out;
 	}, [person, ar]);
+
+	// people with a log first; the ones with nothing in this range fold away under one toggle
+	const active = state.people.filter(hasActivity);
+	const quiet = state.people.filter(p => !hasActivity(p));
+	const quietOpen = showQuiet || !active.length;
+	const viewAs = p => {
+		onClose();
+		onViewAs?.(p);
+	};
+	const viewAsButton = (p, wide = false) =>
+		onViewAs && canViewAs(p) ? (
+			<button
+				type="button"
+				className={`wa-th__viewas${wide ? ' is-wide' : ''}`}
+				onClick={() => viewAs(p)}
+				title={ar ? `ادخل بحساب ${p.name} وشوف اللي بيشوفه` : `Sign in as ${p.name} and see what they see`}
+				aria-label={ar ? `ادخل بحساب ${p.name}` : `View as ${p.name}`}
+			>
+				<Eye size={wide ? 14 : 15} strokeWidth={2.2} aria-hidden="true" />
+				{wide ? <span>{ar ? 'ادخل كـ' : 'View as'}</span> : null}
+			</button>
+		) : null;
+	const personRow = p => (
+		<li key={p.userId} className={`wa-th__item${hasActivity(p) ? '' : ' is-quiet'}`}>
+			<button type="button" className={`wa-th__person${p.userId === pick ? ' is-on' : ''}`} aria-pressed={p.userId === pick} onClick={() => setPick(p.userId)}>
+				<span className="wa-th__avatar">
+					{initials(p.name)}
+					{p.online ? <span className="wa-th__live-dot" aria-hidden="true" /> : null}
+				</span>
+				<span className="wa-th__who">
+					<span className="wa-th__name" dir="auto">
+						{p.name}
+					</span>
+					<span className={`wa-th__seen${p.online ? ' is-online' : ''}`}>{p.online ? (ar ? 'فاتح واتساب دلوقتي' : 'Online now') : ago(p.lastSeenAt, ar)}</span>
+				</span>
+				<span className="wa-th__total" title={ar ? 'إجمالي الوقت في الفترة' : 'Total time in this range'}>
+					{p.totalSeconds ? duration(p.totalSeconds, ar) : '—'}
+				</span>
+			</button>
+			{viewAsButton(p)}
+		</li>
+	);
 
 	if (!open || typeof document === 'undefined') return null;
 
@@ -158,25 +208,17 @@ export default function TeamHistoryDialog({ open, ar, onClose }) {
 				) : (
 					<div className={`wa-th__body${state.status === 'loading' ? ' is-refreshing' : ''}`}>
 						<ul className="wa-th__people" aria-label={ar ? 'الفريق' : 'Team'}>
-							{state.people.map(p => (
-								<li key={p.userId}>
-									<button type="button" className={`wa-th__person${p.userId === pick ? ' is-on' : ''}`} aria-pressed={p.userId === pick} onClick={() => setPick(p.userId)}>
-										<span className="wa-th__avatar">
-											{initials(p.name)}
-											{p.online ? <span className="wa-th__live-dot" aria-hidden="true" /> : null}
-										</span>
-										<span className="wa-th__who">
-											<span className="wa-th__name" dir="auto">
-												{p.name}
-											</span>
-											<span className={`wa-th__seen${p.online ? ' is-online' : ''}`}>{p.online ? (ar ? 'فاتح واتساب دلوقتي' : 'Online now') : ago(p.lastSeenAt, ar)}</span>
-										</span>
-										<span className="wa-th__total" title={ar ? 'إجمالي الوقت في الفترة' : 'Total time in this range'}>
-											{p.totalSeconds ? duration(p.totalSeconds, ar) : '—'}
-										</span>
+							{active.length ? active.map(personRow) : <li className="wa-th__empty-note">{ar ? 'محدش فتح واتساب في الفترة دي.' : 'Nobody opened WhatsApp in this range.'}</li>}
+							{quiet.length ? (
+								<li className="wa-th__quiet">
+									<button type="button" className="wa-th__quiet-toggle" aria-expanded={quietOpen} onClick={() => setShowQuiet(v => !v)} disabled={!active.length}>
+										<ChevronDown size={15} aria-hidden="true" />
+										<span>{ar ? 'من غير نشاط' : 'No activity'}</span>
+										<b>{quiet.length}</b>
 									</button>
 								</li>
-							))}
+							) : null}
+							{quiet.length && quietOpen ? quiet.map(personRow) : null}
 						</ul>
 
 						<div className="wa-th__log" aria-live="polite">
@@ -184,6 +226,7 @@ export default function TeamHistoryDialog({ open, ar, onClose }) {
 								<>
 									<div className="wa-th__log-head">
 										<b dir="auto">{person.name}</b>
+										{viewAsButton(person, true)}
 										<span>
 											{ar ? `${person.sessions.length} مرة · ${duration(person.totalSeconds, true)}` : `${person.sessions.length} sitting${person.sessions.length === 1 ? '' : 's'} · ${duration(person.totalSeconds, false)}`}
 										</span>

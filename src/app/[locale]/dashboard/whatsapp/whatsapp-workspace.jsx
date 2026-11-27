@@ -18009,6 +18009,10 @@ function WhatsAppWorkspaceContent() {
 															? String(member?.role || '').toLowerCase() !== 'super_admin'
 															: String(member?.role || '').toLowerCase() === 'coach' && String(member?.adminId || '') === String(currentUserId)
 													}
+													// the team log only lists your own people (super admin: everyone), so their role is enough
+													canViewAsTeammate={member =>
+														isSuperAdmin ? String(member?.role || '').toLowerCase() !== 'super_admin' : String(member?.role || '').toLowerCase() === 'coach'
+													}
 													assignedCounts={conversations.reduce((counts, item) => {
 														const owner = item?.assignedUser?.id || item?.assignedUserId;
 														if (owner) counts.set(owner, (counts.get(owner) || 0) + 1);
