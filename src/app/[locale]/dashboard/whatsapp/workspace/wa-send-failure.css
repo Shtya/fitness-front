@@ -1,0 +1,168 @@
+/* "Not sent" card: why an outgoing message failed and how to fix it (WaSendFailure.jsx).
+   Portalled to <body>, so it carries its own font and colours. */
+.wa-nsf {
+	--sf-bg: #ffffff;
+	--sf-ink: #111b21;
+	--sf-ink-2: #54656f;
+	--sf-line: rgba(17, 27, 33, 0.09);
+	--sf-red: #e5484d;
+	--sf-red-soft: rgba(229, 72, 77, 0.1);
+	--sf-code: #f6f5f3;
+	--sf-accent: #1daa61;
+	position: fixed;
+	z-index: 100000;
+	box-sizing: border-box;
+	padding: 14px;
+	border: 1px solid var(--sf-line);
+	border-radius: 16px;
+	background: var(--sf-bg);
+	color: var(--sf-ink);
+	box-shadow: 0 18px 44px -18px rgba(11, 20, 26, 0.45), 0 2px 6px rgba(11, 20, 26, 0.06);
+	font-family: var(--font-inter), Inter, 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+	font-size: 13px;
+	line-height: 1.45;
+	text-align: start;
+	animation: wa-nsf-in 140ms ease-out;
+}
+html body .wa-nsf,
+html body .wa-nsf * {
+	font-family: var(--font-inter), Inter, 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+}
+html.dark .wa-nsf,
+html[data-theme-mode='dark'] .wa-nsf {
+	--sf-bg: #1f2224;
+	--sf-ink: #e9edef;
+	--sf-ink-2: #aebac1;
+	--sf-line: rgba(255, 255, 255, 0.08);
+	--sf-red: #ff6b6f;
+	--sf-red-soft: rgba(255, 107, 111, 0.14);
+	--sf-code: #161819;
+	--sf-accent: #21c063;
+	box-shadow: 0 20px 48px -16px rgba(0, 0, 0, 0.75);
+}
+@keyframes wa-nsf-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}
+.wa-nsf.is-below {
+	animation-name: wa-nsf-in-below;
+}
+@keyframes wa-nsf-in-below {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
+.wa-nsf__head {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+.wa-nsf__icon {
+	display: grid;
+	flex: none;
+	place-items: center;
+	inline-size: 30px;
+	block-size: 30px;
+	border-radius: 9px;
+	background: var(--sf-red-soft);
+	color: var(--sf-red);
+}
+.wa-nsf__titles {
+	display: grid;
+	min-width: 0;
+	gap: 1px;
+}
+.wa-nsf__titles small {
+	color: var(--sf-red);
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+.wa-nsf__titles b {
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.3;
+}
+.wa-nsf__fix {
+	margin: 10px 0 0;
+	color: var(--sf-ink-2);
+}
+.wa-nsf__detail {
+	display: grid;
+	gap: 4px;
+	margin-top: 10px;
+	padding: 8px 10px;
+	border-radius: 10px;
+	background: var(--sf-code);
+}
+.wa-nsf__detail-label {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	color: var(--sf-ink-2);
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+.wa-nsf__detail-label em {
+	font-style: normal;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+}
+html body .wa-nsf .wa-nsf__detail code {
+	max-block-size: 96px;
+	overflow: auto;
+	color: var(--sf-ink);
+	font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+	font-size: 12px;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+.wa-nsf__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+	margin-top: 12px;
+}
+.wa-nsf__ghost,
+.wa-nsf__retry {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	block-size: 30px;
+	padding: 0 12px;
+	border: 1px solid var(--sf-line);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--sf-ink);
+	font-size: 12.5px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.wa-nsf__ghost:hover {
+	background: var(--sf-code);
+}
+.wa-nsf__retry {
+	border-color: transparent;
+	background: var(--sf-accent);
+	color: #ffffff;
+}
+.wa-nsf__retry:hover {
+	background: color-mix(in srgb, var(--sf-accent) 88%, #000);
+}
+.wa-nsf :is(button):focus-visible {
+	outline: 2px solid var(--sf-accent);
+	outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+	.wa-nsf {
+		animation: none;
+	}
+}

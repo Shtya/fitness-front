@@ -1,12 +1,13 @@
 'use client';
 
 import { memo } from 'react';
-import { AlertCircle, BellOff, Bot, Check, CheckCheck, ChevronDown, Clock, HeartHandshake, MapPin, Pin, Star, Trash2, Video } from 'lucide-react';
+import { BellOff, Bot, Check, CheckCheck, ChevronDown, Clock, HeartHandshake, MapPin, Pin, Star, Trash2, Video } from 'lucide-react';
 import { useChatDraft } from './wa-chat-drafts';
 import { keepInTouchGroupLabel, keepInTouchSummary } from './wa-keep-in-touch';
 import { conversationTitle, conversationAvatarUrl, conversationUnreadCount, messageDeliveryState, messageTextPresentation, conversationPreview, conversationPreviewShowsReaction, isDeletedWhatsAppMessage } from '../whatsapp-utils';
 import { whatsappFileIconSrc } from '../whatsapp-file-icons';
 import { Avatar } from './WaAvatar';
+import WaSendFailure from './WaSendFailure';
 
 export const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 
@@ -37,27 +38,8 @@ export function DeliveryTicks({ message, size = 13, className = '', selfChat = f
 		return <Clock size={Math.max(12, size - 1)} className={`animate-pulse ${className}`} />;
 	}
 	if (state === 'failed') {
-		const ar = typeof document !== 'undefined' && document.documentElement.lang === 'ar';
-		const reason = message?.sendError ? String(message.sendError) : '';
-		return (
-			<button
-				type="button"
-				aria-label={`${ar ? 'لم تُرسل الرسالة. إعادة المحاولة' : 'Message not sent. Retry'}${reason ? ` — ${reason}` : ''}`}
-				title={reason ? `${ar ? 'إعادة المحاولة' : 'Retry'} — ${reason}` : ar ? 'إعادة المحاولة' : 'Retry'}
-				className={`wa-delivery-retry inline-flex items-center ${className}`}
-				onClick={event => {
-					event.preventDefault();
-					event.stopPropagation();
-					window.dispatchEvent(
-						new CustomEvent('wa-retry-outbound', { detail: { message } }),
-					);
-				}}
-			>
-				<AlertCircle size={size} className="text-rose-500" aria-hidden="true" />
-				{/* The bare icon was easy to miss; in a bubble the action is spelled out. */}
-				<span className="wa-delivery-retry__label">{ar ? 'إعادة' : 'Retry'}</span>
-			</button>
-		);
+		// hover / focus / tap: why it failed and how to fix it; a click retries
+		return <WaSendFailure message={message} size={size} className={className} />;
 	}
 	if (state === 'read') {
 		return <CheckCheck size={size} className={`text-[#53BDEB] ${className}`} />;

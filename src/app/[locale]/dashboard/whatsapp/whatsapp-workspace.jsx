@@ -1049,6 +1049,14 @@ const MESSAGES_CACHE_TTL = MESSAGES_CACHE_TTL_MS;
 const STATUSES_CACHE_TTL = 60_000;
 
 /** Why a send failed, as the server said it (or the network error), for the Retry tooltip. */
+/** A short code for the hover card: the HTTP status, or 'timeout' / 'offline' when there was none. */
+function outboundFailureCode(error) {
+	if (error?.code === 'ECONNABORTED') return 'timeout';
+	// no answer at all: our internet is down, or the server / its proxy did not answer
+	if (!error?.response) return typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'unreachable';
+	return error.response.status || null;
+}
+
 function outboundFailureReason(error) {
 	const fromServer = error?.response?.data?.message;
 	const text = Array.isArray(fromServer) ? fromServer.join(', ') : fromServer;
@@ -10282,6 +10290,7 @@ function WhatsAppWorkspaceContent() {
 				status: 'failed',
 				optimistic: false,
 				sendError: outboundFailureReason(error),
+				sendErrorCode: outboundFailureCode(error),
 			};
 			const applyFailed = items =>
 				(items || []).map(item =>
@@ -10495,6 +10504,7 @@ function WhatsAppWorkspaceContent() {
 				status: 'failed',
 				optimistic: false,
 				sendError: outboundFailureReason(error),
+				sendErrorCode: outboundFailureCode(error),
 			};
 			persistConversationMessages(targetConversationId, items =>
 				(items || []).map(item =>
@@ -10726,7 +10736,13 @@ function WhatsAppWorkspaceContent() {
 				persistConversationMessages(targetConversationId, current =>
 					current.map(message =>
 						message.id === failedId
-							? { ...message, status: 'failed', optimistic: false }
+							? {
+									...message,
+									status: 'failed',
+									optimistic: false,
+									sendError: mediaUploadFailedMessage(error, locale) || outboundFailureReason(error),
+									sendErrorCode: outboundFailureCode(error),
+								}
 							: message,
 					),
 				);

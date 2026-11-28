@@ -101,6 +101,9 @@ function toOutboxRow(message) {
 		created_at: message.created_at || message.providerTimestamp || new Date().toISOString(),
 		quotedProviderMessageId: message.quotedProviderMessageId || null,
 		replyTo: message.replyTo || null,
+		// why it failed, so the hover card can still explain it after a reload
+		...(message.sendError ? { sendError: String(message.sendError).slice(0, 240) } : {}),
+		...(message.sendErrorCode ? { sendErrorCode: message.sendErrorCode } : {}),
 	};
 }
 
