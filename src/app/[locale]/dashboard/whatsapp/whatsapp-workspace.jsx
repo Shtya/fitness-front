@@ -14875,7 +14875,9 @@ function WhatsAppWorkspaceContent() {
 			);
 			return;
 		}
-		if (action === 'pin') {
+		if (action === 'markRead' || action === 'markUnread') {
+			void toggleConversationReadState(conversation);
+		} else if (action === 'pin') {
 			void toggleConversationPinned(conversation);
 		} else if (action === 'mute') {
 			void toggleConversationMuted(conversation);

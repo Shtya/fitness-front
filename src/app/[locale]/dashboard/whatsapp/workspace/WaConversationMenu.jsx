@@ -2,8 +2,8 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Archive, Bell, BellOff, Check, Columns2, HeartHandshake, Info, Pin, Star, Trash2, UserPlus } from 'lucide-react';
-import { conversationTitle, conversationAvatarUrl, conversationPreview } from '../whatsapp-utils';
+import { Archive, Bell, BellOff, Check, CheckCheck, Columns2, HeartHandshake, MessageSquareDot, Pin, Trash2 } from 'lucide-react';
+import { conversationTitle, conversationAvatarUrl, conversationPreview, conversationUnreadCount } from '../whatsapp-utils';
 import { useMenuKeyboard } from '../wa-ui-menu';
 import { Avatar } from './WaAvatar';
 import { useFreshPressGuard, useLongPressBackdrop } from './wa-long-press';
@@ -50,7 +50,8 @@ export function ConversationActionMenu({
 	conversation,
 	anchorRect,
 	locale,
-	canAssign,
+	// assigning is done inside the chat now, so the menu no longer offers it
+	canAssign: _canAssign,
 	busy,
 	onClose,
 	onAction,
@@ -104,6 +105,10 @@ export function ConversationActionMenu({
 			icon: Columns2,
 			group: 'open',
 		},
+		// read / unread, for this chat without opening it
+		conversationUnreadCount(conversation) > 0
+			? { id: 'markRead', label: ar ? 'تعليم كمقروءة' : 'Mark as read', icon: CheckCheck }
+			: { id: 'markUnread', label: ar ? 'تعليم كغير مقروءة' : 'Mark as unread', icon: MessageSquareDot },
 		{
 			id: 'pin',
 			label: conversation.isPinned ? (ar ? 'إلغاء تثبيت المحادثة' : 'Unpin conversation') : ar ? 'تثبيت المحادثة' : 'Pin conversation',
@@ -119,11 +124,6 @@ export function ConversationActionMenu({
 					? 'كتم الإشعارات'
 					: 'Mute notifications',
 			icon: conversation.isMuted ? Bell : BellOff,
-		},
-		{
-			id: 'favorite',
-			label: conversation.isFavorite ? (ar ? 'إزالة من المفضلة' : 'Remove from favorites') : ar ? 'إضافة إلى المفضلة' : 'Add to favorites',
-			icon: Star,
 		},
 		{
 			id: 'keepInTouch',
@@ -148,8 +148,6 @@ export function ConversationActionMenu({
 					: 'Archive chat',
 			icon: Archive,
 		},
-		canAssign && { id: 'assign', label: ar ? 'تعيين إلى شخص' : 'Assign to person', icon: UserPlus, group: 'manage' },
-		{ id: 'info', label: ar ? 'معلومات المحادثة' : 'Conversation info', icon: Info, group: 'manage' },
 		{
 			id: 'delete',
 			label: ar ? 'حذف المحادثة' : 'Delete chat',
